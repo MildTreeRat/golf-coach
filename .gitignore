@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+
+# Data (large files — don't commit to git)
+data/raw/
+data/models/*.pt
+data/models/*.pth
+data/models/*.onnx
+
+# Database
+*.db
+
+# Node
+node_modules/
+src/ui/build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
