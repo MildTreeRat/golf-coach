@@ -4,7 +4,7 @@ A home-lab AI-powered golf swing analysis system that captures your swing via ca
 
 ## Project Status
 
-**Phase**: Planning complete, ready for Milestone 1
+**Phase**: Project scaffolded (structure + shared contracts in place). Starting Milestone 1.
 
 See [ROADMAP.md](ROADMAP.md) for current progress and [WORKLOG.md](WORKLOG.md) for session-by-session notes.
 
@@ -19,7 +19,8 @@ The system has six modules with clean interfaces between them:
 - **Analysis Engine** — merges all data streams, segments swing phases, evaluates checkpoints, scores the swing
 - **Feedback** — rule-based tips, Claude API coaching, visual overlays displayed in a web UI
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for full diagrams and interface contracts.
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for full diagrams and interface contracts,
+and [docs/FLOW.md](docs/FLOW.md) for the proposed end-to-end flow, decoupling seam, and build order (mermaid diagrams).
 
 ## Tech Stack
 
@@ -38,33 +39,46 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for full diagrams and interface
 
 ## Project Structure
 
+The layout and the reasoning behind it are documented in [ADR-008](docs/decisions/008-project-structure.md).
+The core idea: a shared `contracts/` package is the seam every module depends on (modules
+never import each other), I/O boundaries use swappable real/mock adapters, and the analysis
+engine is a pure functional core. This is what lets sections be built independently and run
+on simulated data before any hardware exists.
+
 ```
-golf-swing-ai/
-├── README.md
-├── ROADMAP.md
-├── WORKLOG.md
+golf-coach/
+├── README.md  ROADMAP.md  WORKLOG.md
+├── pyproject.toml           # deps (base + vision/api/llm/hardware extras) + tooling
 ├── docs/
 │   ├── PROJECT_CHARTER.md
 │   ├── ARCHITECTURE.md
-│   └── decisions/           # Architecture Decision Records
-│       ├── 000-template.md
-│       ├── 001-language-python.md
-│       ├── 002-pose-estimation-mediapipe.md
-│       ├── 003-camera-hardware.md
-│       ├── 004-launch-monitor.md
-│       ├── 005-object-detection-yolov8.md
-│       └── 006-mcp-server.md
+│   └── decisions/           # ADRs 000–008
 ├── src/
-│   ├── capture/             # Camera + video recording
-│   ├── analysis/            # Swing phase segmentation + checkpoint scoring
-│   ├── feedback/            # Rule engine + LLM coaching + overlays
-│   ├── mcp_server/          # Launch monitor MCP server
-│   └── ui/                  # React web dashboard
-├── tests/
-└── data/
-    ├── raw/                 # Raw video files
-    ├── processed/           # Extracted keypoints, labeled images
-    └── models/              # Trained model weights
+│   └── golf_coach/
+│       ├── contracts/       # ⭐ shared data shapes (Pydantic) — the decoupling seam
+│       ├── capture/         # VideoSource port + file/camera adapters
+│       ├── pose/            # MediaPipe → FrameKeypoints
+│       ├── detection/       # YOLOv8 → FrameDetections + club-path tracker
+│       ├── launch_monitor/  # ShotDataSource port + mock/r10 adapters + MCP server
+│       ├── analysis/        # ⭐ pure functional core: merge→phases→checkpoints→score
+│       ├── feedback/        # rules + Claude coaching + overlays
+│       ├── storage/         # SQLite repositories
+│       ├── api/             # FastAPI orchestrator
+│       └── config.py        # settings (the only env reader)
+├── frontend/                # React UI (M5) — separate toolchain, talks to api/ over HTTP
+├── tests/                   # mirrors the package; seam tests run on the base install
+├── spikes/                  # throwaway exploration (e.g. the M1.5 detectability spike)
+├── scripts/                 # dev CLI entrypoints (run_pose.py, run_mcp_server.py, …)
+└── data/                    # gitignored: raw/ processed/ models/ + SQLite db
+```
+
+## Setup
+
+```bash
+python -m venv .venv && source .venv/bin/activate
+pip install -e '.[dev]'            # base + dev tools; contracts/tests need nothing heavier
+pip install -e '.[vision,dev]'     # add when starting M1 (MediaPipe/OpenCV/YOLOv8)
+pytest                             # runs the contracts seam tests
 ```
 
 ## Getting Started

@@ -1,6 +1,11 @@
 # Architecture Document: AI Golf Swing Trainer
 
-## Last Updated: 2026-03-16
+## Last Updated: 2026-06-20
+
+> ⚠️ **The diagrams below describe the PROPOSED / target design — not yet built.** As of
+> 2026-06-20 only the scaffolding + `contracts/` seam + `MockShotDataSource` exist. For the
+> current proposed runtime flow, decoupling seam, and build order (incorporating ADR-007 and
+> ADR-008), see [FLOW.md](FLOW.md). Update both as milestones land.
 
 ---
 

@@ -63,7 +63,7 @@ Build a home-lab AI-powered golf swing analysis system that captures a golfer's 
 
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|------------|
-| Camera framerate too low for club tracking | Medium | High | Test early (Milestone 1); upgrade camera if needed |
+| Club head not reliably detectable (motion blur + small/fast object at impact, not just framerate) | High | High | De-risk in the M1.5 spike *before* labeling: lighting + fast-shutter test, then choose pure-ML / marker-assisted / fusion+interpolation. Global shutter fixes distortion, not blur (see ADR-003 addendum). |
 | Launch monitor data locked in vendor app | High | Medium | Research export options before purchasing; choose open-friendly hardware |
 | Pose estimation inaccurate for golf-specific positions | Low | Medium | MediaPipe is well-tested; supplement with custom training if needed |
 | Scope creep | High | Medium | Stick to charter; new features go to a "Future" section in ROADMAP |

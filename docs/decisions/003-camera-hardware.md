@@ -75,4 +75,17 @@ The global shutter is the deciding factor. A golf club head moves at 80-120+ mph
 - Two identical cameras means no hardware mismatch when adding the second angle.
 - External trigger support enables frame-synchronized dual capture in the future without software hacks.
 - USB UVC compliance means OpenCV `cv2.VideoCapture()` works out of the box — no vendor SDK needed.
+
+## Addendum (2026-06-20): Global Shutter ≠ No Motion Blur
+
+The Decision section above overstates the global shutter's effect. To be precise:
+- **Global shutter** eliminates *geometric distortion* (the rolling-shutter "jello"/skew
+  on fast objects) by exposing all pixels simultaneously.
+- **Motion blur** is governed by **exposure time (shutter speed)**, not shutter type. A
+  global-shutter camera will still smear a ~110 mph club head at impact unless the
+  exposure is short (~1/2000s or faster), which in turn requires **bright lighting**.
+
+Implication: sharp impact-zone club frames depend on a **lighting + fast-shutter** setup,
+not just the camera. This is the highest-leverage factor for YOLOv8 detection and is now
+explicitly tested in the M1.5 detectability spike (ROADMAP.md) before any labeling effort.
 - Buying both cameras upfront (~$156) keeps total hardware spend well under budget.

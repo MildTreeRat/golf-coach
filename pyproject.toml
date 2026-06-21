@@ -1,0 +1,66 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "golf-coach"
+version = "0.0.1"
+description = "Home-lab AI golf swing analysis system: capture, pose, club detection, launch-monitor data, and coaching feedback."
+requires-python = ">=3.11"
+# Base deps are intentionally tiny so any module can be worked on without pulling
+# the heavy ML/vision stack. Install the extras you need (see [project.optional-dependencies]).
+dependencies = [
+    "pydantic>=2.6",
+    "pydantic-settings>=2.2",
+]
+
+[project.optional-dependencies]
+# Pose + detection + video. Needed for M1 (pose) and M2 (YOLOv8).
+vision = [
+    "numpy>=1.26",
+    "opencv-python>=4.9",
+    "mediapipe>=0.10",
+    "ultralytics>=8.1",
+]
+# FastAPI orchestrator (the imperative shell).
+api = [
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.29",
+]
+# LLM coaching + MCP server.
+llm = [
+    "anthropic>=0.40",
+    "mcp>=1.0",
+]
+# Launch-monitor hardware (Garmin R10 over BLE). Not needed for the mock source.
+hardware = [
+    "bleak>=0.21",
+]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.4",
+    "mypy>=1.9",
+]
+# Convenience: everything at once.
+all = [
+    "golf-coach[vision,api,llm,hardware,dev]",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/golf_coach"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.mypy]
+python_version = "3.11"
+plugins = ["pydantic.mypy"]
+ignore_missing_imports = true

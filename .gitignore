@@ -6,9 +6,13 @@ dist/
 build/
 .venv/
 venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 
 # Data (large files — don't commit to git)
 data/raw/
+data/processed/
 data/models/*.pt
 data/models/*.pth
 data/models/*.onnx
@@ -18,7 +22,8 @@ data/models/*.onnx
 
 # Node
 node_modules/
-src/ui/build/
+frontend/build/
+frontend/dist/
 
 # IDE
 .vscode/
