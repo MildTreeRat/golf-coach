@@ -1,6 +1,6 @@
 # Roadmap: AI Golf Swing Trainer
 
-## Last Updated: 2026-06-20
+## Last Updated: 2026-06-28
 
 ---
 
@@ -18,6 +18,7 @@ milestones that require it. Each milestone below is tagged with what it needs to
 | M1.5 Club-Head Detectability Spike | None to start | Phone/sample clips of the impact zone |
 | M2 Club & Ball Detection | Global-shutter camera (ADR-003) | Scaffolding + labeling on sample frames |
 | M3 Launch Monitor / MCP | Garmin R10 (ADR-004) | MCP server + schema vs. mock `ShotData` |
+| M4-PoC Fundamentals Analysis | None | M1 skeleton output (pose only) |
 | M4 Analysis Engine | None | Real or simulated merged data |
 | M5 Feedback UI | None | — |
 | M6 LLM Coaching | None | — |
@@ -32,12 +33,17 @@ blocker for M1.
 **Hardware to start**: None — bootstrap with phone video or a sample swing clip (ADR-007).
 
 - [ ] Select and acquire camera hardware (see ADR-003)
-- [ ] Set up Python project: virtual environment, dependencies, folder structure
-- [ ] Write video capture script (OpenCV, save to `data/raw/`)
-- [ ] Run MediaPipe Pose on recorded swing video
-- [ ] Serialize keypoints to JSON (one record per frame)
-- [ ] Render skeleton overlay on video and review accuracy
+- [x] Set up Python project: virtual environment, dependencies, folder structure
+- [x] Read video frames (OpenCV `FileVideoSource` from `data/raw/`) — camera *recording* awaits hardware
+- [x] Run MediaPipe Pose on a swing video (`scripts/run_pose.py`, Tasks API)
+- [x] Serialize keypoints to JSON (one record per frame, `data/processed/`)
+- [x] Render skeleton overlay on video *(code complete; accuracy review pending a real clip)*
 - [ ] Document findings: is 30fps sufficient? Are keypoints stable through full swing?
+
+> **Status (2026-06-28):** pipeline implemented and verified end-to-end on a synthetic clip
+> (capture → pose → keypoints JSON + overlay video). Design doc:
+> [docs/M1_CAPTURE_FLOW.md](docs/M1_CAPTURE_FLOW.md). Remaining: run on a real swing clip
+> dropped at `data/raw/`, review skeleton accuracy, and write up findings.
 
 **Exit Criteria**: Skeleton overlay accurately tracks body through address → follow-through.
 
@@ -95,10 +101,42 @@ blocker for M1.
 
 ---
 
-## Milestone 4: Swing Analysis Engine (Rule-Based)
-**Goal**: Analyze merged pose + detection + shot data and score the swing.
+## Milestone 4-PoC: Fundamentals Analysis Proof-of-Concept (pose-only)
+**Goal**: Prove the whole analysis spine — phases → checkpoint → score → tip — end-to-end
+on **pose data alone**, no club detection and no hardware. First real iteration of the
+scoring engine.
+**Hardware to start**: None — runs on the M1 skeleton output.
+**Decisions behind it**: scoring model in [ADR-009](docs/decisions/009-swing-scoring-model.md);
+benchmark ranges in [ADR-010](docs/decisions/010-benchmark-ranges.md).
+
+- [ ] Add `PracticeGoal` intent contract (mode + target shape + club + focus_checkpoint)
+- [ ] Extend `SwingResult` with `mechanics_score`, `outcome_score`, and the judged `intent`
+- [ ] Add the benchmark store: data file + `resolve_range(checkpoint, club, profile)` with
+      fallback; seed **Tour Tempo (~3:1)** as the only range (ADR-010)
+- [ ] Implement phase segmentation (address → … → follow-through) from keypoints
+- [ ] Implement the **tempo** mechanics checkpoint (backswing:downswing ratio); optionally
+      address posture (spine angle)
+- [ ] Implement `scoring.py` with the **Fundamentals** policy (mechanics 100%, outcome=None)
+- [ ] Implement rule-based tip(s) for the tempo checkpoint (feedback/rules.py)
+- [ ] Wire it end-to-end over an M1 sample clip and eyeball the result
+
+**Exit Criteria**: A real `SwingResult` + `FeedbackPayload` produced from a sample swing
+clip with a tempo score and a plain-English tip — with the intent/dual-axis seam in place
+so M2/M3 add the outcome axis without reworking contracts.
+
+---
+
+## Milestone 4: Swing Analysis Engine (Dual-Axis: Mechanics + Outcome)
+**Goal**: Analyze merged pose + detection + shot data and score the swing across both the
+**mechanics** and **outcome** axes, combined by an intent-driven scoring policy
+(see [ADR-009](docs/decisions/009-swing-scoring-model.md)). Builds out from the M4-PoC.
 
 - [ ] Define swing phase segmentation logic (address, backswing, transition, downswing, impact, follow-through)
+- [ ] Add the remaining **practice modes / scoring policies**: shot-shaping, performance, drill
+- [ ] Add **outcome checkpoints** (shape, start line, distance, dispersion) parameterized by
+      intent; build against `MockShotDataSource` first, then live R10
+- [ ] Expand the benchmark store beyond Tour Tempo (TPI kinematic sequence / X-factor;
+      TrackMan + Arccos/Shot Scope per-club outcome norms) per ADR-010
 - [ ] Define 5-10 swing checkpoints with acceptable ranges:
     - [ ] Address posture (spine angle, knee flex)
     - [ ] Backswing plane (club path relative to target line)

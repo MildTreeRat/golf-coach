@@ -52,7 +52,7 @@ golf-coach/
 ├── docs/
 │   ├── PROJECT_CHARTER.md
 │   ├── ARCHITECTURE.md
-│   └── decisions/           # ADRs 000–008
+│   └── decisions/           # ADRs 000–010
 ├── src/
 │   └── golf_coach/
 │       ├── contracts/       # ⭐ shared data shapes (Pydantic) — the decoupling seam

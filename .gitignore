@@ -16,6 +16,7 @@ data/processed/
 data/models/*.pt
 data/models/*.pth
 data/models/*.onnx
+data/models/*.task
 
 # Database
 *.db
