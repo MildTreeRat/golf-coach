@@ -5,6 +5,96 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-07-02 (cont. 2) — M4-PoC implementation plan written up (no code yet)
+
+**Duration**: ~0.5 hour
+**What I did**: Reviewed the M4-PoC scope (ROADMAP + ADR-009/010), re-verified the current
+contracts/stubs against the plan, and documented the agreed implementation plan into the repo
+as **[docs/M4_POC_PLAN.md](docs/M4_POC_PLAN.md)** so it survives outside the local scratch
+plan. Confirmed nothing in the plan is stale: `analysis/engine.py` and `feedback/rules.py` are
+still `NotImplementedError` stubs; `contracts/{intent}.py` and
+`analysis/{benchmarks,phases,checkpoints,scoring}` don't exist yet (all new); hatchling packages
+all of `src/golf_coach`, so a `benchmarks/ranges.json` ships with no pyproject change.
+**Plan in one line**: build the pose-only Fundamentals spine
+(`FrameKeypoints + PracticeGoal → analyze_swing → SwingResult → build_feedback → FeedbackPayload`)
+with a single **tempo** checkpoint, the dual-axis/intent seam in place, benchmark ranges as
+JSON-with-provenance (Tour Tempo ~3:1 seeded), all on the stdlib base install. Full breakdown of
+the 10 change-sets (new modules, contract extensions, tests, verification) is in the plan doc.
+**Key decisions (all captured in the plan doc)**:
+- **Scope = M4-PoC only, one tempo checkpoint.** No `merge.py`, no outcome checkpoints, no extra
+  scoring policies, no SQLite — those are full-M4 and left as named seams.
+- **Analysis core stays pure-Python/stdlib** (no numpy/MediaPipe) so the spine + tests run on
+  `pip install -e .`; benchmark store ships as **JSON not YAML** to keep base deps tiny.
+**Where I left off**: Plan is documented and approved; **no analysis code written yet**. Next
+session: implement change-sets 1→9 in `docs/M4_POC_PLAN.md` (contracts → benchmarks → phases →
+checkpoint → scoring → engine → feedback → tests), then write the `docs/M4_ANALYSIS_POC.md`
+milestone flow doc and check off the ROADMAP boxes.
+**Blockers**: None — pose-only, no hardware.
+**Notes**: Real-clip eyeball can reuse the existing face-on keypoints JSON in `data/processed/`
+(from `aaron-swing-2.mov`) for the exit-criterion sanity check.
+
+---
+
+## 2026-07-02 — M1 angle re-shoot: face-on confirmed as canonical pose placement
+
+**Duration**: ~0.5 hour
+**What I did**: Re-shot the swing from a **face-on** angle (`data/raw/aaron-swing-2.mov`,
+480×854, 58.9 fps, 656 frames) to test the self-occlusion hypothesis from the 06-28 review,
+ran it through `run_pose.py`, and computed the same metrics on both clips for a
+side-by-side (detection, per-group visibility, knee-by-decile, jitter).
+**Findings** (full write-up:
+[M1_CAPTURE_FLOW.md → angle comparison](docs/M1_CAPTURE_FLOW.md#m1-findings-angle-comparison-2026-07-02)):
+- Face-on wins on **every** body metric. **Knees 0.71 → 0.88 (+24%)**, lower body
+  0.70 → 0.83, overall visibility 0.78 → 0.89. Leg jitter also dropped.
+- The big one: knee confidence now stays 0.85–0.95 *through the bent swing posture* where it
+  used to collapse to ~0.60. Confirms the occlusion diagnosis — at ~5 o'clock the legs
+  stacked front-to-back; face-on separates them.
+- Honest caveat: all-landmark jitter rose slightly, but that's genuine (larger arm arc in
+  face-on), not noise. Temporal smoothing still worth doing.
+**Key decision**:
+- **Canonical pose-camera placement = face-on / 3 o'clock** (ball flies to 12; RH golfer,
+  mirror to 9 for LH). Recorded in **ADR-003 addendum (2026-07-02)**, which also reconciles
+  this with the ADR's original "down-the-line first" note: down-the-line is for the *club*
+  stream (M2/YOLOv8), face-on is for the *pose* stream.
+**Where I left off**: M1 pose setup is now solid. The "re-record & re-review lower body" open
+refinement is **done**; only the optional temporal-smoothing pass remains. Ready to start
+**M4-PoC** (tempo) on the new keypoints JSON whenever we choose.
+**Blockers**: None.
+**Notes**: old raw clip (`golf_swing-aaron-1.mov`) no longer in `data/raw`, but its
+keypoints JSON remains in `data/processed` and was used for the comparison.
+
+---
+
+## 2026-07-02 (cont.) — Spine-angle investigation → camera topology & sync plan
+
+**Duration**: ~0.5 hour
+**What I did**: Investigated a hunch that shot 2's spine looked "very vertical." Estimated
+spine tilt (shoulder-mid → hip-mid vs vertical) on both clips, in 2D and depth-aware 3D.
+Used the result to settle the camera topology and to plan synchronization.
+**Findings**:
+- Shot 1 (~5 o'clock): ~37° spine tilt at address (believable). Shot 2 (face-on): ~2° in the
+  image — looks dead vertical, but that's a **projection artifact**: forward tilt lives in the
+  camera's depth axis and foreshortens to ≈0 face-on. `z`-based 3D put shot 2 at ~66–71° (if
+  anything more bent), but MediaPipe `z` is unreliable. **Can't** conclude a more upright
+  stance — the "vertical" look is the camera angle. Rule: forward spine tilt = down-the-line
+  measurement, not face-on.
+**Key decisions (documented)**:
+- **Two cameras, not three.** The spine/hip stream and the club stream share the
+  down-the-line viewpoint; one global-shutter camera there runs both MediaPipe + YOLOv8. →
+  **ADR-003 addendum (2026-07-02b)** with the stream→camera assignment table + spine caveat.
+- **ADR-011 (Proposed): Camera Synchronization & Multi-View 3D Fusion** — phased plan
+  (Phase 1 single-cam now, build `camera_id`+timestamp+`FrameBundle` seam; Phase 2 two-cam
+  software/event sync + calibration; Phase 3 hardware trigger for frame-accurate dynamic 3D).
+  Unlocks true spine angle / hip rotation / X-factor / kinematic sequence for M4 mechanics.
+- Also noted the spine caveat in M1_CAPTURE_FLOW.md and added both items to ROADMAP Future.
+**Where I left off**: Camera plan is now on record end-to-end (angle, count, stream
+assignment, sync roadmap). No code change — ADR-011's capture-seam work (`camera_id` on
+`Frame`, `FrameBundle`) is a small future task, not needed for M1/M4-PoC.
+**Blockers**: None.
+**Notes**: ADR-011 is Proposed/forward-looking — no multi-cam hardware yet; seam designed now.
+
+---
+
 ## 2026-06-28 (cont. 2) — M1 accuracy review & documentation
 
 **Duration**: ~1 hour

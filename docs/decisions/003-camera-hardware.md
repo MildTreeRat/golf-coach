@@ -89,3 +89,66 @@ Implication: sharp impact-zone club frames depend on a **lighting + fast-shutter
 not just the camera. This is the highest-leverage factor for YOLOv8 detection and is now
 explicitly tested in the M1.5 detectability spike (ROADMAP.md) before any labeling effort.
 - Buying both cameras upfront (~$156) keeps total hardware spend well under budget.
+
+## Addendum (2026-07-02): Pose camera goes FACE-ON (3 o'clock)
+
+**Canonical placement for the pose-estimation camera: face-on.** Using the ball's flight
+direction as a clock face — **the ball flies toward 12 o'clock after impact, so the pose
+camera sits at 3 o'clock** (perpendicular to the ball-flight/target line, facing the
+golfer's chest). This is for a **right-handed** golfer; mirror to **9 o'clock** for a
+left-handed golfer. Camera at hand/hip height, level (not tilted down), full body framed
+with margin.
+
+**Why this refines the original Decision.** The Decision section says to "start with one
+camera in down-the-line position." That guidance was written for *club-path / swing-plane*
+reasons, before we had any pose data. Empirically, down-the-line is the **worst** angle for
+MediaPipe body tracking: the legs stack front-to-back along the camera axis and occlude each
+other, and MediaPipe is trained largely on frontal footage. Two real clips of the same swing
+confirmed it (see
+[M1 findings — angle comparison, 2026-07-02](../M1_CAPTURE_FLOW.md#m1-findings-angle-comparison-2026-07-02)):
+moving from ~5 o'clock to face-on 3 o'clock lifted **knee** confidence 0.71 → 0.88 (+24%),
+lower-body 0.70 → 0.83, and overall visibility 0.78 → 0.89 — and, critically, kept the knees
+confident *through the bent-over swing posture* where they previously collapsed to ~0.60.
+
+**Reconciliation with the two-angle plan.** The two standard golf angles still both matter,
+but they serve different streams:
+- **Pose stream (body, MediaPipe)** → **face-on (3 o'clock)**. This is the primary/first
+  camera now, superseding the "down-the-line first" note for the pose use case.
+- **Club/ball stream (YOLOv8, swing plane) → down-the-line**. Still the right angle for M2
+  club-path work, but MediaPipe body tracking there is poor — don't judge pose quality off
+  the down-the-line camera.
+
+When the second camera is added, the down-the-line unit is for club detection, not pose.
+
+## Addendum (2026-07-02b): Two cameras (not three), stream assignment & the spine caveat
+
+**We need two cameras, not three.** It's tempting to think of three roles — body landmarks,
+spine/hip, and club head — as three cameras. But the spine/hip role and the club role share
+the **same viewpoint** (down-the-line), and one global-shutter camera there runs both
+MediaPipe (body) and YOLOv8 (club) on the same frames. So the setup collapses to two angles.
+The original two-camera buy in the Shopping List above already covers this; nothing new to
+purchase.
+
+**Stream → camera assignment:**
+
+| Camera | Streams it owns |
+|--------|-----------------|
+| **Face-on (3 o'clock)** — primary, integrate first | body landmarks: knees, hands, weight shift, sway, head movement, lateral tilt; **tempo** |
+| **Down-the-line (~6 o'clock)** — second | forward **spine tilt**, swing plane, shoulder/hip turn projected into this view; **club/ball detection** (YOLOv8) |
+
+**Spine-angle caveat (why the assignment matters).** We measured estimated spine tilt
+(shoulder-midpoint → hip-midpoint vs. vertical) on two real clips of the same swing:
+- ~5 o'clock view: **~37°** at address — a believable golf posture.
+- Face-on view: **~2°** at address in the image — looks dead vertical.
+
+The 2° is a **projection artifact, not a real posture**: forward spine tilt happens along the
+camera's depth axis, which a face-on camera looks straight down, so it foreshortens to nearly
+zero. A depth-aware (MediaPipe `z`) estimate put the face-on clip at ~66–71° — if anything
+*more* bent — but `z` is unreliable, so treat it as directional only. **Rule: measure forward
+spine tilt from down-the-line, never from face-on.** This is *not* a reason to move the pose
+camera off face-on (face-on still wins decisively for landmark tracking, per the 2026-07-02
+addendum) — it's the reason the *spine/plane* stream is assigned to the down-the-line camera.
+
+**Trustworthy 3D spine/hip angles** (real forward tilt, hip rotation, X-factor) require fusing
+both views by triangulation, which requires the cameras to be **synchronized** — planned in
+[ADR-011](011-camera-synchronization.md).

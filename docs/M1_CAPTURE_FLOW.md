@@ -240,6 +240,72 @@ the lower body is lost because of the **recording**, not the model:
 
 ---
 
+## M1 findings (angle comparison, 2026-07-02)
+
+Re-shot the swing from a **face-on angle** to test the occlusion hypothesis from the
+2026-06-28 review. Canonical reference frame: **the ball flies toward 12 o'clock after
+impact; the pose camera sits at 3 o'clock** (perpendicular to the ball flight, facing the
+golfer's chest — right-handed golfer; mirror to 9 o'clock for left-handed). The previous
+clip was shot from ~5 o'clock (a rear-quarter / down-the-line-ish angle).
+
+New clip: `data/raw/aaron-swing-2.mov` — 480×854, **58.9 fps**, 656 frames (~11.1 s), lite
+model. Same resolution / fps / model as the first clip, so the **only** variable is angle.
+
+**Result — face-on wins on every body metric:**
+
+| Metric | OLD (~5 o'clock) | NEW (3 o'clock, face-on) | Δ |
+|---|---|---|---|
+| Detection rate | 100% | 100% | — |
+| Avg visibility (all 33) | 0.783 | **0.887** | +0.10 |
+| Upper body | 0.787 | **0.901** | +0.11 |
+| Lower body | 0.696 | **0.827** | +0.13 |
+| **Knees** | 0.712 | **0.884** | **+0.17 (+24%)** |
+| Ankles | 0.693 | **0.880** | +0.19 |
+| Leg jitter (median Δ) | 0.00262 | **0.00195** | steadier |
+
+**Knee confidence by decile** (start → end of clip):
+- OLD: `0.62 0.63 0.62 0.60 0.63 → 0.77 0.75 0.84 0.79 0.87` — collapsed to ~0.60 *during*
+  the bent-over swing, recovering only when standing upright at the end.
+- NEW: `0.87 0.88 0.92 0.95 0.95 0.89 0.85 0.77 0.82 0.95` — strong through address and the
+  swing, dipping only modestly to 0.77 at the top of the backswing.
+
+**Why:** confirms the self-occlusion diagnosis. At ~5 o'clock the legs stacked
+front-to-back and occluded each other (worst during the bent posture); face-on separates
+the knees/ankles so MediaPipe sees both. The knees are now most confident *exactly where
+they were previously worst*.
+
+**Caveat (honest):** all-landmark median jitter rose (0.00103 → 0.00185). This is almost
+certainly **genuine motion**, not tracking noise — in a face-on view the arms/hands sweep a
+much larger horizontal arc, so per-frame travel is legitimately larger. Leg jitter (the
+actual problem area) *decreased*. A temporal-smoothing pass is still worth adding.
+
+**Decision:** face-on / 3-o'clock is now the **canonical pose-camera placement** — recorded
+in [ADR-003 addendum (2026-07-02)](decisions/003-camera-hardware.md#addendum-2026-07-02-pose-camera-goes-face-on-3-oclock).
+This resolves the "re-record and re-review the lower body" open refinement above. Remaining
+pose-setup refinement is now just the optional temporal-smoothing pass for jitter.
+
+### Spine-angle caveat (face-on can't see forward tilt)
+
+While comparing the clips we also estimated **spine tilt from vertical** (shoulder-midpoint →
+hip-midpoint) and hit an important gotcha:
+
+| | Shot 1 (~5 o'clock) | Shot 2 (face-on) |
+|---|---|---|
+| 2D image-plane, at address | ~37° | **~2°** |
+| 3D depth-aware (MediaPipe `z`) | ~54° | ~71° |
+
+The face-on **~2°** looks "dead vertical" but is a **projection artifact**, not a real
+posture — you can't hit a ball standing straight up. Forward spine tilt lives in the camera's
+depth axis, which a face-on camera looks straight down, so it foreshortens to ≈0. The `z`-based
+3D estimate suggests the bend is still there (if anything larger), but MediaPipe `z` is too
+noisy to trust for absolute angles. **Takeaway: measure forward spine tilt from
+down-the-line, not face-on.** Recorded in
+[ADR-003 addendum (2026-07-02b)](decisions/003-camera-hardware.md#addendum-2026-07-02b-two-cameras-not-three-stream-assignment--the-spine-caveat);
+trustworthy 3D spine/hip angles need synced multi-view fusion
+([ADR-011](decisions/011-camera-synchronization.md)).
+
+---
+
 ## Verification
 1. `pip install -e '.[vision,dev]'`
 2. Place a swing clip at `data/raw/swing.mp4` (golfer fully in frame, side / down-the-line).

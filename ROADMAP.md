@@ -181,7 +181,10 @@ so M2/M3 add the outcome axis without reworking contracts.
 ---
 
 ## Future (Out of Scope for Now)
-- [ ] Second camera angle (down-the-line)
+- [ ] Second camera angle (down-the-line) — carries spine/plane pose **and** club tracking
+      (ADR-003 addendum 2026-07-02b)
+- [ ] **Camera synchronization + multi-view 3D fusion** (ADR-011) — phased: software/event
+      sync first, hardware trigger later; unlocks true 3D spine angle, hip rotation, X-factor
 - [ ] Swing comparison overlay (your swing vs. reference pro swing)
 - [ ] Drill recommendations based on persistent faults
 - [ ] Trained ML model for swing quality regression (replace/augment rules)
