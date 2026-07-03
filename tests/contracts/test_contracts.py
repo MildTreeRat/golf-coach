@@ -9,13 +9,18 @@ from __future__ import annotations
 from golf_coach.contracts import (
     NUM_POSE_LANDMARKS,
     BoundingBox,
+    ClubCategory,
     Detection,
     FrameDetections,
     FrameKeypoints,
     Landmark,
     ObjectClass,
     PoseLandmark,
+    PracticeGoal,
+    PracticeMode,
     ShotData,
+    SwingResult,
+    TargetShape,
 )
 from golf_coach.launch_monitor import MockShotDataSource
 
@@ -52,6 +57,30 @@ def test_contract_json_roundtrip() -> None:
     frame = FrameKeypoints(frame_index=3, timestamp_ms=25.0, landmarks=_full_landmarks())
     restored = FrameKeypoints.model_validate_json(frame.model_dump_json())
     assert restored == frame
+
+
+def test_practice_goal_defaults_to_fundamentals() -> None:
+    goal = PracticeGoal()
+    assert goal.mode is PracticeMode.FUNDAMENTALS
+    assert goal.club is ClubCategory.ALL
+    assert goal.target_shape is None
+
+
+def test_swing_result_dual_axis_roundtrip() -> None:
+    goal = PracticeGoal(mode=PracticeMode.FUNDAMENTALS, target_shape=TargetShape.FADE)
+    result = SwingResult(
+        swing_id="s1",
+        session_id="sess1",
+        overall_score=82.5,
+        mechanics_score=82.5,
+        outcome_score=None,
+        intent=goal,
+    )
+    restored = SwingResult.model_validate_json(result.model_dump_json())
+    assert restored == result
+    assert restored.intent is not None
+    assert restored.intent.target_shape is TargetShape.FADE
+    assert restored.outcome_score is None
 
 
 def test_mock_shot_source_is_deterministic_and_valid() -> None:

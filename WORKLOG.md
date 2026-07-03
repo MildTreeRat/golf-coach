@@ -5,6 +5,48 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-07-03 — M4-PoC implemented: pose-only Fundamentals analysis spine
+
+**Duration**: ~2 hours
+**What I did**: Implemented the whole [M4-PoC plan](docs/M4_POC_PLAN.md) — the pose-only
+Fundamentals analysis spine, end-to-end. New: `contracts/intent.py` (`PracticeGoal` + enums),
+the benchmark store (`analysis/benchmarks/` — `ranges.json` seeded with Tour Tempo ~3:1 +
+`resolve_range` with most-specific→`all` fallback), `analysis/phases.py` (lead-wrist
+segmentation → 6 phases), `analysis/checkpoints/mechanics.py` (`evaluate_tempo`),
+`analysis/scoring.py` (`FundamentalsPolicy` + `policy_for`). Extended `SwingResult` with
+`intent`/`mechanics_score`/`outcome_score`, wired `analyze_swing`, and implemented
+`feedback/rules.py` (`build_feedback`). Added the synthetic-swing fixture + 7 test modules (23
+new tests). Also **added the missing runtime sequence diagram to `docs/M4_POC_PLAN.md`** (the
+plan only had a data-flow ASCII block), wrote the milestone flow doc
+**[docs/M4_ANALYSIS_POC.md](docs/M4_ANALYSIS_POC.md)** (mermaid data + sequence, GRASP
+callouts, files, findings), an **ADR-010 addendum** (JSON-not-YAML), and checked off the
+ROADMAP M4-PoC boxes.
+**Verification**: `pytest` → **27 passed** on the **base install** (no vision/ML extras);
+`ruff check` clean; `mypy src/golf_coach/analysis src/golf_coach/feedback` clean. Real-clip
+eyeball: fed the face-on `data/processed/aaron-swing-2.keypoints.json` through
+`analyze_swing → build_feedback` → a full `SwingResult` + tempo tip. Exit criterion met.
+**Key decisions / surprises**:
+- **Phase segmentation had to anchor on the top of the backswing, not "first motion."** First
+  pass forward-scanned for the first wrist movement; on the real clip the golfer waggles/sets
+  up for ~5.8 s, so that swallowed the setup into the backswing → a nonsense **9.6:1** tempo.
+  Re-anchored on the global wrist-`y` minimum (the top) and walked backward to the start of the
+  final rise → address phase collapses correctly (0–342) and tempo reads a believable **~1.1:1**
+  (amateur-quick; the "too quick" tip is the right cue). Synthetic tests stayed green.
+- **Benchmark store ships JSON, not YAML** to keep the analysis core stdlib-only (ADR-010
+  addendum). One seeded row (Tour Tempo).
+- Kept the guardrails: no `merge.py`, no outcome checkpoints, one policy — all named seams
+  (`outcome=[]`, `outcome_score=None`, absent `checkpoints/outcome.py`).
+**Where I left off**: M4-PoC is **done and verified**. The spine is proven; the thing to harden
+next (full M4) is segmentation *accuracy* — landmark smoothing, validating top/impact against
+the overlay video, then more mechanics checkpoints (posture/hip rotation, several needing
+down-the-line / synced 3D per ADR-011) and the outcome axis + other scoring policies.
+**Blockers**: None — pose-only, no hardware.
+**Notes**: Runtime tip text uses a plain hyphen (not em-dash) so the Windows-console eyeball
+doesn't mojibake. Real-clip number is one heuristic on one clip — good enough to prove the
+spine, not yet a trustworthy tempo measurement.
+
+---
+
 ## 2026-07-02 (cont. 2) — M4-PoC implementation plan written up (no code yet)
 
 **Duration**: ~0.5 hour

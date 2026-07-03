@@ -14,6 +14,13 @@ from golf_coach.contracts.detections import (
     ObjectClass,
 )
 from golf_coach.contracts.feedback import FeedbackPayload, Severity, Tip
+from golf_coach.contracts.intent import (
+    ClubCategory,
+    PlayerProfile,
+    PracticeGoal,
+    PracticeMode,
+    TargetShape,
+)
 from golf_coach.contracts.keypoints import (
     NUM_POSE_LANDMARKS,
     FrameKeypoints,
@@ -42,6 +49,12 @@ __all__ = [
     # shot
     "ShotData",
     "ShotSource",
+    # intent
+    "PracticeGoal",
+    "PracticeMode",
+    "TargetShape",
+    "ClubCategory",
+    "PlayerProfile",
     # swing
     "SwingResult",
     "PhaseSegment",

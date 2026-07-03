@@ -12,6 +12,7 @@ from enum import StrEnum
 from pydantic import BaseModel, Field
 
 from golf_coach.contracts.detections import FrameDetections
+from golf_coach.contracts.intent import PracticeGoal
 from golf_coach.contracts.keypoints import FrameKeypoints
 from golf_coach.contracts.shot import ShotData
 
@@ -57,7 +58,14 @@ class SwingResult(BaseModel):
 
     phases: list[PhaseSegment] = Field(default_factory=list)
     checkpoint_scores: list[CheckpointScore] = Field(default_factory=list)
-    overall_score: float = Field(ge=0.0, le=100.0, description="0-100 aggregate.")
+
+    # Dual-axis scoring (ADR-009). The practice intent this swing was judged against,
+    # plus the two independent sub-scores. `overall_score` is the policy-weighted blend
+    # (for the Fundamentals PoC: overall == mechanics_score, outcome_score is None).
+    intent: PracticeGoal | None = None
+    mechanics_score: float | None = Field(default=None, ge=0.0, le=100.0)
+    outcome_score: float | None = Field(default=None, ge=0.0, le=100.0)
+    overall_score: float = Field(ge=0.0, le=100.0, description="0-100 policy-weighted blend.")
 
     # The merged source data this result was computed from. Optional so a lightweight
     # SwingResult (e.g. from storage, scores only) can omit the heavy streams.

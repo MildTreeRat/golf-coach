@@ -1,13 +1,12 @@
 # M4-PoC Implementation Plan — Fundamentals Analysis Spine (pose-only)
 
-> **Status: PLANNED (not yet implemented).** This is the agreed implementation plan for
-> ROADMAP **Milestone 4-PoC**. No analysis code has been written yet — `analysis/engine.py`
-> and `feedback/rules.py` are still `NotImplementedError` stubs. Pick up here next session.
->
-> Verified against the codebase on 2026-07-02: all referenced contracts/stubs exist as
-> described; nothing below is stale. No `contracts/intent.py`,
-> `analysis/{benchmarks,phases,checkpoints,scoring}` yet — all new. hatchling packages all of
-> `src/golf_coach`, so `benchmarks/ranges.json` ships without pyproject changes.
+> **Status: IMPLEMENTED (2026-07-03).** This plan has been built and verified end-to-end —
+> 27 tests on the base install, `ruff`/`mypy` clean, plus a real-clip eyeball. All 10
+> change-sets below landed as written, with one correction found during the eyeball (phase
+> segmentation anchors on the top of the backswing, not "first motion" — see the milestone
+> doc). For the as-built write-up, findings, and file list see
+> **[M4_ANALYSIS_POC.md](M4_ANALYSIS_POC.md)**. This plan is retained as the record of the
+> agreed design.
 
 ## Context
 
@@ -52,6 +51,57 @@ PracticeGoal ──────┤→ analyze_swing()
                                                                      ↓
                                           feedback.build_feedback(result) → FeedbackPayload
 ```
+
+## Runtime sequence (this PoC)
+
+One `analyze_swing → build_feedback` call, pose-only. Mirrors the data flow above but shows
+the call order and the two "no benchmark → no score, never a wrong one" bail-out points
+(ADR-010 §2). Everything here is a pure function on contracts — no I/O, no hardware.
+
+```mermaid
+sequenceDiagram
+    actor Caller as Caller (script / test)
+    participant Eng as analyze_swing
+    participant Ph as phases.segment_phases
+    participant Chk as checkpoints.evaluate_tempo
+    participant Bench as benchmarks.resolve_range
+    participant Score as scoring.policy_for(mode)
+    participant FB as feedback.build_feedback
+
+    Caller->>Eng: analyze_swing(swing_id, session_id,\n keypoints, intent=PracticeGoal())
+    note over Eng: intent defaults to Fundamentals
+
+    Eng->>Ph: segment_phases(keypoints)
+    Ph->>Ph: track lead-wrist y, finite-diff velocity,\n find start / top / impact
+    Ph-->>Eng: list[PhaseSegment] (6 phases)
+
+    Eng->>Chk: evaluate_tempo(phases, club, profile)
+    Chk->>Chk: observed = backswing_ms / downswing_ms
+    Chk->>Bench: resolve_range("tempo_ratio", club, profile)
+    alt range found
+        Bench-->>Chk: ResolvedRange(low, high, source)
+        Chk-->>Eng: CheckpointScore("tempo", …)
+    else no benchmark row
+        Bench-->>Chk: None
+        Chk-->>Eng: None  (checkpoint dropped)
+    end
+
+    Eng->>Score: combine(mechanics=[…], outcome=[])
+    Score->>Score: mechanics = mean(scores)*100,\n outcome = None, overall = mechanics
+    Score-->>Eng: AxisScores(mechanics, outcome, overall)
+    Eng-->>Caller: SwingResult(intent, sub-scores,\n phases, checkpoint_scores)
+
+    Caller->>FB: build_feedback(result)
+    FB->>FB: map each CheckpointScore → Tip\n (severity from passed/score)
+    FB-->>Caller: FeedbackPayload(overall_score, tips)
+```
+
+**Reading it:** the engine is a thin orchestrator; each analysis step is an independent pure
+function meeting only at contracts. The two dashed exits (`resolve_range → None`) are the
+ADR-010 rule that a missing benchmark yields *no* score rather than a wrong one — the tempo
+checkpoint simply drops out and the overall score reflects only what could be judged. The
+`outcome=[]` list and `outcome_score=None` are the named seam where full M4 adds the outcome
+axis without reshaping this call.
 
 ## Changes
 

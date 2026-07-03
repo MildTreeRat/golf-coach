@@ -113,3 +113,15 @@ captured calibration swings** (and eventually a personal baseline: "vs. your las
   our own data. The store makes that migration a data swap.
 - Pairs with [ADR-009](009-swing-scoring-model.md): intent selects *which* range applies
   (e.g. fade vs. straight face-to-path); this ADR governs *where the numbers come from*.
+
+## Addendum (2026-07-03): PoC ships JSON, not YAML
+
+This decision says ranges live in a data file, "YAML/JSON" — either is acceptable. The
+**M4-PoC** implementation ships **JSON** (`src/golf_coach/analysis/benchmarks/ranges.json`),
+loaded via `importlib.resources`. Rationale: it keeps the analysis core on the **standard
+library** (`json` is built in; YAML would add PyYAML to the *base* install), consistent with
+ADR-008's "analysis is a pure functional core" that runs on `pip install -e .` with no extras.
+The schema is unchanged from §1 (each row carries `source` / `source_date` / provenance), and
+the resolver contract (`resolve_range(...)` with most-specific → `all` fallback) is exactly as
+specified. If human-authored comments or multi-document ergonomics later justify it, switching
+to YAML is a loader change behind `resolve_range`, not a schema or contract change.

@@ -1,6 +1,6 @@
 # Roadmap: AI Golf Swing Trainer
 
-## Last Updated: 2026-06-28
+## Last Updated: 2026-07-03
 
 ---
 
@@ -109,16 +109,23 @@ scoring engine.
 **Decisions behind it**: scoring model in [ADR-009](docs/decisions/009-swing-scoring-model.md);
 benchmark ranges in [ADR-010](docs/decisions/010-benchmark-ranges.md).
 
-- [ ] Add `PracticeGoal` intent contract (mode + target shape + club + focus_checkpoint)
-- [ ] Extend `SwingResult` with `mechanics_score`, `outcome_score`, and the judged `intent`
-- [ ] Add the benchmark store: data file + `resolve_range(checkpoint, club, profile)` with
+- [x] Add `PracticeGoal` intent contract (mode + target shape + club + focus_checkpoint)
+- [x] Extend `SwingResult` with `mechanics_score`, `outcome_score`, and the judged `intent`
+- [x] Add the benchmark store: data file + `resolve_range(checkpoint, club, profile)` with
       fallback; seed **Tour Tempo (~3:1)** as the only range (ADR-010)
-- [ ] Implement phase segmentation (address → … → follow-through) from keypoints
-- [ ] Implement the **tempo** mechanics checkpoint (backswing:downswing ratio); optionally
-      address posture (spine angle)
-- [ ] Implement `scoring.py` with the **Fundamentals** policy (mechanics 100%, outcome=None)
-- [ ] Implement rule-based tip(s) for the tempo checkpoint (feedback/rules.py)
-- [ ] Wire it end-to-end over an M1 sample clip and eyeball the result
+- [x] Implement phase segmentation (address → … → follow-through) from keypoints
+- [x] Implement the **tempo** mechanics checkpoint (backswing:downswing ratio) *(address
+      posture deferred — needs down-the-line/3D, ADR-011)*
+- [x] Implement `scoring.py` with the **Fundamentals** policy (mechanics 100%, outcome=None)
+- [x] Implement rule-based tip(s) for the tempo checkpoint (feedback/rules.py)
+- [x] Wire it end-to-end over an M1 sample clip and eyeball the result
+
+> **Status (2026-07-03):** implemented and verified end-to-end (27 tests on the base install,
+> `ruff`/`mypy` clean) plus a real-clip eyeball on the face-on `aaron-swing-2` keypoints.
+> Design doc: [docs/M4_ANALYSIS_POC.md](docs/M4_ANALYSIS_POC.md). Finding: phase segmentation
+> now anchors on the top of the backswing (not "first motion") so a long pre-swing setup
+> isn't mistaken for the backswing; segmentation *accuracy* (smoothing, more checkpoints) is
+> the next thing to harden in full M4.
 
 **Exit Criteria**: A real `SwingResult` + `FeedbackPayload` produced from a sample swing
 clip with a tempo score and a plain-English tip — with the intent/dual-axis seam in place
