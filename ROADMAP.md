@@ -1,6 +1,6 @@
 # Roadmap: AI Golf Swing Trainer
 
-## Last Updated: 2026-07-03
+## Last Updated: 2026-07-16
 
 ---
 
@@ -130,6 +130,48 @@ benchmark ranges in [ADR-010](docs/decisions/010-benchmark-ranges.md).
 **Exit Criteria**: A real `SwingResult` + `FeedbackPayload` produced from a sample swing
 clip with a tempo score and a plain-English tip — with the intent/dual-axis seam in place
 so M2/M3 add the outcome axis without reworking contracts.
+
+---
+
+## Milestone 4-PoC+: Hardened Fundamentals Panel (pose-only)
+**Goal**: Make the pose analysis *trustworthy without hardware* — precision via a landmark
+smoothing pass, visual verification via an annotated overlay — and widen the panel with the
+checkpoints face-on 2D pose measures well. Design doc:
+[docs/M4_FUNDAMENTALS_PANEL.md](docs/M4_FUNDAMENTALS_PANEL.md).
+
+- [x] Add a temporal **smoothing** pass (`analysis/smoothing.py`), applied once in the engine
+- [x] Feed smoothed keypoints to phase segmentation so top/impact are stable frame-to-frame
+- [x] Add **head sway** checkpoint (lateral head travel, shoulder-width normalized)
+- [x] Add **finish balance** checkpoint (post-impact settle, shoulder-width normalized)
+- [x] Seed provisional benchmark rows (labelled `PROVISIONAL / UNCALIBRATED`, ADR-010 addendum)
+- [x] Add `scripts/analyze_swing.py` — text report **+ annotated overlay** (ADDRESS/TOP/IMPACT
+      markers + score HUD) as the no-hardware accuracy check
+- [x] Verify: 39 tests (base install), ruff/mypy clean, real-clip run + overlay eyeball
+
+> **Status (2026-07-16):** done & verified. The overlay localized the remaining error — top &
+> impact detect correctly, but **motion-start lands mid-takeaway**, deflating tempo to ~1:1.
+> Hardening motion-start is the next segmentation task; sway/balance bands await calibration.
+
+**Exit Criteria**: A real swing scored on three pose-only checkpoints with an annotated overlay
+that lets a human verify the detected instants — met.
+
+---
+
+## Hardware Re-Validation Gate (revisit when cameras / launch monitor arrive)
+**Why this exists**: several M4-PoC/PoC+ choices are the best we can do from a single face-on
+camera with no ground truth. They are deliberately provisional and must be re-checked — not
+silently trusted — once hardware (down-the-line camera per ADR-011, Garmin R10 per ADR-004)
+lands. Everything flagged here is greppable in-code via `HARDWARE-REVALIDATE:` comments and via
+the `PROVISIONAL / UNCALIBRATED` provenance strings in `ranges.json`.
+
+- [ ] **Recalibrate provisional bands** — replace `head_sway_norm` / `finish_balance_norm` with
+      values derived from captured ground-truth swings (they are uncalibrated heuristics today)
+- [ ] **Validate phase instants** — check top/impact (and the smoothing window) against club/ball
+      detection (M2) and R10 impact timing (M3); re-tune the pose-only tempo against real impact
+- [ ] **Revisit deferred checkpoints** — spine tilt, hip rotation, X-factor, swing plane become
+      measurable with the down-the-line view / 3D fusion (ADR-011); add them to the panel
+- [ ] **Re-tune smoothing** — window / weighting were set by eye on ~60fps phone clips; global
+      shutter + higher fps may want different values
 
 ---
 

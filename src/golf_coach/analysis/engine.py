@@ -9,9 +9,14 @@ seams where full M4 adds club detection and launch-monitor scoring (ADR-009).
 
 from __future__ import annotations
 
-from golf_coach.analysis.checkpoints import evaluate_tempo
+from golf_coach.analysis.checkpoints import (
+    evaluate_finish_balance,
+    evaluate_head_sway,
+    evaluate_tempo,
+)
 from golf_coach.analysis.phases import segment_phases
 from golf_coach.analysis.scoring import policy_for
+from golf_coach.analysis.smoothing import smooth_keypoints
 from golf_coach.contracts.detections import FrameDetections
 from golf_coach.contracts.intent import PracticeGoal
 from golf_coach.contracts.keypoints import FrameKeypoints
@@ -35,12 +40,20 @@ def analyze_swing(
     """
     intent = intent or PracticeGoal()
 
-    phases = segment_phases(keypoints)
+    # Denoise once, up front, so phase instants and every checkpoint read a stable signal
+    # (raw MediaPipe landmarks jitter frame-to-frame). SwingResult still keeps the raw
+    # keypoints below as the source data this result was computed from.
+    smoothed = smooth_keypoints(keypoints)
+    phases = segment_phases(smoothed)
 
     mechanics: list[CheckpointScore] = []
-    tempo = evaluate_tempo(phases, club=intent.club)
-    if tempo is not None:
-        mechanics.append(tempo)
+    for checkpoint in (
+        evaluate_tempo(phases, club=intent.club),
+        evaluate_head_sway(smoothed, phases, club=intent.club),
+        evaluate_finish_balance(smoothed, phases, club=intent.club),
+    ):
+        if checkpoint is not None:
+            mechanics.append(checkpoint)
 
     # Pose-only PoC: no outcome checkpoints yet (needs M2 detection / M3 shot data).
     outcome: list[CheckpointScore] = []

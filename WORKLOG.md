@@ -5,6 +5,45 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-07-16 — M4-PoC+: hardened Fundamentals panel (smoothing, 2 checkpoints, verification overlay)
+
+**Duration**: ~2 hours
+**What I did**: Made the pose analysis *trustworthy without hardware*, per the approved plan
+([docs/M4_FUNDAMENTALS_PANEL.md](docs/M4_FUNDAMENTALS_PANEL.md)). New `analysis/smoothing.py`
+(visibility-weighted centered moving average, stdlib only), applied once in `engine.analyze_swing`
+so phase segmentation + checkpoints read a denoised signal. Added two pose-only mechanics
+checkpoints in `checkpoints/mechanics.py` — `evaluate_head_sway` (lateral nose travel to impact)
+and `evaluate_finish_balance` (post-impact hip-center settle), both shoulder-width normalized;
+extracted the shared `_score_within_range`/geometry helpers. Seeded two **PROVISIONAL /
+UNCALIBRATED** benchmark rows (`head_sway_norm`, `finish_balance_norm`) — data-only, ADR-010
+addendum. New `scripts/analyze_swing.py`: prints a scores+tips report AND (with `--overlay`)
+renders an annotated clip stamping ADDRESS/TOP/IMPACT + a score HUD, via a new
+`pose/overlay.py:annotate_frame`. Wrote the feature doc (two mermaid diagrams, reliable-vs-deferred
+table, SOLID/GRASP notes), a ROADMAP **M4-PoC+** section + a new **Hardware Re-Validation Gate**,
+and the ADR-010 addendum.
+**Verification**: `pytest` → **39 passed** on the base install (was 27); `ruff` clean; `mypy
+src/golf_coach/analysis src/golf_coach/feedback` clean. Real-clip run on face-on `aaron-swing-2`:
+produced a 3-checkpoint SwingResult (tempo MISS 1.05:1, head_sway PASS, finish_balance PASS) and a
+656-frame annotated overlay; extracted and eyeballed the marked frames.
+**Key decisions / surprises**:
+- **Dropped the plan's velocity-based impact detector.** Implementing it revealed it *miscalibrates*
+  tempo: peak hand speed precedes ball contact, so it shortens the downswing and inflates the ratio,
+  breaking the Tour-Tempo calibration (and the synthetic tests). Reverted impact to the correct
+  return-to-address-height rule; **smoothing is the real robustness win**, not a new impact rule.
+- **The overlay earned its keep immediately** — it localized the remaining tempo error. TOP @ 383 and
+  IMPACT @ 423 are visually correct, but **motion-start @ 341 lands mid-takeaway**, truncating the
+  backswing to ~42 frames → the ~1:1 reading. So tempo is low because of *motion-start*, not top/impact.
+- Provisional bands are labelled as such (greppable) and gated in the Hardware Re-Validation Gate;
+  `HARDWARE-REVALIDATE:` comments mark every spot to revisit when cameras/R10 arrive.
+**Where I left off**: M4-PoC+ done & verified. Next segmentation task is **hardening motion-start**
+(anchor the takeaway on the last stable-setup frame, not the last frame at/above address height) —
+that's what will finally make tempo believable. Sway/balance await calibration data.
+**Blockers**: None — pose-only, no hardware.
+**Notes**: Tip/HUD/banner text stays ASCII (plain hyphen) for the Windows console. The `pytest`
+run needs `--basetemp`/`-p no:cacheprovider` redirected to the scratchpad under the sandbox.
+
+---
+
 ## 2026-07-03 — M4-PoC implemented: pose-only Fundamentals analysis spine
 
 **Duration**: ~2 hours

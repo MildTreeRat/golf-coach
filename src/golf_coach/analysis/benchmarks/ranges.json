@@ -10,6 +10,26 @@
       "source": "Tour Tempo (Novosel) ~3:1 backswing:downswing across tour players",
       "source_date": "2004",
       "added": "2026-07-02"
+    },
+    {
+      "checkpoint": "head_sway_norm",
+      "club_category": "all",
+      "skill_level": "all",
+      "low": 0.0,
+      "high": 0.5,
+      "source": "PROVISIONAL / UNCALIBRATED internal heuristic - lateral nose travel to impact in shoulder-widths; revisit with captured ground-truth data (see ROADMAP hardware re-validation gate, ADR-011)",
+      "source_date": "2026-07-16",
+      "added": "2026-07-16"
+    },
+    {
+      "checkpoint": "finish_balance_norm",
+      "club_category": "all",
+      "skill_level": "all",
+      "low": 0.0,
+      "high": 0.6,
+      "source": "PROVISIONAL / UNCALIBRATED internal heuristic - hip-center drift through follow-through in shoulder-widths; revisit with captured ground-truth data (see ROADMAP hardware re-validation gate, ADR-011)",
+      "source_date": "2026-07-16",
+      "added": "2026-07-16"
     }
   ]
 }

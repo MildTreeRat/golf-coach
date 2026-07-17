@@ -11,11 +11,22 @@ We only need three instants for the tempo checkpoint — **motion start**, **top
 backswing**, and **impact**. The top (highest hands = global minimum `y`) is the cleanest,
 least ambiguous signal, so we anchor on it and derive the other two *relative* to it: motion
 start is the last frame at/above address height while walking **backward** from the top (the
-start of the final rise), and impact is the first frame back at address height walking
-forward. Anchoring on the top keeps a long pre-swing setup/waggle from being mistaken for the
-backswing (see M4 findings). It is intentionally simple and a little noisy: tempo only depends
-on start/top/impact *timing*, not on precise posture. No numpy, no MediaPipe — just lists, so
-it runs on the base install (ADR-008).
+start of the final rise), and impact is the first frame back at/above address height walking
+**forward** from the top — the wrist returning to roughly ball height (fallback: the deepest
+point of the descent). This matches how Tour Tempo counts the downswing (to ball contact,
+ADR-010), so the ~3:1 benchmark stays calibrated. Anchoring on the top keeps a long pre-swing
+setup/waggle from being mistaken for the backswing (see M4 findings). It is intentionally
+simple: tempo only depends on start/top/impact *timing*, not on precise posture. No numpy, no
+MediaPipe — just lists, so it runs on the base install (ADR-008).
+
+**Expects smoothed input.** `engine.analyze_swing` runs `smoothing.smooth_keypoints` before
+calling this, so the wrist `y` series is already denoised and the top/impact instants are
+stable frame-to-frame — this is the real robustness win over the raw-landmark first pass
+(which misread a jittery clip as ~1.1:1). It still works on raw keypoints, just noisier.
+
+HARDWARE-REVALIDATE: top/impact are pose-only *proxies* for ball contact. When club/ball
+detection (M2) and launch-monitor timing (M3) land, validate them against real impact timing
+and against the annotated overlay (see docs/M4_FUNDAMENTALS_PANEL.md).
 """
 
 from __future__ import annotations
@@ -56,6 +67,20 @@ def _lead_wrist_y(keypoints: list[FrameKeypoints]) -> list[float]:
     return ys
 
 
+def _impact_frame(ys: list[float], top: int, n: int, address_y: float) -> int:
+    """Impact instant: first frame after the top where the wrist is back at/above address height.
+
+    `y` grows downward, so the descending wrist returns to ~ball height as it climbs back to
+    `address_y`. Falls back to the deepest point of the descent (max `y` after the top) when
+    the wrist never quite reaches the baseline (body shift, a short clip). Reads cleanly
+    because `engine` smooths the series first.
+    """
+    return next(
+        (i for i in range(top + 1, n) if ys[i] >= address_y),
+        max(range(top, n), key=ys.__getitem__),
+    )
+
+
 def _segment(phase: SwingPhase, start: int, end: int, ts: list[float]) -> PhaseSegment:
     return PhaseSegment(
         phase=phase,
@@ -94,12 +119,8 @@ def segment_phases(keypoints: list[FrameKeypoints]) -> list[PhaseSegment]:
         0,
     )
 
-    # Impact: first frame after the top where the wrist has returned to address height
-    # (fallback: the lowest point — max `y` — after the top).
-    impact = next(
-        (i for i in range(top + 1, n) if ys[i] >= address_y),
-        max(range(top, n), key=ys.__getitem__),
-    )
+    # Impact: peak downward wrist velocity on the descent (see `_impact_frame`).
+    impact = _impact_frame(ys, top, n, address_y)
 
     # Bracket a small symmetric window around the top (transition) and after impact, then
     # clamp everything into a monotonic, non-overlapping boundary chain.

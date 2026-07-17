@@ -125,3 +125,21 @@ The schema is unchanged from §1 (each row carries `source` / `source_date` / pr
 the resolver contract (`resolve_range(...)` with most-specific → `all` fallback) is exactly as
 specified. If human-authored comments or multi-document ergonomics later justify it, switching
 to YAML is a loader change behind `resolve_range`, not a schema or contract change.
+
+## Addendum (2026-07-16): two PROVISIONAL / UNCALIBRATED rows added (head sway, finish balance)
+
+The M4-PoC+ Fundamentals-panel work ([docs/M4_FUNDAMENTALS_PANEL.md](../M4_FUNDAMENTALS_PANEL.md))
+adds two pose-only mechanics checkpoints and seeds a benchmark row for each:
+`head_sway_norm` (`0.0–0.5`) and `finish_balance_norm` (`0.0–0.6`), both `(all, all)`, in
+shoulder-widths.
+
+**These are explicitly not published norms.** Unlike Tour Tempo (a cited, defensible source),
+these bands are *internal, uncalibrated heuristics* chosen by eye to give sensible pass/fail on
+the current face-on clips. Their `source` field says so verbatim and is greppable
+(`PROVISIONAL / UNCALIBRATED`). This is a deliberate, honest exception to §1's provenance rule
+for the PoC — the store's data-driven design means recalibrating them later is a **data edit**,
+not a code change.
+
+**Gate:** they are listed in the ROADMAP **Hardware Re-Validation Gate** for replacement with
+values derived from captured ground-truth data once the down-the-line camera / launch monitor
+land (ADR-011). Until then, treat sway/balance scores as directional, not authoritative.
