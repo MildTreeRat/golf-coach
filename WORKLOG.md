@@ -5,6 +5,66 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-08-02 — M4-REF Phase B: estimator bake-off settled, both provisional bands recalibrated
+
+**Duration**: ~4 hours (mostly background extraction)
+**What I did**: Finished the GolfDB reference work. Locked `_MAJOR_RISE_FRACTION` against the full
+corpus, ran the four-variant pose bake-off to completion, and replaced the last two
+`PROVISIONAL / UNCALIBRATED` bands in `ranges.json` with tour-derived ones. Every number is in
+`docs/M4_POSE_BAKEOFF.md` + `docs/pose_bakeoff_v1.json`; ADR-002 has an addendum recording the
+variant decision.
+**Verification**: `pytest` → **67 passed** on the base install (was 66; one rewritten, one new);
+`ruff` clean; `mypy` clean on `analysis` + `feedback`. End-to-end re-run of `scripts/analyze_swing.py`
+on both clips against the new bands.
+**Key decisions / surprises**:
+- **`_MAJOR_RISE_FRACTION` 0.50 → 0.80**, picked from the **plateau centre** (0.75–0.85 are flat at
+  ~10.5 mean top error) rather than the argmin. The old 0.50 was fit on 97 clips; on all 461 it costs
+  8 frames of mean error. Median top error is now 2 frames, impact 1 — against 21 and 35 for the
+  `argmin` rule this replaced. No effect at all on my own clips: both have a single dominant rising
+  run, so every fraction from 0.40–0.95 gives identical instants.
+- **Keep MediaPipe lite.** Twelve paired McNemar tests across lite/full/heavy — **not one reaches
+  p < 0.05**. full's +9.1pp at the top looked real at n=120 (p=0.099) and **evaporated to +1.9pp
+  (p=0.494) at n=461**, with lite ahead on mean PCE. Same overfitting-to-sample-size trap as the 0.50
+  constant, caught this time *before* it got baked into a band. heavy costs 4.4x and buys nothing,
+  which retires ADR-002's one-clip judgement with an actual number.
+- **RTMPose rejected by 24.7pp**, and the "3 fps, run it overnight or drop it" dilemma was false:
+  rtmlib's `Body` re-runs a YOLOX detector every frame, which is **35x** the pose model. Skipping it
+  (the clips are already bbox crops) gave **118 fps** — faster than lite — so the whole question cost
+  5 minutes instead of 3 hours. It still lost badly: same trajectory (r=0.948 with lite) but 1.5–4.3x
+  noisier per landmark, worst at the hip.
+- **Both eyeballed bands were loose; `finish_balance` by more than 2x.** head_sway 0.5 → **0.42**,
+  finish_balance 0.6 → **0.28** (p90 of 458 face-on swings from 122 tour golfers, measured at
+  GolfDB's *annotated* instants, never at our own segmentation). `aaron-swing-2` drops 100 → 78: its
+  0.47 finish drift was always there and sits above the 90th percentile of tour finishes.
+- **The tightened band exposed a vacuous test.** `test_finish_balance_survives_a_single_bad_frame`
+  asserted `passed is True` while the metric read 0.48 — it had only ever passed because 0.48 < 0.6,
+  and never demonstrated the p90 property at all. Root cause: `smooth_keypoints` is a 5-frame moving
+  average, so **one bad frame becomes five**, and p90 can only reject it beyond ~50 follow-through
+  frames. The fixture hardcoded **8**; the real corpus is p10 50 / p50 89. The metric is fine (only
+  8% of clips fall in the bad regime) — the fixture was testing a regime real footage never reaches.
+  A median center was tried and is *worse*; the center was never the problem.
+- **Calibrated the address constants too** — `_MOTION_QUIET_FRAC` / `_MOTION_STALL_FRAMES` were the
+  last things in `phases.py` still set from one clip. Swept over all 461: **0.08/3 → 0.05/4**, median
+  address error **13 → 9 frames**. Took the plateau centre again, *not* the grid minimum (8.0 at
+  0.03/2), which sits on the grid edge and falls apart one step in any direction. My own clips barely
+  move (address 322 → 319, tempo 3.39 → 3.52, no verdict change).
+- **Verified the corpus by eye, finally.** Added `scripts/golfdb/spot_check.py` — 5 clips x 4
+  ground-truth instants with production skeletons. Every other check this milestone was a statistic,
+  and I'd cut two committed bands from 458 clips without once looking at a pose. Torso/hips/
+  shoulders/legs correct in all 20 tiles, which is what the bands actually rest on.
+**Where I left off**: M4-REF is complete. `ranges.json` has no uncalibrated rows left, all three
+bands cite an inspectable distribution, and nothing in `phases.py` is tuned on a single clip any
+more. The one open item is **improving address detection** (median 9 frames, 46% of clips over 10) —
+now calibrated as far as the current rule goes, so further gains need a *different* rule, not a
+better constant. Intrinsically hard: SwingNet manages only 31.7% PCE there.
+**Blockers**: None.
+**Notes**: ~10% of corpus clips contain a *practice swing* before the annotated one, which no
+estimator fixes — those failures have **higher** tracking confidence than the successes (0.85 vs
+0.82), so they are structural, not pose quality. Nothing under `data/reference/` is committed; the
+only new committed data files are `golfdb_v1.json` and `pose_bakeoff_v1.json`.
+
+---
+
 ## 2026-08-01 — Hardened motion-start detection (velocity-anchored) → tempo is now honest
 
 **Duration**: ~1.5 hours

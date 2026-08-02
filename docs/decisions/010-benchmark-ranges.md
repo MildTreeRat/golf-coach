@@ -143,3 +143,30 @@ not a code change.
 **Gate:** they are listed in the ROADMAP **Hardware Re-Validation Gate** for replacement with
 values derived from captured ground-truth data once the down-the-line camera / launch monitor
 land (ADR-011). Until then, treat sway/balance scores as directional, not authoritative.
+
+## Addendum (2026-08-01): `tempo_ratio` re-sourced from GolfDB — see ADR-012
+
+§4 above said "longer term, replace published norms with ranges derived from our own captured
+calibration swings." The first half of that migration has happened, via an interim source this ADR
+did not anticipate: [ADR-012](012-golfdb-reference-data.md) adopts **GolfDB** — 1,400 hand-annotated
+tour swings — as a reference population.
+
+`tempo_ratio` moves from Tour Tempo's **2.7–3.3** to the **2.72–4.71** p10–p90 of 1,399 clips from
+246 tour golfers. Novosel's floor was essentially right and his ceiling was not: the book band
+captured roughly the lower third of the real tour distribution (median 3.39).
+
+Three things this validates about the design here:
+
+- **It was a data edit.** `store.py`, `resolve_range`, and the schema were untouched; the fallback
+  semantics did not move. Exactly what §1 and the Consequences promised.
+- **Provenance carried the reasoning.** The new row's `source` records n, the golfer count, the
+  derivation, and what it replaced — so the *next* person to touch it can tell whether it is still
+  the best available number.
+- **One gap the schema does not cover.** `_score_within_range` decays in *band-widths*, so widening
+  a band also softens every partial score computed against it. Re-sourcing a band is therefore not
+  a purely local change to its pass/fail boundary, and nothing in the row records that coupling.
+  Worth remembering when the remaining rows are re-cut.
+
+The two `PROVISIONAL / UNCALIBRATED` rows are **not** yet replaced; they need pose over the clip
+corpus rather than labels alone (ADR-012 Phase B). The Hardware Re-Validation Gate item for them
+stands, though ADR-012 shows it no longer strictly requires hardware.

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from conftest import _ADDRESS_FRAMES, make_swing
 
-from golf_coach.analysis.phases import segment_phases
+from golf_coach.analysis.phases import _rising_runs, segment_phases
 from golf_coach.analysis.smoothing import smooth_keypoints
 from golf_coach.contracts.keypoints import FrameKeypoints
 from golf_coach.contracts.swing import SwingPhase
@@ -47,6 +47,49 @@ def test_top_detected_near_true_top_on_smoothed_swing() -> None:
     transition = next(p for p in phases if p.phase is SwingPhase.TRANSITION)
     top = (transition.start_frame + transition.end_frame) // 2
     assert 34 <= top <= 41
+
+
+def test_top_survives_a_finish_higher_than_the_top() -> None:
+    """The regression that GolfDB exposed. [M4-REF]
+
+    A full tour finish leaves the hands **higher** than they ever were at the top of the backswing,
+    so "top = global minimum of wrist y" locates the *finish* instead. Measured against GolfDB's
+    hand-annotated events, the old rule was a median of 26 frames late and wrong on 80% of tour
+    clips — and no clip we owned could have shown it, because none of them finish that high.
+
+    Here the finish (`0.05`) is well above the top (`_TOP_Y == 0.15`). The detected top must stay
+    on the backswing, not jump to the end of the clip.
+    """
+    smoothed = smooth_keypoints(make_swing(30, 10, finish_y=0.05))
+    phases = segment_phases(smoothed)
+    transition = next(p for p in phases if p.phase is SwingPhase.TRANSITION)
+    top = (transition.start_frame + transition.end_frame) // 2
+    assert 34 <= top <= 41, f"top landed at {top} — likely the finish, not the top of backswing"
+
+    # And the swing must still segment sanely around it, rather than collapsing to a sliver.
+    impact = next(p for p in phases if p.phase is SwingPhase.IMPACT)
+    assert top < impact.start_frame < len(smoothed) - 1
+
+
+def test_rising_runs_ignore_untracked_frames() -> None:
+    """Held-forward values must not manufacture a descent. [M4-REF]
+
+    `_lead_wrist_xy` carries the last confident position through dim frames to keep the series
+    continuous. That is right for smoothing and wrong for finding extrema: the held stretch is not
+    evidence of where the hands went. Here the untracked middle sits far below the tracked frames,
+    which without the confidence mask would read as by far the largest descent in the clip.
+    """
+    ys = [0.50, 0.40, 0.30, 0.95, 0.95, 0.95, 0.32, 0.40, 0.50]
+    confident = [True, True, True, False, False, False, True, True, True]
+
+    runs = _rising_runs(ys, confident)
+
+    assert runs, "the genuine 0.30 -> 0.50 descent should still be found"
+    assert max(rise for rise, _, _ in runs) < 0.30, (
+        "a run spanning the untracked plateau was scored — the 0.30 -> 0.95 jump is an artefact "
+        "of holding the last good value, not a descent of the hands"
+    )
+    assert all(not 3 <= end <= 5 for _, _, end in runs)
 
 
 def test_motion_start_includes_horizontal_takeaway() -> None:

@@ -164,6 +164,47 @@ that lets a human verify the detected instants — met.
 
 ---
 
+## M4-REF: GolfDB reference data (no hardware) — in progress
+**Goal**: Replace eyeballed benchmark bands with ranges derived from a real population of tour
+swings, and validate our instruments against ground truth — both without buying hardware. See
+[ADR-012](docs/decisions/012-golfdb-reference-data.md) and the change ledger in
+[docs/M4_POSE_BAKEOFF.md](docs/M4_POSE_BAKEOFF.md).
+
+- [x] **Metric definitions v2** — `finish_balance` `max` → p90 (one bad frame no longer sets the
+      score), `head_sway` `NOSE` → ear-midpoint (the nose rides on a rotating head), stricter hip
+      visibility gate. Landed *before* band derivation, since a band only means something against
+      the definition it was cut from
+- [x] **`tempo_ratio` re-sourced** — 2.7–3.3 (a book) → **2.72–4.71**, the p10–p90 of 1,399
+      hand-annotated clips from 246 tour golfers. Novosel's floor was right; his ceiling captured
+      only the lower third of the real distribution
+- [x] **Fixed top-of-backswing detection** — ground truth showed "top = highest hands" was a
+      median of **26 frames late on 80%** of tour clips: a full finish puts the hands higher than
+      the top, so it was finding the finish. Rebuilt around the earliest major descent; median
+      error now **2 frames** (top) and **1** (impact) over the full 461-clip corpus, against 21
+      and 35 for the rule it replaced
+- [x] **Estimator bake-off** — MediaPipe lite/full/heavy vs RTMPose-m on identical clips, scored on
+      event recovery against ground truth. **Kept lite**: no MediaPipe variant differs significantly
+      from another (12 paired McNemar tests, none p < 0.05), heavy costs 4.4x for nothing, and
+      RTMPose lost by 24.7pp. full's apparent +9.1pp edge at n=120 vanished to +1.9pp at n=461 —
+      the same sample-size trap that had mis-tuned the descent threshold. See
+      [ADR-002 addendum](docs/decisions/002-pose-estimation-mediapipe.md)
+- [x] **Recalibrated `head_sway_norm` / `finish_balance_norm`** — 0.5 → **0.42** and 0.6 → **0.28**,
+      the p90 of 458 face-on swings from 122 tour golfers, measured at GolfDB's *annotated* instants
+      rather than our own segmentation. Both eyeballed bands were loose; `finish_balance` by over 2x.
+      `ranges.json` now has **no `PROVISIONAL / UNCALIBRATED` rows left**
+- [x] **Calibrated the address constants** — `_MOTION_QUIET_FRAC` / `_MOTION_STALL_FRAMES` were set
+      from one clip's speed profile; swept against all 461, they move 0.08/3 → **0.05/4** (the
+      centre of a plateau, not the grid-edge argmin), cutting median address error **13 → 9 frames**
+- [ ] Improve address detection — still the weakest instant (median 9 frames, 46% of clips over 10)
+      and now calibrated as far as the current rule goes, so further gains need a *different* rule.
+      Intrinsically hard: the takeaway onset is a gradual departure from stillness rather than a
+      direction change, and GolfDB's own SwingNet manages only 31.7% PCE here
+
+**Exit Criteria**: every band in `ranges.json` traceable to an inspectable distribution, and phase
+instants validated against hand-annotated ground truth — **met**, apart from the address instant.
+
+---
+
 ## Hardware Re-Validation Gate (revisit when cameras / launch monitor arrive)
 **Why this exists**: several M4-PoC/PoC+ choices are the best we can do from a single face-on
 camera with no ground truth. They are deliberately provisional and must be re-checked — not
@@ -171,10 +212,16 @@ silently trusted — once hardware (down-the-line camera per ADR-011, Garmin R10
 lands. Everything flagged here is greppable in-code via `HARDWARE-REVALIDATE:` comments and via
 the `PROVISIONAL / UNCALIBRATED` provenance strings in `ranges.json`.
 
-- [ ] **Recalibrate provisional bands** — replace `head_sway_norm` / `finish_balance_norm` with
-      values derived from captured ground-truth swings (they are uncalibrated heuristics today)
-- [ ] **Validate phase instants** — check top/impact (and the smoothing window) against club/ball
-      detection (M2) and R10 impact timing (M3); re-tune the pose-only tempo against real impact
+- [x] **Recalibrate provisional bands** — **done without hardware** (M4-REF Phase B): both are now
+      p90 of 458 face-on tour swings (122 golfers), and the `PROVISIONAL / UNCALIBRATED` provenance
+      strings are gone. *Still worth re-checking against our own captured swings — a tour population
+      says what good looks like, not what this camera measures; and the same estimator processing
+      both sides is what makes the comparison fair, so common-mode bias is cancelled, not removed.*
+- [x] **Validate phase instants** — **done without hardware** (M4-REF): validated against GolfDB's
+      461 hand-annotated face-on clips, which found and fixed a systematic top-detection defect.
+      Median error now 2 frames (top), 1 (impact), 9 (address). Real impact timing from M2/M3 is
+      still the stronger check for *impact specifically*, but the pose-only instants are no longer
+      unvalidated guesses tuned on one clip
 - [ ] **Revisit deferred checkpoints** — spine tilt, hip rotation, X-factor, swing plane become
       measurable with the down-the-line view / 3D fusion (ADR-011); add them to the panel
 - [ ] **Re-tune smoothing** — window / weighting were set by eye on ~60fps phone clips; global
@@ -241,7 +288,13 @@ the `PROVISIONAL / UNCALIBRATED` provenance strings in `ranges.json`.
       (ADR-003 addendum 2026-07-02b)
 - [ ] **Camera synchronization + multi-view 3D fusion** (ADR-011) — phased: software/event
       sync first, hardware trigger later; unlocks true 3D spine angle, hip rotation, X-factor
-- [ ] Swing comparison overlay (your swing vs. reference pro swing)
+- [ ] Swing comparison overlay (your swing vs. reference pro swing) — **most of the groundwork
+      exists**: M4-REF's Tier 1 cache holds 461 face-on tour swings as keypoints in the *exact*
+      `FrameKeypoints` serialization `analyze_swing()` already loads, so a reference swing replays
+      through the existing pipeline unchanged. What is missing is selection (which pro, matched on
+      club/sex/build?) and spatial normalization, not extraction. Note the corpus is gitignored for
+      licensing (ADR-012), so shipping this needs a redistribution story — aggregate percentiles are
+      committable, per-clip keypoints of named tour players are not
 - [ ] Drill recommendations based on persistent faults
 - [ ] Trained ML model for swing quality regression (replace/augment rules)
 - [ ] Mobile companion app

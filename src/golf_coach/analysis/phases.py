@@ -7,26 +7,49 @@ so during the swing the wrist traces: rest (high `y`) → rises through the back
 falls to a minimum at the top) → falls back through the downswing (`y` climbs) → impact near
 address height → follow-through (rises again).
 
-We only need three instants for the tempo checkpoint — **motion start**, **top of
-backswing**, and **impact**. The top (highest hands = global minimum `y`) is the cleanest,
-least ambiguous signal, so we anchor on it and derive the other two *relative* to it: motion
-start is found by **2D wrist speed** — walking **backward** from the top and taking the takeaway
-to begin just after the last sustained *quiet* (low-speed) stretch — and impact is the first
-frame back at/above address height walking **forward** from the top — the wrist returning to
-roughly ball height (fallback: the deepest point of the descent). This matches how Tour Tempo
-counts the downswing (to ball contact, ADR-010), so the ~3:1 benchmark stays calibrated.
-Anchoring on the top keeps a long pre-swing setup/waggle from being mistaken for the backswing.
-Using *speed* (not wrist height) to find the start is what makes tempo believable: the early
-takeaway is near-horizontal — the lead wrist moves back at roughly constant height — so an
-earlier rule that keyed on the wrist *rising* past address height missed that horizontal move,
-landed motion-start mid-takeaway, and collapsed tempo toward ~1:1 (see M4 findings). It is
-intentionally simple: tempo only depends on start/top/impact *timing*, not on precise posture.
+We only need three instants for the tempo checkpoint — **motion start**, **top of backswing**, and
+**impact**.
+
+**Top and impact are found together, as the two ends of the downswing.** The downswing is the
+longest sustained stretch of the hands *coming down* (rising `y`), so we scan for near-monotone
+rising runs and take the **earliest** one within half the size of the largest. Ordering carries the
+decision: a full finish leaves the hands higher than they were at the top, and lost tracking after
+the finish adds spurious excursions, so "the biggest descent" can easily be something that is not
+the downswing — but nothing in a golf swing descends before the downswing does. That is also why
+the rule needs no address baseline, no fps assumption, and no per-camera threshold.
+
+An earlier version anchored on the global minimum of wrist `y` ("highest hands"). Validated against
+GolfDB's hand-annotated events it mislocated the top by a **median of 26 frames**, always late,
+failing on 80% of tour clips — it was finding the finish. The rule here reduces that to a median of
+**2 frames** with a 7% failure rate; the residual cases are clips containing a practice swing before
+the real one, which no amount of pose accuracy resolves. See docs/M4_POSE_BAKEOFF.md.
+
+**Motion start** is then found *relative* to the top, by 2D wrist speed: walk backward and take the
+takeaway to begin just after the last sustained *quiet* stretch. Using speed rather than wrist
+height is what makes tempo believable — the early takeaway is near-horizontal, so a height rule
+missed it, landed motion-start mid-takeaway, and collapsed tempo toward ~1:1 (M4 findings).
+
+Counting the downswing to ball contact matches how Tour Tempo defines it (ADR-010), so the
+benchmark stays calibrated. Tempo depends only on start/top/impact *timing*, never on posture.
 No numpy, no MediaPipe — just lists, so it runs on the base install (ADR-008).
 
 **Expects smoothed input.** `engine.analyze_swing` runs `smoothing.smooth_keypoints` before
 calling this, so the wrist `y` series is already denoised and the top/impact instants are
 stable frame-to-frame — this is the real robustness win over the raw-landmark first pass
 (which misread a jittery clip as ~1.1:1). It still works on raw keypoints, just noisier.
+
+**Rejected (M4-REF, 2026-08-01): sub-frame parabola refinement of the top.** The textbook remedy
+for a flat extremum is to fit a parabola near the `argmin` and take its vertex, on the theory that
+the neighbouring samples pin the vertex better than the single lowest one does. It does not apply
+here. The top of a golf swing is not a *symmetric* flat extremum — it is an asymmetric reversal,
+and a symmetric-window fit is pulled toward whichever side has the shallower slope. Measured on our
+two clips the lead wrist approaches the top at ~-0.006/frame and leaves it at ~+0.002/frame, and
+the fit moved the top **+1 frame later**; on a synthetic swing with the asymmetry reversed it moved
+it *earlier*. A correction whose sign depends on the local shape of the trajectory is a
+data-dependent bias, not noise reduction — and it would differ between broadcast reference footage
+and phone clips, which is precisely where we need the two to stay comparable. The raw `argmin` on
+the smoothed series is left in place; how well it actually locates the top is measured against
+GolfDB's ground-truth event labels rather than guessed at (see docs/M4_POSE_BAKEOFF.md).
 
 HARDWARE-REVALIDATE: top/impact are pose-only *proxies* for ball contact. When club/ball
 detection (M2) and launch-monitor timing (M3) land, validate them against real impact timing
@@ -44,9 +67,17 @@ _LEAD_WRIST = PoseLandmark.LEFT_WRIST
 # last good `y` rather than trust a low-confidence jump (MediaPipe convention).
 _MIN_VISIBILITY = 0.5
 
-# The address baseline is the mean lead-wrist `y` over the first few frames (the golfer is
-# still at setup). Used to locate impact (the wrist's return to ball height).
-_ADDRESS_SAMPLE_FRAMES = 5
+# A rising run tolerates a dip of this fraction of the rise it has already accumulated before it
+# is considered over. A real downswing is not perfectly monotone in a 2D track; testing for strict
+# monotonicity shatters it into fragments and ends up scoring noise instead of the swing.
+_DRAWDOWN_TOLERANCE = 0.25
+
+# A rising run counts as a candidate downswing at this fraction of the largest rise in the clip.
+# Tuned against GolfDB ground truth over the full 461-clip face-on corpus (see
+# `docs/M4_POSE_BAKEOFF.md`): mean top error is flat at ~10.5 frames across 0.75-0.85 and rises on
+# both sides, so this is the centre of a plateau rather than an argmin. An earlier 97-clip sweep
+# put the optimum at 0.50; that was sample size, not signal.
+_MAJOR_RISE_FRACTION = 0.80
 
 # Motion start is velocity-anchored. The lead wrist is *still* at setup (and momentarily between
 # waggle bobs) but moves continuously once the takeaway begins — including the early, near-
@@ -54,11 +85,22 @@ _ADDRESS_SAMPLE_FRAMES = 5
 # from the top, take the takeaway to begin just after the last sustained *quiet* stretch: at least
 # `_MOTION_STALL_FRAMES` consecutive frames slower than `_MOTION_QUIET_FRAC` of the swing's peak
 # wrist speed. Both are scale- and fps-invariant (a fraction of the swing's own peak speed; a
-# frame count small enough to sit inside a real setup dwell). 8% cleanly separates a still setup
-# (with small waggle jitter, ~3% of peak on the aaron-swing-2 clip) from the takeaway onset
-# (which jumps past ~12%); tuned against that clip's speed profile and the overlay.
-_MOTION_QUIET_FRAC = 0.08
-_MOTION_STALL_FRAMES = 3
+# frame count small enough to sit inside a real setup dwell).
+#
+# Tuned against GolfDB ground truth over the 461-clip face-on corpus (docs/M4_POSE_BAKEOFF.md).
+# Both sit at the centre of a plateau where median address error is flat at 9 frames across
+# fractions 0.05-0.06 and stalls 3-6. The grid argmin is (0.03, 2) at 8 frames, but it sits on the
+# grid edge and degrades immediately in every direction — the same edge-fit that had mis-set
+# `_MAJOR_RISE_FRACTION`. The earlier (0.08, 3) was read off one clip's speed profile, where waggle
+# jitter sat ~3% of peak and the takeaway jumped past ~12%; across 461 swings that reasoning was
+# sound but the value was 4 frames of median error too high.
+#
+# Address remains the weakest instant by a wide margin (median 9 frames, 46% of clips over 10),
+# and this is a calibration, not a fix. It is intrinsically hard — GolfDB's own SwingNet reaches
+# only 31.7% PCE here — because the takeaway onset is a gradual departure from stillness rather
+# than a direction change like the top or a contact event like impact.
+_MOTION_QUIET_FRAC = 0.05
+_MOTION_STALL_FRAMES = 4
 
 # Half-widths (in frames) of the transition window straddling the top of the backswing and
 # of the impact window straddling the return to address height. Small, symmetric, heuristic.
@@ -81,18 +123,74 @@ def _lead_wrist_xy(keypoints: list[FrameKeypoints]) -> list[tuple[float, float]]
     return points
 
 
-def _impact_frame(ys: list[float], top: int, n: int, address_y: float) -> int:
-    """Impact instant: first frame after the top where the wrist is back at/above address height.
+def _wrist_confident(keypoints: list[FrameKeypoints]) -> list[bool]:
+    """Per-frame mask: was the lead wrist actually tracked, or is `_lead_wrist_xy` holding?
 
-    `y` grows downward, so the descending wrist returns to ~ball height as it climbs back to
-    `address_y`. Falls back to the deepest point of the descent (max `y` after the top) when
-    the wrist never quite reaches the baseline (body shift, a short clip). Reads cleanly
-    because `engine` smooths the series first.
+    `_lead_wrist_xy` carries the last confident position through dim frames, which is right for a
+    continuous series to smooth but wrong as evidence of where the hands went. Held frames are
+    excluded from run detection so a stretch of lost tracking cannot bound a descent — worth about
+    1.5 frames of mean top error on the GolfDB face-on set (docs/M4_POSE_BAKEOFF.md).
     """
-    return next(
-        (i for i in range(top + 1, n) if ys[i] >= address_y),
-        max(range(top, n), key=ys.__getitem__),
-    )
+    return [frame.landmark(_LEAD_WRIST).visibility >= _MIN_VISIBILITY for frame in keypoints]
+
+
+def _rising_runs(ys: list[float], confident: list[bool]) -> list[tuple[float, int, int]]:
+    """Near-monotone stretches of *falling hands* as `(rise, start_frame, end_frame)`.
+
+    `y` grows downward, so a rising `y` is the hands coming down — a descent of the club. The
+    downswing is the largest such stretch in a normal swing; the takeaway and the follow-through
+    run the other way. Each run ends when `y` gives back more than `_DRAWDOWN_TOLERANCE` of the
+    rise it has accumulated, and only confidently-tracked frames participate.
+    """
+    runs: list[tuple[float, int, int]] = []
+    start = peak_at = -1
+    peak = 0.0
+
+    for index, y in enumerate(ys):
+        if not confident[index]:
+            continue
+        if start < 0:
+            start, peak, peak_at = index, y, index
+            continue
+        if y >= peak:
+            peak, peak_at = y, index
+            continue
+
+        rise = peak - ys[start]
+        if rise > 0.0 and (peak - y) > _DRAWDOWN_TOLERANCE * rise:
+            runs.append((rise, start, peak_at))
+            start, peak, peak_at = index, y, index
+        elif y < ys[start]:
+            # Still descending toward a lower turning point — restart from here.
+            start, peak, peak_at = index, y, index
+
+    if start >= 0 and peak > ys[start]:
+        runs.append((peak - ys[start], start, peak_at))
+    return runs
+
+
+def _top_and_impact(ys: list[float], confident: list[bool], n: int) -> tuple[int, int]:
+    """Locate the top of the backswing and impact as the ends of the downswing.
+
+    Takes the **earliest** rising run within `_MAJOR_RISE_FRACTION` of the largest one, rather than
+    the largest outright. That one word is what makes this correct on real swings: a full finish
+    puts the hands *higher* than they were at the top, and after the finish tracking often degrades
+    into large spurious excursions — either can produce a rise that rivals the true downswing. What
+    they cannot do is happen *before* it. Ordering is the one piece of structure every golf swing
+    has, and unlike a threshold it does not need calibrating per camera, per player, or per fps.
+
+    Falls back to the old global-argmin behaviour only when no run is found at all (a clip with no
+    detectable descent), where any answer is a guess anyway.
+    """
+    runs = _rising_runs(ys, confident)
+    if not runs:
+        top = min(range(n), key=ys.__getitem__)
+        return top, max(range(top, n), key=ys.__getitem__)
+
+    largest = max(rise for rise, _, _ in runs)
+    major = [run for run in runs if run[0] >= _MAJOR_RISE_FRACTION * largest]
+    _, top, impact = min(major, key=lambda run: run[1])
+    return top, impact
 
 
 def _wrist_speed(xy: list[tuple[float, float]]) -> list[float]:
@@ -158,21 +256,15 @@ def segment_phases(keypoints: list[FrameKeypoints]) -> list[PhaseSegment]:
     ts = [frame.timestamp_ms for frame in keypoints]
     xy = _lead_wrist_xy(keypoints)
     ys = [y for _, y in xy]
+    confident = _wrist_confident(keypoints)
 
-    # Top of backswing: highest hands = global minimum `y`. The clearest anchor.
-    top = min(range(n), key=ys.__getitem__)
-
-    # Address baseline from the still frames at the start of the clip.
-    sample = min(_ADDRESS_SAMPLE_FRAMES, max(top, 1))
-    address_y = sum(ys[:sample]) / sample
+    # Top and impact are found together, as the two ends of the downswing (see `_top_and_impact`).
+    top, impact = _top_and_impact(ys, confident, n)
 
     # Motion start: the frame the sustained takeaway begins (see `_motion_start`) — anchored on 2D
     # wrist speed so the near-horizontal early takeaway isn't missed and a waggle isn't mistaken
     # for the backswing.
     motion_start = _motion_start(xy, top)
-
-    # Impact: the wrist's return to address height after the top (see `_impact_frame`).
-    impact = _impact_frame(ys, top, n, address_y)
 
     # Bracket a small symmetric window around the top (transition) and after impact, then
     # clamp everything into a monotonic, non-overlapping boundary chain.

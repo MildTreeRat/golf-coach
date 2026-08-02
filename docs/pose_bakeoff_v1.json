@@ -1,0 +1,200 @@
+{
+  "schema_version": 2,
+  "pce_tolerance": "max(round(n/30), 1) frames, n = address..impact",
+  "runs": [
+    {
+      "sample": {
+        "clips": 120,
+        "source_videos": 120,
+        "golfers": 87,
+        "view": "face-on",
+        "selection": "round-robin across source videos, deterministic"
+      },
+      "estimators": [
+        "mediapipe:lite",
+        "mediapipe:full",
+        "mediapipe:heavy",
+        "rtmpose:m"
+      ],
+      "results": [
+        {
+          "estimator": "mediapipe:lite",
+          "clips_scored": 120,
+          "clips_unsegmentable": 0,
+          "clips_not_cached": 0,
+          "frames": 33102,
+          "scoring_seconds": 2.9,
+          "events": {
+            "address": {
+              "med_err_frames": 6.0,
+              "med_norm_err": 0.1498,
+              "pce": 10.8
+            },
+            "top": {
+              "med_err_frames": 1.0,
+              "med_norm_err": 0.0303,
+              "pce": 61.7
+            },
+            "impact": {
+              "med_err_frames": 0.0,
+              "med_norm_err": 0.0,
+              "pce": 88.3
+            }
+          },
+          "mean_norm_err": 0.06,
+          "mean_pce": 53.6
+        },
+        {
+          "estimator": "mediapipe:full",
+          "clips_scored": 120,
+          "clips_unsegmentable": 0,
+          "clips_not_cached": 0,
+          "frames": 33102,
+          "scoring_seconds": 3.0,
+          "events": {
+            "address": {
+              "med_err_frames": 6.0,
+              "med_norm_err": 0.1463,
+              "pce": 6.7
+            },
+            "top": {
+              "med_err_frames": 1.0,
+              "med_norm_err": 0.0278,
+              "pce": 70.8
+            },
+            "impact": {
+              "med_err_frames": 0.0,
+              "med_norm_err": 0.0,
+              "pce": 86.7
+            }
+          },
+          "mean_norm_err": 0.058,
+          "mean_pce": 54.7
+        },
+        {
+          "estimator": "mediapipe:heavy",
+          "clips_scored": 120,
+          "clips_unsegmentable": 0,
+          "clips_not_cached": 0,
+          "frames": 33102,
+          "scoring_seconds": 3.0,
+          "events": {
+            "address": {
+              "med_err_frames": 6.0,
+              "med_norm_err": 0.165,
+              "pce": 8.3
+            },
+            "top": {
+              "med_err_frames": 1.0,
+              "med_norm_err": 0.0308,
+              "pce": 66.7
+            },
+            "impact": {
+              "med_err_frames": 0.0,
+              "med_norm_err": 0.0,
+              "pce": 86.7
+            }
+          },
+          "mean_norm_err": 0.0653,
+          "mean_pce": 53.9
+        },
+        {
+          "estimator": "rtmpose:m",
+          "clips_scored": 120,
+          "clips_unsegmentable": 0,
+          "clips_not_cached": 0,
+          "frames": 33102,
+          "scoring_seconds": 3.0,
+          "events": {
+            "address": {
+              "med_err_frames": 20.5,
+              "med_norm_err": 0.569,
+              "pce": 2.5
+            },
+            "top": {
+              "med_err_frames": 4.0,
+              "med_norm_err": 0.099,
+              "pce": 30.8
+            },
+            "impact": {
+              "med_err_frames": 1.0,
+              "med_norm_err": 0.0303,
+              "pce": 56.7
+            }
+          },
+          "mean_norm_err": 0.2328,
+          "mean_pce": 30.0
+        }
+      ]
+    },
+    {
+      "sample": {
+        "clips": 461,
+        "source_videos": 209,
+        "golfers": 122,
+        "view": "face-on",
+        "selection": "round-robin across source videos, deterministic"
+      },
+      "estimators": [
+        "mediapipe:lite",
+        "mediapipe:full"
+      ],
+      "results": [
+        {
+          "estimator": "mediapipe:lite",
+          "clips_scored": 461,
+          "clips_unsegmentable": 0,
+          "clips_not_cached": 0,
+          "frames": 134412,
+          "scoring_seconds": 12.5,
+          "events": {
+            "address": {
+              "med_err_frames": 13,
+              "med_norm_err": 0.175,
+              "pce": 8.7
+            },
+            "top": {
+              "med_err_frames": 2,
+              "med_norm_err": 0.0303,
+              "pce": 61.4
+            },
+            "impact": {
+              "med_err_frames": 1,
+              "med_norm_err": 0.0147,
+              "pce": 87.0
+            }
+          },
+          "mean_norm_err": 0.0733,
+          "mean_pce": 52.4
+        },
+        {
+          "estimator": "mediapipe:full",
+          "clips_scored": 461,
+          "clips_unsegmentable": 0,
+          "clips_not_cached": 0,
+          "frames": 134412,
+          "scoring_seconds": 12.2,
+          "events": {
+            "address": {
+              "med_err_frames": 11,
+              "med_norm_err": 0.1622,
+              "pce": 6.5
+            },
+            "top": {
+              "med_err_frames": 2,
+              "med_norm_err": 0.028,
+              "pce": 63.3
+            },
+            "impact": {
+              "med_err_frames": 1,
+              "med_norm_err": 0.0167,
+              "pce": 84.6
+            }
+          },
+          "mean_norm_err": 0.069,
+          "mean_pce": 51.5
+        }
+      ]
+    }
+  ]
+}

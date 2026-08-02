@@ -5,31 +5,31 @@
       "checkpoint": "tempo_ratio",
       "club_category": "all",
       "skill_level": "all",
-      "low": 2.7,
-      "high": 3.3,
-      "source": "Tour Tempo (Novosel) ~3:1 backswing:downswing across tour players",
-      "source_date": "2004",
-      "added": "2026-07-02"
+      "low": 2.72,
+      "high": 4.71,
+      "source": "GolfDB (McNally et al., CVPRW 2019) - p10-p90 of n=1399 hand-annotated tour swings from 246 PGA/LPGA/Champions Tour golfers; replaces the Tour Tempo (Novosel, 2004) 2.7-3.3 estimate, whose floor it confirms but whose ceiling captured only the lower third of the tour distribution (p50 3.39). Derived from event labels only, no video; see benchmarks/golfdb_v1.json and ADR-012",
+      "source_date": "2019",
+      "added": "2026-08-01"
     },
     {
       "checkpoint": "head_sway_norm",
       "club_category": "all",
       "skill_level": "all",
       "low": 0.0,
-      "high": 0.5,
-      "source": "PROVISIONAL / UNCALIBRATED internal heuristic - lateral nose travel to impact in shoulder-widths; revisit with captured ground-truth data (see ROADMAP hardware re-validation gate, ADR-011)",
-      "source_date": "2026-07-16",
-      "added": "2026-07-16"
+      "high": 0.42,
+      "source": "GolfDB (McNally et al., CVPRW 2019) - p90 of n=458 face-on tour swings from 122 golfers, measured by MediaPipe Pose lite at GolfDB's hand-annotated instants; one-sided (lower is better), replacing the 0.5 uncalibrated estimate. Metric definitions v2 (ear midpoint, not nose). Unaffected by the 160x160 pixel-aspect correction, which cancels for an x-distance over an x-scale; see benchmarks/golfdb_v1.json, docs/M4_POSE_BAKEOFF.md and ADR-012",
+      "source_date": "2019",
+      "added": "2026-08-02"
     },
     {
       "checkpoint": "finish_balance_norm",
       "club_category": "all",
       "skill_level": "all",
       "low": 0.0,
-      "high": 0.6,
-      "source": "PROVISIONAL / UNCALIBRATED internal heuristic - hip-center drift through follow-through in shoulder-widths; revisit with captured ground-truth data (see ROADMAP hardware re-validation gate, ADR-011)",
-      "source_date": "2026-07-16",
-      "added": "2026-07-16"
+      "high": 0.28,
+      "source": "GolfDB (McNally et al., CVPRW 2019) - p90 of n=458 face-on tour swings from 122 golfers, measured by MediaPipe Pose lite at GolfDB's hand-annotated instants; one-sided (lower is better), replacing the 0.6 uncalibrated estimate. Metric definitions v2 (p90 of hip drift, not max; hip visibility gate 0.7). Includes the 160x160 pixel-aspect correction, which moves p90 from 0.30 to 0.28; see benchmarks/golfdb_v1.json, docs/M4_POSE_BAKEOFF.md and ADR-012",
+      "source_date": "2019",
+      "added": "2026-08-02"
     }
   ]
 }

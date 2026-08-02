@@ -36,6 +36,13 @@ llm = [
 hardware = [
     "bleak>=0.21",
 ]
+# Offline research / reference-data derivation (M4-REF). Used ONLY by scripts/golfdb/*, never
+# by the package: pandas appears at exactly one boundary (reading GolfDB's pickled DataFrame),
+# after which everything downstream is stdlib. Keeping it out of `vision` keeps the invariant
+# that the analysis core installs and tests with no extras at all (ADR-008).
+research = [
+    "pandas>=2.0",
+]
 dev = [
     "pytest>=8.0",
     "ruff>=0.4",
@@ -43,7 +50,7 @@ dev = [
 ]
 # Convenience: everything at once.
 all = [
-    "golf-coach[vision,api,llm,hardware,dev]",
+    "golf-coach[vision,api,llm,hardware,research,dev]",
 ]
 
 [tool.hatch.build.targets.wheel]

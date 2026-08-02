@@ -18,6 +18,12 @@ data/models/*.pth
 data/models/*.onnx
 data/models/*.task
 
+# Third-party reference corpora (GolfDB and anything like it). Kept out of git for licensing
+# as much as size: the upstream annotations and per-clip rows keyed to named tour players are
+# third-party data we redistribute nothing of. Only *aggregate* statistics are committed, and
+# those live in the package at src/golf_coach/analysis/benchmarks/. See ADR-012.
+data/reference/
+
 # Database
 *.db
 
