@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from conftest import make_swing
+from conftest import _ADDRESS_FRAMES, make_swing
 
 from golf_coach.analysis.phases import segment_phases
 from golf_coach.analysis.smoothing import smooth_keypoints
@@ -47,3 +47,14 @@ def test_top_detected_near_true_top_on_smoothed_swing() -> None:
     transition = next(p for p in phases if p.phase is SwingPhase.TRANSITION)
     top = (transition.start_frame + transition.end_frame) // 2
     assert 34 <= top <= 41
+
+
+def test_motion_start_includes_horizontal_takeaway() -> None:
+    # A 20-frame near-horizontal takeaway (lead wrist sliding sideways at address height) sits
+    # between the 8-frame address dwell and the vertical rise (~frame 28+). A wrist-*height* rule
+    # can't see that sideways move and anchors motion-start at the vertical-rise start, collapsing
+    # the backswing; the 2D-speed rule must anchor it back near the takeaway start (~frame 8).
+    smoothed = smooth_keypoints(make_swing(20, 13, takeaway_frames=20))
+    phases = segment_phases(smoothed)
+    backswing = next(p for p in phases if p.phase is SwingPhase.BACKSWING)
+    assert backswing.start_frame <= _ADDRESS_FRAMES + 4  # not the ~frame-28 vertical-rise start

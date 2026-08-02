@@ -173,8 +173,12 @@ Detected instants (frame): ADDRESS @ 341, TOP OF BACKSWING @ 383, IMPACT @ 423
   tips against their provisional bands.
 
 ## Next (not in this iteration)
-- **Harden motion-start detection** — the located error above. Candidates: anchor the
-  takeaway on the last stable-setup frame (low wrist velocity) before the final rise, rather
-  than the last frame at/above address height.
+- ~~**Harden motion-start detection** — the located error above.~~ **Done (2026-08-01).**
+  Replaced the height-crossing rule with a **velocity-anchored** one in `analysis/phases.py`
+  (`_motion_start` over 2D lead-wrist speed): walking back from the top, the takeaway begins just
+  after the last sustained *quiet* stretch. This catches the near-horizontal early takeaway the
+  height rule couldn't see. On `aaron-swing-2` the ADDRESS marker moved from mid-backswing (@341)
+  to the true onset (@322, hands still at the ball), and tempo rose 1.05 → **1.53:1** — the honest
+  reading for this genuinely quick swing (TOP/IMPACT unchanged). See the WORKLOG 2026-08-01 entry.
 - Recalibrate the provisional sway/balance bands against captured data, and revisit the
   deferred depth checkpoints — both tracked in the ROADMAP **Hardware Re-Validation Gate**.

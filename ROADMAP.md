@@ -151,6 +151,13 @@ checkpoints face-on 2D pose measures well. Design doc:
 > **Status (2026-07-16):** done & verified. The overlay localized the remaining error — top &
 > impact detect correctly, but **motion-start lands mid-takeaway**, deflating tempo to ~1:1.
 > Hardening motion-start is the next segmentation task; sway/balance bands await calibration.
+>
+> **Update (2026-08-01):** motion-start **hardened** — the wrist-height rule missed the near-
+> horizontal early takeaway, so `phases.py` now anchors it on **2D wrist speed** (last quiet frame
+> before the takeaway). On `aaron-swing-2` the ADDRESS instant moved to the true onset (hands still
+> at the ball) and tempo reads an honest **1.53:1** (a genuinely quick swing), up from the
+> under-counted 1.05:1; TOP/IMPACT unchanged. 41 tests, ruff/mypy clean, overlay re-verified. Only
+> the **Hardware Re-Validation Gate** items remain for the pose-only panel.
 
 **Exit Criteria**: A real swing scored on three pose-only checkpoints with an annotated overlay
 that lets a human verify the detected instants — met.

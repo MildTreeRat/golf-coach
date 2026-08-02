@@ -52,6 +52,17 @@ def test_too_slow_tempo_fails_and_scores_lower() -> None:
     assert cp.score < 1.0
 
 
+def test_tempo_counts_horizontal_takeaway() -> None:
+    # The vertical rise alone (20) vs downswing (13) reads ~1.5:1 ("too quick"), but the
+    # near-horizontal takeaway is part of the backswing. Counting it (20 takeaway + 20 rise)
+    # restores a believable ~3:1 instead of the collapsed reading a wrist-height rule produced.
+    swing = make_swing(20, 13, takeaway_frames=20)
+    cp = evaluate_tempo(segment_phases(swing))
+    assert cp is not None
+    assert cp.observed >= 2.5  # not collapsed toward the ~1.5:1 the vertical rise alone gives
+    assert cp.passed is True
+
+
 def test_steady_head_passes_sway() -> None:
     smoothed, phases = _analyzed(head_sway=0.0)
     cp = evaluate_head_sway(smoothed, phases)

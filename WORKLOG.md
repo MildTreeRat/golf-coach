@@ -5,6 +5,47 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-08-01 — Hardened motion-start detection (velocity-anchored) → tempo is now honest
+
+**Duration**: ~1.5 hours
+**What I did**: Fixed the last-flagged segmentation error from the 07-16 session — motion-start
+landing mid-takeaway and collapsing tempo. Replaced the height-crossing rule in
+`analysis/phases.py` with a **velocity-anchored** one: new `_motion_start` measures **2D lead-wrist
+speed** (new `_wrist_speed`; refactored `_lead_wrist_y` → `_lead_wrist_xy` since we now need `x`
+too) and, walking back from the top, takes the takeaway to begin just after the last sustained
+*quiet* stretch (`_MOTION_QUIET_FRAC` of peak speed for `_MOTION_STALL_FRAMES` frames). Extended the
+synthetic fixture (`tests/analysis/conftest.py` `make_swing`) with a near-horizontal `takeaway_x`
+preamble — the sideways move a wrist-*height* rule can't see — and added two tests (a motion-start
+robustness test in `test_phases.py`, a tempo-not-collapsed test in `test_checkpoints.py`).
+**Verification**: `pytest` → **41 passed** on the base install (was 39); `ruff` clean; `mypy
+src/golf_coach/analysis src/golf_coach/feedback` clean. Then the decisive real-clip check on face-on
+`aaron-swing-2`: dumped the smoothed lead-wrist speed profile and re-ran `scripts/analyze_swing.py
+--overlay`. **Extracted and eyeballed the annotated frames** — ADDRESS marker @322 lands with the
+hands *still at the ball* (frame 290 setup and 322 look identical; motion only appears by 345),
+where it used to land mid-backswing.
+**Key decisions / surprises**:
+- **The clip's tempo is genuinely ~1.5:1, not a bug.** The speed profile settles this: the lead
+  wrist is provably *still* (< ~3% of peak, flat `y`) from frame ~250 to ~318, then onsets sharply
+  (12% → 22% → 54% …) at ~320. So motion-start @322 is *correct*; this golfer just swings quick.
+  The move 1.05 → **1.53:1** is the backswing finally being counted from the true onset, not the
+  number magically becoming 3:1. Honest > flattering.
+- **Height can't see the takeaway; speed can.** The early takeaway is near-horizontal — the lead
+  wrist moves back at roughly constant height — so the old "wrist rose past address height" rule
+  skipped it. Using 2D speed is what fixed it; anchoring on wrist-`y` alone never could.
+- **Tuned `_MOTION_QUIET_FRAC` to 0.08** against the real speed profile: setup waggle jitter tops
+  out ~3% of peak, the takeaway jumps past ~12%, so 8% sits cleanly between. TOP @383 / IMPACT @423
+  unchanged throughout (only motion-start moved).
+**Where I left off**: Tempo is now trustworthy end-to-end (correct instant, honest value, visual
+proof). The three pose-only checkpoints are solid. Next is either the **Hardware Re-Validation
+Gate** (recalibrate the provisional sway/balance bands, validate instants against club/R10 timing)
+when hardware lands, or non-pose work (M1.5 club spike / full-M4 outcome axis).
+**Blockers**: None — pose-only, no hardware.
+**Notes**: `_MOTION_QUIET_FRAC` is tuned on one clip; re-check when higher-fps / global-shutter
+footage arrives (folded into the existing `HARDWARE-REVALIDATE:` note on smoothing/instants). The
+annotated overlay + extracted frames live under gitignored `data/processed/`.
+
+---
+
 ## 2026-07-16 — M4-PoC+: hardened Fundamentals panel (smoothing, 2 checkpoints, verification overlay)
 
 **Duration**: ~2 hours
