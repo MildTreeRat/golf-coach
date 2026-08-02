@@ -29,6 +29,13 @@ takeaway to begin just after the last sustained *quiet* stretch. Using speed rat
 height is what makes tempo believable — the early takeaway is near-horizontal, so a height rule
 missed it, landed motion-start mid-takeaway, and collapsed tempo toward ~1:1 (M4 findings).
 
+How long that quiet stretch must be is expressed as a fraction of the clip's own downswing
+duration rather than as a frame count, which is what lets the same rule read a real-time clip and a
+4x slow-motion one (M4-REF Phase B6, ADR-013). Motion start is by a wide margin the least accurate
+of the three instants — median 7 frames against 2 and 1 — so it reports whether it actually found
+anything: `_motion_start` returns a `detected` flag that rides on the ADDRESS and BACKSWING
+segments, and `evaluate_tempo` drops its score rather than divide by an estimate.
+
 Counting the downswing to ball contact matches how Tour Tempo defines it (ADR-010), so the
 benchmark stays calibrated. Tempo depends only on start/top/impact *timing*, never on posture.
 No numpy, no MediaPipe — just lists, so it runs on the base install (ADR-008).
@@ -82,25 +89,48 @@ _MAJOR_RISE_FRACTION = 0.80
 # Motion start is velocity-anchored. The lead wrist is *still* at setup (and momentarily between
 # waggle bobs) but moves continuously once the takeaway begins — including the early, near-
 # horizontal part a wrist-*height* rule misses. So we measure 2D wrist speed and, walking back
-# from the top, take the takeaway to begin just after the last sustained *quiet* stretch: at least
-# `_MOTION_STALL_FRAMES` consecutive frames slower than `_MOTION_QUIET_FRAC` of the swing's peak
-# wrist speed. Both are scale- and fps-invariant (a fraction of the swing's own peak speed; a
-# frame count small enough to sit inside a real setup dwell).
+# from the top, take the takeaway to begin just after the last sustained *quiet* stretch: a run of
+# frames slower than `_MOTION_QUIET_FRAC` of the swing's peak wrist speed.
 #
-# Tuned against GolfDB ground truth over the 461-clip face-on corpus (docs/M4_POSE_BAKEOFF.md).
-# Both sit at the centre of a plateau where median address error is flat at 9 frames across
-# fractions 0.05-0.06 and stalls 3-6. The grid argmin is (0.03, 2) at 8 frames, but it sits on the
-# grid edge and degrades immediately in every direction — the same edge-fit that had mis-set
-# `_MAJOR_RISE_FRACTION`. The earlier (0.08, 3) was read off one clip's speed profile, where waggle
-# jitter sat ~3% of peak and the takeaway jumped past ~12%; across 461 swings that reasoning was
-# sound but the value was 4 frames of median error too high.
+# `_MOTION_QUIET_FRAC` is a fraction of the clip's own peak, so it is already scale- and
+# fps-invariant; the 461-clip sweep puts it on a plateau across 0.04-0.05.
 #
-# Address remains the weakest instant by a wide margin (median 9 frames, 46% of clips over 10),
-# and this is a calibration, not a fix. It is intrinsically hard — GolfDB's own SwingNet reaches
-# only 31.7% PCE here — because the takeaway onset is a gradual departure from stillness rather
-# than a direction change like the top or a contact event like impact.
+# **The run length is not a frame count** (M4-REF Phase B6, ADR-013). It used to be
+# `_MOTION_STALL_FRAMES = 4` — the one fps-dependent absolute left anywhere in the address path,
+# and the reason this instant failed the way it did. A downswing is ~8 frames in a real-time clip
+# and ~30 in a broadcast slow-motion one, so "4 quiet frames" meant something four times different
+# across the two halves of the corpus, and a slow takeaway spends long stretches below any
+# fraction of its own peak. The walk therefore stopped *mid-takeaway*: signed error median +4 with
+# 66% of clips late, and 17 frames of median error on slow-motion clips against 5 on real-time.
+# Expressing the run as a fraction of `(impact - top)` — the clip's own time base, measured from
+# the two instants we locate accurately — cut median error 9 -> 8 and mean 27.2 -> 24.1.
 _MOTION_QUIET_FRAC = 0.05
-_MOTION_STALL_FRAMES = 4
+_MOTION_STALL_FRACTION = 0.25
+
+# Floor for the quiet run. Two frames is the shortest stretch that can distinguish a dwell from a
+# single smoothed sample; it binds only on very short real-time clips.
+_MOTION_STALL_MIN_FRAMES = 2
+
+# When the wrist never settles — continuous fidgeting through setup, or a golfer still walking in —
+# there is no quiet run to find. This used to return frame 0, which is not a neutral answer: GolfDB
+# clips carry a median 59 frames of pre-roll (p90 254), so it fired on 11% of clips and cost them a
+# median of 31 frames. Falling back to the tour-median tempo ratio instead bounds the damage
+# (median 9 -> 7, mean 27.2 -> 22.9 overall). The value is GolfDB's own median over 1,399 clips
+# (ADR-012), not a book number.
+#
+# The segment is marked `detected=False` when this fires, because the estimate is circular for
+# anything that divides by it: `evaluate_tempo` would report ~3.5:1 by construction. Posture
+# checkpoints still use it, since they only need it to place a sampling window (ADR-013).
+_FALLBACK_TEMPO_RATIO = 3.5
+
+# Address is still the weakest instant by a wide margin (median 7 frames, 40% of clips over 10)
+# and this does not fix that. It is intrinsically hard — GolfDB's own SwingNet reaches only 31.7%
+# PCE here — because the takeaway onset is a gradual departure from stillness rather than a
+# direction change like the top or a contact event like impact. Six alternative signal families
+# were tried and all lost to lead-wrist speed; `scripts/golfdb/tune_address.py` keeps them
+# runnable and docs/M4_POSE_BAKEOFF.md Phase B6 records why each fails. The honest ceiling marker:
+# a rule using *no pose signal at all* scores a median of 11 frames, so what the wrist contributes
+# here is real but small.
 
 # Half-widths (in frames) of the transition window straddling the top of the backswing and
 # of the impact window straddling the return to address height. Small, symmetric, heuristic.
@@ -201,44 +231,61 @@ def _wrist_speed(xy: list[tuple[float, float]]) -> list[float]:
     return speeds
 
 
-def _motion_start(xy: list[tuple[float, float]], top: int) -> int:
+def _motion_start(xy: list[tuple[float, float]], top: int, impact: int) -> tuple[int, bool]:
     """Motion start: the frame the sustained takeaway begins, walking back from the top.
 
-    The lead wrist is *still* at setup (and momentarily between waggle bobs) but moves
-    continuously once the takeaway begins. We measure 2D wrist speed and walk backward from the
-    top; the takeaway begins just after the last **quiet** stretch — `_MOTION_STALL_FRAMES`
-    consecutive frames slower than `_MOTION_QUIET_FRAC` of the swing's peak wrist speed. Requiring
-    a *run* of quiet frames keeps a single slow smoothed frame mid-takeaway from ending it early,
-    and using speed (not wrist height) catches the near-horizontal early takeaway an earlier
-    height rule missed. Reads cleanly because `engine` smooths first; falls back to frame 0 when
-    the wrist never settles (no detectable setup / continuous motion from the first frame).
+    Returns `(frame, detected)`. `detected` is False when the wrist never settles and the frame is
+    the bounded estimate described at `_FALLBACK_TEMPO_RATIO` rather than something found in the
+    signal — callers that divide by this boundary must drop their result instead of using it.
+
+    The lead wrist is *still* at setup (and momentarily between waggle bobs) but moves continuously
+    once the takeaway begins. We measure 2D wrist speed and walk backward from the top; the
+    takeaway begins just after the last **quiet** stretch — a run of frames slower than
+    `_MOTION_QUIET_FRAC` of the swing's peak wrist speed. Requiring a *run* keeps a single slow
+    smoothed frame mid-takeaway from ending it early, and using speed (not wrist height) catches
+    the near-horizontal early takeaway an earlier height rule missed.
+
+    **The run length scales with the clip, not with the frame rate.** It is
+    `_MOTION_STALL_FRACTION` of the downswing duration `(impact - top)` — the clip's own time base,
+    taken from the two instants we locate to within 2 and 1 frames. That is what makes this rule
+    read a 240fps phone clip and a broadcast slow-motion replay the same way; see ADR-013.
+
+    Needs `top > 0` and reads cleanly because `engine` smooths first.
     """
     if top <= 0:
-        return 0
+        return 0, True
     speeds = _wrist_speed(xy)
     peak = max(speeds[1 : top + 1], default=0.0)
     if peak <= 0.0:
-        return 0
+        return 0, True
     quiet_threshold = peak * _MOTION_QUIET_FRAC
+    downswing = max(impact - top, 1)
+    stall = max(_MOTION_STALL_MIN_FRAMES, round(_MOTION_STALL_FRACTION * downswing))
 
     quiet = 0
     for i in range(top, -1, -1):
         if speeds[i] < quiet_threshold:
             quiet += 1
-            if quiet >= _MOTION_STALL_FRAMES:
-                return i + quiet  # first moving frame above the quiet run = takeaway start
+            if quiet >= stall:
+                # First moving frame above the quiet run = takeaway start. Clamped to the top,
+                # which a long stall near the top can otherwise overshoot.
+                return min(i + quiet, top), True
         else:
             quiet = 0
-    return 0
+
+    return max(0, top - round(_FALLBACK_TEMPO_RATIO * downswing)), False
 
 
-def _segment(phase: SwingPhase, start: int, end: int, ts: list[float]) -> PhaseSegment:
+def _segment(
+    phase: SwingPhase, start: int, end: int, ts: list[float], detected: bool = True
+) -> PhaseSegment:
     return PhaseSegment(
         phase=phase,
         start_frame=start,
         end_frame=end,
         start_ms=ts[start],
         end_ms=ts[end],
+        detected=detected,
     )
 
 
@@ -263,8 +310,9 @@ def segment_phases(keypoints: list[FrameKeypoints]) -> list[PhaseSegment]:
 
     # Motion start: the frame the sustained takeaway begins (see `_motion_start`) — anchored on 2D
     # wrist speed so the near-horizontal early takeaway isn't missed and a waggle isn't mistaken
-    # for the backswing.
-    motion_start = _motion_start(xy, top)
+    # for the backswing. `found` is False when the wrist never settled and the boundary is an
+    # estimate; it rides on the two segments that boundary defines.
+    motion_start, found = _motion_start(xy, top, impact)
 
     # Bracket a small symmetric window around the top (transition) and after impact, then
     # clamp everything into a monotonic, non-overlapping boundary chain.
@@ -279,8 +327,8 @@ def segment_phases(keypoints: list[FrameKeypoints]) -> list[PhaseSegment]:
     b5 = max(b5, b4)
 
     return [
-        _segment(SwingPhase.ADDRESS, b0, b1, ts),
-        _segment(SwingPhase.BACKSWING, b1, b2, ts),
+        _segment(SwingPhase.ADDRESS, b0, b1, ts, found),
+        _segment(SwingPhase.BACKSWING, b1, b2, ts, found),
         _segment(SwingPhase.TRANSITION, b2, b3, ts),
         _segment(SwingPhase.DOWNSWING, b3, b4, ts),
         _segment(SwingPhase.IMPACT, b4, b5, ts),

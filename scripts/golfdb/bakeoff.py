@@ -25,6 +25,12 @@ holds every stage but the estimator fixed.
   `delta = max(round(n / 30), 1)` frames where `n` is the ground-truth address-to-impact span.
   Included so the numbers can be read next to published ones; the constant is our reading of their
   convention, not a value they state, so prefer `med_norm` when the two disagree.
+- **`med_err_frames_by_speed`** — `med_err` split into slow-motion and real-time clips. The pooled
+  frame median mixes two populations a frame does not mean the same thing in: every instant scales
+  with capture speed (address 4 vs 17 frames, top 1 vs 4, impact 0 vs 3), so the pooled number
+  partly reports how much slow-motion is in the sample. Prefer `med_norm`, which is already
+  fps-invariant; this split exists to make the effect visible rather than to be optimized against.
+  It is what exposed the fixed frame count in the address rule (M4-REF Phase B6).
 """
 
 from __future__ import annotations
@@ -92,6 +98,12 @@ def _evaluate(name: str, swings: list[ReferenceSwing]) -> dict[str, Any]:
     errors: dict[str, list[int]] = {e: [] for e in EVENTS}
     normalized: dict[str, list[float]] = {e: [] for e in EVENTS}
     correct: dict[str, int] = dict.fromkeys(EVENTS, 0)
+    # Split the raw frame errors by capture speed. A pooled frame median over a corpus that is
+    # ~47% broadcast slow-motion substantially measures the corpus mix rather than the rule —
+    # the effect is small for top and impact and dominant for address (M4-REF Phase B6).
+    by_speed: dict[str, dict[str, list[int]]] = {
+        e: {"slow_motion": [], "real_time": []} for e in EVENTS
+    }
     scored = 0
     unsegmentable = 0
     missing = 0
@@ -127,10 +139,12 @@ def _evaluate(name: str, swings: list[ReferenceSwing]) -> dict[str, Any]:
             continue
         tolerance = max(round(span / _PCE_TOLERANCE_DIVISOR), 1)
 
+        stratum = "slow_motion" if swing.slow_motion else "real_time"
         for event in EVENTS:
             delta = abs(detected[event] - truth[event])
             errors[event].append(delta)
             normalized[event].append(delta / span)
+            by_speed[event][stratum].append(delta)
             if delta <= tolerance:
                 correct[event] += 1
         scored += 1
@@ -155,6 +169,11 @@ def _evaluate(name: str, swings: list[ReferenceSwing]) -> dict[str, Any]:
             "med_err_frames": round(statistics.median(errors[event]), 2),
             "med_norm_err": round(statistics.median(normalized[event]), 4),
             "pce": round(100.0 * correct[event] / scored, 1) if scored else 0.0,
+            "med_err_frames_by_speed": {
+                stratum: round(statistics.median(deltas), 2)
+                for stratum, deltas in by_speed[event].items()
+                if deltas
+            },
         }
 
     if scored:
@@ -175,9 +194,12 @@ def _print_result(result: dict[str, Any]) -> None:
         f"not cached {result['clips_not_cached']}"
     )
     for event, stats in result["events"].items():
+        by_speed = stats.get("med_err_frames_by_speed", {})
+        split = "  ".join(f"{k}={v:g}fr" for k, v in by_speed.items())
         print(
             f"    {event:<8} med_err={stats['med_err_frames']:>6} fr   "
             f"med_norm={stats['med_norm_err']:>7.3f}   PCE={stats['pce']:>5.1f}%"
+            + (f"   [{split}]" if split else "")
         )
     if "mean_pce" in result:
         print(f"    {'MEAN':<8} med_norm={result['mean_norm_err']:>7.3f}   "

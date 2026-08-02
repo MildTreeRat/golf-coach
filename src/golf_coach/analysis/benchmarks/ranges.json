@@ -16,8 +16,8 @@
       "club_category": "all",
       "skill_level": "all",
       "low": 0.0,
-      "high": 0.42,
-      "source": "GolfDB (McNally et al., CVPRW 2019) - p90 of n=458 face-on tour swings from 122 golfers, measured by MediaPipe Pose lite at GolfDB's hand-annotated instants; one-sided (lower is better), replacing the 0.5 uncalibrated estimate. Metric definitions v2 (ear midpoint, not nose). Unaffected by the 160x160 pixel-aspect correction, which cancels for an x-distance over an x-scale; see benchmarks/golfdb_v1.json, docs/M4_POSE_BAKEOFF.md and ADR-012",
+      "high": 0.43,
+      "source": "GolfDB (McNally et al., CVPRW 2019) - p90 of n=458 face-on tour swings from 122 golfers, measured by MediaPipe Pose lite at GolfDB's hand-annotated instants; one-sided (lower is better), replacing the 0.5 uncalibrated estimate. Metric definitions v3 (ear midpoint, not nose; address endpoint and shoulder-width ruler read from a short window ending at the address boundary, not the whole ADDRESS phase, which began at frame 0 - this moved p90 from 0.42 to 0.43). Unaffected by the 160x160 pixel-aspect correction, which cancels for an x-distance over an x-scale; see benchmarks/golfdb_v1.json, docs/M4_POSE_BAKEOFF.md, ADR-012 and ADR-013",
       "source_date": "2019",
       "added": "2026-08-02"
     },
@@ -26,8 +26,8 @@
       "club_category": "all",
       "skill_level": "all",
       "low": 0.0,
-      "high": 0.28,
-      "source": "GolfDB (McNally et al., CVPRW 2019) - p90 of n=458 face-on tour swings from 122 golfers, measured by MediaPipe Pose lite at GolfDB's hand-annotated instants; one-sided (lower is better), replacing the 0.6 uncalibrated estimate. Metric definitions v2 (p90 of hip drift, not max; hip visibility gate 0.7). Includes the 160x160 pixel-aspect correction, which moves p90 from 0.30 to 0.28; see benchmarks/golfdb_v1.json, docs/M4_POSE_BAKEOFF.md and ADR-012",
+      "high": 0.29,
+      "source": "GolfDB (McNally et al., CVPRW 2019) - p90 of n=458 face-on tour swings from 122 golfers, measured by MediaPipe Pose lite at GolfDB's hand-annotated instants; one-sided (lower is better), replacing the 0.6 uncalibrated estimate. Metric definitions v3 (p90 of hip drift, not max; hip visibility gate 0.7; shoulder-width ruler read from a short window ending at the address boundary, not the whole ADDRESS phase - this moved p90 from 0.28 to 0.29). Includes the 160x160 pixel-aspect correction, which moves p90 from 0.30 to 0.28; see benchmarks/golfdb_v1.json, docs/M4_POSE_BAKEOFF.md, ADR-012 and ADR-013",
       "source_date": "2019",
       "added": "2026-08-02"
     }

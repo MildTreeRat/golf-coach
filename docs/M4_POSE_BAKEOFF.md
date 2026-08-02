@@ -630,3 +630,153 @@ not a window**, so there is no ground truth for how wide the transition should b
 currently inert for scoring: `top_ms` is the window's *midpoint*, which equals the detected top for
 any symmetric half-width, and no checkpoint measures over the TRANSITION segment. Left at 3 and
 recorded here so the gap is deliberate rather than overlooked.
+
+---
+
+## Phase B6 — address, with a different rule rather than a better constant
+
+B5 ended by parking this: *"Improving it beyond calibration remains an open ROADMAP item."* This is
+that item. The rule changes; the constants B5 swept are, with one exception, exactly where B5 left
+them.
+
+### First: the pooled median was hiding the problem
+
+Split the same 461 clips by capture speed and the single number in B5's headline comes apart:
+
+| population | share | median | mean | > 10 frames |
+|---|---|---|---|---|
+| real-time | 53% | **5.0** | 23.6 | 29% |
+| broadcast slow-motion | 47% | **17.0** | 31.3 | 65% |
+
+A frame is worth four times less time in a slow-motion clip, so a pooled frame median over a corpus
+that is ~47% slow-motion measures the corpus mix as much as the rule. This is the same argument
+`bakeoff.py` already makes for preferring `med_norm`.
+
+**All three instants scale this way, not just address** — measured after this change, top runs 1
+frame real-time against 4 slow-motion, and impact 0 against 3. That is expected and is precisely
+why a raw frame count is the wrong unit. What singles address out is not that it scales differently
+but that it is far larger in *both* units: `med_norm` 0.122 against 0.029 for top and 0.015 for
+impact. The split is a lens, not a diagnosis; it mattered here because it pointed at the one
+constant in the rule that was denominated in frames.
+
+`bakeoff.py` now emits `med_err_frames_by_speed` so this cannot again be read as one number.
+
+### The diagnosis: one absolute, and a bad failure path
+
+**The stall was a frame count.** `_MOTION_STALL_FRAMES = 4` required four consecutive still frames.
+The downswing is 8 frames real-time and 30 in slow motion, so "four frames" meant something four
+times different across the corpus. Worse, a gradual takeaway spends long stretches below *any*
+fraction of its own peak speed, so the backward walk stopped mid-takeaway. The fingerprint:
+
+```
+signed error   median +4.0   mean -0.4   p10 -32  p25 -4  p75 +13  p90 +31
+               early 32%     late 66%
+```
+
+Two-thirds of clips detected **late**, which is exactly what a threshold-crossing rule does to a
+signal that departs from rest gradually.
+
+**The fallback was frame 0.** When the wrist never settled the rule answered 0 — not a neutral
+answer, because GolfDB clips carry a median of **59 frames** of pre-roll (p90 254). It fired on 11%
+of clips and cost them a median of 31 / mean 58 frames, which is most of the gap between the corpus
+median (9) and its mean (27.2).
+
+### Six alternative signals, all worse
+
+Each is a named rule in `scripts/golfdb/tune_address.py` and re-runs in about a second. Median
+absolute error over all 461 clips:
+
+| rule | median | mean | > 10 | med_norm | why it fails |
+|---|---|---|---|---|---|
+| `setup_ball 0.10` | 13.0 | 23.7 | 57% | 0.180 | displacement *is* fps-invariant where speed is not — but a gradual takeaway leaves a fixed-radius ball late, and shrinking the radius hits the pose noise floor |
+| `setup_ball 0.20` | 17.0 | 27.8 | 64% | 0.234 | worse the looser the ball, which is the tell |
+| `noise_floor k=3` | 41.0 | 66.2 | 73% | 0.748 | correct intuition (setup jitter and swing peak are unrelated quantities) but no persistence test, so any slow mid-takeaway frame trips it |
+| `noise_floor k=10` | 47.0 | 70.8 | 86% | 0.774 | |
+| `ramp_extrap 0.05-0.30` | 15.0 | 35.4 | 57% | 0.219 | the textbook onset estimator; it does kill the late bias (signed median -5) but the wrist's early takeaway is not linear in speed, so the fit chases the chosen band |
+| `ramp_extrap 0.10-0.50` | 14.0 | 38.1 | 57% | 0.246 | |
+| `torso_energy 0.10` | 19.0 | 40.1 | 62% | 0.256 | at 160x160 the torso barely moves during a takeaway |
+| `upper_energy 0.10` | 8.0 | 23.8 | 43% | 0.132 | **ties** the lead wrist alone, for eight extra landmarks — no information, just cost |
+| `shoulder_turn 0.05` | 24.0 | 45.0 | 71% | 0.370 | the most attractive candidate on paper — a waggle moves the hands, not the shoulders — but the shoulder line is too short a baseline for a stable angle here |
+| `persistence 0.70` | 32.0 | 58.2 | 74% | 0.628 | amplitude-free, so it *should* be immune to slow motion; defeated because `smooth_keypoints` is a centered moving average and makes setup jitter look directionally persistent |
+
+Averaging many joints should suppress independent landmark noise by the square root of N and let the
+threshold drop far enough to catch a gradual onset. It does not pay at this resolution. The lead
+wrist is where the takeaway shows first, and it stayed.
+
+### The ceiling, stated plainly
+
+`prior_tempo` — `top - 3.5 x (impact - top)`, using **no pose signal whatsoever** — scores:
+
+| | median | mean | > 10 | med_norm | PCE |
+|---|---|---|---|---|---|
+| `prior_tempo (no pose)` | 11.0 | 28.0 | 50% | 0.181 | 13.7% |
+
+The shipped rule beats it by 4 frames of median. That is the honest size of what the lead wrist tells
+us about takeaway onset, and it is the bar any future candidate must clear — not the `current` row.
+It is a permanent row in `tune_address.py` for exactly that reason.
+
+### What shipped
+
+| | median | mean | > 10 | med_norm | PCE | slow-mo | real-time |
+|---|---|---|---|---|---|---|---|
+| before (fixed stall, frame-0 fallback) | 9.0 | 27.2 | 46% | 0.133 | 14.3% | 17.0 | 5.0 |
+| + clip-relative stall | 8.0 | 24.1 | 41% | 0.129 | 15.0% | 19.0 | 4.0 |
+| **+ bounded fallback (shipped)** | **7.0** | **22.9** | **40%** | **0.122** | **15.8%** | **17.0** | **4.0** |
+
+`_MOTION_STALL_FRAMES = 4` becomes `_MOTION_STALL_FRACTION = 0.25` of the detected downswing
+duration, floored at 2 frames. `_MOTION_QUIET_FRAC` stays at **0.05** — B5's value, still on its
+plateau under the new stall. The frame-0 fallback becomes `top - 3.5 x (impact - top)` and marks the
+segment `detected=False`; it fires on **14%** of clips, and on the 86% where it does not fire the
+rule scores median 6.0 / mean 18.7 / 35% over 10 frames.
+
+Top and impact are unchanged at 2 and 1 frames. See
+[ADR-013](decisions/013-clip-relative-detection.md) for why this is stated as three principles
+rather than one fix.
+
+### The posture half, which turned out to matter more
+
+`head_sway` and `finish_balance` averaged over the whole ADDRESS phase — `[0, motion_start]` — so
+they inherited both the boundary error and all of the pre-roll. Measured against a tight window
+ending at the *labelled* address, over 453 clips:
+
+| head-baseline error (shoulder-widths; the `head_sway` band is 0.42 in total) | median | p90 | > 0.10 | > 0.21 |
+|---|---|---|---|---|
+| old — the whole `[0, motion_start]` window | 0.023 | 0.135 | 16% | 5% |
+| **new — a short window ending at the boundary** | **0.014** | **0.090** | **9%** | **2%** |
+
+**One expected win did not materialize.** The shoulder-width ruler — which divides *both*
+checkpoints — was off by more than 10% on 10% of clips before and 11% after. That error is pose
+noise, not window content. It is unchanged and still there.
+
+**The effect on our own footage is the clearest evidence in this section.** On
+`golf_swing-aaron-1`, `head_sway` moves from **1.21 to 0.36** shoulder-widths: a hard fail against
+the 0.43 band becomes a comfortable pass, and the clip's overall score goes to 100/100. Tracing the
+head across the old 459-frame window shows why —
+
+```
+frames   0- 49: +0.14      frames 250-299: +0.16
+frames  50- 99: +0.27      frames 300-349: +0.08
+frames 100-149: +0.41      frames 350-399: -0.02
+frames 150-199: +0.31      frames 400-449: -0.03
+frames 200-249: +0.20      frames 450-458: -0.00
+```
+
+(shoulder-widths from the frame-458 setup position). The golfer walks in, settles by ~frame 400, and
+the old baseline averaged all of it. The metric was reading the approach as swing sway. This is the
+same shape of defect ADR-012 found in top detection: a plausible number measuring the wrong thing,
+invisible until something independent was pointed at it. `aaron-swing-2` barely moves
+(`head_sway` 0.015 → 0.030, `finish_balance` 0.468 → 0.480, both verdicts unchanged) because its
+pre-roll happens to be steady.
+
+### Metric definitions v2 → v3
+
+Changing *where* a metric samples changes the metric, so per ADR-012 §4 the bands were re-derived
+rather than assumed still valid:
+
+| band | v2 | v3 |
+|---|---|---|
+| `head_sway_norm` p90 | 0.42 | **0.43** |
+| `finish_balance_norm` p90 | 0.28 | **0.29** |
+
+Small — which is the point. §4 exists so that drift this size gets recorded instead of quietly
+invalidating every comparison made against the old band.

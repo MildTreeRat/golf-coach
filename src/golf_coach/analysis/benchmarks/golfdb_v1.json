@@ -6,10 +6,10 @@
     "url": "https://github.com/wmcnally/golfdb",
     "license_note": "Upstream code is CC BY-NC 4.0; the dataset itself states no license and the source clips are third-party broadcast footage. Only aggregate statistics are reproduced here - no clips, no annotations, no per-player rows. See ADR-012.",
     "pose_estimator": "mediapipe:lite",
-    "metric_definitions_version": 2,
+    "metric_definitions_version": 3,
     "min_samples": 30,
     "derived_on": "2026-08-02",
-    "pipeline_commit": "d426a5f"
+    "pipeline_commit": "55d15ae"
   },
   "distributions": [
     {
@@ -19,13 +19,13 @@
       "view": "all",
       "n": 458,
       "n_players": 122,
-      "mean": 0.1842,
-      "sd": 0.1763,
-      "p10": 0.087,
+      "mean": 0.184,
+      "sd": 0.1735,
+      "p10": 0.08,
       "p25": 0.11,
       "p50": 0.15,
       "p75": 0.21,
-      "p90": 0.28
+      "p90": 0.29
     },
     {
       "metric": "finish_balance_norm",
@@ -34,12 +34,12 @@
       "view": "all",
       "n": 341,
       "n_players": 107,
-      "mean": 0.1906,
-      "sd": 0.1478,
+      "mean": 0.1903,
+      "sd": 0.1419,
       "p10": 0.09,
       "p25": 0.12,
       "p50": 0.16,
-      "p75": 0.22,
+      "p75": 0.23,
       "p90": 0.3
     },
     {
@@ -49,13 +49,13 @@
       "view": "all",
       "n": 32,
       "n_players": 14,
-      "mean": 0.1391,
-      "sd": 0.0572,
+      "mean": 0.1341,
+      "sd": 0.0508,
       "p10": 0.072,
       "p25": 0.1,
-      "p50": 0.14,
-      "p75": 0.1725,
-      "p90": 0.199
+      "p50": 0.135,
+      "p75": 0.17,
+      "p90": 0.198
     },
     {
       "metric": "finish_balance_norm",
@@ -64,13 +64,13 @@
       "view": "all",
       "n": 69,
       "n_players": 27,
-      "mean": 0.1465,
-      "sd": 0.0835,
-      "p10": 0.078,
+      "mean": 0.148,
+      "sd": 0.089,
+      "p10": 0.08,
       "p25": 0.1,
       "p50": 0.13,
-      "p75": 0.18,
-      "p90": 0.224
+      "p75": 0.19,
+      "p90": 0.232
     },
     {
       "metric": "finish_balance_norm",
@@ -79,13 +79,13 @@
       "view": "all",
       "n": 254,
       "n_players": 58,
-      "mean": 0.2071,
-      "sd": 0.2187,
+      "mean": 0.2066,
+      "sd": 0.2147,
       "p10": 0.1,
       "p25": 0.12,
       "p50": 0.17,
       "p75": 0.23,
-      "p90": 0.297
+      "p90": 0.307
     },
     {
       "metric": "finish_balance_norm",
@@ -94,13 +94,13 @@
       "view": "all",
       "n": 204,
       "n_players": 64,
-      "mean": 0.1556,
-      "sd": 0.0941,
-      "p10": 0.07,
+      "mean": 0.1559,
+      "sd": 0.0945,
+      "p10": 0.08,
       "p25": 0.1,
       "p50": 0.13,
       "p75": 0.1725,
-      "p90": 0.25
+      "p90": 0.257
     },
     {
       "metric": "finish_balance_norm",
@@ -109,13 +109,13 @@
       "view": "face-on",
       "n": 458,
       "n_players": 122,
-      "mean": 0.1842,
-      "sd": 0.1763,
-      "p10": 0.087,
+      "mean": 0.184,
+      "sd": 0.1735,
+      "p10": 0.08,
       "p25": 0.11,
       "p50": 0.15,
       "p75": 0.21,
-      "p90": 0.28
+      "p90": 0.29
     },
     {
       "metric": "follow_through_ratio",
@@ -274,13 +274,13 @@
       "view": "all",
       "n": 458,
       "n_players": 122,
-      "mean": 0.209,
-      "sd": 0.1871,
+      "mean": 0.2016,
+      "sd": 0.1751,
       "p10": 0.03,
       "p25": 0.08,
       "p50": 0.17,
-      "p75": 0.29,
-      "p90": 0.42
+      "p75": 0.27,
+      "p90": 0.43
     },
     {
       "metric": "head_sway_norm",
@@ -289,12 +289,12 @@
       "view": "all",
       "n": 341,
       "n_players": 107,
-      "mean": 0.2246,
-      "sd": 0.1792,
-      "p10": 0.03,
+      "mean": 0.2242,
+      "sd": 0.1865,
+      "p10": 0.04,
       "p25": 0.09,
       "p50": 0.19,
-      "p75": 0.32,
+      "p75": 0.31,
       "p90": 0.46
     },
     {
@@ -304,13 +304,13 @@
       "view": "all",
       "n": 32,
       "n_players": 14,
-      "mean": 0.1869,
-      "sd": 0.1968,
-      "p10": 0.021,
-      "p25": 0.05,
-      "p50": 0.155,
-      "p75": 0.22,
-      "p90": 0.348
+      "mean": 0.1478,
+      "sd": 0.1255,
+      "p10": 0.01,
+      "p25": 0.0475,
+      "p50": 0.15,
+      "p75": 0.2025,
+      "p90": 0.279
     },
     {
       "metric": "head_sway_norm",
@@ -319,13 +319,13 @@
       "view": "all",
       "n": 69,
       "n_players": 27,
-      "mean": 0.1459,
-      "sd": 0.2228,
-      "p10": 0.02,
+      "mean": 0.1162,
+      "sd": 0.1108,
+      "p10": 0.01,
       "p25": 0.04,
-      "p50": 0.11,
-      "p75": 0.18,
-      "p90": 0.274
+      "p50": 0.1,
+      "p75": 0.17,
+      "p90": 0.234
     },
     {
       "metric": "head_sway_norm",
@@ -334,13 +334,13 @@
       "view": "all",
       "n": 254,
       "n_players": 58,
-      "mean": 0.2139,
-      "sd": 0.1684,
+      "mean": 0.2081,
+      "sd": 0.17,
       "p10": 0.03,
-      "p25": 0.08,
-      "p50": 0.18,
-      "p75": 0.3075,
-      "p90": 0.457
+      "p25": 0.09,
+      "p50": 0.17,
+      "p75": 0.28,
+      "p90": 0.45
     },
     {
       "metric": "head_sway_norm",
@@ -349,12 +349,12 @@
       "view": "all",
       "n": 204,
       "n_players": 64,
-      "mean": 0.2029,
-      "sd": 0.2084,
+      "mean": 0.1936,
+      "sd": 0.1813,
       "p10": 0.03,
       "p25": 0.07,
-      "p50": 0.17,
-      "p75": 0.2725,
+      "p50": 0.16,
+      "p75": 0.2525,
       "p90": 0.407
     },
     {
@@ -364,13 +364,13 @@
       "view": "face-on",
       "n": 458,
       "n_players": 122,
-      "mean": 0.209,
-      "sd": 0.1871,
+      "mean": 0.2016,
+      "sd": 0.1751,
       "p10": 0.03,
       "p25": 0.08,
       "p50": 0.17,
-      "p75": 0.29,
-      "p90": 0.42
+      "p75": 0.27,
+      "p90": 0.43
     },
     {
       "metric": "mid_backswing_frac",

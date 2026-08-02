@@ -28,7 +28,14 @@ from golf_coach.contracts.reference import ReferenceSwing
 
 # These definitions are what the derived benchmark bands mean. Changing one invalidates every band
 # cut from it, so they are versioned alongside the checkpoint definitions in `mechanics.py`.
-METRIC_DEFINITIONS_VERSION = 2
+#
+# v3 (M4-REF Phase B6): `head_sway_norm` and `finish_balance_norm` now read their address endpoint
+# and their shoulder-width ruler from `_address_sample_bounds` — a short window ending at the
+# address boundary — instead of averaging across the whole ADDRESS phase, which began at frame 0
+# and so averaged over the golfer walking into shot. Both p90s moved (0.42 -> 0.43 sway,
+# 0.28 -> 0.29 balance), which is small but is exactly the kind of drift ADR-012 §4 exists to stop
+# going unrecorded.
+METRIC_DEFINITIONS_VERSION = 3
 
 # GolfDB's `bbox` is normalized to the *source* video, whose pixel dimensions we do not have —
 # only the clips resized from it. Nearly all of the 580 sources are YouTube broadcast footage, so

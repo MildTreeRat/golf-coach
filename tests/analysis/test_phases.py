@@ -101,3 +101,77 @@ def test_motion_start_includes_horizontal_takeaway() -> None:
     phases = segment_phases(smoothed)
     backswing = next(p for p in phases if p.phase is SwingPhase.BACKSWING)
     assert backswing.start_frame <= _ADDRESS_FRAMES + 4  # not the ~frame-28 vertical-rise start
+
+
+def _address_end(keypoints: list[FrameKeypoints]) -> int:
+    phases = segment_phases(smooth_keypoints(keypoints))
+    return next(p for p in phases if p.phase is SwingPhase.ADDRESS).end_frame
+
+
+def test_motion_start_is_frame_rate_invariant() -> None:
+    """The same swing at 3x the frame rate must still put the boundary at the end of the dwell.
+
+    The rule's quiet run is a fraction of the clip's own downswing (ADR-013), so stretching every
+    phase by a common factor must not move the boundary relative to the swing. The superseded
+    fixed 4-frame stall was the one fps-dependent absolute in this path.
+
+    Note what this can and cannot show: the fixture's setup is *perfectly* still, so both the old
+    and new rules find the dwell here. The failure this guards against needs a noisy setup and a
+    gradual takeaway, which is measured on the 461-clip GolfDB corpus by
+    `scripts/golfdb/tune_address.py`, not in a unit test. What it does lock down is that the
+    boundary tracks the swing rather than the frame count.
+    """
+    fast = make_swing(20, 8, takeaway_frames=6)
+    slow = make_swing(60, 24, takeaway_frames=18)
+
+    # Address dwell is a fixed 8 frames in both, so the boundary should land at its end either
+    # way rather than drifting into the (3x longer) takeaway.
+    assert _address_end(fast) <= _ADDRESS_FRAMES
+    assert _address_end(slow) <= _ADDRESS_FRAMES
+
+
+def test_quiet_run_scales_with_the_downswing() -> None:
+    """A longer downswing demands a longer stretch of stillness before calling it the takeaway."""
+    from golf_coach.analysis.phases import _MOTION_STALL_FRACTION, _MOTION_STALL_MIN_FRAMES
+
+    assert max(_MOTION_STALL_MIN_FRAMES, round(_MOTION_STALL_FRACTION * 8)) == 2
+    assert max(_MOTION_STALL_MIN_FRAMES, round(_MOTION_STALL_FRACTION * 40)) == 10
+
+
+def test_detected_flag_is_true_when_the_wrist_settles(swing: list[FrameKeypoints]) -> None:
+    phases = segment_phases(smooth_keypoints(swing))
+    by_phase = {p.phase: p for p in phases}
+    assert by_phase[SwingPhase.ADDRESS].detected
+    assert by_phase[SwingPhase.BACKSWING].detected
+    # Every other segment is unconditionally detected — the flag only describes this one boundary.
+    assert all(p.detected for p in phases)
+
+
+def test_never_settling_falls_back_to_a_bounded_estimate() -> None:
+    """A clip with no still setup must not answer frame 0, and must admit it guessed.
+
+    `make_swing(takeaway_frames=...)` with no address dwell is the degenerate case: the wrist is
+    moving from the first frame, so no quiet run exists. The superseded rule returned 0, which on
+    GolfDB's median 59 frames of pre-roll cost those clips a median of 31 frames. The estimate has
+    to be bounded *and* flagged, because it is derived from an assumed tempo ratio and so is
+    circular for anything that divides by it.
+    """
+    from golf_coach.analysis.phases import _FALLBACK_TEMPO_RATIO
+
+    # A long takeaway with the address dwell stripped: the wrist moves from the first frame, so
+    # no quiet run exists anywhere. The takeaway is long enough that the prior lands well clear of
+    # zero, which is what makes this a test of the *estimate* rather than of the clamp.
+    moving = make_swing(20, 14, takeaway_frames=60)[_ADDRESS_FRAMES:]
+    phases = segment_phases(smooth_keypoints(moving))
+    by_phase = {p.phase: p for p in phases}
+    address = by_phase[SwingPhase.ADDRESS]
+
+    assert not address.detected
+    assert not by_phase[SwingPhase.BACKSWING].detected
+
+    transition = by_phase[SwingPhase.TRANSITION]
+    top = (transition.start_frame + transition.end_frame) // 2
+    impact = by_phase[SwingPhase.IMPACT].start_frame
+    expected = max(0, top - round(_FALLBACK_TEMPO_RATIO * max(impact - top, 1)))
+    assert address.end_frame == expected
+    assert address.end_frame > 0, "the bounded estimate, not the frame-0 answer it replaced"

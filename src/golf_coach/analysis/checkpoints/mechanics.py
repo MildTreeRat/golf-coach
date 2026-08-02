@@ -13,15 +13,23 @@ score beats a wrong one (ADR-010 §2). Pure functions, stdlib only. Checkpoints 
 (spine tilt, hip rotation, swing plane) are *not* here — they need a down-the-line/synced view
 (ADR-011) and stay deferred; see docs/M4_FUNDAMENTALS_PANEL.md.
 
-**Metric definitions version 2** (M4-REF, 2026-08-01). v1 measured head sway from the `NOSE` and
-finish drift with `max()`; both were changed before deriving benchmark bands from GolfDB, because a
-band is only meaningful against the definition it was cut from. See `docs/M4_POSE_BAKEOFF.md` for
-the before/after and `golfdb_v1.json`'s `metric_definitions_version` for which definition a band
-belongs to.
+**Metric definitions version 3** (M4-REF Phase B6, 2026-08-02). A band is only meaningful against
+the definition it was cut from, so each generation is numbered and the bands re-derived with it:
 
-HARDWARE-REVALIDATE: `head_sway` / `finish_balance` thresholds are provisional, uncalibrated
-placeholders (see ranges.json provenance). Recalibrate against captured ground-truth data and
-revisit the deferred depth checkpoints when the down-the-line camera / 3D fusion land (ADR-011).
+- **v2** — head sway measured from the ear midpoint rather than the `NOSE`, and finish drift
+  summarized at p90 rather than `max()`.
+- **v3** — `head_sway`'s address endpoint and *both* checkpoints' shoulder-width ruler read
+  `_address_sample_bounds` (a short window ending at the address boundary) instead of averaging
+  across the whole ADDRESS phase, which began at frame 0 and so averaged over the golfer walking
+  into shot. Moved `head_sway_norm` p90 0.42 → 0.43 and `finish_balance_norm` p90 0.28 → 0.29.
+
+See `docs/M4_POSE_BAKEOFF.md` for the before/after and `golfdb_v1.json`'s
+`metric_definitions_version` for which definition a band belongs to.
+
+HARDWARE-REVALIDATE: `head_sway` / `finish_balance` bands are now derived from 458 face-on tour
+swings rather than eyeballed (ADR-012), but a tour population says what *good* looks like, not what
+*this camera* measures. Re-check against our own captured ground truth, and revisit the deferred
+depth checkpoints, when the down-the-line camera / 3D fusion land (ADR-011).
 """
 
 from __future__ import annotations
@@ -58,6 +66,13 @@ _MIN_SHOULDER_WIDTH = 0.02
 
 # Fewest follow-through frames needed to judge how still the finish settles.
 _MIN_FINISH_FRAMES = 3
+
+# The posture-sampling window (see `_address_sample_bounds`): this fraction of the clip's own
+# downswing duration, floored at a handful of frames. Half a downswing is ~4 frames on a real-time
+# clip and ~15 in slow motion — long enough that averaging suppresses landmark jitter, short enough
+# that it cannot reach back into the golfer walking up to the ball.
+_ADDRESS_SAMPLE_FRACTION = 0.5
+_ADDRESS_SAMPLE_MIN_FRAMES = 5
 
 # Finish drift is summarized at this quantile rather than by `max()`. [metric definitions v2]
 # `max()` is an extreme-value statistic: one bad frame sets the entire metric, and the frames it
@@ -140,6 +155,45 @@ def _shoulder_width(keypoints: list[FrameKeypoints], lo: int, hi: int) -> float 
     return width if width >= _MIN_SHOULDER_WIDTH else None
 
 
+def _address_sample_bounds(phases: list[PhaseSegment]) -> tuple[int, int] | None:
+    """A short window **ending at** the address boundary — where the golfer is actually set up.
+
+    Not the same thing as the ADDRESS phase. That segment runs `[0, motion_start]`, and frame 0 is
+    not address, it is wherever the clip happens to begin: across the GolfDB face-on corpus the
+    golfer's head travels a median of 0.12 shoulder-widths inside that window and 0.61 at the p90,
+    because they are still walking in and settling over the ball. Averaging posture across it
+    measures the approach as much as the setup — and `head_sway`'s entire pass band is 0.42
+    shoulder-widths, so at the p90 the pre-roll alone outweighs the thing being scored.
+
+    Anchoring a few frames to the *end* of the segment fixes both failure modes at once (ADR-013):
+    it excludes the pre-roll, and it makes posture largely indifferent to the address boundary
+    being wrong, which matters because that boundary carries a median error of 7 frames. A window
+    that moves with the boundary still lands on genuine setup; a window that *starts at frame 0*
+    inherits everything before it.
+
+    Length scales with the clip's own downswing duration for the same reason the quiet run does —
+    a fixed count would mean 4x different things across a corpus that is ~47% slow-motion — with a
+    floor of `_ADDRESS_SAMPLE_MIN_FRAMES` so there is always enough to average. Returns None only
+    when the phases are unusable.
+    """
+    address = _phase_bounds(phases, SwingPhase.ADDRESS)
+    downswing = _phase_bounds(phases, SwingPhase.DOWNSWING)
+    if address is None or downswing is None:
+        return None
+
+    span = max(downswing[1] - downswing[0], 1)
+    length = max(_ADDRESS_SAMPLE_MIN_FRAMES, round(_ADDRESS_SAMPLE_FRACTION * span))
+
+    hi = address[1]
+    lo = max(address[0], hi - length)
+    # A clip whose takeaway starts almost immediately (or where the boundary was estimated at 0)
+    # leaves nothing behind it — widen forward instead, since the frames just after a mis-placed
+    # boundary are still far closer to setup than the start of the clip is.
+    if hi - lo < _ADDRESS_SAMPLE_MIN_FRAMES:
+        hi = min(downswing[0], lo + _ADDRESS_SAMPLE_MIN_FRAMES)
+    return (lo, max(hi, lo))
+
+
 def _hip_center_points(
     keypoints: list[FrameKeypoints], lo: int, hi: int
 ) -> list[tuple[float, float]]:
@@ -176,12 +230,25 @@ def _tempo_timings(phases: list[PhaseSegment]) -> tuple[float, float] | None:
 
     Uses motion start (`BACKSWING.start_ms`), the top of the backswing (center of the
     `TRANSITION` window), and impact (`IMPACT.start_ms`).
+
+    **Address is the dominant error term in this ratio.** It sits directly in the numerator, and it
+    is the least accurate instant we have — median 7 frames against 2 for the top and 1 for impact.
+    Worth keeping in proportion: a rule that ignores the pose entirely and assumes the tour-median
+    tempo locates address to within 11 frames, so the wrist signal contributes real but modest
+    information here (M4-REF Phase B6).
+
+    Returns None when the backswing boundary was **estimated rather than detected**. That estimate
+    is derived from an assumed tempo ratio, so scoring it would report that assumption back as an
+    observation — a wrong score dressed as a measurement. Dropping the checkpoint is ADR-010 §2 and
+    ADR-013; it costs ~14% of clips their tempo reading.
     """
     by_phase = {segment.phase: segment for segment in phases}
     backswing = by_phase.get(SwingPhase.BACKSWING)
     transition = by_phase.get(SwingPhase.TRANSITION)
     impact = by_phase.get(SwingPhase.IMPACT)
     if backswing is None or transition is None or impact is None:
+        return None
+    if not backswing.detected:
         return None
 
     motion_start_ms = backswing.start_ms
@@ -255,21 +322,24 @@ def evaluate_head_sway(
 
     The head center is the **ear midpoint** (see `_head_center_points`), measured in
     shoulder-widths so it is independent of the golfer's distance from the camera. Face-on is the
-    ideal view for side-to-side sway. Both endpoints are means over their whole phase window, which
-    is what makes this checkpoint robust: averaging N frames suppresses zero-mean landmark jitter
-    by √N, so the remaining error is dominated by *definition*, not by the pose model.
+    ideal view for side-to-side sway. Both endpoints are means over a window, which is what makes
+    this checkpoint robust: averaging N frames suppresses zero-mean landmark jitter by √N, so the
+    remaining error is dominated by *definition*, not by the pose model.
+
+    The address endpoint reads `_address_sample_bounds`, **not** the full ADDRESS phase — averaging
+    over the whole phase averaged over the golfer walking into frame. See that helper for why.
 
     Returns `None` if the phases/landmarks are unusable or the store has no band (the caller then
     omits a sway score).
     """
-    address = _phase_bounds(phases, SwingPhase.ADDRESS)
+    setup = _address_sample_bounds(phases)
     impact = _phase_bounds(phases, SwingPhase.IMPACT)
-    if address is None or impact is None:
+    if setup is None or impact is None:
         return None
 
-    head_address = _mean_of(_head_center_points(keypoints, address[0], address[1]))
+    head_address = _mean_of(_head_center_points(keypoints, setup[0], setup[1]))
     head_impact = _mean_of(_head_center_points(keypoints, impact[0], impact[1]))
-    width = _shoulder_width(keypoints, address[0], address[1])
+    width = _shoulder_width(keypoints, setup[0], setup[1])
     if head_address is None or head_impact is None or width is None:
         return None
 
@@ -314,6 +384,10 @@ def evaluate_finish_balance(
     A balanced swing settles into a held finish (small drift); an off-balance one keeps
     staggering. Measured in shoulder-widths for scale-invariance.
 
+    The shoulder-width ruler comes from `_address_sample_bounds` rather than the full ADDRESS
+    phase: measured over the whole phase it was off by more than 10% on 12% of GolfDB clips, and it
+    divides the metric, so that error lands straight on the score.
+
     Drift is summarized at the **p90** of the per-frame series rather than its `max`
     (`_FINISH_DRIFT_QUANTILE`, metric definitions v2). `max` made this the one checkpoint where a
     single mis-detected frame passed straight through to the score unattenuated — the opposite of
@@ -323,12 +397,12 @@ def evaluate_finish_balance(
     Returns `None` if there are too few confident follow-through frames or the store has no band.
     """
     follow_through = _phase_bounds(phases, SwingPhase.FOLLOW_THROUGH)
-    address = _phase_bounds(phases, SwingPhase.ADDRESS)
-    if follow_through is None or address is None:
+    setup = _address_sample_bounds(phases)
+    if follow_through is None or setup is None:
         return None
 
     points = _hip_center_points(keypoints, follow_through[0], follow_through[1])
-    width = _shoulder_width(keypoints, address[0], address[1])
+    width = _shoulder_width(keypoints, setup[0], setup[1])
     if len(points) < _MIN_FINISH_FRAMES or width is None:
         return None
 

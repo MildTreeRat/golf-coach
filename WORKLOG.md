@@ -5,6 +5,70 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-08-02 — M4-REF Phase B6: address detection, and the posture bug hiding behind it
+
+**Duration**: ~3 hours
+**What I did**: Closed the last open M4-REF item. Replaced the address rule's one fps-dependent
+constant with a clip-relative one, bounded its failure path, made it report when it fails, and —
+the part that turned out to matter more — stopped the posture checkpoints depending on the address
+boundary being right. New `scripts/golfdb/tune_address.py` is the runnable address report that
+never existed; ADR-013 records the decision; M4_POSE_BAKEOFF Phase B6 and
+`docs/M4_ADDRESS_DETECTION.md` carry the numbers and the flow.
+**Verification**: `pytest` → **75 passed** (was 67); `ruff` clean. `tune_address.py` reproduces
+median **7.0** / mean 22.9 / 40% over 10 / med_norm 0.122 / PCE 15.8% against the old rule's
+9.0 / 27.2 / 46% / 0.133 / 14.3%. `bakeoff.py --merge` confirms top and impact **unchanged** at 2
+and 1. Full band re-derivation chain re-run; `analyze_swing.py` re-run on both own clips.
+**Key decisions / surprises**:
+- **Splitting the corpus by capture speed is what cracked it.** The famous "median 9 frames" is
+  really 5 real-time and **17 slow-motion**, and the corpus is 47% slow-motion — so the headline was
+  substantially reporting the corpus mix. That immediately implicated `_MOTION_STALL_FRAMES = 4`, a
+  frame count sitting in a corpus whose downswing runs 8 frames real-time and 30 slow-motion. Now
+  **0.25 of the clip's own downswing duration**. Median 9 → 8 on its own.
+- **The frame-0 fallback was a second, separate bug.** It fired on 11% of clips at a median of 31
+  frames, because frame 0 is not a neutral answer — GolfDB clips carry a median 59 frames of
+  pre-roll. Bounded it to `top - 3.5 x downswing` and marked the segment `detected=False`. Median
+  → **7**, mean 27.2 → 22.9.
+- **Six alternative signals, all worse.** Setup-ball displacement, noise-floor/MAD, ramp
+  back-extrapolation, torso energy, shoulder rotation, directional persistence. Upper-body motion
+  energy *ties* the lead wrist for eight extra landmarks. Kept every one of them runnable in
+  `tune_address.py` rather than deleting the evidence — at 160x160 the torso simply does not move
+  enough during a takeaway.
+- **The sobering number**: a rule using **no pose signal at all** (`top - 3.5 x downswing`) scores
+  median 11. We score 7. That is the honest size of what the lead wrist contributes, and it is now
+  a permanent row in the harness so no future candidate gets graded against a soft baseline.
+- **The real find was in posture, not in the boundary.** `head_sway` averaged the head across
+  `[0, motion_start]` — which starts at frame 0, i.e. the golfer walking in. On
+  `golf_swing-aaron-1` that read **1.21 shoulder-widths** of sway, nearly 3x the tour p90, when the
+  head sits +0.41 off setup early in the clip and only settles by ~frame 400. Sampling a short
+  window *ending at* the boundary gives **0.36** — a hard fail becomes a comfortable pass, and the
+  clip goes to 100/100. Same shape as the top-detection defect ADR-012 found: a plausible number
+  measuring the wrong thing.
+- **One predicted win did not happen.** I expected the shoulder-width ruler (it divides *both*
+  posture checkpoints) to improve with the window. It did not — 10% of clips off by >10% before,
+  11% after. That error is pose noise, not window content. Recorded as a miss rather than quietly
+  dropped.
+- **Tempo now drops rather than guesses on 14% of clips.** The fallback boundary is derived from an
+  assumed tempo ratio, so scoring it would hand the assumption back as an observation. ADR-010 §2.
+  The most contestable call here, and the one to revisit if it annoys in practice.
+- **Metric definitions v2 → v3.** Changing *where* a metric samples changes the metric, so the bands
+  were re-derived rather than assumed: `head_sway_norm` 0.42 → **0.43**, `finish_balance_norm`
+  0.28 → **0.29**. Small, which is exactly the drift ADR-012 §4 exists to catch.
+**Where I left off**: M4-REF exit criteria met. Address is still the weakest instant (7 frames, 40%
+over 10) but it is measured, improved by a different rule rather than a better constant, and can no
+longer fail silently. Two follow-ups on the ROADMAP: switch the tracked headline from pooled frame
+median to `med_norm` + the slow-mo split, and decide whether the remaining headroom (SwingNet 31.7%
+PCE vs our 15.8%) justifies a learned model — which needs its own ADR, since ADR-008 keeps the
+analysis core stdlib-only.
+**Blockers**: None.
+**Notes**: `smoothing.py`'s 5-frame window is now the *only* absolute left in the address path, and
+it is still the value tuned by eye on ~60fps phone clips. Changing it globally moves top and impact
+too, so it stays its own item — but it is the obvious next thing to question. Also worth knowing:
+the synthetic test fixtures cannot prove the fps-invariance claim, because their setup is perfectly
+still and both the old and new rules find it. The corpus harness is the evidence there; the unit
+tests only guard the contract.
+
+---
+
 ## 2026-08-02 — M4-REF Phase B: estimator bake-off settled, both provisional bands recalibrated
 
 **Duration**: ~4 hours (mostly background extraction)

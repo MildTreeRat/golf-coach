@@ -195,13 +195,30 @@ swings, and validate our instruments against ground truth — both without buyin
 - [x] **Calibrated the address constants** — `_MOTION_QUIET_FRAC` / `_MOTION_STALL_FRAMES` were set
       from one clip's speed profile; swept against all 461, they move 0.08/3 → **0.05/4** (the
       centre of a plateau, not the grid-edge argmin), cutting median address error **13 → 9 frames**
-- [ ] Improve address detection — still the weakest instant (median 9 frames, 46% of clips over 10)
-      and now calibrated as far as the current rule goes, so further gains need a *different* rule.
-      Intrinsically hard: the takeaway onset is a gradual departure from stillness rather than a
-      direction change, and GolfDB's own SwingNet manages only 31.7% PCE here
+- [x] **Improved address detection** — the fixed 4-frame stall was the one fps-dependent absolute in
+      the path, and the corpus is ~47% slow-motion (median error 17 frames there against 5
+      real-time). Expressed as **0.25 of the clip's own downswing duration**, with the frame-0
+      fallback replaced by a bounded estimate that marks itself `detected=False`: median **9 → 7**
+      frames, mean 27.2 → 22.9, PCE 14.3% → 15.8%. Six alternative signal families were tried and
+      all lost to lead-wrist speed. Separately — and worth more — posture checkpoints now sample a
+      short window *ending at* the boundary instead of averaging the whole ADDRESS phase from frame
+      0, which corrected a false 1.21-shoulder-width sway fault on `golf_swing-aaron-1` down to
+      0.36. Bands re-derived under metric definitions **v3**. See
+      [docs/M4_ADDRESS_DETECTION.md](docs/M4_ADDRESS_DETECTION.md),
+      [ADR-013](docs/decisions/013-clip-relative-detection.md) and M4_POSE_BAKEOFF Phase B6
+- [ ] **Track `med_norm` and the slow-mo split, not the pooled frame median** — `bakeoff.py` already
+      calls `med_norm` "the headline number" and now emits `med_err_frames_by_speed`, but the
+      figures quoted around this repo are still raw frames. A pooled frame median over a corpus that
+      is 47% broadcast slow-motion measures the corpus mix as much as the rule
+- [ ] Address is *still* the weakest instant (median 7 frames, 40% over 10) and the remaining
+      headroom looks like a learned-model problem, not a heuristic one: a rule using **no pose
+      signal at all** scores 11 frames, and GolfDB's own SwingNet reaches 31.7% PCE against our
+      15.8%. Would need its own ADR — ADR-008 keeps the analysis core stdlib-only
 
 **Exit Criteria**: every band in `ranges.json` traceable to an inspectable distribution, and phase
-instants validated against hand-annotated ground truth — **met**, apart from the address instant.
+instants validated against hand-annotated ground truth — **met**. Address remains the weakest of the
+three instants, but it is now measured, improved against a different rule, and no longer able to
+fail silently.
 
 ---
 
@@ -219,7 +236,7 @@ the `PROVISIONAL / UNCALIBRATED` provenance strings in `ranges.json`.
       both sides is what makes the comparison fair, so common-mode bias is cancelled, not removed.*
 - [x] **Validate phase instants** — **done without hardware** (M4-REF): validated against GolfDB's
       461 hand-annotated face-on clips, which found and fixed a systematic top-detection defect.
-      Median error now 2 frames (top), 1 (impact), 9 (address). Real impact timing from M2/M3 is
+      Median error now 2 frames (top), 1 (impact), **7 (address)**. Real impact timing from M2/M3 is
       still the stronger check for *impact specifically*, but the pose-only instants are no longer
       unvalidated guesses tuned on one clip
 - [ ] **Revisit deferred checkpoints** — spine tilt, hip rotation, X-factor, swing plane become

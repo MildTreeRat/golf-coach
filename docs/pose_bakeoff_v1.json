@@ -195,6 +195,59 @@
           "mean_pce": 51.5
         }
       ]
+    },
+    {
+      "sample": {
+        "clips": 461,
+        "source_videos": 209,
+        "golfers": 122,
+        "view": "face-on",
+        "selection": "round-robin across source videos, deterministic"
+      },
+      "estimators": [
+        "mediapipe:lite"
+      ],
+      "results": [
+        {
+          "estimator": "mediapipe:lite",
+          "clips_scored": 461,
+          "clips_unsegmentable": 0,
+          "clips_not_cached": 0,
+          "frames": 134412,
+          "scoring_seconds": 12.2,
+          "events": {
+            "address": {
+              "med_err_frames": 7,
+              "med_norm_err": 0.122,
+              "pce": 15.8,
+              "med_err_frames_by_speed": {
+                "slow_motion": 17,
+                "real_time": 4.0
+              }
+            },
+            "top": {
+              "med_err_frames": 2,
+              "med_norm_err": 0.0294,
+              "pce": 62.9,
+              "med_err_frames_by_speed": {
+                "slow_motion": 4,
+                "real_time": 1.0
+              }
+            },
+            "impact": {
+              "med_err_frames": 1,
+              "med_norm_err": 0.0147,
+              "pce": 87.0,
+              "med_err_frames_by_speed": {
+                "slow_motion": 3,
+                "real_time": 0.0
+              }
+            }
+          },
+          "mean_norm_err": 0.0554,
+          "mean_pce": 55.2
+        }
+      ]
     }
   ]
 }

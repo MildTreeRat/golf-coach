@@ -9,9 +9,14 @@ from golf_coach.analysis.checkpoints import (
     evaluate_head_sway,
     evaluate_tempo,
 )
+from golf_coach.analysis.checkpoints.mechanics import (
+    _ADDRESS_SAMPLE_MIN_FRAMES,
+    _address_sample_bounds,
+)
 from golf_coach.analysis.phases import segment_phases
 from golf_coach.analysis.smoothing import smooth_keypoints
 from golf_coach.contracts.keypoints import FrameKeypoints, PoseLandmark
+from golf_coach.contracts.swing import SwingPhase
 
 
 def _tempo(backswing_frames: int, downswing_frames: int):
@@ -214,3 +219,86 @@ def test_low_confidence_hips_are_rejected() -> None:
 
     smoothed = smooth_keypoints(swing)
     assert evaluate_finish_balance(smoothed, segment_phases(smoothed)) is None
+
+
+def _with_pre_roll(keypoints: list[FrameKeypoints], frames: int) -> list[FrameKeypoints]:
+    """Prepend still frames — the golfer standing over the ball before anything happens.
+
+    `make_swing` opens with an 8-frame address dwell, which is far shorter than real footage: the
+    GolfDB face-on corpus carries a median of 59 frames between the clip starting and the labelled
+    address, and 254 at the p90. Without modelling that, the sampling window is bounded by how few
+    frames exist rather than by its own length, and a test of its scaling measures nothing.
+    """
+    padded = [keypoints[0]] * frames + list(keypoints)
+    return [
+        frame.model_copy(update={"frame_index": index, "timestamp_ms": index * 10.0})
+        for index, frame in enumerate(padded)
+    ]
+
+
+def test_address_sample_window_ends_at_the_boundary_and_excludes_pre_roll() -> None:
+    """Posture is sampled from a short window ending at address, not from `[0, motion_start]`.
+
+    The ADDRESS phase starts at frame 0, which is not address — it is wherever the clip begins.
+    On GolfDB that window holds a median 59 frames of the golfer walking up to the ball, and their
+    head travels 0.61 shoulder-widths across it at the p90 against a `head_sway` pass band of 0.42
+    in total. See `_address_sample_bounds` and ADR-013.
+    """
+    smoothed = smooth_keypoints(_with_pre_roll(make_swing(30, 10, takeaway_frames=12), 40))
+    phases = segment_phases(smoothed)
+    address = next(p for p in phases if p.phase is SwingPhase.ADDRESS)
+
+    lo, hi = _address_sample_bounds(phases)
+
+    assert hi == address.end_frame, "the window must end exactly at the address boundary"
+    assert lo > address.start_frame, "it must not reach back to frame 0"
+    assert hi - lo + 1 >= _ADDRESS_SAMPLE_MIN_FRAMES
+    # The 40 frames of pre-roll are exactly what the old `[0, motion_start]` window averaged over.
+    assert lo > 40 - hi, "most of the pre-roll must fall outside the window"
+
+
+def test_address_sample_window_scales_with_the_downswing() -> None:
+    """A slow-motion clip gets a proportionally longer window, for the same reason the stall does.
+
+    A fixed frame count would mean four times different things across a corpus that is ~47%
+    slow-motion. Measured on GolfDB the window is 6 frames on real-time clips (the floor) and 12
+    on slow-motion ones. Both fixtures get generous pre-roll so the window is limited by its own
+    length rather than by the end of the clip.
+    """
+    fast = segment_phases(smooth_keypoints(_with_pre_roll(make_swing(20, 8), 60)))
+    slow = segment_phases(smooth_keypoints(_with_pre_roll(make_swing(60, 40), 60)))
+
+    fast_lo, fast_hi = _address_sample_bounds(fast)
+    slow_lo, slow_hi = _address_sample_bounds(slow)
+
+    assert (fast_hi - fast_lo) < (slow_hi - slow_lo)
+
+
+def test_address_sample_window_survives_a_boundary_at_frame_zero() -> None:
+    """When the boundary is 0 there is nothing behind it, so the window widens forward instead.
+
+    Frames just after a mis-placed boundary are still far closer to setup than the start of a clip
+    is, and 11% of GolfDB clips left fewer than 5 frames behind the boundary.
+    """
+    moving = make_swing(20, 14, takeaway_frames=60)[8:]
+    phases = segment_phases(smooth_keypoints(moving))
+    lo, hi = _address_sample_bounds(phases)
+
+    assert 0 <= lo <= hi
+    assert hi - lo + 1 >= _ADDRESS_SAMPLE_MIN_FRAMES
+
+
+def test_tempo_is_dropped_when_the_boundary_was_only_estimated() -> None:
+    """No score beats a wrong one (ADR-010 §2): a guessed address must not become a tempo reading.
+
+    The fallback estimate is derived from an assumed tempo ratio, so scoring it would report that
+    assumption straight back as an observation.
+    """
+    moving = make_swing(20, 14, takeaway_frames=60)[8:]
+    phases = segment_phases(smooth_keypoints(moving))
+
+    assert not next(p for p in phases if p.phase is SwingPhase.BACKSWING).detected
+    assert evaluate_tempo(phases) is None
+    # Posture still scores — it only needs the boundary to place a window, not to divide by.
+    smoothed = smooth_keypoints(moving)
+    assert evaluate_head_sway(smoothed, phases) is not None

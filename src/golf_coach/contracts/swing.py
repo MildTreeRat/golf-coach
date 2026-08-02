@@ -36,6 +36,16 @@ class PhaseSegment(BaseModel):
     end_frame: int = Field(ge=0)
     start_ms: float = Field(ge=0.0)
     end_ms: float = Field(ge=0.0)
+    detected: bool = Field(
+        default=True,
+        description=(
+            "False when this boundary is an estimate rather than something found in the signal. "
+            "A detector that fails should say so rather than return a plausible-looking number "
+            "(ADR-013): the estimate is good enough to place a measurement window, but a consumer "
+            "that *divides* by the boundary — tempo does — must drop its score instead of "
+            "reporting one. Defaults True so a segment nobody flagged reads as detected."
+        ),
+    )
 
 
 class CheckpointScore(BaseModel):
