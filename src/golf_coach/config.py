@@ -26,6 +26,15 @@ class Settings(BaseSettings):
     models_dir: Path = REPO_ROOT / "data" / "models"
     db_path: Path = REPO_ROOT / "data" / "golf_trainer.db"
 
+    # Screen-capture shot ingestion (ADR-014). Drop photos of the launch monitor's
+    # SHOT DATA screen in `shot_screens_dir`; parsed shots land in `shots_dir`.
+    shot_screens_dir: Path = REPO_ROOT / "data" / "raw" / "shot_screens"
+    shots_dir: Path = REPO_ROOT / "data" / "processed" / "shots"
+    launch_monitor_profile: str = "hd_golf"
+    ocr_engine: str = "paddle"
+    # Below this, a parse is flagged `needs_review` rather than silently trusted.
+    ocr_min_confidence: float = 0.6
+
     # Service ports (see docs/ARCHITECTURE.md deployment view).
     api_port: int = 8080
     mcp_port: int = 8081

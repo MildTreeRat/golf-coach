@@ -170,3 +170,37 @@ Three things this validates about the design here:
 The two `PROVISIONAL / UNCALIBRATED` rows are **not** yet replaced; they need pose over the clip
 corpus rather than labels alone (ADR-012 Phase B). The Hardware Re-Validation Gate item for them
 stands, though ADR-012 shows it no longer strictly requires hardware.
+
+## Addendum (2026-08-04): percentiles ride on `CheckpointScore`, but never on the scoring path
+
+§2 said a missing range yields no score, and ADR-012 kept `golfdb_v1.json` deliberately *off* the
+`resolve_range` hot path — "scoring reads `ranges.json` and nothing here". `CheckpointScore` now
+carries `percentile` / `population_n` / `one_sided`, filled from that same distribution file. This
+records why that is not a violation, and the rule that keeps it from becoming one.
+
+**The firewall.** `score` and `passed` are computed from `ranges.json` alone, exactly as before.
+The percentile is attached afterwards and read only by `feedback`. `tests/analysis/test_population.py
+::test_percentile_never_moves_the_score_or_the_verdict` blinds the evaluators to the distributions
+and asserts both fields are unchanged, so the boundary is executable rather than a comment.
+
+**Why it was needed at all.** `_score_within_range` returns exactly `1.0` for *every* passing
+checkpoint, so a swing that passes everything has three identical scores and no way to rank them.
+`golf_swing-aaron-1` scores 100/100 while its head sway sits higher than 83% of tour swings — the
+one thing on that swing worth telling the golfer, and invisible to every number we stored before.
+Ranking in-band checkpoints is the percentile's job; nothing else can do it.
+
+**Same stratum as the band.** `_population_placement` queries `(club, sex, view)` all `"all"` —
+the stratum the bands were cut from — rather than the most specific match. `tempo_ratio`'s face-on
+p90 is 5.00 against the all-view 4.71, so mixing strata would let one swing read "inside the band"
+and "past the 90th percentile" simultaneously. Moving to per-club bands means moving *both* the band
+and the percentile together; the resolver's fallback semantics make that a data edit, but it is not
+a data edit that can be done on one side only.
+
+**A limit worth recording, because it constrains consumers.** The bands *are* the reference p10/p90
+(ADR-012), and `Distribution.percentile_of` clamps to `[10, 90]` because the tails were never
+stored. So **every failing checkpoint reports percentile 90**, whether it missed by a hair or by
+triple — the percentile saturates precisely where the band ends. It is therefore useless for grading
+severity, and `feedback.rules` deliberately keeps severity and failure-ranking on `score` (which
+decays in band-widths and does separate them), using the percentile only to rank passes. Storing the
+p1/p99 or the raw sd would lift this, and is the change to make if failure severity ever needs
+population units.

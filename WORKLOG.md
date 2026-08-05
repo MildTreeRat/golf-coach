@@ -5,6 +5,124 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-08-04 — M3: shot data arrives, read off a photo of the simulator screen
+
+**Duration**: ~3 hours
+**What I did**: Unblocked M3 without buying anything. The HD Golf simulator has no data export
+of any kind, so shot metrics are now read off photographs of its `SHOT DATA` screen: rectify the
+screen out of the photo, recover its orientation, OCR it, parse the tile grid geometrically,
+cross-check the numbers against the screen's own arithmetic, and cache the result. Plus
+`CompositeShotDataSource`, so screen captures, mock shots, and a future R10 mix behind one port.
+Decision: [ADR-014](docs/decisions/014-screen-capture-shot-ingestion.md); ADR-004 has an addendum.
+**Verification**: `pytest` → **141 passed, 4 skipped** (was 96); `ruff` clean; `mypy` clean on
+`contracts` + `launch_monitor`. Rectification verified by eye on both reference photos. The 4 skips
+are the OCR integration tests — `paddleocr` isn't installed in this venv yet.
+**Key decisions / surprises**:
+- **Chose local OCR over vision-model parsing, knowing it is the riskier build.** The photos are
+  the hard case: shot at an angle, ceiling glare, the room reflected across the tiles. What made
+  it worth it is that the choice is *cheap to reverse* — the engine sits behind a `TextRecognizer`
+  Protocol, so if it proves too fragile in practice, a vision adapter is one new class and parsing,
+  validation, caching and the source are untouched.
+- **Quad detection failed on both real photos, and the cause was scale, not thresholds.** The
+  morphology kernel that bridges gaps in the bezel edge is a fixed pixel size; on a 5712px phone
+  photo it is far too small to close anything, so the screen contour came back shattered every
+  time. Running detection on a normalized 1000px copy and scaling the corners back fixed both
+  photos immediately. I had been about to start tuning Canny thresholds — that would have been
+  hours down the wrong hole.
+- **The "upside-down" photo was never upside-down to the code.** IMG_2739 displays inverted in
+  viewers that ignore EXIF, and I wrote a test asserting the rotation search would correct it.
+  `cv2.imread` applies the EXIF orientation tag, so it loads upright and the assertion was wrong.
+  The rotation search still earns its place — EXIF does not survive re-encodes, screenshots, or
+  video frames — but it is now tested on synthetic images where I control the orientation, and the
+  integration test asserts what actually matters (the screen got cropped, the labels are legible).
+- **The screen validates its own parse.** It prints redundant metrics: `smash == ball / club` and
+  `total == carry + bounce & roll`. Both hold *exactly* on both reference photos, which makes a
+  mismatch evidence about the parse rather than about the shot. That is the whole answer to "how
+  do I know OCR didn't drop a digit" — a 128.1 read as 28.1 is a well-formed number that breaks
+  the arithmetic.
+- **Fidelity is not plausibility, and conflating them would have been a bug.** IMG_2739 shows a
+  159.5 mph club speed and a 0.89 smash factor — nonsense as a golf shot, but the screen's own
+  arithmetic checks out, so the parse is correct and passes clean. Flagging it would train me to
+  ignore flags. Range checks are deliberately wide enough to admit it; they exist to catch a
+  dropped digit, not an unusual swing.
+- **No fixed ROIs anywhere.** Tiles are located from the labels' own geometry — find the labels,
+  group into rows, derive each column from its neighbours, read what falls in the cell below. A
+  pixel-coordinate template would break the first time I stood somewhere else to take the photo.
+  Device knowledge (labels, target fields, sign rules) is `profiles.json`, so a second launch
+  monitor is a data change.
+- **Signs are the most dangerous part of the pipeline.** `1.6 ° O>I` must become `-1.6`, `Closed`
+  negative, `L` negative, and `---` must become `None` and never `0`. A flipped sign is invisible
+  downstream. A number with no direction word is stored as a magnitude *with a warning*, never
+  with a guess.
+**Where I left off**: Ingestion works end-to-end on the two reference photos. Next: install the
+`ocr` extra, run `import_shot_screens.py` over a full range session, and tune preprocessing on
+photos that were not the two I developed against. Then the MCP server itself, which is now the
+only thing left in M3.
+**Blockers**: None. `paddleocr` is not installed yet, so the integration tests skip.
+
+---
+
+## 2026-08-04 — M5: the feedback learns to prioritise, and the panel fails to widen
+
+**Duration**: ~3 hours
+**What I did**: Turned three equal-weight readouts into ranked coaching. Wired the reference
+distributions — built, tested and *never called* since M4-REF — onto every `CheckpointScore`, ranked
+tips by what actually discriminates within their group, added a headline, and stopped unmeasurable
+checkpoints vanishing without a word. Then tried to widen the panel from 3 to 5 using the
+arm-parallel metrics already sitting in `golfdb_v1.json`, and the gate said no. Design doc:
+[docs/M5_COACHING_FEEDBACK.md](docs/M5_COACHING_FEEDBACK.md); ADR-010 has a new addendum.
+**Verification**: `pytest` → **96 passed** (was 75); `ruff` clean; `mypy` clean on `analysis` +
+`feedback`. `analyze_swing.py` re-run on both clips. `tune_arm_parallel.py` scored 461 face-on clips.
+**Key decisions / surprises**:
+- **The motivating bug was a 100/100 swing.** `golf_swing-aaron-1` passes all three checkpoints and
+  scores perfect — while its head sway sits higher than **83% of 458 tour swings**. Nothing we stored
+  could say so, because `_score_within_range` returns exactly 1.0 for *every* pass. Three passes,
+  three identical scores, no ordering derivable. That is the whole argument for percentiles, and it
+  is a better one than "show the golfer a stat".
+- **The percentile saturates exactly where the band ends.** The bands *are* the reference p10/p90
+  (ADR-012) and `percentile_of` clamps there, so every failing checkpoint reports 90 whether it
+  missed by a hair or by triple. I had planned to rank failures by percentile; that would have
+  flattened them all into one bucket. Ranking needs **two** signals: `score` for failures (it decays
+  in band-widths and does separate them), percentile for passes (score cannot). Severity stays on
+  `score` for the same reason.
+- **Percentiles query the same stratum the band was cut from**, not the most specific match.
+  `tempo_ratio` face-on p90 is 5.00 against the all-view 4.71 — mixing them would let a swing read
+  "inside the band" and "past the 90th percentile" at once. There is now a test that blinds the
+  evaluators to the distributions and asserts `score`/`passed` do not move, so ADR-010 §2's firewall
+  is executable rather than a comment.
+- **The panel did not widen, and that is the result.** GolfDB's mid-backswing/mid-downswing are
+  *lead arm parallel to the ground* — a genuine body pose, unlike `toe_up`, which is a club event
+  gated on M2. Built `tune_arm_parallel.py` and measured before writing either checkpoint.
+  **`prior_frac` — which reads no pose signal at all, just "assume the tour-median fraction" — beats
+  every pose rule on every column, for both events.** frac_err 0.043 against argmin's 0.059
+  (mid_backswing) and 0.038 against cross's 0.100 (mid_downswing). A checkpoint built on our
+  detection would be worse than a constant. First time `tune_address.py`'s `prior_*` bar has actually
+  rejected something.
+- **Reported `frac_err`, not frames.** The error in the metric the checkpoint would *report*, against
+  the p10–p90 width of the band it would be compared against. A 4-frame error sounds excellent until
+  you notice `mid_backswing_frac`'s entire tour spread is ~4 frames on a real-time clip.
+- **A hypothesis I checked and had wrong.** I assumed the tight spread was frame quantization — an
+  8-frame downswing can only produce a handful of fractions. It is not: spread is **0.148 real-time
+  vs 0.149 slow-motion** for mid_backswing, on 29- vs 108-frame backswings. Four times the temporal
+  resolution does not narrow it. The variation is real; our detector cannot resolve it.
+- **Unscored checkpoints are named now.** Tempo drops on ~14% of clips (ADR-013) and `overall_score`
+  is a mean over survivors, so a 2-checkpoint and a 3-checkpoint swing printed the same number.
+  `SwingResult.unscored` carries the names. The score is deliberately *not* penalised — dropping the
+  checkpoint is right, dropping it silently was not.
+**Where I left off**: The panel stays at three checkpoints, now ranked and quantified against the
+tour population. `tune_arm_parallel.py` is kept runnable alongside the rejected address signals. The
+two things that would change its verdict are both hardware/milestone gated: M2 club detection gives
+`toe_up` directly, and the down-the-line view (ADR-011) sees arm-parallel far more cleanly than a
+160×160 face-on crop.
+**Blockers**: None.
+**Notes**: `unscored` carries names but not *reasons* — "tempo could not be measured" does not say
+"because the address boundary was estimated". A reason means the evaluators returning one instead of
+`None`, which touches every return site; deferred deliberately. Also: the coaching prose still lives
+in `mechanics.py`. Fine at three checkpoints, extract a `feedback/catalogue.py` the moment that
+changes.
+
+---
+
 ## 2026-08-02 — M4-REF Phase B6: address detection, and the posture bug hiding behind it
 
 **Duration**: ~3 hours

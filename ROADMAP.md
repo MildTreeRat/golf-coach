@@ -1,6 +1,6 @@
 # Roadmap: AI Golf Swing Trainer
 
-## Last Updated: 2026-07-16
+## Last Updated: 2026-08-04
 
 ---
 
@@ -17,7 +17,7 @@ milestones that require it. Each milestone below is tagged with what it needs to
 | M1 Capture & Skeleton | None | Phone video / sample swing clips |
 | M1.5 Club-Head Detectability Spike | None to start | Phone/sample clips of the impact zone |
 | M2 Club & Ball Detection | Global-shutter camera (ADR-003) | Scaffolding + labeling on sample frames |
-| M3 Launch Monitor / MCP | Garmin R10 (ADR-004) | MCP server + schema vs. mock `ShotData` |
+| M3 Launch Monitor / MCP | None — HD Golf screen captures (ADR-014) | Photos of the SHOT DATA screen; mock `ShotData` |
 | M4-PoC Fundamentals Analysis | None | M1 skeleton output (pose only) |
 | M4 Analysis Engine | None | Real or simulated merged data |
 | M5 Feedback UI | None | — |
@@ -87,15 +87,24 @@ blocker for M1.
 
 ## Milestone 3: Launch Monitor Integration
 **Goal**: Ingest real shot data from a launch monitor and expose it via MCP server.
-**Hardware to start**: Garmin R10 (ADR-004) for *real* data. The MCP server + `ShotData` schema are built first against **mock/simulated shot data**, then switched to the live R10 feed (ADR-007). The R10's `club_path` metric is the quantitative counterpart to M2's visual club-path arc.
+**Hardware to start**: None any more. Shot data now comes from photos of the **HD Golf** simulator's `SHOT DATA` screen, parsed by local OCR ([ADR-014](docs/decisions/014-screen-capture-shot-ingestion.md)) — hardware already owned. The Garmin R10 (ADR-004) stays the right answer for real-time streaming and drops into the same port when bought. `club_path` is the quantitative counterpart to M2's visual club-path arc.
 
-- [ ] Build MCP server against mock/simulated `ShotData` (no hardware required)
-- [ ] Select and acquire launch monitor hardware (see ADR-004)
-- [ ] Reverse-engineer or use API to extract shot data from device
-- [ ] Define `ShotData` schema (club_speed, ball_speed, launch_angle, spin, face_angle, path)
+- [x] Define `ShotData` schema (club_speed, ball_speed, launch_angle, spin, face_angle, path)
+- [x] Extract shot data from the device — screen-capture OCR, since HD Golf has no export
+- [x] `CompositeShotDataSource` so screen / mock / R10 feeds mix behind one port
+- [x] Parse confidence + physics cross-checks, so a misread digit is flagged not trusted
+- [x] `scripts/import_shot_screens.py` — photos in, parsed shots out, content-addressed cache
+- [ ] Tune preprocessing against a full range session's photos (not just the 2 reference ones)
+- [ ] Build MCP server against a `ShotDataSource` (mock or screen — no hardware required)
 - [ ] Build MCP server with tools: `get_recent_shots`, `get_session_summary`, `get_shot_by_id`, `compare_sessions`
 - [ ] Write integration tests: MCP server returns valid data for each tool
 - [ ] Connect MCP server to analysis engine data merger
+- [ ] *(optional, later)* Acquire the Garmin R10 and add its BLE adapter (ADR-004)
+
+> **Status (2026-08-04):** shot ingestion works end-to-end from photos — screen rectification,
+> orientation recovery, OCR, geometric tile parsing, sign conventions, physics validation, and a
+> parse cache. `ScreenShotDataSource` serves the results on the base install with no OCR stack.
+> Remaining: tune preprocessing on a real session's worth of photos, then the MCP server itself.
 
 **Exit Criteria**: After a shot, MCP server exposes complete shot metrics; analysis engine can query them.
 
@@ -222,6 +231,44 @@ fail silently.
 
 ---
 
+## M5-FB: Prioritised coaching feedback (no hardware) — done
+**Goal**: Stop reporting three equal-weight pass/fail readouts and start saying *what to work on
+first*, grounded in how far off the tour population a swing actually sits. Design doc:
+[docs/M5_COACHING_FEEDBACK.md](docs/M5_COACHING_FEEDBACK.md).
+
+- [x] **Wired the reference distributions into production.** `golfdb_v1.json` + `percentile_of()`
+      were built and tested in M4-REF and then imported by nothing but their own test. Every
+      `CheckpointScore` now carries `percentile` / `population_n` / `one_sided`, and every tip says
+      where the swing sits — "a looser finish than at least 90% of 458 tour swings"
+- [x] **Ranked the tips, added a headline.** Failures first by `score`, then passes by percentile.
+      Two signals because neither works alone: the bands *are* the reference p10/p90 and
+      `percentile_of` clamps there, so every failure reports 90; and `_score_within_range` returns
+      exactly 1.0 for every pass. The motivating case is `golf_swing-aaron-1`, which scores
+      **100/100** while its head sway sits higher than 83% of tour swings
+- [x] **Percentiles kept off the scoring path** (ADR-010 addendum) — informational only, drawn from
+      the same `(all, all, all)` stratum the bands were cut from, with a test that blinds the
+      evaluators to the distributions and asserts `score`/`passed` do not move
+- [x] **Unmeasurable checkpoints are named rather than dropped silently** — tempo goes missing on
+      ~14% of clips (ADR-013) and `overall_score` is a mean over survivors, so `SwingResult.unscored`
+      now carries the names. The score is *not* penalised; the fix is disclosure, not arithmetic
+- [x] **Tried to widen the panel 3 → 5, and the gate said no.** GolfDB's mid-backswing/mid-downswing
+      are *lead arm parallel to the ground*, a real body pose (unlike `toe_up`, a club event gated on
+      M2). New `scripts/golfdb/tune_arm_parallel.py` scored three candidate rules over the 461-clip
+      face-on corpus **before** either checkpoint was written: `prior_frac`, which reads no pose
+      signal at all, beats every pose rule on every column — frac_err 0.043 vs 0.059 (mid_backswing)
+      and 0.038 vs 0.100 (mid_downswing). A checkpoint built on our detection would be worse than a
+      constant. Kept runnable, like the six rejected address signals
+- [ ] **Reasons, not just names, on `unscored`** — needs the evaluators to return a reason instead of
+      `None`, which touches every return site
+- [ ] **Per-club percentiles** — the corpus has the strata, but the band has to move in step
+      (ADR-010 addendum), so it is one change on two sides, not a percentile-only edit
+
+**Exit Criteria**: a swing report that leads with the one thing to work on and quantifies it against
+the tour population — **met**. The panel stayed at three checkpoints, which is a measured result
+rather than an omission.
+
+---
+
 ## Hardware Re-Validation Gate (revisit when cameras / launch monitor arrive)
 **Why this exists**: several M4-PoC/PoC+ choices are the best we can do from a single face-on
 camera with no ground truth. They are deliberately provisional and must be re-checked — not
@@ -278,8 +325,10 @@ the `PROVISIONAL / UNCALIBRATED` provenance strings in `ranges.json`.
 
 - [ ] Set up React project (or Streamlit for rapid prototype)
 - [ ] Build video replay component with skeleton + club path overlays
-- [ ] Build score dashboard: overall score, per-checkpoint breakdown
-- [ ] Build rule-based feedback panel: plain-English tips per checkpoint
+- [ ] Build score dashboard: overall score, per-checkpoint breakdown *(the payload is ready:
+      `CheckpointScore` carries the band **and** the tour percentile, so a bar can show both)*
+- [ ] Build rule-based feedback panel: plain-English tips per checkpoint *(the ranking, severity and
+      headline landed in M5-FB; what's left is rendering `FeedbackPayload`)*
 - [ ] Build session history view: list of past swings with scores and trends
 - [ ] Connect frontend to FastAPI backend
 

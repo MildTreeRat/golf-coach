@@ -7,9 +7,22 @@ launch-monitor data online — this package is the named seam where it will land
 """
 
 from golf_coach.analysis.checkpoints.mechanics import (
+    FINISH_BALANCE_CHECKPOINT,
+    HEAD_SWAY_CHECKPOINT,
+    TEMPO_CHECKPOINT,
     evaluate_finish_balance,
     evaluate_head_sway,
     evaluate_tempo,
 )
 
-__all__ = ["evaluate_tempo", "evaluate_head_sway", "evaluate_finish_balance"]
+# The name constants are public because an evaluator returning `None` still has to be *named* —
+# `SwingResult.unscored` reports which checkpoints could not be measured, and the engine should not
+# be re-typing those strings as literals next to the calls that produce them.
+__all__ = [
+    "FINISH_BALANCE_CHECKPOINT",
+    "HEAD_SWAY_CHECKPOINT",
+    "TEMPO_CHECKPOINT",
+    "evaluate_finish_balance",
+    "evaluate_head_sway",
+    "evaluate_tempo",
+]

@@ -1,10 +1,12 @@
 """ShotDataSource port: the interface every shot-data source implements.
 
 Adapters:
-  - MockShotDataSource (launch_monitor/mock.py) — synthetic shots          [today]
-  - R10Source          (launch_monitor/r10.py)  — Garmin R10 over BLE      [needs hardware]
+  - MockShotDataSource     (launch_monitor/mock.py)          — synthetic shots     [today]
+  - ScreenShotDataSource   (launch_monitor/screen/source.py) — parsed screen shots [today]
+  - CompositeShotDataSource(launch_monitor/composite.py)     — several of the above
+  - R10Source              (launch_monitor/r10.py)           — R10 over BLE  [needs hardware]
 
-Both yield identical `ShotData` contracts (ADR-007).
+All yield identical `ShotData` contracts (ADR-007).
 """
 
 from __future__ import annotations

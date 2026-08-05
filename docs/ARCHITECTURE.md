@@ -85,7 +85,7 @@ graph TB
 |-----------|-----------|------------|
 | Keypoints | Pose → Analysis | `List[FrameKeypoints]` — 33 landmarks per frame with x, y, z, visibility |
 | Detections | Detection → Analysis | `List[FrameDetections]` — bounding boxes + class (club_head, ball) per frame |
-| Shot Data | MCP → Analysis | `ShotData` — club_speed, ball_speed, launch_angle, spin_rate, club_face_angle, club_path, smash_factor |
+| Shot Data | MCP → Analysis | `ShotData` — club_speed, ball_speed, launch_angle, spin_rate, club_face_angle, club_path, smash_factor, distances, plus `provenance` (confidence + audit trail) for sources that *infer* metrics rather than receive them (ADR-014) |
 | Swing Result | Analysis → Feedback | `SwingResult` — phase_timestamps, checkpoint_scores, overall_score, merged keypoint+detection+shot data |
 | Feedback | Feedback → UI | `FeedbackPayload` — score, list of tips (text), overlay frames, LLM coaching response |
 

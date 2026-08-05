@@ -59,6 +59,39 @@ class CheckpointScore(BaseModel):
     expected_high: float | None = None
     message: str = ""
 
+    # Where `observed` sits in the reference population (M4-REF `golfdb_v1.json`), as opposed to
+    # `score`, which only says how far outside the *band* it fell. These are **informational and
+    # never affect `score` or `passed`** — scoring reads `ranges.json` and nothing else (ADR-010 §2
+    # and its percentile addendum). They exist because `score` is not comparable across checkpoints:
+    # `_score_within_range` decays in band-widths, and the bands are 1.99, 0.43 and 0.29 wide, so a
+    # 0.6 means three different real-world things. A percentile is the common currency that lets
+    # `feedback` rank tips and say which fault to work on first.
+    percentile: float | None = Field(
+        default=None,
+        ge=0.0,
+        le=100.0,
+        description=(
+            "Percentile of `observed` within the reference population, or None when no "
+            "distribution covers this metric. Clamped to [10, 90] by `Distribution.percentile_of` "
+            "because the tails were never stored — read 90 as 'at or beyond the 90th', not as a "
+            "precise rank."
+        ),
+    )
+    population_n: int | None = Field(
+        default=None,
+        ge=0,
+        description="Sample size behind `percentile`, so a reader can weigh how much it is worth.",
+    )
+    one_sided: bool = Field(
+        default=False,
+        description=(
+            "True when lower is strictly better (head sway, finish balance) and the band is "
+            "`[0, high]`; False when both tails are faults (tempo). Consumers need this to turn a "
+            "percentile into a distance from *ideal* — at the 10th percentile a one-sided metric "
+            "is excellent and a two-sided one is as wrong as it is at the 90th."
+        ),
+    )
+
 
 class SwingResult(BaseModel):
     """The complete analyzed result for one swing."""
@@ -68,6 +101,18 @@ class SwingResult(BaseModel):
 
     phases: list[PhaseSegment] = Field(default_factory=list)
     checkpoint_scores: list[CheckpointScore] = Field(default_factory=list)
+
+    unscored: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Checkpoints that were attempted but could not be measured — no benchmark band, "
+            "unusable landmarks, or a boundary that was estimated rather than detected (ADR-013). "
+            "Dropping the score is correct (ADR-010 §2: no score beats a wrong one), but dropping "
+            "it *silently* is not: `overall_score` is a mean over whatever survived, so without "
+            "this list a two-checkpoint swing and a three-checkpoint swing are indistinguishable. "
+            "Names only — the reason would need the evaluators to return one instead of None."
+        ),
+    )
 
     # Dual-axis scoring (ADR-009). The practice intent this swing was judged against,
     # plus the two independent sub-scores. `overall_score` is the policy-weighted blend

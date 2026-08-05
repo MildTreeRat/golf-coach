@@ -64,6 +64,10 @@ def _print_report(result: SwingResult, instants: dict[str, int]) -> None:
         + ", ".join(f"{label} @ {frame}" for label, frame in instants.items())
     )
 
+    feedback = build_feedback(result)
+    if feedback.headline:
+        print(f"\n>> {feedback.headline}")
+
     print("\nCheckpoints:")
     if not result.checkpoint_scores:
         print("  (none scored - no benchmark band matched, or the swing was unsegmentable)")
@@ -74,11 +78,15 @@ def _print_report(result: SwingResult, instants: dict[str, int]) -> None:
             else "[no band]"
         )
         flag = "PASS" if cp.passed else "MISS"
+        # The percentile is what separates two checkpoints that both scored 100% — print it beside
+        # the score rather than only inside the tip text.
+        place = f"  tour pct={cp.percentile:g}" if cp.percentile is not None else ""
         print(f"  {cp.name:<16} observed={cp.observed}  band={band}  "
-              f"score={cp.score:.0%}  {flag}")
+              f"score={cp.score:.0%}  {flag}{place}")
+    if result.unscored:
+        print(f"  not measured: {', '.join(result.unscored)}")
 
-    print("\nTips:")
-    feedback = build_feedback(result)
+    print("\nTips (most actionable first):")
     for tip in feedback.tips:
         print(f"  [{tip.severity.value.upper():<5}] {tip.text}")
     print()

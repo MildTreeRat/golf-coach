@@ -10,6 +10,9 @@ seams where full M4 adds club detection and launch-monitor scoring (ADR-009).
 from __future__ import annotations
 
 from golf_coach.analysis.checkpoints import (
+    FINISH_BALANCE_CHECKPOINT,
+    HEAD_SWAY_CHECKPOINT,
+    TEMPO_CHECKPOINT,
     evaluate_finish_balance,
     evaluate_head_sway,
     evaluate_tempo,
@@ -46,14 +49,23 @@ def analyze_swing(
     smoothed = smooth_keypoints(keypoints)
     phases = segment_phases(smoothed)
 
+    # Each evaluator returns `None` rather than guess when it cannot measure — no band, unusable
+    # landmarks, or a boundary that was estimated rather than detected (ADR-010 §2, ADR-013). That
+    # is right, but a dropped score still has to be *reported*: `overall_score` is a mean over
+    # whatever survived, so a two-checkpoint swing and a three-checkpoint swing otherwise print the
+    # same number with nothing to distinguish them. Carrying the name alongside each call is what
+    # lets `unscored` say which one went missing.
     mechanics: list[CheckpointScore] = []
-    for checkpoint in (
-        evaluate_tempo(phases, club=intent.club),
-        evaluate_head_sway(smoothed, phases, club=intent.club),
-        evaluate_finish_balance(smoothed, phases, club=intent.club),
+    unscored: list[str] = []
+    for name, checkpoint in (
+        (TEMPO_CHECKPOINT, evaluate_tempo(phases, club=intent.club)),
+        (HEAD_SWAY_CHECKPOINT, evaluate_head_sway(smoothed, phases, club=intent.club)),
+        (FINISH_BALANCE_CHECKPOINT, evaluate_finish_balance(smoothed, phases, club=intent.club)),
     ):
         if checkpoint is not None:
             mechanics.append(checkpoint)
+        else:
+            unscored.append(name)
 
     # Pose-only PoC: no outcome checkpoints yet (needs M2 detection / M3 shot data).
     outcome: list[CheckpointScore] = []
@@ -65,6 +77,7 @@ def analyze_swing(
         session_id=session_id,
         phases=phases,
         checkpoint_scores=mechanics + outcome,
+        unscored=unscored,
         intent=intent,
         mechanics_score=scores.mechanics,
         outcome_score=scores.outcome,

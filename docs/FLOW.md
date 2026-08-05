@@ -30,7 +30,12 @@ flowchart TD
 
     subgraph LM["Launch Monitor — I/O edge"]
         MOCK["MockShotDataSource (today) ✅"]
+        SCR["ScreenShotDataSource — OCR of HD Golf screen photos ✅"]
         R10["R10Source — Garmin R10 BLE (later)"]
+        COMP["CompositeShotDataSource — mixes the above ✅"]
+        MOCK --> COMP
+        SCR --> COMP
+        R10 -.-> COMP
     end
 
     POSE["Pose — MediaPipe"]
@@ -53,11 +58,13 @@ flowchart TD
     DB -->|history / trends| UI
 
     classDef built fill:#d4edda,stroke:#28a745,color:#155724;
-    class MOCK built;
+    class MOCK,SCR,COMP built;
 ```
 
-**Reading it:** the two camera adapters (`File`/`Live`) and two launch-monitor adapters
-(`Mock`/`R10`) are interchangeable behind their ports. Pose and Detection run in parallel
+**Reading it:** the two camera adapters (`File`/`Live`) and the launch-monitor adapters
+(`Mock`/`Screen`/`R10`) are interchangeable behind their ports — and `Composite` means it
+is *adapters*, plural: a session can mix screen-parsed and live shots without any consumer
+knowing (ADR-014). Pose and Detection run in parallel
 on the same frames. Analysis is the convergence point and the only place the streams meet.
 ✅ = exists today.
 
@@ -98,7 +105,9 @@ flowchart TD
 
 **Why it matters:** because consumers depend on the contract (not the producer), you can
 build `analysis` against *mock* `FrameKeypoints` before `pose` exists, and run the MCP
-server against `MockShotDataSource` before buying the R10.
+server against `MockShotDataSource` before buying any launch monitor. It is also what let
+a shot source nobody had planned for — OCR of a simulator screen (ADR-014) — arrive as one
+new adapter rather than a rewrite.
 
 ---
 
@@ -115,21 +124,22 @@ flowchart LR
     M15 --> M2["M2 — YOLOv8 club/ball 🔧"]
     M1 --> M4["M4 — Analysis engine"]
     M2 --> M4
-    M3["M3 — MCP server: mock first, then R10 🔧"] --> M4
+    M3["M3 — MCP server: mock, then HD Golf screen OCR"] --> M4
     M4 --> M5["M5 — Feedback UI"]
     M5 --> M6["M6 — LLM coaching"]
 
     HW["Hardware purchase (parallel track): 2x ELP cameras + Garmin R10"]
     HW -.->|enables| M2
-    HW -.->|enables real data| M3
+    HW -.->|optional: real-time feed| M3
 
     classDef built fill:#d4edda,stroke:#28a745,color:#155724;
     class M0 built;
 ```
 
-**Critical path note:** M3 starts *now* against mock `ShotData` and only the real-data
-swap needs the R10. The only milestone truly blocked on hardware is M2 (sharp club-head
-frames), and even its scaffolding/labeling workflow can be prepared earlier.
+**Critical path note:** M3 no longer waits on a purchase at all — real shot data comes from
+photos of the HD Golf screen (ADR-014), and the R10 would only upgrade that to a real-time
+feed. The only milestone truly blocked on hardware is M2 (sharp club-head frames), and even
+its scaffolding/labeling workflow can be prepared earlier.
 
 ---
 

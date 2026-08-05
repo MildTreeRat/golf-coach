@@ -27,7 +27,7 @@ from golf_coach.contracts.keypoints import (
     Landmark,
     PoseLandmark,
 )
-from golf_coach.contracts.shot import ShotData, ShotSource
+from golf_coach.contracts.shot import ShotData, ShotProvenance, ShotSource
 from golf_coach.contracts.swing import (
     CheckpointScore,
     PhaseSegment,
@@ -49,6 +49,7 @@ __all__ = [
     # shot
     "ShotData",
     "ShotSource",
+    "ShotProvenance",
     # intent
     "PracticeGoal",
     "PracticeMode",

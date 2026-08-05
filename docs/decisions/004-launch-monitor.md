@@ -1,7 +1,17 @@
 # ADR-004: Launch Monitor Hardware
 
 ## Status
-Accepted
+Accepted — but **not the near-term data path**. See [ADR-014](014-screen-capture-shot-ingestion.md).
+
+> **Addendum (2026-08-04).** The R10 was never purchased, and an **HD Golf** simulator
+> became available instead. HD Golf has no export of any kind — the deciding criterion of
+> this ADR — so its shot data is read off the `SHOT DATA` screen by OCR (ADR-014). That
+> unblocks M3 today on hardware already owned.
+>
+> This decision is **not superseded**. The R10 remains the right answer for real-time,
+> structured, per-shot streaming, and nothing here changes if it is bought later: its
+> adapter implements the same `ShotDataSource` port, and `CompositeShotDataSource` lets
+> both feed the pipeline at once.
 
 ## Date
 2026-03-16

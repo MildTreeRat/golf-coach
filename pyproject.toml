@@ -36,6 +36,15 @@ llm = [
 hardware = [
     "bleak>=0.21",
 ]
+# Local OCR for reading shot data off photos of the simulator screen (ADR-014). Needed
+# only to *import* screenshots; `ScreenShotDataSource` reads the parsed results with no
+# extras at all. Includes opencv/numpy so it installs standalone without `vision`.
+ocr = [
+    "paddleocr>=2.7",
+    "paddlepaddle>=2.6",
+    "opencv-python>=4.9",
+    "numpy>=1.26",
+]
 # Offline research / reference-data derivation (M4-REF). Used ONLY by scripts/golfdb/*, never
 # by the package: pandas appears at exactly one boundary (reading GolfDB's pickled DataFrame),
 # after which everything downstream is stdlib. Keeping it out of `vision` keeps the invariant
@@ -50,7 +59,7 @@ dev = [
 ]
 # Convenience: everything at once.
 all = [
-    "golf-coach[vision,api,llm,hardware,research,dev]",
+    "golf-coach[vision,api,llm,hardware,ocr,research,dev]",
 ]
 
 [tool.hatch.build.targets.wheel]

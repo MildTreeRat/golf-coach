@@ -1,0 +1,126 @@
+{
+  "_comment": [
+    "Device profiles for screen-capture shot ingestion (ADR-014).",
+    "A profile is the *only* device-specific thing in the pipeline: it names the tile",
+    "labels to look for, which ShotData field each one feeds, and how to read the sign",
+    "off the qualifier the device prints next to the number. No pixel coordinates —",
+    "the parser locates cells geometrically, so a profile survives a different photo",
+    "framing, screen size, or crop.",
+    "Fields with target=null are boundary-only: they are not stored, but finding them",
+    "keeps the neighbouring cell from spilling into their column."
+  ],
+  "profiles": [
+    {
+      "device": "hd_golf",
+      "title": "SHOT DATA",
+      "value_span_ratio": 3.5,
+      "blank_markers": ["---", "--", "—", "- - -"],
+      "fields": [
+        {
+          "label": "Shot Distance",
+          "target": "total_distance",
+          "kind": "number",
+          "unit": "yards"
+        },
+        {
+          "label": "Carry",
+          "target": "carry_distance",
+          "kind": "number",
+          "unit": "yards"
+        },
+        {
+          "label": "Bounce & Roll",
+          "aliases": ["Bounce Roll", "Bounce and Roll"],
+          "target": "bounce_and_roll",
+          "kind": "number",
+          "unit": "yards"
+        },
+        {
+          "label": "Ball Speed",
+          "target": "ball_speed",
+          "kind": "number",
+          "unit": "mph"
+        },
+        {
+          "label": "Launch Angle",
+          "target": "launch_angle",
+          "kind": "number",
+          "unit": "degrees"
+        },
+        {
+          "label": "Club Speed",
+          "target": "club_head_speed",
+          "kind": "number",
+          "unit": "mph"
+        },
+        {
+          "label": "Club Path",
+          "target": "club_path",
+          "kind": "number",
+          "unit": "degrees",
+          "sign_tokens": [
+            { "tokens": ["I>O", "I O", "IO", "1>0", "I>0"], "sign": 1 },
+            { "tokens": ["O>I", "O I", "OI", "0>1", "O>1"], "sign": -1 }
+          ]
+        },
+        {
+          "label": "Custom",
+          "target": null,
+          "kind": "text"
+        },
+        {
+          "label": "Club Face Angle",
+          "target": "club_face_angle",
+          "kind": "number",
+          "unit": "degrees",
+          "sign_tokens": [
+            { "tokens": ["OPEN"], "sign": 1 },
+            { "tokens": ["CLOSED", "CLOSE"], "sign": -1 }
+          ]
+        },
+        {
+          "label": "Spin",
+          "target": "spin_rate",
+          "kind": "number",
+          "unit": "rpm"
+        },
+        {
+          "label": "Smash Factor",
+          "target": "smash_factor",
+          "kind": "number",
+          "unit": "ratio"
+        },
+        {
+          "label": "Impact Position",
+          "target": "impact_position",
+          "kind": "text"
+        },
+        {
+          "label": "Shot Type",
+          "target": "shot_type",
+          "kind": "text"
+        },
+        {
+          "label": "Horizontal Angle",
+          "target": "launch_direction",
+          "kind": "number",
+          "unit": "degrees",
+          "sign_tokens": [
+            { "tokens": ["R", "RIGHT"], "sign": 1 },
+            { "tokens": ["L", "LEFT"], "sign": -1 }
+          ]
+        },
+        {
+          "label": "Spin Axis",
+          "target": "spin_axis",
+          "kind": "number",
+          "unit": "degrees",
+          "sign_tokens": [
+            { "tokens": ["R", "RIGHT"], "sign": 1 },
+            { "tokens": ["L", "LEFT"], "sign": -1 }
+          ]
+        }
+      ]
+    }
+  ]
+}
