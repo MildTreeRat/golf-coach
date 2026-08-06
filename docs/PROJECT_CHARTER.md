@@ -7,7 +7,42 @@ Home Lab AI Golf Swing Trainer
 2026-03-16
 
 ## Last Updated
-2026-03-16
+2026-08-05 — reviewed, **purpose / goals / scope unchanged since 2026-03-16**. Only the
+"How the charter has been refined" section below is new; everything else is the original text.
+
+---
+
+## 0. How the charter has been refined
+
+The charter has held up well — the purpose, the four goals, and the in/out-of-scope lines all
+still describe the project. Three things have been *sharpened* by later decisions, and the
+success criteria in §4 read as pre-decision as a result:
+
+- **Scoring is dual-axis, not a single score.** [ADR-009](decisions/009-swing-scoring-model.md)
+  separates `mechanics_score` from `outcome_score`, combined by a policy chosen from the
+  golfer's practice intent. §4's "scores swing quality" is therefore two numbers and a policy,
+  not one number.
+- **"Known fundamentals" now means a measured population, not a book.**
+  [ADR-012](decisions/012-golfdb-reference-data.md) replaced eyeballed and book-sourced bands
+  with p10–p90 ranges derived from 1,399 hand-annotated tour swings. §1's "against known
+  fundamentals" is now traceable to an inspectable distribution.
+- **Two capture tiers, not one camera count.** §3 says "single-camera (expandable to two)".
+  That is still right, but the two are now *different tiers*: a fixed ELP rig that could
+  eventually support 3D fusion ([ADR-011](decisions/011-camera-synchronization.md)), and a
+  zero-setup hand-held two-phone tier that trades 3D away for portability (M7). The second was
+  not foreseen here.
+
+Two out-of-scope lines worth re-reading in light of what happened:
+
+- **"Real-time 3D modeling / digital twin"** stays out of scope, and ADR-011's addendum explains
+  why it is genuinely unreachable for hand-held capture rather than merely deferred.
+- **"Integration with third-party golf sim software (e.g. E6, GSPro)"** stays out of scope, and
+  still is — [ADR-014](decisions/014-screen-capture-shot-ingestion.md) reads the HD Golf
+  simulator's `SHOT DATA` screen *optically*, precisely **because** there is no integration and
+  no data export. Photographing a screen is the opposite of integrating with it.
+
+The risk register in §6 is unchanged and still current — the club-head detectability risk is
+live and unretired, since the M1.5 spike that would settle it has not been run.
 
 ---
 

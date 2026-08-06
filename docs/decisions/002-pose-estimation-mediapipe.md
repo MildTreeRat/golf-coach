@@ -77,7 +77,7 @@ if needed later: lite → full → heavy, then MMPose (per the original decision
   `FrameKeypoints` contract is unaffected.
 
 Operational reference + the full M1 accuracy-review findings:
-[docs/M1_CAPTURE_FLOW.md](../M1_CAPTURE_FLOW.md).
+[docs/M1_CAPTURE_FLOW.md](../archive/M1_CAPTURE_FLOW.md).
 
 ---
 

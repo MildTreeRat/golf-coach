@@ -1,18 +1,28 @@
-# M1: Capture & Skeleton — Feature Flow (PROPOSED)
+# M1: Capture & Skeleton — Feature Flow
 
-> ✅ **Implemented & verified (2026-06-28).** The M1 pipeline below is built and runs
-> end-to-end: `capture/file.py`, `pose/estimator.py`, `pose/overlay.py`, and
-> `scripts/run_pose.py` all exist. See [Pose model (reference)](#pose-model-reference) for
-> exactly what model we use and where it comes from, and
-> [M1 findings](#m1-findings-accuracy-review-2026-06-28) for the first real-clip review.
+> **SUPERSEDED — historical record.** Accurate as of **2026-07-02**. The M1 pipeline described
+> here is built and still runs (`capture/file.py`, `pose/estimator.py`, `pose/overlay.py`,
+> `scripts/run_pose.py`), but the analysis that consumes it has moved on four iterations since.
+> For current state see [../ARCHITECTURE.md](../ARCHITECTURE.md); for current benchmark values
+> see `src/golf_coach/analysis/benchmarks/ranges.json`.
+>
+> **Retained because** of two things nothing else records: the
+> [face-on vs down-the-line angle comparison](#m1-findings-angle-comparison-2026-07-02) that
+> settled canonical camera placement (+24% knee confidence), and the
+> [Pose model reference table](#pose-model-reference) — the one place the model variant,
+> download URL and API choice are written down.
+>
+> **Known stale detail:** `run_pose.py` still buffers all frames in memory as described here.
+> That is a documented bug (~15 GB on a 4K60 phone clip), scheduled for M7 Phase 1 — see
+> [../M7_TWO_PHONE_CAPTURE.md](../M7_TWO_PHONE_CAPTURE.md).
 
 ## Why this milestone exists
 M1 is the first milestone with real, running code. Its job is to prove that a consumer
 camera + MediaPipe can track a golf-swing skeleton, and — just as importantly — to
 **produce `FrameKeypoints`**, the contract every downstream milestone consumes. The M4-PoC
-tempo analysis ([ADR-009](decisions/009-swing-scoring-model.md)) cannot start until this
+tempo analysis ([ADR-009](../decisions/009-swing-scoring-model.md)) cannot start until this
 stream exists. No hardware is required: we bootstrap on a phone/sample clip
-([ADR-007](decisions/007-decouple-software-from-hardware.md)).
+([ADR-007](../decisions/007-decouple-software-from-hardware.md)).
 
 This milestone fills in adapters behind interfaces the scaffolding already defines — it is
 not new architecture:
@@ -179,7 +189,7 @@ contract — the same `estimate_pose` and outputs apply.
 ## Pose model (reference)
 
 Everything about the model M1 uses, in one place (the "why" and the variant trade-offs live
-in [ADR-002](decisions/002-pose-estimation-mediapipe.md)):
+in [ADR-002](../decisions/002-pose-estimation-mediapipe.md)):
 
 | | |
 |---|---|
@@ -280,7 +290,7 @@ much larger horizontal arc, so per-frame travel is legitimately larger. Leg jitt
 actual problem area) *decreased*. A temporal-smoothing pass is still worth adding.
 
 **Decision:** face-on / 3-o'clock is now the **canonical pose-camera placement** — recorded
-in [ADR-003 addendum (2026-07-02)](decisions/003-camera-hardware.md#addendum-2026-07-02-pose-camera-goes-face-on-3-oclock).
+in [ADR-003 addendum (2026-07-02)](../decisions/003-camera-hardware.md#addendum-2026-07-02-pose-camera-goes-face-on-3-oclock).
 This resolves the "re-record and re-review the lower body" open refinement above. Remaining
 pose-setup refinement is now just the optional temporal-smoothing pass for jitter.
 
@@ -300,15 +310,18 @@ depth axis, which a face-on camera looks straight down, so it foreshortens to �
 3D estimate suggests the bend is still there (if anything larger), but MediaPipe `z` is too
 noisy to trust for absolute angles. **Takeaway: measure forward spine tilt from
 down-the-line, not face-on.** Recorded in
-[ADR-003 addendum (2026-07-02b)](decisions/003-camera-hardware.md#addendum-2026-07-02b-two-cameras-not-three-stream-assignment--the-spine-caveat);
+[ADR-003 addendum (2026-07-02b)](../decisions/003-camera-hardware.md#addendum-2026-07-02b-two-cameras-not-three-stream-assignment--the-spine-caveat);
 trustworthy 3D spine/hip angles need synced multi-view fusion
-([ADR-011](decisions/011-camera-synchronization.md)).
+([ADR-011](../decisions/011-camera-synchronization.md)).
 
 ---
 
 ## Verification
 1. `pip install -e '.[vision,dev]'`
-2. Place a swing clip at `data/raw/swing.mp4` (golfer fully in frame, side / down-the-line).
+2. Place a swing clip at `data/raw/swing.mp4` (golfer fully in frame, **face-on / 3 o'clock** —
+   see the [angle comparison](#m1-findings-angle-comparison-2026-07-02) below and
+   [ADR-003 addendum](../decisions/003-camera-hardware.md#addendum-2026-07-02-pose-camera-goes-face-on-3-oclock);
+   this step originally said "side / down-the-line", which the same document later disproved).
 3. `python scripts/run_pose.py data/raw/swing.mp4`
 4. Confirm `data/processed/swing.overlay.mp4` shows the skeleton tracking through the full
    swing, and `data/processed/swing.keypoints.json` has one record/frame with 33 landmarks.

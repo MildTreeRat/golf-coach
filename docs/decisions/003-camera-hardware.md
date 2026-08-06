@@ -105,7 +105,7 @@ reasons, before we had any pose data. Empirically, down-the-line is the **worst*
 MediaPipe body tracking: the legs stack front-to-back along the camera axis and occlude each
 other, and MediaPipe is trained largely on frontal footage. Two real clips of the same swing
 confirmed it (see
-[M1 findings — angle comparison, 2026-07-02](../M1_CAPTURE_FLOW.md#m1-findings-angle-comparison-2026-07-02)):
+[M1 findings — angle comparison, 2026-07-02](../archive/M1_CAPTURE_FLOW.md#m1-findings-angle-comparison-2026-07-02)):
 moving from ~5 o'clock to face-on 3 o'clock lifted **knee** confidence 0.71 → 0.88 (+24%),
 lower-body 0.70 → 0.83, and overall visibility 0.78 → 0.89 — and, critically, kept the knees
 confident *through the bent-over swing posture* where they previously collapsed to ~0.60.

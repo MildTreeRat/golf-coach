@@ -1,11 +1,25 @@
 # M4-PoC: Fundamentals Analysis — Feature Flow (pose-only)
 
+> **SUPERSEDED — historical record.** Accurate as of **2026-07-03**. Every benchmark band,
+> score and test count below has since changed — the tempo band quoted here (2.7–3.3) was
+> re-sourced from GolfDB in M4-REF, and the panel grew from one checkpoint to three. **Do not
+> read numbers off this page.** Current bands live in
+> `src/golf_coach/analysis/benchmarks/ranges.json`; current state in
+> [../ARCHITECTURE.md](../ARCHITECTURE.md).
+>
+> **Retained because** it records the correction that shaped everything after it: phase
+> segmentation had to anchor on the **top of the backswing**, not "first motion" — a golfer who
+> waggles for 5.8 s otherwise produces a 9.6:1 tempo. See
+> [M4-PoC findings](#m4-poc-findings-2026-07-03).
+>
+> ---
+>
 > ✅ **Implemented & verified (2026-07-03).** The pose-only Fundamentals spine below is built
 > and runs end-to-end: `analysis/{phases,scoring}.py`, `analysis/benchmarks/`,
 > `analysis/checkpoints/mechanics.py`, `analysis/engine.py`, and `feedback/rules.py` all exist
 > and are exercised by the base-install test suite. Implements the agreed
-> [M4-PoC plan](M4_POC_PLAN.md); scoped by [ADR-009](decisions/009-swing-scoring-model.md)
-> (dual-axis scoring) and [ADR-010](decisions/010-benchmark-ranges.md) (benchmark provenance).
+> [M4-PoC plan](M4_POC_PLAN.md); scoped by [ADR-009](../decisions/009-swing-scoring-model.md)
+> (dual-axis scoring) and [ADR-010](../decisions/010-benchmark-ranges.md) (benchmark provenance).
 > See [M4-PoC findings](#m4-poc-findings-2026-07-03) for the first real-clip result.
 
 ## Why this milestone exists
@@ -170,7 +184,7 @@ MediaPipe. Swapping the pose backend or feeding stored keypoints changes nothing
 ## Confirmed decisions
 - **Benchmark store ships as JSON, not YAML.** ADR-010 permits either; JSON keeps the
   analysis core on the stdlib (no PyYAML in the base install). Noted as an
-  [ADR-010 addendum](decisions/010-benchmark-ranges.md#addendum-2026-07-03-poc-ships-json-not-yaml).
+  [ADR-010 addendum](../decisions/010-benchmark-ranges.md#addendum-2026-07-03-poc-ships-json-not-yaml).
 - **Phase segmentation anchors on the top of the backswing**, not on "first motion." The top
   (highest hands = global minimum lead-wrist `y`) is the least ambiguous instant; motion-start
   and impact are derived relative to it. This was a *correction made during the real-clip
@@ -238,6 +252,6 @@ setup — which was the real risk.
 - Outcome checkpoints (shape, start line, distance, dispersion) + shot-shaping / performance /
   drill policies — need the launch monitor / club detection.
 - More mechanics checkpoints (posture, hip rotation, X-factor) — several need down-the-line or
-  synced 3D ([ADR-011](decisions/011-camera-synchronization.md)).
+  synced 3D ([ADR-011](../decisions/011-camera-synchronization.md)).
 - Temporal smoothing of the landmark tracks; validating segmentation against the overlay video.
 - Persisting `SwingResult` to SQLite (M4 storage).

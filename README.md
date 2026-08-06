@@ -4,38 +4,98 @@ A home-lab AI-powered golf swing analysis system that captures your swing via ca
 
 ## Project Status
 
-**Phase**: Project scaffolded (structure + shared contracts in place). Starting Milestone 1.
+**Working today, no hardware required:** drop a face-on swing clip in `data/raw/`, and the
+pipeline extracts pose, segments the swing, scores three checkpoints against tour-derived
+benchmark bands, and prints ranked coaching tips with an annotated verification overlay.
+Shot data is read off photographs of the HD Golf simulator screen by local OCR.
 
-See [ROADMAP.md](ROADMAP.md) for current progress and [WORKLOG.md](WORKLOG.md) for session-by-session notes.
+| Milestone | State |
+|---|---|
+| **M1** Capture & skeleton | ✅ Done — MediaPipe pose, face-on canonical angle |
+| **M1.5** Club-head detectability spike | ⬜ Not started — gates M2 |
+| **M2** Club & ball detection (YOLOv8) | 🔒 Gated on M1.5 + global-shutter camera |
+| **M3** Launch monitor / MCP | 🟡 Shot ingestion done (screen OCR); MCP server pending |
+| **M4-PoC / PoC+ / REF** Pose-only analysis | ✅ Done — 3 checkpoints, bands validated vs 461 tour clips |
+| **M5-FB** Prioritised coaching feedback | ✅ Done — ranked tips, tour percentiles |
+| **M4** full (outcome axis) | ⬜ Needs the M2 + M3 streams |
+| **M5** Feedback UI · **M6** LLM coaching | ⬜ Not started |
+| **M7** Two-phone sim capture | 📋 Planned, 7 phases, 0 built |
+
+See **[docs/README.md](docs/README.md)** for the documentation map,
+[ROADMAP.md](ROADMAP.md) for milestone detail, and [WORKLOG.md](WORKLOG.md) for
+session-by-session notes (the best "pick up where I left off" document).
+
+## Getting Started
+
+```bash
+python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -e '.[dev]'          # base + dev tools — the whole analysis core runs on this
+pytest                           # analysis, contracts, feedback and launch-monitor suites
+```
+
+The three working CLIs:
+
+```bash
+# 1. Pose: video -> keypoints JSON + skeleton overlay          (needs the `vision` extra)
+pip install -e '.[vision,dev]'
+python scripts/run_pose.py data/raw/my_swing.mov
+#    -> data/processed/my_swing.keypoints.json
+#    -> data/processed/my_swing.overlay.mp4
+
+# 2. Analysis: keypoints -> scores, ranked tips, detected instants     (base install)
+python scripts/analyze_swing.py data/processed/my_swing.keypoints.json
+#    add --overlay to render ADDRESS/TOP/IMPACT markers + a score HUD (needs `vision`)
+python scripts/analyze_swing.py data/processed/my_swing.keypoints.json \
+    --overlay data/raw/my_swing.mov
+
+# 3. Shot data: photos of the simulator SHOT DATA screen -> parsed shots  (needs `ocr`)
+pip install -e '.[ocr]'
+python scripts/import_shot_screens.py data/raw/shot_screens --dry-run
+```
+
+Reading the parsed shots back needs no extras at all — `ScreenShotDataSource` serves them
+from the store on the base install.
+
+Offline research tooling for the reference corpus lives in `scripts/golfdb/` and needs the
+`research` extra; see [data/README.md](data/README.md) for how to rebuild it.
 
 ## Architecture
 
-The system has six modules with clean interfaces between them:
+Nine packages under `src/golf_coach/`, with a shared `contracts/` package as the seam every
+module depends on — modules never import each other.
 
-- **Capture** — camera input, video recording, frame extraction
-- **Pose Estimation** — MediaPipe body keypoint extraction (33 landmarks/frame)
-- **Club/Ball Detection** — YOLOv8 fine-tuned for club head and ball tracking
-- **Launch Monitor (MCP Server)** — ingests shot data from hardware, exposes it via MCP tools
-- **Analysis Engine** — merges all data streams, segments swing phases, evaluates checkpoints, scores the swing
-- **Feedback** — rule-based tips, Claude API coaching, visual overlays displayed in a web UI
+- **contracts** — shared Pydantic data shapes; the decoupling seam (ADR-008)
+- **capture** — `VideoSource` port; `FileVideoSource` adapter over OpenCV
+- **pose** — MediaPipe Tasks API → `FrameKeypoints` (33 landmarks/frame), plus overlay rendering
+- **detection** — YOLOv8 club head + ball *(stub — M2, gated on the M1.5 spike)*
+- **launch_monitor** — `ShotDataSource` port with mock / screen-OCR / composite adapters
+- **analysis** — pure functional core: smooth → phases → checkpoints → score
+- **feedback** — rule-based ranked tips; Claude coaching and overlays to come
+- **storage** — SQLite repositories *(docstring only — M7 Phase 3)*
+- **api** — FastAPI orchestrator *(docstring only — M7 Phase 5)*
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for full diagrams and interface contracts,
-and [docs/FLOW.md](docs/FLOW.md) for the proposed end-to-end flow, decoupling seam, and build order (mermaid diagrams).
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) documents the system **as built**;
+[docs/FLOW.md](docs/FLOW.md) documents the **target** design and build order.
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|-----------|
-| Language | Python 3.11+ (backend/ML), JavaScript/React (UI) |
-| Pose Estimation | MediaPipe Pose |
-| Object Detection | YOLOv8 (Ultralytics) |
-| Video Processing | OpenCV |
-| ML Framework | PyTorch |
-| Backend API | FastAPI |
-| MCP Server | Python (MCP SDK) |
-| Database | SQLite |
-| LLM | Claude API (Anthropic) |
-| Frontend | React |
+| Layer | Technology | Status |
+|-------|-----------|--------|
+| Language | Python 3.11+ (backend/ML), JavaScript/React (UI) | Python in use |
+| Pose estimation | MediaPipe Pose Landmarker, **lite** variant (Tasks API) | In use |
+| Video processing | OpenCV | In use |
+| Reference data | GolfDB — 1,399 hand-annotated tour swings (ADR-012) | In use, aggregates only |
+| Shot data OCR | PaddleOCR, reading the HD Golf screen (ADR-014) | In use |
+| Object detection | YOLOv8 (Ultralytics) | M2, not started |
+| Backend API | FastAPI | Declared, unused |
+| MCP server | Python (MCP SDK) | M3, not started |
+| Database | SQLite | Designed, not built |
+| LLM | Claude API (Anthropic) | M6, not started |
+| Frontend | React | M5, not started |
+
+Heavy dependencies are optional extras, so the analysis core installs and tests with none of
+them: `vision`, `api`, `llm`, `hardware`, `ocr`, `research`, `dev`, and `all`. See
+`pyproject.toml`.
 
 ## Project Structure
 
@@ -48,43 +108,36 @@ on simulated data before any hardware exists.
 ```
 golf-coach/
 ├── README.md  ROADMAP.md  WORKLOG.md
-├── pyproject.toml           # deps (base + vision/api/llm/hardware extras) + tooling
+├── pyproject.toml           # deps (base + 7 extras) + tooling
 ├── docs/
+│   ├── README.md            # ⭐ documentation map — start here
+│   ├── ARCHITECTURE.md      # the system as built
+│   ├── FLOW.md              # the target design + build order
 │   ├── PROJECT_CHARTER.md
-│   ├── ARCHITECTURE.md
-│   └── decisions/           # ADRs 000–010
+│   ├── decisions/           # ADRs 000–014
+│   └── archive/             # superseded milestone docs, kept as record
 ├── src/
 │   └── golf_coach/
 │       ├── contracts/       # ⭐ shared data shapes (Pydantic) — the decoupling seam
-│       ├── capture/         # VideoSource port + file/camera adapters
-│       ├── pose/            # MediaPipe → FrameKeypoints
-│       ├── detection/       # YOLOv8 → FrameDetections + club-path tracker
-│       ├── launch_monitor/  # ShotDataSource port + mock/r10 adapters + MCP server
-│       ├── analysis/        # ⭐ pure functional core: merge→phases→checkpoints→score
-│       ├── feedback/        # rules + Claude coaching + overlays
-│       ├── storage/         # SQLite repositories
-│       ├── api/             # FastAPI orchestrator
+│       ├── capture/         # VideoSource port + file adapter
+│       ├── pose/            # MediaPipe → FrameKeypoints + overlays
+│       ├── detection/       # YOLOv8 → FrameDetections (stub, M2)
+│       ├── launch_monitor/  # ShotDataSource port + mock/screen/composite adapters
+│       ├── analysis/        # ⭐ pure functional core: smooth→phases→checkpoints→score
+│       ├── feedback/        # ranked rule-based tips (+ Claude coaching later)
+│       ├── storage/         # SQLite repositories (stub)
+│       ├── api/             # FastAPI orchestrator (stub)
 │       └── config.py        # settings (the only env reader)
 ├── frontend/                # React UI (M5) — separate toolchain, talks to api/ over HTTP
-├── tests/                   # mirrors the package; seam tests run on the base install
+├── tests/                   # mirrors the package; the core suite runs on the base install
 ├── spikes/                  # throwaway exploration (e.g. the M1.5 detectability spike)
-├── scripts/                 # dev CLI entrypoints (run_pose.py, run_mcp_server.py, …)
-└── data/                    # gitignored: raw/ processed/ models/ + SQLite db
+├── scripts/                 # dev CLIs + scripts/golfdb/ reference-data tooling
+└── data/                    # gitignored: raw/ processed/ models/ reference/ + SQLite db
 ```
-
-## Setup
-
-```bash
-python -m venv .venv && source .venv/bin/activate
-pip install -e '.[dev]'            # base + dev tools; contracts/tests need nothing heavier
-pip install -e '.[vision,dev]'     # add when starting M1 (MediaPipe/OpenCV/YOLOv8)
-pytest                             # runs the contracts seam tests
-```
-
-## Getting Started
-
-*Coming in Milestone 1 — setup instructions will be added once the first working code exists.*
 
 ## Decision Log
 
-All architectural and technology decisions are documented as ADRs in `docs/decisions/`. See [000-template.md](docs/decisions/000-template.md) for the format.
+All architectural and technology decisions are documented as ADRs in `docs/decisions/` —
+14 of them, several carrying dated addenda where reality corrected the original call.
+[docs/README.md](docs/README.md) indexes them with statuses; see
+[000-template.md](docs/decisions/000-template.md) for the format.

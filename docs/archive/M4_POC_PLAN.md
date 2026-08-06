@@ -1,5 +1,18 @@
 # M4-PoC Implementation Plan — Fundamentals Analysis Spine (pose-only)
 
+> **SUPERSEDED — historical record.** Accurate as of **2026-07-03**. This is the *pre-build
+> plan*; it describes intended design, and the seeded tempo band it specifies (2.7–3.3, from a
+> book) was replaced in M4-REF by 2.72–4.71 derived from 1,399 tour swings. **Do not read
+> numbers or file specifications off this page.** Current bands live in
+> `src/golf_coach/analysis/benchmarks/ranges.json`; current state in
+> [../ARCHITECTURE.md](../ARCHITECTURE.md).
+>
+> **Retained because** it is the record of the agreed design and its anti-over-engineering
+> guardrails — the explicit reasoning for *not* building `merge.py`, outcome checkpoints, extra
+> scoring policies or SQLite at PoC stage. Those guardrails still hold.
+>
+> ---
+>
 > **Status: IMPLEMENTED (2026-07-03).** This plan has been built and verified end-to-end —
 > 27 tests on the base install, `ruff`/`mypy` clean, plus a real-clip eyeball. All 10
 > change-sets below landed as written, with one correction found during the eyeball (phase
@@ -18,10 +31,10 @@ M2 club detection and M3 launch-monitor hardware).
 
 **This plan targets M4-PoC only**, with a **single tempo checkpoint**. The design is dictated by
 two accepted ADRs:
-- **[ADR-009](decisions/009-swing-scoring-model.md)** — dual-axis scoring (`mechanics_score` +
+- **[ADR-009](../decisions/009-swing-scoring-model.md)** — dual-axis scoring (`mechanics_score` +
   `outcome_score`) selected by an intent-driven **ScoringPolicy** (Strategy). PoC implements the
   *Fundamentals* policy only.
-- **[ADR-010](decisions/010-benchmark-ranges.md)** — benchmark ranges live as **versioned data
+- **[ADR-010](../decisions/010-benchmark-ranges.md)** — benchmark ranges live as **versioned data
   with provenance**, resolved by `resolve_range(...)` with most-specific→least-specific fallback.
   PoC seeds one row: Tour Tempo.
 

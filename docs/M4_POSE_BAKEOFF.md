@@ -1,5 +1,19 @@
 # M4-REF: metric-definition and pose-estimator change record
 
+> **Tier: REFERENCE — a change ledger, so it records superseded numbers by design.** This is the
+> provenance target cited by `ranges.json`'s committed `source` strings and by nine code comments
+> across `analysis/phases.py`, `analysis/checkpoints/mechanics.py` and `scripts/golfdb/*` — it is
+> a live reference, not an archived doc.
+>
+> **Read it as history, not as current values.** Its whole purpose is recording what each number
+> was *before* a change, so almost every band quoted below is intentionally out of date. The
+> `Baseline` section is explicitly pre-change state. For current values, read
+> `src/golf_coach/analysis/benchmarks/ranges.json`.
+>
+> **Use it when** a band looks wrong and you need to find which change moved it, or when you want
+> to know whether an idea has already been tried and rejected — the estimator bake-off (§B0), the
+> six rejected address signals (§B6) and the arm-parallel no-go all live here with numbers.
+
 **Purpose.** Two things in the M4-REF work change what our numbers *mean* — the metric-definition
 fixes (Phase 0b) and the pose estimator (Phase B0). Neither is allowed to happen without the prior
 state recorded here first. If a benchmark band later looks wrong, this file is how you find out
@@ -7,6 +21,9 @@ which change moved it.
 
 This is a **findings log**, not a design doc. The decision lives in
 [ADR-012](decisions/012-golfdb-reference-data.md); the plan lives in the M4-REF plan.
+
+Machine-readable companion: [`pose_bakeoff_v1.json`](pose_bakeoff_v1.json), written by
+`scripts/golfdb/bakeoff.py` (which hard-codes that path — do not move it).
 
 ---
 

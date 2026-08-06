@@ -1,9 +1,27 @@
 # M4-PoC+ — Hardened Fundamentals Panel (pose-only)
 
+> **Tier: REFERENCE — current design, stale numbers.** The *design* below still ships: the
+> smoothing pass, the three-checkpoint panel, and the annotated-overlay verification CLI are all
+> live, and `analysis/checkpoints/mechanics.py`, `analysis/phases.py` and
+> `scripts/analyze_swing.py` cite this file for the reliable-vs-deferred reasoning. Kept in
+> `docs/` for that reason rather than archived.
+>
+> **But every number in [Findings](#findings-real-clip-run-aaron-swing-2) is superseded.** The
+> bands shown there (2.7–3.3, 0.0–0.5, 0.0–0.6) were provisional or book-sourced; M4-REF replaced
+> all three with tour-derived values, and the 67/100 score for that clip is now 78. **Read
+> current bands from `src/golf_coach/analysis/benchmarks/ranges.json`**, which carries full
+> provenance per row.
+>
+> The still-current parts: [what face-on 2D pose can and cannot
+> measure](#what-face-on-2d-pose-can-and-cannot-measure), the data-flow and sequence diagrams,
+> and the design notes.
+>
+> ---
+>
 > **Status: IMPLEMENTED (2026-07-16).** Builds directly on the M4-PoC spine
-> ([M4_ANALYSIS_POC.md](M4_ANALYSIS_POC.md)). Verified end-to-end — **39 tests** on the base
-> install, `ruff`/`mypy` clean, plus a real-clip run + annotated overlay on the face-on
-> `aaron-swing-2` clip. No hardware, no M1.5, stdlib-only analysis core.
+> ([archive/M4_ANALYSIS_POC.md](archive/M4_ANALYSIS_POC.md)). Verified end-to-end — **39 tests**
+> on the base install, `ruff`/`mypy` clean, plus a real-clip run + annotated overlay on the
+> face-on `aaron-swing-2` clip. No hardware, no M1.5, stdlib-only analysis core.
 
 ## Why this exists
 

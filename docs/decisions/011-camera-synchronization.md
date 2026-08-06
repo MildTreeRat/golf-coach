@@ -1,8 +1,13 @@
 # ADR-011: Camera Synchronization & Multi-View 3D Fusion
 
 ## Status
-Proposed (forward-looking — no multi-camera hardware acquired yet; the seam is designed now,
-implemented in phases)
+**Partially accepted** — split by capture tier, see the 2026-08-05 addendum:
+- **Option C (event-anchored alignment): accepted and committed.** M7 Phase 2 implements it
+  standalone for the hand-held-phone tier. The Phase 1 seam (`camera_id` on `Frame`, persisted
+  per-clip fps) is now load-bearing rather than speculative — M7 Phase 1 builds it.
+- **Phases 2–3 and 3D fusion (Options A/B, triangulation): still proposed**, and fixed-rig only.
+  No multi-camera hardware acquired. Unreachable by construction for hand-held phones, which
+  cannot be calibrated.
 
 ## Date
 2026-07-02
@@ -116,3 +121,40 @@ implemented alongside Phase 2: **intrinsics** per camera (checkerboard/ChArUco) 
   addenda (face-on pose placement; two-camera stream assignment & spine caveat).
 - ADR-007 (decouple software from hardware — this ADR keeps sync off the critical path).
 - ADR-008 (project structure — the "design the seam now" approach mirrors it).
+
+## Addendum (2026-08-05): A second capture tier — hand-held phones, aligned but never fused
+
+Everything above assumes the **fixed ELP rig**, and for that rig it still stands. But a second,
+lower-ceiling capture setup turned out to be available much sooner: at an indoor sim, two people
+record the same swing on two hand-held iPhones (face-on + down-the-line). This is M7
+(`docs/M7_TWO_PHONE_CAPTURE.md`).
+
+**That setup can be aligned but never fused, and the distinction is not a matter of effort.**
+Triangulation needs intrinsics *and* extrinsics — the cameras' relative pose. Two phones held by
+two people, placed differently on every swing, have no stable extrinsics to solve for. So for this
+tier the `fusion/` module above is not "deferred", it is **unreachable by construction**, and with
+it go triangulated spine angle, hip rotation, X-factor and the kinematic sequence. Those remain
+fixed-rig-only measurements.
+
+What the phone tier *can* do is the part of this ADR that never needed calibration: **Option C,
+used standalone rather than as a refinement of Option B.** Segment each clip independently with
+the existing `segment_phases()`, then align the two on the phase instants they each already
+produce (top and impact — median 2 and 1 frames of error against 461 GolfDB clips). That yields a
+normalized swing-time axis and a frame correspondence good enough for per-view 2D metrics and
+side-by-side replay, with no shared clock, no trigger, and no calibration target.
+
+It is also more robust than Option B would be here, for a reason the original options table did
+not anticipate: two consumer phones are not configured identically. Different frame rates,
+different clip lengths, different start moments, and **iPhone slo-mo** — which stores 120/240fps
+capture with a stretched playback rate, so `CAP_PROP_FPS` may not describe real time at all. An
+event-anchored warp absorbs all of that; host timestamps would not.
+
+**Consequences for this ADR:**
+- The **Phase 1 seam is now load-bearing, not speculative.** `camera_id` on `Frame` and a reliable
+  per-clip `fps` are what M7 Phase 1 implements — the "for free later" argument above is being
+  cashed in, just by a capture tier this ADR did not foresee.
+- `FrameBundle` as specified pairs frames *within a tolerance*, which presumes a common clock. The
+  phone tier pairs on a normalized swing-time axis instead. Whether these converge on one type or
+  stay two is settled in **ADR-015**, drafted during M7 Phase 2.
+- Nothing here changes the phased plan for the ELP rig. Phases 2–3 (software sync → hardware
+  trigger) and the calibration prerequisite are still the route to real 3D, and still the only one.

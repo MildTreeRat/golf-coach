@@ -5,6 +5,46 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-08-05 — Investigation: can two phones at a sim feed this thing? (M7 planned)
+
+**Duration**: ~1 hour, investigation and planning only
+**What I did**: Answered a use-case question — *record one swing at an indoor sim on two iPhones
+(face-on + down-the-line), photograph the HD Golf screen, send all three in, get analysis back* —
+and turned the answer into a seven-phase plan at
+[docs/M7_TWO_PHONE_CAPTURE.md](docs/M7_TWO_PHONE_CAPTURE.md). No code written. ADR-011 has a
+2026-08-05 addendum; ROADMAP has an M7 section and two corrected `Future` entries.
+**Verification**: docs only — nothing under `src/`, `scripts/` or `tests/` touched, so the suite is
+unchanged.
+**Key decisions / surprises**:
+- **The answer was "no", and the missing parts are the hard parts.** Everything downstream of *"a
+  video file is already on the desktop"* works. Everything upstream is absent: no upload path, no
+  `camera_id`, no structure holding two views of one swing, no session registry (`storage/` is a
+  4-line docstring), no host (`api/` is a 6-line docstring with fastapi already declared and unused).
+  Call it 60% built — but the remaining 40% is ingestion, identity, and alignment.
+- **`run_pose.py:36` will OOM on the first real phone clip.** `frames = list(source.frames())`
+  materializes every decoded BGR frame; a 10-second 4K60 iPhone clip is 600 × ~24.9 MB ≈ **15 GB**.
+  It has survived purely because the one committed sample is small. Found while tracing whether the
+  desktop could do the compute — the answer is yes, comfortably, but not through that line.
+- **3D fusion is off the table here, and that is a construction fact, not a scheduling one.**
+  ADR-011 reads as though multi-camera work leads to triangulation. It does — for the fixed ELP rig.
+  Two phones held by two people have no stable extrinsics to solve for, so spine angle, hip rotation
+  and X-factor stay fixed-rig-only. Wrote the addendum specifically so the next person reading
+  ADR-011 doesn't spend a day trying to calibrate hand-held phones.
+- **But ADR-011's Option C survives on its own, and is the better tool here anyway.** Aligning the
+  two clips on the phase instants each already produces (top, impact — median 2 and 1 frames against
+  461 GolfDB clips) needs no shared clock and no calibration. It also absorbs the thing host
+  timestamps would choke on: two consumer phones aren't configured alike, and **iPhone slo-mo**
+  stores 120/240fps with a stretched playback rate, so `CAP_PROP_FPS` may not describe real time.
+- **Swing identity has to be assigned server-side.** The tempting design has each phone label its
+  upload with a swing number. Two people, two phones, mid-session — they will drift within about
+  three swings. Each phone declares only its *role*; the store does the matching.
+- **Split into seven one-commit phases with a planning prompt each**, at Aaron's request, after the
+  first draft came back as one large plan. Alignment alone is its own problem with its own failure
+  modes and deserves its own planning pass. The prompts exist so each phase is planned in a fresh
+  session rather than at the tail of a stretched context.
+
+---
+
 ## 2026-08-04 — M3: shot data arrives, read off a photo of the simulator screen
 
 **Duration**: ~3 hours
@@ -330,7 +370,7 @@ run needs `--basetemp`/`-p no:cacheprovider` redirected to the scratchpad under 
 ## 2026-07-03 — M4-PoC implemented: pose-only Fundamentals analysis spine
 
 **Duration**: ~2 hours
-**What I did**: Implemented the whole [M4-PoC plan](docs/M4_POC_PLAN.md) — the pose-only
+**What I did**: Implemented the whole [M4-PoC plan](docs/archive/M4_POC_PLAN.md) — the pose-only
 Fundamentals analysis spine, end-to-end. New: `contracts/intent.py` (`PracticeGoal` + enums),
 the benchmark store (`analysis/benchmarks/` — `ranges.json` seeded with Tour Tempo ~3:1 +
 `resolve_range` with most-specific→`all` fallback), `analysis/phases.py` (lead-wrist
@@ -338,9 +378,9 @@ segmentation → 6 phases), `analysis/checkpoints/mechanics.py` (`evaluate_tempo
 `analysis/scoring.py` (`FundamentalsPolicy` + `policy_for`). Extended `SwingResult` with
 `intent`/`mechanics_score`/`outcome_score`, wired `analyze_swing`, and implemented
 `feedback/rules.py` (`build_feedback`). Added the synthetic-swing fixture + 7 test modules (23
-new tests). Also **added the missing runtime sequence diagram to `docs/M4_POC_PLAN.md`** (the
+new tests). Also **added the missing runtime sequence diagram to `docs/archive/M4_POC_PLAN.md`** (the
 plan only had a data-flow ASCII block), wrote the milestone flow doc
-**[docs/M4_ANALYSIS_POC.md](docs/M4_ANALYSIS_POC.md)** (mermaid data + sequence, GRASP
+**[docs/archive/M4_ANALYSIS_POC.md](docs/archive/M4_ANALYSIS_POC.md)** (mermaid data + sequence, GRASP
 callouts, files, findings), an **ADR-010 addendum** (JSON-not-YAML), and checked off the
 ROADMAP M4-PoC boxes.
 **Verification**: `pytest` → **27 passed** on the **base install** (no vision/ML extras);
@@ -374,7 +414,7 @@ spine, not yet a trustworthy tempo measurement.
 **Duration**: ~0.5 hour
 **What I did**: Reviewed the M4-PoC scope (ROADMAP + ADR-009/010), re-verified the current
 contracts/stubs against the plan, and documented the agreed implementation plan into the repo
-as **[docs/M4_POC_PLAN.md](docs/M4_POC_PLAN.md)** so it survives outside the local scratch
+as **[docs/archive/M4_POC_PLAN.md](docs/archive/M4_POC_PLAN.md)** so it survives outside the local scratch
 plan. Confirmed nothing in the plan is stale: `analysis/engine.py` and `feedback/rules.py` are
 still `NotImplementedError` stubs; `contracts/{intent}.py` and
 `analysis/{benchmarks,phases,checkpoints,scoring}` don't exist yet (all new); hatchling packages
@@ -390,8 +430,8 @@ the 10 change-sets (new modules, contract extensions, tests, verification) is in
 - **Analysis core stays pure-Python/stdlib** (no numpy/MediaPipe) so the spine + tests run on
   `pip install -e .`; benchmark store ships as **JSON not YAML** to keep base deps tiny.
 **Where I left off**: Plan is documented and approved; **no analysis code written yet**. Next
-session: implement change-sets 1→9 in `docs/M4_POC_PLAN.md` (contracts → benchmarks → phases →
-checkpoint → scoring → engine → feedback → tests), then write the `docs/M4_ANALYSIS_POC.md`
+session: implement change-sets 1→9 in `docs/archive/M4_POC_PLAN.md` (contracts → benchmarks → phases →
+checkpoint → scoring → engine → feedback → tests), then write the `docs/archive/M4_ANALYSIS_POC.md`
 milestone flow doc and check off the ROADMAP boxes.
 **Blockers**: None — pose-only, no hardware.
 **Notes**: Real-clip eyeball can reuse the existing face-on keypoints JSON in `data/processed/`
@@ -407,7 +447,7 @@ milestone flow doc and check off the ROADMAP boxes.
 ran it through `run_pose.py`, and computed the same metrics on both clips for a
 side-by-side (detection, per-group visibility, knee-by-decile, jitter).
 **Findings** (full write-up:
-[M1_CAPTURE_FLOW.md → angle comparison](docs/M1_CAPTURE_FLOW.md#m1-findings-angle-comparison-2026-07-02)):
+[M1_CAPTURE_FLOW.md → angle comparison](docs/archive/M1_CAPTURE_FLOW.md#m1-findings-angle-comparison-2026-07-02)):
 - Face-on wins on **every** body metric. **Knees 0.71 → 0.88 (+24%)**, lower body
   0.70 → 0.83, overall visibility 0.78 → 0.89. Leg jitter also dropped.
 - The big one: knee confidence now stays 0.85–0.95 *through the bent swing posture* where it
@@ -466,7 +506,7 @@ assignment, sync roadmap). No code change — ADR-011's capture-seam work (`came
 (`data/raw/golf_swing-aaron-1.mov`, 480×854, 58.9 fps, 674 frames) and did the accuracy
 review. Then documented the model + this step thoroughly so it's easy to pick back up.
 **Findings** (full write-up in
-[docs/M1_CAPTURE_FLOW.md → M1 findings](docs/M1_CAPTURE_FLOW.md#m1-findings-accuracy-review-2026-06-28)):
+[docs/archive/M1_CAPTURE_FLOW.md → M1 findings](docs/archive/M1_CAPTURE_FLOW.md#m1-findings-accuracy-review-2026-06-28)):
 - 100% detection, avg visibility 0.78; **upper body tracks well**; **59 fps is plenty**.
 - **Knees/lower body weak during the bent swing posture**, fine once standing; plus some
   **jitter**.
@@ -501,13 +541,13 @@ off our contract, and wired the lot in `scripts/run_pose.py` (capture → pose �
 JSON + skeleton overlay mp4). Added tests for the pure mapping (no ML deps) and for
 `FileVideoSource` (guarded by `importorskip` so the base suite still runs). Set up a `.venv`,
 installed `.[vision,dev]`, and verified end-to-end on a synthetic clip. Wrote the M1 design
-doc `docs/M1_CAPTURE_FLOW.md` (with mermaid data-flow + sequence diagrams).
+doc `docs/archive/M1_CAPTURE_FLOW.md` (with mermaid data-flow + sequence diagrams).
 **Key decisions / surprises**:
 - **MediaPipe Tasks API, not the legacy Solutions API.** The installed mediapipe (0.10.35
   on Python 3.13) has *removed* `mp.solutions` — only `Image`/`ImageFormat`/`tasks` remain.
   Rewrote the estimator to use `PoseLandmarker` (VIDEO mode); it needs a `.task` model
   bundle, so `_ensure_model()` downloads `pose_landmarker_lite.task` (~5 MB) into
-  `data/models/` on first run. Corrected `docs/M1_CAPTURE_FLOW.md` accordingly.
+  `data/models/` on first run. Corrected `docs/archive/M1_CAPTURE_FLOW.md` accordingly.
 - Undetected frames emit 33 placeholder landmarks at visibility 0 (one record per frame) so
   the timeline stays aligned for M4-PoC.
 **Verification**: `ruff check` clean; `pytest -q` → 9 passed (4 contract + 3 mapping + 2
