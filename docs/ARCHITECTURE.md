@@ -83,7 +83,7 @@ flowchart TD
     CAP["capture/<br/>FileVideoSource"] --> C
     POSE["pose/<br/>estimator + overlay"] --> C
     LMM["launch_monitor/<br/>mock, screen, composite"] --> C
-    ANA["analysis/<br/>smoothing, phases,<br/>checkpoints, scoring, benchmarks"] --> C
+    ANA["analysis/<br/>smoothing, phases, alignment,<br/>checkpoints, scoring, benchmarks"] --> C
     FB["feedback/<br/>rules"] --> C
     DET["detection/ — stub"] -.-> C
     STO["storage/ — docstring only"] -.-> C
@@ -196,13 +196,14 @@ detection (M2); face angle and ball flight need the launch monitor. See ADR-011 
 
 ## 4. Storage — what is actually persisted
 
-**No database exists.** `storage/` is a docstring; `data/golf_trainer.db` is gitignored and
-never created. Everything persists as files:
+**No database exists.** `storage/` is flat files and nothing else; `data/golf_trainer.db` is
+gitignored and never created. Everything persists as files:
 
 | What | Where | Status |
 |---|---|---|
 | Raw video | `data/raw/` | ✅ manual drop |
 | Keypoints | `data/processed/<clip>.keypoints.json` | ✅ written by `run_pose.py` |
+| ↳ *its format* | `{"clip": {fps, width, height, frame_count, source_sha256}, "frames": [...]}` | ✅ read/written via `storage/keypoints_io.py`, which also accepts the bare-array shape everything written before M7 Phase 1 uses |
 | Overlays | `data/processed/<clip>.overlay.mp4`, `.analysis.mp4` | ✅ |
 | Parsed shots | `data/processed/shots/` (content-addressed) | ✅ written by `import_shot_screens.py` |
 | Reference corpus | `data/reference/golfdb/` | ✅ gitignored for licensing (ADR-012) |

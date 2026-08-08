@@ -34,8 +34,9 @@ class FileVideoSource:
                 ...
     """
 
-    def __init__(self, path: str | Path) -> None:
+    def __init__(self, path: str | Path, *, camera_id: str | None = None) -> None:
         self._path = Path(path)
+        self._camera_id = camera_id
         self._cap: cv2.VideoCapture | None = None
 
     def __enter__(self) -> FileVideoSource:
@@ -53,6 +54,11 @@ class FileVideoSource:
             self._cap = None
 
     @property
+    def camera_id(self) -> str | None:
+        """Which camera this file came from, or None if the caller didn't say (ADR-011)."""
+        return self._camera_id
+
+    @property
     def fps(self) -> float:
         """Frames per second reported by the container, with a sane fallback."""
         cap = self._require_cap()
@@ -62,17 +68,51 @@ class FileVideoSource:
             return _DEFAULT_FPS
         return float(fps)
 
+    @property
+    def width(self) -> int:
+        """Frame width in pixels as the container reports it; 0 when it won't say."""
+        return self._prop(cv2.CAP_PROP_FRAME_WIDTH)
+
+    @property
+    def height(self) -> int:
+        """Frame height in pixels as the container reports it; 0 when it won't say."""
+        return self._prop(cv2.CAP_PROP_FRAME_HEIGHT)
+
+    @property
+    def frame_count(self) -> int:
+        """The container's *claim* about how many frames it holds; 0 when it won't say.
+
+        Deliberately not the same thing as the number of frames `frames()` yields, and not part of
+        the `VideoSource` port — a live camera has no length. Treat a disagreement between the two
+        as a signal: a file that opens cleanly and then decodes short is the silent failure mode
+        (docs/M7_TWO_PHONE_SPIKE.md, Q2 PARTIAL), so callers that care should compare and warn.
+        """
+        return self._prop(cv2.CAP_PROP_FRAME_COUNT)
+
     def frames(self) -> Iterator[Frame]:
         """Yield frames in order until the file is exhausted."""
         cap = self._require_cap()
         fps = self.fps
+        camera_id = self._camera_id
         index = 0
         while True:
             ok, image = cap.read()
             if not ok:
                 break
-            yield Frame(index=index, timestamp_ms=index / fps * 1000.0, image=image)
+            yield Frame(
+                index=index,
+                timestamp_ms=index / fps * 1000.0,
+                image=image,
+                camera_id=camera_id,
+            )
             index += 1
+
+    def _prop(self, prop: int) -> int:
+        """A container property as a non-negative int; unreported values (0, -1, NaN) become 0."""
+        value = self._require_cap().get(prop)
+        if not value or value != value or value < 0:  # `value != value` catches NaN
+            return 0
+        return int(value)
 
     def _require_cap(self) -> cv2.VideoCapture:
         if self._cap is None:

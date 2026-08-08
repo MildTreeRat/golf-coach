@@ -63,6 +63,17 @@ def test_contract_json_roundtrip() -> None:
     assert restored == frame
 
 
+def test_frame_keypoints_camera_id_is_optional_and_round_trips() -> None:
+    """Optional so every keypoints file written before ADR-011's seam existed still validates."""
+    unlabelled = FrameKeypoints(frame_index=0, timestamp_ms=0.0, landmarks=_full_landmarks())
+    assert unlabelled.camera_id is None
+
+    labelled = FrameKeypoints(
+        frame_index=0, timestamp_ms=0.0, landmarks=_full_landmarks(), camera_id="face_on"
+    )
+    assert FrameKeypoints.model_validate_json(labelled.model_dump_json()) == labelled
+
+
 def test_practice_goal_defaults_to_fundamentals() -> None:
     goal = PracticeGoal()
     assert goal.mode is PracticeMode.FUNDAMENTALS

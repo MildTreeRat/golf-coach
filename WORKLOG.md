@@ -5,6 +5,229 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-08-07 — Two views of one swing, aligned (M7 Phase 2)
+
+**Duration**: ~1 session, implementation + first real bay footage
+**What I did**: Built the alignment engine, then met real footage and had to build one more thing.
+
+1. **`contracts/alignment.py` + `analysis/alignment.py`** — event-anchored piecewise-linear warp on
+   a normalized swing-time axis τ (0 = motion start, 1 = top, 2 = impact), ADR-011's Option C
+   standalone. Pure, stdlib + pydantic. `AlignmentQuality` (`full` / `top_impact` / `impact_only` /
+   `unaligned`) carries outward how much of the swing was actually anchored.
+2. **`scripts/align_swings.py`** — text report with no video needed; `--out` renders the
+   side-by-side MP4. Both clips **stream** (the warp is monotone, so the follower only moves
+   forward), reusing `draw_skeleton`/`annotate_frame` unchanged.
+3. **Multi-swing selection**, which was not in the plan — `phases.candidate_downswings()` (a pure
+   addition; `segment_phases` untouched), `--list-swings`, `--window START:END`.
+4. **`analyze_swing.py` now derives its instants from `anchors_from_phases`** instead of its own
+   copy, so the frame the TOP banner is stamped on and the frame the warp pins to τ=1 cannot drift.
+5. **ADR-015**, which also settles the `FrameBundle` question ADR-011's addendum left open: they
+   stay two types. `FrameBundle` pairs frames within a millisecond tolerance and so presumes a
+   clock; this tier has none.
+
+**Verification**: 201 passed / 4 skipped, ruff clean, mypy clean (52 files, `--python-version 3.12`
+per the standing numpy-stub issue). `aaron-swing-2` still reports **TOP @ 400 / IMPACT @ 423** after
+the `_instants` refactor — the pinned baseline did not move. The real proof is visual, on the first
+bay pair: at τ=1.00 both panels are stamped TOP OF BACKSWING (face-on 704, down-the-line 1551) and
+at τ=2.00 both are stamped IMPACT (718 / 1574), with the club at the ball in both. Independently, by
+eye, the ball leaves the mat between down-the-line frames 1570 and 1580.
+
+**Key decisions / surprises**:
+- **The practice-swing problem is the common case, not the tail**, and Aaron flagged it before the
+  footage confirmed it. `_top_and_impact` takes the *earliest* major descent — right for the
+  single-swing GolfDB corpus, wrong for a 41-second bay clip. Unaided, both views picked a **setup
+  move**: face-on a 0.50 s "downswing" at 0.9 s, down-the-line one at 15.2 s. Downswing *duration*
+  is what makes the real swing obvious in the listing (~0.23 s against 0.4-9.1 s for the decoys),
+  so `--list-swings` prints it. Worth remembering: **N swings yield about N+1 descents**, because
+  the hands coming back down to address is a descent like any other.
+- **The tempo cross-check earned its place immediately, and not for the reason I wrote it.** It was
+  meant to catch two clips locking onto different swings. What it actually caught on the first real
+  pair was `motion_start` **collapsing onto the top** in *both* views — the golfer pauses at the
+  top, and `_motion_start` walks back from the top looking for exactly such a quiet stretch. The
+  backswing measured 0.43 and 0.04 downswings. `phases.py` reports `detected=True` and is not
+  wrong to: from inside one clip nothing looks off. So alignment now refuses any anchor implying a
+  backswing shorter than its downswing — no reference distribution needed to know that is not a
+  golf swing.
+- **A τ warp makes *any* two swings look aligned.** That is the feature, and it means a
+  convincing-looking side-by-side is *not* evidence the two clips show the same physical swing.
+  Here they do — both are the last swing in their clip and the ball departs in both — but the video
+  cannot establish that by itself, and a results page must not imply otherwise.
+- **Down-the-line generates far more spurious candidates than face-on** (7 vs 3): a bystander walks
+  through frame, the phone gets lowered, and MediaPipe's single-person model tracks both. Down-the-
+  line is filmed from the busy side of the bay.
+
+**Noticed, not fixed**:
+- **The down-the-line top reads early** — 23 frames of downswing against face-on's 14 for the same
+  swing at the same frame rate. Consistent with the lead wrist being the far, occluded arm from
+  behind. Recorded as a preliminary observation in the spike doc; it is *not* a Q1 verdict, which
+  still needs the set-A inventory, on-axis framing and `truth.json`.
+- **The clips are 4K60 portrait, not the 1080p60 the M7 doc asks for**, because nobody told the
+  phones otherwise. Pose runs at ~9-14 fps end-to-end at that resolution — tolerable, so the
+  deferred pre-inference downscale stays deferred, but that is now a measured number rather than a
+  guess.
+- I wasted a chunk of this session on a self-inflicted harness bug: my throwaway extraction script
+  walked parent directories looking for `pyproject.toml` from a path outside the repo, which never
+  terminates, and I read the resulting 100%-CPU-zero-IO process as "4K pose is very slow" and
+  started optimising a problem that did not exist. The tell was there and I misread it: zero bytes
+  read over four seconds is not a slow decode, it is no decode.
+
+---
+
+## 2026-08-07 — Capture layer survives phone footage (M7 Phase 1)
+
+**Duration**: ~1 session, implementation
+**What I did**: The three things standing between the pipeline and a real iPhone clip.
+
+1. **Killed the OOM.** `run_pose.py` held every decoded BGR frame. Both it and
+   `analyze_swing.py --overlay` — same bug, and the one you actually point at phone footage —
+   now stream. Pose and overlay are two passes over the file rather than one pass and a list.
+2. **`camera_id`** on `Frame` and `FrameKeypoints`, ADR-011's Phase 1 seam, prescribed in July
+   and never built. `run_pose.py --camera-id face_on`.
+3. **Clip metadata persisted.** fps existed only inside `FileVideoSource` and died with the
+   process. The keypoints JSON grew an envelope — `{"clip": {...}, "frames": [...]}` — carrying
+   fps, width, height, decoded frame count and the source clip's sha256.
+
+Touched `capture/source.py`, `capture/file.py`, `contracts/keypoints.py`, `pose/estimator.py`,
+new `storage/keypoints_io.py`, `storage/manifest.py` (+`hash_file`), `run_pose.py`,
+`analyze_swing.py`, the three `scripts/golfdb/` readers/writers, the spike probe's loader, and
++19 tests.
+
+**Verification**: 184 passed / 4 skipped, ruff clean. The real proof is an identity, not a
+judgement call: re-running pose on the committed sample produced all **656 × 33 × 4 landmark
+values bit-identical** to the previous file, `TOP @ 400 / IMPACT @ 423` unmoved, and the spike's
+pre-flight still exits 0. Peak RSS **971 MB → 233 MB** on that 480×854 clip (measured, not
+estimated), and the new number no longer scales with clip length. Clip metadata came out exactly
+as predicted: `fps=58.913` — not 60 — `480×854`, 656 frames, sha matching `Get-FileHash`. The
+461-clip GolfDB cache loads untouched, pinned by a test that reads the real files when present.
+
+**Key decisions / surprises**:
+- **Dropped the pre-inference downscale**, one of the four items in the phase plan. The
+  justification for it — "MediaPipe resizes internally, so 4K buys zero accuracy" — is right
+  about the ceiling but skips that downscaling first makes it a *two*-step resample, and that
+  difference has never been measured here. It is a throughput optimisation, not a correctness
+  fix, and streaming is what actually makes 4K survivable. Revisit with Phase 0 footage and a
+  real throughput number. Dropping it is also what let the sample come out bit-identical, which
+  is a far stronger check on a refactor this wide than "the instants still look right".
+- **The envelope had to be a format change, not a sidecar**, and that put the 461-clip cache in
+  the blast radius. One sniffing loader (`load_keypoints`) absorbs it: a top-level array is
+  legacy, an object is enveloped, and legacy files report `clip=None` — which is *true*, not a
+  missing value. Nothing was migrated; nothing needs to be.
+- **`analyze_swing.py` had the same OOM and nobody had noticed**, because it is behind
+  `--overlay` and the only clip anyone ran it on is 2.7 MB. Worth remembering the pattern is
+  copy-pasted, not unique. The one remaining `list(source.frames())` is in
+  `scripts/golfdb/extract_pose.py` and is left alone deliberately: 160px clips, ~15 MB, and the
+  estimator interface takes a Sequence.
+
+**Noticed, not fixed**: `mypy src/golf_coach` now dies inside numpy's own `__init__.pyi` —
+"Type statement is only supported in Python 3.12 and greater". Nothing to do with this work
+(`--python-version 3.12` is clean across all 50 source files); the installed numpy's stubs have
+outrun `python_version = "3.11"` in `pyproject.toml`. Bumping the mypy target is its own call.
+
+---
+
+## 2026-08-06 — Phone reaches the server from anywhere (M7 Phase 6)
+
+**Duration**: ~1 hour, implementation
+**What I did**: Made the upload server reachable from a phone on any network, which was the whole
+point of Phases 3 & 5 and the one thing they stopped short of. **The bind did not change** —
+uvicorn still listens on `127.0.0.1` and Tailscale proxies to it over real TLS. Wrote
+**ADR-016**; touched `config.py`, `api/app.py`, `api/static/index.html`, `scripts/run_server.py`,
+`tests/api/test_uploads.py` (+7 tests), and the M7 doc / ROADMAP / FLOW / READMEs.
+**Verification**: full suite green (169 passed, 4 skipped), ruff and mypy clean. Live server on
+`127.0.0.1:3000`: 401 with no token and with a wrong token, 200 with the header, 200 with `?t=`,
+static page still reachable unauthenticated, and a real 2.6 MB `.mov` uploaded end-to-end through
+the query-param token. `--host 0.0.0.0` with no token exits 2 instead of starting.
+
+**Then verified for real, same day, from an actual iPhone.** Installed Tailscale 1.102.2, enabled
+MagicDNS + HTTPS certificates, `tailscale serve --bg 3000` →
+`https://desktop-snhi10c.taila73d7e.ts.net`. Over that URL: static page 200 with a trusted cert,
+`/api` 401 without a token and 200 with either the header or `?t=`. A complete swing bundle landed
+from the phone in 30 seconds — `IMG_2712.mov` (33.6 MB, face-on), `IMG_2746.mov` (11.1 MB,
+down-the-line), `IMG_2739.jpeg` (4.5 MB, shot screen) — all three grouped into swing 1, status
+`complete`, no warnings. The 33.6 MB face-on clip sits right in the 30–50 MB range estimated for
+1080p60, which is the number the Cloudflare-vs-Tailscale decision turned on.
+
+`netstat` during all of it showed exactly one listener, `127.0.0.1:3000` — and Tailscale connected
+to it as a *loopback client* (`127.0.0.1:7629 → 127.0.0.1:3000`). That is the whole design in one
+line of output: nothing was exposed, Tailscale reaches in from inside.
+
+**Still outstanding: Funnel.** `tailscale funnel --bg 3000` (the guest-phone path) is untested, and
+it's the one that actually needs the token — Serve was verified with the token on, but tailnet
+membership was also protecting it. Deliberately not changed at the same time as Serve.
+**Key decisions / surprises**:
+- **The plan of record was wrong, and the reason was a person, not a protocol.** Phase 6 said bind
+  to the tailnet IP because tailnet membership is the access control. That holds right up until
+  the down-the-line phone belongs to whoever is at the bay — a helper can't join my tailnet. So:
+  `tailscale serve` for my devices, `tailscale funnel` for guests, and because Funnel is public,
+  a `GOLF_UPLOAD_TOKEN` gate on `/api/`. The token is what buys the guest case.
+- **Serving via Tailscale is strictly better than binding the tailnet IP**, which is a bonus I
+  wasn't looking for. Loopback bind stays loopback (the dangerous config becomes unreachable, not
+  merely warned against), and TLS termination gives a secure context — so `getUserMedia` is
+  available whenever the page wants to capture directly instead of via the camera roll.
+- **Cloudflare Tunnel is out on a hard number**: free and Pro cap request bodies at 100 MB with an
+  edge-side 413. A 1080p60 clip (~30–50 MB, measured against the 2.6 MB sample) usually fits; 4K
+  doesn't, and the workaround is client-side chunking. Tailscale Funnel documents no body cap.
+- **`create_app(token=...)` needed a sentinel.** `None` has to mean "no auth", so it can't also
+  mean "look it up in settings" — without the sentinel, tests asserting the unauthenticated path
+  would flip to 401 the moment someone put `GOLF_UPLOAD_TOKEN` in their `.env`. Defaulting to the
+  sentinel also keeps the lookup fail-closed.
+- **The guard is a route dependency, not middleware**, specifically so it resolves before the
+  handler reaches `request.stream()`. A rejected upload writes zero bytes to `.incoming/`; there's
+  a test for exactly that.
+- **`fetch` cannot report upload progress** — only `XMLHttpRequest.upload.onprogress` can. On
+  cellular a 50 MB clip left the page showing a motionless "Uploading…", which reads as hung.
+  Swapped to XHR with a progress bar. Nothing to do with networking, everything to do with the
+  page being usable on a phone.
+- **The 8080 → 3000 port note below is now fixed in code, not just remembered.** `api_port`
+  defaults to 3000 with the excluded-range explanation inline.
+- **`httpx2` in `pyproject.toml` is not a typo** — I assumed it was and was wrong. starlette 1.4.1
+  depends on `httpx2` 2.9.1, which is installed and is what `TestClient` uses. Left alone.
+
+---
+
+## 2026-08-06 — Swing bundle store + phone upload server (M7 Phases 3 & 5, trimmed)
+
+**Duration**: ~2 hours, implementation
+**What I did**: Built the storage and API layers that let a phone browser upload a swing bundle
+(face-on video, down-the-line video, shot-tracker photo) and have it land on the desktop,
+correctly grouped — trimmed from the full M7 Phase 3 + Phase 5 design in
+[docs/M7_TWO_PHONE_CAPTURE.md](docs/M7_TWO_PHONE_CAPTURE.md) at the user's explicit direction:
+no auto-triggered analysis (Phase 4 + the Phase 5 worker), no Tailscale (Phase 6) — both are
+separate future work. New: `storage/manifest.py`, `storage/bundle_store.py`, `api/app.py`,
+`api/static/index.html`, `scripts/run_server.py`, plus `tests/storage/` and `tests/api/` (21
+new tests, all passing; suite stays green with only the base + `api` + `dev` extras).
+**Verification**: `pytest -q` green (21 new + all existing). Manually exercised the running
+server on localhost: all three roles landing in one swing in every arrival order, dedupe on a
+repeated upload, the documented "different bytes reopens a new swing" behavior and its
+`swing_id` repair path, and confirmed via `netstat` that the bind stays on `127.0.0.1` (never
+`0.0.0.0`).
+**Key decisions / surprises**:
+- **Swing identity assigned by the store, exactly as ADR-011's addendum and the M7 doc call
+  for** — a role-only upload (`face_on` / `down_the_line` / `shot_screen`) slots into the
+  newest swing missing that role. Pinned down, not silently accepted: if two swings are
+  simultaneously missing the same role, "newest wins" can misattribute an out-of-order upload.
+  A test (`test_newest_wins_when_two_swings_are_missing_the_same_role`) locks the behavior down
+  so a future change can't alter it unnoticed; the escape hatch is an explicit `swing_id` query
+  param that overwrites a role slot by hand.
+- **`status()` is derived, not persisted, and deliberately not named `pending`/`ready`/
+  `analyzed`.** Those words imply something consumes `ready` to fire analysis, which nothing
+  does yet. `collecting`/`complete` says only what's actually true; `analyzed_at` can be added
+  later as a pure addition with no manifest migration.
+- **`StaticFiles(..., html=True)` only serves a directory-relative `index.html`** — the upload
+  page had to be named `index.html`, not `upload.html`, or `GET /` 404s. Caught during manual
+  verification, not by the test suite (the API tests never hit `/`).
+- **Port 8080 — this repo's own configured `api_port` — is inside a Windows TCP port exclusion
+  range (`netsh interface ipv4 show excludedportrange`, 8069–8168 here) on this machine.** Binding
+  failed with `WinError 10013` until moved to port 3000 for the manual check. Environment-specific
+  and not a code issue, but worth remembering if `scripts/run_server.py` ever refuses to bind on
+  the default port on this box.
+- Also fixed doc drift while in the area: `README.md` still described `storage/` as SQLite and
+  `api/` as unused/declared-only. Left `docs/decisions/008-project-structure.md` alone —
+  ADRs in this repo get addenda, not rewrites (see ADR-011's pattern), and 008 is a decision
+  record, not living documentation.
+
+---
+
 ## 2026-08-05 — Investigation: can two phones at a sim feed this thing? (M7 planned)
 
 **Duration**: ~1 hour, investigation and planning only

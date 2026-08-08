@@ -38,7 +38,7 @@ file is already sitting on the desktop" works, and works well. Everything *upstr
 | Where do the phone videos get sent? | **Nowhere.** The only ingestion path is a positional CLI argument → `cv2.VideoCapture` (`scripts/run_pose.py:28-38`). No upload, no watcher, no queue. |
 | How does the program know to "wait" for a video? | **It doesn't.** There is no session or swing registry. The filename stem is the entire notion of swing identity (`scripts/analyze_swing.py:164`). `src/golf_coach/storage/` is a 4-line docstring. |
 | What is hosting the program? | **Nothing.** `src/golf_coach/api/__init__.py` is a 6-line docstring — no FastAPI app, no routes. The `api` extra (fastapi, uvicorn) is declared in `pyproject.toml` and entirely unused. |
-| Does the desktop compute the data? | Yes, and that is the right call — MediaPipe lite and PaddleOCR are both CPU-friendly and run comfortably faster than the session. **But** `run_pose.py:36` does `frames = list(source.frames())`, materializing every decoded BGR frame: a 10-second 4K60 iPhone clip is 600 frames × ~24.9 MB ≈ **15 GB**. It will OOM on the first real phone video. |
+| Does the desktop compute the data? | Yes, and that is the right call — MediaPipe lite and PaddleOCR are both CPU-friendly and run comfortably faster than the session. **But** `run_pose.py:36` did `frames = list(source.frames())`, materializing every decoded BGR frame: a 10-second 4K60 iPhone clip is 600 frames × ~24.9 MB ≈ **15 GB**. It would have OOM'd on the first real phone video. *Fixed in Phase 1.* |
 
 Roughly 60% of the work is already done. The remaining 40% is ingestion, identity, and alignment —
 which is the harder 40%.
@@ -78,8 +78,8 @@ zero-setup portability, and the two coexist. See the 2026-08-05 addendum on ADR-
 |---|---|---|---|
 | D | Land this plan in the repo | This doc + roadmap / ADR / worklog updates | [x] |
 | 0 | Field spike | `docs/M7_TWO_PHONE_SPIKE.md`. Gate: decides scope of 1 and 2. | [ ] |
-| 1 | Capture layer survives phone footage | Streaming pose, downscale, `camera_id`, clip metadata w/ fps | [ ] |
-| 2 | **Video sync / alignment engine** | `analysis/alignment.py` + side-by-side CLI | [ ] |
+| 1 | Capture layer survives phone footage | Streaming pose, `camera_id`, clip metadata w/ fps | [x] |
+| 2 | **Video sync / alignment engine** | `analysis/alignment.py` + side-by-side CLI | [x] |
 | 3 | Session & swing bundle store | `storage/` manifest + arrival state machine | [ ] |
 | 4 | Bundle analysis + launch-monitor join | `analyze_swing_bundle()`, `SwingResult.shot` populated | [ ] |
 | 5 | Local server + phone upload page | FastAPI on localhost, browser upload, worker | [ ] |
@@ -108,53 +108,85 @@ gains an ffmpeg transcode step on upload.
 
 ### Phase 1 — Capture layer survives phone footage
 
-**Goal**: real 4K/60 phone clips run through pose without OOM, and every clip records which camera it
-came from plus its fps.
+**Built 2026-08-07.** Real phone clips run through pose without OOM, and every clip records which
+camera it came from plus its fps.
 
-- Fix the `list(source.frames())` OOM in `scripts/run_pose.py:36`.
-- Downscale to ~720px long edge before inference. MediaPipe resizes to its own input internally, so 4K
-  buys zero accuracy and costs real decode time. Landmarks are normalized `[0,1]`
-  (`contracts/keypoints.py:61-72`), so nothing downstream changes.
-- Add `camera_id` to `Frame` (`capture/source.py`). ADR-011 prescribes exactly this; it was never done.
-- Persist clip metadata (`fps`, `width`, `height`, `frame_count`, `source_sha256`) in the keypoints
-  JSON. **fps is currently never persisted anywhere** — it lives only inside `FileVideoSource` — and
-  Phase 2 needs it.
+- **The `list(source.frames())` OOM is fixed** — both in `scripts/run_pose.py` and in
+  `scripts/analyze_swing.py`'s `--overlay` path, which had the identical bug and is the command
+  most likely to be pointed at phone footage. Pose and overlay are two streaming passes over the
+  file; the overlay needs the pixels a second time and a `VideoSource` is one-shot, so it simply
+  decodes twice (a few percent of the run — decode is ~675 fps against MediaPipe's ~106).
+  Measured on the 480×854 sample: **peak RSS 971 MB → 233 MB**, and the new figure no longer
+  scales with clip length or resolution.
+- **`camera_id`** on `Frame` (`capture/source.py`) and carried onto `FrameKeypoints` — ADR-011's
+  Phase 1 seam, built at last. Optional, defaulting to `None`, which is what every clip recorded
+  before today honestly is. `run_pose.py --camera-id face_on`.
+- **Clip metadata** (`fps`, `width`, `height`, `frame_count`, `source_sha256`) now rides in the
+  keypoints JSON, which grew an envelope: `{"clip": {...}, "frames": [...]}`.
+  `storage/keypoints_io.py` reads that *and* the legacy bare array, so nothing was migrated —
+  the 461-clip GolfDB cache loads untouched and reports `clip=None`, which is true rather than a
+  gap. `frame_count` records what was actually **decoded**, and a decode that comes up short of
+  the container's claim now warns instead of passing silently (spike Q2's PARTIAL case).
 
-**Separable because** it is a standalone bug fix plus a backward-compatible contract addition, valuable
-even if nothing else in M7 is built. Main regression risk: the 461-clip GolfDB reference cache under
-`data/reference/golfdb/keypoints/` must still load.
+**The pre-inference downscale was deliberately dropped**, and it is the one item here that did not
+ship. The argument for it — "MediaPipe resizes to its own input internally, so 4K buys zero
+accuracy" — is sound about the *ceiling* but skips a step: downscaling first makes it a two-step
+resample (`INTER_AREA` → MediaPipe's own resize) rather than one, and the difference between those
+has never been measured in this repo. It is a throughput optimisation, not a correctness fix, and
+the streaming change is what actually makes 4K survivable. Revisit once Phase 0 footage exists and
+there is a real decode-throughput number to optimise against; the 480×854 sample would have been
+resized by a 720px cap for almost no saving while perturbing the pinned 400/423 baseline the spike's
+pre-flight asserts against.
+
+**Verified** by re-running pose on the committed sample and diffing: all 656 × 33 × 4 landmark
+values **bit-identical** to the previous output, `TOP @ 400 / IMPACT @ 423` unmoved, and the
+spike's pre-flight still exits 0. Dropping the downscale is what makes that an exact identity
+rather than a judgement call.
 
 ---
 
 ### Phase 2 — Video sync / alignment engine
 
-**Goal**: given two keypoints files of the same swing from different angles, determine which frame in
-each corresponds to the same swing instant — and prove it with a side-by-side video.
+**Built 2026-08-07.** Two keypoints files of one swing go in; a frame correspondence and a
+side-by-side MP4 come out, with no shared clock anywhere in the path. Recorded as **ADR-015**.
 
-**Design (settled; the phase plan works out *how*, not *whether*): event-anchored piecewise-linear time
-warp.** Segment each clip independently, then align on the phase instants each already produces.
-Normalized swing-time axis `τ`: 0 = motion start, 1 = top, 2 = impact, extrapolated linearly past
-impact at the downswing rate. Map `τ → frame index` per clip by piecewise-linear interpolation.
-
-This is ADR-011's **Option C used standalone** rather than as a refinement of Option B. It needs no
-shared clock, no clapper, no calibration, and is immune to different frame rates, different clip
-lengths, different start/stop moments, and iPhone slo-mo — all of which are guaranteed when two people
-hold two differently-configured phones.
-
-Anchor reliability, from this repo's own bakeoff (`docs/M4_POSE_BAKEOFF.md`, ADR-013):
+**The design is as specified**: event-anchored piecewise-linear time warp on a normalized swing-time
+axis `τ` (0 = motion start, 1 = top, 2 = impact, extrapolated past impact at the downswing rate),
+ADR-011's Option C used standalone. Anchor reliability from the repo's own bakeoff
+(`docs/M4_POSE_BAKEOFF.md`, ADR-013) is what splits the anchors into primary and soft:
 
 | Anchor | Error | Use |
 |---|---|---|
 | `impact` | median 1 frame | primary |
 | `top` | median 2 frames | primary |
-| `motion_start` | median 7 frames; 40% of clips >10 frames off; falls back entirely on ~14% | soft — only when `PhaseSegment.detected` is true |
+| `motion_start` | median 7 frames; 40% of clips >10 frames off; falls back entirely on ~14% | soft — only when **both** clips detected it *and* their tempo ratios agree |
 
-Between top and impact the warp is a clean two-point linear map, which is exactly the window where
-alignment accuracy matters most for viewing.
+- **`contracts/alignment.py`** — `SwingAnchors`, `ClipAlignment`, `SwingAlignment`, and
+  `AlignmentQuality` (`full` / `top_impact` / `impact_only` / `unaligned`), each with a
+  human-readable summary so a UI can say *"aligned on impact only"* rather than rendering two panels
+  and letting the viewer infer precision nobody measured.
+- **`analysis/alignment.py`** — pure, stdlib + pydantic. Anchor extraction, `frame_of_tau` /
+  `tau_of_frame` (exact inverses), `align_swings`, `map_frame`.
+- **`scripts/align_swings.py`** — the text report needs no video at all; `--out` renders the
+  side-by-side. Both clips **stream**, since the warp is monotone; buffering two 4K clips would have
+  undone Phase 1's whole point.
+
+**Two things were added that the phase plan did not anticipate**, both from meeting real footage:
+
+1. **Multi-swing clip selection.** Real phone clips contain practice swings, and `segment_phases`
+   takes the *earliest* major descent — so it will pick a practice swing if one comes first. That is
+   correct behaviour for the single-swing GolfDB corpus it was validated on and cannot be tuned
+   away. `phases.candidate_downswings()` (a pure addition; `segment_phases` is untouched) lists every
+   descent, `--list-swings` prints them, and `--window START:END` selects one. Worth knowing: **N
+   swings produce about N+1 descents**, because the hands coming back down to address between swings
+   is a descent like any other.
+2. **A tempo cross-check.** Frame rate cancels out of a backswing:downswing ratio, so two views of
+   one swing must agree on it. When they disagree the alignment refuses the soft anchor and says
+   why — this is the guard against the two clips locking onto *different* swings, which is the one
+   failure mode that produces a confident, plausible, completely wrong video.
 
 **Separable because** it is purely offline and pure-functional: two JSON files in, an alignment and an
-MP4 out. No server, no storage, no upload. Fully unit-testable against synthetic phase segments the way
-`tests/analysis/test_phases.py` already does.
+MP4 out. No server, no storage, no upload.
 
 ---
 
@@ -215,15 +247,34 @@ proving the network path works. Debugging both at once is the trap.
 
 ### Phase 6 — Tailscale exposure
 
-**Goal**: both phones at the sim reach the desktop at home, over the tailnet.
+**Goal**: both phones at the sim reach the desktop at home — including a phone that isn't mine.
 
-Bind uvicorn to the desktop's Tailscale IP (`100.x.y.z`), **not `0.0.0.0`**. There is no authentication
-on the upload endpoint — tailnet membership *is* the access control — so binding wide would expose an
-unauthenticated file-upload endpoint to the home LAN. Phones run the Tailscale iOS app and hit the
-MagicDNS name in Safari. No router ports opened, no public exposure, no dynamic DNS.
+**Built (2026-08-06), and it diverges from what this section originally specified.** The original plan
+was to bind uvicorn to the desktop's Tailscale IP (`100.x.y.z`) over plain HTTP. Two things changed it:
+
+1. **The bind never widens at all.** `tailscale serve --bg 3000` terminates real Let's Encrypt TLS at
+   `https://<machine>.<tailnet>.ts.net` and proxies to `127.0.0.1:3000`. uvicorn stays on loopback,
+   which is strictly safer than binding the tailnet IP, and HTTPS gives a secure context — so a future
+   page can use `getUserMedia` instead of the camera roll.
+2. **A helper's phone can't join the tailnet.** This is a two-person capture; the down-the-line phone
+   often belongs to whoever is at the bay. `tailscale funnel --bg 3000` publishes the same URL
+   publicly, on demand, no app required — and that makes tailnet membership insufficient as the only
+   access control.
+
+So `/api/` routes are gated on `GOLF_UPLOAD_TOKEN`, enforced only when set, accepted as an
+`X-Upload-Token` header or a `?t=` query param. A phone is set up once by opening `/?t=<token>`; the
+page stores it beside the role and strips it from the URL. `scripts/run_server.py` refuses to start on
+a non-loopback `--host` with no token set. See **ADR-016**.
+
+Cloudflare Tunnel was considered and rejected: the free and Pro plans hard-cap request bodies at
+100 MB with an edge-side HTTP 413, which would need client-side chunking to work around.
 
 Upload time over the sim's uplink is the dominant latency in the whole system — not compute. Record
-1080p60, not 4K.
+1080p60, not 4K. Funnel is relayed and rate-limited, so guest-phone uploads are slower than tailnet
+ones; turn Funnel off when the session ends.
+
+Also fixed here: the default port moved 8080 → 3000, because Windows reserves 8069–8168 on this
+machine and 8080 could never bind (`WinError 10013`).
 
 **Separable because** it is a networking and security concern touching config and docs, not application
 logic, and it is verified independently (phone on cellular with WiFi off) before a bay session depends

@@ -18,7 +18,7 @@ wording; only the grouping and the M4 checklist have been corrected.
 | **M5-FB** Ranked coaching | ✅ Done | — | [§M5-FB](#m5-fb-prioritised-coaching-feedback-pose-only-slice-of-m5--done) |
 | **M3** Launch monitor / MCP | 🟡 In progress | Nothing — screen OCR done; MCP server left | [§M3](#milestone-3-launch-monitor-integration--in-progress) |
 | **M1.5** Detectability spike | ⬜ Next | Nothing — phone clips of the impact zone | [§M1.5](#milestone-15-club-head-detectability-spike-de-risk-before-investing) |
-| **M7** Two-phone sim capture | 📋 Planned, 0/7 phases | Nothing — two iPhones + a sim bay | [§M7](#milestone-7-two-phone-sim-capture-no-hardware-purchase) |
+| **M7** Two-phone sim capture | 🟡 In progress, 3/7 phases (1; 3 & 5 trimmed) | Nothing — two iPhones + a sim bay | [§M7](#milestone-7-two-phone-sim-capture-no-hardware-purchase) |
 | **M4** full (outcome axis) | ⬜ Blocked | The M2 + M3 streams | [§M4 full](#milestone-4-full-swing-analysis-engine--the-outcome-axis) |
 | **M5** Feedback UI | ⬜ Not started | M7 Phase 5 gives the host | [§M5](#milestone-5-feedback-ui) |
 | **M6** LLM coaching | ⬜ Not started | M5 | [§M6](#milestone-6-llm-powered-coaching) |
@@ -318,24 +318,50 @@ zero-setup portability. Triangulation is unreachable with hand-held phones (no c
 possible), so down-the-line is **capture + align only**: scoring stays on the three validated
 face-on checkpoints. Each phase below is one commit, planned in a fresh session.
 
+> **Status (2026-08-06):** Phases 3, 5 and 6 built, **trimmed** — a phone anywhere (tailnet or
+> open internet) can now upload a swing bundle to the desktop and see it land, but nothing
+> auto-analyzes yet. Deliberately deferred out of these phases: any auto-trigger of
+> pose/OCR/analysis on arrival (no background worker, no consumer of a `ready` signal —
+> `SwingManifest.status()` uses the neutral `collecting`/`complete` instead of
+> `pending`/`ready`/`analyzed` because nothing here makes `ready` true in the original sense).
+> Phases 0–2 and 4 are unstarted and unaffected by this work.
+
 - [ ] **Phase 0** — Field spike: does `segment_phases()` work on down-the-line footage? Does
       OpenCV decode iPhone HEVC? What does `CAP_PROP_FPS` report for slo-mo? Gate for 1 and 2
-- [ ] **Phase 1** — Capture layer survives phone footage: fix the `list(source.frames())` OOM
-      (~15 GB on a 10s 4K60 clip), downscale before inference, add `camera_id` (ADR-011
-      prescribed it, never done), persist clip metadata incl. **fps** — currently never stored
-- [ ] **Phase 2** — Video sync / alignment engine: event-anchored piecewise-linear time warp
-      over the phase instants each clip already produces (ADR-011 Option C, standalone).
-      Immune to mismatched fps, clip lengths, and iPhone slo-mo. Drafts **ADR-015**
-- [ ] **Phase 3** — Session & swing bundle store: arrival-driven state machine, `pending` →
-      `ready` / `partial` → `analyzed`. Swing identity assigned by the store, not the uploader.
-      First real code in `storage/`
+- [x] **Phase 1** — Capture layer survives phone footage *(2026-08-07)*: streaming pose and
+      overlay passes (peak RSS 971 → 233 MB on the sample clip, and now independent of clip
+      length), `camera_id` on `Frame` + `FrameKeypoints` (ADR-011's seam, finally built), clip
+      metadata incl. **fps** persisted in the keypoints JSON. The pre-inference downscale was
+      **deliberately deferred** — see the phase notes in docs/M7_TWO_PHONE_CAPTURE.md
+- [x] **Phase 2** — Video sync / alignment engine *(2026-08-07)*: event-anchored piecewise-linear
+      time warp over the phase instants each clip already produces (ADR-011 Option C, standalone),
+      in `contracts/alignment.py` + `analysis/alignment.py` + `scripts/align_swings.py`. Immune to
+      mismatched fps, clip lengths and iPhone slo-mo by construction. `AlignmentQuality` states how
+      much of the swing was actually anchored rather than implying frame accuracy everywhere.
+      Added beyond the plan: **multi-swing clip selection** (`phases.candidate_downswings()` +
+      `--window`), because real phone clips contain practice swings and the earliest-descent rule
+      would otherwise align a practice swing in one view to the real one in the other. Wrote
+      **ADR-015**, which also settles the `FrameBundle` question ADR-011 left open
+- [x] **Phase 3** — Session & swing bundle store, **trimmed**: role-based swing assignment
+      (`storage/bundle_store.py`), content-addressed dedupe, and a `swing_id` repair path for
+      the case a naive arrival rule misattributes (documented, not engineered around — see
+      `tests/storage/test_bundle_store.py::test_newest_wins_when_two_swings_are_missing_the_same_role`).
+      First real code in `storage/`. Status is derived, not a persisted `pending → ready →
+      analyzed` machine — nothing downstream consumes `ready` yet
 - [ ] **Phase 4** — Bundle analysis + launch-monitor join: `analyze_swing_bundle()`, populate
       `SwingResult.shot` (the field exists; nothing has ever set it). Attaches and displays the
       shot numbers — *scoring* them stays M4 per ADR-009
-- [ ] **Phase 5** — Local server + phone upload page: fills the `api/` seam, streams uploads to
-      disk, in-process worker. Localhost only, deliberately
-- [ ] **Phase 6** — Tailscale exposure: bind to the tailnet IP (not `0.0.0.0` — tailnet
-      membership is the only access control). Drafts **ADR-016**
+- [x] **Phase 5** — Local server + phone upload page, **trimmed**: fills the `api/` seam
+      (`api/app.py`) — `POST /api/uploads` streams to disk, a static page (`api/static/`) with a
+      role picker sticky in `localStorage` and a live status panel. Localhost only
+      (`scripts/run_server.py` hard-codes `127.0.0.1`). No background worker — upload lands the
+      file and nothing more; analysis wiring is Phase 4's job, not built here
+- [x] **Phase 6** — Tailscale exposure, **and it did not land as planned**: rather than binding the
+      tailnet IP, the bind stays on `127.0.0.1` and `tailscale serve` proxies to it over real TLS.
+      Because a helper's phone can't join the tailnet, `tailscale funnel` covers guest devices —
+      which makes tailnet membership insufficient as the only access control, so `/api/` is gated
+      on `GOLF_UPLOAD_TOKEN` (header or one-time `?t=` link). Default port 8080 → 3000 (Windows
+      reserves 8069–8168). Wrote **ADR-016**
 
 **Exit Criteria**: one bay session where every swing assembles from the right two clips, the
 aligned side-by-side video's IMPACT banners land together in both panels, and shot data attaches

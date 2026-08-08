@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Golf Coach Upload</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { font-family: system-ui, sans-serif; margin: 0; padding: 1.25rem; max-width: 480px; }
+  h1 { font-size: 1.1rem; margin: 0 0 1rem; }
+  .roles { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+  .roles button {
+    flex: 1; padding: 0.75rem 0.25rem; font-size: 0.85rem;
+    border: 2px solid #888; border-radius: 8px; background: transparent;
+  }
+  .roles button.active { border-color: #2a7; background: #2a7; color: white; }
+  input[type=file] { width: 100%; padding: 1rem 0; }
+  #message { margin-top: 1rem; padding: 0.75rem; border-radius: 8px; background: rgba(128,128,128,0.15); min-height: 1.2em; }
+  #message.error { background: rgba(200,60,60,0.2); }
+  /* Upload progress: on cellular a 50 MB clip is not instant, and a static
+     "Uploading..." with no movement reads as a hung page. */
+  #progress { margin-top: 0.5rem; height: 6px; border-radius: 3px; background: rgba(128,128,128,0.25); overflow: hidden; }
+  #progress[hidden] { display: none; }
+  #progress-bar { height: 100%; width: 0%; background: #2a7; transition: width 0.15s linear; }
+  #status { margin-top: 1.5rem; }
+  .swing { border: 1px solid #999; border-radius: 8px; padding: 0.6rem 0.8rem; margin-bottom: 0.6rem; }
+  .swing.complete { border-color: #2a7; }
+  .role-row { display: flex; justify-content: space-between; font-size: 0.9rem; padding: 0.1rem 0; }
+  .yes { color: #2a7; font-weight: bold; }
+  .no { color: #999; }
+</style>
+</head>
+<body>
+<h1>Golf Coach — Swing Upload</h1>
+
+<div class="roles" id="roles">
+  <button type="button" data-role="face_on">Face-on</button>
+  <button type="button" data-role="down_the_line">Down-the-line</button>
+  <button type="button" data-role="shot_screen">Shot screen</button>
+</div>
+
+<input type="file" id="file" accept="video/*,image/*" />
+<div id="message">Pick a role, then a file.</div>
+<div id="progress" hidden><div id="progress-bar"></div></div>
+
+<div id="status"></div>
+
+<script>
+const ROLE_KEY = "golf_coach_role";
+const TOKEN_KEY = "golf_coach_token";
+const roleButtons = document.querySelectorAll("#roles button");
+const fileInput = document.getElementById("file");
+const messageEl = document.getElementById("message");
+const progressEl = document.getElementById("progress");
+const progressBar = document.getElementById("progress-bar");
+const statusEl = document.getElementById("status");
+
+// One-time setup per phone: open /?t=<token> once, and the token is kept from then on.
+// It is stripped from the URL immediately so the secret doesn't linger in the address
+// bar, in a screenshot, or in whatever the browser syncs to history.
+(function absorbToken() {
+  const fromUrl = new URLSearchParams(location.search).get("t");
+  if (!fromUrl) return;
+  localStorage.setItem(TOKEN_KEY, fromUrl);
+  history.replaceState(null, "", location.pathname);
+})();
+
+function authHeaders() {
+  const token = localStorage.getItem(TOKEN_KEY);
+  return token ? { "X-Upload-Token": token } : {};
+}
+
+function setMessage(text, isError) {
+  messageEl.textContent = text;
+  messageEl.classList.toggle("error", Boolean(isError));
+}
+
+function currentRole() {
+  return localStorage.getItem(ROLE_KEY) || "face_on";
+}
+
+function setRole(role) {
+  localStorage.setItem(ROLE_KEY, role);
+  roleButtons.forEach((b) => b.classList.toggle("active", b.dataset.role === role));
+  fileInput.accept = role === "shot_screen" ? "image/*" : "video/*,image/*";
+}
+
+roleButtons.forEach((b) => b.addEventListener("click", () => setRole(b.dataset.role)));
+setRole(currentRole());
+
+const NOT_SET_UP =
+  "This phone isn't set up. Reopen the setup link (the one ending in /?t=...) to register it.";
+
+function megabytes(bytes) {
+  return (bytes / (1024 * 1024)).toFixed(1);
+}
+
+// XMLHttpRequest rather than fetch: fetch cannot report *upload* progress, and the whole
+// point of this page is sending a video clip over a phone's uplink.
+function postFile(url, file, onProgress) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", url);
+    const headers = authHeaders();
+    Object.keys(headers).forEach((k) => xhr.setRequestHeader(k, headers[k]));
+    xhr.upload.addEventListener("progress", (e) => {
+      if (e.lengthComputable) onProgress(e.loaded, e.total);
+    });
+    xhr.addEventListener("load", () => resolve({ status: xhr.status, body: xhr.responseText }));
+    xhr.addEventListener("error", () => reject(new Error("network error")));
+    xhr.addEventListener("abort", () => reject(new Error("upload cancelled")));
+    xhr.send(file);
+  });
+}
+
+fileInput.addEventListener("change", async () => {
+  const file = fileInput.files[0];
+  if (!file) return;
+  const role = currentRole();
+  const url = `/api/uploads?role=${encodeURIComponent(role)}&filename=${encodeURIComponent(file.name)}`;
+  setMessage(`Uploading ${file.name}...`);
+  progressBar.style.width = "0%";
+  progressEl.hidden = false;
+  try {
+    const res = await postFile(url, file, (loaded, total) => {
+      progressBar.style.width = `${(loaded / total) * 100}%`;
+      setMessage(`Uploading ${file.name} — ${megabytes(loaded)} / ${megabytes(total)} MB`);
+    });
+    if (res.status === 401) {
+      setMessage(NOT_SET_UP, true);
+      return;
+    }
+    if (res.status < 200 || res.status >= 300) {
+      setMessage(`Upload failed: ${res.body}`, true);
+      return;
+    }
+    setMessage(JSON.parse(res.body).message);
+  } catch (err) {
+    setMessage(`Upload failed: ${err.message}`, true);
+  } finally {
+    progressEl.hidden = true;
+    fileInput.value = "";
+    refreshStatus();
+  }
+});
+
+async function refreshStatus() {
+  try {
+    const currentRes = await fetch("/api/sessions/current", { headers: authHeaders() });
+    if (currentRes.status === 401) {
+      statusEl.innerHTML = `<p>${NOT_SET_UP}</p>`;
+      return;
+    }
+    const current = await currentRes.json();
+    const session = await fetch(`/api/sessions/${current.session_id}`, {
+      headers: authHeaders(),
+    }).then((r) => r.json());
+    renderStatus(session);
+  } catch (err) {
+    // Status panel is best-effort; a transient failure here shouldn't be loud.
+  }
+}
+
+function renderStatus(session) {
+  if (!session.swings.length) {
+    statusEl.innerHTML = "<p>No swings yet today.</p>";
+    return;
+  }
+  statusEl.innerHTML = session.swings
+    .map((swing) => {
+      const rows = Object.entries(swing.roles)
+        .map(([role, info]) => {
+          const label = role.replace(/_/g, "-");
+          const mark = info ? "&#10003;" : "&mdash;";
+          const cls = info ? "yes" : "no";
+          return `<div class="role-row"><span>${label}</span><span class="${cls}">${mark}</span></div>`;
+        })
+        .join("");
+      return `<div class="swing ${swing.status}"><strong>Swing ${swing.swing_id}</strong> &mdash; ${swing.status}${rows}</div>`;
+    })
+    .join("");
+}
+
+refreshStatus();
+setInterval(refreshStatus, 5000);
+</script>
+</body>
+</html>

@@ -35,8 +35,23 @@ class Settings(BaseSettings):
     # Below this, a parse is flagged `needs_review` rather than silently trusted.
     ocr_min_confidence: float = 0.6
 
-    # Service ports (see docs/ARCHITECTURE.md deployment view).
-    api_port: int = 8080
+    # Phone upload ingestion (trimmed M7 Phases 3+5) — swing bundles land here, one
+    # directory per swing, grouped by role (face_on / down_the_line / shot_screen).
+    sessions_dir: Path = REPO_ROOT / "data" / "processed" / "sessions"
+    # Guards the streamed upload from an unbounded body; ~2 GiB comfortably covers a
+    # multi-minute 1080p60 clip.
+    max_upload_bytes: int = 2 * 1024**3
+    # Shared secret for phone uploads (ADR-016). Tailnet-only `tailscale serve` can run
+    # without one; exposing the server any wider — Funnel, or a non-loopback bind —
+    # requires it, and `scripts/run_server.py` refuses to start otherwise.
+    upload_token: str | None = Field(default=None)
+
+    # Service ports (see docs/ARCHITECTURE.md deployment view). api_port is the loopback
+    # port Tailscale Serve proxies to, never a port a phone connects to directly.
+    # 3000 rather than 8080: Windows reserves 8069-8168 (and 7969-8068, 8169-8268), so
+    # binding 8080/8000/8443 fails here with WinError 10013. Check with
+    # `netsh interface ipv4 show excludedportrange protocol=tcp` before changing.
+    api_port: int = 3000
     mcp_port: int = 8081
 
     # LLM coaching (M6). Read from env; never hardcode.

@@ -13,9 +13,11 @@ deriving a new pose metric that nobody has thought of yet — is then a cheap pa
 the keypoints means a future checkpoint can be measured across a thousand tour swings without
 touching a video again.
 
-Serialization matches `scripts/run_pose.py` exactly (`TypeAdapter(list[FrameKeypoints])`) so these
-files load through the ordinary loader and can be pushed through `analyze_swing` unchanged — just
-written compact and rounded, because a thousand indented full-precision clips is gigabytes.
+Serialization matches `scripts/run_pose.py` — the same `{"clip": ..., "frames": [...]}` envelope, so
+these files load through `storage.keypoints_io.load_keypoints` and can be pushed through
+`analyze_swing` unchanged — just written compact and rounded, because a thousand indented
+full-precision clips is gigabytes. Clips extracted before the envelope existed are bare arrays and
+still load; nothing forces a re-extraction.
 
 Resumable: clips already extracted are skipped, so an interrupted run costs nothing.
 """
@@ -43,11 +45,17 @@ def estimator_slug(name: str) -> str:
     return name.replace(":", "-")
 
 
-def _serialize(keypoints: list, path: Path) -> None:
-    """Write keypoints as a compact JSON array, rounded, matching the run_pose.py schema."""
+def _serialize(keypoints: list, path: Path, clip: dict | None = None) -> None:
+    """Write keypoints in the run_pose.py envelope, compact and rounded.
+
+    Hand-built rather than routed through `save_keypoints` because the rounding above is what keeps
+    a thousand clips from being gigabytes, and pydantic will not round on the way out. The shape is
+    the same one `load_keypoints` reads, which is what matters — and clips already in the cache
+    stay bare arrays, which that loader also accepts, so no re-extraction is forced.
+    """
     import json
 
-    payload = [
+    frames = [
         {
             "frame_index": frame.frame_index,
             "timestamp_ms": round(frame.timestamp_ms, 3),
@@ -63,6 +71,9 @@ def _serialize(keypoints: list, path: Path) -> None:
         }
         for frame in keypoints
     ]
+    payload = {"frames": frames}
+    if clip is not None:
+        payload = {"clip": clip, "frames": frames}
     path.write_text(json.dumps(payload, separators=(",", ":")), encoding="utf-8")
 
 
@@ -97,6 +108,7 @@ def main(argv: list[str]) -> int:
         return 1
 
     from golf_coach.capture.file import FileVideoSource
+    from golf_coach.storage.manifest import hash_file
 
     swings: list[ReferenceSwing] = common.load_swings()
     if args.sample:
@@ -128,13 +140,23 @@ def main(argv: list[str]) -> int:
             missing += 1
             continue
 
+        # `list()` is safe here and nowhere else in the repo: videos_160 clips are 160px square
+        # crops of ~200 frames, ~15 MB in total. `estimators.Estimator` takes a Sequence (the
+        # RTMPose adapter indexes it), so streaming would be a signature change for no gain.
         with FileVideoSource(clip) as source:
+            clip_meta = {
+                "fps": source.fps,
+                "width": source.width or None,
+                "height": source.height or None,
+                "source_sha256": hash_file(clip),
+            }
             frames = list(source.frames())
         if not frames:
             missing += 1
             continue
 
-        _serialize(estimator(frames), target)
+        clip_meta["frame_count"] = len(frames)
+        _serialize(estimator(frames), target, {k: v for k, v in clip_meta.items() if v is not None})
         frames_seen += len(frames)
         extracted += 1
 

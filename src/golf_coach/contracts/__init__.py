@@ -7,6 +7,15 @@ and tested independently (e.g. analysis against mock keypoints before pose exist
 This package depends only on pydantic + the stdlib. Keep it that way.
 """
 
+from golf_coach.contracts.alignment import (
+    TAU_IMPACT,
+    TAU_MOTION_START,
+    TAU_TOP,
+    AlignmentQuality,
+    ClipAlignment,
+    SwingAlignment,
+    SwingAnchors,
+)
 from golf_coach.contracts.detections import (
     BoundingBox,
     Detection,
@@ -65,4 +74,12 @@ __all__ = [
     "FeedbackPayload",
     "Tip",
     "Severity",
+    # alignment
+    "SwingAnchors",
+    "SwingAlignment",
+    "ClipAlignment",
+    "AlignmentQuality",
+    "TAU_MOTION_START",
+    "TAU_TOP",
+    "TAU_IMPACT",
 ]

@@ -90,7 +90,7 @@ flowchart TD
     subgraph CAP["Capture — I/O edge"]
         FSRC["FileVideoSource — phone/sample clip ✅"]
         CSRC["LiveCameraSource — ELP camera (later)"]
-        UPL["Phone upload over Tailscale (M7 Phase 5-6)"]
+        UPL["Phone upload over Tailscale ✅ — ingest only, no auto-analysis yet"]
     end
 
     subgraph LM["Launch Monitor — I/O edge"]
@@ -105,7 +105,7 @@ flowchart TD
 
     POSE["Pose — MediaPipe ✅"]
     DET["Detection — YOLOv8 + tracker (M2)"]
-    ALIGN["Alignment — event-anchored time warp (M7 Phase 2)"]
+    ALIGN["Alignment — event-anchored time warp ✅<br/>M7 Phase 2, ADR-015"]
     ANA["Analysis — smooth to phases to checkpoints to score ✅<br/>mechanics axis only; outcome axis is M4"]
     FB["Feedback — ranked rules ✅ + Claude coach (M6) + overlay ✅"]
     UI["Web UI (M5)"]
@@ -126,7 +126,7 @@ flowchart TD
     DB -->|history / trends| UI
 
     classDef built fill:#d4edda,stroke:#28a745,color:#155724;
-    class FSRC,MOCK,SCR,COMP,POSE,ANA,FB built;
+    class FSRC,MOCK,SCR,COMP,POSE,ALIGN,ANA,FB built;
 ```
 
 **Reading it:** Pose and Detection run in parallel on the same frames. Analysis is the
@@ -233,7 +233,7 @@ graph TB
         FILES["data/raw, data/processed ✅"]
     end
 
-    PHONE["iPhones — M7"] -.->|"Tailscale, M7 Phase 6"| API
+    PHONE["iPhones — M7 ✅"] -->|"Tailscale serve/funnel → 127.0.0.1 (ADR-016)"| API
     CAM_HW --> API
     LM_HW2 --> MCP_SRV
     MCP_SRV --> API

@@ -83,9 +83,7 @@ def _evaluate(name: str, swings: list[ReferenceSwing]) -> dict[str, Any]:
     Extraction is the expensive, one-time part; scoring is a fast pass over JSON, so a change to
     the segmentation logic can be re-scored across every estimator in seconds.
     """
-    from pydantic import TypeAdapter
-
-    from golf_coach.contracts.keypoints import FrameKeypoints
+    from golf_coach.storage.keypoints_io import load_keypoints
 
     print(f"\n=== {name} ===")
     cache = common.KEYPOINTS_DIR / extract_pose.estimator_slug(name)
@@ -93,7 +91,6 @@ def _evaluate(name: str, swings: list[ReferenceSwing]) -> dict[str, Any]:
         raise FileNotFoundError(
             f"no cache at {cache} — run: python scripts/golfdb/extract_pose.py --estimator {name}"
         )
-    adapter = TypeAdapter(list[FrameKeypoints])
 
     errors: dict[str, list[int]] = {e: [] for e in EVENTS}
     normalized: dict[str, list[float]] = {e: [] for e in EVENTS}
@@ -116,7 +113,9 @@ def _evaluate(name: str, swings: list[ReferenceSwing]) -> dict[str, Any]:
             missing += 1
             continue
 
-        keypoints = adapter.validate_json(path.read_bytes())
+        # Cached clips predate the clip-metadata envelope and load as bare arrays; newly
+        # extracted ones are enveloped. `load_keypoints` takes either.
+        keypoints = load_keypoints(path).frames
         if len(keypoints) < 6:
             missing += 1
             continue

@@ -1,6 +1,7 @@
-"""API module — FastAPI orchestrator (the imperative shell).
+"""API module — FastAPI upload server (the imperative shell for phone ingestion).
 
-Wires the modules together: capture -> pose/detection -> analysis -> feedback, pulling
-shot data from the launch_monitor source. The only component that knows about all the
-others; everything else stays decoupled. Requires the `api` extra.
+Currently fills only the upload -> swing bundle store seam (`api/app.py`): a phone
+browser posts a file tagged with a role, and the file lands on disk grouped into
+the right swing. It does not yet wire capture -> pose/detection -> analysis ->
+feedback; that orchestration is a later phase. Requires the `api` extra.
 """

@@ -1,0 +1,37 @@
+{
+  "_readme": [
+    "Hand-labelled ground truth for the M7 Phase 0 spike. One entry per CLIP (so a swing",
+    "recorded from two angles appears twice, labelled INDEPENDENTLY — the matched pair is",
+    "the control that makes the down-the-line question answerable at all).",
+    "",
+    "Label from the index-burned frame dump:",
+    "  probe.py frames <clip.mov> --out labels/<name>",
+    "",
+    "  truth_top    = the last frame before the hands begin to descend",
+    "  truth_impact = the first frame in which the ball is no longer at rest",
+    "",
+    "label_uncertainty_frames: how many frames either way you would accept. +/-1 for impact",
+    "at 60fps is normal (the ball travels ~74 cm between frames at 100 mph). No verdict may",
+    "rest on a margin smaller than this — record it honestly, it is what keeps the findings",
+    "doc from over-claiming.",
+    "",
+    "angle must be exactly 'face_on' or 'down_the_line'; the scorer groups on it.",
+    "keypoints paths are relative to this file.",
+    "",
+    "Delete the _example entry before the real run."
+  ],
+  "clips": [
+    {
+      "name": "_example",
+      "angle": "face_on",
+      "club": "7i",
+      "mode": "60",
+      "swing": 0,
+      "keypoints": "../../data/processed/aaron-swing-2.keypoints.json",
+      "truth_top": 400,
+      "truth_impact": 423,
+      "label_uncertainty_frames": 0,
+      "note": "PLUMBING SMOKE TEST ONLY — these numbers are copied from the detector, not hand-labelled. They must score exactly 0.0 error for lead_wrist; anything else means the clip/label join is broken. Delete this entry before the real run."
+    }
+  ]
+}

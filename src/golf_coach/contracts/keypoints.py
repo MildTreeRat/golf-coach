@@ -80,7 +80,57 @@ class FrameKeypoints(BaseModel):
     landmarks: list[Landmark] = Field(
         description=f"Exactly {NUM_POSE_LANDMARKS} landmarks, indexed by PoseLandmark.",
     )
+    camera_id: str | None = Field(
+        default=None,
+        description=(
+            "Which camera produced this frame (ADR-011). None means not recorded — the state of "
+            "every file written before M7 Phase 1. Free-form by design: the value is whatever the "
+            "`VideoSource` was told it is. M7 uses the same words as `storage.manifest.Role` "
+            "('face_on', 'down_the_line') by convention, not by import."
+        ),
+    )
 
     def landmark(self, which: PoseLandmark) -> Landmark:
         """Convenience accessor: ``frame.landmark(PoseLandmark.LEFT_WRIST)``."""
         return self.landmarks[which]
+
+
+class ClipMetadata(BaseModel):
+    """What the source clip was, recorded alongside the pose extracted from it.
+
+    Every field is optional: these are facts about a video file, and a `FrameKeypoints` list can
+    legitimately exist without one (synthetic test fixtures, a corpus whose videos are long gone).
+    None means unknown, never zero.
+
+    **`fps` is the container's claim, not measured real time.** It is `CAP_PROP_FPS` as reported,
+    which iPhone slo-mo is known to stretch — see docs/M7_TWO_PHONE_SPIKE.md Q3. If that spike shows
+    the reported rate does not describe real time, a companion real-time rate lands here as a pure
+    field addition; nothing already written needs migrating.
+    """
+
+    fps: float | None = Field(default=None, gt=0.0, description="Container-reported frames/second.")
+    width: int | None = Field(default=None, gt=0)
+    height: int | None = Field(default=None, gt=0)
+    frame_count: int | None = Field(
+        default=None,
+        ge=0,
+        description=(
+            "Frames actually DECODED, which is the honest number — a container can claim more "
+            "frames than it yields, and a silently-short decode is the failure mode this records."
+        ),
+    )
+    source_sha256: str | None = Field(
+        default=None, description="Content hash of the source video, tying pose back to its clip."
+    )
+
+
+class KeypointsFile(BaseModel):
+    """The on-disk shape of a `*.keypoints.json`: the frames plus what clip they came from.
+
+    Files written before M7 Phase 1 are a bare JSON array of frames with no envelope. Read through
+    `storage.keypoints_io.load_keypoints`, which accepts both and reports `clip=None` for the old
+    shape, rather than parsing this model directly.
+    """
+
+    clip: ClipMetadata | None = None
+    frames: list[FrameKeypoints]

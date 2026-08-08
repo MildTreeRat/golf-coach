@@ -26,19 +26,17 @@ import sys
 
 import common
 import extract_pose
-from pydantic import TypeAdapter
 
 from golf_coach.analysis.checkpoints import evaluate_finish_balance, evaluate_head_sway
 from golf_coach.contracts.keypoints import FrameKeypoints, Landmark
 from golf_coach.contracts.reference import ReferenceSwing
 from golf_coach.contracts.swing import PhaseSegment, SwingPhase
+from golf_coach.storage.keypoints_io import load_keypoints
 
 # Half-widths matching phases.py, so ground-truth-derived windows have the same shape as the ones
 # the checkpoints normally receive.
 _TRANSITION_HALF_FRAMES = 3
 _IMPACT_HALF_FRAMES = 2
-
-_ADAPTER = TypeAdapter(list[FrameKeypoints])
 
 
 def _phases_from_events(events: dict[str, int], origin: int, n: int) -> list[PhaseSegment] | None:
@@ -132,7 +130,7 @@ def main(argv: list[str]) -> int:
         if not path.exists():
             continue
 
-        keypoints = _ADAPTER.validate_json(path.read_bytes())
+        keypoints = load_keypoints(path).frames
         phases = _phases_from_events(swing.events, swing.events["start"], len(keypoints))
         if phases is None:
             skipped += 1

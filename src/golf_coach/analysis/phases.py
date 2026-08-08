@@ -65,6 +65,8 @@ and against the annotated overlay (see docs/M4_FUNDAMENTALS_PANEL.md).
 
 from __future__ import annotations
 
+from typing import NamedTuple
+
 from golf_coach.contracts.keypoints import FrameKeypoints, PoseLandmark
 from golf_coach.contracts.swing import PhaseSegment, SwingPhase
 
@@ -221,6 +223,55 @@ def _top_and_impact(ys: list[float], confident: list[bool], n: int) -> tuple[int
     major = [run for run in runs if run[0] >= _MAJOR_RISE_FRACTION * largest]
     _, top, impact = min(major, key=lambda run: run[1])
     return top, impact
+
+
+class Downswing(NamedTuple):
+    """One candidate downswing: the hands descending from `top` to `impact`."""
+
+    top: int
+    impact: int
+    rise: float  # how far the lead wrist fell, in normalized image units
+
+
+def candidate_downswings(
+    keypoints: list[FrameKeypoints], *, min_fraction: float = _MAJOR_RISE_FRACTION
+) -> list[Downswing]:
+    """Every descent of the hands in the clip, earliest first. [M7 Phase 2]
+
+    `segment_phases` locates *one* swing and is right to: it was validated against 461 GolfDB
+    clips, each of which contains exactly one. A phone clip does not. Someone takes two practice
+    swings, settles, and then hits — and `_top_and_impact`'s "earliest major run" rule, which
+    exists to stop a *finish* being read as the top, will happily return the first **practice**
+    swing instead. That failure is already documented at the top of this module as the residual 7%
+    of GolfDB clips; on hand-held phone footage it stops being an edge case.
+
+    This does not change that rule. It exposes the runs `_rising_runs` already finds so a caller
+    can *see* how many swings are in the clip and choose one, instead of discovering by eye that
+    the wrong one was picked. `analysis.alignment` uses it to warn when two clips of "the same"
+    swing disagree, and `scripts/align_swings.py --list-swings` prints it.
+
+    `min_fraction` is the share of the largest descent a run must reach to be listed. It defaults
+    to the same `_MAJOR_RISE_FRACTION` `segment_phases` itself applies, so the *first* entry of the
+    default listing is exactly the swing `segment_phases` would have chosen. Lower it to see the
+    near-misses — a lazy practice swing often descends less far than the real one.
+    """
+    n = len(keypoints)
+    if n < _MIN_FRAMES:
+        return []
+
+    xy = _lead_wrist_xy(keypoints)
+    ys = [y for _, y in xy]
+    runs = _rising_runs(ys, _wrist_confident(keypoints))
+    if not runs:
+        return []
+
+    largest = max(rise for rise, _, _ in runs)
+    threshold = min_fraction * largest
+    return [
+        Downswing(top=start, impact=peak, rise=rise)
+        for rise, start, peak in runs
+        if rise >= threshold
+    ]
 
 
 def _wrist_speed(xy: list[tuple[float, float]]) -> list[float]:

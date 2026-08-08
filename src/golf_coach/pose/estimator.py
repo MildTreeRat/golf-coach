@@ -60,12 +60,16 @@ def _to_frame_keypoints(
     raw: Sequence[_RawLandmark] | None,
     frame_index: int,
     timestamp_ms: float,
+    camera_id: str | None = None,
 ) -> FrameKeypoints:
     """Map MediaPipe's per-frame landmarks into our contract.
 
     When MediaPipe finds no body (``raw is None``), emit 33 placeholder landmarks at
     visibility 0 so there is exactly one record per frame and the timeline stays aligned
     for downstream phase segmentation (M4-PoC).
+
+    `camera_id` rides along from the capturing `Frame` so a keypoints list stays attributable to
+    a view after the pixels are gone (ADR-011).
     """
     if raw is None:
         landmarks = [
@@ -80,6 +84,7 @@ def _to_frame_keypoints(
         frame_index=frame_index,
         timestamp_ms=timestamp_ms,
         landmarks=landmarks,
+        camera_id=camera_id,
     )
 
 
@@ -87,6 +92,10 @@ def estimate_pose(
     frames: Iterable[Frame], model_path: str | Path | None = None
 ) -> list[FrameKeypoints]:
     """Run MediaPipe Pose over frames and return one FrameKeypoints per frame.
+
+    `frames` is consumed **lazily**, one at a time — pass `source.frames()` straight in and no
+    decoded frame outlives its iteration. That is what keeps a 4K clip from needing gigabytes;
+    the returned keypoints are small (33 landmarks/frame) and are the only thing accumulated.
 
     `model_path` defaults to the bundle under `settings.models_dir` (downloaded on first
     use); pass an explicit path to override.
@@ -114,5 +123,7 @@ def estimate_pose(
             last_ts = ts
             detected = landmarker.detect_for_video(mp_image, ts)
             raw = detected.pose_landmarks[0] if detected.pose_landmarks else None
-            results.append(_to_frame_keypoints(raw, frame.index, frame.timestamp_ms))
+            results.append(
+                _to_frame_keypoints(raw, frame.index, frame.timestamp_ms, frame.camera_id)
+            )
     return results

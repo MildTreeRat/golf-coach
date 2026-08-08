@@ -50,3 +50,22 @@ def test_missing_body_yields_placeholder_frame() -> None:
     assert fk.frame_index == 2
     assert len(fk.landmarks) == NUM_POSE_LANDMARKS
     assert all(lm.visibility == 0.0 for lm in fk.landmarks)
+
+
+def test_camera_id_rides_through_the_mapping() -> None:
+    """ADR-011's seam has to survive the hop from pixels to contract, including on a lost body."""
+    raw = [
+        _FakeLandmark(x=0.5, y=0.5, z=0.0, visibility=1.0) for _ in range(NUM_POSE_LANDMARKS)
+    ]
+
+    found = _to_frame_keypoints(raw, frame_index=0, timestamp_ms=0.0, camera_id="face_on")
+    lost = _to_frame_keypoints(None, frame_index=1, timestamp_ms=33.3, camera_id="face_on")
+
+    assert found.camera_id == "face_on"
+    assert lost.camera_id == "face_on"
+
+
+def test_camera_id_defaults_to_none() -> None:
+    fk = _to_frame_keypoints(None, frame_index=0, timestamp_ms=0.0)
+
+    assert fk.camera_id is None

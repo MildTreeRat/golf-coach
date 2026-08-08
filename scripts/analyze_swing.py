@@ -18,39 +18,33 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from pydantic import TypeAdapter
-
+from golf_coach.analysis.alignment import anchors_from_phases
 from golf_coach.analysis.engine import analyze_swing
 from golf_coach.contracts.keypoints import FrameKeypoints
-from golf_coach.contracts.swing import PhaseSegment, SwingPhase, SwingResult
+from golf_coach.contracts.swing import SwingResult
 from golf_coach.feedback.rules import build_feedback
-
-_KEYPOINTS_ADAPTER = TypeAdapter(list[FrameKeypoints])
+from golf_coach.storage.keypoints_io import load_keypoints
 
 # How many frames each side of an instant the overlay banner stays up, so it is visible.
 _BANNER_HALF_FRAMES = 2
 
 
-def _bounds(phases: list[PhaseSegment], phase: SwingPhase) -> tuple[int, int] | None:
-    for segment in phases:
-        if segment.phase is phase:
-            return segment.start_frame, segment.end_frame
-    return None
-
-
 def _instants(result: SwingResult) -> dict[str, int]:
-    """Detected address / top / impact frame indices from the phase boundaries."""
-    instants: dict[str, int] = {}
-    address = _bounds(result.phases, SwingPhase.ADDRESS)
-    transition = _bounds(result.phases, SwingPhase.TRANSITION)
-    impact = _bounds(result.phases, SwingPhase.IMPACT)
-    if address is not None:
-        instants["ADDRESS"] = address[1]
-    if transition is not None:
-        instants["TOP OF BACKSWING"] = (transition[0] + transition[1]) // 2
-    if impact is not None:
-        instants["IMPACT"] = impact[0]
-    return instants
+    """Detected address / top / impact frame indices from the phase boundaries.
+
+    Delegates to `analysis.alignment.anchors_from_phases` rather than re-deriving the instants
+    here. The two used to compute the top independently, which meant the frame this CLI stamps a
+    TOP banner on and the frame M7 Phase 2's warp pins to `tau = 1` could quietly disagree — and
+    the whole visible proof of the alignment is that those banners land together.
+    """
+    anchors = anchors_from_phases(result.phases)
+    if anchors is None:
+        return {}
+    return {
+        "ADDRESS": anchors.motion_start,
+        "TOP OF BACKSWING": anchors.top,
+        "IMPACT": anchors.impact,
+    }
 
 
 def _print_report(result: SwingResult, instants: dict[str, int]) -> None:
@@ -99,21 +93,17 @@ def _write_overlay(
     video_path: Path,
     out_path: Path,
 ) -> None:
+    """Render the annotated clip, streaming the video rather than holding it.
+
+    This used to build `[frame.image for frame in source.frames()]` — every decoded BGR frame at
+    once, which is ~2.9 GB for a 1080p60 8-second clip and ~15 GB for 10 s of 4K60. Same bug as
+    the one M7 Phase 1 fixed in `run_pose.py`, in the command most likely to be pointed at real
+    phone footage. Peak memory is now one frame.
+    """
     import cv2
 
     from golf_coach.capture.file import FileVideoSource
     from golf_coach.pose.overlay import annotate_frame
-
-    with FileVideoSource(video_path) as source:
-        fps = source.fps
-        frames = [frame.image for frame in source.frames()]
-
-    if len(frames) != len(keypoints):
-        print(
-            f"warning: video has {len(frames)} frames but keypoints has {len(keypoints)}; "
-            "overlaying the common prefix.",
-            file=sys.stderr,
-        )
 
     # frame index -> banner label, held for a small window around each instant.
     banners: dict[int, str] = {}
@@ -126,14 +116,27 @@ def _write_overlay(
         for cp in result.checkpoint_scores
     ) + (f"overall {result.overall_score:.0f}/100",)
 
-    height, width = frames[0].shape[:2]
-    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-    writer = cv2.VideoWriter(str(out_path), fourcc, fps, (width, height))
-    try:
-        for i, (image, kp) in enumerate(zip(frames, keypoints, strict=False)):
-            writer.write(annotate_frame(image, kp, banner=banners.get(i), hud_lines=hud))
-    finally:
-        writer.release()
+    with FileVideoSource(video_path) as source:
+        fps = source.fps
+        reported = source.frame_count
+        if reported and reported != len(keypoints):
+            print(
+                f"warning: video reports {reported} frames but keypoints has {len(keypoints)}; "
+                "overlaying the common prefix.",
+                file=sys.stderr,
+            )
+
+        writer: cv2.VideoWriter | None = None
+        try:
+            for i, (frame, kp) in enumerate(zip(source.frames(), keypoints, strict=False)):
+                if writer is None:
+                    height, width = frame.image.shape[:2]
+                    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+                    writer = cv2.VideoWriter(str(out_path), fourcc, fps, (width, height))
+                writer.write(annotate_frame(frame.image, kp, banner=banners.get(i), hud_lines=hud))
+        finally:
+            if writer is not None:
+                writer.release()
     print(f"Wrote annotated overlay -> {out_path}")
 
 
@@ -158,7 +161,8 @@ def main(argv: list[str]) -> int:
         print(f"error: {keypoints_path} not found", file=sys.stderr)
         return 1
 
-    keypoints = _KEYPOINTS_ADAPTER.validate_json(keypoints_path.read_bytes())
+    # Reads both the enveloped and the legacy bare-array shapes; this path only needs the frames.
+    keypoints = load_keypoints(keypoints_path).frames
     # run_pose.py names files "<clip>.keypoints.json"; drop the trailing ".keypoints" so the
     # swing id and outputs read as the original clip name.
     stem = keypoints_path.stem.removesuffix(".keypoints")
