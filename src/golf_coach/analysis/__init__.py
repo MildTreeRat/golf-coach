@@ -6,6 +6,6 @@ in, `SwingResult` out. This is what makes it trivially testable and runnable on
 simulated data before any hardware exists.
 """
 
-from golf_coach.analysis.engine import analyze_swing
+from golf_coach.analysis.engine import analyze_swing, analyze_swing_bundle
 
-__all__ = ["analyze_swing"]
+__all__ = ["analyze_swing", "analyze_swing_bundle"]

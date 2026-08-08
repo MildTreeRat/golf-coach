@@ -27,51 +27,24 @@ from __future__ import annotations
 
 import argparse
 import sys
-from collections.abc import Iterator
 from contextlib import ExitStack
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
 
 from golf_coach.analysis.alignment import (
     align_swings,
     anchors_from_keypoints,
-    frame_of_tau,
-    tau_of_frame,
+    pair_frames,
 )
-from golf_coach.analysis.phases import candidate_downswings
+from golf_coach.analysis.phases import (
+    CANDIDATE_MIN_RISE,
+    candidate_downswings,
+    select_swing,
+    window_around,
+)
 from golf_coach.analysis.smoothing import smooth_keypoints
-from golf_coach.contracts.alignment import (
-    TAU_IMPACT,
-    TAU_MOTION_START,
-    TAU_TOP,
-    ClipAlignment,
-    SwingAlignment,
-    SwingAnchors,
-)
+from golf_coach.contracts.alignment import SwingAlignment, SwingAnchors
 from golf_coach.contracts.keypoints import FrameKeypoints, KeypointsFile
 from golf_coach.storage.keypoints_io import load_keypoints
-
-if TYPE_CHECKING:
-    import numpy as np
-
-# Height each panel is scaled to before the two are joined. 4K portrait phone footage is 3840 tall;
-# writing that verbatim produces a gigantic file nobody can scrub through, and the alignment is
-# just as visible at 720.
-_PANEL_HEIGHT = 720
-
-# Fallback canvas when there is no video and the keypoints file never recorded a size.
-_DEFAULT_CANVAS = (1280, 720)  # (height, width) is transposed below
-
-# How wide a tau window each banner stays up for, as a fraction of one downswing. ~0.13 is two
-# frames at a typical 15-frame 60fps downswing — long enough to see when scrubbing, short enough
-# that TOP and IMPACT never overlap.
-_BANNER_HALF_TAU = 0.13
-
-_BANNERS: tuple[tuple[float, str], ...] = (
-    (TAU_MOTION_START, "ADDRESS"),
-    (TAU_TOP, "TOP OF BACKSWING"),
-    (TAU_IMPACT, "IMPACT"),
-)
 
 
 def _parse_window(value: str | None) -> tuple[int, int] | None:
@@ -113,8 +86,9 @@ def _print_swings(label: str, keypoints: list[FrameKeypoints], fps: float | None
     """List every descent of the hands in the clip — how you find a practice swing."""
     smoothed = smooth_keypoints(keypoints)
     # A lower threshold than segment_phases' own, deliberately: a lazy practice swing often
-    # descends less far than the real one, and the point here is to SEE it.
-    swings = candidate_downswings(smoothed, min_fraction=0.45)
+    # descends less far than the real one, and the point here is to SEE it. Shared with
+    # `select_swing` so the set you choose from and the set it chooses from are identical.
+    swings = candidate_downswings(smoothed, min_fraction=CANDIDATE_MIN_RISE)
     print(f"\n{label}: {len(keypoints)} frames, {len(swings)} candidate descent(s)")
     if not swings:
         print("  (none - no detectable descent of the hands)")
@@ -126,10 +100,11 @@ def _print_swings(label: str, keypoints: list[FrameKeypoints], fps: float | None
         frames = swing.impact - swing.top
         at = f"{swing.top / fps:6.1f}s" if fps else f"{swing.top:6d}f"
         # A real downswing is ~0.2-0.3 s whoever is swinging; this is by far the easiest way to
-        # tell a swing from a rehearsal or from the hands simply being lowered into address.
+        # tell a swing from a rehearsal or from the hands simply being lowered into address, and
+        # it is the rule `select_swing` automates.
         duration = f"{frames / fps:8.2f}s" if fps else f"{frames:7d}f"
-        pad = max(0, swing.top - 2 * frames)
-        window = f"--window {pad}:{swing.impact + frames * 3}"
+        start, end = window_around(swing)
+        window = f"--window {start}:{end}"
         print(
             f"  {i:>2}  {at:>7}  {swing.top:>6}  {swing.impact:>6}  {duration:>10}"
             f"  {swing.rise:>6.3f}  {window}"
@@ -177,63 +152,6 @@ def _fmt(value: float | None) -> str:
     return "-" if value is None else f"{value:.2f}"
 
 
-class _FramePuller:
-    """Pull frames from a one-shot decoder at non-decreasing indices, holding the last.
-
-    The warp is monotone, so the follower clip is only ever asked to move forward — which means
-    both clips can stream rather than being buffered. That matters: two 1080p60 clips held in
-    memory is ~5.8 GB, and 4K is far worse. It is the same bug M7 Phase 1 removed from
-    `run_pose.py`, and re-introducing it here would undo that.
-
-    A repeated index re-serves the frame already in hand, which is what happens whenever the
-    reference clip is the faster of the two.
-
-    **It always decodes from frame 0**, so a swing 3,000 frames into a 4K clip costs a minute of
-    decoding before the first output frame appears. `VideoSource` is a forward-only port with no
-    seek, deliberately (a live camera cannot seek), and adding one is a capture-layer change rather
-    than an alignment one. Streaming is what keeps memory flat; the wait is the price.
-    """
-
-    def __init__(self, frames: Iterator[Any], blank: np.ndarray[Any, Any]) -> None:
-        self._frames = frames
-        self._current: np.ndarray[Any, Any] = blank
-        self._index = -1
-
-    def at(self, index: int) -> np.ndarray[Any, Any]:
-        while self._index < index:
-            frame = next(self._frames, None)
-            if frame is None:
-                break  # clip ended early; hold the last frame we did get
-            self._current = frame.image
-            self._index += 1
-        return self._current
-
-
-def _tau(clip: ClipAlignment, frame: int) -> float:
-    """This clip's frame -> the shared axis."""
-    return tau_of_frame(clip.anchors, frame, motion_start=clip.warp_motion_start)
-
-
-def _frame(clip: ClipAlignment, tau: float) -> float:
-    """The shared axis -> this clip's frame."""
-    return frame_of_tau(clip.anchors, tau, motion_start=clip.warp_motion_start)
-
-
-def _banner_for(tau: float) -> str | None:
-    for anchor_tau, label in _BANNERS:
-        if abs(tau - anchor_tau) <= _BANNER_HALF_TAU:
-            return label
-    return None
-
-
-def _canvas_size(keypoints_file: KeypointsFile) -> tuple[int, int]:
-    """(height, width) for the black-canvas fallback, from the clip metadata when it exists."""
-    clip = keypoints_file.clip
-    if clip is not None and clip.width and clip.height:
-        return clip.height, clip.width
-    return _DEFAULT_CANVAS
-
-
 def _render(
     alignment: SwingAlignment,
     kp_a: list[FrameKeypoints],
@@ -248,102 +166,47 @@ def _render(
     label_b: str,
     tau_range: tuple[float, float],
 ) -> None:
-    """Write the side-by-side MP4, streaming both clips."""
-    import cv2
-    import numpy as np
-
+    """Open the clips and hand them to the renderer, which streams both."""
     from golf_coach.capture.file import FileVideoSource
-    from golf_coach.pose.overlay import annotate_frame
+    from golf_coach.pose.side_by_side import Panel, render_side_by_side
 
-    assert alignment.a is not None and alignment.b is not None
-    assert alignment.overlap is not None
-
-    ref: ClipAlignment = alignment.a if reference == "a" else alignment.b
-    fps = ref.anchors.fps or 60.0
-
-    # The reference clip drives the output timeline, so its OWN length is the bound — reading the
-    # other clip's here would truncate or overrun whenever the two differ, which is always.
-    ref_frames = len(kp_a) if reference == "a" else len(kp_b)
-
-    # Clamp the render to the part of the axis that is actually a swing. The honest overlap of two
-    # long clips is mostly dead air — a golfer standing over the ball, or the bay after they walk
-    # off — and rendering all of it buries the thing the video exists to show. It is also the
-    # region the warp describes worst whenever the soft anchor was refused.
-    low = max(alignment.overlap[0], tau_range[0])
-    high = min(alignment.overlap[1], tau_range[1])
-    first = max(0, int(_frame(ref, low)))
-    last = min(ref_frames - 1, int(_frame(ref, high)))
-    if last <= first:
+    schedule = pair_frames(
+        alignment, len(kp_a), len(kp_b), reference=reference, tau_range=tau_range
+    )
+    if not schedule:
         print("error: the two clips share no overlapping swing time", file=sys.stderr)
         return
 
-    blank_a = np.zeros((*_canvas_size(file_a), 3), dtype=np.uint8)
-    blank_b = np.zeros((*_canvas_size(file_b), 3), dtype=np.uint8)
-    writer: cv2.VideoWriter | None = None
+    lead = alignment.a if reference == "a" else alignment.b
+    assert lead is not None  # pair_frames returns [] unless both sides are present
 
     with ExitStack() as stack:
         source_a = stack.enter_context(FileVideoSource(video_a)) if video_a else None
         source_b = stack.enter_context(FileVideoSource(video_b)) if video_b else None
-        pull_a = _FramePuller(source_a.frames() if source_a else iter(()), blank_a)
-        pull_b = _FramePuller(source_b.frames() if source_b else iter(()), blank_b)
+        written = render_side_by_side(
+            out_path,
+            schedule,
+            Panel(kp_a, label_a, file_a.clip, source_a.frames() if source_a else ()),
+            Panel(kp_b, label_b, file_b.clip, source_b.frames() if source_b else ()),
+            fps=lead.anchors.fps or 60.0,
+            quality=alignment.quality,
+        )
 
-        for step in range(first, last + 1):
-            # ONE tau per output frame, used for both panels. This is what makes the banners
-            # land simultaneously by construction rather than by coincidence.
-            if reference == "a":
-                frame_a = step
-                tau = _tau(alignment.a, step)
-                frame_b = _clamped(_frame(alignment.b, tau), len(kp_b))
-            else:
-                frame_b = step
-                tau = _tau(alignment.b, step)
-                frame_a = _clamped(_frame(alignment.a, tau), len(kp_a))
-
-            # Scale FIRST, then annotate. Landmarks are normalized to [0, 1], so the skeleton
-            # lands identically either way — but `annotate_frame` draws text at a fixed pixel
-            # size, and text drawn on a 3840-tall 4K frame is unreadable once the panel is
-            # shrunk to 720. Annotating the scaled frame keeps the HUD legible at output size.
-            banner = _banner_for(tau)
-            panel_a = annotate_frame(
-                _scaled(pull_a.at(frame_a)),
-                kp_a[min(frame_a, len(kp_a) - 1)],
-                banner=banner,
-                hud_lines=(f"{label_a}  frame {frame_a}",),
-            )
-            panel_b = annotate_frame(
-                _scaled(pull_b.at(frame_b)),
-                kp_b[min(frame_b, len(kp_b) - 1)],
-                banner=banner,
-                hud_lines=(
-                    f"{label_b}  frame {frame_b}",
-                    f"tau {tau:+.2f}  {alignment.quality.summary}",
-                ),
-            )
-
-            joined = np.hstack([panel_a, panel_b])
-            if writer is None:
-                height, width = joined.shape[:2]
-                writer = cv2.VideoWriter(
-                    str(out_path), cv2.VideoWriter_fourcc(*"mp4v"), fps, (width, height)
-                )
-            writer.write(joined)
-
-        if writer is not None:
-            writer.release()
-
-    print(f"Wrote {last - first + 1} aligned frames -> {out_path}")
+    print(f"Wrote {written} aligned frames -> {out_path}")
 
 
-def _scaled(panel: np.ndarray[Any, Any]) -> np.ndarray[Any, Any]:
-    import cv2
-
-    height, width = panel.shape[:2]
-    scale = _PANEL_HEIGHT / height
-    return cv2.resize(panel, (max(1, int(width * scale)), _PANEL_HEIGHT))
-
-
-def _clamped(frame: float, count: int) -> int:
-    return max(0, min(count - 1, round(frame)))
+def _auto_window(
+    label: str, keypoints: list[FrameKeypoints], file: KeypointsFile
+) -> tuple[int, int] | None:
+    """`select_swing`'s pick for one clip, narrating what it chose or why it declined."""
+    fps = file.clip.fps if file.clip else None
+    choice = select_swing(smooth_keypoints(keypoints), fps=fps)
+    if choice is None:
+        reason = "the keypoints file records no fps" if fps is None else "no plausible downswing"
+        print(f"  {label}: auto-window declined ({reason}) — using the whole clip")
+        return None
+    print(f"  {label}: {choice.reason}")
+    return choice.window
 
 
 def main(argv: list[str]) -> int:
@@ -381,6 +244,14 @@ def main(argv: list[str]) -> int:
         action="store_true",
         help="list every candidate swing in each clip and exit — use on clips with practice swings",
     )
+    parser.add_argument(
+        "--auto-window",
+        action="store_true",
+        help=(
+            "pick each clip's swing automatically by downswing duration (analysis.phases."
+            "select_swing) instead of using the whole clip. An explicit --window-a/-b still wins"
+        ),
+    )
     args = parser.parse_args(argv)
 
     for path in (args.keypoints_a, args.keypoints_b):
@@ -398,8 +269,17 @@ def main(argv: list[str]) -> int:
         _print_swings(name_b, kp_b, file_b.clip.fps if file_b.clip else None)
         return 0
 
-    anchors_a = anchors_from_keypoints(kp_a, clip=file_a.clip, window=_parse_window(args.window_a))
-    anchors_b = anchors_from_keypoints(kp_b, clip=file_b.clip, window=_parse_window(args.window_b))
+    window_a = _parse_window(args.window_a)
+    window_b = _parse_window(args.window_b)
+    if args.auto_window:
+        print("\nAuto-window:")
+        if window_a is None:
+            window_a = _auto_window(name_a, kp_a, file_a)
+        if window_b is None:
+            window_b = _auto_window(name_b, kp_b, file_b)
+
+    anchors_a = anchors_from_keypoints(kp_a, clip=file_a.clip, window=window_a)
+    anchors_b = anchors_from_keypoints(kp_b, clip=file_b.clip, window=window_b)
     if anchors_a is None or anchors_b is None:
         missing = name_a if anchors_a is None else name_b
         print(f"error: {missing} could not be segmented into a swing", file=sys.stderr)

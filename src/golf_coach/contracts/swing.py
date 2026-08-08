@@ -11,7 +11,9 @@ from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
+from golf_coach.contracts.alignment import SwingAlignment
 from golf_coach.contracts.detections import FrameDetections
+from golf_coach.contracts.feedback import FeedbackPayload
 from golf_coach.contracts.intent import PracticeGoal
 from golf_coach.contracts.keypoints import FrameKeypoints
 from golf_coach.contracts.shot import ShotData
@@ -127,3 +129,68 @@ class SwingResult(BaseModel):
     keypoints: list[FrameKeypoints] = Field(default_factory=list)
     detections: list[FrameDetections] = Field(default_factory=list)
     shot: ShotData | None = None
+
+
+class SwingBundleResult(BaseModel):
+    """One swing analyzed from the two camera views plus its shot photo. [M7 Phase 4]
+
+    A *bundle* is what the storage layer assembles from two phones and a screen photo: a face-on
+    clip, a down-the-line clip, and a picture of the launch monitor. This is the whole verdict on
+    one, and it is what gets serialized for a results page to render.
+
+    The two views are not equals and this shape says so. **Only the face-on view is scored** —
+    it is the canonical pose angle the three checkpoints were validated against, and the GolfDB
+    corpus the benchmark bands came from is face-on, so a down-the-line metric would have no
+    reference data to be judged against. The down-the-line clip contributes alignment anchors
+    and nothing else (ADR-015; M7 Phase 4).
+
+    Every frame index in here — `swing.phases`, `alignment`'s anchors — addresses the **whole**
+    clip, even when a window was used to find the swing inside a longer recording. The window is
+    a search restriction, not a coordinate system.
+    """
+
+    swing_id: str
+    session_id: str
+
+    swing: SwingResult = Field(
+        description="The face-on view's scored result, with the shot attached if one was found."
+    )
+
+    alignment: SwingAlignment | None = Field(
+        default=None,
+        description=(
+            "How the two views correspond, or None when there was no usable down-the-line clip. "
+            "Read `alignment.quality` before presenting the side-by-side video as synchronized — "
+            "rendering two panels implies frame correspondence everywhere and only FULL earns it."
+        ),
+    )
+
+    face_on_window: tuple[int, int] | None = Field(
+        default=None,
+        description=(
+            "The `[start, end)` frame range the swing was found in, when the clip held more than "
+            "one. Recorded because it is not cosmetic: it decides which frames were scored."
+        ),
+    )
+    down_the_line_window: tuple[int, int] | None = None
+
+    notes: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Everything that degraded, in order of discovery — a missing view, an unmeasurable "
+            "anchor, a shot flagged for review, a checkpoint whose input is not physically "
+            "possible. A consumer that renders the score and ignores this is exactly the silent "
+            "failure ADR-013 and ADR-014 were written against."
+        ),
+    )
+
+    feedback: FeedbackPayload | None = Field(
+        default=None,
+        description=(
+            "Ranked coaching tips. Left None by `analysis`, which must not import `feedback` "
+            "(ADR-008: modules depend on `contracts` and never on each other) — the caller fills "
+            "it in with `feedback.build_feedback(result.swing)` so the serialized artifact is the "
+            "complete result rather than something a reader has to recompute. Same shape of seam "
+            "as `SwingResult.shot`."
+        ),
+    )

@@ -16,6 +16,7 @@ from golf_coach.analysis.alignment import (
     anchors_from_keypoints,
     frame_of_tau,
     map_frame,
+    pair_frames,
     tau_of_frame,
 )
 from golf_coach.analysis.phases import candidate_downswings
@@ -340,3 +341,53 @@ def test_windowed_anchors_align_against_an_untrimmed_clip() -> None:
     alignment = align_swings(a, b)
     assert alignment.quality is AlignmentQuality.FULL
     assert abs(map_frame(alignment, a.impact, source="a") - b.impact) <= 1
+
+
+def test_pair_frames_gives_one_tau_per_output_frame() -> None:
+    """The render schedule is the seam between working out the correspondence and drawing it.
+
+    Every entry carries a single tau used for BOTH panels, which is what makes the banners land
+    simultaneously by construction rather than by coincidence — a renderer that did its own warp
+    arithmetic per panel could drift.
+    """
+    real = make_swing(20, 8)
+    padded = _prepend_still(real, 30)
+
+    a = _anchored(real, 60.0)
+    b = _anchored(padded, 60.0)
+    alignment = align_swings(a, b)
+
+    schedule = pair_frames(alignment, len(real), len(padded))
+    assert schedule
+
+    # The reference clip advances one frame at a time; the follower never goes backwards.
+    assert [entry.frame_a for entry in schedule] == sorted({e.frame_a for e in schedule})
+    assert all(
+        later.frame_b >= earlier.frame_b
+        for earlier, later in zip(schedule, schedule[1:], strict=False)
+    ), "the warp is monotone, which is what lets both clips stream"
+
+    # Both indices stay inside their own clip, so a renderer can index without checking.
+    assert all(0 <= entry.frame_a < len(real) for entry in schedule)
+    assert all(0 <= entry.frame_b < len(padded) for entry in schedule)
+
+    # tau increases with the reference frame, and impact lands where the anchors say it does.
+    taus = [entry.tau for entry in schedule]
+    assert taus == sorted(taus)
+    at_impact = min(schedule, key=lambda entry: abs(entry.tau - TAU_IMPACT))
+    assert abs(at_impact.frame_a - a.impact) <= 1
+    assert abs(at_impact.frame_b - b.impact) <= 1
+
+
+def test_pair_frames_is_empty_without_an_alignment() -> None:
+    """Reported, not raised: nothing to map through means no schedule (ADR-013)."""
+    from golf_coach.contracts.alignment import SwingAlignment
+
+    assert pair_frames(SwingAlignment(), 10, 10) == []
+
+
+def test_pair_frames_rejects_an_unknown_reference() -> None:
+    real = make_swing(20, 8)
+    alignment = align_swings(_anchored(real, 60.0), _anchored(real, 60.0))
+    with pytest.raises(ValueError, match="reference must be"):
+        pair_frames(alignment, len(real), len(real), reference="c")

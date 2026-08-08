@@ -16,6 +16,11 @@ fragile on glare and off-axis photos, a vision-model adapter drops in behind it 
 touching parsing, validation, caching, or the source.
 """
 
+from golf_coach.launch_monitor.screen.importer import (
+    MissingOCRExtra,
+    build_recognizer,
+    import_screen,
+)
 from golf_coach.launch_monitor.screen.parser import ParsedShot, parse_screen, to_shot_data
 from golf_coach.launch_monitor.screen.profiles import DeviceProfile, load_profile
 from golf_coach.launch_monitor.screen.recognizer import TextBox, TextRecognizer
@@ -34,4 +39,7 @@ __all__ = [
     "validate_parse",
     "ShotStore",
     "ScreenShotDataSource",
+    "import_screen",
+    "build_recognizer",
+    "MissingOCRExtra",
 ]

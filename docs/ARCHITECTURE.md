@@ -30,22 +30,36 @@ flowchart LR
     SC --> TIP["ranked tips + headline<br/>+ tour percentiles"]
     AS -.->|"--overlay"| OV["annotated .mp4<br/>ADDRESS/TOP/IMPACT + score HUD"]
 
-    IMG["HD Golf SHOT DATA<br/>screen photo"] --> IS["scripts/import_shot_screens.py<br/>rectify, OCR, parse, validate"]
+    IMG["HD Golf SHOT DATA<br/>screen photo"] --> IS["screen/importer.py<br/>rectify, OCR, parse, validate"]
     IS --> SD[("parsed shot store<br/>data/processed/shots")]
-    SD --> SRC["ScreenShotDataSource<br/>no extras needed"]
-    SRC -.->|"not joined yet — M7 Phase 4"| AS
+    SD --> SRC["lookup by image sha256<br/>no extras needed"]
+
+    BUN["swing bundle<br/>2 clips + shot photo"] --> AB["scripts/analyze_bundle.py"]
+    AB --> SEL["select_swing<br/>which descent is the swing"]
+    SEL --> ASB["analyze_swing_bundle<br/>face-on scored, DTL anchors only"]
+    SRC --> ASB
+    ASB --> AS
+    ASB --> ALN["align_swings + pair_frames"]
+    ALN --> SBS["aligned.mp4<br/>banners land together"]
+    ASB --> JSON["analysis.json<br/>SwingBundleResult"]
+    TIP --> JSON
 
     classDef built fill:#d4edda,stroke:#28a745,color:#155724;
     classDef gap fill:#fff3cd,stroke:#ffc107,color:#856404;
-    class RP,AS,SM,PH,CK,SC,TIP,IS,SRC built;
-    class OV,SD gap;
+    class RP,AS,SM,PH,CK,SC,TIP,IS,SRC,SD,BUN,AB,SEL,ASB,ALN,SBS,JSON built;
+    class OV gap;
 ```
 
-**Reading it:** the pose pipeline is complete end-to-end and is what produces a swing report.
-The shot pipeline is complete up to *storage* — `SwingResult.shot` exists as a field but has
-never been populated by anything, so shot numbers are parsed and cached but not yet attached
-to a swing. `detection/` (YOLOv8), `storage/` (SQLite) and `api/` (FastAPI) are not in the
-running path at all.
+**Reading it:** both pipelines are complete and, since M7 Phase 4, joined. `analyze_bundle.py`
+is the entry point that runs the lot offline — pose per view, OCR (only if the photo isn't
+already in the store), scoring, ranked tips, alignment — and writes `analysis.json` plus
+`aligned.mp4` beside the clips. `SwingResult.shot` is populated at last.
+
+Two deliberate boundaries remain. **Nothing auto-triggers**: an upload lands a file and stops
+there; joining ingestion to analysis is Phase 5's background worker. And the shot is
+**attached and displayed, never scored** — outcome checkpoints need per-club benchmark bands
+`ranges.json` does not have (ADR-009). `detection/` (YOLOv8) and SQLite are not in the running
+path at all.
 
 ### The commands, precisely
 
@@ -59,6 +73,16 @@ python scripts/analyze_swing.py <keypoints.json> [--overlay <video>]
 # Shot ingestion (needs the `ocr` extra)
 python scripts/import_shot_screens.py [paths...] [--session ID] [--device PROFILE]
                                       [--out DIR] [--min-confidence F] [--force] [--dry-run]
+
+# Two-view alignment (base install; `vision` only to render)
+python scripts/align_swings.py <a.keypoints.json> <b.keypoints.json> [--video-a F] [--video-b F]
+                               [--out MP4] [--list-swings] [--auto-window] [--window-a A:B]
+
+# The whole use case, offline (`vision`; `ocr` only for a photo not already in the shot store)
+python scripts/analyze_bundle.py <SESSION/SWING | swing-dir> [--list-swings] [--no-auto-window]
+                                 [--window-face-on A:B] [--window-dtl A:B] [--no-video]
+                                 [--force-pose] [--force-ocr] [--skip-ocr] [--club C] [--tau L:H]
+#   exit 0 clean · 1 result produced but something is flagged · 2 no result
 ```
 
 There are no long-running services yet. No MCP server (M3), no FastAPI app (M7 Phase 5), no
@@ -205,7 +229,9 @@ gitignored and never created. Everything persists as files:
 | Keypoints | `data/processed/<clip>.keypoints.json` | ✅ written by `run_pose.py` |
 | ↳ *its format* | `{"clip": {fps, width, height, frame_count, source_sha256}, "frames": [...]}` | ✅ read/written via `storage/keypoints_io.py`, which also accepts the bare-array shape everything written before M7 Phase 1 uses |
 | Overlays | `data/processed/<clip>.overlay.mp4`, `.analysis.mp4` | ✅ |
-| Parsed shots | `data/processed/shots/` (content-addressed) | ✅ written by `import_shot_screens.py` |
+| Parsed shots | `data/processed/shots/` (content-addressed) | ✅ written by `import_shot_screens.py` and by `analyze_bundle.py` |
+| Swing bundles | `data/processed/sessions/<session>/<swing>/` + `manifest.json` | ✅ written by the upload route (M7 Phase 3/5) |
+| ↳ *analysis artifacts* | `analysis.json`, `aligned.mp4`, `<role>.keypoints.json` in the same directory | ✅ written by `analyze_bundle.py`; `analysis.json` is a `SwingBundleResult` with the heavy streams excluded (the keypoints sit beside it) |
 | Reference corpus | `data/reference/golfdb/` | ✅ gitignored for licensing (ADR-012) |
 | Benchmark aggregates | `src/golf_coach/analysis/benchmarks/*.json` | ✅ committed |
 | Swing results, sessions, trends | SQLite `swings` / `shots` tables | ❌ designed only — M7 Phase 3 |

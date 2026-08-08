@@ -209,10 +209,29 @@ from `launch_monitor/screen/store.py` — so a double-tapped upload does not cre
 
 ---
 
-### Phase 4 — Bundle analysis + launch-monitor join
+### Phase 4 — Bundle analysis + launch-monitor join — **built 2026-08-08**
 
 **Goal**: one command takes an assembled swing bundle and produces the complete result — score,
 checkpoints, ranked tips, aligned side-by-side video, and the HD Golf numbers attached.
+
+**Built as specified, plus one thing the spec did not anticipate.** `analyze_swing_bundle()` and
+`scripts/analyze_bundle.py` are as described below; `SwingBundleResult` (new, in
+`contracts/swing.py`) serializes to `analysis.json` beside an `aligned.mp4` and the per-view
+keypoints. The shot join is **cache-first on the photo's sha256**, which the manifest already
+records and `ShotStore` is already keyed on — so a shot imported earlier attaches with no `ocr`
+extra installed at all, and OCR runs only on a genuinely new photo.
+
+The addition is **`phases.select_swing()`**. The plan treated picking the swing out of a
+multi-swing clip as a Phase 2 concern already solved by `--window`. It is not, because the window
+does not merely frame the video — *it decides which frames get scored*. Unaided, `segment_phases`
+picks a setup move on all four real bay clips; scoring `aaron-1-front` whole-clip gives 58/100
+with tempo unscored and finish balance a 0.53 MISS, and scoring the actual swing gives 67/100
+with both in band. So selection had to become automatic and pure. The rule, and the evidence
+behind every number in it, is documented on `_PLAUSIBLE_DOWNSWING_S` and `_WINDOW_LEAD`.
+
+**Not built, and now a named follow-up:** the face-on tempo checkpoint is untrustworthy on real
+footage — see the ROADMAP item under this milestone. Phase 4 surfaces the contradiction and
+changes no scoring.
 
 `analyze_swing_bundle()` scores the **face-on** view via the existing `analyze_swing()` unchanged (no
 regression risk to the validated three checkpoints) and segments the down-the-line view for alignment

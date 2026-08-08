@@ -40,6 +40,7 @@ from golf_coach.contracts.shot import ShotData, ShotProvenance, ShotSource
 from golf_coach.contracts.swing import (
     CheckpointScore,
     PhaseSegment,
+    SwingBundleResult,
     SwingPhase,
     SwingResult,
 )
@@ -67,6 +68,7 @@ __all__ = [
     "PlayerProfile",
     # swing
     "SwingResult",
+    "SwingBundleResult",
     "PhaseSegment",
     "SwingPhase",
     "CheckpointScore",

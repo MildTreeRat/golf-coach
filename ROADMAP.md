@@ -18,7 +18,7 @@ wording; only the grouping and the M4 checklist have been corrected.
 | **M5-FB** Ranked coaching | ✅ Done | — | [§M5-FB](#m5-fb-prioritised-coaching-feedback-pose-only-slice-of-m5--done) |
 | **M3** Launch monitor / MCP | 🟡 In progress | Nothing — screen OCR done; MCP server left | [§M3](#milestone-3-launch-monitor-integration--in-progress) |
 | **M1.5** Detectability spike | ⬜ Next | Nothing — phone clips of the impact zone | [§M1.5](#milestone-15-club-head-detectability-spike-de-risk-before-investing) |
-| **M7** Two-phone sim capture | 🟡 In progress, 3/7 phases (1; 3 & 5 trimmed) | Nothing — two iPhones + a sim bay | [§M7](#milestone-7-two-phone-sim-capture-no-hardware-purchase) |
+| **M7** Two-phone sim capture | 🟡 In progress, 6/7 phases (3 & 5 trimmed) | Nothing — two iPhones + a sim bay | [§M7](#milestone-7-two-phone-sim-capture-no-hardware-purchase) |
 | **M4** full (outcome axis) | ⬜ Blocked | The M2 + M3 streams | [§M4 full](#milestone-4-full-swing-analysis-engine--the-outcome-axis) |
 | **M5** Feedback UI | ⬜ Not started | M7 Phase 5 gives the host | [§M5](#milestone-5-feedback-ui) |
 | **M6** LLM coaching | ⬜ Not started | M5 | [§M6](#milestone-6-llm-powered-coaching) |
@@ -318,13 +318,13 @@ zero-setup portability. Triangulation is unreachable with hand-held phones (no c
 possible), so down-the-line is **capture + align only**: scoring stays on the three validated
 face-on checkpoints. Each phase below is one commit, planned in a fresh session.
 
-> **Status (2026-08-06):** Phases 3, 5 and 6 built, **trimmed** — a phone anywhere (tailnet or
-> open internet) can now upload a swing bundle to the desktop and see it land, but nothing
-> auto-analyzes yet. Deliberately deferred out of these phases: any auto-trigger of
-> pose/OCR/analysis on arrival (no background worker, no consumer of a `ready` signal —
-> `SwingManifest.status()` uses the neutral `collecting`/`complete` instead of
-> `pending`/`ready`/`analyzed` because nothing here makes `ready` true in the original sense).
-> Phases 0–2 and 4 are unstarted and unaffected by this work.
+> **Status (2026-08-08):** Phases 1–6 built (3 and 5 **trimmed**). With Phase 4 the full use
+> case works end to end offline: `python scripts/analyze_bundle.py <session>/<swing>` turns an
+> uploaded bundle into a score, ranked tips, an aligned side-by-side video and the HD Golf
+> numbers, all beside the clips. **Still no auto-trigger on arrival** — an upload lands the file
+> and nothing more; wiring the two together is Phase 5's background worker, which is why
+> `SwingManifest.status()` still uses the neutral `collecting`/`complete` rather than
+> `pending`/`ready`/`analyzed`. Only the Phase 0 field spike is unstarted.
 
 - [ ] **Phase 0** — Field spike: does `segment_phases()` work on down-the-line footage? Does
       OpenCV decode iPhone HEVC? What does `CAP_PROP_FPS` report for slo-mo? Gate for 1 and 2
@@ -348,9 +348,25 @@ face-on checkpoints. Each phase below is one commit, planned in a fresh session.
       `tests/storage/test_bundle_store.py::test_newest_wins_when_two_swings_are_missing_the_same_role`).
       First real code in `storage/`. Status is derived, not a persisted `pending → ready →
       analyzed` machine — nothing downstream consumes `ready` yet
-- [ ] **Phase 4** — Bundle analysis + launch-monitor join: `analyze_swing_bundle()`, populate
-      `SwingResult.shot` (the field exists; nothing has ever set it). Attaches and displays the
-      shot numbers — *scoring* them stays M4 per ADR-009
+- [x] **Phase 4** — Bundle analysis + launch-monitor join *(2026-08-08)*: `analyze_swing_bundle()`
+      in `analysis/engine.py` scores the face-on view through `analyze_swing()` **unchanged** and
+      uses down-the-line for alignment anchors only; `SwingResult.shot` is populated at last, from
+      a cache-first join on the photo's sha256 (an already-imported shot attaches with no `ocr`
+      extra at all). New `scripts/analyze_bundle.py` is the one command; new `SwingBundleResult`
+      serializes to `analysis.json` beside an `aligned.mp4`. Added beyond the plan:
+      **`phases.select_swing()`**, because the window is not framing — it decides which frames get
+      *scored*, and unaided segmentation picks a setup move on all four real bay clips.
+      Shot numbers are attached and displayed; *scoring* them stays M4 per ADR-009
+- [ ] **Tempo is untrustworthy on real footage and needs its own look.** `phases._motion_start`
+      walks back from the top for a quiet stretch, and a golfer who pauses at the top hands it one
+      immediately — so the boundary collapses onto the top and the backswing measures shorter than
+      the downswing (0.43:1 on `aaron-1`, an impossibility). `analyze_swing` scores it anyway and
+      the ranked tips lead with "work on tempo first", which is wrong. Phase 4 makes the
+      contradiction impossible to miss (a note, printed above the tips) and deliberately changes
+      no scoring. A fix belongs either in `_motion_start` — reject a quiet stretch sitting within
+      a downswing's length of the top — or in `evaluate_tempo`, applying the plausibility floor
+      `analysis/alignment.py` already has as `MIN_PLAUSIBLE_TEMPO`. Measure against GolfDB first:
+      that corpus is where the tempo band came from
 - [x] **Phase 5** — Local server + phone upload page, **trimmed**: fills the `api/` seam
       (`api/app.py`) — `POST /api/uploads` streams to disk, a static page (`api/static/`) with a
       role picker sticky in `localStorage` and a live status panel. Localhost only

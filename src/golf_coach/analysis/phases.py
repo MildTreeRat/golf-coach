@@ -274,6 +274,155 @@ def candidate_downswings(
     ]
 
 
+# How long a real downswing takes, in seconds — the discriminator that separates a golf swing
+# from everything else a phone clip contains. This is a **selection** aid, not a measurement, and
+# it is the one rule in this module expressed in seconds rather than in the clip's own time base
+# (ADR-013): a downswing is ~0.2-0.3 s for every golfer at every frame rate, which is exactly what
+# makes it usable to tell swings apart from setup moves.
+#
+# Measured on the four real bay clips (`--list-swings`, M7 Phase 2 footage):
+#
+#   real swings    0.23  0.38  0.40  0.42        <- one per clip, ground-truth confirmed on aaron-1
+#   setup moves    0.48  0.50  0.50  0.50  0.53  <- the hands being lowered into address
+#   rehearsals     1.57  3.10  3.37  6.60  ...   <- practice swings and idle motion
+#   tracking junk  0.08                          <- 5 frames at the very end of a clip
+#
+# The upper bound sits in a 0.06 s gap (0.42 real against 0.48 decoy), which is *thin*. That is why
+# `select_swing` always reports what it chose, always yields to an explicit window, and declines
+# rather than guesses when nothing lands in the band. Down-the-line durations run longer than
+# face-on ones for the same swing because the DTL top reads early (the lead wrist is the far,
+# occluded arm from behind — see WORKLOG 2026-08-07), which is what the 0.45 ceiling accommodates.
+#
+# **Every one of those numbers came from a 60 fps clip.** A 30 fps recording of the same swing
+# brackets the descent more coarsely and reads *longer* — the 2026-08-07 bundle's face-on view
+# measures 0.60 s for its only swing. Widening the band to admit that would swallow the whole
+# setup-move cluster at 60 fps, so the band stays where the evidence put it and the
+# single-candidate case is handled separately instead (see `select_swing`).
+_PLAUSIBLE_DOWNSWING_S = (0.15, 0.45)
+
+# How much clip to keep around the chosen swing, in downswing-lengths before the top and after
+# impact — the clip's own time base, so this reads a 30 fps clip and a 240 fps one alike
+# (ADR-013). Shared with `scripts/align_swings.py --list-swings` so the window the listing prints
+# and the window `select_swing` picks are the same arithmetic.
+#
+# The lead is sized from `_FALLBACK_TEMPO_RATIO`: a tour backswing runs ~3.5 downswings, and
+# `_motion_start` then needs a stretch of *quiet* address before that to walk back to. 2 was
+# enough to frame a swing for viewing (which is all Phase 2 asked of it) but not to measure one
+# — at 2 the window lands inside the backswing and motion start goes undetected on two of the
+# six real clips, which drops the tempo checkpoint and degrades the alignment to top-and-impact.
+# Measured across leads 2-8 on all six: 5 is the smallest value that detects motion start on
+# every clip while leaving top and impact exactly where they are without a window at all.
+_WINDOW_LEAD = 5
+_WINDOW_TRAIL = 3
+
+# How far a descent must fall, as a share of the clip's largest, to be considered a swing at all.
+# Deliberately looser than `_MAJOR_RISE_FRACTION`, and it is not a nicety: on `aaron-1-back` the
+# largest descent is a *bystander* at 0.417, so the default 0.80 threshold puts the cut at 0.334
+# and the real swing (0.257) is not even a candidate. Duration is what identifies the swing here,
+# so this rule's job is only to avoid discarding it before duration gets to look. Shared with
+# `scripts/align_swings.py --list-swings` so the set a human chooses from and the set
+# `select_swing` chooses from are identical.
+CANDIDATE_MIN_RISE = 0.45
+
+
+class SwingChoice(NamedTuple):
+    """Which descent in a multi-swing clip is the actual swing, and why. [M7 Phase 4]"""
+
+    window: tuple[int, int]
+    downswing: Downswing
+    candidates: list[Downswing]
+    reason: str
+
+
+def window_around(downswing: Downswing) -> tuple[int, int]:
+    """The `[start, end)` frame window holding one swing plus its takeaway and finish."""
+    frames = max(1, downswing.impact - downswing.top)
+    return max(0, downswing.top - _WINDOW_LEAD * frames), downswing.impact + _WINDOW_TRAIL * frames
+
+
+def select_swing(
+    keypoints: list[FrameKeypoints], *, fps: float | None
+) -> SwingChoice | None:
+    """Pick the real swing out of a clip that contains several. [M7 Phase 4]
+
+    `segment_phases` takes the **earliest** major descent, which is right for the single-swing
+    GolfDB corpus it was validated against and wrong for a bay clip: on all four real clips it
+    picks a *setup move*, and that is not merely a framing problem — the window decides which
+    frames get scored, so an unwindowed clip is graded on the wrong swing (whole-clip
+    `aaron-1-front` scores 58/100 with tempo unscored; the actual swing scores 67/100).
+
+    Three rules, in order:
+
+    1. **Duration.** Keep only candidates whose downswing lasts a plausible time
+       (`_PLAUSIBLE_DOWNSWING_S`). This is what does the work — it is uniquely correct on all four
+       multi-swing bay clips, because setup moves cluster tightly at ~0.5 s and rehearsals run
+       whole seconds.
+    2. **Last, not first.** Among survivors take the latest: nobody takes a practice swing *after*
+       hitting the ball. Applied on its own this rule is wrong on both down-the-line clips (the
+       DTL phone keeps rolling 15-24 s past impact, on the busy side of the bay), which is why it
+       runs second rather than first.
+    3. **One candidate wins on its own.** If the clip holds exactly one descent, take it whatever
+       it measures. The duration band exists to *choose between* candidates; with nothing to
+       choose between it is only a filter with no job, and applying it anyway throws away a
+       perfectly good window — which is how a 30 fps single-swing clip (0.60 s, above the band
+       derived from 60 fps footage) ended up scored over its whole length including dead air.
+       This can never be worse than declining: `segment_phases` would pick that same lone descent
+       regardless, so the choice is only whether to measure it in isolation or with the rest of
+       the clip mixed in.
+
+    Returns None — never a guess — when it has no pick to offer: no fps to read durations with
+    (legacy keypoints files record `clip=None`, and a duration in seconds is meaningless without
+    one), no descent at all, or several descents and none plausible. A caller that gets None
+    falls back to `segment_phases`' own choice and should show the candidate listing, which
+    prints the same durations this rule judged on.
+
+    Note what this deliberately does **not** claim: a plausible downswing duration is evidence
+    about *which descent is a swing*, not evidence that two clips show the *same* swing. Only
+    `alignment.align_swings`' tempo cross-check speaks to that, and it does not fire in every
+    case — it is skipped once the soft anchor has already been refused for another reason.
+    """
+    if fps is None or fps <= 0.0:
+        return None
+
+    candidates = candidate_downswings(keypoints, min_fraction=CANDIDATE_MIN_RISE)
+    low, high = _PLAUSIBLE_DOWNSWING_S
+    plausible = [
+        swing for swing in candidates if low <= (swing.impact - swing.top) / fps <= high
+    ]
+    if not plausible:
+        if len(candidates) != 1:
+            return None
+        only = candidates[0]
+        return SwingChoice(
+            window=window_around(only),
+            downswing=only,
+            candidates=candidates,
+            reason=(
+                f"1 descent, and its downswing measures "
+                f"{(only.impact - only.top) / fps:.2f}s rather than the usual "
+                f"{low:g}-{high:g}s — taking it anyway, since there is nothing to choose "
+                f"between (top {only.top}, impact {only.impact})"
+            ),
+        )
+
+    chosen = plausible[-1]
+    duration = (chosen.impact - chosen.top) / fps
+    if len(plausible) == 1:
+        reason = (
+            f"{len(candidates)} descent(s), 1 with a plausible downswing "
+            f"({duration:.2f}s) — top {chosen.top}, impact {chosen.impact}"
+        )
+    else:
+        reason = (
+            f"{len(candidates)} descent(s), {len(plausible)} with a plausible downswing; took "
+            f"the last ({duration:.2f}s, top {chosen.top}, impact {chosen.impact}). The clip "
+            "holds more than one real-looking swing — confirm with --list-swings"
+        )
+    return SwingChoice(
+        window=window_around(chosen), downswing=chosen, candidates=candidates, reason=reason
+    )
+
+
 def _wrist_speed(xy: list[tuple[float, float]]) -> list[float]:
     """Per-frame 2D lead-wrist speed (frame-to-frame displacement); `0.0` at the first frame."""
     speeds = [0.0]

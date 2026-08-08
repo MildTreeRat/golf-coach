@@ -7,7 +7,9 @@ A home-lab AI-powered golf swing analysis system that captures your swing via ca
 **Working today, no hardware required:** drop a face-on swing clip in `data/raw/`, and the
 pipeline extracts pose, segments the swing, scores three checkpoints against tour-derived
 benchmark bands, and prints ranked coaching tips with an annotated verification overlay.
-Shot data is read off photographs of the HD Golf simulator screen by local OCR.
+Shot data is read off photographs of the HD Golf simulator screen by local OCR. Point
+`analyze_bundle.py` at a swing uploaded from two phones and it does the lot in one command,
+leaving a JSON result and an aligned side-by-side video beside the clips.
 
 | Milestone | State |
 |---|---|
@@ -19,7 +21,7 @@ Shot data is read off photographs of the HD Golf simulator screen by local OCR.
 | **M5-FB** Prioritised coaching feedback | ✅ Done — ranked tips, tour percentiles |
 | **M4** full (outcome axis) | ⬜ Needs the M2 + M3 streams |
 | **M5** Feedback UI · **M6** LLM coaching | ⬜ Not started |
-| **M7** Two-phone sim capture | 🟡 4/7 phases (1, 2, 3, 5) |
+| **M7** Two-phone sim capture | 🟡 6/7 phases — only the Phase 0 field spike is left |
 
 See **[docs/README.md](docs/README.md)** for the documentation map,
 [ROADMAP.md](ROADMAP.md) for milestone detail, and [WORKLOG.md](WORKLOG.md) for
@@ -33,7 +35,7 @@ pip install -e '.[dev]'          # base + dev tools — the whole analysis core 
 pytest                           # analysis, contracts, feedback and launch-monitor suites
 ```
 
-The four working CLIs:
+The five working CLIs:
 
 ```bash
 # 1. Pose: video -> keypoints JSON + skeleton overlay          (needs the `vision` extra)
@@ -60,6 +62,15 @@ python scripts/align_swings.py face_on.keypoints.json down_the_line.keypoints.js
 # 4. Shot data: photos of the simulator SHOT DATA screen -> parsed shots  (needs `ocr`)
 pip install -e '.[ocr]'
 python scripts/import_shot_screens.py data/raw/shot_screens --dry-run
+
+# 5. The whole thing: an assembled swing bundle -> the complete result       (`vision`; `ocr`
+#    only for a shot photo that isn't in the store yet)
+python scripts/analyze_bundle.py 2026-08-07/1        # SESSION/SWING, or a swing directory
+#    -> analysis.json   score, checkpoints, ranked tips, the HD Golf numbers, alignment quality
+#    -> aligned.mp4     the two views side by side, banners landing together
+#    -> <role>.keypoints.json   pose per view, cached by the clip's hash so a re-run is free
+#    picks the real swing out of a clip full of practice swings by downswing duration;
+#    --list-swings to see the candidates, --window-face-on / --window-dtl to override
 ```
 
 Reading the parsed shots back needs no extras at all — `ScreenShotDataSource` serves them
@@ -107,13 +118,16 @@ module depends on — modules never import each other.
 
 - **contracts** — shared Pydantic data shapes; the decoupling seam (ADR-008)
 - **capture** — `VideoSource` port; `FileVideoSource` adapter over OpenCV
-- **pose** — MediaPipe Tasks API → `FrameKeypoints` (33 landmarks/frame), plus overlay rendering
+- **pose** — MediaPipe Tasks API → `FrameKeypoints` (33 landmarks/frame), plus overlay and
+  side-by-side rendering
 - **detection** — YOLOv8 club head + ball *(stub — M2, gated on the M1.5 spike)*
 - **launch_monitor** — `ShotDataSource` port with mock / screen-OCR / composite adapters
 - **analysis** — pure functional core: smooth → phases → checkpoints → score, plus
-  two-view alignment on a normalized swing-time axis (ADR-015)
+  two-view alignment on a normalized swing-time axis (ADR-015) and whole-bundle analysis
+  (`analyze_swing_bundle`: face-on scored, down-the-line for anchors, shot attached)
 - **feedback** — rule-based ranked tips; Claude coaching and overlays to come
-- **storage** — flat-file, content-addressed swing-bundle store *(M7 Phase 3, trimmed)*
+- **storage** — flat-file, content-addressed swing-bundle store *(M7 Phase 3, trimmed)*;
+  analysis artifacts land in the same swing directory
 - **api** — FastAPI phone-upload server *(M7 Phase 5, trimmed — ingestion only, no analysis wiring yet)*
 
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) documents the system **as built**;

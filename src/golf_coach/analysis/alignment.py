@@ -43,6 +43,7 @@ from golf_coach.contracts.alignment import (
     TAU_TOP,
     AlignmentQuality,
     ClipAlignment,
+    FramePairing,
     SwingAlignment,
     SwingAnchors,
 )
@@ -69,7 +70,16 @@ _TEMPO_AGREEMENT = 0.35
 # "backswing" measures near zero. The estimate is still returned with `detected=True`, because
 # from inside `phases.py` nothing about it looks wrong — it takes two views, or this check, to see
 # that it is.
-_MIN_PLAUSIBLE_TEMPO = 1.0
+#
+# Public because `engine.analyze_swing_bundle` applies the same floor to say out loud that the
+# *tempo checkpoint* is untrustworthy on such a swing. The two uses are the same fact read twice:
+# a backswing that measures shorter than its downswing means the motion-start boundary is wrong,
+# which makes it useless as an alignment anchor and makes the tempo ratio derived from it wrong.
+MIN_PLAUSIBLE_TEMPO = 1.0
+
+# The swing and nothing else: from a little before the takeaway to one downswing past impact.
+# Widen it to render more of the clip.
+DEFAULT_TAU_RANGE = (-0.4, 3.0)
 
 
 def anchors_from_phases(
@@ -222,7 +232,7 @@ def align_swings(a: SwingAnchors, b: SwingAnchors) -> SwingAlignment:
             if ratio is None:
                 use_soft = False
                 notes.append(f"{label}: no measurable backswing; motion start dropped as an anchor")
-            elif ratio < _MIN_PLAUSIBLE_TEMPO:
+            elif ratio < MIN_PLAUSIBLE_TEMPO:
                 use_soft = False
                 notes.append(
                     f"{label}: backswing measures {ratio:.2f} downswings, which no golf swing "
@@ -275,6 +285,68 @@ def map_frame(alignment: SwingAlignment, frame: int, *, source: str = "a") -> in
     tau = tau_of_frame(origin.anchors, frame, motion_start=origin.warp_motion_start)
     mapped = frame_of_tau(target.anchors, tau, motion_start=target.warp_motion_start)
     return _clamp(round(mapped), target.anchors.frame_count)
+
+
+def pair_frames(
+    alignment: SwingAlignment,
+    count_a: int,
+    count_b: int,
+    *,
+    reference: str = "a",
+    tau_range: tuple[float, float] = DEFAULT_TAU_RANGE,
+) -> list[FramePairing]:
+    """The output schedule for a side-by-side render: which two frames show each instant.
+
+    The reference clip drives the timeline one frame at a time — its motion stays at its native
+    rate — and the other clip is sampled at whatever frame shows the same `tau`. Every entry
+    carries that single shared `tau`, so a renderer draws one banner decision per output frame
+    and the two panels cannot disagree.
+
+    The schedule is clamped to `tau_range` intersected with what both clips actually cover. The
+    honest overlap of two long clips is mostly dead air — a golfer standing over the ball, or the
+    bay after they walk off — and rendering all of it buries the thing the video exists to show.
+    It is also the region the warp describes worst whenever the soft anchor was refused.
+
+    Empty when there is no alignment to map through or the two clips share no overlapping swing
+    time — reported, not raised (ADR-013).
+    """
+    if alignment.a is None or alignment.b is None or alignment.overlap is None:
+        return []
+    if reference not in {"a", "b"}:
+        raise ValueError(f"reference must be 'a' or 'b', got {reference!r}")
+
+    lead, count_lead = (
+        (alignment.a, count_a) if reference == "a" else (alignment.b, count_b)
+    )
+    low = max(alignment.overlap[0], tau_range[0])
+    high = min(alignment.overlap[1], tau_range[1])
+    first = max(0, int(frame_of_tau(lead.anchors, low, motion_start=lead.warp_motion_start)))
+    last = min(
+        count_lead - 1,
+        int(frame_of_tau(lead.anchors, high, motion_start=lead.warp_motion_start)),
+    )
+    if last <= first:
+        return []
+
+    schedule: list[FramePairing] = []
+    for step in range(first, last + 1):
+        tau = tau_of_frame(lead.anchors, step, motion_start=lead.warp_motion_start)
+        follow = alignment.b if reference == "a" else alignment.a
+        mapped = _clamp_index(
+            frame_of_tau(follow.anchors, tau, motion_start=follow.warp_motion_start),
+            count_b if reference == "a" else count_a,
+        )
+        pairing = (
+            FramePairing(tau=tau, frame_a=step, frame_b=mapped)
+            if reference == "a"
+            else FramePairing(tau=tau, frame_a=mapped, frame_b=step)
+        )
+        schedule.append(pairing)
+    return schedule
+
+
+def _clamp_index(frame: float, count: int) -> int:
+    return max(0, min(count - 1, round(frame)))
 
 
 def _clip_alignment(anchors: SwingAnchors, motion_start: int) -> ClipAlignment:

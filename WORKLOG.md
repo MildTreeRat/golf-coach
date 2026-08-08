@@ -5,6 +5,100 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-08-08 — One command, whole bundle (M7 Phase 4)
+
+**Duration**: ~1 session, implementation + verification against real footage
+**What I did**: Joined everything that already existed into one command, and found out along the
+way that the hard part was not the joining.
+
+1. **`analyze_swing_bundle()`** (`analysis/engine.py`) — pure. Scores the face-on view through
+   `analyze_swing()` **unchanged**, uses down-the-line for alignment anchors only, attaches the
+   shot. Reuses the phases `analyze_swing` already computed for the anchors rather than
+   segmenting twice, so the frame a checkpoint was measured on and the frame the warp pins to
+   τ=1 *cannot* drift. New `SwingBundleResult` contract; `SwingResult.shot` is finally populated.
+2. **`scripts/analyze_bundle.py`** — the one command. Writes `analysis.json` (7 KB — heavy
+   streams excluded, the keypoints already sit beside it), `aligned.mp4`, and per-view keypoints
+   cached against the clip's sha256. Cold run 50 s, warm 9 s.
+3. **`phases.select_swing()`**, which was not in the plan and turned out to be the substance of
+   the phase — see below.
+4. **Two moves, no duplication**: the side-by-side renderer out of `align_swings.py` into
+   `pose/side_by_side.py`, and `_import_one` out of `import_shot_screens.py` into
+   `launch_monitor/screen/importer.py`. The renderer move needed a seam — it would otherwise
+   have made `pose` import `analysis` — so the frame correspondence became
+   `alignment.pair_frames()` returning `FramePairing`s, and the renderer now only draws.
+
+**Verification**: 227 passed (up from 201 passed / 4 skipped — the OCR integration tests run for
+the first time), ruff clean, mypy clean. `aaron-swing-2` still reports **TOP @ 400 / IMPACT @
+423**. The renderer move is provably faithful: re-rendering `aaron-1-aligned.mp4` gives 98 frames
+at **0.000 mean absolute pixel difference** against the committed reference — every pixel.
+End-to-end on the genuine `aaron-1` triple: auto-selection reproduced the Phase 2 verified pair
+unaided (face-on 704/718, down-the-line 1550/1574), a *new* shot photo OCR'd at conf 0.93, and
+all 24 banner frames render on **both** panels with zero strays — at IMPACT the club is at the
+ball in both views.
+
+**Key decisions / surprises**:
+- **The window is not framing — it decides what gets scored.** This is the whole reason
+  `select_swing` exists. Unaided, `segment_phases` picks a *setup move* on all four real bay
+  clips. Whole-clip `aaron-1-front` scores 58/100 with tempo unscored and finish balance a 0.53
+  MISS; the actual swing scores 67/100 with both in band. On the 2026-08-07 bundle the same
+  effect took finish balance from 0.46 (a MAJOR fault) to 0.07 — the unwindowed figure was
+  measuring the golfer *walking away after the shot*.
+- **"Take the last descent" is half right, and the half that fails does so silently.** Aaron's
+  idea — nobody rehearses after hitting — is correct on both face-on clips and wrong on both
+  down-the-line ones, because the DTL phone keeps rolling 15–24 s past impact on the busy side
+  of the bay. On `aaron-2-back` it picks a 5-frame artifact at the very end of the clip. And
+  *nothing catches it*: `align_swings`' tempo cross-check is skipped once the soft anchor has
+  already been refused for another reason, so the wrong pick renders a confident, plausible,
+  completely wrong video. What rescues the idea is **downswing duration** — real swings measured
+  0.23/0.38/0.40/0.42 s against a setup-move cluster at 0.48–0.53 s — so: filter by duration,
+  then take the last. Correct on all four.
+- **`candidate_downswings`' default 0.80 rise threshold hides the swing.** On `aaron-1-back` the
+  largest descent is a *bystander* (0.417), which puts the cut at 0.334 and excludes the real
+  swing (0.257) entirely. Selection uses the same looser threshold `--list-swings` already did,
+  now shared as `CANDIDATE_MIN_RISE`, so the set a human chooses from and the set the rule
+  chooses from are identical.
+- **The window's lead-in was sized for viewing, not measuring.** Phase 2's 2 downswings before
+  the top is *inside* a tour-tempo backswing (~3.5), so motion start went undetected on two of
+  six clips, which drops the tempo checkpoint and degrades the alignment. Swept 2–8 across all
+  six: **5** is the smallest that detects motion start everywhere while leaving top and impact
+  exactly where they were. On the 2026-08-07 bundle that alone took the alignment from
+  `top_impact` to `full` and made tempo measurable.
+- **The band is calibrated on 60 fps and a 30 fps clip reads longer** — the bundle's face-on view
+  measures 0.60 s for its only swing. Widening the band would swallow the whole setup-move
+  cluster at 60 fps, so instead: **one candidate wins on its own**, whatever it measures. There
+  is nothing to choose between, and `segment_phases` would pick that same descent anyway — the
+  only question is whether it gets measured in isolation or with the clip's dead air mixed in.
+- **`paddle.py` had a latent bug that only a real install could find.** It was written to absorb
+  the PaddleOCR 2.x/3.x split in the *result* shape but still called the 2.x *constructor*, and
+  3.x validates argument names strictly. Nobody had noticed because `paddleocr` had never been
+  installed here — the integration tests had always skipped. Also had to disable oneDNN:
+  paddlepaddle 3.3.1's kernel aborts at *predict* time on this CPU, well after a clean
+  construction, so no constructor fallback could catch it.
+- **The `2026-08-07/1` bundle is not a real paired capture.** Its two clips show different
+  swings in different rooms — it came from the Phase 6 *networking* test and holds whatever
+  three files were on the phone. Worth knowing before trusting anything measured on it. It also
+  demonstrates the limitation exactly: the tempo cross-check passed (1.89 vs 1.54, gap 0.19
+  against a 0.35 threshold), and the alignment reported `full` on two different swings. A τ warp
+  makes any two swings look aligned; the video is not evidence they are the same swing. The real
+  end-to-end check used the `aaron-1` triple, assembled through `SwingBundleStore` as
+  `2026-08-07-aaron1` (≈380 MB of copied video — delete it whenever).
+
+**Noticed, not fixed** — and now a named ROADMAP item: **the tempo checkpoint is untrustworthy
+on real footage.** `_motion_start` walks back from the top for a quiet stretch, and a golfer who
+pauses at the top hands it one immediately, so the boundary collapses onto the top: `aaron-1`
+reads a backswing of **0.43 downswings**, which is not physically possible. `analyze_swing`
+scores it anyway and the ranked tips lead with "work on tempo first, the downswing is rushing the
+backswing" — a confidently wrong instruction. Phase 4 deliberately changes no scoring and instead
+makes it impossible to render without seeing it (a note, printed *above* the tips). The fix
+belongs in `_motion_start`, or in `evaluate_tempo` applying the floor `alignment.py` already has
+as `MIN_PLAUSIBLE_TEMPO` — measured against GolfDB first, since that is where the band came from.
+
+**Where I left off**: the full use case works end to end offline. Phase 5's remaining piece is
+the background worker that triggers this on upload instead of a human running it.
+**Blockers**: None.
+
+---
+
 ## 2026-08-07 — Two views of one swing, aligned (M7 Phase 2)
 
 **Duration**: ~1 session, implementation + first real bay footage

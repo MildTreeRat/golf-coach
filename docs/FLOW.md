@@ -135,8 +135,14 @@ validated and hardened while two of its three input streams did not exist. The `
 adapter means it is *adapters*, plural: a session can mix screen-parsed and live shots without
 any consumer knowing (ADR-014).
 
-**The gap that matters most right now:** `ShotData` is produced and stored, but nothing sets
-`SwingResult.shot`. The two streams above meet on paper and not yet in code (M7 Phase 4).
+**That gap closed in M7 Phase 4.** `analyze_swing_bundle` sets `SwingResult.shot`, joining the
+two streams in code: the shot is found by the photo's sha256 — the identity the manifest and the
+shot store already share — so an already-parsed shot attaches with no OCR extra installed. It is
+**attached and displayed, not scored**; the `outcome` axis still waits on per-club benchmark
+bands (ADR-009).
+
+**The gap that matters most now:** nothing *triggers* any of it. An upload lands a file and
+stops; `analyze_bundle.py` has to be run by hand. Joining the two is Phase 5's background worker.
 
 ---
 
@@ -220,7 +226,7 @@ graph TB
             WEB["Web UI<br/>React dev server, port 3000<br/>M5"]
         end
         subgraph Scripts ["Run-on-Demand — these exist ✅"]
-            CLIS["run_pose.py, analyze_swing.py,<br/>import_shot_screens.py ✅"]
+            CLIS["run_pose.py, analyze_swing.py,<br/>import_shot_screens.py, align_swings.py,<br/>analyze_bundle.py ✅"]
             RESEARCH["scripts/golfdb/* reference tooling ✅"]
             TRAIN["YOLOv8 fine-tuning — M2"]
             LABEL["Label Studio, port 8090 — M2"]

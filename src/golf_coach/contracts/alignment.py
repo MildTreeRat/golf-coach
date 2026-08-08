@@ -24,6 +24,7 @@ Pydantic + stdlib only, like every other contract (ADR-008).
 from __future__ import annotations
 
 from enum import StrEnum
+from typing import NamedTuple
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -62,6 +63,23 @@ _QUALITY_SUMMARY: dict[AlignmentQuality, str] = {
     AlignmentQuality.IMPACT_ONLY: "aligned on impact only",
     AlignmentQuality.UNALIGNED: "not aligned",
 }
+
+
+class FramePairing(NamedTuple):
+    """One output frame: the swing instant it shows, and the frame of each clip showing it.
+
+    The seam between working out the correspondence and drawing it. `analysis.alignment` produces
+    a schedule of these from a `SwingAlignment`; a renderer consumes it and never does warp
+    arithmetic of its own — which is what lets the two live in different modules (ADR-008) and
+    what makes the correspondence testable without decoding a single frame.
+
+    One `tau` per output frame, shared by both panels. That is the whole reason the ADDRESS / TOP
+    / IMPACT banners land simultaneously by construction rather than by coincidence.
+    """
+
+    tau: float
+    frame_a: int
+    frame_b: int
 
 
 class SwingAnchors(BaseModel):
