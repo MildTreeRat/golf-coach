@@ -5,6 +5,62 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-08-09 — No command at all (M7 Phase 5, completed)
+
+**Duration**: ~1 session, implementation + end-to-end verification through the real server
+**What I did**: Closed the loop. An upload used to land a file and stop; now the third file
+starts the analysis and a results page renders it.
+
+1. **`api/pipeline.py`** — the orchestration lifted out of `scripts/analyze_bundle.py`
+   near-verbatim. `print()` became an injected `log` callback so a headless worker doesn't lose
+   the narration, and anything a *reader of the result* needs — a short decode, a shot that
+   couldn't be read, a swing the selector declined to pick — became a durable note in
+   `analysis.json` instead of a line on stderr nobody is watching. The CLI kept every flag and
+   every exit code and is now presentation only. It imports no fastapi, so it still runs on a
+   `vision`-only install; `tests/api/test_pipeline_imports.py` pins that in a subprocess.
+2. **`api/worker.py`** — asyncio queue, one consumer, `asyncio.to_thread` for the heavy part.
+   Triggers **only on a complete bundle**; a partial one waits for an explicit "Analyze anyway"
+   behind a confirm dialog. No timeout heuristic, deliberately — it would be wrong in both
+   directions. `api/state.py` persists an `analysis.state.json` sidecar keyed on the
+   role→sha256 map, so a re-uploaded clip invalidates its own result, and the 5 s status poll
+   reads a denormalised score rather than parsing a 7 KB JSON per swing.
+3. **Routes + `results.html`** — swing detail, the analyze override, and a video route (byte
+   ranges confirmed; iOS Safari won't play a `<video>` without them). Path segments are now
+   validated — `..` was a live traversal into `sessions_dir`'s parent.
+
+**Three things I was wrong about, all caught by running it rather than reasoning about it:**
+
+- **The `avc1` codec fallback.** OpenCV's bundled FFmpeg carries no libx264, only libopenh264,
+  and dlopen's a DLL that isn't shipped — so it prints `Failed to load OpenH264 library` and
+  fails. I expected the fallback to `mp4v` to fire. It doesn't: OpenCV falls back to Media
+  Foundation, which encodes real H.264. The output is `avc1`, 85/85 frames, honouring the
+  requested fps exactly. `isOpened()` is the only thing worth believing; the stderr lies.
+- **`isOpened()` reporting success mid-failure** is why `RenderResult` now carries the codec
+  that actually won rather than the one that was asked for.
+- **`asyncio.Queue.put_nowait` from a non-loop thread** enqueues without waking a consumer
+  parked on `get()`. Only bit a test — every production caller is a route handler — but the
+  constraint is now documented on `submit()`.
+
+**Verified end to end** through `run_server.py` against the real bay footage: three uploads
+(35 MB in 0.1 s), `queued=False` on the first two, `complete` + `queued=True` on the third,
+`running → done` in **31.8 s**, score 86.1 matching the CLI exactly, and the video served as
+H.264 with `accept-ranges: bytes`. The partial path was checked separately: face-on alone
+auto-started nothing, the override produced `partial=true` with the three degradations spelled
+out in the notes, no aligned video, and the raw face-on clip served as the fallback.
+Also found that uvicorn leaves the root logger at WARNING, so the worker was running silently —
+`run_server.py` now configures logging and the whole pipeline narrates to the terminal.
+
+258 tests pass (31 new, all on the base install thanks to the injectable `runner` seam), ruff
+and mypy clean.
+
+**Where I left off**: M7 has only the Phase 0 field spike outstanding. The upload leg of Q2 is
+still unmeasured — nobody has confirmed what iOS Safari does to a `.mov` on submit, and one real
+phone upload plus `spikes/2026-08-07-two-phone/probe.py inspect` answers it. The louder problem
+is the tempo checkpoint: it is untrustworthy on real footage and the tips now lead with a
+confident, wrong "work on tempo first" to a reader who never sees a caveat on a terminal.
+
+---
+
 ## 2026-08-08 — One command, whole bundle (M7 Phase 4)
 
 **Duration**: ~1 session, implementation + verification against real footage

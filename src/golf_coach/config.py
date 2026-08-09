@@ -45,6 +45,11 @@ class Settings(BaseSettings):
     # without one; exposing the server any wider — Funnel, or a non-loopback bind —
     # requires it, and `scripts/run_server.py` refuses to start otherwise.
     upload_token: str | None = Field(default=None)
+    # The background analysis worker. On by default: an upload that lands and does nothing is
+    # the state M7 Phase 5 exists to fix. Turn it off to run the server as pure ingestion and
+    # drive `scripts/analyze_bundle.py` by hand — which is also what the API tests do, so a
+    # test never has to own a running event-loop task it didn't ask for.
+    analysis_enabled: bool = True
 
     # Service ports (see docs/ARCHITECTURE.md deployment view). api_port is the loopback
     # port Tailscale Serve proxies to, never a port a phone connects to directly.

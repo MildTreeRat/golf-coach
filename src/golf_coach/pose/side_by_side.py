@@ -25,7 +25,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Iterator, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, NamedTuple
 
 from golf_coach.capture.source import Frame
 from golf_coach.contracts.alignment import (
@@ -60,6 +60,37 @@ _BANNERS: tuple[tuple[float, str], ...] = (
     (TAU_IMPACT, "IMPACT"),
 )
 
+# Tried in order. `mp4v` (MPEG-4 Part 2) is what this module used to write unconditionally, and
+# it plays in VLC but *not* in Chrome or Firefox — which stops mattering the moment a results
+# page puts the clip in a <video> tag. `avc1` is H.264, which every browser plays.
+#
+# Whether avc1 opens depends on the machine, not the code, so the fallback is real rather than
+# decorative. On Windows expect a wall of stderr on every render:
+#
+#     Failed to load OpenH264 library: openh264-1.8.0-win64.dll
+#     VIDEOIO/FFMPEG: Failed to initialize VideoWriter
+#
+# That is OpenCV's *bundled FFmpeg* giving up — it carries no libx264 (GPL), only libopenh264,
+# which dlopen's a DLL that is not shipped. It is noise, not failure: OpenCV then falls back to
+# Media Foundation, whose native H.264 encoder opens fine and honours the requested frame rate
+# exactly. Verified on this repo's own footage — the output really is `avc1`, 85/85 frames.
+# Dropping the Cisco DLL on the path silences the noise; nothing else changes.
+#
+# `RenderResult.codec` records which one actually won, because `isOpened()` is the only thing
+# worth believing here and the stderr above will happily contradict a perfectly good file.
+_CODECS: tuple[str, ...] = ("avc1", "mp4v")
+
+# The codec a browser will not play inline. Callers warn on this rather than test `!= "avc1"`,
+# so adding a third acceptable codec here doesn't silently start warning about it.
+BROWSER_HOSTILE_CODECS = frozenset({"mp4v"})
+
+
+class RenderResult(NamedTuple):
+    """What was written, and in which codec — `codec` is None when nothing was written."""
+
+    frames: int
+    codec: str | None
+
 
 @dataclass
 class Panel:
@@ -79,21 +110,22 @@ def render_side_by_side(
     *,
     fps: float = 60.0,
     quality: AlignmentQuality = AlignmentQuality.UNALIGNED,
-) -> int:
-    """Write the aligned side-by-side MP4. Returns the number of frames written.
+) -> RenderResult:
+    """Write the aligned side-by-side MP4. Returns the frames written and the codec used.
 
-    An empty `schedule` writes nothing and returns 0 — the two clips shared no overlapping swing
-    time, which the caller reports rather than this raising (ADR-013).
+    An empty `schedule` writes nothing and returns `RenderResult(0, None)` — the two clips shared
+    no overlapping swing time, which the caller reports rather than this raising (ADR-013).
     """
     import cv2
     import numpy as np
 
     if not schedule:
-        return 0
+        return RenderResult(0, None)
 
     pull_a = _FramePuller(iter(a.frames), np.zeros((*_canvas_size(a.clip), 3), dtype=np.uint8))
     pull_b = _FramePuller(iter(b.frames), np.zeros((*_canvas_size(b.clip), 3), dtype=np.uint8))
     writer: cv2.VideoWriter | None = None
+    codec: str | None = None
 
     try:
         for tau, frame_a, frame_b in schedule:
@@ -106,18 +138,39 @@ def render_side_by_side(
             joined = np.hstack([panel_a, panel_b])
             if writer is None:
                 height, width = joined.shape[:2]
-                # `VideoWriter.fourcc`, not the older module-level `VideoWriter_fourcc`: same
-                # value, but the free function is missing from opencv's type stubs and this is
-                # library code rather than a script, so it is type-checked.
-                writer = cv2.VideoWriter(
-                    str(out_path), cv2.VideoWriter.fourcc(*"mp4v"), fps, (width, height)
-                )
+                writer, codec = _open_writer(out_path, fps, (width, height))
             writer.write(joined)
     finally:
         if writer is not None:
             writer.release()
 
-    return len(schedule)
+    return RenderResult(len(schedule), codec)
+
+
+def _open_writer(
+    out_path: Path, fps: float, size: tuple[int, int]
+) -> tuple[Any, str]:
+    """First codec in `_CODECS` that actually opens, and its name.
+
+    A refused `VideoWriter` still leaves a zero-byte stub behind, so each failed attempt is
+    released and unlinked before the next is tried — otherwise a successful `mp4v` would be
+    written on top of avc1's debris and `out_path`'s mtime would lie about which one won.
+    """
+    import cv2
+
+    for tag in _CODECS:
+        # `VideoWriter.fourcc`, not the older module-level `VideoWriter_fourcc`: same value, but
+        # the free function is missing from opencv's type stubs and this is library code rather
+        # than a script, so it is type-checked.
+        writer = cv2.VideoWriter(str(out_path), cv2.VideoWriter.fourcc(*tag), fps, size)
+        if writer.isOpened():
+            return writer, tag
+        writer.release()
+        out_path.unlink(missing_ok=True)
+
+    raise RuntimeError(
+        f"OpenCV would not open a video writer for {out_path.name} in any of {_CODECS}"
+    )
 
 
 def _draw(

@@ -11,6 +11,11 @@ Shot data is read off photographs of the HD Golf simulator screen by local OCR. 
 `analyze_bundle.py` at a swing uploaded from two phones and it does the lot in one command,
 leaving a JSON result and an aligned side-by-side video beside the clips.
 
+**From a phone, it needs no command at all:** upload a face-on clip, a down-the-line clip and a
+photo of the shot screen from two phone browsers, and the third file triggers the same pipeline
+in the background — the results page has the score, the bands, the tips and the aligned video by
+the time you have walked back from the bay.
+
 | Milestone | State |
 |---|---|
 | **M1** Capture & skeleton | ✅ Done — MediaPipe pose, face-on canonical angle |
@@ -20,7 +25,7 @@ leaving a JSON result and an aligned side-by-side video beside the clips.
 | **M4-PoC / PoC+ / REF** Pose-only analysis | ✅ Done — 3 checkpoints, bands validated vs 461 tour clips |
 | **M5-FB** Prioritised coaching feedback | ✅ Done — ranked tips, tour percentiles |
 | **M4** full (outcome axis) | ⬜ Needs the M2 + M3 streams |
-| **M5** Feedback UI · **M6** LLM coaching | ⬜ Not started |
+| **M5** Feedback UI · **M6** LLM coaching | ⬜ Not started — a static results page stands in for M5 |
 | **M7** Two-phone sim capture | 🟡 6/7 phases — only the Phase 0 field spike is left |
 
 See **[docs/README.md](docs/README.md)** for the documentation map,
@@ -99,6 +104,29 @@ Both publish `https://<machine>.<tailnet>.ts.net`. Open **`https://<machine>.<ta
 once per phone: the page stores the token and the role, strips the token from the URL, and every
 upload after that is two taps. Verify it properly with WiFi *off* — on cellular is the real test.
 
+**The third file starts the analysis.** When a swing has all three roles, a background worker
+runs the same pipeline `analyze_bundle.py` does — pose per view, the shot screen, scoring,
+alignment — and the swing gets a **View results** link on the upload page. Nothing auto-runs on
+a partial bundle: no timeout guesses right about whether the second phone is still walking back
+from the bay. Shot the swing from one angle on purpose? **Analyze anyway** on that swing runs it
+without the missing pieces, after warning you the result will be thinner. A face-on clip is the
+one hard requirement — every checkpoint is measured from it.
+
+Uploads never wait on analysis: the pipeline runs in a thread, so you can be uploading the next
+swing while the last one is still being posed (~30 s for a 30 fps pair, minutes at 4K60).
+
+The results page shows the score, each checkpoint against its tour band and percentile, the
+ranked tips, the HD Golf numbers, and the two views side by side. Run the server with
+`python scripts/run_server.py` and watch the terminal — the worker narrates every step.
+
+> **OpenH264 warnings on every render are expected and harmless.** OpenCV's bundled FFmpeg ships
+> no libx264, only libopenh264, and dlopen's a DLL that isn't included — so it prints
+> `Failed to load OpenH264 library` and gives up. OpenCV then falls back to Media Foundation,
+> which encodes genuine H.264, which is what makes `aligned.mp4` playable in the phone browser.
+> Dropping [openh264-1.8.0-win64.dll](https://github.com/cisco/openh264/releases) on the DLL
+> search path silences the noise; nothing else changes. If both paths ever fail the renderer
+> falls back to `mp4v`, records that it did, and the results page says the clip needs VLC.
+
 Notes: Funnel needs a `funnel` node attribute in the tailnet policy file, only listens on
 443/8443/10000, and is relayed with undisclosed bandwidth limits — prefer Serve for your own
 phones. Without `GOLF_UPLOAD_TOKEN` set, `/api/` is unauthenticated, which is only acceptable
@@ -128,7 +156,8 @@ module depends on — modules never import each other.
 - **feedback** — rule-based ranked tips; Claude coaching and overlays to come
 - **storage** — flat-file, content-addressed swing-bundle store *(M7 Phase 3, trimmed)*;
   analysis artifacts land in the same swing directory
-- **api** — FastAPI phone-upload server *(M7 Phase 5, trimmed — ingestion only, no analysis wiring yet)*
+- **api** — FastAPI phone-upload server, the bundle pipeline, and the background worker that
+  runs it when a swing completes *(M7 Phase 5)*
 
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) documents the system **as built**;
 [docs/FLOW.md](docs/FLOW.md) documents the **target** design and build order.
@@ -182,7 +211,7 @@ golf-coach/
 │       ├── analysis/        # ⭐ pure functional core: smooth→phases→checkpoints→score
 │       ├── feedback/        # ranked rule-based tips (+ Claude coaching later)
 │       ├── storage/         # flat-file swing-bundle store, content-addressed
-│       ├── api/             # FastAPI phone-upload server (ingestion only, no analysis yet)
+│       ├── api/             # upload server + bundle pipeline + background analysis worker
 │       └── config.py        # settings (the only env reader)
 ├── frontend/                # React UI (M5) — separate toolchain, talks to api/ over HTTP
 ├── tests/                   # mirrors the package; the core suite runs on the base install

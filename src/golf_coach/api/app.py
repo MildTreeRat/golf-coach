@@ -1,34 +1,48 @@
-"""Phone upload server — fills the `api/` seam with the upload-ingestion path only.
+"""Phone upload server — ingestion, background analysis, and the results the two produce.
 
-A phone browser posts a file tagged with a role (face_on / down_the_line /
-shot_screen); the body is streamed to disk and handed to `SwingBundleStore`, which
-groups it into the right swing. Nothing here triggers pose extraction, OCR, or
-analysis — that wiring is a later phase.
+A phone browser posts a file tagged with a role (face_on / down_the_line / shot_screen); the body
+is streamed to disk and handed to `SwingBundleStore`, which groups it into the right swing. When
+the third role lands and the bundle is complete, `AnalysisWorker` runs the whole pipeline off the
+event loop and the results page has something to show (M7 Phase 5).
 
-`scripts/run_server.py` binds this to 127.0.0.1 only. Phones reach it through Tailscale,
-which terminates TLS and proxies to that loopback port (ADR-016) — so the bind address
-never widens, whether the phone is on the tailnet (`tailscale serve`) or off it
-(`tailscale funnel`). Funnel makes these routes publicly reachable, so every `/api/`
-route is gated on a shared token whenever `GOLF_UPLOAD_TOKEN` is set.
+`scripts/run_server.py` binds this to 127.0.0.1 only. Phones reach it through Tailscale, which
+terminates TLS and proxies to that loopback port (ADR-016) — so the bind address never widens,
+whether the phone is on the tailnet (`tailscale serve`) or off it (`tailscale funnel`). Funnel
+makes these routes publicly reachable, so every `/api/` route is gated on a shared token whenever
+`GOLF_UPLOAD_TOKEN` is set.
 """
 
 from __future__ import annotations
 
 import hashlib
+import re
 import secrets
 import uuid
-from collections.abc import Callable
+from collections.abc import AsyncIterator, Callable
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from golf_coach.api.state import load_analysis, load_state
+from golf_coach.api.worker import AnalysisWorker, should_analyze
 from golf_coach.config import settings
 from golf_coach.storage.bundle_store import SwingBundleStore
 from golf_coach.storage.manifest import EXPECTED_ROLES, Role
 
 _STATIC_DIR = Path(__file__).parent / "static"
-_CHUNK_SIZE = 1024 * 1024  # 1 MiB — bounds peak memory regardless of upload size
+
+# Path parameters are joined to filesystem paths, so they are validated rather than trusted.
+# A literal `..` segment survives routing (it is one segment, so `{session_id}` matches it) and
+# would otherwise walk out of `sessions_dir`.
+_SAFE_SEGMENT = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+
+# Which files a client may ask for by name. An allowlist rather than a sanitised filename: the
+# swing directory also holds the raw uploads and the keypoint dumps, and none of that is served.
+_ALIGNED = "aligned"
+_VIDEO_ROLES = {role.value for role in (Role.FACE_ON, Role.DOWN_THE_LINE)}
 
 
 class _FromSettings:
@@ -56,7 +70,8 @@ def _token_guard(expected: str | None) -> Callable:
     No token configured means tailnet-only `tailscale serve`, where tailnet membership is
     the access control. Accepts the token in the `X-Upload-Token` header or a `?t=` query
     param: the query param is what makes the initial setup link openable on a phone, the
-    header is what the page uses for every request after that.
+    header is what the page uses for every request after that — and it is also the only way a
+    `<video>` element can authenticate, since a media element sends no custom headers.
     """
 
     async def guard(
@@ -74,18 +89,66 @@ def _token_guard(expected: str | None) -> Callable:
     return guard
 
 
+def _safe(segment: str, kind: str) -> str:
+    if not _SAFE_SEGMENT.match(segment):
+        raise HTTPException(status_code=400, detail=f"invalid {kind}")
+    return segment
+
+
+def _media_type(path: Path) -> str:
+    """iPhones upload `.mov`; only the aligned render is reliably `.mp4`."""
+    return "video/quicktime" if path.suffix.lower() == ".mov" else "video/mp4"
+
+
+def _analysis_summary(swing_dir: Path) -> dict:
+    """The compact analysis block the status panel polls for, every five seconds, per swing."""
+    state = load_state(swing_dir)
+    if state is None:
+        return {"status": "none", "score": None, "headline": None, "has_video": False}
+    return {
+        "status": state.status,
+        "score": state.score,
+        "headline": state.headline,
+        "error": state.error,
+        "partial": state.partial,
+        "missing_roles": state.missing_roles,
+        "has_video": bool(state.video),
+        "video_codec": state.video_codec,
+        "completed_at": state.completed_at.isoformat() if state.completed_at else None,
+    }
+
+
 def create_app(
     *,
     store: SwingBundleStore | None = None,
     token: str | None | _FromSettings = _FROM_SETTINGS,
+    worker: AnalysisWorker | None | _FromSettings = _FROM_SETTINGS,
 ) -> FastAPI:
-    app = FastAPI(title="golf-coach upload")
     bundle_store = store or SwingBundleStore(settings.sessions_dir)
     incoming_dir = bundle_store.root / ".incoming"
     expected = settings.upload_token if isinstance(token, _FromSettings) else token
+    if isinstance(worker, _FromSettings):
+        analysis = AnalysisWorker(bundle_store) if settings.analysis_enabled else None
+    else:
+        analysis = worker
+
+    @asynccontextmanager
+    async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+        if analysis is not None:
+            await analysis.start()
+        try:
+            yield
+        finally:
+            if analysis is not None:
+                await analysis.stop()
+
+    app = FastAPI(title="golf-coach upload", lifespan=lifespan)
     # Declared as a route dependency rather than middleware so it resolves *before* the
     # handler touches `request.stream()` — an unauthenticated body never reaches disk.
     guard = [Depends(_token_guard(expected))]
+
+    def swing_dir_of(session_id: str, swing_id: str) -> Path:
+        return bundle_store.root / session_id / swing_id
 
     @app.post("/api/uploads", dependencies=guard)
     async def upload(
@@ -126,6 +189,16 @@ def create_app(
             size_bytes=size,
             swing_id=swing_id,
         )
+
+        # The whole point of Phase 5: the third file landing is what starts the analysis. A
+        # partial bundle waits for someone to ask for it explicitly (`/analyze`), because no
+        # timeout guesses right about whether a second phone is still walking back.
+        queued = False
+        if result.status == "complete":
+            manifest = bundle_store.get_swing(result.session_id, result.swing_id)
+            if analysis is not None and manifest is not None and should_analyze(manifest):
+                queued = analysis.submit(result.session_id, result.swing_id)
+
         return {
             "session_id": result.session_id,
             "swing_id": result.swing_id,
@@ -133,6 +206,7 @@ def create_app(
             "status": result.status,
             "missing_roles": [role.value for role in result.missing_roles],
             "deduped": result.deduped,
+            "queued": queued,
             "message": _status_message(result.swing_id, result.status, result.missing_roles),
         }
 
@@ -140,8 +214,12 @@ def create_app(
     async def session_current() -> dict:
         return {"session_id": bundle_store.current_session_id()}
 
+    # Declared before `/api/sessions/{session_id}` would be ambiguous only if the paths had the
+    # same shape; they don't, but `current` must stay above it regardless — FastAPI matches in
+    # declaration order and `{session_id}` would happily swallow the literal.
     @app.get("/api/sessions/{session_id}", dependencies=guard)
     async def session_detail(session_id: str) -> dict:
+        _safe(session_id, "session id")
         manifests = bundle_store.get_session(session_id)
         return {
             "session_id": session_id,
@@ -162,10 +240,85 @@ def create_app(
                         )
                         for role in EXPECTED_ROLES
                     },
+                    "analysis": _analysis_summary(
+                        swing_dir_of(session_id, manifest.swing_id)
+                    ),
                 }
                 for manifest in manifests
             ],
         }
+
+    @app.get("/api/sessions/{session_id}/swings/{swing_id}", dependencies=guard)
+    async def swing_detail(session_id: str, swing_id: str) -> dict:
+        _safe(session_id, "session id")
+        _safe(swing_id, "swing id")
+        manifest = bundle_store.get_swing(session_id, swing_id)
+        if manifest is None:
+            raise HTTPException(status_code=404, detail="no such swing")
+        swing_dir = swing_dir_of(session_id, swing_id)
+        return {
+            "session_id": session_id,
+            "swing_id": swing_id,
+            "status": manifest.status(),
+            "missing_roles": [role.value for role in manifest.missing_roles()],
+            "analysis": _analysis_summary(swing_dir),
+            # Null until the worker has finished; the page renders a waiting state for that.
+            "result": load_analysis(swing_dir),
+        }
+
+    @app.post("/api/sessions/{session_id}/swings/{swing_id}/analyze", dependencies=guard)
+    async def analyze_swing(session_id: str, swing_id: str) -> dict:
+        """The "Analyze anyway" override, for a bundle that will never be complete."""
+        _safe(session_id, "session id")
+        _safe(swing_id, "swing id")
+        manifest = bundle_store.get_swing(session_id, swing_id)
+        if manifest is None:
+            raise HTTPException(status_code=404, detail="no such swing")
+        if analysis is None:
+            raise HTTPException(status_code=503, detail="analysis worker is disabled")
+        if Role.FACE_ON not in manifest.roles:
+            # Every checkpoint is measured from the face-on view, so there is nothing to score
+            # without it — better a clear 400 than a result with no checkpoints in it.
+            raise HTTPException(
+                status_code=400,
+                detail="a face-on clip is required — every checkpoint is measured from it",
+            )
+        analysis.submit(session_id, swing_id, force=True)
+        return {
+            "session_id": session_id,
+            "swing_id": swing_id,
+            "queued": True,
+            "missing_roles": [role.value for role in manifest.missing_roles()],
+        }
+
+    @app.get("/api/sessions/{session_id}/swings/{swing_id}/video/{name}", dependencies=guard)
+    async def swing_video(session_id: str, swing_id: str, name: str) -> FileResponse:
+        """The aligned render, or one raw view when there was no second angle to align to.
+
+        Range requests matter here rather than being a nicety: iOS Safari will not play a
+        `<video>` from a source that cannot serve them. Starlette's FileResponse handles it.
+        """
+        _safe(session_id, "session id")
+        _safe(swing_id, "swing id")
+        swing_dir = swing_dir_of(session_id, swing_id)
+
+        if name == _ALIGNED:
+            path = swing_dir / "aligned.mp4"
+        elif name in _VIDEO_ROLES:
+            manifest = bundle_store.get_swing(session_id, swing_id)
+            role_file = manifest.roles.get(Role(name)) if manifest else None
+            if role_file is None:
+                raise HTTPException(status_code=404, detail="no such video")
+            path = swing_dir / role_file.filename
+        else:
+            raise HTTPException(status_code=404, detail="no such video")
+
+        if not path.is_file():
+            raise HTTPException(status_code=404, detail="no such video")
+        # No `filename=`: that sets Content-Disposition: attachment, which turns the results
+        # page's <video> into a download prompt. The page's download link uses the anchor's
+        # own `download` attribute instead, so one route serves both.
+        return FileResponse(path, media_type=_media_type(path))
 
     # Deliberately ungated, and mounted last because it catches everything: the page is a
     # role picker and an empty upload form, holding no session data, and gating it would

@@ -28,6 +28,14 @@
   .role-row { display: flex; justify-content: space-between; font-size: 0.9rem; padding: 0.1rem 0; }
   .yes { color: #2a7; font-weight: bold; }
   .no { color: #999; }
+  .analysis { margin-top: 0.5rem; padding-top: 0.5rem; font-size: 0.85rem;
+              border-top: 1px solid rgba(128,128,128,0.3); }
+  .analysis a { font-weight: 600; }
+  .analysis .score { font-weight: 700; }
+  .analysis .failed { color: #c33; }
+  button.anyway { margin-top: 0.4rem; padding: 0.4rem 0.7rem; font-size: 0.8rem;
+                  border: 1px solid #888; border-radius: 6px; background: transparent;
+                  color: inherit; }
 </style>
 </head>
 <body>
@@ -176,10 +184,80 @@ function renderStatus(session) {
           return `<div class="role-row"><span>${label}</span><span class="${cls}">${mark}</span></div>`;
         })
         .join("");
-      return `<div class="swing ${swing.status}"><strong>Swing ${swing.swing_id}</strong> &mdash; ${swing.status}${rows}</div>`;
+      return `<div class="swing ${swing.status}"><strong>Swing ${swing.swing_id}</strong> &mdash; ${swing.status}${rows}` +
+        renderAnalysis(session.session_id, swing) + `</div>`;
     })
     .join("");
 }
+
+// The results link appears only once there is a result to link to. Everything else here is
+// about being honest that nothing is happening yet and why.
+function renderAnalysis(sessionId, swing) {
+  const a = swing.analysis || {};
+  const href = `/results.html?session=${encodeURIComponent(sessionId)}&swing=${encodeURIComponent(swing.swing_id)}`;
+
+  if (a.status === "done") {
+    const score = typeof a.score === "number" ? `${a.score.toFixed(0)}/100` : "done";
+    const partial = a.partial ? " (partial)" : "";
+    return `<div class="analysis"><span class="score">${score}</span>${partial}
+      &nbsp;<a href="${href}">View results &rarr;</a></div>`;
+  }
+  if (a.status === "queued" || a.status === "running") {
+    return `<div class="analysis">Analyzing&hellip; this takes a few minutes.</div>`;
+  }
+  if (a.status === "failed") {
+    return `<div class="analysis"><span class="failed">Analysis failed.</span>
+      ${a.error ? escapeHtml(a.error) : ""}
+      <button class="anyway" data-swing="${swing.swing_id}">Try again</button></div>`;
+  }
+  if (swing.status === "complete") {
+    return `<div class="analysis">Queued for analysis&hellip;</div>`;
+  }
+  // Incomplete and idle: the only path to a result is the user saying so out loud.
+  const hasFaceOn = Boolean(swing.roles.face_on);
+  if (!hasFaceOn) {
+    return `<div class="analysis">Needs a face-on clip before it can be analyzed.</div>`;
+  }
+  return `<div class="analysis">Waiting for the rest of the bundle.
+    <button class="anyway" data-swing="${swing.swing_id}">Analyze anyway</button></div>`;
+}
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+}
+
+// Delegated, because renderStatus replaces this subtree every five seconds.
+statusEl.addEventListener("click", async (event) => {
+  const button = event.target.closest("button.anyway");
+  if (!button) return;
+  const swingId = button.dataset.swing;
+  const ok = confirm(
+    `Analyze swing ${swingId} without all three files?\n\n` +
+    "Missing the down-the-line clip means no alignment and no side-by-side video. " +
+    "Missing the shot screen means no launch-monitor numbers. " +
+    "The result will be worse than a complete bundle's."
+  );
+  if (!ok) return;
+
+  button.disabled = true;
+  try {
+    const current = await fetch("/api/sessions/current", { headers: authHeaders() }).then((r) => r.json());
+    const res = await fetch(
+      `/api/sessions/${encodeURIComponent(current.session_id)}/swings/${encodeURIComponent(swingId)}/analyze`,
+      { method: "POST", headers: authHeaders() });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setMessage(`Could not analyze: ${body.detail || res.status}`, true);
+      return;
+    }
+    setMessage(`Swing ${swingId}: analyzing without the full bundle.`);
+  } catch (err) {
+    setMessage(`Could not analyze: ${err.message}`, true);
+  } finally {
+    refreshStatus();
+  }
+});
 
 refreshStatus();
 setInterval(refreshStatus, 5000);

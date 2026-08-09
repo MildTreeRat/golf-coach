@@ -55,11 +55,13 @@ is the entry point that runs the lot offline — pose per view, OCR (only if the
 already in the store), scoring, ranked tips, alignment — and writes `analysis.json` plus
 `aligned.mp4` beside the clips. `SwingResult.shot` is populated at last.
 
-Two deliberate boundaries remain. **Nothing auto-triggers**: an upload lands a file and stops
-there; joining ingestion to analysis is Phase 5's background worker. And the shot is
-**attached and displayed, never scored** — outcome checkpoints need per-club benchmark bands
-`ranges.json` does not have (ADR-009). `detection/` (YOLOv8) and SQLite are not in the running
-path at all.
+**Analysis now auto-triggers** (M7 Phase 5): when an upload completes a swing's third role, an
+in-process worker runs that same pipeline off the event loop and the results page has something
+to render. A partial bundle waits for an explicit "Analyze anyway" rather than a timeout.
+
+One deliberate boundary remains: the shot is **attached and displayed, never scored** — outcome
+checkpoints need per-club benchmark bands `ranges.json` does not have (ADR-009). `detection/`
+(YOLOv8) and SQLite are not in the running path at all.
 
 ### The commands, precisely
 
@@ -85,8 +87,10 @@ python scripts/analyze_bundle.py <SESSION/SWING | swing-dir> [--list-swings] [--
 #   exit 0 clean · 1 result produced but something is flagged · 2 no result
 ```
 
-There are no long-running services yet. No MCP server (M3), no FastAPI app (M7 Phase 5), no
-web UI (M5) — `scripts/run_mcp_server.py` raises `NotImplementedError`.
+One long-running service: the FastAPI upload server (`scripts/run_server.py`, M7 Phase 5),
+which also carries the background analysis worker and serves the upload and results pages. No
+MCP server (M3) — `scripts/run_mcp_server.py` raises `NotImplementedError` — and no React UI
+(M5); the two static pages under `api/static/` are what stands in for it.
 
 Offline reference-data tooling (`scripts/golfdb/`, the `research` extra) is a separate
 concern from the runtime: `fetch` → `ingest_labels` → `extract_pose` → `derive_pose_metrics`
@@ -110,10 +114,10 @@ flowchart TD
     ANA["analysis/<br/>smoothing, phases, alignment,<br/>checkpoints, scoring, benchmarks"] --> C
     FB["feedback/<br/>rules"] --> C
     DET["detection/ — stub"] -.-> C
-    STO["storage/ — docstring only"] -.-> C
-    API["api/ — docstring only"] -.-> C
+    STO["storage/ — bundle store"] --> C
+    API["api/ — upload server,<br/>pipeline, analysis worker"] --> C
 
-    CLI["scripts/*.py<br/>the only orchestrators today"] --> CAP
+    CLI["scripts/*.py<br/>thin CLIs over api/pipeline.py"] --> CAP
     CLI --> POSE
     CLI --> ANA
     CLI --> FB
@@ -131,8 +135,11 @@ is pure-Python/stdlib by rule (ADR-008), which is why the test suite runs on
 `pip install -e '.[dev]'`. It is also what let a shot source nobody planned for — OCR of a
 simulator screen (ADR-014) — arrive as one new adapter rather than a rewrite.
 
-Note that `api/` is intended to be the orchestrator, but today **`scripts/` fills that role**.
-That is the honest picture; M7 Phase 5 moves it.
+`api/` is now the orchestrator it was always meant to be: the bundle pipeline lives in
+`api/pipeline.py`, and `scripts/analyze_bundle.py` is a presentation layer over it (M7 Phase 5).
+The worker and the CLI therefore run the *same* code, so a phone's results page and a terminal
+cannot disagree. `pipeline.py` imports no web framework, which is what lets the CLI keep working
+on a `vision`-only install — pinned by `tests/api/test_pipeline_imports.py`.
 
 ### Interface contracts (key data shapes)
 
@@ -142,7 +149,7 @@ That is the honest picture; M7 Phase 5 moves it.
 | Detections | Detection → Analysis | `List[FrameDetections]` — bounding boxes + class (club_head, ball) per frame | contract only |
 | Shot Data | Launch monitor → Analysis | `ShotData` — club_speed, ball_speed, launch_angle, spin_rate, club_face_angle, club_path, smash_factor, distances, plus `provenance` (confidence + audit trail) for sources that *infer* metrics rather than receive them (ADR-014) | ✅ produced, not consumed |
 | Swing Result | Analysis → Feedback | `SwingResult` — phases, checkpoint scores with tour percentiles, mechanics/outcome/overall scores, `unscored` names, judged `intent` | ✅ (`outcome_score` always `None`) |
-| Feedback | Feedback → UI | `FeedbackPayload` — overall score, ranked tips with severity, headline | ✅ produced, no UI consumes it |
+| Feedback | Feedback → UI | `FeedbackPayload` — overall score, ranked tips with severity, headline | ✅ produced and rendered by `api/static/results.html` |
 | Reference | Benchmarks → Analysis | `ranges.json` bands + `golfdb_v1.json` distributions, both with provenance | ✅ |
 
 ---
@@ -231,7 +238,8 @@ gitignored and never created. Everything persists as files:
 | Overlays | `data/processed/<clip>.overlay.mp4`, `.analysis.mp4` | ✅ |
 | Parsed shots | `data/processed/shots/` (content-addressed) | ✅ written by `import_shot_screens.py` and by `analyze_bundle.py` |
 | Swing bundles | `data/processed/sessions/<session>/<swing>/` + `manifest.json` | ✅ written by the upload route (M7 Phase 3/5) |
-| ↳ *analysis artifacts* | `analysis.json`, `aligned.mp4`, `<role>.keypoints.json` in the same directory | ✅ written by `analyze_bundle.py`; `analysis.json` is a `SwingBundleResult` with the heavy streams excluded (the keypoints sit beside it) |
+| ↳ *analysis artifacts* | `analysis.json`, `aligned.mp4`, `<role>.keypoints.json` in the same directory | ✅ written by `api/pipeline.py`, from the worker or the CLI; `analysis.json` is a `SwingBundleResult` with the heavy streams excluded (the keypoints sit beside it) |
+| ↳ *worker state* | `analysis.state.json` in the same directory | ✅ `AnalysisState` — queued/running/done/failed, the role→sha256 map the result was computed from (so a re-upload invalidates it), and a denormalised score/headline so the 5 s status poll never parses `analysis.json` |
 | Reference corpus | `data/reference/golfdb/` | ✅ gitignored for licensing (ADR-012) |
 | Benchmark aggregates | `src/golf_coach/analysis/benchmarks/*.json` | ✅ committed |
 | Swing results, sessions, trends | SQLite `swings` / `shots` tables | ❌ designed only — M7 Phase 3 |

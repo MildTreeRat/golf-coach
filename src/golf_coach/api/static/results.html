@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Golf Coach Results</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { font-family: system-ui, sans-serif; margin: 0; padding: 1.25rem; max-width: 480px; }
+  h1 { font-size: 1.1rem; margin: 0 0 0.25rem; }
+  h2 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em;
+       opacity: 0.6; margin: 1.5rem 0 0.5rem; }
+  a.back { font-size: 0.85rem; }
+  .score { font-size: 2.4rem; font-weight: 700; line-height: 1; margin: 0.75rem 0 0.25rem; }
+  .score small { font-size: 0.9rem; font-weight: 400; opacity: 0.7; }
+  .headline { margin: 0.5rem 0 0; font-size: 0.95rem; }
+  .banner { padding: 0.7rem 0.85rem; border-radius: 8px; margin-top: 1rem; font-size: 0.9rem; }
+  .banner.warn { background: rgba(220,160,40,0.18); border: 1px solid rgba(220,160,40,0.5); }
+  .banner.error { background: rgba(200,60,60,0.18); border: 1px solid rgba(200,60,60,0.5); }
+  .banner.info { background: rgba(128,128,128,0.15); }
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  th { text-align: left; font-weight: 600; opacity: 0.6; padding: 0.2rem 0.3rem; }
+  td { padding: 0.35rem 0.3rem; border-top: 1px solid rgba(128,128,128,0.25); }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .pass { color: #2a7; font-weight: 600; }
+  .miss { color: #c93; font-weight: 600; }
+  ul.notes { margin: 0; padding-left: 1.1rem; font-size: 0.87rem; }
+  ul.notes li { margin-bottom: 0.35rem; }
+  .tip { border-left: 3px solid #999; padding: 0.4rem 0 0.4rem 0.6rem; margin-bottom: 0.7rem;
+         font-size: 0.88rem; }
+  .tip.major { border-color: #c33; }
+  .tip.minor { border-color: #c93; }
+  .tip.info  { border-color: #2a7; }
+  .sev { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.65;
+         display: block; margin-bottom: 0.15rem; }
+  .shot { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.4rem 0.8rem;
+          font-size: 0.87rem; }
+  .shot div { display: flex; justify-content: space-between;
+              border-bottom: 1px solid rgba(128,128,128,0.2); padding-bottom: 0.2rem; }
+  .shot span:last-child { font-variant-numeric: tabular-nums; font-weight: 600; }
+  video { width: 100%; border-radius: 8px; background: #000; margin-top: 0.25rem; }
+  .muted { opacity: 0.65; font-size: 0.83rem; }
+</style>
+</head>
+<body>
+<a class="back" href="/">&larr; Upload</a>
+<div id="root"><p class="muted">Loading...</p></div>
+
+<script>
+const TOKEN_KEY = "golf_coach_token";
+const params = new URLSearchParams(location.search);
+const sessionId = params.get("session");
+const swingId = params.get("swing");
+const root = document.getElementById("root");
+
+function token() { return localStorage.getItem(TOKEN_KEY); }
+function authHeaders() {
+  const t = token();
+  return t ? { "X-Upload-Token": t } : {};
+}
+
+// A <video> element sends no custom headers, so the token has to ride in the query string.
+// The guard accepts either (ADR-016).
+function videoUrl(name) {
+  const base = `/api/sessions/${encodeURIComponent(sessionId)}/swings/${encodeURIComponent(swingId)}/video/${name}`;
+  const t = token();
+  return t ? `${base}?t=${encodeURIComponent(t)}` : base;
+}
+
+function esc(value) {
+  return String(value).replace(/[&<>"']/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+}
+
+function num(value, digits = 2) {
+  return typeof value === "number" ? value.toFixed(digits).replace(/\.?0+$/, "") : "-";
+}
+
+function roleName(role) { return role.replace(/_/g, "-"); }
+
+async function load() {
+  if (!sessionId || !swingId) {
+    root.innerHTML = `<div class="banner error">No swing selected. Go back and pick one.</div>`;
+    return;
+  }
+  let payload;
+  try {
+    const res = await fetch(
+      `/api/sessions/${encodeURIComponent(sessionId)}/swings/${encodeURIComponent(swingId)}`,
+      { headers: authHeaders() });
+    if (res.status === 401) {
+      root.innerHTML = `<div class="banner error">This phone isn't set up. Reopen the setup
+        link (the one ending in /?t=...) to register it.</div>`;
+      return;
+    }
+    if (res.status === 404) {
+      root.innerHTML = `<div class="banner error">No swing ${esc(swingId)} in session
+        ${esc(sessionId)}.</div>`;
+      return;
+    }
+    payload = await res.json();
+  } catch (err) {
+    root.innerHTML = `<div class="banner error">Could not load: ${esc(err.message)}</div>`;
+    return;
+  }
+  render(payload);
+
+  // Opened straight from a link while the worker is still going: keep checking rather than
+  // making the user pull to refresh.
+  const status = payload.analysis && payload.analysis.status;
+  if (status === "queued" || status === "running") setTimeout(load, 5000);
+}
+
+function render(payload) {
+  const analysis = payload.analysis || {};
+  const result = payload.result;
+
+  if (!result) {
+    root.innerHTML = header(payload) + waiting(analysis, payload);
+    return;
+  }
+
+  const swing = result.swing || {};
+  const parts = [header(payload)];
+
+  parts.push(`<div class="score">${num(swing.overall_score, 0)}<small>/100</small></div>`);
+  if (typeof swing.mechanics_score === "number") {
+    parts.push(`<p class="muted">mechanics ${num(swing.mechanics_score, 0)}/100</p>`);
+  }
+  if (result.feedback && result.feedback.headline) {
+    parts.push(`<p class="headline">${esc(result.feedback.headline)}</p>`);
+  }
+
+  // The "results are not as good" warning, made concrete after the fact.
+  if (analysis.partial && (analysis.missing_roles || []).length) {
+    parts.push(`<div class="banner warn"><strong>Incomplete bundle.</strong> Analyzed without
+      ${analysis.missing_roles.map(roleName).map(esc).join(", ")}. These results are thinner
+      than a full three-file swing.</div>`);
+  }
+
+  // Notes above the tips, deliberately: a note can say a checkpoint's own input was
+  // impossible, and a headline built on that number must not be read without it.
+  if ((result.notes || []).length) {
+    parts.push(`<h2>Read first</h2><ul class="notes">` +
+      result.notes.map((n) => `<li>${esc(n)}</li>`).join("") + `</ul>`);
+  }
+
+  parts.push(checkpoints(swing));
+  parts.push(tips(result.feedback));
+  parts.push(shotBlock(swing.shot));
+  parts.push(videoBlock(analysis, result));
+
+  root.innerHTML = parts.join("");
+}
+
+function header(payload) {
+  return `<h1>Swing ${esc(payload.swing_id)} <span class="muted">&middot;
+    ${esc(payload.session_id)}</span></h1>`;
+}
+
+function waiting(analysis, payload) {
+  if (analysis.status === "failed") {
+    return `<div class="banner error"><strong>Analysis failed.</strong>
+      ${esc(analysis.error || "No reason recorded.")}</div>`;
+  }
+  if (analysis.status === "queued" || analysis.status === "running") {
+    return `<div class="banner info">Analyzing this swing now — pose on a 4K clip takes a few
+      minutes. This page refreshes itself.</div>`;
+  }
+  const missing = (payload.missing_roles || []).map(roleName).map(esc).join(", ");
+  return `<div class="banner info">Not analyzed yet.${missing
+    ? ` Still waiting on ${missing}.` : ""}</div>`;
+}
+
+function checkpoints(swing) {
+  const rows = (swing.checkpoint_scores || []).map((cp) => {
+    const band = cp.expected_low !== null && cp.expected_low !== undefined
+      ? `${num(cp.expected_low)} - ${num(cp.expected_high)}` : "no band";
+    const pct = typeof cp.percentile === "number"
+      ? `${num(cp.percentile, 0)}<span class="muted">${cp.population_n
+          ? ` / ${cp.population_n}` : ""}</span>` : "-";
+    return `<tr>
+      <td>${esc(cp.name)}</td>
+      <td class="num">${num(cp.observed)}</td>
+      <td class="num muted">${band}</td>
+      <td class="${cp.passed ? "pass" : "miss"}">${cp.passed ? "PASS" : "MISS"}</td>
+      <td class="num">${pct}</td>
+    </tr>`;
+  }).join("");
+
+  if (!rows) {
+    return `<h2>Checkpoints</h2><p class="muted">None scored — no benchmark band matched, or
+      the swing could not be segmented.</p>`;
+  }
+  const unscored = (swing.unscored || []).length
+    ? `<p class="muted">not measured: ${swing.unscored.map(esc).join(", ")}</p>` : "";
+  return `<h2>Checkpoints</h2><table>
+    <tr><th>checkpoint</th><th class="num">observed</th><th class="num">tour band</th>
+        <th></th><th class="num">pct</th></tr>
+    ${rows}</table>${unscored}`;
+}
+
+function tips(feedback) {
+  const list = (feedback && feedback.tips) || [];
+  if (!list.length) return "";
+  return `<h2>Tips — most actionable first</h2>` + list.map((tip) => {
+    const sev = String(tip.severity || "info").toLowerCase();
+    return `<div class="tip ${esc(sev)}"><span class="sev">${esc(sev)}${tip.checkpoint
+      ? ` &middot; ${esc(tip.checkpoint)}` : ""}</span>${esc(tip.text)}</div>`;
+  }).join("");
+}
+
+const SHOT_FIELDS = [
+  ["carry", "carry_distance"], ["total", "total_distance"],
+  ["ball speed", "ball_speed"], ["club speed", "club_head_speed"],
+  ["smash", "smash_factor"], ["path", "club_path"],
+  ["face", "club_face_angle"], ["launch", "launch_angle"],
+  ["spin", "spin_rate"], ["shape", "shot_type"], ["strike", "impact_position"],
+];
+
+function shotBlock(shot) {
+  if (!shot) {
+    return `<h2>Shot data</h2><p class="muted">No shot-screen photo in this bundle — no
+      launch-monitor numbers attached.</p>`;
+  }
+  const cells = SHOT_FIELDS
+    .filter(([, key]) => shot[key] !== null && shot[key] !== undefined)
+    .map(([label, key]) => {
+      const raw = shot[key];
+      const value = typeof raw === "number" ? num(raw) : esc(raw);
+      return `<div><span>${esc(label)}</span><span>${value}</span></div>`;
+    }).join("");
+
+  const prov = shot.provenance;
+  // ADR-014: OCR off a photograph of a screen is trusted, but never silently.
+  const review = prov && prov.needs_review
+    ? `<div class="banner warn"><strong>Needs review.</strong> These numbers were read off the
+       screen photo with ${num((prov.parse_confidence || 0) * 100, 0)}% confidence.
+       ${(prov.warnings || []).map(esc).join(" ")}</div>` : "";
+  return `<h2>Shot data</h2><div class="shot">${cells}</div>${review}`;
+}
+
+function videoBlock(analysis, result) {
+  if (analysis.has_video) {
+    const hostile = analysis.video_codec === "mp4v";
+    const quality = result.alignment && result.alignment.quality
+      ? `<p class="muted">${esc(result.alignment.quality)}</p>` : "";
+    return `<h2>Aligned views</h2>
+      <video controls playsinline preload="metadata" src="${videoUrl("aligned")}"></video>
+      ${quality}
+      ${hostile ? `<div class="banner warn">This clip is MPEG-4 Part 2, which most browsers
+        will not play. Download it, or install openh264 so H.264 is available — see the
+        README.</div>` : ""}
+      <p><a href="${videoUrl("aligned")}" download>Download the aligned clip</a></p>`;
+  }
+  // No aligned render — usually a face-on-only bundle. The raw clip is better than nothing.
+  return `<h2>Video</h2><p class="muted">No aligned video: the two views could not be aligned,
+    or there was only one.</p>
+    <video controls playsinline preload="metadata" src="${videoUrl("face_on")}"></video>`;
+}
+
+load();
+</script>
+</body>
+</html>

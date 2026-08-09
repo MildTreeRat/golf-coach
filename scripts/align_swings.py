@@ -168,7 +168,11 @@ def _render(
 ) -> None:
     """Open the clips and hand them to the renderer, which streams both."""
     from golf_coach.capture.file import FileVideoSource
-    from golf_coach.pose.side_by_side import Panel, render_side_by_side
+    from golf_coach.pose.side_by_side import (
+        BROWSER_HOSTILE_CODECS,
+        Panel,
+        render_side_by_side,
+    )
 
     schedule = pair_frames(
         alignment, len(kp_a), len(kp_b), reference=reference, tau_range=tau_range
@@ -183,7 +187,7 @@ def _render(
     with ExitStack() as stack:
         source_a = stack.enter_context(FileVideoSource(video_a)) if video_a else None
         source_b = stack.enter_context(FileVideoSource(video_b)) if video_b else None
-        written = render_side_by_side(
+        render = render_side_by_side(
             out_path,
             schedule,
             Panel(kp_a, label_a, file_a.clip, source_a.frames() if source_a else ()),
@@ -192,7 +196,9 @@ def _render(
             quality=alignment.quality,
         )
 
-    print(f"Wrote {written} aligned frames -> {out_path}")
+    print(f"Wrote {render.frames} aligned frames ({render.codec}) -> {out_path}")
+    if render.codec in BROWSER_HOSTILE_CODECS:
+        print(f"  note: {render.codec} plays in VLC but not in most browsers - see README")
 
 
 def _auto_window(

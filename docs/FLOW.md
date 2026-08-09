@@ -90,7 +90,7 @@ flowchart TD
     subgraph CAP["Capture — I/O edge"]
         FSRC["FileVideoSource — phone/sample clip ✅"]
         CSRC["LiveCameraSource — ELP camera (later)"]
-        UPL["Phone upload over Tailscale ✅ — ingest only, no auto-analysis yet"]
+        UPL["Phone upload over Tailscale ✅ — analysis auto-triggers on a complete bundle"]
     end
 
     subgraph LM["Launch Monitor — I/O edge"]
@@ -141,8 +141,15 @@ shot store already share — so an already-parsed shot attaches with no OCR extr
 **attached and displayed, not scored**; the `outcome` axis still waits on per-club benchmark
 bands (ADR-009).
 
-**The gap that matters most now:** nothing *triggers* any of it. An upload lands a file and
-stops; `analyze_bundle.py` has to be run by hand. Joining the two is Phase 5's background worker.
+**That gap is now closed** (M7 Phase 5). The third role landing marks a swing complete, and
+`api/worker.py` runs the pipeline on it off the event loop; `api/static/results.html` renders
+the result. `analyze_bundle.py` still exists and still works — it is now a CLI over the same
+`api/pipeline.py` the worker calls, not a second implementation.
+
+**The gap that matters most now:** the tempo checkpoint is untrustworthy on real footage
+(`phases._motion_start` collapses onto the top when a golfer pauses at address), so the ranked
+tips can lead with a confident, wrong "work on tempo first" — and unattended there is no human
+reading the caveat. See the ROADMAP item.
 
 ---
 
@@ -220,10 +227,10 @@ delivers a second stream into analysis.
 ```mermaid
 graph TB
     subgraph HomeLab ["Home Lab Machine"]
-        subgraph Services ["Long-Running Services — none exist yet"]
+        subgraph Services ["Long-Running Services — one exists"]
             MCP_SRV["MCP Server<br/>Python, port 8081<br/>M3"]
-            API["Backend API<br/>FastAPI, port 8080<br/>M7 Phase 5"]
-            WEB["Web UI<br/>React dev server, port 3000<br/>M5"]
+            API["Backend API + analysis worker<br/>FastAPI, port 3000<br/>M7 Phase 5 ✅"]
+            WEB["Web UI<br/>React dev server<br/>M5 — static pages stand in for it"]
         end
         subgraph Scripts ["Run-on-Demand — these exist ✅"]
             CLIS["run_pose.py, analyze_swing.py,<br/>import_shot_screens.py, align_swings.py,<br/>analyze_bundle.py ✅"]
@@ -251,9 +258,10 @@ graph TB
     class CLIS,RESEARCH,FILES built;
 ```
 
-Ports are configured in `src/golf_coach/config.py` (`api_port` 8080, `mcp_port` 8081) but
-nothing binds them yet. **There is no startup sequence** — see
-[ARCHITECTURE.md](ARCHITECTURE.md) §1 for the CLI commands that do exist.
+Ports are configured in `src/golf_coach/config.py` (`api_port` **3000** — 8080 is unusable on
+this machine, see the note in `config.py` — and `mcp_port` 8081). The startup sequence is one
+command, `python scripts/run_server.py`; `mcp_port` still binds nothing. See
+[ARCHITECTURE.md](ARCHITECTURE.md) §1 for the CLI commands.
 
 ### Timing expectations — estimates, never measured
 

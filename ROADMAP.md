@@ -18,7 +18,7 @@ wording; only the grouping and the M4 checklist have been corrected.
 | **M5-FB** Ranked coaching | ✅ Done | — | [§M5-FB](#m5-fb-prioritised-coaching-feedback-pose-only-slice-of-m5--done) |
 | **M3** Launch monitor / MCP | 🟡 In progress | Nothing — screen OCR done; MCP server left | [§M3](#milestone-3-launch-monitor-integration--in-progress) |
 | **M1.5** Detectability spike | ⬜ Next | Nothing — phone clips of the impact zone | [§M1.5](#milestone-15-club-head-detectability-spike-de-risk-before-investing) |
-| **M7** Two-phone sim capture | 🟡 In progress, 6/7 phases (3 & 5 trimmed) | Nothing — two iPhones + a sim bay | [§M7](#milestone-7-two-phone-sim-capture-no-hardware-purchase) |
+| **M7** Two-phone sim capture | 🟡 In progress, 6/7 phases (3 trimmed) | Nothing — two iPhones + a sim bay | [§M7](#milestone-7-two-phone-sim-capture-no-hardware-purchase) |
 | **M4** full (outcome axis) | ⬜ Blocked | The M2 + M3 streams | [§M4 full](#milestone-4-full-swing-analysis-engine--the-outcome-axis) |
 | **M5** Feedback UI | ⬜ Not started | M7 Phase 5 gives the host | [§M5](#milestone-5-feedback-ui) |
 | **M6** LLM coaching | ⬜ Not started | M5 | [§M6](#milestone-6-llm-powered-coaching) |
@@ -318,13 +318,14 @@ zero-setup portability. Triangulation is unreachable with hand-held phones (no c
 possible), so down-the-line is **capture + align only**: scoring stays on the three validated
 face-on checkpoints. Each phase below is one commit, planned in a fresh session.
 
-> **Status (2026-08-08):** Phases 1–6 built (3 and 5 **trimmed**). With Phase 4 the full use
-> case works end to end offline: `python scripts/analyze_bundle.py <session>/<swing>` turns an
-> uploaded bundle into a score, ranked tips, an aligned side-by-side video and the HD Golf
-> numbers, all beside the clips. **Still no auto-trigger on arrival** — an upload lands the file
-> and nothing more; wiring the two together is Phase 5's background worker, which is why
-> `SwingManifest.status()` still uses the neutral `collecting`/`complete` rather than
-> `pending`/`ready`/`analyzed`. Only the Phase 0 field spike is unstarted.
+> **Status (2026-08-09):** Phases 1–6 built (3 **trimmed**). The whole use case now runs from a
+> phone: upload face-on, down-the-line and a photo of the shot screen, and the third file
+> triggers a background worker that scores the swing, ranks the tips, aligns the two views and
+> attaches the HD Golf numbers — a results page has them by the time you walk back from the bay.
+> Verified end to end at 31.8 s for a 30 fps pair; uploads stay instant throughout because the
+> pipeline runs in a thread. `SwingManifest.status()` still uses the neutral
+> `collecting`/`complete`: analysis state lives in its own `analysis.state.json` sidecar rather
+> than in the ingestion manifest. Only the Phase 0 field spike is unstarted.
 
 - [ ] **Phase 0** — Field spike: does `segment_phases()` work on down-the-line footage? Does
       OpenCV decode iPhone HEVC? What does `CAP_PROP_FPS` report for slo-mo? Gate for 1 and 2
@@ -367,11 +368,18 @@ face-on checkpoints. Each phase below is one commit, planned in a fresh session.
       a downswing's length of the top — or in `evaluate_tempo`, applying the plausibility floor
       `analysis/alignment.py` already has as `MIN_PLAUSIBLE_TEMPO`. Measure against GolfDB first:
       that corpus is where the tempo band came from
-- [x] **Phase 5** — Local server + phone upload page, **trimmed**: fills the `api/` seam
-      (`api/app.py`) — `POST /api/uploads` streams to disk, a static page (`api/static/`) with a
-      role picker sticky in `localStorage` and a live status panel. Localhost only
-      (`scripts/run_server.py` hard-codes `127.0.0.1`). No background worker — upload lands the
-      file and nothing more; analysis wiring is Phase 4's job, not built here
+- [x] **Phase 5** — Local server + phone upload page *(ingestion 2026-08-06; worker and results
+      page 2026-08-09, completing the phase)*: `POST /api/uploads` streams to disk, a static page
+      (`api/static/`) with a role picker sticky in `localStorage` and a live status panel.
+      Localhost only (`scripts/run_server.py` hard-codes `127.0.0.1`).
+      **The loop is now closed**: the orchestration moved out of `scripts/analyze_bundle.py` into
+      `api/pipeline.py` (which imports no fastapi, so the CLI still runs without the `api` extra),
+      `api/worker.py` runs it on an asyncio queue at concurrency 1 via `asyncio.to_thread`, and
+      `api/static/results.html` renders score, checkpoints, tips, shot numbers and the aligned
+      video. State lives in an `analysis.state.json` sidecar keyed on the role→sha256 map, so a
+      re-uploaded clip invalidates its own result. **Analysis triggers only on a complete
+      bundle** — a partial one waits for an explicit "Analyze anyway", because no timeout guesses
+      right about whether the second phone is still walking back from the bay
 - [x] **Phase 6** — Tailscale exposure, **and it did not land as planned**: rather than binding the
       tailnet IP, the bind stays on `127.0.0.1` and `tailscale serve` proxies to it over real TLS.
       Because a helper's phone can't join the tailnet, `tailscale funnel` covers guest devices —

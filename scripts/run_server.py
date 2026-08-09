@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import argparse
 import ipaddress
+import logging
 import sys
 
 from golf_coach.config import settings
@@ -74,6 +75,13 @@ def main(argv: list[str]) -> int:
         return 1
 
     from golf_coach.api.app import create_app
+
+    # uvicorn configures its own loggers and leaves the root at WARNING, so without this the
+    # background worker runs completely silently — no "queued", no "analyzed in 34s", nothing
+    # between an upload landing and a score appearing. Logging config belongs at the entry
+    # point, not in library code, which is why it is here rather than in `api/worker.py`.
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s:     %(message)s")
+    logging.getLogger("golf_coach").setLevel(logging.INFO)
 
     print(f"upload server:  http://{args.host}:{args.port}/")
     if settings.upload_token:
