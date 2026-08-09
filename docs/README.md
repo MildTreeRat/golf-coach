@@ -1,7 +1,12 @@
 # Documentation map
 
-31 documents. This page says which one to read, and — just as importantly — which ones are
-records of the past rather than descriptions of the present.
+38 markdown documents: 31 in `docs/` — 11 here at the top level (including this map), 17 ADRs,
+3 archived — plus 7 outside it (the three at the repo root, and one each in `data/` and
+`frontend/`, two in `spikes/`). This page says which one to read, and — just as importantly —
+which ones are records of the past rather than descriptions of the present.
+
+*(The breakdown is spelled out so the count can be checked rather than trusted — `git ls-files
+'*.md'` — because a bare number here has gone stale twice.)*
 
 **Every doc declares a tier in its first lines:**
 
@@ -50,7 +55,8 @@ estimator choice, the tempo band, why the panel is three checkpoints and not fiv
 | [M5_COACHING_FEEDBACK.md](M5_COACHING_FEEDBACK.md) | AS-BUILT | How are tips ranked and why does ranking need two different signals? Why did the panel stay at three checkpoints? |
 | [M4_FUNDAMENTALS_PANEL.md](M4_FUNDAMENTALS_PANEL.md) | REFERENCE | What can face-on 2D pose measure, and what is deferred to a second view / detection / launch monitor? *(Its Findings numbers are superseded.)* |
 | [M4_POSE_BAKEOFF.md](M4_POSE_BAKEOFF.md) | REFERENCE | Has this been tried already? The estimator bake-off, six rejected address signals, the arm-parallel no-go. **782 lines — grep it, don't read it.** |
-| [M7_TWO_PHONE_CAPTURE.md](M7_TWO_PHONE_CAPTURE.md) | TARGET | The current live plan: two phones at a sim, seven phases, with a self-contained planning prompt per phase. |
+| [M7_TWO_PHONE_CAPTURE.md](M7_TWO_PHONE_CAPTURE.md) | TARGET | The current live plan: two phones at a sim, seven phases (six built). **Its planning prompts are historical — Phase 6's is actively wrong and bannered.** |
+| [BAY_SESSION_RUNBOOK.md](BAY_SESSION_RUNBOOK.md) | AS-BUILT | Taking the two-phone capture to a real sim: preflight at home, phone settings and why 1080p60, measured timings, and what to check when it doesn't work. *(Failure modes are predicted until the first bay session.)* |
 | [M7_TWO_PHONE_SPIKE.md](M7_TWO_PHONE_SPIKE.md) | REFERENCE | Does phase detection survive down-the-line, does OpenCV decode iPhone HEVC, and does `CAP_PROP_FPS` mean anything on slo-mo? Thresholds committed 2026-08-07; **results pending footage**. |
 | [../data/README.md](../data/README.md) | AS-BUILT | The data layout, the three-tier reference cache, and how to rebuild the GolfDB corpus. |
 
@@ -61,7 +67,7 @@ estimator choice, the tempo band, why the panel is three checkpoints and not fiv
 
 ## Decisions (ADRs)
 
-14 decisions, 11 addenda between them. **The addenda are where reality corrected the original
+16 decisions, 11 addenda between them. **The addenda are where reality corrected the original
 call**, so a doc's original Decision section is not always the final word — the counts below
 exist so you don't miss them.
 

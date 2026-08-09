@@ -104,6 +104,10 @@ Both publish `https://<machine>.<tailnet>.ts.net`. Open **`https://<machine>.<ta
 once per phone: the page stores the token and the role, strips the token from the URL, and every
 upload after that is two taps. Verify it properly with WiFi *off* — on cellular is the real test.
 
+**Taking this to an actual sim bay?** [docs/BAY_SESSION_RUNBOOK.md](docs/BAY_SESSION_RUNBOOK.md)
+is the preflight checklist, the phone camera settings (1080p60, not 4K, and why), the measured
+timings, and what to check when it doesn't work.
+
 **The third file starts the analysis.** When a swing has all three roles, a background worker
 runs the same pipeline `analyze_bundle.py` does — pose per view, the shot screen, scoring,
 alignment — and the swing gets a **View results** link on the upload page. Nothing auto-runs on
@@ -199,7 +203,7 @@ golf-coach/
 │   ├── ARCHITECTURE.md      # the system as built
 │   ├── FLOW.md              # the target design + build order
 │   ├── PROJECT_CHARTER.md
-│   ├── decisions/           # ADRs 000–014
+│   ├── decisions/           # ADRs 000–016
 │   └── archive/             # superseded milestone docs, kept as record
 ├── src/
 │   └── golf_coach/

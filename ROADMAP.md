@@ -1,6 +1,6 @@
 # Roadmap: AI Golf Swing Trainer
 
-## Last Updated: 2026-08-05
+## Last Updated: 2026-08-09
 
 Grouped by **state**, not by number, because the numbers no longer run in order: the pose-only
 slices (M4-PoC, M4-PoC+, M4-REF, M5-FB) delivered the mechanics half of M4 and the ranking half
@@ -371,7 +371,8 @@ face-on checkpoints. Each phase below is one commit, planned in a fresh session.
 - [x] **Phase 5** — Local server + phone upload page *(ingestion 2026-08-06; worker and results
       page 2026-08-09, completing the phase)*: `POST /api/uploads` streams to disk, a static page
       (`api/static/`) with a role picker sticky in `localStorage` and a live status panel.
-      Localhost only (`scripts/run_server.py` hard-codes `127.0.0.1`).
+      Loopback only — `run_server.py` defaults to `127.0.0.1` and refuses a non-loopback `--host`
+      with no token set; Phase 6 puts Tailscale in front rather than widening it (ADR-016).
       **The loop is now closed**: the orchestration moved out of `scripts/analyze_bundle.py` into
       `api/pipeline.py` (which imports no fastapi, so the CLI still runs without the `api` extra),
       `api/worker.py` runs it on an asyncio queue at concurrency 1 via `asyncio.to_thread`, and
@@ -389,7 +390,9 @@ face-on checkpoints. Each phase below is one commit, planned in a fresh session.
 
 **Exit Criteria**: one bay session where every swing assembles from the right two clips, the
 aligned side-by-side video's IMPACT banners land together in both panels, and shot data attaches
-to the correct swing.
+to the correct swing. That session also collects Phase 0's footage — preflight, phone settings,
+timings and failure modes are in
+[docs/BAY_SESSION_RUNBOOK.md](docs/BAY_SESSION_RUNBOOK.md).
 
 
 ---

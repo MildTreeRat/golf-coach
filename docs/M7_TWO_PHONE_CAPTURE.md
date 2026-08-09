@@ -1,25 +1,34 @@
 # M7: Two-Phone Sim Capture — multi-angle ingestion, alignment, and a host
 
-**Status**: planned, 2026-08-05 — no phase implemented yet
+**Status**: 2026-08-09 — **six of seven phases built** (3 trimmed). Only the Phase 0 field spike
+is unstarted; it needs a bay session, not code. Per-phase detail below records what actually
+shipped where it diverged from the plan.
 **Decisions**: [ADR-011](decisions/011-camera-synchronization.md) + its 2026-08-05 addendum
 (this is a second capture tier, not a replacement), [ADR-014](decisions/014-screen-capture-shot-ingestion.md)
 (shot ingestion, offline-first stance), [ADR-003](decisions/003-camera-hardware.md) addendum 2026-07-02b
-(face-on vs down-the-line stream assignment). ADR-015 and ADR-016 are drafted *during* phases 2 and 6.
+(face-on vs down-the-line stream assignment). [ADR-015](decisions/015-handheld-two-phone-capture-and-event-anchored-alignment.md)
+and [ADR-016](decisions/016-local-first-host-and-phone-upload-topology.md) were written during
+phases 2 and 6, as planned, and are now Accepted.
+**Taking it to a bay**: [BAY_SESSION_RUNBOOK.md](BAY_SESSION_RUNBOOK.md).
 
 ## How to use this doc
 
 M7 is a **ladder of seven phases**. Each one is independently valuable, ends in a single commit, and
-depends only on the phases before it. Work them in order.
+depends only on the phases before it. **Six are built — start at [the ladder](#the-ladder) to see
+which.**
 
-**Plan each phase in a fresh session using the prompt at the bottom of this doc.** That is deliberate:
-these phases span capture internals, a pure-functional alignment algorithm, a storage state machine,
-and a web server, and plan quality drops noticeably when one context is stretched across all of them.
-Each prompt is self-contained — it names the relevant files, the constraints, and the things
-explicitly *not* to build — so a cold session produces a good plan without re-deriving the
-investigation below.
+Each phase was planned in a fresh session using a self-contained prompt at the bottom of this doc.
+That was deliberate: these phases span capture internals, a pure-functional alignment algorithm, a
+storage state machine, and a web server, and plan quality drops noticeably when one context is
+stretched across all of them.
 
-Prefix any prompt with *"Read docs/M7_TWO_PHONE_CAPTURE.md for project context, then plan Phase N."*
-The standalone context inside each prompt is belt-and-braces for anyone working without this doc.
+> ⚠️ **The prompts are now historical, except Phase 0's.** They describe what was believed before
+> each phase was built, and several phases deliberately diverged from their own prompt. **Phase 6's
+> prompt is actively wrong** and carries a banner saying so. Check the ladder before copying
+> anything from that section — the per-phase sections above it are the record of what shipped.
+
+Prefix the Phase 0 prompt with *"Read docs/M7_TWO_PHONE_CAPTURE.md for project context, then plan
+Phase 0."* The standalone context inside it is belt-and-braces for anyone working without this doc.
 
 ## The ask
 
@@ -80,10 +89,14 @@ zero-setup portability, and the two coexist. See the 2026-08-05 addendum on ADR-
 | 0 | Field spike | `docs/M7_TWO_PHONE_SPIKE.md`. Gate: decides scope of 1 and 2. | [ ] |
 | 1 | Capture layer survives phone footage | Streaming pose, `camera_id`, clip metadata w/ fps | [x] |
 | 2 | **Video sync / alignment engine** | `analysis/alignment.py` + side-by-side CLI | [x] |
-| 3 | Session & swing bundle store | `storage/` manifest + arrival state machine | [ ] |
-| 4 | Bundle analysis + launch-monitor join | `analyze_swing_bundle()`, `SwingResult.shot` populated | [ ] |
-| 5 | Local server + phone upload page | FastAPI on localhost, browser upload, worker | [ ] |
-| 6 | Tailscale exposure | Phone-to-desktop over tailnet, on-site validation | [ ] |
+| 3 | Session & swing bundle store | `storage/` manifest + arrival state machine | [x] **trimmed** |
+| 4 | Bundle analysis + launch-monitor join | `analyze_swing_bundle()`, `SwingResult.shot` populated | [x] |
+| 5 | Local server + phone upload page | FastAPI on localhost, browser upload, worker | [x] |
+| 6 | Tailscale exposure | Phone-to-desktop over tailnet, on-site validation | [x] *(not as specified — see below)* |
+
+Phases 3–6 landed out of order: 6 shipped before 4 and 5 completed. On-site validation is still
+outstanding on all of it — that is the bay session, and Phase 0's footage comes from the same trip.
+See [BAY_SESSION_RUNBOOK.md](BAY_SESSION_RUNBOOK.md).
 
 ---
 
@@ -303,17 +316,28 @@ on it.
 
 ## New ADRs
 
-Written *during* the phase that implements them, not up front:
+Written *during* the phase that implements them, not up front. Both are Accepted:
 
-- **ADR-015 — Handheld two-phone capture & event-anchored alignment** (Phase 2). Records that for
+- **[ADR-015](decisions/015-handheld-two-phone-capture-and-event-anchored-alignment.md) — Handheld
+  two-phone capture & event-anchored alignment** (Phase 2). Records that for
   hand-held phones, alignment is event-anchored 2D and 3D fusion is unreachable. Does **not** supersede
   ADR-011; the two coexist as different capture tiers.
-- **ADR-016 — Local-first host & phone upload topology** (Phase 6). Tailscale-bound FastAPI, browser
-  upload, no phone app, no cloud. Consistent with ADR-014's offline-first reasoning.
+- **[ADR-016](decisions/016-local-first-host-and-phone-upload-topology.md) — Local-first host &
+  phone upload topology** (Phase 6). A **loopback-bound** FastAPI with Tailscale Serve/Funnel in
+  front of it — the bind never widens — plus a `GOLF_UPLOAD_TOKEN` gate on `/api/`, because a
+  helper's phone can't join the tailnet. Browser upload, no phone app, no cloud. Consistent with
+  ADR-014's offline-first reasoning.
 
 ---
 
 ## Planning prompts
+
+> ⚠️ **Only the Phase 0 prompt is live. Phases 1–6 are built — their prompts are kept as the
+> record of what was believed before each phase, not as instructions.** They are preserved rather
+> than deleted because several phases diverged from their own prompt for reasons worth keeping
+> (see the per-phase sections above), but a cold session that copies one will plan work that is
+> already done, against constraints that no longer hold. **Check the ladder table before copying
+> anything from here.**
 
 Copy the matching block into a fresh session.
 
@@ -530,6 +554,23 @@ Constraints:
 ```
 
 ### Phase 6
+
+> 🛑 **SUPERSEDED — do not plan from this block.** Unlike the others, this prompt is not merely
+> historical: what shipped on 2026-08-06 **contradicts its "settled decisions" point by point**,
+> and it has already sent one cold session down the wrong path.
+>
+> | This prompt says | What the repo actually does |
+> |---|---|
+> | Bind uvicorn to the tailnet IP `100.x.y.z` | The bind never widens — `127.0.0.1` always; `tailscale serve` terminates TLS and proxies inward |
+> | Add the bind host to `config.py` | Deliberately *not* a config field; `run_server.py` refuses a non-loopback `--host` with no token |
+> | `api_port: int = 8080` | `api_port: int = 3000` — Windows reserves 8069–8168, so 8080 could never bind |
+> | No auth; tailnet membership is the access control | `/api/` is gated on `GOLF_UPLOAD_TOKEN`, because a helper's phone can't join the tailnet |
+> | Draft ADR-016 | [ADR-016](decisions/016-local-first-host-and-phone-upload-topology.md) is written and Accepted |
+> | Validate on cellular, WiFi off | Done 2026-08-06 — three-file bundle in 30 s |
+>
+> Building this as written would reverse an Accepted ADR and delete a guard that has a regression
+> test. Read the **Phase 6** section above and ADR-016 instead. Kept only as the record of what
+> was believed before the phase was built.
 
 ```
 Repo: C:\Users\aaron\Desktop\repo\golf-coach (Python 3.11, ADR-driven; read README.md and

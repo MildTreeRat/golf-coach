@@ -5,6 +5,67 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-08-09 — The doc that planned work already done (M7 Phase 6, closed out)
+
+**Duration**: ~1 session, docs and validation only — no `src/` or `scripts/` change
+**What I did**: Started this session by pasting the Phase 6 planning prompt out of
+`docs/M7_TWO_PHONE_CAPTURE.md` into a fresh context, as the doc instructs. **Phase 6 shipped
+three days ago, and the prompt contradicts what shipped point by point** — bind the tailnet IP
+(the bind never widens), add a host to `config.py` (deliberately not a field), `api_port: int =
+8080` (it is 3000), tailnet membership is the access control (it stopped being sufficient the
+moment Funnel existed). Building it as written would have reversed ADR-016 and deleted a guard
+that has a regression test.
+
+So this commit is the close-out Phase 6 never got, plus disarming the trap:
+
+1. **`docs/BAY_SESSION_RUNBOOK.md`** (new, AS-BUILT) — the two bullets of the Phase 6 prompt that
+   were genuinely never delivered: what to check before driving out, and the failure modes to
+   expect on-site. At-home preflight, the guest/Funnel path, 1080p60-not-4K with the reasoning,
+   a timings table built only from measured numbers, the per-swing loop, a symptom→cause→check
+   table, and what footage to bring back for Phase 0.
+2. **Bannered the planning prompts.** Phases 1–6 are built, so their prompts are history, not
+   instructions; Phase 6's carries a `🛑 SUPERSEDED` banner with the point-by-point diff, because
+   it is the one that is affirmatively wrong rather than merely dated. Kept, not deleted — the
+   divergence is the interesting part, and this repo banners rather than rewrites.
+3. **Fixed the stale counts** that let this happen quietly: the M7 ladder still showed four built
+   phases as `[ ]`, the doc header said "no phase implemented yet", `README` said ADRs 000–014,
+   `docs/README` said 14 decisions and 31 documents, `ROADMAP` was dated 2026-08-05 and described
+   `run_server.py` as hard-coding `127.0.0.1`.
+
+**Key decisions / surprises**:
+- **A planning doc that outlives its phase becomes an instruction to redo it.** The prompts were
+  written to be self-contained so a cold session wouldn't need the surrounding doc — which is
+  exactly what made this one dangerous, because the context that would have corrected it was the
+  part deliberately left out. Self-contained prompts need an expiry marker; that is the general
+  lesson, and the banner is the cheap version of it.
+- **The doc count is now spelled out by directory rather than given as a bare number** (38 = 31 in
+  `docs/` + 7 elsewhere, checkable with `git ls-files '*.md'`). A bare count had already gone
+  stale twice; a number nobody can verify is one nobody updates.
+- **The tempo defect is now in the runbook as a "do not trust this" item.** It was tracked in
+  ROADMAP, which is not what anyone reads at a driving range. Whoever takes this to a bay would
+  otherwise have been handed a confident, wrong "work on tempo first" with no caveat anywhere in
+  reach.
+- **No ADR written.** Nothing new was decided here — ADR-016 already covers all of it. The next
+  free number stays 017.
+
+**Where I left off**: M7 has two things left and one trip closes both — the Phase 0 field spike
+(method locked 2026-08-07, thresholds pre-committed, waiting only on footage) and the on-site
+validation of everything Phases 3–6 built. The runbook is written to be the thing you actually
+carry.
+
+**Blockers**: **The Funnel guest path is still unvalidated** and I could not validate it from
+here — it needs a physical phone that is not on the tailnet. The procedure is written up in §2 of
+the runbook and takes about five minutes at home: `tailscale funnel --bg 3000`, confirm 401
+without a token and 200 with `?t=`, upload one clip, time it, `funnel --bg off`. The measured
+time fills the one blank row in the runbook's timings table. Serve was verified on 2026-08-06,
+but tailnet membership was also protecting the endpoint then, so the token has never actually
+been the only thing holding the door.
+
+**Notes**: Next commit is the tempo defect — `phases._motion_start` or `evaluate_tempo` via the
+`MIN_PLAUSIBLE_TEMPO` floor `analysis/alignment.py` already has, measured against GolfDB first.
+
+---
+
 ## 2026-08-09 — No command at all (M7 Phase 5, completed)
 
 **Duration**: ~1 session, implementation + end-to-end verification through the real server
