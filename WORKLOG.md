@@ -5,6 +5,73 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-08-09 — One noise bug behind three separate symptoms (tempo, playback speed, sync)
+
+**Duration**: ~1 session
+**What prompted it**: Looking at `results.html?session=2026-08-09&swing=2` and finding three things
+wrong at once — the down-the-line panel of the aligned video plays visibly fast, tempo reads 0.4:1
+against an eyeballed ~2:1, and the face-on swing visibly starts before the down-the-line swing.
+
+**They were all one bug, and it was not in the video path.** There is no client-side sync to get
+wrong: `results.html` plays a single pre-rendered `aligned.mp4` and there is no `playbackRate`
+anywhere in the repo. The distortion was baked in at render time by a wrong phase anchor.
+
+`_rising_runs` closed a descent run when the drawdown exceeded `_DRAWDOWN_TOLERANCE` of the run's
+**own accumulated rise** — which is near zero in a run's first frames, so any noise clears it. The
+golfer hovered at the top; the smoothed lead wrist drifted 0.3205 → 0.3244 over nine frames and
+wobbled back 0.0020, which was more than a quarter of the 0.0039 accumulated. That split the
+descent, and `_top_and_impact` took the second fragment: **top at 704 instead of 694, a 14-frame
+downswing where the truth was 24.**
+
+Everything downstream inherited it:
+
+| | before | after |
+|---|---|---|
+| face-on downswing | 14 fr (0.234s) | 24 fr (0.400s) — matches DTL exactly |
+| scored window (`select_swing` leads by 5 downswings) | (634, 760) | (574, 790) |
+| face-on `motion_start` | 698 — 6 frames before the top | 636, still `detected` |
+| tempo | **0.43:1** | **2.42:1** |
+| DTL panel speed | **1.69×** | 0.99× |
+| panel offset at first frame | **+983 ms** | −2 ms |
+
+The tempo number was never a `_motion_start` bug, which is where ROADMAP and the runbook both
+predicted it. `_motion_start` was doing its job on a top that was 10 frames late; widen the window
+by fixing the top and it finds the takeaway unaided.
+
+**The occlusion hypothesis was wrong, and I nearly built on it.** The 2026-08-07 entry above (and
+`phases.py`'s own `_PLAUSIBLE_DOWNSWING_S` comment) blamed the disagreement on the DTL lead wrist
+being the far, occluded arm. Measured before planning around it: on DTL the two wrists **agree**
+(LEFT → 24 frames, RIGHT → 25). Face-on was the outlier at 14. Three of the four measurements
+cluster at a top of ~694 in face-on coordinates; only face-on's LEFT_WRIST said 704. There is no
+DTL landmark problem to fix, and no view-aware wrist selection was written.
+
+**Validation.** The floor was swept against the 461-clip GolfDB corpus, paired per-clip against the
+floor-0 baseline rather than compared on pooled columns — the pooled table is too coarse to choose
+with (median and impact do not move at all). Impact is untouched at every floor tried: **0 clips
+move.** Top at the chosen 0.012: median 2.0 unchanged, mean 10.56 → 10.58, the >10 tail count
+unchanged at 46, and 12 clips better against 12 worse. Past 0.014 the tail count and the win/loss
+balance both turn. Address re-measured after (it scales its quiet run off top/impact): median 7.0
+unchanged, mean 22.9 → 22.8, PCE 15.8% → 16.1%.
+
+**Also landed, as a guard rather than a fix**: `align_swings` now checks the two views' downswing
+*durations in seconds* and, when they disagree beyond 30%, emits `AlignmentQuality.IMPACT_ONLY` —
+a tier that was defined, documented and never reachable. There both clips take one shared duration
+measured back from impact and each panel advances at its own native rate, so a disagreement about
+instants can no longer be paid for in playback speed. Run against the *pre-fix* anchors it turns
+the 1.69× panel into 0.99×, which is what it is for. It does not fire on this swing any more.
+
+One guard I wrote and then deleted: refusing the fallback when the two clips' reported frame rates
+differ. A 30 fps phone beside a 60 fps one is an ordinary pairing, not a broken clock, and slo-mo's
+stretched rate is not detectable from the number anyway. Replaced with the check that can actually
+be made — that the duration about to be imposed on both panels is a physically possible downswing.
+There is a test pinning the 30/60 case specifically.
+
+**Next**: the two views still disagree on *tempo* (2.42 vs 1.50) because DTL's `motion_start` reads
+~22 frames late, so quality stays `top_impact`. Harmless now — the fallback anchor is symmetric and
+derived from downswings that agree — but it is the remaining soft-anchor weakness on real footage.
+
+---
+
 ## 2026-08-09 — The doc that planned work already done (M7 Phase 6, closed out)
 
 **Duration**: ~1 session, docs and validation only — no `src/` or `scripts/` change
@@ -268,10 +335,10 @@ eye, the ball leaves the mat between down-the-line frames 1570 and 1580.
   line is filmed from the busy side of the bay.
 
 **Noticed, not fixed**:
-- **The down-the-line top reads early** — 23 frames of downswing against face-on's 14 for the same
-  swing at the same frame rate. Consistent with the lead wrist being the far, occluded arm from
-  behind. Recorded as a preliminary observation in the spike doc; it is *not* a Q1 verdict, which
-  still needs the set-A inventory, on-axis framing and `truth.json`.
+- ~~**The down-the-line top reads early**~~ — 23 frames of downswing against face-on's 14 for the
+  same swing at the same frame rate. Attributed here to the lead wrist being the far, occluded arm
+  from behind. **This was the wrong way round — see 2026-08-09 below.** Face-on was the outlier;
+  down-the-line had it right all along.
 - **The clips are 4K60 portrait, not the 1080p60 the M7 doc asks for**, because nobody told the
   phones otherwise. Pose runs at ~9-14 fps end-to-end at that resolution — tolerable, so the
   deferred pre-inference downscale stays deferred, but that is now a measured number rather than a

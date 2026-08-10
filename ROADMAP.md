@@ -358,16 +358,28 @@ face-on checkpoints. Each phase below is one commit, planned in a fresh session.
       **`phases.select_swing()`**, because the window is not framing — it decides which frames get
       *scored*, and unaided segmentation picks a setup move on all four real bay clips.
       Shot numbers are attached and displayed; *scoring* them stays M4 per ADR-009
-- [ ] **Tempo is untrustworthy on real footage and needs its own look.** `phases._motion_start`
-      walks back from the top for a quiet stretch, and a golfer who pauses at the top hands it one
-      immediately — so the boundary collapses onto the top and the backswing measures shorter than
-      the downswing (0.43:1 on `aaron-1`, an impossibility). `analyze_swing` scores it anyway and
-      the ranked tips lead with "work on tempo first", which is wrong. Phase 4 makes the
-      contradiction impossible to miss (a note, printed above the tips) and deliberately changes
-      no scoring. A fix belongs either in `_motion_start` — reject a quiet stretch sitting within
-      a downswing's length of the top — or in `evaluate_tempo`, applying the plausibility floor
-      `analysis/alignment.py` already has as `MIN_PLAUSIBLE_TEMPO`. Measure against GolfDB first:
-      that corpus is where the tempo band came from
+- [x] **Tempo is untrustworthy on real footage and needs its own look.** *(fixed 2026-08-09 —
+      and neither of the two fixes predicted here was the right one.)* The diagnosis above was
+      wrong: `_motion_start` was not collapsing onto the top, it was doing its job on a **top that
+      was ten frames late**. `_rising_runs` ends a descent when the drawdown exceeds a quarter of
+      the run's *own accumulated* rise, which is near zero in a run's first frames — so a golfer
+      hovering at the top produced a 0.002 wobble that split the descent, and the second fragment
+      was taken as the top. The downswing measured 14 frames where the truth was 24, and tempo
+      fell out at 0.43:1. Fixed by flooring the drawdown test at `phases._DRAWDOWN_FLOOR` (0.012
+      of the clip's own wrist range); tempo on `aaron-1` now reads 2.42:1. Validated paired
+      per-clip against the 461-clip GolfDB corpus: impact unmoved (0 clips change), top median
+      unchanged with 12 better against 12 worse, address mean 22.9 → 22.8. The same fix removed
+      two symptoms nobody had connected to it — the down-the-line panel replaying at 1.69x and the
+      two panels starting a second out of step — because both came from the two views disagreeing
+      about the downswing length
+- [ ] **The down-the-line motion start reads late on real footage.** With the top fixed, the two
+      views agree exactly on the downswing (24 frames each) but still disagree on *tempo* (2.42
+      face-on against 1.50 down-the-line), because DTL's `motion_start` lands ~22 frames late. So
+      alignment stays at the `top_impact` tier rather than `full`. Harmless today — the fallback
+      anchor is symmetric and derived from downswings that now agree, so the render is correct
+      either way — but it is the last soft-anchor weakness on real bay footage. Note that GolfDB
+      is a **face-on** corpus, so `tune_address.py` cannot measure a DTL-specific rule; this needs
+      down-the-line ground truth before anyone re-tunes for it
 - [x] **Phase 5** — Local server + phone upload page *(ingestion 2026-08-06; worker and results
       page 2026-08-09, completing the phase)*: `POST /api/uploads` streams to disk, a static page
       (`api/static/`) with a role picker sticky in `localStorage` and a live status panel.

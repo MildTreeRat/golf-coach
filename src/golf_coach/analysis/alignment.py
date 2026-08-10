@@ -37,7 +37,11 @@ install (ADR-008).
 
 from __future__ import annotations
 
-from golf_coach.analysis.phases import _FALLBACK_TEMPO_RATIO, segment_phases
+from golf_coach.analysis.phases import (
+    _FALLBACK_TEMPO_RATIO,
+    _PLAUSIBLE_DOWNSWING_S,
+    segment_phases,
+)
 from golf_coach.analysis.smoothing import smooth_keypoints
 from golf_coach.contracts.alignment import (
     TAU_TOP,
@@ -76,6 +80,33 @@ _TEMPO_AGREEMENT = 0.35
 # a backswing that measures shorter than its downswing means the motion-start boundary is wrong,
 # which makes it useless as an alignment anchor and makes the tempo ratio derived from it wrong.
 MIN_PLAUSIBLE_TEMPO = 1.0
+
+# How far apart the two views' *downswing durations* may sit, in seconds, before the top is refused
+# as an anchor too. Unlike the tempo cross-check above this is a check on the **hard** anchors, so
+# it runs whatever happened to the soft one.
+#
+# The warp's central assumption is that between two anchors the views progress through the swing
+# proportionally (ADR-015). That is exactly true only if the instants are exactly right. When they
+# are not, forcing both panels to reach tau=1 and tau=2 together does not hide the disagreement — it
+# converts it into *playback speed*, resampling the follower to catch up by impact. A viewer reads
+# that as one camera running fast, which is worse than a visible seam: it silently misrepresents
+# tempo and sequencing, the two things the side-by-side exists to show.
+#
+# 0.30 sits between the two regimes with room on both sides. Top and impact are located to a median
+# of 2 and 1 frames, so honest disagreement on a ~15-frame downswing runs to maybe 20%; the failure
+# this catches measured 0.234s against 0.400s, a gap of 0.42.
+_DOWNSWING_AGREEMENT = 0.30
+
+
+# ...but this fallback converts a duration through each clip's own fps, which the normalized axis
+# was specifically designed never to need (ADR-015; docs/M7_TWO_PHONE_SPIKE.md Q3 is still open on
+# whether `CAP_PROP_FPS` describes real time at all). Note what cannot be checked here: two phones
+# genuinely set to 30 and 60 fps are a perfectly ordinary pairing, so the two rates *disagreeing* is
+# not evidence of a lying clock, and a slo-mo clip's stretched rate is not detectable from the
+# number alone. What can be checked is whether the duration about to be imposed on both panels is a
+# physically possible downswing. If it is not, either that clock or that clip's anchors are wrong,
+# and propagating it to the other view would turn one bad panel into two — so keep the warp and let
+# the quality tier and notes carry the problem instead.
 
 # The swing and nothing else: from a little before the takeaway to one downswing past impact.
 # Widen it to render more of the clip.
@@ -167,7 +198,9 @@ def anchors_from_keypoints(
     )
 
 
-def frame_of_tau(anchors: SwingAnchors, tau: float, *, motion_start: int | None = None) -> float:
+def frame_of_tau(
+    anchors: SwingAnchors, tau: float, *, motion_start: int | None = None, top: int | None = None
+) -> float:
     """Where `tau` falls in this clip, as a (fractional) frame index.
 
     Piecewise-linear through the anchors, and linear outside them: **past impact at the downswing
@@ -177,34 +210,39 @@ def frame_of_tau(anchors: SwingAnchors, tau: float, *, motion_start: int | None 
     matters least for viewing.
 
     `motion_start` overrides the tau=0 anchor, which is how the soft-anchor fallback substitutes
-    the same estimate into both clips.
+    the same estimate into both clips. `top` overrides tau=1 the same way, which is how the
+    IMPACT_ONLY tier gives both clips a shared downswing duration measured back from impact.
     """
     zero = anchors.motion_start if motion_start is None else motion_start
-    downswing = float(anchors.impact - anchors.top)
-    backswing = float(anchors.top - zero)
+    pivot = anchors.top if top is None else top
+    downswing = float(anchors.impact - pivot)
+    backswing = float(pivot - zero)
 
     if tau >= TAU_TOP:
         # Covers [1, 2] and everything past impact with one expression: both run at the
         # downswing rate, which is exactly why the axis is defined this way.
-        return anchors.top + (tau - TAU_TOP) * downswing
+        return pivot + (tau - TAU_TOP) * downswing
 
     # Below the top. With no backswing to measure (a clip opening at the top), fall back to the
     # downswing rate rather than dividing by zero — degraded, and flagged by the quality tier.
     rate = backswing if backswing > 0.0 else downswing
-    return anchors.top - (TAU_TOP - tau) * rate
+    return pivot - (TAU_TOP - tau) * rate
 
 
-def tau_of_frame(anchors: SwingAnchors, frame: float, *, motion_start: int | None = None) -> float:
+def tau_of_frame(
+    anchors: SwingAnchors, frame: float, *, motion_start: int | None = None, top: int | None = None
+) -> float:
     """The exact inverse of `frame_of_tau` — what swing-instant this frame shows."""
     zero = anchors.motion_start if motion_start is None else motion_start
-    downswing = float(anchors.impact - anchors.top)
-    backswing = float(anchors.top - zero)
+    pivot = anchors.top if top is None else top
+    downswing = float(anchors.impact - pivot)
+    backswing = float(pivot - zero)
 
-    if frame >= anchors.top:
-        return TAU_TOP + (frame - anchors.top) / downswing
+    if frame >= pivot:
+        return TAU_TOP + (frame - pivot) / downswing
 
     rate = backswing if backswing > 0.0 else downswing
-    return TAU_TOP - (anchors.top - frame) / rate
+    return TAU_TOP - (pivot - frame) / rate
 
 
 def align_swings(a: SwingAnchors, b: SwingAnchors) -> SwingAlignment:
@@ -246,11 +284,7 @@ def align_swings(a: SwingAnchors, b: SwingAnchors) -> SwingAlignment:
         assert ratio_a is not None and ratio_b is not None  # both checked just above
         if _relative_gap(ratio_a, ratio_b) > _TEMPO_AGREEMENT:
             use_soft = False
-            notes.append(
-                f"tempo ratios disagree ({ratio_a:.2f} vs {ratio_b:.2f}) — frame rate cancels out "
-                "of a ratio, so two views of one swing should not. Most likely the two clips are "
-                "showing DIFFERENT swings; check for a practice swing in one of them"
-            )
+            notes.append(_tempo_disagreement_note(a, b, ratio_a, ratio_b))
 
     if use_soft:
         motion_a, motion_b = a.motion_start, b.motion_start
@@ -259,13 +293,96 @@ def align_swings(a: SwingAnchors, b: SwingAnchors) -> SwingAlignment:
         motion_a = _estimated_motion_start(a)
         motion_b = _estimated_motion_start(b)
 
+    # The hard anchors get their own check. If the two views disagree about how long the downswing
+    # lasted, pinning both to tau=1 resamples one panel to catch up — see `_DOWNSWING_AGREEMENT`.
+    top_a, top_b = _shared_tops(a, b, notes)
+    if top_a is not None and top_b is not None:
+        quality = AlignmentQuality.IMPACT_ONLY
+        motion_a = max(0, top_a - round(_FALLBACK_TEMPO_RATIO * (a.impact - top_a)))
+        motion_b = max(0, top_b - round(_FALLBACK_TEMPO_RATIO * (b.impact - top_b)))
+
     return SwingAlignment(
-        a=_clip_alignment(a, motion_a),
-        b=_clip_alignment(b, motion_b),
+        a=_clip_alignment(a, motion_a, top_a),
+        b=_clip_alignment(b, motion_b, top_b),
         quality=quality,
         notes=notes,
-        overlap=_overlap(a, motion_a, b, motion_b),
+        overlap=_overlap(a, motion_a, top_a, b, motion_b, top_b),
     )
+
+
+def _tempo_disagreement_note(
+    a: SwingAnchors, b: SwingAnchors, ratio_a: float, ratio_b: float
+) -> str:
+    """Why two views of one swing came out at different tempos — the denominator tells you which.
+
+    Tempo is backswing over downswing, so a disagreement lives in one of the two. If the clips also
+    disagree about the *downswing*, the tops are on different events and "different swings" is the
+    likeliest reading — a practice swing in one clip is the classic cause. But when the downswings
+    agree and only the ratio does not, the two views are demonstrably watching the same motion and
+    the whole difference sits in the numerator: one clip's takeaway boundary is wrong. Saying
+    "different swings" there sends the reader to check something that is fine.
+    """
+    common = (
+        f"tempo ratios disagree ({ratio_a:.2f} vs {ratio_b:.2f}) — frame rate cancels out of a "
+        "ratio, so two views of one swing should not. "
+    )
+    if a.fps and b.fps:
+        seconds_a = a.downswing_frames / a.fps
+        seconds_b = b.downswing_frames / b.fps
+        if _relative_gap(seconds_a, seconds_b) <= _DOWNSWING_AGREEMENT:
+            late = a.camera_id or "a" if ratio_a < ratio_b else b.camera_id or "b"
+            return (
+                common + f"The two downswings agree ({seconds_a:.3f}s and {seconds_b:.3f}s), so "
+                f"this is the takeaway boundary, not two different swings — {late} is finding its "
+                "motion start late. Dropping it as an anchor; the swing itself is fine"
+            )
+    return (
+        common + "Most likely the two clips are showing DIFFERENT swings; check for a practice "
+        "swing in one of them"
+    )
+
+
+def _shared_tops(
+    a: SwingAnchors, b: SwingAnchors, notes: list[str]
+) -> tuple[int | None, int | None]:
+    """A tau=1 anchor for each clip at a *shared* downswing duration, or `(None, None)`.
+
+    Returns None for both unless the two views disagree about the downswing by more than
+    `_DOWNSWING_AGREEMENT` — the common case is that they agree and the detected tops stand. When
+    they do not, the reference duration is the face-on clip's, because that is the view the phase
+    detector was tuned on (docs/M4_POSE_BAKEOFF.md is a face-on corpus) and the only one scored
+    (ADR-015). Each clip converts that duration through its *own* fps, so both panels then advance
+    at their native rate and meet at impact.
+    """
+    if not a.fps or not b.fps:
+        return None, None
+
+    seconds_a = a.downswing_frames / a.fps
+    seconds_b = b.downswing_frames / b.fps
+    if _relative_gap(seconds_a, seconds_b) <= _DOWNSWING_AGREEMENT:
+        return None, None
+
+    reference = seconds_a if a.camera_id == "face_on" else (
+        seconds_b if b.camera_id == "face_on" else seconds_a
+    )
+    label_a, label_b = a.camera_id or "a", b.camera_id or "b"
+    low, high = _PLAUSIBLE_DOWNSWING_S
+    if not low <= reference <= high:
+        notes.append(
+            f"downswing durations disagree ({label_a} {seconds_a:.3f}s vs {label_b} "
+            f"{seconds_b:.3f}s) and the reference view's {reference:.3f}s is not a possible "
+            "downswing — leaving the warp in place rather than holding both panels to it"
+        )
+        return None, None
+    notes.append(
+        f"downswing durations disagree ({label_a} {seconds_a:.3f}s vs {label_b} {seconds_b:.3f}s) "
+        f"— one view's top is wrong. Holding both panels to {reference:.3f}s back from impact so "
+        "neither is replayed at the wrong speed; the tops may sit a frame or two apart on screen"
+    )
+    # Clamp to a downswing of at least one frame: `frame_of_tau` divides by it.
+    top_a = min(a.impact - 1, max(0, a.impact - round(reference * a.fps)))
+    top_b = min(b.impact - 1, max(0, b.impact - round(reference * b.fps)))
+    return top_a, top_b
 
 
 def map_frame(alignment: SwingAlignment, frame: int, *, source: str = "a") -> int | None:
@@ -282,8 +399,12 @@ def map_frame(alignment: SwingAlignment, frame: int, *, source: str = "a") -> in
     origin, target = (
         (alignment.a, alignment.b) if source == "a" else (alignment.b, alignment.a)
     )
-    tau = tau_of_frame(origin.anchors, frame, motion_start=origin.warp_motion_start)
-    mapped = frame_of_tau(target.anchors, tau, motion_start=target.warp_motion_start)
+    tau = tau_of_frame(
+        origin.anchors, frame, motion_start=origin.warp_motion_start, top=origin.warp_top
+    )
+    mapped = frame_of_tau(
+        target.anchors, tau, motion_start=target.warp_motion_start, top=target.warp_top
+    )
     return _clamp(round(mapped), target.anchors.frame_count)
 
 
@@ -320,20 +441,35 @@ def pair_frames(
     )
     low = max(alignment.overlap[0], tau_range[0])
     high = min(alignment.overlap[1], tau_range[1])
-    first = max(0, int(frame_of_tau(lead.anchors, low, motion_start=lead.warp_motion_start)))
+    first = max(
+        0,
+        int(
+            frame_of_tau(
+                lead.anchors, low, motion_start=lead.warp_motion_start, top=lead.warp_top
+            )
+        ),
+    )
     last = min(
         count_lead - 1,
-        int(frame_of_tau(lead.anchors, high, motion_start=lead.warp_motion_start)),
+        int(
+            frame_of_tau(
+                lead.anchors, high, motion_start=lead.warp_motion_start, top=lead.warp_top
+            )
+        ),
     )
     if last <= first:
         return []
 
     schedule: list[FramePairing] = []
     for step in range(first, last + 1):
-        tau = tau_of_frame(lead.anchors, step, motion_start=lead.warp_motion_start)
+        tau = tau_of_frame(
+            lead.anchors, step, motion_start=lead.warp_motion_start, top=lead.warp_top
+        )
         follow = alignment.b if reference == "a" else alignment.a
         mapped = _clamp_index(
-            frame_of_tau(follow.anchors, tau, motion_start=follow.warp_motion_start),
+            frame_of_tau(
+                follow.anchors, tau, motion_start=follow.warp_motion_start, top=follow.warp_top
+            ),
             count_b if reference == "a" else count_a,
         )
         pairing = (
@@ -349,13 +485,16 @@ def _clamp_index(frame: float, count: int) -> int:
     return max(0, min(count - 1, round(frame)))
 
 
-def _clip_alignment(anchors: SwingAnchors, motion_start: int) -> ClipAlignment:
+def _clip_alignment(
+    anchors: SwingAnchors, motion_start: int, top: int | None = None
+) -> ClipAlignment:
     last = (anchors.frame_count - 1) if anchors.frame_count else anchors.impact
     return ClipAlignment(
         anchors=anchors,
         warp_motion_start=motion_start,
-        tau_start=tau_of_frame(anchors, 0, motion_start=motion_start),
-        tau_end=tau_of_frame(anchors, last, motion_start=motion_start),
+        warp_top=top,
+        tau_start=tau_of_frame(anchors, 0, motion_start=motion_start, top=top),
+        tau_end=tau_of_frame(anchors, last, motion_start=motion_start, top=top),
     )
 
 
@@ -375,17 +514,23 @@ def _relative_gap(x: float, y: float) -> float:
 
 
 def _overlap(
-    a: SwingAnchors, motion_a: int, b: SwingAnchors, motion_b: int
+    a: SwingAnchors,
+    motion_a: int,
+    top_a: int | None,
+    b: SwingAnchors,
+    motion_b: int,
+    top_b: int | None,
 ) -> tuple[float, float]:
     """The tau range both clips actually cover."""
     last_a = (a.frame_count - 1) if a.frame_count else a.impact
     last_b = (b.frame_count - 1) if b.frame_count else b.impact
     low = max(
-        tau_of_frame(a, 0, motion_start=motion_a), tau_of_frame(b, 0, motion_start=motion_b)
+        tau_of_frame(a, 0, motion_start=motion_a, top=top_a),
+        tau_of_frame(b, 0, motion_start=motion_b, top=top_b),
     )
     high = min(
-        tau_of_frame(a, last_a, motion_start=motion_a),
-        tau_of_frame(b, last_b, motion_start=motion_b),
+        tau_of_frame(a, last_a, motion_start=motion_a, top=top_a),
+        tau_of_frame(b, last_b, motion_start=motion_b, top=top_b),
     )
     return (low, high)
 

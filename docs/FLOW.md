@@ -146,10 +146,12 @@ bands (ADR-009).
 the result. `analyze_bundle.py` still exists and still works — it is now a CLI over the same
 `api/pipeline.py` the worker calls, not a second implementation.
 
-**The gap that matters most now:** the tempo checkpoint is untrustworthy on real footage
-(`phases._motion_start` collapses onto the top when a golfer pauses at address), so the ranked
-tips can lead with a confident, wrong "work on tempo first" — and unattended there is no human
-reading the caveat. See the ROADMAP item.
+**The gap that mattered most here — the tempo checkpoint reading 0.43:1 on real footage and the
+ranked tips leading with a confident, wrong "work on tempo first" — was fixed on 2026-08-09.** The
+cause was not tempo: a hover at the top fragmented the descent in `_rising_runs` and put the
+detected top ten frames late. See `phases._DRAWDOWN_FLOOR` and the WORKLOG entry. What remains is
+narrower: down-the-line's `motion_start` still reads late, so two-view alignment sits at the
+`top_impact` tier rather than `full`. See the ROADMAP item.
 
 ---
 

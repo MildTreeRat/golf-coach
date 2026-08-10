@@ -92,6 +92,71 @@ def test_rising_runs_ignore_untracked_frames() -> None:
     assert all(not 3 <= end <= 5 for _, _, end in runs)
 
 
+def test_top_survives_a_pause_at_the_top() -> None:
+    """A hover at the top must not fragment the descent and push the top late. [M7]
+
+    The bug this locks down was found on real bay footage (session 2026-08-09, swing 2), not on any
+    synthetic clip. `_DRAWDOWN_TOLERANCE` is a fraction of the run's *own accumulated* rise, which
+    is near zero in a run's first frames — so while the hands hover at the top, one sub-noise wobble
+    clears the bar, ends the run, and hands `_top_and_impact` a second fragment starting well after
+    the true top. There it cost 10 frames: a 14-frame downswing measured where the truth was 24.
+
+    Everything downstream inherits it, which is why this is worth a test of its own rather than a
+    tolerance bump. Tempo read 0.43:1 — a backswing shorter than its own downswing, which no golf
+    swing does. The alignment warp then squeezed the other camera's panel to 1.69x real speed to
+    make two disagreeing downswings meet at impact, and started it a full second out of step.
+    `_DRAWDOWN_FLOOR` is the fix; this asserts the wobble no longer moves the top.
+    """
+    true_top = _ADDRESS_FRAMES + 30 - 1  # 8 address frames + a 30-frame vertical rise
+    smoothed = smooth_keypoints(make_swing(30, 10, hover_frames=12))
+
+    phases = segment_phases(smoothed)
+    transition = next(p for p in phases if p.phase is SwingPhase.TRANSITION)
+    top = (transition.start_frame + transition.end_frame) // 2
+
+    assert abs(top - true_top) <= 2, (
+        f"top landed at {top}, {top - true_top:+d} frames from the true top at {true_top} — the "
+        "hover wobble split the descent and the second fragment was taken as the top"
+    )
+
+    # And the consequence that made it visible: the downswing must still be the real one.
+    downswing = next(p for p in phases if p.phase is SwingPhase.DOWNSWING)
+    impact = next(p for p in phases if p.phase is SwingPhase.IMPACT)
+    assert impact.start_frame - top >= 8, (
+        "the downswing collapsed to a sliver — the top is sitting inside the descent"
+    )
+    assert downswing.start_frame < impact.start_frame
+
+
+def test_hover_wobble_does_not_end_a_rising_run() -> None:
+    """The floor's unit-level contract, independent of the swing fixture.
+
+    A drawdown must clear both the relative tolerance *and* `_DRAWDOWN_FLOOR` of the clip's own
+    wrist range. Here the 0.004 wobble is far more than a quarter of the 0.008 accumulated at that
+    point, so the relative test alone splits the descent; against a 0.70 range the floor is 0.0084
+    and rides through it.
+    """
+    ys = [0.20, 0.204, 0.208, 0.204, 0.210, 0.40, 0.60, 0.90]
+    confident = [True] * len(ys)
+
+    runs = _rising_runs(ys, confident)
+
+    assert len(runs) == 1, f"the wobble at index 3 fragmented the descent into {len(runs)} runs"
+    rise, start, end = runs[0]
+    assert start == 0, f"run started at {start} — the true top is index 0"
+    assert end == len(ys) - 1
+
+
+def test_a_drawdown_above_the_floor_still_ends_a_run() -> None:
+    """The floor must not swallow a real reversal — it is a noise gate, not a new tolerance."""
+    ys = [0.20, 0.30, 0.40, 0.25, 0.50, 0.90]
+    confident = [True] * len(ys)
+
+    runs = _rising_runs(ys, confident)
+
+    assert len(runs) == 2, "a 0.15 reversal against a 0.70 range is a genuine turning point"
+
+
 def test_motion_start_includes_horizontal_takeaway() -> None:
     # A 20-frame near-horizontal takeaway (lead wrist sliding sideways at address height) sits
     # between the 8-frame address dwell and the vertical rise (~frame 28+). A wrist-*height* rule

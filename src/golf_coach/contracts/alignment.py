@@ -26,7 +26,7 @@ from __future__ import annotations
 from enum import StrEnum
 from typing import NamedTuple
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, computed_field, model_validator
 
 # The three fixed points of the axis. Named because they appear in both the warp and its inverse,
 # and a bare 2.0 in that arithmetic is unreadable.
@@ -172,8 +172,26 @@ class ClipAlignment(BaseModel):
         ),
     )
 
+    warp_top: int | None = Field(
+        default=None,
+        ge=0,
+        description=(
+            "The frame the warp pins to tau=1, when that is *not* `anchors.top`. Only the "
+            "IMPACT_ONLY tier sets it: there the two views disagree about how long the downswing "
+            "lasted, so rather than resample one panel onto the other's timeline both clips take "
+            "the same duration measured back from impact and each advances at its own native "
+            "rate. None on every other tier — and on artifacts written before the tier existed, "
+            "which is why this is optional rather than required. Read it through `.top`."
+        ),
+    )
+
     tau_start: float = Field(description="tau at frame 0 — negative when the clip rolls early.")
     tau_end: float = Field(description="tau at the last frame.")
+
+    @property
+    def top(self) -> int:
+        """The frame tau=1 resolves to: the override when there is one, else the detected top."""
+        return self.anchors.top if self.warp_top is None else self.warp_top
 
 
 class SwingAlignment(BaseModel):
@@ -205,3 +223,15 @@ class SwingAlignment(BaseModel):
             "sync failure and is really just one phone that started rolling later."
         ),
     )
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def quality_summary(self) -> str:
+        """`quality.summary`, carried in the serialized payload.
+
+        Serialized rather than left to the reader because the alternative is every consumer
+        keeping its own copy of the enum-to-sentence mapping — and the results page, which had
+        exactly that job, instead printed the bare enum value (`top_impact`) at a viewer for two
+        milestones.
+        """
+        return self.quality.summary

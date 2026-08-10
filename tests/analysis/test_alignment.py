@@ -210,6 +210,40 @@ def test_disagreeing_tempo_refuses_the_soft_anchor() -> None:
     assert any("tempo ratios disagree" in note for note in alignment.notes)
 
 
+def test_agreeing_downswings_blame_the_takeaway_not_a_second_swing() -> None:
+    """The denominator says which half of the ratio is wrong. [M7]
+
+    "Check for a practice swing" is the right advice when the two views disagree about the
+    downswing too — the tops are then on different events. It is the wrong advice when the
+    downswings match to the millisecond and only the ratio differs, which is what the first fixed
+    bay pair actually looks like: same motion, one late takeaway boundary. Sending the reader off
+    to hunt a practice swing that isn't there is a worse failure than the degraded tier itself.
+    """
+    a = _DISAGREEING_A.model_copy(update={"motion_start": 636, "top": 694})  # 2.42 : 1
+    alignment = align_swings(a, _DISAGREEING_B)  # b is 1.50 : 1, same 24-frame downswing
+
+    assert alignment.quality is AlignmentQuality.TOP_IMPACT
+    note = next(n for n in alignment.notes if "tempo ratios disagree" in n)
+    assert "downswings agree" in note
+    assert "down_the_line is finding its motion start late" in note
+    assert "DIFFERENT swings" not in note
+
+
+def test_disagreeing_downswings_still_warn_about_a_practice_swing() -> None:
+    """The other branch: different downswings mean the tops are on different events.
+
+    Both ratios have to stay above `MIN_PLAUSIBLE_TEMPO` or the collapse check refuses the soft
+    anchor first and the tempo comparison never runs.
+    """
+    a = SwingAnchors(motion_start=0, top=60, impact=75, frame_count=200, fps=60.0)  # 4.0:1, 0.25s
+    b = SwingAnchors(motion_start=0, top=90, impact=135, frame_count=200, fps=60.0)  # 2.0:1, 0.75s
+
+    alignment = align_swings(a, b)
+
+    note = next(n for n in alignment.notes if "tempo ratios disagree" in n)
+    assert "DIFFERENT swings" in note
+
+
 def test_a_backswing_shorter_than_its_downswing_is_refused() -> None:
     """The failure real phone footage actually produced. [M7 Phase 2]
 
@@ -238,6 +272,112 @@ def test_a_backswing_shorter_than_its_downswing_is_refused() -> None:
     # The anchors that ARE trustworthy still line up exactly.
     assert abs(map_frame(alignment, collapsed.impact, source="a") - healthy.impact) <= 1
     assert abs(map_frame(alignment, collapsed.top, source="a") - healthy.top) <= 1
+
+
+def _panel_speeds(alignment, count_a: int, count_b: int) -> tuple[float, float]:
+    """How fast each panel runs against real time, given the render schedule.
+
+    1.0 means the panel advances through its own footage at the rate it was filmed. Anything else
+    is the warp resampling that view onto the other's timeline — the thing a viewer sees as one
+    camera running fast.
+    """
+    schedule = pair_frames(alignment, count_a, count_b, reference="a")
+    first, last = schedule[0], schedule[-1]
+    fps_a = alignment.a.anchors.fps
+    fps_b = alignment.b.anchors.fps
+    output_seconds = len(schedule) / fps_a
+    return (
+        ((last.frame_a - first.frame_a) / fps_a) / output_seconds,
+        ((last.frame_b - first.frame_b) / fps_b) / output_seconds,
+    )
+
+
+# The anchors the first real bay pair actually produced, before `_DRAWDOWN_FLOOR` landed: the two
+# views measured the same physical downswing as 14 and 24 frames at the same ~60 fps.
+_DISAGREEING_A = SwingAnchors(
+    motion_start=698, top=704, impact=718, frame_count=926, fps=59.92, camera_id="face_on"
+)
+_DISAGREEING_B = SwingAnchors(
+    motion_start=1514, top=1550, impact=1574, frame_count=2472, fps=59.96,
+    camera_id="down_the_line",
+)
+
+
+def test_disagreeing_downswings_fall_back_to_real_time() -> None:
+    """Two views that disagree about the downswing must not be forced to meet at the top. [M7]
+
+    This is the failure the side-by-side made visible before the phase fix landed. The warp pins
+    both clips to tau=1 and tau=2, so when one view measures the downswing at 0.234s and the other
+    at 0.400s, the only way to satisfy both is to *resample* the longer one — the down-the-line
+    panel played at 1.69x and started a full second out of step with face-on.
+
+    Speed is the wrong thing to spend on a disagreement about instants. A viewer cannot see that
+    the top anchor is two frames off, but they can absolutely see one camera running fast, and it
+    misrepresents the two things the video exists to show. So both panels revert to their own
+    native rate, pinned at impact, and the tier says the top is no longer an anchor.
+    """
+    alignment = align_swings(_DISAGREEING_A, _DISAGREEING_B)
+
+    assert alignment.quality is AlignmentQuality.IMPACT_ONLY
+    assert any("downswing durations disagree" in note for note in alignment.notes)
+
+    speed_a, speed_b = _panel_speeds(alignment, 926, 2472)
+    assert speed_a == pytest.approx(1.0, abs=0.05)
+    assert speed_b == pytest.approx(1.0, abs=0.05), (
+        f"the down-the-line panel is replayed at {speed_b:.2f}x — the warp is still resampling it"
+    )
+
+
+def test_the_rigid_fallback_pins_the_panels_at_impact() -> None:
+    """Impact is the one instant both views locate to a median of a single frame."""
+    alignment = align_swings(_DISAGREEING_A, _DISAGREEING_B)
+    mapped = map_frame(alignment, _DISAGREEING_A.impact, source="a")
+    assert abs(mapped - _DISAGREEING_B.impact) <= 1
+
+
+def test_agreeing_downswings_keep_the_warp() -> None:
+    """The guard must not fire on healthy input — degrading has a real cost. [M7]
+
+    These are the same two clips after `phases._DRAWDOWN_FLOOR` fixed the face-on top: the views
+    now measure the downswing at 24 frames apiece, so the detected tops stand as anchors.
+    """
+    a = _DISAGREEING_A.model_copy(update={"motion_start": 636, "top": 694})
+    alignment = align_swings(a, _DISAGREEING_B)
+
+    assert alignment.quality is not AlignmentQuality.IMPACT_ONLY
+    assert alignment.a is not None and alignment.b is not None
+    assert alignment.a.warp_top is None and alignment.b.warp_top is None
+    assert alignment.a.top == a.top
+
+
+def test_the_rigid_fallback_tolerates_two_honestly_different_frame_rates() -> None:
+    """A 30fps phone beside a 60fps one is an ordinary pairing, not a broken clock.
+
+    Worth pinning because the obvious guard here — refuse when the two reported rates differ — is
+    wrong, and was written that way first. Each clip converts the shared duration through its own
+    fps, so different rates are exactly what the arithmetic is for.
+    """
+    b = _DISAGREEING_B.model_copy(update={"fps": 29.97})
+    alignment = align_swings(_DISAGREEING_A, b)
+
+    assert alignment.quality is AlignmentQuality.IMPACT_ONLY
+    speed_a, speed_b = _panel_speeds(alignment, 926, 2472)
+    assert speed_a == pytest.approx(1.0, abs=0.05)
+    assert speed_b == pytest.approx(1.0, abs=0.05)
+
+
+def test_the_rigid_fallback_needs_a_believable_downswing() -> None:
+    """An impossible reference duration must not be imposed on the other panel too.
+
+    The fallback holds both views to one duration measured back from impact. If that duration is
+    not a physically possible downswing then the reference clip's anchors (or its clock) are wrong,
+    and propagating it turns one bad panel into two. Keep the warp and let the notes carry it.
+    """
+    a = _DISAGREEING_A.model_copy(update={"top": 712})  # 6 frames ~ 0.10s, below the plausible band
+    alignment = align_swings(a, _DISAGREEING_B)
+
+    assert alignment.quality is not AlignmentQuality.IMPACT_ONLY
+    assert any("not a possible downswing" in note for note in alignment.notes)
 
 
 def test_manual_anchors_are_not_a_second_code_path(slow_clip: list[FrameKeypoints]) -> None:

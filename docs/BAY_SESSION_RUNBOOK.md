@@ -166,13 +166,17 @@ You do not have to wait for a swing to finish before recording the next one.
 - **`Failed to load OpenH264 library` on every render.** Expected and harmless. OpenCV falls back
   to Media Foundation, which encodes real H.264 — which is what makes the aligned video playable
   in the phone browser. See README.
-- **⚠️ Ignore any tip that says "work on tempo first."** This is a **known defect**, not a read
-  on your swing. `phases._motion_start` walks back from the top looking for a quiet stretch, and
-  a golfer who pauses at the top hands it one immediately — so the backswing boundary collapses
-  onto the top and the backswing measures *shorter than the downswing* (0.43:1 on `aaron-1`,
-  which is physically impossible). The swing still gets scored and the ranked tips still lead
-  with it, confidently and wrongly. Tracked in [ROADMAP.md](../ROADMAP.md) under M7; the fix is
-  the next commit. **Trust the other two checkpoints; discard tempo entirely this session.**
+- **Tempo is trustworthy again as of 2026-08-09.** It used to read around 0.4:1 on real footage —
+  a backswing shorter than its own downswing, which is physically impossible — and the ranked tips
+  led with it. The cause was not tempo at all: a hover at the top fragmented the descent and put
+  the detected *top* ten frames late, so the downswing was measured at 14 frames when it was 24.
+  Fixed in `phases._DRAWDOWN_FLOOR`. If you see a tempo below 1:1 again, that is the same class of
+  bug returning and the number should be ignored — the phase boundaries are wrong, not your swing.
+- **"Aligned on top and impact" under the video is normal, not an error.** Only the top tier
+  ("aligned on motion start, top and impact") means all three instants were agreed by both
+  cameras. The takeaway is the hardest instant to locate and is often estimated instead; the note
+  under the video says which camera and why. The swing itself is still aligned on the two anchors
+  that matter most.
 
 ---
 

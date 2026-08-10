@@ -797,3 +797,87 @@ rather than assumed still valid:
 
 Small — which is the point. §4 exists so that drift this size gets recorded instead of quietly
 invalidating every comparison made against the old band.
+
+---
+
+## Phase B7 — a floor under the drawdown test (top detection, 2026-08-09)
+
+Phase B2 established the descent-run family and B2's sweep locked `_MAJOR_RISE_FRACTION` at 0.80.
+Neither touched the test that decides where a run *ends*, and that is where real footage broke it.
+
+### The failure
+
+`_rising_runs` closes a run when the drawdown exceeds `_DRAWDOWN_TOLERANCE` (0.25) of the rise the
+run has **accumulated so far**. In a run's first frames that quantity is near zero, so the test is
+effectively vacuous there and any tracking noise ends the run.
+
+Session 2026-08-09 swing 2, face-on, smoothed lead-wrist `y` (grows downward):
+
+```
+f694  0.3205   <- true top, hands highest
+f703  0.3244       hovering: drifting down over nine frames
+f704  0.3224   <- wobble up 0.0020, against 0.25 x 0.0039 accumulated = 0.00098
+f705+ 0.3233 -> 0.5233 at f718 (impact)
+```
+
+The run was cut at f704 and the second fragment taken as the top: a **14-frame downswing where the
+truth was 24**. Downstream, tempo read 0.43:1, and because the other view measured the same swing
+at 24 frames the alignment warp resampled the down-the-line panel to 1.69x to make both meet at
+impact — see the WORKLOG entry for that chain.
+
+### The rule
+
+A drawdown must now clear both the relative tolerance **and** an absolute floor, expressed as a
+fraction of the clip's own wrist range so it stays resolution-, framing- and fps-invariant
+(ADR-013):
+
+```python
+(peak - y) > max(_DRAWDOWN_TOLERANCE * rise, _DRAWDOWN_FLOOR * (max(ys) - min(ys)))
+```
+
+### The sweep
+
+Pooled columns cannot choose here — the median never moves and impact never moves — so this was
+decided on a **paired per-clip** comparison against the floor-0 baseline over all 461 clips.
+
+**Impact is untouched at every floor tried: 0 clips change.** That is the expected signature of a
+rule that can only move where a run *starts*.
+
+| floor | top med | top mean | top >10 | clips changed | better | worse |
+|---|---|---|---|---|---|---|
+| 0 (baseline) | 2.0 | 10.56 | 46 | 0 | 0 | 0 |
+| 0.010 | 2.0 | 10.58 | 46 | 21 | 10 | 11 |
+| **0.012** | **2.0** | **10.58** | **46** | **24** | **12** | **12** |
+| 0.014 | 2.0 | 10.63 | 47 | 27 | 13 | 14 |
+| 0.016 | 2.0 | 10.65 | 47 | 31 | 14 | 17 |
+| 0.020 | 2.0 | 10.66 | 47 | 32 | 14 | 18 |
+| 0.030 | 2.0 | 10.67 | 47 | 38 | 16 | 22 |
+
+0.012 is the largest floor that leaves the >10 tail count unmoved and the wins and losses evenly
+matched; past 0.014 both turn. The bay swing flips to the correct top at 0.010, so 0.012 clears it
+with margin at a cost of 0.02 frames of corpus mean — noise, in a distribution whose mean is 10.6
+against a median of 2.
+
+### Address, re-measured
+
+Address scales its quiet run off `(impact - top)`, so moving the top moves it without any change to
+the address rule. Re-run after:
+
+| | before | after |
+|---|---|---|
+| `clip_relative bounded` med | 7.0 | 7.0 |
+| mean | 22.9 | **22.8** |
+| >10 | 40% | 40% |
+| norm | 0.122 | **0.121** |
+| PCE | 15.8% | **16.1%** |
+
+Slightly better, which is what you would expect from a more accurate time base rather than
+anything the address rule did.
+
+### What this corrects
+
+The 2026-08-07 WORKLOG entry, `phases._PLAUSIBLE_DOWNSWING_S`'s comment, and the runbook all
+attributed the two views' disagreement to the down-the-line lead wrist being the far, occluded arm.
+**That was backwards.** On down-the-line the two wrists agree (LEFT 24 frames, RIGHT 25); face-on
+was the outlier at 14, and with the floor in place both views read 24. No view-aware landmark
+selection is warranted, and none was written.

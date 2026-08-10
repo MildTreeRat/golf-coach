@@ -101,6 +101,9 @@ def make_swing(
     takeaway_x: float = 0.16,
     finish_y: float = _FOLLOWTHROUGH_Y,
     followthrough_frames: int = _FOLLOWTHROUGH_FRAMES,
+    hover_frames: int = 0,
+    hover_drift: float = 0.012,
+    hover_wobble: float = 0.006,
 ) -> list[FrameKeypoints]:
     """Build a synthetic swing with the given tempo and optional head-sway / finish-drift.
 
@@ -121,6 +124,14 @@ def make_swing(
     ever were at the top of the backswing — the swing shape that breaks any "top = highest hands"
     rule. Default keeps the modest finish of the clips this fixture was originally built from.
 
+    With `hover_frames > 0`, the hands **pause at the top** before the downswing: `y` drifts down by
+    `hover_drift` across the dwell, then wobbles back up by `hover_wobble` over two frames, and only
+    then does the descent begin. This models what real footage does and a clean ramp never will —
+    see `phases._DRAWDOWN_FLOOR`. The wobble is deliberately sized to sit *above* a quarter of the
+    drift accumulated so far (so the relative drawdown test alone splits the descent in two and
+    reports the top late) and *below* the absolute floor (so the shipped rule rides through it). The
+    true top stays the last frame of the vertical rise, exactly as without a hover.
+
     `followthrough_frames` sets how long the finish is held. The default 8 is **far shorter than
     real footage** — the GolfDB face-on corpus measures p10 50 / p50 89 frames — and is kept only so
     existing tests are unaffected. Any test about `finish_balance`'s *statistical* behaviour must
@@ -130,13 +141,25 @@ def make_swing(
     is too short for the statistic to have rejection power, and a test using it would silently
     measure nothing.
     """
-    swing_frames = backswing_frames + downswing_frames
+    # The dwell at the top, if any: a slow drift down, a wobble back up, then a settle before the
+    # descent. The wobble is held for three frames and the settle for three more, because
+    # `smooth_keypoints` averages over five and a one-frame spike butted against this fixture's
+    # (very steep) descent ramp is simply erased by it — which is not what real footage does.
+    hover_ys: list[float] = []
+    if hover_frames > 0:
+        peak_y = _TOP_Y + hover_drift
+        hover_ys = _ramp(_TOP_Y, peak_y, hover_frames)
+        hover_ys += [peak_y - hover_wobble] * 3
+        hover_ys += [peak_y - hover_wobble / 4] * 3
+
+    swing_frames = backswing_frames + len(hover_ys) + downswing_frames
     lead_pad = _ADDRESS_FRAMES + takeaway_frames  # frames before the vertical rise begins
     takeaway_dx = takeaway_x if takeaway_frames > 0 else 0.0
 
     ys: list[float] = [_ADDRESS_Y] * lead_pad  # address dwell + flat (horizontal) takeaway
     ys += _ramp(_ADDRESS_Y, _TOP_Y, backswing_frames)
-    ys += _ramp(_TOP_Y, _ADDRESS_Y, downswing_frames)
+    ys += hover_ys
+    ys += _ramp(hover_ys[-1] if hover_ys else _TOP_Y, _ADDRESS_Y, downswing_frames)
     ys += _ramp(_ADDRESS_Y, finish_y, followthrough_frames)
 
     # Lead wrist steady in `x` at address, slides sideways through the takeaway, then holds.

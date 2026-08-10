@@ -89,11 +89,21 @@ def rule_max_rise_confident(
     return (best[1], best[2]) if best[0] > 0 else rule_max_rise(ys, speeds, ok)
 
 
-def _rising_runs(ys: list[float], ok: list[bool]) -> list[tuple[float, int, int]]:
-    """Maximal near-monotone rising runs as `(rise, start, end)`, tolerating small dips."""
+def _rising_runs(
+    ys: list[float], ok: list[bool], floor_fraction: float = 0.0
+) -> list[tuple[float, int, int]]:
+    """Maximal near-monotone rising runs as `(rise, start, end)`, tolerating small dips.
+
+    `floor_fraction` is the B7 candidate: an absolute floor on the drawdown, as a fraction of the
+    clip's own wrist range, so noise cannot end a run in its first frames where the *relative*
+    tolerance is still near zero. `0.0` reproduces the pre-B7 behaviour exactly, which is what keeps
+    every rule above a fixed baseline.
+    """
     runs: list[tuple[float, int, int]] = []
     start = peak_at = -1
     peak = 0.0
+    tracked = [y for y, good in zip(ys, ok, strict=False) if good]
+    floor = floor_fraction * (max(tracked) - min(tracked)) if tracked else 0.0
     for i, y in enumerate(ys):
         if not ok[i]:
             continue
@@ -104,7 +114,7 @@ def _rising_runs(ys: list[float], ok: list[bool]) -> list[tuple[float, int, int]
             peak, peak_at = y, i
             continue
         rise = peak - ys[start]
-        if rise > 0 and (peak - y) > _DRAWDOWN_TOLERANCE * rise:
+        if rise > 0 and (peak - y) > max(_DRAWDOWN_TOLERANCE * rise, floor):
             runs.append((rise, start, peak_at))
             start, peak, peak_at = i, y, i
         elif y < ys[start]:
@@ -134,7 +144,9 @@ def rule_fastest_rising_run(
     return start, end
 
 
-def _earliest_major_rise(ys: list[float], ok: list[bool], fraction: float) -> tuple[int, int]:
+def _earliest_major_rise(
+    ys: list[float], ok: list[bool], fraction: float, floor: float = 0.0
+) -> tuple[int, int]:
     """The *earliest* rising run within `fraction` of the largest.
 
     Encodes the one piece of structure every golf swing has and no threshold can fake: the
@@ -142,7 +154,7 @@ def _earliest_major_rise(ys: list[float], ok: list[bool], fraction: float) -> tu
     that rivals the real downswing, "biggest" picks the artefact and "earliest among the big ones"
     does not.
     """
-    runs = _rising_runs(ys, ok)
+    runs = _rising_runs(ys, ok, floor)
     if not runs:
         return rule_max_rise(ys, [], ok)
     largest = max(r[0] for r in runs)
@@ -151,12 +163,25 @@ def _earliest_major_rise(ys: list[float], ok: list[bool], fraction: float) -> tu
     return start, end
 
 
-def _major_rise_rule(fraction: float) -> Rule:
+def _major_rise_rule(fraction: float, floor: float = 0.0) -> Rule:
     def rule(ys: list[float], speeds: list[float], ok: list[bool]) -> tuple[int, int]:
-        return _earliest_major_rise(ys, ok, fraction)
+        return _earliest_major_rise(ys, ok, fraction, floor)
 
     return rule
 
+
+# --- Phase B7: an absolute floor under the drawdown test --------------------------------------
+#
+# `_DRAWDOWN_TOLERANCE` is a fraction of the run's own accumulated rise, which is near zero in the
+# first frames of a run — so noise ends the run there. On real bay footage a golfer hovering at the
+# top produced a 0.002 wobble that split the descent and put the top 10 frames late. These rows
+# sweep the floor; `earliest_major_rise_80` (floor 0) is the baseline they must beat or match.
+#
+# The pooled columns below are too coarse to choose between these — median and impact do not move at
+# all, and the mean shifts by hundredths. The decision was made on a *paired* per-clip comparison
+# against floor 0 (see the table in `phases._DRAWDOWN_FLOOR`), which is what separates 12-better /
+# 12-worse at 0.012 from 14-better / 18-worse at 0.020. Re-derive it that way, not from this table.
+_FLOOR_SWEEP = (0.008, 0.010, 0.012, 0.014, 0.020)
 
 RULES: dict[str, Rule] = {
     "argmin_all (current)": rule_argmin_all,
@@ -168,6 +193,9 @@ RULES: dict[str, Rule] = {
     **{
         f"earliest_major_rise_{int(f * 100):02d}": _major_rise_rule(f)
         for f in (0.40, 0.50, 0.60, 0.70, 0.75, 0.80, 0.85, 0.90, 0.95)
+    },
+    **{
+        f"major_rise_80 +floor {k:.3f}": _major_rise_rule(0.80, k) for k in _FLOOR_SWEEP
     },
 }
 

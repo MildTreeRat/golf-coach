@@ -81,6 +81,37 @@ _MIN_VISIBILITY = 0.5
 # monotonicity shatters it into fragments and ends up scoring noise instead of the swing.
 _DRAWDOWN_TOLERANCE = 0.25
 
+# ...but a fraction of the run's *own accumulated* rise is near zero at the start of a run, so in
+# the first few frames any tracking noise clears the bar and ends the run. That is not hypothetical:
+# it is what made the top read late on real bay footage. A golfer who hovers at the top gives the
+# lead wrist a long, nearly-flat stretch, and one 0.002 wobble upward mid-stretch was enough to
+# split the descent in two. `_top_and_impact` then took the second fragment and put the top 10
+# frames late — a 14-frame downswing where the truth was 24 (session 2026-08-09, swing 2). Every
+# consumer inherits that: tempo read 0.43:1, and the alignment warp squeezed the other view 1.69x
+# to make the two disagreeing downswings meet.
+#
+# So the drawdown must also clear an absolute floor before it is believed. The floor is a fraction
+# of the clip's own vertical wrist range, which keeps it resolution-, framing- and fps-invariant the
+# way ADR-013 requires — it is a floor on the *test*, not a change to the tolerance, and it is inert
+# wherever the signal is already clean.
+#
+# Swept against the 461-clip GolfDB face-on corpus (`tune_phases.py`, Phase B7) paired per-clip
+# against the floor-0 baseline. **Impact is untouched at every floor tried** — 0 clips move — which
+# is what you would expect from a rule that can only change where a run *starts*. Top:
+#
+#     floor    med   mean   >10   changed  better  worse
+#     0        2.0   10.56   46         0       0      0
+#     0.010    2.0   10.58   46        21      10     11
+#     0.012    2.0   10.58   46        24      12     12
+#     0.014    2.0   10.63   47        27      13     14
+#     0.020    2.0   10.66   47        32      14     18
+#
+# 0.012 is the largest floor that leaves the >10 tail count unmoved and the wins and losses evenly
+# matched; past it the trade turns negative. The bay swing flips to the correct top at 0.010, so
+# this clears that by a comfortable margin while costing 0.02 frames of mean on the corpus — well
+# inside the noise of a distribution whose mean is 10.6 against a median of 2.
+_DRAWDOWN_FLOOR = 0.012
+
 # A rising run counts as a candidate downswing at this fraction of the largest rise in the clip.
 # Tuned against GolfDB ground truth over the full 461-clip face-on corpus (see
 # `docs/M4_POSE_BAKEOFF.md`): mean top error is flat at ~10.5 frames across 0.75-0.85 and rises on
@@ -172,11 +203,16 @@ def _rising_runs(ys: list[float], confident: list[bool]) -> list[tuple[float, in
     `y` grows downward, so a rising `y` is the hands coming down — a descent of the club. The
     downswing is the largest such stretch in a normal swing; the takeaway and the follow-through
     run the other way. Each run ends when `y` gives back more than `_DRAWDOWN_TOLERANCE` of the
-    rise it has accumulated, and only confidently-tracked frames participate.
+    rise it has accumulated **and** more than `_DRAWDOWN_FLOOR` of the clip's whole wrist range —
+    the floor is what stops noise from ending a run in its first few frames, where the relative
+    test is vacuous. Only confidently-tracked frames participate.
     """
     runs: list[tuple[float, int, int]] = []
     start = peak_at = -1
     peak = 0.0
+
+    tracked = [y for y, ok in zip(ys, confident, strict=False) if ok]
+    floor = _DRAWDOWN_FLOOR * (max(tracked) - min(tracked)) if tracked else 0.0
 
     for index, y in enumerate(ys):
         if not confident[index]:
@@ -189,7 +225,7 @@ def _rising_runs(ys: list[float], confident: list[bool]) -> list[tuple[float, in
             continue
 
         rise = peak - ys[start]
-        if rise > 0.0 and (peak - y) > _DRAWDOWN_TOLERANCE * rise:
+        if rise > 0.0 and (peak - y) > max(_DRAWDOWN_TOLERANCE * rise, floor):
             runs.append((rise, start, peak_at))
             start, peak, peak_at = index, y, index
         elif y < ys[start]:
@@ -289,9 +325,14 @@ def candidate_downswings(
 #
 # The upper bound sits in a 0.06 s gap (0.42 real against 0.48 decoy), which is *thin*. That is why
 # `select_swing` always reports what it chose, always yields to an explicit window, and declines
-# rather than guesses when nothing lands in the band. Down-the-line durations run longer than
-# face-on ones for the same swing because the DTL top reads early (the lead wrist is the far,
-# occluded arm from behind — see WORKLOG 2026-08-07), which is what the 0.45 ceiling accommodates.
+# rather than guesses when nothing lands in the band.
+#
+# These numbers were read while the face-on top was landing late (see `_DRAWDOWN_FLOOR`), and the
+# note that used to sit here blamed the two views' disagreement on the down-the-line lead wrist
+# being the far, occluded arm. **That was backwards.** Measured on 2026-08-09 swing 2, the two
+# wrists agree with each other on down-the-line (24 frames and 25) and it was face-on that read 14;
+# with the floor in place both views land on 24. So the 0.45 ceiling is not accommodating a DTL
+# bias — it is accommodating genuinely slow amateur downswings, which is what 0.40 s is.
 #
 # **Every one of those numbers came from a 60 fps clip.** A 30 fps recording of the same swing
 # brackets the descent more coarsely and reads *longer* — the 2026-08-07 bundle's face-on view
