@@ -21,7 +21,7 @@ the time you have walked back from the bay.
 | **M1** Capture & skeleton | ✅ Done — MediaPipe pose, face-on canonical angle |
 | **M1.5** Club-head detectability spike | ⬜ Not started — gates M2 |
 | **M2** Club & ball detection (YOLOv8) | 🔒 Gated on M1.5 + global-shutter camera |
-| **M3** Launch monitor / MCP | 🟡 Shot ingestion done (screen OCR); MCP server pending |
+| **M3** Launch monitor / MCP | 🟡 Shot ingestion (screen OCR) + MCP server done; OCR tuning left |
 | **M4-PoC / PoC+ / REF** Pose-only analysis | ✅ Done — 3 checkpoints, bands validated vs 461 tour clips |
 | **M5-FB** Prioritised coaching feedback | ✅ Done — ranked tips, tour percentiles |
 | **M4** full (outcome axis) | ⬜ Needs the M2 + M3 streams |
@@ -177,7 +177,7 @@ module depends on — modules never import each other.
 | Shot data OCR | PaddleOCR, reading the HD Golf screen (ADR-014) | In use |
 | Object detection | YOLOv8 (Ultralytics) | M2, not started |
 | Backend API | FastAPI | In use — phone upload server, loopback + Tailscale (ADR-016) |
-| MCP server | Python (MCP SDK) | M3, not started |
+| MCP server | Python (MCP SDK) | In use — swings + shots over stdio (`scripts/run_mcp_server.py`) |
 | Database | SQLite | Reserved, unused — storage is flat-file (see `storage/`) |
 | LLM | Claude API (Anthropic) | M6, not started |
 | Frontend | React | M5, not started |

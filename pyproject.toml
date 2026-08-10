@@ -30,7 +30,11 @@ api = [
 # LLM coaching + MCP server.
 llm = [
     "anthropic>=0.40",
-    "mcp>=1.0",
+    # 2.0, not the 1.0 this originally declared: the server API was renamed (FastMCP ->
+    # MCPServer) and the wire fields moved to snake_case (inputSchema -> input_schema,
+    # isError -> is_error). `golf_coach.mcp.server` is written against 2.x and raises
+    # ImportError on 1.x, so the floor has to say so.
+    "mcp>=2.0",
 ]
 # Launch-monitor hardware (Garmin R10 over BLE). Not needed for the mock source.
 hardware = [

@@ -78,7 +78,7 @@ exist so you don't miss them.
 | [003](decisions/003-camera-hardware.md) | Camera hardware | Accepted | **3** — global shutter ≠ no motion blur; **pose camera goes face-on (3 o'clock)**; two cameras not three + the spine caveat |
 | [004](decisions/004-launch-monitor.md) | Garmin R10 | Accepted, **not the near-term path** | — (superseded in practice by ADR-014) |
 | [005](decisions/005-object-detection-yolov8.md) | YOLOv8 for club/ball detection | Accepted | — (not built; gated on M1.5) |
-| [006](decisions/006-mcp-server.md) | MCP server for shot data | Accepted | **1** — parsing moved out of the server, behind the `ShotDataSource` port |
+| [006](decisions/006-mcp-server.md) | MCP server for shot data | Accepted | **2** — parsing moved out behind the `ShotDataSource` port; tool list re-scoped from shot-only to swings + shots |
 | [007](decisions/007-decouple-software-from-hardware.md) | Software and hardware tracks run in parallel | Accepted | — |
 | [008](decisions/008-project-structure.md) | Project structure & the `contracts/` seam | Accepted | — |
 | [009](decisions/009-swing-scoring-model.md) | Dual-axis scoring with intent-driven policies | Accepted | — |

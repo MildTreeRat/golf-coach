@@ -153,6 +153,13 @@ detected top ten frames late. See `phases._DRAWDOWN_FLOOR` and the WORKLOG entry
 narrower: down-the-line's `motion_start` still reads late, so two-view alignment sits at the
 `top_impact` tier rather than `full`. See the ROADMAP item.
 
+**There is now a second consumer of the same stored results** (M3, 2026-08-10): the MCP server in
+`src/golf_coach/mcp/` reads `analysis.json`, the `analysis.state.json` sidecar and the parsed-shot
+store, and exposes them to Claude as five tools. It adds no stage to the pipeline above — it is a
+read side, and it deliberately reshapes rather than passes through, because the three things this
+repo knows to be provisional (`needs_review` on an OCR'd shot, the alignment tier, `unscored`
+checkpoint names) all become confident falsehoods if an LLM receives them unlabelled.
+
 ---
 
 ## 3. Component view — target

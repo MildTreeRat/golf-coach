@@ -5,6 +5,87 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-08-10 — The MCP server, and a tool list three milestones out of date (M3)
+
+**Duration**: ~1 session, implementation + verification against real bay data
+**What prompted it**: Looking for the next task. The MCP server was the last M3 item, fully
+unblocked — `mcp>=1.0` declared in the `llm` extra since March, `scripts/run_mcp_server.py` a
+`NotImplementedError` stub, ADR-006 accepted. Straightforward. It was not.
+
+**ADR-006's tool list predated everything that makes this project worth querying.** All five tools
+it specifies — `get_recent_shots`, `get_shot_by_id`, `get_session_summary`, `compare_sessions`,
+`get_shot_trends` — are shot-only, written 2026-03-16 when M3 *was* the system. Since then the
+pose-only track delivered scored swings with tour percentiles and ranked tips, and M7 Phase 4
+started writing `analysis.json` per swing.
+
+So the shot metrics are now the **less** differentiated half of what this repo holds. They are HD
+Golf's own readout, photographed and OCR'd — the simulator already shows them on a screen in front
+of the golfer. What only this system can say is where a swing sits against 458 tour swings. Built
+to the table as written, Claude could report "club speed 98.3, carried 121 yards" and would have
+been unable to say "your head sway sits higher than 83% of tour swings." That inverts the point of
+a coaching interface, so the tool set covers both axes of ADR-009's model. ADR-006 has a second
+addendum recording it; no new ADR, because nothing was re-decided, only re-scoped.
+
+The join turned out to be free: `data/processed/shots/*.shot.json` carries `session_id`, and the
+bundles live at `data/processed/sessions/<session_id>/<swing>/`.
+
+1. **`mcp/query.py`** — reads sessions, swings and shots. Imports no MCP SDK, so it installs and
+   tests on the base install; a subprocess test pins that the way `test_pipeline_imports.py` pins
+   fastapi out of `api/pipeline.py`. Reuses `SwingBundleStore`, `api/state.py`'s `load_state` /
+   `load_analysis`, and `ScreenShotDataSource` behind `CompositeShotDataSource` — whose docstring
+   has named the MCP server as an intended consumer since M3 shipped.
+2. **`mcp/server.py`** — five tools, stdio transport, delegating every call. `settings.mcp_port`
+   (8081) stays unwired: under stdio the client launches the process and talks over the pipe.
+3. **`scripts/run_mcp_server.py`** — the stub replaced, `mcp` imported lazily so a base install
+   gets an instruction instead of a traceback out of a process holding a client's pipe.
+
+**The views are not passthroughs, and that is the substance of the phase.** An LLM presents what it
+is handed as fact, so everything this repo knows to be provisional had to survive the trip out:
+`needs_review` hoisted from inside `ShotProvenance` to the top level, the alignment tier turned
+into an actual sentence about what not to conclude from the side-by-side, and `unscored` labelled
+as "dropped, not failed" — with the same three restated in the server's `instructions`, which the
+model reads once on connect, alongside a note that spine angle and swing plane are *not* measured
+here and must not be inferred.
+
+**Key decisions / surprises**:
+- **Two tools from the original table are deliberately not built.** `get_shot_trends` and
+  `compare_sessions` both invite Claude to narrate a trend, and the store holds **three** shots. A
+  trend tool over n=3 reports noise in a confident voice — the same failure ADR-012 found when a
+  120-clip result vanished at 461. Recorded as a decision in the addendum so it does not read as an
+  oversight.
+- **ADR-008 puts the MCP server in `launch_monitor/`**, which was right for a shot-only server and
+  wrong now: it would make the launch-monitor module import `analysis` and `storage` to serve tools
+  that have nothing to do with a launch monitor. New top-level `src/golf_coach/mcp/`. (`from mcp.server
+  import ...` inside `golf_coach/mcp/` resolves to the SDK — Python 3 has no implicit relative
+  imports. It reads like a shadowing bug and is not one.)
+- **A tool returning `None` serializes to zero content blocks**, which reads identically to a call
+  that silently did nothing — and my tool descriptions were claiming "returns null". Found by
+  running it, not by reasoning about it. The three lookup tools now return an explicit `NotFound`
+  that names the miss and points at the tool listing valid ids.
+- **The listing said "not analyzed" for swings that were analyzed.** The 2026-08-07 sessions have an
+  `analysis.json` but no `analysis.state.json` — analyzed by the CLI before Phase 5 introduced the
+  sidecar. Reading only the sidecar contradicted `get_swing`, which returns their full result a
+  moment later. Falls back to `analysis.json` when the sidecar is absent, which costs one parse on
+  legacy swings only.
+- **`mcp` 2.0 is not the API in most examples.** `FastMCP` is `MCPServer`, and the wire fields are
+  snake_case (`input_schema`, `is_error`) where older versions used camelCase. Checked against the
+  installed package rather than recalled.
+
+**Verification**: 294 tests pass (27 new), ruff and mypy clean. Against the real bay data rather
+than fixtures: `list_sessions` returns four sessions newest-first, `get_swing("2026-08-10", "1")`
+returns **94.9** with all three checkpoints, their bands and percentiles, the `top_impact` caveat
+attached, and the joined shot at 125.6 yards carry — matching `analysis.json` exactly.
+
+**Where I left off**: M3's only remaining no-hardware item is tuning OCR preprocessing on a real
+range session's photos. The server is ready for M6 to build on.
+**Blockers**: None. Not yet registered with a real Claude Desktop / Claude Code client — the tools
+were exercised through `call_tool` in-process, which validates the schemas and the data but not the
+client handshake.
+**Notes**: `config.py:coaching_model` is `claude-opus-4-8` and its comment says "latest, most
+capable"; the current model is `claude-opus-5`. Unread until M6, so left alone — fold it in there.
+
+---
+
 ## 2026-08-09 — One noise bug behind three separate symptoms (tempo, playback speed, sync)
 
 **Duration**: ~1 session

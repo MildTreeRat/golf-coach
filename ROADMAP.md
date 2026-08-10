@@ -1,6 +1,6 @@
 # Roadmap: AI Golf Swing Trainer
 
-## Last Updated: 2026-08-09
+## Last Updated: 2026-08-10
 
 Grouped by **state**, not by number, because the numbers no longer run in order: the pose-only
 slices (M4-PoC, M4-PoC+, M4-REF, M5-FB) delivered the mechanics half of M4 and the ranking half
@@ -16,7 +16,7 @@ wording; only the grouping and the M4 checklist have been corrected.
 | **M4-PoC+** Hardened panel | ✅ Done | — | [§M4-PoC+](#m4-poc-hardened-fundamentals-panel-pose-only-slice-of-m4--done) |
 | **M4-REF** GolfDB validation | ✅ Done | — | [§M4-REF](#m4-ref-golfdb-reference-data-pose-only-slice-of-m4--done) |
 | **M5-FB** Ranked coaching | ✅ Done | — | [§M5-FB](#m5-fb-prioritised-coaching-feedback-pose-only-slice-of-m5--done) |
-| **M3** Launch monitor / MCP | 🟡 In progress | Nothing — screen OCR done; MCP server left | [§M3](#milestone-3-launch-monitor-integration--in-progress) |
+| **M3** Launch monitor / MCP | 🟡 In progress | Nothing — ingestion + MCP server done; OCR tuning left | [§M3](#milestone-3-launch-monitor-integration--in-progress) |
 | **M1.5** Detectability spike | ⬜ Next | Nothing — phone clips of the impact zone | [§M1.5](#milestone-15-club-head-detectability-spike-de-risk-before-investing) |
 | **M7** Two-phone sim capture | 🟡 In progress, 6/7 phases (3 trimmed) | Nothing — two iPhones + a sim bay | [§M7](#milestone-7-two-phone-sim-capture-no-hardware-purchase) |
 | **M4** full (outcome axis) | ⬜ Blocked | The M2 + M3 streams | [§M4 full](#milestone-4-full-swing-analysis-engine--the-outcome-axis) |
@@ -251,7 +251,7 @@ rather than an omission.
 
 # In progress
 
-Shot ingestion landed; the MCP server is the remainder.
+Shot ingestion and the MCP server both landed; tuning OCR on a real session's photos is the remainder.
 
 ---
 
@@ -265,16 +265,29 @@ Shot ingestion landed; the MCP server is the remainder.
 - [x] Parse confidence + physics cross-checks, so a misread digit is flagged not trusted
 - [x] `scripts/import_shot_screens.py` — photos in, parsed shots out, content-addressed cache
 - [ ] Tune preprocessing against a full range session's photos (not just the 2 reference ones)
-- [ ] Build MCP server against a `ShotDataSource` (mock or screen — no hardware required)
-- [ ] Build MCP server with tools: `get_recent_shots`, `get_session_summary`, `get_shot_by_id`, `compare_sessions`
-- [ ] Write integration tests: MCP server returns valid data for each tool
+- [x] Build MCP server against a `ShotDataSource` (mock or screen — no hardware required)
+      *(2026-08-10)* — `src/golf_coach/mcp/`, stdio transport, `scripts/run_mcp_server.py`
+- [x] **Build MCP server with tools — and the tool list changed.** ADR-006's five were all
+      shot-only, written in March before M4/M5/M7 existed. Shipped instead: `list_sessions`,
+      `get_swing`, `get_session_summary`, `get_recent_shots`, `get_shot_by_id` — both axes of
+      ADR-009's model, because the shot numbers are the *less* differentiated half (they are
+      HD Golf's own readout, photographed) and a shot-only server would leave Claude unable to
+      say where a swing sits against the tour population. See the ADR-006 2026-08-10 addendum
+- [x] Write integration tests: 27 tests, and the query layer is pinned to import no MCP SDK
+      (same extras boundary `api/pipeline.py` holds against fastapi)
+- [ ] `get_shot_trends` / `compare_sessions` — **deliberately deferred, not dropped.** Three
+      parsed shots exist; a trend tool over n=3 reports noise in a confident voice. They land
+      when a real range session's worth of shots does
 - [ ] Connect MCP server to analysis engine data merger
 - [ ] *(optional, later)* Acquire the Garmin R10 and add its BLE adapter (ADR-004)
 
-> **Status (2026-08-04):** shot ingestion works end-to-end from photos — screen rectification,
-> orientation recovery, OCR, geometric tile parsing, sign conventions, physics validation, and a
-> parse cache. `ScreenShotDataSource` serves the results on the base install with no OCR stack.
-> Remaining: tune preprocessing on a real session's worth of photos, then the MCP server itself.
+> **Status (2026-08-10):** the server is built and answers over stdio against real bay data —
+> `get_swing("2026-08-10", "1")` returns 94.9 with all three checkpoints, their tour percentiles
+> and the joined shot. It is a thin adapter: `mcp/query.py` does the reading and imports no SDK,
+> `mcp/server.py` declares the tools and delegates. Anything the repo knows to be provisional is
+> carried out rather than flattened — `needs_review` on an OCR'd shot, the alignment tier and its
+> caveat, and `unscored` checkpoint names — because an LLM will otherwise present all of it as
+> fact. The only M3 item left that needs no hardware is OCR preprocessing tuning.
 
 **Exit Criteria**: After a shot, MCP server exposes complete shot metrics; analysis engine can query them.
 

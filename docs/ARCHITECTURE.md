@@ -88,8 +88,9 @@ python scripts/analyze_bundle.py <SESSION/SWING | swing-dir> [--list-swings] [--
 ```
 
 One long-running service: the FastAPI upload server (`scripts/run_server.py`, M7 Phase 5),
-which also carries the background analysis worker and serves the upload and results pages. No
-MCP server (M3) — `scripts/run_mcp_server.py` raises `NotImplementedError` — and no React UI
+which also carries the background analysis worker and serves the upload and results pages. The
+MCP server (M3, `scripts/run_mcp_server.py`) is not a service in the same sense — it speaks
+stdio, so the MCP client launches it per connection and there is no port to bind. No React UI
 (M5); the two static pages under `api/static/` are what stands in for it.
 
 Offline reference-data tooling (`scripts/golfdb/`, the `research` extra) is a separate
