@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+import textwrap
 from pathlib import Path
 
 from golf_coach.analysis.phases import (
@@ -43,6 +44,7 @@ from golf_coach.api.pipeline import (
     resolve_swing_dir,
 )
 from golf_coach.config import settings
+from golf_coach.contracts.feedback import FeedbackPayload
 from golf_coach.contracts.intent import ClubCategory
 from golf_coach.contracts.keypoints import KeypointsFile
 from golf_coach.contracts.shot import ShotData
@@ -157,6 +159,20 @@ def _print_report(result: SwingBundleResult) -> None:
         print("\nTips (most actionable first):")
         for tip in result.feedback.tips:
             print(f"  [{tip.severity.value.upper():<5}] {tip.text}")
+        _print_coaching(result.feedback)
+
+
+def _print_coaching(feedback: FeedbackPayload) -> None:
+    """The written coaching, under a heading that says who wrote it (M6).
+
+    Attribution above the prose rather than below it: everything else this report prints is a
+    measurement, and a reader scanning down has to know the register changed before they read it.
+    """
+    if not feedback.coaching_text or feedback.coaching is None:
+        return
+    print(f"\nCoach ({feedback.coaching.model}, written from the numbers above):")
+    for line in textwrap.wrap(feedback.coaching_text, width=88):
+        print(f"  {line}")
 
 
 def _print_shot(shot: ShotData | None) -> None:
@@ -217,6 +233,11 @@ def main(argv: list[str]) -> int:
         help="list every candidate swing in each view and exit — use when the pick looks wrong",
     )
     parser.add_argument("--no-video", action="store_true", help="skip the side-by-side render")
+    parser.add_argument(
+        "--no-coaching",
+        action="store_true",
+        help="skip the Claude coaching call (it is skipped anyway with no API key configured)",
+    )
     parser.add_argument("--force-pose", action="store_true", help="re-run pose, ignoring the cache")
     parser.add_argument("--force-ocr", action="store_true", help="re-read the shot screen")
     parser.add_argument("--skip-ocr", action="store_true", help="do not OCR an unstored photo")
@@ -258,6 +279,7 @@ def main(argv: list[str]) -> int:
         window_down_the_line=_parse_window(args.window_dtl),
         auto_window=not args.no_auto_window,
         render_video=not args.no_video,
+        coaching=defaults.coaching and not args.no_coaching,
         force_pose=args.force_pose,
         force_ocr=args.force_ocr,
         skip_ocr=args.skip_ocr,

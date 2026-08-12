@@ -22,6 +22,10 @@ from pathlib import Path
 from mcp.server import MCPServer
 from pydantic import BaseModel, Field
 
+from golf_coach.contracts.caveats import (
+    READING_THIS_DATA_HONESTLY,
+    TWO_AXES,
+)
 from golf_coach.launch_monitor.source import ShotDataSource
 from golf_coach.mcp import query
 from golf_coach.mcp.query import (
@@ -52,36 +56,14 @@ def _missing(what: str, hint: str) -> NotFound:
 
 #: Shown to the model once, on connect. The place to put the standing caveats, so every tool
 #: description does not have to repeat them and no answer has to rediscover them.
-INSTRUCTIONS = """\
-Swing analysis and launch-monitor data from a home golf simulator.
+#:
+#: The data paragraphs are composed from `contracts.caveats` rather than written here: the
+#: coaching call (`feedback/coach.py`) needs the identical warnings, and ADR-008 rules out either
+#: module importing the other. Only the opening line is local, because only it describes *this
+#: server* rather than the data.
+_OPENING = "Swing analysis and launch-monitor data from a home golf simulator."
 
-Two independent axes, and they answer different questions. **Mechanics** come from pose
-analysis of a face-on video: three checkpoints (tempo, head sway, finish balance) scored
-against p10-p90 bands derived from hand-annotated tour swings, plus the percentile the swing
-sits at in that population. **Outcome** comes from the launch monitor: club and ball speed,
-launch, spin, carry. A swing can score well on one and badly on the other; say which you are
-talking about.
-
-Reading this data honestly:
-
-- `unscored` lists checkpoints that could not be measured, not ones that failed. They are
-  excluded from `overall_score` rather than counted as zero, so a swing with an unscored
-  checkpoint was judged on fewer fundamentals than one without. Say so if it comes up.
-- `percentile` is informational and clamps at the band edges, so every failing checkpoint
-  reports about 90 whether it missed narrowly or hugely. Rank severity by `score`, not by
-  percentile.
-- `needs_review` on a shot means its numbers were read off a photograph by OCR and the parse
-  was flagged. Do not quote a flagged shot's figures as fact; say the reading is uncertain.
-- `alignment_caveat`, when present, means the two camera views were anchored on some swing
-  instants and interpolated between them. Do not describe the side-by-side video as
-  synchronized throughout, and do not read fine timing differences off it.
-- Only three fundamentals are measured, all from the face-on view. Spine angle, hip rotation,
-  swing plane and club path are NOT measured here — they need a second calibrated view or club
-  detection, neither of which exists yet. Do not infer them from what is available.
-
-There are only a handful of sessions and shots recorded so far. Do not describe a trend or a
-pattern over this data; there is not enough of it for one.
-"""
+INSTRUCTIONS = "\n\n".join([_OPENING, TWO_AXES, READING_THIS_DATA_HONESTLY]) + "\n"
 
 
 def build_server(

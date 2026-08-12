@@ -5,6 +5,61 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-08-11 — Claude writes the verdict, and a percentile of 90 printed as 9 (M6)
+
+> **Written 2026-08-12, after the fact.** This session shipped without an entry; the record below is
+> reconstructed from the ROADMAP §M6 section, which was written at the time. It carries only what
+> that section already states — no findings have been added from memory.
+
+**Duration**: ~1 session, implementation + tests against a fake client
+**What prompted it**: the analysis produces numbers, bands, percentiles and ranked tips, and a golfer
+still has to assemble them into a sentence. M6 is the sentence.
+
+**What landed**: `feedback/coach.py` (prompt template + the API call), `contracts/caveats.py`,
+`CoachingProvenance` on `contracts/feedback.py`, the coaching card in `api/static/results.html`, and
+`coaching_model` / `coaching_enabled` in `config.py`. The model moved to **`claude-opus-5`** — the
+2026-08-10 entry below flagged `claude-opus-4-8` sitting behind a comment claiming "latest, most
+capable" and deferred it to here, which is where it belongs.
+
+**The brief is rendered, not dumped.** Every value is labelled with the vocabulary the caveats warn
+about — `unscored`, `percentile`, `needs_review`, `alignment_caveat` — so a warning about `unscored`
+lands beside a line that actually says `unscored`. Keypoints and phases are excluded: several hundred
+frames of landmarks that no coach reasons from and that would dominate the prompt.
+
+**It never raises for an expected failure.** No key, no `llm` extra, a rate limit, a refusal, a
+truncation — each returns a *reason* that becomes a note on the result. Coaching is the last thing
+that happens to a swing and the least important thing about it; it must never be able to cost a
+golfer their score.
+
+**One source of truth for the caveats.** The standing warnings moved to `contracts/caveats.py` and
+are composed by **both** `mcp/server.py` and `feedback/coach.py`. ADR-008 forbids either importing
+the other, and the alternative was two copies of load-bearing prose drifting apart — which this repo
+has been bitten by three times.
+
+**The bug, found by running it rather than reasoning about it.** The first cut trimmed trailing zeros
+unconditionally, so a percentile of **90 rendered as 9** and 10 as **1**. Plausible, wrong, and aimed
+straight at a model that would have repeated it as fact. Chasing it exposed a second, real inaccuracy
+in the caveat *text*: it claimed every failing checkpoint reports "about 90", but a two-sided metric
+that misses **low** clamps to 10 — as tempo does on `2026-08-10/2`. Both fixed, the second for the
+MCP server too.
+
+**Display is gated on provenance, not just on text.** `results.html` renders the paragraph as a
+tinted card, never as a fourth `.tip`, with the model named *above* the prose. Unattributed prose on
+a page of measurements is indistinguishable from a measurement.
+
+**Verified**: full suite green, ruff and mypy clean — against a **fake client**. A swing analyzed
+with a key configured carries `feedback.coaching_text` and `feedback.coaching` (model, timestamp, and
+a sha256 of the brief, so a stored result can tell when the numbers moved underneath it).
+
+**Where I left off**: the live path is unproven. **No real request has ever been sent** — no
+`GOLF_ANTHROPIC_API_KEY` is configured. Put a real key in `.env`, run
+`python scripts/analyze_bundle.py 2026-08-10/2 --no-video`, and read the paragraph against the
+numbers above it: it must assert nothing the brief did not contain, and must not mention spine angle,
+hip rotation, swing plane or club path — none of which this system measures.
+**Blockers**: an API key, and nothing else.
+
+---
+
 ## 2026-08-11 — Measure now, judge later, and the circle that kept the panel at three (M6.5)
 
 > **Written 2026-08-12, after the fact.** This session shipped without an entry; the record below is

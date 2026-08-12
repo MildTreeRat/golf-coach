@@ -62,7 +62,11 @@ class Settings(BaseSettings):
     # LLM coaching (M6). Read from env; never hardcode.
     anthropic_api_key: str | None = Field(default=None)
     # Latest, most capable Claude model for coaching (see /claude-api skill before changing).
-    coaching_model: str = "claude-opus-4-8"
+    coaching_model: str = "claude-opus-5"
+    # On by default, because the API key is the real gate: with no key the pipeline skips the
+    # call and says so in `notes`, so nobody is billed for installing the repo. Turn it off to
+    # run the pipeline without coaching even when a key is configured (`--no-coaching`).
+    coaching_enabled: bool = True
 
 
 settings = Settings()

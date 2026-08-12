@@ -52,6 +52,7 @@ from golf_coach.contracts.intent import ClubCategory, PracticeGoal
 from golf_coach.contracts.keypoints import ClipMetadata, KeypointsFile
 from golf_coach.contracts.shot import ShotData
 from golf_coach.contracts.swing import SwingBundleResult
+from golf_coach.feedback.coach import generate_coaching
 from golf_coach.feedback.rules import build_feedback
 from golf_coach.launch_monitor.screen.store import ShotStore
 from golf_coach.storage.keypoints_io import load_keypoints, save_keypoints
@@ -87,6 +88,10 @@ class PipelineOptions:
     force_ocr: bool = False
     skip_ocr: bool = False
     tau_range: tuple[float, float] = DEFAULT_TAU_RANGE
+    #: Ask Claude for the written coaching paragraph (M6). Defaults to the setting rather than to
+    #: a literal, so `--no-coaching` and `GOLF_COACHING_ENABLED=0` are the same switch. With no
+    #: API key configured the call is skipped either way, and the skip is recorded in `notes`.
+    coaching: bool = field(default_factory=lambda: settings.coaching_enabled)
 
 
 @dataclass
@@ -434,6 +439,23 @@ def analyze_swing_dir(
     # `analysis` must not import `feedback` (ADR-008), so the shell joins the two — which is
     # what makes analysis.json the complete result instead of something to recompute.
     result.feedback = build_feedback(result.swing)
+
+    # Coaching runs last, on the finished result, and is the one step allowed to fail without
+    # costing anything: `generate_coaching` returns its reason rather than raising, the reason
+    # becomes a note, and the swing keeps its score. It reads `result.notes`, so it has to come
+    # after the extend above — the brief should carry everything that degraded, not most of it.
+    if options.coaching:
+        log("\nCoaching:")
+        coaching = generate_coaching(
+            result, model=settings.coaching_model, api_key=settings.anthropic_api_key
+        )
+        if coaching.text and coaching.provenance is not None:
+            result.feedback.coaching_text = coaching.text
+            result.feedback.coaching = coaching.provenance
+            log(f"  {coaching.provenance.model} wrote {len(coaching.text)} characters")
+        elif coaching.note:
+            log(f"  {coaching.note}")
+            result.notes.append(coaching.note)
 
     # The heavy streams are excluded deliberately: the keypoints already sit beside this file in
     # their own per-view JSON, and inlining several hundred frames of 33 landmarks would make

@@ -37,17 +37,14 @@ from pydantic import BaseModel, Field
 
 from golf_coach.api.state import load_analysis, load_state
 from golf_coach.contracts.alignment import AlignmentQuality
+from golf_coach.contracts.caveats import ALIGNMENT_CAVEAT
 from golf_coach.contracts.shot import ShotData
 from golf_coach.launch_monitor.source import ShotDataSource
 from golf_coach.storage.bundle_store import SwingBundleStore
 
-# Alignment tiers below this one get a caveat attached. FULL is the only tier that anchored on
-# all three instants, so it is the only one a reader may treat as synchronized throughout.
-_CAVEAT = (
-    "The two camera views were {summary}, not on every instant. Frame correspondence is exact at "
-    "those anchors and interpolated between them, so do not describe the side-by-side video as "
-    "synchronized throughout, and do not read fine timing differences off it."
-)
+# Alignment tiers below FULL get a caveat attached. Its text lives in `contracts.caveats` because
+# the coaching call needs the identical sentence and ADR-008 rules out importing this module.
+_CAVEAT = ALIGNMENT_CAVEAT
 
 
 class SwingSummary(BaseModel):
