@@ -1,7 +1,7 @@
 # Architecture — the system AS BUILT
 
 > **Tier: AS-BUILT.** This document describes what actually exists and runs, reviewed
-> **2026-08-05**. Everything here has been executed. For the *target* design — the full
+> **2026-08-11**. Everything here has been executed. For the *target* design — the full
 > component/deployment picture, the build order, and the parts not yet written — see
 > [FLOW.md](FLOW.md).
 >
@@ -85,6 +85,22 @@ python scripts/analyze_bundle.py <SESSION/SWING | swing-dir> [--list-swings] [--
                                  [--window-face-on A:B] [--window-dtl A:B] [--no-video]
                                  [--force-pose] [--force-ocr] [--skip-ocr] [--club C] [--tau L:H]
 #   exit 0 clean · 1 result produced but something is flagged · 2 no result
+
+# Career mode: who has hit what, across every session (base install)
+python scripts/backfill_golfer.py --name NAME [--handedness right|left] [--session ID] [--dry-run]
+python scripts/career_corpus.py [--name NAME | --player-id ID] [--verbose]
+#   the honest n: distinct swings after deduping re-uploads, and the sample size per metric
+python scripts/career_baseline.py [--name NAME | --player-id ID] [--verbose]
+#   what that n buys: per-metric center / spread / trend, each withheld below its own floor
+python scripts/career_dispersion.py [--name NAME | --player-id ID] [--verbose]
+#   what the numbers are evidence for: a repeatable miss (look before the swing) against a
+#   scattered one (look at timing). Both findings withheld until the baseline's floors clear
+
+# Bring stored analyses up to the current engine (`vision` only with --video)
+python scripts/reanalyze.py [SESSION/SWING ...] [--all] [--player ID] [--dry-run] [--video]
+                            [--coaching] [--verbose]
+#   default targets: never analyzed, inputs re-uploaded since, or analysis_version < current
+#   pose and shots are cached, so an unchanged bundle re-runs in seconds
 ```
 
 One long-running service: the FastAPI upload server (`scripts/run_server.py`, M7 Phase 5),
@@ -115,7 +131,7 @@ flowchart TD
     ANA["analysis/<br/>smoothing, phases, alignment,<br/>checkpoints, scoring, benchmarks"] --> C
     FB["feedback/<br/>rules"] --> C
     DET["detection/ — stub"] -.-> C
-    STO["storage/ — bundle store"] --> C
+    STO["storage/<br/>bundle + golfer stores,<br/>career corpus reader"] --> C
     API["api/ — upload server,<br/>pipeline, analysis worker"] --> C
 
     CLI["scripts/*.py<br/>thin CLIs over api/pipeline.py"] --> CAP
@@ -126,9 +142,19 @@ flowchart TD
 
     classDef built fill:#d4edda,stroke:#28a745,color:#155724;
     classDef stub fill:#f8d7da,stroke:#dc3545,color:#721c24;
-    class C,CAP,POSE,LMM,ANA,FB,CLI built;
-    class DET,STO,API stub;
+    class C,CAP,POSE,LMM,ANA,FB,CLI,STO,API built;
+    class DET stub;
 ```
+
+`storage/` and `api/` were stubs when this diagram was first drawn and are not any more —
+M7 Phases 3 and 5 built the bundle store, the upload server and the background worker. `detection/`
+is the last real stub, gated on M1.5.
+
+**One edge here breaks the rule, knowingly:** `storage/corpus.py` imports `api.state` for
+`load_analysis` / `load_state`, the tolerant readers for the two artifacts an analysis run leaves
+behind. `mcp/query.py` does the same. The alternative was a second copy of a tolerant reader, and a
+second copy is one that drifts; the clean fix is moving those two functions down into
+`storage/analysis_io.py`.
 
 **The load-bearing consequence:** because consumers depend on the contract rather than the
 producer, the entire analysis core installs and tests with **no ML dependencies at all**. It
@@ -152,6 +178,7 @@ on a `vision`-only install — pinned by `tests/api/test_pipeline_imports.py`.
 | Swing Result | Analysis → Feedback | `SwingResult` — phases, checkpoint scores with tour percentiles, mechanics/outcome/overall scores, `unscored` names, judged `intent` | ✅ (`outcome_score` always `None`) |
 | Feedback | Feedback → UI | `FeedbackPayload` — overall score, ranked tips with severity, headline | ✅ produced and rendered by `api/static/results.html` |
 | Reference | Benchmarks → Analysis | `ranges.json` bands + `golfdb_v1.json` distributions, both with provenance | ✅ |
+| Career corpus | Storage → Analysis | `CareerCorpus` — one golfer's distinct swings with their `Measurement`s, the honest per-metric `n`, and every excluded swing with its reason | ✅ produced, not yet consumed (career mode step 4) |
 
 ---
 
@@ -239,17 +266,94 @@ gitignored and never created. Everything persists as files:
 | Overlays | `data/processed/<clip>.overlay.mp4`, `.analysis.mp4` | ✅ |
 | Parsed shots | `data/processed/shots/` (content-addressed) | ✅ written by `import_shot_screens.py` and by `analyze_bundle.py` |
 | Swing bundles | `data/processed/sessions/<session>/<swing>/` + `manifest.json` | ✅ written by the upload route (M7 Phase 3/5) |
+| ↳ *who swung it* | `player_id` on `SwingManifest`, stamped **write-once** from the session cursor | ✅ career mode step 1 — never sent by the uploading phone, because two phones would have to type matching names |
 | ↳ *analysis artifacts* | `analysis.json`, `aligned.mp4`, `<role>.keypoints.json` in the same directory | ✅ written by `api/pipeline.py`, from the worker or the CLI; `analysis.json` is a `SwingBundleResult` with the heavy streams excluded (the keypoints sit beside it) |
-| ↳ *worker state* | `analysis.state.json` in the same directory | ✅ `AnalysisState` — queued/running/done/failed, the role→sha256 map the result was computed from (so a re-upload invalidates it), and a denormalised score/headline so the 5 s status poll never parses `analysis.json` |
+| ↳ *analysis state* | `analysis.state.json` in the same directory | ✅ `AnalysisState` — queued/running/done/failed, the role→sha256 map the result was computed from (so a re-upload invalidates it), and a denormalised score/headline so the 5 s status poll never parses `analysis.json`. The terminal status is written by `pipeline.record_state` as part of writing `analysis.json`, because a denormalised copy must be written by whatever writes the original; the worker owns only `queued`/`running`/crash |
+| ↳ *golfer cursor* | `session.json` in the **session** directory | ✅ `storage/session_meta.py` — who the *next* swing belongs to; the record of who actually swung lives on each manifest, so a buddy taking a few swings mid-session rewrites nobody's history |
+| Golfer registry | `data/processed/golfers/<player_id>.golfer.json` | ✅ `storage/golfer_store.py` — one file per golfer, name + handedness. Beside `sessions/`, not inside: a golfer outlives any one session, and that outliving is the point |
 | Reference corpus | `data/reference/golfdb/` | ✅ gitignored for licensing (ADR-012) |
 | Benchmark aggregates | `src/golf_coach/analysis/benchmarks/*.json` | ✅ committed |
-| Swing results, sessions, trends | SQLite `swings` / `shots` tables | ❌ designed only — M7 Phase 3 |
+| Swing results, sessions, trends | SQLite `swings` / `shots` tables | ❌ never built — M7 Phase 3 shipped **trimmed**, as flat files, and nothing has needed a database since |
 
 The `swings.jsonl` Tier-2 shape in the reference pipeline was deliberately built as the shape
 the future SQLite `swings` table will take, so that migration is a load rather than a design.
 
-**Swing identity today is the filename stem** (`scripts/analyze_swing.py:164`). There is no
-session registry. M7 Phase 3 replaces this with a store that assigns identity server-side.
+**Swing identity is assigned server-side** by `storage/bundle_store.py` (M7 Phase 3): each upload
+declares only its *role*, and the store slots it into the newest swing in the session lacking that
+role. Two people holding two phones cannot be trusted to type matching swing numbers. Content
+addressing makes a retried or double-tapped upload a no-op rather than a phantom swing.
+`scripts/analyze_swing.py`'s filename-stem identity survives only on the standalone single-clip
+path, which no longer feeds anything that stores a result.
+
+### One golfer across sessions — the career corpus
+
+`storage/corpus.py` is a **derived** view, persisted nowhere: `read_corpus(sessions_dir,
+player_id)` re-reads the manifests and `analysis.json` files on every call. Cheap at this scale,
+and it means the corpus can never disagree with the files it describes.
+
+Its job is the honest `n`. Four swing directories currently hold **two** swings — the same three
+files were re-uploaded three times while the upload path was being tested — so swings are deduped
+on the face-on clip's sha256 and launch-monitor metrics on the shot photo's, giving a per-metric
+sample count rather than a directory count. Both hashes are already on the manifest, so nothing is
+re-read to compute them. Counting directories instead would repeat one swing's numbers three times,
+which drives the variance toward zero — and per-golfer *variance* is the entire reason career mode
+exists (a tight spread points at a static cause, a wide one at timing).
+
+Every swing that contributes no sample is named with a reason (`ExclusionReason`: unattributed,
+no face-on clip, duplicate, not analyzed, stale, outdated). Read it with `python
+scripts/career_corpus.py`.
+
+Three pure consumers sit on top of it, all in `analysis/` and none doing any I/O.
+`analysis/baseline.py` turns the corpus into a `PersonalBaseline`: per-metric center, spread and
+trend, each **withheld below its own floor** — and withheld means the field is `None`, not
+populated-beside-a-flag, so there is no number a forgetful consumer can render.
+`analysis/dispersion.py` reads that guarded shape and answers what the numbers are *evidence for*:
+a **bias** (the center is further from the target than measurement error explains) and a
+**scatter** (the spread is larger than it explains), which together separate a cause that is fixed
+before the swing from one that happens during it. `analysis/comparison.py` answers the third
+question — where that center sits in the tour population — read off the mean's 95% CI rather than
+the mean, so a center near an edge reports `straddles` instead of a placement that flips on the
+next swing. All three consume the guarded baseline rather than the raw values, precisely so that a
+sealed statistic is absent from their input instead of merely unused, and they share one guard
+(`analysis.baseline.refuse`) rather than copies of the same floors.
+
+**Only `comparison.py` imports `benchmarks`, and that is the whole reason it is a separate module.**
+Comparing a golfer to the tour population is real and is what step 6 built, but keeping it out of
+`baseline.py` and `dispersion.py` is what stops a personal statistic quietly becoming a change to
+how a swing is scored (ADR-010 §2). The boundary moved out by one layer rather than dissolving, and
+a test parses those two files' source to keep it there — a runtime `sys.modules` check cannot see
+the property, because `analysis/__init__.py` imports `engine`, which reads the bands.
+
+Three of the eight metrics are refused the tour join outright, for two different reasons. The two
+launch-monitor metrics have no population at all: every distribution here comes from GolfDB, which
+is pose estimated from broadcast video and holds no ball flight. `head_hip_offset_impact_norm` is
+the interesting one — it *has* a stored distribution and may not be placed in it, because its sign
+is camera-relative and that population mixes both handednesses. A personal corpus is single-handed
+by construction, which is why the one metric a personal baseline can interpret is the one metric
+the tour band cannot. The spread is never compared to the tour spread either: `Distribution.sd` is
+between-player variation and a personal `sd` is within-player repeatability, so the comparison
+would flatter every golfer alive.
+
+**Career mode has three surfaces and one route under two of them.** `mcp/career.py` flattens all of
+it for `get_golfer_profile` / `get_shot_trends` / `compare_sessions`, because a model reads a flat
+payload better. `GET /api/golfers/{id}/career` serves the contracts unflattened, and both the career
+page (`static/career.html`) and the swing page's "Against your own history" block read that one
+route — so the number rendered in one place cannot disagree with the number rendered in the other.
+`storage.corpus.narrow_to` is what makes a window or a two-session comparison honest: it recomputes
+`metric_counts` alongside the filtered swings, so the printed `n` always describes the values under
+it, and the per-session mean then faces the same CENTER floor the pooled mean faces.
+
+**`stale` and `outdated` are two different axes and both are load-bearing.** `stale` means the
+*bytes* moved — a clip was re-uploaded, so `AnalysisState.matches` fails. `outdated` means the
+*code* moved: `SwingBundleResult.analysis_version` is below `contracts.swing.ANALYSIS_VERSION`, so
+the numbers were produced by an engine that has since changed what they mean. Nothing could see
+the second axis before the stamp existed, because a re-analysis does not change the inputs — and
+mixing two engine generations in a per-golfer spread manufactures variance out of a code change,
+which is the duplicate-counting error in reverse. `scripts/reanalyze.py` repairs both.
+
+The version field defaults to **0**, not to the current version, which is the whole reason it
+works on artifacts written before it existed: a default of "current" would make every legacy file
+claim to be up to date, and that wrong answer is indistinguishable from a right one.
 
 ---
 
@@ -258,9 +362,9 @@ session registry. M7 Phase 3 replaces this with a store that assigns identity se
 Worth stating explicitly, because it is unusual and it is the main reason the pose-only work
 is trustworthy without hardware.
 
-- **Base-install test suite** — 141 passed / 4 skipped as of 2026-08-04 (the skips are OCR
-  integration tests needing `paddleocr`). Check `WORKLOG.md` for the current count rather than
-  trusting this line.
+- **Base-install test suite** — 426 passed as of 2026-08-11 (OCR integration tests run here
+  because `paddleocr` is installed in this venv; they skip on a base install). Check `WORKLOG.md`
+  for the current count rather than trusting this line.
 - **Ground truth from a public corpus** — phase instants and benchmark bands are validated
   against 461 hand-annotated GolfDB face-on clips, which found and fixed a systematic
   top-detection defect no amount of self-consistency checking would have caught (ADR-012).

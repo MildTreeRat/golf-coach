@@ -67,9 +67,10 @@ estimator choice, the tempo band, why the panel is three checkpoints and not fiv
 
 ## Decisions (ADRs)
 
-16 decisions, 11 addenda between them. **The addenda are where reality corrected the original
-call**, so a doc's original Decision section is not always the final word — the counts below
-exist so you don't miss them.
+16 decisions, 13 addenda between them (`grep -c '^#\+ *Addendum' docs/decisions/*.md` — the
+stated total had drifted to 11 and is now checkable the same way the document count is).
+**The addenda are where reality corrected the original call**, so a doc's original Decision
+section is not always the final word — the counts below exist so you don't miss them.
 
 | ADR | Decision | Status | Addenda |
 |---|---|---|---|
@@ -80,7 +81,7 @@ exist so you don't miss them.
 | [005](decisions/005-object-detection-yolov8.md) | YOLOv8 for club/ball detection | Accepted | — (not built; gated on M1.5) |
 | [006](decisions/006-mcp-server.md) | MCP server for shot data | Accepted | **2** — parsing moved out behind the `ShotDataSource` port; tool list re-scoped from shot-only to swings + shots |
 | [007](decisions/007-decouple-software-from-hardware.md) | Software and hardware tracks run in parallel | Accepted | — |
-| [008](decisions/008-project-structure.md) | Project structure & the `contracts/` seam | Accepted | — |
+| [008](decisions/008-project-structure.md) | Project structure & the `contracts/` seam | Accepted | **1** — two modules import *upward* into `api.state` for the tolerant artifact readers, knowingly |
 | [009](decisions/009-swing-scoring-model.md) | Dual-axis scoring with intent-driven policies | Accepted | — |
 | [010](decisions/010-benchmark-ranges.md) | Benchmark ranges as versioned data with provenance | Accepted | **4** — JSON not YAML; two provisional rows; tempo re-sourced from GolfDB; **percentiles ride on `CheckpointScore` but never on the scoring path** |
 | [011](decisions/011-camera-synchronization.md) | Camera sync & multi-view 3D fusion | **Partially accepted** | **1** — a second capture tier: hand-held phones can be *aligned* but never *fused* |

@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Golf Coach Career</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { font-family: system-ui, sans-serif; margin: 0; padding: 1.25rem; max-width: 480px; }
+  h1 { font-size: 1.1rem; margin: 0 0 0.25rem; }
+  h2 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em;
+       opacity: 0.6; margin: 1.5rem 0 0.5rem; }
+  a.back { font-size: 0.85rem; }
+  .banner { padding: 0.7rem 0.85rem; border-radius: 8px; margin-top: 1rem; font-size: 0.9rem; }
+  .banner.warn { background: rgba(220,160,40,0.18); border: 1px solid rgba(220,160,40,0.5); }
+  .banner.error { background: rgba(200,60,60,0.18); border: 1px solid rgba(200,60,60,0.5); }
+  .banner.info { background: rgba(128,128,128,0.15); }
+  .muted { opacity: 0.65; font-size: 0.83rem; }
+  /* One card per metric. A metric is the unit someone reads here — its center, its spread, its
+     findings and its tour placement are four answers about one number, and splitting them into
+     four tables would make the reader do the join the whole milestone exists to do for them. */
+  .metric { border: 1px solid rgba(128,128,128,0.28); border-radius: 8px;
+            padding: 0.6rem 0.75rem; margin-bottom: 0.75rem; }
+  .metric h3 { font-size: 0.92rem; margin: 0 0 0.1rem; font-family: ui-monospace, monospace; }
+  .row { display: flex; gap: 0.5rem; font-size: 0.85rem; padding: 0.22rem 0;
+         border-top: 1px solid rgba(128,128,128,0.18); }
+  .row:first-of-type { border-top: none; }
+  .row .k { flex: 0 0 4.6rem; opacity: 0.6; }
+  .row .v { flex: 1; font-variant-numeric: tabular-nums; }
+  /* A refused claim must not look like a quiet value. It reads as struck-through-adjacent: same
+     row, visibly lighter, and always carrying the sentence that says what it waits for. */
+  .row.refused .v { opacity: 0.55; font-style: italic; font-variant-numeric: normal; }
+  .reading { font-size: 0.84rem; opacity: 0.85; margin: 0.45rem 0 0; }
+  .pill { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em;
+          border-radius: 999px; padding: 0.08rem 0.45rem; border: 1px solid currentColor; }
+  .pill.yes { color: #2a7; }
+  .pill.cannot { color: #c93; }
+  .pill.held { color: #888; }
+  /* "Waiting" and "blocked" need opposite responses — one says book another bay hour, the other
+     says this metric needs a reference band first — so they must never render identically. */
+  .why { font-size: 0.79rem; margin: 0.3rem 0 0; padding-left: 0.6rem;
+         border-left: 2px solid rgba(128,128,128,0.4); opacity: 0.8; }
+  .why.blocked { border-left-color: rgba(200,60,60,0.5); }
+  details { margin-top: 1.25rem; font-size: 0.85rem; }
+  details summary { cursor: pointer; font-size: 0.8rem; text-transform: uppercase;
+                    letter-spacing: 0.06em; opacity: 0.6; }
+  details ul { padding-left: 1.1rem; }
+  details li { margin-bottom: 0.3rem; }
+</style>
+</head>
+<body>
+<a class="back" href="/">&larr; Upload</a>
+<div id="root"><p class="muted">Loading...</p></div>
+
+<script>
+const TOKEN_KEY = "golf_coach_token";
+const params = new URLSearchParams(location.search);
+const playerId = params.get("player");
+const root = document.getElementById("root");
+
+function authHeaders() {
+  const t = localStorage.getItem(TOKEN_KEY);
+  return t ? { "X-Upload-Token": t } : {};
+}
+
+function esc(value) {
+  return String(value).replace(/[&<>"']/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+}
+
+// One decimal for degrees, three for the normalized metrics. Matches career_baseline.py and
+// career_dispersion.py, so a number read off the page and a number read off the CLI are the
+// same string.
+function fmt(value, unit) {
+  if (typeof value !== "number") return "-";
+  return unit === "degrees" ? value.toFixed(1) : value.toFixed(3);
+}
+
+function plural(n, word) { return `${n} ${word}${n === 1 ? "" : "s"}`; }
+
+// 1st / 2nd / 3rd / 4th, and the teens that break the pattern. Trivial, and worth having: the
+// first render of this page said "61th".
+function ordinal(n) {
+  const v = Math.round(n);
+  if (v % 100 >= 11 && v % 100 <= 13) return `${v}th`;
+  return `${v}${["th", "st", "nd", "rd"][v % 10] || "th"}`;
+}
+
+async function load() {
+  if (!playerId) { await pickGolfer(); return; }
+  let payload;
+  try {
+    const res = await fetch(`/api/golfers/${encodeURIComponent(playerId)}/career`,
+      { headers: authHeaders() });
+    if (res.status === 401) {
+      root.innerHTML = `<div class="banner error">This phone isn't set up. Reopen the setup
+        link (the one ending in /?t=...) to register it.</div>`;
+      return;
+    }
+    if (res.status === 404) {
+      root.innerHTML = `<div class="banner error">No golfer ${esc(playerId)} on file.</div>`;
+      await pickGolfer(true);
+      return;
+    }
+    payload = await res.json();
+  } catch (err) {
+    root.innerHTML = `<div class="banner error">Could not load: ${esc(err.message)}</div>`;
+    return;
+  }
+  render(payload);
+}
+
+// No ?player= — the page is reachable from a bookmark as well as from a swing, so it offers the
+// registry rather than erroring at someone who typed the bare URL.
+async function pickGolfer(append = false) {
+  let golfers = [];
+  try {
+    const res = await fetch("/api/golfers", { headers: authHeaders() });
+    golfers = (await res.json()).golfers || [];
+  } catch (err) { /* fall through to the empty case */ }
+  const links = golfers.map((g) =>
+    `<li><a href="/career.html?player=${encodeURIComponent(g.player_id)}">${esc(g.display_name)}</a></li>`
+  ).join("");
+  const html = links
+    ? `<h2>Whose career?</h2><ul>${links}</ul>`
+    : `<div class="banner info">No golfers on file yet. Set one on the upload page.</div>`;
+  root.innerHTML = append ? root.innerHTML + html : html;
+}
+
+function render(payload) {
+  const baseline = payload.baseline || {};
+  const dispersion = payload.dispersion || {};
+  const standing = payload.standing || {};
+  const corpus = payload.corpus || {};
+  const metrics = baseline.metrics || {};
+
+  const parts = [
+    `<h1>${esc(payload.display_name)} <span class="muted">&middot; ${esc(payload.player_id)},
+      ${esc(payload.handedness)}-handed</span></h1>`,
+    corpusLine(corpus, baseline),
+  ];
+
+  const names = Object.keys(metrics).sort();
+  if (!names.length) {
+    parts.push(`<div class="banner info">No measurement on any swing yet — nothing to build a
+      baseline from. The commonest causes are swings that were never analyzed and swings
+      analyzed by an older engine; the breakdown below says which.</div>`);
+    parts.push(exclusions(corpus));
+    root.innerHTML = parts.join("");
+    return;
+  }
+
+  // Said once, at the top, rather than repeated on eight cards. The cards then explain
+  // themselves individually, because the refusals differ per metric and per claim.
+  if (nothingSayable(metrics)) {
+    parts.push(`<div class="banner info"><strong>Nothing is sayable yet.</strong> Every claim
+      below is refused, and each one names what it is waiting for. A baseline printed over two
+      swings would look like progress and be exactly the thing this was built not to do.</div>`);
+  }
+
+  parts.push(`<h2>Metrics</h2>`);
+  for (const name of names) {
+    parts.push(metricCard(metrics[name], (dispersion.metrics || {})[name],
+                          (standing.metrics || {})[name]));
+  }
+
+  if (nothingSayable(metrics)) {
+    parts.push(`<p class="muted">The unblock is a bay session: 20&ndash;30 swings with shots
+      attached.</p>`);
+  }
+  parts.push(exclusions(corpus));
+  root.innerHTML = parts.join("");
+}
+
+function nothingSayable(metrics) {
+  return Object.values(metrics).every((m) => !(m.ready || []).length);
+}
+
+function corpusLine(corpus, baseline) {
+  const bits = [
+    `${plural(corpus.distinct_swings || 0, "distinct swing")} across
+     ${plural(baseline.built_from_sessions || 0, "session")}`,
+  ];
+  if (corpus.duplicates_collapsed) {
+    bits.push(`${plural(corpus.swing_dirs_seen || 0, "directory").replace("directorys", "directories")}
+      on disk, ${corpus.duplicates_collapsed} of them re-uploads of a clip already counted`);
+  }
+  if (corpus.outdated_swings) {
+    bits.push(`${corpus.outdated_swings} analyzed by an older engine — run
+      <code>scripts/reanalyze.py</code>`);
+  }
+  if (corpus.unattributed_swings) {
+    bits.push(`${corpus.unattributed_swings} naming no golfer`);
+  }
+  return `<p class="muted">${bits.join(". ")}.</p>`;
+}
+
+const FINDING_PILL = {
+  established: ["yes", "pill yes"],
+  // Never "no": an interval straddling the tolerance is consistent with a real effect and with
+  // none, and a column reading "no" beside a real miss would be read as a clean bill.
+  not_established: ["cannot tell", "pill cannot"],
+  withheld: ["withheld", "pill held"],
+};
+
+// A standing is a placement, never a verdict — the contract carries no `score` and no `passed`
+// precisely so it cannot read as one. Two things here are load-bearing, and both were found by
+// rendering the speaking path rather than by reasoning about it:
+//
+//   1. Every pill is NEUTRAL. Colouring "outside" amber re-adds through styling the judgement the
+//      contract structurally refuses. A tour band describes 122 professionals; an amateur outside
+//      it is the normal case, not a fault.
+//   2. "Outside" says WHICH SIDE. finish_balance_norm is a one-sided magnitude on a [0, high]
+//      band, so a center below p10 is better balanced than the tour population — and the bare word
+//      "outside" made that render identically to a center above p90. Same failure as step 5's
+//      shared BIASED text: one label that is correct for some metrics and misleading for others.
+function standingLabel(tour) {
+  if (tour.standing === "outside") {
+    return typeof tour.outside_by === "number" && tour.outside_by < 0
+      ? "below tour range" : "above tour range";
+  }
+  return { inside: "inside tour range", straddles: "cannot tell" }[tour.standing] || "withheld";
+}
+
+function row(label, value, refused = false) {
+  return `<div class="row${refused ? " refused" : ""}"><span class="k">${esc(label)}</span>
+    <span class="v">${value}</span></div>`;
+}
+
+function pill(map, key) {
+  const [text, cls] = map[key] || ["withheld", "pill held"];
+  return `<span class="${cls}">${esc(text)}</span>`;
+}
+
+function metricCard(base, disp, tour) {
+  const unit = base.unit;
+  const parts = [`<div class="metric">
+    <h3>${esc(base.name)}</h3>
+    <p class="muted">${esc(unit.replace(/_/g, " "))} &middot;
+      n = ${base.n} over ${plural(base.n_sessions, "session")}</p>`];
+
+  // These are not calls to a "may I show this" predicate. A withheld claim leaves no number
+  // behind, so "is there a number" and "may it be shown" are the same question — the property
+  // the contract exists to give every consumer, this page included.
+  if (typeof base.mean === "number") {
+    let v = fmt(base.mean, unit);
+    if (base.mean_ci) {
+      v += ` <span class="muted">95% CI ${fmt(base.mean_ci.low, unit)} &ndash;
+             ${fmt(base.mean_ci.high, unit)}</span>`;
+    }
+    if (typeof base.median === "number") {
+      v += ` <span class="muted">(median ${fmt(base.median, unit)})</span>`;
+    }
+    parts.push(row("center", v));
+  } else {
+    parts.push(row("center", "no typical value yet", true));
+  }
+
+  if (typeof base.sd === "number") {
+    let v = `sd ${fmt(base.sd, unit)}`;
+    if (base.sd_ci) {
+      v += ` <span class="muted">95% CI ${fmt(base.sd_ci.low, unit)} &ndash;
+             ${fmt(base.sd_ci.high, unit)}</span>`;
+    }
+    if (typeof base.minimum === "number") {
+      v += ` <span class="muted">(range ${fmt(base.minimum, unit)} &ndash;
+             ${fmt(base.maximum, unit)})</span>`;
+    }
+    parts.push(row("spread", v));
+  } else {
+    parts.push(row("spread", "no repeatability claim yet", true));
+  }
+
+  if (disp) {
+    parts.push(row("bias", pill(FINDING_PILL, disp.bias), disp.bias === "withheld"));
+    let scatter = pill(FINDING_PILL, disp.scatter);
+    if (typeof disp.within_session_sd === "number") {
+      scatter += ` <span class="muted">within-session ${fmt(disp.within_session_sd, unit)}</span>`;
+    }
+    parts.push(row("scatter", scatter, disp.scatter === "withheld"));
+    if (disp.pattern) {
+      parts.push(row("pattern", esc(disp.pattern.replace(/_/g, " "))));
+    }
+  }
+
+  if (tour) {
+    let v = `<span class="pill held">${esc(standingLabel(tour))}</span>`;
+    if (typeof tour.band_low === "number") {
+      v += ` <span class="muted">tour ${fmt(tour.band_low, unit)} &ndash;
+             ${fmt(tour.band_high, unit)}`;
+      if (tour.population_players) v += ` (${tour.population_players} players)`;
+      v += `</span>`;
+    }
+    if (typeof tour.percentile === "number") {
+      // The clamp said out loud. `percentile_of` stops at the stored quantiles, so a rail value
+      // is a floor on how extreme the center is and not its rank.
+      v += ` <span class="muted">&middot; ${tour.percentile_clamped ? "at least " : ""}`;
+      v += `${ordinal(tour.percentile)} pct</span>`;
+    }
+    if (typeof tour.outside_by === "number") {
+      v += ` <span class="muted">&middot; ${tour.outside_by > 0 ? "+" : ""}`;
+      v += `${fmt(tour.outside_by, unit)} past the edge</span>`;
+    }
+    parts.push(row("vs tour", v, tour.standing === "withheld"));
+  }
+
+  const reading = (disp && disp.points_at) || (tour && tour.reading);
+  if (reading) parts.push(`<p class="reading">${esc(reading)}</p>`);
+  for (const caveat of (disp && disp.caveats) || []) {
+    parts.push(`<p class="why">${esc(caveat)}</p>`);
+  }
+
+  // Deduplicated across the three layers: a CENTER refusal legitimately arrives from the
+  // baseline, the dispersion and the standing, and printing it three times would read as three
+  // different problems.
+  const waiting = new Map();
+  for (const r of base.withheld || []) waiting.set(r.reason, r);
+  for (const r of (disp && disp.withheld) || []) waiting.set(r.reason, r);
+  for (const r of (tour && tour.withheld) || []) waiting.set(r.reason, r);
+  for (const r of waiting.values()) {
+    parts.push(`<p class="why"><strong>waiting</strong> &middot; ${esc(r.reason)}</p>`);
+  }
+
+  const blocked = new Set([...((disp && disp.unavailable) || []),
+                           ...((tour && tour.unavailable) || [])]);
+  for (const reason of blocked) {
+    parts.push(`<p class="why blocked"><strong>blocked</strong> &middot; ${esc(reason)}</p>`);
+  }
+
+  parts.push(`</div>`);
+  return parts.join("");
+}
+
+// Never absorbed into a count. A swing that contributes nothing is a swing the baseline does not
+// know about, and an `n` that shrank for a reason nobody recorded is indistinguishable from a
+// reader with a bug.
+function exclusions(corpus) {
+  const list = corpus.excluded || [];
+  if (!list.length) return "";
+  return `<details><summary>Swings contributing no sample (${list.length})</summary>
+    <ul>${list.map((e) =>
+      `<li><code>${esc(e.ref)}</code> &mdash; <strong>${esc(e.reason)}</strong>:
+       ${esc(e.detail)}</li>`).join("")}</ul></details>`;
+}
+
+load();
+</script>
+</body>
+</html>

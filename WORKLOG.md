@@ -5,6 +5,259 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-08-12 — A band is not a target, and "outside" is not a verdict (career mode, step 6)
+
+**Duration**: ~1 session, implementation + tests
+**What prompted it**: the last step of the milestone. Steps 1–5 built the whole mechanism and left
+it unreachable from anything but three dev CLIs. Step 6 is the surfacing — the two MCP tools ADR-006
+deferred, a page, and the personal-vs-tour join that turns "a consistent 0.31 of head sway" into
+"and that sits inside tour range".
+
+**What landed**: `contracts/comparison.py` + `analysis/comparison.py` (the join),
+`storage.corpus.narrow_to`, `mcp/career.py` with `get_golfer_profile` / `get_shot_trends` /
+`compare_sessions`, `GET /api/golfers/{id}/career`, `static/career.html`, an "Against your own
+history" block on the swing page, `READING_A_PERSONAL_HISTORY` in `contracts/caveats.py`, and a
+`vs tour` row in `career_baseline.py`. 540 tests (up from 501), ruff and mypy clean.
+
+**The join is decided by the interval, like everything else in this milestone.** `Standing` is read
+off the mean's 95% CI, never the mean: whole CI inside p10–p90 is `inside`, whole CI past an edge is
+`outside`, anything crossing is `straddles` — which is "unresolved", not "borderline". A center a
+hair past p90 with an interval over it has not been shown to be outside anything, and reporting so
+would be a placement that flips on the next swing.
+
+**The four target-less metrics never needed targets.** Going in, the plan was that `tempo_ratio`
+could acquire a bias finding via "a one-line edit to `METRIC_TARGETS`". It could, and it would have
+been wrong: the recorded reason for its missing target is that *its target is a band*, and asking
+whether the center's CI sits inside p10–p90 is that band's own question asked directly. A point
+target would have meant declaring the midpoint of 2.72–4.71 to be what good is — a claim with
+nothing behind it. `METRIC_TARGETS` is untouched and the join answers what the targets were wanted
+for.
+
+**Five things found by building it:**
+
+1. **The one metric a personal baseline can read is the one the tour band cannot.** Step 4's finding
+   was that `head_hip_offset_impact_norm`'s sign is readable personally, because a personal corpus
+   is single-handed by construction. The stored distribution is cut from GolfDB's *mixed*-handedness
+   population — the exact reason M6.5 blocked it as a checkpoint. So the join must refuse the only
+   metric that has both a center and a distribution. A naive implementation returns a confident
+   percentile here and every "did we get a row back" test passes.
+2. **`sd` against `sd` looks like a free second finding and is a category error.** `Distribution`
+   carries an `sd` one field from the p10 already being read. But it is *between-player* variation
+   (458 clips, 122 players, under four each) against a personal *within-player* one. "Your spread is
+   tighter than the tour's" compares one golfer's repeatability to how much a field differs from
+   itself, and is true for everybody. Recorded in `unavailable` rather than computed — and only once
+   the golfer actually has a spread, since that is when the absence becomes a question.
+3. **"Outside" is a verdict for half the panel and its opposite for the other half.** Caught by
+   rendering the speaking path over a synthetic 18-swing corpus: `finish_balance_norm` sits *below*
+   p10 on a one-sided `[0, high]` band — better balance than tour — and the page printed "outside
+   tour range" in amber, identically to a center above p90. Fixed structurally rather than in
+   wording: every standing pill is neutral (the contract carries no `score` and no `passed` so it
+   cannot read as a verdict, and colour was re-adding one), and `outside` always names its side.
+   This is step 5's defect one milestone later, and again only a render caught it — every assertion
+   was green.
+4. **A refusal keeps its evidence, and a model can do arithmetic.** `n`, `n_sessions` and the
+   per-session counts stay populated because that is what makes a refusal actionable. Handed
+   "session A: 4 swings, session B: 5" and a withheld mean, a model can average them and narrate the
+   trend the guard just declined. Nothing in a payload stops it, so `READING_A_PERSONAL_HISTORY`
+   names the move and forbids it — kept *separate* from the block `feedback/coach.py` gets, which
+   writes about one swing and would be reading rules for tools it does not have.
+5. **The import-boundary test everyone would write cannot work.** `analysis.baseline` and
+   `analysis.dispersion` promise to import no `benchmarks`, and the obvious check — import them in a
+   subprocess, inspect `sys.modules` — fails immediately: `analysis/__init__.py` imports `engine`,
+   which reads the bands, so importing *anything* under `golf_coach.analysis` pulls them in before
+   the module body runs. Had it happened to pass it would have been passing for the wrong reason
+   forever. The property is about what those two files import, so the test parses their source.
+
+**The window and the two sessions turned out to be one operation.** `get_shot_trends` narrows by
+date, `compare_sessions` narrows by session id, and both hand the result to the same
+`build_baseline` — so a per-session mean faces the identical CENTER floor a pooled mean faces, asked
+of less data, and no second threshold exists to drift. `narrow_to` recomputes `metric_counts` rather
+than filtering the swing list beside a stale count, which is step 4's pooling-vs-counting lesson
+arriving by a different route.
+
+**One output looked like a bug and was the dedupe rule working.** `compare_sessions` on the real
+disk reports session `2026-08-09` with a mean score of 94.9 and **zero samples on every metric** —
+its clips are re-uploads of a swing already counted in an earlier session, so it scores normally and
+contributes no `n`. Left unexplained a reader concludes the corpus reader is broken, so the payload
+says it in a sentence.
+
+**Verified**: 540 tests, ruff and mypy clean. Against the real disk all three career CLIs still
+agree on `n = 2` for every metric, the tour join refuses all eight placements (five waiting on `n`,
+three blocked for want of a population), and the MCP server registers eight tools with a registry
+and five without. Both pages were rendered head-less against a real payload and against a synthetic
+18-swing corpus, and that second render is what caught defect 3.
+
+**Where I left off**: career mode is complete. The milestone is `6/6` and moved to ROADMAP's Done
+section, with the caveat stated there: it is finished and currently silent.
+**Blockers**: none to build, for the first time in this milestone. Everything now waits on one bay
+session — 20–30 swings with shots attached — after which every surface built here starts speaking
+and the tolerances in `METRIC_TARGETS` are the first thing to revise against real repeats.
+**Notes**: the em-dash/cp1252 note still applies to all three career CLIs (`PYTHONIOENCODING=utf-8`).
+Two test modules briefly collided on the basename `test_career.py` — `tests/` has no `__init__.py`,
+so basenames must be unique across test packages; they are `test_career_route.py` and
+`test_career_tools.py`.
+
+---
+
+## 2026-08-12 — The shape of a miss, and a reading meant for one metric (career mode, step 5)
+
+**Duration**: ~1 session, implementation + tests
+**What prompted it**: step 4 built the baseline and made `pooled_samples()` public specifically as
+this step's door. Step 5 is the argument the whole milestone rests on: this instrument cannot see
+*why* a face is open — grip, lead wrist and release are all invisible to it — but the **shape** of a
+miss is itself evidence. A miss that repeats at the same size is produced by something that is the
+same every swing; a miss that moves cannot be. Those have different fixes, and separating them needs
+no view of the body.
+
+**What landed**: `contracts/dispersion.py` (`Finding`, `DispersionPattern`, `MetricTarget`,
+`METRIC_TARGETS`, `PATTERN_READING`, `MetricDispersion`, `GolferDispersion`),
+`analysis/dispersion.py` (`build_dispersion`, `dispersion_for`), `scripts/career_dispersion.py`, and
+`analysis/baseline._refuse` promoted to `refuse`. 501 tests (up from 481), ruff and mypy clean.
+
+**Two findings, never one verdict.** `bias` (the center is further from the target than measurement
+error explains) and `scatter` (the spread is larger than measurement error explains) are answered
+independently, because the *contrast* is the whole signal — the same 6° average miss means opposite
+things at sd 1 and at sd 9, and collapsing them into one number throws away exactly the thing this
+step exists to read. Both are decided by an interval and never a point estimate: bias needs the
+mean's 95% CI to clear the tolerance band entirely, scatter needs the sd's CI **lower** bound to
+clear it. So a tolerance set wrong surfaces as `NOT_ESTABLISHED` — an honest "cannot tell" — rather
+than as a confident wrong pattern. No new statistics: `mean_ci` and `sd_ci` already existed.
+
+**Five things found by building it:**
+
+1. **The reading was written for one metric and printed for all eight.** The `BIASED` text named
+   the checks outright — "grip, alignment, ball position, face at address" — which reads correctly
+   under `face_to_path_deg` and is nonsense under `head_sway_norm`, where it printed **unchanged**.
+   Found by rendering the speaking path on a synthetic session rather than by reasoning about it:
+   the tests all passed while the output would have sent a golfer to check their grip about a head
+   that moves. One reading serves every metric, so it may name only the class of cause; naming the
+   specific check needs per-metric vocabulary and belongs in `feedback`. There is now a test that
+   asserts the pose and shot readings are the *same string* and that it names no specific check.
+2. **Six of the eight tolerances were already measured — they just had never been written down.**
+   `tune_spatial_metric.py` computes `noise` + `bound`, which is precisely "the smallest difference
+   distinguishable from this pipeline's own error", and it prints them and stores nothing. Re-ran it
+   over the 461-clip face-on corpus (both estimator caches were already on disk, so no extraction):
+   0.024 for `finish_balance_norm` up to 0.943 for `tempo_ratio`. Tempo's `noise` column is
+   **0.000**, which is structural rather than lucky — it reads phase instants only and both
+   estimators were handed GolfDB's labelled ones, so its entire error term is our own address
+   detection, the weakest instant we have. The two launch-monitor metrics have no analogue for a
+   photographed screen, so 2.0° is judgment, recorded as judgment.
+3. **The tolerance does double duty, and both uses are the same quantity used correctly.** It bounds
+   how far a center must sit from the target before a bias is real, and — because measurement error
+   inflates observed spread (`sd_obs² ≈ sd_true² + sd_err²`) — it is also the level a spread must
+   exceed before the scatter is the golfer's rather than the instrument's. A sample sd sitting at
+   the tolerance is exactly what a perfectly repeatable golfer measured by this pipeline produces.
+4. **Four of the eight may carry a scatter finding and must not carry a bias one.** Declaring a
+   target is declaring what *good* is, which this repo does in exactly one place: a band with a
+   derivation behind it. `hip_sway_norm` / `hip_shift_at_top_norm` have no band and "less is better"
+   is not established for either; `head_hip_offset_impact_norm` has a readable sign (step 4's
+   finding) but no known right amount; `tempo_ratio`'s target *is* a band, and reading it here would
+   import `benchmarks` into the personal-baseline path — the boundary step 4 held deliberately. Each
+   is refused with its reason attached, in `unavailable` rather than `withheld`, because the two
+   need opposite responses: one says book another bay hour, the other says this needs a band first.
+5. **A bias on a one-sided magnitude asserts less than it reads.** Zero head sway is unattainable,
+   so "distinguishable from 0" is established for every golfer alive. What it actually says is *a
+   consistent amount, above measurement error* — the half of the contrast this step needs — and not
+   that the amount is too much. That is the tour band's question. Documented on the two entries it
+   applies to, because the finding is true and the obvious reading of it is not.
+
+**The guard is inherited, not re-invented.** `MetricDispersion` is built from the `MetricBaseline`
+step 4 already sealed, so when `CENTER` was refused there is no mean *in the input* to test a bias
+against — absent rather than ignored, which is "withheld means absent" holding by construction one
+level further out. The one thing raw samples are read for is the within-session spread, and that is
+itself gated on `SPREAD` so it cannot become a route around the seal. Only `_refuse` had to become
+public; a second copy of the guard is how two floors drift apart with the looser one deciding what
+gets said, which is step 4's own `artifact_key` lesson repeating.
+
+**Pooled spread mixes two different quantities**, and the cause reading is only about one of them:
+"your release is inconsistent" is a claim about one bay hour, while a pooled sd across sessions also
+contains whatever the golfer changed in between. When two sessions each carry ≥2 samples the pooled
+within-session sd is computed alongside, and a caveat fires when the two diverge. Classification
+stays on the pooled figure — a proper variance decomposition has its own `n` requirements and there
+is no corpus to test one against, so naming the possibility is the honest amount to say today.
+
+**Verified**: 501 tests, ruff and mypy clean. `tests/analysis/test_baseline.py` passes with **no
+assertion moved**, which is the check that making `refuse` public changed nothing. Against the real
+disk, `career_dispersion.py --name Aaron` lists all eight metrics at n=2 with both findings withheld
+and each naming its shortfall, and `career_corpus.py` / `career_baseline.py` / `career_dispersion.py`
+agree on `n` for every metric. The speaking path was rendered separately over a synthetic 12-swing
+session — a consistently open face reads `biased`, a wandering start line reads `scattered`, and
+that render is what caught defect 1.
+
+**Where I left off**: step 6, the last one — `get_shot_trends` / `compare_sessions`, the results
+page, and the personal-vs-tour join. That join is what turns "a consistent 0.31 of head sway" into
+"and that sits inside tour range", and it is also what would let the four target-less metrics
+acquire a bias finding: one line each in `METRIC_TARGETS`.
+**Blockers**: none to build. Everything after this wants the bay session — 20–30 swings with shots
+attached.
+**Notes**: the em-dash/cp1252 note from step 4 applies to this CLI too (`PYTHONIOENCODING=utf-8`),
+unchanged for the same reason — it is a terminal setting, and it now affects all three career CLIs
+equally.
+
+---
+
+## 2026-08-12 — A baseline that refuses to speak (career mode, step 4)
+
+**Duration**: ~1 session, implementation + tests
+**What prompted it**: steps 1–3 assembled the inputs and step 3's re-run brought `n` to 2 for all
+eight metrics. Step 4 is the consumer: turn a `CareerCorpus` into per-metric statistics, and refuse
+to report them below a threshold.
+
+**What landed**: `contracts/baseline.py` (`PersonalBaseline`, `MetricBaseline`, `BaselineClaim`,
+`WithheldClaim`, `SessionSample`, `MetricSample`, and the threshold table), `analysis/baseline.py`
+(`build_baseline`, `pooled_samples`), `mean_ci` / `sd_ci` / `mean_and_sd` in `analysis/stats.py`,
+and `scripts/career_baseline.py`. Against the disk it refuses all 24 claims (8 metrics × 3), each
+naming what it waits for. 481 tests, ruff and mypy clean.
+
+**The gate is per (metric, claim).** `CENTER`, `SPREAD` and `TREND` have different appetites for
+`n` — the sample sd is a noisier estimator than the sample mean (relative error `1/sqrt(2(n-1))`,
+still 24% at n=10), and a trend needs repeated *occasions* rather than repeated swings, so it gates
+on `n_sessions` separately. One threshold per metric would either block a defensible mean or ship a
+spread the data cannot support.
+
+**Every statistic carries a 95% CI**, Student-t for the mean and chi-square for the sd. No scipy on
+the base install (ADR-008), so both are small hardcoded critical-value tables for df 1..30 with
+Cornish-Fisher / Wilson-Hilferty fallbacks beyond — pinned in `test_stats.py` against published
+values and hand-computed intervals.
+
+**Four things found by building it:**
+
+1. **Pooling could have disagreed with counting, invisibly.** Step 2's dedupe rule lived inside
+   `storage/corpus.py::_count_metrics`, which returned *counts and not values*. A baseline
+   iterating `swing.measurements` naively would have averaged a different number of values than the
+   `n` printed beside it — and only where the rule matters (a re-uploaded clip; one shot photo
+   across two real swings), which is to say only where nobody would see it. Lifted the rule to
+   `CorpusSwing.artifact_key`, called by both sides; the existing 21 corpus tests passing unchanged
+   is the check that nothing moved, and a new end-to-end test pins
+   `metric_counts[name] == baseline.metrics[name].n`.
+2. **M6.5's spread/error ratios cannot set the thresholds.** The obvious move, and wrong: that
+   ratio is *population* spread over *instrument* error, while what binds a personal baseline is
+   the golfer's own shot-to-shot variability — unmeasured and much larger. Deriving from tempo's
+   r = 2.4 gives a usefully-resolved personal mean at n ≈ 3. So the floors are judgment, documented
+   as such, and the CI is what makes that safe: too low a floor reads as a visibly wide interval,
+   not as a confident wrong number.
+3. **Withheld had to mean absent, not flagged.** A statistic shipped beside `ready: false` is one
+   forgotten conditional away from being rendered. Gated fields are `None` — `Measurement`'s
+   "structurally incapable of reading as a verdict", one level up. What stays populated is the
+   evidence (`n`, `n_sessions`, per-session counts), because that is what makes a refusal
+   actionable rather than merely silent. The CLI demonstrates it: it never calls `supports()`, it
+   just checks whether there is a number.
+4. **`head_hip_offset_impact_norm` is readable here and nowhere else.** M6.5 blocked it as a
+   checkpoint because its sign is camera-relative and a GolfDB band over mixed handedness would be
+   meaningless. A personal corpus is single-handed by construction, so a personal baseline reads
+   the sign without consulting `Golfer.handedness` at all.
+
+**Where I left off**: step 5 (dispersion as cause discriminator) reads `pooled_samples()`. Step 6
+surfaces it, and is where the personal-vs-tour join lands — `MetricBaseline` mirrors
+`Distribution`'s shape so that is a lookup, not a redesign. `TREND` is gated but exposes only the
+per-session breakdown; the slope and its significance wait for a corpus to test against.
+**Blockers**: none to build. The `n` still needs a bay session — 20–30 swings with shots attached.
+**Notes**: pre-existing and cosmetic — both career CLIs print em-dashes, which the Windows console
+garbles at cp1252. `PYTHONIOENCODING=utf-8` fixes it; not changed here since it affects
+`career_corpus.py` equally and is a terminal setting rather than a code defect.
+
+---
+
 ## 2026-08-12 — The backfill, and the staleness nothing could see (career mode, step 3)
 
 **Duration**: ~1 session, implementation + the real backfill over the four swings on disk

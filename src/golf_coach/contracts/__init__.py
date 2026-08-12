@@ -16,6 +16,15 @@ from golf_coach.contracts.alignment import (
     SwingAlignment,
     SwingAnchors,
 )
+from golf_coach.contracts.baseline import (
+    BaselineClaim,
+    Interval,
+    MetricBaseline,
+    MetricSample,
+    PersonalBaseline,
+    SessionSample,
+    WithheldClaim,
+)
 from golf_coach.contracts.career import (
     CareerCorpus,
     CorpusSwing,
@@ -92,6 +101,14 @@ __all__ = [
     "CorpusSwing",
     "ExcludedSwing",
     "ExclusionReason",
+    # baseline
+    "PersonalBaseline",
+    "MetricBaseline",
+    "MetricSample",
+    "SessionSample",
+    "BaselineClaim",
+    "WithheldClaim",
+    "Interval",
     # feedback
     "FeedbackPayload",
     "Tip",

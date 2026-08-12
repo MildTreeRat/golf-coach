@@ -41,6 +41,20 @@
   .coach p { margin: 0 0 0.6rem; }
   .coach p:last-child { margin-bottom: 0; }
   .coach .by { font-size: 0.75rem; opacity: 0.7; margin-bottom: 0.5rem; }
+  /* Against your own history. Visually a sibling of the measurements table it sits under, not of
+     the checkpoint table above it: a personal center is not a band, and nothing here is scored. */
+  .hist { font-size: 0.85rem; }
+  .hist .m { display: flex; justify-content: space-between; gap: 0.6rem;
+             border-top: 1px solid rgba(128,128,128,0.2); padding: 0.3rem 0; }
+  .hist .m:first-child { border-top: none; }
+  .hist .name { font-family: ui-monospace, monospace; font-size: 0.8rem; }
+  .hist .v { font-variant-numeric: tabular-nums; text-align: right; }
+  .hist .v em { font-style: normal; opacity: 0.6; font-size: 0.78rem; display: block;
+                font-variant-numeric: normal; }
+  details.measured { margin-top: 1.5rem; font-size: 0.85rem; }
+  details.measured summary { cursor: pointer; font-size: 0.8rem; text-transform: uppercase;
+                             letter-spacing: 0.06em; opacity: 0.6; }
+  details.measured table { margin-top: 0.5rem; }
   .shot { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.4rem 0.8rem;
           font-size: 0.87rem; }
   .shot div { display: flex; justify-content: space-between;
@@ -112,6 +126,9 @@ async function load() {
     return;
   }
   render(payload);
+  // Fetched after the render rather than before it, and injected into a placeholder: the swing
+  // is what this page is about, and one slow corpus read must not hold back the score.
+  loadHistory(payload);
 
   // Opened straight from a link while the worker is still going: keep checking rather than
   // making the user pull to refresh.
@@ -157,6 +174,8 @@ function render(payload) {
   parts.push(tips(result.feedback));
   parts.push(coachBlock(result.feedback));
   parts.push(shotBlock(swing.shot));
+  parts.push(measurementsBlock(swing));
+  parts.push(`<div id="history"></div>`);
   parts.push(videoBlock(analysis, result));
 
   root.innerHTML = parts.join("");
@@ -262,6 +281,110 @@ function shotBlock(shot) {
        screen photo with ${num((prov.parse_confidence || 0) * 100, 0)}% confidence.
        ${(prov.warnings || []).map(esc).join(" ")}</div>` : "";
   return `<h2>Shot data</h2><div class="shot">${cells}</div>${review}`;
+}
+
+// Measured but not judged: no band, so no pass/fail, no percentile, no colour. Collapsed by
+// default and placed last, because a number nobody can yet say is good or bad is reference
+// material rather than feedback — and rendering it like the checkpoint table above would invite
+// exactly the reading it cannot support.
+function measurementsBlock(swing) {
+  const list = swing.measurements || [];
+  if (!list.length) return "";
+  const rows = list.map((m) => `<tr>
+      <td>${esc(m.name)}</td>
+      <td class="num">${num(m.value, 3)}</td>
+      <td class="muted">${esc(m.unit.replace(/_/g, " "))}</td>
+    </tr>`).join("");
+  return `<details class="measured"><summary>Measured, not yet judged (${list.length})</summary>
+    <p class="muted">These have no tour benchmark band yet, so nothing here is a pass, a fail, or a
+      percentile. They are recorded so bands can be derived from real swings later.</p>
+    <table>${rows}</table></details>`;
+}
+
+// Career mode, step 6. This swing's eight measurements against the golfer's own corpus — the
+// half of the scoring model tour bands cannot supply, since a 15-handicap held to a tour p10-p90
+// fails everything forever.
+//
+// Reads the same `/api/golfers/{id}/career` route the career page reads, rather than a per-swing
+// variant of it: one endpoint means the number here and the number there cannot disagree.
+async function loadHistory(payload) {
+  const slot = document.getElementById("history");
+  if (!slot) return;
+
+  const measurements = ((payload.result || {}).swing || {}).measurements || [];
+  if (!measurements.length) return;
+
+  if (!payload.player_id) {
+    slot.innerHTML = `<h2>Against your own history</h2><p class="muted">This swing names no
+      golfer, so it belongs to nobody's history. Set one on the upload page — the swing row
+      there has a repair link — and it joins the corpus.</p>`;
+    return;
+  }
+
+  let career;
+  try {
+    const res = await fetch(`/api/golfers/${encodeURIComponent(payload.player_id)}/career`,
+      { headers: authHeaders() });
+    if (!res.ok) return;   // a 404 here means an unregistered id; the swing page still stands
+    career = await res.json();
+  } catch (err) {
+    return;
+  }
+
+  const metrics = (career.baseline || {}).metrics || {};
+  const standing = (career.standing || {}).metrics || {};
+  const link = `/career.html?player=${encodeURIComponent(payload.player_id)}`;
+
+  const rows = measurements.map((m) => {
+    const base = metrics[m.name];
+    // Formatted by the metric's unit, not with the table above's flat 3 decimals: this row puts
+    // the swing's value directly beside the golfer's typical one, and "9.116 vs your typical 8.6"
+    // makes a reader check whether they are even the same quantity.
+    const value = fmtUnit(m.value, m.unit);
+    if (!base) {
+      return histRow(m.name, value, "not in the corpus yet — this swing may not have been " +
+        "re-read since it was analyzed");
+    }
+    if (typeof base.mean !== "number") {
+      const why = (base.withheld || []).find((r) => r.claim === "center");
+      return histRow(m.name, value, why ? why.reason : `n = ${base.n}, not enough for a typical value`);
+    }
+    // A typical value exists, so this swing can be placed against it — and against the tour, if
+    // that metric has a population it may be placed in.
+    const unit = base.unit;
+    let note = `your typical ${fmtUnit(base.mean, unit)}`;
+    if (base.mean_ci) {
+      note += ` (95% CI ${fmtUnit(base.mean_ci.low, unit)}–${fmtUnit(base.mean_ci.high, unit)})`;
+    }
+    // Never the bare word "outside": on a one-sided magnitude like finish_balance_norm a center
+    // below p10 is better than the tour population, and "outside tour range" renders that
+    // identically to a center above p90. career.html carries the same rule and the same reason.
+    const tour = standing[m.name];
+    if (tour && tour.standing !== "withheld") {
+      const side = tour.standing === "inside" ? "inside tour range"
+        : tour.standing === "straddles" ? "cannot tell against tour range"
+        : (typeof tour.outside_by === "number" && tour.outside_by < 0)
+          ? "below tour range" : "above tour range";
+      note += ` · ${side}`;
+    }
+    return histRow(m.name, value, note);
+  }).join("");
+
+  slot.innerHTML = `<h2>Against your own history</h2><div class="hist">${rows}</div>
+    <p class="muted">Built from ${career.corpus.distinct_swings} distinct swing${
+      career.corpus.distinct_swings === 1 ? "" : "s"}.
+    <a href="${link}">See the full career page</a>.</p>`;
+}
+
+function histRow(name, value, note) {
+  return `<div class="m"><span class="name">${esc(name)}</span>
+    <span class="v">${esc(value)}<em>${esc(note)}</em></span></div>`;
+}
+
+// Matches career.html and the career CLIs: one decimal for degrees, three otherwise.
+function fmtUnit(value, unit) {
+  if (typeof value !== "number") return "-";
+  return unit === "degrees" ? value.toFixed(1) : value.toFixed(3);
 }
 
 function videoBlock(analysis, result) {

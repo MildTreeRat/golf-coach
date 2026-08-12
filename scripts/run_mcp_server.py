@@ -52,6 +52,15 @@ def main() -> int:
         default=settings.shots_dir,
         help="Directory of parsed launch-monitor shots (default: %(default)s).",
     )
+    parser.add_argument(
+        "--golfers-dir",
+        type=Path,
+        default=settings.golfers_dir,
+        help=(
+            "Golfer registry, which the three career tools resolve names through "
+            "(default: %(default)s). Without it those tools are not offered at all."
+        ),
+    )
     args = parser.parse_args()
 
     # Imported here, not at module scope, so `--help` and the path checks below work on an
@@ -72,16 +81,21 @@ def main() -> int:
     # Warn rather than fail: a missing directory is an empty dataset, and the tools answer
     # "nothing recorded yet" perfectly well. Exiting here would make the client show a broken
     # server instead, which is a worse diagnosis of the same situation.
-    for label, path in (("sessions", args.sessions_dir), ("shots", args.shots_dir)):
+    for label, path in (
+        ("sessions", args.sessions_dir),
+        ("shots", args.shots_dir),
+        ("golfers", args.golfers_dir),
+    ):
         if not path.exists():
             print(f"warning: {label} directory does not exist: {path}", file=sys.stderr)
 
     source = CompositeShotDataSource([ScreenShotDataSource(args.shots_dir)])
     print(
-        f"golf-coach MCP server on stdio — sessions={args.sessions_dir} shots={args.shots_dir}",
+        f"golf-coach MCP server on stdio — sessions={args.sessions_dir} "
+        f"shots={args.shots_dir} golfers={args.golfers_dir}",
         file=sys.stderr,
     )
-    run(args.sessions_dir, source)
+    run(args.sessions_dir, source, args.golfers_dir)
     return 0
 
 

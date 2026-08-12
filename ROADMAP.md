@@ -1,6 +1,6 @@
 # Roadmap: AI Golf Swing Trainer
 
-## Last Updated: 2026-08-10
+## Last Updated: 2026-08-12
 
 Grouped by **state**, not by number, because the numbers no longer run in order: the pose-only
 slices (M4-PoC, M4-PoC+, M4-REF, M5-FB) delivered the mechanics half of M4 and the ranking half
@@ -20,16 +20,47 @@ wording; only the grouping and the M4 checklist have been corrected.
 | **M1.5** Detectability spike | ⬜ Next | Nothing — phone clips of the impact zone | [§M1.5](#milestone-15-club-head-detectability-spike-de-risk-before-investing) |
 | **M7** Two-phone sim capture | 🟡 In progress, 6/7 phases (3 trimmed) | Nothing — two iPhones + a sim bay | [§M7](#milestone-7-two-phone-sim-capture-no-hardware-purchase) |
 | **M4** full (outcome axis) | ⬜ Blocked | The M2 + M3 streams | [§M4 full](#milestone-4-full-swing-analysis-engine--the-outcome-axis) |
+| **M6** LLM coaching | 🟡 In progress | Nothing — an API key | [§M6](#milestone-6-llm-powered-coaching--in-progress) |
+| **M6.5** Measure now, judge later | 🟡 In progress | Nothing — 8 metrics recorded, none scored | [§M6.5](#m65-measure-now-judge-later--in-progress) |
+| **Career mode** One golfer over time | ✅ Done, 6/6 steps | — (built and silent; a bay session gives it the `n` to speak) | [§Career](#career-mode-one-golfer-tracked-over-time--done-built-and-silent) |
 | **M5** Feedback UI | ⬜ Not started | M7 Phase 5 gives the host | [§M5](#milestone-5-feedback-ui) |
-| **M6** LLM coaching | ⬜ Not started | M5 | [§M6](#milestone-6-llm-powered-coaching) |
 | **M2** Club & ball detection | 🔒 Gated | M1.5 go/no-go **+** global-shutter camera | [§M2](#milestone-2-club--ball-detection) |
 | Hardware re-validation | 🔒 Gated | Cameras / launch monitor arriving | [§Gate](#hardware-re-validation-gate-revisit-when-cameras--launch-monitor-arrive) |
+
+**NEXT ACTION — do this first:** add an Anthropic API key and verify M6 coaching against the live
+API. The whole coaching path (M6) is built, tested against a fake client, and green — but no real
+request has ever been sent, because no key is configured. Concretely:
+
+```bash
+echo "GOLF_ANTHROPIC_API_KEY=sk-ant-..." >> .env    # a real key, not a placeholder
+python scripts/analyze_bundle.py 2026-08-10/2 --no-video   # reads the key, calls claude-opus-5
+```
+
+Then read the coaching paragraph against the numbers above it: it must not assert anything the
+brief didn't contain, and must not mention spine angle, hip rotation, swing plane or club path —
+none of which this system measures. Until that run happens, M6's live path is unproven. Tracked as
+the first open item in [§M6](#milestone-6-llm-powered-coaching--in-progress).
 
 **The one purchase that actually blocks something:** a global-shutter camera for M2. Everything
 else above either needs nothing, or needs work rather than money.
 
 **Oldest unstarted item:** M1.5. It has stayed deferrable because the pose-only spine kept
 producing value without it — but M2 and every club-derived metric sit behind it.
+
+**Biggest constraint on *coaching*, as opposed to measuring: n.** Causal coaching ("why is your
+face open") is unreachable with this instrument — grip, wrists and clubface are all invisible to
+it. What *is* reachable is per-golfer dispersion, which splits static causes from timing causes
+without seeing the body, and needs 20–30 shots in one session rather than the one-per-session on
+disk. See [Career mode](#career-mode-one-golfer-tracked-over-time--done-built-and-silent). No
+purchase unblocks this, and as of 2026-08-12 **nothing to build does either**: all six steps are
+done — golfer identity at capture; the corpus reader that counts the `n`; the backfill that brought
+every stored analysis up to the current engine; the baseline plus the minimum-N guard that reads
+it; the discriminator that turns a mean and a spread into which *family* of cause to investigate;
+and the surfacing, which joins a personal center to the tour band and puts all of it behind three
+MCP tools and a career page. The counter prints **n = 2 for every metric**, so every one of those
+surfaces refuses. Every swing on disk is measured, `career_baseline.py` refuses all 24 claims over
+those measurements, `career_dispersion.py` refuses both findings on all eight metrics, and the tour
+join refuses all eight placements. The mechanism is complete and silent; only `n` is missing.
 
 ---
 
@@ -60,7 +91,12 @@ blocker for M1.
 
 # Done
 
-The pose-only track, complete. All four of these ran on phone video and a public reference corpus — no hardware was used or needed.
+The pose-only track, complete. The first four ran on phone video and a public reference corpus —
+no hardware was used or needed. **Career mode** joins them as of 2026-08-12 and is the odd one out
+in a way worth stating: it is finished and it currently says nothing. Its deliverable is a
+mechanism *plus the guard that keeps it quiet*, so refusing every claim over the two swings on disk
+is the feature working, not the milestone being unfinished. What it waits for is `n`, and no code
+supplies that.
 
 ---
 
@@ -237,6 +273,9 @@ first*, grounded in how far off the tour population a swing actually sits. Desig
       signal at all, beats every pose rule on every column — frac_err 0.043 vs 0.059 (mid_backswing)
       and 0.038 vs 0.100 (mid_downswing). A checkpoint built on our detection would be worse than a
       constant. Kept runnable, like the six rejected address signals
+      *(2026-08-11: that refusal was about **instant detection**, and does not generalize —
+      see [§M6.5](#m65-measure-now-judge-later--in-progress). Spatial metrics measured at the
+      already-validated instants pass the equivalent gate comfortably.)*
 - [ ] **Reasons, not just names, on `unscored`** — needs the evaluators to return a reason instead of
       `None`, which touches every return site
 - [ ] **Per-club percentiles** — the corpus has the strata, but the band has to move in step
@@ -249,9 +288,272 @@ rather than an omission.
 
 ---
 
+## Career mode: one golfer, tracked over time — done (built and silent)
+**The idea**: everything today judges a swing against a *tour population*. Career mode judges it
+against **the golfer's own history** — their baseline, their spread, their trend. It is the
+missing half of the scoring model: `golfdb_v1.json` says what good looks like across 122 tour
+players, and nothing yet says what *normal* looks like for the person actually swinging.
+
+**Why it is worth its own milestone rather than a feature**: it changes what questions are
+answerable, not just what is displayed.
+
+- **Dispersion becomes a cause discriminator.** This is the strongest single argument for it. We
+  can measure that a club face is open; we cannot see *why*, because grip, lead-wrist angle and
+  release timing are all invisible to this instrument (wrists jitter 6x more than hips and 14.5%
+  of frames fail the visibility gate; the club needs M2). But the **variance** of face angle across
+  a session splits the causes without seeing the body at all: consistently open by a similar amount
+  points at a *static* cause (grip, setup — checkable before you swing), while a wide spread points
+  at *timing/release*. Those have completely different fixes. Three shots read +8.6, +2.8, -5.0 —
+  suggestive of timing, and nowhere near enough to say so.
+- **A fix becomes testable.** Since the cause is unknowable from this data, the honest method is
+  empirical: baseline the golfer's face-to-path, change one thing, measure whether it moved toward
+  zero. That needs a per-golfer baseline to move *from*.
+- **Personal bands beat tour bands for feedback.** A 15-handicap held to a tour p10-p90 fails
+  everything forever. Their own p50 is the useful comparison, with the tour band as the horizon.
+- It subsumes the two MCP tools deliberately deferred in M3 (`get_shot_trends`, `compare_sessions`),
+  which were held back for exactly this reason: *"a trend tool over n=3 reports noise in a
+  confident voice."*
+
+**What blocks it, and it is almost only one thing: n.** Nothing about this is hard to build — it
+is a store, a few aggregates, and a minimum-N guard that refuses to speak below threshold. It is
+deferred because building it now would produce a confident-looking trend line over three points,
+which is the failure mode this repo exists to avoid. **The unblock is a bay session that captures
+20-30 swings with shots attached.**
+
+Two corrections to that framing, both found by looking at the disk rather than the roadmap:
+
+- **`n` is 2, not 3.** Three of the four swings on disk are byte-identical re-uploads of one clip
+  (`face_on.91b9d32c1afb` in `2026-08-07-aaron1/1`, `2026-08-09/2` and `2026-08-10/1`, with the
+  same shot photo attached to all three). Since shots join by photo *hash*, a cross-session
+  aggregate written naively would count one swing — and one shot — three times. The corpus reader
+  has to dedupe on content hash, and report the duplicates rather than absorb them.
+- **"not any code" was wrong about exactly one thing: capture-time metadata.** Everything else is
+  derivable after the fact, so it can be built whenever. Who swung and which way they face are
+  recorded or lost, so they had to land *before* the bay session, not after it.
+
+**Step 1 is done (2026-08-11): golfer identity + handedness at capture.** `contracts/golfer.py`
+(`Golfer`, `Handedness`, `slugify`), a flat-file registry in `storage/golfer_store.py`, a
+per-session cursor in `storage/session_meta.py`, `player_id` stamped write-once onto
+`SwingManifest`, a golfer bar on the upload page, and `scripts/backfill_golfer.py` (already run —
+all four existing swings are `aaron`, right-handed). Uploads are deliberately never blocked on it;
+setting a golfer adopts the swings that arrived unlabeled, and each swing row has a repair link.
+
+**Step 2 is done (2026-08-11): the cross-session corpus reader.** `contracts/career.py`
+(`CareerCorpus`, `CorpusSwing`, `ExclusionReason`), `storage/corpus.py` (`read_corpus`), and
+`scripts/career_corpus.py`, which prints the honest `n`. Against the four swings on disk:
+
+```
+4 swing directories across 4 sessions  ->  2 distinct swings, 2 distinct shots
+  face_on 91b9d32c1afb  kept 2026-08-07-aaron1/1  <- 2026-08-09/2, 2026-08-10/1
+  n = 1 for all eight metrics; 1 swing analyzed pre-M6.5 with `measurements: []`
+```
+
+Two things the plan did not anticipate, both found by writing the test:
+
+- **The two dedupe keys diverge in only one direction.** Pose metrics count distinct face-on clips,
+  launch-monitor metrics distinct shot photos, and the real case is one photo attached to two
+  different swings by `bundle_store`'s arrival rule — two pose samples, one shot sample. The
+  reverse (one clip, two photos) looked like the stronger argument for two keys and is not a
+  sample at all: one physical swing produced one ball flight, so a second photo is misattached.
+  It is reported as `conflicting_shots` for repair rather than counted, because counting it would
+  put a `face_to_path_deg` into the dispersion that no swing ever produced.
+- **`excluded` means "contributes no sample", not "not in the corpus".** An unanalyzed or stale
+  swing is a real distinct swing of this golfer's carrying no usable numbers *yet* — both are
+  repaired by re-running the pipeline, so they are reported as work rather than as absence.
+
+**Step 3 is done (2026-08-12): the backfill, and a second axis of staleness.** All four
+`analysis.json` on disk are re-analyzed and carry all eight measurements; **`n = 2` for every
+metric**. The re-run moved nothing else — scores, checkpoints, phases, windows and alignment
+anchors are byte-identical to what was stored, which is the check that says the backfill added
+data rather than changing history. New `scripts/reanalyze.py` is the repeatable form of it.
+
+Two things found by looking at the disk, neither of which was in the plan:
+
+- **Nothing could tell that a stored analysis was older than the engine.** It worked this once by
+  accident: M6.5 happened to *add a field*, so "pre-M6.5" read as `measurements: []`. The
+  2026-08-09 `_DRAWDOWN_FLOOR` fix is the counterexample — it moved a stored tempo from 0.43 to
+  2.42 without changing the shape of anything. So `SwingBundleResult` now carries
+  `analysis_version` (`contracts/swing.ANALYSIS_VERSION`, defaulting to **0** so a legacy artifact
+  reads as older-than-current rather than claiming to be current), `read_corpus` reports
+  `ExclusionReason.OUTDATED` and keeps those swings out of the counts, and `reanalyze.py` targets
+  them by default. This matters for step 4 specifically: a `PersonalBaseline` reads *spread*, and
+  pooling two engine generations manufactures variance out of a code change — the mirror image of
+  the duplicate-counting error step 2 was built to refuse.
+- **`analysis.state.json` could silently contradict `analysis.json`, and did.** `2026-08-09/2`'s
+  sidecar read **66.67** with the pre-fix "Tempo too quick - 0.4:1" headline while its own
+  analysis read **94.92** / "2.4:1", so the upload page showed 67/100 for a swing whose results
+  page showed 95/100. `analyze_swing_dir` wrote the analysis and only `api/worker.py` wrote the
+  sidecar, so every CLI run was a way to desync them — and `AnalysisState.matches` could never
+  catch it, because it compares *inputs* and a re-analysis does not change the inputs. The
+  terminal state is now written by `pipeline.record_state` as part of writing `analysis.json`;
+  the worker keeps `queued`/`running`/crash, the three states no analysis on disk corresponds to.
+
+**Step 4 is done (2026-08-12): the baseline, and the guard that keeps it quiet.**
+`contracts/baseline.py` (`PersonalBaseline`, `MetricBaseline`, `BaselineClaim`, `WithheldClaim`,
+the threshold table), `analysis/baseline.py` (`build_baseline`, `pooled_samples`), `mean_ci` /
+`sd_ci` in `analysis/stats.py`, and `scripts/career_baseline.py`. Against the two swings on disk it
+refuses **all 24 claims** — eight metrics × three claims — and each refusal names what it is waiting
+for, so the output doubles as a worklist.
+
+The gate is per **(metric, claim)**, not per metric, because the three claims have genuinely
+different appetites for `n`: `CENTER` (a typical value), `SPREAD` (repeatability — the claim this
+milestone exists for), `TREND` (movement, which additionally needs ≥3 *sessions*, since twelve
+swings hit in one bay hour are one occasion). Every statistic carries a 95% CI, so a mean over 6
+swings cannot print the same way as one over 60.
+
+Four things found by building it:
+
+- **The dedupe rule was private, and pooling could have disagreed with counting.** Step 2's keying
+  lived inside `storage/corpus.py::_count_metrics`, which returned *counts and not values*. A
+  baseline that pooled `swing.measurements` naively would have averaged a different number of
+  values than the `n` printed beside it — and only in the cases the rule exists for (a re-uploaded
+  clip; one shot photo across two real swings), which is to say only where it is invisible. The
+  rule is now `CorpusSwing.artifact_key`, called by both sides, with the equality pinned end-to-end
+  in `tests/storage/test_corpus.py`.
+- **M6.5's spread/error ratios cannot set these thresholds**, which is the obvious place to reach
+  for them. That ratio is *population* spread over *instrument* error, while what binds a personal
+  baseline is the golfer's own shot-to-shot variability — unmeasured, and much larger. Deriving
+  from tempo's r = 2.4 yields a usefully-resolved personal mean at **n ≈ 3**. So the floors are
+  judgment, documented as judgment, and the CI is what makes that safe: a floor set too low shows
+  up as a visibly wide interval rather than as a confident wrong number.
+- **Withheld had to mean *absent*, not flagged.** A statistic shipped beside a `ready: false` is one
+  forgotten conditional away from being rendered anyway. Gated fields are `None`, which is
+  `Measurement`'s "structurally incapable of reading as a verdict" one level up. What stays
+  populated is the *evidence* — `n`, `n_sessions`, the per-session counts — because those are facts
+  about how much data exists rather than claims about the golfer, and they are what makes a refusal
+  actionable.
+- **`head_hip_offset_impact_norm` is readable here and nowhere else.** M6.5 blocked it from becoming
+  a checkpoint because its sign is camera-relative and a band cut from GolfDB's mixed-handedness
+  population would be meaningless. A personal corpus is single-handed by construction, so the sign
+  is consistent without consulting `Golfer.handedness` at all — the one metric a personal baseline
+  can interpret that a tour band cannot.
+
+**Step 5 is done (2026-08-12): the cause discriminator, and a reading written for one metric.**
+`contracts/dispersion.py` (`Finding`, `DispersionPattern`, `MetricTarget`, the `METRIC_TARGETS`
+table, `MetricDispersion`, `GolferDispersion`), `analysis/dispersion.py` (`build_dispersion`,
+`dispersion_for`), and `scripts/career_dispersion.py`. Two findings rather than one verdict —
+**bias** (the center sits further from the target than measurement error explains) and **scatter**
+(the spread is larger than measurement error explains) — because a golfer can have both and the
+*contrast* is the entire signal: the same 6° average miss means opposite things at sd 1 and at sd 9.
+Both are decided by an interval and never a point estimate, so a tolerance set wrong surfaces as an
+honest "cannot tell" instead of a confident wrong pattern. Against the disk it refuses both findings
+on all eight metrics.
+
+Five things found by building it:
+
+- **The reading was written for one metric and printed for all eight.** The first cut of the
+  `BIASED` text named the things to check outright — "grip, alignment, ball position, face at
+  address" — which is right under `face_to_path_deg` and is nonsense under `head_sway_norm`, where
+  it printed unchanged. A golfer would have been sent to check their grip about a head that moves.
+  One reading serves every metric, so it may name only the *class* of cause; the specific check
+  needs per-metric vocabulary and belongs in `feedback`.
+- **Six of the eight tolerances did not have to be invented — they were already measured.**
+  `tune_spatial_metric.py` computes `noise` (two estimators at identical labelled instants) plus
+  `bound` (labelled against detected segmentation), which is exactly "the smallest difference
+  distinguishable from this pipeline's own error". Re-run over the 461-clip face-on corpus: 0.024
+  (`finish_balance_norm`) to 0.943 (`tempo_ratio`). Tempo's `noise` is **0.000** and that is
+  structural rather than lucky — it reads phase instants only, and both estimators were handed
+  GolfDB's labelled ones, so its whole error term is our own address detection. The two
+  launch-monitor metrics have no analogue for a photographed screen, so their 2.0° is judgment,
+  documented as judgment and flagged as the first thing a bay session should revise.
+- **Four of the eight can carry a scatter finding and must not carry a bias one.** Declaring a
+  target is declaring what *good* is, which this repo does in exactly one place — a band with a
+  derivation behind it (ADR-010 §2). `hip_sway_norm` and `hip_shift_at_top_norm` have no band and
+  "less is better" is not established for either (some lateral hip travel is a weight shift);
+  `head_hip_offset_impact_norm` has a readable sign but no known right amount; and `tempo_ratio`'s
+  target *is* a band, so reading it here would import `benchmarks` into the personal-baseline path
+  — the boundary step 4 held on purpose. Each refusal carries its reason rather than being absent.
+- **A bias on a one-sided magnitude asserts less than it reads.** Zero head sway is not attainable
+  by a human, so "the center is distinguishable from 0" is established for essentially every
+  golfer. What it actually says is *a consistent amount, above measurement error* — which is
+  precisely the half of the contrast this step needs — and **not** that the amount is too much.
+  That question is the tour band's, and it is step 6.
+- **The guard did not need re-deriving, it needed consuming.** `MetricDispersion` is built from the
+  `MetricBaseline` step 4 already sealed, so when `CENTER` was refused there is no mean in the
+  input to test a bias against — absent rather than ignored. Only `_refuse` had to become public
+  (`analysis.baseline.refuse`), so both steps build refusals from one definition; a second copy is
+  how two floors drift apart with the looser one deciding what gets said.
+
+**Step 6 is done (2026-08-12): the surfacing, and the join that closes the scoring model.**
+`contracts/comparison.py` + `analysis/comparison.py` (the personal-vs-tour join), `mcp/career.py`
+plus three MCP tools, `GET /api/golfers/{id}/career`, a new `static/career.html`, an "Against your
+own history" block on the swing page, and the `vs tour` row in `scripts/career_baseline.py`.
+`storage.corpus.narrow_to` is the one new reader. 540 tests (up from 501), ruff and mypy clean.
+
+The join answers the question the tour band was always going to be asked: whether the golfer's own
+center sits where tour swings sit. It is read off the mean's **95% CI**, never the mean, so a
+center a hair past p90 with an interval crossing it reports `straddles` — unresolved — rather than
+a placement that flips on the next swing. Against the disk it refuses all eight.
+
+**The four target-less metrics did not need targets after all.** The plan going in was that a bias
+finding for `tempo_ratio` was "a one-line edit to `METRIC_TARGETS` once a band exists". It is, and
+it would have been wrong: the band *is* the answer, and asking whether the center's CI sits inside
+p10–p90 is the band's own question asked directly. Inventing a point target — the midpoint of
+2.72–4.71 — would have declared 3.7 to be what *good* is, which is a claim nobody derived.
+`METRIC_TARGETS` is unchanged, and the join answers what the missing targets were wanted for.
+
+Five things found by building it:
+
+- **The one metric a personal baseline can read is the one metric the tour band cannot.** Step 4
+  established that `head_hip_offset_impact_norm`'s sign is readable personally, because a personal
+  corpus is single-handed by construction. The stored distribution is not: it is cut from GolfDB's
+  mixed-handedness population, which is exactly why M6.5 blocked the metric as a checkpoint. So the
+  join has to refuse the one metric that has both a center and a distribution — a stored row
+  existing is not a stored row meaning something, and "did we get a row back" would have passed.
+- **`sd` against `sd` is a category error and looks like a free second finding.** `Distribution`
+  carries one, one field from the p10 the join already reads. But the tour `sd` is *between-player*
+  variation (458 clips over 122 players, under four each) while a personal `sd` is *within-player*
+  repeatability. "Your spread is tighter than the tour's" compares one golfer's consistency against
+  how much a field differs from itself, and comes out flattering for everyone alive. Recorded in
+  `unavailable` rather than computed.
+- **"Outside" is a verdict for half the panel and the opposite for the other half.** Found by
+  rendering the speaking path: `finish_balance_norm` sits *below* p10 on a one-sided `[0, high]`
+  band, which is better balance than the tour population — and the page printed "outside tour
+  range" in amber, identically to a center above p90. Two fixes, both structural: every standing
+  pill is now neutral (the contract carries no `score` and no `passed` precisely so it cannot read
+  as a verdict, and colour was re-adding one), and `outside` always names its side. This is step
+  5's own defect repeating one milestone later — a shared reading that is correct for some metrics
+  and misleading for others — and again only a render caught it.
+- **A withheld claim keeps its evidence, and an LLM can do arithmetic.** The refusal ships `n`,
+  `n_sessions` and the per-session counts, because that is what makes it actionable. Handed
+  "session A: 4 swings, session B: 5", a model can average them and narrate the trend the guard
+  just refused; nothing in a payload prevents it. So `contracts/caveats.py` gained
+  `READING_A_PERSONAL_HISTORY`, kept *separate* from the block the coaching call gets — that one
+  writes about a single swing, and rules for tools it does not have teach a reader to skim.
+- **The boundary moved out one layer instead of dissolving.** `analysis.baseline` and
+  `analysis.dispersion` still import no `benchmarks`; the join is the only module that imports
+  both. Pinned by a test that reads the two files' **source**, because the obvious runtime version
+  cannot work: `analysis/__init__.py` imports `engine`, so importing anything under
+  `golf_coach.analysis` pulls the bands in before the module body runs. A `sys.modules` check there
+  passes for the wrong reason forever.
+
+`TREND` is defined and gated but exposes only the per-session breakdown; the inferential statistic
+(a slope, and whether it differs from zero) is deferred until there is a corpus to test it against.
+`get_shot_trends` keeps ADR-006's name though it now covers the six pose metrics too.
+
+**Design notes** (recorded while the reasoning was fresh; steps 1–4 have since built all three):
+- The minimum-N guard is the load-bearing part, and it should refuse per-metric rather than
+  globally: face-angle dispersion needs far fewer shots to be meaningful than a carry-distance
+  trend does. *(Built in step 4, and refined one notch finer — the gate is per **(metric, claim)**,
+  because `SPREAD` needs more `n` than `CENTER` on the same metric.)*
+- `Measurement` (M6.5) is the right input. Every analyzed swing already records eight of them with
+  no band attached, which is exactly the shape a personal baseline is cut from — and why recording
+  them before they could be judged was worth doing. *(Confirmed: `build_baseline` reads nothing
+  else.)*
+- Handedness is now on the `Golfer` record, which is what finally lets
+  `head_hip_offset_impact_norm`'s camera-relative sign be interpreted — it stays unscored until a
+  checkpoint reads that field, since the GolfDB band behind it is cut from a mostly right-handed
+  population. *(Step 4 found this is a constraint on the **tour band only**: a personal corpus is
+  single-handed by construction, so a personal baseline reads the sign without the field.)*
+
+
+---
+
 # In progress
 
-Shot ingestion and the MCP server both landed; tuning OCR on a real session's photos is the remainder.
+Shot ingestion and the MCP server both landed; tuning OCR on a real session's photos is the
+remainder of M3. M6 joins them: Claude now writes the per-swing verdict, and what is left there
+is the client handshake and conversational follow-up.
 
 ---
 
@@ -275,9 +577,11 @@ Shot ingestion and the MCP server both landed; tuning OCR on a real session's ph
       say where a swing sits against the tour population. See the ADR-006 2026-08-10 addendum
 - [x] Write integration tests: 27 tests, and the query layer is pinned to import no MCP SDK
       (same extras boundary `api/pipeline.py` holds against fastapi)
-- [ ] `get_shot_trends` / `compare_sessions` — **deliberately deferred, not dropped.** Three
-      parsed shots exist; a trend tool over n=3 reports noise in a confident voice. They land
-      when a real range session's worth of shots does
+- [x] `get_shot_trends` / `compare_sessions` *(2026-08-12, career mode step 6)* — deferred, then
+      built without the sample size changing. The guard is what made them safe: a statistic the
+      `n` cannot support is `None`, so the confident voice has nothing to say. A third tool,
+      `get_golfer_profile`, carries the bias/scatter discriminator the original table had no
+      place for
 - [ ] Connect MCP server to analysis engine data merger
 - [ ] *(optional, later)* Acquire the Garmin R10 and add its BLE adapter (ADR-004)
 
@@ -293,6 +597,119 @@ Shot ingestion and the MCP server both landed; tuning OCR on a real session's ph
 
 
 ---
+
+## M6.5: Measure now, judge later — in progress
+**Goal**: Record every quantity this system *can* measure from data already on disk, without
+scoring any of it — so bands can be derived from a real population later, and so a swing captured
+today is still worth re-reading once they exist.
+
+**Why it exists**: measurement and judgment were fused. `evaluate_head_sway` measured, resolved a
+band, scored, and returned `None` if *any* step failed — so a metric with no band could not be
+measured, while bands are derived from populations of measurements. That circle, not the difficulty
+of any metric, is why the panel sat at three checkpoints for two milestones.
+
+- [x] **Split measure from judge** *(2026-08-11)* — `analysis/measure.py` holds the measuring half
+      (pure, no `resolve_range`, `None` means *could not measure*); `checkpoints/mechanics.py` keeps
+      the judging half. The three evaluators are unchanged in behaviour, pinned by the existing
+      `tests/analysis` suite passing with no assertion moved
+- [x] **`Measurement` contract** — no band, no `passed`, no `score`. ADR-010 §2 expressed as a type
+      rather than a convention: a measurement is structurally incapable of reading as a verdict
+- [x] **Three new face-on pose metrics** — `hip_sway_norm`, `hip_shift_at_top_norm`,
+      `head_hip_offset_impact_norm`. All hips/shoulders/ears, all windowed, all `x`-over-`x` and so
+      immune to the 16:9 pixel-aspect assumption. Vertical and shoulder-tilt metrics were left out
+      for being aspect-*sensitive*; ankles and knees for having zero recorded reliability evidence
+- [x] **Two launch-monitor metrics** — `face_to_path_deg` (the observable ADR-009 §Concepts names
+      for shape) and `start_line_deg`. `smash_factor` / `club_head_speed` are deliberately excluded:
+      every shot on disk reads smash 0.89-1.00, i.e. ball speed *below* club speed, and the OCR is
+      faithful, so the simulator itself is printing a physically impossible number. `spin_axis` too
+      — its sign contradicts the contract and the parser warns it stored an uninterpreted magnitude
+- [x] **`scripts/golfdb/tune_spatial_metric.py`** — the gate the repo did not have. It had three
+      harnesses for *temporal* rules and none for spatial quantities, so "should we add this
+      checkpoint?" was answerable only by argument. Scores population spread against measurement
+      error, where error is estimator disagreement (`lite` vs `full`, both already cached for all
+      461 face-on clips, no new extraction) plus segmentation error (labelled vs detected instants)
+- [x] **Registry-driven derivation** — `derive_pose_metrics.py` iterates
+      `measure.POSE_MEASUREMENTS` instead of hardcoding two metric names in three places, so a
+      candidate metric is one line. `derive_reference.py` needed no change; it auto-discovers
+- [ ] **Decide what to promote.** Nothing is scored yet and `ranges.json` is untouched — that is
+      the next call, and it wants more than one golfer's swings behind it
+
+> **Status (2026-08-11):** all six pose metrics clear the gate over the full 461-clip face-on
+> corpus (ratio = spread / error): `finish_balance` 8.2, `head_hip_offset_impact` 7.6,
+> `hip_sway` 7.1, `head_sway` 6.7, `hip_shift_at_top` 3.6, `tempo` 2.4. The harness validates
+> itself three ways — it reproduces `head_sway_norm`'s shipped band (p10-p90 **0.029-0.430** against
+> `ranges.json`'s 0.0-0.43), `finish_balance_norm`'s p90 (**0.287** against 0.29), and the face-on
+> `tempo_ratio` p90 of **5.000** that `mechanics.py` documents against the all-view 4.71.
+>
+> Two things found by running it. Normalizing the simulator's shape text matched `CENTER` before
+> `FADE`, classifying a real recorded `"CENTER SLIGHT FADE"` as **straight** — curvature words now
+> beat centering words. And re-deriving showed the corpus had been storing `CheckpointScore.observed`,
+> which is **rounded to 2dp**; measurements now carry full precision, which moves 42 distribution
+> rows by under 0.005 and leaves every shipped band unchanged at the precision it quotes.
+>
+> `head_hip_offset_impact_norm` is signed and camera-relative. It is empirically *not* bimodal on
+> this corpus (p10 -0.88 to p90 -0.33, consistently head-behind-hips) so a band is derivable — but
+> that is a fact about GolfDB's handedness mix, not a guarantee, and handedness must be resolved
+> before it becomes a checkpoint. `derive_reference.py`'s recommended band for it is also garbage
+> (`low=0.00 high=-0.33`): its one-sided heuristic assumes non-negative values.
+
+**Exit Criteria**: every measurable quantity recorded on every analyzed swing, with a harness that
+says which of them a band is worth deriving from — met. Promotion to scored checkpoints is
+deliberately a separate decision.
+
+
+---
+
+## Milestone 6: LLM-Powered Coaching — in progress
+**Goal**: Use Claude API to generate conversational, context-aware coaching advice.
+
+- [x] **Design prompt template** — `feedback/coach.py`. The brief is *rendered*, not dumped:
+      every value is labelled with the vocabulary the caveats warn about (`unscored`,
+      `percentile`, `needs_review`, `alignment_caveat`), so a warning about `unscored` lands
+      beside a line that says `unscored`. Keypoints and phases are excluded — several hundred
+      frames of landmarks that no coach reasons from and that would dominate the prompt
+- [x] **Implement the Claude API call in the feedback module** *(2026-08-11)* — `claude-opus-5`,
+      adaptive thinking at `effort: low`, and it **never raises for an expected failure**: no key,
+      no `llm` extra, a rate limit, a refusal, a truncation each return a reason that becomes a
+      note on the result. Coaching is the last thing that happens to a swing and the least
+      important; it must never be able to cost a golfer their score
+- [x] **One source of truth for the caveats** — the standing warnings moved to
+      `contracts/caveats.py`, composed by *both* `mcp/server.py` and `feedback/coach.py`. ADR-008
+      forbids either importing the other, and the alternative was two copies of load-bearing prose
+      drifting apart, which this repo has been bitten by three times
+- [x] **Display LLM coaching alongside rule-based feedback in UI** — `results.html` renders it as
+      a tinted card, never as a fourth `.tip`, with the model named *above* the prose. Gated on
+      `CoachingProvenance` as well as text: unattributed prose on a page of measurements is
+      indistinguishable from a measurement
+- [ ] **⭐ NEXT: add an API key and verify the live call.** Everything above is tested against a
+      fake client and has never made a real request — no `GOLF_ANTHROPIC_API_KEY` is configured.
+      Put a real key in `.env`, run `python scripts/analyze_bundle.py 2026-08-10/2 --no-video`, and
+      read the paragraph against the numbers: it must state nothing the brief didn't contain and
+      must not mention spine angle, hip rotation, swing plane or club path. This is the one open
+      item that needs nothing but the key
+- [ ] **Register the MCP server with a real client and exercise the handshake.** Config is
+      written up in the README for both Claude Desktop and Claude Code; the tools have still only
+      been driven in-process through `call_tool`, which validates the schemas and the data but
+      not the client handshake
+- [ ] **Ask follow-up questions about a swing** — needs a transcript store, so it is a real
+      milestone of its own rather than an increment. The natural shape is the SDK tool runner over
+      `mcp/query.py`'s functions directly (not over the stdio server — that round trip exists for
+      *external* clients)
+- [ ] *Enable Claude to call MCP server tools for shot data context* — **reframed, not dropped.**
+      The in-app call needs no tools: the pipeline already holds the whole `SwingBundleResult` in
+      memory and hands it over directly. Tools become the right answer only for the follow-up
+      case above
+
+> **Status (2026-08-11):** a swing analyzed with a key configured carries `feedback.coaching_text`
+> and `feedback.coaching` (model + timestamp + a sha256 of the brief, so a stored result can tell
+> when the numbers moved underneath it). Found by running it: the first cut trimmed trailing zeros
+> unconditionally and rendered a percentile of 90 as **9** and 10 as **1** — plausible, wrong, and
+> aimed straight at a model that would have repeated it as fact. That also exposed a real
+> inaccuracy in the caveat text itself, which claimed every failing checkpoint reports "about 90";
+> a two-sided metric that misses *low* clamps to 10, as tempo does on `2026-08-10/2`. Both fixed,
+> the second one for the MCP server too.
+
+**Exit Criteria**: Claude provides specific, grounded coaching advice referencing actual swing data and shot metrics.
 
 # Next — nothing blocking
 
@@ -493,16 +910,6 @@ scoring both axes.
 
 ---
 
-## Milestone 6: LLM-Powered Coaching
-**Goal**: Use Claude API to generate conversational, context-aware coaching advice.
-
-- [ ] Design prompt template: feed swing result data + session history to Claude
-- [ ] Implement Claude API call in feedback module
-- [ ] Enable Claude to call MCP server tools for shot data context
-- [ ] Display LLM coaching alongside rule-based feedback in UI
-- [ ] Add ability to ask follow-up questions about the swing
-
-**Exit Criteria**: Claude provides specific, grounded coaching advice referencing actual swing data and shot metrics.
 
 
 ---
@@ -557,6 +964,7 @@ the `PROVISIONAL / UNCALIBRATED` provenance strings in `ranges.json`.
 ---
 
 ## Future (Out of Scope for Now)
+
 - [ ] **Multi-view 3D fusion on the fixed rig** (ADR-011 Phases 2–3) — triangulated spine angle,
       hip rotation, X-factor, kinematic sequence. Needs the ELP cameras, intrinsics/extrinsics
       calibration, and eventually a hardware trigger. **Not** reachable from M7's hand-held

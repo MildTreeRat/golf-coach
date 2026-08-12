@@ -23,6 +23,8 @@ Base install only — no vision, no OCR, no MCP SDK.
 
 from __future__ import annotations
 
+from collections.abc import Collection
+from datetime import datetime
 from pathlib import Path
 
 # `storage` importing `api` inverts ADR-008's direction. It is deliberate and follows the
@@ -136,6 +138,51 @@ def read_corpus(sessions_dir: Path, player_id: str) -> CareerCorpus:
         other_golfers=other_golfers,
         unknown_sources=unknown_sources,
         excluded=excluded,
+    )
+
+
+def narrow_to(
+    corpus: CareerCorpus,
+    *,
+    since: datetime | None = None,
+    sessions: Collection[str] | None = None,
+) -> CareerCorpus:
+    """The same corpus restricted to a time window or to named sessions, **counts recomputed**.
+
+    Career mode step 6 needs two narrowings that steps 1-5 never did: a trend over the last N days,
+    and one session held against another. Both are the same operation, and the reason it lives here
+    rather than in the caller is `metric_counts` — a filtered `swings` list beside the unfiltered
+    counts is a corpus whose printed `n` describes a different set of swings than its values do.
+    That is the exact failure step 4 found when the dedupe rule was private, one layer out.
+
+    The guard then falls out for free rather than needing a second version of itself: narrow, hand
+    the result to `build_baseline`, and a window holding three swings refuses everything a corpus
+    holding three swings refuses. Nothing has to remember that a per-session mean is a weaker claim
+    than a pooled one — it is the same claim asked of less data.
+
+    **The scan counters are carried unchanged and still describe the whole read**
+    (`swing_dirs_seen`, `sessions_scanned`, `unattributed_swings`, `other_golfers`, `excluded`).
+    They are facts about what was on disk, which narrowing does not alter, and no consumer of a
+    narrowed corpus reads them — `build_baseline` and everything downstream of it read `swings`.
+    """
+    kept = [
+        swing
+        for swing in corpus.swings
+        if (since is None or swing.captured_at >= since)
+        and (sessions is None or swing.session_id in sessions)
+    ]
+    metric_counts, unknown_sources = _count_metrics(kept)
+
+    return corpus.model_copy(
+        update={
+            "swings": kept,
+            "metric_counts": metric_counts,
+            "unknown_sources": unknown_sources,
+            "outdated_swings": sum(1 for swing in kept if swing.outdated),
+            "analyzed_without_measurements": sum(
+                1 for swing in kept if swing.counts_toward_metrics() and not swing.measurements
+            ),
+        }
     )
 
 

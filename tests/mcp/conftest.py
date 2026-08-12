@@ -15,6 +15,9 @@ from typing import Any
 import pytest
 
 from golf_coach.api.state import AnalysisState, input_hashes, save_state
+from golf_coach.contracts.golfer import Handedness
+from golf_coach.contracts.swing import ANALYSIS_VERSION
+from golf_coach.storage.golfer_store import GolferStore
 from golf_coach.storage.manifest import (
     Role,
     RoleFile,
@@ -26,12 +29,20 @@ from golf_coach.storage.manifest import (
 _WHEN = datetime(2026, 8, 10, 1, 39, tzinfo=UTC)
 
 
-def make_manifest(session_id: str, swing_id: str, *, roles: tuple[Role, ...] = ()) -> SwingManifest:
+def make_manifest(
+    session_id: str,
+    swing_id: str,
+    *,
+    roles: tuple[Role, ...] = (),
+    player_id: str | None = None,
+    created_at: datetime = _WHEN,
+) -> SwingManifest:
     return SwingManifest(
         swing_id=swing_id,
         session_id=session_id,
-        created_at=_WHEN,
-        updated_at=_WHEN,
+        created_at=created_at,
+        updated_at=created_at,
+        player_id=player_id,
         roles={
             role: RoleFile(
                 role=role,
@@ -116,12 +127,21 @@ def write_swing(
     analysis: dict[str, Any] | None = None,
     state: bool = True,
     stale: bool = False,
+    player_id: str | None = None,
+    created_at: datetime = _WHEN,
 ) -> Path:
-    """One swing directory. `state=False` mimics a CLI-analyzed swing from before Phase 5."""
+    """One swing directory. `state=False` mimics a CLI-analyzed swing from before Phase 5.
+
+    `player_id` and `created_at` exist for the career tools (step 6): a swing naming no golfer is
+    excluded from every corpus as `UNATTRIBUTED`, and `created_at` is what a trend is keyed on, so
+    both have to be settable per swing rather than fixed at `_WHEN`.
+    """
     swing_dir = sessions_dir / session_id / swing_id
     swing_dir.mkdir(parents=True, exist_ok=True)
 
-    manifest = make_manifest(session_id, swing_id, roles=roles)
+    manifest = make_manifest(
+        session_id, swing_id, roles=roles, player_id=player_id, created_at=created_at
+    )
     save_manifest(manifest, manifest_path(swing_dir))
 
     if analysis is not None:
@@ -173,3 +193,65 @@ def sessions_dir(tmp_path: Path) -> Path:
     # Uploaded, never analyzed, and still missing a role.
     write_swing(root, "2026-08-08", "1", roles=(Role.FACE_ON,), analysis=None)
     return root
+
+
+# --------------------------------------------------------------------------------------
+# Career mode (step 6): a corpus with a golfer attached, and one big enough to speak
+# --------------------------------------------------------------------------------------
+
+#: The eight metrics an analyzed swing records, with the provenance each one's `n` is keyed on.
+#: `source` is not decoration here — it decides whether a sample counts distinct face-on clips or
+#: distinct shot photos (`CorpusSwing.artifact_key`).
+CAREER_METRICS: dict[str, tuple[str, str]] = {
+    "head_sway_norm": ("pose:face_on", "shoulder_widths"),
+    "hip_sway_norm": ("pose:face_on", "shoulder_widths"),
+    "hip_shift_at_top_norm": ("pose:face_on", "shoulder_widths"),
+    "head_hip_offset_impact_norm": ("pose:face_on", "shoulder_widths"),
+    "finish_balance_norm": ("pose:face_on", "shoulder_widths"),
+    "tempo_ratio": ("pose:face_on", "ratio"),
+    "face_to_path_deg": ("launch_monitor:hd_golf", "degrees"),
+    "start_line_deg": ("launch_monitor:hd_golf", "degrees"),
+}
+
+
+def career_analysis(values: dict[str, float], *, overall: float = 91.0) -> dict[str, Any]:
+    """An `analysis.json` carrying measurements and stamped with the current engine version.
+
+    Both are required for a swing to reach a baseline at all: `measurements` is what
+    `build_baseline` pools, and a missing `analysis_version` reads as **0**, which `read_corpus`
+    correctly excludes as OUTDATED. A career fixture without the stamp tests the exclusion path
+    and nothing else, silently.
+    """
+    payload = make_analysis("s", "1", overall=overall)
+    payload["analysis_version"] = ANALYSIS_VERSION
+    payload["swing"]["measurements"] = [
+        {
+            "name": name,
+            "value": value,
+            "unit": CAREER_METRICS[name][1],
+            "source": CAREER_METRICS[name][0],
+            "detail": "test",
+        }
+        for name, value in values.items()
+    ]
+    return payload
+
+
+@pytest.fixture
+def golfers_dir(tmp_path: Path) -> Path:
+    """A registry holding one golfer, created the way the upload page creates one."""
+    root = tmp_path / "golfers"
+    GolferStore(root).get_or_create("Aaron", Handedness.RIGHT)
+    return root
+
+
+@pytest.fixture
+def career_writer():
+    """`career_analysis` as a fixture. See `analysis_factory`."""
+    return career_analysis
+
+
+@pytest.fixture
+def career_metrics() -> dict[str, tuple[str, str]]:
+    """`CAREER_METRICS` as a fixture. See `analysis_factory`."""
+    return CAREER_METRICS

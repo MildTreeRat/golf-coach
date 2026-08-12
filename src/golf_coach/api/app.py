@@ -27,11 +27,16 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
+from golf_coach.analysis.baseline import build_baseline
+from golf_coach.analysis.comparison import build_standing
+from golf_coach.analysis.dispersion import build_dispersion
 from golf_coach.api.state import load_analysis, load_state
 from golf_coach.api.worker import AnalysisWorker, should_analyze
 from golf_coach.config import settings
+from golf_coach.contracts.career import CareerCorpus
 from golf_coach.contracts.golfer import Golfer, Handedness, slugify
 from golf_coach.storage.bundle_store import SwingBundleStore
+from golf_coach.storage.corpus import read_corpus
 from golf_coach.storage.golfer_store import GolferStore
 from golf_coach.storage.manifest import EXPECTED_ROLES, Role
 from golf_coach.storage.session_meta import load_session_meta, set_current_player
@@ -147,6 +152,34 @@ def _safe(segment: str, kind: str) -> str:
 def _media_type(path: Path) -> str:
     """iPhones upload `.mov`; only the aligned render is reliably `.mp4`."""
     return "video/quicktime" if path.suffix.lower() == ".mov" else "video/mp4"
+
+
+def _corpus_summary(corpus: CareerCorpus) -> dict:
+    """The evidence behind every `n` on the career page, without the swing list.
+
+    A refusal is only actionable beside the reason the `n` is what it is, and for this corpus the
+    reason is almost never "you have not swung enough" — it is three re-uploads collapsing into
+    one swing, or a swing nobody attributed. So the page gets the counts and the itemised
+    exclusions, which is what `CareerCorpus` carries them for.
+    """
+    return {
+        "distinct_swings": corpus.distinct_swings,
+        "distinct_shots": corpus.distinct_shots,
+        "swing_dirs_seen": corpus.swing_dirs_seen,
+        "sessions_scanned": corpus.sessions_scanned,
+        "duplicates_collapsed": corpus.duplicates_collapsed,
+        "shot_conflicts": corpus.shot_conflicts,
+        "outdated_swings": corpus.outdated_swings,
+        "unattributed_swings": corpus.unattributed_swings,
+        "other_golfers": corpus.other_golfers,
+        "analyzed_without_measurements": corpus.analyzed_without_measurements,
+        "unknown_sources": corpus.unknown_sources,
+        "metric_counts": corpus.metric_counts,
+        "excluded": [
+            {"ref": swing.ref, "reason": swing.reason.value, "detail": swing.detail}
+            for swing in corpus.excluded
+        ],
+    }
 
 
 def _analysis_summary(swing_dir: Path) -> dict:
@@ -306,6 +339,36 @@ def create_app(
             "player_id": golfer.player_id,
             "golfer": _golfer_payload(golfer),
             "attributed": attributed,
+        }
+
+    @app.get("/api/golfers/{player_id}/career", dependencies=guard)
+    async def golfer_career(player_id: str) -> dict:
+        """One golfer judged against their own history. [Career mode, step 6]
+
+        Serves the three analysis contracts as they are, rather than a flattened view. The MCP
+        server flattens the identical data (`mcp/career.py`) because a model reads a flat payload
+        better; a page does not need that, and inventing a second shape here would give the two
+        surfaces a way to disagree about what career mode says. What is shared is the layer under
+        both — `build_baseline`, `build_dispersion`, `build_standing`, all over one `read_corpus`
+        so the three provably describe the same swings.
+
+        Everything on this route refuses today. That is the feature, and it is why the page is
+        worth building before the bay session rather than after it.
+        """
+        _safe(player_id, "player id")
+        golfer = golfer_store.get(player_id)
+        if golfer is None:
+            raise HTTPException(status_code=404, detail="no such golfer")
+
+        corpus = read_corpus(bundle_store.root, player_id)
+        return {
+            "player_id": golfer.player_id,
+            "display_name": golfer.display_name,
+            "handedness": golfer.handedness.value,
+            "corpus": _corpus_summary(corpus),
+            "baseline": build_baseline(corpus).model_dump(mode="json"),
+            "dispersion": build_dispersion(corpus).model_dump(mode="json"),
+            "standing": build_standing(corpus).model_dump(mode="json"),
         }
 
     # Declared before `/api/sessions/{session_id}` would be ambiguous only if the paths had the

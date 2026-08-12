@@ -107,6 +107,11 @@ the outcome one:
 | `get_recent_shots` | Last N shots | `list[ShotData]` |
 | `get_shot_by_id` | Single shot with full provenance | `ShotData` |
 | `get_session_summary` | Per-session aggregates across both axes | `SessionDetail` |
+| `get_golfer_profile` | One golfer against their own history: baseline, bias/scatter, tour standing | `GolferProfile` |
+| `get_shot_trends` | One metric's per-session history, gated on the trend guard | `MetricTrend` |
+| `compare_sessions` | Two sessions of one golfer's, each metric separately gated | `SessionsCompared` |
+
+The last three landed 2026-08-12 with career mode step 6 — see the note below.
 
 **Two tools from the original table are deliberately not built yet**, and the reason is
 sample size rather than effort. `get_shot_trends` and `compare_sessions` both invite Claude to
@@ -116,6 +121,19 @@ voice — the same failure mode M5-FB's percentile work exists to prevent, and t
 [ADR-012](012-golfdb-reference-data.md) found when a 120-clip result vanished at 461. They go
 in when a real range session's worth of shots exists to trend over. This is an omission by
 decision, not by oversight.
+
+> **Resolved 2026-08-12 (career mode step 6).** Both tools are now built, and *not* because the
+> sample size changed — it has not. What changed is that the numbers behind them are gated:
+> `contracts.baseline`'s per-(metric, claim) minimum-N guard withholds any statistic the `n`
+> cannot support, and withheld means the field is `None` rather than flagged. So the confident
+> voice has nothing to say. `get_shot_trends` returns per-session counts with every mean absent
+> and a refusal naming what it waits for; `compare_sessions` returns two sample counts and no
+> delta. A third tool, `get_golfer_profile`, was added alongside them: it carries the bias/scatter
+> discriminator, which is the argument career mode exists for and which the original table had no
+> place for. `get_shot_trends` keeps its name though it now covers the six pose metrics as well as
+> the two launch-monitor ones. The three live in `mcp/career.py` and are registered only when
+> `build_server` is given a golfer registry, since every one of them starts by resolving a name to
+> a `player_id`.
 
 **Location diverges from ADR-008.** [ADR-008](008-project-structure.md)'s tree puts the MCP
 server inside `launch_monitor/` ("ShotDataSource port + mock/r10 adapters + MCP server"),

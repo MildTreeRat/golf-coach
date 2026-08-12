@@ -4,6 +4,12 @@ A home-lab AI-powered golf swing analysis system that captures your swing via ca
 
 ## Project Status
 
+> **⭐ NEXT ACTION — do this first:** add a real `GOLF_ANTHROPIC_API_KEY` to `.env` and run
+> `python scripts/analyze_bundle.py 2026-08-10/2 --no-video` to verify M6 coaching against the
+> live API. The coaching path is built and green, but only against a fake client — no real request
+> has been sent yet. See the **NEXT ACTION** note atop [ROADMAP.md](ROADMAP.md) for what to check
+> in the output.
+
 **Working today, no hardware required:** drop a face-on swing clip in `data/raw/`, and the
 pipeline extracts pose, segments the swing, scores three checkpoints against tour-derived
 benchmark bands, and prints ranked coaching tips with an annotated verification overlay.
@@ -25,7 +31,10 @@ the time you have walked back from the bay.
 | **M4-PoC / PoC+ / REF** Pose-only analysis | ✅ Done — 3 checkpoints, bands validated vs 461 tour clips |
 | **M5-FB** Prioritised coaching feedback | ✅ Done — ranked tips, tour percentiles |
 | **M4** full (outcome axis) | ⬜ Needs the M2 + M3 streams |
-| **M5** Feedback UI · **M6** LLM coaching | ⬜ Not started — a static results page stands in for M5 |
+| **M6** LLM coaching | 🟡 Claude writes the per-swing verdict; follow-up Q&A left |
+| **M6.5** Measure now, judge later | 🟡 8 metrics recorded per swing, none scored yet |
+| **Career mode** One golfer over time | ✅ 6/6 steps — built, and currently **silent by design**: it reports **n = 2** per metric and refuses every claim over that. A bay session is what makes it speak |
+| **M5** Feedback UI | ⬜ Not started — a static results page stands in for it |
 | **M7** Two-phone sim capture | 🟡 6/7 phases — only the Phase 0 field spike is left |
 
 See **[docs/README.md](docs/README.md)** for the documentation map,
@@ -76,6 +85,28 @@ python scripts/analyze_bundle.py 2026-08-07/1        # SESSION/SWING, or a swing
 #    -> <role>.keypoints.json   pose per view, cached by the clip's hash so a re-run is free
 #    picks the real swing out of a clip full of practice swings by downswing duration;
 #    --list-swings to see the candidates, --window-face-on / --window-dtl to override
+
+# 6. One golfer across every session: the honest sample size            (base install)
+python scripts/career_corpus.py --name Aaron
+#    -> distinct swings after collapsing re-uploads, and n per metric
+#    swings are deduped on the face-on clip's hash, launch-monitor metrics on the shot
+#    photo's, so a clip uploaded three times counts once — see "Career mode" in ROADMAP.md
+python scripts/backfill_golfer.py --name Aaron --handedness right   # label older swings
+python scripts/reanalyze.py --dry-run                # which stored results are out of date
+#    a swing is out of date when it was never analyzed, when a clip was re-uploaded since, or
+#    when it was analyzed by an older engine (`analysis_version`). Drop --dry-run to repair;
+#    pose and shots are cached, so an unchanged bundle re-runs in seconds
+
+# 7. What that sample size buys — which today is nothing, on purpose      (base install)
+python scripts/career_baseline.py --name Aaron
+#    -> per metric: center, spread, trend, and where the center sits against the tour band
+python scripts/career_dispersion.py --name Aaron
+#    -> is the miss repeatable (look at what is fixed before the swing) or scattered (timing)?
+#    Both refuse every claim at n = 2, and each refusal names what it waits for — so the output
+#    doubles as a worklist. A baseline printed over two swings is the failure this exists to
+#    avoid. Same data on a page at /career.html?player=aaron, and over MCP as
+#    get_golfer_profile / get_shot_trends / compare_sessions.
+#    Windows: prefix with PYTHONIOENCODING=utf-8, or the console garbles the em-dashes
 ```
 
 Reading the parsed shots back needs no extras at all — `ScreenShotDataSource` serves them
@@ -120,8 +151,9 @@ Uploads never wait on analysis: the pipeline runs in a thread, so you can be upl
 swing while the last one is still being posed (~30 s for a 30 fps pair, minutes at 4K60).
 
 The results page shows the score, each checkpoint against its tour band and percentile, the
-ranked tips, the HD Golf numbers, and the two views side by side. Run the server with
-`python scripts/run_server.py` and watch the terminal — the worker narrates every step.
+ranked tips, Claude's written verdict if a key is configured, the HD Golf numbers, and the two
+views side by side. Run the server with `python scripts/run_server.py` and watch the terminal —
+the worker narrates every step.
 
 > **OpenH264 warnings on every render are expected and harmless.** OpenCV's bundled FFmpeg ships
 > no libx264, only libopenh264, and dlopen's a DLL that isn't included — so it prints
@@ -140,6 +172,49 @@ The default port is 3000 rather than 8080 because Windows reserves 8069–8168 (
 8169–8268) on this machine, so 8080/8000/8443 fail to bind with `WinError 10013`. Check with
 `netsh interface ipv4 show excludedportrange protocol=tcp`.
 
+### Claude coaching (M6)
+
+With an Anthropic API key configured, every analyzed swing also gets a short written verdict —
+the paragraph a coach gives walking back from the bay, written from the same numbers the page
+shows and nothing else.
+
+```bash
+pip install -e '.[llm]'
+echo "GOLF_ANTHROPIC_API_KEY=sk-ant-..." >> .env
+```
+
+That is the whole setup. With no key the call is skipped, the swing still scores, and the results
+page says why in its notes — coaching is the last thing that happens to a result and is never
+allowed to cost you one. `--no-coaching` turns it off for a run even with a key set.
+
+The prose is always attributed to the model that wrote it, on the page and in `analysis.json`
+(`feedback.coaching`). That is not decoration: everything else on that page is measured, and a
+reader has to be able to tell which is which. The prompt carries the same standing caveats the
+MCP server shows a client — they live in one place, `contracts/caveats.py`, because two copies
+of load-bearing prose is one copy going stale.
+
+### Asking Claude about your swings (MCP)
+
+`scripts/run_mcp_server.py` speaks stdio, which is what Claude Desktop and Claude Code both use.
+Register it once and you can ask about sessions in plain language.
+
+```bash
+# Claude Code, from the repo root
+claude mcp add golf-coach -- "$(pwd)/.venv/Scripts/python.exe" "$(pwd)/scripts/run_mcp_server.py"
+```
+
+For **Claude Desktop**, add this to `%APPDATA%\Claude\claude_desktop_config.json` (absolute paths,
+doubled backslashes) and restart it:
+
+```json
+{ "mcpServers": { "golf-coach": {
+    "command": "C:\\path\\to\\golf-coach\\.venv\\Scripts\\python.exe",
+    "args": ["C:\\path\\to\\golf-coach\\scripts\\run_mcp_server.py"] } } }
+```
+
+Then ask *"how did my swing on 2026-08-10 go?"* — five tools cover sessions, one swing's full
+analysis, a session summary, and recent shots.
+
 Offline research tooling for the reference corpus lives in `scripts/golfdb/` and needs the
 `research` extra; see [data/README.md](data/README.md) for how to rebuild it.
 
@@ -154,10 +229,16 @@ module depends on — modules never import each other.
   side-by-side rendering
 - **detection** — YOLOv8 club head + ball *(stub — M2, gated on the M1.5 spike)*
 - **launch_monitor** — `ShotDataSource` port with mock / screen-OCR / composite adapters
-- **analysis** — pure functional core: smooth → phases → checkpoints → score, plus
+- **analysis** — pure functional core, with **measuring split from judging** (M6.5): `measure.py`
+  and `shot_measure.py` produce numbers with no band in sight, `checkpoints/` turns three of them
+  into verdicts. The split is what lets a new metric be measured across the reference corpus
+  *before* a band for it exists — bands are derived from those measurements, so the fused version
+  could never let a new metric acquire one. Also: smooth → phases → checkpoints → score, plus
   two-view alignment on a normalized swing-time axis (ADR-015) and whole-bundle analysis
   (`analyze_swing_bundle`: face-on scored, down-the-line for anchors, shot attached)
-- **feedback** — rule-based ranked tips; Claude coaching and overlays to come
+- **feedback** — rule-based ranked tips (`rules.py`), plus the Claude coaching paragraph
+  (`coach.py`, M6) written from those tips and the measured numbers, and stamped with the model
+  that wrote it so prose is never mistaken for a measurement
 - **storage** — flat-file, content-addressed swing-bundle store *(M7 Phase 3, trimmed)*;
   analysis artifacts land in the same swing directory
 - **api** — FastAPI phone-upload server, the bundle pipeline, and the background worker that
@@ -179,7 +260,7 @@ module depends on — modules never import each other.
 | Backend API | FastAPI | In use — phone upload server, loopback + Tailscale (ADR-016) |
 | MCP server | Python (MCP SDK) | In use — swings + shots over stdio (`scripts/run_mcp_server.py`) |
 | Database | SQLite | Reserved, unused — storage is flat-file (see `storage/`) |
-| LLM | Claude API (Anthropic) | M6, not started |
+| LLM | Claude API (Anthropic), `claude-opus-5` | In use — per-swing coaching (M6) |
 | Frontend | React | M5, not started |
 
 Heavy dependencies are optional extras, so the analysis core installs and tests with none of
@@ -212,10 +293,13 @@ golf-coach/
 │       ├── pose/            # MediaPipe → FrameKeypoints + overlays
 │       ├── detection/       # YOLOv8 → FrameDetections (stub, M2)
 │       ├── launch_monitor/  # ShotDataSource port + mock/screen/composite adapters
-│       ├── analysis/        # ⭐ pure functional core: smooth→phases→checkpoints→score
+│       ├── analysis/        # ⭐ pure functional core: smooth→phases→checkpoints→score,
+│       │                    #   plus career mode: baseline → dispersion → tour comparison
 │       ├── feedback/        # ranked rule-based tips (+ Claude coaching later)
-│       ├── storage/         # flat-file swing-bundle store, content-addressed
+│       ├── storage/         # flat-file stores: swing bundles (content-addressed),
+│       │                    #   golfer registry, career corpus reader
 │       ├── api/             # upload server + bundle pipeline + background analysis worker
+│       ├── mcp/             # MCP tools over swings, shots and one golfer's career (ADR-006)
 │       └── config.py        # settings (the only env reader)
 ├── frontend/                # React UI (M5) — separate toolchain, talks to api/ over HTTP
 ├── tests/                   # mirrors the package; the core suite runs on the base install

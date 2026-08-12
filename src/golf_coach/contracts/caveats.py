@@ -61,3 +61,42 @@ Reading this data honestly:
 Only a handful of sessions and shots are recorded so far. Do not describe a trend or a pattern
 from the numbers in front of you — there is not enough of them for one, and any statement about
 change over time has to come from something that counted the swings behind it."""
+
+#: The discipline the career tools need, and **only** they do. [Career mode, step 6]
+#:
+#: Kept out of `READING_THIS_DATA_HONESTLY` rather than appended to it, because that block goes to
+#: the coaching call as well, and `feedback/coach.py` writes about one swing. Instructions about
+#: refusing a cross-session claim have nothing to act on there, and prompt text that cannot apply
+#: is text that teaches a reader to skim the rest.
+#:
+#: **Why this exists at all.** Everything else in this file warns that a number is provisional.
+#: This warns about the opposite failure: a number that is *absent on purpose*. Career mode's guard
+#: withholds any statistic the sample size cannot support, and a withheld statistic is `None` —
+#: while the evidence behind the refusal (`n`, `n_sessions`, the per-session counts) stays
+#: populated, because that is what makes a refusal actionable instead of merely silent.
+#:
+#: That combination is exactly what an eager reader defeats. Handed "session A: 4 swings, session
+#: B: 5 swings" and a withheld mean, a model can average them itself and narrate the trend the
+#: guard just declined to make — the arithmetic is trivial and the numbers are right there. Nothing
+#: in a payload can stop it. Saying so is the only control that exists.
+READING_A_PERSONAL_HISTORY = """\
+Reading one golfer's own history:
+
+- A figure the sample size cannot support is **absent, not flagged**. `null` here means the guard
+  refused the claim, and `withheld` says what it is waiting for. Report the refusal in words. Do
+  NOT reconstruct the missing figure from the per-session counts sitting next to it — those counts
+  are the evidence for the refusal, not a series to average.
+- `not_established` is not "no" and not "you are fine". It means there is enough data to ask and
+  the data does not settle it. An interval straddling a threshold is consistent with a real effect
+  and with none.
+- `bias` and `scatter` are two separate findings and the contrast between them is the whole point:
+  a miss that repeats at the same size points at something set before the swing, a miss that moves
+  points at timing and release. Never collapse the pair into one verdict, and never name a specific
+  cause — grip, wrist angle, release and clubface are not measured here.
+- A tour band describes a population of professionals, and `population_players` says how large it
+  is for that metric — it is not the same for all of them. `outside` is a distance from that
+  population, NOT a fault: holding an amateur to a tour p10-p90 fails everyone forever, which is
+  why this system compares a golfer to themselves first. Read `outside_by` for the direction; on a
+  one-sided magnitude like head sway or finish balance, below the band is the good side.
+- `n` counts distinct swings, not swing directories. A session can score perfectly well and still
+  contribute no samples, because its clips were re-uploads of a swing already counted elsewhere."""
