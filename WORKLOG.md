@@ -5,6 +5,76 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-08-11 — Measure now, judge later, and the circle that kept the panel at three (M6.5)
+
+> **Written 2026-08-12, after the fact.** This session shipped without an entry; the record below is
+> reconstructed from the ROADMAP §M6.5 section, which was written at the time. It carries only what
+> that section already states — no findings have been added from memory.
+
+**Duration**: ~1 session, implementation + a full re-derivation over the 461-clip face-on corpus
+**What prompted it**: the panel had sat at three checkpoints for two milestones, and the reason was
+not that any metric was hard. **Measurement and judgment were fused.** `evaluate_head_sway` measured,
+resolved a band, scored, and returned `None` if *any* step failed — so a metric with no band could
+not be measured at all, while bands are derived from populations of measurements. That circle is the
+blocker, and it is a code-shape problem rather than a data problem.
+
+**What landed**: `analysis/measure.py` and `analysis/shot_measure.py` (the measuring half — pure, no
+`resolve_range`, where `None` means *could not measure*), the `Measurement` contract,
+`scripts/golfdb/tune_spatial_metric.py`, and a registry-driven `derive_pose_metrics.py`.
+`checkpoints/mechanics.py` keeps the judging half and the three evaluators are unchanged in
+behaviour — pinned by the existing `tests/analysis` suite passing with **no assertion moved**.
+
+**`Measurement` is ADR-010 §2 expressed as a type rather than a convention.** No band, no `passed`,
+no `score`. A metric earns a verdict only once a population exists to judge it against, and until
+then it is data — so a measurement is made *structurally incapable* of rendering as a fault, however
+it travels.
+
+**Five new metrics, and the ones deliberately left out matter as much.** Three face-on pose:
+`hip_sway_norm`, `hip_shift_at_top_norm`, `head_hip_offset_impact_norm` — all hips/shoulders/ears,
+all windowed, all `x`-over-`x` and so immune to the 16:9 pixel-aspect assumption. Vertical and
+shoulder-tilt metrics were excluded for being aspect-*sensitive*; ankles and knees for having zero
+recorded reliability evidence. Two launch-monitor: `face_to_path_deg` and `start_line_deg`.
+`smash_factor` and `club_head_speed` are excluded because every shot on disk reads smash 0.89–1.00 —
+ball speed *below* club speed — and the OCR is faithful, so the **simulator itself** is printing a
+physically impossible number. `spin_axis` too: its sign contradicts the contract and the parser warns
+that it stored an uninterpreted magnitude.
+
+**The gate the repo did not have.** There were three harnesses for *temporal* rules and none for
+spatial quantities, so "should we add this checkpoint?" was answerable only by argument.
+`tune_spatial_metric.py` scores population spread against measurement error, where error is estimator
+disagreement (`lite` vs `full`, both already cached for all 461 face-on clips — no new extraction)
+plus segmentation error (labelled vs detected instants). All six pose metrics clear it
+(spread / error): `finish_balance` **8.2**, `head_hip_offset_impact` **7.6**, `hip_sway` **7.1**,
+`head_sway` **6.7**, `hip_shift_at_top` **3.6**, `tempo` **2.4**.
+
+**The harness validates itself three ways**, which is the only reason to believe the numbers above:
+it reproduces `head_sway_norm`'s shipped band (p10–p90 **0.029–0.430** against `ranges.json`'s
+0.0–0.43), `finish_balance_norm`'s p90 (**0.287** against 0.29), and the face-on `tempo_ratio` p90 of
+**5.000** that `mechanics.py` documents against the all-view 4.71.
+
+**Two things found by running it:**
+
+1. **Normalizing the simulator's shape text matched `CENTER` before `FADE`**, classifying a real
+   recorded `"CENTER SLIGHT FADE"` as **straight**. Curvature words now beat centering words.
+2. **The corpus had been storing `CheckpointScore.observed`, which is rounded to 2dp.** Measurements
+   now carry full precision. Re-deriving moves 42 distribution rows by under 0.005 and leaves every
+   shipped band unchanged at the precision it quotes — which is the check that says this was a
+   latent-precision bug rather than a change of answer.
+
+**`head_hip_offset_impact_norm` is signed and camera-relative.** It is empirically *not* bimodal on
+this corpus (p10 −0.88 to p90 −0.33, consistently head-behind-hips), so a band is derivable — but
+that is a fact about GolfDB's handedness mix, not a guarantee, and handedness has to be resolved
+before it can become a checkpoint. `derive_reference.py`'s recommended band for it is also garbage
+(`low=0.00 high=-0.33`): its one-sided heuristic assumes non-negative values.
+
+**Where I left off**: nothing is scored and `ranges.json` is untouched — **promotion is deliberately
+a separate decision**, and it wants more than one golfer's swings behind it. Exit criteria for the
+milestone are otherwise met: every measurable quantity is recorded on every analyzed swing, with a
+harness that says which of them a band is worth deriving from.
+**Blockers**: none to build.
+
+---
+
 ## 2026-08-10 — The MCP server, and a tool list three milestones out of date (M3)
 
 **Duration**: ~1 session, implementation + verification against real bay data

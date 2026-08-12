@@ -1,11 +1,17 @@
 # M7 Phase 0: Two-Phone Field Spike — findings
 
-> ⬜ **Method fixed, footage not yet recorded (2026-08-07).** Every threshold in this document was
+> ⬜ **Method fixed; the spike's own footage not yet recorded.** Every threshold in this document was
 > written **before** any footage existed, which is the point: the pass/fail bar for the biggest
 > risk in M7 is not allowed to be chosen after seeing the numbers. Sections marked *pending* are
 > filled in after the bay session; nothing else in them changes.
+>
+> **Q2 is answered** on borrowed footage (§Q2 Results, 2026-08-07): HEVC decodes, frame-exact.
+> **Q1 is not**, and its preliminary observation was **corrected on 2026-08-11** — the pre-fix
+> reading blamed down-the-line occlusion for a face-on bug. **Q3 has no footage at all**: every clip
+> on disk is normal-rate 60fps, so the slo-mo question is untouched. It needs a 30-second recording
+> of anything at all, not a bay.
 
-**Status**: method locked 2026-08-07 · results pending
+**Status**: method locked 2026-08-07 · Q2 answered · Q1 preliminary corrected 2026-08-11 · Q3 unstarted
 **Gates**: [M7 Phase 1, 2 and 5](M7_TWO_PHONE_CAPTURE.md#the-ladder)
 **Decisions**: [ADR-003](decisions/003-camera-hardware.md) addendum 2026-07-02b (face-on vs
 down-the-line stream assignment), [ADR-011](decisions/011-camera-synchronization.md) + its
@@ -194,7 +200,10 @@ does not meet the bar this document set before any of it existed:
 
 So this is evidence about *these clips*, not a measurement of the shipped rule from down-the-line.
 
-**What was observed** (aaron-1: face-on 926 frames, down-the-line 2472 frames, both 4K60):
+**What was observed** (aaron-1: face-on 926 frames, down-the-line 2472 frames, both 4K60).
+⚠️ **Measured 2026-08-07, before `phases._DRAWDOWN_FLOOR` landed** — the face-on downswing in this
+table is the noise bug, not the swing. Superseded by the re-measurement below; kept because the
+inference drawn from it is the thing that needed correcting.
 
 | | face-on | down-the-line |
 |---|---|---|
@@ -216,11 +225,56 @@ Three things follow, and the third is the one that matters:
    why: a bystander walks through frame at 36 s and the phone is lowered at 40 s, both of which
    MediaPipe's single-person model tracks happily. Down-the-line is filmed from the busy side of a
    bay; face-on is not.
-3. **Given the right window, down-the-line top and impact are usable.** Impact landed within the
+3. ~~**Given the right window, down-the-line top and impact are usable.** Impact landed within the
    1570→1580 bracket the ball's departure defines. The top is the weaker of the two and reads
    **early** — 23 frames of downswing against face-on's 14 for the same swing at the same frame
    rate. That is the shape of an occlusion effect (the lead wrist is the far arm from behind), and
-   it is what a real Q1 measurement should be sized to detect.
+   it is what a real Q1 measurement should be sized to detect.~~
+   **Withdrawn 2026-08-11 — the attribution was wrong.** See the re-measurement below. Impact was
+   and remains fine; the "top reads early from down-the-line" reading compared DTL against a
+   *face-on* number that was itself a bug.
+
+### Re-measurement, 2026-08-11 — post-`_DRAWDOWN_FLOOR`
+
+Both pairs re-run through the shipped path (`smooth_keypoints` → `select_swing` → `segment_phases`),
+unchanged, after the drawdown-floor fix in `phases.py` (commit `57d0d33`). **Still not scored against
+the verdict table** — the three disqualifications above are untouched: no hand labels, n=2, off-axis
+DTL framing. This corrects an inference, it does not close Q1.
+
+| | aaron-1 face-on | aaron-1 DTL | aaron-2 face-on | aaron-2 DTL |
+|---|---|---|---|---|
+| top → impact | 694 → 718 | 1550 → 1574 | 880 → 903 | 1772 → 1797 |
+| **downswing** | **24 fr (401 ms)** | **24 fr (400 ms)** | **23 fr (384 ms)** | **25 fr (417 ms)** |
+| backswing | 55 fr | 33 fr | 51 fr | 26 fr |
+| lead wrist ≥0.5, whole clip | 74.4% | 28.2% | 74.4% | 22.0% |
+| lead wrist ≥0.5, in window | 78.2% | 51.9% | 89.4% | 49.8% |
+| trail wrist ≥0.5, whole clip | 100.0% | 65.3% | 100.0% | 84.8% |
+
+**The two views now agree on the downswing to within 1 ms on aaron-1 and 2 frames on aaron-2.** The
+pre-fix table's face-on 14 frames was `_rising_runs` splitting a descent on a 0.002 wobble at the top
+(ROADMAP: *"the downswing measured 14 frames where the truth was 24"*). DTL's 23 was approximately
+**right all along**. So the spike's own preliminary evidence had blamed down-the-line occlusion for a
+face-on bug — the exact error §Verification rule 2 exists to catch, arriving from the direction that
+rule does not cover: the face-on control misbehaving *quietly* rather than obviously.
+
+**The residual disagreement is entirely in `motion_start`, not the top.** Backswing runs 22 frames
+short on aaron-1 and 25 short on aaron-2 from down-the-line, which is what drags DTL `tempo_ratio` to
+~1.2–1.6 against face-on's ~2.6 and holds alignment at the `top_impact` tier. That matches the open
+M7 item in ROADMAP verbatim and now has a mechanism under it: **the lead wrist is below the 0.5
+visibility gate on roughly half the frames of a DTL swing window (51.9% / 49.8% pass) against ~80–90%
+face-on**, so `_motion_start`'s quiet-run search is working from a signal that is mostly gated out
+exactly where it looks.
+
+Two consequences for the eventual verdict, both pointing the same way:
+
+- **Q1's GREEN/AMBER/RED table asks only about `e_top` and `e_impact`.** On this evidence those are
+  the *strong* instants from down-the-line, and `motion_start` — which the table does not score at
+  all — is the weak one. Whoever fills in the verdict should add an `e_motion_start` column or the
+  spike will return GREEN on a rule that is measurably wrong about the takeaway.
+- **The trail wrist is the better-seen landmark from down-the-line** (65.3% / 84.8% against the
+  lead's 28.2% / 22.0%), which is the `trail_wrist` variant §Candidate signals already lists. The
+  pre-flight finding stands and is now doubly load-bearing: it finds the **finish** on face-on
+  footage, so this can only ever be a per-view choice keyed on `camera_id`, never a global swap.
 
 **This does not close Q1.** It says the question is worth answering properly and that the answer is
 unlikely to be RED. The verdict still needs the set-A inventory, on-axis framing, and `truth.json`.
@@ -245,6 +299,13 @@ where the model has far less training data than face-on).*
 | clip | landmark | vis mean (top→impact) | vis min | % below gate | teleports |
 |---|---|---|---|---|---|
 |  |  |  |  |  |  |
+
+> Partial data exists — see the 2026-08-11 re-measurement above. It is **not** transcribed into this
+> table, because it was taken over `select_swing`'s whole window rather than `[top, impact]` and
+> carries no teleport count, and a table that mixes two windows is worse than an empty one. It does
+> already settle the prediction below in the affirmative for the *takeaway*: visibility collapses
+> (~50% gated out) exactly where `motion_start` fails, which is the occlusion signature rather than
+> the projective-geometry one.
 
 This table is what makes the verdict *attributable*. Large errors **with** collapsed visibility mean
 occlusion, and a different landmark can fix it. Large errors **with** healthy visibility mean the

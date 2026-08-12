@@ -138,6 +138,18 @@ class SwingView(BaseModel):
             "unscored checkpoint is scored on fewer fundamentals than one without."
         ),
     )
+    measurements: dict[str, float] = Field(
+        default_factory=dict,
+        description=(
+            "Quantities measured off this swing that are NOT judged: no benchmark band exists for "
+            "them yet, so there is no good or bad value and no percentile. Report them only if "
+            "asked for a raw number, and never say whether one is good — the three entries in "
+            "`checkpoints` are the only things on this swing anyone has a reference population "
+            "for. `face_to_path_deg` is the exception worth knowing: positive means the club face "
+            "was open to its path (a fade shape), negative closed (a draw), and zero is straight "
+            "regardless of either angle alone."
+        ),
+    )
     alignment_quality: str | None = None
     alignment_caveat: str | None = Field(
         default=None,
@@ -241,6 +253,7 @@ def get_swing(sessions_dir: Path, session_id: str, swing_id: str) -> SwingView |
         checkpoints=[_checkpoint(c) for c in _list(swing.get("checkpoint_scores"))],
         tips=[_tip(t) for t in _list(feedback.get("tips"))],
         unscored=[str(name) for name in _list(swing.get("unscored"))],
+        measurements=_measurements(swing),
         alignment_quality=quality,
         alignment_caveat=caveat,
         shot=_shot_view_from_dict(shot_raw) if isinstance(shot_raw, dict) else None,
@@ -406,6 +419,23 @@ def _status_of(state: Any, swing_dir: Path) -> str:
     if manifest is not None and not state.matches(manifest):
         return "stale — inputs changed since this was analyzed"
     return state.status
+
+
+def _measurements(swing: dict[str, Any]) -> dict[str, float]:
+    """Flatten `SwingResult.measurements` to name -> value.
+
+    The unit and detail strings are dropped deliberately. They are provenance for a derivation
+    step, not context a coaching answer can use, and carrying them here would pad every reply
+    with text the model has no way to act on.
+    """
+    out: dict[str, float] = {}
+    for entry in _list(swing.get("measurements")):
+        if not isinstance(entry, dict):
+            continue
+        name, value = entry.get("name"), _number(entry.get("value"))
+        if isinstance(name, str) and value is not None:
+            out[name] = value
+    return out
 
 
 def _alignment_view(alignment: dict[str, Any]) -> tuple[str | None, str | None]:

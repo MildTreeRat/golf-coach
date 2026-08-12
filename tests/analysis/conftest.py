@@ -96,6 +96,7 @@ def make_swing(
     backswing_frames: int = 30,
     downswing_frames: int = 10,
     head_sway: float = 0.0,
+    hip_sway: float = 0.0,
     finish_drift: float = 0.0,
     takeaway_frames: int = 0,
     takeaway_x: float = 0.16,
@@ -111,7 +112,8 @@ def make_swing(
     wrist sits at address, rises over `backswing_frames` to the top, falls back to address
     height over `downswing_frames` (impact), then rises again. `head_sway` shifts the whole head
     (nose and both ears together) in `x` from address to impact (in normalized units);
-    `finish_drift` slides the hip-center sideways across the follow-through.
+    `hip_sway` does the same for the hip-center; `finish_drift` slides the hip-center sideways
+    across the follow-through, on top of wherever `hip_sway` left it.
 
     With `takeaway_frames > 0`, a near-horizontal takeaway is inserted between the address dwell
     and the vertical rise: the lead wrist slides sideways by `takeaway_x` (normalized) at address
@@ -172,9 +174,14 @@ def make_swing(
     head_xs += _lerp(_HEAD_BASE_X, _HEAD_BASE_X + head_sway, swing_frames)
     head_xs += [_HEAD_BASE_X + head_sway] * followthrough_frames
 
-    # Hips steady through the swing, then drift across the follow-through (balance signal).
-    hip_xs: list[float] = [_HIP_BASE_X] * (lead_pad + swing_frames)
-    hip_xs += _lerp(_HIP_BASE_X, _HIP_BASE_X + finish_drift, followthrough_frames)
+    # Hips: steady through address, sliding to `hip_sway` by impact (the lateral-slide signal,
+    # mirroring `head_sway`), then drifting a further `finish_drift` across the follow-through
+    # (the balance signal). The two are independent so a test can model a body that slides but
+    # finishes balanced, which is exactly the case head sway alone cannot see.
+    hip_impact_x = _HIP_BASE_X + hip_sway
+    hip_xs: list[float] = [_HIP_BASE_X] * lead_pad
+    hip_xs += _lerp(_HIP_BASE_X, hip_impact_x, swing_frames)
+    hip_xs += _lerp(hip_impact_x, hip_impact_x + finish_drift, followthrough_frames)
 
     return [
         _frame(index, y, wrist_x, head_x, hip_x)

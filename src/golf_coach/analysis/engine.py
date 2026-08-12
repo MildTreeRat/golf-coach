@@ -26,8 +26,14 @@ from golf_coach.analysis.checkpoints import (
     evaluate_head_sway,
     evaluate_tempo,
 )
+from golf_coach.analysis.measure import (
+    POSE_MEASUREMENT_DETAIL,
+    POSE_MEASUREMENT_UNIT,
+    POSE_MEASUREMENTS,
+)
 from golf_coach.analysis.phases import segment_phases
 from golf_coach.analysis.scoring import policy_for
+from golf_coach.analysis.shot_measure import SHOT_MEASUREMENTS
 from golf_coach.analysis.smoothing import smooth_keypoints
 from golf_coach.contracts.alignment import AlignmentQuality, SwingAnchors
 from golf_coach.contracts.detections import FrameDetections
@@ -36,10 +42,61 @@ from golf_coach.contracts.keypoints import FrameKeypoints, KeypointsFile
 from golf_coach.contracts.shot import ShotData
 from golf_coach.contracts.swing import (
     CheckpointScore,
+    Measurement,
     PhaseSegment,
     SwingBundleResult,
     SwingResult,
 )
+
+
+def _measurements(
+    smoothed: list[FrameKeypoints],
+    phases: list[PhaseSegment],
+    shot: ShotData | None,
+) -> list[Measurement]:
+    """Every quantity we can measure off this swing, judged by nothing.
+
+    Deliberately independent of the checkpoint loop above. A metric appears here whether or not a
+    band exists for it, which is the whole point: bands are cut from populations of measurements,
+    so a metric that could only be measured once it had a band could never acquire one. Recording
+    them now is also what makes a swing captured today worth re-reading after the bands land.
+
+    Order is pose first then shot, and within each the registry's order — stable across runs so a
+    diff of two `analysis.json` files is readable.
+    """
+    out: list[Measurement] = []
+
+    for name, measure in POSE_MEASUREMENTS.items():
+        value = measure(smoothed, phases)
+        if value is None:
+            continue
+        out.append(
+            Measurement(
+                name=name,
+                value=round(value, 4),
+                unit=POSE_MEASUREMENT_UNIT[name],
+                source="pose:face_on",
+                detail=POSE_MEASUREMENT_DETAIL[name],
+            )
+        )
+
+    if shot is not None:
+        device = shot.provenance.device if shot.provenance else shot.source.value
+        for name, (measure_shot, unit, detail) in SHOT_MEASUREMENTS.items():
+            value = measure_shot(shot)
+            if value is None:
+                continue
+            out.append(
+                Measurement(
+                    name=name,
+                    value=round(value, 4),
+                    unit=unit,
+                    source=f"launch_monitor:{device}",
+                    detail=detail,
+                )
+            )
+
+    return out
 
 
 def analyze_swing(
@@ -92,6 +149,7 @@ def analyze_swing(
         session_id=session_id,
         phases=phases,
         checkpoint_scores=mechanics + outcome,
+        measurements=_measurements(smoothed, phases, shot),
         unscored=unscored,
         intent=intent,
         mechanics_score=scores.mechanics,

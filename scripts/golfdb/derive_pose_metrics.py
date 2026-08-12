@@ -3,19 +3,25 @@
 Usage:
     python scripts/golfdb/derive_pose_metrics.py --estimator mediapipe:lite
 
-Reads cached keypoints (Tier 1) plus GolfDB's annotated events, computes `head_sway_norm` and
-`finish_balance_norm` for each clip, and merges them back into `swings.jsonl` (Tier 2) so
-`derive_reference.py` can aggregate them into bands.
+Reads cached keypoints (Tier 1) plus GolfDB's annotated events, computes **every metric in
+`analysis.measure.POSE_MEASUREMENTS`** for each clip, and merges them back into `swings.jsonl`
+(Tier 2) so `derive_reference.py` can aggregate them into bands.
 
 **Phases come from GolfDB's labels, never from `segment_phases`.** That isolates the *estimator*
 from our *segmentation*: a wide sway distribution then means "this estimator on tour swings", not
 "our top-detection drifted". It also means these bands stay valid across future segmentation
 changes.
 
-The checkpoint code is reused verbatim — we call `evaluate_head_sway` / `evaluate_finish_balance`
-and keep their `observed` values, so the corpus is measured by exactly the code that will measure
-the user's swing. Reimplementing the metrics here would be the fastest possible way to produce
-bands that quietly do not match what they are compared against.
+The production measuring code is reused verbatim — this iterates `POSE_MEASUREMENTS`, the same
+registry `analysis.engine` builds a swing's measurements from, so the corpus is measured by exactly
+the code that will measure the user's swing. Reimplementing the metrics here would be the fastest
+possible way to produce bands that quietly do not match what they are compared against.
+
+Iterating the registry rather than naming metrics here is what makes a new candidate metric one
+line in `measure.py` instead of an edit in three files. It also means a metric with **no band yet**
+is measured across the corpus — which is the whole point, since the band is derived from these
+numbers. Before the measure/judge split this script called the *evaluators*, which returned `None`
+without a band, so a new metric could never produce the population it needed to acquire one.
 """
 
 from __future__ import annotations
@@ -27,7 +33,7 @@ import sys
 import common
 import extract_pose
 
-from golf_coach.analysis.checkpoints import evaluate_finish_balance, evaluate_head_sway
+from golf_coach.analysis.measure import POSE_MEASUREMENTS
 from golf_coach.contracts.keypoints import FrameKeypoints, Landmark
 from golf_coach.contracts.reference import ReferenceSwing
 from golf_coach.contracts.swing import PhaseSegment, SwingPhase
@@ -123,7 +129,7 @@ def main(argv: list[str]) -> int:
 
     swings: list[ReferenceSwing] = common.load_swings()
     measured = skipped = 0
-    raw: dict[str, list[float]] = {"head_sway_norm": [], "finish_balance_norm": []}
+    raw: dict[str, list[float]] = {name: [] for name in POSE_MEASUREMENTS}
 
     for swing in swings:
         path = cache / f"{swing.source_id}.keypoints.json"
@@ -142,16 +148,13 @@ def main(argv: list[str]) -> int:
             else _apply_pixel_aspect(keypoints, swing.pixel_aspect)
         )
 
-        sway = evaluate_head_sway(corrected, phases)
-        balance = evaluate_finish_balance(corrected, phases)
         found = False
-        if sway is not None and sway.observed is not None:
-            swing.metrics["head_sway_norm"] = sway.observed
-            raw["head_sway_norm"].append(sway.observed)
-            found = True
-        if balance is not None and balance.observed is not None:
-            swing.metrics["finish_balance_norm"] = balance.observed
-            raw["finish_balance_norm"].append(balance.observed)
+        for name, measure in POSE_MEASUREMENTS.items():
+            value = measure(corrected, phases)
+            if value is None:
+                continue
+            swing.metrics[name] = value
+            raw[name].append(value)
             found = True
         if found:
             swing.pose_estimator = args.estimator

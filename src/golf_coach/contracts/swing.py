@@ -95,6 +95,38 @@ class CheckpointScore(BaseModel):
     )
 
 
+class Measurement(BaseModel):
+    """A quantity measured off one swing, carrying no claim about whether it is good.
+
+    Deliberately **not** a `CheckpointScore`: no band, no `passed`, no `score`. The distinction is
+    the point. A metric earns a verdict only once a population distribution exists to judge it
+    against (ADR-010 §2 — no score beats a wrong one), and until then it is data. Making that a
+    *type* rather than a convention means a measurement is structurally incapable of being rendered
+    as a fault, however it travels.
+
+    Recording them before they can be judged is what breaks the chicken-and-egg that kept this
+    panel at three checkpoints: bands are derived from a population of measurements
+    (`scripts/golfdb/derive_pose_metrics.py` -> `derive_reference.py`), so a metric that cannot be
+    measured without a band can never acquire one. It is also why a session's swings stay worth
+    re-analyzing later — the measurement is on disk even though nothing yet knows what it means.
+    """
+
+    name: str
+    value: float
+    unit: str = Field(
+        description="'shoulder_widths' | 'degrees' | 'ratio' | 'mph' | 'yards' | 'rpm'."
+    )
+    source: str = Field(description="Where it came from: 'pose:face_on', 'launch_monitor:hd_golf'.")
+    detail: str = Field(
+        default="",
+        description=(
+            "How and where it was taken — 'address window -> impact window', and any sign "
+            "convention. A bare number cannot be re-derived or re-normalized later; this is what "
+            "makes it auditable when a band is eventually cut from it."
+        ),
+    )
+
+
 class SwingResult(BaseModel):
     """The complete analyzed result for one swing."""
 
@@ -103,6 +135,18 @@ class SwingResult(BaseModel):
 
     phases: list[PhaseSegment] = Field(default_factory=list)
     checkpoint_scores: list[CheckpointScore] = Field(default_factory=list)
+
+    measurements: list[Measurement] = Field(
+        default_factory=list,
+        description=(
+            "Quantities measured off this swing that are **not** judged — no band, no score, no "
+            "pass/fail. A consumer must never render these as verdicts or infer one from them; "
+            "they exist so bands can be derived from a real population later, and so a swing "
+            "captured today is still worth re-reading once they are. Independent of "
+            "`checkpoint_scores`: a metric can be measured here and scored there, or measured "
+            "here and scored nowhere."
+        ),
+    )
 
     unscored: list[str] = Field(
         default_factory=list,
