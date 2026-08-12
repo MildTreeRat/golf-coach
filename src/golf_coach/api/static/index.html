@@ -8,6 +8,25 @@
   :root { color-scheme: light dark; }
   body { font-family: system-ui, sans-serif; margin: 0; padding: 1.25rem; max-width: 480px; }
   h1 { font-size: 1.1rem; margin: 0 0 1rem; }
+  /* Golfer bar. Unset is styled as a warning rather than a neutral prompt: an unlabeled swing
+     is repairable during the session and effectively permanent after it, so this is the one
+     piece of state on the page worth being loud about. It never blocks the file input. */
+  #golfer { border: 1px solid #999; border-radius: 8px; padding: 0.6rem 0.8rem; margin-bottom: 1rem; }
+  #golfer.unset { border-color: #d90; background: rgba(220,150,0,0.12); }
+  #golfer-warning { font-weight: 600; margin-bottom: 0.5rem; }
+  #golfer-input { width: 100%; padding: 0.5rem; font-size: 1rem; box-sizing: border-box;
+                  border: 1px solid #888; border-radius: 6px; background: transparent; color: inherit; }
+  #hand-row { margin: 0.5rem 0; font-size: 0.9rem; }
+  #hand-row[hidden] { display: none; }
+  #hand-row label { margin-right: 0.75rem; }
+  #golfer-save { margin-top: 0.4rem; padding: 0.45rem 0.9rem; font-size: 0.9rem;
+                 border: 2px solid #2a7; border-radius: 6px; background: #2a7; color: white; }
+  #golfer-set[hidden], #golfer-form[hidden] { display: none; }
+  .hand { color: #999; font-size: 0.85rem; }
+  button.link { border: none; background: none; color: inherit; text-decoration: underline;
+                font-size: 0.85rem; padding: 0 0.25rem; }
+  .swing-golfer { font-size: 0.85rem; color: #999; }
+  .swing-golfer.none { color: #d90; font-weight: 600; }
   .roles { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
   .roles button {
     flex: 1; padding: 0.75rem 0.25rem; font-size: 0.85rem;
@@ -41,6 +60,26 @@
 <body>
 <h1>Golf Coach — Swing Upload</h1>
 
+<div id="golfer" class="unset">
+  <div id="golfer-set" hidden>
+    Golfer: <strong id="golfer-name"></strong>
+    <span class="hand" id="golfer-hand"></span>
+    <button type="button" class="link" id="golfer-change">change</button>
+    <a class="link" id="golfer-career" href="#">career</a>
+  </div>
+  <div id="golfer-form">
+    <div id="golfer-warning">&#9888; No golfer set for this session.</div>
+    <input type="text" id="golfer-input" placeholder="Golfer name" autocomplete="off"
+           autocapitalize="words" />
+    <div id="hand-row" hidden>
+      Swings:
+      <label><input type="radio" name="hand" value="right" checked /> Right-handed</label>
+      <label><input type="radio" name="hand" value="left" /> Left-handed</label>
+    </div>
+    <button type="button" id="golfer-save">Save</button>
+  </div>
+</div>
+
 <div class="roles" id="roles">
   <button type="button" data-role="face_on">Face-on</button>
   <button type="button" data-role="down_the_line">Down-the-line</button>
@@ -62,6 +101,21 @@ const messageEl = document.getElementById("message");
 const progressEl = document.getElementById("progress");
 const progressBar = document.getElementById("progress-bar");
 const statusEl = document.getElementById("status");
+const golferEl = document.getElementById("golfer");
+const golferSetEl = document.getElementById("golfer-set");
+const golferFormEl = document.getElementById("golfer-form");
+const golferNameEl = document.getElementById("golfer-name");
+const golferHandEl = document.getElementById("golfer-hand");
+const golferCareerEl = document.getElementById("golfer-career");
+const golferInput = document.getElementById("golfer-input");
+const handRow = document.getElementById("hand-row");
+
+// The golfer is deliberately NOT in localStorage, unlike the role. The role is a property of
+// this phone; the golfer is a property of the session both phones are uploading into, so it
+// has exactly one home — the server — and both phones read it from there.
+let knownGolfers = {};     // player_id -> {display_name, handedness}
+let currentGolfer = null;
+let editingGolfer = false; // suppresses the 5s poll while someone is mid-type
 
 // One-time setup per phone: open /?t=<token> once, and the token is kept from then on.
 // It is stripped from the URL immediately so the secret doesn't linger in the address
@@ -98,6 +152,111 @@ setRole(currentRole());
 
 const NOT_SET_UP =
   "This phone isn't set up. Reopen the setup link (the one ending in /?t=...) to register it.";
+
+// ----------------------------------------------------------------- golfer identity
+
+// Mirrors `contracts.golfer.slugify`, NFD accent-stripping included — see its docstring for why
+// that pass exists. Used only to decide whether to *ask* for handedness; the server slugs
+// independently and is the authority on identity, so drift between the two costs an unnecessary
+// question, never a wrong attribution.
+function slugify(name) {
+  return name.trim().toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+}
+
+function selectedHandedness() {
+  const checked = document.querySelector('#hand-row input[name=hand]:checked');
+  return checked ? checked.value : "right";
+}
+
+// Handedness is asked only for a name the registry doesn't know. A returning golfer's is already
+// on file, and re-asking is just an opportunity to contradict it — the server ignores the field
+// for a known golfer for the same reason.
+function updateHandPrompt() {
+  handRow.hidden = Boolean(knownGolfers[slugify(golferInput.value)]);
+}
+
+function renderGolfer() {
+  if (editingGolfer) return;
+  const isSet = Boolean(currentGolfer);
+  golferEl.classList.toggle("unset", !isSet);
+  golferSetEl.hidden = !isSet;
+  golferFormEl.hidden = isSet;
+  if (isSet) {
+    golferNameEl.textContent = currentGolfer.display_name;
+    golferHandEl.textContent = `(${currentGolfer.handedness}-handed)`;
+    // Career mode is per-golfer, so the link only means anything once one is set.
+    golferCareerEl.href =
+      `/career.html?player=${encodeURIComponent(currentGolfer.player_id)}`;
+  }
+}
+
+async function refreshGolfer() {
+  try {
+    const [golfers, current] = await Promise.all([
+      fetch("/api/golfers", { headers: authHeaders() }).then((r) => r.json()),
+      fetch("/api/sessions/current/golfer", { headers: authHeaders() }).then((r) => r.json()),
+    ]);
+    knownGolfers = {};
+    (golfers.golfers || []).forEach((g) => { knownGolfers[g.player_id] = g; });
+    currentGolfer = current.golfer || null;
+    renderGolfer();
+  } catch (err) {
+    // Best-effort, same as the status panel.
+  }
+}
+
+async function saveGolfer(name, handedness) {
+  const res = await fetch("/api/sessions/current/golfer", {
+    method: "POST",
+    headers: { ...authHeaders(), "Content-Type": "application/json" },
+    body: JSON.stringify({ name, handedness }),
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    setMessage(body.detail || `Could not set golfer (${res.status})`, true);
+    return null;
+  }
+  return body;
+}
+
+document.getElementById("golfer-save").addEventListener("click", async () => {
+  const name = golferInput.value.trim();
+  if (!name) {
+    setMessage("Type a name first.", true);
+    return;
+  }
+  const body = await saveGolfer(name, selectedHandedness());
+  if (!body) return;
+  editingGolfer = false;
+  golferInput.value = "";
+  const n = (body.attributed || []).length;
+  setMessage(
+    `Golfer set to ${body.golfer.display_name}.` +
+    (n ? ` Adopted ${n} swing${n === 1 ? "" : "s"} already uploaded.` : "")
+  );
+  await refreshGolfer();
+  refreshStatus();
+});
+
+document.getElementById("golfer-change").addEventListener("click", () => {
+  editingGolfer = true;
+  golferInput.value = "";
+  handRow.hidden = false;
+  golferSetEl.hidden = true;
+  golferFormEl.hidden = false;
+  golferEl.classList.add("unset");
+  updateHandPrompt();
+  golferInput.focus();
+});
+
+// Typing claims the bar until Save. Without this the 5s poll would re-render mid-word and wipe
+// a half-typed name — and the unset state polls just as often as the set one.
+golferInput.addEventListener("input", () => {
+  editingGolfer = true;
+  updateHandPrompt();
+});
 
 function megabytes(bytes) {
   return (bytes / (1024 * 1024)).toFixed(1);
@@ -185,9 +344,22 @@ function renderStatus(session) {
         })
         .join("");
       return `<div class="swing ${swing.status}"><strong>Swing ${swing.swing_id}</strong> &mdash; ${swing.status}${rows}` +
-        renderAnalysis(session.session_id, swing) + `</div>`;
+        renderSwingGolfer(swing) + renderAnalysis(session.session_id, swing) + `</div>`;
     })
     .join("");
+}
+
+// Who each swing is filed under, shown per row rather than only in the bar at the top. The bar
+// says who is swinging *now*; this says who each swing on disk actually belongs to, and the two
+// legitimately differ the moment someone else takes a turn.
+function renderSwingGolfer(swing) {
+  const known = knownGolfers[swing.player_id];
+  const label = swing.player_id
+    ? escapeHtml(known ? known.display_name : swing.player_id)
+    : "unassigned";
+  const cls = swing.player_id ? "swing-golfer" : "swing-golfer none";
+  return `<div class="${cls}">${label}<button type="button" class="link golfer-fix"
+    data-swing="${swing.swing_id}">change</button></div>`;
 }
 
 // The results link appears only once there is a result to link to. Everything else here is
@@ -259,8 +431,50 @@ statusEl.addEventListener("click", async (event) => {
   }
 });
 
+// Re-attributing one swing. Separate from the bar because it fixes history rather than setting
+// the present — this is the only control on the page that overwrites a name already recorded.
+statusEl.addEventListener("click", async (event) => {
+  const button = event.target.closest("button.golfer-fix");
+  if (!button) return;
+  const swingId = button.dataset.swing;
+  const name = prompt(`Who hit swing ${swingId}?`);
+  if (!name) return;
+
+  const current = await fetch("/api/sessions/current", { headers: authHeaders() })
+    .then((r) => r.json());
+  const url = `/api/sessions/${encodeURIComponent(current.session_id)}` +
+    `/swings/${encodeURIComponent(swingId)}/golfer`;
+
+  async function post(handedness) {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { ...authHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({ name, handedness }),
+    });
+    return { ok: res.ok, body: await res.json().catch(() => ({})) };
+  }
+
+  try {
+    let { ok, body } = await post(null);
+    // A name the registry has never seen needs a handedness before it can be created; the
+    // server refuses to pick one rather than defaulting to right-handed.
+    if (!ok && /right- or left-handed/.test(body.detail || "")) {
+      const right = confirm(`${name} is new. OK for right-handed, Cancel for left-handed.`);
+      ({ ok, body } = await post(right ? "right" : "left"));
+    }
+    setMessage(ok ? `Swing ${swingId} filed under ${body.golfer.display_name}.`
+                  : `Could not change golfer: ${body.detail || "failed"}`, !ok);
+  } catch (err) {
+    setMessage(`Could not change golfer: ${err.message}`, true);
+  } finally {
+    await refreshGolfer();
+    refreshStatus();
+  }
+});
+
+refreshGolfer();
 refreshStatus();
-setInterval(refreshStatus, 5000);
+setInterval(() => { refreshGolfer(); refreshStatus(); }, 5000);
 </script>
 </body>
 </html>

@@ -104,3 +104,30 @@ def test_hash_file_handles_an_empty_file(tmp_path) -> None:
     path.write_bytes(b"")
 
     assert hash_file(path) == hash_bytes(b"")
+
+
+def test_a_manifest_written_before_player_id_existed_still_loads(tmp_path) -> None:
+    """The no-migration guarantee. Four manifests on disk predate the field entirely."""
+    path = tmp_path / "manifest.json"
+    path.write_text(
+        '{"swing_id": "1", "session_id": "2026-08-07-aaron1",'
+        ' "created_at": "2026-08-07T12:00:00Z", "updated_at": "2026-08-07T12:00:00Z",'
+        ' "roles": {}}',
+        encoding="utf-8",
+    )
+
+    manifest = load_manifest(path)
+
+    assert manifest is not None
+    assert manifest.player_id is None
+
+
+def test_player_id_round_trips(tmp_path) -> None:
+    manifest = SwingManifest(
+        swing_id="1", session_id="2026-08-06", created_at=_NOW, updated_at=_NOW, player_id="aaron"
+    )
+    path = tmp_path / "manifest.json"
+
+    save_manifest(manifest, path)
+
+    assert load_manifest(path).player_id == "aaron"

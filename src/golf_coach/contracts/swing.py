@@ -175,6 +175,25 @@ class SwingResult(BaseModel):
     shot: ShotData | None = None
 
 
+#: The generation of the analysis engine. Stamped onto every `SwingBundleResult` the pipeline
+#: writes, so a stored artifact can say which code produced it.
+#:
+#: **Bump it whenever the engine's output changes *meaning*** — a new measurement, a corrected
+#: phase instant, a re-cut benchmark band. Not for refactors, and not for anything that leaves
+#: every number where it was.
+#:
+#: The reason this exists is career mode, where a `PersonalBaseline` reads a golfer's *spread*
+#: across sessions. Two swings analyzed by different generations of this engine are not
+#: comparable, and the difference is invisible in the artifact: the 2026-08-09 `_DRAWDOWN_FLOOR`
+#: fix moved a stored tempo from 0.43 to 2.42 without changing the shape of anything. Mixing them
+#: would manufacture variance out of a code change — the same class of error as counting a
+#: re-uploaded clip twice, which `storage.corpus` already refuses.
+#:
+#:   0  the artifact predates versioning (no `analysis_version` key at all)
+#:   1  2026-08-12 — first versioned engine: M6.5 `measurements` present
+ANALYSIS_VERSION = 1
+
+
 class SwingBundleResult(BaseModel):
     """One swing analyzed from the two camera views plus its shot photo. [M7 Phase 4]
 
@@ -198,6 +217,19 @@ class SwingBundleResult(BaseModel):
 
     swing: SwingResult = Field(
         description="The face-on view's scored result, with the shot attached if one was found."
+    )
+
+    analysis_version: int = Field(
+        default=0,
+        description=(
+            "Which generation of the engine produced this (`ANALYSIS_VERSION` above). **Defaults "
+            "to 0, not to the current version, and that is load-bearing**: this field is read "
+            "back by parsing artifacts written before it existed, and a default of 'current' "
+            "would make every legacy file claim to be up to date — the one wrong answer that "
+            "cannot be recovered from, since it is indistinguishable from a correct one. The "
+            "pipeline sets it explicitly; anything that reads 0 was written by an older engine "
+            "and should be re-run rather than compared against."
+        ),
     )
 
     alignment: SwingAlignment | None = Field(

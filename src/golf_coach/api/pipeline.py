@@ -5,10 +5,12 @@ one place allowed to do I/O around the pure analysis core. It ran inside
 `scripts/analyze_bundle.py` until the background worker needed it too, and two copies of a
 pipeline is how they drift.
 
-Pose per view, OCR the shot screen, score, rank tips, align the two views; three artifacts land
+Pose per view, OCR the shot screen, score, rank tips, align the two views; four artifacts land
 in the swing directory:
 
     analysis.json           the complete result, for a results page to render
+    analysis.state.json     the sidecar summary of this run — written *here* so it can never
+                            quote a score the analysis beside it has stopped agreeing with
     aligned.mp4             the two views side by side, banners landing together
     <role>.keypoints.json   pose output per view, cached so a re-run is free
 
@@ -41,12 +43,14 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 
 from golf_coach.analysis.alignment import DEFAULT_TAU_RANGE, pair_frames
 from golf_coach.analysis.engine import analyze_swing_bundle
 from golf_coach.analysis.phases import select_swing
 from golf_coach.analysis.smoothing import smooth_keypoints
+from golf_coach.api.state import AnalysisState, input_hashes, load_state, now, save_state
 from golf_coach.config import settings
 from golf_coach.contracts.intent import ClubCategory, PracticeGoal
 from golf_coach.contracts.keypoints import ClipMetadata, KeypointsFile
@@ -352,6 +356,52 @@ def _render(
     return out_path, render.codec
 
 
+def record_state(
+    swing_dir: Path,
+    manifest: SwingManifest,
+    outcome: PipelineOutcome,
+    *,
+    started_at: datetime,
+) -> AnalysisState:
+    """Write the `analysis.state.json` summary of a run that just finished.
+
+    **The sidecar is a denormalised copy of `analysis.json`, so whoever writes one must write the
+    other.** It was not always so: the worker wrote it and `analyze_swing_dir` did not, which made
+    every CLI run a way to leave the two disagreeing. `2026-08-09/2` sat for three days with a
+    sidecar reading 66.67 beside an analysis reading 94.92 — the upload page serves the sidecar
+    and the results page serves the analysis, so the same swing showed two scores. Nothing could
+    catch it, either: `AnalysisState.matches` compares the *inputs*, and re-analysis does not
+    change the inputs.
+
+    Any existing state is read first so the worker's `queued_at` survives a run it did not start.
+    Everything else describes this run.
+    """
+    previous = load_state(swing_dir)
+    missing = [role.value for role in manifest.missing_roles()]
+    completed = now()
+    result = outcome.result
+
+    state = AnalysisState(
+        status="done" if result is not None else "failed",
+        inputs=input_hashes(manifest),
+        queued_at=previous.queued_at if previous else None,
+        started_at=started_at,
+        completed_at=completed,
+        duration_seconds=(completed - started_at).total_seconds(),
+        error=None if result is not None else (outcome.error or "the pipeline produced no result"),
+        partial=bool(missing),
+        missing_roles=missing,
+        video=outcome.video_path.name if outcome.video_path else None,
+        video_codec=outcome.video_codec,
+        score=result.swing.overall_score if result is not None else None,
+        headline=(
+            result.feedback.headline if result is not None and result.feedback else None
+        ),
+    )
+    save_state(state, swing_dir)
+    return state
+
+
 def analyze_swing_dir(
     swing_dir: Path,
     *,
@@ -361,12 +411,17 @@ def analyze_swing_dir(
     """Run the whole pipeline over one assembled swing bundle.
 
     Never raises for an *expected* failure — a missing face-on view, an unreadable manifest — it
-    returns an outcome with `error` set. The caller decides whether that is an exit code or a
-    state file. Unexpected failures still propagate; the worker catches those separately.
+    returns an outcome with `error` set. The caller decides whether that is an exit code; the
+    state sidecar is written here either way, so it can never disagree with the `analysis.json`
+    beside it. Unexpected failures still propagate; the worker catches those separately and
+    records them, because it is the only layer that can see a crash.
     """
     options = options or PipelineOptions()
+    started_at = now()
     manifest = load_manifest(manifest_path(swing_dir))
     if manifest is None:
+        # No state written: without a manifest there are no `inputs` to key one on, and a
+        # directory that cannot say which bytes it holds is not a swing yet.
         return PipelineOutcome(error=f"{swing_dir} has no readable manifest")
 
     missing = manifest.missing_roles()
@@ -390,13 +445,15 @@ def analyze_swing_dir(
         if keypoints is not None:
             views[role] = keypoints
         elif role is Role.FACE_ON:
-            return PipelineOutcome(
+            outcome = PipelineOutcome(
                 missing_roles=missing,
                 error=(
                     f"no usable {label} view — that is the view every checkpoint is measured "
                     "from, so there is nothing to score"
                 ),
             )
+            record_state(swing_dir, manifest, outcome, started_at=started_at)
+            return outcome
 
     window_face_on = options.window_face_on
     window_dtl = options.window_down_the_line
@@ -470,7 +527,7 @@ def analyze_swing_dir(
     needs_review = (
         shot is not None and shot.provenance is not None and shot.provenance.needs_review
     )
-    return PipelineOutcome(
+    outcome = PipelineOutcome(
         result=result,
         analysis_path=analysis_path,
         video_path=video_path,
@@ -478,6 +535,8 @@ def analyze_swing_dir(
         missing_roles=missing,
         flagged=bool(needs_review or missing),
     )
+    record_state(swing_dir, manifest, outcome, started_at=started_at)
+    return outcome
 
 
 def _note(notes: list[str] | None, message: str) -> None:

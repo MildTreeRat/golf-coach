@@ -25,12 +25,16 @@ from pathlib import Path
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
 
 from golf_coach.api.state import load_analysis, load_state
 from golf_coach.api.worker import AnalysisWorker, should_analyze
 from golf_coach.config import settings
+from golf_coach.contracts.golfer import Golfer, Handedness, slugify
 from golf_coach.storage.bundle_store import SwingBundleStore
+from golf_coach.storage.golfer_store import GolferStore
 from golf_coach.storage.manifest import EXPECTED_ROLES, Role
+from golf_coach.storage.session_meta import load_session_meta, set_current_player
 
 _STATIC_DIR = Path(__file__).parent / "static"
 
@@ -55,6 +59,51 @@ class _FromSettings:
 
 
 _FROM_SETTINGS = _FromSettings()
+
+
+class GolferRequest(BaseModel):
+    """Naming a golfer, from the upload page's form.
+
+    `handedness` is optional because the page only asks for it when the typed name is new — a
+    returning golfer's is already on file, and re-asking is an opportunity to contradict it.
+    Required when the name *is* new: see `_resolve_golfer`.
+    """
+
+    name: str
+    handedness: Handedness | None = None
+
+
+def _resolve_golfer(golfers: GolferStore, payload: GolferRequest) -> Golfer:
+    """A typed name to a stored golfer, creating one only when the slug is new.
+
+    Refuses to invent a handedness for a golfer nobody stated one for. Defaulting it to
+    right-handed would be wrong for one golfer in ten and *silently* wrong: nothing downstream
+    can detect it, and the metric it corrupts (`head_hip_offset_impact_norm`, the only signed
+    one) would simply read a normal impact position as a gross fault forever after.
+    """
+    player_id = slugify(payload.name)
+    if not player_id:
+        raise HTTPException(status_code=400, detail="a golfer needs a name with letters or digits")
+
+    existing = golfers.get(player_id)
+    if existing is not None:
+        return existing
+    if payload.handedness is None:
+        raise HTTPException(
+            status_code=400,
+            detail=f"{payload.name!r} is new here — say whether they swing right- or left-handed",
+        )
+    return golfers.get_or_create(payload.name, payload.handedness)
+
+
+def _golfer_payload(golfer: Golfer | None) -> dict | None:
+    if golfer is None:
+        return None
+    return {
+        "player_id": golfer.player_id,
+        "display_name": golfer.display_name,
+        "handedness": golfer.handedness.value,
+    }
 
 
 def _status_message(swing_id: str, status: str, missing: list[Role]) -> str:
@@ -121,10 +170,12 @@ def _analysis_summary(swing_dir: Path) -> dict:
 def create_app(
     *,
     store: SwingBundleStore | None = None,
+    golfers: GolferStore | None = None,
     token: str | None | _FromSettings = _FROM_SETTINGS,
     worker: AnalysisWorker | None | _FromSettings = _FROM_SETTINGS,
 ) -> FastAPI:
     bundle_store = store or SwingBundleStore(settings.sessions_dir)
+    golfer_store = golfers or GolferStore(settings.golfers_dir)
     incoming_dir = bundle_store.root / ".incoming"
     expected = settings.upload_token if isinstance(token, _FromSettings) else token
     if isinstance(worker, _FromSettings):
@@ -149,6 +200,9 @@ def create_app(
 
     def swing_dir_of(session_id: str, swing_id: str) -> Path:
         return bundle_store.root / session_id / swing_id
+
+    def session_dir_of(session_id: str) -> Path:
+        return bundle_store.root / session_id
 
     @app.post("/api/uploads", dependencies=guard)
     async def upload(
@@ -179,6 +233,9 @@ def create_app(
             raise
 
         session_id = bundle_store.current_session_id()
+        # Read from the session cursor, never from the request: both phones post into the same
+        # swing, and only one of them is being held by someone who knows whose swing it is.
+        current_player = load_session_meta(session_dir_of(session_id)).player_id
         result = bundle_store.assign_from_path(
             session_id=session_id,
             role=parsed_role,
@@ -188,6 +245,7 @@ def create_app(
             content_type=request.headers.get("content-type", "application/octet-stream"),
             size_bytes=size,
             swing_id=swing_id,
+            player_id=current_player,
         )
 
         # The whole point of Phase 5: the third file landing is what starts the analysis. A
@@ -207,12 +265,48 @@ def create_app(
             "missing_roles": [role.value for role in result.missing_roles],
             "deduped": result.deduped,
             "queued": queued,
+            "player_id": result.player_id,
             "message": _status_message(result.swing_id, result.status, result.missing_roles),
         }
 
     @app.get("/api/sessions/current", dependencies=guard)
     async def session_current() -> dict:
         return {"session_id": bundle_store.current_session_id()}
+
+    @app.get("/api/golfers", dependencies=guard)
+    async def list_golfers() -> dict:
+        """Every known golfer — what lets the page tell a returning name from a new one."""
+        return {"golfers": [_golfer_payload(g) for g in golfer_store.list_all()]}
+
+    @app.get("/api/sessions/current/golfer", dependencies=guard)
+    async def get_current_golfer() -> dict:
+        session_id = bundle_store.current_session_id()
+        player_id = load_session_meta(session_dir_of(session_id)).player_id
+        return {
+            "session_id": session_id,
+            "player_id": player_id,
+            "golfer": _golfer_payload(golfer_store.get(player_id) if player_id else None),
+        }
+
+    @app.post("/api/sessions/current/golfer", dependencies=guard)
+    async def set_current_golfer(payload: GolferRequest) -> dict:
+        """Point the session at a golfer, and adopt whatever arrived before anyone said so.
+
+        The backfill is why uploads are never blocked on this. Files land at the pace of a bay
+        session; selecting a golfer reaches back over the ones that are still unlabeled, so
+        forgetting until the third swing costs nothing. Already-attributed swings are left alone
+        — that is what makes handing the club to someone else a safe thing to do.
+        """
+        golfer = _resolve_golfer(golfer_store, payload)
+        session_id = bundle_store.current_session_id()
+        set_current_player(session_dir_of(session_id), golfer.player_id)
+        attributed = bundle_store.attribute_unlabeled(session_id, golfer.player_id)
+        return {
+            "session_id": session_id,
+            "player_id": golfer.player_id,
+            "golfer": _golfer_payload(golfer),
+            "attributed": attributed,
+        }
 
     # Declared before `/api/sessions/{session_id}` would be ambiguous only if the paths had the
     # same shape; they don't, but `current` must stay above it regardless — FastAPI matches in
@@ -229,6 +323,7 @@ def create_app(
                     "status": manifest.status(),
                     "created_at": manifest.created_at.isoformat(),
                     "updated_at": manifest.updated_at.isoformat(),
+                    "player_id": manifest.player_id,
                     "roles": {
                         role.value: (
                             {
@@ -261,9 +356,32 @@ def create_app(
             "swing_id": swing_id,
             "status": manifest.status(),
             "missing_roles": [role.value for role in manifest.missing_roles()],
+            "player_id": manifest.player_id,
             "analysis": _analysis_summary(swing_dir),
             # Null until the worker has finished; the page renders a waiting state for that.
             "result": load_analysis(swing_dir),
+        }
+
+    @app.post("/api/sessions/{session_id}/swings/{swing_id}/golfer", dependencies=guard)
+    async def set_swing_golfer(session_id: str, swing_id: str, payload: GolferRequest) -> dict:
+        """Re-attribute one swing. The repair path for a misfiled golfer.
+
+        Unlike the session cursor, this **overwrites** — it is the explicit human-driven override,
+        and the only way to correct a swing that got stamped with the wrong name. It exists
+        because uploads are deliberately never blocked on identity, and any rule that attributes
+        automatically needs a way to be told it was wrong.
+        """
+        _safe(session_id, "session id")
+        _safe(swing_id, "swing id")
+        golfer = _resolve_golfer(golfer_store, payload)
+        manifest = bundle_store.set_player(session_id, swing_id, golfer.player_id)
+        if manifest is None:
+            raise HTTPException(status_code=404, detail="no such swing")
+        return {
+            "session_id": session_id,
+            "swing_id": swing_id,
+            "player_id": golfer.player_id,
+            "golfer": _golfer_payload(golfer),
         }
 
     @app.post("/api/sessions/{session_id}/swings/{swing_id}/analyze", dependencies=guard)

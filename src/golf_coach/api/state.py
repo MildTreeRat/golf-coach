@@ -15,6 +15,17 @@ inputs stop matching the manifest and the result invalidates itself. Same trick
 **Keeping the status poll cheap.** `score` and `headline` are denormalised copies. The upload
 page polls every 5 seconds with every swing of the day on screen; without these, each poll would
 open and parse a 7 KB `analysis.json` per swing to render one number.
+
+Denormalised copies drift, so the invariant is enforced one level up: `api.pipeline.record_state`
+writes this file as part of writing `analysis.json`, and is the only thing that writes a terminal
+status. Before that, only the worker did — and a CLI re-run left the sidecar quoting a score its
+own `analysis.json` had stopped agreeing with, invisibly, because `matches()` compares *inputs*
+and the inputs had not changed.
+
+This module is also where the **tolerant readers for `analysis.json` itself** live —
+`load_analysis`, `stored_analysis_version`, `is_outdated`. They sit beside the state readers
+rather than in `storage/` because they answer the same question from two sides: is what we
+recorded about this swing still true? (`storage.corpus` imports them; see the note there.)
 """
 
 from __future__ import annotations
@@ -26,6 +37,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from golf_coach.contracts.swing import ANALYSIS_VERSION
 from golf_coach.storage.manifest import SwingManifest
 
 STATE_NAME = "analysis.state.json"
@@ -109,3 +121,29 @@ def load_analysis(swing_dir: Path) -> dict | None:
     except (OSError, ValueError):
         return None
     return loaded if isinstance(loaded, dict) else None
+
+
+def stored_analysis_version(analysis: dict | None) -> int:
+    """Which generation of the engine wrote this artifact. `0` for anything before versioning.
+
+    Read off the raw dict rather than through `SwingBundleResult` for the same reason
+    `load_analysis` returns one: an artifact whose shape has moved on must stay readable. A
+    non-integer or negative value is treated as 0 — "old enough that I cannot tell" and
+    "definitely old" want the same repair.
+    """
+    if not isinstance(analysis, dict):
+        return 0
+    version = analysis.get("analysis_version", 0)
+    if isinstance(version, bool) or not isinstance(version, int) or version < 0:
+        return 0
+    return version
+
+
+def is_outdated(analysis: dict | None) -> bool:
+    """Was this written by an engine older than the one installed now?
+
+    The question `storage.corpus` asks before letting a swing into a metric count, and the one
+    `scripts/reanalyze.py` picks its targets by. A missing analysis is **not** outdated — it is
+    absent, which is a different repair with a different report (`ExclusionReason.NOT_ANALYZED`).
+    """
+    return analysis is not None and stored_analysis_version(analysis) < ANALYSIS_VERSION

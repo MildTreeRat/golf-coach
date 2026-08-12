@@ -5,6 +5,190 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-08-12 — The backfill, and the staleness nothing could see (career mode, step 3)
+
+**Duration**: ~1 session, implementation + the real backfill over the four swings on disk
+**What prompted it**: step 2's counter printed `n = 1` for all eight metrics, and named its own
+worklist: three of the four `analysis.json` predate M6.5 and carry no `measurements`. Re-running
+them was supposed to be the whole job.
+
+**It was, but "which ones need re-running?" turned out to be unanswerable.** The only signal was
+`measurements: []`, and that works *once*, by accident — M6.5 happened to add a field. The
+counterexample is three entries below this one: the 2026-08-09 `_DRAWDOWN_FLOOR` fix moved a
+stored tempo from 0.43 to 2.42 and changed the shape of nothing. An artifact from before it is
+indistinguishable from one after it, and `AnalysisState.matches` cannot help — it compares the
+*inputs*, which a re-analysis does not change. That is a live hazard for step 4 rather than a
+tidiness complaint: a `PersonalBaseline` reads **spread**, so pooling two engine generations
+manufactures variance out of a code change. Same failure as counting a re-uploaded clip, inverted.
+
+1. **`contracts/swing.ANALYSIS_VERSION`** + `SwingBundleResult.analysis_version`. The default is
+   **0, not the current version**, and that is the load-bearing part: the field is read back by
+   parsing artifacts written before it existed, and a default of "current" would make every legacy
+   file claim to be up to date — the one wrong answer indistinguishable from a right one. The
+   engine sets it explicitly; `api/state.py` gains `stored_analysis_version` / `is_outdated`.
+2. **`ExclusionReason.OUTDATED`** and `CareerCorpus.outdated_swings`. `counts_toward_metrics()`
+   now asks three questions of three different things — the artifact (`analyzed`), the bytes under
+   it (`stale`), the code that joined them (`outdated`).
+3. **`scripts/reanalyze.py`** — targets whatever needs it, `--dry-run`, `--all`, `--video` and
+   `--coaching` off by default. Walks the bundle store rather than `read_corpus`, deliberately:
+   the corpus collapses re-uploads, but each of those directories still holds an `analysis.json`
+   the results page and the MCP server will serve.
+4. **`analyzed_without_measurements` survived, narrowed.** It gates on `counts_toward_metrics()`,
+   so a pre-M6.5 artifact is now `outdated` and no longer lands there. What is left is
+   "current-engine swing where every metric returned None" — measurement failed rather than the
+   engine being old, a different problem with a different fix. Both read 0 now.
+
+**The bug I found while making sure the backfill would not create one.** `analysis.state.json` is a
+denormalised copy of `analysis.json` — the upload page's 5-second poll reads it so it does not
+parse a 7 KB file per swing. Only `api/worker.py` wrote it, and `analyze_swing_dir` did not. So
+every CLI re-analysis desynced them, and `2026-08-09/2` had been sitting for three days with a
+sidecar reading **66.67** and the pre-fix "Tempo too quick - 0.4:1" headline beside an analysis
+reading **94.92** / "2.4:1" — the session list showing 67/100 for a swing whose results page showed
+95/100, with nothing anywhere able to flag it. Step 3 is a bulk CLI re-run, so shipping it as
+planned would have produced two more copies of this while fixing something else. `record_state`
+now lives in `api/pipeline.py` and runs as part of writing the analysis; the worker keeps
+`queued` / `running` / crash-`failed`, which are the three states no analysis on disk corresponds
+to. `tests/api/test_state.py` is new and pins the invariant, including that `matches()` returns
+True across the desync — the reason nothing caught it.
+
+**Key decisions**:
+- **A re-run rewrites the whole artifact, and that is the honest choice.** A measurement-only patch
+  was the cautious-looking option and is worse: today's code computing measurements while
+  yesterday's checkpoint scores stay put yields one file whose `checkpoint_scores[tempo].observed`
+  and `measurements[tempo_ratio].value` both claim to be this swing's tempo and can disagree.
+- **`--video` off by default, with a check instead of an assumption.** Pose keypoints and shots are
+  both content-addressed caches, so a re-run is seconds; the render is minutes. But a moved
+  alignment anchor would leave `aligned.mp4` disagreeing with the JSON beside it, so the script
+  compares anchors across the run and says so. They did not move here — which is exactly why it
+  should be checked rather than assumed.
+- **All four swings were re-run, including the one that already had measurements.** It was written
+  before the stamp existed, so it cannot prove it is current, and "cannot prove it" is the whole
+  rule. The corpus is now a single generation.
+- **No ADR.** Nothing cross-cutting was decided; the rule lives in the `ANALYSIS_VERSION` and
+  `ExclusionReason.OUTDATED` docstrings, which is where anyone meets it. Next free number stays 017.
+
+**Two mistakes in my own reporting, both caught by running it.** The first run warned that the
+alignment anchors had moved on all four swings and printed `window [574, 790] -> (574, 790)` as a
+change. Neither was real: `_anchors` was reading the analysis dict one level too high so the
+"before" side was always unknown, and the window row was comparing a JSON list against a tuple by
+their string forms. Worth recording because the failure mode is the one this repo keeps meeting —
+a diff tool that reports drift it invented is indistinguishable from a real regression, and I very
+nearly re-rendered four videos to fix nothing.
+
+**Verified**: 442 tests (up from 426), ruff and mypy clean. Against the real four swings:
+`reanalyze.py --dry-run` found all four outdated, the run produced `version 0 -> 1` and
+`measurements 0 -> 8` with **no other field moving** — scores, checkpoints, phases, windows and
+anchors all identical to the pre-run backup — and a second plain run reports nothing to do.
+`career_corpus.py --name Aaron` now prints **`n = 2` for all eight metrics**, no outdated swings,
+and nothing excluded but the two known duplicates. Through the real API: session-list score and
+results-page score agree on every swing, `2026-08-09/2` included. `aligned.mp4` mtimes untouched.
+`mcp.query.get_swing("2026-08-07-aaron1", "1")` returns all eight measurements.
+
+**Where I left off**: step 4 — `PersonalBaseline` and the per-metric minimum-N guard. Pure
+functions over `CareerCorpus.metric_counts`, testable on synthetic input, no bay session needed to
+*build*. The two `face_to_path_deg` samples now on disk are 10.9 and 13.2, which is what step 5
+will consume and nowhere near enough to conclude anything from.
+**Blockers**: none for step 4. Steps 5–6 want the bay session.
+
+---
+
+## 2026-08-11 — The corpus reader, and a dedupe key that only works one way (career mode, step 2)
+
+**Duration**: ~1 session, implementation + verification against the real four swings
+**What prompted it**: step 1 made "who swung this" addressable; nothing could *assemble* it. Every
+reader in the repo is per-session — `get_session`, `get_session_summary` — so "every swing Aaron
+has ever hit" was not a question the code could answer, and steps 4-5 are pure math over exactly
+that list.
+
+**The counting is the feature.** Four swing directories hold two swings: the same three files were
+re-uploaded three times while the upload path was being tested. Counting directories would hand a
+personal baseline one swing's numbers three times, which does not merely inflate `n` — it drives
+the variance toward zero, and variance is the single quantity career mode exists to read (a tight
+spread points at a static cause, a wide one at timing). The most confident possible wrong answer,
+manufactured out of a testing artifact.
+
+1. **`contracts/career.py`** — `CareerCorpus`, `CorpusSwing`, `ExcludedSwing`/`ExclusionReason`.
+   `CorpusSwing.measurements` carries `Measurement` whole rather than flattening to name -> value
+   the way `query._measurements` does, because `source` is what decides the sample count.
+2. **`storage/corpus.py`** — `read_corpus(sessions_dir, player_id)`. Pure reads over artifacts that
+   already exist; no file is re-hashed, since `RoleFile.content_sha256` was recorded as the upload
+   streamed in.
+3. **`scripts/career_corpus.py`** — the honest-`n` counter, printing per-metric `n`, the collapsed
+   re-uploads, and everything contributing nothing, with reasons.
+4. **`SwingBundleStore.list_session_ids()`** — the same listing existed inline in
+   `mcp/query.list_sessions` and `scripts/backfill_golfer._sessions`; this would have been a third.
+
+**The design error the test caught, and it was mine.** I argued for two dedupe keys — pose metrics
+counting distinct face-on clips, launch-monitor metrics distinct shot photos — and the case I used
+to justify it was one clip re-uploaded with a different shot photo attached, which I claimed was
+one pose sample and two shot samples. The test asserting `n=2` failed, and it should have: the
+duplicates share the face-on bytes, so they are one physical swing, and one swing produced one ball
+flight. The second photo is misattached. Counting it would have put a `face_to_path_deg` into a
+dispersion that no swing ever produced — the exact class of error the milestone is being built to
+avoid, arrived at while arguing for the mechanism meant to prevent it.
+
+The two keys are still right, but they diverge in only **one** direction: `bundle_store`'s "newest
+swing missing this role" rule can attach one photo to two genuinely different swings, which is two
+pose samples and one shot sample. The other direction is a data conflict, reported as
+`conflicting_shots` for repair — the same posture `bundle_store` already takes toward a
+misattributed upload, which it documents and hands to a human rather than engineering around.
+
+**Key decisions**:
+- **No fallback to `checkpoint.observed`.** Three of the four `analysis.json` predate M6.5 and
+  carry `measurements: []` while their checkpoints still hold `observed` (tempo 2.35, head sway
+  0.25). Reading those as measurements would have lifted `n` to 2 for three metrics immediately and
+  mixed two derivation paths under one name. Reported as `analyzed_without_measurements` instead,
+  which is precisely step 3's worklist.
+- **`excluded` means "contributes no sample", not "absent from the corpus".** An unanalyzed or
+  stale swing is a real distinct swing carrying no usable numbers yet; both are fixed by re-running
+  the pipeline, so they are reported as work rather than as absence.
+- **Survivor of a duplicate group is the earliest arrival.** A re-upload's timestamp dates the
+  upload, so taking the latest would file a swing under the day someone retested the upload path.
+- **`storage` imports `api.state`**, which inverts ADR-008's direction. Deliberate, and the
+  precedent `mcp/query.py` set: a second copy of a tolerant reader is a second copy that drifts.
+  The honest fix — moving `load_analysis`/`load_state` to `storage/analysis_io.py` — is contained
+  and is not this commit.
+
+**Verified**: `python scripts/career_corpus.py --name Aaron` reports 4 directories -> 2 distinct
+swings, 2 distinct shots, 2 collapsed re-uploads of `face_on 91b9d32c`, and `n = 1` for all eight
+metrics. That last number is the point: it is what the ROADMAP already asserted in prose, now
+produced by code, and it makes step 3's scope self-evident. Full suite green (426 tests), ruff and
+mypy clean.
+
+---
+
+## 2026-08-11 — Who swung this, recorded before the bay session (career mode, step 1)
+
+> **Written 2026-08-12, after the fact.** This session shipped without an entry; the record below is
+> reconstructed from the ROADMAP §Career step-1 paragraph, which was written at the time. It carries
+> only what that section already states — no findings have been added from memory.
+
+**Duration**: ~1 session, implementation + a backfill over the four swings on disk
+**What prompted it**: career mode was about to be declared "nothing to build, only `n` to collect",
+and that was wrong about exactly one thing — **capture-time metadata**. Everything else career mode
+needs is derivable from artifacts after the fact, so it can be built whenever. Who swung a clip and
+which way they face are *recorded or lost*. Those had to land before the bay session, not after it.
+
+**What landed**: `contracts/golfer.py` (`Golfer`, `Handedness`, `slugify`), a flat-file registry in
+`storage/golfer_store.py`, a per-session cursor in `storage/session_meta.py`, `player_id` stamped
+**write-once** onto `SwingManifest`, a golfer bar on the upload page, and `scripts/backfill_golfer.py`.
+The backfill has been run: all four existing swings are `aaron`, right-handed.
+
+**Uploads are deliberately never blocked on it.** A phone at a bay uploading three files is the one
+moment in this system where friction costs data that cannot be recovered — the swing is over. So an
+unlabeled upload is accepted, setting a golfer *adopts* the swings that arrived without one, and each
+swing row carries a repair link. Identity is a thing you attach, not a gate you pass.
+
+**Handedness is on the record for a reason that only pays off later.** It is what will eventually let
+`head_hip_offset_impact_norm`'s camera-relative sign be interpreted, since the GolfDB band behind it
+is cut from a mostly right-handed population.
+
+**Where I left off**: step 2, the cross-session corpus reader — every reader in the repo is
+per-session, so "every swing Aaron has ever hit" was not yet a question the code could answer.
+**Blockers**: none.
+
+---
+
 ## 2026-08-11 — Claude writes the verdict, and a percentile of 90 printed as 9 (M6)
 
 > **Written 2026-08-12, after the fact.** This session shipped without an entry; the record below is

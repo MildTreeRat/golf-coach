@@ -20,6 +20,7 @@ from golf_coach.analysis.engine import analyze_swing, analyze_swing_bundle
 from golf_coach.contracts.alignment import AlignmentQuality
 from golf_coach.contracts.keypoints import ClipMetadata, FrameKeypoints, KeypointsFile
 from golf_coach.contracts.shot import ShotData, ShotProvenance, ShotSource
+from golf_coach.contracts.swing import ANALYSIS_VERSION, SwingBundleResult
 
 _FPS = 100.0
 
@@ -76,6 +77,16 @@ def test_face_on_is_scored_by_analyze_swing_unchanged(swing: list[FrameKeypoints
     assert [(c.name, c.observed, c.passed) for c in bundle.swing.checkpoint_scores] == [
         (c.name, c.observed, c.passed) for c in bare.checkpoint_scores
     ]
+
+
+def test_the_result_stamps_the_engine_that_produced_it(swing: list[FrameKeypoints]) -> None:
+    """`analysis_version` defaults to 0 so legacy artifacts read as older-than-current; the engine
+    is the one thing allowed to claim otherwise, and it has to actually do it."""
+    bundle = analyze_swing_bundle("s", "sess", _file(swing))
+
+    assert bundle.analysis_version == ANALYSIS_VERSION
+    unstamped = SwingBundleResult(swing_id="s", session_id="sess", swing=bundle.swing)
+    assert unstamped.analysis_version == 0
 
 
 def test_two_views_align(swing: list[FrameKeypoints]) -> None:

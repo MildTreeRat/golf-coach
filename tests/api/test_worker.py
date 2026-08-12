@@ -18,12 +18,13 @@ import pytest
 from fastapi.testclient import TestClient
 
 from golf_coach.api.app import create_app
-from golf_coach.api.pipeline import PipelineOutcome
-from golf_coach.api.state import load_state
+from golf_coach.api.pipeline import PipelineOutcome, record_state
+from golf_coach.api.state import load_state, now
 from golf_coach.api.worker import AnalysisWorker
 from golf_coach.contracts.feedback import FeedbackPayload
 from golf_coach.contracts.swing import SwingBundleResult, SwingResult
 from golf_coach.storage.bundle_store import SwingBundleStore
+from golf_coach.storage.manifest import load_manifest, manifest_path
 
 _ROLES = ("face_on", "down_the_line", "shot_screen")
 
@@ -40,7 +41,13 @@ def _result(swing_id: str = "1", session_id: str = "s", score: float = 84.0):
 
 
 class RecordingRunner:
-    """Stands in for the pipeline. Records every call; optionally fails or blocks."""
+    """Stands in for the pipeline. Records every call; optionally fails or blocks.
+
+    **It writes the terminal state, because the pipeline does.** `record_state` is part of what a
+    run leaves behind — the sidecar is a denormalised copy of `analysis.json`, so it belongs to
+    whatever wrote that file — and a stand-in that skipped it would let these tests pass over a
+    worker that never reached `done` in production.
+    """
 
     def __init__(self, *, outcome=None, error=None):
         self.calls: list = []
@@ -54,7 +61,11 @@ class RecordingRunner:
             self.gate.wait(timeout=5)
         if self.error is not None:
             raise self.error
-        return self.outcome or PipelineOutcome(result=_result(), video_path=None)
+        outcome = self.outcome or PipelineOutcome(result=_result(), video_path=None)
+        manifest = load_manifest(manifest_path(swing_dir))
+        assert manifest is not None
+        record_state(swing_dir, manifest, outcome, started_at=now())
+        return outcome
 
 
 @pytest.fixture

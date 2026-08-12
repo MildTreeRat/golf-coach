@@ -198,10 +198,7 @@ def list_sessions(sessions_dir: Path, *, limit: int = 20) -> list[SessionSummary
     if not sessions_dir.exists():
         return []
     store = SwingBundleStore(sessions_dir)
-    session_ids = sorted(
-        (p.name for p in sessions_dir.iterdir() if p.is_dir() and not p.name.startswith(".")),
-        reverse=True,
-    )
+    session_ids = sorted(store.list_session_ids(), reverse=True)
     out: list[SessionSummary] = []
     for session_id in session_ids[: max(0, limit)]:
         swings = [

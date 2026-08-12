@@ -16,6 +16,12 @@ from golf_coach.contracts.alignment import (
     SwingAlignment,
     SwingAnchors,
 )
+from golf_coach.contracts.career import (
+    CareerCorpus,
+    CorpusSwing,
+    ExcludedSwing,
+    ExclusionReason,
+)
 from golf_coach.contracts.detections import (
     BoundingBox,
     Detection,
@@ -23,6 +29,7 @@ from golf_coach.contracts.detections import (
     ObjectClass,
 )
 from golf_coach.contracts.feedback import FeedbackPayload, Severity, Tip
+from golf_coach.contracts.golfer import Golfer, Handedness, slugify
 from golf_coach.contracts.intent import (
     ClubCategory,
     PlayerProfile,
@@ -38,6 +45,7 @@ from golf_coach.contracts.keypoints import (
 )
 from golf_coach.contracts.shot import ShotData, ShotProvenance, ShotSource
 from golf_coach.contracts.swing import (
+    ANALYSIS_VERSION,
     CheckpointScore,
     Measurement,
     PhaseSegment,
@@ -67,6 +75,10 @@ __all__ = [
     "TargetShape",
     "ClubCategory",
     "PlayerProfile",
+    # golfer
+    "Golfer",
+    "Handedness",
+    "slugify",
     # swing
     "SwingResult",
     "SwingBundleResult",
@@ -74,6 +86,12 @@ __all__ = [
     "SwingPhase",
     "CheckpointScore",
     "Measurement",
+    "ANALYSIS_VERSION",
+    # career
+    "CareerCorpus",
+    "CorpusSwing",
+    "ExcludedSwing",
+    "ExclusionReason",
     # feedback
     "FeedbackPayload",
     "Tip",

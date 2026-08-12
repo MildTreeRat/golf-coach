@@ -24,6 +24,7 @@ def _upload(
     filename: str = "clip.mov",
     content_type: str = "video/quicktime",
     swing_id: str | None = None,
+    player_id: str | None = None,
 ):
     incoming = store.root / ".incoming"
     incoming.mkdir(parents=True, exist_ok=True)
@@ -39,6 +40,7 @@ def _upload(
         content_type=content_type,
         size_bytes=len(data),
         swing_id=swing_id,
+        player_id=player_id,
     )
 
 
@@ -137,3 +139,82 @@ def test_corrupt_swing_dir_is_skipped_not_fatal(store) -> None:
 
 def test_missing_session_directory_is_empty_not_an_error(store) -> None:
     assert store.get_session("no-such-session") == []
+
+
+# --------------------------------------------------------------------------- golfer attribution
+
+
+def test_a_new_swing_is_stamped_with_the_current_golfer(store) -> None:
+    result = _upload(store, _SESSION, Role.FACE_ON, b"face-on", player_id="aaron")
+
+    assert result.player_id == "aaron"
+    assert store.get_swing(_SESSION, "1").player_id == "aaron"
+
+
+def test_uploading_with_no_golfer_selected_leaves_the_swing_unlabeled(store) -> None:
+    """Uploads are never blocked on identity, so an anonymous swing is a supported state."""
+    result = _upload(store, _SESSION, Role.FACE_ON, b"face-on")
+
+    assert result.player_id is None
+    assert store.get_swing(_SESSION, "1").player_id is None
+
+
+def test_a_later_role_labels_a_swing_that_was_still_anonymous(store) -> None:
+    """The two-phone case: phone A uploaded before a golfer was picked, phone B after."""
+    _upload(store, _SESSION, Role.FACE_ON, b"face-on")
+
+    second = _upload(store, _SESSION, Role.DOWN_THE_LINE, b"dtl", player_id="aaron")
+
+    assert second.swing_id == "1"
+    assert store.get_swing(_SESSION, "1").player_id == "aaron"
+
+
+def test_an_attributed_swing_is_never_restamped_by_a_later_upload(store) -> None:
+    """Handing the club over must not rewrite the previous golfer's swings."""
+    _upload(store, _SESSION, Role.FACE_ON, b"face-on", player_id="aaron")
+
+    _upload(store, _SESSION, Role.DOWN_THE_LINE, b"dtl", player_id="dave")
+
+    assert store.get_swing(_SESSION, "1").player_id == "aaron"
+
+
+def test_switching_golfer_stamps_only_subsequent_swings(store) -> None:
+    _upload(store, _SESSION, Role.FACE_ON, b"aarons-swing", player_id="aaron")
+
+    _upload(store, _SESSION, Role.FACE_ON, b"daves-swing", player_id="dave")
+
+    assert store.get_swing(_SESSION, "1").player_id == "aaron"
+    assert store.get_swing(_SESSION, "2").player_id == "dave"
+
+
+def test_attribute_unlabeled_adopts_only_the_anonymous_swings(store) -> None:
+    _upload(store, _SESSION, Role.FACE_ON, b"one")
+    _upload(store, _SESSION, Role.FACE_ON, b"two", player_id="dave")
+    _upload(store, _SESSION, Role.FACE_ON, b"three")
+
+    changed = store.attribute_unlabeled(_SESSION, "aaron")
+
+    assert changed == ["1", "3"]
+    assert [m.player_id for m in store.get_session(_SESSION)] == ["aaron", "dave", "aaron"]
+
+
+def test_attribute_unlabeled_is_idempotent(store) -> None:
+    _upload(store, _SESSION, Role.FACE_ON, b"one")
+    store.attribute_unlabeled(_SESSION, "aaron")
+
+    assert store.attribute_unlabeled(_SESSION, "aaron") == []
+
+
+def test_set_player_overwrites_one_swing_and_leaves_its_neighbours(store) -> None:
+    """The explicit human-driven repair path — the one place an attribution is overwritten."""
+    _upload(store, _SESSION, Role.FACE_ON, b"one", player_id="dave")
+    _upload(store, _SESSION, Role.FACE_ON, b"two", player_id="dave")
+
+    repaired = store.set_player(_SESSION, "1", "aaron")
+
+    assert repaired.player_id == "aaron"
+    assert store.get_swing(_SESSION, "2").player_id == "dave"
+
+
+def test_set_player_on_a_missing_swing_returns_none(store) -> None:
+    assert store.set_player(_SESSION, "99", "aaron") is None

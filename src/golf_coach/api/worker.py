@@ -21,8 +21,16 @@ guessed when you were finished uploading would be wrong in both directions: too 
 analyses a face-on clip alone while the second phone is still on the walk back, too long and it
 sits idle after a swing you shot deliberately from one angle.
 
+**The state machine is split, and the seam is which layer can see what.** This module writes
+`queued`, `running`, and the `failed` that follows an unhandled exception — three states that
+describe a job, not an analysis, and that no `analysis.json` on disk corresponds to. The terminal
+`done` / `failed` summary is written by `pipeline.record_state`, because it is a denormalised copy
+of `analysis.json` and a copy must be written by whoever writes the original. Keeping it here is
+what let a CLI re-run leave the two disagreeing; see the note on `record_state`.
+
 The `runner` seam exists so tests can drive all of this without cv2, mediapipe or paddleocr
-anywhere near them.
+anywhere near them. A stand-in runner therefore has to record the terminal state the way the
+pipeline does — that is part of what it is standing in for.
 """
 
 from __future__ import annotations
@@ -202,35 +210,13 @@ class AnalysisWorker:
             )
             return
 
+        # The terminal state is written by the pipeline, not here: it is a denormalised copy of
+        # `analysis.json`, so it belongs to whatever wrote that file. What stays here is the part
+        # only a worker can see — `queued`, `running`, and the crash path above, none of which
+        # correspond to an analysis on disk at all.
         if outcome.result is None:
-            save_state(
-                base.model_copy(
-                    update={
-                        "status": "failed",
-                        "completed_at": now(),
-                        "duration_seconds": _elapsed(started),
-                        "error": outcome.error or "the pipeline produced no result",
-                    }
-                ),
-                swing_dir,
-            )
             return
 
-        feedback = outcome.result.feedback
-        save_state(
-            base.model_copy(
-                update={
-                    "status": "done",
-                    "completed_at": now(),
-                    "duration_seconds": _elapsed(started),
-                    "video": outcome.video_path.name if outcome.video_path else None,
-                    "video_codec": outcome.video_codec,
-                    "score": outcome.result.swing.overall_score,
-                    "headline": feedback.headline if feedback else None,
-                }
-            ),
-            swing_dir,
-        )
         logger.info("analyzed %s/%s in %.1fs", session_id, swing_id, _elapsed(started))
 
         self._resubmit_if_changed(session_id, swing_id, seen_at)

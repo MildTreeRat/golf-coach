@@ -10,6 +10,7 @@ from fastapi.testclient import TestClient
 
 from golf_coach.api.app import create_app
 from golf_coach.storage.bundle_store import SwingBundleStore
+from golf_coach.storage.golfer_store import GolferStore
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -173,3 +174,141 @@ def test_rejected_upload_writes_nothing_to_disk(auth_client, tmp_path) -> None:
 
     incoming = tmp_path / ".incoming"
     assert not incoming.exists() or not list(incoming.iterdir())
+
+
+# --------------------------------------------------------------------------- golfer identity
+
+
+@pytest.fixture
+def golfer_client(tmp_path):
+    """A client whose golfer registry is also isolated to tmp_path."""
+    store = SwingBundleStore(tmp_path / "sessions")
+    golfers = GolferStore(tmp_path / "golfers")
+    return TestClient(create_app(store=store, golfers=golfers, token=None, worker=None))
+
+
+def _session_swings(client):
+    session_id = client.get("/api/sessions/current").json()["session_id"]
+    return client.get(f"/api/sessions/{session_id}").json()["swings"]
+
+
+def test_no_golfer_is_selected_until_someone_picks_one(golfer_client) -> None:
+    body = golfer_client.get("/api/sessions/current/golfer").json()
+
+    assert body["player_id"] is None
+    assert body["golfer"] is None
+
+
+def test_uploading_is_not_blocked_by_a_missing_golfer(golfer_client) -> None:
+    """The deliberate choice: a bay session must never stall on a form."""
+    res = golfer_client.post(
+        "/api/uploads", params={"role": "face_on", "filename": "a.mov"}, content=b"aaa"
+    )
+
+    assert res.status_code == 200
+    assert res.json()["player_id"] is None
+
+
+def test_a_new_golfer_needs_a_handedness(golfer_client) -> None:
+    """Never guessed: it is the frame of reference for every signed metric."""
+    res = golfer_client.post("/api/sessions/current/golfer", json={"name": "Aaron"})
+
+    assert res.status_code == 400
+    assert "right- or left-handed" in res.json()["detail"]
+
+
+def test_a_nameless_golfer_is_rejected(golfer_client) -> None:
+    res = golfer_client.post(
+        "/api/sessions/current/golfer", json={"name": "!!!", "handedness": "right"}
+    )
+
+    assert res.status_code == 400
+
+
+def test_setting_a_golfer_adopts_the_swings_already_uploaded(golfer_client) -> None:
+    golfer_client.post(
+        "/api/uploads", params={"role": "face_on", "filename": "a.mov"}, content=b"aaa"
+    )
+
+    res = golfer_client.post(
+        "/api/sessions/current/golfer", json={"name": "Aaron", "handedness": "right"}
+    )
+
+    assert res.json()["attributed"] == ["1"]
+    assert [s["player_id"] for s in _session_swings(golfer_client)] == ["aaron"]
+
+
+def test_switching_golfer_leaves_earlier_swings_alone(golfer_client) -> None:
+    golfer_client.post(
+        "/api/sessions/current/golfer", json={"name": "Aaron", "handedness": "right"}
+    )
+    golfer_client.post(
+        "/api/uploads", params={"role": "face_on", "filename": "a.mov"}, content=b"aaa"
+    )
+
+    golfer_client.post(
+        "/api/sessions/current/golfer", json={"name": "Dave", "handedness": "left"}
+    )
+    golfer_client.post(
+        "/api/uploads", params={"role": "face_on", "filename": "b.mov"}, content=b"bbb"
+    )
+
+    assert [s["player_id"] for s in _session_swings(golfer_client)] == ["aaron", "dave"]
+
+
+def test_a_retyped_name_does_not_create_a_second_golfer(golfer_client) -> None:
+    golfer_client.post(
+        "/api/sessions/current/golfer", json={"name": "Aaron", "handedness": "right"}
+    )
+
+    res = golfer_client.post(
+        "/api/sessions/current/golfer", json={"name": "  aaron ", "handedness": "left"}
+    )
+
+    # Same golfer, and the stored handedness survives being contradicted.
+    assert res.json()["golfer"] == {
+        "player_id": "aaron",
+        "display_name": "Aaron",
+        "handedness": "right",
+    }
+    assert len(golfer_client.get("/api/golfers").json()["golfers"]) == 1
+
+
+def test_the_repair_path_re_attributes_one_swing(golfer_client) -> None:
+    golfer_client.post(
+        "/api/sessions/current/golfer", json={"name": "Dave", "handedness": "left"}
+    )
+    for name, data in (("a.mov", b"aaa"), ("b.mov", b"bbb")):
+        golfer_client.post(
+            "/api/uploads", params={"role": "face_on", "filename": name}, content=data
+        )
+    session_id = golfer_client.get("/api/sessions/current").json()["session_id"]
+
+    res = golfer_client.post(
+        f"/api/sessions/{session_id}/swings/1/golfer",
+        json={"name": "Aaron", "handedness": "right"},
+    )
+
+    assert res.status_code == 200
+    assert [s["player_id"] for s in _session_swings(golfer_client)] == ["aaron", "dave"]
+
+
+def test_the_repair_path_404s_on_an_unknown_swing(golfer_client) -> None:
+    golfer_client.post(
+        "/api/sessions/current/golfer", json={"name": "Aaron", "handedness": "right"}
+    )
+    session_id = golfer_client.get("/api/sessions/current").json()["session_id"]
+
+    res = golfer_client.post(
+        f"/api/sessions/{session_id}/swings/99/golfer", json={"name": "Aaron"}
+    )
+
+    assert res.status_code == 404
+
+
+def test_golfer_routes_are_behind_the_upload_token(auth_client) -> None:
+    assert auth_client.get("/api/golfers").status_code == 401
+    assert auth_client.get("/api/sessions/current/golfer").status_code == 401
+    assert auth_client.post(
+        "/api/sessions/current/golfer", json={"name": "Aaron", "handedness": "right"}
+    ).status_code == 401

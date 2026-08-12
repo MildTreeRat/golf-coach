@@ -41,6 +41,7 @@ from golf_coach.contracts.intent import PracticeGoal
 from golf_coach.contracts.keypoints import FrameKeypoints, KeypointsFile
 from golf_coach.contracts.shot import ShotData
 from golf_coach.contracts.swing import (
+    ANALYSIS_VERSION,
     CheckpointScore,
     Measurement,
     PhaseSegment,
@@ -267,6 +268,10 @@ def analyze_swing_bundle(
         swing_id=swing_id,
         session_id=session_id,
         swing=swing,
+        # Set explicitly, because the field defaults to 0 so that artifacts written before it
+        # existed read as older-than-current rather than as current. This is the one place that
+        # gets to claim otherwise, and it earns it by being the thing that just did the work.
+        analysis_version=ANALYSIS_VERSION,
         alignment=alignment,
         face_on_window=face_on_window,
         down_the_line_window=down_the_line_window,

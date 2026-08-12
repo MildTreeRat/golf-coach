@@ -45,6 +45,23 @@ Then, checklist:
       pick the role (`face-on` on one, `down-the-line` on the other). The page stores the token
       and the role in `localStorage` and strips the token from the URL — after this, uploading is
       two taps.
+- [ ] **The golfer is set.** The bar at the top of the upload page. Type the name, pick
+      right- or left-handed the first time that name is used, tap Save. Either phone can do it —
+      it is one value for the session and both phones read it from the server, so it is set once,
+      not once per phone.
+
+      This is the only thing you record at the bay that **cannot be recovered afterwards**.
+      Everything else is derived from the clips and can be recomputed whenever the code improves;
+      who swung and which way they face are not in the footage in any form a machine can read.
+      Handedness in particular is the frame of reference for every signed measurement, so a wrong
+      one does not fail loudly, it silently inverts them. Career mode is per-golfer by
+      construction, so a session captured without this is a session it cannot use.
+
+      Uploads are deliberately **not blocked** when it is unset — you would lose swings to a form.
+      The page shows an orange "No golfer set" banner instead, and setting the golfer adopts every
+      swing already uploaded that is still unlabeled. Handing the club to someone else mid-session
+      is fine: change the name, and only swings from that point carry it. If a swing ends up
+      under the wrong name, each swing row has a **change** link.
 - [ ] **One real clip uploaded end to end, with the phone's WiFi OFF.** Cellular is the real
       test; on home WiFi a broken tailnet path can still succeed by accident. Confirm a **View
       results** link appears and the results page renders.
@@ -145,6 +162,9 @@ thread, and the results page is ready roughly by the time you have walked back f
 
 ## 4. The per-swing loop at the bay
 
+0. **Glance at the golfer bar.** Green name = filed correctly. Orange banner = the swings you are
+   about to hit are landing unlabeled; fix it whenever you get a moment, and they will be adopted
+   retroactively. Only needed once per session unless someone else takes a turn.
 1. Hit the shot.
 2. Face-on phone: upload the clip (role already remembered — pick the file, tap upload).
 3. Down-the-line phone: same.

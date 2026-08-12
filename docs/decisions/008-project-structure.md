@@ -84,3 +84,34 @@ the modules. `frontend` talks to `api` over HTTP. No import cycles, ever.
 - A little more boilerplate (ports, contracts) up front; worth it for independent workstreams.
 - Tooling standardized in `pyproject.toml` (ruff, pytest, mypy); `src/` layout avoids
   import-path foot-guns.
+
+## Addendum (2026-08-11): two modules import `api.state`, and the dependency rule says they shouldn't
+
+The Dependency rule above reads "`api` orchestrates the modules… No import cycles, ever." Two
+modules now import *upward* into `api`, and recording it is better than leaving a future reader to
+find it and assume it was an accident:
+
+- `mcp/query.py` (M3) and `storage/corpus.py` (career mode step 2) both import `load_analysis`
+  and `load_state` from `golf_coach.api.state`.
+
+**Why it happened.** M7 Phase 5 put the tolerant readers for `analysis.json` and
+`analysis.state.json` in `api/state.py`, because the background worker was the only thing that
+needed them. They are storage concerns that landed in the shell. When two later readers needed the
+same tolerance — a half-written or older-schema artifact must read as *absent*, never raise — the
+choice was importing upward or copying a tolerant reader. This repo has been bitten three times by
+prose that existed twice and went stale in one copy; the same argument applies to a parser.
+
+**Why it is not a cycle.** `api/state.py` imports `storage.manifest` and nothing else from
+`storage`, so the graph stays acyclic. Nothing here drags in a web framework either —
+`tests/api/test_pipeline_imports.py` pins fastapi out of `api/pipeline.py`, which is what keeps
+these readers usable on a `vision`-only or base install.
+
+**What is unchanged**: the rule itself, and every other module's compliance with it. `analysis`
+remains pure and depends only on `contracts`; the new career-mode shapes went into
+`contracts/career.py` precisely so that `storage` (producer) and `analysis` (step 4's consumer)
+still never import each other.
+
+**The fix, when someone wants it**: move `load_analysis` / `load_state` / `AnalysisState` into
+`storage/analysis_io.py` and have `api.state` re-export them. Contained — three importers and
+their tests. It has not been done because nothing is broken by the inversion today, and doing it
+inside an unrelated commit is how a small move becomes an unreviewable diff.

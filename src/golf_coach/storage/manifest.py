@@ -6,6 +6,10 @@ screen photo) have arrived; until then it is still useful in a `collecting` stat
 consumes a `ready`/`analyzed` signal, so persisting one would claim more than is
 true. When an analysis worker is built later it can add an `analyzed_at` field as a
 pure addition, with no migration of manifests written by this code.
+
+`player_id` was added exactly that way (career mode, step 1): optional, defaulted,
+and read through the same tolerant loader, so the four manifests written before it
+existed still load and simply report `None`.
 """
 
 from __future__ import annotations
@@ -60,6 +64,18 @@ class SwingManifest(BaseModel):
     created_at: datetime
     updated_at: datetime
     roles: dict[Role, RoleFile] = Field(default_factory=dict)
+
+    player_id: str | None = Field(
+        default=None,
+        description=(
+            "Who swung it, stamped from the session cursor when the swing was created "
+            "(`storage.session_meta`). None means nobody had selected a golfer yet — an expected "
+            "state, since uploads are never blocked on it, and one the upload page surfaces so it "
+            "can be repaired while the session is still happening. **Write-once in practice**: "
+            "the store sets it only when it is None, so switching the cursor to a second golfer "
+            "mid-session cannot rewrite swings already attributed to the first."
+        ),
+    )
 
     def missing_roles(self) -> list[Role]:
         return [role for role in EXPECTED_ROLES if role not in self.roles]

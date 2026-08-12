@@ -38,6 +38,10 @@ class Settings(BaseSettings):
     # Phone upload ingestion (trimmed M7 Phases 3+5) — swing bundles land here, one
     # directory per swing, grouped by role (face_on / down_the_line / shot_screen).
     sessions_dir: Path = REPO_ROOT / "data" / "processed" / "sessions"
+    # Golfer registry (career mode, step 1) — one JSON file per golfer, keyed by `player_id`.
+    # Sits beside `sessions_dir` rather than inside it: a golfer outlives any one session, and
+    # that outliving is the entire point of tracking one.
+    golfers_dir: Path = REPO_ROOT / "data" / "processed" / "golfers"
     # Guards the streamed upload from an unbounded body; ~2 GiB comfortably covers a
     # multi-minute 1080p60 clip.
     max_upload_bytes: int = 2 * 1024**3
