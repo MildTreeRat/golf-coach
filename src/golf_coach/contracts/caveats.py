@@ -49,17 +49,24 @@ Reading this data honestly:
   about 90 (or about 10, when it missed on the low side of a two-sided metric) whether it missed
   narrowly or hugely. A low percentile is therefore not by itself good news — read `passed` for
   the verdict and rank severity by `score`, never by percentile.
-- **Less is not better on every checkpoint.** `tempo` and `hip_sway` are two-sided (`one_sided`
-  is false): too little hip travel fails just as too much does, because some lateral hip movement
-  is the weight shift a swing needs. On the one-sided checkpoints — head sway, finish balance,
-  hip shift at top — below the band is the good side. Read `one_sided` before describing a low
-  number as a strength.
+- **Less is not better on every checkpoint.** `tempo`, `hip_sway` and `head_stays_back` are
+  two-sided (`one_sided` is false): too little hip travel fails just as too much does, because
+  some lateral hip movement is the weight shift a swing needs, and a head that hangs back through
+  impact fails as a head that drifts forward with the hips does. On the one-sided checkpoints —
+  head sway, finish balance, hip shift at top — below the band is the good side. Read `one_sided`
+  before describing a low number as a strength.
+- `head_stays_back` is recorded as a **negative** number, and that is a frame of reference rather
+  than a fault: its band lives in a right-handed camera frame where more negative means more
+  head-behind-hips separation. Never read its sign as bad news, and never quote the raw value to a
+  golfer — the checkpoint's own `message` states the magnitude in the right direction. This is also
+  the one checkpoint that can be missing because nobody said who swung: when a swing has no golfer
+  attributed, it appears in `unscored` rather than being scored on a guess.
 - `needs_review` on a shot means its numbers were read off a photograph by OCR and the parse
   was flagged. Do not quote a flagged shot's figures as fact; say the reading is uncertain.
 - `alignment_caveat`, when present, means the two camera views were anchored on some swing
   instants and interpolated between them. Do not describe the side-by-side video as
   synchronized throughout, and do not read fine timing differences off it.
-- Only five fundamentals are measured, all from the face-on view, and all of them are lateral
+- Only six fundamentals are measured, all from the face-on view, and all of them are lateral
   (side-to-side) or timing quantities. Spine angle, hip **rotation**, swing plane and club path
   are NOT measured here — they need a second calibrated view or club detection, neither of which
   exists yet. The hip checkpoints measure how far the hips travel sideways, never how far they

@@ -20,11 +20,13 @@ from golf_coach.analysis.alignment import (
 )
 from golf_coach.analysis.checkpoints import (
     FINISH_BALANCE_CHECKPOINT,
+    HEAD_STAYS_BACK_CHECKPOINT,
     HEAD_SWAY_CHECKPOINT,
     HIP_SHIFT_AT_TOP_CHECKPOINT,
     HIP_SWAY_CHECKPOINT,
     TEMPO_CHECKPOINT,
     evaluate_finish_balance,
+    evaluate_head_stays_back,
     evaluate_head_sway,
     evaluate_hip_shift_at_top,
     evaluate_hip_sway,
@@ -41,6 +43,7 @@ from golf_coach.analysis.shot_measure import SHOT_MEASUREMENTS
 from golf_coach.analysis.smoothing import smooth_keypoints
 from golf_coach.contracts.alignment import AlignmentQuality, SwingAnchors
 from golf_coach.contracts.detections import FrameDetections
+from golf_coach.contracts.golfer import Handedness
 from golf_coach.contracts.intent import PracticeGoal
 from golf_coach.contracts.keypoints import FrameKeypoints, KeypointsFile
 from golf_coach.contracts.shot import ShotData
@@ -111,12 +114,24 @@ def analyze_swing(
     detections: list[FrameDetections] | None = None,
     shot: ShotData | None = None,
     intent: PracticeGoal | None = None,
+    handedness: Handedness | None = None,
 ) -> SwingResult:
     """Analyze one swing from its data streams, judged against a practice intent.
 
     `intent` defaults to Fundamentals (grade mechanics only). Checkpoints that can't be
     scored (e.g. no benchmark band) are dropped, so `overall_score` reflects only what was
     judged.
+
+    **`handedness` is identity, not intent, which is why it is a separate argument.** Every signed
+    quantity this engine measures is camera-relative — a face-on camera sees a left-handed swing
+    mirrored — so `head_stays_back` cannot be scored without it. `PracticeGoal` was the tempting
+    place to put it and is the wrong one: intent is what the golfer was *trying to do* and is chosen
+    per session, while handedness is *who they are* and is recorded once (`contracts.golfer` states
+    the distinction and why the field is captured at capture time).
+
+    Passing `None` costs the swing that one checkpoint, reported by name in `unscored`, and costs it
+    nothing else. `analysis` stays pure: resolving a `player_id` to a `Golfer` is the shell's job
+    (`api.pipeline`), and nothing here imports the golfer registry.
     """
     intent = intent or PracticeGoal()
 
@@ -142,6 +157,10 @@ def analyze_swing(
         (
             HIP_SHIFT_AT_TOP_CHECKPOINT,
             evaluate_hip_shift_at_top(smoothed, phases, club=intent.club),
+        ),
+        (
+            HEAD_STAYS_BACK_CHECKPOINT,
+            evaluate_head_stays_back(smoothed, phases, handedness, club=intent.club),
         ),
     ):
         if checkpoint is not None:
@@ -180,6 +199,7 @@ def analyze_swing_bundle(
     intent: PracticeGoal | None = None,
     face_on_window: tuple[int, int] | None = None,
     down_the_line_window: tuple[int, int] | None = None,
+    handedness: Handedness | None = None,
 ) -> SwingBundleResult:
     """Analyze one assembled swing bundle: two camera views plus the launch-monitor shot.
 
@@ -213,6 +233,7 @@ def analyze_swing_bundle(
         keypoints=frames,
         shot=shot,
         intent=intent,
+        handedness=handedness,
     )
 
     # Back into whole-clip coordinates, and re-attach the frames the window sliced away. Keyed

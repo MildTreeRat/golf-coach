@@ -52,6 +52,7 @@ from golf_coach.analysis.phases import select_swing
 from golf_coach.analysis.smoothing import smooth_keypoints
 from golf_coach.api.state import AnalysisState, input_hashes, load_state, now, save_state
 from golf_coach.config import settings
+from golf_coach.contracts.golfer import Handedness
 from golf_coach.contracts.intent import ClubCategory, PracticeGoal
 from golf_coach.contracts.keypoints import ClipMetadata, KeypointsFile
 from golf_coach.contracts.shot import ShotData
@@ -59,6 +60,7 @@ from golf_coach.contracts.swing import SwingBundleResult
 from golf_coach.feedback.coach import generate_coaching
 from golf_coach.feedback.rules import build_feedback
 from golf_coach.launch_monitor.screen.store import ShotStore
+from golf_coach.storage.golfer_store import GolferStore
 from golf_coach.storage.keypoints_io import load_keypoints, save_keypoints
 from golf_coach.storage.manifest import Role, SwingManifest, load_manifest, manifest_path
 
@@ -267,6 +269,32 @@ def _shot_for(
     return shot, None
 
 
+def _handedness_for(manifest: SwingManifest) -> tuple[Handedness | None, str | None]:
+    """The swinging golfer's handedness, or `(None, why_not)`.
+
+    The registry lookup lives here rather than in `analysis` on purpose: the analysis core is pure
+    and depends only on `contracts` (ADR-008), so *reading a JSON file to find out who swung* is the
+    shell's job. This is the whole seam M6.5 named — `Golfer.handedness` has been recorded since
+    career step 1, and nothing could carry it to the one checkpoint whose sign depends on it.
+
+    Both failure modes are narrated rather than defaulted. Guessing right-handed would score a
+    left-handed golfer's ordinary impact position as a gross fault, so an unattributed swing loses
+    the checkpoint and says so — `unscored` names it, and the note here explains why.
+    """
+    if manifest.player_id is None:
+        return None, (
+            "no golfer is attributed to this swing, so the head_stays_back checkpoint could not be "
+            "scored — its sign depends on which side the golfer swings from"
+        )
+    golfer = GolferStore(settings.golfers_dir).get(manifest.player_id)
+    if golfer is None:
+        return None, (
+            f"golfer {manifest.player_id!r} is not in the registry, so the head_stays_back "
+            "checkpoint could not be scored — its sign depends on which side the golfer swings from"
+        )
+    return golfer.handedness, None
+
+
 def _auto_window(
     label: str, keypoints: KeypointsFile, *, log: Log, notes: list[str]
 ) -> tuple[int, int] | None:
@@ -472,6 +500,11 @@ def analyze_swing_dir(
         log(f"  {shot_note}")
         notes.append(shot_note)
 
+    handedness, handedness_note = _handedness_for(manifest)
+    if handedness_note:
+        log(f"\nGolfer:\n  {handedness_note}")
+        notes.append(handedness_note)
+
     result = analyze_swing_bundle(
         swing_id=manifest.swing_id,
         session_id=manifest.session_id,
@@ -481,6 +514,7 @@ def analyze_swing_dir(
         intent=PracticeGoal(club=options.club),
         face_on_window=window_face_on,
         down_the_line_window=window_dtl,
+        handedness=handedness,
     )
 
     video_path: Path | None = None

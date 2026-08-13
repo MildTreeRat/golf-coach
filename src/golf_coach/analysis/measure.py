@@ -372,6 +372,60 @@ def measure_head_hip_offset_impact(
     return (head[0] - hips[0]) / width
 
 
+def measure_head_hip_gain(
+    keypoints: list[FrameKeypoints], phases: list[PhaseSegment]
+) -> float | None:
+    """Change in the signed head-hip offset from address to impact, in shoulder widths. [M6.5]
+
+    The *same* quantity as `measure_head_hip_offset_impact`, read as a change across the swing
+    rather than as an absolute position: how much rearward separation between head and hips the
+    golfer's motion actually created. Negative means the offset moved head-behind-hips during the
+    swing, which is what a tour swing does — the hips shift toward the target while the head stays
+    put. A value near zero means head and hips travelled together.
+
+    **Why this exists beside the absolute, rather than instead of it.** The absolute offset is the
+    one metric in this module that is a *static difference between two body parts at one instant*;
+    every other one is a difference of a single landmark across time. That distinction is not
+    stylistic — it decides whether a camera-geometry bias cancels. Shoulder-width normalization
+    removes the `1/Z` scale, so distance from the camera is handled, but it does not remove **yaw**:
+    a camera off-square to the target line converts the head/hip *depth* difference into apparent
+    horizontal offset, and at impact the hips have rotated open while the head has not, so the two
+    sit at genuinely different depths exactly where the absolute is read.
+
+    `scripts/golfdb/check_metric_transfer.py` measured that directly and it is not small. Against
+    the GolfDB corpus our own bay clips carry a **0.32 shoulder-width** disagreement *at address*,
+    where the body is square and there is no swing yet to disagree about — 55% of the total gap at
+    impact, and about 4x this metric's own measurement error. Subtracting the address reading
+    removes the static term by construction and leaves the part the swing produced, which is also
+    the part the coaching concept ("stay behind the ball") is actually about.
+
+    Both readings share **one ruler** — the shoulder width measured over the address window — so
+    the subtraction is of two comparable quantities. Using each instant's own width would put a
+    second difference into the result and defeat the point.
+
+    Signed and camera-relative, exactly like the absolute: positive is image-right, and which side
+    that is in swing terms depends on handedness. `analysis` records the raw camera-frame number
+    here and the judging layer normalizes it — see `checkpoints.mechanics.evaluate_head_stays_back`.
+    """
+    setup = address_sample_bounds(phases)
+    impact = phase_bounds(phases, SwingPhase.IMPACT)
+    if setup is None or impact is None:
+        return None
+
+    width = shoulder_width(keypoints, setup[0], setup[1])
+    if width is None:
+        return None
+
+    offsets: list[float] = []
+    for lo, hi in (setup, impact):
+        head = mean_of(head_center_points(keypoints, lo, hi))
+        hips = mean_of(hip_center_points(keypoints, lo, hi))
+        if head is None or hips is None:
+            return None
+        offsets.append((head[0] - hips[0]) / width)
+    return offsets[1] - offsets[0]
+
+
 def measure_finish_balance(
     keypoints: list[FrameKeypoints], phases: list[PhaseSegment]
 ) -> float | None:
@@ -409,6 +463,7 @@ POSE_MEASUREMENTS: dict[str, MeasureFn] = {
     "hip_sway_norm": measure_hip_sway,
     "hip_shift_at_top_norm": measure_hip_shift_at_top,
     "head_hip_offset_impact_norm": measure_head_hip_offset_impact,
+    "head_hip_gain_norm": measure_head_hip_gain,
 }
 
 #: How each measurement is taken, carried onto `Measurement.detail` so a stored number can be
@@ -420,8 +475,12 @@ POSE_MEASUREMENT_DETAIL = {
     "hip_sway_norm": "|dx| of hip midpoint, address window -> impact window",
     "hip_shift_at_top_norm": "|dx| of hip midpoint, address window -> transition window",
     "head_hip_offset_impact_norm": (
-        "signed (head - hips) dx over the impact window; + is image-right, "
-        "handedness not resolved"
+        "signed (head - hips) dx over the impact window; + is image-right, camera-frame — "
+        "carries a static camera bias, see head_hip_gain_norm"
+    ),
+    "head_hip_gain_norm": (
+        "change in signed (head - hips) dx, address window -> impact window, one shared "
+        "shoulder-width ruler; + is image-right, camera-frame, handedness resolved when judged"
     ),
 }
 
@@ -433,4 +492,5 @@ POSE_MEASUREMENT_UNIT = {
     "hip_sway_norm": "shoulder_widths",
     "hip_shift_at_top_norm": "shoulder_widths",
     "head_hip_offset_impact_norm": "shoulder_widths",
+    "head_hip_gain_norm": "shoulder_widths",
 }

@@ -194,7 +194,13 @@ class SwingResult(BaseModel):
 #:   2  2026-08-12 — `hip_sway` and `hip_shift_at_top` promoted to scored checkpoints, so
 #:                   `overall_score` is a mean over five and no longer comparable with a mean
 #:                   over three. The measurements did not move; what they *mean* did.
-ANALYSIS_VERSION = 2
+#:   3  2026-08-13 — `head_stays_back` promoted, so `overall_score` is a mean over six. Also the
+#:                   first version whose panel size depends on the *swing*: the checkpoint needs
+#:                   `Golfer.handedness`, so an unattributed swing is scored over five and says so
+#:                   in `unscored`. Two stored distributions moved as well — `head_hip_offset_
+#:                   impact_norm` was re-derived with handedness folded and two impossible readings
+#:                   dropped (its `sd` was half artifact), though no shipped band was cut from it.
+ANALYSIS_VERSION = 3
 
 
 class SwingBundleResult(BaseModel):

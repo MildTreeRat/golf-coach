@@ -19,6 +19,7 @@ from golf_coach.analysis.checkpoints.mechanics import _placement_clause
 from golf_coach.analysis.engine import analyze_swing
 from golf_coach.analysis.phases import segment_phases
 from golf_coach.analysis.smoothing import smooth_keypoints
+from golf_coach.contracts.golfer import Handedness
 
 
 def _all_three(head_sway: float = 0.0, finish_drift: float = 0.0):
@@ -124,18 +125,79 @@ def test_unmeasurable_checkpoint_is_named_rather_than_dropped_silently() -> None
 
 
 def test_a_fully_measured_swing_leaves_nothing_unscored() -> None:
-    result = analyze_swing(swing_id="s", session_id="sess", keypoints=make_swing(30, 10))
+    result = analyze_swing(
+        swing_id="s",
+        session_id="sess",
+        keypoints=make_swing(30, 10),
+        handedness=Handedness.RIGHT,
+    )
     assert result.unscored == []
-    assert len(result.checkpoint_scores) == 5
+    assert len(result.checkpoint_scores) == 6
 
-    # `make_swing`'s default body holds its hips perfectly still, which no golfer does -- so the
-    # two-sided hip_sway band fails it while every one-sided checkpoint passes. Measured and
+    # `make_swing`'s default body is rigid — head and hips hold perfectly still, which no golfer
+    # does — so every spatial metric measures exactly 0.0. That splits the panel cleanly along
+    # `one_sided`: a one-sided band starts at zero and passes a motionless body, while both
+    # two-sided bands (hip_sway, head_stays_back) require real movement and fail it. Measured and
     # failed is the opposite of unmeasured, which is what this test is actually about, and the
-    # split is asserted here so a future fixture default that adds a hip shift has to come past
-    # this line rather than quietly flipping a checkpoint back to passing.
+    # split is asserted by *shape* rather than by name so a sixth checkpoint cannot be added
+    # without deciding which side of it lands on.
     by_name = {cp.name: cp for cp in result.checkpoint_scores}
-    assert by_name["hip_sway"].passed is False
-    assert all(cp.passed for name, cp in by_name.items() if name != "hip_sway")
+    assert {name for name, cp in by_name.items() if not cp.passed} == {
+        "hip_sway",
+        "head_stays_back",
+    }
+    # Restated as the shape rule it follows from: on a motionless body a spatial checkpoint passes
+    # exactly when its band is one-sided. Tempo is excluded because it is two-sided and passes —
+    # it reads durations, not positions, so a rigid body has nothing to do with it.
+    assert all(cp.passed is cp.one_sided for cp in by_name.values() if cp.name != "tempo")
+
+
+def test_head_stays_back_is_unscored_when_nobody_said_who_swung() -> None:
+    """The one checkpoint whose sign depends on identity refuses rather than assumes.
+
+    A face-on camera mirrors a left-handed swing, so scoring this without knowing the golfer means
+    reading half of them as a gross fault. Dropping it is visible — `unscored` names it — where a
+    wrong guess would look exactly like a measurement.
+    """
+    keypoints = make_swing(30, 10)
+    anonymous = analyze_swing(swing_id="s", session_id="sess", keypoints=keypoints)
+
+    assert anonymous.unscored == ["head_stays_back"]
+    assert len(anonymous.checkpoint_scores) == 5
+
+    # The other five are untouched by the missing identity: same scores, same verdicts.
+    known = analyze_swing(
+        swing_id="s", session_id="sess", keypoints=keypoints, handedness=Handedness.RIGHT
+    )
+    shared = {cp.name: cp.score for cp in known.checkpoint_scores if cp.name != "head_stays_back"}
+    assert {cp.name: cp.score for cp in anonymous.checkpoint_scores} == shared
+
+
+def test_handedness_mirrors_the_head_stays_back_reading() -> None:
+    """Same frames, opposite handedness: the observed value flips sign and nothing else moves.
+
+    This is the property the whole seam exists for. The measurement is camera-relative, so the two
+    golfers described here are the *same* body position seen from the two sides — and the checkpoint
+    has to normalize them onto one frame before the band can mean anything.
+    """
+    keypoints = make_swing(30, 10)
+    right = analyze_swing(
+        swing_id="s", session_id="sess", keypoints=keypoints, handedness=Handedness.RIGHT
+    )
+    left = analyze_swing(
+        swing_id="s", session_id="sess", keypoints=keypoints, handedness=Handedness.LEFT
+    )
+
+    r = next(cp for cp in right.checkpoint_scores if cp.name == "head_stays_back")
+    left_score = next(cp for cp in left.checkpoint_scores if cp.name == "head_stays_back")
+    assert left_score.observed == pytest.approx(-r.observed)
+
+    # The raw measurement stays in the camera frame for both — normalizing is the judge's job, and
+    # a stored measurement that silently depended on handedness could not be re-derived later.
+    raw = {m.name: m.value for m in right.measurements}
+    assert raw["head_hip_gain_norm"] == pytest.approx(
+        next(m.value for m in left.measurements if m.name == "head_hip_gain_norm")
+    )
 
 
 @pytest.mark.parametrize(

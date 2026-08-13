@@ -6,7 +6,7 @@ score against it, place it in the reference population, phrase it for a golfer. 
 because the fused version could not measure a metric that had no band yet — and bands are derived
 from populations of measurements, so nothing new could ever acquire one. See `measure.py`.
 
-Five checkpoints, all measured from **face-on 2D pose** (the canonical pose-camera placement,
+Six checkpoints, all measured from **face-on 2D pose** (the canonical pose-camera placement,
 ADR-003 addendum) — deliberately the ones this single view reads well:
 
 - **tempo** — backswing:downswing time ratio, from phase timings.
@@ -15,6 +15,19 @@ ADR-003 addendum) — deliberately the ones this single view reads well:
 - **hip_sway** — lateral (`x`) hip travel from address to impact, in shoulder-widths. [2026-08-12]
 - **hip_shift_at_top** — lateral hip travel from address to the top, in shoulder-widths.
   [2026-08-12]
+- **head_stays_back** — how much head-behind-hips separation the swing created, address to impact,
+  in shoulder-widths. **Signed**, so it needs `Handedness` and returns `None` without it — the only
+  checkpoint here that depends on who swung rather than only on what they did. [2026-08-13]
+
+**Every checkpoint here differences one landmark across time, and that is load-bearing rather than
+incidental.** `head_stays_back` was very nearly the exception: the obvious form of "staying behind
+the ball" is the head-hip offset *at impact*, a static difference between two body parts at one
+instant, and `check_metric_transfer.py` showed what that costs. Our own bay clips disagree with the
+reference corpus by 0.32 shoulder-widths **at address** — square body, no swing yet, ~4x the
+metric's error and 55% of the whole gap at impact — because a camera off-square to the target line
+converts head/hip *depth* into apparent horizontal offset, and shoulder-width normalization does not
+remove it. Differencing address from impact cancels the static term. The rule worth carrying: a band
+cut from broadcast footage transfers to a phone only for quantities where the camera cancels.
 
 The last two were measured for a milestone before they were judged (M6.5), which is the order this
 module's split exists to allow: a band is cut from a population of measurements, so the measuring
@@ -75,11 +88,13 @@ from golf_coach.analysis.measure import (
     ADDRESS_SAMPLE_MIN_FRAMES,
     address_sample_bounds,
     measure_finish_balance,
+    measure_head_hip_gain,
     measure_head_sway,
     measure_hip_shift_at_top,
     measure_hip_sway,
     measure_tempo_ratio,
 )
+from golf_coach.contracts.golfer import Handedness
 from golf_coach.contracts.intent import ClubCategory, PlayerProfile
 from golf_coach.contracts.keypoints import FrameKeypoints
 from golf_coach.contracts.swing import CheckpointScore, PhaseSegment
@@ -104,6 +119,9 @@ _HIP_SWAY_RANGE_KEY = "hip_sway_norm"
 
 HIP_SHIFT_AT_TOP_CHECKPOINT = "hip_shift_at_top"
 _HIP_SHIFT_AT_TOP_RANGE_KEY = "hip_shift_at_top_norm"
+
+HEAD_STAYS_BACK_CHECKPOINT = "head_stays_back"
+_HEAD_STAYS_BACK_RANGE_KEY = "head_hip_gain_norm"
 
 
 def _score_within_range(observed: float, low: float, high: float) -> float:
@@ -488,4 +506,105 @@ def evaluate_hip_shift_at_top(
         percentile=pct,
         population_n=population_n,
         one_sided=True,
+    )
+
+
+def evaluate_head_stays_back(
+    keypoints: list[FrameKeypoints],
+    phases: list[PhaseSegment],
+    handedness: Handedness | None = None,
+    club: ClubCategory = ClubCategory.ALL,
+    profile: PlayerProfile | None = None,
+) -> CheckpointScore | None:
+    """Score how much rearward head-hip separation the swing created, address to impact.
+
+    "Staying behind the ball", and the first checkpoint here whose *sign* carries meaning — which is
+    why it is also the first that cannot be scored without knowing who swung.
+
+    **Returns `None` when `handedness` is None, and that is the feature.** A face-on camera sees a
+    left-handed swing mirrored, so the same body position lands on the opposite sign. Defaulting to
+    right-handed would read a left-handed golfer's perfectly ordinary impact position as a gross
+    fault — silently, and in the direction nothing downstream can detect. An unscored checkpoint is
+    reported by name in `SwingResult.unscored`; a wrongly scored one is not reported at all. Same
+    posture `api.app` takes when it refuses to invent a handedness for a golfer nobody stated one
+    for (`contracts.golfer` records why the field is captured at all).
+
+    **Why the delta rather than the offset at impact.** The absolute head-hip offset is the one pose
+    quantity in this module that is a static difference between two body parts at a single instant;
+    every other one differences a single landmark across time, which is what makes a camera-geometry
+    bias cancel. `check_metric_transfer.py` measured the difference that makes: our bay clips
+    disagree with the reference corpus by **0.32 shoulder-widths at address**, where the body is
+    square and no swing has happened yet — 55% of the whole gap at impact, and ~4x this metric's own
+    error. Scoring the absolute would have billed that to the golfer, and it would have become the
+    worst checkpoint on every swing on disk. Differencing the two instants under one shared ruler
+    removes the static term and leaves what the swing actually did. See `measure_head_hip_gain`.
+
+    **Two-sided**, and neither edge is "less is better". Too little separation is the head drifting
+    forward with the hips; too much is hanging back behind the ball through impact. Both edges clear
+    the instrument at 3.4x the 0.080 noise+boundary error, which is what ADR-010's 2026-08-12
+    addendum asks before an edge is asserted.
+    """
+    raw = measure_head_hip_gain(keypoints, phases)
+    if raw is None or handedness is None:
+        return None
+
+    # Into the right-handed camera frame the band is cut in. The corpus was folded the same way
+    # (derive_reference.py), so `observed`, the band and the stored distribution all share one
+    # convention — the percentile below would otherwise read a mirrored value against an
+    # unmirrored population and quietly return a plausible, wrong rank.
+    observed = raw if handedness is Handedness.RIGHT else -raw
+
+    band = resolve_range(_HEAD_STAYS_BACK_RANGE_KEY, club, profile)
+    if band is None:
+        return None
+
+    score = _score_within_range(observed, band.low, band.high)
+    passed = band.low <= observed <= band.high
+    # Phrased as a magnitude in the golfer's own terms. The stored number is negative because the
+    # band lives in a camera frame, and "-0.16 shoulder-widths of separation" is not a sentence.
+    travel = abs(observed)
+    if passed:
+        message = (
+            f"Head stayed behind the ball - {travel:.2f} shoulder-widths of separation opened up "
+            "between head and hips through impact (inside the tour range)."
+        )
+    elif observed > band.high:
+        message = (
+            f"Head drifting forward - only {travel:.2f} shoulder-widths of separation between "
+            "head and hips by impact. The head is travelling toward the target with the hips "
+            f"rather than staying back (tour swings open up {abs(band.high):g}-"
+            f"{abs(band.low):g})."
+        )
+    else:
+        message = (
+            f"Hanging back - {travel:.2f} shoulder-widths of separation between head and hips by "
+            f"impact, more than tour swings show (they open up {abs(band.high):g}-"
+            f"{abs(band.low):g}). The upper body is staying behind the ball through impact rather "
+            "than moving through the shot."
+        )
+
+    pct, population_n = _population_placement(_HEAD_STAYS_BACK_RANGE_KEY, observed)
+    if pct is not None and population_n is not None:
+        # The population is stored in the same negative frame, so a *low* percentile is the
+        # hanging-back end and a *high* one is the drifting-forward end. Labels follow the frame,
+        # not the prose above.
+        clause = _placement_clause(
+            pct,
+            population_n,
+            "more head-behind separation than",
+            "less head-behind separation than",
+        )
+        message += f" That is {clause}."
+
+    return CheckpointScore(
+        name=HEAD_STAYS_BACK_CHECKPOINT,
+        score=score,
+        passed=passed,
+        observed=round(observed, 2),
+        expected_low=band.low,
+        expected_high=band.high,
+        message=message,
+        percentile=pct,
+        population_n=population_n,
+        one_sided=False,
     )

@@ -50,6 +50,16 @@
       "source": "GolfDB (McNally et al., CVPRW 2019) - p90 of n=458 face-on tour swings from 122 golfers, measured by MediaPipe Pose lite at GolfDB's hand-annotated instants. One-sided, and for a different reason than head_sway_norm's: not because less is better - that is unestablished here too - but because the lower edge is UNMEASURABLE. The p10 is 0.015 while tune_spatial_metric.py puts this metric's noise+boundary error at 0.053, so a low edge there would separate golfers this pipeline cannot tell apart. Only overshoot is judged, which is the half the instrument can resolve: a hip slide past the tour p90 going back is the recognised 'sway off the ball'. Metric definitions v3; see benchmarks/golfdb_v1.json, ADR-010 addendum 2026-08-12, ADR-012",
       "source_date": "2019",
       "added": "2026-08-12"
+    },
+    {
+      "checkpoint": "head_hip_gain_norm",
+      "club_category": "all",
+      "skill_level": "all",
+      "low": -0.67,
+      "high": -0.14,
+      "source": "GolfDB (McNally et al., CVPRW 2019) - p10-p90 of n=458 face-on tour swings from 122 golfers, measured by MediaPipe Pose lite at GolfDB's hand-annotated instants. Negative because the band lives in the RIGHT-HANDED CAMERA FRAME: more negative means the head finished further behind the hips than it started, which is what a tour swing does. evaluate_head_stays_back normalizes a left-handed golfer onto this frame before scoring, using Golfer.handedness; the corpus was normalized the same way by derive_reference.py, which resolves each subject's handedness from the sign of head_hip_offset_impact_norm (4 of 122 subjects fold, and two of them are Mickelson and Watson - the check this has instead of a handedness column). TWO-SIDED: both edges clear the instrument, tune_spatial_metric.py putting noise+boundary at 0.080 against 0.269 from p50 to either edge (3.4x). This metric is the DELTA, not the absolute head-hip offset at impact, and that is the whole point - check_metric_transfer.py found our bay clips disagree with this corpus by 0.32 shoulder-widths AT ADDRESS, before the swing starts and 4x the error, so the absolute carries a static camera bias (yaw converts head/hip depth into apparent offset, and shoulder-width normalization does not remove it). Differencing two instants under one shared address-window ruler cancels that term and leaves what the swing produced. Metric definitions v3; see benchmarks/golfdb_v1.json, ADR-010 addendum 2026-08-12, ADR-012",
+      "source_date": "2019",
+      "added": "2026-08-13"
     }
   ]
 }

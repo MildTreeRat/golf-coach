@@ -5,6 +5,89 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-08-13 — The band that did not survive our camera (M6.5, closed)
+
+**Duration**: ~1 session, a new harness + implementation + tests + a re-analysis of everything on disk
+**What prompted it**: M6.5's last open item, `head_hip_offset_impact_norm`. The roadmap framed it as
+an architecture problem — `analysis` is pure and cannot read `Golfer.handedness` — and that framing
+was right about the blocker and wrong about the risk.
+
+**What landed**: the handedness seam, a new transfer-check harness, a rejected metric, a promoted
+one, and the panel at **six checkpoints**. `ANALYSIS_VERSION` 2 → 3. **552 tests** (up from 547),
+ruff and mypy clean.
+
+**The metric M6.5 named was the wrong one, and the check that says so did not exist.** The repo had
+`tune_spatial_metric.py`, which asks *is this metric signal or jitter* — entirely inside the
+reference corpus. Nothing asked the question that comes after it: **does the population the band was
+cut from project the way ours does?** So `scripts/golfdb/check_metric_transfer.py` measures the same
+quantity **at address**, where the body is square, the hips have not rotated, and there is no swing
+yet to disagree about. The result:
+
+| | at address | at impact | impact − address |
+|---|---|---|---|
+| GolfDB (broadcast) | −0.198 | −0.617 | −0.404 |
+| our bay clips | **+0.124** | −0.032 | −0.156 |
+| gap | **+0.322** | +0.585 | +0.249 |
+
+**55% of the disagreement is present before the golfer moves**, at ~4x the metric's own 0.082 error.
+Promoting the absolute offset would have scored 0.39–0.50 on all four stored swings, made "you are
+not staying behind the ball" the top-ranked tip on every one of them, and dropped every score from
+~96 to ~87 — roughly half of it camera.
+
+**Why this metric and not the other five.** Every shipped checkpoint differences *one landmark
+across time* — sway and shift are travel, finish balance is drift from its own mean, tempo is a
+ratio of durations — so a fixed camera bias is common-mode and cancels in the subtraction. The
+absolute head-hip offset compares *two different body parts at one instant*. Shoulder-width
+normalization removes the `1/Z` scale, so distance from the camera is handled; it does not remove
+**yaw**, and at impact the hips have rotated open while the head has not, so the two sit at
+genuinely different depths exactly where the metric reads. That distinction is now written into
+`mechanics.py`'s module docstring, because it generalises past this metric: *a band cut from
+broadcast footage transfers to a phone only for quantities where the camera cancels.*
+
+**So the delta was promoted instead, and it costs almost nothing.** `head_hip_gain_norm` is impact
+minus address under one shared address-window ruler — the same coaching concept, in the regime where
+the bias cancels. Ratio **7.1** against the absolute's 7.6. Band two-sided `[-0.67, -0.14]`, both
+edges 3.4x the 0.080 error. On the real swings it reads −0.16 to −0.17: **inside** the tour range,
+near the shallow edge at the 87th percentile — the opposite verdict from the one the absolute would
+have delivered, and the impact frame agrees with it.
+
+**Three things found by running it rather than reasoning about it:**
+
+1. **One golfer, two handednesses.** Classifying handedness independently per signed metric gave
+   `TOBY KEITH` opposite labels, from medians of −0.110 and +0.015 that are both inside measurement
+   error. A person does not swing right-handed under one measurement and left-handed under another,
+   so handedness is resolved **once** per subject, from the metric whose population sits furthest
+   from zero. The classifier validates itself by name: four of 122 subjects fold, and two are Phil
+   Mickelson and Bubba Watson.
+2. **A stored `sd` that was half artifact.** `head_hip_offset_impact_norm` carried sd 0.504; two
+   clips of one Stacy Lewis driver swing read **5.44** and **6.13** shoulder-widths — a collapsed
+   `shoulder_width` denominator, not a body. Dropping them gives 0.249. Quantiles were robust so no
+   shipped band ever moved, which is precisely why nothing caught it.
+3. **The unscored tip told the golfer to re-film a clip that was fine.** With no golfer attributed,
+   `head_stays_back` drops out and `feedback` emitted its standard "try a clip with the whole swing
+   in frame and the camera steady" — confident, and wrong: the swing measured perfectly, the *form
+   field* was empty. The remedy is now chosen from what is actually missing, keyed on whether the
+   measurement came through.
+
+**The seam itself is small, which is the point.** `analyze_swing(..., handedness=)`, resolved from
+the manifest's `player_id` by `api/pipeline.py`. `analysis` imports `Handedness` from `contracts`
+and no registry; `None` costs that one checkpoint and names it in `unscored`, because guessing
+right-handed would read a left-handed golfer's ordinary impact position as a gross fault — silently,
+and in the direction nothing downstream can detect.
+
+**Verified**: 552 tests, ruff and mypy clean. `derive_reference.py` re-run touched **only** the two
+signed metrics' rows — 7 added, 7 changed, every other row byte-identical, which is the regression
+property that made the change auditable. All four swings re-analyzed `version 2 -> 3`; sidecars
+agree with `analysis.json`; the MCP `get_swing` view carries the sixth checkpoint; career mode picked
+up the ninth metric with no career-mode change at all and still refuses everything at n = 2.
+
+**Where I left off**: M6.5 is closed. The rejected metric is still measured on every swing, so a
+later camera-geometry fix can revisit it without re-capturing anything.
+**Blockers**: none. The roadmap's standing NEXT ACTION is still an Anthropic API key — M6's live
+path has never made a real request.
+
+---
+
 ## 2026-08-12 — The panel widens to five, and the default band shape was wrong for both (M6.5)
 
 **Duration**: ~1 session, implementation + tests + a re-analysis of everything on disk

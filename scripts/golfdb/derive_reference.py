@@ -43,6 +43,35 @@ MIN_SAMPLES = 30
 
 QUANTILES = (0.10, 0.25, 0.50, 0.75, 0.90)
 
+#: Metrics whose sign is camera-relative, so a mixed-handedness corpus records the same swing
+#: position under two opposite signs. Listed explicitly rather than inferred: "is this quantity
+#: signed?" is a fact about what the metric means, and a heuristic over the observed values would
+#: have to guess it back from data that the guess then conditions.
+SIGNED_METRICS = frozenset({"head_hip_offset_impact_norm", "head_hip_gain_norm"})
+
+#: Which signed metric decides a subject's handedness for all of them. The absolute offset, because
+#: its population sits furthest from zero (median -0.62 against the gain's -0.40), so the fewest
+#: golfers straddle the sign boundary where the test is a coin flip.
+_HANDEDNESS_CLASSIFIER = "head_hip_offset_impact_norm"
+
+#: Noise + boundary error for `_HANDEDNESS_CLASSIFIER`, from `tune_spatial_metric.py`. A subject
+#: whose median sits inside this is classified on evidence weaker than the instrument, and is
+#: reported rather than silently trusted.
+_CLASSIFIER_ERROR = 0.082
+
+#: Largest believable shoulder-width-normalized value. Above this the *ruler* has collapsed, not
+#: the golfer moved: `shoulder_width` bottoms out at `MIN_SHOULDER_WIDTH` (0.02) when a golfer turns
+#: side-on or the shoulders mis-detect, and every `_norm` metric divides by it, so a near-floor
+#: width inflates whatever sits on top. Two clips of one driver swing read 5.44 and 6.13
+#: shoulder-widths of head-hip offset — six shoulder widths is not a body.
+#:
+#: Applies to every `_norm` metric because they all share that denominator. It is a no-op for the
+#: other four today (their largest values are 2.64 and 2.16), which is the point: it removes two
+#: known-impossible readings and leaves every shipped band where it was. Quantiles were already
+#: robust to these, so the row this actually corrects is `sd` — inflated from 0.249 to 0.504 by
+#: those two clips alone.
+MAX_PLAUSIBLE_NORM = 3.0
+
 CITATION = (
     "McNally et al., GolfDB: A Video Database for Golf Swing Sequencing, CVPR Workshops 2019"
 )
@@ -60,6 +89,75 @@ def _load_swings() -> list[ReferenceSwing]:
         )
     with common.SWINGS_JSONL.open(encoding="utf-8") as handle:
         return [ReferenceSwing.model_validate_json(line) for line in handle if line.strip()]
+
+
+def _drop_implausible(swings: list[ReferenceSwing]) -> dict[str, int]:
+    """Remove `_norm` readings past `MAX_PLAUSIBLE_NORM`. Returns per-metric drop counts.
+
+    Mutates the in-memory rows only — `swings.jsonl` is written by `derive_pose_metrics.py` and
+    stays the faithful record of what was measured. Screening belongs to the aggregation step,
+    where it can be reported, not to the measurement step, where it would erase evidence.
+    """
+    dropped: dict[str, int] = {}
+    for swing in swings:
+        for metric in list(swing.metrics):
+            if not metric.endswith("_norm"):
+                continue
+            if abs(swing.metrics[metric]) > MAX_PLAUSIBLE_NORM:
+                del swing.metrics[metric]
+                dropped[metric] = dropped.get(metric, 0) + 1
+    return dropped
+
+
+def _normalize_handedness(swings: list[ReferenceSwing]) -> tuple[list[str], list[str]]:
+    """Fold left-handed golfers onto the right-handed sign convention.
+
+    Returns `(lefties, weakly_classified)`.
+
+    **The metric's own sign is the handedness label, and it checks out by name.** A face-on camera
+    sees a left-handed golfer's swing mirrored, so every signed quantity flips; a golfer's *median*
+    is therefore a far more robust handedness signal than any single clip, and GolfDB carries no
+    handedness column to read instead.
+
+    Exactly four of 122 subjects come out positive, and two of them are Phil Mickelson and Bubba
+    Watson — the two best-known left-handers in professional golf, identified by a test that knows
+    nothing about them. That is the validation this has instead of a label, and it is why the
+    classification is per *subject* rather than per clip: at the clip level the same test would
+    reclassify a golfer's one outlying swing as a change of handedness.
+
+    **One golfer gets one label, from one metric.** Classifying each signed metric independently
+    is the obvious implementation and it is wrong: it gave `TOBY KEITH` opposite handedness on the
+    two metrics, from medians of -0.110 and +0.015 that are both inside measurement error. A person
+    does not swing right-handed under one measurement and left-handed under another, so handedness
+    is resolved once — from `_HANDEDNESS_CLASSIFIER`, whose population sits furthest from zero
+    (median -0.62) and therefore has the least ambiguous sign — and that verdict is applied to every
+    signed metric.
+
+    Subjects whose evidence is inside measurement error are still classified, because the sign test
+    puts Mickelson on the correct side even at +0.011 and folding a near-zero value barely moves it
+    either way. They are *reported* rather than silently trusted, which is the part that matters.
+
+    Called after `_drop_implausible`, deliberately. A blown-up ruler produces large values of
+    arbitrary sign, and enough of them under one subject would flip that subject's median — so
+    screening has to come first or the classifier reads its own artifacts.
+    """
+    by_subject: dict[str, list[float]] = {}
+    for swing in swings:
+        if swing.subject and _HANDEDNESS_CLASSIFIER in swing.metrics:
+            by_subject.setdefault(swing.subject, []).append(
+                swing.metrics[_HANDEDNESS_CLASSIFIER]
+            )
+
+    medians = {subject: statistics.median(values) for subject, values in by_subject.items()}
+    lefties = {subject for subject, median in medians.items() if median > 0}
+    weak = sorted(s for s in medians if abs(medians[s]) < _CLASSIFIER_ERROR)
+
+    for swing in swings:
+        if swing.subject not in lefties:
+            continue
+        for metric in SIGNED_METRICS & swing.metrics.keys():
+            swing.metrics[metric] = -swing.metrics[metric]
+    return sorted(lefties), weak
 
 
 def _strata(swings: list[ReferenceSwing]) -> list[tuple[str, str, str, list[ReferenceSwing]]]:
@@ -127,6 +225,22 @@ def main(argv: list[str]) -> int:
     swings = _load_swings()
     print(f"Loaded {len(swings)} reference swings")
 
+    dropped = _drop_implausible(swings)
+    for metric, count in sorted(dropped.items()):
+        print(f"  dropped {count} reading(s) of {metric} past {MAX_PLAUSIBLE_NORM} shoulder-widths")
+
+    lefties, weak = _normalize_handedness(swings)
+    if lefties:
+        print(
+            f"  handedness (from {_HANDEDNESS_CLASSIFIER}): folded {len(lefties)} "
+            f"left-handed subject(s) — {', '.join(lefties)}"
+        )
+    if weak:
+        print(
+            f"  {len(weak)} subject(s) classified on a median inside the "
+            f"{_CLASSIFIER_ERROR} error floor — {', '.join(weak)}"
+        )
+
     metrics = sorted({name for s in swings for name in s.metrics})
     estimators = sorted({s.pose_estimator for s in swings if s.pose_estimator})
     versions = sorted({s.metric_definitions_version for s in swings})
@@ -185,14 +299,39 @@ def _report(distributions: list[dict[str, Any]]) -> None:
 
     print("\nRecommended ranges.json bands (paste by hand — see module docstring):")
     for row in overall:
-        # Two-sided for a ratio that can err in either direction; one-sided from zero for the
-        # "lower is better" pose metrics, matching `_score_within_range(low=0.0, ...)`.
-        one_sided = row["metric"].endswith("_norm")
-        low = 0.0 if one_sided else row["p10"]
+        low, high, shape = _recommended_band(row)
         print(
-            f'  {row["metric"]:<22} low={low:<7.2f} high={row["p90"]:<7.2f} '
-            f'(n={row["n"]}, {row["n_players"]} golfers)'
+            f'  {row["metric"]:<26} low={low:<7.2f} high={high:<7.2f} '
+            f'{shape:<10} (n={row["n"]}, {row["n_players"]} golfers)'
         )
+    print(
+        "\nA recommendation is a starting point, not a band. ADR-010's addendum (2026-08-12) asks\n"
+        "for one more check before any edge ships: assert an edge only where it clears the\n"
+        "instrument — compare it against the metric's noise+boundary error from\n"
+        "tune_spatial_metric.py, and drop the edge if the two are comparable."
+    )
+
+
+def _recommended_band(row: dict[str, Any]) -> tuple[float, float, str]:
+    """`(low, high, shape)` for one overall row.
+
+    **A `_norm` suffix does not mean "lower is better".** It means shoulder-width normalized, and
+    the old rule read it as the former: one-sided `[0, p90]` for anything ending `_norm`. That is
+    right for head sway and finish drift, wrong for the hip metrics (some lateral travel is the
+    weight shift a swing needs — ADR-010 addendum 2026-08-12), and *incoherent* for a signed
+    quantity, where it printed `low=0.00 high=-0.33` — an empty interval — because it assumed
+    values are non-negative. `measure.py` carried a warning telling readers not to paste that,
+    which is a note where a fix belonged.
+
+    The distribution itself settles the only part a script can settle: a population sitting mostly
+    below zero cannot have a band starting at zero. Whether a *non-negative* metric deserves a lower
+    edge stays a human call, so those keep the one-sided default and the caller is told to check it.
+    """
+    if row["p90"] < 0 or row["p10"] < 0:
+        return row["p10"], row["p90"], "two-sided"
+    if row["metric"].endswith("_norm"):
+        return 0.0, row["p90"], "one-sided"
+    return row["p10"], row["p90"], "two-sided"
 
 
 if __name__ == "__main__":

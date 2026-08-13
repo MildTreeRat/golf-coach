@@ -239,9 +239,10 @@ METRIC_TARGETS: dict[str, MetricTarget] = {
         tolerance=0.050,
         provenance=_TUNED,
         no_target_reason=(
-            "no band, and 'less is better' is not established for it — some lateral hip travel is "
-            "a weight shift rather than a fault, and nothing here knows how much. M6.5 measured "
-            "this metric and deliberately promoted nothing"
+            "'less is better' is not established for it — some lateral hip travel is a weight "
+            "shift rather than a fault, and nothing here knows how much. It has a two-sided band "
+            "as of 2026-08-12, which is a range rather than a target: `analysis.comparison` asks "
+            "whether the personal center sits inside it, so no point value has to be invented here"
         ),
     ),
     "hip_shift_at_top_norm": MetricTarget(
@@ -250,8 +251,9 @@ METRIC_TARGETS: dict[str, MetricTarget] = {
         tolerance=0.053,
         provenance=_TUNED,
         no_target_reason=(
-            "same as hip_sway_norm: measured by M6.5, promoted by nothing, and the right amount of "
-            "hip travel going back is not a number this repo has"
+            "same as hip_sway_norm: it has a one-sided band as of 2026-08-12, but a band edge is "
+            "not a target, and the right amount of hip travel going back is not a number this repo "
+            "has. Its lower edge is omitted for being unmeasurable, not for being zero"
         ),
     ),
     "head_hip_offset_impact_norm": MetricTarget(
@@ -264,6 +266,22 @@ METRIC_TARGETS: dict[str, MetricTarget] = {
             "is single-handed by construction, so the camera-relative ambiguity that blocks a tour "
             "band does not apply. A readable sign is not a target: staying behind the ball is "
             "right, and how far behind is not established"
+        ),
+    ),
+    "head_hip_gain_norm": MetricTarget(
+        metric="head_hip_gain_norm",
+        target=None,
+        tolerance=0.080,
+        provenance=_TUNED,
+        no_target_reason=(
+            "it has a band (a two-sided tour range) rather than a value, and the band is the "
+            "wrong shape to read a target off: too little head-hip separation is the head "
+            "drifting forward with the hips, too much is hanging back through impact, and the "
+            "right amount for one golfer is not a number this repo has. `analysis.comparison` "
+            "asks the band's own question instead — whether the personal center's interval sits "
+            "inside it — which needs no point target invented here. Note the sign convention: "
+            "values live in a right-handed camera frame, so a personal center is only meaningful "
+            "against a corpus folded the same way"
         ),
     ),
     "tempo_ratio": MetricTarget(

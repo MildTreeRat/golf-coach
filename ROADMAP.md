@@ -1,6 +1,6 @@
 # Roadmap: AI Golf Swing Trainer
 
-## Last Updated: 2026-08-12
+## Last Updated: 2026-08-13
 
 Grouped by **state**, not by number, because the numbers no longer run in order: the pose-only
 slices (M4-PoC, M4-PoC+, M4-REF, M5-FB) delivered the mechanics half of M4 and the ranking half
@@ -21,7 +21,7 @@ wording; only the grouping and the M4 checklist have been corrected.
 | **M7** Two-phone sim capture | 🟡 In progress, 6/7 phases (3 trimmed) | Nothing — two iPhones + a sim bay | [§M7](#milestone-7-two-phone-sim-capture-no-hardware-purchase) |
 | **M4** full (outcome axis) | ⬜ Blocked | The M2 + M3 streams | [§M4 full](#milestone-4-full-swing-analysis-engine--the-outcome-axis) |
 | **M6** LLM coaching | 🟡 In progress | Nothing — an API key | [§M6](#milestone-6-llm-powered-coaching--in-progress) |
-| **M6.5** Measure now, judge later | 🟡 In progress | Nothing — 8 recorded, **5 scored**; 1 candidate left needs a handedness seam | [§M6.5](#m65-measure-now-judge-later--in-progress) |
+| **M6.5** Measure now, judge later | ✅ Done | — (9 recorded, **6 scored**; the handedness seam landed and the last candidate was settled) | [§M6.5](#m65-measure-now-judge-later--done) |
 | **Career mode** One golfer over time | ✅ Done, 6/6 steps | — (built and silent; a bay session gives it the `n` to speak) | [§Career](#career-mode-one-golfer-tracked-over-time--done-built-and-silent) |
 | **M5** Feedback UI | ⬜ Not started | M7 Phase 5 gives the host | [§M5](#milestone-5-feedback-ui) |
 | **M2** Club & ball detection | 🔒 Gated | M1.5 go/no-go **+** global-shutter camera | [§M2](#milestone-2-club--ball-detection) |
@@ -58,9 +58,13 @@ every stored analysis up to the current engine; the baseline plus the minimum-N 
 it; the discriminator that turns a mean and a spread into which *family* of cause to investigate;
 and the surfacing, which joins a personal center to the tour band and puts all of it behind three
 MCP tools and a career page. The counter prints **n = 2 for every metric**, so every one of those
-surfaces refuses. Every swing on disk is measured, `career_baseline.py` refuses all 24 claims over
-those measurements, `career_dispersion.py` refuses both findings on all eight metrics, and the tour
-join refuses all eight placements. The mechanism is complete and silent; only `n` is missing.
+surfaces refuses. Every swing on disk is measured, `career_baseline.py` refuses all 27 claims over
+those measurements, `career_dispersion.py` refuses both findings on all nine metrics, and the tour
+join refuses all nine placements. The mechanism is complete and silent; only `n` is missing.
+
+*(Counts read nine rather than eight as of 2026-08-13: M6.5's `head_hip_gain_norm` is picked up by
+the corpus reader with no career-mode change at all, which is the registry-driven derivation doing
+its job.)*
 
 ---
 
@@ -97,6 +101,14 @@ in a way worth stating: it is finished and it currently says nothing. Its delive
 mechanism *plus the guard that keeps it quiet*, so refusing every claim over the two swings on disk
 is the feature working, not the milestone being unfinished. What it waits for is `n`, and no code
 supplies that.
+
+**M6.5** closes the group on 2026-08-13, and its last decision is the one worth remembering: a
+candidate metric was rejected not for being noisy but for **not surviving our camera**. Everything
+this repo scores differences one landmark across time, where a camera bias is common-mode and
+cancels; the one candidate that instead compared two body parts at a single instant disagreed with
+the reference population by a third of a shoulder-width *before the swing started*. The panel is
+six checkpoints, and the second question — *does this band transfer?* — now has a harness
+(`check_metric_transfer.py`) beside the one that asks whether a metric is signal at all.
 
 ---
 
@@ -274,7 +286,7 @@ first*, grounded in how far off the tour population a swing actually sits. Desig
       and 0.038 vs 0.100 (mid_downswing). A checkpoint built on our detection would be worse than a
       constant. Kept runnable, like the six rejected address signals
       *(2026-08-11: that refusal was about **instant detection**, and does not generalize —
-      see [§M6.5](#m65-measure-now-judge-later--in-progress). Spatial metrics measured at the
+      see [§M6.5](#m65-measure-now-judge-later--done). Spatial metrics measured at the
       already-validated instants pass the equivalent gate comfortably.)*
 - [ ] **Reasons, not just names, on `unscored`** — needs the evaluators to return a reason instead of
       `None`, which touches every return site
@@ -547,6 +559,114 @@ Five things found by building it:
   single-handed by construction, so a personal baseline reads the sign without the field.)*
 
 
+## M6.5: Measure now, judge later — done
+**Goal**: Record every quantity this system *can* measure from data already on disk, without
+scoring any of it — so bands can be derived from a real population later, and so a swing captured
+today is still worth re-reading once they exist.
+
+**Why it exists**: measurement and judgment were fused. `evaluate_head_sway` measured, resolved a
+band, scored, and returned `None` if *any* step failed — so a metric with no band could not be
+measured, while bands are derived from populations of measurements. That circle, not the difficulty
+of any metric, is why the panel sat at three checkpoints for two milestones.
+
+- [x] **Split measure from judge** *(2026-08-11)* — `analysis/measure.py` holds the measuring half
+      (pure, no `resolve_range`, `None` means *could not measure*); `checkpoints/mechanics.py` keeps
+      the judging half. The three evaluators are unchanged in behaviour, pinned by the existing
+      `tests/analysis` suite passing with no assertion moved
+- [x] **`Measurement` contract** — no band, no `passed`, no `score`. ADR-010 §2 expressed as a type
+      rather than a convention: a measurement is structurally incapable of reading as a verdict
+- [x] **Three new face-on pose metrics** — `hip_sway_norm`, `hip_shift_at_top_norm`,
+      `head_hip_offset_impact_norm`. All hips/shoulders/ears, all windowed, all `x`-over-`x` and so
+      immune to the 16:9 pixel-aspect assumption. Vertical and shoulder-tilt metrics were left out
+      for being aspect-*sensitive*; ankles and knees for having zero recorded reliability evidence
+- [x] **Two launch-monitor metrics** — `face_to_path_deg` (the observable ADR-009 §Concepts names
+      for shape) and `start_line_deg`. `smash_factor` / `club_head_speed` are deliberately excluded:
+      every shot on disk reads smash 0.89-1.00, i.e. ball speed *below* club speed, and the OCR is
+      faithful, so the simulator itself is printing a physically impossible number. `spin_axis` too
+      — its sign contradicts the contract and the parser warns it stored an uninterpreted magnitude
+- [x] **`scripts/golfdb/tune_spatial_metric.py`** — the gate the repo did not have. It had three
+      harnesses for *temporal* rules and none for spatial quantities, so "should we add this
+      checkpoint?" was answerable only by argument. Scores population spread against measurement
+      error, where error is estimator disagreement (`lite` vs `full`, both already cached for all
+      461 face-on clips, no new extraction) plus segmentation error (labelled vs detected instants)
+- [x] **Registry-driven derivation** — `derive_pose_metrics.py` iterates
+      `measure.POSE_MEASUREMENTS` instead of hardcoding two metric names in three places, so a
+      candidate metric is one line. `derive_reference.py` needed no change; it auto-discovers
+- [x] **Decide what to promote** *(2026-08-12)* — **two of the five, and the panel is now 3 → 5.**
+      `hip_sway_norm` (`0.14-0.50`) and `hip_shift_at_top_norm` (`0.0-0.21`) are scored checkpoints;
+      the bands were already derived from the same 458 face-on GolfDB swings and needed no new data.
+      The "wants more than one golfer's swings" note above turned out to be aimed at the wrong
+      thing: the bands come from 122 tour golfers, not from ours, and what actually had to be
+      decided was **band shape**. `derive_reference.py`'s one-sided `[0, p90]` default encodes *less
+      is better*, which career mode step 5 had already established is **not** true of hip travel —
+      some of it is the weight shift a swing needs. So `hip_sway_norm` is two-sided (its p10 of 0.14
+      sits 2.8x the metric's 0.050 measurement error above zero, so "too little" is a real
+      distinction) while `hip_shift_at_top_norm` is one-sided for the opposite reason — its p10 of
+      0.015 sits *below* a 0.053 error floor, so a lower edge would split golfers this pipeline
+      cannot tell apart. Rule recorded in the [ADR-010 addendum
+      (2026-08-12)](docs/decisions/010-benchmark-ranges.md): assert a band edge only where it clears
+      the instrument. `ANALYSIS_VERSION` 1 → 2, since `overall_score` is a mean over five now
+- [x] **The handedness seam** *(2026-08-13)* — `analyze_swing(..., handedness=)`, resolved from the
+      manifest's `player_id` by `api/pipeline.py` and never by `analysis`, which stays pure and
+      imports no registry. `None` costs the swing that one checkpoint and says so in `unscored`;
+      guessing right-handed would read a left-handed golfer's ordinary impact position as a gross
+      fault, which is the failure that blocked this metric for two milestones
+- [x] **`head_hip_offset_impact_norm` was rejected, and its *delta* promoted instead**
+      *(2026-08-13)* — the panel is 3 → 5 → **6**. The absolute offset failed a transfer check that
+      had never been run: `scripts/golfdb/check_metric_transfer.py` measures the same quantity **at
+      address**, where the body is square and no swing has happened, and found our bay clips sit
+      **0.32 shoulder-widths** from the corpus there — 55% of the whole gap at impact and ~4x the
+      metric's own error. Scoring it would have made "not staying behind the ball" the top tip on
+      every swing on disk, roughly half of it camera. `head_hip_gain_norm` (impact minus address,
+      one shared address-window ruler) removes that static term by construction, and costs almost
+      nothing to do so: ratio **7.1** against the absolute's 7.6. Band two-sided `[-0.67, -0.14]`,
+      both edges 3.4x the 0.080 error. `ANALYSIS_VERSION` 2 → 3
+
+> **Status (2026-08-11):** all six pose metrics clear the gate over the full 461-clip face-on
+> corpus (ratio = spread / error): `finish_balance` 8.2, `head_hip_offset_impact` 7.6,
+> `hip_sway` 7.1, `head_sway` 6.7, `hip_shift_at_top` 3.6, `tempo` 2.4. The harness validates
+> itself three ways — it reproduces `head_sway_norm`'s shipped band (p10-p90 **0.029-0.430** against
+> `ranges.json`'s 0.0-0.43), `finish_balance_norm`'s p90 (**0.287** against 0.29), and the face-on
+> `tempo_ratio` p90 of **5.000** that `mechanics.py` documents against the all-view 4.71.
+>
+> Two things found by running it. Normalizing the simulator's shape text matched `CENTER` before
+> `FADE`, classifying a real recorded `"CENTER SLIGHT FADE"` as **straight** — curvature words now
+> beat centering words. And re-deriving showed the corpus had been storing `CheckpointScore.observed`,
+> which is **rounded to 2dp**; measurements now carry full precision, which moves 42 distribution
+> rows by under 0.005 and leaves every shipped band unchanged at the precision it quotes.
+>
+> `head_hip_offset_impact_norm` is signed and camera-relative. It is empirically *not* bimodal on
+> this corpus (p10 -0.88 to p90 -0.33, consistently head-behind-hips) so a band is derivable — but
+> that is a fact about GolfDB's handedness mix, not a guarantee, and handedness must be resolved
+> before it becomes a checkpoint. `derive_reference.py`'s recommended band for it is also garbage
+> (`low=0.00 high=-0.33`): its one-sided heuristic assumes non-negative values.
+
+> **Status (2026-08-13): done.** The handedness seam is built and the last candidate is settled —
+> against, in the form it was proposed, and for in a form that survives our own camera. What the
+> transfer check added to this repo is a second question to ask of any band: not only *is this
+> metric signal rather than jitter* (`tune_spatial_metric.py`) but *does the population it was cut
+> from project the way ours does*. Every shipped checkpoint differences one landmark across time,
+> where a camera bias is common-mode and cancels; the absolute head-hip offset was the first
+> candidate that did not, and it is the first that failed.
+>
+> Two things found by running it rather than reasoning about it. Classifying handedness
+> per-metric gave `TOBY KEITH` opposite labels on the two signed metrics from medians of -0.110
+> and +0.015, both inside measurement error — so handedness is now resolved once per subject from
+> the metric with the widest separation. And the stored `sd` for `head_hip_offset_impact_norm` was
+> **half artifact** (0.504 against 0.249): two clips of one Stacy Lewis driver swing read 5.44 and
+> 6.13 shoulder-widths, a collapsed `shoulder_width` denominator rather than a body. Quantiles were
+> robust to it so no shipped band moved, which is exactly why nothing had caught it.
+
+**Exit Criteria**: every measurable quantity recorded on every analyzed swing, with a harness that
+says which of them a band is worth deriving from — met, and the promotion decisions that were
+deliberately held separate have now all been taken. The panel is **6 checkpoints**. The one
+candidate this milestone rejected is still measured on every swing, so a later camera-geometry fix
+can revisit it without re-capturing anything.
+
+
+---
+
+
 ---
 
 # In progress
@@ -594,87 +714,6 @@ is the client handshake and conversational follow-up.
 > fact. The only M3 item left that needs no hardware is OCR preprocessing tuning.
 
 **Exit Criteria**: After a shot, MCP server exposes complete shot metrics; analysis engine can query them.
-
-
----
-
-## M6.5: Measure now, judge later — in progress
-**Goal**: Record every quantity this system *can* measure from data already on disk, without
-scoring any of it — so bands can be derived from a real population later, and so a swing captured
-today is still worth re-reading once they exist.
-
-**Why it exists**: measurement and judgment were fused. `evaluate_head_sway` measured, resolved a
-band, scored, and returned `None` if *any* step failed — so a metric with no band could not be
-measured, while bands are derived from populations of measurements. That circle, not the difficulty
-of any metric, is why the panel sat at three checkpoints for two milestones.
-
-- [x] **Split measure from judge** *(2026-08-11)* — `analysis/measure.py` holds the measuring half
-      (pure, no `resolve_range`, `None` means *could not measure*); `checkpoints/mechanics.py` keeps
-      the judging half. The three evaluators are unchanged in behaviour, pinned by the existing
-      `tests/analysis` suite passing with no assertion moved
-- [x] **`Measurement` contract** — no band, no `passed`, no `score`. ADR-010 §2 expressed as a type
-      rather than a convention: a measurement is structurally incapable of reading as a verdict
-- [x] **Three new face-on pose metrics** — `hip_sway_norm`, `hip_shift_at_top_norm`,
-      `head_hip_offset_impact_norm`. All hips/shoulders/ears, all windowed, all `x`-over-`x` and so
-      immune to the 16:9 pixel-aspect assumption. Vertical and shoulder-tilt metrics were left out
-      for being aspect-*sensitive*; ankles and knees for having zero recorded reliability evidence
-- [x] **Two launch-monitor metrics** — `face_to_path_deg` (the observable ADR-009 §Concepts names
-      for shape) and `start_line_deg`. `smash_factor` / `club_head_speed` are deliberately excluded:
-      every shot on disk reads smash 0.89-1.00, i.e. ball speed *below* club speed, and the OCR is
-      faithful, so the simulator itself is printing a physically impossible number. `spin_axis` too
-      — its sign contradicts the contract and the parser warns it stored an uninterpreted magnitude
-- [x] **`scripts/golfdb/tune_spatial_metric.py`** — the gate the repo did not have. It had three
-      harnesses for *temporal* rules and none for spatial quantities, so "should we add this
-      checkpoint?" was answerable only by argument. Scores population spread against measurement
-      error, where error is estimator disagreement (`lite` vs `full`, both already cached for all
-      461 face-on clips, no new extraction) plus segmentation error (labelled vs detected instants)
-- [x] **Registry-driven derivation** — `derive_pose_metrics.py` iterates
-      `measure.POSE_MEASUREMENTS` instead of hardcoding two metric names in three places, so a
-      candidate metric is one line. `derive_reference.py` needed no change; it auto-discovers
-- [x] **Decide what to promote** *(2026-08-12)* — **two of the five, and the panel is now 3 → 5.**
-      `hip_sway_norm` (`0.14-0.50`) and `hip_shift_at_top_norm` (`0.0-0.21`) are scored checkpoints;
-      the bands were already derived from the same 458 face-on GolfDB swings and needed no new data.
-      The "wants more than one golfer's swings" note above turned out to be aimed at the wrong
-      thing: the bands come from 122 tour golfers, not from ours, and what actually had to be
-      decided was **band shape**. `derive_reference.py`'s one-sided `[0, p90]` default encodes *less
-      is better*, which career mode step 5 had already established is **not** true of hip travel —
-      some of it is the weight shift a swing needs. So `hip_sway_norm` is two-sided (its p10 of 0.14
-      sits 2.8x the metric's 0.050 measurement error above zero, so "too little" is a real
-      distinction) while `hip_shift_at_top_norm` is one-sided for the opposite reason — its p10 of
-      0.015 sits *below* a 0.053 error floor, so a lower edge would split golfers this pipeline
-      cannot tell apart. Rule recorded in the [ADR-010 addendum
-      (2026-08-12)](docs/decisions/010-benchmark-ranges.md): assert a band edge only where it clears
-      the instrument. `ANALYSIS_VERSION` 1 → 2, since `overall_score` is a mean over five now
-- [ ] **`head_hip_offset_impact_norm` is the remaining candidate**, and it is an architecture change
-      rather than a data edit. Its band exists and its ratio is 7.6, but the sign is camera-relative
-      and the stored distribution is cut from GolfDB's mixed-handedness population. `Golfer.handedness`
-      records the fact since career mode step 1 — but `analysis` is pure and does not read the golfer
-      registry, so a checkpoint that consults it needs a seam that does not exist yet
-
-> **Status (2026-08-11):** all six pose metrics clear the gate over the full 461-clip face-on
-> corpus (ratio = spread / error): `finish_balance` 8.2, `head_hip_offset_impact` 7.6,
-> `hip_sway` 7.1, `head_sway` 6.7, `hip_shift_at_top` 3.6, `tempo` 2.4. The harness validates
-> itself three ways — it reproduces `head_sway_norm`'s shipped band (p10-p90 **0.029-0.430** against
-> `ranges.json`'s 0.0-0.43), `finish_balance_norm`'s p90 (**0.287** against 0.29), and the face-on
-> `tempo_ratio` p90 of **5.000** that `mechanics.py` documents against the all-view 4.71.
->
-> Two things found by running it. Normalizing the simulator's shape text matched `CENTER` before
-> `FADE`, classifying a real recorded `"CENTER SLIGHT FADE"` as **straight** — curvature words now
-> beat centering words. And re-deriving showed the corpus had been storing `CheckpointScore.observed`,
-> which is **rounded to 2dp**; measurements now carry full precision, which moves 42 distribution
-> rows by under 0.005 and leaves every shipped band unchanged at the precision it quotes.
->
-> `head_hip_offset_impact_norm` is signed and camera-relative. It is empirically *not* bimodal on
-> this corpus (p10 -0.88 to p90 -0.33, consistently head-behind-hips) so a band is derivable — but
-> that is a fact about GolfDB's handedness mix, not a guarantee, and handedness must be resolved
-> before it becomes a checkpoint. `derive_reference.py`'s recommended band for it is also garbage
-> (`low=0.00 high=-0.33`): its one-sided heuristic assumes non-negative values.
-
-**Exit Criteria**: every measurable quantity recorded on every analyzed swing, with a harness that
-says which of them a band is worth deriving from — met. Promotion was deliberately a separate
-decision, and **it has now been taken for two of them** (2026-08-12): the panel is 5 checkpoints,
-and the milestone stays open only for `head_hip_offset_impact_norm`, which needs a way for a pure
-`analysis` module to learn the golfer's handedness.
 
 
 ---
