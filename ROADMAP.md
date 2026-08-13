@@ -21,7 +21,7 @@ wording; only the grouping and the M4 checklist have been corrected.
 | **M7** Two-phone sim capture | 🟡 In progress, 6/7 phases (3 trimmed) | Nothing — two iPhones + a sim bay | [§M7](#milestone-7-two-phone-sim-capture-no-hardware-purchase) |
 | **M4** full (outcome axis) | ⬜ Blocked | The M2 + M3 streams | [§M4 full](#milestone-4-full-swing-analysis-engine--the-outcome-axis) |
 | **M6** LLM coaching | 🟡 In progress | Nothing — an API key | [§M6](#milestone-6-llm-powered-coaching--in-progress) |
-| **M6.5** Measure now, judge later | 🟡 In progress | Nothing — 8 metrics recorded, none scored | [§M6.5](#m65-measure-now-judge-later--in-progress) |
+| **M6.5** Measure now, judge later | 🟡 In progress | Nothing — 8 recorded, **5 scored**; 1 candidate left needs a handedness seam | [§M6.5](#m65-measure-now-judge-later--in-progress) |
 | **Career mode** One golfer over time | ✅ Done, 6/6 steps | — (built and silent; a bay session gives it the `n` to speak) | [§Career](#career-mode-one-golfer-tracked-over-time--done-built-and-silent) |
 | **M5** Feedback UI | ⬜ Not started | M7 Phase 5 gives the host | [§M5](#milestone-5-feedback-ui) |
 | **M2** Club & ball detection | 🔒 Gated | M1.5 go/no-go **+** global-shutter camera | [§M2](#milestone-2-club--ball-detection) |
@@ -631,8 +631,25 @@ of any metric, is why the panel sat at three checkpoints for two milestones.
 - [x] **Registry-driven derivation** — `derive_pose_metrics.py` iterates
       `measure.POSE_MEASUREMENTS` instead of hardcoding two metric names in three places, so a
       candidate metric is one line. `derive_reference.py` needed no change; it auto-discovers
-- [ ] **Decide what to promote.** Nothing is scored yet and `ranges.json` is untouched — that is
-      the next call, and it wants more than one golfer's swings behind it
+- [x] **Decide what to promote** *(2026-08-12)* — **two of the five, and the panel is now 3 → 5.**
+      `hip_sway_norm` (`0.14-0.50`) and `hip_shift_at_top_norm` (`0.0-0.21`) are scored checkpoints;
+      the bands were already derived from the same 458 face-on GolfDB swings and needed no new data.
+      The "wants more than one golfer's swings" note above turned out to be aimed at the wrong
+      thing: the bands come from 122 tour golfers, not from ours, and what actually had to be
+      decided was **band shape**. `derive_reference.py`'s one-sided `[0, p90]` default encodes *less
+      is better*, which career mode step 5 had already established is **not** true of hip travel —
+      some of it is the weight shift a swing needs. So `hip_sway_norm` is two-sided (its p10 of 0.14
+      sits 2.8x the metric's 0.050 measurement error above zero, so "too little" is a real
+      distinction) while `hip_shift_at_top_norm` is one-sided for the opposite reason — its p10 of
+      0.015 sits *below* a 0.053 error floor, so a lower edge would split golfers this pipeline
+      cannot tell apart. Rule recorded in the [ADR-010 addendum
+      (2026-08-12)](docs/decisions/010-benchmark-ranges.md): assert a band edge only where it clears
+      the instrument. `ANALYSIS_VERSION` 1 → 2, since `overall_score` is a mean over five now
+- [ ] **`head_hip_offset_impact_norm` is the remaining candidate**, and it is an architecture change
+      rather than a data edit. Its band exists and its ratio is 7.6, but the sign is camera-relative
+      and the stored distribution is cut from GolfDB's mixed-handedness population. `Golfer.handedness`
+      records the fact since career mode step 1 — but `analysis` is pure and does not read the golfer
+      registry, so a checkpoint that consults it needs a seam that does not exist yet
 
 > **Status (2026-08-11):** all six pose metrics clear the gate over the full 461-clip face-on
 > corpus (ratio = spread / error): `finish_balance` 8.2, `head_hip_offset_impact` 7.6,
@@ -654,8 +671,10 @@ of any metric, is why the panel sat at three checkpoints for two milestones.
 > (`low=0.00 high=-0.33`): its one-sided heuristic assumes non-negative values.
 
 **Exit Criteria**: every measurable quantity recorded on every analyzed swing, with a harness that
-says which of them a band is worth deriving from — met. Promotion to scored checkpoints is
-deliberately a separate decision.
+says which of them a band is worth deriving from — met. Promotion was deliberately a separate
+decision, and **it has now been taken for two of them** (2026-08-12): the panel is 5 checkpoints,
+and the milestone stays open only for `head_hip_offset_impact_norm`, which needs a way for a pure
+`analysis` module to learn the golfer's handedness.
 
 
 ---

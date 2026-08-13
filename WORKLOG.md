@@ -5,6 +5,86 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-08-12 — The panel widens to five, and the default band shape was wrong for both (M6.5)
+
+**Duration**: ~1 session, implementation + tests + a re-analysis of everything on disk
+**What prompted it**: M6.5's last open item — "decide what to promote". The measuring/judging split
+shipped five metrics recorded and none scored, and the panel had sat at three checkpoints for four
+milestones. With the bay session a while off, this is the largest user-visible change available
+that needs no new data at all.
+
+**What landed**: `evaluate_hip_sway` and `evaluate_hip_shift_at_top` in
+`analysis/checkpoints/mechanics.py`, two rows in `ranges.json`, engine wiring, an ADR-010 addendum,
+and `ANALYSIS_VERSION` 1 → 2. **547 tests** (up from 540), ruff and mypy clean. The mechanics panel
+is now **five checkpoints**.
+
+**The roadmap's own note about what blocked this was aimed at the wrong thing.** It said promotion
+"wants more than one golfer's swings behind it". It does not: the bands are cut from 458 face-on
+GolfDB swings by 122 tour golfers, not from ours, and they were already derived and committed by
+M6.5. What actually had to be decided was **band shape**, and that is where the work was.
+
+**`derive_reference.py`'s default would have shipped a wrong band for both metrics.** It recommends
+a one-sided `[0, p90]` band for anything named `_norm`, which encodes *less is better*. That is
+established for head sway and finish drift. It is **not** established for hip travel — some of it is
+the weight shift a swing needs — and this repo had already written that down, in career mode step 5,
+as the reason both metrics were denied a bias target. The tour distribution says the same thing out
+loud: `hip_sway_norm`'s p10 is **0.14**, so 90% of tour swings move the hips *further* than that. A
+`[0, p90]` band would have scored a golfer who barely moves their lower body as perfect.
+
+**Then the two metrics needed opposite treatment, which is the part I did not expect.** Having
+rejected the default for both, the obvious move is to make both two-sided. The measurement error
+says no:
+
+| metric | p10 | p90 | noise + boundary | p10 vs error |
+|---|---|---|---|---|
+| `hip_sway_norm` | 0.138 | 0.499 | 0.050 | **2.8x above** |
+| `hip_shift_at_top_norm` | 0.015 | 0.207 | 0.053 | **0.3x — below it** |
+
+So `hip_sway_norm` is two-sided `[0.14, 0.50]`, and `hip_shift_at_top_norm` is one-sided
+`[0, 0.21]` — the same shape as head sway, reached by the opposite argument. Not because less is
+better, but because a lower edge at 0.015 would separate golfers this pipeline cannot tell apart.
+The rule that falls out is worth more than either row: **assert a band edge only where it clears the
+instrument.** `tune_spatial_metric.py` already computed the numbers for step 5's tolerances; this is
+the second thing they have been used for, and neither use needed new extraction.
+
+**Two things found by running it rather than reasoning about it:**
+
+1. **The default synthetic swing now fails a checkpoint, and it should.** `make_swing`'s body holds
+   its hips perfectly still, which no golfer does, so it fails the two-sided `hip_sway` while
+   passing all four others. `test_a_fully_measured_swing_leaves_nothing_unscored` asserted
+   `== 3` and was the only test in the suite that broke. Rather than just bumping the number, it now
+   pins the pass/fail split too — a later fixture default that adds a hip shift has to come past
+   that line instead of quietly flipping a checkpoint back to green.
+2. **Adding checkpoints raised every stored score, which is why the version had to move.**
+   `overall_score` is a mean over survivors, so two new passing checkpoints dilute the one failing
+   tempo: 94.92 → **96.95** on three swings and 93.77 → **96.26** on the fourth. Nothing about those
+   swings changed. This is the coupling the 2026-08-01 ADR-010 addendum flagged for band *width*,
+   showing up for panel *membership* — and it is the case `ANALYSIS_VERSION` exists for.
+   `reanalyze.py` found all four unprompted and `record_state` kept the sidecars in step, so career
+   step 3's two mechanisms both paid off without being touched.
+
+**`one_sided` stopped being an internal ranking detail.** With `tempo_ratio` and `hip_sway_norm` both
+two-sided, "a low percentile is good news" is now wrong on two of five checkpoints.
+`contracts/caveats.py` says so explicitly, because a model handed a low number will otherwise
+congratulate the golfer for it — the same class of defect as career step 6's amber "outside tour
+range" pill, caught this time before it shipped rather than by a render.
+
+**Verified**: 547 tests, ruff and mypy clean. Against the real disk, all four swings re-analyzed
+`version 1 -> 2`, and on `2026-08-07-aaron1/1` the new checkpoints read `hip_sway` 0.27 (percentile
+41.5) and `hip_shift_at_top` 0.08 (percentile 48.6) — both near the tour median, which is the
+sanity check that they are not manufacturing faults on a real amateur swing. Feedback still leads
+with tempo, the only failure. `analysis.state.json` agrees with `analysis.json` on all four, and the
+three career CLIs still report `n = 2` for all eight metrics, unchanged: promotion judges
+measurements, it does not alter them.
+
+**Where I left off**: `head_hip_offset_impact_norm` is the one candidate left, and it is an
+architecture change rather than a data edit — the band exists and the ratio is 7.6, but its sign is
+camera-relative, and `analysis` is pure and cannot read `Golfer.handedness` without a seam that does
+not exist. That is the next decision, not the next commit.
+**Blockers**: none. Nothing here needed the bay session.
+
+---
+
 ## 2026-08-12 — A band is not a target, and "outside" is not a verdict (career mode, step 6)
 
 **Duration**: ~1 session, implementation + tests

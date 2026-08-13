@@ -6,12 +6,35 @@ score against it, place it in the reference population, phrase it for a golfer. 
 because the fused version could not measure a metric that had no band yet — and bands are derived
 from populations of measurements, so nothing new could ever acquire one. See `measure.py`.
 
-Three checkpoints, all measured from **face-on 2D pose** (the canonical pose-camera placement,
+Five checkpoints, all measured from **face-on 2D pose** (the canonical pose-camera placement,
 ADR-003 addendum) — deliberately the ones this single view reads well:
 
 - **tempo** — backswing:downswing time ratio, from phase timings.
 - **head_sway** — lateral (`x`) head travel from address to impact, in shoulder-widths.
 - **finish_balance** — how still the body settles through the follow-through, in shoulder-widths.
+- **hip_sway** — lateral (`x`) hip travel from address to impact, in shoulder-widths. [2026-08-12]
+- **hip_shift_at_top** — lateral hip travel from address to the top, in shoulder-widths.
+  [2026-08-12]
+
+The last two were measured for a milestone before they were judged (M6.5), which is the order this
+module's split exists to allow: a band is cut from a population of measurements, so the measuring
+has to come first. `tune_spatial_metric.py` cleared both — spread/error 7.1 and 3.6 — and the
+bands come from the same 458 face-on GolfDB swings the other two spatial bands do.
+
+**A band edge is asserted only where it clears the instrument.** That rule is why the two new
+checkpoints have different *shapes*, and it is worth stating because the obvious default gets both
+wrong. `derive_reference.py` recommends a one-sided `[0, p90]` band for anything named `_norm`,
+which encodes "less is better" — established for head sway and finish drift, and **not** established
+for either hip metric, since some lateral hip travel is the weight shift a swing needs (the same
+finding that denied both metrics a bias target in career mode step 5). So:
+
+- `hip_sway_norm` is **two-sided** `[0.14, 0.50]`. The tour p10 is 0.14, meaning 90% of tour swings
+  show *more* hip travel than that — not the shape of a quantity to minimise — and 0.14 sits 2.8x
+  the metric's own noise+boundary error (0.050) above zero, so "too little" is a distinction this
+  pipeline can actually make.
+- `hip_shift_at_top_norm` is **one-sided** `[0, 0.21]`, and not because less is better. Its p10 is
+  0.015 against an error floor of 0.053, so a lower edge there would separate golfers the pipeline
+  cannot tell apart. Only overshoot is judged — the half the instrument resolves.
 
 Each compares an observed value against a benchmark band resolved from the store (ADR-010) and
 returns a `CheckpointScore`, or `None` when the data is unusable or the store has no band — no
@@ -53,6 +76,8 @@ from golf_coach.analysis.measure import (
     address_sample_bounds,
     measure_finish_balance,
     measure_head_sway,
+    measure_hip_shift_at_top,
+    measure_hip_sway,
     measure_tempo_ratio,
 )
 from golf_coach.contracts.intent import ClubCategory, PlayerProfile
@@ -73,6 +98,12 @@ _HEAD_SWAY_RANGE_KEY = "head_sway_norm"
 
 FINISH_BALANCE_CHECKPOINT = "finish_balance"
 _FINISH_BALANCE_RANGE_KEY = "finish_balance_norm"
+
+HIP_SWAY_CHECKPOINT = "hip_sway"
+_HIP_SWAY_RANGE_KEY = "hip_sway_norm"
+
+HIP_SHIFT_AT_TOP_CHECKPOINT = "hip_shift_at_top"
+_HIP_SHIFT_AT_TOP_RANGE_KEY = "hip_shift_at_top_norm"
 
 
 def _score_within_range(observed: float, low: float, high: float) -> float:
@@ -305,6 +336,149 @@ def evaluate_finish_balance(
 
     return CheckpointScore(
         name=FINISH_BALANCE_CHECKPOINT,
+        score=score,
+        passed=passed,
+        observed=round(observed, 2),
+        expected_low=band.low,
+        expected_high=band.high,
+        message=message,
+        percentile=pct,
+        population_n=population_n,
+        one_sided=True,
+    )
+
+
+def evaluate_hip_sway(
+    keypoints: list[FrameKeypoints],
+    phases: list[PhaseSegment],
+    club: ClubCategory = ClubCategory.ALL,
+    profile: PlayerProfile | None = None,
+) -> CheckpointScore | None:
+    """Score lateral hip travel from address to impact — the **two-sided** checkpoint.
+
+    The structural twin of `evaluate_head_sway` measuring a different thing: head sway asks whether
+    the golfer stayed centred, hip sway asks how much the lower body moved laterally into the shot.
+    Neither is visible from the other — a head that stays put over hips that slide is a lateral
+    slide, while head and hips moving together is a body that swayed.
+
+    **Two-sided, and that is the substance of this checkpoint rather than a detail.** Every other
+    spatial band here is `[0, p90]`, which asserts that less is better. That is not established for
+    hip travel: some of it is the weight shift a swing needs, and the tour population shows it —
+    the p10 is 0.14, so 90% of tour swings move the hips *further* than that. A `[0, p90]` band
+    would score a golfer who barely moves their lower body as perfect. The lower edge is safe to
+    assert because it clears the instrument by 2.8x (see the module docstring).
+
+    Both endpoints are means over a window, so zero-mean landmark jitter suppresses by √N. Returns
+    `None` if the phases/landmarks are unusable or the store has no band.
+    """
+    observed = measure_hip_sway(keypoints, phases)
+    if observed is None:
+        return None
+
+    band = resolve_range(_HIP_SWAY_RANGE_KEY, club, profile)
+    if band is None:
+        return None
+
+    score = _score_within_range(observed, band.low, band.high)
+    passed = band.low <= observed <= band.high
+    target = f"tour range {band.low:g}-{band.high:g}"
+    if passed:
+        message = (
+            f"Good lower-body movement - {observed:.2f} shoulder-widths of lateral hip travel "
+            f"to impact (inside the {target})."
+        )
+    elif observed < band.low:
+        # Deliberately phrased as a fact about the population rather than as a cause. This
+        # pipeline measures lateral hip position; it does not see weight, pressure or rotation,
+        # and the standing caveats forbid inferring them.
+        message = (
+            f"Little hip movement - {observed:.2f} shoulder-widths of lateral hip travel to "
+            f"impact, under the {target}. Almost every tour swing moves the hips further into "
+            "the shot than this."
+        )
+    else:
+        message = (
+            f"Hip slide - {observed:.2f} shoulder-widths of lateral hip travel to impact, past "
+            f"the {target}. The hips are travelling sideways more than tour swings do."
+        )
+
+    pct, population_n = _population_placement(_HIP_SWAY_RANGE_KEY, observed)
+    if pct is not None and population_n is not None:
+        clause = _placement_clause(
+            pct, population_n, "less hip travel than", "more hip travel than"
+        )
+        message += f" That is {clause}."
+
+    return CheckpointScore(
+        name=HIP_SWAY_CHECKPOINT,
+        score=score,
+        passed=passed,
+        observed=round(observed, 2),
+        expected_low=band.low,
+        expected_high=band.high,
+        message=message,
+        percentile=pct,
+        population_n=population_n,
+        one_sided=False,
+    )
+
+
+def evaluate_hip_shift_at_top(
+    keypoints: list[FrameKeypoints],
+    phases: list[PhaseSegment],
+    club: ClubCategory = ClubCategory.ALL,
+    profile: PlayerProfile | None = None,
+) -> CheckpointScore | None:
+    """Score lateral hip travel from address to the top of the backswing.
+
+    **One-sided, for a reason that is not "less is better".** That claim is no better established
+    here than for `evaluate_hip_sway`. The lower edge is omitted because it is *unmeasurable*: the
+    tour p10 is 0.015 against a noise+boundary error of 0.053, so a band edge there would separate
+    golfers this pipeline cannot tell apart. Judging only overshoot judges only the half the
+    instrument resolves — a distinction worth keeping, because a reader who assumes the usual
+    `[0, p90]` reasoning will draw the usual conclusion from it.
+
+    **Magnitude only, so this says nothing about direction.** Sign would separate a slide away from
+    the target from a reverse pivot toward it, and the sign is camera-relative while handedness is
+    not resolved on the analysis path (see `measure_head_hip_offset_impact`). The message therefore
+    describes how far the hips travelled, never which way.
+
+    This reads a *detected* instant (the top, median 2 frames of error) but measures a spatial
+    quantity averaged over the transition window, so it inherits none of the single-frame fragility
+    that sank the arm-parallel candidates in M5-FB. Returns `None` if the phases/landmarks are
+    unusable or the store has no band.
+    """
+    observed = measure_hip_shift_at_top(keypoints, phases)
+    if observed is None:
+        return None
+
+    band = resolve_range(_HIP_SHIFT_AT_TOP_RANGE_KEY, club, profile)
+    if band is None:
+        return None
+
+    score = _score_within_range(observed, band.low, band.high)
+    passed = band.low <= observed <= band.high
+    if passed:
+        message = (
+            f"Steady hips going back - {observed:.2f} shoulder-widths of lateral hip travel to "
+            "the top (centered over the ball at the top)."
+        )
+    else:
+        message = (
+            f"Hip slide going back - {observed:.2f} shoulder-widths of lateral hip travel to the "
+            f"top. The hips are travelling sideways during the backswing rather than staying "
+            f"centered (aim under {band.high})."
+        )
+
+    pct, population_n = _population_placement(_HIP_SHIFT_AT_TOP_RANGE_KEY, observed)
+    if pct is not None and population_n is not None:
+        clause = _placement_clause(
+            pct, population_n, "less hip slide going back than", "more hip slide going back than"
+        )
+        message += f" That is {clause}."
+
+    return CheckpointScore(
+        name=HIP_SHIFT_AT_TOP_CHECKPOINT,
         score=score,
         passed=passed,
         observed=round(observed, 2),

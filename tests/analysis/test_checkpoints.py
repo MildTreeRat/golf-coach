@@ -1,4 +1,4 @@
-"""Mechanics checkpoints: tempo, head sway, and finish balance on synthetic swings."""
+"""Mechanics checkpoints: tempo, head/hip sway, finish balance on synthetic swings."""
 
 from __future__ import annotations
 
@@ -7,6 +7,8 @@ from conftest import make_swing
 from golf_coach.analysis.checkpoints import (
     evaluate_finish_balance,
     evaluate_head_sway,
+    evaluate_hip_shift_at_top,
+    evaluate_hip_sway,
     evaluate_tempo,
 )
 from golf_coach.analysis.checkpoints.mechanics import (
@@ -24,10 +26,10 @@ def _tempo(backswing_frames: int, downswing_frames: int):
     return evaluate_tempo(segment_phases(swing))
 
 
-def _analyzed(head_sway: float = 0.0, finish_drift: float = 0.0):
+def _analyzed(head_sway: float = 0.0, finish_drift: float = 0.0, hip_sway: float = 0.0):
     """Smooth then segment, mirroring the engine, and return (smoothed, phases)."""
     smoothed = smooth_keypoints(
-        make_swing(30, 10, head_sway=head_sway, finish_drift=finish_drift)
+        make_swing(30, 10, head_sway=head_sway, finish_drift=finish_drift, hip_sway=hip_sway)
     )
     return smoothed, segment_phases(smoothed)
 
@@ -109,6 +111,114 @@ def test_checkpoints_return_none_when_unsegmentable() -> None:
     empty: list[FrameKeypoints] = []
     assert evaluate_head_sway(empty, []) is None
     assert evaluate_finish_balance(empty, []) is None
+    assert evaluate_hip_sway(empty, []) is None
+    assert evaluate_hip_shift_at_top(empty, []) is None
+
+
+# --- the hip checkpoints, promoted 2026-08-12 ----------------------------------------------
+# The point of these two is not that they are more checkpoints, it is that they have *different
+# band shapes for different reasons*. hip_sway is two-sided because "less is better" is not
+# established for hip travel; hip_shift_at_top is one-sided because its lower edge sits below
+# the pipeline's own measurement error. Both refusals are easy to lose in a later refactor that
+# "tidies" the panel into one shape, so each is pinned below.
+
+
+def test_hip_sway_passes_inside_the_band() -> None:
+    smoothed, phases = _analyzed(hip_sway=0.03)  # ~0.19 shoulder-widths
+    cp = evaluate_hip_sway(smoothed, phases)
+    assert cp is not None
+    assert cp.name == "hip_sway"
+    assert cp.passed is True
+    assert cp.score == 1.0
+    assert cp.expected_low <= cp.observed <= cp.expected_high
+
+
+def test_hip_sway_fails_when_the_hips_barely_move() -> None:
+    """The whole reason this band is two-sided: a body that does not move laterally is a fault.
+
+    Under a `[0, p90]` band -- the shape every other spatial checkpoint uses, and the one
+    `derive_reference.py` recommends for any `_norm` metric -- this swing would score a perfect
+    1.0. The tour population says otherwise: p10 is 0.14, so 90% of tour swings move the hips
+    further than this one does.
+    """
+    smoothed, phases = _analyzed(hip_sway=0.0)
+    cp = evaluate_hip_sway(smoothed, phases)
+    assert cp is not None
+    assert cp.passed is False
+    assert cp.observed < cp.expected_low
+    assert cp.score < 1.0
+
+
+def test_hip_sway_fails_when_the_hips_slide_too_far() -> None:
+    smoothed, phases = _analyzed(hip_sway=0.12)  # ~0.74 shoulder-widths
+    cp = evaluate_hip_sway(smoothed, phases)
+    assert cp is not None
+    assert cp.passed is False
+    assert cp.observed > cp.expected_high
+    assert cp.score < 1.0
+
+
+def test_hip_sway_is_two_sided_and_hip_shift_is_not() -> None:
+    """The contrast, on one swing: motionless hips fail one checkpoint and pass the other.
+
+    Not a redundant restatement of the two tests above -- it pins that the shapes were chosen per
+    metric rather than copied, which is the property a later "make the panel consistent" change
+    would silently undo. `one_sided` also rides out on `CheckpointScore` for `feedback` to rank
+    with and for the caveats to warn about, so the flags are asserted, not just the verdicts.
+    """
+    smoothed, phases = _analyzed(hip_sway=0.0)
+
+    sway = evaluate_hip_sway(smoothed, phases)
+    shift = evaluate_hip_shift_at_top(smoothed, phases)
+    assert sway is not None and shift is not None
+
+    assert sway.passed is False and sway.one_sided is False
+    assert shift.passed is True and shift.one_sided is True
+    assert sway.expected_low > 0.0
+    assert shift.expected_low == 0.0
+
+
+def test_hip_shift_at_top_passes_a_centered_backswing() -> None:
+    smoothed, phases = _analyzed(hip_sway=0.03)  # ~0.13 shoulder-widths by the top
+    cp = evaluate_hip_shift_at_top(smoothed, phases)
+    assert cp is not None
+    assert cp.name == "hip_shift_at_top"
+    assert cp.passed is True
+    assert cp.score == 1.0
+
+
+def test_hip_shift_at_top_fails_a_lateral_slide_going_back() -> None:
+    smoothed, phases = _analyzed(hip_sway=0.08)  # ~0.36 shoulder-widths by the top
+    cp = evaluate_hip_shift_at_top(smoothed, phases)
+    assert cp is not None
+    assert cp.passed is False
+    assert cp.observed > cp.expected_high
+    assert cp.score < 1.0
+
+
+def test_the_hip_messages_never_claim_a_direction_or_a_rotation() -> None:
+    """Both metrics are unsigned magnitudes, and neither sees the hips *turn*.
+
+    `measure_hip_shift_at_top` drops the sign because it is camera-relative and handedness is not
+    resolved on the analysis path, so a message naming a side would be right for half of golfers.
+    Rotation is not measured at all -- the standing caveats forbid inferring it -- and "the hips
+    slid instead of turning" is the sentence a coach reaches for first.
+    """
+    smoothed, phases = _analyzed(hip_sway=0.12)
+    messages = [
+        cp.message or ""
+        for cp in (
+            evaluate_hip_sway(smoothed, phases),
+            evaluate_hip_shift_at_top(smoothed, phases),
+        )
+        if cp is not None
+    ]
+    assert len(messages) == 2
+    for message in messages:
+        lowered = message.lower()
+        assert "rotat" not in lowered and "turning" not in lowered
+        for side in ("left", "right", "away from the target", "toward the target"):
+            assert side not in lowered
 
 
 # --- metric definitions v2 (M4-REF) -------------------------------------------------------

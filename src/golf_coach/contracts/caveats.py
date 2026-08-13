@@ -23,11 +23,11 @@ from __future__ import annotations
 #: What the two scores mean and why they are not interchangeable (ADR-009).
 TWO_AXES = """\
 Two independent axes, and they answer different questions. **Mechanics** come from pose
-analysis of a face-on video: three checkpoints (tempo, head sway, finish balance) scored
-against p10-p90 bands derived from hand-annotated tour swings, plus the percentile the swing
-sits at in that population. **Outcome** comes from the launch monitor: club and ball speed,
-launch, spin, carry. A swing can score well on one and badly on the other; say which you are
-talking about."""
+analysis of a face-on video: five checkpoints (tempo, head sway, finish balance, hip sway, hip
+shift at top) scored against bands derived from hand-annotated tour swings, plus the percentile
+the swing sits at in that population. **Outcome** comes from the launch monitor: club and ball
+speed, launch, spin, carry. A swing can score well on one and badly on the other; say which you
+are talking about."""
 
 #: Attached to any alignment tier below FULL, which is the only tier that anchored on all three
 #: instants and so the only one a reader may treat as synchronized throughout (ADR-015). Takes
@@ -46,17 +46,24 @@ Reading this data honestly:
   excluded from `overall_score` rather than counted as zero, so a swing with an unscored
   checkpoint was judged on fewer fundamentals than one without. Say so if it comes up.
 - `percentile` is informational and clamps at the band edges, so a failing checkpoint reports
-  about 90 (or about 10, when it missed on the low side of a two-sided metric like tempo)
-  whether it missed narrowly or hugely. A low percentile is therefore not by itself good news —
-  read `passed` for the verdict and rank severity by `score`, never by percentile.
+  about 90 (or about 10, when it missed on the low side of a two-sided metric) whether it missed
+  narrowly or hugely. A low percentile is therefore not by itself good news — read `passed` for
+  the verdict and rank severity by `score`, never by percentile.
+- **Less is not better on every checkpoint.** `tempo` and `hip_sway` are two-sided (`one_sided`
+  is false): too little hip travel fails just as too much does, because some lateral hip movement
+  is the weight shift a swing needs. On the one-sided checkpoints — head sway, finish balance,
+  hip shift at top — below the band is the good side. Read `one_sided` before describing a low
+  number as a strength.
 - `needs_review` on a shot means its numbers were read off a photograph by OCR and the parse
   was flagged. Do not quote a flagged shot's figures as fact; say the reading is uncertain.
 - `alignment_caveat`, when present, means the two camera views were anchored on some swing
   instants and interpolated between them. Do not describe the side-by-side video as
   synchronized throughout, and do not read fine timing differences off it.
-- Only three fundamentals are measured, all from the face-on view. Spine angle, hip rotation,
-  swing plane and club path are NOT measured here — they need a second calibrated view or club
-  detection, neither of which exists yet. Do not infer them from what is available.
+- Only five fundamentals are measured, all from the face-on view, and all of them are lateral
+  (side-to-side) or timing quantities. Spine angle, hip **rotation**, swing plane and club path
+  are NOT measured here — they need a second calibrated view or club detection, neither of which
+  exists yet. The hip checkpoints measure how far the hips travel sideways, never how far they
+  turn, and never in which direction. Do not infer them from what is available.
 
 Only a handful of sessions and shots are recorded so far. Do not describe a trend or a pattern
 from the numbers in front of you — there is not enough of them for one, and any statement about

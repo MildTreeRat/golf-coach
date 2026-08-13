@@ -191,7 +191,10 @@ class SwingResult(BaseModel):
 #:
 #:   0  the artifact predates versioning (no `analysis_version` key at all)
 #:   1  2026-08-12 — first versioned engine: M6.5 `measurements` present
-ANALYSIS_VERSION = 1
+#:   2  2026-08-12 — `hip_sway` and `hip_shift_at_top` promoted to scored checkpoints, so
+#:                   `overall_score` is a mean over five and no longer comparable with a mean
+#:                   over three. The measurements did not move; what they *mean* did.
+ANALYSIS_VERSION = 2
 
 
 class SwingBundleResult(BaseModel):

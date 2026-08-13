@@ -30,6 +30,26 @@
       "source": "GolfDB (McNally et al., CVPRW 2019) - p90 of n=458 face-on tour swings from 122 golfers, measured by MediaPipe Pose lite at GolfDB's hand-annotated instants; one-sided (lower is better), replacing the 0.6 uncalibrated estimate. Metric definitions v3 (p90 of hip drift, not max; hip visibility gate 0.7; shoulder-width ruler read from a short window ending at the address boundary, not the whole ADDRESS phase - this moved p90 from 0.28 to 0.29). Includes the 160x160 pixel-aspect correction, which moves p90 from 0.30 to 0.28; see benchmarks/golfdb_v1.json, docs/M4_POSE_BAKEOFF.md, ADR-012 and ADR-013",
       "source_date": "2019",
       "added": "2026-08-02"
+    },
+    {
+      "checkpoint": "hip_sway_norm",
+      "club_category": "all",
+      "skill_level": "all",
+      "low": 0.14,
+      "high": 0.5,
+      "source": "GolfDB (McNally et al., CVPRW 2019) - p10-p90 of n=458 face-on tour swings from 122 golfers, measured by MediaPipe Pose lite at GolfDB's hand-annotated instants. TWO-SIDED, unlike head_sway_norm and finish_balance_norm, and deliberately: 'less is better' is NOT established for lateral hip travel, because some of it is the weight shift a swing needs (recorded when career-mode step 5 refused this metric a bias finding for exactly this reason). The tour population agrees - p10 is 0.14, so 90% of tour swings show MORE hip travel than that, which is not the shape of a quantity golfers should minimise. The lower edge is assertable because it clears the instrument: tune_spatial_metric.py puts this metric's noise+boundary error at 0.050, and 0.14 sits 2.8x that above zero. Metric definitions v3; see benchmarks/golfdb_v1.json, ADR-010 addendum 2026-08-12, ADR-012",
+      "source_date": "2019",
+      "added": "2026-08-12"
+    },
+    {
+      "checkpoint": "hip_shift_at_top_norm",
+      "club_category": "all",
+      "skill_level": "all",
+      "low": 0.0,
+      "high": 0.21,
+      "source": "GolfDB (McNally et al., CVPRW 2019) - p90 of n=458 face-on tour swings from 122 golfers, measured by MediaPipe Pose lite at GolfDB's hand-annotated instants. One-sided, and for a different reason than head_sway_norm's: not because less is better - that is unestablished here too - but because the lower edge is UNMEASURABLE. The p10 is 0.015 while tune_spatial_metric.py puts this metric's noise+boundary error at 0.053, so a low edge there would separate golfers this pipeline cannot tell apart. Only overshoot is judged, which is the half the instrument can resolve: a hip slide past the tour p90 going back is the recognised 'sway off the ball'. Metric definitions v3; see benchmarks/golfdb_v1.json, ADR-010 addendum 2026-08-12, ADR-012",
+      "source_date": "2019",
+      "added": "2026-08-12"
     }
   ]
 }

@@ -24,7 +24,7 @@ flowchart LR
     KP --> AS["scripts/analyze_swing.py"]
     AS --> SM["smoothing<br/>visibility-weighted moving avg"]
     SM --> PH["phases<br/>address / top / impact"]
-    PH --> CK["3 checkpoints<br/>tempo, head_sway, finish_balance"]
+    PH --> CK["5 checkpoints<br/>tempo, head_sway, finish_balance<br/>hip_sway, hip_shift_at_top"]
     CK --> BR[("ranges.json<br/>golfdb_v1.json")]
     CK --> SC["scoring<br/>FundamentalsPolicy"]
     SC --> TIP["ranked tips + headline<br/>+ tour percentiles"]
@@ -231,16 +231,26 @@ sequenceDiagram
 
 ### What is measured, and what the numbers mean
 
-Three checkpoints, all from a single face-on camera, all with bands derived from GolfDB tour
+Five checkpoints, all from a single face-on camera, all with bands derived from GolfDB tour
 swings rather than eyeballed. Current values live in
 `src/golf_coach/analysis/benchmarks/ranges.json` — **read them there, not from a doc**, since
 they have been re-derived three times and each `source` string carries full provenance.
 
-| Checkpoint | What it measures | Band source |
-|---|---|---|
-| `tempo` | backswing : downswing duration ratio | p10–p90 of 1,399 tour swings, 246 golfers |
-| `head_sway` | lateral head travel to impact, shoulder-width normalized | p90 of 458 face-on tour swings, 122 golfers |
-| `finish_balance` | post-impact settle, shoulder-width normalized | p90 of 458 face-on tour swings, 122 golfers |
+| Checkpoint | What it measures | Band | Band source |
+|---|---|---|---|
+| `tempo` | backswing : downswing duration ratio | two-sided | p10–p90 of 1,399 tour swings, 246 golfers |
+| `head_sway` | lateral head travel to impact, shoulder-width normalized | one-sided | p90 of 458 face-on tour swings, 122 golfers |
+| `finish_balance` | post-impact settle, shoulder-width normalized | one-sided | p90 of 458 face-on tour swings, 122 golfers |
+| `hip_sway` | lateral hip travel to impact, shoulder-width normalized | **two-sided** | p10–p90 of 458 face-on tour swings, 122 golfers |
+| `hip_shift_at_top` | lateral hip travel to the top, shoulder-width normalized | one-sided | p90 of 458 face-on tour swings, 122 golfers |
+
+**Two of the five are two-sided, and that is a measured choice rather than a default.** `hip_sway`
+is not "less is better": the tour p10 is 0.14, so 90% of tour swings move the hips *further* than
+that, and too little lateral movement fails just as too much does. `hip_shift_at_top` is one-sided
+for a different reason again — not because less is better, but because its p10 (0.015) sits below
+the pipeline's own measurement error (0.053), so a lower edge would split golfers this instrument
+cannot tell apart. The rule is in the ADR-010 addendum of 2026-08-12: assert a band edge only where
+it clears the instrument. Consumers must read `one_sided` before calling a low number good.
 
 Phase-instant accuracy against 461 hand-annotated clips: **top 2 frames, impact 1 frame,
 address 7 frames** (median). Address is the known weak instant — see

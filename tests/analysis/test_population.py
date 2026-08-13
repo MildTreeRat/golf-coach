@@ -126,7 +126,16 @@ def test_unmeasurable_checkpoint_is_named_rather_than_dropped_silently() -> None
 def test_a_fully_measured_swing_leaves_nothing_unscored() -> None:
     result = analyze_swing(swing_id="s", session_id="sess", keypoints=make_swing(30, 10))
     assert result.unscored == []
-    assert len(result.checkpoint_scores) == 3
+    assert len(result.checkpoint_scores) == 5
+
+    # `make_swing`'s default body holds its hips perfectly still, which no golfer does -- so the
+    # two-sided hip_sway band fails it while every one-sided checkpoint passes. Measured and
+    # failed is the opposite of unmeasured, which is what this test is actually about, and the
+    # split is asserted here so a future fixture default that adds a hip shift has to come past
+    # this line rather than quietly flipping a checkpoint back to passing.
+    by_name = {cp.name: cp for cp in result.checkpoint_scores}
+    assert by_name["hip_sway"].passed is False
+    assert all(cp.passed for name, cp in by_name.items() if name != "hip_sway")
 
 
 @pytest.mark.parametrize(

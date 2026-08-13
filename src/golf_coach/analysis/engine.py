@@ -21,9 +21,13 @@ from golf_coach.analysis.alignment import (
 from golf_coach.analysis.checkpoints import (
     FINISH_BALANCE_CHECKPOINT,
     HEAD_SWAY_CHECKPOINT,
+    HIP_SHIFT_AT_TOP_CHECKPOINT,
+    HIP_SWAY_CHECKPOINT,
     TEMPO_CHECKPOINT,
     evaluate_finish_balance,
     evaluate_head_sway,
+    evaluate_hip_shift_at_top,
+    evaluate_hip_sway,
     evaluate_tempo,
 )
 from golf_coach.analysis.measure import (
@@ -134,6 +138,11 @@ def analyze_swing(
         (TEMPO_CHECKPOINT, evaluate_tempo(phases, club=intent.club)),
         (HEAD_SWAY_CHECKPOINT, evaluate_head_sway(smoothed, phases, club=intent.club)),
         (FINISH_BALANCE_CHECKPOINT, evaluate_finish_balance(smoothed, phases, club=intent.club)),
+        (HIP_SWAY_CHECKPOINT, evaluate_hip_sway(smoothed, phases, club=intent.club)),
+        (
+            HIP_SHIFT_AT_TOP_CHECKPOINT,
+            evaluate_hip_shift_at_top(smoothed, phases, club=intent.club),
+        ),
     ):
         if checkpoint is not None:
             mechanics.append(checkpoint)

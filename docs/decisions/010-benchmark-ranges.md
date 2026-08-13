@@ -204,3 +204,51 @@ severity, and `feedback.rules` deliberately keeps severity and failure-ranking o
 decays in band-widths and does separate them), using the percentile only to rank passes. Storing the
 p1/p99 or the raw sd would lift this, and is the change to make if failure severity ever needs
 population units.
+
+## Addendum (2026-08-12): two hip checkpoints promoted, and a rule for which band edges may be asserted
+
+M6.5 recorded five metrics without judging any of them, leaving "decide what to promote" as an
+explicit later call. Two are now promoted to scored checkpoints, taking the mechanics panel from
+three to five: **`hip_sway_norm`** (`0.14–0.50`) and **`hip_shift_at_top_norm`** (`0.0–0.21`), both
+`(all, all)`, both cut from the same 458 face-on GolfDB swings by 122 golfers that the other two
+spatial bands came from. Both cleared `tune_spatial_metric.py` — spread/error 7.1 and 3.6.
+
+Promotion needed no new data and no schema change; it is two rows and two evaluators, which is what
+§1 promised. What it *did* need was a decision this ADR had not previously had to make.
+
+**The rule: assert a band edge only where it clears the instrument.** `derive_reference.py`
+recommends a one-sided `[0, p90]` band for any metric named `_norm`, which encodes *less is better*.
+That is established for head sway and finish drift and **not** established for either hip metric —
+some lateral hip travel is the weight shift a swing needs, the same finding that denied both metrics
+a bias target in career mode step 5. Applying the default heuristic would have shipped a band
+asserting that motionless hips are ideal. The two metrics then diverge, for different reasons:
+
+- **`hip_sway_norm` is two-sided.** The tour p10 is 0.14, so 90% of tour swings show *more* hip
+  travel than that — not the shape of a quantity to minimise. The lower edge is assertable because
+  it clears measurement error: `tune_spatial_metric.py` puts this metric's noise + boundary at
+  0.050, and 0.14 sits 2.8x that above zero.
+- **`hip_shift_at_top_norm` is one-sided, and not because less is better.** Its p10 is 0.015
+  against an error floor of 0.053. A lower edge there would separate golfers this pipeline cannot
+  tell apart, so only overshoot is judged — the half the instrument resolves.
+
+The distinction is recorded because the two rows *look* like the existing one-sided/two-sided pair
+and were reached by a different argument. A later reader tidying the panel into one shape would be
+undoing a measurement, not a preference.
+
+**Consequences.**
+
+- **`ANALYSIS_VERSION` goes 1 → 2.** `overall_score` is a mean over surviving checkpoints, so a mean
+  over five is not comparable with a mean over three. No measurement moved; what the score *means*
+  did. The four stored swings were re-analyzed through `scripts/reanalyze.py`, which found them
+  unprompted, and their scores rose (94.92 → 96.95, 93.77 → 96.26) purely because two passing
+  checkpoints now dilute one failing one. That is the coupling the 2026-08-01 addendum flagged in a
+  different form: panel membership, like band width, changes every score computed against it.
+- **`one_sided` is now load-bearing for readers, not just for `feedback`.** With `tempo_ratio` and
+  `hip_sway_norm` both two-sided, "a low percentile is good" is wrong on two of five checkpoints.
+  `contracts/caveats.py` says so explicitly, because an LLM handed a low number will otherwise
+  congratulate the golfer for it.
+- **`head_hip_offset_impact_norm` stays unpromoted.** Its band exists and its ratio is 7.6, but the
+  sign is camera-relative and the stored distribution is cut from a mixed-handedness population.
+  `Golfer.handedness` now records the fact (career mode step 1), but `analysis` is pure and does not
+  read the golfer registry, so promoting it is an architecture change rather than a data edit. It is
+  the next one to consider, and it is not this addendum.
