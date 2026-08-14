@@ -37,10 +37,11 @@ from pydantic import BaseModel, Field
 
 from golf_coach.api.state import load_analysis, load_state
 from golf_coach.contracts.alignment import AlignmentQuality
-from golf_coach.contracts.caveats import ALIGNMENT_CAVEAT
+from golf_coach.contracts.caveats import ALIGNMENT_CAVEAT, ONLY_CHECKPOINTS_ARE_JUDGED
 from golf_coach.contracts.shot import ShotData
 from golf_coach.launch_monitor.source import ShotDataSource
 from golf_coach.storage.bundle_store import SwingBundleStore
+from golf_coach.storage.manifest import load_manifest, manifest_path
 
 # Alignment tiers below FULL get a caveat attached. Its text lives in `contracts.caveats` because
 # the coaching call needs the identical sentence and ADR-008 rules out importing this module.
@@ -140,11 +141,10 @@ class SwingView(BaseModel):
         description=(
             "Quantities measured off this swing that are NOT judged: no benchmark band exists for "
             "them yet, so there is no good or bad value and no percentile. Report them only if "
-            "asked for a raw number, and never say whether one is good — the three entries in "
-            "`checkpoints` are the only things on this swing anyone has a reference population "
-            "for. `face_to_path_deg` is the exception worth knowing: positive means the club face "
-            "was open to its path (a fade shape), negative closed (a draw), and zero is straight "
-            "regardless of either angle alone."
+            f"asked for a raw number, and never say whether one is good — "
+            f"{ONLY_CHECKPOINTS_ARE_JUDGED}. `face_to_path_deg` is the exception worth knowing: "
+            "positive means the club face was open to its path (a fade shape), negative closed "
+            "(a draw), and zero is straight regardless of either angle alone."
         ),
     )
     alignment_quality: str | None = None
@@ -349,6 +349,12 @@ def get_shot(source: ShotDataSource, shot_id: str) -> ShotView | None:
 # --------------------------------------------------------------------------------------
 
 #: `ShotData` fields that are metrics rather than identity/provenance bookkeeping.
+#:
+#: Read through `getattr(shot, field, None)`, so neither mypy nor ruff can see the coupling to
+#: `contracts.shot.ShotData` — a field added there is silently absent from every MCP payload and
+#: never averaged, with the suite green. `_NON_METRIC_FIELDS` below exists so the split can be
+#: asserted *exhaustively* against the model (`tests/mcp/test_query.py`); without it a pin could
+#: only check that these fields still exist, which is not the direction that breaks.
 _METRIC_FIELDS = (
     "club_head_speed",
     "club_face_angle",
@@ -365,6 +371,17 @@ _METRIC_FIELDS = (
     "apex_height",
     "shot_type",
     "impact_position",
+)
+
+#: The rest of `ShotData` — identity, provenance and the source enum. These reach a client through
+#: `ShotView`'s own named fields rather than through `metrics`, which is why they are excluded
+#: rather than missing.
+_NON_METRIC_FIELDS = (
+    "shot_id",
+    "session_id",
+    "timestamp",
+    "source",
+    "provenance",
 )
 
 
@@ -407,7 +424,6 @@ def _status_of(state: Any, swing_dir: Path) -> str:
     """
     if state is None:
         return "not analyzed" if load_analysis(swing_dir) is None else "done"
-    from golf_coach.storage.manifest import load_manifest, manifest_path
 
     manifest = load_manifest(manifest_path(swing_dir))
     if manifest is not None and not state.matches(manifest):

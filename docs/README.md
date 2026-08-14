@@ -85,7 +85,7 @@ everything on this page is supposed to be trustworthy.
 
 ## Decisions (ADRs)
 
-16 decisions, 14 addenda between them (`grep -c '^#\+ *Addendum' docs/decisions/*.md` — the
+16 decisions, 15 addenda between them (`grep -c '^#\+ *Addendum' docs/decisions/*.md` — the
 stated total had drifted to 11, then to 13, and is now pinned by `tests/test_docs_truth.py`
 along with every per-ADR count in the last column).
 **The addenda are where reality corrected the original call**, so a doc's original Decision
@@ -100,7 +100,7 @@ section is not always the final word — the counts below exist so you don't mis
 | [005](decisions/005-object-detection-yolov8.md) | YOLOv8 for club/ball detection | Accepted | — (not built; gated on M1.5) |
 | [006](decisions/006-mcp-server.md) | MCP server for shot data | Accepted | **2** — parsing moved out behind the `ShotDataSource` port; tool list re-scoped from shot-only to swings + shots |
 | [007](decisions/007-decouple-software-from-hardware.md) | Software and hardware tracks run in parallel | Accepted | — |
-| [008](decisions/008-project-structure.md) | Project structure & the `contracts/` seam | Accepted | **1** — two modules import *upward* into `api.state` for the tolerant artifact readers, knowingly |
+| [008](decisions/008-project-structure.md) | Project structure & the `contracts/` seam | Accepted | **2** — two modules import *upward* into `api.state` for the tolerant artifact readers, knowingly; `mcp` named as a second imperative shell alongside `api`, and the `pose`/`detection` → `Frame` edge made type-only |
 | [009](decisions/009-swing-scoring-model.md) | Dual-axis scoring with intent-driven policies | Accepted | — |
 | [010](decisions/010-benchmark-ranges.md) | Benchmark ranges as versioned data with provenance | Accepted | **5** — JSON not YAML; two provisional rows; tempo re-sourced from GolfDB; **percentiles ride on `CheckpointScore` but never on the scoring path**; **two hip checkpoints promoted, and a rule for which band edges may be asserted** |
 | [011](decisions/011-camera-synchronization.md) | Camera sync & multi-view 3D fusion | **Partially accepted** | **1** — a second capture tier: hand-held phones can be *aligned* but never *fused* |

@@ -65,6 +65,35 @@ def test_importing_the_coach_does_not_import_anthropic() -> None:
     )
 
 
+def test_the_pose_modules_import_without_the_vision_stack() -> None:
+    """`pose/overlay.py` and `pose/side_by_side.py` both advertise import-cheapness in their own
+    docstrings ("imported lazily so importing this module stays cheap"). Nothing held them to it.
+
+    Until this pin they reached `capture.source` at runtime for `Frame` — an annotation-only use,
+    but a real import — so the property was underwritten by a `TYPE_CHECKING` block in *another*
+    module. Hoisting `import numpy as np` in `capture/source.py` is a one-line edit that
+    `docs/CODE_STANDARDS.md` R2 explicitly permits (`capture` may use numpy), and it would have
+    silently made all three `pose` modules require the ML stack at import time.
+    """
+    modules = (
+        "golf_coach.pose.estimator",
+        "golf_coach.pose.overlay",
+        "golf_coach.pose.side_by_side",
+    )
+
+    for module in modules:
+        code = f"import {module}, sys; print(bool({{'numpy', 'cv2'}} & sys.modules.keys()))"
+
+        out = subprocess.run(
+            [sys.executable, "-c", code], capture_output=True, text=True, check=True
+        )
+
+        assert out.stdout.strip() == "False", (
+            f"importing {module} pulled in numpy/cv2 — that module states it stays cheap to "
+            "import, and scripts on a base install rely on it"
+        )
+
+
 def test_api_package_init_stays_import_light() -> None:
     code = "import golf_coach.api, sys; print('fastapi' in sys.modules)"
 

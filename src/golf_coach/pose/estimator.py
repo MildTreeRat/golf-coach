@@ -18,11 +18,16 @@ from __future__ import annotations
 import urllib.request
 from collections.abc import Iterable, Sequence
 from pathlib import Path
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 
-from golf_coach.capture.source import Frame
 from golf_coach.config import settings
 from golf_coach.contracts.keypoints import NUM_POSE_LANDMARKS, FrameKeypoints, Landmark
+
+if TYPE_CHECKING:
+    # Type-only: `Frame` carries a numpy image, so it cannot live in `contracts/` (see
+    # `capture/source.py`). Importing it at runtime would make this module's cheapness depend on
+    # `capture` never hoisting its own numpy import — which R2 explicitly allows it to do.
+    from golf_coach.capture.source import Frame
 
 # Lite pose-landmarker bundle (~5 MB). Fast and accurate enough for the M1 skeleton PoC;
 # swap to the full/heavy variant later if accuracy through impact needs it.
@@ -34,11 +39,23 @@ _MODEL_URL = (
 
 
 def _ensure_model(models_dir: Path) -> Path:
-    """Return the local path to the pose model, downloading it once if missing."""
+    """Return the local path to the pose model, downloading it once if missing.
+
+    Downloads to a temp path and renames, the same way `api/state.py` and the `storage/` writers
+    do. Fetching straight to `model_path` meant a Ctrl-C or a dropped connection mid-download left
+    a truncated `.task` that the `exists()` check below accepts forever after — every later
+    `estimate_pose` then failing inside MediaPipe with an opaque model-parse error that nothing
+    connects back to the interrupted download.
+    """
     models_dir.mkdir(parents=True, exist_ok=True)
     model_path = models_dir / _MODEL_FILENAME
     if not model_path.exists():
-        urllib.request.urlretrieve(_MODEL_URL, model_path)  # trusted https model bundle
+        tmp = model_path.with_suffix(".part")
+        try:
+            urllib.request.urlretrieve(_MODEL_URL, tmp)  # trusted https model bundle
+            tmp.replace(model_path)
+        finally:
+            tmp.unlink(missing_ok=True)
     return model_path
 
 

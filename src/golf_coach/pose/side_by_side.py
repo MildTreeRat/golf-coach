@@ -27,7 +27,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, NamedTuple
 
-from golf_coach.capture.source import Frame
 from golf_coach.contracts.alignment import (
     TAU_IMPACT,
     TAU_MOTION_START,
@@ -40,6 +39,10 @@ from golf_coach.pose.overlay import annotate_frame
 
 if TYPE_CHECKING:
     import numpy as np
+
+    # Type-only for the same reason numpy is: `Frame` holds a numpy image, and this module
+    # advertises that importing it stays cheap. See `estimator.py`'s note.
+    from golf_coach.capture.source import Frame
 
 # Height each panel is scaled to before the two are joined. 4K portrait phone footage is 3840
 # tall; writing that verbatim produces a gigantic file nobody can scrub through, and the

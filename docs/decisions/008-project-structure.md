@@ -115,3 +115,38 @@ still never import each other.
 `storage/analysis_io.py` and have `api.state` re-export them. Contained — three importers and
 their tests. It has not been done because nothing is broken by the inversion today, and doing it
 inside an unrelated commit is how a small move becomes an unreviewable diff.
+
+## Addendum (2026-08-13): "every other module's compliance" was wrong the day it was written
+
+The addendum above closes with *"What is unchanged: the rule itself, and every other module's
+compliance with it."* That sentence was written on 2026-08-11, the day after `mcp/career.py`
+landed as a second module importing `analysis` and `storage` — so it was false when it was
+written, and `docs/ARCHITECTURE.md` §2's diagram inherited the error by omitting `mcp` entirely.
+A `/refactor-review` pass spent its budget re-deriving whether that was a violation. This
+addendum answers it once so the next one does not.
+
+**`mcp` is a second imperative shell, not a violation.** The Dependency rule says "`api`
+orchestrates the modules" because `api` was the only shell when this was written.
+`mcp/query.py` reads `storage.bundle_store` and `storage.manifest`; `mcp/career.py` reads
+`storage.corpus` / `storage.golfer_store` and calls `analysis.baseline` / `comparison` /
+`dispersion`; both reach the `launch_monitor.source` port. That is the same shape as `api`, for
+the same reason — [ADR-006](006-mcp-server.md)'s 2026-08-10 addendum re-scoped the tool set from
+shot-only to *swings and shots*, and a server that answers "where does this swing sit against a
+tour population" has to read what analysis wrote. The dependency direction is unchanged: both
+shells depend downward on the modules, the modules still depend only on `contracts`, and the
+graph stays acyclic. Read the Dependency rule as **`api` and `mcp` orchestrate the modules.**
+
+**`pose` and `detection` import `capture.source.Frame`, and it is type-only.** Three files
+(`pose/estimator.py`, `pose/side_by_side.py`, `detection/detector.py`) annotate with `Frame`,
+which cannot live in `contracts/` because it holds a numpy image. They imported it at *runtime*
+until now, which made two docstrings' claim that those modules stay cheap to import depend on
+`capture/source.py` keeping its own numpy import inside `TYPE_CHECKING` — a block whose stated
+reason is about `contracts`, and which principle 4 explicitly permits `capture` to abandon. All
+three are now `if TYPE_CHECKING:` imports and `tests/api/test_pipeline_imports.py` pins that
+importing the `pose` modules loads neither numpy nor cv2. The type-only edge stays: it is the
+producer→contract→consumer flow with a shape that the numpy rule keeps out of `contracts`.
+
+**What is unchanged, stated more carefully this time**: the rule itself, `analysis`'s purity, and
+the absence of cycles. The runtime module graph is now `contracts` ← every module, plus two
+shells (`api`, `mcp`) reaching down, plus the one knowing upward edge into `api.state` recorded
+above. Anything else is a finding.

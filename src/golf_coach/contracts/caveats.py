@@ -84,6 +84,18 @@ TWO_AXES = fill(
     width=_WIDTH,
 )
 
+#: The clause that bounds what a reader is allowed to judge, for consumers composing their own
+#: sentence around it. `mcp/query.py` interpolates it into the `measurements` field description.
+#:
+#: It is here rather than typed at that call site because a pydantic `description=` ships inside
+#: the tool's `outputSchema` — a *second* way this repo's prose reaches a model, alongside
+#: `mcp/server.py`'s instructions, and one nothing was deriving. It said "the three entries" while
+#: six checkpoints shipped: the M6.5 bug, in the channel the M6.5 fix did not reach.
+ONLY_CHECKPOINTS_ARE_JUDGED = (
+    f"the {_COUNT} entries in `checkpoints` are the only things on this swing anyone has a "
+    "reference population for"
+)
+
 #: Attached to any alignment tier below FULL, which is the only tier that anchored on all three
 #: instants and so the only one a reader may treat as synchronized throughout (ADR-015). Takes
 #: the tier's own `summary` clause, so the sentence names *which* anchors held.

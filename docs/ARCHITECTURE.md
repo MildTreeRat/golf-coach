@@ -132,29 +132,60 @@ flowchart TD
     FB["feedback/<br/>rules"] --> C
     DET["detection/ — stub"] -.-> C
     STO["storage/<br/>bundle + golfer stores,<br/>career corpus reader"] --> C
-    API["api/ — upload server,<br/>pipeline, analysis worker"] --> C
 
-    CLI["scripts/*.py<br/>thin CLIs over api/pipeline.py"] --> CAP
+    API["api/ — upload server,<br/>pipeline, analysis worker"] --> C
+    MCP["mcp/ — query + career tools"] --> C
+
+    API --> CAP
+    API --> POSE
+    API --> ANA
+    API --> FB
+    API --> LMM
+    API --> STO
+
+    MCP --> ANA
+    MCP --> STO
+    MCP --> LMM
+
+    STO -. "load_analysis / load_state" .-> API
+    MCP -. "load_analysis / load_state" .-> API
+
+    CLI["scripts/*.py — entry points;<br/>analyze_bundle.py is a thin CLI over api/pipeline.py"] --> API
+    CLI --> CAP
     CLI --> POSE
     CLI --> ANA
     CLI --> FB
     CLI --> LMM
+    CLI --> STO
 
     classDef built fill:#d4edda,stroke:#28a745,color:#155724;
     classDef stub fill:#f8d7da,stroke:#dc3545,color:#721c24;
-    class C,CAP,POSE,LMM,ANA,FB,CLI,STO,API built;
+    classDef shell fill:#cce5ff,stroke:#004085,color:#004085;
+    class C,CAP,POSE,LMM,ANA,FB,CLI,STO built;
+    class API,MCP shell;
     class DET stub;
 ```
+
+Read it as three layers: `contracts/` at the bottom, the modules depending on it and on nothing
+else, and **two imperative shells** — `api/` and `mcp/` — reaching down across them. The earlier
+version of this diagram drew every module with a single edge to `contracts/` and omitted `mcp/`
+altogether, which made the shells invisible and the one rule-breaking edge below unfindable.
 
 `storage/` and `api/` were stubs when this diagram was first drawn and are not any more —
 M7 Phases 3 and 5 built the bundle store, the upload server and the background worker. `detection/`
 is the last real stub, gated on M1.5.
 
-**One edge here breaks the rule, knowingly:** `storage/corpus.py` imports `api.state` for
-`load_analysis` / `load_state`, the tolerant readers for the two artifacts an analysis run leaves
-behind. `mcp/query.py` does the same. The alternative was a second copy of a tolerant reader, and a
-second copy is one that drifts; the clean fix is moving those two functions down into
-`storage/analysis_io.py`.
+**The dotted edges upward break the rule, knowingly:** `storage/corpus.py` and `mcp/query.py` both
+import `api.state` for `load_analysis` / `load_state`, the tolerant readers for the two artifacts
+an analysis run leaves behind. The alternative was a second copy of a tolerant reader, and a second
+copy is one that drifts; the clean fix is moving those two functions down into
+`storage/analysis_io.py`. Recorded in ADR-008's addenda, and in `docs/REFACTOR_LEDGER.md` so it is
+not re-raised.
+
+Not drawn, because they are not runtime edges: `pose/` and `detection/` annotate with
+`capture.source.Frame` under `if TYPE_CHECKING:`. `Frame` holds a numpy image and so cannot live
+in `contracts/`; keeping the import type-only is what lets those modules be imported without the
+ML stack, pinned by `tests/api/test_pipeline_imports.py`.
 
 **The load-bearing consequence:** because consumers depend on the contract rather than the
 producer, the entire analysis core installs and tests with **no ML dependencies at all**. It

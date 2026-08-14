@@ -126,6 +126,80 @@ def test_the_sided_split_in_the_caveats_matches_the_registry() -> None:
             assert f"`{spec.name}`" in head, f"{spec.name} is two-sided but is not listed as one"
 
 
+# --------------------------------------------------------------------- the other prose channel
+
+
+def _mcp_field_descriptions() -> list[tuple[str, str]]:
+    """Every `description=` on a view model the MCP tools return, as (where, text).
+
+    Pydantic ships these inside each tool's `outputSchema`, so they reach a model the same way
+    `mcp/server.py`'s instructions do — they are prose about the panel that deriving
+    `contracts/caveats.py` does not cover, because nothing was looking at them.
+
+    `mcp/server.py` is left out: it imports the MCP SDK at module scope, and this suite runs on
+    the base install. Its instructions are the channel the caveats tests above already guard.
+    """
+    import inspect
+
+    from pydantic import BaseModel
+
+    from golf_coach.mcp import career, query
+
+    found: list[tuple[str, str]] = []
+    for module in (query, career):
+        for name, obj in vars(module).items():
+            if not (inspect.isclass(obj) and issubclass(obj, BaseModel)):
+                continue
+            # Defined here, not merely imported into scope: `ShotData`'s own descriptions belong
+            # to `contracts/` and are checked where they live.
+            if obj.__module__ != module.__name__:
+                continue
+            for field_name, field in obj.model_fields.items():
+                if field.description:
+                    found.append((f"{name}.{field_name}", field.description))
+    return found
+
+
+def test_no_mcp_field_description_miscounts_the_panel() -> None:
+    """The M6.5 bug in its second channel: `SwingView.measurements` said "the three entries in
+    `checkpoints`" while six shipped, so a model was told half the panel had no reference
+    population and could not be judged.
+
+    A scan rather than an assertion on the one field that was wrong. The failure was never that
+    *that* sentence was wrong — it was that nothing was reading any of them.
+    """
+    from golf_coach.contracts.caveats import _COUNT_WORDS, _count_word
+
+    word = _count_word(len(CHECKPOINT_REGISTRY))
+    # Only fires on an actual number word, so "fewer fundamentals" and "the three files" — both
+    # present and both correct — are not false positives.
+    claim = re.compile(
+        rf"\b({'|'.join(_COUNT_WORDS)}|\d+) +(?:entries in `checkpoints`|checkpoints|fundamentals)",
+        re.IGNORECASE,
+    )
+
+    for where, text in _mcp_field_descriptions():
+        stated = claim.search(_flat(text))
+        if stated and stated.group(1).lower() != word:
+            pytest.fail(
+                f"{where} says '{stated.group(0)}'; {len(CHECKPOINT_REGISTRY)} checkpoints ship. "
+                "That description ships to every MCP client inside the tool's outputSchema."
+            )
+
+
+def test_the_measurements_description_derives_its_count() -> None:
+    """Correct-but-typed is the state the bug started from, so pin the derivation itself."""
+    from golf_coach.contracts.caveats import ONLY_CHECKPOINTS_ARE_JUDGED
+    from golf_coach.mcp.query import SwingView
+
+    description = SwingView.model_fields["measurements"].description or ""
+
+    assert ONLY_CHECKPOINTS_ARE_JUDGED in _flat(description), (
+        "SwingView.measurements no longer interpolates caveats.ONLY_CHECKPOINTS_ARE_JUDGED — "
+        "stating the panel size in its own words is what went stale last time"
+    )
+
+
 # --------------------------------------------------------------------- the architecture doc
 
 

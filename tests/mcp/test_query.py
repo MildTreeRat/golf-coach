@@ -296,6 +296,24 @@ def test_get_shot_by_id_finds_and_misses(tmp_path: Path) -> None:
     assert query.get_shot(source, "missing") is None
 
 
+def test_every_shot_field_is_accounted_for_by_the_metric_split() -> None:
+    """`_METRIC_FIELDS` is a hand-typed copy of `ShotData`, read by `getattr` with a default.
+
+    That default is why nothing else can catch this: add a metric to `ShotData` — ADR-004 names
+    the R10 adapter as the next thing to do exactly that — and it is silently missing from every
+    MCP payload and from `get_session_summary`'s averages, with mypy at "no issues found" and the
+    suite green. Asserting the split is *exhaustive*, rather than that the listed names still
+    exist, is what makes the new field fail here instead of vanishing.
+    """
+    split = set(query._METRIC_FIELDS) | set(query._NON_METRIC_FIELDS)
+
+    assert split == set(ShotData.model_fields), (
+        "ShotData and mcp/query.py's metric split have diverged: "
+        f"unclassified {sorted(set(ShotData.model_fields) - split)}, "
+        f"no longer on the model {sorted(split - set(ShotData.model_fields))}"
+    )
+
+
 def test_roles_that_never_arrived_are_visible_in_the_listing(sessions_dir: Path) -> None:
     """A partial bundle is a real state — the swing exists with one of three files."""
     session = next(s for s in query.list_sessions(sessions_dir) if s.session_id == "2026-08-08")
