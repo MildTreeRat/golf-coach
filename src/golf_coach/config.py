@@ -3,13 +3,22 @@
 Modules receive config via this object rather than reading env vars themselves, which
 keeps them pure and testable. Values can be overridden with env vars (prefix GOLF_) or
 a local .env file.
+
+Secrets are typed `SecretStr`, never `str`: `repr()`, `str()`, f-strings and `model_dump()`
+all render `**********`, so a stray `print(settings)` or an exception traceback cannot spill
+one. Reading a secret therefore costs an explicit `.get_secret_value()` — greppable, and
+`tests/test_config.py` pins the exact set of files allowed to call it, so a fourth unwrap site
+is a failing test rather than a quiet habit. OS keychains were considered for the *storage*
+side and declined (ADR-019): platform lock-in in a project that is otherwise portable. The
+values therefore still sit in plaintext in a gitignored `.env` at rest, which is the accepted
+trade and the reason the masking above carries the weight it does.
 """
 
 from __future__ import annotations
 
 from pathlib import Path
 
-from pydantic import Field
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Repo root = three parents up from this file (src/golf_coach/config.py -> repo root).
@@ -48,7 +57,10 @@ class Settings(BaseSettings):
     # Shared secret for phone uploads (ADR-016). Tailnet-only `tailscale serve` can run
     # without one; exposing the server any wider — Funnel, or a non-loopback bind —
     # requires it, and `scripts/run_server.py` refuses to start otherwise.
-    upload_token: str | None = Field(default=None)
+    # `SecretStr` implements `__len__`, so the plain truthiness checks that gate on this
+    # (`scripts/run_server.py` refusing a non-loopback bind) keep their exact meaning: unset
+    # and empty are both falsy. That is load-bearing — it is a security refusal, not a hint.
+    upload_token: SecretStr | None = Field(default=None)
     # The background analysis worker. On by default: an upload that lands and does nothing is
     # the state M7 Phase 5 exists to fix. Turn it off to run the server as pure ingestion and
     # drive `scripts/analyze_bundle.py` by hand — which is also what the API tests do, so a
@@ -64,7 +76,7 @@ class Settings(BaseSettings):
     mcp_port: int = 8081
 
     # LLM coaching (M6). Read from env; never hardcode.
-    anthropic_api_key: str | None = Field(default=None)
+    anthropic_api_key: SecretStr | None = Field(default=None)
     # Latest, most capable Claude model for coaching (see /claude-api skill before changing).
     coaching_model: str = "claude-opus-5"
     # On by default, because the API key is the real gate: with no key the pipeline skips the

@@ -20,26 +20,33 @@ wording; only the grouping and the M4 checklist have been corrected.
 | **M1.5** Detectability spike | ✅ Done *(2026-08-14, **no-go**)* | — (ran on footage already on disk) | [§M1.5](#milestone-15-club-head-detectability-spike-de-risk-before-investing) |
 | **M7** Two-phone sim capture | 🟡 In progress, 6/7 phases (3 trimmed) | Nothing — two iPhones + a sim bay | [§M7](#milestone-7-two-phone-sim-capture-no-hardware-purchase) |
 | **M4** full (outcome axis) | ⬜ Blocked | The M2 + M3 streams | [§M4 full](#milestone-4-full-swing-analysis-engine--the-outcome-axis) |
-| **M6** LLM coaching | 🟡 In progress | Nothing — an API key | [§M6](#milestone-6-llm-powered-coaching--in-progress) |
+| **M6** LLM coaching | 🟡 In progress | Nothing — **live coaching and the MCP handshake are both proven** (2026-08-14); only follow-up questions are left, and they need a transcript store | [§M6](#milestone-6-llm-powered-coaching--in-progress) |
 | **M6.5** Measure now, judge later | ✅ Done | — (9 recorded, **6 scored**; the handedness seam landed and the last candidate was settled) | [§M6.5](#m65-measure-now-judge-later--done) |
 | **Career mode** One golfer over time | ✅ Done, 6/6 steps | — (built and silent; a bay session gives it the `n` to speak) | [§Career](#career-mode-one-golfer-tracked-over-time--done-built-and-silent) |
 | **M5** Feedback UI | ⬜ Not started | M7 Phase 5 gives the host | [§M5](#milestone-5-feedback-ui) |
 | **M2** Club & ball detection | 🔒 Gated, **and M1.5 said no-go** | Bay lighting for a ~1/2000 s exposure — *not* a global-shutter camera | [§M2](#milestone-2-club--ball-detection) |
 | Hardware re-validation | 🔒 Gated | Cameras / launch monitor arriving | [§Gate](#hardware-re-validation-gate-revisit-when-cameras--launch-monitor-arrive) |
 
-**NEXT ACTION — do this first:** add an Anthropic API key and verify M6 coaching against the live
-API. The whole coaching path (M6) is built, tested against a fake client, and green — but no real
-request has ever been sent, because no key is configured. Concretely:
+**M6's live path is proven** as of 2026-08-14. A real key is configured and
+`python scripts/analyze_bundle.py 2026-08-10/2 --no-video` returned a paragraph written by
+`claude-opus-5`, attributed in `analysis.json` (`feedback.coaching`) with a sha256 of the brief. It
+led on tempo — the one checkpoint outside its band — stayed inside the brief, and volunteered both
+caveats that applied: the launch-monitor numbers are attached but unscored, and the second view was
+anchored only at top and impact. No spine angle, hip rotation, swing plane or club path. How the key
+is *held* is [ADR-019](docs/decisions/019-secret-handling.md); it is a `SecretStr` in `.env`, and
+`.env` is the only place it exists.
 
-```bash
-echo "GOLF_ANTHROPIC_API_KEY=sk-ant-..." >> .env    # a real key, not a placeholder
-python scripts/analyze_bundle.py 2026-08-10/2 --no-video   # reads the key, calls claude-opus-5
-```
+**The MCP handshake is proven too**, same day. The server was driven over stdio by a real client:
+`initialize` negotiated protocol `2025-11-25`, advertised all **8** tools with their schemas, and
+served live `call_tool` requests including the not-found path. It is registered with Claude Code
+(`claude mcp add`, per the README) and reports `✔ Connected`, which is a second client completing
+the same handshake independently.
 
-Then read the coaching paragraph against the numbers above it: it must not assert anything the
-brief didn't contain, and must not mention spine angle, hip rotation, swing plane or club path —
-none of which this system measures. Until that run happens, M6's live path is unproven. Tracked as
-the first open item in [§M6](#milestone-6-llm-powered-coaching--in-progress).
+**NEXT ACTION — do this first:** M6's remaining item is *ask follow-up questions about a swing*,
+which needs a transcript store and is a milestone of its own rather than an increment. If you want
+something smaller first, [§M3](#milestone-3-launch-monitor-integration--in-progress)'s OCR tuning is
+the open work that needs no hardware — every shot parsed so far carries `screen title 'SHOT DATA'
+not found` as a warning.
 
 **The one purchase that actually blocks something — and M1.5 changed what it is.** It is not a
 global-shutter camera. The spike measured the club head smearing across 600–980 px at impact at
@@ -751,17 +758,20 @@ is the client handshake and conversational follow-up.
       a tinted card, never as a fourth `.tip`, with the model named *above* the prose. Gated on
       `CoachingProvenance` as well as text: unattributed prose on a page of measurements is
       indistinguishable from a measurement
-- [ ] **⭐ NEXT: add an API key and verify the live call.** Everything above is tested against a
-      fake client and has never made a real request — no `GOLF_ANTHROPIC_API_KEY` is configured.
-      Put a real key in `.env`, run `python scripts/analyze_bundle.py 2026-08-10/2 --no-video`, and
-      read the paragraph against the numbers: it must state nothing the brief didn't contain and
-      must not mention spine angle, hip rotation, swing plane or club path. This is the one open
-      item that needs nothing but the key
-- [ ] **Register the MCP server with a real client and exercise the handshake.** Config is
-      written up in the README for both Claude Desktop and Claude Code; the tools have still only
-      been driven in-process through `call_tool`, which validates the schemas and the data but
-      not the client handshake
-- [ ] **Ask follow-up questions about a swing** — needs a transcript store, so it is a real
+- [x] **Add an API key and verify the live call** — done 2026-08-14 against `2026-08-10/2`.
+      `claude-opus-5` wrote the verdict; `analysis.json` carries the model, the timestamp and a
+      sha256 of the brief. It led on tempo, asserted nothing the brief did not contain, and named
+      the two caveats that applied on its own. No spine angle, hip rotation, swing plane or club
+      path. The key is a `SecretStr` read from `.env`
+      ([ADR-019](docs/decisions/019-secret-handling.md))
+- [x] **Register the MCP server with a real client and exercise the handshake** — done 2026-08-14.
+      A stdio client completed `initialize` (protocol `2025-11-25`, capabilities negotiated, the
+      5k-character briefing delivered), `list_tools` returned all **8** with their schemas, and
+      `call_tool` served `list_sessions`, `get_swing`, `get_session_summary`, `get_recent_shots`
+      and a deliberate miss — the `NotFound` shape survives the wire as a normal result rather
+      than a protocol error, which is what it was designed to do. Registered with Claude Code via
+      `claude mcp add`; `claude mcp list` reports `✔ Connected`
+- [ ] **⭐ NEXT: Ask follow-up questions about a swing** — needs a transcript store, so it is a real
       milestone of its own rather than an increment. The natural shape is the SDK tool runner over
       `mcp/query.py`'s functions directly (not over the stdio server — that round trip exists for
       *external* clients)

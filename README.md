@@ -180,8 +180,14 @@ shows and nothing else.
 
 ```bash
 pip install -e '.[llm]'
-echo "GOLF_ANTHROPIC_API_KEY=sk-ant-..." >> .env
+cp .env.example .env          # skip if you already have one
 ```
+
+Then put `GOLF_ANTHROPIC_API_KEY=sk-ant-...` into `.env` **with an editor**, not with
+`echo "..." >> .env`. On Windows, PSReadLine records every command you type into a plaintext
+history file that survives reboots, so `echo` leaves a copy of the key somewhere you will never
+think to clear. The key itself is held as a `SecretStr` and masked everywhere but the one call
+that needs it (ADR-019).
 
 That is the whole setup. With no key the call is skipped, the swing still scores, and the results
 page says why in its notes — coaching is the last thing that happens to a result and is never

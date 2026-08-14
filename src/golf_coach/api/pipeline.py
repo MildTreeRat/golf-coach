@@ -537,8 +537,14 @@ def analyze_swing_dir(
     # after the extend above — the brief should carry everything that degraded, not most of it.
     if options.coaching:
         log("\nCoaching:")
+        # One of the three sanctioned `get_secret_value` sites (tests/test_config.py pins the
+        # set). `generate_coaching` takes a plain `str` so it stays injectable in tests without
+        # importing pydantic; the unwrap belongs here, at the boundary, not in `feedback/`.
+        key = settings.anthropic_api_key
         coaching = generate_coaching(
-            result, model=settings.coaching_model, api_key=settings.anthropic_api_key
+            result,
+            model=settings.coaching_model,
+            api_key=key.get_secret_value() if key else None,
         )
         if coaching.text and coaching.provenance is not None:
             result.feedback.coaching_text = coaching.text

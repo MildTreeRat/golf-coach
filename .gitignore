@@ -50,5 +50,16 @@ frontend/dist/
 .DS_Store
 Thumbs.db
 
-# Environment
-.env
+# Environment. `.env*` rather than the bare `.env`: this repo is public, and the one-filename
+# rule only ever covered the file people are careful with. A `cp .env .env.bak` before an edit,
+# or an editor leaving `.env.save`, would have committed a live token — the file is *not* the
+# thing that needs protecting, the shape of its name is. The negation keeps the template tracked.
+.env*
+!.env.example
+
+# Keys and certificates, whatever they end up being called. Nothing in the repo matches these
+# today; they are here so the first one to appear is ignored before anyone thinks about it.
+*.key
+*.pem
+*.pfx
+*.p12

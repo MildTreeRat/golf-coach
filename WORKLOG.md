@@ -5,6 +5,74 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-08-14 — The key that arrived, and the two axes `.gitignore` never covered (ADR-019)
+
+**Duration**: ~1 session. One ADR, one addendum, five pins, and both of M6's standing "never
+actually tried it" items closed — the live coaching call and the MCP client handshake.
+**What prompted it**: an Anthropic API key, and the question of where to put it so it stays put.
+
+**M6 is proven live, on both distinct swings.** `analyze_bundle.py --no-video` against
+`claude-opus-5` returned paragraphs that led on tempo — the one checkpoint outside its band in both
+— asserted nothing the brief did not contain, and volunteered the caveats that applied (shot data
+attached but unscored; the second view anchored only at top and impact). No spine angle, hip
+rotation, swing plane or club path. `analysis.json` carries the model, timestamp and a sha256 of the
+brief. **The first real requests this repo has ever sent**, ~30 sessions after the path was built.
+
+**Only two distinct swings exist on disk, and three directories are one of them.** `2026-08-07-aaron1/1`,
+`2026-08-09/2` and `2026-08-10/1` are byte-identical re-uploads — same sha256, same 104,089,834
+bytes, and the MCP `get_swing` scores agree to fifteen decimal places. So "run it on both swings"
+cost one call, not three. This is exactly the case `CareerCorpus.duplicates_collapsed` and the
+briefing's closing line ("`n` counts distinct swings, not swing directories") were written for; nice
+to see the design meet the data it predicted.
+
+**The MCP handshake is proven, which closes the other standing "never actually tried it".** A real
+stdio client completed `initialize` (protocol `2025-11-25`, capabilities negotiated, the
+5k-character briefing delivered on connect), `list_tools` returned all 8 with schemas, and
+`call_tool` served four real queries plus a deliberate miss. **The `NotFound` shape survives the
+wire as a normal result with `is_error=False`** — a client sees "no swing '9' in session 'nope',
+call list_sessions" as an answer, not a protocol fault, which is what `_missing` was built for.
+Registered with Claude Code via `claude mcp add`; `claude mcp list` reports `✔ Connected`, a second
+client completing the same handshake independently. Note for anyone writing a client here: the
+Python SDK at `mcp` 2.0.0 is **snake_case** (`server_info`, `input_schema`, `is_error`), not the
+camelCase the wire protocol uses.
+
+**The security work was not where I expected it.** `.gitignore` was already right — `.env` ignored
+since the first commit, never tracked on any branch, no key ever in history, and nothing key-shaped
+in the tree. What it does not cover is the two axes that actually bound the risk: **disclosure**
+(can the value reach a log, a traceback, a `model_dump()`?) and **at rest** (who can read the
+bytes?). It answers a third, narrower question — does this reach the public repo — and answers it
+well. That is the whole of ADR-019's context section.
+
+**Three measurements turned a tidy-up into a decision:** `.env`'s ACL granted `BUILTIN\Users` →
+Modify, so every local account could read both secrets; `.gitignore` protected exactly one
+*filename*, so `cp .env .env.bak` before an edit would have committed a live token to a public
+repo; and `run_server.py` printed the upload token in full on every start, into scrollback that
+outlives the session.
+
+**`SecretStr` for both secrets, and the keychain declined.** `keyring` would have removed
+plaintext-at-rest, but its Windows backend *is* Credential Manager — platform lock-in in a repo
+that is otherwise portable and stdlib-first, and no defence against the realistic local threat.
+Declined deliberately, written down in ADR-019 so it does not get re-proposed. That trade is why
+the masking is pinned rather than trusted: `tests/test_config.py` fails if either annotation
+reverts to `str`, and fails if a **fourth** file learns to call `.get_secret_value()`. Exactly
+three may — the Anthropic SDK, `compare_digest`, and the operator's setup link.
+
+**The pin had to parse rather than grep.** `config.py` names `get_secret_value` in its own
+docstring, explaining the mechanism; a text search would have forced the prose to avoid the word it
+exists to describe. `ast.walk` for `Attribute` nodes ignores strings and comments entirely.
+
+**Where I left off**: green — 612 tests, ruff and mypy clean. Nothing outstanding from this work.
+M6's only remaining item is follow-up questions over a transcript store, which is a milestone of
+its own. The smaller open thing is M3's OCR tuning: every shot parsed so far carries
+`screen title 'SHOT DATA' not found`, and one of them lost `Impact Position` entirely.
+**Deliberately left open**: `api/app.py:135` still waves everything through when no token is
+configured, and the only guard against a wide-open bind lives in `scripts/run_server.py` — so
+`uvicorn ... --host 0.0.0.0`, a container or a systemd unit bypasses it. Closing it changes API
+behaviour and cuts against ADR-016's premise that tailnet membership *is* the access control, so it
+wants its own ADR rather than a ride-along. Named in ADR-019's Consequences.
+
+---
+
 ## 2026-08-14 — The club head that our light destroyed (M1.5, closed as a no-go)
 
 **Duration**: ~1 session. A spike, an ADR, two addenda, and a roadmap correction about money.

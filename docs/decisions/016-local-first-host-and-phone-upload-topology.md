@@ -130,3 +130,22 @@ weight; anything finer would be building an account system for a garage.
   stance. The clips never leave hardware I own; Funnel relays bytes but stores nothing.
 - **This does not supersede ADR-011.** Camera topology is unaffected — this ADR is only about how
   files arrive.
+
+## Addendum (2026-08-14): how the token is *held*, now decided separately in ADR-019
+
+This ADR settled what the upload token **is** — a shared bearer secret in a URL, compared with
+`secrets.compare_digest`, revoked only by rotation. All of that stands unchanged.
+
+What it never stated is how the value is stored and rendered, and the gap showed:
+`scripts/run_server.py` printed it in full on every start, into scrollback that outlives the
+session and into any screenshot of a bay session. [ADR-019](019-secret-handling.md) now owns that
+question for both of this repo's secrets. Two consequences land here:
+
+- `settings.upload_token` is a `SecretStr`, so it renders as `**********` everywhere except the one
+  sanctioned unwrap in `api/app.py`. The truthiness checks this ADR's design depends on — chiefly
+  `scripts/run_server.py` refusing a non-loopback bind on `not settings.upload_token` — are
+  unaffected, because `SecretStr` implements `__len__`. `tests/test_config.py` pins that.
+- The startup line prints a four-character prefix; `--show-token` prints the setup link in full.
+
+The `?t=` query parameter, the `localStorage` handoff, and rotation-as-revocation are all as
+described above. This narrows one operational edge; it does not reopen the design.

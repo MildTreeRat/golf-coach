@@ -210,7 +210,14 @@ def create_app(
     bundle_store = store or SwingBundleStore(settings.sessions_dir)
     golfer_store = golfers or GolferStore(settings.golfers_dir)
     incoming_dir = bundle_store.root / ".incoming"
-    expected = settings.upload_token if isinstance(token, _FromSettings) else token
+    # Unwrapped here and nowhere deeper: `_token_guard` needs a plain `str` for
+    # `compare_digest`, and keeping it ignorant of `SecretStr` is what lets a test pass a
+    # literal token. One of the three sanctioned `get_secret_value` sites.
+    if isinstance(token, _FromSettings):
+        configured = settings.upload_token
+        expected = configured.get_secret_value() if configured else None
+    else:
+        expected = token
     if isinstance(worker, _FromSettings):
         analysis = AnalysisWorker(bundle_store) if settings.analysis_enabled else None
     else:

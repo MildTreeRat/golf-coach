@@ -51,6 +51,11 @@ def main(argv: list[str]) -> int:
         "--host", default=_DEFAULT_HOST, help="bind address (default: loopback only)"
     )
     parser.add_argument("--port", type=int, default=settings.api_port)
+    parser.add_argument(
+        "--show-token",
+        action="store_true",
+        help="print the phone setup link in full (it carries the upload token)",
+    )
     args = parser.parse_args(argv)
 
     if not _is_loopback(args.host) and not settings.upload_token:
@@ -85,7 +90,20 @@ def main(argv: list[str]) -> int:
 
     print(f"upload server:  http://{args.host}:{args.port}/")
     if settings.upload_token:
-        print(f"phone setup link ends with:  /?t={settings.upload_token}")
+        # Printed as a prefix by default. This is a bearer secret carried in a URL (ADR-016),
+        # and a bay session is precisely where a terminal gets screenshotted, screen-shared or
+        # logged — scrollback outlives the session that made it. Four characters is enough to
+        # tell two tokens apart when rotating, which is the only thing the operator reads it
+        # for; the phone gets the real link from `--show-token`.
+        # One of the three sanctioned `get_secret_value` sites (tests/test_config.py).
+        token_value = settings.upload_token.get_secret_value()
+        if args.show_token:
+            print(f"phone setup link ends with:  /?t={token_value}")
+        else:
+            print(
+                f"phone setup link ends with:  /?t={token_value[:4]}..."
+                "  (--show-token prints it in full)"
+            )
     else:
         print("no GOLF_UPLOAD_TOKEN set - /api/ is open to anything that reaches this port.")
     print(f"to reach it from a phone:  tailscale serve --bg {args.port}")

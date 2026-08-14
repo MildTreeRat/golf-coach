@@ -1,6 +1,6 @@
 # Documentation map
 
-46 markdown documents: 36 in `docs/` — 13 here at the top level (including this map), 19 ADRs,
+47 markdown documents: 37 in `docs/` — 13 here at the top level (including this map), 20 ADRs,
 3 archived, 1 in `proposals/` — plus 10 outside it (the four at the repo root, and one each in
 `data/` and `frontend/`, four in `spikes/`). This page says which one to read, and — just as
 importantly — which ones are records of the past rather than descriptions of the present.
@@ -85,7 +85,7 @@ everything on this page is supposed to be trustworthy.
 
 ## Decisions (ADRs)
 
-18 decisions, 18 addenda between them (`grep -c '^#\+ *Addendum' docs/decisions/*.md` — the
+19 decisions, 19 addenda between them (`grep -c '^#\+ *Addendum' docs/decisions/*.md` — the
 stated total had drifted to 11, then to 13, and is now pinned by `tests/test_docs_truth.py`
 along with every per-ADR count in the last column).
 **The addenda are where reality corrected the original call**, so a doc's original Decision
@@ -108,9 +108,10 @@ section is not always the final word — the counts below exist so you don't mis
 | [013](decisions/013-clip-relative-detection.md) | Clip-relative detection windows; explicit detection confidence | Accepted | — |
 | [014](decisions/014-screen-capture-shot-ingestion.md) | Shot data by OCR of the simulator screen | Accepted | — |
 | [015](decisions/015-handheld-two-phone-capture-and-event-anchored-alignment.md) | Hand-held two-phone capture & event-anchored alignment | Accepted | — (settles the `FrameBundle` question ADR-011 left open) |
-| [016](decisions/016-local-first-host-and-phone-upload-topology.md) | Local-first host & phone upload topology | Accepted | — |
+| [016](decisions/016-local-first-host-and-phone-upload-topology.md) | Local-first host & phone upload topology | Accepted | **1** — how the token is *held* is ADR-019's question, not this one's; the startup line prints a prefix, not the token |
 | [017](decisions/017-club-head-detection-strategy.md) | Club-head detection strategy — and the constraint that actually binds | Accepted | **1** — why the spike's own threshold table did not decide it |
 | [018](decisions/018-bay-lighting.md) | Bay lighting — buying the exposure ADR-017 asked for | Accepted | — |
+| [019](decisions/019-secret-handling.md) | Secret handling — masked in memory, plaintext at rest | Accepted | — (the keychain was declined, deliberately; the reasoning is the point) |
 
 Format: [000-template.md](decisions/000-template.md).
 
