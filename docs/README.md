@@ -1,8 +1,8 @@
 # Documentation map
 
-42 markdown documents: 34 in `docs/` — 13 here at the top level (including this map), 17 ADRs,
-3 archived, 1 in `proposals/` — plus 8 outside it (the four at the repo root, and one each in
-`data/` and `frontend/`, two in `spikes/`). This page says which one to read, and — just as
+45 markdown documents: 35 in `docs/` — 13 here at the top level (including this map), 18 ADRs,
+3 archived, 1 in `proposals/` — plus 10 outside it (the four at the repo root, and one each in
+`data/` and `frontend/`, four in `spikes/`). This page says which one to read, and — just as
 importantly — which ones are records of the past rather than descriptions of the present.
 
 *(The breakdown is spelled out so the count can be checked rather than trusted — `git ls-files
@@ -85,7 +85,7 @@ everything on this page is supposed to be trustworthy.
 
 ## Decisions (ADRs)
 
-16 decisions, 15 addenda between them (`grep -c '^#\+ *Addendum' docs/decisions/*.md` — the
+17 decisions, 18 addenda between them (`grep -c '^#\+ *Addendum' docs/decisions/*.md` — the
 stated total had drifted to 11, then to 13, and is now pinned by `tests/test_docs_truth.py`
 along with every per-ADR count in the last column).
 **The addenda are where reality corrected the original call**, so a doc's original Decision
@@ -95,9 +95,9 @@ section is not always the final word — the counts below exist so you don't mis
 |---|---|---|---|
 | [001](decisions/001-language-python.md) | Python as the primary language | Accepted | — |
 | [002](decisions/002-pose-estimation-mediapipe.md) | MediaPipe for pose estimation | Accepted | **2** — Tasks API replaced the removed Solutions API; **lite kept over full/heavy, measured** (12 McNemar tests, none significant) |
-| [003](decisions/003-camera-hardware.md) | Camera hardware | Accepted | **3** — global shutter ≠ no motion blur; **pose camera goes face-on (3 o'clock)**; two cameras not three + the spine caveat |
+| [003](decisions/003-camera-hardware.md) | Camera hardware | Accepted | **4** — global shutter ≠ no motion blur; **pose camera goes face-on (3 o'clock)**; two cameras not three + the spine caveat; **the number behind the blur note — ~1/2000 s, so buy light not shutter type** |
 | [004](decisions/004-launch-monitor.md) | Garmin R10 | Accepted, **not the near-term path** | — (superseded in practice by ADR-014) |
-| [005](decisions/005-object-detection-yolov8.md) | YOLOv8 for club/ball detection | Accepted | — (not built; gated on M1.5) |
+| [005](decisions/005-object-detection-yolov8.md) | YOLOv8 for club/ball detection | Accepted, **not yet startable** | **1** — M1.5 ran and deferred the labelling on evidence; the blocker is exposure time, not the detector |
 | [006](decisions/006-mcp-server.md) | MCP server for shot data | Accepted | **2** — parsing moved out behind the `ShotDataSource` port; tool list re-scoped from shot-only to swings + shots |
 | [007](decisions/007-decouple-software-from-hardware.md) | Software and hardware tracks run in parallel | Accepted | — |
 | [008](decisions/008-project-structure.md) | Project structure & the `contracts/` seam | Accepted | **2** — two modules import *upward* into `api.state` for the tolerant artifact readers, knowingly; `mcp` named as a second imperative shell alongside `api`, and the `pose`/`detection` → `Frame` edge made type-only |
@@ -109,6 +109,7 @@ section is not always the final word — the counts below exist so you don't mis
 | [014](decisions/014-screen-capture-shot-ingestion.md) | Shot data by OCR of the simulator screen | Accepted | — |
 | [015](decisions/015-handheld-two-phone-capture-and-event-anchored-alignment.md) | Hand-held two-phone capture & event-anchored alignment | Accepted | — (settles the `FrameBundle` question ADR-011 left open) |
 | [016](decisions/016-local-first-host-and-phone-upload-topology.md) | Local-first host & phone upload topology | Accepted | — |
+| [017](decisions/017-club-head-detection-strategy.md) | Club-head detection strategy — and the constraint that actually binds | Accepted | **1** — why the spike's own threshold table did not decide it |
 
 Format: [000-template.md](decisions/000-template.md).
 

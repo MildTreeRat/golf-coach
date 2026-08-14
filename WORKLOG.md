@@ -5,6 +5,84 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-08-14 — The club head that our light destroyed (M1.5, closed as a no-go)
+
+**Duration**: ~1 session. A spike, an ADR, two addenda, and a roadmap correction about money.
+**What prompted it**: "what can we work on next" — with the constraint that it had to be pure
+desk work. Every other track is blocked on a bay trip, an API key, or footage nobody can shoot
+right now. M1.5 turned out to be the one milestone whose exit criteria were reachable from
+footage already on disk.
+
+**M1.5 is closed and the answer is no-go.** `spikes/club-head-detectability/` (thresholds,
+probe, log) and **ADR-017**. Addenda on ADR-005 (labelling deferred on evidence) and ADR-003 (the
+number behind "global shutter ≠ no motion blur"). No `src/` change — `detection/detector.py`
+still raises, and its message is still accurate.
+
+**It needed no new footage.** `data/raw/aaron-{1,2}` already held two swings × two views at
+2160×3840/60fps, and the pipeline had already computed impact on all four clips, so the spike
+read the frames the system actually calls impact rather than re-detecting them. Thresholds went
+into `thresholds.md` before a single frame was extracted, per the M7 Phase 0 precedent.
+
+**The finding is not the one the milestone was written to expect.** The club head is a *good*
+detection target at rest — 42 px across the short axis at 4K, crisp, behind a crisp ball. It is
+destroyed by **exposure time**. At the bay's 1/60 s it smears 600–980 px, 14x to 23x its own
+size: a translucent band you can see the mat through, present in the impact zone for about three
+frames of the sixty in that second and boundable in none of them. Pure-ML has nothing to label
+there, and **a marker does not fix it** — a marker raises contrast, and contrast is not what is
+missing. So M2's real gate is **~1/2000 s, about 30x the bay's present light**.
+
+That corrects a standing roadmap claim about money: the one purchase that blocks something is
+**not** a global-shutter camera. Shutter *type* does not appear in the calculation anywhere;
+exposure *duration* is all of it, and a global-shutter camera in the current light still records
+a smear. The purchase is lighting, evaluated against minimum exposure and lux.
+
+**Three things found by running it rather than reasoning about it:**
+
+1. **The scale that matters is the ball's, not the golfer's, and they differ by 1.66x.** The
+   first cut normalised by the body, as the rest of the repo does. Wrong ruler: the head at
+   impact is in the *ball's* plane, nearer a slightly downward-looking phone, and the ball
+   measures 57 px where a body-plane ruler predicts 34. Every blur figure on the body plane is
+   40% too small. The ball is the better ruler anyway — 42.7 mm by rule, against an assumed
+   shoulder width.
+2. **Shoulder width is not a ruler down-the-line, for a reason already written down here.**
+   Face-on it gives 887/883 px/m across the two swings; down-the-line, 198/112. From behind the
+   golfer the shoulders are edge-on. That is M6.5's finding again — *a quantity comparing two
+   body parts at one instant does not survive a change of camera yaw* — and the fix has the same
+   shape: use a **vertical** extent, which yaw leaves alone.
+3. **The pre-committed sharpness metric was uninformative, and is recorded as such rather than
+   quietly swapped.** Moving-region ÷ static-patch Laplacian variance lands at 1.4–5.4 — the
+   *moving* region always scores *higher*, because it is full of body edges while the static
+   patch is a smooth mat. It measures scene texture, not blur. The verdict rests on the extent
+   criterion and on looking at the frames, which is what the M1.5 checklist asked for. ADR-017
+   carries an addendum on why the threshold table pointed at marker-assisted and the ADR did
+   not follow it.
+
+**One number in the shot data does not survive contact.** Both swings carry a physically
+impossible smash factor (1.00 and 0.92 — a real strike cannot exceed ~1.5 or plausibly fall
+below ~1.1), so the launch monitor's club-speed reading is not trustworthy. Rather than assume
+it, the club speed is **bracketed** from `ball_speed / 1.5` up to the reading as printed, and the
+verdict is checked across the bracket. It holds either way: 1/1714 s at the low end, 1/2793 s at
+the high end. Worth remembering when M3's OCR tuning finally happens.
+
+**Verified**: 607 tests, ruff and mypy clean — unchanged, because nothing in `src/` moved.
+`spikes/` is outside both gates by design (`ruff check src tests scripts`, `mypy src`).
+`tests/test_docs_truth.py` pins the doc map's counts, so the new ADR and the two addenda are
+reflected there: 42 → 45 markdown documents, 16 → 17 decisions, 15 → 18 addenda.
+
+**Also corrected here**: this log was stale by two commits. The 2026-08-14 governance and
+refactor-pass commits landed without an entry, and the count of **552 tests** quoted in the entry
+below has been **607** since then. Neither is re-narrated; this note is the pointer.
+
+**Where I left off**: M1.5 is closed. The single open question is the one no desk work can
+answer — one clip of a swing under bright light with the shutter forced short flips pure-ML and
+marker-assisted together, and `probe.py` re-runs against it unchanged by adding a row to
+`SWINGS`.
+**Blockers**: none new. The standing NEXT ACTION is still an Anthropic API key for M6's live
+path; note that API billing is separate from a claude.ai subscription and runs on prepaid
+credits, so a few dollars covers hundreds of coaching calls at this volume.
+
+---
+
 ## 2026-08-13 — The band that did not survive our camera (M6.5, closed)
 
 **Duration**: ~1 session, a new harness + implementation + tests + a re-analysis of everything on disk

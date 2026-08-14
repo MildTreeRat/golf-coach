@@ -25,8 +25,8 @@ the time you have walked back from the bay.
 | Milestone | State |
 |---|---|
 | **M1** Capture & skeleton | ✅ Done — MediaPipe pose, face-on canonical angle |
-| **M1.5** Club-head detectability spike | ⬜ Not started — gates M2 |
-| **M2** Club & ball detection (YOLOv8) | 🔒 Gated on M1.5 + global-shutter camera |
+| **M1.5** Club-head detectability spike | ✅ Done *(2026-08-14)* — **no-go**: the head is destroyed by exposure, not by the detector |
+| **M2** Club & ball detection (YOLOv8) | 🔒 Gated — needs bay lighting for a ~1/2000 s exposure, *not* a global-shutter camera ([ADR-017](docs/decisions/017-club-head-detection-strategy.md)) |
 | **M3** Launch monitor / MCP | 🟡 Shot ingestion (screen OCR) + MCP server done; OCR tuning left |
 | **M4-PoC / PoC+ / REF** Pose-only analysis | ✅ Done — 6 checkpoints, bands validated vs 461 tour clips |
 | **M5-FB** Prioritised coaching feedback | ✅ Done — ranked tips, tour percentiles |
@@ -227,7 +227,7 @@ module depends on — modules never import each other.
 - **capture** — `VideoSource` port; `FileVideoSource` adapter over OpenCV
 - **pose** — MediaPipe Tasks API → `FrameKeypoints` (33 landmarks/frame), plus overlay and
   side-by-side rendering
-- **detection** — YOLOv8 club head + ball *(stub — M2, gated on the M1.5 spike)*
+- **detection** — YOLOv8 club head + ball *(stub — M2; the M1.5 spike ran and returned no-go, see ADR-017)*
 - **launch_monitor** — `ShotDataSource` port with mock / screen-OCR / composite adapters
 - **analysis** — pure functional core, with **measuring split from judging** (M6.5): `measure.py`
   and `shot_measure.py` produce numbers with no band in sight, `checkpoints/` turns three of them

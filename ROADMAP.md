@@ -1,6 +1,6 @@
 # Roadmap: AI Golf Swing Trainer
 
-## Last Updated: 2026-08-13
+## Last Updated: 2026-08-14
 
 Grouped by **state**, not by number, because the numbers no longer run in order: the pose-only
 slices (M4-PoC, M4-PoC+, M4-REF, M5-FB) delivered the mechanics half of M4 and the ranking half
@@ -17,14 +17,14 @@ wording; only the grouping and the M4 checklist have been corrected.
 | **M4-REF** GolfDB validation | ✅ Done | — | [§M4-REF](#m4-ref-golfdb-reference-data-pose-only-slice-of-m4--done) |
 | **M5-FB** Ranked coaching | ✅ Done | — | [§M5-FB](#m5-fb-prioritised-coaching-feedback-pose-only-slice-of-m5--done) |
 | **M3** Launch monitor / MCP | 🟡 In progress | Nothing — ingestion + MCP server done; OCR tuning left | [§M3](#milestone-3-launch-monitor-integration--in-progress) |
-| **M1.5** Detectability spike | ⬜ Next | Nothing — phone clips of the impact zone | [§M1.5](#milestone-15-club-head-detectability-spike-de-risk-before-investing) |
+| **M1.5** Detectability spike | ✅ Done *(2026-08-14, **no-go**)* | — (ran on footage already on disk) | [§M1.5](#milestone-15-club-head-detectability-spike-de-risk-before-investing) |
 | **M7** Two-phone sim capture | 🟡 In progress, 6/7 phases (3 trimmed) | Nothing — two iPhones + a sim bay | [§M7](#milestone-7-two-phone-sim-capture-no-hardware-purchase) |
 | **M4** full (outcome axis) | ⬜ Blocked | The M2 + M3 streams | [§M4 full](#milestone-4-full-swing-analysis-engine--the-outcome-axis) |
 | **M6** LLM coaching | 🟡 In progress | Nothing — an API key | [§M6](#milestone-6-llm-powered-coaching--in-progress) |
 | **M6.5** Measure now, judge later | ✅ Done | — (9 recorded, **6 scored**; the handedness seam landed and the last candidate was settled) | [§M6.5](#m65-measure-now-judge-later--done) |
 | **Career mode** One golfer over time | ✅ Done, 6/6 steps | — (built and silent; a bay session gives it the `n` to speak) | [§Career](#career-mode-one-golfer-tracked-over-time--done-built-and-silent) |
 | **M5** Feedback UI | ⬜ Not started | M7 Phase 5 gives the host | [§M5](#milestone-5-feedback-ui) |
-| **M2** Club & ball detection | 🔒 Gated | M1.5 go/no-go **+** global-shutter camera | [§M2](#milestone-2-club--ball-detection) |
+| **M2** Club & ball detection | 🔒 Gated, **and M1.5 said no-go** | Bay lighting for a ~1/2000 s exposure — *not* a global-shutter camera | [§M2](#milestone-2-club--ball-detection) |
 | Hardware re-validation | 🔒 Gated | Cameras / launch monitor arriving | [§Gate](#hardware-re-validation-gate-revisit-when-cameras--launch-monitor-arrive) |
 
 **NEXT ACTION — do this first:** add an Anthropic API key and verify M6 coaching against the live
@@ -41,11 +41,18 @@ brief didn't contain, and must not mention spine angle, hip rotation, swing plan
 none of which this system measures. Until that run happens, M6's live path is unproven. Tracked as
 the first open item in [§M6](#milestone-6-llm-powered-coaching--in-progress).
 
-**The one purchase that actually blocks something:** a global-shutter camera for M2. Everything
-else above either needs nothing, or needs work rather than money.
+**The one purchase that actually blocks something — and M1.5 changed what it is.** It is not a
+global-shutter camera. The spike measured the club head smearing across 600–980 px at impact at
+the bay's 1/60 s exposure, and put the requirement at **~1/2000 s**, which is on the order of
+**30x more light** than the bay currently gives. Shutter *type* does not enter that calculation;
+exposure *duration* is all of it. So the M2 purchase is **lighting first**, evaluated against
+minimum exposure and lux — a global-shutter camera in the current light still records a smear.
+See [ADR-017](docs/decisions/017-club-head-detection-strategy.md). Everything else above either
+needs nothing, or needs work rather than money.
 
-**Oldest unstarted item:** M1.5. It has stayed deferrable because the pose-only spine kept
-producing value without it — but M2 and every club-derived metric sit behind it.
+**Oldest unstarted item:** M7 Phase 0's field spike — and it needs a bay, not a decision.
+(M1.5 held this slot until 2026-08-14, when it turned out to be answerable from footage already
+on disk.)
 
 **Biggest constraint on *coaching*, as opposed to measuring: n.** Causal coaching ("why is your
 face open") is unreachable with this instrument — grip, wrists and clubface are all invisible to
@@ -773,7 +780,9 @@ is the client handshake and conversational follow-up.
 
 # Next — nothing blocking
 
-Startable today. M1.5 gates M2, so it is the highest-leverage of the three.
+Startable today. **M1.5 has now run** (2026-08-14) and closed as a no-go on pure-ML club
+detection; it is kept in this section as the record of what it decided and what it left open.
+The two below need a bay, not a decision.
 
 ---
 
@@ -782,17 +791,46 @@ Startable today. M1.5 gates M2, so it is the highest-leverage of the three.
 **Hardware to start**: None to begin (use phone/sample video). A fast-shutter capture test is more informative with the global-shutter camera + lighting, but the core visual check can start immediately.
 **Why this exists**: Club-head tracking is hard precisely where it matters most (impact). At ~110 mph the head moves ~16 in *between frames* even at 120fps, and motion blur is governed by **exposure time, not shutter type** — a global shutter removes *distortion* (warping) but NOT blur. A sharp club head at impact needs a fast shutter **+ bright light**. We need to see real frames before committing.
 
-- [ ] Capture/collect a handful of swing clips that clearly include the **impact zone** (phone is fine to start)
-- [ ] Manual inspection: at impact, is the club head a recognizable object or an unlabelable smear? How many pixels is it? How many usable frames are in the impact window?
-- [ ] Lighting/shutter test: does adding bright light + forcing a fast shutter (e.g. 1/2000s) freeze the club head?
-- [ ] Quick detectability probe: can an off-the-shelf detector (or just *you*, drawing boxes) reliably localize the club head frame-by-frame?
-- [ ] Evaluate the fallback levers and pick a direction:
-    - [ ] **Pure ML** — train YOLOv8 on the unmarked club head (most learning, gappiest at impact)
-    - [ ] **Marker-assisted** — bright/reflective tape on the club head (reliable; even color-thresholding works)
-    - [ ] **Fusion + interpolation** — bridge impact-zone gaps using MediaPipe wrist position + shaft angle + a Kalman tracker, anchored by the R10's `club_path`
-- [ ] Write findings into a short ADR (detection strategy) once real frames are seen
+> **Status (2026-08-14): done, and the answer is no-go.** It needed no new footage — the four bay
+> clips already on disk carried the impact zone at 4K/60. Thresholds were committed before any
+> frame was extracted. Findings:
+> [spikes/club-head-detectability/log.md](spikes/club-head-detectability/log.md). Decision:
+> [ADR-017](docs/decisions/017-club-head-detection-strategy.md).
+>
+> **The club head is a good detection target at rest and is destroyed by exposure, not by the
+> detector.** 42 px across at 4K, crisp, behind a crisp ball — then a translucent 600–980 px band
+> at impact, 14x to 23x its own size, present in the impact zone for about three frames of the
+> sixty in that second and boundable in none of them. Pure-ML has nothing to label there, and a
+> marker does not help because it raises *contrast* while the thing destroying the head is
+> *exposure*. The requirement, consistent across both swings and the full plausible club-speed
+> bracket, is **~1/2000 s** — about 30x the bay's current light.
 
-**Exit Criteria (go/no-go gate)**: A documented decision on (a) whether camera-based club tracking is viable in our setup, (b) the chosen detection strategy, and (c) the lighting/shutter requirements — *before* any large labeling effort begins. A "no-go on pure-ML" is a valid, useful outcome (fall back to marker or fusion).
+- [x] Capture/collect a handful of swing clips that clearly include the **impact zone** — **not
+      needed**: `data/raw/aaron-{1,2}` already held two swings × two views at 2160×3840/60fps,
+      with impact frames the pipeline had already computed
+- [x] Manual inspection: recognizable object or unlabelable smear? **Unlabelable band.** Head is
+      **42 px** short-axis at rest; **zero** usable frames in the impact window, out of ~3 in
+      which the club is in the zone at all
+- [ ] Lighting/shutter test: does bright light + a forced fast shutter freeze the head? —
+      **still open, and it is the only open question.** No fast-shutter clip exists, so 1/2000 s
+      is a *specification derived from measurement*, not an observation. One clip settles it
+- [x] Quick detectability probe — done by measurement plus direct inspection of native-resolution
+      crops; `probe.py measure` prints the table and re-runs in a minute
+- [x] Evaluate the fallback levers and pick a direction:
+    - [x] **Pure ML** — **no-go at current capture.** Nothing to label through impact
+    - [x] **Marker-assisted** — **no-go as a standalone fix.** Solves contrast; the problem is
+          exposure. A marker at 1/60 s smears across the same 600–980 px
+    - [x] **Fusion + interpolation** — **chosen** as the only path that produces a club path from
+          what we can actually record. Explicitly a *modelled* path, and must be surfaced as one
+- [x] Write findings into a short ADR — [ADR-017](docs/decisions/017-club-head-detection-strategy.md),
+      plus addenda on [ADR-005](docs/decisions/005-object-detection-yolov8.md) (labelling deferred
+      on evidence) and [ADR-003](docs/decisions/003-camera-hardware.md) (the number behind "global
+      shutter ≠ no motion blur")
+
+**Exit Criteria (go/no-go gate)**: ✅ met. (a) Camera-based club tracking is **not** viable at
+current capture; (b) the strategy is fusion + interpolation until the capture changes; (c) the
+lighting/shutter requirement is ~1/2000 s and ~30x present light. The no-go arrived before any
+labeling effort began, which is what this spike existed to achieve.
 
 
 ---
@@ -982,9 +1020,9 @@ Needs a purchase, or needs hardware in hand to re-check a provisional choice.
 
 ## Milestone 2: Club & Ball Detection
 **Goal**: Detect and track club head and ball through the swing using a fine-tuned model.
-**Hardware to start**: Global-shutter camera (ADR-003) — needed for sharp, blur-free club-head frames. Scaffolding and labeling workflow can be built earlier on sample frames.
+**Hardware to start**: **lighting, not a camera** — M1.5 measured the requirement at ~1/2000 s, about 30x the bay's present light. A global-shutter camera in the current light still records a smear (ADR-003's 2026-08-14 addendum). Scaffolding and labeling workflow can be built earlier on sample frames.
 **Why this exists**: MediaPipe tracks the *body* only (it has no concept of a club). YOLOv8 is what detects the club head + ball, and feeding its detections through a tracker (ByteTrack) produces the visual **club-path arc** — the swing path overlaid on the replay. This is also the one model we train ourselves (ADR-005).
-**Gated on M1.5**: Do not start the labeling effort below until the M1.5 spike confirms the detection strategy. The tasks below assume the pure-ML or marker-assisted path; a fusion-heavy outcome reshapes them.
+**Gated on M1.5 — which has now reported, and the answer reshapes this milestone.** The spike ran 2026-08-14 and returned **no-go on pure ML and no-go on marker-assisted**, because the club head is destroyed by exposure time rather than by anything a detector or a marker addresses ([ADR-017](docs/decisions/017-club-head-detection-strategy.md)). **Do not start the labeling effort below.** The tasks as written assume the pure-ML path; the chosen interim direction is fusion + interpolation, which needs none of them and produces a *modelled* club path that must be surfaced as modelled. The labelling tasks become startable again only if a fast-shutter capture test passes — one clip settles it.
 
 - [ ] Collect training images (~200-500 frames with club head and ball visible)
 - [ ] Label images using Label Studio or Roboflow (see ADR-005)

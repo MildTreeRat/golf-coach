@@ -24,6 +24,11 @@ data/models/*.task
 # those live in the package at src/golf_coach/analysis/benchmarks/. See ADR-012.
 data/reference/
 
+# Spike frame dumps. Large, and regenerate in a minute from footage the repo already has
+# (`spikes/club-head-detectability/probe.py frames`). The findings are committed, the pixels
+# are not — same rule as data/.
+spikes/*/frames/
+
 # Database
 *.db
 

@@ -152,3 +152,18 @@ addendum) — it's the reason the *spine/plane* stream is assigned to the down-t
 **Trustworthy 3D spine/hip angles** (real forward tilt, hip rotation, X-factor) require fusing
 both views by triangulation, which requires the cameras to be **synchronized** — planned in
 [ADR-011](011-camera-synchronization.md).
+
+## Addendum (2026-08-14): the number behind "global shutter ≠ no motion blur"
+
+The 2026-06-20 addendum above said the right thing qualitatively. M1.5 has now measured it, and
+the number changes what should be bought.
+
+Against real bay footage, holding the club head's smear under half its own width at impact needs
+**~1/2000 s** — roughly five stops below the 1/60 s the bay currently yields, i.e. on the order
+of **30x more light**. Shutter *type* does not appear in that calculation anywhere; exposure
+*duration* is the whole of it.
+
+So the camera decision above should be evaluated on **minimum exposure and the lux available to
+support it**, not on global-vs-rolling shutter — and for club tracking specifically, the lighting
+may be the larger purchase. A global-shutter camera in the bay's current light still records a
+smear. See [ADR-017](017-club-head-detection-strategy.md).
