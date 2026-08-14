@@ -20,6 +20,7 @@ from typing import Any, TypeVar
 
 import pytest
 
+from golf_coach.contracts.checkpoints import CHECKPOINT_REGISTRY
 from golf_coach.contracts.shot import ShotData
 
 pytest.importorskip("mcp", reason="needs the `llm` extra")
@@ -133,8 +134,16 @@ def test_the_instructions_carry_the_standing_caveats(server) -> None:
     assert "unscored" in instructions
     assert "needs_review" in instructions
     assert "percentile" in instructions
-    # The panel is three face-on checkpoints; the model must not invent the rest.
+    # The panel is a fixed set of face-on checkpoints; the model must not invent the rest.
     assert "swing plane" in instructions
+
+    # The count and the names come off `CHECKPOINT_REGISTRY`, and this is the assertion that says
+    # what breaks if they stop: these instructions are what an MCP client tells its model the
+    # system measures. They claimed five checkpoints for the whole of M6.5 while six ran.
+    for spec in CHECKPOINT_REGISTRY:
+        assert spec.label in instructions, (
+            f"{spec.name} ships as a checkpoint but the MCP instructions never name it"
+        )
 
 
 def test_reading_the_data_does_not_require_the_mcp_sdk() -> None:

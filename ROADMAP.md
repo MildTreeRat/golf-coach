@@ -490,7 +490,9 @@ Five things found by building it:
 `contracts/comparison.py` + `analysis/comparison.py` (the personal-vs-tour join), `mcp/career.py`
 plus three MCP tools, `GET /api/golfers/{id}/career`, a new `static/career.html`, an "Against your
 own history" block on the swing page, and the `vs tour` row in `scripts/career_baseline.py`.
-`storage.corpus.narrow_to` is the one new reader. 540 tests (up from 501), ruff and mypy clean.
+`storage.corpus.narrow_to` is the one new reader. 39 new tests, ruff and mypy clean. (The running
+total lives in `WORKLOG.md`'s top entry — a repo-wide count written into a milestone section is
+stale by the next session.)
 
 The join answers the question the tour band was always going to be asked: whether the golfer's own
 center sits where tour swings sit. It is read off the mean's **95% CI**, never the mean, so a

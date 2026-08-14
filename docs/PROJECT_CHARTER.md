@@ -1,5 +1,9 @@
 # Project Charter: AI Golf Swing Trainer
 
+> **Tier: FOUNDING.** The intent the project started from. Scope and risks still hold; specific
+> numbers and milestone shapes have been sharpened by later ADRs — read the intent, not the
+> specifics.
+
 ## Project Name
 Home Lab AI Golf Swing Trainer
 

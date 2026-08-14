@@ -1,5 +1,6 @@
 # M4-REF: Address Detection — Feature Flow
 
+> **Tier: AS-BUILT.**
 > ✅ **Implemented & verified (2026-08-02).** The rule below ships in `analysis/phases.py` and
 > `analysis/checkpoints/mechanics.py`, validated against all 461 hand-annotated GolfDB face-on
 > clips. Median address error **9 → 7 frames**; `head_sway` on `golf_swing-aaron-1` corrected from

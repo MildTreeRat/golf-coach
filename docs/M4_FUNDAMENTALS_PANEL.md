@@ -1,8 +1,10 @@
 # M4-PoC+ — Hardened Fundamentals Panel (pose-only)
 
 > **Tier: REFERENCE — current design, stale numbers.** The *design* below still ships: the
-> smoothing pass, the three-checkpoint panel, and the annotated-overlay verification CLI are all
-> live, and `analysis/checkpoints/mechanics.py`, `analysis/phases.py` and
+> smoothing pass, the scored fundamentals panel, and the annotated-overlay verification CLI are all
+> live. The panel has since grown past the three checkpoints described here — `CHECKPOINT_REGISTRY`
+> in `contracts/checkpoints.py` is what ships — and `analysis/checkpoints/mechanics.py`,
+> `analysis/phases.py` and
 > `scripts/analyze_swing.py` cite this file for the reliable-vs-deferred reasoning. Kept in
 > `docs/` for that reason rather than archived.
 >

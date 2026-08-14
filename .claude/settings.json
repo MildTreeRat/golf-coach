@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls -la)",
+      "Bash(.venv/Scripts/python.exe -m pytest)",
+      "Bash(.venv/Scripts/python.exe -m pytest -q)",
+      "Bash(.venv/Scripts/python.exe -m pytest -q -p no:cacheprovider)",
+      "Bash(.venv/Scripts/python.exe -m ruff check src tests scripts)",
+      "Bash(.venv/Scripts/python.exe -m mypy src)"
+    ]
+  }
+}

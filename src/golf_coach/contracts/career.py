@@ -16,7 +16,7 @@ timing cause without seeing the body). A confident "your face angle is remarkabl
 out of a re-upload is the exact failure this milestone was deferred to avoid.
 
 **Two dedupe keys, because a measurement's `n` depends on which artifact it came from.**
-`Measurement.source` is `pose:face_on` for the six pose metrics and `launch_monitor:hd_golf` for
+`Measurement.source` is `pose:face_on` for the seven pose metrics and `launch_monitor:hd_golf` for
 `face_to_path_deg` and `start_line_deg`. So a pose metric's sample count is the number of distinct
 **face-on clips**, and a shot metric's is the number of distinct **shot photos**. They agree today
 and are free to diverge, in one direction: `bundle_store`'s "newest swing missing this role" rule

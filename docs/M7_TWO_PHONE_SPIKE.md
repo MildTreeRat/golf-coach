@@ -1,5 +1,6 @@
 # M7 Phase 0: Two-Phone Field Spike — findings
 
+> **Tier: REFERENCE — thresholds committed in advance, results pending footage.**
 > ⬜ **Method fixed; the spike's own footage not yet recorded.** Every threshold in this document was
 > written **before** any footage existed, which is the point: the pass/fail bar for the biggest
 > risk in M7 is not allowed to be chosen after seeing the numbers. Sections marked *pending* are

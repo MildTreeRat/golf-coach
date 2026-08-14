@@ -11,7 +11,7 @@ A home-lab AI-powered golf swing analysis system that captures your swing via ca
 > in the output.
 
 **Working today, no hardware required:** drop a face-on swing clip in `data/raw/`, and the
-pipeline extracts pose, segments the swing, scores three checkpoints against tour-derived
+pipeline extracts pose, segments the swing, scores six checkpoints against tour-derived
 benchmark bands, and prints ranked coaching tips with an annotated verification overlay.
 Shot data is read off photographs of the HD Golf simulator screen by local OCR. Point
 `analyze_bundle.py` at a swing uploaded from two phones and it does the lot in one command,
@@ -28,11 +28,11 @@ the time you have walked back from the bay.
 | **M1.5** Club-head detectability spike | ⬜ Not started — gates M2 |
 | **M2** Club & ball detection (YOLOv8) | 🔒 Gated on M1.5 + global-shutter camera |
 | **M3** Launch monitor / MCP | 🟡 Shot ingestion (screen OCR) + MCP server done; OCR tuning left |
-| **M4-PoC / PoC+ / REF** Pose-only analysis | ✅ Done — 3 checkpoints, bands validated vs 461 tour clips |
+| **M4-PoC / PoC+ / REF** Pose-only analysis | ✅ Done — 6 checkpoints, bands validated vs 461 tour clips |
 | **M5-FB** Prioritised coaching feedback | ✅ Done — ranked tips, tour percentiles |
 | **M4** full (outcome axis) | ⬜ Needs the M2 + M3 streams |
 | **M6** LLM coaching | 🟡 Claude writes the per-swing verdict; follow-up Q&A left |
-| **M6.5** Measure now, judge later | 🟡 8 metrics recorded per swing, none scored yet |
+| **M6.5** Measure now, judge later | ✅ Done — 9 metrics recorded per swing, 6 of them scored |
 | **Career mode** One golfer over time | ✅ 6/6 steps — built, and currently **silent by design**: it reports **n = 2** per metric and refuses every claim over that. A bay session is what makes it speak |
 | **M5** Feedback UI | ⬜ Not started — a static results page stands in for it |
 | **M7** Two-phone sim capture | 🟡 6/7 phases — only the Phase 0 field spike is left |

@@ -20,14 +20,69 @@ does). A caveat about `unscored` is useless next to a brief that calls it someth
 
 from __future__ import annotations
 
+from textwrap import fill
+
+from golf_coach.contracts.checkpoints import CHECKPOINT_REGISTRY
+
+# How wide the composed prose wraps. Nothing downstream cares — a model reads this, not a
+# terminal — but the blocks below are hand-written at this width and a derived clause that
+# reflowed to a different one would make the seam between them obvious for no reason.
+_WIDTH = 95
+
+_COUNT_WORDS = (
+    "no",
+    "one",
+    "two",
+    "three",
+    "four",
+    "five",
+    "six",
+    "seven",
+    "eight",
+    "nine",
+    "ten",
+    "eleven",
+    "twelve",
+)
+
+
+def _count_word(n: int) -> str:
+    """`6` -> "six", so the prose keeps saying "six checkpoints" rather than "6 checkpoints".
+
+    Falls back to the digits past twelve, which is well beyond any plausible panel and is the
+    point where a reader would rather see a number anyway.
+    """
+    return _COUNT_WORDS[n] if n < len(_COUNT_WORDS) else str(n)
+
+
+def _and_list(items: list[str]) -> str:
+    """"a", "a and b", "a, b and c" — the serial comma this repo's prose does not use."""
+    if len(items) <= 1:
+        return "".join(items)
+    return f"{', '.join(items[:-1])} and {items[-1]}"
+
+
+# Everything below is derived from the registry rather than typed out. The count and the names in
+# this file are the highest-stakes prose in the repo — `feedback/coach.py` freezes them into the
+# coaching system prompt and `mcp/server.py` hands them to every client — and they are exactly
+# what went stale: this file claimed five checkpoints through the whole of M6.5 while six ran.
+_COUNT = _count_word(len(CHECKPOINT_REGISTRY))
+_ALL_LABELS = ", ".join(spec.label for spec in CHECKPOINT_REGISTRY)
+# Two-sided ones are named as identifiers because the sentence tells a reader to go and check the
+# `one_sided` field on them; the one-sided ones are prose because the sentence is just prose.
+_TWO_SIDED = _and_list([f"`{spec.name}`" for spec in CHECKPOINT_REGISTRY if not spec.one_sided])
+_ONE_SIDED = ", ".join(spec.label for spec in CHECKPOINT_REGISTRY if spec.one_sided)
+
 #: What the two scores mean and why they are not interchangeable (ADR-009).
-TWO_AXES = """\
-Two independent axes, and they answer different questions. **Mechanics** come from pose
-analysis of a face-on video: five checkpoints (tempo, head sway, finish balance, hip sway, hip
-shift at top) scored against bands derived from hand-annotated tour swings, plus the percentile
-the swing sits at in that population. **Outcome** comes from the launch monitor: club and ball
-speed, launch, spin, carry. A swing can score well on one and badly on the other; say which you
-are talking about."""
+TWO_AXES = fill(
+    "Two independent axes, and they answer different questions. **Mechanics** come from pose "
+    f"analysis of a face-on video: {_COUNT} checkpoints ({_ALL_LABELS}) scored against bands "
+    "derived from hand-annotated tour swings, plus the percentile the swing sits at in that "
+    "population. **Outcome** comes from the launch monitor: club and ball speed, launch, spin, "
+    "carry. A swing can score well on one and badly on the other; say which you are talking "
+    "about.",
+    width=_WIDTH,
+)
 
 #: Attached to any alignment tier below FULL, which is the only tier that anchored on all three
 #: instants and so the only one a reader may treat as synchronized throughout (ADR-015). Takes
@@ -38,8 +93,34 @@ ALIGNMENT_CAVEAT = (
     "synchronized throughout, and do not read fine timing differences off it."
 )
 
+# The two bullets of `READING_THIS_DATA_HONESTLY` that count or name checkpoints. Composed here
+# rather than inline so the surrounding block stays a readable essay, and wrapped so a registry of
+# a different size still produces a tidy list rather than one very long line.
+_LESS_IS_NOT_BETTER = fill(
+    f"**Less is not better on every checkpoint.** {_TWO_SIDED} are two-sided (`one_sided` is "
+    "false): too little hip travel fails just as too much does, because some lateral hip movement "
+    "is the weight shift a swing needs, and a head that hangs back through impact fails as a head "
+    f"that drifts forward with the hips does. On the one-sided checkpoints — {_ONE_SIDED} — below "
+    "the band is the good side. Read `one_sided` before describing a low number as a strength.",
+    width=_WIDTH,
+    initial_indent="- ",
+    subsequent_indent="  ",
+)
+
+_ONLY_THESE_FUNDAMENTALS = fill(
+    f"Only {_COUNT} fundamentals are measured, all from the face-on view, and all of them are "
+    "lateral (side-to-side) or timing quantities. Spine angle, hip **rotation**, swing plane and "
+    "club path are NOT measured here — they need a second calibrated view or club detection, "
+    "neither of which exists yet. The hip checkpoints measure how far the hips travel sideways, "
+    "never how far they turn, and never in which direction. Do not infer them from what is "
+    "available.",
+    width=_WIDTH,
+    initial_indent="- ",
+    subsequent_indent="  ",
+)
+
 #: The provisional-data warnings, one per way this repo can be honestly wrong.
-READING_THIS_DATA_HONESTLY = """\
+READING_THIS_DATA_HONESTLY = f"""\
 Reading this data honestly:
 
 - `unscored` lists checkpoints that could not be measured, not ones that failed. They are
@@ -49,12 +130,7 @@ Reading this data honestly:
   about 90 (or about 10, when it missed on the low side of a two-sided metric) whether it missed
   narrowly or hugely. A low percentile is therefore not by itself good news — read `passed` for
   the verdict and rank severity by `score`, never by percentile.
-- **Less is not better on every checkpoint.** `tempo`, `hip_sway` and `head_stays_back` are
-  two-sided (`one_sided` is false): too little hip travel fails just as too much does, because
-  some lateral hip movement is the weight shift a swing needs, and a head that hangs back through
-  impact fails as a head that drifts forward with the hips does. On the one-sided checkpoints —
-  head sway, finish balance, hip shift at top — below the band is the good side. Read `one_sided`
-  before describing a low number as a strength.
+{_LESS_IS_NOT_BETTER}
 - `head_stays_back` is recorded as a **negative** number, and that is a frame of reference rather
   than a fault: its band lives in a right-handed camera frame where more negative means more
   head-behind-hips separation. Never read its sign as bad news, and never quote the raw value to a
@@ -66,11 +142,7 @@ Reading this data honestly:
 - `alignment_caveat`, when present, means the two camera views were anchored on some swing
   instants and interpolated between them. Do not describe the side-by-side video as
   synchronized throughout, and do not read fine timing differences off it.
-- Only six fundamentals are measured, all from the face-on view, and all of them are lateral
-  (side-to-side) or timing quantities. Spine angle, hip **rotation**, swing plane and club path
-  are NOT measured here — they need a second calibrated view or club detection, neither of which
-  exists yet. The hip checkpoints measure how far the hips travel sideways, never how far they
-  turn, and never in which direction. Do not infer them from what is available.
+{_ONLY_THESE_FUNDAMENTALS}
 
 Only a handful of sessions and shots are recorded so far. Do not describe a trend or a pattern
 from the numbers in front of you — there is not enough of them for one, and any statement about

@@ -1,5 +1,8 @@
 # M7: Two-Phone Sim Capture — multi-angle ingestion, alignment, and a host
 
+> **Tier: TARGET.** The live plan — most of it is built, but this document describes the intended
+> design and its planning prompts are historical. Verify against code before trusting a detail.
+
 **Status**: 2026-08-09 — **six of seven phases built** (3 trimmed). Only the Phase 0 field spike
 is unstarted; it needs a bay session, not code. Per-phase detail below records what actually
 shipped where it diverged from the plan.

@@ -149,8 +149,8 @@ def main(argv: list[str]) -> int:
         )
 
         found = False
-        for name, measure in POSE_MEASUREMENTS.items():
-            value = measure(corrected, phases)
+        for name, pose in POSE_MEASUREMENTS.items():
+            value = pose.measure(corrected, phases)
             if value is None:
                 continue
             swing.metrics[name] = value

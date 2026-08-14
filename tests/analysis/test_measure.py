@@ -11,8 +11,6 @@ from __future__ import annotations
 from conftest import make_swing
 
 from golf_coach.analysis.measure import (
-    POSE_MEASUREMENT_DETAIL,
-    POSE_MEASUREMENT_UNIT,
     POSE_MEASUREMENTS,
     measure_finish_balance,
     measure_head_hip_offset_impact,
@@ -154,22 +152,23 @@ def test_unusable_phases_measure_nothing_rather_than_guessing() -> None:
 
 
 def test_registry_is_complete_and_consistent() -> None:
-    """Every registered metric has a unit and a detail string, and the registry runs.
+    """Every registered metric carries a unit and a detail string, and the registry runs.
 
-    The registry is what `derive_pose_metrics.py` and `tune_spatial_metric.py` both iterate, so a
-    metric added to one dict and forgotten in another would silently lose its provenance.
+    The registry is what `derive_pose_metrics.py` and `tune_spatial_metric.py` both iterate. The
+    three parallel dicts this replaced could disagree about which names they held — a test caught
+    that — but never about which unit belonged to which metric, because nothing tied a row
+    together. One record per metric is what makes the misalignment unrepresentable.
     """
     smoothed, phases = _analyzed(followthrough_frames=60)
 
-    assert set(POSE_MEASUREMENTS) == set(POSE_MEASUREMENT_UNIT)
-    assert set(POSE_MEASUREMENTS) == set(POSE_MEASUREMENT_DETAIL)
-
-    for name, measure in POSE_MEASUREMENTS.items():
-        value = measure(smoothed, phases)
+    for name, pose in POSE_MEASUREMENTS.items():
+        assert pose.unit, f"{name} has no unit"
+        assert pose.detail, f"{name} has no detail string"
+        value = pose.measure(smoothed, phases)
         assert value is not None, f"{name} could not measure the ideal synthetic swing"
 
 
 def test_norm_suffix_marks_the_shoulder_width_metrics() -> None:
     """`derive_reference.py` keys its one-sided band recommendation on the `_norm` suffix."""
-    for name, unit in POSE_MEASUREMENT_UNIT.items():
-        assert name.endswith("_norm") == (unit == "shoulder_widths")
+    for name, pose in POSE_MEASUREMENTS.items():
+        assert name.endswith("_norm") == (pose.unit == "shoulder_widths")

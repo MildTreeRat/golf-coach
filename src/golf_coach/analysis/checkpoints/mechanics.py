@@ -6,8 +6,9 @@ score against it, place it in the reference population, phrase it for a golfer. 
 because the fused version could not measure a metric that had no band yet — and bands are derived
 from populations of measurements, so nothing new could ever acquire one. See `measure.py`.
 
-Six checkpoints, all measured from **face-on 2D pose** (the canonical pose-camera placement,
-ADR-003 addendum) — deliberately the ones this single view reads well:
+Every checkpoint here is measured from **face-on 2D pose** (the canonical pose-camera placement,
+ADR-003 addendum) — deliberately the ones this single view reads well. Which of them ship, and in
+what order, is `contracts.checkpoints.CHECKPOINT_REGISTRY`; this list is what each one *means*:
 
 - **tempo** — backswing:downswing time ratio, from phase timings.
 - **head_sway** — lateral (`x`) head travel from address to impact, in shoulder-widths.
@@ -94,6 +95,7 @@ from golf_coach.analysis.measure import (
     measure_hip_sway,
     measure_tempo_ratio,
 )
+from golf_coach.contracts.checkpoints import spec_for
 from golf_coach.contracts.golfer import Handedness
 from golf_coach.contracts.intent import ClubCategory, PlayerProfile
 from golf_coach.contracts.keypoints import FrameKeypoints
@@ -105,23 +107,34 @@ from golf_coach.contracts.swing import CheckpointScore, PhaseSegment
 _ADDRESS_SAMPLE_MIN_FRAMES = ADDRESS_SAMPLE_MIN_FRAMES
 _address_sample_bounds = address_sample_bounds
 
-TEMPO_CHECKPOINT = "tempo"
-_TEMPO_RANGE_KEY = "tempo_ratio"
+# Name, band key and band shape all come off the spec rather than being retyped here.
+# `contracts.checkpoints` owns the pairing because `caveats.py` has to build prose out of it and
+# cannot import this package (ADR-008); keeping a second copy is what let the shipped caveat text
+# claim five checkpoints while six ran. The names stay module attributes because they are public
+# vocabulary — `SwingResult.unscored`, `feedback/rules.py` and the tests all match on them.
+_TEMPO = spec_for("tempo")
+TEMPO_CHECKPOINT = _TEMPO.name
+_TEMPO_RANGE_KEY = _TEMPO.metric
 
-HEAD_SWAY_CHECKPOINT = "head_sway"
-_HEAD_SWAY_RANGE_KEY = "head_sway_norm"
+_HEAD_SWAY = spec_for("head_sway")
+HEAD_SWAY_CHECKPOINT = _HEAD_SWAY.name
+_HEAD_SWAY_RANGE_KEY = _HEAD_SWAY.metric
 
-FINISH_BALANCE_CHECKPOINT = "finish_balance"
-_FINISH_BALANCE_RANGE_KEY = "finish_balance_norm"
+_FINISH_BALANCE = spec_for("finish_balance")
+FINISH_BALANCE_CHECKPOINT = _FINISH_BALANCE.name
+_FINISH_BALANCE_RANGE_KEY = _FINISH_BALANCE.metric
 
-HIP_SWAY_CHECKPOINT = "hip_sway"
-_HIP_SWAY_RANGE_KEY = "hip_sway_norm"
+_HIP_SWAY = spec_for("hip_sway")
+HIP_SWAY_CHECKPOINT = _HIP_SWAY.name
+_HIP_SWAY_RANGE_KEY = _HIP_SWAY.metric
 
-HIP_SHIFT_AT_TOP_CHECKPOINT = "hip_shift_at_top"
-_HIP_SHIFT_AT_TOP_RANGE_KEY = "hip_shift_at_top_norm"
+_HIP_SHIFT_AT_TOP = spec_for("hip_shift_at_top")
+HIP_SHIFT_AT_TOP_CHECKPOINT = _HIP_SHIFT_AT_TOP.name
+_HIP_SHIFT_AT_TOP_RANGE_KEY = _HIP_SHIFT_AT_TOP.metric
 
-HEAD_STAYS_BACK_CHECKPOINT = "head_stays_back"
-_HEAD_STAYS_BACK_RANGE_KEY = "head_hip_gain_norm"
+_HEAD_STAYS_BACK = spec_for("head_stays_back")
+HEAD_STAYS_BACK_CHECKPOINT = _HEAD_STAYS_BACK.name
+_HEAD_STAYS_BACK_RANGE_KEY = _HEAD_STAYS_BACK.metric
 
 
 def _score_within_range(observed: float, low: float, high: float) -> float:
@@ -235,7 +248,7 @@ def evaluate_tempo(
         message=message,
         percentile=pct,
         population_n=population_n,
-        one_sided=False,
+        one_sided=_TEMPO.one_sided,
     )
 
 
@@ -297,7 +310,7 @@ def evaluate_head_sway(
         message=message,
         percentile=pct,
         population_n=population_n,
-        one_sided=True,
+        one_sided=_HEAD_SWAY.one_sided,
     )
 
 
@@ -362,7 +375,7 @@ def evaluate_finish_balance(
         message=message,
         percentile=pct,
         population_n=population_n,
-        one_sided=True,
+        one_sided=_FINISH_BALANCE.one_sided,
     )
 
 
@@ -437,7 +450,7 @@ def evaluate_hip_sway(
         message=message,
         percentile=pct,
         population_n=population_n,
-        one_sided=False,
+        one_sided=_HIP_SWAY.one_sided,
     )
 
 
@@ -505,7 +518,7 @@ def evaluate_hip_shift_at_top(
         message=message,
         percentile=pct,
         population_n=population_n,
-        one_sided=True,
+        one_sided=_HIP_SHIFT_AT_TOP.one_sided,
     )
 
 
@@ -606,5 +619,5 @@ def evaluate_head_stays_back(
         message=message,
         percentile=pct,
         population_n=population_n,
-        one_sided=False,
+        one_sided=_HEAD_STAYS_BACK.one_sided,
     )

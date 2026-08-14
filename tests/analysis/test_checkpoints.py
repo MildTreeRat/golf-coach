@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from conftest import make_swing
 
+from golf_coach.analysis.benchmarks import resolve_range
 from golf_coach.analysis.checkpoints import (
+    CHECKPOINT_EVALUATORS,
     evaluate_finish_balance,
     evaluate_head_sway,
     evaluate_hip_shift_at_top,
@@ -15,8 +17,11 @@ from golf_coach.analysis.checkpoints.mechanics import (
     _ADDRESS_SAMPLE_MIN_FRAMES,
     _address_sample_bounds,
 )
+from golf_coach.analysis.measure import POSE_MEASUREMENTS
 from golf_coach.analysis.phases import segment_phases
 from golf_coach.analysis.smoothing import smooth_keypoints
+from golf_coach.contracts.checkpoints import CHECKPOINT_REGISTRY
+from golf_coach.contracts.intent import ClubCategory
 from golf_coach.contracts.keypoints import FrameKeypoints, PoseLandmark
 from golf_coach.contracts.swing import SwingPhase
 
@@ -412,3 +417,48 @@ def test_tempo_is_dropped_when_the_boundary_was_only_estimated() -> None:
     # Posture still scores — it only needs the boundary to place a window, not to divide by.
     smoothed = smooth_keypoints(moving)
     assert evaluate_head_sway(smoothed, phases) is not None
+
+
+def test_every_registered_checkpoint_has_an_evaluator_and_a_band() -> None:
+    """The pin that catches a checkpoint added to the registry and nowhere else.
+
+    `contracts.checkpoints` is now the single declaration of which checkpoints exist, which only
+    helps if the three things a name has to line up with — an evaluator, a measurement, and a
+    benchmark band — are checked against it rather than assumed. Adding a spec without a band is
+    the specific mistake that would otherwise ship a checkpoint that silently lands in `unscored`
+    on every swing (ADR-010 §2 makes it return `None`, so nothing else would complain).
+    """
+    for spec in CHECKPOINT_REGISTRY:
+        assert spec.name in CHECKPOINT_EVALUATORS, (
+            f"{spec.name} is registered but has no evaluator bound in "
+            "analysis.checkpoints.CHECKPOINT_EVALUATORS"
+        )
+        assert spec.metric in POSE_MEASUREMENTS, (
+            f"{spec.name} judges {spec.metric}, which nothing measures"
+        )
+        assert resolve_range(spec.metric, ClubCategory.ALL) is not None, (
+            f"{spec.name} has no band in benchmarks/ranges.json, so it would be unscored on "
+            "every swing"
+        )
+
+    assert set(CHECKPOINT_EVALUATORS) == {spec.name for spec in CHECKPOINT_REGISTRY}, (
+        "an evaluator is bound to a name that is not registered — the engine walks the registry, "
+        "so it would never be called"
+    )
+
+
+def test_band_shape_agrees_with_the_registry() -> None:
+    """`one_sided` is a claim about the band, so the band is what it gets checked against.
+
+    A one-sided band is `[0, high]` — only overshoot is judged. The flag rides out on every
+    `CheckpointScore` and `caveats.py` builds the "less is not better" warning by partitioning on
+    it, so a spec that disagreed with its own band would teach a model the wrong direction for a
+    checkpoint. The ADR-010 addendum of 2026-08-12 is the rule these encode.
+    """
+    for spec in CHECKPOINT_REGISTRY:
+        band = resolve_range(spec.metric, ClubCategory.ALL)
+        assert band is not None
+        assert spec.one_sided == (band.low == 0.0), (
+            f"{spec.name} is registered one_sided={spec.one_sided} but its band is "
+            f"[{band.low}, {band.high}]"
+        )

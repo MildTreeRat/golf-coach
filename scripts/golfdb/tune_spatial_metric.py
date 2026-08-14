@@ -71,8 +71,8 @@ def _quantile(values: list[float], q: float) -> float:
 def _measure_all(frames, phases) -> dict[str, float]:
     """Every registered metric on one clip, skipping the ones that could not be measured."""
     out: dict[str, float] = {}
-    for name, measure in POSE_MEASUREMENTS.items():
-        value = measure(frames, phases)
+    for name, pose in POSE_MEASUREMENTS.items():
+        value = pose.measure(frames, phases)
         if value is not None:
             out[name] = value
     return out

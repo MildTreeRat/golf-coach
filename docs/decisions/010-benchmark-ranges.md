@@ -244,7 +244,8 @@ undoing a measurement, not a preference.
   checkpoints now dilute one failing one. That is the coupling the 2026-08-01 addendum flagged in a
   different form: panel membership, like band width, changes every score computed against it.
 - **`one_sided` is now load-bearing for readers, not just for `feedback`.** With `tempo_ratio` and
-  `hip_sway_norm` both two-sided, "a low percentile is good" is wrong on two of five checkpoints.
+  `hip_sway_norm` both two-sided, "a low percentile is good" is wrong on every two-sided
+  checkpoint — which ones those are is `CHECKPOINT_REGISTRY`, not a count stated here.
   `contracts/caveats.py` says so explicitly, because an LLM handed a low number will otherwise
   congratulate the golfer for it.
 - **`head_hip_offset_impact_norm` stays unpromoted.** Its band exists and its ratio is 7.6, but the

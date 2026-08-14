@@ -1,12 +1,19 @@
 # Documentation map
 
-38 markdown documents: 31 in `docs/` — 11 here at the top level (including this map), 17 ADRs,
-3 archived — plus 7 outside it (the three at the repo root, and one each in `data/` and
-`frontend/`, two in `spikes/`). This page says which one to read, and — just as importantly —
-which ones are records of the past rather than descriptions of the present.
+42 markdown documents: 34 in `docs/` — 13 here at the top level (including this map), 17 ADRs,
+3 archived, 1 in `proposals/` — plus 8 outside it (the four at the repo root, and one each in
+`data/` and `frontend/`, two in `spikes/`). This page says which one to read, and — just as
+importantly — which ones are records of the past rather than descriptions of the present.
 
 *(The breakdown is spelled out so the count can be checked rather than trusted — `git ls-files
-'*.md'` — because a bare number here has gone stale twice.)*
+'*.md' ':!.claude'` — because a bare number here has gone stale twice. It is now pinned by
+`tests/test_docs_truth.py` rather than left to discipline. `.claude/` is excluded because the
+agent and slash-command definitions in it are harness configuration, not documentation — nothing
+here routes to them.)*
+
+**Start with [../CLAUDE.md](../CLAUDE.md)**, at the repo root: the invariants, which section of
+which document answers which question, and how much to read for a given kind of change. It is the
+short one, and it is auto-loaded into every Claude session.
 
 **Every doc declares a tier in its first lines:**
 
@@ -15,6 +22,7 @@ which ones are records of the past rather than descriptions of the present.
 | **AS-BUILT** | Describes what exists and runs today | Yes |
 | **TARGET** | Describes the intended design; much is unbuilt | It's a plan, not a measurement |
 | **REFERENCE** | Current design, but records historical numbers by design | Read the design, not the numbers |
+| **FOUNDING** | The charter the project started from | Read the intent, not the specifics |
 | **SUPERSEDED** | Historical record, in `archive/` | No — see the banner for what replaced it |
 
 The one rule that matters: **benchmark bands live in
@@ -34,13 +42,16 @@ Picking the project up cold, in order:
    pipeline diagram; it is the only diagram in the repo that describes reality rather than intent.
 4. **[../ROADMAP.md](../ROADMAP.md)** — read just the *Status at a glance* table, then the
    section for whatever you're working on.
-5. **[../WORKLOG.md](../WORKLOG.md)** — **read the top entry.** This is the best
-   "pick up where I left off" document in the repo: every session records what was done, what
-   surprised, where it was left, and what's blocked. If you read only one doc, read this one.
+5. **[../WORKLOG.md](../WORKLOG.md)** — **read the top entry, and only the top entry.** This is
+   the best "pick up where I left off" document in the repo: every session records what was done,
+   what surprised, where it was left, and what's blocked. It is also append-only across 30-odd
+   sessions and by far the longest file here, so reading it whole costs more than everything else
+   on this list put together and mostly buys history. Top entry, then stop.
 
 Coming back after a break and wanting to *change* something? Read the ADR for the area first —
 several encode decisions that look wrong until you see the measurement behind them (the
-estimator choice, the tempo band, why the panel is three checkpoints and not five).
+estimator choice, the tempo band, why a band edge is asserted only where it clears the
+instrument).
 
 ---
 
@@ -50,11 +61,13 @@ estimator choice, the tempo band, why the panel is three checkpoints and not fiv
 |---|---|---|
 | [ARCHITECTURE.md](ARCHITECTURE.md) | AS-BUILT | What runs today? What's a stub? What's actually persisted? How does one `analyze_swing` call work? |
 | [FLOW.md](FLOW.md) | TARGET | Where is this going? What's blocked on what? The milestone status map, component and deployment views. |
-| [PROJECT_CHARTER.md](PROJECT_CHARTER.md) | Founding | Why does this project exist, what's in and out of scope, what are the risks? Plus how later ADRs sharpened it. |
+| [PROJECT_CHARTER.md](PROJECT_CHARTER.md) | FOUNDING | Why does this project exist, what's in and out of scope, what are the risks? Plus how later ADRs sharpened it. |
+| [CODE_STANDARDS.md](CODE_STANDARDS.md) | AS-BUILT | What rules is code held to here, and — just as importantly — which deliberate choices are *not* violations? Every rule cites a repo precedent or states plainly that it has none yet. |
+| [REFACTOR_LEDGER.md](REFACTOR_LEDGER.md) | AS-BUILT | Has this refactor already been considered and declined? Append-only, one line per decision. Read before proposing a structural change, so the same idea isn't re-litigated. |
 | [M4_ADDRESS_DETECTION.md](M4_ADDRESS_DETECTION.md) | AS-BUILT | How is the address instant found, why is it the weak one (7 frames vs 2 and 1), and why is tempo *dropped* rather than guessed on 14% of clips? |
-| [M5_COACHING_FEEDBACK.md](M5_COACHING_FEEDBACK.md) | AS-BUILT | How are tips ranked and why does ranking need two different signals? Why did the panel stay at three checkpoints? |
+| [M5_COACHING_FEEDBACK.md](M5_COACHING_FEEDBACK.md) | AS-BUILT | How are tips ranked and why does ranking need two different signals? Why was the panel held at three checkpoints for so long, and what unblocked it? |
 | [M4_FUNDAMENTALS_PANEL.md](M4_FUNDAMENTALS_PANEL.md) | REFERENCE | What can face-on 2D pose measure, and what is deferred to a second view / detection / launch monitor? *(Its Findings numbers are superseded.)* |
-| [M4_POSE_BAKEOFF.md](M4_POSE_BAKEOFF.md) | REFERENCE | Has this been tried already? The estimator bake-off, six rejected address signals, the arm-parallel no-go. **782 lines — grep it, don't read it.** |
+| [M4_POSE_BAKEOFF.md](M4_POSE_BAKEOFF.md) | REFERENCE | Has this been tried already? The estimator bake-off, six rejected address signals, the arm-parallel no-go. **The longest doc here — grep it, don't read it.** |
 | [M7_TWO_PHONE_CAPTURE.md](M7_TWO_PHONE_CAPTURE.md) | TARGET | The current live plan: two phones at a sim, seven phases (six built). **Its planning prompts are historical — Phase 6's is actively wrong and bannered.** |
 | [BAY_SESSION_RUNBOOK.md](BAY_SESSION_RUNBOOK.md) | AS-BUILT | Taking the two-phone capture to a real sim: preflight at home, phone settings and why 1080p60, measured timings, and what to check when it doesn't work. *(Failure modes are predicted until the first bay session.)* |
 | [M7_TWO_PHONE_SPIKE.md](M7_TWO_PHONE_SPIKE.md) | REFERENCE | Does phase detection survive down-the-line, does OpenCV decode iPhone HEVC, and does `CAP_PROP_FPS` mean anything on slo-mo? Thresholds committed 2026-08-07; **results pending footage**. |
@@ -63,12 +76,18 @@ estimator choice, the tempo band, why the panel is three checkpoints and not fiv
 `pose_bakeoff_v1.json` is the machine-readable companion to M4_POSE_BAKEOFF, written by
 `scripts/golfdb/bakeoff.py`, which hard-codes the path — leave it in `docs/`.
 
+[`proposals/`](proposals/README.md) is deliberately **not** in the table above. It holds drafts
+written by the `/design` agent, unreviewed until someone reads them; a proposal earns a row here
+only when it is promoted into `docs/` by hand. Nothing on this page routes to a draft, because
+everything on this page is supposed to be trustworthy.
+
 ---
 
 ## Decisions (ADRs)
 
-16 decisions, 13 addenda between them (`grep -c '^#\+ *Addendum' docs/decisions/*.md` — the
-stated total had drifted to 11 and is now checkable the same way the document count is).
+16 decisions, 14 addenda between them (`grep -c '^#\+ *Addendum' docs/decisions/*.md` — the
+stated total had drifted to 11, then to 13, and is now pinned by `tests/test_docs_truth.py`
+along with every per-ADR count in the last column).
 **The addenda are where reality corrected the original call**, so a doc's original Decision
 section is not always the final word — the counts below exist so you don't miss them.
 
@@ -83,7 +102,7 @@ section is not always the final word — the counts below exist so you don't mis
 | [007](decisions/007-decouple-software-from-hardware.md) | Software and hardware tracks run in parallel | Accepted | — |
 | [008](decisions/008-project-structure.md) | Project structure & the `contracts/` seam | Accepted | **1** — two modules import *upward* into `api.state` for the tolerant artifact readers, knowingly |
 | [009](decisions/009-swing-scoring-model.md) | Dual-axis scoring with intent-driven policies | Accepted | — |
-| [010](decisions/010-benchmark-ranges.md) | Benchmark ranges as versioned data with provenance | Accepted | **4** — JSON not YAML; two provisional rows; tempo re-sourced from GolfDB; **percentiles ride on `CheckpointScore` but never on the scoring path** |
+| [010](decisions/010-benchmark-ranges.md) | Benchmark ranges as versioned data with provenance | Accepted | **5** — JSON not YAML; two provisional rows; tempo re-sourced from GolfDB; **percentiles ride on `CheckpointScore` but never on the scoring path**; **two hip checkpoints promoted, and a rule for which band edges may be asserted** |
 | [011](decisions/011-camera-synchronization.md) | Camera sync & multi-view 3D fusion | **Partially accepted** | **1** — a second capture tier: hand-held phones can be *aligned* but never *fused* |
 | [012](decisions/012-golfdb-reference-data.md) | GolfDB as a reference-swing source | Accepted | — |
 | [013](decisions/013-clip-relative-detection.md) | Clip-relative detection windows; explicit detection confidence | Accepted | — |

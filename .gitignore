@@ -37,6 +37,10 @@ frontend/dist/
 .idea/
 *.swp
 
+# Claude Code: shared settings are tracked in .claude/settings.json; the .local. file is
+# per-machine (scratchpad paths, one-off approvals) and is nobody else's business.
+.claude/settings.local.json
+
 # OS
 .DS_Store
 Thumbs.db

@@ -1,5 +1,7 @@
 # M5: Prioritised coaching feedback (pose-only)
 
+> **Tier: AS-BUILT.** The ranking below is what `feedback/rules.py` does today.
+
 **Status**: implemented and verified, 2026-08-04
 **Decisions**: [ADR-009](decisions/009-swing-scoring-model.md) (scoring model),
 [ADR-010](decisions/010-benchmark-ranges.md) + its 2026-08-04 addendum (percentiles),

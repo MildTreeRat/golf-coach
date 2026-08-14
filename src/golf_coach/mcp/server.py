@@ -195,7 +195,7 @@ def _add_career_tools(server: MCPServer, sessions_dir: Path, golfers_dir: Path) 
     is not more data (there still is not any) but the per-(metric, claim) guard behind them: a claim
     the `n` cannot support arrives absent, so the confident voice has nothing to say.
 
-    `get_shot_trends` keeps its name though it now covers the six pose metrics as well as the two
+    `get_shot_trends` keeps its name though it now covers the seven pose metrics as well as the two
     launch-monitor ones. The description says so, because a model picks a tool by reading that and
     not by reading a changelog.
     """

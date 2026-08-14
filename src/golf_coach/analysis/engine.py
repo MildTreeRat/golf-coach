@@ -18,30 +18,14 @@ from golf_coach.analysis.alignment import (
     anchors_from_keypoints,
     anchors_from_phases,
 )
-from golf_coach.analysis.checkpoints import (
-    FINISH_BALANCE_CHECKPOINT,
-    HEAD_STAYS_BACK_CHECKPOINT,
-    HEAD_SWAY_CHECKPOINT,
-    HIP_SHIFT_AT_TOP_CHECKPOINT,
-    HIP_SWAY_CHECKPOINT,
-    TEMPO_CHECKPOINT,
-    evaluate_finish_balance,
-    evaluate_head_stays_back,
-    evaluate_head_sway,
-    evaluate_hip_shift_at_top,
-    evaluate_hip_sway,
-    evaluate_tempo,
-)
-from golf_coach.analysis.measure import (
-    POSE_MEASUREMENT_DETAIL,
-    POSE_MEASUREMENT_UNIT,
-    POSE_MEASUREMENTS,
-)
+from golf_coach.analysis.checkpoints import CHECKPOINT_EVALUATORS
+from golf_coach.analysis.measure import POSE_MEASUREMENTS
 from golf_coach.analysis.phases import segment_phases
 from golf_coach.analysis.scoring import policy_for
 from golf_coach.analysis.shot_measure import SHOT_MEASUREMENTS
 from golf_coach.analysis.smoothing import smooth_keypoints
 from golf_coach.contracts.alignment import AlignmentQuality, SwingAnchors
+from golf_coach.contracts.checkpoints import CHECKPOINT_REGISTRY
 from golf_coach.contracts.detections import FrameDetections
 from golf_coach.contracts.golfer import Handedness
 from golf_coach.contracts.intent import PracticeGoal
@@ -74,17 +58,17 @@ def _measurements(
     """
     out: list[Measurement] = []
 
-    for name, measure in POSE_MEASUREMENTS.items():
-        value = measure(smoothed, phases)
+    for name, pose in POSE_MEASUREMENTS.items():
+        value = pose.measure(smoothed, phases)
         if value is None:
             continue
         out.append(
             Measurement(
                 name=name,
                 value=round(value, 4),
-                unit=POSE_MEASUREMENT_UNIT[name],
+                unit=pose.unit,
                 source="pose:face_on",
-                detail=POSE_MEASUREMENT_DETAIL[name],
+                detail=pose.detail,
             )
         )
 
@@ -145,28 +129,24 @@ def analyze_swing(
     # landmarks, or a boundary that was estimated rather than detected (ADR-010 §2, ADR-013). That
     # is right, but a dropped score still has to be *reported*: `overall_score` is a mean over
     # whatever survived, so a two-checkpoint swing and a three-checkpoint swing otherwise print the
-    # same number with nothing to distinguish them. Carrying the name alongside each call is what
-    # lets `unscored` say which one went missing.
+    # same number with nothing to distinguish them. Walking the registry is what lets `unscored`
+    # say which one went missing — the name comes off the spec, so it cannot disagree with the
+    # `CheckpointScore` the same spec's evaluator produced.
+    #
+    # Registry order is the reported order (`contracts.checkpoints` says so), and every evaluator is
+    # called through the one adapted signature, so the two that read a narrower set of arguments —
+    # tempo takes no keypoints, `head_stays_back` is the only one that needs handedness — do not
+    # each need a line here.
     mechanics: list[CheckpointScore] = []
     unscored: list[str] = []
-    for name, checkpoint in (
-        (TEMPO_CHECKPOINT, evaluate_tempo(phases, club=intent.club)),
-        (HEAD_SWAY_CHECKPOINT, evaluate_head_sway(smoothed, phases, club=intent.club)),
-        (FINISH_BALANCE_CHECKPOINT, evaluate_finish_balance(smoothed, phases, club=intent.club)),
-        (HIP_SWAY_CHECKPOINT, evaluate_hip_sway(smoothed, phases, club=intent.club)),
-        (
-            HIP_SHIFT_AT_TOP_CHECKPOINT,
-            evaluate_hip_shift_at_top(smoothed, phases, club=intent.club),
-        ),
-        (
-            HEAD_STAYS_BACK_CHECKPOINT,
-            evaluate_head_stays_back(smoothed, phases, handedness, club=intent.club),
-        ),
-    ):
+    for spec in CHECKPOINT_REGISTRY:
+        checkpoint = CHECKPOINT_EVALUATORS[spec.name](
+            smoothed, phases, handedness, intent.club, None
+        )
         if checkpoint is not None:
             mechanics.append(checkpoint)
         else:
-            unscored.append(name)
+            unscored.append(spec.name)
 
     # Pose-only PoC: no outcome checkpoints yet (needs M2 detection / M3 shot data).
     outcome: list[CheckpointScore] = []

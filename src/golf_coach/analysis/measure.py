@@ -50,6 +50,7 @@ Pure functions, stdlib + contracts only (ADR-008).
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import NamedTuple
 
 from golf_coach.analysis.stats import percentile
 from golf_coach.contracts.keypoints import FrameKeypoints, PoseLandmark
@@ -448,7 +449,28 @@ def measure_finish_balance(
     return percentile(drifts, FINISH_DRIFT_QUANTILE) / width
 
 
-#: Name -> measure function, for everything derived from face-on pose over a full swing.
+class PoseMeasurement(NamedTuple):
+    """How to take one pose measurement, and what the resulting number is.
+
+    Was three dicts keyed by the same seven names — the function, the unit and the detail string —
+    which is three places to edit and two chances to add a metric that measures fine and then
+    stores with the wrong unit. Nothing enforced that they agreed except a test asserting their key
+    sets matched, which caught a missing entry but never a misaligned one.
+
+    Unpacks positionally as `(measure, unit, detail)`, which is the shape `shot_measure`'s registry
+    already had, so the engine really does build both families the same way.
+    """
+
+    #: Takes the smoothed frames and the phase segmentation, returns the number or `None`.
+    measure: MeasureFn
+    #: Goes onto `Measurement.unit`.
+    unit: str
+    #: How the measurement is taken, carried onto `Measurement.detail` so a stored number can be
+    #: re-derived or re-normalized later without reading this module.
+    detail: str
+
+
+#: Name -> how to measure it, for everything derived from face-on pose over a full swing.
 #:
 #: The registry is the point: `derive_pose_metrics.py` iterates it instead of hardcoding metric
 #: names (it hardcoded two, in three places), and `tune_spatial_metric.py` scores whatever is in
@@ -456,41 +478,46 @@ def measure_finish_balance(
 #:
 #: Names ending `_norm` are shoulder-width-normalized, which `derive_reference.py` keys on to
 #: recommend a one-sided band. `tempo_ratio` is deliberately outside that convention.
-POSE_MEASUREMENTS: dict[str, MeasureFn] = {
-    "tempo_ratio": lambda frames, phases: measure_tempo_ratio(phases),
-    "head_sway_norm": measure_head_sway,
-    "finish_balance_norm": measure_finish_balance,
-    "hip_sway_norm": measure_hip_sway,
-    "hip_shift_at_top_norm": measure_hip_shift_at_top,
-    "head_hip_offset_impact_norm": measure_head_hip_offset_impact,
-    "head_hip_gain_norm": measure_head_hip_gain,
-}
-
-#: How each measurement is taken, carried onto `Measurement.detail` so a stored number can be
-#: re-derived or re-normalized later without reading this module.
-POSE_MEASUREMENT_DETAIL = {
-    "tempo_ratio": "backswing:downswing time, from phase instants; frame rate cancels",
-    "head_sway_norm": "|dx| of ear midpoint, address window -> impact window",
-    "finish_balance_norm": "p90 hip-center drift through follow-through",
-    "hip_sway_norm": "|dx| of hip midpoint, address window -> impact window",
-    "hip_shift_at_top_norm": "|dx| of hip midpoint, address window -> transition window",
-    "head_hip_offset_impact_norm": (
+#:
+#: Not every metric here is judged. A name gains a checkpoint by appearing in
+#: `contracts.checkpoints.CHECKPOINT_REGISTRY` and a band in `benchmarks/ranges.json`; until then
+#: it is measured and stored and nothing else, which is the order M6.5 exists to allow.
+POSE_MEASUREMENTS: dict[str, PoseMeasurement] = {
+    "tempo_ratio": PoseMeasurement(
+        lambda frames, phases: measure_tempo_ratio(phases),
+        "ratio",
+        "backswing:downswing time, from phase instants; frame rate cancels",
+    ),
+    "head_sway_norm": PoseMeasurement(
+        measure_head_sway,
+        "shoulder_widths",
+        "|dx| of ear midpoint, address window -> impact window",
+    ),
+    "finish_balance_norm": PoseMeasurement(
+        measure_finish_balance,
+        "shoulder_widths",
+        "p90 hip-center drift through follow-through",
+    ),
+    "hip_sway_norm": PoseMeasurement(
+        measure_hip_sway,
+        "shoulder_widths",
+        "|dx| of hip midpoint, address window -> impact window",
+    ),
+    "hip_shift_at_top_norm": PoseMeasurement(
+        measure_hip_shift_at_top,
+        "shoulder_widths",
+        "|dx| of hip midpoint, address window -> transition window",
+    ),
+    "head_hip_offset_impact_norm": PoseMeasurement(
+        measure_head_hip_offset_impact,
+        "shoulder_widths",
         "signed (head - hips) dx over the impact window; + is image-right, camera-frame — "
-        "carries a static camera bias, see head_hip_gain_norm"
+        "carries a static camera bias, see head_hip_gain_norm",
     ),
-    "head_hip_gain_norm": (
+    "head_hip_gain_norm": PoseMeasurement(
+        measure_head_hip_gain,
+        "shoulder_widths",
         "change in signed (head - hips) dx, address window -> impact window, one shared "
-        "shoulder-width ruler; + is image-right, camera-frame, handedness resolved when judged"
+        "shoulder-width ruler; + is image-right, camera-frame, handedness resolved when judged",
     ),
-}
-
-#: Unit per measurement, for `Measurement.unit`.
-POSE_MEASUREMENT_UNIT = {
-    "tempo_ratio": "ratio",
-    "head_sway_norm": "shoulder_widths",
-    "finish_balance_norm": "shoulder_widths",
-    "hip_sway_norm": "shoulder_widths",
-    "hip_shift_at_top_norm": "shoulder_widths",
-    "head_hip_offset_impact_norm": "shoulder_widths",
-    "head_hip_gain_norm": "shoulder_widths",
 }
