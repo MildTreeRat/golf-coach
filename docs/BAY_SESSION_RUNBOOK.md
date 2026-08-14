@@ -236,3 +236,69 @@ locked and its thresholds pre-committed, and is waiting only on footage.**
 M7's exit criteria, for reference: one bay session where every swing assembles from the right two
 clips, the aligned side-by-side video's IMPACT banners land together in both panels, and shot data
 attaches to the correct swing.
+
+---
+
+## 8. Optional: the M1.5 fast-shutter test
+
+**This is the one open question M1.5 left**, and it is the only thing that can reopen club
+tracking. [ADR-017](decisions/017-club-head-detection-strategy.md) closed M1.5 as a no-go because
+the club head smears 600–980 px at impact under the bay's own light — a translucent band with
+nothing to draw a box around. The spike could not test the remedy, because no fast-shutter clip
+exists. **One clip settles it**, and the whole thing takes ten minutes.
+
+It is a *separate deliberate capture*, not a change to the per-swing loop in §4. Keep the routine
+swings at 1080p60 for the reasons in §1; shoot these few clips differently and on purpose.
+
+### Bring
+
+- **Neewer MS60B** (65W COB, 40,000 lux @ 1 m, rated flicker-free to 1/2000 s) + **2× NP-F970**
+  batteries + a light stand. Battery rather than mains on purpose: no cable across a bay floor,
+  nothing to trip over, nothing to ask permission for.
+- **Blackmagic Camera** (free, iOS) installed and opened once *before* you go. The stock Camera
+  app cannot set a shutter speed, and without a forced shutter **the light changes nothing** —
+  you get a brighter video with exactly the same smear.
+
+### Set up
+
+- **Light ~2 m from the ball**, off the swing arc and out of any shank line. Two metres, not
+  three: on battery the MS60B is power-limited to 48 W (33 W on a single cell), so it gives
+  ~29,500 lux rather than 40,000, and 2 m is where that still buys ISO 100–200 at 1/2000 s.
+- **Reflector on, no softbox.** Diffusion costs 2–3 stops, and hard light is *better* here — it
+  sharpens the club head's edges rather than wrapping them.
+- **Run the light at or near 100%.** Do not dim it to taste. PWM duty cycles get razor-thin when
+  dimmed and that is exactly when banding shows up at a fast shutter. Control exposure with ISO
+  and distance instead.
+- Ask the facility first. A light stand in a bay is somebody's liability question.
+
+### Shoot
+
+Face-on phone, **4K60** (not 1080p — at 1080p the club head is ~21 px and the whole judgement
+sits on the 20 px floor), Blackmagic Camera, **shutter 1/2000 s**, ISO starting at 400, focus and
+white balance **locked** so they cannot hunt mid-swing.
+
+1. One **control** clip at the app's automatic settings, same framing. Without it there is
+   nothing to compare against.
+2. **Three to five swings** at 1/2000 s.
+3. Glance at one clip on the phone for **horizontal banding**. If it is there: light to 100%, and
+   nudge the shutter (1/1920, 1/2048) — banding is a beat between the shutter and the light's PWM
+   frequency, not a fault in either.
+
+### The bar, which was set before any of this
+
+From `spikes/club-head-detectability/thresholds.md`, unchanged: **the club head is localizable as
+a bounded object, short axis ≥20 px, in ≥3 consecutive frames of the impact window.** Do not
+renegotiate it after seeing the frames — that is the whole point of having written it down first.
+
+### Back at the desk
+
+Add the clip as a row in `SWINGS` in `spikes/club-head-detectability/probe.py`, then:
+
+```bash
+.venv/Scripts/python.exe spikes/club-head-detectability/probe.py measure
+.venv/Scripts/python.exe spikes/club-head-detectability/probe.py frames --swing <new> --pad 4
+```
+
+The harness runs against new footage unchanged. If the bar is met, ADR-017 reopens and M2's
+labelling effort becomes startable; if it is not, the fusion + interpolation path stands and the
+answer cost one session and one light instead of 500 labelled images.
