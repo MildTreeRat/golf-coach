@@ -253,8 +253,10 @@ swings at 1080p60 for the reasons in §1; shoot these few clips differently and 
 ### Bring
 
 - **Neewer MS60B** (65W COB, 40,000 lux @ 1 m, rated flicker-free to 1/2000 s) + **2× NP-F970**
-  batteries + a light stand. Battery rather than mains on purpose: no cable across a bay floor,
-  nothing to trip over, nothing to ask permission for.
+  batteries + a light stand — chosen in [ADR-018](decisions/018-bay-lighting.md), where the
+  rejected alternatives and the reason that one spec decided it are recorded. Battery rather than
+  mains on purpose: no cable across a bay floor, nothing to trip over, nothing to ask permission
+  for.
 - **Blackmagic Camera** (free, iOS) installed and opened once *before* you go. The stock Camera
   app cannot set a shutter speed, and without a forced shutter **the light changes nothing** —
   you get a brighter video with exactly the same smear.

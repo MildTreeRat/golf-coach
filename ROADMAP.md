@@ -47,8 +47,11 @@ the bay's 1/60 s exposure, and put the requirement at **~1/2000 s**, which is on
 **30x more light** than the bay currently gives. Shutter *type* does not enter that calculation;
 exposure *duration* is all of it. So the M2 purchase is **lighting first**, evaluated against
 minimum exposure and lux — a global-shutter camera in the current light still records a smear.
-See [ADR-017](docs/decisions/017-club-head-detection-strategy.md). Everything else above either
-needs nothing, or needs work rather than money.
+See [ADR-017](docs/decisions/017-club-head-detection-strategy.md), and
+[ADR-018](docs/decisions/018-bay-lighting.md) for what was bought and why: one 65 W COB rated
+flicker-free at 1/2000 s, ~$200, to answer the question rather than to build a rig. The test it
+buys is written up in [BAY_SESSION_RUNBOOK.md §8](docs/BAY_SESSION_RUNBOOK.md). Everything else
+above either needs nothing, or needs work rather than money.
 
 **Oldest unstarted item:** M7 Phase 0's field spike — and it needs a bay, not a decision.
 (M1.5 held this slot until 2026-08-14, when it turned out to be answerable from footage already
@@ -1020,7 +1023,7 @@ Needs a purchase, or needs hardware in hand to re-check a provisional choice.
 
 ## Milestone 2: Club & Ball Detection
 **Goal**: Detect and track club head and ball through the swing using a fine-tuned model.
-**Hardware to start**: **lighting, not a camera** — M1.5 measured the requirement at ~1/2000 s, about 30x the bay's present light. A global-shutter camera in the current light still records a smear (ADR-003's 2026-08-14 addendum). Scaffolding and labeling workflow can be built earlier on sample frames.
+**Hardware to start**: **lighting, not a camera** — M1.5 measured the requirement at ~1/2000 s, which is 5 stops below the bay's present exposure and needs roughly 4–10x more light *on the ball* (less than ADR-017's "30x", which held ISO constant). A global-shutter camera in the current light still records a smear (ADR-003's 2026-08-14 addendum). The light chosen and why: [ADR-018](docs/decisions/018-bay-lighting.md). Scaffolding and labeling workflow can be built earlier on sample frames.
 **Why this exists**: MediaPipe tracks the *body* only (it has no concept of a club). YOLOv8 is what detects the club head + ball, and feeding its detections through a tracker (ByteTrack) produces the visual **club-path arc** — the swing path overlaid on the replay. This is also the one model we train ourselves (ADR-005).
 **Gated on M1.5 — which has now reported, and the answer reshapes this milestone.** The spike ran 2026-08-14 and returned **no-go on pure ML and no-go on marker-assisted**, because the club head is destroyed by exposure time rather than by anything a detector or a marker addresses ([ADR-017](docs/decisions/017-club-head-detection-strategy.md)). **Do not start the labeling effort below.** The tasks as written assume the pure-ML path; the chosen interim direction is fusion + interpolation, which needs none of them and produces a *modelled* club path that must be surfaced as modelled. The labelling tasks become startable again only if a fast-shutter capture test passes — one clip settles it.
 
