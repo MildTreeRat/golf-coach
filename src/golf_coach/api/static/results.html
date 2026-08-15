@@ -41,6 +41,31 @@
   .coach p { margin: 0 0 0.6rem; }
   .coach p:last-child { margin-bottom: 0; }
   .coach .by { font-size: 0.75rem; opacity: 0.7; margin-bottom: 0.5rem; }
+  /* Follow-ups (ADR-020). Shares `.coach`'s tint on purpose — both are written prose from the
+     same model, and the distinction that matters on this page is prose vs. measurement, not
+     paragraph vs. conversation. The question bubbles are plain so the golfer's own words never
+     look like something the system asserted. */
+  .ask { margin-top: 0.5rem; }
+  .ask .turn { font-size: 0.9rem; margin-bottom: 0.6rem; }
+  .ask .turn.you { opacity: 0.75; }
+  .ask .turn.you .who { font-weight: 600; }
+  .ask .turn.coach { background: rgba(90,120,200,0.12);
+                     border: 1px solid rgba(90,120,200,0.35);
+                     border-radius: 8px; padding: 0.6rem 0.75rem; }
+  .ask .turn p { margin: 0 0 0.5rem; }
+  .ask .turn p:last-child { margin-bottom: 0; }
+  .ask .who { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em;
+              opacity: 0.65; display: block; margin-bottom: 0.15rem; }
+  .ask form { display: flex; gap: 0.4rem; margin-top: 0.6rem; }
+  .ask input { flex: 1; min-width: 0; font: inherit; font-size: 0.9rem; padding: 0.45rem 0.55rem;
+               border: 1px solid rgba(128,128,128,0.45); border-radius: 6px;
+               background: transparent; color: inherit; }
+  .ask button { font: inherit; font-size: 0.9rem; padding: 0.45rem 0.8rem; border-radius: 6px;
+                border: 1px solid rgba(128,128,128,0.45); background: transparent;
+                color: inherit; cursor: pointer; }
+  .ask button[disabled] { opacity: 0.5; cursor: default; }
+  .ask .tools { font-size: 0.7rem; opacity: 0.55; font-family: ui-monospace, monospace;
+                margin-bottom: 0.3rem; }
   /* Against your own history. Visually a sibling of the measurements table it sits under, not of
      the checkpoint table above it: a personal center is not a band, and nothing here is scored. */
   .hist { font-size: 0.85rem; }
@@ -177,8 +202,10 @@ function render(payload) {
   parts.push(measurementsBlock(swing));
   parts.push(`<div id="history"></div>`);
   parts.push(videoBlock(analysis, result));
+  parts.push(askBlock());
 
   root.innerHTML = parts.join("");
+  wireAsk();
 }
 
 function header(payload) {
@@ -251,6 +278,80 @@ function coachBlock(feedback) {
   return `<h2>Coach</h2><div class="coach">
     <p class="by">Written by ${esc(prov.model)} from the measured numbers on this page —
       not itself a measurement.</p>${paras}</div>`;
+}
+
+// M6 follow-ups (ADR-020). The conversation lives on the server — this holds only the id, so a
+// reload or a second phone picks the same thread back up rather than starting a parallel one.
+let conversationId = null;
+
+function askBlock() {
+  return `<h2>Ask about this swing</h2><div class="ask">
+    <div id="askTurns"></div>
+    <form id="askForm">
+      <input id="askInput" type="text" autocomplete="off"
+             placeholder="why is my tempo quick?" aria-label="Ask about this swing" />
+      <button type="submit">Ask</button>
+    </form>
+    <p class="muted" id="askNote"></p>
+  </div>`;
+}
+
+function turnHtml(role, text) {
+  const who = role === "user" ? "you" : "coach";
+  const paras = String(text).split(/\n\s*\n/)
+    .map((p) => p.trim()).filter(Boolean)
+    .map((p) => `<p>${esc(p)}</p>`).join("");
+  return `<div class="turn ${who}"><span class="who">${who}</span>${paras}</div>`;
+}
+
+function wireAsk() {
+  const form = document.getElementById("askForm");
+  if (!form) return;
+  const input = document.getElementById("askInput");
+  const turns = document.getElementById("askTurns");
+  const note = document.getElementById("askNote");
+  const button = form.querySelector("button");
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const question = input.value.trim();
+    if (!question) return;
+
+    // Render the question immediately, then lock the form. A turn takes several seconds — the
+    // model makes tool calls between round trips — and a second submit mid-flight would start a
+    // parallel turn against the same transcript.
+    turns.insertAdjacentHTML("beforeend", turnHtml("user", question));
+    input.value = "";
+    input.disabled = button.disabled = true;
+    note.textContent = "Thinking…";
+
+    try {
+      const res = await fetch(
+        `/api/sessions/${encodeURIComponent(sessionId)}/swings/${encodeURIComponent(swingId)}/ask`,
+        {
+          method: "POST",
+          headers: { ...authHeaders(), "Content-Type": "application/json" },
+          body: JSON.stringify({ question, conversation_id: conversationId }),
+        });
+      if (!res.ok) throw new Error(`server said ${res.status}`);
+      const body = await res.json();
+      conversationId = body.conversation_id || conversationId;
+      if (body.tools_called && body.tools_called.length) {
+        turns.insertAdjacentHTML("beforeend",
+          `<p class="tools">looked up: ${esc(body.tools_called.join(", "))}</p>`);
+      }
+      if (body.text) turns.insertAdjacentHTML("beforeend", turnHtml("assistant", body.text));
+      // A note is the expected-failure channel, not an error: no key, a rate limit, an answer
+      // that ran out of steps. It sits under the form rather than in the thread, because it is
+      // about the request rather than something the coach said.
+      note.textContent = body.note || "";
+    } catch (err) {
+      note.textContent = `Could not ask: ${err.message}`;
+    } finally {
+      input.disabled = button.disabled = false;
+      input.focus();
+    }
+  });
 }
 
 const SHOT_FIELDS = [

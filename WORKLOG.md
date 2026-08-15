@@ -5,6 +5,78 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-08-15 — The conversation that refused to average two sessions (M6 closed, ADR-020)
+
+**Duration**: ~1 session. One ADR, one addendum to another, one new subsystem, 70 pins, and the
+last desk-work item on the board.
+**What prompted it**: "what's the next thing to work on" — and for once both boards already
+agreed. `ROADMAP.md`'s NEXT ACTION and this log's top entry named the same item.
+
+**M6 is done.** A golfer can now ask follow-up questions about a swing, from the terminal
+(`scripts/ask_swing.py`) or from a chat panel on the results page. The conversation seeds from the
+swing's own stored brief — the same `build_brief` the coaching paragraph is written from, so the
+two cannot describe one swing differently — and looks everything else up through the same eight
+tools the MCP server offers external clients. **Called in-process, not over stdio**: that round
+trip exists for Claude Desktop and Claude Code, and re-paying it to reach functions already
+importable buys nothing.
+
+**The acceptance test was never going to be a test.** Asked "is that worse than last session?"
+against the two swings on disk, it answered: *"The comparison tool withheld every per-metric mean,
+tempo included: it needs 8 swings in a session to state a typical tempo and each of these had
+one."* That is the whole point. The withheld figure sits in the payload next to the per-session
+counts that justify withholding it, the arithmetic is trivial, and nothing in a JSON document can
+stop a model doing it — `READING_A_PERSONAL_HISTORY` saying so is the only control that exists,
+and it held. It also volunteered that the 8/09 session contributes no samples because its clip is
+a byte-identical re-upload, which is `duplicates_collapsed` explaining itself unprompted.
+
+**It refused the causal question too**, which was not asked of it: *"this data can't tell you why —
+it measures the ratio, not the cause… any cause I named would be invented."* No spine angle, no
+hip rotation, no swing plane, no club path. The one figure that looked like an invention — "your
+downswing is around 0.38 to 0.42 seconds" — is in the brief's alignment note (0.384s and 0.417s),
+correctly attributed to the two views agreeing.
+
+**A transcript stores the model's own blocks verbatim, and that is load-bearing rather than
+lazy.** Thinking is on by default on `claude-opus-5`, thinking blocks are only legal replayed
+*unchanged*, and only into the model that produced them. So `Transcript.model` is a replay guard:
+resuming under a changed `coaching_model` reseeds instead of replaying. Without it the failure is a
+400 on turn three of a conversation that worked twice, long after the config moved. Turn three was
+run live to prove the replay: it worked.
+
+**The seam that took the most thought was prose, not code.** A model picks a tool by reading its
+description and nothing else, and there were now two adapters needing the identical eight
+paragraphs. They moved to `contracts/tool_descriptions.py` — the answer `caveats.py` already
+established — and `NotFound` plus its six miss hints moved to `query.py` for the same reason: a
+wrong id has to read as a retry, identically, either way. Both moves verified byte-for-byte
+against HEAD. **The move also closed a gap it did not set out to**: the descriptions were
+unreachable from `test_docs_truth.py` while they lived in a module needing the MCP SDK, and the
+count-claim scan now covers them.
+
+**One trap worth writing down.** `@beta_tool` reads a function's description from `__doc__` **at
+decoration time**. Decorate first and assign `.description` afterwards and you get an empty
+description, no error — a tool the model silently never calls. `_tool()` assigns `__doc__` before
+calling `beta_tool`, and says so.
+
+**Found by running it, not by testing it**: the results page opened with the entire swing brief in
+a bubble labelled as the golfer's own words. The seeded turn is now two content blocks rather than
+one joined string, so `visible_turns` can render the question alone — a block boundary survives a
+rewording of the preamble, and pattern-matching on it would not.
+
+**And ADR-019's pin fired for the first time**, on the full-suite run at the end: `ask_swing.py`
+unwraps the API key for the SDK, which made a fourth `get_secret_value` site. The test named the
+file and pointed at the ADR, which now carries an addendum saying why the site is right. That is
+the friction ADR-019 called the feature, working on its first real exercise.
+
+**Where I left off**: green — 694 tests (70 new), ruff and mypy clean. Five live turns against
+`2026-08-10/2` across CLI and HTTP; three conversations on disk under
+`data/processed/conversations/`.
+
+**The board has no desk work left.** Everything remaining needs a bay session or needs `n`, and
+one bay session is the unblock for both — career mode is built, complete and silent at n=2, and
+every surface over it, now including the conversation, refuses rather than guesses. 20–30 swings
+in one session turns all of them on at once.
+
+---
+
 ## 2026-08-14 — The warning that cried wolf for thirty sessions, and the fade it was hiding
 
 **Duration**: ~1 session. One ADR addendum, twelve pins, one wrong number corrected on disk.

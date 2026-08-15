@@ -34,12 +34,19 @@ from golf_coach.api.state import load_analysis, load_state
 from golf_coach.api.worker import AnalysisWorker, should_analyze
 from golf_coach.config import settings
 from golf_coach.contracts.career import CareerCorpus
+from golf_coach.contracts.conversation import Transcript
 from golf_coach.contracts.golfer import Golfer, Handedness, slugify
 from golf_coach.storage.bundle_store import SwingBundleStore
 from golf_coach.storage.corpus import read_corpus
 from golf_coach.storage.golfer_store import GolferStore
 from golf_coach.storage.manifest import EXPECTED_ROLES, Role
 from golf_coach.storage.session_meta import load_session_meta, set_current_player
+from golf_coach.storage.transcript_store import (
+    load_transcript,
+    new_transcript,
+    save_transcript,
+    visible_turns,
+)
 
 _STATIC_DIR = Path(__file__).parent / "static"
 
@@ -76,6 +83,19 @@ class GolferRequest(BaseModel):
 
     name: str
     handedness: Handedness | None = None
+
+
+class AskRequest(BaseModel):
+    """One follow-up question, from the results page's chat panel. [ADR-020]
+
+    `conversation_id` is absent on the first question and echoed back on every one after it, which
+    is what makes the panel a conversation rather than a series of unrelated asks. The server
+    mints the id; a client-supplied one that names no stored transcript is a 404 rather than a
+    silent new conversation, so a typo cannot quietly lose the thread it was meant to continue.
+    """
+
+    question: str
+    conversation_id: str | None = None
 
 
 def _resolve_golfer(golfers: GolferStore, payload: GolferRequest) -> Golfer:
@@ -477,6 +497,138 @@ def create_app(
             "swing_id": swing_id,
             "queued": True,
             "missing_roles": [role.value for role in manifest.missing_roles()],
+        }
+
+    @app.post("/api/sessions/{session_id}/swings/{swing_id}/ask", dependencies=guard)
+    def ask_about_swing(session_id: str, swing_id: str, payload: AskRequest) -> dict:
+        """Ask a follow-up question about a swing, continuing a conversation if given one.
+
+        **Deliberately `def`, not `async def`.** The tool-runner loop is blocking and takes
+        seconds — several model round trips with tool calls between them. Starlette runs a sync
+        handler in a threadpool, so it cannot stall the event loop, the upload stream or the
+        analysis worker. If turns ever get long enough to risk an HTTP timeout the answer is a
+        background job polled like `AnalysisWorker`; that is a bigger change and deliberately not
+        where this starts (ADR-020).
+
+        Every expected failure is a 200 carrying a `note` — no key, no `llm` extra, a rate limit,
+        a refusal. Coaching is the least important thing that happens to a swing and must never be
+        able to break the page a score is rendered on.
+        """
+        _safe(session_id, "session id")
+        _safe(swing_id, "swing id")
+        question = payload.question.strip()
+        if not question:
+            raise HTTPException(status_code=400, detail="a question is required")
+
+        swing_dir = swing_dir_of(session_id, swing_id)
+        if bundle_store.get_swing(session_id, swing_id) is None:
+            raise HTTPException(status_code=404, detail="no such swing")
+
+        # Imported here rather than at module scope so the server still starts without the `llm`
+        # extra — `tests/api/test_pipeline_imports.py` keeps `app.py` importable without it, and
+        # a missing SDK has to read as "coaching is off", not as a server that will not boot.
+        try:
+            from golf_coach.feedback.conversation import ask
+            from golf_coach.mcp.runner_tools import build_tools
+            from golf_coach.mcp.server import instructions
+        except ImportError:
+            return {
+                "conversation_id": payload.conversation_id,
+                "text": None,
+                "tools_called": [],
+                "note": (
+                    "no answer: the `llm` extra is not installed on the server "
+                    "(pip install -e '.[llm]'). The scores and tips above are unaffected."
+                ),
+            }
+
+        resumed = _resume_or_seed(payload.conversation_id, session_id, swing_id, swing_dir)
+        if resumed is None:
+            raise HTTPException(status_code=404, detail="no such conversation")
+        transcript, brief = resumed
+
+        golfers_dir = golfer_store.root if golfer_store.root.exists() else None
+        outcome = ask(
+            question,
+            transcript=transcript,
+            tools=build_tools(bundle_store.root, _shot_source(), golfers_dir=golfers_dir),
+            briefing=instructions(career_tools=golfers_dir is not None),
+            model=settings.coaching_model,
+            brief=brief,
+            api_key=(
+                settings.anthropic_api_key.get_secret_value()
+                if settings.anthropic_api_key
+                else None
+            ),
+        )
+        if outcome.transcript is not None:
+            save_transcript(outcome.transcript, settings.conversations_dir)
+
+        return {
+            "conversation_id": transcript.conversation_id,
+            "text": outcome.text,
+            "tools_called": outcome.tools_called,
+            "note": outcome.note,
+        }
+
+    def _resume_or_seed(
+        conversation_id: str | None, session_id: str, swing_id: str, swing_dir: Path
+    ) -> tuple[Transcript, str | None] | None:
+        """An existing conversation, or a new one seeded from the swing's stored analysis.
+
+        The brief is `feedback.coach.build_brief` over the same `analysis.json` the coaching
+        paragraph on this page was written from — one rendering, so the conversation and the
+        paragraph above it cannot describe the swing differently. A swing with no analysis yet
+        seeds nothing and the model looks everything up through the tools instead.
+        """
+        from golf_coach.contracts.swing import SwingBundleResult
+        from golf_coach.feedback.coach import build_brief
+
+        if conversation_id:
+            existing = load_transcript(settings.conversations_dir, conversation_id)
+            return (existing, None) if existing is not None else None
+
+        brief: str | None = None
+        stored = load_analysis(swing_dir)
+        if stored is not None:
+            try:
+                brief = build_brief(SwingBundleResult.model_validate(stored))
+            except ValueError:
+                # An older-schema artifact still answers questions through the tools; it just
+                # does not seed. Same tolerance `load_analysis` itself applies one line up.
+                brief = None
+        return (
+            new_transcript(
+                model=settings.coaching_model, session_id=session_id, swing_id=swing_id
+            ),
+            brief,
+        )
+
+    def _shot_source():
+        """The shot reader the conversation's tools use. Built per request, like the CLI's."""
+        from golf_coach.launch_monitor.composite import CompositeShotDataSource
+        from golf_coach.launch_monitor.screen.source import ScreenShotDataSource
+
+        return CompositeShotDataSource([ScreenShotDataSource(settings.shots_dir)])
+
+    @app.get("/api/conversations/{conversation_id}", dependencies=guard)
+    async def conversation_detail(conversation_id: str) -> dict:
+        """One conversation, rendered for display.
+
+        `visible_turns` drops the thinking and tool blocks — a `tool_result` is a JSON payload a
+        golfer has no use for, and the sentence that quoted what mattered from it is the next text
+        block along. The stored blocks are untouched; this is a rendering (ADR-020).
+        """
+        transcript = load_transcript(settings.conversations_dir, conversation_id)
+        if transcript is None:
+            raise HTTPException(status_code=404, detail="no such conversation")
+        return {
+            "conversation_id": transcript.conversation_id,
+            "session_id": transcript.session_id,
+            "swing_id": transcript.swing_id,
+            "model": transcript.model,
+            "updated_at": transcript.updated_at.isoformat(),
+            "turns": visible_turns(transcript),
         }
 
     @app.get("/api/sessions/{session_id}/swings/{swing_id}/video/{name}", dependencies=guard)

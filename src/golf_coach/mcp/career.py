@@ -544,6 +544,35 @@ def _points(baseline: MetricBaseline) -> list[SessionPoint]:
     ]
 
 
+# Every career tool starts by resolving a name to a `player_id`, so every one of them can miss the
+# same way — and the *hint* differs each time, because what to do next differs. Kept here rather
+# than beside `query.py`'s misses for the same reason the shapes are: this module is the one that
+# knows what a golfer is. Two adapters read these (ADR-020), so the prose exists once.
+
+
+def missing_golfer_profile(player: str) -> query.NotFound:
+    return query._missing(
+        f"No golfer matching {player!r} is registered.",
+        "Names are matched loosely (case and punctuation are folded), so this means nobody "
+        "by that name has swings on file yet.",
+    )
+
+
+def missing_golfer_trend(player: str) -> query.NotFound:
+    return query._missing(
+        f"No golfer matching {player!r} is registered.",
+        "Call get_golfer_profile with the name to see whether they have any swings on file.",
+    )
+
+
+def missing_golfer_comparison(player: str) -> query.NotFound:
+    return query._missing(
+        f"No golfer matching {player!r} is registered.",
+        "compare_sessions needs a golfer, because a session's swings can belong to more than "
+        "one person. Call get_golfer_profile to see who is on file.",
+    )
+
+
 def _refusal(withheld: WithheldClaim) -> Refusal:
     return Refusal(
         claim=withheld.claim.value,

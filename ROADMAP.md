@@ -20,7 +20,7 @@ wording; only the grouping and the M4 checklist have been corrected.
 | **M1.5** Detectability spike | ✅ Done *(2026-08-14, **no-go**)* | — (ran on footage already on disk) | [§M1.5](#milestone-15-club-head-detectability-spike-de-risk-before-investing) |
 | **M7** Two-phone sim capture | 🟡 In progress, 6/7 phases (3 trimmed) | Nothing — two iPhones + a sim bay | [§M7](#milestone-7-two-phone-sim-capture-no-hardware-purchase) |
 | **M4** full (outcome axis) | ⬜ Blocked | The M2 + M3 streams | [§M4 full](#milestone-4-full-swing-analysis-engine--the-outcome-axis) |
-| **M6** LLM coaching | 🟡 In progress | Nothing — **live coaching and the MCP handshake are both proven** (2026-08-14); only follow-up questions are left, and they need a transcript store | [§M6](#milestone-6-llm-powered-coaching--in-progress) |
+| **M6** LLM coaching | ✅ Done *(2026-08-15)* | — (live coaching, the MCP handshake and follow-up questions are all proven) | [§M6](#milestone-6-llm-powered-coaching--done) |
 | **M6.5** Measure now, judge later | ✅ Done | — (9 recorded, **6 scored**; the handedness seam landed and the last candidate was settled) | [§M6.5](#m65-measure-now-judge-later--done) |
 | **Career mode** One golfer over time | ✅ Done, 6/6 steps | — (built and silent; a bay session gives it the `n` to speak) | [§Career](#career-mode-one-golfer-tracked-over-time--done-built-and-silent) |
 | **M5** Feedback UI | ⬜ Not started | M7 Phase 5 gives the host | [§M5](#milestone-5-feedback-ui) |
@@ -42,9 +42,21 @@ served live `call_tool` requests including the not-found path. It is registered 
 (`claude mcp add`, per the README) and reports `✔ Connected`, which is a second client completing
 the same handshake independently.
 
-**NEXT ACTION — do this first:** M6's remaining item is *ask follow-up questions about a swing*,
-which needs a transcript store and is a milestone of its own rather than an increment. It is now
-the only desk-work item of any size that is not waiting on a bay.
+**NEXT ACTION — do this first:** *nothing on this board is desk work any more.* M6 closed on
+2026-08-15 with follow-up questions ([ADR-020](docs/decisions/020-conversational-followups.md)),
+which was the last sizeable item that needed neither a bay nor an `n`. What is left divides in
+two, and both halves want the same trip:
+
+- **Needs a bay session**: M7 Phase 0's field spike, M3's remaining OCR work (the profile
+  describes a screen layout the simulator can be configured out of — enumerating that needs the
+  screen in front of you), and M2's lighting/shutter test, which the ADR-018 light was bought for
+  and [BAY_SESSION_RUNBOOK.md §8](docs/BAY_SESSION_RUNBOOK.md) writes up.
+- **Needs `n`**: career mode is complete and silent at n=2, and every surface built on it — the
+  baseline, the dispersion discriminator, the tour join, and now the follow-up conversation —
+  refuses rather than guesses. 20–30 swings in one session is what turns all of them on at once.
+
+So the single highest-value action is **one bay session**, and it unblocks more than any code
+change available. The runbook already sequences it.
 
 *(The smaller item that used to sit here — every shot carrying `screen title 'SHOT DATA' not
 found` — was done on 2026-08-14, and was hiding a wrong number: `spin_axis` was stored with its
@@ -750,7 +762,7 @@ is the client handshake and conversational follow-up.
 
 ---
 
-## Milestone 6: LLM-Powered Coaching — in progress
+## Milestone 6: LLM-Powered Coaching — done
 **Goal**: Use Claude API to generate conversational, context-aware coaching advice.
 
 - [x] **Design prompt template** — `feedback/coach.py`. The brief is *rendered*, not dumped:
@@ -784,10 +796,17 @@ is the client handshake and conversational follow-up.
       and a deliberate miss — the `NotFound` shape survives the wire as a normal result rather
       than a protocol error, which is what it was designed to do. Registered with Claude Code via
       `claude mcp add`; `claude mcp list` reports `✔ Connected`
-- [ ] **⭐ NEXT: Ask follow-up questions about a swing** — needs a transcript store, so it is a real
-      milestone of its own rather than an increment. The natural shape is the SDK tool runner over
-      `mcp/query.py`'s functions directly (not over the stdio server — that round trip exists for
-      *external* clients)
+- [x] **Ask follow-up questions about a swing** *(2026-08-15, [ADR-020](docs/decisions/020-conversational-followups.md))* —
+      the SDK tool runner over `mcp/query.py`'s functions directly, exactly as this line predicted;
+      the stdio round trip stays for *external* clients. A conversation seeds from the swing's
+      stored brief and looks everything else up through the same eight tools. Transcripts live in
+      `data/processed/conversations/`, holding the model's own content blocks **verbatim** —
+      thinking blocks are only replayable unchanged, and only into the model that produced them.
+      Two entry points: `scripts/ask_swing.py` and a chat panel on the results page.
+      **Proven live on 2026-08-10/2**: three turns, and the one that matters is the second —
+      asked whether tempo was worse than last session, it reported the refusal ("the comparison
+      tool withheld every per-metric mean… it needs 8 swings in a session") instead of averaging
+      the per-session counts sitting beside it
 - [ ] *Enable Claude to call MCP server tools for shot data context* — **reframed, not dropped.**
       The in-app call needs no tools: the pipeline already holds the whole `SwingBundleResult` in
       memory and hands it over directly. Tools become the right answer only for the follow-up

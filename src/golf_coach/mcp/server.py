@@ -5,6 +5,11 @@ returns its result — no reading, joining or aggregating happens in this file. 
 the interesting half be tested without standing up a server, and what keeps the `llm` extra off
 the base install (ADR-008).
 
+**The tool descriptions are not here.** They live in `contracts/tool_descriptions.py` because
+`mcp/runner_tools.py` needs the identical text for the in-process tool runner (ADR-020), and a
+model picks a tool by reading that description and nothing else. Same reasoning as `caveats.py`
+one import below, and the same three-time-repeated failure behind it.
+
 `from mcp.server import MCPServer` resolves to the installed SDK, not to this package: Python 3
 has no implicit relative imports, so `golf_coach.mcp` never shadows top-level `mcp`. It reads
 like a bug and is not one.
@@ -20,17 +25,27 @@ from __future__ import annotations
 from pathlib import Path
 
 from mcp.server import MCPServer
-from pydantic import BaseModel, Field
 
 from golf_coach.contracts.caveats import (
     READING_A_PERSONAL_HISTORY,
     READING_THIS_DATA_HONESTLY,
     TWO_AXES,
 )
+from golf_coach.contracts.tool_descriptions import (
+    COMPARE_SESSIONS,
+    GET_GOLFER_PROFILE,
+    GET_RECENT_SHOTS,
+    GET_SESSION_SUMMARY,
+    GET_SHOT_BY_ID,
+    GET_SHOT_TRENDS,
+    GET_SWING,
+    LIST_SESSIONS,
+)
 from golf_coach.launch_monitor.source import ShotDataSource
 from golf_coach.mcp import career, query
 from golf_coach.mcp.career import GolferProfile, MetricTrend, SessionsCompared
 from golf_coach.mcp.query import (
+    NotFound,
     SessionDetail,
     SessionSummary,
     ShotView,
@@ -39,22 +54,6 @@ from golf_coach.mcp.query import (
 
 SERVER_NAME = "golf-coach"
 
-
-class NotFound(BaseModel):
-    """Nothing matched — said out loud rather than by returning nothing.
-
-    A tool that returns `None` serializes to a result with *no content blocks*, which reads the
-    same as a call that silently did nothing and gives the model no way to tell "you have the
-    wrong id" from "something broke". Naming the miss, and saying what to do about it, is the
-    difference between a useful retry and an invented answer.
-    """
-
-    found: bool = Field(default=False, description="Always false. This is the miss case.")
-    message: str
-
-
-def _missing(what: str, hint: str) -> NotFound:
-    return NotFound(message=f"{what} {hint}")
 
 #: Shown to the model once, on connect. The place to put the standing caveats, so every tool
 #: description does not have to repeat them and no answer has to rediscover them.
@@ -105,80 +104,28 @@ def build_server(
     """
     server = MCPServer(name=name, instructions=instructions(career_tools=golfers_dir is not None))
 
-    @server.tool(
-        description=(
-            "List golf sessions, newest first, with each swing's score and lead coaching point. "
-            "Call this first when the user asks about their golf generally, refers to a session "
-            "by day ('yesterday', 'last time'), or asks what data exists — it is the cheapest way "
-            "to find the session and swing ids every other tool needs. Returns one entry per "
-            "session with its swings; a swing whose status is not 'done' has no score yet, and "
-            "'stale' means the video was re-uploaded after the result was computed."
-        )
-    )
+    @server.tool(description=LIST_SESSIONS)
     def list_sessions(limit: int = 20) -> list[SessionSummary]:
         return query.list_sessions(sessions_dir, limit=limit)
 
-    @server.tool(
-        description=(
-            "Get one swing's full analysis: every scored checkpoint with the tour band it was "
-            "judged against and the percentile it sits at, the ranked coaching tips, any "
-            "checkpoints that could not be measured, and the launch-monitor shot if one was "
-            "attached. Call this whenever the user asks how a specific swing went or what to work "
-            "on — it is the only tool that returns mechanics. Needs a session_id and swing_id "
-            "from list_sessions; if no such swing exists it says so rather than returning data."
-        )
-    )
+    @server.tool(description=GET_SWING)
     def get_swing(session_id: str, swing_id: str) -> SwingView | NotFound:
         view = query.get_swing(sessions_dir, session_id, swing_id)
-        return view if view is not None else _missing(
-            f"No swing {swing_id!r} in session {session_id!r}.",
-            "Call list_sessions to see which sessions and swing ids exist.",
-        )
+        return view if view is not None else query.missing_swing(session_id, swing_id)
 
-    @server.tool(
-        description=(
-            "Aggregate one session across both axes: mean/best/worst score, how often each "
-            "checkpoint passed, which checkpoints went unmeasured, and averages over the "
-            "launch-monitor shots attached to that session's swings. Call this when the user asks "
-            "how a whole session or day went, rather than fetching every swing individually. "
-            "Shots flagged as uncertain are counted but excluded from the averages. A session "
-            "with nothing analyzed yet returns zero counts, which is a real answer; only a "
-            "session id that does not exist at all reports a miss."
-        )
-    )
+    @server.tool(description=GET_SESSION_SUMMARY)
     def get_session_summary(session_id: str) -> SessionDetail | NotFound:
         detail = query.get_session_summary(sessions_dir, session_id)
-        return detail if detail is not None else _missing(
-            f"No session {session_id!r}.",
-            "Call list_sessions to see which sessions exist.",
-        )
+        return detail if detail is not None else query.missing_session(session_id)
 
-    @server.tool(
-        description=(
-            "Get the most recent launch-monitor shots, newest first, across every configured "
-            "source. Call this when the user asks about ball flight, distances, club speed or "
-            "strike quality without naming a specific swing. Each shot carries needs_review and "
-            "parse_confidence, because these numbers are read off a photograph of the simulator "
-            "screen by OCR — treat a flagged shot's figures as uncertain rather than as fact."
-        )
-    )
+    @server.tool(description=GET_RECENT_SHOTS)
     def get_recent_shots(count: int = 10) -> list[ShotView]:
         return query.recent_shots(shot_source, count)
 
-    @server.tool(
-        description=(
-            "Get one launch-monitor shot by its id, with the full set of metrics and the "
-            "confidence of the OCR parse that produced them. Call this to follow up on a specific "
-            "shot surfaced by get_recent_shots or attached to a swing by get_swing. If no shot "
-            "has that id it says so rather than returning data."
-        )
-    )
+    @server.tool(description=GET_SHOT_BY_ID)
     def get_shot_by_id(shot_id: str) -> ShotView | NotFound:
         shot = query.get_shot(shot_source, shot_id)
-        return shot if shot is not None else _missing(
-            f"No shot with id {shot_id!r}.",
-            "Call get_recent_shots to see which shot ids exist.",
-        )
+        return shot if shot is not None else query.missing_shot(shot_id)
 
     if golfers_dir is not None:
         _add_career_tools(server, sessions_dir, golfers_dir)
@@ -200,70 +147,26 @@ def _add_career_tools(server: MCPServer, sessions_dir: Path, golfers_dir: Path) 
     not by reading a changelog.
     """
 
-    @server.tool(
-        description=(
-            "Get one golfer's own baseline: their typical value and spread for each measured "
-            "metric, whether their miss is repeatable or scattered, and where their typical value "
-            "sits in the tour population. Call this whenever the user asks what they usually do, "
-            "what their tendency is, whether something is improving, or why a fault keeps "
-            "happening — it is the only tool that judges a golfer against themselves rather than "
-            "against tour bands. Takes a name as typed ('Aaron') or a stored id ('aaron'). "
-            "IMPORTANT: any figure the sample size cannot support is absent rather than flagged, "
-            "and the `withheld` list says what it is waiting for. Report those refusals as "
-            "refusals; do not compute the missing figure from the per-session counts beside it."
-        )
-    )
+    @server.tool(description=GET_GOLFER_PROFILE)
     def get_golfer_profile(player: str) -> GolferProfile | NotFound:
         profile = career.golfer_profile(sessions_dir, golfers_dir, player)
-        return profile if profile is not None else _missing(
-            f"No golfer matching {player!r} is registered.",
-            "Names are matched loosely (case and punctuation are folded), so this means nobody "
-            "by that name has swings on file yet.",
-        )
+        return profile if profile is not None else career.missing_golfer_profile(player)
 
-    @server.tool(
-        description=(
-            "Get one metric's per-session history for one golfer, oldest first, to answer whether "
-            "it has moved. Covers the pose metrics (tempo, head sway, hip sway, finish balance and "
-            "the rest) as well as the launch-monitor ones, despite the name. Call this for "
-            "'is my tempo getting better', 'has my face angle changed since last month'. Optional "
-            "`days` limits the window; omit it for the whole history. IMPORTANT: `ready` is false "
-            "until there are enough swings AND enough separate sessions for a trend to mean "
-            "anything, and while it is false every per-session mean is absent and no direction may "
-            "be described — the session counts are the evidence for the refusal, not a series."
-        )
-    )
+    @server.tool(description=GET_SHOT_TRENDS)
     def get_shot_trends(
         metric: str, player: str, days: int | None = None
     ) -> MetricTrend | NotFound:
         trend = career.shot_trends(sessions_dir, golfers_dir, metric, player, days)
-        return trend if trend is not None else _missing(
-            f"No golfer matching {player!r} is registered.",
-            "Call get_golfer_profile with the name to see whether they have any swings on file.",
-        )
+        return trend if trend is not None else career.missing_golfer_trend(player)
 
-    @server.tool(
-        description=(
-            "Hold two of one golfer's sessions against each other: each session's mean score, and "
-            "each metric's sample count and mean in both. Call this for 'was today better than "
-            "last time' or 'compare Tuesday to Thursday'. Needs two session ids from "
-            "list_sessions. IMPORTANT: a per-metric mean is present only when that session on its "
-            "own carried enough swings to support one, so at small sample sizes the honest answer "
-            "is a pair of counts and no delta. No difference here is tested for significance, and "
-            "a session can score well while contributing no samples at all — read the `note`."
-        )
-    )
+    @server.tool(description=COMPARE_SESSIONS)
     def compare_sessions(
         session_a: str, session_b: str, player: str
     ) -> SessionsCompared | NotFound:
         compared = career.compare_sessions(
             sessions_dir, golfers_dir, session_a, session_b, player
         )
-        return compared if compared is not None else _missing(
-            f"No golfer matching {player!r} is registered.",
-            "compare_sessions needs a golfer, because a session's swings can belong to more than "
-            "one person. Call get_golfer_profile to see who is on file.",
-        )
+        return compared if compared is not None else career.missing_golfer_comparison(player)
 
 
 def run(

@@ -51,6 +51,10 @@ class Settings(BaseSettings):
     # Sits beside `sessions_dir` rather than inside it: a golfer outlives any one session, and
     # that outliving is the entire point of tracking one.
     golfers_dir: Path = REPO_ROOT / "data" / "processed" / "golfers"
+    # Follow-up conversations (M6, ADR-020) — one JSON transcript per conversation. Beside
+    # sessions for the same reason as golfers: a conversation seeded from one swing can range
+    # across sessions by its second turn, so filing it under that swing outgrows the directory.
+    conversations_dir: Path = REPO_ROOT / "data" / "processed" / "conversations"
     # Guards the streamed upload from an unbounded body; ~2 GiB comfortably covers a
     # multi-minute 1080p60 clip.
     max_upload_bytes: int = 2 * 1024**3

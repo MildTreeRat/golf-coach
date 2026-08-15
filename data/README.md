@@ -7,10 +7,19 @@ keeps the directory in git and documents the layout.
 data/
 ├── raw/         # raw swing video files, e.g. raw/sessions/{session_id}/   (gitignored)
 ├── processed/   # extracted keypoints, labeled images, intermediate artifacts (gitignored)
+│   ├── sessions/      # one directory per swing bundle + its analysis artifacts
+│   ├── shots/         # parsed launch-monitor shots, content-addressed
+│   ├── golfers/       # the golfer registry, one file per golfer
+│   └── conversations/ # follow-up conversation transcripts, one per conversation (ADR-020)
 ├── models/      # trained model weights, *.pt/*.onnx                        (gitignored)
 ├── reference/   # third-party reference corpora — see below                 (gitignored)
 └── golf_trainer.db   # SQLite database                                      (gitignored)
 ```
+
+`conversations/` holds the model's own content blocks verbatim — thinking blocks included —
+because they are replayed to the API on the next turn rather than merely displayed. Treat one as
+a transcript of a private coaching conversation, not as a log: it quotes the golfer's questions
+and the swing's measurements in full.
 
 Drop a sample/phone swing clip into `data/raw/` to start Milestone 1.
 

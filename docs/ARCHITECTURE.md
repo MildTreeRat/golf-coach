@@ -96,6 +96,14 @@ python scripts/career_dispersion.py [--name NAME | --player-id ID] [--verbose]
 #   what the numbers are evidence for: a repeatable miss (look before the swing) against a
 #   scattered one (look at timing). Both findings withheld until the baseline's floors clear
 
+# Follow-up questions about a swing (needs the `llm` extra and a key — ADR-020)
+python scripts/ask_swing.py <SESSION/SWING> "<question>"
+python scripts/ask_swing.py --resume <CONVERSATION-ID> "<question>"
+python scripts/ask_swing.py [--list | --show <CONVERSATION-ID>]
+#   seeds from the swing's stored analysis, then looks anything else up through the same eight
+#   tools the MCP server offers — called in-process, not over stdio
+#   exit 0 answered · 1 answered with something flagged · 2 no answer
+
 # Bring stored analyses up to the current engine (`vision` only with --video)
 python scripts/reanalyze.py [SESSION/SWING ...] [--all] [--player ID] [--dry-run] [--video]
                             [--coaching] [--verbose]
@@ -320,6 +328,7 @@ gitignored and never created. Everything persists as files:
 | ↳ *analysis state* | `analysis.state.json` in the same directory | ✅ `AnalysisState` — queued/running/done/failed, the role→sha256 map the result was computed from (so a re-upload invalidates it), and a denormalised score/headline so the 5 s status poll never parses `analysis.json`. The terminal status is written by `pipeline.record_state` as part of writing `analysis.json`, because a denormalised copy must be written by whatever writes the original; the worker owns only `queued`/`running`/crash |
 | ↳ *golfer cursor* | `session.json` in the **session** directory | ✅ `storage/session_meta.py` — who the *next* swing belongs to; the record of who actually swung lives on each manifest, so a buddy taking a few swings mid-session rewrites nobody's history |
 | Golfer registry | `data/processed/golfers/<player_id>.golfer.json` | ✅ `storage/golfer_store.py` — one file per golfer, name + handedness. Beside `sessions/`, not inside: a golfer outlives any one session, and that outliving is the point |
+| Conversations | `data/processed/conversations/<conversation-id>.json` | ✅ `storage/transcript_store.py` (ADR-020) — one follow-up conversation per file, holding the model's own content blocks **verbatim**, thinking blocks included. Not a rendering: they are replayed to the API on the next turn, and thinking blocks are only legal replayed unchanged and only into the model that produced them, which is why `model` is recorded beside them. Beside `sessions/` for `golfers/`'s reason — a conversation seeded from one swing is asking about another by its second turn |
 | Reference corpus | `data/reference/golfdb/` | ✅ gitignored for licensing (ADR-012) |
 | Benchmark aggregates | `src/golf_coach/analysis/benchmarks/*.json` | ✅ committed |
 | Swing results, sessions, trends | SQLite `swings` / `shots` tables | ❌ never built — M7 Phase 3 shipped **trimmed**, as flat files, and nothing has needed a database since |

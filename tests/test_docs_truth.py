@@ -137,7 +137,8 @@ def _mcp_field_descriptions() -> list[tuple[str, str]]:
     `contracts/caveats.py` does not cover, because nothing was looking at them.
 
     `mcp/server.py` is left out: it imports the MCP SDK at module scope, and this suite runs on
-    the base install. Its instructions are the channel the caveats tests above already guard.
+    the base install. Its instructions are the channel the caveats tests above already guard, and
+    since ADR-020 its *tool* descriptions are `_mcp_tool_descriptions()` below.
     """
     import inspect
 
@@ -160,6 +161,20 @@ def _mcp_field_descriptions() -> list[tuple[str, str]]:
     return found
 
 
+def _mcp_tool_descriptions() -> list[tuple[str, str]]:
+    """Every tool description, as (where, text). [ADR-020]
+
+    The *third* channel this repo's prose reaches a model through, after the connect-time
+    instructions and the output schemas above — and the one a model reads to decide whether to
+    call a tool at all. It became scannable when ADR-020 moved these out of `mcp/server.py` (which
+    needs the SDK) into `contracts/tool_descriptions.py` (which needs nothing), so the gap named
+    in the docstring above is now closed rather than merely explained.
+    """
+    from golf_coach.contracts.tool_descriptions import TOOL_DESCRIPTIONS
+
+    return [(f"tool {name}", text) for name, text in sorted(TOOL_DESCRIPTIONS.items())]
+
+
 def test_no_mcp_field_description_miscounts_the_panel() -> None:
     """The M6.5 bug in its second channel: `SwingView.measurements` said "the three entries in
     `checkpoints`" while six shipped, so a model was told half the panel had no reference
@@ -178,7 +193,7 @@ def test_no_mcp_field_description_miscounts_the_panel() -> None:
         re.IGNORECASE,
     )
 
-    for where, text in _mcp_field_descriptions():
+    for where, text in _mcp_field_descriptions() + _mcp_tool_descriptions():
         stated = claim.search(_flat(text))
         if stated and stated.group(1).lower() != word:
             pytest.fail(

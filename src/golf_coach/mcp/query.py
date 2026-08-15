@@ -48,6 +48,49 @@ from golf_coach.storage.manifest import load_manifest, manifest_path
 _CAVEAT = ALIGNMENT_CAVEAT
 
 
+class NotFound(BaseModel):
+    """Nothing matched — said out loud rather than by returning nothing.
+
+    A tool that returns `None` serializes to a result with *no content blocks*, which reads the
+    same as a call that silently did nothing and gives the model no way to tell "you have the
+    wrong id" from "something broke". Naming the miss, and saying what to do about it, is the
+    difference between a useful retry and an invented answer.
+
+    Lives here rather than in `server.py` because since ADR-020 there are two adapters over these
+    functions — the stdio server and the in-process tool runner — and a miss must read identically
+    to a model whichever one it arrived through. The `missing_*` helpers below are the reason: the
+    hint each one carries is the prose that turns a dead end into a retry, and it exists once.
+    """
+
+    found: bool = Field(default=False, description="Always false. This is the miss case.")
+    message: str
+
+
+def _missing(what: str, hint: str) -> NotFound:
+    return NotFound(message=f"{what} {hint}")
+
+
+def missing_swing(session_id: str, swing_id: str) -> NotFound:
+    return _missing(
+        f"No swing {swing_id!r} in session {session_id!r}.",
+        "Call list_sessions to see which sessions and swing ids exist.",
+    )
+
+
+def missing_session(session_id: str) -> NotFound:
+    return _missing(
+        f"No session {session_id!r}.",
+        "Call list_sessions to see which sessions exist.",
+    )
+
+
+def missing_shot(shot_id: str) -> NotFound:
+    return _missing(
+        f"No shot with id {shot_id!r}.",
+        "Call get_recent_shots to see which shot ids exist.",
+    )
+
+
 class SwingSummary(BaseModel):
     """One swing as it appears in a listing — cheap enough to render a whole session from."""
 

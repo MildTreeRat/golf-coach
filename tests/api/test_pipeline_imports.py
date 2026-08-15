@@ -65,6 +65,52 @@ def test_importing_the_coach_does_not_import_anthropic() -> None:
     )
 
 
+def test_importing_the_conversation_module_does_not_import_anthropic() -> None:
+    """ADR-020's loop, held to the same rule as the coaching call it sits beside.
+
+    `api/app.py` reaches this module for the follow-up route, so a module-scope `import anthropic`
+    here would make the whole upload server — ingestion, analysis, results — require the `llm`
+    extra to start. It uses `coach._sdk()` instead, which is why the seam is worth a pin of its
+    own rather than resting on `coach.py`'s.
+    """
+    code = "import golf_coach.feedback.conversation, sys; print('anthropic' in sys.modules)"
+
+    out = subprocess.run(
+        [sys.executable, "-c", code], capture_output=True, text=True, check=True
+    )
+
+    assert out.stdout.strip() == "False", (
+        "golf_coach.feedback.conversation imports anthropic at module scope — it must stay "
+        "inside `coach._sdk()` so the upload server starts without the `llm` extra"
+    )
+
+
+def test_the_query_layer_imports_without_either_sdk() -> None:
+    """ADR-020 put a second adapter beside `mcp/server.py`, and it imports `anthropic`.
+
+    `query.py` and `career.py` are the half both adapters read through, and they are documented as
+    base-install: `tests/mcp/test_query.py` and the career tests run with neither SDK present. One
+    convenient `from golf_coach.mcp.runner_tools import ...` at the top of either would make the
+    whole reading layer — and every test over it — need the `llm` extra.
+
+    Checked in both directions on purpose. `mcp` is the MCP SDK for the stdio server; `anthropic`
+    is the tool runner. Neither belongs here, and importing `golf_coach.mcp.query` must load
+    neither, but `golf_coach.mcp.server` legitimately loads the first and `runner_tools` the
+    second — so a check that only looked at one of them would pass while the other leaked in.
+    """
+    for module in ("golf_coach.mcp.query", "golf_coach.mcp.career"):
+        code = f"import {module}, sys; print(bool({{'anthropic', 'mcp'}} & sys.modules.keys()))"
+
+        out = subprocess.run(
+            [sys.executable, "-c", code], capture_output=True, text=True, check=True
+        )
+
+        assert out.stdout.strip() == "False", (
+            f"importing {module} pulled in anthropic or the MCP SDK — that module is the half "
+            "both adapters read through, and it is documented as running on a base install"
+        )
+
+
 def test_the_pose_modules_import_without_the_vision_stack() -> None:
     """`pose/overlay.py` and `pose/side_by_side.py` both advertise import-cheapness in their own
     docstrings ("imported lazily so importing this module stays cheap"). Nothing held them to it.

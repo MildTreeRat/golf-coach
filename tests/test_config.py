@@ -25,9 +25,11 @@ from golf_coach.config import Settings
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 #: The only files allowed to turn a `SecretStr` back into a `str`. Each is a boundary where an
-#: outside caller needs a plain string and cannot be handed a wrapper: the Anthropic SDK, the
-#: constant-time token comparison, and the operator-facing setup link.
+#: outside caller needs a plain string and cannot be handed a wrapper: the Anthropic SDK (twice —
+#: the one-shot coaching call and the follow-up conversation), the constant-time token comparison,
+#: and the operator-facing setup link.
 SANCTIONED_UNWRAP_SITES = {
+    "scripts/ask_swing.py",
     "scripts/run_server.py",
     "src/golf_coach/api/app.py",
     "src/golf_coach/api/pipeline.py",

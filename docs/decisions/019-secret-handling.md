@@ -108,3 +108,23 @@ Concretely:
   other entry point (`uvicorn ... --host 0.0.0.0`, a container, a systemd unit) bypasses it. That is
   a real hole, deliberately out of scope here because closing it changes API behaviour and cuts
   against ADR-016's premise that tailnet membership *is* the access control. It needs its own ADR.
+
+## Addendum (2026-08-15): a fourth unwrap site, and the pin doing its job
+
+`SANCTIONED_UNWRAP_SITES` gained **`scripts/ask_swing.py`** ([ADR-020](020-conversational-followups.md)).
+Recorded here because the Consequences above say a new site costs a line in the set and a note in
+this file, and a rule whose first exercise goes unrecorded is a rule that stops being followed.
+
+**Why it is the right shape.** It is the same boundary as the three already listed: the Anthropic
+SDK takes a plain `str` and cannot be handed a wrapper. The CLI is the follow-up conversation's
+entry point exactly as `api/pipeline.py` is the one-shot coaching call's, and it unwraps at the
+call site rather than passing a `SecretStr` down — `feedback/conversation.py` takes `api_key: str
+| None` for the same reason `generate_coaching` does, which keeps the module that talks to the
+model ignorant of how the key is held.
+
+**The web half needed nothing.** `api/app.py`'s follow-up route was already on the list for
+`compare_digest`, so the conversation added no site there.
+
+**Worth noting how this surfaced**: the pin failed the first time the full suite ran after the
+work, naming the added file and pointing at this document. That is the friction the original
+decision described as the feature, working on its first real test.
