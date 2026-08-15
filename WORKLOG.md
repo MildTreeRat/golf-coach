@@ -5,6 +5,59 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-08-14 — The warning that cried wolf for thirty sessions, and the fade it was hiding
+
+**Duration**: ~1 session. One ADR addendum, twelve pins, one wrong number corrected on disk.
+**What prompted it**: "what can we work on next", and the smallest open item on the board —
+every shot ever parsed carried `screen title 'SHOT DATA' not found`.
+
+**The warning was noise. What it was sitting on top of was not.** `spin_axis` was stored with
+its sign inverted. HD Golf prints that one tile already signed (`-9.3 °`) where every other angle
+is a magnitude plus a direction word; ADR-014's sign section only anticipated the second shape, so
+the parser found no direction word, warned "sign unknown", and stored the number as printed. The
+contract is `+ = fade`. **Both shots on disk were fades recorded as draws** — and the MCP server
+has been serving them to Claude that way.
+
+**Three readings of one screen agreed, which is why this was a correction and not a guess.** The
+`Shot Type` tile one column away reads `FADE` on both. The face sits 13.2 ° and 10.9 ° open to the
+path, which curves the ball right for a right-handed golfer. And the magnitudes are what that
+face-to-path would produce. The screen was carrying its own answer the whole time.
+
+**So the fix is now self-checking, which matters more than the fix.** `validate.py` gained a third
+cross-check beside the two identities: `sign(spin_axis)` must agree with the curvature word in
+`shot_type`. This is the one misread the arithmetic cannot see — every magnitude can be perfect and
+the shot still be reported bending the wrong way, which is exactly what happened. If `printed_sign`
+is ever wrong for some shot shape, it now says so. The polarity itself is profile *data*
+(`printed_sign: -1`), so the next device that prints its own signs is a JSON edit.
+
+**The title warning was two bugs wearing one message.** PaddleOCR returns the wide-tracked banner
+as one token, `SHOTDATA`; the check was a substring test against `SHOT DATA`. It passed in the
+tests because the fixture's title was written by hand *with* the space — **a fixture kinder than
+the OCR engine, testing the parser against a screen that does not exist.** That is the transferable
+lesson here; conftest now says so in its docstring. Underneath it, `rectify` crops the reference
+photos below the banner entirely, so the check also had to stop treating a cropped-out title as
+evidence of anything.
+
+**Why chase warnings at all.** They reach a golfer — `provenance.warnings` and `needs_review` are
+carried out by the MCP server, named in the standing caveats, and rendered into the coaching brief.
+Two of four warnings on a typical shot were unfalsifiable, and `needs_review` was `False` on a shot
+carrying five of them. The noise had already decoupled from the signal. A warning that fires on
+every correct parse is what teaches a reader, human or model, to skip the ones that are real.
+
+**Two warnings survive because they are true**, and both want the bay rather than a decision.
+`no tile found for 'Bounce & Roll'` is correct — the bay's screen shows `Impact Position V` where
+the reference photos show `Bounce & Roll`, so the profile describes a layout HD Golf can be
+configured out of. And on the one photo where `rectify` fails, `Impact Position`'s value is claimed
+by the tile next door (`'CENTER SLIGHT FADE'`), a cell-boundary bug that only appears uncropped.
+
+**Where I left off**: green — 624 tests (12 new), ruff and mypy clean. All four swings re-imported
+with `--force-ocr`, so the corrected sign is on disk and the MCP server serves `spin_axis: 9.3`
+beside `shot_type: FADE`. Warnings on the cleanly-cropped shot went 3 → 1. M3's remaining OCR work
+now genuinely needs a bay session. The board's only sizeable desk-work item left is M6's follow-up
+questions over a transcript store.
+
+---
+
 ## 2026-08-14 — The key that arrived, and the two axes `.gitignore` never covered (ADR-019)
 
 **Duration**: ~1 session. One ADR, one addendum, five pins, and both of M6's standing "never

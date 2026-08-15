@@ -97,6 +97,75 @@ def test_missing_direction_word_is_reported_not_guessed(profile) -> None:
     assert any("Club Path" in w and "sign unknown" in w for w in parsed.warnings)
 
 
+def test_a_printed_sign_is_a_known_sign_not_a_missing_word(profile) -> None:
+    """HD Golf prints the spin axis signed, and its polarity is the contract's inverted.
+
+    `-9.3 °` on screen is a fade, and the contract is `+ = fade`, so the stored value is
+    +9.3. The sign came from the digits and the profile's stated convention, so there is
+    nothing to warn about — the old message called this "sign unknown" on every shot.
+    """
+    rows = [list(SCREEN_2738[0]), list(SCREEN_2738[1])]
+    rows[1][6] = ("Spin Axis", ["-9.3 °"])
+
+    parsed = parse_screen(build_screen(rows), profile)
+
+    assert parsed.values["spin_axis"] == 9.3
+    assert parsed.warnings == []
+
+
+def test_a_direction_word_still_beats_a_printed_sign(profile) -> None:
+    """If the device ever prints both, the word states the convention and wins."""
+    rows = [list(SCREEN_2738[0]), list(SCREEN_2738[1])]
+    rows[1][6] = ("Spin Axis", ["-9.3 ° R"])
+
+    parsed = parse_screen(build_screen(rows), profile)
+
+    assert parsed.values["spin_axis"] == 9.3  # R = right = fade = positive
+    assert parsed.warnings == []
+
+
+def test_an_unsigned_number_with_no_word_is_still_reported(profile) -> None:
+    """The `printed_sign` convention must not swallow the genuinely ambiguous case."""
+    rows = [list(SCREEN_2738[0]), list(SCREEN_2738[1])]
+    rows[1][6] = ("Spin Axis", ["9.3 °"])
+
+    parsed = parse_screen(build_screen(rows), profile)
+
+    assert parsed.values["spin_axis"] == 9.3
+    assert any("Spin Axis" in w and "sign unknown" in w for w in parsed.warnings)
+
+
+def test_the_title_is_matched_without_its_spaces(profile) -> None:
+    """OCR returns the tracked-out banner as `SHOTDATA`; the profile says `SHOT DATA`."""
+    parsed = parse_screen(build_screen(SCREEN_2738, title="SHOTDATA Aaron"), profile)
+
+    assert parsed.warnings == []
+
+
+def test_a_title_cropped_out_of_frame_is_not_reported_as_missing(profile) -> None:
+    """`rectify` can crop to the tile grid, leaving the banner outside the frame.
+
+    Absence of a title from a frame that starts at the first tile row is a fact about the
+    crop, not about the page — and warning on it means warning on every correctly-parsed
+    photo, which is how the repo's real shots all came to carry the message.
+    """
+    boxes = [b for b in build_screen(SCREEN_2738) if "SHOT" not in b.text.upper()]
+
+    parsed = parse_screen(boxes, profile)
+
+    assert parsed.values["carry_distance"] == 128.1  # the page parsed fine
+    assert not any("title" in w for w in parsed.warnings)
+
+
+def test_a_missing_title_is_reported_when_we_could_have_seen_it(profile) -> None:
+    """The check still earns its keep: text above the grid, but not the title."""
+    boxes = build_screen(SCREEN_2738, title="PUTTING ANALYSIS")
+
+    parsed = parse_screen(boxes, profile)
+
+    assert any("title" in w and "right page" in w for w in parsed.warnings)
+
+
 def test_unreadable_screen_yields_nothing_rather_than_garbage(profile) -> None:
     boxes = [TextBox("BALL TRAJECTORY", 0.0, 0.0, 200.0, 20.0, 0.9)]
 

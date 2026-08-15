@@ -5,6 +5,13 @@ these fixtures lay out the same tile grid, with the same strings the OCR engine 
 `data/raw/shot_screens/`, at plausible coordinates. That keeps the tests that guard the
 sign conventions and the physics checks — the parts that silently corrupt a session when
 wrong — runnable on the base install, with no OCR engine and no images (ADR-008).
+
+*The same strings* is load-bearing, and was once only nearly true: the title default read
+`SHOT DATA Player 1` where PaddleOCR returns the wide-tracked banner as one token,
+`SHOTDATA`. The title check was a substring test, so it passed here and failed on every
+real photo the repo had ever parsed. A fixture that is kinder than the OCR engine tests
+the parser against a screen that does not exist — so when one of these strings and the
+engine disagree, the engine is right.
 """
 
 from __future__ import annotations
@@ -28,7 +35,7 @@ Row = list[tuple[str, list[str]]]
 
 
 def build_screen(
-    rows: list[Row], *, title: str = "SHOT DATA Player 1", confidence: float = 0.95
+    rows: list[Row], *, title: str = "SHOTDATA Aaron", confidence: float = 0.95
 ) -> list[TextBox]:
     """Lay out `rows` of (label, value lines) as located text, label above value."""
     boxes = [TextBox(title, 10.0, 40.0, 220.0, LABEL_HEIGHT, confidence)]

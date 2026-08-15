@@ -111,10 +111,22 @@
           ]
         },
         {
+          "_comment": [
+            "The one tile HD Golf prints already signed ('-9.3 °'), and its polarity is the",
+            "opposite of the ShotData contract's (+ = fade). Both real shots on disk print a",
+            "negative axis while the screen's own Shot Type tile beside them reads FADE, and",
+            "on both the face sits >10 ° open to the path, which curves the ball right for",
+            "this right-handed golfer. Three readings of one screen agreeing, so printed_sign",
+            "is -1 rather than a guess. validate.py cross-checks the stored sign against Shot",
+            "Type on every parse, so if this is ever wrong for some shot shape it says so",
+            "instead of quietly storing a fade as a draw.",
+            "sign_tokens stays: if HD Golf ever prints '9.3 ° R', the word still wins."
+          ],
           "label": "Spin Axis",
           "target": "spin_axis",
           "kind": "number",
           "unit": "degrees",
+          "printed_sign": -1,
           "sign_tokens": [
             { "tokens": ["R", "RIGHT"], "sign": 1 },
             { "tokens": ["L", "LEFT"], "sign": -1 }

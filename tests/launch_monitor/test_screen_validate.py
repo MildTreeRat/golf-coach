@@ -39,6 +39,57 @@ def test_an_implausible_but_self_consistent_shot_still_passes(profile) -> None:
     assert validated.warnings == []
 
 
+def test_a_fade_stored_as_a_draw_is_caught_by_the_shape_word(profile) -> None:
+    """The one misread the arithmetic checks cannot see: a correct magnitude, wrong sign.
+
+    Every other cross-check here compares numbers, and a flipped sign leaves all of them
+    satisfied — the shot is simply reported as curving the other way. HD Golf names the
+    shape in the tile beside the axis, so the screen carries its own answer.
+    """
+    rows = [list(SCREEN_2738[0]), list(SCREEN_2738[1])]
+    rows[1][4] = ("Shot Type", ["FADE"])
+    rows[1][6] = ("Spin Axis", ["9.3 ° L"])  # a left tilt is a draw, not a fade
+
+    validated = validate_parse(_parse(rows, profile))
+
+    assert validated.needs_review is True
+    assert any("disagrees with shot type" in w for w in validated.warnings)
+
+
+def test_the_axis_and_the_shape_word_agreeing_is_silent(profile) -> None:
+    rows = [list(SCREEN_2738[0]), list(SCREEN_2738[1])]
+    rows[1][4] = ("Shot Type", ["FADE"])
+    rows[1][6] = ("Spin Axis", ["-9.3 °"])  # printed inverted; stored +9.3 = fade
+
+    validated = validate_parse(_parse(rows, profile))
+
+    assert validated.values["spin_axis"] == 9.3
+    assert validated.needs_review is False
+    assert validated.warnings == []
+
+
+def test_a_near_zero_axis_is_not_judged_against_the_shape_word(profile) -> None:
+    """The device still prints 'SLIGHT FADE' for a ball that curved a foot."""
+    rows = [list(SCREEN_2738[0]), list(SCREEN_2738[1])]
+    rows[1][4] = ("Shot Type", ["SLIGHT", "FADE"])
+    rows[1][6] = ("Spin Axis", ["0.4 ° L"])
+
+    validated = validate_parse(_parse(rows, profile))
+
+    assert validated.needs_review is False
+    assert not any("disagrees" in w for w in validated.warnings)
+
+
+def test_a_straight_shot_gives_the_axis_nothing_to_disagree_with(profile) -> None:
+    rows = [list(SCREEN_2738[0]), list(SCREEN_2738[1])]
+    rows[1][4] = ("Shot Type", ["STRAIGHT"])
+    rows[1][6] = ("Spin Axis", ["-9.3 °"])
+
+    validated = validate_parse(_parse(rows, profile))
+
+    assert not any("disagrees" in w for w in validated.warnings)
+
+
 def test_a_dropped_digit_in_carry_breaks_the_distance_identity(profile) -> None:
     rows = [list(SCREEN_2738[0]), list(SCREEN_2738[1])]
     rows[0][1] = ("Carry", ["28.1", "yds"])  # 128.1 misread

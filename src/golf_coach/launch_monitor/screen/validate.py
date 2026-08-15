@@ -7,9 +7,15 @@ self-consistent if the parse was right:
 
     smash factor  ==  ball speed / club speed
     shot distance ==  carry + bounce & roll
+    sign(spin axis) agrees with the curvature word in shot type
 
-Both hold exactly on real screens (101.5 / 88.6 = 1.15; 128.1 + 23.4 = 151.5), so a
-mismatch is evidence about the *parse*, not about the shot.
+The first two hold exactly on real screens (101.5 / 88.6 = 1.15; 128.1 + 23.4 = 151.5),
+so a mismatch is evidence about the *parse*, not about the shot.
+
+The third is the same idea applied to a sign rather than a digit, and it exists because a
+flipped sign is the one OCR failure the other two cannot see: every magnitude can be
+perfect and the shot still be reported as curving the wrong way. HD Golf prints the axis
+and names the shape in the tile beside it, so the screen carries its own answer.
 
 Range checks are the same idea at coarser grain — they exist to catch an inserted or
 dropped digit, so the bounds are deliberately loose. This module never judges whether a
@@ -47,6 +53,15 @@ _PLAUSIBLE_RANGES: dict[str, tuple[float, float]] = {
     "total_distance": (0.0, 500.0),
     "bounce_and_roll": (0.0, 150.0),
 }
+
+# Curvature words HD Golf prints in the Shot Type tile, as whole words — 'SLIGHT FADE',
+# 'DRAW', 'PUSH SLICE'. Matched on the word so 'FADE' never matches inside another token.
+_FADE_WORDS = frozenset({"FADE", "SLICE"})
+_DRAW_WORDS = frozenset({"DRAW", "HOOK"})
+
+# Below this the axis is too flat for the shape word to be evidence about its sign: the
+# device still prints 'SLIGHT FADE' for a ball that curved a foot.
+_AXIS_DEADBAND = 1.0
 
 # How much a failed check costs. A broken identity is the strongest signal available that
 # the parse is wrong, so it outweighs a merely out-of-range value.
@@ -109,7 +124,41 @@ def _identity_failures(values: dict[str, float | str]) -> list[str]:
                 f"({carry:g} + {roll:g} = {expected_total:g}) - one of the three was misread"
             )
 
+    failures.extend(_spin_axis_disagreement(values))
     return failures
+
+
+def _spin_axis_disagreement(values: dict[str, float | str]) -> list[str]:
+    """Does the axis curve the ball the way the shot-type tile says it curved?
+
+    `spin_axis` is signed `+ = fade` by the contract, and the device names the shape in
+    words a tile away. Disagreement means one of three things went wrong — the digits,
+    the profile's `printed_sign` polarity, or the shape word — and all three are worth a
+    human look, because none of them makes the number *look* wrong.
+    """
+    axis = _number(values, "spin_axis")
+    shape = values.get("shot_type")
+    if axis is None or not isinstance(shape, str):
+        return []
+
+    words = set(shape.upper().split())
+    fade = bool(words & _FADE_WORDS)
+    draw = bool(words & _DRAW_WORDS)
+    if fade == draw:  # neither named, or a contradictory tile — nothing to check against
+        return []
+    if abs(axis) < _AXIS_DEADBAND:
+        # A shape word beside a near-zero axis is the device rounding a straight ball
+        # into a direction, not evidence about the sign.
+        return []
+
+    if (axis > 0) != fade:
+        shape_word = "fade" if fade else "draw"
+        expected = "positive" if fade else "negative"
+        return [
+            f"spin axis {axis:g} disagrees with shot type {shape!r} - a {shape_word} needs "
+            f"a {expected} axis (+ = fade), so the sign or the shape word was misread"
+        ]
+    return []
 
 
 def _range_failures(values: dict[str, float | str]) -> list[str]:

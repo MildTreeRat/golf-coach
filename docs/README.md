@@ -85,7 +85,7 @@ everything on this page is supposed to be trustworthy.
 
 ## Decisions (ADRs)
 
-19 decisions, 19 addenda between them (`grep -c '^#\+ *Addendum' docs/decisions/*.md` — the
+19 decisions, 20 addenda between them (`grep -c '^#\+ *Addendum' docs/decisions/*.md` — the
 stated total had drifted to 11, then to 13, and is now pinned by `tests/test_docs_truth.py`
 along with every per-ADR count in the last column).
 **The addenda are where reality corrected the original call**, so a doc's original Decision
@@ -106,7 +106,7 @@ section is not always the final word — the counts below exist so you don't mis
 | [011](decisions/011-camera-synchronization.md) | Camera sync & multi-view 3D fusion | **Partially accepted** | **1** — a second capture tier: hand-held phones can be *aligned* but never *fused* |
 | [012](decisions/012-golfdb-reference-data.md) | GolfDB as a reference-swing source | Accepted | — |
 | [013](decisions/013-clip-relative-detection.md) | Clip-relative detection windows; explicit detection confidence | Accepted | — |
-| [014](decisions/014-screen-capture-shot-ingestion.md) | Shot data by OCR of the simulator screen | Accepted | — |
+| [014](decisions/014-screen-capture-shot-ingestion.md) | Shot data by OCR of the simulator screen | Accepted | **1** — `spin_axis` was stored sign-inverted; the sign table gains the one tile the device prints already signed |
 | [015](decisions/015-handheld-two-phone-capture-and-event-anchored-alignment.md) | Hand-held two-phone capture & event-anchored alignment | Accepted | — (settles the `FrameBundle` question ADR-011 left open) |
 | [016](decisions/016-local-first-host-and-phone-upload-topology.md) | Local-first host & phone upload topology | Accepted | **1** — how the token is *held* is ADR-019's question, not this one's; the startup line prints a prefix, not the token |
 | [017](decisions/017-club-head-detection-strategy.md) | Club-head detection strategy — and the constraint that actually binds | Accepted | **1** — why the spike's own threshold table did not decide it |

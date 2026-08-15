@@ -162,3 +162,71 @@ guessed sign.
   over them are the regression net.
 - **A new `ocr` extra** (`paddleocr`, `paddlepaddle`, `opencv-python`, `numpy`). Needed only
   to *import* screenshots; reading the results needs nothing.
+
+---
+
+## Addendum (2026-08-14): the sign nobody read, and three warnings that cried wolf
+
+Every shot this repo has ever parsed carried the warning `screen title 'SHOT DATA' not
+found`. Chasing it turned up a wrong number underneath, which is the more important half
+of this entry.
+
+**`spin_axis` was stored with its sign inverted.** HD Golf prints this one tile already
+signed — `-9.3 °` — where every other angle on the screen is a magnitude plus a direction
+word. The section above only anticipated the second shape, so the parser found no
+direction word, warned "sign unknown", and stored the printed number *as printed*. The
+contract is `+ = fade`; the device's polarity is the opposite. Both real shots on disk were
+fades stored as draws.
+
+Three independent readings of the same screen agree, which is why this is a correction and
+not a guess:
+
+- the `Shot Type` tile, one column away, reads `FADE` on both shots;
+- the face sits 13.2 ° and 10.9 ° **open to the path** on them, which curves the ball right
+  for this right-handed golfer;
+- the magnitudes are what that face-to-path would produce.
+
+`ProfileField.printed_sign` now records the polarity as data (`-1` for this tile), so a
+device that prints its own signs is a profile change rather than a code change — the same
+property this ADR claims for labels and direction words. A direction word still wins if
+both appear.
+
+**The correction is now self-checking.** `validate.py` gained a third cross-check beside
+the two identities: `sign(spin_axis)` must agree with the curvature word in `shot_type`.
+This is the only misread the arithmetic checks cannot see — every magnitude can be perfect
+and the shot still reported as bending the wrong way. Below 1 ° the axis is too flat for
+the word to be evidence, so the check stands down. If `printed_sign` is ever wrong for some
+shot shape, it now says so instead of storing a fade as a draw.
+
+**The sign-conventions table above gains a row**, and it is the row that breaks the
+pattern:
+
+| Printed | Stored | Contract |
+|---|---|---|
+| `-9.3 °` | `spin_axis = +9.3` | + = fade — device polarity **inverted** |
+
+**And the title warning was two bugs wearing one message.** PaddleOCR returns the
+wide-tracked banner as the single token `SHOTDATA`, and the check was a substring test
+against `SHOT DATA` — so it failed on every real photo. It passed in the tests because the
+synthetic fixture's title string was written by hand *with* the space: a fixture kinder
+than the OCR engine, testing the parser against a screen that does not exist. Underneath
+that, `rectify` crops the reference photos to the tile grid, below where the banner sits at
+all; a title missing from a frame that starts at the first tile row is a fact about the
+crop, not about the page. The check now compares without spaces and only fires when there
+was something above the grid for the title to be *in*.
+
+**Why any of this mattered.** These messages reach a golfer: `provenance.warnings` and
+`needs_review` are carried out by the MCP server and named in the standing caveats, and the
+coaching brief renders them. Two of the four warnings on a typical shot were unfalsifiable,
+and `needs_review` was `False` on shots carrying five of them — so the noise had already
+decoupled from the signal it was supposed to raise. A warning that fires on every correct
+parse is worse than no warning, because it is what teaches a reader, human or model, to
+skip the ones that are real.
+
+**Still open, and deliberately.** Two warnings survive because they are true. `no tile
+found for 'Bounce & Roll'` is correct: the bay's screen layout has no such tile — it shows
+`Impact Position V` where the reference photos show `Bounce & Roll` — so the profile
+describes a layout HD Golf can be configured out of. Enumerating those configurations needs
+a bay session, not a decision here. And on the one photo where `rectify` fails, `Impact
+Position`'s value is claimed by the `Shot Type` tile next door (`'CENTER SLIGHT FADE'`),
+which is a cell-boundary bug that only appears on an uncropped frame.

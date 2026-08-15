@@ -110,6 +110,29 @@ def test_parses_a_real_photo(filename: str, recognizer) -> None:
 
 
 @pytest.mark.parametrize("filename", sorted(EXPECTED))
+def test_a_correct_parse_does_not_warn_about_the_title(filename: str, recognizer) -> None:
+    """The pin the synthetic fixtures could not provide.
+
+    This message was on every shot the repo had ever parsed, for two compounding reasons
+    only a real photo shows: PaddleOCR returns the banner as one token (`SHOTDATA`) where
+    the profile says `SHOT DATA`, and `rectify` crops these two photos to the tile grid,
+    below where the banner sits at all. A warning that fires on every correct parse is
+    worse than no warning — it is what teaches a reader, human or model, to skip them.
+    """
+    from golf_coach.launch_monitor.screen.preprocess import load_image, prepare_screen
+
+    path = _SCREENS / filename
+    if not path.exists():
+        pytest.skip(f"{filename} not present")
+
+    profile = load_profile("hd_golf")
+    prepared = prepare_screen(load_image(path), recognizer, profile)
+    parsed = validate_parse(parse_screen(prepared.boxes, profile))
+
+    assert not [w for w in parsed.warnings if "title" in w], parsed.warnings
+
+
+@pytest.mark.parametrize("filename", sorted(EXPECTED))
 def test_the_screen_is_cropped_out_of_the_photo(filename: str, recognizer) -> None:
     """Both photos are off-axis with the room visible around the monitor.
 

@@ -98,7 +98,7 @@ def parse_screen(boxes: list[TextBox], profile: DeviceProfile) -> ParsedShot:
         )
         return parsed
 
-    if not _has_title(boxes, profile):
+    if not _has_title(boxes, profile) and _title_band_was_captured(boxes, labels):
         parsed.warnings.append(
             f"screen title {profile.title!r} not found - is this the right page?"
         )
@@ -151,8 +151,33 @@ def to_shot_data(
 
 
 def _has_title(boxes: list[TextBox], profile: DeviceProfile) -> bool:
-    want = normalize_label(profile.title)
-    return any(want in normalize_label(box.text) for box in boxes)
+    """Is the screen's title anywhere on it? Compared with the spaces taken out.
+
+    HD Golf sets the title in wide-tracked capitals, and PaddleOCR returns it as the
+    single token `SHOTDATA` — so a substring test against `SHOT DATA` failed on every
+    real photo the repo has ever parsed, while passing on the synthetic fixtures, whose
+    title string was written by hand *with* the space. The letters are what identify the
+    page; the kerning the OCR infers between them is not evidence about anything.
+    """
+    want = _despace(profile.title)
+    return any(want in _despace(box.text) for box in boxes)
+
+
+def _despace(text: str) -> str:
+    return normalize_label(text).replace(" ", "")
+
+
+def _title_band_was_captured(boxes: list[TextBox], labels: list[_Located]) -> bool:
+    """Was there anything above the top row of tiles for the title to be *in*?
+
+    The title sits above the grid, and `preprocess.rectify` crops to the screen — which
+    on the reference photos lands below it. A title missing from a frame that starts at
+    the first tile row is a fact about the crop, not about the page, and warning on it
+    means warning on every correctly-parsed photo. So the check answers "we looked where
+    it would be and it was not there", which is the only form of it that is evidence.
+    """
+    top_of_grid = min(box.y for _, box in labels)
+    return any(box.bottom <= top_of_grid for box in boxes)
 
 
 def _find_labels(boxes: list[TextBox], profile: DeviceProfile) -> list[_Located]:
@@ -266,15 +291,22 @@ def _read_cell(cell: _Cell, profile: DeviceProfile, parsed: ParsedShot) -> None:
         return
 
     magnitude, matched_text = number
-    if profile_field.sign_tokens:
+    if profile_field.sign_tokens or profile_field.printed_sign is not None:
         sign = _sign_from(text.replace(matched_text, " ", 1), profile_field)
-        if sign is None:
+        if sign is not None:
+            # A direction word beats a printed sign: it states the convention in the
+            # device's own words, where a bare '-' only states one if we already know
+            # which way the device points it.
+            magnitude = abs(magnitude) * sign
+        elif matched_text[0] in "+-" and profile_field.printed_sign is not None:
+            # The tile printed its own sign, and the profile records how that polarity
+            # relates to the contract. Nothing is unknown here, so nothing is warned.
+            magnitude *= profile_field.printed_sign
+        else:
             parsed.warnings.append(
                 f"{profile_field.label}: no direction word in {text!r} - "
                 "sign unknown, storing the magnitude as printed"
             )
-        else:
-            magnitude = abs(magnitude) * sign
     parsed.values[profile_field.target] = magnitude
 
 

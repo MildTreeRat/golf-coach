@@ -55,6 +55,16 @@ class ProfileField(BaseModel):
     kind: str = Field(default="number", description="'number' or 'text'.")
     unit: str | None = None
     sign_tokens: list[SignRule] = Field(default_factory=list)
+    printed_sign: int | None = Field(
+        default=None,
+        description=(
+            "Set when the device prints this tile's sign in the digits ('-9.3 °') rather "
+            "than as a word. +1 = the printed polarity already matches the ShotData "
+            "contract, -1 = it is inverted and must be negated. Left None, an explicitly "
+            "signed number is still reported as sign-unknown, because a sign we cannot "
+            "attribute to a stated convention is a guess."
+        ),
+    )
 
     def matches(self, text: str) -> float:
         """Similarity of `text` to this field's label or any alias, 0-1."""

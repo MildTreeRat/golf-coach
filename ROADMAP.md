@@ -43,10 +43,15 @@ served live `call_tool` requests including the not-found path. It is registered 
 the same handshake independently.
 
 **NEXT ACTION — do this first:** M6's remaining item is *ask follow-up questions about a swing*,
-which needs a transcript store and is a milestone of its own rather than an increment. If you want
-something smaller first, [§M3](#milestone-3-launch-monitor-integration--in-progress)'s OCR tuning is
-the open work that needs no hardware — every shot parsed so far carries `screen title 'SHOT DATA'
-not found` as a warning.
+which needs a transcript store and is a milestone of its own rather than an increment. It is now
+the only desk-work item of any size that is not waiting on a bay.
+
+*(The smaller item that used to sit here — every shot carrying `screen title 'SHOT DATA' not
+found` — was done on 2026-08-14, and was hiding a wrong number: `spin_axis` was stored with its
+sign inverted, so both shots on disk were fades recorded as draws. See the
+[ADR-014 addendum](docs/decisions/014-screen-capture-shot-ingestion.md). What is left of M3's OCR
+work genuinely needs the bay: the profile describes a screen layout the simulator can be
+configured out of, and enumerating those needs the screen in front of you.)*
 
 **The one purchase that actually blocks something — and M1.5 changed what it is.** It is not a
 global-shutter camera. The spike measured the club head smearing across 600–980 px at impact at
@@ -706,6 +711,14 @@ is the client handshake and conversational follow-up.
 - [x] Parse confidence + physics cross-checks, so a misread digit is flagged not trusted
 - [x] `scripts/import_shot_screens.py` — photos in, parsed shots out, content-addressed cache
 - [ ] Tune preprocessing against a full range session's photos (not just the 2 reference ones)
+      — *and enumerate the bay screen's actual tile layout while you are there.* The profile was
+      written from the two reference photos; the bay's screen shows `Impact Position V` where they
+      show `Bounce & Roll`, so "no tile found" fires on every real shot and is telling the truth
+- [x] **Sign conventions audited against a real screen** *(2026-08-14)* — `spin_axis` was stored
+      inverted (HD Golf prints it signed, opposite the contract's `+ = fade`); both shots on disk
+      were fades recorded as draws. Fixed as profile data (`printed_sign`), and cross-checked on
+      every parse against the `Shot Type` tile, which is the only way to catch a flipped sign —
+      the arithmetic identities cannot see one. Three false warnings retired with it
 - [x] Build MCP server against a `ShotDataSource` (mock or screen — no hardware required)
       *(2026-08-10)* — `src/golf_coach/mcp/`, stdio transport, `scripts/run_mcp_server.py`
 - [x] **Build MCP server with tools — and the tool list changed.** ADR-006's five were all
