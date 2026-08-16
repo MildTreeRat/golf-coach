@@ -12,6 +12,7 @@ nothing here needs a key, a network or the `llm` extra.
 from __future__ import annotations
 
 import json
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
@@ -26,6 +27,7 @@ from golf_coach.storage.transcript_store import (
     load_transcript,
     new_transcript,
     save_transcript,
+    transcript_path,
 )
 
 _ROLES = ("face_on", "down_the_line", "shot_screen")
@@ -315,3 +317,75 @@ def test_reading_an_unknown_conversation_is_a_404(client, conversations_dir) -> 
 
 def test_reading_a_traversing_id_is_a_404(client, conversations_dir) -> None:
     assert client.get("/api/conversations/..%2F..%2Fsecret").status_code == 404
+
+
+# ------------------------------------------------------ resuming a swing's thread on page load
+
+
+def _seed_conversation(
+    conversations_dir, *, session_id: str, swing_id: str, updated_at: datetime, text: str
+) -> str:
+    """A stored two-turn conversation for a swing, with `updated_at` forced past the writer.
+
+    `save_transcript` always stamps `updated_at` to now, so the file is rewritten with the value
+    the test needs — the same trick `tests/storage/test_transcript_store.py` uses.
+    """
+    transcript = new_transcript(model="claude-opus-5", session_id=session_id, swing_id=swing_id)
+    transcript.messages = [
+        {"role": "user", "content": "why?"},
+        {"role": "assistant", "content": [{"type": "text", "text": text}]},
+    ]
+    save_transcript(transcript, conversations_dir)
+    stored = load_transcript(conversations_dir, transcript.conversation_id)
+    assert stored is not None
+    stored.updated_at = updated_at
+    transcript_path(conversations_dir, stored.conversation_id).write_text(
+        stored.model_dump_json(indent=2), encoding="utf-8"
+    )
+    return stored.conversation_id
+
+
+def test_a_swings_latest_conversation_is_returned_for_resume(client, conversations_dir) -> None:
+    """The results page holds no id after a reload; this is how it finds the thread to resume."""
+    base = datetime(2026, 8, 15, 12, 0, tzinfo=UTC)
+    _seed_conversation(
+        conversations_dir, session_id="s", swing_id="1", updated_at=base, text="Older answer."
+    )
+    newest = _seed_conversation(
+        conversations_dir, session_id="s", swing_id="1",
+        updated_at=base + timedelta(hours=1), text="Newer answer.",
+    )
+
+    body = client.get("/api/sessions/s/swings/1/conversation").json()
+
+    assert body["conversation_id"] == newest
+    assert body["turns"] == [
+        {"role": "user", "text": "why?"},
+        {"role": "assistant", "text": "Newer answer."},
+    ]
+
+
+def test_a_swing_with_no_conversation_is_an_empty_thread_not_a_404(
+    client, conversations_dir
+) -> None:
+    """First-visit state: the panel renders empty either way, so a 200 rather than a 404."""
+    res = client.get("/api/sessions/s/swings/1/conversation")
+
+    assert res.status_code == 200
+    assert res.json() == {"conversation_id": None, "turns": []}
+
+
+def test_resume_is_scoped_to_the_swing_not_the_clock(client, conversations_dir) -> None:
+    """A newer thread on a *different* swing must not be picked up by this one."""
+    base = datetime(2026, 8, 15, 12, 0, tzinfo=UTC)
+    mine = _seed_conversation(
+        conversations_dir, session_id="s", swing_id="1", updated_at=base, text="Mine."
+    )
+    _seed_conversation(
+        conversations_dir, session_id="s", swing_id="2",
+        updated_at=base + timedelta(hours=1), text="Another swing.",
+    )
+
+    body = client.get("/api/sessions/s/swings/1/conversation").json()
+
+    assert body["conversation_id"] == mine

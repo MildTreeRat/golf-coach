@@ -17,6 +17,7 @@ import pytest
 from golf_coach.contracts.conversation import TRANSCRIPT_VERSION, Transcript
 from golf_coach.storage.transcript_store import (
     is_conversation_id,
+    latest_for_swing,
     list_transcripts,
     load_transcript,
     new_conversation_id,
@@ -178,6 +179,77 @@ def test_listing_is_newest_first_and_skips_unreadable(conversations_dir: Path) -
 
 def test_listing_an_absent_directory_is_empty(tmp_path: Path) -> None:
     assert list_transcripts(tmp_path / "never-created") == []
+
+
+def _seed_for_swing(
+    conversations_dir: Path, *, session_id: str, swing_id: str, updated_at: datetime
+) -> str:
+    """A stored transcript for a swing, with `updated_at` forced past the atomic writer.
+
+    Same trick `test_listing_is_newest_first_and_skips_unreadable` uses: `save_transcript` always
+    stamps `updated_at` to now, so the file is rewritten with the value the test needs.
+    """
+    transcript = new_transcript(model=MODEL, session_id=session_id, swing_id=swing_id)
+    save_transcript(transcript, conversations_dir)
+    stored = load_transcript(conversations_dir, transcript.conversation_id)
+    assert stored is not None
+    stored.updated_at = updated_at
+    transcript_path(conversations_dir, stored.conversation_id).write_text(
+        stored.model_dump_json(indent=2), encoding="utf-8"
+    )
+    return stored.conversation_id
+
+
+def test_latest_for_swing_returns_the_newest_thread_for_that_swing(
+    conversations_dir: Path,
+) -> None:
+    """The lookup the results page resumes from. Newest by `updated_at`, scoped to the swing."""
+    base = datetime(2026, 8, 15, 12, 0, tzinfo=UTC)
+    _seed_for_swing(conversations_dir, session_id="2026-08-10", swing_id="2", updated_at=base)
+    newest = _seed_for_swing(
+        conversations_dir, session_id="2026-08-10", swing_id="2",
+        updated_at=base + timedelta(hours=1),
+    )
+    # A different swing in the same session, and a different session — the newest of all, so a
+    # match here would mean the scoping is by time alone rather than by swing.
+    _seed_for_swing(
+        conversations_dir, session_id="2026-08-10", swing_id="1",
+        updated_at=base + timedelta(hours=2),
+    )
+    _seed_for_swing(
+        conversations_dir, session_id="2026-08-11", swing_id="2",
+        updated_at=base + timedelta(hours=3),
+    )
+
+    found = latest_for_swing(conversations_dir, "2026-08-10", "2")
+
+    assert found is not None
+    assert found.conversation_id == newest
+
+
+def test_latest_for_swing_is_none_when_the_swing_has_no_thread(conversations_dir: Path) -> None:
+    _seed_for_swing(
+        conversations_dir, session_id="2026-08-10", swing_id="1",
+        updated_at=datetime(2026, 8, 15, 12, 0, tzinfo=UTC),
+    )
+
+    assert latest_for_swing(conversations_dir, "2026-08-10", "2") is None
+    # The first-visit state: no conversations directory at all.
+    assert latest_for_swing(conversations_dir / "never-created", "2026-08-10", "2") is None
+
+
+def test_latest_for_swing_skips_an_unreadable_neighbour(conversations_dir: Path) -> None:
+    """Inherited from `list_transcripts`: a corrupt file must not raise or hide a good match."""
+    good = _seed_for_swing(
+        conversations_dir, session_id="2026-08-10", swing_id="2",
+        updated_at=datetime(2026, 8, 15, 12, 0, tzinfo=UTC),
+    )
+    (conversations_dir / "conv-2026-08-15-deadbeef.json").write_text("nonsense", encoding="utf-8")
+
+    found = latest_for_swing(conversations_dir, "2026-08-10", "2")
+
+    assert found is not None
+    assert found.conversation_id == good
 
 
 def test_replayable_by_rejects_another_model_and_an_older_schema() -> None:

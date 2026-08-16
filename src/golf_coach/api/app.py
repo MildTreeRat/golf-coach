@@ -42,6 +42,7 @@ from golf_coach.storage.golfer_store import GolferStore
 from golf_coach.storage.manifest import EXPECTED_ROLES, Role
 from golf_coach.storage.session_meta import load_session_meta, set_current_player
 from golf_coach.storage.transcript_store import (
+    latest_for_swing,
     load_transcript,
     new_transcript,
     save_transcript,
@@ -610,6 +611,27 @@ def create_app(
         from golf_coach.launch_monitor.screen.source import ScreenShotDataSource
 
         return CompositeShotDataSource([ScreenShotDataSource(settings.shots_dir)])
+
+    @app.get("/api/sessions/{session_id}/swings/{swing_id}/conversation", dependencies=guard)
+    async def swing_conversation(session_id: str, swing_id: str) -> dict:
+        """The swing's most recent conversation, rendered for display, or an empty one.
+
+        The results page holds no conversation id after a reload (ADR-020), so this is how it
+        picks the thread back up: it resolves the swing to its newest transcript server-side, so
+        a second phone opening the same swing URL resumes the same thread rather than starting a
+        parallel one. Empty (not 404) when none exists — 'no conversation yet' is the ordinary
+        first-visit state and the panel renders the same either way. `visible_turns` drops
+        thinking and tool blocks; the stored blocks are untouched (ADR-020).
+        """
+        _safe(session_id, "session id")
+        _safe(swing_id, "swing id")
+        transcript = latest_for_swing(settings.conversations_dir, session_id, swing_id)
+        if transcript is None:
+            return {"conversation_id": None, "turns": []}
+        return {
+            "conversation_id": transcript.conversation_id,
+            "turns": visible_turns(transcript),
+        }
 
     @app.get("/api/conversations/{conversation_id}", dependencies=guard)
     async def conversation_detail(conversation_id: str) -> dict:

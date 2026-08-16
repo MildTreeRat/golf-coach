@@ -154,6 +154,9 @@ async function load() {
   // Fetched after the render rather than before it, and injected into a placeholder: the swing
   // is what this page is about, and one slow corpus read must not hold back the score.
   loadHistory(payload);
+  // Same after-render shape: the swing's thread is looked up server-side and dropped into the
+  // ask panel, so a reload picks it back up (ADR-020) rather than showing an empty box.
+  loadConversation(payload);
 
   // Opened straight from a link while the worker is still going: keep checking rather than
   // making the user pull to refresh.
@@ -352,6 +355,35 @@ function wireAsk() {
       input.focus();
     }
   });
+}
+
+// Restore the swing's most recent conversation on load. The server resolves the swing to its
+// newest transcript (ADR-020), so this is what makes the comment above `conversationId` true: a
+// reload, or the same swing URL on a second phone, resumes the one thread instead of orphaning
+// it behind a fresh one. Runs after `render`, so `#askTurns` exists; `render` rebuilds that node
+// each call, so a re-render while analysis polls cannot double up the restored turns.
+async function loadConversation(payload) {
+  const turns = document.getElementById("askTurns");
+  if (!turns) return;   // analysis still running — no ask panel yet; nothing to restore into
+
+  let convo;
+  try {
+    const res = await fetch(
+      `/api/sessions/${encodeURIComponent(sessionId)}/swings/${encodeURIComponent(swingId)}/conversation`,
+      { headers: authHeaders() });
+    if (!res.ok) return;   // an unreadable thread is treated as none: the empty panel is correct
+    convo = await res.json();
+  } catch (err) {
+    return;                // a lost conversation costs a re-ask and must never break the page
+  }
+
+  if (!convo.conversation_id) return;   // nothing seeded for this swing yet — first-visit state
+  conversationId = convo.conversation_id;
+  for (const turn of convo.turns || []) {
+    // The same renderer the live submit path uses, so a restored turn and a just-asked one are
+    // byte-identical markup.
+    turns.insertAdjacentHTML("beforeend", turnHtml(turn.role, turn.text));
+  }
 }
 
 const SHOT_FIELDS = [

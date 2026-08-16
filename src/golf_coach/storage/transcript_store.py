@@ -97,6 +97,24 @@ def list_transcripts(conversations_dir: Path, *, limit: int = 20) -> list[Transc
     return found[: max(0, limit)]
 
 
+def latest_for_swing(
+    conversations_dir: Path, session_id: str, swing_id: str, *, limit: int = 200
+) -> Transcript | None:
+    """The most recently updated conversation seeded from this swing, or None.
+
+    The results page has no id after a reload — the conversation is server-side (ADR-020) — so
+    this is how a swing's page finds the thread to pick back up. Reuses `list_transcripts`, so it
+    inherits both its newest-first order and its tolerance of an unreadable file. A conversation
+    can range wider than its seed, but `session_id`/`swing_id` still record where it started, and
+    that origin is what a swing's page resumes from. `limit` bounds the scan; at local
+    single-golfer scale it never bites.
+    """
+    for transcript in list_transcripts(conversations_dir, limit=limit):
+        if transcript.session_id == session_id and transcript.swing_id == swing_id:
+            return transcript
+    return None
+
+
 def new_transcript(
     *,
     model: str,
