@@ -754,6 +754,58 @@ unusualness, with `head_hip_gain_norm` contributing 38.6% of the departure *whil
 **Exit criteria**: a swing can be told its combination is unusual, with the metric responsible
 named — **met offline**, not yet on a `SwingResult`.
 
+### M8.1 — the trajectory model (NEXT ACTION, agreed 2026-08-16)
+
+**Why**: the shipped model reads six scalars at four instants. The Tier 1 cache holds **461 face-on
+clips as full 33-landmark time series**, so the model currently ignores most of the signal already
+on disk. A trajectory model also unlocks the one thing the scalar model structurally cannot do —
+saying **when** in the swing the departure happens, which is the sentence a coach actually gives.
+
+Steps, and **the ordering matters — step 1 gates step 3**:
+
+1. - [ ] **Gate the `z` channel.** `scripts/golfdb/tune_z_channel.py` (new). MediaPipe emits a `z`
+        per landmark; it is a monocular *guess* at depth, not triangulation, and owning two cameras
+        does not improve it. But it has never been through a gate, and much of its bias would be
+        common-mode between corpus and user swings — the argument ADR-012 makes for the estimator.
+        So screen it the way every current metric was screened: **spread ÷ (noise + boundary) ≥ 2.0**
+        (`tune_spatial_metric.py`'s bar), per landmark, comparing `z`'s ratio against `x` and `y`'s.
+        The data is already there — `keypoints/mediapipe-lite/` and `mediapipe-full/` both hold 461
+        clips, so noise is the lite-vs-full disagreement at the labelled instants.
+        **Its verdict decides whether step 3's features are x/y or x/y/z. Do not skip ahead.**
+2. - [ ] **Extract down-the-line keypoints.** 584 GolfDB DTL clips have **no keypoints at all**.
+        `extract_pose.py` already does this and is resumable, so it runs unattended.
+        ⚠️ **Needs the `videos_160` archive (~700 MB), which is deliberately not in the repo** — check
+        it is still on disk before relying on this. Not a blocker for step 3, which is face-on.
+3. - [ ] **Build it.** Agreed shape: **12 landmarks** (shoulders, hips, elbows, wrists, knees,
+        ankles, ear — drop MediaPipe's face detail), coordinates per step 1's verdict, **~60
+        timesteps resampled onto the eight annotated events** so slow-motion and real-time clips
+        line up (the corpus is ~47% slow-motion). That is ~1,400 raw numbers per swing against
+        n=458, so **PCA to 15–30 components** before fitting anything — at 25 components that is
+        ~18 swings per dimension; the raw space would have more dimensions than samples and the
+        covariance would not invert at all.
+        **The stopping rule already exists**: add components until `derive_joint_model.py`'s
+        leave-one-player-out exceedance drifts off 10%, then back off one. Overfitting announces
+        itself.
+4. - [ ] **Surface both models in one pass.** One `ANALYSIS_VERSION` bump, one `reanalyze.py` run,
+        one edit to `contracts/caveats.py` — rather than paying that twice.
+
+**Two things settled in discussion, recorded so they are not re-litigated:**
+
+- **There is no 3D here, and that is structural rather than pending.** The reference corpus is
+  single-view: of 580 source videos only 60 contain more than one view, and just **14 cross-view
+  clip pairs overlap in time** — nowhere near enough to fit anything. And on our own capture,
+  [ADR-011](docs/decisions/011-camera-synchronization.md)'s addendum already ruled that hand-held
+  phones "can be aligned but never fused… unreachable by construction", because two people holding
+  phones differently every swing have no stable extrinsics.
+- **The second camera's value is a second 2D model, not depth.** Down-the-line sees what face-on
+  cannot — spine tilt, swing plane — which is what step 2 is for. Two per-view models is exactly
+  what "aligned but never fused" implies architecturally.
+
+**More reference swings are *not* the bottleneck right now.** 458 clips against ~21 fitted
+parameters is comfortable; another 500 tour clips would barely move the scalar model. That flips at
+step 3, where hundreds of dimensions make n=458 start to pinch — so extract more from the clips on
+hand *first*, and only then go looking for more clips.
+
 
 ---
 

@@ -66,9 +66,24 @@ do not.
 
 **Where it was left.** The model is fitted, committed, tested and **not surfaced** — it is on no
 `SwingResult`, `ANALYSIS_VERSION` did not move, no stored analysis changed. That is M6.5's ordering
-on purpose: the quantity should be inspectable across swings before it is spoken. Surfacing it is
-the next step and has its own blast radius (measurements list, MCP payloads, caveats prose,
-re-analysis).
+on purpose: the quantity should be inspectable across swings before it is spoken.
+
+**NEXT ACTION — read [ROADMAP.md §M8.1](ROADMAP.md#m81--the-trajectory-model-next-action-agreed-2026-08-16),
+which has the whole agreed plan with its dependency order.** In one line: the shipped model reads
+six scalars where the Tier 1 cache holds 461 clips as full 33-landmark time series, so the next
+model is a trajectory model over 12 landmarks, ~60 timesteps resampled onto the annotated events,
+PCA to 15–30 components.
+
+**Start with the `z` gate** (`scripts/golfdb/tune_z_channel.py`, not yet written). MediaPipe's `z`
+is a monocular guess rather than triangulation, it has never been screened, and **its verdict
+decides whether the trajectory features are x/y or x/y/z** — so it comes first. Screen it on
+`tune_spatial_metric.py`'s bar, spread ÷ (noise + boundary) ≥ 2.0, using the lite-vs-full
+disagreement already on disk (461 clips each).
+
+Two questions that came up and are **settled, not open**: there is no 3D to be had — the reference
+corpus has only 14 cross-view clip pairs, and ADR-011's addendum already ruled hand-held phones
+"aligned but never fused" — and more reference swings are not the bottleneck until the trajectory
+model exists. Both are written up in §M8.1 so they are not re-argued.
 
 **Also worth knowing**: CaddieSet has no frame indices, so it can say nothing about **tempo** — the
 one checkpoint currently failing. And its two views are the same shots (803 share a launch-monitor
