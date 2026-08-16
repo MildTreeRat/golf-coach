@@ -1,6 +1,6 @@
 # Documentation map
 
-48 markdown documents: 38 in `docs/` — 13 here at the top level (including this map), 21 ADRs,
+50 markdown documents: 40 in `docs/` — 13 here at the top level (including this map), 23 ADRs,
 3 archived, 1 in `proposals/` — plus 10 outside it (the four at the repo root, and one each in
 `data/` and `frontend/`, four in `spikes/`). This page says which one to read, and — just as
 importantly — which ones are records of the past rather than descriptions of the present.
@@ -85,7 +85,7 @@ everything on this page is supposed to be trustworthy.
 
 ## Decisions (ADRs)
 
-20 decisions, 21 addenda between them (`grep -c '^#\+ *Addendum' docs/decisions/*.md` — the
+22 decisions, 21 addenda between them (`grep -c '^#\+ *Addendum' docs/decisions/*.md` — the
 stated total had drifted to 11, then to 13, and is now pinned by `tests/test_docs_truth.py`
 along with every per-ADR count in the last column).
 **The addenda are where reality corrected the original call**, so a doc's original Decision
@@ -113,6 +113,8 @@ section is not always the final word — the counts below exist so you don't mis
 | [018](decisions/018-bay-lighting.md) | Bay lighting — buying the exposure ADR-017 asked for | Accepted | — |
 | [019](decisions/019-secret-handling.md) | Secret handling — masked in memory, plaintext at rest | Accepted | **1** — a fourth unwrap site (`scripts/ask_swing.py`), recorded because the pin caught it and the decision says widening the surface must be deliberate |
 | [020](decisions/020-conversational-followups.md) | Conversational follow-ups — a transcript store, and the tool runner over `query.py` | Accepted | — (the stdio round trip is for *external* clients; in-app calls go direct) |
+| [021](decisions/021-caddieset-paired-reference-data.md) | CaddieSet as a paired mechanics/outcome source | Accepted as a corpus, **and its study returned a negative result** | — (face-on pose does not predict ball flight; the club sets the ball and the club is not in the picture) |
+| [022](decisions/022-learned-artifacts-as-committed-data.md) | Learned artifacts as committed data — and the tour joint-distribution model | Accepted, **fitted but not yet surfaced** | — (fit offline, ship the numbers, evaluate in stdlib — what `ranges.json` already is) |
 
 Format: [000-template.md](decisions/000-template.md).
 

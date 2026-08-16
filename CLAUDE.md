@@ -49,6 +49,12 @@ Break one of these and something breaks a long way from your edit.
 - **Measuring is separate from judging.** `analysis/measure.py` produces numbers with no band in
   sight; `analysis/checkpoints/mechanics.py` turns them into verdicts. That split is what lets a
   new metric be measured across the corpus *before* a band for it exists.
+- **Models are fitted offline and ship as data** (ADR-022). Fitting lives in `scripts/` under the
+  `research` extra and may use numpy/scikit-learn; what enters the package is a provenanced JSON
+  artifact plus stdlib arithmetic to evaluate it. `ranges.json` and `golfdb_v1.json` already work
+  this way, `joint_model_v1.json` is the first *learned* one, and
+  `tests/api/test_pipeline_imports.py` is what fails if a `golf_coach.*` module reaches for either
+  library.
 
 ## Where the answer is
 
@@ -67,6 +73,7 @@ of its five sections costs a fraction of reading the file.
 | Where is this going next? | `ROADMAP.md` — *Status at a glance*, then your section only |
 | What happened last session? | `WORKLOG.md` — **the top entry, and only the top entry** |
 | Has this been tried and rejected? | `docs/M4_POSE_BAKEOFF.md` — grep it |
+| Why is there a trained model, and where? | ADR-022, then `analysis/benchmarks/joint.py` |
 | What rules is code held to? | `docs/CODE_STANDARDS.md` — each rule with its precedent *and* a known non-violation |
 | Has this refactor already been declined? | `docs/REFACTOR_LEDGER.md` — read it before proposing a structural change |
 

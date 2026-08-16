@@ -60,3 +60,32 @@ python scripts/golfdb/derive_reference.py
 
 The clip archive (`videos_160`, ~700 MB) is downloaded separately per the upstream README and is
 **not** stored here.
+
+## `reference/caddieset/` — the paired corpus (M8-PAIR)
+
+Populated by `scripts/caddieset/*`. The one corpus here with **mechanics and ball flight on the same
+row**: 1,757 rows (924 face-on) from eight golfers of mixed skill, per-phase joint metrics across
+the same eight swing events GolfDB annotates, plus the launch monitor's reading. See
+[ADR-021](../docs/decisions/021-caddieset-paired-reference-data.md).
+
+```
+reference/caddieset/
+├── upstream/CaddieSet.csv   # the shipped file, one CSV, ~500 KB
+├── upstream/LICENSE         # MIT — fetched alongside so the terms travel with the data
+└── shots.jsonl              # one row per view-of-a-shot, cells that cannot be trusted made absent
+```
+
+**MIT, so this one could have been vendored into git — and deliberately is not.** Keeping every
+third-party corpus under one gitignored root makes the licensing boundary a directory rather than a
+per-file judgement someone has to remember. One HTTP GET rebuilds it.
+
+Two things to know before using it. Its joint metrics are CaddieSet's own definitions, **not** our
+`metric_definitions_version: 3`, so no value here may ever become a band (ADR-012 §4). And 803
+face-on rows share a launch-monitor reading with a down-the-line row, so 1,757 rows are roughly 950
+physical shots — `common.shot_key` is what makes that visible instead of double-counted.
+
+```
+python scripts/caddieset/fetch.py
+python scripts/caddieset/ingest.py
+python scripts/caddieset/study_panel.py   # needs the `research` extra
+```

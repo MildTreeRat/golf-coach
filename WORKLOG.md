@@ -5,6 +5,78 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-08-16 — The model that was supposed to predict the ball, and the one that shipped instead
+
+**Duration**: ~1 session. Two ADRs, one new corpus, two gates, one fitted artifact, 12 pins.
+**What prompted it**: "where can we get more pro data, and why isn't there a trained model?" —
+which turned out to be two questions with opposite answers.
+
+**The pro data was never the bottleneck.** 1,399 GolfDB swings, 458 face-on from 122 golfers,
+92 published distributions. What was missing was any corpus with mechanics *and* ball flight on the
+same row, which is precisely what ADR-012 said and `NO_LAUNCH_MONITOR_POPULATION` says in code.
+
+**Found one: CaddieSet** (arXiv 2508.20491, MIT, one 508 KB CSV). 924 face-on shots, eight golfers
+of mixed skill, per-phase joint metrics over the same eight events GolfDB annotates, plus carry,
+ball speed, direction and spin axis. Ingested under the same gitignored root as GolfDB
+([ADR-021](docs/decisions/021-caddieset-paired-reference-data.md)).
+
+**Then it failed, and the failure is the most useful thing here.** Leave-one-golfer-out over the
+924 face-on shots: spin axis 0.532 against 0.572 for *knowing which club was hit*, carry R² of
+**-0.205** — worse than predicting that golfer's own average. Only start direction cleared its
+baseline, 0.594 vs 0.535, and only marginally. A regularisation sweep moved nothing.
+
+**Centering each feature on the golfer's own mean made it worse** (0.443, 0.502 — at or below
+chance), which is the detail that settles it: the little signal there was lived *between* the eight
+golfers, not inside any of them. Traits of eight people, not a lever anyone can pull.
+
+Which is what ball-flight physics predicts and what the ROADMAP already suspected — "we can measure
+that a club face is open; we cannot see *why*". The club sets the ball; a face-on camera pointed at
+a body does not see the club. So this is not "the checkpoints are worthless", it is the first
+empirical support ADR-009's two-axis split has ever had. **The gate did its job: it killed the
+centrepiece of the plan before it was built**, the way `tune_arm_parallel.py` killed two
+checkpoints.
+
+**What face-on pose can answer is a different question, and the data for it was already on disk.**
+Six independent bands cannot say a *combination* is one no tour player produces. New
+`tune_joint_structure.py` checked whether there was anything to say: `head_sway_norm` ×
+`hip_shift_at_top_norm` at **+0.441**, × `head_hip_gain_norm` at **-0.385**, two more past the gate,
+condition number 4.8. There is.
+
+So `derive_joint_model.py` fits a robust center, scale and inverse correlation over those 458 clips
+and commits ~50 numbers; `analysis/benchmarks/joint.py` evaluates them in stdlib.
+**No invariant moved** — fitting uses the `research` extra, the artifact is data, evaluation is dot
+products, and `test_pipeline_imports.py` still passes. That is what `ranges.json` already is
+([ADR-022](docs/decisions/022-learned-artifacts-as-committed-data.md)).
+
+**It generalises**: leave-one-*player*-out, 11.1% of held-out swings exceed the refitted model's own
+p90 against a 10% target.
+
+**And it immediately says something the panel cannot.** `2026-08-10/2` scores **96.9** — everything
+it can be judged on passes except tempo — and sits at the **73rd percentile** of unusualness as a
+combination. The decomposition names why: `head_hip_gain_norm` contributes **38.6% of the departure
+while passing its band**, because its value is odd *given* the tempo.
+
+**Two things found while the data was open.** 458 clips from 122 golfers are not 458 independent
+samples: a player-clustered bootstrap widens the band intervals by up to **×2.16**
+(`hip_shift_at_top_norm`'s p90), and `hip_sway_norm`'s p10 of 0.1414 has a clustered 95% interval
+reaching down to **0.0801** — where it sits 1.6× the 0.050 error floor above zero rather than the
+2.8× ADR-010's addendum justified it on. Worth a look before that band is trusted tightly. And
+per-club face-on strata: driver 341, iron 69, fairway 32 clear `MIN_SAMPLES`; wedge 11 and hybrid 5
+do not.
+
+**Where it was left.** The model is fitted, committed, tested and **not surfaced** — it is on no
+`SwingResult`, `ANALYSIS_VERSION` did not move, no stored analysis changed. That is M6.5's ordering
+on purpose: the quantity should be inspectable across swings before it is spoken. Surfacing it is
+the next step and has its own blast radius (measurements list, MCP payloads, caveats prose,
+re-analysis).
+
+**Also worth knowing**: CaddieSet has no frame indices, so it can say nothing about **tempo** — the
+one checkpoint currently failing. And its two views are the same shots (803 share a launch-monitor
+reading byte for byte), so 1,757 rows are ~950 shots; `common.shot_key` exists so a future study
+does not double-count them.
+
+---
+
 ## 2026-08-15 — The conversation that refused to average two sessions (M6 closed, ADR-020)
 
 **Duration**: ~1 session. One ADR, one addendum to another, one new subsystem, 70 pins, and the

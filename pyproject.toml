@@ -49,12 +49,21 @@ ocr = [
     "opencv-python>=4.9",
     "numpy>=1.26",
 ]
-# Offline research / reference-data derivation (M4-REF). Used ONLY by scripts/golfdb/*, never
-# by the package: pandas appears at exactly one boundary (reading GolfDB's pickled DataFrame),
-# after which everything downstream is stdlib. Keeping it out of `vision` keeps the invariant
-# that the analysis core installs and tests with no extras at all (ADR-008).
+# Offline research / reference-data derivation (M4-REF, M8-PAIR). Used ONLY by scripts/golfdb/*
+# and scripts/caddieset/*, never by the package: pandas appears at exactly one boundary (reading
+# GolfDB's pickled DataFrame), after which everything downstream is stdlib. Keeping it out of
+# `vision` keeps the invariant that the analysis core installs and tests with no extras at all
+# (ADR-008).
+#
+# numpy and scikit-learn are here for the same reason and under the same rule: model *fitting*
+# happens offline in scripts, and what ships is the fitted artifact as committed JSON that stdlib
+# code evaluates — the pattern `ranges.json` and `golfdb_v1.json` already are (ADR-022). If a
+# `golf_coach.*` module ever imports either of these, that invariant has been broken, and
+# tests/api/test_pipeline_imports.py is what says so.
 research = [
     "pandas>=2.0",
+    "numpy>=1.26",
+    "scikit-learn>=1.4",
 ]
 dev = [
     "pytest>=8.0",

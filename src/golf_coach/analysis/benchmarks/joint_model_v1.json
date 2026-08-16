@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "dataset": {
+    "name": "GolfDB",
+    "citation": "McNally et al., GolfDB: A Video Database for Golf Swing Sequencing, CVPR Workshops 2019",
+    "url": "https://github.com/wmcnally/golfdb",
+    "license_note": "Aggregate statistics only. GolfDB's code is CC BY-NC 4.0, the dataset states no license, and the clips are third-party broadcast footage. A center, a scale and a correlation matrix carry no player name, clip id or frame index and are not a substantial reproduction of the dataset. See ADR-012 and ADR-022.",
+    "pose_estimator": "mediapipe:lite",
+    "metric_definitions_version": 3,
+    "min_samples": 30,
+    "derived_on": "2026-08-16",
+    "pipeline_commit": "d38acfe"
+  },
+  "model": {
+    "kind": "mahalanobis",
+    "metrics": [
+      "tempo_ratio",
+      "head_sway_norm",
+      "finish_balance_norm",
+      "hip_sway_norm",
+      "hip_shift_at_top_norm",
+      "head_hip_gain_norm"
+    ],
+    "n": 458,
+    "n_players": 122,
+    "clip_z": 4.0,
+    "center": [
+      3.625,
+      0.165483,
+      0.148777,
+      0.301805,
+      0.084338,
+      -0.405474
+    ],
+    "scale": [
+      0.87207,
+      0.141587,
+      0.068226,
+      0.132228,
+      0.076538,
+      0.188344
+    ],
+    "precision": [
+      [
+        1.115758,
+        -0.190579,
+        -0.082434,
+        0.275106,
+        0.088458,
+        -0.049285
+      ],
+      [
+        -0.190579,
+        1.494524,
+        -0.192278,
+        0.278582,
+        -0.279917,
+        0.72943
+      ],
+      [
+        -0.082434,
+        -0.192278,
+        1.094238,
+        -0.053301,
+        -0.215915,
+        -0.09614
+      ],
+      [
+        0.275106,
+        0.278582,
+        -0.053301,
+        1.271579,
+        0.212704,
+        0.429431
+      ],
+      [
+        0.088458,
+        -0.279917,
+        -0.215915,
+        0.212704,
+        1.170438,
+        -0.109907
+      ],
+      [
+        -0.049285,
+        0.72943,
+        -0.09614,
+        0.429431,
+        -0.109907,
+        1.428998
+      ]
+    ],
+    "distance_quantiles": {
+      "p10": 1.292799,
+      "p25": 1.641883,
+      "p50": 2.236239,
+      "p75": 3.027039,
+      "p90": 4.226034
+    }
+  }
+}

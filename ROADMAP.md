@@ -23,6 +23,7 @@ wording; only the grouping and the M4 checklist have been corrected.
 | **M6** LLM coaching | ✅ Done *(2026-08-15)* | — (live coaching, the MCP handshake and follow-up questions are all proven) | [§M6](#milestone-6-llm-powered-coaching--done) |
 | **M6.5** Measure now, judge later | ✅ Done | — (9 recorded, **6 scored**; the handedness seam landed and the last candidate was settled) | [§M6.5](#m65-measure-now-judge-later--done) |
 | **Career mode** One golfer over time | ✅ Done, 6/6 steps | — (built and silent; a bay session gives it the `n` to speak) | [§Career](#career-mode-one-golfer-tracked-over-time--done-built-and-silent) |
+| **M8** Learning what "good" means | 🟡 Fitted, not surfaced | — (both gates ran on data on disk; surfacing is the next step) | [§M8](#m8-learning-what-good-means--gates-run-model-fitted) |
 | **M5** Feedback UI | ⬜ Not started | M7 Phase 5 gives the host | [§M5](#milestone-5-feedback-ui) |
 | **M2** Club & ball detection | 🔒 Gated, **and M1.5 said no-go** | Bay lighting for a ~1/2000 s exposure — *not* a global-shutter camera | [§M2](#milestone-2-club--ball-detection) |
 | Hardware re-validation | 🔒 Gated | Cameras / launch monitor arriving | [§Gate](#hardware-re-validation-gate-revisit-when-cameras--launch-monitor-arrive) |
@@ -702,6 +703,57 @@ can revisit it without re-capturing anything.
 
 ---
 
+## M8: Learning what "good" means — gates run, model fitted
+
+**The idea**: everything before this judges a swing one number at a time. A coach does not. Most of
+what a coach knows that an average golfer does not is *conditional* — a wide hip slide is fine if
+the head stays back and a fault if it does not — and six independent bands have no way to hold an
+"if". This milestone asked what could be learned from data instead of asserted, and ran two gates
+to find out.
+
+**Gate 1 — can mechanics predict the ball? No.** [ADR-021](docs/decisions/021-caddieset-paired-reference-data.md).
+CaddieSet (MIT, 924 face-on shots, 8 golfers of mixed skill) is the first corpus here with mechanics
+and ball flight on the same row. Leave-one-golfer-out: spin axis **0.532** against **0.572** for
+knowing only which club was hit; carry **R² = -0.205**, worse than predicting that golfer's average.
+Start direction cleared its baseline marginally (0.594 vs 0.535) and a regularisation sweep moved
+nothing. Centering each feature on the golfer's own mean made it *worse* — the little signal there
+was lived between the eight golfers, not inside any of them.
+
+That is what ball-flight physics predicts and what [§Career](#career-mode-one-golfer-tracked-over-time--done-built-and-silent)
+already suspected: the club sets the ball and a face-on camera pointed at a body does not see the
+club. It is also the first empirical support [ADR-009](docs/decisions/009-swing-scoring-model.md)'s
+two-axis split has had.
+
+**Gate 2 — is there joint structure the bands are missing? Yes.**
+`scripts/golfdb/tune_joint_structure.py` over the 458 face-on clips: `head_sway_norm` ×
+`hip_shift_at_top_norm` at **+0.441**, × `head_hip_gain_norm` at **-0.385**, two more past 0.2,
+correlation-matrix condition number 4.8.
+
+**What shipped**: a robust center, scale and inverse correlation of the tour population, fitted
+offline under the `research` extra and committed as ~50 numbers that stdlib arithmetic evaluates —
+the pattern `ranges.json` already is ([ADR-022](docs/decisions/022-learned-artifacts-as-committed-data.md)).
+Leave-one-*player*-out exceedance 11.1% against a 10% target, so the shape transfers to golfers the
+fit never saw. On `2026-08-10/2` it places a swing scoring **96.9** at the **73rd percentile** of
+unusualness, with `head_hip_gain_norm` contributing 38.6% of the departure *while passing its band*.
+
+- [x] `scripts/caddieset/{fetch,ingest,study_panel}.py` and the corpus decision
+- [x] `scripts/golfdb/tune_joint_structure.py` — the gate, plus player-clustered band intervals
+- [x] `scripts/golfdb/derive_joint_model.py` → `analysis/benchmarks/joint_model_v1.json`
+- [x] `analysis/benchmarks/joint.py` + 12 pins in `tests/analysis/test_joint.py`
+- [ ] **Surface it.** Register as a `Measurement`, bump `ANALYSIS_VERSION`, re-run
+      `scripts/reanalyze.py`, and teach `contracts/caveats.py` how to describe it. Held back on
+      purpose — M6.5's ordering says a quantity should be inspectable across swings before it is
+      spoken, and the blast radius reaches the MCP payloads and the coaching prose
+- [ ] **Revisit `hip_sway_norm`'s lower edge.** The player-clustered bootstrap puts its p10 of
+      0.1414 in a 95% interval reaching to **0.0801**, where it sits 1.6× the 0.050 error floor
+      above zero rather than the 2.8× [ADR-010](docs/decisions/010-benchmark-ranges.md)'s addendum
+      justified it on. 458 clips from 122 golfers are not 458 independent samples
+- [ ] **Per-club bands are now costed**: face-on driver 341, iron 69, fairway 32 clear
+      `MIN_SAMPLES = 30`; wedge 11 and hybrid 5 do not
+
+**Exit criteria**: a swing can be told its combination is unusual, with the metric responsible
+named — **met offline**, not yet on a `SwingResult`.
+
 
 ---
 
@@ -1122,8 +1174,12 @@ the `PROVISIONAL / UNCALIBRATED` provenance strings in `ranges.json`.
       through the existing pipeline unchanged. What is missing is selection (which pro, matched on
       club/sex/build?) and spatial normalization, not extraction. Note the corpus is gitignored for
       licensing (ADR-012), so shipping this needs a redistribution story — aggregate percentiles are
-      committable, per-clip keypoints of named tour players are not
+      committable, per-clip keypoints of named tour players are not. **M8 found the way round
+      this**: a *basis* fitted over 122 pros is an aggregate, and a basis is not a pro
 - [ ] Drill recommendations based on persistent faults
-- [ ] Trained ML model for swing quality regression (replace/augment rules)
+- [x] ~~Trained ML model for swing quality regression (replace/augment rules)~~ — **attempted and
+      redirected**, see [§M8](#m8-learning-what-good-means--gates-run-model-fitted). Regression
+      against *outcome* is closed (ADR-021: face-on pose does not predict ball flight). What shipped
+      instead is a normative model of the tour population's joint distribution (ADR-022)
 - [ ] Mobile companion app
 - [ ] Export swing reports as PDF

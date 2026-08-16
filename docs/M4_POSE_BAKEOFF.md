@@ -881,3 +881,50 @@ attributed the two views' disagreement to the down-the-line lead wrist being the
 **That was backwards.** On down-the-line the two wrists agree (LEFT 24 frames, RIGHT 25); face-on
 was the outlier at 14, and with the floor in place both views read 24. No view-aware landmark
 selection is warranted, and none was written.
+
+---
+
+## Phase C — predicting ball flight from face-on pose (rejected, 2026-08-16)
+
+Recorded here because this is where "has this been tried?" is grepped, though the corpus is not
+GolfDB and the full argument is [ADR-021](decisions/021-caddieset-paired-reference-data.md).
+
+**The idea**: rank the six checkpoints by how much each actually costs a shot, replacing
+`feedback/rules.py`'s hand-authored severity with a learned ordering. It needs mechanics and ball
+flight on one row, which GolfDB has never had. **CaddieSet** does — 924 face-on shots, eight golfers
+of mixed skill, launch-monitor ball data.
+
+**Result: no.** Leave-one-golfer-out, `scripts/caddieset/study_panel.py`:
+
+| target | mechanics | club choice alone | best over |
+|---|---|---|---|
+| straight start (\|direction\| ≤ 6°) | 0.594 | 0.535 | +0.059 |
+| desirable spin axis (\|axis\| ≤ 10°) | 0.532 | **0.572** | **-0.040** |
+| carry, within (golfer, club) | R² **-0.205** | — | worse than the golfer's own mean |
+
+Stable across C = 0.01 … 10 (straight start 0.566–0.610, spin axis 0.515–0.520), so it is not a
+hyperparameter artefact. Non-linearity is not what is missing either: a gradient-boosted model
+scored 0.542 and 0.532.
+
+**The detail that settles it.** Centering every feature on the golfer's own mean — which removes
+between-golfer differences and leaves only the within-golfer mechanism — makes transfer *worse*,
+0.443 and 0.502, at or below chance. Whatever signal existed was a trait of those eight people, not
+a lever any of them could pull.
+
+**Why this was predictable, and is not a defect.** Start line and curvature are set by the club face
+and path. A face-on camera pointed at a body does not see the club. The panel measures whether the
+body is doing something repeatable and athletic; it never claimed to predict the ball, and
+[ADR-009](decisions/009-swing-scoring-model.md) built the two axes separately for exactly this
+reason.
+
+**What cannot be concluded**: that the biomechanics are irrelevant. CaddieSet's joint metrics come
+from CaddieSet's own pose pipeline (22 of its cells are structurally unreadable, and its normalised
+columns reach 33 shoulder-widths against a median of -0.15), so a null result here may measure their
+instrument rather than the underlying relationship. Eight golfers is also eight, not a population.
+
+**What to re-try this with**: a corpus with club delivery in it — club face and path at impact
+alongside the body — or this repo's own paired data once a bay session has produced enough of it.
+Not another body-pose-only dataset.
+
+**Also**: CaddieSet ships no frame indices, so it can say nothing at all about `tempo_ratio` — the
+one checkpoint currently failing on this golfer's swings.
