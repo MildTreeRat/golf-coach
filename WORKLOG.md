@@ -74,11 +74,16 @@ six scalars where the Tier 1 cache holds 461 clips as full 33-landmark time seri
 model is a trajectory model over 12 landmarks, ~60 timesteps resampled onto the annotated events,
 PCA to 15–30 components.
 
-**Start with the `z` gate** (`scripts/golfdb/tune_z_channel.py`, not yet written). MediaPipe's `z`
-is a monocular guess rather than triangulation, it has never been screened, and **its verdict
-decides whether the trajectory features are x/y or x/y/z** — so it comes first. Screen it on
-`tune_spatial_metric.py`'s bar, spread ÷ (noise + boundary) ≥ 2.0, using the lite-vs-full
-disagreement already on disk (461 clips each).
+**The `z` gate is done** (`scripts/golfdb/tune_z_channel.py`, 2026-08-16): `z` **passed** at a
+median ratio of 2.69 against `x` 9.86 and `y` 18.09, all 12 landmarks clearing 2.0 at n = 3,521.
+So it is not pure noise — but it carries ~22% of the planar signal-to-noise and **the screen
+flatters it**, because lite and full are one architecture at two sizes and make correlated
+monocular-depth mistakes. 2.69 is an upper bound. Decision: carry `z` into the trajectory model and
+**fit twice, with and without it**, letting leave-one-player-out exceedance settle it.
+`docs/M4_POSE_BAKEOFF.md` §Phase D has the writeup, including two silent bugs found on the way —
+GolfDB event indices need rebasing on `start`, and spread must be measured hip-relative.
+
+**So the next thing to build is the trajectory model itself** (§M8.1 step 3).
 
 Two questions that came up and are **settled, not open**: there is no 3D to be had — the reference
 corpus has only 14 cross-view clip pairs, and ADR-011's addendum already ruled hand-held phones

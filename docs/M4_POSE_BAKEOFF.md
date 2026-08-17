@@ -928,3 +928,55 @@ Not another body-pose-only dataset.
 
 **Also**: CaddieSet ships no frame indices, so it can say nothing at all about `tempo_ratio` — the
 one checkpoint currently failing on this golfer's swings.
+
+---
+
+## Phase D — the `z` channel, screened (passed with a caveat, 2026-08-16)
+
+**The question**: the trajectory model (ROADMAP §M8.1) needs to know whether its features are
+`x/y` or `x/y/z`. MediaPipe emits a `z` per landmark and nothing here had ever screened it.
+
+**Method**: `scripts/golfdb/tune_z_channel.py`. Twelve landmarks, at GolfDB's eight hand-labelled
+event frames, over the **461 face-on clips that have both `mediapipe-lite` and `mediapipe-full`
+cached**. Everything hip-relative and shoulder-width-normalised, so the three axes sit in one frame
+of reference — MediaPipe defines `z` as depth relative to the hips, so leaving `x`/`y` in image
+coordinates would have compared unlike things. Noise is the lite-vs-full disagreement on identical
+pixels. Bar is `tune_spatial_metric.py`'s: spread ÷ noise ≥ 2.0.
+
+**Result — `z` passes.** n = 3,521 per landmark-axis.
+
+| axis | median ratio | landmarks clearing 2.0 |
+|---|---|---|
+| `x` | 9.86 | 12/12 |
+| `y` | 18.09 | 10/12 |
+| `z` | **2.69** | 12/12 |
+
+So `z` clears the bar everywhere, while carrying about **22%** of the planar signal-to-noise.
+
+**Two reasons the screen is generous, the second specific to `z`:**
+
+1. It reads at *labelled* instants, so there is no boundary term. Every axis is flattered.
+2. **Lite and full are two sizes of one architecture trained the same way, so they make correlated
+   mistakes about monocular depth — they agree with each other while both guessing.** Estimator
+   agreement proxies error well on `x` and `y`, where the evidence is in the pixels, and poorly on
+   `z`, where it is inferred. **`z`'s 2.69 is therefore an upper bound on its standing, not an
+   estimate of it.**
+
+**Verdict**: carry `z` forward into step 3, but decide it there rather than here — fit the
+trajectory model with and without `z` and compare leave-one-player-out exceedance. That is a
+measurement this screen structurally cannot make.
+
+**What this does not mean.** `z` is not depth from two cameras. It is a per-image guess, and
+[ADR-011](decisions/011-camera-synchronization.md)'s addendum already ruled that hand-held phones
+can be aligned but never fused, so no triangulated depth exists anywhere in this project. Passing
+this gate says `z` is not pure noise; it does not say it is geometry.
+
+**Two bugs found writing this, both worth knowing because both fail silently:**
+
+- **GolfDB's event indices are absolute frames in the source video; the cached clips are trimmed.**
+  They must be rebased on `start` (`events -= events[0]`), exactly as upstream's dataloader does.
+  Without it the indices run off the end of a short clip and the corpus quietly drops from 461 to
+  ~6 usable clips instead of raising anything.
+- **Spread must be measured hip-relative.** A landmark's absolute position in a 160×160 broadcast
+  crop is mostly where the golfer stands in frame — framing variance, not swing variance — and
+  scoring it credits `x` and `y` with signal they do not have.

@@ -763,29 +763,35 @@ saying **when** in the swing the departure happens, which is the sentence a coac
 
 Steps, and **the ordering matters — step 1 gates step 3**:
 
-1. - [ ] **Gate the `z` channel.** `scripts/golfdb/tune_z_channel.py` (new). MediaPipe emits a `z`
-        per landmark; it is a monocular *guess* at depth, not triangulation, and owning two cameras
-        does not improve it. But it has never been through a gate, and much of its bias would be
-        common-mode between corpus and user swings — the argument ADR-012 makes for the estimator.
-        So screen it the way every current metric was screened: **spread ÷ (noise + boundary) ≥ 2.0**
-        (`tune_spatial_metric.py`'s bar), per landmark, comparing `z`'s ratio against `x` and `y`'s.
-        The data is already there — `keypoints/mediapipe-lite/` and `mediapipe-full/` both hold 461
-        clips, so noise is the lite-vs-full disagreement at the labelled instants.
-        **Its verdict decides whether step 3's features are x/y or x/y/z. Do not skip ahead.**
+1. - [x] **Gate the `z` channel — PASSED with a caveat, 2026-08-16.**
+        `scripts/golfdb/tune_z_channel.py`, screening every axis on `tune_spatial_metric.py`'s bar
+        (spread ÷ noise ≥ 2.0) over the 461 face-on clips that have both estimators cached.
+        Median ratio **`x` 9.86, `y` 18.09, `z` 2.69**, all 12 landmarks clearing 2.0 at n = 3,521.
+        So `z` is not pure noise — but it carries only ~22% of the planar signal-to-noise, **and the
+        screen flatters it**: lite and full are one architecture at two sizes, so they make
+        *correlated* monocular-depth mistakes and agree with each other while both guessing.
+        **2.69 is an upper bound on `z`, not an estimate.** Decision: carry `z` into step 3 and
+        settle it there by fitting with and without it. Writeup: `docs/M4_POSE_BAKEOFF.md` §Phase D,
+        which also records the two silent bugs found on the way (event indices need rebasing on
+        `start`; spread must be hip-relative).
 2. - [ ] **Extract down-the-line keypoints.** 584 GolfDB DTL clips have **no keypoints at all**.
         `extract_pose.py` already does this and is resumable, so it runs unattended.
         ⚠️ **Needs the `videos_160` archive (~700 MB), which is deliberately not in the repo** — check
         it is still on disk before relying on this. Not a blocker for step 3, which is face-on.
 3. - [ ] **Build it.** Agreed shape: **12 landmarks** (shoulders, hips, elbows, wrists, knees,
-        ankles, ear — drop MediaPipe's face detail), coordinates per step 1's verdict, **~60
-        timesteps resampled onto the eight annotated events** so slow-motion and real-time clips
-        line up (the corpus is ~47% slow-motion). That is ~1,400 raw numbers per swing against
-        n=458, so **PCA to 15–30 components** before fitting anything — at 25 components that is
-        ~18 swings per dimension; the raw space would have more dimensions than samples and the
-        covariance would not invert at all.
-        **The stopping rule already exists**: add components until `derive_joint_model.py`'s
-        leave-one-player-out exceedance drifts off 10%, then back off one. Overfitting announces
-        itself.
+        ears — drop MediaPipe's face and hand detail), **hip-relative and shoulder-width
+        normalised** (step 1 established that absolute position in a 160×160 crop is mostly framing
+        variance), **~60 timesteps resampled onto the eight annotated events** so slow-motion and
+        real-time clips line up (the corpus is ~47% slow-motion). That is ~1,400–2,160 raw numbers
+        per swing against n=458, so **PCA to 15–30 components** before fitting anything — at 25
+        components that is ~18 swings per dimension; the raw space would have more dimensions than
+        samples and the covariance would not invert at all.
+        **Fit it twice, with and without `z`**, and let leave-one-player-out exceedance decide —
+        that is the experiment step 1 deferred to here, because estimator agreement cannot measure
+        a channel both estimators guess at.
+        **The stopping rule for component count already exists**: add components until
+        `derive_joint_model.py`'s leave-one-player-out exceedance drifts off 10%, then back off one.
+        Overfitting announces itself.
 4. - [ ] **Surface both models in one pass.** One `ANALYSIS_VERSION` bump, one `reanalyze.py` run,
         one edit to `contracts/caveats.py` — rather than paying that twice.
 
