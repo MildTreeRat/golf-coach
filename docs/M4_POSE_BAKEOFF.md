@@ -980,3 +980,72 @@ this gate says `z` is not pure noise; it does not say it is geometry.
 - **Spread must be measured hip-relative.** A landmark's absolute position in a 160×160 broadcast
   crop is mostly where the golfer stands in frame — framing variance, not swing variance — and
   scoring it credits `x` and `y` with signal they do not have.
+
+---
+
+## Phase E — the trajectory model's parameters, swept (2026-08-16)
+
+`scripts/golfdb/derive_trajectory_model.py`. Every default it ships with was measured, not chosen.
+Read `T2` as distance inside the fitted subspace and `Q` as the reconstruction residual off it;
+both are scored by **leave-one-player-out exceedance of the refitted model's own p90, where 10% is
+calibrated**.
+
+### `z` lost, despite passing its own gate
+
+| axes | components | variance | T² | Q | artifact |
+|---|---|---|---|---|---|
+| `xyz` | 10 | 62.2% | 8.5% | 16.6% | 147 KB |
+| **`xy`** | **10** | **66.3%** | **9.0%** | **14.1%** | **98 KB** |
+| `xyz` | 20 | 74.8% | 8.1% | 19.5% | 278 KB |
+| `xy` | 20 | 76.8% | 7.6% | 18.8% | 186 KB |
+
+Adding `z` **lowers** variance explained at equal component count, worsens both calibrations and
+grows the artifact by half. 480 extra dimensions of inferred depth dilute the basis rather than
+extend it. This is the experiment §Phase D deferred to, and it confirms that section's warning:
+`z`'s 2.69 ratio was an upper bound produced by two estimators agreeing with each other about
+something both were guessing at. **`x/y` ships.**
+
+### Component count peaks at 10
+
+| k | variance | T² | Q |
+|---|---|---|---|
+| 5 | 55.5% | 7.4% | 11.7% |
+| 8 | 62.7% | 8.1% | 13.2% |
+| **10** | **66.3%** | **9.0%** | **14.1%** |
+| 12 | 69.1% | 7.4% | 15.0% |
+| 15 | 72.5% | 5.8% | 15.7% |
+| 30 | 82.5% | 7.4% | 24.2% |
+
+T²'s calibration peaks at 10 and falls away either side; `Q` degrades monotonically with more
+components. More variance explained is **not** better here — past 10 the extra components are
+fitting the training players.
+
+### The anchor set — the finding that nearly shipped a research artifact
+
+The model resamples each swing onto a **normalised event time axis**, which is what lets a corpus
+that is ~47% slow-motion be pooled at all. The obvious choice is GolfDB's eight annotated events.
+It is also unusable: four of them (`toe_up`, `mid_backswing`, `mid_downswing`,
+`mid_follow_through`) are annotations **this project cannot produce**. `segment_phases()` emits six
+phases from its own detection, and the instants it locates are address, top and impact.
+
+A model anchored on events that exist only in the corpus can never score a golfer's swing. Caught
+before it shipped, and the smaller anchor set turns out to be better anyway:
+
+| anchors | clips | golfers | variance | T² | Q |
+|---|---|---|---|---|---|
+| `annotated` (8) | 446 | 122 | 66.3% | 9.0% | 14.1% |
+| **`detected` (3: address, top, impact)** | **415** | **116** | **73.6%** | **8.9%** | **14.0%** |
+
+Higher variance explained at identical calibration, because three anchors span two intervals rather
+than seven, so consecutive samples are more correlated and fewer effective dimensions are needed.
+The cost is 31 clips (46 skipped against 15): concentrating 40 samples between address and impact
+puts more of them in the blur-heavy downswing, where the visibility gate rejects more landmarks.
+`--anchors annotated` is kept as the ceiling, so the price of our own segmentation stays measurable.
+
+### `Q` is not calibrated, and that is a property rather than a bug
+
+`Q` over-flags at 14% against a 10% target at every setting tried. A golfer the basis never saw has
+idiosyncrasies that land in the residual **by construction**, so `Q` partly measures "this is a
+different person" rather than "this is an abnormal swing". Both exceedance figures are stored
+inside `trajectory_model_v1.json` under `leave_one_player_out_exceedance` so a consumer can see how
+far to trust each one, rather than having to find this section.

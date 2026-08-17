@@ -776,24 +776,32 @@ Steps, and **the ordering matters — step 1 gates step 3**:
         `start`; spread must be hip-relative).
 2. - [ ] **Extract down-the-line keypoints.** 584 GolfDB DTL clips have **no keypoints at all**.
         `extract_pose.py` already does this and is resumable, so it runs unattended.
-        ⚠️ **Needs the `videos_160` archive (~700 MB), which is deliberately not in the repo** — check
-        it is still on disk before relying on this. Not a blocker for step 3, which is face-on.
-3. - [ ] **Build it.** Agreed shape: **12 landmarks** (shoulders, hips, elbows, wrists, knees,
-        ears — drop MediaPipe's face and hand detail), **hip-relative and shoulder-width
-        normalised** (step 1 established that absolute position in a 160×160 crop is mostly framing
-        variance), **~60 timesteps resampled onto the eight annotated events** so slow-motion and
-        real-time clips line up (the corpus is ~47% slow-motion). That is ~1,400–2,160 raw numbers
-        per swing against n=458, so **PCA to 15–30 components** before fitting anything — at 25
-        components that is ~18 swings per dimension; the raw space would have more dimensions than
-        samples and the covariance would not invert at all.
-        **Fit it twice, with and without `z`**, and let leave-one-player-out exceedance decide —
-        that is the experiment step 1 deferred to here, because estimator agreement cannot measure
-        a channel both estimators guess at.
-        **The stopping rule for component count already exists**: add components until
-        `derive_joint_model.py`'s leave-one-player-out exceedance drifts off 10%, then back off one.
-        Overfitting announces itself.
-4. - [ ] **Surface both models in one pass.** One `ANALYSIS_VERSION` bump, one `reanalyze.py` run,
-        one edit to `contracts/caveats.py` — rather than paying that twice.
+        🚧 **BLOCKED 2026-08-16: the `videos_160` archive is not on disk.** It is deliberately not
+        in the repo (~700 MB, ADR-012's licensing boundary) and no copy was found locally, so this
+        needs re-downloading per GolfDB's upstream README before it can start. Never blocked
+        step 3, which is face-on and runs off the existing cache.
+3. - [x] **Fitted and validated, 2026-08-16** — `scripts/golfdb/derive_trajectory_model.py` →
+        `analysis/benchmarks/trajectory_model_v1.json` (98 KB). 12 landmarks, **x/y**, 40 timesteps
+        on **3 detected anchors**, PCA to **10 components**, 73.6% variance, over 415 clips from
+        116 golfers. Leave-one-player-out exceedance **T² 8.9%** against a 10% target.
+        Three findings, all in `docs/M4_POSE_BAKEOFF.md` §Phase E:
+        **`z` lost** — it lowered variance explained at equal component count and worsened both
+        calibrations, confirming §Phase D's warning that its gate score was an upper bound.
+        **The anchor set nearly shipped unusable** — four of GolfDB's eight annotated events are
+        ones `segment_phases()` cannot produce, so a model anchored on them could never score a
+        real swing; the three we do detect validate better anyway.
+        **`Q` is not calibrated** (14% against 10%) and that is a property — a golfer the basis
+        never saw has idiosyncrasies that land in the residual by construction. Both exceedance
+        figures ship inside the artifact so a consumer can see how far to trust each.
+   - [ ] **Still to do: make it loadable from `analysis/`.** The artifact exists and validates, but
+        nothing in the package can score a swing against it yet. Needs a **stdlib trajectory
+        builder in `analysis/`** — resample on the phase instants, hip-relative, shoulder-width
+        normalise, mirror lefties — which `derive_trajectory_model.py` should then import rather
+        than keep its own numpy copy of, since two implementations of one feature vector is two
+        things that drift. Then `analysis/benchmarks/trajectory.py` alongside `joint.py`, and pins.
+4. - [ ] **Surface all three in one pass.** One `ANALYSIS_VERSION` bump, one `reanalyze.py` run,
+        one edit to `contracts/caveats.py` — rather than paying that three times. Blocked on
+        step 3's second box.
 
 **Two things settled in discussion, recorded so they are not re-litigated:**
 

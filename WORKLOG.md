@@ -83,7 +83,26 @@ monocular-depth mistakes. 2.69 is an upper bound. Decision: carry `z` into the t
 `docs/M4_POSE_BAKEOFF.md` §Phase D has the writeup, including two silent bugs found on the way —
 GolfDB event indices need rebasing on `start`, and spread must be measured hip-relative.
 
-**So the next thing to build is the trajectory model itself** (§M8.1 step 3).
+**The trajectory model is fitted too** (§M8.1 step 3, 2026-08-16):
+`analysis/benchmarks/trajectory_model_v1.json`, 98 KB — 12 landmarks, x/y, 40 timesteps on 3
+detected anchors, PCA to 10 components, 73.6% variance over 415 clips from 116 golfers,
+leave-one-player-out T² exceedance **8.9%** against a 10% target. Three findings in
+`docs/M4_POSE_BAKEOFF.md` §Phase E: **`z` lost the A/B** (it *lowered* variance explained and
+worsened both calibrations — §Phase D's warning was right); **the anchor set nearly shipped
+unusable**, because four of GolfDB's eight annotated events are ones `segment_phases()` cannot
+produce, so a model keyed to them could never score a real swing; and **`Q` is not calibrated** at
+14% against 10%, which is a property of a residual rather than a tuning failure.
+
+**PICK UP HERE.** The trajectory model validates but **nothing in the package can score a swing
+against it yet** — the feature builder lives in the fitting script, in numpy. The next job is a
+**stdlib trajectory builder in `analysis/`** (resample on phase instants, hip-relative,
+shoulder-width normalise, mirror lefties) that `derive_trajectory_model.py` then *imports* rather
+than keeping its own copy of, because two implementations of one feature vector is two things that
+drift. Then `analysis/benchmarks/trajectory.py` beside `joint.py`, then pins, then surface all
+three models in a single `ANALYSIS_VERSION` bump.
+
+**Also blocked**: §M8.1 step 2 (down-the-line keypoints) needs the `videos_160` archive, which is
+not on disk anywhere and has to be re-downloaded. It never blocked step 3.
 
 Two questions that came up and are **settled, not open**: there is no 3D to be had — the reference
 corpus has only 14 cross-view clip pairs, and ADR-011's addendum already ruled hand-held phones
