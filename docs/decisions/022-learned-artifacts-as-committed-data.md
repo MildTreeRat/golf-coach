@@ -221,3 +221,55 @@ golfer the basis never saw has idiosyncrasies that land in the residual by const
 partly measures "a different person" rather than "a worse swing". Both exceedance figures ship
 *inside* the artifact under `leave_one_player_out_exceedance` so a consumer sees how far to trust
 each without finding this page, and the measurement's own `detail` string says it too.
+
+---
+
+## Addendum (2026-08-17): a second camera, and why its placement is never blended with the first
+
+`trajectory_model_dtl_v1.json` joins the two face-on artifacts. It is fitted the same way — offline
+under the `research` extra, shipped as numbers, evaluated by stdlib — so §1 needed no change for a
+third model, which is now the second piece of evidence that the seam was drawn in the right place.
+
+### The two views are two models, and the placements are reported side by side
+
+`analyze_swing_bundle` records `tour_trajectory_t2_dtl` and `tour_trajectory_q_dtl` beside the
+face-on pair. They are **never combined into a single number**, and that is a decision rather than
+an omission: blending them would be exactly the mistake [ADR-009](009-swing-scoring-model.md)
+avoided by keeping mechanics and outcome as separate axes. Two cameras answer the same question
+about different planes of one swing, and a mean of the two answers neither.
+
+**Disagreement between them is a finding, not a defect.** A swing that places as ordinary face-on
+and unusual from behind has departed in the plane the face-on camera cannot see, and saying so is
+more useful than averaging it away.
+
+They are separate *names*, not one name with a view field, because `measurements` is keyed by name
+everywhere downstream — `analysis/baseline.py::pooled_samples` groups by it, so two entries called
+`tour_trajectory_t2` would silently pool a face-on and a down-the-line number into one personal
+baseline.
+
+### Anchors are reused, not recomputed
+
+The bundle has already segmented the down-the-line clip to build its alignment anchors, and those
+are the same three instants the model resamples onto. `placement_from_anchors` takes them directly.
+Cheaper, but the real reason is the one `analyze_swing_bundle` already gives for reusing the
+face-on phases: it makes it impossible for the frames the trajectory is read from and the frames
+the warp pins to `tau=1` to disagree.
+
+Two independent implementations of "read three instants off a phase chain" now exist —
+`alignment.anchors_from_phases` and `trajectory.anchors_from_phases` — and
+`test_the_trajectory_anchors_agree_with_the_alignment_anchors` pins them to each other. Nothing
+else would catch that drift, and its symptom would be a model scored on different frames than the
+swing was aligned on.
+
+### `ANALYSIS_VERSION` 5 → 6
+
+Face-on is untouched; no checkpoint, band or score moves, verified by re-analysing all four stored
+swings to identical `overall_score`. `measurements` goes 12 → 14 on a two-view bundle.
+
+### A caveat the stored swings surfaced immediately
+
+Three of the four stored swings report `tour_trajectory_q_dtl` of **11.05** against **5.19** for the
+fourth. Those three share the down-the-line clip whose segmentation still reports a one-frame
+backswing (§Phase F). So a large Q is doing what it should — flagging a shape the basis cannot
+represent — while the *cause* is a broken anchor set rather than an unusual swing. Q cannot tell
+those apart, which is one more reason it ships uncalibrated and labelled.

@@ -212,7 +212,11 @@ class SwingResult(BaseModel):
 #:                   39% of frames from behind and the shipped rule misses the top on 30% of
 #:                   GolfDB's down-the-line clips, against 7% on the trail wrist
 #:                   (M4_POSE_BAKEOFF §Phase F).
-ANALYSIS_VERSION = 5
+#: 5 -> 6 (2026-08-17, M8.2): the down-the-line clip gets its own trajectory placement, against its
+#:                   own basis, as `tour_trajectory_t2_dtl` / `_q_dtl`. Two cameras answering the
+#:                   same question about different planes; deliberately never combined into one
+#:                   number. Face-on is untouched and no score moves.
+ANALYSIS_VERSION = 6
 
 
 class SwingBundleResult(BaseModel):

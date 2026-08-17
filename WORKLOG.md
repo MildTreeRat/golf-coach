@@ -172,15 +172,47 @@ wrist.
    carries — spine tilt, swing plane — lives in the depth direction one camera cannot resolve,
    which is ADR-011's "aligned but never fused" appearing as a number.
 
-**PICK UP HERE.** The DTL model is fitted, validated and committed, and **nothing loads it**.
-`benchmarks/trajectory.py` reads one hard-coded filename and `engine._placements` runs on the
-face-on clip only. Surfacing needs a per-view loader plus the real question, which is design and
-not plumbing: what does a down-the-line placement *mean* on a bundle where the two views disagree?
+**The DTL model is surfaced too.** Per-view loading in `benchmarks/trajectory.py`;
+`analyze_swing_bundle` records `tour_trajectory_t2_dtl` / `_q_dtl` beside the face-on pair.
+`ANALYSIS_VERSION` 5 → 6, face-on untouched, every stored score identical, `measurements` 12 → 14
+on a two-view bundle. 24 pins in `tests/analysis/test_trajectory.py`.
 
-Also still open, neither blocking: `aligned.mp4` is stale for `2026-08-10/2` (re-run
-`reanalyze.py --video`), and the §Phase F trail-wrist result is still unproven on our own footage —
-of the two distinct DTL clips on disk one segments sensibly and the other reports a one-frame
-backswing on either wrist. n=2 cannot confirm a corpus result.
+**The design question answered: the two views are never blended.** Two cameras answer the same
+question about different planes of one swing, and a mean of them answers neither — blending would
+be the mistake ADR-009 avoided by keeping mechanics and outcome apart. Disagreement is a *finding*:
+a swing that places ordinary face-on and unusual from behind departed in the plane face-on cannot
+see. Separate measurement *names* rather than one name with a view field, because
+`baseline.pooled_samples` groups by name and would otherwise pool two cameras into one baseline.
+
+Anchors are reused from the alignment pass rather than recomputed — cheaper, but really so the
+frames the trajectory is read from cannot drift from the frames the warp pins to. That left two
+implementations of "read three instants off a phase chain" (`alignment.anchors_from_phases` and
+`trajectory.anchors_from_phases`), now pinned to each other by a test, since nothing else would
+catch the drift.
+
+**The stored swings surfaced a caveat immediately.** Three of four report `tour_trajectory_q_dtl`
+of 11.05 against 5.19 for the fourth — and those three share the DTL clip whose segmentation still
+reports a one-frame backswing. Q is doing its job (a shape the basis cannot represent) while the
+*cause* is a broken anchor set, not an unusual swing. Q cannot tell those apart, which is one more
+reason it ships uncalibrated and labelled.
+
+**PICK UP HERE.** M8 is complete — three models, one per camera, all fitted, validated, surfaced
+and pinned. Nothing in it is half-done. What remains are the threads it exposed rather than steps
+in it:
+1. **§Phase F's trail-wrist result is unproven on our own footage.** Of two distinct DTL clips on
+   disk one segments sensibly and one reports a one-frame backswing on either wrist, and the
+   `q_dtl` gap above is that same clip showing up downstream. n=2 cannot confirm a corpus result —
+   this is a `check_metric_transfer.py`-shaped question for a session with more clips.
+2. **`aligned.mp4` is stale for `2026-08-10/2`** — `reanalyze.py` said so itself. Re-run with
+   `--video`; nothing reads the render.
+3. **Nothing yet *says* any of this to a golfer.** Five population placements are recorded on every
+   swing and `feedback/` reads none of them. That is M6.5's ordering working as intended — the
+   quantities should be inspectable across swings before they are spoken — but with the models
+   calibrated it is the obvious next milestone, and it needs a band or a policy, not more fitting.
+
+`tests/api/test_worker.py::test_failure_is_recorded_and_the_consumer_survives` is **flaky** — a
+threading test with a 5s timeout that fails under load and passes in isolation. Unrelated to any of
+this; re-run before believing it.
 
 ---
 

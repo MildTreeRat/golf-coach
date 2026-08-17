@@ -23,7 +23,7 @@ wording; only the grouping and the M4 checklist have been corrected.
 | **M6** LLM coaching | ✅ Done *(2026-08-15)* | — (live coaching, the MCP handshake and follow-up questions are all proven) | [§M6](#milestone-6-llm-powered-coaching--done) |
 | **M6.5** Measure now, judge later | ✅ Done | — (9 recorded, **6 scored**; the handedness seam landed and the last candidate was settled) | [§M6.5](#m65-measure-now-judge-later--done) |
 | **Career mode** One golfer over time | ✅ Done, 6/6 steps | — (built and silent; a bay session gives it the `n` to speak) | [§Career](#career-mode-one-golfer-tracked-over-time--done-built-and-silent) |
-| **M8** Learning what "good" means | ✅ Done *(2026-08-16)* | — (two models fitted, validated and surfaced; DTL extraction is the one open thread) | [§M8](#m8-learning-what-good-means--gates-run-model-fitted) |
+| **M8** Learning what "good" means | ✅ Done *(2026-08-17)* | — (three models fitted, validated and surfaced, one per camera) | [§M8](#m8-learning-what-good-means--gates-run-model-fitted) |
 | **M5** Feedback UI | ⬜ Not started | M7 Phase 5 gives the host | [§M5](#milestone-5-feedback-ui) |
 | **M2** Club & ball detection | 🔒 Gated, **and M1.5 said no-go** | Bay lighting for a ~1/2000 s exposure — *not* a global-shutter camera | [§M2](#milestone-2-club--ball-detection) |
 | Hardware re-validation | 🔒 Gated | Cameras / launch monitor arriving | [§Gate](#hardware-re-validation-gate-revisit-when-cameras--launch-monitor-arrive) |
@@ -861,10 +861,16 @@ What it needs, and none of it is a rerun of M8.1:
   ⚠️ **93.7% variance explained is not a boast.** Down-the-line the swing runs toward and away from
   the camera, so the features are more redundant and fewer directions describe them. This model is
   well-calibrated and probably sees *less* of the swing than the face-on one.
-- [ ] **Surface it.** Nothing loads the DTL artifact: `benchmarks/trajectory.py` reads one
-  hard-coded filename and `engine._placements` runs on the face-on clip only. Needs a per-view
-  loader and — the real question, which is design rather than plumbing — what a down-the-line
-  placement *means* on a bundle where the two views disagree.
+- [x] **Surfaced, 2026-08-17.** Per-view loading in `benchmarks/trajectory.py`, and
+  `analyze_swing_bundle` records `tour_trajectory_t2_dtl` / `_q_dtl` beside the face-on pair.
+  `ANALYSIS_VERSION` 5 → 6; face-on untouched, every stored score identical, `measurements` 12 → 14
+  on a two-view bundle.
+  **The design answer: the two are never blended.** Two cameras answering the same question about
+  different planes; a mean of them answers neither, and blending would be the mistake ADR-009
+  avoided by keeping mechanics and outcome apart. Disagreement is a *finding* — a swing ordinary
+  face-on and unusual from behind departed in the plane face-on cannot see. Anchors are reused from
+  the alignment pass rather than recomputed, and the two implementations of "read three instants off
+  a phase chain" are now pinned to each other.
 - **Its own aspect handling.** ADR-012's `videos_160` distortion applies here too, and M8.1 showed
   it is worth ~7 points of explained variance when a model mixes axes.
 

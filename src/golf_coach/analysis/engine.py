@@ -19,7 +19,11 @@ from golf_coach.analysis.alignment import (
     anchors_from_phases,
 )
 from golf_coach.analysis.benchmarks.joint import placement_for as joint_placement
-from golf_coach.analysis.benchmarks.trajectory import trajectory_placement_for
+from golf_coach.analysis.benchmarks.trajectory import (
+    DOWN_THE_LINE,
+    placement_from_anchors,
+    trajectory_placement_for,
+)
 from golf_coach.analysis.checkpoints import CHECKPOINT_EVALUATORS
 from golf_coach.analysis.measure import POSE_MEASUREMENTS
 from golf_coach.analysis.phases import TRAIL_WRIST, segment_phases
@@ -116,6 +120,54 @@ def _placements(
         )
 
     return out
+
+
+def _dtl_placements(
+    frames: list[FrameKeypoints],
+    anchors: SwingAnchors,
+    handedness: Handedness | None,
+) -> list[Measurement]:
+    """The down-the-line view's own trajectory placement, against its own basis.
+
+    Separate names rather than a `view` field on the existing ones, because `measurements` is keyed
+    by name everywhere downstream — `analysis/baseline.py::pooled_samples` groups by it, so two
+    entries called `tour_trajectory_t2` would silently pool a face-on and a down-the-line number
+    into one personal baseline.
+    """
+    placement = placement_from_anchors(
+        smooth_keypoints(frames),
+        (float(anchors.motion_start), float(anchors.top), float(anchors.impact)),
+        left_handed=handedness == Handedness.LEFT,
+        view=DOWN_THE_LINE,
+    )
+    if placement is None:
+        return []
+
+    interval = next(iter(placement.residual_by_interval), "?")
+    return [
+        Measurement(
+            name="tour_trajectory_t2_dtl",
+            value=round(placement.t2, 4),
+            unit="sd_units",
+            source="population:golfdb",
+            detail=(
+                f"down-the-line: distance from the tour swing shape inside its fitted subspace; "
+                f"more unusual than {placement.t2_percentile:g}% of "
+                f"{placement.population_n} tour swings. A separate basis from the face-on one — "
+                f"never combine the two"
+            ),
+        ),
+        Measurement(
+            name="tour_trajectory_q_dtl",
+            value=round(placement.q, 4),
+            unit="shoulder_widths",
+            source="population:golfdb",
+            detail=(
+                f"down-the-line: residual off that basis; most of it falls in {interval}. NOT "
+                f"calibrated, same caveat as the face-on Q"
+            ),
+        ),
+    ]
 
 
 def _measurements(
@@ -349,6 +401,26 @@ def analyze_swing_bundle(
                 "down-the-line: the clip could not be segmented into a swing, so the two views "
                 "cannot be aligned"
             )
+
+    # The down-the-line view gets its own trajectory placement, against its own basis, and the two
+    # are **never combined into one number**. They are two cameras answering the same question
+    # about different planes of the same swing, and blending them would be exactly the mistake
+    # ADR-009 avoided by keeping mechanics and outcome as separate axes. Disagreement between them
+    # is a finding rather than a defect: a swing that looks ordinary face-on and unusual from
+    # behind has departed in the plane the face-on camera cannot see.
+    #
+    # Built from `dtl_anchors` rather than by segmenting again — those are already the three
+    # instants this model resamples onto, so reusing them makes it impossible for the frames the
+    # trajectory reads and the frames the warp pins to disagree.
+    if down_the_line is not None and dtl_anchors is not None:
+        swing = swing.model_copy(
+            update={
+                "measurements": [
+                    *swing.measurements,
+                    *_dtl_placements(down_the_line.frames, dtl_anchors, handedness),
+                ]
+            }
+        )
 
     alignment = None
     if face_anchors is not None and dtl_anchors is not None:

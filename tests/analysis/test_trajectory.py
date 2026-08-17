@@ -21,6 +21,11 @@ from golf_coach.analysis.benchmarks import (
     trajectory_dataset_info,
     trajectory_placement_for,
 )
+from golf_coach.analysis.benchmarks.trajectory import (
+    DOWN_THE_LINE,
+    FACE_ON,
+    placement_from_anchors,
+)
 from golf_coach.analysis.phases import segment_phases
 from golf_coach.analysis.trajectory import (
     LANDMARK_INDEX,
@@ -229,3 +234,82 @@ def test_placement_is_not_reachable_from_the_scoring_path() -> None:
         assert "trajectory" not in public, (
             f"{module.__name__} has grown a reference to the trajectory model"
         )
+
+
+# ------------------------------------------------------------------ the two views are two models
+
+
+def test_both_views_load_and_are_distinct_models() -> None:
+    face = load_trajectory_model(FACE_ON)
+    dtl = load_trajectory_model(DOWN_THE_LINE)
+    assert face.landmarks != dtl.landmarks
+    assert face.n > 0 and dtl.n > 0
+
+
+def test_the_down_the_line_model_drops_the_lead_arm() -> None:
+    """The measured reason the two views cannot share a landmark list.
+
+    From behind, the lead arm crosses the body and the torso hides it — elbow and wrist track in
+    under half of frames (M4_POSE_BAKEOFF §Phase G). Handing the face-on list to a down-the-line
+    fit discards 72% of the corpus, so this is not a stylistic difference and must not drift back.
+    """
+    dtl = load_trajectory_model(DOWN_THE_LINE)
+    assert "left_elbow" not in dtl.landmarks
+    assert "left_wrist" not in dtl.landmarks
+    # The trail arm is what survives, and the feet take the freed slots.
+    assert "right_wrist" in dtl.landmarks
+    assert "left_ankle" in dtl.landmarks
+
+
+def test_every_landmark_either_model_names_is_one_we_can_find() -> None:
+    """A name absent from `LANDMARK_INDEX` makes `build_trajectory` return None for *every* swing.
+
+    That is silent rather than loud — it is how the first down-the-line fit produced 0 usable
+    clips — so the map has to cover the union of both views' lists, not whichever came first.
+    """
+    for view in (FACE_ON, DOWN_THE_LINE):
+        for name in load_trajectory_model(view).landmarks:
+            assert name in LANDMARK_INDEX, f"{name} ({view}) is not in LANDMARK_INDEX"
+
+
+def test_an_unknown_view_raises_rather_than_falling_back() -> None:
+    with pytest.raises(KeyError):
+        load_trajectory_model("worms-eye")
+
+
+def test_placement_from_anchors_matches_the_phase_path() -> None:
+    """The two entry points must agree, or the bundle scores a different swing than it aligns.
+
+    `analyze_swing_bundle` reuses the anchors it already computed rather than segmenting a second
+    time; that is only sound while both routes build the same vector.
+    """
+    swing = make_swing()
+    phases = _phases(swing)
+    anchors = anchors_from_phases(phases)
+    assert anchors is not None
+
+    model = load_trajectory_model(FACE_ON)
+    via_phases = model.placement_for(swing, phases)
+    via_anchors = placement_from_anchors(swing, anchors, view=FACE_ON)
+    assert via_phases is not None and via_anchors is not None
+    assert via_anchors.t2 == pytest.approx(via_phases.t2)
+    assert via_anchors.q == pytest.approx(via_phases.q)
+
+
+def test_the_trajectory_anchors_agree_with_the_alignment_anchors() -> None:
+    """Two functions read the same three instants off the same phases; pin them to each other.
+
+    `alignment.anchors_from_phases` builds the warp's anchors and `trajectory.anchors_from_phases`
+    builds the model's. They are independent implementations of one rule, and the bundle path
+    feeds one into the other — if they drift, the trajectory is read off different frames than the
+    warp pins to, which nothing else would catch.
+    """
+    from golf_coach.analysis.alignment import anchors_from_phases as alignment_anchors
+
+    phases = _phases(make_swing())
+    mine = anchors_from_phases(phases)
+    theirs = alignment_anchors(phases)
+    assert mine is not None and theirs is not None
+    assert int(mine[0]) == theirs.motion_start
+    assert int(mine[1]) == theirs.top
+    assert int(mine[2]) == theirs.impact

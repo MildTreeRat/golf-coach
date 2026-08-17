@@ -39,7 +39,17 @@ from golf_coach.analysis.trajectory import anchors_from_phases, build_trajectory
 from golf_coach.contracts.keypoints import FrameKeypoints
 from golf_coach.contracts.swing import PhaseSegment
 
-_MODEL_FILE = "trajectory_model_v1.json"
+#: One artifact per camera, keyed by view. **Not one model with a view column**: the two are fitted
+#: on different landmark lists over different clips, so they are different objects that happen to
+#: answer the same question. The down-the-line fit drops the lead arm, which is hidden by the torso
+#: from behind (M4_POSE_BAKEOFF §Phase G-H).
+FACE_ON = "face-on"
+DOWN_THE_LINE = "down-the-line"
+
+_MODEL_FILES = {
+    FACE_ON: "trajectory_model_v1.json",
+    DOWN_THE_LINE: "trajectory_model_dtl_v1.json",
+}
 
 
 class TrajectoryPlacement(BaseModel):
@@ -97,7 +107,11 @@ class TrajectoryModel(BaseModel):
         vector = build_trajectory(
             keypoints, anchors, self.steps, self.landmarks, self.axes, mirror=left_handed
         )
-        if vector is None or len(vector) != self.dimensions:
+        return None if vector is None else self.placement_from_vector(vector)
+
+    def placement_from_vector(self, vector: list[float]) -> TrajectoryPlacement | None:
+        """Project an already-built feature vector. Shared by both entry points."""
+        if len(vector) != self.dimensions:
             return None
 
         centered = [v - m for v, m in zip(vector, self.mean, strict=True)]
@@ -188,9 +202,11 @@ class TrajectoryDatasetInfo(BaseModel):
 _MODEL_ADAPTER = TypeAdapter(TrajectoryModel)
 
 
-@lru_cache(maxsize=1)
-def _load() -> tuple[TrajectoryDatasetInfo, TrajectoryModel]:
-    raw = resources.files(__package__).joinpath(_MODEL_FILE).read_text(encoding="utf-8")
+@lru_cache(maxsize=len(_MODEL_FILES))
+def _load(view: str = FACE_ON) -> tuple[TrajectoryDatasetInfo, TrajectoryModel]:
+    if view not in _MODEL_FILES:
+        raise KeyError(f"no trajectory model for view {view!r}; have {sorted(_MODEL_FILES)}")
+    raw = resources.files(__package__).joinpath(_MODEL_FILES[view]).read_text(encoding="utf-8")
     payload = json.loads(raw)
     return (
         TrajectoryDatasetInfo.model_validate(payload["dataset"]),
@@ -198,14 +214,14 @@ def _load() -> tuple[TrajectoryDatasetInfo, TrajectoryModel]:
     )
 
 
-def trajectory_dataset_info() -> TrajectoryDatasetInfo:
+def trajectory_dataset_info(view: str = FACE_ON) -> TrajectoryDatasetInfo:
     """Provenance of the corpus this basis was fitted on."""
-    return _load()[0]
+    return _load(view)[0]
 
 
-def load_trajectory_model() -> TrajectoryModel:
-    """The fitted tour trajectory model."""
-    return _load()[1]
+def load_trajectory_model(view: str = FACE_ON) -> TrajectoryModel:
+    """The fitted tour trajectory model for one camera view."""
+    return _load(view)[1]
 
 
 def trajectory_placement_for(
@@ -213,6 +229,29 @@ def trajectory_placement_for(
     phases: list[PhaseSegment],
     *,
     left_handed: bool = False,
+    view: str = FACE_ON,
 ) -> TrajectoryPlacement | None:
-    """Convenience: place one swing's motion against the tour basis."""
-    return load_trajectory_model().placement_for(keypoints, phases, left_handed=left_handed)
+    """Convenience: place one swing's motion against that camera's tour basis."""
+    return load_trajectory_model(view).placement_for(keypoints, phases, left_handed=left_handed)
+
+
+def placement_from_anchors(
+    keypoints: list[FrameKeypoints],
+    anchors: tuple[float, float, float],
+    *,
+    left_handed: bool = False,
+    view: str = DOWN_THE_LINE,
+) -> TrajectoryPlacement | None:
+    """Place a swing whose anchors are already known, rather than re-segmenting to find them.
+
+    The bundle path has already segmented the down-the-line clip to build its alignment anchors,
+    and those are the same three instants this model resamples onto. Passing them in rather than
+    calling `segment_phases` a second time is not only cheaper — it makes it *impossible* for the
+    frames the trajectory is built on and the frames the warp pins to disagree, which is the same
+    argument `analyze_swing_bundle` already makes about reusing the face-on phases.
+    """
+    model = load_trajectory_model(view)
+    vector = build_trajectory(
+        keypoints, anchors, model.steps, model.landmarks, model.axes, mirror=left_handed
+    )
+    return None if vector is None else model.placement_from_vector(vector)
