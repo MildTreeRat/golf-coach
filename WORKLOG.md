@@ -112,12 +112,19 @@ about seven points of the basis had been describing GolfDB's cropping — and **
 component count from 10 to 6**. Never carry a hyperparameter across a change in how features are
 built.
 
-**PICK UP HERE — the one open thread.** §M8.1 step 2, the down-the-line keypoint extraction, is
-**running but unfinished**. The `videos_160` archive turned up under the user's `Downloads`, and
-`extract_pose.py --view down-the-line --videos <path>` is resumable, so re-running the same command
-finishes whatever is left of the 584 clips. Nothing depends on it yet — it is the raw material for
-a second, down-the-line model, which sees what face-on cannot (spine tilt, swing plane) and is what
-ADR-011's "aligned but never fused" implies architecturally.
+**The down-the-line corpus is extracted too** (§M8.1 step 2): all **584** DTL clips, 0 missing,
+1,501 s at 109 fps. The Tier 1 cache went from 461 clips to **1,045** — it had only ever held the
+face-on half. GolfDB's remaining 354 clips are view `other` and were skipped deliberately; they are
+neither of our camera positions.
+
+**PICK UP HERE.** Nothing reads those 584 clips yet, and that is the next milestone — **§M8.2, a
+down-the-line model**. The face-on models are blind to everything in the other plane (spine tilt,
+swing plane), and two per-view models rather than one fused 3D one is exactly what ADR-011's
+addendum implies. It is *not* a rerun of M8.1: `segment_phases()` was tuned and validated on
+face-on, so whether top and impact detect as well down-the-line is an open question — with a ready
+answer, since those 584 clips carry hand-annotated events and `tune_phases.py` can score it
+directly. The landmark list needs rethinking too: from down-the-line the lead wrist is the *far*,
+occluded arm, so the face-on twelve are not automatically the right twelve.
 
 Two questions that came up and are **settled, not open**: there is no 3D to be had — the reference
 corpus has only 14 cross-view clip pairs, and ADR-011's addendum already ruled hand-held phones

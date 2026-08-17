@@ -774,12 +774,11 @@ Steps, and **the ordering matters — step 1 gates step 3**:
         settle it there by fitting with and without it. Writeup: `docs/M4_POSE_BAKEOFF.md` §Phase D,
         which also records the two silent bugs found on the way (event indices need rebasing on
         `start`; spread must be hip-relative).
-2. - [ ] **Extract down-the-line keypoints.** 584 GolfDB DTL clips have **no keypoints at all**.
-        `extract_pose.py` already does this and is resumable, so it runs unattended.
-        🚧 **BLOCKED 2026-08-16: the `videos_160` archive is not on disk.** It is deliberately not
-        in the repo (~700 MB, ADR-012's licensing boundary) and no copy was found locally, so this
-        needs re-downloading per GolfDB's upstream README before it can start. Never blocked
-        step 3, which is face-on and runs off the existing cache.
+2. - [x] **Down-the-line keypoints extracted, 2026-08-16.** All **584** DTL clips, 0 missing, in
+        1,501 s at 109 fps. The Tier 1 cache now holds **1,045** clips — 461 face-on and 584
+        down-the-line — where before it held only the face-on half. (GolfDB's remaining 354 clips
+        are view `other` and are not worth extracting: they are neither of our camera positions.)
+        Nothing consumes the DTL half yet; it is the raw material for the item below.
 3. - [x] **Fitted and validated, 2026-08-16** — `scripts/golfdb/derive_trajectory_model.py` →
         `analysis/benchmarks/trajectory_model_v1.json` (98 KB). 12 landmarks, **x/y**, 40 timesteps
         on **3 detected anchors**, PCA to **10 components**, 73.6% variance, over 415 clips from
@@ -824,6 +823,25 @@ Steps, and **the ordering matters — step 1 gates step 3**:
 parameters is comfortable; another 500 tour clips would barely move the scalar model. That flips at
 step 3, where hundreds of dimensions make n=458 start to pinch — so extract more from the clips on
 hand *first*, and only then go looking for more clips.
+
+### M8.2 — a down-the-line model (not started)
+
+584 DTL tour swings are now cached and nothing reads them. The face-on models are blind to
+everything that lives in the other plane — spine tilt, swing plane, the arm-parallel positions M5's
+gate rejected on face-on evidence — and this is the corpus for it. Two per-view models, never a
+fused 3D one, is exactly what [ADR-011](docs/decisions/011-camera-synchronization.md)'s addendum
+implies: hand-held phones can be aligned but never fused.
+
+What it needs, and none of it is a rerun of M8.1:
+
+- **Its own anchor set.** `segment_phases()` was tuned and validated on face-on. Whether top and
+  impact detect as well down-the-line is an open question with a ready answer — the 584 clips carry
+  hand-annotated events, so `tune_phases.py` can score it directly.
+- **Its own landmark list.** The lead wrist is the *far*, occluded arm from down-the-line
+  ([M7_TWO_PHONE_CAPTURE](docs/M7_TWO_PHONE_CAPTURE.md)), so the face-on twelve are not
+  automatically the right twelve.
+- **Its own aspect handling.** ADR-012's `videos_160` distortion applies here too, and M8.1 showed
+  it is worth ~7 points of explained variance when a model mixes axes.
 
 
 ---
