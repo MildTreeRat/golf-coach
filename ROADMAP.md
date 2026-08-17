@@ -849,12 +849,22 @@ What it needs, and none of it is a rerun of M8.1:
   is hidden by the torso. Two of the face-on twelve are among the five failures, so that list
   cannot be reused. Proposed DTL twelve: **ears, shoulders, hips, knees, ankles, plus the trail
   elbow and trail wrist**. See M4_POSE_BAKEOFF §Phase G.
-- [ ] **Fit it, and settle the list empirically.** The screen above is an exclusion floor, not a
-  relevance ranking — it ranks ankles and face landmarks top because their *noise* is near zero,
-  not because feet matter. Which of the eligible landmarks actually help is the question `z`
-  answered by fitting: build the DTL trajectory model with candidate sets and compare
-  leave-one-player-out exceedance. `derive_trajectory_model.py` already takes `--anchors`; it needs
-  a `--view` and a landmark set to become the DTL fitter.
+- [x] **Fitted and settled empirically, 2026-08-17.** `derive_trajectory_model.py` gained `--view`
+  and `--landmarks`, and writes one artifact per view. `trajectory_model_dtl_v1.json` (63 KB): 12
+  landmarks, x/y, 40 steps on 3 detected anchors, PCA to 6 components, **510 clips from 166
+  golfers** — broader than the face-on model's 415/116 — with leave-one-player-out T² exceedance
+  **10.2%** against a 10% target.
+  **The landmark list is worth far more than the screen suggested**: handing the face-on twelve to
+  a down-the-line fit skips **441 of 584 clips (72%)**, because the lead arm is missing too much of
+  its timeline, and what survives is the biased remnant where it happened to stay visible
+  (Q calibration 20.3% against 12.2%). M4_POSE_BAKEOFF §Phase H.
+  ⚠️ **93.7% variance explained is not a boast.** Down-the-line the swing runs toward and away from
+  the camera, so the features are more redundant and fewer directions describe them. This model is
+  well-calibrated and probably sees *less* of the swing than the face-on one.
+- [ ] **Surface it.** Nothing loads the DTL artifact: `benchmarks/trajectory.py` reads one
+  hard-coded filename and `engine._placements` runs on the face-on clip only. Needs a per-view
+  loader and — the real question, which is design rather than plumbing — what a down-the-line
+  placement *means* on a bundle where the two views disagree.
 - **Its own aspect handling.** ADR-012's `videos_160` distortion applies here too, and M8.1 showed
   it is worth ~7 points of explained variance when a model mixes axes.
 

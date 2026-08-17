@@ -1191,3 +1191,56 @@ It has since finished — the Tier 1 cache now holds **1,045 clips under each of
 `mediapipe-full`** — and the screen was re-run over all 584. Ratios moved a little (the trail wrist
 27.7 → 33.8), **no landmark changed sides**, and the five failures are the same five. The
 visibility column never depended on it.
+
+---
+
+## Phase H — the down-the-line model, fitted; and what the landmark set is really worth (2026-08-17)
+
+§Phase G recommended a down-the-line landmark list from a visibility screen and said plainly that a
+screen cannot decide relevance — that has to be fitted. `derive_trajectory_model.py` gained
+`--view` and `--landmarks`, so the comparison is one flag apart. Both fits use down-the-line data;
+only the landmark list differs.
+
+| landmark set | clips | golfers | variance | T² | Q |
+|---|---|---|---|---|---|
+| **down-the-line (12)** | **510** | **166** | 93.7% | **10.2%** | **12.2%** |
+| face-on (12) | 143 | 82 | 91.4% | 9.1% | 20.3% |
+
+**The cost of the wrong landmark list is not accuracy, it is corpus.** Handing the face-on twelve
+to a down-the-line fit skips **441 of 584 clips** — 72% — because the lead arm is missing more of
+its timeline than `MAX_MISSING` allows and the swing is dropped rather than invented. What survives
+is a biased remnant: the 143 clips where the lead arm happened to stay visible. Q's calibration
+shows the damage, 20.3% against a 10% target.
+
+That is a stronger result than the screen predicted. §Phase G said five landmarks are hard to see;
+the fit says including two of them costs three quarters of the data.
+
+### The shipped down-the-line model
+
+`trajectory_model_dtl_v1.json`, 63 KB. 12 landmarks (ears, shoulders, hips, knees, ankles, trail
+elbow, trail wrist), x/y, 40 steps on the three detected anchors, PCA to 6 components. **510 clips
+from 166 golfers** — a larger and broader population than the face-on model's 415 from 116, because
+GolfDB has more down-the-line clips than face-on ones. Leave-one-player-out T² exceedance **10.2%**
+against a 10% target.
+
+### One number to be suspicious of
+
+**93.7% variance explained in 6 components**, against face-on's 74.0%. That reads like a better
+model and may be the opposite. Down-the-line the swing happens largely *toward and away from* the
+camera, so much of the motion projects onto very little image-plane movement: the features are more
+redundant, and a basis can describe them with fewer directions precisely because there is less
+independent variation to describe. High explained variance is a statement about redundancy, not
+about information.
+
+The honest reading is that this model is well-calibrated (T² 10.2%) and probably sees **less** of
+the swing than the face-on one, not more. What down-the-line uniquely carries — spine tilt, swing
+plane — lives in exactly the depth direction a single camera cannot resolve, which is
+[ADR-011](decisions/011-camera-synchronization.md)'s "aligned but never fused" showing up as a
+number.
+
+### Not yet surfaced
+
+Fitted, validated and committed; nothing loads it. `analysis/benchmarks/trajectory.py` reads one
+hard-coded filename, and the placement path in `engine.py` runs on the face-on clip only. Wiring it
+means a per-view loader and a decision about what a down-the-line placement means on a bundle where
+the two views disagree — which is a design question, not a plumbing one.

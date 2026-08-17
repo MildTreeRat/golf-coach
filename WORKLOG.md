@@ -151,15 +151,36 @@ wrist.
    face-on twelve fail, so that list cannot be reused; the proposed DTL twelve is ears, shoulders,
    hips, knees, ankles, trail elbow and trail wrist.
 
-   **The remaining step is to fit it.** The screen is an exclusion floor, not a relevance ranking
-   (it puts ankles and face landmarks on top because their noise is near zero, not because feet
-   matter in a golf swing). Which landmarks actually help is settled the way `z` was — fit
-   candidate sets, compare leave-one-player-out exceedance. `derive_trajectory_model.py` needs a
-   `--view` and a landmark set to become the DTL fitter.
+   **Fitted, and the list mattered more than the screen said.** `derive_trajectory_model.py` now
+   takes `--view` and `--landmarks` and writes one artifact per view.
+   `trajectory_model_dtl_v1.json` (63 KB) fits **510 clips from 166 golfers** — broader than the
+   face-on model's 415/116, since GolfDB has more DTL clips than face-on ones — at
+   leave-one-player-out T² exceedance **10.2%** against a 10% target.
 
-   The `mediapipe-full` DTL extraction has since finished — the Tier 1 cache now holds **1,045
-   clips under each estimator** — and §Phase G's ratios were re-run over all 584 with the complete
-   noise term. Ratios moved a little, **no landmark changed sides**.
+   The comparison the screen could not make: handing the **face-on** twelve to a down-the-line fit
+   skips **441 of 584 clips (72%)**, because the lead arm is missing too much of its timeline, and
+   what survives is the biased remnant where it stayed visible. Q calibration 20.3% against 12.2%.
+   So the wrong landmark list does not cost accuracy so much as *corpus*.
+
+   Found on the way: `analysis/trajectory.py::LANDMARK_INDEX` had no ankles, so the new DTL set
+   referenced names it did not know and `build_trajectory` returned None for **every** swing —
+   silent, not loud. The map now has to cover the union of all views' lists.
+
+   ⚠️ **Do not read 93.7% variance explained as a better model.** Down-the-line the swing runs
+   toward and away from the camera, so the features are redundant and fewer directions describe
+   them. Well-calibrated, and probably seeing *less* of the swing than face-on. What DTL uniquely
+   carries — spine tilt, swing plane — lives in the depth direction one camera cannot resolve,
+   which is ADR-011's "aligned but never fused" appearing as a number.
+
+**PICK UP HERE.** The DTL model is fitted, validated and committed, and **nothing loads it**.
+`benchmarks/trajectory.py` reads one hard-coded filename and `engine._placements` runs on the
+face-on clip only. Surfacing needs a per-view loader plus the real question, which is design and
+not plumbing: what does a down-the-line placement *mean* on a bundle where the two views disagree?
+
+Also still open, neither blocking: `aligned.mp4` is stale for `2026-08-10/2` (re-run
+`reanalyze.py --video`), and the §Phase F trail-wrist result is still unproven on our own footage —
+of the two distinct DTL clips on disk one segments sensibly and the other reports a one-frame
+backswing on either wrist. n=2 cannot confirm a corpus result.
 
 ---
 

@@ -1,9 +1,14 @@
 """Fit the tour *trajectory* model — the whole motion, not six snapshots. [M8.1 step 3]
 
 Usage:
-    python scripts/golfdb/derive_trajectory_model.py [--steps 40] [--components 10]
-                                                     [--axes xy|xyz]
+    python scripts/golfdb/derive_trajectory_model.py [--steps 40] [--components 6]
+                                                     [--axes xy|xyz] [--view face-on|down-the-line]
+                                                     [--landmarks face-on|down-the-line]
                                                      [--anchors detected|annotated] [--write]
+
+Fits **one model per camera view**, to separate artifacts. The two views do not share a landmark
+list: from behind, the lead arm is hidden by the torso, and handing the face-on twelve to a
+down-the-line fit discards 72% of the corpus (M4_POSE_BAKEOFF §Phase H).
 
 Defaults are the shipped configuration, and every one of them was chosen by measurement rather
 than taste — the sweep is in `docs/M4_POSE_BAKEOFF.md` §Phase E.
@@ -30,10 +35,11 @@ mean different things:
 
 ### Why PCA, and why the dimension count is not a free choice
 
-12 landmarks × 2 axes × 40 timesteps is 960 numbers per swing, against **415 swings**. Fitting
-anything in that space directly is impossible — more dimensions than samples means the covariance
-is singular and no distance exists. PCA is what makes the problem well-posed: project onto the 10
-directions the population actually varies along, where 415 samples is ~40 per dimension.
+12 landmarks × 2 axes × 40 timesteps is 960 numbers per swing, against 415 face-on swings (510
+down-the-line). Fitting anything in that space directly is impossible — more dimensions than
+samples means the covariance is singular and no distance exists. PCA is what makes the problem
+well-posed: project onto the handful of directions the population actually varies along, where a
+few hundred samples is tens per dimension.
 
 In that projected space the components are uncorrelated by construction, so the joint model
 degenerates pleasantly: T² is just the sum of squared component scores divided by their own
@@ -74,7 +80,10 @@ from golf_coach.contracts.keypoints import (
 )
 
 SCHEMA_VERSION = 1
-OUTPUT_PATH = common.BENCHMARKS_DIR / "trajectory_model_v1.json"
+_OUTPUT_NAMES = {
+    common.VIEW_FACE_ON: "trajectory_model_v1.json",
+    "down-the-line": "trajectory_model_dtl_v1.json",
+}
 
 _ESTIMATOR_SLUG = "mediapipe-lite"
 _ESTIMATOR_NAME = "mediapipe:lite"
@@ -114,6 +123,33 @@ _LANDMARKS = [lm for _, left, right in _PAIRS for lm in (left, right)]
 _LANDMARK_NAMES = [
     f"{side}_{name}" for name, _, _ in _PAIRS for side in ("left", "right")
 ]
+
+# Per-view landmark sets. **Not the same twelve, and that is measured rather than stylistic**
+# (M4_POSE_BAKEOFF §Phase G): from down-the-line the lead arm crosses the body and the torso hides
+# it, so the lead elbow and wrist track in 0.46 and 0.47 of frames against 0.87 and 0.86 on the
+# trail side. Two of the face-on twelve are therefore unusable from behind. Ankles take their
+# place — visible in ~1.00 of frames from either camera.
+#
+# Left/right order within each pair is preserved so `analysis/trajectory.py::_mirror` can still
+# find a landmark's partner by name. `right_elbow`/`right_wrist` have no left counterpart in the
+# DTL set, and `_mirror` maps those to themselves, which is correct: there is nothing to swap with.
+LANDMARK_SETS: dict[str, list[str]] = {
+    common.VIEW_FACE_ON: list(_LANDMARK_NAMES),
+    "down-the-line": [
+        "left_ear",
+        "right_ear",
+        "left_shoulder",
+        "right_shoulder",
+        "left_hip",
+        "right_hip",
+        "left_knee",
+        "right_knee",
+        "left_ankle",
+        "right_ankle",
+        "right_elbow",
+        "right_wrist",
+    ],
+}
 
 _MIN_VISIBILITY = 0.5
 _MIN_SHOULDER_WIDTH = 0.02
@@ -199,6 +235,8 @@ def build_trajectory(
     steps: int,
     axes: tuple[str, ...],
     events: tuple[str, ...],
+
+    landmarks: list[str],
 ) -> np.ndarray | None:
     """One swing as a flat feature vector, via the package's own builder.
 
@@ -235,7 +273,7 @@ def build_trajectory(
     ]
 
     vector = trajectory.build_trajectory(
-        keypoints, tuple(anchors), steps, list(_LANDMARK_NAMES), list(axes)
+        keypoints, tuple(anchors), steps, list(landmarks), list(axes)
     )
     return None if vector is None else np.array(vector)
 
@@ -246,6 +284,7 @@ def collect(
     axes: tuple[str, ...],
     lefties: set[str],
     events: tuple[str, ...],
+    landmarks: list[str],
 ) -> tuple[np.ndarray, list[str], int]:
     """Trajectories for every usable face-on clip, mirrored onto one handedness."""
     rows, subjects, skipped = [], [], 0
@@ -254,7 +293,7 @@ def collect(
         if frames is None:
             skipped += 1
             continue
-        vector = build_trajectory(swing, frames, steps, axes, events)
+        vector = build_trajectory(swing, frames, steps, axes, events, landmarks)
         if vector is None:
             skipped += 1
             continue
@@ -262,7 +301,9 @@ def collect(
             # Re-run through the shared builder with the mirror applied, rather than folding the
             # flat vector here — the swap-and-negate rule is part of the transform and belongs
             # in one place.
-            keypoints_vector = build_trajectory_mirrored(swing, frames, steps, axes, events)
+            keypoints_vector = build_trajectory_mirrored(
+                swing, frames, steps, axes, events, landmarks
+            )
             if keypoints_vector is None:
                 skipped += 1
                 continue
@@ -278,6 +319,8 @@ def build_trajectory_mirrored(
     steps: int,
     axes: tuple[str, ...],
     events: tuple[str, ...],
+
+    landmarks: list[str],
 ) -> np.ndarray | None:
     """`build_trajectory` with the left-handed fold applied."""
     anchors = _event_frames(swing, len(frames), events)
@@ -296,7 +339,7 @@ def build_trajectory_mirrored(
         for frame in frames
     ]
     vector = trajectory.build_trajectory(
-        keypoints, tuple(anchors), steps, list(_LANDMARK_NAMES), list(axes), mirror=True
+        keypoints, tuple(anchors), steps, list(landmarks), list(axes), mirror=True
     )
     return None if vector is None else np.array(vector)
 
@@ -359,6 +402,8 @@ def build_payload(
     axes: tuple[str, ...],
     validation: tuple[float, float],
     events: tuple[str, ...],
+    landmarks: list[str],
+    view: str,
 ) -> dict[str, Any]:
     t2, q = score(matrix, model)
     quantiles = (0.10, 0.25, 0.50, 0.75, 0.90)
@@ -383,7 +428,8 @@ def build_payload(
         },
         "model": {
             "kind": "pca_trajectory",
-            "landmarks": _LANDMARK_NAMES,
+            "landmarks": list(landmarks),
+            "view": view,
             "axes": list(axes),
             "events": list(events),
             "steps": steps,
@@ -424,7 +470,7 @@ def main(argv: list[str]) -> int:
         print(
             "usage: python scripts/golfdb/derive_trajectory_model.py "
             "[--steps N] [--components N] [--axes xyz|xy] "
-            "[--anchors detected|annotated] [--write]",
+            "[--anchors detected|annotated] [--view V] [--landmarks V] [--write]",
             file=sys.stderr,
         )
         return 2
@@ -442,14 +488,25 @@ def main(argv: list[str]) -> int:
     axes: tuple[str, ...] = ("x", "y", "z") if "xyz" in argv else ("x", "y")
     anchors = "annotated" if "annotated" in argv else "detected"
     events = ANCHOR_SETS[anchors]
+    view = argv[argv.index("--view") + 1] if "--view" in argv else common.VIEW_FACE_ON
+    if view not in LANDMARK_SETS:
+        print(f"unknown view {view!r}; expected one of {sorted(LANDMARK_SETS)}", file=sys.stderr)
+        return 2
+    # `--landmarks` exists to run the comparison the screen could not settle: whether dropping
+    # the lead arm actually helps, or only looks principled. Defaults to this view's own set.
+    chosen = argv[argv.index("--landmarks") + 1] if "--landmarks" in argv else view
+    if chosen not in LANDMARK_SETS:
+        print(f"unknown landmark set {chosen!r}", file=sys.stderr)
+        return 2
+    landmarks = LANDMARK_SETS[chosen]
 
     swings = common.load_swings()
     derive_reference._drop_implausible(swings)
     lefty_list, _ = derive_reference._normalize_handedness(swings)
     lefties = set(lefty_list)
-    face_on = [s for s in swings if s.view == common.VIEW_FACE_ON]
+    in_view = [s for s in swings if s.view == view]
 
-    matrix, subjects, skipped = collect(face_on, steps, axes, lefties, events)
+    matrix, subjects, skipped = collect(in_view, steps, axes, lefties, events, landmarks)
     if len(matrix) < 100:
         print(f"only {len(matrix)} usable clips — expected ~450", file=sys.stderr)
         return 1
@@ -469,16 +526,19 @@ def main(argv: list[str]) -> int:
     print(f"  T2 (inside the subspace): {t2_rate:.1%}")
     print(f"  Q  (residual off it):     {q_rate:.1%}")
 
-    payload = build_payload(matrix, subjects, model, steps, axes, (t2_rate, q_rate), events)
+    payload = build_payload(
+        matrix, subjects, model, steps, axes, (t2_rate, q_rate), events, landmarks, view
+    )
     size = len(json.dumps(payload)) / 1024
     print(f"\nartifact would be {size:,.0f} KB")
 
     if "--write" not in argv:
-        print("\nDRY RUN — pass --write to update the artifact")
+        print(f"\nDRY RUN — pass --write to update {_OUTPUT_NAMES[view]}")
         return 0
 
-    OUTPUT_PATH.write_text(json.dumps(payload) + "\n", encoding="utf-8")
-    print(f"\nwrote {OUTPUT_PATH}")
+    output = common.BENCHMARKS_DIR / _OUTPUT_NAMES[view]
+    output.write_text(json.dumps(payload) + "\n", encoding="utf-8")
+    print(f"\nwrote {output}")
     return 0
 
 

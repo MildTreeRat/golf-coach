@@ -35,6 +35,14 @@ LANDMARK_INDEX: dict[str, PoseLandmark] = {
     "right_hip": PoseLandmark.RIGHT_HIP,
     "left_knee": PoseLandmark.LEFT_KNEE,
     "right_knee": PoseLandmark.RIGHT_KNEE,
+    # Ankles are here for the down-the-line set rather than the face-on one. From behind, the lead
+    # arm is hidden by the torso (elbow and wrist track in under half of frames,
+    # M4_POSE_BAKEOFF §Phase G), so that model drops the lead arm and takes the feet instead —
+    # visible in ~1.00 of frames from either camera. A name absent from this map makes
+    # `build_trajectory` return None for every swing, which is silent rather than loud, so the map
+    # must cover the union of every view's list and not just the one that came first.
+    "left_ankle": PoseLandmark.LEFT_ANKLE,
+    "right_ankle": PoseLandmark.RIGHT_ANKLE,
 }
 
 MIN_VISIBILITY = 0.5
