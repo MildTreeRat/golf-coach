@@ -1185,6 +1185,9 @@ pixel-aspect bug, variance that is not about the swing getting into the model. T
 **within-swing motion**, which is the right quantity but still divides by a noise floor that
 rewards stillness.
 
-**Ratios above are preliminary**: the `mediapipe-full` down-the-line cache was still extracting, so
-the noise term rests on a subset of clips. The visibility column is over all 584 and is what the
-conclusion rests on.
+**Ratios confirmed on the complete noise term (2026-08-17).** They were first written while the
+`mediapipe-full` down-the-line cache was still extracting, so the noise term rested on ~48 clips.
+It has since finished — the Tier 1 cache now holds **1,045 clips under each of `mediapipe-lite` and
+`mediapipe-full`** — and the screen was re-run over all 584. Ratios moved a little (the trail wrist
+27.7 → 33.8), **no landmark changed sides**, and the five failures are the same five. The
+visibility column never depended on it.

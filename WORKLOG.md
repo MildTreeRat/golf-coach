@@ -157,9 +157,9 @@ wrist.
    candidate sets, compare leave-one-player-out exceedance. `derive_trajectory_model.py` needs a
    `--view` and a landmark set to become the DTL fitter.
 
-   Note the `mediapipe-full` DTL cache was still extracting when §Phase G was written, so its
-   *ratios* rest on a subset. The visibility column — which is what the conclusion rests on — is
-   over all 584.
+   The `mediapipe-full` DTL extraction has since finished — the Tier 1 cache now holds **1,045
+   clips under each estimator** — and §Phase G's ratios were re-run over all 584 with the complete
+   noise term. Ratios moved a little, **no landmark changed sides**.
 
 ---
 
