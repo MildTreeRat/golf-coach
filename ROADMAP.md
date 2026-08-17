@@ -842,10 +842,19 @@ What it needs, and none of it is a rerun of M8.1:
   [M7 Spike](docs/M7_TWO_PHONE_SPIKE.md) Q1, the biggest unmeasured risk under the two-phone
   ladder, and reverses M4_POSE_BAKEOFF §Phase B7's "no view-aware landmark selection is warranted"
   — that was one bay swing; this is 1,045 labelled clips.
-- [ ] **Its own landmark list.** The lead wrist is the *far*, occluded arm from down-the-line, and
-  the visibility table above (0.39 lead against 0.70 trail) says the face-on twelve are not
-  automatically the right twelve. Measure per-landmark visibility on the DTL half the way
-  `tune_z_channel.py` did per-axis, and pick from that rather than by symmetry with face-on.
+- [x] **Its own landmark list — measured 2026-08-17.** `scripts/golfdb/tune_landmarks.py` over all
+  584 DTL clips: **the whole lead arm is gone**, not just the wrist. Lead elbow 0.46, wrist 0.47,
+  thumb/index/pinky 0.37-0.40 tracked, against 0.84-0.87 on the trail side. Shoulders, hips, knees
+  and ankles are fine on both sides — it is specifically the arm that swings across the body and
+  is hidden by the torso. Two of the face-on twelve are among the five failures, so that list
+  cannot be reused. Proposed DTL twelve: **ears, shoulders, hips, knees, ankles, plus the trail
+  elbow and trail wrist**. See M4_POSE_BAKEOFF §Phase G.
+- [ ] **Fit it, and settle the list empirically.** The screen above is an exclusion floor, not a
+  relevance ranking — it ranks ankles and face landmarks top because their *noise* is near zero,
+  not because feet matter. Which of the eligible landmarks actually help is the question `z`
+  answered by fitting: build the DTL trajectory model with candidate sets and compare
+  leave-one-player-out exceedance. `derive_trajectory_model.py` already takes `--anchors`; it needs
+  a `--view` and a landmark set to become the DTL fitter.
 - **Its own aspect handling.** ADR-012's `videos_160` distortion applies here too, and M8.1 showed
   it is worth ~7 points of explained variance when a model mixes axes.
 

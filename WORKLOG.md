@@ -144,8 +144,22 @@ wrist.
    with more clips in it.
 2. **`aligned.mp4` is stale for `2026-08-10/2`** — `reanalyze.py` said so itself. Re-run it with
    `--video` when convenient; nothing reads the render.
-3. **The DTL landmark list** (ROADMAP §M8.2) is the next real step: measure per-landmark visibility
-   on the DTL half rather than assuming the face-on twelve carry over.
+3. **The DTL landmark list is measured** (`tune_landmarks.py`, M4_POSE_BAKEOFF §Phase G): from
+   behind, **the whole lead arm is gone**, not just the wrist — elbow 0.46, wrist 0.47,
+   thumb/index/pinky 0.37-0.40, against 0.84-0.87 on the trail side. Shoulders, hips, knees and
+   ankles are fine on both sides, so it is specifically the arm that crosses the body. Two of the
+   face-on twelve fail, so that list cannot be reused; the proposed DTL twelve is ears, shoulders,
+   hips, knees, ankles, trail elbow and trail wrist.
+
+   **The remaining step is to fit it.** The screen is an exclusion floor, not a relevance ranking
+   (it puts ankles and face landmarks on top because their noise is near zero, not because feet
+   matter in a golf swing). Which landmarks actually help is settled the way `z` was — fit
+   candidate sets, compare leave-one-player-out exceedance. `derive_trajectory_model.py` needs a
+   `--view` and a landmark set to become the DTL fitter.
+
+   Note the `mediapipe-full` DTL cache was still extracting when §Phase G was written, so its
+   *ratios* rest on a subset. The visibility column — which is what the conclusion rests on — is
+   over all 584.
 
 ---
 

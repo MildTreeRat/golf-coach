@@ -1133,3 +1133,58 @@ anything *worse* here.
 
 That is the honest state: a strong corpus measurement, an unproven transfer, and a
 `check_metric_transfer.py`-shaped question waiting for a session with more than two clips in it.
+
+---
+
+## Phase G — the down-the-line landmark list: the whole lead arm is gone (2026-08-17)
+
+`scripts/golfdb/tune_landmarks.py`, over all 584 down-the-line clips at the eight labelled
+instants. §Phase F found the lead *wrist* is barely tracked from behind. It is not just the wrist.
+
+**Tracked-frame fraction, down-the-line, lead side against trail side:**
+
+| landmark | lead (left) | trail (right) |
+|---|---|---|
+| shoulder | 1.00 | 1.00 |
+| **elbow** | **0.46** | 0.87 |
+| **wrist** | **0.47** | 0.86 |
+| **thumb / index / pinky** | **0.37 / 0.39 / 0.40** | 0.84 / 0.85 / 0.85 |
+| hip | 1.00 | 1.00 |
+| knee | 0.82 | 0.99 |
+| ankle | 0.99 | 1.00 |
+
+Five landmarks fall below the 0.60 floor and **all five are the lead arm and hand**. Shoulders,
+hips, knees and ankles are untouched on both sides; face-on the same lead elbow tracks at 0.93.
+
+That is precisely the anatomy: from behind a right-handed golfer the lead arm crosses the body and
+the torso hides it. Nothing about the *left side* is hard to see — it is the arm that swings across.
+
+**Consequence for M8.2's feature list.** The face-on twelve (ears, shoulders, elbows, wrists, hips,
+knees) cannot be reused: two of them are among the five that fail. A down-the-line twelve that
+clears the floor and keeps the same symmetric shape is **ears, shoulders, hips, knees, ankles, plus
+the trail elbow and trail wrist** — the lead arm dropped, the feet promoted into the space.
+
+### What this screen does not decide, and why the ordering is misleading
+
+Both views rank ankles, heels and face landmarks at the top by ratio. That is **not** a claim that
+feet matter most in a golf swing. Their ratio is high because their *noise* is nearly zero — a
+stationary, well-tracked point beats a fast, occluded one on any signal-to-noise measure, and the
+wrists are the fastest and least certain points on the body.
+
+So this is an **exclusion floor, not a relevance ranking**, and the script now says so. It answers
+"is this landmark measurable from this camera", which is `tune_spatial_metric.py`'s question. It
+cannot answer "does this landmark help" — that depends on the model, and the way to settle it is
+the way `z` was settled in §Phase E: fit candidate sets and compare leave-one-player-out
+exceedance. A screen passed `z`; the fit rejected it.
+
+Two earlier versions of this script were wrong in instructive ways, both recorded rather than
+quietly fixed. The first scored **between-golfer positional spread**, which ranked ankles top
+(stance width is anatomy, not swing) and dropped the hips (everything is measured relative to the
+hip midpoint, so they sit near zero by construction) — the same class of error as §Phase E's
+pixel-aspect bug, variance that is not about the swing getting into the model. The second scored
+**within-swing motion**, which is the right quantity but still divides by a noise floor that
+rewards stillness.
+
+**Ratios above are preliminary**: the `mediapipe-full` down-the-line cache was still extracting, so
+the noise term rests on a subset of clips. The visibility column is over all 584 and is what the
+conclusion rests on.
