@@ -200,7 +200,13 @@ class SwingResult(BaseModel):
 #:                   in `unscored`. Two stored distributions moved as well — `head_hip_offset_
 #:                   impact_norm` was re-derived with handedness folded and two impossible readings
 #:                   dropped (its `sd` was half artifact), though no shipped band was cut from it.
-ANALYSIS_VERSION = 3
+#: 3 -> 4 (2026-08-16, M8.1): three population placements joined `measurements` —
+#:                   `tour_joint_distance`, `tour_trajectory_t2` and `tour_trajectory_q`. No
+#:                   checkpoint, band or score changed, so `overall_score` is untouched on every
+#:                   stored swing; the bump exists because a stored `analysis.json` from version 3
+#:                   is *missing* three quantities rather than disagreeing about any, and
+#:                   `reanalyze.py` is how it acquires them.
+ANALYSIS_VERSION = 4
 
 
 class SwingBundleResult(BaseModel):

@@ -18,6 +18,8 @@ from golf_coach.analysis.alignment import (
     anchors_from_keypoints,
     anchors_from_phases,
 )
+from golf_coach.analysis.benchmarks.joint import placement_for as joint_placement
+from golf_coach.analysis.benchmarks.trajectory import trajectory_placement_for
 from golf_coach.analysis.checkpoints import CHECKPOINT_EVALUATORS
 from golf_coach.analysis.measure import POSE_MEASUREMENTS
 from golf_coach.analysis.phases import segment_phases
@@ -41,10 +43,86 @@ from golf_coach.contracts.swing import (
 )
 
 
+def _placements(
+    smoothed: list[FrameKeypoints],
+    phases: list[PhaseSegment],
+    pose_values: dict[str, float],
+    handedness: Handedness | None,
+) -> list[Measurement]:
+    """Where this swing sits against the tour *population*, as recorded quantities.
+
+    Three numbers that no single checkpoint can produce, because each is about the swing as a
+    whole: how unusual the six metrics are **as a combination** (ADR-022's joint model), and how
+    far the motion sits from the tour shape both **inside** the fitted subspace (T²) and **off** it
+    entirely (Q).
+
+    **Recorded, not judged.** They ride on `measurements` rather than `checkpoint_scores`, so they
+    cannot touch `overall_score` — the same firewall ADR-010 §2 puts around percentiles, and the
+    same "measure now, judge later" ordering M6.5 established. A band for any of them would have to
+    be earned separately, against a population of these values that does not exist yet.
+
+    Each returns `None` rather than a guess when its inputs are incomplete: the joint model needs
+    all six metrics, the trajectory model needs three usable phase anchors.
+    """
+    out: list[Measurement] = []
+
+    joint = joint_placement(pose_values)
+    if joint is not None:
+        leading = next(iter(joint.contributions), "?")
+        out.append(
+            Measurement(
+                name="tour_joint_distance",
+                value=round(joint.distance, 4),
+                unit="sd_units",
+                source="population:golfdb",
+                detail=(
+                    f"Mahalanobis distance of the six metrics as a combination, against "
+                    f"{joint.population_n} face-on tour swings; more unusual than "
+                    f"{joint.percentile:g}% of them. Largest contributor: {leading}"
+                ),
+            )
+        )
+
+    placement = trajectory_placement_for(
+        smoothed, phases, left_handed=handedness == Handedness.LEFT
+    )
+    if placement is not None:
+        interval = next(iter(placement.residual_by_interval), "?")
+        out.append(
+            Measurement(
+                name="tour_trajectory_t2",
+                value=round(placement.t2, 4),
+                unit="sd_units",
+                source="population:golfdb",
+                detail=(
+                    f"distance from the tour swing shape inside the fitted subspace; more "
+                    f"unusual than {placement.t2_percentile:g}% of "
+                    f"{placement.population_n} tour swings"
+                ),
+            )
+        )
+        out.append(
+            Measurement(
+                name="tour_trajectory_q",
+                value=round(placement.q, 4),
+                unit="shoulder_widths",
+                source="population:golfdb",
+                detail=(
+                    f"residual off the tour subspace — shape the basis cannot represent; most of "
+                    f"it falls in {interval}. NOT calibrated: it over-flags golfers the basis "
+                    f"never saw, so read it beside T2 rather than alone"
+                ),
+            )
+        )
+
+    return out
+
+
 def _measurements(
     smoothed: list[FrameKeypoints],
     phases: list[PhaseSegment],
     shot: ShotData | None,
+    handedness: Handedness | None = None,
 ) -> list[Measurement]:
     """Every quantity we can measure off this swing, judged by nothing.
 
@@ -57,11 +135,13 @@ def _measurements(
     diff of two `analysis.json` files is readable.
     """
     out: list[Measurement] = []
+    pose_values: dict[str, float] = {}
 
     for name, pose in POSE_MEASUREMENTS.items():
         value = pose.measure(smoothed, phases)
         if value is None:
             continue
+        pose_values[name] = value
         out.append(
             Measurement(
                 name=name,
@@ -71,6 +151,8 @@ def _measurements(
                 detail=pose.detail,
             )
         )
+
+    out.extend(_placements(smoothed, phases, pose_values, handedness))
 
     if shot is not None:
         device = shot.provenance.device if shot.provenance else shot.source.value
@@ -158,7 +240,7 @@ def analyze_swing(
         session_id=session_id,
         phases=phases,
         checkpoint_scores=mechanics + outcome,
-        measurements=_measurements(smoothed, phases, shot),
+        measurements=_measurements(smoothed, phases, shot, handedness),
         unscored=unscored,
         intent=intent,
         mechanics_score=scores.mechanics,

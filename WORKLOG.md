@@ -93,16 +93,31 @@ unusable**, because four of GolfDB's eight annotated events are ones `segment_ph
 produce, so a model keyed to them could never score a real swing; and **`Q` is not calibrated** at
 14% against 10%, which is a property of a residual rather than a tuning failure.
 
-**PICK UP HERE.** The trajectory model validates but **nothing in the package can score a swing
-against it yet** — the feature builder lives in the fitting script, in numpy. The next job is a
-**stdlib trajectory builder in `analysis/`** (resample on phase instants, hip-relative,
-shoulder-width normalise, mirror lefties) that `derive_trajectory_model.py` then *imports* rather
-than keeping its own copy of, because two implementations of one feature vector is two things that
-drift. Then `analysis/benchmarks/trajectory.py` beside `joint.py`, then pins, then surface all
-three models in a single `ANALYSIS_VERSION` bump.
+**Both models are now surfaced.** `ANALYSIS_VERSION` 3 → 4, `measurements` 9 → 12 on all four
+stored swings, and **every `overall_score` identical** — the three placements ride on
+`measurements`, never `checkpoint_scores`, which is the firewall verified rather than assumed. A
+new `source` value, `population:golfdb`, sits alongside `pose:face_on` and `launch_monitor:*` and
+says plainly that these are population-relative rather than measured off the body.
 
-**Also blocked**: §M8.1 step 2 (down-the-line keypoints) needs the `videos_160` archive, which is
-not on disk anywhere and has to be re-downloaded. It never blocked step 3.
+The feature builder is `analysis/trajectory.py` — **stdlib, in the package, and imported by the
+fitting script** rather than duplicated in numpy. That was the one design point worth insisting on:
+a vector built one way at fit time and another at scoring time gives a model evaluated against
+numbers never fitted to it, which produces plausible output and no error.
+
+**A pixel-aspect bug, found by reading `derive_pose_metrics.py` rather than by any test.**
+`videos_160` squashes a non-square crop to a square, so x and y sit on different scales per clip
+(ADR-012's third accepted limit). Metrics built from x-ratios cancel it; the trajectory model mixes
+axes in every component and did not. Correcting it moved variance explained **73.6% → 80.3%** —
+about seven points of the basis had been describing GolfDB's cropping — and **changed the optimal
+component count from 10 to 6**. Never carry a hyperparameter across a change in how features are
+built.
+
+**PICK UP HERE — the one open thread.** §M8.1 step 2, the down-the-line keypoint extraction, is
+**running but unfinished**. The `videos_160` archive turned up under the user's `Downloads`, and
+`extract_pose.py --view down-the-line --videos <path>` is resumable, so re-running the same command
+finishes whatever is left of the 584 clips. Nothing depends on it yet — it is the raw material for
+a second, down-the-line model, which sees what face-on cannot (spine tilt, swing plane) and is what
+ADR-011's "aligned but never fused" implies architecturally.
 
 Two questions that came up and are **settled, not open**: there is no 3D to be had — the reference
 corpus has only 14 cross-view clip pairs, and ADR-011's addendum already ruled hand-held phones

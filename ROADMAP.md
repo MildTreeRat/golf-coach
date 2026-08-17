@@ -23,7 +23,7 @@ wording; only the grouping and the M4 checklist have been corrected.
 | **M6** LLM coaching | ✅ Done *(2026-08-15)* | — (live coaching, the MCP handshake and follow-up questions are all proven) | [§M6](#milestone-6-llm-powered-coaching--done) |
 | **M6.5** Measure now, judge later | ✅ Done | — (9 recorded, **6 scored**; the handedness seam landed and the last candidate was settled) | [§M6.5](#m65-measure-now-judge-later--done) |
 | **Career mode** One golfer over time | ✅ Done, 6/6 steps | — (built and silent; a bay session gives it the `n` to speak) | [§Career](#career-mode-one-golfer-tracked-over-time--done-built-and-silent) |
-| **M8** Learning what "good" means | 🟡 Fitted, not surfaced | — (both gates ran on data on disk; surfacing is the next step) | [§M8](#m8-learning-what-good-means--gates-run-model-fitted) |
+| **M8** Learning what "good" means | ✅ Done *(2026-08-16)* | — (two models fitted, validated and surfaced; DTL extraction is the one open thread) | [§M8](#m8-learning-what-good-means--gates-run-model-fitted) |
 | **M5** Feedback UI | ⬜ Not started | M7 Phase 5 gives the host | [§M5](#milestone-5-feedback-ui) |
 | **M2** Club & ball detection | 🔒 Gated, **and M1.5 said no-go** | Bay lighting for a ~1/2000 s exposure — *not* a global-shutter camera | [§M2](#milestone-2-club--ball-detection) |
 | Hardware re-validation | 🔒 Gated | Cameras / launch monitor arriving | [§Gate](#hardware-re-validation-gate-revisit-when-cameras--launch-monitor-arrive) |
@@ -793,15 +793,20 @@ Steps, and **the ordering matters — step 1 gates step 3**:
         **`Q` is not calibrated** (14% against 10%) and that is a property — a golfer the basis
         never saw has idiosyncrasies that land in the residual by construction. Both exceedance
         figures ship inside the artifact so a consumer can see how far to trust each.
-   - [ ] **Still to do: make it loadable from `analysis/`.** The artifact exists and validates, but
-        nothing in the package can score a swing against it yet. Needs a **stdlib trajectory
-        builder in `analysis/`** — resample on the phase instants, hip-relative, shoulder-width
-        normalise, mirror lefties — which `derive_trajectory_model.py` should then import rather
-        than keep its own numpy copy of, since two implementations of one feature vector is two
-        things that drift. Then `analysis/benchmarks/trajectory.py` alongside `joint.py`, and pins.
-4. - [ ] **Surface all three in one pass.** One `ANALYSIS_VERSION` bump, one `reanalyze.py` run,
-        one edit to `contracts/caveats.py` — rather than paying that three times. Blocked on
-        step 3's second box.
+   - [x] **Loadable from `analysis/`, 2026-08-16.** `analysis/trajectory.py` is the **single**
+        feature builder — stdlib, in the package — and `derive_trajectory_model.py` imports it
+        rather than keeping a numpy copy, so a vector cannot be built one way at fit time and
+        another at scoring time. `analysis/benchmarks/trajectory.py` projects onto the basis;
+        18 pins in `tests/analysis/test_trajectory.py`.
+   - [x] **A pixel-aspect bug, found on the way.** `videos_160` squashes a non-square crop square,
+        so x and y sit on different scales per clip (ADR-012). Metrics built from x-ratios cancel
+        it; this model mixes axes and did not. Correcting it moved variance explained
+        **73.6% → 80.3%** and changed the optimal component count from 10 to **6**.
+4. - [x] **Surfaced, 2026-08-16.** `ANALYSIS_VERSION` 3 → 4, one `reanalyze.py` run,
+        `measurements` 9 → 12 on all four stored swings and **every `overall_score` identical** —
+        the placements ride on `measurements`, never `checkpoint_scores`, so they cannot move a
+        score. New `source` value `population:golfdb`, alongside `pose:face_on` and
+        `launch_monitor:*`, marks them as population-relative rather than measured off the body.
 
 **Two things settled in discussion, recorded so they are not re-litigated:**
 

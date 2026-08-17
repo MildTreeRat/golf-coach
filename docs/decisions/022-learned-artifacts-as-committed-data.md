@@ -153,3 +153,71 @@ python scripts/golfdb/derive_joint_model.py       # dry run; --write to update t
 - [ADR-012](012-golfdb-reference-data.md) — the corpus, and §2's aggregates-only licensing rule
 - [ADR-021](021-caddieset-paired-reference-data.md) — why the outcome-prediction route was closed
 - `scripts/golfdb/tune_joint_structure.py` — the gate, including player-clustered band intervals
+
+---
+
+## Addendum (2026-08-16): the trajectory model, and all three placements surfaced
+
+The Decision above shipped the joint model and deliberately left it unsurfaced. Both halves of that
+have now moved.
+
+### A second learned artifact, under the same rule
+
+`trajectory_model_v1.json` (64 KB) fits the swing as a **path through time** rather than six
+scalars at four instants: 12 landmarks, x/y, 40 samples on a normalised event axis, PCA to 6
+components over 415 face-on clips from 116 golfers. It reports **T²** (distance inside the fitted
+subspace) and **Q** (the residual off it — a shape the tour basis cannot represent at all, which
+nothing else here can express).
+
+Nothing in §1 changed to accommodate it: fitted offline under the `research` extra, shipped as
+numbers, evaluated by stdlib arithmetic. The pattern held for a second, quite different model,
+which is the strongest evidence it was the right seam.
+
+**The feature builder lives in `analysis/trajectory.py`, and the fitting script imports it.** This
+is the part worth insisting on. A trajectory built one way at fit time and another at scoring time
+produces a model evaluated against numbers that were never fitted to it — plausible output, no
+error, nothing to catch it. One implementation, in the package, used by both sides; the script's
+only additions are corpus facts (GolfDB's absolute event indices, and its pixel-aspect correction).
+
+### Three things measured that would have been asserted
+
+- **`z` lost.** ADR-021's sibling gate (`tune_z_channel.py`) passed MediaPipe's depth channel at a
+  ratio of 2.69 while warning the figure was an upper bound, because lite and full are one
+  architecture at two sizes and agree with each other while both guessing. Fitted both ways, `z`
+  *lowered* variance explained at equal component count and worsened both calibrations. **x/y ships.**
+- **The anchor set nearly made the model unusable.** The obvious time axis is GolfDB's eight
+  annotated events — but four of them are annotations `segment_phases()` cannot produce, so a model
+  keyed to them could never score a real swing. Caught before it shipped. The three instants this
+  pipeline does detect validate *better* (73.6% variance against 66.3%, same calibration).
+- **A pixel-aspect bug, found by reading `derive_pose_metrics.py`.** `videos_160` squashes a
+  non-square crop to a square, so x and y sit on different scales per clip (ADR-012's third
+  accepted limit). Metrics built from x-ratios cancel it; this model mixes axes in every component
+  and did not. Correcting it moved variance explained 73.6% → 80.3% — about seven points of the
+  basis had been describing GolfDB's cropping — and **changed the optimal component count from 10
+  to 6**, which is a good reason never to carry a hyperparameter across a change in how features
+  are built.
+
+Full sweeps in [M4_POSE_BAKEOFF.md](../M4_POSE_BAKEOFF.md) §Phase E.
+
+### Surfaced, as measurements rather than checkpoints
+
+`ANALYSIS_VERSION` 3 → 4. `engine.py::_placements` records three quantities on every swing —
+`tour_joint_distance`, `tour_trajectory_t2`, `tour_trajectory_q` — with `source:
+"population:golfdb"`, which is a third source alongside `pose:face_on` and `launch_monitor:*` and
+says plainly that these are population-relative rather than measured off the body.
+
+They ride on `measurements`, never `checkpoint_scores`, so **`overall_score` cannot move**. Verified
+rather than assumed: re-analysing the four stored swings changed `measurements` 9 → 12 and left
+every score identical. `tests/analysis/test_trajectory.py` and `test_joint.py` each pin that
+`mechanics.py` and `scoring.py` hold no reference to either model.
+
+This is M6.5's ordering: the quantities are recorded and inspectable now; a band for any of them
+has to be earned separately, against a population of these values that does not exist yet.
+
+### The limit that has not moved
+
+`Q` is **not calibrated** — 12% leave-one-player-out exceedance against a 10% target — because a
+golfer the basis never saw has idiosyncrasies that land in the residual by construction. So Q
+partly measures "a different person" rather than "a worse swing". Both exceedance figures ship
+*inside* the artifact under `leave_one_player_out_exceedance` so a consumer sees how far to trust
+each without finding this page, and the measurement's own `detail` string says it too.

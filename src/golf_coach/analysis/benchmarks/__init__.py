@@ -27,6 +27,14 @@ from golf_coach.analysis.benchmarks.joint import (
     placement_for,
 )
 from golf_coach.analysis.benchmarks.store import ResolvedRange, resolve_range
+from golf_coach.analysis.benchmarks.trajectory import (
+    TrajectoryDatasetInfo,
+    TrajectoryModel,
+    TrajectoryPlacement,
+    load_trajectory_model,
+    trajectory_dataset_info,
+    trajectory_placement_for,
+)
 
 __all__ = [
     "DatasetInfo",
@@ -35,10 +43,16 @@ __all__ = [
     "JointModel",
     "JointPlacement",
     "ResolvedRange",
+    "TrajectoryDatasetInfo",
+    "TrajectoryModel",
+    "TrajectoryPlacement",
     "dataset_info",
     "joint_dataset_info",
     "load_distribution",
     "load_joint_model",
+    "load_trajectory_model",
     "placement_for",
     "resolve_range",
+    "trajectory_dataset_info",
+    "trajectory_placement_for",
 ]

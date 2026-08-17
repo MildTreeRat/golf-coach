@@ -66,7 +66,12 @@ import common
 import derive_reference
 import numpy as np
 
-from golf_coach.contracts.keypoints import PoseLandmark
+from golf_coach.analysis import trajectory
+from golf_coach.contracts.keypoints import (
+    FrameKeypoints,
+    Landmark,
+    PoseLandmark,
+)
 
 SCHEMA_VERSION = 1
 OUTPUT_PATH = common.BENCHMARKS_DIR / "trajectory_model_v1.json"
@@ -195,52 +200,44 @@ def build_trajectory(
     axes: tuple[str, ...],
     events: tuple[str, ...],
 ) -> np.ndarray | None:
-    """One swing as a `steps x (12 * len(axes))` array, hip-relative and shoulder-width scaled."""
+    """One swing as a flat feature vector, via the package's own builder.
+
+    **The transform itself lives in `analysis/trajectory.py` and is imported, not reimplemented.**
+    A feature vector built one way here and another way at scoring time would produce a model
+    evaluated against numbers that were never fitted to it — plausible output, no error, nothing to
+    catch it. So this function's whole job is the two things that are *corpus* facts rather than
+    transform facts: rebasing GolfDB's absolute event indices onto the trimmed clip, and correcting
+    pixel aspect.
+
+    `videos_160` resizes a non-square bounding box to a square, so `x` and `y` land on different
+    scales per clip (ADR-012's third accepted limit). A metric built from ratios of `x` distances
+    cancels that; this model mixes the axes in every component, so an uncorrected `y` would put
+    GolfDB's cropping into the basis and the PCA would spend components describing it.
+    `derive_pose_metrics.py::_apply_pixel_aspect` does the same for the scalar metrics.
+    """
     anchors = _event_frames(swing, len(frames), events)
     if anchors is None:
         return None
 
-    samples = _sample_axis(anchors, steps)
-    raw = np.full((steps, len(_LANDMARKS) * len(axes)), np.nan)
-    widths = []
+    aspect = float(getattr(swing, "pixel_aspect", 1.0) or 1.0)
+    keypoints = [
+        FrameKeypoints(
+            frame_index=frame["frame_index"],
+            timestamp_ms=frame["timestamp_ms"],
+            landmarks=[
+                Landmark(
+                    x=lm["x"], y=lm["y"] * aspect, z=lm["z"], visibility=lm["visibility"]
+                )
+                for lm in frame["landmarks"]
+            ],
+        )
+        for frame in frames
+    ]
 
-    for row, position in enumerate(samples):
-        low = int(position)
-        high = min(low + 1, len(frames) - 1)
-        frac = position - low
-
-        def coordinate(landmark: int, axis: str, lo: int = low, hi: int = high, f: float = frac):
-            a, b = frames[lo]["landmarks"][landmark], frames[hi]["landmarks"][landmark]
-            if min(a["visibility"], b["visibility"]) < _MIN_VISIBILITY:
-                return None
-            return a[axis] * (1 - f) + b[axis] * f
-
-        hips = {}
-        for axis in axes:
-            left = coordinate(PoseLandmark.LEFT_HIP, axis)
-            right = coordinate(PoseLandmark.RIGHT_HIP, axis)
-            hips[axis] = None if left is None or right is None else (left + right) / 2
-
-        left_shoulder = coordinate(PoseLandmark.LEFT_SHOULDER, "x")
-        right_shoulder = coordinate(PoseLandmark.RIGHT_SHOULDER, "x")
-        if left_shoulder is not None and right_shoulder is not None:
-            width = abs(left_shoulder - right_shoulder)
-            if width >= _MIN_SHOULDER_WIDTH:
-                widths.append(width)
-
-        for i, landmark in enumerate(_LANDMARKS):
-            for j, axis in enumerate(axes):
-                value = coordinate(landmark, axis)
-                if value is not None and hips[axis] is not None:
-                    raw[row, i * len(axes) + j] = value - hips[axis]
-
-    if not widths:
-        return None
-    # One ruler for the whole swing, not one per frame. A per-frame width would renormalise away
-    # the very torso motion the model is trying to see, and it is noisier besides.
-    scale = float(np.median(widths))
-    filled = _interpolate_gaps(raw / scale)
-    return None if filled is None else filled
+    vector = trajectory.build_trajectory(
+        keypoints, tuple(anchors), steps, list(_LANDMARK_NAMES), list(axes)
+    )
+    return None if vector is None else np.array(vector)
 
 
 def collect(
@@ -252,36 +249,56 @@ def collect(
 ) -> tuple[np.ndarray, list[str], int]:
     """Trajectories for every usable face-on clip, mirrored onto one handedness."""
     rows, subjects, skipped = [], [], 0
-    left_index = {i for i, name in enumerate(_LANDMARK_NAMES) if name.startswith("left_")}
-
     for swing in swings:
         frames = _load_frames(swing.source_id)
         if frames is None:
             skipped += 1
             continue
-        trajectory = build_trajectory(swing, frames, steps, axes, events)
-        if trajectory is None:
+        vector = build_trajectory(swing, frames, steps, axes, events)
+        if vector is None:
             skipped += 1
             continue
-
         if swing.subject in lefties:
-            # A face-on camera sees a left-handed swing mirrored, so folding it onto the
-            # right-handed convention is a sign flip on x plus a swap of every left/right pair.
-            # Both halves are needed: flipping without swapping would put the lead arm on the
-            # trail side and teach the basis a shape nobody swings.
-            mirrored = trajectory.copy()
-            for i in range(len(_LANDMARKS)):
-                partner = i + 1 if i in left_index else i - 1
-                for j, axis in enumerate(axes):
-                    column, other = i * len(axes) + j, partner * len(axes) + j
-                    source = trajectory[:, other]
-                    mirrored[:, column] = -source if axis == "x" else source
-            trajectory = mirrored
-
-        rows.append(trajectory.reshape(-1))
+            # Re-run through the shared builder with the mirror applied, rather than folding the
+            # flat vector here — the swap-and-negate rule is part of the transform and belongs
+            # in one place.
+            keypoints_vector = build_trajectory_mirrored(swing, frames, steps, axes, events)
+            if keypoints_vector is None:
+                skipped += 1
+                continue
+            vector = keypoints_vector
+        rows.append(vector)
         subjects.append(swing.subject or "")
-
     return np.array(rows), subjects, skipped
+
+
+def build_trajectory_mirrored(
+    swing: Any,
+    frames: list[dict[str, Any]],
+    steps: int,
+    axes: tuple[str, ...],
+    events: tuple[str, ...],
+) -> np.ndarray | None:
+    """`build_trajectory` with the left-handed fold applied."""
+    anchors = _event_frames(swing, len(frames), events)
+    if anchors is None:
+        return None
+    aspect = float(getattr(swing, "pixel_aspect", 1.0) or 1.0)
+    keypoints = [
+        FrameKeypoints(
+            frame_index=frame["frame_index"],
+            timestamp_ms=frame["timestamp_ms"],
+            landmarks=[
+                Landmark(x=lm["x"], y=lm["y"] * aspect, z=lm["z"], visibility=lm["visibility"])
+                for lm in frame["landmarks"]
+            ],
+        )
+        for frame in frames
+    ]
+    vector = trajectory.build_trajectory(
+        keypoints, tuple(anchors), steps, list(_LANDMARK_NAMES), list(axes), mirror=True
+    )
+    return None if vector is None else np.array(vector)
 
 
 def fit_pca(matrix: np.ndarray, components: int) -> dict[str, Any]:
@@ -413,10 +430,15 @@ def main(argv: list[str]) -> int:
         return 2
 
     steps = _arg(argv, "--steps", 40)
-    # 10 components, x/y only. Both settled by measurement rather than taste — see the sweep in
+    # 6 components, x/y only. Both settled by measurement rather than taste — see the sweep in
     # docs/M4_POSE_BAKEOFF.md §Phase E. `z` *lowered* variance explained while enlarging the
-    # artifact, and T2's leave-one-player-out calibration peaks at 10 and falls away either side.
-    components = _arg(argv, "--components", 10)
+    # artifact, and T2's leave-one-player-out calibration peaks at 6 (9.9% against a 10% target)
+    # with Q at its best there too.
+    #
+    # It was 10 before the pixel-aspect correction landed. Removing that per-clip distortion took
+    # a source of variance out of the data, so **fewer** components now describe more of it — a
+    # good reason never to carry a component count across a change in how the features are built.
+    components = _arg(argv, "--components", 6)
     axes: tuple[str, ...] = ("x", "y", "z") if "xyz" in argv else ("x", "y")
     anchors = "annotated" if "annotated" in argv else "detected"
     events = ANCHOR_SETS[anchors]
