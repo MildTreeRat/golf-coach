@@ -51,7 +51,7 @@ from golf_coach.contracts.alignment import (
     SwingAlignment,
     SwingAnchors,
 )
-from golf_coach.contracts.keypoints import ClipMetadata, FrameKeypoints
+from golf_coach.contracts.keypoints import ClipMetadata, FrameKeypoints, PoseLandmark
 from golf_coach.contracts.swing import PhaseSegment, SwingPhase
 
 # How far apart two clips' backswing:downswing ratios may sit before the soft anchor is refused.
@@ -162,6 +162,7 @@ def anchors_from_keypoints(
     *,
     clip: ClipMetadata | None = None,
     window: tuple[int, int] | None = None,
+    wrist: PoseLandmark | None = None,
 ) -> SwingAnchors | None:
     """Smooth, segment and extract anchors — the whole per-clip path in one call.
 
@@ -191,7 +192,8 @@ def anchors_from_keypoints(
         metadata = clip.model_copy(update={"frame_count": len(keypoints)})
 
     return anchors_from_phases(
-        segment_phases(smooth_keypoints(frames)),
+        segment_phases(smooth_keypoints(frames), wrist) if wrist is not None
+        else segment_phases(smooth_keypoints(frames)),
         clip=metadata,
         camera_id=camera_id,
         offset=offset,

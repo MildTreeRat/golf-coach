@@ -117,24 +117,35 @@ built.
 face-on half. GolfDB's remaining 354 clips are view `other` and were skipped deliberately; they are
 neither of our camera positions.
 
-**PICK UP HERE.** Nothing reads those 584 clips yet, and that is the next milestone — **§M8.2, a
-down-the-line model**. The face-on models are blind to everything in the other plane (spine tilt,
-swing plane), and two per-view models rather than one fused 3D one is exactly what ADR-011's
-addendum implies. It is *not* a rerun of M8.1: `segment_phases()` was tuned and validated on
-face-on, so whether top and impact detect as well down-the-line is an open question — with a ready
-answer, since those 584 clips carry hand-annotated events and `tune_phases.py` can score it
-directly. The landmark list needs rethinking too: from down-the-line the lead wrist is the *far*,
-occluded arm, so the face-on twelve are not automatically the right twelve.
+**M8.2 started, and its first question is answered.** The 584 DTL clips immediately paid for
+themselves: `tune_phases.py` gained `--view` and `--wrist`, and scoring the shipped rule
+down-the-line for the first time showed it **misses the top on 30% of clips and impact on 35%**,
+against 9% and 7% face-on. `--detail` says why — it is the pose track, not the rule. From behind
+the lead wrist is the far arm, tracked in **39%** of frames against the trail wrist's **70%**, and
+the clips that fail are the poorly-tracked ones (confidence 0.32 against 0.42), whereas face-on the
+failing clips are tracked *better* than average. No rule tuning reaches that.
 
-Two questions that came up and are **settled, not open**: there is no 3D to be had — the reference
-corpus has only 14 cross-view clip pairs, and ADR-011's addendum already ruled hand-held phones
-"aligned but never fused" — and more reference swings are not the bottleneck until the trajectory
-model exists. Both are written up in §M8.1 so they are not re-argued.
+**On the trail wrist the same rule gets 7% and 2% — better than face-on.** So `segment_phases` now
+takes the landmark, defaulting to the lead wrist so face-on is byte-identical, and the bundle path
+passes `TRAIL_WRIST` for the down-the-line clip. `ANALYSIS_VERSION` 4 → 5; every stored score is
+unchanged, `alignment` moves. This answers **M7 Spike Q1** — named there as the biggest unmeasured
+risk under the whole two-phone ladder — and **reverses M4_POSE_BAKEOFF §Phase B7's** "no view-aware
+landmark selection is warranted", which was measured on one bay swing against 1,045 labelled clips
+here.
 
-**Also worth knowing**: CaddieSet has no frame indices, so it can say nothing about **tempo** — the
-one checkpoint currently failing. And its two views are the same shots (803 share a launch-monitor
-reading byte for byte), so 1,757 rows are ~950 shots; `common.shot_key` exists so a future study
-does not double-count them.
+A fixture bug fell out of it: `conftest._frame` animated only the lead wrist, so every synthetic
+swing described a golfer holding the club one-handed. Invisible until something read the other
+wrist.
+
+**PICK UP HERE.** Two things, neither blocking:
+1. **The transfer is unproven on our own footage.** Of the two distinct DTL clips on disk one
+   segments sensibly and the other still reports a one-frame backswing on either wrist. n=2 cannot
+   confirm a corpus result — this is a `check_metric_transfer.py`-shaped question for a session
+   with more clips in it.
+2. **`aligned.mp4` is stale for `2026-08-10/2`** — `reanalyze.py` said so itself. Re-run it with
+   `--video` when convenient; nothing reads the render.
+3. **The DTL landmark list** (ROADMAP §M8.2) is the next real step: measure per-landmark visibility
+   on the DTL half rather than assuming the face-on twelve carry over.
 
 ---
 

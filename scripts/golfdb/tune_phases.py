@@ -2,6 +2,7 @@
 
 Usage:
     python scripts/golfdb/tune_phases.py
+    python scripts/golfdb/tune_phases.py --view down-the-line
     python scripts/golfdb/tune_phases.py --estimator mediapipe:lite --limit 200
 
 Reads **cached** keypoints (`extract_pose.py` must have run) so an algorithm change is a
@@ -200,22 +201,73 @@ RULES: dict[str, Rule] = {
 }
 
 
-def _series(keypoints: list[FrameKeypoints]) -> tuple[list[float], list[float], list[bool]]:
+_WRISTS = {"left": PoseLandmark.LEFT_WRIST, "right": PoseLandmark.RIGHT_WRIST}
+
+
+def _wrist_xy(
+    keypoints: list[FrameKeypoints], landmark: PoseLandmark
+) -> list[tuple[float, float]]:
+    """`_lead_wrist_xy` with the landmark as a parameter, so either wrist can be scored.
+
+    Deliberately a copy of four lines rather than a change to `phases.py`: this is tuning
+    scaffolding, and the production rule should not gain a knob until a measurement says which way
+    to turn it.
+    """
+    points: list[tuple[float, float]] = []
+    last_good: tuple[float, float] | None = None
+    for frame in keypoints:
+        wrist = frame.landmark(landmark)
+        if wrist.visibility >= _MIN_VISIBILITY or last_good is None:
+            last_good = (wrist.x, wrist.y)
+        points.append(last_good)
+    return points
+
+
+def _series(
+    keypoints: list[FrameKeypoints], wrist: str = "left"
+) -> tuple[list[float], list[float], list[bool]]:
     smoothed = smooth_keypoints(keypoints)
-    xy = _lead_wrist_xy(smoothed)
+    landmark = _WRISTS[wrist]
+    xy = _wrist_xy(smoothed, landmark) if wrist != "left" else _lead_wrist_xy(smoothed)
     ys = [y for _, y in xy]
     speeds = _wrist_speed(xy)
-    ok = [
-        frame.landmark(PoseLandmark.LEFT_WRIST).visibility >= _MIN_VISIBILITY
-        for frame in smoothed
-    ]
+    ok = [frame.landmark(landmark).visibility >= _MIN_VISIBILITY for frame in smoothed]
     return ys, speeds, ok
+
+
+def _cached_frames(adapter, path):
+    """Frames from a Tier 1 cache file, in either serialization it may carry.
+
+    The cache holds **two shapes**, which is a fact about its history rather than a bug: the
+    face-on half predates clip metadata and is a bare frame list, while anything extracted since
+    is a `{clip, frames}` object. Reading only one of them fails loudly on the other, which is how
+    this was found — scoring down-the-line for the first time.
+    """
+    import json
+
+    payload = json.loads(path.read_bytes())
+    frames = payload["frames"] if isinstance(payload, dict) else payload
+    return adapter.validate_python(frames)
 
 
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description="Tune top/impact detection against ground truth.")
     parser.add_argument("--estimator", default="mediapipe:lite")
     parser.add_argument("--limit", type=int, default=0)
+    parser.add_argument(
+        "--wrist",
+        default="left",
+        choices=sorted(_WRISTS),
+        help="which wrist to track. `phases.py` uses the lead (left) wrist; the trail wrist "
+        "is nearer the camera from down-the-line and tracks roughly twice as often there",
+    )
+    parser.add_argument(
+        "--view",
+        default=common.VIEW_FACE_ON,
+        help="camera view to score, or 'all'. Defaults to face-on, which is what every "
+        "number in M4_POSE_BAKEOFF was measured on. Scoring the two views together would "
+        "average a rule that works against one that may not, and report neither",
+    )
     parser.add_argument(
         "--detail",
         default="",
@@ -254,10 +306,12 @@ def main(argv: list[str]) -> int:
         swing = swings.get(path.name.split(".")[0])
         if swing is None:
             continue
+        if args.view != "all" and swing.view != args.view:
+            continue
         origin = swing.events["start"]
         truth = {"top": swing.events["top"] - origin, "impact": swing.events["impact"] - origin}
 
-        keypoints = adapter.validate_json(path.read_bytes())
+        keypoints = _cached_frames(adapter, path)
         if len(keypoints) < 6:
             continue
         # A handful of videos_160 clips are shorter than their own annotation span — the labelled
@@ -266,7 +320,7 @@ def main(argv: list[str]) -> int:
         if truth["impact"] >= len(keypoints):
             truncated.append(path.name.split(".")[0])
             continue
-        ys, speeds, ok = _series(keypoints)
+        ys, speeds, ok = _series(keypoints, args.wrist)
 
         for name, rule in RULES.items():
             top, impact = rule(ys, speeds, ok)

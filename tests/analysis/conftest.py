@@ -52,15 +52,29 @@ _WRIST_BASE_X = 0.5
 # `head_x` — a rigid head translation, with no rotation component for the metric to cancel.
 _EAR_HALF_SPAN = 0.03
 
+# Where the trail hand sits relative to the lead hand — a grip's width down the shaft. Small, and
+# constant through the swing, because the two hands do not move relative to each other while the
+# club is held.
+_GRIP_OFFSET_X = 0.012
+_GRIP_OFFSET_Y = 0.018
+
 
 def _frame(
     index: int, wrist_y: float, wrist_x: float, head_x: float, hip_x: float
 ) -> FrameKeypoints:
-    """One frame: body parked mid-frame, with lead wrist, head, shoulders, hips placed."""
+    """One frame: body parked mid-frame, with both wrists, head, shoulders, hips placed."""
     landmarks = [
         Landmark(x=0.5, y=0.5, z=0.0, visibility=1.0) for _ in range(NUM_POSE_LANDMARKS)
     ]
     landmarks[PoseLandmark.LEFT_WRIST] = Landmark(x=wrist_x, y=wrist_y, z=0.0, visibility=1.0)
+    # The trail wrist travels with the lead one, offset by a grip's width. Both hands are on the
+    # club, so a fixture that animated only the lead wrist described a golfer letting go of it —
+    # harmless while nothing read the trail wrist, and immediately wrong once the down-the-line
+    # path started tracking it (M4_POSE_BAKEOFF §Phase F). Placed here rather than in that change
+    # so every existing expectation about the lead wrist is untouched.
+    landmarks[PoseLandmark.RIGHT_WRIST] = Landmark(
+        x=wrist_x + _GRIP_OFFSET_X, y=wrist_y + _GRIP_OFFSET_Y, z=0.0, visibility=1.0
+    )
     landmarks[PoseLandmark.NOSE] = Landmark(x=head_x, y=0.2, z=0.0, visibility=1.0)
     landmarks[PoseLandmark.LEFT_EAR] = Landmark(
         x=head_x - _EAR_HALF_SPAN, y=0.2, z=0.0, visibility=1.0

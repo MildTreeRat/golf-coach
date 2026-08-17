@@ -22,7 +22,7 @@ from golf_coach.analysis.benchmarks.joint import placement_for as joint_placemen
 from golf_coach.analysis.benchmarks.trajectory import trajectory_placement_for
 from golf_coach.analysis.checkpoints import CHECKPOINT_EVALUATORS
 from golf_coach.analysis.measure import POSE_MEASUREMENTS
-from golf_coach.analysis.phases import segment_phases
+from golf_coach.analysis.phases import TRAIL_WRIST, segment_phases
 from golf_coach.analysis.scoring import policy_for
 from golf_coach.analysis.shot_measure import SHOT_MEASUREMENTS
 from golf_coach.analysis.smoothing import smooth_keypoints
@@ -333,8 +333,16 @@ def analyze_swing_bundle(
     if down_the_line is None:
         notes.append("no down-the-line view in this bundle — face-on analysis only")
     else:
+        # The trail wrist, not the lead one — this is the only place the two views are told
+        # apart, and it is worth the special case. From behind, the lead wrist is the far arm and
+        # is tracked in 39% of frames; the shipped rule then misses the top on 30% of GolfDB's
+        # down-the-line clips and impact on 35%. On the trail wrist it misses 7% and 2%, which is
+        # better than face-on manages. Measured over 584 labelled clips — M4_POSE_BAKEOFF §Phase F.
         dtl_anchors = anchors_from_keypoints(
-            down_the_line.frames, clip=down_the_line.clip, window=down_the_line_window
+            down_the_line.frames,
+            clip=down_the_line.clip,
+            window=down_the_line_window,
+            wrist=TRAIL_WRIST,
         )
         if dtl_anchors is None:
             notes.append(

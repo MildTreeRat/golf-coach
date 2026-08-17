@@ -834,12 +834,18 @@ implies: hand-held phones can be aligned but never fused.
 
 What it needs, and none of it is a rerun of M8.1:
 
-- **Its own anchor set.** `segment_phases()` was tuned and validated on face-on. Whether top and
-  impact detect as well down-the-line is an open question with a ready answer — the 584 clips carry
-  hand-annotated events, so `tune_phases.py` can score it directly.
-- **Its own landmark list.** The lead wrist is the *far*, occluded arm from down-the-line
-  ([M7_TWO_PHONE_CAPTURE](docs/M7_TWO_PHONE_CAPTURE.md)), so the face-on twelve are not
-  automatically the right twelve.
+- [x] **Its own anchor set — answered and actioned, 2026-08-17.** On the lead wrist the shipped
+  rule misses the top on **30%** of down-the-line clips and impact on **35%**. On the **trail**
+  wrist — nearer that camera, tracked in 70% of frames against the lead wrist's 39% — the same rule
+  reaches **7%** and **2%**, better than face-on manages. `segment_phases` now takes the landmark
+  and the bundle path passes `TRAIL_WRIST` for the DTL clip. This also answers
+  [M7 Spike](docs/M7_TWO_PHONE_SPIKE.md) Q1, the biggest unmeasured risk under the two-phone
+  ladder, and reverses M4_POSE_BAKEOFF §Phase B7's "no view-aware landmark selection is warranted"
+  — that was one bay swing; this is 1,045 labelled clips.
+- [ ] **Its own landmark list.** The lead wrist is the *far*, occluded arm from down-the-line, and
+  the visibility table above (0.39 lead against 0.70 trail) says the face-on twelve are not
+  automatically the right twelve. Measure per-landmark visibility on the DTL half the way
+  `tune_z_channel.py` did per-axis, and pick from that rather than by symmetry with face-on.
 - **Its own aspect handling.** ADR-012's `videos_160` distortion applies here too, and M8.1 showed
   it is worth ~7 points of explained variance when a model mixes axes.
 

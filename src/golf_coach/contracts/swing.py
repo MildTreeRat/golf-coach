@@ -206,7 +206,13 @@ class SwingResult(BaseModel):
 #:                   stored swing; the bump exists because a stored `analysis.json` from version 3
 #:                   is *missing* three quantities rather than disagreeing about any, and
 #:                   `reanalyze.py` is how it acquires them.
-ANALYSIS_VERSION = 4
+#: 4 -> 5 (2026-08-17, M8.2): the down-the-line clip is segmented on the **trail** wrist. Face-on
+#:                   is untouched — same landmark, same rule, same numbers — so no checkpoint,
+#:                   band or score moves. What moves is `alignment`: the lead wrist is tracked in
+#:                   39% of frames from behind and the shipped rule misses the top on 30% of
+#:                   GolfDB's down-the-line clips, against 7% on the trail wrist
+#:                   (M4_POSE_BAKEOFF §Phase F).
+ANALYSIS_VERSION = 5
 
 
 class SwingBundleResult(BaseModel):

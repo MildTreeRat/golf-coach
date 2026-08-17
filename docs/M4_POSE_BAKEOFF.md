@@ -1049,3 +1049,87 @@ idiosyncrasies that land in the residual **by construction**, so `Q` partly meas
 different person" rather than "this is an abnormal swing". Both exceedance figures are stored
 inside `trajectory_model_v1.json` under `leave_one_player_out_exceedance` so a consumer can see how
 far to trust each one, rather than having to find this section.
+
+---
+
+## Phase F — the trail wrist, and a view-aware conclusion that reverses Phase B7's (2026-08-17)
+
+**What changed to make this measurable**: M8.1 extracted the 584 down-the-line clips. Until then
+the DTL half of GolfDB had never been pose-extracted, and every number in this document was
+face-on. `tune_phases.py` gained `--view` and `--wrist`.
+
+### `segment_phases()` down-the-line, as shipped: it fails on a third of clips
+
+Shipped rule (`major_rise_80 +floor 0.012`), median / mean / failure rate:
+
+| view | wrist | top | impact |
+|---|---|---|---|
+| face-on | left (lead, shipped) | 2.0 / 10.6 / **9%** | 1.0 / 8.9 / **7%** |
+| down-the-line | left (lead, shipped) | 3.0 / 15.0 / **30%** | 4.0 / 20.7 / **35%** |
+| down-the-line | **right (trail)** | **2.0 / 6.2 / 7%** | **1.0 / 5.3 / 2%** |
+| face-on | right (trail) | 2.0 / 13.4 / 17% | 1.0 / 12.1 / 10% |
+
+**Down-the-line on the trail wrist is better than face-on on the lead wrist** — impact fails on 2%
+of clips against face-on's 7%. On the lead wrist it fails on 35%.
+
+### It is the pose track, not the rule
+
+`--detail` separates the two, and the answer is not ambiguous. Mean tracked-frame fraction:
+
+| view | lead (left) wrist | trail (right) wrist |
+|---|---|---|
+| face-on | 0.826 | 0.966 |
+| down-the-line | **0.389** | 0.701 |
+
+Down-the-line the lead wrist is tracked in **39%** of frames. And the failing clips are the poorly
+tracked ones (mean confidence 0.32 against 0.42 for the rest), whereas face-on the failing clips
+are tracked *better* than average (0.85 against 0.82) — face-on failures are algorithmic, DTL
+failures are the instrument. No amount of rule tuning reaches them.
+
+### This reverses §Phase B7's closing sentence, on much stronger evidence
+
+Phase B7 ended: *"No view-aware landmark selection is warranted, and none was written."* That was
+measured on **one** bay swing, comparing LEFT against RIGHT on a single down-the-line clip, and it
+was right about what it measured — the two wrists agreed with each other there (24 vs 25 frames).
+
+Two wrists agreeing on one clip is not the same claim as either being *trackable* across a corpus.
+Over 1,045 labelled clips the trail wrist is visible nearly twice as often from behind, and
+**view-aware landmark selection is warranted after all**. Phase B7's correction of the original
+occlusion story stands for what it examined; its generalisation does not.
+
+The lead wrist is still right for face-on — the trail wrist is *worse* there (17%/10% against
+9%/7%), so this is genuinely per-view rather than "the trail wrist is better".
+
+### What it unblocks, and what it costs
+
+M7 Spike Q1 — *"`segment_phases()` works from down-the-line"*, named there as the biggest
+unmeasured risk under the whole two-phone ladder — is **answered: yes, on the trail wrist; no, on
+the lead wrist.** M7 Phase 2's alignment design rests on both clips producing usable anchors, and
+with the shipped rule a third of down-the-line clips would not.
+
+Not yet actioned in `phases.py`. The change is a per-view landmark choice threaded through
+`segment_phases` and `alignment.anchors_from_keypoints`; face-on behaviour must not move, so
+`ANALYSIS_VERSION` should not need to bump, but that is a claim to verify rather than assume.
+
+### Actioned 2026-08-17, and what it did *not* fix
+
+`segment_phases(keypoints, wrist=...)` now takes the tracked landmark, defaulting to the lead wrist
+so face-on is byte-identical. `engine.analyze_swing_bundle` passes `TRAIL_WRIST` for the
+down-the-line clip — the only place in the codebase the two views are told apart, and worth the
+special case. `ANALYSIS_VERSION` 4 → 5: no checkpoint, band or score moves (verified — all four
+stored swings re-analysed to the same `overall_score`), but `alignment` does.
+
+**The synthetic fixture had to be corrected first.** `tests/analysis/conftest.py::_frame` animated
+only the lead wrist, so every synthetic swing described a golfer holding the club with one hand.
+Harmless while nothing read the trail wrist; three bundle tests failed the moment something did.
+The trail wrist now travels with the lead one, a grip's width down the shaft.
+
+**On the two distinct down-the-line clips on disk, this changed little.** One segments sensibly
+(motion_start 1730 → top 1770 → impact 1797). The other still reports a **one-frame backswing**
+(1549 → 1550 → 1574) on either wrist, which is a detection failure rather than a swing. So the
+corpus result — 30% → 7% failure at the top — is **not yet reproduced on our own footage**, and
+with n=2 it cannot be. What the bay clips do establish is that the trail wrist does not make
+anything *worse* here.
+
+That is the honest state: a strong corpus measurement, an unproven transfer, and a
+`check_metric_transfer.py`-shaped question waiting for a session with more than two clips in it.

@@ -72,6 +72,20 @@ from golf_coach.contracts.swing import PhaseSegment, SwingPhase
 
 _LEAD_WRIST = PoseLandmark.LEFT_WRIST
 
+#: The wrist to track, per camera view. Measured, not assumed — see M4_POSE_BAKEOFF §Phase F.
+#:
+#: A face-on camera sees the lead wrist for most of the swing (tracked in 83% of frames against
+#: the trail wrist's 97%, but the *rule* does better on it: 9%/7% failure against 17%/10%). From
+#: down-the-line the lead wrist is the **far** arm, occluded by the torso through the top, and is
+#: tracked in only **39%** of frames — where the shipped rule fails on 30% of clips for top and
+#: 35% for impact. On the trail wrist, which is nearer that camera, the same rule reaches
+#: 7% and 2% — better than face-on manages.
+#:
+#: This reverses §Phase B7's "no view-aware landmark selection is warranted", which was measured on
+#: one bay swing. Over 1,045 labelled GolfDB clips it is warranted, and it is genuinely per-view
+#: rather than "the trail wrist is better".
+TRAIL_WRIST = PoseLandmark.RIGHT_WRIST
+
 # Frames whose lead-wrist visibility is below this are treated as unreliable; we hold the
 # last good `y` rather than trust a low-confidence jump (MediaPipe convention).
 _MIN_VISIBILITY = 0.5
@@ -174,19 +188,23 @@ _IMPACT_HALF_FRAMES = 2
 _MIN_FRAMES = 6
 
 
-def _lead_wrist_xy(keypoints: list[FrameKeypoints]) -> list[tuple[float, float]]:
-    """Lead-wrist `(x, y)` per frame, holding the last confident value through dim frames."""
+def _lead_wrist_xy(
+    keypoints: list[FrameKeypoints], wrist: PoseLandmark = _LEAD_WRIST
+) -> list[tuple[float, float]]:
+    """Tracked-wrist `(x, y)` per frame, holding the last confident value through dim frames."""
     points: list[tuple[float, float]] = []
     last_good: tuple[float, float] | None = None
     for frame in keypoints:
-        wrist = frame.landmark(_LEAD_WRIST)
-        if wrist.visibility >= _MIN_VISIBILITY or last_good is None:
-            last_good = (wrist.x, wrist.y)
+        wrist_lm = frame.landmark(wrist)
+        if wrist_lm.visibility >= _MIN_VISIBILITY or last_good is None:
+            last_good = (wrist_lm.x, wrist_lm.y)
         points.append(last_good)
     return points
 
 
-def _wrist_confident(keypoints: list[FrameKeypoints]) -> list[bool]:
+def _wrist_confident(
+    keypoints: list[FrameKeypoints], wrist: PoseLandmark = _LEAD_WRIST
+) -> list[bool]:
     """Per-frame mask: was the lead wrist actually tracked, or is `_lead_wrist_xy` holding?
 
     `_lead_wrist_xy` carries the last confident position through dim frames, which is right for a
@@ -530,21 +548,28 @@ def _segment(
     )
 
 
-def segment_phases(keypoints: list[FrameKeypoints]) -> list[PhaseSegment]:
+def segment_phases(
+    keypoints: list[FrameKeypoints], wrist: PoseLandmark = _LEAD_WRIST
+) -> list[PhaseSegment]:
     """Segment a keypoint timeline into the six swing phases (in canonical order).
 
     Returns an empty list for a clip too short to contain a swing. The returned segments are
     contiguous and their frame indices are monotonic non-decreasing, so a consumer can read
     phase timings straight off the boundaries.
+
+    **`wrist` is the camera's question, not the golfer's.** It defaults to the lead wrist, which is
+    right for face-on and is what every band and every stored analysis was produced with. A
+    down-the-line caller should pass `TRAIL_WRIST`: from behind, the lead wrist is the far arm and
+    is tracked in 39% of frames, where this rule fails on a third of clips. See `TRAIL_WRIST`.
     """
     n = len(keypoints)
     if n < _MIN_FRAMES:
         return []
 
     ts = [frame.timestamp_ms for frame in keypoints]
-    xy = _lead_wrist_xy(keypoints)
+    xy = _lead_wrist_xy(keypoints, wrist)
     ys = [y for _, y in xy]
-    confident = _wrist_confident(keypoints)
+    confident = _wrist_confident(keypoints, wrist)
 
     # Top and impact are found together, as the two ends of the downswing (see `_top_and_impact`).
     top, impact = _top_and_impact(ys, confident, n)
