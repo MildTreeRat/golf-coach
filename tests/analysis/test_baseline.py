@@ -26,6 +26,7 @@ import pytest
 from golf_coach.analysis.baseline import build_baseline, pooled_samples
 from golf_coach.contracts.baseline import BaselineClaim, minimum_n
 from golf_coach.contracts.career import CareerCorpus, CorpusSwing
+from golf_coach.contracts.placements import placement_names
 from golf_coach.contracts.swing import Measurement
 
 POSE = "pose:face_on"
@@ -305,6 +306,40 @@ def test_an_unrecognised_source_falls_back_to_swing_identity() -> None:
     swings = [_swing(i, values={"future_metric": float(i)}, source="wearable:imu") for i in (1, 2)]
 
     assert build_baseline(_corpus(*swings)).metrics["future_metric"].n == 2
+
+
+def test_a_placement_pools_as_a_metric_today_and_that_is_deferred() -> None:
+    """A characterization pin, not an endorsement. [ADR-022, fourth addendum]
+
+    M8's five population placements ride on `measurements` with `source="population:golfdb"`,
+    which matches neither dedupe prefix — so they pool per swing directory and, once `n` clears
+    the `CENTER` floor, acquire a center like any personal metric. Whether a
+    distance-from-a-tour-population *is* a personal quantity was deferred rather than defaulted,
+    and the two down-the-line ones cannot be deduplicated at all until `CorpusSwing` carries a
+    down-the-line hash.
+
+    On the corpus as it stands `n = 2` and everything is withheld, so today's behaviour is
+    invisible and stays that way until the bay session that would put `n` past 5. This asserts
+    what happens on that day, so it happens on purpose: change the pooling rule and this test is
+    what tells you the decision was already written down.
+    """
+    placement = placement_names()[0]
+    floor = minimum_n(placement, BaselineClaim.CENTER)
+    swings = [
+        # The unit `_measurement` picks is wrong for a placement (`sd_units`) and irrelevant here
+        # — what is on trial is which names reach `build_baseline`, not what they are measured in.
+        _swing(i, values={placement: 2.0 + i * 0.1}, source="population:golfdb")
+        for i in range(1, floor + 1)
+    ]
+
+    metric = build_baseline(_corpus(*swings)).metrics[placement]
+
+    assert metric.n == floor
+    assert metric.mean is not None, (
+        "a placement acquires a center at the CENTER floor — if this now fails, the deferred "
+        "decision in ADR-022's fourth addendum has been taken, and the addendum needs updating"
+    )
+    assert BaselineClaim.CENTER in metric.ready
 
 
 # --------------------------------------------------------------------------- assembly

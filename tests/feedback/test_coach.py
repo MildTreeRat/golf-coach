@@ -21,7 +21,12 @@ from golf_coach.contracts.alignment import (
 )
 from golf_coach.contracts.feedback import FeedbackPayload, Severity, Tip
 from golf_coach.contracts.shot import ShotData, ShotProvenance, ShotSource
-from golf_coach.contracts.swing import CheckpointScore, SwingBundleResult, SwingResult
+from golf_coach.contracts.swing import (
+    CheckpointScore,
+    Measurement,
+    SwingBundleResult,
+    SwingResult,
+)
 from golf_coach.feedback.coach import (
     CoachingOutcome,
     build_brief,
@@ -55,6 +60,33 @@ def _checkpoint(
     )
 
 
+def _placements() -> list[Measurement]:
+    """One calibrated and one uncalibrated placement, with the real values from `2026-08-10/2`.
+
+    The `q_dtl` figure is the interesting one and is why these are not round numbers: 11.06 is the
+    swing whose down-the-line clip segments to a one-frame backswing, so the largest placement on
+    the swing is a mis-detected anchor rather than anything the golfer did.
+    """
+    return [
+        Measurement(
+            name="tour_trajectory_t2",
+            value=2.9099,
+            unit="sd_units",
+            source="population:golfdb",
+            detail="distance from the tour swing shape inside the fitted subspace; more unusual "
+            "than 82.3% of 415 tour swings",
+        ),
+        Measurement(
+            name="tour_trajectory_q_dtl",
+            value=11.055,
+            unit="shoulder_widths",
+            source="population:golfdb",
+            detail="down-the-line: residual off that basis; most of it falls in address->top. "
+            "NOT calibrated, same caveat as the face-on Q",
+        ),
+    ]
+
+
 def _bundle(
     *,
     checkpoints: list[CheckpointScore] | None = None,
@@ -63,12 +95,14 @@ def _bundle(
     alignment: SwingAlignment | None = None,
     notes: list[str] | None = None,
     feedback: FeedbackPayload | None = None,
+    measurements: list[Measurement] | None = None,
 ) -> SwingBundleResult:
     swing = SwingResult(
         swing_id="2",
         session_id="2026-08-10",
         checkpoint_scores=checkpoints if checkpoints is not None else [_checkpoint()],
         unscored=unscored or [],
+        measurements=measurements if measurements is not None else _placements(),
         overall_score=94.9,
         mechanics_score=94.9,
         shot=shot,
@@ -250,6 +284,73 @@ def test_brief_excludes_the_heavy_streams() -> None:
     brief = build_brief(_bundle())
     assert "keypoints" not in brief.lower()
     assert len(brief) < 4000
+
+
+# ------------------------------------------------------- the population placements [M8.3]
+
+
+def test_the_placements_reach_the_brief_at_all() -> None:
+    """They did not, for the whole of M8: five were recorded and `build_brief` rendered none.
+
+    The models were fitted, validated and surfaced onto `measurements`, and the coaching call —
+    the only channel that speaks to a golfer — never saw them.
+    """
+    brief = build_brief(_bundle())
+
+    assert "tour_trajectory_t2" in brief
+    assert "2.91" in brief
+
+
+def test_a_placement_carries_its_detail_because_that_is_where_its_meaning_is() -> None:
+    """The value alone is unreadable: the percentile and the population size live in `detail`."""
+    brief = build_brief(_bundle())
+
+    assert "82.3% of 415 tour swings" in brief
+
+
+def test_an_uncalibrated_placement_says_so_on_its_own_line() -> None:
+    """The caveat block warns about this too, three hundred words above the number.
+
+    A model applies a general warning to the numbers it remembers, so the flag rides on the line
+    that carries the value — the same reason `_checkpoint_line` repeats `one_sided`. Without it
+    the largest number in this brief is a broken anchor presented as the swing's headline.
+    """
+    brief = build_brief(_bundle())
+
+    q_line = next(line for line in brief.splitlines() if "tour_trajectory_q_dtl" in line)
+    assert "NOT calibrated" in q_line
+    assert "down-the-line view" in q_line
+
+    t2_line = next(line for line in brief.splitlines() if "tour_trajectory_t2 " in line)
+    assert "NOT calibrated" not in t2_line
+    assert "face-on view" in t2_line
+
+
+def test_a_swing_with_no_placement_says_nothing_rather_than_going_silent() -> None:
+    """Same discipline as `unscored`: an absent section reads as one nobody looked at."""
+    brief = build_brief(_bundle(measurements=[]))
+
+    assert "POPULATION PLACEMENT" in brief
+    assert "Say nothing about where it sits." in brief
+
+
+def test_plain_measurements_are_not_rendered_as_placements() -> None:
+    """`measurements` also holds pose metrics the checkpoints above already judged.
+
+    Repeating them here would print every number in the brief twice under two names, which is how
+    a model comes to describe one reading as two findings.
+    """
+    pose = Measurement(
+        name="head_sway_norm",
+        value=0.1234,
+        unit="shoulder_widths",
+        source="pose:face_on",
+        detail="address window -> impact window",
+    )
+    brief = build_brief(_bundle(measurements=[pose]))
+
+    assert "head_sway_norm" not in brief
+    assert "Say nothing about where it sits." in brief
 
 
 # --------------------------------------------------------------------------- the call

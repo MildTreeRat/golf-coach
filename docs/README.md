@@ -85,7 +85,7 @@ everything on this page is supposed to be trustworthy.
 
 ## Decisions (ADRs)
 
-22 decisions, 23 addenda between them (`grep -c '^#\+ *Addendum' docs/decisions/*.md` — the
+22 decisions, 25 addenda between them (`grep -c '^#\+ *Addendum' docs/decisions/*.md` — the
 stated total had drifted to 11, then to 13, and is now pinned by `tests/test_docs_truth.py`
 along with every per-ADR count in the last column).
 **The addenda are where reality corrected the original call**, so a doc's original Decision
@@ -114,7 +114,7 @@ section is not always the final word — the counts below exist so you don't mis
 | [019](decisions/019-secret-handling.md) | Secret handling — masked in memory, plaintext at rest | Accepted | **1** — a fourth unwrap site (`scripts/ask_swing.py`), recorded because the pin caught it and the decision says widening the surface must be deliberate |
 | [020](decisions/020-conversational-followups.md) | Conversational follow-ups — a transcript store, and the tool runner over `query.py` | Accepted | — (the stdio round trip is for *external* clients; in-app calls go direct) |
 | [021](decisions/021-caddieset-paired-reference-data.md) | CaddieSet as a paired mechanics/outcome source | Accepted as a corpus, **and its study returned a negative result** | — (face-on pose does not predict ball flight; the club sets the ball and the club is not in the picture) |
-| [022](decisions/022-learned-artifacts-as-committed-data.md) | Learned artifacts as committed data — and the tour joint-distribution model | Accepted, **three models surfaced** | **2** — a second artifact (the trajectory model) under the same rule; `z` lost its A/B, the anchor set nearly made it unusable, and a pixel-aspect bug was worth 7 points of variance; then a down-the-line model, whose placement is reported beside the face-on one and never blended with it |
+| [022](decisions/022-learned-artifacts-as-committed-data.md) | Learned artifacts as committed data — and the tour joint-distribution model | Accepted, **three models surfaced and spoken** | **4** — a second artifact (the trajectory model) under the same rule; `z` lost its A/B, the anchor set nearly made it unusable, and a pixel-aspect bug was worth 7 points of variance; then a down-the-line model, whose placement is reported beside the face-on one and never blended with it; then the policy for *saying* a placement, since a band was the wrong instrument for a corpus made entirely of swings that work; then what career mode may say about a *history* of one, deferred with its trigger and its seam |
 
 Format: [000-template.md](decisions/000-template.md).
 

@@ -37,7 +37,12 @@ from pydantic import BaseModel, Field
 
 from golf_coach.api.state import load_analysis, load_state
 from golf_coach.contracts.alignment import AlignmentQuality
-from golf_coach.contracts.caveats import ALIGNMENT_CAVEAT, ONLY_CHECKPOINTS_ARE_JUDGED
+from golf_coach.contracts.caveats import (
+    ALIGNMENT_CAVEAT,
+    ONLY_CHECKPOINTS_ARE_JUDGED,
+    PLACEMENTS_ARE_NOT_SCORES,
+)
+from golf_coach.contracts.placements import PLACEMENTS_BY_NAME
 from golf_coach.contracts.shot import ShotData
 from golf_coach.launch_monitor.source import ShotDataSource
 from golf_coach.storage.bundle_store import SwingBundleStore
@@ -156,6 +161,32 @@ class ShotView(BaseModel):
     metrics: dict[str, float | str] = Field(default_factory=dict)
 
 
+class PlacementView(BaseModel):
+    """One population placement, with the sentence that makes it readable attached to it.
+
+    The only member of `measurements` that keeps its `detail`, and the exception is the point.
+    `_measurements` drops unit and detail because for a pose metric they are provenance for a
+    derivation step — `address window -> impact window` tells a coaching answer nothing. For a
+    placement the detail *is* the meaning: it carries the percentile, the size of the population
+    and which part of the swing the number came from, none of which can be recovered from a bare
+    float. Shipped as a float alone, `tour_trajectory_q_dtl: 11.06` reads as this swing's most
+    alarming number, when on the stored corpus it is a mis-detected anchor.
+    """
+
+    name: str
+    value: float
+    unit: str
+    view: str = Field(description="Which camera's fitted basis produced it — never compare across.")
+    calibrated: bool = Field(
+        description=(
+            "False means the number is real but its rate is not: an uncalibrated placement "
+            "over-flags any golfer the tour basis never saw. Read it beside its calibrated "
+            "partner, never alone."
+        )
+    )
+    detail: str
+
+
 class SwingView(BaseModel):
     """Everything the coach needs about one swing: mechanics, outcome, and what to distrust."""
 
@@ -188,6 +219,16 @@ class SwingView(BaseModel):
             f"{ONLY_CHECKPOINTS_ARE_JUDGED}. `face_to_path_deg` is the exception worth knowing: "
             "positive means the club face was open to its path (a fade shape), negative closed "
             "(a draw), and zero is straight regardless of either angle alone."
+        ),
+    )
+    population: list[PlacementView] = Field(
+        default_factory=list,
+        description=(
+            "Where this swing sits against a corpus of tour swings, as a whole rather than "
+            f"checkpoint by checkpoint: {PLACEMENTS_ARE_NOT_SCORES}. Split out of `measurements` "
+            "rather than mixed into it because these are the entries whose meaning does not "
+            "survive being reduced to a number — read each one's `detail`, `calibrated` and "
+            "`view` before saying anything about it."
         ),
     )
     alignment_quality: str | None = None
@@ -279,6 +320,7 @@ def get_swing(sessions_dir: Path, session_id: str, swing_id: str) -> SwingView |
     quality, caveat = _alignment_view(alignment)
 
     shot_raw = swing.get("shot")
+    measurements, placements = _measurements(swing)
     return SwingView(
         swing_id=swing_id,
         session_id=session_id,
@@ -290,7 +332,8 @@ def get_swing(sessions_dir: Path, session_id: str, swing_id: str) -> SwingView |
         checkpoints=[_checkpoint(c) for c in _list(swing.get("checkpoint_scores"))],
         tips=[_tip(t) for t in _list(feedback.get("tips"))],
         unscored=[str(name) for name in _list(swing.get("unscored"))],
-        measurements=_measurements(swing),
+        measurements=measurements,
+        population=placements,
         alignment_quality=quality,
         alignment_caveat=caveat,
         shot=_shot_view_from_dict(shot_raw) if isinstance(shot_raw, dict) else None,
@@ -474,21 +517,44 @@ def _status_of(state: Any, swing_dir: Path) -> str:
     return state.status
 
 
-def _measurements(swing: dict[str, Any]) -> dict[str, float]:
-    """Flatten `SwingResult.measurements` to name -> value.
+def _measurements(swing: dict[str, Any]) -> tuple[dict[str, float], list[PlacementView]]:
+    """Split `SwingResult.measurements` into the flat metrics and the population placements.
 
-    The unit and detail strings are dropped deliberately. They are provenance for a derivation
-    step, not context a coaching answer can use, and carrying them here would pad every reply
-    with text the model has no way to act on.
+    The unit and detail strings are dropped from the flat half deliberately. They are provenance
+    for a derivation step, not context a coaching answer can use, and carrying them here would pad
+    every reply with text the model has no way to act on.
+
+    The placements are the exception and get their own shape, because their detail is not
+    provenance but meaning — see `PlacementView`. Membership comes from
+    `contracts.placements.PLACEMENTS_BY_NAME` rather than a name prefix: a `tour_` test would have
+    silently reclassified anything later named that way, in the direction that loses the caveat.
     """
-    out: dict[str, float] = {}
+    flat: dict[str, float] = {}
+    placements: list[PlacementView] = []
     for entry in _list(swing.get("measurements")):
         if not isinstance(entry, dict):
             continue
         name, value = entry.get("name"), _number(entry.get("value"))
-        if isinstance(name, str) and value is not None:
-            out[name] = value
-    return out
+        if not isinstance(name, str) or value is None:
+            continue
+        spec = PLACEMENTS_BY_NAME.get(name)
+        if spec is None:
+            flat[name] = value
+            continue
+        placements.append(
+            PlacementView(
+                name=name,
+                value=value,
+                # Off the stored entry, not off the spec: a swing analyzed by an older engine is
+                # read back here, and this reports what that engine wrote rather than what the
+                # current registry would have written.
+                unit=_text(entry.get("unit")) or spec.unit,
+                view=spec.view,
+                calibrated=spec.calibrated,
+                detail=_text(entry.get("detail")) or "",
+            )
+        )
+    return flat, placements
 
 
 def _alignment_view(alignment: dict[str, Any]) -> tuple[str | None, str | None]:

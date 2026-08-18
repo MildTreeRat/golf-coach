@@ -27,6 +27,7 @@ from pathlib import Path
 import pytest
 
 from golf_coach.contracts.checkpoints import CHECKPOINT_REGISTRY
+from golf_coach.contracts.placements import POPULATION_PLACEMENT_REGISTRY
 
 REPO = Path(__file__).resolve().parent.parent
 DOCS = REPO / "docs"
@@ -126,6 +127,44 @@ def test_the_sided_split_in_the_caveats_matches_the_registry() -> None:
             assert f"`{spec.name}`" in head, f"{spec.name} is two-sided but is not listed as one"
 
 
+def test_the_caveats_name_every_population_placement_that_ships() -> None:
+    """The M6.5 bug's shape, in the channel M8 opened.
+
+    Five placements shipped onto `SwingResult.measurements` and the caveats said nothing about any
+    of them, so an MCP client received a distance from a tour population as a bare float under a
+    field description promising there was no percentile. A placement missing from this prose is a
+    number a model will read as a score, because that is what a large number next to a golf swing
+    looks like.
+    """
+    from golf_coach.contracts.caveats import READING_THIS_DATA_HONESTLY as honestly
+
+    flat = _flat(honestly)
+    for spec in POPULATION_PLACEMENT_REGISTRY:
+        assert f"`{spec.name}`" in flat, (
+            f"{spec.name} ships on every swing but the caveats never name it — every MCP client "
+            "and every coaching call is being handed it with no way to read it"
+        )
+
+
+def test_the_uncalibrated_placements_are_named_as_uncalibrated() -> None:
+    """Derived, because this is the half of the placement prose that reverses if it goes stale.
+
+    A calibrated placement described as uncalibrated wastes a finding. An **un**calibrated one
+    described as calibrated is a mis-detected anchor reported to a golfer as the most unusual thing
+    about their swing — which is exactly what `tour_trajectory_q_dtl` is on three of the four
+    stored swings.
+    """
+    from golf_coach.contracts.caveats import READING_THIS_DATA_HONESTLY as honestly
+
+    bullet = next(b for b in _flat(honestly).split("- ") if "not calibrated" in b)
+    for spec in POPULATION_PLACEMENT_REGISTRY:
+        named = f"`{spec.name}`" in bullet
+        assert named is not spec.calibrated, (
+            f"{spec.name} is calibrated={spec.calibrated} but the uncalibrated-placement bullet "
+            f"{'names' if named else 'does not name'} it"
+        )
+
+
 # --------------------------------------------------------------------- the other prose channel
 
 
@@ -212,6 +251,19 @@ def test_the_measurements_description_derives_its_count() -> None:
     assert ONLY_CHECKPOINTS_ARE_JUDGED in _flat(description), (
         "SwingView.measurements no longer interpolates caveats.ONLY_CHECKPOINTS_ARE_JUDGED — "
         "stating the panel size in its own words is what went stale last time"
+    )
+
+
+def test_the_population_description_derives_its_caveat() -> None:
+    """Same pin for the field that carries the placements, and it ships in the same outputSchema."""
+    from golf_coach.contracts.caveats import PLACEMENTS_ARE_NOT_SCORES
+    from golf_coach.mcp.query import SwingView
+
+    description = SwingView.model_fields["population"].description or ""
+
+    assert PLACEMENTS_ARE_NOT_SCORES in _flat(description), (
+        "SwingView.population no longer interpolates caveats.PLACEMENTS_ARE_NOT_SCORES — the "
+        "count of placements is stated in its own words again"
     )
 
 

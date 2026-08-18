@@ -81,6 +81,11 @@ _BANNERS: tuple[tuple[float, str], ...] = (
 #
 # `RenderResult.codec` records which one actually won, because `isOpened()` is the only thing
 # worth believing here and the stderr above will happily contradict a perfectly good file.
+#
+# But `isOpened()` is only believable about the *writer*, and it is asked before a single frame
+# has been written. It says nothing about the finished file — a writer that opens and then
+# encodes nothing produces a valid-looking path with no frames in it, and the log above looks
+# identical either way. `probe_render` is the half that reads the output back.
 _CODECS: tuple[str, ...] = ("avc1", "mp4v")
 
 # The codec a browser will not play inline. Callers warn on this rather than test `!= "avc1"`,
@@ -89,10 +94,16 @@ BROWSER_HOSTILE_CODECS = frozenset({"mp4v"})
 
 
 class RenderResult(NamedTuple):
-    """What was written, and in which codec — `codec` is None when nothing was written."""
+    """What was written, and in which codec — `codec` is None when nothing was written.
+
+    `frames` is what the schedule asked for; `frames_read` is what the finished file decodes.
+    They are two different claims and only the second one survives a silent encoder failure, so
+    callers compare them rather than reporting either alone.
+    """
 
     frames: int
     codec: str | None
+    frames_read: int | None = None
 
 
 @dataclass
@@ -114,7 +125,7 @@ def render_side_by_side(
     fps: float = 60.0,
     quality: AlignmentQuality = AlignmentQuality.UNALIGNED,
 ) -> RenderResult:
-    """Write the aligned side-by-side MP4. Returns the frames written and the codec used.
+    """Write the aligned side-by-side MP4. Returns the frames written, the codec, and the readback.
 
     An empty `schedule` writes nothing and returns `RenderResult(0, None)` — the two clips shared
     no overlapping swing time, which the caller reports rather than this raising (ADR-013).
@@ -147,7 +158,51 @@ def render_side_by_side(
         if writer is not None:
             writer.release()
 
-    return RenderResult(len(schedule), codec)
+    # After `release()`, never before: the file is not finalized until the writer lets go of it,
+    # and a probe run inside the loop would be reading a container with no moov atom yet.
+    return RenderResult(len(schedule), codec, probe_render(out_path))
+
+
+def probe_render(out_path: Path) -> int:
+    """Frames the written file actually decodes. Raises if it will not open at all.
+
+    **The render step is the only one whose product is not checked by the thing that consumes it.**
+    A score is read back by the report; a keypoints file is read back by the engine; `aligned.mp4`
+    is read back by a browser, days later, by a human. So a render that opened a writer, wrote
+    nothing usable and returned a frame count taken from `len(schedule)` is invisible here and
+    obvious there — and it hides behind a wall of OpenCV stderr that looks fatal on every
+    *successful* render too (see `_CODECS`). Reading the log cannot tell those apart; reading the
+    file can.
+
+    Raises rather than returning 0 for an unopenable file, matching `_open_writer`: a render that
+    produced nothing openable did not partially succeed. A file that opens and decodes *short* is
+    a different thing and is returned as a number, because the caller has the expected count and
+    this does not — `capture.file` records the same failure class on the input side.
+
+    `CAP_PROP_FRAME_COUNT` first, falling back to counting with `grab()`: the property is read off
+    container metadata and is not populated by every muxer, but `grab()` decodes no pixels, and a
+    swing render is ~170 frames. Public so the probe is testable without rendering.
+    """
+    import cv2
+
+    capture = cv2.VideoCapture(str(out_path))
+    try:
+        if not capture.isOpened():
+            raise RuntimeError(
+                f"{out_path.name} was written but will not open — the render produced no readable "
+                "video (OpenCV's stderr during a render says nothing about this either way)"
+            )
+
+        declared = int(capture.get(cv2.CAP_PROP_FRAME_COUNT))
+        if declared > 0:
+            return declared
+
+        counted = 0
+        while capture.grab():
+            counted += 1
+        return counted
+    finally:
+        capture.release()
 
 
 def _open_writer(

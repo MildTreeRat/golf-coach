@@ -375,7 +375,18 @@ def _render(
             fps=alignment.a.anchors.fps or 60.0,
             quality=alignment.quality,
         )
-    log(f"\nWrote {render.frames} aligned frames ({render.codec}) -> {out_path}")
+    log(
+        f"\nWrote {render.frames} aligned frames ({render.codec}) -> {out_path}"
+        f"  [reads back {render.frames_read}]"
+    )
+    if render.frames_read is not None and render.frames_read != render.frames:
+        # Logged rather than raised: a short render is not a wrong score, and the analysis stands
+        # without the video. It is worth saying loudly because the render's own stderr looks like
+        # this whether it succeeded or not — see `side_by_side._CODECS`.
+        log(
+            f"  note: the file decodes {render.frames_read} of {render.frames} frames written - "
+            "re-render before trusting it"
+        )
     if render.codec in BROWSER_HOSTILE_CODECS:
         # Deliberately not a `note`: notes describe the *swing*, and this describes the file we
         # wrapped it in. It travels as `PipelineOutcome.video_codec` instead, which the results

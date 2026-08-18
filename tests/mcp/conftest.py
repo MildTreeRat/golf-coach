@@ -66,6 +66,7 @@ def make_analysis(
     quality: str | None = "top_impact",
     unscored: list[str] | None = None,
     shot: dict[str, Any] | None = None,
+    measurements: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     return {
         "swing_id": swing_id,
@@ -100,6 +101,7 @@ def make_analysis(
                 },
             ],
             "unscored": unscored or [],
+            "measurements": measurements or [],
             "mechanics_score": overall,
             "outcome_score": None,
             "overall_score": overall,

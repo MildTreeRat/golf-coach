@@ -196,7 +196,15 @@ def _render(
             quality=alignment.quality,
         )
 
-    print(f"Wrote {render.frames} aligned frames ({render.codec}) -> {out_path}")
+    print(
+        f"Wrote {render.frames} aligned frames ({render.codec}) -> {out_path}"
+        f"  [reads back {render.frames_read}]"
+    )
+    if render.frames_read is not None and render.frames_read != render.frames:
+        print(
+            f"  note: the file decodes {render.frames_read} of {render.frames} frames written - "
+            "re-render before trusting it"
+        )
     if render.codec in BROWSER_HOSTILE_CODECS:
         print(f"  note: {render.codec} plays in VLC but not in most browsers - see README")
 

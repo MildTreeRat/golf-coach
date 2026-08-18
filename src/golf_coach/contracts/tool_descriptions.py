@@ -39,7 +39,10 @@ GET_SWING = (
     "Get one swing's full analysis: every scored checkpoint with the tour band it was "
     "judged against and the percentile it sits at, the ranked coaching tips, any "
     "checkpoints that could not be measured, and the launch-monitor shot if one was "
-    "attached. Call this whenever the user asks how a specific swing went or what to work "
+    "attached. It also returns `population`: where the swing as a whole sits against a "
+    "corpus of tour swings, which is context rather than a verdict — nothing in it has a "
+    "band and unusual is not bad. Call this whenever the user asks how a specific swing "
+    "went or what to work "
     "on — it is the only tool that returns mechanics. Needs a session_id and swing_id "
     "from list_sessions; if no such swing exists it says so rather than returning data."
 )

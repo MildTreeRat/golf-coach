@@ -273,3 +273,169 @@ fourth. Those three share the down-the-line clip whose segmentation still report
 backswing (§Phase F). So a large Q is doing what it should — flagging a shape the basis cannot
 represent — while the *cause* is a broken anchor set rather than an unusual swing. Q cannot tell
 those apart, which is one more reason it ships uncalibrated and labelled.
+
+---
+
+## Addendum (2026-08-17): the placements are spoken — the policy, since there is no band
+
+Three models were fitted, validated and surfaced onto `SwingResult.measurements`, and **nothing
+said any of it to a golfer**. That was M6.5's ordering working as designed — a quantity should be
+inspectable across swings before it is spoken — but it left the placements one step short of
+useful. Closing that step needed a *band* or a *policy*. It is a policy, and the argument for which
+is the whole of this addendum.
+
+### Why not a band
+
+A band would put a placement on the scoring path, and there is nothing to cut one from. Every clip
+behind these three models is a tour professional, so they describe the shape of swings that *work*
+and hold no information whatever about swings that do not — the same limit
+[ADR-012](012-golfdb-reference-data.md) records for `ranges.json`, but sharper here, because a
+range check at least asserts a direction. A Mahalanobis distance asserts only *distance*, and
+"far from the tour population" includes both the golfer who is doing something wrong and the tour
+player with an unusual action. Scoring that would fail every amateur forever while telling them
+nothing about what to change.
+
+So the firewall [ADR-010's 2026-08-04 addendum](010-benchmark-ranges.md) put around percentiles
+stays exactly where it is: placements ride on `measurements`, never on `checkpoint_scores`, and
+`overall_score` does not move. **What changed is not what is computed. It is what may be said.**
+
+### The policy
+
+1. **A placement is context, never a verdict, and never the headline.** `feedback/rules.py` emits
+   no tip for one and the coaching prompt says so in as many words. A number with no band cannot
+   rank against six numbers that have one.
+2. **It earns a clause when it sharpens the thing already being named** — most usefully when a
+   metric passes its own band while driving the swing's distance from the population, which is a
+   sentence no band can produce and the reason the joint model was fitted at all.
+3. **An uncalibrated placement is labelled on the line that carries it**, not only in the caveat
+   block above it. The two Q residuals over-flag any golfer the tour basis never saw, which is
+   every golfer using this system.
+4. **Unusual is not bad** is stated wherever a placement is stated. An unusual swing that works is
+   a style.
+
+### Why a registry, and why it is in `contracts/`
+
+`contracts/placements.py` is new, and it is `checkpoints.py`'s argument repeated rather than a new
+one: `caveats.py` has to *name* these five in prose that ships into the coaching system prompt and
+into every MCP client's `outputSchema`, and ADR-008 forbids `contracts` importing `analysis`. The
+alternative was hand-typing the list, which is precisely what went stale during M6.5 — and had
+already gone quietly wrong here, since the caveats named **none** of the five while all five
+shipped. `analysis/engine.py` now takes each placement's name and unit off the registry, and
+`benchmarks/trajectory.py` takes its two view strings from it, so one spelling reaches the artifact
+keys, the emitted measurement and the prose.
+
+### The gap this closed in the MCP channel
+
+`mcp/query.py` flattened `measurements` to `name -> float`, dropping unit and detail. For a pose
+metric that is right — `address window -> impact window` is provenance for a derivation step. For a
+placement the detail *is* the meaning: it carries the percentile, the population size and the
+calibration warning, none of which survive being reduced to a float. An MCP client was therefore
+receiving `tour_trajectory_q_dtl: 11.06` as a bare number, under a field description promising
+there was *no* percentile — the largest figure on the swing, with nothing to say it was a
+mis-detected anchor. Placements now travel as their own `population` list, which is the one part of
+`measurements` that keeps its `detail`.
+
+### `ANALYSIS_VERSION` does not move
+
+Nothing about the engine's output changed meaning: same names, same values, same units, same five
+placements. Re-analysing `2026-08-10/2` reproduced its stored `analysis.json` unchanged. The version
+counter tracks what the numbers *are*, and this addendum is about what is said about them.
+
+---
+
+## Addendum (2026-08-17): the placements in a personal history — deferred, and what would decide it
+
+The addendum above settled what may be said about a placement on **one** swing. It did not settle
+what career mode may say about a golfer's **history** of one, and career mode has been quietly
+answering that question since the placements shipped. Found while checking the blast radius of the
+policy, not introduced by it. **The decision is deferred rather than taken**, and this records the
+argument so the deferral is a choice rather than an oversight.
+
+### What pools today
+
+`analysis/baseline.py::pooled_samples` groups a golfer's corpus by `Measurement.name`. Nothing
+filters on `source`, so `build_baseline` for `aaron` returns **fourteen metrics, five of them
+placements**, each with the default floors from `contracts/baseline.py`.
+
+Worse than un-filtered: **un-deduplicated**. `CorpusSwing.artifact_key` knows two source prefixes
+(`pose:`, `launch_monitor:`) and keys a sample by the clip or the photo it was read off, so two
+swings sharing a face-on clip are one pose sample. `population:golfdb` matches neither and falls
+through to `swing:{ref}` — one sample per swing *directory*, per the conservative fallback that
+branch was written for. `storage/corpus.py::_count_metrics` already reports this, and has been
+reporting it since the placements shipped:
+
+```
+Unrecognised measurement sources: population:golfdb
+  Counted per swing rather than per artifact - check the dedupe key still fits.
+```
+
+The reader's own coverage warning fired correctly. Nobody read it.
+
+### What already refuses, and it is most of the surface
+
+Two of the three consumers of a `PersonalBaseline` decline the placements without being told to:
+
+- **`analysis/dispersion.py`** — placements are absent from `METRIC_TARGETS`, so `dispersion_for`
+  returns early with an `unavailable` note and **neither a bias nor a scatter finding is ever
+  emitted**. `target_for`'s "silent by omission rather than judged against a borrowed error term"
+  is doing exactly the job it was written for, on a case it was written before.
+- **`analysis/comparison.py`** — refuses all five with *"no reference distribution is stored for
+  it"*, since a placement's population is the model, not a `ranges.json` row.
+
+This matters for how alarming the finding is. The worry that reads worst — *dispersion is
+documented as a cause discriminator (bias points at something set before the swing, scatter at
+timing and release), and that reading applied to a Mahalanobis distance is nonsense* — is real
+about the **framing** and false about the **output**. No such finding reaches a reader today.
+
+### The one layer with no refusal, and the date it bites
+
+`build_baseline` itself. Given enough `n` it will publish a mean, a 95% interval, a median, an sd
+with its own interval, a min/max and a per-session trend for `tour_trajectory_q_dtl` — a quantity
+this repo ships explicitly labelled *NOT calibrated*, whose largest observed value on our own
+corpus is a mis-detected down-the-line anchor (§Phase F) rather than anything about the golfer.
+
+Today `n = 2` and every claim is withheld, so nothing false is said. **The default `CENTER` floor
+is 5.** One bay session of 20–30 swings crosses it — and a bay session is the single action the
+roadmap is pointed at, so the statistic appears on the first day there is enough data to look at.
+That is the deadline this addendum exists to record.
+
+### Why it is not obviously wrong to pool them
+
+A golfer's own trend in `tour_joint_distance` is a real question, and arguably the most interesting
+number career mode could produce: *is this swing moving toward the shape of swings that work?* That
+placement is the **calibrated** one, its exceedance rate was validated on held-out players, and a
+trend over a golfer's own history needs no band — it is a comparison to themselves, which is the
+whole premise of career mode.
+
+### Why it is not obviously right either
+
+- **The machinery around the number is built for a different kind of number.** Bias/scatter
+  discriminates a cause that is fixed before the swing from one that happens during it, and it
+  reads a *signed* metric against a target. A Mahalanobis distance is folded and non-negative, has
+  no target, and decomposes into neither cause. The refusal above is currently an accident of
+  `METRIC_TARGETS` membership rather than a stated position.
+- **The two `_dtl` placements cannot be deduplicated at all.** `CorpusSwing` carries
+  `face_on_sha256` and `shot_sha256` and no down-the-line hash, so two swings sharing one
+  down-the-line clip contribute two samples of one reading. On the corpus as it stands, three of
+  four swings share the clip behind `q_dtl = 11.05` — which would read as a *consistent* golfer
+  while measuring the same artifact three times. That is the exact failure the dedupe rule exists
+  to prevent, arriving through the gap in it.
+
+### What would decide it, and the seam a fix uses
+
+The question is not "filter or don't". It is **whether a distance-from-a-population is a personal
+quantity at all**, and the cheapest evidence is the bay session that triggers the problem: with
+n≈25, look at whether `tour_joint_distance` moves coherently within one golfer or just tracks
+whichever swings the pose estimator handled well.
+
+Whatever is decided, the change goes in one place. `CorpusSwing.artifact_key` is documented as
+**the single definition of the dedupe rule**, called by both the counter (`storage/corpus.py::
+_count_metrics`) and the pooler (`analysis/baseline.py::pooled_samples`), and returning `None`
+already means "contributes no sample" — the branch a flagged shot parse takes. A `population:`
+prefix returning `None` there moves counting, pooling, dispersion and the tour join together, and
+leaves `tests/storage/test_corpus.py`'s `set(baseline.metrics) == set(corpus.metric_counts)`
+true without editing it. Keeping them instead means adding a down-the-line hash to `CorpusSwing`
+and a third dedupe branch keyed on `PlacementSpec.view`.
+
+`tests/analysis/test_baseline.py::test_a_placement_pools_as_a_metric_today_and_that_is_deferred`
+pins the current behaviour and names this addendum, so the day it changes, it changes on purpose.

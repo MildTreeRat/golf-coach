@@ -303,6 +303,33 @@ Phase-instant accuracy against 461 hand-annotated clips: **top 2 frames, impact 
 address 7 frames** (median). Address is the known weak instant — see
 [M4_ADDRESS_DETECTION.md](M4_ADDRESS_DETECTION.md).
 
+### Where the swing sits in the tour population — recorded, spoken, never scored
+
+Alongside the checkpoints, the engine records **population placements**: how unusual the six
+metrics are *as a combination*, and how far the motion sits from the tour shape both inside the
+fitted subspace and off it. Which ones ship is declared in
+`src/golf_coach/contracts/placements.py` (`POPULATION_PLACEMENT_REGISTRY`) — `analysis/engine.py`
+takes each name and unit from it, `contracts/caveats.py` builds its warning prose from the same
+tuple, and `benchmarks/trajectory.py` keys its two committed artifacts on its view strings. Do not
+write the list or its size into a sentence; derive it.
+
+They ride on `SwingResult.measurements`, never on `checkpoint_scores`, so **no placement can move
+`overall_score`** — the same firewall §3's rule 2 puts around percentiles, for a stronger reason:
+the corpus behind them is entirely tour professionals, so they know the shape of swings that work
+and nothing about swings that do not. *Unusual is not bad.*
+
+What is new as of 2026-08-17 is not the numbers but the **policy for saying them**, which
+[ADR-022's third addendum](decisions/022-learned-artifacts-as-committed-data.md) states in full: a
+placement is context and never a headline, it earns a clause only when it sharpens a finding
+already being named, and an uncalibrated one is labelled on the line that carries it. Two of them
+are residuals whose exceedance rate was never validated — `PlacementSpec.calibrated` is the field
+that says which, and `tests/test_docs_truth.py` fails if the prose and the flag disagree.
+
+Both consumers of that prose get it from one place: `feedback/coach.py` renders the placements into
+the coaching brief, and `mcp/query.py` ships them as `SwingView.population` — the one part of
+`measurements` that keeps its `detail` string, because for a placement that string is not
+provenance but meaning.
+
 Deferred by physics, not by schedule: spine tilt and forward bend foreshorten to ≈0 face-on;
 hip rotation, X-factor and kinematic sequence need 3D; swing plane and club path need
 detection (M2); face angle and ball flight need the launch monitor. See ADR-011 and

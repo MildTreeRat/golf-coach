@@ -51,8 +51,9 @@ from golf_coach.contracts.caveats import (
     TWO_AXES,
 )
 from golf_coach.contracts.feedback import CoachingProvenance
+from golf_coach.contracts.placements import PLACEMENTS_BY_NAME
 from golf_coach.contracts.shot import ShotData
-from golf_coach.contracts.swing import CheckpointScore, SwingBundleResult
+from golf_coach.contracts.swing import CheckpointScore, Measurement, SwingBundleResult
 
 #: Big enough that adaptive thinking plus a short paragraph never truncates. Thinking is ON by
 #: default on Opus 5 and `max_tokens` bounds thinking *and* response text together, so sizing
@@ -81,6 +82,10 @@ How to write it:
   to each other; do not contradict them or invent a competing diagnosis.
 - Never state a measurement that is not in the brief. If you want to reference something that
   was not measured, say it was not measured.
+- The population placement is context, not a fault, and it is never the headline. Bring it in only
+  when it sharpens the thing you are already naming — a metric that passes its own band while
+  driving the swing's distance from the tour population is worth a clause, because no band can
+  say that. An unusual swing that works is a style, not a problem.
 - When the brief flags a number as uncertain, say so in the sentence that uses it rather than
   quoting it flat.
 - Address the golfer as "you". Be direct and encouraging; do not pad."""
@@ -143,6 +148,39 @@ def _checkpoint_line(checkpoint: CheckpointScore) -> str:
     return "\n".join(parts)
 
 
+def _placement_lines(measurements: list[Measurement]) -> list[str]:
+    """The population placements, each labelled with whether it may be read on its own.
+
+    The five `population:golfdb` entries were recorded by M8 and rendered by nothing — this brief
+    did not include `measurements` at all, so the one thing these models can say that the six bands
+    cannot never reached the golfer. That is what they are here for.
+
+    `calibrated` is stamped on every line rather than left to the caveat block, for the reason
+    `_checkpoint_line` carries `one_sided`: a warning three hundred words above a number is a
+    warning a model applies to the numbers it remembers. The uncalibrated ones are the residuals,
+    and on the stored corpus the largest of them is a mis-detected anchor rather than an unusual
+    swing — a value this brief would otherwise present as the swing's most striking feature.
+
+    Only placements are rendered. The rest of `measurements` is pose metrics the checkpoints above
+    already judged and shot fields `_shot_lines` already prints, so including them would repeat
+    every number in the brief under a second name.
+    """
+    lines: list[str] = []
+    for measurement in measurements:
+        spec = PLACEMENTS_BY_NAME.get(measurement.name)
+        if spec is None:
+            continue
+        calibration = (
+            "calibrated" if spec.calibrated else "NOT calibrated - read beside its T2, never alone"
+        )
+        lines.append(
+            f"- {measurement.name} ({spec.view} view, {calibration}): "
+            f"{_fmt(measurement.value)} {measurement.unit}"
+        )
+        lines.append(f"  {measurement.detail}")
+    return lines
+
+
 def _shot_lines(shot: ShotData) -> list[str]:
     """The launch-monitor numbers, with the OCR flag first so it is read before them."""
     lines: list[str] = []
@@ -184,6 +222,9 @@ def build_brief(result: SwingBundleResult) -> str:
 
     Deliberately excludes `keypoints`, `detections` and `phases`: several hundred frames of 33
     landmarks each, none of which a coach reasons from, all of which would dominate the prompt.
+
+    Of `measurements` it renders the population placements only — see `_placement_lines` for why
+    the rest would be every number in this brief a second time.
     """
     swing = result.swing
     out: list[str] = [
@@ -213,6 +254,16 @@ def build_brief(result: SwingBundleResult) -> str:
         )
     else:
         out.append("unscored: none - every checkpoint was measurable on this swing")
+
+    placements = _placement_lines(swing.measurements)
+    out += ["", "POPULATION PLACEMENT (recorded, never scored - nothing here has a band)"]
+    if placements:
+        out += placements
+    else:
+        out.append(
+            "none - this swing did not produce a placement, which happens when a metric or a "
+            "phase anchor the model needs was missing. Say nothing about where it sits."
+        )
 
     feedback = result.feedback
     if feedback is not None:

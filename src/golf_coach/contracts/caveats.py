@@ -23,6 +23,7 @@ from __future__ import annotations
 from textwrap import fill
 
 from golf_coach.contracts.checkpoints import CHECKPOINT_REGISTRY
+from golf_coach.contracts.placements import POPULATION_PLACEMENT_REGISTRY
 
 # How wide the composed prose wraps. Nothing downstream cares — a model reads this, not a
 # terminal — but the blocks below are hand-written at this width and a derived clause that
@@ -96,6 +97,20 @@ ONLY_CHECKPOINTS_ARE_JUDGED = (
     "reference population for"
 )
 
+#: The same bound for the population placements, for consumers composing their own sentence around
+#: it. `mcp/query.py` interpolates it into the `population` field description.
+#:
+#: Separate from `ONLY_CHECKPOINTS_ARE_JUDGED` rather than folded into it, because the two say
+#: opposite-shaped things. That one bounds what has a *reference population*; a placement has one —
+#: it is nothing but a reference population — and what it lacks is a **band**, the statement that
+#: some part of that population is the good part. A reader told only "no reference data" would
+#: reasonably conclude the placement numbers are the trustworthy ones.
+PLACEMENTS_ARE_NOT_SCORES = (
+    f"the {_count_word(len(POPULATION_PLACEMENT_REGISTRY))} entries in `population` are distances "
+    "from a population of tour professionals rather than scores — unusual is not bad, no band "
+    "exists for any of them, and none of them is included in `overall_score`"
+)
+
 #: Attached to any alignment tier below FULL, which is the only tier that anchored on all three
 #: instants and so the only one a reader may treat as synchronized throughout (ADR-015). Takes
 #: the tier's own `summary` clause, so the sentence names *which* anchors held.
@@ -114,6 +129,45 @@ _LESS_IS_NOT_BETTER = fill(
     "is the weight shift a swing needs, and a head that hangs back through impact fails as a head "
     f"that drifts forward with the hips does. On the one-sided checkpoints — {_ONE_SIDED} — below "
     "the band is the good side. Read `one_sided` before describing a low number as a strength.",
+    width=_WIDTH,
+    initial_indent="- ",
+    subsequent_indent="  ",
+)
+
+# The population placements, in the two halves a reader needs in this order: what the numbers are
+# (so a distance is not mistaken for a score), then which of them cannot be read alone. Both are
+# derived from the registry — this is the prose that was missing entirely while five placements
+# shipped, and the whole reason `contracts/placements.py` exists.
+_PLACEMENT_NAMES = _and_list([f"`{spec.name}`" for spec in POPULATION_PLACEMENT_REGISTRY])
+_UNCALIBRATED = _and_list(
+    [f"`{spec.name}`" for spec in POPULATION_PLACEMENT_REGISTRY if not spec.calibrated]
+)
+
+_PLACEMENTS_ARE_NOT_SCORES = fill(
+    f"**The `population:golfdb` entries are placements, not scores.** {_PLACEMENT_NAMES} say how "
+    "far this swing sits from a population of tour professionals — as a combination of metrics, "
+    "and as a motion. Every clip behind them is a tour swing, so these models know the shape of "
+    "swings that work and nothing whatever about swings that do not: a large value means "
+    "**unusual**, which is a reason to look and never a fault to report. No band exists for any of "
+    "them, none is part of `overall_score`, and their percentiles clamp at 10 and 90 exactly as "
+    "the checkpoint ones do. Naming what a swing does unusually is useful; calling it wrong is not "
+    "supported by anything behind these numbers.",
+    width=_WIDTH,
+    initial_indent="- ",
+    subsequent_indent="  ",
+)
+
+_PLACEMENTS_PER_VIEW = fill(
+    f"{_UNCALIBRATED} are **not calibrated**, and the others are. A Q is the part of the motion "
+    "the tour basis cannot represent at all, and it over-flags any golfer that basis never saw — "
+    "which is every golfer using this system. It also cannot tell an unusual swing from a "
+    "mis-detected one, so a large Q beside an ordinary T2 more often means the swing was read "
+    "badly than swung badly. Read each Q beside its own T2, never alone. And the face-on and "
+    "down-the-line numbers come from two bases fitted to two cameras: each is compared against its "
+    "own population and never against the other, so a difference between the two is not a finding "
+    "about the swing. A down-the-line placement is still not spine angle, swing plane or club "
+    "path: those live in the depth direction one camera cannot resolve, and none of them is "
+    "measured here.",
     width=_WIDTH,
     initial_indent="- ",
     subsequent_indent="  ",
@@ -149,6 +203,8 @@ Reading this data honestly:
   golfer — the checkpoint's own `message` states the magnitude in the right direction. This is also
   the one checkpoint that can be missing because nobody said who swung: when a swing has no golfer
   attributed, it appears in `unscored` rather than being scored on a guess.
+{_PLACEMENTS_ARE_NOT_SCORES}
+{_PLACEMENTS_PER_VIEW}
 - `needs_review` on a shot means its numbers were read off a photograph by OCR and the parse
   was flagged. Do not quote a flagged shot's figures as fact; say the reading is uncertain.
 - `alignment_caveat`, when present, means the two camera views were anchored on some swing

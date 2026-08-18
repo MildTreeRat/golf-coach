@@ -37,15 +37,18 @@ from pydantic import BaseModel, TypeAdapter
 
 from golf_coach.analysis.trajectory import anchors_from_phases, build_trajectory
 from golf_coach.contracts.keypoints import FrameKeypoints
+from golf_coach.contracts.placements import DOWN_THE_LINE, FACE_ON
 from golf_coach.contracts.swing import PhaseSegment
 
 #: One artifact per camera, keyed by view. **Not one model with a view column**: the two are fitted
 #: on different landmark lists over different clips, so they are different objects that happen to
 #: answer the same question. The down-the-line fit drops the lead arm, which is hidden by the torso
 #: from behind (M4_POSE_BAKEOFF §Phase G-H).
-FACE_ON = "face-on"
-DOWN_THE_LINE = "down-the-line"
-
+#:
+#: The two view strings are imported rather than defined here because `contracts/placements.py`
+#: names the same two bases in the caveat prose, and a second spelling of "down-the-line" is a
+#: second thing to keep in step. Both remain importable from this module, which is where every
+#: existing caller reaches for them.
 _MODEL_FILES = {
     FACE_ON: "trajectory_model_v1.json",
     DOWN_THE_LINE: "trajectory_model_dtl_v1.json",

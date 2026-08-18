@@ -152,6 +152,68 @@ def test_unscored_checkpoints_are_named_and_not_confused_with_failures(
 # --------------------------------------------------------------------------------------
 
 
+#: One placement and one plain pose metric, as `analysis.json` stores them. The `q_dtl` value is
+#: the real one from `2026-08-10/2`, where the largest placement on the swing is a mis-detected
+#: down-the-line anchor rather than anything the golfer did — the case that makes a bare float
+#: actively misleading.
+_MEASUREMENTS = [
+    {
+        "name": "tour_trajectory_q_dtl",
+        "value": 11.055,
+        "unit": "shoulder_widths",
+        "source": "population:golfdb",
+        "detail": "down-the-line: residual off that basis; NOT calibrated",
+    },
+    {
+        "name": "head_sway_norm",
+        "value": 0.1234,
+        "unit": "shoulder_widths",
+        "source": "pose:face_on",
+        "detail": "address window -> impact window",
+    },
+]
+
+
+def test_a_placement_is_split_out_of_measurements_and_keeps_its_detail(
+    tmp_path: Path, swing_writer, analysis_factory
+) -> None:
+    """The gap M8 left: five placements shipped as bare floats under `measurements`.
+
+    A float called `tour_trajectory_q_dtl` reads as a score to anything that receives it, and the
+    field description it arrived under promised there was no percentile — while the percentile, the
+    population size and the "NOT calibrated" warning all sat in the `detail` this flattener dropped.
+    """
+    root = tmp_path / "sessions"
+    swing_writer(
+        root,
+        "2026-08-10",
+        "1",
+        analysis=analysis_factory("2026-08-10", "1", measurements=_MEASUREMENTS),
+    )
+
+    view = query.get_swing(root, "2026-08-10", "1")
+
+    assert view is not None
+    assert [p.name for p in view.population] == ["tour_trajectory_q_dtl"]
+
+    placement = view.population[0]
+    assert placement.value == 11.055
+    assert placement.calibrated is False
+    assert placement.view == "down-the-line"
+    assert "NOT calibrated" in placement.detail
+
+    # The plain metric stays where it was, flat and without its provenance string.
+    assert view.measurements == {"head_sway_norm": 0.1234}
+
+
+def test_a_swing_with_no_placements_reports_an_empty_list(sessions_dir: Path) -> None:
+    """Absence is not an error — a swing analyzed before M8 simply has none to report."""
+    view = query.get_swing(sessions_dir, "2026-08-10", "1")
+
+    assert view is not None
+    assert view.population == []
+
+
 def test_a_degraded_alignment_carries_a_caveat(sessions_dir: Path) -> None:
     view = query.get_swing(sessions_dir, "2026-08-10", "1")
 

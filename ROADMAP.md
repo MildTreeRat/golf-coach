@@ -23,7 +23,7 @@ wording; only the grouping and the M4 checklist have been corrected.
 | **M6** LLM coaching | ✅ Done *(2026-08-15)* | — (live coaching, the MCP handshake and follow-up questions are all proven) | [§M6](#milestone-6-llm-powered-coaching--done) |
 | **M6.5** Measure now, judge later | ✅ Done | — (9 recorded, **6 scored**; the handedness seam landed and the last candidate was settled) | [§M6.5](#m65-measure-now-judge-later--done) |
 | **Career mode** One golfer over time | ✅ Done, 6/6 steps | — (built and silent; a bay session gives it the `n` to speak) | [§Career](#career-mode-one-golfer-tracked-over-time--done-built-and-silent) |
-| **M8** Learning what "good" means | ✅ Done *(2026-08-17)* | — (three models fitted, validated and surfaced, one per camera) | [§M8](#m8-learning-what-good-means--gates-run-model-fitted) |
+| **M8** Learning what "good" means | ✅ Done *(2026-08-17)* | — (three models fitted, validated, surfaced **and spoken**, with a policy rather than a band) | [§M8](#m8-learning-what-good-means--gates-run-model-fitted) |
 | **M5** Feedback UI | ⬜ Not started | M7 Phase 5 gives the host | [§M5](#milestone-5-feedback-ui) |
 | **M2** Club & ball detection | 🔒 Gated, **and M1.5 said no-go** | Bay lighting for a ~1/2000 s exposure — *not* a global-shutter camera | [§M2](#milestone-2-club--ball-detection) |
 | Hardware re-validation | 🔒 Gated | Cameras / launch monitor arriving | [§Gate](#hardware-re-validation-gate-revisit-when-cameras--launch-monitor-arrive) |
@@ -595,6 +595,16 @@ Five things found by building it:
   population. *(Step 4 found this is a constraint on the **tour band only**: a personal corpus is
   single-handed by construction, so a personal baseline reads the sign without the field.)*
 
+**Open on the bay session, and it is the one thing here that is not merely waiting for `n`.** M8's
+five population placements pool through `build_baseline` as if they were personal metrics, and the
+two down-the-line ones cannot be deduplicated because `CorpusSwing` carries no down-the-line hash.
+Nothing false is said at n=2 — every claim is withheld, and dispersion and the tour join refuse
+them outright — but the default `CENTER` floor is 5, so **the first bay session is also the moment
+a center appears for `tour_trajectory_q_dtl`**, a quantity that ships labelled *NOT calibrated*.
+The decision was deferred rather than defaulted; the argument, the trigger and the one-line seam
+are [ADR-022's fourth addendum](docs/decisions/022-learned-artifacts-as-committed-data.md). Read it
+**before** analysing that session's swings, not after.
+
 
 ## M6.5: Measure now, judge later — done
 **Goal**: Record every quantity this system *can* measure from data already on disk, without
@@ -740,10 +750,11 @@ unusualness, with `head_hip_gain_norm` contributing 38.6% of the departure *whil
 - [x] `scripts/golfdb/tune_joint_structure.py` — the gate, plus player-clustered band intervals
 - [x] `scripts/golfdb/derive_joint_model.py` → `analysis/benchmarks/joint_model_v1.json`
 - [x] `analysis/benchmarks/joint.py` + 12 pins in `tests/analysis/test_joint.py`
-- [ ] **Surface it.** Register as a `Measurement`, bump `ANALYSIS_VERSION`, re-run
-      `scripts/reanalyze.py`, and teach `contracts/caveats.py` how to describe it. Held back on
-      purpose — M6.5's ordering says a quantity should be inspectable across swings before it is
-      spoken, and the blast radius reaches the MCP payloads and the coaching prose
+- [x] **Surface it.** Landed in two halves, and the gap between them is the lesson. M8.1 did the
+      data half — registered as a `Measurement`, `ANALYSIS_VERSION` 3 → 4, `reanalyze.py` re-run —
+      and **M8.3 did the prose half**, which had been left undone: `caveats.py` named none of the
+      five placements while all five shipped, so an MCP client received them as bare floats under a
+      field description promising there was no percentile
 - [ ] **Revisit `hip_sway_norm`'s lower edge.** The player-clustered bootstrap puts its p10 of
       0.1414 in a 95% interval reaching to **0.0801**, where it sits 1.6× the 0.050 error floor
       above zero rather than the 2.8× [ADR-010](docs/decisions/010-benchmark-ranges.md)'s addendum
@@ -752,7 +763,7 @@ unusualness, with `head_hip_gain_norm` contributing 38.6% of the departure *whil
       `MIN_SAMPLES = 30`; wedge 11 and hybrid 5 do not
 
 **Exit criteria**: a swing can be told its combination is unusual, with the metric responsible
-named — **met offline**, not yet on a `SwingResult`.
+named — **met**, on a `SwingResult` since M8.1 and in words a golfer reads since M8.3.
 
 ### M8.1 — the trajectory model (NEXT ACTION, agreed 2026-08-16)
 
@@ -873,6 +884,38 @@ What it needs, and none of it is a rerun of M8.1:
   a phase chain" are now pinned to each other.
 - **Its own aspect handling.** ADR-012's `videos_160` distortion applies here too, and M8.1 showed
   it is worth ~7 points of explained variance when a model mixes axes.
+
+### M8.3 — saying it (done, 2026-08-17)
+
+Three models fitted, five placements on every swing, and **nothing said any of it to a golfer**.
+That was M6.5's ordering working as designed — inspectable before spoken — but it had also left a
+live gap: `contracts/caveats.py` named none of the five, so `mcp/query.py` shipped
+`tour_trajectory_q_dtl: 11.06` as a bare float under a field description promising there was no
+percentile. On three of four stored swings that number is a mis-detected down-the-line anchor, and
+it is the largest figure on the swing.
+
+This needed **a band or a policy**. It is a policy — a band would put a placement on the scoring
+path, and there is nothing to cut one from, since every clip behind these models is a tour
+professional and "far from the tour population" covers both the golfer doing something wrong and
+the tour player with an unusual action. [ADR-022's third addendum](docs/decisions/022-learned-artifacts-as-committed-data.md)
+states it in full.
+
+- [x] **`contracts/placements.py`** — `POPULATION_PLACEMENT_REGISTRY`, `checkpoints.py`'s argument
+  repeated: prose that has to name a set must derive it. `engine.py` takes each name and unit from
+  it, `benchmarks/trajectory.py` takes its two view strings from it, and `caveats.py` builds two
+  new bullets out of it — including the uncalibrated split, filtered on `PlacementSpec.calibrated`.
+- [x] **The coaching brief renders them** (`feedback/coach.py`), which it never did — `build_brief`
+  excluded `measurements` entirely. Calibration rides on the line carrying the value, not only in
+  the caveat block, for the reason `_checkpoint_line` repeats `one_sided`.
+- [x] **The MCP channel got its own shape**: `SwingView.population`, the one part of `measurements`
+  that keeps its `detail`, because for a placement that string is not provenance but meaning.
+- [x] **No score moved and `ANALYSIS_VERSION` did not bump.** Nothing about the engine's output
+  changed meaning; re-analysing `2026-08-10/2` reproduced its stored `analysis.json` byte for byte.
+  `feedback/rules.py` was deliberately left alone — a rule-based tip about a placement would be a
+  verdict, and there is no band to earn one.
+
+**Exit criteria**: a golfer hears what the population models found, with its uncertainty attached
+and never as a fault — **met**.
 
 
 ---

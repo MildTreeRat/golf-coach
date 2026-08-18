@@ -5,6 +5,142 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-08-17 — Five numbers nobody was allowed to read, and the policy that let them be said
+
+**Duration**: ~1 session. One new contract module, two ADR addenda, 18 pins, two live coaching
+calls, no version bump.
+**What prompted it**: the third of M8's three loose threads — "nothing yet *says* any of this to a
+golfer" — which needed a band or a policy, not more fitting. The session then closed the two
+follow-ups it created: the policy is exercised against a live model, and the render finally checks
+its own output.
+
+**It is a policy, and the reason is the whole decision.** A band would put a placement on the
+scoring path and there is nothing to cut one from: every clip behind these three models is a tour
+professional, so they describe the shape of swings that *work* and hold nothing at all about swings
+that do not. "Far from the tour population" covers the golfer doing something wrong and the tour
+player with an unusual action equally, and scoring that fails every amateur forever while telling
+them nothing to change. So the firewall stays exactly where ADR-010's 2026-08-04 addendum put it —
+placements ride on `measurements`, `overall_score` does not move. **What changed is not what is
+computed but what may be said.**
+
+**The gap was worse than "not yet spoken", and that is the finding.** `contracts/caveats.py` named
+**none** of the five placements while all five shipped — so `mcp/query.py`, which flattens
+`measurements` to `name -> float` and drops `detail`, was handing an MCP client
+`tour_trajectory_q_dtl: 11.06` as a bare number, *under a field description promising there was no
+percentile*. The percentile, the population size and the "NOT calibrated" warning were all in the
+detail string it dropped. On three of the four stored swings that figure is the mis-detected
+down-the-line anchor from §Phase F — the largest number on the swing, with nothing attached to say
+it is not about the golfer. That is the M6.5 caveat bug exactly, in the channel M8 opened.
+
+**`contracts/placements.py` is `checkpoints.py`'s argument repeated rather than a new one.** Prose
+that has to name a set must derive it, and `caveats.py` cannot import `analysis` (ADR-008). The
+registry now feeds four consumers: `engine.py` takes each name and unit off it, `caveats.py` builds
+two new bullets from it — including the uncalibrated split, filtered on `PlacementSpec.calibrated`
+— `coach.py` partitions the brief with it, and `mcp/query.py` decides `population` membership by
+it rather than by a `tour_` prefix, since a prefix test would silently reclassify a future name in
+the direction that loses the caveat. `benchmarks/trajectory.py` now imports its two view strings
+from it too, so one spelling reaches the artifact keys, the measurement and the prose.
+
+**`build_brief` had never rendered `measurements` at all** — the coaching call, the only channel
+that speaks to a golfer, saw none of M8's output. It does now, placements only, with calibration
+stamped on the line that carries the value rather than left to the caveat block three hundred words
+above it. Same reason `_checkpoint_line` repeats `one_sided`: a model applies a general warning to
+the numbers it remembers.
+
+**The policy in the prompt is four lines**: a placement is context and never the headline; it earns
+a clause when it sharpens the finding already being named — most usefully a metric that passes its
+own band while driving the departure, which is the sentence no band can produce and why the joint
+model was fitted; an uncalibrated one says so where it is stated; unusual is not bad. ADR-022's
+third addendum has the argument.
+
+**`feedback/rules.py` was deliberately left alone.** A rule-based tip about a placement would be a
+verdict, and there is no band to earn one. The LLM gets context; the ranked verdict stays six
+checkpoints deep.
+
+**No score moved and `ANALYSIS_VERSION` did not bump** — nothing about the engine's output changed
+meaning, only what is said about it. Verified rather than assumed: re-analysing `2026-08-10/2`
+reproduced its stored `analysis.json` unchanged.
+
+**`aligned.mp4` was stale on all four swings, not the one the last entry named.** Every render sat
+eight days behind its `analysis.json`, because `alignment` moved in v5 when the down-the-line clip
+went to the trail wrist. **All four re-rendered** and verified readable (167/167/167/159 frames);
+all four re-analyses reported `no change`, which is the byte-identical result above confirmed
+across the whole corpus rather than the one swing it was diffed on.
+
+Two things about that check worth keeping. `aligned.mp4` is written *before* `analysis.json` in the
+same pipeline run, so a raw `render_mtime < analysis_mtime` test reports every freshly processed
+swing as stale — use a tolerance. And the render logs `Failed to load OpenH264 library` plus
+`Failed to initialize VideoWriter` and then **succeeds anyway**, because OpenCV falls back to
+another fourcc; the errors look fatal, the exit code is 0, and the file is valid. Probe the output
+rather than reading the log.
+
+**That last sentence is now code rather than advice.** `pose/side_by_side.py::probe_render` reopens
+the finished file and returns the frames it actually decodes; `RenderResult` carries `frames_read`
+beside `frames`, and both render callers log the pair and warn when they disagree. The distinction
+it turns on is that `isOpened()` — previously the only check — is asked of the **writer**, before a
+single frame is written, so it cannot see an encoder that opens and then produces nothing. This is
+the one output nothing downstream reads back: a score is read by the report, keypoints by the
+engine, and `aligned.mp4` by a human in a browser days later. An unopenable file raises; a short
+one is logged, because a bad render is not a wrong score. `2026-08-10/2` re-rendered at
+`159 frames (avc1) [reads back 159]`.
+
+**PICK UP HERE.** M8 is closed — fitted, validated, surfaced, spoken with a policy, and that policy
+now proven against a live model. What is left are the threads it exposed, and both of the remaining
+ones want the same bay session:
+
+1. **§Phase F's trail-wrist result is still unproven on our own footage.** Two distinct DTL clips on
+   disk, one segments sensibly and one reports a one-frame backswing on either wrist. That same clip
+   is behind three swings' `q_dtl` of 11.05 and behind their stale renders. n=2 cannot confirm a
+   corpus result — a `check_metric_transfer.py`-shaped question for a session with more clips in it,
+   and the thing most worth capturing at the next bay session.
+2. **`hip_sway_norm`'s lower edge** still sits on the player-clustered interval M8 flagged (p10
+   0.1414, 95% reaching to 0.0801, i.e. 1.6× the error floor rather than 2.8×). Untouched.
+3. ~~The placement policy is unexercised against a live model.~~ **Done — it holds, on both the easy
+   swing and the adversarial one.** `2026-08-10/2` and `2026-08-07-aaron1/1`, real `claude-opus-5`
+   calls, ~1,050 characters each. Both led on tempo, the one failing checkpoint. Neither made a
+   placement the headline. Both produced *exactly* the sentence the joint model was fitted for —
+   "the head-hip relationship is the biggest single contributor to how unusual your six numbers
+   look together against the tour group, **even though it passes its band comfortably**" — which is
+   policy line 2 verbatim and is a sentence no band can generate. Line 4 held too: "that's a style
+   marker to be aware of, not something to change." **Line 3 is still untested**, and that is the
+   honest gap: `2026-08-07-aaron1/1` carries `tour_trajectory_q_dtl = 11.05`, the largest number on
+   the swing, rendered into the brief labelled `NOT calibrated - read beside its T2, never alone` —
+   and the model simply never reached for it, going to the calibrated joint distance instead. That
+   is the safest possible outcome and it means nothing yet exercises "an uncalibrated placement
+   says so where it is stated". Both runs' `analysis.json` diffed clean: `feedback.coaching` and
+   `feedback.coaching_text` are the only fields that moved.
+4. ~~Career mode pools the placements as if they were metrics, and nobody decided that.~~
+   **Deferred on purpose, and written down** — [ADR-022's fourth
+   addendum](docs/decisions/022-learned-artifacts-as-committed-data.md), with a pointer from
+   `contracts/placements.py`, a line in ROADMAP §Career, and
+   `test_a_placement_pools_as_a_metric_today_and_that_is_deferred` pinning today's behaviour so it
+   cannot change by accident. **No code moved.** Three things found while writing it up that change
+   how alarming it is:
+   - **The worst-sounding half is already refused.** Placements are absent from `METRIC_TARGETS`,
+     so `dispersion_for` returns early and **no bias/scatter finding is ever emitted** — the "cause
+     discriminator applied to a Mahalanobis distance" is wrong about the framing and never reaches
+     a reader. `analysis/comparison.py` refuses all five too. `build_baseline` is the *only*
+     unrefused layer.
+   - **It is worse than un-filtered: it is un-deduplicated.** `population:golfdb` matches neither
+     prefix in `CorpusSwing.artifact_key`, so placements key on `swing:{ref}` — and `CorpusSwing`
+     carries no down-the-line hash, so the two `_dtl` placements *cannot* be deduplicated at all.
+   - **`storage/corpus.py` had already reported this and nobody read it.** `career_corpus.py`
+     prints `Unrecognised measurement sources: population:golfdb — Counted per swing rather than
+     per artifact, check the dedupe key still fits.` The coverage warning fired correctly the day
+     the placements shipped.
+
+   **The deadline is the bay session, not "someday".** Today `n = 2` and every claim is withheld,
+   so nothing false is said; the default `CENTER` floor is **5**, so the first 20–30-swing session
+   is also the moment `tour_trajectory_q_dtl` acquires a center. Read the addendum *before*
+   analysing that session. The seam when it is decided is one branch in `CorpusSwing.artifact_key`,
+   the documented single definition of the dedupe rule.
+
+`tests/api/test_worker.py::test_failure_is_recorded_and_the_consumer_survives` remains **flaky** —
+threading test, 5s timeout, fails under load and passes in isolation. Unrelated; re-run before
+believing it.
+
+---
+
 ## 2026-08-16 — The model that was supposed to predict the ball, and the one that shipped instead
 
 **Duration**: ~1 session. Two ADRs, one new corpus, two gates, one fitted artifact, 12 pins.

@@ -36,6 +36,7 @@ from golf_coach.contracts.detections import FrameDetections
 from golf_coach.contracts.golfer import Handedness
 from golf_coach.contracts.intent import PracticeGoal
 from golf_coach.contracts.keypoints import FrameKeypoints, KeypointsFile
+from golf_coach.contracts.placements import spec_for as placement_spec
 from golf_coach.contracts.shot import ShotData
 from golf_coach.contracts.swing import (
     ANALYSIS_VERSION,
@@ -67,17 +68,23 @@ def _placements(
 
     Each returns `None` rather than a guess when its inputs are incomplete: the joint model needs
     all six metrics, the trajectory model needs three usable phase anchors.
+
+    Name and unit come off `contracts.placements` rather than being typed here, for the reason that
+    module exists: `caveats.py` names these five in the prose every MCP client and every coaching
+    call reads, and a name that lived only at this call site could be renamed without the warning
+    about it following.
     """
     out: list[Measurement] = []
 
     joint = joint_placement(pose_values)
     if joint is not None:
         leading = next(iter(joint.contributions), "?")
+        spec = placement_spec("tour_joint_distance")
         out.append(
             Measurement(
-                name="tour_joint_distance",
+                name=spec.name,
                 value=round(joint.distance, 4),
-                unit="sd_units",
+                unit=spec.unit,
                 source="population:golfdb",
                 detail=(
                     f"Mahalanobis distance of the six metrics as a combination, against "
@@ -92,11 +99,12 @@ def _placements(
     )
     if placement is not None:
         interval = next(iter(placement.residual_by_interval), "?")
+        t2_spec, q_spec = placement_spec("tour_trajectory_t2"), placement_spec("tour_trajectory_q")
         out.append(
             Measurement(
-                name="tour_trajectory_t2",
+                name=t2_spec.name,
                 value=round(placement.t2, 4),
-                unit="sd_units",
+                unit=t2_spec.unit,
                 source="population:golfdb",
                 detail=(
                     f"distance from the tour swing shape inside the fitted subspace; more "
@@ -107,9 +115,9 @@ def _placements(
         )
         out.append(
             Measurement(
-                name="tour_trajectory_q",
+                name=q_spec.name,
                 value=round(placement.q, 4),
-                unit="shoulder_widths",
+                unit=q_spec.unit,
                 source="population:golfdb",
                 detail=(
                     f"residual off the tour subspace — shape the basis cannot represent; most of "
@@ -144,11 +152,13 @@ def _dtl_placements(
         return []
 
     interval = next(iter(placement.residual_by_interval), "?")
+    t2_spec = placement_spec("tour_trajectory_t2_dtl")
+    q_spec = placement_spec("tour_trajectory_q_dtl")
     return [
         Measurement(
-            name="tour_trajectory_t2_dtl",
+            name=t2_spec.name,
             value=round(placement.t2, 4),
-            unit="sd_units",
+            unit=t2_spec.unit,
             source="population:golfdb",
             detail=(
                 f"down-the-line: distance from the tour swing shape inside its fitted subspace; "
@@ -158,9 +168,9 @@ def _dtl_placements(
             ),
         ),
         Measurement(
-            name="tour_trajectory_q_dtl",
+            name=q_spec.name,
             value=round(placement.q, 4),
-            unit="shoulder_widths",
+            unit=q_spec.unit,
             source="population:golfdb",
             detail=(
                 f"down-the-line: residual off that basis; most of it falls in {interval}. NOT "
