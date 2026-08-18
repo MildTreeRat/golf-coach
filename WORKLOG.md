@@ -5,6 +5,85 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-08-17 — The same five numbers, in the channel a golfer actually looks at
+
+**Duration**: ~1 session. One shared resolver, one new page block, 4 pins, no version bump.
+**What prompted it**: "what is the next thing to work on?" — and the answer turned out to be the
+previous entry's own gap rather than anything on the roadmap.
+
+**M8.3 fixed two channels out of three.** It gave the MCP client `SwingView.population` and taught
+`build_brief` to render placements, and it never reached `results.html`. That page's
+`measurementsBlock` rendered all fourteen measurements as `name / value / unit` and dropped
+`detail` — the *identical* field `mcp/query.py` had been dropping — under a caption reading "These
+have no tour benchmark band yet, so nothing here is a pass, a fail, or a percentile. They are
+recorded so bands can be derived from real swings later." Every clause of that is false for a
+placement: the dropped `detail` states a percentile in so many words, and per ADR-022's third
+addendum a band is deliberately never coming. So `tour_trajectory_q_dtl: 11.055` sat in a browser
+as the largest number on the page, and on three of four stored swings it is the mis-detected
+down-the-line anchor. **The bug M8.3 was written to fix outlived it by one channel.**
+
+**The find is the lesson, not the fix.** M8.3's own worklog entry, its ADR addendum and its commit
+message all describe the gap as *the MCP channel's*. It was never the MCP channel's — it was
+`measurements`-with-`detail`-dropped, and two consumers did that. Naming a bug after the first
+place you saw it is how you fix it once.
+
+**`api/state.py::resolve_placements` is the one definition**, and it lives there because that
+module's docstring already claims the tolerant readers for `analysis.json`, and because
+`mcp/query.py` already imports it under ADR-008's recorded exception — `api` importing `mcp` would
+have closed that into a cycle. `mcp/query.py` now wraps it in `PlacementView` and `app.py` serves
+it as a derived `population` key beside `result`, never folded into it, since `load_analysis`
+returns what the pipeline wrote. All 55 MCP pins passed unchanged through that refactor, which is
+what "behaviour-preserving" is supposed to look like.
+
+**The page hard-codes nothing, and there is a pin for it.**
+`test_the_results_page_hard_codes_no_placement_name` reads `results.html` and asserts no
+`spec.name` appears — a set restated in JavaScript is a second copy, and that is exactly how five
+placements shipped with no prose naming them. It failed on first run against *my own comments*,
+which is the pin being blunter than the invariant: a comment naming `tour_trajectory_q_dtl` is
+what makes the comment worth reading. It now strips `/* */` blocks and whole-line `//` before
+asserting, and line comments only at start-of-line so a `//` inside a string can't hide a real
+hard-code.
+
+**Grey, not amber.** The uncalibrated flag deliberately does not use `#c93`, the page's `.miss`
+colour. A placement borrowing the checkpoint table's miss colour asserts the fault this whole ADR
+says no band supports — the flag is a statement about how well the number is known, not about the
+swing.
+
+**A second thing was wrong in that block and is now fixed too.** It was captioned "Measured, not
+yet judged" while listing the six metrics behind the checkpoint table immediately above it —
+false about 6 of 14 rows, pre-existing, and unmissable once the caption was being rewritten
+anyway. `api/state.py::judged_metrics` maps through `CheckpointSpec.metric` and drops them. On
+`2026-08-07-aaron1/1` that block goes **14 rows → 3**, and its existing sentence is true as
+written for the first time.
+
+**Verified by rendering, not by reading.** `node` evaluating the page's own `populationBlock` and
+`measurementsBlock` against the real stored payload for `2026-08-07-aaron1/1` — the adversarial
+swing — which is worth more than eyeballing the diff: it is the page's output, not the payload it
+was handed. `tour_trajectory_q_dtl` comes out at 11.05 under a `down-the-line` heading with
+`not calibrated` on the value row and "NOT calibrated, same caveat as the face-on Q" beneath it.
+
+**No version bump, and `scripts/reanalyze.py --dry-run` reports every stored result current.**
+Nothing on the analysis path moved — the diff is `api/` and one static page. That dry run is the
+cheap form of the check; a full `analyze_bundle` re-run would have cost a pose pass and a live
+LLM call to prove something the version counter already answers.
+
+**PICK UP HERE.** The three threads from the previous entry are all still open and unchanged. Two
+want the bay session (§Phase F's trail-wrist result is unproven at n=2; career mode's placement
+pooling decides itself the day `n` crosses 5 — read ADR-022's fourth addendum *before* analysing
+that session). The one piece of desk work left on M8's checklist is **`hip_sway_norm`'s lower
+edge**: `ranges.json` justifies its 0.14 at 2.8× the 0.050 error floor, but M8's player-clustered
+bootstrap puts p10's 95% interval down at 0.0801 — 1.6×. All four stored swings sit comfortably
+inside the band (0.2733, 0.2733, 0.2733, 0.4123), so **no score moves whichever way it is
+decided**, which makes now the cheap moment to decide it. `hip_shift_at_top_norm` is the precedent
+for dropping an unmeasurable lower edge. The other open box, per-club bands, is costed already:
+face-on driver 341, iron 69, fairway 32 clear `MIN_SAMPLES = 30`; wedge 11 and hybrid 5 do not.
+
+`tests/api/test_worker.py::test_failure_is_recorded_and_the_consumer_survives` remains **flaky** —
+threading test, 5s timeout, fails under load and passes in isolation. Unrelated; re-run before
+believing it.
+
+---
+
 ## 2026-08-17 — Five numbers nobody was allowed to read, and the policy that let them be said
 
 **Duration**: ~1 session. One new contract module, two ADR addenda, 18 pins, two live coaching

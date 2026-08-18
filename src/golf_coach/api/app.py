@@ -30,7 +30,7 @@ from pydantic import BaseModel
 from golf_coach.analysis.baseline import build_baseline
 from golf_coach.analysis.comparison import build_standing
 from golf_coach.analysis.dispersion import build_dispersion
-from golf_coach.api.state import load_analysis, load_state
+from golf_coach.api.state import judged_metrics, load_analysis, load_state, resolve_placements
 from golf_coach.api.worker import AnalysisWorker, should_analyze
 from golf_coach.config import settings
 from golf_coach.contracts.career import CareerCorpus
@@ -442,6 +442,7 @@ def create_app(
         if manifest is None:
             raise HTTPException(status_code=404, detail="no such swing")
         swing_dir = swing_dir_of(session_id, swing_id)
+        result = load_analysis(swing_dir)
         return {
             "session_id": session_id,
             "swing_id": swing_id,
@@ -450,7 +451,19 @@ def create_app(
             "player_id": manifest.player_id,
             "analysis": _analysis_summary(swing_dir),
             # Null until the worker has finished; the page renders a waiting state for that.
-            "result": load_analysis(swing_dir),
+            "result": result,
+            # Two derived views over `result`, sent beside it rather than folded into it —
+            # `load_analysis` returns what the pipeline wrote, and a route must not edit that.
+            #
+            # Both exist so the page can name a set without typing one. `measurements` mixes three
+            # kinds of number: the six that back the checkpoint table, three that genuinely have
+            # no band yet, and five placements whose meaning lives in a `detail` string. Rendered
+            # as one list they were all captioned "measured, not yet judged", which was false for
+            # eleven of the fourteen and dangerous for the placements — a distance from a tour
+            # population read as a bare float looks like a score. The registries decide which is
+            # which (`contracts/placements.py`, `contracts/checkpoints.py`); the page renders.
+            "population": resolve_placements(result),
+            "judged_metrics": judged_metrics(result),
         }
 
     @app.post("/api/sessions/{session_id}/swings/{swing_id}/golfer", dependencies=guard)

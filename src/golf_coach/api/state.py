@@ -37,6 +37,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from golf_coach.contracts.checkpoints import CHECKPOINT_REGISTRY
+from golf_coach.contracts.placements import PLACEMENTS_BY_NAME
 from golf_coach.contracts.swing import ANALYSIS_VERSION
 from golf_coach.storage.manifest import SwingManifest
 
@@ -147,3 +149,91 @@ def is_outdated(analysis: dict | None) -> bool:
     absent, which is a different repair with a different report (`ExclusionReason.NOT_ANALYZED`).
     """
     return analysis is not None and stored_analysis_version(analysis) < ANALYSIS_VERSION
+
+
+def _measurement_entries(analysis: dict | None) -> list[dict]:
+    """`swing.measurements` off a stored artifact, or empty for anything that is not that."""
+    if not isinstance(analysis, dict):
+        return []
+    swing = analysis.get("swing")
+    if not isinstance(swing, dict):
+        return []
+    entries = swing.get("measurements")
+    if not isinstance(entries, list):
+        return []
+    return [entry for entry in entries if isinstance(entry, dict)]
+
+
+def resolve_placements(analysis: dict | None) -> list[dict]:
+    """The population placements on a stored swing, each carrying what makes it readable.
+
+    A placement shipped as a bare float is the failure `contracts/placements.py` exists to stop:
+    `tour_trajectory_q_dtl: 11.06` looks like this swing's most alarming number, when on the
+    stored corpus it is a mis-detected anchor. The percentile, the size of the population and the
+    "NOT calibrated" warning all live in `detail`, and none of them is recoverable from the value.
+
+    **One resolver, two channels.** `mcp/query.py` wraps this in `PlacementView` and `api/app.py`
+    hands it to the results page, so the rule for turning a stored measurement entry into a
+    readable placement has exactly one definition. It lives here beside `load_analysis` for the
+    reason this module's docstring gives — the tolerant readers for `analysis.json` sit together —
+    and it returns plain dicts rather than a model because its two callers need different shapes
+    and `contracts` holds no dict-readers.
+
+    Membership is `PLACEMENTS_BY_NAME` and never a `tour_` prefix test: a prefix would silently
+    reclassify a future name in the direction that loses the caveat.
+    """
+    resolved: list[dict] = []
+    for entry in _measurement_entries(analysis):
+        name = entry.get("name")
+        if not isinstance(name, str):
+            continue
+        spec = PLACEMENTS_BY_NAME.get(name)
+        if spec is None:
+            continue
+        value = entry.get("value")
+        if isinstance(value, bool) or not isinstance(value, int | float):
+            continue
+        unit = entry.get("unit")
+        detail = entry.get("detail")
+        resolved.append(
+            {
+                "name": name,
+                "value": float(value),
+                # Unit and detail come off the **stored entry**, view and calibrated off the spec.
+                # An artifact written by an older engine is read back here, and the two halves
+                # differ in what they are: the first pair is what that engine recorded, the second
+                # is what this repo knows about the model. Falling back to the spec's unit keeps a
+                # row renderable when an old artifact omitted one.
+                "unit": unit if isinstance(unit, str) and unit else spec.unit,
+                "detail": detail if isinstance(detail, str) else "",
+                "view": spec.view,
+                "calibrated": spec.calibrated,
+            }
+        )
+    return resolved
+
+
+def judged_metrics(analysis: dict | None) -> list[str]:
+    """Which measurement names on this swing are already shown as scored checkpoints.
+
+    `measurements` holds every quantity the engine recorded, including the ones backing the
+    checkpoint panel — so a consumer rendering it whole under "measured, not yet judged" says
+    something false about the entries that *are* judged, in the table directly above it.
+
+    Membership comes from this swing's own `checkpoint_scores` rather than from the registry
+    alone, because the honest claim is "these exact numbers are judged on this page" — a
+    checkpoint the engine could not score contributes nothing here. The name -> metric mapping is
+    `CheckpointSpec.metric`, the one name for the number across measuring, banding and storing.
+    """
+    if not isinstance(analysis, dict):
+        return []
+    swing = analysis.get("swing")
+    if not isinstance(swing, dict):
+        return []
+    scores = swing.get("checkpoint_scores")
+    scored = {
+        entry.get("name")
+        for entry in (scores if isinstance(scores, list) else [])
+        if isinstance(entry, dict)
+    }
+    return [spec.metric for spec in CHECKPOINT_REGISTRY if spec.name in scored]

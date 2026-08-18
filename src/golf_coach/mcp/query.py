@@ -35,7 +35,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from golf_coach.api.state import load_analysis, load_state
+from golf_coach.api.state import load_analysis, load_state, resolve_placements
 from golf_coach.contracts.alignment import AlignmentQuality
 from golf_coach.contracts.caveats import (
     ALIGNMENT_CAVEAT,
@@ -171,6 +171,10 @@ class PlacementView(BaseModel):
     and which part of the swing the number came from, none of which can be recovered from a bare
     float. Shipped as a float alone, `tour_trajectory_q_dtl: 11.06` reads as this swing's most
     alarming number, when on the stored corpus it is a mis-detected anchor.
+
+    The fields are filled by `api.state.resolve_placements`, which the results page reads through
+    as well — this is the MCP-shaped wrapper around it and not a second implementation. Which half
+    of a row comes off the stored artifact and which off the registry is decided there.
     """
 
     name: str
@@ -320,7 +324,9 @@ def get_swing(sessions_dir: Path, session_id: str, swing_id: str) -> SwingView |
     quality, caveat = _alignment_view(alignment)
 
     shot_raw = swing.get("shot")
-    measurements, placements = _measurements(swing)
+    # Resolved off the whole artifact rather than off `swing`, because `state.resolve_placements`
+    # is the one definition the results page reads through too — see its docstring.
+    placements = [PlacementView(**row) for row in resolve_placements(analysis)]
     return SwingView(
         swing_id=swing_id,
         session_id=session_id,
@@ -332,7 +338,7 @@ def get_swing(sessions_dir: Path, session_id: str, swing_id: str) -> SwingView |
         checkpoints=[_checkpoint(c) for c in _list(swing.get("checkpoint_scores"))],
         tips=[_tip(t) for t in _list(feedback.get("tips"))],
         unscored=[str(name) for name in _list(swing.get("unscored"))],
-        measurements=measurements,
+        measurements=_measurements(swing),
         population=placements,
         alignment_quality=quality,
         alignment_caveat=caveat,
@@ -517,44 +523,27 @@ def _status_of(state: Any, swing_dir: Path) -> str:
     return state.status
 
 
-def _measurements(swing: dict[str, Any]) -> tuple[dict[str, float], list[PlacementView]]:
-    """Split `SwingResult.measurements` into the flat metrics and the population placements.
+def _measurements(swing: dict[str, Any]) -> dict[str, float]:
+    """Flatten the non-placement half of `SwingResult.measurements` to name -> value.
 
-    The unit and detail strings are dropped from the flat half deliberately. They are provenance
-    for a derivation step, not context a coaching answer can use, and carrying them here would pad
-    every reply with text the model has no way to act on.
+    The unit and detail strings are dropped here deliberately. They are provenance for a
+    derivation step, not context a coaching answer can use, and carrying them would pad every
+    reply with text the model has no way to act on.
 
-    The placements are the exception and get their own shape, because their detail is not
-    provenance but meaning — see `PlacementView`. Membership comes from
+    The placements are the exception and leave through `state.resolve_placements` instead, because
+    their detail is not provenance but meaning — see `PlacementView`. Membership comes from
     `contracts.placements.PLACEMENTS_BY_NAME` rather than a name prefix: a `tour_` test would have
     silently reclassified anything later named that way, in the direction that loses the caveat.
     """
     flat: dict[str, float] = {}
-    placements: list[PlacementView] = []
     for entry in _list(swing.get("measurements")):
         if not isinstance(entry, dict):
             continue
         name, value = entry.get("name"), _number(entry.get("value"))
-        if not isinstance(name, str) or value is None:
+        if not isinstance(name, str) or value is None or name in PLACEMENTS_BY_NAME:
             continue
-        spec = PLACEMENTS_BY_NAME.get(name)
-        if spec is None:
-            flat[name] = value
-            continue
-        placements.append(
-            PlacementView(
-                name=name,
-                value=value,
-                # Off the stored entry, not off the spec: a swing analyzed by an older engine is
-                # read back here, and this reports what that engine wrote rather than what the
-                # current registry would have written.
-                unit=_text(entry.get("unit")) or spec.unit,
-                view=spec.view,
-                calibrated=spec.calibrated,
-                detail=_text(entry.get("detail")) or "",
-            )
-        )
-    return flat, placements
+        flat[name] = value
+    return flat
 
 
 def _alignment_view(alignment: dict[str, Any]) -> tuple[str | None, str | None]:

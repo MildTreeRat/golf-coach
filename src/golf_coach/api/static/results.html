@@ -76,6 +76,25 @@
   .hist .v { font-variant-numeric: tabular-nums; text-align: right; }
   .hist .v em { font-style: normal; opacity: 0.6; font-size: 0.78rem; display: block;
                 font-variant-numeric: normal; }
+  /* Population placements. A sibling of `.hist` and deliberately not of the checkpoint table:
+     both say where a number sits against a distribution, and neither is a verdict. The one thing
+     that must never happen here is a placement borrowing the panel's pass/miss colours — a
+     distance from a tour population is not a fault, and `#c93` on `tour_trajectory_q_dtl` would
+     assert exactly the thing no band exists to support. So the uncalibrated flag is grey: it is
+     a statement about how well we know the number, not about the swing. */
+  .plc { font-size: 0.85rem; }
+  .plc .vw { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.55;
+             margin: 0.7rem 0 0.1rem; }
+  .plc .vw:first-child { margin-top: 0; }
+  .plc .p { border-top: 1px solid rgba(128,128,128,0.2); padding: 0.4rem 0; }
+  .plc .top { display: flex; justify-content: space-between; gap: 0.6rem; align-items: baseline; }
+  .plc .name { font-family: ui-monospace, monospace; font-size: 0.8rem; }
+  .plc .v { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+  .plc .v .u { opacity: 0.6; font-size: 0.78rem; margin-left: 0.2rem; }
+  .plc .flag { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.04em;
+               border: 1px solid rgba(128,128,128,0.5); border-radius: 4px; opacity: 0.75;
+               padding: 0.02rem 0.25rem; margin-left: 0.35rem; }
+  .plc .d { opacity: 0.7; font-size: 0.8rem; margin: 0.15rem 0 0; }
   details.measured { margin-top: 1.5rem; font-size: 0.85rem; }
   details.measured summary { cursor: pointer; font-size: 0.8rem; text-transform: uppercase;
                              letter-spacing: 0.06em; opacity: 0.6; }
@@ -202,7 +221,8 @@ function render(payload) {
   parts.push(tips(result.feedback));
   parts.push(coachBlock(result.feedback));
   parts.push(shotBlock(swing.shot));
-  parts.push(measurementsBlock(swing));
+  parts.push(populationBlock(payload));
+  parts.push(measurementsBlock(payload));
   parts.push(`<div id="history"></div>`);
   parts.push(videoBlock(analysis, result));
   parts.push(askBlock());
@@ -416,12 +436,65 @@ function shotBlock(shot) {
   return `<h2>Shot data</h2><div class="shot">${cells}</div>${review}`;
 }
 
+// Where this swing sits against a population of tour professionals. Expanded rather than
+// collapsed, and above the unjudged metrics, because these numbers *do* have a population behind
+// them — what they lack is a band, which is a different absence and the opposite reading.
+//
+// Every one of these shipped for two milestones as a bare `name / value / unit` row inside the
+// block below, under a caption promising no percentile — while the percentile, the population
+// size and the "NOT calibrated" warning all sat in the `detail` string this page was dropping.
+// `tour_trajectory_q_dtl` is the reason that mattered: it is the largest number on three of the
+// four stored swings and on those three it is a mis-detected anchor, not the golfer.
+//
+// `detail` is therefore the row's primary content and not a tooltip, and calibration is stamped
+// on the line carrying the value rather than left to the caption — the same argument
+// `feedback/coach.py` makes about its brief, and the reason `_checkpoint_line` repeats
+// `one_sided`: a reader applies a general warning to the numbers it remembers.
+function populationBlock(payload) {
+  const list = payload.population || [];
+  if (!list.length) return "";
+  // Grouped by the view the API resolved off `PlacementSpec`, never by parsing the name. Two
+  // cameras, two fitted bases, two populations: a difference between the groups is not a finding.
+  const views = [];
+  for (const p of list) {
+    let group = views.find((g) => g.view === p.view);
+    if (!group) views.push((group = { view: p.view, rows: [] }));
+    group.rows.push(p);
+  }
+  const groups = views.map((g) => `<p class="vw">${esc(g.view)}</p>` +
+    g.rows.map((p) => `<div class="p">
+      <div class="top">
+        <span class="name">${esc(p.name)}</span>
+        <span class="v">${num(p.value, 2)}<span class="u">${esc(p.unit.replace(/_/g, " "))}</span>
+          ${p.calibrated ? "" : `<span class="flag">not calibrated</span>`}</span>
+      </div>
+      <p class="d">${esc(p.detail)}</p>
+    </div>`).join("")).join("");
+  return `<h2>Against the tour population</h2>
+    <p class="muted">Distances from a group of tour professionals, as a combination of your
+      numbers and as a motion. Every swing behind them is a tour swing, so a large value means
+      <strong>unusual</strong> — a reason to look, never a fault. None of these has a band and
+      none is part of your score. The two camera groups are compared against their own
+      populations and never against each other.</p>
+    <div class="plc">${groups}</div>`;
+}
+
 // Measured but not judged: no band, so no pass/fail, no percentile, no colour. Collapsed by
 // default and placed last, because a number nobody can yet say is good or bad is reference
 // material rather than feedback — and rendering it like the checkpoint table above would invite
 // exactly the reading it cannot support.
-function measurementsBlock(swing) {
-  const list = swing.measurements || [];
+//
+// Both exclusions are the API's lists rather than names typed here, so the block cannot go stale
+// the way the caption did. Placements leave because they have a population and belong above;
+// the checkpoint metrics leave because they are judged in the table at the top of this page, and
+// a block captioned "not yet judged" listing them again was false about six of its fourteen rows.
+function measurementsBlock(payload) {
+  const swing = (payload.result || {}).swing || {};
+  const shown = new Set([
+    ...(payload.population || []).map((p) => p.name),
+    ...(payload.judged_metrics || []),
+  ]);
+  const list = (swing.measurements || []).filter((m) => !shown.has(m.name));
   if (!list.length) return "";
   const rows = list.map((m) => `<tr>
       <td>${esc(m.name)}</td>

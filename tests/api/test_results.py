@@ -8,16 +8,38 @@ the base install with no worker, no threads, and no cv2.
 from __future__ import annotations
 
 import json
+import re
 
 import pytest
 from fastapi.testclient import TestClient
 
-from golf_coach.api.app import create_app
+from golf_coach.api.app import _STATIC_DIR, create_app
 from golf_coach.api.state import AnalysisState, save_state
+from golf_coach.contracts.placements import POPULATION_PLACEMENT_REGISTRY
 from golf_coach.storage.bundle_store import SwingBundleStore
 
 _TOKEN = "s3cret-token"
 _ROLES = ("face_on", "down_the_line", "shot_screen")
+
+#: One entry per registered placement, plus the metric behind the seeded checkpoint and one that
+#: is genuinely unjudged — the three kinds `measurements` mixes. The placement half is built from
+#: the registry rather than typed out, so a sixth placement is covered by these tests the day it
+#: ships rather than the day someone remembers to add it here.
+_MEASUREMENTS: list[dict] = [
+    {"name": "tempo_ratio", "value": 1.89, "unit": "ratio",
+     "detail": "backswing:downswing time, from phase instants"},
+    {"name": "start_line_deg", "value": -5.3, "unit": "degrees",
+     "detail": "initial horizontal launch direction; + is right of target"},
+    *(
+        {
+            "name": spec.name,
+            "value": 11.055,
+            "unit": spec.unit,
+            "detail": f"seeded detail for {spec.name}",
+        }
+        for spec in POPULATION_PLACEMENT_REGISTRY
+    ),
+]
 
 _ANALYSIS = {
     "swing_id": "1",
@@ -35,6 +57,7 @@ _ANALYSIS = {
             }
         ],
         "unscored": [],
+        "measurements": _MEASUREMENTS,
         "shot": {"shot_id": "seeded-1", "session_id": "seeded", "source": "screen",
                  "carry_distance": 195.9, "ball_speed": 142.1},
     },
@@ -206,3 +229,95 @@ def test_results_page_is_reachable(client) -> None:
 
     assert res.status_code == 200
     assert "Aligned views" in res.text
+
+
+def test_swing_detail_resolves_every_population_placement(client, store) -> None:
+    """The browser half of M8.3, and it shipped two milestones after the numbers did.
+
+    The MCP channel got `SwingView.population`; this page got nothing, so every placement arrived
+    as a `name / value / unit` row with its `detail` dropped — under a caption promising there was
+    no percentile, when the percentile was *in* the string being dropped.
+    """
+    session_id = _seed(client, store)
+
+    body = client.get(f"/api/sessions/{session_id}/swings/1").json()
+
+    resolved = {row["name"]: row for row in body["population"]}
+    for spec in POPULATION_PLACEMENT_REGISTRY:
+        row = resolved.get(spec.name)
+        assert row is not None, (
+            f"{spec.name} ships on every swing but the results page is never sent it — it is "
+            "rendering as a bare number under the wrong caption again"
+        )
+        assert row["view"] == spec.view
+        assert row["calibrated"] is spec.calibrated
+        assert row["unit"] == spec.unit
+
+
+def test_a_placement_never_reaches_the_page_as_a_bare_number(client, store) -> None:
+    """The detail string is the whole fix, so it is pinned on its own.
+
+    Without it `tour_trajectory_q_dtl: 11.06` is this swing's largest number with nothing attached
+    to say it is a distance from a tour population rather than a score — and on three of the four
+    stored swings, that it is a mis-detected anchor rather than anything about the golfer.
+    """
+    session_id = _seed(client, store)
+
+    body = client.get(f"/api/sessions/{session_id}/swings/1").json()
+
+    stored = {m["name"]: m["detail"] for m in _MEASUREMENTS}
+    for row in body["population"]:
+        assert row["detail"] == stored[row["name"]], (
+            f"{row['name']} reached the page without the sentence that makes it readable"
+        )
+
+
+def test_the_measurements_the_page_still_calls_unjudged_are_unjudged(client, store) -> None:
+    """`judged_metrics` is what keeps that block's caption true.
+
+    `measurements` carries the metrics behind the checkpoint table as well, so rendering it whole
+    under "measured, not yet judged" said something false about the six that *are* judged, in the
+    table directly above it.
+    """
+    session_id = _seed(client, store)
+
+    body = client.get(f"/api/sessions/{session_id}/swings/1").json()
+
+    # `tempo` is the one checkpoint the fixture scores, so its metric must be claimed as judged.
+    assert body["judged_metrics"] == ["tempo_ratio"]
+    excluded = set(body["judged_metrics"]) | {row["name"] for row in body["population"]}
+    remaining = [m["name"] for m in _MEASUREMENTS if m["name"] not in excluded]
+    assert remaining == ["start_line_deg"]
+
+
+def _without_comments(source: str) -> str:
+    """`source` with `/* */` blocks and whole-line `//` comments removed.
+
+    Comments are stripped rather than searched because the distinction the pin below cares about
+    is code vs. prose: a comment *should* be free to name `tour_trajectory_q_dtl`, since naming
+    the number that made the bug concrete is what makes the comment worth reading. Only a name
+    the page branches on is a second copy of the registry.
+
+    Line comments are matched at the start of a line only, so a `//` inside a URL or a string
+    survives — an over-eager strip would hide a real hard-code sitting after one.
+    """
+    without_blocks = re.sub(r"/\*.*?\*/", "", source, flags=re.DOTALL)
+    return "\n".join(
+        line for line in without_blocks.splitlines() if not line.lstrip().startswith("//")
+    )
+
+
+def test_the_results_page_hard_codes_no_placement_name() -> None:
+    """The invariant that stops this fix rotting the way the caveats it repairs did.
+
+    A placement named in the page's own JavaScript is a set stated twice, and the second copy goes
+    stale silently the next time the registry grows — which is precisely how five placements came
+    to ship with no prose anywhere naming them.
+    """
+    page = _without_comments((_STATIC_DIR / "results.html").read_text(encoding="utf-8"))
+
+    for spec in POPULATION_PLACEMENT_REGISTRY:
+        assert spec.name not in page, (
+            f"results.html names {spec.name} in code; it must partition on the `population` list "
+            "the API resolves from POPULATION_PLACEMENT_REGISTRY instead"
+        )

@@ -335,6 +335,33 @@ there was *no* percentile — the largest figure on the swing, with nothing to s
 mis-detected anchor. Placements now travel as their own `population` list, which is the one part of
 `measurements` that keeps its `detail`.
 
+### The same gap in the browser channel, closed a day later
+
+The fix above reached the MCP client and the coaching brief and **not the results page**, which is
+the one surface a golfer actually looks at. `results.html::measurementsBlock` rendered all fourteen
+measurements as `name / value / unit` and dropped `detail` exactly as `mcp/query.py` had, under a
+caption reading *"These have no tour benchmark band yet, so nothing here is a pass, a fail, or a
+percentile. They are recorded so bands can be derived from real swings later."* Every clause of
+that is wrong for a placement: the dropped `detail` states a percentile, and by this addendum a
+band is deliberately never coming.
+
+So the policy's line 3 now holds in all three channels. The page groups placements by `view`,
+carries each `detail` as the row's primary content, and stamps *not calibrated* on the line
+holding the value — grey rather than the panel's amber, because borrowing the checkpoint table's
+miss colour would assert the fault this ADR says no band supports.
+
+The split is resolved in Python and never in the page: **`api/state.py::resolve_placements`** is
+the one definition of what turns a stored measurement entry into a readable placement, wrapped by
+`mcp/query.py`'s `PlacementView` for one channel and served as a derived `population` key on the
+swing-detail route for the other. `tests/api/test_results.py` pins that `results.html` names no
+placement in code, since a set restated in JavaScript is a second copy that goes stale — which is
+how five placements came to ship with no prose naming them in the first place.
+
+One thing found on the way, and fixed with it: that block was captioned *"measured, not yet
+judged"* while listing the six metrics behind the checkpoint table directly above it. It now
+excludes them via `api/state.py::judged_metrics`, mapping through `CheckpointSpec.metric`, and
+holds the three quantities that genuinely have no band — which is what its sentence always claimed.
+
 ### `ANALYSIS_VERSION` does not move
 
 Nothing about the engine's output changed meaning: same names, same values, same units, same five
