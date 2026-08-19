@@ -45,7 +45,9 @@ finding that denied both metrics a bias target in career mode step 5). So:
 - `hip_sway_norm` is **two-sided** `[0.14, 0.50]`. The tour p10 is 0.14, meaning 90% of tour swings
   show *more* hip travel than that — not the shape of a quantity to minimise — and 0.14 sits 2.8x
   the metric's own noise+boundary error (0.050) above zero, so "too little" is a distinction this
-  pipeline can actually make.
+  pipeline can actually make. That 2.8x is a claim about *resolution* and M8's player-clustered
+  bootstrap leaves it untouched; what the bootstrap widened is where the tour p10 *sits* (95%
+  interval reaching 0.0801). Weighed 2026-08-18 and the edge kept — see ADR-010's addendum.
 - `hip_shift_at_top_norm` is **one-sided** `[0, 0.21]`, and not because less is better. Its p10 is
   0.015 against an error floor of 0.053, so a lower edge there would separate golfers the pipeline
   cannot tell apart. Only overshoot is judged — the half the instrument resolves.
@@ -397,7 +399,8 @@ def evaluate_hip_sway(
     hip travel: some of it is the weight shift a swing needs, and the tour population shows it —
     the p10 is 0.14, so 90% of tour swings move the hips *further* than that. A `[0, p90]` band
     would score a golfer who barely moves their lower body as perfect. The lower edge is safe to
-    assert because it clears the instrument by 2.8x (see the module docstring).
+    assert because it clears the instrument by 2.8x (see the module docstring) — a resolution the
+    player-clustered interval on the tour p10 does not narrow (ADR-010 addendum 2026-08-18).
 
     Both endpoints are means over a window, so zero-mean landmark jitter suppresses by √N. Returns
     `None` if the phases/landmarks are unusable or the store has no band.

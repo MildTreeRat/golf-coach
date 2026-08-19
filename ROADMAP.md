@@ -755,12 +755,31 @@ unusualness, with `head_hip_gain_norm` contributing 38.6% of the departure *whil
       and **M8.3 did the prose half**, which had been left undone: `caveats.py` named none of the
       five placements while all five shipped, so an MCP client received them as bare floats under a
       field description promising there was no percentile
-- [ ] **Revisit `hip_sway_norm`'s lower edge.** The player-clustered bootstrap puts its p10 of
-      0.1414 in a 95% interval reaching to **0.0801**, where it sits 1.6× the 0.050 error floor
-      above zero rather than the 2.8× [ADR-010](docs/decisions/010-benchmark-ranges.md)'s addendum
-      justified it on. 458 clips from 122 golfers are not 458 independent samples
-- [ ] **Per-club bands are now costed**: face-on driver 341, iron 69, fairway 32 clear
-      `MIN_SAMPLES = 30`; wedge 11 and hybrid 5 do not
+- [x] **Revisited `hip_sway_norm`'s lower edge — kept at 0.14, 2026-08-18.** The box was opened by
+      the player-clustered bootstrap putting p10's 95% interval down at **0.0801** (458 clips from
+      122 golfers are not 458 independent samples), described here and in WORKLOG as "1.6× the
+      0.050 error floor rather than 2.8×". **That phrasing mixed two different measurements**, and
+      separating them is what settled it: 2.8× is a claim about *resolution* — can the pipeline
+      tell 0.14 from zero — and clustering does not touch it; the interval is a claim about
+      *placement*, where the tour p10 sits. Only the second widened, so the finding is reduced
+      confidence in the edge's location rather than an unmeasurable edge, and
+      `hip_shift_at_top_norm` (p10 *below* its floor) is not the precedent it resembles. The edge
+      stays, `ranges.json` now carries the interval beside the 2.8×, and no score moved — all four
+      stored swings pass at 1.0. [ADR-010 addendum
+      2026-08-18](docs/decisions/010-benchmark-ranges.md)
+- [x] **Per-club bands gated, and none is cut — 2026-08-18.** Costed was not gated: the counts
+      below say a stratum is big enough to cut a band from, not that the band differs from the one
+      shipped. `scripts/golfdb/tune_per_club_bands.py` screens each per-club p90 against the
+      all-club p90 in units of the metric's own error, then puts a player-clustered bootstrap on
+      whatever clears. **Two of nineteen strata survive** (`head_sway_norm` x iron, 2.85x;
+      `finish_balance_norm` x fairway, 2.56x) and they do not make a panel. **Driver never differs
+      at all** (0.17–0.56x) because it *is* 341 of the 458 face-on clips. Pooling every non-driver
+      club onto 42 golfers leaves exactly one real effect — head sway is lower with a shorter club,
+      2.20x — and there is no `ClubCategory` for "not a driver". **Tempo is on the wrong axis
+      entirely**: the golfer effect is 4.7x the club effect, and the club effect is 5.8x *smaller*
+      than our own tempo error, so tempo belongs to `PersonalBaseline` and not to a band here.
+      [ADR-010 addendum 2026-08-18](docs/decisions/010-benchmark-ranges.md) has the three blockers
+      that would have to clear before any of it ships
 
 **Exit criteria**: a swing can be told its combination is unusual, with the metric responsible
 named — **met**, on a `SwingResult` since M8.1 and in words a golfer reads since M8.3.

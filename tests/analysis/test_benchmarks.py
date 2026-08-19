@@ -39,3 +39,26 @@ def test_specific_club_and_skill_fall_back_to_all() -> None:
 def test_missing_checkpoint_yields_none() -> None:
     # No wrong score for an unseeded checkpoint — the resolver returns None (ADR-010 §2).
     assert resolve_range("hip_rotation") is None
+
+
+# --- the one place this file asserts a literal, and why -----------------------------------------
+
+
+def test_the_hip_sway_lower_edge_carries_its_clustered_interval() -> None:
+    """A decision to *keep* a band edge leaves no behaviour behind to pin — only a reason.
+
+    `hip_sway_norm`'s lower edge was revisited on 2026-08-18 and kept: M8's player-clustered
+    bootstrap puts p10's 95% interval down at 0.0801, which widens where the edge *sits* without
+    touching the 2.8x resolution claim that admitted it (ADR-010 addendum 2026-08-18). Nothing
+    executable moved, so the only thing that can silently regress is the argument going missing
+    from the row — and a session reading only the confident half is free to tighten this band on a
+    number it does not know has an error bar.
+
+    **This deliberately breaks the module docstring's rule against literals.** That rule exists to
+    keep re-sourcing a band a cheap data edit, and it does not conflict here: a re-derivation
+    replaces this interval rather than dropping it, so this test failing on one is the alarm
+    working rather than friction.
+    """
+    band = resolve_range("hip_sway_norm")
+    assert band is not None
+    assert "0.0801" in band.source, "the clustered interval is no longer recorded on the row"

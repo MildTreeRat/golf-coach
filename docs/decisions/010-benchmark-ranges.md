@@ -253,3 +253,151 @@ undoing a measurement, not a preference.
   `Golfer.handedness` now records the fact (career mode step 1), but `analysis` is pure and does not
   read the golfer registry, so promoting it is an architecture change rather than a data edit. It is
   the next one to consider, and it is not this addendum.
+
+## Addendum (2026-08-18): the clustered interval on `hip_sway_norm`'s lower edge, and why it stays
+
+M8's `tune_joint_structure.py` measured something the addendum above could not have known when it
+asserted this band's lower edge: **458 clips from 122 golfers are not 458 independent samples.**
+Several clips are often cut from one broadcast of one swing motion, so a bootstrap resampling
+*clips* is confident in proportion to a count it has not earned. Resampling **players** instead
+leaves the point estimate where it was — p10 `0.1414` — and widens its 95% interval down to
+**`0.0801`**.
+
+ROADMAP and WORKLOG both recorded that as "0.0801 sits 1.6x the error floor rather than the 2.8x
+ADR-010 justified it on", which reads as *the edge may be unmeasurable*. That reading is what this
+addendum exists to correct: **the rule above measures one thing and the bootstrap measures
+another.**
+
+- **"Clears the instrument" is a claim about resolution.** Can the pipeline tell 0.14 from zero?
+  Yes — 0.050 noise+boundary, so 2.8x. Clustering does not enter that calculation at all. It is a
+  property of the measurement, not of the sample.
+- **The bootstrap is a claim about placement.** Is the tour p10 *at* 0.14? Best estimate yes;
+  honestly, somewhere at or above 0.08.
+
+Only the second degraded. `1.6x` is a coherent quantity — it is where an edge *placed at the
+interval's floor* would sit against the noise — but it does not describe the edge that ships, which
+is at 0.14 and clears at 2.8x. Reading it as though it had replaced the 2.8x is what turns a
+placement result into an apparent resolution failure. **The finding is that we are less certain
+where the edge belongs, not that the edge cannot be measured**, and the response to reduced
+confidence is to record it rather than to delete the edge.
+
+**So `low` stays at `0.14`**, and the `ranges.json` row now carries the interval beside the 2.8x —
+the half it previously stated alone.
+
+Two further reasons, beyond the reframing:
+
+- **`hip_shift_at_top_norm` is not the precedent it resembles.** Its edge was dropped because its
+  p10 of 0.015 sits *below* its 0.053 error floor, separating golfers the pipeline cannot tell
+  apart. Nothing about `hip_sway_norm` is in that condition. Two rows looking alike while resting on
+  different arguments is the exact trap the 2026-08-12 addendum was written about, arriving from the
+  other direction.
+- **Dropping the edge would make derived prose wrong.** `one_sided` feeds `contracts/caveats.py`'s
+  "on the one-sided checkpoints … below the band is the good side" — the bullet that stops a model
+  congratulating a golfer for a low number. Filing `hip_sway` under it would assert the one thing
+  this ADR has now twice refused to assert: that less lateral hip travel is better.
+
+**What would reopen it**, so the next reader inherits a trigger rather than a judgement call: bay
+footage measuring near this edge, or a re-derivation over a corpus with more *distinct golfers* —
+not more clips, which is the quantity that flattered the original interval.
+
+**Consequences.**
+
+- **Nothing executable changes and `ANALYSIS_VERSION` does not move.** No band, evaluator or score
+  is touched, so no stored `analysis.json` becomes outdated and `scripts/reanalyze.py --dry-run`
+  reports every result current. All four stored swings pass this checkpoint at 1.0 (0.27, 0.27,
+  0.27, 0.41), which is precisely why this was the cheap moment to settle it: the same call taken
+  after a bay session would be moving scores while deciding.
+- **The decision is pinned where the reasoning lives, not where the number does.** Behaviour is
+  unchanged, so the only thing that can silently regress is the argument going missing.
+  `tests/analysis/test_benchmarks.py` asserts this row's provenance still names the clustered bound,
+  so a later tightening cannot be justified on the confident half alone.
+- **The 2026-08-12 rule stands, with a second axis.** Assert a band edge only where it clears the
+  instrument — *and* record how well the sample locates it. The first governs whether an edge may
+  exist at all; the second governs how much confidence its provenance is allowed to project.
+
+## Addendum (2026-08-18): per-club bands were costed, then gated, and none is cut
+
+ROADMAP carried "per-club bands are now costed" as M8's last open box: `tune_joint_structure.py`
+had counted the strata that *could* be cut — face-on driver 341 clips, iron 69, fairway 32 clearing
+`derive_reference.MIN_SAMPLES`. **Costed is not gated.** That a stratum is big enough to cut a band
+from says nothing about whether the band that comes out differs from the one already shipped.
+`scripts/golfdb/tune_per_club_bands.py` asks the second question and the answer is no.
+
+**The test is in two parts, and the first alone would have been wrong.** Part 1 screens each
+per-club p90 against the all-club p90 in units of that metric's own noise+boundary error, read from
+`contracts.dispersion.METRIC_TARGETS` rather than restated, at `tune_spatial_metric.py`'s 2.0x bar.
+Part 2 puts a player-clustered bootstrap on any stratum that clears it — the addendum above is why:
+32 clips from 14 golfers is not 32 observations, and `MIN_SAMPLES` is a *clip* gate that does not
+notice.
+
+**Nineteen strata were cut and screened. Two survive both parts**, and they do not make a panel:
+
+| stratum | golfers | naive shift | after clustering |
+|---|---|---|---|
+| `head_sway_norm` x iron | 27 | 3.35x | **2.85x — survives** |
+| `finish_balance_norm` x fairway | 14 | 3.89x | **2.56x — survives** |
+| `finish_balance_norm` x iron | 27 | 2.46x | 1.28x — fails the bound |
+| `head_sway_norm` x fairway | 14 | 2.62x | interval contains the all-club edge |
+
+Everything else screened out before the bootstrap: all four `tempo_ratio` strata (0.17–0.55x), and
+`hip_sway_norm`, `hip_shift_at_top_norm` and `head_hip_gain_norm` at every club (0.08–1.62x).
+
+**Driver never differs from the all-club band** — 0.17x to 0.56x on all six metrics — which is not a
+finding about drivers but about the corpus: driver is 341 of the 458 face-on clips, so the all-club
+band very largely *is* the driver band. A per-club driver row would restate a shipped one.
+
+**The two survivors say one physical thing** — a shorter club is swung with less movement — so the
+same test was run with every non-driver club pooled, on 42 golfers rather than 14 or 27. Exactly one
+effect survives there: `head_sway_norm`, p90 **0.2614** against the all-club **0.4311**, worst-case
+**2.20x** the floor. `finish_balance_norm` falls to 1.49x. So the real, measured result is narrower
+than the per-club framing: **head sway is genuinely lower with non-driver clubs, and nothing else
+about the panel depends on club at all.**
+
+**Tempo deserved its own question, and the club is the wrong axis for it.** Tempo screens out at
+every club while being the metric a coach would most expect to track club length, so the variance
+was decomposed both ways over the 1,399 labelled swings:
+
+- between **golfers**, sd of group means **0.7618**
+- between **clubs**, sd of group means **0.1626**
+
+The golfer effect is **4.7x** the club effect, and the club effect is **5.8x smaller than our own
+tempo measurement error** (0.943, `METRIC_TARGETS`). A per-club tempo band would key on a quantity
+five times below the noise on the measurement it would be applied to. Tempo is a personal signature,
+and the axis it belongs on is the golfer — which is `PersonalBaseline`, already built and waiting
+on `n`, not a band in this file.
+
+**Decision: no per-club row is added to `ranges.json`.** Beyond the thinness above, shipping even
+the one real effect needs three things this repo does not have:
+
+1. **A corpus-to-`ClubCategory` mapping that is not a fiction.** `ClubCategory` distinguishes
+   `long_iron` / `mid_iron` / `short_iron`; the corpus says only `iron`. Seeding three members from
+   one undifferentiated stratum would be three rows claiming to be three strata while being one, and
+   `resolve_range` matches `club_category` exactly. `contracts/reference.py` has always said the
+   mapping is "the consumer's"; nothing has had to write it, and it is not writable from this corpus.
+2. **Something that records which club was swung.** The plumbing is complete —
+   `analyze_bundle.py --club` reaches `resolve_range` through `PracticeGoal` — but it is a manual
+   flag. `Shot` carries club head speed, face angle and path, and no club identity, so the launch
+   monitor does not supply it either. Every stored swing reads `club: all`.
+3. **`_population_placement` following the band's stratum.** Its docstring already flags this: the
+   band and the percentile must move together, or a swing reads "inside the band" and "past the 90th
+   percentile" at once. `ResolvedRange` carries `(low, high, source)` and not which stratum it
+   resolved to, so that coupling is a contract change rather than a data edit.
+
+**What would reopen it**: more *golfers* per club stratum, or the club becoming a recorded fact
+rather than a flag — at which point the pooled non-driver head-sway result is the one candidate with
+evidence behind it, and item 3 is the work.
+
+**Consequences.**
+
+- **Nothing executable changes and `ANALYSIS_VERSION` does not move.** The gate is a script that
+  prints; no band, evaluator or score is touched. ADR-010 §2's rule holds unchanged: bands resolve
+  most-specific-first, and with no per-club row every swing continues to land on `(all, all)`.
+- **The negative result is committed, not just concluded.** `tune_per_club_bands.py` re-runs in
+  seconds on a base install, so the next person to ask this question gets the numbers instead of the
+  argument — the same reason `tune_arm_parallel.py` stayed in the tree after killing two candidate
+  checkpoints.
+- **`MIN_SAMPLES` is now known to be the wrong gate on its own.** It counts clips. Fairway passes it
+  at 32 clips and 14 golfers, and 14 golfers is what actually killed `head_sway_norm x fairway`.
+  Left as-is rather than changed, because it guards `derive_reference.py`'s published distributions
+  where a thin stratum is reported with its `n_players` beside it, and no band is cut without this
+  gate having been run.
