@@ -5,6 +5,61 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-08-21 — M9 P1: the club vocabulary, and three sessions squashed into one commit
+
+**Duration**: ~1 session. One commit of accumulated work, then one new contracts module with no
+consumers. `ANALYSIS_VERSION` unchanged; no stored analysis re-scores.
+
+**What prompted it**: "what's the next thing / small phase" — ROADMAP named M9 P1 and it is still
+the only substantial item needing neither a bay session nor more `n`.
+
+**Part 1 — the tree was three sessions deep and green.** The `unscored` change (2026-08-19), the
+tempo trainer built on top of it (2026-08-20), and the M9 design docs (2026-08-20) were all
+uncommitted together: 41 files, suite green, ruff and mypy clean. Squashed into one commit at the
+user's call rather than split, with the message naming all three halves and the dependency between
+the first two — Part 2 of the tempo work reads `tempo_timings`' three refusal paths, which the
+`unscored` change introduced, so they only make sense in that order.
+
+**Part 2 — `contracts/club.py`, 22 clubs and two functions.** `ClubId` in canonical bag order
+(driver, woods, hybrids, 1i-9i, wedges, putter), `CLUB_CATEGORY` mapping each onto the existing
+`ClubCategory` from `intent.py`, `category_of`, and `parse_club` as the tolerant boundary parser.
+Nothing imports it. That is the deliverable — P1 is the vocabulary, not a feature.
+
+**The alias table is derived from the enum, and the collision guard is the reason that is safe.**
+`parse_club` accepts three spellings per club and all three are read off the declaration: the
+value (`7i`), the member name folded (`seveniron`, which is how "seven iron" normalises), and for
+numeric clubs the digit with its suffix expanded (`7iron`). The member names are spelled out only
+because `3w` is not a valid Python identifier — but that constraint is what makes the second form
+free. A hand-listed alias table's failure mode is a club added later that silently parses as
+`None` at the bay; this one cannot have that. `_build_aliases` raises on any spelling claimed by
+two clubs, verified by making `3h` derive `3wood` and watching it fire.
+
+**No bare-number aliases, and "wedge" does not parse.** "7" is a 7 iron or a 7 wood and nothing
+here can tell which; "wedge" and "iron" name a category rather than a club. Both return `None`
+rather than a nearest match, because the costs are asymmetric — a refused tag costs one retype at
+the bay, a wrong one pools a wedge's carries into a 7 iron's average where nothing downstream can
+detect it.
+
+**`CLUB_CATEGORY` is written out rather than derived from the digit, deliberately.** 1i-4i long /
+5i-7i mid / 8i-9i short is a convention, not arithmetic. Burying it in a range comparison makes it
+look like a fact; a table can be read and argued with. The exhaustiveness test is what lets
+`category_of` index it bare, same posture as `UnscoredCheckpoint.spec`.
+
+**The trap was not sprung.** `PracticeGoal.club` stays `ClubCategory.ALL` and nothing was wired
+into `resolve_range`. `ranges.json` holds club-agnostic rows only, so handing it a real category
+would resolve no band for every checkpoint and take the fundamentals panel dark. `category_of`
+exists for when per-club bands exist, not now.
+
+**Verified.** 9 new tests, full suite green, ruff and mypy clean. All three of the new pins were
+checked by violating them in-process — deleting a `CLUB_CATEGORY` row, pointing a club at
+`ClubCategory.ALL`, and forcing an alias collision — rather than assumed to bite.
+
+**Where it was left**: M9 is 1/20. Next is **P2** (`contracts/bag.py`), then P3 (`bag_store`).
+P8-P11, the measurement track, remain fully independent of the ingest spine and can go in any
+session.
+
+---
+
 ## 2026-08-20 — M9 planned: the club tag, and why distance was never measurable
 
 **Duration**: ~1 session, **design only — no code**. New ADR-024, new

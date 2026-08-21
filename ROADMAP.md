@@ -24,7 +24,7 @@ wording; only the grouping and the M4 checklist have been corrected.
 | **M6.5** Measure now, judge later | ✅ Done | — (9 recorded, **6 scored**; the handedness seam landed and the last candidate was settled) | [§M6.5](#m65-measure-now-judge-later--done) |
 | **Career mode** One golfer over time | ✅ Done, 6/6 steps | — (built and silent; a bay session gives it the `n` to speak) | [§Career](#career-mode-one-golfer-tracked-over-time--done-built-and-silent) |
 | **M8** Learning what "good" means | ✅ Done *(2026-08-17)* | — (three models fitted, validated, surfaced **and spoken**, with a policy rather than a band) | [§M8](#m8-learning-what-good-means--gates-run-model-fitted) |
-| **M9** Player tracking (per-club) | ⬜ Not started, 0/20 phases | Nothing — the ingest half is desk work | [§M9](#m9-player-tracking-per-club-shot-history--not-started) |
+| **M9** Player tracking (per-club) | 🟡 In progress, 1/20 phases | Nothing — the ingest half is desk work | [§M9](#m9-player-tracking-per-club-shot-history--in-progress) |
 | **M5** Feedback UI | ⬜ Not started | M7 Phase 5 gives the host | [§M5](#milestone-5-feedback-ui) |
 | **M2** Club & ball detection | 🔒 Gated, **and M1.5 said no-go** | Bay lighting for a ~1/2000 s exposure — *not* a global-shutter camera | [§M2](#milestone-2-club--ball-detection) |
 | Hardware re-validation | 🔒 Gated | Cameras / launch monitor arriving | [§Gate](#hardware-re-validation-gate-revisit-when-cameras--launch-monitor-arrive) |
@@ -44,12 +44,13 @@ served live `call_tool` requests including the not-found path. It is registered 
 (`claude mcp add`, per the README) and reports `✔ Connected`, which is a second client completing
 the same handshake independently.
 
-**NEXT ACTION — do this first: M9 P1.** Until 2026-08-20 this section read *"nothing on this
-board is desk work any more"*, and [M9](#m9-player-tracking-per-club-shot-history--not-started)
+**NEXT ACTION — do this first: M9 P2.** Until 2026-08-20 this section read *"nothing on this
+board is desk work any more"*, and [M9](#m9-player-tracking-per-club-shot-history--in-progress)
 is what stopped that being true. It is the one substantial item that needs **neither a bay session
 nor an `n`**: no shot on disk records which club hit it, and adding that tag is pure desk work that
-makes the *next* bay session's data worth more than the last one's. Start at
-[M9 P1](docs/M9_PLAYER_TRACKING.md); the design is
+makes the *next* bay session's data worth more than the last one's. P1 landed 2026-08-21 —
+`contracts/club.py` holds the taxonomy and has no consumers yet. Continue at
+[M9 P2](docs/M9_PLAYER_TRACKING.md); the design is
 [ADR-024](docs/decisions/024-per-club-shot-history.md).
 
 Everything else still divides in two, and both halves want the same trip:
@@ -960,11 +961,11 @@ is the client handshake and conversational follow-up.
 
 ---
 
-## M9: Player tracking, per-club shot history — not started
+## M9: Player tracking, per-club shot history — in progress
 
 **Design**: [ADR-024](docs/decisions/024-per-club-shot-history.md).
 **Phase list**: [docs/M9_PLAYER_TRACKING.md](docs/M9_PLAYER_TRACKING.md) — 20 phases, each
-independently commit-ready. **Start at P1.**
+independently commit-ready. **P1 landed 2026-08-21; start at P2.**
 
 **The gap, in one sentence.** This repo can say how a swing compares to a tour population and how
 it compares to the golfer's own history. It cannot say how far you hit your 7 iron, because **no

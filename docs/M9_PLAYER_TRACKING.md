@@ -1,10 +1,11 @@
 # M9 — Player Tracking: per-club shot history
 
-> **Tier: TARGET.** This is the agreed plan for M9, written before any code. Nothing in it is
-> built yet, so verify every claim about the codebase against the code. The *why* behind it is
-> [ADR-024](decisions/024-per-club-shot-history.md); this document is the *how*, as a phase list.
+> **Tier: TARGET.** This is the agreed plan for M9. Everything past the phase marked done below
+> is still a plan, so verify every claim about the codebase against the code. The *why* behind it
+> is [ADR-024](decisions/024-per-club-shot-history.md); this document is the *how*, as a phase
+> list.
 
-**Status: not started, 0/20 phases.** Start at P1.
+**Status: in progress, 1/20 phases.** P1 landed 2026-08-21. Start at P2.
 
 ---
 
@@ -69,7 +70,7 @@ Run after every phase:
 
 ---
 
-### [ ] P1 — `contracts/club.py`: the club vocabulary
+### [x] P1 — `contracts/club.py`: the club vocabulary *(done 2026-08-21)*
 
 **Goal.** A fixed club taxonomy and a derived mapping to the existing `ClubCategory`. Nothing
 consumes it yet.

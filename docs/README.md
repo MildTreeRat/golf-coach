@@ -1,6 +1,6 @@
 # Documentation map
 
-52 markdown documents: 42 in `docs/` — 14 here at the top level (including this map), 24 ADRs,
+53 markdown documents: 43 in `docs/` — 14 here at the top level (including this map), 25 ADRs,
 3 archived, 1 in `proposals/` — plus 10 outside it (the four at the repo root, and one each in
 `data/` and `frontend/`, four in `spikes/`). This page says which one to read, and — just as
 importantly — which ones are records of the past rather than descriptions of the present.
@@ -117,7 +117,7 @@ section is not always the final word — the counts below exist so you don't mis
 | [021](decisions/021-caddieset-paired-reference-data.md) | CaddieSet as a paired mechanics/outcome source | Accepted as a corpus, **and its study returned a negative result** | — (face-on pose does not predict ball flight; the club sets the ball and the club is not in the picture) |
 | [022](decisions/022-learned-artifacts-as-committed-data.md) | Learned artifacts as committed data — and the tour joint-distribution model | Accepted, **three models surfaced and spoken** | **4** — a second artifact (the trajectory model) under the same rule; `z` lost its A/B, the anchor set nearly made it unusable, and a pixel-aspect bug was worth 7 points of variance; then a down-the-line model, whose placement is reported beside the face-on one and never blended with it; then the policy for *saying* a placement, since a band was the wrong instrument for a corpus made entirely of swings that work; then what career mode may say about a *history* of one, deferred with its trigger and its seam |
 | [023](decisions/023-tempo-training-and-absolute-swing-durations.md) | Tempo training, and absolute swing durations as reference data | Accepted, built and surfaced | **1** — durations enter `golfdb_v1.json` as distributions and never as a band, because tempo is scored once already; **two beat patterns, since no one pulse marks both the top and impact**; then the correction — **club was the wrong speed axis and the ADR over-claimed from it**: a real speed cohort (LPGA vs PGA) is 167 ms apart on the backswing, so the target now anchors to the golfer's own |
-| [024](decisions/024-per-club-shot-history.md) | Per-club shot history — the tag that makes distance measurable | **Proposed**, not started | — |
+| [024](decisions/024-per-club-shot-history.md) | Per-club shot history — the tag that makes distance measurable | **Proposed**, 1/20 phases built | — |
 
 Format: [000-template.md](decisions/000-template.md).
 
