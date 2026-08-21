@@ -8,8 +8,9 @@ module is a pure functional core — it turns contracts into this contract with 
 from __future__ import annotations
 
 from enum import StrEnum
+from typing import Any, NamedTuple
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from golf_coach.contracts.alignment import SwingAlignment
 from golf_coach.contracts.detections import FrameDetections
@@ -17,6 +18,7 @@ from golf_coach.contracts.feedback import FeedbackPayload
 from golf_coach.contracts.intent import PracticeGoal
 from golf_coach.contracts.keypoints import FrameKeypoints
 from golf_coach.contracts.shot import ShotData
+from golf_coach.contracts.unscored import UnscoredCheckpoint, UnscoredReason
 
 
 class SwingPhase(StrEnum):
@@ -95,6 +97,34 @@ class CheckpointScore(BaseModel):
     )
 
 
+class CheckpointOutcome(NamedTuple):
+    """What one evaluator returns: a score, or the reason there is no score.
+
+    Was `CheckpointScore | None`. The `None` said a checkpoint went missing and nothing else, so
+    the engine could only ever record its *name* — see `contracts.unscored` for what that cost
+    downstream, and ADR-010's 2026-08-19 addendum for why it went uncorrected for so long.
+
+    A tuple rather than a wider `CheckpointScore` with nullable fields, because a score and a
+    refusal are different things and a shape that can be half of each invites code that reads a
+    band edge off a checkpoint that has none.
+    """
+
+    #: The verdict, or None when the checkpoint could not be scored.
+    score: CheckpointScore | None
+    #: Which condition stopped it. None exactly when `score` is present.
+    reason: UnscoredReason | None = None
+    #: Which window, landmark group or lookup failed, for a human.
+    detail: str = ""
+
+    @classmethod
+    def scored(cls, score: CheckpointScore) -> CheckpointOutcome:
+        return cls(score)
+
+    @classmethod
+    def unscored_for(cls, reason: UnscoredReason, detail: str) -> CheckpointOutcome:
+        return cls(None, reason, detail)
+
+
 class Measurement(BaseModel):
     """A quantity measured off one swing, carrying no claim about whether it is good.
 
@@ -148,17 +178,43 @@ class SwingResult(BaseModel):
         ),
     )
 
-    unscored: list[str] = Field(
+    unscored: list[UnscoredCheckpoint] = Field(
         default_factory=list,
         description=(
-            "Checkpoints that were attempted but could not be measured — no benchmark band, "
-            "unusable landmarks, or a boundary that was estimated rather than detected (ADR-013). "
-            "Dropping the score is correct (ADR-010 §2: no score beats a wrong one), but dropping "
-            "it *silently* is not: `overall_score` is a mean over whatever survived, so without "
-            "this list a two-checkpoint swing and a three-checkpoint swing are indistinguishable. "
-            "Names only — the reason would need the evaluators to return one instead of None."
+            "Checkpoints that were attempted but could not be scored, each with the reason — no "
+            "benchmark band, unusable landmarks, a boundary that was estimated rather than "
+            "detected (ADR-013), or no golfer attributed. Dropping the score is correct (ADR-010 "
+            "§2: no score beats a wrong one), but dropping it *silently* is not: `overall_score` "
+            "is a mean over whatever survived, so without this list a two-checkpoint swing and a "
+            "three-checkpoint swing are indistinguishable. The reason decides what to tell the "
+            "golfer, which is why it is carried rather than inferred downstream — see "
+            "`contracts.unscored`."
         ),
     )
+
+    @field_validator("unscored", mode="before")
+    @classmethod
+    def _accept_bare_names(cls, value: Any) -> Any:
+        """Read the names-only form every artifact written before 2026-08-19 uses.
+
+        One coercion here rather than a tolerant reader per consumer, and it is the whole
+        back-compatibility story for this field: an old `analysis.json` says `["tempo"]` and means
+        "tempo went missing and this file does not know why", which is exactly `UNRECORDED`.
+
+        Dropping the entries instead would have been the silent failure — a stored swing judged on
+        five fundamentals would start reading as one judged on six, and `overall_score` would gain
+        a checkpoint it never had. Note the engine never *writes* `UNRECORDED`; seeing one means
+        you are looking at an artifact that predates the reason, and `scripts/reanalyze.py` fixes
+        it.
+        """
+        if not isinstance(value, list):
+            return value
+        return [
+            {"name": entry, "reason": UnscoredReason.UNRECORDED}
+            if isinstance(entry, str)
+            else entry
+            for entry in value
+        ]
 
     # Dual-axis scoring (ADR-009). The practice intent this swing was judged against,
     # plus the two independent sub-scores. `overall_score` is the policy-weighted blend
@@ -216,7 +272,14 @@ class SwingResult(BaseModel):
 #:                   own basis, as `tour_trajectory_t2_dtl` / `_q_dtl`. Two cameras answering the
 #:                   same question about different planes; deliberately never combined into one
 #:                   number. Face-on is untouched and no score moves.
-ANALYSIS_VERSION = 6
+#: 6 -> 7 (2026-08-20, ADR-023): `backswing_ms` and `downswing_ms` joined `measurements` — the two
+#:                   halves `tempo_ratio` was already built from and then divided away. No
+#:                   checkpoint, band or score changed: they are measured and stored and nothing
+#:                   judges them, so `overall_score` is byte-identical on every stored swing. Same
+#:                   shape of bump as `3 -> 4`: a version-6 `analysis.json` is *missing* two
+#:                   quantities rather than disagreeing about any, and `reanalyze.py` is how it
+#:                   acquires them.
+ANALYSIS_VERSION = 7
 
 
 class SwingBundleResult(BaseModel):

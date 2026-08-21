@@ -17,7 +17,7 @@ what order, is `contracts.checkpoints.CHECKPOINT_REGISTRY`; this list is what ea
 - **hip_shift_at_top** — lateral hip travel from address to the top, in shoulder-widths.
   [2026-08-12]
 - **head_stays_back** — how much head-behind-hips separation the swing created, address to impact,
-  in shoulder-widths. **Signed**, so it needs `Handedness` and returns `None` without it — the only
+  in shoulder-widths. **Signed**, so it needs `Handedness` and refuses without it — the only
   checkpoint here that depends on who swung rather than only on what they did. [2026-08-13]
 
 **Every checkpoint here differences one landmark across time, and that is load-bearing rather than
@@ -53,10 +53,11 @@ finding that denied both metrics a bias target in career mode step 5). So:
   cannot tell apart. Only overshoot is judged — the half the instrument resolves.
 
 Each compares an observed value against a benchmark band resolved from the store (ADR-010) and
-returns a `CheckpointScore`, or `None` when the data is unusable or the store has no band — no
-score beats a wrong one (ADR-010 §2). Pure functions, stdlib only. Checkpoints needing depth
-(spine tilt, hip rotation, swing plane) are *not* here — they need a down-the-line/synced view
-(ADR-011) and stay deferred; see docs/M4_FUNDAMENTALS_PANEL.md.
+returns a `CheckpointOutcome`: a `CheckpointScore`, or the *reason* there is none when the data
+is unusable or the store has no band — no score beats a wrong one (ADR-010 §2), and no silent
+omission beats a reported one (`contracts.unscored`). Pure functions, stdlib only. Checkpoints
+needing depth (spine tilt, hip rotation, swing plane) are *not* here — they need a
+down-the-line/synced view (ADR-011) and stay deferred; see docs/M4_FUNDAMENTALS_PANEL.md.
 
 Each score also carries **where it sits in the reference population** (`percentile`,
 `population_n`), read from `golfdb_v1.json` via `_population_placement`. That is strictly
@@ -89,6 +90,7 @@ from __future__ import annotations
 from golf_coach.analysis.benchmarks import load_distribution, resolve_range
 from golf_coach.analysis.measure import (
     ADDRESS_SAMPLE_MIN_FRAMES,
+    MeasureOutcome,
     address_sample_bounds,
     measure_finish_balance,
     measure_head_hip_gain,
@@ -101,7 +103,8 @@ from golf_coach.contracts.checkpoints import spec_for
 from golf_coach.contracts.golfer import Handedness
 from golf_coach.contracts.intent import ClubCategory, PlayerProfile
 from golf_coach.contracts.keypoints import FrameKeypoints
-from golf_coach.contracts.swing import CheckpointScore, PhaseSegment
+from golf_coach.contracts.swing import CheckpointOutcome, CheckpointScore, PhaseSegment
+from golf_coach.contracts.unscored import UnscoredReason
 
 # Kept as module attributes under their original private names: `tests/analysis/test_checkpoints.py`
 # imports them from here, and the window definition is still what this module's bands were cut
@@ -137,6 +140,31 @@ _HIP_SHIFT_AT_TOP_RANGE_KEY = _HIP_SHIFT_AT_TOP.metric
 _HEAD_STAYS_BACK = spec_for("head_stays_back")
 HEAD_STAYS_BACK_CHECKPOINT = _HEAD_STAYS_BACK.name
 _HEAD_STAYS_BACK_RANGE_KEY = _HEAD_STAYS_BACK.metric
+
+
+def _no_measurement(measured: MeasureOutcome) -> CheckpointOutcome:
+    """Carry a measurement's refusal outward unchanged.
+
+    `measure.py` already decided which of its six conditions failed, and it is the only layer that
+    still has the window and the landmark group in hand. Re-deriving a reason here would be a
+    second opinion on evidence this module can no longer see — and the first opinion is the one
+    that was there.
+    """
+    assert measured.reason is not None, "a measurement with no value must carry a reason"
+    return CheckpointOutcome(None, measured.reason, measured.detail)
+
+
+def _no_band(range_key: str, club: ClubCategory) -> CheckpointOutcome:
+    """The judging-side refusal: the number is fine, there is nothing to judge it against.
+
+    Names the club because that is what makes it actionable — `resolve_range` matches
+    `club_category` exactly, so a miss here is usually a per-club row that does not exist rather
+    than a metric with no band at all (ADR-010 addendum, 2026-08-18).
+    """
+    return CheckpointOutcome.unscored_for(
+        UnscoredReason.NO_BAND,
+        f"no band in ranges.json for {range_key} at club={club.value}",
+    )
 
 
 def _score_within_range(observed: float, low: float, high: float) -> float:
@@ -200,19 +228,21 @@ def evaluate_tempo(
     phases: list[PhaseSegment],
     club: ClubCategory = ClubCategory.ALL,
     profile: PlayerProfile | None = None,
-) -> CheckpointScore | None:
+) -> CheckpointOutcome:
     """Score swing tempo (backswing:downswing ratio) against the benchmark band.
 
-    Returns `None` when the phases don't yield a usable tempo or when the store has no band
-    for this checkpoint — in both cases the caller simply omits a tempo score.
+    Produces no score when the phases don't yield a usable tempo or when the store has no
+    band for this checkpoint. The two are reported as different reasons, because the first
+    is a clip worth shooting again and the second is not the golfer's to fix at all.
     """
-    observed = measure_tempo_ratio(phases)
-    if observed is None:
-        return None
+    measured = measure_tempo_ratio(phases)
+    if measured.value is None:
+        return _no_measurement(measured)
+    observed = measured.value
 
     band = resolve_range(_TEMPO_RANGE_KEY, club, profile)
     if band is None:
-        return None
+        return _no_band(_TEMPO_RANGE_KEY, club)
 
     score = _score_within_range(observed, band.low, band.high)
     passed = band.low <= observed <= band.high
@@ -240,17 +270,19 @@ def evaluate_tempo(
         )
         message += f" You swing with {clause}."
 
-    return CheckpointScore(
-        name=TEMPO_CHECKPOINT,
-        score=score,
-        passed=passed,
-        observed=round(observed, 2),
-        expected_low=band.low,
-        expected_high=band.high,
-        message=message,
-        percentile=pct,
-        population_n=population_n,
-        one_sided=_TEMPO.one_sided,
+    return CheckpointOutcome.scored(
+        CheckpointScore(
+            name=TEMPO_CHECKPOINT,
+            score=score,
+            passed=passed,
+            observed=round(observed, 2),
+            expected_low=band.low,
+            expected_high=band.high,
+            message=message,
+            percentile=pct,
+            population_n=population_n,
+            one_sided=_TEMPO.one_sided,
+        )
     )
 
 
@@ -259,7 +291,7 @@ def evaluate_head_sway(
     phases: list[PhaseSegment],
     club: ClubCategory = ClubCategory.ALL,
     profile: PlayerProfile | None = None,
-) -> CheckpointScore | None:
+) -> CheckpointOutcome:
     """Score lateral head stability: `x` travel of the head center from address to impact.
 
     The head center is the **ear midpoint** (see `_head_center_points`), measured in
@@ -271,16 +303,17 @@ def evaluate_head_sway(
     The address endpoint reads `_address_sample_bounds`, **not** the full ADDRESS phase — averaging
     over the whole phase averaged over the golfer walking into frame. See that helper for why.
 
-    Returns `None` if the phases/landmarks are unusable or the store has no band (the caller then
-    omits a sway score).
+    Produces no score if the phases/landmarks are unusable or the store has no band, carrying
+    which of those it was on `CheckpointOutcome.reason`.
     """
-    observed = measure_head_sway(keypoints, phases)
-    if observed is None:
-        return None
+    measured = measure_head_sway(keypoints, phases)
+    if measured.value is None:
+        return _no_measurement(measured)
+    observed = measured.value
 
     band = resolve_range(_HEAD_SWAY_RANGE_KEY, club, profile)
     if band is None:
-        return None
+        return _no_band(_HEAD_SWAY_RANGE_KEY, club)
 
     score = _score_within_range(observed, band.low, band.high)
     passed = band.low <= observed <= band.high
@@ -302,17 +335,19 @@ def evaluate_head_sway(
         )
         message += f" That is {clause}."
 
-    return CheckpointScore(
-        name=HEAD_SWAY_CHECKPOINT,
-        score=score,
-        passed=passed,
-        observed=round(observed, 2),
-        expected_low=band.low,
-        expected_high=band.high,
-        message=message,
-        percentile=pct,
-        population_n=population_n,
-        one_sided=_HEAD_SWAY.one_sided,
+    return CheckpointOutcome.scored(
+        CheckpointScore(
+            name=HEAD_SWAY_CHECKPOINT,
+            score=score,
+            passed=passed,
+            observed=round(observed, 2),
+            expected_low=band.low,
+            expected_high=band.high,
+            message=message,
+            percentile=pct,
+            population_n=population_n,
+            one_sided=_HEAD_SWAY.one_sided,
+        )
     )
 
 
@@ -321,7 +356,7 @@ def evaluate_finish_balance(
     phases: list[PhaseSegment],
     club: ClubCategory = ClubCategory.ALL,
     profile: PlayerProfile | None = None,
-) -> CheckpointScore | None:
+) -> CheckpointOutcome:
     """Score finish balance: how far the hip-center drifts from its own mean through follow-through.
 
     A balanced swing settles into a held finish (small drift); an off-balance one keeps
@@ -337,15 +372,17 @@ def evaluate_finish_balance(
     how `head_sway` averages over a window — and it read hips at the most occluded moment in the
     swing. Hip landmarks are additionally gated at `_MIN_HIP_VISIBILITY`.
 
-    Returns `None` if there are too few confident follow-through frames or the store has no band.
+    Produces no score if there are too few confident follow-through frames (`TOO_FEW_FRAMES`,
+    the reason this checkpoint hits most) or the store has no band.
     """
-    observed = measure_finish_balance(keypoints, phases)
-    if observed is None:
-        return None
+    measured = measure_finish_balance(keypoints, phases)
+    if measured.value is None:
+        return _no_measurement(measured)
+    observed = measured.value
 
     band = resolve_range(_FINISH_BALANCE_RANGE_KEY, club, profile)
     if band is None:
-        return None
+        return _no_band(_FINISH_BALANCE_RANGE_KEY, club)
 
     score = _score_within_range(observed, band.low, band.high)
     passed = band.low <= observed <= band.high
@@ -367,17 +404,19 @@ def evaluate_finish_balance(
         )
         message += f" That is {clause}."
 
-    return CheckpointScore(
-        name=FINISH_BALANCE_CHECKPOINT,
-        score=score,
-        passed=passed,
-        observed=round(observed, 2),
-        expected_low=band.low,
-        expected_high=band.high,
-        message=message,
-        percentile=pct,
-        population_n=population_n,
-        one_sided=_FINISH_BALANCE.one_sided,
+    return CheckpointOutcome.scored(
+        CheckpointScore(
+            name=FINISH_BALANCE_CHECKPOINT,
+            score=score,
+            passed=passed,
+            observed=round(observed, 2),
+            expected_low=band.low,
+            expected_high=band.high,
+            message=message,
+            percentile=pct,
+            population_n=population_n,
+            one_sided=_FINISH_BALANCE.one_sided,
+        )
     )
 
 
@@ -386,7 +425,7 @@ def evaluate_hip_sway(
     phases: list[PhaseSegment],
     club: ClubCategory = ClubCategory.ALL,
     profile: PlayerProfile | None = None,
-) -> CheckpointScore | None:
+) -> CheckpointOutcome:
     """Score lateral hip travel from address to impact — the **two-sided** checkpoint.
 
     The structural twin of `evaluate_head_sway` measuring a different thing: head sway asks whether
@@ -405,13 +444,14 @@ def evaluate_hip_sway(
     Both endpoints are means over a window, so zero-mean landmark jitter suppresses by √N. Returns
     `None` if the phases/landmarks are unusable or the store has no band.
     """
-    observed = measure_hip_sway(keypoints, phases)
-    if observed is None:
-        return None
+    measured = measure_hip_sway(keypoints, phases)
+    if measured.value is None:
+        return _no_measurement(measured)
+    observed = measured.value
 
     band = resolve_range(_HIP_SWAY_RANGE_KEY, club, profile)
     if band is None:
-        return None
+        return _no_band(_HIP_SWAY_RANGE_KEY, club)
 
     score = _score_within_range(observed, band.low, band.high)
     passed = band.low <= observed <= band.high
@@ -443,17 +483,19 @@ def evaluate_hip_sway(
         )
         message += f" That is {clause}."
 
-    return CheckpointScore(
-        name=HIP_SWAY_CHECKPOINT,
-        score=score,
-        passed=passed,
-        observed=round(observed, 2),
-        expected_low=band.low,
-        expected_high=band.high,
-        message=message,
-        percentile=pct,
-        population_n=population_n,
-        one_sided=_HIP_SWAY.one_sided,
+    return CheckpointOutcome.scored(
+        CheckpointScore(
+            name=HIP_SWAY_CHECKPOINT,
+            score=score,
+            passed=passed,
+            observed=round(observed, 2),
+            expected_low=band.low,
+            expected_high=band.high,
+            message=message,
+            percentile=pct,
+            population_n=population_n,
+            one_sided=_HIP_SWAY.one_sided,
+        )
     )
 
 
@@ -462,7 +504,7 @@ def evaluate_hip_shift_at_top(
     phases: list[PhaseSegment],
     club: ClubCategory = ClubCategory.ALL,
     profile: PlayerProfile | None = None,
-) -> CheckpointScore | None:
+) -> CheckpointOutcome:
     """Score lateral hip travel from address to the top of the backswing.
 
     **One-sided, for a reason that is not "less is better".** That claim is no better established
@@ -479,16 +521,17 @@ def evaluate_hip_shift_at_top(
 
     This reads a *detected* instant (the top, median 2 frames of error) but measures a spatial
     quantity averaged over the transition window, so it inherits none of the single-frame fragility
-    that sank the arm-parallel candidates in M5-FB. Returns `None` if the phases/landmarks are
-    unusable or the store has no band.
+    that sank the arm-parallel candidates in M5-FB. Produces no score if the phases/landmarks
+    are unusable or the store has no band.
     """
-    observed = measure_hip_shift_at_top(keypoints, phases)
-    if observed is None:
-        return None
+    measured = measure_hip_shift_at_top(keypoints, phases)
+    if measured.value is None:
+        return _no_measurement(measured)
+    observed = measured.value
 
     band = resolve_range(_HIP_SHIFT_AT_TOP_RANGE_KEY, club, profile)
     if band is None:
-        return None
+        return _no_band(_HIP_SHIFT_AT_TOP_RANGE_KEY, club)
 
     score = _score_within_range(observed, band.low, band.high)
     passed = band.low <= observed <= band.high
@@ -511,17 +554,19 @@ def evaluate_hip_shift_at_top(
         )
         message += f" That is {clause}."
 
-    return CheckpointScore(
-        name=HIP_SHIFT_AT_TOP_CHECKPOINT,
-        score=score,
-        passed=passed,
-        observed=round(observed, 2),
-        expected_low=band.low,
-        expected_high=band.high,
-        message=message,
-        percentile=pct,
-        population_n=population_n,
-        one_sided=_HIP_SHIFT_AT_TOP.one_sided,
+    return CheckpointOutcome.scored(
+        CheckpointScore(
+            name=HIP_SHIFT_AT_TOP_CHECKPOINT,
+            score=score,
+            passed=passed,
+            observed=round(observed, 2),
+            expected_low=band.low,
+            expected_high=band.high,
+            message=message,
+            percentile=pct,
+            population_n=population_n,
+            one_sided=_HIP_SHIFT_AT_TOP.one_sided,
+        )
     )
 
 
@@ -531,17 +576,18 @@ def evaluate_head_stays_back(
     handedness: Handedness | None = None,
     club: ClubCategory = ClubCategory.ALL,
     profile: PlayerProfile | None = None,
-) -> CheckpointScore | None:
+) -> CheckpointOutcome:
     """Score how much rearward head-hip separation the swing created, address to impact.
 
     "Staying behind the ball", and the first checkpoint here whose *sign* carries meaning — which is
     why it is also the first that cannot be scored without knowing who swung.
 
-    **Returns `None` when `handedness` is None, and that is the feature.** A face-on camera sees a
-    left-handed swing mirrored, so the same body position lands on the opposite sign. Defaulting to
-    right-handed would read a left-handed golfer's perfectly ordinary impact position as a gross
-    fault — silently, and in the direction nothing downstream can detect. An unscored checkpoint is
-    reported by name in `SwingResult.unscored`; a wrongly scored one is not reported at all. Same
+    **Refuses with `NO_HANDEDNESS` when `handedness` is None, and that is the feature.** A
+    face-on camera sees a left-handed swing mirrored, so the same body position lands on the
+    opposite sign. Defaulting to right-handed would read a left-handed golfer's perfectly ordinary
+    impact position as a gross fault — silently, and in the direction nothing downstream can
+    detect. An unscored checkpoint is reported, with its reason, in `SwingResult.unscored`; a
+    wrongly scored one is not reported at all. Same
     posture `api.app` takes when it refuses to invent a handedness for a golfer nobody stated one
     for (`contracts.golfer` records why the field is captured at all).
 
@@ -560,9 +606,20 @@ def evaluate_head_stays_back(
     the instrument at 3.4x the 0.080 noise+boundary error, which is what ADR-010's 2026-08-12
     addendum asks before an edge is asserted.
     """
-    raw = measure_head_hip_gain(keypoints, phases)
-    if raw is None or handedness is None:
-        return None
+    # Two quite different failures, and merging them into one `None` is what forced `feedback` to
+    # infer which had happened by checking whether the metric survived into `measurements`. An
+    # unreadable clip wants re-filming; an unattributed swing wants a golfer picked, and telling
+    # the second golfer to go back to the bay is the wrong answer confidently given.
+    measured = measure_head_hip_gain(keypoints, phases)
+    if measured.value is None:
+        return _no_measurement(measured)
+    if handedness is None:
+        return CheckpointOutcome.unscored_for(
+            UnscoredReason.NO_HANDEDNESS,
+            "the head-hip gain was measured, but its sign is camera-relative and no golfer "
+            "is attributed to this swing",
+        )
+    raw = measured.value
 
     # Into the right-handed camera frame the band is cut in. The corpus was folded the same way
     # (derive_reference.py), so `observed`, the band and the stored distribution all share one
@@ -572,7 +629,7 @@ def evaluate_head_stays_back(
 
     band = resolve_range(_HEAD_STAYS_BACK_RANGE_KEY, club, profile)
     if band is None:
-        return None
+        return _no_band(_HEAD_STAYS_BACK_RANGE_KEY, club)
 
     score = _score_within_range(observed, band.low, band.high)
     passed = band.low <= observed <= band.high
@@ -612,15 +669,17 @@ def evaluate_head_stays_back(
         )
         message += f" That is {clause}."
 
-    return CheckpointScore(
-        name=HEAD_STAYS_BACK_CHECKPOINT,
-        score=score,
-        passed=passed,
-        observed=round(observed, 2),
-        expected_low=band.low,
-        expected_high=band.high,
-        message=message,
-        percentile=pct,
-        population_n=population_n,
-        one_sided=_HEAD_STAYS_BACK.one_sided,
+    return CheckpointOutcome.scored(
+        CheckpointScore(
+            name=HEAD_STAYS_BACK_CHECKPOINT,
+            score=score,
+            passed=passed,
+            observed=round(observed, 2),
+            expected_low=band.low,
+            expected_high=band.high,
+            message=message,
+            percentile=pct,
+            population_n=population_n,
+            one_sided=_HEAD_STAYS_BACK.one_sided,
+        )
     )

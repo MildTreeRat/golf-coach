@@ -24,7 +24,7 @@ import json
 from functools import lru_cache
 from importlib import resources
 
-from pydantic import BaseModel, TypeAdapter
+from pydantic import BaseModel, Field, TypeAdapter
 
 _DISTRIBUTIONS_FILE = "golfdb_v1.json"
 
@@ -48,6 +48,17 @@ class Distribution(BaseModel):
     p50: float
     p75: float
     p90: float
+
+    provenance: str = Field(
+        default="",
+        description=(
+            "How *this row* was sampled, when that differs from the file's `dataset` block. Empty "
+            "for the rows the dataset block already describes, which is why it defaults rather "
+            "than being required. `ranges.json` carries provenance per row for the same reason: a "
+            "file-level claim stops being true the moment one metric is drawn from a different "
+            "slice of the corpus than the rest, and a reader has no way to notice."
+        ),
+    )
 
     def percentile_of(self, observed: float) -> float:
         """Roughly where `observed` falls in this population, as a percentile in `[0, 100]`.
@@ -83,6 +94,16 @@ class DatasetInfo(BaseModel):
     min_samples: int
     derived_on: str
     pipeline_commit: str
+
+    notes: str = Field(
+        default="",
+        description=(
+            "Where this block stops describing every row. `pose_estimator` in particular is a "
+            "claim about the pose-derived rows and says nothing true about a row measured from "
+            "the label track instead - so rather than restate the exception here, this points at "
+            "`Distribution.provenance`, which carries it per row and cannot fall out of step."
+        ),
+    )
 
 
 _DISTRIBUTION_LIST_ADAPTER = TypeAdapter(list[Distribution])

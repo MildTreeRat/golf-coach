@@ -1,9 +1,14 @@
 """Measuring, separated from judging. [M6.5 — data infrastructure]
 
 Every function here answers *what is the number* and nothing else. None of them touch
-`ranges.json`, none produce a `CheckpointScore`, and a `None` return means strictly **could not
-measure** — unusable landmarks, a missing phase, a boundary that was estimated rather than
-detected — never "no band exists".
+`ranges.json`, none produce a `CheckpointScore`, and a `MeasureOutcome` with no value means
+strictly **could not measure** — unusable landmarks, a missing phase, a boundary that was
+estimated rather than detected — never "no band exists".
+
+Which of those it was is carried out rather than discarded: `MeasureOutcome.reason` is drawn from
+`contracts.unscored.MEASUREMENT_REASONS`, the subset of the vocabulary that describes a
+measurement failing. `NO_BAND` and `NO_HANDEDNESS` are in that vocabulary and are *not* in the
+subset, which is this module's split with `checkpoints/mechanics.py` made checkable.
 
 ## Why this module exists
 
@@ -55,12 +60,43 @@ from typing import NamedTuple
 from golf_coach.analysis.stats import percentile
 from golf_coach.contracts.keypoints import FrameKeypoints, PoseLandmark
 from golf_coach.contracts.swing import PhaseSegment, SwingPhase
+from golf_coach.contracts.unscored import UnscoredReason
 
 #: A per-frame point extractor over an inclusive frame span — `hip_center_points` and friends.
 PointsFn = Callable[[list[FrameKeypoints], int, int], list[tuple[float, float]]]
 
-#: A full pose measurement: smoothed frames + phases in, one number or "could not measure" out.
-MeasureFn = Callable[[list[FrameKeypoints], list[PhaseSegment]], float | None]
+
+class MeasureOutcome(NamedTuple):
+    """One number, or the reason there isn't one.
+
+    Replaced a bare `float | None`. The `None` was never ambiguous about *whether* the measurement
+    failed, but it threw away *which* of six conditions failed — and that was the one thing every
+    consumer downstream wanted and had to guess at (`contracts.unscored` tells that story).
+
+    The reason costs nothing to produce here and cannot be recovered anywhere else: by the time a
+    `None` reaches `feedback`, the window it came from, the landmark group it was reading and the
+    gate it failed are all gone.
+    """
+
+    #: The measurement, or None if it could not be taken. Never a sentinel, never a zero.
+    value: float | None
+    #: Which condition failed, or None when `value` is present. Always in `MEASUREMENT_REASONS`.
+    reason: UnscoredReason | None = None
+    #: Which window or landmark group, for a human. `MeasureOutcome.value` is what code reads.
+    detail: str = ""
+
+    @classmethod
+    def measured(cls, value: float) -> MeasureOutcome:
+        return cls(value)
+
+    @classmethod
+    def unmeasurable(cls, reason: UnscoredReason, detail: str) -> MeasureOutcome:
+        """`detail` is required, not optional — a reason with no window named is half an answer."""
+        return cls(None, reason, detail)
+
+
+#: A full pose measurement: smoothed frames + phases in, one number or a reason out.
+MeasureFn = Callable[[list[FrameKeypoints], list[PhaseSegment]], MeasureOutcome]
 
 # Landmarks dimmer than this are treated as unreliable (MediaPipe convention, matches
 # phases.py / overlay.py).
@@ -223,8 +259,23 @@ def head_center_points(
     return midpoint_series(keypoints, lo, hi, PoseLandmark.LEFT_EAR, PoseLandmark.RIGHT_EAR)
 
 
-def tempo_timings(phases: list[PhaseSegment]) -> tuple[float, float] | None:
-    """Extract (backswing_ms, downswing_ms) from the phase boundaries, or None if unavailable.
+class TempoTimings(NamedTuple):
+    """The two durations, or the reason they could not be read.
+
+    A second shape beside `MeasureOutcome` rather than a reuse of it, because this carries a *pair*
+    and that one carries a number. Both exist for the same reason: the three ways tempo goes
+    missing are genuinely different clips, and merging them into one `None` is what forced every
+    consumer to guess.
+    """
+
+    #: `(backswing_ms, downswing_ms)`, or None if they could not be read.
+    durations: tuple[float, float] | None
+    reason: UnscoredReason | None = None
+    detail: str = ""
+
+
+def tempo_timings(phases: list[PhaseSegment]) -> TempoTimings:
+    """Extract (backswing_ms, downswing_ms) from the phase boundaries, or say why not.
 
     Uses motion start (`BACKSWING.start_ms`), the top of the backswing (center of the
     `TRANSITION` window), and impact (`IMPACT.start_ms`).
@@ -235,19 +286,38 @@ def tempo_timings(phases: list[PhaseSegment]) -> tuple[float, float] | None:
     tempo locates address to within 11 frames, so the wrist signal contributes real but modest
     information here (M4-REF Phase B6).
 
-    Returns None when the backswing boundary was **estimated rather than detected**. That estimate
-    is derived from an assumed tempo ratio, so reporting it would echo that assumption back as an
-    observation — a guess dressed as a measurement. Dropping it is ADR-010 §2 and ADR-013; it costs
-    ~14% of clips their tempo reading.
+    Refuses when the backswing boundary was **estimated rather than detected**
+    (`BOUNDARY_ESTIMATED`). That estimate is derived from an assumed tempo ratio, so reporting it
+    would echo that assumption back as an observation — a guess dressed as a measurement. Dropping
+    it is ADR-010 §2 and ADR-013; it costs ~14% of clips their tempo reading, which is why it gets
+    its own reason rather than sharing one with an unreadable clip: the footage was fine.
     """
     by_phase = {segment.phase: segment for segment in phases}
     backswing = by_phase.get(SwingPhase.BACKSWING)
     transition = by_phase.get(SwingPhase.TRANSITION)
     impact = by_phase.get(SwingPhase.IMPACT)
+    missing = [
+        name
+        for name, segment in (
+            ("backswing", backswing),
+            ("transition", transition),
+            ("impact", impact),
+        )
+        if segment is None
+    ]
     if backswing is None or transition is None or impact is None:
-        return None
+        return TempoTimings(
+            None,
+            UnscoredReason.PHASE_NOT_SEGMENTED,
+            "tempo needs the backswing, transition and impact phases; "
+            f"missing {', '.join(missing)}",
+        )
     if not backswing.detected:
-        return None
+        return TempoTimings(
+            None,
+            UnscoredReason.BOUNDARY_ESTIMATED,
+            "the start of the backswing was estimated from an assumed tempo, not detected",
+        )
 
     motion_start_ms = backswing.start_ms
     top_ms = (transition.start_ms + transition.end_ms) / 2
@@ -256,8 +326,13 @@ def tempo_timings(phases: list[PhaseSegment]) -> tuple[float, float] | None:
     backswing_ms = top_ms - motion_start_ms
     downswing_ms = impact_ms - top_ms
     if backswing_ms <= 0 or downswing_ms <= 0:
-        return None
-    return backswing_ms, downswing_ms
+        return TempoTimings(
+            None,
+            UnscoredReason.TIMING_DEGENERATE,
+            f"backswing {backswing_ms:.0f} ms and downswing {downswing_ms:.0f} ms; "
+            "both must be positive",
+        )
+    return TempoTimings((backswing_ms, downswing_ms))
 
 
 def _lateral_travel(
@@ -265,58 +340,128 @@ def _lateral_travel(
     phases: list[PhaseSegment],
     points_of: PointsFn,
     to_phase: SwingPhase,
-) -> float | None:
+    landmarks: str,
+) -> MeasureOutcome:
     """Shared body of the address-to-instant lateral metrics: |Δx| in shoulder widths.
 
     Both endpoints are means over a window and the ruler comes from the address window, which is
     what makes this family robust and what keeps it aspect-immune (an `x` distance over an `x`
     scale cancels the 16:9 assumption outright).
+
+    `landmarks` is the human name of what `points_of` reads ("ear midpoint"), and exists only for
+    `detail`. Deriving it from the callable would mean matching on a function identity, which is
+    the kind of cleverness that goes stale the first time someone passes a lambda.
     """
     setup = address_sample_bounds(phases)
+    if setup is None:
+        return MeasureOutcome.unmeasurable(
+            UnscoredReason.PHASE_NOT_SEGMENTED,
+            "the address sampling window needs the address and downswing phases",
+        )
     target = phase_bounds(phases, to_phase)
-    if setup is None or target is None:
-        return None
+    if target is None:
+        return MeasureOutcome.unmeasurable(
+            UnscoredReason.PHASE_NOT_SEGMENTED,
+            f"no {to_phase.value} phase to measure travel to",
+        )
+
+    # Scale first: without a ruler the endpoints are unusable even when both are present, and
+    # reporting "landmarks unconfident" for a golfer who simply stood side-on would send them off
+    # to fix the wrong thing.
+    width = shoulder_width(keypoints, setup[0], setup[1])
+    if width is None:
+        return MeasureOutcome.unmeasurable(
+            UnscoredReason.SCALE_UNAVAILABLE,
+            "no confident, non-degenerate shoulder width across the address window",
+        )
 
     start = mean_of(points_of(keypoints, setup[0], setup[1]))
+    if start is None:
+        return MeasureOutcome.unmeasurable(
+            UnscoredReason.LANDMARKS_UNCONFIDENT,
+            f"no confident {landmarks} frames in the address window",
+        )
     end = mean_of(points_of(keypoints, target[0], target[1]))
-    width = shoulder_width(keypoints, setup[0], setup[1])
-    if start is None or end is None or width is None:
-        return None
-    return abs(end[0] - start[0]) / width
+    if end is None:
+        return MeasureOutcome.unmeasurable(
+            UnscoredReason.LANDMARKS_UNCONFIDENT,
+            f"no confident {landmarks} frames in the {to_phase.value} window",
+        )
+    return MeasureOutcome.measured(abs(end[0] - start[0]) / width)
 
 
 # --------------------------------------------------------------------------- the measurements
 
 
-def measure_tempo_ratio(phases: list[PhaseSegment]) -> float | None:
+def measure_tempo_ratio(phases: list[PhaseSegment]) -> MeasureOutcome:
     """Backswing:downswing time ratio. Frame rate cancels, so slo-mo and real-time agree."""
     timings = tempo_timings(phases)
-    if timings is None:
-        return None
-    backswing_ms, downswing_ms = timings
-    return backswing_ms / downswing_ms
+    if timings.durations is None:
+        # `tempo_timings` already decided which of the three conditions failed; re-deciding here
+        # would be a second opinion on the same evidence.
+        assert timings.reason is not None
+        return MeasureOutcome.unmeasurable(timings.reason, timings.detail)
+    backswing_ms, downswing_ms = timings.durations
+    return MeasureOutcome.measured(backswing_ms / downswing_ms)
+
+
+def measure_backswing_ms(phases: list[PhaseSegment]) -> MeasureOutcome:
+    """Backswing duration in milliseconds — motion start to the top.
+
+    Unlike `measure_tempo_ratio`, frame rate does **not** cancel here, so this is only meaningful
+    on a real-time clip. That is a property of the capture rather than of this function, which is
+    why it is not gated here: `phases` carries millisecond timestamps that the pipeline already
+    derived from the clip's own fps, and a slow-motion clip would have arrived with slow-motion
+    timestamps long before this point.
+    """
+    return _tempo_duration(phases, backswing=True)
+
+
+def measure_downswing_ms(phases: list[PhaseSegment]) -> MeasureOutcome:
+    """Downswing duration in milliseconds — the top to impact. See `measure_backswing_ms`."""
+    return _tempo_duration(phases, backswing=False)
+
+
+def _tempo_duration(phases: list[PhaseSegment], *, backswing: bool) -> MeasureOutcome:
+    """One half of `tempo_timings`, as a measurement.
+
+    Both halves and the ratio come from the same call, so all three inherit its three refusal
+    paths and cannot disagree about whether a swing was timeable — a clip whose backswing boundary
+    was estimated has no tempo *and* no duration, for the one reason.
+    """
+    timings = tempo_timings(phases)
+    if timings.durations is None:
+        assert timings.reason is not None
+        return MeasureOutcome.unmeasurable(timings.reason, timings.detail)
+    return MeasureOutcome.measured(timings.durations[0 if backswing else 1])
 
 
 def measure_head_sway(
     keypoints: list[FrameKeypoints], phases: list[PhaseSegment]
-) -> float | None:
+) -> MeasureOutcome:
     """Lateral head travel, address window -> impact window, in shoulder widths. [v3]"""
-    return _lateral_travel(keypoints, phases, head_center_points, SwingPhase.IMPACT)
+    return _lateral_travel(
+        keypoints, phases, head_center_points, SwingPhase.IMPACT, "ear midpoint"
+    )
 
 
-def measure_hip_sway(keypoints: list[FrameKeypoints], phases: list[PhaseSegment]) -> float | None:
+def measure_hip_sway(
+    keypoints: list[FrameKeypoints], phases: list[PhaseSegment]
+) -> MeasureOutcome:
     """Lateral hip travel, address window -> impact window, in shoulder widths.
 
     The structural twin of `measure_head_sway`, and it answers a different coaching question: a
     head that stays put over hips that slide is a lateral slide, while head and hips moving
     together is a body that swayed. Neither is visible from head sway alone.
     """
-    return _lateral_travel(keypoints, phases, hip_center_points, SwingPhase.IMPACT)
+    return _lateral_travel(
+        keypoints, phases, hip_center_points, SwingPhase.IMPACT, "hip midpoint"
+    )
 
 
 def measure_hip_shift_at_top(
     keypoints: list[FrameKeypoints], phases: list[PhaseSegment]
-) -> float | None:
+) -> MeasureOutcome:
     """Lateral hip travel, address window -> transition (top) window, in shoulder widths.
 
     Magnitude only. Direction would separate a sway off the ball from a reverse pivot, but the sign
@@ -329,12 +474,14 @@ def measure_hip_shift_at_top(
     over the transition window, so it inherits none of the single-frame fragility that sank the
     frame-index rules. `tune_spatial_metric.py` is what settles it.
     """
-    return _lateral_travel(keypoints, phases, hip_center_points, SwingPhase.TRANSITION)
+    return _lateral_travel(
+        keypoints, phases, hip_center_points, SwingPhase.TRANSITION, "hip midpoint"
+    )
 
 
 def measure_head_hip_offset_impact(
     keypoints: list[FrameKeypoints], phases: list[PhaseSegment]
-) -> float | None:
+) -> MeasureOutcome:
     """Signed head-center minus hip-center offset over the impact window, in shoulder widths.
 
     "Staying behind the ball" — and the only metric here that is signed, because the magnitude
@@ -361,21 +508,38 @@ def measure_head_hip_offset_impact(
     not generalize to a signed quantity.
     """
     setup = address_sample_bounds(phases)
+    if setup is None:
+        return MeasureOutcome.unmeasurable(
+            UnscoredReason.PHASE_NOT_SEGMENTED,
+            "the address sampling window needs the address and downswing phases",
+        )
     impact = phase_bounds(phases, SwingPhase.IMPACT)
-    if setup is None or impact is None:
-        return None
+    if impact is None:
+        return MeasureOutcome.unmeasurable(
+            UnscoredReason.PHASE_NOT_SEGMENTED, "no impact phase to read the offset at"
+        )
+
+    width = shoulder_width(keypoints, setup[0], setup[1])
+    if width is None:
+        return MeasureOutcome.unmeasurable(
+            UnscoredReason.SCALE_UNAVAILABLE,
+            "no confident, non-degenerate shoulder width across the address window",
+        )
 
     head = mean_of(head_center_points(keypoints, impact[0], impact[1]))
     hips = mean_of(hip_center_points(keypoints, impact[0], impact[1]))
-    width = shoulder_width(keypoints, setup[0], setup[1])
-    if head is None or hips is None or width is None:
-        return None
-    return (head[0] - hips[0]) / width
+    if head is None or hips is None:
+        missing = "ear midpoint" if head is None else "hip midpoint"
+        return MeasureOutcome.unmeasurable(
+            UnscoredReason.LANDMARKS_UNCONFIDENT,
+            f"no confident {missing} frames in the impact window",
+        )
+    return MeasureOutcome.measured((head[0] - hips[0]) / width)
 
 
 def measure_head_hip_gain(
     keypoints: list[FrameKeypoints], phases: list[PhaseSegment]
-) -> float | None:
+) -> MeasureOutcome:
     """Change in the signed head-hip offset from address to impact, in shoulder widths. [M6.5]
 
     The *same* quantity as `measure_head_hip_offset_impact`, read as a change across the swing
@@ -409,44 +573,82 @@ def measure_head_hip_gain(
     here and the judging layer normalizes it — see `checkpoints.mechanics.evaluate_head_stays_back`.
     """
     setup = address_sample_bounds(phases)
+    if setup is None:
+        return MeasureOutcome.unmeasurable(
+            UnscoredReason.PHASE_NOT_SEGMENTED,
+            "the address sampling window needs the address and downswing phases",
+        )
     impact = phase_bounds(phases, SwingPhase.IMPACT)
-    if setup is None or impact is None:
-        return None
+    if impact is None:
+        return MeasureOutcome.unmeasurable(
+            UnscoredReason.PHASE_NOT_SEGMENTED, "no impact phase to difference the offset against"
+        )
 
     width = shoulder_width(keypoints, setup[0], setup[1])
     if width is None:
-        return None
+        return MeasureOutcome.unmeasurable(
+            UnscoredReason.SCALE_UNAVAILABLE,
+            "no confident, non-degenerate shoulder width across the address window",
+        )
 
     offsets: list[float] = []
-    for lo, hi in (setup, impact):
+    for window, lo, hi in (("address", *setup), ("impact", *impact)):
         head = mean_of(head_center_points(keypoints, lo, hi))
         hips = mean_of(hip_center_points(keypoints, lo, hi))
         if head is None or hips is None:
-            return None
+            missing = "ear midpoint" if head is None else "hip midpoint"
+            return MeasureOutcome.unmeasurable(
+                UnscoredReason.LANDMARKS_UNCONFIDENT,
+                f"no confident {missing} frames in the {window} window",
+            )
         offsets.append((head[0] - hips[0]) / width)
-    return offsets[1] - offsets[0]
+    return MeasureOutcome.measured(offsets[1] - offsets[0])
 
 
 def measure_finish_balance(
     keypoints: list[FrameKeypoints], phases: list[PhaseSegment]
-) -> float | None:
+) -> MeasureOutcome:
     """Hip-center drift from its own mean through the follow-through, in shoulder widths. [v2]"""
     follow_through = phase_bounds(phases, SwingPhase.FOLLOW_THROUGH)
+    if follow_through is None:
+        return MeasureOutcome.unmeasurable(
+            UnscoredReason.PHASE_NOT_SEGMENTED,
+            "no follow-through phase — the clip may end at impact",
+        )
     setup = address_sample_bounds(phases)
-    if follow_through is None or setup is None:
-        return None
+    if setup is None:
+        return MeasureOutcome.unmeasurable(
+            UnscoredReason.PHASE_NOT_SEGMENTED,
+            "the address sampling window needs the address and downswing phases",
+        )
 
-    points = hip_center_points(keypoints, follow_through[0], follow_through[1])
     width = shoulder_width(keypoints, setup[0], setup[1])
-    if len(points) < MIN_FINISH_FRAMES or width is None:
-        return None
+    if width is None:
+        return MeasureOutcome.unmeasurable(
+            UnscoredReason.SCALE_UNAVAILABLE,
+            "no confident, non-degenerate shoulder width across the address window",
+        )
+
+    # `TOO_FEW_FRAMES` rather than `LANDMARKS_UNCONFIDENT` even at zero: the hips are gated at
+    # `MIN_HIP_VISIBILITY` here, harder than anywhere else, so "not enough of them" is the honest
+    # description of both a short follow-through and an occluded one. `mean_of` below cannot then
+    # return None, and the guard stays only because the type says it can.
+    points = hip_center_points(keypoints, follow_through[0], follow_through[1])
+    if len(points) < MIN_FINISH_FRAMES:
+        return MeasureOutcome.unmeasurable(
+            UnscoredReason.TOO_FEW_FRAMES,
+            f"{len(points)} confident hip frames through the follow-through, "
+            f"need {MIN_FINISH_FRAMES}",
+        )
 
     center = mean_of(points)
-    if center is None:
-        return None
+    if center is None:  # pragma: no cover - unreachable past the length check above
+        return MeasureOutcome.unmeasurable(
+            UnscoredReason.TOO_FEW_FRAMES, "no confident hip frames through the follow-through"
+        )
     mean_x, mean_y = center
     drifts = [((x - mean_x) ** 2 + (y - mean_y) ** 2) ** 0.5 for x, y in points]
-    return percentile(drifts, FINISH_DRIFT_QUANTILE) / width
+    return MeasureOutcome.measured(percentile(drifts, FINISH_DRIFT_QUANTILE) / width)
 
 
 class PoseMeasurement(NamedTuple):
@@ -461,7 +663,8 @@ class PoseMeasurement(NamedTuple):
     already had, so the engine really does build both families the same way.
     """
 
-    #: Takes the smoothed frames and the phase segmentation, returns the number or `None`.
+    #: Takes the smoothed frames and the phase segmentation, returns a `MeasureOutcome` — the
+    #: number, or which condition stopped it being taken.
     measure: MeasureFn
     #: Goes onto `Measurement.unit`.
     unit: str
@@ -487,6 +690,21 @@ POSE_MEASUREMENTS: dict[str, PoseMeasurement] = {
         lambda frames, phases: measure_tempo_ratio(phases),
         "ratio",
         "backswing:downswing time, from phase instants; frame rate cancels",
+    ),
+    # The two halves the ratio above is built from, kept rather than divided away. Nothing judges
+    # them — no band, no checkpoint, no placement — because tempo is already scored once and a
+    # second verdict over the same two instants would double-count it (ADR-023). They are here so
+    # a stored swing can say "your downswing took 384 ms", which the ratio cannot recover, and as
+    # the groundwork for diagnosing *which half* is off. M6.5's measure-now-judge-later order.
+    "backswing_ms": PoseMeasurement(
+        lambda frames, phases: measure_backswing_ms(phases),
+        "ms",
+        "motion start -> top, from phase instants; real-time clips only, fps does not cancel",
+    ),
+    "downswing_ms": PoseMeasurement(
+        lambda frames, phases: measure_downswing_ms(phases),
+        "ms",
+        "top -> impact, from phase instants; real-time clips only, fps does not cancel",
     ),
     "head_sway_norm": PoseMeasurement(
         measure_head_sway,
@@ -521,3 +739,23 @@ POSE_MEASUREMENTS: dict[str, PoseMeasurement] = {
         "shoulder-width ruler; + is image-right, camera-frame, handedness resolved when judged",
     ),
 }
+
+
+#: The measurements that are an absolute time, and therefore **not** frame-rate invariant.
+#:
+#: Every other metric in the registry is a ratio or a shoulder-width, which is why the GolfDB
+#: tooling can treat a slow-motion clip and a real-time clip as the same kind of evidence: about
+#: 47% of that corpus is slow-motion and a ratio survives it. These two do not.
+#:
+#: That matters to the offline scripts specifically, because
+#: `derive_pose_metrics._phases_from_events` builds labelled phases with **frame indices in the
+#: `start_ms` field** — deliberately, and documented there, since only ratios were ever read from
+#: them. A duration measured off those phases is a frame count wearing a millisecond's name. It
+#: would be written into `swings.jsonl` beside real milliseconds and cut into a band, and nothing
+#: in `tests/` covers those scripts.
+#:
+#: Derived from the unit rather than listed, so a third duration metric is covered the day it is
+#: added rather than the day someone remembers this set exists.
+FPS_DEPENDENT_MEASUREMENTS: frozenset[str] = frozenset(
+    name for name, measurement in POSE_MEASUREMENTS.items() if measurement.unit == "ms"
+)

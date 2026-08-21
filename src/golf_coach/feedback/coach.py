@@ -248,12 +248,18 @@ def build_brief(result: SwingBundleResult) -> str:
 
     out.append("")
     if swing.unscored:
+        # The reason goes in the brief, not just the name. A model told only that tempo is missing
+        # will reach for the likeliest explanation and state it — and "your camera moved" is a
+        # confident wrong answer to give a golfer whose clip was fine and whose band simply does
+        # not exist. Naming the cause is what makes the caveat about `unscored` actionable rather
+        # than merely honest.
         out.append(
-            "unscored (attempted but could not be measured, and excluded from overall_score"
-            f" rather than counted as zero): {', '.join(swing.unscored)}"
+            "unscored (attempted but could not be scored, and excluded from overall_score"
+            " rather than counted as zero):"
         )
+        out += [f"- {entry.name}: {entry.spec.summary}" for entry in swing.unscored]
     else:
-        out.append("unscored: none - every checkpoint was measurable on this swing")
+        out.append("unscored: none - every checkpoint was scored on this swing")
 
     placements = _placement_lines(swing.measurements)
     out += ["", "POPULATION PLACEMENT (recorded, never scored - nothing here has a band)"]

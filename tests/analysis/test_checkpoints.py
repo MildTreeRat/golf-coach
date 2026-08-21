@@ -28,7 +28,7 @@ from golf_coach.contracts.swing import SwingPhase
 
 def _tempo(backswing_frames: int, downswing_frames: int):
     swing = make_swing(backswing_frames, downswing_frames)
-    return evaluate_tempo(segment_phases(swing))
+    return evaluate_tempo(segment_phases(swing)).score
 
 
 def _analyzed(head_sway: float = 0.0, finish_drift: float = 0.0, hip_sway: float = 0.0):
@@ -69,7 +69,7 @@ def test_tempo_counts_horizontal_takeaway() -> None:
     # near-horizontal takeaway is part of the backswing. Counting it (20 takeaway + 20 rise)
     # restores a believable ~3:1 instead of the collapsed reading a wrist-height rule produced.
     swing = make_swing(20, 13, takeaway_frames=20)
-    cp = evaluate_tempo(segment_phases(swing))
+    cp = evaluate_tempo(segment_phases(swing)).score
     assert cp is not None
     assert cp.observed >= 2.5  # not collapsed toward the ~1.5:1 the vertical rise alone gives
     assert cp.passed is True
@@ -77,7 +77,7 @@ def test_tempo_counts_horizontal_takeaway() -> None:
 
 def test_steady_head_passes_sway() -> None:
     smoothed, phases = _analyzed(head_sway=0.0)
-    cp = evaluate_head_sway(smoothed, phases)
+    cp = evaluate_head_sway(smoothed, phases).score
     assert cp is not None
     assert cp.name == "head_sway"
     assert cp.passed is True
@@ -88,7 +88,7 @@ def test_steady_head_passes_sway() -> None:
 def test_large_head_sway_fails() -> None:
     # A full shoulder-width of lateral drift (sway ~1.0) is well past the 0.5 band.
     smoothed, phases = _analyzed(head_sway=0.16)
-    cp = evaluate_head_sway(smoothed, phases)
+    cp = evaluate_head_sway(smoothed, phases).score
     assert cp is not None
     assert cp.passed is False
     assert cp.observed > cp.expected_high
@@ -97,7 +97,7 @@ def test_large_head_sway_fails() -> None:
 
 def test_held_finish_passes_balance() -> None:
     smoothed, phases = _analyzed(finish_drift=0.0)
-    cp = evaluate_finish_balance(smoothed, phases)
+    cp = evaluate_finish_balance(smoothed, phases).score
     assert cp is not None
     assert cp.name == "finish_balance"
     assert cp.passed is True
@@ -106,7 +106,7 @@ def test_held_finish_passes_balance() -> None:
 
 def test_staggered_finish_fails_balance() -> None:
     smoothed, phases = _analyzed(finish_drift=0.3)
-    cp = evaluate_finish_balance(smoothed, phases)
+    cp = evaluate_finish_balance(smoothed, phases).score
     assert cp is not None
     assert cp.passed is False
     assert cp.observed > cp.expected_high
@@ -114,10 +114,10 @@ def test_staggered_finish_fails_balance() -> None:
 
 def test_checkpoints_return_none_when_unsegmentable() -> None:
     empty: list[FrameKeypoints] = []
-    assert evaluate_head_sway(empty, []) is None
-    assert evaluate_finish_balance(empty, []) is None
-    assert evaluate_hip_sway(empty, []) is None
-    assert evaluate_hip_shift_at_top(empty, []) is None
+    assert evaluate_head_sway(empty, []).score is None
+    assert evaluate_finish_balance(empty, []).score is None
+    assert evaluate_hip_sway(empty, []).score is None
+    assert evaluate_hip_shift_at_top(empty, []).score is None
 
 
 # --- the hip checkpoints, promoted 2026-08-12 ----------------------------------------------
@@ -130,7 +130,7 @@ def test_checkpoints_return_none_when_unsegmentable() -> None:
 
 def test_hip_sway_passes_inside_the_band() -> None:
     smoothed, phases = _analyzed(hip_sway=0.03)  # ~0.19 shoulder-widths
-    cp = evaluate_hip_sway(smoothed, phases)
+    cp = evaluate_hip_sway(smoothed, phases).score
     assert cp is not None
     assert cp.name == "hip_sway"
     assert cp.passed is True
@@ -147,7 +147,7 @@ def test_hip_sway_fails_when_the_hips_barely_move() -> None:
     further than this one does.
     """
     smoothed, phases = _analyzed(hip_sway=0.0)
-    cp = evaluate_hip_sway(smoothed, phases)
+    cp = evaluate_hip_sway(smoothed, phases).score
     assert cp is not None
     assert cp.passed is False
     assert cp.observed < cp.expected_low
@@ -156,7 +156,7 @@ def test_hip_sway_fails_when_the_hips_barely_move() -> None:
 
 def test_hip_sway_fails_when_the_hips_slide_too_far() -> None:
     smoothed, phases = _analyzed(hip_sway=0.12)  # ~0.74 shoulder-widths
-    cp = evaluate_hip_sway(smoothed, phases)
+    cp = evaluate_hip_sway(smoothed, phases).score
     assert cp is not None
     assert cp.passed is False
     assert cp.observed > cp.expected_high
@@ -173,8 +173,8 @@ def test_hip_sway_is_two_sided_and_hip_shift_is_not() -> None:
     """
     smoothed, phases = _analyzed(hip_sway=0.0)
 
-    sway = evaluate_hip_sway(smoothed, phases)
-    shift = evaluate_hip_shift_at_top(smoothed, phases)
+    sway = evaluate_hip_sway(smoothed, phases).score
+    shift = evaluate_hip_shift_at_top(smoothed, phases).score
     assert sway is not None and shift is not None
 
     assert sway.passed is False and sway.one_sided is False
@@ -185,7 +185,7 @@ def test_hip_sway_is_two_sided_and_hip_shift_is_not() -> None:
 
 def test_hip_shift_at_top_passes_a_centered_backswing() -> None:
     smoothed, phases = _analyzed(hip_sway=0.03)  # ~0.13 shoulder-widths by the top
-    cp = evaluate_hip_shift_at_top(smoothed, phases)
+    cp = evaluate_hip_shift_at_top(smoothed, phases).score
     assert cp is not None
     assert cp.name == "hip_shift_at_top"
     assert cp.passed is True
@@ -194,7 +194,7 @@ def test_hip_shift_at_top_passes_a_centered_backswing() -> None:
 
 def test_hip_shift_at_top_fails_a_lateral_slide_going_back() -> None:
     smoothed, phases = _analyzed(hip_sway=0.08)  # ~0.36 shoulder-widths by the top
-    cp = evaluate_hip_shift_at_top(smoothed, phases)
+    cp = evaluate_hip_shift_at_top(smoothed, phases).score
     assert cp is not None
     assert cp.passed is False
     assert cp.observed > cp.expected_high
@@ -213,8 +213,8 @@ def test_the_hip_messages_never_claim_a_direction_or_a_rotation() -> None:
     messages = [
         cp.message or ""
         for cp in (
-            evaluate_hip_sway(smoothed, phases),
-            evaluate_hip_shift_at_top(smoothed, phases),
+            evaluate_hip_sway(smoothed, phases).score,
+            evaluate_hip_shift_at_top(smoothed, phases).score,
         )
         if cp is not None
     ]
@@ -248,7 +248,7 @@ def test_head_sway_ignores_pure_head_rotation() -> None:
         )
 
     smoothed = smooth_keypoints(swing)
-    cp = evaluate_head_sway(smoothed, segment_phases(smoothed))
+    cp = evaluate_head_sway(smoothed, segment_phases(smoothed)).score
     assert cp is not None
     assert cp.observed == 0.0
     assert cp.passed is True
@@ -285,7 +285,7 @@ def test_finish_balance_survives_a_single_bad_frame() -> None:
     """
     clean_swing = make_swing(30, 10, followthrough_frames=_REALISTIC_FOLLOWTHROUGH)
     smoothed = smooth_keypoints(clean_swing)
-    clean = evaluate_finish_balance(smoothed, segment_phases(smoothed))
+    clean = evaluate_finish_balance(smoothed, segment_phases(smoothed)).score
     assert clean is not None
     assert clean.observed == 0.0
 
@@ -293,7 +293,7 @@ def test_finish_balance_survives_a_single_bad_frame() -> None:
         make_swing(30, 10, followthrough_frames=_REALISTIC_FOLLOWTHROUGH)
     )
     smoothed = smooth_keypoints(dirty_swing)
-    cp = evaluate_finish_balance(smoothed, segment_phases(smoothed))
+    cp = evaluate_finish_balance(smoothed, segment_phases(smoothed)).score
     assert cp is not None
     assert cp.observed is not None and clean.observed is not None
     assert cp.observed - clean.observed < 0.05, (
@@ -312,14 +312,14 @@ def test_finish_balance_rejection_needs_a_long_enough_window() -> None:
     """
     short = _blow_out_one_hip_frame(make_swing(30, 10, followthrough_frames=8))
     smoothed = smooth_keypoints(short)
-    cp = evaluate_finish_balance(smoothed, segment_phases(smoothed))
+    cp = evaluate_finish_balance(smoothed, segment_phases(smoothed)).score
     assert cp is not None
     assert cp.observed > 0.4, "expected the short window to let one bad frame through"
 
 
 def test_finish_balance_still_catches_sustained_drift() -> None:
     """p90 must not have blunted the checkpoint into never firing."""
-    cp = evaluate_finish_balance(*_analyzed(finish_drift=0.3))
+    cp = evaluate_finish_balance(*_analyzed(finish_drift=0.3)).score
     assert cp is not None
     assert cp.passed is False
 
@@ -333,7 +333,7 @@ def test_low_confidence_hips_are_rejected() -> None:
             frame.landmarks[side] = frame.landmarks[side].model_copy(update={"visibility": 0.6})
 
     smoothed = smooth_keypoints(swing)
-    assert evaluate_finish_balance(smoothed, segment_phases(smoothed)) is None
+    assert evaluate_finish_balance(smoothed, segment_phases(smoothed)).score is None
 
 
 def _with_pre_roll(keypoints: list[FrameKeypoints], frames: int) -> list[FrameKeypoints]:
@@ -413,10 +413,10 @@ def test_tempo_is_dropped_when_the_boundary_was_only_estimated() -> None:
     phases = segment_phases(smooth_keypoints(moving))
 
     assert not next(p for p in phases if p.phase is SwingPhase.BACKSWING).detected
-    assert evaluate_tempo(phases) is None
+    assert evaluate_tempo(phases).score is None
     # Posture still scores — it only needs the boundary to place a window, not to divide by.
     smoothed = smooth_keypoints(moving)
-    assert evaluate_head_sway(smoothed, phases) is not None
+    assert evaluate_head_sway(smoothed, phases).score is not None
 
 
 def test_every_registered_checkpoint_has_an_evaluator_and_a_band() -> None:

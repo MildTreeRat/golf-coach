@@ -214,7 +214,7 @@ on a `vision`-only install — pinned by `tests/api/test_pipeline_imports.py`.
 | Keypoints | Pose → Analysis | `List[FrameKeypoints]` — 33 landmarks per frame with x, y, z, visibility | ✅ |
 | Detections | Detection → Analysis | `List[FrameDetections]` — bounding boxes + class (club_head, ball) per frame | contract only |
 | Shot Data | Launch monitor → Analysis | `ShotData` — club_speed, ball_speed, launch_angle, spin_rate, club_face_angle, club_path, smash_factor, distances, plus `provenance` (confidence + audit trail) for sources that *infer* metrics rather than receive them (ADR-014) | ✅ produced, not consumed |
-| Swing Result | Analysis → Feedback | `SwingResult` — phases, checkpoint scores with tour percentiles, mechanics/outcome/overall scores, `unscored` names, judged `intent` | ✅ (`outcome_score` always `None`) |
+| Swing Result | Analysis → Feedback | `SwingResult` — phases, checkpoint scores with tour percentiles, mechanics/outcome/overall scores, `unscored` entries carrying a reason, judged `intent` | ✅ (`outcome_score` always `None`) |
 | Feedback | Feedback → UI | `FeedbackPayload` — overall score, ranked tips with severity, headline | ✅ produced and rendered by `api/static/results.html` |
 | Reference | Benchmarks → Analysis | `ranges.json` bands + `golfdb_v1.json` distributions, both with provenance | ✅ |
 | Career corpus | Storage → Analysis | `CareerCorpus` — one golfer's distinct swings with their `Measurement`s, the honest per-metric `n`, and every excluded swing with its reason | ✅ produced, not yet consumed (career mode step 4) |
@@ -251,7 +251,7 @@ sequenceDiagram
         Chk->>Bench: percentile_of(...) — informational only
         Chk-->>Eng: CheckpointScore + percentile
     else no band, or boundary was estimated
-        Chk-->>Eng: None — dropped, named in `unscored`
+        Chk-->>Eng: CheckpointOutcome(reason) — named *and explained* in `unscored`
     end
     Eng-->>Caller: SwingResult
     Caller->>FB: build_feedback(result)
@@ -263,7 +263,10 @@ sequenceDiagram
 
 1. **A missing benchmark yields no score, never a wrong one** (ADR-010 §2). Checkpoints drop
    out and are named in `SwingResult.unscored`; `overall_score` is a mean over survivors and
-   is deliberately *not* penalised.
+   is deliberately *not* penalised. Each entry carries **why** it dropped
+   (`contracts/unscored.py`), which is what lets `feedback` tell a golfer whose clip was
+   unreadable to shoot it again and a golfer whose swing measured fine to pick a golfer instead
+   — read `refilming_helps`, never the checkpoint name (ADR-010 addendum, 2026-08-19).
 2. **Percentiles never touch the scoring path** (ADR-010 addendum, 2026-08-04). They are
    informational, drawn from the same stratum the band was cut from. A test blinds the
    evaluators to the distributions and asserts `score`/`passed` do not move.
@@ -297,7 +300,7 @@ it clears the instrument. Consumers must read `one_sided` before calling a low n
 `head_stays_back` is the odd one: its band is **negative** on both edges, because the quantity is
 signed in a right-handed camera frame. It is also the only checkpoint that needs to know *who*
 swung — a face-on camera sees a left-handed swing mirrored — so a swing with no golfer attributed
-carries it in `unscored` rather than scored on a guess.
+carries it in `unscored` with reason `NO_HANDEDNESS` rather than scored on a guess.
 
 Phase-instant accuracy against 461 hand-annotated clips: **top 2 frames, impact 1 frame,
 address 7 frames** (median). Address is the known weak instant — see
@@ -334,6 +337,47 @@ Deferred by physics, not by schedule: spine tilt and forward bend foreshorten to
 hip rotation, X-factor and kinematic sequence need 3D; swing plane and club path need
 detection (M2); face angle and ball flight need the launch monitor. See ADR-011 and
 [FLOW.md](FLOW.md).
+
+### The tempo trainer — the one output that asks for a swing back
+
+Everything above judges a swing that already happened. `analysis/tempo_trainer.py` is the
+exception: `build_tempo_plan(phases, pace)` turns the tour's own durations into a beat sequence a
+golfer swings *to*, because "Tempo too quick" is the one verdict on the panel with no next move
+attached to it ([ADR-023](decisions/023-tempo-training-and-absolute-swing-durations.md)).
+
+It is **derived at read time, not stored**. `api/state.py::resolve_tempo_plan` builds it from the
+stored `phases` and `api/app.py::swing_detail` sends it beside the result — so it works on swings
+analyzed before it existed, and `SwingResult` did not change shape. The results page decides
+whether to show it, because the page holds the verdict; the server decides what the beats are,
+because a page recomputing them would print a tempo nobody is hearing.
+
+**Two beat patterns ship and neither is a rendering of the other.** No single pulse marks both the
+top and impact — the intervals differ by ~3.4x — so `GRID` snaps the backswing to a whole number of
+downswing-length ticks (steady and loopable, ratio rounded) and `CUES` plays three tones at the
+exact medians (true ratio, silent through the backswing). They carry different durations and
+different ratios, which is why those sit on `BeatPattern` rather than on `TempoPlan`.
+
+**The target follows the golfer, via their own backswing.** Swing speed does change swing duration
+— LPGA against PGA, driver only, the backswing runs 1001 ms against 834 and the downswing 267
+against 234 — so a single tour-median target would hand a slower golfer a faster golfer's swing.
+Club is *not* that axis (between-club sd 6.9 ms): a longer club lengthens the lever rather than
+speeding the rotation. Anchoring to the measured backswing captures the effect with no club-head
+speed involved, which is necessary as well as convenient — every stored shot reads a smash factor
+below 1.0, so no usable speed exists. The ratio always stays the tour's; only the anchor's length
+moves. Guarded by the corpus p10–p90, so a backswing that is itself the fault is not rehearsed —
+`TempoPlan.anchored` says which case applied.
+
+**The fit rides on `TempoPlan.pace`, not on the beats.** Patterns are always the tour reference and
+a renderer multiplies by `pace` — one place applies it, and the page's pace slider opens at that
+value rather than a neutral 100%, so the control shows the fitted decision and dragging it overrides
+cleanly. See ADR-023's addendum.
+
+The targets come from two distribution rows added to `golfdb_v1.json` — `backswing_ms` and
+`downswing_ms`, the halves `tempo_ratio` was always built from and then divided away. Both are also
+recorded on `SwingResult.measurements` and **judged by nothing**: no band, no checkpoint, no
+placement, because tempo is scored once already. Read the numbers from the artifact, not from here.
+Those two rows carry their own `Distribution.provenance`, because their inclusion rule is not the
+one the file's `dataset` block describes.
 
 ---
 

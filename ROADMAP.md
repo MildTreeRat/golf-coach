@@ -1,6 +1,6 @@
 # Roadmap: AI Golf Swing Trainer
 
-## Last Updated: 2026-08-14
+## Last Updated: 2026-08-20
 
 Grouped by **state**, not by number, because the numbers no longer run in order: the pose-only
 slices (M4-PoC, M4-PoC+, M4-REF, M5-FB) delivered the mechanics half of M4 and the ranking half
@@ -24,6 +24,7 @@ wording; only the grouping and the M4 checklist have been corrected.
 | **M6.5** Measure now, judge later | ✅ Done | — (9 recorded, **6 scored**; the handedness seam landed and the last candidate was settled) | [§M6.5](#m65-measure-now-judge-later--done) |
 | **Career mode** One golfer over time | ✅ Done, 6/6 steps | — (built and silent; a bay session gives it the `n` to speak) | [§Career](#career-mode-one-golfer-tracked-over-time--done-built-and-silent) |
 | **M8** Learning what "good" means | ✅ Done *(2026-08-17)* | — (three models fitted, validated, surfaced **and spoken**, with a policy rather than a band) | [§M8](#m8-learning-what-good-means--gates-run-model-fitted) |
+| **M9** Player tracking (per-club) | ⬜ Not started, 0/20 phases | Nothing — the ingest half is desk work | [§M9](#m9-player-tracking-per-club-shot-history--not-started) |
 | **M5** Feedback UI | ⬜ Not started | M7 Phase 5 gives the host | [§M5](#milestone-5-feedback-ui) |
 | **M2** Club & ball detection | 🔒 Gated, **and M1.5 said no-go** | Bay lighting for a ~1/2000 s exposure — *not* a global-shutter camera | [§M2](#milestone-2-club--ball-detection) |
 | Hardware re-validation | 🔒 Gated | Cameras / launch monitor arriving | [§Gate](#hardware-re-validation-gate-revisit-when-cameras--launch-monitor-arrive) |
@@ -43,10 +44,15 @@ served live `call_tool` requests including the not-found path. It is registered 
 (`claude mcp add`, per the README) and reports `✔ Connected`, which is a second client completing
 the same handshake independently.
 
-**NEXT ACTION — do this first:** *nothing on this board is desk work any more.* M6 closed on
-2026-08-15 with follow-up questions ([ADR-020](docs/decisions/020-conversational-followups.md)),
-which was the last sizeable item that needed neither a bay nor an `n`. What is left divides in
-two, and both halves want the same trip:
+**NEXT ACTION — do this first: M9 P1.** Until 2026-08-20 this section read *"nothing on this
+board is desk work any more"*, and [M9](#m9-player-tracking-per-club-shot-history--not-started)
+is what stopped that being true. It is the one substantial item that needs **neither a bay session
+nor an `n`**: no shot on disk records which club hit it, and adding that tag is pure desk work that
+makes the *next* bay session's data worth more than the last one's. Start at
+[M9 P1](docs/M9_PLAYER_TRACKING.md); the design is
+[ADR-024](docs/decisions/024-per-club-shot-history.md).
+
+Everything else still divides in two, and both halves want the same trip:
 
 - **Needs a bay session**: M7 Phase 0's field spike, M3's remaining OCR work (the profile
   describes a screen layout the simulator can be configured out of — enumerating that needs the
@@ -56,8 +62,10 @@ two, and both halves want the same trip:
   baseline, the dispersion discriminator, the tour join, and now the follow-up conversation —
   refuses rather than guesses. 20–30 swings in one session is what turns all of them on at once.
 
-So the single highest-value action is **one bay session**, and it unblocks more than any code
-change available. The runbook already sequences it.
+So the highest-value *trip* is still **one bay session**, and it unblocks more than any other
+single thing. The runbook already sequences it. But M9's ingest half should land before that trip
+rather than after it — a session hit without club tags produces data that can never be split by
+club afterwards, which is the one kind of loss no amount of re-analysis repairs.
 
 *(The smaller item that used to sit here — every shot carrying `screen title 'SHOT DATA' not
 found` — was done on 2026-08-14, and was hiding a wrong number: `spin_axis` was stored with its
@@ -323,8 +331,13 @@ first*, grounded in how far off the tour population a swing actually sits. Desig
       *(2026-08-11: that refusal was about **instant detection**, and does not generalize —
       see [§M6.5](#m65-measure-now-judge-later--done). Spatial metrics measured at the
       already-validated instants pass the equivalent gate comfortably.)*
-- [ ] **Reasons, not just names, on `unscored`** — needs the evaluators to return a reason instead of
-      `None`, which touches every return site
+- [x] **Reasons, not just names, on `unscored`** *(2026-08-19)* — the evaluators return a
+      `CheckpointOutcome` and `measure.py` a `MeasureOutcome`, so the reason is decided where the
+      condition failed rather than inferred downstream. Eight causes in `contracts/unscored.py`;
+      the load-bearing field is `refilming_helps`, which is what `feedback/rules.py` was
+      *guessing* from whether the metric had survived into `measurements`. That heuristic is gone,
+      and with it the two checkpoint names `feedback` had to retype because it may not import
+      `analysis`. No number moved, so `ANALYSIS_VERSION` did not — see the ADR-010 addendum
 - [ ] **Per-club percentiles** — the corpus has the strata, but the band has to move in step
       (ADR-010 addendum), so it is one change on two sides, not a percentile-only edit
 
@@ -947,6 +960,60 @@ is the client handshake and conversational follow-up.
 
 ---
 
+## M9: Player tracking, per-club shot history — not started
+
+**Design**: [ADR-024](docs/decisions/024-per-club-shot-history.md).
+**Phase list**: [docs/M9_PLAYER_TRACKING.md](docs/M9_PLAYER_TRACKING.md) — 20 phases, each
+independently commit-ready. **Start at P1.**
+
+**The gap, in one sentence.** This repo can say how a swing compares to a tour population and how
+it compares to the golfer's own history. It cannot say how far you hit your 7 iron, because **no
+shot on disk records which club hit it.**
+
+**Why it is mostly wiring.** Career mode already built everything downstream of that field: the
+corpus reader that counts an honest `n`, the baseline with its minimum-`n` guard, the bias/scatter
+discriminator, and — the load-bearing one — `storage.corpus.narrow_to`, which filters a corpus
+*and recomputes its metric counts*. Adding a `club=` clause to that filter makes the whole career
+pipeline produce per-club answers with nothing new learning the rules. The statistics are written
+and validated; what is missing is the tag.
+
+**Why this is the next action rather than a bay session.** It is the one substantial item on this
+board that needs neither a bay nor an `n`. And the ordering matters in one direction only: a
+session hit *without* club tags produces data that can never be split by club afterwards. Tagging
+is the cheapest thing here and the only one that is unrecoverable if skipped.
+
+**What it delivers.** A bag page: every club with its average carry, its spread, its start-line
+bias, and its loft — each with an honest `n` or an explicit refusal. Plus a declared bag carrying
+per-club loft, which is the anchor club fitting will need and which cannot be reconstructed later.
+
+**What it deliberately does not deliver**, all recorded in ADR-024's *Deferred*:
+
+- **True landing offset.** The simulator prints no offline tile, so lateral miss ships as
+  `start_line_offline_yds` — carry times the sine of the start line, i.e. where the ball *would*
+  have landed if it never curved. Curve stays in degrees on `face_to_path_deg`. A real flight
+  model is blocked on `spin_axis`, whose sign already stored two fades as draws
+  ([ADR-014 addendum](docs/decisions/014-screen-capture-shot-ingestion.md)).
+- **Club fitting.** The reason loft, ball speed and launch angle get recorded now. The models need
+  data nobody has; the inputs are unrecoverable after the fact, so the inputs land and the models
+  wait.
+- **Per-club benchmark bands.** [ADR-010](docs/decisions/010-benchmark-ranges.md) already gated
+  these and cut none — the club is not an axis this panel varies on, and
+  [ADR-023](docs/decisions/023-tempo-training-and-absolute-swing-durations.md)'s addendum reached
+  the same conclusion from the other direction.
+
+**Two traps, written down because both look like oversights.** Do not wire the club into
+`resolve_range` / `PracticeGoal.club` — `ranges.json` holds `club_category: "all"` rows only, so a
+real category makes every checkpoint resolve no band and the panel goes dark. And do not give club
+an `attribute_unlabeled` equivalent: reaching backwards over a session's untagged swings is safe
+for golfer (usually one per session) and destructive for club (many per session).
+
+**Expect refusals.** Every swing currently on disk is untagged, and the guard needs five shots per
+club before it will state a mean. The correct output at every stage of M9 is a refusal with a
+correct `n`; a number appearing early is the bug. Same acceptance criterion career mode shipped
+under.
+
+---
+
 ## Milestone 3: Launch Monitor Integration — in progress
 **Goal**: Ingest real shot data from a launch monitor and expose it via MCP server.
 **Hardware to start**: None any more. Shot data now comes from photos of the **HD Golf** simulator's `SHOT DATA` screen, parsed by local OCR ([ADR-014](docs/decisions/014-screen-capture-shot-ingestion.md)) — hardware already owned. The Garmin R10 (ADR-004) stays the right answer for real-time streaming and drops into the same port when bought. `club_path` is the quantitative counterpart to M2's visual club-path arc.
@@ -1358,7 +1425,15 @@ the `PROVISIONAL / UNCALIBRATED` provenance strings in `ranges.json`.
       licensing (ADR-012), so shipping this needs a redistribution story — aggregate percentiles are
       committable, per-clip keypoints of named tour players are not. **M8 found the way round
       this**: a *basis* fitted over 122 pros is an aggregate, and a basis is not a pro
-- [ ] Drill recommendations based on persistent faults
+- [ ] Drill recommendations based on persistent faults — **one of them shipped** (2026-08-20,
+      [ADR-023](docs/decisions/023-tempo-training-and-absolute-swing-durations.md)): the tempo
+      trainer, a metronome built from tour absolute durations and played on the results page when
+      the tempo checkpoint fails. Not "persistent" yet — it reads one swing, and a fault is only
+      persistent against a `PersonalBaseline`, which is still gated on `n`. Two things it added
+      that the rest of this row can build on: `backswing_ms` / `downswing_ms` now reach
+      `measurements` (so *which half* is off becomes answerable once `n` exists), and the requested
+      mph-indexed version was measured and refused — club moves tour downswing duration by 6.9 ms
+      against 47.0 ms between golfers
 - [x] ~~Trained ML model for swing quality regression (replace/augment rules)~~ — **attempted and
       redirected**, see [§M8](#m8-learning-what-good-means--gates-run-model-fitted). Regression
       against *outcome* is closed (ADR-021: face-on pose does not predict ball flight). What shipped

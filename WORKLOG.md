@@ -5,6 +5,268 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-08-20 — M9 planned: the club tag, and why distance was never measurable
+
+**Duration**: ~1 session, **design only — no code**. New ADR-024, new
+[docs/M9_PLAYER_TRACKING.md](docs/M9_PLAYER_TRACKING.md) (20 phases), ROADMAP updated. Nothing
+under `src/` was touched.
+**What prompted it**: the ask was "player tracking" — clubs used, average distance per club,
+relative dispersion, and eventually club fitting off swing speed and launch. Exploring for it
+turned up that almost all of it is already built.
+
+**The finding that shaped the whole plan: career mode already does this, minus one field.** The
+corpus reader, the honest `n`, the confidence intervals, the minimum-`n` guard, the bias/scatter
+discriminator — all built, all validated, all silent. And `storage.corpus.narrow_to` already
+filters a corpus *and recomputes `metric_counts`*, which exists so a filtered swing list can never
+sit beside an `n` describing a different set. **Adding `club=` to that one function makes the
+entire career pipeline produce per-club answers with nothing new learning the rules.** So M9 is
+mostly wiring, and the estimate should be read that way.
+
+**Why carry distance was never a measurement, which I had assumed was an oversight.** It is not —
+it is that a carry pooled across clubs is not a noisy estimate of anything, it is an average of two
+different questions. `shot_measure.py` records `face_to_path_deg` and `start_line_deg` and stops.
+**The club tag is what makes distance poolable at all**, which is why carry arrives with M9 rather
+than with M6.5, and that reason belongs in the module docstring when P8 lands.
+
+**"Average yards left or right" is not measurable and I nearly planned it as if it were.** Checked
+`launch_monitor/screen/profiles.json` field by field: the HD Golf screen prints Shot Distance,
+Carry, Bounce & Roll, Ball Speed, Launch Angle, Club Speed, Club Path, Club Face Angle, Spin,
+Smash Factor, Impact Position, Shot Type, Horizontal Angle, Spin Axis. **No offline tile, no
+landing coordinate, and no club tile either.** So lateral miss ships as
+`start_line_offline_yds = carry * sin(start_line)` — exact trigonometry, where the ball *would*
+have landed if it never curved — and the docstring has to say *started*, never *finished*. A real
+flight model is deferred on `spin_axis`, which ADR-014's addendum already caught storing two fades
+as draws.
+
+**Two traps found while planning, both written into the ADR because both look like oversights.**
+`PracticeGoal.club` already exists and threads into `resolve_range`, so wiring the new tag into it
+looks like the obvious payoff — but `ranges.json` holds **6 rows, all `club_category: "all"`**, so
+a real category makes every checkpoint resolve no band and the fundamentals panel goes dark. And
+club must *not* get an `attribute_unlabeled` equivalent: reaching backwards over a session's
+untagged swings is safe for golfer (usually one per session) and destructive for club (many).
+
+**The one place I overrode the stated preference, and why.** The ask was "club required at
+upload". Taken literally that means the client sends it — but `api/app.py` reads `player_id` from
+a *server-side session cursor* with the comment *"both phones post into the same swing, and only
+one of them is being held by someone who knows whose swing it is."* Two phones with two
+`localStorage` club values would disagree and the disagreement would land in the manifest. So
+requiredness is enforced as **409 on `/api/uploads` when the club cursor is unset** — genuinely
+blocking, one copy of the value.
+
+**Where it was left**: nothing built. Start at **M9 P1** (`contracts/club.py`). P1–P7 are the
+ingest spine and run in order; **P8–P11 are the measurements and are fully independent of them**,
+so the two tracks can go in parallel or to separate sessions. P10 is skippable.
+
+**Expect refusals throughout.** Every swing on disk is untagged and the guard needs 5 shots per
+club. The correct output at every stage is a refusal with a correct `n`; a number appearing early
+is the bug. Same acceptance criterion career mode shipped under.
+
+**Note the working tree** still carries the uncommitted tempo/`unscored` work from the previous two
+sessions. This entry's changes are docs-only and touch none of it.
+
+---
+
+## 2026-08-20 — the tempo trainer, and the mph axis the corpus refused
+
+**Duration**: ~1 session. Implements the tempo plan end to end. New ADR-023, two new modules,
+`ANALYSIS_VERSION` 6 -> 7.
+**What prompted it**: picking up a plan a previous session wrote and did not start. Note the
+working tree still carries that session's **`unscored` change, uncommitted** — this is built on top
+of it (Part 2 relies on `tempo_timings`' three refusal paths, which that change introduced), so the
+two want committing in order.
+
+**The ask was a tempo indexed by club speed, and the corpus said no.** Over the 310 non-slow-motion
+GolfDB clips with a real frame rate, between-club sd of downswing duration is **6.9 ms** — a fifth
+of one frame — against **47.0 ms** between golfers. Tour downswing duration does not move with club
+across the widest speed range in golf. That reproduces ADR-010's 2026-08-18 ratio finding on the
+*absolute* durations, which is stronger: the ratio could have held while both halves scaled, and it
+does not. Add that `shot_measure.py` already refuses `club_head_speed` because every stored shot
+reads a smash factor under 1.0, and an mph axis would have been a fabricated relationship keyed off
+a known-bad number. A **pace** scale ships instead: multiplies both halves, moves no ratio.
+
+**Two beat patterns, and that is the design rather than a feature.** No single pulse marks both the
+top and impact — the intervals differ by 3.4x, so 67 BPM cannot mark impact and 225 BPM is not a
+groove. `GRID` snaps the backswing to whole downswing-length ticks (steady, loopable, ratio
+rounded); `CUES` plays three tones at the exact medians (true ratio, ~900 ms of silence). They carry
+different durations, which is why those live on `BeatPattern` and not on `TempoPlan` — one `ratio`
+field beside two patterns would be false for one of them, and plausibly so.
+
+**The surprise in Part 1: every duration-eligible clip is down-the-line.** The plan predicted the
+sample exactly (n=310, 168 golfers, p50 901 / 267 ms) but not its composition. The face-on half of
+the pose cache predates the `clip` envelope, so no face-on clip has a recoverable frame rate, and
+the source videos are not kept. It does not compromise the numbers — a duration comes from
+ground-truth event labels and the clip's fps and reads no landmark — but the sample is one view, so
+`Distribution` gained a per-row `provenance` and those two rows state it. The `dataset` block now
+points at that field rather than restating the exception.
+
+**Two landmines, and only one of them was the pin's doing.** `test_dispersion` failed honestly —
+a metric in `measure.py` and nowhere else. The other was silent: **`derive_pose_metrics.py` would
+have written frame counts into `swings.jsonl` under a millisecond name.** It measures every
+registered metric at *labelled* instants, and `_phases_from_events` puts frame indices in
+`start_ms` by design, since ~47% of the corpus is slow-motion and only ratios were ever read from
+them. Those frame counts would have sat beside the real milliseconds `derive_reference.py` computes
+and every duration band would have been cut from the mixture. Nothing in `tests/` covers the
+research scripts. `tune_spatial_metric.py` had the same bug in the other direction — it printed
+`backswing_ms` at ratio 0.1, **"MOSTLY NOISE"**, which reads exactly like a finding and is frames
+minus milliseconds. Both now refuse the set, and the set is
+`measure.FPS_DEPENDENT_MEASUREMENTS`, derived from the metric's own unit rather than listed.
+
+**The two tolerances are composed, not tuned, and that is stated.** The harness cannot measure them,
+so they come from the M4-REF instant errors — a duration is a subtraction of two instants, so its
+error is theirs summed: backswing (2+7) frames = 300 ms, downswing (1+2) = 100 ms. Address dominates
+the first exactly as it dominates `tempo_ratio`'s tuned 0.943, and 300 ms on a 267 ms downswing is
+~1.1 of ratio — the same size, arrived at independently. That agreement is the only cross-check
+available.
+
+**Verified.** 803 tests green, ruff and mypy clean. `derive_reference.py` re-run: every existing
+distribution byte-identical, only the provenance stamps and the two new metrics moved. The page's
+728 lines of JS parse under `node --check`, and its gating was driven in node — renders only when
+tempo failed, hidden when it passed, was unscored, or no plan came; the verdict prose is escaped.
+
+**`overall_score` was proven unmoved rather than assumed.** Ran the engine twice over the same
+stored keypoints, once with the two metrics registered and once without: `overall_score`,
+`mechanics_score`, `checkpoint_scores` and `unscored` all byte-identical, the only difference being
+the two new measurements. Done in-process — `reanalyze.py --all` would have overwritten four real
+untracked artifacts to prove less.
+
+**Then the premise was challenged, and it was right.** *"The tempo of a 70 mph swing and a 100
+mph swing are going to vary."* They do. The club test above answers a different question: a longer
+club raises head speed by **lengthening the lever**, not by rotating faster, so duration holds —
+that is the 6.9 ms. A golfer who swings harder rotates faster, which compresses the swing, and the
+club test could not see it. GolfDB carries a real speed cohort in `sex`: LPGA against PGA, driver
+only, one vote per golfer — backswing **1001 ms against 834**, downswing **267 against 234**. About
+five times the club effect. ADR-023 now carries an addendum saying so, and the Status line points at
+it, because the Context section as written would send the next reader the wrong way.
+
+**The fix is not an mph axis, it is an anchor.** `build_tempo_plan` now targets the golfer's own
+measured backswing and derives the downswing from it at the tour ratio. A slower golfer's longer
+backswing *is* the speed signal, measured rather than inferred — which matters because there is
+still no usable club-head speed to key on. The ratio stays the tour's: it is the anchor's length
+that follows the golfer, never the shape, since the ratio is what the checkpoint judges.
+**Guarded** by the corpus p10-p90, so a backswing that is itself the fault is not rehearsed. With
+no usable backswing it collapses onto exactly what shipped this morning, and that is pinned.
+
+**Then: can the golfer still use the slider?** Yes, and it now opens where the fit put it. The
+anchoring was moved out of the beats and onto `TempoPlan.pace`, so the patterns are always the tour
+reference and one place applies a pace — the renderer. A slow swinger's control opens at **111%**, a
+quick one's at **83%**, unanchored at 100%, and dragging is a plain override. Baked into the beats
+it read 100% for everyone, showing nothing of the decision it overrides. This also removed a latent
+double-application: `build_tempo_plan` took a `pace` and pre-multiplied *while* the page multiplied
+by its slider. Nothing ever passed one, so it never bit; the parameter is gone rather than
+documented. The slider's bounds are pinned against the guard's own range, read out of
+`results.html`, so widening the guard without widening the control fails a test.
+
+**A pre-existing display bug fell out of testing it.** `num()` stripped trailing zeros with
+`.replace(/\.?0+$/, "")`, which anchors on any run of trailing zeros rather than ones after a
+decimal point — so it ate them out of whole numbers too. **A score of 90 rendered as "9", a clamped
+percentile of 10 as "1", 890 ms as "89", and exactly 0 as the empty string.** Every result is a
+plausible number, which is why it survived on a page that has shipped for milestones. Fixed, and
+pinned through node, having first confirmed the pin fails on the old regex.
+
+**One self-inflicted scare worth recording.** I ran `git checkout` on `results.html` to undo a
+deliberately-broken formatter and reverted the *whole file*, discarding the tempo block with it —
+the file had a session's uncommitted work in it and HEAD did not. Rebuilt from the same content and
+re-verified. **Do not `git checkout` a file in this tree while the `unscored` and tempo work is
+uncommitted**; there is no second copy.
+
+**PICK UP HERE.** Two things. First, **the stored swings are still version 6** — nothing on disk was
+rewritten, so `scripts/reanalyze.py --all` is what gives the four of them their durations, and it is
+a deliberate uncommitted-work decision rather than an oversight. Second, the deferral worth having:
+**which half is off.** On `2026-08-10/2` the backswing is 901 ms — *exactly* the tour median — and
+the downswing is 384 ms, 28% past the p90 edge. Tempo fails there because the downswing is slow,
+which is the opposite of what its own headline, "Tempo too quick", sounds like it means. Diagnosing
+that needs a `PersonalBaseline` over the two new measurements, so it is gated on `n` like everything
+else on this board.
+
+---
+
+## 2026-08-19 — `unscored` says why, and two consumers stop guessing
+
+**Duration**: ~1 session. One new contracts module, one ADR-010 addendum, no version bump.
+**What prompted it**: "what's the next thing to work on?" — the board is all bay-or-`n` now, and
+M5-FB's deferred list still held one box that needed neither.
+
+**The box was "reasons, not just names, on `unscored`", and the interesting part is who was
+already answering it.** `SwingResult.unscored` was `list[str]`. Its own field description admitted
+the gap. But a golfer still had to be told *something*, so two places downstream reconstructed the
+cause and **neither was the source**: `feedback/rules.py` held a `_UNSCORED_REMEDY` table keyed on
+checkpoint name and decided between "film it again" and "pick a golfer" by checking whether
+`head_hip_gain_norm` had survived into `measurements` — if the number was there the frames must
+have been readable. `api/pipeline.py` narrated the same case again as free text.
+
+**That heuristic was right and unextendable, which is a worse state than wrong.** It inferred the
+failure from a side effect rather than from the failure, so it worked for the one checkpoint
+someone wrote a row for and could never cover a second. A `NO_BAND` — swing measured fine, repo has
+no benchmark — would have been told to steady the camera. Nobody would have noticed, because the
+advice is plausible.
+
+**The causes were always enumerable: 13 `return None` sites, six conditions.** Every one is a
+helper in `measure.py` failing, a `resolve_range` miss, or a missing `handedness`. Each knows
+exactly which, and has the window and landmark group still in hand — all of which is gone by the
+time a `None` reaches `feedback`. New `contracts/unscored.py` names them
+(`PHASE_NOT_SEGMENTED`, `BOUNDARY_ESTIMATED`, `TIMING_DEGENERATE`, `LANDMARKS_UNCONFIDENT`,
+`TOO_FEW_FRAMES`, `SCALE_UNAVAILABLE`, `NO_BAND`, `NO_HANDEDNESS`) with one `ReasonSpec` row each.
+`measure_*` returns `MeasureOutcome`, evaluators return `CheckpointOutcome`.
+
+**The load-bearing field is `refilming_helps`, not the reason.** It is the bit every consumer needs
+and none could derive, and it is exactly what the old table was inferring. `contracts/caveats.py`
+derives its warning from it rather than listing causes in prose, so a reason added later cannot
+leave the coaching models reading a stale list — two `test_docs_truth.py` pins hold both directions
+of that, because a capture problem listed as "not a capture problem" fails silently.
+
+**Where the vocabulary lives is the whole reason it works.** `feedback` may not import `analysis`
+(ADR-008) — that is what forced `rules.py` to retype two checkpoint names as literals with a
+comment apologising for it. Putting the vocabulary in `contracts/` removes the need rather than
+working around it. Same argument `caveats.py` and `dispersion.py::METRIC_TARGETS` already make.
+
+**One split kept deliberately: `MEASUREMENT_REASONS`.** `measure.py` may report only the six
+measurement causes; `NO_BAND` and `NO_HANDEDNESS` cannot come out of it. That is M6.5's
+measure/judge separation made *checkable* — a `NO_BAND` escaping into `measure.py` would mean the
+measuring layer had started consulting bands again, which is the fusion that kept the panel at
+three checkpoints. Pinned in `tests/analysis/test_measure.py`, and the two sets are asserted to
+partition the enum so neither pin can go vacuous.
+
+**`ANALYSIS_VERSION` deliberately did not move.** Every number and verdict is where it was; what
+changed is what a refusal says about itself. Its own rule is "not for anything that leaves every
+number where it was".
+
+**Two things nearly went wrong, both caught by a tool rather than by reading.**
+`scripts/golfdb/derive_pose_metrics.py` and `tune_spatial_metric.py` iterate `POSE_MEASUREMENTS`
+and did `if value is None: continue` — and a `MeasureOutcome` is never `None`, so both would have
+stored the *tuple* as the metric and taken every band derived from that file with it. Nothing in
+`tests/` covers the research scripts. Second: mypy caught `outcome` colliding with the outcome
+*axis* list in `engine.py`, which is a name this repo uses for something else entirely.
+
+**Back-compat, and the one unacceptable option.** Old artifacts store `unscored` as bare names.
+`SwingResult` coerces those to `UNRECORDED` in one `field_validator`; `mcp/query.py` does the same
+for the raw JSON it reads without building the model, and also swallows an unrecognised reason from
+a *newer* build. Dropping the entries was never on: a swing judged on five fundamentals would start
+reading as one judged on six. The engine never writes `UNRECORDED` — pinned, so "this file does not
+know" cannot decay into "we did not bother to say". All four stored swings happen to have empty
+`unscored`, so nothing on disk changed.
+
+**Verified.** 779 tests green, ruff and mypy clean. Driven in-process over the real
+`2026-08-10/2` face-on keypoints rather than through `analyze_bundle.py`, because
+`data/processed/` is untracked and re-running the CLI would overwrite a real artifact and could
+fire a paid coaching call. Unattributed, that swing reports `head_stays_back` / `no_handedness`,
+`refilming_helps=False`, and the tip says pick a golfer *and will score without re-filming* —
+where the old code got there by a guess that happened to be right.
+
+**PICK UP HERE.** M5-FB has one box left and it is not desk work: **per-club percentiles**, which
+needs the band and the percentile to move together (ADR-010 addendum) and is gated behind the same
+`ResolvedRange` contract change the 2026-08-18 entry describes. Everything else on the board still
+splits the way ROADMAP's NEXT ACTION says — bay session, or `n`.
+
+If someone picks up the UI thread instead: `results.html` renders the reason token and puts
+`detail` in a `title`, deliberately **not** the remedy prose — that is written once on the server
+and arrives in the Tips list. Adding it to the page would be the second copy this change removed.
+
+`tests/api/test_worker.py::test_failure_is_recorded_and_the_consumer_survives` remains **flaky** —
+threading test, 5s timeout, fails under load and passes in isolation. Unrelated; re-run before
+believing it.
+
+---
+
 ## 2026-08-18 — Per-club bands, gated and declined; M8's checklist is empty
 
 **Duration**: ~1 session. One new gate script, one ADR addendum, no code, no version bump.

@@ -35,14 +35,19 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, TypeAdapter, ValidationError
 
+from golf_coach.analysis.tempo_trainer import build_tempo_plan
 from golf_coach.contracts.checkpoints import CHECKPOINT_REGISTRY
 from golf_coach.contracts.placements import PLACEMENTS_BY_NAME
-from golf_coach.contracts.swing import ANALYSIS_VERSION
+from golf_coach.contracts.swing import ANALYSIS_VERSION, PhaseSegment
 from golf_coach.storage.manifest import SwingManifest
 
 STATE_NAME = "analysis.state.json"
+
+#: Re-hydrates `swing.phases` off a stored artifact. Module-level because `TypeAdapter` builds a
+#: validator on construction and `resolve_tempo_plan` is called once per swing detail request.
+_PHASE_LIST_ADAPTER = TypeAdapter(list[PhaseSegment])
 
 Status = Literal["queued", "running", "done", "failed"]
 
@@ -211,6 +216,39 @@ def resolve_placements(analysis: dict | None) -> list[dict]:
             }
         )
     return resolved
+
+
+def resolve_tempo_plan(analysis: dict | None) -> dict | None:
+    """A metronome for this swing, built from the tour's durations. None if it cannot be.
+
+    Built from the stored **phases**, not from the stored measurements, and that is what makes it
+    work on an artifact written before `backswing_ms` and `downswing_ms` existed (`ANALYSIS_VERSION`
+    6 and earlier). A version-6 swing has every instant this needs; it simply never wrote the two
+    subtractions down.
+
+    Returns a plain dict for the same reason `resolve_placements` does — this is a route payload,
+    and `contracts` holds no dict-readers. The plan itself is a real `TempoPlan`; only the
+    serialization is loose.
+
+    Tolerant in the one direction that matters: a stored `phases` list that will not validate
+    yields None rather than an exception, because a results page failing to render a *whole swing*
+    over an optional practice aid would be the wrong trade.
+    """
+    if not isinstance(analysis, dict):
+        return None
+    swing = analysis.get("swing")
+    if not isinstance(swing, dict):
+        return None
+    raw_phases = swing.get("phases")
+    if not isinstance(raw_phases, list):
+        return None
+    try:
+        phases = _PHASE_LIST_ADAPTER.validate_python(raw_phases)
+    except ValidationError:
+        return None
+
+    plan = build_tempo_plan(phases)
+    return plan.model_dump(mode="json") if plan is not None else None
 
 
 def judged_metrics(analysis: dict | None) -> list[str]:

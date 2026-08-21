@@ -279,7 +279,14 @@ def _handedness_for(manifest: SwingManifest) -> tuple[Handedness | None, str | N
 
     Both failure modes are narrated rather than defaulted. Guessing right-handed would score a
     left-handed golfer's ordinary impact position as a gross fault, so an unattributed swing loses
-    the checkpoint and says so — `unscored` names it, and the note here explains why.
+    the checkpoint and says so — `unscored` reports it with reason `NO_HANDEDNESS`.
+
+    **The note here is not a duplicate of that reason, and the difference is the layer.** The
+    evaluator knows only that no handedness reached it; it cannot know *why* none did, because
+    `analysis` does not import the golfer registry and must not. Whether nobody picked a golfer or
+    a `player_id` points at a golfer who is not in the registry is knowledge that exists only in
+    this shell — and the two want different fixes. So the reason says what was missing and the note
+    says how it went missing.
     """
     if manifest.player_id is None:
         return None, (

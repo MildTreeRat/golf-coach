@@ -46,6 +46,7 @@ from golf_coach.contracts.swing import (
     SwingBundleResult,
     SwingResult,
 )
+from golf_coach.contracts.unscored import UnscoredCheckpoint
 
 
 def _placements(
@@ -200,7 +201,10 @@ def _measurements(
     pose_values: dict[str, float] = {}
 
     for name, pose in POSE_MEASUREMENTS.items():
-        value = pose.measure(smoothed, phases)
+        # The reason a measurement is missing is not recorded here. `measurements` is the
+        # unjudged half — a metric absent from it has no band to be unscored *against*, and
+        # the reasons that matter are the ones attached to a checkpoint below.
+        value = pose.measure(smoothed, phases).value
         if value is None:
             continue
         pose_values[name] = value
@@ -257,9 +261,9 @@ def analyze_swing(
     per session, while handedness is *who they are* and is recorded once (`contracts.golfer` states
     the distinction and why the field is captured at capture time).
 
-    Passing `None` costs the swing that one checkpoint, reported by name in `unscored`, and costs it
-    nothing else. `analysis` stays pure: resolving a `player_id` to a `Golfer` is the shell's job
-    (`api.pipeline`), and nothing here imports the golfer registry.
+    Passing `None` costs the swing that one checkpoint, reported in `unscored` with reason
+    `NO_HANDEDNESS`, and costs it nothing else. `analysis` stays pure: resolving a `player_id` to
+    a `Golfer` is the shell's job (`api.pipeline`), and nothing here imports the golfer registry.
     """
     intent = intent or PracticeGoal()
 
@@ -269,28 +273,34 @@ def analyze_swing(
     smoothed = smooth_keypoints(keypoints)
     phases = segment_phases(smoothed)
 
-    # Each evaluator returns `None` rather than guess when it cannot measure — no band, unusable
-    # landmarks, or a boundary that was estimated rather than detected (ADR-010 §2, ADR-013). That
-    # is right, but a dropped score still has to be *reported*: `overall_score` is a mean over
-    # whatever survived, so a two-checkpoint swing and a three-checkpoint swing otherwise print the
-    # same number with nothing to distinguish them. Walking the registry is what lets `unscored`
-    # say which one went missing — the name comes off the spec, so it cannot disagree with the
-    # `CheckpointScore` the same spec's evaluator produced.
+    # Each evaluator refuses rather than guesses when it cannot score — no band, unusable
+    # landmarks, a boundary that was estimated rather than detected, or no golfer attributed
+    # (ADR-010 §2, ADR-013). That is right, but a dropped score still has to be *reported*:
+    # `overall_score` is a mean over whatever survived, so a two-checkpoint swing and a
+    # three-checkpoint swing otherwise print the same number with nothing to distinguish them.
+    # Walking the registry is what lets `unscored` say which one went missing — the name comes
+    # off the spec, so it cannot disagree with the `CheckpointScore` the same spec's evaluator
+    # produced — and the evaluator supplies *why*, which nothing downstream could recover.
     #
     # Registry order is the reported order (`contracts.checkpoints` says so), and every evaluator is
     # called through the one adapted signature, so the two that read a narrower set of arguments —
     # tempo takes no keypoints, `head_stays_back` is the only one that needs handedness — do not
     # each need a line here.
     mechanics: list[CheckpointScore] = []
-    unscored: list[str] = []
+    unscored: list[UnscoredCheckpoint] = []
     for spec in CHECKPOINT_REGISTRY:
-        checkpoint = CHECKPOINT_EVALUATORS[spec.name](
+        # Not `outcome` — that name is the outcome *axis* a dozen lines down (ADR-009), and the
+        # two mean opposite things.
+        judged = CHECKPOINT_EVALUATORS[spec.name](
             smoothed, phases, handedness, intent.club, None
         )
-        if checkpoint is not None:
-            mechanics.append(checkpoint)
+        if judged.score is not None:
+            mechanics.append(judged.score)
         else:
-            unscored.append(spec.name)
+            assert judged.reason is not None, f"{spec.name} produced neither a score nor a reason"
+            unscored.append(
+                UnscoredCheckpoint(name=spec.name, reason=judged.reason, detail=judged.detail)
+            )
 
     # Pose-only PoC: no outcome checkpoints yet (needs M2 detection / M3 shot data).
     outcome: list[CheckpointScore] = []

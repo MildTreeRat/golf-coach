@@ -133,6 +133,13 @@ def clip_path(videos_dir: Path, source_id: str) -> Path:
     return videos_dir / f"{source_id}.mp4"
 
 
-def keypoints_path(source_id: str) -> Path:
-    """Where this clip's extracted keypoints live (Tier 1 cache, gitignored)."""
-    return KEYPOINTS_DIR / f"{source_id}.keypoints.json"
+def keypoints_path(source_id: str, estimator_slug: str) -> Path:
+    """Where this clip's extracted keypoints live (Tier 1 cache, gitignored).
+
+    The cache is partitioned **by estimator** — `extract_pose.py` writes under
+    `KEYPOINTS_DIR / estimator_slug(name)` so the bake-off can hold four estimators' output for
+    the same clip at once. This helper used to omit that level and return a path that has never
+    existed; it had no callers, so nothing failed and the bug sat here looking like the way to do
+    it. Pass `extract_pose.estimator_slug(name)`, or one of the slugs already on disk.
+    """
+    return KEYPOINTS_DIR / estimator_slug / f"{source_id}.keypoints.json"

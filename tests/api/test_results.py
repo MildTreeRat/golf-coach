@@ -8,11 +8,16 @@ the base install with no worker, no threads, and no cv2.
 from __future__ import annotations
 
 import json
+import pathlib
 import re
+import shutil
+import subprocess
+import tempfile
 
 import pytest
 from fastapi.testclient import TestClient
 
+from golf_coach.analysis.tempo_trainer import build_tempo_plan
 from golf_coach.api.app import _STATIC_DIR, create_app
 from golf_coach.api.state import AnalysisState, save_state
 from golf_coach.contracts.placements import POPULATION_PLACEMENT_REGISTRY
@@ -47,6 +52,23 @@ _ANALYSIS = {
     "swing": {
         "swing_id": "1",
         "session_id": "seeded",
+        # A real segmentation, because the tempo trainer is derived from `phases` rather than from
+        # `measurements` — that is what makes it work on artifacts written before the durations
+        # existed, and it is only exercised if the fixture carries phases at all.
+        "phases": [
+            {"phase": "address", "start_frame": 0, "end_frame": 1,
+             "start_ms": 0.0, "end_ms": 0.0, "detected": True},
+            {"phase": "backswing", "start_frame": 1, "end_frame": 2,
+             "start_ms": 0.0, "end_ms": 890.0, "detected": True},
+            {"phase": "transition", "start_frame": 2, "end_frame": 3,
+             "start_ms": 890.0, "end_ms": 910.0, "detected": True},
+            {"phase": "downswing", "start_frame": 3, "end_frame": 4,
+             "start_ms": 910.0, "end_ms": 1284.0, "detected": True},
+            {"phase": "impact", "start_frame": 4, "end_frame": 5,
+             "start_ms": 1284.0, "end_ms": 1304.0, "detected": True},
+            {"phase": "follow_through", "start_frame": 5, "end_frame": 6,
+             "start_ms": 1304.0, "end_ms": 1800.0, "detected": True},
+        ],
         "overall_score": 86.0,
         "mechanics_score": 86.0,
         "checkpoint_scores": [
@@ -321,3 +343,120 @@ def test_the_results_page_hard_codes_no_placement_name() -> None:
             f"results.html names {spec.name} in code; it must partition on the `population` list "
             "the API resolves from POPULATION_PLACEMENT_REGISTRY instead"
         )
+
+
+def test_swing_detail_carries_a_tempo_plan_built_from_the_stored_phases(client, store) -> None:
+    """ADR-023. The trainer is derived at read time, so a stored swing needs no re-analysis.
+
+    Built from `phases` rather than from `measurements` deliberately: the fixture carries no
+    `backswing_ms` at all, exactly like every artifact written before `ANALYSIS_VERSION` 7, and it
+    still gets a metronome.
+    """
+    session_id = _seed(client, store)
+
+    plan = client.get(f"/api/sessions/{session_id}/swings/1").json()["tempo_plan"]
+
+    assert plan is not None
+    modes = [p["mode"] for p in plan["patterns"]]
+    assert modes == ["grid", "cues"], "grid is the default and order is what the page plays"
+
+    # The observed side comes off this swing's own phases: 900 ms back, 384 ms down.
+    assert plan["observed_backswing_ms"] == pytest.approx(900.0)
+    assert plan["observed_downswing_ms"] == pytest.approx(384.0)
+
+    for pattern in plan["patterns"]:
+        assert pattern["beats"][0]["role"] == "takeaway"
+        assert pattern["beats"][-1]["role"] == "impact"
+        assert pattern["source"], "a pattern that cannot say where its numbers came from"
+
+
+def test_a_swing_with_no_stored_phases_gets_no_plan_rather_than_an_invented_one(
+    client, store
+) -> None:
+    """Refuse, never guess — and here the stakes are a golfer rehearsing to the invented number."""
+    session_id = _seed(client, store)
+    swing_dir = store.root / session_id / "1"
+    stripped = json.loads((swing_dir / "analysis.json").read_text(encoding="utf-8"))
+    del stripped["swing"]["phases"]
+    (swing_dir / "analysis.json").write_text(json.dumps(stripped), encoding="utf-8")
+
+    body = client.get(f"/api/sessions/{session_id}/swings/1").json()
+
+    assert body["tempo_plan"] is None
+    assert body["result"]["swing"]["overall_score"] == 86.0, "the rest of the swing still renders"
+
+
+def test_the_results_page_writes_no_tempo_number_of_its_own() -> None:
+    """The standing rule the placement pin already holds, extended to the trainer.
+
+    Every duration, ratio, tick count and mode name is computed in `analysis/tempo_trainer.py` and
+    arrives on the payload. A number typed into the page is a second copy of the corpus, and it
+    goes stale silently the next time `derive_reference.py` runs — which is precisely how the
+    placements came to ship with prose that named none of them.
+
+    `GRID`'s ratio is the specific trap: it is a *rounded* one, so a page recomputing it from the
+    tour medians would print a tempo the golfer is not hearing.
+    """
+    page = _without_comments((_STATIC_DIR / "results.html").read_text(encoding="utf-8"))
+
+    plan = build_tempo_plan([])
+    # The durations and the beat instants — every one three or four digits, so a match is a real
+    # hard-code rather than a stray digit in a CSS length. Beat *counts* and the grid ratio are
+    # deliberately not checked: they are single digits and unsearchable in an HTML file, and both
+    # are implied by the durations that are checked.
+    forbidden = {round(p.backswing_ms) for p in plan.patterns}
+    forbidden |= {round(p.downswing_ms) for p in plan.patterns}
+    forbidden |= {round(b.at_ms) for p in plan.patterns for b in p.beats if b.at_ms > 0}
+
+    for number in sorted(forbidden):
+        assert str(number) not in page, (
+            f"results.html contains {number}, which is a tempo fact the API already sends"
+        )
+
+    for mode in (p.mode.value for p in plan.patterns):
+        assert f'"{mode}"' not in page, (
+            f"results.html names the {mode} mode in code; it must render `pattern.mode` instead"
+        )
+
+
+def test_the_pages_number_formatter_does_not_eat_trailing_zeros() -> None:
+    """A regression pin for a bug that rendered a score of 90 as "9".
+
+    `num()` strips trailing zeros so `2.50` reads `2.5`. The first version anchored on any run of
+    trailing zeros rather than on ones after a decimal point, so it also ate them out of whole
+    numbers: 90 -> "9", a clamped percentile of 10 -> "1", 890 ms -> "89", and exactly 0 -> "".
+    Every result is a plausible number, which is why nobody caught it by looking.
+
+    Driven through node because the page's JavaScript is otherwise untested, and this is arithmetic
+    rather than markup — reading the regex back out of the file would only restate it.
+    """
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("node is not available to evaluate the page's JavaScript")
+
+    source = (_STATIC_DIR / "results.html").read_text(encoding="utf-8")
+    script = re.search(r"<script>(.*?)</script>", source, re.DOTALL).group(1)
+    cases = [(890, 0, "890"), (90, 0, "90"), (10, 0, "10"), (0, 0, "0"), (100, 0, "100"),
+             (86.5, 0, "87"), (2.5, 2, "2.5"), (3.0, 2, "3"), (0.1, 2, "0.1"), (4.71, 2, "4.71")]
+
+    harness = (
+        'globalThis.location={search:"",href:""};'
+        "globalThis.localStorage={getItem:()=>null,setItem(){}};"
+        "globalThis.document={getElementById:()=>null,querySelectorAll:()=>[],"
+        "addEventListener(){},body:{}};"
+        "globalThis.window=globalThis;globalThis.fetch=async()=>({ok:false,json:async()=>({})});\n"
+    )
+    checks = "\n".join(
+        f'console.log(JSON.stringify(num({value}, {digits})));' for value, digits, _ in cases
+    )
+    with tempfile.TemporaryDirectory() as tmp:
+        path = pathlib.Path(tmp) / "num.mjs"
+        path.write_text(harness + script + "\n" + checks, encoding="utf-8")
+        # Not `check=True`: the page calls `load()` at the top level, which reaches for a DOM node
+        # this harness does not provide and throws *after* the checks have printed. Reading stdout
+        # is the assertion — a genuine syntax error prints nothing and fails on the compare below,
+        # so the exit code buys nothing here and would only couple this to the bootstrap.
+        out = subprocess.run([node, str(path)], capture_output=True, text=True, check=False)
+
+    got = [json.loads(line) for line in out.stdout.splitlines() if line.strip()]
+    assert got == [want for _, _, want in cases], out.stderr[-400:]

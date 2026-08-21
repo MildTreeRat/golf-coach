@@ -127,6 +127,45 @@ def test_the_sided_split_in_the_caveats_matches_the_registry() -> None:
             assert f"`{spec.name}`" in head, f"{spec.name} is two-sided but is not listed as one"
 
 
+def test_the_caveats_name_every_reason_that_cannot_be_fixed_by_re_filming() -> None:
+    """The half of the unscored prose that reverses if it goes stale.
+
+    This bullet tells every coaching model which causes must never be answered with "shoot the
+    clip again". A reason missing from it gets the generic capture advice, which sends a golfer
+    back to the bay over something they could fix from the results page — the exact failure the
+    old `_UNSCORED_REMEDY` heuristic was written to avoid and could only avoid for one checkpoint.
+
+    Derived from `UNSCORED_REASONS`, so the pin is on the derivation rather than on the wording.
+    """
+    from golf_coach.contracts.caveats import READING_THIS_DATA_HONESTLY as honestly
+    from golf_coach.contracts.unscored import UNSCORED_REASONS
+
+    prose = _flat(honestly)
+    for reason, spec in UNSCORED_REASONS.items():
+        if not spec.refilming_helps:
+            assert f"`{reason.value}`" in prose, (
+                f"{reason.value} cannot be fixed by re-filming, but the caveats never say so — "
+                "a model reading them will give the capture advice anyway"
+            )
+
+
+def test_the_caveats_do_not_name_a_reason_re_filming_does_fix() -> None:
+    """The other direction, and the one that fails quietly.
+
+    A capture problem listed as "not a capture problem" tells a model to withhold the one piece of
+    advice that would have worked. Same bullet, opposite error, and nothing else would catch it.
+    """
+    from golf_coach.contracts.caveats import READING_THIS_DATA_HONESTLY as honestly
+    from golf_coach.contracts.unscored import UNSCORED_REASONS
+
+    bullet = next(b for b in _flat(honestly).split("- ") if "not capture problems" in b)
+    for reason, spec in UNSCORED_REASONS.items():
+        if spec.refilming_helps:
+            assert f"`{reason.value}`" not in bullet, (
+                f"{reason.value} is a capture problem but is listed among the ones that are not"
+            )
+
+
 def test_the_caveats_name_every_population_placement_that_ships() -> None:
     """The M6.5 bug's shape, in the channel M8 opened.
 

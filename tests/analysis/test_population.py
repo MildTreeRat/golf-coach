@@ -20,6 +20,7 @@ from golf_coach.analysis.engine import analyze_swing
 from golf_coach.analysis.phases import segment_phases
 from golf_coach.analysis.smoothing import smooth_keypoints
 from golf_coach.contracts.golfer import Handedness
+from golf_coach.contracts.unscored import UnscoredReason
 
 
 def _all_three(head_sway: float = 0.0, finish_drift: float = 0.0):
@@ -27,9 +28,9 @@ def _all_three(head_sway: float = 0.0, finish_drift: float = 0.0):
     smoothed = smooth_keypoints(make_swing(30, 10, head_sway=head_sway, finish_drift=finish_drift))
     phases = segment_phases(smoothed)
     return [
-        evaluate_tempo(phases),
-        evaluate_head_sway(smoothed, phases),
-        evaluate_finish_balance(smoothed, phases),
+        evaluate_tempo(phases).score,
+        evaluate_head_sway(smoothed, phases).score,
+        evaluate_finish_balance(smoothed, phases).score,
     ]
 
 
@@ -110,12 +111,20 @@ def test_percentile_separates_two_checkpoints_that_both_scored_perfectly() -> No
 
 
 def test_unmeasurable_checkpoint_is_named_rather_than_dropped_silently() -> None:
-    """Tempo drops on an estimated address boundary (ADR-013) — the result must say so."""
+    """Tempo drops on an estimated address boundary (ADR-013) — the result must say so.
+
+    And say *which* ADR-013 case it was. `BOUNDARY_ESTIMATED` is the reason that separates this
+    clip — perfectly readable, but starting mid-motion — from one the pose model could not use at
+    all, and it is the difference between "start the clip before you take the club back" and
+    "check your lighting".
+    """
     # No address dwell, so the wrist never settles and motion start is an estimate.
     moving = make_swing(20, 14, takeaway_frames=60)[_ADDRESS_FRAMES:]
     result = analyze_swing(swing_id="s", session_id="sess", keypoints=moving)
 
-    assert "tempo" in result.unscored
+    tempo = next(entry for entry in result.unscored if entry.name == "tempo")
+    assert tempo.reason is UnscoredReason.BOUNDARY_ESTIMATED
+    assert not tempo.spec.refilming_helps or "settled over the ball" in tempo.spec.remedy
     assert all(cp.name != "tempo" for cp in result.checkpoint_scores)
     # The rest still score, and the overall stays a mean over what survived (not a penalty).
     assert result.checkpoint_scores
@@ -158,11 +167,17 @@ def test_head_stays_back_is_unscored_when_nobody_said_who_swung() -> None:
     A face-on camera mirrors a left-handed swing, so scoring this without knowing the golfer means
     reading half of them as a gross fault. Dropping it is visible — `unscored` names it — where a
     wrong guess would look exactly like a measurement.
+
+    The reason has to be `NO_HANDEDNESS` specifically, not merely "unscored": this clip measured
+    fine, so any advice about the footage is wrong, and `refilming_helps` is the flag every
+    consumer branches on to avoid giving it.
     """
     keypoints = make_swing(30, 10)
     anonymous = analyze_swing(swing_id="s", session_id="sess", keypoints=keypoints)
 
-    assert anonymous.unscored == ["head_stays_back"]
+    assert [entry.name for entry in anonymous.unscored] == ["head_stays_back"]
+    assert anonymous.unscored[0].reason is UnscoredReason.NO_HANDEDNESS
+    assert anonymous.unscored[0].spec.refilming_helps is False
     assert len(anonymous.checkpoint_scores) == 5
 
     # The other five are untouched by the missing identity: same scores, same verdicts.

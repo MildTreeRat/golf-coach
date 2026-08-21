@@ -401,3 +401,62 @@ evidence behind it, and item 3 is the work.
   Left as-is rather than changed, because it guards `derive_reference.py`'s published distributions
   where a thin stratum is reported with its `n_players` beside it, and no band is cut without this
   gate having been run.
+
+## Addendum (2026-08-19): `unscored` carries the reason, not just the name
+
+§2 says no score beats a wrong one, and ADR-013 added the disclosure half: a checkpoint that cannot
+be scored is *named* in `SwingResult.unscored`, because `overall_score` is a mean over survivors and
+a swing judged on five fundamentals must not print the same shape of number as one judged on six.
+
+**Names alone turned out to be half the disclosure.** They say a fundamental went missing and
+nothing about what to do next — and the two most common causes want opposite advice. An unreadable
+clip wants re-filming. A swing with no golfer attributed was measured perfectly and wants a golfer
+picked, which takes one click on the results page. Telling that second golfer to go back to the bay
+is a confident answer to a question they did not ask.
+
+**So two consumers reconstructed the cause, and neither was the source.** `feedback/rules.py` held a
+`_UNSCORED_REMEDY` table keyed on checkpoint name and decided between the two by checking whether
+`head_hip_gain_norm` had survived into `measurements` — if the number was there the frames must have
+been readable, so the missing score had to be the handedness case. That is inference from a side
+effect rather than from the failure. It gave the right answer for the one checkpoint someone wrote a
+row for and could never have covered a second; a `NO_BAND` would have been told to steady the
+camera. `api/pipeline.py` narrated the same case again as free text.
+
+**The causes were always enumerable.** Six `return None` sites in `analysis/measure.py` and two more
+in `checkpoints/mechanics.py`, each of which knows exactly which condition it just failed and has
+the window and landmark group still in hand. `contracts/unscored.py` gives them names —
+`PHASE_NOT_SEGMENTED`, `BOUNDARY_ESTIMATED`, `TIMING_DEGENERATE`, `LANDMARKS_UNCONFIDENT`,
+`TOO_FEW_FRAMES`, `SCALE_UNAVAILABLE`, `NO_BAND`, `NO_HANDEDNESS` — and one `ReasonSpec` row each.
+
+**The load-bearing field is `refilming_helps`,** not the reason itself. It is the bit every consumer
+needs and none could derive, and `contracts/caveats.py` derives its warning from it rather than
+listing the causes in prose, so a reason added later cannot leave the coaching models reading a
+stale list.
+
+**Why `contracts/` rather than `analysis/`.** `feedback` may not import `analysis` (ADR-008), which
+is exactly what forced `rules.py` to retype two checkpoint names as string literals with a comment
+apologising for it. The vocabulary living in `contracts/` removes the need instead of working around
+it — the same argument `contracts/caveats.py` makes for the standing warnings and
+`contracts/dispersion.py::METRIC_TARGETS` for the error floors.
+
+**A split worth keeping: `MEASUREMENT_REASONS`.** `analysis/measure.py` may report only the six
+measurement causes; `NO_BAND` and `NO_HANDEDNESS` are judging failures and cannot come out of it.
+That is M6.5's measure/judge separation made checkable rather than aspirational — a `NO_BAND`
+escaping into `measure.py` would mean the measuring layer had started consulting bands again, which
+is the fusion that kept the panel at three checkpoints.
+
+**Consequences.**
+
+- **`ANALYSIS_VERSION` does not move.** Every number and every verdict is where it was; what changed
+  is what a refusal *says about itself*. Its own rule is "not for anything that leaves every number
+  where it was", and this leaves all of them there.
+- **Stored artifacts keep reading.** `SwingResult.unscored` coerces a bare name to `UNRECORDED` in
+  one `field_validator`, and `mcp/query.py` does the same for the raw JSON it reads without building
+  the model. Dropping those entries was the one unacceptable option: a swing judged on five
+  fundamentals would start reading as one judged on six. `UNRECORDED` is a reader's answer and the
+  engine never writes it — a pin asserts that, so "this file does not know" cannot decay into "we
+  did not bother to say".
+- **`api/pipeline.py`'s note stays, and is not a duplicate.** The evaluator knows only that no
+  handedness reached it; whether nobody picked a golfer or a `player_id` names one missing from the
+  registry is knowledge that exists only in the shell, and the two want different fixes. The reason
+  says what was missing, the note says how.

@@ -33,7 +33,7 @@ import sys
 import common
 import extract_pose
 
-from golf_coach.analysis.measure import POSE_MEASUREMENTS
+from golf_coach.analysis.measure import FPS_DEPENDENT_MEASUREMENTS, POSE_MEASUREMENTS
 from golf_coach.contracts.keypoints import FrameKeypoints, Landmark
 from golf_coach.contracts.reference import ReferenceSwing
 from golf_coach.contracts.swing import PhaseSegment, SwingPhase
@@ -129,7 +129,20 @@ def main(argv: list[str]) -> int:
 
     swings: list[ReferenceSwing] = common.load_swings()
     measured = skipped = 0
-    raw: dict[str, list[float]] = {name: [] for name in POSE_MEASUREMENTS}
+
+    # The absolute-duration metrics are excluded here and it is not a limitation of this script:
+    # `_phases_from_events` puts *frame indices* in `start_ms`, so measuring one off these phases
+    # yields a frame count named `_ms`. Written to `swings.jsonl` it would sit beside the real
+    # milliseconds `derive_reference._attach_durations` computes from a clip's own frame rate, and
+    # every duration band would be cut from the mixture. Ratios are immune, which is why every
+    # other metric in the registry is one.
+    wanted = {n: m for n, m in POSE_MEASUREMENTS.items() if n not in FPS_DEPENDENT_MEASUREMENTS}
+    if skipped_metrics := sorted(FPS_DEPENDENT_MEASUREMENTS):
+        print(
+            f"Not measuring {', '.join(skipped_metrics)} — absolute durations cannot be read from "
+            "ground-truth phases, which carry frame indices. derive_reference.py attaches them."
+        )
+    raw: dict[str, list[float]] = {name: [] for name in wanted}
 
     for swing in swings:
         path = cache / f"{swing.source_id}.keypoints.json"
@@ -149,8 +162,11 @@ def main(argv: list[str]) -> int:
         )
 
         found = False
-        for name, pose in POSE_MEASUREMENTS.items():
-            value = pose.measure(corrected, phases)
+        for name, pose in wanted.items():
+            # `.value`, not the outcome — a `MeasureOutcome` is never falsy, so dropping the
+            # unwrap here would store the tuple as the metric and take every band derived from
+            # this file with it.
+            value = pose.measure(corrected, phases).value
             if value is None:
                 continue
             swing.metrics[name] = value

@@ -23,6 +23,7 @@ silently rewriting the committed store would undercut that.
 from __future__ import annotations
 
 import json
+import re
 import statistics
 import subprocess
 import sys
@@ -71,6 +72,39 @@ _CLASSIFIER_ERROR = 0.082
 #: robust to these, so the row this actually corrects is `sd` — inflated from 0.249 to 0.504 by
 #: those two clips alone.
 MAX_PLAUSIBLE_NORM = 3.0
+
+#: Which pose caches to look in for a clip's frame rate, first hit wins.
+#:
+#: `fps` is a property of the source video, not of the estimator that read it, so every cache that
+#: saw a clip recorded the same number and the order below only buys determinism. `mediapipe-lite`
+#: leads because it is the estimator every shipped metric was measured with.
+#:
+#: The cache is the **only** surviving record of frame rate: `videos_160` is not kept (only the
+#: annotation database is under `upstream/`), so a clip with no cached keypoints can never gain a
+#: duration, and re-deriving one would mean re-downloading the corpus.
+_FPS_ESTIMATOR_SLUGS = ("mediapipe-lite", "mediapipe-full", "mediapipe-heavy", "rtmpose-m")
+
+#: Pulls `fps` out of the keypoints envelope without parsing the file.
+#:
+#: These files average ~270 KB and the whole cache is 566 MB; parsing 758 of them to read one
+#: float at byte 10 costs a minute for nothing. `extract_pose._serialize` writes the `clip` block
+#: first, so the number is always inside the first chunk, and no landmark key is named `fps` — a
+#: false positive would need the string to appear in coordinate data, which cannot happen.
+_FPS_PATTERN = re.compile(r'"fps":\s*([0-9.]+)')
+
+#: How far into a keypoints file to look for the envelope. Generous — the block is ~120 bytes.
+_FPS_PROBE_BYTES = 512
+
+#: The absolute swing durations, in milliseconds. Named here because they are the rows with a
+#: different inclusion rule than everything else in the file, and `_summarize` keys on it.
+DURATION_METRICS = ("backswing_ms", "downswing_ms")
+
+#: Where the `dataset` block stops describing every row. A pointer rather than a second copy of the
+#: restriction: the exception itself lives on the rows it applies to, so it cannot go stale here.
+DATASET_NOTES = (
+    "`pose_estimator` describes the pose-derived rows. Any row carrying its own `provenance` was "
+    "sampled under a different rule - read that field, not this block, for those."
+)
 
 CITATION = (
     "McNally et al., GolfDB: A Video Database for Golf Swing Sequencing, CVPR Workshops 2019"
@@ -160,6 +194,98 @@ def _normalize_handedness(swings: list[ReferenceSwing]) -> tuple[list[str], list
     return sorted(lefties), weak
 
 
+#: Frame rate per clip id, as it was actually read. Populated by `_clip_fps`, and read again by
+#: `_duration_provenance` so the row can state the rates it was cut at instead of asserting one.
+_CLIP_FPS: dict[str, float | None] = {}
+
+
+def _clip_fps(source_id: str) -> float | None:
+    """The clip's frame rate from whichever pose cache holds it, or None if none does.
+
+    Returns None for the face-on clips as well as the uncached ones: those were extracted before
+    `extract_pose.py` wrote the `clip` envelope, so their files are a bare list of frames with no
+    frame rate in them. That is not recoverable here — see `_FPS_ESTIMATOR_SLUGS`.
+    """
+    if source_id in _CLIP_FPS:
+        return _CLIP_FPS[source_id]
+
+    fps: float | None = None
+    for slug in _FPS_ESTIMATOR_SLUGS:
+        path = common.keypoints_path(source_id, slug)
+        if not path.exists():
+            continue
+        with path.open(encoding="utf-8") as handle:
+            match = _FPS_PATTERN.search(handle.read(_FPS_PROBE_BYTES))
+        if match:
+            fps = float(match.group(1))
+            break
+    _CLIP_FPS[source_id] = fps
+    return fps
+
+
+def _attach_durations(swings: list[ReferenceSwing]) -> int:
+    """Add `backswing_ms` / `downswing_ms` to every swing whose real-time duration is knowable.
+
+    Returns the count attached.
+
+    **The rest of this file is deliberately frame-rate free** — 641 of 1,399 clips are slow-motion
+    and every shipped metric is a ratio or a fraction precisely so that it survives that. These two
+    are the exception, and they exist because a metronome cannot be built out of a ratio: the
+    trainer needs to know that a tour downswing is 267 ms, and no row in this file said so.
+
+    So the inclusion rule is stricter than everything else here, in two ways that compound:
+
+    - **`slow_motion is False`.** A slow-motion clip's container fps no longer reflects real time,
+      so its durations would be a playback speed rather than a swing (`ReferenceSwing.slow_motion`).
+    - **A cached frame rate.** Which, today, means the clip is down-the-line; see `_clip_fps`.
+
+    Skips non-positive durations rather than clamping them, on the same principle as
+    `measure.tempo_timings`: instants that came out in an impossible order are not a fast swing.
+    """
+    attached = 0
+    for swing in swings:
+        if swing.slow_motion:
+            continue
+        events = swing.events
+        if not {"address", "top", "impact"} <= events.keys():
+            continue
+        fps = _clip_fps(swing.source_id)
+        if fps is None or fps <= 0:
+            continue
+        ms_per_frame = 1000.0 / fps
+        backswing_ms = (events["top"] - events["address"]) * ms_per_frame
+        downswing_ms = (events["impact"] - events["top"]) * ms_per_frame
+        if backswing_ms <= 0 or downswing_ms <= 0:
+            continue
+        swing.metrics["backswing_ms"] = backswing_ms
+        swing.metrics["downswing_ms"] = downswing_ms
+        attached += 1
+    return attached
+
+
+def _duration_provenance(members: list[ReferenceSwing]) -> str:
+    """The per-row provenance for a duration row, with the sample's own facts in it.
+
+    Derived from `members` rather than written as a sentence, because the restriction is a
+    property of what was actually included and this file's whole discipline is not to copy numbers
+    into prose. If the face-on cache is ever re-extracted with an envelope, this string changes by
+    itself.
+    """
+    views = sorted({s.view for s in members if s.view}) or ["unlabelled"]
+    rates = sorted({round(fps) for s in members if (fps := _CLIP_FPS.get(s.source_id))})
+    quantum = round(1000.0 / max(rates)) if rates else 0
+    return (
+        "Non-slow-motion clips only, since a slow-motion clip's container fps is a playback speed "
+        "rather than real time. Frame rate is read from the pose cache, which restricts this to "
+        f"{'/'.join(views)} clips - the face-on half of the cache was extracted before the file "
+        "carried a `clip` envelope, and the source videos are not kept, so it cannot contribute. "
+        f"Frame rates present: {'/'.join(str(r) for r in rates)} fps, so the instrument quantizes "
+        f"at {quantum} ms on a downswing that spans single-figure frames - read these as a "
+        "distribution, not as a stopwatch. Every other row in this file is a ratio or a fraction "
+        "and is drawn from the full corpus."
+    )
+
+
 def _strata(swings: list[ReferenceSwing]) -> list[tuple[str, str, str, list[ReferenceSwing]]]:
     """`(club, sex, view, members)` groups: the overall population plus one-axis marginals.
 
@@ -201,6 +327,13 @@ def _summarize(
     }
     for q in QUANTILES:
         summary[f"p{int(q * 100)}"] = round(percentile(values, q), 4)
+
+    # Only the rows whose inclusion rule differs from the `dataset` block carry one, so every row
+    # that was already correct stays byte-identical rather than gaining an empty string.
+    if metric in DURATION_METRICS:
+        summary["provenance"] = _duration_provenance(
+            [s for s in members if metric in s.metrics]
+        )
     return summary
 
 
@@ -228,6 +361,12 @@ def main(argv: list[str]) -> int:
     dropped = _drop_implausible(swings)
     for metric, count in sorted(dropped.items()):
         print(f"  dropped {count} reading(s) of {metric} past {MAX_PLAUSIBLE_NORM} shoulder-widths")
+
+    attached = _attach_durations(swings)
+    print(
+        f"  attached absolute durations to {attached} of {len(swings)} swings "
+        "(non-slow-motion clips with a cached frame rate)"
+    )
 
     lefties, weak = _normalize_handedness(swings)
     if lefties:
@@ -271,6 +410,7 @@ def main(argv: list[str]) -> int:
             "min_samples": MIN_SAMPLES,
             "derived_on": date.today().isoformat(),
             "pipeline_commit": _pipeline_commit(),
+            "notes": DATASET_NOTES,
         },
         "distributions": distributions,
     }
@@ -299,6 +439,14 @@ def _report(distributions: list[dict[str, Any]]) -> None:
 
     print("\nRecommended ranges.json bands (paste by hand — see module docstring):")
     for row in overall:
+        if row["metric"] in DURATION_METRICS:
+            # Deliberately no recommendation. These ship as distributions and never as a band:
+            # tempo is already one scored checkpoint, and a second band over the same two instants
+            # would put a second verdict on one fundamental and double-count it into
+            # `overall_score` (ADR-023). Printing a paste-ready band for them would be an
+            # invitation to do exactly that.
+            print(f'  {row["metric"]:<26} (distribution only — never a band, see ADR-023)')
+            continue
         low, high, shape = _recommended_band(row)
         print(
             f'  {row["metric"]:<26} low={low:<7.2f} high={high:<7.2f} '

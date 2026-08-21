@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 from golf_coach.contracts.feedback import Severity
-from golf_coach.contracts.swing import CheckpointScore, Measurement, SwingResult
-from golf_coach.feedback.rules import _UNSCORED_REMEDY, build_feedback
+from golf_coach.contracts.swing import CheckpointScore, SwingResult
+from golf_coach.contracts.unscored import UNSCORED_REASONS, UnscoredCheckpoint, UnscoredReason
+from golf_coach.feedback.rules import build_feedback
 
 
 def _result_with(*checkpoints: CheckpointScore, overall: float = 100.0, **kwargs) -> SwingResult:
@@ -119,11 +120,18 @@ def test_no_checkpoints_means_no_verdict_rather_than_a_clean_bill() -> None:
 
 
 def test_unmeasured_checkpoint_gets_its_own_tip() -> None:
-    payload = build_feedback(_result_with(_passing("balance", 20.0), unscored=["tempo"]))
+    payload = build_feedback(
+        _result_with(
+            _passing("balance", 20.0),
+            unscored=[
+                UnscoredCheckpoint(name="tempo", reason=UnscoredReason.BOUNDARY_ESTIMATED)
+            ],
+        )
+    )
     assert [tip.checkpoint for tip in payload.tips] == ["balance", "tempo"]
     unmeasured = payload.tips[-1]
     assert unmeasured.severity is Severity.INFO
-    assert "could not be measured" in unmeasured.text
+    assert "could not be scored" in unmeasured.text
 
 
 def test_a_checkpoint_blocked_by_identity_is_not_told_to_re_film() -> None:
@@ -131,20 +139,20 @@ def test_a_checkpoint_blocked_by_identity_is_not_told_to_re_film() -> None:
 
     `head_stays_back` goes unscored for two quite different reasons: the swing was unreadable, or
     the swing was fine and nobody said who hit it. The standard advice ("steady the camera") is
-    right for the first and wrong for the second, and the measurement's presence is what tells
-    them apart — it is only recorded when the frames *were* readable.
+    right for the first and wrong for the second.
+
+    This used to be established by a side channel — `feedback` checked whether `head_hip_gain_norm`
+    had survived into `measurements`, since it is only recorded when the frames *were* readable.
+    That inference gave the right answer and could only ever cover the one checkpoint someone had
+    written a table row for. The evaluator now says which it was, so the test asserts on the cause
+    rather than on a correlate of it.
     """
     payload = build_feedback(
         _result_with(
             _passing("balance", 20.0),
-            unscored=["head_stays_back"],
-            measurements=[
-                Measurement(
-                    name="head_hip_gain_norm",
-                    value=-0.2,
-                    unit="shoulder_widths",
-                    source="pose:face_on",
-                    detail="measured fine",
+            unscored=[
+                UnscoredCheckpoint(
+                    name="head_stays_back", reason=UnscoredReason.NO_HANDEDNESS
                 )
             ],
         )
@@ -153,28 +161,71 @@ def test_a_checkpoint_blocked_by_identity_is_not_told_to_re_film() -> None:
     tip = payload.tips[-1]
     assert tip.checkpoint == "head_stays_back"
     assert "which side you swing from" in tip.text
-    assert "camera steady" not in tip.text
+    assert "re-filming" in tip.text
 
 
-def test_the_same_checkpoint_keeps_the_capture_advice_when_nothing_was_measured() -> None:
-    """No measurement means the frames really were unusable, so the camera advice is right."""
-    payload = build_feedback(_result_with(_passing("balance", 20.0), unscored=["head_stays_back"]))
+def test_the_same_checkpoint_gets_capture_advice_when_the_clip_was_the_problem() -> None:
+    """Same checkpoint, unreadable frames: now the capture advice is the right one."""
+    payload = build_feedback(
+        _result_with(
+            _passing("balance", 20.0),
+            unscored=[
+                UnscoredCheckpoint(
+                    name="head_stays_back", reason=UnscoredReason.LANDMARKS_UNCONFIDENT
+                )
+            ],
+        )
+    )
 
-    assert "camera steady" in payload.tips[-1].text
-    assert "which side you swing from" not in payload.tips[-1].text
+    tip = payload.tips[-1]
+    assert "clearly visible" in tip.text
+    assert "which side you swing from" not in tip.text
 
 
-def test_the_identity_remedy_names_a_checkpoint_and_metric_that_actually_exist() -> None:
-    """`_UNSCORED_REMEDY` holds two string literals that `feedback` cannot import (ADR-008).
+def test_a_missing_band_is_never_blamed_on_the_golfers_camera() -> None:
+    """The case the old heuristic could not have reached at all.
 
-    Unpinned, a rename in `analysis` would leave this silently unmatched and the wrong advice would
-    come back without a single test failing — so both strings are checked against the real
-    vocabulary. A test may import `analysis`; the module boundary binds `src`, not the pins on it.
+    `NO_BAND` means the swing measured fine and the repo has no benchmark to judge it against. It
+    is nobody's capture problem, and it is the reason the remedy is keyed on cause rather than on
+    checkpoint name — no table of checkpoints could have known this about an arbitrary one.
     """
-    from golf_coach.analysis.checkpoints import HEAD_STAYS_BACK_CHECKPOINT
-    from golf_coach.analysis.measure import POSE_MEASUREMENTS
+    payload = build_feedback(
+        _result_with(
+            _passing("balance", 20.0),
+            unscored=[UnscoredCheckpoint(name="tempo", reason=UnscoredReason.NO_BAND)],
+        )
+    )
 
-    known_checkpoints = {HEAD_STAYS_BACK_CHECKPOINT}
-    for checkpoint, (metric, _) in _UNSCORED_REMEDY.items():
-        assert checkpoint in known_checkpoints
-        assert metric in POSE_MEASUREMENTS
+    tip = payload.tips[-1]
+    assert "no tour benchmark" in tip.text
+    assert "camera" not in tip.text
+
+
+def test_every_reason_produces_a_tip_rather_than_a_key_error() -> None:
+    """The exhaustiveness pin, from the consumer's side.
+
+    `UNSCORED_REASONS` is checked for completeness in `tests/contracts/test_unscored.py`; this
+    asserts the thing that actually breaks a golfer's results page if it is not — a reason with no
+    row raises on lookup, mid-render, for a swing that was otherwise fine.
+    """
+    for reason in UnscoredReason:
+        payload = build_feedback(
+            _result_with(
+                _passing("balance", 20.0),
+                unscored=[UnscoredCheckpoint(name="tempo", reason=reason)],
+            )
+        )
+        assert payload.tips[-1].text.endswith(UNSCORED_REASONS[reason].remedy)
+
+
+def test_a_legacy_result_still_gets_a_tip() -> None:
+    """Names-only artifacts predate the reason; they must still produce a truthful tip.
+
+    `SwingResult` coerces a bare name to `UNRECORDED`, so the tip says what is actually known —
+    the checkpoint was not scored — without inventing a cause for it.
+    """
+    payload = build_feedback(_result_with(_passing("balance", 20.0), unscored=["tempo"]))
+
+    tip = payload.tips[-1]
+    assert tip.checkpoint == "tempo"
+    assert "Re-running the analysis" in tip.text

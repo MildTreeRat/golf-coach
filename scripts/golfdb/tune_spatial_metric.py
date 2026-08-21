@@ -47,7 +47,7 @@ import common
 import derive_pose_metrics as derive
 import extract_pose
 
-from golf_coach.analysis.measure import POSE_MEASUREMENTS
+from golf_coach.analysis.measure import FPS_DEPENDENT_MEASUREMENTS, POSE_MEASUREMENTS
 from golf_coach.analysis.phases import segment_phases
 from golf_coach.analysis.smoothing import smooth_keypoints
 from golf_coach.storage.keypoints_io import load_keypoints
@@ -72,7 +72,7 @@ def _measure_all(frames, phases) -> dict[str, float]:
     """Every registered metric on one clip, skipping the ones that could not be measured."""
     out: dict[str, float] = {}
     for name, pose in POSE_MEASUREMENTS.items():
-        value = pose.measure(frames, phases)
+        value = pose.measure(frames, phases).value
         if value is not None:
             out[name] = value
     return out
@@ -97,6 +97,24 @@ def main(argv: list[str]) -> int:
     if unknown:
         print(f"error: unknown metric(s): {', '.join(unknown)}", file=sys.stderr)
         return 2
+
+    # This harness cannot score an absolute duration, and the failure is silent rather than loud,
+    # which is why it is refused rather than left to the reader. `boundary` compares the metric at
+    # labelled instants against the metric at detected ones — but labelled phases carry frame
+    # indices in `start_ms` (`derive_pose_metrics._phases_from_events`) while detected phases carry
+    # real milliseconds, so for a duration the two columns are in different units and their
+    # difference is arithmetic on unlike quantities. It printed `backswing_ms` at ratio 0.1,
+    # "MOSTLY NOISE", which reads exactly like a finding about the metric and is a unit mismatch.
+    # Every other metric is a ratio or a shoulder-width and is unaffected.
+    if refused := [m for m in wanted if m in FPS_DEPENDENT_MEASUREMENTS]:
+        print(
+            f"Not scoring {', '.join(sorted(refused))}: this harness compares labelled against "
+            "detected instants, and labelled phases carry frame indices where detected ones carry "
+            "milliseconds. A duration's error term would be frames minus milliseconds."
+        )
+        wanted = [m for m in wanted if m not in FPS_DEPENDENT_MEASUREMENTS]
+    if not wanted:
+        return 0
 
     # Per metric: the labelled-instant population, and the paired per-clip deltas.
     population: dict[str, list[float]] = {m: [] for m in wanted}

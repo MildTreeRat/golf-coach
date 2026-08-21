@@ -1,6 +1,6 @@
 # Documentation map
 
-50 markdown documents: 40 in `docs/` — 13 here at the top level (including this map), 23 ADRs,
+52 markdown documents: 42 in `docs/` — 14 here at the top level (including this map), 24 ADRs,
 3 archived, 1 in `proposals/` — plus 10 outside it (the four at the repo root, and one each in
 `data/` and `frontend/`, four in `spikes/`). This page says which one to read, and — just as
 importantly — which ones are records of the past rather than descriptions of the present.
@@ -69,6 +69,7 @@ instrument).
 | [M4_FUNDAMENTALS_PANEL.md](M4_FUNDAMENTALS_PANEL.md) | REFERENCE | What can face-on 2D pose measure, and what is deferred to a second view / detection / launch monitor? *(Its Findings numbers are superseded.)* |
 | [M4_POSE_BAKEOFF.md](M4_POSE_BAKEOFF.md) | REFERENCE | Has this been tried already? The estimator bake-off, six rejected address signals, the arm-parallel no-go. **The longest doc here — grep it, don't read it.** |
 | [M7_TWO_PHONE_CAPTURE.md](M7_TWO_PHONE_CAPTURE.md) | TARGET | The current live plan: two phones at a sim, seven phases (six built). **Its planning prompts are historical — Phase 6's is actively wrong and bannered.** |
+| [M9_PLAYER_TRACKING.md](M9_PLAYER_TRACKING.md) | TARGET | The 20-phase plan for per-club shot history: how far do I hit my 7 iron, and where does it go? Nothing built yet — start at P1. The *why* is ADR-024. |
 | [BAY_SESSION_RUNBOOK.md](BAY_SESSION_RUNBOOK.md) | AS-BUILT | Taking the two-phone capture to a real sim: preflight at home, phone settings and why 1080p60, measured timings, and what to check when it doesn't work. *(Failure modes are predicted until the first bay session.)* |
 | [M7_TWO_PHONE_SPIKE.md](M7_TWO_PHONE_SPIKE.md) | REFERENCE | Does phase detection survive down-the-line, does OpenCV decode iPhone HEVC, and does `CAP_PROP_FPS` mean anything on slo-mo? Thresholds committed 2026-08-07; **results pending footage**. |
 | [../data/README.md](../data/README.md) | AS-BUILT | The data layout, the three-tier reference cache, and how to rebuild the GolfDB corpus. |
@@ -85,7 +86,7 @@ everything on this page is supposed to be trustworthy.
 
 ## Decisions (ADRs)
 
-22 decisions, 27 addenda between them (`grep -c '^#\+ *Addendum' docs/decisions/*.md` — the
+24 decisions, 29 addenda between them (`grep -c '^#\+ *Addendum' docs/decisions/*.md` — the
 stated total had drifted to 11, then to 13, and is now pinned by `tests/test_docs_truth.py`
 along with every per-ADR count in the last column).
 **The addenda are where reality corrected the original call**, so a doc's original Decision
@@ -102,7 +103,7 @@ section is not always the final word — the counts below exist so you don't mis
 | [007](decisions/007-decouple-software-from-hardware.md) | Software and hardware tracks run in parallel | Accepted | — |
 | [008](decisions/008-project-structure.md) | Project structure & the `contracts/` seam | Accepted | **2** — two modules import *upward* into `api.state` for the tolerant artifact readers, knowingly; `mcp` named as a second imperative shell alongside `api`, and the `pose`/`detection` → `Frame` edge made type-only |
 | [009](decisions/009-swing-scoring-model.md) | Dual-axis scoring with intent-driven policies | Accepted | — |
-| [010](decisions/010-benchmark-ranges.md) | Benchmark ranges as versioned data with provenance | Accepted | **7** — JSON not YAML; two provisional rows; tempo re-sourced from GolfDB; **percentiles ride on `CheckpointScore` but never on the scoring path**; **two hip checkpoints promoted, and a rule for which band edges may be asserted**; **`hip_sway_norm`'s lower edge revisited and kept — the rule gains a second axis, resolution vs. placement**; **per-club bands gated and none cut — the club is not an axis this panel varies on** |
+| [010](decisions/010-benchmark-ranges.md) | Benchmark ranges as versioned data with provenance | Accepted | **8** — JSON not YAML; two provisional rows; tempo re-sourced from GolfDB; **percentiles ride on `CheckpointScore` but never on the scoring path**; **two hip checkpoints promoted, and a rule for which band edges may be asserted**; **`hip_sway_norm`'s lower edge revisited and kept — the rule gains a second axis, resolution vs. placement**; **per-club bands gated and none cut — the club is not an axis this panel varies on**; **`unscored` carries the reason, not just the name — and `refilming_helps` is the bit that decides what a golfer is told** |
 | [011](decisions/011-camera-synchronization.md) | Camera sync & multi-view 3D fusion | **Partially accepted** | **1** — a second capture tier: hand-held phones can be *aligned* but never *fused* |
 | [012](decisions/012-golfdb-reference-data.md) | GolfDB as a reference-swing source | Accepted | — |
 | [013](decisions/013-clip-relative-detection.md) | Clip-relative detection windows; explicit detection confidence | Accepted | — |
@@ -115,6 +116,8 @@ section is not always the final word — the counts below exist so you don't mis
 | [020](decisions/020-conversational-followups.md) | Conversational follow-ups — a transcript store, and the tool runner over `query.py` | Accepted | — (the stdio round trip is for *external* clients; in-app calls go direct) |
 | [021](decisions/021-caddieset-paired-reference-data.md) | CaddieSet as a paired mechanics/outcome source | Accepted as a corpus, **and its study returned a negative result** | — (face-on pose does not predict ball flight; the club sets the ball and the club is not in the picture) |
 | [022](decisions/022-learned-artifacts-as-committed-data.md) | Learned artifacts as committed data — and the tour joint-distribution model | Accepted, **three models surfaced and spoken** | **4** — a second artifact (the trajectory model) under the same rule; `z` lost its A/B, the anchor set nearly made it unusable, and a pixel-aspect bug was worth 7 points of variance; then a down-the-line model, whose placement is reported beside the face-on one and never blended with it; then the policy for *saying* a placement, since a band was the wrong instrument for a corpus made entirely of swings that work; then what career mode may say about a *history* of one, deferred with its trigger and its seam |
+| [023](decisions/023-tempo-training-and-absolute-swing-durations.md) | Tempo training, and absolute swing durations as reference data | Accepted, built and surfaced | **1** — durations enter `golfdb_v1.json` as distributions and never as a band, because tempo is scored once already; **two beat patterns, since no one pulse marks both the top and impact**; then the correction — **club was the wrong speed axis and the ADR over-claimed from it**: a real speed cohort (LPGA vs PGA) is 167 ms apart on the backswing, so the target now anchors to the golfer's own |
+| [024](decisions/024-per-club-shot-history.md) | Per-club shot history — the tag that makes distance measurable | **Proposed**, not started | — |
 
 Format: [000-template.md](decisions/000-template.md).
 

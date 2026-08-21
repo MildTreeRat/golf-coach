@@ -24,6 +24,7 @@ from textwrap import fill
 
 from golf_coach.contracts.checkpoints import CHECKPOINT_REGISTRY
 from golf_coach.contracts.placements import POPULATION_PLACEMENT_REGISTRY
+from golf_coach.contracts.unscored import UNSCORED_REASONS, UnscoredReason
 
 # How wide the composed prose wraps. Nothing downstream cares — a model reads this, not a
 # terminal — but the blocks below are hand-written at this width and a derived clause that
@@ -134,6 +135,30 @@ _LESS_IS_NOT_BETTER = fill(
     subsequent_indent="  ",
 )
 
+# Which unscored reasons are *not* the golfer's camera. Derived rather than listed, for the reason
+# the placement prose is: this bullet's whole job is to stop a model recommending a re-film for a
+# cause re-filming cannot fix, and a hand-written list of those causes would be wrong the first
+# time a reason is added. `refilming_helps` is the field that decides it, so read that field.
+_NOT_A_CAPTURE_PROBLEM = _and_list(
+    [
+        f"`{reason.value}`"
+        for reason in UnscoredReason
+        if not UNSCORED_REASONS[reason].refilming_helps
+    ]
+)
+
+_UNSCORED_REASONS_PROSE = fill(
+    "Each entry in `unscored` carries a `reason`, and it decides what to say next. "
+    f"{_NOT_A_CAPTURE_PROBLEM} are not capture problems — the swing was measured fine and "
+    "something other than the footage is missing — so never answer one of those by telling the "
+    "golfer to re-film, steady the camera or shoot the swing again. Every other reason is a clip "
+    "worth taking again. The `refilming_helps` flag says which is which; do not infer it from the "
+    "checkpoint name.",
+    width=_WIDTH,
+    initial_indent="- ",
+    subsequent_indent="  ",
+)
+
 # The population placements, in the two halves a reader needs in this order: what the numbers are
 # (so a distance is not mistaken for a score), then which of them cannot be read alone. Both are
 # derived from the registry — this is the prose that was missing entirely while five placements
@@ -189,9 +214,10 @@ _ONLY_THESE_FUNDAMENTALS = fill(
 READING_THIS_DATA_HONESTLY = f"""\
 Reading this data honestly:
 
-- `unscored` lists checkpoints that could not be measured, not ones that failed. They are
+- `unscored` lists checkpoints that could not be scored, not ones that failed. They are
   excluded from `overall_score` rather than counted as zero, so a swing with an unscored
   checkpoint was judged on fewer fundamentals than one without. Say so if it comes up.
+{_UNSCORED_REASONS_PROSE}
 - `percentile` is informational and clamps at the band edges, so a failing checkpoint reports
   about 90 (or about 10, when it missed on the low side of a two-sided metric) whether it missed
   narrowly or hugely. A low percentile is therefore not by itself good news — read `passed` for

@@ -185,6 +185,34 @@ _JUDGED_DEGREES = (
     "below the level a coaching action follows from. Revise from a real bay session's repeats"
 )
 
+#: The two absolute durations, and why they are not `_TUNED` like the six metrics beside them.
+#:
+#: `tune_spatial_metric.py` **cannot** score a duration, and it now says so rather than printing a
+#: number: its `boundary` column compares a metric at labelled instants against the same metric at
+#: detected ones, but labelled phases carry frame indices in `start_ms` by design
+#: (`derive_pose_metrics._phases_from_events`, since ~47% of GolfDB is slow-motion and only ratios
+#: were ever read from them). For a duration that comparison is frames against milliseconds.
+#:
+#: So these are composed from the instant errors instead, which M4-REF measured directly and which
+#: is the one term a duration's error is made of — a duration is a subtraction of two instants and
+#: reads no landmark at all. At the corpus's 30 fps one frame is 33.4 ms:
+#:
+#:   backswing = top - motion start -> (2 + 7) frames = 300 ms
+#:   downswing = impact - top       -> (1 + 2) frames = 100 ms
+#:
+#: Address dominates the first, at a median 7 frames with 40% of clips over 10, exactly as it
+#: dominates `tempo_ratio`'s 0.943 — and the two agree: 300 ms of backswing error on a ~267 ms
+#: downswing is about 1.1 of ratio, which is the same size as the tuned figure arrived at
+#: independently. That agreement is the only cross-check available and it is worth having.
+#:
+#: **Both are estimates from a broadcast corpus and the first thing a bay session should revise**,
+#: on the same footing as `_TUNED` and `contracts.baseline.METRIC_MINIMUM_N`.
+_FROM_INSTANTS = (
+    "composed from M4-REF instant errors, 2026-08-20: a duration is a subtraction of two instants, "
+    "so its error is theirs summed - address 7 frames, top 2, impact 1, at the corpus's 30 fps. "
+    "tune_spatial_metric.py cannot measure these; see ADR-023"
+)
+
 #: metric -> what it aims at and how close counts. Every registered metric gets a scatter finding;
 #: only the four with a `target` get a bias finding, and the other four say why in the record
 #: itself rather than being quietly absent.
@@ -299,6 +327,33 @@ METRIC_TARGETS: dict[str, MetricTarget] = {
             "`analysis.baseline` holds on purpose (ADR-010 §2). `analysis.comparison` answers the "
             "band's question directly instead — whether the center's interval sits inside it — so "
             "no point target has to be invented here (career mode step 6)"
+        ),
+    ),
+    "backswing_ms": MetricTarget(
+        metric="backswing_ms",
+        target=None,
+        tolerance=300.0,
+        provenance=_FROM_INSTANTS,
+        no_target_reason=(
+            "there is a tour median (about 901 ms) and it is deliberately not a target. Tempo is "
+            "already scored once, as a ratio, and declaring a target for each half would put a "
+            "second verdict on one fundamental and count it twice — ADR-023 is explicit that these "
+            "ship as distributions and never as a band. The tour distribution is still readable "
+            "where it belongs, in `analysis/tempo_trainer.py`, which builds a metronome from it "
+            "rather than a judgment"
+        ),
+    ),
+    "downswing_ms": MetricTarget(
+        metric="downswing_ms",
+        target=None,
+        tolerance=100.0,
+        provenance=_FROM_INSTANTS,
+        no_target_reason=(
+            "the same reason as `backswing_ms` — one fundamental is scored once. Worth noting what "
+            "the corpus says about this half in particular: tour downswing duration barely moves "
+            "at all (p10 200 ms, p90 300 ms, and a between-club sd of 6.9 ms against 47.0 ms "
+            "between golfers), so it looks more like a constant than any other quantity here. That "
+            "is a reason it makes a good metronome, not a reason to score it"
         ),
     ),
 }

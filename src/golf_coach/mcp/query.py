@@ -18,7 +18,10 @@ deliberately rather than flattened away:
     wrong for two milestones.
   - `SwingResult.unscored` — `overall_score` is a mean over *survivors*, so a two-checkpoint and
     a three-checkpoint swing print the same number. The checkpoint was dropped, not failed, and
-    the names say which (ADR-013).
+    each entry says which *and why* (ADR-013, `contracts.unscored`). The why matters here more
+    than anywhere: a model told only that a checkpoint is missing will supply the likeliest
+    explanation itself, and "your camera moved" is a confident wrong answer to give a golfer
+    whose clip was fine and whose band simply does not exist yet.
 
 **Shots are joined by photo hash, not by session id.** `analysis.json` attaches a shot by the
 sha256 of the screen photo, so a swing can legitimately carry a shot whose own `session_id`
@@ -44,6 +47,7 @@ from golf_coach.contracts.caveats import (
 )
 from golf_coach.contracts.placements import PLACEMENTS_BY_NAME
 from golf_coach.contracts.shot import ShotData
+from golf_coach.contracts.unscored import UnscoredCheckpoint, UnscoredReason
 from golf_coach.launch_monitor.source import ShotDataSource
 from golf_coach.storage.bundle_store import SwingBundleStore
 from golf_coach.storage.manifest import load_manifest, manifest_path
@@ -191,6 +195,30 @@ class PlacementView(BaseModel):
     detail: str
 
 
+class UnscoredView(BaseModel):
+    """One checkpoint that produced no score, and why — carried, never inferred.
+
+    `why` is prose rather than only the enum token because a coaching model is going to render a
+    sentence either way; giving it the repo's sentence is what stops it writing its own. The
+    `reason` stays alongside so a consumer can branch without parsing English.
+    """
+
+    name: str
+    reason: str = Field(
+        description=(
+            "Stable token from `contracts.unscored.UnscoredReason` - branch on this, not on `why`."
+        )
+    )
+    why: str = Field(description="What went wrong, as a clause that can be read to a golfer.")
+    refilming_helps: bool = Field(
+        description=(
+            "Whether shooting the clip again could fix it. False means it is not a capture "
+            "problem - no band exists yet, or no golfer is attributed - and telling the golfer to "
+            "re-film would be answering a question they did not ask."
+        )
+    )
+
+
 class SwingView(BaseModel):
     """Everything the coach needs about one swing: mechanics, outcome, and what to distrust."""
 
@@ -206,23 +234,29 @@ class SwingView(BaseModel):
     headline: str | None = None
     checkpoints: list[CheckpointView] = Field(default_factory=list)
     tips: list[TipView] = Field(default_factory=list)
-    unscored: list[str] = Field(
+    unscored: list[UnscoredView] = Field(
         default_factory=list,
         description=(
-            "Checkpoints that could not be measured on this swing. NOT failures — they are "
-            "excluded from `overall_score` rather than counted as zero, so a swing with an "
-            "unscored checkpoint is scored on fewer fundamentals than one without."
+            "Checkpoints that could not be scored on this swing, each with the reason. NOT "
+            "failures — they are excluded from `overall_score` rather than counted as zero, so a "
+            "swing with an unscored checkpoint is scored on fewer fundamentals than one without. "
+            "Use the reason rather than guessing at one: `refilming_helps` is false when the "
+            "cause is not the golfer's camera."
         ),
     )
     measurements: dict[str, float] = Field(
         default_factory=dict,
         description=(
             "Quantities measured off this swing that are NOT judged: no benchmark band exists for "
-            "them yet, so there is no good or bad value and no percentile. Report them only if "
+            "them, so there is no good or bad value and no percentile. Report them only if "
             f"asked for a raw number, and never say whether one is good — "
             f"{ONLY_CHECKPOINTS_ARE_JUDGED}. `face_to_path_deg` is the exception worth knowing: "
             "positive means the club face was open to its path (a fade shape), negative closed "
-            "(a draw), and zero is straight regardless of either angle alone."
+            "(a draw), and zero is straight regardless of either angle alone. `backswing_ms` and "
+            "`downswing_ms` are a second kind of exception: they will never have a band, because "
+            "tempo is already scored as the ratio of the two and a band on each half would judge "
+            "one fundamental three times (ADR-023). They are still the honest answer to which "
+            "*half* is off, which the ratio alone cannot tell you."
         ),
     )
     population: list[PlacementView] = Field(
@@ -337,7 +371,7 @@ def get_swing(sessions_dir: Path, session_id: str, swing_id: str) -> SwingView |
         headline=_text(feedback.get("headline")),
         checkpoints=[_checkpoint(c) for c in _list(swing.get("checkpoint_scores"))],
         tips=[_tip(t) for t in _list(feedback.get("tips"))],
-        unscored=[str(name) for name in _list(swing.get("unscored"))],
+        unscored=[_unscored(entry) for entry in _list(swing.get("unscored"))],
         measurements=_measurements(swing),
         population=placements,
         alignment_quality=quality,
@@ -380,8 +414,8 @@ def get_session_summary(sessions_dir: Path, session_id: str) -> SessionDetail | 
             measured[checkpoint.name] = measured.get(checkpoint.name, 0) + 1
             if checkpoint.passed:
                 passed[checkpoint.name] = passed.get(checkpoint.name, 0) + 1
-        for name in view.unscored:
-            unscored_counts[name] = unscored_counts.get(name, 0) + 1
+        for entry in view.unscored:
+            unscored_counts[entry.name] = unscored_counts.get(entry.name, 0) + 1
         if view.shot is not None:
             shots_attached += 1
             if view.shot.needs_review:
@@ -582,6 +616,38 @@ def _tip(raw: Any) -> TipView:
         checkpoint=str(data.get("checkpoint", "")),
         text=str(data.get("text", "")),
         severity=_text(data.get("severity")),
+    )
+
+
+def _unscored(raw: Any) -> UnscoredView:
+    """Read one unscored entry, in either the current shape or the names-only one.
+
+    Two old forms reach this. A bare `"tempo"` is every artifact written before 2026-08-19 and
+    means "this file does not know why", which is `UNRECORDED` — the same coercion
+    `SwingResult.unscored` does, restated here because this layer reads raw JSON and never builds
+    the model (that is the point of a tolerant reader). A reason string this build does not
+    recognise gets the same treatment rather than an exception: an unknown token from a *newer*
+    artifact is still an honest "not scored, and this reader cannot say why".
+
+    Dropping either would be the one unacceptable outcome — a swing judged on five fundamentals
+    would start reading as one judged on six.
+    """
+    if isinstance(raw, str):
+        entry = UnscoredCheckpoint(name=raw, reason=UnscoredReason.UNRECORDED)
+    else:
+        data = _dict(raw)
+        raw_reason = str(data.get("reason", ""))
+        reason = (
+            UnscoredReason(raw_reason)
+            if raw_reason in set(UnscoredReason)
+            else UnscoredReason.UNRECORDED
+        )
+        entry = UnscoredCheckpoint(name=str(data.get("name", "")), reason=reason)
+    return UnscoredView(
+        name=entry.name,
+        reason=entry.reason.value,
+        why=entry.spec.summary,
+        refilming_helps=entry.spec.refilming_helps,
     )
 
 

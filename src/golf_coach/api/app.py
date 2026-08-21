@@ -30,7 +30,13 @@ from pydantic import BaseModel
 from golf_coach.analysis.baseline import build_baseline
 from golf_coach.analysis.comparison import build_standing
 from golf_coach.analysis.dispersion import build_dispersion
-from golf_coach.api.state import judged_metrics, load_analysis, load_state, resolve_placements
+from golf_coach.api.state import (
+    judged_metrics,
+    load_analysis,
+    load_state,
+    resolve_placements,
+    resolve_tempo_plan,
+)
 from golf_coach.api.worker import AnalysisWorker, should_analyze
 from golf_coach.config import settings
 from golf_coach.contracts.career import CareerCorpus
@@ -464,6 +470,12 @@ def create_app(
             # which (`contracts/placements.py`, `contracts/checkpoints.py`); the page renders.
             "population": resolve_placements(result),
             "judged_metrics": judged_metrics(result),
+            # And a third: a metronome built from the tour's own durations, for the one checkpoint
+            # that ships a verdict a golfer cannot act on. Sent whenever it can be built rather
+            # than only when tempo failed — *whether to show it* is the page's call and it already
+            # holds the verdict, while *what the beats are* is this side's and must not be
+            # recomputed there (ADR-023).
+            "tempo_plan": resolve_tempo_plan(result),
         }
 
     @app.post("/api/sessions/{session_id}/swings/{swing_id}/golfer", dependencies=guard)

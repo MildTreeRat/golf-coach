@@ -130,9 +130,45 @@ def test_a_swing_without_analysis_still_reports_its_status(sessions_dir: Path) -
     assert view.checkpoints == []
 
 
-def test_unscored_checkpoints_are_named_and_not_confused_with_failures(
+def test_unscored_checkpoints_carry_their_reason_out_to_the_model(
     tmp_path: Path, swing_writer, analysis_factory
 ) -> None:
+    """A model handed a bare name will invent the cause; handed the cause it does not have to.
+
+    `refilming_helps` is the field that matters here — `no_band` means the swing was fine and the
+    repo has no benchmark, so a coaching answer that tells this golfer to re-shoot the clip is
+    wrong about something it was told.
+    """
+    root = tmp_path / "sessions"
+    swing_writer(
+        root,
+        "2026-08-10",
+        "1",
+        analysis=analysis_factory(
+            "2026-08-10",
+            "1",
+            unscored=[{"name": "tempo", "reason": "no_band", "detail": "no band for tempo_ratio"}],
+        ),
+    )
+
+    view = query.get_swing(root, "2026-08-10", "1")
+
+    assert view is not None
+    assert [entry.name for entry in view.unscored] == ["tempo"]
+    assert view.unscored[0].reason == "no_band"
+    assert view.unscored[0].refilming_helps is False
+    assert "no benchmark band" in view.unscored[0].why
+
+
+def test_a_names_only_artifact_is_read_rather_than_dropped(
+    tmp_path: Path, swing_writer, analysis_factory
+) -> None:
+    """Every result written before 2026-08-19 stores `unscored` as bare names.
+
+    Dropping those entries is the one unacceptable outcome: a swing judged on five fundamentals
+    would start reading as one judged on six, and `overall_score` would gain a checkpoint it never
+    had. `unrecorded` is the honest answer — not scored, and this artifact cannot say why.
+    """
     root = tmp_path / "sessions"
     swing_writer(
         root,
@@ -144,7 +180,33 @@ def test_unscored_checkpoints_are_named_and_not_confused_with_failures(
     view = query.get_swing(root, "2026-08-10", "1")
 
     assert view is not None
-    assert view.unscored == ["tempo"]
+    assert [entry.name for entry in view.unscored] == ["tempo"]
+    assert view.unscored[0].reason == "unrecorded"
+    assert view.unscored[0].refilming_helps is False
+
+
+def test_an_unknown_reason_reads_as_unrecorded_rather_than_raising(
+    tmp_path: Path, swing_writer, analysis_factory
+) -> None:
+    """The forward-compatible half: an artifact from a *newer* build must not crash this reader.
+
+    Same posture as the names-only case, and for the same reason — an entry this build cannot
+    interpret is still an entry, and losing it would misreport how many fundamentals were judged.
+    """
+    root = tmp_path / "sessions"
+    swing_writer(
+        root,
+        "2026-08-10",
+        "1",
+        analysis=analysis_factory(
+            "2026-08-10", "1", unscored=[{"name": "tempo", "reason": "invented_later"}]
+        ),
+    )
+
+    view = query.get_swing(root, "2026-08-10", "1")
+
+    assert view is not None
+    assert view.unscored[0].reason == "unrecorded"
 
 
 # --------------------------------------------------------------------------------------

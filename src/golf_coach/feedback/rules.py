@@ -28,6 +28,7 @@ from __future__ import annotations
 
 from golf_coach.contracts.feedback import FeedbackPayload, Severity, Tip
 from golf_coach.contracts.swing import CheckpointScore, SwingResult
+from golf_coach.contracts.unscored import UnscoredCheckpoint
 
 # A checkpoint that failed but still scored at/above this is a minor miss; below it, major.
 _MINOR_SCORE_FLOOR = 0.5
@@ -89,51 +90,29 @@ def _tip_for(checkpoint: CheckpointScore) -> Tip:
     return Tip(checkpoint=checkpoint.name, text=text, severity=_severity_for(checkpoint))
 
 
-#: Checkpoints that can go unscored for a reason **re-shooting the clip would not fix**, mapped to
-#: the measurement that distinguishes the two causes and the remedy that actually applies.
-#:
-#: If the measurement is present the footage was readable, so the missing score is not a capture
-#: problem and the standard "film it again" advice is wrong — actively so, since it sends the golfer
-#: back to the bay over a form field. `head_stays_back` is the only such checkpoint: its sign is
-#: camera-relative, so it needs `Golfer.handedness` and refuses without it.
-#:
-#: The two names are string literals rather than imports on purpose. `feedback` must not import
-#: `analysis` (ADR-008) and this is the same problem `contracts.caveats` solves for the standing
-#: warnings — shared vocabulary, no shared module. `tests/feedback/test_rules.py` pins both against
-#: the real checkpoint so a rename cannot leave this silently unmatched.
-_UNSCORED_REMEDY: dict[str, tuple[str, str]] = {
-    "head_stays_back": (
-        "head_hip_gain_norm",
-        "The swing itself was measured fine - this checkpoint also needs to know which side you "
-        "swing from, and no golfer is attributed to this swing. Pick a golfer for the session and "
-        "it will score without re-filming.",
-    ),
-}
-
-
-def _unmeasured_tip(name: str, measured: frozenset[str]) -> Tip:
-    """Say plainly that a checkpoint was attempted and could not be scored.
+def _unmeasured_tip(entry: UnscoredCheckpoint) -> Tip:
+    """Say plainly that a checkpoint was attempted and could not be scored, and why.
 
     `overall_score` is a mean over the checkpoints that *did* produce a score, so without this the
     golfer cannot tell a swing graded on three things from one graded on two (ADR-013).
 
-    The remedy is chosen from what is actually wrong. A checkpoint listed in `_UNSCORED_REMEDY`
-    whose measurement came through was blocked by something the camera cannot fix, and telling that
-    golfer to steady their camera would be a confident answer to a question they did not ask.
+    **The remedy is read, not inferred.** This used to hold a `_UNSCORED_REMEDY` table keyed on
+    checkpoint name, and decide between "film it again" and "pick a golfer" by checking whether the
+    metric had survived into `SwingResult.measurements` — if the number was there the footage must
+    have been readable, so the missing score had to be the handedness case. It gave the right
+    answer for the one checkpoint it covered and could never have covered a second, because the
+    signal it read was a side effect rather than the cause. `contracts.unscored` carries the cause
+    itself now, so this is a lookup.
+
+    That module is also why the string literals are gone. `feedback` must not import `analysis`
+    (ADR-008), which is what forced two checkpoint names to be retyped here; the vocabulary living
+    in `contracts/` removes the need rather than working around it.
     """
-    entry = _UNSCORED_REMEDY.get(name)
-    if entry is not None and entry[0] in measured:
-        advice = entry[1]
-    else:
-        advice = (
-            "This usually means an instant of the swing wasn't clearly detected - try a clip with "
-            "the whole swing in frame and the camera steady."
-        )
     return Tip(
-        checkpoint=name,
+        checkpoint=entry.name,
         text=(
-            f"{name.replace('_', ' ').capitalize()} could not be measured on this swing, so it is "
-            f"not included in the score. {advice}"
+            f"{entry.name.replace('_', ' ').capitalize()} could not be scored on this swing, so it "
+            f"is not included in the score. {entry.spec.remedy}"
         ),
         severity=Severity.INFO,
     )
@@ -164,11 +143,10 @@ def _headline(checkpoints: list[CheckpointScore]) -> str | None:
 def build_feedback(result: SwingResult) -> FeedbackPayload:
     """Produce ranked rule-based tips from a swing result (LLM coaching added in M6)."""
     ranked = sorted(result.checkpoint_scores, key=_rank_key)
-    measured = frozenset(measurement.name for measurement in result.measurements)
     return FeedbackPayload(
         swing_id=result.swing_id,
         overall_score=result.overall_score,
         headline=_headline(result.checkpoint_scores),
         tips=[_tip_for(checkpoint) for checkpoint in ranked]
-        + [_unmeasured_tip(name, measured) for name in result.unscored],
+        + [_unmeasured_tip(entry) for entry in result.unscored],
     )

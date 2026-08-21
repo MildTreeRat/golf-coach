@@ -10,7 +10,8 @@ here. That module is deliberately upstream of this one: `contracts/caveats.py` b
 prose a model reads out of the same registry, and ADR-008 forbids it importing `analysis`.
 
 `head_stays_back` is the only one that needs to know *who* swung: its sign is camera-relative, so
-it takes a `Handedness` and returns `None` without one. See `mechanics.evaluate_head_stays_back`.
+it takes a `Handedness` and refuses with `NO_HANDEDNESS` without one. See
+`mechanics.evaluate_head_stays_back`.
 """
 
 from collections.abc import Callable
@@ -32,7 +33,7 @@ from golf_coach.analysis.checkpoints.mechanics import (
 from golf_coach.contracts.golfer import Handedness
 from golf_coach.contracts.intent import ClubCategory, PlayerProfile
 from golf_coach.contracts.keypoints import FrameKeypoints
-from golf_coach.contracts.swing import CheckpointScore, PhaseSegment
+from golf_coach.contracts.swing import CheckpointOutcome, PhaseSegment
 
 #: One shape every checkpoint is called through, whatever it actually reads.
 Evaluate = Callable[
@@ -43,7 +44,7 @@ Evaluate = Callable[
         ClubCategory,
         PlayerProfile | None,
     ],
-    CheckpointScore | None,
+    CheckpointOutcome,
 ]
 
 #: Registered name -> the call that scores it, so the engine dispatches instead of listing.
@@ -85,9 +86,10 @@ CHECKPOINT_EVALUATORS: dict[str, Evaluate] = {
     ),
 }
 
-# The name constants are public because an evaluator returning `None` still has to be *named* —
-# `SwingResult.unscored` reports which checkpoints could not be measured, and the engine should not
-# be re-typing those strings as literals next to the calls that produce them.
+# The name constants are public because an evaluator that produces no score still has to be
+# *named* — `SwingResult.unscored` reports which checkpoints could not be scored, and the engine
+# should not be re-typing those strings as literals next to the calls that produce them. The
+# evaluator supplies the reason; the registry walk supplies the name.
 __all__ = [
     "CHECKPOINT_EVALUATORS",
     "FINISH_BALANCE_CHECKPOINT",

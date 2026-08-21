@@ -95,6 +95,47 @@
                border: 1px solid rgba(128,128,128,0.5); border-radius: 4px; opacity: 0.75;
                padding: 0.02rem 0.25rem; margin-left: 0.35rem; }
   .plc .d { opacity: 0.7; font-size: 0.8rem; margin: 0.15rem 0 0; }
+  /* The tempo trainer (ADR-023). The one block on this page that asks for a swing back rather
+     than reporting on one, so it is styled as a control panel and not as a reading: a tinted card
+     like `.coach`, because both are things the system offers rather than things it measured, but
+     warm rather than blue so a golfer never confuses a metronome with written advice.
+
+     The beat strip is proportional to the real intervals, which is why `flex-grow` carries the
+     gap and no width is written here — a 3.4x difference between the backswing and the downswing
+     is the whole reason two patterns exist, and a strip that drew them equal would contradict the
+     thing it is illustrating. */
+  .tempo { background: rgba(200,150,60,0.12); border: 1px solid rgba(200,150,60,0.4);
+           border-radius: 8px; padding: 0.7rem 0.85rem; font-size: 0.88rem; }
+  .tempo p { margin: 0 0 0.6rem; }
+  .tempo .why { font-size: 0.85rem; }
+  .tempo .modes { display: flex; gap: 0.4rem; margin-bottom: 0.6rem; }
+  .tempo .modes button { font: inherit; font-size: 0.8rem; padding: 0.3rem 0.6rem;
+                         border-radius: 6px; border: 1px solid rgba(128,128,128,0.45);
+                         background: transparent; color: inherit; cursor: pointer; flex: 1; }
+  .tempo .modes button[aria-pressed="true"] { border-color: rgba(200,150,60,0.9);
+                                              background: rgba(200,150,60,0.2);
+                                              font-weight: 600; }
+  .tempo .strip { display: flex; align-items: flex-end; height: 2.2rem; margin: 0.5rem 0 0.2rem;
+                  gap: 2px; }
+  .tempo .strip .b { width: 3px; border-radius: 2px; background: currentColor; flex: none; }
+  .tempo .strip .b.takeaway, .tempo .strip .b.top, .tempo .strip .b.impact { height: 100%;
+                                                                            opacity: 0.9; }
+  /* Grid filler, drawn as quietly as it is played. */
+  .tempo .strip .b.subdivision { height: 45%; opacity: 0.35; }
+  .tempo .strip .gap { flex-grow: 1; }
+  .tempo .legend { display: flex; justify-content: space-between; font-size: 0.72rem;
+                   opacity: 0.6; margin-bottom: 0.6rem; }
+  .tempo .controls { display: flex; gap: 0.5rem; align-items: center; }
+  .tempo .controls button.play { font: inherit; font-size: 0.9rem; padding: 0.45rem 0.9rem;
+                                 border-radius: 6px; border: 1px solid rgba(128,128,128,0.45);
+                                 background: transparent; color: inherit; cursor: pointer; }
+  .tempo .controls label { font-size: 0.78rem; opacity: 0.7; display: flex; gap: 0.35rem;
+                           align-items: center; flex: 1; }
+  .tempo .controls input[type=range] { flex: 1; min-width: 0; }
+  .tempo .facts { font-size: 0.78rem; opacity: 0.7; margin: 0.55rem 0 0;
+                  font-variant-numeric: tabular-nums; }
+  .tempo .anchor { font-size: 0.76rem; opacity: 0.75; margin: 0.3rem 0 0; }
+  .tempo .src { font-size: 0.72rem; opacity: 0.55; margin: 0.3rem 0 0; }
   details.measured { margin-top: 1.5rem; font-size: 0.85rem; }
   details.measured summary { cursor: pointer; font-size: 0.8rem; text-transform: uppercase;
                              letter-spacing: 0.06em; opacity: 0.6; }
@@ -139,7 +180,9 @@ function esc(value) {
 }
 
 function num(value, digits = 2) {
-  return typeof value === "number" ? value.toFixed(digits).replace(/\.?0+$/, "") : "-";
+  if (typeof value !== "number") return "-";
+  const fixed = value.toFixed(digits);
+  return fixed.includes(".") ? fixed.replace(/0+$/, "").replace(/\.$/, "") : fixed;
 }
 
 function roleName(role) { return role.replace(/_/g, "-"); }
@@ -219,6 +262,7 @@ function render(payload) {
 
   parts.push(checkpoints(swing));
   parts.push(tips(result.feedback));
+  parts.push(tempoBlock(payload, swing));
   parts.push(coachBlock(result.feedback));
   parts.push(shotBlock(swing.shot));
   parts.push(populationBlock(payload));
@@ -229,6 +273,7 @@ function render(payload) {
 
   root.innerHTML = parts.join("");
   wireAsk();
+  wireTempo(payload);
 }
 
 function header(payload) {
@@ -286,6 +331,229 @@ function tips(feedback) {
     return `<div class="tip ${esc(sev)}"><span class="sev">${esc(sev)}${tip.checkpoint
       ? ` &middot; ${esc(tip.checkpoint)}` : ""}</span>${esc(tip.text)}</div>`;
   }).join("");
+}
+
+// The tempo trainer (ADR-023). Rendered directly under the tips because it is the one tip a
+// golfer can act on in the room: "Tempo too quick" is a verdict with no next move attached, and
+// this is the next move.
+//
+// Gated on the tempo checkpoint having *failed*, not on the plan existing — the API sends a plan
+// for every swing it can build one for, and deciding whether to show it is this side's call
+// because this side is what holds the verdict. A metronome offered to a golfer whose tempo is
+// already in band is noise.
+//
+// The verdict prose is `checkpoint.message`, reused rather than rewritten. It is authored once in
+// `analysis/checkpoints/mechanics.py` and already says which direction the miss was in; a second
+// sentence composed here would be the copy this page has been bitten by twice.
+//
+// **No duration, ratio, tick count or mode name is written in this file.** Every one of them is
+// derived server-side in `analysis/tempo_trainer.py` from the reference distributions and arrives
+// on `payload.tempo_plan`. That is the same standing rule the placements block is pinned to, and
+// the reason both patterns are computed there rather than one being derived here from the other:
+// GRID's ratio is a *rounded* one, and a page recomputing it from CUES would silently print a
+// number the golfer is not hearing.
+let tempoPlanState = null;
+
+function tempoBlock(payload, swing) {
+  const plan = payload.tempo_plan;
+  if (!plan || !(plan.patterns || []).length) return "";
+  const cp = (swing.checkpoint_scores || []).find((c) => c.name === "tempo");
+  if (!cp || cp.passed !== false) return "";
+
+  const modes = plan.patterns.map((p, i) =>
+    `<button type="button" data-mode="${i}" aria-pressed="${i === 0}">${esc(p.mode)}</button>`
+  ).join("");
+
+  return `<h2>Practice this tempo</h2><div class="tempo">
+    <p class="why">${esc(cp.message)}</p>
+    <p>Swing along with the beats: <strong>first beat</strong> start the takeaway,
+      <strong>top</strong> is the top of the backswing, <strong>impact</strong> is the ball.
+      Two count-in ticks come first, then it loops.</p>
+    <div class="modes">${modes}</div>
+    <div id="tempoStrip"></div>
+    <div class="controls">
+      <button type="button" class="play" id="tempoPlay">Play</button>
+      <label>Pace <input type="range" id="tempoPace" min="70" max="140" step="1" />
+        <span id="tempoPaceOut"></span></label>
+    </div>
+    <p class="facts" id="tempoFacts"></p>
+    <p class="anchor" id="tempoAnchor"></p>
+    <p class="src" id="tempoSrc"></p>
+  </div>`;
+}
+
+// Everything below is presentation of a payload, with one exception worth naming: the pitch
+// table. A role needs a *sound*, and a sound is not a fact about the swing — sending frequencies
+// from the server would be absurd. So roles are named here, and only to be pitched and captioned.
+//
+// `subdivision` is quieter and lower than every cue on purpose. It marks nothing; it exists to
+// keep the pulse audible through the ~900 ms the backswing takes, and a golfer who hears it as a
+// cue would be swinging to the wrong beat.
+const BEAT_TONE = {
+  takeaway:    { hz: 660, gain: 0.30 },
+  top:         { hz: 880, gain: 0.30 },
+  impact:      { hz: 1320, gain: 0.34 },
+  subdivision: { hz: 330, gain: 0.10 },
+};
+
+// How long each click sounds for. Short — a metronome tick, not a note.
+const BEAT_SECONDS = 0.045;
+// Count-in ticks before the first beat, and rest ticks between loops. Both measured in the
+// pattern's *own* interval, so they stay in proportion at any pace and in either mode.
+const COUNT_IN_TICKS = 2;
+const REST_TICKS = 2;
+
+let tempoAudio = null;
+let tempoTimer = null;
+
+function wireTempo(payload) {
+  const plan = payload.tempo_plan;
+  const play = document.getElementById("tempoPlay");
+  if (!plan || !play) { tempoPlanState = null; return; }
+
+  // The slider starts where the server fitted it, not at a neutral 100%. `plan.pace` is a
+  // multiple of the *tour median* backswing, so a golfer whose own backswing is 11% longer opens
+  // at 111% — the control shows the decision rather than hiding it, and dragging is an override.
+  //
+  // The bounds are the anchor guard's own range expressed as a pace (the corpus p10-p90 against
+  // its median), so every value the fitter can produce is reachable; `pace` is clamped rather
+  // than trusted, because a future guard could widen and a slider that cannot reach its own
+  // starting value would silently play something other than what the page says.
+  const pace = document.getElementById("tempoPace");
+  const opening = Math.min(Number(pace.max), Math.max(Number(pace.min),
+    Math.round((plan.pace || 1) * 100)));
+  pace.value = String(opening);
+  tempoPlanState = { plan, mode: 0, pace: opening / 100 };
+  document.getElementById("tempoPaceOut").textContent = `${opening}%`;
+
+  document.querySelectorAll(".tempo .modes button").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      tempoPlanState.mode = Number(btn.dataset.mode);
+      document.querySelectorAll(".tempo .modes button").forEach((b) =>
+        b.setAttribute("aria-pressed", String(b === btn)));
+      // Switching mode or pace rebuilds from the payload rather than rescaling what is playing:
+      // the two patterns have different beat counts, so there is no correspondence to preserve.
+      restartTempoIfPlaying();
+      drawTempo();
+    });
+  });
+
+  pace.addEventListener("input", () => {
+    tempoPlanState.pace = Number(pace.value) / 100;
+    document.getElementById("tempoPaceOut").textContent = `${pace.value}%`;
+    restartTempoIfPlaying();
+    drawTempo();
+  });
+
+  play.addEventListener("click", () => (tempoTimer ? stopTempo() : startTempo()));
+  drawTempo();
+}
+
+function currentPattern() {
+  return tempoPlanState.plan.patterns[tempoPlanState.mode];
+}
+
+// Beat times at the pace the golfer chose. The payload's own `pace` is what the server already
+// applied (1.0 from this route), so the two multiply rather than one overriding the other.
+function pacedBeats() {
+  const scale = tempoPlanState.pace;
+  return currentPattern().beats.map((b) => ({ role: b.role, at_ms: b.at_ms * scale }));
+}
+
+function pacedInterval() {
+  return currentPattern().downswing_ms * tempoPlanState.pace;
+}
+
+function drawTempo() {
+  const pattern = currentPattern();
+  const beats = pacedBeats();
+  const span = beats[beats.length - 1].at_ms || 1;
+
+  // Bars separated by proportional gaps, so the strip is a picture of the real intervals.
+  let strip = "";
+  beats.forEach((b, i) => {
+    if (i) strip += `<span class="gap" style="flex-grow:${(b.at_ms - beats[i - 1].at_ms) / span}">
+      </span>`;
+    strip += `<span class="b ${esc(b.role)}"></span>`;
+  });
+  document.getElementById("tempoStrip").innerHTML = `<div class="strip">${strip}</div>
+    <div class="legend"><span>takeaway</span><span>top</span><span>impact</span></div>`;
+
+  const plan = tempoPlanState.plan;
+  const observed = (plan.observed_backswing_ms && plan.observed_downswing_ms)
+    ? ` &middot; yours ${num(plan.observed_backswing_ms, 0)} / ${
+        num(plan.observed_downswing_ms, 0)} ms (${
+        num(plan.observed_backswing_ms / plan.observed_downswing_ms, 2)}:1)`
+    : "";
+  document.getElementById("tempoFacts").innerHTML =
+    `${num(pattern.backswing_ms * tempoPlanState.pace, 0)} ms back / ${
+      num(pattern.downswing_ms * tempoPlanState.pace, 0)} ms down &middot; ${
+      num(pattern.ratio, 2)}:1${observed}`;
+  // Which backswing the target was built on. A golfer swinging at 90 mph and one at 110 do not
+  // share an absolute tempo — the corpus puts a whole speed cohort 167 ms apart on the backswing —
+  // so the trainer fits to theirs where it can, and has to say when it could not.
+  document.getElementById("tempoAnchor").textContent = plan.anchored
+    ? "Matched to your own backswing — only the ratio is the tour's."
+    : "Set to the tour median backswing: yours sits outside the tour range, so matching it would "
+      + "have built the drill around the half that needs changing.";
+  document.getElementById("tempoSrc").textContent = pattern.source;
+}
+
+function startTempo() {
+  const Ctx = window.AudioContext || window.webkitAudioContext;
+  if (!Ctx) return;
+  if (!tempoAudio) tempoAudio = new Ctx();
+  // iOS starts every context suspended until a gesture resumes it; this runs inside a click.
+  if (tempoAudio.state === "suspended") tempoAudio.resume();
+
+  document.getElementById("tempoPlay").textContent = "Stop";
+  scheduleTempoCycle();
+}
+
+// One cycle: the count-in, the pattern, then a rest, and re-arm. Scheduled a cycle at a time
+// through the Web Audio clock rather than a click per `setTimeout` — `setTimeout` drifts by tens
+// of milliseconds under load, which on a 267 ms downswing is a quarter of the interval.
+function scheduleTempoCycle() {
+  const beats = pacedBeats();
+  const tick = pacedInterval();
+  const start = tempoAudio.currentTime + 0.12;
+  const countIn = COUNT_IN_TICKS * tick;
+
+  for (let i = 0; i < COUNT_IN_TICKS; i++) {
+    click(start + (i * tick) / 1000, BEAT_TONE.subdivision);
+  }
+  for (const b of beats) {
+    click(start + (countIn + b.at_ms) / 1000, BEAT_TONE[b.role] || BEAT_TONE.subdivision);
+  }
+
+  const cycleMs = countIn + beats[beats.length - 1].at_ms + REST_TICKS * tick;
+  tempoTimer = setTimeout(scheduleTempoCycle, cycleMs);
+}
+
+function click(at, tone) {
+  const osc = tempoAudio.createOscillator();
+  const gain = tempoAudio.createGain();
+  osc.frequency.value = tone.hz;
+  // Ramped rather than switched: a square-edged gain change is an audible pop on every tick.
+  gain.gain.setValueAtTime(0, at);
+  gain.gain.linearRampToValueAtTime(tone.gain, at + 0.005);
+  gain.gain.exponentialRampToValueAtTime(0.0001, at + BEAT_SECONDS);
+  osc.connect(gain).connect(tempoAudio.destination);
+  osc.start(at);
+  osc.stop(at + BEAT_SECONDS + 0.02);
+}
+
+function stopTempo() {
+  clearTimeout(tempoTimer);
+  tempoTimer = null;
+  const play = document.getElementById("tempoPlay");
+  if (play) play.textContent = "Play";
+}
+
+function restartTempoIfPlaying() {
+  if (!tempoTimer) return;
+  clearTimeout(tempoTimer);
+  scheduleTempoCycle();
 }
 
 // M6. Rendered after the tips because it is a synthesis of them, and gated on provenance as
