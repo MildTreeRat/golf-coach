@@ -1,4 +1,4 @@
-"""Golfer registry and the session cursor — identity stability and the two silent-drift guards.
+"""Golfer registry — identity stability and the two silent-drift guards.
 
 The properties under test here are the ones whose failure mode is invisible: a name that resolves
 to two golfers halves a career baseline without erroring, and a flipped handedness inverts every
@@ -13,13 +13,6 @@ import pytest
 
 from golf_coach.contracts.golfer import Golfer, Handedness, slugify
 from golf_coach.storage.golfer_store import GolferStore
-from golf_coach.storage.session_meta import (
-    SessionMeta,
-    load_session_meta,
-    save_session_meta,
-    session_meta_path,
-    set_current_player,
-)
 
 
 @pytest.fixture
@@ -143,43 +136,3 @@ def test_list_all_is_sorted_by_display_name(golfers) -> None:
     golfers.get_or_create("aaron", Handedness.RIGHT)
 
     assert [g.display_name for g in golfers.list_all()] == ["aaron", "Zoe"]
-
-
-# --------------------------------------------------------------------------- session cursor
-
-
-def test_missing_session_meta_reads_as_no_golfer(tmp_path) -> None:
-    """"Nobody selected yet" is every session's starting state, not an error."""
-    assert load_session_meta(tmp_path).player_id is None
-
-
-def test_corrupt_session_meta_reads_as_no_golfer(tmp_path) -> None:
-    session_meta_path(tmp_path).write_text("{not json", encoding="utf-8")
-
-    assert load_session_meta(tmp_path).player_id is None
-
-
-def test_session_cursor_round_trips(tmp_path) -> None:
-    session_dir = tmp_path / "2026-08-12"
-
-    stored = set_current_player(session_dir, "aaron")
-
-    assert stored.player_id == "aaron"
-    assert load_session_meta(session_dir).player_id == "aaron"
-
-
-def test_session_cursor_can_be_repointed(tmp_path) -> None:
-    session_dir = tmp_path / "2026-08-12"
-    set_current_player(session_dir, "aaron")
-
-    set_current_player(session_dir, "dave")
-
-    assert load_session_meta(session_dir).player_id == "dave"
-
-
-def test_saving_meta_creates_the_session_directory(tmp_path) -> None:
-    session_dir = tmp_path / "2026-08-12"
-
-    save_session_meta(SessionMeta(player_id="aaron"), session_dir)
-
-    assert session_meta_path(session_dir).exists()

@@ -5,7 +5,7 @@
 > is [ADR-024](decisions/024-per-club-shot-history.md); this document is the *how*, as a phase
 > list.
 
-**Status: in progress, 1/20 phases.** P1 landed 2026-08-21. Start at P2.
+**Status: in progress, 5/20 phases.** P5 landed 2026-08-21. Start at P6.
 
 ---
 
@@ -101,7 +101,7 @@ round-trips every enum value's own string, and returns `None` on junk.
 
 ---
 
-### [ ] P2 — `contracts/bag.py`: what a club in the bag is
+### [x] P2 — `contracts/bag.py`: what a club in the bag is *(done 2026-08-21)*
 
 **Goal.** The shape of a bag entry, carrying the loft fitting will need. Pure contract.
 
@@ -113,6 +113,10 @@ round-trips every enum value's own string, and returns `None` on junk.
 - `Bag`: `player_id: str`, `entries: dict[ClubId, BagEntry]`, `updated_at: datetime`, plus a
   `club_ids` property returning canonical bag order (derived from `ClubId` declaration order, not
   sorted alphabetically).
+- **As built, P2 also added** a `model_validator` pinning each `entries` key against its own
+  `BagEntry.club`, and the `PLAYER_ID` slug check copied from `Golfer` — the store reads the id
+  straight into a path, so the contract is where that has to hold. P3 then added `retired`,
+  `retired_at`, `same_club_as` and `retired_for`; see its entry.
 
 **Comment to write.** Why `loft_deg` is optional — a golfer who has not measured their lofts still
 has a bag; the work that needs loft refuses per club, the same posture as `SwingResult.unscored`.
@@ -125,73 +129,148 @@ populations, and P16 turns that into a caveat rather than pooling them silently.
 
 ---
 
-### [ ] P3 — `storage/bag_store.py`: the bag on disk
+### [x] P3 — `storage/bag_store.py`: the bag on disk *(done 2026-08-21)*
 
-**Goal.** Read/write one `bag.json` per golfer.
+**Goal.** Read/write one bag per golfer.
 
-**Files.** `src/golf_coach/storage/bag_store.py`, `tests/storage/test_bag_store.py`.
+**Files.** `src/golf_coach/storage/bag_store.py`, `tests/storage/test_bag_store.py`; amended
+`contracts/bag.py` and `tests/contracts/test_bag.py`.
 
-**Reuse.** Mirror `storage/golfer_store.py` exactly — same class shape, same tolerant reads. Same
-atomic write (tmp + `os.replace`) as `storage/manifest.py:save_manifest`.
+**Reuse.** Mirrors `storage/golfer_store.py` — same class shape, same tolerant read. Same atomic
+write (tmp + `os.replace`) as `storage/manifest.py:save_manifest`.
 
-**Detail.** `BagStore`: `get(player_id) -> Bag | None`, `save(bag)`, `set_entry(player_id, entry)`
-(upsert one club, stamping `recorded_at` and `Bag.updated_at`), `remove_entry(player_id, club)`.
-Path `<root>/<player_id>.json`; `player_id` is already slug-validated by
-`contracts/golfer.py:PLAYER_ID`, so no second sanitising step. A missing or corrupt bag is `None`,
-never an exception (R8).
+**Path, as built:** `data/processed/golfers/<player_id>.bag.json` — **beside the golfer**, reusing
+`settings.golfers_dir` rather than adding one. `GolferStore.list_all` globs `*.golfer.json` and
+this store globs nothing, so neither sees the other's files, and the `.golfer.json` suffix already
+existed so that directory could hold more than one record kind per player. No new config field.
+`player_id` is slug-validated by `contracts/golfer.py:PLAYER_ID` inside `Bag`, so the store does no
+second sanitising step — the ordering is what makes that safe: a bad id fails constructing the
+model, before `save` can turn it into a filename.
 
-**Tests.** Round-trip; unknown player → `None`; corrupt file → `None`; `set_entry` twice on one
-club replaces rather than duplicating.
+**Detail.** `BagStore`: `get`, `save`, `set_entry`, `remove_entry`, `restore_entry`. A missing or
+corrupt bag reads as `None` for a *reader* (R8) — writers deliberately refuse instead, see below.
 
-**Done when.** Tests pass.
+**The phase gained a decision the list did not anticipate: nothing deletes a club.** Replacing or
+removing one moves the outgoing entry to `Bag.retired`, an append-only shelf, and `restore_entry`
+puts back the club a slot held before. Overwriting it would destroy a measured loft, which is the
+exact loss "unrecoverable after the fact" was the argument against. This is **retention, not the
+bag entry versioning ADR-024 defers** — nothing reads the shelf, and P16 still caveats from the
+current entry's `recorded_at`. See the [ADR-024 addendum](decisions/024-per-club-shot-history.md).
 
----
+Two consequences worth knowing before P19:
 
-### [ ] P4 — `club` reaches the manifest and the session cursor
+- **Re-saving an unchanged entry writes nothing and does not move `recorded_at`** (identity is
+  `BagEntry.same_club_as`, every descriptive field and neither timestamp). P19's save button on an
+  unedited row would otherwise hand P16 a bag-changed caveat over a club that never changed.
+- **The store owns the clock.** `set_entry` discards the caller's `recorded_at`, as
+  `get_or_create` discards `handedness` for a known golfer.
 
-**Goal.** The storage layer can record which club hit a swing. No API, no UI yet.
+**And one guard the shelf made necessary.** `get` collapses "no bag" and "unreadable bag" into
+`None`; the three mutators read through `_load_for_write`, which distinguishes them and **raises**
+on the second. A writer treating a corrupt file as an empty bag replaces the bag *and its whole
+shelf* with the one club it was asked to set.
 
-**Files.** `storage/manifest.py`, `storage/session_meta.py`, and their mirrored tests.
-
-**Reuse.** `SwingManifest.player_id` is the precedent — read its docstring and copy the posture.
-
-**Detail.**
-- `SwingManifest.club: ClubId | None = None`, with a description saying it is stamped from the
-  session cursor at swing creation, that `None` means it predates the field, and that it is
-  **write-once in practice** so switching the cursor mid-session cannot rewrite earlier swings.
-- **Optional in the shape, required at the boundary** (R12). The manifests already on disk have no
-  club and must still load; requiredness is enforced in P6, in the route.
-- `SessionMeta.club: ClubId | None = None`, plus `set_current_club(session_dir, club)` mirroring
-  `set_current_player`.
-- **Careful:** `set_current_player` currently *replaces* the whole `SessionMeta`. With two cursors
-  both setters must load-modify-save, or setting the club clears the golfer. Fix
-  `set_current_player` in this phase.
-
-**Tests.** A legacy manifest JSON (pin it as a literal string, not a constructed model) loads with
-`club is None`. Setting the club preserves the player and vice versa — the regression the
-load-modify-save change exists to prevent.
-
-**Done when.** Tests pass; the existing `tests/storage/` suite is green.
+**Tests.** 21 in `tests/storage/test_bag_store.py`, 7 added to `tests/contracts/test_bag.py`. The
+three load-bearing pins — the clobber guard, the unchanged-row short-circuit, and the shelf being
+copied rather than popped — were each checked by removing the behaviour in-process and watching the
+test fail, rather than assumed.
 
 ---
 
-### [ ] P5 — `bundle_store` stamps and repairs the club
+### [x] P4 — `club` reaches the manifest and the session cursor *(done 2026-08-21)*
+
+**Goal.** The storage layer can record which club hit a swing. No API, no UI, and no writer yet —
+P5 stamps the field, P6 makes it required at the boundary.
+
+**Files.** `src/golf_coach/storage/manifest.py`, `src/golf_coach/storage/session_meta.py`,
+`tests/storage/test_manifest.py`, and a new `tests/storage/test_session_meta.py`.
+
+**Reuse.** `SwingManifest.player_id` is the precedent and was copied literally — same
+`Field(default=None, description=...)` posture, same no-migration argument.
+
+**Detail, as built.**
+
+- `SwingManifest.club: ClubId | None = None`. The description records the three facts that go
+  load-bearing later: stamped from the session cursor at swing creation, **write-once in
+  practice**, and `None` meaning *predates the field* — which is where it parts company with
+  `player_id`, since P6 refuses an untagged upload. Optional in the shape, required at the
+  boundary (R12), which is what lets every manifest already on disk keep loading.
+- `SessionMeta.club: ClubId | None = None` and `set_current_club`.
+
+**The load-modify-save fix, which was the phase's real content.** `set_current_player` constructed
+a whole fresh `SessionMeta` — correct while there was one cursor, and silently destructive the
+moment there were two: picking a golfer would have cleared the club, on disk, mid-session, visible
+only later as a mistagged shot. Both setters now go through one private `_update_cursor`, which
+loads, applies only the named change, and persists.
+
+**Why one helper rather than load-modify-save written out twice.** Carrying the sibling field by
+hand in each setter fixes it today and re-introduces it the day a third cursor arrives and one
+setter forgets — so the preservation lives in one place a new cursor inherits without asking. It
+merges onto a `model_dump` and re-runs `model_validate` rather than `model_copy(update=...)`, for
+the reason `bag_store._write` already gives: `model_copy` skips validators.
+
+**One `updated_at` for the whole record**, not one per cursor. Nothing reads it today, and "when
+the session's choices last changed" is a truthful reading of one field — but it cannot answer
+"when was the club chosen", so P19 needs its own field if it wants that. Said in the docstring so
+P19 does not discover it by shipping a wrong timestamp.
+
+**No backfill counterpart for the club**, and `set_current_club`'s docstring says why:
+`attribute_unlabeled` reaches backwards over a session because a session usually has one golfer; a
+session has many clubs, so the same reach would confidently mislabel every earlier swing
+(ADR-024 §5).
+
+**Tests.** The session-cursor tests **moved** out of `tests/storage/test_golfer_store.py` into a
+new `tests/storage/test_session_meta.py` — `session.json` stopped being about golfers alone, and
+`tests/` mirrors `src/` package by package. 15 there (5 moved, 10 new) and 3 added to
+`test_manifest.py`, taking the suite 858 → 871. Both directions of the cross-cursor pin are written out separately, and both
+were checked by **reverting each setter to its replacing form in-process and watching the suite go
+red** — which is how it is known they are pins. Each break was caught by a *different* test, so a
+single direction would have missed one.
+
+**Deliberately left stale for P20:** `docs/ARCHITECTURE.md` §4 still calls `session.json` the
+"golfer cursor" (line ~400) and its manifest row (~397) names only `player_id`. `tests/test_docs_truth.py`
+does not cover those tables, so nothing goes red in the meantime.
+
+---
+
+### [x] P5 — `bundle_store` stamps and repairs the club *(done 2026-08-21)*
 
 **Goal.** Thread the club through swing creation, plus the per-swing repair path.
 
 **Files.** `storage/bundle_store.py`, `tests/storage/test_bundle_store.py`.
 
-**Reuse.** `assign_from_path`'s `player_id` parameter and `set_player` are the two shapes to copy.
+**Reuse.** `assign_from_path`'s `player_id` parameter and `set_player` were the two shapes copied,
+literally — the club now appears at every site `player_id` does and at no others.
 
-**Detail.** `assign_from_path(..., club=None)` threaded into `_new_manifest` and `_place` exactly
-as `player_id` is; write-once. `set_club(session_id, swing_id, club)` as the explicit human-driven
-override. **No `attribute_unlabeled` analogue** — write the comment saying why, pointing at that
-method's docstring.
+**Detail, as built.** `assign_from_path(..., club=None)` threaded into `_new_manifest` and `_place`;
+write-once. `set_club(session_id, swing_id, club)` as the explicit human-driven override, with no
+`attribute_unlabeled` analogue and a docstring saying why.
 
-**Tests.** Two uploads into one swing with different clubs → first wins. `set_club` overwrites;
-on a missing swing returns `None`.
+**The phase list did not name `AssignmentResult`, and it had to change.** It gained `club`, for two
+reasons that only appear once you write the dedupe path out: P6 puts the club in the upload response
+and builds that response field-by-field off the result, and the deduped early return needs somewhere
+to report `manifest.club` — the club the swing *says*, not the one the retry asked for. A phone
+retrying an upload after the cursor has moved on would otherwise be told its stale club won.
 
-**Done when.** Tests pass.
+**Where the club is not the golfer, in the one place it shows.** `_place`'s stamp-if-empty branch is
+the whole two-phone fix for `player_id` — one phone uploads before a golfer is picked, the other
+after, and the swing gets attributed on the second file. For the club that branch is **defensive
+rather than load-bearing**: P6 refuses an upload with no club, so a swing created since M9 cannot
+reach `_place` untagged. What it still covers is a swing written before the field existed receiving
+a later role, and tagging that from the cursor current *now* is right, because now is when the swing
+is being completed. The comment beside it says so, so nobody later reads the two branches as equally
+important and deletes the wrong one.
+
+**Tests.** 10 added to `tests/storage/test_bundle_store.py`, 19 → 29, mirroring the golfer block
+below its own divider. Three are load-bearing and each was checked by **removing the behaviour
+in-process and watching that one test go red**: the write-once guard, the dedupe echo reading
+`manifest.club` rather than the argument, and `set_club` mutating the loaded manifest rather than
+rebuilding one (which is P4's `set_current_player` bug, one layer down — the pin exists because the
+mistake has already been made once in this repo). The cross-field pin is written out in **both**
+directions, for the reason P4 found: each direction is caught by a different test.
+
+**Still stale for P20**, unchanged from P4: `docs/ARCHITECTURE.md` §4 calls `session.json` the
+"golfer cursor" and its manifest row names only `player_id`.
 
 ---
 

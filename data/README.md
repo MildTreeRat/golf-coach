@@ -9,12 +9,17 @@ data/
 ├── processed/   # extracted keypoints, labeled images, intermediate artifacts (gitignored)
 │   ├── sessions/      # one directory per swing bundle + its analysis artifacts
 │   ├── shots/         # parsed launch-monitor shots, content-addressed
-│   ├── golfers/       # the golfer registry, one file per golfer
+│   ├── golfers/       # per golfer: the registry record, and the declared bag beside it
 │   └── conversations/ # follow-up conversation transcripts, one per conversation (ADR-020)
 ├── models/      # trained model weights, *.pt/*.onnx                        (gitignored)
 ├── reference/   # third-party reference corpora — see below                 (gitignored)
 └── golf_trainer.db   # SQLite database                                      (gitignored)
 ```
+
+`golfers/` holds two record kinds per player, kept apart by suffix: `<player_id>.golfer.json`
+(name and handedness) and `<player_id>.bag.json` (the declared bag — ADR-024). A bag is the one
+thing here that is typed in rather than recomputed from the clips, so deleting one loses lofts
+that cannot be recovered from anything else on disk.
 
 `conversations/` holds the model's own content blocks verbatim — thinking blocks included —
 because they are replayed to the API on the next turn rather than merely displayed. Treat one as

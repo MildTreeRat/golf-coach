@@ -211,3 +211,49 @@ parameter and think it was an oversight.
 it needed `n` to be *correct*, and no amount of desk work produced data. M9's ingest half needs no
 `n` at all — it is what makes the next bay session's data worth more than the last one's, so
 building it before the session is the ordering that pays.
+
+## Addendum (2026-08-21): a club that leaves the bag is kept, and that is not versioning
+
+**What changed.** `Bag` gained `retired: tuple[BagEntry, ...]` — an append-only shelf of finished
+stints — and `BagEntry` gained `retired_at`. `BagStore.set_entry` moves the outgoing entry there
+instead of dropping it, `remove_entry` shelves rather than deletes, and `restore_entry` puts back
+the club a slot held previously. Landed with P3.
+
+**Why the original decision was not enough.** §2 says the bag entry is the single home for loft
+and that a change to it is caveated rather than duplicated. Both still hold. What §2 did not say
+is what happens to the *old* entry at the moment of the change, and the implicit answer — it is
+overwritten — loses the one input this milestone exists to capture. A golfer who puts last
+season's 7 iron back in the bag would have to re-measure a loft that had already been measured,
+and "unrecoverable after the fact" was the entire argument for recording lofts before the models
+that use them exist. Deleting them on replacement reintroduces exactly that loss, one club at a
+time, through the normal use of the feature.
+
+**The boundary, because these two are easy to confuse.** *Deferred, by choice* defers **bag entry
+versioning**: attributing each stored shot to the stint that hit it. That stays deferred, and
+nothing in P3 moves toward it. `Bag.retired` has no reader — P16 still builds its caveat from the
+**current** entry's `recorded_at`, naming a date rather than modelling a history, exactly as that
+bullet says. The shelf is retention: it keeps a declaration from being destroyed and makes
+re-declaring a club one call. It makes the deferred modelling *possible* later without promising
+it now.
+
+The test for whether this addendum has gone stale is one line: if anything joins a shot to a
+member of `Bag.retired`, versioning has happened and it needs a decision here rather than an
+addendum.
+
+**Two smaller calls that follow from it.**
+
+- **Re-saving an unchanged entry writes nothing and does not move `recorded_at`.** Identity is
+  `BagEntry.same_club_as`, which compares every descriptive field and neither timestamp. Without
+  this, P19's save button on an unedited row retires a club and hands P16 a bag-changed caveat
+  over shots that were all hit with the same club — the false positive is produced by the UI
+  working correctly, which is the worst way to get one.
+- **A restore copies off the shelf rather than popping.** Out, back and out again is three stints
+  and not one overwritten record. Popping would make a club's second departure look like its
+  first, which is the history the shelf exists to hold.
+
+**And one guard the shelf made necessary.** `BagStore.get` is tolerant — a corrupt bag reads as
+`None`, as `GolferStore.get` does. The writers deliberately are not: they read through a helper
+that distinguishes "no bag yet" from "bag I cannot parse" and raises on the second. A writer that
+treated an unreadable file as an empty bag would replace the bag *and its entire shelf* with the
+single club it was asked to set. That failure existed before the shelf and got materially worse
+with it, since the shelf is the part that was meant to survive replacement.

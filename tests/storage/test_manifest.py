@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 from datetime import UTC, datetime
 
+from golf_coach.contracts.club import ClubId
 from golf_coach.storage.manifest import (
     Role,
     RoleFile,
@@ -131,3 +132,60 @@ def test_player_id_round_trips(tmp_path) -> None:
     save_manifest(manifest, path)
 
     assert load_manifest(path).player_id == "aaron"
+
+
+def test_a_manifest_written_before_club_existed_still_loads(tmp_path) -> None:
+    """M9 P4's half of the no-migration guarantee.
+
+    The literal is the same JSON the `player_id` test pins, because that manifest predates both
+    fields. Written out rather than built from `SwingManifest`: a constructed model carries every
+    field this module currently declares, so it would still load after a field was made required
+    and prove nothing about the bytes actually sitting in `data/`.
+    """
+    path = tmp_path / "manifest.json"
+    path.write_text(
+        '{"swing_id": "1", "session_id": "2026-08-07-aaron1",'
+        ' "created_at": "2026-08-07T12:00:00Z", "updated_at": "2026-08-07T12:00:00Z",'
+        ' "roles": {}}',
+        encoding="utf-8",
+    )
+
+    manifest = load_manifest(path)
+
+    assert manifest is not None
+    assert manifest.club is None
+
+
+def test_club_round_trips(tmp_path) -> None:
+    manifest = SwingManifest(
+        swing_id="1",
+        session_id="2026-08-06",
+        created_at=_NOW,
+        updated_at=_NOW,
+        club=ClubId.SEVEN_IRON,
+    )
+    path = tmp_path / "manifest.json"
+
+    save_manifest(manifest, path)
+
+    assert load_manifest(path).club is ClubId.SEVEN_IRON
+
+
+def test_club_and_player_are_independent_on_a_manifest(tmp_path) -> None:
+    """One stamped and not the other is an ordinary state, not a half-written manifest."""
+    path = tmp_path / "manifest.json"
+    save_manifest(
+        SwingManifest(
+            swing_id="1",
+            session_id="2026-08-06",
+            created_at=_NOW,
+            updated_at=_NOW,
+            player_id="aaron",
+        ),
+        path,
+    )
+
+    loaded = load_manifest(path)
+
+    assert loaded.player_id == "aaron"
+    assert loaded.club is None

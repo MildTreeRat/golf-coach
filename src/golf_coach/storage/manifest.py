@@ -9,7 +9,10 @@ pure addition, with no migration of manifests written by this code.
 
 `player_id` was added exactly that way (career mode, step 1): optional, defaulted,
 and read through the same tolerant loader, so the four manifests written before it
-existed still load and simply report `None`.
+existed still load and simply report `None`. `club` (M9 P4) is the second field
+added under that pattern, and the pattern is the reason neither addition needed a
+migration: a new optional field is a pure addition, so every manifest already on
+disk keeps loading and answers `None`.
 """
 
 from __future__ import annotations
@@ -22,6 +25,8 @@ from pathlib import Path
 from typing import Literal
 
 from pydantic import BaseModel, Field
+
+from golf_coach.contracts.club import ClubId
 
 
 class Role(StrEnum):
@@ -74,6 +79,22 @@ class SwingManifest(BaseModel):
             "can be repaired while the session is still happening. **Write-once in practice**: "
             "the store sets it only when it is None, so switching the cursor to a second golfer "
             "mid-session cannot rewrite swings already attributed to the first."
+        ),
+    )
+
+    club: ClubId | None = Field(
+        default=None,
+        description=(
+            "Which club hit it, stamped from the session cursor when the swing was created "
+            "(`storage.session_meta`), exactly as `player_id` is. **Write-once in practice** for "
+            "the same reason: switching the cursor to the next club mid-session must not rewrite "
+            "the swings already hit with the last one. None means the swing predates the field — "
+            "and unlike `player_id`, that is the *only* thing it means, because the upload route "
+            "refuses a swing with no club selected (ADR-024 §5). The asymmetry is repairability: "
+            "an untagged golfer can be reached backwards over a session that usually had one "
+            "golfer, whereas a session has many clubs and nothing but memory can say which hit "
+            "what. Optional in the shape, required at the boundary (R12) — which is what lets "
+            "every manifest written before M9 keep loading."
         ),
     )
 

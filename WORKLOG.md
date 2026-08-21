@@ -5,6 +5,282 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-08-21 — M9 P5: the club gets a writer, and the branch that is only defensive
+
+**Duration**: ~1 session. One storage module amended, one test file extended.
+`ANALYSIS_VERSION` unchanged; nothing analysis-side reads the field yet.
+
+**What prompted it**: "can we work on the next step for M9?" — P5, agreed by ROADMAP's NEXT
+ACTION and the phase doc's first open box. Scope was confirmed as **P5 alone** rather than the
+P5–P7 slice that would have reached the bay, and the measurement track (P8–P11) was left for its
+own session.
+
+**What landed.** `bundle_store` now writes the field P4 created. `assign_from_path(..., club=None)`
+threads into `_new_manifest` and `_place`; `set_club(session_id, swing_id, club)` is the repair
+route; there is no `attribute_unlabeled` analogue and the docstring says why. The club appears at
+every site `player_id` does and at no others, which was the whole design instruction and is the
+thing to check if this ever needs re-reading.
+
+**The phase list did not name `AssignmentResult`, and it had to change.** It gained `club` for two
+reasons that only surface once the dedupe path is written out. P6 builds the upload response
+field-by-field off the result, so the field has to be there to be reported. And the deduped early
+return needs somewhere to echo `manifest.club` — the club the swing *says*, not the one the retry
+asked for. Without that distinction a phone retrying an upload after the cursor had moved on would
+be told its stale club won, which is a wrong answer that looks exactly like a right one.
+
+**The one place the club is genuinely not the golfer.** `_place`'s stamp-if-empty branch is the
+entire two-phone fix for `player_id`: one phone uploads before a golfer is picked, the other after,
+and the swing gets attributed on the second file rather than staying anonymous because of which
+phone was faster. For the club that same branch is **defensive rather than load-bearing** — P6
+refuses an upload with no club, so a swing created since M9 cannot reach `_place` untagged. What it
+still covers is a swing written before the field existed receiving a later role, and tagging that
+from the cursor current *now* is right, because now is when the swing is being completed. The
+comment beside it says all of that, so the two branches are not read as equally important by
+someone later deciding one of them is dead code.
+
+**Tests: 10 added, 19 → 29 in the file, suite 871 → 881.** They mirror the golfer block below their
+own divider, which is what makes the asymmetries legible — the club block has no
+`attribute_unlabeled` mirror, and that absence is now itself a test.
+
+**Three pins were watched fail rather than assumed**, the P3/P4 habit, run as one scripted pass
+that mutates, runs the single named test, and restores. Dropping the write-once guard fails
+"a tagged swing is never retagged by a later upload". Making the dedupe echo the *argument* instead
+of the manifest fails the stored-club test. And rebuilding the manifest inside `set_club` instead of
+mutating the loaded one fails "set_club leaves the golfer alone" — which is P4's `set_current_player`
+bug one layer down, and the reason that pin exists at all is that this repo has already made that
+mistake once. The cross-field pin is written in both directions, for P4's reason: each direction is
+caught by a different test.
+
+**Verified.** Full suite 881 green; ruff and mypy clean; `tests/api/test_pipeline_imports.py` green,
+which is what would have caught `storage/` importing `contracts/club.py` the wrong way. Checked on
+disk rather than in the model, as P4 did: a manifest written through the real `assign_from_path`
+carries `"club": "7i"`, and `set_club` rewrites it to `"pw"`.
+
+**Docs touched beyond the phase.** The phase doc's status line said "3/20, start at P4" while P4 was
+already checked `[x]` in the same file — corrected, along with P5's as-built entry. ROADMAP's NEXT
+ACTION and status table also still said P5, which would have sent the next session to redo finished
+work; both now say P6. `docs/ARCHITECTURE.md` §4 stays stale on purpose, still P20's.
+
+**Where it was left**: M9 is 5/20. Next is **P6** — the upload endpoint requiring a club: the
+`GET`/`POST /api/sessions/current/club` cursor routes, a **409 before the body is streamed to disk**
+when no club is selected, `club` added to the upload response (read it off `AssignmentResult`, it is
+already there), and the per-swing repair route calling `set_club`. `parse_club` is the boundary
+parser and P6 is where it gets its first caller. P8–P11 remain fully independent of the ingest
+spine.
+
+---
+
+## 2026-08-21 — M9 P4: the club reaches two things that run, and the setter that replaced too much
+
+**Duration**: ~1 session. Two storage modules amended, one test file split in two.
+`ANALYSIS_VERSION` unchanged; no stored analysis re-scores — nothing analysis-side reads either
+new field yet.
+
+**What prompted it**: "can we work on the next step for M9? I think its P4 but please double
+check" — it was P4, confirmed from three places that agreed: ROADMAP's NEXT ACTION, the phase
+doc's first open box, and the previous entry's closing line.
+
+**What landed.** `SwingManifest.club: ClubId | None` and `SessionMeta.club: ClubId | None`, plus
+`set_current_club`. This is the first time anything from P1–P3 touches a module that already runs;
+until today `contracts/club.py` had zero importers. Still **no writer** — P5 stamps the field, P6
+makes it required at the boundary — so the storage layer can now record a club and nothing yet
+does.
+
+**The phase's real content was a latent bug, and the phase list flagged it in advance.**
+`set_current_player` constructed a whole fresh `SessionMeta` on every call. That was correct while
+`session.json` held one cursor and silently destructive the moment it held two: picking a golfer
+would have wiped the club, on disk, mid-session, surfacing much later as a shot tagged with the
+wrong club or none. Both setters now go through one private `_update_cursor` that loads, applies
+only what it was asked to change, and saves.
+
+**One helper rather than load-modify-save written out twice**, which was the one design decision
+here. Carrying the sibling field by hand in each setter fixes it today and re-introduces it the
+day a third cursor arrives and one setter forgets to carry it — the same class of bug, just
+deferred to someone with less context. Putting preservation in one place means a new cursor
+inherits it without asking. It merges onto a `model_dump` and re-runs `model_validate` rather than
+`model_copy(update=...)`, for the reason P3 already established in `bag_store._write`:
+`model_copy` skips validators. There are none on `SessionMeta` today; the point is that one added
+later still runs.
+
+**One `updated_at` for the whole record, and that is a limitation worth having written down.**
+Nothing reads the field (grepped `src/` and `tests/` — no readers), and "when the session's
+choices last changed" is a truthful reading of a single timestamp. But it cannot answer "when was
+the club chosen", which is a question P19's bag page might well want. Said in the class docstring
+so P19 finds it before shipping a wrong timestamp rather than after.
+
+**The manifest field's description says something `player_id`'s does not.** For `player_id`,
+`None` is an ordinary, repairable state — uploads are never blocked on it. For `club`, `None` can
+only mean *predates the field*, because P6 refuses an untagged upload outright. Same shape, and
+the asymmetry between them is the whole of ADR-024 §5, so the description states it rather than
+leaving two identical-looking optional fields to be read as identical.
+
+**Tests moved, not just added.** The five session-cursor tests were living in
+`tests/storage/test_golfer_store.py`, which was fine while `session.json` was about golfers; it
+stops being fine the moment club-cursor tests would land in a file named for the golfer store.
+They moved to a new `tests/storage/test_session_meta.py`, which is where the mirror rule puts
+them. 15 tests there (5 moved unchanged, 10 new) and 3 added to `test_manifest.py` — the
+suite goes 858 → 871, which is +13 net and exactly accounts for the 5 that changed file.
+
+**Both directions of the cross-cursor pin are written out separately, and it turned out to
+matter.** Each setter was reverted to its replacing form in-process and the suite watched go red —
+the P3 habit, and it paid: the two breaks were caught by *two different tests*. Breaking
+`set_current_player` failed "setting the golfer preserves the club"; breaking `set_current_club`
+failed the clearing pin and the on-disk one. A single direction would have missed a real break.
+
+**Verified.** Full suite green; `tests/storage/` 150; `tests/api/test_pipeline_imports.py` green,
+which is the pin that would have caught `storage/` reaching into `contracts/` the wrong way;
+`tests/test_docs_truth.py` green; ruff and mypy clean. Also checked on disk rather than in the
+model: both cursors written to a real `session.json`, a golfer swap leaving the club intact, and
+the club surviving a manifest round trip as a `ClubId` and not a bare string.
+
+**Left stale on purpose, for P20.** `docs/ARCHITECTURE.md` §4 still calls `session.json` the
+"golfer cursor" (~line 400) and its manifest row (~397) names only `player_id`. Docs reconciliation
+is P20 by the phase list; `tests/test_docs_truth.py` does not cover those tables, so nothing is red
+in the meantime. Named here so P20 inherits a list instead of a search.
+
+**Where it was left**: M9 is 4/20. Next is **P5** — `bundle_store` threading the club through
+`assign_from_path` write-once and a `set_club` repair route, with **no `attribute_unlabeled`
+analogue** (a session has many clubs, so reaching backwards would mislabel). P2 and P3 are still
+uncommitted in the tree alongside P4, on the user's call. P8–P11, the measurement track, remain
+fully independent of the ingest spine.
+
+---
+
+## 2026-08-21 — M9 P3: the bag on disk, and the shelf that turned one phase into a decision
+
+**Duration**: ~1 session. One new storage module, one amended contract, both still with no
+consumers. `ANALYSIS_VERSION` unchanged; no stored analysis re-scores.
+
+**What prompted it**: "can we work on the next thing" — ROADMAP and the previous entry both named
+M9 P3, still the ingest half's next link and still needing neither a bay session nor more `n`.
+
+**What landed.** `storage/bag_store.py`: `BagStore` with `get`, `save`, `set_entry`,
+`remove_entry`, `restore_entry`, mirroring `GolferStore`'s class shape and `save_manifest`'s atomic
+write. `contracts/bag.py` gained `retired`, `retired_at`, `same_club_as` and `retired_for`.
+
+**The bag lives beside the golfer**, at `data/processed/golfers/<player_id>.bag.json`, on the
+user's call — reusing `settings.golfers_dir` rather than adding a `bags_dir`. The `.golfer.json`
+suffix already existed so that directory could hold more than one record kind per player, and
+`GolferStore.list_all` globs `*.golfer.json` while this store globs nothing, so neither sees the
+other's files. A separate top-level directory would have named the same thing twice. There is a
+test that writes both and asserts each store sees only its own, because that is the half of this
+decision that can only fail on disk.
+
+**The phase gained a decision the phase list did not anticipate, and it came from the user:
+nothing deletes a club.** The spec said `set_entry` upserts and `remove_entry` removes. Asked
+which way `recorded_at` should move on a re-save, the answer was to keep every club ever entered
+and only replace the one actively in the bag — so a golfer who goes back to last year's 7 iron
+still has its loft. That is right, and it is right for the reason the whole milestone exists:
+"loft is unrecoverable after the fact" was the argument for recording it before any model uses it,
+and overwriting the entry on replacement re-creates exactly that loss, one club at a time, through
+normal use of the feature.
+
+So `Bag.retired` is an append-only shelf of finished stints and `BagEntry.retired_at` says when
+each one ended. `restore_entry` **copies** off the shelf and leaves the stint in place — out, back
+and out again is three stints, not one overwritten record. A pop would make a club's second
+departure look like its first.
+
+**Retention is not the versioning ADR-024 defers, and the difference needed writing down.** The
+ADR's *Deferred, by choice* defers *bag entry versioning* — attributing each stored shot to the
+stint that hit it. That stays deferred. Nothing reads `Bag.retired`; P16 will still caveat from the
+current entry's `recorded_at`, naming a date rather than modelling a history. The shelf makes the
+modelling possible later without promising it now. The addendum states the staleness test in one
+line: **if anything joins a shot to a member of `Bag.retired`, versioning has happened** and it
+needs a decision rather than an addendum.
+
+**Re-saving an unchanged entry writes nothing.** Identity is `BagEntry.same_club_as`, which
+compares every descriptive field and neither timestamp — derived by *excluding* the two timestamps
+rather than listing the six fields, so a field added to `BagEntry` later is compared from the day
+it is added. Without the short-circuit, P19's save button on an unedited row retires a club and
+hands P16 a bag-changed caveat over shots all hit with the same club: a false positive produced by
+the UI working correctly, which is the worst kind to debug.
+
+**The guard the shelf made necessary.** `get` is tolerant — corrupt reads as `None`, as
+`GolferStore.get` does. The three mutators are not: they read through `_load_for_write`, which
+tells "no bag yet" from "bag I cannot parse" and raises on the second. A writer treating an
+unreadable file as an empty bag replaces the bag *and its entire shelf* with the one club it was
+asked to set. That failure existed before the shelf and got materially worse with it. All three
+mutators are parametrized over the same test, because they share one reader and a fourth added
+later that reached for `get` would reintroduce it.
+
+**`_write` constructs a `Bag` rather than `model_copy`-ing one**, deliberately: `model_copy`
+skips validators, and both of `Bag`'s guard invariants that these three methods are the only thing
+maintaining. Building the model is what makes a mistake in that file fail there instead of on the
+next read.
+
+**Verified.** 21 new store tests and 7 added to the contract's (13 total there), full suite green
+at 858, ruff and mypy clean.
+The three load-bearing pins were checked by **removing the behaviour in-process and watching them
+fail** rather than assumed: the clobber guard rewired to the tolerant reader, `same_club_as` forced
+to `False`, and `restore_entry` reimplemented to pop. All three fired. `tests/test_docs_truth.py`
+caught the stale addendum count in `docs/README.md` on the first run, which is the doc-truth test
+doing precisely its job.
+
+**Escalation note.** P3 is an L2 phase that had to touch a `contracts/` shape, which CLAUDE.md
+routes to L3. Taken anyway rather than deferred: `Bag` and `BagEntry` have zero importers and P2
+was still uncommitted, so the usual L3 cost — a consumer nobody read — was nil. It will never be
+cheaper than it was today.
+
+**Where it was left**: M9 is 3/20. Next is **P4** (`club` on `SwingManifest` and the session
+cursor) — the first phase where the club reaches something that already runs, and the one carrying
+the `set_current_player` load-modify-save fix. P8–P11, the measurement track, remain fully
+independent of the ingest spine and can go in any session.
+
+---
+
+## 2026-08-21 — M9 P2: the bag entry, and the two guards the phase list did not ask for
+
+**Duration**: ~1 session, one new contracts module with no consumers. `ANALYSIS_VERSION`
+unchanged; no stored analysis re-scores.
+
+**What prompted it**: "implement the next thing" — ROADMAP named M9 P2 and it is still the ingest
+half's next link, needing neither a bay session nor more `n`.
+
+**What landed.** `contracts/bag.py`: `BagEntry` (`club`, `loft_deg`, `make`, `model`, `shaft`,
+`length_in`, `recorded_at`) and `Bag` (`player_id`, `entries` keyed by `ClubId`, `updated_at`,
+plus a `club_ids` property). Pure contract — P3 puts it on disk, P14 composes the entry into a
+club profile, P16 reads `recorded_at`. Nothing imports it yet, and that is the deliverable.
+
+**`recorded_at` is required, with no default, and that is a decision.** `Golfer.created_at` is the
+precedent: the contract stays dumb and `GolferStore` stamps it. P3's `set_entry` will re-stamp on
+upsert the same way. A `default_factory` reading the clock was the alternative and was rejected —
+it would put a second stamping site in a different layer from the first, which is exactly the
+drift `recorded_at` exists to make visible.
+
+**Two guards the phase list did not specify, both added because the failure is silent.** The phase
+detail listed fields and a property; what it did not name is that `entries` is keyed by `ClubId`
+*and* `BagEntry` carries `club`, so the two can disagree. They both have to exist — an entry
+travels alone through `set_entry` and `ClubProfile.bag_entry` — so a `model_validator` rejects a
+mismatch rather than picking a winner. Filing a sand wedge under `7i` attaches the wrong loft to a
+club's history and nothing downstream can detect it. Same posture as `_build_aliases`' collision
+raise from P1.
+
+The second is a `field_validator` on `player_id` against `contracts/golfer.py:PLAYER_ID`, copied
+from `Golfer`. P3's spec says the id is "already slug-validated, so no second sanitising step" and
+then reads it straight into `<root>/<player_id>.json` — that sentence was only true of `Golfer`
+until now.
+
+**Defaults on the descriptive fields.** `make`/`model`/`shaft` default to `""` and both float
+fields to `None`, so the only required inputs are the club and the timestamp. A golfer who has
+never had their lofts measured still has a bag; the work that needs loft refuses per club, which
+is `SwingResult.unscored`'s posture applied to a different missing input.
+
+**The `club_ids` ordering pin needed a club set where all three orders differ**, or it pins
+nothing. pw / 3w / driver / 7i does it: inserted in that order, alphabetical by value is
+`3w, 7i, driver, pw`, and only bag order puts the driver first and the wedge last. The test
+asserts against all three.
+
+**Verified.** 6 new tests, full suite green (830), ruff and mypy clean. All four pins checked by
+violating them in-process rather than assumed — including the club/key mismatch arriving as raw
+JSON with string keys, since pydantic coerces the key before the validator sees it and that is the
+path `BagStore` will actually take.
+
+**Where it was left**: M9 is 2/20. Next is **P3** (`storage/bag_store.py`), mirroring
+`storage/golfer_store.py`. P8-P11, the measurement track, remain fully independent of the ingest
+spine and can go in any session.
+
+---
+
 ## 2026-08-21 — M9 P1: the club vocabulary, and three sessions squashed into one commit
 
 **Duration**: ~1 session. One commit of accumulated work, then one new contracts module with no

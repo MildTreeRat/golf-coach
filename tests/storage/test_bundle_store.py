@@ -9,6 +9,7 @@ from datetime import UTC, datetime
 
 import pytest
 
+from golf_coach.contracts.club import ClubId
 from golf_coach.storage.bundle_store import SwingBundleStore
 from golf_coach.storage.manifest import Role
 
@@ -25,6 +26,7 @@ def _upload(
     content_type: str = "video/quicktime",
     swing_id: str | None = None,
     player_id: str | None = None,
+    club: ClubId | None = None,
 ):
     incoming = store.root / ".incoming"
     incoming.mkdir(parents=True, exist_ok=True)
@@ -41,6 +43,7 @@ def _upload(
         size_bytes=len(data),
         swing_id=swing_id,
         player_id=player_id,
+        club=club,
     )
 
 
@@ -218,3 +221,94 @@ def test_set_player_overwrites_one_swing_and_leaves_its_neighbours(store) -> Non
 
 def test_set_player_on_a_missing_swing_returns_none(store) -> None:
     assert store.set_player(_SESSION, "99", "aaron") is None
+
+
+# ------------------------------------------------------------------------------ club attribution
+
+
+def test_a_new_swing_is_stamped_with_the_current_club(store) -> None:
+    result = _upload(store, _SESSION, Role.FACE_ON, b"face-on", club=ClubId.SEVEN_IRON)
+
+    assert result.club is ClubId.SEVEN_IRON
+    assert store.get_swing(_SESSION, "1").club is ClubId.SEVEN_IRON
+
+
+def test_a_tagged_swing_is_never_retagged_by_a_later_upload(store) -> None:
+    """Reaching for the next club must not rewrite the shot hit with the last one."""
+    _upload(store, _SESSION, Role.FACE_ON, b"face-on", club=ClubId.SEVEN_IRON)
+
+    _upload(store, _SESSION, Role.DOWN_THE_LINE, b"dtl", club=ClubId.PITCHING_WEDGE)
+
+    assert store.get_swing(_SESSION, "1").club is ClubId.SEVEN_IRON
+
+
+def test_switching_club_tags_only_subsequent_swings(store) -> None:
+    _upload(store, _SESSION, Role.FACE_ON, b"the-seven", club=ClubId.SEVEN_IRON)
+
+    _upload(store, _SESSION, Role.FACE_ON, b"the-wedge", club=ClubId.PITCHING_WEDGE)
+
+    assert store.get_swing(_SESSION, "1").club is ClubId.SEVEN_IRON
+    assert store.get_swing(_SESSION, "2").club is ClubId.PITCHING_WEDGE
+
+
+def test_a_later_role_tags_a_swing_that_was_still_untagged(store) -> None:
+    """The `_place` stamp-if-empty branch: a swing written before the club field existed."""
+    _upload(store, _SESSION, Role.FACE_ON, b"face-on")
+
+    second = _upload(store, _SESSION, Role.DOWN_THE_LINE, b"dtl", club=ClubId.SEVEN_IRON)
+
+    assert second.swing_id == "1"
+    assert store.get_swing(_SESSION, "1").club is ClubId.SEVEN_IRON
+
+
+def test_a_deduped_upload_reports_the_stored_club_not_the_requested_one(store) -> None:
+    """The retry reads back what the swing says, so a stale cursor cannot appear to have won."""
+    _upload(store, _SESSION, Role.FACE_ON, b"face-on", club=ClubId.SEVEN_IRON)
+
+    retry = _upload(store, _SESSION, Role.FACE_ON, b"face-on", club=ClubId.PITCHING_WEDGE)
+
+    assert retry.deduped is True
+    assert retry.club is ClubId.SEVEN_IRON
+
+
+def test_set_club_overwrites_one_swing_and_leaves_its_neighbours(store) -> None:
+    """The club's only repair path — per swing, because nothing may reach backwards for it."""
+    _upload(store, _SESSION, Role.FACE_ON, b"one", club=ClubId.PITCHING_WEDGE)
+    _upload(store, _SESSION, Role.FACE_ON, b"two", club=ClubId.PITCHING_WEDGE)
+
+    repaired = store.set_club(_SESSION, "1", ClubId.SEVEN_IRON)
+
+    assert repaired.club is ClubId.SEVEN_IRON
+    assert store.get_swing(_SESSION, "2").club is ClubId.PITCHING_WEDGE
+
+
+def test_set_club_on_a_missing_swing_returns_none(store) -> None:
+    assert store.set_club(_SESSION, "99", ClubId.SEVEN_IRON) is None
+
+
+def test_set_club_leaves_the_golfer_alone(store) -> None:
+    _upload(store, _SESSION, Role.FACE_ON, b"one", player_id="aaron", club=ClubId.PITCHING_WEDGE)
+
+    repaired = store.set_club(_SESSION, "1", ClubId.SEVEN_IRON)
+
+    assert repaired.player_id == "aaron"
+
+
+def test_set_player_leaves_the_club_alone(store) -> None:
+    """The other direction, written out separately: one repair must not undo the other."""
+    _upload(store, _SESSION, Role.FACE_ON, b"one", player_id="dave", club=ClubId.SEVEN_IRON)
+
+    repaired = store.set_player(_SESSION, "1", "aaron")
+
+    assert repaired.club is ClubId.SEVEN_IRON
+
+
+def test_attribute_unlabeled_stamps_the_golfer_and_touches_no_club(store) -> None:
+    """There is deliberately no bulk backfill for the club, and the golfer's must not become one."""
+    _upload(store, _SESSION, Role.FACE_ON, b"one")
+    _upload(store, _SESSION, Role.FACE_ON, b"two", club=ClubId.SEVEN_IRON)
+
+    store.attribute_unlabeled(_SESSION, "aaron")
+
+    assert [m.player_id for m in store.get_session(_SESSION)] == ["aaron", "aaron"]
+    assert [m.club for m in store.get_session(_SESSION)] == [None, ClubId.SEVEN_IRON]

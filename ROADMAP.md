@@ -1,6 +1,6 @@
 # Roadmap: AI Golf Swing Trainer
 
-## Last Updated: 2026-08-20
+## Last Updated: 2026-08-21
 
 Grouped by **state**, not by number, because the numbers no longer run in order: the pose-only
 slices (M4-PoC, M4-PoC+, M4-REF, M5-FB) delivered the mechanics half of M4 and the ranking half
@@ -24,7 +24,7 @@ wording; only the grouping and the M4 checklist have been corrected.
 | **M6.5** Measure now, judge later | ✅ Done | — (9 recorded, **6 scored**; the handedness seam landed and the last candidate was settled) | [§M6.5](#m65-measure-now-judge-later--done) |
 | **Career mode** One golfer over time | ✅ Done, 6/6 steps | — (built and silent; a bay session gives it the `n` to speak) | [§Career](#career-mode-one-golfer-tracked-over-time--done-built-and-silent) |
 | **M8** Learning what "good" means | ✅ Done *(2026-08-17)* | — (three models fitted, validated, surfaced **and spoken**, with a policy rather than a band) | [§M8](#m8-learning-what-good-means--gates-run-model-fitted) |
-| **M9** Player tracking (per-club) | 🟡 In progress, 1/20 phases | Nothing — the ingest half is desk work | [§M9](#m9-player-tracking-per-club-shot-history--in-progress) |
+| **M9** Player tracking (per-club) | 🟡 In progress, 5/20 phases | Nothing — the ingest half is desk work | [§M9](#m9-player-tracking-per-club-shot-history--in-progress) |
 | **M5** Feedback UI | ⬜ Not started | M7 Phase 5 gives the host | [§M5](#milestone-5-feedback-ui) |
 | **M2** Club & ball detection | 🔒 Gated, **and M1.5 said no-go** | Bay lighting for a ~1/2000 s exposure — *not* a global-shutter camera | [§M2](#milestone-2-club--ball-detection) |
 | Hardware re-validation | 🔒 Gated | Cameras / launch monitor arriving | [§Gate](#hardware-re-validation-gate-revisit-when-cameras--launch-monitor-arrive) |
@@ -44,14 +44,23 @@ served live `call_tool` requests including the not-found path. It is registered 
 (`claude mcp add`, per the README) and reports `✔ Connected`, which is a second client completing
 the same handshake independently.
 
-**NEXT ACTION — do this first: M9 P2.** Until 2026-08-20 this section read *"nothing on this
+**NEXT ACTION — do this first: M9 P6.** Until 2026-08-20 this section read *"nothing on this
 board is desk work any more"*, and [M9](#m9-player-tracking-per-club-shot-history--in-progress)
 is what stopped that being true. It is the one substantial item that needs **neither a bay session
 nor an `n`**: no shot on disk records which club hit it, and adding that tag is pure desk work that
-makes the *next* bay session's data worth more than the last one's. P1 landed 2026-08-21 —
-`contracts/club.py` holds the taxonomy and has no consumers yet. Continue at
-[M9 P2](docs/M9_PLAYER_TRACKING.md); the design is
-[ADR-024](docs/decisions/024-per-club-shot-history.md).
+makes the *next* bay session's data worth more than the last one's. P1–P4 all landed 2026-08-21 —
+`contracts/club.py` holds the taxonomy, `contracts/bag.py` the declared bag, `storage/bag_store.py`
+puts a bag on disk at `data/processed/golfers/<player_id>.bag.json` beside the golfer's own record,
+and **P4 carried the club into two things that already run**: `SwingManifest.club` and a second
+session cursor, `SessionMeta.club`. Nothing writes either field yet — P5 is the writer, threading
+the club through `bundle_store` at swing creation plus a per-swing repair route, and P6 is where
+the upload endpoint starts refusing a shot with no club selected. Continue at
+[M9 P5](docs/M9_PLAYER_TRACKING.md); the design is
+[ADR-024](docs/decisions/024-per-club-shot-history.md), whose addendum records the one call P3 added
+to it — a club that leaves the bag is kept rather than overwritten.
+
+P4 also fixed a latent bug it had to: `set_current_player` replaced the whole `session.json`, which
+was correct with one cursor and would have cleared the club with two.
 
 Everything else still divides in two, and both halves want the same trip:
 
@@ -965,7 +974,9 @@ is the client handshake and conversational follow-up.
 
 **Design**: [ADR-024](docs/decisions/024-per-club-shot-history.md).
 **Phase list**: [docs/M9_PLAYER_TRACKING.md](docs/M9_PLAYER_TRACKING.md) — 20 phases, each
-independently commit-ready. **P1 landed 2026-08-21; start at P2.**
+independently commit-ready. **P1–P4 landed 2026-08-21; start at P5.** The vocabulary, the bag
+shape and the bag on disk are in, and P4 carried the club into `SwingManifest` and a second session
+cursor — so the storage layer can now *record* a club, but nothing writes one. P5 is the writer.
 
 **The gap, in one sentence.** This repo can say how a swing compares to a tour population and how
 it compares to the golfer's own history. It cannot say how far you hit your 7 iron, because **no

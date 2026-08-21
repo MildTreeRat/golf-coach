@@ -22,6 +22,17 @@ anything here, so switching the cursor mid-session touches only swings that were
 still unlabeled. Getting it wrong is repaired the same explicit human-driven way,
 via `set_player`.
 
+The club is stamped from the same cursor by the same rule, and differs from the
+golfer in two ways worth knowing before reading the code. It is **required at
+the boundary** where the golfer is not, because an untagged golfer is repairable
+later and an untagged club is not recoverable by anything except memory. And it
+has **no backfill counterpart**: `attribute_unlabeled` may reach backwards over
+a session because a session usually has one golfer, whereas a session has many
+clubs, so the same reach would confidently mislabel every earlier swing.
+`set_club` is the whole of the club's repair story. Both asymmetries are argued
+in ADR-024 §5 and restated where they bite, in
+`storage.session_meta.set_current_club`.
+
 Flat files, one manifest.json per swing, mirroring the pattern in
 `launch_monitor/screen/store.py` — no shared index, no read-modify-write across
 swings, no SQLite.
@@ -35,6 +46,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
+from golf_coach.contracts.club import ClubId
 from golf_coach.storage.manifest import (
     Role,
     RoleFile,
@@ -55,6 +67,7 @@ class AssignmentResult:
     missing_roles: list[Role]
     deduped: bool
     player_id: str | None = None
+    club: ClubId | None = None
 
 
 class SwingBundleStore:
@@ -115,6 +128,7 @@ class SwingBundleStore:
         size_bytes: int,
         swing_id: str | None = None,
         player_id: str | None = None,
+        club: ClubId | None = None,
     ) -> AssignmentResult:
         """Slot an already-streamed-to-disk file into a swing. Must hold `_lock`."""
         with self._lock:
@@ -123,12 +137,12 @@ class SwingBundleStore:
 
             if swing_id is not None:
                 target = self.get_swing(session_id, swing_id) or _new_manifest(
-                    session_id, swing_id, player_id
+                    session_id, swing_id, player_id, club
                 )
                 return self._place(
                     session_dir, target, role, tmp_path, digest,
                     original_filename, content_type, size_bytes,
-                    deduped=False, player_id=player_id,
+                    deduped=False, player_id=player_id, club=club,
                 )
 
             for manifest in manifests:
@@ -143,6 +157,7 @@ class SwingBundleStore:
                         missing_roles=manifest.missing_roles(),
                         deduped=True,
                         player_id=manifest.player_id,
+                        club=manifest.club,
                     )
 
             candidate = next(
@@ -150,12 +165,12 @@ class SwingBundleStore:
                 None,
             )
             if candidate is None:
-                candidate = _new_manifest(session_id, _next_swing_id(manifests), player_id)
+                candidate = _new_manifest(session_id, _next_swing_id(manifests), player_id, club)
 
             return self._place(
                 session_dir, candidate, role, tmp_path, digest,
                 original_filename, content_type, size_bytes,
-                deduped=False, player_id=player_id,
+                deduped=False, player_id=player_id, club=club,
             )
 
     def attribute_unlabeled(self, session_id: str, player_id: str) -> list[str]:
@@ -198,6 +213,27 @@ class SwingBundleStore:
             save_manifest(manifest, manifest_path(swing_dir))
             return manifest
 
+    def set_club(self, session_id: str, swing_id: str, club: ClubId) -> SwingManifest | None:
+        """Retag one swing, overwriting whatever it said. The club's **only** repair path.
+
+        Per-swing and nothing else, deliberately. `attribute_unlabeled`'s docstring explains why
+        reaching backwards over a session is safe for the golfer; a session has many clubs, so the
+        same reach would confidently mislabel every earlier swing (ADR-024 §5). Nothing but memory
+        can say which club hit swing 3, so nothing but a human naming it should.
+
+        Otherwise the same shape as `set_player`: the explicit human-driven override, and the one
+        place a club already on a manifest is overwritten. Returns None if there is no such swing.
+        """
+        with self._lock:
+            swing_dir = self._root / session_id / swing_id
+            manifest = load_manifest(manifest_path(swing_dir))
+            if manifest is None:
+                return None
+            manifest.club = club
+            manifest.updated_at = datetime.now(tz=UTC)
+            save_manifest(manifest, manifest_path(swing_dir))
+            return manifest
+
     def _place(
         self,
         session_dir: Path,
@@ -211,6 +247,7 @@ class SwingBundleStore:
         *,
         deduped: bool,
         player_id: str | None = None,
+        club: ClubId | None = None,
     ) -> AssignmentResult:
         swing_dir = session_dir / manifest.swing_id
         swing_dir.mkdir(parents=True, exist_ok=True)
@@ -222,6 +259,15 @@ class SwingBundleStore:
         # on the second file rather than staying anonymous because of which phone was faster.
         if manifest.player_id is None and player_id is not None:
             manifest.player_id = player_id
+
+        # The club stamps by the same rule, but the rule carries less weight for it: the upload
+        # route refuses a swing with no club selected, so a swing created since M9 cannot reach
+        # here untagged and this branch cannot fire for it. What it still covers is a swing written
+        # before the field existed receiving a later role — and tagging that from the cursor
+        # current *now* is right, because now is when the swing is being completed. Write-once
+        # either way: reaching for the next club must not retag the shots hit with the last one.
+        if manifest.club is None and club is not None:
+            manifest.club = club
 
         old = manifest.roles.get(role)
         if old is not None and old.filename != filename:
@@ -253,10 +299,16 @@ class SwingBundleStore:
             missing_roles=manifest.missing_roles(),
             deduped=deduped,
             player_id=manifest.player_id,
+            club=manifest.club,
         )
 
 
-def _new_manifest(session_id: str, swing_id: str, player_id: str | None = None) -> SwingManifest:
+def _new_manifest(
+    session_id: str,
+    swing_id: str,
+    player_id: str | None = None,
+    club: ClubId | None = None,
+) -> SwingManifest:
     now = datetime.now(tz=UTC)
     return SwingManifest(
         swing_id=swing_id,
@@ -264,6 +316,7 @@ def _new_manifest(session_id: str, swing_id: str, player_id: str | None = None) 
         created_at=now,
         updated_at=now,
         player_id=player_id,
+        club=club,
     )
 
 
