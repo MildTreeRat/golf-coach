@@ -104,6 +104,8 @@ def client(store):
 
 def _seed(client, store, *, roles=_ROLES, analysis=True, video=False, state_kwargs=None):
     """Upload `roles`, then drop analysis artifacts beside them as a worker would have."""
+    # M9 P6: an upload 409s without a club cursor; these tests are not about the club.
+    client.post("/api/sessions/current/club", json={"club": "7i"})
     for role in roles:
         res = client.post(
             "/api/uploads", params={"role": role, "filename": f"{role}.mov"},
@@ -154,6 +156,8 @@ def test_session_detail_carries_the_analysis_block(client, store) -> None:
 
 
 def test_analysis_block_reads_none_before_any_run(client, store) -> None:
+    # M9 P6: an upload 409s without a club cursor; these tests are not about the club.
+    client.post("/api/sessions/current/club", json={"club": "7i"})
     client.post("/api/uploads", params={"role": "face_on", "filename": "x.mov"}, content=b"a")
     session_id = client.get("/api/sessions/current").json()["session_id"]
 
@@ -233,6 +237,10 @@ def test_unknown_artifact_names_are_not_served(client, store) -> None:
 def test_video_route_accepts_the_token_as_a_query_param(store) -> None:
     # A <video> element sends no custom headers, so `?t=` is the only way it can authenticate.
     client = TestClient(create_app(store=store, token=_TOKEN, worker=None))
+    # M9 P6: an upload 409s without a club cursor; this test is not about the club.
+    client.post(
+        "/api/sessions/current/club", json={"club": "7i"}, headers={"X-Upload-Token": _TOKEN}
+    )
     for role in _ROLES:
         res = client.post(
             "/api/uploads", params={"role": role, "filename": f"{role}.mov", "t": _TOKEN},

@@ -5,7 +5,8 @@
 > is [ADR-024](decisions/024-per-club-shot-history.md); this document is the *how*, as a phase
 > list.
 
-**Status: in progress, 5/20 phases.** P5 landed 2026-08-21. Start at P6.
+**Status: in progress, 7/20 phases.** P7 landed 2026-08-21 and closes the ingest spine.
+Start at P8 — the measurements track, which is independent of P1–P7.
 
 ---
 
@@ -274,49 +275,142 @@ directions, for the reason P4 found: each direction is caught by a different tes
 
 ---
 
-### [ ] P6 — the upload endpoint requires a club
+### [x] P6 — the upload endpoint requires a club *(done 2026-08-21)*
 
 **Goal.** No shot can be ingested without a club.
 
-**Files.** `api/app.py`, `tests/api/test_uploads.py`.
+**Files.** `api/app.py`, `tests/api/test_uploads.py`; plus the club cursor added to the four other
+API test files that upload (see below).
 
-**Reuse.** The golfer cursor routes are the template; `_safe()` for path segments.
+**Reuse.** The golfer cursor routes were the template and were followed literally: `GolferRequest`
+→ `ClubRequest`, `_resolve_golfer` → `_resolve_club`, `set_swing_golfer` → `set_swing_club`,
+`_safe()` on both path segments. `parse_club` got its first caller, which was the point of P1.
 
-**Detail.**
-- `GET` / `POST /api/sessions/current/club` — the cursor. `POST` parses via `parse_club`, 400 on
-  unparseable. **No backfill call.**
-- `POST /api/uploads` — read the club cursor; if `None`, **409 before streaming the body to
-  disk**, with a message naming the fix. Pass the club to `assign_from_path`; add `club` to the
-  response.
+**Detail, as built.**
+
+- `GET` / `POST /api/sessions/current/club`, declared immediately after the golfer cursor routes —
+  that position is load-bearing for the reason the comment above `/api/sessions/{session_id}`
+  already gives, since `{session_id}` would otherwise swallow the literal `current`. **No backfill
+  call**, and the docstring says why rather than leaving the absence to be read as an oversight.
+- `POST /api/uploads` reads **both** cursors in one `load_session_meta`, before the body streams,
+  and 409s when the club is `None` with a detail naming the route that fixes it.
 - `POST /api/sessions/{session_id}/swings/{swing_id}/club` — the repair route.
 
-**Comment to write.** Extend the existing note above the cursor read: the club is read from the
-cursor for the same two-phone reason as the golfer, and it is *required* where the golfer is not,
-because a mistagged club silently pools a wedge into a 7 iron's carry average whereas an untagged
-golfer is repairable later.
+**`ClubRequest.club` is a `str`, not a `ClubId`, and that is a real decision.** Typed as the enum,
+pydantic rejects "7 iron" with a 422 before `parse_club` ever runs — and those tolerant spellings
+are the entire reason that parser exists. Parsing therefore happens in `_resolve_club`, which keeps
+`contracts/club.py`'s claim to be *the* place free text becomes a `ClubId`, and keeps the boundary's
+own 400 (R12).
 
-**Tests.** No cursor → 409 **and nothing written to `incoming_dir`**. With a cursor → 200 and the
-manifest carries the club. Setting the club does not clear the golfer (route-level pin of P4).
+**`session_id` is computed once and threaded down**, where the handler previously read it after the
+stream. A large upload spanning midnight would otherwise check one session's cursor and write the
+swing into the next day's — a mistag with no downstream symptom. The comment says so; it is the
+kind of thing that reads like a pointless local variable a year later.
 
-**Done when.** `pytest tests/api/` green.
+**Two read routes gained `club` beyond what this list named.** `session_detail`'s per-swing rows and
+`swing_detail` now report it wherever they already report `player_id`, which is P5's design
+instruction ("the club appears at every site `player_id` does") applied one layer up. Without it P7
+has a repair route it cannot show the current value for. `_club_value` is the one place
+`ClubId | None` becomes JSON.
+
+**Tests: 16 added, 23 → 39 in the file, suite 881 → 897.** They sit under their own divider
+mirroring the golfer block, because the two asymmetries — required where the golfer is not, no bulk
+backfill where the golfer has one — only read as deliberate side by side. **Fifteen existing tests
+across five files had to select a club first**: explicitly at each call site in
+`tests/api/test_uploads.py` (so the tests that *do not* call `_pick_club` are visibly the refusal
+ones), and once at the construction point in `test_results.py`, `test_worker.py`,
+`test_career_route.py` and `test_conversation_routes.py`, which are not about the club.
+
+**Three pins were watched fail rather than assumed**, the P3/P4/P5 habit. Moving the 409 to after
+the streaming block fails "a clubless upload writes nothing to disk" — and leaves an orphaned
+`.part` behind, which is the failure in full. Echoing the cursor instead of `manifest.club` in the
+response fails the dedupe test. Rebuilding `SessionMeta` instead of going through `_update_cursor`
+fails "picking a club leaves the golfer alone", which is P4's bug at the route.
+
+**Known and deliberate: the upload page cannot upload after this phase.** It has no club picker, so
+every file it sends gets a 409 until P7. That is the cost of landing P6 alone and it is not a
+regression to hunt.
+
+**Still stale for P20**, unchanged from P4 and P5: `docs/ARCHITECTURE.md` §4 calls `session.json`
+the "golfer cursor", its manifest row names only `player_id`, and no route table knows about the
+three routes added here. `tests/test_docs_truth.py` pins no route list, so nothing goes red.
 
 ---
 
-### [ ] P7 — the club picker on the upload page
+### [x] P7 — the club picker on the upload page *(done 2026-08-21)*
 
 **Goal.** A phone in a bay can pick a club in one tap.
 
-**Files.** `api/static/index.html`.
+**Files.** `api/static/index.html`, **`api/app.py`**, `tests/api/test_uploads.py`.
 
-**Reuse.** The existing golfer-picker block — same fetch pattern, same styling.
+**The file list grew a route, and that was the phase's one decision.** P6's worklog deferred it
+here explicitly: *does the picker derive its list from a route, or inline it?* Inlined, the 22 ids
+in `contracts/club.py` would have a second copy in a static file nothing tests — and the failure is
+quiet, because a club added to `ClubId` would parse at every route in `api/app.py` while being
+unpickable at the bay. So `GET /api/clubs` was added and the phase is an L2 rather than the L1 its
+box implied.
 
-**Detail.** A club selector posting to the cursor route, showing the current club prominently (it
-changes every few shots, unlike the golfer). Order by canonical bag order; if the current golfer
-has a bag, list theirs first and the full taxonomy under it. Disable the upload control while no
-club is selected, and surface the 409 if one slips through.
+**Reuse.** The golfer bar for the fetch/poll/render shape and its warning styling; `/api/golfers`
+as the route's sibling; `Bag.club_ids` for ordering; `statusEl`'s delegated listeners for a
+subtree the poll replaces.
+
+**Detail, as built.**
+
+- **`GET /api/clubs`** returns `{"clubs": [...], "bag": [...]}` — the full taxonomy straight off
+  `ClubId`, plus the session golfer's declared clubs through `Bag.club_ids`. Both walk the enum, so
+  **canonical bag order comes from the declaration** and nothing sorts. Serving `bag.entries`
+  instead returns insertion order and is what `test_a_declared_bag_comes_back_in_bag_order_...`
+  catches.
+- **Two things on one route** because a phone on cellular pays for round trips and neither half is
+  useful alone: the taxonomy cannot put the golfer's own clubs first, and the bag cannot offer the
+  club they have just borrowed.
+- **No labels are invented.** The ids go over the wire as they are and the page uppercases them in
+  CSS. A server-side `"7 iron"` would be a second spelling table beside `_build_aliases`, free to
+  disagree with the one that does the parsing.
+- **`BagStore` is derived, not injected**: `BagStore(golfer_store.root)` in `create_app`. The bag
+  file lives in the golfer directory by design (`<player_id>.bag.json` beside
+  `<player_id>.golfer.json`), so deriving the root means the pair cannot be pointed at different
+  directories — and no test fixture had to learn about a store it does not exercise.
+- **The picker is an always-open chip grid**, not a collapsed bar with a *change* link. That is what
+  this box's *"unlike the golfer"* is contrasting against rather than asking us to copy: the club
+  changes every few shots, so a collapse step would be a tap on almost every shot. Two sections when
+  the golfer has a bag (**In the bag**, then **Every club**), one when they do not — which is every
+  golfer today, since nothing writes a bag until P19.
+- **The file input is disabled while no club is selected**, and starts disabled in the markup so
+  there is no window at load in which it looks usable. This is the golfer bar's stated asymmetry
+  made visible: that bar *never* blocks the input, and the comment beside this CSS says why this
+  one does.
+- **The 409 is surfaced, not dumped.** The failure branch used to print the raw response body;
+  it now shows `detail` and, on 409 specifically, re-reads the cursor — reaching that status means
+  the page's idea of the cursor is stale (the other phone moved it, or the session rolled over),
+  not that the golfer did something wrong.
+
+**Two things the box did not name and the page needed.** `clubPending` holds the poll off across a
+POST, which is `editingGolfer` applied to a subtree that would otherwise flash the previous chip
+back. And the 5s poll of the cursor is what **survives midnight**: the cursor is per-session and a
+session is a day, so the new directory answers `null`, the picker goes unset and the input disables
+rather than the page showing a club it is no longer tagging anything with.
+
+**Tests: 8 added, 39 → 47 in the file, suite 897 → 905.** They assert against `ClubId` itself
+rather than a written-out list — a literal here would be the very duplicate the route exists to
+prevent, and it would pass on the day a club is added to the enum and forgotten everywhere else.
+One test walks every club the route serves through the cursor route, which is the pin that the
+picker's list and the parser are one vocabulary.
+
+**Two pins were watched fail rather than assumed**, the P3–P6 habit. Serving `bag.entries` fails the
+bag-ordering test with `['pw', 'driver', '7i']`; sorting `clubs` fails the canonical-order test at
+index 0. **And the DOM half was driven, since nothing tests a static file**: the page's own script
+was run against a live server with a stubbed DOM, in all three states — club set (input enabled,
+chip highlighted), bag declared out of order (rendered `driver 7i pw sw`), and cursor cleared
+(`unset`, header `none selected`, input disabled).
 
 **Done when.** Manual check via `python scripts/run_server.py`: pick a club, upload, and the
-manifest names it.
+manifest names it. ✅ — verified live against a scratch data directory: `7i` then `pw`, two swings,
+`["7i", "pw"]` on the read route and `"club": "7i"` in swing 1's manifest.
+
+**Still stale for P20**, unchanged from P4–P6: `docs/ARCHITECTURE.md` §4 calls `session.json` the
+"golfer cursor", its manifest row names only `player_id`, and no route table knows about the four
+routes M9 has added. `tests/test_docs_truth.py` pins no route list, so nothing goes red.
 
 ---
 

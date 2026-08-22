@@ -23,6 +23,28 @@
                  border: 2px solid #2a7; border-radius: 6px; background: #2a7; color: white; }
   #golfer-set[hidden], #golfer-form[hidden] { display: none; }
   .hand { color: #999; font-size: 0.85rem; }
+  /* Club picker. Same warning styling as the golfer bar and a deliberately different behaviour:
+     this one *blocks* the file input, where the golfer bar's comment above says it never does.
+     The asymmetry is ADR-024 §5 at the page — an untagged golfer is repairable after the session
+     and an untagged club is not, so the boundary 409s (M9 P6) and this disables rather than
+     letting someone discover the refusal one clip at a time. Always open, never collapsed: the
+     club changes every few shots, so a "change" step would be a tap on almost every shot. */
+  #club { border: 1px solid #999; border-radius: 8px; padding: 0.6rem 0.8rem; margin-bottom: 1rem; }
+  #club.unset { border-color: #d90; background: rgba(220,150,0,0.12); }
+  #club-name { text-transform: uppercase; }
+  #club-name.none { text-transform: none; color: #d90; }
+  #club-warning { font-weight: 600; margin: 0.4rem 0; }
+  #club:not(.unset) #club-warning { display: none; }
+  #club-bag[hidden] { display: none; }
+  .club-section { font-size: 0.7rem; color: #999; letter-spacing: 0.06em;
+                  text-transform: uppercase; margin: 0.6rem 0 0.3rem; }
+  /* Five across is what fits "PUTTER" at this font size inside the 480px body on a phone. */
+  .club-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.3rem; }
+  .club-grid button { padding: 0.55rem 0.1rem; font-size: 0.8rem; text-transform: uppercase;
+                      border: 2px solid #888; border-radius: 6px; background: transparent;
+                      color: inherit; overflow: hidden; }
+  .club-grid button.active { border-color: #2a7; background: #2a7; color: white; }
+  input[type=file]:disabled { opacity: 0.4; }
   button.link { border: none; background: none; color: inherit; text-decoration: underline;
                 font-size: 0.85rem; padding: 0 0.25rem; }
   .swing-golfer { font-size: 0.85rem; color: #999; }
@@ -80,14 +102,26 @@
   </div>
 </div>
 
+<div id="club" class="unset">
+  <div>Club: <strong id="club-name" class="none">none selected</strong></div>
+  <div id="club-warning">&#9888; Pick a club before uploading &mdash; nothing but memory can say
+    which club hit a swing afterwards.</div>
+  <div id="club-bag" hidden>
+    <div class="club-section">In the bag</div>
+    <div class="club-grid" id="club-bag-grid"></div>
+    <div class="club-section">Every club</div>
+  </div>
+  <div class="club-grid" id="club-all-grid"></div>
+</div>
+
 <div class="roles" id="roles">
   <button type="button" data-role="face_on">Face-on</button>
   <button type="button" data-role="down_the_line">Down-the-line</button>
   <button type="button" data-role="shot_screen">Shot screen</button>
 </div>
 
-<input type="file" id="file" accept="video/*,image/*" />
-<div id="message">Pick a role, then a file.</div>
+<input type="file" id="file" accept="video/*,image/*" disabled />
+<div id="message">Pick a club and a role, then a file.</div>
 <div id="progress" hidden><div id="progress-bar"></div></div>
 
 <div id="status"></div>
@@ -109,6 +143,11 @@ const golferHandEl = document.getElementById("golfer-hand");
 const golferCareerEl = document.getElementById("golfer-career");
 const golferInput = document.getElementById("golfer-input");
 const handRow = document.getElementById("hand-row");
+const clubEl = document.getElementById("club");
+const clubNameEl = document.getElementById("club-name");
+const clubBagEl = document.getElementById("club-bag");
+const clubBagGrid = document.getElementById("club-bag-grid");
+const clubAllGrid = document.getElementById("club-all-grid");
 
 // The golfer is deliberately NOT in localStorage, unlike the role. The role is a property of
 // this phone; the golfer is a property of the session both phones are uploading into, so it
@@ -116,6 +155,14 @@ const handRow = document.getElementById("hand-row");
 let knownGolfers = {};     // player_id -> {display_name, handedness}
 let currentGolfer = null;
 let editingGolfer = false; // suppresses the 5s poll while someone is mid-type
+
+// The club is not in localStorage either, and for a stronger version of the same reason: two
+// phones post into one swing, so two remembered club values would disagree and the disagreement
+// would land in the manifest, where nothing downstream can detect it (see `session_meta.py`).
+let clubs = [];            // the full taxonomy, canonical bag order, straight from /api/clubs
+let bagClubs = [];         // the subset this golfer has declared; empty until P19 can write one
+let currentClub = null;
+let clubPending = false;   // the club's `editingGolfer` — see the picker's listener
 
 // One-time setup per phone: open /?t=<token> once, and the token is kept from then on.
 // It is stripped from the URL immediately so the secret doesn't linger in the address
@@ -258,6 +305,85 @@ golferInput.addEventListener("input", () => {
   updateHandPrompt();
 });
 
+// ------------------------------------------------------------------- club selection [M9 P7]
+
+// Both grids' markup. The ids are rendered as they arrive and uppercased in CSS: `/api/clubs`
+// deliberately sends no labels, because a "7 iron" spelling invented here would be a second
+// vocabulary free to disagree with the one `contracts/club.py` parses.
+function clubChips(ids) {
+  return ids
+    .map((id) => `<button type="button" class="${id === currentClub ? "active" : ""}"
+      data-club="${escapeHtml(id)}">${escapeHtml(id)}</button>`)
+    .join("");
+}
+
+function renderClubs() {
+  if (clubPending) return;
+  clubEl.classList.toggle("unset", !currentClub);
+  clubNameEl.textContent = currentClub || "none selected";
+  clubNameEl.classList.toggle("none", !currentClub);
+  // The boundary already refuses a clubless upload with a 409 (M9 P6). Disabling here is not a
+  // second guard so much as a better place to meet it: a bay is a poor place to read a refusal,
+  // and a 50 MB clip should not be picked before the page says it cannot be sent.
+  fileInput.disabled = !currentClub;
+  // One section or two. Every golfer has an empty bag today — nothing writes one until P19 —
+  // so the common case is the taxonomy alone, and the shortcut appears when there is one.
+  clubBagEl.hidden = bagClubs.length === 0;
+  clubBagGrid.innerHTML = clubChips(bagClubs);
+  clubAllGrid.innerHTML = clubChips(clubs);
+}
+
+async function refreshClubs() {
+  try {
+    const [list, current] = await Promise.all([
+      fetch("/api/clubs", { headers: authHeaders() }).then((r) => r.json()),
+      fetch("/api/sessions/current/club", { headers: authHeaders() }).then((r) => r.json()),
+    ]);
+    clubs = list.clubs || [];
+    bagClubs = list.bag || [];
+    // This is also what survives midnight. The cursor is per-session and a session is a day, so
+    // the moment the directory rolls over this returns null for the new one — and the picker goes
+    // unset and the input disables, rather than the page showing a club it is no longer tagging
+    // anything with.
+    currentClub = current.club || null;
+    renderClubs();
+  } catch (err) {
+    // Best-effort, same as the golfer bar and the status panel.
+  }
+}
+
+// Delegated: both grids are replaced wholesale on every poll, so a listener bound to a chip would
+// not survive the first one.
+clubEl.addEventListener("click", async (event) => {
+  const button = event.target.closest("button[data-club]");
+  if (!button) return;
+
+  // Held across the request so a poll landing mid-change cannot answer with the old cursor and
+  // flash the previous chip back. `editingGolfer` guards the name field for the same reason.
+  clubPending = true;
+  try {
+    const res = await fetch("/api/sessions/current/club", {
+      method: "POST",
+      headers: { ...authHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({ club: button.dataset.club }),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setMessage(body.detail || `Could not set club (${res.status})`, true);
+      return;
+    }
+    // From the response and not from the tap: the cursor has one home and both phones read it
+    // there, so what the server stored is the only answer worth rendering.
+    currentClub = body.club;
+    setMessage(`Club set to ${currentClub}. Every swing from now on is tagged with it.`);
+  } catch (err) {
+    setMessage(`Could not set club: ${err.message}`, true);
+  } finally {
+    clubPending = false;
+    renderClubs();
+  }
+});
+
 function megabytes(bytes) {
   return (bytes / (1024 * 1024)).toFixed(1);
 }
@@ -298,7 +424,19 @@ fileInput.addEventListener("change", async () => {
       return;
     }
     if (res.status < 200 || res.status >= 300) {
-      setMessage(`Upload failed: ${res.body}`, true);
+      // The body is JSON with a `detail` written for a human; dumping the raw response put
+      // `{"detail":"..."}` in front of someone standing in a bay.
+      let detail = res.body;
+      try {
+        detail = JSON.parse(res.body).detail || res.body;
+      } catch (err) {
+        // Not JSON — show whatever came back.
+      }
+      setMessage(`Upload failed: ${detail}`, true);
+      // 409 is the clubless refusal, and reaching it means this page's idea of the cursor is
+      // stale rather than that the golfer did something wrong — the other phone moved it, or the
+      // session rolled over. Re-reading is the repair, and it re-disables the input.
+      if (res.status === 409) refreshClubs();
       return;
     }
     setMessage(JSON.parse(res.body).message);
@@ -473,8 +611,9 @@ statusEl.addEventListener("click", async (event) => {
 });
 
 refreshGolfer();
+refreshClubs();
 refreshStatus();
-setInterval(() => { refreshGolfer(); refreshStatus(); }, 5000);
+setInterval(() => { refreshGolfer(); refreshClubs(); refreshStatus(); }, 5000);
 </script>
 </body>
 </html>

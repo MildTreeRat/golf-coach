@@ -108,6 +108,8 @@ def asked(monkeypatch):
 
 
 def _seed(client, store, *, analysis: bool = True) -> str:
+    # M9 P6: an upload 409s without a club cursor; these tests are not about the club.
+    client.post("/api/sessions/current/club", json={"club": "7i"})
     for role in _ROLES:
         res = client.post(
             "/api/uploads", params={"role": role, "filename": f"{role}.mov"},

@@ -75,7 +75,10 @@ def store(tmp_path):
 
 def _client(store, runner, **kwargs):
     worker = AnalysisWorker(store, runner=runner, **kwargs)
-    return TestClient(create_app(store=store, token=None, worker=worker)), worker
+    client = TestClient(create_app(store=store, token=None, worker=worker))
+    # M9 P6: an upload 409s without a club cursor; these tests are not about the club.
+    client.post("/api/sessions/current/club", json={"club": "7i"})
+    return client, worker
 
 
 def _upload(client, role: str, content: bytes = b"bytes", swing_id: str | None = None):
@@ -271,6 +274,8 @@ def test_uploads_do_not_block_on_analysis(store, tmp_path) -> None:
 
 def test_worker_disabled_leaves_ingestion_working(store) -> None:
     client = TestClient(create_app(store=store, token=None, worker=None))
+    # M9 P6: an upload 409s without a club cursor; this test is not about the club.
+    client.post("/api/sessions/current/club", json={"club": "7i"})
 
     with client:
         for role in _ROLES:
@@ -282,6 +287,8 @@ def test_worker_disabled_leaves_ingestion_working(store) -> None:
 
 def test_analyze_route_503s_when_the_worker_is_disabled(store) -> None:
     client = TestClient(create_app(store=store, token=None, worker=None))
+    # M9 P6: an upload 409s without a club cursor; this test is not about the club.
+    client.post("/api/sessions/current/club", json={"club": "7i"})
 
     with client:
         session_id = _upload(client, "face_on").json()["session_id"]

@@ -76,6 +76,8 @@ def _seed(client, store, *, player: str | None = "aaron") -> str:
     """One analyzed swing carrying measurements, attributed to a golfer."""
     if player:
         client.post("/api/sessions/current/golfer", json={"name": "Aaron", "handedness": "right"})
+    # M9 P6: an upload 409s without a club cursor; these tests are not about the club.
+    client.post("/api/sessions/current/club", json={"club": "7i"})
     for role in _ROLES:
         res = client.post(
             "/api/uploads", params={"role": role, "filename": f"{role}.mov"},

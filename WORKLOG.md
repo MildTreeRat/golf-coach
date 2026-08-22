@@ -5,6 +5,163 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-08-21 — M9 P7: the picker that closes the ingest spine, and the list it refused to copy
+
+**Duration**: ~1 session. One static page, one new API route, one API test file.
+`ANALYSIS_VERSION` unchanged; nothing analysis-side reads the field yet.
+
+**What prompted it**: "can we work on M9 P7?" — the first open box, and ROADMAP's NEXT ACTION.
+P6 had left the upload page unable to upload on purpose; this is the phase that pays that off.
+
+**The one decision, which P6 deferred here by name: the picker derives its list.** P6's entry below
+records the question — *does the picker derive its list from a route, or inline it?* Inlining the 22
+ids would have put a second copy of `contracts/club.py`'s taxonomy in a static file nothing tests,
+and the failure mode is silent: a club added to `ClubId` parses at every route in `api/app.py` while
+being unpickable at the bay, forever, with nothing red. So **`GET /api/clubs`** was added and the
+phase became an L2 rather than the L1 its box implied. That escalation is noted in the box.
+
+**The route carries two things and the docstring says why.** `{"clubs": [...], "bag": [...]}` — the
+full taxonomy off `ClubId`, plus the session golfer's declared clubs through `Bag.club_ids`. One
+round trip because a phone on cellular pays for them, and neither half is useful alone: the taxonomy
+cannot put the golfer's own clubs first, and the bag cannot offer the club they just borrowed. Both
+sides walk the enum, so **canonical bag order comes from the declaration** and nothing sorts.
+
+**No labels are invented, and that is the same rule as the list.** The ids go over the wire as they
+are and the page uppercases them in CSS. A server-side `"7 iron"` would be a second spelling table
+beside `_build_aliases`, free to disagree with the one that does the parsing.
+
+**`BagStore` is derived, not injected.** `BagStore(golfer_store.root)` in `create_app`, because
+`bag_store.py` writes `<player_id>.bag.json` into the directory `GolferStore` writes
+`<player_id>.golfer.json` into and the suffixes are what keep them apart. Deriving the root means
+the pair cannot be pointed at different directories by a caller — and it meant no `create_app`
+parameter and no fixture change, so `golfer_client` already isolated the bag to `tmp_path` without
+knowing it existed.
+
+**The picker is an always-open chip grid, not the golfer bar.** The box's *"unlike the golfer"* is
+contrasting against that bar's collapse-then-change flow rather than asking for it: the club changes
+every few shots, so collapsing would cost a tap on almost every shot. Two sections when the golfer
+has a bag (**In the bag**, then **Every club**), one when they do not — which is every golfer today,
+since nothing writes a bag until P19.
+
+**The file input is disabled while no club is selected**, and starts disabled in the markup so there
+is no window at load where it looks usable. That makes the golfer bar's stated asymmetry visible on
+the page: that bar never blocks the input, this one does, and the comment beside the CSS says why —
+an untagged golfer is repairable after the session and an untagged club is not. And the 409 is now
+**surfaced rather than dumped**: the failure branch used to print the raw response body, so someone
+standing in a bay read `{"detail":"..."}`. It shows `detail`, and on 409 re-reads the cursor, because
+reaching that status means the page is stale rather than that the golfer did something wrong.
+
+**Two things the box did not name and the page needed.** `clubPending` holds the 5s poll off across
+the POST — `editingGolfer` applied to a subtree that would otherwise flash the previous chip back.
+And polling the cursor is what **survives midnight**: the cursor is per-session and a session is a
+day, so the rolled-over directory answers `null`, the picker goes unset and the input disables
+rather than the page showing a club it is no longer tagging anything with. Both are commented,
+because both read as incidental.
+
+**Tests: 8 added, 39 → 47 in the file, suite 897 → 905.** They assert against `ClubId` itself and
+never a written-out list — a literal there would be the duplicate the route exists to prevent, and
+it would pass on the day a club is added and forgotten everywhere else. One test walks *every* club
+the route serves through the cursor route, which is the pin that the picker's list and the parser
+are one vocabulary rather than two that happen to agree today.
+
+**Two pins watched fail, and then the half no test covers was driven.** Serving `bag.entries`
+returns insertion order and fails the bag test with `['pw', 'driver', '7i']`; sorting `clubs` fails
+the canonical-order test at index 0. Then, because **nothing in this repo tests a static file**, the
+page's own script was extracted and run against a live server on a scratch data directory with a
+stubbed DOM, in all three states: club set (input enabled, chip highlighted), a bag declared
+`sw, driver, 7i, pw` (rendered `driver 7i pw sw`), and the cursor cleared (`unset`, header
+`none selected`, input disabled). The end-to-end also ran for real — `7i` then `pw`, two swings,
+`["7i", "pw"]` on the read route and `"club": "7i"` in swing 1's manifest — which is the box's own
+"done when".
+
+**What is next.** P8, and it is a different track: carry and total distance become measurements.
+P1–P7 were strictly ordered and are finished; P8–P11 are independent of all of them.
+
+---
+
+## 2026-08-21 — M9 P6: the club becomes required, and the page stops being able to upload
+
+**Duration**: ~1 session. One API module amended, five API test files touched.
+`ANALYSIS_VERSION` unchanged; nothing analysis-side reads the field yet.
+
+**What prompted it**: "can we take a look at the next plan/phase for M9 and make a plan to get it
+done?" — P6, agreed by ROADMAP's NEXT ACTION and the phase doc's first open box. Scope was
+confirmed as **P6 alone**, and the club-taxonomy question P7 will need (does the picker derive its
+list from a route, or inline it?) was explicitly deferred to P7 rather than pre-decided here.
+
+**What landed.** `parse_club` finally has a caller, which is what P1 was for. `GET`/`POST
+/api/sessions/current/club` are the cursor; `POST /api/uploads` reads both cursors in **one**
+`load_session_meta` before it streams a byte and answers **409** when no club is selected;
+`POST /api/sessions/{session_id}/swings/{swing_id}/club` is the repair route. The golfer routes were
+the template and were followed literally — `ClubRequest` beside `GolferRequest`, `_resolve_club`
+beside `_resolve_golfer`, `_safe()` on both path segments, and the club routes declared *above*
+`/api/sessions/{session_id}` so the literal `current` is not swallowed.
+
+**The one real decision the phase list did not contain: `ClubRequest.club` is a `str`.** Typed as
+`ClubId`, pydantic rejects "7 iron" with a 422 before `parse_club` ever runs — and those tolerant
+spellings are the entire reason that parser exists. So parsing happens in `_resolve_club`, which
+keeps `contracts/club.py`'s claim to be the only place free text becomes a `ClubId` and keeps the
+boundary's own 400 (R12). Getting this backwards would have looked like better typing and would have
+made the bay retype "7 iron" as "7i" forever.
+
+**`session_id` is now computed once and threaded down.** The handler used to read it *after* the
+stream; the check and the write have to agree about which session they mean, or a large upload
+spanning midnight checks one day's cursor and writes the swing into the next day's — a mistag with
+no downstream symptom at all. The comment beside it says that, because a year from now it reads like
+a pointless local variable.
+
+**Two read routes gained `club` beyond the phase list.** `session_detail`'s per-swing rows and
+`swing_detail` report it wherever they already report `player_id` — P5's design instruction ("the
+club appears at every site `player_id` does and at no others") applied one layer up. Without it P7
+would have a repair route it cannot show the current value for. `_club_value` is the single place
+`ClubId | None` becomes JSON.
+
+**Tests: 16 added, 23 → 39 in the file, suite 881 → 897.** They sit under their own divider
+mirroring the golfer block, because the two asymmetries only read as deliberate side by side: the
+club is required where the golfer is not, and it has no bulk backfill where the golfer has one.
+
+**Fifteen existing tests across five files had to start selecting a club**, and the two styles were
+chosen deliberately. In `tests/api/test_uploads.py` it is explicit at each call site via
+`_pick_club`, so the tests that *do not* call it are visibly the refusal ones. In `test_results.py`,
+`test_worker.py`, `test_career_route.py` and `test_conversation_routes.py` it is one line at the
+construction point with a comment saying these tests are not about the club — burying it in a
+fixture in the club's own test file would have hidden the thing under test.
+
+**Three pins were watched fail rather than assumed**, the P3/P4/P5 habit, each mutated in-process
+and restored. Moving the 409 to after the streaming block fails "a clubless upload writes nothing to
+disk" — and the failure shows the orphaned `.part` left in `.incoming`, which is the whole point of
+checking before the stream rather than after. Echoing the cursor instead of `manifest.club` in the
+upload response fails the dedupe test, which is P5's `AssignmentResult.club` earning its place.
+Rebuilding `SessionMeta` instead of going through `_update_cursor` fails "picking a club leaves the
+golfer alone" — P4's bug, one layer up, and the reason that pin exists is that this repo has already
+made that mistake once.
+
+**Verified.** Full suite 897 green; ruff and mypy clean; `tests/api/test_pipeline_imports.py` green.
+Checked on disk rather than in the model, as P4 and P5 did — against a real filesystem store in a
+scratch root, not `data/processed/`, since the check writes swings: a clubless upload 409s and
+leaves `.incoming` empty, "7 Iron" stores as `"club": "7i"` in both `session.json` and
+`manifest.json`, moving the cursor to `pw` leaves swing 1 saying `7i` and leaves the golfer alone,
+and the repair route rewrites swing 1 to `sw`.
+
+**Known, deliberate, and the first thing the next session should hear: the upload page cannot upload
+any more.** It has no club picker, so every file it sends is refused with the 409. That is the cost
+of landing P6 without P7 and it is not a regression to hunt — P7 is a single HTML file and the
+golfer bar is its literal template. ROADMAP says so in the NEXT ACTION block too.
+
+**Docs touched beyond the phase.** The phase doc's status line and P6's as-built entry; ROADMAP's
+status row, NEXT ACTION heading and the P5/P6 narrative. `docs/ARCHITECTURE.md` stays stale on
+purpose for P20, as P4 and P5 both left it — §4 still calls `session.json` the "golfer cursor", its
+manifest row names only `player_id`, and no route table knows about the three routes added here.
+`tests/test_docs_truth.py` pins no route list, so nothing goes red in the meantime.
+
+**Where it was left**: M9 is 6/20. Next is **P7** — the club picker on `api/static/index.html`:
+canonical bag order, the current club shown prominently because it changes every few shots, the
+upload control disabled while no club is selected, and the 409 surfaced if one slips through. The
+open question it inherits is where the picker gets its 22 clubs from — a `GET /api/clubs` derived
+from `ClubId`, or a list inlined in the JS. P8–P11 remain fully independent of the ingest spine.
+
+---
+
 ## 2026-08-21 — M9 P5: the club gets a writer, and the branch that is only defensive
 
 **Duration**: ~1 session. One storage module amended, one test file extended.

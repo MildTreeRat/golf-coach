@@ -40,13 +40,19 @@ from golf_coach.api.state import (
 from golf_coach.api.worker import AnalysisWorker, should_analyze
 from golf_coach.config import settings
 from golf_coach.contracts.career import CareerCorpus
+from golf_coach.contracts.club import ClubId, parse_club
 from golf_coach.contracts.conversation import Transcript
 from golf_coach.contracts.golfer import Golfer, Handedness, slugify
+from golf_coach.storage.bag_store import BagStore
 from golf_coach.storage.bundle_store import SwingBundleStore
 from golf_coach.storage.corpus import read_corpus
 from golf_coach.storage.golfer_store import GolferStore
 from golf_coach.storage.manifest import EXPECTED_ROLES, Role
-from golf_coach.storage.session_meta import load_session_meta, set_current_player
+from golf_coach.storage.session_meta import (
+    load_session_meta,
+    set_current_club,
+    set_current_player,
+)
 from golf_coach.storage.transcript_store import (
     latest_for_swing,
     load_transcript,
@@ -92,6 +98,19 @@ class GolferRequest(BaseModel):
     handedness: Handedness | None = None
 
 
+class ClubRequest(BaseModel):
+    """Naming a club — from the session cursor picker or the per-swing repair control.
+
+    `club` is a plain `str` and not a `ClubId` deliberately. Typing it as the enum would have
+    pydantic reject "7 iron" with a 422 before `parse_club` ever ran, and those tolerant spellings
+    are the entire reason that parser exists — a bay is not the place to discover that the field
+    wanted "7i". Parsing happens in `_resolve_club` instead, so `contracts/club.py` keeps its claim
+    to be the only place free text becomes a `ClubId`, and the boundary keeps its own 400.
+    """
+
+    club: str
+
+
 class AskRequest(BaseModel):
     """One follow-up question, from the results page's chat panel. [ADR-020]
 
@@ -128,6 +147,22 @@ def _resolve_golfer(golfers: GolferStore, payload: GolferRequest) -> Golfer:
     return golfers.get_or_create(payload.name, payload.handedness)
 
 
+def _resolve_club(payload: ClubRequest) -> ClubId:
+    """Typed text to a club, or a 400 naming what was rejected. The first caller of `parse_club`.
+
+    Never nudged toward a nearest match, for the reason `parse_club`'s own docstring gives: the
+    cost is asymmetric. A refused tag costs one retype at the bay; a wrong one pools a wedge's
+    carries into a 7 iron's average, where nothing downstream can ever detect it (ADR-024 §5).
+    """
+    club = parse_club(payload.club)
+    if club is None:
+        raise HTTPException(
+            status_code=400,
+            detail=f"{payload.club!r} is not a club in the bag — try '7i', '7 iron' or 'pw'",
+        )
+    return club
+
+
 def _golfer_payload(golfer: Golfer | None) -> dict | None:
     if golfer is None:
         return None
@@ -136,6 +171,16 @@ def _golfer_payload(golfer: Golfer | None) -> dict | None:
         "display_name": golfer.display_name,
         "handedness": golfer.handedness.value,
     }
+
+
+def _club_value(club: ClubId | None) -> str | None:
+    """A club as it goes over the wire. `None` stays `None` and means *no club recorded*.
+
+    `ClubId` is a `StrEnum` so the encoder would serialise it unaided; writing `.value` out is the
+    same explicitness every `role.value` in this module already has, and it is what makes the
+    `None` branch — which is a real state for every swing predating M9 — visible at each site.
+    """
+    return club.value if club is not None else None
 
 
 def _status_message(swing_id: str, status: str, missing: list[Role]) -> str:
@@ -236,6 +281,12 @@ def create_app(
 ) -> FastAPI:
     bundle_store = store or SwingBundleStore(settings.sessions_dir)
     golfer_store = golfers or GolferStore(settings.golfers_dir)
+    # Derived from the golfer store rather than taken as a fourth `create_app` argument, because a
+    # bag is not stored anywhere a golfer is not: `bag_store.py` writes `<player_id>.bag.json` into
+    # the same directory `GolferStore` writes `<player_id>.golfer.json` into, and the two suffixes
+    # are what keep them apart. Deriving the root means the pair cannot be pointed at different
+    # directories by a caller, and no test fixture has to learn about a store it does not exercise.
+    bag_store = BagStore(golfer_store.root)
     incoming_dir = bundle_store.root / ".incoming"
     # Unwrapped here and nowhere deeper: `_token_guard` needs a plain `str` for
     # `compare_digest`, and keeping it ignorant of `SecretStr` is what lets a test pass a
@@ -283,6 +334,28 @@ def create_app(
         except ValueError:
             raise HTTPException(status_code=400, detail=f"unknown role {role!r}") from None
 
+        # Both cursors, read once and before a byte is streamed. Never from the request: both
+        # phones post into the same swing, and only one of them is being held by someone who
+        # knows whose swing it is and what they hit. The club is *required* where the golfer is
+        # not — an untagged golfer is repairable later by `attribute_unlabeled`, whereas nothing
+        # but memory can say which club hit swing 3, and a mistagged one silently pools a wedge
+        # into a 7 iron's carry average (ADR-024 §5). So this refuses rather than accepting a
+        # shot it can never file.
+        #
+        # `session_id` is computed here and threaded down rather than read again after the
+        # stream: a 2 GiB upload spanning midnight would otherwise check one session's cursor
+        # and write the swing into the next day's, which is a mistag nothing downstream shows.
+        session_id = bundle_store.current_session_id()
+        meta = load_session_meta(session_dir_of(session_id))
+        if meta.club is None:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    "no club selected for this session — POST /api/sessions/current/club "
+                    "(e.g. {\"club\": \"7i\"}) before uploading"
+                ),
+            )
+
         incoming_dir.mkdir(parents=True, exist_ok=True)
         tmp_path = incoming_dir / f"{uuid.uuid4().hex}.part"
         digest = hashlib.sha256()
@@ -299,10 +372,6 @@ def create_app(
             tmp_path.unlink(missing_ok=True)
             raise
 
-        session_id = bundle_store.current_session_id()
-        # Read from the session cursor, never from the request: both phones post into the same
-        # swing, and only one of them is being held by someone who knows whose swing it is.
-        current_player = load_session_meta(session_dir_of(session_id)).player_id
         result = bundle_store.assign_from_path(
             session_id=session_id,
             role=parsed_role,
@@ -312,7 +381,8 @@ def create_app(
             content_type=request.headers.get("content-type", "application/octet-stream"),
             size_bytes=size,
             swing_id=swing_id,
-            player_id=current_player,
+            player_id=meta.player_id,
+            club=meta.club,
         )
 
         # The whole point of Phase 5: the third file landing is what starts the analysis. A
@@ -333,6 +403,10 @@ def create_app(
             "deduped": result.deduped,
             "queued": queued,
             "player_id": result.player_id,
+            # The club the swing *says*, which on the deduped path is not the club the retry
+            # asked for — a phone re-sending after the cursor moved on must not be told its
+            # stale club won. `AssignmentResult.club` carries that distinction (M9 P5).
+            "club": _club_value(result.club),
             "message": _status_message(result.swing_id, result.status, result.missing_roles),
         }
 
@@ -344,6 +418,39 @@ def create_app(
     async def list_golfers() -> dict:
         """Every known golfer — what lets the page tell a returning name from a new one."""
         return {"golfers": [_golfer_payload(g) for g in golfer_store.list_all()]}
+
+    @app.get("/api/clubs", dependencies=guard)
+    async def list_clubs() -> dict:
+        """Everything the upload page's club picker needs to render, in one round trip. [M9 P7]
+
+        Sibling of `/api/golfers` above, and the answer to the question P6 deferred: the picker
+        **derives** its list from here rather than inlining it. A hand-written list in
+        `static/index.html` would make `contracts/club.py` the second copy of a vocabulary, and the
+        failure mode is quiet — a club added to `ClubId` would parse at every route in this module
+        while being unpickable at the bay, with nothing testing the static file to catch it.
+
+        **Two things on one route** because a phone on cellular pays for round trips, and neither
+        half is useful alone: the taxonomy without the bag cannot put the golfer's own clubs first,
+        and the bag without the taxonomy cannot offer the club they have just borrowed.
+
+        Order is `ClubId`'s declaration order at both sites — directly here, and through
+        `Bag.club_ids` for the bag, which walks the enum for exactly this reason. Sorting either
+        list is the bug the ordering exists to prevent; `3w` lands between `2h` and `5h`
+        alphabetically, which is not a bag anyone recognises.
+
+        No labels. The ids go over the wire as they are and the page styles them, because a
+        server-side "7 iron" would be a second spelling table beside `_build_aliases` — free to
+        disagree with the one that does the parsing.
+        """
+        session_id = bundle_store.current_session_id()
+        player_id = load_session_meta(session_dir_of(session_id)).player_id
+        # `BagStore.get` reads an unreadable or older-schema bag as absent, which is the behaviour
+        # wanted here: a corrupt bag costs the "in the bag" shortcut, never the picker itself.
+        bag = bag_store.get(player_id) if player_id else None
+        return {
+            "clubs": [club.value for club in ClubId],
+            "bag": [club.value for club in bag.club_ids] if bag is not None else [],
+        }
 
     @app.get("/api/sessions/current/golfer", dependencies=guard)
     async def get_current_golfer() -> dict:
@@ -374,6 +481,31 @@ def create_app(
             "golfer": _golfer_payload(golfer),
             "attributed": attributed,
         }
+
+    @app.get("/api/sessions/current/club", dependencies=guard)
+    async def get_current_club() -> dict:
+        session_id = bundle_store.current_session_id()
+        return {
+            "session_id": session_id,
+            "club": _club_value(load_session_meta(session_dir_of(session_id)).club),
+        }
+
+    @app.post("/api/sessions/current/club", dependencies=guard)
+    async def set_club_cursor(payload: ClubRequest) -> dict:
+        """Point the session at a club. Every swing uploaded from now on is tagged with it.
+
+        **No backfill, and that is the whole asymmetry with the golfer route above.** Picking a
+        golfer reaches back over the session's unlabeled swings because a session usually has one
+        golfer, so the reach is almost always right. A session has many clubs — reaching back from
+        the wedge you just pulled would confidently retag the seven 7-iron shots before it, and
+        nothing downstream could tell (ADR-024 §5). Reaching for the next club must therefore
+        change what happens *next* and nothing that already happened; a swing tagged wrong is
+        repaired one swing at a time, through the route below.
+        """
+        club = _resolve_club(payload)
+        session_id = bundle_store.current_session_id()
+        set_current_club(session_dir_of(session_id), club)
+        return {"session_id": session_id, "club": club.value}
 
     @app.get("/api/golfers/{player_id}/career", dependencies=guard)
     async def golfer_career(player_id: str) -> dict:
@@ -421,6 +553,7 @@ def create_app(
                     "created_at": manifest.created_at.isoformat(),
                     "updated_at": manifest.updated_at.isoformat(),
                     "player_id": manifest.player_id,
+                    "club": _club_value(manifest.club),
                     "roles": {
                         role.value: (
                             {
@@ -455,6 +588,7 @@ def create_app(
             "status": manifest.status(),
             "missing_roles": [role.value for role in manifest.missing_roles()],
             "player_id": manifest.player_id,
+            "club": _club_value(manifest.club),
             "analysis": _analysis_summary(swing_dir),
             # Null until the worker has finished; the page renders a waiting state for that.
             "result": result,
@@ -499,6 +633,23 @@ def create_app(
             "player_id": golfer.player_id,
             "golfer": _golfer_payload(golfer),
         }
+
+    @app.post("/api/sessions/{session_id}/swings/{swing_id}/club", dependencies=guard)
+    async def set_swing_club(session_id: str, swing_id: str, payload: ClubRequest) -> dict:
+        """Retag one swing. The club's **only** repair path, and deliberately the only one.
+
+        Same shape as the golfer's repair route, and it overwrites for the same reason: it is the
+        explicit human-driven override. What it has no counterpart to is `attribute_unlabeled` —
+        there is no bulk fix for the club and there is not meant to be one, because only the person
+        who hit swing 3 knows what they hit it with (ADR-024 §5).
+        """
+        _safe(session_id, "session id")
+        _safe(swing_id, "swing id")
+        club = _resolve_club(payload)
+        manifest = bundle_store.set_club(session_id, swing_id, club)
+        if manifest is None:
+            raise HTTPException(status_code=404, detail="no such swing")
+        return {"session_id": session_id, "swing_id": swing_id, "club": club.value}
 
     @app.post("/api/sessions/{session_id}/swings/{swing_id}/analyze", dependencies=guard)
     async def analyze_swing(session_id: str, swing_id: str) -> dict:
