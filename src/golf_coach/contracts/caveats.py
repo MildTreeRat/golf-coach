@@ -280,3 +280,37 @@ Reading one golfer's own history:
   one-sided magnitude like head sway or finish balance, below the band is the good side.
 - `n` counts distinct swings, not swing directories. A session can score perfectly well and still
   contribute no samples, because its clips were re-uploads of a swing already counted elsewhere."""
+
+#: What the per-club tools add, and **only** they do. [M9 P18]
+#:
+#: Ships beside `READING_A_PERSONAL_HISTORY` and never instead of it: the two are gated by the same
+#: golfer registry, and everything about how to read a withheld claim is already said there. What is
+#: left is the four things that are *new* once a club is in hand, and every one of them is a
+#: misreading this repo can predict.
+#:
+#: The first bullet is the one M9 P17 found by rendering the real corpus. An empty bag profile and a
+#: bag full of refusals look alike from a distance and need opposite answers — one says go and hit
+#: balls, the other says nothing on disk names a club and no amount of hitting fixes that on its
+#: own. A model that cannot tell them apart will give the wrong instruction confidently, because
+#: "you need more data" is true of both and useless for one.
+READING_A_BAG = """\
+Reading one golfer's bag, per club:
+
+- **An empty bag profile is not a refusal.** No clubs listed means no swing on record names a club
+  — the club tag is newer than the swings. Say that, and say the fix is tagging those swings; do
+  NOT answer it by telling the golfer to hit more balls. A club that *is* listed and withholds a
+  figure is the other case, and that one is fixed by shots on that club.
+- `n_swings` counts clips and `n_shots` counts photographs of the simulator screen, so `n_shots` is
+  the ceiling on every distance and launch figure — carry, total, offline, ball speed and launch
+  angle all come off that screen. A club filmed often and photographed rarely has plenty of swing
+  history and almost no distance history.
+- `start_line_offline_yds` is where the ball **started**, projected out to the carry — not where it
+  landed. The simulator prints no landing offset, so nothing here knows it. The curve is a separate
+  number, `face_to_path_deg`, in degrees.
+- Nothing says how far a golfer *should* hit a given club, so a distance never earns a bias
+  finding; only a repeatability one. `unavailable` carries that reason, and more swings never fix
+  it.
+- A club with no bag entry has no loft, make or model on record. That costs the loft and nothing
+  else — its distance statistics are perfectly readable — but a loft, gapping-by-loft or fitting
+  question about it must refuse rather than take a catalogue value. Where a bag entry exists and a
+  caveat says swings predate it, the numbers may pool two physical clubs under one name."""

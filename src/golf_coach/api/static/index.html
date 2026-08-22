@@ -49,6 +49,16 @@
                 font-size: 0.85rem; padding: 0 0.25rem; }
   .swing-golfer { font-size: 0.85rem; color: #999; }
   .swing-golfer.none { color: #d90; font-weight: 600; }
+  /* Per-swing club, and the retag picker behind it. Warned in the same colour as an unassigned
+     golfer because the two rows say the same kind of thing: this swing is missing a fact only a
+     person can supply. Collapsed behind *change*, which is the club bar's rule above running the
+     other way — that one is never collapsed because the club changes every few shots, and this
+     one is a repair made once per swing, so an always-open grid would put 22 chips on every row
+     for a tap almost none of them will get. */
+  .swing-club { font-size: 0.85rem; color: #999; }
+  .swing-club.none { color: #d90; font-weight: 600; }
+  .swing-club .id { text-transform: uppercase; }
+  .retag { margin: 0.4rem 0 0.6rem; }
   .roles { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
   .roles button {
     flex: 1; padding: 0.75rem 0.25rem; font-size: 0.85rem;
@@ -160,9 +170,15 @@ let editingGolfer = false; // suppresses the 5s poll while someone is mid-type
 // phones post into one swing, so two remembered club values would disagree and the disagreement
 // would land in the manifest, where nothing downstream can detect it (see `session_meta.py`).
 let clubs = [];            // the full taxonomy, canonical bag order, straight from /api/clubs
-let bagClubs = [];         // the subset this golfer has declared; empty until P19 can write one
+let bagClubs = [];         // the subset this golfer has declared, written on the career page
 let currentClub = null;
 let clubPending = false;   // the club's `editingGolfer` — see the picker's listener
+
+// The retag picker's two pieces of state, and both live out here rather than in the DOM because
+// `renderStatus` replaces that whole subtree every five seconds: held as state the picker is
+// re-rendered open, held in the markup it would shut itself under the golfer's thumb.
+let retagSwing = null;     // which swing's picker is open, at most one
+let retagPending = false;  // `clubPending` for the swing rows — see the retag listener
 
 // One-time setup per phone: open /?t=<token> once, and the token is kept from then on.
 // It is stripped from the URL immediately so the secret doesn't linger in the address
@@ -310,9 +326,14 @@ golferInput.addEventListener("input", () => {
 // Both grids' markup. The ids are rendered as they arrive and uppercased in CSS: `/api/clubs`
 // deliberately sends no labels, because a "7 iron" spelling invented here would be a second
 // vocabulary free to disagree with the one `contracts/club.py` parses.
-function clubChips(ids) {
+//
+// `selected` defaults to the cursor's club; the retag picker passes the *swing's* instead, and that
+// argument is the whole difference between the two callers. Highlighting `currentClub` inside a
+// swing row would assert the swing was hit with whatever the bay is on now — the one fact a
+// repair control must never invent, since it is exactly what the golfer is there to correct.
+function clubChips(ids, selected = currentClub) {
   return ids
-    .map((id) => `<button type="button" class="${id === currentClub ? "active" : ""}"
+    .map((id) => `<button type="button" class="${id === selected ? "active" : ""}"
       data-club="${escapeHtml(id)}">${escapeHtml(id)}</button>`)
     .join("");
 }
@@ -326,8 +347,8 @@ function renderClubs() {
   // second guard so much as a better place to meet it: a bay is a poor place to read a refusal,
   // and a 50 MB clip should not be picked before the page says it cannot be sent.
   fileInput.disabled = !currentClub;
-  // One section or two. Every golfer has an empty bag today — nothing writes one until P19 —
-  // so the common case is the taxonomy alone, and the shortcut appears when there is one.
+  // One section or two. A bag is declared on the career page and most golfers have not declared
+  // one, so the common case is the taxonomy alone and the shortcut appears when there is one.
   clubBagEl.hidden = bagClubs.length === 0;
   clubBagGrid.innerHTML = clubChips(bagClubs);
   clubAllGrid.innerHTML = clubChips(clubs);
@@ -467,6 +488,9 @@ async function refreshStatus() {
 }
 
 function renderStatus(session) {
+  // Held off across a retag, for the reason `renderClubs` gives one layer up: a poll answering
+  // with the pre-write manifest would flash the old club back under the tap that just changed it.
+  if (retagPending) return;
   if (!session.swings.length) {
     statusEl.innerHTML = "<p>No swings yet today.</p>";
     return;
@@ -482,7 +506,8 @@ function renderStatus(session) {
         })
         .join("");
       return `<div class="swing ${swing.status}"><strong>Swing ${swing.swing_id}</strong> &mdash; ${swing.status}${rows}` +
-        renderSwingGolfer(swing) + renderAnalysis(session.session_id, swing) + `</div>`;
+        renderSwingGolfer(swing) + renderSwingClub(swing) +
+        renderAnalysis(session.session_id, swing) + `</div>`;
     })
     .join("");
 }
@@ -498,6 +523,36 @@ function renderSwingGolfer(swing) {
   const cls = swing.player_id ? "swing-golfer" : "swing-golfer none";
   return `<div class="${cls}">${label}<button type="button" class="link golfer-fix"
     data-swing="${swing.swing_id}">change</button></div>`;
+}
+
+// Which club each swing on disk was hit with, and the only control that can change it. The bar at
+// the top tags what is uploaded *next*; this repairs what is already stored, and every swing
+// captured before M9 reads `no club` here — a real gap in the history rather than a display
+// problem, so it is styled as one.
+//
+// Retagging costs no re-analysis. `analysis.json` never carried the club, and `storage/corpus.py`
+// reads `manifest.club` off the manifest on every scan, so the bag page is correct on its next
+// load with nothing re-run.
+function renderSwingClub(swing) {
+  const open = retagSwing === swing.swing_id;
+  const label = swing.club ? `<span class="id">${escapeHtml(swing.club)}</span>` : "no club";
+  const cls = swing.club ? "swing-club" : "swing-club none";
+  return `<div class="${cls}">Club: ${label}<button type="button" class="link club-fix"
+    data-swing="${swing.swing_id}">${open ? "cancel" : "change"}</button></div>` +
+    (open ? retagPicker(swing) : "");
+}
+
+// The same two sections as the picker at the top, off the same two lists: one vocabulary rendered
+// twice, never a second copy. There is no *no club* chip, because the route takes a club or a 400
+// — nothing can untag a swing, and offering it would be a button with no server behind it.
+function retagPicker(swing) {
+  const bag = bagClubs.length
+    ? `<div class="club-section">In the bag</div>
+       <div class="club-grid">${clubChips(bagClubs, swing.club)}</div>
+       <div class="club-section">Every club</div>`
+    : "";
+  return `<div class="retag" data-swing="${swing.swing_id}">${bag}
+    <div class="club-grid">${clubChips(clubs, swing.club)}</div></div>`;
 }
 
 // The results link appears only once there is a result to link to. Everything else here is
@@ -606,6 +661,53 @@ statusEl.addEventListener("click", async (event) => {
     setMessage(`Could not change golfer: ${err.message}`, true);
   } finally {
     await refreshGolfer();
+    refreshStatus();
+  }
+});
+
+// Opening and closing one swing's picker. At most one is open at a time: two grids on a phone is
+// 44 chips with nothing to say which swing a tap belongs to.
+statusEl.addEventListener("click", (event) => {
+  const button = event.target.closest("button.club-fix");
+  if (!button) return;
+  retagSwing = retagSwing === button.dataset.swing ? null : button.dataset.swing;
+  refreshStatus();
+});
+
+// Retagging one swing, and it is deliberately one at a time. There is no bulk fix for the club and
+// there is not meant to be one — a session has many clubs, so a rule that reached backwards over
+// it would confidently mislabel every earlier swing (ADR-024 §5). The swing id comes off the
+// picker's own wrapper rather than the chip, so the chips stay the same markup as the bar's.
+statusEl.addEventListener("click", async (event) => {
+  const button = event.target.closest(".retag button[data-club]");
+  if (!button) return;
+  const swingId = button.closest(".retag").dataset.swing;
+
+  retagPending = true;
+  try {
+    const current = await fetch("/api/sessions/current", { headers: authHeaders() })
+      .then((r) => r.json());
+    const res = await fetch(
+      `/api/sessions/${encodeURIComponent(current.session_id)}` +
+      `/swings/${encodeURIComponent(swingId)}/club`,
+      {
+        method: "POST",
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ club: button.dataset.club }),
+      });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setMessage(body.detail || `Could not retag swing ${swingId} (${res.status})`, true);
+      return;
+    }
+    // Reported from the response and not from the tap, as the bar does: what the manifest stored
+    // is the only answer worth rendering, and it is what every per-club number is cut from.
+    setMessage(`Swing ${swingId} is now tagged ${body.club}.`);
+    retagSwing = null;
+  } catch (err) {
+    setMessage(`Could not retag swing ${swingId}: ${err.message}`, true);
+  } finally {
+    retagPending = false;
     refreshStatus();
   }
 });

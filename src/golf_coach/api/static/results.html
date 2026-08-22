@@ -855,10 +855,19 @@ function histRow(name, value, note) {
     <span class="v">${esc(value)}<em>${esc(note)}</em></span></div>`;
 }
 
-// Matches career.html and the career CLIs: one decimal for degrees, three otherwise.
+// Unit -> decimal places, matching career.html and all four career CLIs so one quantity reads the
+// same everywhere. Carried here by M9 P19 for the reason P17 found: the old rule was `1dp for
+// degrees, 3dp otherwise`, written when every metric in the repo was shoulder-width-normalized,
+// and P8-P10 added yards and mph — this block reports the golfer's typical carry, so it printed
+// "your typical 154.400" beside a swing that carried 152.
+const PRECISION = { degrees: 1, yards: 1, mph: 1, ms: 1, ratio: 3, shoulder_widths: 3 };
+// An unlisted unit takes three rather than one: too much precision is noise a reader can see and
+// complain about, too little is a digit that quietly went missing.
+const DEFAULT_PRECISION = 3;
+
 function fmtUnit(value, unit) {
   if (typeof value !== "number") return "-";
-  return unit === "degrees" ? value.toFixed(1) : value.toFixed(3);
+  return value.toFixed(unit in PRECISION ? PRECISION[unit] : DEFAULT_PRECISION);
 }
 
 function videoBlock(analysis, result) {

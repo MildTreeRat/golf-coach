@@ -46,9 +46,15 @@ _FINDING_LABEL = {
 }
 
 
+#: Unit -> decimal places. Matches `career_baseline.py`, which carries the argument for why the
+#: old `1dp if degrees else 3dp` rule stopped being right when M9 put `yards` and `mph` into
+#: `measurements`.
+_PRECISION = {"degrees": 1, "yards": 1, "mph": 1, "ms": 1, "ratio": 3, "shoulder_widths": 3}
+
+
 def _fmt(value: float, unit: str) -> str:
-    """One decimal for degrees, three for the normalized metrics. Matches career_baseline.py."""
-    return f"{value:.1f}" if unit == "degrees" else f"{value:.3f}"
+    """One decimal for the physical units, three for the normalized ones."""
+    return f"{value:.{_PRECISION.get(unit, 3)}f}"
 
 
 def _report_metric(metric: MetricDispersion, *, verbose: bool) -> None:

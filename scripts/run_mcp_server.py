@@ -57,8 +57,9 @@ def main() -> int:
         type=Path,
         default=settings.golfers_dir,
         help=(
-            "Golfer registry, which the three career tools resolve names through "
-            "(default: %(default)s). Without it those tools are not offered at all."
+            "Golfer registry, which every per-golfer tool resolves a name through — the "
+            "career ones and the per-club ones alike (default: %(default)s). Without it none of "
+            "them is offered at all."
         ),
     )
     args = parser.parse_args()

@@ -40,6 +40,8 @@ from pydantic import BaseModel
 
 from golf_coach.contracts.tool_descriptions import (
     COMPARE_SESSIONS,
+    GET_BAG_PROFILE,
+    GET_CLUB_PROFILE,
     GET_GOLFER_PROFILE,
     GET_RECENT_SHOTS,
     GET_SESSION_SUMMARY,
@@ -50,6 +52,15 @@ from golf_coach.contracts.tool_descriptions import (
 )
 from golf_coach.launch_monitor.source import ShotDataSource
 from golf_coach.mcp import career, query
+
+# By name and not as `club.*`, for `server.py`'s reason: the tool below takes a parameter called
+# `club`, and a module of that name in scope would be shadowed inside the function that needs it.
+from golf_coach.mcp.club import (
+    bag_profile,
+    club_profile,
+    missing_golfer_bag,
+    missing_golfer_club,
+)
 
 
 def _json(value: BaseModel | Sequence[BaseModel]) -> str:
@@ -149,6 +160,7 @@ def build_tools(
 
     if golfers_dir is not None:
         tools += _career_tools(sessions_dir, golfers_dir)
+        tools += _club_tools(sessions_dir, golfers_dir)
     return tools
 
 
@@ -198,5 +210,38 @@ def _career_tools(
             session_a="First session id from list_sessions.",
             session_b="Second session id from list_sessions.",
             player="Golfer name as typed, or a stored id.",
+        ),
+    ]
+
+
+def _club_tools(sessions_dir: Path, golfers_dir: Path) -> list[BetaFunctionTool[Any]]:
+    """The two that cut that history by club. [M9 P18]
+
+    Registry-gated beside the career three and for the same reason, and both can refuse the same
+    way. What is different is that they can also be **silent without refusing**: at the sample size
+    on disk today no swing names a club at all, so `get_bag_profile` returns an empty bag whose
+    `note` says the fix is tagging swings rather than hitting more of them. `caveats.READING_A_BAG`
+    is in the briefing because those two silences look identical and need opposite answers.
+    """
+
+    def get_bag_profile(player: str) -> str:
+        profile = bag_profile(sessions_dir, golfers_dir, player)
+        return _json(profile if profile is not None else missing_golfer_bag(player))
+
+    def get_club_profile(player: str, club: str) -> str:
+        profile = club_profile(sessions_dir, golfers_dir, player, club)
+        return _json(profile if profile is not None else missing_golfer_club(player))
+
+    return [
+        _tool(
+            get_bag_profile,
+            GET_BAG_PROFILE,
+            player="Golfer name as typed ('Aaron') or a stored id ('aaron').",
+        ),
+        _tool(
+            get_club_profile,
+            GET_CLUB_PROFILE,
+            player="Golfer name as typed, or a stored id.",
+            club="One club: '7i', '7 iron', 'seven iron', 'driver', 'pw'. Not a category.",
         ),
     ]

@@ -55,6 +55,12 @@ def server(sessions_dir: Path):
     return build_server(sessions_dir, _EmptySource())
 
 
+@pytest.fixture
+def registry_server(sessions_dir: Path, golfers_dir: Path):
+    """The same server with a golfer registry, which is what turns the per-golfer tools on."""
+    return build_server(sessions_dir, _EmptySource(), golfers_dir=golfers_dir)
+
+
 def test_every_planned_tool_is_declared(server) -> None:
     names = {tool.name for tool in run(server.list_tools)}
 
@@ -65,6 +71,47 @@ def test_every_planned_tool_is_declared(server) -> None:
         "get_recent_shots",
         "get_shot_by_id",
     }
+
+
+def test_a_registry_adds_the_career_and_club_tools(registry_server) -> None:
+    """[M9 P18] Five more names, and the club pair is the phase.
+
+    Asserted against the server rather than against the constants, because the constants are what
+    `tests/contracts/test_tool_descriptions.py` already checks — what is only checkable here is
+    that `build_server` actually registered them.
+    """
+    names = {tool.name for tool in run(registry_server.list_tools)}
+
+    assert {"get_golfer_profile", "get_shot_trends", "compare_sessions"} <= names
+    assert {"get_bag_profile", "get_club_profile"} <= names
+
+
+def test_the_club_tool_asks_for_the_club_by_the_name_a_model_will_use(registry_server) -> None:
+    """The parameter is `club`, and it is required.
+
+    Worth pinning because the implementation has a live reason to spell it otherwise: `mcp/club.py`
+    is a module of the same name, and the argument a model fills in comes straight off this
+    signature.
+    """
+    by_name = {tool.name: tool for tool in run(registry_server.list_tools)}
+
+    assert by_name["get_club_profile"].input_schema["required"] == ["player", "club"]
+    assert by_name["get_bag_profile"].input_schema["required"] == ["player"]
+
+
+def test_a_bag_with_nothing_tagged_answers_rather_than_refusing(registry_server) -> None:
+    """The state on disk today, over the wire. [M9 P17's finding, M9 P18's payload]
+
+    No swing in the fixture names a club, so there is no club to refuse about. What must not happen
+    is a bare empty list: an empty bag and a bag full of refusals need opposite instructions, and a
+    model can only tell them apart if the note says which one this is.
+    """
+    result = run(registry_server.call_tool, "get_bag_profile", {"player": "Aaron"})
+
+    text = "".join(block.text for block in result.content if block.type == "text")
+    assert '"nothing_tagged": true' in text
+    assert '"clubs": []' in text
+    assert "hit more balls" in text, "an empty bag has to say what does NOT fix it"
 
 
 def test_every_tool_has_a_substantive_description(server) -> None:

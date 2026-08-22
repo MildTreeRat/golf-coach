@@ -222,10 +222,10 @@ def _mcp_field_descriptions() -> list[tuple[str, str]]:
 
     from pydantic import BaseModel
 
-    from golf_coach.mcp import career, query
+    from golf_coach.mcp import career, club, query
 
     found: list[tuple[str, str]] = []
-    for module in (query, career):
+    for module in (query, career, club):
         for name, obj in vars(module).items():
             if not (inspect.isclass(obj) and issubclass(obj, BaseModel)):
                 continue

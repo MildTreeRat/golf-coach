@@ -27,12 +27,15 @@ from pathlib import Path
 from mcp.server import MCPServer
 
 from golf_coach.contracts.caveats import (
+    READING_A_BAG,
     READING_A_PERSONAL_HISTORY,
     READING_THIS_DATA_HONESTLY,
     TWO_AXES,
 )
 from golf_coach.contracts.tool_descriptions import (
     COMPARE_SESSIONS,
+    GET_BAG_PROFILE,
+    GET_CLUB_PROFILE,
     GET_GOLFER_PROFILE,
     GET_RECENT_SHOTS,
     GET_SESSION_SUMMARY,
@@ -44,6 +47,18 @@ from golf_coach.contracts.tool_descriptions import (
 from golf_coach.launch_monitor.source import ShotDataSource
 from golf_coach.mcp import career, query
 from golf_coach.mcp.career import GolferProfile, MetricTrend, SessionsCompared
+
+# Imported by name rather than as `club.*`, unlike `career` and `query` above: the tool below takes
+# a parameter called `club`, because that is the argument name a model sees in the schema, and a
+# module of the same name in scope would be shadowed inside the one function that needs it.
+from golf_coach.mcp.club import (
+    BagView,
+    ClubView,
+    bag_profile,
+    club_profile,
+    missing_golfer_bag,
+    missing_golfer_club,
+)
 from golf_coach.mcp.query import (
     NotFound,
     SessionDetail,
@@ -68,13 +83,19 @@ _OPENING = "Swing analysis and launch-monitor data from a home golf simulator."
 def instructions(*, career_tools: bool) -> str:
     """The connect-time briefing, matched to the tools this server actually offers.
 
-    `READING_A_PERSONAL_HISTORY` is added only when the career tools are, because it is entirely
-    about how to read a withheld claim — and a briefing carrying rules for tools that are not
-    present is how a model learns that the briefing describes something other than this server.
+    The flag means "a golfer registry is configured", which is the one gate every per-golfer tool
+    sits behind — career mode's three since step 6, and M9 P18's two club tools since. Its name is
+    unchanged because four call sites pass it by keyword and none of them is any less true.
+
+    Both extra blocks are added only when those tools are, because both are entirely about how to
+    read a refusal — and a briefing carrying rules for tools that are not present is how a model
+    learns that the briefing describes something other than this server. `READING_A_BAG` ships
+    beside `READING_A_PERSONAL_HISTORY` and never instead of it: it adds only what a club changes
+    and leans on that block for everything about what a withheld claim is.
     """
     blocks = [_OPENING, TWO_AXES, READING_THIS_DATA_HONESTLY]
     if career_tools:
-        blocks.append(READING_A_PERSONAL_HISTORY)
+        blocks += [READING_A_PERSONAL_HISTORY, READING_A_BAG]
     return "\n\n".join(blocks) + "\n"
 
 
@@ -129,6 +150,7 @@ def build_server(
 
     if golfers_dir is not None:
         _add_career_tools(server, sessions_dir, golfers_dir)
+        _add_club_tools(server, sessions_dir, golfers_dir)
 
     return server
 
@@ -167,6 +189,30 @@ def _add_career_tools(server: MCPServer, sessions_dir: Path, golfers_dir: Path) 
             sessions_dir, golfers_dir, session_a, session_b, player
         )
         return compared if compared is not None else career.missing_golfer_comparison(player)
+
+
+def _add_club_tools(server: MCPServer, sessions_dir: Path, golfers_dir: Path) -> None:
+    """The two that cut a golfer's history by club. [M9 P18]
+
+    Registry-gated with the career three and for the identical reason — both start by resolving a
+    name to a `player_id`. The bag itself needs no second directory: a declared bag lives beside
+    the golfer record it belongs to, so `golfers_dir` is the whole wiring.
+
+    **`get_club_profile` takes the club as free text, not an enum.** The schema could offer the
+    canonical ids and a model would still be handed "seven iron" by a user; `parse_club` is the one
+    place text becomes a `ClubId` and it refuses rather than guessing, so a miss here reads as a
+    retry with a hint rather than as a wrong club silently pooled into a right one.
+    """
+
+    @server.tool(description=GET_BAG_PROFILE)
+    def get_bag_profile(player: str) -> BagView | NotFound:
+        profile = bag_profile(sessions_dir, golfers_dir, player)
+        return profile if profile is not None else missing_golfer_bag(player)
+
+    @server.tool(description=GET_CLUB_PROFILE)
+    def get_club_profile(player: str, club: str) -> ClubView | NotFound:
+        profile = club_profile(sessions_dir, golfers_dir, player, club)
+        return profile if profile is not None else missing_golfer_club(player)
 
 
 def run(

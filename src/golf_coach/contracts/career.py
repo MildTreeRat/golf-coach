@@ -41,6 +41,7 @@ the reader: `storage` produces them, `analysis` consumes them, and the two never
 
 from __future__ import annotations
 
+from collections.abc import Collection, Sequence
 from datetime import datetime
 from enum import StrEnum
 
@@ -318,6 +319,76 @@ class CareerCorpus(BaseModel):
         ),
     )
 
+    def narrowed_to(
+        self,
+        *,
+        since: datetime | None = None,
+        sessions: Collection[str] | None = None,
+        club: ClubId | None = None,
+    ) -> CareerCorpus:
+        """This corpus narrowed to a window, named sessions or one club, **counts recomputed**.
+
+        Career mode step 6 needs two narrowings that steps 1-5 never did: a trend over the last N
+        days, and one session held against another. Both are the same operation, and the reason it
+        lives on the corpus rather than in each caller is `metric_counts` — a filtered `swings` list
+        beside the unfiltered counts is a corpus whose printed `n` describes a different set of
+        swings than its values do. That is the exact failure step 4 found when the dedupe rule was
+        private, one layer out.
+
+        The guard then falls out for free rather than needing a second version of itself: narrow,
+        hand the result to `build_baseline`, and a window holding three swings refuses everything a
+        corpus holding three swings refuses. Nothing has to remember that a per-session mean is a
+        weaker claim than a pooled one — it is the same claim asked of less data.
+
+        **The scan counters are carried unchanged and still describe the whole read**
+        (`swing_dirs_seen`, `sessions_scanned`, `unattributed_swings`, `other_golfers`, `excluded`).
+        They are facts about what was on disk, which narrowing does not alter, and no consumer of a
+        narrowed corpus reads them — `build_baseline` and everything downstream of it read `swings`.
+
+        **The club is M9's narrowing, and it is what makes a per-club statistic possible at all.**
+        Narrow to a club, hand the result to `build_baseline`, and a per-club mean carry refuses at
+        exactly the thresholds a whole-corpus metric refuses at: "your 7 iron carries 164 yards"
+        needs five distinct *7-iron* shots, not five shots. Nothing new had to learn the guard,
+        which is why the club is a clause here rather than a second builder beside the first
+        (ADR-024).
+
+        **A swing naming no club matches no club, so a club narrowing drops it — and that asymmetry
+        is the point.** `storage.corpus.read_corpus` deliberately does *not* exclude an untagged
+        swing: the club was never an input to measuring head sway, so excluding it upstream would
+        shrink the mechanics `n` to punish a missing tag mechanics never needed (`CorpusSwing.club`,
+        ADR-024 Consequences). A per-club view is the one place the tag is load-bearing, and this is
+        that place. Note that `untagged_swings` needs no recomputation below: it is a derived
+        property, so a club-narrowed corpus reports 0 with nothing here to remember — the shape M9
+        P12 chose for exactly this call site.
+
+        **Why this lives on the contract rather than on the reader that produces it** (M9 P15).
+        `analysis` depends on `contracts` alone (ADR-008), so the per-club builder could not reach a
+        filter living in `storage` — and the alternative, re-filtering inside the builder, is the
+        same printed-`n`-describes-a-different-set bug one layer further out. `artifact_key` above
+        is the precedent: a rule both sides need belongs on the shape both sides hold.
+        `storage.corpus.narrow_to` stays as the shell-facing spelling and delegates here.
+        """
+        kept = [
+            swing
+            for swing in self.swings
+            if (since is None or swing.captured_at >= since)
+            and (sessions is None or swing.session_id in sessions)
+            and (club is None or swing.club == club)
+        ]
+        metric_counts, unknown_sources = count_metrics(kept)
+
+        return self.model_copy(
+            update={
+                "swings": kept,
+                "metric_counts": metric_counts,
+                "unknown_sources": unknown_sources,
+                "outdated_swings": sum(1 for swing in kept if swing.outdated),
+                "analyzed_without_measurements": sum(
+                    1 for swing in kept if swing.counts_toward_metrics() and not swing.measurements
+                ),
+            }
+        )
+
     @property
     def distinct_swings(self) -> int:
         return len(self.swings)
@@ -326,6 +397,21 @@ class CareerCorpus(BaseModel):
     def distinct_shots(self) -> int:
         """Distinct shot photos across the corpus — the ceiling on any launch-monitor metric."""
         return len({swing.shot_sha256 for swing in self.swings if swing.shot_sha256 is not None})
+
+    @property
+    def distinct_sessions(self) -> int:
+        """Distinct sessions these swings came from — the occasions, not the swings.
+
+        Beside `distinct_swings` and `distinct_shots` because it answers the third form of "how much
+        evidence is there", and derived for the reason all three are: `narrowed_to` recomputes what
+        it must, and there is no stored counter here for it to forget.
+
+        **Not the number any TREND claim gates on.** That gate reads `MetricBaseline.n_sessions`,
+        which counts only sessions that contributed a *sample to that metric* — so a session whose
+        swings are unanalyzed raises this and not that one. Both are right; they answer different
+        questions, and naming the gap here is what stops it being filed later as a bug.
+        """
+        return len({swing.session_id for swing in self.swings})
 
     @property
     def untagged_swings(self) -> int:
@@ -354,3 +440,37 @@ class CareerCorpus(BaseModel):
     def shot_conflicts(self) -> int:
         """Swings whose re-uploads disagree about which shot photo belongs to them."""
         return sum(1 for swing in self.swings if swing.conflicting_shots)
+
+
+def count_metrics(swings: Sequence[CorpusSwing]) -> tuple[dict[str, int], list[str]]:
+    """metric -> distinct contributing artifacts, and any `source` neither prefix claimed.
+
+    The keying itself is `CorpusSwing.artifact_key` and deliberately not repeated: career mode step
+    4 pools the *values* behind these counts, and a second copy of the rule is a way for the printed
+    `n` and the number of values averaged under it to drift apart. What lives here is
+    `unknown_sources`, which is a report about the reader's coverage rather than part of the rule.
+
+    A module-level function and not a `CareerCorpus` method, because `storage.corpus.read_corpus`
+    needs it on a bare list *before* there is a corpus to call it on. `narrowed_to` is its second
+    caller, and that is what moved it here from the reader in M9 P15: ADR-008 needed the filter
+    reachable from `analysis`, and the filter cannot recompute its counts without this.
+    """
+    artifacts: dict[str, set[str]] = {}
+    unknown: set[str] = set()
+
+    for swing in swings:
+        if not swing.counts_toward_metrics():
+            continue
+        for measurement in swing.measurements:
+            if not (
+                measurement.source.startswith(POSE_SOURCE_PREFIX)
+                or measurement.source.startswith(LAUNCH_MONITOR_SOURCE_PREFIX)
+            ):
+                unknown.add(measurement.source)
+            key = swing.artifact_key(measurement)
+            if key is None:
+                continue
+            artifacts.setdefault(measurement.name, set()).add(key)
+
+    counts = {name: len(keys) for name, keys in sorted(artifacts.items())}
+    return counts, sorted(unknown)

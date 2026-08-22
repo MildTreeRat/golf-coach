@@ -20,6 +20,7 @@ import secrets
 import uuid
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
@@ -28,6 +29,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from golf_coach.analysis.baseline import build_baseline
+from golf_coach.analysis.club_profile import build_bag_profile
 from golf_coach.analysis.comparison import build_standing
 from golf_coach.analysis.dispersion import build_dispersion
 from golf_coach.api.state import (
@@ -39,8 +41,10 @@ from golf_coach.api.state import (
 )
 from golf_coach.api.worker import AnalysisWorker, should_analyze
 from golf_coach.config import settings
+from golf_coach.contracts.bag import BagEntry
 from golf_coach.contracts.career import CareerCorpus
 from golf_coach.contracts.club import ClubId, parse_club
+from golf_coach.contracts.club_profile import BagProfile
 from golf_coach.contracts.conversation import Transcript
 from golf_coach.contracts.golfer import Golfer, Handedness, slugify
 from golf_coach.storage.bag_store import BagStore
@@ -109,6 +113,30 @@ class ClubRequest(BaseModel):
     """
 
     club: str
+
+
+class BagEntryRequest(BaseModel):
+    """One club being declared or edited, from the bag page's row form. [M9 P19]
+
+    Every field is optional and defaults exactly as `BagEntry` defaults it, `loft_deg` most
+    importantly: a golfer who has never put their irons on a loft machine still has a bag, and a
+    form that refused to save without one would mean recording nothing. An omitted field is
+    *undeclared* rather than zero, which is why none of these carries a numeric default.
+
+    The club is not in the body. It is the path segment, so the route that edits a 7 iron cannot be
+    handed a payload claiming to be a wedge — `Bag._keys_match_entries` catches that mismatch on the
+    way to disk, and not putting the club in two places is what stops it ever being asked to.
+
+    `recorded_at` is absent for the reason `bag_store.py` states in its module docstring: the store
+    owns the clock and discards whatever a caller passes, so a field for it here would be a value
+    the API accepts and silently ignores.
+    """
+
+    loft_deg: float | None = None
+    make: str = ""
+    model: str = ""
+    shaft: str = ""
+    length_in: float | None = None
 
 
 class AskRequest(BaseModel):
@@ -251,6 +279,35 @@ def _corpus_summary(corpus: CareerCorpus) -> dict:
             {"ref": swing.ref, "reason": swing.reason.value, "detail": swing.detail}
             for swing in corpus.excluded
         ],
+    }
+
+
+def _bag_summary(profile: BagProfile) -> dict:
+    """The bag page's payload — a `BagProfile` plus the three things its JSON does not carry.
+
+    The career route above serves its contracts exactly as they are and says why. This one cannot,
+    and the difference is `contracts/club_profile.py`'s own doing: `ClubProfile.category`,
+    `clubs_used` and `clubs_declared` are plain properties rather than `computed_field`s, which P14
+    chose deliberately and named this surface as the projector for.
+
+    `category` is the half that matters. A page deriving it in JavaScript would hold a second copy
+    of `CLUB_CATEGORY` in a static file nothing tests — the exact failure `GET /api/clubs` was added
+    in M9 P7 to prevent, and quiet in the same way: a club added to `ClubId` would keep working at
+    every route here while rendering under the wrong heading at the bay.
+
+    The two lists come over as **counts**. The page has no use for a second copy of each profile and
+    every use for "10 clubs, 8 of them hit", so the membership rule stays on the contract where the
+    two categories cannot drift apart from the data.
+    """
+    return {
+        "player_id": profile.player_id,
+        "clubs": [
+            {**club.model_dump(mode="json"), "category": club.category.value}
+            for club in profile.clubs
+        ],
+        "clubs_used": len(profile.clubs_used),
+        "clubs_declared": len(profile.clubs_declared),
+        "untagged_swings": profile.untagged_swings,
     }
 
 
@@ -507,6 +564,38 @@ def create_app(
         set_current_club(session_dir_of(session_id), club)
         return {"session_id": session_id, "club": club.value}
 
+    def _registered(player_id: str) -> Golfer:
+        """The four golfer-scoped routes' shared front door: validate the id, then know the golfer.
+
+        `player_id` reaches a filesystem path in every one of them — `read_corpus` walks the
+        sessions for it and `BagStore` names a file after it — so it is validated rather than
+        trusted, and a literal `..` survives routing as a single segment. One home for that pair
+        because a route that skipped either would look exactly like the three that do not.
+        """
+        _safe(player_id, "player id")
+        golfer = golfer_store.get(player_id)
+        if golfer is None:
+            raise HTTPException(status_code=404, detail="no such golfer")
+        return golfer
+
+    def _bag_for(player_id: str) -> dict:
+        """One golfer's whole bag, rebuilt from disk. One place, three routes. [M9 P19]
+
+        The two writers below return **this**, not the entry they just saved. That gives the page a
+        single render path, and it means a save shows exactly what a reload would — including P16's
+        bag-changed caveat, which declaring an entry is precisely what creates. A response carrying
+        only the saved row would leave the page to guess at that, and guessing wrong reads as the
+        caveat appearing from nowhere on the next visit.
+
+        The cost is one `read_corpus` per write, which is what the career route already pays per
+        read.
+        """
+        corpus = read_corpus(bundle_store.root, player_id)
+        # `BagStore.get` is the tolerant reader: an absent or unreadable bag is None, and None is
+        # not a degraded mode here — `build_bag_profile` takes it and the golfer loses the loft and
+        # nothing else.
+        return _bag_summary(build_bag_profile(corpus, bag_store.get(player_id)))
+
     @app.get("/api/golfers/{player_id}/career", dependencies=guard)
     async def golfer_career(player_id: str) -> dict:
         """One golfer judged against their own history. [Career mode, step 6]
@@ -521,10 +610,7 @@ def create_app(
         Everything on this route refuses today. That is the feature, and it is why the page is
         worth building before the bay session rather than after it.
         """
-        _safe(player_id, "player id")
-        golfer = golfer_store.get(player_id)
-        if golfer is None:
-            raise HTTPException(status_code=404, detail="no such golfer")
+        golfer = _registered(player_id)
 
         corpus = read_corpus(bundle_store.root, player_id)
         return {
@@ -536,6 +622,78 @@ def create_app(
             "dispersion": build_dispersion(corpus).model_dump(mode="json"),
             "standing": build_standing(corpus).model_dump(mode="json"),
         }
+
+    @app.get("/api/golfers/{player_id}/bag", dependencies=guard)
+    async def golfer_bag(player_id: str) -> dict:
+        """Every club this golfer has hit or declared, and what each one's history says. [M9 P19]
+
+        The career route above answers "what does this golfer usually do"; this one answers it per
+        club, which is the only cut on which a distance means anything — a mean carry pooled over a
+        driver and a wedge describes nobody's shot (ADR-024).
+
+        Nothing new is computed here. `analysis/club_profile.py` narrows the corpus per club and
+        hands each slice to career mode's own guard, so a per-club mean refuses at the same floors a
+        whole-bag one does — applied to a fraction of the same history, which is why almost
+        everything on this route refuses for far longer. `scripts/club_profile.py` and the MCP
+        `get_bag_profile` read the identical builder; three surfaces over one builder is what stops
+        them disagreeing about how far someone hits a 7 iron.
+
+        **The expected answer today is an empty club list**, because every swing on disk predates
+        the club tag. That is a statement about the tags rather than about the golfer, and the page
+        says so in different words than a refusal would.
+        """
+        _registered(player_id)
+        return _bag_for(player_id)
+
+    @app.post("/api/golfers/{player_id}/bag/{club}", dependencies=guard)
+    async def set_bag_entry(player_id: str, club: str, payload: BagEntryRequest) -> dict:
+        """Declare the physical club in one slot, or edit the one already there. [M9 P19]
+
+        The first writer of a bag in this repo. Loft is why it exists and why it could not wait for
+        the fitting models: it is the anchor those models need and it is unrecoverable after the
+        fact, so the input lands now (ADR-024, Deferred).
+
+        **An unchanged save is deliberately not special-cased here.** `BagStore.set_entry` already
+        returns without writing when `BagEntry.same_club_as` matches, and its docstring names this
+        route as the reason that branch exists: someone opening the page and pressing save on an
+        untouched row would otherwise move `recorded_at` and hand P16 a bag-changed caveat over
+        shots that were all hit with the same club.
+
+        The club is taken off the path through `_resolve_club`, so "7 iron" works here as it does at
+        the bay and `contracts/club.py` keeps its claim to be the only place free text becomes a
+        `ClubId`. No `_safe` on that segment: it never becomes a filesystem path — the bag file is
+        named after the golfer — and `parse_club` is the stricter guard anyway.
+        """
+        golfer = _registered(player_id)
+        club_id = _resolve_club(ClubRequest(club=club))
+        # `recorded_at` is stamped here only because the contract requires one; `set_entry`
+        # discards it and stamps its own. The store owns the clock (`bag_store.py`), the same way
+        # `GolferStore.get_or_create` owns `created_at` — one stamping site, in the layer that
+        # knows when the write actually happened.
+        bag_store.set_entry(
+            golfer.player_id,
+            BagEntry(club=club_id, recorded_at=datetime.now(tz=UTC), **payload.model_dump()),
+        )
+        return _bag_for(golfer.player_id)
+
+    @app.delete("/api/golfers/{player_id}/bag/{club}", dependencies=guard)
+    async def remove_bag_entry(player_id: str, club: str) -> dict:
+        """Take a club out of the bag — and keep every shot it ever hit. [M9 P19]
+
+        `BagStore.remove_entry` shelves the outgoing entry on `Bag.retired` rather than deleting it,
+        so this destroys no measured loft. What the golfer loses is the club's place in the
+        *current* bag, and its history is untouched: `contracts/club_profile.py` keeps `in_bag` and
+        `n_swings > 0` apart for exactly this, and a club sold last year still answers "how far did
+        I hit it".
+
+        404 when the slot was already empty, which is `remove_entry` returning None. A 200 there
+        would tell a page its request changed something when nothing did.
+        """
+        golfer = _registered(player_id)
+        club_id = _resolve_club(ClubRequest(club=club))
+        if bag_store.remove_entry(golfer.player_id, club_id) is None:
+            raise HTTPException(status_code=404, detail=f"{club_id.value} is not in the bag")
+        return _bag_for(golfer.player_id)
 
     # Declared before `/api/sessions/{session_id}` would be ambiguous only if the paths had the
     # same shape; they don't, but `current` must stay above it regardless — FastAPI matches in

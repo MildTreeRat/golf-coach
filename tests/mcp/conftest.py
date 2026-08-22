@@ -15,6 +15,7 @@ from typing import Any
 import pytest
 
 from golf_coach.api.state import AnalysisState, input_hashes, save_state
+from golf_coach.contracts.club import ClubId
 from golf_coach.contracts.golfer import Handedness
 from golf_coach.contracts.swing import ANALYSIS_VERSION
 from golf_coach.storage.golfer_store import GolferStore
@@ -36,6 +37,7 @@ def make_manifest(
     roles: tuple[Role, ...] = (),
     player_id: str | None = None,
     created_at: datetime = _WHEN,
+    club: ClubId | None = None,
 ) -> SwingManifest:
     return SwingManifest(
         swing_id=swing_id,
@@ -43,6 +45,7 @@ def make_manifest(
         created_at=created_at,
         updated_at=created_at,
         player_id=player_id,
+        club=club,
         roles={
             role: RoleFile(
                 role=role,
@@ -131,18 +134,27 @@ def write_swing(
     stale: bool = False,
     player_id: str | None = None,
     created_at: datetime = _WHEN,
+    club: ClubId | None = None,
 ) -> Path:
     """One swing directory. `state=False` mimics a CLI-analyzed swing from before Phase 5.
 
     `player_id` and `created_at` exist for the career tools (step 6): a swing naming no golfer is
     excluded from every corpus as `UNATTRIBUTED`, and `created_at` is what a trend is keyed on, so
     both have to be settable per swing rather than fixed at `_WHEN`.
+
+    `club` exists for the club tools (M9 P18) and defaults to None on purpose — that is the shape
+    of every swing on disk today, and it is the state `BagProfile.untagged_swings` counts.
     """
     swing_dir = sessions_dir / session_id / swing_id
     swing_dir.mkdir(parents=True, exist_ok=True)
 
     manifest = make_manifest(
-        session_id, swing_id, roles=roles, player_id=player_id, created_at=created_at
+        session_id,
+        swing_id,
+        roles=roles,
+        player_id=player_id,
+        created_at=created_at,
+        club=club,
     )
     save_manifest(manifest, manifest_path(swing_dir))
 
@@ -215,6 +227,25 @@ CAREER_METRICS: dict[str, tuple[str, str]] = {
     "start_line_deg": ("launch_monitor:hd_golf", "degrees"),
 }
 
+#: The five M9 measurements a club is the only honest cut on. [M9 P8-P10]
+#:
+#: Deliberately a **second** mapping rather than five more rows in `CAREER_METRICS`: that one is
+#: what `test_career_tools.py` counts its panel against, and growing it would move an assertion
+#: about the career tools to make room for a club fixture. They are all sourced from the launch
+#: monitor, which is what makes `CorpusSwing.artifact_key` count them against shot photographs
+#: rather than clips — the divergence `ClubProfile.n_shots` exists to report.
+CLUB_METRICS: dict[str, tuple[str, str]] = {
+    "carry_distance_yds": ("launch_monitor:hd_golf", "yards"),
+    "total_distance_yds": ("launch_monitor:hd_golf", "yards"),
+    "start_line_offline_yds": ("launch_monitor:hd_golf", "yards"),
+    "ball_speed_mph": ("launch_monitor:hd_golf", "mph"),
+    "launch_angle_deg": ("launch_monitor:hd_golf", "degrees"),
+}
+
+#: Both tables, for the writer below. A metric name resolves to one unit and one source wherever it
+#: is written, which is the property `read_corpus` needs to count it consistently.
+ALL_METRICS: dict[str, tuple[str, str]] = CAREER_METRICS | CLUB_METRICS
+
 
 def career_analysis(values: dict[str, float], *, overall: float = 91.0) -> dict[str, Any]:
     """An `analysis.json` carrying measurements and stamped with the current engine version.
@@ -230,8 +261,8 @@ def career_analysis(values: dict[str, float], *, overall: float = 91.0) -> dict[
         {
             "name": name,
             "value": value,
-            "unit": CAREER_METRICS[name][1],
-            "source": CAREER_METRICS[name][0],
+            "unit": ALL_METRICS[name][1],
+            "source": ALL_METRICS[name][0],
             "detail": "test",
         }
         for name, value in values.items()
@@ -257,3 +288,9 @@ def career_writer():
 def career_metrics() -> dict[str, tuple[str, str]]:
     """`CAREER_METRICS` as a fixture. See `analysis_factory`."""
     return CAREER_METRICS
+
+
+@pytest.fixture
+def club_metrics() -> dict[str, tuple[str, str]]:
+    """`CLUB_METRICS` as a fixture. See `analysis_factory`."""
+    return CLUB_METRICS

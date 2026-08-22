@@ -5,11 +5,52 @@
 > is [ADR-024](decisions/024-per-club-shot-history.md); this document is the *how*, as a phase
 > list.
 
-**Status: in progress, 11/20 phases.** P12 landed 2026-08-21 and **opened the corpus track** —
-the club now crosses from the manifest into `CorpusSwing`, and `CareerCorpus.untagged_swings` counts
-the history per-club work cannot see. Start at P13 — `narrow_to(club=)`, the filter every per-club
-statistic hangs off — or at P10, still optional, if launch conditions are wanted before the next bay
-session.
+**Status: in progress, 19/20 phases.** P19 landed 2026-08-22 and gave the bag a browser: a section
+inside `career.html` over three new routes, and **the first thing in this repo that ever wrote a
+bag** — `BagStore.set_entry` and `remove_entry` had no caller outside their own tests until now. It
+renders the same five silences P18 enumerated, in the page's own voice, and it found two prose
+errors by driving rather than by reasoning: `fmt` printed `154.400 yards` on two pages, and the CLI
+pointed at a retag button that did not exist on any page. That button now does, and the paragraph
+below is its record. **What is left is the docs.** Start at P20.
+
+**The one thing standing between this milestone and a real answer was not a phase on this list, and
+it is now fixed.** `POST /api/sessions/{session}/swings/{swing}/club` had no UI, so the swings
+already on disk — every one of which predates the tag — could not be retagged from a phone. As of
+2026-08-22 `index.html`'s swing list carries a per-swing **change** control beside the golfer one:
+each row says which club it was hit with, `no club` in the warning colour when it says nothing, and
+*change* opens the same chip grid the upload picker uses, scoped to that swing.
+
+Three shapes there are worth knowing before P20 reads the page:
+
+- **`clubChips` gained a `selected` argument**, defaulting to the cursor's club. The retag picker
+  passes the *swing's* instead — highlighting `currentClub` inside a swing row would assert the
+  swing was hit with whatever the bay is on now, which is the one fact a repair control must never
+  invent. Breaking that argument in place fails four checks of the drive below.
+- **The picker is collapsed behind *change*, where the bar at the top is never collapsed.** Same
+  argument, run the other way: the cursor changes every few shots and a retag happens once per
+  swing, so an always-open grid would put 22 chips on every row for a tap almost none of them get.
+- **`retagSwing` and `retagPending` live in the page's state, not in the DOM.** `renderStatus`
+  replaces that subtree every five seconds; held in the markup the picker would shut itself under
+  the golfer's thumb, and a poll landing mid-write would flash the old club back.
+
+Nothing needs re-analyzing after a retag: `analysis.json` never carried the club and
+`storage/corpus.py` reads `manifest.club` off the manifest on every scan.
+
+**No new tests, which is the precedent rather than an omission** — nothing here tests a static
+file, and the route itself is pinned in `tests/api/test_uploads.py`. The suite stayed at 993. The
+page's own script was driven against a live server with a stubbed DOM instead, over an untagged
+swing beside a tagged one, and **three behaviours were watched fail rather than assumed**, the
+P3–P19 habit: the `selected` argument (4 checks), the `retagPending` guard (1), and holding the
+open picker in state (5+). Then driven on a **copy** of the real corpus, which is the payoff — with
+the two stored swings retagged, `scripts/club_profile.py` leaves the empty state for a `7i` row at
+`n = 2` with every claim withheld, and `mcp/club.py` moves from `NEVER_HIT` to
+`NOT_ENOUGH_ON_THIS_CLUB` with `untagged_swings` at 0. The real `data/` was left alone: only the
+golfer knows what those two swings were hit with (ADR-024 §5).
+
+**The four prose blocks that said the button did not exist are corrected** — `mcp/club.py`'s
+`NOTHING_TAGGED`, `career.html`'s `nothingTagged()`, and both blocks in `scripts/club_profile.py`.
+Each keeps its own audience's wording: the model and the CLI still name the route, the page names
+the control.
 
 ---
 
@@ -554,7 +595,7 @@ a test. `scripts/career_dispersion.py` then printed the row beside `start_line_d
 
 ---
 
-### [ ] P10 — ball speed and launch angle as fitting inputs *(optional; skippable)*
+### [x] P10 — ball speed and launch angle as fitting inputs *(done 2026-08-21, written up 08-22)*
 
 **Goal.** Record the two fields club fitting will need, judged by nothing. Pure measure-now-judge-
 later (M6.5).
@@ -569,7 +610,29 @@ club speed is a known-bad number on this device. These two are not implicated by
 are recorded because launch conditions are the input to any future fitting model and are
 unrecoverable after the fact; they get no target and no band.
 
-**Done when.** Tests pass. Skip this phase entirely for the smallest useful M9.
+**As built, and the box is later than the code.** P10 shipped in `f930973` alongside P12's work
+and this box was left unchecked — it is written up here after the fact, which is why the two dates
+differ. Both metrics are in `SHOT_MEASUREMENTS` as straight reads with the comment above; the
+optional phase was taken rather than skipped.
+
+**It carried the two `METRIC_TARGETS` rows with it, which was not optional.** P11's parity pin
+(`test_every_production_metric_has_a_tolerance`) means an unregistered production metric is a red
+suite, so `_JUDGED_LAUNCH` shipped in the same change: both rows take `target=None` — a "right"
+ball speed is a fitting output and optimal launch needs the model that does not exist — leaving
+the tolerance to do the one job it still can, which is the *scatter* finding. Neither number is a
+fresh judgment: 2 degrees for launch angle is what this repo already claims about the OCR path's
+other angle fields, and 4 mph for ball speed is `_JUDGED_YARDS`'s 5 yards carried through the
+~1.4 yd/mph the two stored shots show. `_JUDGED_DEGREES` is deliberately *not* reused for launch
+angle, because that constant argues from the level a coaching action follows from and nobody
+coaches a launch angle off this instrument.
+
+**`ANALYSIS_VERSION` went 9 → 10, and the disk did not follow until 2026-08-22.** For a day every
+stored swing read `OUTDATED`, `Honest n per metric` printed *(none)*, and the corpus counted
+nothing — the cost of a version bump without its `scripts/reanalyze.py` run. Repaired with P13:
+all four swings moved to version 10, every `overall_score` byte-identical, `measurements` 19 → 21
+on each.
+
+**Done when.** Tests pass. Skip this phase entirely for the smallest useful M9. ✅
 
 ---
 
@@ -701,7 +764,7 @@ has added. `tests/test_docs_truth.py` pins none of it, so nothing goes red.
 
 ---
 
-### [ ] P13 — `narrow_to(club=)`
+### [x] P13 — `narrow_to(club=)` *(done 2026-08-22)*
 
 **Goal.** The one-line change that makes every per-club statistic possible.
 
@@ -719,15 +782,53 @@ comprehension. The `metric_counts` recomputation is already there and is what ma
 metric refuses at — so "your 7 iron carries 164 yards" needs 5 distinct 7-iron shots, not 5 shots.
 Nothing new had to learn the guard.
 
+**As built: three lines, exactly as specified.** An import of `ClubId`, `club: ClubId | None =
+None` on the keyword-only signature, and `and (club is None or swing.club == club)` in the
+comprehension. The `model_copy(update=...)` block was not touched — it already recomputes
+`metric_counts`, `unknown_sources`, `outdated_swings` and `analyzed_without_measurements`, which
+is the per-club `n` arriving honest for free.
+
+**The docstring gained the untagged asymmetry as well as the unlock.** `read_corpus` keeps an
+untagged swing on purpose, so a club narrowing is *the* place it drops out — the one view where
+the tag is load-bearing. And `untagged_swings` needs no recomputation here, because P12 shipped it
+as a derived property; the docstring says so at the call site the shape was chosen for, since a
+stored version would have been a fifth entry in a hand-listed update that nothing goes red about.
+
+**`contracts/dispersion.py` was deliberately not touched.** `_JUDGED_YARDS`, `_JUDGED_OFFLINE` and
+`_JUDGED_LAUNCH` each name `narrow_to(club=)` as what makes their per-club tolerance *measurable*,
+and that stays true after this phase: revising them needs a per-club **sample**, which needs a bay
+session. All three say they should be revised in one pass, and that instruction is left standing.
+
+**No `ANALYSIS_VERSION` bump** — no measurement changed and no artifact was written, same as P12.
+
 **Tests.** Narrowing keeps only that club's swings **and** recomputes `metric_counts` to match —
 pin the count, not just the list; that is the failure the docstring warns about. An unhit club
-gives an empty corpus, not an error. Club and `since` compose.
+gives an empty corpus, not an error. Club and `since` compose. ✅ — four added, suite 925 → 929,
+and a fourth the box did not ask for: a club narrowing drops the untagged swing *and*
+`untagged_swings` follows it to 0, which is the assertion that goes red if that counter is ever
+converted to a field.
 
-**Done when.** Tests pass.
+**One test was wrong before the code was.** The first draft built three swings with distinct clubs
+and asserted `carry_distance_yds` counted 3; it counted 1, because launch-monitor metrics are
+keyed on the **shot photo's** hash and the builder defaults every swing to one `shot-hash`. The
+reader was right — the fixture had built one shot photographed once and attributed to three
+swings. Fixed by giving each swing its own shot, which is also the shape the dedupe rules describe.
+
+**Both pins were watched fail.** Removing the clause fails all four; carrying the whole read's
+`metric_counts` through instead of recomputing fails five (the four plus the pre-existing
+narrowing test) on counts rather than lists — `{'carry_distance_yds': 3} == 2` is the count pin
+doing the job the list pin cannot.
+
+**Done when.** Tests pass. ✅ — 929 passed, `ruff check src tests scripts` clean, `mypy src` clean
+across 92 files. Driven on the real corpus too: the whole read is 2 swings with
+`carry_distance_yds` n=2, and every club narrowing comes back honestly empty with
+`untagged_swings` 0, because both swings on disk predate the tag. `scripts/career_corpus.py
+--player-id aaron` is byte-identical to the run before the change, which is the acceptance
+criterion — nothing in that script passes `club=`, so any movement would have been a bug.
 
 ---
 
-### [ ] P14 — `contracts/club_profile.py`: the shape of a club's history
+### [x] P14 — `contracts/club_profile.py`: the shape of a club's history *(done 2026-08-22)*
 
 **Goal.** The output shape. Pure contract, nothing builds it yet.
 
@@ -745,127 +846,478 @@ properties**, so the two categories cannot drift out of agreement with the data.
 
 **Comment to write.** Why `in_bag` and `n_shots > 0` are separate: a club in the bag you have not
 hit has no statistics but is not an error, and a club you have hit that has left the bag still has
-real history. Collapsing them into one list loses which is which.
+real history. Collapsing them into one list loses which is which. ✅ — written into the module
+docstring as its own section, since `BagProfile` derives a list from each and the pair only reads
+as deliberate together.
+
+**The box named one evidence counter and the phase shipped two, which was its one design decision.**
+`ClubProfile` carries `n_swings` *and* `n_shots`, mirroring the split `CareerCorpus` already makes
+between `distinct_swings` and `distinct_shots`. Per club they genuinely diverge: a 7 iron filmed six
+times with two shot-screen photos is six swings of history and a **carry ceiling of two**, because
+every launch-monitor claim dedupes on the photo's hash. A single counter named `n_shots` would
+either undercount the history or overstate what a distance statistic can be built from, and a carry
+average is the number nobody audits. Both are always populated and never gated — they are facts
+about how much data exists rather than claims about the golfer, which is why `MetricBaseline.n` sits
+outside the guard too. `clubs_used` therefore derives off `n_swings`, so a club hit on video with no
+screen photo keeps its history.
+
+**`category` is a derived property, not the field the box listed.** `contracts/club.py` is explicit
+that `CLUB_CATEGORY` is *the* one table so a club's category cannot be two things in two places; a
+copy stored on every profile is a second home free to disagree with it (R4). It is a plain
+`@property` and so not serialized, matching `Bag.club_ids` and `CareerCorpus.untagged_swings` — no
+contract here uses `computed_field`, and P18/P19 project their own view models the way
+`mcp/career.py` already does.
+
+**`BagProfile.untagged_shots` shipped as `untagged_swings`**, because its only source is
+`CareerCorpus.untagged_swings` and a number renamed on the way through is two spellings free to be
+reported differently.
+
+**Two shapes the box did not specify, both taken from precedent in this file's own contracts.**
+`clubs` is a flat `tuple[ClubProfile, ...]` rather than a dict keyed by club — `ClubProfile.club`
+already names the slot, and a second key is a second thing that can disagree with the entry it
+holds, which is the bug `Bag._keys_match_entries` exists to catch. And a `model_validator` **pins
+canonical bag order** and rejects a repeated club: `club.py` states that declaration order is read
+and not decorative and that sorting downstream is the bug it exists to prevent, so a validator is
+what makes that enforceable rather than a convention P15 can forget. `profile_for` is there for the
+`Bag.retired_for` reason — P17's `--club 7i` and P18's `get_club_profile` are both scans over
+`clubs`, and two hand-rolled ones are two places to get it wrong.
+
+**No `ANALYSIS_VERSION` bump**, same as P12 and P13: nothing here is measured and nothing is written
+to an artifact. Worth saying because P8, P9 and P10 each carried one.
 
 **Tests.** JSON round-trip. The two derived lists are correct for all four combinations of (in
-bag, has shots).
+bag, has shots). ✅ — **9 added, suite 929 → 938.** The round-trip carries a real `MetricBaseline`
+with both a ready claim and a `WithheldClaim` inside it, plus a `MetricDispersion` with an
+`unavailable` entry, because the nesting is the phase and a refusal that fails to survive storage
+renders as a blank cell — which reads as zero, the one thing `contracts/baseline.py` exists to
+prevent. `category` is asserted against `category_of` across every `ClubId` rather than a written-out
+list (R6), and the order pin uses `test_bag.py`'s `pw, 3w, driver, 7i` set, where insertion,
+alphabetical and bag order all differ.
 
-**Done when.** Tests pass; `mypy src` clean.
+**Both pins were watched fail**, the P3–P13 habit. Collapsing `clubs_declared` onto `n_swings > 0`
+fails the four-combination test on `[driver, 7i] != [driver, 3w]` — the two lists answering one
+question. Dropping the order clause from the validator fails the ordering test with `DID NOT RAISE`,
+in both the insertion-order and alphabetical directions.
+
+**Done when.** Tests pass; `mypy src` clean. ✅
 
 ---
 
-### [ ] P15 — `analysis/club_profile.py`: the builder
+### [x] P15 — `analysis/club_profile.py`: the builder *(done 2026-08-22)*
 
 **Goal.** Turn a corpus plus a bag into a `BagProfile`. **It should be short** — if it is long,
 something is being reimplemented.
 
-**Files.** `analysis/club_profile.py`, `tests/analysis/test_club_profile.py`.
+**Files.** `analysis/club_profile.py`, `tests/analysis/test_club_profile_builder.py` — plus the two
+the ADR-008 answer required, `contracts/career.py` and `storage/corpus.py`. The box called this an
+L2; the contract change makes it an **L3**, and that is the honest classification for any phase
+whose design decision is "which module may import which".
 
-**Reuse — all of it.** `narrow_to` (P13), `build_baseline`, `build_dispersion`, `category_of`.
-For each club present in the corpus or declared in the bag: narrow, build both, assemble.
+**Reuse — all of it, and the box's list is one item stale.** `narrow_to` (P13), `build_baseline`,
+`build_dispersion`. **Not `category_of`**: P14 made `ClubProfile.category` a derived property, so
+the builder cannot set it and must not try.
 
-**The one design decision.** `analysis` must not import `storage` (ADR-008), and `narrow_to` lives
-in `storage/corpus.py`. **Check the import direction before writing this.** If it cannot be
-imported, move the pure filter half of `narrow_to` onto `CareerCorpus` in `contracts/career.py` and
-have `storage.corpus.narrow_to` delegate. **Prefer the move** — it is the ADR-008-clean answer, and
-`CorpusSwing.artifact_key` is already precedent for a shared rule living on the contract because
-both sides need it.
+**The one design decision was taken as the box prefers: the filter moved onto the contract.**
+`CareerCorpus.narrowed_to(*, since, sessions, club)` now holds the body and the whole docstring;
+`storage.corpus.narrow_to` keeps its name and delegates in one line, because `mcp/career.py` calls
+it at three sites and it is where a caller holding a corpus off disk looks. `CorpusSwing
+.artifact_key` is the precedent the box names, and it is exact — a rule both sides need lives on
+the shape both sides hold.
 
-**Tests.** A corpus with 6 `7i` shots and 2 `driver` gives a 7i with a CENTER claim and a driver
-refusing one, both with the right `n`. An empty bag still profiles clubs that have shots. A
-declared-but-unhit club appears with `n_shots=0` and every claim withheld.
+**The move dragged a second function with it, which the box did not anticipate.** `narrowed_to`
+recomputes `metric_counts`, and that recomputation *is* `storage.corpus._count_metrics`. So it moved
+too, as the public `contracts.career.count_metrics`. A module-level function rather than a
+`CareerCorpus` method, because `read_corpus` needs it on a bare list before there is a corpus to
+call it on — it now has two callers, one on each side of the seam.
+
+**And it gained a third derived property.** `CareerCorpus.distinct_sessions`, beside
+`distinct_swings` and `distinct_shots`, so the builder's three evidence counters all come off the
+narrowing rather than one being assembled by hand. Its docstring carries the warning that goes with
+it: **this is not the number a TREND claim gates on.** That gate reads `MetricBaseline.n_sessions`,
+which counts only sessions that contributed a sample *to that metric*, so a session whose swings are
+unanalyzed raises one and not the other. Both are right, and the gap is named where it can be found.
+
+**Two things the builder deliberately does not do**, both commented at the line rather than left to
+be rediscovered:
+
+- **`bag_entry` never reads `Bag.retired`.** The shelf is retention, not the bag-entry versioning
+  ADR-024 defers, and `contracts/bag.py` states that nothing reads it. So a club that has left the
+  bag keeps every statistic and loses only its loft — which is exactly the split `clubs_used` /
+  `clubs_declared` exists to express. Borrowing the retired entry's loft would attach a measurement
+  from one physical club to shots hit with another.
+- **It does not optimise away the second `build_baseline`.** `build_dispersion` takes a corpus and
+  builds its own baseline on purpose, so its guarded statistics and its raw per-session samples
+  provably describe the same read; handing it one built in the loop would be the seam through which
+  one club's spread could pair with another's sessions. The cost is a second pass over a swing list
+  this repo counts in tens.
+
+**The phase's one unbudgeted find: two test files cannot share a basename here, and the failure is
+total.** `tests/` holds no `__init__.py`, so pytest's default `prepend` import mode imports every
+test module under its bare name — and `tests/analysis/test_club_profile.py` beside P14's
+`tests/contracts/test_club_profile.py` does not skip one file, it **interrupts the entire run at
+collection**. The real fix, `--import-mode=importlib`, was tried and reverted: ten modules across
+`tests/analysis/` and `tests/launch_monitor/` do `from conftest import ...`, which is the same
+`prepend` idiom and stops resolving under it. That is its own commit and is written up in
+`WORKLOG.md`. Here the file is `test_club_profile_builder.py` and its docstring says why, so nobody
+restores the mirror and discovers this the hard way.
+
+**Tests: 10 added, suite 938 → 948.** The three the box named (6 `7i` and 2 `driver` → a CENTER
+claim and a refusal with the right `n`; an empty bag still profiles what has shots; a
+declared-but-unhit club with every claim withheld) plus seven the phase needed — canonical bag order
+from a bag declared `pw 3w driver 7i`, the two counters diverging on one club filmed three times
+with two photos, a retired club keeping its history, untagged swings reaching no profile while still
+counting whole-bag, an empty corpus being an empty profile, the baseline and the dispersion agreeing
+on `n`, and **a static pin that this module imports no `storage`** — read with `ast` for the reason
+`test_comparison.py` gives, since `analysis/__init__.py` imports `engine` and a `sys.modules` check
+would answer a question about the package rather than about this file.
+
+**Six behaviours were watched fail rather than assumed**, the P3–P14 habit, each broken in-process:
+club order taken from `bag.entries` instead of walked off `ClubId` (fails the ordering test on the
+`BagProfile` validator), the whole corpus handed to `build_baseline` (fails on `n`, not on the club
+list — the count pin doing what a list pin cannot), the same for `build_dispersion`,
+`untagged_swings` read off a narrowed corpus, `bag_entry` falling back to the shelf, and the
+convenient one-line `from golf_coach.storage.corpus import narrow_to`, which fails only the new
+import pin and nothing else — which is the point of having it.
+
+**No `ANALYSIS_VERSION` bump**, same as P12–P14: nothing here is measured and no artifact is
+written.
 
 **Done when.** Tests pass; `tests/api/test_pipeline_imports.py` green — this is the phase most
-likely to trip it.
+likely to trip it. ✅ — and driven on the real corpus, since the point of a builder is that it
+produces something: `build_bag_profile(read_corpus(...), None)` for `aaron` returns **no club
+profiles and `untagged_swings` 2**, because both swings on disk predate the tag. That is the correct
+output and a club appearing here would have been the bug.
 
 ---
 
-### [ ] P16 — the bag-changed caveat
+### [x] P16 — the bag-changed caveat *(done 2026-08-22)*
 
 **Goal.** Never silently pool two physical clubs under one name.
 
-**Files.** `analysis/club_profile.py`, `tests/analysis/test_club_profile.py`.
+**Files.** `analysis/club_profile.py`, **`tests/analysis/test_club_profile_builder.py`** — not the
+`test_club_profile.py` this box named, and the difference is not cosmetic. That basename collides
+with P14's `tests/contracts/test_club_profile.py` under pytest's default `prepend` import mode and
+**interrupts the whole run at collection** rather than skipping a file; P15 found it and wrote it
+up above. The box's list was written before that was known.
 
-**Detail.** When `bag_entry.recorded_at` is later than the earliest pooled shot's `captured_at`,
-append a caveat naming the date and saying shots before and after it may have been hit with a
-different club. Do **not** withhold the statistic — the entry may simply have been recorded late
-for a club that never changed.
+**Detail, as built.** `_bag_changed_caveats(entry, swings)` — a private helper taking the entry and
+the **narrowed** swing list, returning a list of zero or one sentences. Wired into `_profile_for`'s
+`ClubProfile(...)` constructor beside `dispersion`. No statistic is touched, which is the phase.
 
-**Comment to write.** The same posture `SESSION_DRIFT_FACTOR` takes: a loose judgment that only
-ever adds a caveat and never removes a claim, so being wrong about it costs a sentence rather than
-a verdict.
+**The sentence has two forms, and that was the phase's one real decision.** A single form covering
+both sides reads as false on the common one. When *some* swings predate the entry there genuinely
+are two populations in one average and the sentence says so. When **every** swing predates it there
+is one population of unknown provenance and nothing is pooled at all — and that is not the exotic
+case, it is what every club looks like the day a golfer declares a bag after months of range
+sessions (which is every golfer, since nothing writes a bag until P19). Telling them their carry
+average "mixes two clubs" would be alarming and wrong; what is actually in doubt is whether the
+make, model and loft on the entry describe the club that hit any of it, so that form says that
+instead.
 
-**Tests.** Recorded before all shots → no caveat. Recorded mid-history → caveat naming the date.
-No bag entry → no caveat.
+**The count ships alongside the date, which is one more than this box asked for.** The sentence is
+permanently true once it fires — the earliest swing never moves — so a bare date reads identically
+on the day a club is declared and a year later. A proportion deflates on its own as
+post-declaration history accumulates, and "2 of 40" is a different situation from "2 of 4" in the
+only way a reader can act on. The all-predate form drops the count for the reason above: there is
+no proportion to report when every swing is on one side.
 
-**Done when.** Tests pass.
+**Three smaller calls, each commented at the line rather than left to be rediscovered:**
+
+- **`narrowed.swings`, never `corpus.swings`.** The count has to describe *this club's* history.
+  The unnarrowed list produces a caveat that is wrong about its own subject while looking exactly
+  like a working one — the module docstring's opening argument, one layer down.
+- **Strictly `<`.** An entry recorded in the same instant as a swing *was* the club that hit it.
+  Off by one here and every bag declared during a session caveats the session it was declared in.
+- **"swings", not "shots".** `n_shots` in this repo counts distinct shot *photos*, so prose saying
+  "shots" beside it would name a smaller number than the profile just printed.
+
+**Two things it deliberately does not have.** No threshold constant — `SESSION_DRIFT_FACTOR` is the
+precedent for the *posture*, not the shape, and there is no "how much later is suspicious" judgment
+to make here, only "later at all"; a grace window would be a free parameter with no evidence behind
+it (R11). And no naive/aware guard on the datetime comparison: `CareerCorpus.narrowed_to(since=)`
+makes the same bare `captured_at` comparison and does not guard either, and every writer on both
+sides stamps `datetime.now(tz=UTC)`.
+
+**Tests: 8 added, suite 948 → 956.** The three this box named, plus five the phase needed — the
+`<`/`<=` boundary, the two prose forms (including the one that renders "1 of these 1 swings" if the
+count is naive), a retired club staying silent rather than borrowing the shelf's `recorded_at`, and
+**the load-bearing one: the caveat qualifies the statistics and never withholds them.** Six
+7-iron shots with an entry recorded midway still state their CENTER mean at `n = 6`. That is the
+one way this phase could have deleted real history, so it is the one test written to catch it.
+
+**Four breaks were watched fail rather than assumed**, the P3–P15 habit. Handing the helper
+`corpus.swings` fails the mid-history test on the *count* (`"2 of the 8 swings"` for a club with
+four) and not on the presence of a caveat — a test asserting only "a caveat exists" would have
+passed. `<` → `<=` fails the same-instant test. And withholding was broken in **two** ways, because
+the obvious one is not the dangerous one: zeroing the caveat fails on `len(caveats) == 1`, while
+the realistic bad fix — keep the caveat, cut the statistics back to post-entry swings — fails on
+`BaselineClaim.CENTER in ready` with the mean gone to `None` at `n = 3`. Only the second exercises
+the assertions that matter.
+
+**No `ANALYSIS_VERSION` bump**, same as P12–P15: nothing here is measured and no artifact is
+written. Worth saying because P8, P9 and P10 each carried one.
+
+**Done when.** Tests pass. ✅ — 956 passed, `ruff check src tests scripts` clean, `mypy src` clean.
+**Driven on the real corpus, with the honest limit stated:** `read_corpus` + `build_bag_profile`
+for `aaron` is byte-identical to P15's verified result (2 distinct swings, **0 club profiles**,
+`untagged_swings` 2), which is the useful check — nothing moved. It exercises no caveat, and
+nothing on disk can: every swing predates the club tag and no bag exists. The caveat's own drive
+was one real stored swing retagged `7i` in a REPL with a bag entry recorded a day later, which
+produced the sentence and left `carry_distance_yds` refusing at `n = 1` exactly as it did without
+the bag. P17's CLI is the first thing that will render one for real.
 
 ---
 
-### [ ] P17 — `scripts/club_profile.py` CLI
+### [x] P17 — `scripts/club_profile.py` CLI *(done 2026-08-22)*
 
 **Goal.** Read the numbers without a browser or an MCP client. **The phase that proves the spine
 works.**
 
-**Files.** `scripts/club_profile.py`.
+**Files.** `scripts/club_profile.py` — plus a two-line carry-over into `scripts/career_baseline.py`
+and `scripts/career_dispersion.py`, argued under *formatting* below.
 
-**Reuse.** `scripts/career_baseline.py` and `scripts/career_dispersion.py` are the templates —
-same argument shape, same output style, same tolerant reads.
+**Reuse — all of it.** `career_baseline.py` and `career_dispersion.py` are the templates and were
+copied structurally: the target-resolution block, `_FINDING_LABEL` with its reasoning, and
+`_label` / `_print_block` / `_wrap`. Off the contracts: `read_corpus`, `BagStore.get`,
+`build_bag_profile`, `BagProfile.profile_for` (P14 put the lookup there so this and P18's
+`get_club_profile` cannot disagree about "no such club"), and `parse_club` for `--club`.
 
-**Detail.** `python scripts/club_profile.py <player> [--club 7i]`. Per club: `n`, mean carry with
-its CI or the refusal, sd, the start-line offline finding, and the bag entry's loft. Refusals print
-`WithheldClaim.reason` verbatim — that sentence already names what is missing.
+**The argument shape follows the templates, not this box's own sketch.** The box wrote
+`club_profile.py <player>`; the three career CLIs all take `--name` / `--player-id`, and its own
+Reuse line said "same argument shape". Four CLIs over one corpus that disagree about how to name a
+golfer is the worse outcome, so the flags won. `--club` accepts anything `parse_club` does and
+**refuses rather than nudges** — "wedge" and "iron" name a category, so both exit 2 with the
+sentence saying so.
 
-**Done when.** Running it against the data on disk prints a table of refusals — expected, since
-every swing on disk is untagged — without crashing. "Refuses cleanly on real data" is the
-acceptance criterion, exactly as it was for career mode.
+**No tests, and that is the precedent rather than an omission.** `tests/` has no `scripts/` mirror
+and none of the three career CLIs carries one. Acceptance is the real-data drive.
+
+**What this phase actually found: the box's Done-when could not happen.** It predicted "a table of
+refusals". `build_bag_profile` for `aaron` returns **zero club profiles** — a club with no swings
+and no bag entry gets no row, so there is nothing to refuse *about*. So the deliverable grew a
+branch the box did not have, `_report_empty`, which says how many untagged swings exist and where a
+tag comes from. The two states need opposite responses — a refusal table means go and hit balls, an
+empty profile means nothing on disk names a club at all — and a golfer's name followed by a blank
+would read as a bug in the CLI when the finding is about the disk.
+
+**One decision inside the output, and it was checked rather than assumed.**
+`MetricDispersion.withheld` is not printed. `analysis/dispersion.py`'s `_carry_refusals` builds it
+by **filtering `MetricBaseline.withheld`**, so every sentence in it is already printed verbatim
+beside it — verified in a REPL across two metrics (`d <= b` for both), not read off the source and
+hoped. On output that is nothing but refusals, rendering both would double every metric block to
+say each thing twice. The finding labels still read "withheld", and `unavailable` — a different
+list saying a different thing, which no bay session fixes — is printed, last.
+
+**The formatting rule is the one thing the templates could not supply.** Both spell it
+`1dp if unit == "degrees" else 3dp`, written when every other metric here was
+shoulder-width-normalized. P8–P10 added `yards` and `mph`, and `ms` was already there, so that rule
+prints `154.400 yards`. Replaced by a unit → precision table, and **carried back into both career
+CLIs** rather than left to disagree: `career_dispersion.py` has printed both distances since P8, so
+the wart is already theirs and only latent because no center has cleared its floor yet. Three
+copies of a six-entry dict, because `scripts/` is not a package and a per-script `_fmt` is the
+standing shape here.
+
+**Done when.** ✅ 956 passed (unchanged — no test moved and nothing importable did), `ruff check src
+tests scripts` clean, `mypy src` clean. **Driven on the real corpus:** `aaron`, zero club profiles,
+`untagged_swings` 2 — byte-identical to what P15 and P16 both verified, now rendered as the empty
+state. `--club 7i` → "never hit and not in the bag", exit 0; `--club wedge` → exit 2;
+`--player-id nobody` → the "(not registered)" path, exit 0.
+
+**And driven populated, which is what a renderer has to be.** Nothing on disk can produce a club
+profile, so two scratch drives: the real stored swings retagged `7i` with a bag entry recorded a day
+later (P16's all-predate caveat, its first render outside a test, plus a declared-but-unhit driver),
+and a synthetic 12-swing 7-iron history across 4 sessions with the entry recorded midway. The second
+is what proves the formatting change: it prints `center 154.4` in yards beside `center 3.014` for
+`tempo_ratio`, where the template's rule would have printed `154.400`. It also rendered P16's
+*mixed* form — "9 of the 12 swings…" — which no other drive has produced.
 
 ---
 
-### [ ] P18 — MCP tools
+### [x] P18 — MCP tools *(done 2026-08-22)*
 
 **Goal.** Claude can answer "how far do I hit my 7 iron".
 
-**Files.** `mcp/club.py` (or extend `mcp/career.py`), `mcp/server.py`,
-`contracts/tool_descriptions.py`, `tests/mcp/test_club_tools.py`.
+**Files.** `mcp/club.py` (new), `mcp/server.py`, `mcp/runner_tools.py`, `mcp/query.py`,
+`contracts/tool_descriptions.py`, `contracts/caveats.py`, `scripts/run_mcp_server.py`,
+`tests/mcp/test_club_tools.py`, plus pins in `tests/contracts/test_tool_descriptions.py`,
+`tests/mcp/test_server.py`, `tests/mcp/test_query.py`, `tests/mcp/conftest.py` and
+`tests/test_docs_truth.py`.
 
-**Reuse.** `mcp/career.py`'s view-model pattern — `MetricProfile`, `Refusal`, `resolve_golfer`,
-`_refusal`. Register in `server.py` the way the career tools are.
+**A new module, not an extension of `career.py`.** The box allowed either. `career.py` is ~590
+lines and cohesive, and the club shapes, the notes and the misses are their own thing;
+`mcp/club.py` reaches into it for `Refusal`, `resolve_golfer`, `THE_UNBLOCK`, `_refusal`, `_points`
+and `_low`/`_high`, exactly as `career.py` reaches into `query._missing`.
 
-**Detail.** `get_bag_profile(player)` and `get_club_profile(player, club)`.
+**`ClubMetric` is not `career.MetricProfile`, and that is the shape decision.** `MetricProfile`
+carries the tour join, and there is no per-club tour join — ADR-024's own trap says `ranges.json`
+holds `club_category: "all"` rows only. Reusing the shape would have shipped
+`tour_standing: "withheld"` on every metric of every club forever: a refusal of a claim nothing
+ever intended to make, which reads to a model as "ask again with more data". So the baseline and
+dispersion halves are mirrored field for field and the tour block is absent. The duplication is the
+price of not fabricating a refusal, and `test_no_metric_carries_a_tour_placement` pins it.
 
-**The tool descriptions are load-bearing** — `tests/test_docs_truth.py` reads them, and the MCP
-instructions block is how Claude learns to read this data honestly. Say explicitly: a withheld
-claim is not a zero; `start_line_offline_yds` is where the ball *started*, projected to carry
-distance, and never where it landed; curve is `face_to_path_deg`, in degrees; a club with no bag
-entry has no loft, so any fitting question about it must be refused.
+**The phase turned out to be about counting silences, and driving it populated found two more.**
+The box named the refusal case; P17 had already found the untagged case. Rendering a populated bag
+found the other two, both of which the first cut got wrong by giving them the refusal sentence:
 
-**Tests.** Tools appear in the advertised list. Unknown player → the `NotFound` shape. A club at
-`n=2` returns refusals with `have_n` / `need_n` populated. Mirror `tests/mcp/test_career_tools.py`.
+  1. `NOTHING_TAGGED` — no club profiles at all. **Tagging** fixes it, not a bay session.
+  2. `NOT_ENOUGH_ON_THIS_CLUB` — a club whose every figure is withheld. Shots on it fix it.
+  3. `NEVER_HIT` — never hit and not in the bag. An answer, not a `NotFound`.
+  4. `IN_BAG_NEVER_HIT` — declared today, never hit. Nothing was claimed, so nothing was refused,
+     and saying "every claim is withheld" would be a refusal this module invented — the same
+     fabricated refusal the tour block is left out to avoid, one field over.
+  5. `NO_MEASUREMENTS` — swings that contributed no value. Not about the club at all.
 
-**Done when.** `pytest tests/mcp/` green; `python scripts/run_mcp_server.py` advertises them.
+Plus `SOME_SWINGS_UNTAGGED`, appended when untagged swings sit beside a bag that does have clubs:
+both things are true at once, and a note carrying only one describes half the situation as the
+whole of it. `scripts/club_profile.py` draws the same distinctions on screen, which is what made
+the first three obvious and the last two findable — a payload less honest than the dev CLI is the
+wrong way round.
+
+**The descriptions and the briefing.** `GET_BAG_PROFILE` and `GET_CLUB_PROFILE` in
+`contracts/tool_descriptions.py`, plus a new `caveats.READING_A_BAG` gated on the same registry
+flag as `READING_A_PERSONAL_HISTORY` and shipped beside it, never instead — it adds only what a
+club changes and leans on that block for what a withheld claim is. `CAREER_TOOL_NAMES` kept its
+meaning; `CLUB_TOOL_NAMES` and `REGISTRY_TOOL_NAMES` joined it, because the gate is "a registry
+exists" and it now covers five tools rather than three.
+
+**One carry-over outside the box: `SwingView.club`.** `get_swing` already loads the manifest that
+carries it, and a model able to ask about a 7 iron but unable to see which club hit a given swing
+is a gap with a four-line fix. `None` is explained in the field description rather than left to
+read as a data error.
+
+**Done when.** ✅ 979 passed (956 → 979, +23), `ruff check src tests scripts` clean, `mypy src`
+clean. **Driven on the real corpus:** the server advertises **10** tools with a registry
+configured, `get_bag_profile(player="aaron")` returns the empty state with `untagged_swings` of 2 —
+byte-identical to what `scripts/club_profile.py` prints — `get_club_profile(player="aaron",
+club="7 iron")` resolves the spelling and reports `NEVER_HIT`, `club="wedge"` is refused as a
+category, and an unknown golfer is the `NotFound` shape.
+
+**And driven populated**, P17's precedent: the real swings retagged `7i` with a bag entry recorded
+a day later (P16's all-predate caveat, a declared-but-unhit driver on `IN_BAG_NEVER_HIT`), and a
+synthetic 12-swing 7-iron history across 4 sessions with the entry recorded midway — `center 154
+yards`, `sd 3.133`, and P16's *mixed* caveat, "3 of the 12 swings…".
 
 ---
 
-### [ ] P19 — the bag page
+### [x] P19 — the bag page *(done 2026-08-22)*
 
-**Goal.** A browser view of the bag.
+**Goal.** A browser view of the bag — and the first thing in this repo that ever wrote one.
 
-**Files.** `api/app.py`, `api/static/career.html` (extend) or a new `bag.html`,
-`tests/api/test_bag_route.py`.
+**Files.** `api/app.py`, `api/static/career.html`, `tests/api/test_bag_route.py` — plus two
+carry-overs argued below, `api/static/results.html` and `scripts/club_profile.py`.
 
-**Reuse.** `GET /api/golfers/{player_id}/career` is the route template, including its
-`_safe(player_id, "player id")` guard. `career.html` is the page template.
+**Reuse.** `GET /api/golfers/{player_id}/career` was the route template and `career.html` the page
+template, both as the box says. Off the contracts: `read_corpus`, `BagStore.get`/`set_entry`/
+`remove_entry`, `build_bag_profile`, `_resolve_club` (so `parse_club` gets its fourth caller), and
+`GET /api/clubs` from P7 for the "add a club" picker.
 
-**Detail.** `GET /api/golfers/{player_id}/bag` returning the `BagProfile`, plus
-`POST /api/golfers/{player_id}/bag/{club}` to set an entry's loft/make/model. One row per club:
-carry mean with CI or "needs N more shots", spread, start-line bias, loft, and an edit control.
+**The box's first open question, settled with the user: a section inside `career.html`, not a new
+`bag.html`.** One page per golfer. The bag sits **above** the whole-bag cards, and that order is
+M9's own argument rendered as layout — a carry pooled across a driver and a wedge describes
+nobody's shot, so a page leading with whole-bag numbers re-teaches the reading this milestone was
+built to correct. The old `Metrics` heading became `Whole bag`, because there are now per-club
+metrics on the same page and the bare word stopped distinguishing them.
 
-**Render refusals as first-class text, not blanks.** A blank cell reads as zero; the
-`WithheldClaim.reason` string is already written for a human and should be shown verbatim.
+**The box's second, also settled with the user: set and remove, not restore.** `POST` and `DELETE`
+on `/api/golfers/{player_id}/bag/{club}`. The shelf is still written by the store and still not
+served — `BagProfile` carries none by P15's decision, and `Bag.retired_for` therefore still waits
+for its second caller.
+
+**The one route-shaped decision: this route cannot serve its contract raw, and the career route
+can.** `ClubProfile.category`, `clubs_used` and `clubs_declared` are plain properties, which P14
+chose deliberately while naming this surface as the projector. `category` is the half that matters:
+a page deriving it in JavaScript would hold a second copy of `CLUB_CATEGORY` in a static file
+nothing tests — the exact failure `GET /api/clubs` was added in P7 to prevent, and quiet in the same
+way, since a club added to `ClubId` would keep working at every route while rendering under the
+wrong heading at the bay. So `_bag_summary` projects it beside `_corpus_summary`. The two lists
+travel as **counts**: the page has every use for "10 clubs, 8 of them hit" and none for a second
+copy of each profile, so the membership rule stays on the contract.
+
+**Both writers return the whole bag, not the row they saved.** That gives the page one render path,
+and it means a save shows exactly what a reload would — including P16's caveat, which *declaring an
+entry is what creates*. A response assembled from the request is the one place that caveat could go
+missing, and it would then appear from nowhere on the next visit. The cost is one `read_corpus` per
+write, which is what the career route already pays per read.
+
+**The phase found a helper it did not expect to need.** Three new routes plus the career one all
+open with the same two steps — validate the id, then know the golfer — and `player_id` reaches a
+filesystem path in every one of them. That is now `_registered`, and the career route was moved onto
+it: four hand-rolled copies is four places for one to be forgotten, and the one that forgets looks
+exactly like the three that do not.
+
+**`BagEntryRequest` carries no `recorded_at` and no `club`, and both absences are deliberate.** The
+store owns the clock (`bag_store.py`), so a field for it would be a value the API accepts and
+silently ignores. The club is the path segment, so `Bag._keys_match_entries` can never be handed a
+7 iron's row claiming to be a wedge — not putting it in two places is what stops it being asked to.
+
+**Two carry-overs, both honesty fixes rather than features.**
+
+- **`fmt` printed `154.400 yards`, on two pages.** `career.html` and `results.html` both spelled the
+  rule `1dp for degrees, 3dp otherwise`, written when every metric here was shoulder-width
+  normalized; P8–P10 put `yards` and `mph` into `measurements`. P17 hit this in the CLIs and carried
+  a unit → precision table into both rather than let them disagree, and this is the same carry to the
+  two pages. `results.html` is not this phase's subject and its `num()` helper, which strips trailing
+  zeros for the measurements table, was left alone.
+- **`scripts/club_profile.py` pointed at a button that does not exist.** Its empty-state message said
+  a stored swing is retagged "which the same page does with one tap". Driving this phase found that
+  `POST /api/sessions/{s}/swings/{sw}/club` has **no UI on any page** — `index.html` has a per-swing
+  *golfer* repair control (`button.golfer-fix`) and no club counterpart. Both the CLI and the new
+  page now say the honest thing: there is no button yet. **That gap is the real blocker on M9
+  speaking**, and it is named in the roadmap rather than fixed here.
+
+**The five silences are rendered in the page's own voice**, with a comment pointing at `mcp/club.py`
+as where the taxonomy of five is stated. The wording differs per surface on purpose — the CLI points
+at a shell command, the MCP note at a tool, the page at a control someone can tap — but the
+distinctions must not, so the enumeration lives in one place and this is a rendering of it.
+`NEVER_HIT` has no branch: a club nobody has hit and nobody declared has no row, and its absence is
+the answer.
+
+**Tests: 14 added, suite 979 → 993**, in `tests/api/test_bag_route.py`. The envelope (bag order from
+a bag where insertion, alphabetical and canonical all differ; `category` asserted against
+`category_of` and never a written-out list; a withheld claim absent with its reason; untagged swings
+reaching no row; the two counters diverging), the gates (404 on every verb, the slug guard, the
+token), and the writes — which is the half nothing in this repo had ever exercised.
+
+**Two of the new tests were wrong before the code was, and both taught something.**
+
+- The counter-divergence test first built two swings *sharing* one shot photograph. They cannot:
+  `assign_from_path` dedupes an identical upload back onto the swing that already holds it, so the
+  second swing silently got no shot file, no `analysis.json` and no metrics at all. The real shape of
+  the `n_swings > n_shots` gap is a clip filmed without the screen being photographed, and the
+  fixture now builds that.
+- The traversal test copied `test_career_route.py`'s `..%2F..%2Fetc` form — **and that form never
+  reaches the guard.** httpx normalises it away before it is sent, so the assertion passes on a
+  routing 404 and `_safe` is never called. This file pins the character class instead, which is the
+  guard actually speaking. `tests/api/test_career_route.py` still carries the weaker form; it is not
+  wrong, it is just not testing what it reads as.
+
+**Three behaviours were watched fail rather than assumed**, the P3–P18 habit. Forcing a write past
+`same_club_as` fails the unedited-save test on a moved `recorded_at` — the failure that would
+otherwise reach a golfer as a caveat produced by the act of looking at the page. Assembling the POST
+response from the request instead of re-reading fails the save-equals-reload assertion. And
+`del bag.entries[club]` in place of `remove_entry` fails the removal test on an empty shelf.
+
+**No `ANALYSIS_VERSION` bump**, same as P12–P18: nothing here is measured and no artifact is written.
 
 **Done when.** `pytest tests/api/` green; the page renders against the data on disk showing
-refusals.
+refusals. ✅ — 993 passed, `ruff check src tests scripts` clean, `mypy src` clean across 95 files.
+The page's own script was run against a live server with a stubbed DOM, since nothing tests a static
+file, in both states:
+
+- **Against the real corpus**, the empty state — 0 clubs, `untagged_swings` 2 — byte-identical in
+  substance to what `scripts/club_profile.py` prints and what `get_bag_profile` returns. Three
+  surfaces over one builder, agreeing, which is what P18 was accepted on.
+- **Against a seeded corpus**, populated: a 7 iron over 13 swings, 12 shot photographs and 4
+  sessions rendering `carries 154.3 yards over 12 shots`, its `sd 3.1`, P16's all-predate caveat, and
+  the two counters visibly diverging with the ceiling line beside them; a driver on one shot with
+  every claim withheld; a declared-but-unhit 3 wood on the never-hit note. The precision carry-over
+  is visible in that same output — `154.3` and `0.2` in yards beside `3.024` for `tempo_ratio`, where
+  the old rule printed `154.258`.
+
+**Still stale for P20**, unchanged from P4–P18: `docs/ARCHITECTURE.md` §4 calls `session.json` the
+"golfer cursor", its manifest row names only `player_id`, and no route table knows the **seven**
+routes M9 has now added. `tests/test_docs_truth.py` pins none of it, so nothing goes red.
 
 ---
 
@@ -893,8 +1345,12 @@ Once P1–P13 are in:
 3. Upload a face-on clip plus a shot screen photo tagged `7i`.
 4. `python scripts/analyze_bundle.py <session>/<swing>` and confirm `analysis.json` carries
    `carry_distance_yds` and `start_line_offline_yds` with `source: "launch_monitor:hd_golf"`.
-5. `python scripts/club_profile.py aaron` — expect refusals with correct `n`s, not blanks.
+5. `python scripts/club_profile.py --player-id aaron` — expect refusals with correct `n`s, not
+   blanks, and before any swing is tagged the empty state rather than a table (see P17).
 6. Via MCP: `get_club_profile(player="aaron", club="7i")`, and confirm the refusal reads honestly.
+   As of P18 the honest answer on today's disk is not a refusal at all — it is "never hit and not
+   in the bag", and `get_bag_profile` says nothing on disk names a club. Both are answers; a
+   sample-size refusal appears with the first tagged swing.
 
 **The correct result at every stage is refusal**, because there is not enough data on disk yet. A
 number appearing early is the bug — the same acceptance criterion career mode used. The feature

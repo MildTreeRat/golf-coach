@@ -105,6 +105,36 @@ COMPARE_SESSIONS = (
     "a session can score well while contributing no samples at all — read the `note`."
 )
 
+GET_BAG_PROFILE = (
+    "Get one golfer's whole bag: every club they have hit or declared, how far they hit it, how "
+    "repeatable that is, and the physical club recorded in each slot. Call this when the user "
+    "asks about their distances, their gapping, which club they hit how far, or what is in the "
+    "bag. Takes a name as typed ('Aaron') or a stored id ('aaron'). IMPORTANT: two different "
+    "silences live in this payload and they need opposite answers. An empty club list means no "
+    "swing on record names a club at all — the fix is tagging swings, NOT hitting more balls, so "
+    "do not answer it by telling the golfer to go and practise. A club that is listed but "
+    "withholds a figure has too few shots for that claim; `withheld` says what it is waiting for, "
+    "and that one does mean go and hit some. Report either as a refusal and never compute the "
+    "missing figure from the counts sitting beside it."
+)
+
+GET_CLUB_PROFILE = (
+    "Get one club of one golfer's: carry and total distance, start line, ball speed and launch "
+    "angle, each with its own sample count and its own refusal, plus the make, model and loft "
+    "declared for the club in that slot. Call this for 'how far do I hit my seven iron', 'what is "
+    "my gap wedge carrying', or anything about one club rather than the whole bag. The club is "
+    "free text — '7i', '7 iron', 'seven iron', 'driver', 'pw' all reach the same club; 'wedge' "
+    "and 'iron' name a category rather than a club and are refused rather than guessed at. "
+    "IMPORTANT: read these fields as they are named. `start_line_offline_yds` is where the ball "
+    "STARTED, in yards, projected out to the carry — it is not where the ball landed and the "
+    "curve is not in it; the curve is `face_to_path_deg`, in degrees. `n_shots` caps every "
+    "distance and launch figure, because those are read off a photograph of the simulator screen "
+    "while `n_swings` counts clips. Nothing here says how far a golfer should hit a club, so a "
+    "distance never earns a bias finding — only a repeatability one. And a club with no bag entry "
+    "has no loft on record: refuse loft and fitting questions about it rather than substituting a "
+    "catalogue value."
+)
+
 #: tool name -> description, derived from the constants above rather than retyped.
 #:
 #: Exists so a consumer can iterate the surface and so `tests/contracts/test_tool_descriptions.py`
@@ -119,10 +149,25 @@ TOOL_DESCRIPTIONS: dict[str, str] = {
     "get_golfer_profile": GET_GOLFER_PROFILE,
     "get_shot_trends": GET_SHOT_TRENDS,
     "compare_sessions": COMPARE_SESSIONS,
+    "get_bag_profile": GET_BAG_PROFILE,
+    "get_club_profile": GET_CLUB_PROFILE,
 }
 
-#: The three that only exist when a golfer registry is configured (`build_server`'s `golfers_dir`).
-#: Named here so both adapters agree on which tools that flag adds, rather than each keeping a list.
+#: The three that judge a golfer against their own history, whole-bag. [Career mode, step 6]
 CAREER_TOOL_NAMES: frozenset[str] = frozenset(
     {"get_golfer_profile", "get_shot_trends", "compare_sessions"}
 )
+
+#: The two that cut that same history by club. [M9 P18]
+#:
+#: Kept as its own set rather than folded into `CAREER_TOOL_NAMES`, because the two answer different
+#: questions and a reader of either name should get the truth: these are career mode's machinery
+#: narrowed to one club (`analysis/club_profile.py` runs the same guard over
+#: `narrowed_to(club=)`), not more career tools.
+CLUB_TOOL_NAMES: frozenset[str] = frozenset({"get_bag_profile", "get_club_profile"})
+
+#: Every tool that only exists when a golfer registry is configured (`build_server`'s
+#: `golfers_dir`). Named here so both adapters agree on which tools that flag adds, rather than
+#: each keeping a list — and the union, not `CAREER_TOOL_NAMES`, is what the gate actually is: all
+#: five start by resolving a name to a `player_id`, which is a registry lookup.
+REGISTRY_TOOL_NAMES: frozenset[str] = CAREER_TOOL_NAMES | CLUB_TOOL_NAMES

@@ -1,6 +1,6 @@
 # Roadmap: AI Golf Swing Trainer
 
-## Last Updated: 2026-08-21
+## Last Updated: 2026-08-22
 
 Grouped by **state**, not by number, because the numbers no longer run in order: the pose-only
 slices (M4-PoC, M4-PoC+, M4-REF, M5-FB) delivered the mechanics half of M4 and the ranking half
@@ -24,7 +24,7 @@ wording; only the grouping and the M4 checklist have been corrected.
 | **M6.5** Measure now, judge later | ✅ Done | — (9 recorded, **6 scored**; the handedness seam landed and the last candidate was settled) | [§M6.5](#m65-measure-now-judge-later--done) |
 | **Career mode** One golfer over time | ✅ Done, 6/6 steps | — (built and silent; a bay session gives it the `n` to speak) | [§Career](#career-mode-one-golfer-tracked-over-time--done-built-and-silent) |
 | **M8** Learning what "good" means | ✅ Done *(2026-08-17)* | — (three models fitted, validated, surfaced **and spoken**, with a policy rather than a band) | [§M8](#m8-learning-what-good-means--gates-run-model-fitted) |
-| **M9** Player tracking (per-club) | 🟡 In progress, 11/20 phases | Nothing — the ingest and measurement halves are both desk work | [§M9](#m9-player-tracking-per-club-shot-history--in-progress) |
+| **M9** Player tracking (per-club) | 🟡 In progress, 19/20 phases | Nothing — every surface is built (CLI, MCP, bag page), the bag is writable and a stored swing is retaggable; what is left is the docs | [§M9](#m9-player-tracking-per-club-shot-history--in-progress) |
 | **M5** Feedback UI | ⬜ Not started | M7 Phase 5 gives the host | [§M5](#milestone-5-feedback-ui) |
 | **M2** Club & ball detection | 🔒 Gated, **and M1.5 said no-go** | Bay lighting for a ~1/2000 s exposure — *not* a global-shutter camera | [§M2](#milestone-2-club--ball-detection) |
 | Hardware re-validation | 🔒 Gated | Cameras / launch monitor arriving | [§Gate](#hardware-re-validation-gate-revisit-when-cameras--launch-monitor-arrive) |
@@ -44,7 +44,19 @@ served live `call_tool` requests including the not-found path. It is registered 
 (`claude mcp add`, per the README) and reports `✔ Connected`, which is a second client completing
 the same handshake independently.
 
-**NEXT ACTION — do this first: M9 P13.** Until 2026-08-20 this section read *"nothing on this
+**NEXT ACTION — M9 P20, the docs reconciliation, and M9 closes.** The blocker this line carried is
+gone as of 2026-08-22: `index.html`'s swing list now has a per-swing **change** control beside the
+golfer one, so a swing already on disk is retagged from a phone in one tap over `POST
+/api/sessions/{session}/swings/{swing}/club` — a route that had worked and been untested by any UI
+since P6. It is the club's only repair path and deliberately one swing at a time; a session has
+many clubs, so there is no bulk backfill and there is not meant to be one (ADR-024 §5). **Driven on
+a copy of the real corpus**: with the two stored swings retagged, `scripts/club_profile.py` leaves
+the empty state and prints a `7i` row — 2 swings, 2 shot photos, 2 sessions, every claim honestly
+withheld against the 5-, 10- and 12-sample floors — and `mcp/club.py` moves from `NEVER_HIT` to
+`NOT_ENOUGH_ON_THIS_CLUB`. **The real `data/` was left alone**: only the person who hit those two
+swings knows what hit them, which is ADR-024 §5's own argument, so that tap is theirs to make.
+Until 2026-08-20 this
+section read *"nothing on this
 board is desk work any more"*, and [M9](#m9-player-tracking-per-club-shot-history--in-progress)
 is what stopped that being true. It is the one substantial item that needs **neither a bay session
 nor an `n`**: no shot on disk records which club hit it, and adding that tag is pure desk work that
@@ -87,9 +99,51 @@ the scan, whereas an untagged one is a real swing in `swings`, and deriving it i
 **counted, never excluded** — the club was never an input to measuring head sway, so excluding it
 would shrink the mechanics `n` to punish a missing tag mechanics never needed.
 
-Continue at [M9 P13](docs/M9_PLAYER_TRACKING.md) — `narrow_to(club=)`, the one-line filter that makes
-every per-club statistic possible. **P10 is open and was deliberately not taken**: ball speed and
-launch angle as fitting inputs, optional and skippable, and the only measurements phase left.
+**P13 closed the filter, and it is three lines.** `narrow_to(club=)` (2026-08-22) takes a `ClubId`
+and adds one clause to a comprehension; everything that makes it *honest* was already there, because
+the function recomputes `metric_counts` inside the filter rather than trusting a caller. So a
+per-club mean carry refuses at exactly the thresholds a whole-corpus metric refuses at — "your 7
+iron carries 164 yards" needs five distinct **7-iron** shots, not five shots, and nothing new had
+to learn the guard. It is also where an untagged swing finally drops out: `read_corpus` keeps it
+on purpose, since the club was never an input to measuring head sway, and a per-club view is the
+one place the tag is load-bearing. `untagged_swings` follows to 0 for free, which is what P12's
+derived-property shape was for. On the real corpus every club narrowing is honestly empty — both
+swings on disk predate the tag.
+
+**P10 was not skipped after all — it shipped on 2026-08-21 and its paperwork landed on the 22nd.**
+`ball_speed_mph` and `launch_angle_deg` are recorded as fitting inputs with no target and no band,
+and they carried their two `METRIC_TARGETS` rows with them because P11's parity pin leaves no
+choice. **It also bumped `ANALYSIS_VERSION` 9 → 10 without running `scripts/reanalyze.py`**, so for
+one day every stored swing read `OUTDATED` and `Honest n per metric` printed *(none)*. Repaired
+alongside P13: all four swings are on version 10, every `overall_score` byte-identical, and 21
+metrics are back in the counts.
+
+**P14 opened the profile track.** `contracts/club_profile.py` declares `ClubProfile` and
+`BagProfile` — the shape a per-club answer comes back in, composing `MetricBaseline`,
+`MetricDispersion` and `BagEntry` rather than restating them, so the minimum-`n` guard and the
+bias/scatter discriminator arrive per club with nothing new learning the rules. It carries **two
+evidence counters, not one**: a club filmed six times with two screen photos is six swings of
+history and a carry ceiling of two, since every launch-monitor claim dedupes on the photo's hash.
+
+**P15 filled those shapes and answered the ADR-008 question the same day.** The pure half of
+`narrow_to` moved onto `CareerCorpus.narrowed_to` — taking `count_metrics` with it, since a filter
+that does not recompute its counts is the bug the filter exists to prevent — and
+`storage.corpus.narrow_to` now delegates in one line, so `analysis/club_profile.py` narrows per club
+while `analysis` still imports `contracts` alone. The builder is 30 lines of assembly over
+`build_baseline` and `build_dispersion`, which is the size it should be: everything it reports was
+sealed by the step allowed to seal it. A static test pins the module's imports, because the
+convenient `from golf_coach.storage.corpus import narrow_to` is one keystroke away and breaks
+nothing at runtime.
+
+**P16 closed the profile track.** A club whose bag entry was recorded after some of its swings
+now says so in a sentence and keeps every statistic — and the sentence has two forms, because when
+*every* swing predates the entry nothing is pooled at all and only the make, model and loft are in
+doubt. That is the common case rather than the exotic one: it is what every club looks like the day
+a golfer first declares a bag.
+
+Continue at [M9 P17](docs/M9_PLAYER_TRACKING.md) — `scripts/club_profile.py`, the CLI that reads
+the numbers without a browser or an MCP client, and the phase that proves the spine works. It is
+also the first surface that will render a caveat for real.
 
 **P8 opened the measurements track and cashed the tag in.** `carry_distance_yds` and
 `total_distance_yds` are measured, which they could not honestly be before: a carry pooled across
@@ -1022,14 +1076,16 @@ is the client handshake and conversational follow-up.
 
 **Design**: [ADR-024](docs/decisions/024-per-club-shot-history.md).
 **Phase list**: [docs/M9_PLAYER_TRACKING.md](docs/M9_PLAYER_TRACKING.md) — 20 phases, each
-independently commit-ready. **P1–P9 and P11 landed 2026-08-21; start at P12** (or at P10, which is
-optional). P1–P7 are the whole ingest spine: the vocabulary, the bag shape, the bag on disk, the
+independently commit-ready. **P1–P12 landed 2026-08-21, P13–P18 on 2026-08-22; start at P19.**
+P1–P7 are the whole ingest spine: the vocabulary, the bag shape, the bag on disk, the
 club on `SwingManifest` and on a second session cursor, the writer that stamps it, the 409 that
 refuses an untagged upload, and the one-tap picker that satisfies it. A swing can no longer reach
 disk without a club. **P8 opened the measurements track** and put carry and total distance into
 `measurements` — the thing the tag was for, since a carry pooled across clubs describes nobody's
 shot. Both are measured and judged by nothing: no target exists for how far a golfer should hit a
-club, and none is invented. **P9 closed that track** with `start_line_offline_yds`, the start line
+club, and none is invented. **P10 took the optional phase too**, recording ball speed and launch
+angle as fitting inputs judged by nothing. **P9 closed that track** with `start_line_offline_yds`,
+the start line
 projected out to the carry — where the ball *started*, in yards, which is the only lateral number
 this screen can honestly produce because it prints no offline tile. It takes a target of `0.0`,
 because zero is straight by geometry rather than by a population. P11 was absorbed into P8 and P9
@@ -1042,9 +1098,10 @@ shot on disk records which club hit it.**
 **Why it is mostly wiring.** Career mode already built everything downstream of that field: the
 corpus reader that counts an honest `n`, the baseline with its minimum-`n` guard, the bias/scatter
 discriminator, and — the load-bearing one — `storage.corpus.narrow_to`, which filters a corpus
-*and recomputes its metric counts*. Adding a `club=` clause to that filter makes the whole career
-pipeline produce per-club answers with nothing new learning the rules. The statistics are written
-and validated; what is missing is the tag.
+*and recomputes its metric counts*. **P13 added that `club=` clause on 2026-08-22**, and the whole
+career pipeline now produces per-club answers with nothing new having learned the rules. The
+statistics are written and validated; what is still missing is the tag — every swing on disk
+predates it, so every per-club narrowing is currently, and honestly, empty.
 
 **Why this is the next action rather than a bay session.** It is the one substantial item on this
 board that needs neither a bay nor an `n`. And the ordering matters in one direction only: a
@@ -1082,6 +1139,23 @@ correct `n`; a number appearing early is the bug. Same acceptance criterion care
 under — and P8 is the first place it is observable: `scripts/career_dispersion.py` now prints both
 distances at `n = 2 over 2 sessions`, both claims waiting on their sample floors, with the reason no
 target exists printed rather than the metric going quietly absent.
+
+**P14–P18 built the per-club answer and both readers of it.** P14 is the shape (`BagProfile` /
+`ClubProfile`, with `n_swings` and `n_shots` kept apart because a clip filmed without a screen photo
+is history that cannot carry a distance), P15 the builder, P16 the sentence a club whose bag entry
+postdates its swings carries, **P17 the CLI** (`python scripts/club_profile.py`) and **P18 the MCP
+tools** — `get_bag_profile` and `get_club_profile`, registry-gated beside the career three. Their
+output today is one step behind even a refusal, and correctly so — with no swing tagged, no club
+gets a row to refuse in, so both readers report the untagged count and where a tag comes from
+instead. The refusal table turns on with the first tagged swing and the numbers with the fifth.
+
+**P18's own finding is that "no numbers" has five spellings**, and they need different answers: no
+club tagged at all (tag them), a club whose figures are withheld (hit it), a club never hit and not
+in the bag (nothing is wrong), a club declared today (nothing was claimed, so nothing was refused)
+and swings that carried no measurement (not about the club). The first cut gave four of them the
+refusal sentence, which is how a golfer gets sent to the bay to fix a swing that was never
+analyzed. `mcp/club.py` names one constant per silence and `caveats.READING_A_BAG` teaches the
+distinction once at the top of the conversation.
 
 ---
 

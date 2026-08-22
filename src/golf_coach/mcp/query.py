@@ -225,6 +225,16 @@ class SwingView(BaseModel):
     swing_id: str
     session_id: str
     status: str
+    club: str | None = Field(
+        default=None,
+        description=(
+            "Which club hit this swing, or None when nothing recorded one. None is not a data "
+            "error: the club tag is newer than some of the swings on file, and an untagged swing "
+            "is still a real swing whose mechanics were measured normally — the club was never an "
+            "input to any of them. It is only absent from per-club answers, which is what "
+            "get_club_profile reports on."
+        ),
+    )
     overall_score: float | None = None
     mechanics_score: float | None = None
     outcome_score: float | None = Field(
@@ -349,8 +359,14 @@ def get_swing(sessions_dir: Path, session_id: str, swing_id: str) -> SwingView |
     state = load_state(swing_dir)
     status = _status_of(state, swing_dir)
     analysis = load_analysis(swing_dir)
+    # Off the manifest, not the analysis: the club is stamped when the swing arrives and an
+    # unanalyzed swing has one too. Both returns carry it for that reason.
+    club = manifest.club.value if manifest.club is not None else None
+
     if analysis is None:
-        return SwingView(swing_id=swing_id, session_id=session_id, status=status)
+        return SwingView(
+            swing_id=swing_id, session_id=session_id, status=status, club=club
+        )
 
     swing = _dict(analysis.get("swing"))
     feedback = _dict(analysis.get("feedback"))
@@ -365,6 +381,7 @@ def get_swing(sessions_dir: Path, session_id: str, swing_id: str) -> SwingView |
         swing_id=swing_id,
         session_id=session_id,
         status=status,
+        club=club,
         overall_score=_number(swing.get("overall_score")),
         mechanics_score=_number(swing.get("mechanics_score")),
         outcome_score=_number(swing.get("outcome_score")),

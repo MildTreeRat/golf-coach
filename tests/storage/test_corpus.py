@@ -581,3 +581,86 @@ def test_narrowing_leaves_the_scan_counters_describing_the_whole_read(
 
     assert narrowed.distinct_swings == 1
     assert narrowed.swing_dirs_seen == corpus.swing_dirs_seen == 2
+
+
+def test_narrowing_to_a_club_recomputes_the_counts_with_the_swings(
+    corpus_dir, swing, analysis, metric
+) -> None:
+    """The per-club `n` has to be the club's, not the corpus's. [M9 P13]
+
+    This is the same failure the two tests above pin, arriving by the narrowing M9 added — and it
+    is worse here, because the whole point of a per-club view is to answer "how far do you hit
+    this club". A filtered swing list beside the whole bag's counts would let `build_baseline`
+    clear the five-sample floor on a club that has been hit twice.
+    """
+    for day, club in ((7, ClubId.SEVEN_IRON), (8, ClubId.SEVEN_IRON), (9, ClubId.SAND_WEDGE)):
+        swing(corpus_dir, f"2026-08-{day:02d}", "1", face_on=f"clip-{day}",
+              shot_screen=f"shot-{day}", club=club, created_at=_at(day),
+              analysis=analysis([metric("carry_distance_yds", 150.0 + day, source=LM,
+                                        unit="yards")]))
+
+    corpus = read_corpus(corpus_dir, "aaron")
+    irons = narrow_to(corpus, club=ClubId.SEVEN_IRON)
+
+    assert corpus.metric_counts == {"carry_distance_yds": 3}
+    assert irons.metric_counts == {"carry_distance_yds": 2}
+    assert [s.session_id for s in irons.swings] == ["2026-08-07", "2026-08-08"]
+    assert build_baseline(irons).metrics["carry_distance_yds"].n == 2
+
+
+def test_narrowing_to_an_unhit_club_is_an_empty_corpus_not_an_error(
+    corpus_dir, swing, pose_analysis
+) -> None:
+    """"You have not hit your driver yet" is a real answer, and the first one every club has.
+
+    Same call `read_corpus` already makes for an unknown `player_id`. A raise here would make the
+    bag page's empty state an exception path rather than a sentence.
+    """
+    swing(corpus_dir, "2026-08-07", "1", face_on="clip-a", club=ClubId.SEVEN_IRON,
+          created_at=_at(7), analysis=pose_analysis)
+
+    empty = narrow_to(read_corpus(corpus_dir, "aaron"), club=ClubId.DRIVER)
+
+    assert empty.swings == []
+    assert empty.metric_counts == {}
+    assert empty.distinct_swings == 0
+
+
+def test_club_and_since_compose(corpus_dir, swing, analysis, metric) -> None:
+    """"Your 7 iron over the last month" is one call, not two passes with a list in between."""
+    for day, club in ((7, ClubId.SEVEN_IRON), (9, ClubId.SEVEN_IRON), (9, ClubId.SAND_WEDGE)):
+        swing(corpus_dir, f"2026-08-{day:02d}", club.value, face_on=f"clip-{day}-{club.value}",
+              club=club, created_at=_at(day),
+              analysis=analysis([metric("head_sway_norm", 0.25)]))
+
+    both = narrow_to(read_corpus(corpus_dir, "aaron"), since=_at(8), club=ClubId.SEVEN_IRON)
+
+    assert [s.club for s in both.swings] == [ClubId.SEVEN_IRON]
+    assert [s.captured_at for s in both.swings] == [_at(9)]
+    assert both.metric_counts == {"head_sway_norm": 1}
+
+
+def test_a_club_narrowing_drops_untagged_swings_and_untagged_swings_follows(
+    corpus_dir, swing, pose_analysis
+) -> None:
+    """The asymmetry ADR-024 argues for, pinned from both ends. [M9 P13]
+
+    `read_corpus` keeps an untagged swing — the club was never an input to measuring head sway —
+    so it is here, in the one view where the tag is load-bearing, that it drops out. And
+    `untagged_swings` has to follow it: a narrowed corpus reporting the whole read's figure beside
+    a filtered swing list is the printed-`n`-describes-a-different-set failure `narrow_to` exists
+    to prevent. It follows for free only because the counter is derived rather than stored, which
+    is what this assertion is really pinning — convert it to a field and this goes red.
+    """
+    swing(corpus_dir, "2026-08-07", "1", face_on="clip-a", club=ClubId.SEVEN_IRON,
+          created_at=_at(7), analysis=pose_analysis)
+    swing(corpus_dir, "2026-08-08", "1", face_on="clip-b", created_at=_at(8),
+          analysis=pose_analysis)
+
+    corpus = read_corpus(corpus_dir, "aaron")
+    irons = narrow_to(corpus, club=ClubId.SEVEN_IRON)
+
+    assert corpus.untagged_swings == 1
+    assert corpus.metric_counts == {"head_sway_norm": 2}
+    assert irons.untagged_swings == 0
+    assert irons.metric_counts == {"head_sway_norm": 1}

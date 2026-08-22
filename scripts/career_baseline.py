@@ -60,9 +60,21 @@ def _standing_label(standing: MetricComparison) -> str:
     return _STANDING_LABEL[standing.standing]
 
 
+#: Unit -> decimal places. This was `1dp if degrees else 3dp`, written when every metric here was
+#: shoulder-width-normalized; M9 P8-P10 added `yards` and `mph` and `ms` was already there, and
+#: that rule prints "152.000 yards" — precision the launch monitor does not have. A third copy of
+#: this table lives in `club_profile.py` and a second in `career_dispersion.py`: `scripts/` is not
+#: a package and no script imports another, so a per-script `_fmt` is the standing shape here.
+_PRECISION = {"degrees": 1, "yards": 1, "mph": 1, "ms": 1, "ratio": 3, "shoulder_widths": 3}
+
+
 def _fmt(value: float, unit: str) -> str:
-    """Three significant-ish decimals for normalized metrics, one for degrees."""
-    return f"{value:.1f}" if unit == "degrees" else f"{value:.3f}"
+    """One decimal for the physical units, three for the normalized ones.
+
+    An unlisted unit takes three, deliberately: too much precision is noise a reader can see, too
+    little is a digit that quietly went missing.
+    """
+    return f"{value:.{_PRECISION.get(unit, 3)}f}"
 
 
 def _report_standing(standing: MetricComparison, unit: str) -> None:

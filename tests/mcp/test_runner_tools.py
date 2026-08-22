@@ -20,7 +20,12 @@ from typing import Any
 import pytest
 
 from golf_coach.contracts.shot import ShotData
-from golf_coach.contracts.tool_descriptions import CAREER_TOOL_NAMES, TOOL_DESCRIPTIONS
+from golf_coach.contracts.tool_descriptions import (
+    CAREER_TOOL_NAMES,
+    CLUB_TOOL_NAMES,
+    REGISTRY_TOOL_NAMES,
+    TOOL_DESCRIPTIONS,
+)
 
 pytest.importorskip("anthropic", reason="needs the `llm` extra")
 pytest.importorskip("mcp", reason="needs the `llm` extra")
@@ -113,16 +118,21 @@ def test_the_args_block_becomes_parameter_descriptions(tools) -> None:
 # --------------------------------------------------------------------------- behaviour
 
 
-def test_the_career_tools_are_absent_without_a_registry(sessions_dir: Path) -> None:
-    """Absent, not broken. A tool that answers "unknown golfer" to every name is worse."""
+def test_the_per_golfer_tools_are_absent_without_a_registry(sessions_dir: Path) -> None:
+    """Absent, not broken. A tool that answers "unknown golfer" to every name is worse.
+
+    Subtracts the whole registry gate and not `CAREER_TOOL_NAMES` alone: M9 P18 put two more tools
+    behind the same flag, and every one of them starts by resolving a name to a `player_id`.
+    """
     names = {tool.name for tool in build_tools(sessions_dir, _EmptySource())}
 
-    assert names == set(TOOL_DESCRIPTIONS) - CAREER_TOOL_NAMES
-    assert not (names & CAREER_TOOL_NAMES)
+    assert names == set(TOOL_DESCRIPTIONS) - REGISTRY_TOOL_NAMES
+    assert not (names & REGISTRY_TOOL_NAMES)
 
 
-def test_the_career_tools_are_present_with_one(tools) -> None:
+def test_the_per_golfer_tools_are_present_with_one(tools) -> None:
     assert CAREER_TOOL_NAMES <= set(tools)
+    assert CLUB_TOOL_NAMES <= set(tools)
 
 
 def test_list_sessions_returns_the_sessions_on_disk(tools) -> None:

@@ -39,13 +39,13 @@ from golf_coach.api.state import (
     stored_analysis_version,
 )
 from golf_coach.contracts.career import (
-    LAUNCH_MONITOR_SOURCE_PREFIX,
-    POSE_SOURCE_PREFIX,
     CareerCorpus,
     CorpusSwing,
     ExcludedSwing,
     ExclusionReason,
+    count_metrics,
 )
+from golf_coach.contracts.club import ClubId
 from golf_coach.contracts.shot import ShotData
 from golf_coach.contracts.swing import ANALYSIS_VERSION, Measurement
 from golf_coach.storage.bundle_store import SwingBundleStore
@@ -122,7 +122,7 @@ def read_corpus(sessions_dir: Path, player_id: str) -> CareerCorpus:
         swings.append(swing)
 
     swings.sort(key=lambda swing: (swing.captured_at, swing.session_id, swing.swing_id))
-    metric_counts, unknown_sources = _count_metrics(swings)
+    metric_counts, unknown_sources = count_metrics(swings)
 
     return CareerCorpus(
         player_id=player_id,
@@ -146,44 +146,22 @@ def narrow_to(
     *,
     since: datetime | None = None,
     sessions: Collection[str] | None = None,
+    club: ClubId | None = None,
 ) -> CareerCorpus:
-    """The same corpus restricted to a time window or to named sessions, **counts recomputed**.
+    """The same corpus restricted to a window, named sessions or one club, counts recomputed.
 
-    Career mode step 6 needs two narrowings that steps 1-5 never did: a trend over the last N days,
-    and one session held against another. Both are the same operation, and the reason it lives here
-    rather than in the caller is `metric_counts` — a filtered `swings` list beside the unfiltered
-    counts is a corpus whose printed `n` describes a different set of swings than its values do.
-    That is the exact failure step 4 found when the dedupe rule was private, one layer out.
+    A delegate. The filter itself is `CareerCorpus.narrowed_to`, and its docstring is where the
+    reasoning lives — why the counts are recomputed inside the filter rather than by the caller,
+    which scan counters are deliberately carried through unchanged, and what the club clause
+    unlocks. It moved onto the contract in M9 P15 because `analysis/club_profile.py` needs to narrow
+    per club and `analysis` may import only `contracts` (ADR-008).
 
-    The guard then falls out for free rather than needing a second version of itself: narrow, hand
-    the result to `build_baseline`, and a window holding three swings refuses everything a corpus
-    holding three swings refuses. Nothing has to remember that a per-session mean is a weaker claim
-    than a pooled one — it is the same claim asked of less data.
-
-    **The scan counters are carried unchanged and still describe the whole read**
-    (`swing_dirs_seen`, `sessions_scanned`, `unattributed_swings`, `other_golfers`, `excluded`).
-    They are facts about what was on disk, which narrowing does not alter, and no consumer of a
-    narrowed corpus reads them — `build_baseline` and everything downstream of it read `swings`.
+    **The name stays here because the shells read it here.** `mcp/career.py` calls it at three sites
+    for the trend and compare tools, and this module is where a caller holding a corpus off disk
+    looks for the operation that narrows one. A delegate is not a second definition of the rule —
+    there is one filter, one recomputation, and one docstring describing them.
     """
-    kept = [
-        swing
-        for swing in corpus.swings
-        if (since is None or swing.captured_at >= since)
-        and (sessions is None or swing.session_id in sessions)
-    ]
-    metric_counts, unknown_sources = _count_metrics(kept)
-
-    return corpus.model_copy(
-        update={
-            "swings": kept,
-            "metric_counts": metric_counts,
-            "unknown_sources": unknown_sources,
-            "outdated_swings": sum(1 for swing in kept if swing.outdated),
-            "analyzed_without_measurements": sum(
-                1 for swing in kept if swing.counts_toward_metrics() and not swing.measurements
-            ),
-        }
-    )
+    return corpus.narrowed_to(since=since, sessions=sessions, club=club)
 
 
 # --------------------------------------------------------------------------------------
@@ -331,35 +309,6 @@ def _needs_review(raw: object) -> bool:
     except ValueError:
         return True
     return bool(shot.provenance and shot.provenance.needs_review)
-
-
-def _count_metrics(swings: list[CorpusSwing]) -> tuple[dict[str, int], list[str]]:
-    """metric -> distinct contributing artifacts, and any `source` neither prefix claimed.
-
-    The keying itself is `CorpusSwing.artifact_key` and deliberately not repeated here: career
-    mode step 4 pools the *values* behind these counts, and a second copy of the rule is a way for
-    the printed `n` and the number of values averaged under it to drift apart. What stays here is
-    `unknown_sources`, which is a report about the reader's coverage rather than part of the rule.
-    """
-    artifacts: dict[str, set[str]] = {}
-    unknown: set[str] = set()
-
-    for swing in swings:
-        if not swing.counts_toward_metrics():
-            continue
-        for measurement in swing.measurements:
-            if not (
-                measurement.source.startswith(POSE_SOURCE_PREFIX)
-                or measurement.source.startswith(LAUNCH_MONITOR_SOURCE_PREFIX)
-            ):
-                unknown.add(measurement.source)
-            key = swing.artifact_key(measurement)
-            if key is None:
-                continue
-            artifacts.setdefault(measurement.name, set()).add(key)
-
-    counts = {name: len(keys) for name, keys in sorted(artifacts.items())}
-    return counts, sorted(unknown)
 
 
 def _excluded(manifest: SwingManifest, reason: ExclusionReason, detail: str) -> ExcludedSwing:

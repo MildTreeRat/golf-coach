@@ -10,6 +10,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from pathlib import Path
 
+from golf_coach.contracts.club import ClubId
 from golf_coach.contracts.shot import ShotData, ShotProvenance, ShotSource
 from golf_coach.mcp import query
 from golf_coach.storage.manifest import Role
@@ -75,6 +76,29 @@ def test_listing_falls_back_to_analysis_json_when_there_is_no_state_sidecar(
     assert swing.score == 86.1
     assert swing.headline is not None
     assert session.analyzed_count == 1
+
+
+def test_a_swing_carries_the_club_that_hit_it(
+    tmp_path: Path, swing_writer, analysis_factory
+) -> None:
+    """[M9 P18] Read off the manifest, so an unanalyzed swing has it too.
+
+    The `None` case is the one worth stating: every swing on disk predates the tag, and a model
+    that reads that as a data error will say so. The field description is where that is explained;
+    this is the assertion that the field is filled at all.
+    """
+    root = tmp_path / "sessions"
+    swing_writer(
+        root, "2026-09-01", "1", club=ClubId.SEVEN_IRON,
+        analysis=analysis_factory("2026-09-01", "1"),
+    )
+    swing_writer(root, "2026-09-01", "2", analysis=analysis_factory("2026-09-01", "2"))
+
+    tagged = query.get_swing(root, "2026-09-01", "1")
+    untagged = query.get_swing(root, "2026-09-01", "2")
+
+    assert tagged is not None and tagged.club == "7i"
+    assert untagged is not None and untagged.club is None
 
 
 def test_an_uploaded_but_unanalyzed_swing_reports_no_score(sessions_dir: Path) -> None:
