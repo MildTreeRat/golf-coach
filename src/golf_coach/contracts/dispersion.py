@@ -185,6 +185,26 @@ _JUDGED_DEGREES = (
     "below the level a coaching action follows from. Revise from a real bay session's repeats"
 )
 
+#: The two distance tolerances, and they are judgment for the same reason `_JUDGED_DEGREES` is:
+#: there is no instrument-error evidence for the OCR path at all, and the estimator-disagreement
+#: trick behind `_TUNED` has no analogue for a photographed screen.
+#:
+#: 5 yards is below the level a coaching action follows from — nobody changes anything about a
+#: swing over it — and it sits well clear of any plausible misread of a printed three-digit number.
+#: Erring wide is the safe direction here exactly as it is above: it costs claims, where erring
+#: narrow buys confident claims about the simulator's own noise.
+#:
+#: **A single constant is the wrong shape and this is the deferral, recorded rather than hidden.**
+#: Distance error plausibly scales with the club — 5 yards is a different fraction of a driver than
+#: of a sand wedge — so the correct tolerance is per club, and it needs a per-club sample this repo
+#: does not have yet. M9's `narrow_to(club=)` is what makes that measurable; until then one wide
+#: constant, chosen so the wedge end is not judged against the driver's error.
+_JUDGED_YARDS = (
+    "judgment, 2026-08-21 (M9 P8): no instrument-error evidence exists for the OCR path. 5 yards "
+    "is below the level a coaching action follows from. The correct tolerance is per club and "
+    "scales with carry; deferred until a per-club sample exists, and erring wide until then"
+)
+
 #: The two absolute durations, and why they are not `_TUNED` like the six metrics beside them.
 #:
 #: `tune_spatial_metric.py` **cannot** score a duration, and it now says so rather than printing a
@@ -237,6 +257,41 @@ METRIC_TARGETS: dict[str, MetricTarget] = {
         target=0.0,
         tolerance=2.0,
         provenance=_JUDGED_DEGREES,
+    ),
+    # The two distances, measured since M9 P8 and judged by nothing. **No target, and that is not
+    # a gap to be filled in later**: how far a golfer *should* hit a club is not a number this repo
+    # has, and the only populations it holds are cut from GolfDB, which is broadcast pose footage
+    # with no ball flight in it. A tour carry band would also judge an amateur against a population
+    # they are not in, which is a different failure from the one ADR-010 §2 guards and just as bad.
+    #
+    # They still register, because a tolerance is what buys the *scatter* finding — how repeatable
+    # this golfer's distance is, which is answerable without anyone declaring what good is.
+    #
+    # **Do not add `METRIC_MINIMUM_N` overrides for these.** The defaults are right for distance:
+    # nothing about a printed carry is known to need more samples than a pose metric does, and every
+    # override in that table was moved off a measured spread/error figure rather than a hunch.
+    # Adding one here speculatively would be a refusal nobody derived. `contracts/baseline.py` says
+    # the same beside the table itself.
+    "carry_distance_yds": MetricTarget(
+        metric="carry_distance_yds",
+        target=None,
+        tolerance=5.0,
+        provenance=_JUDGED_YARDS,
+        no_target_reason=(
+            "how far a golfer should hit a given club is not a number this repo has. Every "
+            "distribution here is cut from GolfDB, which contains no ball flight, and a tour "
+            "carry band would judge an amateur against a population they are not in"
+        ),
+    ),
+    "total_distance_yds": MetricTarget(
+        metric="total_distance_yds",
+        target=None,
+        tolerance=5.0,
+        provenance=_JUDGED_YARDS,
+        no_target_reason=(
+            "the same as carry, plus one more: the gap between them is roll, which is the ground "
+            "rather than the swing - a target would judge a golfer for the mat they hit off"
+        ),
     ),
     # The two one-sided magnitudes. "Lower is strictly better" is already this repo's position for
     # both: the shipped bands are `[0.0, 0.43]` and `[0.0, 0.29]`, and `CheckpointScore.one_sided`

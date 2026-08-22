@@ -5,6 +5,86 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-08-21 — M9 P8: distance becomes measurable, and the pin that said the phase was bigger
+
+**Duration**: ~1 session. Two measurements, two target rows, one version bump, five tests.
+`ANALYSIS_VERSION` 7 → 8, and all four stored swings re-analyzed onto it.
+
+**What prompted it**: "can we complete the next thing on M9? I think its going to be P8" — correct,
+and it was ROADMAP's NEXT ACTION. Scope was held to P8 alone; P9, P10 and P11 stay open.
+
+**The phase's real content is a docstring, and it is about timing.** `carry_distance` has been
+sitting on `ShotData` since the OCR worked, and was left out of `SHOT_MEASUREMENTS` anyway. Not
+because it was hard — it is a pass-through — but because **a carry pooled across clubs is not a weak
+statistic, it is a meaningless one**: a mean over a driver and a sand wedge describes nobody's shot,
+and its spread is mostly which clubs happened to be hit. The club tag M9 P4 put on `SwingManifest`
+is what makes distance poolable at all. So the module docstring got a new section, *"What arrived
+late, and why it could not arrive earlier"*, sitting **above** the exclusions rather than inside
+them — the three exclusions (`smash_factor`, `club_head_speed`, `spin_axis`) are a different
+argument and are untouched.
+
+**The box was wrong about one thing, and the pin is what said so.** P8's file list names
+`shot_measure.py` and its tests. But `test_every_production_metric_has_a_tolerance` asserts
+`set(POSE_MEASUREMENTS) | set(SHOT_MEASUREMENTS) == set(METRIC_TARGETS)` — **strict equality**. P11
+had deferred those rows on the belief that an unregistered metric is "measured and permanently
+silent"; it is not, it is a red suite. So P11's two distance rows came forward with it, and the
+phase went L1 → L2. That escalation is in the box, and **P11 is amended** so the next session does
+not re-derive it: what is left there is `start_line_offline_yds` alone.
+
+**`ANALYSIS_VERSION` 7 → 8, which the box also did not name.** Precedent is exact — `6 -> 7`
+(ADR-023) was two new `measurements` entries with no checkpoint, band or score moved, and a
+version-7 artifact is *missing* two quantities rather than disagreeing about any. Worth noticing
+that **nothing went red to say the bump was owed**: every test derives the number from the constant,
+which is right, and means the only thing that catches a missed bump is remembering the rule.
+
+**Neither distance gets a target, and that is the whole judgment.** How far a golfer *should* hit a
+club is not a number this repo has. Every distribution here is cut from GolfDB, which is pose over
+broadcast video with no ball flight in it, and a tour carry band would additionally judge an amateur
+against a population they are not in. They still register, because a tolerance is what buys the
+*scatter* finding — how repeatable this golfer's distance is — which is answerable without anyone
+declaring what good is. `_JUDGED_YARDS` = 5 yards, modelled line for line on `_JUDGED_DEGREES`: no
+instrument-error evidence exists for the OCR path, 5 yards is below the level a coaching action
+follows from, erring wide costs claims where erring narrow buys confident claims about the
+simulator's own noise. The provenance string carries the same deferral P11 records for offline —
+distance error scales with the club, so one constant is the wrong shape and the right tolerance is
+per club.
+
+**Two pins were watched fail first**, the P3–P7 habit, and one of them is how the missing dependency
+was found rather than assumed. `test_every_production_metric_has_a_tolerance` fails on the bare
+registry addition. And `test_registry_entries_are_well_formed` fails on **its own fixture** — it
+measures every registered entry against one `ShotData` and asserts non-`None`, so the fixture had to
+gain a carry and a total. That is the pin working, and it is the cheapest place in the repo to
+notice a new metric has no test of its own, so it was fed rather than weakened.
+
+**Tests: 5 added, suite 905 → 910.** Three in `test_shot_measure.py` — distances carried as printed,
+a missing distance is `None` and never 0.0 (a duff that never happened would otherwise pool into a
+mean), both registered in `yards`. Two in `test_engine.py`: the registry-to-artifact path, and the
+direction that matters — a swing with **no** shot records no distance at all. The engine test pins
+`source == "launch_monitor:hd_golf"` because `storage.corpus` keys its honest sample counts off that
+string; a distance recorded under `pose:face_on` would be counted per face-on clip rather than per
+shot photo, which is the "two dedupe keys" argument in `contracts/career.py`.
+
+**Driven end to end, because the point of the phase is that the number reaches a stored artifact.**
+`scripts/reanalyze.py` found all four stored swings still on **engine 6** and moved them to 8:
+`measurements 14 -> 18` on each, `carry_distance_yds` 125.6 / `total_distance_yds` 131.0 under
+`launch_monitor:hd_golf`, and **every `overall_score` byte-identical** — 97.45951982132875 on three,
+96.88296555239968 on the fourth — which is the expected non-change for a bump of this shape. Then
+`scripts/career_dispersion.py`, which is the first place M9's "expect refusals" criterion is
+actually observable: `n = 2 over 2 sessions` (four directories deduping to two shot photos, exactly
+as `contracts/career.py` predicts), both claims waiting on their floors, and the no-target reason
+printed rather than the metric going quietly absent.
+
+**One thing left commented for P13.** Until `narrow_to(club=)` lands, everything reading these two
+pools them whole-bag. Nothing false ships today — `DEFAULT_MINIMUM_N[CENTER]` is 5 against 2
+samples — but the guard that saves it is a sample count, not an argument about clubs, so it would go
+on being satisfied by a mixed bag. Commented at the registry rows rather than left to be
+rediscovered.
+
+**What is next.** P9: `start_line_offline_yds`, `carry * sin(launch_direction)`, where the ball
+*would* have landed if it never curved. Its docstring is the deliverable, same as this phase's.
+
+---
+
 ## 2026-08-21 — M9 P7: the picker that closes the ingest spine, and the list it refused to copy
 
 **Duration**: ~1 session. One static page, one new API route, one API test file.

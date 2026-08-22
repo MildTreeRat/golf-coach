@@ -5,8 +5,8 @@
 > is [ADR-024](decisions/024-per-club-shot-history.md); this document is the *how*, as a phase
 > list.
 
-**Status: in progress, 7/20 phases.** P7 landed 2026-08-21 and closes the ingest spine.
-Start at P8 — the measurements track, which is independent of P1–P7.
+**Status: in progress, 8/20 phases.** P8 landed 2026-08-21 and opens the measurements track.
+Start at P9 — `start_line_offline_yds`, which needs nothing but P8.
 
 ---
 
@@ -414,11 +414,12 @@ routes M9 has added. `tests/test_docs_truth.py` pins no route list, so nothing g
 
 ---
 
-### [ ] P8 — carry and total distance become measurements
+### [x] P8 — carry and total distance become measurements *(done 2026-08-21)*
 
 **Goal.** "How far did it go" enters the corpus.
 
-**Files.** `analysis/shot_measure.py`, `tests/analysis/test_shot_measure.py`.
+**Files.** `analysis/shot_measure.py`, `tests/analysis/test_shot_measure.py` — plus three the box
+did not name: `contracts/dispersion.py`, `contracts/swing.py` and `tests/analysis/test_engine.py`.
 
 **Reuse.** The `SHOT_MEASUREMENTS` registry. The engine already walks it, so nothing else needs
 touching for these to reach `analysis.json`.
@@ -429,13 +430,67 @@ touching for these to reach `analysis.json`.
 *excluded* and why; add carry to the *included* side with its own reason. Carry was not measurable
 before because a carry pooled across clubs is meaningless — a mean over a driver and a sand wedge
 describes nobody's shot. **The club tag is what makes distance poolable at all**, which is why
-this metric arrives with M9 and not M6.5. Do not touch the existing exclusions for
-`smash_factor`, `club_head_speed` or `spin_axis`.
+this metric arrives with M9 and not with M6.5. Do not touch the existing exclusions for
+`smash_factor`, `club_head_speed` or `spin_axis`. ✅ — written as its own section, *"What arrived
+late, and why it could not arrive earlier"*, above the exclusions rather than inside them; the three
+exclusions are untouched.
+
+**Two things this box did not name, and the phase needed both.** They are why P8 was an L2 rather
+than the L1 its file list implied:
+
+- **`contracts/dispersion.py`, because P8 alone leaves the suite red.**
+  `test_every_production_metric_has_a_tolerance` asserts
+  `set(POSE_MEASUREMENTS) | set(SHOT_MEASUREMENTS) == set(METRIC_TARGETS)` — **strict equality**, not
+  a subset. So a new measurement with no target row is not "measured and permanently silent" as P11
+  below claimed; it is a failing test. P11's two distance rows were pulled forward, along with the
+  `_JUDGED_YARDS` constant they hang off and P11's "no `METRIC_MINIMUM_N` overrides" note. **P11 is
+  amended accordingly** and now holds `start_line_offline_yds` only.
+- **`ANALYSIS_VERSION` 7 → 8.** Precedent is exact — `6 -> 7` (ADR-023) was two new `measurements`
+  entries with no checkpoint, band or score moved, and a version-7 artifact is *missing* two
+  quantities rather than disagreeing about any. Every test derives the number from the constant, so
+  nothing pinned the literal and nothing went red to say the bump was owed.
+
+**The tolerance is judgment and says so.** `_JUDGED_YARDS` is 5 yards for both distances, modelled
+on `_JUDGED_DEGREES`: no instrument-error evidence exists for the OCR path, 5 yards is below the
+level a coaching action follows from, and erring wide costs claims where erring narrow buys
+confident claims about the simulator's own noise. **Neither distance gets a target** — how far a
+golfer *should* hit a club is not a number this repo has, every distribution here is cut from GolfDB
+(which contains no ball flight), and a tour carry band would judge an amateur against a population
+they are not in. The provenance string records the same deferral P11 records for offline: distance
+error scales with the club, so one constant is the wrong shape and the correct tolerance is per
+club.
 
 **Tests.** Present → measured; missing → `None`; unit is `yards`. An engine-level test that an
-analyzed swing with a shot carries both.
+analyzed swing with a shot carries both. ✅ — **5 added, suite 905 → 910.** Three in
+`test_shot_measure.py` (both distances carried as printed, a missing distance is `None` and never
+0.0, both registered in `yards`) and two in `test_engine.py` — the registry-to-artifact path, plus
+the direction that matters: a swing with no shot records no distance at all. The engine test asserts
+`source == "launch_monitor:hd_golf"`, because `storage.corpus` keys its honest sample counts off
+that string and a distance recorded under `pose:face_on` would be counted per face-on clip rather
+than per shot photo.
 
-**Done when.** Tests pass.
+**Two pins were watched fail first**, the P3–P7 habit — and one of them is why this box grew.
+`test_every_production_metric_has_a_tolerance` fails on the bare registry addition, which is what
+found the missing P11 dependency. And `test_registry_entries_are_well_formed` fails on its own
+fixture: it asserts every registered measurement reads non-`None` off one shot, so the fixture had
+to gain a carry and a total. That is the pin working — it is the cheapest place to notice that a new
+metric has no test of its own — so it was fed, not weakened.
+
+**Done when.** Tests pass. ✅ — and driven end to end, since the point of the phase is that the
+number reaches a stored artifact. `scripts/reanalyze.py` re-ran all four stored swings (still on
+engine 6): `version 6 -> 8 | measurements 14 -> 18` on each, `carry_distance_yds` 125.6 and
+`total_distance_yds` 131.0 under `launch_monitor:hd_golf` in yards, and **every `overall_score` is
+byte-identical** — 97.45951982132875 on three, 96.88296555239968 on the fourth — which is the
+expected non-change for a bump of this shape. `scripts/career_dispersion.py` then refused both
+metrics correctly: `n = 2 over 2 sessions` (the four directories dedupe to two shot photos, exactly
+as `contracts/career.py` describes), both claims waiting on their sample floors, and the no-target
+reason printed rather than the metric going quietly absent.
+
+**One thing to know before P13.** Until `narrow_to(club=)` lands, everything that reads these two
+pools them **whole-bag**. Nothing false ships today — `DEFAULT_MINIMUM_N[CENTER]` is 5 and there are
+2 samples — but the guard that saves it is a sample count, not an argument about clubs, so it would
+go on being satisfied by a mixed bag. That is commented at the registry rows rather than left to be
+rediscovered.
 
 ---
 
@@ -488,16 +543,22 @@ unrecoverable after the fact; they get no target and no band.
 
 **Files.** `contracts/dispersion.py`, `tests/contracts/`.
 
-**Reuse.** `METRIC_TARGETS` and the `_JUDGED_DEGREES` provenance-constant pattern beside it.
-`target_for` returns `None` for unregistered metrics, which refuses **both** findings — so without
-this phase P8/P9's metrics are measured and permanently silent.
+**Amended by P8 — read this first.** Two thirds of this phase is already done, and the sentence
+that deferred it was wrong. `target_for` returning `None` does *not* leave a metric "measured and
+permanently silent": `test_every_production_metric_has_a_tolerance` asserts **strict equality**
+between the two measurement registries and `METRIC_TARGETS`, so an unregistered production metric is
+a red suite, not a quiet one. P8 therefore shipped `_JUDGED_YARDS`, both distance rows and the
+`METRIC_MINIMUM_N` note below. **What is left of this phase is one row**, plus P10's two if P10 is
+ever done.
 
-**Detail.** Add a `_JUDGED_YARDS` provenance constant, then one `MetricTarget` each. Targets:
-`carry_distance_yds` and `total_distance_yds` get **no** target (how far a golfer *should* hit a
-club is not a number this repo has, and a tour carry band would judge an amateur against a
-population they are not in); `start_line_offline_yds` gets target `0.0` by geometry, the same
-argument `start_line_deg` already makes; P10's two get no target (a "right" ball speed is a
-fitting output, and optimal launch needs the model that does not exist).
+**Reuse.** `METRIC_TARGETS`, and now `_JUDGED_YARDS` beside `_JUDGED_DEGREES`.
+
+**Detail.** `start_line_offline_yds` gets target `0.0` by geometry, the same argument
+`start_line_deg` already makes. (Shipped in P8: `carry_distance_yds` and `total_distance_yds`, both
+with **no** target — how far a golfer *should* hit a club is not a number this repo has, and a tour
+carry band would judge an amateur against a population they are not in. If P10 is done, its two get
+no target either: a "right" ball speed is a fitting output, and optimal launch needs the model that
+does not exist.)
 
 **The design note to write into the code.** The offline tolerance is the `_JUDGED_DEGREES` figure
 evaluated at the *widest club in the bag*. Offline error scales with carry, so a single constant is
@@ -506,7 +567,8 @@ here — it costs claims, where erring narrow buys confident claims about the si
 Record the deferral in the provenance string.
 
 **Do not add `METRIC_MINIMUM_N` overrides.** The defaults are right for distance and there is no
-evidence to justify moving them. Say so in a comment so nobody adds one speculatively.
+evidence to justify moving them. Say so in a comment so nobody adds one speculatively. ✅ — the
+comment shipped with P8's rows.
 
 **Tests.** Every metric in `SHOT_MEASUREMENTS` and `POSE_MEASUREMENTS` has a `METRIC_TARGETS`
 entry — derive both sides from the registries (R6), so a metric added later fails loudly instead

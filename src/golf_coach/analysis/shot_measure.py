@@ -7,8 +7,19 @@ curvature.
 
 Nothing here scores anything, and nothing here needs a reference population. That is the point:
 face-to-path relates to shape by ball-flight physics, not by a tour distribution, so it is
-measurable today whereas carry and spin norms are blocked on data nobody has acquired
-(ADR-010 §4 names TrackMan / Arccos as the eventual source).
+measurable today whereas carry and spin *norms* are blocked on data nobody has acquired
+(ADR-010 §4 names TrackMan / Arccos as the eventual source). Norms, not the numbers: carry itself is
+measured here as of M9 and judged by nothing, which is that sentence working rather than an
+exception to it.
+
+## What arrived late, and why it could not arrive earlier
+
+**`carry_distance_yds` and `total_distance_yds`.** These were readable off `ShotData` from the day
+the OCR worked, and were left out until M9 anyway. A carry pooled across clubs is not a weak
+statistic, it is a meaningless one — a mean over a driver and a sand wedge describes nobody's shot,
+and its spread is mostly which clubs happened to be hit. **The club tag is what makes distance
+poolable at all**, so distance enters the corpus with M9's `SwingManifest.club` and not with M6.5,
+which is when everything else in this module was written.
 
 ## What is deliberately excluded, and why
 
@@ -85,6 +96,28 @@ def measure_start_line(shot: ShotData) -> float | None:
     return shot.launch_direction
 
 
+def measure_carry_distance(shot: ShotData) -> float | None:
+    """Carry, in yards, exactly as the screen printed it. No arithmetic at all.
+
+    A pass-through is still worth a registry row: what `measurements` holds is what
+    `storage.corpus` pools and what `analysis.baseline` builds a personal mean from, and a field
+    that stays on `ShotData` reaches none of that. The module docstring above says why this one
+    waited for a club tag.
+    """
+    return shot.carry_distance
+
+
+def measure_total_distance(shot: ShotData) -> float | None:
+    """Carry plus roll, in yards, as printed.
+
+    Kept beside carry rather than folded into it because the two answer different questions and
+    the gap between them is the ground, not the swing — a number that moves with a mat, a fairway
+    setting and a season. `ShotData.bounce_and_roll` already prints that gap, so it is not measured
+    here: recording `total - carry` beside both is a third number free to disagree with them.
+    """
+    return shot.total_distance
+
+
 def normalize_shot_shape(shot: ShotData) -> TargetShape | None:
     """Map the simulator's free-text shape ("CENTER SLIGHT FADE") onto `TargetShape`.
 
@@ -121,5 +154,20 @@ SHOT_MEASUREMENTS = {
         measure_start_line,
         "degrees",
         "initial horizontal launch direction; + is right of target",
+    ),
+    # The two distances are **pooled whole-bag** by everything that reads them until
+    # `storage.corpus.narrow_to(club=)` lands (M9 P13), which is what makes a mean carry mean
+    # anything. Nothing false ships in the meantime — `contracts.baseline.DEFAULT_MINIMUM_N`
+    # refuses a center below 5 samples — but the guard that saves this is a sample count, not an
+    # argument about clubs, so it would go on being satisfied by a mixed bag.
+    "carry_distance_yds": (
+        measure_carry_distance,
+        "yards",
+        "carry as printed by the launch monitor; meaningful per club, not across a bag",
+    ),
+    "total_distance_yds": (
+        measure_total_distance,
+        "yards",
+        "carry plus roll as printed; the gap to carry is the ground, not the swing",
     ),
 }

@@ -279,7 +279,14 @@ class SwingResult(BaseModel):
 #:                   shape of bump as `3 -> 4`: a version-6 `analysis.json` is *missing* two
 #:                   quantities rather than disagreeing about any, and `reanalyze.py` is how it
 #:                   acquires them.
-ANALYSIS_VERSION = 7
+#: 7 -> 8 (2026-08-21, M9 P8): `carry_distance_yds` and `total_distance_yds` joined `measurements`
+#:                   — two fields the OCR has always read, held out until a swing could say which
+#:                   club hit it (`SwingManifest.club`, M9 P4). Nothing judges them: no band, no
+#:                   checkpoint, no target, so `overall_score` is byte-identical on every stored
+#:                   swing. Same shape of bump as `3 -> 4` and `6 -> 7` — a version-7
+#:                   `analysis.json` is *missing* two quantities rather than disagreeing about any,
+#:                   and `reanalyze.py` is how it acquires them.
+ANALYSIS_VERSION = 8
 
 
 class SwingBundleResult(BaseModel):

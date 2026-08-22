@@ -117,10 +117,12 @@ MINIMUM_SESSIONS: dict[BaselineClaim, int] = {
 #:   metric's from the same swings.
 #: - `hip_shift_at_top_norm` — spread/error 3.6, the second-noisiest.
 #:
-#: The two launch-monitor metrics take the defaults, and that is the least-informed row in this
+#: **Every launch-monitor metric takes the defaults**, and that is the least-informed row in this
 #: table: there is no instrument-error evidence for the OCR path at all — the estimator-disagreement
 #: trick `tune_spatial_metric.py` uses has no analogue for a photographed screen. They are the first
-#: floors a real bay session should revise.
+#: floors a real bay session should revise. M9 P8 added two distances under that same silence and
+#: deliberately did not override them either: the defaults are not known to be wrong for a printed
+#: carry, and a floor moved without evidence is a refusal nobody derived.
 METRIC_MINIMUM_N: dict[str, dict[BaselineClaim, int]] = {
     "tempo_ratio": {
         BaselineClaim.CENTER: 8,

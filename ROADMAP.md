@@ -24,7 +24,7 @@ wording; only the grouping and the M4 checklist have been corrected.
 | **M6.5** Measure now, judge later | ✅ Done | — (9 recorded, **6 scored**; the handedness seam landed and the last candidate was settled) | [§M6.5](#m65-measure-now-judge-later--done) |
 | **Career mode** One golfer over time | ✅ Done, 6/6 steps | — (built and silent; a bay session gives it the `n` to speak) | [§Career](#career-mode-one-golfer-tracked-over-time--done-built-and-silent) |
 | **M8** Learning what "good" means | ✅ Done *(2026-08-17)* | — (three models fitted, validated, surfaced **and spoken**, with a policy rather than a band) | [§M8](#m8-learning-what-good-means--gates-run-model-fitted) |
-| **M9** Player tracking (per-club) | 🟡 In progress, 7/20 phases | Nothing — the ingest half is desk work | [§M9](#m9-player-tracking-per-club-shot-history--in-progress) |
+| **M9** Player tracking (per-club) | 🟡 In progress, 8/20 phases | Nothing — the ingest half is desk work | [§M9](#m9-player-tracking-per-club-shot-history--in-progress) |
 | **M5** Feedback UI | ⬜ Not started | M7 Phase 5 gives the host | [§M5](#milestone-5-feedback-ui) |
 | **M2** Club & ball detection | 🔒 Gated, **and M1.5 said no-go** | Bay lighting for a ~1/2000 s exposure — *not* a global-shutter camera | [§M2](#milestone-2-club--ball-detection) |
 | Hardware re-validation | 🔒 Gated | Cameras / launch monitor arriving | [§Gate](#hardware-re-validation-gate-revisit-when-cameras--launch-monitor-arrive) |
@@ -44,7 +44,7 @@ served live `call_tool` requests including the not-found path. It is registered 
 (`claude mcp add`, per the README) and reports `✔ Connected`, which is a second client completing
 the same handshake independently.
 
-**NEXT ACTION — do this first: M9 P8.** Until 2026-08-20 this section read *"nothing on this
+**NEXT ACTION — do this first: M9 P9.** Until 2026-08-20 this section read *"nothing on this
 board is desk work any more"*, and [M9](#m9-player-tracking-per-club-shot-history--in-progress)
 is what stopped that being true. It is the one substantial item that needs **neither a bay session
 nor an `n`**: no shot on disk records which club hit it, and adding that tag is pure desk work that
@@ -56,14 +56,23 @@ untagged: `contracts/club.py` holds the taxonomy, `contracts/bag.py` the declare
 the golfer's own record, and **P4 carried the club into two things that already run**:
 `SwingManifest.club` and a second session cursor, `SessionMeta.club`. P5 wrote the field — threading
 the club through `bundle_store` at swing creation, plus a per-swing repair route — P6 put the
-requirement at the boundary, and P7 gave the phone a one-tap way to satisfy it. Continue at
-[M9 P8](docs/M9_PLAYER_TRACKING.md), which opens the measurements track and is independent of
-everything above it; the design is
+requirement at the boundary, and P7 gave the phone a one-tap way to satisfy it. The design is
 [ADR-024](docs/decisions/024-per-club-shot-history.md), whose addendum records the one call P3 added
 to it — a club that leaves the bag is kept rather than overwritten.
 
 P4 also fixed a latent bug it had to: `set_current_player` replaced the whole `session.json`, which
 was correct with one cursor and would have cleared the club with two.
+
+**P8 opened the measurements track and cashed the tag in.** `carry_distance_yds` and
+`total_distance_yds` are measured, which they could not honestly be before: a carry pooled across
+clubs is meaningless, so the club tag is what makes distance poolable at all. Both are *measured and
+judged by nothing* — no target, because how far a golfer should hit a club is not a number this repo
+has and every distribution here is cut from GolfDB, which contains no ball flight. `ANALYSIS_VERSION`
+went 7 → 8 and all four stored swings were re-analyzed onto it with every `overall_score`
+byte-identical. Continue at [M9 P9](docs/M9_PLAYER_TRACKING.md) — `start_line_offline_yds`, the
+lateral miss as an honest start-line projection. Note that P11 is now mostly done: P8 had to ship its
+two target rows, because an unregistered production metric fails
+`test_every_production_metric_has_a_tolerance` rather than going quietly silent.
 
 **P6 required the club and P7 made it pickable, and the order was deliberate.** `POST /api/uploads`
 reads the session's club cursor before it streams a byte and answers 409 when nothing is selected,
@@ -986,11 +995,13 @@ is the client handshake and conversational follow-up.
 
 **Design**: [ADR-024](docs/decisions/024-per-club-shot-history.md).
 **Phase list**: [docs/M9_PLAYER_TRACKING.md](docs/M9_PLAYER_TRACKING.md) — 20 phases, each
-independently commit-ready. **P1–P7 landed 2026-08-21; start at P8.** That is the whole ingest
+independently commit-ready. **P1–P8 landed 2026-08-21; start at P9.** P1–P7 are the whole ingest
 spine: the vocabulary, the bag shape, the bag on disk, the club on `SwingManifest` and on a second
 session cursor, the writer that stamps it, the 409 that refuses an untagged upload, and the one-tap
-picker that satisfies it. A swing can no longer reach disk without a club. P8 opens the
-measurements track, which is independent of everything above it.
+picker that satisfies it. A swing can no longer reach disk without a club. **P8 opened the
+measurements track** and put carry and total distance into `measurements` — the thing the tag was
+for, since a carry pooled across clubs describes nobody's shot. Both are measured and judged by
+nothing: no target exists for how far a golfer should hit a club, and none is invented.
 
 **The gap, in one sentence.** This repo can say how a swing compares to a tour population and how
 it compares to the golfer's own history. It cannot say how far you hit your 7 iron, because **no
@@ -1036,7 +1047,9 @@ for golfer (usually one per session) and destructive for club (many per session)
 **Expect refusals.** Every swing currently on disk is untagged, and the guard needs five shots per
 club before it will state a mean. The correct output at every stage of M9 is a refusal with a
 correct `n`; a number appearing early is the bug. Same acceptance criterion career mode shipped
-under.
+under — and P8 is the first place it is observable: `scripts/career_dispersion.py` now prints both
+distances at `n = 2 over 2 sessions`, both claims waiting on their sample floors, with the reason no
+target exists printed rather than the metric going quietly absent.
 
 ---
 

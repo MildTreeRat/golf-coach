@@ -14,8 +14,10 @@ import pytest
 
 from golf_coach.analysis.shot_measure import (
     SHOT_MEASUREMENTS,
+    measure_carry_distance,
     measure_face_to_path,
     measure_start_line,
+    measure_total_distance,
     normalize_shot_shape,
 )
 from golf_coach.contracts.intent import TargetShape
@@ -75,6 +77,36 @@ def test_start_line_is_carried_signed() -> None:
     assert measure_start_line(_shot()) is None
 
 
+def test_the_distances_are_carried_as_printed() -> None:
+    """A real pair out of the shot store; nothing is rounded, scaled or converted."""
+    shot = _shot(carry_distance=125.6, total_distance=131.0)
+
+    assert measure_carry_distance(shot) == 125.6
+    assert measure_total_distance(shot) == 131.0
+
+
+def test_a_missing_distance_is_none_rather_than_zero() -> None:
+    """A shot the screen printed no carry for did not carry zero yards.
+
+    Same rule as `SwingResult.unscored` one layer down: a measurement that is absent stays absent,
+    because a 0.0 pooled into a mean carry is a duff that never happened.
+    """
+    assert measure_carry_distance(_shot()) is None
+    assert measure_total_distance(_shot()) is None
+    assert measure_carry_distance(_shot(total_distance=131.0)) is None
+    assert measure_total_distance(_shot(carry_distance=125.6)) is None
+
+
+def test_the_distances_are_registered_in_yards() -> None:
+    """The unit is the whole interface for a pass-through metric — there is no arithmetic to check.
+
+    A carry stored under `degrees`, or under no unit at all, reaches `analysis.baseline` and gets
+    averaged anyway; the unit is all any reader has to tell 125.6 yards from 125.6 of anything.
+    """
+    for name in ("carry_distance_yds", "total_distance_yds"):
+        assert SHOT_MEASUREMENTS[name][1] == "yards"
+
+
 @pytest.mark.parametrize(
     ("text", "expected"),
     [
@@ -120,7 +152,16 @@ def test_device_artifacts_are_not_measured() -> None:
 
 
 def test_registry_entries_are_well_formed() -> None:
-    shot = _shot(club_face_angle=8.6, club_path=-4.6, launch_direction=4.0)
+    # Every field any registered measurement reads. A metric added to the registry and not to this
+    # shot fails here, which is the point — it is the cheapest place to notice that a new
+    # measurement has no test of its own.
+    shot = _shot(
+        club_face_angle=8.6,
+        club_path=-4.6,
+        launch_direction=4.0,
+        carry_distance=125.6,
+        total_distance=131.0,
+    )
     for name, (measure, unit, detail) in SHOT_MEASUREMENTS.items():
         assert unit and detail, f"{name} is missing a unit or a detail string"
         assert measure(shot) is not None
