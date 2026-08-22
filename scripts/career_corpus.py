@@ -88,6 +88,16 @@ def _report(corpus: CareerCorpus, display_name: str, *, verbose: bool) -> None:
         print("    artifact. Their checkpoint `observed` values are deliberately not read as")
         print("    measurements: it would mix two derivation paths under one metric name.")
 
+    if corpus.untagged_swings:
+        print(
+            f"\n  {corpus.untagged_swings} distinct swing(s) naming no club "
+            f"(of {corpus.distinct_swings})."
+        )
+        print("    They still count toward every metric above and toward every whole-bag")
+        print("    number — the club was never an input to measuring head sway — and are")
+        print("    absent only from per-club views. Repair them one at a time on the upload")
+        print("    page: a session has many clubs, so there is no bulk backfill (ADR-024 §5).")
+
     if corpus.unknown_sources:
         print(f"\n  Unrecognised measurement sources: {', '.join(corpus.unknown_sources)}")
         print("    Counted per swing rather than per artifact — check the dedupe key still fits.")

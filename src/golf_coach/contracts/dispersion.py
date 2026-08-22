@@ -205,6 +205,60 @@ _JUDGED_YARDS = (
     "scales with carry; deferred until a per-club sample exists, and erring wide until then"
 )
 
+#: The offline tolerance, which is **not a fresh judgment — it is `_JUDGED_DEGREES` converted**.
+#:
+#: `start_line_offline_yds` is `carry * sin(start_line_deg)`, so its error is the start line's
+#: error carried through that same multiplication. Two degrees is what the row above already claims
+#: about the angle, and the only free parameter is which carry to evaluate it at.
+#:
+#: **The widest club in the bag decides it**, because the tolerance has to hold for every club that
+#: shares this one constant, and the driver is where two degrees is worth the most yards. At a
+#: 250-yard driver carry that is `250 * sin(2 deg)` = 8.7, rounded up to 9. The 250 is stated in the
+#: provenance rather than left implicit, since it is the one number here that a bay session can
+#: replace with a measured driver carry.
+#:
+#: **A single constant is the wrong shape, and this metric is where that is most visible.** At the
+#: other end of the bag a 125-yard wedge puts two degrees at 4.4 yards, so the wedge is judged at
+#: roughly twice the tolerance its own geometry asks for. That is deliberate and it is the
+#: documented safe direction — erring wide costs claims, where erring narrow buys confident claims
+#: about the simulator's own noise — but it is a deferral, not a result. `narrow_to(club=)` (M9 P13)
+#: is what makes the per-club version measurable; `_JUDGED_YARDS` above records the same deferral
+#: for the two distances, and both should be revised in one pass rather than separately.
+_JUDGED_OFFLINE = (
+    "judgment, 2026-08-21 (M9 P9): _JUDGED_DEGREES's 2 degrees carried through "
+    "carry * sin(angle) at the widest club in the bag - 250 yd x sin(2 deg) = 8.7, rounded up. "
+    "Offline error scales with carry, so one constant is the wrong shape and the wedge end is "
+    "judged wide on purpose; per-club deferred until a per-club sample exists"
+)
+
+#: The two launch conditions, and neither number is a fresh judgment.
+#:
+#: These are the one pair here **recorded for a model rather than for a verdict** — fitting inputs
+#: with no target and no band (`analysis/shot_measure.py` says why). With `target` None there is no
+#: bias finding to gate, so a tolerance's only remaining job is the *scatter* finding: how
+#: repeatable this golfer's launch conditions are, which is answerable without anyone declaring
+#: what good is.
+#:
+#: **2 degrees** for launch angle is what this repo already claims about the OCR path's other two
+#: angle fields. `_JUDGED_DEGREES` is not reused for it because that constant argues from the level
+#: a *coaching action* follows from, and nobody coaches a launch angle off this instrument.
+#:
+#: **4 mph** for ball speed is `_JUDGED_YARDS`'s 5 yards carried through the only
+#: ball-speed-to-carry ratio this repo has measured: the two stored shots sit at about 1.4 yd
+#: per mph, so `5 / 1.4` = 3.6, rounded **up**. Same move as `_JUDGED_OFFLINE` and with the
+#: same weakness stated rather than hidden — the ratio is two shots of one club and it is
+#: club-specific, since spin and launch angle both move it. Rounding up is the documented safe
+#: direction: erring wide costs claims, where erring narrow buys confident claims about the
+#: simulator's own noise. `narrow_to(club=)` (M9 P13) is what makes the per-club version
+#: measurable, and this constant, `_JUDGED_YARDS` and `_JUDGED_OFFLINE` should be revised in
+#: one pass rather than separately.
+_JUDGED_LAUNCH = (
+    "judgment, 2026-08-21 (M9 P10): no instrument-error evidence exists for the OCR path. Launch "
+    "angle takes _JUDGED_DEGREES's 2 degrees, the claim the other two angle fields already make; "
+    "ball speed takes _JUDGED_YARDS's 5 yards through the ~1.4 yd/mph the stored shots show - "
+    "5 / 1.4 = 3.6, rounded up. That ratio is club-specific; per-club deferred, erring wide"
+)
+
 #: The two absolute durations, and why they are not `_TUNED` like the six metrics beside them.
 #:
 #: `tune_spatial_metric.py` **cannot** score a duration, and it now says so rather than printing a
@@ -258,6 +312,22 @@ METRIC_TARGETS: dict[str, MetricTarget] = {
         tolerance=2.0,
         provenance=_JUDGED_DEGREES,
     ),
+    # The same quantity as the row above, in the units a golfer actually thinks in — and it gets a
+    # target for the same reason that one does. Zero is straight by geometry: a ball that starts on
+    # the target line is offline by nothing, whoever is swinging and whatever club is in hand. That
+    # is not a claim about a population, which is the only kind of target this repo declines to
+    # invent (ADR-010 §2).
+    #
+    # **A bias finding here is the one worth reading, and a scatter finding is nearly the same
+    # number as `start_line_deg`'s.** Both are the start line; only the units differ. What the
+    # yards version buys is that it is comparable to a carry and speakable to a golfer, which the
+    # degrees version is not.
+    "start_line_offline_yds": MetricTarget(
+        metric="start_line_offline_yds",
+        target=0.0,
+        tolerance=9.0,
+        provenance=_JUDGED_OFFLINE,
+    ),
     # The two distances, measured since M9 P8 and judged by nothing. **No target, and that is not
     # a gap to be filled in later**: how far a golfer *should* hit a club is not a number this repo
     # has, and the only populations it holds are cut from GolfDB, which is broadcast pose footage
@@ -291,6 +361,37 @@ METRIC_TARGETS: dict[str, MetricTarget] = {
         no_target_reason=(
             "the same as carry, plus one more: the gap between them is roll, which is the ground "
             "rather than the swing - a target would judge a golfer for the mat they hit off"
+        ),
+    ),
+    # The two launch conditions, measured since M9 P10 and judged by nothing — and the absent
+    # target here is firmer than the distances' above. A carry has no target because this repo
+    # lacks the population; these two have none because the question is the wrong way round. They
+    # are what a fitting model *consumes*, so a "right" value is that model's output, and the model
+    # does not exist. They register anyway, because a tolerance is what buys the scatter finding,
+    # and how repeatable a golfer's launch conditions are needs nobody to declare what good is.
+    #
+    # The whole-bag caveat at the distance rows applies to both unchanged: until `narrow_to(club=)`
+    # (M9 P13) everything that reads these pools a driver and a wedge into one mean.
+    "ball_speed_mph": MetricTarget(
+        metric="ball_speed_mph",
+        target=None,
+        tolerance=4.0,
+        provenance=_JUDGED_LAUNCH,
+        no_target_reason=(
+            "a 'right' ball speed is an output of club fitting rather than an input to coaching - "
+            "the club's loft and the golfer's delivery decide it, and this repo has no model that "
+            "reads either. Recorded so that model has data on the day it exists"
+        ),
+    ),
+    "launch_angle_deg": MetricTarget(
+        metric="launch_angle_deg",
+        target=None,
+        tolerance=2.0,
+        provenance=_JUDGED_LAUNCH,
+        no_target_reason=(
+            "optimal launch is per club, per ball speed and per spin rate, so a single number for "
+            "it would be wrong for every club in the bag. Same missing model as ball speed and the "
+            "same deferral"
         ),
     ),
     # The two one-sided magnitudes. "Lower is strictly better" is already this repo's position for

@@ -5,8 +5,11 @@
 > is [ADR-024](decisions/024-per-club-shot-history.md); this document is the *how*, as a phase
 > list.
 
-**Status: in progress, 8/20 phases.** P8 landed 2026-08-21 and opens the measurements track.
-Start at P9 — `start_line_offline_yds`, which needs nothing but P8.
+**Status: in progress, 11/20 phases.** P12 landed 2026-08-21 and **opened the corpus track** —
+the club now crosses from the manifest into `CorpusSwing`, and `CareerCorpus.untagged_swings` counts
+the history per-club work cannot see. Start at P13 — `narrow_to(club=)`, the filter every per-club
+statistic hangs off — or at P10, still optional, if launch conditions are wanted before the next bay
+session.
 
 ---
 
@@ -494,14 +497,19 @@ rediscovered.
 
 ---
 
-### [ ] P9 — `start_line_offline_yds`
+### [x] P9 — `start_line_offline_yds` *(done 2026-08-21)*
 
 **Goal.** "How many yards right or left", as exact geometry, honestly named.
 
-**Files.** `analysis/shot_measure.py`, `tests/analysis/test_shot_measure.py`.
+**Files.** `analysis/shot_measure.py`, `tests/analysis/test_shot_measure.py` — plus two the box did
+not name, both of them P8's documented consequences rather than surprises: `contracts/dispersion.py`
+(the target row, see below) and `contracts/swing.py` (`ANALYSIS_VERSION` 8 → 9).
 
 **Detail.** `carry_distance * sin(radians(launch_direction))`, `None` if either is missing.
-Positive is right of target, matching `launch_direction` and `start_line_deg`. Unit `yards`.
+Positive is right of target, matching `launch_direction` and `start_line_deg`. Unit `yards`. ✅ —
+and it reads its two inputs **through `measure_carry_distance` and `measure_start_line`** rather
+than off `ShotData` directly, so there is one definition of which field is the carry and which is
+the start line.
 
 **Docstring to write — the honesty is the deliverable.** State that this is where the ball *would*
 have landed if it never curved, not where it landed; that the screen prints no offline tile; that
@@ -512,9 +520,37 @@ golfer who starts it straight and slices reads about 0 here and the whole miss l
 should **supersede** this rather than sit beside it.
 
 **Tests.** 150 yd at +2° → +5.23 yd (within 0.01). Negative angle → negative. Zero → 0.0. Either
-input missing → `None`. A pin that the sign agrees with `start_line_deg`.
+input missing → `None`. A pin that the sign agrees with `start_line_deg`. ✅ — **5 added, suite
+910 → 915**, all five in `test_shot_measure.py`. The sign pin is written as the box asked and the
+shape matters: it asserts the two metrics agree **with each other** over four angles rather than
+each against a constant, because two readings of one quantity in two units is exactly where a
+dropped minus sign produces a coherent-looking artifact that says the golfer misses the other way.
+The zero case is pinned beside the `None` cases on purpose — `0.0` and `None` are the same falsy
+value to a careless reader, and here they mean *dead straight* and *unknown*.
 
-**Done when.** Tests pass.
+**The pin that had to fail first did, and the fixture that fed P8 did not need feeding.**
+`test_every_production_metric_has_a_tolerance` went red on the bare registry row, exactly as P8's
+box predicted it would for any new metric. But `test_registry_entries_are_well_formed` stayed green
+without being touched: its one shot already carries `launch_direction=4.0` and `carry_distance=125.6`
+because `start_line_deg` and `carry_distance_yds` are already registered, so a metric derived from
+two existing ones inherits its fixture. That is worth knowing for P10, which reads two fields
+**nothing** currently measures and will therefore have to feed it.
+
+**`ANALYSIS_VERSION` 8 → 9, and it is the cheapest bump on that list.** Same shape as `3 -> 4`,
+`6 -> 7` and `7 -> 8` — one new `measurements` entry, no checkpoint, band or score moved. What makes
+it cheaper than P8's is that the quantity is *derived from two fields a version-8 artifact already
+carries*: a version-8 file was never missing the information, only the arithmetic. Nothing went red
+to say the bump was owed, for the same reason as last time — every test derives the number from the
+constant.
+
+**Done when.** Tests pass. ✅ — and driven end to end, since the point is that the number reaches a
+stored artifact. `scripts/reanalyze.py` moved all four stored swings `version 8 -> 9 |
+measurements 18 -> 19`, and **every `overall_score` is byte-identical** to P8's recorded values
+(97.45951982132875 on three, 96.88296555239968 on the fourth). The two real shots on disk miss in
+**opposite directions** — `start_line_deg` −5.3° at 125.6 yd carry gives −11.6017 yd, and +4.0° at
+121.0 yd gives +8.4405 yd — which is the sign working on real data in both directions rather than in
+a test. `scripts/career_dispersion.py` then printed the row beside `start_line_deg` with
+`target 0.000 +/- 9.000` and withheld both claims at `n = 2`, waiting on the 5- and 10-sample floors.
 
 ---
 
@@ -537,9 +573,17 @@ unrecoverable after the fact; they get no target and no band.
 
 ---
 
-### [ ] P11 — targets and tolerances for the new metrics
+### [x] P11 — targets and tolerances for the new metrics *(done 2026-08-21, across P8 and P9)*
 
 **Goal.** Let `build_dispersion` speak about the new metrics instead of refusing them.
+
+**This phase never ran as a phase, and could not have.** The strict-equality pin means a target row
+cannot lag its metric by even one commit, so P8 took two thirds of it and P9 took the last row. What
+is recorded below is the argument; the code shipped with the metrics it judges.
+
+**If P10 is ever done it ships its own two rows in the same change** — that is not a new decision,
+it is the same pin. Both get no target: a "right" ball speed is a fitting output, and optimal launch
+needs the model that does not exist.
 
 **Files.** `contracts/dispersion.py`, `tests/contracts/`.
 
@@ -554,7 +598,12 @@ ever done.
 **Reuse.** `METRIC_TARGETS`, and now `_JUDGED_YARDS` beside `_JUDGED_DEGREES`.
 
 **Detail.** `start_line_offline_yds` gets target `0.0` by geometry, the same argument
-`start_line_deg` already makes. (Shipped in P8: `carry_distance_yds` and `total_distance_yds`, both
+`start_line_deg` already makes. ✅ — shipped in P9, `tolerance=9.0` under a new `_JUDGED_OFFLINE`
+provenance constant. The tolerance is **not a fresh judgment**: it is `_JUDGED_DEGREES`'s 2° carried
+through the same multiplication the metric is, leaving one free parameter — which carry to evaluate
+it at. The widest club in the bag decides that, because the constant has to hold for every club that
+shares it: `250 * sin(2 deg)` = 8.7, rounded up to 9. The 250 is stated in the provenance rather than
+left implicit, since it is the one number a bay session can replace with a measured driver carry. (Shipped in P8: `carry_distance_yds` and `total_distance_yds`, both
 with **no** target — how far a golfer *should* hit a club is not a number this repo has, and a tour
 carry band would judge an amateur against a population they are not in. If P10 is done, its two get
 no target either: a "right" ball speed is a fitting output, and optimal launch needs the model that
@@ -572,30 +621,83 @@ comment shipped with P8's rows.
 
 **Tests.** Every metric in `SHOT_MEASUREMENTS` and `POSE_MEASUREMENTS` has a `METRIC_TARGETS`
 entry — derive both sides from the registries (R6), so a metric added later fails loudly instead
-of going silently unjudgeable.
+of going silently unjudgeable. ✅ — this test already existed and is what collapsed the phase; it
+was watched fail on both P8's rows and P9's.
 
-**Done when.** Tests pass; `tests/analysis/test_dispersion.py` still green.
+**Done when.** Tests pass; `tests/analysis/test_dispersion.py` still green. ✅
 
 ---
 
-### [ ] P12 — the corpus carries the club
+### [x] P12 — the corpus carries the club *(done 2026-08-21)*
 
 **Goal.** `CorpusSwing` knows which club hit it.
 
-**Files.** `contracts/career.py`, `storage/corpus.py`, `tests/storage/test_corpus.py`.
+**Files.** `contracts/career.py`, `storage/corpus.py`, `tests/storage/test_corpus.py` — plus
+`tests/storage/conftest.py` (the builder had to be able to say the word) and **`scripts/career_corpus.py`**,
+which the box did not name; see below.
 
-**Detail.** `CorpusSwing.club: ClubId | None`; `_corpus_swing` reads `manifest.club` alongside
-`manifest.player_id`; `CareerCorpus.untagged_swings: int`, counted for the same reason
-`unattributed_swings` is.
+**Detail, as built.** `CorpusSwing.club: ClubId | None` declared beside `shot_sha256`;
+`_corpus_swing` reads `manifest.club` inside the `CorpusSwing(...)` constructor — **not** below it,
+because the `NOT_ANALYZED` branch returns early and a field assigned after that point would be
+silently absent on every unanalyzed swing.
 
-**Design note.** Do **not** add an `ExclusionReason` for an untagged swing. It is a perfectly good
-contributor to every pose metric and to whole-bag numbers; it is excluded only from per-club
-views. Excluding it from the corpus would silently shrink the mechanics `n`.
+**`untagged_swings` shipped as a derived property, not the `int` field this box specified.** The box
+says it is counted "for the same reason `unattributed_swings` is", and the reason carries over while
+the shape does not. An unattributed manifest never becomes a `CorpusSwing` at all — it is excluded
+before the swings are grouped — so that counter *must* be tallied during the scan. An untagged
+manifest is a real swing sitting in `swings`, so this one is read back off them, and there is
+therefore no field for P13's `narrow_to` to forget to recompute: a stored version would have been a
+fifth entry in a hand-listed `model_copy(update=...)` that nothing goes red about. It also shares
+`distinct_swings`' denominator, which is what lets "2 of 2 swings name no club" be printed as one
+honest sentence.
 
-**Tests.** A tagged manifest produces a `CorpusSwing` carrying the club. A legacy manifest produces
-`None`, increments `untagged_swings`, and does **not** appear in `excluded`.
+**The phase's one unnamed decision: the club comes off the survivor, and there is no
+`conflicting_clubs`.** A duplicate group is one clip uploaded more than once, and every upload stamps
+the cursor as it stood when *that* file arrived — so a clip re-sent after the golfer moved on to a
+wedge carries a wedge. The survivor is the earliest arrival, closest to the capture, and its tag
+wins; this is also P5's instruction that the club appears at every site `player_id` does and at no
+others, and `player_id` is read off the survivor with no fallback. Deliberately **not** mirroring
+`conflicting_shots` immediately above it: a second shot photo names a repair, because whichever of
+the two is misattached is attached to a swing being scored on it, whereas a duplicate's club is
+attached to a directory that contributes nothing — so a `conflicting_clubs` field would have no
+reader (R11). By the same argument an untagged survivor does **not** borrow a tagged duplicate's
+club: that infers what hit the swing from what the cursor said when someone re-sent the clip, which
+is the guess `parse_club` refuses at the boundary (R7). Repair stays per swing, via
+`POST /api/sessions/{session_id}/swings/{swing_id}/club`.
 
-**Done when.** Tests pass; the existing corpus suite is green.
+**Design note, as shipped.** No `ExclusionReason` for an untagged swing, and the property's docstring
+now says why rather than leaving the absence to be read as an oversight: the club was never an input
+to measuring head sway, so excluding it would shrink the mechanics `n` to punish a missing tag
+mechanics never needed.
+
+**`scripts/career_corpus.py` gained a reporting block, which is why the file list grew.** A counter
+nothing prints is a counter nobody notices is wrong, and that script is the corpus's own inspector —
+it is also where this phase's design note reaches a human, since the block says the untagged swings
+still count toward every metric above it.
+
+**Tests: 6 added, suite 919 → 925.** Both directions of the survivor rule are written out separately,
+and the P4/P5 habit is why: breaking the read in-process (`swing.club = duplicates[-1].club`) failed
+**each direction on a different assertion** — `SAND_WEDGE is not SEVEN_IRON` on one, `SAND_WEDGE is
+not None` on the other — so a single test would have missed one. The design-note pin was watched fail
+the same way: excluding untagged swings in-process turns `{"head_sway_norm": 2}` into
+`{"head_sway_norm": 1}`, which is the silently-shrunk mechanics `n` the note describes, arriving as a
+visible failure.
+
+**No `ANALYSIS_VERSION` bump**, and worth saying because P8, P9 and P10 all carried one. P12 changes
+no measurement and writes no `analysis.json`, so nothing on disk became outdated and
+`scripts/reanalyze.py` was not run.
+
+**Done when.** Tests pass; the existing corpus suite is green. ✅ — 925 passed, `ruff check src tests
+scripts` clean, `mypy src` clean across 92 files. Driven on the real data too, since the point is
+that the field crosses into a corpus that already exists: `scripts/career_corpus.py --player-id
+aaron` prints **2 of 2 distinct swings naming no club**, and every other line of its output is
+byte-identical to the run before the change — `Honest n per metric` unmoved, `Contributing no sample`
+unmoved, no new exclusion reason. A metric count that had moved was the failure this phase was most
+likely to produce.
+
+**Still stale for P20**, unchanged from P4–P7: `docs/ARCHITECTURE.md` §4 calls `session.json` the
+"golfer cursor", its manifest row names only `player_id`, and no route table knows the four routes M9
+has added. `tests/test_docs_truth.py` pins none of it, so nothing goes red.
 
 ---
 

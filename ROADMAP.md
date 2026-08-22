@@ -24,7 +24,7 @@ wording; only the grouping and the M4 checklist have been corrected.
 | **M6.5** Measure now, judge later | ✅ Done | — (9 recorded, **6 scored**; the handedness seam landed and the last candidate was settled) | [§M6.5](#m65-measure-now-judge-later--done) |
 | **Career mode** One golfer over time | ✅ Done, 6/6 steps | — (built and silent; a bay session gives it the `n` to speak) | [§Career](#career-mode-one-golfer-tracked-over-time--done-built-and-silent) |
 | **M8** Learning what "good" means | ✅ Done *(2026-08-17)* | — (three models fitted, validated, surfaced **and spoken**, with a policy rather than a band) | [§M8](#m8-learning-what-good-means--gates-run-model-fitted) |
-| **M9** Player tracking (per-club) | 🟡 In progress, 8/20 phases | Nothing — the ingest half is desk work | [§M9](#m9-player-tracking-per-club-shot-history--in-progress) |
+| **M9** Player tracking (per-club) | 🟡 In progress, 11/20 phases | Nothing — the ingest and measurement halves are both desk work | [§M9](#m9-player-tracking-per-club-shot-history--in-progress) |
 | **M5** Feedback UI | ⬜ Not started | M7 Phase 5 gives the host | [§M5](#milestone-5-feedback-ui) |
 | **M2** Club & ball detection | 🔒 Gated, **and M1.5 said no-go** | Bay lighting for a ~1/2000 s exposure — *not* a global-shutter camera | [§M2](#milestone-2-club--ball-detection) |
 | Hardware re-validation | 🔒 Gated | Cameras / launch monitor arriving | [§Gate](#hardware-re-validation-gate-revisit-when-cameras--launch-monitor-arrive) |
@@ -44,7 +44,7 @@ served live `call_tool` requests including the not-found path. It is registered 
 (`claude mcp add`, per the README) and reports `✔ Connected`, which is a second client completing
 the same handshake independently.
 
-**NEXT ACTION — do this first: M9 P9.** Until 2026-08-20 this section read *"nothing on this
+**NEXT ACTION — do this first: M9 P13.** Until 2026-08-20 this section read *"nothing on this
 board is desk work any more"*, and [M9](#m9-player-tracking-per-club-shot-history--in-progress)
 is what stopped that being true. It is the one substantial item that needs **neither a bay session
 nor an `n`**: no shot on disk records which club hit it, and adding that tag is pure desk work that
@@ -63,16 +63,43 @@ to it — a club that leaves the bag is kept rather than overwritten.
 P4 also fixed a latent bug it had to: `set_current_player` replaced the whole `session.json`, which
 was correct with one cursor and would have cleared the club with two.
 
+**P9 closed the measurements track, and closed P11 with it.** `start_line_offline_yds` answers
+"how many yards right or left" in yards instead of degrees: `carry * sin(start line)`, exact
+trigonometry over two printed numbers with no physics invented. It is honest about what it is not —
+the screen prints **no offline tile**, so this is where the ball *would* have landed if it never
+curved, and the curve is a separate reading in `face_to_path_deg`. A golfer who starts it straight
+and slices reads about 0 here, which is why any prose over it must say *started* and never
+*finished*. `ANALYSIS_VERSION` went 8 → 9 and all four stored swings moved onto it with every
+`overall_score` byte-identical; the two real shots on disk read −11.6 yd and +8.4 yd, opposite
+directions, which is the sign working on real data. It also carried P11's last row — target `0.0` by
+geometry, tolerance 9.0 yards, which is `_JUDGED_DEGREES`'s 2° evaluated at a 250-yard driver, the
+widest club in the bag. **P11 is therefore done, having never run as a phase**: the strict-equality
+pin means a target row cannot lag its metric by even one commit, so P8 took two thirds of it and P9
+took the rest.
+
+**P12 opened the corpus track** (2026-08-21). `CorpusSwing` now reads `manifest.club` off the
+**survivor** of a duplicate group — the earliest arrival, so a clip re-sent after the session cursor
+moved on cannot rename the swing it duplicates — and `CareerCorpus.untagged_swings` counts what
+per-club work cannot see. That counter is a **derived property**, not the stored field the phase
+list specified: an unattributed manifest never becomes a `CorpusSwing` and so must be tallied during
+the scan, whereas an untagged one is a real swing in `swings`, and deriving it is what stops P13's
+`narrow_to` reporting the whole read's figure beside a filtered swing list. An untagged swing is
+**counted, never excluded** — the club was never an input to measuring head sway, so excluding it
+would shrink the mechanics `n` to punish a missing tag mechanics never needed.
+
+Continue at [M9 P13](docs/M9_PLAYER_TRACKING.md) — `narrow_to(club=)`, the one-line filter that makes
+every per-club statistic possible. **P10 is open and was deliberately not taken**: ball speed and
+launch angle as fitting inputs, optional and skippable, and the only measurements phase left.
+
 **P8 opened the measurements track and cashed the tag in.** `carry_distance_yds` and
 `total_distance_yds` are measured, which they could not honestly be before: a carry pooled across
 clubs is meaningless, so the club tag is what makes distance poolable at all. Both are *measured and
 judged by nothing* — no target, because how far a golfer should hit a club is not a number this repo
 has and every distribution here is cut from GolfDB, which contains no ball flight. `ANALYSIS_VERSION`
 went 7 → 8 and all four stored swings were re-analyzed onto it with every `overall_score`
-byte-identical. Continue at [M9 P9](docs/M9_PLAYER_TRACKING.md) — `start_line_offline_yds`, the
-lateral miss as an honest start-line projection. Note that P11 is now mostly done: P8 had to ship its
-two target rows, because an unregistered production metric fails
-`test_every_production_metric_has_a_tolerance` rather than going quietly silent.
+byte-identical. P8 also had to ship its two target rows, because an unregistered production metric
+fails `test_every_production_metric_has_a_tolerance` rather than going quietly silent — which is the
+rule P9 then inherited.
 
 **P6 required the club and P7 made it pickable, and the order was deliberate.** `POST /api/uploads`
 reads the session's club cursor before it streams a byte and answers 409 when nothing is selected,
@@ -995,13 +1022,18 @@ is the client handshake and conversational follow-up.
 
 **Design**: [ADR-024](docs/decisions/024-per-club-shot-history.md).
 **Phase list**: [docs/M9_PLAYER_TRACKING.md](docs/M9_PLAYER_TRACKING.md) — 20 phases, each
-independently commit-ready. **P1–P8 landed 2026-08-21; start at P9.** P1–P7 are the whole ingest
-spine: the vocabulary, the bag shape, the bag on disk, the club on `SwingManifest` and on a second
-session cursor, the writer that stamps it, the 409 that refuses an untagged upload, and the one-tap
-picker that satisfies it. A swing can no longer reach disk without a club. **P8 opened the
-measurements track** and put carry and total distance into `measurements` — the thing the tag was
-for, since a carry pooled across clubs describes nobody's shot. Both are measured and judged by
-nothing: no target exists for how far a golfer should hit a club, and none is invented.
+independently commit-ready. **P1–P9 and P11 landed 2026-08-21; start at P12** (or at P10, which is
+optional). P1–P7 are the whole ingest spine: the vocabulary, the bag shape, the bag on disk, the
+club on `SwingManifest` and on a second session cursor, the writer that stamps it, the 409 that
+refuses an untagged upload, and the one-tap picker that satisfies it. A swing can no longer reach
+disk without a club. **P8 opened the measurements track** and put carry and total distance into
+`measurements` — the thing the tag was for, since a carry pooled across clubs describes nobody's
+shot. Both are measured and judged by nothing: no target exists for how far a golfer should hit a
+club, and none is invented. **P9 closed that track** with `start_line_offline_yds`, the start line
+projected out to the carry — where the ball *started*, in yards, which is the only lateral number
+this screen can honestly produce because it prints no offline tile. It takes a target of `0.0`,
+because zero is straight by geometry rather than by a population. P11 was absorbed into P8 and P9
+rather than run: the parity pin means a target row cannot lag its metric by a commit.
 
 **The gap, in one sentence.** This repo can say how a swing compares to a tour population and how
 it compares to the golfer's own history. It cannot say how far you hit your 7 iron, because **no

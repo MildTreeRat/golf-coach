@@ -286,7 +286,22 @@ class SwingResult(BaseModel):
 #:                   swing. Same shape of bump as `3 -> 4` and `6 -> 7` — a version-7
 #:                   `analysis.json` is *missing* two quantities rather than disagreeing about any,
 #:                   and `reanalyze.py` is how it acquires them.
-ANALYSIS_VERSION = 8
+#: 8 -> 9 (2026-08-21, M9 P9): `start_line_offline_yds` joined `measurements` — the start line
+#:                   projected out to the carry, so "how many yards right" is answerable in yards
+#:                   rather than degrees. Derived from two fields a version-8 artifact already
+#:                   carries, which makes this the *cheapest* bump on this list: the quantity was
+#:                   recoverable by hand from a version-8 file and is now recorded. Nothing judges
+#:                   it against a band, so `overall_score` is byte-identical on every stored swing;
+#:                   same shape as `3 -> 4`, `6 -> 7` and `7 -> 8`.
+#: 9 -> 10 (2026-08-21, M9 P10): `ball_speed_mph` and `launch_angle_deg` joined `measurements` —
+#:                   the two launch conditions, recorded as fitting inputs and judged by nothing:
+#:                   no band, no checkpoint, no target, so `overall_score` is byte-identical on
+#:                   every stored swing. Same shape of bump as `3 -> 4`, `6 -> 7` and `7 -> 8`, and
+#:                   deliberately *not* the shape of `8 -> 9`: these are new reads off `ShotData`
+#:                   rather than arithmetic over fields a version-9 artifact already carries, so a
+#:                   version-9 file is genuinely missing them and `reanalyze.py` is how it acquires
+#:                   them.
+ANALYSIS_VERSION = 10
 
 
 class SwingBundleResult(BaseModel):

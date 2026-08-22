@@ -46,6 +46,7 @@ from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
+from golf_coach.contracts.club import ClubId
 from golf_coach.contracts.swing import Measurement
 
 #: `Measurement.source` prefixes, and the artifact each provenance dedupes on. A pose metric is
@@ -123,6 +124,20 @@ class CorpusSwing(BaseModel):
         description=(
             "The shot photo's hash — the identity launch-monitor measurements dedupe on, "
             "independently of the clip. None when no shot screen was uploaded."
+        ),
+    )
+
+    club: ClubId | None = Field(
+        default=None,
+        description=(
+            "Which club hit it, read off the **survivor's** manifest — the earliest arrival, and "
+            "so the tag stamped closest to the swing. A duplicate's club is never consulted: a "
+            "re-upload stamps the cursor as it stood when that file arrived, so consulting it "
+            "would let a clip re-sent after the cursor moved on rename the swing it duplicates. "
+            "None means the swing predates M9 P6 and nothing else, since the upload route now "
+            "refuses an untagged swing (ADR-024 §5). **An untagged swing is not excluded** — it "
+            "is a good contributor to every pose metric and to every whole-bag number, and is "
+            "absent only from per-club views. See `CareerCorpus.untagged_swings`."
         ),
     )
 
@@ -311,6 +326,25 @@ class CareerCorpus(BaseModel):
     def distinct_shots(self) -> int:
         """Distinct shot photos across the corpus — the ceiling on any launch-monitor metric."""
         return len({swing.shot_sha256 for swing in self.swings if swing.shot_sha256 is not None})
+
+    @property
+    def untagged_swings(self) -> int:
+        """Distinct swings naming no club — everything per-club work cannot see.
+
+        **Derived, where `unattributed_swings` is tallied, and the asymmetry is the whole reason.**
+        A manifest naming no golfer never becomes a `CorpusSwing` at all — it is excluded before
+        the swings are grouped — so that counter has to be counted during the scan or not at all.
+        A manifest naming no *club* is a real swing sitting in `swings`, so this reads it back off
+        them. That is what stops `storage.corpus.narrow_to` reporting the whole read's figure
+        beside a filtered swing list: there is no field for it to forget to recompute.
+
+        **Deliberately not an `ExclusionReason`** (ADR-024, Consequences). An untagged swing is a
+        perfectly good contributor to every pose metric — the club was never an input to measuring
+        head sway — so excluding it would shrink the mechanics `n` to punish a missing tag that
+        mechanics never needed. It is counted here and nowhere else, and it shares
+        `distinct_swings`' denominator so the two can be honestly printed in one sentence.
+        """
+        return sum(1 for swing in self.swings if swing.club is None)
 
     @property
     def duplicates_collapsed(self) -> int:

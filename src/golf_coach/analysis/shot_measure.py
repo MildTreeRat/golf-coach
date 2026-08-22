@@ -21,6 +21,16 @@ and its spread is mostly which clubs happened to be hit. **The club tag is what 
 poolable at all**, so distance enters the corpus with M9's `SwingManifest.club` and not with M6.5,
 which is when everything else in this module was written.
 
+## What is recorded for a model that does not exist yet
+
+**`ball_speed_mph` and `launch_angle_deg`.** Two more straight reads, added in M9 P10 as *fitting
+inputs*: launch conditions are what any future club-fitting model reads, and the bay does not print
+them twice — the screen clears for the next shot, so a launch angle nobody recorded is gone. They
+are judged by nothing and, unlike the two distances above, are not even waiting on a band: a
+"right" ball speed is a fitting *output*, and optimal launch needs the model itself. M6.5's
+measure-now-judge-later at its most literal — the measurement precedes the judgment by a milestone
+nobody has scheduled.
+
 ## What is deliberately excluded, and why
 
 **`smash_factor` and `club_head_speed`.** Every shot on disk reads a smash factor of 0.89-1.00 —
@@ -29,6 +39,14 @@ speed for 195.9 yards of carry. The OCR is faithful: `launch_monitor/screen/vali
 `ball_speed / club_head_speed == printed smash` and it passes on all three, so the simulator itself
 is printing these. Recording them as measurements would invite a later derivation step to cut a
 band from a device artifact, which is a wrong number with a provenance string attached.
+
+**Why ball speed survives that finding and club speed does not.** A smash below 1.0 says at least
+one of the two is wrong; the consistency check cannot say which, because it divides one printed
+number by another and recovers the third. The stored shots can. Two of them read 90.7 and 90.5 mph
+of ball speed for 125.6 and 121.0 yards of carry — the same ball speed, near enough the same carry
+— while their club speeds read 91.0 and 98.3, 7.3 mph apart on the one field nothing else
+corroborates. That is evidence rather than proof, and it points at the club-speed reading, so
+`ball_speed_mph` is recorded and `club_head_speed` stays out.
 
 **`spin_axis`.** Its sign is unresolved and contradicts `contracts/shot.py`, which documents
 `+ = fade`: both fades on disk carry a *negative* value. The parser warns it stored an
@@ -43,6 +61,8 @@ reads `ShotData` from `contracts` and computes from its fields.
 """
 
 from __future__ import annotations
+
+from math import radians, sin
 
 from golf_coach.contracts.intent import TargetShape
 from golf_coach.contracts.shot import ShotData
@@ -118,6 +138,72 @@ def measure_total_distance(shot: ShotData) -> float | None:
     return shot.total_distance
 
 
+def measure_start_line_offline(shot: ShotData) -> float | None:
+    """How many yards right or left the ball **started**, in yards. Positive is right of target.
+
+    `carry * sin(start line)` — exact trigonometry over two printed numbers, with no physics
+    invented and no parameter fitted.
+
+    **This is not where the ball landed.** It is where it would have landed if it never curved.
+    The HD Golf screen prints no offline tile at all — no side, no deviation, no landing
+    coordinate — so a true offline is not available to be read, and the only horizontal quantity
+    it does print is `Horizontal Angle`, the initial launch direction (`measure_start_line`
+    above). The curve is a separate reading in separate units: `measure_face_to_path`, in degrees.
+
+    The consequence is specific and has to be said out loud, because it is the way this number
+    misleads: **a golfer who starts it straight and slices 30 yards reads about 0 here**, and the
+    whole of that miss lives in `face_to_path_deg`. The two must be read together, and any prose
+    rendering this must say *started* and never *finished*.
+
+    A real ball-flight model — launch, spin and spin axis integrated to a landing point — is the
+    honest way to get true offline, and it is deferred rather than rejected. It is blocked on
+    `spin_axis`, which the exclusions above refuse for a reason that has already bitten once
+    (ADR-014's addendum: both stored shots were fades saved as draws).
+
+    If the simulator can be configured to print an offline tile, that is a one-row `profiles.json`
+    addition, and the measured value should **supersede** this derived one rather than sit beside
+    it — two numbers named for the same quantity, free to disagree, is the thing
+    `measure_total_distance` above declines to create.
+
+    Returns None if either input is missing. Reads both through the registry's own extractors so
+    there is one definition of which `ShotData` field is the carry and which is the start line.
+    """
+    carry = measure_carry_distance(shot)
+    start_line = measure_start_line(shot)
+    if carry is None or start_line is None:
+        return None
+    return carry * sin(radians(start_line))
+
+
+def measure_ball_speed(shot: ShotData) -> float | None:
+    """Ball speed off the face, in mph, exactly as the screen printed it. Judged by nothing.
+
+    A fitting input rather than a coaching number, and the module docstring above says why it is
+    recorded despite the smash-factor exclusion sitting two paragraphs from it: the printed smash
+    implicates the *pair*, and the two shots on disk isolate the fault to club speed.
+
+    Whether this reaches `measurements` is a separate question from whether it sits on `ShotData`,
+    which is the same argument `measure_carry_distance` makes — a field that stays on `ShotData`
+    reaches neither `storage.corpus` nor `analysis.baseline`.
+    """
+    return shot.ball_speed
+
+
+def measure_launch_angle(shot: ShotData) -> float | None:
+    """Vertical launch angle, in degrees, as printed. The other half of the launch-condition pair.
+
+    **Vertical**, where `measure_start_line` above is horizontal — two separate tiles on the screen
+    (`Launch Angle` and `Horizontal Angle`) and two separate rows here. The registry's `detail`
+    string repeats that, because a reader meeting `launch_angle_deg` beside `start_line_deg` has
+    nothing else to tell one plane from the other, and `analysis.baseline` averages by name and
+    unit without knowing either.
+
+    Judged by nothing for a stronger reason than the distances are: optimal launch is an *output*
+    of a fitting model that does not exist, so there is no band to be waiting on.
+    """
+    return shot.launch_angle
+
+
 def normalize_shot_shape(shot: ShotData) -> TargetShape | None:
     """Map the simulator's free-text shape ("CENTER SLIGHT FADE") onto `TargetShape`.
 
@@ -169,5 +255,30 @@ SHOT_MEASUREMENTS = {
         measure_total_distance,
         "yards",
         "carry plus roll as printed; the gap to carry is the ground, not the swing",
+    ),
+    # Derived, not read: the screen prints no offline tile, so this is the start line projected
+    # out to the carry. The detail string says *started* on purpose — it is the one line about
+    # this metric a reader is guaranteed to see, and "finished" is the misreading the function's
+    # docstring exists to prevent.
+    "start_line_offline_yds": (
+        measure_start_line_offline,
+        "yards",
+        "yards right (+) or left of target the ball started, projected to the carry; not where it "
+        "finished - the curve is face_to_path_deg",
+    ),
+    # The two launch conditions [M9 P10]. Recorded for a model that does not exist yet and scored
+    # by nothing — see the module docstring for why ball speed survives the smash-factor exclusion
+    # that keeps club speed out. The whole-bag note above applies to these exactly as it does to
+    # the distances: a mean ball speed over a driver and a wedge describes nobody's shot either.
+    "ball_speed_mph": (
+        measure_ball_speed,
+        "mph",
+        "ball speed off the face as printed by the launch monitor; a fitting input, judged by "
+        "nothing",
+    ),
+    "launch_angle_deg": (
+        measure_launch_angle,
+        "degrees",
+        "vertical launch angle as printed; start_line_deg is the horizontal one",
     ),
 }

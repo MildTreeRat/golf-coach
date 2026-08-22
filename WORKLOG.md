@@ -5,6 +5,174 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-08-21 — M9 P12: the club crosses into the corpus, and a counter that cannot go stale
+
+**Duration**: ~1 session. One field, one derived property, one CLI block, six tests. **No
+`ANALYSIS_VERSION` bump** — nothing here is stored in an artifact. Suite 919 → 925.
+
+**What prompted it**: "Can we work on the next stage of M9?" — P12, which is what ROADMAP's NEXT
+ACTION said. Scope was held to P12 alone at the user's instruction; **P13 was explicitly not taken**,
+and it is the next thing.
+
+**The phase is one line of code and two arguments about shape.** `_corpus_swing` now passes
+`club=manifest.club` into the `CorpusSwing(...)` constructor. Everything else is deciding *which*
+manifest and *what* to count.
+
+**Which manifest: the survivor's, and nothing borrows from a duplicate.** A duplicate group is one
+clip uploaded more than once, and every upload stamps the session cursor as it stood when *that* file
+arrived — so a clip re-sent after the golfer moved on to a wedge carries a wedge. The survivor is the
+earliest arrival, closest to the capture, so its tag wins. That also keeps P5's instruction that the
+club appears at every site `player_id` does and at no others, since `player_id` is read off the
+survivor with no fallback. **No `conflicting_clubs`**, deliberately, and the comment sits right above
+`_conflicting_shots` so the asymmetry is readable: a second shot photo names a *repair*, because
+whichever of the two is misattached is attached to some swing being scored on it, whereas a
+duplicate's club is attached to a directory that contributes nothing. And an untagged survivor does
+**not** borrow a tagged duplicate's club — that infers what hit the swing from what the cursor said
+when someone re-sent the clip, which is exactly the guess `parse_club` refuses at the boundary.
+
+**What to count: `untagged_swings` shipped as a derived property, where the phase box said `int`.**
+The box's reasoning — "counted for the same reason `unattributed_swings` is" — carries over; its
+*shape* does not, and noticing that was most of the phase. An unattributed manifest never becomes a
+`CorpusSwing` at all, because it is excluded before the swings are grouped, so that counter has to be
+tallied during the scan or not at all. An untagged manifest is a real swing sitting in `swings`. So
+this one is read back off them, and the payoff is specific: **P13 has no field to forget.** A stored
+version would be a fifth entry in `narrow_to`'s hand-listed `model_copy(update=...)`, and a narrowed
+corpus reporting the whole read's untagged figure beside a filtered swing list is precisely the
+printed-`n`-describes-a-different-set failure that function exists to prevent. It also shares
+`distinct_swings`' denominator, which is what lets "2 of 2 swings name no club" be one honest
+sentence rather than two numbers from different populations.
+
+**`scripts/career_corpus.py` gained a block, and that is why the file list grew past the box.** A
+counter nothing prints is a counter nobody notices is wrong. It is also where the design note reaches
+a human: the block says these swings *still count toward every metric above it* and are absent only
+from per-club views, which is the ADR-024 rule stated where someone reading a refusal will meet it.
+
+**Six tests, and both pins were watched fail rather than assumed.** Breaking the read in-process
+(`swing.club = duplicates[-1].club`) failed the two survivor directions on **different assertions** —
+`SAND_WEDGE is not SEVEN_IRON` on one, `SAND_WEDGE is not None` on the other — which is P4's lesson
+arriving again and the reason both directions are written out separately instead of folded into one
+test. The design-note pin was broken the same way: excluding untagged swings in-process turned
+`{"head_sway_norm": 2}` into `{"head_sway_norm": 1}`, the silently-shrunk mechanics `n` the note
+warns about, as a visible failure. The untagged test also asserts
+`build_baseline(corpus).metrics[...].n == 2`, not just the count — a count that included the untagged
+swing while the pooling did not would be the `artifact_key` disagreement arriving by a new route.
+
+**Driven on the real data, and the acceptance criterion is that nothing moved.**
+`scripts/career_corpus.py --player-id aaron` prints **2 distinct swing(s) naming no club (of 2)** —
+every swing on disk predates the tag, which is the expected state — and every other line is
+byte-identical to the run before the change. `Honest n per metric` unmoved, `Contributing no sample`
+unmoved, no new exclusion reason. A metric count that had shifted was the bug this phase was most
+likely to produce.
+
+**Two things found in the working tree that are not P12's, flagged rather than absorbed.**
+
+- **P10 is implemented and undocumented.** `ball_speed_mph` and `launch_angle_deg` are in
+  `SHOT_MEASUREMENTS`, both have `METRIC_TARGETS` rows, and `ANALYSIS_VERSION` is **10** — but
+  `docs/M9_PLAYER_TRACKING.md` still shows P10 unchecked, ROADMAP still calls it "open and
+  deliberately not taken", and there is no worklog entry. **The four stored swings are still at
+  version 9**, so every one of them currently reads `outdated` and `Honest n per metric` prints
+  *(none)*. `scripts/reanalyze.py` is the unblock, and P10's box and status lines still need writing.
+  Left alone here because it is not this phase.
+- **One pre-existing `ruff` failure was fixed**: `contracts/dispersion.py:246` was 101 characters, in
+  P10's uncommitted comment. Reflowed only — no wording changed — because the lint gate had to be
+  clean for this phase's own verification to mean anything.
+
+**Full suite green**: 925 passed, `ruff check src tests scripts` clean, `mypy src` clean across 92
+files.
+
+---
+
+## 2026-08-21 — M9 P9: the lateral miss, in yards, and the sentence that keeps it honest
+
+**Duration**: ~1 session. One measurement, one target row, one version bump, five tests.
+`ANALYSIS_VERSION` 8 → 9, all four stored swings re-analyzed onto it. Suite 910 → 915.
+
+**What prompted it**: "Can we do the next step in M9?" — P9, which is what ROADMAP's NEXT ACTION
+said. Scope was held to P9 alone at the user's instruction; **P10 was explicitly not taken**, and it
+is now the only measurements phase left.
+
+**The phase's real content is a docstring, and it is about what the number is not.**
+`start_line_offline_yds` is `carry * sin(start_line_deg)` — three lines of arithmetic over two
+printed numbers, no physics invented, no parameter fitted. What needed writing down is that this is
+**where the ball would have landed if it never curved**, which is not where it landed. The HD Golf
+screen prints no offline tile at all, so a true offline is not available to be read; the only
+horizontal quantity it prints is `Horizontal Angle`. The consequence is specific and is in the
+docstring because it is the way this number misleads: **a golfer who starts it straight and slices
+30 yards reads about 0 here**, and the whole of that miss lives in `face_to_path_deg`. Any prose
+over this must say *started* and never *finished* — so the registry's `detail` string says it too,
+since that is the one line about the metric a reader is guaranteed to see.
+
+**It reads its inputs through the other extractors, not off `ShotData`.** `measure_carry_distance`
+and `measure_start_line` already exist and already define which field is which; going to
+`shot.carry_distance` directly would have been a second definition free to drift from the first.
+Three lines either way, and the version that reuses is the one where renaming a `ShotData` field
+breaks in one place.
+
+**The pin that had to fail first did — and the fixture that P8 had to feed did not need feeding.**
+`test_every_production_metric_has_a_tolerance` went red on the bare registry row, exactly as P8's box
+predicted for any new metric. But `test_registry_entries_are_well_formed` stayed green untouched: its
+one shot already carries `launch_direction=4.0` and `carry_distance=125.6`, because both inputs are
+already registered metrics. **A metric derived from two existing ones inherits its fixture**, which
+is worth knowing for P10 — those two fields are measured by nothing today, so P10 will have to feed
+it the way P8 did.
+
+**P11 is done, and it never ran as a phase.** Its last row was `start_line_offline_yds`'s target, and
+the strict-equality pin means a target row cannot lag its metric by even one commit — so P8 took two
+thirds of it and P9 took the rest. This is not scope creep into a second phase; it is the same
+constraint P8 documented, arriving on schedule. P11's box is marked done and now records the
+argument rather than the work.
+
+**The tolerance is 9.0 yards and it is a conversion, not a fresh judgment.** `_JUDGED_DEGREES`
+already claims 2° about the start line; the offline metric is that angle multiplied by a carry, so
+its error is that claim carried through the same multiplication. The one free parameter is *which
+carry*, and the widest club in the bag decides it, because one constant has to hold for every club
+that shares it: `250 * sin(2 deg)` = 8.7, rounded up to 9. The 250 is written into the provenance
+string rather than left implicit — it is the one number a bay session can replace with a measured
+driver carry. **The wedge end is judged wide on purpose**: at a 125-yard carry, 2° is 4.4 yards, so
+that club gets roughly twice the tolerance its own geometry asks for. That is the documented safe
+direction (erring wide costs claims; erring narrow buys confident claims about the simulator's own
+noise) but it is a deferral, and `_JUDGED_OFFLINE` says so beside `_JUDGED_YARDS`, which defers the
+same thing for the two distances. Both should be revised in one pass.
+
+**It gets a target where the distances did not, and the line between them is the whole point.**
+Zero is straight **by geometry** — a ball that starts on the target line is offline by nothing,
+whoever is swinging, whatever club — which is the same argument `start_line_deg` and
+`face_to_path_deg` already make. That is not a claim about a population, which is the only kind of
+target this repo declines to invent (ADR-010 §2). How far you *should* hit a 7 iron is such a claim;
+which way you should start it is not.
+
+**`ANALYSIS_VERSION` 8 → 9, the cheapest bump on that list.** Same shape as `3 -> 4`, `6 -> 7` and
+`7 -> 8` — one new `measurements` entry, nothing judged, no score moved. What makes it cheaper than
+P8's: the quantity is derived from two fields a version-8 artifact **already carries**, so a
+version-8 file was never missing the information, only the arithmetic. As last time, nothing went
+red to say the bump was owed — every test derives the number from the constant, which is right, and
+means the rule has to be remembered rather than caught.
+
+**Tests: 5 added, suite 910 → 915.** The arithmetic on a hand-checkable case (150 yd at 2° → 5.23,
+and 2° is not incidental — it is what the tolerance beside it claims, so the case also says what
+that tolerance is worth in yards at a mid-iron). The sign pin is written to compare the two metrics
+**to each other** over four angles rather than each to a constant, because two readings of one
+quantity in two units is exactly where a dropped minus sign produces a coherent-looking artifact
+that says the golfer misses the other way. Zero is pinned beside the `None` cases deliberately:
+`0.0` and `None` are the same falsy value to a careless reader and here they mean *dead straight*
+and *unknown*. And a unit pin asserting offline is `yards` **while `start_line_deg` is still
+`degrees`** — if both were degrees, `analysis.baseline` would average them together, since it keys
+on name and unit and has no idea one is a projection of the other.
+
+**Driven end to end.** `scripts/reanalyze.py` moved all four stored swings `version 8 -> 9 |
+measurements 18 -> 19`, with **every `overall_score` byte-identical** to P8's figures —
+97.45951982132875 on three, 96.88296555239968 on the fourth. The two real shots on disk miss in
+**opposite directions**: −5.3° at 125.6 yd → −11.6017 yd, +4.0° at 121.0 yd → +8.4405 yd. That is
+the sign working on real data in both directions, which no unit test can buy.
+`scripts/career_dispersion.py` then printed the row beside `start_line_deg` — `target 0.000 +/-
+9.000`, `n = 2 over 2 sessions`, both claims withheld against the 5- and 10-sample floors. Refusing
+is the correct output at n=2 and is what M9's own verification criterion asks to see.
+
+**Full suite green**: 915 passed, `ruff check src tests scripts` clean, `mypy src` clean across 92
+files.
+
+---
+
 ## 2026-08-21 — M9 P8: distance becomes measurable, and the pin that said the phase was bigger
 
 **Duration**: ~1 session. Two measurements, two target rows, one version bump, five tests.

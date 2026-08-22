@@ -208,6 +208,20 @@ def _corpus_swing(
     swing_dir = sessions_dir / manifest.session_id / manifest.swing_id
     shot_file = manifest.roles.get(Role.SHOT_SCREEN)
 
+    # The club is read off *this* manifest — the survivor's — and no duplicate's is consulted, which
+    # is the one place it parts company with `_conflicting_shots` below. A second shot photo names a
+    # repair: whichever of the two is misattached is attached to some swing that is being scored on
+    # it. A duplicate's club is attached to a directory that contributes nothing, and it disagrees
+    # for a mundane reason — each upload stamps the cursor as it stood when *that* file arrived, so
+    # a re-upload after the cursor moved on is a stale reading of the same swing, not a competing
+    # one. A `conflicting_clubs` counterpart would therefore be a field with no reader (R11). By the
+    # same argument an untagged survivor does not borrow a tagged duplicate's club: that infers what
+    # hit the swing from what the cursor said when someone re-sent the clip, which is the guess
+    # `parse_club` already refuses at the boundary (R7). Repair is per swing, via
+    # `POST /api/sessions/{session_id}/swings/{swing_id}/club`, and that is the only route.
+    #
+    # It belongs in this constructor rather than below it: the NOT_ANALYZED branch returns early, so
+    # a field assigned after that point would be silently absent on every unanalyzed swing.
     swing = CorpusSwing(
         player_id=manifest.player_id or "",
         session_id=manifest.session_id,
@@ -215,6 +229,7 @@ def _corpus_swing(
         captured_at=manifest.created_at,
         face_on_sha256=face_on_sha256,
         shot_sha256=shot_file.content_sha256 if shot_file else None,
+        club=manifest.club,
         duplicates=duplicates,
         missing_roles=[role.value for role in manifest.missing_roles()],
     )

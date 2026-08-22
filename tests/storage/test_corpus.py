@@ -17,6 +17,7 @@ from golf_coach.analysis.baseline import build_baseline
 from golf_coach.analysis.comparison import build_standing
 from golf_coach.analysis.dispersion import build_dispersion
 from golf_coach.contracts.career import ExclusionReason
+from golf_coach.contracts.club import ClubId
 from golf_coach.contracts.swing import ANALYSIS_VERSION
 from golf_coach.storage.corpus import narrow_to, read_corpus
 
@@ -205,6 +206,131 @@ def test_a_swing_with_no_face_on_clip_can_never_carry_a_pose_measurement(
 
     assert corpus.distinct_swings == 0
     assert corpus.excluded[0].reason is ExclusionReason.NO_FACE_ON
+
+
+# ----------------------------------------------------------------------------- the club
+
+
+def test_a_tagged_manifest_carries_its_club_into_the_corpus(
+    corpus_dir, swing, pose_analysis
+) -> None:
+    """The read itself. [M9 P12]"""
+    swing(corpus_dir, "2026-08-10", "1", face_on="clip-a", club=ClubId.SEVEN_IRON,
+          analysis=pose_analysis)
+
+    corpus = read_corpus(corpus_dir, "aaron")
+
+    assert corpus.swings[0].club is ClubId.SEVEN_IRON
+    assert corpus.untagged_swings == 0
+
+
+def test_a_manifest_written_before_the_club_existed_reads_as_none(
+    corpus_dir, swing, pose_analysis
+) -> None:
+    """Every swing on disk today looks like this, and not one of them is a fault to report.
+
+    `None` is the pre-M9 state and the only thing it means, because the upload route has refused an
+    untagged swing since P6. It is counted so a per-club refusal can say how much history it cannot
+    see, and never itemised in `excluded`, which is reserved for swings contributing no sample.
+    """
+    swing(corpus_dir, "2026-08-10", "1", face_on="clip-a", analysis=pose_analysis)
+
+    corpus = read_corpus(corpus_dir, "aaron")
+
+    assert corpus.swings[0].club is None
+    assert corpus.untagged_swings == 1
+    assert corpus.excluded == []
+
+
+def test_an_untagged_swing_still_contributes_to_every_metric_count(
+    corpus_dir, swing, analysis, metric
+) -> None:
+    """The design note as an assertion. [ADR-024, Consequences]
+
+    Excluding an untagged swing would shrink the mechanics `n` to punish a missing tag mechanics
+    never needed — the club is not an input to measuring head sway. So the tagged swing and the
+    untagged one pool into a single count of 2, and `build_baseline` must average both values
+    behind it: a count that included the untagged swing while the pooling did not would be the
+    printed-`n`-disagrees-with-the-values failure `artifact_key` exists to prevent, arriving by a
+    new route.
+    """
+    swing(corpus_dir, "2026-08-07", "1", face_on="clip-a", club=ClubId.SEVEN_IRON,
+          created_at=_at(7), analysis=analysis([metric("head_sway_norm", 0.22)]))
+    swing(corpus_dir, "2026-08-08", "1", face_on="clip-b", created_at=_at(8),
+          analysis=analysis([metric("head_sway_norm", 0.26)]))
+
+    corpus = read_corpus(corpus_dir, "aaron")
+
+    assert corpus.metric_counts == {"head_sway_norm": 2}
+    assert corpus.untagged_swings == 1
+    assert corpus.excluded == []
+    assert build_baseline(corpus).metrics["head_sway_norm"].n == 2
+
+
+def test_the_survivor_names_the_club_not_the_re_upload_whose_cursor_moved_on(
+    corpus_dir, swing, pose_analysis
+) -> None:
+    """One clip, two directories, two clubs — and the earliest arrival is the one that was there.
+
+    Every upload stamps the session cursor as it stood when *that* file arrived, so a clip re-sent
+    after the golfer moved on to a wedge carries a wedge. It is the same swing, so the later tag is
+    a stale reading rather than a competing one, and taking it would rename a shot already recorded
+    correctly. Deliberately not surfaced as a conflict the way a second *shot photo* is: that names
+    a repair on a swing being scored, this names a directory that contributes nothing.
+    """
+    swing(corpus_dir, "2026-08-07", "1", face_on="clip-a", club=ClubId.SEVEN_IRON,
+          created_at=_at(7), analysis=pose_analysis)
+    swing(corpus_dir, "2026-08-10", "1", face_on="clip-a", club=ClubId.SAND_WEDGE,
+          created_at=_at(10), analysis=pose_analysis)
+
+    kept = read_corpus(corpus_dir, "aaron").swings[0]
+
+    assert kept.ref == "2026-08-07/1"
+    assert kept.club is ClubId.SEVEN_IRON
+    assert kept.duplicates == ["2026-08-10/1"]
+
+
+def test_an_untagged_survivor_does_not_borrow_a_re_uploads_club(
+    corpus_dir, swing, pose_analysis
+) -> None:
+    """The other direction, written out because a different assertion catches it. [P4's lesson]
+
+    A pre-M9 clip re-sent today arrives with whatever club is selected now, which is evidence about
+    the cursor and not about the swing. Filling the survivor's `None` from it would be exactly the
+    guess `parse_club` refuses at the boundary (R7); the repair route is per swing and human.
+    """
+    swing(corpus_dir, "2026-08-07", "1", face_on="clip-a", created_at=_at(7),
+          analysis=pose_analysis)
+    swing(corpus_dir, "2026-08-10", "1", face_on="clip-a", club=ClubId.SAND_WEDGE,
+          created_at=_at(10), analysis=pose_analysis)
+
+    corpus = read_corpus(corpus_dir, "aaron")
+
+    assert corpus.swings[0].club is None
+    assert corpus.untagged_swings == 1
+
+
+def test_untagged_swings_counts_distinct_swings_not_directories(
+    corpus_dir, swing, pose_analysis
+) -> None:
+    """The property's shape, and where it parts company with `unattributed_swings`.
+
+    That counter is tallied over manifests during the scan, because an unattributed one never
+    becomes a `CorpusSwing` at all. This one is derived from `swings`, so two untagged directories
+    holding one untagged swing count 1 — the same collapse `distinct_swings` performs, which is
+    what lets the two be printed as "1 of 2" without the sentence being a lie.
+    """
+    swing(corpus_dir, "2026-08-07", "1", face_on="clip-a", club=ClubId.SEVEN_IRON,
+          created_at=_at(7), analysis=pose_analysis)
+    for session_id, day in (("2026-08-08", 8), ("2026-08-09", 9)):
+        swing(corpus_dir, session_id, "1", face_on="clip-b", created_at=_at(day),
+              analysis=pose_analysis)
+
+    corpus = read_corpus(corpus_dir, "aaron")
+
+    assert corpus.swing_dirs_seen == 3
+    assert corpus.distinct_swings == 2
+    assert corpus.untagged_swings == 1
 
 
 # --------------------------------------------------------------------- trust and staleness

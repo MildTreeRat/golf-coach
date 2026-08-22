@@ -21,6 +21,7 @@ from typing import Any
 import pytest
 
 from golf_coach.api.state import AnalysisState, input_hashes, save_state
+from golf_coach.contracts.club import ClubId
 from golf_coach.contracts.swing import ANALYSIS_VERSION
 from golf_coach.storage.manifest import (
     Role,
@@ -101,6 +102,7 @@ def write_swing(
     swing_id: str,
     *,
     player_id: str | None = "aaron",
+    club: ClubId | None = None,
     face_on: str | None = "face-on-hash",
     shot_screen: str | None = "shot-hash",
     down_the_line: str | None = "dtl-hash",
@@ -108,7 +110,12 @@ def write_swing(
     analysis: dict[str, Any] | None = None,
     stale: bool = False,
 ) -> Path:
-    """One swing directory. A `None` hash means that role never arrived."""
+    """One swing directory. A `None` hash means that role never arrived.
+
+    `club` defaults to `None` because that is what every manifest written before M9 P4 actually
+    says, and it is what every swing currently on disk says — so a test that does not mention the
+    club is testing the state the reader will mostly meet, not an artificial one.
+    """
     swing_dir = sessions_dir / session_id / swing_id
     swing_dir.mkdir(parents=True, exist_ok=True)
 
@@ -123,6 +130,7 @@ def write_swing(
         created_at=created_at,
         updated_at=created_at,
         player_id=player_id,
+        club=club,
         roles={
             role: RoleFile(
                 role=role,
