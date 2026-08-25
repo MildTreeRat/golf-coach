@@ -47,6 +47,11 @@ from golf_coach.contracts.conversation import Transcript
 # symptom would be a golfer reading "an error occurred" where the other path says which one.
 from golf_coach.feedback.coach import _note_for, _sdk, _text_from
 
+#: The vocabulary this module puts in front of a shared failure sentence. `_note_for` defaults to
+#: coaching's wording, which is right for the results page and wrong under a question — every
+#: other note here already says "no answer", and an SDK error used to be the one that did not.
+_NOTE_PREFIX = "no answer: "
+
 #: Room for adaptive thinking, several tool calls and an answer. On Opus 5 `max_tokens` bounds
 #: thinking *and* response text together, so this is not "how long may the answer be" — sizing it
 #: to the prose would cut answers off mid-sentence after a couple of tool calls.
@@ -189,18 +194,20 @@ def ask(
     """
     sdk = _sdk()
     if client is None:
-        if not api_key:
-            return AskOutcome(
-                note=(
-                    "no answer: no Anthropic API key is configured, so the question was not sent "
-                    "(set GOLF_ANTHROPIC_API_KEY). The stored analysis is unaffected."
-                )
-            )
+        # Extra before key, for the reason spelled out in `coach.py`'s matching guard: only one of
+        # the two can be reported, and a missing package is the one that makes the other moot.
         if sdk is None:
             return AskOutcome(
                 note=(
                     "no answer: the `llm` extra is not installed (pip install -e '.[llm]'). "
                     "The stored analysis is unaffected."
+                )
+            )
+        if not api_key:
+            return AskOutcome(
+                note=(
+                    "no answer: no Anthropic API key is configured, so the question was not sent "
+                    "(set GOLF_ANTHROPIC_API_KEY). The stored analysis is unaffected."
                 )
             )
         client = sdk.Anthropic(api_key=api_key)
@@ -238,7 +245,7 @@ def ask(
         )
         last, tools_called = _mirror(runner, messages)
     except Exception as exc:  # narrowed in `_note_for`; the SDK may be absent entirely
-        return AskOutcome(note=_note_for(exc, sdk))
+        return AskOutcome(note=_note_for(exc, sdk, prefix=_NOTE_PREFIX))
 
     if last is None:
         return AskOutcome(note="no answer: the model returned nothing for this question.")

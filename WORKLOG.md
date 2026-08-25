@@ -5,6 +5,178 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-08-22 — The tempo trainer grows a career scope, and the metronome moves out of the page
+
+**Duration**: ~1 session. Two source modules, three static files (one new), one ADR addendum, one
+ledger row. **No `ANALYSIS_VERSION` bump** — nothing new is measured and nothing new is written to
+an artifact; `CareerTempo` is derived at read time from measurements that have been on disk since
+ADR-023 shipped.
+
+**What prompted it**: two questions. *"Does a long video cost more than a short one?"* and *"where
+is the tempo feature — can I see my own tempo from the career page?"*
+
+**The first answer is yes, and it is linear.** `api/pipeline.py::keypoints_for` streams the whole
+clip through `estimate_pose` **before** `phases.select_swing` picks a window, so the swing selector
+saves nothing on the only expensive stage — it decides which frames get *scored*, not which get
+posed. `docs/M7_TWO_PHONE_SPIKE.md` has the measured rate: ~9.5 fps end-to-end at 4K60, so roughly
+6.3 s of compute per second of clip, per view. Nothing was changed on the strength of it (the same
+call that doc's Q2 already made), but it is now written where someone asking will find it:
+trimming on the phone before upload is the only real lever.
+
+**The second was the actual work.** The trainer existed only on `results.html`, gated on the tempo
+checkpoint having *failed* on the swing being viewed — so a golfer whose tempo passed never saw a
+metronome, and there was no surface anywhere answering "what is *my* tempo", which is the question
+every simulator user has and the one with a different answer per person. `backswing_ms` and
+`downswing_ms` had been measured per swing since ADR-023 and were read by nothing but the anchor of
+the swing they came from.
+
+**The shape, and the one decision that made it shippable today.** `CareerTempo` layers by what each
+layer is allowed to assert: the per-swing readings are **measurements** and print at any `n`; the
+typical values are `PersonalBaseline`'s guarded means and stay `None` until `CENTER` lifts; the plan
+is a target. Without that split there was nothing to ship — `tempo_ratio` needs 8 samples for a
+center claim and the corpus holds **2 distinct swings** (2.417:1 and 2.348:1; the other two
+`analysis.json` files on disk are re-uploads of one clip and collapse). A view that could only show
+a mean would have shown a blank page while the two numbers wanted were sitting in the artifacts.
+Printing the readings is not the guard being bent — the guard governs what may be asserted *about
+the golfer*, and one swing's durations assert one swing. `SessionSample` already draws that line.
+
+**`TempoAnchor` has three values because a career view has three answers.** `TempoPlan.anchored` is
+a bool and right for one swing. Career mode needs `CAREER_MEAN` → `LATEST_SWING` → `TOUR_MEDIAN`,
+and the middle rung is the whole point: a golfer whose mean is withheld still has a measured
+backswing, and one measured swing beats a population median for someone the population does not
+describe. **The reported anchor is read back off the built plan, never decided beside it** —
+`_anchor_backswing` can reject a backswing outside the tour p10–p90, and a view branching on its own
+copy of that rule would print "matched to your own backswing" over a drill built on the median.
+Aaron's live payload comes back `latest_swing`, pace 1.0006, anchored to 901.2 ms.
+
+**`build_tempo_plan` split rather than being copied.** `build_tempo_plan_for(observed_backswing_ms=,
+observed_downswing_ms=)` is the shared half; the phases version is now four lines on top of it.
+Keyword-only on purpose — two floats in a fixed order is a numeric boolean trap, and
+`build_tempo_plan_for(384, 901)` would have built a target with the halves swapped and looked fine.
+
+**The metronome moved to `api/static/tempo.js`.** A second Web Audio scheduler is a second thing
+that drifts, and one of the things that would have drifted is the pace slider's bounds, which
+`tests/analysis/test_tempo_trainer.py` reads out of the file to pin against the anchor guard's own
+range. The ledger's 2026-08-13 row declines a *node toolchain* for these pages, not a second file,
+and `StaticFiles` already serves the directory whole — so a plain `<script src>` is inside that
+decision rather than around it. **Framing prose stayed per-page**: the anchor sentence has two cases
+on the results page and three on the career page, and one shared sentence would have been wrong on
+one of them.
+
+**Surprises worth carrying forward:**
+
+- **The career page already had `tempo_ratio`, `backswing_ms` and `downswing_ms` cards** and had had
+  them since career mode step 6. They read "no typical value yet" and always would at n=2, so the
+  feature looked missing while being present — a refusal with no evidence beside it is
+  indistinguishable from an absent feature. The new section is above the cards partly for that.
+- **The `#tempo` fragment did nothing on arrival.** `career.html` renders from a fetch, so the
+  browser resolved the fragment against an empty page. Scrolled explicitly after render.
+- **The two withheld sentences differ only by a number** (8 vs 5), because `WithheldClaim` carries
+  no metric name — it never needed one on a card already titled with the metric. Sorted
+  strictest-first in `_center_refusals` so the one gating the headline reads first. If a third
+  metric ever joins, that field is worth adding rather than sorting around.
+- **Between the two floors** (n=5–7) the halves' means are sayable while the ratio's is not, so the
+  typical tile prints "withheld" with the halves under it. Withholding a number the guard has
+  already released would be its own kind of false.
+
+**Verified**: full suite green, 996 → **1008** (+12: 9 in `test_tempo_trainer.py`, 3 in
+`test_career_route.py`). The two `test_docs_truth.py` addendum counters went red on the new ADR
+addendum before `docs/README.md`'s total and ADR-023's own row were corrected — which is the pin
+doing its job, and worth recording as the second time this session's prose was caught by a test
+rather than by a reader. `ruff check src
+tests scripts` and `mypy src` clean. No browser was available, so both pages' trainers were exercised
+through a DOM stub under `node` — mode toggle, pace pre-set, strip roles, facts and anchor prose all
+read back correct on `results.html` as well as `career.html`, and the live route was hit against the
+real corpus through `TestClient`.
+
+**Left for next time**: the diagnosis sentence. The page now *shows* the two halves beside the ratio,
+which is what makes "your backswing is fine, the downswing is slow" visible — ADR-023 records the
+case exactly, 901/384 is a tour-median backswing with a downswing 28% past p90 — but saying it in the
+product's own voice needs a rule about when it is safe to say, and that rule needs more than two
+swings. Still deferred, and now deferred with the evidence rendered.
+
+---
+
+## 2026-08-22 — M9 P20: the docs catch up, and the pins that stop them falling behind again
+
+**Duration**: ~1 session. Ten files, three new tests, no source behaviour changed. Suite 993 →
+**996** (+3, all in `tests/test_docs_truth.py`). **No `ANALYSIS_VERSION` bump** — nothing measured,
+nothing written to an artifact, same as P12–P19. **M9 is closed at 20/20.**
+
+**What prompted it**: "can we work on p20 to wrap up the M9 milestone?" — with the verification
+asked for first. P1–P19 check out: 993 passed, `ruff check src tests scripts` clean, `mypy src`
+clean across 95 files, all seven M9 routes live in `api/app.py`, both club tools registered,
+`SHOT_MEASUREMENTS` grown 2 → 7 and `TOOL_DESCRIPTIONS` 8 → 10.
+
+**The phase said to run `tests/test_docs_truth.py` first and work only from its failures. It had
+none, and that was the finding.** The suite was *fully green* while `ARCHITECTURE.md` §4 described a
+repo that stopped existing at P4. Fifteen consecutive phases wrote a note in
+`docs/M9_PLAYER_TRACKING.md` saying so — "still stale for P20, `tests/test_docs_truth.py` pins none
+of it, so nothing goes red" — and every one of them was right. Running the doc-truth suite first is
+only a *method* where the suite covers the surface being changed; where it does not, it is a green
+light with nothing behind it. So P20 did the prose by hand **and** extended the cover, which is the
+half that outlives the phase.
+
+**Three pins, each watched fail before being trusted** (the P3–P19 habit):
+
+1. **The MCP tool count**, derived from `TOOL_DESCRIPTIONS` and spelled with `caveats._count_word`.
+   Reinstating "eight tools" in `scripts/ask_swing.py` fails it by name. Pinned on one phrase shape —
+   *"the same N tools"* — and deliberately **not** on every `N tools` in the repo, because a subset
+   count is a legitimate sentence: `mcp/club.py` really does hold two. `WORKLOG.md` is exempt, since
+   a dated record of what a handshake advertised in August is not a claim about today.
+2. **Every route in `api/app.py` appears in a route table.** There was no route table anywhere in
+   the repo, which is exactly how seven endpoints landed in silence. Removing one row fails it with
+   the path named. It parses the decorators out of the **source text** rather than importing
+   `app.py`, because this suite runs on a base install with no `fastapi` — the constraint
+   `tests/api/test_pipeline_imports.py` exists to hold.
+3. **The phase doc's status line and the map's row agree on the count.** Both drifted independently
+   this milestone: the map said "start at P8" while 19 phases were in. Setting the status line back
+   to 19/20 fails it. Pinned to each other rather than to a literal, so the next milestone to close
+   this way needs no edit here.
+
+**What the prose actually had wrong**, beyond the tool count in six places: §4 called `session.json`
+the "golfer cursor" when it has held two cursors since P4, and its manifest row named only
+`player_id` when `club` has been stamped beside it since P5. §1 listed every CLI but
+`club_profile.py`, and called `api/static/` "the two static pages" when there are three. §2's
+diagram left the bag store off `storage/` and the club tools off `mcp/`. §3 described the pose
+measurements and the tempo durations and said nothing at all about the launch-monitor half, which
+M9 grew from two entries to seven.
+
+**Two things were deliberately not written.** The seven `SHOT_MEASUREMENTS` names are *not* listed
+in §3 — the registry is named and the rule is stated, which is CLAUDE.md's derive-don't-copy rule
+and what §3 already does correctly for the placements. And `ROADMAP.md`'s two dated MCP-handshake
+records **lost their digit rather than gaining a new one**: what was advertised on 2026-08-14 was
+true on 2026-08-14, and this repo's own precedent for a count that moves is to delete the number and
+keep the point (`test_volatile_counts_stay_out_of_prose`).
+
+**Two status flips, each with a test watching the pair.** `docs/M9_PLAYER_TRACKING.md` went TARGET →
+**REFERENCE**: nothing in it is a plan any more, but it is dense with per-phase snapshot numbers,
+which is the map's own definition of that tier — and `test_the_map_agrees_with_each_doc_about_its_tier`
+fails unless `docs/README.md` moves in the same commit. **ADR-024 flipped to Accepted with no
+addendum**: none of its four decisions was corrected by building them, and inventing one would have
+broken the map's addendum count for no reader's benefit.
+
+**The NEXT ACTION moved off the board's last piece of desk work.** ROADMAP's banner now reads *one
+bay session* — M7 Phase 0's field spike, M3's remaining OCR work and M2's lighting test all want the
+screen in front of you, and career mode plus every per-club answer are built, correct and refusing at
+`n = 2`. The banner carries the one preflight step M9 added: **set the club cursor before the first
+swing**, because a session hit without club tags produces data that can never be split by club
+afterwards.
+
+**One self-inflicted scare worth recording.** Verifying the pins meant breaking each doc on purpose;
+reverting with `git checkout -- <file>` reverts to **HEAD**, not to the working state, so it
+discarded the session's own uncommitted edits to three files including `ARCHITECTURE.md`. Recovered
+by re-running the edit scripts. The lesson is cheap and general: while a change is uncommitted,
+`git checkout --` is a delete, not an undo — break a *copy*, or revert the breakage with the inverse
+edit.
+
+**Left deliberately unfixed, and neither was caused by M9**: root `README.md` says "ADRs 000–016"
+and "16 of them" where 25 exist, and "Nine packages" where there are ten; `docs/FLOW.md`'s milestone
+graph has no M9 node. All three are real, all three are out of this phase's scope, and none is
+pinned — so they are recorded here rather than left to be rediscovered.
+
+---
+
 ## 2026-08-22 — the per-swing club control: M9's blocker, which was never a phase
 
 **Duration**: ~1 session. One static file, four prose blocks across three files, no new tests. Suite **993 → 993**, and

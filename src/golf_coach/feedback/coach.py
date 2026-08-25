@@ -350,19 +350,23 @@ def generate_coaching(
 
     sdk = _sdk()
     if client is None:
+        # The extra is checked before the key, because it is the more fundamental blocker and
+        # only one of the two can be reported. With no `anthropic` package there is nothing to
+        # authenticate against, so answering that install with "no API key is configured" sends
+        # the reader to `.env` — where they find a perfectly good key — instead of to pip.
+        if sdk is None:
+            return CoachingOutcome(
+                note=(
+                    "no written coaching: the `llm` extra is not installed "
+                    "(pip install -e '.[llm]'). The scores and ranked tips above are unaffected."
+                )
+            )
         if not api_key:
             return CoachingOutcome(
                 note=(
                     "no written coaching: no Anthropic API key is configured, so the coaching "
                     "call was skipped (set GOLF_ANTHROPIC_API_KEY). The scores and ranked tips "
                     "above are unaffected."
-                )
-            )
-        if sdk is None:
-            return CoachingOutcome(
-                note=(
-                    "no written coaching: the `llm` extra is not installed "
-                    "(pip install -e '.[llm]'). The scores and ranked tips above are unaffected."
                 )
             )
         client = sdk.Anthropic(api_key=api_key)
@@ -416,14 +420,48 @@ def generate_coaching(
     )
 
 
-def _note_for(exc: Exception, anthropic: Any | None) -> str:
+#: Long enough for the API's own sentence, short enough that a note stays a note. What this clips
+#: is the rare message that embeds a request echo; the actionable ones are a single line.
+_MAX_DETAIL = 200
+
+
+def _api_detail(exc: Exception) -> str:
+    """The API's own sentence about a failure, or "" when there is nothing worth printing.
+
+    `APIStatusError.message` is assembled by the SDK as ``Error code: 400 - {…whole body dict…}``,
+    which is accurate and unreadable. The parsed body carries the same sentence on its own, so
+    prefer that and fall back to `message` only when the shape is unfamiliar. Everything is read
+    through `getattr`: the tests build exceptions via `__new__` to skip the response plumbing, and
+    a diagnostic that raises while explaining a failure is worse than the failure.
+    """
+    body = getattr(exc, "body", None)
+    if isinstance(body, dict):
+        error = body.get("error")
+        if isinstance(error, dict) and isinstance(error.get("message"), str):
+            detail: str = error["message"].strip()
+            if detail:
+                return detail[:_MAX_DETAIL]
+    message = getattr(exc, "message", None)
+    if isinstance(message, str) and message.strip():
+        return message.strip()[:_MAX_DETAIL]
+    return ""
+
+
+def _note_for(
+    exc: Exception, anthropic: Any | None, *, prefix: str = "no written coaching: "
+) -> str:
     """Turn an SDK exception into the sentence a golfer should read on the results page.
 
     Most specific first, per the SDK's own guidance — a 404 on the model id and a rate limit want
     different words, and collapsing both into "an error occurred" is how a stale `coaching_model`
     goes unnoticed for a month.
+
+    `prefix` is what lets `conversation.py` share this. The failures are identical; the vocabulary
+    around them is not — the results page says "no written coaching", the Ask panel says "no
+    answer". It was hardcoded to the coaching wording once, and conversation.py had no way to say
+    otherwise, so a rate-limited *question* answered itself with "no written coaching:" directly
+    underneath the question the golfer had just typed.
     """
-    prefix = "no written coaching: "
     if anthropic is not None:
         if isinstance(exc, anthropic.NotFoundError):  # type: ignore[attr-defined]
             return (
@@ -433,9 +471,22 @@ def _note_for(exc: Exception, anthropic: Any | None) -> str:
         if isinstance(exc, anthropic.AuthenticationError):  # type: ignore[attr-defined]
             return f"{prefix}the configured Anthropic API key was rejected."
         if isinstance(exc, anthropic.RateLimitError):  # type: ignore[attr-defined]
-            return f"{prefix}the coaching request was rate limited. Re-run to try again."
+            return f"{prefix}the request was rate limited. Re-run to try again."
+        if isinstance(exc, anthropic.OverloadedError):  # type: ignore[attr-defined]
+            # 529 is the API being busy, and says nothing about this request. Named apart from the
+            # status branch below so it reads as "wait", which is the whole of the fix.
+            return f"{prefix}the API is overloaded right now. Re-run to try again."
         if isinstance(exc, anthropic.APIStatusError):  # type: ignore[attr-defined]
-            return f"{prefix}the API returned {exc.status_code}."  # type: ignore[attr-defined]
+            status = getattr(exc, "status_code", None)
+            code = str(status) if status is not None else "an error"
+            # The status alone is not actionable, and 400 is the case that proves it: a malformed
+            # request and an exhausted credit balance arrive as the same number, so "the API
+            # returned 400." sends you to read request-building code when the answer was billing.
+            # The body says which, and keeping it is the difference between a dead end and a fix.
+            detail = _api_detail(exc)
+            if detail:
+                return f"{prefix}the API returned {code}: {detail}"
+            return f"{prefix}the API returned {code}."
         if isinstance(exc, anthropic.APIConnectionError):  # type: ignore[attr-defined]
             return f"{prefix}could not reach the API. The scores above are unaffected."
-    return f"{prefix}the coaching request failed ({type(exc).__name__}: {exc})."
+    return f"{prefix}the request failed ({type(exc).__name__}: {exc})."

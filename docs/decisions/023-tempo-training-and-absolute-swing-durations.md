@@ -4,10 +4,12 @@
 Accepted. Built and surfaced: the durations are derived, the two beat patterns are computed
 server-side, and the results page plays them.
 
-**One addendum (2026-08-20), and it corrects this document.** The Context section below concludes
-"no mph axis" from a club-stratified test. Club is the wrong axis — it changes speed by lengthening
-the lever, not by rotating faster — and on a real speed cohort the durations *do* move. The target
-now follows the golfer's own backswing. Read the addendum at the foot before acting on the Context.
+**Two addenda at the foot, and the first corrects this document.** 2026-08-20: the Context section
+below concludes "no mph axis" from a club-stratified test. Club is the wrong axis — it changes speed
+by lengthening the lever, not by rotating faster — and on a real speed cohort the durations *do*
+move. The target now follows the golfer's own backswing. Read that addendum before acting on the
+Context. 2026-08-22 extends rather than corrects: the trainer gains a career scope and a third
+anchor state, lifting the first item under *Deferred, by choice*.
 
 ## Date
 2026-08-20
@@ -159,7 +161,10 @@ bug sat there looking like the way to do it.
 
 ## Deferred, by choice
 
-- **Diagnosing which half to fix.** The trainer sets the ratio and gives instructions; working out
+- **Diagnosing which half to fix.** *(Partly lifted 2026-08-22 — see the second addendum. The two
+  halves are now shown beside the ratio on the career page, which makes the diagnosis visible;
+  saying it in the product's own voice is what stays deferred.)* The trainer sets the ratio and
+  gives instructions; working out
   whether the backswing or the downswing is the problem is left to the golfer and the metronome.
   Consequence 2 above is the groundwork — once a personal baseline exists over the two durations,
   the diagnosis is a comparison rather than a guess. Worth knowing for whoever picks it up: the
@@ -279,3 +284,87 @@ speed. Whether an amateur at 70 mph follows the same duration relationship as a 
 94 is untested — every golfer in this corpus is a tour player, and the honest reading of the table
 above is that it describes the gap between two professional tours, not the whole speed range of
 golf. A bay session with a working smash factor is what would extend it.
+
+---
+
+## Addendum — 2026-08-22: the trainer gets a career scope, and a third anchor state
+
+**This lifts the first item under *Deferred, by choice*, and only that item.** That entry said the
+groundwork for diagnosing tempo was "once a personal baseline exists over the two durations"; it
+does, career mode built it, and nothing was reaching for it. Nothing about the beat patterns, the
+bands or the mph question changes here.
+
+### What was actually missing
+
+The trainer existed only on the results page, gated on the tempo checkpoint having *failed* on the
+swing being viewed. Three consequences, none of them intended:
+
+1. A golfer whose tempo passed never saw a metronome, and never saw their own ratio anywhere
+   outside a table cell on one swing's page.
+2. There was no way to ask "what is *my* tempo" — the question every user of a simulator has,
+   because every golfer's answer is different, and the one this repo had the measurements for.
+3. `backswing_ms` and `downswing_ms` had been measured per swing since this ADR shipped and were
+   read by nothing but the anchor of the swing they came from.
+
+### The shape
+
+`contracts/tempo.py` gains `CareerTempo`, built by `analysis/tempo_trainer.build_career_tempo` from
+a `CareerCorpus`, and served on `/api/golfers/{player_id}/career` beside the three career contracts
+already there — one route over one `read_corpus`, so the tempo a page prints and the `tempo_ratio`
+card under it cannot describe different swings.
+
+**Three tiers, gated differently, and the split is the whole design:**
+
+| tier | field | gate |
+|---|---|---|
+| readings | `swings`, `latest` | none — a measurement asserts nothing about the golfer |
+| claims | `typical_ratio`, `typical_backswing_ms`, `typical_downswing_ms` | `PersonalBaseline`'s `CENTER` guard, verbatim |
+| target | `plan`, `anchor` | the anchor guard already in this ADR |
+
+That split is what lets this ship useful at n=2. `tempo_ratio` needs 8 samples for a `CENTER` claim
+(`contracts/baseline.py`, the noisiest metric in the panel), and the golfer on disk has two — so a
+view that could only show a mean would show nothing at all, while the two numbers actually wanted
+are sitting measured in the artifacts. Printing the readings is not the guard being bent: the guard
+governs what may be *asserted about the golfer*, and "this swing took 901 ms back and 384 ms down"
+asserts one swing. `SessionSample` already draws exactly this line, carrying its `n` ungated while
+its mean waits.
+
+### The third anchor state
+
+`TempoPlan.anchored` is a bool because one swing has two answers: its own backswing, or the tour
+median. A career view has three, and the middle one is the point:
+
+- `CAREER_MEAN` — the mean backswing, once `CENTER` allows it.
+- `LATEST_SWING` — the most recent measured backswing, while it does not. **Not a mean smuggled
+  past the guard**: it is one swing's measurement used as a target, which is exactly what the
+  results page has done per swing since this ADR shipped. One measured swing is a better target
+  than a population median for a golfer whose speed the population does not describe.
+- `TOUR_MEDIAN` — nothing measurable, *or* the anchor guard above rejected what there was.
+
+`anchor` is read back off the built plan rather than decided alongside it. `_anchor_backswing` can
+refuse an observed backswing outside p10–p90, and a view that had branched on its own copy of that
+rule would print "matched to your own backswing" over a drill built on the median — the failure
+this ADR's guard exists to prevent, reintroduced one layer up.
+
+### Two things this deliberately does not do
+
+**It does not diagnose which half is wrong.** That was the same deferred entry's actual subject and
+it stays deferred. The page now shows the backswing and the downswing beside the ratio — which is
+what makes the diagnosis *visible* to the golfer, and is the case this ADR already records: 901/384
+is a tour-median backswing with a downswing 28% past p90, so "tempo too quick" is true of the ratio
+and the opposite of what it sounds like. Saying that sentence in the product's own voice needs a
+rule about when it is safe to say, and that rule needs more than two swings.
+
+**It records nothing.** Still read-only, for the reason §Why it is in `contracts/` gives: ADR-020
+says a write path gets its own decision, and "the golfer practiced to this" would be one.
+
+### Consequence for the pages
+
+`build_tempo_plan` splits into itself and `build_tempo_plan_for`, which takes the two durations
+directly; both scopes go through the second, so there is one definition of when a golfer's own
+backswing may be practiced to. On the client, the metronome's mechanism moves to
+`static/tempo.js` and is shared by `results.html` and `career.html` — a second Web Audio scheduler
+is a second thing that drifts. A plain `<script src>` with no build step, which is what
+`REFACTOR_LEDGER.md`'s 2026-08-13 row on the static pages permits: the objection there was a node
+toolchain, not a second file. Each page keeps its own framing prose, because the two genuinely say
+different things and the anchor sentence has a different number of cases on each.

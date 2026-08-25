@@ -312,3 +312,76 @@ def test_attribute_unlabeled_stamps_the_golfer_and_touches_no_club(store) -> Non
 
     assert [m.player_id for m in store.get_session(_SESSION)] == ["aaron", "aaron"]
     assert [m.club for m in store.get_session(_SESSION)] == [None, ClubId.SEVEN_IRON]
+
+
+# ---------------------------------------------------------------- deleting a swing [phantoms]
+
+
+def test_delete_swing_removes_the_directory(store) -> None:
+    _upload(store, _SESSION, Role.FACE_ON, b"one", club=ClubId.SEVEN_IRON)
+
+    assert store.delete_swing(_SESSION, "1") is True
+    assert store.get_session(_SESSION) == []
+    assert not (store.root / _SESSION / "1").exists()
+
+
+def test_delete_swing_on_a_missing_swing_returns_false(store) -> None:
+    """Same shape as `set_club` on a missing swing: a report, not an exception. The route turns
+    it into a 404, and a double-tapped delete must not 500 a page held in a bay."""
+    assert store.delete_swing(_SESSION, "99") is False
+
+
+def test_delete_swing_takes_everything_in_the_directory(store) -> None:
+    """Keypoints, analysis and the state sidecar are all derived from this swing alone, so they
+    go with it — a state file left behind is a swing the status page renders with no files."""
+    _upload(store, _SESSION, Role.FACE_ON, b"one", club=ClubId.SEVEN_IRON)
+    swing_dir = store.root / _SESSION / "1"
+    (swing_dir / "analysis.json").write_text("{}", encoding="utf-8")
+    (swing_dir / "analysis.state.json").write_text("{}", encoding="utf-8")
+
+    store.delete_swing(_SESSION, "1")
+
+    assert not swing_dir.exists()
+
+
+def test_deleting_a_phantom_stops_it_swallowing_the_next_swing(store) -> None:
+    """Why this method exists, written as the failure it prevents.
+
+    A corrective shot-screen re-upload opens a *new* swing, because "newest swing lacking that
+    role" cannot tell a repair from the next shot. The phantom that results is missing both
+    clips, so it is the newest swing lacking them — and the next real swing's face-on lands in
+    it, paired with a shot screen from a different swing. Silently.
+    """
+    _upload(store, _SESSION, Role.FACE_ON, b"clip-1", club=ClubId.SEVEN_IRON)
+    _upload(store, _SESSION, Role.SHOT_SCREEN, b"bad-photo", club=ClubId.SEVEN_IRON)
+    # The correction. It cannot replace the bad photo, so it opens swing 2 holding only itself.
+    phantom = _upload(store, _SESSION, Role.SHOT_SCREEN, b"good-photo", club=ClubId.SEVEN_IRON)
+    assert phantom.swing_id == "2"
+
+    # Left alone, the phantom takes the next swing's clip.
+    swallowed = _upload(store, _SESSION, Role.FACE_ON, b"clip-2", club=ClubId.SEVEN_IRON)
+    assert swallowed.swing_id == "2"
+
+    store.delete_swing(_SESSION, "2")
+
+    assert [m.swing_id for m in store.get_session(_SESSION)] == ["1"]
+
+
+def test_swing_id_override_replaces_a_role_in_place(store) -> None:
+    """The repair the upload page now sends. Without `swing_id` this same call opens a new swing;
+    with it the bad file is overwritten and no phantom is created."""
+    _upload(store, _SESSION, Role.SHOT_SCREEN, b"bad-photo", club=ClubId.SEVEN_IRON)
+
+    result = _upload(
+        store, _SESSION, Role.SHOT_SCREEN, b"good-photo",
+        filename="shot.jpg", content_type="image/jpeg", swing_id="1",
+    )
+
+    assert result.swing_id == "1"
+    assert [m.swing_id for m in store.get_session(_SESSION)] == ["1"]
+    manifest = store.get_swing(_SESSION, "1")
+    assert manifest.roles[Role.SHOT_SCREEN].original_filename == "shot.jpg"
+    # The superseded file is gone, not merely unreferenced — `_place` unlinks it.
+    names = {p.name for p in (store.root / _SESSION / "1").iterdir()}
+    assert not any(name.endswith(".part") for name in names)
+    assert len([n for n in names if n.startswith("shot_screen.")]) == 1

@@ -14,20 +14,37 @@ Refuses rather than guesses when the distributions are missing (ADR-010 §2). Th
 constant to fall back to, and a metronome ticking at an invented tempo is worse than no metronome:
 a golfer would practice to it.
 
+Two scopes are built here. `build_tempo_plan` fits one swing; `build_career_tempo` at the foot fits
+one *golfer*, joining their whole measured history to career mode's guard so a target can follow
+their mean backswing rather than their last one (ADR-023 addendum, 2026-08-22). Both go through
+`build_tempo_plan_for`, which is where the anchor guard lives and is the reason there is exactly
+one definition of when a golfer's own backswing may be practiced to.
+
 Stdlib + contracts only (ADR-008).
 """
 
 from __future__ import annotations
 
+from golf_coach.analysis.baseline import build_baseline, pooled_samples
 from golf_coach.analysis.benchmarks.distributions import Distribution, load_distribution
 from golf_coach.analysis.measure import tempo_timings
+from golf_coach.contracts.baseline import (
+    BaselineClaim,
+    MetricSample,
+    PersonalBaseline,
+    WithheldClaim,
+)
+from golf_coach.contracts.career import CareerCorpus
 from golf_coach.contracts.swing import PhaseSegment
 from golf_coach.contracts.tempo import (
     Beat,
     BeatPattern,
     BeatRole,
+    CareerTempo,
+    TempoAnchor,
     TempoPattern,
     TempoPlan,
+    TempoSwing,
 )
 
 #: The distribution rows the plan is built from. Both are unjudged measurements — there is no band
@@ -70,6 +87,30 @@ def build_tempo_plan(phases: list[PhaseSegment]) -> TempoPlan | None:
     Returns the plan with `GRID` first, as the pattern that gives a golfer something to track
     through the backswing; `CUES` is the exact-ratio alternative beside it.
     """
+    timings = tempo_timings(phases)
+    observed = timings.durations
+    return build_tempo_plan_for(
+        observed_backswing_ms=observed[0] if observed else None,
+        observed_downswing_ms=observed[1] if observed else None,
+    )
+
+
+def build_tempo_plan_for(
+    *, observed_backswing_ms: float | None, observed_downswing_ms: float | None
+) -> TempoPlan | None:
+    """The same plan, from two durations rather than from a segmentation.
+
+    Split out of `build_tempo_plan` above when career mode needed a target anchored to a golfer's
+    *mean* backswing rather than to one swing's (ADR-023 addendum, 2026-08-22). The two callers
+    differ in exactly one thing — where the observed durations come from — and everything after
+    that point is the anchor guard and the two patterns, which must not exist twice: a second copy
+    would be free to anchor on a backswing the guard rejects, and the page would say "matched to
+    your own backswing" over a drill built around the fault.
+
+    Keyword-only because the two arguments are the same type in a fixed order, which is the
+    boolean trap's numeric cousin (R14): `build_tempo_plan_for(384, 901)` is a plausible-looking
+    call that silently builds a target with the halves swapped.
+    """
     backswing = load_distribution(_BACKSWING_METRIC)
     downswing = load_distribution(_DOWNSWING_METRIC)
     if backswing is None or downswing is None:
@@ -77,9 +118,7 @@ def build_tempo_plan(phases: list[PhaseSegment]) -> TempoPlan | None:
     if backswing.p50 <= 0 or downswing.p50 <= 0:
         return None
 
-    timings = tempo_timings(phases)
-    observed = timings.durations
-    anchor, anchored = _anchor_backswing(backswing, observed[0] if observed else None)
+    anchor, anchored = _anchor_backswing(backswing, observed_backswing_ms)
 
     # The ratio is the tour's, always — it is the anchor's *length* that follows the golfer, never
     # the shape. A golfer whose ratio was already the target would not be reading this page.
@@ -96,8 +135,8 @@ def build_tempo_plan(phases: list[PhaseSegment]) -> TempoPlan | None:
         pace=anchor / backswing.p50,
         anchored=anchored,
         anchor_backswing_ms=anchor,
-        observed_backswing_ms=observed[0] if observed else None,
-        observed_downswing_ms=observed[1] if observed else None,
+        observed_backswing_ms=observed_backswing_ms,
+        observed_downswing_ms=observed_downswing_ms,
     )
 
 
@@ -210,3 +249,145 @@ def _source_prose(backswing: Distribution, downswing: Distribution, anchored: bo
         f"downswing {downswing.p50:.0f} ms (n={downswing.n}, {downswing.n_players} golfers); "
         f"{anchor_note}"
     )
+
+
+# --------------------------------------------------------------------------------------
+# Career scope — one golfer's whole tempo history, and the target it earns them
+# --------------------------------------------------------------------------------------
+
+#: The three measurements a career tempo view reads, and the order the anchor prefers them in.
+#: `tempo_ratio` is what defines a swing as having a readable tempo — the two halves can be absent
+#: on an artifact written before they were measured, and a history that dropped those swings would
+#: be shorter than the `n` printed beside it.
+_RATIO_METRIC = "tempo_ratio"
+
+
+def build_career_tempo(corpus: CareerCorpus) -> CareerTempo:
+    """One golfer's tempo across every swing on disk, plus a metronome fitted to it. [ADR-023]
+
+    **The measurements and the claims are separated here, not in the page.** `swings` is every
+    reading, printed at any `n`; `typical_*` is `PersonalBaseline`'s guarded mean and is `None`
+    until the guard lifts. That split is the whole reason this can ship useful today: `tempo_ratio`
+    needs 8 samples for a `CENTER` claim (`contracts/baseline.py`, and it is the noisiest metric in
+    the panel), so a view that could only show the mean would show a golfer with two swings
+    nothing at all — while the two numbers they actually want to see are sitting in the artifacts.
+
+    **The anchor degrades in one direction and says so.** Career mean if the guard allows it, else
+    the most recent swing's own backswing, else the tour median. The middle rung is not a mean
+    smuggled past the guard: it is one swing's measurement used as a target, which is exactly what
+    the results page has done per-swing since ADR-023 shipped, and `TempoAnchor` makes it legible
+    rather than leaving the page to infer it from `plan.anchored`.
+
+    The reported `anchor` is read back off the built plan rather than predicted, because
+    `_anchor_backswing` may reject an observed backswing that falls outside the tour p10-p90 — and
+    a view claiming `LATEST_SWING` over a plan that quietly fell back to the median would be the
+    kind of disagreement the two-surfaces-one-builder rule exists to prevent.
+
+    Builds its own baseline rather than taking one: `build_baseline` is pure arithmetic over the
+    same corpus, so recomputing it costs nothing measurable and removes the one way a caller could
+    hand this a baseline describing different swings.
+    """
+    samples = pooled_samples(corpus)
+    baseline = build_baseline(corpus)
+
+    swings = _tempo_swings(samples)
+    latest = swings[-1] if swings else None
+
+    typical_ratio = _claimed(baseline, _RATIO_METRIC)
+    typical_backswing = _claimed(baseline, _BACKSWING_METRIC)
+    typical_downswing = _claimed(baseline, _DOWNSWING_METRIC)
+
+    if typical_backswing is not None:
+        anchor, observed_backswing, observed_downswing = (
+            TempoAnchor.CAREER_MEAN, typical_backswing, typical_downswing
+        )
+    elif latest is not None and latest.backswing_ms is not None:
+        anchor, observed_backswing, observed_downswing = (
+            TempoAnchor.LATEST_SWING, latest.backswing_ms, latest.downswing_ms
+        )
+    else:
+        anchor, observed_backswing, observed_downswing = TempoAnchor.TOUR_MEDIAN, None, None
+
+    plan = build_tempo_plan_for(
+        observed_backswing_ms=observed_backswing, observed_downswing_ms=observed_downswing
+    )
+    if plan is not None and not plan.anchored:
+        anchor = TempoAnchor.TOUR_MEDIAN
+
+    return CareerTempo(
+        player_id=corpus.player_id,
+        swings=swings,
+        latest=latest,
+        typical_ratio=typical_ratio,
+        typical_backswing_ms=typical_backswing,
+        typical_downswing_ms=typical_downswing,
+        withheld=_center_refusals(baseline),
+        anchor=anchor,
+        plan=plan,
+    )
+
+
+def _tempo_swings(samples: dict[str, list[MetricSample]]) -> tuple[TempoSwing, ...]:
+    """The per-swing history, keyed on the ratio and joined to the two halves by `swing_ref`.
+
+    A join rather than three parallel lists, because the three metrics do not always cover the same
+    swings: `backswing_ms` and `downswing_ms` arrived after `tempo_ratio` did, so an artifact from
+    an earlier engine carries the ratio alone. Zipping the lists positionally would pair one
+    swing's ratio with another's durations the first time that happens, and every number would
+    still look plausible.
+    """
+    halves = {
+        metric: {sample.swing_ref: sample.value for sample in samples.get(metric, [])}
+        for metric in (_BACKSWING_METRIC, _DOWNSWING_METRIC)
+    }
+    return tuple(
+        TempoSwing(
+            swing_ref=sample.swing_ref,
+            session_id=sample.session_id,
+            captured_at=sample.captured_at,
+            ratio=sample.value,
+            backswing_ms=halves[_BACKSWING_METRIC].get(sample.swing_ref),
+            downswing_ms=halves[_DOWNSWING_METRIC].get(sample.swing_ref),
+        )
+        for sample in samples.get(_RATIO_METRIC, [])
+        if sample.value > 0
+    )
+
+
+def _claimed(baseline: PersonalBaseline, metric: str) -> float | None:
+    """One metric's mean, or None — which is the guard's refusal, already applied.
+
+    No `supports(CENTER)` call: `_baseline_for` strips the statistic back out when the claim is
+    withheld, so "is there a number" and "may it be shown" are the same question. Asking the
+    predicate as well would be a second gate that could one day disagree with the first.
+    """
+    entry = baseline.metrics.get(metric)
+    return entry.mean if entry is not None else None
+
+
+def _center_refusals(baseline: PersonalBaseline) -> tuple[WithheldClaim, ...]:
+    """Why each `typical_*` is absent, deduplicated by reason.
+
+    Deduplicated because the three metrics gate at three floors and frequently refuse in the same
+    words — `backswing_ms` and `downswing_ms` share a floor and always share an `n`, so an
+    undeduplicated list prints one sentence twice and reads as two different problems. The same
+    dedupe `career.html` already does across the baseline, dispersion and standing layers.
+
+    `CENTER` only: `SPREAD` and `TREND` back no field here, and listing their refusals would tell a
+    golfer they are waiting for something this view was never going to show them.
+
+    Strictest first, and that ordering is what makes the list readable rather than merely correct.
+    `WithheldClaim` carries no metric name — it never needed one on a card already titled with the
+    metric — so here the refusals arrive as sentences differing only in a number, and a golfer
+    reading "needs 5" above "needs 8" would take the first as the answer. The strictest is the one
+    that actually gates the headline ratio.
+    """
+    refusals: dict[str, WithheldClaim] = {}
+    for metric in (_RATIO_METRIC, _BACKSWING_METRIC, _DOWNSWING_METRIC):
+        entry = baseline.metrics.get(metric)
+        if entry is None:
+            continue
+        for claim in entry.withheld:
+            if claim.claim is BaselineClaim.CENTER:
+                refusals.setdefault(claim.reason, claim)
+    return tuple(sorted(refusals.values(), key=lambda claim: -claim.need_n))

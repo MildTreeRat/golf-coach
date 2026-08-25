@@ -362,6 +362,100 @@ def test_architectures_checkpoint_table_has_a_row_per_checkpoint() -> None:
     )
 
 
+# --------------------------------------------------------------------- the M9 surface
+
+# The three pins below were added by M9 P20, and the reason is worth stating: this suite was
+# **fully green** for the whole of M9 while `ARCHITECTURE.md` §4 described a repo that had not
+# existed since P4. Fifteen consecutive phases wrote a note in `docs/M9_PLAYER_TRACKING.md` saying
+# so, and no test could see any of them. "Run the doc-truth suite first and work from its failures"
+# is only a method where the suite covers the surface being changed — so P20 extended the cover
+# rather than just fixing the prose.
+
+
+def test_the_docs_state_the_real_mcp_tool_count() -> None:
+    """M9 P18 added two MCP tools and left six sentences saying eight.
+
+    Pinned on one phrase shape — "the same N tools" — rather than on every "N tools" in the repo,
+    because a subset count is a legitimate thing to write: `mcp/club.py` really does hold two. What
+    is not legitimate is a sentence claiming to describe the *whole* surface with a stale number,
+    and that sentence has one recognisable form in all three places it appears.
+
+    `WORKLOG.md` is deliberately not read. It is append-only history, and a dated record of what a
+    handshake advertised in August is not a claim about today — the same exemption the module
+    docstring gives every true past-tense sentence about the three-checkpoint panel.
+    """
+    from golf_coach.contracts.caveats import _count_word
+    from golf_coach.contracts.tool_descriptions import TOOL_DESCRIPTIONS
+
+    expected = _count_word(len(TOOL_DESCRIPTIONS))
+    sources = [
+        DOCS / "ARCHITECTURE.md",
+        REPO / "ROADMAP.md",
+        REPO / "scripts" / "ask_swing.py",
+        *sorted(DECISIONS.glob("*.md")),
+    ]
+
+    found: list[str] = []
+    for path in sources:
+        for word in re.findall(r"the same (\w+) tools", _flat(_read(path))):
+            found.append(f"{path.relative_to(REPO)}: 'the same {word} tools'")
+            assert word == expected, (
+                f"{path.relative_to(REPO)} says 'the same {word} tools'; "
+                f"{len(TOOL_DESCRIPTIONS)} are registered in TOOL_DESCRIPTIONS"
+            )
+
+    assert found, (
+        "no document states the MCP tool count in the pinned form any more — either the phrasing "
+        "moved, in which case reword this test with it, or the claim was dropped and this pin is "
+        "now guarding nothing"
+    )
+
+
+def test_architecture_lists_every_api_route() -> None:
+    """There was no route table anywhere in this repo, so M9's seven endpoints landed in silence.
+
+    The decorators are parsed out of `api/app.py`'s **source text** rather than by importing it.
+    Importing would pull in `fastapi`, and this suite runs on a base install where the `api` extra
+    is absent — the same constraint `tests/api/test_pipeline_imports.py` exists to hold, and the
+    same technique the `comparison.py` boundary test uses for its own reason.
+    """
+    source = _read(REPO / "src" / "golf_coach" / "api" / "app.py")
+    routes = set(re.findall(r'@app\.(?:get|post|put|delete)\(\s*"(/api/[^"]+)"', source))
+
+    assert routes, "no routes parsed out of api/app.py — the decorator spelling changed"
+
+    table = _read(DOCS / "ARCHITECTURE.md")
+    missing = sorted(route for route in routes if f"`{route}`" not in table)
+
+    assert not missing, (
+        "ARCHITECTURE.md §1's route table does not list "
+        + ", ".join(missing)
+        + " — that document is tier AS-BUILT, so its route table is the answer to "
+        "'what does the server serve' and an unlisted endpoint is invisible"
+    )
+
+
+def test_the_map_and_the_m9_doc_agree_on_the_phase_count() -> None:
+    """Both sides drifted independently during M9: the map said "start at P8" at 19/20 built.
+
+    The phase doc's own status line and the map's ADR-024 row are two hand-maintained counts of one
+    thing, which is exactly the shape that goes stale. Pinned to each other rather than to a
+    literal, so closing a future milestone the same way needs no edit here.
+    """
+    doc = re.search(r"\*\*Status: [^*]*?(\d+)/(\d+) phases", _read(DOCS / "M9_PLAYER_TRACKING.md"))
+    assert doc, "M9_PLAYER_TRACKING.md no longer states 'N/M phases' in its status line"
+
+    text = _read(DOCS / "README.md")
+    rows = re.findall(r"\*\*(\d+)/(\d+) phases built\*\*|(\d+)/(\d+) phases built", text)
+    counts = {(a or c, b or d) for a, b, c, d in rows}
+
+    assert counts, "docs/README.md no longer states M9's phase count in either of its two rows"
+    assert counts == {doc.groups()}, (
+        f"M9_PLAYER_TRACKING.md says {doc.group(1)}/{doc.group(2)} phases; "
+        f"docs/README.md says {sorted(counts)}"
+    )
+
+
 # --------------------------------------------------------------------- the map's own counts
 
 

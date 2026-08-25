@@ -69,12 +69,69 @@
   button, select { font: inherit; font-size: 0.8rem; padding: 0.2rem 0.5rem; cursor: pointer; }
   .note { font-size: 0.83rem; margin: 0.45rem 0 0; padding-left: 0.6rem;
           border-left: 2px solid rgba(128,128,128,0.4); opacity: 0.85; }
+
+  /* --- tempo [ADR-023 addendum] ---------------------------------------------------- */
+  /* The same warm card results.html gives the trainer, and deliberately the same: a golfer who
+     has practiced to the metronome on a swing page should recognise this one on sight as the same
+     instrument. Everything below `.tempo` here is a copy of that page's rules for the shared
+     markup in `tempo.js` — the CSS is duplicated because there is no stylesheet link and no build
+     step (REFACTOR_LEDGER, 2026-08-13), while the markup and behaviour it styles are not. */
+  .tempo { background: rgba(200,150,60,0.12); border: 1px solid rgba(200,150,60,0.4);
+           border-radius: 8px; padding: 0.7rem 0.85rem; font-size: 0.88rem; }
+  .tempo p { margin: 0 0 0.6rem; }
+  .tempo .modes { display: flex; gap: 0.4rem; margin-bottom: 0.6rem; }
+  .tempo .modes button { font: inherit; font-size: 0.8rem; padding: 0.3rem 0.6rem;
+                         border-radius: 6px; border: 1px solid rgba(128,128,128,0.45);
+                         background: transparent; color: inherit; cursor: pointer; flex: 1; }
+  .tempo .modes button[aria-pressed="true"] { border-color: rgba(200,150,60,0.9);
+                                              background: rgba(200,150,60,0.2); }
+  .tempo .strip { display: flex; align-items: flex-end; height: 2.2rem; margin: 0.5rem 0 0.2rem;
+                  color: rgba(200,150,60,1); }
+  .tempo .strip .b { width: 3px; border-radius: 2px; background: currentColor; flex: none; }
+  .tempo .strip .b.takeaway, .tempo .strip .b.top, .tempo .strip .b.impact { height: 100%; }
+  .tempo .strip .b.subdivision { height: 45%; opacity: 0.35; }
+  .tempo .strip .gap { flex-grow: 1; }
+  .tempo .legend { display: flex; justify-content: space-between; font-size: 0.72rem;
+                   opacity: 0.6; }
+  .tempo .controls { display: flex; gap: 0.5rem; align-items: center; }
+  .tempo .controls button.play { font: inherit; font-size: 0.9rem; padding: 0.45rem 0.9rem;
+                                 border-radius: 6px; border: 1px solid rgba(128,128,128,0.45);
+                                 background: transparent; color: inherit; cursor: pointer; }
+  .tempo .controls label { font-size: 0.78rem; opacity: 0.7; display: flex; gap: 0.35rem;
+                           align-items: center; flex: 1; min-width: 0; }
+  .tempo .controls input[type=range] { flex: 1; min-width: 0; }
+  .tempo .facts { font-size: 0.78rem; opacity: 0.7; margin: 0.55rem 0 0;
+                  font-variant-numeric: tabular-nums; }
+  .tempo .anchor { font-size: 0.76rem; opacity: 0.75; margin: 0.3rem 0 0; }
+  .tempo .src { font-size: 0.72rem; opacity: 0.55; margin: 0.3rem 0 0; }
+
+  /* The headline numbers, above the card. Big because this is the thing the golfer came for —
+     every simulator user has a different tempo and the whole point of the page is knowing yours —
+     and split into three rows because "latest" and "typical" are different kinds of claim and must
+     never merge into one number. `.held` is the withheld state, styled like `.row.refused`. */
+  .tnums { display: flex; gap: 0.9rem; flex-wrap: wrap; margin: 0 0 0.7rem; }
+  .tnums .n { flex: 1 1 6.5rem; }
+  .tnums .k { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.55; }
+  .tnums .v { font-size: 1.6rem; font-weight: 700; line-height: 1.1;
+              font-variant-numeric: tabular-nums; }
+  .tnums .v.held { font-size: 0.95rem; font-weight: 400; font-style: italic; opacity: 0.6;
+                   font-variant-numeric: normal; }
+  .tnums .sub { font-size: 0.75rem; opacity: 0.65; font-variant-numeric: tabular-nums; }
+  /* Oldest first, matching `CareerTempo.swings` — a history that reads down the page in the order
+     it happened is the one a golfer can check against their own memory of the session. */
+  .thist { font-size: 0.83rem; }
+  .thist .s { display: flex; justify-content: space-between; gap: 0.6rem;
+              border-top: 1px solid rgba(128,128,128,0.2); padding: 0.28rem 0; }
+  .thist .s:first-child { border-top: none; }
+  .thist .r { font-variant-numeric: tabular-nums; font-weight: 600; }
+  .thist .d { opacity: 0.6; font-size: 0.78rem; }
 </style>
 </head>
 <body>
 <a class="back" href="/">&larr; Upload</a>
 <div id="root"><p class="muted">Loading...</p></div>
 
+<script src="/tempo.js"></script>
 <script>
 const TOKEN_KEY = "golf_coach_token";
 const params = new URLSearchParams(location.search);
@@ -197,6 +254,13 @@ function render(payload) {
   //
   // Filled by renderBag() after the innerHTML lands, because every edit re-renders this subtree
   // alone and re-rendering the whole page would collapse the details the golfer just opened.
+  // Tempo goes first, above the bag and above every card. It is the one number on this page a
+  // golfer can act on standing in the bay, and unlike almost everything else here it has something
+  // to say at n=2 — the readings are measurements, so they are printed while the mean they would
+  // average to is still withheld. Landing it at the top is also what makes `#tempo` from the
+  // upload page arrive somewhere useful rather than scrolling past fourteen clubs.
+  parts.push(tempoSection(payload.tempo));
+
   parts.push(`<h2>Bag</h2><div id="bag"></div>`);
   parts.push(`<h2>Whole bag</h2>`);
 
@@ -233,6 +297,129 @@ function render(payload) {
   const host = document.getElementById("bag");
   host.addEventListener("click", onBagClick);
   renderBag();
+  wireTempo(payload.tempo);
+
+  // The browser resolved `#tempo` before this page had any content — everything above is rendered
+  // from a fetch — so the fragment silently did nothing and the upload page's tempo link landed at
+  // the top like the career one beside it. Scrolled here, once the target exists.
+  if (location.hash) {
+    document.getElementById(location.hash.slice(1))?.scrollIntoView();
+  }
+}
+
+// --------------------------------------------------------------------------- tempo [ADR-023]
+//
+// The career counterpart to results.html's per-swing trainer, and the reason `CareerTempo` exists:
+// the swing page answers "was *that* one quick", this answers "what do I usually do". The
+// mechanism — beats, audio, strip, pace — is `tempo.js`, shared between the two.
+//
+// **Three tiers, rendered differently on purpose, because they are different kinds of statement:**
+// the readings are measurements and print at any `n`; the typical values are claims and are
+// `null` until career mode's `CENTER` guard lifts; the plan is a target. A page that flattened
+// them would print a tendency over two swings, which is the exact thing career mode was built not
+// to do — and would also, in the other direction, refuse a golfer numbers that are sitting
+// measured in their own artifacts.
+//
+// No ratio, duration or refusal sentence is composed here. Every one arrives on `payload.tempo`
+// from `analysis/tempo_trainer.py`, the same standing rule the metric cards below follow.
+function tempoSection(tempo) {
+  if (!tempo) return "";
+  if (!tempo.swings.length) {
+    return `<h2 id="tempo">Tempo</h2><div class="banner info">No swing on file has a readable
+      tempo yet. It is the one measurement that goes missing on its own — the takeaway has to be
+      detected, not estimated — so a swing can score everything else and still have none.</div>`;
+  }
+
+  const latest = tempo.latest;
+  const parts = [`<h2 id="tempo">Tempo</h2>`, `<div class="tnums">`];
+
+  parts.push(numBlock("latest", ratioText(latest.ratio), halvesText(latest)));
+  // The strictest refusal is first (`_center_refusals` sorts on `need_n`), and it is the one that
+  // gates the ratio — so its floor is the one to count toward. Read off the claim rather than
+  // written here: `tempo_ratio`'s override is 8 today and is a judgment call that ADR-023 and
+  // `contracts/baseline.py` both expect a real bay session to revise.
+  const gate = tempo.withheld[0];
+  // The halves gate separately from the ratio and at a lower floor, so between the two floors they
+  // are sayable while the ratio is not. Printed in the sub line either way rather than only in the
+  // ready branch: withholding a number the guard has already released would be its own kind of
+  // false, and the tile is titled "withheld" for the ratio it is actually refusing.
+  const typicalHalves = halvesText({ backswing_ms: tempo.typical_backswing_ms,
+                                     downswing_ms: tempo.typical_downswing_ms });
+  parts.push(tempo.typical_ratio === null
+    ? numBlock("typical", "withheld",
+               typicalHalves || (gate ? `${gate.have_n} of ${gate.need_n} swings` : ""), true)
+    : numBlock("typical", ratioText(tempo.typical_ratio), typicalHalves));
+
+  // The tour figure comes off the CUES pattern, which is the one that keeps the exact medians —
+  // GRID's ratio is rounded, and printing that as "tour" would quote a number no tour player hit.
+  const cues = (tempo.plan ? tempo.plan.patterns : []).find((p) => p.mode === "cues");
+  if (cues) {
+    parts.push(numBlock("tour", ratioText(cues.ratio),
+                        halvesText({ backswing_ms: cues.backswing_ms,
+                                     downswing_ms: cues.downswing_ms })));
+  }
+  parts.push(`</div>`);
+
+  // Never suppressed once a typical value lands: the refusal explains the number's absence, and
+  // seeing the floor it cleared is how a golfer knows what the `n` beside it is worth.
+  for (const claim of tempo.withheld) {
+    parts.push(`<p class="why"><strong>waiting</strong> &middot; ${esc(claim.reason)}</p>`);
+  }
+
+  parts.push(`<div class="thist">${tempo.swings.map(historyRow).join("")}</div>`);
+
+  if (tempo.plan) {
+    parts.push(`<h2>Practice this tempo</h2><div class="tempo">
+      ${TempoTrainer.markup(tempo.plan)}</div>`);
+  }
+  return parts.join("");
+}
+
+function numBlock(key, value, sub, held = false) {
+  return `<div class="n"><div class="k">${esc(key)}</div>
+    <div class="v${held ? " held" : ""}">${esc(value)}</div>
+    <div class="sub">${esc(sub)}</div></div>`;
+}
+
+// `2.42:1`, at the ratio precision the whole repo formats to — `fmt` carries that table, so a
+// tempo read off this page and one read off `scripts/career_baseline.py` are the same string.
+function ratioText(ratio) {
+  return typeof ratio === "number" ? `${fmt(ratio, "ratio")}:1` : "-";
+}
+
+// The two halves under the ratio, and they earn their place: the ratio alone cannot say *which*
+// half is off. ADR-023 records the case exactly — this golfer's backswing is the tour median and
+// the downswing is 28% past p90, so "tempo too quick" is true of the ratio and the opposite of
+// what it sounds like.
+function halvesText(swing) {
+  const back = swing && swing.backswing_ms;
+  const down = swing && swing.downswing_ms;
+  if (typeof back !== "number" || typeof down !== "number") return "";
+  return `${fmt(back, "ms")} / ${fmt(down, "ms")} ms`;
+}
+
+function historyRow(swing) {
+  const halves = halvesText(swing);
+  return `<div class="s"><span class="r">${esc(ratioText(swing.ratio))}</span>
+    <span class="d">${esc(swing.captured_at.slice(0, 10))} &middot; ${esc(swing.swing_ref)}${
+      halves ? ` &middot; ${esc(halves)}` : ""}</span></div>`;
+}
+
+// The anchor sentence is this page's own, and has a state results.html does not: a golfer whose
+// mean is still withheld is anchored to their most recent swing, which is neither "your own
+// typical backswing" nor "the tour median" and must not be described as either.
+const ANCHOR_TEXT = {
+  career_mean: "Matched to your own typical backswing — only the ratio is the tour's.",
+  latest_swing: "Matched to your most recent swing's backswing: your typical one is still "
+    + "withheld, and one measured swing is a better target than the tour median.",
+  tour_median: "Set to the tour median backswing — either nothing measurable to anchor on, or "
+    + "yours sits outside the tour range and matching it would have built the drill around the "
+    + "half that needs changing.",
+};
+
+function wireTempo(tempo) {
+  if (!tempo || !tempo.plan) return;
+  TempoTrainer.wire(tempo.plan, { anchorText: ANCHOR_TEXT[tempo.anchor] || "" });
 }
 
 function nothingSayable(metrics) {

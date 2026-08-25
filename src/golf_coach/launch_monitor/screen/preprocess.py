@@ -81,12 +81,88 @@ class PreparedScreen:
     notes: list[str]
 
 
+#: Brand codes in an ISO-BMFF `ftyp` box that mean HEIF, i.e. an iPhone camera photo. Used only
+#: to write a better error message: what these have in common is that OpenCV cannot decode them,
+#: and OpenCV reports that identically to a truncated JPEG (`imread` -> None). Telling the two
+#: apart is the difference between "install the extra" and "re-take the photo".
+_HEIF_BRANDS = frozenset({b"heic", b"heix", b"hevc", b"hevx", b"heim", b"heis", b"mif1", b"msf1"})
+
+
+def _is_heif(path: Path | str) -> bool:
+    """True if the file's `ftyp` box names a HEIF brand. Never raises — it is only advisory."""
+    try:
+        with open(path, "rb") as handle:
+            header = handle.read(16)
+    except OSError:
+        return False
+    # ISO-BMFF: 4-byte big-endian box size, then b"ftyp", then the 4-byte major brand.
+    return header[4:8] == b"ftyp" and header[8:12] in _HEIF_BRANDS
+
+
+def _load_via_pillow(path: Path | str) -> Any | None:
+    """Second decoder, for the formats OpenCV has no codec for. None if it cannot help either.
+
+    HEIC is why this exists. It is the iPhone camera default, so it is not an exotic input here —
+    it is the *common* one, arriving straight off a camera roll (`data/processed/sessions/.../
+    shot_screen.*.HEIC`). `pillow-heif` registers a HEIF opener with Pillow on import; both ride
+    in on the `ocr` extra, and both are imported lazily so the base install still imports this
+    module.
+
+    EXIF orientation is applied here because `cv2.imread` applies it and this is standing in for
+    `cv2.imread`. The rotation search downstream would recover from a sideways screen anyway (see
+    this module's docstring), but it would burn three extra OCR passes discovering what the
+    metadata already said.
+    """
+    try:
+        from PIL import Image, ImageOps
+    except ImportError:
+        return None
+    try:
+        import pillow_heif
+
+        pillow_heif.register_heif_opener()
+    except ImportError:
+        # Not fatal: Pillow alone still decodes formats OpenCV was merely built without.
+        pass
+
+    try:
+        with Image.open(path) as handle:
+            rgb = ImageOps.exif_transpose(handle).convert("RGB")
+    except Exception:
+        # Pillow raises a wide family (UnidentifiedImageError, OSError, ValueError,
+        # DecompressionBombError) and the caller's next move is the same for all of them:
+        # report that nothing could read it.
+        return None
+    return cv2.cvtColor(np.asarray(rgb), cv2.COLOR_RGB2BGR)
+
+
 def load_image(path: Path | str) -> Any:
-    """Read an image file as BGR. Raises rather than returning None on failure."""
+    """Read an image file as BGR. Raises rather than returning None on failure.
+
+    Two decoders, because `cv2.imread` returning None conflates "corrupt" with "format OpenCV
+    was not built with", and the second case is the ordinary one: an iPhone writes HEIC unless
+    told otherwise. Pillow is tried next, and only if that also declines is this a real failure.
+
+    The raised message distinguishes the three outcomes, because they have three different
+    repairs — install the extra, re-shoot the photo, or check the file arrived intact. This used
+    to be one sentence, and a HEIC shot screen consequently failed an entire swing's analysis with
+    a message that suggested a corrupt upload.
+    """
     image = cv2.imread(str(path), cv2.IMREAD_COLOR)
-    if image is None:
-        raise OSError(f"Could not read image: {path}")
-    return image
+    if image is not None:
+        return image
+
+    fallback = _load_via_pillow(path)
+    if fallback is not None:
+        return fallback
+
+    if _is_heif(path):
+        raise OSError(
+            f"Could not read image: {path} — it is a HEIC/HEIF photo (the iPhone camera "
+            "default) and no decoder for it is installed. Install the `ocr` extra, which "
+            "carries pillow-heif, or set iOS Camera > Formats > Most Compatible to shoot JPEG."
+        )
+    raise OSError(f"Could not read image: {path} — no installed decoder could read this file")
 
 
 def prepare_screen(

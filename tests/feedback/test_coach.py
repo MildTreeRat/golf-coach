@@ -400,11 +400,32 @@ def test_digest_changes_when_the_swing_does() -> None:
 
 
 def test_missing_api_key_is_a_note_not_an_exception() -> None:
+    """Needs the SDK present, because the extra is now checked first and would answer instead."""
+    pytest.importorskip("anthropic", reason="the missing-key note is only reached with the SDK")
+
     outcome = generate_coaching(_bundle(), model=MODEL, api_key=None)
 
     assert outcome.text is None
     assert outcome.note is not None
     assert "no Anthropic API key" in outcome.note
+
+
+def test_a_missing_extra_is_not_reported_as_a_missing_key(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """With both absent, only one can be named, and naming the key sends you to the wrong file.
+
+    The order used to be the other way round, so an install without `.[llm]` reported "no
+    Anthropic API key is configured" — sending a reader to `.env`, where the key is sitting
+    perfectly valid, for a problem that pip fixes.
+    """
+    monkeypatch.setattr("golf_coach.feedback.coach._sdk", lambda: None)
+
+    outcome = generate_coaching(_bundle(), model=MODEL, api_key=None)
+
+    assert outcome.note is not None
+    assert "llm" in outcome.note
+    assert "API key" not in outcome.note
 
 
 def test_a_refusal_produces_no_text() -> None:
@@ -454,6 +475,58 @@ def test_sdk_errors_are_named_specifically_when_the_sdk_is_installed(error_name:
     assert outcome.text is None
     expected = "model id" if error_name == "NotFoundError" else "rate limited"
     assert expected in outcome.note
+
+
+def test_an_overloaded_api_reads_as_wait_rather_than_as_a_bad_request() -> None:
+    """529 says nothing about the request, so the note has to say "try again" and not "400"."""
+    anthropic = pytest.importorskip("anthropic")
+    exc = anthropic.OverloadedError.__new__(anthropic.OverloadedError)
+    Exception.__init__(exc, "boom")
+
+    outcome = generate_coaching(_bundle(), model=MODEL, client=_FakeClient(exc))
+
+    assert outcome.note is not None
+    assert "overloaded" in outcome.note
+    assert "try again" in outcome.note
+
+
+def test_a_status_error_keeps_the_apis_own_explanation() -> None:
+    """A bare status is a dead end on the one code that most needs explaining.
+
+    An exhausted credit balance and a malformed request are both 400, so "the API returned 400."
+    sends you to read request-building code when the answer was billing. The body says which.
+    """
+    anthropic = pytest.importorskip("anthropic")
+    exc = anthropic.BadRequestError.__new__(anthropic.BadRequestError)
+    Exception.__init__(exc, "boom")
+    exc.status_code = 400
+    exc.body = {
+        "type": "error",
+        "error": {
+            "type": "invalid_request_error",
+            "message": "Your credit balance is too low to access the Anthropic API.",
+        },
+    }
+
+    outcome = generate_coaching(_bundle(), model=MODEL, client=_FakeClient(exc))
+
+    assert outcome.note is not None
+    assert "400" in outcome.note
+    assert "credit balance is too low" in outcome.note
+
+
+def test_a_status_error_with_no_readable_body_still_names_the_status() -> None:
+    """The detail is a bonus, not a dependency — an unfamiliar body must not lose the code."""
+    anthropic = pytest.importorskip("anthropic")
+    exc = anthropic.ConflictError.__new__(anthropic.ConflictError)
+    Exception.__init__(exc, "")
+    exc.status_code = 409
+    exc.body = None
+
+    outcome = generate_coaching(_bundle(), model=MODEL, client=_FakeClient(exc))
+
+    assert outcome.note is not None
+    assert "409" in outcome.note
 
 
 def test_outcome_defaults_are_the_absent_case() -> None:

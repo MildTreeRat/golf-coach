@@ -8,15 +8,22 @@ stubbed distribution would pin the arithmetic while letting the wiring rot.
 from __future__ import annotations
 
 import re
+from datetime import UTC, datetime
 
 import pytest
 
 from golf_coach.analysis import tempo_trainer
 from golf_coach.analysis.benchmarks.distributions import load_distribution
-from golf_coach.analysis.tempo_trainer import build_tempo_plan
+from golf_coach.analysis.tempo_trainer import (
+    build_career_tempo,
+    build_tempo_plan,
+    build_tempo_plan_for,
+)
 from golf_coach.api.app import _STATIC_DIR
-from golf_coach.contracts.swing import PhaseSegment, SwingPhase
-from golf_coach.contracts.tempo import BeatRole, TempoPattern
+from golf_coach.contracts.baseline import BaselineClaim, minimum_n
+from golf_coach.contracts.career import CareerCorpus, CorpusSwing
+from golf_coach.contracts.swing import Measurement, PhaseSegment, SwingPhase
+from golf_coach.contracts.tempo import BeatRole, TempoAnchor, TempoPattern
 
 
 def _phases(backswing_ms: float, downswing_ms: float) -> list[PhaseSegment]:
@@ -258,10 +265,12 @@ def test_every_fitted_pace_is_reachable_on_the_pages_slider() -> None:
     the median. A slider narrower than that clamps the opening value and quietly plays a tempo
     other than the one the page's own text claims — silently, because both numbers look fine.
 
-    The bounds are read out of `results.html` rather than restated here, so widening the guard
-    without widening the control fails this instead of shipping.
+    The bounds are read out of `tempo.js` rather than restated here, so widening the guard
+    without widening the control fails this instead of shipping. They moved there with the rest of
+    the trainer's mechanism when career mode grew a second one: two controls with two pairs of
+    bounds is two ways for this to be true of one page and false of the other.
     """
-    page = (_STATIC_DIR / "results.html").read_text(encoding="utf-8")
+    page = (_STATIC_DIR / "tempo.js").read_text(encoding="utf-8")
     control = re.search(r'id="tempoPace"[^>]*', page).group(0)
     low = int(re.search(r'min="(\d+)"', control).group(1))
     high = int(re.search(r'max="(\d+)"', control).group(1))
@@ -300,3 +309,200 @@ def test_the_source_prose_says_which_backswing_the_target_was_built_on() -> None
 
     assert "your own backswing" in fitted.patterns[0].source
     assert "tour median backswing" in defaulted.patterns[0].source
+
+
+# ------------------------------------------------------------------ career scope [ADR-023 add.]
+#
+# What is pinned here is the *layering* — measurements print, claims are withheld, the anchor
+# degrades in one direction — and not the statistics under it, which are `test_baseline.py`'s.
+# Corpora are built by constructing the contracts directly, the same posture that file takes: a
+# guard failure and a reader failure must not be able to look alike.
+
+
+def _tempo_swing(
+    index: int, *, ratio: float, backswing: float | None = None, downswing: float | None = None,
+) -> CorpusSwing:
+    """One distinct swing carrying a tempo reading, and optionally the two halves behind it."""
+    values: dict[str, tuple[str, float]] = {"tempo_ratio": ("ratio", ratio)}
+    if backswing is not None:
+        values["backswing_ms"] = ("ms", backswing)
+    if downswing is not None:
+        values["downswing_ms"] = ("ms", downswing)
+    return CorpusSwing(
+        player_id="aaron",
+        session_id=f"2026-08-{index:02d}",
+        swing_id=str(index),
+        captured_at=datetime(2026, 8, index, 12, tzinfo=UTC),
+        face_on_sha256=f"clip-{index}",
+        analyzed=True,
+        measurements=[
+            Measurement(name=name, value=value, unit=unit, source="pose:face_on", detail="test")
+            for name, (unit, value) in values.items()
+        ],
+    )
+
+
+def _tempo_corpus(*swings: CorpusSwing) -> CareerCorpus:
+    return CareerCorpus(player_id="aaron", swings=list(swings))
+
+
+def test_every_reading_is_printed_while_the_mean_over_them_is_withheld() -> None:
+    """The property the whole career view rests on, and the reason it ships useful at n=2.
+
+    A measurement asserts nothing about the golfer, so `swings` is never gated; a mean asserts a
+    tendency, so it is. Collapsing the two would either print a baseline over two swings — the one
+    thing career mode exists to prevent — or refuse a golfer numbers sitting in their own
+    artifacts.
+    """
+    tempo = build_career_tempo(_tempo_corpus(
+        _tempo_swing(7, ratio=2.42, backswing=968.0, downswing=400.6),
+        _tempo_swing(10, ratio=2.35, backswing=901.2, downswing=383.9),
+    ))
+
+    assert [s.ratio for s in tempo.swings] == [2.42, 2.35]
+    assert tempo.latest.ratio == 2.35
+    assert tempo.typical_ratio is None
+    assert tempo.typical_backswing_ms is None
+    assert tempo.withheld, "an absent mean must arrive with the floor it is waiting for"
+
+
+def test_the_typical_value_lands_once_the_center_guard_lifts() -> None:
+    """The other half of the same property: the refusal has to actually be liftable.
+
+    `tempo_ratio` carries an override (8, against the default 5) because it is the noisiest metric
+    in the panel, so the floor is read from `minimum_n` rather than written here — a floor revised
+    by a real bay session should move this test's input, not break it.
+    """
+    n = minimum_n("tempo_ratio", BaselineClaim.CENTER)
+    tempo = build_career_tempo(_tempo_corpus(*(
+        _tempo_swing(i, ratio=2.4, backswing=900.0, downswing=375.0) for i in range(1, n + 1)
+    )))
+
+    assert tempo.typical_ratio == pytest.approx(2.4)
+    assert tempo.typical_backswing_ms == pytest.approx(900.0)
+    assert tempo.anchor is TempoAnchor.CAREER_MEAN
+
+
+def test_the_anchor_falls_back_to_the_latest_swing_before_the_tour_median() -> None:
+    """The middle rung, and the reason `TempoAnchor` has three values rather than a bool.
+
+    A golfer whose mean is withheld still has a measured backswing, and one measured swing is a
+    better target than a population median. It is not a mean smuggled past the guard — it is one
+    swing's measurement used as a target, exactly as the results page has done since ADR-023.
+    """
+    tempo = build_career_tempo(_tempo_corpus(
+        _tempo_swing(7, ratio=2.42, backswing=968.0, downswing=400.6),
+        _tempo_swing(10, ratio=2.35, backswing=901.2, downswing=383.9),
+    ))
+
+    assert tempo.anchor is TempoAnchor.LATEST_SWING
+    assert tempo.plan.anchored is True
+    assert tempo.plan.anchor_backswing_ms == pytest.approx(901.2)
+
+
+def test_a_ratio_with_no_halves_behind_it_still_counts_as_history() -> None:
+    """`backswing_ms` and `downswing_ms` are a later measurement than the ratio.
+
+    An artifact from an engine that wrote only `tempo_ratio` has a readable tempo and no durations.
+    Dropping it would shorten the history for a reason no reader could see; anchoring on it is
+    impossible, so the target falls back to the tour median and says so.
+    """
+    tempo = build_career_tempo(_tempo_corpus(_tempo_swing(7, ratio=2.42)))
+
+    assert [s.ratio for s in tempo.swings] == [2.42]
+    assert tempo.swings[0].backswing_ms is None
+    assert tempo.anchor is TempoAnchor.TOUR_MEDIAN
+    assert tempo.plan.anchored is False
+
+
+def test_the_halves_are_joined_by_swing_and_never_zipped_positionally() -> None:
+    """The bug this join exists to make impossible.
+
+    Three parallel lists paired by index put one swing's ratio beside another's durations the first
+    time the metrics cover different swings — and every number still looks plausible.
+    """
+    tempo = build_career_tempo(_tempo_corpus(
+        _tempo_swing(7, ratio=2.42),
+        _tempo_swing(10, ratio=2.35, backswing=901.2, downswing=383.9),
+    ))
+
+    by_ref = {s.swing_ref: s for s in tempo.swings}
+    assert by_ref["2026-08-07/7"].backswing_ms is None
+    assert by_ref["2026-08-10/10"].backswing_ms == pytest.approx(901.2)
+
+
+def test_an_anchor_the_guard_rejects_is_reported_as_the_tour_median() -> None:
+    """`anchor` is read back off the plan, never predicted.
+
+    `_anchor_backswing` refuses an observed backswing outside the tour p10-p90, so a view that
+    claimed `LATEST_SWING` from its own branch would say "matched to your backswing" over a drill
+    built on the median. Both surfaces read one builder's decision.
+    """
+    backswing = load_distribution("backswing_ms")
+    too_quick = backswing.p10 / 2
+
+    tempo = build_career_tempo(_tempo_corpus(
+        _tempo_swing(7, ratio=2.0, backswing=too_quick, downswing=too_quick / 2),
+    ))
+
+    assert tempo.anchor is TempoAnchor.TOUR_MEDIAN
+    assert tempo.plan.anchored is False
+    # The reading itself is untouched — the guard governs the target, not the measurement.
+    assert tempo.swings[0].backswing_ms == pytest.approx(too_quick)
+
+
+def test_an_empty_corpus_is_an_empty_history_and_still_offers_the_tour_target() -> None:
+    """The first true answer about every golfer, and it is not an error.
+
+    The trainer still builds: a golfer with no swings on file can practice the tour tempo, and
+    refusing them the metronome as well as the history would be a refusal nobody asked for.
+    """
+    tempo = build_career_tempo(_tempo_corpus())
+
+    assert tempo.swings == ()
+    assert tempo.latest is None
+    assert tempo.typical_ratio is None
+    assert tempo.anchor is TempoAnchor.TOUR_MEDIAN
+    assert tempo.plan is not None
+
+
+def test_the_refusals_are_deduplicated_and_strictest_first() -> None:
+    """Three metrics, two distinct floors, and an order a reader can act on.
+
+    `backswing_ms` and `downswing_ms` share a floor and always share an `n`, so an undeduplicated
+    list prints one sentence twice and reads as two problems. The strictest is first because it is
+    the one gating the headline ratio, and the sentences differ only in a number.
+    """
+    tempo = build_career_tempo(_tempo_corpus(
+        _tempo_swing(7, ratio=2.42, backswing=968.0, downswing=400.6),
+    ))
+
+    reasons = [claim.reason for claim in tempo.withheld]
+    assert len(reasons) == len(set(reasons))
+    assert [claim.need_n for claim in tempo.withheld] == sorted(
+        (claim.need_n for claim in tempo.withheld), reverse=True
+    )
+    assert tempo.withheld[0].need_n == minimum_n("tempo_ratio", BaselineClaim.CENTER)
+
+
+def test_both_scopes_go_through_one_anchor_guard() -> None:
+    """The reason `build_tempo_plan_for` was split out rather than copied.
+
+    A career target fitted to a backswing and a per-swing target fitted to the same backswing are
+    the same plan. Two builders would be free to disagree about when a golfer's own backswing may
+    be practiced to — silently, since both would look right.
+    """
+    from_phases = build_tempo_plan(_phases(backswing_ms=901.2, downswing_ms=383.9))
+    from_durations = build_tempo_plan_for(
+        observed_backswing_ms=901.2, observed_downswing_ms=383.9
+    )
+
+    # Field by field rather than `==`: `_phases` reconstructs the durations through the transition
+    # midpoint, so the two arrive a float ulp apart and an equality would be testing arithmetic
+    # noise instead of the guard.
+    assert from_phases.anchored is from_durations.anchored
+    assert from_phases.anchor_backswing_ms == pytest.approx(from_durations.anchor_backswing_ms)
+    assert from_phases.pace == pytest.approx(from_durations.pace)
+    assert [p.model_dump() for p in from_phases.patterns] == [
+        p.model_dump() for p in from_durations.patterns
+    ]

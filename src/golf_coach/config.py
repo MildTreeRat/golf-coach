@@ -2,7 +2,7 @@
 
 Modules receive config via this object rather than reading env vars themselves, which
 keeps them pure and testable. Values can be overridden with env vars (prefix GOLF_) or
-a local .env file.
+a local .env file — located absolutely, so it is found from any working directory.
 
 Secrets are typed `SecretStr`, never `str`: `repr()`, `str()`, f-strings and `model_dump()`
 all render `**********`, so a stray `print(settings)` or an exception traceback cannot spill
@@ -26,7 +26,18 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_prefix="GOLF_", env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_prefix="GOLF_",
+        # Absolute, not the bare ".env" this started as: pydantic-settings resolves a relative
+        # env_file against the process working directory, so a server started from anywhere but
+        # the repo root silently got no secrets at all. Every path below is absolute via
+        # REPO_ROOT, so such a process still found its data and scored swings normally — it just
+        # had no API key and no upload token, and nothing in the symptom pointed at the working
+        # directory. That cost a session of dead coaching before it was found. Pinned by
+        # `tests/test_config.py::test_the_env_file_is_read_from_the_repo_regardless_of_cwd`.
+        env_file=REPO_ROOT / ".env",
+        extra="ignore",
+    )
 
     # Filesystem layout (data/ is gitignored).
     data_dir: Path = REPO_ROOT / "data"

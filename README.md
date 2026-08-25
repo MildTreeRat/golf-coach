@@ -34,6 +34,7 @@ the time you have walked back from the bay.
 | **M6** LLM coaching | 🟡 Claude writes the per-swing verdict; follow-up Q&A left |
 | **M6.5** Measure now, judge later | ✅ Done — 9 metrics recorded per swing, 6 of them scored |
 | **Career mode** One golfer over time | ✅ 6/6 steps — built, and currently **silent by design**: it reports **n = 2** per metric and refuses every claim over that. A bay session is what makes it speak |
+| **M9** Player tracking (per-club) | ✅ Done *(2026-08-22)*, 20/20 phases — the club tag at capture, a declared bag with lofts, and the per-club profile behind a CLI, a bag page and two MCP tools. **Silent by design** until swings carry the tag |
 | **M5** Feedback UI | ⬜ Not started — a static results page stands in for it |
 | **M7** Two-phone sim capture | 🟡 6/7 phases — only the Phase 0 field spike is left |
 
@@ -246,7 +247,9 @@ module depends on — modules never import each other.
   (`coach.py`, M6) written from those tips and the measured numbers, and stamped with the model
   that wrote it so prose is never mistaken for a measurement
 - **storage** — flat-file, content-addressed swing-bundle store *(M7 Phase 3, trimmed)*;
-  analysis artifacts land in the same swing directory
+  analysis artifacts land in the same swing directory. Beside it: the golfer registry, the
+  declared bag (M9, ADR-024) and the career corpus reader, which is derived on every call and
+  persisted nowhere
 - **api** — FastAPI phone-upload server, the bundle pipeline, and the background worker that
   runs it when a swing completes *(M7 Phase 5)*
 
@@ -303,9 +306,10 @@ golf-coach/
 │       │                    #   plus career mode: baseline → dispersion → tour comparison
 │       ├── feedback/        # ranked rule-based tips (+ Claude coaching later)
 │       ├── storage/         # flat-file stores: swing bundles (content-addressed),
-│       │                    #   golfer registry, career corpus reader
+│       │                    #   golfer registry, declared bag, career corpus reader
 │       ├── api/             # upload server + bundle pipeline + background analysis worker
-│       ├── mcp/             # MCP tools over swings, shots and one golfer's career (ADR-006)
+│       ├── mcp/             # MCP tools over swings, shots, one golfer's career and
+│       │                    #   their bag (ADR-006)
 │       └── config.py        # settings (the only env reader)
 ├── frontend/                # React UI (M5) — separate toolchain, talks to api/ over HTTP
 ├── tests/                   # mirrors the package; the core suite runs on the base install

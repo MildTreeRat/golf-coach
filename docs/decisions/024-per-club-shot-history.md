@@ -1,9 +1,11 @@
 # ADR-024: Per-Club Shot History — the tag that makes distance a measurable quantity
 
 ## Status
-Proposed. Design agreed 2026-08-20; no code written. The phase list is
-[docs/M9_PLAYER_TRACKING.md](../M9_PLAYER_TRACKING.md); this document is the *why* behind it.
-Flip to Accepted when M9 P20 closes.
+**Accepted** 2026-08-22. Design agreed 2026-08-20; all 20 phases of
+[docs/M9_PLAYER_TRACKING.md](../M9_PLAYER_TRACKING.md) are built, and this document is the *why*
+behind them. Nothing in the four decisions below was corrected by building it, which is why this
+flip carries no addendum — the one thing reality did add is on the shelf question, and it has
+its own addendum below from 2026-08-21.
 
 ## Date
 2026-08-20

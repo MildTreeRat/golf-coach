@@ -315,12 +315,45 @@ def test_the_request_asks_for_adaptive_thinking_and_no_sampling_params() -> None
 
 
 def test_no_key_is_a_note_not_an_exception() -> None:
+    """Needs the SDK present, because the extra is now checked first and would answer instead."""
+    pytest.importorskip("anthropic", reason="the missing-key note is only reached with the SDK")
+
     outcome = ask("q", transcript=transcript(), tools=[], briefing=BRIEFING, model=MODEL)
 
     assert isinstance(outcome, AskOutcome)
     assert outcome.text is None
     assert outcome.transcript is None
     assert "no Anthropic API key" in (outcome.note or "")
+
+
+def test_a_missing_extra_is_not_reported_as_a_missing_key(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Same ordering rule as `coach.py`: pip is the fix, so pip is what the note has to name."""
+    monkeypatch.setattr("golf_coach.feedback.conversation._sdk", lambda: None)
+
+    outcome = ask("q", transcript=transcript(), tools=[], briefing=BRIEFING, model=MODEL)
+
+    assert "llm" in (outcome.note or "")
+    assert "API key" not in (outcome.note or "")
+
+
+def test_an_sdk_error_speaks_this_panels_vocabulary_not_coachings() -> None:
+    """`_note_for` is shared with `coach.py`, and its wording defaults to the results page.
+
+    Every other note in this module says "no answer". An SDK error was the one that did not,
+    because the prefix was hardcoded — so a rate-limited question replied "no written coaching:"
+    directly underneath the question the golfer had just typed.
+    """
+    anthropic = pytest.importorskip("anthropic")
+    exc = anthropic.RateLimitError.__new__(anthropic.RateLimitError)
+    Exception.__init__(exc, "boom")
+
+    outcome = ask("q", transcript=transcript(), tools=[], briefing=BRIEFING, model=MODEL,
+                  client=_Client(exc))
+
+    assert (outcome.note or "").startswith("no answer: ")
+    assert "no written coaching" not in (outcome.note or "")
 
 
 def test_an_sdk_failure_becomes_a_note() -> None:

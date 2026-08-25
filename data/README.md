@@ -7,7 +7,8 @@ keeps the directory in git and documents the layout.
 data/
 ├── raw/         # raw swing video files, e.g. raw/sessions/{session_id}/   (gitignored)
 ├── processed/   # extracted keypoints, labeled images, intermediate artifacts (gitignored)
-│   ├── sessions/      # one directory per swing bundle + its analysis artifacts
+│   ├── sessions/      # one directory per swing bundle + its analysis artifacts, under a
+│   │                  #   session.json holding two cursors: golfer and club (ADR-024)
 │   ├── shots/         # parsed launch-monitor shots, content-addressed
 │   ├── golfers/       # per golfer: the registry record, and the declared bag beside it
 │   └── conversations/ # follow-up conversation transcripts, one per conversation (ADR-020)

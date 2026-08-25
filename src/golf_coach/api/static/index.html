@@ -87,6 +87,22 @@
   button.anyway { margin-top: 0.4rem; padding: 0.4rem 0.7rem; font-size: 0.8rem;
                   border: 1px solid #888; border-radius: 6px; background: transparent;
                   color: inherit; }
+  /* The two repair controls. Both live on the swing row rather than near the file input,
+     because both act on a swing already on disk — the same reasoning that put the golfer and
+     club repairs there. */
+  .role-row .fix { margin-left: 0.5rem; }
+  /* Deleting a whole swing is the only destructive control on the page, so it is the only one
+     styled in the failure colour, and it is pushed to its own line under the analysis rule
+     rather than sitting beside "View results" where a thumb aiming at the link would find it. */
+  .danger { margin-top: 0.5rem; padding-top: 0.4rem; border-top: 1px solid rgba(128,128,128,0.3); }
+  button.delete { padding: 0.35rem 0.6rem; font-size: 0.78rem; border: 1px solid #c33;
+                  border-radius: 6px; background: transparent; color: #c33; }
+  /* The armed state of a replace tap: what the file picker is about to overwrite. Loud because
+     picking a file is otherwise indistinguishable from an ordinary upload, and the two now do
+     very different things. */
+  #retarget { margin-top: 0.5rem; padding: 0.5rem 0.7rem; border-radius: 8px;
+              border: 1px solid #d90; background: rgba(220,150,0,0.12); font-size: 0.85rem; }
+  #retarget[hidden] { display: none; }
 </style>
 </head>
 <body>
@@ -98,6 +114,11 @@
     <span class="hand" id="golfer-hand"></span>
     <button type="button" class="link" id="golfer-change">change</button>
     <a class="link" id="golfer-career" href="#">career</a>
+    <!-- Its own link rather than a line inside career mode's, because it answers a question asked
+         at a different moment: career is "how am I doing", tempo is "what am I swinging to right
+         now", and the second is wanted with a club already in hand. Deep-links to the same page's
+         `#tempo`, so there is one career page and not two. -->
+    <a class="link" id="golfer-tempo" href="#">tempo</a>
   </div>
   <div id="golfer-form">
     <div id="golfer-warning">&#9888; No golfer set for this session.</div>
@@ -131,6 +152,11 @@
 </div>
 
 <input type="file" id="file" accept="video/*,image/*" disabled />
+<div id="retarget" hidden>
+  Replacing <strong id="retarget-what"></strong> &mdash; the next file you pick goes to that
+  swing, not to a new one.
+  <button type="button" class="link" id="retarget-cancel">cancel</button>
+</div>
 <div id="message">Pick a club and a role, then a file.</div>
 <div id="progress" hidden><div id="progress-bar"></div></div>
 
@@ -151,6 +177,7 @@ const golferFormEl = document.getElementById("golfer-form");
 const golferNameEl = document.getElementById("golfer-name");
 const golferHandEl = document.getElementById("golfer-hand");
 const golferCareerEl = document.getElementById("golfer-career");
+const golferTempoEl = document.getElementById("golfer-tempo");
 const golferInput = document.getElementById("golfer-input");
 const handRow = document.getElementById("hand-row");
 const clubEl = document.getElementById("club");
@@ -158,6 +185,8 @@ const clubNameEl = document.getElementById("club-name");
 const clubBagEl = document.getElementById("club-bag");
 const clubBagGrid = document.getElementById("club-bag-grid");
 const clubAllGrid = document.getElementById("club-all-grid");
+const retargetEl = document.getElementById("retarget");
+const retargetWhatEl = document.getElementById("retarget-what");
 
 // The golfer is deliberately NOT in localStorage, unlike the role. The role is a property of
 // this phone; the golfer is a property of the session both phones are uploading into, so it
@@ -179,6 +208,16 @@ let clubPending = false;   // the club's `editingGolfer` — see the picker's li
 // re-rendered open, held in the markup it would shut itself under the golfer's thumb.
 let retagSwing = null;     // which swing's picker is open, at most one
 let retagPending = false;  // `clubPending` for the swing rows — see the retag listener
+
+// Where the next picked file goes: null for the ordinary path (the store decides), or
+// {swing_id, role} to send `?swing_id=`, which makes the upload *replace* that role on that
+// swing. This is the page half of the repair; the route has taken `swing_id` since M7 and
+// nothing sent it, so a corrected file could only ever land in a new swing.
+//
+// It survives a poll for the same reason `retagSwing` does — `renderStatus` rebuilds the whole
+// subtree every five seconds — and it is cleared after one upload, because "replace" is a single
+// deliberate act and an armed picker that outlived it would silently overwrite the next clip.
+let replaceTarget = null;
 
 // One-time setup per phone: open /?t=<token> once, and the token is kept from then on.
 // It is stripped from the URL immediately so the secret doesn't linger in the address
@@ -249,9 +288,12 @@ function renderGolfer() {
   if (isSet) {
     golferNameEl.textContent = currentGolfer.display_name;
     golferHandEl.textContent = `(${currentGolfer.handedness}-handed)`;
-    // Career mode is per-golfer, so the link only means anything once one is set.
-    golferCareerEl.href =
-      `/career.html?player=${encodeURIComponent(currentGolfer.player_id)}`;
+    // Career mode is per-golfer, so the link only means anything once one is set. Tempo is the
+    // same page at its own anchor — every golfer on this simulator swings to a different one, so
+    // it is worth reaching in one tap and is meaningless without a golfer to reach it for.
+    const career = `/career.html?player=${encodeURIComponent(currentGolfer.player_id)}`;
+    golferCareerEl.href = career;
+    golferTempoEl.href = `${career}#tempo`;
   }
 }
 
@@ -427,12 +469,36 @@ function postFile(url, file, onProgress) {
   });
 }
 
+// The banner under the file input, and the whole of what "armed" looks like. Rendered from
+// `replaceTarget` rather than toggled at the tap so that cancelling, uploading and a failed
+// upload all go through one place.
+function renderRetarget() {
+  retargetEl.hidden = !replaceTarget;
+  if (replaceTarget) {
+    retargetWhatEl.textContent =
+      `${replaceTarget.role.replace(/_/g, "-")} on swing ${replaceTarget.swing_id}`;
+  }
+}
+
+document.getElementById("retarget-cancel").addEventListener("click", () => {
+  replaceTarget = null;
+  renderRetarget();
+  setMessage("Replace cancelled. The next file uploads normally.");
+});
+
 fileInput.addEventListener("change", async () => {
   const file = fileInput.files[0];
   if (!file) return;
-  const role = currentRole();
-  const url = `/api/uploads?role=${encodeURIComponent(role)}&filename=${encodeURIComponent(file.name)}`;
-  setMessage(`Uploading ${file.name}...`);
+  // An armed replace overrides the role buttons: the row that armed it named the role, and
+  // trusting the buttons here would let a stale selection drop a face-on clip into the
+  // shot_screen slot of a swing someone was only trying to repair.
+  const target = replaceTarget;
+  const role = target ? target.role : currentRole();
+  const url = `/api/uploads?role=${encodeURIComponent(role)}&filename=${encodeURIComponent(file.name)}` +
+    (target ? `&swing_id=${encodeURIComponent(target.swing_id)}` : "");
+  setMessage(target
+    ? `Replacing ${role.replace(/_/g, "-")} on swing ${target.swing_id} with ${file.name}...`
+    : `Uploading ${file.name}...`);
   progressBar.style.width = "0%";
   progressEl.hidden = false;
   try {
@@ -466,6 +532,12 @@ fileInput.addEventListener("change", async () => {
   } finally {
     progressEl.hidden = true;
     fileInput.value = "";
+    // Disarmed whatever happened, including on failure. A replace that 4xx'd has a reason the
+    // golfer must act on (wrong format, wrong swing), and leaving it armed would send the next
+    // *ordinary* upload into that swing instead — the exact mis-slotting this control exists to
+    // undo.
+    replaceTarget = null;
+    renderRetarget();
     refreshStatus();
   }
 });
@@ -502,12 +574,20 @@ function renderStatus(session) {
           const label = role.replace(/_/g, "-");
           const mark = info ? "&#10003;" : "&mdash;";
           const cls = info ? "yes" : "no";
-          return `<div class="role-row"><span>${label}</span><span class="${cls}">${mark}</span></div>`;
+          // *replace* on a filled slot, *add* on an empty one, and they are the same control —
+          // both send `?swing_id=`, which is what says "this swing" instead of letting the store
+          // pick. The empty case matters as much as the filled one: an incomplete swing is
+          // precisely the one the "newest swing lacking that role" rule will otherwise fill with
+          // the *next* shot's clip.
+          const verb = info ? "replace" : "add";
+          return `<div class="role-row"><span>${label}</span><span><span class="${cls}">${mark}</span>` +
+            `<button type="button" class="link fix role-fix" data-swing="${swing.swing_id}"` +
+            ` data-role="${role}">${verb}</button></span></div>`;
         })
         .join("");
       return `<div class="swing ${swing.status}"><strong>Swing ${swing.swing_id}</strong> &mdash; ${swing.status}${rows}` +
         renderSwingGolfer(swing) + renderSwingClub(swing) +
-        renderAnalysis(session.session_id, swing) + `</div>`;
+        renderAnalysis(session.session_id, swing) + renderDelete(swing) + `</div>`;
     })
     .join("");
 }
@@ -587,6 +667,17 @@ function renderAnalysis(sessionId, swing) {
     <button class="anyway" data-swing="${swing.swing_id}">Analyze anyway</button></div>`;
 }
 
+// The one destructive control here, and it exists because the store's assignment rule makes
+// phantom swings out of ordinary corrections: re-uploading a fixed file for a role a swing
+// already has opens a *new* swing rather than replacing anything. Before this, one mistyped
+// upload was a permanent one-file swing — and worse than clutter, since a swing missing its two
+// clips is the newest swing lacking those roles, so it quietly swallows the next real shot's
+// footage and pairs it with a shot screen from a different swing.
+function renderDelete(swing) {
+  return `<div class="danger"><button type="button" class="delete"
+    data-swing="${swing.swing_id}">Delete swing ${swing.swing_id}</button></div>`;
+}
+
 function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, (c) =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
@@ -661,6 +752,78 @@ statusEl.addEventListener("click", async (event) => {
     setMessage(`Could not change golfer: ${err.message}`, true);
   } finally {
     await refreshGolfer();
+    refreshStatus();
+  }
+});
+
+// Arming a replace. Nothing is uploaded here — this only points the file input at one role of one
+// swing, and the banner under the input says so until a file is picked or someone cancels.
+statusEl.addEventListener("click", (event) => {
+  const button = event.target.closest("button.role-fix");
+  if (!button) return;
+  const { swing: swingId, role } = button.dataset;
+  // Tapping the armed row again disarms it, matching the retag picker's *change*/*cancel*.
+  if (replaceTarget && replaceTarget.swing_id === swingId && replaceTarget.role === role) {
+    replaceTarget = null;
+    renderRetarget();
+    setMessage("Replace cancelled. The next file uploads normally.");
+    return;
+  }
+  // The club cursor gates replaces too — `/api/uploads` refuses a clubless upload whatever it
+  // is aimed at (M9 P6), and the input is disabled to match. A `click()` on a disabled input is
+  // silently ignored, which would leave the banner armed over a picker that never opened.
+  if (fileInput.disabled) {
+    setMessage("Pick a club first — every upload is tagged with one, replacements included.", true);
+    return;
+  }
+  replaceTarget = { swing_id: swingId, role };
+  renderRetarget();
+  // The accept filter still comes off the role, so the picker offers photos for a shot screen and
+  // clips for a view — but the role *buttons* are left alone deliberately. They say what the next
+  // ordinary upload is, and a replace is a detour that should not rewrite that.
+  fileInput.accept = role === "shot_screen" ? "image/*" : "video/*,image/*";
+  setMessage(`Pick the ${role.replace(/_/g, "-")} file for swing ${swingId}.`);
+  fileInput.click();
+});
+
+// Deleting one swing. Confirmed in full sentences rather than "Are you sure?": the files are
+// gone, and on a phone in a bay this button is a thumb's width from "View results".
+statusEl.addEventListener("click", async (event) => {
+  const button = event.target.closest("button.delete");
+  if (!button) return;
+  const swingId = button.dataset.swing;
+  const ok = confirm(
+    `Delete swing ${swingId}?
+
+` +
+    "Its clips, shot screen and any analysis are removed from disk. This cannot be undone."
+  );
+  if (!ok) return;
+
+  button.disabled = true;
+  try {
+    const current = await fetch("/api/sessions/current", { headers: authHeaders() })
+      .then((r) => r.json());
+    const res = await fetch(
+      `/api/sessions/${encodeURIComponent(current.session_id)}/swings/${encodeURIComponent(swingId)}`,
+      { method: "DELETE", headers: authHeaders() });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setMessage(body.detail || `Could not delete swing ${swingId} (${res.status})`, true);
+      return;
+    }
+    // A deleted swing cannot still be the target of an armed replace, and the ids are reused —
+    // `_next_swing_id` counts from the highest on disk — so leaving it armed could point at a
+    // future swing that has nothing to do with this one.
+    if (replaceTarget && replaceTarget.swing_id === swingId) {
+      replaceTarget = null;
+      renderRetarget();
+    }
+    if (retagSwing === swingId) retagSwing = null;
+    setMessage(`Swing ${swingId} deleted.`);
+  } catch (err) {
+    setMessage(`Could not delete swing ${swingId}: ${err.message}`, true);
+  } finally {
     refreshStatus();
   }
 });

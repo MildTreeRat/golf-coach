@@ -1,7 +1,7 @@
 # Architecture — the system AS BUILT
 
 > **Tier: AS-BUILT.** This document describes what actually exists and runs, reviewed
-> **2026-08-11**. Everything here has been executed. For the *target* design — the full
+> **2026-08-22**. Everything here has been executed. For the *target* design — the full
 > component/deployment picture, the build order, and the parts not yet written — see
 > [FLOW.md](FLOW.md).
 >
@@ -95,12 +95,15 @@ python scripts/career_baseline.py [--name NAME | --player-id ID] [--verbose]
 python scripts/career_dispersion.py [--name NAME | --player-id ID] [--verbose]
 #   what the numbers are evidence for: a repeatable miss (look before the swing) against a
 #   scattered one (look at timing). Both findings withheld until the baseline's floors clear
+python scripts/club_profile.py [--name NAME | --player-id ID] [--club CLUB] [--verbose]
+#   the same question narrowed to one club: how far this golfer hits it, and where the
+#   history refuses to say. --club takes a name a human would type ('7i', 'seven iron')
 
 # Follow-up questions about a swing (needs the `llm` extra and a key — ADR-020)
 python scripts/ask_swing.py <SESSION/SWING> "<question>"
 python scripts/ask_swing.py --resume <CONVERSATION-ID> "<question>"
 python scripts/ask_swing.py [--list | --show <CONVERSATION-ID>]
-#   seeds from the swing's stored analysis, then looks anything else up through the same eight
+#   seeds from the swing's stored analysis, then looks anything else up through the same ten
 #   tools the MCP server offers — called in-process, not over stdio
 #   exit 0 answered · 1 answered with something flagged · 2 no answer
 
@@ -115,7 +118,37 @@ One long-running service: the FastAPI upload server (`scripts/run_server.py`, M7
 which also carries the background analysis worker and serves the upload and results pages. The
 MCP server (M3, `scripts/run_mcp_server.py`) is not a service in the same sense — it speaks
 stdio, so the MCP client launches it per connection and there is no port to bind. No React UI
-(M5); the two static pages under `api/static/` are what stands in for it.
+(M5); the three static pages under `api/static/` — upload, results, career — are what stands
+in for it.
+
+### The routes, precisely
+
+The upload server's whole surface, from `api/app.py`. Every one is gated by the same shared-secret
+dependency except the static mount, which is deliberately open because the page has to load before
+anyone can type the secret into it. `tests/test_docs_truth.py` asserts this table names every route
+the module declares, so a new endpoint fails the suite until it is listed here.
+
+| Method | Route | What it is for |
+|---|---|---|
+| `POST` | `/api/uploads` | The only write a phone makes: one file with its role, slotted into a swing server-side. Refuses a 409 when the session cursor names no club (M9 P6). `?swing_id=` aims it at one swing instead, which is what makes a bad file *replaceable* rather than the start of a new swing |
+| `GET` | `/api/sessions/current` | Which session today's uploads land in |
+| `GET` | `/api/golfers` | Every known golfer — what lets the page tell a returning name from a new one |
+| `GET` | `/api/clubs` | The club vocabulary and its categories, so the picker renders in one round trip (M9 P7) |
+| `GET` `POST` | `/api/sessions/current/golfer` | The golfer cursor: who the *next* swing belongs to |
+| `GET` `POST` | `/api/sessions/current/club` | The club cursor: what the *next* swing was hit with (M9 P4) |
+| `GET` | `/api/golfers/{player_id}/career` | One golfer against their own history, plus their tempo and the metronome fitted to it — the route both the career page and the swing page read, so the two cannot disagree |
+| `GET` | `/api/golfers/{player_id}/bag` | Every club this golfer has hit or declared, with what each one's history says or refuses (M9 P19) |
+| `POST` `DELETE` | `/api/golfers/{player_id}/bag/{club}` | Declare or edit one slot; removing retires it to the append-only shelf rather than deleting it (M9 P19, ADR-024) |
+| `GET` | `/api/sessions/{session_id}` | A session's swings and their analysis state — the 5 s status poll |
+| `GET` | `/api/sessions/{session_id}/swings/{swing_id}` | One swing's stored result, plus the tempo plan derived at read time |
+| `DELETE` | `/api/sessions/{session_id}/swings/{swing_id}` | Remove one swing and its directory. The undo for a *phantom* — a corrective re-upload cannot replace a role a swing already has, so it opens a new swing, and a phantom missing both clips then swallows the next real shot's footage. Refused with 409 while a run is queued or in flight |
+| `POST` | `/api/sessions/{session_id}/swings/{swing_id}/golfer` | Re-attribute one swing; the repair path for a misfiled golfer |
+| `POST` | `/api/sessions/{session_id}/swings/{swing_id}/club` | Retag one swing. The club's **only** repair path, and deliberately per-swing — a session holds many clubs, so there is no bulk backfill (M9 P6, ADR-024 §5) |
+| `POST` | `/api/sessions/{session_id}/swings/{swing_id}/analyze` | The "Analyze anyway" override, for a bundle that will never be complete |
+| `POST` | `/api/sessions/{session_id}/swings/{swing_id}/ask` | A follow-up question, continuing a conversation if one is given (ADR-020) |
+| `GET` | `/api/sessions/{session_id}/swings/{swing_id}/conversation` | That swing's most recent conversation, rendered for display |
+| `GET` | `/api/conversations/{conversation_id}` | One conversation by id, rendered for display |
+| `GET` | `/api/sessions/{session_id}/swings/{swing_id}/video/{name}` | The aligned render, or one raw view when there was no second angle to align to |
 
 Offline reference-data tooling (`scripts/golfdb/`, the `research` extra) is a separate
 concern from the runtime: `fetch` → `ingest_labels` → `extract_pose` → `derive_pose_metrics`
@@ -139,10 +172,10 @@ flowchart TD
     ANA["analysis/<br/>smoothing, phases, alignment,<br/>checkpoints, scoring, benchmarks"] --> C
     FB["feedback/<br/>rules"] --> C
     DET["detection/ — stub"] -.-> C
-    STO["storage/<br/>bundle + golfer stores,<br/>career corpus reader"] --> C
+    STO["storage/<br/>bundle, golfer + bag stores,<br/>career corpus reader"] --> C
 
     API["api/ — upload server,<br/>pipeline, analysis worker"] --> C
-    MCP["mcp/ — query + career tools"] --> C
+    MCP["mcp/ — query, career + club tools"] --> C
 
     API --> CAP
     API --> POSE
@@ -218,6 +251,7 @@ on a `vision`-only install — pinned by `tests/api/test_pipeline_imports.py`.
 | Feedback | Feedback → UI | `FeedbackPayload` — overall score, ranked tips with severity, headline | ✅ produced and rendered by `api/static/results.html` |
 | Reference | Benchmarks → Analysis | `ranges.json` bands + `golfdb_v1.json` distributions, both with provenance | ✅ |
 | Career corpus | Storage → Analysis | `CareerCorpus` — one golfer's distinct swings with their `Measurement`s, the honest per-metric `n`, and every excluded swing with its reason | ✅ produced, not yet consumed (career mode step 4) |
+| Bag profile | Storage → Analysis → UI/MCP | `BagProfile` / `ClubProfile` — the same corpus narrowed to one club, with `n_swings` and `n_shots` deliberately kept apart, because a clip filmed without a screen photo is history that carries no distance (M9 P14) | ✅ built and read by three surfaces: the CLI, the bag page and two MCP tools |
 
 ---
 
@@ -341,7 +375,7 @@ detection (M2); face angle and ball flight need the launch monitor. See ADR-011 
 ### The tempo trainer — the one output that asks for a swing back
 
 Everything above judges a swing that already happened. `analysis/tempo_trainer.py` is the
-exception: `build_tempo_plan(phases, pace)` turns the tour's own durations into a beat sequence a
+exception: `build_tempo_plan(phases)` turns the tour's own durations into a beat sequence a
 golfer swings *to*, because "Tempo too quick" is the one verdict on the panel with no next move
 attached to it ([ADR-023](decisions/023-tempo-training-and-absolute-swing-durations.md)).
 
@@ -350,6 +384,19 @@ stored `phases` and `api/app.py::swing_detail` sends it beside the result — so
 analyzed before it existed, and `SwingResult` did not change shape. The results page decides
 whether to show it, because the page holds the verdict; the server decides what the beats are,
 because a page recomputing them would print a tempo nobody is hearing.
+
+**Two scopes, one anchor guard.** `build_career_tempo(corpus)` fits the same trainer to a whole
+golfer rather than one swing, and rides on the career route (ADR-023's second addendum). It layers
+what it knows by what the layer is allowed to assert: the per-swing readings are measurements and
+print at any `n`; the typical values are `PersonalBaseline`'s guarded means and are `None` until
+`CENTER` lifts; the target is a `TempoPlan` whose `anchor` degrades career mean → latest swing →
+tour median. Both scopes go through `build_tempo_plan_for`, so there is exactly one definition of
+when a golfer's own backswing may be practiced to — and the reported anchor is read back off the
+built plan rather than decided beside it, because that guard can reject what it was handed.
+
+On the client, the metronome itself is `api/static/tempo.js`, one `<script src>` shared by the
+results and career pages; each page keeps its own framing prose, since the two are answering
+different questions.
 
 **Two beat patterns ship and neither is a rendering of the other.** No single pulse marks both the
 top and impact — the intervals differ by ~3.4x — so `GRID` snaps the backswing to a whole number of
@@ -379,6 +426,31 @@ placement, because tempo is scored once already. Read the numbers from the artif
 Those two rows carry their own `Distribution.provenance`, because their inclusion rule is not the
 one the file's `dataset` block describes.
 
+### What the launch monitor contributes — measured, and judged by no band
+
+The other half of `measurements` comes off the shot rather than the pose.
+`analysis/shot_measure.py`'s `SHOT_MEASUREMENTS` is the registry — read the membership there, not
+from here — and M9 more than tripled it, because the tag it needed finally exists.
+
+**A distance is only poolable once a swing says which club hit it.** A carry averaged over a driver
+and a sand wedge is not a noisy estimate of something real, it is the mean of two different
+questions, which is why `carry_distance_yds` sat unregistered through M6.5 despite being the most
+obviously useful number the HD Golf screen prints. `SwingManifest.club` (M9 P4) is what unblocked
+it, and the distances, the two launch conditions and the start-line projection followed in P8–P10.
+
+**None of them is scored.** No band exists for how far a golfer *should* hit a club, and
+[ADR-010](decisions/010-benchmark-ranges.md) has gated per-club bands twice and cut none — so every
+one of these rides on `measurements` and reaches no `checkpoint_scores` entry. `overall_score` is
+byte-identical on every stored swing across all four bumps that added them (`7 -> 8` through
+`9 -> 10`; the reasoning is on `ANALYSIS_VERSION` in `contracts/swing.py`).
+
+**A dispersion target is not a band, and the distinction is the whole point.** Career mode's
+`METRIC_TARGETS` (`contracts/dispersion.py`) gives the two lateral degrees and
+`start_line_offline_yds` a target of `0.0` — straight is straight **by geometry**, not by a
+population — so a repeatable miss can be told from a scattered one. The distances get no target at
+all, and that absence is deliberate: it is the one thing here no measurement can supply.
+
+
 ---
 
 ## 4. Storage — what is actually persisted
@@ -394,10 +466,10 @@ gitignored and never created. Everything persists as files:
 | Overlays | `data/processed/<clip>.overlay.mp4`, `.analysis.mp4` | ✅ |
 | Parsed shots | `data/processed/shots/` (content-addressed) | ✅ written by `import_shot_screens.py` and by `analyze_bundle.py` |
 | Swing bundles | `data/processed/sessions/<session>/<swing>/` + `manifest.json` | ✅ written by the upload route (M7 Phase 3/5) |
-| ↳ *who swung it* | `player_id` on `SwingManifest`, stamped **write-once** from the session cursor | ✅ career mode step 1 — never sent by the uploading phone, because two phones would have to type matching names |
+| ↳ *who swung it, and with what* | `player_id` and `club` on `SwingManifest`, both stamped from the session cursor at swing creation | ✅ `player_id` is **write-once** (career mode step 1); `club` is required — an upload against a cursor naming no club is refused with a 409 (M9 P4–P6). Neither is sent by the uploading phone: two phones would have to type matching names, and a free-text club turns a typo into a tag |
 | ↳ *analysis artifacts* | `analysis.json`, `aligned.mp4`, `<role>.keypoints.json` in the same directory | ✅ written by `api/pipeline.py`, from the worker or the CLI; `analysis.json` is a `SwingBundleResult` with the heavy streams excluded (the keypoints sit beside it) |
 | ↳ *analysis state* | `analysis.state.json` in the same directory | ✅ `AnalysisState` — queued/running/done/failed, the role→sha256 map the result was computed from (so a re-upload invalidates it), and a denormalised score/headline so the 5 s status poll never parses `analysis.json`. The terminal status is written by `pipeline.record_state` as part of writing `analysis.json`, because a denormalised copy must be written by whatever writes the original; the worker owns only `queued`/`running`/crash |
-| ↳ *golfer cursor* | `session.json` in the **session** directory | ✅ `storage/session_meta.py` — who the *next* swing belongs to; the record of who actually swung lives on each manifest, so a buddy taking a few swings mid-session rewrites nobody's history |
+| ↳ *session cursor* | `session.json` in the **session** directory | ✅ `storage/session_meta.py` — **two** cursors, `player_id` and `club` (M9 P4): who the *next* swing belongs to and what it will be hit with. Both are pointers, never records — what actually happened lives on each manifest, so a buddy taking a few swings mid-session rewrites nobody's history and changing clubs mid-bucket rewrites no swing's tag. The club moves far more often, which is why the upload page keeps its picker open and the per-swing repair collapses behind a control |
 | Golfer registry | `data/processed/golfers/<player_id>.golfer.json` | ✅ `storage/golfer_store.py` — one file per golfer, name + handedness. Beside `sessions/`, not inside: a golfer outlives any one session, and that outliving is the point |
 | ↳ *their bag* | `data/processed/golfers/<player_id>.bag.json` | ✅ `storage/bag_store.py` (M9 P3, ADR-024) — the declared bag: which physical club fills each slot, with the loft club fitting will need. Shares the directory with the golfer record and is kept apart by the suffix, since `list_all` globs `*.golfer.json`. Declared rather than derived, because "clubs used" is derivable from shot history and "clubs owned" is not. **Nothing deletes a club**: a replaced or removed one moves to an append-only `retired` shelf, so a loft measured once is never measured twice |
 | Conversations | `data/processed/conversations/<conversation-id>.json` | ✅ `storage/transcript_store.py` (ADR-020) — one follow-up conversation per file, holding the model's own content blocks **verbatim**, thinking blocks included. Not a rendering: they are replayed to the API on the next turn, and thinking blocks are only legal replayed unchanged and only into the model that produced them, which is why `model` is recorded beside them. Beside `sessions/` for `golfers/`'s reason — a conversation seeded from one swing is asking about another by its second turn |
@@ -472,6 +544,22 @@ route — so the number rendered in one place cannot disagree with the number re
 `storage.corpus.narrow_to` is what makes a window or a two-session comparison honest: it recomputes
 `metric_counts` alongside the filtered swings, so the printed `n` always describes the values under
 it, and the per-session mean then faces the same CENTER floor the pooled mean faces.
+
+**M9 added one clause to that filter and got a milestone out of it.** `narrow_to(club=...)` (M9
+P13) narrows the same corpus to one club, and because it recomputes the counts like every other
+narrowing, the whole career pipeline — baseline, dispersion, tour comparison — produces per-club
+answers with nothing new having learned the rules. `analysis/club_profile.py` builds `BagProfile` /
+`ClubProfile` on top of it, and **three surfaces read that one builder**: `scripts/club_profile.py`,
+the bag section of `static/career.html` over `GET /api/golfers/{id}/bag`, and `mcp/club.py`'s two
+tools. Same discipline as the career route: one builder, so no two surfaces can print different
+numbers for one club.
+
+**"No numbers" has five spellings and they need five different answers** (M9 P18): no club tagged
+at all, a club whose figures are withheld for sample size, a club never hit and not in the bag, a
+club declared today, and swings that carried no measurement. Only the second sends a golfer to the
+bay; the first sends them to the retag control and the rest mean nothing is wrong. `mcp/club.py`
+names one constant per silence rather than reusing the refusal sentence, which is the same failure
+mode `unscored`'s `refilming_helps` exists to prevent one layer down.
 
 **`stale` and `outdated` are two different axes and both are load-bearing.** `stale` means the
 *bytes* moved — a clip was re-uploaded, so `AnalysisState.matches` fails. `outdated` means the

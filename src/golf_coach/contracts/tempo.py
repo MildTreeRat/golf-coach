@@ -31,14 +31,28 @@ argument `unscored.py` and `placements.py` make: shared vocabulary, no shared mo
 toggle is a client-side preference that persists nowhere. ADR-020 says a write path needs its own
 decision; this respects that rather than stretching it.
 
+## Two scopes, one vocabulary
+
+`TempoPlan` is one swing's target. `CareerTempo` at the foot is one *golfer's* — their whole
+measured history plus the target it earns them, which is the thing ADR-023 left under *Deferred, by
+choice* until a personal baseline existed over the two durations. It shares the beat vocabulary
+above rather than restating it, and carries a `TempoPlan` whole.
+
 Stdlib + pydantic only (ADR-008).
 """
 
 from __future__ import annotations
 
+from datetime import datetime
 from enum import StrEnum
 
 from pydantic import BaseModel, Field
+
+# The one import out of this module, and it is sideways rather than upward: `CareerTempo` reports
+# the baseline guard's refusals verbatim, so it needs the guard's own shape. Restating it would be
+# the second refusal vocabulary in a repo whose whole career-mode argument is that a withheld claim
+# must look identical wherever it surfaces.
+from golf_coach.contracts.baseline import WithheldClaim
 
 
 class TempoPattern(StrEnum):
@@ -192,3 +206,113 @@ class TempoPlan(BaseModel):
     def default_pattern(self) -> BeatPattern:
         """The pattern a surface should play unless the golfer picked the other one."""
         return self.patterns[0]
+
+
+class TempoAnchor(StrEnum):
+    """Which backswing a career-level target was built on. [ADR-023 addendum 2026-08-22]
+
+    `TempoPlan.anchored` is a bool because a single swing has only two answers: its own backswing
+    or the tour's. A career view has three, and the middle one is the whole reason this enum
+    exists — a golfer whose baseline is still withheld is not in the same position as one with no
+    measurement at all, and a page that could not tell them apart would either print a mean it is
+    forbidden to print or refuse a golfer a target it can honestly give them.
+    """
+
+    #: The golfer's own mean backswing, and so a claim their history supports.
+    CAREER_MEAN = "career_mean"
+    #: Their most recent measured backswing. Not a claim about the golfer — a fact about one
+    #: swing, which is what makes it sayable at an `n` the `CENTER` guard refuses.
+    LATEST_SWING = "latest_swing"
+    #: Neither was usable, so the target is the tour median. Also where the anchor lands when the
+    #: golfer's own backswing falls outside `_anchor_backswing`'s p10-p90 guard.
+    TOUR_MEDIAN = "tour_median"
+
+
+class TempoSwing(BaseModel):
+    """One recorded swing's tempo, as measured.
+
+    **A measurement, never a claim about the golfer**, which is exactly why it may be printed at
+    any `n`. `PersonalBaseline` withholds a mean over two swings because a mean asserts a tendency;
+    "this swing took 901 ms back and 384 ms down" asserts nothing beyond that swing and is the
+    evidence the refusal is built out of. Same split `SessionSample` already draws — the counts
+    travel while the per-session mean is gated.
+    """
+
+    swing_ref: str = Field(description="`session/swing`, matching `MetricSample.swing_ref`.")
+    session_id: str
+    captured_at: datetime
+
+    ratio: float = Field(gt=0.0, description="`backswing_ms / downswing_ms` for this swing.")
+    backswing_ms: float | None = Field(
+        default=None,
+        description=(
+            "Takeaway to top. Optional because the two durations are a later measurement than the "
+            "ratio (ADR-023 §Consequences): a swing analyzed by an engine that wrote `tempo_ratio` "
+            "and not the halves has a ratio and no halves, and dropping it would shorten the "
+            "history for no reason a reader could see."
+        ),
+    )
+    downswing_ms: float | None = Field(default=None, description="Top to impact. See above.")
+
+
+class CareerTempo(BaseModel):
+    """One golfer's tempo across their whole history, and the target it earns them. [ADR-023]
+
+    The career-mode counterpart to the per-swing `TempoPlan`. The results page answers "what did
+    *this* swing do"; this answers "what do I usually do, and what should I be practising to" —
+    which is the question a golfer standing in the bay actually has, and the one ADR-023 left under
+    *Deferred, by choice* until a personal baseline existed over the two durations.
+
+    **Three layers, and they are gated differently on purpose:**
+
+    - `swings` and `latest` are measurements. Never withheld.
+    - `typical_*` are claims, and come straight from `PersonalBaseline` — `None` when its `CENTER`
+      guard refused, with the refusal itemised in `withheld`. `tempo_ratio` needs 8 samples rather
+      than the default 5 (`contracts/baseline.py`), so this stays `None` for longer than the rest
+      of the panel and that is the metric's own noise, not an oversight.
+    - `plan` is a target, and `anchor` says which of the two it was fitted to.
+
+    Nothing here is stored. It is derived at read time from the corpus, for the reason ADR-023
+    rejected storing `TempoPlan` on `SwingResult`: none of it is a measurement *of* a swing, and
+    deriving it means the history a golfer sees can never lag the artifacts on disk.
+    """
+
+    player_id: str
+
+    swings: tuple[TempoSwing, ...] = Field(
+        default=(),
+        description="Every distinct swing with a readable tempo, **oldest first**. Deduplicated "
+        "by `CorpusSwing.artifact_key`, so three re-uploads of one clip appear once.",
+    )
+    latest: TempoSwing | None = Field(
+        default=None, description="The last entry in `swings`, or None when there are none."
+    )
+
+    typical_ratio: float | None = None
+    typical_backswing_ms: float | None = None
+    typical_downswing_ms: float | None = None
+
+    withheld: tuple[WithheldClaim, ...] = Field(
+        default=(),
+        description=(
+            "Every `CENTER` refusal behind a `None` above, deduplicated by reason. The three "
+            "metrics gate separately and at different floors, so a page that printed one refusal "
+            "would be silent about the other two."
+        ),
+    )
+
+    anchor: TempoAnchor = TempoAnchor.TOUR_MEDIAN
+    plan: TempoPlan | None = Field(
+        default=None,
+        description=(
+            "The metronome, or None when the reference distributions are unavailable — the same "
+            "refusal `build_tempo_plan` makes, for the same reason (ADR-010 §2). `plan.anchored` "
+            "and `anchor` always agree: the anchor guard lives in the plan builder and this "
+            "reports its decision rather than predicting it."
+        ),
+    )
+
+    @property
+    def n(self) -> int:
+        """Distinct swings behind this. The evidence a refusal is read against."""
+        return len(self.swings)

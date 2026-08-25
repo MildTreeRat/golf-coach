@@ -1,17 +1,22 @@
 # M9 — Player Tracking: per-club shot history
 
-> **Tier: TARGET.** This is the agreed plan for M9. Everything past the phase marked done below
-> is still a plan, so verify every claim about the codebase against the code. The *why* behind it
-> is [ADR-024](decisions/024-per-club-shot-history.md); this document is the *how*, as a phase
-> list.
+> **Tier: REFERENCE.** All 20 phases are built, so nothing here is a plan any more — but every
+> phase records the numbers it saw on the day it ran (`n = 2`, `154.3`, `version 6 -> 8`), and
+> those are snapshots. Read the design and the reasoning; read the numbers from the code. The
+> *why* behind it is [ADR-024](decisions/024-per-club-shot-history.md); this document is the
+> *how*, as a phase list.
 
-**Status: in progress, 19/20 phases.** P19 landed 2026-08-22 and gave the bag a browser: a section
+**Status: done, 20/20 phases.** P20 landed 2026-08-22 and closed the milestone by reconciling
+the documentation with fifteen phases of code, and by pinning the parts of it that had been
+drifting invisibly — see the P20 record at the foot of this file.
+
+**How it got here:** P19 landed 2026-08-22 and gave the bag a browser: a section
 inside `career.html` over three new routes, and **the first thing in this repo that ever wrote a
 bag** — `BagStore.set_entry` and `remove_entry` had no caller outside their own tests until now. It
 renders the same five silences P18 enumerated, in the page's own voice, and it found two prose
 errors by driving rather than by reasoning: `fmt` printed `154.400 yards` on two pages, and the CLI
 pointed at a retag button that did not exist on any page. That button now does, and the paragraph
-below is its record. **What is left is the docs.** Start at P20.
+below is its record. **The docs followed in P20, and M9 is closed.**
 
 **The one thing standing between this milestone and a real answer was not a phase on this list, and
 it is now fixed.** `POST /api/sessions/{session}/swings/{swing}/club` had no UI, so the swings
@@ -272,9 +277,10 @@ were checked by **reverting each setter to its replacing form in-process and wat
 red** — which is how it is known they are pins. Each break was caught by a *different* test, so a
 single direction would have missed one.
 
-**Deliberately left stale for P20:** `docs/ARCHITECTURE.md` §4 still calls `session.json` the
-"golfer cursor" (line ~400) and its manifest row (~397) names only `player_id`. `tests/test_docs_truth.py`
-does not cover those tables, so nothing goes red in the meantime.
+**Deliberately left stale for P20, and fixed there:** `docs/ARCHITECTURE.md` §4 called
+`session.json` the "golfer cursor" and its manifest row named only `player_id`.
+`tests/test_docs_truth.py` did not cover those tables, so nothing went red in the meantime —
+which is the argument P20 acted on when it added the pins.
 
 ---
 
@@ -314,8 +320,8 @@ rebuilding one (which is P4's `set_current_player` bug, one layer down — the p
 mistake has already been made once in this repo). The cross-field pin is written out in **both**
 directions, for the reason P4 found: each direction is caught by a different test.
 
-**Still stale for P20**, unchanged from P4: `docs/ARCHITECTURE.md` §4 calls `session.json` the
-"golfer cursor" and its manifest row names only `player_id`.
+**Was stale for P20**, unchanged from P4: `docs/ARCHITECTURE.md` §4 called `session.json` the
+"golfer cursor" and its manifest row named only `player_id`. Both fixed in P20.
 
 ---
 
@@ -375,9 +381,9 @@ fails "picking a club leaves the golfer alone", which is P4's bug at the route.
 every file it sends gets a 409 until P7. That is the cost of landing P6 alone and it is not a
 regression to hunt.
 
-**Still stale for P20**, unchanged from P4 and P5: `docs/ARCHITECTURE.md` §4 calls `session.json`
-the "golfer cursor", its manifest row names only `player_id`, and no route table knows about the
-three routes added here. `tests/test_docs_truth.py` pins no route list, so nothing goes red.
+**Was stale for P20**, unchanged from P4 and P5: `docs/ARCHITECTURE.md` §4 called `session.json`
+the "golfer cursor", its manifest row named only `player_id`, and no route table knew about the
+three routes added here. All fixed in P20, which also added the route pin that was missing.
 
 ---
 
@@ -452,9 +458,9 @@ chip highlighted), bag declared out of order (rendered `driver 7i pw sw`), and c
 manifest names it. ✅ — verified live against a scratch data directory: `7i` then `pw`, two swings,
 `["7i", "pw"]` on the read route and `"club": "7i"` in swing 1's manifest.
 
-**Still stale for P20**, unchanged from P4–P6: `docs/ARCHITECTURE.md` §4 calls `session.json` the
-"golfer cursor", its manifest row names only `player_id`, and no route table knows about the four
-routes M9 has added. `tests/test_docs_truth.py` pins no route list, so nothing goes red.
+**Was stale for P20**, unchanged from P4–P6: `docs/ARCHITECTURE.md` §4 called `session.json` the
+"golfer cursor", its manifest row named only `player_id`, and no route table knew about the four
+routes M9 had added. All fixed in P20.
 
 ---
 
@@ -758,9 +764,9 @@ byte-identical to the run before the change — `Honest n per metric` unmoved, `
 unmoved, no new exclusion reason. A metric count that had moved was the failure this phase was most
 likely to produce.
 
-**Still stale for P20**, unchanged from P4–P7: `docs/ARCHITECTURE.md` §4 calls `session.json` the
-"golfer cursor", its manifest row names only `player_id`, and no route table knows the four routes M9
-has added. `tests/test_docs_truth.py` pins none of it, so nothing goes red.
+**Was stale for P20**, unchanged from P4–P7: `docs/ARCHITECTURE.md` §4 called `session.json` the
+"golfer cursor", its manifest row named only `player_id`, and no route table knew the four routes M9
+had added. All fixed in P20.
 
 ---
 
@@ -1315,22 +1321,70 @@ file, in both states:
   is visible in that same output — `154.3` and `0.2` in yards beside `3.024` for `tempo_ratio`, where
   the old rule printed `154.258`.
 
-**Still stale for P20**, unchanged from P4–P18: `docs/ARCHITECTURE.md` §4 calls `session.json` the
-"golfer cursor", its manifest row names only `player_id`, and no route table knows the **seven**
-routes M9 has now added. `tests/test_docs_truth.py` pins none of it, so nothing goes red.
+**Was stale for P20**, unchanged from P4–P18: `docs/ARCHITECTURE.md` §4 called `session.json` the
+"golfer cursor", its manifest row named only `player_id`, and no route table knew the **seven**
+routes M9 had added. Fifteen consecutive phases wrote a note like this one and none of them went
+red, which is the finding P20 turned into three pins.
 
 ---
 
-### [ ] P20 — docs reconciliation
+### [x] P20 — docs reconciliation *(done 2026-08-22)*
 
 **Goal.** The docs and the code agree; ADR-024 flips to Accepted.
 
-**Files.** `docs/ARCHITECTURE.md` (§1 commands, §3 the `analyze_swing` walk, §4 what is on disk),
-`docs/README.md`, `ROADMAP.md`, `WORKLOG.md`, `data/README.md`, and this file's status line.
+**Files.** `docs/ARCHITECTURE.md` (§1 commands and a new route table, §2 the module diagram and the
+contracts table, §3 the launch-monitor measurements, §4 what is on disk), `tests/test_docs_truth.py`,
+`docs/README.md`, `ROADMAP.md`, `README.md`, `WORKLOG.md`, `data/README.md`, ADR-020, ADR-024,
+`scripts/ask_swing.py`'s docstring, and this file.
 
 **Detail.** Run `pytest tests/test_docs_truth.py` **first** and work only from its failures — that
 is the `/doc-check` protocol and this repo's stated method. Do not copy any band, count, threshold
 or tolerance into prose; point at the registry instead.
+
+**The protocol produced no work, and that was the finding.** The doc-truth suite was **fully
+green** while `ARCHITECTURE.md` §4 had been wrong for fifteen consecutive phases — every one of
+which wrote a note saying so, and none of which went red. A test that cannot see the thing it is
+supposed to protect is not evidence, and running it first is only the correct method when it
+covers the surface being changed. So P20 reconciled the prose by hand *and* closed the gap that let
+it rot, which is the half that outlives the phase.
+
+**Three pins added**, all in `tests/test_docs_truth.py` beside the existing architecture-doc block:
+
+1. **The MCP tool count**, derived from `TOOL_DESCRIPTIONS` and spelled with `caveats._count_word`.
+   P18 added two tools and left six sites claiming eight — `ARCHITECTURE.md`, `ROADMAP.md` ×3,
+   ADR-020 ×2 and `scripts/ask_swing.py`. The pin reads the living docs and the script; `WORKLOG.md`
+   is exempt because it is append-only history, and a dated record of what a handshake advertised in
+   August is not a claim about today.
+2. **Every route in `api/app.py` appears in `ARCHITECTURE.md` §1's route table.** There was no route
+   table anywhere in the repo, which is why seven new endpoints went undocumented without a murmur.
+   The pin parses the decorators out of the *source text* rather than importing `app.py`, so it runs
+   on a base install with no `fastapi` — the same technique the `comparison.py` boundary test uses,
+   and required by the `tests/api/test_pipeline_imports.py` invariant.
+3. **This file's status line and `docs/README.md`'s row for it agree on the phase count.** Both
+   sides drifted independently during M9: the map said "start at P8" at 19/20.
+
+**What the prose actually said wrong**, beyond the tool count: §4 called `session.json` the "golfer
+cursor" when it has carried two cursors since P4, and its manifest row named only `player_id` when
+`club` has been stamped beside it since P5. §1 listed every CLI but `club_profile.py` and called
+`api/static/` "the two static pages" when there are three. §2's diagram left the bag store off
+`storage/` and the club tools off `mcp/`. §3 described the pose measurements and the tempo durations
+and said nothing at all about the launch-monitor half, which M9 grew from two entries to seven.
+
+**Two things were deliberately not written.** The seven `SHOT_MEASUREMENTS` names are not listed in
+§3 — the registry is named and the *rule* is stated, which is CLAUDE.md's derive-don't-copy rule and
+what §3 already does correctly for the placements. And the two dated MCP-handshake records in
+`ROADMAP.md` lost their digit rather than gaining a new one: what was advertised on 2026-08-14 was
+true on 2026-08-14, and the repo's own precedent for a count that moves is to delete the number and
+keep the point (`test_volatile_counts_stay_out_of_prose`).
+
+**Tier moved TARGET → REFERENCE** on this file, with `docs/README.md`'s row changed in the same
+commit because `test_the_map_agrees_with_each_doc_about_its_tier` pins the pair. Nothing here is a
+plan any more, but it is dense with per-phase snapshot numbers, which is the map's own definition of
+REFERENCE. **ADR-024 flipped to Accepted with no addendum**: none of its four decisions was
+corrected by building them, and inventing an addendum would have broken the map's addendum count for
+no reader's benefit.
+
+**No `ANALYSIS_VERSION` bump**, same as P12–P19: nothing is measured and no artifact is written.
 
 **Done when.** `pytest` fully green, `ruff check src tests scripts` clean, `mypy src` clean.
 

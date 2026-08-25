@@ -253,16 +253,32 @@ def _shot_for(
         return None, f"no launch-monitor data attached: {exc}"
 
     log(f"  shot_screen: reading {role_file.original_filename} ...")
-    status, shot = import_screen(
-        image_path,
-        recognizer=recognizer,
-        profile=load_profile(settings.launch_monitor_profile),
-        store=store,
-        session_id=manifest.session_id,
-        min_confidence=options.min_confidence,
-        force=options.force_ocr,
-        shot_id=f"{manifest.session_id}-{manifest.swing_id}",
-    )
+    try:
+        status, shot = import_screen(
+            image_path,
+            recognizer=recognizer,
+            profile=load_profile(settings.launch_monitor_profile),
+            store=store,
+            session_id=manifest.session_id,
+            min_confidence=options.min_confidence,
+            force=options.force_ocr,
+            shot_id=f"{manifest.session_id}-{manifest.swing_id}",
+        )
+    except Exception as exc:
+        # The shot screen is the *optional* third of a bundle and this is the one place that
+        # forgot it. `import_screen` decodes an image, warps it, and runs a third-party OCR
+        # engine over it, so its failure surface is wide and none of it is under this repo's
+        # control — a HEIC photo raised OSError out of `preprocess.load_image` and took a whole
+        # analysis down with it, discarding pose that had already run and every mechanics
+        # checkpoint that had already scored. Nothing about a photo justifies losing the swing.
+        #
+        # Deliberately broad. The narrow `except (MissingOCRExtra, ValueError)` above guards
+        # `build_recognizer`, where the failures are this repo's own and enumerable; here they
+        # are OpenCV's, Pillow's and PaddleOCR's, and an exception type this list had not
+        # anticipated is exactly the bug being fixed. `notes` is what makes that safe — the
+        # result says out loud that no numbers attached and why (see this module's docstring:
+        # "log is for progress; notes are for truth").
+        return None, f"the shot screen could not be read — no numbers attached: {exc}"
     if shot is None:
         return None, f"the shot screen could not be read ({status}) — no numbers attached"
     log(f"  shot_screen: {status}")

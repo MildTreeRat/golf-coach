@@ -23,10 +23,10 @@ not have:
 2. **The ability to look things up mid-answer**, rather than being handed a fixed payload.
 3. **Memory across turns.** The second question is almost always about the first answer.
 
-The lookup half already exists and is proven. `mcp/query.py` and `mcp/career.py` hold eight
-read-only functions, and ADR-006's tool surface was driven over a real stdio client on 2026-08-14:
-`initialize` negotiated, all eight tools advertised with schemas, `call_tool` served live queries
-including the not-found path. What does not exist is anywhere to keep a conversation.
+The lookup half already exists and is proven. `mcp/query.py` and `mcp/career.py` hold the
+read-only functions behind it, and ADR-006's tool surface was driven over a real stdio client on
+2026-08-14: `initialize` negotiated, every tool then advertised carried its schema, `call_tool`
+served live queries including the not-found path. What does not exist is anywhere to keep a conversation.
 
 That is the whole of this ADR: **the missing piece is a transcript store**, and the decision is
 where the loop that fills it lives.
@@ -88,8 +88,8 @@ So the transcript has to hold the model's own content blocks verbatim, not a ren
 - **`storage/transcript_store.py`** reads and writes them under `settings.conversations_dir`
   (`data/processed/conversations/`), one JSON file per conversation, with the tolerant-read and
   atomic-write shape `api/state.py` established.
-- **`mcp/runner_tools.py`** builds the eight tools for the runner, beside `mcp/server.py` and over
-  the same `query.py` / `career.py` functions. ADR-008's 2026-08-13 addendum already records `mcp`
+- **`mcp/runner_tools.py`** builds the runner's tools, beside `mcp/server.py` and over the same
+  `query.py` / `career.py` functions — and, since M9 P18, `club.py`'s two. ADR-008's 2026-08-13 addendum already records `mcp`
   as a second imperative shell; this is a second adapter inside it, not a new edge.
 - **`feedback/conversation.py`** owns the loop and the `anthropic` seam. It takes `tools` and
   `briefing` as **arguments** — the same injection seam `build_server` uses — so it never imports

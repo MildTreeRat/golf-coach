@@ -144,3 +144,104 @@ def test_an_unreadable_screen_is_reported_not_hidden(np, cv2) -> None:
 
     assert prepared.label_ratio == 0.0
     assert any("legible" in note for note in prepared.notes)
+
+
+# ------------------------------------------------------------------ decoding [HEIC]
+
+# `load_image` is the boundary that decides whether a photo becomes a swing's launch-monitor
+# numbers or an exception. It used to be one `cv2.imread`, and an ordinary iPhone photo — HEIC,
+# the camera's default — came back as None and raised the same message a truncated file does.
+
+
+def _heic_header() -> bytes:
+    """The first bytes of an ISO-BMFF file whose major brand is `heic`. Not decodable, and not
+    meant to be: this pins the *diagnosis*, which is what the old message got wrong."""
+    return (0).to_bytes(4, "big") + b"ftypheic" + b"\x00" * 16
+
+
+def test_is_heif_recognises_an_iphone_photo(tmp_path) -> None:
+    from golf_coach.launch_monitor.screen.preprocess import _is_heif
+
+    path = tmp_path / "shot.HEIC"
+    path.write_bytes(_heic_header())
+
+    assert _is_heif(path) is True
+
+
+def test_is_heif_does_not_claim_a_jpeg(tmp_path) -> None:
+    from golf_coach.launch_monitor.screen.preprocess import _is_heif
+
+    path = tmp_path / "shot.jpg"
+    path.write_bytes(b"\xff\xd8\xff\xe0" + b"\x00" * 20)
+
+    assert _is_heif(path) is False
+
+
+def test_is_heif_never_raises_on_a_missing_file(tmp_path) -> None:
+    """Advisory only — it runs on the failure path, where raising would replace the real error."""
+    from golf_coach.launch_monitor.screen.preprocess import _is_heif
+
+    assert _is_heif(tmp_path / "nope.HEIC") is False
+
+
+def test_undecodable_heic_names_the_format_and_the_fix(tmp_path, monkeypatch) -> None:
+    """The message a golfer in a bay actually has to act on. `cv2.imread` reports "no codec for
+    this format" and "this file is corrupt" identically, and the repairs are nothing alike."""
+    from golf_coach.launch_monitor.screen import preprocess
+
+    monkeypatch.setattr(preprocess, "_load_via_pillow", lambda _: None)
+    path = tmp_path / "shot.HEIC"
+    path.write_bytes(_heic_header())
+
+    with pytest.raises(OSError, match="HEIC/HEIF"):
+        preprocess.load_image(path)
+
+
+def test_undecodable_junk_does_not_blame_heic(tmp_path, monkeypatch) -> None:
+    from golf_coach.launch_monitor.screen import preprocess
+
+    monkeypatch.setattr(preprocess, "_load_via_pillow", lambda _: None)
+    path = tmp_path / "shot.jpg"
+    path.write_bytes(b"not an image at all")
+
+    with pytest.raises(OSError, match="no installed decoder"):
+        preprocess.load_image(path)
+
+
+def test_pillow_decodes_what_opencv_declines(tmp_path, np, monkeypatch) -> None:
+    """The fallback itself, with OpenCV's decoder forced to decline so the second one is what
+    answers. BGR out, matching `cv2.imread` — the caller warps and OCRs it without knowing which
+    decoder produced it."""
+    from golf_coach.launch_monitor.screen import preprocess
+
+    pytest.importorskip("PIL")
+    import cv2
+
+    source = np.zeros((8, 12, 3), dtype=np.uint8)
+    source[:, :, 2] = 255  # pure red in BGR
+    path = tmp_path / "shot.png"
+    cv2.imwrite(str(path), source)
+
+    monkeypatch.setattr(preprocess.cv2, "imread", lambda *a, **k: None)
+    loaded = preprocess.load_image(path)
+
+    assert loaded.shape == (8, 12, 3)
+    assert loaded[0, 0].tolist() == [0, 0, 255]
+
+
+def test_a_real_heic_round_trips_when_the_extra_is_installed(tmp_path, np) -> None:
+    """End to end on the actual format, skipped where `pillow-heif` is not installed. This is the
+    file that failed a whole swing's analysis: `shot_screen.*.HEIC`, straight off a camera roll."""
+    pytest.importorskip("pillow_heif")
+    import pillow_heif
+    from PIL import Image
+
+    from golf_coach.launch_monitor.screen.preprocess import load_image
+
+    pillow_heif.register_heif_opener()
+    path = tmp_path / "shot.HEIC"
+    Image.fromarray(np.full((16, 24, 3), 200, dtype=np.uint8)).save(path, format="HEIF")
+
+    loaded = load_image(path)
+
+    assert loaded.shape == (16, 24, 3)

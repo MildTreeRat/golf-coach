@@ -41,6 +41,7 @@ swings, no SQLite.
 from __future__ import annotations
 
 import os
+import shutil
 import threading
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -233,6 +234,34 @@ class SwingBundleStore:
             manifest.updated_at = datetime.now(tz=UTC)
             save_manifest(manifest, manifest_path(swing_dir))
             return manifest
+
+    def delete_swing(self, session_id: str, swing_id: str) -> bool:
+        """Remove one swing and everything in its directory. True if there was one to remove.
+
+        The counterpart to "swing identity is assigned by the store": because the store opens a
+        new swing for any upload whose role is already taken, a corrective re-upload lands as a
+        *phantom* — a swing holding one file and no clips. That is not a rare mistake, it is what
+        the assignment rule does with an ordinary human correction, and until this existed there
+        was no way to undo it from the bay.
+
+        Leaving one there is worse than untidy. A phantom is missing `face_on` and
+        `down_the_line`, which makes it the newest swing lacking those roles — so the *next*
+        real swing's two clips slot into it and pair with a shot screen from a different swing.
+        Silently, with no error and nothing downstream able to notice.
+
+        Recursive and unconditional: the directory holds only this swing's uploads, keypoints,
+        analysis and state, all of which are derived from or specific to it. Analysis in flight
+        is not waited on — the worker writes its state at the end of a run and `save_state`
+        re-creates the directory if it must, which leaves a state file and no swing behind. The
+        caller (`api.app`) refuses the delete while a run is queued or running for that reason;
+        this layer stays mechanical, as `set_player` and `set_club` do.
+        """
+        with self._lock:
+            swing_dir = self._root / session_id / swing_id
+            if not swing_dir.is_dir():
+                return False
+            shutil.rmtree(swing_dir)
+            return True
 
     def _place(
         self,

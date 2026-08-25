@@ -48,6 +48,13 @@ ocr = [
     "paddlepaddle>=2.6",
     "opencv-python>=4.9",
     "numpy>=1.26",
+    # HEIC/HEIF, which is what an iPhone camera writes by default. OpenCV has no decoder for
+    # it and `cv2.imread` signals that the same way it signals a corrupt file — by returning
+    # None — so without this an ordinary photo off the camera roll is indistinguishable from
+    # garbage. `preprocess.load_image` falls back to Pillow when this is installed and says so
+    # explicitly when it is not.
+    "pillow>=10.0",
+    "pillow-heif>=0.16",
 ]
 # Offline research / reference-data derivation (M4-REF, M8-PAIR). Used ONLY by scripts/golfdb/*
 # and scripts/caddieset/*, never by the package: pandas appears at exactly one boundary (reading

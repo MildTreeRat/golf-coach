@@ -32,6 +32,7 @@ from golf_coach.analysis.baseline import build_baseline
 from golf_coach.analysis.club_profile import build_bag_profile
 from golf_coach.analysis.comparison import build_standing
 from golf_coach.analysis.dispersion import build_dispersion
+from golf_coach.analysis.tempo_trainer import build_career_tempo
 from golf_coach.api.state import (
     judged_metrics,
     load_analysis,
@@ -226,6 +227,14 @@ def _token_guard(expected: str | None) -> Callable:
     param: the query param is what makes the initial setup link openable on a phone, the
     header is what the page uses for every request after that — and it is also the only way a
     `<video>` element can authenticate, since a media element sends no custom headers.
+
+    That open-when-unset default is only safe while the token cannot go missing by accident,
+    which is a property of `config.py` and not of this file: `env_file` there is absolute, so
+    `.env` is found from any working directory. It was relative once, and a server started from
+    elsewhere silently read no `.env` at all — which lands here as `expected is None` and opens
+    every route. `run_server.py`'s refusal does not cover it, because that only fires on a
+    non-loopback bind and a Tailscale-fronted server binds loopback. Hence the pin in
+    `tests/test_config.py::test_the_env_file_is_read_from_the_repo_regardless_of_cwd`.
     """
 
     async def guard(
@@ -600,12 +609,12 @@ def create_app(
     async def golfer_career(player_id: str) -> dict:
         """One golfer judged against their own history. [Career mode, step 6]
 
-        Serves the three analysis contracts as they are, rather than a flattened view. The MCP
+        Serves the analysis contracts as they are, rather than a flattened view. The MCP
         server flattens the identical data (`mcp/career.py`) because a model reads a flat payload
         better; a page does not need that, and inventing a second shape here would give the two
         surfaces a way to disagree about what career mode says. What is shared is the layer under
-        both — `build_baseline`, `build_dispersion`, `build_standing`, all over one `read_corpus`
-        so the three provably describe the same swings.
+        both — `build_baseline`, `build_dispersion`, `build_standing`, `build_career_tempo`, all
+        over one `read_corpus` so they provably describe the same swings.
 
         Everything on this route refuses today. That is the feature, and it is why the page is
         worth building before the bay session rather than after it.
@@ -621,6 +630,12 @@ def create_app(
             "baseline": build_baseline(corpus).model_dump(mode="json"),
             "dispersion": build_dispersion(corpus).model_dump(mode="json"),
             "standing": build_standing(corpus).model_dump(mode="json"),
+            # A fourth contract over the same corpus, and the only one carrying a *target* rather
+            # than a description (ADR-023 addendum). It rides on this route rather than getting its
+            # own for the reason the three above share one: the tempo the page prints and the
+            # tempo_ratio card under it are the same golfer's, and two routes is how they acquire
+            # a way to disagree about which swings that golfer has.
+            "tempo": build_career_tempo(corpus).model_dump(mode="json"),
         }
 
     @app.get("/api/golfers/{player_id}/bag", dependencies=guard)
@@ -730,6 +745,37 @@ def create_app(
                 for manifest in manifests
             ],
         }
+
+    @app.delete("/api/sessions/{session_id}/swings/{swing_id}", dependencies=guard)
+    async def delete_swing(session_id: str, swing_id: str) -> dict:
+        """Remove one swing entirely. The undo for a phantom the assignment rule created.
+
+        Uploading a *corrected* file for a role a swing already has does not replace it — the
+        store opens a new swing, because "newest swing lacking that role" cannot tell a repair
+        from the next shot (`bundle_store.assign_from_path`). The repair is `?swing_id=`, which
+        the upload page now sends; this route is what clears up the phantoms made before it did,
+        and it is the reason a stray one-file swing is no longer permanent.
+
+        Refused mid-analysis rather than racing it. The worker writes `analysis.state.json` when
+        its run ends and `save_state` re-creates the directory to do it, so deleting underneath a
+        running job leaves a state file for a swing that no longer exists — a swing the status
+        page then renders forever with no files in it. Waiting is the golfer's call, so this says
+        so instead of blocking.
+        """
+        _safe(session_id, "session id")
+        _safe(swing_id, "swing id")
+        state = load_state(swing_dir_of(session_id, swing_id))
+        if state is not None and state.status in ("queued", "running"):
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    f"swing {swing_id} is being analyzed ({state.status}) — "
+                    "wait for it to finish, then delete it"
+                ),
+            )
+        if not bundle_store.delete_swing(session_id, swing_id):
+            raise HTTPException(status_code=404, detail="no such swing")
+        return {"session_id": session_id, "swing_id": swing_id, "deleted": True}
 
     @app.get("/api/sessions/{session_id}/swings/{swing_id}", dependencies=guard)
     async def swing_detail(session_id: str, swing_id: str) -> dict:

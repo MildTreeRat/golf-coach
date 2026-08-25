@@ -45,6 +45,31 @@ def _is_loopback(host: str) -> bool:
         return False
 
 
+def _coaching_line() -> str:
+    """One line saying whether written coaching will actually happen, printed at every start.
+
+    This exists because the failure it describes is silent everywhere else. Coaching is the only
+    part of the pipeline that needs a secret, and when the key is missing the swing is still
+    ingested, still scored and still written to disk — the sole trace is a note buried in
+    `analysis.json`, which nobody reads until they notice the coaching paragraph has been absent
+    for a week. `.env` is now found from any directory (`config.py`), so the remaining way to be
+    keyless is to have never set one; either way the operator should learn it at boot and not from
+    a missing paragraph. Returned rather than printed so the branching stays readable in one place
+    — `scripts/` is thin CLI shell by convention here and is not covered by `tests/`.
+    """
+    if not settings.coaching_enabled:
+        return (
+            "coaching:       off (coaching_enabled is False) - swings are scored, "
+            "not written up."
+        )
+    if not settings.anthropic_api_key:
+        return (
+            "coaching:       ON, BUT NO GOLF_ANTHROPIC_API_KEY - every swing will be scored and\n"
+            "                then skip its written coaching. Set one in .env to turn it on."
+        )
+    return f"coaching:       on, {settings.coaching_model}"
+
+
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(prog="run_server", description=__doc__)
     parser.add_argument(
@@ -106,6 +131,7 @@ def main(argv: list[str]) -> int:
             )
     else:
         print("no GOLF_UPLOAD_TOKEN set - /api/ is open to anything that reaches this port.")
+    print(_coaching_line())
     print(f"to reach it from a phone:  tailscale serve --bg {args.port}")
 
     uvicorn.run(create_app(), host=args.host, port=args.port)

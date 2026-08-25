@@ -198,3 +198,59 @@ def test_the_route_is_behind_the_token(store, golfers) -> None:
     assert client.get(
         "/api/golfers/aaron/career", headers={"X-Upload-Token": _TOKEN}
     ).status_code == 200
+
+
+# ---------------------------------------------------------------- tempo [ADR-023 addendum]
+
+
+def test_the_tempo_block_rides_on_the_same_corpus_as_the_other_layers(client, store) -> None:
+    """A fourth contract on this route, and the reason it is not its own.
+
+    The tempo the page prints and the `tempo_ratio` card under it describe the same golfer's same
+    swings. Two routes would let them answer over different corpora — a swing uploaded between the
+    two fetches is all it would take — and the disagreement would be invisible, because both
+    numbers would look right.
+    """
+    _seed(client, store)
+
+    body = client.get("/api/golfers/aaron/career").json()
+
+    assert set(body) >= {"corpus", "baseline", "dispersion", "standing", "tempo"}
+    assert body["tempo"]["player_id"] == "aaron"
+    assert [s["ratio"] for s in body["tempo"]["swings"]] == [2.42]
+
+
+def test_a_reading_survives_json_while_the_mean_over_it_does_not(client, store) -> None:
+    """The layering the career tempo view rests on, asserted over the wire.
+
+    The seeded swing carries a `tempo_ratio` and nothing else, so this is the shape a golfer with
+    one analyzed swing actually gets: the reading printed, the typical value `null`, and the floor
+    it is waiting for beside it. A page cannot print a tendency it was never sent.
+    """
+    _seed(client, store)
+
+    tempo = client.get("/api/golfers/aaron/career").json()["tempo"]
+
+    assert tempo["latest"]["ratio"] == 2.42
+    assert tempo["typical_ratio"] is None
+    assert tempo["withheld"], "an absent mean must arrive with the floor it is waiting for"
+    # No `backswing_ms` on the seeded measurements, so there is nothing to anchor to and the
+    # target is the tour's. `anchor` and `plan.anchored` never disagree — the plan builder decides.
+    assert tempo["anchor"] == "tour_median"
+    assert tempo["plan"]["anchored"] is False
+
+
+def test_a_golfer_with_no_swings_still_gets_a_target(client, store, golfers) -> None:
+    """An empty history is the first true answer about every golfer, not an error.
+
+    It is also the state the page is opened in most often before a bay session, so the metronome
+    has to build: refusing someone the tour tempo because they have not uploaded yet would be a
+    refusal nobody derived.
+    """
+    golfers.get_or_create("Blake", Handedness.LEFT)
+
+    tempo = client.get("/api/golfers/blake/career").json()["tempo"]
+
+    assert tempo["swings"] == []
+    assert tempo["latest"] is None
+    assert tempo["plan"] is not None

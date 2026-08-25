@@ -24,7 +24,7 @@ wording; only the grouping and the M4 checklist have been corrected.
 | **M6.5** Measure now, judge later | ✅ Done | — (9 recorded, **6 scored**; the handedness seam landed and the last candidate was settled) | [§M6.5](#m65-measure-now-judge-later--done) |
 | **Career mode** One golfer over time | ✅ Done, 6/6 steps | — (built and silent; a bay session gives it the `n` to speak) | [§Career](#career-mode-one-golfer-tracked-over-time--done-built-and-silent) |
 | **M8** Learning what "good" means | ✅ Done *(2026-08-17)* | — (three models fitted, validated, surfaced **and spoken**, with a policy rather than a band) | [§M8](#m8-learning-what-good-means--gates-run-model-fitted) |
-| **M9** Player tracking (per-club) | 🟡 In progress, 19/20 phases | Nothing — every surface is built (CLI, MCP, bag page), the bag is writable and a stored swing is retaggable; what is left is the docs | [§M9](#m9-player-tracking-per-club-shot-history--in-progress) |
+| **M9** Player tracking (per-club) | ✅ Done *(2026-08-22)*, 20/20 phases | — (built and **silent by design**: every club-narrowed answer refuses, because no swing on disk is tagged yet. A bay session, and the retag control, are what make it speak) | [§M9](#m9-player-tracking-per-club-shot-history--done-and-waiting-on-a-bay-session) |
 | **M5** Feedback UI | ⬜ Not started | M7 Phase 5 gives the host | [§M5](#milestone-5-feedback-ui) |
 | **M2** Club & ball detection | 🔒 Gated, **and M1.5 said no-go** | Bay lighting for a ~1/2000 s exposure — *not* a global-shutter camera | [§M2](#milestone-2-club--ball-detection) |
 | Hardware re-validation | 🔒 Gated | Cameras / launch monitor arriving | [§Gate](#hardware-re-validation-gate-revisit-when-cameras--launch-monitor-arrive) |
@@ -39,14 +39,23 @@ is *held* is [ADR-019](docs/decisions/019-secret-handling.md); it is a `SecretSt
 `.env` is the only place it exists.
 
 **The MCP handshake is proven too**, same day. The server was driven over stdio by a real client:
-`initialize` negotiated protocol `2025-11-25`, advertised all **8** tools with their schemas, and
+`initialize` negotiated protocol `2025-11-25`, advertised every tool it then held with their
+schemas, and
 served live `call_tool` requests including the not-found path. It is registered with Claude Code
 (`claude mcp add`, per the README) and reports `✔ Connected`, which is a second client completing
 the same handshake independently.
 
-**NEXT ACTION — M9 P20, the docs reconciliation, and M9 closes.** The blocker this line carried is
-gone as of 2026-08-22: `index.html`'s swing list now has a per-swing **change** control beside the
-golfer one, so a swing already on disk is retagged from a phone in one tap over `POST
+**NEXT ACTION — one bay session.** M9 closed on 2026-08-22 with P20, and with it the last item on
+this board that was pure desk work. What remains divides into *needs a bay* and *needs `n`*, and
+one trip serves both: M7 Phase 0's field spike, M3's remaining OCR work and M2's lighting test all
+want the screen and the bay in front of you, while career mode, the dispersion discriminator, the
+tour join and every per-club answer are built, correct and refusing at `n = 2`. 20–30 tagged swings
+in one session turns all of them on at once. [BAY_SESSION_RUNBOOK.md](docs/BAY_SESSION_RUNBOOK.md)
+sequences the trip; **set the club cursor on the upload page before the first swing**, because a
+session hit without club tags produces data that can never be split by club afterwards.
+
+**M9's own last blocker went in the session before P20**: `index.html`'s swing list now has a
+per-swing **change** control beside the golfer one, so a swing already on disk is retagged from a phone in one tap over `POST
 /api/sessions/{session}/swings/{swing}/club` — a route that had worked and been untested by any UI
 since P6. It is the club's only repair path and deliberately one swing at a time; a session has
 many clubs, so there is no bulk backfill and there is not meant to be one (ADR-024 §5). **Driven on
@@ -55,12 +64,13 @@ the empty state and prints a `7i` row — 2 swings, 2 shot photos, 2 sessions, e
 withheld against the 5-, 10- and 12-sample floors — and `mcp/club.py` moves from `NEVER_HIT` to
 `NOT_ENOUGH_ON_THIS_CLUB`. **The real `data/` was left alone**: only the person who hit those two
 swings knows what hit them, which is ADR-024 §5's own argument, so that tap is theirs to make.
-Until 2026-08-20 this
-section read *"nothing on this
-board is desk work any more"*, and [M9](#m9-player-tracking-per-club-shot-history--in-progress)
-is what stopped that being true. It is the one substantial item that needs **neither a bay session
-nor an `n`**: no shot on disk records which club hit it, and adding that tag is pure desk work that
-makes the *next* bay session's data worth more than the last one's.
+Until 2026-08-20 this section read *"nothing on this board is desk work any more"*, and
+[M9](#m9-player-tracking-per-club-shot-history--done-and-waiting-on-a-bay-session) is what
+stopped that being true — it was the one substantial item needing **neither a bay session nor an
+`n`**, because no shot on disk recorded which club hit it and adding that tag was pure desk work
+that makes the *next* bay session's data worth more than the last one's. **As of 2026-08-22 that
+sentence is true again**: M9 is closed, and everything left on this board wants the bay or wants
+`n`.
 
 **The ingest spine is closed.** P1–P7 all landed 2026-08-21, and a swing can no longer reach disk
 untagged: `contracts/club.py` holds the taxonomy, `contracts/bag.py` the declared bag,
@@ -141,9 +151,9 @@ now says so in a sentence and keeps every statistic — and the sentence has two
 doubt. That is the common case rather than the exotic one: it is what every club looks like the day
 a golfer first declares a bag.
 
-Continue at [M9 P17](docs/M9_PLAYER_TRACKING.md) — `scripts/club_profile.py`, the CLI that reads
-the numbers without a browser or an MCP client, and the phase that proves the spine works. It is
-also the first surface that will render a caveat for real.
+P17 built `scripts/club_profile.py` on top of that — the CLI that reads the numbers without a
+browser or an MCP client, and the phase that proved the spine works end to end. It was the first
+surface to render one of these caveats for real.
 
 **P8 opened the measurements track and cashed the tag in.** `carry_distance_yds` and
 `total_distance_yds` are measured, which they could not honestly be before: a carry pooled across
@@ -1072,11 +1082,11 @@ is the client handshake and conversational follow-up.
 
 ---
 
-## M9: Player tracking, per-club shot history — in progress
+## M9: Player tracking, per-club shot history — done, and waiting on a bay session
 
 **Design**: [ADR-024](docs/decisions/024-per-club-shot-history.md).
 **Phase list**: [docs/M9_PLAYER_TRACKING.md](docs/M9_PLAYER_TRACKING.md) — 20 phases, each
-independently commit-ready. **P1–P12 landed 2026-08-21, P13–P18 on 2026-08-22; start at P19.**
+independently commit-ready. **P1–P12 landed 2026-08-21, P13–P20 on 2026-08-22. All 20 are in.**
 P1–P7 are the whole ingest spine: the vocabulary, the bag shape, the bag on disk, the
 club on `SwingManifest` and on a second session cursor, the writer that stamps it, the 409 that
 refuses an untagged upload, and the one-tap picker that satisfies it. A swing can no longer reach
@@ -1091,22 +1101,25 @@ this screen can honestly produce because it prints no offline tile. It takes a t
 because zero is straight by geometry rather than by a population. P11 was absorbed into P8 and P9
 rather than run: the parity pin means a target row cannot lag its metric by a commit.
 
-**The gap, in one sentence.** This repo can say how a swing compares to a tour population and how
-it compares to the golfer's own history. It cannot say how far you hit your 7 iron, because **no
-shot on disk records which club hit it.**
+**The gap M9 closed, in one sentence.** This repo could say how a swing compares to a tour
+population and how it compares to the golfer's own history. It could not say how far you hit your
+7 iron, because **no shot on disk recorded which club hit it.** A swing can no longer reach disk
+without that field, and every reader of it is built — so what is left is not code, it is swings.
 
 **Why it is mostly wiring.** Career mode already built everything downstream of that field: the
 corpus reader that counts an honest `n`, the baseline with its minimum-`n` guard, the bias/scatter
 discriminator, and — the load-bearing one — `storage.corpus.narrow_to`, which filters a corpus
 *and recomputes its metric counts*. **P13 added that `club=` clause on 2026-08-22**, and the whole
 career pipeline now produces per-club answers with nothing new having learned the rules. The
-statistics are written and validated; what is still missing is the tag — every swing on disk
-predates it, so every per-club narrowing is currently, and honestly, empty.
+statistics are written and validated; what is still missing is tagged swings — every swing on disk
+predates the field, so every per-club narrowing is currently, and honestly, empty until the retag
+control or a bay session fills it.
 
-**Why this is the next action rather than a bay session.** It is the one substantial item on this
-board that needs neither a bay nor an `n`. And the ordering matters in one direction only: a
-session hit *without* club tags produces data that can never be split by club afterwards. Tagging
-is the cheapest thing here and the only one that is unrecoverable if skipped.
+**Why it ran before the bay session rather than after.** It was the one substantial item on this
+board needing neither a bay nor an `n`, and the ordering mattered in one direction only: a session
+hit *without* club tags produces data that can never be split by club afterwards. Tagging was the
+cheapest thing here and the only one unrecoverable if skipped — which is why **setting the club
+cursor is now a preflight step**, not an optional one.
 
 **What it delivers.** A bag page: every club with its average carry, its spread, its start-line
 bias, and its loft — each with an honest `n` or an explicit refusal. Plus a declared bag carrying
@@ -1139,6 +1152,14 @@ correct `n`; a number appearing early is the bug. Same acceptance criterion care
 under — and P8 is the first place it is observable: `scripts/career_dispersion.py` now prints both
 distances at `n = 2 over 2 sessions`, both claims waiting on their sample floors, with the reason no
 target exists printed rather than the metric going quietly absent.
+
+**P20 closed the milestone** on 2026-08-22 by reconciling the documentation with fifteen phases of
+code — and its finding was that `tests/test_docs_truth.py` was fully green the whole time, so
+`ARCHITECTURE.md` §4 stayed wrong for fifteen consecutive phases with a note on each one saying
+so. Three pins went in with the prose fix: the MCP tool count derived from `TOOL_DESCRIPTIONS`
+(P18 added two tools and left six sites claiming eight), every route in `api/app.py` appearing in
+a route table that did not previously exist anywhere in the repo, and this file's phase count
+agreeing with the documentation map's.
 
 **P14–P18 built the per-club answer and both readers of it.** P14 is the shape (`BagProfile` /
 `ClubProfile`, with `n_swings` and `n_shots` kept apart because a clip filmed without a screen photo
@@ -1237,7 +1258,8 @@ distinction once at the top of the conversation.
       ([ADR-019](docs/decisions/019-secret-handling.md))
 - [x] **Register the MCP server with a real client and exercise the handshake** — done 2026-08-14.
       A stdio client completed `initialize` (protocol `2025-11-25`, capabilities negotiated, the
-      5k-character briefing delivered), `list_tools` returned all **8** with their schemas, and
+      5k-character briefing delivered), `list_tools` returned every tool then registered with its
+      schema, and
       `call_tool` served `list_sessions`, `get_swing`, `get_session_summary`, `get_recent_shots`
       and a deliberate miss — the `NotFound` shape survives the wire as a normal result rather
       than a protocol error, which is what it was designed to do. Registered with Claude Code via
@@ -1245,7 +1267,7 @@ distinction once at the top of the conversation.
 - [x] **Ask follow-up questions about a swing** *(2026-08-15, [ADR-020](docs/decisions/020-conversational-followups.md))* —
       the SDK tool runner over `mcp/query.py`'s functions directly, exactly as this line predicted;
       the stdio round trip stays for *external* clients. A conversation seeds from the swing's
-      stored brief and looks everything else up through the same eight tools. Transcripts live in
+      stored brief and looks everything else up through the same ten tools. Transcripts live in
       `data/processed/conversations/`, holding the model's own content blocks **verbatim** —
       thinking blocks are only replayable unchanged, and only into the model that produced them.
       Two entry points: `scripts/ask_swing.py` and a chat panel on the results page.

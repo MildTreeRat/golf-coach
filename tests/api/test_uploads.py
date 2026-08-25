@@ -625,3 +625,76 @@ def test_an_unreadable_bag_costs_the_shortcut_and_not_the_picker(golfer_client, 
 
 def test_the_picker_route_is_behind_the_upload_token(auth_client) -> None:
     assert auth_client.get("/api/clubs").status_code == 401
+
+
+# ------------------------------------------------------------- the two repair paths [phantoms]
+
+
+def test_swing_id_override_replaces_instead_of_opening_a_new_swing(client) -> None:
+    """What the upload page's *replace* control sends. The route has taken `swing_id` since M7
+    and nothing sent it, so a corrected file could only ever land in a new swing."""
+    _pick_club(client)
+    client.post(
+        "/api/uploads", params={"role": "shot_screen", "filename": "bad.HEIC"}, content=b"bad"
+    )
+
+    res = client.post(
+        "/api/uploads",
+        params={"role": "shot_screen", "filename": "good.jpg", "swing_id": "1"},
+        content=b"good",
+    )
+
+    assert res.status_code == 200
+    assert res.json()["swing_id"] == "1"
+    assert len(client.get("/api/sessions/current").json()["session_id"]) == 10
+    session_id = client.get("/api/sessions/current").json()["session_id"]
+    swings = client.get(f"/api/sessions/{session_id}").json()["swings"]
+    assert [s["swing_id"] for s in swings] == ["1"]
+    assert swings[0]["roles"]["shot_screen"]["original_filename"] == "good.jpg"
+
+
+def test_delete_swing_removes_it(client) -> None:
+    _pick_club(client)
+    client.post("/api/uploads", params={"role": "face_on", "filename": "a.mov"}, content=b"a")
+    session_id = client.get("/api/sessions/current").json()["session_id"]
+
+    res = client.delete(f"/api/sessions/{session_id}/swings/1")
+
+    assert res.status_code == 200
+    assert res.json()["deleted"] is True
+    assert client.get(f"/api/sessions/{session_id}").json()["swings"] == []
+
+
+def test_delete_swing_404s_when_there_is_none(client) -> None:
+    session_id = client.get("/api/sessions/current").json()["session_id"]
+    assert client.delete(f"/api/sessions/{session_id}/swings/9").status_code == 404
+
+
+def test_delete_swing_is_refused_mid_analysis(client, tmp_path) -> None:
+    """Deleting underneath a running job loses the race: the worker's `save_state` re-creates the
+    directory to write its terminal state, leaving a swing with a state file and no files."""
+    _pick_club(client)
+    client.post("/api/uploads", params={"role": "face_on", "filename": "a.mov"}, content=b"a")
+    session_id = client.get("/api/sessions/current").json()["session_id"]
+    (tmp_path / session_id / "1" / "analysis.state.json").write_text(
+        '{"status": "running", "inputs": {}}', encoding="utf-8"
+    )
+
+    res = client.delete(f"/api/sessions/{session_id}/swings/1")
+
+    assert res.status_code == 409
+    assert "analyzed" in res.json()["detail"]
+    assert (tmp_path / session_id / "1").exists()
+
+
+def test_delete_swing_is_behind_the_upload_token(auth_client) -> None:
+    assert auth_client.delete("/api/sessions/2026-08-06/swings/1").status_code == 401
+
+
+@pytest.mark.parametrize("segment", ["..", ".hidden", "with space"])
+def test_delete_swing_refuses_a_traversing_id(client, segment) -> None:
+    """`_safe` at the one route here that removes a directory *tree*. Mirrors the sweep in
+    `test_results.py`; a bare `..` is normalised away by the client before it reaches routing,
+    which is why the accepted answers include the redirect/405 the router gives it."""
+    res = client.delete(f"/api/sessions/2026-08-06/swings/{segment}")
+    assert res.status_code in (400, 404, 405, 307)

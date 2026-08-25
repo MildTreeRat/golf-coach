@@ -18,6 +18,7 @@ import ast
 import json
 from pathlib import Path
 
+import pytest
 from pydantic import SecretStr
 
 from golf_coach.config import Settings
@@ -122,3 +123,50 @@ def test_an_unset_secret_is_none_rather_than_an_empty_secretstr() -> None:
     assert not Settings(upload_token=None).upload_token
     assert not Settings(upload_token="").upload_token
     assert Settings(upload_token="set").upload_token
+
+
+def test_the_env_file_is_read_from_the_repo_regardless_of_cwd(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The secrets have to come from the repo's `.env`, not from wherever the process started.
+
+    `env_file` was a bare relative `".env"` for most of this project's life, and
+    pydantic-settings resolves that against the working directory. A server started from
+    anywhere else therefore loaded no secrets at all — while every `Path` setting, absolute via
+    `REPO_ROOT`, kept resolving correctly. So it found its sessions, scored swings and wrote
+    `analysis.json` exactly as normal, and the only visible trace was coaching quietly reporting
+    that no API key was configured. It cost a session to find, because nothing about the symptom
+    pointed at `cd`.
+
+    Planting a decoy is what makes this hermetic: it fails on the old code, which reads the
+    decoy, and it needs neither the presence nor the contents of the real gitignored `.env`.
+    """
+    decoy = "decoy-from-the-working-directory"
+    (tmp_path / ".env").write_text(
+        f"GOLF_ANTHROPIC_API_KEY={decoy}\nGOLF_UPLOAD_TOKEN={decoy}\n", encoding="utf-8"
+    )
+    monkeypatch.chdir(tmp_path)
+
+    settings = Settings()
+
+    for field in ("anthropic_api_key", "upload_token"):
+        secret = getattr(settings, field)
+        assert secret is None or secret.get_secret_value() != decoy, (
+            f"`{field}` was read from a .env in the working directory rather than the repo's. "
+            "Config must not depend on where the process was started: the paths in Settings are "
+            "absolute, so a mismatch here goes unnoticed until something silently has no secret."
+        )
+
+
+def test_the_env_file_is_an_absolute_path() -> None:
+    """The property above, named directly, so a regression fails on the cause and not a symptom.
+
+    The test above would still catch a revert, but only via a decoy the reader has to reason
+    about. This one says the actual rule in one line.
+    """
+    env_file = Settings.model_config["env_file"]
+
+    assert env_file is not None and Path(env_file).is_absolute(), (
+        f"env_file must be absolute, got {env_file!r}. A relative path resolves against the "
+        "process working directory, which is how every secret went missing once already."
+    )
