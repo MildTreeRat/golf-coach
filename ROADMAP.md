@@ -1,6 +1,6 @@
 # Roadmap: AI Golf Swing Trainer
 
-## Last Updated: 2026-08-22
+## Last Updated: 2026-08-25
 
 Grouped by **state**, not by number, because the numbers no longer run in order: the pose-only
 slices (M4-PoC, M4-PoC+, M4-REF, M5-FB) delivered the mechanics half of M4 and the ranking half
@@ -25,6 +25,7 @@ wording; only the grouping and the M4 checklist have been corrected.
 | **Career mode** One golfer over time | ✅ Done, 6/6 steps | — (built and silent; a bay session gives it the `n` to speak) | [§Career](#career-mode-one-golfer-tracked-over-time--done-built-and-silent) |
 | **M8** Learning what "good" means | ✅ Done *(2026-08-17)* | — (three models fitted, validated, surfaced **and spoken**, with a policy rather than a band) | [§M8](#m8-learning-what-good-means--gates-run-model-fitted) |
 | **M9** Player tracking (per-club) | ✅ Done *(2026-08-22)*, 20/20 phases | — (built and **silent by design**: every club-narrowed answer refuses, because no swing on disk is tagged yet. A bay session, and the retag control, are what make it speak) | [§M9](#m9-player-tracking-per-club-shot-history--done-and-waiting-on-a-bay-session) |
+| **M10** Alignment accuracy | ⬜ Not started, 0/10 phases | — (the footage that exposed it is already on disk; this is the one open milestone that does **not** want a bay session) | [§M10](#m10-alignment-accuracy--the-two-panels-leave-address-together--not-started) |
 | **M5** Feedback UI | ⬜ Not started | M7 Phase 5 gives the host | [§M5](#milestone-5-feedback-ui) |
 | **M2** Club & ball detection | 🔒 Gated, **and M1.5 said no-go** | Bay lighting for a ~1/2000 s exposure — *not* a global-shutter camera | [§M2](#milestone-2-club--ball-detection) |
 | Hardware re-validation | 🔒 Gated | Cameras / launch monitor arriving | [§Gate](#hardware-re-validation-gate-revisit-when-cameras--launch-monitor-arrive) |
@@ -45,14 +46,21 @@ served live `call_tool` requests including the not-found path. It is registered 
 (`claude mcp add`, per the README) and reports `✔ Connected`, which is a second client completing
 the same handshake independently.
 
-**NEXT ACTION — one bay session.** M9 closed on 2026-08-22 with P20, and with it the last item on
-this board that was pure desk work. What remains divides into *needs a bay* and *needs `n`*, and
-one trip serves both: M7 Phase 0's field spike, M3's remaining OCR work and M2's lighting test all
-want the screen and the bay in front of you, while career mode, the dispersion discriminator, the
-tour join and every per-club answer are built, correct and refusing at `n = 2`. 20–30 tagged swings
-in one session turns all of them on at once. [BAY_SESSION_RUNBOOK.md](docs/BAY_SESSION_RUNBOOK.md)
-sequences the trip; **set the club cursor on the upload page before the first swing**, because a
-session hit without club tags produces data that can never be split by club afterwards.
+**NEXT ACTION — one bay session, and M10 alongside it.** M9 closed on 2026-08-22 with P20,
+which emptied this board of desk work — until the side-by-side renders were looked at properly on
+2026-08-25 and put **M10** back on it. What remains now divides three ways. *Needs a bay* and
+*needs `n`* are served by one trip: M7 Phase 0's field spike, M3's remaining OCR work and M2's
+lighting test all want the screen and the bay in front of you, while career mode, the dispersion
+discriminator, the tour join and every per-club answer are built, correct and refusing at `n = 2`.
+20–30 tagged swings in one session turns all of them on at once.
+[BAY_SESSION_RUNBOOK.md](docs/BAY_SESSION_RUNBOOK.md) sequences the trip; **set the club cursor on
+the upload page before the first swing**, because a session hit without club tags produces data
+that can never be split by club afterwards.
+
+The third way is **M10**, which wants neither: the bundles that expose the alignment drift are
+already on disk, so it is desk work that can run before the trip or in parallel with it. It is
+also worth doing *before* the trip — a bay session recorded against a windowing bug produces
+20–30 more bundles scored on the wrong frames.
 
 **M9's own last blocker went in the session before P20**: `index.html`'s swing list now has a
 per-swing **change** control beside the golfer one, so a swing already on disk is retagged from a phone in one tap over `POST
@@ -1177,6 +1185,33 @@ and swings that carried no measurement (not about the club). The first cut gave 
 refusal sentence, which is how a golfer gets sent to the bay to fix a swing that was never
 analyzed. `mcp/club.py` names one constant per silence and `caveats.READING_A_BAG` teaches the
 distinction once at the top of the conversation.
+
+---
+
+## M10: Alignment accuracy — the two panels leave address together — not started
+
+**Design**: [ADR-015](docs/decisions/015-handheld-two-phone-capture-and-event-anchored-alignment.md).
+**Phase list**: [docs/M10_ALIGNMENT_ACCURACY.md](docs/M10_ALIGNMENT_ACCURACY.md) — 10 phases, each
+independently commit-ready. **None built yet.**
+
+**The gap, in one sentence.** The side-by-side `aligned.mp4` opens with the down-the-line panel
+already into its takeaway while the face-on panel is still standing at address — visibly, on the
+bundles on disk, and by an amount worth a quarter of a second.
+
+**It is not one bug, and the obvious suspect is innocent.** `analysis/alignment.py` is largely
+right: it detects the trouble, refuses the soft anchor and writes an accurate note. The defects
+divide in two. **Group A** is upstream in `analysis/phases.py` — the down-the-line swing is
+selected with the *lead* wrist while its anchors are measured on the *trail* wrist, and the two
+views choose their swings independently, so a clip can be windowed on a practice swing or not
+windowed at all. **Group B** is inside the alignment itself — both the degraded fallback and the
+tempo cross-check compare **ratios** where they must compare **durations**, and a ratio divides
+out the very quantity that is wrong. Group B is why bundles reported `full` are misaligned too,
+which is the part a reader would otherwise not expect.
+
+**Why the fix costs a re-analysis, not just a re-render.** The window decides which frames get
+*scored*, so correcting it moves checkpoint scores on the stored bundles as well as the video.
+That is intended — a bundle scored on a practice swing was scored on the wrong thing — and P10
+records the before/after both ways.
 
 ---
 

@@ -1,6 +1,6 @@
 # Documentation map
 
-53 markdown documents: 43 in `docs/` — 14 here at the top level (including this map), 25 ADRs,
+54 markdown documents: 44 in `docs/` — 15 here at the top level (including this map), 25 ADRs,
 3 archived, 1 in `proposals/` — plus 10 outside it (the four at the repo root, and one each in
 `data/` and `frontend/`, four in `spikes/`). This page says which one to read, and — just as
 importantly — which ones are records of the past rather than descriptions of the present.
@@ -70,6 +70,7 @@ instrument).
 | [M4_POSE_BAKEOFF.md](M4_POSE_BAKEOFF.md) | REFERENCE | Has this been tried already? The estimator bake-off, six rejected address signals, the arm-parallel no-go. **The longest doc here — grep it, don't read it.** |
 | [M7_TWO_PHONE_CAPTURE.md](M7_TWO_PHONE_CAPTURE.md) | TARGET | The current live plan: two phones at a sim, seven phases (six built). **Its planning prompts are historical — Phase 6's is actively wrong and bannered.** |
 | [M9_PLAYER_TRACKING.md](M9_PLAYER_TRACKING.md) | REFERENCE | How far do I hit my 7 iron, and where does it go? **20/20 phases built** — the club tag, the declared bag, the per-club profile and its three readers. Each phase records the numbers it saw on the day, so read the reasoning and not the digits. The *why* is ADR-024. |
+| [M10_ALIGNMENT_ACCURACY.md](M10_ALIGNMENT_ACCURACY.md) | TARGET | Why does the down-the-line panel swing while the face-on one is still at address? The diagnosis over the bundles on disk, and the repair as ten phases. **0/10 built — nothing here is as-built yet.** The *why* behind the alignment is ADR-015. |
 | [BAY_SESSION_RUNBOOK.md](BAY_SESSION_RUNBOOK.md) | AS-BUILT | Taking the two-phone capture to a real sim: preflight at home, phone settings and why 1080p60, measured timings, and what to check when it doesn't work. *(Failure modes are predicted until the first bay session.)* |
 | [M7_TWO_PHONE_SPIKE.md](M7_TWO_PHONE_SPIKE.md) | REFERENCE | Does phase detection survive down-the-line, does OpenCV decode iPhone HEVC, and does `CAP_PROP_FPS` mean anything on slo-mo? Thresholds committed 2026-08-07; **results pending footage**. |
 | [../data/README.md](../data/README.md) | AS-BUILT | The data layout, the three-tier reference cache, and how to rebuild the GolfDB corpus. |
