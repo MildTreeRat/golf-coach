@@ -98,16 +98,6 @@ MIN_PLAUSIBLE_TEMPO = 1.0
 _DOWNSWING_AGREEMENT = 0.30
 
 
-# ...but this fallback converts a duration through each clip's own fps, which the normalized axis
-# was specifically designed never to need (ADR-015; docs/M7_TWO_PHONE_SPIKE.md Q3 is still open on
-# whether `CAP_PROP_FPS` describes real time at all). Note what cannot be checked here: two phones
-# genuinely set to 30 and 60 fps are a perfectly ordinary pairing, so the two rates *disagreeing* is
-# not evidence of a lying clock, and a slo-mo clip's stretched rate is not detectable from the
-# number alone. What can be checked is whether the duration about to be imposed on both panels is a
-# physically possible downswing. If it is not, either that clock or that clip's anchors are wrong,
-# and propagating it to the other view would turn one bad panel into two — so keep the warp and let
-# the quality tier and notes carry the problem instead.
-
 # The swing and nothing else: from a little before the takeaway to one downswing past impact.
 # Widen it to render more of the clip.
 DEFAULT_TAU_RANGE = (-0.4, 3.0)
@@ -252,8 +242,13 @@ def align_swings(a: SwingAnchors, b: SwingAnchors) -> SwingAlignment:
 
     Both clips are always aligned on **top and impact** — the two anchors the bake-off says are
     worth trusting. Motion start joins them only when both clips detected it independently and
-    their tempo ratios agree; otherwise both clips take the same tour-median estimate, so the
-    pre-top region degrades symmetrically instead of in one panel only.
+    their tempo ratios agree.
+
+    When it is refused, each clip takes the tour-median estimate off **its own** downswing, so what
+    the two share is the ratio and not the duration — and the views routinely disagree on the
+    downswing by 10–40%, which `_FALLBACK_TEMPO_RATIO` multiplies. Measured over the bundles on
+    disk that is 0.300s of drift at tau=0, which is what the viewer actually sees at the top of the
+    render. Fixed in P2; the evidence is docs/M10_ALIGNMENT_ACCURACY.md §B1.
     """
     notes: list[str] = []
     quality = AlignmentQuality.FULL
