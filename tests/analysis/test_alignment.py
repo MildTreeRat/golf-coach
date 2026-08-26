@@ -11,6 +11,7 @@ import pytest
 from conftest import _ADDRESS_FRAMES, make_swing
 
 from golf_coach.analysis.alignment import (
+    _BACKSWING_AGREEMENT_S,
     _TEMPO_AGREEMENT,
     align_swings,
     anchors_from_keypoints,
@@ -242,6 +243,83 @@ def test_a_clip_without_fps_still_falls_back_on_its_own_downswing() -> None:
             _FALLBACK_TEMPO_RATIO * clip.anchors.downswing_frames
         )
         assert clip.warp_motion_start == expected
+
+
+def test_agreeing_tempo_does_not_rescue_backswings_that_disagree_in_seconds() -> None:
+    """The ratio check's blind spot, taken from the bundle it was found on. [M10 P3]
+
+    Session 2026-08-23/9 shipped as `full` while the two panels were 0.233s apart at the takeaway —
+    14 frames of daylight at 60fps, which is what the complaint was about. Its tempo ratios are
+    4.06 and 4.25, closer together than any other pair on disk, because both views mismeasured the
+    downswing in the same direction and the ratio divided the error back out.
+
+    Session 8 is the control below: 14 times closer in real time, and its ratios are 1.89 against
+    2.60. Ranking those two pairs by tempo agreement puts them in the wrong order, which is why
+    seconds and not a ratio.
+    """
+    a = SwingAnchors(
+        motion_start=469, top=534, impact=550, frame_count=726, fps=59.975, camera_id="face_on"
+    )
+    b = SwingAnchors(
+        motion_start=246, top=297, impact=309, frame_count=450, fps=59.960,
+        camera_id="down_the_line",
+    )
+    assert a.tempo_ratio is not None and b.tempo_ratio is not None
+    # The ratios agree comfortably — this pair is refused on time alone, not on tempo.
+    assert abs(a.tempo_ratio - b.tempo_ratio) / b.tempo_ratio < _TEMPO_AGREEMENT
+    gap = (a.top - a.motion_start) / 59.975 - (b.top - b.motion_start) / 59.960
+    assert gap > _BACKSWING_AGREEMENT_S
+
+    alignment = align_swings(a, b)
+
+    assert alignment.quality is AlignmentQuality.TOP_IMPACT
+    note = next(n for n in alignment.notes if "backswings are" in n)
+    assert "tempo ratios agree" in note
+    # The downswings match (0.267s and 0.200s), so the takeaway is the boundary to doubt.
+    assert "down_the_line is finding its motion start late" in note
+    assert "DIFFERENT swings" not in note
+
+
+def test_backswings_that_agree_in_seconds_keep_the_soft_anchor() -> None:
+    """The honest pair, from session 2026-08-23/8 — and it is the one with the *worst* tempo gap.
+
+    0.884s against 0.867s of backswing, one frame apart, on ratios of 1.89 and 2.60. A tighter
+    `_TEMPO_AGREEMENT` would throw this pair away to catch session 9 above, and still miss it.
+    """
+    a = SwingAnchors(
+        motion_start=452, top=505, impact=533, frame_count=700, fps=59.975, camera_id="face_on"
+    )
+    b = SwingAnchors(
+        motion_start=300, top=352, impact=372, frame_count=600, fps=59.960,
+        camera_id="down_the_line",
+    )
+    assert a.tempo_ratio is not None and b.tempo_ratio is not None
+    assert abs(a.tempo_ratio - b.tempo_ratio) / b.tempo_ratio < _TEMPO_AGREEMENT
+
+    alignment = align_swings(a, b)
+
+    assert alignment.quality is AlignmentQuality.FULL
+    assert alignment.a is not None and alignment.b is not None
+    assert alignment.a.warp_motion_start == a.motion_start
+    assert alignment.b.warp_motion_start == b.motion_start
+
+
+def test_a_pair_without_fps_is_still_judged_on_the_ratio_alone() -> None:
+    """No frame rate, no duration to compare — so the seconds check does not run. [M10 P3]
+
+    Reported, not raised (ADR-013). A clip whose container never gave up a frame rate gets the
+    weaker of the two cross-checks rather than an error, and keeps the soft anchor it would have
+    kept before this check existed. Same anchors as the session-9 case above, fps dropped.
+    """
+    a = SwingAnchors(motion_start=469, top=534, impact=550, frame_count=726, camera_id="face_on")
+    b = SwingAnchors(
+        motion_start=246, top=297, impact=309, frame_count=450, camera_id="down_the_line"
+    )
+
+    alignment = align_swings(a, b)
+
+    assert alignment.quality is AlignmentQuality.FULL
+    assert not any("backswings are" in note for note in alignment.notes)
 
 
 def test_disagreeing_tempo_refuses_the_soft_anchor() -> None:

@@ -20,7 +20,8 @@ approach (docs/M7_TWO_PHONE_SPIKE.md, Q3).
 **Not every anchor is worth the same.** Against 461 GolfDB clips (docs/M4_POSE_BAKEOFF.md) impact
 lands within a median of 1 frame and the top within 2, but motion start is out by a median of 7
 with 40% of clips over 10 frames and an outright fallback on ~14%. It is therefore a **soft**
-anchor: used only when both clips found it independently *and* the two agree on the swing's tempo.
+anchor: used only when both clips found it independently *and* the two agree about the backswing —
+as a tempo ratio, and again in seconds, because a ratio cannot see an error the two views share.
 Otherwise both clips fall back to the same tour-median estimate and the result says so through
 `AlignmentQuality`, rather than rendering a video that implies precision nobody measured.
 
@@ -63,6 +64,33 @@ from golf_coach.contracts.swing import PhaseSegment, SwingPhase
 # downswing is most of a tempo unit all by itself, so a tight bound would reject honest pairs. It
 # is sized to catch a *category* error (3.1 against 1.4), not to grade agreement.
 _TEMPO_AGREEMENT = 0.35
+
+# The cross-check the constant above is structurally unable to make: how far apart the two views'
+# *backswing durations* may sit, in seconds, before the soft anchor is refused.
+#
+# A ratio divides out the downswing. So when both views mismeasure one swing in the same direction
+# — the common case, since they are watching the same motion — the ratios agree while the durations
+# do not, and `_TEMPO_AGREEMENT` waves through a pair that is visibly apart on screen. That is not a
+# loose bound, it is a blind one: no value of `_TEMPO_AGREEMENT` catches this, which is why there is
+# a second constant here rather than a tighter first one.
+#
+# Sized on the four bundles that report `full` on disk (docs/M10_ALIGNMENT_ACCURACY.md B2):
+#
+#   session  9   1.084s vs 0.851s   0.233s apart   tempo 4.06 / 4.25   must fail
+#   session  6   0.984s vs 0.784s   0.200s apart   tempo 2.36 / 2.14   must fail
+#   session 11   0.834s vs 0.700s   0.133s apart   tempo 2.50 / 2.00   must pass
+#   session  8   0.884s vs 0.867s   0.017s apart   tempo 1.89 / 2.60   must pass
+#
+# leaving the band (0.133, 0.200). 0.167 is ten frames at 60fps and sits at its log midpoint, a
+# third of the width clear either side. Read sessions 9 and 8 against each other: the pair fourteen
+# times further apart in real time is the pair whose tempo ratios agree more closely. That inversion
+# is the entire argument for measuring this in seconds.
+#
+# Absolute seconds, where `_TEMPO_AGREEMENT` and `_DOWNSWING_AGREEMENT` are both relative. A
+# relative bound here would re-import the scale-blindness being fixed, allowing a slow backswing
+# more real drift than a fast one — and the viewer sees the same daylight between the panels either
+# way, because what is wrong at tau=0 is an offset and not a rate.
+_BACKSWING_AGREEMENT_S = 0.167
 
 # A backswing shorter than its own downswing is not a golf swing. Tour tempo is ~3:1 and the
 # slowest credible amateur is still well above 1:1, so a ratio under this means the `motion_start`
@@ -241,8 +269,9 @@ def align_swings(a: SwingAnchors, b: SwingAnchors) -> SwingAlignment:
     """Put two clips of one swing on a shared tau axis.
 
     Both clips are always aligned on **top and impact** — the two anchors the bake-off says are
-    worth trusting. Motion start joins them only when both clips detected it independently and
-    their tempo ratios agree.
+    worth trusting. Motion start joins them only when both clips detected it independently and the
+    two backswings agree twice over: as tempo ratios, and — when both clips reported a frame rate —
+    as durations in seconds, which is the disagreement a ratio is blind to.
 
     When it is refused, both clips take the tour-median estimate off **one shared downswing
     duration** and convert it through their own fps, so the pre-top region degrades by the same
@@ -281,6 +310,17 @@ def align_swings(a: SwingAnchors, b: SwingAnchors) -> SwingAlignment:
         if _relative_gap(ratio_a, ratio_b) > _TEMPO_AGREEMENT:
             use_soft = False
             notes.append(_tempo_disagreement_note(a, b, ratio_a, ratio_b))
+        elif a.fps and b.fps:
+            # The ratio check's blind spot, measured in real time — see `_BACKSWING_AGREEMENT_S`.
+            # `elif`, because a pair that already failed on tempo has been refused and a second
+            # note about the same disagreement would only crowd the first. Both frame rates or
+            # nothing: without one there is no duration to compare, so the soft anchor stands on
+            # the ratio alone exactly as it did before (ADR-013, reported not raised).
+            backswing_a = a.backswing_frames / a.fps
+            backswing_b = b.backswing_frames / b.fps
+            if abs(backswing_a - backswing_b) > _BACKSWING_AGREEMENT_S:
+                use_soft = False
+                notes.append(_backswing_disagreement_note(a, b, backswing_a, backswing_b))
 
     if use_soft:
         motion_a, motion_b = a.motion_start, b.motion_start
@@ -308,32 +348,60 @@ def align_swings(a: SwingAnchors, b: SwingAnchors) -> SwingAlignment:
 def _tempo_disagreement_note(
     a: SwingAnchors, b: SwingAnchors, ratio_a: float, ratio_b: float
 ) -> str:
-    """Why two views of one swing came out at different tempos — the denominator tells you which.
-
-    Tempo is backswing over downswing, so a disagreement lives in one of the two. If the clips also
-    disagree about the *downswing*, the tops are on different events and "different swings" is the
-    likeliest reading — a practice swing in one clip is the classic cause. But when the downswings
-    agree and only the ratio does not, the two views are demonstrably watching the same motion and
-    the whole difference sits in the numerator: one clip's takeaway boundary is wrong. Saying
-    "different swings" there sends the reader to check something that is fine.
-    """
-    common = (
+    """Why two views of one swing came out at different tempos."""
+    opening = (
         f"tempo ratios disagree ({ratio_a:.2f} vs {ratio_b:.2f}) — frame rate cancels out of a "
         "ratio, so two views of one swing should not. "
     )
+    return opening + _which_half_is_wrong(a, b, shorter_backswing_is_a=ratio_a < ratio_b)
+
+
+def _backswing_disagreement_note(
+    a: SwingAnchors, b: SwingAnchors, seconds_a: float, seconds_b: float
+) -> str:
+    """Why a pair whose tempo ratios agree is refused anyway. [M10 P3]
+
+    This note has to say more than the tempo one, because the reader has just been told nothing is
+    wrong: the ratios matched. Lead with the arithmetic reason they could match — a ratio divides
+    out the downswing — or the refusal reads as the check being fussy about a pair it already
+    approved.
+    """
+    opening = (
+        f"the two views' backswings are {abs(seconds_a - seconds_b):.3f}s apart "
+        f"({seconds_a:.3f}s and {seconds_b:.3f}s) even though their tempo ratios agree — a ratio "
+        "divides out the downswing, so it cannot see two views whose errors scale together. "
+    )
+    return opening + _which_half_is_wrong(a, b, shorter_backswing_is_a=seconds_a < seconds_b)
+
+
+def _which_half_is_wrong(
+    a: SwingAnchors, b: SwingAnchors, *, shorter_backswing_is_a: bool
+) -> str:
+    """Which of the two boundaries to doubt — the denominator tells you.
+
+    Both refusals above are a disagreement about the backswing, so it lives in either the takeaway
+    boundary or the top. If the clips also disagree about the *downswing*, the tops are on different
+    events and "different swings" is the likeliest reading — a practice swing in one clip is the
+    classic cause. But when the downswings agree, the two views are demonstrably watching the same
+    motion and the whole difference sits in the takeaway: one clip's motion start is late. Saying
+    "different swings" there sends the reader to check something that is fine.
+
+    Shared by both notes rather than written twice, because the branch is the same judgement and a
+    second copy is a second thing to drift.
+    """
     if a.fps and b.fps:
         seconds_a = a.downswing_frames / a.fps
         seconds_b = b.downswing_frames / b.fps
         if _relative_gap(seconds_a, seconds_b) <= _DOWNSWING_AGREEMENT:
-            late = a.camera_id or "a" if ratio_a < ratio_b else b.camera_id or "b"
+            late = (a.camera_id or "a") if shorter_backswing_is_a else (b.camera_id or "b")
             return (
-                common + f"The two downswings agree ({seconds_a:.3f}s and {seconds_b:.3f}s), so "
-                f"this is the takeaway boundary, not two different swings — {late} is finding its "
-                "motion start late. Dropping it as an anchor; the swing itself is fine"
+                f"The two downswings agree ({seconds_a:.3f}s and {seconds_b:.3f}s), so this is the "
+                f"takeaway boundary, not two different swings — {late} is finding its motion start "
+                "late. Dropping it as an anchor; the swing itself is fine"
             )
     return (
-        common + "Most likely the two clips are showing DIFFERENT swings; check for a practice "
-        "swing in one of them"
+        "Most likely the two clips are showing DIFFERENT swings; check for a practice swing in one "
+        "of them"
     )
 
 
