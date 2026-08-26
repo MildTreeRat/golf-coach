@@ -244,11 +244,10 @@ def align_swings(a: SwingAnchors, b: SwingAnchors) -> SwingAlignment:
     worth trusting. Motion start joins them only when both clips detected it independently and
     their tempo ratios agree.
 
-    When it is refused, each clip takes the tour-median estimate off **its own** downswing, so what
-    the two share is the ratio and not the duration — and the views routinely disagree on the
-    downswing by 10–40%, which `_FALLBACK_TEMPO_RATIO` multiplies. Measured over the bundles on
-    disk that is 0.300s of drift at tau=0, which is what the viewer actually sees at the top of the
-    render. Fixed in P2; the evidence is docs/M10_ALIGNMENT_ACCURACY.md §B1.
+    When it is refused, both clips take the tour-median estimate off **one shared downswing
+    duration** and convert it through their own fps, so the pre-top region degrades by the same
+    number of *seconds* in each panel. A clip without fps is the exception and still degrades off
+    its own downswing — see `_shared_motion_starts`.
     """
     notes: list[str] = []
     quality = AlignmentQuality.FULL
@@ -287,8 +286,7 @@ def align_swings(a: SwingAnchors, b: SwingAnchors) -> SwingAlignment:
         motion_a, motion_b = a.motion_start, b.motion_start
     else:
         quality = AlignmentQuality.TOP_IMPACT
-        motion_a = _estimated_motion_start(a)
-        motion_b = _estimated_motion_start(b)
+        motion_a, motion_b = _shared_motion_starts(a, b)
 
     # The hard anchors get their own check. If the two views disagree about how long the downswing
     # lasted, pinning both to tau=1 resamples one panel to catch up — see `_DOWNSWING_AGREEMENT`.
@@ -502,6 +500,39 @@ def _estimated_motion_start(anchors: SwingAnchors) -> int:
     estimated by the detector and one whose anchor was refused here on the *same* footing.
     """
     return max(0, anchors.top - round(_FALLBACK_TEMPO_RATIO * anchors.downswing_frames))
+
+
+def _shared_motion_starts(a: SwingAnchors, b: SwingAnchors) -> tuple[int, int]:
+    """The tau=0 fallback for both clips at a *shared* backswing duration.
+
+    Applying `_estimated_motion_start` to each clip separately shares the tour-median **ratio**,
+    which is not the same thing as degrading symmetrically: the two views routinely disagree about
+    the downswing by 10–40%, and `_FALLBACK_TEMPO_RATIO` multiplies that disagreement by 3.5 before
+    it reaches the screen. Over the bundles on disk that put the two panels' tau=0 up to 0.300s
+    apart, and `DEFAULT_TAU_RANGE` opens *before* tau=0, so the render began with the gap grown
+    another 40% — the drift the viewer actually complained about (docs/M10_ALIGNMENT_ACCURACY.md
+    §B1).
+
+    So derive one duration in seconds and convert it through each clip's own fps, exactly as
+    `_shared_tops` does for the tops. The reference is the face-on clip for the same reason it is
+    there: that is the view the phase detector was tuned on and the only one scored (ADR-015).
+
+    Without fps on both clips there is no duration to share, and this falls back to today's
+    per-clip ratio — degraded further, but reported rather than raised (ADR-013).
+    """
+    if not a.fps or not b.fps:
+        return _estimated_motion_start(a), _estimated_motion_start(b)
+
+    reference = (
+        a.downswing_frames / a.fps
+        if a.camera_id == "face_on" or b.camera_id != "face_on"
+        else b.downswing_frames / b.fps
+    )
+    backswing_seconds = _FALLBACK_TEMPO_RATIO * reference
+    return (
+        max(0, a.top - round(backswing_seconds * a.fps)),
+        max(0, b.top - round(backswing_seconds * b.fps)),
+    )
 
 
 def _relative_gap(x: float, y: float) -> float:

@@ -58,6 +58,12 @@ def _backswing_in_downswings(clip: ClipAlignment) -> float:
     return (clip.anchors.top - clip.warp_motion_start) / clip.anchors.downswing_frames
 
 
+def _backswing_seconds(clip: ClipAlignment) -> float:
+    """The same span in real time — which is what the two panels have to share, not the ratio."""
+    assert clip.anchors.fps is not None
+    return (clip.anchors.top - clip.warp_motion_start) / clip.anchors.fps
+
+
 def _prepend_still(clip: list[FrameKeypoints], frames: int) -> list[FrameKeypoints]:
     """Hold the opening frame for longer — a phone that started rolling earlier."""
     return _concat([clip[0]] * frames, clip)
@@ -178,18 +184,64 @@ def test_an_undetected_motion_start_drops_to_top_and_impact() -> None:
     assert abs(map_frame(alignment, a.impact, source="a") - b.impact) <= 1
 
 
-def test_both_clips_take_the_same_fallback_when_the_soft_anchor_is_dropped() -> None:
-    """Degrade symmetrically or not at all — one panel drifting is worse than both drifting."""
-    moving = make_swing(20, 14, takeaway_frames=60)[_ADDRESS_FRAMES:]
-    settled = make_swing(20, 14, takeaway_frames=60)
-    alignment = align_swings(_anchored(moving, 60.0), _anchored(settled, 60.0))
+def test_both_clips_take_the_same_fallback_duration_not_the_same_ratio() -> None:
+    """Degrade symmetrically or not at all — and "symmetrically" is measured in seconds. [M10 P2]
+
+    A shared *ratio* is not symmetry. Two views of one swing routinely disagree about the downswing
+    by 10-40%, and the tour-median fallback multiplies that gap by 3.5 before it reaches the screen:
+    on the 24-vs-19-frame pair below the old per-clip rule opened the render with the two panels
+    0.28s apart at tau=0, which is the drift docs/M10_ALIGNMENT_ACCURACY.md §B1 measured on disk.
+    """
+    a = SwingAnchors(
+        motion_start=100, top=200, impact=224, frame_count=400, fps=59.94, camera_id="face_on",
+        motion_start_detected=False,
+    )
+    b = SwingAnchors(
+        motion_start=300, top=400, impact=419, frame_count=700, fps=59.94,
+        camera_id="down_the_line",
+    )
+    # The downswings disagree by 21%, under `_DOWNSWING_AGREEMENT`, so the tops stand and this is
+    # the TOP_IMPACT branch under test rather than the IMPACT_ONLY one.
+    alignment = align_swings(a, b)
+    assert alignment.quality is AlignmentQuality.TOP_IMPACT
 
     assert alignment.a is not None and alignment.b is not None
     # Neither clip's warp uses its own detected motion start; both use the same substituted rule.
     assert alignment.b.warp_motion_start != alignment.b.anchors.motion_start
-    assert _backswing_in_downswings(alignment.a) == pytest.approx(
+    # Within a frame of each other in real time. The ratios now differ, and that is the point.
+    assert _backswing_seconds(alignment.a) == pytest.approx(
+        _backswing_seconds(alignment.b), abs=1 / 59.94
+    )
+    assert _backswing_in_downswings(alignment.a) != pytest.approx(
         _backswing_in_downswings(alignment.b), abs=0.2
     )
+
+
+def test_a_clip_without_fps_still_falls_back_on_its_own_downswing() -> None:
+    """No fps means no duration to share, so the pre-top region degrades in ratio as it always did.
+
+    Reported, not raised (ADR-013): a clip whose container never gave up a frame rate is a worse
+    alignment, not an error. This is the path `_shared_motion_starts` deliberately leaves alone.
+    """
+    from golf_coach.analysis.phases import _FALLBACK_TEMPO_RATIO
+
+    a = SwingAnchors(
+        motion_start=100, top=200, impact=224, frame_count=400, camera_id="face_on",
+        motion_start_detected=False,
+    )
+    b = SwingAnchors(
+        motion_start=300, top=400, impact=419, frame_count=700, fps=59.94,
+        camera_id="down_the_line",
+    )
+    alignment = align_swings(a, b)
+
+    assert alignment.quality is AlignmentQuality.TOP_IMPACT
+    assert alignment.a is not None and alignment.b is not None
+    for clip in (alignment.a, alignment.b):
+        expected = clip.anchors.top - round(
+            _FALLBACK_TEMPO_RATIO * clip.anchors.downswing_frames
+        )
+        assert clip.warp_motion_start == expected
 
 
 def test_disagreeing_tempo_refuses_the_soft_anchor() -> None:
