@@ -6,8 +6,8 @@
 > *why* behind the alignment itself is [ADR-015](decisions/015-handheld-two-phone-capture-and-event-anchored-alignment.md);
 > this document is the repair, as a phase list.
 
-**Status: 4/10 phases built** — the alignment-math track (P1-P3) is complete; P4 is in.
-The selection track resumes at P5.
+**Status: 5/10 phases built** — the alignment-math track (P1-P3) is complete; the selection
+track has P4 and P5 in and resumes at P6.
 
 ## What this milestone is
 
@@ -274,7 +274,7 @@ changes here, ahead of P5. (The file held 7 tests, not 8.)
 
 ---
 
-### [ ] P5 — the down-the-line view is selected on the trail wrist *(fixes A1, part 2)*
+### [x] P5 — the down-the-line view is selected on the trail wrist *(fixes A1, part 2)*
 
 **Goal.** The window and the anchors read the same landmark.
 
@@ -294,6 +294,44 @@ is expected and P7 fixes it — do not tune anything to paper over it.
 pin that the DTL view is windowed on the trail wrist.
 
 **Done when.** Session 10's DTL window is ~216 frames, not 3619.
+
+**As built.** Session 10's DTL window is `(1099, 1315)` — 216 frames, from 3619 — and that bundle
+now reports `full` with both views measuring a 24-frame downswing. Three deviations:
+
+- **`phases._LEAD_WRIST` is now public as `LEAD_WRIST`**, which this plan did not list and which
+  touches `phases.py`. A caller that chooses per view has to be able to name *both* halves of the
+  pair; the alternatives were the `| None = None` default P4's As-built note declined, or a second
+  literal `PoseLandmark.LEFT_WRIST` written in `api/`. Zero behaviour change.
+- **`scripts/align_swings.py`'s anchors were fixed too** — its two `anchors_from_keypoints` calls
+  passed no `wrist` at all, so it segmented *both* clips on the lead wrist while `engine` has used
+  the trail wrist for down-the-line since M4 §Phase F. This is an oversight in the phase list, not
+  a consequence of P5: the script appears in this document only here and in P6's Reuse note, so no
+  later phase would have caught it. Left alone, P5 would have given the dev CLI the exact
+  window/anchor split §A1 is about. It picks its wrist from `camera_id`, the field `main()` already
+  reads to choose the reference clip; a file recording none keeps the lead wrist.
+- **A shared `view → wrist` helper in `analysis/` was considered and declined.** `engine` and
+  `pipeline` hold a `storage.manifest.Role`, which `analysis` must not import (ADR-008);
+  `align_swings.py` holds only a free-form `camera_id`. One helper cannot key on both, and two is
+  the drift a single helper would have existed to prevent.
+
+**The regression is wider than this plan predicted, and it is the same defect.** Measured over all
+15 stored down-the-line clips, lead-wrist selection against trail-wrist:
+
+| | before (lead) | after (trail) |
+|---|---|---|
+| session 10 | `(0, 3619)`, 9.673 s — the whole clip | `(1099, 1315)`, 0.400 s ✔ |
+| session 4 | declined | `(1130, 1391)`, 0.484 s ✔ |
+| session 3 | `(958, 1183)`, 0.417 s | `(1637, 1763)`, 0.233 s ✘ post-impact |
+| session 6 | `(1056, 1209)`, 0.284 s | `(1693, 1792)`, 0.183 s ✘ post-impact |
+| `2026-08-07-aaron1/1`, `2026-08-09/2`, `2026-08-10/1` — one clip, three bundles | `(1430, 1646)`, 0.400 s | `(2298, 2442)`, 0.267 s ✘ post-impact |
+| `2026-08-10/2` | `(1647, 1872)`, 0.417 s | declined ✘ |
+| the other six | — | windows shift a few frames and durations move *toward* the band (session 9: 0.183 → 0.417) |
+
+So **five clips regress, not two**, all of them A2 ("last plausible" picks a descent after impact,
+because the DTL phone keeps rolling) — and `2026-08-10/2` is a clean second instance of **A3**: its
+true descent measures 27 frames at 59.959 fps = **0.4503 s**, 0.0003 s outside
+`_PLAUSIBLE_DOWNSWING_S`, so all seven of its candidates are filtered and the single-candidate
+escape cannot fire. P7's two rules cover both shapes; nothing here was tuned to hide either.
 
 ---
 

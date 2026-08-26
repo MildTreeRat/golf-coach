@@ -197,7 +197,8 @@ def test_the_trail_wrist_finds_a_swing_the_lead_wrist_cannot_see() -> None:
 def test_the_default_landmark_is_the_lead_wrist() -> None:
     """Every stored window and every band was produced on the lead wrist; the default holds it.
 
-    P5 changes one call site, not the default. Pinned on both entry points because they are
+    P5 changes the down-the-line call sites — `api.pipeline._auto_window` and
+    `scripts/align_swings.py` — not the default. Pinned on both entry points because they are
     threaded separately and a default that drifted on only one of them would be invisible until
     a face-on window moved.
     """

@@ -37,13 +37,15 @@ from golf_coach.analysis.alignment import (
 )
 from golf_coach.analysis.phases import (
     CANDIDATE_MIN_RISE,
+    LEAD_WRIST,
+    TRAIL_WRIST,
     candidate_downswings,
     select_swing,
     window_around,
 )
 from golf_coach.analysis.smoothing import smooth_keypoints
 from golf_coach.contracts.alignment import SwingAlignment, SwingAnchors
-from golf_coach.contracts.keypoints import FrameKeypoints, KeypointsFile
+from golf_coach.contracts.keypoints import FrameKeypoints, KeypointsFile, PoseLandmark
 from golf_coach.storage.keypoints_io import load_keypoints
 
 
@@ -62,6 +64,32 @@ def _parse_window(value: str | None) -> tuple[int, int] | None:
 
 def _load(path: Path) -> KeypointsFile:
     return load_keypoints(path)
+
+
+def _selection_wrist(keypoints: list[FrameKeypoints]) -> PoseLandmark:
+    """Which landmark this clip is read on: the trail wrist from behind, else the lead wrist.
+
+    This script takes two clips called A and B and is told nothing about which view either is, so
+    it asks the frames — the same `camera_id` `main()` already reads to decide which clip drives
+    the output timeline, and that `alignment.anchors_from_keypoints` reads to stamp the anchors.
+    The field is free-form by contract (`contracts/keypoints.py`); M7 writes
+    `storage.manifest.Role`'s own words into it by convention, which is what this matches. A file
+    recording no `camera_id` — everything written before M7 Phase 1 — gets the lead wrist, which
+    is what it has always been read on.
+
+    Why per view at all: from down-the-line the lead wrist is the far arm, occluded by the torso
+    through the top and tracked in 39% of frames (`phases.TRAIL_WRIST`). `engine` has segmented
+    that view on the trail wrist since M4 §Phase F. This script did not, so its report of a
+    down-the-line clip disagreed with what the pipeline produces from the same file.
+    """
+    camera_id = next((f.camera_id for f in keypoints if f.camera_id is not None), None)
+    return TRAIL_WRIST if camera_id == "down_the_line" else LEAD_WRIST
+
+
+def _wrist_name(wrist: PoseLandmark) -> str:
+    """The repo's word for a landmark. Not `wrist.name`, which says "left wrist" — true of the
+    index and wrong for a left-handed golfer, whose lead wrist is the right one."""
+    return "trail wrist" if wrist is TRAIL_WRIST else "lead wrist"
 
 
 def _override(anchors: SwingAnchors, top: int | None, impact: int | None) -> SwingAnchors:
@@ -85,11 +113,16 @@ def _override(anchors: SwingAnchors, top: int | None, impact: int | None) -> Swi
 def _print_swings(label: str, keypoints: list[FrameKeypoints], fps: float | None) -> None:
     """List every descent of the hands in the clip — how you find a practice swing."""
     smoothed = smooth_keypoints(keypoints)
+    wrist = _selection_wrist(keypoints)
     # A lower threshold than segment_phases' own, deliberately: a lazy practice swing often
     # descends less far than the real one, and the point here is to SEE it. Shared with
-    # `select_swing` so the set you choose from and the set it chooses from are identical.
-    swings = candidate_downswings(smoothed, min_fraction=CANDIDATE_MIN_RISE)
-    print(f"\n{label}: {len(keypoints)} frames, {len(swings)} candidate descent(s)")
+    # `select_swing` — same threshold and same landmark — so the set you choose from and the set
+    # it chooses from are identical.
+    swings = candidate_downswings(smoothed, min_fraction=CANDIDATE_MIN_RISE, wrist=wrist)
+    print(
+        f"\n{label}: {len(keypoints)} frames, {len(swings)} candidate descent(s)"
+        f"  [read on the {_wrist_name(wrist)}]"
+    )
     if not swings:
         print("  (none - no detectable descent of the hands)")
         return
@@ -214,12 +247,16 @@ def _auto_window(
 ) -> tuple[int, int] | None:
     """`select_swing`'s pick for one clip, narrating what it chose or why it declined."""
     fps = file.clip.fps if file.clip else None
-    choice = select_swing(smooth_keypoints(keypoints), fps=fps)
+    wrist = _selection_wrist(keypoints)
+    choice = select_swing(smooth_keypoints(keypoints), fps=fps, wrist=wrist)
     if choice is None:
         reason = "the keypoints file records no fps" if fps is None else "no plausible downswing"
-        print(f"  {label}: auto-window declined ({reason}) — using the whole clip")
+        print(
+            f"  {label}: auto-window declined ({reason}, on the {_wrist_name(wrist)})"
+            " — using the whole clip"
+        )
         return None
-    print(f"  {label}: {choice.reason}")
+    print(f"  {label}: {choice.reason}  [read on the {_wrist_name(wrist)}]")
     return choice.window
 
 
@@ -292,8 +329,17 @@ def main(argv: list[str]) -> int:
         if window_b is None:
             window_b = _auto_window(name_b, kp_b, file_b)
 
-    anchors_a = anchors_from_keypoints(kp_a, clip=file_a.clip, window=window_a)
-    anchors_b = anchors_from_keypoints(kp_b, clip=file_b.clip, window=window_b)
+    # The same landmark the window was picked on, for the reason `engine.analyze_swing_bundle`
+    # passes one here: the window decides which frames these anchors are measured over, so a
+    # window chosen on one wrist and anchors segmented on the other describe two different swings
+    # (M10 §A1). Until M10 P5 this passed no wrist at all, so a down-the-line clip was reported
+    # here on the lead wrist and scored in the pipeline on the trail one.
+    anchors_a = anchors_from_keypoints(
+        kp_a, clip=file_a.clip, window=window_a, wrist=_selection_wrist(kp_a)
+    )
+    anchors_b = anchors_from_keypoints(
+        kp_b, clip=file_b.clip, window=window_b, wrist=_selection_wrist(kp_b)
+    )
     if anchors_a is None or anchors_b is None:
         missing = name_a if anchors_a is None else name_b
         print(f"error: {missing} could not be segmented into a swing", file=sys.stderr)

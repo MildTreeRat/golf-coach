@@ -48,13 +48,13 @@ from pathlib import Path
 
 from golf_coach.analysis.alignment import DEFAULT_TAU_RANGE, pair_frames
 from golf_coach.analysis.engine import analyze_swing_bundle
-from golf_coach.analysis.phases import select_swing
+from golf_coach.analysis.phases import LEAD_WRIST, TRAIL_WRIST, select_swing
 from golf_coach.analysis.smoothing import smooth_keypoints
 from golf_coach.api.state import AnalysisState, input_hashes, load_state, now, save_state
 from golf_coach.config import settings
 from golf_coach.contracts.golfer import Handedness
 from golf_coach.contracts.intent import ClubCategory, PracticeGoal
-from golf_coach.contracts.keypoints import ClipMetadata, KeypointsFile
+from golf_coach.contracts.keypoints import ClipMetadata, KeypointsFile, PoseLandmark
 from golf_coach.contracts.shot import ShotData
 from golf_coach.contracts.swing import SwingBundleResult
 from golf_coach.feedback.coach import generate_coaching
@@ -319,22 +319,37 @@ def _handedness_for(manifest: SwingManifest) -> tuple[Handedness | None, str | N
 
 
 def _auto_window(
-    label: str, keypoints: KeypointsFile, *, log: Log, notes: list[str]
+    label: str,
+    keypoints: KeypointsFile,
+    *,
+    wrist: PoseLandmark = LEAD_WRIST,
+    log: Log,
+    notes: list[str],
 ) -> tuple[int, int] | None:
     """`select_swing`'s pick for one view, narrating what it chose or why it declined.
 
     A decline is a note, not just a log line: scoring the whole clip when it holds practice
     swings produces numbers that look fine and describe the wrong motion.
+
+    `wrist` mirrors `select_swing`'s own signature, default included, so there is one convention
+    for naming a landmark rather than two. The narration says which one was read because on a
+    down-the-line clip that is the *answer* to a decline, not a detail of it: the lead wrist is
+    the far arm there and is tracked in 39% of frames, so "no plausible downswing" usually means
+    "not on that arm".
     """
     fps = keypoints.clip.fps if keypoints.clip else None
-    choice = select_swing(smooth_keypoints(keypoints.frames), fps=fps)
+    choice = select_swing(smooth_keypoints(keypoints.frames), fps=fps, wrist=wrist)
     if choice is None:
+        # Named from the constant rather than from `wrist.name`, which would say "left wrist" —
+        # true of the landmark index and wrong for a left-handed golfer, whose lead wrist is the
+        # right one. `phases.LEAD_WRIST` carries that assumption; this only has to report it.
+        landmark = "trail wrist" if wrist is TRAIL_WRIST else "lead wrist"
         why = "the keypoints file records no fps" if fps is None else "no plausible downswing"
-        log(f"  {label}: could not pick a swing ({why}) — using the whole clip. Run "
-            "--list-swings and pass a window if this clip holds more than one swing")
+        log(f"  {label}: could not pick a swing ({why}, on the {landmark}) — using the whole "
+            "clip. Run --list-swings and pass a window if this clip holds more than one swing")
         notes.append(
-            f"could not pick a swing in the {label} view ({why}) — the whole clip was scored, "
-            "so these numbers describe every motion in it, not one swing"
+            f"could not pick a swing in the {label} view ({why}, reading the {landmark}) — the "
+            "whole clip was scored, so these numbers describe every motion in it, not one swing"
         )
         return None
     log(f"  {label}: {choice.reason}")
@@ -524,8 +539,18 @@ def analyze_swing_dir(
         if window_face_on is None:
             window_face_on = _auto_window("face-on", views[Role.FACE_ON], log=log, notes=notes)
         if window_dtl is None and Role.DOWN_THE_LINE in views:
+            # The trail wrist, matching `engine.analyze_swing_bundle`'s own down-the-line call —
+            # and it has to match, because this window is what that segmentation then runs over.
+            # A window chosen on one wrist and anchors measured on the other are two different
+            # swings: on the worst bundle the lead wrist reads a 9.7 s "downswing" here and
+            # windows the entire clip, while the trail wrist finds the swing at 0.40 s
+            # (M10 §A1). Face-on keeps the default; it is the view the rule was tuned on.
             window_dtl = _auto_window(
-                "down-the-line", views[Role.DOWN_THE_LINE], log=log, notes=notes
+                "down-the-line",
+                views[Role.DOWN_THE_LINE],
+                wrist=TRAIL_WRIST,
+                log=log,
+                notes=notes,
             )
 
     log("\nShot data:")

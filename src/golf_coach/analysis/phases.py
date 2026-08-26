@@ -70,8 +70,6 @@ from typing import NamedTuple
 from golf_coach.contracts.keypoints import FrameKeypoints, PoseLandmark
 from golf_coach.contracts.swing import PhaseSegment, SwingPhase
 
-_LEAD_WRIST = PoseLandmark.LEFT_WRIST
-
 #: The wrist to track, per camera view. Measured, not assumed — see M4_POSE_BAKEOFF §Phase F.
 #:
 #: A face-on camera sees the lead wrist for most of the swing (tracked in 83% of frames against
@@ -84,6 +82,13 @@ _LEAD_WRIST = PoseLandmark.LEFT_WRIST
 #: This reverses §Phase B7's "no view-aware landmark selection is warranted", which was measured on
 #: one bay swing. Over 1,045 labelled GolfDB clips it is warranted, and it is genuinely per-view
 #: rather than "the trail wrist is better".
+#:
+#: Both halves are public, and the lead one only recently: it is the default everywhere in this
+#: module, so nothing in here has to name it. Outside it, `api.pipeline._auto_window` and
+#: `scripts/align_swings.py` choose per view and so name both — and a pair where only one half can
+#: be said by name is a pair whose other half gets written as a literal `PoseLandmark.LEFT_WRIST`
+#: somewhere this module cannot see it drift.
+LEAD_WRIST = PoseLandmark.LEFT_WRIST
 TRAIL_WRIST = PoseLandmark.RIGHT_WRIST
 
 # Frames whose lead-wrist visibility is below this are treated as unreliable; we hold the
@@ -189,7 +194,7 @@ _MIN_FRAMES = 6
 
 
 def _lead_wrist_xy(
-    keypoints: list[FrameKeypoints], wrist: PoseLandmark = _LEAD_WRIST
+    keypoints: list[FrameKeypoints], wrist: PoseLandmark = LEAD_WRIST
 ) -> list[tuple[float, float]]:
     """Tracked-wrist `(x, y)` per frame, holding the last confident value through dim frames."""
     points: list[tuple[float, float]] = []
@@ -203,7 +208,7 @@ def _lead_wrist_xy(
 
 
 def _wrist_confident(
-    keypoints: list[FrameKeypoints], wrist: PoseLandmark = _LEAD_WRIST
+    keypoints: list[FrameKeypoints], wrist: PoseLandmark = LEAD_WRIST
 ) -> list[bool]:
     """Per-frame mask: was the tracked wrist actually seen, or is `_lead_wrist_xy` holding?
 
@@ -212,7 +217,7 @@ def _wrist_confident(
     excluded from run detection so a stretch of lost tracking cannot bound a descent — worth about
     1.5 frames of mean top error on the GolfDB face-on set (docs/M4_POSE_BAKEOFF.md).
 
-    This read `_LEAD_WRIST` in its body while taking a `wrist` argument, so a `TRAIL_WRIST` caller
+    This read `LEAD_WRIST` in its body while taking a `wrist` argument, so a `TRAIL_WRIST` caller
     got trail-wrist positions masked by *lead*-wrist visibility — precisely inverted from behind,
     where the lead wrist is the occluded far arm. `segment_phases` has passed `wrist` here since
     the down-the-line view moved to the trail wrist; the effect was to mask a well-tracked series
@@ -297,7 +302,7 @@ def candidate_downswings(
     keypoints: list[FrameKeypoints],
     *,
     min_fraction: float = _MAJOR_RISE_FRACTION,
-    wrist: PoseLandmark = _LEAD_WRIST,
+    wrist: PoseLandmark = LEAD_WRIST,
 ) -> list[Downswing]:
     """Every descent of the hands in the clip, earliest first. [M7 Phase 2]
 
@@ -415,7 +420,7 @@ def window_around(downswing: Downswing) -> tuple[int, int]:
 
 
 def select_swing(
-    keypoints: list[FrameKeypoints], *, fps: float | None, wrist: PoseLandmark = _LEAD_WRIST
+    keypoints: list[FrameKeypoints], *, fps: float | None, wrist: PoseLandmark = LEAD_WRIST
 ) -> SwingChoice | None:
     """Pick the real swing out of a clip that contains several. [M7 Phase 4]
 
@@ -570,7 +575,7 @@ def _segment(
 
 
 def segment_phases(
-    keypoints: list[FrameKeypoints], wrist: PoseLandmark = _LEAD_WRIST
+    keypoints: list[FrameKeypoints], wrist: PoseLandmark = LEAD_WRIST
 ) -> list[PhaseSegment]:
     """Segment a keypoint timeline into the six swing phases (in canonical order).
 
