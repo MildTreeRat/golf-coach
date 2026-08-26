@@ -17,12 +17,13 @@ from conftest import make_swing
 
 from golf_coach.analysis.phases import (
     _PLAUSIBLE_DOWNSWING_S,
+    TRAIL_WRIST,
     candidate_downswings,
     select_swing,
     window_around,
 )
 from golf_coach.analysis.smoothing import smooth_keypoints
-from golf_coach.contracts.keypoints import FrameKeypoints
+from golf_coach.contracts.keypoints import FrameKeypoints, PoseLandmark
 
 # The fixture builder emits one frame per 10 ms, so a clip made from it is 100 fps.
 _FPS = 100.0
@@ -156,3 +157,55 @@ def test_window_contains_the_swing_with_room_for_takeaway_and_finish() -> None:
     downswing = choice.downswing.impact - choice.downswing.top
     lead = choice.downswing.top - start
     assert lead >= 3.5 * downswing, "must reach back past a tour-tempo backswing"
+
+
+def _dim_lead_wrist(clip: list[FrameKeypoints]) -> list[FrameKeypoints]:
+    """Drop the lead wrist below `_MIN_VISIBILITY` everywhere — the down-the-line view.
+
+    From behind the golfer the lead wrist is the **far** arm, occluded by the torso through the
+    top and tracked in 39% of frames (`phases.TRAIL_WRIST`). The fixture animates both wrists
+    together, so blanking the lead one's visibility is the only part of that view a synthetic
+    clip can model — and it is the part selection depends on.
+    """
+    dimmed: list[FrameKeypoints] = []
+    for frame in clip:
+        landmarks = list(frame.landmarks)
+        lead = landmarks[PoseLandmark.LEFT_WRIST]
+        landmarks[PoseLandmark.LEFT_WRIST] = lead.model_copy(update={"visibility": 0.0})
+        dimmed.append(frame.model_copy(update={"landmarks": landmarks}))
+    return dimmed
+
+
+def test_the_trail_wrist_finds_a_swing_the_lead_wrist_cannot_see() -> None:
+    """The down-the-line case: one landmark is occluded and the other is not.
+
+    This also pins `_wrist_confident`, which took a `wrist` argument and then read `_LEAD_WRIST`
+    in its body. With that bug the trail-wrist call still masks every frame by the *lead* wrist's
+    visibility, finds no confidently-tracked run, and declines exactly as the lead-wrist call
+    does — so this test fails on the threading alone.
+    """
+    clip = _smoothed(_dim_lead_wrist(_prepend_still(make_swing(downswing_frames=_REAL), 40)))
+
+    assert select_swing(clip, fps=_FPS) is None, "the lead wrist must be unreadable here"
+
+    choice = select_swing(clip, fps=_FPS, wrist=TRAIL_WRIST)
+
+    assert choice is not None
+    assert _LOW <= (choice.downswing.impact - choice.downswing.top) / _FPS <= _HIGH
+
+
+def test_the_default_landmark_is_the_lead_wrist() -> None:
+    """Every stored window and every band was produced on the lead wrist; the default holds it.
+
+    P5 changes one call site, not the default. Pinned on both entry points because they are
+    threaded separately and a default that drifted on only one of them would be invisible until
+    a face-on window moved.
+    """
+    clip = _smoothed(_prepend_still(make_swing(downswing_frames=_REAL), 40))
+
+    assert candidate_downswings(clip, min_fraction=0.45) == candidate_downswings(
+        clip, min_fraction=0.45, wrist=PoseLandmark.LEFT_WRIST
+    )
+    assert select_swing(clip, fps=_FPS) == select_swing(
+        clip, fps=_FPS, wrist=PoseLandmark.LEFT_WRIST
+    )

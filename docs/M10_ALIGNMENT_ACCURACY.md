@@ -6,7 +6,8 @@
 > *why* behind the alignment itself is [ADR-015](decisions/015-handheld-two-phone-capture-and-event-anchored-alignment.md);
 > this document is the repair, as a phase list.
 
-**Status: not started, 0/10 phases.**
+**Status: 4/10 phases built** — the alignment-math track (P1-P3) is complete; P4 is in.
+The selection track resumes at P5.
 
 ## What this milestone is
 
@@ -160,7 +161,7 @@ Run after every phase:
 
 ---
 
-### [ ] P1 — remove the dead comment and the false symmetry claim
+### [x] P1 — remove the dead comment and the false symmetry claim
 
 **Goal.** Zero behaviour change. Make `alignment.py` stop asserting something the evidence
 disproves, before P2 changes what it does.
@@ -181,7 +182,7 @@ disproves, before P2 changes what it does.
 
 ---
 
-### [ ] P2 — the `TOP_IMPACT` fallback shares a duration, not a ratio *(fixes B1)*
+### [x] P2 — the `TOP_IMPACT` fallback shares a duration, not a ratio *(fixes B1)*
 
 **Goal.** When the soft anchor is refused, both panels place tau=0 at the same *real-time* distance
 before their own top.
@@ -213,7 +214,7 @@ a frame of each other in seconds.
 
 ---
 
-### [ ] P3 — cross-check the backswing in seconds *(fixes B2)*
+### [x] P3 — cross-check the backswing in seconds *(fixes B2)*
 
 **Goal.** Stop `full` being reported when the two views disagree about the takeaway by 0.2 s.
 
@@ -242,7 +243,7 @@ anchor (the session-9 case). An honest pair keeps `full`.
 
 ---
 
-### [ ] P4 — `select_swing` learns which wrist to read *(fixes A1, part 1)*
+### [x] P4 — `select_swing` learns which wrist to read *(fixes A1, part 1)*
 
 **Goal.** Make swing selection able to use the trail wrist. No caller changes yet, so this phase
 cannot regress anything.
@@ -261,7 +262,15 @@ cannot regress anything.
 **Tests.** Selection on the trail wrist finds a swing the lead wrist misses. Default behaviour is
 unchanged — pin that, since every existing caller relies on it.
 
-**Done when.** All 8 existing `test_select_swing.py` tests pass untouched.
+**Done when.** All existing `test_select_swing.py` tests pass untouched.
+
+**As built.** Two deviations, both deliberate. The signature is `wrist: PoseLandmark =
+_LEAD_WRIST`, keyword-only — `segment_phases`' own signature rather than this plan's `| None =
+None`, since the Reuse note's "one convention" is the stronger instruction and a `None` default
+buys only a branch. And the `_wrist_confident` fix is **not** behaviour-neutral: `segment_phases`
+has passed `TRAIL_WRIST` from `engine.analyze_swing_bundle` since M4 §Phase F, so down-the-line
+segmentation was already masking trail-wrist positions with lead-wrist visibility. That path
+changes here, ahead of P5. (The file held 7 tests, not 8.)
 
 ---
 

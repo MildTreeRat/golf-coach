@@ -205,14 +205,20 @@ def _lead_wrist_xy(
 def _wrist_confident(
     keypoints: list[FrameKeypoints], wrist: PoseLandmark = _LEAD_WRIST
 ) -> list[bool]:
-    """Per-frame mask: was the lead wrist actually tracked, or is `_lead_wrist_xy` holding?
+    """Per-frame mask: was the tracked wrist actually seen, or is `_lead_wrist_xy` holding?
 
     `_lead_wrist_xy` carries the last confident position through dim frames, which is right for a
     continuous series to smooth but wrong as evidence of where the hands went. Held frames are
     excluded from run detection so a stretch of lost tracking cannot bound a descent — worth about
     1.5 frames of mean top error on the GolfDB face-on set (docs/M4_POSE_BAKEOFF.md).
+
+    This read `_LEAD_WRIST` in its body while taking a `wrist` argument, so a `TRAIL_WRIST` caller
+    got trail-wrist positions masked by *lead*-wrist visibility — precisely inverted from behind,
+    where the lead wrist is the occluded far arm. `segment_phases` has passed `wrist` here since
+    the down-the-line view moved to the trail wrist; the effect was to mask a well-tracked series
+    with the visibility of the arm it was chosen to avoid.
     """
-    return [frame.landmark(_LEAD_WRIST).visibility >= _MIN_VISIBILITY for frame in keypoints]
+    return [frame.landmark(wrist).visibility >= _MIN_VISIBILITY for frame in keypoints]
 
 
 def _rising_runs(ys: list[float], confident: list[bool]) -> list[tuple[float, int, int]]:
@@ -284,11 +290,14 @@ class Downswing(NamedTuple):
 
     top: int
     impact: int
-    rise: float  # how far the lead wrist fell, in normalized image units
+    rise: float  # how far the tracked wrist fell, in normalized image units
 
 
 def candidate_downswings(
-    keypoints: list[FrameKeypoints], *, min_fraction: float = _MAJOR_RISE_FRACTION
+    keypoints: list[FrameKeypoints],
+    *,
+    min_fraction: float = _MAJOR_RISE_FRACTION,
+    wrist: PoseLandmark = _LEAD_WRIST,
 ) -> list[Downswing]:
     """Every descent of the hands in the clip, earliest first. [M7 Phase 2]
 
@@ -308,14 +317,20 @@ def candidate_downswings(
     to the same `_MAJOR_RISE_FRACTION` `segment_phases` itself applies, so the *first* entry of the
     default listing is exactly the swing `segment_phases` would have chosen. Lower it to see the
     near-misses — a lazy practice swing often descends less far than the real one.
+
+    `wrist` is the camera's question, exactly as it is in `segment_phases` — same name, same
+    default, same meaning. It is here so a down-the-line caller can read the *same* landmark for
+    the window and for the anchors: the window this listing feeds decides which frames get scored,
+    and a window chosen on one wrist while the phases are segmented on the other describes two
+    different swings (M10 §A1).
     """
     n = len(keypoints)
     if n < _MIN_FRAMES:
         return []
 
-    xy = _lead_wrist_xy(keypoints)
+    xy = _lead_wrist_xy(keypoints, wrist)
     ys = [y for _, y in xy]
-    runs = _rising_runs(ys, _wrist_confident(keypoints))
+    runs = _rising_runs(ys, _wrist_confident(keypoints, wrist))
     if not runs:
         return []
 
@@ -400,7 +415,7 @@ def window_around(downswing: Downswing) -> tuple[int, int]:
 
 
 def select_swing(
-    keypoints: list[FrameKeypoints], *, fps: float | None
+    keypoints: list[FrameKeypoints], *, fps: float | None, wrist: PoseLandmark = _LEAD_WRIST
 ) -> SwingChoice | None:
     """Pick the real swing out of a clip that contains several. [M7 Phase 4]
 
@@ -439,11 +454,17 @@ def select_swing(
     about *which descent is a swing*, not evidence that two clips show the *same* swing. Only
     `alignment.align_swings`' tempo cross-check speaks to that, and it does not fire in every
     case — it is skipped once the soft anchor has already been refused for another reason.
+
+    `wrist` mirrors `segment_phases`: the default is the lead wrist and is what every stored
+    window was picked with, and a down-the-line caller passes `TRAIL_WRIST` so the window and the
+    anchors read one landmark. Choosing the swing on the far, occluded arm is not a near miss —
+    on session 10 the lead wrist measures a 9.7 s "downswing" and windows the whole clip, while
+    the trail wrist finds the swing at 0.40 s (M10 §A1).
     """
     if fps is None or fps <= 0.0:
         return None
 
-    candidates = candidate_downswings(keypoints, min_fraction=CANDIDATE_MIN_RISE)
+    candidates = candidate_downswings(keypoints, min_fraction=CANDIDATE_MIN_RISE, wrist=wrist)
     low, high = _PLAUSIBLE_DOWNSWING_S
     plausible = [
         swing for swing in candidates if low <= (swing.impact - swing.top) / fps <= high

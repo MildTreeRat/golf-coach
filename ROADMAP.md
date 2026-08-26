@@ -25,7 +25,7 @@ wording; only the grouping and the M4 checklist have been corrected.
 | **Career mode** One golfer over time | ✅ Done, 6/6 steps | — (built and silent; a bay session gives it the `n` to speak) | [§Career](#career-mode-one-golfer-tracked-over-time--done-built-and-silent) |
 | **M8** Learning what "good" means | ✅ Done *(2026-08-17)* | — (three models fitted, validated, surfaced **and spoken**, with a policy rather than a band) | [§M8](#m8-learning-what-good-means--gates-run-model-fitted) |
 | **M9** Player tracking (per-club) | ✅ Done *(2026-08-22)*, 20/20 phases | — (built and **silent by design**: every club-narrowed answer refuses, because no swing on disk is tagged yet. A bay session, and the retag control, are what make it speak) | [§M9](#m9-player-tracking-per-club-shot-history--done-and-waiting-on-a-bay-session) |
-| **M10** Alignment accuracy | ⬜ Not started, 0/10 phases | — (the footage that exposed it is already on disk; this is the one open milestone that does **not** want a bay session) | [§M10](#m10-alignment-accuracy--the-two-panels-leave-address-together--not-started) |
+| **M10** Alignment accuracy | 🔨 In progress, 4/10 phases | — (the footage that exposed it is already on disk; this is the one open milestone that does **not** want a bay session) | [§M10](#m10-alignment-accuracy--the-two-panels-leave-address-together--in-progress) |
 | **M5** Feedback UI | ⬜ Not started | M7 Phase 5 gives the host | [§M5](#milestone-5-feedback-ui) |
 | **M2** Club & ball detection | 🔒 Gated, **and M1.5 said no-go** | Bay lighting for a ~1/2000 s exposure — *not* a global-shutter camera | [§M2](#milestone-2-club--ball-detection) |
 | Hardware re-validation | 🔒 Gated | Cameras / launch monitor arriving | [§Gate](#hardware-re-validation-gate-revisit-when-cameras--launch-monitor-arrive) |
@@ -1188,11 +1188,13 @@ distinction once at the top of the conversation.
 
 ---
 
-## M10: Alignment accuracy — the two panels leave address together — not started
+## M10: Alignment accuracy — the two panels leave address together — in progress
 
 **Design**: [ADR-015](docs/decisions/015-handheld-two-phone-capture-and-event-anchored-alignment.md).
 **Phase list**: [docs/M10_ALIGNMENT_ACCURACY.md](docs/M10_ALIGNMENT_ACCURACY.md) — 10 phases, each
-independently commit-ready. **None built yet.**
+independently commit-ready. **4 built**: the whole Group B track (P1-P3), so the degraded fallback
+and the cross-check now both work in seconds, plus P4. The remaining six are Group A, in order
+from P5.
 
 **The gap, in one sentence.** The side-by-side `aligned.mp4` opens with the down-the-line panel
 already into its takeaway while the face-on panel is still standing at address — visibly, on the
