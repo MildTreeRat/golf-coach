@@ -25,7 +25,7 @@ wording; only the grouping and the M4 checklist have been corrected.
 | **Career mode** One golfer over time | ✅ Done, 6/6 steps | — (built and silent; a bay session gives it the `n` to speak) | [§Career](#career-mode-one-golfer-tracked-over-time--done-built-and-silent) |
 | **M8** Learning what "good" means | ✅ Done *(2026-08-17)* | — (three models fitted, validated, surfaced **and spoken**, with a policy rather than a band) | [§M8](#m8-learning-what-good-means--gates-run-model-fitted) |
 | **M9** Player tracking (per-club) | ✅ Done *(2026-08-22)*, 20/20 phases | — (built and **silent by design**: every club-narrowed answer refuses, because no swing on disk is tagged yet. A bay session, and the retag control, are what make it speak) | [§M9](#m9-player-tracking-per-club-shot-history--done-and-waiting-on-a-bay-session) |
-| **M10** Alignment accuracy | 🔨 In progress, 5/10 phases | — (the footage that exposed it is already on disk; this is the one open milestone that does **not** want a bay session) | [§M10](#m10-alignment-accuracy--the-two-panels-leave-address-together--in-progress) |
+| **M10** Alignment accuracy | ✅ Done *(2026-08-26)*, 10/10 phases | — (the corpus has been re-analysed against the fix; what is left underneath is a face-on top that lands late, and it wants no hardware either) | [§M10](#m10-alignment-accuracy--the-two-panels-leave-address-together--done) |
 | **M5** Feedback UI | ⬜ Not started | M7 Phase 5 gives the host | [§M5](#milestone-5-feedback-ui) |
 | **M2** Club & ball detection | 🔒 Gated, **and M1.5 said no-go** | Bay lighting for a ~1/2000 s exposure — *not* a global-shutter camera | [§M2](#milestone-2-club--ball-detection) |
 | Hardware re-validation | 🔒 Gated | Cameras / launch monitor arriving | [§Gate](#hardware-re-validation-gate-revisit-when-cameras--launch-monitor-arrive) |
@@ -46,10 +46,9 @@ served live `call_tool` requests including the not-found path. It is registered 
 (`claude mcp add`, per the README) and reports `✔ Connected`, which is a second client completing
 the same handshake independently.
 
-**NEXT ACTION — one bay session, and M10 alongside it.** M9 closed on 2026-08-22 with P20,
-which emptied this board of desk work — until the side-by-side renders were looked at properly on
-2026-08-25 and put **M10** back on it. What remains now divides three ways. *Needs a bay* and
-*needs `n`* are served by one trip: M7 Phase 0's field spike, M3's remaining OCR work and M2's
+**NEXT ACTION — one bay session.** M9 closed on 2026-08-22 with P20 and M10 closed on
+2026-08-26, so this board is again empty of desk work and everything left wants the bay or wants
+`n` — one trip serves both: M7 Phase 0's field spike, M3's remaining OCR work and M2's
 lighting test all want the screen and the bay in front of you, while career mode, the dispersion
 discriminator, the tour join and every per-club answer are built, correct and refusing at `n = 2`.
 20–30 tagged swings in one session turns all of them on at once.
@@ -57,10 +56,12 @@ discriminator, the tour join and every per-club answer are built, correct and re
 the upload page before the first swing**, because a session hit without club tags produces data
 that can never be split by club afterwards.
 
-The third way is **M10**, which wants neither: the bundles that expose the alignment drift are
-already on disk, so it is desk work that can run before the trip or in parallel with it. It is
-also worth doing *before* the trip — a bay session recorded against a windowing bug produces
-20–30 more bundles scored on the wrong frames.
+**M10 is why the trip is worth taking now rather than a week ago.** A bay session recorded
+against the windowing bug would have produced 20–30 more bundles scored on the wrong frames; the
+code was fixed on 2026-08-26 (P1-P9) and the 15 bundles already on disk were re-analysed against it
+the same day (P10). What M10 leaves behind is one open defect — the face-on top lands late on four
+bundles, see [§M10](#m10-alignment-accuracy--the-two-panels-leave-address-together--done) — and it
+is desk work whenever someone wants it, not a reason to hold the trip. More footage helps it.
 
 **M9's own last blocker went in the session before P20**: `index.html`'s swing list now has a
 per-swing **change** control beside the golfer one, so a swing already on disk is retagged from a phone in one tap over `POST
@@ -1188,35 +1189,61 @@ distinction once at the top of the conversation.
 
 ---
 
-## M10: Alignment accuracy — the two panels leave address together — in progress
+## M10: Alignment accuracy — the two panels leave address together — done
 
 **Design**: [ADR-015](docs/decisions/015-handheld-two-phone-capture-and-event-anchored-alignment.md).
 **Phase list**: [docs/M10_ALIGNMENT_ACCURACY.md](docs/M10_ALIGNMENT_ACCURACY.md) — 10 phases, each
-independently commit-ready. **5 built**: the whole Group B track (P1-P3), so the degraded fallback
-and the cross-check now both work in seconds, plus P4 and P5 — swing selection now reads the trail
-wrist on the down-the-line view, which is the landmark that view's anchors have always been
-segmented on. The remaining five are Group A, in order from P6. **Expect the corpus to look worse
-until P7**: choosing the right landmark exposes A2, so five down-the-line clips now pick a descent
-*after* impact. P7 is the rule that ends that, and P5's As-built note has the measured table.
+independently commit-ready. **All 10 built**: the whole Group B track (P1-P3), so the degraded fallback
+and the cross-check now both work in seconds, and the whole Group A track (P4-P8) — the
+down-the-line view is selected on the trail wrist its anchors were always segmented on, the window
+always keeps a quiet address in front of the takeaway, and the two views no longer choose their
+swings independently. Measured over the 15 stored bundles, six down-the-line windows move onto the
+real swing and no seventh moves at all. P9 closed the paperwork: ADR-015's first addendum, and
+`ANALYSIS_VERSION` 10 → 11.
 
-**The gap, in one sentence.** The side-by-side `aligned.mp4` opens with the down-the-line panel
-already into its takeaway while the face-on panel is still standing at address — visibly, on the
-bundles on disk, and by an amount worth a quarter of a second.
+**P10 ran on 2026-08-26 and the corpus is on the fix.** All 15 bundles were re-analysed and
+re-rendered in one pass; every stored result is current, and `career_corpus.py` counts 13 distinct
+swings over 21 metrics with nothing excluded as `OUTDATED`. Over the eleven bundles from
+2026-08-23: windows that pointed at no swing at all went 4 → 1, face-on motion starts that were
+never detected went 3 → 0, and the worst tau=0 disagreement went 0.300 s → 0.167 s. Four scores
+moved and eleven did not.
 
-**It is not one bug, and the obvious suspect is innocent.** `analysis/alignment.py` is largely
-right: it detects the trouble, refuses the soft anchor and writes an accurate note. The defects
-divide in two. **Group A** is upstream in `analysis/phases.py` — the down-the-line swing is
-selected with the *lead* wrist while its anchors are measured on the *trail* wrist, and the two
-views choose their swings independently, so a clip can be windowed on a practice swing or not
-windowed at all. **Group B** is inside the alignment itself — both the degraded fallback and the
-tempo cross-check compare **ratios** where they must compare **durations**, and a ratio divides
-out the very quantity that is wrong. Group B is why bundles reported `full` are misaligned too,
+**The tier count got slightly worse, and that is the point.** Sessions 9 and 6 were shipping 0.233 s
+and 0.200 s of visible drift while reporting `full`; they now degrade to `impact_only` and
+`top_impact` and name the reason in their notes, while session 10 — the worst offender, windowed on
+the whole clip — is the one that came *up* to `full`. No bundle claims an alignment it does not
+have, which is what this milestone set out to buy.
+
+**The gap that started it, in one sentence.** The side-by-side `aligned.mp4` opened with the
+down-the-line panel already into its takeaway while the face-on panel was still standing at
+address — visibly, on the bundles on disk, and by an amount worth a quarter of a second. Both
+renders nominated for an eyeball check now leave address together, and the phase list records the
+frames.
+
+**What M10 left behind, for whoever opens the next milestone.** On four bundles the two views
+disagree about the downswing in the same direction every time — face-on measures 0.183-0.267 s
+where down-the-line measures 0.384-0.484 s of the same swing — so the face-on top is landing late,
+which is the class `_DRAWDOWN_FLOOR` was fitted against and did not finish. It costs three `tempo`
+readings that now score and fail at 4.92, 6.08 and 6.09:1, and it is why one bundle still cannot be
+windowed down-the-line. Those three failures are **not** coaching truth and the phase list says so
+beside them.
+
+**It was not one bug, and the obvious suspect was innocent.** `analysis/alignment.py` was largely
+right: it detected the trouble, refused the soft anchor and wrote an accurate note. The defects
+divided in two. **Group A** was upstream in `analysis/phases.py` — the down-the-line swing was
+selected with the *lead* wrist while its anchors were measured on the *trail* wrist, and the two
+views chose their swings independently, so a clip could be windowed on a practice swing or not
+windowed at all. **Group B** was inside the alignment itself — both the degraded fallback and the
+tempo cross-check compared **ratios** where they had to compare **durations**, and a ratio divides
+out the very quantity that is wrong. Group B is why bundles reported `full` were misaligned too,
 which is the part a reader would otherwise not expect.
 
-**Why the fix costs a re-analysis, not just a re-render.** The window decides which frames get
-*scored*, so correcting it moves checkpoint scores on the stored bundles as well as the video.
-That is intended — a bundle scored on a practice swing was scored on the wrong thing — and P10
-records the before/after both ways.
+**Why the fix cost a re-analysis, not just a re-render.** The window decides which frames get
+*scored*, so correcting it moved checkpoint scores on the stored bundles as well as the video.
+That was intended — a bundle scored on a practice swing was scored on the wrong thing — and it
+landed on four of the fifteen: three fell because `tempo` stopped being unscored and started
+failing, and one rose because the bundle that had been scored over its whole clip finally got a
+window. P10 records both directions.
 
 ---
 

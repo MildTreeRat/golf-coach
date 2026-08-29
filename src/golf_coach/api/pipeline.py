@@ -48,7 +48,13 @@ from pathlib import Path
 
 from golf_coach.analysis.alignment import DEFAULT_TAU_RANGE, pair_frames
 from golf_coach.analysis.engine import analyze_swing_bundle
-from golf_coach.analysis.phases import LEAD_WRIST, TRAIL_WRIST, select_swing
+from golf_coach.analysis.phases import (
+    LEAD_WRIST,
+    TRAIL_WRIST,
+    SwingChoice,
+    select_matching_swing,
+    select_swing,
+)
 from golf_coach.analysis.smoothing import smooth_keypoints
 from golf_coach.api.state import AnalysisState, input_hashes, load_state, now, save_state
 from golf_coach.config import settings
@@ -318,32 +324,76 @@ def _handedness_for(manifest: SwingManifest) -> tuple[Handedness | None, str | N
     return golfer.handedness, None
 
 
-def _auto_window(
-    label: str,
+def _pick_swing(
     keypoints: KeypointsFile,
     *,
-    wrist: PoseLandmark = LEAD_WRIST,
+    wrist: PoseLandmark,
+    reference_downswing_s: float | None = None,
+) -> SwingChoice | None:
+    """One view's swing, chosen alone or against a duration the other view already measured.
+
+    Selection only — no `log`, no `notes`. That split is what lets `_auto_windows` try a view
+    *twice*: a face-on decline the down-the-line view then rescues must not have already told
+    `analysis.json` that the whole clip was scored.
+
+    With a reference this is `select_matching_swing`, without one it is `select_swing`. There is
+    deliberately no "matched, else plain" fallback: the matching rule keeps every candidate the
+    duration band keeps **plus** the ones the reference vouches for, and both rules end at the
+    same `_lone_candidate_choice`, so `select_matching_swing` returns `None` exactly where
+    `select_swing` would on the same clip. A fallback there would be unreachable.
+    """
+    fps = keypoints.clip.fps if keypoints.clip else None
+    frames = smooth_keypoints(keypoints.frames)
+    if reference_downswing_s is not None:
+        return select_matching_swing(
+            frames, fps=fps, reference_downswing_s=reference_downswing_s, wrist=wrist
+        )
+    return select_swing(frames, fps=fps, wrist=wrist)
+
+
+def _downswing_seconds(choice: SwingChoice | None, keypoints: KeypointsFile) -> float | None:
+    """The chosen descent's duration — the whole of what one view offers the other.
+
+    `None` when there is nothing to offer: no choice, no frame rate, or a descent measuring no
+    time at all. `select_matching_swing` declines a non-positive reference, so passing one on
+    would quietly turn "no reference" into "no window".
+    """
+    fps = keypoints.clip.fps if keypoints.clip else None
+    if choice is None or fps is None or fps <= 0.0:
+        return None
+    seconds = (choice.downswing.impact - choice.downswing.top) / fps
+    return seconds if seconds > 0.0 else None
+
+
+def _narrate_choice(
+    label: str,
+    choice: SwingChoice | None,
+    keypoints: KeypointsFile,
+    *,
+    wrist: PoseLandmark,
     log: Log,
     notes: list[str],
 ) -> tuple[int, int] | None:
-    """`select_swing`'s pick for one view, narrating what it chose or why it declined.
+    """One view's final pick said out loud: its window, or why it has none.
 
     A decline is a note, not just a log line: scoring the whole clip when it holds practice
     swings produces numbers that look fine and describe the wrong motion.
 
-    `wrist` mirrors `select_swing`'s own signature, default included, so there is one convention
-    for naming a landmark rather than two. The narration says which one was read because on a
-    down-the-line clip that is the *answer* to a decline, not a detail of it: the lead wrist is
-    the far arm there and is tracked in 39% of frames, so "no plausible downswing" usually means
-    "not on that arm".
+    The narration says which landmark was read because on a down-the-line clip that is the
+    *answer* to a decline, not a detail of it: the lead wrist is the far arm there and is tracked
+    in 39% of frames, so "no plausible downswing" usually means "not on that arm".
+
+    Called once per view and only after the last attempt at it — `_auto_windows` may pick face-on
+    twice, and a note describing the attempt that was superseded would be false in the file.
     """
-    fps = keypoints.clip.fps if keypoints.clip else None
-    choice = select_swing(smooth_keypoints(keypoints.frames), fps=fps, wrist=wrist)
     if choice is None:
         # Named from the constant rather than from `wrist.name`, which would say "left wrist" —
         # true of the landmark index and wrong for a left-handed golfer, whose lead wrist is the
         # right one. `phases.LEAD_WRIST` carries that assumption; this only has to report it.
         landmark = "trail wrist" if wrist is TRAIL_WRIST else "lead wrist"
+        fps = keypoints.clip.fps if keypoints.clip else None
+        # "no plausible downswing" covers a matched pick too — it declines only where the plain
+        # rule also would (see `_pick_swing`), so there is no third reason to name here.
         why = "the keypoints file records no fps" if fps is None else "no plausible downswing"
         log(f"  {label}: could not pick a swing ({why}, on the {landmark}) — using the whole "
             "clip. Run --list-swings and pass a window if this clip holds more than one swing")
@@ -354,6 +404,95 @@ def _auto_window(
         return None
     log(f"  {label}: {choice.reason}")
     return choice.window
+
+
+def _auto_windows(
+    views: dict[Role, KeypointsFile],
+    *,
+    window_face_on: tuple[int, int] | None,
+    window_dtl: tuple[int, int] | None,
+    log: Log,
+    notes: list[str],
+) -> tuple[tuple[int, int] | None, tuple[int, int] | None]:
+    """Both views' windows: the confident view picked first, the other matched against it.
+
+    Face-on leads because it is the view that works — it picked a sane swing on 11 of 11 stored
+    clips, while "the last plausible descent" on a down-the-line clip is routinely a move made
+    after the ball was gone, the phone on the busy side of the bay having kept rolling 15-24 s
+    past impact. Six of the fifteen stored bundles were windowed on such a descent until this
+    ordering existed (M10 §A2).
+
+    **The pick is mutual, not face-on-first**, and the extra rule pays for itself on the view that
+    matters most. When face-on declines, the down-the-line view is picked alone and *its* duration
+    becomes the reference for a second attempt at face-on. On `2026-08-23/8` face-on's real
+    descent measures 0.467 s and misses `_PLAUSIBLE_DOWNSWING_S` by 0.017 s, so the view every
+    checkpoint is measured from was scored over its whole clip; the down-the-line view is
+    confident at 0.400 s and recovers it.
+
+    The risk that buys is stated rather than guarded: a down-the-line reference that is itself a
+    post-impact descent would hand face-on a confidently wrong window instead of a decline, and
+    that is the worse failure of the two (`phases._MATCH_TOLERANCE_S` says so). It is accepted
+    only because the reverse runs nowhere else — on that path the alternative is already "every
+    motion in the clip scored as one swing".
+
+    An explicit window is not a reference. A hand-picked window is not a downswing duration, and
+    it may deliberately point at a different swing than the selector would have chosen, so the
+    other view is picked alone and told so.
+    """
+    face_on = views[Role.FACE_ON]
+    face_on_given = window_face_on is not None
+    # `None` means there is nothing to pick for the down-the-line view — it is absent, or its
+    # window was given by hand, and an explicit window always wins.
+    dtl = views.get(Role.DOWN_THE_LINE) if window_dtl is None else None
+
+    face_on_choice = None if face_on_given else _pick_swing(face_on, wrist=LEAD_WRIST)
+    reference = _downswing_seconds(face_on_choice, face_on)
+
+    dtl_choice: SwingChoice | None = None
+    if dtl is not None:
+        # The trail wrist, matching `engine.analyze_swing_bundle`'s own down-the-line call — and
+        # it has to match, because this window is what that segmentation then runs over. A window
+        # chosen on one wrist and anchors measured on the other are two different swings: on the
+        # worst bundle the lead wrist reads a 9.7 s "downswing" here and windows the entire clip,
+        # while the trail wrist finds the swing at 0.40 s (M10 §A1). Face-on keeps the default;
+        # it is the view the rule was tuned on.
+        dtl_choice = _pick_swing(dtl, wrist=TRAIL_WRIST, reference_downswing_s=reference)
+
+    matched_in_reverse = False
+    if not face_on_given and face_on_choice is None and dtl is not None:
+        back_reference = _downswing_seconds(dtl_choice, dtl)
+        if back_reference is not None:
+            face_on_choice = _pick_swing(
+                face_on, wrist=LEAD_WRIST, reference_downswing_s=back_reference
+            )
+            matched_in_reverse = face_on_choice is not None
+
+    if not face_on_given:
+        window_face_on = _narrate_choice(
+            "face-on", face_on_choice, face_on, wrist=LEAD_WRIST, log=log, notes=notes
+        )
+        if matched_in_reverse:
+            notes.append(
+                "the face-on swing could not be picked from that clip alone and was chosen by "
+                "matching the down-the-line view instead — a weaker basis than usual, so check "
+                "the aligned video shows the swing and not a practice move"
+            )
+    if dtl is not None:
+        window_dtl = _narrate_choice(
+            "down-the-line", dtl_choice, dtl, wrist=TRAIL_WRIST, log=log, notes=notes
+        )
+        if dtl_choice is not None and reference is None:
+            why = (
+                "the face-on window was given rather than measured"
+                if face_on_given
+                else "the face-on view has no measured downswing to match against"
+            )
+            notes.append(
+                f"the down-the-line swing was picked from that clip alone ({why}), with nothing "
+                "to cross-check it — on a clip that keeps rolling past impact the last plausible "
+                "descent is often a move made after the ball was gone"
+            )
+    return window_face_on, window_dtl
 
 
 def _render(
@@ -536,22 +675,13 @@ def analyze_swing_dir(
     window_dtl = options.window_down_the_line
     if options.auto_window:
         log("\nSwing selection:")
-        if window_face_on is None:
-            window_face_on = _auto_window("face-on", views[Role.FACE_ON], log=log, notes=notes)
-        if window_dtl is None and Role.DOWN_THE_LINE in views:
-            # The trail wrist, matching `engine.analyze_swing_bundle`'s own down-the-line call —
-            # and it has to match, because this window is what that segmentation then runs over.
-            # A window chosen on one wrist and anchors measured on the other are two different
-            # swings: on the worst bundle the lead wrist reads a 9.7 s "downswing" here and
-            # windows the entire clip, while the trail wrist finds the swing at 0.40 s
-            # (M10 §A1). Face-on keeps the default; it is the view the rule was tuned on.
-            window_dtl = _auto_window(
-                "down-the-line",
-                views[Role.DOWN_THE_LINE],
-                wrist=TRAIL_WRIST,
-                log=log,
-                notes=notes,
-            )
+        window_face_on, window_dtl = _auto_windows(
+            views,
+            window_face_on=window_face_on,
+            window_dtl=window_dtl,
+            log=log,
+            notes=notes,
+        )
 
     log("\nShot data:")
     shot, shot_note = _shot_for(swing_dir, manifest, options=options, log=log)

@@ -154,6 +154,72 @@ X-factor and kinematic sequence.
 - **Nothing here needs a server, storage, or a network.** Two JSON files in, an alignment and an
   MP4 out, on the base install plus `vision` to render.
 
+## Addendum (2026-08-26): fps entered this design, and it is the anchors that needed it [M10 P9]
+
+**The Consequences above say "fps is almost entirely unused, which is the point." That is no longer
+true**, and this addendum is what that bullet should now say. It was true on 2026-08-07 and stopped
+being so within days, unrecorded twice: `_PLAUSIBLE_DOWNSWING_S` began filtering swing candidates by
+a duration in seconds on 2026-08-08 (M7 Phase 4), and `_shared_tops` began converting one shared
+downswing duration through each clip's own fps on 2026-08-10. M10 P2, P3 and P6 then made it plainly
+false. Nothing here revises the Decision.
+
+**The warp does not need fps; the anchors do, and that distinction is the whole of it.** Option E's
+normalized tau axis is still right for the reason it was chosen: divide by the downswing and the
+frame rate cancels. What the M10 evidence showed is that this holds only where the downswing is
+measured *correctly*. Normalizing by a **wrongly measured** downswing does not absorb the error, it
+amplifies it — the degraded fallback multiplied a 10–40% disagreement between the two views by
+`_FALLBACK_TEMPO_RATIO` before it reached the screen, which is the quarter-second of visible drift
+`docs/M10_ALIGNMENT_ACCURACY.md` §B1 opens with. Worse, the ratio cross-check meant to catch that
+is blind to it by construction: a ratio divides out the very quantity that is wrong (§B2). So the
+**anchors** need a sanity check in real time even though the **warp** does not.
+
+**Where fps is load-bearing now.** Grep both modules rather than trusting this list to stay
+complete; each site argues for itself in its own comment.
+
+- `analysis/alignment.py::_shared_tops` — the precedent inside the alignment itself, set on
+  2026-08-10 and recorded here for the first time. P2's fallback is explicitly modelled on it.
+- `analysis/alignment.py::_shared_motion_starts` (P2) — the `TOP_IMPACT` fallback shares one
+  backswing *duration* rather than applying the tour-median ratio to each clip's own downswing.
+- `analysis/alignment.py::_BACKSWING_AGREEMENT_S`, and `_which_half_is_wrong` beside it (P3) — the
+  cross-check the ratio could not do, plus the note saying which boundary to doubt.
+- `analysis/phases.py::_PLAUSIBLE_DOWNSWING_S` (M7 Phase 4) — the oldest of the five, and the one
+  furthest from anyone's idea of "the alignment". A swing selector that filters candidates by a
+  duration in seconds was always an fps dependency; it simply predates anyone noticing that this
+  ADR's bullet did not cover it.
+- `analysis/phases.py::_MIN_ADDRESS_LEAD_S` (P6) — the window's lead is floored in seconds because
+  the quantity it has to cover is the *backswing*, and an amateur's backswing runs ~0.8–1.2 s
+  whatever their downswing does. Measured across the stored face-on clips it is near-constant in
+  real time and 3× to 7× in downswing-lengths, so it is not expressible on the normalized axis at
+  all.
+
+**This is not a claim that fps is trustworthy.** §Context's slo-mo warning stands unamended, and the
+degenerate `impact_only` case is still flagged where it leans on a rate. Every site above is guarded
+on `fps: float | None` and falls back to the frame arithmetic that shipped before it — the no-fps
+paths P2, P3 and P6 each kept are deliberate, not vestigial. What makes the seconds paths safe *in
+practice* is a fact about this corpus rather than about the format: every clip on disk reports
+~59.96 fps, so the two views agree on the rate and a shared duration converts back to nearly the
+same frame count in both. §Context's "there is no shared frame rate" is still the design
+assumption — two phones genuinely set to 30 and 60 exercise the same arithmetic correctly, because
+a duration in seconds is exactly the quantity that survives the difference. What none of these
+sites can survive is a rate that *lies*, which is the slo-mo case, and they degrade under it the
+way everything downstream of `CAP_PROP_FPS` always could.
+
+**Tempo agreement is no longer the only cross-check.** That section presents the ratio as the sole
+guard against the two clips locking onto different swings. Since P7/P8, selection is a guard too:
+`phases.select_matching_swing` chooses the second view's swing *against the first view's downswing
+duration*, so a candidate no reference vouches for is declined rather than picked. The pick is
+**mutual** — whichever view is confident becomes the reference — which is what lets a down-the-line
+clip rescue a face-on one whose true descent fell just outside the plausibility band.
+
+**Which means "multi-swing clips are handled by selection, not by cleverness" needs one clause.**
+The manual `window` parameter is unchanged and the user still chooses. What changed is the
+*automatic* rule: it is no longer per-clip-independent, because independence is exactly what let the
+two views window different swings and render a confident, plausible, wrong video. The risk that
+buys — a reference that is itself a post-impact descent, handing the other view a confidently wrong
+window instead of a decline — is written into `api/pipeline.py::_auto_windows`' docstring rather
+than guarded, because the reverse direction only ever runs where the alternative is already "score
+every motion in the clip as one swing".
+
 ## References
 - ADR-011 (camera synchronization & 3D fusion) + its 2026-08-05 addendum, which deferred exactly
   this decision and asked the `FrameBundle` question answered above.
@@ -161,3 +227,5 @@ X-factor and kinematic sequence.
 - ADR-008 (project structure) — contracts as the seam, analysis as a pure functional core.
 - docs/M4_POSE_BAKEOFF.md — the anchor error figures the soft/primary split rests on.
 - docs/M7_TWO_PHONE_SPIKE.md — Q1 (down-the-line anchors) and Q3 (fps) as they stand.
+- docs/M10_ALIGNMENT_ACCURACY.md — the alignment defects found on the stored bundles and their
+  repair, and the source of everything in the addendum above.

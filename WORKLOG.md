@@ -5,6 +5,57 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-08-26 — M10 closes: the corpus is on the fix, and the face-on top is what is left
+
+**Duration**: ~1 session, desk work only. **No source changes** — P10 is a data run plus its
+paperwork, and `ANALYSIS_VERSION` stays at 11 because P9 bumped it and this is the phase that makes
+the artifacts agree with it.
+
+**What ran.** `scripts/reanalyze.py --all --video` over all 15 stored bundles: 15/15, exit 0, ~26
+minutes. A second `--dry-run` reports every stored result current, and `scripts/career_corpus.py`
+counts 13 distinct swings over 21 metrics with nothing excluded as `OUTDATED` — before this, every
+one of them was excluded. `2026-08-23/1` was then re-run with `--coaching`: it is the only bundle
+carrying a written paragraph, and `build_feedback` rebuilds the rules half on every run while
+leaving `coaching_text` to the flag, so without that second run it would have kept a paragraph
+describing the pre-M10 window.
+
+**What moved, over the eleven bundles from 2026-08-23.** Windows that pointed at no swing at all:
+4 → 1. Face-on motion starts never detected: 3 → 0. Worst tau=0 disagreement: 0.300 s → 0.167 s,
+and no `full` bundle now exceeds `_BACKSWING_AGREEMENT_S` where two did. The windows landed exactly
+where the M10 doc's §A1 table predicted they would — session 4's down-the-line window went from
+*none* to `(1130, 1391)` and session 10's from the whole clip to `(1099, 1315)`, frame for frame.
+
+**The tier count got worse and that is the fix working.** Sessions 9 and 6 were the two bundles
+§B2 caught claiming `full` while 0.233 s and 0.200 s apart; both now degrade — to `impact_only` and
+`top_impact` — and say why in their notes. Session 10, the worst offender, came *up* to `full`.
+Watched by eye at tau = +0.40: before, session 10's face-on club head had barely left the ball
+while the down-the-line panel was a third into its takeaway; after, both panels have the hands at
+hip height. Session 9 is the same story in the other direction and now says *aligned on impact
+only* rather than claiming what it does not have.
+
+**Four scores moved, eleven did not, and three of the four moved for a reason worth distrusting.**
+`2026-08-23/8` rose 88.78 → 93.07 because it finally got a face-on window and stopped measuring
+finish balance over its own walk-off. The other three fell — 2, 4 and 5 — because `tempo` left
+`unscored` and immediately failed, at 4.92, 6.08 and 6.09:1. **Do not read those as coaching
+truth.** On four bundles the two views now disagree about the downswing in the same direction every
+time: face-on measures 0.183-0.267 s where down-the-line measures 0.384-0.484 s of the same swing.
+The face-on top is landing late, which is the class `_DRAWDOWN_FLOOR` (`analysis/phases.py:132`)
+was fitted against and evidently did not finish, and it is also why `2026-08-23/5` still cannot be
+windowed down-the-line — a 0.183 s reference will not match the clip's only 0.450 s descent. That
+is the defect M10 hands to whatever comes next; the notes in each artifact say "one view's top is
+wrong" and stop there, which is the honest reading.
+
+**One piece of noise that is not a change.** The renderer's first-choice H.264 encoder fails to
+load on this machine (`openh264-1.8.0-win64.dll`, wrong version), so OpenCV prints a `VideoWriter`
+failure per bundle before falling back. All 15 files are h264 and read back at their full frame
+count.
+
+**State of the tree.** P6-P10 are all still uncommitted, by request — `git status` shows the P6-P9
+source and test work alongside this phase's documentation edits (`ROADMAP.md`, `docs/README.md`,
+`docs/M10_ALIGNMENT_ACCURACY.md`, this file). Suite green: 1065 tests, ruff and mypy clean.
+
+---
+
 ## 2026-08-22 — The tempo trainer grows a career scope, and the metronome moves out of the page
 
 **Duration**: ~1 session. Two source modules, three static files (one new), one ADR addendum, one

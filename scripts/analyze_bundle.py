@@ -105,7 +105,7 @@ def _print_swings(label: str, flag: str, keypoints: KeypointsFile) -> None:
         frames = swing.impact - swing.top
         at = f"{swing.top / fps:6.1f}s" if fps else f"{swing.top:6d}f"
         duration = f"{frames / fps:8.2f}s" if fps else f"{frames:7d}f"
-        start, end = window_around(swing)
+        start, end = window_around(swing, fps=fps)
         print(
             f"  {i:>2}  {at:>7}  {swing.top:>6}  {swing.impact:>6}  {duration:>10}"
             f"  {flag} {start}:{end}"

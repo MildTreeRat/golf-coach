@@ -301,7 +301,22 @@ class SwingResult(BaseModel):
 #:                   rather than arithmetic over fields a version-9 artifact already carries, so a
 #:                   version-9 file is genuinely missing them and `reanalyze.py` is how it acquires
 #:                   them.
-ANALYSIS_VERSION = 10
+#: 10 -> 11 (2026-08-26, M10 P9): **the first bump in a while that adds no field at all.** The six
+#:                   checkpoints are the same six, measured the same way, against the same bands —
+#:                   over *different frames*. M10 P4-P8 changed which descent the engine calls the
+#:                   swing: the down-the-line view is now selected on the trail wrist and matched
+#:                   against the face-on view's downswing duration instead of choosing
+#:                   independently, and the window always keeps a quiet address in front of the
+#:                   takeaway. So a version-10 artifact is not *missing* a quantity the way
+#:                   `3 -> 4`, `6 -> 7`, `7 -> 8`, `8 -> 9` and `9 -> 10` were — it **disagrees**,
+#:                   which puts this in the same class as `2` and `3`, where `overall_score` moved
+#:                   under a reader who had no way to see it. Measured instance: `2026-08-23/8`
+#:                   had been scored over its whole 575-frame clip, which carried motion long past
+#:                   the finish; on the selected window `finish_balance` goes 0.70 -> 1.00 and the
+#:                   swing 86.5 -> 91.7. `reanalyze.py` is how a stored bundle acquires the right
+#:                   frames, and until it runs `is_outdated` is the only thing standing between a
+#:                   pre-M10 score and a post-M10 one in the same `PersonalBaseline`.
+ANALYSIS_VERSION = 11
 
 
 class SwingBundleResult(BaseModel):

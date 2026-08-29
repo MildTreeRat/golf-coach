@@ -70,7 +70,7 @@ instrument).
 | [M4_POSE_BAKEOFF.md](M4_POSE_BAKEOFF.md) | REFERENCE | Has this been tried already? The estimator bake-off, six rejected address signals, the arm-parallel no-go. **The longest doc here — grep it, don't read it.** |
 | [M7_TWO_PHONE_CAPTURE.md](M7_TWO_PHONE_CAPTURE.md) | TARGET | The current live plan: two phones at a sim, seven phases (six built). **Its planning prompts are historical — Phase 6's is actively wrong and bannered.** |
 | [M9_PLAYER_TRACKING.md](M9_PLAYER_TRACKING.md) | REFERENCE | How far do I hit my 7 iron, and where does it go? **20/20 phases built** — the club tag, the declared bag, the per-club profile and its three readers. Each phase records the numbers it saw on the day, so read the reasoning and not the digits. The *why* is ADR-024. |
-| [M10_ALIGNMENT_ACCURACY.md](M10_ALIGNMENT_ACCURACY.md) | TARGET | Why does the down-the-line panel swing while the face-on one is still at address? The diagnosis over the bundles on disk, and the repair as ten phases. **0/10 built — nothing here is as-built yet.** The *why* behind the alignment is ADR-015. |
+| [M10_ALIGNMENT_ACCURACY.md](M10_ALIGNMENT_ACCURACY.md) | REFERENCE | Why does the down-the-line panel swing while the face-on one is still at address? The diagnosis over the bundles on disk, and the repair as ten phases. **10/10 phases built** — the alignment math and the swing selection are both repaired, and P10 re-analysed the corpus against them on 2026-08-26: every window that pointed at no swing now points at one bar a single bundle, two bundles stopped claiming an alignment they did not have, and the defect left underneath is a face-on top that lands late. Each phase's *As built* note records what it measured on the day, so read the reasoning and not the digits. The *why* behind the alignment is ADR-015, whose addendum this milestone wrote. |
 | [BAY_SESSION_RUNBOOK.md](BAY_SESSION_RUNBOOK.md) | AS-BUILT | Taking the two-phone capture to a real sim: preflight at home, phone settings and why 1080p60, measured timings, and what to check when it doesn't work. *(Failure modes are predicted until the first bay session.)* |
 | [M7_TWO_PHONE_SPIKE.md](M7_TWO_PHONE_SPIKE.md) | REFERENCE | Does phase detection survive down-the-line, does OpenCV decode iPhone HEVC, and does `CAP_PROP_FPS` mean anything on slo-mo? Thresholds committed 2026-08-07; **results pending footage**. |
 | [../data/README.md](../data/README.md) | AS-BUILT | The data layout, the three-tier reference cache, and how to rebuild the GolfDB corpus. |
@@ -87,7 +87,7 @@ everything on this page is supposed to be trustworthy.
 
 ## Decisions (ADRs)
 
-24 decisions, 31 addenda between them (`grep -c '^#\+ *Addendum' docs/decisions/*.md` — the
+24 decisions, 32 addenda between them (`grep -c '^#\+ *Addendum' docs/decisions/*.md` — the
 stated total had drifted to 11, then to 13, and is now pinned by `tests/test_docs_truth.py`
 along with every per-ADR count in the last column).
 **The addenda are where reality corrected the original call**, so a doc's original Decision
@@ -109,7 +109,7 @@ section is not always the final word — the counts below exist so you don't mis
 | [012](decisions/012-golfdb-reference-data.md) | GolfDB as a reference-swing source | Accepted | — |
 | [013](decisions/013-clip-relative-detection.md) | Clip-relative detection windows; explicit detection confidence | Accepted | — |
 | [014](decisions/014-screen-capture-shot-ingestion.md) | Shot data by OCR of the simulator screen | Accepted | **1** — `spin_axis` was stored sign-inverted; the sign table gains the one tile the device prints already signed |
-| [015](decisions/015-handheld-two-phone-capture-and-event-anchored-alignment.md) | Hand-held two-phone capture & event-anchored alignment | Accepted | — (settles the `FrameBundle` question ADR-011 left open) |
+| [015](decisions/015-handheld-two-phone-capture-and-event-anchored-alignment.md) | Hand-held two-phone capture & event-anchored alignment | Accepted | **1** — **fps entered this design and the Consequences' "fps is almost entirely unused" is retired**: the tau axis absorbs the frame rate but only where the downswing is measured right, so the *anchors* gained real-time checks the *warp* still does not need. Also: selection is now a second cross-check for "same swing?", and it is no longer per-clip independent. (Still settles the `FrameBundle` question ADR-011 left open.) |
 | [016](decisions/016-local-first-host-and-phone-upload-topology.md) | Local-first host & phone upload topology | Accepted | **1** — how the token is *held* is ADR-019's question, not this one's; the startup line prints a prefix, not the token |
 | [017](decisions/017-club-head-detection-strategy.md) | Club-head detection strategy — and the constraint that actually binds | Accepted | **1** — why the spike's own threshold table did not decide it |
 | [018](decisions/018-bay-lighting.md) | Bay lighting — buying the exposure ADR-017 asked for | Accepted | — |

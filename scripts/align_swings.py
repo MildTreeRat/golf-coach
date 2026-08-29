@@ -13,9 +13,13 @@ Usage:
     python scripts/align_swings.py a.keypoints.json b.keypoints.json --window-b 1800:2400
 
 The two clips are segmented **independently** and aligned on the swing instants each produces,
-never on a clock — see `analysis/alignment.py` and ADR-015. The visible correctness claim is that
-the ADDRESS / TOP / IMPACT banners appear on both panels on the same output frame; they are drawn
-from a single `tau` per output frame, so if the alignment is right they cannot disagree.
+never on a clock — see `analysis/alignment.py` and ADR-015. `--auto-window` is the one thing that
+is not independent, and only in *which* swing it points each clip at: since M10 P8 the face-on
+clip is chosen first and the other is matched to its downswing duration.
+
+The visible correctness claim is that the ADDRESS / TOP / IMPACT banners appear on both panels on
+the same output frame; they are drawn from a single `tau` per output frame, so if the alignment is
+right they cannot disagree.
 
 Videos are optional. Without them the skeletons render on a black canvas, which still proves the
 alignment and works on any keypoints pair — including files whose clips are long gone.
@@ -29,6 +33,7 @@ import argparse
 import sys
 from contextlib import ExitStack
 from pathlib import Path
+from typing import NamedTuple
 
 from golf_coach.analysis.alignment import (
     align_swings,
@@ -39,7 +44,9 @@ from golf_coach.analysis.phases import (
     CANDIDATE_MIN_RISE,
     LEAD_WRIST,
     TRAIL_WRIST,
+    SwingChoice,
     candidate_downswings,
+    select_matching_swing,
     select_swing,
     window_around,
 )
@@ -82,8 +89,12 @@ def _selection_wrist(keypoints: list[FrameKeypoints]) -> PoseLandmark:
     that view on the trail wrist since M4 §Phase F. This script did not, so its report of a
     down-the-line clip disagreed with what the pipeline produces from the same file.
     """
-    camera_id = next((f.camera_id for f in keypoints if f.camera_id is not None), None)
-    return TRAIL_WRIST if camera_id == "down_the_line" else LEAD_WRIST
+    return TRAIL_WRIST if _camera_id(keypoints) == "down_the_line" else LEAD_WRIST
+
+
+def _camera_id(keypoints: list[FrameKeypoints]) -> str | None:
+    """Which view this clip says it is, or `None` for a file written before M7 Phase 1."""
+    return next((f.camera_id for f in keypoints if f.camera_id is not None), None)
 
 
 def _wrist_name(wrist: PoseLandmark) -> str:
@@ -136,7 +147,7 @@ def _print_swings(label: str, keypoints: list[FrameKeypoints], fps: float | None
         # tell a swing from a rehearsal or from the hands simply being lowered into address, and
         # it is the rule `select_swing` automates.
         duration = f"{frames / fps:8.2f}s" if fps else f"{frames:7d}f"
-        start, end = window_around(swing)
+        start, end = window_around(swing, fps=fps)
         window = f"--window {start}:{end}"
         print(
             f"  {i:>2}  {at:>7}  {swing.top:>6}  {swing.impact:>6}  {duration:>10}"
@@ -242,22 +253,103 @@ def _render(
         print(f"  note: {render.codec} plays in VLC but not in most browsers - see README")
 
 
-def _auto_window(
-    label: str, keypoints: list[FrameKeypoints], file: KeypointsFile
-) -> tuple[int, int] | None:
-    """`select_swing`'s pick for one clip, narrating what it chose or why it declined."""
-    fps = file.clip.fps if file.clip else None
-    wrist = _selection_wrist(keypoints)
-    choice = select_swing(smooth_keypoints(keypoints), fps=fps, wrist=wrist)
+class _Clip(NamedTuple):
+    """One of the two files this script was handed, in the three shapes the rest of it wants."""
+
+    name: str
+    keypoints: list[FrameKeypoints]
+    file: KeypointsFile
+
+
+def _pick_swing(clip: _Clip, *, reference_downswing_s: float | None = None) -> SwingChoice | None:
+    """This clip's swing: chosen alone, or against the duration the other clip already measured."""
+    fps = clip.file.clip.fps if clip.file.clip else None
+    frames = smooth_keypoints(clip.keypoints)
+    wrist = _selection_wrist(clip.keypoints)
+    if reference_downswing_s is not None:
+        return select_matching_swing(
+            frames, fps=fps, reference_downswing_s=reference_downswing_s, wrist=wrist
+        )
+    return select_swing(frames, fps=fps, wrist=wrist)
+
+
+def _downswing_seconds(choice: SwingChoice | None, clip: _Clip) -> float | None:
+    """The chosen descent's duration — all one clip offers the other. `None` if it has none."""
+    fps = clip.file.clip.fps if clip.file.clip else None
+    if choice is None or fps is None or fps <= 0.0:
+        return None
+    seconds = (choice.downswing.impact - choice.downswing.top) / fps
+    return seconds if seconds > 0.0 else None
+
+
+def _narrate_choice(clip: _Clip, choice: SwingChoice | None) -> tuple[int, int] | None:
+    """What one clip ended up with — printed after the last attempt at it, never before."""
+    wrist = _selection_wrist(clip.keypoints)
     if choice is None:
+        fps = clip.file.clip.fps if clip.file.clip else None
         reason = "the keypoints file records no fps" if fps is None else "no plausible downswing"
         print(
-            f"  {label}: auto-window declined ({reason}, on the {_wrist_name(wrist)})"
+            f"  {clip.name}: auto-window declined ({reason}, on the {_wrist_name(wrist)})"
             " — using the whole clip"
         )
         return None
-    print(f"  {label}: {choice.reason}  [read on the {_wrist_name(wrist)}]")
+    print(f"  {clip.name}: {choice.reason}  [read on the {_wrist_name(wrist)}]")
     return choice.window
+
+
+def _auto_windows(
+    clip_a: _Clip,
+    clip_b: _Clip,
+    window_a: tuple[int, int] | None,
+    window_b: tuple[int, int] | None,
+) -> tuple[tuple[int, int] | None, tuple[int, int] | None]:
+    """Both clips' windows: the face-on clip picked first, the other matched against it.
+
+    The same order `api.pipeline._auto_windows` runs, and that is the point of doing it here at
+    all. A window printed by this script is one a human copies into `--window-a/-b`, so a script
+    that chose independently would report a different swing than the pipeline scores from the same
+    file — on six of the fifteen stored bundles it did (M10 §A2, P8). The *rule* is shared,
+    `phases.select_matching_swing`; only the narration is written twice, because this one prints
+    where the pipeline's writes notes.
+
+    An explicit window always wins, and is never a reference: it is a frame range rather than a
+    downswing duration, and it may deliberately point at a different swing than the selector would
+    have picked.
+    """
+    # Face-on leads because it is the view "the last plausible descent" is right about, while a
+    # down-the-line phone keeps rolling 15-24 s past impact. Same test as `main`'s `b_leads`.
+    swapped = (
+        _camera_id(clip_b.keypoints) == "face_on" and _camera_id(clip_a.keypoints) != "face_on"
+    )
+    lead, follow = (clip_b, clip_a) if swapped else (clip_a, clip_b)
+    lead_window, follow_window = (window_b, window_a) if swapped else (window_a, window_b)
+    if _camera_id(lead.keypoints) != "face_on":
+        print(f"  note: neither clip says it is face-on — taking {lead.name} as the reference")
+
+    lead_choice = None if lead_window is not None else _pick_swing(lead)
+    reference = _downswing_seconds(lead_choice, lead)
+    follow_choice = (
+        None
+        if follow_window is not None
+        else _pick_swing(follow, reference_downswing_s=reference)
+    )
+    # The reverse: when the reference clip declines, the other one's pick becomes the reference
+    # for a second attempt at it. `api.pipeline._auto_windows` records what that buys and risks.
+    if lead_window is None and lead_choice is None and follow_choice is not None:
+        back_reference = _downswing_seconds(follow_choice, follow)
+        if back_reference is not None:
+            lead_choice = _pick_swing(lead, reference_downswing_s=back_reference)
+
+    if lead_window is None:
+        lead_window = _narrate_choice(lead, lead_choice)
+    if follow_window is None:
+        follow_window = _narrate_choice(follow, follow_choice)
+        if follow_choice is not None and reference is None:
+            print(
+                f"  note: nothing to cross-check {follow.name} against — {lead.name} declined or "
+                "was given by hand, so this is the pick P8 exists to stop relying on"
+            )
+    return (follow_window, lead_window) if swapped else (lead_window, follow_window)
 
 
 def main(argv: list[str]) -> int:
@@ -299,8 +391,9 @@ def main(argv: list[str]) -> int:
         "--auto-window",
         action="store_true",
         help=(
-            "pick each clip's swing automatically by downswing duration (analysis.phases."
-            "select_swing) instead of using the whole clip. An explicit --window-a/-b still wins"
+            "pick each clip's swing automatically instead of using the whole clip: the face-on "
+            "clip by downswing duration (analysis.phases.select_swing), the other one by matching "
+            "it (select_matching_swing). An explicit --window-a/-b still wins"
         ),
     )
     args = parser.parse_args(argv)
@@ -324,10 +417,9 @@ def main(argv: list[str]) -> int:
     window_b = _parse_window(args.window_b)
     if args.auto_window:
         print("\nAuto-window:")
-        if window_a is None:
-            window_a = _auto_window(name_a, kp_a, file_a)
-        if window_b is None:
-            window_b = _auto_window(name_b, kp_b, file_b)
+        window_a, window_b = _auto_windows(
+            _Clip(name_a, kp_a, file_a), _Clip(name_b, kp_b, file_b), window_a, window_b
+        )
 
     # The same landmark the window was picked on, for the reason `engine.analyze_swing_bundle`
     # passes one here: the window decides which frames these anchors are measured over, so a

@@ -78,6 +78,18 @@ def _living_docs() -> list[Path]:
     return sorted(p for p in DOCS.glob("*.md") if p.name != "README.md")
 
 
+#: A milestone phase list announces itself with `**Status: ... N/M phases ...**`. Matching on the
+#: banner rather than on a filename pattern is what keeps the pin from needing an edit per
+#: milestone; `M4_FUNDAMENTALS_PANEL.md` has a `**Status:` line and no phase count, and is
+#: correctly not a phase doc.
+_PHASE_STATUS = re.compile(r"\*\*Status: [^*]*?(\d+)/(\d+) phases")
+
+
+def _phase_docs() -> list[Path]:
+    """The docs that state their own phase count, discovered rather than listed."""
+    return [p for p in _living_docs() if _PHASE_STATUS.search(_read(p))]
+
+
 # --------------------------------------------------------------------- the shipped prose
 
 
@@ -435,23 +447,38 @@ def test_architecture_lists_every_api_route() -> None:
     )
 
 
-def test_the_map_and_the_m9_doc_agree_on_the_phase_count() -> None:
+@pytest.mark.parametrize("doc", _phase_docs(), ids=lambda p: p.name)
+def test_the_map_and_each_phase_doc_agree_on_the_phase_count(doc: Path) -> None:
     """Both sides drifted independently during M9: the map said "start at P8" at 19/20 built.
 
-    The phase doc's own status line and the map's ADR-024 row are two hand-maintained counts of one
+    A phase doc's own status line and its row in the map are two hand-maintained counts of one
     thing, which is exactly the shape that goes stale. Pinned to each other rather than to a
     literal, so closing a future milestone the same way needs no edit here.
+
+    **This was M9-only until M10 P9, and the M9-only form was actively harmful.** It gathered every
+    `N/M phases built` in the whole map into one set and compared it against M9's status line — so
+    the moment a second milestone stated its count honestly, the *correct* edit failed the test.
+    M10's row survived at "0/10 built" only by omitting the word "phases", which is a test shaping
+    a document rather than checking it. Scoped per doc, and discovered rather than listed, so M11
+    needs no edit here either.
     """
-    doc = re.search(r"\*\*Status: [^*]*?(\d+)/(\d+) phases", _read(DOCS / "M9_PLAYER_TRACKING.md"))
-    assert doc, "M9_PLAYER_TRACKING.md no longer states 'N/M phases' in its status line"
+    stated = _PHASE_STATUS.search(_read(doc))
+    assert stated, f"{doc.name} no longer states 'N/M phases' in its status line"
 
-    text = _read(DOCS / "README.md")
-    rows = re.findall(r"\*\*(\d+)/(\d+) phases built\*\*|(\d+)/(\d+) phases built", text)
-    counts = {(a or c, b or d) for a, b, c, d in rows}
+    rows = [
+        line
+        for line in _read(DOCS / "README.md").splitlines()
+        if line.startswith("|") and f"({doc.name})" in line
+    ]
+    assert rows, f"{doc.name} states a phase count but has no row in docs/README.md to agree with"
 
-    assert counts, "docs/README.md no longer states M9's phase count in either of its two rows"
-    assert counts == {doc.groups()}, (
-        f"M9_PLAYER_TRACKING.md says {doc.group(1)}/{doc.group(2)} phases; "
+    counts = {m for row in rows for m in re.findall(r"(\d+)/(\d+) phases built", row)}
+    assert counts, (
+        f"{doc.name} says {stated.group(1)}/{stated.group(2)} phases built; its docs/README.md "
+        "row states no count at all, so the map can go stale without anything noticing"
+    )
+    assert counts == {stated.groups()}, (
+        f"{doc.name} says {stated.group(1)}/{stated.group(2)} phases; "
         f"docs/README.md says {sorted(counts)}"
     )
 

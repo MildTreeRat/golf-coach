@@ -379,6 +379,29 @@ def candidate_downswings(
 # single-candidate case is handled separately instead (see `select_swing`).
 _PLAUSIBLE_DOWNSWING_S = (0.15, 0.45)
 
+# How far a descent may sit from the swing another camera already found, in seconds — the tolerance
+# `select_matching_swing` matches on. It does two jobs: it admits a descent the band above rejects
+# when the *other view* vouches for it, and it is the distance "nearest the reference" is measured
+# with.
+#
+# Sized by sweeping it over the 15 stored bundles and watching which down-the-line descent each
+# value picks, against the real swing recorded in M10 §A1 and P5's As-built table:
+#
+#   below 0.07    session 6 and 2026-08-10/2 take a post-impact descent, or decline
+#   below 0.085   session 3 does too — it needs 0.084 (a 0.467s descent, 0.384s reference)
+#   0.085-0.25    every bundle picks the same swing; the corpus cannot tell these apart
+#   above 0.25    session 5 comes in, but only because a window that wide has stopped asserting
+#                 anything: its two views measure the same swing 0.284s apart
+#
+# 0.12 sits inside that plateau, ~2 frames at 60 fps above the binding case. The lower edge is the
+# hard one — miss it and the rule picks the wrong swing confidently rather than declining.
+#
+# Rejected: a *relative* tolerance, a share of the reference. The three requirements are 16-22% of
+# their own references, so a 25% rule also fits this corpus. But what is being absorbed is
+# `_top_and_impact` bracketing one descent a few frames early or late — 4 to 5 frames on these
+# clips, whatever the swing lasts — which is a frame count and not a proportion of the swing.
+_MATCH_TOLERANCE_S = 0.12
+
 # How much clip to keep around the chosen swing, in downswing-lengths before the top and after
 # impact — the clip's own time base, so this reads a 30 fps clip and a 240 fps one alike
 # (ADR-013). Shared with `scripts/align_swings.py --list-swings` so the window the listing prints
@@ -393,6 +416,34 @@ _PLAUSIBLE_DOWNSWING_S = (0.15, 0.45)
 # every clip while leaving top and impact exactly where they are without a window at all.
 _WINDOW_LEAD = 5
 _WINDOW_TRAIL = 3
+
+# A floor under that lead, because `_WINDOW_LEAD` alone shrinks it exactly when it must not.
+#
+# The loop this closes: a short measured downswing shrinks the window, which removes the address,
+# which loses the motion start, which sends the alignment to the `_FALLBACK_TEMPO_RATIO` estimate
+# that multiplies that same short downswing by 3.5 (M10 §A4).
+#
+# **This one is in seconds and `_WINDOW_LEAD` is not, and that is the finding.** Measured over the
+# 14 stored face-on clips: the lead a window needs before `_motion_start` can find a quiet run is
+# 0.92-1.27 s — near-constant in real time, but 3x to 7x in downswing-lengths. It tracks the
+# *backswing* (0.83-1.22 s on these clips), and an amateur's backswing runs ~0.8-1.2 s whatever
+# their downswing does. So `_WINDOW_LEAD * downswing` under-reaches precisely on the fast
+# downswings: sessions 4, 5 and 2 get 1.00, 0.92 and 1.08 s and go undetected, while session 11
+# gets 1.67 s for a requirement of 0.92. The quantity is not expressible in the clip's own time
+# base, so it is expressed in seconds and converted through the clip's own fps — the same
+# deviation, for the same kind of reason, that `_PLAUSIBLE_DOWNSWING_S` above already carries.
+#
+# 1.5 s sits 0.23 s above the worst observed requirement (1.267 s) and 0.28 s above the longest
+# measured backswing (1.217 s). It binds on 5 of the 14 clips and leaves top and impact where they
+# were on all of them.
+#
+# Rejected: raising `_WINDOW_LEAD` to 7, which also fixes all three failures here with no top
+# movement. It gives the *failing* clips the thinnest margins (1.28-1.52 s against a 1.17-1.27 s
+# requirement — the multiplier shrinks the lead where it is needed most) while widening every
+# already-working clip to 2.7-2.9 s of lead for nothing, which is that much more room for a
+# rehearsal to enter the window on footage not yet on disk. That is the risk the block above was
+# tuned against.
+_MIN_ADDRESS_LEAD_S = 1.5
 
 # How far a descent must fall, as a share of the clip's largest, to be considered a swing at all.
 # Deliberately looser than `_MAJOR_RISE_FRACTION`, and it is not a nicety: on `aaron-1-back` the
@@ -413,10 +464,50 @@ class SwingChoice(NamedTuple):
     reason: str
 
 
-def window_around(downswing: Downswing) -> tuple[int, int]:
-    """The `[start, end)` frame window holding one swing plus its takeaway and finish."""
+def window_around(downswing: Downswing, *, fps: float | None = None) -> tuple[int, int]:
+    """The `[start, end)` frame window holding one swing plus its takeaway, address and finish.
+
+    With `fps`, the lead is floored at `_MIN_ADDRESS_LEAD_S` so a fast downswing cannot squeeze the
+    address out of the window and take motion-start detection with it. Without it the lead is
+    `_WINDOW_LEAD` downswings exactly as before: a clip whose frame rate was never recorded degrades
+    to the old arithmetic rather than raising (ADR-013), the same way `alignment`'s `TOP_IMPACT`
+    fallback keeps its no-fps path.
+    """
     frames = max(1, downswing.impact - downswing.top)
-    return max(0, downswing.top - _WINDOW_LEAD * frames), downswing.impact + _WINDOW_TRAIL * frames
+    lead = _WINDOW_LEAD * frames
+    if fps is not None and fps > 0.0:
+        lead = max(lead, round(_MIN_ADDRESS_LEAD_S * fps))
+    return max(0, downswing.top - lead), downswing.impact + _WINDOW_TRAIL * frames
+
+
+def _lone_candidate_choice(candidates: list[Downswing], *, fps: float) -> SwingChoice | None:
+    """The "one candidate wins on its own" escape, shared by both selection rules.
+
+    `None` unless the clip holds exactly one descent. Both `select_swing` and
+    `select_matching_swing` arrive here having filtered everything away — one on duration, the
+    other on duration *and* a reference — and both then owe the same answer, so the branch lives
+    once rather than twice.
+
+    `select_matching_swing` needs it more, not less: a reference can reject a lone descent the band
+    would have kept. On `2026-08-23/4` the only down-the-line descent measures 0.484s against a
+    0.200s face-on reference, so neither rule admits it, and declining would throw away the window
+    P5 won that bundle.
+    """
+    if len(candidates) != 1:
+        return None
+    only = candidates[0]
+    low, high = _PLAUSIBLE_DOWNSWING_S
+    return SwingChoice(
+        window=window_around(only, fps=fps),
+        downswing=only,
+        candidates=candidates,
+        reason=(
+            f"1 descent, and its downswing measures "
+            f"{(only.impact - only.top) / fps:.2f}s rather than the usual "
+            f"{low:g}-{high:g}s — taking it anyway, since there is nothing to choose "
+            f"between (top {only.top}, impact {only.impact})"
+        ),
+    )
 
 
 def select_swing(
@@ -456,9 +547,12 @@ def select_swing(
     prints the same durations this rule judged on.
 
     Note what this deliberately does **not** claim: a plausible downswing duration is evidence
-    about *which descent is a swing*, not evidence that two clips show the *same* swing. Only
-    `alignment.align_swings`' tempo cross-check speaks to that, and it does not fire in every
-    case — it is skipped once the soft anchor has already been refused for another reason.
+    about *which descent is a swing*, not evidence that two clips show the *same* swing. Two other
+    things speak to that. `alignment.align_swings`' tempo cross-check does, after the fact, and it
+    does not fire in every case — it is skipped once the soft anchor has already been refused for
+    another reason. `select_matching_swing` below does it at selection time instead: given one
+    view's downswing it takes the descent in the other view that matches, which makes it the only
+    rule here whose evidence is a *pair* of clips.
 
     `wrist` mirrors `segment_phases`: the default is the lead wrist and is what every stored
     window was picked with, and a down-the-line caller passes `TRAIL_WRIST` so the window and the
@@ -475,20 +569,7 @@ def select_swing(
         swing for swing in candidates if low <= (swing.impact - swing.top) / fps <= high
     ]
     if not plausible:
-        if len(candidates) != 1:
-            return None
-        only = candidates[0]
-        return SwingChoice(
-            window=window_around(only),
-            downswing=only,
-            candidates=candidates,
-            reason=(
-                f"1 descent, and its downswing measures "
-                f"{(only.impact - only.top) / fps:.2f}s rather than the usual "
-                f"{low:g}-{high:g}s — taking it anyway, since there is nothing to choose "
-                f"between (top {only.top}, impact {only.impact})"
-            ),
-        )
+        return _lone_candidate_choice(candidates, fps=fps)
 
     chosen = plausible[-1]
     duration = (chosen.impact - chosen.top) / fps
@@ -504,7 +585,83 @@ def select_swing(
             "holds more than one real-looking swing — confirm with --list-swings"
         )
     return SwingChoice(
-        window=window_around(chosen), downswing=chosen, candidates=candidates, reason=reason
+        window=window_around(chosen, fps=fps),
+        downswing=chosen,
+        candidates=candidates,
+        reason=reason,
+    )
+
+
+def select_matching_swing(
+    keypoints: list[FrameKeypoints],
+    *,
+    fps: float | None,
+    reference_downswing_s: float,
+    wrist: PoseLandmark = LEAD_WRIST,
+) -> SwingChoice | None:
+    """Pick the descent that matches a swing already chosen in the *other* view. [M10 P7]
+
+    `select_swing` judges a clip alone, and on a down-the-line clip that is not enough: the phone on
+    the busy side of the bay keeps rolling 15-24 s past impact, so "the last plausible descent" is
+    routinely something that happened after the ball was gone. Face-on is the reliable view — it
+    picked a sane swing on 11 of 11 stored clips — so once *its* swing is chosen the other view's is
+    no longer a free choice. Sessions 3 and 6 and the 2026-08-07 clip are this shape exactly:
+    post-impact descents of 0.233, 0.183 and 0.267 s standing in for real swings of 0.467, 0.484 and
+    0.417 s (M10 §A2).
+
+    Three rules, in order:
+
+    1. **Plausible, or vouched for.** Keep a candidate whose downswing lands in
+       `_PLAUSIBLE_DOWNSWING_S` **or** within `_MATCH_TOLERANCE_S` of the reference. The second
+       branch is not a wider band, it is a different kind of evidence — and it is what admits the
+       0.450 s and 0.467 s descents on `2026-08-10/2` and session 3, which miss the band by 0.0003 s
+       and 0.017 s while another camera is looking straight at the same swing (M10 §A3).
+    2. **Nearest the reference, not last.** `select_swing`'s rule 2 is the one that fails on these
+       clips; its docstring above records why "last" is right when a clip is judged alone. Here that
+       rule survives only as the tie-break, for candidates equally far from the reference.
+    3. **Decline rather than guess** (ADR-013) when nothing survives — except that a lone candidate
+       still wins, for the reason `_lone_candidate_choice` records.
+
+    Returns `None` without a frame rate, and without a positive reference: a duration in seconds is
+    meaningless without the first and this rule has no question to ask without the second. A caller
+    that gets `None` falls back to `select_swing`, which judges this view on its own — which is also
+    what it should do when the reference view itself declined, since a reference nobody measured is
+    not one to match against.
+    """
+    if fps is None or fps <= 0.0 or reference_downswing_s <= 0.0:
+        return None
+
+    candidates = candidate_downswings(keypoints, min_fraction=CANDIDATE_MIN_RISE, wrist=wrist)
+    seconds = [(swing.impact - swing.top) / fps for swing in candidates]
+    low, high = _PLAUSIBLE_DOWNSWING_S
+    matched = [
+        (swing, duration)
+        for swing, duration in zip(candidates, seconds, strict=True)
+        if low <= duration <= high
+        or abs(duration - reference_downswing_s) <= _MATCH_TOLERANCE_S
+    ]
+    if not matched:
+        return _lone_candidate_choice(candidates, fps=fps)
+
+    # `min` keeps the first of equals, so reversing hands a tie to the *later* candidate — rule 2
+    # of `select_swing`, demoted to the tie-break it is safe as.
+    chosen, duration = min(
+        reversed(matched), key=lambda pair: abs(pair[1] - reference_downswing_s)
+    )
+    admitted = (
+        "in band" if low <= duration <= high else f"outside the usual {low:g}-{high:g}s band"
+    )
+    return SwingChoice(
+        window=window_around(chosen, fps=fps),
+        downswing=chosen,
+        candidates=candidates,
+        reason=(
+            f"{len(candidates)} descent(s), {len(matched)} matching the "
+            f"{reference_downswing_s:.2f}s reference from the other view; took the nearest "
+            f"({duration:.2f}s, {admitted}, off by "
+            f"{abs(duration - reference_downswing_s):.2f}s — top {chosen.top}, "
+            f"impact {chosen.impact})"
+        ),
     )
 
 
