@@ -38,9 +38,13 @@ install (ADR-008).
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+from typing import NamedTuple
+
 from golf_coach.analysis.phases import (
     _FALLBACK_TEMPO_RATIO,
     _PLAUSIBLE_DOWNSWING_S,
+    _STRIKE_TOLERANCE_S,
     segment_phases,
 )
 from golf_coach.analysis.smoothing import smooth_keypoints
@@ -129,6 +133,69 @@ _DOWNSWING_AGREEMENT = 0.30
 # The swing and nothing else: from a little before the takeaway to one downswing past impact.
 # Widen it to render more of the clip.
 DEFAULT_TAU_RANGE = (-0.4, 3.0)
+
+
+def with_measured_impact(
+    anchors: SwingAnchors, strike_frames: Sequence[int] | None
+) -> SwingAnchors:
+    """`anchors` with tau=2 pinned to a ball strike heard in this same clip. [M11 P6]
+
+    The one anchor in the system that can be *measured* rather than inferred. Everything else here
+    is a pose estimate, including the impact this replaces — and on four of the eleven bundles on
+    disk that estimate is 5.7 to 7.5 frames early in the down-the-line view while the face-on view
+    is right to within a frame (docs/M11_ACOUSTIC_SYNC.md §E4). Two clips that each pin tau=2 to
+    the sound they heard are on a real shared clock, which is what `align_swings` then reports as
+    `AlignmentQuality.SYNCHRONIZED`.
+
+    Frames, and frames in **this clip's own numbering** — the same convention `phases._struck`
+    takes, and for the same reason: no clip-to-clip offset appears anywhere in `analysis/`, because
+    each view is anchored against what its own microphone heard and the shared clock falls out of
+    that rather than being computed.
+
+    **The earliest candidate wins, and that rule is doing the work the window cannot.** The bay
+    makes four transients per shot and the loudest of them is the ball hitting the impact screen
+    85-145 ms later (§E5), while the correction this exists to make runs to 125 ms — so no window
+    wide enough to admit the real error is narrow enough to exclude the screen strike, and picking
+    the *nearest* transient would take the screen on any clip whose pose impact was already right.
+    Ordering resolves what distance cannot: the ball is the first sound a shot makes. The
+    club-and-mat pair that precedes it by 15-20 ms is below `audio/impact.py`'s own 50 ms
+    separation floor and has already been merged into one onset by the time it arrives here.
+
+    **Anything ahead of the ball wins here by construction, and on four clips that is load-bearing
+    in a way nobody designed.** M11 P9 measured a quiet precursor 2-3 frames ahead of the strike
+    being taken instead of it. Watching the renders on 2026-08-30 found why removing it makes those
+    same clips *worse*: their video decode ignores a 90 ms edit-list offset their audio decode
+    applies (§E2, bundles 1, 7, 9, 11), and the precursor was cancelling most of that. The two
+    errors have to be fixed together, in `audio/` and in the video decode — not here. Frame numbers
+    in docs/M11_ACOUSTIC_SYNC.md §Addendum.
+
+    Returns `anchors` **unchanged** when there is nothing to pin to — no strikes, no fps to size
+    the window with, or no transient inside it — and `impact_measured` then stays False, which is
+    the honest reading: not measured is not the same as measured at the pose estimate (ADR-010 §2).
+    """
+    if not strike_frames or not anchors.fps:
+        return anchors
+
+    window = round(_STRIKE_TOLERANCE_S * anchors.fps)
+    last = (anchors.frame_count - 1) if anchors.frame_count else None
+    candidates = [
+        frame
+        for frame in strike_frames
+        if abs(frame - anchors.impact) <= window
+        # `SwingAnchors` requires impact strictly after the top and inside the clip. A transient
+        # that would break either is not a correction, it is a different event: on a fast downswing
+        # the window reaches back past the top all by itself (face-on measures 0.183 s of downswing
+        # on M10's four offenders, against a 0.20 s window), so this is a live branch and not a
+        # defensive one.
+        and frame > anchors.top
+        and (last is None or frame <= last)
+    ]
+    if not candidates:
+        return anchors
+
+    # `model_copy` does not re-run the validator, which is why the two ordering conditions are
+    # enforced in the filter above rather than left to it.
+    return anchors.model_copy(update={"impact": min(candidates), "impact_measured": True})
 
 
 def anchors_from_phases(
@@ -277,6 +344,21 @@ def align_swings(a: SwingAnchors, b: SwingAnchors) -> SwingAlignment:
     duration** and convert it through their own fps, so the pre-top region degrades by the same
     number of *seconds* in each panel. A clip without fps is the exception and still degrades off
     its own downswing — see `_shared_motion_starts`.
+
+    Above all of that sits one case that is not a count of anchors at all: when both clips arrive
+    with `impact_measured` — tau=2 pinned to a strike each one *heard*, via `with_measured_impact`
+    — the pair has a real shared clock and reports `SYNCHRONIZED`. See `_synchronized`.
+
+    That shared clock is also what lets a disagreement about the *top* be settled rather than
+    merely reported: with tau=2 fixed to one instant in real time, the shorter downswing is the
+    late top and both panels are held to the longer one. See `_arbitrate_tops`. [M11 P7]
+
+    **The finding outlives the correction.** Which top is late is recorded on each clip as
+    `ClipAlignment.top_is_late` whether or not the warp went on to move it, because the two answer
+    different questions — the warp asks *can this be replayed honestly*, and the flag asks *was the
+    instant a checkpoint was timed from contradicted*. `_PLAUSIBLE_DOWNSWING_S` makes those come
+    apart on real footage, and it is the flag rather than the warp that `analysis.engine` reads
+    before retiring a score (`contracts.unscored.CROSS_VIEW_CONTRADICTED`). [M11 P8]
     """
     notes: list[str] = []
     quality = AlignmentQuality.FULL
@@ -328,21 +410,66 @@ def align_swings(a: SwingAnchors, b: SwingAnchors) -> SwingAlignment:
         quality = AlignmentQuality.TOP_IMPACT
         motion_a, motion_b = _shared_motion_starts(a, b)
 
+    # Which top the shared clock says is late — computed here rather than inside `_shared_tops`
+    # because the two outputs part company: the warp only *moves* a top whose reference duration is
+    # a possible downswing, while the finding that one of them is late holds either way and is what
+    # `analysis.engine` retires a checkpoint on. Deciding it once is also what stops the warp and
+    # `ClipAlignment.top_is_late` disagreeing about the same pair. [M11 P8]
+    arbitration = _arbitrate_tops(a, b)
+
     # The hard anchors get their own check. If the two views disagree about how long the downswing
     # lasted, pinning both to tau=1 resamples one panel to catch up — see `_DOWNSWING_AGREEMENT`.
-    top_a, top_b = _shared_tops(a, b, notes)
+    top_a, top_b = _shared_tops(a, b, notes, arbitration)
     if top_a is not None and top_b is not None:
         quality = AlignmentQuality.IMPACT_ONLY
         motion_a = max(0, top_a - round(_FALLBACK_TEMPO_RATIO * (a.impact - top_a)))
         motion_b = max(0, top_b - round(_FALLBACK_TEMPO_RATIO * (b.impact - top_b)))
 
+    quality = _synchronized(a, b, quality, notes)
+
+    late = None if arbitration is None else arbitration.late
+    late_by = None if arbitration is None else arbitration.frames_late
     return SwingAlignment(
-        a=_clip_alignment(a, motion_a, top_a),
-        b=_clip_alignment(b, motion_b, top_b),
+        a=_clip_alignment(a, motion_a, top_a, top_late_by=late_by if late is a else None),
+        b=_clip_alignment(b, motion_b, top_b, top_late_by=late_by if late is b else None),
         quality=quality,
         notes=notes,
         overlap=_overlap(a, motion_a, top_a, b, motion_b, top_b),
     )
+
+
+def _synchronized(
+    a: SwingAnchors, b: SwingAnchors, quality: AlignmentQuality, notes: list[str]
+) -> AlignmentQuality:
+    """`SYNCHRONIZED` when both clips heard the strike, else `quality` untouched. [M11 P6]
+
+    **Last, and overwriting whatever the anchor count came to.** A measured tau=2 is better
+    evidence than three inferred anchors, so a synchronized pair must not go on reporting
+    `IMPACT_ONLY` — that tier is the *worst* non-failing one precisely because its single anchor
+    was a guess, and §Design of docs/M11_ACOUSTIC_SYNC.md names the inversion this creates.
+
+    **This function still only sets the label.** The warp is decided above it, and what a measured
+    impact does *there* is give `_shared_tops` an arbiter for a disagreement about the top (M11
+    P7): the two downswings become two measurements of one interval in real time, so the shorter
+    one is the late top rather than merely the face-on one. Both facts come off the same
+    `impact_measured` pair and they are deliberately read in two places, because the tier is a
+    claim about evidence and the warp is a claim about frames.
+
+    Half a pair is worth a note and no tier. One clip anchored on sound and the other on pose does
+    not make a shared clock, and the interesting case is the ordinary one — a phone across the bay
+    that heard nothing — so name the view that could not contribute rather than leaving a silent
+    `full`.
+    """
+    if a.impact_measured and b.impact_measured:
+        return AlignmentQuality.SYNCHRONIZED
+    if a.impact_measured or b.impact_measured:
+        heard, deaf = (a, b) if a.impact_measured else (b, a)
+        notes.append(
+            f"{heard.camera_id or 'one view'}'s impact was measured on the ball strike but "
+            f"{deaf.camera_id or 'the other'}'s was not, so the two clips are aligned on inferred "
+            "instants as before — a shared clock needs the strike in both"
+        )
+    return quality
 
 
 def _tempo_disagreement_note(
@@ -386,6 +513,12 @@ def _which_half_is_wrong(
     motion and the whole difference sits in the takeaway: one clip's motion start is late. Saying
     "different swings" there sends the reader to check something that is fine.
 
+    **The "different swings" reading is the one this corpus has never once justified.** It fires on
+    2026-08-23 bundles 4, 7 and 9, and on all three the two views' audio cross-correlates to a
+    single strike at r = 0.76-0.83 — one swing, filmed twice, with a bad boundary in one view
+    (docs/M11_ACOUSTIC_SYNC.md §E3). It stays as the last resort because a pair that heard nothing
+    still cannot rule it out; a pair that heard the *same* strike can, which is the branch below.
+
     Shared by both notes rather than written twice, because the branch is the same judgement and a
     second copy is a second thing to drift.
     """
@@ -399,23 +532,147 @@ def _which_half_is_wrong(
                 f"takeaway boundary, not two different swings — {late} is finding its motion start "
                 "late. Dropping it as an anchor; the swing itself is fine"
             )
+        arbitration = _arbitrate_tops(a, b)
+        if arbitration is not None:
+            return (
+                f"The two downswings disagree ({seconds_a:.3f}s and {seconds_b:.3f}s) — but both "
+                "views heard the strike, so tau=2 is one instant in real time and this is one "
+                f"swing filmed twice, not two. {arbitration.late_label}'s top is the late one, by "
+                f"{arbitration.frames_late} frames"
+            )
     return (
         "Most likely the two clips are showing DIFFERENT swings; check for a practice swing in one "
         "of them"
     )
 
 
+class _Arbitration(NamedTuple):
+    """Which of two disagreeing tops is the wrong one, once a shared clock makes that decidable."""
+
+    #: The view whose top landed late. Its downswing is the shorter of the two.
+    late: SwingAnchors
+    #: The view whose downswing the pair is held to.
+    sound: SwingAnchors
+    #: `sound`'s downswing, in seconds — the reference both clips convert through their own fps.
+    seconds: float
+    #: Where that duration puts `late`'s top, in `late`'s own frame numbering.
+    corrected_top: int
+    #: How far `late`'s detected top sits past `corrected_top`, in its own frames.
+    frames_late: int
+
+    @property
+    def late_label(self) -> str:
+        return self.late.camera_id or "one view"
+
+    @property
+    def sound_label(self) -> str:
+        return self.sound.camera_id or "the other view"
+
+
+def _arbitrate_tops(a: SwingAnchors, b: SwingAnchors) -> _Arbitration | None:
+    """Which view's top is wrong, when both clips heard the strike. `None` when undecidable.
+
+    M10 closed the windowing and handed one defect forward: the face-on top lands late on five of
+    the eleven bundles on disk, measuring 0.183-0.267s of downswing where down-the-line measures
+    0.367-0.484s of the same swing (docs/M11_ACOUSTIC_SYNC.md §E3). Every consumer inherits it —
+    three of those five score a `tempo` that *fails* at 4.92-6.09:1 against a 4.71 ceiling — and
+    until now nothing could say which view was wrong, because the two disagreeing durations were
+    measured against two independently inferred impacts. Two wrong anchors, one gap, no arbiter.
+
+    **The strike is the arbiter.** With tau=2 pinned in both clips to a sound both microphones
+    heard (`with_measured_impact`), the two downswings become two measurements of one interval in
+    real time. `impact_measured` on both is therefore the entry condition and not a nicety: on a
+    pair of inferred impacts this is exactly the comparison M10 could not settle.
+
+    **The shorter downswing is the late top, and the asymmetry behind that is mechanical rather
+    than statistical.** `phases._top_and_impact` puts the top at the start of the major rising run,
+    and the failure `_DRAWDOWN_FLOOR` documents is that run *fragmenting* — a golfer who hovers at
+    the top gives the lead wrist a nearly-flat stretch, one wobble splits the descent, and the
+    later fragment is taken. That shortens the downswing. Nothing in the rule can move a top the
+    other way: `_MAJOR_RISE_FRACTION` requires 80% of the largest rise in the clip before a run is
+    a candidate at all, so a pre-top wobble cannot be mistaken for the descent. The ground truth
+    agrees — on 2026-08-09 swing 2 the two down-the-line wrists read 24 and 25 frames while face-on
+    read 14, and the floor moved face-on to 24.
+
+    Returns `None` rather than guessing when either clip is anchored on pose, when either has no
+    fps to compare in real time, or when the two durations already agree inside
+    `_DOWNSWING_AGREEMENT` — the ordinary case, where there is nothing to arbitrate (ADR-013).
+    """
+    if not (a.impact_measured and b.impact_measured) or not a.fps or not b.fps:
+        return None
+
+    seconds_a = a.downswing_frames / a.fps
+    seconds_b = b.downswing_frames / b.fps
+    if _relative_gap(seconds_a, seconds_b) <= _DOWNSWING_AGREEMENT:
+        return None
+
+    late, sound, seconds = (a, b, seconds_b) if seconds_a < seconds_b else (b, a, seconds_a)
+    corrected = _top_at(late, seconds)
+    return _Arbitration(late, sound, seconds, corrected, late.top - corrected)
+
+
+def _top_at(anchors: SwingAnchors, seconds: float) -> int:
+    """The frame sitting `seconds` back from this clip's impact, in its own frame numbering.
+
+    Clamped to a downswing of at least one frame, because `frame_of_tau` divides by it. Converting
+    a duration rather than copying a frame index is what lets one reference serve two clips filmed
+    at different rates (ADR-013).
+    """
+    return min(anchors.impact - 1, max(0, anchors.impact - round(seconds * (anchors.fps or 0.0))))
+
+
+def _tempo_restated(arbitration: _Arbitration) -> str:
+    """What the late view's tempo ratio reads on the arbitrated top, when it has one.
+
+    The alignment scores nothing and this does not change that — `SwingResult` keeps the ratio the
+    face-on phases produced, and P7's brief is to *report* the correction rather than substitute it
+    silently. But the late top is precisely why three bundles on disk report 4.92, 6.08 and 6.09:1
+    (docs/M11_ACOUSTIC_SYNC.md §E3): the ratio's denominator is the very duration being corrected
+    here, so a note that moves the top without saying what that does to the number leaves the
+    reader to redo the arithmetic against a score the results page is showing them in red.
+
+    Empty string when there is no before-and-after to state — no measurable backswing on one side
+    of the correction or the other — rather than a sentence about nothing.
+    """
+    before = arbitration.late.tempo_ratio
+    backswing = arbitration.corrected_top - arbitration.late.motion_start
+    downswing = arbitration.late.impact - arbitration.corrected_top
+    if before is None or backswing <= 0 or downswing <= 0:
+        return ""
+    return f", where its backswing reads {backswing / downswing:.2f}:1 rather than {before:.2f}:1"
+
+
 def _shared_tops(
-    a: SwingAnchors, b: SwingAnchors, notes: list[str]
+    a: SwingAnchors,
+    b: SwingAnchors,
+    notes: list[str],
+    arbitration: _Arbitration | None,
 ) -> tuple[int | None, int | None]:
     """A tau=1 anchor for each clip at a *shared* downswing duration, or `(None, None)`.
 
     Returns None for both unless the two views disagree about the downswing by more than
     `_DOWNSWING_AGREEMENT` — the common case is that they agree and the detected tops stand. When
-    they do not, the reference duration is the face-on clip's, because that is the view the phase
-    detector was tuned on (docs/M4_POSE_BAKEOFF.md is a face-on corpus) and the only one scored
-    (ADR-015). Each clip converts that duration through its *own* fps, so both panels then advance
-    at their native rate and meet at impact.
+    they do not, both clips are held to one duration, converted through each clip's *own* fps so
+    that both panels advance at their native rate and meet at impact.
+
+    **Which duration depends on whether the pair has a shared clock.** With one — both impacts
+    pinned to a heard strike — `_arbitrate_tops` names the late top and the reference becomes the
+    *other* view's, so the correction moves the top that is wrong and leaves the sound one where it
+    was detected. Without one there is nothing to decide with, and the reference stays the face-on
+    clip's on the original grounds: that is the view the phase detector was tuned on
+    (docs/M4_POSE_BAKEOFF.md is a face-on corpus) and the only one scored (ADR-015). The two rules
+    point opposite ways on the bundles this exists for — face-on is the late view on all five of
+    them — which is the whole of what P7 changes. [M11 P7]
+
+    `_PLAUSIBLE_DOWNSWING_S` guards both routes, and on the arbitrated one it is not a formality:
+    once P6 pins the down-the-line impact 5-7 frames later on §E4's bundles, the longer downswing
+    runs past 0.48s on several of them, which is not a downswing any golfer makes. A reference that
+    implausible means the *sound* view's top is suspect too, so neither is imposed and the warp
+    stands — declining rather than guessing, and reported in the notes either way (ADR-013).
+
+    `arbitration` is decided by the caller and passed in rather than taken here, because
+    `align_swings` also stamps it onto both clips and the two must not be able to disagree about
+    the same pair. [M11 P8]
     """
     if not a.fps or not b.fps:
         return None, None
@@ -425,27 +682,44 @@ def _shared_tops(
     if _relative_gap(seconds_a, seconds_b) <= _DOWNSWING_AGREEMENT:
         return None, None
 
-    reference = seconds_a if a.camera_id == "face_on" else (
-        seconds_b if b.camera_id == "face_on" else seconds_a
-    )
     label_a, label_b = a.camera_id or "a", b.camera_id or "b"
+    opening = (
+        f"downswing durations disagree ({label_a} {seconds_a:.3f}s vs {label_b} {seconds_b:.3f}s)"
+    )
+
+    if arbitration is None:
+        reference = seconds_a if a.camera_id == "face_on" else (
+            seconds_b if b.camera_id == "face_on" else seconds_a
+        )
+        diagnosis = "one view's top is wrong"
+        remedy = (
+            f"Holding both panels to {reference:.3f}s back from impact so neither is replayed at "
+            "the wrong speed; the tops may sit a frame or two apart on screen"
+        )
+    else:
+        reference = arbitration.seconds
+        diagnosis = (
+            "both views heard the strike, so tau=2 is one instant in real time and the tops are "
+            f"the only thing left to disagree — {arbitration.late_label}'s is "
+            f"{arbitration.frames_late} frames late"
+        )
+        remedy = (
+            f"Holding both panels to {arbitration.sound_label}'s {reference:.3f}s back from "
+            f"impact, which moves {arbitration.late_label}'s top to frame "
+            f"{arbitration.corrected_top}{_tempo_restated(arbitration)}"
+        )
+
     low, high = _PLAUSIBLE_DOWNSWING_S
     if not low <= reference <= high:
         notes.append(
-            f"downswing durations disagree ({label_a} {seconds_a:.3f}s vs {label_b} "
-            f"{seconds_b:.3f}s) and the reference view's {reference:.3f}s is not a possible "
-            "downswing — leaving the warp in place rather than holding both panels to it"
+            f"{opening} — {diagnosis}. But the {reference:.3f}s it would be held to is not a "
+            "possible downswing, so there is nothing sound to hold both panels to — leaving the "
+            "warp in place"
         )
         return None, None
-    notes.append(
-        f"downswing durations disagree ({label_a} {seconds_a:.3f}s vs {label_b} {seconds_b:.3f}s) "
-        f"— one view's top is wrong. Holding both panels to {reference:.3f}s back from impact so "
-        "neither is replayed at the wrong speed; the tops may sit a frame or two apart on screen"
-    )
-    # Clamp to a downswing of at least one frame: `frame_of_tau` divides by it.
-    top_a = min(a.impact - 1, max(0, a.impact - round(reference * a.fps)))
-    top_b = min(b.impact - 1, max(0, b.impact - round(reference * b.fps)))
-    return top_a, top_b
+
+    notes.append(f"{opening} — {diagnosis}. {remedy}")
+    return _top_at(a, reference), _top_at(b, reference)
 
 
 def map_frame(alignment: SwingAlignment, frame: int, *, source: str = "a") -> int | None:
@@ -549,13 +823,21 @@ def _clamp_index(frame: float, count: int) -> int:
 
 
 def _clip_alignment(
-    anchors: SwingAnchors, motion_start: int, top: int | None = None
+    anchors: SwingAnchors,
+    motion_start: int,
+    top: int | None = None,
+    *,
+    top_late_by: int | None = None,
 ) -> ClipAlignment:
     last = (anchors.frame_count - 1) if anchors.frame_count else anchors.impact
     return ClipAlignment(
         anchors=anchors,
         warp_motion_start=motion_start,
         warp_top=top,
+        # `> 0` rather than truthiness: `_arbitrate_tops` only fires past `_DOWNSWING_AGREEMENT`, so
+        # a zero here would be a rounding artefact of `_top_at`, not a top that is late by nothing,
+        # and the field's `gt=0` would reject it anyway.
+        top_late_by=top_late_by if top_late_by and top_late_by > 0 else None,
         tau_start=tau_of_frame(anchors, 0, motion_start=motion_start, top=top),
         tau_end=tau_of_frame(anchors, last, motion_start=motion_start, top=top),
     )

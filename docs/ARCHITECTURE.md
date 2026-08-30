@@ -35,8 +35,12 @@ flowchart LR
     SD --> SRC["lookup by image sha256<br/>no extras needed"]
 
     BUN["swing bundle<br/>2 clips + shot photo"] --> AB["scripts/analyze_bundle.py"]
+    BUN --> AUD["audio_for per view<br/>decode 48kHz mono, find strikes"]
+    AUD --> STR[("strike frames<br/>per clip, own numbering")]
+    STR --> SEL
     AB --> SEL["select_swing<br/>which descent is the swing"]
     SEL --> ASB["analyze_swing_bundle<br/>face-on scored, DTL anchors only"]
+    STR --> ASB
     SRC --> ASB
     ASB --> AS
     ASB --> ALN["align_swings + pair_frames"]
@@ -46,7 +50,7 @@ flowchart LR
 
     classDef built fill:#d4edda,stroke:#28a745,color:#155724;
     classDef gap fill:#fff3cd,stroke:#ffc107,color:#856404;
-    class RP,AS,SM,PH,CK,SC,TIP,IS,SRC,SD,BUN,AB,SEL,ASB,ALN,SBS,JSON built;
+    class RP,AS,SM,PH,CK,SC,TIP,IS,SRC,SD,BUN,AB,SEL,ASB,ALN,SBS,JSON,AUD,STR built;
     class OV gap;
 ```
 
@@ -58,6 +62,16 @@ already in the store), scoring, ranked tips, alignment — and writes `analysis.
 **Analysis now auto-triggers** (M7 Phase 5): when an upload completes a swing's third role, an
 in-process worker runs that same pipeline off the event loop and the results page has something
 to render. A partial bundle waits for an explicit "Analyze anyway" rather than a timeout.
+
+**Both phones hear the ball** (M11, ADR-025), and that is the newest edge in the diagram. Each
+clip's audio is decoded once, the ball strike is found in it, and the result reaches the analysis
+core as **frame indices in that clip's own numbering** — never a waveform. Those indices do three
+things: they overrule the duration band when `select_swing` picks which descent is the swing, they
+pin each view's impact anchor to a heard event so the pair reports `AlignmentQuality.SYNCHRONIZED`,
+and — because two impacts pinned to one sound make the two downswings measurements of one interval
+in real time — they make a disagreement about the *top* decidable. A `tempo` timed from a top the
+other view contradicts is withdrawn rather than shipped (`unscored.CROSS_VIEW_CONTRADICTED`). A
+bundle whose clips carry no usable audio, or where only one did, behaves exactly as it did before.
 
 One deliberate boundary remains: the shot is **attached and displayed, never scored** — outcome
 checkpoints need per-club benchmark bands `ranges.json` does not have (ADR-009). `detection/`
@@ -80,7 +94,9 @@ python scripts/import_shot_screens.py [paths...] [--session ID] [--device PROFIL
 python scripts/align_swings.py <a.keypoints.json> <b.keypoints.json> [--video-a F] [--video-b F]
                                [--out MP4] [--list-swings] [--auto-window] [--window-a A:B]
 
-# The whole use case, offline (`vision`; `ocr` only for a photo not already in the shot store)
+# The whole use case, offline (`vision`; `ocr` only for a photo not already in the shot store;
+# `audio` to hear the ball strike — without it every clip falls back to the pre-M11 pose anchors
+# and says so in the notes, which is a degradation and never an error)
 python scripts/analyze_bundle.py <SESSION/SWING | swing-dir> [--list-swings] [--no-auto-window]
                                  [--window-face-on A:B] [--window-dtl A:B] [--no-video]
                                  [--force-pose] [--force-ocr] [--skip-ocr] [--club C] [--tau L:H]
@@ -168,6 +184,7 @@ flowchart TD
 
     CAP["capture/<br/>FileVideoSource"] --> C
     POSE["pose/<br/>estimator + overlay"] --> C
+    AUD["audio/<br/>decode port, strike detection"] --> C
     LMM["launch_monitor/<br/>mock, screen, composite"] --> C
     ANA["analysis/<br/>smoothing, phases, alignment,<br/>checkpoints, scoring, benchmarks"] --> C
     FB["feedback/<br/>rules"] --> C
@@ -179,6 +196,7 @@ flowchart TD
 
     API --> CAP
     API --> POSE
+    API --> AUD
     API --> ANA
     API --> FB
     API --> LMM
@@ -194,6 +212,7 @@ flowchart TD
     CLI["scripts/*.py — entry points;<br/>analyze_bundle.py is a thin CLI over api/pipeline.py"] --> API
     CLI --> CAP
     CLI --> POSE
+    CLI --> AUD
     CLI --> ANA
     CLI --> FB
     CLI --> LMM
@@ -202,7 +221,7 @@ flowchart TD
     classDef built fill:#d4edda,stroke:#28a745,color:#155724;
     classDef stub fill:#f8d7da,stroke:#dc3545,color:#721c24;
     classDef shell fill:#cce5ff,stroke:#004085,color:#004085;
-    class C,CAP,POSE,LMM,ANA,FB,CLI,STO built;
+    class C,CAP,POSE,AUD,LMM,ANA,FB,CLI,STO built;
     class API,MCP shell;
     class DET stub;
 ```
@@ -215,6 +234,13 @@ altogether, which made the shells invisible and the one rule-breaking edge below
 `storage/` and `api/` were stubs when this diagram was first drawn and are not any more —
 M7 Phases 3 and 5 built the bundle store, the upload server and the background worker. `detection/`
 is the last real stub, gated on M1.5.
+
+**`audio/` is the newest module and it is deliberately shaped exactly like `pose/`** (M11,
+ADR-025): an I/O-edge adapter behind an extra (`audio`, on `imageio-ffmpeg`), producing a contract
+shape, imported by the shells and by nothing in `analysis/`. The core receives **frame indices**
+and never a waveform, which is what keeps it stdlib-only and keeps a base install passing every
+analysis test. `tests/api/test_pipeline_imports.py` now holds `imageio_ffmpeg` alongside `fastapi`
+and `anthropic` for exactly that reason.
 
 **The dotted edges upward break the rule, knowingly:** `storage/corpus.py` and `mcp/query.py` both
 import `api.state` for `load_analysis` / `load_state`, the tolerant readers for the two artifacts
@@ -246,6 +272,7 @@ on a `vision`-only install — pinned by `tests/api/test_pipeline_imports.py`.
 |-----------|-----------|------------|--------|
 | Keypoints | Pose → Analysis | `List[FrameKeypoints]` — 33 landmarks per frame with x, y, z, visibility | ✅ |
 | Detections | Detection → Analysis | `List[FrameDetections]` — bounding boxes + class (club_head, ball) per frame | contract only |
+| Ball strikes | Audio → Analysis | `list[int]` — the frames a strike was heard on, in each clip's **own** numbering, decoded from `AudioFile` by `audio/impact.py` and passed to `analyze_swing_bundle` as `face_on_strikes` / `down_the_line_strikes`. Indices rather than a waveform is the whole seam: `analysis/` stays stdlib-only (ADR-025) | ✅ |
 | Shot Data | Launch monitor → Analysis | `ShotData` — club_speed, ball_speed, launch_angle, spin_rate, club_face_angle, club_path, smash_factor, distances, plus `provenance` (confidence + audit trail) for sources that *infer* metrics rather than receive them (ADR-014) | ✅ produced, not consumed |
 | Swing Result | Analysis → Feedback | `SwingResult` — phases, checkpoint scores with tour percentiles, mechanics/outcome/overall scores, `unscored` entries carrying a reason, judged `intent` | ✅ (`outcome_score` always `None`) |
 | Feedback | Feedback → UI | `FeedbackPayload` — overall score, ranked tips with severity, headline | ✅ produced and rendered by `api/static/results.html` |
@@ -304,6 +331,17 @@ sequenceDiagram
 2. **Percentiles never touch the scoring path** (ADR-010 addendum, 2026-08-04). They are
    informational, drawn from the same stratum the band was cut from. A test blinds the
    evaluators to the distributions and asserts `score`/`passed` do not move.
+3. **One finding reaches back into a score after `analyze_swing` has returned, and only one**
+   (M11 P8, ADR-025). The sequence above is a single clip and nothing in it can see a wrong phase
+   instant — `phases.py` reports a late top as detected and is not wrong to. `analyze_swing_bundle`
+   can, once *both* clips are anchored on a ball strike they both heard: the two downswings then
+   measure one interval in real time, the shorter one is the late top, and the checkpoints timed
+   from it (`contracts.checkpoints.CONTRADICTED_BY_A_LATE_TOP`, currently `tempo` alone) are
+   **withdrawn** into `unscored` with reason `CROSS_VIEW_CONTRADICTED`. Withdrawn, not restated:
+   the alignment knows what the ratio reads on the corrected top, but a score whose number came
+   from the warp and whose band came from the engine is the wrong-score rule 1 refuses. This is
+   the *only* path by which the second camera reaches `overall_score`, and it does so by removing
+   a number rather than contributing one.
 
 ### What is measured, and what the numbers mean
 
@@ -467,7 +505,7 @@ gitignored and never created. Everything persists as files:
 | Parsed shots | `data/processed/shots/` (content-addressed) | ✅ written by `import_shot_screens.py` and by `analyze_bundle.py` |
 | Swing bundles | `data/processed/sessions/<session>/<swing>/` + `manifest.json` | ✅ written by the upload route (M7 Phase 3/5) |
 | ↳ *who swung it, and with what* | `player_id` and `club` on `SwingManifest`, both stamped from the session cursor at swing creation | ✅ `player_id` is **write-once** (career mode step 1); `club` is required — an upload against a cursor naming no club is refused with a 409 (M9 P4–P6). Neither is sent by the uploading phone: two phones would have to type matching names, and a free-text club turns a typo into a tag |
-| ↳ *analysis artifacts* | `analysis.json`, `aligned.mp4`, `<role>.keypoints.json` in the same directory | ✅ written by `api/pipeline.py`, from the worker or the CLI; `analysis.json` is a `SwingBundleResult` with the heavy streams excluded (the keypoints sit beside it) |
+| ↳ *analysis artifacts* | `analysis.json`, `aligned.mp4`, `<role>.keypoints.json`, `<role>.audio.json` in the same directory | ✅ written by `api/pipeline.py`, from the worker or the CLI; `analysis.json` is a `SwingBundleResult` with the heavy streams excluded (the keypoints sit beside it). The two caches are keyed on the clip's sha256; `<role>.audio.json` also carries `detector_version` and is re-detected when `AUDIO_DETECTOR_VERSION` moves, because a changed detector is invisible to a content hash |
 | ↳ *analysis state* | `analysis.state.json` in the same directory | ✅ `AnalysisState` — queued/running/done/failed, the role→sha256 map the result was computed from (so a re-upload invalidates it), and a denormalised score/headline so the 5 s status poll never parses `analysis.json`. The terminal status is written by `pipeline.record_state` as part of writing `analysis.json`, because a denormalised copy must be written by whatever writes the original; the worker owns only `queued`/`running`/crash |
 | ↳ *session cursor* | `session.json` in the **session** directory | ✅ `storage/session_meta.py` — **two** cursors, `player_id` and `club` (M9 P4): who the *next* swing belongs to and what it will be hit with. Both are pointers, never records — what actually happened lives on each manifest, so a buddy taking a few swings mid-session rewrites nobody's history and changing clubs mid-bucket rewrites no swing's tag. The club moves far more often, which is why the upload page keeps its picker open and the per-swing repair collapses behind a control |
 | Golfer registry | `data/processed/golfers/<player_id>.golfer.json` | ✅ `storage/golfer_store.py` — one file per golfer, name + handedness. Beside `sessions/`, not inside: a golfer outlives any one session, and that outliving is the point |

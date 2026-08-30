@@ -40,8 +40,20 @@ class AlignmentQuality(StrEnum):
 
     Ordered from most to least evidence. The value is what a UI should surface — rendering a
     side-by-side video implies frame correspondence everywhere, and only `FULL` earns that.
+
+    **`SYNCHRONIZED` is a different kind of claim from the three below it** (M11 P6). Those count
+    *inferred* anchors: three pose estimates agree, or two, or one. `SYNCHRONIZED` says the tau=2
+    anchor was **heard** in both clips — the ball strike reaches both microphones, so it is the one
+    instant the two recordings share on a real clock rather than by inference. That is why it sits
+    above `FULL` instead of beside it, and why it overwrites the count: one measured anchor is
+    better evidence than three estimated ones (docs/M11_ACOUSTIC_SYNC.md §E4 found four bundles
+    where a `full`/`impact_only` pair had its down-the-line impact 5.7-7.5 frames wrong).
+
+    The count is not lost when that happens — every anchor `analysis.alignment` refuses appends its
+    own note, so what the tier stops carrying, `SwingAlignment.notes` still says out loud.
     """
 
+    SYNCHRONIZED = "synchronized"
     FULL = "full"
     TOP_IMPACT = "top_impact"
     IMPACT_ONLY = "impact_only"
@@ -56,13 +68,34 @@ class AlignmentQuality(StrEnum):
     def is_aligned(self) -> bool:
         return self is not AlignmentQuality.UNALIGNED
 
+    @property
+    def is_degraded(self) -> bool:
+        """True when the warp is standing on less than the best evidence available to it.
+
+        **Deliberately not the same test as the one that gates `caveats.ALIGNMENT_CAVEAT`**, which
+        is `is not FULL` at each of its two call sites and stays that way. The two ask different
+        questions. This one asks *did something go wrong* — and a pair anchored on a heard ball
+        strike is the opposite of that, so a `SYNCHRONIZED` result must not be reported as
+        degraded. The caveat asks *may a reader trust every instant*, and the answer there is still
+        no: `SYNCHRONIZED` pins tau=2 to a measured event and interpolates between anchors exactly
+        as `FULL` does, so "the two views were synchronized on the ball strike, **not on every
+        instant**" is the sentence a reader of a synchronized pair needs, not one to suppress.
+        """
+        return self not in _UNDEGRADED
+
 
 _QUALITY_SUMMARY: dict[AlignmentQuality, str] = {
+    AlignmentQuality.SYNCHRONIZED: "synchronized on the ball strike",
     AlignmentQuality.FULL: "aligned on motion start, top and impact",
     AlignmentQuality.TOP_IMPACT: "aligned on top and impact",
     AlignmentQuality.IMPACT_ONLY: "aligned on impact only",
     AlignmentQuality.UNALIGNED: "not aligned",
 }
+
+# The tiers `is_degraded` answers False for. A frozenset rather than a chain of `is not`
+# comparisons at each caller, so the membership lives in one place next to the summaries it has to
+# stay consistent with.
+_UNDEGRADED = frozenset({AlignmentQuality.SYNCHRONIZED, AlignmentQuality.FULL})
 
 
 class FramePairing(NamedTuple):
@@ -103,6 +136,19 @@ class SwingAnchors(BaseModel):
         ),
     )
 
+    impact_measured: bool = Field(
+        default=False,
+        description=(
+            "True when `impact` was pinned to a ball strike **heard** in this clip rather than "
+            "inferred from pose (`analysis.alignment.with_measured_impact`, M11 P6). It is the one "
+            "anchor that can be measured: the crack reaches both phones, so two clips carrying it "
+            "share a real clock and the pair reports `AlignmentQuality.SYNCHRONIZED`. "
+            "Defaults False so every artifact written before M11 reads back as what it was — "
+            "inferred — rather than silently claiming a measurement nobody took, the same way "
+            "`ClipAlignment.warp_top` was added."
+        ),
+    )
+
     camera_id: str | None = Field(
         default=None, description="Which view this clip is, when the keypoints recorded it."
     )
@@ -113,10 +159,11 @@ class SwingAnchors(BaseModel):
         default=None,
         gt=0.0,
         description=(
-            "Container-reported frame rate. Nothing in the warp needs it — that is the whole "
-            "point of a normalized axis — except the degenerate `IMPACT_ONLY` case, which has no "
-            "second anchor to derive a rate from. Treat it with the suspicion "
-            "docs/M7_TWO_PHONE_SPIKE.md Q3 earns it."
+            "Container-reported frame rate. Nothing in the *warp* needs it — that is the whole "
+            "point of a normalized axis — but everything that has to compare the two clips in real "
+            "seconds does: the shared-duration fallbacks, and the strike window "
+            "`with_measured_impact` converts from seconds into this clip's frames. Treat it with "
+            "the suspicion docs/M7_TWO_PHONE_SPIKE.md Q3 earns it."
         ),
     )
 
@@ -185,6 +232,25 @@ class ClipAlignment(BaseModel):
         ),
     )
 
+    top_late_by: int | None = Field(
+        default=None,
+        gt=0,
+        description=(
+            "How many of **this clip's** frames its detected top sits past the real one, when a "
+            "shared clock can say (M11 P7/P8). None means either that the tops agree or that "
+            "nothing could arbitrate them; it never means zero. Set only on a pair that both heard "
+            "the ball strike: with tau=2 pinned to one sound the two downswings measure one "
+            "interval in real time, so the shorter one is the *late* top rather than merely the "
+            "disagreeing one (`analysis.alignment._arbitrate_tops`). "
+            "**This is the diagnosis, and `warp_top` is the correction — they are separate on "
+            "purpose.** The warp only moves a top when the duration it would be held to is a "
+            "possible downswing (`phases._PLAUSIBLE_DOWNSWING_S`), so a bundle can carry a top "
+            "known to be late that the warp declined to move; reporting only the corrected ones "
+            "would leave every declined case looking sound. `analysis.engine` reads *this* field, "
+            "not `warp_top`, when it retires a checkpoint timed from a contradicted instant."
+        ),
+    )
+
     tau_start: float = Field(description="tau at frame 0 — negative when the clip rolls early.")
     tau_end: float = Field(description="tau at the last frame.")
 
@@ -192,6 +258,16 @@ class ClipAlignment(BaseModel):
     def top(self) -> int:
         """The frame tau=1 resolves to: the override when there is one, else the detected top."""
         return self.anchors.top if self.warp_top is None else self.warp_top
+
+    @property
+    def top_is_late(self) -> bool:
+        """Whether a shared clock contradicted this top at all. `top_late_by` says how far.
+
+        A property so no consumer writes `is not None` against a field whose None means "nothing
+        could decide" rather than "nothing was wrong" — two readings a bare comparison invites
+        mixing up.
+        """
+        return self.top_late_by is not None
 
 
 class SwingAlignment(BaseModel):

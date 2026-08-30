@@ -38,18 +38,25 @@ def test_every_row_says_something_in_both_registers() -> None:
         assert spec.remedy.endswith("."), f"{reason}'s remedy is not a sentence"
 
 
-def test_the_reasons_that_are_not_capture_problems_are_the_expected_three() -> None:
+def test_the_reasons_that_are_not_capture_problems_are_the_expected_four() -> None:
     """`refilming_helps` is the one bit every consumer branches on, so it is pinned by name.
 
     Derived prose in `contracts.caveats` tells every coaching model which reasons must never be
     answered with "film it again". Getting this set wrong sends a golfer back to the bay over a
     form field — the exact failure the old `_UNSCORED_REMEDY` heuristic existed to avoid, now
     stated once instead of inferred.
+
+    `CROSS_VIEW_CONTRADICTED` is the one whose membership is worth arguing about, because unlike
+    the other three it *is* about the footage: a top the other view contradicts came out of a real
+    clip. It belongs here anyway. The cause is a golfer pausing at the top, which fragments the
+    rising run `phases._top_and_impact` reads (`_DRAWDOWN_FLOOR`) — a second clip of the same swing
+    reproduces it, so "film it again" is advice that costs a trip to the bay and changes nothing.
     """
     not_capture = {reason for reason, spec in UNSCORED_REASONS.items() if not spec.refilming_helps}
     assert not_capture == {
         UnscoredReason.NO_BAND,
         UnscoredReason.NO_HANDEDNESS,
+        UnscoredReason.CROSS_VIEW_CONTRADICTED,
         UnscoredReason.UNRECORDED,
     }
 
@@ -59,8 +66,18 @@ def test_the_judging_reasons_are_exactly_the_ones_measure_may_not_report() -> No
 
     A reason in neither set would be a cause nothing is allowed to produce; one in both would make
     the layering assertion in `tests/analysis/test_measure.py` vacuous.
+
+    `CROSS_VIEW_CONTRADICTED` sits on this side without being a judging failure in the sense the
+    other three are: it is written by `analysis.engine.analyze_swing_bundle` at the two-view seam,
+    which is neither measuring nor banding. What the partition asserts is only that
+    `analysis.measure` may not produce it, and it may not — measure sees one clip.
     """
-    judging = {UnscoredReason.NO_BAND, UnscoredReason.NO_HANDEDNESS, UnscoredReason.UNRECORDED}
+    judging = {
+        UnscoredReason.NO_BAND,
+        UnscoredReason.NO_HANDEDNESS,
+        UnscoredReason.CROSS_VIEW_CONTRADICTED,
+        UnscoredReason.UNRECORDED,
+    }
     assert MEASUREMENT_REASONS | judging == set(UnscoredReason)
     assert not MEASUREMENT_REASONS & judging
 

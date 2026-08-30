@@ -17,6 +17,7 @@ from golf_coach.analysis.alignment import (
     align_swings,
     anchors_from_keypoints,
     anchors_from_phases,
+    with_measured_impact,
 )
 from golf_coach.analysis.benchmarks.joint import placement_for as joint_placement
 from golf_coach.analysis.benchmarks.trajectory import (
@@ -30,8 +31,12 @@ from golf_coach.analysis.phases import TRAIL_WRIST, segment_phases
 from golf_coach.analysis.scoring import policy_for
 from golf_coach.analysis.shot_measure import SHOT_MEASUREMENTS
 from golf_coach.analysis.smoothing import smooth_keypoints
-from golf_coach.contracts.alignment import AlignmentQuality, SwingAnchors
-from golf_coach.contracts.checkpoints import CHECKPOINT_REGISTRY
+from golf_coach.contracts.alignment import ClipAlignment, SwingAnchors
+from golf_coach.contracts.checkpoints import (
+    CHECKPOINT_REGISTRY,
+    CONTRADICTED_BY_A_LATE_TOP,
+    checkpoint_names,
+)
 from golf_coach.contracts.detections import FrameDetections
 from golf_coach.contracts.golfer import Handedness
 from golf_coach.contracts.intent import PracticeGoal
@@ -46,7 +51,7 @@ from golf_coach.contracts.swing import (
     SwingBundleResult,
     SwingResult,
 )
-from golf_coach.contracts.unscored import UnscoredCheckpoint
+from golf_coach.contracts.unscored import UnscoredCheckpoint, UnscoredReason
 
 
 def _placements(
@@ -333,6 +338,8 @@ def analyze_swing_bundle(
     intent: PracticeGoal | None = None,
     face_on_window: tuple[int, int] | None = None,
     down_the_line_window: tuple[int, int] | None = None,
+    face_on_strikes: list[int] | None = None,
+    down_the_line_strikes: list[int] | None = None,
     handedness: Handedness | None = None,
 ) -> SwingBundleResult:
     """Analyze one assembled swing bundle: two camera views plus the launch-monitor shot.
@@ -356,6 +363,13 @@ def analyze_swing_bundle(
     coordinate system: the face-on phases are shifted back by the window offset and the result
     carries the full frame list, so `swing.phases[i].start_frame` indexes `swing.keypoints` and
     the alignment anchors address the same frames the video does. A caller never tracks an offset.
+
+    The `*_strikes` arguments are the ball strikes heard in each view's own clip, as frame indices
+    in that clip's own numbering (`api.pipeline.audio_for` produces them). They move **only the
+    alignment**: each view's impact anchor is pinned to the strike it heard, and a pair that
+    both heard one reports `AlignmentQuality.SYNCHRONIZED`. No checkpoint changes, because
+    `analyze_swing` above has already scored the face-on view off its own phases by the time these
+    are read — the property that lets M11 improve the anchor without re-opening M4's scoring.
 
     Degradation is reported, not raised (ADR-013): a missing or unsegmentable down-the-line view
     leaves `alignment` None with a note saying so, and the face-on result stands on its own.
@@ -399,7 +413,12 @@ def analyze_swing_bundle(
             "cannot be aligned"
         )
 
+    # Before the strike is read, on purpose: this note is about the *tempo checkpoint*, and the
+    # checkpoint was scored off the pose phases. Pinning impact to the sound first would have it
+    # quote a ratio no checkpoint on this swing was measured from.
     notes.extend(_tempo_notes(face_anchors))
+
+    face_anchors = _anchored_on_strike(face_anchors, face_on_strikes, "face-on", notes)
 
     dtl_anchors: SwingAnchors | None = None
     if down_the_line is None:
@@ -421,6 +440,8 @@ def analyze_swing_bundle(
                 "down-the-line: the clip could not be segmented into a swing, so the two views "
                 "cannot be aligned"
             )
+
+    dtl_anchors = _anchored_on_strike(dtl_anchors, down_the_line_strikes, "down-the-line", notes)
 
     # The down-the-line view gets its own trajectory placement, against its own basis, and the two
     # are **never combined into one number**. They are two cameras answering the same question
@@ -445,9 +466,17 @@ def analyze_swing_bundle(
     alignment = None
     if face_anchors is not None and dtl_anchors is not None:
         alignment = align_swings(face_anchors, dtl_anchors)
-        if alignment.quality is not AlignmentQuality.FULL:
+        if alignment.quality.is_degraded:
             notes.append(f"alignment degraded: {alignment.quality.summary}")
         notes.extend(f"alignment: {note}" for note in alignment.notes)
+
+        # The one thing in this function that reaches back into a score `analyze_swing` already
+        # produced, and it is deliberately the *last* thing: everything above it is measured from
+        # one clip, and this is the only finding that does not exist inside either clip alone.
+        # `align_swings` is passed `face_anchors` as `a`, so `alignment.a` is always the scored
+        # view.
+        if alignment.a is not None and alignment.a.top_is_late:
+            swing = _without_contradicted_scores(swing, alignment.a, notes)
 
     if shot is not None and shot.provenance is not None and shot.provenance.needs_review:
         notes.append(
@@ -500,6 +529,111 @@ def _shifted(segment: PhaseSegment, offset: int) -> PhaseSegment:
 
 def _camera_id(keypoints: list[FrameKeypoints]) -> str | None:
     return next((frame.camera_id for frame in keypoints if frame.camera_id is not None), None)
+
+
+def _anchored_on_strike(
+    anchors: SwingAnchors | None, strikes: list[int] | None, label: str, notes: list[str]
+) -> SwingAnchors | None:
+    """`anchors` with tau=2 pinned to the ball strike this view heard, saying so when it moved.
+
+    Never substitutes silently (ADR-010 §2). A correction of five to seven frames is exactly the
+    size of the defect M10 handed forward, so a reader comparing this run against an older one has
+    to be able to see that the impact frame changed and by how much — and a reader who *only* has
+    this run has to be able to see that the number is a measurement rather than an estimate.
+
+    Runs on `None` too, so the two call sites do not each need the guard: a view that could not be
+    segmented has no anchor to pin.
+    """
+    if anchors is None:
+        return None
+    measured = with_measured_impact(anchors, strikes)
+    moved = measured.impact - anchors.impact
+    if measured.impact_measured and moved != 0:
+        # `impact_measured` is only ever True when fps was known — `with_measured_impact` sizes its
+        # window with it — so the conversion to seconds below cannot divide by None.
+        assert measured.fps is not None
+        notes.append(
+            f"{label}: impact moved {moved:+d} frames ({moved / measured.fps:+.3f}s) onto the ball "
+            f"strike heard in this clip — pose had it "
+            f"{'early' if moved > 0 else 'late'}. tau=2 is now a measured instant, not an estimate"
+        )
+    return measured
+
+
+def _without_contradicted_scores(
+    swing: SwingResult, clip: ClipAlignment, notes: list[str]
+) -> SwingResult:
+    """`swing` with every score a late top invalidates withdrawn into `unscored`. [M11 P8]
+
+    **The only place a cross-view finding re-opens a face-on score**, and it exists because M10
+    handed forward three `tempo` readings that score, *fail* at 4.92-6.09:1 against a 4.71 ceiling,
+    and are not coaching truth — the top they divide by landed late, which shortens the downswing
+    and lengthens the backswing at once. From inside the face-on clip nothing about that is
+    visible; `phases.py` reports the boundary as detected and is not wrong to. It takes the other
+    camera, on a clock both of them heard, to know (docs/M11_ACOUSTIC_SYNC.md §E3).
+
+    **Withdrawn rather than restated, and the distinction is ADR-010 §2.** `align_swings` can say
+    what the ratio reads on the corrected top, and on 2026-08-23 bundle 2 that is 2.35:1 — a pass.
+    Writing it into `CheckpointScore.observed` would mean a score whose number came from the
+    alignment and whose band came from the engine, measured over frames `segment_phases` never
+    agreed to; and on the bundles where `_PLAUSIBLE_DOWNSWING_S` refuses the correction there is no
+    restatement to write at all. No score beats a wrong one, and a corrected top belongs in
+    `phases.py` where the boundary is found, not patched in at the seam that noticed.
+
+    `mechanics` and `outcome` are split back apart by registry membership rather than by position,
+    because `combine` weighs the two axes differently and `checkpoint_scores` is their
+    concatenation with nothing marking the join (ADR-009). Today the outcome list is empty and this
+    is a no-op; it is written this way so it stays right when it is not.
+    """
+    withdrawn = [
+        score for score in swing.checkpoint_scores if score.name in CONTRADICTED_BY_A_LATE_TOP
+    ]
+    if not withdrawn:
+        return swing
+
+    names = {score.name for score in withdrawn}
+    kept = [score for score in swing.checkpoint_scores if score.name not in names]
+    registered = set(checkpoint_names())
+    scores = policy_for((swing.intent or PracticeGoal()).mode).combine(
+        [score for score in kept if score.name in registered],
+        [score for score in kept if score.name not in registered],
+    )
+
+    detail = (
+        f"the other view, synchronized on the ball strike, puts the top {clip.top_late_by} frames "
+        "earlier than this clip did"
+    )
+    for score in withdrawn:
+        observed = "" if score.observed is None else f" at {score.observed:.2f}"
+        notes.append(
+            f"{score.name} withdrawn: it scored {score.score:.2f}{observed} off a top the "
+            f"down-the-line view puts {clip.top_late_by} frames earlier on a shared clock"
+        )
+
+    # Registry order is the reported order of `unscored` (`contracts.checkpoints` says so), so the
+    # withdrawn entries are sorted into place rather than appended — an appended `tempo` would put
+    # the first checkpoint last and quietly break the one ordering that module asks for.
+    order = {name: index for index, name in enumerate(checkpoint_names())}
+    unscored = [
+        *swing.unscored,
+        *(
+            UnscoredCheckpoint(
+                name=score.name,
+                reason=UnscoredReason.CROSS_VIEW_CONTRADICTED,
+                detail=detail,
+            )
+            for score in withdrawn
+        ),
+    ]
+    return swing.model_copy(
+        update={
+            "checkpoint_scores": kept,
+            "unscored": sorted(unscored, key=lambda entry: order.get(entry.name, len(order))),
+            "mechanics_score": scores.mechanics,
+            "outcome_score": scores.outcome,
+            "overall_score": scores.overall,
+        }
+    )
 
 
 def _tempo_notes(anchors: SwingAnchors | None) -> list[str]:

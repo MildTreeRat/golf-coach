@@ -56,6 +56,24 @@ ocr = [
     "pillow>=10.0",
     "pillow-heif>=0.16",
 ]
+# Audio for acoustic synchronization (M11, ADR-015 Option C). Needed to *decode* a clip's audio
+# track and to *detect* the transients in it; the stored `{role}.audio.json` those two produce
+# reads with no extras at all, which is the split `ocr` has and the one that matters — the
+# analysis core consumes the artifact, never the waveform.
+#
+# imageio-ffmpeg ships a static ffmpeg binary as a wheel, so there is no system install to keep in
+# step with the venv. It is a *demuxer* dependency, not a convenience: the corpus carries
+# non-uniform audio edit lists (docs/M11_ACOUSTIC_SYNC.md §E2) and applying one correctly is the
+# thing being bought.
+#
+# numpy is here for `audio/impact.py` alone — an FFT per 5 ms hop over a 30-second clip, which is
+# not stdlib arithmetic's job. It sits on the far side of the same seam ADR-022 draws for fitted
+# models: heavy numerics at the I/O edge, plain data (a sample index and a confidence) downstream.
+# `analysis/` still has no numpy and `tests/api/test_pipeline_imports.py` is what says so.
+audio = [
+    "imageio-ffmpeg>=0.4",
+    "numpy>=1.26",
+]
 # Offline research / reference-data derivation (M4-REF, M8-PAIR). Used ONLY by scripts/golfdb/*
 # and scripts/caddieset/*, never by the package: pandas appears at exactly one boundary (reading
 # GolfDB's pickled DataFrame), after which everything downstream is stdlib. Keeping it out of
@@ -80,7 +98,7 @@ dev = [
 ]
 # Convenience: everything at once.
 all = [
-    "golf-coach[vision,api,llm,hardware,ocr,research,dev]",
+    "golf-coach[vision,api,llm,hardware,ocr,audio,research,dev]",
 ]
 
 [tool.hatch.build.targets.wheel]

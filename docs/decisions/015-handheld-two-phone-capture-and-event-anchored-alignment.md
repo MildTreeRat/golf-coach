@@ -220,6 +220,69 @@ window instead of a decline — is written into `api/pipeline.py::_auto_windows`
 than guarded, because the reverse direction only ever runs where the alternative is already "score
 every motion in the clip as one swing".
 
+## Addendum (2026-08-29): there is a shared clock, and it is the ball [M11 P8]
+
+**§Context's first constraint — "There is no shared clock" — now has a documented exception, and
+Option C is no longer parked.** ADR-025 takes it. This addendum records what that does to the text
+above; nothing in the Decision is revised, because the thing taken was always described here as a
+*refinement* of Option E rather than a rival to it.
+
+**The premise was about timestamps and is still true about timestamps.** Two phones write two
+unrelated wall clocks and nothing correlates them — that sentence needs no amendment. What it
+missed is that the two phones are recording the same room: **both microphones hear the ball being
+struck**, which is an event in the world rather than a number a phone wrote down. §Context should
+be read as "there is no shared clock *in the containers*", which is what it was measuring.
+
+**Of the three objections Option C was parked on, one did not hold and two did.**
+
+- *"assumes the upload path preserves the audio track"* — **did not hold.** Unknowable when this
+  ADR was written, because nothing had looked; measured 2026-08-29 by parsing every stored
+  container, **30/30 clips carry `mp4a` audio at 48 kHz**.
+- *"recovers an offset only, so it does not survive a frame-rate difference"* — **holds,
+  conditionally.** It bites for slo-mo and genuinely different rates, and that is a per-bundle fact
+  the container reports rather than an assumption the design must make. It also matters less than
+  it reads: what audio contributes is one **anchor**, and an anchor needs no rate. The warp stays
+  Option E's, immune by construction.
+- *"the strike is not the only sharp transient"* — **holds, and is the hard part.** An indoor bay
+  makes four transients per shot. The answer is ordering rather than amplitude — the ball is the
+  first sound a shot makes — and it is `audio/impact.py` plus §E5 of docs/M11_ACOUSTIC_SYNC.md.
+
+**"Not all anchors are equal, and the code says so" gains a tier above the ones it lists.** That
+section ranks impact, top and motion start by bake-off error, and `AlignmentQuality`'s four values
+count how many of them survived. `SYNCHRONIZED` is not a fifth count: it says tau=2 was **heard**
+in both clips, which is a different kind of evidence, so it sits above `full` and overwrites the
+count. The measurement that forced it is docs/M11_ACOUSTIC_SYNC.md §E4 — four bundles reporting
+`full` or `impact_only` while their down-the-line impact was 5.7–7.5 frames wrong. An anchor being
+*primary* was never the same as it being *right*, and until a microphone said so nothing could tell
+the two apart.
+
+**"Tempo agreement is the cross-check" is now the weaker of two, and the stronger one can settle
+rather than refuse.** The ratio check catches two clips locking onto different swings and stops
+there — it can say the pair disagrees and never which half is wrong. With tau=2 pinned to one sound
+the two downswings become two measurements of one interval in real time, so the shorter one is the
+**late top**, and that asymmetry is mechanical: `phases._MAJOR_RISE_FRACTION` needs 80% of the
+largest rise in the clip before a run is a candidate, so nothing in the detector can move a top
+earlier. Replayed over the eleven stored bundles, face-on is the late view on every one of the
+seven that disagree.
+
+That also retires a note this design used to emit. `_which_half_is_wrong`'s last resort reads
+*"Most likely the two clips are showing DIFFERENT swings"*, and it fires on bundles 4, 7 and 9 — on
+all three of which the two views' audio cross-correlates to a single strike at r = 0.76–0.83. One
+swing, filmed twice, with a bad boundary in one view. The reading stays as the last resort for a
+pair that heard nothing, which genuinely cannot rule it out.
+
+**And one consequence bullet is now wrong in a way worth naming.** *"Down-the-line stays
+capture-and-align only"* is still true — no DTL checkpoint became scoreable, and the reason given
+there still stands. But the down-the-line view is no longer only a *contributor* to the alignment:
+on a synchronized pair it is the view that **adjudicates**, and a face-on `tempo` it contradicts is
+withdrawn from the score (`unscored.CROSS_VIEW_CONTRADICTED`, ADR-010 §2). That is the first time
+anything measured from the second camera reaches `overall_score`, and it reaches it by *removing* a
+number rather than by contributing one — which is the only direction this ADR's reference-population
+argument permits.
+
+**Audio does not touch the calibration bullet.** A clock is not extrinsics. Option D is still
+unreachable by construction and this changes nothing about it.
+
 ## References
 - ADR-011 (camera synchronization & 3D fusion) + its 2026-08-05 addendum, which deferred exactly
   this decision and asked the `FrameBundle` question answered above.

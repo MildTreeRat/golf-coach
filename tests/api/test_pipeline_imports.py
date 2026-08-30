@@ -7,7 +7,8 @@ transitively. Both are easy to break by adding one convenient import.
 
 The same holds for the `llm` extra since M6: `pipeline.py` imports `feedback.coach`, which is
 allowed to *use* `anthropic` but not to import it at module scope. A top-level import there would
-make the whole CLI unrunnable without a dependency it needs only when a key is configured.
+make the whole CLI unrunnable without a dependency it needs only when a key is configured. And for
+the `audio` extra since M11, where `audio_for` reaches for a decoder and numpy inside the call.
 """
 
 from __future__ import annotations
@@ -49,6 +50,31 @@ def test_importing_the_pipeline_does_not_import_anthropic() -> None:
     assert out.stdout.strip() == "False", (
         "importing golf_coach.api.pipeline pulled in anthropic — that breaks "
         "scripts/analyze_bundle.py on an install without the `llm` extra"
+    )
+
+
+def test_importing_the_pipeline_does_not_import_the_audio_extra() -> None:
+    """M11: `audio_for` decodes through ffmpeg and detects with numpy, both behind lazy imports.
+
+    The same boundary as the two above, and the one this milestone is most likely to break: the
+    obvious way to write `audio_for` is to import `FfmpegAudioSource` beside `FileVideoSource` at
+    the top of the module, which would make the analysis core need a decoder to be *imported* —
+    not to be used. `numpy` is checked alongside `imageio_ffmpeg` because `audio/impact.py` is the
+    other half of the same lazy block, and it is the half that would go unnoticed: the analysis
+    core's stdlib-only rule (ADR-008) is about `analysis/`, so nothing else would complain.
+    """
+    code = (
+        "import golf_coach.api.pipeline, sys;"
+        "print(bool({'imageio_ffmpeg', 'numpy'} & sys.modules.keys()))"
+    )
+
+    out = subprocess.run(
+        [sys.executable, "-c", code], capture_output=True, text=True, check=True
+    )
+
+    assert out.stdout.strip() == "False", (
+        "importing golf_coach.api.pipeline pulled in imageio_ffmpeg or numpy — that breaks "
+        "scripts/analyze_bundle.py on an install without the `audio` extra"
     )
 
 

@@ -149,9 +149,10 @@ _NOT_A_CAPTURE_PROBLEM = _and_list(
 
 _UNSCORED_REASONS_PROSE = fill(
     "Each entry in `unscored` carries a `reason`, and it decides what to say next. "
-    f"{_NOT_A_CAPTURE_PROBLEM} are not capture problems — the swing was measured fine and "
-    "something other than the footage is missing — so never answer one of those by telling the "
-    "golfer to re-film, steady the camera or shoot the swing again. Every other reason is a clip "
+    f"{_NOT_A_CAPTURE_PROBLEM} are not capture problems — the footage is not what went wrong, so "
+    "a better clip would not change the answer and you must never respond to one of those by "
+    "telling the golfer to re-film, steady the camera or shoot the swing again. Every other "
+    "reason is a clip "
     "worth taking again. The `refilming_helps` flag says which is which; do not infer it from the "
     "checkpoint name.",
     width=_WIDTH,

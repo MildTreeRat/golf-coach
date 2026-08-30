@@ -9,6 +9,7 @@ touches SQLite.
 
 from __future__ import annotations
 
+from golf_coach.storage.audio_io import load_audio, save_audio
 from golf_coach.storage.bundle_store import SwingBundleStore
 from golf_coach.storage.keypoints_io import load_keypoints, save_keypoints
 from golf_coach.storage.manifest import Role, SwingManifest
@@ -17,6 +18,8 @@ __all__ = [
     "Role",
     "SwingBundleStore",
     "SwingManifest",
+    "load_audio",
     "load_keypoints",
+    "save_audio",
     "save_keypoints",
 ]

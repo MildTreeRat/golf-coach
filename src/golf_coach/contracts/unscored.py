@@ -93,6 +93,13 @@ class UnscoredReason(StrEnum):
     #: impact position as a gross fault, so it refuses. Fixable from the results page.
     NO_HANDEDNESS = "no_handedness"
 
+    #: The other view, on a shared clock, contradicts the instants this checkpoint was timed
+    #: from. Only reachable on a bundle whose two clips **both heard the ball strike**: with tau=2
+    #: pinned to one sound the two downswings become two measurements of one interval, and the
+    #: shorter one is the late top (`analysis.alignment._arbitrate_tops`, M11 P7). The face-on
+    #: clip alone looks fine, which is the point — nothing inside it could have found this.
+    CROSS_VIEW_CONTRADICTED = "cross_view_contradicted"
+
     #: The stored result predates reasons being recorded at all. Never produced by the engine — it
     #: exists so a tolerant reader can say "this artifact does not know" instead of inventing a
     #: cause or dropping the entry, which would understate how many fundamentals a swing was judged
@@ -194,6 +201,18 @@ UNSCORED_REASONS: dict[UnscoredReason, ReasonSpec] = {
         ),
         refilming_helps=False,
     ),
+    UnscoredReason.CROSS_VIEW_CONTRADICTED: ReasonSpec(
+        summary="the other camera, synchronized on the ball strike, contradicts its timing",
+        remedy=(
+            "Both cameras heard the strike, so the two clips share a real clock - and on that "
+            "clock they disagree about when the backswing ended. The face-on view puts the top "
+            "later than the other camera does, which would make this reading a comparison "
+            "between one instant that is right and one that is not. Nothing to re-film: both "
+            "clips are good, and it is the swing's own pause at the top that makes the moment "
+            "hard to place."
+        ),
+        refilming_helps=False,
+    ),
     UnscoredReason.UNRECORDED: ReasonSpec(
         summary="this result was produced before the reason was recorded",
         remedy=(
@@ -205,7 +224,10 @@ UNSCORED_REASONS: dict[UnscoredReason, ReasonSpec] = {
 }
 
 
-#: The reasons a *measurement* may report. Everything else is a judging failure.
+#: The reasons a *measurement* may report. Everything else is produced above it — by a checkpoint
+#: banding the number (`NO_BAND`, `NO_HANDEDNESS`), by a tolerant reader (`UNRECORDED`), or, since
+#: M11 P8, by the two-view seam in `analysis.engine` that can see what one clip cannot
+#: (`CROSS_VIEW_CONTRADICTED`).
 #:
 #: `analysis/measure.py` answers "what is the number" and nothing else, and this frozenset is what
 #: makes that checkable rather than aspirational: a `NO_BAND` coming out of a measure function

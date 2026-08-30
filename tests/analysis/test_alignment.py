@@ -19,8 +19,9 @@ from golf_coach.analysis.alignment import (
     map_frame,
     pair_frames,
     tau_of_frame,
+    with_measured_impact,
 )
-from golf_coach.analysis.phases import candidate_downswings
+from golf_coach.analysis.phases import _STRIKE_TOLERANCE_S, candidate_downswings
 from golf_coach.analysis.smoothing import smooth_keypoints
 from golf_coach.contracts.alignment import (
     TAU_IMPACT,
@@ -661,3 +662,417 @@ def test_pair_frames_rejects_an_unknown_reference() -> None:
     alignment = align_swings(_anchored(real, 60.0), _anchored(real, 60.0))
     with pytest.raises(ValueError, match="reference must be"):
         pair_frames(alignment, len(real), len(real), reference="c")
+
+
+# --- the ball strike as a measured anchor ---------------------------------------------- [M11 P6]
+#
+# Every number below is taken from docs/M11_ACOUSTIC_SYNC.md rather than invented: §E4's four
+# offending bundles, where the down-the-line pose impact runs 5.7-7.5 frames early while face-on is
+# right to within a frame, and §E5's bay, where the ball hitting the impact screen 85-145 ms later
+# is the *louder* transient on every clip measured. The second fact is why these tests care so much
+# about which of two candidates wins.
+
+
+def _pair(*, impact_a: int = 224, impact_b: int = 419) -> tuple[SwingAnchors, SwingAnchors]:
+    """Two views of one swing whose anchors agree, so any tier change is the strike's doing."""
+    a = SwingAnchors(
+        motion_start=100, top=200, impact=impact_a, frame_count=400, fps=59.94,
+        camera_id="face_on",
+    )
+    b = SwingAnchors(
+        motion_start=295, top=395, impact=impact_b, frame_count=700, fps=59.94,
+        camera_id="down_the_line",
+    )
+    return a, b
+
+
+def test_an_anchor_with_no_strike_is_left_inferred() -> None:
+    """Nobody listened, and the detector heard nothing, are both "no measurement".
+
+    Neither may come back claiming `impact_measured` at the pose estimate: not measured is not the
+    same as measured and agreeing (ADR-010 §2). The two differ one level up, in `api/pipeline.py`,
+    which notes the silence — down here they are the same absence.
+    """
+    anchors, _ = _pair()
+    for strikes in (None, []):
+        measured = with_measured_impact(anchors, strikes)
+        assert measured == anchors
+        assert not measured.impact_measured
+
+
+def test_the_early_down_the_line_impact_is_pulled_onto_the_strike() -> None:
+    """§E4's finding, in the shape it was measured: pose 7 frames early, the crack where it is."""
+    _, dtl = _pair()
+    measured = with_measured_impact(dtl, [dtl.impact + 7])
+
+    assert measured.impact == dtl.impact + 7
+    assert measured.impact_measured
+    # The correction lands entirely in the downswing — nothing else about the clip moved.
+    assert measured.top == dtl.top and measured.motion_start == dtl.motion_start
+    assert measured.downswing_frames == dtl.downswing_frames + 7
+
+
+def test_the_screen_strike_never_wins_over_the_ball() -> None:
+    """§E5's trap, both ways round: the loud one is second, and second must never win.
+
+    The bay makes the ball, the mat, then the impact screen 85-145 ms later — 5 to 9 frames at 60
+    fps, and 3-4x louder in onset flux. No window can separate those, because the correction this
+    exists to make (§E4, up to 7.5 frames) is *longer* than the gap it would have to exclude. Only
+    the ordering can, so it is the ordering that is pinned here rather than the window width.
+    """
+    _, dtl = _pair()
+    screen = round(0.145 * 59.94)  # the widest ball-to-screen gap §E5 measured
+
+    # Pose impact already right — the case where "take the loudest peak" takes the screen strike.
+    on_time = with_measured_impact(dtl, [dtl.impact, dtl.impact + screen])
+    assert on_time.impact == dtl.impact
+
+    # And pose impact 7 frames early, where both candidates sit after the estimate.
+    early = with_measured_impact(dtl, [dtl.impact + 7, dtl.impact + 7 + screen])
+    assert early.impact == dtl.impact + 7
+    assert early.impact_measured
+
+
+def test_a_transient_outside_the_window_is_not_this_swing() -> None:
+    """A crack from the next bay, or the golfer's next shot, is not evidence about this impact."""
+    _, dtl = _pair()
+    outside = round(_STRIKE_TOLERANCE_S * 59.94) + 1
+
+    measured = with_measured_impact(dtl, [dtl.impact + outside])
+
+    assert measured == dtl
+    assert not measured.impact_measured
+
+
+def test_a_transient_before_the_top_is_refused_rather_than_clamped() -> None:
+    """A live branch, not a defensive one — the window outruns a fast downswing all by itself.
+
+    M10's four offenders measure 0.183-0.267 s of face-on downswing, and the strike window is
+    0.20 s wide, so on the fastest of them the window opens *before* the top. `SwingAnchors`
+    requires impact strictly after it, and `with_measured_impact` skips such a candidate rather
+    than clamping it onto the top: a transient that early is a different event, not a mismeasured
+    impact.
+    """
+    face_on, _ = _pair(impact_a=211)  # 11 frames of downswing, 0.18 s at 59.94
+    assert face_on.impact - face_on.top < round(_STRIKE_TOLERANCE_S * 59.94)
+
+    measured = with_measured_impact(face_on, [face_on.top - 1])
+
+    assert measured == face_on
+    assert not measured.impact_measured
+
+
+def test_a_strike_past_the_end_of_the_clip_is_refused() -> None:
+    """The audio outlives the video on some containers; an impact off the end of it is not one."""
+    face_on, _ = _pair()
+    beyond = face_on.frame_count
+    assert beyond is not None
+
+    measured = with_measured_impact(
+        face_on.model_copy(update={"impact": beyond - 2}), [beyond + 1]
+    )
+
+    assert not measured.impact_measured
+
+
+def test_without_fps_there_is_no_window_to_size() -> None:
+    """The tolerance is in seconds and the strikes are in frames; no rate, no comparison.
+
+    Reported, not raised (ADR-013) — the same shape as `_shared_motion_starts`' fps guard, which is
+    the other place a clip with no frame rate simply gets less.
+    """
+    anchors = SwingAnchors(motion_start=100, top=200, impact=224, frame_count=400)
+
+    measured = with_measured_impact(anchors, [224])
+
+    assert measured == anchors
+    assert not measured.impact_measured
+
+
+def test_both_views_on_a_heard_strike_are_synchronized() -> None:
+    """The tier this milestone exists to produce: a real shared clock, not a shared inference."""
+    a, b = _pair()
+    alignment = align_swings(
+        with_measured_impact(a, [a.impact]), with_measured_impact(b, [b.impact])
+    )
+
+    assert alignment.quality is AlignmentQuality.SYNCHRONIZED
+    assert alignment.quality.summary == "synchronized on the ball strike"
+    assert not alignment.quality.is_degraded
+
+
+def test_one_view_hearing_the_strike_is_not_a_shared_clock() -> None:
+    """Half a pair earns a note and no tier — a phone across the bay hears less, ordinarily."""
+    a, b = _pair()
+    alignment = align_swings(with_measured_impact(a, [a.impact]), b)
+
+    assert alignment.quality is AlignmentQuality.FULL
+    assert any("face_on" in note and "down_the_line" in note for note in alignment.notes)
+
+
+def test_a_measured_impact_outranks_a_refused_top() -> None:
+    """The inversion §Design names: `impact_only` must not be the label on the best anchor here.
+
+    The downswings disagree far past `_DOWNSWING_AGREEMENT`, so `_shared_tops` refuses the detected
+    tops and the pose ladder bottoms out at `IMPACT_ONLY` — the tier whose *whole reason* for being
+    the worst one is that its single anchor was a guess. Here it is not a guess, so the label goes
+    up. The warp underneath still holds both panels to one duration back from impact rather than
+    replaying either fast; which duration is P7's question, pinned below.
+    """
+    a = SwingAnchors(
+        motion_start=100, top=200, impact=213, frame_count=400, fps=59.94, camera_id="face_on",
+    )
+    b = SwingAnchors(
+        motion_start=295, top=395, impact=419, frame_count=700, fps=59.94,
+        camera_id="down_the_line",
+    )
+    assert align_swings(a, b).quality is AlignmentQuality.IMPACT_ONLY
+
+    alignment = align_swings(
+        with_measured_impact(a, [a.impact]), with_measured_impact(b, [b.impact])
+    )
+
+    assert alignment.quality is AlignmentQuality.SYNCHRONIZED
+    assert alignment.a is not None and alignment.b is not None
+    assert alignment.a.warp_top is not None and alignment.b.warp_top is not None
+    assert any("downswing durations disagree" in note for note in alignment.notes)
+
+
+def test_every_tier_has_a_summary_and_only_the_top_two_are_undegraded() -> None:
+    """`is_degraded` and `summary` are total over the enum — a new member cannot be half-added."""
+    for quality in AlignmentQuality:
+        assert quality.summary
+        assert quality.is_degraded is (
+            quality not in {AlignmentQuality.SYNCHRONIZED, AlignmentQuality.FULL}
+        )
+
+
+def test_anchors_written_before_m11_read_back_as_inferred() -> None:
+    """The default is False so an artifact on disk cannot claim a measurement nobody took."""
+    stored = {"motion_start": 100, "top": 200, "impact": 224}
+
+    assert not SwingAnchors.model_validate(stored).impact_measured
+
+
+# --- arbitrating the late top ---------------------------------------------------------- [M11 P7]
+#
+# The anchors below are the ones on disk, read out of `analysis.json` for 2026-08-23 bundles 2 and
+# 4 — two of the five that carry M10's handoff defect (docs/M11_ACOUSTIC_SYNC.md §E3). §E4 measured
+# both bundles' pose impacts as right in *both* views to within a frame, which is why the strikes
+# here are `[anchors.impact]`: that is exactly what P9's re-run will produce for them.
+
+
+def _bundle_2() -> tuple[SwingAnchors, SwingAnchors]:
+    """Face-on reads 0.217s of downswing where down-the-line reads 0.384s of the same swing."""
+    a = SwingAnchors(
+        motion_start=910, top=974, impact=987, frame_count=1100, fps=59.9747,
+        camera_id="face_on",
+    )
+    b = SwingAnchors(
+        motion_start=1273, top=1274, impact=1297, frame_count=1400, fps=59.9602,
+        camera_id="down_the_line",
+    )
+    return a, b
+
+
+def _bundle_4() -> tuple[SwingAnchors, SwingAnchors]:
+    """0.200s against 0.484s — the same defect, with a reference too long to be a downswing."""
+    a = SwingAnchors(
+        motion_start=672, top=745, impact=757, frame_count=900, fps=59.9739,
+        camera_id="face_on",
+    )
+    b = SwingAnchors(
+        motion_start=1225, top=1275, impact=1304, frame_count=1400, fps=59.9588,
+        camera_id="down_the_line",
+    )
+    return a, b
+
+
+def _heard(pair: tuple[SwingAnchors, SwingAnchors]) -> tuple[SwingAnchors, SwingAnchors]:
+    """Both views anchored on the strike each one heard — the shared clock P6 built."""
+    a, b = pair
+    return with_measured_impact(a, [a.impact]), with_measured_impact(b, [b.impact])
+
+
+def test_the_late_top_is_the_shorter_downswing_once_both_views_heard_the_strike() -> None:
+    """M10's handoff defect, decided rather than described.
+
+    Both tops used to be dragged onto the face-on duration, which on these bundles is the *wrong*
+    one — face-on is the view whose descent fragmented. With tau=2 pinned to one sound in both
+    clips the two downswings measure one interval in real time, so the shorter is the late top and
+    the reference flips to the other view.
+    """
+    a, b = _heard(_bundle_2())
+    alignment = align_swings(a, b)
+
+    assert alignment.a is not None and alignment.b is not None
+    # Face-on's top moves 10 frames earlier, onto down-the-line's 0.384s; down-the-line keeps the
+    # top it detected, because the reference is its own duration.
+    assert alignment.a.warp_top == 964
+    assert alignment.b.warp_top == b.top
+
+
+def test_the_arbitrated_note_names_the_late_view_and_what_it_does_to_tempo() -> None:
+    """Reported, never substituted — and the number the reader is looking at is the tempo.
+
+    `SwingResult` keeps the 4.92:1 the face-on phases produced; this note is what says the
+    denominator behind it is 10 frames short and what the ratio reads without that error.
+    """
+    alignment = align_swings(*_heard(_bundle_2()))
+
+    note = next(n for n in alignment.notes if "downswing durations disagree" in n)
+    assert "face_on's is 10 frames late" in note
+    assert "moves face_on's top to frame 964" in note
+    assert "reads 2.35:1 rather than 4.92:1" in note
+
+
+def test_without_a_shared_clock_the_reference_is_still_the_face_on_view() -> None:
+    """The pre-M11 behaviour, unchanged where the evidence to change it is absent.
+
+    Same two clips, neither anchored on sound. Two inferred impacts cannot settle which top is
+    wrong, so `_shared_tops` falls back to the view the detector was tuned on — and on this bundle
+    that is demonstrably the late one. Holding the pair to a duration that is probably wrong still
+    beats replaying one panel fast; it is the arbitration that is new, not the fallback.
+    """
+    a, b = _bundle_2()
+    alignment = align_swings(a, b)
+
+    assert alignment.a is not None and alignment.b is not None
+    assert alignment.a.warp_top == a.top  # face-on's own 0.217s, imposed on both
+    note = next(n for n in alignment.notes if "downswing durations disagree" in n)
+    assert "one view's top is wrong" in note
+    assert "frames late" not in note
+
+
+def test_an_arbitrated_reference_that_is_no_downswing_is_still_refused() -> None:
+    """Knowing which top is wrong is not the same as knowing where the right one is.
+
+    Bundle 4's down-the-line view reads 0.484s, past `phases._PLAUSIBLE_DOWNSWING_S` — and §E4 says
+    its impact anchor is the *early* kind on several of this family, so P6 pushing tau=2 later only
+    lengthens it further. A reference that is not a downswing means the sound view's top is suspect
+    too, so neither is imposed. The diagnosis still lands in the notes; the warp does not move.
+    """
+    alignment = align_swings(*_heard(_bundle_4()))
+
+    assert alignment.a is not None and alignment.b is not None
+    assert alignment.a.warp_top is None and alignment.b.warp_top is None
+    note = next(n for n in alignment.notes if "downswing durations disagree" in n)
+    assert "face_on's is 17 frames late" in note
+    assert "not a possible downswing" in note
+
+
+def test_one_strike_in_both_clips_rules_out_two_different_swings() -> None:
+    """The note P0 found to be false on every bundle that carries it.
+
+    Bundles 4, 7 and 9 all report *"Most likely the two clips are showing DIFFERENT swings"*, and
+    on all three §E4 cross-correlates the two views' audio to a single strike at r = 0.76-0.83.
+    They are one swing filmed twice with a bad boundary in one view — which is now sayable, because
+    a strike heard in both clips is the evidence that rules the alternative out.
+    """
+    a, b = _bundle_4()
+    assert "DIFFERENT swings" in next(
+        n for n in align_swings(a, b).notes if "tempo ratios disagree" in n
+    )
+
+    alignment = align_swings(*_heard((a, b)))
+
+    note = next(n for n in alignment.notes if "tempo ratios disagree" in n)
+    assert "DIFFERENT swings" not in note
+    assert "one swing filmed twice" in note
+    assert "face_on's top is the late one, by 17 frames" in note
+
+
+def test_half_a_pair_is_not_enough_to_arbitrate() -> None:
+    """One microphone is not a shared clock — the same rule the tier already applies.
+
+    Worth its own pin because the arbitration is the more tempting place to relax it: the late view
+    here *is* the one without a measurement, so "trust the view that heard something" would give
+    the right answer on this bundle and the wrong one the moment the deaf phone is the sound view.
+    """
+    a, b = _bundle_2()
+    alignment = align_swings(a, with_measured_impact(b, [b.impact]))
+
+    assert alignment.a is not None
+    assert alignment.a.warp_top == a.top
+    assert not any("frames late" in note for note in alignment.notes)
+
+
+
+# --- the late top as a finding a consumer can read ------------------------------------- [M11 P8]
+#
+# P7 put the arbitration in the notes, where only a human can read it. These pin the machine-
+# readable half: `ClipAlignment.top_late_by`, which is what `analysis.engine` withdraws a
+# checkpoint on. The distinction that matters throughout is diagnosis against correction —
+# `warp_top` is what the warp *did*, `top_late_by` is what the shared clock *knows*.
+
+
+def test_the_late_top_is_recorded_on_the_clip_that_carries_it() -> None:
+    """The finding lands on one clip, not on the pair — a pair has two tops and one is fine."""
+    alignment = align_swings(*_heard(_bundle_2()))
+
+    assert alignment.a is not None and alignment.b is not None
+    assert alignment.a.top_late_by == 10
+    assert alignment.a.top_is_late
+    # The sound view keeps the top it detected, so nothing about it was contradicted. Pinned
+    # because "the tops disagree" is a symmetric fact and this one deliberately is not.
+    assert alignment.b.top_late_by is None
+    assert not alignment.b.top_is_late
+
+
+def test_a_correction_the_warp_declined_is_still_a_contradicted_top() -> None:
+    """The case the whole field exists for, and the one `warp_top` cannot express.
+
+    Bundle 4's reference is 0.484s, which `phases._PLAUSIBLE_DOWNSWING_S` refuses, so the warp
+    leaves both tops where they were. Reading the correction as the finding would make this bundle
+    indistinguishable from one where the two views agreed — and bundle 4 is precisely the swing
+    shipping a `tempo` of 6.08:1 that M10 P10 called not coaching truth.
+    """
+    alignment = align_swings(*_heard(_bundle_4()))
+
+    assert alignment.a is not None and alignment.b is not None
+    assert alignment.a.warp_top is None and alignment.b.warp_top is None
+    assert alignment.a.top_late_by == 17
+    assert alignment.b.top_late_by is None
+
+
+def test_a_pair_with_no_shared_clock_claims_no_late_top() -> None:
+    """Same two clips, neither anchored on sound: the disagreement is real and undecidable.
+
+    The pre-M11 fallback still holds both panels to the face-on duration — but it does so on a tie
+    -break, not on evidence, so nothing may be recorded as *contradicted*. A `top_late_by` set here
+    would have `analysis.engine` withdraw a score on the strength of a guess (ADR-010 §2).
+    """
+    alignment = align_swings(*_bundle_2())
+
+    assert alignment.a is not None and alignment.b is not None
+    assert alignment.a.top_late_by is None and alignment.b.top_late_by is None
+
+
+def test_two_views_that_agree_record_no_late_top() -> None:
+    """The ordinary case: both heard the strike, both read one downswing, nothing to settle."""
+    a, b = _heard(_pair())
+    alignment = align_swings(a, b)
+
+    assert alignment.quality is AlignmentQuality.SYNCHRONIZED
+    assert alignment.a is not None and alignment.b is not None
+    assert alignment.a.top_late_by is None and alignment.b.top_late_by is None
+
+
+def test_a_clip_alignment_written_before_m11_reads_back_as_uncontradicted() -> None:
+    """Every stored bundle predates the field, and none of them was arbitrated.
+
+    The same back-compatibility shape as `SwingAnchors.impact_measured` and `warp_top`: the default
+    has to mean "nobody looked", and here that is indistinguishable from "nothing was wrong" only
+    because a top nobody checked is a top nothing contradicts.
+    """
+    stored = ClipAlignment.model_validate(
+        {
+            "anchors": {"motion_start": 10, "top": 40, "impact": 60},
+            "warp_motion_start": 10,
+            "tau_start": -0.33,
+            "tau_end": 2.5,
+        }
+    )
+
+    assert stored.top_late_by is None
+    assert not stored.top_is_late

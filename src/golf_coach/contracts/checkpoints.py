@@ -78,6 +78,25 @@ CHECKPOINT_REGISTRY: tuple[CheckpointSpec, ...] = (
 )
 
 
+#: The checkpoints a **late top** is known to invalidate, so a bundle whose two views were
+#: synchronized on the ball strike can retire them rather than ship a number measured off the wrong
+#: frame (`unscored.UnscoredReason.CROSS_VIEW_CONTRADICTED`, M11 P8).
+#:
+#: **This is a claim about evidence, not about which frames a checkpoint reads**, and the
+#: difference is why it is a hand-held set rather than a derivation. `hip_shift_at_top` reads the
+#: top too and is the obvious second member — it is deliberately not one, because nothing has yet
+#: measured what a ten-frame shift in the top does to a hip position sampled there, and adding it
+#: on the strength of the name would be the guess ADR-010 §2 exists to refuse. `tempo` is in
+#: because the arbitration restates its number outright: the top is both halves of
+#: `tempo_ratio`, and `analysis.alignment._tempo_restated` computes the before and after
+#: (2026-08-23 bundle 2 reads 4.92:1 against 2.35:1 on the corrected top).
+#:
+#: What would earn a second member is a measurement, not an argument. Until then a checkpoint left
+#: out of this set still ships its score beside a `SwingAlignment` that says the top was late, so
+#: the finding is disclosed either way — what this set decides is only which scores are *withdrawn*.
+CONTRADICTED_BY_A_LATE_TOP: frozenset[str] = frozenset({"tempo"})
+
+
 def checkpoint_names() -> tuple[str, ...]:
     """Registered checkpoint names, in evaluation order."""
     return tuple(spec.name for spec in CHECKPOINT_REGISTRY)

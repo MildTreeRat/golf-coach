@@ -19,6 +19,7 @@ from golf_coach.analysis.phases import (
     _MATCH_TOLERANCE_S,
     _MIN_ADDRESS_LEAD_S,
     _PLAUSIBLE_DOWNSWING_S,
+    _STRIKE_TOLERANCE_S,
     _WINDOW_LEAD,
     _WINDOW_TRAIL,
     TRAIL_WRIST,
@@ -434,3 +435,189 @@ def test_no_fps_and_no_reference_both_decline() -> None:
     assert select_matching_swing(clip, fps=None, reference_downswing_s=_REFERENCE) is None
     assert select_matching_swing(clip, fps=0.0, reference_downswing_s=_REFERENCE) is None
     assert select_matching_swing(clip, fps=_FPS, reference_downswing_s=0.0) is None
+
+
+# The acoustic rule (M11 P5). Every rule above reads the pose stream and asks whether a motion
+# *looks* like a swing; this one asks whether a ball was hit, which is a different kind of
+# evidence and is why it runs ahead of the band rather than alongside it.
+#
+# Strike frames are the clip's own frame numbering, so a fixture only has to say which descent the
+# crack landed on. At 100 fps `_STRIKE_TOLERANCE_S` is 20 frames.
+_SCREEN_GAP = 14  # 0.14 s — the ball-to-screen gap of M11 §E5, inside the tolerance
+_STRAY = 50  # 0.50 s — a noise belonging to no descent in these fixtures
+
+
+def _held_apart(first: int, second: int, gap: int = 60) -> list[FrameKeypoints]:
+    """Two swings with the golfer standing still between them.
+
+    `_two_swings` butts the clips together and the seam — the hands dropping from one finish to
+    the next address — is a short descent in its own right. Harmless to every rule above, which
+    rejects it on duration, and *not* harmless here: it lands 8 frames past the first swing's
+    impact, well inside `_STRIKE_TOLERANCE_S`, so one crack would vouch for two descents and the
+    fixture would be testing the join rather than the rule.
+
+    Real footage does not do that. A golfer lowers the club seconds after the finish, not a
+    twelfth of one. So the fixture holds the swings apart rather than the tolerance being cut to
+    tolerate an artifact of the builder — a tolerance sized on the corpus (M11 §E4-E5) must not be
+    re-sized by a synthetic clip.
+    """
+    before = make_swing(backswing_frames=70, downswing_frames=first)
+    after = make_swing(backswing_frames=70, downswing_frames=second)
+    return _smoothed(_concat(before, [before[-1]] * gap, after))
+
+
+def _impacts(clip: list[FrameKeypoints]) -> list[int]:
+    return [swing.impact for swing in candidate_downswings(clip, min_fraction=0.45)]
+
+
+def test_the_strike_fixtures_sit_where_the_acoustic_tests_claim() -> None:
+    """Guard the fixtures: the tolerance must bracket the two offsets, and the seam must be clear.
+
+    Three descents, in order: the swing, the long seam left by standing still, and the post-impact
+    decoy. Only the first may be inside a crack's reach of the strike these tests place on it.
+    """
+    tolerance = _STRIKE_TOLERANCE_S * _FPS
+    assert _SCREEN_GAP < tolerance < _STRAY
+
+    real, seam, decoy = _impacts(_held_apart(_PAST_BAND, _LATE))
+    assert seam - real > tolerance and decoy - real > tolerance
+    assert all(abs(real + _STRAY - impact) > tolerance for impact in (real, seam, decoy))
+
+
+def test_a_strike_beats_the_duration_band_it_disagrees_with() -> None:
+    """The ordering the phase turns on: rule 0 runs *before* rule 1, not after it.
+
+    This clip is the shape M10 left behind — a real swing measuring past the band (session 3 misses
+    it by 0.017 s) and a short post-impact descent sitting comfortably inside it. Judged on
+    duration the decoy wins and the swing is then scored on a move made after the ball was gone.
+    One crack, at the real swing's impact, settles it: the band never gets to look.
+    """
+    clip = _held_apart(_PAST_BAND, _LATE)
+    real, _seam, decoy = _impacts(clip)
+
+    band_only = select_swing(clip, fps=_FPS)
+    assert band_only is not None and band_only.downswing.impact == decoy, (
+        "without audio the band takes the decoy — that is the failure being fixed"
+    )
+
+    struck = select_swing(clip, fps=_FPS, strike_frames=[real])
+    assert struck is not None
+    assert struck.downswing.impact == real
+    # The descent it took is one the band rejects, so the reason has to say it was overruled and
+    # not merely chosen.
+    assert (struck.downswing.impact - struck.downswing.top) / _FPS > _HIGH
+    assert "ends at a ball strike" in struck.reason
+
+
+def test_the_listing_still_holds_every_descent_a_strike_filtered_out() -> None:
+    """`SwingChoice.candidates` is what a human checks the pick against, so it stays complete.
+
+    A filtered listing answers the wrong question: "which descents did the rule consider" is not
+    "which descents are in this clip", and only the second lets a reader see that a strike threw
+    away something it should have kept.
+    """
+    clip = _held_apart(_PAST_BAND, _LATE)
+    real, _seam, _decoy = _impacts(clip)
+
+    struck = select_swing(clip, fps=_FPS, strike_frames=[real])
+    assert struck is not None
+    assert struck.candidates == candidate_downswings(clip, min_fraction=0.45)
+    assert len(struck.candidates) == 3
+
+
+def test_no_strikes_and_no_audio_at_all_are_the_rules_exactly_as_they_were() -> None:
+    """The compatibility pin: `None` is "nobody listened", `[]` is "the detector heard nothing".
+
+    Neither is evidence against a descent, so both must leave the answer identical to the one this
+    rule gave before audio existed. A base install with no `audio` extra is the ordinary path here,
+    not a degraded one.
+    """
+    clip = _held_apart(_PAST_BAND, _LATE)
+    before = select_swing(clip, fps=_FPS)
+
+    assert select_swing(clip, fps=_FPS, strike_frames=None) == before
+    assert select_swing(clip, fps=_FPS, strike_frames=[]) == before
+
+    matched = select_matching_swing(clip, fps=_FPS, reference_downswing_s=_REFERENCE)
+    assert (
+        select_matching_swing(
+            clip, fps=_FPS, reference_downswing_s=_REFERENCE, strike_frames=[]
+        )
+        == matched
+    )
+
+
+def test_a_transient_belonging_to_no_descent_leaves_the_field_whole() -> None:
+    """A stray noise is evidence about the bay, not evidence against every candidate at once.
+
+    The bay is not quiet between swings — a club dropped in a rack, the simulator's own ball-flight
+    audio — and a rule that declined whenever a heard transient matched nothing would turn ambient
+    noise into a lost window. So an unmatched strike list falls through to the duration rules
+    untouched.
+    """
+    clip = _held_apart(_PAST_BAND, _LATE)
+    real, _seam, _decoy = _impacts(clip)
+
+    assert select_swing(clip, fps=_FPS, strike_frames=[real + _STRAY]) == select_swing(
+        clip, fps=_FPS
+    )
+
+
+def test_the_screen_strike_still_counts_as_a_ball_having_been_struck() -> None:
+    """§E5: the loudest of the bay's four transients is the ball hitting the screen, 85-145 ms late.
+
+    Identifying *which* transient was the ball is a much harder problem and it is P6's. Selection
+    does not need it — any of the four says a ball was struck here — so the tolerance is sized to
+    swallow that gap rather than to resolve it.
+    """
+    clip = _held_apart(_PAST_BAND, _LATE)
+    real, _seam, _decoy = _impacts(clip)
+
+    struck = select_swing(clip, fps=_FPS, strike_frames=[real + _SCREEN_GAP])
+    assert struck is not None
+    assert struck.downswing.impact == real
+
+
+def test_two_struck_descents_hand_the_choice_back_to_the_band() -> None:
+    """A clip holding two real shots is not something audio can settle, and it does not pretend to.
+
+    With both candidates vouched for, rule 0 has narrowed nothing and rules 1-3 decide exactly as
+    they would have. The reason still records that both were struck: a reader who sees "took the
+    last" on a two-swing clip should be able to tell that the ball was hit twice.
+    """
+    clip = _held_apart(_REAL, _LATE)
+    real, _seam, decoy = _impacts(clip)
+
+    struck = select_swing(clip, fps=_FPS, strike_frames=[real, decoy])
+    plain = select_swing(clip, fps=_FPS)
+    assert struck is not None and plain is not None
+
+    assert struck.downswing == plain.downswing
+    assert "2 ending at a ball strike" in struck.reason
+    assert "took the last" in struck.reason
+
+
+def test_a_strike_outranks_the_other_views_reference() -> None:
+    """The cross-view rule matches a *duration*; this one matches the event itself.
+
+    `select_matching_swing` is the rule a down-the-line clip is picked by, and the reference it
+    matches against can itself be wrong — M11 §E4 has four bundles where one view's impact is
+    5.7-7.5 frames out. Here the reference points squarely at the decoy and the crack points at
+    the swing, and the crack wins: a duration that resembles a swing is weaker evidence than a
+    ball having been hit.
+    """
+    clip = _held_apart(_PAST_BAND, _LATE)
+    real, _seam, decoy = _impacts(clip)
+    reference = _LATE / _FPS  # the other view measured the decoy, not the swing
+
+    misled = select_matching_swing(clip, fps=_FPS, reference_downswing_s=reference)
+    assert misled is not None and misled.downswing.impact == decoy
+
+    struck = select_matching_swing(
+        clip, fps=_FPS, reference_downswing_s=reference, strike_frames=[real]
+    )
+    assert struck is not None
+    assert struck.downswing.impact == real
+    assert "ends at a ball strike" in struck.reason
+
+

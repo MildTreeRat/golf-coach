@@ -5,6 +5,420 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-08-30 — M11's eye check: the video decode ignores an edit list the audio decode applies
+
+**Duration**: ~1 session. `src/golf_coach/audio/impact.py` (a docstring that says why the obvious
+fix is not there), `src/golf_coach/contracts/audio.py` (`AUDIO_DETECTOR_VERSION`,
+`AudioFile.detector_version`), `src/golf_coach/api/pipeline.py` (`audio_for` re-detects behind that
+version, and keeps the older list with a note on an install that cannot),
+`src/golf_coach/analysis/alignment.py` (one docstring). Tests: three new in
+`tests/api/test_pipeline_audio.py`, one in `tests/contracts/test_audio.py`, one fixture stamped in
+`tests/api/test_pipeline_auto_window.py`. Docs: `docs/M11_ACOUSTIC_SYNC.md` §Addendum, `ROADMAP.md`,
+`docs/ARCHITECTURE.md` §4. Corpus re-analysed twice and left exactly where it started; `pytest`
+1187 passed, `ruff` and `mypy` clean.
+
+**The two carried-forward items were supposed to be independent and they were not.** One was P9's
+precursor floor; the other was §Verification's "watch two renders by eye". Doing the second
+disproved the first, which is precisely why that line was in §Verification and not in a phase.
+
+**The floor was built exactly as P9 specified and it works.** A candidate must clear a fraction of
+its clip's loudest transient; measured over all 30 cached clips it wants 0.25 (precursors 0.02-0.10,
+the ball never under 0.61). Every clip went from 7-42 candidates to 2-4, eleven anchors on seven
+bundles moved onto the loud onset, `ANALYSIS_VERSION` went 12 -> 13. Then I watched the renders and
+`2026-08-23/9`'s panels were four output frames apart.
+
+**Contact, read off the video frame by frame, on six clips.** Face-on: `9` 550-551 against an audio
+ball at 550.3, `10` 773-774 against 773.4, `7` 1107-1108 against 1106.5 — in sync. Down-the-line:
+`10` 1242-1243 against 1242.9 — in sync; but `9` **321-322 against 327.7** and `7` **669-670 against
+676.3**. Two clips out by ~110 ms, same direction.
+
+**`offset_between` said which half was lying, without naming a transient.** On `10` the audio offset
+between the two clips (-7.8350 s) matches the offset implied by the two verified contacts
+(-7.8257 s) to 0.6 frames. On `9` the audio says +3.7100 s and the video says +3.8169 s — 107 ms of
+disagreement inside one bundle.
+
+**§E2 had already written down the cause, a milestone before anyone needed it.** Bundles 1, 7, 9 and
+11's down-the-line clips carry a video edit list at timescale 19200: an empty edit of 5.5 ms, then a
+start 1632 ticks (85 ms) into the media. ffmpeg applies it to the audio. The video path reads frames
+from media time zero and ignores it. 90.5 ms of register error, plus `detect_strikes`'s +18 ms
+window convention, predicts 108.5 ms against the 103 and 113 measured. §E2's own conclusion — "the
+decode path must let a real demuxer apply the edit list rather than reading samples from zero" — was
+applied to audio and never to video.
+
+**So P9 was right about which peak, and the floor still cannot ship yet.** On those four clips the
+precursor sat ~3 frames early against a container offset ~6 frames late, and the two partly
+cancelled. Remove the precursor and the anchor becomes correct in audio time and 6 frames late in
+video time, which is the time tau=2 is measured in: `7` 672 -> 676 against contact at 669-670, `9`
+324 -> 327 against 321-322. The panels get further apart, so it is reverted with the measurement
+written into `detect_strikes` so nobody rebuilds it blind.
+
+**§E4's headline is downgraded.** "The down-the-line pose impact is 5.7-7.5 frames early" was the
+gap between a pose estimate and an anchor whose clip was 90 ms out of register. Against the video
+the pose estimate is right to within a frame on both edit-list clips checked.
+
+**`2026-08-23/11` is the sensitivity warning.** Under the floor its two anchors each moved 3 frames,
+lengthening both downswings equally — and a *relative* gap shrinks when a constant is added to both
+sides, so it crossed `_DOWNSWING_AGREEMENT` (0.320 -> 0.286 against 0.30) and its `tempo` came back
+from withdrawn to scored-and-failing at 2.50:1. Three frames decides whether that swing is judged on
+five fundamentals or six.
+
+**One thing kept from the reverted work**: `AUDIO_DETECTOR_VERSION`. `{role}.audio.json` is keyed on
+the *clip's* sha256, which cannot see a changed detector, so the floor would have shipped invisibly
+onto every stored bundle. It is at 1, detection is unchanged by it, and the next real fix moves it.
+
+**Left at**: M11 committed in one commit, corpus untouched by the session. The next change is the
+edit list, not the detector: make the video decode honour it (or measure the offset once and carry
+it on `ClipMetadata`), which moves frame indices on four clips and so is an `ANALYSIS_VERSION` bump
+plus a pose-cache invalidation. *Then* land P9's floor, which is already measured. Before either,
+read `2026-08-23/1` and `/11` against the video — they are the two edit-list clips nobody has
+checked, and three bundles of ground truth is thin.
+
+
+## 2026-08-29 — M11 P9: the corpus re-run, and the milestone closes
+
+**Duration**: ~1 session, no source files touched. `reanalyze.py --all --video` over 15 bundles,
+then `2026-08-23/1` again with `--coaching`. Docs only: `docs/M11_ACOUSTIC_SYNC.md` (P9 ticked, its
+*As built*, header to tier REFERENCE and 10/10), `ROADMAP.md` (status row, §M11, §M10's handoff
+paragraph, the NEXT ACTION), `docs/README.md`'s map row. `pytest` 1183 passed, `ruff` and `mypy`
+clean over 101 files, before the run and after the doc edits.
+
+**Every bundle on disk reads `synchronized`, 30/30 clips pinned to a strike they heard.** No
+bundle sits at any other tier, which makes §Design's tier inversion the ordinary case rather than a
+corner: the ladder that ranks inferred anchors is now the fallback, not the normal report. Four of
+the fifteen were shot weeks before any of this was designed and synchronize anyway — the audio was
+always there, which was ADR-025's whole claim.
+
+**The late top is on seven bundles, not three, and that is the milestone working.** M10 handed over
+2, 4 and 5; 1, 7, 9 and 11 joined the moment a measured impact was underneath, exactly as P6's
+*As built* predicted — pinning the down-the-line impact later *widens* the downswing gap rather
+than closing it. So seven `tempo` scores are withdrawn, and the two that matter most are 7 and 9,
+which were **passes** at 4.27 and 4.06:1. §E3 wrote down in advance that a pass here was not a
+result to preserve; they were passing on the same short face-on downswing that made the others
+fail, and they are now withdrawn on a clock instead of surviving on a suspicion.
+
+**Five scores moved and every one of them went up, and none of it is a swing improving.**
+`2026-08-23/4` reads 100.00 where it read 88.50 because a wrong score left — ADR-010 §2, judged on
+five fundamentals rather than six, with `unscored` saying so. If that column is ever read as
+progress the milestone will have made things worse rather than better; the artifact says which it
+is and the coaching prose repeats it.
+
+**The clearest evidence that P8's derivation works is a sentence nobody wrote.** The regenerated
+paragraph on `2026-08-23/1` ends: *"tempo couldn't be scored here because the two cameras disagree
+about when your backswing ended … so this score comes off five fundamentals, not six, and there's
+nothing to re-film."* `CROSS_VIEW_CONTRADICTED` carries `refilming_helps=False` and
+`contracts/caveats.py` builds the rest. The same holds through MCP: `get_swing("2026-08-23", "4")`
+reports `synchronized`, five checkpoints and `tempo` unscored — §Verification's line, satisfied.
+
+**One residual, and it is not the one P6 deferred.** `with_measured_impact` takes the earliest
+transient in its window; on four bundles a **low-confidence precursor sits 2–3 frames ahead of the
+ball** and wins. Bundle 7 chose an onset at confidence 0.34 over the ball at 0.90 three frames
+later. Cross-view error is ≈1.5 frames on three of the four (the same rule fires in both views and
+mostly cancels) and 3.9 on `2026-08-23/7`. The strong onsets are the ball on independent evidence —
+each pairs with a second loud transient at §E5's measured ball→screen gap. Do **not** "fix" this by
+taking the most confident candidate: §E5 measured the screen strike louder than the ball on every
+clip, so that rule is worse. Prominence separates the precursor by an order of magnitude
+(19.2M against 2.5M on `2026-08-23/9`), so the fix is a candidate floor in `audio/impact.py` where
+prominence already lives — not in `analysis/`, and not the ≈22 ms container bias, which is still
+deferred and is worth 1.3 frames against this.
+
+**Two things that did not move, and both are load-bearing.** `career_corpus.py` still reports
+`tempo_ratio` at `n = 13`: seven withdrawn **scores** cost zero **measurements**, which is
+`measure.py` and `mechanics.py` being separate subsystems rather than a lucky accident.
+And `2026-08-23/2`'s down-the-line backswing is still 1 frame — session 5's was repaired by the
+corrected impact but 2's has its *motion start* wrong, not its top, so nothing here reaches it.
+
+**Left at**: M11 is closed, 10/10. Two things carried forward, neither blocking. The residual
+precursor above is the next piece of desk work and wants a candidate floor plus a test built from
+`2026-08-23/7`. And §Verification's *"watch two renders by eye"* (`2026-08-23/9` and `/10`) has not
+been done — both were re-rendered on 2026-08-29 and what wants confirming is the new half of the
+claim: that the two panels strike the ball on the same output frame. `scripts/align_swings.py`
+still builds its own anchors and so can report neither `synchronized` nor an arbitration; the
+pipeline path does both, and P9 went through `analyze_swing_dir`.
+
+
+## 2026-08-29 — M11 P8: ADR-025, and the tempo that was never coaching truth
+
+**Duration**: ~1 session, desk work. New `docs/decisions/025-acoustic-synchronization.md`; addendum
+#2 on ADR-015. `src/golf_coach/contracts/unscored.py` gains `CROSS_VIEW_CONTRADICTED`,
+`contracts/alignment.py` gains `ClipAlignment.top_late_by` and a `top_is_late` property,
+`contracts/checkpoints.py` gains `CONTRADICTED_BY_A_LATE_TOP`, `contracts/swing.py` goes
+`ANALYSIS_VERSION` 11 -> 12, `contracts/caveats.py` widens one derived clause;
+`analysis/alignment.py` decides the arbitration once and threads it; `analysis/engine.py` gains
+`_without_contradicted_scores`. Docs: `ARCHITECTURE.md` §1-§3, `README.md`, `ROADMAP.md`,
+`M11_ACOUSTIC_SYNC.md`. New sections in `tests/analysis/test_alignment.py` and
+`tests/analysis/test_engine_bundle.py`, two pinned sets updated in `tests/contracts/test_unscored.py`.
+`pytest` 1183 passed, `ruff` and `mypy` clean over 101 files.
+
+**The phase list called P8 "the paperwork" and P7's handoff attached a code decision to it.** The
+paperwork was real — ADR-025 taking ADR-015's parked Option C, the addendum recording that "there
+is no shared clock" is true of *timestamps* and false of *events*, the version bump, the doc map.
+But the thing worth a session was the question P7 left open: three stored `tempo` readings score
+and **fail** at 4.92, 6.08 and 6.09:1 on a denominator the other view contradicts, and M10 P10's
+*As built* already says in as many words that they are not coaching truth. They are now withdrawn.
+
+**The field is `top_late_by`, and the reason it is not `warp_top` is the whole of why this took
+code rather than prose.** P7 corrected one bundle and diagnosed seven, because
+`_PLAUSIBLE_DOWNSWING_S` refuses to impose a reference past 0.45 s and four of the seven run to
+0.48-0.58 s. Keying the withdrawal off the *correction* would therefore have left exactly the
+bundles this milestone exists for looking sound — `2026-08-23/4`, the swing §Verification names, is
+one of them. So the contract carries the **diagnosis** (how many frames late, on the clip that
+carries it) and the warp keeps carrying the correction, and `align_swings` computes the arbitration
+once and threads it into `_shared_tops` so the two cannot disagree about one pair.
+
+**Withdrawn, not restated — and `_tempo_restated` already knows the answer, which is what makes it a
+decision.** On bundle 2 the corrected top reads 2.35:1, a pass. Writing that into a
+`CheckpointScore` would ship a number whose value came from the alignment and whose band came from
+the engine, measured over frames `segment_phases` never agreed to; and on four bundles there is no
+restatement to write at all. ADR-010 §2. The repair belongs in `phases.py` where the boundary is
+found, and what P8 hands that eventual fix is the thing tuning a detector against its own symptom
+could never supply: a per-bundle label saying which view was wrong and by how many frames.
+
+**`CONTRADICTED_BY_A_LATE_TOP` holds `tempo` alone, and `hip_shift_at_top` is deliberately out.**
+It reads the top too, so the name argues for it. Nothing has measured what a ten-frame shift does
+to a hip position sampled there, and the name is not evidence — a second member has to be earned
+the way the first was. A checkpoint left out still ships beside an alignment that says the top was
+late, so the finding is disclosed either way; the set decides only which scores are *withdrawn*.
+
+**Two things the derivation did for free, and one it did not.** Adding the reason with
+`refilming_helps=False` updated the coaching prose and the MCP guidance without either being
+edited — `contracts/caveats.py` builds that bullet from `UNSCORED_REASONS`. The three
+`test_docs_truth.py` failures P8 predicted are exactly the three that fired. What was *not* free is
+the two hand-listed sets in `tests/contracts/test_unscored.py`, which is correct: those pin the
+`refilming_helps` split by name precisely so a new member cannot join it silently.
+
+**Left at**: P9, the corpus re-run, which is now the only thing between this milestone and its
+*after* column. `scripts/reanalyze.py --all --dry-run` then `--video`, then `2026-08-23/1` again
+with `--coaching` (M10 P10's trap: `build_feedback` rebuilds the rules half every run and leaves
+`coaching_text` to the flag). Expect scores to move on more bundles than the tempo ones — better
+windows and a corrected impact re-cut what gets scored. Two carry-forwards:
+`scripts/align_swings.py` still builds its own anchors and can report neither `synchronized` nor an
+arbitration, which is now the only route into the alignment that cannot see the clock; and
+§Verification's `get_swing("2026-08-23", "4")` line is satisfiable but not satisfied — the stored
+artifact says 6.08:1 until `reanalyze.py` runs.
+
+
+## 2026-08-29 — M11 P7: which top is the late one
+
+**Duration**: ~1 session, desk work. One source file: `src/golf_coach/analysis/alignment.py` gains
+`_Arbitration`, `_arbitrate_tops`, `_top_at` and `_tempo_restated`; `_shared_tops` picks its
+reference through the arbitration; `_which_half_is_wrong` gains a branch above the "different
+swings" fallback. New section in `tests/analysis/test_alignment.py`. `pytest` 1172 passed, `ruff`
+and `mypy` clean over 101 files.
+
+**The shorter downswing is the late top, and the asymmetry is mechanical.** `_top_and_impact` puts
+the top at the start of the major rising run and the failure `_DRAWDOWN_FLOOR` documents is that
+run fragmenting — a hover at the top splits the descent and the later half is taken, which
+*shortens* the downswing. Nothing in the rule can move a top earlier: `_MAJOR_RISE_FRACTION` needs
+80% of the largest rise in the clip before a run is a candidate. Replayed over all eleven
+2026-08-23 bundles with tau=2 measured in both views, **face-on is the late view on every one of
+the seven that disagree**, by 10–17 frames. Not one exception.
+
+**What changed is which view the reference comes from, and the old one was the broken half.**
+`_shared_tops` held both panels to the *face-on* duration on ADR-015's grounds — the tuned and
+scored view. Face-on is also the late view on all seven, so the pre-P7 rule was taking the wrong
+duration and imposing it on the good panel. With both impacts pinned to a heard strike the two
+downswings measure one interval in real time, so the reference becomes the *sound* view's: the
+wrong top moves, the sound top stays where it was detected. Without a shared clock nothing changed.
+
+**`_PLAUSIBLE_DOWNSWING_S` now decides how much of this actually lands, and it is a face-on band.**
+On the arbitrated route the reference is a *down-the-line* duration read off the trail wrist, and
+down-the-line reads systematically longer — 0.367–0.484 s across the corpus, with 0.484 s occurring
+on bundle 6, where the two views agree. So P7 **diagnoses seven bundles and corrects one**: bundle 2
+(reference 0.384 s, top 10 frames earlier, tempo restated 4.92 → 2.35:1), while 5 misses by 0.0003 s,
+4 sits at 0.484 s, and §E4's 1/7/9/11 run to 0.48–0.58 s once P6 pins their down-the-line impact
+later. The guard is kept: it is `phases`' constant, shared with `select_swing`, and on §E4's four
+the refusal is *correct* — 0.5 s is no downswing, which is a residual for P9 to read. **Open
+question for P8: whether the arbitrated route needs its own ceiling sized on down-the-line
+durations.** Bundles 4 and 5 are what it would buy.
+
+**The three failing tempo readings are named, not retired.** `analyze_swing` scores tempo off the
+face-on phases long before `align_swings` runs, so `2026-08-23/4` still ships 6.08:1 as a fail with
+a note saying its denominator is 17 frames short. Retiring the score needs a new `UnscoredReason`
+and an engine that re-opens a scored result on a cross-view finding — a `contracts/` change, so it
+belongs with P8's `ANALYSIS_VERSION` bump. **§Verification's `get_swing("2026-08-23", "4")` line is
+not yet satisfied**, and that is the decision it waits on.
+
+**Two things checked and deliberately left.** `analysis/phases.py` was in the phase's file list and
+needed nothing — the evidence to decide lives at the cross-view seam, not inside one clip's
+segmentation. And `_shared_motion_starts` derives from the same face-on duration and looks like it
+wants the same flip, but the `IMPACT_ONLY` branch overwrites it whenever `_shared_tops` returns
+tops; the only time its reference matters is when `_shared_tops` refused, which on the arbitrated
+route is exactly when that duration was just judged implausible.
+
+**Left at**: P8 — ADR-025, `ANALYSIS_VERSION` 11 → 12, and the doc map. Take the tempo decision
+above with it. `scripts/align_swings.py` still builds its own anchors and passes them straight to
+`align_swings`, so it can report neither `synchronized` nor an arbitration — the audio-free gap P5
+recorded at `align_swings.py:300`, now widened a second time.
+
+
+## 2026-08-29 — M11 P6: the ball strike is the clock
+
+**Duration**: ~1 session, desk work. `src/golf_coach/contracts/alignment.py` gains
+`AlignmentQuality.SYNCHRONIZED`, an `is_degraded` property and `SwingAnchors.impact_measured`;
+`src/golf_coach/analysis/alignment.py` gains `with_measured_impact` and `_synchronized`;
+`src/golf_coach/analysis/engine.py` gains `_anchored_on_strike` and two `*_strikes` arguments on
+`analyze_swing_bundle`; `src/golf_coach/api/pipeline.py` hoists the `Audio:` stage out of
+`auto_window`. New sections in `tests/analysis/test_alignment.py`,
+`tests/analysis/test_engine_bundle.py` and `tests/api/test_pipeline_auto_window.py`. `pytest`
+1166 passed, `ruff` and `mypy` clean over 101 files.
+
+**The earliest transient wins, and every other rule fails on this corpus.** "Take the loudest" takes
+the impact screen on *every* clip §E5 measured; "take the nearest" takes it on any clip whose pose
+impact was already right, which is seven of eleven. And no window separates them — the correction
+being made runs to 7.5 frames while the gap to reject starts at 5, so the admitting band is wider
+than the rejecting one. Ordering is what is left, and it is physics rather than statistics: the ball
+is the first sound a shot makes. The club-and-mat pair 15–20 ms ahead of it is under
+`audio/impact.py`'s 50 ms separation floor and arrives already merged into one onset.
+
+**The window is P5's `_STRIKE_TOLERANCE_S`, imported rather than re-derived.** It was sized on
+exactly the three measurements this needed, and it is the same quantity read for a second purpose:
+how far a pose impact may sit from the transient that made it. Two guards ride alongside it — a
+candidate must land after the top and inside the clip — and the first is live, not defensive: M10's
+offenders measure 0.183 s of face-on downswing against a 0.20 s window, so the window opens before
+the top on its own.
+
+**`SYNCHRONIZED` overwrites the anchor count; the notes are what make that safe.** `_synchronized`
+runs last and replaces whatever the ladder came to, which is the inversion §Design named — a bundle
+whose tops were refused now reads `synchronized` where it read `impact_only`, and the tier that
+means "one anchor, and it was a guess" no longer sits on the best number in the system. Nothing is
+lost, because every anchor `align_swings` refuses already appends its own note. Half a pair earns a
+note and no tier.
+
+**The warp underneath is untouched, `_shared_tops` included.** Only the label moved. Measuring
+impact does not say which view's *top* is wrong — it makes the question answerable, which is P7 —
+and pinning the down-the-line impact 5–7 frames later actually *widens* the downswing disagreement
+on §E4's four bundles. That is the point: the gap was always there, split between two wrong anchors.
+
+**One consumer change, and the phase guessed the wrong one.** The results page and
+`pose/side_by_side.py` read through `quality_summary` and needed nothing, as predicted. But three
+call sites gate a caveat on `is not FULL` and they do not want the same answer: `engine.py:448` was
+calling the new tier *"alignment degraded"*, so it now reads `quality.is_degraded`, while
+`feedback/coach.py` and `mcp/query.py` keep `is not FULL` **deliberately** — `ALIGNMENT_CAVEAT`
+warns that correspondence is interpolated between anchors, which is still true of a synchronized
+pair and produces the right sentence verbatim.
+
+**§E4's ≈22 ms container bias is not applied, and that is deferred rather than dropped.** It needs
+the *video* track's edit-list offset, and nothing in the package can see a container's edit list
+today — `audio/ffmpeg.py` lets ffmpeg apply the audio one and never reports it, and P0 read the
+video one with a throwaway MOV atom parser. Exposing it is a change to the decode port, not to three
+`analysis/` modules. It is worth 1.3 frames against the 5.7–7.5 this phase corrects. **P9's corpus
+re-run is where a residual that size shows up**; if it does, the fix belongs in `FfmpegAudioSource`
+beside the stream index it already records.
+
+**Left at**: P7, arbitrating the late top. `_backswing_disagreement_note` and `_which_half_is_wrong`
+are untouched and still only *name* the suspect boundary; `_DRAWDOWN_FLOOR`'s comment
+(`phases.py:103-132`) already holds the ground truth for which way to decide. One thing P6 leaves
+by name: `scripts/align_swings.py` builds its own anchors and passes them straight to
+`align_swings`, so it can never report `synchronized` — the same audio-free gap P5 recorded at
+`align_swings.py:300`, now widened from selection to the tier.
+
+
+## 2026-08-29 — M11 P5: a rehearsal makes no crack
+
+**Duration**: ~1 session, desk work. `src/golf_coach/analysis/phases.py` gains `_struck`,
+`_STRIKE_TOLERANCE_S` and a `strike_frames` argument on both selection rules;
+`src/golf_coach/api/pipeline.py` gains an `Audio:` stage, `PipelineOptions.force_audio` and a
+`strikes` argument threaded to `_pick_swing`. New sections in `tests/analysis/test_select_swing.py`
+and `tests/api/test_pipeline_auto_window.py`. `pytest` 1147 passed, `ruff` and `mypy` clean over
+101 files.
+
+**Rule 0 filters the field; it never decides alone.** Candidates whose `impact` lands within
+`_STRIKE_TOLERANCE_S` of a heard transient become the pool, and the duration band and "take the
+last" then run *on that pool*. One struck descent reaches the existing `_lone_candidate_choice` and
+the band is overruled; several, and the band chooses among them as before; none, and the whole
+field goes through untouched. No fourth escape, which is what the phase asked for.
+
+**`pool = struck or candidates`, and that `or` is the design.** A transient near no descent is
+evidence about the bay, not evidence against every candidate at once — a dropped club must not cost
+a window.
+
+**0.20 s of tolerance, and it is loose on purpose.** §E4's worst pose-impact error is 0.125 s,
+§E5's ball-to-screen gap is 0.145 s, and the detector's own onset convention is 18 ms late.
+Selection never has to know *which* of the bay's four transients was the ball — any of them says a
+ball was hit here — so the tolerance swallows that rather than resolving it. The decoys it must
+reject sit 15-24 s away, so nothing sits in between.
+
+**Silence is a note and never a decline.** An empty strike list is the rehearsal signal, and it is
+also what a phone across the bay records; declining would score every motion in the clip as one
+swing, which is worse than scoring the right descent with a caveat. The cross-modal check went in
+one-directional: a shot attached with no crack in *either* view says the footage and the shot may
+not be the same swing; strikes with no shot says nothing, because an unimported screen photo is the
+ordinary state of most bundles.
+
+**Left at**: P6, sync — `AlignmentQuality.SYNCHRONIZED`, `SwingAnchors.impact_measured`, and
+`align_swings` pinning `tau = 2` to the measured impact in both views. Two things P5 left for it by
+name: the audio stage runs only under `options.auto_window` and needs hoisting, since the alignment
+wants strikes even when the windows were given by hand; and `scripts/align_swings.py` still carries
+its own audio-free copy of the selection ordering (`align_swings.py:300`), so its windows can now
+differ from the pipeline's on a clip a strike decides.
+
+## 2026-08-29 — M11 P4: the audio artifact, cached the way pose is
+
+**Duration**: ~1 session, desk work. `src/golf_coach/api/pipeline.py` gains `audio_for` and
+`_frames_derived`; new `tests/api/test_pipeline_audio.py`; one more pin in
+`tests/api/test_pipeline_imports.py`. `pytest` 1132 passed, `ruff` and `mypy` clean over 101 files.
+
+**A direct sibling of `keypoints_for`**, and deliberately boring: same cache key (the clip's own
+sha256, compared against the manifest's), same lazy import that degrades with a note instead of
+raising, same `_note` rule that anything a reader of the *result* would need lands in
+`analysis.json`. Writes `{role}.audio.json`.
+
+**The one deviation from the phase's file list is `fps`, and it is a parameter.** The detector has
+never seen the video, so a frame index is derived and not measured — and the caller doing the
+deriving has to be the one already holding the frame rate, which is `_auto_windows` with
+`KeypointsFile.clip.fps` in hand. Reading the fps off the clip a second time inside `audio_for`
+would be a second answer to a question the pipeline has already answered. With `fps=None` every
+strike keeps `frame=None`, which is exactly what P6 wants: cross-correlation works in samples.
+
+**Frames are re-derived from the cache, never re-heard.** A call with no fps followed by one with an
+fps costs a single decode — the sample index is the measurement and it has not moved, so the frames
+are filled in from the stored artifact and written back with the fps they were derived under beside
+them. It does not run in reverse: a caller without an fps does not strip frames a caller that had
+one already wrote.
+
+**Five ways it comes back with nothing, four of them notes.** Role never arrived (silent — no clip
+is not an audio fault), clip missing from disk, `audio` extra absent, no audio stream in the
+container, decode failed. `NoAudioTrackError` is caught apart from `OSError` because the two mean
+different things to a golfer: one says this bundle cannot be anchored on the ball strike at all.
+An empty `strikes` list is **not** one of the five — it is the result P5 reads.
+
+**The import pin now names numpy as well as `imageio_ffmpeg`.** That half is the one that would
+have slipped: ADR-008's stdlib-only rule is about `analysis/`, so numpy arriving in `api/pipeline`
+at module scope would have broken a base install with nothing else complaining.
+
+**Left at**: P5, selection — thread `strike_frames` through `select_swing` /
+`select_matching_swing` and `_pick_swing`, and have `_narrate_choice` say when a strike decided it.
+`audio_for` has no caller until then; `PipelineOptions` grows `force_audio` in that phase, where it
+is a switch on a path something actually takes.
+
+## 2026-08-29 — M11 P3: the bay's audio, asked two different questions
+
+**Duration**: ~1 session, desk work. New `src/golf_coach/audio/impact.py` and
+`tests/audio/test_impact.py`; `numpy` added to the `audio` extra. `pytest` 1116 passed, `ruff` and
+`mypy` clean over 101 files.
+
+**Two functions, and the split is the point.** `detect_strikes` finds the transients in one clip
+and is the hard half; `offset_between` cross-correlates two clips' flux envelopes and identifies
+no transient at all, which is why P6 can be built before P5 exists. Both were calibrated against
+the 22 real clips of 2026-08-23 rather than against intuition, and the numbers are in the phase's
+*As built* note.
+
+**What the corpus says.** The ball and screen strikes stand at z = 113-599 above a clip's own flux
+floor where 20 s of room tone never exceeds 4.4 — so a rehearsal returns an empty list, which is
+the discriminator P5 wants. §E5's warning survived contact: the screen strike outranks the ball on
+about half the clips, so `strikes[0]` is not impact, and a test now pins that.
+
+**The finding P6 has to act on.** Whole-clip, the offset agrees with the detected strikes to
+0-20 ms on ten of eleven bundles at r = 0.838-0.923. On bundle 8 it is confidently wrong: that
+80-second down-the-line clip holds *two* shots, and the face-on clip matches the second at
+r = 0.923 where the right answer scores 0.672. No margin rule catches that — both matches are
+real — so `offset_between` takes a `max_lag_s` and **P6 must pass one** from the pose anchors it
+already holds.
+
+**Left at**: P4, `audio_for` in `api/pipeline.py` — the cached per-view read that turns a decode
+plus a detection into `{role}.audio.json`, and the import pin that keeps `imageio_ffmpeg` and
+numpy out of a bare `api.pipeline` import.
+
 ## 2026-08-26 — M10 closes: the corpus is on the fix, and the face-on top is what is left
 
 **Duration**: ~1 session, desk work only. **No source changes** — P10 is a data run plus its

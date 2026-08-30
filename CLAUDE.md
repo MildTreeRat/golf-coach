@@ -24,7 +24,7 @@ every coaching call a false fact for a milestone.
 
 `.venv/` is the real environment. A `venv/` directory also exists and is an empty stub — ignore
 it. Entry points are the thin CLIs in `scripts/`; `docs/ARCHITECTURE.md` §1 "The commands,
-precisely" lists them with their flags. Extras (`vision`, `api`, `llm`, `ocr`, `research`) are
+precisely" lists them with their flags. Extras (`vision`, `api`, `llm`, `ocr`, `audio`, `research`) are
 declared in `pyproject.toml`; the analysis core runs on a base install and that is load-bearing.
 
 ## Invariants

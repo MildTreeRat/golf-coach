@@ -5,14 +5,15 @@ one place allowed to do I/O around the pure analysis core. It ran inside
 `scripts/analyze_bundle.py` until the background worker needed it too, and two copies of a
 pipeline is how they drift.
 
-Pose per view, OCR the shot screen, score, rank tips, align the two views; four artifacts land
-in the swing directory:
+Pose per view, listen for the ball strike, OCR the shot screen, score, rank tips, align the two
+views; four artifacts land in the swing directory:
 
     analysis.json           the complete result, for a results page to render
     analysis.state.json     the sidecar summary of this run — written *here* so it can never
                             quote a score the analysis beside it has stopped agreeing with
     aligned.mp4             the two views side by side, banners landing together
     <role>.keypoints.json   pose output per view, cached so a re-run is free
+    <role>.audio.json       the transients heard in that view's clip, cached the same way (M11)
 
 **Everything expensive is cached and content-addressed.** Pose on a 4K60 clip is minutes, so
 keypoints are reused whenever their recorded `source_sha256` still matches the manifest's, and
@@ -25,9 +26,11 @@ that is the view every checkpoint is measured from.
 
 Two rules this module exists to keep:
 
-**It must not import fastapi.** `scripts/analyze_bundle.py` imports it and runs on a `vision`-only
-install; dragging the web framework in here would break the extras boundary ADR-008 draws.
-`tests/api/test_pipeline_imports.py` pins that.
+**It must not import fastapi — nor the decoders behind the other extras.**
+`scripts/analyze_bundle.py` imports it and runs on a `vision`-only install; dragging the web
+framework in here would break the extras boundary ADR-008 draws, and so would a module-scope
+reach for `imageio_ffmpeg` on `audio_for`'s behalf. `tests/api/test_pipeline_imports.py` pins
+both.
 
 **Nothing is narrated only to a terminal.** The CLI passes `log=print`; the worker passes a
 logger, and nobody is watching. So anything a reader of the *result* would need to know — a clip
@@ -35,8 +38,8 @@ that decoded short, a shot that could not be read, a swing the selector declined
 appended to `result.notes`, which is part of `analysis.json`. `log` is for progress; `notes` are
 for truth.
 
-Needs the `vision` extra to run pose or render, and `ocr` only to read a shot photo that is not
-already in the store.
+Needs the `vision` extra to run pose or render, `ocr` only to read a shot photo that is not
+already in the store, and `audio` only to hear a clip that has not been listened to yet.
 """
 
 from __future__ import annotations
@@ -58,6 +61,12 @@ from golf_coach.analysis.phases import (
 from golf_coach.analysis.smoothing import smooth_keypoints
 from golf_coach.api.state import AnalysisState, input_hashes, load_state, now, save_state
 from golf_coach.config import settings
+from golf_coach.contracts.audio import (
+    AUDIO_DETECTOR_VERSION,
+    AudioClipMetadata,
+    AudioFile,
+    AudioStrike,
+)
 from golf_coach.contracts.golfer import Handedness
 from golf_coach.contracts.intent import ClubCategory, PracticeGoal
 from golf_coach.contracts.keypoints import ClipMetadata, KeypointsFile, PoseLandmark
@@ -66,6 +75,7 @@ from golf_coach.contracts.swing import SwingBundleResult
 from golf_coach.feedback.coach import generate_coaching
 from golf_coach.feedback.rules import build_feedback
 from golf_coach.launch_monitor.screen.store import ShotStore
+from golf_coach.storage.audio_io import load_audio, save_audio
 from golf_coach.storage.golfer_store import GolferStore
 from golf_coach.storage.keypoints_io import load_keypoints, save_keypoints
 from golf_coach.storage.manifest import Role, SwingManifest, load_manifest, manifest_path
@@ -97,6 +107,10 @@ class PipelineOptions:
     auto_window: bool = True
     render_video: bool = True
     force_pose: bool = False
+    #: Re-detect the ball strikes even when `{role}.audio.json` matches the clip on disk. There is
+    #: no `skip_audio` beside it: audio is only ever *evidence* for a rule that already worked
+    #: without it, so a run with no audio available is the ordinary path and not a degraded one.
+    force_audio: bool = False
     force_ocr: bool = False
     skip_ocr: bool = False
     tau_range: tuple[float, float] = DEFAULT_TAU_RANGE
@@ -214,6 +228,182 @@ def keypoints_for(
     return keypoints
 
 
+def audio_for(
+    swing_dir: Path,
+    manifest: SwingManifest,
+    role: Role,
+    *,
+    fps: float | None = None,
+    force: bool = False,
+    log: Log = _noop,
+    notes: list[str] | None = None,
+) -> AudioFile | None:
+    """The transients in one view's clip, from cache when the clip behind it has not changed.
+
+    A direct sibling of `keypoints_for`: same cache key (the clip's own sha256, recorded in the
+    envelope and in the manifest), same lazy import of the extra it needs, same rule that a
+    missing dependency is a note and not an exception. Writes `{role}.audio.json`.
+
+    **The cache is keyed on the detector as well as on the clip.** `AUDIO_DETECTOR_VERSION` moves
+    when detection would return a different list for the same waveform, and an artifact behind it
+    is re-detected rather than read — otherwise a fix to `audio/impact.py` would be invisible on
+    every bundle already on disk, which is the failure `analysis_version` exists to prevent one
+    layer up. An install without the `audio` extra cannot re-detect and keeps the older list,
+    saying so in a note.
+
+    Cached for the reason pose is, one order of magnitude down: the decode is a subprocess and
+    detection is an FFT every 5 ms, so a whole down-the-line clip is seconds rather than minutes
+    — but the artifact is also the *auditable* half of an anchor. A sample index nobody can look
+    at afterwards is a number nobody can check (`contracts/audio.py`).
+
+    **`fps` is a parameter and not something this reads off the video**, which is the one place it
+    departs from the file list M11 P4 was written against. The detector never sees the video, so a
+    frame index is derived and not measured; the caller doing the deriving has to be the one that
+    knows the frame rate, and that is `_auto_windows`, holding `KeypointsFile.clip.fps` already.
+    Opening the clip a second time here to rediscover a number the pipeline is already holding
+    would be a second answer to the same question, and the two could disagree. With `fps=None`
+    every strike keeps `frame=None` — honest, and exactly what a caller that only needs sample
+    offsets (P6's cross-correlation) should get.
+
+    Returns `None` when there is nothing to detect in: no such role, the clip missing from disk,
+    the `audio` extra absent, no audio stream in the container, or a decode that failed. An
+    **empty `strikes` list is not one of those** — it is a result, and the one P5 reads, because
+    a rehearsal swing makes no crack.
+    """
+    role_file = manifest.roles.get(role)
+    if role_file is None:
+        return None
+
+    cache_path = swing_dir / f"{role.value}.audio.json"
+    # Same clip, older detector: worth re-detecting, and worth keeping if this install cannot.
+    superseded: AudioFile | None = None
+    if cache_path.exists() and not force:
+        cached = load_audio(cache_path)
+        if cached.clip is None or cached.clip.source_sha256 != role_file.content_sha256:
+            log(f"  {role.value}: cached audio is for a different clip, re-detecting")
+        elif cached.detector_version != AUDIO_DETECTOR_VERSION:
+            # A cache the current detector would disagree with, which the sha256 cannot see: it
+            # keys on the *clip*, and the clip has not changed (`contracts/audio.py`).
+            superseded = cached
+            log(
+                f"  {role.value}: cached audio is from detector v{cached.detector_version}, "
+                f"re-detecting at v{AUDIO_DETECTOR_VERSION}"
+            )
+        else:
+            log(f"  {role.value}: {len(cached.strikes)} strikes from cache")
+            framed = _frames_derived(cached, fps)
+            if framed is not cached:
+                # The strikes were detected by a caller that did not know the fps, and this one
+                # does. Re-deriving beats re-detecting — the sample index is the measurement and
+                # it has not changed — and writing it back means the next reader gets the frames
+                # too, with the fps they were derived under recorded beside them.
+                save_audio(framed, cache_path)
+                log(f"  {role.value}: frames derived at {fps} fps -> {cache_path.name}")
+            return framed
+
+    video_path = swing_dir / role_file.filename
+    if not video_path.exists():
+        log(f"  {role.value}: {video_path.name} is missing from the swing directory")
+        _note(notes, f"the {role.value} clip is recorded in the manifest but missing from disk")
+        return None
+
+    try:
+        from golf_coach.audio.ffmpeg import FfmpegAudioSource
+        from golf_coach.audio.impact import detect_strikes
+        from golf_coach.audio.source import NoAudioTrackError
+    except ImportError:
+        # An older detection beats none — a stored strike list is a measurement, where the pose
+        # impact it would otherwise fall back to is an estimate. Said out loud rather than used
+        # quietly: a reader comparing this run against one made on an install that *could* listen
+        # has to be able to see why the two differ.
+        if superseded is not None:
+            log(f"  {role.value}: no audio extra to re-detect with, keeping the older detection")
+            _note(
+                notes,
+                f"the {role.value} strikes were found by an older detector (v"
+                f"{superseded.detector_version}) and the audio extra is not installed to re-run it",
+            )
+            return _frames_derived(superseded, fps)
+        log(f"  {role.value}: audio needs the audio extra — pip install -e '.[audio]'")
+        _note(notes, f"no audio for {role.value}: the audio extra is not installed")
+        return None
+
+    log(f"  {role.value}: decoding audio from {role_file.original_filename} ...")
+    try:
+        clip = FfmpegAudioSource(video_path, camera_id=role.value).read()
+    except NoAudioTrackError:
+        # Told apart from a broken decode on purpose (`audio/source.py`): this bundle simply
+        # cannot be acoustically anchored, which is a fact about the footage and worth recording,
+        # where a decode failure is a broken tool. Measured 0/30 in this corpus (§E1) — an
+        # unmeasured path is the one that rots, so it says so rather than falling through.
+        log(f"  {role.value}: the clip carries no audio track")
+        _note(
+            notes,
+            f"the {role.value} clip has no audio track, so it cannot be anchored on the "
+            "ball strike",
+        )
+        return None
+    except OSError as error:
+        log(f"  {role.value}: audio could not be decoded — {error}")
+        _note(
+            notes,
+            f"the {role.value} clip's audio could not be decoded, so no strike was detected in it",
+        )
+        return None
+
+    strikes = detect_strikes(clip.samples, clip.sample_rate)
+    audio = _frames_derived(
+        AudioFile(
+            clip=AudioClipMetadata(
+                sample_rate=clip.sample_rate,
+                # The decoded length, which is the honest one: it carries the edit list's effect
+                # where the container's own duration field does not (§E2).
+                duration_s=clip.duration_s,
+                source_sha256=role_file.content_sha256,
+                stream_index=clip.stream_index,
+            ),
+            strikes=strikes,
+            detector_version=AUDIO_DETECTOR_VERSION,
+        ),
+        fps,
+    )
+    save_audio(audio, cache_path)
+    log(f"  {role.value}: {len(strikes)} strikes -> {cache_path.name}")
+    return audio
+
+
+def _frames_derived(audio: AudioFile, fps: float | None) -> AudioFile:
+    """`audio` with every strike's video frame worked out under `fps`; `audio` itself if it can't.
+
+    Pure, and returns the *same object* when there is nothing to add, which is what lets the
+    caller tell "already derived" from "just derived" without comparing two models field by field.
+
+    Derived and never guessed: with no fps, no sample rate, or a strike list already carrying
+    frames from this same fps, nothing is invented and nothing already recorded is thrown away —
+    a caller that does not know the frame rate must not erase the frames a caller that did know
+    wrote (ADR-010 §2). Rounding is a floor, because a frame index answers "which frame was being
+    exposed when this happened", and a strike 1.5 frames in happened during frame 1.
+    """
+    clip = audio.clip
+    if fps is None or fps <= 0.0 or clip is None or not clip.sample_rate:
+        return audio
+    if clip.fps == fps and all(strike.frame is not None for strike in audio.strikes):
+        return audio
+
+    rate = clip.sample_rate
+    framed: list[AudioStrike] = [
+        strike.model_copy(update={"frame": int(strike.sample * fps / rate)})
+        for strike in audio.strikes
+    ]
+    return AudioFile(
+        clip=clip.model_copy(update={"fps": fps}),
+        strikes=framed,
+        # Carried, never re-stamped: deriving a frame index from a sample index is arithmetic, and
+        # arithmetic does not turn an older detector's list into this one's.
+        detector_version=audio.detector_version,
+    )
+
+
 def _shot_for(
     swing_dir: Path,
     manifest: SwingManifest,
@@ -329,6 +519,7 @@ def _pick_swing(
     *,
     wrist: PoseLandmark,
     reference_downswing_s: float | None = None,
+    strike_frames: list[int] | None = None,
 ) -> SwingChoice | None:
     """One view's swing, chosen alone or against a duration the other view already measured.
 
@@ -341,14 +532,23 @@ def _pick_swing(
     duration band keeps **plus** the ones the reference vouches for, and both rules end at the
     same `_lone_candidate_choice`, so `select_matching_swing` returns `None` exactly where
     `select_swing` would on the same clip. A fallback there would be unreachable.
+
+    `strike_frames` are the transients heard in **this view's own clip**, in its own frame
+    numbering, and both rules apply them ahead of everything else (M11 P5). Passing another view's
+    strikes here would be a real error rather than a slack one: the two phones start at different
+    instants, and putting them on one clock is P6's job, not a detail this call site may assume.
     """
     fps = keypoints.clip.fps if keypoints.clip else None
     frames = smooth_keypoints(keypoints.frames)
     if reference_downswing_s is not None:
         return select_matching_swing(
-            frames, fps=fps, reference_downswing_s=reference_downswing_s, wrist=wrist
+            frames,
+            fps=fps,
+            reference_downswing_s=reference_downswing_s,
+            wrist=wrist,
+            strike_frames=strike_frames,
         )
-    return select_swing(frames, fps=fps, wrist=wrist)
+    return select_swing(frames, fps=fps, wrist=wrist, strike_frames=strike_frames)
 
 
 def _downswing_seconds(choice: SwingChoice | None, keypoints: KeypointsFile) -> float | None:
@@ -385,6 +585,13 @@ def _narrate_choice(
 
     Called once per view and only after the last attempt at it — `_auto_windows` may pick face-on
     twice, and a note describing the attempt that was superseded would be false in the file.
+
+    **When a ball strike decided the pick, this says so** — through `choice.reason`, which names
+    the strike itself (`phases.select_swing` rule 0), rather than through a second sentence added
+    here. That is deliberate and it is the reason `SwingChoice.reason` is prose in the first
+    place: one selection rule, one place that explains it. There is no matching *note* for the
+    positive case, because a note is for a reader who has to be told something went differently
+    from usual, and a strike is the evidence this rule most wants to have.
     """
     if choice is None:
         # Named from the constant rather than from `wrist.name`, which would say "left wrist" —
@@ -411,6 +618,7 @@ def _auto_windows(
     *,
     window_face_on: tuple[int, int] | None,
     window_dtl: tuple[int, int] | None,
+    strikes: dict[Role, list[int]] | None = None,
     log: Log,
     notes: list[str],
 ) -> tuple[tuple[int, int] | None, tuple[int, int] | None]:
@@ -438,14 +646,29 @@ def _auto_windows(
     An explicit window is not a reference. A hand-picked window is not a downswing duration, and
     it may deliberately point at a different swing than the selector would have chosen, so the
     other view is picked alone and told so.
+
+    **`strikes` does not change any of that ordering** (M11 P5). Each view is handed the transients
+    heard in its own clip and applies them before its own duration rules, so the mutual pick above
+    runs exactly as described — face-on first, the other matched to it, and back again on a
+    decline. What audio changes is what each of those three calls is choosing *between*, which is
+    why a bundle with no audio at all still walks the same path. It is optional here for that
+    reason and not merely for the tests' convenience: `analyze_swing_dir` passes `{}` on a base
+    install, and `scripts/align_swings.py` has its own copy of this ordering with no audio in it.
     """
+    strikes = strikes or {}
     face_on = views[Role.FACE_ON]
     face_on_given = window_face_on is not None
     # `None` means there is nothing to pick for the down-the-line view — it is absent, or its
     # window was given by hand, and an explicit window always wins.
     dtl = views.get(Role.DOWN_THE_LINE) if window_dtl is None else None
 
-    face_on_choice = None if face_on_given else _pick_swing(face_on, wrist=LEAD_WRIST)
+    face_on_choice = (
+        None
+        if face_on_given
+        else _pick_swing(
+            face_on, wrist=LEAD_WRIST, strike_frames=strikes.get(Role.FACE_ON)
+        )
+    )
     reference = _downswing_seconds(face_on_choice, face_on)
 
     dtl_choice: SwingChoice | None = None
@@ -456,14 +679,22 @@ def _auto_windows(
         # worst bundle the lead wrist reads a 9.7 s "downswing" here and windows the entire clip,
         # while the trail wrist finds the swing at 0.40 s (M10 §A1). Face-on keeps the default;
         # it is the view the rule was tuned on.
-        dtl_choice = _pick_swing(dtl, wrist=TRAIL_WRIST, reference_downswing_s=reference)
+        dtl_choice = _pick_swing(
+            dtl,
+            wrist=TRAIL_WRIST,
+            reference_downswing_s=reference,
+            strike_frames=strikes.get(Role.DOWN_THE_LINE),
+        )
 
     matched_in_reverse = False
     if not face_on_given and face_on_choice is None and dtl is not None:
         back_reference = _downswing_seconds(dtl_choice, dtl)
         if back_reference is not None:
             face_on_choice = _pick_swing(
-                face_on, wrist=LEAD_WRIST, reference_downswing_s=back_reference
+                face_on,
+                wrist=LEAD_WRIST,
+                reference_downswing_s=back_reference,
+                strike_frames=strikes.get(Role.FACE_ON),
             )
             matched_in_reverse = face_on_choice is not None
 
@@ -673,12 +904,54 @@ def analyze_swing_dir(
 
     window_face_on = options.window_face_on
     window_dtl = options.window_down_the_line
+    # Unconditional, where M11 P5 ran this only under `auto_window` (M11 P6 hoisted it).
+    # Selection is no longer the only reader: `analyze_swing_bundle` pins each view's tau=2
+    # anchor to the strike that view heard, and a bundle whose windows were given by hand wants
+    # that as much as one that found them — arguably more, since a hand-picked window means
+    # someone was already unhappy with what the detector did.
+    strikes: dict[Role, list[int]] = {}
+    log("\nAudio:")
+    for role, label in VIEWS:
+        if role not in views:
+            continue
+        clip = views[role].clip
+        audio = audio_for(
+            swing_dir,
+            manifest,
+            role,
+            # The fps this view's pose was decoded at, which is what makes a sample index a
+            # frame index in *this clip's* numbering — the numbering selection then compares
+            # against `Downswing.impact`, and the numbering `alignment.with_measured_impact`
+            # compares against `SwingAnchors.impact` (`contracts/audio.py`, `_frames_derived`).
+            fps=clip.fps if clip else None,
+            force=options.force_audio,
+            log=log,
+            notes=notes,
+        )
+        if audio is None:
+            continue
+        strikes[role] = [
+            strike.frame for strike in audio.strikes if strike.frame is not None
+        ]
+        if not audio.strikes:
+            # The one result that is a *finding* rather than a gap: the detector ran over this
+            # clip and nothing in it stood above the clip's own floor. It does not decline the
+            # window — `phases._struck` records why silence must not throw a window away — so
+            # the note is what carries it to a reader of `analysis.json`.
+            log(f"  {role.value}: no ball strike in this clip")
+            notes.append(
+                f"no ball strike was heard in the {label} clip, so its swing was picked on "
+                "movement alone — if this was a rehearsal, the numbers describe a swing that "
+                "never hit a ball"
+            )
+
     if options.auto_window:
         log("\nSwing selection:")
         window_face_on, window_dtl = _auto_windows(
             views,
             window_face_on=window_face_on,
             window_dtl=window_dtl,
+            strikes=strikes,
             log=log,
             notes=notes,
         )
@@ -688,6 +961,19 @@ def analyze_swing_dir(
     if shot_note:
         log(f"  {shot_note}")
         notes.append(shot_note)
+
+    if shot is not None and strikes and not any(strikes.values()):
+        # Two independent witnesses to one event disagreeing, which is the only kind of check the
+        # simulator's own data can give the footage: ADR-014's shot was read off the screen and
+        # the strikes off the microphone, and neither knows about the other. Silence is the
+        # surprising half — §E1 measured every real strike at z = 113-599 above its clip's own
+        # floor — so a recorded ball with no crack in either clip most likely means this bundle's
+        # video and its shot are not the same swing. A note and not an error, deliberately: the
+        # shot still scores, and mis-pairing is a thing only a human can confirm.
+        notes.append(
+            "the simulator recorded a shot for this swing but no clip in the bundle carries a "
+            "ball strike — the footage and the shot data may not describe the same swing"
+        )
 
     handedness, handedness_note = _handedness_for(manifest)
     if handedness_note:
@@ -703,6 +989,8 @@ def analyze_swing_dir(
         intent=PracticeGoal(club=options.club),
         face_on_window=window_face_on,
         down_the_line_window=window_dtl,
+        face_on_strikes=strikes.get(Role.FACE_ON),
+        down_the_line_strikes=strikes.get(Role.DOWN_THE_LINE),
         handedness=handedness,
     )
 

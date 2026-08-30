@@ -402,6 +402,33 @@ _PLAUSIBLE_DOWNSWING_S = (0.15, 0.45)
 # clips, whatever the swing lasts — which is a frame count and not a proportion of the swing.
 _MATCH_TOLERANCE_S = 0.12
 
+# How far a descent's impact may sit from a transient heard in the same clip and still count as
+# ending at it, in seconds. This is the whole tolerance of the strike rule, and it is loose on
+# purpose: the rule is not being asked which transient was the ball, only whether *something* was
+# hit where this descent ended.
+#
+# Sized from the measurements in docs/M11_ACOUSTIC_SYNC.md that bound the error:
+#
+#   +/-0.125 s   the worst pose-impact error the corpus holds - down-the-line impact runs 5.7-7.5
+#                frames early on four bundles (E4), and nothing says the sign cannot reverse on
+#                footage not yet on disk
+#   +0.145 s     the ball-to-screen gap (E5), so the nearest transient to a *correct* impact may
+#                be the screen strike rather than the ball
+#   +0.018 s     the detector's own onset convention, late by that much on average
+#                (`audio/impact.py`)
+#
+# 0.20 s clears the worst of those with room to spare, and nothing it must reject is anywhere near
+# it: the post-impact descents this rule exists to exclude sit 15-24 s past the swing on a
+# down-the-line clip (M10 A2). There is no value between "covers the measurement error" and
+# "admits a decoy" on this corpus, which is why this band can be loose where
+# `_PLAUSIBLE_DOWNSWING_S` has to be tight.
+#
+# Rejected: an asymmetric window - a transient may only land *after* the impact, which is truer to
+# the physics, since the crack cannot precede the contact. It is wrong about the *measurement*:
+# E4's four offenders have the pose impact landing ~0.1 s after the audio, and an asymmetric rule
+# would refuse exactly the bundles this milestone exists to repair.
+_STRIKE_TOLERANCE_S = 0.20
+
 # How much clip to keep around the chosen swing, in downswing-lengths before the top and after
 # impact — the clip's own time base, so this reads a 30 fps clip and a 240 fps one alike
 # (ADR-013). Shared with `scripts/align_swings.py --list-swings` so the window the listing prints
@@ -480,38 +507,92 @@ def window_around(downswing: Downswing, *, fps: float | None = None) -> tuple[in
     return max(0, downswing.top - lead), downswing.impact + _WINDOW_TRAIL * frames
 
 
-def _lone_candidate_choice(candidates: list[Downswing], *, fps: float) -> SwingChoice | None:
+def _struck(
+    candidates: list[Downswing], strike_frames: list[int] | None, *, fps: float
+) -> list[Downswing]:
+    """The candidates whose impact lands on a transient heard in that same clip. [M11 P5]
+
+    Evidence of a different kind from everything else in this module: every other rule here reads
+    the pose stream and asks whether a motion *looks* like a swing, and this one asks whether a
+    ball was hit. A practice swing has a whoosh and no crack.
+
+    Frames, not samples, and frames in this clip's own numbering — which is why no clip-to-clip
+    offset appears anywhere in this file. Each view is filtered against the transients heard in its
+    own footage; putting the two clips on one clock is a separate question and a separate phase
+    (M11 P6).
+
+    **Empty means "audio has nothing to say", never "no swing".** `None` (nobody listened) and `[]`
+    (the detector ran and heard nothing) both come back empty here, and both leave the remaining
+    rules to judge the clip exactly as they did before audio existed. Telling those two apart
+    matters, but one level up: a clip that was listened to and made no crack is worth a note
+    (`api/pipeline.py`), while refusing every candidate on silence would throw a window away over a
+    microphone.
+    """
+    if not strike_frames:
+        return []
+    tolerance = max(1, round(_STRIKE_TOLERANCE_S * fps))
+    return [
+        swing
+        for swing in candidates
+        if any(abs(swing.impact - frame) <= tolerance for frame in strike_frames)
+    ]
+
+
+def _lone_candidate_choice(
+    pool: list[Downswing],
+    *,
+    fps: float,
+    candidates: list[Downswing] | None = None,
+    struck: bool = False,
+) -> SwingChoice | None:
     """The "one candidate wins on its own" escape, shared by both selection rules.
 
-    `None` unless the clip holds exactly one descent. Both `select_swing` and
-    `select_matching_swing` arrive here having filtered everything away — one on duration, the
-    other on duration *and* a reference — and both then owe the same answer, so the branch lives
-    once rather than twice.
+    `None` unless exactly one descent survived. Both `select_swing` and `select_matching_swing`
+    arrive here having filtered everything away — one on duration, the other on duration *and* a
+    reference — and both then owe the same answer, so the branch lives once rather than twice.
 
     `select_matching_swing` needs it more, not less: a reference can reject a lone descent the band
     would have kept. On `2026-08-23/4` the only down-the-line descent measures 0.484s against a
     0.200s face-on reference, so neither rule admits it, and declining would throw away the window
     P5 won that bundle.
+
+    `pool` is what survived; `candidates` is every descent found, and defaults to `pool` because
+    until M11 P5 those were the same list. They part company when a ball strike has narrowed the
+    field: the choice is then made among the struck descents while `SwingChoice.candidates` still
+    lists all of them, because that listing exists for a human checking whether the right descent
+    was taken and a filtered listing cannot answer that question.
     """
-    if len(candidates) != 1:
+    if len(pool) != 1:
         return None
-    only = candidates[0]
+    only = pool[0]
     low, high = _PLAUSIBLE_DOWNSWING_S
+    # Two different justifications, and the reason has to say which one it is. Without audio this
+    # is "the band is a tie-break with no tie to break"; with it, the band has been *overruled* by
+    # a measurement of the physical event the band only ever stood in for.
+    lead, why = (
+        ("1 descent ends at a ball strike, and its", "since a ball was struck there")
+        if struck
+        else ("1 descent, and its", "since there is nothing to choose between")
+    )
     return SwingChoice(
         window=window_around(only, fps=fps),
         downswing=only,
-        candidates=candidates,
+        candidates=pool if candidates is None else candidates,
         reason=(
-            f"1 descent, and its downswing measures "
+            f"{lead} downswing measures "
             f"{(only.impact - only.top) / fps:.2f}s rather than the usual "
-            f"{low:g}-{high:g}s — taking it anyway, since there is nothing to choose "
-            f"between (top {only.top}, impact {only.impact})"
+            f"{low:g}-{high:g}s — taking it anyway, {why} "
+            f"(top {only.top}, impact {only.impact})"
         ),
     )
 
 
 def select_swing(
-    keypoints: list[FrameKeypoints], *, fps: float | None, wrist: PoseLandmark = LEAD_WRIST
+    keypoints: list[FrameKeypoints],
+    *,
+    fps: float | None,
+    wrist: PoseLandmark = LEAD_WRIST,
+    strike_frames: list[int] | None = None,
 ) -> SwingChoice | None:
     """Pick the real swing out of a clip that contains several. [M7 Phase 4]
 
@@ -521,8 +602,15 @@ def select_swing(
     frames get scored, so an unwindowed clip is graded on the wrong swing (whole-clip
     `aaron-1-front` scores 58/100 with tempo unscored; the actual swing scores 67/100).
 
-    Three rules, in order:
+    Four rules, in order:
 
+    0. **A ball was struck here** (`strike_frames`, M11 P5). When the clip's audio has been
+       listened to and a transient lands where a descent ends, the rules below judge *those*
+       descents and no others. It runs first because it is the only rule here reading the
+       physical event; every other one reads a proxy for it. It is also the only rule that can be
+       absent: with `strike_frames` of `None` — no audio extra, no audio track, nobody asked —
+       behaviour from rule 1 down is identical to what it was before audio existed, the same way
+       `window_around` keeps its no-fps path.
     1. **Duration.** Keep only candidates whose downswing lasts a plausible time
        (`_PLAUSIBLE_DOWNSWING_S`). This is what does the work — it is uniquely correct on all four
        multi-swing bay clips, because setup moves cluster tightly at ~0.5 s and rehearsals run
@@ -531,8 +619,8 @@ def select_swing(
        hitting the ball. Applied on its own this rule is wrong on both down-the-line clips (the
        DTL phone keeps rolling 15-24 s past impact, on the busy side of the bay), which is why it
        runs second rather than first.
-    3. **One candidate wins on its own.** If the clip holds exactly one descent, take it whatever
-       it measures. The duration band exists to *choose between* candidates; with nothing to
+    3. **One candidate wins on its own.** If exactly one descent survived, take it whatever it
+       measures. The duration band exists to *choose between* candidates; with nothing to
        choose between it is only a filter with no job, and applying it anyway throws away a
        perfectly good window — which is how a 30 fps single-swing clip (0.60 s, above the band
        derived from 60 fps footage) ended up scored over its whole length including dead air.
@@ -564,23 +652,30 @@ def select_swing(
         return None
 
     candidates = candidate_downswings(keypoints, min_fraction=CANDIDATE_MIN_RISE, wrist=wrist)
+    struck = _struck(candidates, strike_frames, fps=fps)
+    # `or candidates`, not `if strike_frames is not None`: a strike list that lands near no
+    # descent leaves the duration rules judging the whole field. A transient nobody's swing ends
+    # at is evidence about the detector or the framing; it is not evidence against every
+    # candidate at once, and treating it as such would decline a clip over a stray noise.
+    pool = struck or candidates
     low, high = _PLAUSIBLE_DOWNSWING_S
-    plausible = [
-        swing for swing in candidates if low <= (swing.impact - swing.top) / fps <= high
-    ]
+    plausible = [swing for swing in pool if low <= (swing.impact - swing.top) / fps <= high]
     if not plausible:
-        return _lone_candidate_choice(candidates, fps=fps)
+        return _lone_candidate_choice(pool, fps=fps, candidates=candidates, struck=bool(struck))
 
     chosen = plausible[-1]
     duration = (chosen.impact - chosen.top) / fps
+    found = f"{len(candidates)} descent(s)"
+    if struck:
+        found += f", {len(struck)} ending at a ball strike"
     if len(plausible) == 1:
         reason = (
-            f"{len(candidates)} descent(s), 1 with a plausible downswing "
+            f"{found}, 1 with a plausible downswing "
             f"({duration:.2f}s) — top {chosen.top}, impact {chosen.impact}"
         )
     else:
         reason = (
-            f"{len(candidates)} descent(s), {len(plausible)} with a plausible downswing; took "
+            f"{found}, {len(plausible)} with a plausible downswing; took "
             f"the last ({duration:.2f}s, top {chosen.top}, impact {chosen.impact}). The clip "
             "holds more than one real-looking swing — confirm with --list-swings"
         )
@@ -598,6 +693,7 @@ def select_matching_swing(
     fps: float | None,
     reference_downswing_s: float,
     wrist: PoseLandmark = LEAD_WRIST,
+    strike_frames: list[int] | None = None,
 ) -> SwingChoice | None:
     """Pick the descent that matches a swing already chosen in the *other* view. [M10 P7]
 
@@ -609,8 +705,12 @@ def select_matching_swing(
     post-impact descents of 0.233, 0.183 and 0.267 s standing in for real swings of 0.467, 0.484 and
     0.417 s (M10 §A2).
 
-    Three rules, in order:
+    Four rules, in order, and rule 0 is `select_swing`'s:
 
+    0. **A ball was struck here** (`strike_frames`, M11 P5). It is worth more on this side than on
+       the one it was written for: what makes a down-the-line clip hard is the descents that
+       happened *after* the ball was gone, and what separates them from the swing is exactly that
+       the ball had already been hit.
     1. **Plausible, or vouched for.** Keep a candidate whose downswing lands in
        `_PLAUSIBLE_DOWNSWING_S` **or** within `_MATCH_TOLERANCE_S` of the reference. The second
        branch is not a wider band, it is a different kind of evidence — and it is what admits the
@@ -632,16 +732,18 @@ def select_matching_swing(
         return None
 
     candidates = candidate_downswings(keypoints, min_fraction=CANDIDATE_MIN_RISE, wrist=wrist)
-    seconds = [(swing.impact - swing.top) / fps for swing in candidates]
+    struck = _struck(candidates, strike_frames, fps=fps)
+    pool = struck or candidates
+    seconds = [(swing.impact - swing.top) / fps for swing in pool]
     low, high = _PLAUSIBLE_DOWNSWING_S
     matched = [
         (swing, duration)
-        for swing, duration in zip(candidates, seconds, strict=True)
+        for swing, duration in zip(pool, seconds, strict=True)
         if low <= duration <= high
         or abs(duration - reference_downswing_s) <= _MATCH_TOLERANCE_S
     ]
     if not matched:
-        return _lone_candidate_choice(candidates, fps=fps)
+        return _lone_candidate_choice(pool, fps=fps, candidates=candidates, struck=bool(struck))
 
     # `min` keeps the first of equals, so reversing hands a tie to the *later* candidate — rule 2
     # of `select_swing`, demoted to the tie-break it is safe as.
@@ -651,12 +753,15 @@ def select_matching_swing(
     admitted = (
         "in band" if low <= duration <= high else f"outside the usual {low:g}-{high:g}s band"
     )
+    found = f"{len(candidates)} descent(s)"
+    if struck:
+        found += f", {len(struck)} ending at a ball strike"
     return SwingChoice(
         window=window_around(chosen, fps=fps),
         downswing=chosen,
         candidates=candidates,
         reason=(
-            f"{len(candidates)} descent(s), {len(matched)} matching the "
+            f"{found}, {len(matched)} matching the "
             f"{reference_downswing_s:.2f}s reference from the other view; took the nearest "
             f"({duration:.2f}s, {admitted}, off by "
             f"{abs(duration - reference_downswing_s):.2f}s — top {chosen.top}, "

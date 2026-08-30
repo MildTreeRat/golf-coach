@@ -316,7 +316,25 @@ class SwingResult(BaseModel):
 #:                   swing 86.5 -> 91.7. `reanalyze.py` is how a stored bundle acquires the right
 #:                   frames, and until it runs `is_outdated` is the only thing standing between a
 #:                   pre-M10 score and a post-M10 one in the same `PersonalBaseline`.
-ANALYSIS_VERSION = 11
+#: 11 -> 12 (2026-08-29, M11 P8): **the first bump whose cause is outside the clip being scored.**
+#:                   Both phones record the ball strike, so a bundle that heard it in both views
+#:                   has a real shared clock (ADR-025) — and with tau=2 pinned to one sound the two
+#:                   downswings become two measurements of one interval, which is what finally says
+#:                   *which* view's top is late rather than merely that they disagree. Three things
+#:                   move as a result. The window `select_swing` picks can be overruled by a
+#:                   descent the microphone heard, so a swing may be scored over different frames;
+#:                   the down-the-line impact anchor moves 5-7 frames on four of the eleven
+#:                   2026-08-23 bundles, which re-cuts every quantity resampled onto it
+#:                   (`tour_trajectory_*_dtl`); and a `tempo` timed from a contradicted top is
+#:                   **withdrawn** into `unscored` with `CROSS_VIEW_CONTRADICTED`, so
+#:                   `overall_score` becomes a mean over one fewer checkpoint on the bundles that
+#:                   carry it. That last one is why this is a `2`/`3`/`10 -> 11`-shaped bump and
+#:                   not a `3 -> 4`-shaped one: a version-11 artifact does not *lack* a quantity,
+#:                   it **disagrees** — it reports 4.92, 6.08 and 6.09:1 as scored failures where
+#:                   this engine reports no tempo at all. `reanalyze.py` is how a stored bundle
+#:                   acquires the corrected reading, and `is_outdated` is what keeps the two out of
+#:                   one `PersonalBaseline` until it runs.
+ANALYSIS_VERSION = 12
 
 
 class SwingBundleResult(BaseModel):

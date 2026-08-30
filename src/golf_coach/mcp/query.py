@@ -15,7 +15,9 @@ deliberately rather than flattened away:
   - `AlignmentQuality` — rendering two panels implies frame correspondence everywhere and only
     `FULL` earns it (ADR-015). `alignment_caveat` spells that out in a sentence rather than
     leaving a reader to infer it from an enum value, which is exactly what the results page did
-    wrong for two milestones.
+    wrong for two milestones. `SYNCHRONIZED` ranks *above* `FULL` and still carries the caveat
+    (M11 P6): a measured ball strike pins one instant on a shared clock and says nothing about
+    the ones between the anchors, which is precisely what the sentence warns about.
   - `SwingResult.unscored` — `overall_score` is a mean over *survivors*, so a two-checkpoint and
     a three-checkpoint swing print the same number. The checkpoint was dropped, not failed, and
     each entry says which *and why* (ADR-013, `contracts.unscored`). The why matters here more
@@ -598,7 +600,12 @@ def _measurements(swing: dict[str, Any]) -> dict[str, float]:
 
 
 def _alignment_view(alignment: dict[str, Any]) -> tuple[str | None, str | None]:
-    """The alignment tier and, below `FULL`, the sentence a reader needs beside it."""
+    """The alignment tier and, on every tier but `FULL`, the sentence a reader needs beside it.
+
+    `SYNCHRONIZED` is above `FULL` on the ladder and still gets the caveat — see the module
+    docstring, and `AlignmentQuality.is_degraded` for why that is a different question from
+    whether anything went wrong.
+    """
     raw = alignment.get("quality")
     if not isinstance(raw, str):
         return None, None

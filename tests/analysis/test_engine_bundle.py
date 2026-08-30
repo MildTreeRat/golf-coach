@@ -18,9 +18,11 @@ from conftest import make_swing
 
 from golf_coach.analysis.engine import analyze_swing, analyze_swing_bundle
 from golf_coach.contracts.alignment import AlignmentQuality
+from golf_coach.contracts.checkpoints import checkpoint_names
 from golf_coach.contracts.keypoints import ClipMetadata, FrameKeypoints, KeypointsFile
 from golf_coach.contracts.shot import ShotData, ShotProvenance, ShotSource
 from golf_coach.contracts.swing import ANALYSIS_VERSION, SwingBundleResult
+from golf_coach.contracts.unscored import UnscoredReason
 
 _FPS = 100.0
 
@@ -257,3 +259,254 @@ def test_quality_below_full_is_named_in_notes(swing: list[FrameKeypoints]) -> No
     assert bundle.alignment is not None
     if bundle.alignment.quality is not AlignmentQuality.FULL:
         assert any("alignment degraded" in note for note in bundle.notes)
+
+
+# --- the ball strike reaches the alignment and stops there ------------------------------ [M11 P6]
+
+
+def _two_views(swing: list[FrameKeypoints]) -> tuple[KeypointsFile, KeypointsFile]:
+    """One swing filmed twice, the second phone rolling 40 frames earlier."""
+    return (
+        _file(swing, camera_id="face_on"),
+        _file(_concat([swing[0]] * 40, swing), camera_id="down_the_line"),
+    )
+
+
+def test_a_heard_strike_moves_the_impact_anchor_and_says_so(
+    swing: list[FrameKeypoints],
+) -> None:
+    """§E4's shape end to end: face-on right, down-the-line seven frames early, both heard.
+
+    The correction is never silent (ADR-010 §2). Five to seven frames is exactly the size of the
+    defect M10 handed forward, so a reader comparing two runs of the same bundle has to be able to
+    see that the impact frame moved, by how much, and that it is now a measurement.
+    """
+    face_on, dtl = _two_views(swing)
+    inferred = analyze_swing_bundle("s", "sess", face_on, dtl)
+    assert inferred.alignment is not None
+    assert inferred.alignment.a is not None and inferred.alignment.b is not None
+    face_impact = inferred.alignment.a.anchors.impact
+    dtl_impact = inferred.alignment.b.anchors.impact
+    assert not inferred.alignment.a.anchors.impact_measured
+
+    bundle = analyze_swing_bundle(
+        "s", "sess", face_on, dtl,
+        face_on_strikes=[face_impact],
+        down_the_line_strikes=[dtl_impact + 7],
+    )
+
+    assert bundle.alignment is not None and bundle.alignment.b is not None
+    assert bundle.alignment.b.anchors.impact == dtl_impact + 7
+    assert bundle.alignment.quality is AlignmentQuality.SYNCHRONIZED
+    assert any("down-the-line: impact moved +7 frames" in note for note in bundle.notes)
+    # A tier above FULL is not a degradation, whatever the anchor count underneath it came to.
+    assert not any("alignment degraded" in note for note in bundle.notes)
+
+
+def test_a_strike_that_confirms_the_pose_impact_moves_nothing_and_says_nothing(
+    swing: list[FrameKeypoints],
+) -> None:
+    """The common case — §E4 found seven of eleven bundles right in both views.
+
+    Worth pinning because the note above must fire on a *correction* and not on the measurement:
+    a run that logged "impact moved +0 frames" on every healthy bundle would bury the four that
+    matter.
+    """
+    face_on, dtl = _two_views(swing)
+    inferred = analyze_swing_bundle("s", "sess", face_on, dtl)
+    assert inferred.alignment is not None
+    assert inferred.alignment.a is not None and inferred.alignment.b is not None
+
+    bundle = analyze_swing_bundle(
+        "s", "sess", face_on, dtl,
+        face_on_strikes=[inferred.alignment.a.anchors.impact],
+        down_the_line_strikes=[inferred.alignment.b.anchors.impact],
+    )
+
+    assert bundle.alignment is not None
+    assert bundle.alignment.quality is AlignmentQuality.SYNCHRONIZED
+    assert not any("impact moved" in note for note in bundle.notes)
+
+
+def test_a_heard_strike_never_reaches_the_score(swing: list[FrameKeypoints]) -> None:
+    """The property that lets M11 improve an anchor without re-opening M4's validated scoring.
+
+    `analyze_swing` has already scored the face-on view off its own phases by the time a strike is
+    read, so the checkpoints, the phases and the totals are bit-identical with and without audio.
+    The down-the-line *trajectory placement* is deliberately not in that list: it is resampled onto
+    these anchors, so a better impact makes it a better placement.
+
+    **P8 opened one exception, and this test still holds because it stays outside it.** A strike in
+    *both* clips can contradict the face-on top, and a contradicted top withdraws the scores timed
+    from it - see the section below. One strike is not a shared clock, so nothing here is decidable
+    and nothing here may move.
+    """
+    face_on, dtl = _two_views(swing)
+    inferred = analyze_swing_bundle("s", "sess", face_on, dtl)
+    assert inferred.alignment is not None and inferred.alignment.b is not None
+
+    bundle = analyze_swing_bundle(
+        "s", "sess", face_on, dtl,
+        down_the_line_strikes=[inferred.alignment.b.anchors.impact + 7],
+    )
+
+    assert bundle.swing.checkpoint_scores == inferred.swing.checkpoint_scores
+    assert bundle.swing.phases == inferred.swing.phases
+    assert bundle.swing.unscored == inferred.swing.unscored
+    assert bundle.swing.overall_score == inferred.swing.overall_score
+
+
+def test_one_view_hearing_the_strike_leaves_the_pose_tier_alone(
+    swing: list[FrameKeypoints],
+) -> None:
+    """A shared clock needs the crack in both clips; one is the ordinary state of a bundle."""
+    face_on, dtl = _two_views(swing)
+    inferred = analyze_swing_bundle("s", "sess", face_on, dtl)
+    assert inferred.alignment is not None and inferred.alignment.a is not None
+
+    bundle = analyze_swing_bundle(
+        "s", "sess", face_on, dtl, face_on_strikes=[inferred.alignment.a.anchors.impact]
+    )
+
+    assert bundle.alignment is not None
+    assert bundle.alignment.quality is inferred.alignment.quality
+    assert any("a shared clock needs the strike in both" in note for note in bundle.notes)
+
+
+# --- and the one place it does reach the score ------------------------------------------ [M11 P8]
+#
+# P7's arbitration knew which top was late and could only say so in prose. These pin the
+# consequence: a checkpoint timed from a contradicted top is *withdrawn*, because M10 handed
+# forward three `tempo` readings that score, fail, and are not coaching truth
+# (docs/M11_ACOUSTIC_SYNC.md §E3). Withdrawn rather than restated — ADR-010 §2, and a corrected
+# top belongs in `phases.py` where the boundary is found.
+
+
+def _disagreeing_views(dtl_downswing: int) -> tuple[KeypointsFile, KeypointsFile]:
+    """Two views whose downswings disagree, face-on the shorter — M10's defect, in miniature.
+
+    Face-on descends over 10 frames and the second view over `dtl_downswing`, which at the 100 fps
+    these fixtures run at puts the reference duration under the caller's control. That is the whole
+    reason the parameter is here: `phases._PLAUSIBLE_DOWNSWING_S` is what decides whether the warp
+    *corrects* the top, and the finding has to survive it saying no.
+    """
+    return (
+        _file(make_swing(downswing_frames=10), camera_id="face_on"),
+        _file(make_swing(downswing_frames=dtl_downswing), camera_id="down_the_line"),
+    )
+
+
+def _heard_in_both(face_on: KeypointsFile, dtl: KeypointsFile) -> SwingBundleResult:
+    """The same bundle analyzed twice: once to learn the pose impacts, once anchored on them.
+
+    Confirming strikes rather than correcting ones, so the only thing under test is the top. An
+    impact that also moved would make a failure here ambiguous between two different findings.
+    """
+    inferred = analyze_swing_bundle("s", "sess", face_on, dtl)
+    assert inferred.alignment is not None
+    assert inferred.alignment.a is not None and inferred.alignment.b is not None
+    return analyze_swing_bundle(
+        "s", "sess", face_on, dtl,
+        face_on_strikes=[inferred.alignment.a.anchors.impact],
+        down_the_line_strikes=[inferred.alignment.b.anchors.impact],
+    )
+
+
+def test_a_contradicted_top_withdraws_the_score_timed_from_it() -> None:
+    """The finding M10 could not act on, acted on.
+
+    `tempo` divides by the top twice over — it is both halves of the ratio — so a top the other
+    view puts eight frames earlier makes the number a comparison between one instant that is right
+    and one that is not. It leaves `checkpoint_scores` for `unscored`, and `overall_score` becomes
+    a mean over what survived rather than over a reading nothing stands behind.
+    """
+    face_on, dtl = _disagreeing_views(20)
+    inferred = analyze_swing_bundle("s", "sess", face_on, dtl)
+    assert "tempo" in {score.name for score in inferred.swing.checkpoint_scores}
+
+    bundle = _heard_in_both(face_on, dtl)
+
+    assert "tempo" not in {score.name for score in bundle.swing.checkpoint_scores}
+    withdrawn = next(entry for entry in bundle.swing.unscored if entry.name == "tempo")
+    assert withdrawn.reason is UnscoredReason.CROSS_VIEW_CONTRADICTED
+    assert "8 frames earlier" in withdrawn.detail
+    assert bundle.swing.overall_score != inferred.swing.overall_score
+
+
+def test_the_withdrawal_survives_a_correction_the_warp_declined() -> None:
+    """The §Verification case: 2026-08-23/4 ships 6.08:1 and the warp cannot fix its top.
+
+    A 0.50s reference is no downswing, so `_shared_tops` refuses to impose it and `warp_top` stays
+    None — but the *diagnosis* holds, and it is the diagnosis this reads. Keying the withdrawal off
+    the correction would leave every bundle in that family shipping the failing score it was
+    written to retire.
+    """
+    face_on, dtl = _disagreeing_views(50)
+    bundle = _heard_in_both(face_on, dtl)
+
+    assert bundle.alignment is not None and bundle.alignment.a is not None
+    assert bundle.alignment.a.warp_top is None
+    assert bundle.alignment.a.top_is_late
+    assert "tempo" not in {score.name for score in bundle.swing.checkpoint_scores}
+
+
+def test_a_withdrawal_is_never_silent() -> None:
+    """A score that vanishes between two runs of one bundle has to say why in both places.
+
+    `unscored` is the machine-readable half and `notes` is the half a person reads next to a
+    results page that used to show a number here. The note carries what the score *was*, because
+    a reader comparing this run against a stored one is looking at 4.92:1 in the other window.
+    """
+    bundle = _heard_in_both(*_disagreeing_views(20))
+
+    note = next(note for note in bundle.notes if "tempo withdrawn" in note)
+    assert "on a shared clock" in note
+    assert "8 frames earlier" in note
+
+
+def test_the_withdrawn_checkpoint_keeps_its_place_in_the_reported_order() -> None:
+    """Registry order is the reported order of `unscored` (`contracts.checkpoints` says so).
+
+    `tempo` is the *first* checkpoint, and it is withdrawn last — after `analyze_swing` has already
+    built `unscored` around whatever it could not score. Appending would put it behind
+    `head_stays_back` and break the one ordering that module asks callers to rely on.
+    """
+    bundle = _heard_in_both(*_disagreeing_views(20))
+
+    registry = checkpoint_names()
+    reported = [entry.name for entry in bundle.swing.unscored]
+    assert reported == sorted(reported, key=registry.index)
+    assert reported[0] == "tempo"
+
+
+def test_two_views_that_agree_withdraw_nothing(swing: list[FrameKeypoints]) -> None:
+    """The ordinary bundle, and the regression that would cost every swing its tempo.
+
+    Both clips heard the strike and both read the same downswing, so there is nothing to arbitrate
+    — a `SYNCHRONIZED` tier on its own must never withdraw anything.
+    """
+    face_on, dtl = _two_views(swing)
+    inferred = analyze_swing_bundle("s", "sess", face_on, dtl)
+    bundle = _heard_in_both(face_on, dtl)
+
+    assert bundle.alignment is not None
+    assert bundle.alignment.quality is AlignmentQuality.SYNCHRONIZED
+    assert bundle.swing.checkpoint_scores == inferred.swing.checkpoint_scores
+    assert bundle.swing.unscored == inferred.swing.unscored
+    assert bundle.swing.overall_score == inferred.swing.overall_score
+
+
+def test_a_disagreement_without_a_shared_clock_withdraws_nothing() -> None:
+    """Two inferred impacts cannot say which top is late, and a guess may not cost a score.
+
+    The same two clips as the withdrawal above, with no audio. The alignment still reports the
+    disagreement in its notes and still falls back to one shared duration; what it must not do is
+    take a checkpoint away on the strength of a tie-break (ADR-010 §2).
+    """
+    face_on, dtl = _disagreeing_views(20)
+    bundle = analyze_swing_bundle("s", "sess", face_on, dtl)
+
+    assert bundle.alignment is not None and bundle.alignment.a is not None
+    assert not bundle.alignment.a.top_is_late
+    assert "tempo" in {score.name for score in bundle.swing.checkpoint_scores}
+    assert not any("withdrawn" in note for note in bundle.notes)

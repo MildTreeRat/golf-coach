@@ -25,7 +25,8 @@ wording; only the grouping and the M4 checklist have been corrected.
 | **Career mode** One golfer over time | ✅ Done, 6/6 steps | — (built and silent; a bay session gives it the `n` to speak) | [§Career](#career-mode-one-golfer-tracked-over-time--done-built-and-silent) |
 | **M8** Learning what "good" means | ✅ Done *(2026-08-17)* | — (three models fitted, validated, surfaced **and spoken**, with a policy rather than a band) | [§M8](#m8-learning-what-good-means--gates-run-model-fitted) |
 | **M9** Player tracking (per-club) | ✅ Done *(2026-08-22)*, 20/20 phases | — (built and **silent by design**: every club-narrowed answer refuses, because no swing on disk is tagged yet. A bay session, and the retag control, are what make it speak) | [§M9](#m9-player-tracking-per-club-shot-history--done-and-waiting-on-a-bay-session) |
-| **M10** Alignment accuracy | ✅ Done *(2026-08-26)*, 10/10 phases | — (the corpus has been re-analysed against the fix; what is left underneath is a face-on top that lands late, and it wants no hardware either) | [§M10](#m10-alignment-accuracy--the-two-panels-leave-address-together--done) |
+| **M10** Alignment accuracy | ✅ Done *(2026-08-26)*, 10/10 phases | — (the corpus has been re-analysed against the fix; the face-on top it left landing late was closed by M11 on 2026-08-29) | [§M10](#m10-alignment-accuracy--the-two-panels-leave-address-together--done) |
+| **M11** Acoustic sync | ✅ Done *(2026-08-29)*, 10/10 phases — **read the addendum** *(2026-08-30)* | on four down-the-line clips the video decode ignores a 90 ms edit-list offset the audio decode applies, so tau=2 lands ~2.5 frames late there ([§Addendum](docs/M11_ACOUSTIC_SYNC.md)) | [§M11](#m11-acoustic-sync--the-ball-strike-is-the-clock--done) |
 | **M5** Feedback UI | ⬜ Not started | M7 Phase 5 gives the host | [§M5](#milestone-5-feedback-ui) |
 | **M2** Club & ball detection | 🔒 Gated, **and M1.5 said no-go** | Bay lighting for a ~1/2000 s exposure — *not* a global-shutter camera | [§M2](#milestone-2-club--ball-detection) |
 | Hardware re-validation | 🔒 Gated | Cameras / launch monitor arriving | [§Gate](#hardware-re-validation-gate-revisit-when-cameras--launch-monitor-arrive) |
@@ -56,12 +57,20 @@ discriminator, the tour join and every per-club answer are built, correct and re
 the upload page before the first swing**, because a session hit without club tags produces data
 that can never be split by club afterwards.
 
-**M10 is why the trip is worth taking now rather than a week ago.** A bay session recorded
-against the windowing bug would have produced 20–30 more bundles scored on the wrong frames; the
-code was fixed on 2026-08-26 (P1-P9) and the 15 bundles already on disk were re-analysed against it
-the same day (P10). What M10 leaves behind is one open defect — the face-on top lands late on four
-bundles, see [§M10](#m10-alignment-accuracy--the-two-panels-leave-address-together--done) — and it
-is desk work whenever someone wants it, not a reason to hold the trip. More footage helps it.
+**M10 and M11 are why the trip is worth taking now rather than a fortnight ago.** A bay session
+recorded against the windowing bug would have produced 20–30 more bundles scored on the wrong
+frames; the code was fixed on 2026-08-26 and the corpus re-analysed the same day (M10 P10). What
+M10 left behind — the face-on top landing late — is **closed** as of 2026-08-29:
+[§M11](#m11-acoustic-sync--the-ball-strike-is-the-clock--done) took ADR-015's parked Option C, the
+ball strike both phones already record, as the shared clock that decides which view's top is wrong
+rather than merely doubting both. Every bundle on disk now reads `synchronized`, and a `tempo` timed
+from a contradicted top is withdrawn instead of shipped. So a session filmed today is scored on
+frames two views agree about. M11's residual is **not** closed and changed shape on 2026-08-30: the
+strike detector picks the right transient, but on four down-the-line clips the *video* decode
+ignores a 90 ms edit-list offset the *audio* decode applies, so a correct sample index lands on the
+wrong frame. That is where the down-the-line anchor's remaining error lives, and it has to be fixed
+before P9's candidate floor can land. New footage helps here too — only three bundles have been read
+against the video frame by frame.
 
 **M9's own last blocker went in the session before P20**: `index.html`'s swing list now has a
 per-swing **change** control beside the golfer one, so a swing already on disk is retagged from a phone in one tap over `POST
@@ -1228,6 +1237,13 @@ readings that now score and fail at 4.92, 6.08 and 6.09:1, and it is why one bun
 windowed down-the-line. Those three failures are **not** coaching truth and the phase list says so
 beside them.
 
+**That handoff was taken up and closed on 2026-08-29** by
+[§M11](#m11-acoustic-sync--the-ball-strike-is-the-clock--done), which found the disagreement on
+*seven* bundles rather than four once a measured impact was under it, withdrew every `tempo` timed
+from a contradicted top, and gave `2026-08-23/5` the down-the-line window this paragraph says it
+could not have. The numbers above are M10's and are left as they were measured on 2026-08-26; read
+M11 P9's *As built* for what is on disk now.
+
 **It was not one bug, and the obvious suspect was innocent.** `analysis/alignment.py` was largely
 right: it detected the trouble, refused the soft anchor and wrote an accurate note. The defects
 divided in two. **Group A** was upstream in `analysis/phases.py` — the down-the-line swing was
@@ -1244,6 +1260,86 @@ That was intended — a bundle scored on a practice swing was scored on the wron
 landed on four of the fifteen: three fell because `tempo` stopped being unscored and started
 failing, and one rose because the bundle that had been scored over its whole clip finally got a
 window. P10 records both directions.
+
+---
+
+## M11: Acoustic sync — the ball strike is the clock — done
+
+**Design**: [ADR-025](docs/decisions/025-acoustic-synchronization.md), accepted 2026-08-29. It
+takes [ADR-015](docs/decisions/015-handheld-two-phone-capture-and-event-anchored-alignment.md)'s
+**Option C**, which that ADR parked rather than rejected — *"the strongest alternative here…
+Revisit only with a concrete need."* Of its three objections, one **did not hold** (the upload path
+preserves audio, measured 30/30) and two did; ADR-015 now carries a second addendum recording that
+its "there is no shared clock" premise has an exception.
+**Phase list**: [docs/M11_ACOUSTIC_SYNC.md](docs/M11_ACOUSTIC_SYNC.md) — 10 phases, tier REFERENCE.
+**10/10 built**, closed 2026-08-29 — P9, the corpus re-run, whose *As built* is the before/after
+table and the honest account of what is left; P8, ADR-025 and `ANALYSIS_VERSION` 12, which took
+P7's deferred question with it: a `tempo` timed from a top the other view contradicts is **withdrawn** into `unscored` with a
+new `CROSS_VIEW_CONTRADICTED` reason, rather than shipped as the failing score M10 P10 called not
+coaching truth; P7, arbitrating the late top on the shared clock; P6, `SYNCHRONIZED` and impact as a measured anchor; P5, the ball strike in swing selection; P4, `audio_for`, the cached per-view read; P3, strike detection and the clip-to-clip offset; P2, the `AudioFile` contract and its storage reader; P1, the `audio` extra and the decode port; P0, the verified baseline.
+
+**The concrete need is what M10 handed over.** Both views infer the swing independently, from pose,
+and nothing external adjudicates — so on four bundles the face-on top lands late, three `tempo`
+readings score and fail on a denominator the other view contradicts, and one bundle still cannot be
+windowed down-the-line. ADR-015 built the normalized `tau` axis on the premise that "there is no
+shared clock", and M10's addendum then recorded that fps had entered the design in five places
+anyway, because *the anchors need real time even though the warp does not*.
+
+**There is a shared clock and it has been on disk all along.** Both phones record the ball strike.
+Verified 2026-08-29 by parsing the containers directly: **30/30 stored clips carry `mp4a` audio at
+48 kHz**, which settles the one assumption ADR-015 could not check. Also found, and the reason the
+decode path needs a real demuxer: the audio edit lists are **non-uniform** — most tracks carry a
+2112-sample encoder-priming offset (44 ms, 2.64 frames at 60 fps) and at least one carries none, so
+the bias does not cancel between the two views.
+
+**P0 then found a second defect, larger than the first.** Decoding real clips and cross-correlating
+the two views' audio shows that on four of the eleven 2026-08-23 bundles the **impact anchor** — the
+one alignment treats as reliable — is 5–7 frames out between the views, with down-the-line
+consistently early. It is a partly different set of bundles from the late-top four (only one is in
+both), it includes a bundle currently reported at the `full` tier, and a container A/V bias, a
+variable frame rate and sound travel were each measured and excluded as the cause. Details in
+[§E4](docs/M11_ACOUSTIC_SYNC.md); P6 and P7 were written before it was known.
+
+**Three things it buys, in order of confidence.** *Selection* — a rehearsal makes no crack, which is
+a far better discriminator than the duration band whose own comment calls its margin thin.
+*Synchronization* — a measured impact in both views, and a new `SYNCHRONIZED` tier above `full`,
+because a shared clock is different in kind from three inferred anchors. *Arbitration* — with one
+clock the two views' tops become comparable, which is what finally closes the late-top defect.
+
+**What it does not do.** Audio gives impact, not the top; it makes the top *decidable*, not
+detected. It is not calibration, so no down-the-line checkpoint becomes scoreable and ADR-015's
+Option D stays unreachable. And the `tau` axis stays — M10's addendum already drew the line this
+milestone works along.
+
+**Costs, paid**: one new extra (`audio`, on `imageio-ffmpeg`), an `ANALYSIS_VERSION` bump 11 → 12,
+and a corpus re-analysis that moved scores — the same shape of change M10 P10 was, and for the same
+reason.
+
+**What the re-run found**, 2026-08-29, 15/15 bundles re-analysed and re-rendered: **every bundle
+reads `synchronized`** and 30/30 clips are pinned to a strike they heard, four of them shot weeks
+before this was designed. The late face-on top is on **seven** of the eleven 2026-08-23 bundles
+rather than the three M10 handed over — a measured impact *widens* the disagreement, which is how
+1, 7, 9 and 11 joined it — so seven `tempo` scores are withdrawn into `unscored`, including the two
+that were *passing* at 4.27 and 4.06:1 on the same short downswing that made the others fail.
+`2026-08-23/4` reads 100.00 where it read 88.50 because a wrong score left, not because the swing
+improved; session 5 got the down-the-line window it never had; and the false *"the two clips are
+showing DIFFERENT swings"* note is gone corpus-wide, replaced by *"one swing filmed twice"*.
+
+**The residual P9 handed forward is open, and it sits one layer below where P9 looked**
+*(2026-08-30, the addendum)*. §Verification's "watch two renders by eye" was finally run and `9`
+failed it — its two panels strike about four output frames apart, where `/10`'s agree to within one.
+P9's proposed fix, a prominence floor in `audio/impact.py`, was built, measured over all 30 clips
+and **reverted**: it selects the right transient on every clip, but on the four down-the-line clips
+carrying §E2's video edit list it makes the render *worse*, because the precursor it removes had
+been cancelling a larger error underneath. That error is the edit list itself — a 90 ms presentation
+offset the audio decode applies and the video decode ignores — so on those clips a sample index and
+a frame index describe different timelines. Verified against the video frame by frame: face-on
+contact matches its audio anchor on all three bundles checked, down-the-line contact misses by
++6.2 and +6.8 frames on `9` and `7`, and `10`, which has no such edit list, agrees to 0.6 frames.
+`2026-08-23/11` shows how sensitive the arbitration is to any of this: 3 frames of anchor movement
+flipped its `tempo` from withdrawn to scored across a `_DOWNSWING_AGREEMENT` margin of 0.014. Fix
+the edit list, then land the floor. `AUDIO_DETECTOR_VERSION` was added so that second step cannot
+ship invisibly onto the bundles already on disk. Frame numbers in §Addendum of the phase doc.
 
 ---
 
