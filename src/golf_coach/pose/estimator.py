@@ -6,7 +6,12 @@ extra (`pip install -e '.[vision]'`).
 
 Uses MediaPipe's **Tasks API** (`PoseLandmarker`): recent mediapipe releases (0.10.3x)
 removed the legacy `mp.solutions` API, leaving only Tasks. The Tasks API needs a model
-asset (`.task`), which we fetch once into `data/models/` (see `_ensure_model`).
+asset (`.task`), which we fetch once into `data/models/` (see `ensure_pose_model`).
+
+**Which bundle runs is configuration, not a constant** — `settings.pose_model_variant`, one of
+`POSE_VARIANTS`. `pose_estimator_name` is how the rest of the system says which one measured a
+given artifact; `api/pipeline.py` compares that name against a cached pose run before reusing it,
+for the reason `contracts/audio.py` gives about its detector version.
 
 The heavy MediaPipe call lives in `estimate_pose`; the raw-landmark -> contract mapping is
 isolated in the pure `_to_frame_keypoints` helper so it can be unit-tested without the ML
@@ -29,16 +34,49 @@ if TYPE_CHECKING:
     # `capture` never hoisting its own numpy import — which R2 explicitly allows it to do.
     from golf_coach.capture.source import Frame
 
-# Lite pose-landmarker bundle (~5 MB). Fast and accurate enough for the M1 skeleton PoC;
-# swap to the full/heavy variant later if accuracy through impact needs it.
-_MODEL_FILENAME = "pose_landmarker_lite.task"
+#: The three pose-landmarker bundles Google publishes, cheapest first: lite (~5 MB), full (~9 MB),
+#: heavy (~30 MB). Which one runs is `settings.pose_model_variant`, not a constant here, because
+#: it is an operational choice the bay makes and re-makes — see that setting for why it is heavy
+#: and what the bake-off measured.
+POSE_VARIANTS = ("lite", "full", "heavy")
+
 _MODEL_URL = (
     "https://storage.googleapis.com/mediapipe-models/pose_landmarker/"
-    "pose_landmarker_lite/float16/latest/pose_landmarker_lite.task"
+    "pose_landmarker_{variant}/float16/latest/pose_landmarker_{variant}.task"
 )
 
 
-def _ensure_model(models_dir: Path) -> Path:
+def resolve_variant(variant: str | None = None) -> str:
+    """The variant to run: the argument, else `settings.pose_model_variant`. Validated here.
+
+    Validated rather than passed through, because an unknown name would otherwise surface as a
+    404 inside `urlretrieve` on the first swing of a session — long after the typo, and phrased
+    as a network failure rather than as a bad setting.
+    """
+    resolved = variant if variant is not None else settings.pose_model_variant
+    if resolved not in POSE_VARIANTS:
+        raise ValueError(
+            f"unknown MediaPipe pose variant {resolved!r}; expected one of {POSE_VARIANTS}"
+        )
+    return resolved
+
+
+def pose_estimator_name(variant: str | None = None) -> str:
+    """`"mediapipe:heavy"` — the name a stored artifact records the measuring instrument by.
+
+    Deliberately the same vocabulary as `scripts/golfdb/estimators.py`'s registry keys and
+    `benchmarks/golfdb_v1.json`'s `dataset.pose_estimator`, so a cached pose run, a bake-off row
+    and a band's provenance can be compared as strings without a translation table between them.
+    """
+    return f"mediapipe:{resolve_variant(variant)}"
+
+
+def model_filename(variant: str | None = None) -> str:
+    """Bundle filename for a variant. One per variant, so switching does not re-download."""
+    return f"pose_landmarker_{resolve_variant(variant)}.task"
+
+
+def ensure_pose_model(models_dir: Path, variant: str | None = None) -> Path:
     """Return the local path to the pose model, downloading it once if missing.
 
     Downloads to a temp path and renames, the same way `api/state.py` and the `storage/` writers
@@ -46,13 +84,18 @@ def _ensure_model(models_dir: Path) -> Path:
     a truncated `.task` that the `exists()` check below accepts forever after — every later
     `estimate_pose` then failing inside MediaPipe with an opaque model-parse error that nothing
     connects back to the interrupted download.
+
+    Each variant caches under its own filename, so moving `settings.pose_model_variant` back and
+    forth costs one download per variant and not one per switch.
     """
     models_dir.mkdir(parents=True, exist_ok=True)
-    model_path = models_dir / _MODEL_FILENAME
+    resolved = resolve_variant(variant)
+    model_path = models_dir / model_filename(resolved)
     if not model_path.exists():
         tmp = model_path.with_suffix(".part")
         try:
-            urllib.request.urlretrieve(_MODEL_URL, tmp)  # trusted https model bundle
+            url = _MODEL_URL.format(variant=resolved)
+            urllib.request.urlretrieve(url, tmp)  # trusted https model bundle
             tmp.replace(model_path)
         finally:
             tmp.unlink(missing_ok=True)
@@ -106,7 +149,9 @@ def _to_frame_keypoints(
 
 
 def estimate_pose(
-    frames: Iterable[Frame], model_path: str | Path | None = None
+    frames: Iterable[Frame],
+    model_path: str | Path | None = None,
+    variant: str | None = None,
 ) -> list[FrameKeypoints]:
     """Run MediaPipe Pose over frames and return one FrameKeypoints per frame.
 
@@ -114,15 +159,21 @@ def estimate_pose(
     decoded frame outlives its iteration. That is what keeps a 4K clip from needing gigabytes;
     the returned keypoints are small (33 landmarks/frame) and are the only thing accumulated.
 
-    `model_path` defaults to the bundle under `settings.models_dir` (downloaded on first
-    use); pass an explicit path to override.
+    `model_path` defaults to the bundle for `variant` under `settings.models_dir` (downloaded on
+    first use); pass an explicit path to override. `variant` defaults to
+    `settings.pose_model_variant` — the bake-off (`scripts/golfdb/estimators.py`) is the caller
+    that names one, because comparing variants is the whole point of it.
     """
     import cv2
     import mediapipe as mp
     from mediapipe.tasks import python as mp_python
     from mediapipe.tasks.python import vision
 
-    resolved = Path(model_path) if model_path is not None else _ensure_model(settings.models_dir)
+    resolved = (
+        Path(model_path)
+        if model_path is not None
+        else ensure_pose_model(settings.models_dir, variant)
+    )
 
     options = vision.PoseLandmarkerOptions(
         base_options=mp_python.BaseOptions(model_asset_path=str(resolved)),

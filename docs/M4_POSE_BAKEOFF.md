@@ -355,6 +355,13 @@ mean PCE, and the *worst* address `med_norm` of the three). ADR-002 rejected hea
 basis of one clip judged by eye; that judgement was right, and this is the number that was missing
 from it.
 
+> **Overridden operationally, 2026-08-30.** The bay now runs heavy anyway — see ADR-002's
+> third addendum. Nothing measured here changed: this table is about *event recovery* (which frame
+> is address, top, impact) and the complaint heavy was reached for is landmark **jitter** on bay
+> footage, which no row here scores. If you are here to re-argue the variant, the missing
+> instrument is a per-frame landmark-displacement comparison on our own clips, not another PCE
+> run — and the bands are still cut from `mediapipe:lite`, which is the cost ADR-012 §4 prices.
+
 ### RTMPose was 35x too slow for the wrong reason
 
 RTMPose-m initially measured **3.1 fps** against MediaPipe lite's ~106 — which would have made a

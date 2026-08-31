@@ -17,7 +17,7 @@ Two independent pipelines. Neither is joined to the other yet — that join is M
 
 ```mermaid
 flowchart LR
-    MOV["swing .mov<br/>data/raw"] --> RP["scripts/run_pose.py<br/>MediaPipe lite, Tasks API"]
+    MOV["swing .mov<br/>data/raw"] --> RP["scripts/run_pose.py<br/>MediaPipe, Tasks API"]
     RP --> KP[("keypoints.json<br/>data/processed")]
     RP --> SKEL["skeleton overlay .mp4"]
 

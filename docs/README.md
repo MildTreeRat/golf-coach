@@ -97,7 +97,7 @@ section is not always the final word — the counts below exist so you don't mis
 | ADR | Decision | Status | Addenda |
 |---|---|---|---|
 | [001](decisions/001-language-python.md) | Python as the primary language | Accepted | — |
-| [002](decisions/002-pose-estimation-mediapipe.md) | MediaPipe for pose estimation | Accepted | **2** — Tasks API replaced the removed Solutions API; **lite kept over full/heavy, measured** (12 McNemar tests, none significant) |
+| [002](decisions/002-pose-estimation-mediapipe.md) | MediaPipe for pose estimation | Accepted | **3** — Tasks API replaced the removed Solutions API; **lite kept over full/heavy, measured** (12 McNemar tests, none significant); then the variant became configuration and the bay chose heavy anyway, on a question the bake-off never asked |
 | [003](decisions/003-camera-hardware.md) | Camera hardware | Accepted | **4** — global shutter ≠ no motion blur; **pose camera goes face-on (3 o'clock)**; two cameras not three + the spine caveat; **the number behind the blur note — ~1/2000 s, so buy light not shutter type** |
 | [004](decisions/004-launch-monitor.md) | Garmin R10 | Accepted, **not the near-term path** | — (superseded in practice by ADR-014) |
 | [005](decisions/005-object-detection-yolov8.md) | YOLOv8 for club/ball detection | Accepted, **not yet startable** | **1** — M1.5 ran and deferred the labelling on evidence; the blocker is exposure time, not the detector |

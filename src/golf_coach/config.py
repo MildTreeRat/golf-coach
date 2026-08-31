@@ -46,6 +46,22 @@ class Settings(BaseSettings):
     models_dir: Path = REPO_ROOT / "data" / "models"
     db_path: Path = REPO_ROOT / "data" / "golf_trainer.db"
 
+    # Which MediaPipe pose-landmarker bundle `pose/estimator.py` runs (ADR-002). One of
+    # "lite", "full", "heavy"; the bundle is downloaded into `models_dir` on first use.
+    #
+    # **Heavy is an operator choice, not the measured one.** The 120-clip bake-off
+    # (docs/M4_POSE_BAKEOFF.md Phase B0) found heavy costs 4.4x lite and buys nothing on event
+    # accuracy — full is the variant that won what little there was to win. This defaults to heavy
+    # anyway because it is what the sim bay is asked to run, and because the bake-off measured
+    # *event* accuracy on GolfDB footage, not landmark steadiness on a phone clip of this bay,
+    # which is what "the dots" are. Move it with `GOLF_POSE_MODEL_VARIANT` rather than an edit.
+    #
+    # Changing this changes the numbers, so two stamps move with it: `KeypointsFile.pose_estimator`
+    # invalidates a cached pose run measured by another variant, and `ANALYSIS_VERSION` marks the
+    # stored scores that disagree. Bands, though, are still cut from `mediapipe:lite`
+    # (`benchmarks/golfdb_v1.json`) — ADR-012 §4 is the reason `api/pipeline.py` says so in a note.
+    pose_model_variant: str = "heavy"
+
     # Screen-capture shot ingestion (ADR-014). Drop photos of the launch monitor's
     # SHOT DATA screen in `shot_screens_dir`; parsed shots land in `shots_dir`.
     shot_screens_dir: Path = REPO_ROOT / "data" / "raw" / "shot_screens"

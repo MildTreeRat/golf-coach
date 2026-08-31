@@ -55,12 +55,16 @@ entirely — the module only exposes `Image`, `ImageFormat`, and `tasks`. So the
 not a preference, it is the only option on current builds. We use `PoseLandmarker` in
 `RunningMode.VIDEO` (frame-to-frame tracking). Implemented in `pose/estimator.py`.
 
-### Model: MediaPipe Pose Landmarker — "lite" variant (default)
+### Model: MediaPipe Pose Landmarker — which variant is configuration
+
+Which bundle runs is `settings.pose_model_variant` (`config.py`), not a constant in
+`estimator.py`; read it there rather than here. The M1 choice, and what later measurement and
+operation did to it, are below.
 The model is called the **Pose Landmarker** and comes in three sizes (speed ↔ accuracy):
 
 | Variant | File | Size | Speed | Accuracy | Notes |
 |---------|------|------|-------|----------|-------|
-| **Lite (our default)** | `pose_landmarker_lite.task` | ~5 MB | Fastest | Good | Fine for the M1 skeleton PoC |
+| Lite | `pose_landmarker_lite.task` | ~5 MB | Fastest | Good | Fine for the M1 skeleton PoC |
 | Full | `pose_landmarker_full.task` | ~9 MB | Medium | Better | Untried middle ground |
 | Heavy | `pose_landmarker_heavy.task` | ~30 MB | 3–5× slower | Best on benchmarks | Tested on our first clip in M1 — did **not** improve lower-body/knee tracking; the weak spot there is the *recording* (lighting/contrast/clutter), not model size |
 
@@ -133,3 +137,82 @@ pre-cropped clips the detector is re-deriving a constant. Full-frame video would
 recovery*; the three are indistinguishable. Revisit the variant choice only for a checkpoint that
 depends on absolute landmark positions (spine angle, hip rotation) rather than trajectory shape,
 where this bake-off is silent — and re-run it against that metric.
+
+
+## Addendum (2026-08-30): the variant became configuration, and the bay runs heavy
+
+The bake-off above is unchanged and still says what it said: on *event recovery* the three
+MediaPipe variants are indistinguishable, and heavy costs 4.4x lite for nothing. This addendum
+does not overturn that. It records that the variant stopped being a constant and that the sim bay
+is now asked to run **heavy** anyway, for a reason the bake-off did not measure.
+
+**What changed.** `_MODEL_FILENAME`/`_MODEL_URL` became `settings.pose_model_variant` plus a URL
+template, so the choice moves with `GOLF_POSE_MODEL_VARIANT` and not with an edit. Each variant
+caches under its own filename in `models_dir`, so switching back is free after the first download.
+The bake-off's own copy of that downloader — which had none of `ensure_pose_model`'s temp-file
+guard — went with it; one file, one downloader.
+
+**Why heavy, against the measurement.** The complaint that prompted it is landmark *steadiness* —
+"the dots" — on this bay's own phone clips. Phase B0 scored PCE: whether a variant recovers the
+right frame for address, top and impact on GolfDB's 160x160 tour crops. Those are different
+questions, and the escalation path at the end of the previous addendum names exactly this gap:
+revisit the variant for something depending on absolute landmark positions rather than trajectory
+shape, "where this bake-off is silent". It is still silent. Heavy here is an operator preference
+with a plausible mechanism, not a measured win — and if it is ever to become a measured one, the
+missing instrument is a landmark-jitter comparison on *bay* footage (per-frame displacement of a
+landmark against its own smoothed track), not another PCE run.
+
+**What it costs, and what the code does about it.** Three things follow, and none of them are
+optional:
+
+- **Speed.** ~24 fps against lite's ~106 on the bake-off hardware. A bay clip is minutes of pose,
+  not tens of seconds, and the pipeline caches it precisely so that is paid once per clip.
+- **Caches.** `ClipMetadata.source_sha256` keys the stored `*.keypoints.json` on the *footage*, so
+  it cannot see a changed instrument. `KeypointsFile.pose_estimator` was added beside it and
+  `api.pipeline.keypoints_for` re-runs pose when the two disagree — otherwise every bundle already
+  on disk would have gone on serving lite landmarks with nothing saying so. Same shape, same
+  reason, as `AUDIO_DETECTOR_VERSION`. `ANALYSIS_VERSION` 13 -> 14 is the matching gate a layer up.
+- **Bands.** This is the real cost. `ranges.json` is cut from GolfDB clips extracted with
+  `mediapipe:lite`, and ADR-012 §4 is explicit that a band is only comparable to a swing measured
+  the same way — the estimator's bias is common-mode across both sides and cancels, right up until
+  the two sides diverge. They now diverge. `api.pipeline._band_estimator_note` says so on every
+  affected result rather than leaving it to be inferred from two provenance fields in different
+  files. **The honest fix is to re-derive the corpus under the running variant**
+  (`scripts/golfdb/derive_pose_metrics.py --estimator mediapipe:heavy`, then
+  `derive_reference.py`) — roughly 1400 s per 120 clips at heavy's rate, and until it is run the
+  scores are approximate in a way the note names.
+
+**Measured after the switch: heavy drops the tour-trajectory placements, and it is not steadier
+where it matters.** The corpus re-analysis lost `tour_trajectory_t2` / `_q` on all 15 stored
+bundles and the `_dtl` pair on 11 of them. The mechanism is not a bug: `analysis/trajectory.py`
+discards a landmark column when more than `MAX_MISSING` of its sampled steps fall under
+`MIN_VISIBILITY`, and on `2026-08-23/4` face-on heavy puts right_elbow over at 23/40 and
+right_wrist at 21/40, so `build_trajectory` returns None. Re-run on the *same* clip with the same
+anchors, lite clears every column with none below the floor.
+
+The comparison worth keeping, because it says heavy is not simply "better but shy" (median
+visibility over motion_start..impact; position agreement in normalized frame units; jitter as
+median frame-to-frame displacement):
+
+| landmark | vis lite -> heavy | steps under the floor | median \|dx\| | jitter lite -> heavy |
+|---|---|---|---|---|
+| right_elbow | 0.958 -> 0.987 | 23/40 | 0.005 | 0.00083 -> 0.00073 |
+| right_wrist | 0.947 -> 0.987 | 21/40 | 0.013 | 0.00202 -> 0.00188 |
+| left_wrist | 0.962 -> 0.681 | 13/40 | 0.006 | 0.00232 -> 0.00374 |
+| left_knee | 0.987 -> 0.768 | 15/40 | 0.005 | 0.00035 -> 0.00032 |
+| left_shoulder | 1.000 -> 1.000 | 0/40 | 0.004 | 0.00038 -> 0.00058 |
+
+Three things follow. **Heavy is not mislocating joints** — the two variants agree to 0.4-1.3% of
+frame width, so this is a confidence disagreement, not a tracking one. **Heavy's confidence is
+bimodal**: median *higher* than lite on the trail arm while collapsing under the floor on more
+than half the sampled steps, which is it giving up through the fast part of the downswing rather
+than being uniformly cautious. And **the jitter result is mixed, against heavy where it counts** —
+marginally steadier on the trail arm, 1.6x jitterier on the lead wrist and 1.5x on the lead
+shoulder, and the lead wrist is what `phases.segment_phases` and `select_swing` read.
+
+**This is accepted, not fixed** (operator's call, 2026-08-31): the trajectory placements are not
+wanted right now, so the corpus runs at 17 measurements rather than 19 and no threshold was moved.
+Raising `MIN_VISIBILITY` for heavy was considered and declined — the floor gates every metric in
+the analysis core, not just this one, so admitting heavy's given-up frames would trade a visible
+failure for a silent one. One clip and five landmarks is also all this measures; it is the clip
+that failed, not a sample.

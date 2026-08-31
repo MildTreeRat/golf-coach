@@ -16,35 +16,16 @@ map those into the 33-slot layout and leave the rest at `visibility=0.0`. The re
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
-from pathlib import Path
 
 from golf_coach.capture.source import Frame
 from golf_coach.config import settings
 from golf_coach.contracts.keypoints import NUM_POSE_LANDMARKS, FrameKeypoints, Landmark
 from golf_coach.contracts.keypoints import PoseLandmark as PL
+from golf_coach.pose.estimator import ensure_pose_model
 
 Estimator = Callable[[Sequence[Frame]], list[FrameKeypoints]]
 
 # --- MediaPipe -----------------------------------------------------------------------------
-
-_MEDIAPIPE_VARIANTS = ("lite", "full", "heavy")
-_MEDIAPIPE_URL = (
-    "https://storage.googleapis.com/mediapipe-models/pose_landmarker/"
-    "pose_landmarker_{v}/float16/latest/pose_landmarker_{v}.task"
-)
-
-
-def ensure_mediapipe_model(variant: str) -> Path:
-    """Local path to a pose-landmarker bundle, downloading it once if missing."""
-    if variant not in _MEDIAPIPE_VARIANTS:
-        raise ValueError(f"unknown MediaPipe variant {variant!r}")
-    import urllib.request
-
-    settings.models_dir.mkdir(parents=True, exist_ok=True)
-    path = settings.models_dir / f"pose_landmarker_{variant}.task"
-    if not path.exists():
-        urllib.request.urlretrieve(_MEDIAPIPE_URL.format(v=variant), path)  # trusted https
-    return path
 
 
 def mediapipe_estimator(variant: str) -> Estimator:
@@ -55,7 +36,11 @@ def mediapipe_estimator(variant: str) -> Estimator:
     """
     from golf_coach.pose.estimator import estimate_pose
 
-    model_path = ensure_mediapipe_model(variant)
+    # The package's own downloader, not a second one. This module used to carry a copy — its own
+    # variant tuple, its own URL template, and a `urlretrieve` straight to the cache path with
+    # none of `ensure_pose_model`'s temp-file guard, so an interrupted bake-off download left a
+    # truncated bundle that every later run accepted (`tests/pose/test_model_download.py`).
+    model_path = ensure_pose_model(settings.models_dir, variant)
 
     def run(frames: Sequence[Frame]) -> list[FrameKeypoints]:
         return estimate_pose(frames, model_path=model_path)

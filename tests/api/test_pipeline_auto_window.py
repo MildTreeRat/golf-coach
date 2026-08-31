@@ -51,6 +51,7 @@ from golf_coach.contracts.keypoints import (
 from golf_coach.contracts.shot import ShotData, ShotProvenance, ShotSource
 from golf_coach.contracts.swing import ANALYSIS_VERSION, SwingBundleResult, SwingResult
 from golf_coach.launch_monitor.screen.store import ShotStore
+from golf_coach.pose.estimator import pose_estimator_name
 from golf_coach.storage.audio_io import save_audio
 from golf_coach.storage.keypoints_io import save_keypoints
 from golf_coach.storage.manifest import (
@@ -267,6 +268,10 @@ def bundle(tmp_path):
                 KeypointsFile(
                     clip=ClipMetadata(fps=_FPS, source_sha256=f"sha-{role.value}"),
                     frames=_clip(swings, visible=visible, camera_id=role.value),
+                    # Stamped, or `keypoints_for` would re-run pose over a video that is not
+                    # there rather than read this — the cache is keyed on the estimator as well
+                    # as on the clip (`contracts/keypoints.py`).
+                    pose_estimator=pose_estimator_name(),
                 ),
                 swing_dir / f"{role.value}.keypoints.json",
             )

@@ -20,13 +20,20 @@ and pooling two engine generations manufactures variance out of a code change �
 of the re-upload counting `storage.corpus` already refuses. `read_corpus` reports those swings as
 `ExclusionReason.OUTDATED` and keeps them out of the counts; this is how they get back in.
 
-**It is cheap.** Pose keypoints are cached per view against the clip's sha256 and shots are looked
-up in the shot store by the photo's hash, so a re-run of an unchanged bundle touches neither
-MediaPipe nor OCR — seconds, not minutes. The two genuinely expensive steps are the side-by-side
-render and the Claude coaching call, and both are **off by default** here: `--video` and
-`--coaching` opt back in. Anything analyzed without a render keeps whatever `aligned.mp4` it
-already had, so the script checks whether the alignment anchors moved and says so, rather than
-leaving a video that silently disagrees with the JSON beside it.
+**It is usually cheap.** Pose keypoints are cached per view against the clip's sha256 *and* the
+estimator that measured them, and shots are looked up in the shot store by the photo's hash, so a
+re-run of an unchanged bundle normally touches neither MediaPipe nor OCR — seconds, not minutes.
+The two genuinely expensive steps are the side-by-side render and the Claude coaching call, and
+both are **off by default** here: `--video` and `--coaching` opt back in.
+
+**The exception is a changed `settings.pose_model_variant`**, which invalidates every cached pose
+run by design (`contracts/keypoints.py`) — that re-run is two clips of MediaPipe per bundle and is
+minutes each, hours over a corpus. It is also the run that most wants `--video` afterwards: new
+landmarks move the alignment anchors, so the stored `aligned.mp4` is what goes stale.
+
+Anything analyzed without a render keeps whatever `aligned.mp4` it already had, so the script
+checks whether the alignment anchors moved and says so, rather than leaving a video that silently
+disagrees with the JSON beside it.
 
 Idempotent: run it twice and the second run reports nothing to do.
 

@@ -134,3 +134,19 @@ class KeypointsFile(BaseModel):
 
     clip: ClipMetadata | None = None
     frames: list[FrameKeypoints]
+
+    pose_estimator: str | None = Field(
+        default=None,
+        description=(
+            "Which pose estimator measured these landmarks — `pose.estimator."
+            "pose_estimator_name()`, e.g. `mediapipe:heavy`. **None means unknown, not lite**: "
+            "every file written before this field existed reads None, and the reader "
+            "(`api.pipeline.keypoints_for`) re-runs pose on one rather than guessing which "
+            "bundle produced it. Kept beside `clip` because it is the other half of the same "
+            "question — `clip.source_sha256` says which footage was measured, this says with "
+            "what — and a cache keyed on the footage alone cannot see a changed instrument, "
+            "which is the failure `AUDIO_DETECTOR_VERSION` (`contracts/audio.py`) documents one "
+            "module over. Landmarks from two variants are not interchangeable: they move the "
+            "phase instants and therefore every score built on them."
+        ),
+    )

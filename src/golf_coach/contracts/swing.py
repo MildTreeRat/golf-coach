@@ -349,7 +349,21 @@ class SwingResult(BaseModel):
 #:                   frames; `AUDIO_DETECTOR_VERSION` (`contracts/audio.py`) is the matching gate
 #:                   one layer down, because the strike lists themselves have to be re-detected
 #:                   before this engine can read them right.
-ANALYSIS_VERSION = 13
+#: 13 -> 14 (2026-08-30): a different instrument. `settings.pose_model_variant` moved from `lite`
+#:                   to `heavy`, so every landmark under every score is measured by a different
+#:                   MediaPipe bundle. Another `10 -> 11` shape: no field is added and nothing is
+#:                   missing from a version-13 artifact — it **disagrees**, because the variants do
+#:                   not place a landmark identically and the phase instants, the metrics and the
+#:                   percentiles all move with them. The bump is what keeps a lite-measured swing
+#:                   and a heavy-measured one out of one `PersonalBaseline` until `reanalyze.py`
+#:                   has run; `KeypointsFile.pose_estimator` (`contracts/keypoints.py`) is the
+#:                   matching gate one layer down, forcing the pose itself to be re-run rather than
+#:                   read from a cache keyed only on the clip. Note what this bump does *not* fix:
+#:                   the bands are still cut from `mediapipe:lite`, which ADR-012 §4 says makes
+#:                   them only approximately comparable to a heavy-measured swing — `api/pipeline.
+#:                   py::_band_estimator_note` says so on every affected result until the corpus is
+#:                   re-derived.
+ANALYSIS_VERSION = 14
 
 
 class SwingBundleResult(BaseModel):

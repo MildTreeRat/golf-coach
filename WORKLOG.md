@@ -71,6 +71,88 @@ re-analysing again under the heavy model**. The keypoint caches were untouched d
 (their mtimes are still 2026-08-23), so every number recorded here is `mediapipe:lite` and isolates
 P10 and P11 cleanly; that is stated where the tables are.
 
+## 2026-08-30 — The pose variant became configuration, and the bay now runs heavy
+
+**Duration**: ~1 session. `src/golf_coach/config.py` (`pose_model_variant`, default `heavy`),
+`src/golf_coach/pose/estimator.py` (`POSE_VARIANTS`, `resolve_variant`, `pose_estimator_name`,
+`model_filename`; `_ensure_model` and `estimate_pose` take a variant),
+`src/golf_coach/contracts/keypoints.py` (`KeypointsFile.pose_estimator`),
+`src/golf_coach/contracts/swing.py` (`ANALYSIS_VERSION` 13 -> 14),
+`src/golf_coach/api/pipeline.py` (the keypoints cache is keyed on the estimator, `_older_pose_note`,
+`_band_estimator_note`), `scripts/run_pose.py` (stamps what measured it),
+`scripts/golfdb/estimators.py` (its private downloader deleted in favour of `ensure_pose_model`).
+Tests: `tests/api/test_pipeline_pose_cache.py` (new, 6), `tests/pose/test_model_download.py`
+(3 new), `tests/api/test_pipeline_auto_window.py` (fixture stamps the estimator). Docs: ADR-002
+third addendum, `docs/M4_POSE_BAKEOFF.md` §Phase B0 override note, `docs/README.md`,
+`docs/ARCHITECTURE.md`. `ruff` and `mypy` clean.
+
+**The ask was "set the pose model to the highest setting for the foreseeable future", because the
+dots are misbehaving in the bay.** Highest is `heavy`, and the repo had already measured heavy and
+rejected it: ADR-002's second addendum, Phase B0 of the bake-off, 120 clips — heavy costs 4.4x lite
+and buys nothing on event recovery (53.9% vs 53.6% mean PCE, worst address error of the three).
+That measurement stands and was not overturned. **It also does not answer the question that was
+asked.** PCE scores whether the right *frame* is found for address, top and impact on GolfDB's
+160x160 tour crops; "the dots jitter" is landmark steadiness on this bay's own phone footage, and
+no row in that table scores it. The previous addendum's own escalation path names the gap. So heavy
+ships as an operator preference with a plausible mechanism and is documented as exactly that, not
+as a measured win — and the addendum names the instrument that would settle it (per-frame landmark
+displacement against a smoothed track, on bay clips).
+
+**The switch itself was one line; everything expensive was what the switch would have done
+quietly.** Three things had to move with it:
+
+- **The keypoints cache could not see it.** `*.keypoints.json` is keyed on the clip's sha256, which
+  keys on the *footage* — and the footage does not change when the estimator does. Every bundle on
+  disk would have gone on serving lite landmarks forever, with nothing in the result saying so.
+  `KeypointsFile.pose_estimator` is the second key, and `keypoints_for` now re-runs pose when it
+  disagrees. Exactly the shape `AUDIO_DETECTOR_VERSION` took for the same failure in M11 P11.
+- **A stored score from lite and one from heavy are not comparable.** `ANALYSIS_VERSION` 13 -> 14,
+  a `10 -> 11`-shaped bump: nothing is missing from a version-13 artifact, it disagrees. That is
+  what keeps the two out of one `PersonalBaseline` until `reanalyze.py` runs.
+- **The bands are still lite.** `ranges.json` is cut from GolfDB clips extracted with
+  `mediapipe:lite`, and ADR-012 §4 is explicit that the estimator's bias is common-mode across
+  reference and golfer and cancels *only* while both sides are measured alike. They no longer are.
+  `_band_estimator_note` says so on every affected result and disappears on its own when the two
+  agree again. **This is the outstanding debt of the session**: the honest fix is
+  `derive_pose_metrics.py --estimator mediapipe:heavy` then `derive_reference.py`, ~1400 s per 120
+  clips at heavy's rate, and until it runs the scores are approximate in a way only that note says.
+
+**One fallback got better on the way past.** A cached pose run whose clip has since been deleted
+used to be unreachable — the sha256 check returned early. With the estimator in the key, a variant
+switch sends every archived bundle down the missing-clip branch, which returned `None`, which is
+fatal for face-on and would have failed the whole bundle. It now keeps the older landmarks and
+says which estimator measured them; same for an install without the `vision` extra.
+
+**The corpus was re-analysed under heavy, and it cost the trajectory placements.** 15/15 bundles,
+all 30 clips re-posed and stamped `mediapipe:heavy`; `reanalyze.py` exits 1 because every
+`aligned.mp4` went stale, which is the documented signal and not a failure. But measurements went
+21 -> 17 on eleven bundles: `tour_trajectory_t2` / `_q` are gone from all fifteen and the `_dtl`
+pair from eleven. Not a bug — `build_trajectory` discards a landmark column when more than
+`MAX_MISSING` of its sampled steps fall under `MIN_VISIBILITY`, and heavy puts right_elbow (23/40)
+and right_wrist (21/40) over on `2026-08-23/4` face-on. **The same clip re-posed with lite clears
+every column**, which is what makes this attributable to the variant rather than to M11's anchors.
+
+**Heavy is not mislocating joints; it is disagreeing about confidence, and it is jitterier where
+it counts.** The two variants' positions agree to 0.4-1.3% of frame width. Heavy's visibility is
+*bimodal* — median higher than lite on the trail arm while collapsing under the floor on over half
+the sampled steps, i.e. giving up through the fast part of the downswing. On jitter it is
+marginally steadier on the trail arm and **1.6x worse on the lead wrist**, 1.5x on the lead
+shoulder — and the lead wrist is what `segment_phases` and `select_swing` read. The full table is
+in ADR-002's third addendum. Caveat recorded there too: one clip, five landmarks, and it is the
+clip that failed rather than a sample.
+
+**Accepted rather than fixed, on the operator's call (2026-08-31): stay on heavy, the tour
+placements are not wanted right now.** So the corpus runs at 17 measurements and no threshold
+moved. Raising `MIN_VISIBILITY` for heavy was considered and declined — that floor gates every
+metric in the analysis core, so admitting heavy's given-up frames trades a visible failure for a
+silent one.
+
+**Next.** Two things are outstanding and neither is urgent: every `aligned.mp4` is stale
+(`reanalyze.py --all --video` re-renders), and the bands are still cut from `mediapipe:lite`, which
+`_band_estimator_note` now says on every result. Reverting stays cheap if the dots do not settle —
+`GOLF_POSE_MODEL_VARIANT=lite` and one `reanalyze.py`, which is the reason this landed as a setting
+rather than an edit.
+
 ---
 
 ## 2026-08-30 — The render was replaying one panel at 2.08x, and a duration bound was picking swings

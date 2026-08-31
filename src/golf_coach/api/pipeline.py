@@ -55,6 +55,7 @@ from golf_coach.analysis.alignment import (
     pair_frames,
     warp_speeds,
 )
+from golf_coach.analysis.benchmarks.distributions import dataset_info
 from golf_coach.analysis.engine import analyze_swing_bundle
 from golf_coach.analysis.phases import (
     LEAD_WRIST,
@@ -80,6 +81,7 @@ from golf_coach.contracts.swing import SwingBundleResult
 from golf_coach.feedback.coach import generate_coaching
 from golf_coach.feedback.rules import build_feedback
 from golf_coach.launch_monitor.screen.store import ShotStore
+from golf_coach.pose.estimator import pose_estimator_name
 from golf_coach.storage.audio_io import load_audio, save_audio
 from golf_coach.storage.golfer_store import GolferStore
 from golf_coach.storage.keypoints_io import load_keypoints, save_keypoints
@@ -159,6 +161,23 @@ def resolve_swing_dir(target: str, sessions_dir: Path) -> Path | None:
     return None
 
 
+def _older_pose_note(
+    role: Role, superseded: KeypointsFile, estimator: str, because: str
+) -> str:
+    """Why a result carries landmarks the configured estimator did not produce.
+
+    Both callers reach it the same way — the cache was measured by another variant and this run
+    could not redo it — and both have to say so rather than substitute quietly, because a reader
+    comparing this result against one measured by the configured estimator has to be able to see
+    where the difference came from. `analysis_version` makes the same admission a layer up.
+    """
+    return (
+        f"the {role.value} landmarks were measured by "
+        f"{superseded.pose_estimator or 'an unrecorded estimator'} rather than by the configured "
+        f"{estimator}, and pose could not be re-run because {because}"
+    )
+
+
 def keypoints_for(
     swing_dir: Path,
     manifest: SwingManifest,
@@ -173,21 +192,47 @@ def keypoints_for(
     The cache key is the clip's own sha256, recorded in the keypoints envelope by M7 Phase 1 and
     in the manifest by the upload route. Comparing them is what makes reuse safe rather than
     merely fast: a re-uploaded clip under the same role invalidates itself.
+
+    **The cache is keyed on the estimator as well as on the clip**, exactly as `audio_for`'s is
+    keyed on its detector. `settings.pose_model_variant` decides which MediaPipe bundle runs, and
+    two bundles do not agree landmark for landmark — they move the phase instants and therefore
+    every score. The sha256 cannot see that: it keys on the *footage*, and the footage has not
+    changed. A file stamped with another estimator (or, for anything written before the stamp
+    existed, with none) is re-run rather than read. An install without the `vision` extra cannot
+    re-run and keeps the older landmarks, saying so in a note.
     """
     role_file = manifest.roles.get(role)
     if role_file is None:
         return None
 
+    estimator = pose_estimator_name()
     cache_path = swing_dir / f"{role.value}.keypoints.json"
+    # Same clip, another estimator: worth re-running, and worth keeping if this install cannot.
+    superseded: KeypointsFile | None = None
     if cache_path.exists() and not force:
         cached = load_keypoints(cache_path)
-        if cached.clip is not None and cached.clip.source_sha256 == role_file.content_sha256:
+        if cached.clip is None or cached.clip.source_sha256 != role_file.content_sha256:
+            log(f"  {role.value}: cached keypoints are for a different clip, re-running pose")
+        elif cached.pose_estimator != estimator:
+            superseded = cached
+            measured_by = cached.pose_estimator or "an unrecorded estimator"
+            log(f"  {role.value}: cached pose is from {measured_by}, re-running with {estimator}")
+        else:
             log(f"  {role.value}: {len(cached.frames)} frames from cache")
             return cached
-        log(f"  {role.value}: cached keypoints are for a different clip, re-running pose")
 
     video_path = swing_dir / role_file.filename
     if not video_path.exists():
+        # A cached run whose clip has since been deleted is still a measurement, and losing it
+        # would cost the whole bundle: face-on is the view every checkpoint is measured from, so
+        # `analyze_swing_dir` gives up entirely when this returns None for it. Before the
+        # estimator became part of the cache key this branch was unreachable for a bundle with
+        # cached pose — the sha256 check above returned early. Now a variant switch sends every
+        # archived bundle down it.
+        if superseded is not None:
+            log(f"  {role.value}: {video_path.name} is gone, keeping the older pose run")
+            _note(notes, _older_pose_note(role, superseded, estimator, "the clip is not on disk"))
+            return superseded
         log(f"  {role.value}: {video_path.name} is missing from the swing directory")
         _note(notes, f"the {role.value} clip is recorded in the manifest but missing from disk")
         return None
@@ -196,6 +241,19 @@ def keypoints_for(
         from golf_coach.capture.file import FileVideoSource
         from golf_coach.pose.estimator import estimate_pose
     except ImportError:
+        # Older landmarks beat none, the same trade `audio_for` makes below: the swing is still
+        # scoreable, just by an instrument this install cannot reproduce. Said in a note rather
+        # than used quietly, because a reader comparing this result against one measured by the
+        # configured estimator has to be able to see why the two differ.
+        if superseded is not None:
+            log(f"  {role.value}: no vision extra to re-run pose with, keeping the older run")
+            _note(
+                notes,
+                _older_pose_note(
+                    role, superseded, estimator, "the vision extra is not installed"
+                ),
+            )
+            return superseded
         log(f"  {role.value}: pose needs the vision extra — pip install -e '.[vision]'")
         _note(notes, f"no pose for {role.value}: the vision extra is not installed")
         return None
@@ -232,6 +290,7 @@ def keypoints_for(
             source_sha256=role_file.content_sha256,
         ),
         frames=frames,
+        pose_estimator=estimator,
     )
     save_keypoints(keypoints, cache_path)
     log(f"  {role.value}: {len(frames)} frames -> {cache_path.name}")
@@ -993,6 +1052,9 @@ def analyze_swing_dir(
             "analyzed without " + ", ".join(role.value for role in missing)
             + " — the result is thinner than a complete bundle's"
         )
+    band_mismatch = _band_estimator_note(pose_estimator_name())
+    if band_mismatch is not None:
+        notes.append(band_mismatch)
 
     log("\nPose:")
     views: dict[Role, KeypointsFile] = {}
@@ -1167,6 +1229,35 @@ def analyze_swing_dir(
     )
     record_state(swing_dir, manifest, outcome, started_at=started_at)
     return outcome
+
+
+def _band_estimator_note(estimator: str) -> str | None:
+    """Say so when the swing and the bands it is judged against were measured differently.
+
+    ADR-012 §4 is explicit that a band is only comparable to a swing measured the same way: the
+    reference metrics and the golfer's metrics share an estimator, so most of its bias is
+    common-mode and cancels — and that argument fails the moment the two sides diverge. Which is
+    exactly what moving `settings.pose_model_variant` off the variant the corpus was extracted
+    with does.
+
+    It is a note and not a refusal, because the bands are still the best reference available and
+    a swing scored against them is worth more than no swing scored at all — but it is the kind of
+    thing a reader has to be told rather than left to infer from two provenance fields in
+    different files. It disappears on its own when the two agree again, either by moving the
+    setting back or by re-deriving the corpus (`scripts/golfdb/derive_pose_metrics.py
+    --estimator`, then `derive_reference.py`).
+    """
+    corpus = dataset_info().pose_estimator
+    if corpus is None:
+        return None
+    measured_by = [corpus] if isinstance(corpus, str) else list(corpus)
+    if estimator in measured_by:
+        return None
+    return (
+        f"this swing was measured by {estimator}, but the benchmark bands were cut from swings "
+        f"measured by {' and '.join(measured_by)} — the two instruments do not cancel, so read "
+        "the scores as approximate until the corpus is re-derived (ADR-012 §4)"
+    )
 
 
 def _note(notes: list[str] | None, message: str) -> None:

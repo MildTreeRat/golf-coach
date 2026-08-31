@@ -34,7 +34,7 @@ from golf_coach.capture.file import FileVideoSource
 from golf_coach.capture.source import Frame
 from golf_coach.config import settings
 from golf_coach.contracts.keypoints import ClipMetadata, FrameKeypoints, KeypointsFile
-from golf_coach.pose.estimator import estimate_pose
+from golf_coach.pose.estimator import estimate_pose, pose_estimator_name
 from golf_coach.pose.overlay import draw_skeleton
 from golf_coach.storage.keypoints_io import save_keypoints
 from golf_coach.storage.manifest import hash_file
@@ -94,6 +94,7 @@ def main(argv: list[str]) -> int:
                 source_sha256=hash_file(video_path),
             ),
             frames=keypoints,
+            pose_estimator=pose_estimator_name(),
         ),
         json_path,
     )
