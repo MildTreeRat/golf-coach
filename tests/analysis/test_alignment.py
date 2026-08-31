@@ -12,6 +12,7 @@ from conftest import _ADDRESS_FRAMES, make_swing
 
 from golf_coach.analysis.alignment import (
     _BACKSWING_AGREEMENT_S,
+    _MAX_WARP_SPEED_ERROR,
     _TEMPO_AGREEMENT,
     align_swings,
     anchors_from_keypoints,
@@ -19,6 +20,7 @@ from golf_coach.analysis.alignment import (
     map_frame,
     pair_frames,
     tau_of_frame,
+    warp_speeds,
     with_measured_impact,
 )
 from golf_coach.analysis.phases import _STRIKE_TOLERANCE_S, candidate_downswings
@@ -497,18 +499,28 @@ def test_the_rigid_fallback_tolerates_two_honestly_different_frame_rates() -> No
     assert speed_b == pytest.approx(1.0, abs=0.05)
 
 
-def test_the_rigid_fallback_needs_a_believable_downswing() -> None:
-    """An impossible reference duration must not be imposed on the other panel too.
+def test_an_impossible_reference_is_imposed_rather_than_replayed_fast() -> None:
+    """The inversion of the rule this used to pin, and the whole of the 2026-08-30 fix.
 
-    The fallback holds both views to one duration measured back from impact. If that duration is
-    not a physically possible downswing then the reference clip's anchors (or its clock) are wrong,
-    and propagating it turns one bad panel into two. Keep the warp and let the notes carry it.
+    An unbelievable reference duration used to veto the correction, leaving both detected tops in
+    place. That reads as caution and is not: `pair_frames` has no way to express two disagreeing
+    tops except as playback speed, so declining shipped four bundles replaying a panel at 1.48x to
+    3.11x. Holding both panels to a duration nobody can swing costs the top banner a few frames;
+    declining costs the viewer the tempo the side-by-side exists to show.
+
+    What the veto was protecting is not carried by the warp at all - `top_late_by` carries it, on
+    its own evidence - so nothing about the diagnosis changes here.
     """
     a = _DISAGREEING_A.model_copy(update={"top": 712})  # 6 frames ~ 0.10s, below the plausible band
     alignment = align_swings(a, _DISAGREEING_B)
 
-    assert alignment.quality is not AlignmentQuality.IMPACT_ONLY
-    assert any("not a possible downswing" in note for note in alignment.notes)
+    assert alignment.quality is AlignmentQuality.IMPACT_ONLY
+    assert alignment.a is not None and alignment.b is not None
+    assert alignment.a.warp_top is not None and alignment.b.warp_top is not None
+    # The band is still read, and still reported - it just no longer decides anything.
+    assert any("not a downswing any golfer makes" in note for note in alignment.notes)
+    # The point of imposing it: neither panel is replayed at a speed its camera never shot.
+    assert warp_speeds(alignment)["downswing"] == pytest.approx(1.0, abs=0.01)
 
 
 def test_manual_anchors_are_not_a_second_code_path(slow_clip: list[FrameKeypoints]) -> None:
@@ -944,21 +956,30 @@ def test_without_a_shared_clock_the_reference_is_still_the_face_on_view() -> Non
     assert "frames late" not in note
 
 
-def test_an_arbitrated_reference_that_is_no_downswing_is_still_refused() -> None:
-    """Knowing which top is wrong is not the same as knowing where the right one is.
+def test_an_arbitrated_reference_that_is_no_downswing_is_imposed_with_a_caution() -> None:
+    """Knowing which top is wrong is not the same as knowing where the right one is - so say so.
 
-    Bundle 4's down-the-line view reads 0.484s, past `phases._PLAUSIBLE_DOWNSWING_S` — and §E4 says
-    its impact anchor is the *early* kind on several of this family, so P6 pushing tau=2 later only
-    lengthens it further. A reference that is not a downswing means the sound view's top is suspect
-    too, so neither is imposed. The diagnosis still lands in the notes; the warp does not move.
+    Bundle 4's shape with its down-the-line downswing stretched to 0.917s — past
+    `phases._POSSIBLE_DOWNSWING_S`, which no golfer's downswing reaches. §E4 says this family's
+    down-the-line impact anchor is the *early* kind, so P6 pushing tau=2 later only lengthens it
+    further. That reference really is suspect. It is imposed regardless, because the alternative on
+    this bundle was a down-the-line panel replayed at 3.11x, and the note carries the doubt instead
+    of the warp carrying it as speed.
+
+    Stretched rather than taken as stored: bundle 4's real 0.484s sat outside the 0.45 ceiling of
+    the day and sits comfortably inside the widened band, which is the 2026-08-30 change working —
+    0.484s *is* a downswing. The branch still exists for a reference that is not one.
     """
-    alignment = align_swings(*_heard(_bundle_4()))
+    a, b = _bundle_4()
+    b = b.model_copy(update={"impact": b.top + 55})  # 0.917s of "downswing"
+    alignment = align_swings(*_heard((a, b)))
 
     assert alignment.a is not None and alignment.b is not None
-    assert alignment.a.warp_top is None and alignment.b.warp_top is None
+    assert alignment.a.warp_top is not None and alignment.b.warp_top is not None
     note = next(n for n in alignment.notes if "downswing durations disagree" in n)
-    assert "face_on's is 17 frames late" in note
-    assert "not a possible downswing" in note
+    assert "face_on's is 43 frames late" in note
+    assert "not a downswing any golfer makes" in note
+    assert "top banner is likely wrong in both panels" in note
 
 
 def test_one_strike_in_both_clips_rules_out_two_different_swings() -> None:
@@ -1019,19 +1040,28 @@ def test_the_late_top_is_recorded_on_the_clip_that_carries_it() -> None:
     assert not alignment.b.top_is_late
 
 
-def test_a_correction_the_warp_declined_is_still_a_contradicted_top() -> None:
+def test_a_correction_that_does_not_fit_the_clip_is_still_a_contradicted_top() -> None:
     """The case the whole field exists for, and the one `warp_top` cannot express.
 
-    Bundle 4's reference is 0.484s, which `phases._PLAUSIBLE_DOWNSWING_S` refuses, so the warp
-    leaves both tops where they were. Reading the correction as the finding would make this bundle
-    indistinguishable from one where the two views agreed — and bundle 4 is precisely the swing
-    shipping a `tempo` of 6.08:1 that M10 P10 called not coaching truth.
+    The warp can still decline - not on plausibility any more, but on *fit*: a reference measuring
+    back past frame 0 has no top to pin in that clip. Reading the correction as the finding would
+    make such a bundle indistinguishable from one where the two views agreed, and this family is
+    precisely the one shipping a `tempo` of 6.08:1 that M10 P10 called not coaching truth.
+
+    Declining is safe here only because `pair_frames` guards the render independently. Before that
+    guard existed every route out of `_shared_tops` returning None shipped a speed-up, which is
+    what made the plausibility veto harmful rather than merely cautious.
     """
-    alignment = align_swings(*_heard(_bundle_4()))
+    # Face-on's whole clip is shorter than down-the-line's downswing, so 0.484s back from its
+    # impact lands before its first frame and there is no shared top to impose.
+    a, b = _bundle_4()
+    a = a.model_copy(update={"motion_start": 3, "top": 12, "impact": 24})
+    alignment = align_swings(*_heard((a, b)))
 
     assert alignment.a is not None and alignment.b is not None
     assert alignment.a.warp_top is None and alignment.b.warp_top is None
-    assert alignment.a.top_late_by == 17
+    assert any("falls outside one of the clips" in note for note in alignment.notes)
+    assert alignment.a.top_is_late
     assert alignment.b.top_late_by is None
 
 
@@ -1076,3 +1106,125 @@ def test_a_clip_alignment_written_before_m11_reads_back_as_uncontradicted() -> N
 
     assert stored.top_late_by is None
     assert not stored.top_is_late
+
+
+# --- never at a speed the camera did not shoot ------------------------------------- [2026-08-30]
+#
+# The complaint that started this: on `2026-08-23/9` the down-the-line panel plays at 1.00x to the
+# top and 2.08x from the top onward. Nothing was wrong with the clip - the warp was resampling it
+# to make two disagreeing tops meet at one impact. These pin the two layers that stop it:
+# `_shared_tops` repairs the anchor where it can, and `pair_frames` refuses the speed regardless.
+
+
+def test_warp_speeds_reads_one_for_a_pair_that_agrees() -> None:
+    """The measurement the guard stands on, on a pair with nothing wrong with it."""
+    speeds = warp_speeds(align_swings(*_bundle_8()))
+
+    assert speeds["downswing"] == pytest.approx(1.0, abs=_MAX_WARP_SPEED_ERROR)
+    assert speeds["backswing"] == pytest.approx(1.0, abs=_MAX_WARP_SPEED_ERROR)
+
+
+def test_warp_speeds_declines_without_a_frame_rate() -> None:
+    """A speed is a rate in real time and there is none without fps - empty, never 1.0.
+
+    ADR-010 §2 in miniature: "not measured" and "measured at native rate" are different claims, and
+    a guard that read an empty dict as agreement would wave through exactly the clips it cannot
+    see. `pair_frames` leans on this - it warps unguarded rather than rigidly when fps is missing.
+    """
+    a, b = _bundle_9()
+    assert warp_speeds(align_swings(a, b.model_copy(update={"fps": None}))) == {}
+
+
+def test_session_9_no_longer_replays_the_follower_at_double_speed() -> None:
+    """The bundle the complaint came from, at its real stored anchors.
+
+    Face-on reads 13 frames of downswing where down-the-line reads 27 of the same swing, and both
+    impacts are pinned to the strike each phone heard. The old veto refused the correction because
+    0.4503s missed the duration bound of the day by 0.3 ms, and the render then covered
+    down-the-line's 27 frames in face-on's 13.
+    """
+    alignment = align_swings(*_heard(_bundle_9()))
+
+    speeds = warp_speeds(alignment)
+    assert speeds["downswing"] == pytest.approx(1.0, abs=0.01)
+    assert speeds["backswing"] == pytest.approx(1.0, abs=0.01)
+
+
+def test_the_schedule_advances_the_follower_at_its_native_rate() -> None:
+    """The claim as a viewer meets it: frames on a schedule, not durations in a model.
+
+    Sampled across the top, because that is where the old warp changed gear - one rate below tau=1
+    and another above it. A single rate over the whole schedule is what "nothing was sped up" means.
+    """
+    alignment = align_swings(*_heard(_bundle_9()))
+    schedule = pair_frames(alignment, 726, 450, reference="a")
+
+    assert schedule
+    below = [step for step in schedule if step.tau < TAU_TOP]
+    above = [step for step in schedule if TAU_TOP <= step.tau <= TAU_IMPACT]
+    assert len(below) > 2 and len(above) > 2
+    for segment in (below, above):
+        advanced = segment[-1].frame_b - segment[0].frame_b
+        drove = segment[-1].frame_a - segment[0].frame_a
+        assert advanced / drove == pytest.approx(1.0, abs=0.1)
+
+
+def test_a_pre_top_disagreement_the_repair_never_sees_is_still_refused_as_speed() -> None:
+    """The half `_shared_tops` structurally cannot reach, and the reason the guard exists at all.
+
+    That rule only ever moves a *top*, so it is blind to a pair whose downswings agree and whose
+    backswings do not - which an accepted soft anchor allows up to `_BACKSWING_AGREEMENT_S` of.
+    `2026-08-23/10` is this shape on disk: 0.95x through the downswing, which nobody would notice,
+    and 0.83x before the top, which is six frames of daylight by the takeaway.
+    """
+    a, b = _bundle_10()
+    alignment = align_swings(a, b)
+
+    # The repair declines - the downswings are within `_DOWNSWING_AGREEMENT` of each other.
+    assert alignment.a is not None and alignment.b is not None
+    assert alignment.a.warp_top is None and alignment.b.warp_top is None
+    assert warp_speeds(alignment)["backswing"] < 1.0 - _MAX_WARP_SPEED_ERROR
+
+    # The guard does not, and the rendered schedule comes out at native rate anyway.
+    schedule = pair_frames(alignment, a.frame_count or 900, b.frame_count or 900, reference="a")
+    assert schedule
+    advanced = schedule[-1].frame_b - schedule[0].frame_b
+    drove = schedule[-1].frame_a - schedule[0].frame_a
+    assert advanced / drove == pytest.approx(1.0, abs=_MAX_WARP_SPEED_ERROR)
+
+
+def _bundle_8() -> tuple[SwingAnchors, SwingAnchors]:
+    """Two views of one swing that actually agree - 28 frames of downswing in each."""
+    a = SwingAnchors(
+        motion_start=452, top=505, impact=533, frame_count=700, fps=59.975, camera_id="face_on"
+    )
+    b = SwingAnchors(
+        motion_start=300, top=353, impact=381, frame_count=600, fps=59.960,
+        camera_id="down_the_line",
+    )
+    return a, b
+
+
+def _bundle_9() -> tuple[SwingAnchors, SwingAnchors]:
+    """The stored anchors of `2026-08-23/9`, the bundle the 2.08x render came from."""
+    a = SwingAnchors(
+        motion_start=469, top=534, impact=547, frame_count=726, fps=59.97521685254027,
+        camera_id="face_on",
+    )
+    b = SwingAnchors(
+        motion_start=244, top=297, impact=324, frame_count=450, fps=59.9602911978822,
+        camera_id="down_the_line",
+    )
+    return a, b
+
+
+def _bundle_10() -> tuple[SwingAnchors, SwingAnchors]:
+    """Downswings that agree and backswings that do not - the guard's own case."""
+    a = SwingAnchors(
+        motion_start=700, top=752, impact=773, frame_count=900, fps=59.96, camera_id="face_on"
+    )
+    b = SwingAnchors(
+        motion_start=1200, top=1243, impact=1263, frame_count=1400, fps=59.96,
+        camera_id="down_the_line",
+    )
+    return a, b

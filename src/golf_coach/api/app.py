@@ -52,7 +52,7 @@ from golf_coach.storage.bag_store import BagStore
 from golf_coach.storage.bundle_store import SwingBundleStore
 from golf_coach.storage.corpus import read_corpus
 from golf_coach.storage.golfer_store import GolferStore
-from golf_coach.storage.manifest import EXPECTED_ROLES, Role
+from golf_coach.storage.manifest import EXPECTED_ROLES, Role, SwingManifest
 from golf_coach.storage.session_meta import (
     load_session_meta,
     set_current_club,
@@ -335,6 +335,36 @@ def _analysis_summary(swing_dir: Path) -> dict:
         "has_video": bool(state.video),
         "video_codec": state.video_codec,
         "completed_at": state.completed_at.isoformat() if state.completed_at else None,
+    }
+
+
+def _swing_row(manifest: SwingManifest, swing_dir: Path) -> dict:
+    """One swing as every listing renders it.
+
+    Lifted out of `session_detail` when `GET /api/sessions` arrived, rather than copied into it.
+    The upload page's status panel and the library page show the same five things about a swing —
+    who, which club, which roles landed, what it scored — and a second literal here is a second
+    thing that goes stale when a field is added. Same reason `/api/clubs` exists (M9 P7).
+    """
+    return {
+        "swing_id": manifest.swing_id,
+        "status": manifest.status(),
+        "created_at": manifest.created_at.isoformat(),
+        "updated_at": manifest.updated_at.isoformat(),
+        "player_id": manifest.player_id,
+        "club": _club_value(manifest.club),
+        "roles": {
+            role.value: (
+                {
+                    "original_filename": manifest.roles[role].original_filename,
+                    "received_at": manifest.roles[role].received_at.isoformat(),
+                }
+                if role in manifest.roles
+                else None
+            )
+            for role in EXPECTED_ROLES
+        },
+        "analysis": _analysis_summary(swing_dir),
     }
 
 
@@ -710,6 +740,41 @@ def create_app(
             raise HTTPException(status_code=404, detail=f"{club_id.value} is not in the bag")
         return _bag_for(golfer.player_id)
 
+    @app.get("/api/sessions", dependencies=guard)
+    async def list_sessions() -> dict:
+        """Every session that holds a swing, newest first. The library page's one round trip.
+
+        Until this existed there was no way to *enumerate*: the API could answer "today" and it
+        could answer a session you already knew the id of, so a swing from a previous session was
+        reachable only by typing its `results.html?session=…&swing=…` URL by hand. The upload page
+        only ever renders the current session, which is right for the bay and wrong for looking
+        back at anything.
+
+        **Whole rows, not just ids.** Fifteen swings across six sessions is the corpus this serves,
+        and a page that listed session ids and then fetched each one would pay six round trips to
+        render one screen. `_swing_row` is the same projection `session_detail` sends, so the
+        library and the status panel cannot disagree about what a swing looks like.
+
+        Sessions with no swing bundle in them are skipped. `session.json` alone is a session that
+        was *opened* — a golfer and club cursor were set at the bay — and four of those exist with
+        nothing filmed under them; listing them as browsable history would be four dead rows.
+        """
+        sessions = []
+        for session_id in reversed(bundle_store.list_session_ids()):
+            manifests = bundle_store.get_session(session_id)
+            if not manifests:
+                continue
+            sessions.append(
+                {
+                    "session_id": session_id,
+                    "swings": [
+                        _swing_row(manifest, swing_dir_of(session_id, manifest.swing_id))
+                        for manifest in manifests
+                    ],
+                }
+            )
+        return {"sessions": sessions}
+
     # Declared before `/api/sessions/{session_id}` would be ambiguous only if the paths had the
     # same shape; they don't, but `current` must stay above it regardless — FastAPI matches in
     # declaration order and `{session_id}` would happily swallow the literal.
@@ -720,28 +785,7 @@ def create_app(
         return {
             "session_id": session_id,
             "swings": [
-                {
-                    "swing_id": manifest.swing_id,
-                    "status": manifest.status(),
-                    "created_at": manifest.created_at.isoformat(),
-                    "updated_at": manifest.updated_at.isoformat(),
-                    "player_id": manifest.player_id,
-                    "club": _club_value(manifest.club),
-                    "roles": {
-                        role.value: (
-                            {
-                                "original_filename": manifest.roles[role].original_filename,
-                                "received_at": manifest.roles[role].received_at.isoformat(),
-                            }
-                            if role in manifest.roles
-                            else None
-                        )
-                        for role in EXPECTED_ROLES
-                    },
-                    "analysis": _analysis_summary(
-                        swing_dir_of(session_id, manifest.swing_id)
-                    ),
-                }
+                _swing_row(manifest, swing_dir_of(session_id, manifest.swing_id))
                 for manifest in manifests
             ],
         }

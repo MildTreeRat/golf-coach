@@ -1676,7 +1676,11 @@ scoring both axes.
       `CheckpointScore` carries the band **and** the tour percentile, so a bar can show both)*
 - [ ] Build rule-based feedback panel: plain-English tips per checkpoint *(the ranking, severity and
       headline landed in M5-FB; what's left is rendering `FeedbackPayload`)*
-- [ ] Build session history view: list of past swings with scores and trends
+- [x] Build session history view *(shipped as a static page rather than waiting on React:
+      `api/static/library.html` over `GET /api/sessions` — every session newest-first, each
+      swing's score, headline, club and golfer, filterable by golfer, with the aligned render
+      playable inline. Trends stayed on the career page, which already reads a golfer against
+      their own history; this one answers "which swing was that", not "how am I doing")*
 - [ ] Connect frontend to FastAPI backend
 
 **Exit Criteria**: User swings → sees annotated video, score, and actionable tips within 15 seconds.

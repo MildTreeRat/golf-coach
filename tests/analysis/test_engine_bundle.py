@@ -387,7 +387,7 @@ def _disagreeing_views(dtl_downswing: int) -> tuple[KeypointsFile, KeypointsFile
 
     Face-on descends over 10 frames and the second view over `dtl_downswing`, which at the 100 fps
     these fixtures run at puts the reference duration under the caller's control. That is the whole
-    reason the parameter is here: `phases._PLAUSIBLE_DOWNSWING_S` is what decides whether the warp
+    reason the parameter is here: the reference duration is what decides whether the warp
     *corrects* the top, and the finding has to survive it saying no.
     """
     return (

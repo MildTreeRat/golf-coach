@@ -134,8 +134,8 @@ One long-running service: the FastAPI upload server (`scripts/run_server.py`, M7
 which also carries the background analysis worker and serves the upload and results pages. The
 MCP server (M3, `scripts/run_mcp_server.py`) is not a service in the same sense — it speaks
 stdio, so the MCP client launches it per connection and there is no port to bind. No React UI
-(M5); the three static pages under `api/static/` — upload, results, career — are what stands
-in for it.
+(M5); the static pages under `api/static/` — upload, library, results, career — are what
+stands in for it.
 
 ### The routes, precisely
 
@@ -155,6 +155,7 @@ the module declares, so a new endpoint fails the suite until it is listed here.
 | `GET` | `/api/golfers/{player_id}/career` | One golfer against their own history, plus their tempo and the metronome fitted to it — the route both the career page and the swing page read, so the two cannot disagree |
 | `GET` | `/api/golfers/{player_id}/bag` | Every club this golfer has hit or declared, with what each one's history says or refuses (M9 P19) |
 | `POST` `DELETE` | `/api/golfers/{player_id}/bag/{club}` | Declare or edit one slot; removing retires it to the append-only shelf rather than deleting it (M9 P19, ADR-024) |
+| `GET` | `/api/sessions` | Every session that holds a swing, newest first, with each swing's row. The library page's one round trip, and the only route that *enumerates* — before it, a swing outside today's session was reachable only by typing its results URL by hand |
 | `GET` | `/api/sessions/{session_id}` | A session's swings and their analysis state — the 5 s status poll |
 | `GET` | `/api/sessions/{session_id}/swings/{swing_id}` | One swing's stored result, plus the tempo plan derived at read time |
 | `DELETE` | `/api/sessions/{session_id}/swings/{swing_id}` | Remove one swing and its directory. The undo for a *phantom* — a corrective re-upload cannot replace a role a swing already has, so it opens a new swing, and a phantom missing both clips then swallows the next real shot's footage. Refused with 409 while a run is queued or in flight |

@@ -49,7 +49,11 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
-from golf_coach.analysis.alignment import DEFAULT_TAU_RANGE, pair_frames
+from golf_coach.analysis.alignment import (
+    DEFAULT_TAU_RANGE,
+    pair_frames,
+    warp_speeds,
+)
 from golf_coach.analysis.engine import analyze_swing_bundle
 from golf_coach.analysis.phases import (
     LEAD_WRIST,
@@ -128,6 +132,11 @@ class PipelineOutcome:
     analysis_path: Path | None = None
     video_path: Path | None = None
     video_codec: str | None = None
+    #: Whether this run *tried* to render. `video_path is None` alone cannot say why there is no
+    #: video, and the two reasons want opposite handling in `record_state`: a run that skipped the
+    #: render (`--no-video`, or `reanalyze.py` without `--video`) leaves any existing `aligned.mp4`
+    #: standing, while a run that tried and failed has just contradicted the one on disk.
+    render_attempted: bool = False
     missing_roles: list[Role] = field(default_factory=list)
     #: Something is worth a human's attention — a role never arrived, or the shot needs review.
     #: The CLI turns this into exit code 1.
@@ -633,9 +642,11 @@ def _auto_windows(
     **The pick is mutual, not face-on-first**, and the extra rule pays for itself on the view that
     matters most. When face-on declines, the down-the-line view is picked alone and *its* duration
     becomes the reference for a second attempt at face-on. On `2026-08-23/8` face-on's real
-    descent measures 0.467 s and misses `_PLAUSIBLE_DOWNSWING_S` by 0.017 s, so the view every
-    checkpoint is measured from was scored over its whole clip; the down-the-line view is
-    confident at 0.400 s and recovers it.
+    descent measured 0.467 s and missed the duration bound of the day by 0.017 s, so the view every
+    checkpoint is measured from was scored over its whole clip; the down-the-line view was
+    confident at 0.400 s and recovered it. That bound is now `phases._POSSIBLE_DOWNSWING_S` and
+    admits 0.467 s outright, so the rescue no longer fires on *this* bundle — it is kept because
+    the reverse path is the one with no alternative, not because of the clip it was found on.
 
     The risk that buys is stated rather than guarded: a down-the-line reference that is itself a
     post-impact descent would hand face-on a confidently wrong window instead of a decline, and
@@ -754,6 +765,19 @@ def _render(
         notes.append("no aligned video: the two clips share no overlapping swing time")
         return None, None
 
+    # The one property of this render a viewer can check by eye, so it is worth saying out
+    # loud: `2026-08-23/9` shipped a down-the-line panel at 2.08x for a milestone with no line
+    # of log anywhere admitting it. `pair_frames` has already held the schedule to native rate
+    # by the time this prints, so these numbers report what the *warp alone* would have done —
+    # a speed far from 1.00 means the two views' anchors still disagree and the guard carried
+    # the render.
+    speeds = warp_speeds(alignment, reference="a")
+    if speeds:
+        log(
+            "\nWarp speed (down-the-line, before the render guard): "
+            + ", ".join(f"{name} {speed:.2f}x" for name, speed in speeds.items())
+        )
+
     try:
         from golf_coach.capture.file import FileVideoSource
         from golf_coach.pose.side_by_side import (
@@ -803,6 +827,39 @@ def _render(
     return out_path, render.codec
 
 
+def _recorded_video(
+    swing_dir: Path,
+    outcome: PipelineOutcome,
+    previous: AnalysisState | None,
+) -> tuple[str | None, str | None]:
+    """Which `aligned.mp4`, if any, this run should claim — `(filename, codec)`.
+
+    **A run that did not render must not erase the record of one that did.** `reanalyze.py` keeps
+    the render off by default and says so in its own docstring — "anything analyzed without a
+    render keeps whatever `aligned.mp4` it already had" — but the sidecar did not keep it, and the
+    sidecar is what `GET /api/sessions/.../swings/...` serves as `has_video`. So a corpus-wide
+    re-analysis without `--video` left thirteen of fifteen swings advertising no video while a
+    perfectly playable H.264 file sat in each directory, and `results.html` fell back to the raw
+    iPhone clip — HEVC in a QuickTime container, which most browsers refuse.
+
+    The carry-forward is deliberately narrow. It applies only when no render was *attempted*
+    (`render_attempted`); a run that tried and produced nothing has contradicted whatever is on
+    disk, and the stale file must not be re-advertised. And the file is stat'd rather than
+    trusted, because the sidecar outlives anything anyone deletes by hand.
+
+    Staleness in the other direction — the anchors moved under a file this run did not re-render —
+    is `reanalyze._video_went_stale`'s job and stays there: it can see the before and after, and
+    it reports rather than deletes, because a slightly-misaligned render is still worth watching.
+    """
+    if outcome.video_path is not None:
+        return outcome.video_path.name, outcome.video_codec
+    if outcome.render_attempted or previous is None or previous.video is None:
+        return None, None
+    if not (swing_dir / previous.video).is_file():
+        return None, None
+    return previous.video, previous.video_codec
+
+
 def record_state(
     swing_dir: Path,
     manifest: SwingManifest,
@@ -820,13 +877,15 @@ def record_state(
     catch it, either: `AnalysisState.matches` compares the *inputs*, and re-analysis does not
     change the inputs.
 
-    Any existing state is read first so the worker's `queued_at` survives a run it did not start.
+    Any existing state is read first so the worker's `queued_at` survives a run it did not start,
+    and — see `_recorded_video` — so does the render a run that skipped rendering did not replace.
     Everything else describes this run.
     """
     previous = load_state(swing_dir)
     missing = [role.value for role in manifest.missing_roles()]
     completed = now()
     result = outcome.result
+    video, video_codec = _recorded_video(swing_dir, outcome, previous)
 
     state = AnalysisState(
         status="done" if result is not None else "failed",
@@ -838,8 +897,8 @@ def record_state(
         error=None if result is not None else (outcome.error or "the pipeline produced no result"),
         partial=bool(missing),
         missing_roles=missing,
-        video=outcome.video_path.name if outcome.video_path else None,
-        video_codec=outcome.video_codec,
+        video=video,
+        video_codec=video_codec,
         score=result.swing.overall_score if result is not None else None,
         headline=(
             result.feedback.headline if result is not None and result.feedback else None
@@ -996,7 +1055,8 @@ def analyze_swing_dir(
 
     video_path: Path | None = None
     video_codec: str | None = None
-    if options.render_video and Role.DOWN_THE_LINE in views:
+    render_attempted = options.render_video and Role.DOWN_THE_LINE in views
+    if render_attempted:
         video_path, video_codec = _render(
             result, swing_dir, manifest, views, options=options, log=log, notes=notes
         )
@@ -1049,6 +1109,7 @@ def analyze_swing_dir(
         analysis_path=analysis_path,
         video_path=video_path,
         video_codec=video_codec,
+        render_attempted=render_attempted,
         missing_roles=missing,
         flagged=bool(needs_review or missing),
     )

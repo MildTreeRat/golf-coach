@@ -243,11 +243,12 @@ class ClipAlignment(BaseModel):
             "interval in real time, so the shorter one is the *late* top rather than merely the "
             "disagreeing one (`analysis.alignment._arbitrate_tops`). "
             "**This is the diagnosis, and `warp_top` is the correction — they are separate on "
-            "purpose.** The warp only moves a top when the duration it would be held to is a "
-            "possible downswing (`phases._PLAUSIBLE_DOWNSWING_S`), so a bundle can carry a top "
-            "known to be late that the warp declined to move; reporting only the corrected ones "
-            "would leave every declined case looking sound. `analysis.engine` reads *this* field, "
-            "not `warp_top`, when it retires a checkpoint timed from a contradicted instant."
+            "purpose.** The warp holds both panels to one duration whenever they disagree about "
+            "the downswing at all, which is a lower bar than naming a culprit; this field is "
+            "set only where two measured impacts let a shared clock say *which* view is wrong. "
+            "So a bundle can carry a corrected warp and no finding — the render is fixed and "
+            "nothing has been proved about the golfer. `analysis.engine` reads *this* field, not "
+            "`warp_top`, when it retires a checkpoint timed from a contradicted instant."
         ),
     )
 

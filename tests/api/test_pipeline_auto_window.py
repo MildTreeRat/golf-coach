@@ -64,7 +64,7 @@ from golf_coach.storage.manifest import (
 _WHEN = datetime(2026, 8, 25, 1, 0, tzinfo=UTC)
 
 # One frame per 10 ms, so these clips are 100 fps and a frame count reads directly as a duration:
-# `phases._PLAUSIBLE_DOWNSWING_S` is 15-45 frames here and `_MATCH_TOLERANCE_S` is 12.
+# `phases._POSSIBLE_DOWNSWING_S` is 12-80 frames here and `_MATCH_TOLERANCE_S` is 12.
 _FPS = 100.0
 _ADDRESS_FRAMES = 260
 _RESET_FRAMES = 60  # lowering the hands from the finish back to address, between swings
@@ -364,14 +364,20 @@ def test_the_down_the_line_view_matches_face_on_rather_than_taking_the_last(
 def test_face_on_is_matched_back_when_it_is_the_view_that_declined(bundle, windows) -> None:
     """The mutual half of P8, and the one that moves scores rather than only the render.
 
-    This face-on clip is `2026-08-23/8`'s shape: a real descent just outside
-    `_PLAUSIBLE_DOWNSWING_S` and a second, implausible candidate — so the band declines it and the
-    lone-candidate escape cannot fire either. Face-on is the view every checkpoint is measured
-    from, so declining costs the whole clip's frames. The down-the-line view is confident within
-    `_MATCH_TOLERANCE_S` of it, and matching in reverse recovers it.
+    This face-on clip is `2026-08-23/8`'s shape: a descent the band will not admit and a second,
+    longer candidate — so face-on declines and the lone-candidate escape cannot fire either, there
+    being two of them. Face-on is the view every checkpoint is measured from, so declining costs
+    the whole clip's frames. The down-the-line view is confident within `_MATCH_TOLERANCE_S` of it,
+    and matching in reverse recovers it.
+
+    **The real descent misses the band underneath rather than above it**, which is the shape M10's
+    defect actually takes: `_DRAWDOWN_FLOOR`'s fragmenting run reads a descent *short*, and face-on
+    is the view it happens to (0.183-0.267 s on the stored corpus). Overshooting the ceiling would
+    do here too, but only at durations long enough that `_WINDOW_LEAD` reaches past the start of a
+    synthetic clip, which would test the fixture's length rather than the rule.
     """
-    real, rehearsal = (70, 47), (60, 120)  # 0.47 s, 0.05 s over the band; and 1.20 s
-    result = _run(bundle(face_on=(real, rehearsal), down_the_line=((70, 40),)))
+    real, rehearsal = (70, 7), (60, 130)  # 0.11 s, a fragment under the band; and 1.28 s
+    result = _run(bundle(face_on=(real, rehearsal), down_the_line=((70, 18),)))
 
     top, impact = _descents((real, rehearsal))[0]
     start, end = windows["face_on_window"]
@@ -407,7 +413,7 @@ def test_with_no_face_on_reference_the_other_view_is_picked_alone_and_says_so(
 # No decoding happens here and none may: every `{role}.audio.json` these tests write already
 # matches the manifest's sha256, which is the same cache contract that keeps this file off cv2 and
 # MediaPipe. A test that started an ffmpeg subprocess would have gone wrong somewhere.
-_OUT_OF_BAND = (70, 47)  # 0.47 s — a real swing, 0.02 s past `phases._PLAUSIBLE_DOWNSWING_S`
+_OUT_OF_BAND = (70, 90)  # 0.90 s — a descent `phases._POSSIBLE_DOWNSWING_S` will not admit
 _IN_BAND_DECOY = (60, 18)  # 0.18 s — comfortably in band, and after the ball was gone
 
 
@@ -463,7 +469,7 @@ def test_each_view_is_judged_on_the_strikes_heard_in_its_own_clip(bundle, window
     visibly different frames and a correct answer in both.
     """
     face_on = (_OUT_OF_BAND, _IN_BAND_DECOY)
-    dtl = ((120, 47), _IN_BAND_DECOY)  # a longer backswing, so its impact sits elsewhere
+    dtl = ((120, 90), _IN_BAND_DECOY)  # a longer backswing, so its impact sits elsewhere
     (face_top, face_impact), _ = _descents(face_on)
     (dtl_top, dtl_impact), _ = _descents(dtl)
     # Farther apart than the rule's own tolerance, or one view's strikes would vouch for the

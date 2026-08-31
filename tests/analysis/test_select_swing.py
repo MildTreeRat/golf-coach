@@ -18,7 +18,7 @@ from conftest import make_swing
 from golf_coach.analysis.phases import (
     _MATCH_TOLERANCE_S,
     _MIN_ADDRESS_LEAD_S,
-    _PLAUSIBLE_DOWNSWING_S,
+    _POSSIBLE_DOWNSWING_S,
     _STRIKE_TOLERANCE_S,
     _WINDOW_LEAD,
     _WINDOW_TRAIL,
@@ -36,10 +36,12 @@ from golf_coach.contracts.swing import SwingPhase
 # The fixture builder emits one frame per 10 ms, so a clip made from it is 100 fps.
 _FPS = 100.0
 
-# Downswing frame counts that land inside / outside the plausible band at 100 fps.
-_LOW, _HIGH = _PLAUSIBLE_DOWNSWING_S
+# Downswing frame counts that land inside / outside the possible band at 100 fps. Every one of
+# these is derived from the constant by the guard below rather than trusted, because the band moved
+# once (2026-08-30, 0.15-0.45 -> 0.12-0.80) and silently un-braced half this file when it did.
+_LOW, _HIGH = _POSSIBLE_DOWNSWING_S
 _REAL = 25  # 0.25 s — a real downswing
-_SLOW = 60  # 0.60 s — a setup move or rehearsal, above the band
+_SLOW = 100  # 1.00 s — a rehearsal or a badly bracketed descent, above the band
 
 
 def _concat(*clips: list[FrameKeypoints]) -> list[FrameKeypoints]:
@@ -64,9 +66,17 @@ def _prepend_still(clip: list[FrameKeypoints], frames: int) -> list[FrameKeypoin
 
 
 def test_band_constants_bracket_the_synthetic_durations() -> None:
-    """Guard the fixture: these tests only mean anything if _REAL is in band and _SLOW is not."""
-    assert _LOW <= _REAL / _FPS <= _HIGH
-    assert _SLOW / _FPS > _HIGH
+    """Guard the fixture: these tests only mean anything if the durations sit where they claim.
+
+    Every synthetic duration in this file is checked against the live constant here, so moving the
+    band fails this one test loudly instead of quietly turning a dozen others into tautologies —
+    which is what happened when the 0.45 ceiling became 0.80 and `_SLOW`'s 0.60 s wandered into
+    the band it was written to sit outside.
+    """
+    assert _LOW <= _REAL / _FPS <= _HIGH, "_REAL must be a duration the band admits"
+    assert _SLOW / _FPS > _HIGH, "_SLOW must sit above the band"
+    assert _LOW <= _LATE / _FPS <= _HIGH, "_LATE is in band; it is rejected on order, not length"
+    assert _PAST_BAND / _FPS > _HIGH, "_PAST_BAND must sit above the band"
 
 
 def test_no_fps_declines_rather_than_guessing() -> None:
@@ -309,7 +319,7 @@ def test_without_fps_the_lead_is_the_old_arithmetic_exactly() -> None:
 # descent differs by a frame or two, so every assertion reads the duration back off the candidate
 # rather than assuming it.
 _LATE = 16  # a short descent after impact — in band, and nothing like a 0.25 s reference
-_PAST_BAND = 48  # measures ~0.46 s: past the band, the shape sessions 3 and 6 have on DTL
+_PAST_BAND = 84  # measures 0.82 s: just past the band, so only the other camera vouches for it
 _REFERENCE = 0.25  # what the face-on view measured for the swing being matched
 
 
@@ -341,7 +351,11 @@ def test_the_match_fixtures_sit_where_the_cross_view_tests_claim() -> None:
 
     outside = _durations(_two_swings(_PAST_BAND, _SLOW))[0]
     assert outside > _HIGH, "the leading descent must miss the band"
-    assert outside - _HIGH < 0.05, "but only just — session 3 misses it by 0.017 s"
+    # "Only just" is the whole point of the fixture: rule 1's second branch has to be what lets
+    # this through, and a descent far outside the band would be admitted by nothing and prove
+    # nothing. It used to be sized on session 3 missing the 0.45 ceiling by 0.017 s; the widened
+    # band admits that clip outright, so the margin is now synthetic and stated rather than cited.
+    assert outside - _HIGH < 0.05, "but only just, or rule 1's vouched-for branch proves nothing"
 
 
 def test_the_reference_picks_the_nearest_candidate_not_the_last() -> None:
@@ -621,3 +635,52 @@ def test_a_strike_outranks_the_other_views_reference() -> None:
     assert "ends at a ball strike" in struck.reason
 
 
+# --- duration is not what tells two real swings apart ------------------------------- [2026-08-30]
+#
+# The rule the band was quietly breaking. A practice swing and a real one last the same time, so
+# the thing that separates them is the ball, and the thing that separates two *real* swings is
+# order or the other camera - never length. These pin that the bound has stopped ranking anything.
+
+
+def test_two_ball_struck_swings_are_told_apart_by_order_not_by_length() -> None:
+    """Both descents are real, both struck a ball, and the longer one is the one taken.
+
+    This is the case the 0.45 ceiling used to decide: on the stored corpus it rejected nine
+    ball-struck descents between 0.467 s and 0.567 s, every one a real swing, purely for being
+    long. With the bound widened to what a downswing can physically be, both survive rule 1 and
+    rule 2 chooses - and rule 2 is *order*, which is a fact about the clip rather than a judgement
+    about the golfer.
+    """
+    clip = _two_swings(25, 55)  # 0.25 s and 0.53 s, both real, both inside the band
+    # The third candidate is the reset move between the two swings, which is why this counts the
+    # in-band ones rather than all of them - `_wrist_track`'s docstring names that motion.
+    in_band = [d for d in _durations(clip) if _LOW <= d <= _HIGH]
+    assert len(in_band) == 2, "the fixture must offer a choice between two real swings"
+    assert max(in_band) > 0.45, "and the later one must be past the ceiling that used to reject it"
+
+    strikes = [swing.impact for swing in candidate_downswings(clip)]
+    choice = select_swing(clip, fps=_FPS, strike_frames=strikes)
+
+    assert choice is not None
+    measured = (choice.downswing.impact - choice.downswing.top) / _FPS
+    assert abs(measured - max(in_band)) < 0.02, (
+        "the later swing wins because it is later, and it happens to be the longer one"
+    )
+
+
+def test_the_bound_still_refuses_a_descent_no_swing_could_make() -> None:
+    """What the bound is *for*, and the one stored case that needs it.
+
+    `2026-08-23/5` face-on holds a 2.351 s descent that ends near a transient, so the strike rule
+    admits it and "last" would take it - windowing the whole clip over a real 0.167 s swing. This
+    is the single window on the corpus that moves when the bound is removed entirely, which is why
+    it survives as a sanity check after ceasing to be a discriminator.
+    """
+    clip = _two_swings(_REAL, _SLOW)
+    strikes = [swing.impact for swing in candidate_downswings(clip)]
+    choice = select_swing(clip, fps=_FPS, strike_frames=strikes)
+
+    assert choice is not None
+    measured = (choice.downswing.impact - choice.downswing.top) / _FPS
+    assert measured <= _HIGH, "the impossible descent must not win on being last"
+    assert abs(measured - _REAL / _FPS) < 0.03, "the real swing is what is left"

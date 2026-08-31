@@ -175,6 +175,88 @@ def test_a_rerun_leaves_the_sidecar_agreeing_with_the_analysis(tmp_path) -> None
     assert (state.score, state.headline) == (94.9, "new")
 
 
+# ------------------------------------------------- which render the sidecar is allowed to claim
+
+
+def _rendered(swing_dir, name: str = "aligned.mp4", codec: str = "avc1") -> None:
+    """Put a render on disk and say so in the sidecar, as a `--video` run would have."""
+    swing_dir.mkdir(parents=True, exist_ok=True)
+    (swing_dir / name).write_bytes(bytes(32))
+    save_state(AnalysisState(status="done", video=name, video_codec=codec), swing_dir)
+
+
+def test_a_run_that_skipped_the_render_keeps_the_one_already_there(tmp_path) -> None:
+    """The M11 regression, in one test.
+
+    `reanalyze.py` leaves the render off by default and says an unrendered run "keeps whatever
+    `aligned.mp4` it already had". The sidecar did not keep it — and the sidecar is what
+    `has_video` is read from, so a corpus-wide re-analysis without `--video` left thirteen of
+    fifteen swings advertising no video with a playable H.264 file in each directory, and the
+    results page fell back to the raw HEVC upload no browser would decode.
+    """
+    swing_dir = tmp_path / "swing"
+    manifest = _manifest(swing_dir)
+    _rendered(swing_dir)
+
+    state = record_state(swing_dir, manifest, _outcome(), started_at=now())
+
+    assert (state.video, state.video_codec) == ("aligned.mp4", "avc1")
+
+
+def test_a_render_that_was_attempted_and_produced_nothing_clears_the_old_one(tmp_path) -> None:
+    """The other half, and the reason `render_attempted` exists rather than a bare `video_path`.
+
+    A run that *tried* to render and got nothing has contradicted the file beside it — the views
+    would not align, or the schedule was empty. Carrying the old name forward there would
+    re-advertise a video this analysis says cannot be made.
+    """
+    swing_dir = tmp_path / "swing"
+    manifest = _manifest(swing_dir)
+    _rendered(swing_dir)
+
+    state = record_state(
+        swing_dir,
+        manifest,
+        PipelineOutcome(result=_outcome().result, render_attempted=True),
+        started_at=now(),
+    )
+
+    assert (state.video, state.video_codec) == (None, None)
+
+
+def test_a_recorded_render_that_is_no_longer_on_disk_is_not_carried_forward(tmp_path) -> None:
+    """The sidecar outlives anything deleted by hand, so the file is stat'd rather than trusted."""
+    swing_dir = tmp_path / "swing"
+    manifest = _manifest(swing_dir)
+    _rendered(swing_dir)
+    (swing_dir / "aligned.mp4").unlink()
+
+    state = record_state(swing_dir, manifest, _outcome(), started_at=now())
+
+    assert state.video is None
+
+
+def test_a_run_that_rendered_records_what_it_just_made(tmp_path) -> None:
+    """A fresh render always wins over the carried-forward one, including its codec."""
+    swing_dir = tmp_path / "swing"
+    manifest = _manifest(swing_dir)
+    _rendered(swing_dir, codec="mp4v")
+
+    state = record_state(
+        swing_dir,
+        manifest,
+        PipelineOutcome(
+            result=_outcome().result,
+            video_path=swing_dir / "aligned.mp4",
+            video_codec="avc1",
+            render_attempted=True,
+        ),
+        started_at=now(),
+    )
+
+    assert (state.video, state.video_codec) == ("aligned.mp4", "avc1")
+
+
 def test_the_pipeline_records_its_own_failure(tmp_path) -> None:
     """`analyze_swing_dir` writes the sidecar on the way out, including when it produced nothing.
 

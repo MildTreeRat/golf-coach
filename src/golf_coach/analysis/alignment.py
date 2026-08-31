@@ -43,7 +43,7 @@ from typing import NamedTuple
 
 from golf_coach.analysis.phases import (
     _FALLBACK_TEMPO_RATIO,
-    _PLAUSIBLE_DOWNSWING_S,
+    _POSSIBLE_DOWNSWING_S,
     _STRIKE_TOLERANCE_S,
     segment_phases,
 )
@@ -128,6 +128,27 @@ MIN_PLAUSIBLE_TEMPO = 1.0
 # of 2 and 1 frames, so honest disagreement on a ~15-frame downswing runs to maybe 20%; the failure
 # this catches measured 0.234s against 0.400s, a gap of 0.42.
 _DOWNSWING_AGREEMENT = 0.30
+
+# How far the follower's implied *playback speed* may sit from 1.0 before the warp is refused and
+# both panels are held to one duration instead. Measured as `_relative_gap` against 1.0, so 0.10 is
+# a follower running 1.11x fast or 0.90x slow.
+#
+# **This is a separate constant from `_DOWNSWING_AGREEMENT` on purpose, and the two thresholds
+# answer different questions.** That one decides whether a disagreement can be *blamed* on a named
+# view — it gates `_arbitrate_tops`, and through `ClipAlignment.top_late_by` it decides whether
+# `analysis.engine` retires a checkpoint. This one decides only whether the disagreement may be
+# rendered as *speed*, which is never. Sharing one number made the looser scoring question set the
+# tighter playback one, and 0.30 admits a panel replayed 1.4x fast in silence.
+#
+# 0.10 is the anchor precision the bake-off reports, restated as a rate: impact lands within a
+# median of 1 frame and the top within 2, so on a ~20-frame 60fps downswing two honest views
+# disagree by ~2 frames, which is 10%. Below that the disagreement is not distinguishable from
+# anchor noise and warping to it would be chasing it.
+#
+# The corpus agrees and leaves the value room. Follower playback speed on the 15 stored bundles
+# sits at 1.00, 1.04 and 0.95 (gaps 0.00-0.046) and then jumps to 1.18, 1.27, 0.75, 1.48, 2.08,
+# 2.70, 3.11 (gaps 0.153-0.68). Nothing lands between 0.046 and 0.153.
+_MAX_WARP_SPEED_ERROR = 0.10
 
 
 # The swing and nothing else: from a little before the takeaway to one downswing past impact.
@@ -356,9 +377,13 @@ def align_swings(a: SwingAnchors, b: SwingAnchors) -> SwingAlignment:
     **The finding outlives the correction.** Which top is late is recorded on each clip as
     `ClipAlignment.top_is_late` whether or not the warp went on to move it, because the two answer
     different questions — the warp asks *can this be replayed honestly*, and the flag asks *was the
-    instant a checkpoint was timed from contradicted*. `_PLAUSIBLE_DOWNSWING_S` makes those come
-    apart on real footage, and it is the flag rather than the warp that `analysis.engine` reads
-    before retiring a score (`contracts.unscored.CROSS_VIEW_CONTRADICTED`). [M11 P8]
+    instant a checkpoint was timed from contradicted*. What makes them come apart is the shared
+    clock: the warp holds both panels to one duration on either route, while the flag is set only
+    where two *measured* impacts let `_arbitrate_tops` name which view is wrong. A pair with no
+    shared clock therefore carries a corrected warp and no finding, which is right — the render is
+    fixed and nothing has been proved about the golfer. It is the flag rather than the warp that
+    `analysis.engine` reads before retiring a score
+    (`contracts.unscored.CROSS_VIEW_CONTRADICTED`). [M11 P8]
     """
     notes: list[str] = []
     quality = AlignmentQuality.FULL
@@ -418,7 +443,8 @@ def align_swings(a: SwingAnchors, b: SwingAnchors) -> SwingAlignment:
     arbitration = _arbitrate_tops(a, b)
 
     # The hard anchors get their own check. If the two views disagree about how long the downswing
-    # lasted, pinning both to tau=1 resamples one panel to catch up — see `_DOWNSWING_AGREEMENT`.
+    # lasted, pinning both to tau=1 resamples one panel to catch up — see `_DOWNSWING_AGREEMENT`,
+    # and `pair_frames` for the guard that catches whatever this rule declines.
     top_a, top_b = _shared_tops(a, b, notes, arbitration)
     if top_a is not None and top_b is not None:
         quality = AlignmentQuality.IMPACT_ONLY
@@ -655,6 +681,12 @@ def _shared_tops(
     they do not, both clips are held to one duration, converted through each clip's *own* fps so
     that both panels advance at their native rate and meet at impact.
 
+    **This is the repair, and `pair_frames`' guard is the backstop.** This rule can move an anchor,
+    so it needs to know which one to move and fires only where that is decidable; the guard cannot
+    repair anything and fires wherever the resulting playback speed would be wrong, including the
+    pre-top region this rule never touches. Neither subsumes the other, and a pair this one
+    declines is still rendered at native rate.
+
     **Which duration depends on whether the pair has a shared clock.** With one — both impacts
     pinned to a heard strike — `_arbitrate_tops` names the late top and the reference becomes the
     *other* view's, so the correction moves the top that is wrong and leaves the sound one where it
@@ -664,11 +696,23 @@ def _shared_tops(
     point opposite ways on the bundles this exists for — face-on is the late view on all five of
     them — which is the whole of what P7 changes. [M11 P7]
 
-    `_PLAUSIBLE_DOWNSWING_S` guards both routes, and on the arbitrated one it is not a formality:
-    once P6 pins the down-the-line impact 5-7 frames later on §E4's bundles, the longer downswing
-    runs past 0.48s on several of them, which is not a downswing any golfer makes. A reference that
-    implausible means the *sound* view's top is suspect too, so neither is imposed and the warp
-    stands — declining rather than guessing, and reported in the notes either way (ADR-013).
+    **There is no plausibility veto on the reference, and removing it is what fixed the renders.**
+    `_POSSIBLE_DOWNSWING_S` used to guard both routes: a reference outside 0.15-0.45s meant the
+    sound view's top was suspect too, so neither was imposed and the warp stood. That reasoning is
+    right about the *anchor* and backwards about the *render*. Declining is not neutral here — it
+    re-imposes the two detected tops, which are known to disagree, and `pair_frames` then has no
+    way to express that disagreement except as playback speed. Measured on 2026-08-23/9, whose
+    reference missed the 0.45s ceiling by 0.3 ms: the down-the-line panel ran at 1.00x to the top
+    and 2.08x from the top to the end of the clip. Bundles 1, 4 and 5 did the same at 1.48x, 3.11x
+    and 2.70x.
+
+    So a reference nobody can make is still the better of the two things to hold both panels to,
+    because holding them to it costs a top banner a few frames of accuracy and *not* holding them
+    to it costs the viewer the tempo and sequencing the side-by-side exists to show. What the old
+    veto was protecting — the finding that one view's top is wrong — was never carried by the warp
+    in the first place: `ClipAlignment.top_late_by` carries it, `_arbitrate_tops` sets it on its own
+    threshold, and `analysis.engine` reads it rather than `warp_top`. No score moved when this
+    changed.
 
     `arbitration` is decided by the caller and passed in rather than taken here, because
     `align_swings` also stamps it onto both clips and the two must not be able to disagree about
@@ -679,6 +723,13 @@ def _shared_tops(
 
     seconds_a = a.downswing_frames / a.fps
     seconds_b = b.downswing_frames / b.fps
+    # Deliberately **not** `_MAX_WARP_SPEED_ERROR`, though the gap between two durations is exactly
+    # the follower's playback speed error. Returning non-None here sends `align_swings` to
+    # `IMPACT_ONLY`, and that tier is a claim about *evidence* — a pair whose downswings sit 25%
+    # apart has still had its top independently found in both views. Lowering this trigger to the
+    # render tolerance re-labelled real bundles (session 8, which reports `full` on disk) to buy a
+    # fix `pair_frames` makes for free. The two rules are layered instead: this one repairs the
+    # anchor where it can, that one refuses the speed whatever this decided.
     if _relative_gap(seconds_a, seconds_b) <= _DOWNSWING_AGREEMENT:
         return None, None
 
@@ -709,16 +760,34 @@ def _shared_tops(
             f"{arbitration.corrected_top}{_tempo_restated(arbitration)}"
         )
 
-    low, high = _PLAUSIBLE_DOWNSWING_S
-    if not low <= reference <= high:
+    # A correction that does not fit inside the clip is not one this rule can make: `_top_at`
+    # clamps, and a top clamped to frame 0 is the start of the recording rather than the instant
+    # asked for. Declining is safe here in a way it was not before `pair_frames` grew its own
+    # guard — that guard holds the pair at native rate whatever this returns, so what is given up
+    # is the banner placement and never the playback speed.
+    if any(anchors.impact - round(reference * (anchors.fps or 0.0)) <= 0 for anchors in (a, b)):
         notes.append(
-            f"{opening} — {diagnosis}. But the {reference:.3f}s it would be held to is not a "
-            "possible downswing, so there is nothing sound to hold both panels to — leaving the "
-            "warp in place"
+            f"{opening} — {diagnosis}. But {reference:.3f}s back from impact falls outside one of "
+            "the clips, so there is no shared top to impose — the panels are held at their native "
+            "rate instead and the tops will sit apart on screen"
         )
         return None, None
 
-    notes.append(f"{opening} — {diagnosis}. {remedy}")
+    # `_POSSIBLE_DOWNSWING_S` is read here and *decides nothing* — it used to veto the correction
+    # and that is exactly what left four bundles replaying a panel at up to 3.11x (see the
+    # docstring). What it is still good for is warning the reader: a reference outside the band
+    # means the top being imposed is probably wrong even though the playback speed is now right.
+    low, high = _POSSIBLE_DOWNSWING_S
+    caution = (
+        ""
+        if low <= reference <= high
+        else (
+            f". Note that {reference:.3f}s is not a downswing any golfer makes, so the top banner "
+            "is likely wrong in both panels — but holding them to it is what keeps either from "
+            "being replayed at a speed its camera never shot"
+        )
+    )
+    notes.append(f"{opening} — {diagnosis}. {remedy}{caution}")
     return _top_at(a, reference), _top_at(b, reference)
 
 
@@ -745,6 +814,56 @@ def map_frame(alignment: SwingAlignment, frame: int, *, source: str = "a") -> in
     return _clamp(round(mapped), target.anchors.frame_count)
 
 
+def _segment_rates(clip: ClipAlignment) -> tuple[float, float]:
+    """`(pre_top, post_top)` — the frames-per-tau-unit `frame_of_tau` uses on either side of tau=1.
+
+    Mirrors that function's own fallback rather than re-deriving it: a clip that opens at the top
+    has no backswing to measure and runs the pre-top region at the downswing rate.
+    """
+    down = float(clip.anchors.impact - clip.top)
+    back = float(clip.top - clip.warp_motion_start)
+    return (back if back > 0.0 else down), down
+
+
+def warp_speeds(alignment: SwingAlignment, *, reference: str = "a") -> dict[str, float]:
+    """The follower panel's implied playback speed, per linear segment of the warp.
+
+    1.0 is honest — one second of the follower's footage fills one second of output. 2.08 is what
+    `2026-08-23/9` shipped through its downswing before `_MAX_WARP_SPEED_ERROR` existed, and it is
+    what a viewer reads as one camera running fast.
+
+    **This is the only quantity in the module a viewer can see directly**, which is why it is
+    computed here rather than inferred from the anchors at each call site: `pair_frames` guards on
+    it and `api.pipeline` reports it, and a second copy of the arithmetic is a second thing to
+    drift (the same reason `_which_half_is_wrong` is shared).
+
+    Keys are the two rates `frame_of_tau` actually uses — `"backswing"` below the top, `"downswing"`
+    at or above it, which is also the region past impact. Empty when the speed cannot be measured:
+    no alignment, or a clip with no fps, because a rate in real time needs one. Empty means *not
+    measured*, never *measured at 1.0* (ADR-010 §2).
+    """
+    if alignment.a is None or alignment.b is None:
+        return {}
+    if reference not in {"a", "b"}:
+        raise ValueError(f"reference must be 'a' or 'b', got {reference!r}")
+
+    lead, follow = (
+        (alignment.a, alignment.b) if reference == "a" else (alignment.b, alignment.a)
+    )
+    fps_lead, fps_follow = lead.anchors.fps, follow.anchors.fps
+    if not fps_lead or not fps_follow:
+        return {}
+
+    speeds: dict[str, float] = {}
+    for name, lead_frames, follow_frames in zip(
+        ("backswing", "downswing"), _segment_rates(lead), _segment_rates(follow), strict=True
+    ):
+        if lead_frames <= 0.0 or follow_frames <= 0.0:
+            continue
+        speeds[name] = (follow_frames / fps_follow) / (lead_frames / fps_lead)
+    return speeds
+
+
 def pair_frames(
     alignment: SwingAlignment,
     count_a: int,
@@ -764,6 +883,23 @@ def pair_frames(
     honest overlap of two long clips is mostly dead air — a golfer standing over the ball, or the
     bay after they walk off — and rendering all of it buries the thing the video exists to show.
     It is also the region the warp describes worst whenever the soft anchor was refused.
+
+    **A warp that would replay the follower at the wrong speed is refused here, and this is the
+    only place it can be.** Everything upstream reasons about anchors; playback speed does not
+    exist until frames are put on a schedule, so an anchor disagreement that survives
+    `_shared_tops` arrives as an instruction to resample one panel. When `warp_speeds` says any
+    segment would run outside `_MAX_WARP_SPEED_ERROR`, the follower is mapped **rigidly** instead:
+    pinned to the lead at tau=2 and advancing at its own native rate on either side of it, so the
+    two panels drift apart at the top rather than one of them running fast. That drift is a
+    visible seam and it is the intended outcome — a seam says "these two instants disagree", which
+    is true, where a speed-up says "this golfer swung twice as fast after the top", which is not.
+
+    `_shared_tops` fixes what it can before this ever runs, by moving a top so both panels reach
+    impact together at native rate; it needs to know *which* top to move, so it only acts on the
+    downswing where a shared clock can tell it. This guard needs to know nothing — it cannot
+    repair an anchor, only decline to express the disagreement as speed — which is why it is the
+    backstop and not the primary rule. On the fifteen stored bundles it is the pre-top region it
+    catches, where an accepted soft anchor still admits `_BACKSWING_AGREEMENT_S` of drift.
 
     Empty when there is no alignment to map through or the two clips share no overlapping swing
     time — reported, not raised (ADR-013).
@@ -797,17 +933,32 @@ def pair_frames(
     if last <= first:
         return []
 
+    follow = alignment.b if reference == "a" else alignment.a
+    count_follow = count_b if reference == "a" else count_a
+    speeds = warp_speeds(alignment, reference=reference)
+    # An unmeasurable speed is not a fast one: with no fps there is nothing to guard on, and
+    # `warp_speeds` returning {} leaves the warp exactly as it was before this existed.
+    rigid = any(_relative_gap(speed, 1.0) > _MAX_WARP_SPEED_ERROR for speed in speeds.values())
+    # Native rate for the follower, in follower frames per lead frame. tau=2 is the pin because it
+    # is the best-located anchor in the system and, on a `SYNCHRONIZED` pair, the only measured one.
+    native = (
+        (follow.anchors.fps / lead.anchors.fps)
+        if (lead.anchors.fps and follow.anchors.fps)
+        else 1.0
+    )
+
     schedule: list[FramePairing] = []
     for step in range(first, last + 1):
         tau = tau_of_frame(
             lead.anchors, step, motion_start=lead.warp_motion_start, top=lead.warp_top
         )
-        follow = alignment.b if reference == "a" else alignment.a
         mapped = _clamp_index(
-            frame_of_tau(
+            follow.anchors.impact + (step - lead.anchors.impact) * native
+            if rigid
+            else frame_of_tau(
                 follow.anchors, tau, motion_start=follow.warp_motion_start, top=follow.warp_top
             ),
-            count_b if reference == "a" else count_a,
+            count_follow,
         )
         pairing = (
             FramePairing(tau=tau, frame_a=step, frame_b=mapped)

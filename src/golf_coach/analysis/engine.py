@@ -576,8 +576,8 @@ def _without_contradicted_scores(
     what the ratio reads on the corrected top, and on 2026-08-23 bundle 2 that is 2.35:1 — a pass.
     Writing it into `CheckpointScore.observed` would mean a score whose number came from the
     alignment and whose band came from the engine, measured over frames `segment_phases` never
-    agreed to; and on the bundles where `_PLAUSIBLE_DOWNSWING_S` refuses the correction there is no
-    restatement to write at all. No score beats a wrong one, and a corrected top belongs in
+    agreed to; and where the two views disagree without a shared clock to arbitrate them there is
+    no restatement to write at all. No score beats a wrong one, and a corrected top belongs in
     `phases.py` where the boundary is found, not patched in at the seam that noticed.
 
     `mechanics` and `outcome` are split back apart by registry membership rather than by position,

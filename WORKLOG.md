@@ -5,6 +5,143 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-08-30 — The render was replaying one panel at 2.08x, and a duration bound was picking swings
+
+**Duration**: ~1 session. `src/golf_coach/analysis/alignment.py` (`warp_speeds`, the `pair_frames`
+rate guard, `_MAX_WARP_SPEED_ERROR`, the plausibility veto removed from `_shared_tops`),
+`src/golf_coach/analysis/phases.py` (`_PLAUSIBLE_DOWNSWING_S` -> `_POSSIBLE_DOWNSWING_S`, 0.15-0.45
+-> 0.12-0.80), `src/golf_coach/contracts/alignment.py` and `src/golf_coach/analysis/engine.py`
+(docstrings that described the removed veto), `src/golf_coach/api/pipeline.py` (logs the warp speed
+on every render). Tests: `tests/analysis/test_alignment.py` (3 rewritten, 5 new),
+`tests/analysis/test_select_swing.py` (2 new, fixture guard widened),
+`tests/api/test_pipeline_auto_window.py` and `tests/analysis/test_engine_bundle.py` (fixtures
+resized). `pytest` 1205 passed, `ruff` and `mypy` clean. Corpus re-rendered with
+`reanalyze.py --all --video`.
+
+**The complaint was "the down-the-line video is sped up after the top of the backswing", on
+`2026-08-23/9`. It was, by 2.08x, and `aligned.mp4` is a resample rather than a playback.**
+`pair_frames` drives the timeline off the face-on clip at its native rate and samples the other
+clip at whatever frame shows the same tau, so two views that disagree about where the top is can
+only express that disagreement as *speed*. Face-on measured 13 frames of downswing where
+down-the-line measured 27 of the same swing; forcing both to reach tau=2 together means the
+down-the-line panel covers 27 of its frames in 13 output frames. Output frame 65 is tau=1.000 and
+the panel steps +1 through the backswing and +2 from there to the end of the clip.
+
+**`_shared_tops` had already detected it and then declined to act, and declining is not neutral.**
+Its whole job is to hold both panels to one duration so neither is resampled. It refused because
+the duration it would impose (0.4503 s) missed `_PLAUSIBLE_DOWNSWING_S`'s 0.45 ceiling **by 0.3
+ms**, and its `return None, None` re-enabled the very warp it had just proved wrong. Seven of
+fifteen bundles rendered a panel off-speed; four of those (1, 4, 5, 9 at 1.48x, 3.11x, 2.70x,
+2.08x) carried the note "leaving the warp in place", and three more (3, 8, 2026-08-10/2) said
+nothing at all because a 0.30 relative gap is *inside* `_DOWNSWING_AGREEMENT` and still means a
+30% rate error. `_DOWNSWING_AGREEMENT`'s own comment predicted exactly this: "a viewer reads that
+as one camera running fast, which is worse than a visible seam".
+
+**Two layers now, and they are not the same rule.** `_shared_tops` *repairs* — it can move a top,
+so it only fires where a shared clock says which top to move, and it keeps `_DOWNSWING_AGREEMENT`
+because the tier it sets (`IMPACT_ONLY`) is a claim about evidence. Lowering that trigger to the
+render tolerance was tried and reverted: it re-labelled honest bundles (session 8 reports `full` on
+disk). `pair_frames` *refuses* — it cannot repair anything, so it fires wherever the resulting
+playback speed would leave `_MAX_WARP_SPEED_ERROR` and maps the follower rigidly from tau=2 at its
+native rate. The guard is load-bearing rather than decorative: on four bundles the repair declines
+and the guard is what carries the render, including the pre-top region `_shared_tops` never
+touches. All fifteen now render at 1.00x.
+
+**The plausibility veto is gone and the band it read is now an observation.** A reference nobody
+can swing is still the better of the two things to hold both panels to: imposing it costs the top
+banner a few frames, and not imposing it costs the viewer the tempo the side-by-side exists to
+show. `_POSSIBLE_DOWNSWING_S` is still read at that site and decides nothing — it writes a caution
+into the note instead. What the veto was protecting was never carried by the warp anyway:
+`ClipAlignment.top_late_by` carries it, `_arbitrate_tops` sets it on its own evidence, and
+`analysis.engine` reads *that*. **No score moved.**
+
+**The second half started from "we should not decide what is a practice swing based on length".
+Correct, and the code already agreed — rule 0 is the ball strike, and a practice swing makes no
+sound.** What the band was actually doing was worse than mis-naming: its 0.45 ceiling rejected
+**nine ball-struck descents** on the corpus (0.467 x2, 0.484 x3, 0.500, 0.501, 0.517, 0.567), every
+one a real swing, on nothing but length. Measured over all 62 candidate descents in the 26 distinct
+stored clips, the real ones run 0.167-0.567 s continuously, then there is a **0.534 s gap** — the
+largest below 4 s anywhere in the set — and everything above 1.101 s is not a swing. 0.80 sits
+inside that gap; the floor moved to 0.12 to clear two 5-frame tracking fragments.
+
+**Swept through `api.pipeline._auto_windows` over all fifteen bundles, the widening moves no window
+at all** — the strike rule and the cross-view reference were already making every choice. Removing
+the bound *entirely* moves exactly one: `2026-08-23/5` face-on, where a 2.351 s descent that ends
+near a transient becomes "the last" and windows the whole clip. That single case is why the bound
+survives as a sanity check, and it is why `_POSSIBLE_` and not `_PLAUSIBLE_` — a threshold named
+for likelihood invites being used to rank candidates.
+
+**A correction to something said mid-session**: the claim that the band was choosing between real
+shots on `2026-08-07-aaron1/1`'s down-the-line clip was wrong, inferred from a candidate listing
+rather than run. The cross-view reference already picks that swing; the band was redundant there.
+The structural objection stands and is now fixed, but the corpus never exercised it.
+
+**Carried forward, and it is the next thing worth doing.** `2026-08-23/11` was checked end to end
+after the re-render and its panels still do not strike the ball together, for reasons this session
+did not touch. Its down-the-line container was parsed directly and carries the video edit list
+§E2 predicted — `timescale 19200`, an empty edit of 125 ticks then `media_time 1632`, so 91.5 ms
+(~5.5 frames) that the audio decode applies and the video decode ignores. On top of that, *both*
+views anchored tau=2 on a precursor rather than the ball: face-on took frame 222 (prominence 1.3 M)
+over 225 (13.2 M), down-the-line took 343 (1.4 M) over 346 (14.2 M). Net effect is roughly seven
+frames of daylight at impact with the down-the-line panel leading, and a TOP banner ~15 frames
+early in face-on because the imposed 0.417 s reference is inflated by that late impact anchor. The
+`tempo` withdrawal on that swing is probably the right call for the wrong reason.
+docs/M11_ACOUSTIC_SYNC.md §Addendum has the design: **correct the video edit list first, then floor
+the candidates** — the two fixes cancel each other if either ships alone.
+
+---
+
+## 2026-08-30 — Fifteen swings nobody could reach, and the sidecar that hid their video
+
+**Duration**: ~1 session. `src/golf_coach/api/app.py` (`GET /api/sessions`, `_swing_row` lifted out
+of `session_detail`), `src/golf_coach/api/static/library.html` (new), links into it from the other
+three pages, `src/golf_coach/api/pipeline.py` (`_recorded_video`, `PipelineOutcome.render_attempted`).
+Tests: `tests/api/test_library_route.py` (new, 8), four more in `tests/api/test_state.py`. Docs:
+`docs/ARCHITECTURE.md` §1 route table and its static-page list, `ROADMAP.md` M5. `pytest` 1199
+passed, `ruff` and `mypy` clean. Corpus re-rendered with `reanalyze.py --all --video`.
+
+**The complaint was "I can only find a swing by typing its URL, and then I can't see the video."
+Both halves were true and they had different causes.** The first is a gap: nothing in the API
+enumerated. `/api/sessions/current` answers *today* and `/api/sessions/{id}` answers a session you
+already know the id of, so `index.html` — which only ever renders the current session — was the
+whole navigation surface. Fifteen analyzed swings across four sessions were on disk and reachable
+only by hand-writing `results.html?session=…&swing=…`.
+
+**The second is a bug, and yesterday's own corpus re-analysis caused it.** `record_state` wrote
+`video=outcome.video_path.name if outcome.video_path else None` — unconditionally. `reanalyze.py`
+keeps the render off by default and its docstring promises the opposite ("anything analyzed without
+a render keeps whatever `aligned.mp4` it already had"), but the sidecar is what `has_video` is read
+from. So the `--no-video` sweep at 18:33Z left thirteen of fifteen swings advertising no video with
+a perfectly good H.264 file sitting in each directory, and `results.html` took its fallback branch
+and served the raw upload instead — HEVC in a QuickTime container, which is why the video "didn't
+work" rather than merely being absent. The two swings that *did* still play were 9 and 10, the two
+re-rendered by hand for M11's eye check.
+
+**`video_path is None` cannot say why there is no video, so `render_attempted` now does.** A run
+that skipped the render keeps the previous sidecar's `video` — after stat'ing the file, because the
+sidecar outlives anything deleted by hand. A run that *tried* and produced nothing clears it: the
+views would not align, and re-advertising the old file would claim a video this analysis says
+cannot be made. Staleness in the other direction — anchors moved under a file this run did not
+re-render — stays `reanalyze._video_went_stale`'s job, which reports rather than deletes.
+
+**The library page does not repeat `results.html`'s fallback, deliberately.** Falling back to the
+raw clip is right on a face-on-only bundle opened on an iPhone and wrong in a list on a laptop: a
+play button over an undecodable HEVC file is a button that does nothing. When the sidecar names no
+render the row says "no video" and the golfer keeps their time.
+
+**`GET /api/sessions` sends whole rows rather than ids.** Four sessions is four extra round trips
+to draw one screen on a phone, and the row is `_swing_row` — the same projection `session_detail`
+sends, lifted out rather than copied, with `test_the_list_and_the_detail_describe_a_swing_identically`
+pinning it. Sessions holding only a `session.json` are skipped: four of those exist, each one a
+session someone opened at the bay and filmed nothing in.
+
+**Carried forward**: `results.html`'s own HEVC fallback is untouched and still shows an
+undecodable clip on a desktop browser for a face-on-only bundle. The honest fix is to render a
+single-panel `aligned.mp4` when there is no second angle, which is a pipeline change, not a page
+change.
+
+---
+
 ## 2026-08-30 — M11's eye check: the video decode ignores an edit list the audio decode applies
 
 **Duration**: ~1 session. `src/golf_coach/audio/impact.py` (a docstring that says why the obvious
