@@ -16,7 +16,10 @@ import pytest
 
 imageio_ffmpeg = pytest.importorskip("imageio_ffmpeg")
 
-from golf_coach.audio.ffmpeg import FfmpegAudioSource  # noqa: E402  (after importorskip)
+from golf_coach.audio.ffmpeg import (  # noqa: E402  (after importorskip)
+    FfmpegAudioSource,
+    video_start_seconds,
+)
 from golf_coach.audio.source import AudioSource, NoAudioTrackError  # noqa: E402
 
 _TARGET_RATE = 48_000
@@ -65,6 +68,35 @@ def _write_silent_video(path: Path) -> None:
     )
     if done.returncode != 0:
         pytest.skip(f"No H.264 encoder available in this environment: {done.stderr!r}")
+
+
+def _write_video_starting_late(path: Path, *, delay_s: float = 0.1) -> None:
+    """A clip whose video track starts `delay_s` into the presentation timeline.
+
+    `-itsoffset` on the video input makes the MOV muxer write the same container shape the four
+    odd clips in this corpus carry: a leading *empty edit*, "show nothing until here", followed by
+    the media (docs/M11_ACOUSTIC_SYNC.md §E2, where the real ones measure 105-125 ms). The audio
+    comes from a second input with no offset, so the two tracks disagree exactly as they do there.
+    """
+    _write_silent_video(path.with_suffix(".video.mp4"))
+    _write_tone(path.with_suffix(".audio.mov"), seconds=1.0)
+    done = _ffmpeg(
+        "-itsoffset",
+        str(delay_s),
+        "-i",
+        str(path.with_suffix(".video.mp4")),
+        "-i",
+        str(path.with_suffix(".audio.mov")),
+        "-map",
+        "0:v:0",
+        "-map",
+        "1:a:0",
+        "-c",
+        "copy",
+        str(path),
+    )
+    if done.returncode != 0:
+        pytest.skip(f"Could not build a late-video fixture: {done.stderr!r}")
 
 
 def _decode_ignoring_the_edit_list(path: Path) -> int:
@@ -194,3 +226,44 @@ def test_an_absent_stream_index_raises_no_audio_track_error(tmp_path: Path) -> N
 
 def test_it_implements_the_audio_source_port(tmp_path: Path) -> None:
     assert isinstance(FfmpegAudioSource(tmp_path / "tone.mov"), AudioSource)
+
+
+def test_a_video_that_starts_late_reports_the_offset(tmp_path: Path) -> None:
+    """The whole of M11 P10 in one assertion: audio time zero is not frame zero. [M11 P10]
+
+    On four of the 30 clips on disk the video track carries a leading empty edit and the audio
+    track does not, so a sample index and a frame index describe clocks 105-125 ms apart — 6.3 to
+    7.5 frames at 60 fps, and the error the eye check on 2026-08-30 found in the stored anchors.
+    The fixture is synthetic and its delay is a round number; what is pinned is that the offset is
+    *seen*, because the failure mode it guards is a silent zero.
+    """
+    clip_path = tmp_path / "late_video.mov"
+    _write_video_starting_late(clip_path, delay_s=0.1)
+
+    assert video_start_seconds(clip_path) == pytest.approx(0.1, abs=0.005)
+
+
+def test_a_clip_whose_tracks_agree_reports_zero(tmp_path: Path) -> None:
+    """26 of the 30 clips on disk, and the reason this is a measurement and not a correction.
+
+    A measured 0.0 is what lets the caller treat a *missing* value as "nobody looked" rather than
+    as "no offset" — the distinction `AudioClipMetadata.video_start_s` is documented around.
+    """
+    clip_path = tmp_path / "silent.mov"
+    _write_silent_video(clip_path)
+
+    assert video_start_seconds(clip_path) == 0.0
+
+
+def test_a_clip_with_no_video_track_reports_none(tmp_path: Path) -> None:
+    """None, not zero: there are no frames for a sample index to land on (ADR-010 §2)."""
+    clip_path = tmp_path / "tone.mov"
+    _write_tone(clip_path, seconds=0.3)
+
+    assert video_start_seconds(clip_path) is None
+
+
+def test_probing_a_missing_file_raises(tmp_path: Path) -> None:
+    """Same answer `read()` gives, for the same reason: a missing clip is not an absent track."""
+    with pytest.raises(FileNotFoundError):
+        video_start_seconds(tmp_path / "nope.MOV")

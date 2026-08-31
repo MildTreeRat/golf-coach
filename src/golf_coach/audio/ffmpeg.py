@@ -21,10 +21,16 @@ Verified through this decode path on 2026-08-29, decoding each track twice and d
 sample counts: `2026-08-23/2` skips 2112 samples on **both** views, so it cancels there;
 `2026-08-23/9` skips 2112 on face-on and **0** on down-the-line, so it does not. That bundle is
 one of the four carrying M10's late-top defect.
+
+**And the video track has an edit list too, which is why `video_start_seconds` is here** [M11 P10].
+Applying the audio one correctly put the samples on the *presentation* timeline; the frame indices
+they are compared against come off a decoder that starts counting at its first decoded frame. On
+four clips in this corpus those are not the same clock — see that function.
 """
 
 from __future__ import annotations
 
+import re
 import subprocess
 import sys
 from array import array
@@ -176,3 +182,88 @@ class FfmpegAudioSource:
                 f"{self._path.name} has no audio stream at index {self._stream_index}"
             )
         return OSError(f"ffmpeg could not decode audio from {self._path}: {message}")
+
+
+# ffmpeg's `showinfo` filter prints one line per frame; this is the presentation timestamp on it,
+# in seconds. Parsed rather than computed because the whole point of the call is to ask the
+# demuxer what it did with the edit list, not to re-derive it (see `video_start_seconds`).
+_PTS_TIME = re.compile(rb"pts_time:\s*([0-9]+\.?[0-9]*)")
+
+
+def video_start_seconds(path: str | Path, *, stream_index: int = 0) -> float | None:
+    """Presentation time of the **first frame a decoder hands back** from this clip. [M11 P10]
+
+    Almost always 0.0, and the exceptions are why this function exists. A container can carry a
+    leading *empty edit* — "show nothing for the first N ms" — and a decoder honours it by
+    presenting its first frame at N rather than at zero. Nothing downstream counts frames that way:
+    `capture/file.py` hands out frame 0, 1, 2 and `keypoints.ClipMetadata.fps` turns those into
+    seconds from zero. So on such a clip a *sample* index (presentation time, because
+    `FfmpegAudioSource` applies the edit list) and a *frame* index (decoder output order) describe
+    two clocks N ms apart, and comparing them — which is exactly what M11 does when it pins tau=2
+    to a heard strike — is wrong by N.
+
+    **Measured over all 30 clips on disk, 2026-08-30.** 26 return 0.0. The four that do not are the
+    2026-08-23 down-the-line clips of bundles 1, 7, 9 and 11 — the same four §E2 flagged for their
+    odd structure, video timescale 19200 against everything else's 600 — at 0.107, 0.117, 0.105 and
+    0.125 s. That is 6.3 to 7.5 frames at 60 fps, it is *not* a constant, and it is the error the
+    eye check found on 2026-08-30 (docs/M11_ACOUSTIC_SYNC.md §Addendum): contact by eye at
+    down-the-line frame 321-322 on bundle 9 against an audio anchor of 327.7.
+
+    **Why ffmpeg and not the container.** The atom tree gives the same answer — the empty edit's
+    duration, to the millisecond — but the question is what a *decoder* does with it, and that is
+    not a fact about the file. Both decoders in this project agree here, verified frame-for-frame
+    on 2026-08-30: `cv2.VideoCapture` and this binary return pixel-identical frames in the same
+    order on bundle 9's down-the-line clip (cv2[i] matches ffmpeg's passthrough output i for
+    i = 0, 1, 2 and nowhere else), and both drop the three samples the edit list trims from the
+    head. cv2 simply never says so — `CAP_PROP_POS_MSEC` reads 0.0 on that clip's first frame,
+    which is the whole reason the offset has to be measured through the other one.
+
+    `-fps_mode passthrough` matters: ffmpeg's default output mode *duplicates* the first frame to
+    fill the empty edit — seven copies of it on bundle 9 — and a timestamp read off that padding
+    would be 0.0 and useless.
+
+    Returns None when the clip has no such video stream, and when ffmpeg produces no timestamp at
+    all. None is "nobody measured it", never zero: a caller that treats it as no offset is making
+    the same assumption every reader made before this existed, and `AUDIO_DETECTOR_VERSION` is what
+    makes sure the artifacts written under that assumption get re-measured. Raises `OSError` when
+    ffmpeg fails for any reason other than a missing stream.
+    """
+    target = Path(path)
+    if not target.exists():
+        raise FileNotFoundError(f"Video file not found: {target}")
+
+    completed = subprocess.run(
+        [
+            imageio_ffmpeg.get_ffmpeg_exe(),
+            "-hide_banner",
+            "-nostdin",
+            # `showinfo` logs at info level, so this is the one call here that cannot be quiet.
+            "-loglevel",
+            "info",
+            "-i",
+            str(target),
+            "-map",
+            f"0:v:{stream_index}",
+            "-fps_mode",
+            "passthrough",
+            "-vf",
+            "showinfo",
+            # One frame is the whole measurement, and it keeps this cheap enough to run beside
+            # every decode: the first frame of a 4K HEVC clip is a keyframe.
+            "-frames:v",
+            "1",
+            "-f",
+            "null",
+            "-",
+        ],
+        capture_output=True,
+        check=False,
+    )
+    if completed.returncode != 0:
+        message = completed.stderr.decode("utf-8", errors="replace").strip()
+        if any(marker in message.lower() for marker in _NO_STREAM_MARKERS):
+            return None
+        raise OSError(f"ffmpeg could not read the video timebase of {target}: {message}")
+
+    found = _PTS_TIME.search(completed.stderr)
+    return float(found.group(1)) if found else None

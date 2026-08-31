@@ -5,6 +5,74 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-08-30 — Two clocks in one container, and the floor that could not land without them
+
+**Duration**: ~1 session. `src/golf_coach/audio/ffmpeg.py` (new `video_start_seconds`),
+`src/golf_coach/audio/impact.py` (`_MIN_RELATIVE_PROMINENCE`, a second floor in `detect_strikes`),
+`src/golf_coach/contracts/audio.py` (`AudioClipMetadata.video_start_s`, `AudioStrike.frame`'s second
+`None` case, `AUDIO_DETECTOR_VERSION` 1 -> 2), `src/golf_coach/api/pipeline.py` (`audio_for` probes
+the video timebase, `_frames_derived` subtracts it, new `_frame_of`),
+`src/golf_coach/contracts/swing.py` (`ANALYSIS_VERSION` 12 -> 13),
+`src/golf_coach/analysis/alignment.py` (a docstring that recorded the defect as unfixed). Docs:
+`docs/M11_ACOUSTIC_SYNC.md` (P10, P11, the status line, the addendum's handoff), ADR-025's **first
+addendum**, `docs/README.md`, `docs/ARCHITECTURE.md`, `ROADMAP.md`. Tests: 11 new across
+`tests/audio/test_ffmpeg_source.py`, `tests/audio/test_impact.py` and
+`tests/api/test_pipeline_audio.py`. `pytest` green, `ruff` and `mypy` clean. Corpus re-analysed and
+re-rendered 15/15 with `reanalyze.py --all --video`.
+
+**This is M11's addendum, picked up the day it was written: the anchor was wrong two ways at once
+and the two errors were partly cancelling.** Every clip's earliest candidate could be a quiet
+transient 2-3 frames ahead of the ball, and `with_measured_impact` takes the earliest. On the four
+down-the-line clips whose container carries a leading empty edit, the sample index was *also*
+landing 6.3-7.5 frames late, because `FfmpegAudioSource` decodes on the presentation timeline and a
+frame index counts from the decoder's first frame. On those four the errors ran opposite ways, so
+the stored anchor came out ~2.5 frames late instead of 6 or 3 — which is why the corpus looked
+merely imprecise rather than broken, and why P9 had to revert its floor after building it.
+
+**The container reading in the addendum was wrong, and correcting it made the fix simpler.** It
+read the offset as the empty edit *plus* the 85 ms `media_time` trim, 90.5 ms. Neither decoder drops
+the trimmed head at all: with `-ignore_editlist 1`, ffmpeg's frames 0, 1, 2 are pixel-identical to
+`cv2.VideoCapture`'s frames 0, 1, 2 of the same clip, so `media_time` never reaches a frame index.
+What does is the empty edit, applied as a uniform shift — on `2026-08-23/9`, frame 0 presents at
+0.105 s and the 449 steps after it are 445 of 16.67 ms, three of 18.33 ms, and one 66.67 ms jump at
+the last frame. So the correction is the empty edit alone, it is per-clip (105, 107, 117, 125 ms on
+bundles 9, 1, 7, 11), and **it is measured rather than derived**: `video_start_seconds` asks ffmpeg
+for the first frame's presentation timestamp, because the question is what a decoder *did* with the
+edit list and not what the atom says. This also closes §E4's loose end — those four clips decode
+three fewer frames than their `stts` counts, and the three are at the tail.
+
+**It went on the audio artifact, not on `ClipMetadata` where the addendum guessed.** The pose path
+decodes with OpenCV, which reports 0.0 for `CAP_PROP_POS_MSEC` on the first frame of a clip that
+presents 105 ms late, so there is no switch to flip there and no way to see the number without
+dragging `imageio-ffmpeg` into the vision extras. The audio path already has ffmpeg open on the same
+file, and the only question the offset answers is the one that artifact exists to answer.
+
+**Ten clips have now been read frame by frame, four of them for the first time, and the anchor lands
+on contact in all ten.** `2026-08-23/1` and `/11` were the two edit-list bundles nobody had checked:
+contact at down-the-line 372 and 339 and face-on 442 and 225, against anchors of exactly those.
+`2026-08-23/9`'s render — the one whose panels struck four output frames apart — now strikes on
+output frame 142 in both panels, and `/10` does the same at 108.
+
+**The re-run returned two `tempo` readings from `unscored`, and that is P9's finding with the sign
+flipped.** Eight of fifteen bundles moved an anchor and none moved a window. On `2026-08-23/1` and
+`/11` the cross-view contradiction that withdrew `tempo` on 2026-08-29 turns out to have been the
+mis-registered anchor rather than the swing: with the down-the-line impact corrected the two
+downswings agree (0.384 s against 0.450 s, and 0.334 against 0.350), so the reading is scored again
+— and both **fail**, at 2.61 and 2.50:1 against a 2.72 floor. Their mechanics scores fall, 99.68 ->
+98.80 and 100.00 -> 98.16, because a failing score *came back*, not because a swing got worse. The
+other three withdrawals narrowed and held. `tour_trajectory_t2_dtl` and `tour_trajectory_q_dtl`
+moved on the six bundles whose down-the-line impact moved, and nothing else did.
+
+**Two sessions were editing this repo at once, and this is the seam.** The pose lite -> heavy switch
+below landed while the corpus was re-running. No files collide — that work is in `pose/`, `config.py`
+and `contracts/keypoints.py`, this one in `audio/` and the audio half of `pipeline.py` — but
+`ANALYSIS_VERSION` moved twice on one day, 12 -> 13 here and 13 -> 14 there, and **the corpus needs
+re-analysing again under the heavy model**. The keypoint caches were untouched during this re-run
+(their mtimes are still 2026-08-23), so every number recorded here is `mediapipe:lite` and isolates
+P10 and P11 cleanly; that is stated where the tables are.
+
+---
+
 ## 2026-08-30 — The render was replaying one panel at 2.08x, and a duration bound was picking swings
 
 **Duration**: ~1 session. `src/golf_coach/analysis/alignment.py` (`warp_speeds`, the `pair_frames`

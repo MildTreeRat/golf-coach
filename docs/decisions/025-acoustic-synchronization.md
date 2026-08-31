@@ -206,6 +206,32 @@ fails if it leaks.
   mask the strike degrades detection (not the warp — cross-correlation survives what absolute
   detection does not, which is why they are separate mechanisms).
 
+## Addendum (2026-08-30): the second defect was the container after all [M11 P10]
+
+**§Context's "And a second defect, larger, found while checking the first" is wrong about the
+cause, and the sentence that is wrong is the one that excluded the container.** That section reports
+the down-the-line impact anchor 5–7 frames early on four bundles, and lists "a container A/V bias"
+among three explanations "measured and excluded" — worth only ≈22 ms, it says, against ≈110 ms
+observed. The 22 ms was the *audio* priming asymmetry. The **video** track's edit list was never
+weighed, and it is the whole of it: those four clips carry a leading empty edit of 105–125 ms, which
+the audio decode honours and a frame counter does not, so a correct sample index landed 6–7 frames
+late in video time. Verified against contact by eye, frame by frame, in both views of five bundles.
+
+**What that changes, and what it does not.** The pose estimate on those clips was not early — it is
+right to within a frame, so §Context's reading of §E4 as a *detection* problem does not survive.
+The decision does not depend on it: the strike is still a shared clock, `SYNCHRONIZED` still means
+both views heard the shot, and every option weighed above is weighed the same way. What the fix
+moved was arithmetic one layer below this ADR (`api/pipeline.py` derives a frame from a sample, and
+now subtracts the video's own presentation start), not the design it argues for.
+
+**The general lesson is the one §Context already half-drew.** It says the decode path needs "a real
+demuxer rather than arithmetic on a sample count", and the reason is stated in terms of the audio
+edit lists. It is broader than that: **any two timelines in one container are only comparable once
+you know what the decoder did with each of them.** The audio side got that treatment on 2026-08-29
+and the video side did not until 2026-08-30, and the gap between those two dates is exactly the
+defect. Details and the measurements in
+[docs/M11_ACOUSTIC_SYNC.md](../M11_ACOUSTIC_SYNC.md) §Addendum, P10 and P11.
+
 ## References
 - ADR-015 (hand-held two-phone capture & event-anchored alignment) — the ADR this takes the parked
   Option C of, and whose addendum #2 records the exception to its "no shared clock" premise.

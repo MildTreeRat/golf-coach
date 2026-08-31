@@ -137,6 +137,66 @@ def test_the_club_mat_transient_is_absorbed_into_the_ball() -> None:
     assert len(near_the_ball) == 1
 
 
+def test_a_quiet_onset_ahead_of_the_ball_is_not_a_candidate() -> None:
+    """The floor M11 P9 specified and M11 P11 landed, and the rule it protects downstream.
+
+    `with_measured_impact` takes the *earliest* candidate in its window, because the ball is the
+    first sound a shot makes. That makes anything audible ahead of the ball load-bearing: a quiet
+    onset 3-4 frames early is taken *instead* of the strike, and the anchor moves with it. On the
+    corpus these run 0.02-0.10 of the clip's loudest transient where the ball never falls below
+    0.61; the precursor here sits at 0.08 of the maximum, inside that measured range.
+
+    **Confidence does not catch it**, which is why the floor is relative prominence and not
+    confidence: this one reads 0.83, because it is a perfectly real onset — it is just not the
+    ball.
+    """
+    rng = np.random.default_rng(3)
+    track = _room(5.0, rng)
+    _add_shot(track, 2.0, rng)
+    # 60 ms early: outside `_MIN_SEPARATION_S`, so this is the floor's work and not suppression's.
+    _add_transient(track, 2.0 - 0.060, amplitude=1_400, decay_ms=15, rng=rng)
+    clip = np.clip(track, -32_768, 32_767).astype(np.int16)
+
+    strikes = detect_strikes(clip, _RATE)
+
+    earliest = _by_time(strikes)[0]
+    assert _seconds(earliest.sample) == pytest.approx(2.0, abs=_FRAME_S)
+
+
+def test_the_floor_is_what_removes_it_and_not_the_neighbour_suppression() -> None:
+    """Two rules could explain the test above; this one says which, so a later edit cannot lie.
+
+    With the floor switched off the precursor comes back as its own candidate — it is 60 ms clear
+    of the ball, so `_MIN_SEPARATION_S` never touches it — and it comes back *ahead* of the ball
+    in time, which is exactly the anchor error the corpus carried until 2026-08-30.
+    """
+    rng = np.random.default_rng(3)
+    track = _room(5.0, rng)
+    _add_shot(track, 2.0, rng)
+    _add_transient(track, 2.0 - 0.060, amplitude=1_400, decay_ms=15, rng=rng)
+    clip = np.clip(track, -32_768, 32_767).astype(np.int16)
+
+    unfloored = detect_strikes(clip, _RATE, min_relative_prominence=0.0)
+
+    assert _seconds(_by_time(unfloored)[0].sample) == pytest.approx(2.0 - 0.060, abs=_FRAME_S)
+    assert len(unfloored) > len(detect_strikes(clip, _RATE))
+
+
+def test_the_screen_strike_survives_the_floor() -> None:
+    """The floor must separate noise from the shot, never one of the shot's own transients.
+
+    Measured on all 30 cached clips: the ball's relative prominence never falls below 0.61 and the
+    screen's is of the same order. A floor that took either would break `_by_time`'s two-candidate
+    reading of a shot — and P6's `offset_between` reads the *pattern*, so thinning it is not free.
+    """
+    strikes = detect_strikes(_shot_clip(), _RATE)
+
+    ball, screen = _by_time(strikes[:2])
+    assert _seconds(ball.sample) == pytest.approx(2.0, abs=_FRAME_S)
+    assert _seconds(screen.sample) == pytest.approx(2.0 + _SCREEN_AFTER_S, abs=_FRAME_S)
+    assert min(s.prominence for s in (ball, screen)) / strikes[0].prominence > 0.25
+
+
 def test_a_rehearsal_makes_no_crack() -> None:
     """An empty bay is an empty list — the result M11 P5 reads, not a gap in the data."""
     rng = np.random.default_rng(5)

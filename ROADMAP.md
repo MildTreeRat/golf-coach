@@ -26,7 +26,7 @@ wording; only the grouping and the M4 checklist have been corrected.
 | **M8** Learning what "good" means | ✅ Done *(2026-08-17)* | — (three models fitted, validated, surfaced **and spoken**, with a policy rather than a band) | [§M8](#m8-learning-what-good-means--gates-run-model-fitted) |
 | **M9** Player tracking (per-club) | ✅ Done *(2026-08-22)*, 20/20 phases | — (built and **silent by design**: every club-narrowed answer refuses, because no swing on disk is tagged yet. A bay session, and the retag control, are what make it speak) | [§M9](#m9-player-tracking-per-club-shot-history--done-and-waiting-on-a-bay-session) |
 | **M10** Alignment accuracy | ✅ Done *(2026-08-26)*, 10/10 phases | — (the corpus has been re-analysed against the fix; the face-on top it left landing late was closed by M11 on 2026-08-29) | [§M10](#m10-alignment-accuracy--the-two-panels-leave-address-together--done) |
-| **M11** Acoustic sync | ✅ Done *(2026-08-29)*, 10/10 phases — **read the addendum** *(2026-08-30)* | on four down-the-line clips the video decode ignores a 90 ms edit-list offset the audio decode applies, so tau=2 lands ~2.5 frames late there ([§Addendum](docs/M11_ACOUSTIC_SYNC.md)) | [§M11](#m11-acoustic-sync--the-ball-strike-is-the-clock--done) |
+| **M11** Acoustic sync | ✅ Done *(2026-08-30)*, 12/12 phases | — (P10 and P11 closed the addendum's residual: the anchor now matches contact by eye to within a frame on all ten clips read frame by frame) | [§M11](#m11-acoustic-sync--the-ball-strike-is-the-clock--done) |
 | **M5** Feedback UI | ⬜ Not started | M7 Phase 5 gives the host | [§M5](#milestone-5-feedback-ui) |
 | **M2** Club & ball detection | 🔒 Gated, **and M1.5 said no-go** | Bay lighting for a ~1/2000 s exposure — *not* a global-shutter camera | [§M2](#milestone-2-club--ball-detection) |
 | Hardware re-validation | 🔒 Gated | Cameras / launch monitor arriving | [§Gate](#hardware-re-validation-gate-revisit-when-cameras--launch-monitor-arrive) |
@@ -65,12 +65,15 @@ M10 left behind — the face-on top landing late — is **closed** as of 2026-08
 ball strike both phones already record, as the shared clock that decides which view's top is wrong
 rather than merely doubting both. Every bundle on disk now reads `synchronized`, and a `tempo` timed
 from a contradicted top is withdrawn instead of shipped. So a session filmed today is scored on
-frames two views agree about. M11's residual is **not** closed and changed shape on 2026-08-30: the
-strike detector picks the right transient, but on four down-the-line clips the *video* decode
-ignores a 90 ms edit-list offset the *audio* decode applies, so a correct sample index lands on the
-wrong frame. That is where the down-the-line anchor's remaining error lives, and it has to be fixed
-before P9's candidate floor can land. New footage helps here too — only three bundles have been read
-against the video frame by frame.
+frames two views agree about. **M11's residual closed on 2026-08-30**, and it was two errors rather
+than one: the anchor was taking a quiet transient 2-3 frames ahead of the ball, and on the four
+down-the-line clips whose container presents its video 105-125 ms after its audio it was landing
+6-7 frames late on top of that. They ran in opposite directions and partly cancelled, which is why
+neither showed up in a score. P10 measures the video's own presentation start and subtracts it; P11
+lands the candidate floor P9 specified and had to revert. Ten clips have now been read frame by
+frame in both views and the anchor agrees with contact on every one of them, so `tau=2` is a
+measured frame rather than an estimate — which is what the second panel of every render is drawn
+against.
 
 **M9's own last blocker went in the session before P20**: `index.html`'s swing list now has a
 per-swing **change** control beside the golfer one, so a swing already on disk is retagged from a phone in one tap over `POST
@@ -1325,21 +1328,21 @@ that were *passing* at 4.27 and 4.06:1 on the same short downswing that made the
 improved; session 5 got the down-the-line window it never had; and the false *"the two clips are
 showing DIFFERENT swings"* note is gone corpus-wide, replaced by *"one swing filmed twice"*.
 
-**The residual P9 handed forward is open, and it sits one layer below where P9 looked**
-*(2026-08-30, the addendum)*. §Verification's "watch two renders by eye" was finally run and `9`
-failed it — its two panels strike about four output frames apart, where `/10`'s agree to within one.
-P9's proposed fix, a prominence floor in `audio/impact.py`, was built, measured over all 30 clips
-and **reverted**: it selects the right transient on every clip, but on the four down-the-line clips
-carrying §E2's video edit list it makes the render *worse*, because the precursor it removes had
-been cancelling a larger error underneath. That error is the edit list itself — a 90 ms presentation
-offset the audio decode applies and the video decode ignores — so on those clips a sample index and
-a frame index describe different timelines. Verified against the video frame by frame: face-on
-contact matches its audio anchor on all three bundles checked, down-the-line contact misses by
-+6.2 and +6.8 frames on `9` and `7`, and `10`, which has no such edit list, agrees to 0.6 frames.
-`2026-08-23/11` shows how sensitive the arbitration is to any of this: 3 frames of anchor movement
-flipped its `tempo` from withdrawn to scored across a `_DOWNSWING_AGREEMENT` margin of 0.014. Fix
-the edit list, then land the floor. `AUDIO_DETECTOR_VERSION` was added so that second step cannot
-ship invisibly onto the bundles already on disk. Frame numbers in §Addendum of the phase doc.
+**The residual P9 handed forward is closed, and it was two errors rather than one** *(2026-08-30,
+P10 and P11)*. §Verification's "watch two renders by eye" was finally run and `9` failed it — its
+two panels struck about four output frames apart. Underneath were an anchor taking a quiet transient
+2–3 frames ahead of the ball on *every* clip, and, on the four down-the-line clips carrying §E2's
+video edit list, a presentation offset of 105–125 ms that the audio decode honours and a frame
+counter does not. They ran in opposite directions and partly cancelled, which is why neither showed
+up in a score and why P9's floor made those four renders *worse* when it was tried alone. **P10**
+measures the video's own presentation start through the demuxer and subtracts it before a sample
+index becomes a frame; **P11** lands the floor. Ten clips have now been read frame by frame in both
+views — including `1` and `/11`, which nobody had checked — and the anchor lands on contact in every
+one. The corpus re-run (`ANALYSIS_VERSION` 13, `AUDIO_DETECTOR_VERSION` 2) moved an anchor on eight
+of fifteen bundles and no window at all, and it **returned** two withdrawn `tempo` readings: on `1`
+and `/11` the cross-view contradiction was the mis-registered anchor, not the swing, and both now
+score as honest failures (2.61 and 2.50:1). Bundle `9`'s panels strike on one output frame. Frame
+numbers in §Addendum, P10 and P11 of the phase doc.
 
 ---
 

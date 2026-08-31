@@ -15,6 +15,7 @@ screen — that is P3's question and it is answered there.
 
 from __future__ import annotations
 
+import math
 import sys
 from array import array
 from datetime import UTC, datetime
@@ -74,6 +75,11 @@ class _FakeSource:
     samples: array[int] = array("h")
     error: Exception | None = None
     stream_index: int = 0
+    #: What the fake `video_start_seconds` reports for every clip in this file — the presentation
+    #: time of the video's first frame (M11 P10). 0.0 is the ordinary container; set it on the
+    #: fixture to get the four odd ones. `None` stands for a probe that could not answer, and an
+    #: `Exception` here is raised instead of returned, the way the real probe raises `OSError`.
+    video_start_s: float | None | Exception = 0.0
 
     def __init__(self, path, *, camera_id=None, stream_index: int = 0) -> None:
         self._path = Path(path)
@@ -104,7 +110,17 @@ def decoder(monkeypatch):
     _FakeSource.samples = _waveform()
     _FakeSource.error = None
     _FakeSource.stream_index = 0
+    _FakeSource.video_start_s = 0.0
+
+    def _video_start(path, *, stream_index: int = 0):
+        if isinstance(_FakeSource.video_start_s, Exception):
+            raise _FakeSource.video_start_s
+        return _FakeSource.video_start_s
+
     monkeypatch.setattr(ffmpeg_module, "FfmpegAudioSource", _FakeSource)
+    # Patched for the same reason and in the same place: `audio_for` imports both names lazily
+    # from this module, and the clips in this file are empty bytes that no real probe can read.
+    monkeypatch.setattr(ffmpeg_module, "video_start_seconds", _video_start)
     return _FakeSource
 
 
@@ -172,6 +188,7 @@ def test_the_frame_is_derived_from_the_sample_under_the_fps_it_was_given(bundle,
 
     assert audio is not None and audio.clip is not None
     assert audio.clip.fps == _FPS
+    assert audio.clip.video_start_s == 0.0
     for strike in audio.strikes:
         assert strike.frame == int(strike.sample * _FPS / _RATE)
     loudest = audio.strikes[0]
@@ -416,3 +433,77 @@ def test_a_clean_read_narrates_to_the_log_and_leaves_the_notes_empty(bundle, dec
     assert notes == []
     assert any("decoding audio" in line for line in lines)
     assert any("from cache" in line for line in lines)
+
+
+# --- the video's own clock (M11 P10) -----------------------------------------------------------
+
+
+def test_a_video_that_starts_late_moves_every_frame_back(bundle, decoder) -> None:
+    """The defect M11 P10 fixed, in the one place the two clocks meet.
+
+    A sample index is a time on the presentation clock, because the decode applies the container's
+    edit list. A frame index counts from the first frame the video decoder hands back. On four
+    down-the-line clips here those differ by 105-125 ms, and the anchor was that much late in
+    every stored bundle until 2026-08-30 — six frames at 60 fps, against an eye check that reads
+    contact to within one.
+    """
+    swing_dir, manifest = bundle
+    decoder.video_start_s = 0.105
+
+    audio = audio_for(swing_dir, manifest, Role.FACE_ON, fps=_FPS)
+
+    assert audio is not None and audio.clip is not None
+    assert audio.clip.video_start_s == 0.105
+    for strike in audio.strikes:
+        assert strike.frame == math.floor((strike.sample / _RATE - 0.105) * _FPS)
+    # Six frames earlier than the same waveform on a clip whose tracks agree — the correction, not
+    # a rounding difference.
+    decoder.video_start_s = 0.0
+    unshifted = audio_for(swing_dir, manifest, Role.FACE_ON, fps=_FPS, force=True)
+    assert unshifted is not None
+    assert unshifted.strikes[0].frame - audio.strikes[0].frame == 6
+
+
+def test_a_strike_before_the_first_frame_has_no_frame(bundle, decoder) -> None:
+    """None rather than a clamp to 0: the sound is real and no frame was being exposed for it."""
+    swing_dir, manifest = bundle
+    decoder.video_start_s = 2.0  # every strike in the fixture sounds before this
+
+    audio = audio_for(swing_dir, manifest, Role.FACE_ON, fps=_FPS)
+
+    assert audio is not None and audio.strikes
+    assert all(strike.frame is None for strike in audio.strikes)
+    # And the sample indices — the measurement — are untouched by having no frame to sit on.
+    assert all(strike.sample > 0 for strike in audio.strikes)
+
+
+def test_an_unreadable_timebase_is_a_note_and_the_strikes_still_land(bundle, decoder) -> None:
+    """A probe is not a decode. The strikes are the measurement and they are still worth storing.
+
+    What the note buys is that the frames are then derived under an assumption — that the video
+    starts where the audio does — rather than under a measurement, and a reader comparing this
+    bundle against one that could be probed has to be able to see that.
+    """
+    swing_dir, manifest = bundle
+    decoder.video_start_s = OSError("ffmpeg could not read the video timebase")
+    notes: list[str] = []
+
+    audio = audio_for(swing_dir, manifest, Role.FACE_ON, fps=_FPS, notes=notes)
+
+    assert audio is not None and audio.clip is not None
+    assert audio.clip.video_start_s is None
+    assert audio.strikes and all(strike.frame is not None for strike in audio.strikes)
+    assert any("video timebase" in note for note in notes)
+
+
+def test_a_probe_that_cannot_answer_is_not_a_measured_zero(bundle, decoder) -> None:
+    """None on the artifact, so a later reader can tell "nobody looked" from "no offset"."""
+    swing_dir, manifest = bundle
+    decoder.video_start_s = None
+
+    audio = audio_for(swing_dir, manifest, Role.FACE_ON, fps=_FPS)
+
+    assert audio is not None and audio.clip is not None
+    assert audio.clip.video_start_s is None
+    stored = load_audio(swing_dir / "face_on.audio.json")
+    assert stored.clip is not None and stored.clip.video_start_s is None

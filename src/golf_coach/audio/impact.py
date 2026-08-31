@@ -72,6 +72,27 @@ _MIN_SEPARATION_S = 0.050
 # 0.85-0.97, the listing floor above lands at 0.29, and the loudest peak in an empty bay near 0.18.
 _CONFIDENCE_HALF_Z = 20.0
 
+# A second floor, and the one that decides which transient a caller anchors on. `_MIN_PROMINENCE_Z`
+# separates a real onset from room tone; this separates the shot's own transients from the quiet
+# ones around them, as a fraction of the loudest transient in the same clip. It exists because the
+# rule downstream is *earliest wins* (`analysis/alignment.py`'s `with_measured_impact`): the ball is
+# the first sound a shot makes, so anything audible ahead of it is taken instead of it, and a
+# candidate 2-3 frames early moves an anchor the whole milestone is built on.
+#
+# Measured over all 30 cached clips on 2026-08-30. Relative prominence of the precursors runs
+# 0.02-0.10 and the ball never falls below 0.61 — so this sits 2.5x above the loudest thing it
+# drops and 2.4x below the quietest thing it keeps, and there is a clear order of magnitude
+# between those two populations with nothing at all in between.
+#
+# It is deliberately not a *listing* floor at heart: `_MIN_PROMINENCE_Z` still decides what counts
+# as an onset, and everything this removes was already known to be one. What it removes is the
+# chance to be *chosen*.
+#
+# It was specified by M11 P9, and it could not land until M11 P10 did: the precursor error had
+# been cancelling the video edit-list offset on the four clips that carry one, so removing it
+# alone made those renders worse (docs/M11_ACOUSTIC_SYNC.md §Addendum).
+_MIN_RELATIVE_PROMINENCE = 0.25
+
 # --- clip-to-clip offset ----------------------------------------------------------------------
 
 # How well the two flux envelopes must line up before an offset is reported, and by how much the
@@ -127,6 +148,7 @@ def detect_strikes(
     *,
     min_prominence_z: float = _MIN_PROMINENCE_Z,
     min_separation_s: float = _MIN_SEPARATION_S,
+    min_relative_prominence: float = _MIN_RELATIVE_PROMINENCE,
 ) -> list[AudioStrike]:
     """Every transient in one decoded clip, loudest first. [M11 P3]
 
@@ -142,17 +164,14 @@ def detect_strikes(
     Ordering is by `prominence`, descending — the ranking, not the timeline. Sort by `sample` if
     you want time order.
 
-    **A floor relative to the clip's loudest transient works and must not land on its own.** M11 P9
-    specified one to drop the quiet onsets a few frames ahead of the ball; it was built on
-    2026-08-30, measured over all 30 cached clips (it wants 0.25 of the clip maximum — precursors
-    run 0.02-0.10 and the ball never falls below 0.61), and it picks the ball on every one of them.
-    It was reverted anyway, because watching the renders found a second defect underneath it: on the
-    four down-the-line clips carrying a video edit list (§E2 — bundles 1, 7, 9, 11), the video
-    decode ignores a 90 ms presentation offset that the audio decode honours, and the precursor
-    error was accidentally cancelling most of it. Removing the precursor alone leaves the anchor
-    right in *audio* time and 6 frames late in *video* time, which is the time tau=2 is measured in.
-    Fix the edit list first, then floor the candidates. Evidence, frame by frame, in
-    docs/M11_ACOUSTIC_SYNC.md §Addendum.
+    **The quiet onsets ahead of the ball are gone, and that is `_MIN_RELATIVE_PROMINENCE`** [M11
+    P11]. Returning every audible transient made the *earliest wins* rule downstream take a
+    precursor 2-3 frames ahead of the strike on four bundles. This floor was specified by M11 P9,
+    built on 2026-08-30 and then **reverted the same day** — not because it was wrong (it picks the
+    ball on all 30 cached clips) but because the four clips it helped most were carrying a second,
+    larger error underneath it in the opposite direction, and the two were partly cancelling. It
+    lands here with M11 P10, which fixed that one: the video edit-list offset. Neither half is
+    shippable alone, and the story is in docs/M11_ACOUSTIC_SYNC.md §Addendum.
 
     `frame` is left `None` on every strike: this function is handed a waveform and a sample rate
     and has never seen the video, so it cannot know the fps (`contracts/audio.py`). The caller
@@ -183,12 +202,23 @@ def detect_strikes(
 
     z = (envelope - median) / scale
     separation = max(1, round(min_separation_s * rate / hop))
+    # Both floors are read off the same envelope, and they are floors on different things: `z` is
+    # "louder than this clip's own noise", `prominence` is "loud against this clip's own loudest".
+    # A clip whose peak barely clears the noise has no meaningful ratio to take, so the relative
+    # floor is only meaningful once the absolute one has been passed — which is the order below.
+    loudest = float(np.max(envelope)) - median
+    floor = loudest * min_relative_prominence
 
     strikes: list[AudioStrike] = []
     chosen: list[int] = []
     for index in np.argsort(z)[::-1]:
         peak = int(index)
         if z[peak] < min_prominence_z:
+            break
+        if float(envelope[peak] - median) < floor:
+            # Ordered loudest-first, so everything after this is quieter still. `break` rather
+            # than `continue` is the same shortcut the line above takes and rests on the same
+            # ordering; it is not a different rule.
             break
         if any(abs(peak - other) < separation for other in chosen):
             continue

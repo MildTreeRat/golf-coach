@@ -334,7 +334,22 @@ class SwingResult(BaseModel):
 #:                   this engine reports no tempo at all. `reanalyze.py` is how a stored bundle
 #:                   acquires the corrected reading, and `is_outdated` is what keeps the two out of
 #:                   one `PersonalBaseline` until it runs.
-ANALYSIS_VERSION = 12
+#: 12 -> 13 (2026-08-30, M11 P10/P11): the same shared clock, read correctly. Version 12 compared a
+#:                   sample index against a frame index without noticing that four down-the-line
+#:                   clips present their video 105-125 ms after their audio, and it anchored on a
+#:                   quiet transient 2-3 frames ahead of the ball on every clip. The two errors ran
+#:                   in opposite directions and partly cancelled, which is why neither was visible
+#:                   in a score and why they are fixed together. So this is another `10 -> 11`
+#:                   shape: no field is added and a version-12 artifact **disagrees** rather than
+#:                   lacking anything — its tau=2 is up to 6 frames off in the down-the-line view
+#:                   and ~3 frames early in the face-on one, which moves every quantity resampled
+#:                   onto impact, the `_DOWNSWING_AGREEMENT` comparison that decides whether
+#:                   `tempo` is withdrawn, and — through `select_swing` rule 0 — which descent is
+#:                   scored at all. `reanalyze.py` is how a stored bundle acquires the corrected
+#:                   frames; `AUDIO_DETECTOR_VERSION` (`contracts/audio.py`) is the matching gate
+#:                   one layer down, because the strike lists themselves have to be re-detected
+#:                   before this engine can read them right.
+ANALYSIS_VERSION = 13
 
 
 class SwingBundleResult(BaseModel):

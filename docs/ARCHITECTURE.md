@@ -65,7 +65,11 @@ to render. A partial bundle waits for an explicit "Analyze anyway" rather than a
 
 **Both phones hear the ball** (M11, ADR-025), and that is the newest edge in the diagram. Each
 clip's audio is decoded once, the ball strike is found in it, and the result reaches the analysis
-core as **frame indices in that clip's own numbering** — never a waveform. Those indices do three
+core as **frame indices in that clip's own numbering** — never a waveform. Turning a sample index
+into a frame index is arithmetic with one trap in it, and `audio_for` measures its way out: a
+container can present its video later than its audio, so the same call that decodes the clip also
+probes the presentation time of its first video frame and records it as
+`AudioClipMetadata.video_start_s` (M11 P10). Four of the 30 clips on disk need it, at 105-125 ms. Those indices do three
 things: they overrule the duration band when `select_swing` picks which descent is the swing, they
 pin each view's impact anchor to a heard event so the pair reports `AlignmentQuality.SYNCHRONIZED`,
 and — because two impacts pinned to one sound make the two downswings measurements of one interval
@@ -273,7 +277,7 @@ on a `vision`-only install — pinned by `tests/api/test_pipeline_imports.py`.
 |-----------|-----------|------------|--------|
 | Keypoints | Pose → Analysis | `List[FrameKeypoints]` — 33 landmarks per frame with x, y, z, visibility | ✅ |
 | Detections | Detection → Analysis | `List[FrameDetections]` — bounding boxes + class (club_head, ball) per frame | contract only |
-| Ball strikes | Audio → Analysis | `list[int]` — the frames a strike was heard on, in each clip's **own** numbering, decoded from `AudioFile` by `audio/impact.py` and passed to `analyze_swing_bundle` as `face_on_strikes` / `down_the_line_strikes`. Indices rather than a waveform is the whole seam: `analysis/` stays stdlib-only (ADR-025) | ✅ |
+| Ball strikes | Audio → Analysis | `list[int]` — the frames a strike was heard on, in each clip's **own** numbering, decoded from `AudioFile` by `audio/impact.py` and passed to `analyze_swing_bundle` as `face_on_strikes` / `down_the_line_strikes`. Indices rather than a waveform is the whole seam: `analysis/` stays stdlib-only (ADR-025). The sample→frame conversion happens in `api/pipeline.py` and subtracts the clip's `video_start_s`, because a sample index is a time on the container's presentation clock and a frame index is not | ✅ |
 | Shot Data | Launch monitor → Analysis | `ShotData` — club_speed, ball_speed, launch_angle, spin_rate, club_face_angle, club_path, smash_factor, distances, plus `provenance` (confidence + audit trail) for sources that *infer* metrics rather than receive them (ADR-014) | ✅ produced, not consumed |
 | Swing Result | Analysis → Feedback | `SwingResult` — phases, checkpoint scores with tour percentiles, mechanics/outcome/overall scores, `unscored` entries carrying a reason, judged `intent` | ✅ (`outcome_score` always `None`) |
 | Feedback | Feedback → UI | `FeedbackPayload` — overall score, ranked tips with severity, headline | ✅ produced and rendered by `api/static/results.html` |

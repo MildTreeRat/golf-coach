@@ -44,6 +44,7 @@ already in the store, and `audio` only to hear a clip that has not been listened
 
 from __future__ import annotations
 
+import math
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -317,7 +318,7 @@ def audio_for(
         return None
 
     try:
-        from golf_coach.audio.ffmpeg import FfmpegAudioSource
+        from golf_coach.audio.ffmpeg import FfmpegAudioSource, video_start_seconds
         from golf_coach.audio.impact import detect_strikes
         from golf_coach.audio.source import NoAudioTrackError
     except ImportError:
@@ -360,6 +361,28 @@ def audio_for(
         )
         return None
 
+    # The second clock, measured while this file is open and the extra that can see it is
+    # imported (M11 P10). It belongs to the *video* track, and it is recorded here rather than on
+    # `keypoints.ClipMetadata` for a practical reason: the pose path decodes with OpenCV, which
+    # never reports it, and the only question it answers is the one this artifact asks — which
+    # frame a sample index lands on. A probe that fails is a note, not a failed decode: the
+    # strikes are still the measurement and they are still worth storing.
+    try:
+        video_start_s = video_start_seconds(video_path)
+    except OSError as error:
+        log(f"  {role.value}: could not read the video timebase — {error}")
+        _note(
+            notes,
+            f"the {role.value} clip's video timebase could not be read, so its strike frames "
+            "assume the video starts where the audio does",
+        )
+        video_start_s = None
+    else:
+        if video_start_s:
+            # Rare and load-bearing, so it is said out loud rather than left in the artifact:
+            # four clips in this corpus start their video 105-125 ms after their audio (§E2).
+            log(f"  {role.value}: video starts {video_start_s * 1000:.0f} ms after the audio")
+
     strikes = detect_strikes(clip.samples, clip.sample_rate)
     audio = _frames_derived(
         AudioFile(
@@ -370,6 +393,7 @@ def audio_for(
                 duration_s=clip.duration_s,
                 source_sha256=role_file.content_sha256,
                 stream_index=clip.stream_index,
+                video_start_s=video_start_s,
             ),
             strikes=strikes,
             detector_version=AUDIO_DETECTOR_VERSION,
@@ -392,18 +416,35 @@ def _frames_derived(audio: AudioFile, fps: float | None) -> AudioFile:
     a caller that does not know the frame rate must not erase the frames a caller that did know
     wrote (ADR-010 §2). Rounding is a floor, because a frame index answers "which frame was being
     exposed when this happened", and a strike 1.5 frames in happened during frame 1.
+
+    **`video_start_s` is subtracted first, and that subtraction is the whole of M11 P10.** A sample
+    index is a time on the *presentation* clock, because `FfmpegAudioSource` applies the
+    container's edit list; a frame index counts from whatever frame the video decoder hands back
+    first. Four down-the-line clips here start their video 105-125 ms into that clock, so on them
+    the two differ by 6.3 to 7.5 frames and every earlier reading of this artifact was that much
+    late. Absent, it is treated as zero — the assumption every reader made before the field
+    existed, and true of 26 of the 30 clips on disk — which is why `AUDIO_DETECTOR_VERSION` moved
+    with it rather than leaving stored frames to be re-derived silently under a changed rule.
+
+    A strike **before** the first decoded frame gets `frame=None` rather than a clamp to 0: the
+    sound is real, it is the measurement, and there is genuinely no frame it happened during.
     """
     clip = audio.clip
     if fps is None or fps <= 0.0 or clip is None or not clip.sample_rate:
         return audio
-    if clip.fps == fps and all(strike.frame is not None for strike in audio.strikes):
-        return audio
 
     rate = clip.sample_rate
+    start = clip.video_start_s or 0.0
     framed: list[AudioStrike] = [
-        strike.model_copy(update={"frame": int(strike.sample * fps / rate)})
+        strike.model_copy(update={"frame": _frame_of(strike.sample, rate, fps, start)})
         for strike in audio.strikes
     ]
+    if clip.fps == fps and framed == audio.strikes:
+        # Nothing to add: derived under this same fps already, and every strike that could have a
+        # frame has one. Compared rather than assumed, because `frame=None` now has a second
+        # meaning — a strike ahead of the first decoded frame keeps None forever, and a guard of
+        # "are they all filled in?" would re-derive and re-save such a clip on every read.
+        return audio
     return AudioFile(
         clip=clip.model_copy(update={"fps": fps}),
         strikes=framed,
@@ -411,6 +452,17 @@ def _frames_derived(audio: AudioFile, fps: float | None) -> AudioFile:
         # arithmetic does not turn an older detector's list into this one's.
         detector_version=audio.detector_version,
     )
+
+
+def _frame_of(sample: int, rate: int, fps: float, video_start_s: float) -> int | None:
+    """Which decoded frame a sample index lands on, or None when it precedes the first. [M11 P10]
+
+    Named rather than left inline because the arithmetic has a sign now and `int()` no longer
+    does what the docstring above claims: it truncates *toward zero*, so it would put a strike
+    0.4 frames before the video started on frame 0 and hide the case this returns None for.
+    """
+    frame = math.floor((sample / rate - video_start_s) * fps)
+    return frame if frame >= 0 else None
 
 
 def _shot_for(

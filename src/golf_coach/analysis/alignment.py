@@ -182,13 +182,16 @@ def with_measured_impact(
     club-and-mat pair that precedes it by 15-20 ms is below `audio/impact.py`'s own 50 ms
     separation floor and has already been merged into one onset by the time it arrives here.
 
-    **Anything ahead of the ball wins here by construction, and on four clips that is load-bearing
-    in a way nobody designed.** M11 P9 measured a quiet precursor 2-3 frames ahead of the strike
-    being taken instead of it. Watching the renders on 2026-08-30 found why removing it makes those
-    same clips *worse*: their video decode ignores a 90 ms edit-list offset their audio decode
-    applies (§E2, bundles 1, 7, 9, 11), and the precursor was cancelling most of that. The two
-    errors have to be fixed together, in `audio/` and in the video decode — not here. Frame numbers
-    in docs/M11_ACOUSTIC_SYNC.md §Addendum.
+    **Anything ahead of the ball wins here by construction, so what is offered matters as much as
+    this rule does.** M11 P9 measured a quiet precursor 2-3 frames ahead of the strike being taken
+    instead of it, on every clip in the corpus. That is fixed where it was made — `audio/impact.py`
+    now drops any candidate under a quarter of the clip's loudest (M11 P11) — and it could only be
+    fixed alongside the second error underneath it, a video edit-list offset that ran the other way
+    on four clips and had been partly cancelling it (M11 P10, in `api/pipeline.py`).
+    With both landed, this rule picks a frame that agrees with contact by eye to within one on all
+    ten clips checked frame by frame. Nothing here changed for either fix, and that is the point of
+    the seam: this function takes frames and has no opinion about how they were measured. Story and
+    frame numbers in docs/M11_ACOUSTIC_SYNC.md §Addendum, P10 and P11.
 
     Returns `anchors` **unchanged** when there is nothing to pin to — no strikes, no fps to size
     the window with, or no transient inside it — and `impact_measured` then stays False, which is

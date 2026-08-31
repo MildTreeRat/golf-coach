@@ -11,15 +11,17 @@
 > [ADR-015](decisions/015-handheld-two-phone-capture-and-event-anchored-alignment.md); this
 > document proposes taking the option that ADR parked.
 
-**Status: 10/10 phases built**, closed 2026-08-29 — **and read §Addendum (2026-08-30) before §E4
-and P9's *As built***, because the eye check §Verification asks for was finally run and it moved the
-defect: on four down-the-line clips the *video* decode ignores an edit list the *audio* decode
-applies, so a frame index and a sample index describe timelines 90 ms apart. §E4's "5.7–7.5 frames
-early" is that offset, not a pose error. P0 verified M10's handoff and established the
+**Status: 12/12 phases built**, closed 2026-08-30 — **and read §Addendum before §E4 and P9's *As
+built***, because the eye check §Verification asks for was run the day after P9 and it moved the
+defect: on four down-the-line clips the *video* decode ignored an edit list the *audio* decode
+applies, so a frame index and a sample index described timelines ~105 ms apart. §E4's "5.7–7.5
+frames early" is that offset, not a pose error. P0 verified M10's handoff and established the
 baseline; P1–P4 built the audio path; P5 put it into swing *selection*; P6 into *synchronization*;
 P7 closed M10's residual defect; P8 was the paperwork and `ANALYSIS_VERSION` 12; P9 re-ran the
-corpus. Every stored bundle now reads `synchronized` and 30/30 clips are pinned to a strike they
-heard — what that moved, and the one residual it exposed underneath, are in P9's *As built*.
+corpus; **P10 and P11 are the addendum's two fixes, which had to land together** — the video's own
+presentation offset, and the candidate floor P9 specified and reverted. Every stored bundle reads
+`synchronized`, 30/30 clips are pinned to a strike they heard, and the anchor now agrees with
+contact by eye to within a frame on all ten clips read frame by frame.
 
 ## What this milestone is
 
@@ -1065,6 +1067,165 @@ where `/10`'s agree to within one. That is what §Addendum is.
 
 ---
 
+### [x] P10 — make a frame index and a sample index mean the same time
+
+**Goal.** Stop comparing two clocks as though they were one. On four down-the-line clips the audio
+decode honours a leading empty edit and the frame counter does not, so every strike frame derived
+on them was 6.3–7.5 frames late (§Addendum).
+
+**Files.** `src/golf_coach/audio/ffmpeg.py` (new `video_start_seconds`);
+`src/golf_coach/contracts/audio.py` (`AudioClipMetadata.video_start_s`, `AudioStrike.frame`'s second
+`None` case, `AUDIO_DETECTOR_VERSION` 1 → 2); `src/golf_coach/api/pipeline.py` (`audio_for` probes,
+`_frames_derived` subtracts, new `_frame_of`); `src/golf_coach/contracts/swing.py`
+(`ANALYSIS_VERSION` 12 → 13). **Tests.** `tests/audio/test_ffmpeg_source.py` (4 new),
+`tests/api/test_pipeline_audio.py` (4 new, and the `decoder` fixture gains the probe).
+
+**Detail.** The addendum offered two routes and this took the cheaper one: measure the offset once
+per clip and carry it on the artifact, rather than teach the video decode to honour the edit list.
+Two reasons it is also the *better* one here. The pose path decodes with OpenCV, which shows the
+offset in no property it exposes — `CAP_PROP_POS_MSEC` reads 0.0 on the first frame of a clip whose
+video presents 105 ms late — so there is no decoder-side switch to flip. And the offset is less a
+fact about the file than a fact about what a decoder *did* with the file, which is worth storing
+beside the sample indices it corrects rather than re-deriving at each read.
+
+It is deliberately **not** on `keypoints.ClipMetadata`, which is where the addendum guessed it would
+go. That artifact is written by the vision path, which cannot see the number without dragging
+`imageio-ffmpeg` into the pose extras; the audio path already has ffmpeg open on the same file, and
+the only question the offset answers — which frame a sample index lands on — is the one the audio
+artifact exists to answer.
+
+**As built.** `video_start_seconds` asks ffmpeg for the presentation timestamp of the first frame it
+hands back (`showinfo`, one frame, `-fps_mode passthrough`). Passthrough is load-bearing: ffmpeg's
+default output mode *pads* the empty edit with duplicates of the first frame — seven copies of it on
+`2026-08-23/9` — and a timestamp read off that padding is 0.0 and useless.
+
+*Measured over all 30 clips on disk, 2026-08-30.* Twenty-six report 0.0. The four that do not are
+exactly §E2's four, and they do not share a number:
+
+| clip | video edit list | `video_start_seconds` | frames at 60 fps |
+|---|---|---|---|
+| `2026-08-23/1` down-the-line | `[(107, -1), (8757, 1632)]` | 0.107 s | 6.4 |
+| `2026-08-23/7` down-the-line | `[(117, -1), (13427, 1632)]` | 0.117 s | 7.0 |
+| `2026-08-23/9` down-the-line | `[(105, -1), (7555, 1632)]` | 0.105 s | 6.3 |
+| `2026-08-23/11` down-the-line | `[(125, -1), (7155, 1632)]` | 0.125 s | 7.5 |
+| every other clip | one entry, `media_time` 0 or 2112 | 0.0 s | 0 |
+
+*The empty edit is the whole offset, and §Addendum's reading of the container was wrong about how.*
+The addendum added the empty edit to the 85 ms `media_time` and got 90.5 ms; the decoders do
+something simpler. **Neither drops the trimmed head at all**: with `-ignore_editlist 1` ffmpeg's
+frames 0, 1, 2 are pixel-identical to `cv2.VideoCapture`'s frames 0, 1, 2 of the same clip, so both
+hand back media sample 0 as frame 0 and `media_time` never reaches a frame index. What does reach it
+is the empty edit, applied as a **uniform shift of the whole presentation timeline**: on bundle 9,
+frame 0 is presented at 0.105 s and the 449 steps after it are 445 of 16.67 ms, three of 18.33 ms —
+the container's own periodic long sample, visible in its `stts` — and one 66.67 ms jump at the very
+last frame. So the correction is a constant, it is the empty edit's duration, and it is 105 ms
+rather than 20.
+
+*This also closes §E4's loose end.* Those four clips decode three fewer frames than their `stts`
+counts (527/524, 806/803, 453/450, 431/428) and P0 left the sign untested. The three are at the
+**tail** — the presentation window ends before the media does — which is why nothing was ever wrong
+with a frame index near the strike, and why the missing frames cost nothing.
+
+*Both decoders agree about which frame is frame 0, verified frame by frame.* That is the assumption
+the phase rests on: the number is measured through ffmpeg and applied to indices produced by
+OpenCV. On bundle 9's down-the-line clip the diagonal is the minimum and every off-diagonal is
+clearly worse, for cv2 against ffmpeg passthrough and for cv2 against the edit-list-ignoring decode
+alike, and both decoders return 450 frames.
+
+*A strike before the first decoded frame now has no frame at all.* `_frame_of` floors a value that
+can be negative, where `int()` truncated toward zero and would have called it frame 0. It is not a
+hypothetical on a clip whose video presents 125 ms late; it is honest, and `_auto_windows` already
+drops strikes with no frame.
+
+*The probe is a note, not a failure.* An unreadable timebase leaves `video_start_s` None, keeps the
+strikes — they are still the measurement — and says in the notes that the frames were derived
+assuming the two tracks agree. None is distinguishable from a measured 0.0 on purpose.
+
+### [x] P11 — land the candidate floor P9 specified
+
+**Goal.** Stop the earliest-wins rule anchoring on a transient that is not the ball.
+
+**Files.** `src/golf_coach/audio/impact.py` (`_MIN_RELATIVE_PROMINENCE`, a second floor in
+`detect_strikes`, and its docstring); `src/golf_coach/analysis/alignment.py`
+(`with_measured_impact`'s docstring, which recorded the defect as unfixed). **Tests.**
+`tests/audio/test_impact.py` (3 new).
+
+**Detail.** Exactly what P9 specified and measured: drop any candidate under 0.25 of the loudest
+transient in the same clip. Precursors run 0.02–0.10 of the clip maximum and the ball never falls
+below 0.61, so the threshold sits 2.5x above the loudest thing it removes and 2.4x below the
+quietest thing it keeps, with nothing measured in the gap between those two populations.
+
+It ships **with P10 and could not ship without it.** On the four edit-list clips the precursor error
+ran ~3 frames early against a container offset of ~6 frames late, and the two partly cancelled;
+removing the precursor alone would have left the anchor right in audio time and 6 frames late in
+video time, which is the only time tau=2 is measured in. That is why P9 built this, measured it, and
+reverted it the same day.
+
+**As built.** Landed as specified. Two details worth recording.
+
+*It is not a listing floor at heart.* `_MIN_PROMINENCE_Z` still decides what counts as an onset;
+everything this removes was already known to be one. What it removes is the chance to be *chosen* —
+and because the iteration is by descending prominence, it is a `break` rather than a `continue`,
+resting on the same ordering the z floor already rests on.
+
+*Confidence would not have caught it.* The synthetic precursor the tests pin reads `confidence`
+0.83, because it is a perfectly real onset that simply is not the ball. That is the argument for a
+floor on prominence *relative to this clip's loudest* rather than on the [0, 1] number that looks
+like it should mean this.
+
+**The re-run, 2026-08-30.** `reanalyze.py --all --video` re-analysed and re-rendered 15/15 and
+exited 0; a plain `--dry-run` afterwards reported every stored result current. All fifteen still
+read `synchronized`, and **every window is the one version 12 picked** — the corrected strike frames
+moved no `select_swing` verdict, which is the quiet half of the result.
+
+| bundle | anchors face-on / down-the-line | `top_late_by` | `tempo` | score |
+|---|---|---|---|---|
+| 1 | — / **379 → 372** | 11 → **none** | withdrawn → **2.61 ✗ scored** | 99.68 → **98.80** |
+| 4 | **754 → 757** / — | 19 → 16 | withdrawn (unmoved) | — |
+| 6 | — / **1161 → 1164** | — | — | — |
+| 7 | — / **672 → 669** | 10 → 7 | withdrawn (unmoved) | — |
+| 8 | — / **3993 → 3996** | — | — | — |
+| 9 | **547 → 550** / **324 → 321** | 14 → 8 | withdrawn (unmoved) | — |
+| 10 | **770 → 773** / **1239 → 1242** | — | — | — |
+| 11 | **222 → 225** / **343 → 339** | 8 → **none** | withdrawn → **2.50 ✗ scored** | 100.00 → **98.16** |
+| 2, 3, 5, and the four older bundles | unchanged | — | — | — |
+
+*Every anchor that moved, moved toward contact, and the two fixes are legible in the sizes.* Four
+face-on anchors moved **+3 frames** and two down-the-line ones did (6 and 8): that is P11 alone, a
+precursor dropped on a container whose tracks already agreed. The four edit-list clips moved the
+other way — `7`, `9` and `11` by −3, −3 and −4, which is P11's +3 against P10's −7.0, −6.3 and −7.5,
+and `1` by the full **−7**, because its earliest candidate was already the ball and only its clock
+was wrong. Seven bundles did not move at all.
+
+*Two `tempo` readings came back from `unscored`, and both fail.* This is P9's "a wrong score left"
+read backwards, and it is the most interesting thing the re-run says. Bundles 1 and 11 had their
+`tempo` **withdrawn** on 2026-08-29 because the two views contradicted each other about the top —
+and on both, the contradiction was the mis-registered anchor rather than the swing. With the
+down-the-line impact corrected, bundle 1's two downswings read 0.384 s against 0.450 s where they
+had read 0.384 against 0.567 (a 15% gap, inside `_DOWNSWING_AGREEMENT`), and bundle 11's read
+0.334 against 0.350. Nothing contradicts the top any more, so the face-on `tempo` is scored — 2.61
+and 2.50:1 against a 2.72 floor, both **failures**. The two mechanics scores fall because a failing
+score *returned*, not because a swing got worse; read that column the same careful way P9's asks to
+be read, with the sign flipped. The other three withdrawals (4, 7, 9) narrowed and stayed: their
+views still disagree by more than the threshold, on an anchor that is now right.
+
+*What moved in `measurements`, and nothing else did.* `tour_trajectory_t2_dtl` and
+`tour_trajectory_q_dtl` on the six bundles whose down-the-line impact moved — the two quantities
+resampled onto that anchor, exactly as `ANALYSIS_VERSION`'s note predicts. No other measurement,
+and no mechanics checkpoint outside the two returning `tempo` readings, changed by a digit.
+
+*The renders were watched, which is where this started.* `2026-08-23/9` — the bundle whose panels
+struck about four output frames apart on 2026-08-30 — now strikes on **one** output frame: number
+142, showing face-on 550 beside down-the-line 321, with the ball on the mat at 141 in both panels
+and gone by 143. `2026-08-23/10`, the control, does the same at output frame 108. Every bundle's two
+panels reach their own measured impact on the same output frame, which `pair_frames` guarantees by
+construction — what is new is that the frame each panel calls impact is the frame the ball leaves.
+
+*Measured before the pose variant moved.* This re-run is `mediapipe:lite` at `ANALYSIS_VERSION` 13,
+so the numbers above isolate P10 and P11 from the lite → heavy switch that landed the same day
+(ADR-002's third addendum, `ANALYSIS_VERSION` 14). They will not survive that re-run, and they are
+not meant to: what they pin is the size and direction of this fix.
+
 ## Addendum — the eye check, and the video edit list under it (2026-08-30)
 
 **§Verification's last line was run and it failed**, which is the best thing that happened to this
@@ -1141,15 +1302,21 @@ transient and is the thing that *proved* the container offset. `SYNCHRONIZED` st
 heard the shot. What is not safe to read as ±1 frame is the down-the-line tau=2 on bundles 1, 7, 9
 and 11, and every cross-view comparison drawn through it.
 
-### For whoever picks this up
+### What picked this up — P10 and P11, the same day
 
-1. **Make the video decode honour the edit list**, or measure the offset once and carry it as a
-   field on `ClipMetadata`, which is cheaper and auditable. This moves frame indices on four clips,
-   so it is an `ANALYSIS_VERSION` bump and a pose-cache invalidation, not a patch.
-2. **Then land P9's floor**, which is already measured and known to select the ball.
-3. **Get more ground truth first.** Three bundles were read frame by frame here; `2026-08-23/1` and
-   `/11` are the other two edit-list clips and neither has been checked.
-4. `AUDIO_DETECTOR_VERSION` is in place so step 2 cannot ship invisibly onto the bundles on disk.
+All four items below were done in one change, because the first two are not separable:
+
+1. **The offset is measured, not derived** — `audio/ffmpeg.py`'s `video_start_seconds`, carried on
+   `AudioClipMetadata.video_start_s` and subtracted in `_frames_derived`. It went on the *audio*
+   artifact rather than on `ClipMetadata` (P10 says why). `ANALYSIS_VERSION` 12 → 13.
+2. **P9's floor landed** on top of it (P11), gated by `AUDIO_DETECTOR_VERSION` 1 → 2 exactly as this
+   list intended.
+3. **The ground truth was taken first.** `2026-08-23/1` and `/11` were read frame by frame in both
+   views, which makes ten clips checked rather than six — the table in P10's *As built*.
+4. **One reading here was wrong and P10 corrects it.** The offset is the empty edit alone (105 ms on
+   bundle 9), not the empty edit plus the 85 ms `media_time`: the decoders never drop the trimmed
+   head, so `media_time` reaches no frame index. The arithmetic below that adds the two and lands
+   near the measurement does so by coincidence.
 
 ## Verification, end to end
 
@@ -1165,7 +1332,9 @@ Beyond the per-phase suite:
   as `OUTDATED`.
 - **Watch two renders by eye** — `2026-08-23/9` and `2026-08-23/10`, the two M10 P10 nominated —
   and confirm the panels leave address together *and* strike the ball on the same output frame. The
-  second half is new and is what this milestone actually claims.
+  second half is new and is what this milestone actually claims. **Run 2026-08-30 and it failed**,
+  which is where §Addendum, P10 and P11 come from; re-run after them and both bundles pass —
+  `9` strikes on output frame 142 in both panels and `10` on 108.
 - Via MCP: `get_swing("2026-08-23", "4")` reports a `tempo` that either passes or is honestly
   unscored — not a 6.08:1 failure resting on a denominator the other view contradicts.
 

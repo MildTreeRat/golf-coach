@@ -39,7 +39,13 @@ from pydantic import BaseModel, Field
 #:                   was added, a candidate floor was built, measured against the video frame by
 #:                   frame, and reverted (docs/M11_ACOUSTIC_SYNC.md §Addendum) — and it would have
 #:                   shipped invisibly on every stored bundle without this.
-AUDIO_DETECTOR_VERSION = 1
+#: 1 -> 2 (2026-08-30): that floor, landed [M11 P11] — `detect_strikes` now drops every candidate
+#:                   under a quarter of the clip's loudest, which is a different list for the same
+#:                   waveform and the change this counter was added for. It carries P10 with it:
+#:                   the *frames* on a stored file were derived without `video_start_s`, so every
+#:                   artifact written before this is re-detected against a clip that is now
+#:                   re-probed for its video timebase too.
+AUDIO_DETECTOR_VERSION = 2
 
 
 class AudioStrike(BaseModel):
@@ -78,10 +84,14 @@ class AudioStrike(BaseModel):
         default=None,
         ge=0,
         description=(
-            "The video frame this strike lands on, or None when the fps was not known. Derived, "
-            "not measured: the detector sees a waveform and a sample rate and never the video, so "
-            "this is filled in by the caller that holds the clip's fps. None means unknown — a "
-            "strike whose frame could not be worked out is not frame 0 (ADR-010 §2)."
+            "The video frame this strike lands on, or None when it could not be worked out. "
+            "Derived, not measured: the detector sees a waveform and a sample rate and never the "
+            "video, so this is filled in by the caller that holds the clip's fps *and* its "
+            "`video_start_s`. None means unknown — a strike whose frame could not be worked out "
+            "is not frame 0 (ADR-010 §2) — and it has two causes: nobody knew the fps, or the "
+            "strike sounded before the first frame the decoder hands back, which is a real "
+            "possibility on a clip whose video starts late (see `video_start_s`) and is honestly "
+            "no frame at all rather than frame 0."
         ),
     )
 
@@ -129,6 +139,20 @@ class AudioClipMetadata(BaseModel):
             "no frame was derivable. Recorded for `stream_index`'s reason rather than to duplicate "
             "`keypoints.ClipMetadata.fps`: a stored frame index that cannot be re-derived is a "
             "number nobody can check."
+        ),
+    )
+    video_start_s: float | None = Field(
+        default=None,
+        ge=0.0,
+        description=(
+            "Presentation time of the first frame the video decoder hands back, subtracted from "
+            "every sample time before it becomes a `frame`. Almost always 0.0; it is not on four "
+            "down-the-line clips in this corpus, whose containers carry a leading empty edit that "
+            "the audio decode honours and the frame counter does not (`audio/ffmpeg.py`'s "
+            "`video_start_seconds`, measured at 0.105-0.125 s — 6.3 to 7.5 frames at 60 fps). "
+            "Recorded rather than re-measured because it is the difference between two clocks and "
+            "a stored frame index is unreadable without it. None means nobody measured it, which "
+            "is not the same as a measured zero."
         ),
     )
 
