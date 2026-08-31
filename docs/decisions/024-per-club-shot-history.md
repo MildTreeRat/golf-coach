@@ -259,3 +259,39 @@ that distinguishes "no bag yet" from "bag I cannot parse" and raises on the seco
 treated an unreadable file as an empty bag would replace the bag *and its entire shelf* with the
 single club it was asked to set. That failure existed before the shelf and got materially worse
 with it, since the shelf is the part that was meant to survive replacement.
+
+## Addendum (2026-08-31): loft is the manufacturer's number, and "never a catalogue default" is retired
+
+**What changed.** §2's sentence *"`loft_deg` is optional… the one that does not is named rather
+than defaulted to a book value nobody measured"* — and the field description it produced,
+*"Measured loft. None means unmeasured, and never a catalogue default"* (`contracts/bag.py:74`) —
+is **reversed**. `loft_deg` now means the manufacturer's published loft for that slot of that
+model, filled by a lookup and editable in the form.
+[ADR-026](026-club-specification-lookup.md) §1 is the decision and carries its reasoning; this note
+exists so §2 is not read as current.
+
+**Why the original call was right and stopped being right.** It applied
+[ADR-010](010-benchmark-ranges.md) §2 correctly: a catalogue number standing in silently for a
+measurement is a wrong number wearing a right one's clothes. What it got wrong was the comparison.
+§2 assumed the choice was *book loft versus measured loft*, and for a golfer with no loft machine —
+which is this golfer — the choice is **book loft versus nothing**. Nothing has won for a full
+milestone: the write route, the store and the row form all shipped with M9 and
+`data/processed/golfers/` still contains no `.bag.json`. Epistemic caution about a field in a record
+that does not exist protects nobody.
+
+**What stays true.** Loft is still a property of the *physical club* and not of the `ClubId`, the
+bag is still the single home for it, and a slot is still never named by its loft. §2's actual
+decision is untouched; only its rule about where the number may come from is retired.
+
+**The cost, on the record.** A club bent 2° strong reads its book loft and nothing downstream
+knows. That is accepted rather than solved: the field is editable, so the golfer who had it bent can
+correct it, and a separate measured-loft field is deferred to the day someone wants the difference
+modelled instead (ADR-026, *Deferred*).
+
+**And one thing this addendum obliges the code to do.** ADR-026 widens `BagEntry` with the rest of
+the specification, and one of the new fields is a provenance block carrying a retrieval timestamp.
+`same_club_as` compares by *exclusion* — a design this ADR's first addendum praised, because a field
+added later is compared from the day it is added — so that timestamp would count as club identity,
+and re-looking-up an unchanged club would retire it and produce exactly the false bag-changed caveat
+the first addendum's *"Two smaller calls"* bullet exists to prevent. The provenance is a **third
+timestamp**, and it must be excluded alongside `recorded_at` and `retired_at`.

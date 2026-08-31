@@ -1,6 +1,6 @@
 # Roadmap: AI Golf Swing Trainer
 
-## Last Updated: 2026-08-25
+## Last Updated: 2026-08-31
 
 Grouped by **state**, not by number, because the numbers no longer run in order: the pose-only
 slices (M4-PoC, M4-PoC+, M4-REF, M5-FB) delivered the mechanics half of M4 and the ranking half
@@ -27,6 +27,7 @@ wording; only the grouping and the M4 checklist have been corrected.
 | **M9** Player tracking (per-club) | ✅ Done *(2026-08-22)*, 20/20 phases | — (built and **silent by design**: every club-narrowed answer refuses, because no swing on disk is tagged yet. A bay session, and the retag control, are what make it speak) | [§M9](#m9-player-tracking-per-club-shot-history--done-and-waiting-on-a-bay-session) |
 | **M10** Alignment accuracy | ✅ Done *(2026-08-26)*, 10/10 phases | — (the corpus has been re-analysed against the fix; the face-on top it left landing late was closed by M11 on 2026-08-29) | [§M10](#m10-alignment-accuracy--the-two-panels-leave-address-together--done) |
 | **M11** Acoustic sync | ✅ Done *(2026-08-30)*, 12/12 phases | — (P10 and P11 closed the addendum's residual: the anchor now matches contact by eye to within a frame on all ten clips read frame by frame) | [§M11](#m11-acoustic-sync--the-ball-strike-is-the-clock--done) |
+| **M12** Club specs | 🟡 In progress, 1/8 phases | Nothing — desk work, and the only item on this board that is | [§M12](#m12-club-specs--the-golfer-names-a-club-the-program-determines-what-it-is--in-progress) |
 | **M5** Feedback UI | ⬜ Not started | M7 Phase 5 gives the host | [§M5](#milestone-5-feedback-ui) |
 | **M2** Club & ball detection | 🔒 Gated, **and M1.5 said no-go** | Bay lighting for a ~1/2000 s exposure — *not* a global-shutter camera | [§M2](#milestone-2-club--ball-detection) |
 | Hardware re-validation | 🔒 Gated | Cameras / launch monitor arriving | [§Gate](#hardware-re-validation-gate-revisit-when-cameras--launch-monitor-arrive) |
@@ -92,6 +93,14 @@ stopped that being true — it was the one substantial item needing **neither a 
 that makes the *next* bay session's data worth more than the last one's. **As of 2026-08-22 that
 sentence is true again**: M9 is closed, and everything left on this board wants the bay or wants
 `n`.
+
+**And as of 2026-08-31 it is false again, for the same reason it was in M9's week.**
+[M12](#m12-club-specs--the-golfer-names-a-club-the-program-determines-what-it-is--in-progress)
+is desk work: M9 built the bag and nobody has ever filled it in, so `data/processed/golfers/` holds
+a golfer record and no `.bag.json` at all. A five-field form asking for a lie angle is what produced
+that, and the fix is that the golfer names a club and the program determines its specification. It
+needs neither the bay nor an `n` — and, like M9, it makes the bay session that follows it worth
+more, because a club's specification is another input that is unrecoverable after the fact.
 
 **The ingest spine is closed.** P1–P7 all landed 2026-08-21, and a swing can no longer reach disk
 untagged: `contracts/club.py` holds the taxonomy, `contracts/bag.py` the declared bag,
@@ -1343,6 +1352,58 @@ of fifteen bundles and no window at all, and it **returned** two withdrawn `temp
 and `/11` the cross-view contradiction was the mis-registered anchor, not the swing, and both now
 score as honest failures (2.61 and 2.50:1). Bundle `9`'s panels strike on one output frame. Frame
 numbers in §Addendum, P10 and P11 of the phase doc.
+
+---
+
+## M12: Club specs — the golfer names a club, the program determines what it is — in progress
+
+**Design**: [ADR-026](docs/decisions/026-club-specification-lookup.md), accepted 2026-08-31. It
+**reverses** [ADR-024](docs/decisions/024-per-club-shot-history.md) §2's *"never a catalogue
+default"* rule for loft, and ADR-024 carries a second addendum saying so — read that rather than §2,
+which is now history.
+**Phase list**: [docs/M12_CLUB_SPECS.md](docs/M12_CLUB_SPECS.md) — 8 phases, tier TARGET.
+**1/8 built**: P0, which wrote ADR-026, ADR-024's addendum and the milestone doc. P1–P7 are unbuilt.
+
+**The bag is a blank form and it has stayed blank.** M9 built the whole path — `contracts/bag.py`,
+`storage/bag_store.py`, the write route, the row form on the career page — and it works. It has
+simply never been used: `data/processed/golfers/` holds `aaron.golfer.json` and **no `.bag.json` at
+all**. That is not a defect in any of those parts. It is what a five-field form asking a golfer for
+numbers they do not have to hand produces.
+
+**And five fields are not what a club is.** `BagEntry` carries loft, make, model, shaft and length,
+where `shaft` is one free-text string standing in for six independent facts. A bag filled in
+perfectly, exactly as the shape allows, still cannot say whether a 7 iron is a 30.5° players iron on
+a 120 g steel shaft or a 27° game-improvement iron on 60 g graphite — two clubs that produce
+different ball flights from the same swing.
+
+**The move is to stop asking and start looking up.** A club's *specification*, unlike the club *tag*
+ADR-024 had to ask a human for, is a published property of a manufactured object — nothing in this
+bay can measure it, and nothing needs to. The golfer types "Titleist T150, 7 iron", the program
+determines the rest, and the golfer confirms it. Looking up and saving stay two acts, because what
+comes back is a model's proposal and confirming it is what makes it a declaration.
+
+**Loft reverses, and that is the one thing here most likely to be implemented backwards.**
+`bag.py:74` says *"Measured loft. None means unmeasured, and never a catalogue default"* and ADR-024
+§2 argues for it. Both are retired. The original call applied ADR-010 §2 correctly but compared the
+wrong pair: it assumed *book loft versus measured loft*, and the choice a golfer with no loft machine
+actually faces is **book loft versus nothing** — which has won for a full milestone. ADR-010 §2 is
+not weakened; a spec the model will not commit to still comes back `None`, and blank renders blank
+rather than zero.
+
+**What it costs, on the record**: a club bent 2° strong reads its book loft and nothing downstream
+knows. Accepted, not solved — the field is editable, and a separate measured-loft field is deferred
+to the day someone wants the difference modelled.
+
+**No `ANALYSIS_VERSION` bump and no corpus re-run.** Nothing here changes how a swing is scored, so
+unlike M10 and M11 this milestone owes no re-analysis. It also does not turn anything on: every
+per-club statistic stays silent at the same floors, because no swing on disk is tagged yet. What it
+buys is that the **next** bay session's data is worth more than the last one's — the same argument
+M9 was built on, applied to the club's specification instead of its name.
+
+**Deliberately out of scope**: ball trajectory, swing efficiency, gapping and club fitting. ADR-024
+defers all four and ADR-026 keeps them deferred; the flight model additionally sits behind
+`spin_axis`, which the HD Golf screen prints with no direction word (ADR-014's addendum records two
+fades stored as draws). M12 lands the inputs, which are the half that cannot be recovered later.
 
 ---
 
