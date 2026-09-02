@@ -427,6 +427,133 @@ def test_the_results_page_writes_no_tempo_number_of_its_own() -> None:
         )
 
 
+def _trainer_source() -> str:
+    """`tempo.js`, ready to concatenate into a node script.
+
+    The file is a plain `<script src>` with no module system — `docs/REFACTOR_LEDGER.md` declined a
+    toolchain for these pages — so it is evaluated by appending checks to it rather than imported.
+    Its one export is the `TempoTrainer` object at the end.
+    """
+    return (_STATIC_DIR / "tempo.js").read_text(encoding="utf-8")
+
+
+def _node_json(script: str) -> list:
+    """Run `script` under node and read back the JSON values it printed, one per line."""
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("node is not available to evaluate the trainer's JavaScript")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        entry = pathlib.Path(tmp) / "trainer.mjs"
+        entry.write_text(script, encoding="utf-8")
+        out = subprocess.run([node, str(entry)], capture_output=True, text=True, check=False)
+
+    assert out.returncode == 0, out.stderr[-600:]
+    return [json.loads(line) for line in out.stdout.splitlines() if line.strip()]
+
+
+#: A pattern with the shape `draw()` reads: beats in time order, both halves, a ratio, a source.
+#: The values are arbitrary — nothing below asserts on them — but they have to be present, because
+#: a trainer that renders without them would pass a test the page cannot.
+_PATTERN = {
+    "mode": "grid",
+    "beats": [{"role": "takeaway", "at_ms": 0}, {"role": "top", "at_ms": 900},
+              {"role": "impact", "at_ms": 1167}],
+    "backswing_ms": 900.0, "downswing_ms": 267.0, "ratio": 3.38, "source": "a test fixture",
+}
+
+
+def test_the_trainer_renders_the_out_of_range_notice_off_the_plan_alone() -> None:
+    """M13 P5, and the whole of what replaced the anchor guard P2 deleted.
+
+    An out-of-range downswing used to be refused and swapped for the tour median before the page
+    ever saw it. It is now anchored to and *reported*, so the two fields that report it are the
+    only things that may decide what renders: the page has no opinion of its own about whether a
+    downswing is unusual, and one composed here would be a second copy of the reference edges.
+
+    The two gates are checked apart because they answer different questions and the contract lets
+    them differ: `downswing_in_tour_range` is the fact, `in_range_pace` is whether there is an edge
+    to offer. A button rendered off the fact would point at nothing in the third case below.
+    """
+    plans = {
+        "inside the range": {"patterns": [_PATTERN],
+                             "downswing_in_tour_range": True, "in_range_pace": None},
+        "outside it, with an edge to snap to": {"patterns": [_PATTERN],
+                                                "downswing_in_tour_range": False,
+                                                "in_range_pace": 1.13},
+        "outside it, with nothing to offer": {"patterns": [_PATTERN],
+                                              "downswing_in_tour_range": False,
+                                              "in_range_pace": None},
+    }
+    checks = "\n".join(
+        f"console.log(JSON.stringify(TempoTrainer.markup({json.dumps(plan)})));"
+        for plan in plans.values()
+    )
+
+    inside, offered, bare = _node_json(_trainer_source() + "\n" + checks)
+
+    assert 'id="tempoNotice"' not in inside, "a downswing in range has nothing to notice"
+    assert 'id="tempoSnap"' not in inside
+
+    assert 'id="tempoNotice"' in offered
+    assert 'id="tempoSnap"' in offered
+    assert "113" not in offered, (
+        "the snap's pace is applied by `wire()` from the plan; markup that wrote it would be the "
+        "page holding a tempo number of its own"
+    )
+
+    assert 'id="tempoNotice"' in bare, "the fact stands whether or not an edge can be offered"
+    assert 'id="tempoSnap"' not in bare
+
+
+def test_the_snap_moves_the_pace_control_to_the_plans_own_edge() -> None:
+    """The offer has to land on the control, or the notice is a sentence with no next move.
+
+    Driven through node against a stub DOM, for the reason the formatter test above is: this is
+    behaviour rather than markup, and reading the handler back out of the file would only restate
+    it. What it pins is that clicking the snap leaves the slider *and its readout* on the pace the
+    plan carried — the readout because it is what the golfer reads, and a control that moved
+    silently would be indistinguishable from one that did nothing.
+
+    It also pins the route taken: the handler sets the control and dispatches `input`, so the one
+    existing listener does the redraw. A snap that redrew itself would be a second path from a pace
+    to a played pattern, and the two would drift.
+    """
+    plan = {"patterns": [_PATTERN], "pace": 1.44, "anchored": True,
+            "downswing_in_tour_range": False, "in_range_pace": 1.13,
+            "observed_backswing_ms": 901.2, "observed_downswing_ms": 383.9}
+
+    harness = """
+const el = (props = {}) => Object.assign({
+  listeners: {}, textContent: "", innerHTML: "",
+  addEventListener(type, fn) { (this.listeners[type] = this.listeners[type] || []).push(fn); },
+  dispatchEvent(event) { (this.listeners[event.type] || []).forEach((fn) => fn()); },
+}, props);
+const nodes = {
+  tempoPlay: el(), tempoSnap: el(), tempoPaceOut: el(), tempoStrip: el(),
+  tempoFacts: el(), tempoAnchor: el(), tempoSrc: el(),
+  // The bounds the file itself ships; `test_tempo_trainer.py` is what holds them honest.
+  tempoPace: el({ min: "44", max: "300", value: "100" }),
+};
+globalThis.Event = class { constructor(type) { this.type = type; } };
+globalThis.document = {
+  getElementById: (id) => nodes[id] || null,
+  querySelectorAll: () => [],
+};
+"""
+    checks = f"""
+TempoTrainer.wire({json.dumps(plan)}, {{ anchorText: "a test fixture" }});
+console.log(JSON.stringify([nodes.tempoPace.value, nodes.tempoPaceOut.textContent]));
+nodes.tempoSnap.dispatchEvent(new Event("click"));
+console.log(JSON.stringify([nodes.tempoPace.value, nodes.tempoPaceOut.textContent]));
+"""
+
+    opened, snapped = _node_json(harness + _trainer_source() + checks)
+
+    assert opened == ["144", "144%"], "the control opens where the server fitted it"
+    assert snapped == ["113", "113%"], "and the snap moves it to the edge the plan carried"
+
+
 def test_the_pages_number_formatter_does_not_eat_trailing_zeros() -> None:
     """A regression pin for a bug that rendered a score of 90 as "9".
 

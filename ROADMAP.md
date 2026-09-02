@@ -28,7 +28,7 @@ wording; only the grouping and the M4 checklist have been corrected.
 | **M10** Alignment accuracy | ✅ Done *(2026-08-26)*, 10/10 phases | — (the corpus has been re-analysed against the fix; the face-on top it left landing late was closed by M11 on 2026-08-29) | [§M10](#m10-alignment-accuracy--the-two-panels-leave-address-together--done) |
 | **M11** Acoustic sync | ✅ Done *(2026-08-30)*, 12/12 phases | — (P10 and P11 closed the addendum's residual: the anchor now matches contact by eye to within a frame on all ten clips read frame by frame) | [§M11](#m11-acoustic-sync--the-ball-strike-is-the-clock--done) |
 | **M12** Club specs | ✅ Done *(2026-09-01)*, 8/8 phases | — (desk work, and it produced the first `.bag.json` this repo has ever held; only the form's **layout on a phone** is unverified) | [§M12](#m12-club-specs--the-golfer-names-a-club-the-program-determines-what-it-is--done) |
-| **M13** Downswing tempo | ⬜ Not started, 0/8 phases | Nothing — desk work on the two swings already on disk | [§M13](#m13-downswing-tempo--the-downswing-is-what-you-feel-the-backswing-is-what-you-change) |
+| **M13** Downswing tempo | ✅ Done *(2026-09-02)*, 8/8 phases | — (desk work; all 15 stored swings re-analysed onto the new sentence with no score moved. Only the two pages' **layout** is unverified) | [§M13](#m13-downswing-tempo--the-downswing-is-what-you-feel-the-backswing-is-what-you-change--done) |
 | **M5** Feedback UI | ⬜ Not started | M7 Phase 5 gives the host | [§M5](#milestone-5-feedback-ui) |
 | **M2** Club & ball detection | 🔒 Gated, **and M1.5 said no-go** | Bay lighting for a ~1/2000 s exposure — *not* a global-shutter camera | [§M2](#milestone-2-club--ball-detection) |
 | Hardware re-validation | 🔒 Gated | Cameras / launch monitor arriving | [§Gate](#hardware-re-validation-gate-revisit-when-cameras--launch-monitor-arrive) |
@@ -1767,10 +1767,22 @@ scoring both axes.
 
 ---
 
-## M13: Downswing tempo — the downswing is what you feel, the backswing is what you change
+## M13: Downswing tempo — the downswing is what you feel, the backswing is what you change — done
 
-**Status**: ⬜ Not started, 0/8 phases. Desk work — it runs on the two swings already on disk and
-needs no bay session, which makes it the one open item on this board that does not wait on `n`.
+**Status**: ✅ Done 2026-09-02, 8/8 phases. ADR-023's third addendum records the reversal where a
+reader of the 2026-08-20 one will meet it, `TempoPlan` carries the anchor the flip needs, the
+trainer reads the downswing and prescribes the backswing, the pace slider now spans the whole range
+a measurable downswing can fit to, so the 144% on the swing on disk opens rather than clamping to
+140, the career scope selects on the same half it fits to, both pages name the downswing they were
+fitted to and offer the snap when it sits outside the tour range, and the tempo verdict names a
+backswing target in milliseconds. All desk work — no bay session, no `n`.
+
+**The corpus is on the new sentence and no number moved.** `reanalyze.py --all` re-ran all 15
+stored swings (`--dry-run` reported nothing to do, because `ANALYSIS_VERSION` deliberately did not
+move and staleness cannot see a changed sentence), and `score`, `passed`, `observed`,
+`expected_low`, `expected_high` and `overall_score` came back byte-identical on every one while
+every message changed. **What is unverified is layout** — P5's pins run under node, so nobody has
+looked at the notice and the snap button in a browser.
 
 **Goal**: The tempo trainer anchors its target to the golfer's **backswing** and derives the
 downswing from it at the tour ratio ([ADR-023](docs/decisions/023-tempo-training-and-absolute-swing-durations.md)'s
@@ -1795,11 +1807,16 @@ What replaces it is a notice that the downswing sits outside the tour range, plu
 the nearest in-range value.
 
 Phases, files, tests and the arithmetic are in
-[docs/M13_DOWNSWING_TEMPO.md](docs/M13_DOWNSWING_TEMPO.md). P0 writes ADR-023's third addendum.
+[docs/M13_DOWNSWING_TEMPO.md](docs/M13_DOWNSWING_TEMPO.md). P0 wrote ADR-023's third addendum,
+P1 landed the contract fields, P2 flipped the anchor, P3 widened the pace control to reach it,
+P4 took the career scope with it and P5 — the first phase a golfer can see — put the notice, the
+snap and the three anchor sentences on the two pages.
 
-**Exit criteria**: the pace slider opens at the fitted 144% rather than clamping to 140, the beat
-strip plays the golfer's own downswing interval, and the tempo checkpoint names a backswing target
-in milliseconds — with no row added to `ranges.json`.
+**Exit criteria**, all met: the pace slider opens at the fitted 144% rather than clamping to 140,
+the beat strip plays the golfer's own downswing interval, and the tempo checkpoint names a
+backswing target in milliseconds — with no row added to `ranges.json`. On the stored swing it reads
+*"your downswing was 384 ms; at the tour ratio that wants a 1044-1808 ms backswing, and yours was
+868"*.
 
 ---
 

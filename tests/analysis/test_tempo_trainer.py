@@ -14,6 +14,7 @@ import pytest
 
 from golf_coach.analysis import tempo_trainer
 from golf_coach.analysis.benchmarks.distributions import load_distribution
+from golf_coach.analysis.phases import POSSIBLE_DOWNSWING_S
 from golf_coach.analysis.tempo_trainer import (
     build_career_tempo,
     build_tempo_plan,
@@ -174,8 +175,13 @@ def test_every_pattern_says_where_its_numbers_came_from() -> None:
 # LPGA against PGA, driver only and one vote per golfer, the backswing runs 1001 ms against 834
 # and the downswing 267 against 234. Club is *not* that axis (between-club sd 6.9 ms), which is
 # why the first version of this module targeted the tour median for everyone. See ADR-023's
-# addendum. Anchoring reads the golfer's own backswing instead of inferring a speed we cannot
-# measure — every stored shot's smash factor is below 1.0, so there is no usable club-head speed.
+# 2026-08-20 addendum. Anchoring reads a duration the golfer actually swung instead of inferring a
+# speed we cannot measure — every stored shot's smash factor is below 1.0, so there is no usable
+# club-head speed.
+#
+# **Which duration is the 2026-09-02 addendum: the downswing.** It is the half a golfer feels, so
+# it is the given; the backswing is the half they can change, so it is what the plan prescribes.
+# These tests were written against the opposite anchor and read as their own change log.
 #
 # The fit is carried by `pace` rather than baked into the beats, so these assert on what a golfer
 # actually *hears*: the stored time multiplied by the plan's pace.
@@ -193,8 +199,11 @@ def test_a_slower_golfer_gets_a_slower_target_and_a_quicker_one_gets_quicker() -
     quick = build_tempo_plan(_phases(backswing_ms=750.0, downswing_ms=250.0))
 
     assert slow.anchored and quick.anchored
-    assert slow.anchor_backswing_ms == pytest.approx(1001.0)
-    assert quick.anchor_backswing_ms == pytest.approx(750.0)
+    assert slow.anchor_downswing_ms == pytest.approx(300.0)
+    assert quick.anchor_downswing_ms == pytest.approx(250.0)
+    # The prescribed halves follow the anchors rather than the golfers' own backswings, which is
+    # the milestone: neither 1001 nor 750 appears anywhere in the target.
+    assert slow.anchor_backswing_ms > quick.anchor_backswing_ms
     assert slow.pace > 1.0 > quick.pace
 
     for mode in (0, 1):
@@ -206,13 +215,14 @@ def test_a_slower_golfer_gets_a_slower_target_and_a_quicker_one_gets_quicker() -
 def test_the_pace_is_the_anchor_against_the_tour_median() -> None:
     """What the golfer's slider opens at, and the number it means.
 
-    A pace of 1.11 says "played 11% slower than the tour median" — legible only because the
-    patterns stay at that median. It is also what the page pre-sets the control to.
+    A pace of 1.12 says "played 12% slower than the tour median *downswing*" — legible only because
+    the patterns stay at that median. It is also what the page pre-sets the control to, and the
+    reason M13 P3 has to widen the control: this divisor's range is far wider than the backswing's.
     """
-    median = load_distribution("backswing_ms").p50
+    median = load_distribution("downswing_ms").p50
     plan = build_tempo_plan(_phases(backswing_ms=1001.0, downswing_ms=300.0))
 
-    assert plan.pace == pytest.approx(1001.0 / median)
+    assert plan.pace == pytest.approx(300.0 / median)
     assert build_tempo_plan([]).pace == pytest.approx(1.0)
 
 
@@ -232,52 +242,96 @@ def test_anchoring_moves_what_is_heard_and_never_the_ratio() -> None:
         assert _heard(slow, mode)[1] > _heard(default, mode)[1]
 
 
-def test_the_target_is_the_tour_ratio_applied_to_the_golfers_own_backswing() -> None:
-    """`CUES` is the exact pattern, so the arithmetic is checkable on what it plays."""
-    tour_ratio = load_distribution("backswing_ms").p50 / load_distribution("downswing_ms").p50
-    backswing, downswing = _heard(build_tempo_plan(_phases(1001.0, 300.0)))
+def test_the_target_is_the_tour_ratio_applied_to_the_golfers_own_downswing() -> None:
+    """`CUES` is the exact pattern, so the arithmetic is checkable on what it plays.
 
-    assert backswing == pytest.approx(1001.0)
-    assert downswing == pytest.approx(1001.0 / tour_ratio)
-
-
-@pytest.mark.parametrize("backswing_ms", [400.0, 1500.0])
-def test_a_backswing_outside_the_tour_range_is_not_anchored_to(backswing_ms: float) -> None:
-    """The guard. Anchoring to a backswing that is itself the fault rehearses it.
-
-    A golfer who takes it back in 400 ms would otherwise be handed a 400 ms backswing and a
-    downswing scaled under it — a drill that reads correct and teaches the error. Falling back
-    costs them a personalised target, which is the cheaper of the two mistakes.
+    Read the played downswing back and it is the golfer's own to the millisecond; the backswing is
+    the one being asked for, and it is deliberately *not* the 1001 ms they swung — that difference
+    is the whole instruction. `anchor_backswing_ms` carries it so no page has to multiply.
     """
-    plan = build_tempo_plan(_phases(backswing_ms=backswing_ms, downswing_ms=200.0))
+    tour_ratio = load_distribution("backswing_ms").p50 / load_distribution("downswing_ms").p50
+    plan = build_tempo_plan(_phases(1001.0, 300.0))
+    backswing, downswing = _heard(plan)
 
-    assert plan.anchored is False
-    assert plan.pace == pytest.approx(1.0)
-    assert plan.anchor_backswing_ms == pytest.approx(build_tempo_plan([]).anchor_backswing_ms)
-    # It still reports what the golfer actually did — the refusal is about the *target*.
-    assert plan.observed_backswing_ms == pytest.approx(backswing_ms)
+    assert downswing == pytest.approx(300.0)
+    assert backswing == pytest.approx(300.0 * tour_ratio)
+    assert plan.anchor_backswing_ms == pytest.approx(backswing)
+    assert plan.anchor_backswing_ms != pytest.approx(1001.0)
+
+
+@pytest.mark.parametrize("downswing_ms", [60.0, 700.0])
+def test_a_downswing_outside_the_tour_range_is_anchored_to_anyway_and_flagged(
+    downswing_ms: float,
+) -> None:
+    """The deleted guard, and the thing that replaced it. [ADR-023 addendum 2026-09-02]
+
+    Its predecessor refused an out-of-range *backswing*, because such a backswing is plausibly the
+    fault and a drill built on it rehearses the error. That does not carry over: the downswing is
+    the given, never the fault, so substituting the tour median for it would hand the golfer a
+    target fitted to nobody while claiming a fit — the exact state M13 exists to leave.
+
+    So the plan anchors and *reports*: the notice reads the bool, the snap control reads the
+    None-ness of the pace, and the golfer decides. A mis-segmented 60 ms downswing is caught by the
+    same sentence rather than by a silent substitution.
+    """
+    reference = load_distribution("downswing_ms")
+    plan = build_tempo_plan(_phases(backswing_ms=900.0, downswing_ms=downswing_ms))
+
+    assert plan.anchored is True
+    assert plan.anchor_downswing_ms == pytest.approx(downswing_ms)
+    assert plan.downswing_in_tour_range is False
+
+    edge = reference.p10 if downswing_ms < reference.p10 else reference.p90
+    assert plan.in_range_pace == pytest.approx(edge / reference.p50), (
+        "the snap has to land on the nearest edge, which is the side the golfer fell off"
+    )
+
+
+def test_a_downswing_inside_the_tour_range_is_offered_nothing_to_snap_to() -> None:
+    """The other half of the offer, and the reason `in_range_pace` is optional rather than always
+    populated: a control that renders on a value it should ignore is a control that moves a golfer
+    off their own measured downswing for no reason either surface can see.
+    """
+    plan = build_tempo_plan(_phases(backswing_ms=900.0, downswing_ms=267.0))
+
+    assert plan.downswing_in_tour_range is True
+    assert plan.in_range_pace is None
 
 
 def test_every_fitted_pace_is_reachable_on_the_pages_slider() -> None:
     """The control has to be able to open where the fitter put it.
 
-    The anchor guard is the corpus p10-p90, so the pace it can produce spans that range against
-    the median. A slider narrower than that clamps the opening value and quietly plays a tempo
-    other than the one the page's own text claims — silently, because both numbers look fine.
+    The anchor is the golfer's own downswing with nothing left to reject it — M13 P2 deleted the
+    guard — so the paces the fitter can produce are exactly the downswings the segmenter will hand
+    it, over the tour median it divides by. That range is `phases.POSSIBLE_DOWNSWING_S`. A slider
+    narrower than it clamps the opening value and quietly plays a tempo other than the one the
+    page's own text claims, silently, because both numbers look fine.
 
-    The bounds are read out of `tempo.js` rather than restated here, so widening the guard
-    without widening the control fails this instead of shipping. They moved there with the rest of
-    the trainer's mechanism when career mode grew a second one: two controls with two pairs of
-    bounds is two ways for this to be true of one page and false of the other.
+    This read `backswing_ms`'s p10-p90 until P3, which was the old guard's range written in the
+    old anchor's units: still green the moment P2 made the fit reach 144%, because it was measuring
+    a distribution the fitter had stopped consulting. A pin sourced from the deleted rule is worse
+    than no pin, and that is what re-sourcing it fixes.
+
+    The bounds are read out of `tempo.js` rather than restated here, so a fit that outgrows the
+    control fails this instead of shipping. They live there with the rest of the trainer's
+    mechanism because career mode grew a second control: two pairs of bounds is two ways for this
+    to be true of one page and false of the other.
+
+    What it does not prove: `POSSIBLE_DOWNSWING_S` is the window `phases.py` admits *on its own*,
+    and it will admit a descent outside it when the other view vouches for it (`phases.py`'s
+    matching route), while `tempo_timings` measures top-to-impact from the centre of the transition
+    window rather than the start of the descent. So this is the designed range, not a hard bound on
+    `plan.pace` — which is why `wire()` still clamps the opening value as a backstop.
     """
     page = (_STATIC_DIR / "tempo.js").read_text(encoding="utf-8")
     control = re.search(r'id="tempoPace"[^>]*', page).group(0)
     low = int(re.search(r'min="(\d+)"', control).group(1))
     high = int(re.search(r'max="(\d+)"', control).group(1))
 
-    backswing = load_distribution("backswing_ms")
-    reachable_low = 100 * backswing.p10 / backswing.p50
-    reachable_high = 100 * backswing.p90 / backswing.p50
+    downswing = load_distribution("downswing_ms")
+    possible_low_ms, possible_high_ms = (1000 * seconds for seconds in POSSIBLE_DOWNSWING_S)
+    reachable_low = 100 * possible_low_ms / downswing.p50
+    reachable_high = 100 * possible_high_ms / downswing.p50
 
     assert low <= reachable_low and reachable_high <= high, (
         f"the fitter can produce {reachable_low:.0f}%-{reachable_high:.0f}%; the pace control is "
@@ -288,9 +342,10 @@ def test_every_fitted_pace_is_reachable_on_the_pages_slider() -> None:
 def test_the_unanchored_plan_is_exactly_what_shipped_before_anchoring() -> None:
     """Anchoring is a generalization, not a change of default.
 
-    With no usable backswing the anchor is the tour median, the pace is 1.0, and the arithmetic
-    collapses back onto the original: `GRID` keeps the tour downswing exactly and `CUES` both
-    medians.
+    "Unanchored" now means one thing only — no downswing was measured — since M13 P2 deleted the
+    guard that could also refuse a measured one. In that state the anchor is the tour median, the
+    pace is 1.0, and the arithmetic collapses back onto the original: `GRID` keeps the tour
+    downswing exactly and `CUES` both medians.
     """
     backswing = load_distribution("backswing_ms")
     downswing = load_distribution("downswing_ms")
@@ -303,12 +358,12 @@ def test_the_unanchored_plan_is_exactly_what_shipped_before_anchoring() -> None:
     assert grid.downswing_ms == pytest.approx(downswing.p50)
 
 
-def test_the_source_prose_says_which_backswing_the_target_was_built_on() -> None:
+def test_the_source_prose_says_which_downswing_the_target_was_built_on() -> None:
     fitted = build_tempo_plan(_phases(backswing_ms=1001.0, downswing_ms=300.0))
     defaulted = build_tempo_plan([])
 
-    assert "your own backswing" in fitted.patterns[0].source
-    assert "tour median backswing" in defaulted.patterns[0].source
+    assert "your own downswing" in fitted.patterns[0].source
+    assert "tour median downswing" in defaulted.patterns[0].source
 
 
 # ------------------------------------------------------------------ career scope [ADR-023 add.]
@@ -380,13 +435,17 @@ def test_the_typical_value_lands_once_the_center_guard_lifts() -> None:
 
     assert tempo.typical_ratio == pytest.approx(2.4)
     assert tempo.typical_backswing_ms == pytest.approx(900.0)
+    # The mean downswing is what the anchor is selected on since M13 P4; the mean backswing rides
+    # along as the other half of the "yours" reading and no longer decides anything.
+    assert tempo.typical_downswing_ms == pytest.approx(375.0)
     assert tempo.anchor is TempoAnchor.CAREER_MEAN
+    assert tempo.plan.anchor_downswing_ms == pytest.approx(375.0)
 
 
 def test_the_anchor_falls_back_to_the_latest_swing_before_the_tour_median() -> None:
     """The middle rung, and the reason `TempoAnchor` has three values rather than a bool.
 
-    A golfer whose mean is withheld still has a measured backswing, and one measured swing is a
+    A golfer whose mean is withheld still has a measured downswing, and one measured swing is a
     better target than a population median. It is not a mean smuggled past the guard — it is one
     swing's measurement used as a target, exactly as the results page has done since ADR-023.
     """
@@ -397,7 +456,7 @@ def test_the_anchor_falls_back_to_the_latest_swing_before_the_tour_median() -> N
 
     assert tempo.anchor is TempoAnchor.LATEST_SWING
     assert tempo.plan.anchored is True
-    assert tempo.plan.anchor_backswing_ms == pytest.approx(901.2)
+    assert tempo.plan.anchor_downswing_ms == pytest.approx(383.9)
 
 
 def test_a_ratio_with_no_halves_behind_it_still_counts_as_history() -> None:
@@ -431,24 +490,64 @@ def test_the_halves_are_joined_by_swing_and_never_zipped_positionally() -> None:
     assert by_ref["2026-08-10/10"].backswing_ms == pytest.approx(901.2)
 
 
-def test_an_anchor_the_guard_rejects_is_reported_as_the_tour_median() -> None:
-    """`anchor` is read back off the plan, never predicted.
+def test_a_backswing_with_no_downswing_behind_it_anchors_nothing() -> None:
+    """The half selected on is the half fitted to, so a lone backswing is not a target. [M13 P4]
 
-    `_anchor_backswing` refuses an observed backswing outside the tour p10-p90, so a view that
-    claimed `LATEST_SWING` from its own branch would say "matched to your backswing" over a drill
-    built on the median. Both surfaces read one builder's decision.
+    The two halves are separate measurements joined by `swing_ref`, so a swing can carry one and
+    not the other — that asymmetry is the whole reason `_tempo_swings` joins rather than zips. A
+    backswing alone used to select `LATEST_SWING` while the builder, reading the downswing, fell
+    back to the tour median; the view then said "matched to your own swing" over a drill built on
+    a population. Both now read the downswing, so this swing degrades to the median in one place.
     """
-    backswing = load_distribution("backswing_ms")
-    too_quick = backswing.p10 / 2
-
-    tempo = build_career_tempo(_tempo_corpus(
-        _tempo_swing(7, ratio=2.0, backswing=too_quick, downswing=too_quick / 2),
-    ))
+    tempo = build_career_tempo(_tempo_corpus(_tempo_swing(7, ratio=2.42, backswing=968.0)))
 
     assert tempo.anchor is TempoAnchor.TOUR_MEDIAN
     assert tempo.plan.anchored is False
-    # The reading itself is untouched — the guard governs the target, not the measurement.
-    assert tempo.swings[0].backswing_ms == pytest.approx(too_quick)
+    # The reading itself is untouched — the anchor governs the target, not the measurement.
+    assert tempo.swings[0].backswing_ms == pytest.approx(968.0)
+
+
+def test_a_downswing_with_no_backswing_behind_it_is_still_a_target() -> None:
+    """The other side of that asymmetry, and it goes the other way. [M13 P4]
+
+    The anchor needs one number and it is the downswing. A swing whose backswing could not be read
+    still says how hard the golfer swung, which is the whole input to the fit — the prescription
+    lands on the backswing rather than coming from it. `observed_backswing_ms` stays `None` so the
+    page's "yours 968 / 400" line simply does not print, rather than pairing a real half with a
+    borrowed one.
+    """
+    tempo = build_career_tempo(_tempo_corpus(_tempo_swing(7, ratio=2.42, downswing=383.9)))
+
+    assert tempo.anchor is TempoAnchor.LATEST_SWING
+    assert tempo.plan.anchored is True
+    assert tempo.plan.anchor_downswing_ms == pytest.approx(383.9)
+    assert tempo.plan.observed_backswing_ms is None
+
+
+def test_the_career_anchor_is_read_back_off_the_plan_and_never_predicted() -> None:
+    """`anchor` reports the builder's decision; it does not forecast it.
+
+    Since M13 P4 the read-back cannot change the answer — the branch selects on a `downswing_ms`
+    and `_anchor_downswing` anchors on any downswing it is given, the range guard that could once
+    refuse one having gone with P2. What is pinned here is that the reporting still *goes through*
+    the plan: every selection agrees with what the builder decided, which is the property that
+    would break first if a second copy of the anchor rule appeared in this branch.
+    """
+    corpora = {
+        "career mean": _tempo_corpus(*(
+            _tempo_swing(i, ratio=2.4, backswing=900.0, downswing=375.0)
+            for i in range(1, minimum_n("tempo_ratio", BaselineClaim.CENTER) + 1)
+        )),
+        "latest swing": _tempo_corpus(_tempo_swing(7, ratio=2.42, downswing=400.6)),
+        "backswing only": _tempo_corpus(_tempo_swing(7, ratio=2.42, backswing=968.0)),
+        "ratio only": _tempo_corpus(_tempo_swing(7, ratio=2.42)),
+        "no swings": _tempo_corpus(),
+    }
+
+    for name, corpus in corpora.items():
+        tempo = build_career_tempo(corpus)
+        anchored = tempo.anchor is not TempoAnchor.TOUR_MEDIAN
+        assert tempo.plan.anchored is anchored, f"{name}: anchor and plan disagree"
 
 
 def test_an_empty_corpus_is_an_empty_history_and_still_offers_the_tour_target() -> None:
@@ -485,12 +584,12 @@ def test_the_refusals_are_deduplicated_and_strictest_first() -> None:
     assert tempo.withheld[0].need_n == minimum_n("tempo_ratio", BaselineClaim.CENTER)
 
 
-def test_both_scopes_go_through_one_anchor_guard() -> None:
+def test_both_scopes_go_through_one_builder() -> None:
     """The reason `build_tempo_plan_for` was split out rather than copied.
 
-    A career target fitted to a backswing and a per-swing target fitted to the same backswing are
-    the same plan. Two builders would be free to disagree about when a golfer's own backswing may
-    be practiced to — silently, since both would look right.
+    A career target fitted to a downswing and a per-swing target fitted to the same downswing are
+    the same plan. Two builders would be free to disagree about which half a golfer's target
+    follows — silently, since both would look right.
     """
     from_phases = build_tempo_plan(_phases(backswing_ms=901.2, downswing_ms=383.9))
     from_durations = build_tempo_plan_for(
@@ -501,6 +600,7 @@ def test_both_scopes_go_through_one_anchor_guard() -> None:
     # midpoint, so the two arrive a float ulp apart and an equality would be testing arithmetic
     # noise instead of the guard.
     assert from_phases.anchored is from_durations.anchored
+    assert from_phases.anchor_downswing_ms == pytest.approx(from_durations.anchor_downswing_ms)
     assert from_phases.anchor_backswing_ms == pytest.approx(from_durations.anchor_backswing_ms)
     assert from_phases.pace == pytest.approx(from_durations.pace)
     assert [p.model_dump() for p in from_phases.patterns] == [

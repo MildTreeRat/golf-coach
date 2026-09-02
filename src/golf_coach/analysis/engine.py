@@ -647,7 +647,8 @@ def _tempo_notes(anchors: SwingAnchors | None) -> list[str]:
 
     `phases.py` reports `detected=True` and is not wrong to — from inside one clip nothing about
     it looks wrong — so `evaluate_tempo` scores it and `feedback` will lead with *"work on tempo
-    first, the downswing is rushing the backswing"*. On `aaron-1` that reads 0.43:1.
+    first … take it back longer"*, prescribing a backswing target off a downswing that was never
+    measured against a real top. On `aaron-1` that reads 0.43:1.
 
     **The score is deliberately left alone here.** Dropping the checkpoint would mean this
     function disagreeing with `analyze_swing` about the same frames, and fixing the boundary

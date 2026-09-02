@@ -98,6 +98,7 @@ from golf_coach.analysis.measure import (
     measure_hip_shift_at_top,
     measure_hip_sway,
     measure_tempo_ratio,
+    tempo_timings,
 )
 from golf_coach.contracts.checkpoints import spec_for
 from golf_coach.contracts.golfer import Handedness
@@ -250,18 +251,35 @@ def evaluate_tempo(
     # and has already been re-cut once — from Novosel's 2.7-3.3 estimate to the p10-p90 of the
     # GolfDB tour population — so a literal here would have started lying the moment it moved.
     target = f"tour range {band.low:g}-{band.high:g}:1"
+
+    # The verdict prescribes a *backswing* duration, not a ratio and not a downswing (M13,
+    # ADR-023's 2026-09-02 addendum). The downswing is how hard the golfer swung - the thing they
+    # feel rather than choose - so it is read as given and the backswing is what the sentence asks
+    # them to move. Both edges are the same band applied to that observed downswing, which is why
+    # this sentence cannot contradict the ratio verdict above: the printed backswing falls inside
+    # the printed range exactly when `observed` falls inside `band`.
+    #
+    # `tempo_timings` is the same call `measure_tempo_ratio` made, so durations are present
+    # whenever a ratio is - the assert is the narrowing, not a second opinion, and mirrors how
+    # `measure._tempo_duration` states the same coupling.
+    durations = tempo_timings(phases).durations
+    assert durations is not None
+    backswing_ms, downswing_ms = durations
+    prescription = (
+        f" Your downswing was {downswing_ms:.0f} ms; at the tour ratio that wants a "
+        f"{band.low * downswing_ms:.0f}-{band.high * downswing_ms:.0f} ms backswing, "
+        f"and yours was {backswing_ms:.0f}."
+    )
+
     if passed:
-        message = f"Good tempo - {observed:.1f}:1 backswing:downswing (inside the {target})."
+        message = (
+            f"Good tempo - {observed:.1f}:1 backswing:downswing "
+            f"(inside the {target}).{prescription}"
+        )
     elif observed < band.low:
-        message = (
-            f"Tempo too quick - {observed:.1f}:1. The downswing is rushing the backswing; "
-            f"feel a smoother, fuller backswing (aim for the {target})."
-        )
+        message = f"Tempo too quick - {observed:.1f}:1.{prescription} Take it back longer."
     else:
-        message = (
-            f"Tempo too slow - {observed:.1f}:1. The backswing is dragging relative to the "
-            f"downswing; let the downswing flow a touch quicker (aim for the {target})."
-        )
+        message = f"Tempo too slow - {observed:.1f}:1.{prescription} Take it back shorter."
 
     pct, population_n = _population_placement(_TEMPO_RANGE_KEY, observed)
     if pct is not None and population_n is not None:

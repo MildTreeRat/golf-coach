@@ -4,12 +4,15 @@
 Accepted. Built and surfaced: the durations are derived, the two beat patterns are computed
 server-side, and the results page plays them.
 
-**Two addenda at the foot, and the first corrects this document.** 2026-08-20: the Context section
-below concludes "no mph axis" from a club-stratified test. Club is the wrong axis — it changes speed
-by lengthening the lever, not by rotating faster — and on a real speed cohort the durations *do*
-move. The target now follows the golfer's own backswing. Read that addendum before acting on the
-Context. 2026-08-22 extends rather than corrects: the trainer gains a career scope and a third
-anchor state, lifting the first item under *Deferred, by choice*.
+**Three addenda at the foot, and two of them correct the text above them.** 2026-08-20: the
+Context section below concludes "no mph axis" from a club-stratified test. Club is the wrong axis —
+it changes speed by lengthening the lever, not by rotating faster — and on a real speed cohort the
+durations *do* move, so the target follows the golfer rather than a speed class. Read that addendum
+before acting on the Context. 2026-08-22 extends rather than corrects: the trainer gains a career
+scope and a third anchor state, lifting the first item under *Deferred, by choice*. 2026-09-02
+reverses the first addendum's *anchor* and only that: the target follows the golfer's own
+**downswing** — the half they feel — and the backswing is what it prescribes. §1 survives all three
+— no band on either duration, and the panel is still six checkpoints.
 
 ## Date
 2026-08-20
@@ -238,7 +241,9 @@ directly rather than to a speed class.
 ### What changed
 
 `build_tempo_plan` now **anchors the target to the golfer's own measured backswing**, and derives
-the downswing from it at the tour ratio. A slower golfer's longer backswing *is* the speed signal,
+the downswing from it at the tour ratio. *(Reversed 2026-09-02 — see the third addendum. The
+measurement below stands and so does fitting to the golfer; the half held fixed is now the
+downswing, and the guard described further down is deleted rather than flipped.)* A slower golfer's longer backswing *is* the speed signal,
 measured rather than inferred — so this captures the effect above without a club-head speed, which
 matters because there is still no usable one: every stored shot reads a smash factor below 1.0.
 
@@ -368,3 +373,107 @@ is a second thing that drifts. A plain `<script src>` with no build step, which 
 `REFACTOR_LEDGER.md`'s 2026-08-13 row on the static pages permits: the objection there was a node
 toolchain, not a second file. Each page keeps its own framing prose, because the two genuinely say
 different things and the anchor sentence has a different number of cases on each.
+
+---
+
+## Addendum — 2026-09-02: the anchor moves to the downswing, the half the golfer feels
+
+**This reverses one choice in the 2026-08-20 addendum and nothing else in it.** That addendum's
+measurement stands — a real speed cohort moves the durations, club does not, and the honest response
+is to fit the target to the golfer rather than to a speed class. What it got wrong is *which half to
+fit to*. It anchored on the golfer's measured **backswing** and derived the downswing from it at the
+tour ratio, which prescribes a downswing.
+
+A golfer cannot take that instruction. **The downswing is what they feel — it is how hard they swung
+— and the backswing is the half they can deliberately change.** Anchoring on the backswing asks them
+to change the thing they experience as effort; anchoring on the downswing asks them to change the
+thing they experience as a decision. So the arrow turns round: read the downswing, multiply by the
+tour ratio, prescribe the backswing.
+
+### What it does to the golfer on disk
+
+Reference rows are `golfdb_v1.json`, stratum all/all/all, n=310, down-the-line only. Tour ratio is
+`900.68 / 266.84` = **3.3755**. The latest stored swing is **901.2 ms back / 383.9 ms down**, 2.35:1.
+
+| | before | after |
+|---|---|---|
+| anchor | backswing 901.2 ms (inside p10–p90, accepted) | downswing 383.9 ms |
+| `pace` | `901.2 / 900.68` = **1.00** | `383.9 / 266.84` = **1.44** |
+| `CUES` target | 901 back / 267 down | **1296 back / 384 down** |
+| verdict | "aim for the tour range 2.72–4.71:1" | "your downswing was 384 ms; at the tour ratio that wants a 1044–1808 ms backswing and yours was 901" |
+
+The old anchor was a coincidence doing no work: this golfer's backswing *is* the tour median, so a
+fit that reads 1.00 personalized nothing while the half that was actually 44% long went unmentioned.
+
+### §1 is not walked back — no band on either duration
+
+The `tempo` checkpoint keeps scoring `tempo_ratio` against the unchanged `[2.72, 4.71]` row in
+`ranges.json`. The panel stays at six checkpoints, `overall_score` is byte-identical and
+`ANALYSIS_VERSION` does not move — the only stored field that differs is `message`, and stored
+swings pick it up with `scripts/reanalyze.py --all`.
+
+The re-worded verdict is a change of *voice*, not of arithmetic: `901 ∈ [2.72 × 384, 4.71 × 384]`
+exactly when `ratio ∈ [2.72, 4.71]`. Reading "base tempo on the downswing" as licence to band
+`downswing_ms` would grow the panel to seven, count one fundamental twice into `overall_score`, and
+make the *score* frame-rate dependent. It is still refused, for §1's original reason.
+
+### The anchor guard is deleted, not flipped
+
+`_anchor_backswing`'s p10–p90 rejection existed because an out-of-range backswing is plausibly the
+fault itself, and a drill built on it rehearses the error at a tempo that reads correct. Under this
+anchor the downswing is never the fault — **it is the given**, the thing that happened, and the
+prescription lands on the other half — so the guard has nothing left to guard. Keeping the rule and
+merely swapping the metric would refuse this golfer's 383.9 ms (outside 200.20–300.30) and hand back
+the tour median, which is precisely the state this reversal exists to leave.
+
+What replaces its protection, so it is not simply discarded:
+
+- `downswing_in_tour_range: bool` — whether the observed downswing sits inside the reference
+  p10–p90, reported on the plan and said in words by the page.
+- `in_range_pace: float | None` — the pace that clamps the downswing to the nearest tour edge,
+  `None` when it is already inside. For 383.9 ms that is `300.30 / 266.84` = **1.13**, a 1014 ms
+  backswing, offered as an opt-in "snap" button beside the pace slider.
+
+*"A wrong verdict is read once, and a wrong metronome is rehearsed"* still holds; the answer is now
+the golfer's rather than the server's. A mis-segmented 60 ms downswing is outside p10–p90, so the
+page says so and offers the snap, instead of silently substituting a median and calling it a fit.
+
+### Three consequences, recorded rather than argued again later
+
+**`_grid_pattern`'s rounding argument inverts while its code does not.** It absorbs the integer tick
+rounding in the backswing and keeps the downswing exact — for the reason the 2026-08-20 addendum
+gives, that the downswing is the near-invariant half and the quantity being corrected. That reason
+is now the opposite one: the downswing is the *anchor* and must land on the golfer's own, and the
+backswing is the prescription. Same behaviour, opposite argument; the docstring is rewritten so a
+later reader does not "fix" it back.
+
+**The pace control has to reach further than the old guard allowed.** `static/tempo.js`'s
+`min="70" max="140"` were the backswing guard's edges expressed against the median. The fitted pace
+here is 144% — off the end, and a silent clamp plays a tempo other than the one the page's own text
+claims. The new bounds come from the widest downswing the segmenter admits, `POSSIBLE_DOWNSWING_S =
+(0.12, 0.80)` at `analysis/phases.py`, against `downswing.p50`: **44% to 300%**. That constant is
+promoted and read, not copied.
+
+**The career anchor unlocks earlier, and that is a consequence rather than a goal.**
+`METRIC_MINIMUM_N` overrides `tempo_ratio` to `CENTER: 8` because it is the noisiest metric in the
+panel; `downswing_ms` carries no override and gates at the default 5. A career target therefore
+becomes claimable at fewer swings than before. Nobody has measured a downswing-specific minimum, so
+it is written down here rather than fixed by inventing an override.
+
+### One risk this does not fix
+
+**The re-expressed message is frame-rate dependent where the score is not.** `tempo_ratio` cancels
+fps; an absolute duration does not, and `phases` carries milliseconds derived from the clip's own
+frame rate, so a slow-motion clip prints an inflated downswing and an inflated backswing target. The
+notice above is what catches it — a 3000 ms downswing reads "outside the tour range" — but it is a
+notice and not a gate. The fix is a capture-side fps sanity check, which is a different decision from
+this one.
+
+### Where it is built
+
+Eight phases in [docs/M13_DOWNSWING_TEMPO.md](../M13_DOWNSWING_TEMPO.md), of which this addendum is
+part of P0. The contract fields land in `contracts/tempo.py`, the flip is one divisor and one
+deleted guard in `analysis/tempo_trainer.py`, and the verdict's new sentence is three strings in
+`analysis/checkpoints/mechanics.py`. Nothing in `ranges.json`, `CHECKPOINT_REGISTRY`,
+`contracts/caveats.py` or either benchmark artifact is touched — a phase that finds itself editing
+one of those has grown a band and should stop for a decision.

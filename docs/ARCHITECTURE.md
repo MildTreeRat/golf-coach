@@ -1,7 +1,7 @@
 # Architecture — the system AS BUILT
 
 > **Tier: AS-BUILT.** This document describes what actually exists and runs, reviewed
-> **2026-09-01**. Everything here has been executed. For the *target* design — the full
+> **2026-09-02**. Everything here has been executed. For the *target* design — the full
 > component/deployment picture, the build order, and the parts not yet written — see
 > [FLOW.md](FLOW.md).
 >
@@ -449,14 +449,23 @@ analyzed before it existed, and `SwingResult` did not change shape. The results 
 whether to show it, because the page holds the verdict; the server decides what the beats are,
 because a page recomputing them would print a tempo nobody is hearing.
 
-**Two scopes, one anchor guard.** `build_career_tempo(corpus)` fits the same trainer to a whole
-golfer rather than one swing, and rides on the career route (ADR-023's second addendum). It layers
-what it knows by what the layer is allowed to assert: the per-swing readings are measurements and
-print at any `n`; the typical values are `PersonalBaseline`'s guarded means and are `None` until
-`CENTER` lifts; the target is a `TempoPlan` whose `anchor` degrades career mean → latest swing →
-tour median. Both scopes go through `build_tempo_plan_for`, so there is exactly one definition of
-when a golfer's own backswing may be practiced to — and the reported anchor is read back off the
-built plan rather than decided beside it, because that guard can reject what it was handed.
+**Two scopes, one builder, and no anchor guard.** `build_career_tempo(corpus)` fits the same
+trainer to a whole golfer rather than one swing, and rides on the career route (ADR-023's second
+addendum). It layers what it knows by what the layer is allowed to assert: the per-swing readings
+are measurements and print at any `n`; the typical values are `PersonalBaseline`'s guarded means
+and are `None` until `CENTER` lifts; the target is a `TempoPlan` whose `anchor` degrades career
+mean → latest swing → tour median, and both rungs now select on the same `downswing_ms` the builder
+fits to. Both scopes go through `build_tempo_plan_for`, so there is exactly one place an anchor is
+chosen and a pace is fitted.
+
+**Nothing stands between a measured downswing and the target built on it.** The p10–p90 check that
+used to hand back the tour median for an out-of-range anchor is *deleted*, not swapped onto the
+other half (M13 P2): under this anchor the downswing is the given and never the fault, so refusing
+one would mean prescribing a stranger's swing. What replaced it is a statement and an offer —
+`downswing_in_tour_range` says the anchor sits outside the reference range, `in_range_pace` carries
+the nearest edge as a pace, and the golfer opts in or does not. The anchor is still read back off
+the built plan rather than decided beside it; that read-back can no longer fire, and stays because
+it is what stops a second copy of the anchor rule appearing one layer up.
 
 On the client, the metronome itself is `api/static/tempo.js`, one `<script src>` shared by the
 results and career pages; each page keeps its own framing prose, since the two are answering
@@ -468,20 +477,37 @@ downswing-length ticks (steady and loopable, ratio rounded) and `CUES` plays thr
 exact medians (true ratio, silent through the backswing). They carry different durations and
 different ratios, which is why those sit on `BeatPattern` rather than on `TempoPlan`.
 
-**The target follows the golfer, via their own backswing.** Swing speed does change swing duration
+**The target follows the golfer, via their own downswing.** Swing speed does change swing duration
 — LPGA against PGA, driver only, the backswing runs 1001 ms against 834 and the downswing 267
 against 234 — so a single tour-median target would hand a slower golfer a faster golfer's swing.
 Club is *not* that axis (between-club sd 6.9 ms): a longer club lengthens the lever rather than
-speeding the rotation. Anchoring to the measured backswing captures the effect with no club-head
-speed involved, which is necessary as well as convenient — every stored shot reads a smash factor
-below 1.0, so no usable speed exists. The ratio always stays the tour's; only the anchor's length
-moves. Guarded by the corpus p10–p90, so a backswing that is itself the fault is not rehearsed —
-`TempoPlan.anchored` says which case applied.
+speeding the rotation. Anchoring to a measured half captures the effect with no club-head speed
+involved, which is necessary as well as convenient — every stored shot reads a smash factor below
+1.0, so no usable speed exists. **Which half was reversed on 2026-09-02** (M13, ADR-023's third
+addendum, reversing its 2026-08-20 one): the downswing is what a golfer *feels* — it is how hard
+they swung — and the backswing is what they can deliberately change, so `anchor_downswing_ms` is
+read off the swing and `anchor_backswing_ms` is prescribed from it at the tour ratio. The ratio
+always stays the tour's; only the anchor's length moves. `TempoPlan.anchored` says whether a
+measurement or the tour median was used.
 
-**The fit rides on `TempoPlan.pace`, not on the beats.** Patterns are always the tour reference and
-a renderer multiplies by `pace` — one place applies it, and the page's pace slider opens at that
-value rather than a neutral 100%, so the control shows the fitted decision and dragging it overrides
-cleanly. See ADR-023's addendum.
+**The tempo verdict prescribes the same backswing, and derives it separately.** `evaluate_tempo`
+prints *"your downswing was 384 ms; at the tour ratio that wants a 1044-1808 ms backswing, and
+yours was 868"* — both edges are the resolved band times the observed downswing, so the printed
+backswing sits inside the printed range exactly when the ratio passes. It does not read a
+`TempoPlan`: `checkpoints/` may not, the plan is built at read time and the verdict is stored, and
+the two would then have to agree about a swing analysed months apart. They agree anyway because
+both multiply the golfer's own downswing by a tour ratio — the plan by the median of the two
+duration rows, the verdict by the `tempo_ratio` band's two edges, which today bracket it.
+
+**The fit rides on `TempoPlan.pace`, not on the beats.** `pace` is `anchor_downswing_ms` over the
+tour median downswing; patterns are always the tour reference and a renderer multiplies by it — one
+place applies it, and the page's pace slider opens at that value rather than a neutral 100%, so the
+control shows the fitted decision and dragging it overrides cleanly. Its range is
+`phases.POSSIBLE_DOWNSWING_S` over that median, rounded outward: every downswing the segmenter
+admits on its own can be opened on, so a fitted pace is shown rather than clamped. The constant is
+public for exactly that pin, and `wire()` still clamps as a backstop, because the matching route
+admits a descent outside the band when the other view vouches for it (M13 P3). See ADR-023's
+addenda.
 
 The targets come from two distribution rows added to `golfdb_v1.json` — `backswing_ms` and
 `downswing_ms`, the halves `tempo_ratio` was always built from and then divided away. Both are also

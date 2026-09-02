@@ -124,6 +124,11 @@
          now", and the second is wanted with a club already in hand. Deep-links to the same page's
          `#tempo`, so there is one career page and not two. -->
     <a class="link" id="golfer-tempo" href="#">tempo</a>
+    <!-- Third deep link into the same page, on the same argument as tempo: the bag is asked
+         about at its own moment — a club in hand, checking that the thing on file is the thing
+         being swung — and reaching it through "career" meant scrolling past a tempo card and a
+         page of whole-bag numbers to find out. -->
+    <a class="link" id="golfer-bag" href="#">bag</a>
   </div>
   <div id="golfer-form">
     <div id="golfer-warning">&#9888; No golfer set for this session.</div>
@@ -183,6 +188,7 @@ const golferNameEl = document.getElementById("golfer-name");
 const golferHandEl = document.getElementById("golfer-hand");
 const golferCareerEl = document.getElementById("golfer-career");
 const golferTempoEl = document.getElementById("golfer-tempo");
+const golferBagEl = document.getElementById("golfer-bag");
 const golferInput = document.getElementById("golfer-input");
 const handRow = document.getElementById("hand-row");
 const clubEl = document.getElementById("club");
@@ -299,6 +305,7 @@ function renderGolfer() {
     const career = `/career.html?player=${encodeURIComponent(currentGolfer.player_id)}`;
     golferCareerEl.href = career;
     golferTempoEl.href = `${career}#tempo`;
+    golferBagEl.href = `${career}#bag`;
   }
 }
 

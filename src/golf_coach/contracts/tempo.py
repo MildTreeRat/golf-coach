@@ -46,7 +46,7 @@ from __future__ import annotations
 from datetime import datetime
 from enum import StrEnum
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 # The one import out of this module, and it is sideways rather than upward: `CareerTempo` reports
 # the baseline guard's refusals verbatim, so it needs the guard's own shape. Restating it would be
@@ -159,8 +159,8 @@ class TempoPlan(BaseModel):
         gt=0.0,
         description=(
             "**The multiplier a surface must apply to every beat time**, and where the fitting "
-            "lives: it is `anchor_backswing_ms / <tour median backswing>`, so 1.11 means this "
-            "golfer is played 11% slower than the tour median. The patterns themselves are always "
+            "lives: it is `anchor_downswing_ms / <tour median downswing>`, so 1.44 means this "
+            "golfer is played 44% slower than the tour median. The patterns themselves are always "
             "the tour reference, never pre-scaled - one place applies a pace, and it is the "
             "renderer.\n\n"
             "That split is what lets the golfer's pace control mean something. It is a multiple of "
@@ -173,20 +173,59 @@ class TempoPlan(BaseModel):
     anchored: bool = Field(
         default=False,
         description=(
-            "Whether the target follows this golfer's own backswing rather than the tour median. "
-            "**Swing speed does change swing duration** - LPGA against PGA, driver only, the "
-            "backswing runs 1001 ms against 834 and the downswing 267 against 234 - so a single "
-            "target would hand a slower golfer a faster golfer's swing. Anchoring captures that "
-            "without needing a club-head speed, which is fortunate: every stored shot reads a "
-            "smash factor below 1.0, so no usable speed exists to key on (ADR-023 addendum)."
+            "Whether the target follows this golfer's own measured swing rather than the tour "
+            "median. **Swing speed does change swing duration** - LPGA against PGA, driver only, "
+            "the backswing runs 1001 ms against 834 and the downswing 267 against 234 - so a "
+            "single target would hand a slower golfer a faster golfer's swing. Anchoring captures "
+            "that without needing a club-head speed, which is fortunate: every stored shot reads "
+            "a smash factor below 1.0, so no usable speed exists to key on (ADR-023 addendum)."
+        ),
+    )
+    anchor_downswing_ms: float = Field(
+        gt=0.0,
+        description=(
+            "**The downswing every pattern is built to land on**, and the half the fit is taken "
+            "from - the golfer's own when `anchored`, the tour median otherwise. It is the half a "
+            "golfer *feels*: it is how hard they swung, so it is the swing's given rather than "
+            "something to prescribe, and the target is fitted to it (ADR-023's 2026-09-02 "
+            "addendum). Required for the same reason `anchor_backswing_ms` is: a plan that cannot "
+            "say what it was fitted to cannot be told apart from the tour-median case."
         ),
     )
     anchor_backswing_ms: float = Field(
         gt=0.0,
         description=(
-            "The backswing every pattern was built from - the golfer's own when `anchored`, the "
-            "tour median otherwise. Carried rather than left implicit because the two cases "
-            "produce different targets and a reader cannot tell them apart from the beats alone."
+            "**The backswing this plan prescribes** - `anchor_downswing_ms` times the tour ratio, "
+            "and so the half the golfer is being asked to change. Derived, and carried anyway "
+            "rather than left for the page to multiply: it is the number a surface prints in "
+            "words ('take it back over about 1300 ms'), and deriving it per surface would put the "
+            "tour ratio into pages that are not allowed to know one."
+        ),
+    )
+
+    downswing_in_tour_range: bool = Field(
+        default=True,
+        description=(
+            "Whether the anchor sits inside the reference downswing's p10-p90. **False is a "
+            "notice, never a refusal.** Nothing may be substituted for a downswing outside that "
+            "range: under this anchor the downswing is the given and never the fault, so the "
+            "guard that used to substitute the tour median for one is deleted (ADR-023's "
+            "2026-09-02 addendum; M13 P2 is where it goes). The golfer is told, offered "
+            "`in_range_pace`, and decides. Defaults True because the tour "
+            "median is trivially inside its own p10-p90: with nothing measured there is nothing "
+            "to notice."
+        ),
+    )
+    in_range_pace: float | None = Field(
+        default=None,
+        gt=0.0,
+        description=(
+            "The pace that would put the played downswing on the nearest tour edge, or None when "
+            "there is nothing to offer. A surface renders its snap control off exactly this "
+            "None-ness, so 'is there an offer' and 'should the button exist' are one question - "
+            "the shape `CareerTempo.plan` already uses for a target that cannot be given. The "
+            "golfer opting in is the point: it overrides their own measurement, which is theirs "
+            "to override and was previously done for them by the server."
         ),
     )
 
@@ -202,6 +241,26 @@ class TempoPlan(BaseModel):
         default=None, description="This golfer's own downswing. See `observed_backswing_ms`."
     )
 
+    @model_validator(mode="after")
+    def _snap_only_offered_outside_the_range(self) -> TempoPlan:
+        """There is nothing to snap a downswing to that is already inside the tour range.
+
+        Pinned in the model rather than left to convention because the two fields are one
+        statement read by two different controls - the notice reads the bool, the snap button
+        reads the None-ness. A plan claiming both would draw a button that moves a golfer off
+        their own measured downswing with no notice above it saying why, and neither surface has
+        what it needs to spot the contradiction.
+
+        The converse is deliberately not enforced: `False` with no pace is a coherent state for a
+        caller that can see a downswing is out of range and has no edge to offer it.
+        """
+        if self.downswing_in_tour_range and self.in_range_pace is not None:
+            raise ValueError(
+                "in_range_pace is an offer to a downswing outside the tour range, and "
+                "downswing_in_tour_range says this one is inside it"
+            )
+        return self
+
     @property
     def default_pattern(self) -> BeatPattern:
         """The pattern a surface should play unless the golfer picked the other one."""
@@ -209,22 +268,26 @@ class TempoPlan(BaseModel):
 
 
 class TempoAnchor(StrEnum):
-    """Which backswing a career-level target was built on. [ADR-023 addendum 2026-08-22]
+    """Which measurement a career-level target was fitted to. [ADR-023 addendum 2026-08-22]
 
-    `TempoPlan.anchored` is a bool because a single swing has only two answers: its own backswing
+    `TempoPlan.anchored` is a bool because a single swing has only two answers: its own downswing
     or the tour's. A career view has three, and the middle one is the whole reason this enum
     exists — a golfer whose baseline is still withheld is not in the same position as one with no
     measurement at all, and a page that could not tell them apart would either print a mean it is
     forbidden to print or refuse a golfer a target it can honestly give them.
     """
 
-    #: The golfer's own mean backswing, and so a claim their history supports.
+    #: The golfer's own mean downswing, and so a claim their history supports.
     CAREER_MEAN = "career_mean"
-    #: Their most recent measured backswing. Not a claim about the golfer — a fact about one
+    #: Their most recent measured downswing. Not a claim about the golfer — a fact about one
     #: swing, which is what makes it sayable at an `n` the `CENTER` guard refuses.
     LATEST_SWING = "latest_swing"
     #: Neither was usable, so the target is the tour median. Also where the anchor lands when the
-    #: golfer's own backswing falls outside `_anchor_backswing`'s p10-p90 guard.
+    #: builder reports back that it anchored nothing — still read off the plan and never predicted,
+    #: though since M13 P4 the career branch selects on the same half the builder fits to, so that
+    #: path can no longer be taken. The read-back stays as the thing that keeps it that way.
+    #: (Until M13 P2 this was also where an out-of-range backswing landed; that guard is deleted,
+    #: and an out-of-range *downswing* is now reported on the plan rather than substituted for.)
     TOUR_MEDIAN = "tour_median"
 
 
@@ -307,8 +370,8 @@ class CareerTempo(BaseModel):
         description=(
             "The metronome, or None when the reference distributions are unavailable — the same "
             "refusal `build_tempo_plan` makes, for the same reason (ADR-010 §2). `plan.anchored` "
-            "and `anchor` always agree: the anchor guard lives in the plan builder and this "
-            "reports its decision rather than predicting it."
+            "and `anchor` always agree: the anchor is chosen in the plan builder and this reports "
+            "that decision rather than predicting it."
         ),
     )
 

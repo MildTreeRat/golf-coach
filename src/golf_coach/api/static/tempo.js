@@ -59,11 +59,14 @@ const TempoTrainer = (() => {
 
   // The markup, ids and all. Returned rather than injected so each page decides what wraps it.
   //
-  // The pace bounds are the anchor guard's own range expressed as a percentage of the tour median,
-  // and `tests/analysis/test_tempo_trainer.py` reads them back out of this file: a guard widened
-  // without widening the control would clamp the opening value and quietly play a tempo other than
-  // the one the page's own text claims. Written here rather than on each page so there is one pair
-  // of numbers to keep true, and one place for that test to look.
+  // The pace bounds are the widest downswing the segmenter will admit — `POSSIBLE_DOWNSWING_S` in
+  // `analysis/phases.py` — as a percentage of the tour median downswing, and
+  // `tests/analysis/test_tempo_trainer.py` reads them back out of this file: a control narrower
+  // than the range the fitter can produce clamps the opening value and quietly plays a tempo other
+  // than the one the page's own text claims. They were the *anchor guard's* range until M13 deleted
+  // that guard; the fit is now the golfer's own downswing with nothing rejecting it, so what bounds
+  // it is the window a downswing has to fall in to be measured at all. Written here rather than on
+  // each page so there is one pair of numbers to keep true, and one place for that test to look.
   function markup(plan) {
     if (!plan || !(plan.patterns || []).length) return "";
     const modes = plan.patterns.map((p, i) =>
@@ -77,15 +80,46 @@ const TempoTrainer = (() => {
     <div id="tempoStrip"></div>
     <div class="controls">
       <button type="button" class="play" id="tempoPlay">Play</button>
-      <label>Pace <input type="range" id="tempoPace" min="70" max="140" step="1" />
+      <label>Pace <input type="range" id="tempoPace" min="44" max="300" step="1" />
         <span id="tempoPaceOut"></span></label>
     </div>
     <p class="facts" id="tempoFacts"></p>
     <p class="anchor" id="tempoAnchor"></p>
+    ${notice(plan)}
     <p class="src" id="tempoSrc"></p>`;
   }
 
-  // `anchorText` is the caller's, and required: it is the sentence saying which backswing the
+  // The notice and the snap beside it, which together are the whole of what replaced the anchor
+  // guard M13 deleted. An out-of-range downswing is no longer refused and quietly swapped for the
+  // tour median: under this anchor the downswing is the given — how hard the golfer swung — so the
+  // page states the fact and offers the edge, and the golfer decides (ADR-023, 2026-09-02).
+  //
+  // Two gates rather than one, because they are not the same question. `downswing_in_tour_range`
+  // is the fact; `in_range_pace` is whether there is an edge to snap to, and the contract lets it
+  // be absent while the fact is still false. Rendering the button off the fact would hand a golfer
+  // a control with nothing behind it, so each renders off the field that answers for it.
+  //
+  // No number here, per this file's standing rule: the notice says *that* the downswing is outside
+  // the range, and the facts line above it already prints the golfer's own halves.
+  function notice(plan) {
+    if (plan.downswing_in_tour_range !== false) return "";
+    const snap = plan.in_range_pace
+      ? ` <button type="button" id="tempoSnap">Snap to tour range</button>`
+      : "";
+    return `<p class="notice" id="tempoNotice">The downswing this target is built on sits outside
+      the tour reference range. It is still what the drill is fitted to — it is how hard you swung,
+      not the half being prescribed — but a mis-timed clip reads this way too.${snap}</p>`;
+  }
+
+  // A pace as a slider position: percent, rounded to the control's step and clamped to its bounds.
+  // One clamp for the opening value and the snap both, so a pace the control cannot reach can only
+  // be wrong in one way rather than two. Why the clamp survives bounds that now span the whole
+  // admission window is in `wire()`.
+  function sliderValue(control, pace) {
+    return Math.min(Number(control.max), Math.max(Number(control.min), Math.round(pace * 100)));
+  }
+
+  // `anchorText` is the caller's, and required: it is the sentence saying which downswing the
   // target was built on, and the two pages have different numbers of answers to that. The results
   // page has two (this swing's, or the tour median); career mode has three, because a golfer whose
   // mean is still withheld is anchored to their latest swing and is in neither of the other states.
@@ -94,14 +128,17 @@ const TempoTrainer = (() => {
     if (!plan || !play) { state = null; return; }
 
     // The slider starts where the server fitted it, not at a neutral 100%. `plan.pace` is a
-    // multiple of the *tour median* backswing, so a golfer whose own backswing is 11% longer opens
-    // at 111% — the control shows the decision rather than hiding it, and dragging is an override.
+    // multiple of the *tour median downswing*, so a golfer whose own downswing is 44% longer opens
+    // at 144% — the control shows the decision rather than hiding it, and dragging is an override.
     //
-    // `pace` is clamped rather than trusted, because a future guard could widen and a slider that
-    // cannot reach its own starting value would silently play something other than what it says.
+    // `pace` is clamped rather than trusted, and stays clamped even now the bounds span the whole
+    // admission window: `phases.py` admits a descent outside that window when the other view
+    // vouches for it, and `tempo_timings` measures top-to-impact from the *centre* of the
+    // transition rather than the start of the descent. So those bounds are the designed range and
+    // not a guarantee, and a slider that cannot reach its own starting value would silently play
+    // something other than what it says.
     const pace = document.getElementById("tempoPace");
-    const opening = Math.min(Number(pace.max), Math.max(Number(pace.min),
-      Math.round((plan.pace || 1) * 100)));
+    const opening = sliderValue(pace, plan.pace || 1);
     pace.value = String(opening);
     state = { plan, mode: 0, pace: opening / 100, anchorText };
     document.getElementById("tempoPaceOut").textContent = `${opening}%`;
@@ -124,6 +161,18 @@ const TempoTrainer = (() => {
       restartIfPlaying();
       draw();
     });
+
+    // The snap moves the control and stops there: the `input` handler above is what redraws and
+    // restarts, so there stays one path from a pace to a played pattern. The pace it moves to is
+    // read off the plan — a page working out "the nearest tour edge" itself would hold a second
+    // copy of the reference distributions, which is the rule this whole file is written against.
+    const snap = document.getElementById("tempoSnap");
+    if (snap && plan.in_range_pace) {
+      snap.addEventListener("click", () => {
+        pace.value = String(sliderValue(pace, plan.in_range_pace));
+        pace.dispatchEvent(new Event("input"));
+      });
+    }
 
     play.addEventListener("click", () => (timer ? stop() : start()));
     draw();
@@ -169,9 +218,9 @@ const TempoTrainer = (() => {
       `${num(pattern.backswing_ms * state.pace, 0)} ms back / ${
         num(pattern.downswing_ms * state.pace, 0)} ms down &middot; ${
         num(pattern.ratio, 2)}:1${observed}`;
-    // Which backswing the target was built on. A golfer swinging at 90 mph and one at 110 do not
-    // share an absolute tempo — the corpus puts a whole speed cohort 167 ms apart on the backswing
-    // — so the trainer fits to theirs where it can, and has to say when it could not.
+    // Which downswing the target was built on. A golfer swinging at 90 mph and one at 110 do not
+    // share an absolute tempo — LPGA against PGA, driver only, the two cohorts differ on both
+    // halves — so the trainer fits to theirs where it can, and has to say when it could not.
     document.getElementById("tempoAnchor").textContent = state.anchorText;
     document.getElementById("tempoSrc").textContent = pattern.source;
   }

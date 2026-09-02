@@ -37,10 +37,14 @@ def _pattern(**overrides) -> BeatPattern:
 
 
 def _plan(**overrides) -> TempoPlan:
-    """A plan with the fields every one must carry. `anchor_backswing_ms` has no default on
-    purpose — a plan that cannot say which backswing it was built from is one a reader cannot
-    tell apart from the tour-median case."""
-    fields = {"patterns": (_pattern(),), "anchor_backswing_ms": 900.0}
+    """A plan with the fields every one must carry. Neither anchor has a default on purpose — a
+    plan that cannot say what it was fitted to is one a reader cannot tell apart from the
+    tour-median case. The two are the tour medians here, so this fixture is that case."""
+    fields = {
+        "patterns": (_pattern(),),
+        "anchor_downswing_ms": 267.0,
+        "anchor_backswing_ms": 900.0,
+    }
     return TempoPlan(**{**fields, **overrides})
 
 
@@ -122,15 +126,61 @@ def test_the_observed_durations_are_optional_and_are_not_zero_by_default() -> No
     assert plan.observed_downswing_ms is None
 
 
-def test_a_plan_must_say_which_backswing_it_was_built_from() -> None:
-    """The field that separates "the tour median" from "yours", which the beats cannot show.
+def test_a_plan_must_say_which_swing_it_was_built_from() -> None:
+    """The two fields that separate "the tour median" from "yours", which the beats cannot show.
 
     Two golfers 167 ms apart on the backswing — the gap between the LPGA and PGA cohorts — get
     different targets from the same code, and a reader holding only the beats cannot tell whether
     the one in front of them was fitted or defaulted.
+
+    Both anchors are required rather than one: `anchor_downswing_ms` is the half the fit is taken
+    from and `anchor_backswing_ms` is the half it prescribes (ADR-023's 2026-09-02 addendum), and
+    a plan carrying only one of them makes every surface do the tour-ratio arithmetic itself.
     """
     with pytest.raises(ValidationError):
         TempoPlan(patterns=(_pattern(),))
+    with pytest.raises(ValidationError):
+        TempoPlan(patterns=(_pattern(),), anchor_backswing_ms=900.0)
+    with pytest.raises(ValidationError):
+        TempoPlan(patterns=(_pattern(),), anchor_downswing_ms=267.0)
 
     assert _plan().anchored is False, "defaulting to the median must not claim to be anchored"
-    assert _plan(anchored=True, anchor_backswing_ms=1001.0).anchor_backswing_ms == 1001.0
+    fitted = _plan(anchored=True, anchor_downswing_ms=383.9, anchor_backswing_ms=1296.0)
+    assert fitted.anchor_downswing_ms == 383.9
+    assert fitted.anchor_backswing_ms == 1296.0
+
+
+def test_a_plan_with_nothing_to_notice_says_nothing() -> None:
+    """The defaults are the quiet case, and they have to be: the notice and the snap are drawn off
+    these two fields alone, so a plan that had to remember to opt out of them would eventually
+    tell a golfer their downswing is outside a range nobody measured it against."""
+    plan = _plan()
+
+    assert plan.downswing_in_tour_range is True
+    assert plan.in_range_pace is None
+
+
+def test_a_downswing_inside_the_range_cannot_carry_a_snap_offer() -> None:
+    """The contradiction the model refuses, because two controls read these fields separately.
+
+    The notice reads the bool and the snap button reads the None-ness. A plan asserting both would
+    draw a button that moves the golfer off their own measured downswing with nothing above it
+    saying why — and each surface, holding only its own half, would render exactly as told.
+    """
+    with pytest.raises(ValidationError):
+        _plan(in_range_pace=1.13)
+
+    outside = _plan(downswing_in_tour_range=False, in_range_pace=1.13)
+    assert outside.in_range_pace == 1.13
+
+    silent = _plan(downswing_in_tour_range=False)
+    assert silent.in_range_pace is None, (
+        "out of range with no edge to offer is a coherent state and stays legal"
+    )
+
+
+def test_a_snap_pace_of_zero_is_refused() -> None:
+    """`in_range_pace` is played through the same multiplier as `pace`, so it is bounded the same
+    way — zero collapses every beat onto one instant, and the offer is the golfer's to take."""
+    with pytest.raises(ValidationError):
+        _plan(downswing_in_tour_range=False, in_range_pace=0.0)

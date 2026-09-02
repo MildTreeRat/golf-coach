@@ -43,8 +43,8 @@ from typing import NamedTuple
 
 from golf_coach.analysis.phases import (
     _FALLBACK_TEMPO_RATIO,
-    _POSSIBLE_DOWNSWING_S,
     _STRIKE_TOLERANCE_S,
+    POSSIBLE_DOWNSWING_S,
     segment_phases,
 )
 from golf_coach.analysis.smoothing import smooth_keypoints
@@ -700,7 +700,7 @@ def _shared_tops(
     them — which is the whole of what P7 changes. [M11 P7]
 
     **There is no plausibility veto on the reference, and removing it is what fixed the renders.**
-    `_POSSIBLE_DOWNSWING_S` used to guard both routes: a reference outside 0.15-0.45s meant the
+    `POSSIBLE_DOWNSWING_S` used to guard both routes: a reference outside 0.15-0.45s meant the
     sound view's top was suspect too, so neither was imposed and the warp stood. That reasoning is
     right about the *anchor* and backwards about the *render*. Declining is not neutral here — it
     re-imposes the two detected tops, which are known to disagree, and `pair_frames` then has no
@@ -776,11 +776,11 @@ def _shared_tops(
         )
         return None, None
 
-    # `_POSSIBLE_DOWNSWING_S` is read here and *decides nothing* — it used to veto the correction
+    # `POSSIBLE_DOWNSWING_S` is read here and *decides nothing* — it used to veto the correction
     # and that is exactly what left four bundles replaying a panel at up to 3.11x (see the
     # docstring). What it is still good for is warning the reader: a reference outside the band
     # means the top being imposed is probably wrong even though the playback speed is now right.
-    low, high = _POSSIBLE_DOWNSWING_S
+    low, high = POSSIBLE_DOWNSWING_S
     caution = (
         ""
         if low <= reference <= high

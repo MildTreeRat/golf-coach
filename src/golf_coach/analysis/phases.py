@@ -388,7 +388,13 @@ def candidate_downswings(
 # Expressed in seconds, the one rule in this module that is (ADR-013): a downswing lasts about the
 # same time for every golfer at every frame rate, which is what makes an absolute bound meaningful
 # here where the rest of the module works in the clip's own time base.
-_POSSIBLE_DOWNSWING_S = (0.12, 0.80)
+#
+# **Public — the missing underscore is the point** (M13 P3). The tempo trainer's pace slider has to
+# be able to open on any downswing this module will admit, so `tests/analysis/test_tempo_trainer.py`
+# reads these two numbers against the tour median downswing to say what range that is and checks
+# `static/tempo.js` against it. Restating the bound over there would be a second thing to keep true;
+# reaching through an underscore for it would be the same coupling with less warning attached.
+POSSIBLE_DOWNSWING_S = (0.12, 0.80)
 
 # How far a descent may sit from the swing another camera already found, in seconds — the tolerance
 # `select_matching_swing` matches on. It does two jobs: it admits a descent the band above rejects
@@ -432,7 +438,7 @@ _MATCH_TOLERANCE_S = 0.12
 # it: the post-impact descents this rule exists to exclude sit 15-24 s past the swing on a
 # down-the-line clip (M10 A2). There is no value between "covers the measurement error" and
 # "admits a decoy" on this corpus, which is why this band can be loose where
-# `_POSSIBLE_DOWNSWING_S` can be a sanity bound rather than a discriminator.
+# `POSSIBLE_DOWNSWING_S` can be a sanity bound rather than a discriminator.
 #
 # Rejected: an asymmetric window - a transient may only land *after* the impact, which is truer to
 # the physics, since the crack cannot precede the contact. It is wrong about the *measurement*:
@@ -469,7 +475,7 @@ _WINDOW_TRAIL = 3
 # downswings: sessions 4, 5 and 2 get 1.00, 0.92 and 1.08 s and go undetected, while session 11
 # gets 1.67 s for a requirement of 0.92. The quantity is not expressible in the clip's own time
 # base, so it is expressed in seconds and converted through the clip's own fps — the same
-# deviation, for the same kind of reason, that `_POSSIBLE_DOWNSWING_S` above already carries.
+# deviation, for the same kind of reason, that `POSSIBLE_DOWNSWING_S` above already carries.
 #
 # 1.5 s sits 0.23 s above the worst observed requirement (1.267 s) and 0.28 s above the longest
 # measured backswing (1.217 s). It binds on 5 of the 14 clips and leaves top and impact where they
@@ -576,7 +582,7 @@ def _lone_candidate_choice(
     if len(pool) != 1:
         return None
     only = pool[0]
-    low, high = _POSSIBLE_DOWNSWING_S
+    low, high = POSSIBLE_DOWNSWING_S
     # Two different justifications, and the reason has to say which one it is. Without audio this
     # is "the band is a tie-break with no tie to break"; with it, the band has been *overruled* by
     # a measurement of the physical event the band only ever stood in for.
@@ -626,7 +632,7 @@ def select_swing(
        behaviour from rule 1 down is identical to what it was before audio existed, the same way
        `window_around` keeps its no-fps path.
     1. **Swing-shaped at all.** Drop candidates whose descent could not be a downswing under any
-       bracketing (`_POSSIBLE_DOWNSWING_S`). This is a sanity bound and deliberately not a
+       bracketing (`POSSIBLE_DOWNSWING_S`). This is a sanity bound and deliberately not a
        discriminator: it rejects the 2.351 s "descent" on `2026-08-23/5` and the 5-frame tracking
        fragments, and on the stored corpus it changes nothing else. **It must never be the reason
        one real swing is preferred to another** — a practice swing lasts exactly as long as a real
@@ -676,7 +682,7 @@ def select_swing(
     # at is evidence about the detector or the framing; it is not evidence against every
     # candidate at once, and treating it as such would decline a clip over a stray noise.
     pool = struck or candidates
-    low, high = _POSSIBLE_DOWNSWING_S
+    low, high = POSSIBLE_DOWNSWING_S
     plausible = [swing for swing in pool if low <= (swing.impact - swing.top) / fps <= high]
     if not plausible:
         return _lone_candidate_choice(pool, fps=fps, candidates=candidates, struck=bool(struck))
@@ -730,7 +736,7 @@ def select_matching_swing(
        happened *after* the ball was gone, and what separates them from the swing is exactly that
        the ball had already been hit.
     1. **Swing-shaped, or vouched for.** Keep a candidate whose downswing lands in
-       `_POSSIBLE_DOWNSWING_S` **or** within `_MATCH_TOLERANCE_S` of the reference. The second
+       `POSSIBLE_DOWNSWING_S` **or** within `_MATCH_TOLERANCE_S` of the reference. The second
        branch is not a wider band, it is a different kind of evidence: another camera looking
        straight at the same swing. It carried far more weight when the bound was a 0.45
        discriminator — the 0.450 s and 0.467 s descents on `2026-08-10/2` and session 3 reached
@@ -755,7 +761,7 @@ def select_matching_swing(
     struck = _struck(candidates, strike_frames, fps=fps)
     pool = struck or candidates
     seconds = [(swing.impact - swing.top) / fps for swing in pool]
-    low, high = _POSSIBLE_DOWNSWING_S
+    low, high = POSSIBLE_DOWNSWING_S
     matched = [
         (swing, duration)
         for swing, duration in zip(pool, seconds, strict=True)

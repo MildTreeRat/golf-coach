@@ -17,7 +17,7 @@ from golf_coach.analysis.checkpoints.mechanics import (
     _ADDRESS_SAMPLE_MIN_FRAMES,
     _address_sample_bounds,
 )
-from golf_coach.analysis.measure import POSE_MEASUREMENTS
+from golf_coach.analysis.measure import POSE_MEASUREMENTS, tempo_timings
 from golf_coach.analysis.phases import segment_phases
 from golf_coach.analysis.smoothing import smooth_keypoints
 from golf_coach.contracts.checkpoints import CHECKPOINT_REGISTRY
@@ -46,6 +46,7 @@ def test_ideal_tempo_passes_inside_band() -> None:
     assert cp.passed is True
     assert cp.expected_low <= cp.observed <= cp.expected_high
     assert cp.score == 1.0
+    assert "ms backswing" in cp.message
 
 
 def test_too_quick_tempo_fails_and_scores_lower() -> None:
@@ -54,6 +55,7 @@ def test_too_quick_tempo_fails_and_scores_lower() -> None:
     assert cp.passed is False
     assert cp.observed < cp.expected_low
     assert cp.score < 1.0
+    assert "Take it back longer" in cp.message
 
 
 def test_too_slow_tempo_fails_and_scores_lower() -> None:
@@ -62,6 +64,34 @@ def test_too_slow_tempo_fails_and_scores_lower() -> None:
     assert cp.passed is False
     assert cp.observed > cp.expected_high
     assert cp.score < 1.0
+    assert "Take it back shorter" in cp.message
+
+
+def test_tempo_verdict_prescribes_the_backswing_the_band_wants() -> None:
+    """The verdict's milliseconds are the band applied to the golfer's own downswing (M13).
+
+    Pinning the arithmetic rather than the wording: a reader who "improves" the sentence by
+    prescribing a *downswing* off the backswing puts the milestone back where it started, and a
+    reader who derives the edges from the tour median instead of this swing prints a target no
+    golfer on this page can hit. Both survive a substring check and neither survives this.
+    """
+    for backswing_frames, downswing_frames in ((30, 10), (10, 12), (44, 8)):
+        phases = segment_phases(make_swing(backswing_frames, downswing_frames))
+        durations = tempo_timings(phases).durations
+        assert durations is not None
+        backswing_ms, downswing_ms = durations
+
+        cp = evaluate_tempo(phases).score
+        assert cp is not None
+        low_ms = cp.expected_low * downswing_ms
+        high_ms = cp.expected_high * downswing_ms
+        assert f"downswing was {downswing_ms:.0f} ms" in cp.message
+        assert f"{low_ms:.0f}-{high_ms:.0f} ms backswing" in cp.message
+        assert f"yours was {backswing_ms:.0f}" in cp.message
+        # §Obvious-and-wrong 1: the sentence and the score are one verdict, not two. The printed
+        # backswing sits inside the printed range exactly when the ratio sits inside the band, so
+        # the prose cannot start disagreeing with `passed` on either side of it.
+        assert (low_ms <= backswing_ms <= high_ms) is cp.passed
 
 
 def test_tempo_counts_horizontal_takeaway() -> None:

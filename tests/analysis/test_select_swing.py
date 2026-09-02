@@ -18,10 +18,10 @@ from conftest import make_swing
 from golf_coach.analysis.phases import (
     _MATCH_TOLERANCE_S,
     _MIN_ADDRESS_LEAD_S,
-    _POSSIBLE_DOWNSWING_S,
     _STRIKE_TOLERANCE_S,
     _WINDOW_LEAD,
     _WINDOW_TRAIL,
+    POSSIBLE_DOWNSWING_S,
     TRAIL_WRIST,
     candidate_downswings,
     segment_phases,
@@ -39,7 +39,7 @@ _FPS = 100.0
 # Downswing frame counts that land inside / outside the possible band at 100 fps. Every one of
 # these is derived from the constant by the guard below rather than trusted, because the band moved
 # once (2026-08-30, 0.15-0.45 -> 0.12-0.80) and silently un-braced half this file when it did.
-_LOW, _HIGH = _POSSIBLE_DOWNSWING_S
+_LOW, _HIGH = POSSIBLE_DOWNSWING_S
 _REAL = 25  # 0.25 s — a real downswing
 _SLOW = 100  # 1.00 s — a rehearsal or a badly bracketed descent, above the band
 

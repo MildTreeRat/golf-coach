@@ -62,6 +62,16 @@
   /* An undeclared entry is spelled out rather than left blank, for the reason
      scripts/club_profile.py gives at the same place: a blank cell reads as a zero loft. */
   .entry.none { opacity: 0.72; }
+  /* The read half of the spec [M12 P8]. Same .row grid the metric cards use, because it is the
+     same shape of answer — a name and a value — and a golfer scrolling from a carry average into
+     a loft should not have to re-learn how a line is read. Only .k widens: "adjustable hosel"
+     does not fit the 4.6rem a metric key needs, and a wrapped label misaligns its value. */
+  .spec { margin: 0.1rem 0 0.2rem; }
+  .spec .row .k { flex: 0 0 8rem; }
+  /* Blanks are listed, not omitted, and they are visibly quieter than a recorded value — the
+     distinction the whole entry exists to keep is between a number nobody knows and one nobody
+     has shown you. */
+  .spec .blank { font-size: 0.78rem; opacity: 0.5; padding: 0.2rem 0 0.1rem; }
   /* 7.5rem and not M9's 4.2rem: the form carries every ClubSpec field now and "adjustable
      hosel" is the longest label in it. A label that wraps misaligns the input beside it. */
   .edit { display: grid; grid-template-columns: 7.5rem 1fr; gap: 0.3rem 0.5rem;
@@ -126,6 +136,15 @@
   .tempo .facts { font-size: 0.78rem; opacity: 0.7; margin: 0.55rem 0 0;
                   font-variant-numeric: tabular-nums; }
   .tempo .anchor { font-size: 0.76rem; opacity: 0.75; margin: 0.3rem 0 0; }
+  /* The out-of-range notice, and the snap inside it. Deliberately not styled as an error: the
+     downswing it is about is what the target is fitted to, not a fault, so it reads at the same
+     weight as the anchor sentence it follows and is set apart by a rule rather than by colour. */
+  .tempo .notice { font-size: 0.76rem; margin: 0.45rem 0 0; padding: 0.4rem 0 0.4rem 0.55rem;
+                   border-left: 2px solid rgba(200,150,60,0.75); }
+  .tempo .notice button { font: inherit; font-size: 0.74rem; padding: 0.25rem 0.55rem;
+                          margin-left: 0.3rem; border-radius: 6px;
+                          border: 1px solid rgba(128,128,128,0.45); background: transparent;
+                          color: inherit; cursor: pointer; white-space: nowrap; }
   .tempo .src { font-size: 0.72rem; opacity: 0.55; margin: 0.3rem 0 0; }
 
   /* The headline numbers, above the card. Big because this is the thing the golfer came for —
@@ -153,6 +172,12 @@
 <body>
 <a class="back" href="/">&larr; Upload</a>
 <a class="back" href="/library.html">Library</a>
+<!-- An in-page anchor and not a fourth page. The bag is a section of this golfer's career and
+     reads as one — the whole-bag cards below it only mean anything once you have seen which
+     clubs they were pooled from — so what was missing was never a page, it was a way to land on
+     the section without scrolling past the tempo card looking for it. `#bag` is the <h2> itself
+     (see render()), so the heading arrives at the top of the viewport rather than just above it. -->
+<a class="back" href="#bag">Bag</a>
 <div id="root"><p class="muted">Loading...</p></div>
 
 <script src="/tempo.js"></script>
@@ -301,7 +326,11 @@ function render(payload) {
   // upload page arrive somewhere useful rather than scrolling past fourteen clubs.
   parts.push(tempoSection(payload.tempo));
 
-  parts.push(`<h2>Bag</h2><div id="bag"></div>`);
+  // `id="bag"` is on the heading and not on the container it names, so the fragment link in the
+  // nav — and the one the upload page's golfer chip carries — lands with the heading in view.
+  // The container underneath is what renderBag() replaces, and the two ids are separate for that
+  // reason: an anchor inside a subtree that gets rewritten is an anchor that stops existing.
+  parts.push(`<h2 id="bag">Bag</h2><div id="bag-body"></div>`);
   parts.push(`<h2>Whole bag</h2>`);
 
   const names = Object.keys(metrics).sort();
@@ -334,7 +363,7 @@ function render(payload) {
   // Delegated, and bound to the container rather than to the buttons: renderBag() replaces this
   // element's whole subtree on every edit, so per-button listeners would be re-bound each time
   // and the ones on the old nodes would leak. Same shape as index.html's `golfer-fix` handler.
-  const host = document.getElementById("bag");
+  const host = document.getElementById("bag-body");
   host.addEventListener("click", onBagClick);
   renderBag();
   wireTempo(payload.tempo);
@@ -429,8 +458,10 @@ function ratioText(ratio) {
 
 // The two halves under the ratio, and they earn their place: the ratio alone cannot say *which*
 // half is off. ADR-023 records the case exactly — this golfer's backswing is the tour median and
-// the downswing is 28% past p90, so "tempo too quick" is true of the ratio and the opposite of
-// what it sounds like.
+// the downswing is past p90, so "tempo too quick" is true of the ratio and the opposite of what it
+// sounds like. Since M13 that downswing is what the target is fitted to rather than grounds for
+// refusing one, and the trainer's own notice is where the golfer is told it is out of range; these
+// two numbers are what makes that notice checkable against the swings it was built from.
 function halvesText(swing) {
   const back = swing && swing.backswing_ms;
   const down = swing && swing.downswing_ms;
@@ -447,14 +478,17 @@ function historyRow(swing) {
 
 // The anchor sentence is this page's own, and has a state results.html does not: a golfer whose
 // mean is still withheld is anchored to their most recent swing, which is neither "your own
-// typical backswing" nor "the tour median" and must not be described as either.
+// typical downswing" nor "the tour median" and must not be described as either.
+//
+// All three name the *downswing*, which is the half the target is fitted to since M13 — the half
+// the golfer feels. `tour_median` lost its "or yours sits outside the tour range" clause with the
+// guard that made it true: an out-of-range downswing is still anchored to, and saying so is the
+// trainer's notice rather than this sentence's.
 const ANCHOR_TEXT = {
-  career_mean: "Matched to your own typical backswing — only the ratio is the tour's.",
-  latest_swing: "Matched to your most recent swing's backswing: your typical one is still "
+  career_mean: "Matched to your own typical downswing — only the ratio is the tour's.",
+  latest_swing: "Matched to your most recent swing's downswing: your typical one is still "
     + "withheld, and one measured swing is a better target than the tour median.",
-  tour_median: "Set to the tour median backswing — either nothing measurable to anchor on, or "
-    + "yours sits outside the tour range and matching it would have built the drill around the "
-    + "half that needs changing.",
+  tour_median: "Set to the tour median downswing — nothing measurable of your own to anchor on.",
 };
 
 function wireTempo(tempo) {
@@ -787,16 +821,30 @@ function readSpec(scope) {
   return { body };
 }
 
+// One spec value as it reads, or `null` for a field nobody recorded. **The one place this page
+// decides what "recorded" means**, because two places would let the read-only table and the
+// filled count disagree about the same club — a spec that says "11 of 27" over twelve rows.
+//
+// `""` and `null` are the contract's two spellings of undeclared, one per field type
+// (`ClubSpec`), and they arrive here as the same answer. `false` and `0` are *not* among them:
+// a fixed hosel is a recorded fact and zero offset is a measurement, and dropping either into
+// the blanks list would report a club as less known than it is.
+function specValue(raw) {
+  if (raw === null || raw === undefined || raw === "") return null;
+  if (typeof raw === "boolean") return raw ? "yes" : "no";
+  // `loft_range_deg`, the one pair. Rendered as a span and not as two numbers, because the two
+  // ends are one fact about one adjustable hosel.
+  if (Array.isArray(raw)) return `${raw[0]} to ${raw[1]}`;
+  return String(raw);
+}
+
 // How much of a specification actually arrived, said as a number, because the blanks are the
 // point: 11 of 27 is a source that would not commit to sixteen fields, and a form with sixteen
 // questions still in it.
 function filledCount(spec) {
   let filled = 0;
   for (const [, fields] of SPEC_FIELDS) {
-    for (const [key] of fields) {
-      const value = spec[key];
-      if (value !== null && value !== undefined && value !== "") filled += 1;
-    }
+    for (const [key] of fields) if (specValue(spec[key]) !== null) filled += 1;
   }
   return filled;
 }
@@ -814,7 +862,7 @@ function message(id, text, kind) {
 }
 
 function renderBag() {
-  const host = document.getElementById("bag");
+  const host = document.getElementById("bag-body");
   if (!host) return;
   if (!bagPayload) {
     host.innerHTML = `<div class="banner error">Could not load the bag.</div>`;
@@ -874,16 +922,31 @@ function nothingTagged() {
 
 function clubBlock(club) {
   const editing = editingClub === club.club;
+  // Make and model ride on the collapsed row, between the category and the carry. A bag whose
+  // rows all read "7i · iron · in the bag, never hit" cannot be checked against the clubs in the
+  // hall without opening every one of them, and *is what I declared actually on file* is a
+  // question a golfer asks about the whole bag at once. It sits before the headline rather than
+  // replacing it: carry is still the number most visits came for (`clubHeadline`).
+  const summary = [esc(club.category.replace(/_/g, " ")), declaredName(club), clubHeadline(club)];
   return `<details class="club"${editing ? " open" : ""}>
     <summary><span class="id">${esc(club.club)}</span>
-      <span class="muted">${esc(club.category.replace(/_/g, " "))} &middot;
-      ${clubHeadline(club)}</span></summary>
+      <span class="muted">${summary.filter(Boolean).join(" &middot; ")}</span></summary>
     <div class="body">
-      ${editing ? editForm(club) : entryLine(club)}
+      ${editing ? editForm(club) : entryLine(club) + specTable(club)}
       ${evidenceLine(club)}
       ${(club.caveats || []).map((c) => `<p class="why">${esc(c)}</p>`).join("")}
       ${clubBody(club)}
     </div></details>`;
+}
+
+// What the golfer called this club, or nothing at all. Nothing rather than a placeholder: the
+// undeclared case already has a sentence of its own further down the row (`entryLine`), and a
+// second "not recorded" on the summary line would say it twice about the same club.
+function declaredName(club) {
+  const entry = club.bag_entry;
+  if (!entry) return null;
+  const described = [entry.make, entry.model].filter(Boolean).join(" ");
+  return described ? esc(described) : null;
 }
 
 // The one line most visits came for, on the collapsed row. Carry rather than any other metric,
@@ -931,6 +994,63 @@ function entryLine(club) {
     <span class="muted">(declared ${esc(String(entry.recorded_at).slice(0, 10))})</span>
     <button data-act="edit" data-club="${esc(club.club)}">Edit</button>
     <button data-act="remove" data-club="${esc(club.club)}">Remove</button></p>`;
+}
+
+// Every field of the declared club, read-only, in `contracts/club_spec.py`'s own groups. [M12 P8]
+//
+// The twenty-seven fields have been on this page since P6 — but only inside the *edit* form, and
+// only while it is open. So "is my Titleist 7 iron really on file, and what loft did it get"
+// could be answered only by pressing Edit and reading the numbers out of input boxes, which is a
+// control that says *change this* to someone who wanted to look. Reading and writing are
+// different questions asked at different moments; this is the read, and the buttons above it
+// stay the write.
+//
+// **Derived from `SPEC_FIELDS`, never from a second list.** `tests/api/test_career_page.py` pins
+// that one constant against `ClubSpec`; a display list written out beside it would be exactly
+// the drift that test exists to catch, one surface further out — a field added to the contract
+// and to the form, and silently never shown to the golfer who typed it.
+function specTable(club) {
+  const entry = club.bag_entry;
+  if (!entry) return "";
+  const parts = [`<div class="spec">`];
+  for (const [group, fields] of SPEC_FIELDS) {
+    const rows = [];
+    const blank = [];
+    for (const [key, label] of fields) {
+      const value = specValue(entry[key]);
+      if (value === null) blank.push(label);
+      else rows.push(`<div class="row"><span class="k">${esc(label)}</span>
+        <span class="v">${esc(value)}</span></div>`);
+    }
+    parts.push(`<p class="grp">${esc(group)}</p>`, ...rows);
+    // The blanks are named and never merely counted, and never dropped. Sixteen of these fields
+    // are empty on a club a model looked up; a table that showed only what it had would read as a
+    // complete specification, which is how a golfer comes to believe a loft is on file when
+    // nothing knows one. Naming them also says which question to answer next.
+    if (blank.length) {
+      parts.push(`<p class="blank">not recorded: ${blank.map(esc).join(", ")}</p>`);
+    }
+  }
+  parts.push(`</div>`, provenanceLine(entry));
+  return parts.join("");
+}
+
+// Where the numbers came from, on the row that shows them. ADR-026 §7's whole point is that a
+// loft a model recalled and a loft a golfer read off the manufacturer's own page are not equally
+// trustworthy, and a reader who cannot tell them apart has to treat both as the weaker. `notes`
+// is where the source says which of its own answers it doubts, and it is shown verbatim — it is
+// usually the reason a field listed as blank above is blank.
+function provenanceLine(entry) {
+  const provenance = entry.provenance;
+  const filled = `${filledCount(entry)} of ${SPEC_FIELD_COUNT} fields recorded`;
+  if (!provenance) {
+    // Not an error and not a gap to fill in: `BagEntry.provenance` is None for an entry declared
+    // before anything recorded a source, so this dates the entry rather than doubting it.
+    return `<p class="why">${filled}, from a source this entry predates the recording of.</p>`;
+  }
+  const when = String(provenance.retrieved_at).slice(0, 10);
+  return `<p class="why">${filled} &middot; ${esc(provenance.source)}, retrieved
+    ${esc(when)}</p>${provenance.notes ? `<p class="why">${esc(provenance.notes)}</p>` : ""}`;
 }
 
 // Saving an untouched row is deliberately a no-op on disk: BagStore.set_entry returns without

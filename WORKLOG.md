@@ -5,6 +5,65 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-09-02 — M13: the anchor flips, and 15 artifacts change their sentence without changing a number
+
+**Duration**: one day across several sittings — P1-P7. `contracts/tempo.py`,
+`analysis/tempo_trainer.py`, `analysis/checkpoints/mechanics.py`, `analysis/phases.py` (one
+constant made public), `api/static/tempo.js`, `results.html`, `career.html`, and their mirrored
+tests. Docs: `docs/ARCHITECTURE.md`, `docs/README.md`, `ROADMAP.md`, `docs/M13_DOWNSWING_TEMPO.md`,
+ADR-023's third addendum. Full suite 1404 green, `ruff` and `mypy` clean. **M13 is closed at 8/8.**
+
+**The reversal.** The tempo trainer anchored to the golfer's backswing and derived a downswing from
+it. That is the wrong half to hold fixed: the downswing is what a golfer *feels* — it is how hard
+they swung — and the backswing is what they can deliberately change. It now reads the downswing,
+multiplies by the tour ratio and prescribes the backswing, on both surfaces and in the verdict.
+ADR-023's 2026-08-20 addendum is what this reverses, and its third addendum records that where a
+reader of the second one will meet it.
+
+**No `ANALYSIS_VERSION` bump, deliberately — and it has a cost this session paid.** Nothing
+measured changed: the same `tempo_ratio`, the same band, the same `overall_score`, no row in
+`ranges.json`, six checkpoints still. Bumping would have claimed the numbers moved. The cost is
+that `reanalyze.py --dry-run` reports **nothing to do** — `is_outdated` cannot see a changed
+sentence — so `--all` is the only route onto it, and that is now written into the milestone doc's
+P7 rather than left for the next reader to rediscover.
+
+**All 15 stored swings re-analysed, checked field by field rather than trusted.** The artifacts
+were copied aside first; `score`, `passed`, `observed`, `expected_low`, `expected_high` and
+`overall_score` came back byte-identical on every one, and all 15 messages moved. The stored swing
+now reads *"Tempo too quick - 2.3:1. Your downswing was 384 ms; at the tour ratio that wants a
+1044-1808 ms backswing, and yours was 868. Take it back longer."* A passing one (`2026-08-23/9`)
+carries the same prescription with no instruction — 333 ms down, a 907-1571 ms target, and a
+1034 ms backswing already inside it.
+
+**The guard was deleted, not flipped**, which is the detail the whole milestone was most likely to
+get backwards. Keeping the p10-p90 rule and swapping the metric would refuse this golfer's 384 ms
+downswing and hand back the tour median — a milestone that changes nothing observable. Under this
+anchor the downswing is the given and never the fault. What replaced it is
+`downswing_in_tour_range` (a notice) and `in_range_pace` (an opt-in snap to the nearest edge), and
+the golfer decides.
+
+**`docs/ARCHITECTURE.md` §3 took four edits, not the one P7 predicted.** The anchor-guard paragraph
+split in two, because "no guard" is the claim a reader must leave with; *"via their own backswing"*
+became *"via their own downswing"*, dated; a new paragraph says the verdict derives the same
+backswing **separately** and why `checkpoints/` may not read a `TempoPlan`; and the `pace`
+paragraph gained where the slider's 44-300% comes from (`phases.POSSIBLE_DOWNSWING_S` over the tour
+median, which is why that constant lost its underscore in P3). Review date 2026-09-02.
+
+**One draft sentence was wrong and got corrected in place.** It said the plan and the verdict
+"apply the same tour ratio". They do not: the plan multiplies by the median of the two duration
+rows (3.375), the verdict by the `tempo_ratio` band's edges (2.72-4.71). Two quantities out of two
+distributions that agree on this corpus rather than by construction — a reader who believed they
+were one number would go looking for a shared constant that does not exist.
+
+**Still open, and no document closes it**: nobody has looked at the notice or the snap button in a
+browser. P5's pins run under node.
+
+**Next**: `/doc-check` if you want the sweep — it is manual and was not run from inside P7. Then
+the bay, which is where everything left on the board now waits: M13 was the last item that needed
+neither hardware nor `n`.
+
+---
+
 ## 2026-09-01 — M12 P7: the docs said "nothing consumes this yet" and five things did
 
 **Duration**: ~1 session, docs only. Three docstrings (`clubs/catalogue.py`,

@@ -65,7 +65,7 @@ from golf_coach.storage.manifest import (
 _WHEN = datetime(2026, 8, 25, 1, 0, tzinfo=UTC)
 
 # One frame per 10 ms, so these clips are 100 fps and a frame count reads directly as a duration:
-# `phases._POSSIBLE_DOWNSWING_S` is 12-80 frames here and `_MATCH_TOLERANCE_S` is 12.
+# `phases.POSSIBLE_DOWNSWING_S` is 12-80 frames here and `_MATCH_TOLERANCE_S` is 12.
 _FPS = 100.0
 _ADDRESS_FRAMES = 260
 _RESET_FRAMES = 60  # lowering the hands from the finish back to address, between swings
@@ -418,7 +418,7 @@ def test_with_no_face_on_reference_the_other_view_is_picked_alone_and_says_so(
 # No decoding happens here and none may: every `{role}.audio.json` these tests write already
 # matches the manifest's sha256, which is the same cache contract that keeps this file off cv2 and
 # MediaPipe. A test that started an ffmpeg subprocess would have gone wrong somewhere.
-_OUT_OF_BAND = (70, 90)  # 0.90 s — a descent `phases._POSSIBLE_DOWNSWING_S` will not admit
+_OUT_OF_BAND = (70, 90)  # 0.90 s — a descent `phases.POSSIBLE_DOWNSWING_S` will not admit
 _IN_BAND_DECOY = (60, 18)  # 0.18 s — comfortably in band, and after the ball was gone
 
 

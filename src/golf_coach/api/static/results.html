@@ -135,6 +135,15 @@
   .tempo .facts { font-size: 0.78rem; opacity: 0.7; margin: 0.55rem 0 0;
                   font-variant-numeric: tabular-nums; }
   .tempo .anchor { font-size: 0.76rem; opacity: 0.75; margin: 0.3rem 0 0; }
+  /* The out-of-range notice, and the snap inside it. Deliberately not styled as an error: the
+     downswing it is about is what the target is fitted to, not a fault, so it reads at the same
+     weight as the anchor sentence it follows and is set apart by a rule rather than by colour. */
+  .tempo .notice { font-size: 0.76rem; margin: 0.45rem 0 0; padding: 0.4rem 0 0.4rem 0.55rem;
+                   border-left: 2px solid rgba(200,150,60,0.75); }
+  .tempo .notice button { font: inherit; font-size: 0.74rem; padding: 0.25rem 0.55rem;
+                          margin-left: 0.3rem; border-radius: 6px;
+                          border: 1px solid rgba(128,128,128,0.45); background: transparent;
+                          color: inherit; cursor: pointer; white-space: nowrap; }
   .tempo .src { font-size: 0.72rem; opacity: 0.55; margin: 0.3rem 0 0; }
   details.measured { margin-top: 1.5rem; font-size: 0.85rem; }
   details.measured summary { cursor: pointer; font-size: 0.8rem; text-transform: uppercase;
@@ -369,19 +378,23 @@ function tempoBlock(payload, swing) {
 // The mechanism — the beats, the audio, the strip, the pace control — is `static/tempo.js`,
 // shared with career.html since ADR-023 grew a second trainer. What stays here is this page's own
 // framing, which is not shared because it is not the same: this one is answering "*this swing* was
-// quick", and the anchor it reports is one swing's backswing or the tour median, with no third
+// quick", and the anchor it reports is one swing's downswing or the tour median, with no third
 // state to describe.
 function wireTempo(payload) {
   const plan = payload.tempo_plan;
   if (!plan) return;
   TempoTrainer.wire(plan, {
-    // Which backswing the target was built on. A golfer swinging at 90 mph and one at 110 do not
-    // share an absolute tempo — the corpus puts a whole speed cohort 167 ms apart on the backswing
-    // — so the trainer fits to theirs where it can, and has to say when it could not.
+    // Which downswing the target was built on, because that is the half the target is fitted to
+    // since M13: the downswing is what the golfer feels — how hard they swung — and the backswing
+    // is what the drill prescribes. A golfer swinging at 90 mph and one at 110 do not share an
+    // absolute tempo, so the trainer fits to theirs where it can and has to say when it could not.
+    //
+    // `anchored` false now means one thing only: this swing had no timeable tempo. The guard that
+    // could also *reject* a measured half is deleted — an out-of-range downswing is a notice on
+    // the plan, and `tempo.js` renders it, so this sentence must not claim one was refused.
     anchorText: plan.anchored
-      ? "Matched to your own backswing — only the ratio is the tour's."
-      : "Set to the tour median backswing: yours sits outside the tour range, so matching it would "
-        + "have built the drill around the half that needs changing.",
+      ? "Matched to your own downswing — the backswing it asks for is the tour's ratio over it."
+      : "Set to the tour median downswing: this swing had no timeable tempo to fit to.",
   });
 }
 

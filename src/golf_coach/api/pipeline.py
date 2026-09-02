@@ -755,7 +755,7 @@ def _auto_windows(
     becomes the reference for a second attempt at face-on. On `2026-08-23/8` face-on's real
     descent measured 0.467 s and missed the duration bound of the day by 0.017 s, so the view every
     checkpoint is measured from was scored over its whole clip; the down-the-line view was
-    confident at 0.400 s and recovered it. That bound is now `phases._POSSIBLE_DOWNSWING_S` and
+    confident at 0.400 s and recovered it. That bound is now `phases.POSSIBLE_DOWNSWING_S` and
     admits 0.467 s outright, so the rescue no longer fires on *this* bundle — it is kept because
     the reverse path is the one with no alternative, not because of the clip it was found on.
 

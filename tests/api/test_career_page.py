@@ -86,3 +86,43 @@ def test_the_page_holds_no_second_copy_of_a_closed_vocabulary() -> None:
     page = _PAGE.read_text(encoding="utf-8")
     assert "xx_stiff" not in page
     assert "multi_material" not in page
+
+
+#: The page the golfer chip links into. Read alongside `career.html` because the fragment is a
+#: contract between two hand-written files and neither one can see the other.
+_UPLOAD_PAGE = _PAGE.parent / "index.html"
+
+
+def test_the_bag_is_reachable_by_the_name_it_is_linked_under() -> None:
+    """`#bag` resolves, from both pages that point at it.
+
+    A broken fragment is the quietest failure a link has: the browser navigates, nothing scrolls,
+    and the page looks like it simply chose not to move. There is no error anywhere, so nothing
+    but a test notices — and what it costs is the one route to the bag from a phone standing in
+    the bay, which is the whole reason the link exists.
+
+    The id is on the `<h2>` and deliberately not on `#bag-body` beneath it: `renderBag` replaces
+    that container's subtree on every edit, and an anchor inside a subtree that gets rewritten is
+    an anchor that works until someone saves a club.
+    """
+    page = _PAGE.read_text(encoding="utf-8")
+    assert '<h2 id="bag">Bag</h2>' in page
+    assert 'href="#bag"' in page
+    assert "#bag" in _UPLOAD_PAGE.read_text(encoding="utf-8")
+
+
+def test_the_declared_spec_is_readable_without_opening_the_editor() -> None:
+    """Every spec field shows on the row, and from the same list the form is built from.
+
+    The gap this closes: P6 put all twenty-seven fields on the page and put every one of them
+    inside the edit form, so the only way to read a declared loft was to press a button that says
+    *change this*. `specTable` is the read, and it walks `SPEC_FIELDS` — the constant the tests
+    above pin against `ClubSpec` — so the display cannot drift from the contract independently of
+    the form. A second field list here would reintroduce exactly the drift those tests catch.
+    """
+    page = _PAGE.read_text(encoding="utf-8")
+    body = page[page.index("function specTable("):page.index("function provenanceLine(")]
+    assert "SPEC_FIELDS" in body
+    # No field name of its own. The regex is the one above, and a match inside this function
+    # would mean the read-only view had started listing fields for itself.
+    assert not _FIELD.findall(body)

@@ -960,7 +960,7 @@ def test_an_arbitrated_reference_that_is_no_downswing_is_imposed_with_a_caution(
     """Knowing which top is wrong is not the same as knowing where the right one is - so say so.
 
     Bundle 4's shape with its down-the-line downswing stretched to 0.917s — past
-    `phases._POSSIBLE_DOWNSWING_S`, which no golfer's downswing reaches. §E4 says this family's
+    `phases.POSSIBLE_DOWNSWING_S`, which no golfer's downswing reaches. §E4 says this family's
     down-the-line impact anchor is the *early* kind, so P6 pushing tau=2 later only lengthens it
     further. That reference really is suspect. It is imposed regardless, because the alternative on
     this bundle was a down-the-line panel replayed at 3.11x, and the note carries the doubt instead

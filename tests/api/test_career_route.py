@@ -17,6 +17,8 @@ keeps `test_results.py` on the base install with no worker, no threads and no cv
 from __future__ import annotations
 
 import json
+import re
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -25,6 +27,7 @@ from golf_coach.api.app import create_app
 from golf_coach.api.state import AnalysisState, input_hashes, save_state
 from golf_coach.contracts.golfer import Handedness
 from golf_coach.contracts.swing import ANALYSIS_VERSION
+from golf_coach.contracts.tempo import TempoAnchor
 from golf_coach.storage.bundle_store import SwingBundleStore
 from golf_coach.storage.golfer_store import GolferStore
 
@@ -238,6 +241,42 @@ def test_a_reading_survives_json_while_the_mean_over_it_does_not(client, store) 
     # target is the tour's. `anchor` and `plan.anchored` never disagree — the plan builder decides.
     assert tempo["anchor"] == "tour_median"
     assert tempo["plan"]["anchored"] is False
+
+
+_CAREER_PAGE = Path(__file__).resolve().parents[2] / "src/golf_coach/api/static/career.html"
+
+#: `career_mean: "..."` through to the next key or the closing brace. Coarse on purpose, and for
+#: the reason `test_career_page.py` gives for parsing `SPEC_FIELDS` the same way: a parser that
+#: understood JavaScript would be the build step this repo declined.
+_ANCHOR_SENTENCE = re.compile(r"^  ([a-z_]+): (.*?)(?=^  [a-z_]+:|^\};)", re.M | re.S)
+
+
+def _anchor_sentences() -> dict[str, str]:
+    """`career.html`'s `ANCHOR_TEXT`, as anchor name -> the source of its sentence."""
+    page = _CAREER_PAGE.read_text(encoding="utf-8")
+    block = page.split("const ANCHOR_TEXT = {", 1)[1]
+    return dict(_ANCHOR_SENTENCE.findall(block[: block.index("};") + 2]))
+
+
+def test_every_anchor_this_route_can_send_has_a_sentence_naming_the_right_half() -> None:
+    """The page's three sentences against the enum this route serializes. [M13 P5]
+
+    `TempoAnchor` and `ANCHOR_TEXT` are two surfaces over one vocabulary and one of them is
+    hand-written, which is the shape of failure `test_career_page.py` was written for one layer
+    over: a member added here and missing there renders an empty anchor line — the trainer still
+    plays, and nothing anywhere reports a problem.
+
+    The second assertion is M13's, and it is the milestone in one line. Every sentence names the
+    **downswing**, because that is the half the target is fitted to; a sentence still saying the
+    drill was matched to a backswing would describe the anchor this milestone reversed. Naming the
+    backswing as the thing *prescribed* is fine and is what `results.html` does — what is checked
+    is that the fitted half is named, not that the other one is unmentionable.
+    """
+    sentences = _anchor_sentences()
+
+    assert set(sentences) == {anchor.value for anchor in TempoAnchor}
+    for name, text in sentences.items():
+        assert "downswing" in text, f"{name} does not say which downswing it was fitted to"
 
 
 def test_a_golfer_with_no_swings_still_gets_a_target(client, store, golfers) -> None:
