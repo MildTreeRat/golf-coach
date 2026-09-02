@@ -28,6 +28,7 @@ wording; only the grouping and the M4 checklist have been corrected.
 | **M10** Alignment accuracy | ✅ Done *(2026-08-26)*, 10/10 phases | — (the corpus has been re-analysed against the fix; the face-on top it left landing late was closed by M11 on 2026-08-29) | [§M10](#m10-alignment-accuracy--the-two-panels-leave-address-together--done) |
 | **M11** Acoustic sync | ✅ Done *(2026-08-30)*, 12/12 phases | — (P10 and P11 closed the addendum's residual: the anchor now matches contact by eye to within a frame on all ten clips read frame by frame) | [§M11](#m11-acoustic-sync--the-ball-strike-is-the-clock--done) |
 | **M12** Club specs | ✅ Done *(2026-09-01)*, 8/8 phases | — (desk work, and it produced the first `.bag.json` this repo has ever held; only the form's **layout on a phone** is unverified) | [§M12](#m12-club-specs--the-golfer-names-a-club-the-program-determines-what-it-is--done) |
+| **M13** Downswing tempo | ⬜ Not started, 0/8 phases | Nothing — desk work on the two swings already on disk | [§M13](#m13-downswing-tempo--the-downswing-is-what-you-feel-the-backswing-is-what-you-change) |
 | **M5** Feedback UI | ⬜ Not started | M7 Phase 5 gives the host | [§M5](#milestone-5-feedback-ui) |
 | **M2** Club & ball detection | 🔒 Gated, **and M1.5 said no-go** | Bay lighting for a ~1/2000 s exposure — *not* a global-shutter camera | [§M2](#milestone-2-club--ball-detection) |
 | Hardware re-validation | 🔒 Gated | Cameras / launch monitor arriving | [§Gate](#hardware-re-validation-gate-revisit-when-cameras--launch-monitor-arrive) |
@@ -1763,6 +1764,42 @@ done, listed here so the remaining work below is not misread as a fresh start:
 
 **Exit Criteria**: System correctly identifies at least 5 common swing faults on test swings,
 scoring both axes.
+
+---
+
+## M13: Downswing tempo — the downswing is what you feel, the backswing is what you change
+
+**Status**: ⬜ Not started, 0/8 phases. Desk work — it runs on the two swings already on disk and
+needs no bay session, which makes it the one open item on this board that does not wait on `n`.
+
+**Goal**: The tempo trainer anchors its target to the golfer's **backswing** and derives the
+downswing from it at the tour ratio ([ADR-023](docs/decisions/023-tempo-training-and-absolute-swing-durations.md)'s
+2026-08-20 addendum). That is the wrong half to hold fixed: the downswing is what a golfer *feels*
+— it is how hard they swung — and the backswing is what they can deliberately change. Flip it.
+Read the downswing, multiply by the tour ratio, prescribe the backswing, and re-word the tempo
+verdict from an abstract ratio into a backswing duration in milliseconds.
+
+On the swing on disk (901 ms back / 384 ms down, 2.35:1) the target moves from *901 back / 267
+down* to **1296 back / 384 down**, and the verdict from *"aim for the tour range 2.72–4.71:1"* to
+*"your downswing was 384 ms; at the tour ratio that wants a 1044–1808 ms backswing and yours was
+901."*
+
+**What it deliberately does not do**: no band on `downswing_ms` — ADR-023 §1 stands, the panel
+stays at six checkpoints, `overall_score` is byte-identical and `ANALYSIS_VERSION` does not move.
+The whole milestone is one divisor, one deleted guard, three contract fields and some prose.
+
+**The detail most likely to be implemented backwards**: the anchor guard is *deleted*, not flipped.
+Keeping the p10–p90 rule and merely swapping the metric refuses this golfer's 384 ms downswing and
+hands them the tour median — a milestone that changes nothing observable on either swing on file.
+What replaces it is a notice that the downswing sits outside the tour range, plus an opt-in snap to
+the nearest in-range value.
+
+Phases, files, tests and the arithmetic are in
+[docs/M13_DOWNSWING_TEMPO.md](docs/M13_DOWNSWING_TEMPO.md). P0 writes ADR-023's third addendum.
+
+**Exit criteria**: the pace slider opens at the fitted 144% rather than clamping to 140, the beat
+strip plays the golfer's own downswing interval, and the tempo checkpoint names a backswing target
+in milliseconds — with no row added to `ranges.json`.
 
 ---
 
