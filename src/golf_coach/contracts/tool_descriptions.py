@@ -131,8 +131,9 @@ GET_CLUB_PROFILE = (
     "distance and launch figure, because those are read off a photograph of the simulator screen "
     "while `n_swings` counts clips. Nothing here says how far a golfer should hit a club, so a "
     "distance never earns a bias finding — only a repeatability one. And a club with no bag entry "
-    "has no loft on record: refuse loft and fitting questions about it rather than substituting a "
-    "catalogue value."
+    "has no loft on record: refuse loft and fitting questions about it rather than filling the gap "
+    "yourself. A loft that IS on record is the manufacturer's published figure unless the golfer "
+    "says they measured it, so it describes the model and not a club that has been bent."
 )
 
 #: tool name -> description, derived from the constants above rather than retyped.

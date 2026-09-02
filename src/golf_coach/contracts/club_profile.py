@@ -70,10 +70,12 @@ class ClubProfile(BaseModel):
         default=None,
         description=(
             "The physical club declared in this slot, or None when the golfer has not declared "
-            "one. None is not a gap to be filled with a catalogue default — it is what makes a "
-            "loft or fitting question refuse for this club while its distance statistics stay "
-            "perfectly readable, the same per-input refusal `SwingResult.unscored` performs "
-            "(ADR-024 §2)."
+            "one. None is not a gap to be filled in from anywhere — it is what makes a loft or "
+            "fitting question refuse for this club while its distance statistics stay perfectly "
+            "readable, the same per-input refusal `SwingResult.unscored` performs. A declared "
+            "entry's loft is the **published** one (ADR-026 §1 reverses ADR-024 §2), filled by "
+            "lookup and confirmed by the golfer, so it describes the model rather than this "
+            "particular club if the club has been bent."
         ),
     )
     in_bag: bool = Field(

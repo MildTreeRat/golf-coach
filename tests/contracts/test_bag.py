@@ -29,6 +29,7 @@ from pydantic import ValidationError
 
 from golf_coach.contracts.bag import Bag, BagEntry
 from golf_coach.contracts.club import ClubId
+from golf_coach.contracts.club_spec import ShaftFlex, ShaftMaterial, SpecProvenance
 
 _WHEN = datetime(2026, 8, 21, 12, 0, tzinfo=UTC)
 _LATER = datetime(2026, 8, 21, 13, 0, tzinfo=UTC)
@@ -49,7 +50,9 @@ def test_bag_round_trips_through_json() -> None:
         player_id="aaron",
         entries={
             ClubId.SEVEN_IRON: _entry(ClubId.SEVEN_IRON, loft_deg=34.0, make="Titleist"),
-            ClubId.SAND_WEDGE: _entry(ClubId.SAND_WEDGE, shaft="Dynamic Gold", length_in=35.25),
+            ClubId.SAND_WEDGE: _entry(
+                ClubId.SAND_WEDGE, shaft_model="Dynamic Gold", length_in=35.25
+            ),
         },
         updated_at=_WHEN,
     )
@@ -160,22 +163,25 @@ def test_same_club_ignores_the_timestamps_and_nothing_else() -> None:
     later. A loft arriving where there was none is a real change — it is the day the club became
     measurable, and the shots before it were judged without it.
     """
-    titleist = _entry(ClubId.SEVEN_IRON, make="Titleist", loft_deg=34.0, shaft="Dynamic Gold")
+    titleist = _entry(
+        ClubId.SEVEN_IRON, make="Titleist", loft_deg=34.0, shaft_model="Dynamic Gold"
+    )
 
     same_declaration_much_later = BagEntry(
         club=ClubId.SEVEN_IRON,
         make="Titleist",
         loft_deg=34.0,
-        shaft="Dynamic Gold",
+        shaft_model="Dynamic Gold",
         recorded_at=_LATER,
         retired_at=_LATER,
+        provenance=SpecProvenance(source="typed", retrieved_at=_LATER),
     )
     assert titleist.same_club_as(same_declaration_much_later), "timestamps are not identity"
 
     for field, value in (
         ("make", "Ping"),
         ("model", "i230"),
-        ("shaft", "Project X"),
+        ("shaft_model", "Project X"),
         ("loft_deg", 32.0),
         ("length_in", 37.0),
         ("club", ClubId.EIGHT_IRON),
@@ -184,13 +190,45 @@ def test_same_club_ignores_the_timestamps_and_nothing_else() -> None:
         assert not titleist.same_club_as(other), f"{field} changed and went unnoticed"
 
 
+def test_a_second_lookup_of_the_same_club_is_the_same_club() -> None:
+    """**The M12 P2 pin.** `provenance` carries a clock and must not read as a spec change.
+
+    Two entries identical in every published field, differing only in when the specification was
+    retrieved and by what. Without `provenance` in the exclusion set they compare unequal, and the
+    consequence is not an error: `BagStore.set_entry` retires the good entry and M9 P16 raises a
+    bag-changed caveat over shots that were every one of them hit with the same club. The bag looks
+    right the whole time, which is why this is pinned at the contract as well as at the store
+    (`tests/storage/test_bag_store.py`) — the defect is one line and produces a wrong sentence
+    rather than a failure (ADR-026 §4).
+    """
+    looked_up = _entry(
+        ClubId.SEVEN_IRON,
+        make="Titleist",
+        model="T150",
+        loft_deg=30.5,
+        provenance=SpecProvenance(source="llm:claude-opus-5", retrieved_at=_WHEN),
+    )
+    looked_up_again = looked_up.model_copy(
+        update={
+            "provenance": SpecProvenance(
+                source="catalogue", retrieved_at=_LATER, notes="served from club_catalogue.json"
+            )
+        }
+    )
+
+    assert looked_up.same_club_as(looked_up_again), "a second lookup is not a second club"
+    assert looked_up.same_club_as(looked_up.model_copy(update={"provenance": None}))
+
+
 def test_same_club_compares_every_descriptive_field_that_exists() -> None:
     """The derivation itself, since `same_club_as` excludes rather than lists.
 
-    A field added to `BagEntry` and forgotten here would silently never count as a change. Walking
-    the declaration means the pin covers it on the day it is added (R6).
+    A field added to `BagEntry` — or, since M12 P2, to the `ClubSpec` it inherits — and forgotten
+    here would silently never count as a change. Walking the declaration means the pin covers it on
+    the day it is added (R6), and `_ODD_VALUES` is keyed by field name so a new field fails with a
+    KeyError naming itself rather than being skipped.
     """
-    compared = set(BagEntry.model_fields) - {"recorded_at", "retired_at"}
+    compared = set(BagEntry.model_fields) - {"recorded_at", "retired_at", "provenance"}
     base = _entry(ClubId.SEVEN_IRON)
 
     assert compared, "every field is excluded — same_club_as compares nothing"
@@ -199,14 +237,42 @@ def test_same_club_compares_every_descriptive_field_that_exists() -> None:
 
 
 #: One value per comparable field that differs from `BagEntry`'s default. Keyed by field name so
-#: the test above fails loudly on a new field rather than skipping it.
+#: the test above fails loudly on a new field rather than skipping it. Grouped as `ClubSpec`
+#: declares them, so a field added to a group there is added to the same group here.
 _ODD_VALUES: dict[str, object] = {
+    # Identity
     "club": ClubId.EIGHT_IRON,
-    "loft_deg": 41.5,
     "make": "Ping",
     "model": "i230",
-    "shaft": "Project X",
+    "model_year": 2021,
+    "head_type": "game improvement",
+    "set_composition": "4-PW",
+    # Head
+    "loft_deg": 41.5,
+    "lie_deg": 62.5,
+    "bounce_deg": 7.0,
+    "grind": "S",
+    "offset_mm": 3.2,
+    "face_angle_deg": 1.0,
+    "head_weight_g": 271.0,
+    "adjustable_hosel": True,
+    "loft_range_deg": (7.25, 10.75),
+    # Shaft
+    "shaft_model": "Project X",
+    "shaft_material": ShaftMaterial.GRAPHITE,
+    "shaft_flex": ShaftFlex.STIFF,
+    "shaft_weight_g": 120.0,
+    "shaft_torque_deg": 2.1,
+    "shaft_kick_point": "low",
+    # Assembly
     "length_in": 37.0,
+    "swing_weight": "D2",
+    "total_weight_g": 415.0,
+    "grip": "Golf Pride MCC",
+    # Head performance
+    "cor": 0.83,
+    "moi_g_cm2": 5100.0,
+    "usga_conforming": True,
 }
 
 

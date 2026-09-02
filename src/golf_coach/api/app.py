@@ -41,11 +41,19 @@ from golf_coach.api.state import (
     resolve_tempo_plan,
 )
 from golf_coach.api.worker import AnalysisWorker, should_analyze
+from golf_coach.clubs import catalogue
+from golf_coach.clubs.lookup import ClubLookupOutcome, look_up_club, look_up_set
 from golf_coach.config import settings
 from golf_coach.contracts.bag import BagEntry
 from golf_coach.contracts.career import CareerCorpus
 from golf_coach.contracts.club import ClubId, parse_club
 from golf_coach.contracts.club_profile import BagProfile
+from golf_coach.contracts.club_spec import (
+    ClubSpec,
+    SpecProvenance,
+    parse_shaft_flex,
+    parse_shaft_material,
+)
 from golf_coach.contracts.conversation import Transcript
 from golf_coach.contracts.golfer import Golfer, Handedness, slugify
 from golf_coach.storage.bag_store import BagStore
@@ -131,13 +139,99 @@ class BagEntryRequest(BaseModel):
     `recorded_at` is absent for the reason `bag_store.py` states in its module docstring: the store
     owns the clock and discards whatever a caller passes, so a field for it here would be a value
     the API accepts and silently ignores.
+
+    **`shaft` split into six fields in M12 P2** and this list moved with it, because a body field
+    that no longer exists on `BagEntry` is worse than a missing one: pydantic would accept the old
+    `shaft` string, the route would drop it on the way to the contract, and the page would show a
+    200 for a value that went nowhere. **M12 P5 finished the job**: the head, assembly and
+    performance groups are here now, because `POST /api/clubs/lookup` fills them and a spec that
+    arrives on the page and cannot be posted back is a form that silently loses what it was shown.
+
+    **The list is hand-written and pinned rather than derived**, and the pin is what makes that
+    safe: `test_the_request_carries_every_spec_field` compares this field set against
+    `ClubSpec.model_fields` on every run. Deriving it with `create_model` was the alternative and
+    it buys less than it looks — three fields differ from the contract on purpose (`club` is the
+    path segment, the two vocabularies are `str`, `provenance` is added), so the derivation would
+    need three exceptions and would still not be readable at the boundary a 422 comes from.
+
+    **`shaft_material` and `shaft_flex` are `str` here and enums on `ClubSpec`**, for the reason
+    `ClubRequest` states two classes up: typing them as the enum makes pydantic reject `"S"` and
+    `"Stiff Flex"` with a 422 before `parse_shaft_flex` ever runs, and those tolerant spellings are
+    the entire reason that parser exists — a shaft band says `"S"` and nothing else. They are parsed
+    in `_resolve_shaft_vocabularies`, which keeps `contracts/club_spec.py` the only place text
+    becomes a `ShaftFlex`.
+
+    **`provenance` is typed as the contract model and not as loose text** [M12 P5]. It is echoed
+    back verbatim from a lookup response rather than composed by the page, so there are no tolerant
+    spellings to accept and a malformed block is a 422 rather than a value quietly dropped on the
+    way to disk — which for this field would mean an LLM's answer landing in the bag looking like
+    something a person typed (ADR-026 §7). Absent means typed: `set_bag_entry` stamps `"typed"`,
+    so the M9 hand-filled form keeps working and still says where its numbers came from.
     """
 
-    loft_deg: float | None = None
+    # --- Identity. `club` is deliberately absent: it is the path segment (see above).
     make: str = ""
     model: str = ""
-    shaft: str = ""
+    model_year: int | None = None
+    head_type: str = ""
+    set_composition: str = ""
+
+    # --- Head.
+    loft_deg: float | None = None
+    lie_deg: float | None = None
+    bounce_deg: float | None = None
+    grind: str = ""
+    offset_mm: float | None = None
+    face_angle_deg: float | None = None
+    head_weight_g: float | None = None
+    adjustable_hosel: bool | None = None
+    loft_range_deg: tuple[float, float] | None = None
+
+    # --- Shaft. The two vocabularies are `str` here and parsed at the boundary.
+    shaft_model: str = ""
+    shaft_material: str = ""
+    shaft_flex: str = ""
+    shaft_weight_g: float | None = None
+    shaft_torque_deg: float | None = None
+    shaft_kick_point: str = ""
+
+    # --- Assembly.
     length_in: float | None = None
+    swing_weight: str = ""
+    total_weight_g: float | None = None
+    grip: str = ""
+
+    # --- Head performance.
+    cor: float | None = None
+    moi_g_cm2: float | None = None
+    usga_conforming: bool | None = None
+
+    # --- Where the numbers came from. Not a spec field; see the docstring.
+    provenance: SpecProvenance | None = None
+
+
+class ClubLookupRequest(BaseModel):
+    """A make, a model and one or more slots, on their way to being looked up. [M12 P5]
+
+    `club` and `slots` are the same question asked for one club or for a set, and a body may carry
+    either. `slots` wins when both are present rather than being a 400, because the two cannot
+    contradict each other in a way worth refusing — a set containing the single club is the same
+    request, and a bay is not the place to argue about which field the page filled in.
+
+    Every club is a plain `str` for `ClubRequest`'s reason: `_resolve_club` parses it, so "7 iron"
+    works here as it does at the bay and `contracts/club.py` stays the only place free text becomes
+    a `ClubId`.
+
+    `make` and `model` carry no default that would let a blank one through — they are the catalogue
+    key, and the route refuses a lookup without both rather than buying an answer that can never be
+    remembered (see `look_up_clubs`).
+    """
+
+    make: str = ""
+    model: str = ""
+    model_year: int | None = None
+    club: str = ""
+    slots: list[str] = []
 
 
 class AskRequest(BaseModel):
@@ -176,6 +270,34 @@ def _resolve_golfer(golfers: GolferStore, payload: GolferRequest) -> Golfer:
     return golfers.get_or_create(payload.name, payload.handedness)
 
 
+def _resolve_shaft_vocabularies(payload: BagEntryRequest) -> dict[str, object]:
+    """The saved entry's fields, with the two closed vocabularies parsed — or a 400. [M12 P2]
+
+    `_resolve_club`'s shape applied to the other two vocabularies this repo closed, and refusing for
+    the same asymmetry: a rejected flex costs one retype in a form the golfer is looking at, while a
+    nudged one records a graphite shaft's weight against a steel label where nothing downstream ever
+    flags it (`club_spec.py`'s `parse_shaft_material`).
+
+    An empty string stays absent rather than becoming a refusal. Omitting a field is *undeclared*,
+    which is `BagEntryRequest`'s rule for every other field and has to be this one's too — the M9
+    row form does not ask for a material at all, so a 400 on blank would make it unsavable.
+    """
+    fields = payload.model_dump()
+    for name, parse in (("shaft_material", parse_shaft_material), ("shaft_flex", parse_shaft_flex)):
+        typed = fields[name]
+        if not typed:
+            fields[name] = None
+            continue
+        parsed = parse(typed)
+        if parsed is None:
+            raise HTTPException(
+                status_code=400,
+                detail=f"{typed!r} is not a {name.replace('_', ' ')} this recognises",
+            )
+        fields[name] = parsed
+    return fields
+
+
 def _resolve_club(payload: ClubRequest) -> ClubId:
     """Typed text to a club, or a 400 naming what was rejected. The first caller of `parse_club`.
 
@@ -190,6 +312,70 @@ def _resolve_club(payload: ClubRequest) -> ClubId:
             detail=f"{payload.club!r} is not a club in the bag — try '7i', '7 iron' or 'pw'",
         )
     return club
+
+
+def _resolve_slots(payload: ClubLookupRequest) -> tuple[ClubId, ...]:
+    """The slots a lookup was asked for, parsed and deduplicated in the order they arrived. [P5]
+
+    Every string goes through `_resolve_club`, `slots` included, so a set request cannot smuggle in
+    a spelling the per-club save route would later refuse — the page would show a filled-in row for
+    a club that cannot be saved, which is a worse failure than a 400 on the way in.
+
+    Duplicates collapse here rather than in `look_up_set`, because the catalogue pass below runs
+    first and a slot asked for twice would otherwise be looked up once and rendered twice.
+    """
+    typed = payload.slots or ([payload.club] if payload.club else [])
+    if not typed:
+        raise HTTPException(
+            status_code=400,
+            detail="name a club to look up — 'club' for one, or 'slots' for a set",
+        )
+    return tuple(dict.fromkeys(_resolve_club(ClubRequest(club=text)) for text in typed))
+
+
+def _look_up_missing(
+    make: str, model: str, model_year: int | None, slots: tuple[ClubId, ...]
+) -> ClubLookupOutcome:
+    """The clubs the catalogue could not answer, in **one** model call. [P5]
+
+    No slots is an empty outcome and no call at all, which is the whole point of the catalogue: a
+    bag looked up a second time costs nothing and reaches no network. It is a value rather than a
+    `None` so the caller has one shape to read either way.
+
+    One slot goes through `look_up_club` and several through `look_up_set` — the same request
+    underneath, kept as two calls because a set is asked for together so its loft, lie and length
+    progression stays internally consistent (ADR-026 §6), and a single club has no progression to
+    keep. The key is unwrapped here and passed on as a plain `str`: `api/app.py` is one of
+    `tests/test_config.py`'s sanctioned sites and ADR-019's surface does not widen for this.
+    """
+    if not slots:
+        return ClubLookupOutcome()
+    api_key = (
+        settings.anthropic_api_key.get_secret_value() if settings.anthropic_api_key else None
+    )
+    if len(slots) == 1:
+        return look_up_club(
+            make, model, model_year, slots[0], llm_model=settings.coaching_model, api_key=api_key
+        )
+    return look_up_set(
+        make, model, model_year, slots, llm_model=settings.coaching_model, api_key=api_key
+    )
+
+
+def _spec_of(entry: BagEntry) -> ClubSpec:
+    """The published specification inside a bag entry, with the three declaration fields dropped.
+
+    `BagEntry` **is** a `ClubSpec`, so `catalogue.remember` would accept one as it stands — and
+    pydantic would keep the subclass, writing `recorded_at`, `retired_at` and `provenance` into
+    every catalogue row. Those are facts about one golfer's declaration and the catalogue is a
+    statement about a manufactured object; a row carrying them would say a T150 7 iron was declared
+    on a Tuesday, which is true of nobody but the person who declared it.
+
+    Built by walking `ClubSpec.model_fields` rather than listing the two dozen names, for the
+    reason `same_club_as` compares by exclusion: a field added to the contract has to travel here
+    from the day it is added, and a hand-written list's failure is a spec silently missing it.
+    """
+    return ClubSpec(**{name: getattr(entry, name) for name in ClubSpec.model_fields})
 
 
 def _golfer_payload(golfer: Golfer | None) -> dict | None:
@@ -548,6 +734,95 @@ def create_app(
             "bag": [club.value for club in bag.club_ids] if bag is not None else [],
         }
 
+    @app.post("/api/clubs/lookup", dependencies=guard)
+    def look_up_clubs(payload: ClubLookupRequest) -> dict:
+        """What a named club *is* — from the catalogue if it is known, from a model if it is not.
+
+        **Writes nothing** (ADR-026 §5). What comes back is a proposal; the golfer confirming it on
+        the bag route below is what turns it into a declaration, and that separation is the only
+        thing keeping a hallucinated lie angle distinguishable from a typed one.
+
+        **Deliberately `def`, not `async def`**, exactly as `ask_about_swing` is and for the same
+        reason: the model call is blocking and a seven-slot request at `EFFORT = "high"` takes long
+        enough to matter. Starlette runs a sync handler in a threadpool, so a slow lookup costs one
+        worker and never the event loop, the upload stream or the analysis worker. P4 left the
+        timing question open and this is the answer to it — the budget is a threadpool slot, not
+        the server.
+
+        **The catalogue is consulted per slot, not per request**, so a set half of which has been
+        confirmed before asks the model only for the other half. Serving one hit and looking up the
+        rest is the common shape once a bag is being filled in a club at a time.
+
+        A make or model that slugifies to nothing is a 400 rather than a lookup. The model would
+        answer something for "" and `catalogue.remember` could never key it, so the request would
+        be a purchase that has to be made again every time — the catalogue calling the API forever
+        while looking exactly like it was working (`catalogue.catalogue_key`).
+
+        Every other failure is a 200 carrying a `note`: no key, no `llm` extra, a rate limit, a
+        refusal. A golfer who cannot reach a model still has a form to type into, which is the M9
+        state this milestone improves on and not a regression from it.
+        """
+        make, model = payload.make.strip(), payload.model.strip()
+        if not slugify(make) or not slugify(model):
+            raise HTTPException(
+                status_code=400,
+                detail="a lookup needs a make and a model — e.g. 'Titleist' and 'T150'",
+            )
+        requested = _resolve_slots(payload)
+
+        remembered = {
+            slot: row
+            for slot in requested
+            if (row := catalogue.lookup(make, model, payload.model_year, slot)) is not None
+        }
+        outcome = _look_up_missing(
+            make, model, payload.model_year, tuple(c for c in requested if c not in remembered)
+        )
+        # Keyed on the slot the spec carries, which `clubs/lookup.py` sets from the *request* and
+        # never from the model's echo — so a row can never land against a club nobody asked for.
+        looked_up = {spec.club: spec for spec in outcome.specs}
+
+        candidates: list[dict[str, object]] = []
+        for slot in requested:
+            row = remembered.get(slot)
+            if row is not None:
+                # The row's own provenance travels, not the word "catalogue": the catalogue is
+                # where an answer was kept and not where it came from, and flattening the two
+                # would lose exactly the distinction ADR-026 §7 asks it to preserve.
+                candidates.append(
+                    {
+                        "served_from": "catalogue",
+                        "spec": row.spec.model_dump(mode="json"),
+                        "provenance": row.provenance.model_dump(mode="json"),
+                    }
+                )
+            elif (spec := looked_up.get(slot)) is not None:
+                candidates.append(
+                    {
+                        "served_from": "lookup",
+                        "spec": spec.model_dump(mode="json"),
+                        # One provenance for the whole call, echoed onto each spec it produced. The
+                        # page posts it back on save, which is what carries the model id and its
+                        # own confidence notes into the bag entry.
+                        "provenance": (
+                            outcome.provenance.model_dump(mode="json")
+                            if outcome.provenance is not None
+                            else None
+                        ),
+                    }
+                )
+
+        return {
+            "make": make,
+            "model": model,
+            "model_year": payload.model_year,
+            # Identity is echoed rather than read back off a candidate, because the page needs it
+            # even when there are no candidates at all — a noted empty answer still has to leave
+            # the golfer looking at the club they asked about.
+            "candidates": candidates,
+            "note": outcome.note,
+        }
+
     @app.get("/api/sessions/current/golfer", dependencies=guard)
     async def get_current_golfer() -> dict:
         session_id = bundle_store.current_session_id()
@@ -708,17 +983,39 @@ def create_app(
         the bay and `contracts/club.py` keeps its claim to be the only place free text becomes a
         `ClubId`. No `_safe` on that segment: it never becomes a filesystem path — the bag file is
         named after the golfer — and `parse_club` is the stricter guard anyway.
+
+        **This is the confirm half of ADR-026 §5**, and the second write it performs is
+        `catalogue.remember`. What a model proposed is a proposal; what a person accepted is worth
+        serving to the next lookup of the same club, so the catalogue learns here and never at the
+        lookup route. It cannot fail this request: every refusal in `remember` is silent, because
+        the bag is the record and the catalogue is a cache — a golfer whose club is now correctly
+        in their bag must not see a 500 because a JSON file was busy.
+
+        **What the catalogue learns is this golfer's club**, which is the cost on the record: a
+        shaft cut half an inch short is remembered as the model's length and served to the next
+        lookup of that model. Accepted for the same reason ADR-026 §1 accepts a bent loft — the
+        fields are editable and every row carries provenance — and the thing that would fix it, a
+        per-field "as built" flag, is the deferred measured-loft field wearing a different hat.
         """
         golfer = _registered(player_id)
         club_id = _resolve_club(ClubRequest(club=club))
-        # `recorded_at` is stamped here only because the contract requires one; `set_entry`
-        # discards it and stamps its own. The store owns the clock (`bag_store.py`), the same way
-        # `GolferStore.get_or_create` owns `created_at` — one stamping site, in the layer that
-        # knows when the write actually happened.
-        bag_store.set_entry(
-            golfer.player_id,
-            BagEntry(club=club_id, recorded_at=datetime.now(tz=UTC), **payload.model_dump()),
+        # One clock reading for both stamps below. `recorded_at` is set here only because the
+        # contract requires one; `set_entry` discards it and stamps its own. The store owns the
+        # clock (`bag_store.py`), the same way `GolferStore.get_or_create` owns `created_at` — one
+        # stamping site, in the layer that knows when the write actually happened.
+        now = datetime.now(tz=UTC)
+        # Absent means typed, and typed is a real provenance — a golfer reading the numbers off the
+        # manufacturer's own page is a better source than the model is. The alternative, leaving it
+        # None, would make every hand-filled entry indistinguishable from the pre-M12 ones that
+        # genuinely predate anything recording a source (`BagEntry.provenance`).
+        provenance = payload.provenance or SpecProvenance(source="typed", retrieved_at=now)
+        entry = BagEntry(
+            club=club_id,
+            recorded_at=now,
+            **{**_resolve_shaft_vocabularies(payload), "provenance": provenance},
         )
+        bag_store.set_entry(golfer.player_id, entry)
+        catalogue.remember(_spec_of(entry), provenance)
         return _bag_for(golfer.player_id)
 
     @app.delete("/api/golfers/{player_id}/bag/{club}", dependencies=guard)

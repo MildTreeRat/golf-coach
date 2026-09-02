@@ -62,13 +62,36 @@
   /* An undeclared entry is spelled out rather than left blank, for the reason
      scripts/club_profile.py gives at the same place: a blank cell reads as a zero loft. */
   .entry.none { opacity: 0.72; }
-  .edit { display: grid; grid-template-columns: 4.2rem 1fr; gap: 0.35rem 0.5rem;
-          align-items: center; font-size: 0.82rem; margin: 0.4rem 0 0.6rem; }
-  .edit input { width: 100%; font: inherit; padding: 0.22rem 0.35rem; }
-  .edit .actions { grid-column: 1 / -1; display: flex; gap: 0.4rem; margin-top: 0.15rem; }
+  /* 7.5rem and not M9's 4.2rem: the form carries every ClubSpec field now and "adjustable
+     hosel" is the longest label in it. A label that wraps misaligns the input beside it. */
+  .edit { display: grid; grid-template-columns: 7.5rem 1fr; gap: 0.3rem 0.5rem;
+          align-items: center; font-size: 0.82rem; margin: 0.15rem 0 0.5rem; }
+  .edit input, .edit select { width: 100%; font: inherit; padding: 0.22rem 0.35rem; }
+  .edit .pair { display: flex; gap: 0.3rem; }
+  /* The groups of contracts/club_spec.py, rendered because the grouping is real: reading down
+     twenty-seven fields, a golfer needs to know where the head stops and the shaft starts. */
+  .grp { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.06em; opacity: 0.5;
+         margin: 0.5rem 0 0; }
+  .actions { display: flex; gap: 0.4rem; margin-top: 0.45rem; }
   button, select { font: inherit; font-size: 0.8rem; padding: 0.2rem 0.5rem; cursor: pointer; }
   .note { font-size: 0.83rem; margin: 0.45rem 0 0; padding-left: 0.6rem;
           border-left: 2px solid rgba(128,128,128,0.4); opacity: 0.85; }
+
+  /* --- the club lookup [M12 P6] ----------------------------------------------------- */
+  /* One candidate per slot, each a filled-in form rather than a preview: what the golfer is
+     looking at is the thing that gets saved, which is what makes the confirm step ADR-026 §5
+     asks for a real one rather than an OK button. */
+  .search { display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center;
+            font-size: 0.82rem; margin: 0.6rem 0 0; }
+  .search input { font: inherit; font-size: 0.8rem; padding: 0.2rem 0.35rem; }
+  .search input.make { width: 6.5rem; }
+  .search input.model { width: 7rem; }
+  .search input.year { width: 4.5rem; }
+  .cand { border: 1px solid rgba(128,128,128,0.28); border-radius: 8px;
+          padding: 0.35rem 0.7rem 0.6rem; margin: 0.6rem 0 0; }
+  .cand .chead { margin: 0.15rem 0 0; font-size: 0.85rem; }
+  .cand .chead .id { font-family: ui-monospace, monospace; text-transform: uppercase;
+                     font-weight: 600; }
 
   /* --- tempo [ADR-023 addendum] ---------------------------------------------------- */
   /* The same warm card results.html gives the trainer, and deliberately the same: a golfer who
@@ -146,6 +169,22 @@ let bagPayload = null;      // the /bag payload, replaced wholesale by every wri
 let clubList = [];          // the full taxonomy, canonical bag order, straight from /api/clubs
 let editingClub = null;     // which row has its form open; at most one at a time
 let bagError = null;        // the last write failure, shown until the next render
+
+// The lookup's own state [M12 P6], separate from everything above because it outlives a render: a
+// set lookup takes half a minute (M12 P5 *As built*), so what was asked for has to survive the
+// wait, and what came back has to survive a save that only half worked.
+//
+// `candidates` is three-valued on purpose. `null` is "nothing has been looked up", `[]` is "a
+// lookup ran and the source had nothing", and those need opposite sentences — a page showing the
+// same blank for both would make a refusal look like an idle form.
+let lookupState = {
+  make: "", model: "", year: "", from: "", to: "",  // the search box, kept across renders
+  slots: [],                                        // what was asked for, in taxonomy order
+  pending: false,                                   // a call is in flight; do not fire another
+  note: "",                                         // the route's own note about the answer
+  message: "", messageKind: "note",                 // the panel's one line of feedback
+  candidates: null,
+};
 
 function authHeaders() {
   const t = localStorage.getItem(TOKEN_KEY);
@@ -601,16 +640,178 @@ function exclusions(corpus) {
 // slice to career mode's own guard, so a refusal that arrives here is already sealed and this
 // page's only job is to show it as a sentence rather than as a blank cell.
 
-// Which fields of a BagEntry the row form edits, and how. `recorded_at` is absent because the
-// store owns the clock, and `club` is absent because it is the route's path segment — putting it
-// in the body as well would be a second spelling free to disagree with the first.
-const ENTRY_FIELDS = [
-  ["loft_deg", "loft", "number"],
-  ["make", "make", "text"],
-  ["model", "model", "text"],
-  ["shaft", "shaft", "text"],
-  ["length_in", "length", "number"],
+// Which fields of a spec the form edits, grouped exactly as `contracts/club_spec.py` groups
+// them — and this page's only field list [M12 P6]. `recorded_at` and `retired_at` are absent
+// because the store owns the clock; `provenance` is absent because it is echoed back from a
+// lookup and never typed; `club` is absent because it is the route's path segment — putting it in
+// the body as well would be a second spelling free to disagree with the first.
+//
+// It replaced M9's five-field ENTRY_FIELDS, and being *one* list is the point: the same renderer
+// draws the edit form and every row of a lookup, so a field added to `ClubSpec` is added here and
+// nowhere else. `tests/api/test_career_page.py` compares this list against the contract on every
+// run — a field that exists on `ClubSpec`, is accepted by `BagEntryRequest` and is missing here is
+// a form that silently cannot record it, which is a 200 for a value that went nowhere
+// (`mcp/query.py`'s `_METRIC_FIELDS` failure, one surface further out).
+//
+// **`shaft_material` and `shaft_flex` are text inputs and not <select>s on purpose.** Listing
+// their members here would put a second copy of a closed vocabulary in the page — the failure
+// `GET /api/clubs` exists to prevent for the club taxonomy (`tests/api/test_uploads.py:537`) —
+// and it buys nothing: the save route parses both through `parse_shaft_flex` and refuses an
+// unrecognised spelling with a sentence naming what it rejected, so the guard is one round trip
+// away rather than absent. The tri-state selects below are not a vocabulary; they are a
+// `bool | None`, where "not recorded" and "no" are different answers a checkbox cannot both say.
+const SPEC_FIELDS = [
+  ["identity", [
+    ["make", "make", "text"],
+    ["model", "model", "text"],
+    ["model_year", "model year", "int"],
+    ["head_type", "head type", "text"],
+    ["set_composition", "set", "text"],
+  ]],
+  ["head", [
+    ["loft_deg", "loft °", "number"],
+    ["lie_deg", "lie °", "number"],
+    ["bounce_deg", "bounce °", "number"],
+    ["grind", "grind", "text"],
+    ["offset_mm", "offset mm", "number"],
+    ["face_angle_deg", "face angle °", "number"],
+    ["head_weight_g", "head weight g", "number"],
+    ["adjustable_hosel", "adjustable hosel", "bool"],
+    ["loft_range_deg", "loft range °", "range"],
+  ]],
+  ["shaft", [
+    ["shaft_model", "shaft model", "text"],
+    ["shaft_material", "material", "text"],
+    ["shaft_flex", "flex", "text"],
+    ["shaft_weight_g", "shaft weight g", "number"],
+    ["shaft_torque_deg", "torque °", "number"],
+    ["shaft_kick_point", "kick point", "text"],
+  ]],
+  ["assembly", [
+    ["length_in", "length in", "number"],
+    ["swing_weight", "swing weight", "text"],
+    ["total_weight_g", "total weight g", "number"],
+    ["grip", "grip", "text"],
+  ]],
+  ["head performance", [
+    ["cor", "COR", "number"],
+    ["moi_g_cm2", "MOI g cm²", "number"],
+    ["usga_conforming", "USGA conforming", "bool"],
+  ]],
 ];
+
+const SPEC_FIELD_COUNT = SPEC_FIELDS.reduce((n, [, fields]) => n + fields.length, 0);
+
+// The form both write paths share. `prefix` keeps the input ids unique, because a set lookup puts
+// seven of these on the page at once and a repeated id points every <label> at the first row.
+function specForm(prefix, spec) {
+  return SPEC_FIELDS.map(([group, fields]) =>
+    `<p class="grp">${esc(group)}</p>
+     <div class="edit">${fields.map((f) => fieldRow(prefix, f, spec)).join("")}</div>`).join("");
+}
+
+// One labelled control. **A field nobody knows renders empty and never zero** — that difference is
+// the whole of ADR-026 §6 at the surface a person actually looks at: an empty box is a question,
+// where a zero lie angle is an answer, and a wrong answer is what this milestone spends a confirm
+// step to avoid.
+function fieldRow(prefix, [key, label, type], spec) {
+  const id = `${prefix}-${key}`;
+  const raw = spec[key];
+  if (type === "bool") {
+    // Three options and not a checkbox: `None` is not `False` (`ClubSpec.adjustable_hosel`), and
+    // a checkbox has no way to say "nobody recorded whether this hosel adjusts".
+    const chosen = raw === true ? "yes" : raw === false ? "no" : "";
+    const option = (value, text) =>
+      `<option value="${value}"${chosen === value ? " selected" : ""}>${text}</option>`;
+    return `<label for="${id}">${esc(label)}</label>
+      <select id="${id}" data-f="${key}">
+        ${option("", "not recorded")}${option("yes", "yes")}${option("no", "no")}</select>`;
+  }
+  if (type === "range") {
+    const pair = Array.isArray(raw) ? raw : ["", ""];
+    return `<label for="${id}">${esc(label)}</label>
+      <span class="pair">
+        <input id="${id}" data-f="${key}" type="number" step="0.1" value="${esc(pair[0])}"
+               aria-label="${esc(label)} low">
+        <input data-f="${key}" type="number" step="0.1" value="${esc(pair[1])}"
+               aria-label="${esc(label)} high"></span>`;
+  }
+  const value = raw === null || raw === undefined ? "" : raw;
+  const step = type === "int" ? ` step="1"` : type === "number" ? ` step="0.1"` : "";
+  return `<label for="${id}">${esc(label)}</label>
+    <input id="${id}" data-f="${key}" type="${type === "text" ? "text" : "number"}"${step}
+           value="${esc(value)}">`;
+}
+
+// One form back into a body for `BagEntryRequest`, or the one sentence saying why it is not one.
+// Blank is `null` for a number and `""` for text, which is the contract's own spelling of
+// *undeclared* — and the reason nothing here substitutes a zero for a blank.
+//
+// `scope` is an element and not a selector because a set lookup has seven of these forms in the
+// DOM at once; they are told apart by which box they sit in, never by an id.
+function readSpec(scope) {
+  const body = {};
+  for (const [, fields] of SPEC_FIELDS) {
+    for (const [key, label, type] of fields) {
+      const raw = Array.from(scope.querySelectorAll(`[data-f="${key}"]`))
+        .map((el) => el.value.trim());
+      if (type === "text") { body[key] = raw[0]; continue; }
+      if (type === "bool") { body[key] = raw[0] === "" ? null : raw[0] === "yes"; continue; }
+      if (type === "range") {
+        if (raw[0] === "" && raw[1] === "") { body[key] = null; continue; }
+        if (raw[0] === "" || raw[1] === "") {
+          return { error: `${label} needs both ends or neither.` };
+        }
+        const pair = [Number(raw[0]), Number(raw[1])];
+        if (pair.some(Number.isNaN)) return { error: `${label} is not two numbers.` };
+        // Caught here rather than at the server, and it is the one place this form is stricter
+        // than the route: `ClubSpec._loft_range_is_ordered` *raises* on a reversed pair, so a
+        // save would answer 500 instead of a sentence. A typo in a form is not a server error.
+        if (pair[0] > pair[1]) {
+          return { error: `${label} runs high to low — ${pair[0]} is more than ${pair[1]}.` };
+        }
+        body[key] = pair;
+        continue;
+      }
+      if (raw[0] === "") { body[key] = null; continue; }
+      const value = Number(raw[0]);
+      // Refused rather than silently stored as null, which is what JSON.stringify does with a
+      // NaN. A loft that quietly went missing is the measurement ADR-024 calls unrecoverable.
+      if (Number.isNaN(value)) return { error: `"${raw[0]}" is not a number (${label}).` };
+      if (type === "int" && !Number.isInteger(value)) {
+        return { error: `${label} is a whole number.` };
+      }
+      body[key] = value;
+    }
+  }
+  return { body };
+}
+
+// How much of a specification actually arrived, said as a number, because the blanks are the
+// point: 11 of 27 is a source that would not commit to sixteen fields, and a form with sixteen
+// questions still in it.
+function filledCount(spec) {
+  let filled = 0;
+  for (const [, fields] of SPEC_FIELDS) {
+    for (const [key] of fields) {
+      const value = spec[key];
+      if (value !== null && value !== undefined && value !== "") filled += 1;
+    }
+  }
+  return filled;
+}
+
+// A message that does not cost the form it is about. Every write path here can fail on one value
+// the golfer typed, and re-rendering to show that failure would discard the twenty-six fields
+// typed beside it — so the banner is an element that is always in the DOM and gets its text set,
+// never a branch in a template. M9's five-field form could afford to re-render; this one cannot.
+function message(id, text, kind) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.className = kind === "error" ? "banner error" : "note";
+  el.textContent = text || "";
+  el.style.display = text ? "" : "none";
+}
 
 function renderBag() {
   const host = document.getElementById("bag");
@@ -621,7 +822,9 @@ function renderBag() {
   }
 
   const clubs = bagPayload.clubs || [];
-  const parts = bagError ? [`<div class="banner error">${esc(bagError)}</div>`] : [];
+  // Always emitted and filled in afterwards rather than branched on here, so a failure can be
+  // shown without re-rendering the form it is about (`message`).
+  const parts = [`<div id="bag-msg" style="display:none"></div>`];
 
   if (!clubs.length) {
     parts.push(nothingTagged());
@@ -641,7 +844,15 @@ function renderBag() {
   }
 
   parts.push(addBlock());
+  // The lookup gets its own host and its own render. That is not tidiness: a set lookup takes
+  // half a minute (M12 P5), and rebuilding this whole section when it lands would repaint every
+  // club row — and any edit form open in one — under the golfer's hands. Only `#lookup` changes
+  // while a call is in flight, which is what "must not block the rest of the bag section" means
+  // once it is written in DOM.
+  parts.push(`<div id="lookup"></div>`);
   host.innerHTML = parts.join("");
+  message("bag-msg", bagError, "error");
+  renderLookup();
 }
 
 // The all-or-nothing silence, and the state on disk today. It gets its own branch because a table
@@ -700,20 +911,21 @@ function evidenceLine(club) {
 
 // The physical club, or what its absence costs — spelled out rather than left blank, because the
 // two halves need saying together: it takes nothing away from the distance statistics, and it
-// makes every loft or fitting question about this club refuse (ADR-024 §2).
+// makes every loft or fitting question about this club refuse (ADR-024 §2). What a *declared*
+// loft means changed in M12: ADR-026 §1 reversed "never a catalogue default", so a loft here is
+// the manufacturer's published one unless the golfer measured it.
 function entryLine(club) {
   const entry = club.bag_entry;
   if (!entry) {
     return `<p class="entry none">No bag entry declared. Every statistic below is unaffected; a
-      loft or fitting question about this club has to refuse, and no catalogue default is
-      substituted for a loft nobody measured.
+      loft or fitting question about this club has to refuse until one is.
       <button data-act="edit" data-club="${esc(club.club)}">Declare</button></p>`;
   }
   const described = [entry.make, entry.model].filter(Boolean).join(" ");
   const bits = [esc(described || "make and model not recorded")];
   bits.push(typeof entry.loft_deg === "number"
-    ? `${esc(entry.loft_deg)}&deg; loft` : "loft not measured");
-  if (entry.shaft) bits.push(`${esc(entry.shaft)} shaft`);
+    ? `${esc(entry.loft_deg)}&deg; loft` : "loft not recorded");
+  if (entry.shaft_model) bits.push(`${esc(entry.shaft_model)} shaft`);
   if (typeof entry.length_in === "number") bits.push(`${esc(entry.length_in)} in`);
   return `<p class="entry">${bits.join(" &middot; ")}
     <span class="muted">(declared ${esc(String(entry.recorded_at).slice(0, 10))})</span>
@@ -724,15 +936,13 @@ function entryLine(club) {
 // Saving an untouched row is deliberately a no-op on disk: BagStore.set_entry returns without
 // writing when nothing changed, so the declared date does not move and no bag-changed caveat is
 // raised over shots that were all hit with the same physical club (M9 P3, P16).
+//
+// M12 P6 widened this from five fields to every field of `ClubSpec`, through the same `specForm`
+// a looked-up candidate renders: the typed path and the confirmed-lookup path are one form, so a
+// golfer with no API key configured is editing exactly the shape a lookup would have filled in.
 function editForm(club) {
-  const entry = club.bag_entry || {};
-  const rows = ENTRY_FIELDS.map(([key, label, type]) => {
-    const value = entry[key] === null || entry[key] === undefined ? "" : entry[key];
-    const step = type === "number" ? ` step="0.1"` : "";
-    return `<label for="f-${key}">${label}</label>
-      <input id="f-${key}" data-f="${key}" type="${type}"${step} value="${esc(value)}">`;
-  }).join("");
-  return `<div class="edit">${rows}
+  return `<div class="specform">
+    ${specForm(`e-${club.club}`, club.bag_entry || {})}
     <div class="actions">
       <button data-act="save" data-club="${esc(club.club)}">Save</button>
       <button data-act="cancel">Cancel</button>
@@ -791,6 +1001,207 @@ function addBlock() {
     <button data-act="add">Declare</button></p>`;
 }
 
+// The search box, the pending line and the candidates — everything that changes while a lookup
+// runs. Rendered into `#lookup` alone (see `renderBag`), so the wait costs nothing else on screen.
+function renderLookup() {
+  const host = document.getElementById("lookup");
+  if (!host) return;
+  host.innerHTML = `${searchRow()}
+    <p id="lk-msg" class="note" style="display:none"></p>
+    ${lookupResults()}`;
+  message("lk-msg", lookupState.message, lookupState.messageKind);
+}
+
+// Make, model, year and a slot — or a slot *range*, which is how a set is asked for. The range is
+// two pickers over `clubList` rather than free text like "4-PW", because the taxonomy already
+// knows its own order and parsing a dash into it would be a second club vocabulary in the page.
+function searchRow() {
+  if (!clubList.length) return "";
+  const options = (selected) => clubList.map((c) =>
+    `<option value="${esc(c)}"${c === selected ? " selected" : ""}>${esc(c)}</option>`).join("");
+  // Disabled rather than hidden while a call is in flight: a second click would start a second
+  // half-minute call whose answer overwrites the first, and the button vanishing under the cursor
+  // reads as the page breaking.
+  const busy = lookupState.pending ? " disabled" : "";
+  return `<p class="muted" style="margin-bottom:0.2rem">Or look up what a club <em>is</em>:</p>
+    <div class="search">
+      <input id="lk-make" class="make" placeholder="make" aria-label="make"
+             value="${esc(lookupState.make)}"${busy}>
+      <input id="lk-model" class="model" placeholder="model" aria-label="model"
+             value="${esc(lookupState.model)}"${busy}>
+      <input id="lk-year" class="year" type="number" step="1" placeholder="year"
+             aria-label="model year" value="${esc(lookupState.year)}"${busy}>
+      <label for="lk-from">slot</label>
+      <select id="lk-from" aria-label="slot"${busy}>${options(lookupState.from)}</select>
+      <label for="lk-to">through</label>
+      <select id="lk-to" aria-label="through slot"${busy}>
+        <option value="">just the one</option>${options(lookupState.to)}</select>
+      <button data-act="lookup"${busy}>Look up</button>
+    </div>`;
+}
+
+function lookupResults() {
+  if (lookupState.pending) {
+    const n = lookupState.slots.length;
+    return `<p class="note">Looking up ${n === 1 ? esc(lookupState.slots[0])
+      : plural(n, "slot")}. Half a minute is normal and a set takes longer, because what is being
+      asked is a model and not a database. Nothing else on this page is waiting for it.</p>`;
+  }
+  if (lookupState.candidates === null) return "";
+
+  const parts = [];
+  if (lookupState.note) parts.push(`<p class="why">${esc(lookupState.note)}</p>`);
+  const answered = new Set(lookupState.candidates.map((c) => c.spec.club));
+  const missing = lookupState.slots.filter((slot) => !answered.has(slot));
+  if (missing.length) {
+    // A refusal, said as one. `look_up_club` returns no row for a slot it will not commit to, and
+    // the golfer needs to know the difference between that and a slot it never asked about.
+    parts.push(`<p class="why">Nothing came back for ${esc(missing.join(", "))}. That is the
+      source declining rather than failing, and the club can still be declared from the picker
+      above and filled in by hand.</p>`);
+  }
+  if (!lookupState.candidates.length) return parts.join("");
+
+  parts.push(`<p class="why">A blank below is a field the source would not commit to. Fill it in
+    if you know it and leave it blank if you do not &mdash; blank is recorded as nobody knowing,
+    where a zero would be recorded as a measurement.</p>`);
+  lookupState.candidates.forEach((c, i) => parts.push(candidateBlock(c, i)));
+  parts.push(`<div class="actions">
+    <button data-act="confirm">Add ${plural(lookupState.candidates.length, "club")} to the
+      bag</button>
+    <button data-act="discard">Discard</button></div>`);
+  return parts.join("");
+}
+
+// One slot's proposal, as the editable form it will be saved from. The provenance line is not
+// decoration: it is the difference between a number a person read off a manufacturer's page and
+// one a model recalled, and ADR-026 §7 exists because a reader who cannot tell them apart has to
+// treat both as the weaker. `notes` is where the model says which of its own answers it doubts.
+function candidateBlock(candidate, index) {
+  const spec = candidate.spec;
+  const provenance = candidate.provenance || {};
+  const source = provenance.source || "an unnamed source";
+  const bits = [candidate.served_from === "catalogue"
+    ? `kept from an earlier confirmation, first from ${source}`
+    : `from ${source}`];
+  bits.push(`${filledCount(spec)} of ${SPEC_FIELD_COUNT} fields filled`);
+  if ((bagPayload.clubs || []).some((c) => c.club === spec.club && c.in_bag)) {
+    bits.push("already in the bag, so saving replaces that entry");
+  }
+  return `<div class="cand" data-row="${index}" data-club="${esc(spec.club)}">
+    <p class="chead"><span class="id">${esc(spec.club)}</span>
+      <span class="muted">${bits.map(esc).join(" &middot; ")}</span></p>
+    ${provenance.notes ? `<p class="why">${esc(provenance.notes)}</p>` : ""}
+    ${specForm(`c-${index}`, spec)}
+  </div>`;
+}
+
+// Ask the route. Writes nothing on its own — what comes back is a proposal, and the confirm below
+// is what turns it into a declaration (ADR-026 §5).
+async function doLookup() {
+  const value = (id) => document.getElementById(id).value.trim();
+  const from = document.getElementById("lk-from").value;
+  const to = document.getElementById("lk-to").value;
+  const first = clubList.indexOf(from);
+  const last = to ? clubList.indexOf(to) : first;
+  Object.assign(lookupState, {
+    make: value("lk-make"), model: value("lk-model"), year: value("lk-year"),
+    from, to, note: "", candidates: null, message: "", messageKind: "note",
+  });
+  if (last < first) {
+    // The taxonomy runs driver to putter, so a set always reads long club first. Refused rather
+    // than sorted, because a golfer who picked them backwards may have picked the wrong two.
+    lookupState.message = `a set runs from the longer club to the shorter one, and ${to} comes
+      before ${from} in the bag.`;
+    lookupState.messageKind = "error";
+    renderLookup();
+    return;
+  }
+  lookupState.slots = clubList.slice(first, last + 1);
+  lookupState.pending = true;
+  renderLookup();
+
+  const body = { make: lookupState.make, model: lookupState.model,
+    model_year: lookupState.year === "" ? null : Number(lookupState.year) };
+  // One call for a set, never one per slot: it is what keeps a loft progression internally
+  // consistent, and `look_up_set` exists for that reason (ADR-026 §2).
+  if (lookupState.slots.length === 1) body.club = lookupState.slots[0];
+  else body.slots = lookupState.slots;
+
+  try {
+    const res = await fetch("/api/clubs/lookup", {
+      method: "POST",
+      headers: { ...authHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const payload = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      lookupState.message = detailOf(payload, res.status, "that lookup did not run");
+      lookupState.messageKind = "error";
+    } else {
+      lookupState.candidates = payload.candidates || [];
+      lookupState.note = payload.note || "";
+    }
+  } catch (err) {
+    lookupState.message = `Could not reach the server: ${err.message}`;
+    lookupState.messageKind = "error";
+  }
+  lookupState.pending = false;
+  renderLookup();
+}
+
+// One confirm, N writes, and they go one at a time. `BagStore` reads, mutates and writes the
+// golfer's whole bag file per call, so seven concurrent posts would each write a file read before
+// the other six landed and most of the set would vanish — the sequence is a correctness
+// requirement here and not politeness to the server.
+async function confirmLookup() {
+  const rows = Array.from(document.querySelectorAll("#lookup .cand"));
+  const jobs = [];
+  for (const row of rows) {
+    const read = readSpec(row);
+    if (read.error) {
+      // Deliberately not a re-render: every other row is holding values the golfer typed.
+      message("lk-msg", `${row.dataset.club}: ${read.error}`, "error");
+      return;
+    }
+    const candidate = lookupState.candidates[Number(row.dataset.row)];
+    // What was typed replaces what was proposed, so a re-render after a partial failure shows the
+    // golfer their own edits back rather than quietly reverting them to the source's answer.
+    candidate.spec = { ...candidate.spec, ...read.body };
+    // The provenance is echoed back verbatim rather than composed here, which is what carries the
+    // model id and its own confidence notes into the bag. It covers the whole row even where a
+    // field was edited; per-field provenance is the fix and is deferred (M12 P5 *As built*).
+    jobs.push([row.dataset.club, { ...read.body, provenance: candidate.provenance || null }]);
+  }
+
+  message("lk-msg", `Saving ${plural(jobs.length, "club")}...`, "note");
+  const landed = [];
+  const failed = [];
+  for (const [club, body] of jobs) {
+    const detail = await write(club, "POST", body);
+    if (detail) failed.push(`${club} (${detail})`);
+    else landed.push(club);
+  }
+
+  // A partial failure leaves a partially declared bag and says which slots landed, which is the
+  // honest outcome of six writes and one refusal. The rows that landed leave the panel; the rest
+  // stay open, carrying what was typed, to be fixed and confirmed again.
+  if (failed.length) {
+    lookupState.candidates = lookupState.candidates.filter((c) => !landed.includes(c.spec.club));
+    lookupState.slots = lookupState.slots.filter((slot) => !landed.includes(slot));
+    lookupState.message = `${landed.length ? `${landed.join(", ")} saved. ` : ""}Not saved:
+      ${failed.join("; ")}`;
+    lookupState.messageKind = "error";
+  } else {
+    Object.assign(lookupState, {
+      candidates: null, slots: [], note: "", messageKind: "note",
+      message: `${plural(landed.length, "club")} saved: ${landed.join(", ")}.`,
+    });
+  }
+  bagError = null;
+  renderBag();
+}
+
 async function onBagClick(event) {
   const button = event.target.closest("button[data-act]");
   if (!button) return;
@@ -798,9 +1209,21 @@ async function onBagClick(event) {
   event.preventDefault();
   const { act, club } = button.dataset;
   bagError = null;
+  message("bag-msg", "");
 
   if (act === "edit") { editingClub = club; renderBag(); return; }
   if (act === "cancel") { editingClub = null; renderBag(); return; }
+
+  // The three lookup branches. None of them touches `editingClub` or re-renders the club rows: an
+  // open edit form and an open lookup are two different acts, and neither is a reason to discard
+  // the other's typing.
+  if (act === "lookup") { await doLookup(); return; }
+  if (act === "confirm") { await confirmLookup(); return; }
+  if (act === "discard") {
+    Object.assign(lookupState, { candidates: null, slots: [], note: "", message: "" });
+    renderLookup();
+    return;
+  }
 
   if (act === "add") {
     const select = document.getElementById("add-club");
@@ -808,37 +1231,33 @@ async function onBagClick(event) {
     // Declared empty and then opened for editing, rather than the other way round: putting a club
     // in the bag and recording what it measures are two acts, and BagEntry lets the second wait —
     // a golfer who has never had their lofts measured still has a bag (ADR-024 §2).
-    if (await write(select.value, "POST", {})) editingClub = select.value;
+    bagError = await write(select.value, "POST", {}) || null;
+    if (!bagError) editingClub = select.value;
     renderBag();
     return;
   }
 
   if (act === "remove") {
     if (!confirm(`Take the ${club} out of the bag? Every shot hit with it is kept.`)) return;
-    if (await write(club, "DELETE", null)) editingClub = null;
+    bagError = await write(club, "DELETE", null) || null;
+    if (!bagError) editingClub = null;
     renderBag();
     return;
   }
 
   if (act === "save") {
     // One form is open at a time, so this selector is unambiguous; `editingClub` holds a single
-    // value rather than a set for exactly that reason.
-    const body = {};
-    for (const input of document.querySelectorAll("#bag .edit input[data-f]")) {
-      const raw = input.value.trim();
-      if (input.type !== "number") { body[input.dataset.f] = raw; continue; }
-      if (raw === "") { body[input.dataset.f] = null; continue; }
-      const value = Number(raw);
-      if (Number.isNaN(value)) {
-        // Refused rather than silently stored as null, which is what JSON.stringify does with a
-        // NaN. A loft that quietly went missing is the measurement ADR-024 calls unrecoverable.
-        bagError = `"${raw}" is not a number.`;
-        renderBag();
-        return;
-      }
-      body[input.dataset.f] = value;
+    // value rather than a set for exactly that reason. A candidate form is never picked up here:
+    // it lives under `#lookup` and is saved by its own confirm.
+    const read = readSpec(document.querySelector("#bag .specform"));
+    if (read.error) {
+      // Shown without a re-render, because the other twenty-six fields are still typed in.
+      bagError = read.error;
+      message("bag-msg", bagError, "error");
+      return;
     }
-    if (await write(club, "POST", body)) editingClub = null;
+    bagError = await write(club, "POST", read.body) || null;
+    if (!bagError) editingClub = null;
     renderBag();
   }
 }
@@ -846,6 +1265,11 @@ async function onBagClick(event) {
 // The one place this page writes. Both verbs return the whole bag, which is why nothing here
 // refetches: a save and a reload cannot disagree, and the bag-changed caveat that declaring an
 // entry is what creates arrives with the response rather than on the next visit.
+//
+// **Returns "" on success and the server's own sentence on failure**, rather than setting
+// `bagError` itself as it did in M9. A set fan-out posts N times and can say nothing until all N
+// are back — "4i and 5i landed, 6i did not" is one message about several writes — so the failure
+// comes back to the caller and the caller decides what one of it among several means.
 async function write(club, method, body) {
   const url = `/api/golfers/${encodeURIComponent(playerId)}/bag/${encodeURIComponent(club)}`;
   try {
@@ -856,18 +1280,29 @@ async function write(club, method, body) {
       body: body === null ? undefined : JSON.stringify(body),
     });
     const payload = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      // `detail` verbatim: the server's refusals are written for a human — "'wedge' is not a club
-      // in the bag" names what to type next, where a bare status code names nothing.
-      bagError = payload.detail || `that did not save (${res.status})`;
-      return false;
-    }
+    if (!res.ok) return detailOf(payload, res.status, "that did not save");
     bagPayload = payload;
-    return true;
+    return "";
   } catch (err) {
-    bagError = `Could not reach the server: ${err.message}`;
-    return false;
+    return `Could not reach the server: ${err.message}`;
   }
+}
+
+// `detail` verbatim: the server's refusals are written for a human — "'wedge' is not a club in the
+// bag" names what to type next, where a bare status code names nothing.
+//
+// A 422 answers with a *list* of pydantic errors instead of a sentence, and rendering that gives
+// the golfer "[object Object]". M9's five text fields could not produce one; a form carrying every
+// typed field of `ClubSpec` can, so the shape is checked rather than assumed.
+function detailOf(payload, status, fallback) {
+  const detail = payload && payload.detail;
+  if (typeof detail === "string" && detail) return detail;
+  if (Array.isArray(detail) && detail.length) {
+    const first = detail[0] || {};
+    const where = Array.isArray(first.loc) ? first.loc[first.loc.length - 1] : "";
+    return `${where ? `${where}: ` : ""}${first.msg || "that is not a value this accepts"}`;
+  }
+  return `${fallback} (${status})`;
 }
 
 load();

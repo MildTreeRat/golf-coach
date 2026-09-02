@@ -1,7 +1,7 @@
 # Architecture — the system AS BUILT
 
 > **Tier: AS-BUILT.** This document describes what actually exists and runs, reviewed
-> **2026-08-22**. Everything here has been executed. For the *target* design — the full
+> **2026-09-01**. Everything here has been executed. For the *target* design — the full
 > component/deployment picture, the build order, and the parts not yet written — see
 > [FLOW.md](FLOW.md).
 >
@@ -154,11 +154,12 @@ the module declares, so a new endpoint fails the suite until it is listed here.
 | `GET` | `/api/sessions/current` | Which session today's uploads land in |
 | `GET` | `/api/golfers` | Every known golfer — what lets the page tell a returning name from a new one |
 | `GET` | `/api/clubs` | The club vocabulary and its categories, so the picker renders in one round trip (M9 P7) |
+| `POST` | `/api/clubs/lookup` | What a named club *is* — catalogue first, a model on a miss, one call for a whole set. **Writes nothing**: saving is the bag route below, and the golfer confirming is what turns a proposal into a declaration (M12 P5, ADR-026 §5) |
 | `GET` `POST` | `/api/sessions/current/golfer` | The golfer cursor: who the *next* swing belongs to |
 | `GET` `POST` | `/api/sessions/current/club` | The club cursor: what the *next* swing was hit with (M9 P4) |
 | `GET` | `/api/golfers/{player_id}/career` | One golfer against their own history, plus their tempo and the metronome fitted to it — the route both the career page and the swing page read, so the two cannot disagree |
 | `GET` | `/api/golfers/{player_id}/bag` | Every club this golfer has hit or declared, with what each one's history says or refuses (M9 P19) |
-| `POST` `DELETE` | `/api/golfers/{player_id}/bag/{club}` | Declare or edit one slot; removing retires it to the append-only shelf rather than deleting it (M9 P19, ADR-024) |
+| `POST` `DELETE` | `/api/golfers/{player_id}/bag/{club}` | Declare or edit one slot, carrying the whole `ClubSpec`; removing retires it to the append-only shelf rather than deleting it. Confirming here is also what teaches the club catalogue (M9 P19, M12 P5, ADR-024, ADR-026) |
 | `GET` | `/api/sessions` | Every session that holds a swing, newest first, with each swing's row. The library page's one round trip, and the only route that *enumerates* — before it, a swing outside today's session was reachable only by typing its results URL by hand |
 | `GET` | `/api/sessions/{session_id}` | A session's swings and their analysis state — the 5 s status poll |
 | `GET` | `/api/sessions/{session_id}/swings/{swing_id}` | One swing's stored result, plus the tempo plan derived at read time |
@@ -195,6 +196,7 @@ flowchart TD
     FB["feedback/<br/>rules"] --> C
     DET["detection/ — stub"] -.-> C
     STO["storage/<br/>bundle, golfer + bag stores,<br/>career corpus reader"] --> C
+    CLB["clubs/<br/>committed catalogue,<br/>LLM specification lookup"] --> C
 
     API["api/ — upload server,<br/>pipeline, analysis worker"] --> C
     MCP["mcp/ — query, career + club tools"] --> C
@@ -206,6 +208,7 @@ flowchart TD
     API --> FB
     API --> LMM
     API --> STO
+    API --> CLB
 
     MCP --> ANA
     MCP --> STO
@@ -226,7 +229,7 @@ flowchart TD
     classDef built fill:#d4edda,stroke:#28a745,color:#155724;
     classDef stub fill:#f8d7da,stroke:#dc3545,color:#721c24;
     classDef shell fill:#cce5ff,stroke:#004085,color:#004085;
-    class C,CAP,POSE,AUD,LMM,ANA,FB,CLI,STO built;
+    class C,CAP,POSE,AUD,LMM,ANA,FB,CLI,STO,CLB built;
     class API,MCP shell;
     class DET stub;
 ```
@@ -246,6 +249,23 @@ shape, imported by the shells and by nothing in `analysis/`. The core receives *
 and never a waveform, which is what keeps it stdlib-only and keeps a base install passing every
 analysis test. `tests/api/test_pipeline_imports.py` now holds `imageio_ffmpeg` alongside `fastapi`
 and `anthropic` for exactly that reason.
+
+**`clubs/` is newer still (M12, ADR-026), and it is the first module that answers a question about
+the *equipment* rather than the swing.** Two modules and they are a cache and its miss path:
+`catalogue.py` reads `club_catalogue.json`, a committed dictionary of specifications with
+provenance per row — ADR-022's shape, the same one `ranges.json` and `golfdb_v1.json` take — and
+`lookup.py` asks `claude-opus-5` what a named club is when the catalogue misses. It is the second
+consumer of the `llm` extra after `feedback/coach.py` and deliberately mirrors its structure
+without importing it: `anthropic` is imported inside a function, a `client=` seam lets tests assert
+request and parse shape with no network, and an expected failure returns a note rather than
+raising. ADR-008 forbids the shared copy, so what is duplicated is prose and the cost of drift is a
+differently-worded sentence rather than a wrong number. `tests/api/test_pipeline_imports.py` holds
+a pin for it beside the others.
+
+**Nothing in `clubs/` writes.** A lookup returns a proposal; `api/app.py` composes it with
+`BagStore`, the golfer confirms it, and *that* is the write — which is also what teaches the
+catalogue, so the second lookup of a confirmed club is a dictionary read and not an API call
+(ADR-026 §5, §7).
 
 **The dotted edges upward break the rule, knowingly:** `storage/corpus.py` and `mcp/query.py` both
 import `api.state` for `load_analysis` / `load_state`, the tolerant readers for the two artifacts
@@ -284,6 +304,7 @@ on a `vision`-only install — pinned by `tests/api/test_pipeline_imports.py`.
 | Reference | Benchmarks → Analysis | `ranges.json` bands + `golfdb_v1.json` distributions, both with provenance | ✅ |
 | Career corpus | Storage → Analysis | `CareerCorpus` — one golfer's distinct swings with their `Measurement`s, the honest per-metric `n`, and every excluded swing with its reason | ✅ produced, not yet consumed (career mode step 4) |
 | Bag profile | Storage → Analysis → UI/MCP | `BagProfile` / `ClubProfile` — the same corpus narrowed to one club, with `n_swings` and `n_shots` deliberately kept apart, because a clip filmed without a screen photo is history that carries no distance (M9 P14) | ✅ built and read by three surfaces: the CLI, the bag page and two MCP tools |
+| Club specification | Clubs → Storage → UI/MCP | `ClubSpec` — one slot of one manufacturer's model, as published: loft, lie, length, head, shaft and grip, keyed `(make, model, model_year, club)`. `BagEntry` **inherits** it, so a bag entry *is* a specification rather than five fields beside one (M12 P2). Every field is optional and a refusal stays `None` — blank renders blank and never zero, which is ADR-010 §2 at the lookup boundary (ADR-026 §6) | ✅ produced by `clubs/`, stored by `storage/bag_store.py`, rendered by the bag page |
 
 ---
 
@@ -514,10 +535,11 @@ gitignored and never created. Everything persists as files:
 | ↳ *analysis state* | `analysis.state.json` in the same directory | ✅ `AnalysisState` — queued/running/done/failed, the role→sha256 map the result was computed from (so a re-upload invalidates it), and a denormalised score/headline so the 5 s status poll never parses `analysis.json`. The terminal status is written by `pipeline.record_state` as part of writing `analysis.json`, because a denormalised copy must be written by whatever writes the original; the worker owns only `queued`/`running`/crash |
 | ↳ *session cursor* | `session.json` in the **session** directory | ✅ `storage/session_meta.py` — **two** cursors, `player_id` and `club` (M9 P4): who the *next* swing belongs to and what it will be hit with. Both are pointers, never records — what actually happened lives on each manifest, so a buddy taking a few swings mid-session rewrites nobody's history and changing clubs mid-bucket rewrites no swing's tag. The club moves far more often, which is why the upload page keeps its picker open and the per-swing repair collapses behind a control |
 | Golfer registry | `data/processed/golfers/<player_id>.golfer.json` | ✅ `storage/golfer_store.py` — one file per golfer, name + handedness. Beside `sessions/`, not inside: a golfer outlives any one session, and that outliving is the point |
-| ↳ *their bag* | `data/processed/golfers/<player_id>.bag.json` | ✅ `storage/bag_store.py` (M9 P3, ADR-024) — the declared bag: which physical club fills each slot, with the loft club fitting will need. Shares the directory with the golfer record and is kept apart by the suffix, since `list_all` globs `*.golfer.json`. Declared rather than derived, because "clubs used" is derivable from shot history and "clubs owned" is not. **Nothing deletes a club**: a replaced or removed one moves to an append-only `retired` shelf, so a loft measured once is never measured twice |
+| ↳ *their bag* | `data/processed/golfers/<player_id>.bag.json` | ✅ `storage/bag_store.py` (M9 P3, ADR-024) — the declared bag: which physical club fills each slot, carrying the whole `ClubSpec` since M12 P2 — loft, lie, length, head, shaft and grip, not the five free-text fields M9 shipped. Shares the directory with the golfer record and is kept apart by the suffix, since `list_all` globs `*.golfer.json`. Declared rather than derived, because "clubs used" is derivable from shot history and "clubs owned" is not. **Nothing deletes a club**: a replaced or removed one moves to an append-only `retired` shelf, so a loft measured once is never measured twice |
 | Conversations | `data/processed/conversations/<conversation-id>.json` | ✅ `storage/transcript_store.py` (ADR-020) — one follow-up conversation per file, holding the model's own content blocks **verbatim**, thinking blocks included. Not a rendering: they are replayed to the API on the next turn, and thinking blocks are only legal replayed unchanged and only into the model that produced them, which is why `model` is recorded beside them. Beside `sessions/` for `golfers/`'s reason — a conversation seeded from one swing is asking about another by its second turn |
 | Reference corpus | `data/reference/golfdb/` | ✅ gitignored for licensing (ADR-012) |
 | Benchmark aggregates | `src/golf_coach/analysis/benchmarks/*.json` | ✅ committed |
+| Club catalogue | `src/golf_coach/clubs/club_catalogue.json` | ✅ committed (M12 P3, ADR-026 §7) — every specification a golfer has confirmed, keyed so "T150", "T-150" and "t 150" are one club, with provenance per row. Package data rather than `data/`, for `ranges.json`'s reason: it is the same fact for every golfer. Written by the bag save route, never seeded; a miss costs an API call and never a wrong answer |
 | Swing results, sessions, trends | SQLite `swings` / `shots` tables | ❌ never built — M7 Phase 3 shipped **trimmed**, as flat files, and nothing has needed a database since |
 
 The `swings.jsonl` Tier-2 shape in the reference pipeline was deliberately built as the shape

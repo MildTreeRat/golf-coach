@@ -1,0 +1,148 @@
+{
+  "schema_version": 1,
+  "clubs": [
+    {
+      "spec": {
+        "club": "4i",
+        "make": "Titleist",
+        "model": "T150",
+        "model_year": 2023,
+        "head_type": "forged carbon steel players' cavity back with SUP-10 face insert and tungsten weighting",
+        "set_composition": "offered 3-iron through pitching wedge (W)",
+        "adjustable_hosel": false,
+        "shaft_model": "True Temper AMT Tour White",
+        "shaft_material": "steel",
+        "grip": "Golf Pride Tour Velvet 360",
+        "usga_conforming": true
+      },
+      "provenance": {
+        "source": "llm:claude-opus-5",
+        "retrieved_at": "2026-09-01T13:51:39.545201Z",
+        "notes": "4i: Stock steel shaft was the ascending-weight True Temper AMT Tour White (offered in regular and stiff, plus graphite and other no-upcharge options); I could not confirm the published loft, lie, offset or length figures for this slot so they are left blank rather than interpolated. 5i: AMT shafts step up in weight through the set, so no single shaft weight applies; loft/lie/length left null because I am not confident of the published numbers. 6i: Lofts in this model are stronger than the companion T100 of the same generation, but I cannot recall the exact published figure, so it is left blank. 8i: Numeric specs left blank deliberately; only the stock shaft and grip are reported with confidence. 9i: Loft, lie and length left null rather than derived from the set progression. pw: Because the set lofts are strengthened, many fitters add a gap wedge; the published W loft and bounce are left blank as I cannot confirm them."
+      }
+    },
+    {
+      "spec": {
+        "club": "5i",
+        "make": "Titleist",
+        "model": "T150",
+        "model_year": 2023,
+        "head_type": "forged carbon steel players' cavity back with SUP-10 face insert and tungsten weighting",
+        "set_composition": "offered 3-iron through pitching wedge (W)",
+        "adjustable_hosel": false,
+        "shaft_model": "True Temper AMT Tour White",
+        "shaft_material": "steel",
+        "grip": "Golf Pride Tour Velvet 360",
+        "usga_conforming": true
+      },
+      "provenance": {
+        "source": "llm:claude-opus-5",
+        "retrieved_at": "2026-09-01T13:51:39.545201Z",
+        "notes": "4i: Stock steel shaft was the ascending-weight True Temper AMT Tour White (offered in regular and stiff, plus graphite and other no-upcharge options); I could not confirm the published loft, lie, offset or length figures for this slot so they are left blank rather than interpolated. 5i: AMT shafts step up in weight through the set, so no single shaft weight applies; loft/lie/length left null because I am not confident of the published numbers. 6i: Lofts in this model are stronger than the companion T100 of the same generation, but I cannot recall the exact published figure, so it is left blank. 8i: Numeric specs left blank deliberately; only the stock shaft and grip are reported with confidence. 9i: Loft, lie and length left null rather than derived from the set progression. pw: Because the set lofts are strengthened, many fitters add a gap wedge; the published W loft and bounce are left blank as I cannot confirm them."
+      }
+    },
+    {
+      "spec": {
+        "club": "6i",
+        "make": "Titleist",
+        "model": "T150",
+        "model_year": 2023,
+        "head_type": "forged carbon steel players' cavity back with SUP-10 face insert and tungsten weighting",
+        "set_composition": "offered 3-iron through pitching wedge (W)",
+        "adjustable_hosel": false,
+        "shaft_model": "True Temper AMT Tour White",
+        "shaft_material": "steel",
+        "grip": "Golf Pride Tour Velvet 360",
+        "usga_conforming": true
+      },
+      "provenance": {
+        "source": "llm:claude-opus-5",
+        "retrieved_at": "2026-09-01T13:51:39.545201Z",
+        "notes": "4i: Stock steel shaft was the ascending-weight True Temper AMT Tour White (offered in regular and stiff, plus graphite and other no-upcharge options); I could not confirm the published loft, lie, offset or length figures for this slot so they are left blank rather than interpolated. 5i: AMT shafts step up in weight through the set, so no single shaft weight applies; loft/lie/length left null because I am not confident of the published numbers. 6i: Lofts in this model are stronger than the companion T100 of the same generation, but I cannot recall the exact published figure, so it is left blank. 8i: Numeric specs left blank deliberately; only the stock shaft and grip are reported with confidence. 9i: Loft, lie and length left null rather than derived from the set progression. pw: Because the set lofts are strengthened, many fitters add a gap wedge; the published W loft and bounce are left blank as I cannot confirm them."
+      }
+    },
+    {
+      "spec": {
+        "club": "7i",
+        "make": "Titleist",
+        "model": "T150",
+        "model_year": 2023,
+        "head_type": "forged cavity back / players distance iron",
+        "set_composition": "Available 4-PW plus W48; 7i is a mid-iron in the set",
+        "loft_deg": 32.0,
+        "lie_deg": 62.0,
+        "adjustable_hosel": false,
+        "shaft_model": "True Temper AMT Tour White (stock steel)",
+        "shaft_material": "steel",
+        "shaft_flex": "stiff",
+        "length_in": 37.0,
+        "grip": "Golf Pride Tour Velvet 360",
+        "usga_conforming": true
+      },
+      "provenance": {
+        "source": "typed",
+        "retrieved_at": "2026-09-01T13:51:40.439693Z"
+      }
+    },
+    {
+      "spec": {
+        "club": "8i",
+        "make": "Titleist",
+        "model": "T150",
+        "model_year": 2023,
+        "head_type": "forged carbon steel players' cavity back with SUP-10 face insert and tungsten weighting",
+        "set_composition": "offered 3-iron through pitching wedge (W)",
+        "adjustable_hosel": false,
+        "shaft_model": "True Temper AMT Tour White",
+        "shaft_material": "steel",
+        "grip": "Golf Pride Tour Velvet 360",
+        "usga_conforming": true
+      },
+      "provenance": {
+        "source": "llm:claude-opus-5",
+        "retrieved_at": "2026-09-01T13:51:39.545201Z",
+        "notes": "4i: Stock steel shaft was the ascending-weight True Temper AMT Tour White (offered in regular and stiff, plus graphite and other no-upcharge options); I could not confirm the published loft, lie, offset or length figures for this slot so they are left blank rather than interpolated. 5i: AMT shafts step up in weight through the set, so no single shaft weight applies; loft/lie/length left null because I am not confident of the published numbers. 6i: Lofts in this model are stronger than the companion T100 of the same generation, but I cannot recall the exact published figure, so it is left blank. 8i: Numeric specs left blank deliberately; only the stock shaft and grip are reported with confidence. 9i: Loft, lie and length left null rather than derived from the set progression. pw: Because the set lofts are strengthened, many fitters add a gap wedge; the published W loft and bounce are left blank as I cannot confirm them."
+      }
+    },
+    {
+      "spec": {
+        "club": "9i",
+        "make": "Titleist",
+        "model": "T150",
+        "model_year": 2023,
+        "head_type": "forged carbon steel players' cavity back with SUP-10 face insert and tungsten weighting",
+        "set_composition": "offered 3-iron through pitching wedge (W)",
+        "adjustable_hosel": false,
+        "shaft_model": "True Temper AMT Tour White",
+        "shaft_material": "steel",
+        "grip": "Golf Pride Tour Velvet 360",
+        "usga_conforming": true
+      },
+      "provenance": {
+        "source": "llm:claude-opus-5",
+        "retrieved_at": "2026-09-01T13:51:39.545201Z",
+        "notes": "4i: Stock steel shaft was the ascending-weight True Temper AMT Tour White (offered in regular and stiff, plus graphite and other no-upcharge options); I could not confirm the published loft, lie, offset or length figures for this slot so they are left blank rather than interpolated. 5i: AMT shafts step up in weight through the set, so no single shaft weight applies; loft/lie/length left null because I am not confident of the published numbers. 6i: Lofts in this model are stronger than the companion T100 of the same generation, but I cannot recall the exact published figure, so it is left blank. 8i: Numeric specs left blank deliberately; only the stock shaft and grip are reported with confidence. 9i: Loft, lie and length left null rather than derived from the set progression. pw: Because the set lofts are strengthened, many fitters add a gap wedge; the published W loft and bounce are left blank as I cannot confirm them."
+      }
+    },
+    {
+      "spec": {
+        "club": "pw",
+        "make": "Titleist",
+        "model": "T150",
+        "model_year": 2023,
+        "head_type": "forged carbon steel players' cavity back with SUP-10 face insert",
+        "set_composition": "pitching wedge (marked W) is the shortest club in the stock set",
+        "adjustable_hosel": false,
+        "shaft_model": "True Temper AMT Tour White",
+        "shaft_material": "steel",
+        "grip": "Golf Pride Tour Velvet 360",
+        "usga_conforming": true
+      },
+      "provenance": {
+        "source": "llm:claude-opus-5",
+        "retrieved_at": "2026-09-01T13:51:39.545201Z",
+        "notes": "4i: Stock steel shaft was the ascending-weight True Temper AMT Tour White (offered in regular and stiff, plus graphite and other no-upcharge options); I could not confirm the published loft, lie, offset or length figures for this slot so they are left blank rather than interpolated. 5i: AMT shafts step up in weight through the set, so no single shaft weight applies; loft/lie/length left null because I am not confident of the published numbers. 6i: Lofts in this model are stronger than the companion T100 of the same generation, but I cannot recall the exact published figure, so it is left blank. 8i: Numeric specs left blank deliberately; only the stock shaft and grip are reported with confidence. 9i: Loft, lie and length left null rather than derived from the set progression. pw: Because the set lofts are strengthened, many fitters add a gap wedge; the published W loft and bounce are left blank as I cannot confirm them."
+      }
+    }
+  ]
+}

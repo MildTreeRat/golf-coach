@@ -231,7 +231,9 @@ class ClubView(BaseModel):
             "The physical club declared in this slot, or None when the golfer has not declared "
             "one. None costs the loft and nothing else — the distance statistics beside it are "
             "unaffected — but a loft, gapping-by-loft or fitting question about this club must "
-            "refuse rather than take a catalogue value for a loft nobody measured."
+            "refuse rather than be answered from a specification nobody confirmed. A loft that IS "
+            "here is the manufacturer's published number unless the golfer measured it (ADR-026 "
+            "§1), so a club that has been bent reads its book loft and nothing here knows."
         ),
     )
 

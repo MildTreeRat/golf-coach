@@ -313,5 +313,8 @@ Reading one golfer's bag, per club:
   it.
 - A club with no bag entry has no loft, make or model on record. That costs the loft and nothing
   else — its distance statistics are perfectly readable — but a loft, gapping-by-loft or fitting
-  question about it must refuse rather than take a catalogue value. Where a bag entry exists and a
-  caveat says swings predate it, the numbers may pool two physical clubs under one name."""
+  question about it must refuse rather than be answered from a specification nobody confirmed. A
+  loft that is on record is the manufacturer's published one unless the golfer measured it
+  (ADR-026 §1), so it describes the model rather than a club that has since been bent. Where a bag
+  entry exists and a caveat says swings predate it, the numbers may pool two physical clubs under
+  one name."""

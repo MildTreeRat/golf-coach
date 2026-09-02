@@ -2,8 +2,20 @@
 
 `contracts/club.py` gave the vocabulary: `7i` names a **slot**, not an object. This module is the
 object. Two 7 irons have different lofts and one golfer's changes when it is bent or replaced, so
-loft, make, model, shaft and length belong to a per-golfer record of the club currently occupying
-the slot — a bag entry — and never to the identifier (ADR-024 §2).
+the specification belongs to a per-golfer record of the club currently occupying the slot — a bag
+entry — and never to the identifier (ADR-024 §2).
+
+**The specification itself is `contracts/club_spec.py`, and `BagEntry` inherits it** (ADR-026 §3).
+What stays declared here is the three facts about *this golfer's declaration* rather than about the
+manufactured object: when it was declared, when it left the bag, and where its numbers came from.
+The five descriptive fields this module used to spell out are gone — a hand-written second copy of
+a field list is the failure `mcp/query.py`'s `_METRIC_FIELDS` already cost this repo once
+(`docs/REFACTOR_LEDGER.md`), and the list is two dozen fields now rather than five.
+
+**One sentence of ADR-024 §2 is retired.** `loft_deg` used to read "never a catalogue default";
+ADR-026 §1 reverses it and ADR-024's 2026-08-31 addendum records why — the choice was never book
+loft versus measured loft, it was book loft versus the blank bag `data/processed/golfers/` actually
+had. Read that addendum rather than §2, which on this point is history.
 
 ## Why the bag is declared when everything else here is derived
 
@@ -32,8 +44,11 @@ the ADR says. The shelf makes that modelling possible later without making it a 
 the day something starts joining shots to stints this paragraph is wrong — that needs a decision in
 ADR-024 rather than an addendum to it.
 
-Nothing consumes this yet: P3 puts it on disk, P14 composes `BagEntry` into a club profile, P16
-reads `recorded_at`.
+What consumes it: `storage/bag_store.py` puts it on disk (M9 P3), `analysis/club_profile.py`
+composes a `BagEntry` into a `ClubProfile` (P14), `contracts/caveats.py` reads `recorded_at` to
+date a declaration (P16), `mcp/club.py` and `static/career.html` render it, and `api/app.py` both
+writes it and hands its specification half to `clubs/catalogue.py` (M12 P5) — confirming a club is
+what teaches the catalogue.
 
 Stdlib + pydantic only (ADR-008).
 """
@@ -46,37 +61,30 @@ from typing import Self
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from golf_coach.contracts.club import ClubId
+from golf_coach.contracts.club_spec import ClubSpec, SpecProvenance
 from golf_coach.contracts.golfer import PLAYER_ID
 
 
-class BagEntry(BaseModel):
-    """The physical club occupying one slot, as the golfer declared it.
+class BagEntry(ClubSpec):
+    """The physical club occupying one slot, as the golfer declared it. [M12 P2]
 
-    Every descriptive field is optional and empty by default, `loft_deg` most importantly: a golfer
-    who has never put their irons on a loft machine still has a bag, and refusing to record one
-    until they do would mean recording nothing. The work that needs loft refuses **per club** when
-    it is absent, which is `SwingResult.unscored`'s posture applied to a different missing input —
-    the clubs that do have a loft are unaffected, and the one that does not is named rather than
-    defaulted to a book value nobody measured (ADR-010 §2, ADR-024 §2).
+    A `ClubSpec` — the whole published field list, `club` included — plus the three facts that are
+    about the *declaration* rather than about the club: `recorded_at`, `retired_at` and
+    `provenance`. Inheriting rather than re-listing is what makes a field added to `ClubSpec`
+    compared by `same_club_as`, carried by the save route and rendered by the bag form without three
+    separate edits, and the reason the split could happen at all is that no `.bag.json` existed on
+    disk to migrate — free on the day of ADR-026, a migration the day after the first bag is saved
+    (ADR-026 §3).
+
+    Every spec field stays optional, `loft_deg` most importantly: a golfer who has never put their
+    irons on a loft machine still has a bag, and refusing to record one until they do meant
+    recording nothing — which is precisely what happened for a whole milestone. What has narrowed
+    is what `None` *means* here. Under ADR-026 §1 the published loft fills the field, so a blank is
+    no longer "unmeasured" but "nobody, the manufacturer included, has said". The work that needs
+    loft still refuses **per club** when it is absent, which is `SwingResult.unscored`'s posture
+    applied to a different missing input: the clubs that do have a loft are unaffected, and the one
+    that does not is named rather than filled with a number nobody has (ADR-010 §2).
     """
-
-    club: ClubId = Field(
-        description=(
-            "The slot this club fills. Carried on the entry even though `Bag.entries` is keyed by "
-            "it, because an entry travels alone: `BagStore.set_entry` upserts one, and P14's "
-            "`ClubProfile.bag_entry` holds one with no dict around it. `Bag` pins the two against "
-            "each other rather than trusting them to agree."
-        )
-    )
-
-    loft_deg: float | None = Field(
-        default=None,
-        description="Measured loft. None means unmeasured, and never a catalogue default.",
-    )
-    make: str = ""
-    model: str = ""
-    shaft: str = ""
-    length_in: float | None = None
 
     recorded_at: datetime = Field(
         description=(
@@ -100,24 +108,43 @@ class BagEntry(BaseModel):
         ),
     )
 
+    provenance: SpecProvenance | None = Field(
+        default=None,
+        description=(
+            "Where the spec fields came from, or None for an entry declared before anything "
+            "recorded it. **Not part of club identity** — `same_club_as` excludes it, and that "
+            "exclusion is load-bearing rather than tidy: see that method's docstring, which is "
+            "where the failure it prevents is written out."
+        ),
+    )
+
     def same_club_as(self, other: BagEntry) -> bool:
-        """Is this the same physical club as `other`, ignoring when it was declared?
+        """Is this the same physical club as `other`, ignoring when it was declared and looked up?
 
         The store's whole upsert decision turns on this: re-saving an unchanged row is an edit and
         must not move `recorded_at`, while a genuinely different club retires the old one. Club
         identity lives here rather than in `BagStore` because it is a fact about what a bag entry
         *is*, and a store that owned the definition would be a second place to change it.
 
-        Derived by excluding the two timestamps rather than by listing the descriptive fields, so a
-        field added to `BagEntry` later is compared from the day it is added. A hand-listed tuple's
-        failure mode is a new field that silently never counts as a change — a re-shafted club that
-        reads as the same one and pools two populations of shots.
+        Derived by excluding three fields rather than by listing the two dozen spec fields, so a
+        field added to `ClubSpec` is compared from the day it is added. A hand-listed tuple's
+        failure mode is a new field that silently never counts as a change — a re-shafted club
+        that reads as the same one and pools two populations of shots.
+
+        **`provenance` is the third exclusion, and the one that does not look like a timestamp**
+        (ADR-026 §4). It carries one — `retrieved_at` — and that is enough: without this line,
+        looking a club up a second time and saving it mints a fresh retrieval stamp, compares
+        unequal, retires a perfectly good entry onto `Bag.retired`, and hands M9 P16 a bag-changed
+        caveat over shots that were every one of them hit with the same club. Nothing raises and the
+        bag still reads correctly; the only symptom is a sentence about a club that never changed.
+        That invisibility is why the exclusion is written down here, in ADR-026 §4 and in
+        ADR-024's addendum rather than in one of them.
 
         This instrument has no serial numbers, so two identically-specified 7 irons are one club as
         far as anything here can see. That is the honest answer rather than a limitation to work
         around: nothing downstream could act on the distinction.
         """
-        timestamps = {"recorded_at", "retired_at"}
+        timestamps = {"recorded_at", "retired_at", "provenance"}
         return self.model_dump(exclude=timestamps) == other.model_dump(exclude=timestamps)
 
 

@@ -174,3 +174,24 @@ def test_api_package_init_stays_import_light() -> None:
     )
 
     assert out.stdout.strip() == "False"
+
+
+def test_the_club_lookup_imports_without_anthropic() -> None:
+    """M12 P4: `clubs/lookup.py` mirrors `coach.py`'s lazy seam and needs its own pin.
+
+    The mirror is structural, not shared — ADR-008 forbids `clubs/` importing `feedback/` — so this
+    module's `_sdk()` is a second copy of the same three lines and nothing about `coach.py` passing
+    says anything about this one. `api/app.py` reaches it for the lookup route, so a module-scope
+    `import anthropic` here would make the whole upload server require the `llm` extra to start,
+    exactly as it would from `conversation.py` above.
+    """
+    code = "import golf_coach.clubs.lookup, sys; print('anthropic' in sys.modules)"
+
+    out = subprocess.run(
+        [sys.executable, "-c", code], capture_output=True, text=True, check=True
+    )
+
+    assert out.stdout.strip() == "False", (
+        "golf_coach.clubs.lookup imports anthropic at module scope — it must stay inside "
+        "`_sdk()` so the upload server starts without the `llm` extra"
+    )

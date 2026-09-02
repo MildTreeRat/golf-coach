@@ -272,6 +272,41 @@ def test_a_club_that_is_not_a_club_is_a_400_naming_what_was_rejected(client) -> 
         assert text in res.json()["detail"]
 
 
+def test_the_shaft_vocabularies_are_parsed_at_the_boundary_and_refuse(client) -> None:
+    """`"S"` off the shaft band saves; `"regular-ish"` is a 400 and not a silent `REGULAR`. [M12 P2]
+
+    The reason `BagEntryRequest` types these two as `str` rather than as their enums: pydantic
+    would 422 on `"S"` before `parse_shaft_flex` ever ran, and the letter code is the only spelling
+    most golfers have ever seen their flex written in. `ClubRequest` states the same argument for
+    `"7 iron"`, which is the pattern this follows.
+
+    The refusal matters in the other direction for the same asymmetry `parse_club` names: a hedge
+    recorded as a flex loses the hedge, and a graphite shaft filed as steel is a wrong label nothing
+    downstream can detect.
+    """
+    def entry_for(body: dict, club: str) -> dict:
+        # The response is the whole bag in bag order, so index by club rather than by position.
+        return next(c for c in body["clubs"] if c["club"] == club)["bag_entry"]
+
+    saved = client.post(
+        "/api/golfers/aaron/bag/7i",
+        json={"shaft_flex": "S", "shaft_material": "Carbon Fiber"},
+    )
+
+    assert saved.status_code == 200
+    entry = entry_for(saved.json(), "7i")
+    assert entry["shaft_flex"] == "stiff", "'S' is the spelling on the band"
+    assert entry["shaft_material"] == "graphite"
+
+    refused = client.post("/api/golfers/aaron/bag/8i", json={"shaft_flex": "regular-ish"})
+    assert refused.status_code == 400
+    assert "regular-ish" in refused.json()["detail"]
+
+    blank = client.post("/api/golfers/aaron/bag/9i", json={"make": "Ping"})
+    assert blank.status_code == 200, "an undeclared flex is not a refused one"
+    assert entry_for(blank.json(), "9i")["shaft_flex"] is None
+
+
 def test_every_verb_is_behind_the_token(store, golfers) -> None:
     """Funnel makes these routes publicly reachable (ADR-016), and the two writers are the first
     thing on this server that lets a stranger edit stored state rather than only read it."""
@@ -297,7 +332,7 @@ def test_declaring_a_club_puts_it_in_the_bag_and_the_response_is_a_fresh_read(cl
     """
     saved = client.post(
         "/api/golfers/aaron/bag/7 iron",
-        json={"loft_deg": 34.0, "make": "Titleist", "model": "T150", "shaft": "Modus 105"},
+        json={"loft_deg": 34.0, "make": "Titleist", "model": "T150", "shaft_model": "Modus 105"},
     )
 
     assert saved.status_code == 200
@@ -379,3 +414,151 @@ def test_removing_a_club_that_is_not_in_the_bag_is_a_404(client) -> None:
 
     assert res.status_code == 404
     assert "7i" in res.json()["detail"]
+
+
+# ------------------------------------------------------------- the whole specification [M12 P5]
+
+
+def test_the_request_carries_every_spec_field_and_the_three_it_must_not(client) -> None:
+    """**The R6 pin.** `BagEntryRequest` is a hand-written copy of `ClubSpec`'s field list, and
+    this is what makes that safe to be.
+
+    The failure it catches is silent and expensive: a field added to `ClubSpec` that nobody adds
+    here is accepted by pydantic, dropped by the route on the way to the contract, and answered
+    with a 200 — the page shows a saved value that went nowhere. That is `mcp/query.py`'s
+    `_METRIC_FIELDS` failure, which this repo has already paid for once.
+
+    The three deliberate differences are asserted as such rather than skipped, because each is a
+    decision: `club` is the path segment (so the route editing a 7 iron cannot be handed a payload
+    claiming to be a wedge), and `provenance` is added because it is a fact about the declaration
+    rather than about the club.
+    """
+    from golf_coach.api.app import BagEntryRequest
+    from golf_coach.contracts.club_spec import ClubSpec
+
+    body = set(BagEntryRequest.model_fields)
+
+    assert body == (set(ClubSpec.model_fields) - {"club"}) | {"provenance"}
+    assert "recorded_at" not in body, "the store owns the clock (`bag_store.py`)"
+    assert "retired_at" not in body, "a club leaves the bag through DELETE, not through a field"
+
+
+def test_a_whole_specification_round_trips_through_the_save_route(client) -> None:
+    """Every group of `ClubSpec` posted at once, read back through a fresh `GET`.
+
+    Field by field rather than as a lump, because the failure this catches is one field silently
+    lost in the middle of a body that otherwise works — a 200 looks identical either way. The two
+    tuple-shaped and enum-shaped fields are in here on purpose: `loft_range_deg` is the only
+    non-scalar on the contract and `shaft_flex` is one of the two that arrive as text.
+    """
+    posted = {
+        "make": "TaylorMade",
+        "model": "Stealth 2",
+        "model_year": 2023,
+        "head_type": "titanium driver head, carbon crown",
+        "set_composition": "single club",
+        "loft_deg": 10.5,
+        "lie_deg": 56.0,
+        "bounce_deg": None,
+        "grind": "",
+        "offset_mm": 2.0,
+        "face_angle_deg": 0.0,
+        "head_weight_g": 198.0,
+        "adjustable_hosel": True,
+        "loft_range_deg": [8.5, 12.5],
+        "shaft_model": "Ventus TR Red",
+        "shaft_material": "Carbon Fiber",
+        "shaft_flex": "S",
+        "shaft_weight_g": 55.0,
+        "shaft_torque_deg": 4.6,
+        "shaft_kick_point": "mid-high",
+        "length_in": 45.75,
+        "swing_weight": "D3",
+        "total_weight_g": 310.0,
+        "grip": "Golf Pride Tour Velvet 360",
+        "cor": 0.83,
+        "moi_g_cm2": 5100.0,
+        "usga_conforming": True,
+    }
+
+    saved = client.post("/api/golfers/aaron/bag/driver", json=posted)
+    assert saved.status_code == 200
+    assert saved.json() == client.get("/api/golfers/aaron/bag").json()
+
+    entry = saved.json()["clubs"][0]["bag_entry"]
+    for name, value in posted.items():
+        expected = {"shaft_material": "graphite", "shaft_flex": "stiff"}.get(name, value)
+        assert entry[name] == expected, f"{name} did not survive the round trip"
+
+    assert entry["face_angle_deg"] == 0.0, "a declared zero is a value, not an omission"
+    assert entry["bounce_deg"] is None and entry["grind"] == "", "undeclared stays undeclared"
+
+
+def test_a_looked_up_provenance_travels_onto_the_entry_and_a_typed_one_is_stamped(client) -> None:
+    """ADR-026 §7 at the surface that writes: a model's answer never looks like a typed one.
+
+    The block is echoed back from the lookup response rather than composed here, which is what
+    carries the model id **and its own confidence notes** — usually the reason a field beside them
+    is blank — into the bag. A body with no provenance is stamped `"typed"`, so the M9 hand-filled
+    form keeps working and still says where its numbers came from.
+    """
+    echoed = {
+        "source": "llm:claude-opus-5",
+        "retrieved_at": "2026-08-31T12:00:00Z",
+        "notes": "the T150 iron loft chart is not something I can confirm.",
+    }
+
+    looked_up = client.post(
+        "/api/golfers/aaron/bag/7i",
+        json={"make": "Titleist", "model": "T150", "provenance": echoed},
+    )
+    typed = client.post("/api/golfers/aaron/bag/8i", json={"make": "Titleist", "model": "T150"})
+
+    def entry_for(body: dict, club: str) -> dict:
+        return next(c for c in body["clubs"] if c["club"] == club)["bag_entry"]
+
+    assert looked_up.status_code == 200 and typed.status_code == 200
+    assert entry_for(looked_up.json(), "7i")["provenance"]["source"] == "llm:claude-opus-5"
+    assert "loft chart" in entry_for(looked_up.json(), "7i")["provenance"]["notes"]
+    assert entry_for(typed.json(), "8i")["provenance"]["source"] == "typed"
+
+
+def test_a_second_save_of_a_looked_up_club_does_not_retire_it(client, bags) -> None:
+    """**ADR-026 §4, reached through HTTP.** `same_club_as` excludes `provenance`, and this route
+    stamps a fresh `retrieved_at` on every save — so without that exclusion, pressing save twice
+    would retire a perfectly good entry and hand M9 P16 a bag-changed caveat over shots that were
+    every one of them hit with the same club.
+
+    Nothing raises when it goes wrong and the bag still reads correctly, which is why it is pinned
+    at the route as well as on the contract: the only symptom is a sentence about a club that never
+    changed.
+    """
+    body = {"make": "Titleist", "model": "T150", "lie_deg": 61.5}
+
+    first = client.post("/api/golfers/aaron/bag/7i", json=body).json()
+    second = client.post("/api/golfers/aaron/bag/7i", json=body).json()
+
+    declared = [c for c in second["clubs"] if c["club"] == "7i"][0]["bag_entry"]["recorded_at"]
+    assert declared == [c for c in first["clubs"] if c["club"] == "7i"][0]["bag_entry"][
+        "recorded_at"
+    ]
+    assert bags.get("aaron").retired_for(ClubId.SEVEN_IRON) == ()
+
+
+def test_a_confirmed_club_is_written_into_the_catalogue_and_a_nameless_one_is_not(client) -> None:
+    """Confirming is what makes a specification worth serving to the next lookup (ADR-026 §5).
+
+    The nameless half is the silent refusal `remember` is built on: a row under an empty key would
+    be served for every make-less lookup thereafter, so it declines and the save still succeeds.
+    A 500 here would cost the golfer the bag entry over a cache write.
+    """
+    from golf_coach.clubs import catalogue
+
+    with_name = client.post(
+        "/api/golfers/aaron/bag/7i",
+        json={"make": "Titleist", "model": "T150", "model_year": 2023, "lie_deg": 61.5},
+    )
+    without = client.post("/api/golfers/aaron/bag/8i", json={"loft_deg": 38.0})
+
+    assert with_name.status_code == 200 and without.status_code == 200
+    assert list(catalogue.load_catalogue()) == ["titleist/t150/2023/7i"]

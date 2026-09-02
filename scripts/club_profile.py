@@ -280,8 +280,8 @@ def _print_bag_entry(entry: BagEntry | None) -> None:
         _print_block(
             "club",
             "No bag entry declared. Every statistic below is unaffected; a loft or fitting "
-            "question about this club has to refuse, and no catalogue default is substituted for "
-            "a loft nobody measured.",
+            "question about this club has to refuse. Look the club up and confirm it to fill "
+            "this in (M12).",
             4,
         )
         return
@@ -289,10 +289,10 @@ def _print_bag_entry(entry: BagEntry | None) -> None:
     described = " ".join(part for part in (entry.make, entry.model) if part)
     line = described or "make and model not recorded"
     line += (
-        f", {entry.loft_deg:g} deg loft" if entry.loft_deg is not None else ", loft not measured"
+        f", {entry.loft_deg:g} deg loft" if entry.loft_deg is not None else ", loft not recorded"
     )
-    if entry.shaft:
-        line += f", {entry.shaft} shaft"
+    if entry.shaft_model:
+        line += f", {entry.shaft_model} shaft"
     if entry.length_in is not None:
         line += f", {entry.length_in:g} in"
     line += f"  (declared {entry.recorded_at:%Y-%m-%d})"

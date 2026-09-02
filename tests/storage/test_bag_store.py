@@ -21,6 +21,7 @@ import pytest
 
 from golf_coach.contracts.bag import Bag, BagEntry
 from golf_coach.contracts.club import ClubId
+from golf_coach.contracts.club_spec import SpecProvenance
 from golf_coach.contracts.golfer import Handedness
 from golf_coach.storage.bag_store import BagStore
 from golf_coach.storage.golfer_store import GolferStore
@@ -98,6 +99,63 @@ def test_re_saving_an_unchanged_club_does_not_move_recorded_at(bags) -> None:
     assert again.entries[ClubId.SEVEN_IRON].recorded_at == declared_at
     assert again.retired == (), "an unchanged row retired a club"
     assert bags.get("aaron").entries[ClubId.SEVEN_IRON].recorded_at == declared_at
+
+
+def test_looking_the_same_club_up_twice_does_not_move_recorded_at(bags) -> None:
+    """**The M12 P2 pin, driven through the store.** A fresh `provenance` is not a fresh club.
+
+    The same short-circuit as the test above, but tripped by the field M12 added rather than by the
+    save button: a golfer re-runs the lookup on a club already in the bag, and what comes back is
+    identical except for who answered and when. `same_club_as` excludes `provenance` for this, and
+    with the exclusion missing nothing raises — the entry is retired onto the shelf, the new one
+    takes a fresh `recorded_at`, and M9 P16 tells the golfer their carry average pools two clubs it
+    does not. Pinned here as well as in `tests/contracts/test_bag.py` because the contract is where
+    the comparison lives and the store is where its consequence lands (ADR-026 §4).
+    """
+    spec = {"make": "Titleist", "model": "T150", "loft_deg": 30.5}
+    first = bags.set_entry(
+        "aaron",
+        _entry(
+            ClubId.SEVEN_IRON,
+            provenance=SpecProvenance(source="llm:claude-opus-5", retrieved_at=_STALE),
+            **spec,
+        ),
+    )
+    declared_at = first.entries[ClubId.SEVEN_IRON].recorded_at
+
+    again = bags.set_entry(
+        "aaron",
+        _entry(
+            ClubId.SEVEN_IRON,
+            provenance=SpecProvenance(
+                source="catalogue", retrieved_at=datetime(2026, 8, 31, tzinfo=UTC)
+            ),
+            **spec,
+        ),
+    )
+
+    assert again.entries[ClubId.SEVEN_IRON].recorded_at == declared_at
+    assert again.retired == (), "a second lookup retired the club it was looking up"
+    assert bags.get("aaron").retired == ()
+
+
+def test_a_re_shafted_club_is_a_different_club(bags) -> None:
+    """The other direction of the same widening: the spec fields do count, all of them.
+
+    M12 P2 took `BagEntry` from five descriptive fields to two dozen inherited ones, and the point
+    of `same_club_as` comparing by exclusion is that the new ones count from the day they are
+    added. A shaft swap is the case ADR-026 names — physically a different club, hitting a
+    different ball flight, and pooling its shots with the old one is the failure retention exists
+    to prevent.
+    """
+    bags.set_entry("aaron", _entry(ClubId.SEVEN_IRON, make="Titleist", shaft_model="Modus 105"))
+
+    updated = bags.set_entry(
+        "aaron", _entry(ClubId.SEVEN_IRON, make="Titleist", shaft_model="Project X LZ")
+    )
+
+    assert updated.entries[ClubId.SEVEN_IRON].shaft_model == "Project X LZ"
+    assert [entry.shaft_model for entry in updated.retired] == ["Modus 105"]
 
 
 def test_replacing_a_club_retires_the_old_one_rather_than_deleting_it(bags) -> None:

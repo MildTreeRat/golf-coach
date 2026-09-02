@@ -5,6 +5,301 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-09-01 — M12 P7: the docs said "nothing consumes this yet" and five things did
+
+**Duration**: ~1 session, docs only. Three docstrings (`clubs/catalogue.py`,
+`contracts/club_spec.py`, `contracts/bag.py`), `docs/ARCHITECTURE.md`, `docs/README.md`,
+`ROADMAP.md`, `docs/M12_CLUB_SPECS.md`. No source behaviour, no new tests, no `ANALYSIS_VERSION`
+bump. **M12 is closed at 8/8.**
+
+**`tests/test_docs_truth.py` was green before this phase and green after.** That is the entry.
+Every sentence P7 repaired was invisible to the pins — they count checkpoints, phases, routes,
+addenda and tiers, and none of them can see a docstring claiming a module has no consumers. The
+route table needed nothing, because P5 entered `POST /api/clubs/lookup` when it built it, which is
+the one thing here that *is* pinned working as intended.
+
+**Three docstrings had gone false; one was falsified by its own module's data.**
+`clubs/catalogue.py` said "the file starts empty, and that is the design" — P6 put seven rows in it
+the day before. `contracts/club_spec.py` said "nothing consumes this yet" with five surfaces on it
+(four derive the field list off `model_fields`; `SPEC_FIELDS` in `career.html` is hand-written and
+pinned against it by `tests/api/test_career_page.py`). `contracts/bag.py` said the same thing and
+had said it **since M9** — a forward-reference outliving the phases it pointed at by a whole
+milestone. A line naming *future* consumers has nothing that can fail when they arrive.
+
+**`docs/ARCHITECTURE.md` took four edits, not the one the phase list predicted.** `clubs/` into §2's
+import map with an edge from `api/` only, plus prose on it being the second `llm`-extra consumer
+and mirroring `feedback/coach.py` without importing it; a `ClubSpec` row in the interface-contracts
+table; `club_catalogue.json` into §4's storage table beside the benchmark aggregates, since both
+are committed package data with per-row provenance; and the bag row corrected, a `.bag.json` being
+a whole specification now. Review date moved to 2026-09-01.
+
+**Tier flipped TARGET → REFERENCE** on `docs/M12_CLUB_SPECS.md` and in the map's row, which are
+pinned to each other, along with 7/8 → 8/8. REFERENCE and not AS-BUILT deliberately: the structure
+is stable, but P4/P5/P6's refusal measurements are one model on three dates.
+
+**The catalogue rows ship — decided today.** `club_catalogue.json` is committed with all seven T150
+rows, the first rows this repo has ever shipped. Accepted with it: P6's duplicated provenance note
+(six of seven rows carry the same 932-character paragraph; the pw row's note discusses the 4i). It
+is a note, nothing reads it as data, and the fix needs the per-slot shape `ClubSpec` does not have.
+It is now written into `catalogue.py` where the next reader meets the rows.
+
+**Still open, and no document closes it**: nobody has looked at the twenty-seven-field form on a
+phone. P6 was driven headlessly.
+
+**Next**: `/doc-check` if you want the sweep — it is manual and was not run from inside the phase.
+Then the bay: everything left on the board wants the bay or wants `n`, which is true again for the
+first time since 2026-08-31.
+
+---
+
+## 2026-09-01 — M12 P6: the bag is not blank any more
+
+**Duration**: ~1 session. `src/golf_coach/api/static/career.html` only, plus one new test file,
+`tests/api/test_career_page.py` (3 pins). Docs: `docs/M12_CLUB_SPECS.md` (P6 checked, *As built*,
+6/8 -> 7/8), `ROADMAP.md`, `docs/README.md`. `ruff`, `mypy` and the full suite clean (1388). No
+`ANALYSIS_VERSION` bump.
+
+**`data/processed/golfers/aaron.bag.json` exists.** Seven irons, declared through the page, and
+`src/golf_coach/clubs/club_catalogue.json` holds the seven rows they taught it. Both files were
+empty for the whole of M9 and the whole of M12 until today. **Neither is committed yet — decide
+whether the catalogue rows ship**; they are a real golfer's real clubs and the file is inside the
+package, which is by design (`catalogue.remember` writes there), but nothing has ever shipped a row
+before.
+
+**Driven headlessly, and that is the entry's main caveat.** Chrome automation was not available, so
+the six §Verification steps were walked by loading the page into jsdom against a live
+`run_server.py` and dispatching real clicks at the page's own script. That is the shipped code path
+with `fetch` and `localStorage` supplied from outside, so behaviour is verified and **layout is
+not** — nobody has yet looked at a twenty-seven-field form on a phone. The harness is throwaway and
+lives in the session scratchpad; it is not in the repo and should not be, but it is worth knowing
+it took about fifteen lines to run this page's real JS.
+
+**The measurement, through the page.** 20.1 s for a single Titleist T150 2023 7 iron (14 of 27
+fields filled), 0.3 s for the same club again from the catalogue, 49.3 s for 4i–PW in one call (10
+of 27 per slot). The set refused loft, lie, length and flex on **every** slot with a separate
+written reason each time; the single call answered 32.0°, 62.0° and 37.0" with a hedge. That is the
+fourth measurement of the same asymmetry across three phases: **it will hedge one number and will
+not invent a progression.** The set panel then showed both at once — the remembered 32.0° 7 iron
+beside six slots blank in the same three fields — which is the best picture this milestone has
+produced of what ADR-026 §6 is for.
+
+**The one defect found belongs to `clubs/lookup.py`, not the page.** `ClubLookupOutcome.provenance`
+is one block per call by design, so the seven-slot call produced a single 932-character note
+covering all seven slots and stored it on **each** of the seven rows: the pw entry carries sentences
+about the 4i, and the catalogue reached 10.5 KB for seven rows, six of them the same paragraph. The
+fix is a per-slot note, which needs a shape `ClubSpec` deliberately does not have — so it belongs
+with the per-*field* provenance P5 deferred. Two arguments, one change, and they should be done
+together.
+
+**Two things the widened form forced.** A message is now set on an element rather than rendered by a
+branch (`message()`), because re-rendering to show *"x" is not a number* would discard the
+twenty-six fields typed beside the bad one — M9's five-field form could afford that and this one
+cannot. And `write()` returns the server's sentence instead of setting `bagError` itself, because a
+set fan-out needs all N results before it can say anything ("4i and 5i landed, 6i did not"). The
+fan-out is sequential, and that is correctness rather than politeness: `BagStore` writes the whole
+bag file per call.
+
+**One test where the phase list said none.** `SPEC_FIELDS` is parsed out of the HTML with a regex
+and compared against `ClubSpec.model_fields`. The phase's "no tests" was about behaviour; this is
+the risk the milestone itself names as most likely — three surfaces over one field list, two
+hand-written — and it costs a regex, not a toolchain.
+
+**Next**: P7 — docstrings, `docs/ARCHITECTURE.md` §2's import map and §3's walk, the tier flip from
+TARGET to REFERENCE, then `/doc-check`. And someone should open the page on a phone.
+
+---
+
+## 2026-08-31 — M12 P4: the model will name a driver's loft and refuses an iron's
+
+**Duration**: ~1 session. New `src/golf_coach/clubs/lookup.py`. Tests: new
+`tests/clubs/test_lookup.py`, 81 pins, plus one import pin appended to
+`tests/api/test_pipeline_imports.py` — the extras boundaries live together. Docs:
+`docs/M12_CLUB_SPECS.md` (P4 checked, *As built*), `ROADMAP.md` (4/8 -> 5/8, and the milestone's
+headline qualified). `ruff`, `mypy` and the full suite clean (1367). No `ANALYSIS_VERSION` bump.
+
+**The measurement is the entry.** Four real `claude-opus-5` lookups. It filled the **driver's**
+loft (10.5°, plus a genuine 8.5–12.5 adjustable range) and the **wedge's** (56°), and **refused
+every iron loft** — the single T150 7 iron and all seven slots of a 4i–PW call — saying in its own
+`notes` that it recalls the T150 as ~2° stronger than the T100 and will not state a published
+figure it cannot confirm. Loft is stamped on a driver's sole and lives in a spec chart for an iron,
+and it will not recite the chart. **ADR-026 §1's "book loft versus nothing" therefore holds for
+half the bag**; for irons the real choice is nothing versus nothing, and the reversal buys them a
+form to type into. That is §6's refusal working, not a defect — but it is the argument for the
+deferred hand-populated catalogue, because seven iron lofts are one table typed once.
+
+What it *does* fill: lie, length, head type, set composition, shaft model and material, grip,
+`usga_conforming` — 8 to 11 of 24 fields per club. The seven-slot call held its progressions (lie
+60.5–63.5 in half degrees, length 38.5"–35.75") and refused to interpolate the lofts, which is the
+one-call-per-set argument doing exactly its job. **Two calls disagreed about one club**: the single
+7 iron said lie 61.5, the set said 62.0, neither flagged. That is the sharpest argument yet for
+`catalogue.remember` — a second lookup is a second guess, not a second opinion.
+
+**Structured output cost four rejected requests, and none of the limits is documented.** In order:
+`minItems` other than 0 or 1 is refused; at most 16 union-typed parameters; at most 24 optional
+parameters; then a bare `Schema is too complex.` The last inverts the obvious guess and is worth
+carrying forward — the same 24 fields **compile in 20s when all are `required` and are rejected
+after 180s when 15 are optional**. It is optionality the grammar compiler pays for, not size (a
+flat object failed identically to the nested one). The shape that fits is the one that was wanted:
+every field required, numbers nullable, text refusing with `""`, so a refusal is written down
+rather than omitted. It sits at 15 unions of 16 — one field of margin, hence a test pinning the
+count, since a schema is only validated by the API and every test here injects a client.
+
+**Two structural notes.** The wire shape is walked off `ClubSpec.model_fields` (R6) with one
+`_FieldKind` record carrying both the JSON type and the coercion (R5); a new annotation type raises
+at import rather than being skipped (R8). And `_sdk`, `_text_from` and `_note_for` are knowing
+copies of `feedback/coach.py`'s — ADR-008 forbids `clubs/` importing `feedback/`, what is copied is
+error *prose*, and if a third caller ever appears the answer is `contracts/caveats.py`'s (lift the
+text into `contracts/`), not a fourth copy.
+
+**Next**: P5, the routes. Time a seven-slot call at `EFFORT = "high"` against the route's budget
+before the page depends on it — the SDK's default timeout is ten minutes.
+
+---
+
+## 2026-08-31 — M12 P3: the second lookup of a club is offline
+
+**Duration**: ~1 session. New `src/golf_coach/clubs/` — `__init__.py`, `catalogue.py` and
+`club_catalogue.json`, which ships with **zero rows**. Tests: new `tests/clubs/test_catalogue.py`,
+24 pins. Docs: `docs/M12_CLUB_SPECS.md` (P3 checked, *As built*, 3/8 -> 4/8), `docs/README.md`
+(the M12 row and ADR-026's stale "P1–P7 are unbuilt"), `ROADMAP.md`. `ruff`, `mypy` and the full
+suite clean. **No `ANALYSIS_VERSION` bump and no corpus re-run** — this milestone owes none.
+
+**A cache, and it is written where the repo's other packaged data is only read.** `catalogue.py`
+is ADR-022's shape applied to a lookup instead of a fit, but with one difference that decided most
+of the module: `ranges.json` is read and never written, and this file is written at runtime. So
+there is no `lru_cache` (it would answer out of the state before the last confirmed club, in the
+server and in the tests both), and `_catalogue_path` is a `Path(__file__)` rather than an
+`importlib.resources` traversable, because a `Traversable` cannot be written and naming the file
+two ways would let the read and the write disagree about which catalogue this is.
+
+**The key composes `slugify` and then does one thing `slugify` must not.** It drops the separators
+`slugify` leaves in, so "T150", "T-150" and "t 150" are one key — and that step is exactly the
+difference between the two jobs, since a `player_id` is a filename people read and "mary jane" and
+"maryjane" are allowed to be two golfers. An unknown `model_year` is its own key rather than a
+wildcard: the tempting fallback answers a 2023 lookup with a 2019 set's lofts.
+
+**Every refusal is silent, which is the opposite of `BagStore`'s posture on purpose.** This is a
+cache and the bag is the record, so a `remember` that cannot write costs a *future* API call and
+never the save that triggered it. The exception is the one that would lose data: `remember` will
+not write over a catalogue it cannot parse — `BagStore._load_for_write`'s rule moved here, since a
+tolerant writer replaces every checked row with the one row it was asked to add and nothing raises.
+
+**`lookup` returns the row, not the spec, and the provenance is not rewritten.** A spec handed over
+with its provenance stripped is the failure ADR-026 §7 names; the catalogue is where an answer was
+kept, not where it came from, so `"catalogue"` stays the label for a row typed into the JSON by
+hand. `SpecProvenance` is required on a row where `BagEntry.provenance` is optional — an entry can
+predate anything that recorded a source, a row cannot.
+
+**One pin exists because nothing else would notice.** The reader is tolerant at the file *and* the
+row level, which means a stray comma in the committed `club_catalogue.json` turns the cache off for
+everyone with no symptom beyond a model call that should have been free. One test reads the real
+file and asserts every row in it validates.
+
+**Next**: P4, the LLM lookup — `clubs/lookup.py` mirroring `feedback/coach.py`'s lazy `_sdk()` and
+`client=` seam. **It is where this milestone's first measurement arrives**: what a real lookup of
+two or three checkable clubs returns, and what it refused.
+
+**The corpus still needs re-analysing under the heavy model.** Unchanged from the entries below.
+
+---
+
+## 2026-08-31 — M12 P2: the bag entry stops keeping its own copy of what a club is
+
+**Duration**: ~1 session. `src/golf_coach/contracts/bag.py` (`BagEntry(ClubSpec)`, five descriptive
+fields deleted, `provenance` added, `same_club_as` excludes three), and its consumers:
+`api/app.py` (`BagEntryRequest` shaft-split, new `_resolve_shaft_vocabularies`, the save route),
+`api/static/career.html` (`ENTRY_FIELDS`, the row summary), `scripts/club_profile.py`. Tests:
+`tests/contracts/test_bag.py`, `tests/storage/test_bag_store.py`, `tests/api/test_bag_route.py`.
+Docs: `docs/M12_CLUB_SPECS.md` (P2 checked, *As built*, 2/8 -> 3/8), `docs/README.md`, `ROADMAP.md`.
+`ruff`, `mypy` and the full suite clean. **No `ANALYSIS_VERSION` bump and no corpus re-run** — this
+milestone owes none, and a phase wanting one has strayed out of scope.
+
+**A bag entry is now three fields and a method.** The other two dozen come from `ClubSpec`, `club`
+included: the base already carried the same "an entry travels alone" argument word for word, so a
+second copy would have been the duplication this phase removes. `provenance` is declared after
+`retired_at` so the three names `same_club_as` excludes sit together in the file.
+
+**The consumer table in the phase doc found a break no checker would have.**
+`scripts/club_profile.py:294` read `entry.shaft`; `scripts/` is outside `mypy src` and `ruff` does
+not resolve attributes, so that line would have raised `AttributeError` the first time anyone ran
+the CLI against a declared bag. Caught by reading P0's table rather than by running anything —
+which is the argument for the table having been written.
+
+**The route needed a decision the plan did not name.** `BagEntryRequest` carries `shaft_material`
+and `shaft_flex` as `str`, not as their enums, because the enum makes pydantic 422 on `"S"` before
+`parse_shaft_flex` runs — and `"S"` is what is printed on the shaft band. New
+`_resolve_shaft_vocabularies` parses both beside `_resolve_club` and **400s on text it refuses**
+rather than dropping it; an omitted field stays undeclared. P5 reuses it rather than widening the
+request with enums.
+
+**The R6 pin did exactly what it was built for.** `_ODD_VALUES` walks `BagEntry.model_fields`, so
+the shape change failed with a `KeyError` naming each new field one at a time. Six entries to
+twenty-seven, grouped as `ClubSpec` declares them.
+
+**The provenance defect never appeared.** Both directions of `same_club_as` were written before the
+suite ran and both were green first time, so the milestone's headline risk is recorded as
+*prevented by having been written down three times* — §Design 2, ADR-026 §4 and ADR-024's addendum
+— rather than as caught. The evidence for the practice is an absence, which is worth saying plainly.
+
+**Four sentences are now on a clock, and P5 owns them.** `mcp/club.py:228`,
+`analysis/club_profile.py`, `scripts/club_profile.py:282` and `career.html:707` each still say no
+catalogue default is substituted for a loft nobody measured. True today, because nothing writes a
+looked-up loft until the lookup route lands — false the moment it does, and one of those readers is
+a coaching model. Recorded in the phase doc under both §Three things and P5.
+
+**Next**: P3, the committed catalogue and its key — `clubs/catalogue.py` keyed through `slugify`,
+not a second normaliser.
+
+**The corpus still needs re-analysing under the heavy model.** Unchanged from the entry below.
+
+---
+
+## 2026-08-31 — M12 P1: what a club is, as a field list that refuses
+
+**Duration**: ~1 session. New `src/golf_coach/contracts/club_spec.py` (`ClubSpec`, `ShaftMaterial`,
+`ShaftFlex`, `SpecProvenance`, `parse_shaft_material`, `parse_shaft_flex`) and new
+`tests/contracts/test_club_spec.py` (50 pins). Docs: `docs/M12_CLUB_SPECS.md` (P1 checked, *As
+built*, status 1/8 -> 2/8), `docs/README.md` and `ROADMAP.md` (the same count, which
+`tests/test_docs_truth.py` pins against the phase doc). `ruff` and `mypy` clean.
+
+**Additive only — nothing imports it yet.** `BagEntry` still carries its own five fields; P2 is
+what makes it inherit this one. So this session moved no score, no artifact and no version.
+
+**The plan's one-line pin overstated the shape, and the code kept `BagEntry`'s.** "A `ClubSpec`
+with nothing but a `club` reads `None` everywhere else" is not quite true: the measured fields are
+`None` and the free-text ones are `""`, because that is what `bag.py:77` does today and P2 should
+be an inheritance rather than a migration. The test pins *falsy* and says which is which.
+
+**Three things §Design left open, closed conservatively, each pinned as a refusal.**
+`"composite"` does not parse to `MULTI_MATERIAL` — makers use it for plain graphite as well, so it
+names two members and may pick neither — and `"hybrid"` does not parse at all, because it already
+names a club. `loft_range_deg` gained a `model_validator` refusing a range that runs high to low,
+which is the one field P4's lookup can plausibly return in the order it happened to say it; every
+use of a range is a containment test, and a reversed pair answers `False` for every loft including
+the one the club is set to.
+
+**A trailing "flex" is dropped in `_normalize` instead of listed as aliases.** "Stiff Flex", "R
+Flex" and "Regular Flex" become one rule rather than three rows, and the rule keeps working for a
+member added later. That is `_build_aliases`' own argument — derive from the declaration — applied
+one level up, and it is why the hand-written half of the table is only the letter codes, which no
+rule invents.
+
+**`_normalize` is copied from `club.py` rather than imported, deliberately.** Four lines, two
+vocabularies: sharing the fold would mean a change made for club spellings silently changing how a
+flex parses. Recorded in the *As built* too, because a reuse review will find it and should find
+the reason with it.
+
+**Before this, the working tree was committed as three.** ~1,340 lines of finished work had been
+sitting uncommitted across two WORKLOG entries plus M12 P0's docs. Split by hunk into `0e64aa4`
+(M11 P10/P11), `ce19eee` (the pose heavy switch) and `5f8ff61` (M12 P0). `ANALYSIS_VERSION`'s two
+bumps were in one hunk and the doc counts interleaved all three, so those were split by hand; the
+M12 docs go last, since that is the commit that makes `docs/README.md`'s counts true.
+
+**The corpus still needs re-analysing under the heavy model.** Unchanged from the entry below —
+P1 touched nothing that scores.
+
+---
+
 ## 2026-08-30 — Two clocks in one container, and the floor that could not land without them
 
 **Duration**: ~1 session. `src/golf_coach/audio/ffmpeg.py` (new `video_start_seconds`),

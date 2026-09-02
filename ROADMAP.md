@@ -1,6 +1,6 @@
 # Roadmap: AI Golf Swing Trainer
 
-## Last Updated: 2026-08-31
+## Last Updated: 2026-09-01
 
 Grouped by **state**, not by number, because the numbers no longer run in order: the pose-only
 slices (M4-PoC, M4-PoC+, M4-REF, M5-FB) delivered the mechanics half of M4 and the ranking half
@@ -27,7 +27,7 @@ wording; only the grouping and the M4 checklist have been corrected.
 | **M9** Player tracking (per-club) | ✅ Done *(2026-08-22)*, 20/20 phases | — (built and **silent by design**: every club-narrowed answer refuses, because no swing on disk is tagged yet. A bay session, and the retag control, are what make it speak) | [§M9](#m9-player-tracking-per-club-shot-history--done-and-waiting-on-a-bay-session) |
 | **M10** Alignment accuracy | ✅ Done *(2026-08-26)*, 10/10 phases | — (the corpus has been re-analysed against the fix; the face-on top it left landing late was closed by M11 on 2026-08-29) | [§M10](#m10-alignment-accuracy--the-two-panels-leave-address-together--done) |
 | **M11** Acoustic sync | ✅ Done *(2026-08-30)*, 12/12 phases | — (P10 and P11 closed the addendum's residual: the anchor now matches contact by eye to within a frame on all ten clips read frame by frame) | [§M11](#m11-acoustic-sync--the-ball-strike-is-the-clock--done) |
-| **M12** Club specs | 🟡 In progress, 1/8 phases | Nothing — desk work, and the only item on this board that is | [§M12](#m12-club-specs--the-golfer-names-a-club-the-program-determines-what-it-is--in-progress) |
+| **M12** Club specs | ✅ Done *(2026-09-01)*, 8/8 phases | — (desk work, and it produced the first `.bag.json` this repo has ever held; only the form's **layout on a phone** is unverified) | [§M12](#m12-club-specs--the-golfer-names-a-club-the-program-determines-what-it-is--done) |
 | **M5** Feedback UI | ⬜ Not started | M7 Phase 5 gives the host | [§M5](#milestone-5-feedback-ui) |
 | **M2** Club & ball detection | 🔒 Gated, **and M1.5 said no-go** | Bay lighting for a ~1/2000 s exposure — *not* a global-shutter camera | [§M2](#milestone-2-club--ball-detection) |
 | Hardware re-validation | 🔒 Gated | Cameras / launch monitor arriving | [§Gate](#hardware-re-validation-gate-revisit-when-cameras--launch-monitor-arrive) |
@@ -94,13 +94,15 @@ that makes the *next* bay session's data worth more than the last one's. **As of
 sentence is true again**: M9 is closed, and everything left on this board wants the bay or wants
 `n`.
 
-**And as of 2026-08-31 it is false again, for the same reason it was in M9's week.**
-[M12](#m12-club-specs--the-golfer-names-a-club-the-program-determines-what-it-is--in-progress)
-is desk work: M9 built the bag and nobody has ever filled it in, so `data/processed/golfers/` holds
-a golfer record and no `.bag.json` at all. A five-field form asking for a lie angle is what produced
-that, and the fix is that the golfer names a club and the program determines its specification. It
-needs neither the bay nor an `n` — and, like M9, it makes the bay session that follows it worth
-more, because a club's specification is another input that is unrecoverable after the fact.
+**It went false again on 2026-08-31, for the same reason it was in M9's week, and
+[M12](#m12-club-specs--the-golfer-names-a-club-the-program-determines-what-it-is--done) closed it
+on 2026-09-01.** M9 built the bag and nobody had ever filled it in, so `data/processed/golfers/`
+held a golfer record and no `.bag.json` at all until M12 P6 wrote the first one. A five-field form
+asking for a lie angle is what produced that, and the fix was that the golfer names a club and the
+program determines its specification. It needed neither the bay nor an `n` — and, like M9, it makes
+the bay session that follows it worth more, because a club's specification is another input that is
+unrecoverable after the fact. **With it closed, the sentence above is true once more: everything
+left on this board wants the bay or wants `n`.**
 
 **The ingest spine is closed.** P1–P7 all landed 2026-08-21, and a swing can no longer reach disk
 untagged: `contracts/club.py` holds the taxonomy, `contracts/bag.py` the declared bag,
@@ -1355,20 +1357,53 @@ numbers in §Addendum, P10 and P11 of the phase doc.
 
 ---
 
-## M12: Club specs — the golfer names a club, the program determines what it is — in progress
+## M12: Club specs — the golfer names a club, the program determines what it is — done
 
 **Design**: [ADR-026](docs/decisions/026-club-specification-lookup.md), accepted 2026-08-31. It
 **reverses** [ADR-024](docs/decisions/024-per-club-shot-history.md) §2's *"never a catalogue
 default"* rule for loft, and ADR-024 carries a second addendum saying so — read that rather than §2,
 which is now history.
-**Phase list**: [docs/M12_CLUB_SPECS.md](docs/M12_CLUB_SPECS.md) — 8 phases, tier TARGET.
-**1/8 built**: P0, which wrote ADR-026, ADR-024's addendum and the milestone doc. P1–P7 are unbuilt.
+**Phase list**: [docs/M12_CLUB_SPECS.md](docs/M12_CLUB_SPECS.md) — 8 phases, tier REFERENCE.
+**8/8 built, closed 2026-09-01**: P0, which wrote ADR-026, ADR-024's addendum and the milestone
+doc; P1, which landed `contracts/club_spec.py` — the field list, the two shaft enums and their
+refusing parsers; P2, which made `BagEntry` inherit it, so **the bag entry is the whole
+specification** rather than five fields beside one; P3, `clubs/catalogue.py` — the committed
+catalogue keyed so that "T150", "T-150" and "t 150" are one club, which is what makes the second
+lookup of an accepted club offline; P4, `clubs/lookup.py` — the model call, with its schema walked
+off `ClubSpec` rather than written beside it; P5, `POST /api/clubs/lookup` plus a `BagEntryRequest`
+carrying the whole spec, which composes all three; P6, the bag page's search, confirm and set
+fan-out; and P7, the docs — `clubs/` in `docs/ARCHITECTURE.md` §2's import map, the catalogue in
+§4's storage table, and this milestone's tier flipped from TARGET to REFERENCE.
 
-**The bag is a blank form and it has stayed blank.** M9 built the whole path — `contracts/bag.py`,
-`storage/bag_store.py`, the write route, the row form on the career page — and it works. It has
-simply never been used: `data/processed/golfers/` holds `aaron.golfer.json` and **no `.bag.json` at
-all**. That is not a defect in any of those parts. It is what a five-field form asking a golfer for
-numbers they do not have to hand produces.
+**The path has been walked, and there is a bag on disk.** `data/processed/golfers/aaron.bag.json`
+holds seven irons declared through the page on 2026-09-01 — the first bag this repo has ever held —
+and `club_catalogue.json` holds the seven rows they taught it. Through the page: **20.1 s** for one
+club, **0.3 s** for the same club again from the catalogue, **49.3 s** for a 4i–PW set in one call.
+What is still unverified is layout — P6 was driven headlessly, so nobody has yet looked at a
+twenty-seven-field form on a phone.
+
+**P4 and P5 measured the thing this milestone was built on, and the second reading corrects the
+first.** P4's four lookups had the model fill a **driver's** loft (10.5°, with a real 8.5–12.5
+adjustable range) and a **wedge's** (56°) while refusing every iron loft, and concluded it will not
+recite an iron spec chart. P5's two calls through the route show something narrower: asked for a
+single T150 7 iron it answers **32.0°**, hedged in its own note as a recollection *"worth confirming
+against Titleist's published chart"*; asked for 4i–PW in one call it refuses all seven, *"will not
+interpolate"*. **It declines to invent a progression and will hedge a single number.**
+
+So ADR-026 §1's *book loft versus nothing* holds better than P4 recorded, and §6 is working in both
+directions — a hallucinated seven-slot loft chart is exactly what it exists to stop. It also makes
+the confirm step worth more, not less: the number arrives with a written request to check it. What
+the lookup fills besides loft is lie, length, head type, set composition, shaft model and material,
+grip and `usga_conforming`, with the set call's lie and length progressions internally consistent.
+Two lookups of one club have now disagreed on `lie_deg` twice, which is the argument for the
+catalogue. Details, including the four undocumented schema limits P4 paid for, are in both phases'
+*As built*.
+
+**The bag was a blank form and it stayed blank for a milestone.** M9 built the whole path —
+`contracts/bag.py`, `storage/bag_store.py`, the write route, the row form on the career page — and
+it works. It had simply never been used: `data/processed/golfers/` held `aaron.golfer.json` and
+**no `.bag.json` at all** until P6. That was not a defect in any of those parts. It is what a
+five-field form asking a golfer for numbers they do not have to hand produces.
 
 **And five fields are not what a club is.** `BagEntry` carries loft, make, model, shaft and length,
 where `shaft` is one free-text string standing in for six independent facts. A bag filled in
