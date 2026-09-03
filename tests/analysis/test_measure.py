@@ -12,8 +12,18 @@ strict subset of the vocabulary, and `NO_BAND` is not in it.
 
 from __future__ import annotations
 
+import math
+
 import pytest
-from conftest import make_swing
+from conftest import (
+    _ADDRESS_Y,
+    _GRIP_OFFSET_X,
+    _GRIP_OFFSET_Y,
+    _INDEX_FAN,
+    _SHOULDER_LEFT_X,
+    _SHOULDER_Y,
+    make_swing,
+)
 
 from golf_coach.analysis.measure import (
     FPS_DEPENDENT_MEASUREMENTS,
@@ -21,15 +31,20 @@ from golf_coach.analysis.measure import (
     measure_backswing_ms,
     measure_downswing_ms,
     measure_finish_balance,
+    measure_hand_height,
+    measure_hand_offset_from_hips,
+    measure_hand_separation,
     measure_head_hip_gain,
     measure_head_hip_offset_impact,
     measure_head_sway,
     measure_hip_shift_at_top,
     measure_hip_sway,
     measure_tempo_ratio,
+    measure_trail_hand_roll,
 )
 from golf_coach.analysis.phases import segment_phases
 from golf_coach.analysis.smoothing import smooth_keypoints
+from golf_coach.contracts.keypoints import PoseLandmark
 from golf_coach.contracts.swing import SwingPhase
 from golf_coach.contracts.unscored import MEASUREMENT_REASONS, UnscoredReason
 
@@ -293,3 +308,290 @@ def test_norm_suffix_marks_the_shoulder_width_metrics() -> None:
     """`derive_reference.py` keys its one-sided band recommendation on the `_norm` suffix."""
     for name, pose in POSE_MEASUREMENTS.items():
         assert name.endswith("_norm") == (pose.unit == "shoulder_widths")
+
+
+# --------------------------------------------------------------------------- the hand pair [M14]
+
+#: What the fixture places between the two wrists — a grip's width down the shaft, held for the
+#: whole swing. Imported rather than retyped, so a retuned grip offset moves the expectation with
+#: it instead of failing here.
+_GRIP_LENGTH = math.hypot(_GRIP_OFFSET_X, _GRIP_OFFSET_Y)
+
+
+def test_hand_separation_is_the_distance_the_fixture_holds_the_wrists_apart() -> None:
+    """A grip's width over the shoulder ruler, to the digit — not a range.
+
+    The value is exact because both wrists carry the same trajectory offset by a constant, so the
+    5-frame smoothing window shifts them identically and cancels out of their distance. Anything
+    else means the metric picked up a landmark that is not travelling with the club.
+    """
+    smoothed, phases = _analyzed()
+    value = measure_hand_separation(smoothed, phases).value
+    assert value is not None
+    assert value == pytest.approx(_GRIP_LENGTH / SHOULDER_WIDTH, abs=1e-6)
+
+
+def test_hand_separation_is_the_same_number_whatever_the_swing_does() -> None:
+    """The property that makes it the pair's canary: it describes the golfer, not the swing.
+
+    Both hands are on one grip, so a takeaway that drags the wrists across the frame, a swaying
+    head and a drifting finish must all leave this untouched. A metric that moved with them would
+    be reading something other than two hands on a club — which is the failure it exists to catch
+    in a *stored* number, where no frame is available to look at.
+    """
+    values = [
+        measure_hand_separation(*_analyzed(**case)).value
+        for case in (
+            {},
+            {"takeaway_frames": 6},
+            {"head_sway": 0.08, "hip_sway": 0.08},
+            {"followthrough_frames": 60, "finish_drift": 0.10},
+        )
+    ]
+    assert all(value is not None for value in values)
+    assert values[1:] == [pytest.approx(values[0], abs=1e-6)] * 3
+
+
+def test_hand_height_puts_the_hands_below_the_shoulders() -> None:
+    """Positive is hands below shoulders, and the size is the reach down to the ball.
+
+    The fixture stands the golfer with shoulders at `y=0.4` and the lead wrist at `y=0.85`, so the
+    wrist midpoint hangs a shade under 0.46 below them — a shade, because the trail wrist sits a
+    grip's width further down the shaft. Asserted against the fixture's own constants rather than
+    a literal, and loosely enough to absorb the smoothing window reaching into the takeaway at the
+    far end of the address span.
+    """
+    smoothed, phases = _analyzed()
+    value = measure_hand_height(smoothed, phases).value
+
+    expected = ((_ADDRESS_Y + _GRIP_OFFSET_Y / 2) - _SHOULDER_Y) / SHOULDER_WIDTH
+    assert value is not None
+    assert value == pytest.approx(expected, abs=0.02)
+    assert value > 0, "positive must mean hands below shoulders — image y grows downward"
+
+
+def test_hand_height_grows_when_the_hands_hang_lower() -> None:
+    """Posture, not a constant: reaching further down to the ball reads as a larger number.
+
+    Driven by lowering the wrists after smoothing rather than by a fixture knob, because the
+    fixture's address height is shared with every tempo and phase expectation in this directory
+    and moving it would be a change to all of them.
+    """
+    smoothed, phases = _analyzed()
+    before = measure_hand_height(smoothed, phases).value
+
+    drop = 0.08  # half a shoulder width, the same size `head_sway` uses
+    for frame in smoothed:
+        for side in (PoseLandmark.LEFT_WRIST, PoseLandmark.RIGHT_WRIST):
+            frame.landmarks[side] = frame.landmarks[side].model_copy(
+                update={"y": frame.landmarks[side].y + drop}
+            )
+    after = measure_hand_height(smoothed, phases).value
+
+    assert before is not None and after is not None
+    assert after - before == pytest.approx(drop / SHOULDER_WIDTH, abs=1e-6)
+
+
+def test_dim_wrists_measure_nothing_rather_than_a_plausible_number() -> None:
+    """The refusal M14 P2 exists to make reachable, on the landmarks the pair actually reads.
+
+    Dimmed *after* segmentation, not before: `segment_phases` tracks the lead wrist to find the
+    top, so a swing with dim wrists from the start has no phases either and both metrics would
+    refuse for `PHASE_NOT_SEGMENTED` — the right answer to a different question. Handing good
+    phases to bad frames isolates the visibility gate, which is the thing under test.
+
+    `LANDMARKS_UNCONFIDENT` and not a number is the whole point (ADR-010 §2). The wrists are still
+    sitting at a perfectly plausible address position; only their confidence says otherwise, and
+    that has to be enough.
+    """
+    smoothed, phases = _analyzed()
+    for frame in smoothed:
+        for side in (PoseLandmark.LEFT_WRIST, PoseLandmark.RIGHT_WRIST):
+            frame.landmarks[side] = frame.landmarks[side].model_copy(update={"visibility": 0.4})
+
+    for measure in (measure_hand_separation, measure_hand_height):
+        outcome = measure(smoothed, phases)
+        assert outcome.value is None, measure.__name__
+        assert outcome.reason is UnscoredReason.LANDMARKS_UNCONFIDENT
+        assert "address window" in outcome.detail or "address-window" in outcome.detail
+
+
+# ------------------------------------------------------------------ the offset and the roll [M14]
+
+#: The trail index knuckle's placement in the fixture, resolved from shaft-relative units to the
+#: `(dx, dy)` a reader of the frame would see. Derived here rather than typed, for `_INDEX_FAN`'s
+#: reason: retuning the grip offset must move the expectation with it.
+_INDEX_DX = _INDEX_FAN[0] * _GRIP_OFFSET_X + _INDEX_FAN[1] * _GRIP_OFFSET_Y
+_INDEX_DY = _INDEX_FAN[0] * _GRIP_OFFSET_Y - _INDEX_FAN[1] * _GRIP_OFFSET_X
+
+
+def _place_trail_knuckle(smoothed, dx: float, dy: float) -> None:
+    """Put the trail index knuckle at a fixed offset from its wrist, in every frame.
+
+    After smoothing, like the other landmark edits here: the window would otherwise average the
+    placement against its neighbours and the angle under test would not be the angle asked for.
+    """
+    for frame in smoothed:
+        wrist = frame.landmarks[PoseLandmark.RIGHT_WRIST]
+        frame.landmarks[PoseLandmark.RIGHT_INDEX] = frame.landmarks[
+            PoseLandmark.RIGHT_INDEX
+        ].model_copy(update={"x": wrist.x + dx, "y": wrist.y + dy})
+
+
+def test_hand_offset_from_hips_is_the_signed_gap_the_fixture_holds() -> None:
+    """Wrist midpoint against hip center, signed, exact.
+
+    Both are parked at `x = 0.5` for the whole address dwell and the wrists carry a constant grip
+    offset, so what survives is half that offset over the ruler. Exact rather than approximate
+    because nothing in `x` moves across the smoothing window on the default swing.
+    """
+    smoothed, phases = _analyzed()
+    value = measure_hand_offset_from_hips(smoothed, phases).value
+    assert value is not None
+    assert value == pytest.approx((_GRIP_OFFSET_X / 2) / SHOULDER_WIDTH, abs=1e-6)
+
+
+def test_hand_offset_from_hips_flips_sign_with_the_hands() -> None:
+    """Signed and camera-relative: hands to the image-left of the hips is a negative number.
+
+    The whole point of storing the sign, and `head_hip_offset_impact_norm`'s reason one window
+    earlier. A magnitude would call these two setups identical.
+    """
+    smoothed, phases = _analyzed()
+    shift = 0.05
+    for frame in smoothed:
+        for side in (PoseLandmark.LEFT_WRIST, PoseLandmark.RIGHT_WRIST):
+            frame.landmarks[side] = frame.landmarks[side].model_copy(
+                update={"x": frame.landmarks[side].x - shift}
+            )
+    value = measure_hand_offset_from_hips(smoothed, phases).value
+
+    assert value is not None
+    assert value < 0
+    assert value == pytest.approx((_GRIP_OFFSET_X / 2 - shift) / SHOULDER_WIDTH, abs=1e-6)
+
+
+def test_hand_offset_from_hips_refuses_when_the_hips_go_dim() -> None:
+    """The hip branch is reachable, unlike `hand_height_norm`'s shoulder one.
+
+    `hip_center_points` gates at `MIN_HIP_VISIBILITY`, which is stricter than the ruler's gate, so
+    a clip can carry a perfectly good shoulder width and still have no hips to measure against.
+    0.6 is the value that proves it: above `MIN_VISIBILITY`, below `MIN_HIP_VISIBILITY`.
+    """
+    smoothed, phases = _analyzed()
+    for frame in smoothed:
+        for side in (PoseLandmark.LEFT_HIP, PoseLandmark.RIGHT_HIP):
+            frame.landmarks[side] = frame.landmarks[side].model_copy(update={"visibility": 0.6})
+
+    outcome = measure_hand_offset_from_hips(smoothed, phases)
+    assert outcome.value is None
+    assert outcome.reason is UnscoredReason.LANDMARKS_UNCONFIDENT
+    assert "hip" in outcome.detail
+
+
+def test_trail_hand_roll_reads_the_fan_the_fixture_placed() -> None:
+    """The angle off image-vertical of the trail wrist-to-index-knuckle vector, exactly.
+
+    Exact for `hand_separation_norm`'s reason: both landmarks carry the same trajectory offset by
+    a constant, so the smoothing window shifts them identically and cancels out of their
+    difference. A drifting value here means the metric read a landmark not riding with the hand.
+    """
+    smoothed, phases = _analyzed()
+    value = measure_trail_hand_roll(smoothed, phases).value
+    assert value is not None
+    assert value == pytest.approx(math.degrees(math.atan2(_INDEX_DX, _INDEX_DY)), abs=1e-6)
+
+
+@pytest.mark.parametrize(
+    ("dx", "dy", "expected"),
+    [
+        (0.0, 0.03, 0.0),  # straight down the frame
+        (0.03, 0.03, 45.0),  # down and to the image-right
+        (-0.03, 0.03, -45.0),  # down and to the image-left, sign kept rather than folded away
+        (0.03, 0.0, 90.0),  # horizontal, image-right
+    ],
+)
+def test_trail_hand_roll_measures_the_angle_off_vertical(dx, dy, expected) -> None:
+    """Zero is straight down and positive is image-right, on four placements that say so.
+
+    Pinned against hand-computed angles rather than against the fixture's own arithmetic, because
+    the convention is the thing being fixed: a version measuring off *horizontal*, or with the
+    sign the other way, would still pass a test that recomputed it the way the code does.
+    """
+    smoothed, phases = _analyzed()
+    _place_trail_knuckle(smoothed, dx, dy)
+    assert measure_trail_hand_roll(smoothed, phases).value == pytest.approx(expected, abs=1e-6)
+
+
+def test_trail_hand_roll_averages_around_the_wrap_not_through_it() -> None:
+    """Why the mean is circular: two frames pointing nearly straight *up* must not read as down.
+
+    Alternate frames at +179 and -179 degrees describe a hand pointing at the top of the frame in
+    both. A mean of the per-frame angles gives 0 - straight down, the opposite direction, and a
+    perfectly plausible-looking number. The mean of the unit vectors gives 180, which is what the
+    frames actually show. This is the test that fails if `direction_series` stops normalizing or
+    the caller starts averaging angles.
+    """
+    smoothed, phases = _analyzed()
+    length = 0.03
+    for i, frame in enumerate(smoothed):
+        angle = math.radians(179.0 if i % 2 == 0 else -179.0)
+        wrist = frame.landmarks[PoseLandmark.RIGHT_WRIST]
+        frame.landmarks[PoseLandmark.RIGHT_INDEX] = frame.landmarks[
+            PoseLandmark.RIGHT_INDEX
+        ].model_copy(
+            update={
+                "x": wrist.x + length * math.sin(angle),
+                "y": wrist.y + length * math.cos(angle),
+            }
+        )
+
+    value = measure_trail_hand_roll(smoothed, phases).value
+    assert value is not None
+    assert abs(value) == pytest.approx(180.0, abs=1.0)
+
+
+def test_trail_hand_roll_needs_no_shoulder_ruler() -> None:
+    """An angle is scale-free, so a clip with no usable ruler still has a roll.
+
+    Both shoulders collapsed onto one `x` is what `MIN_SHOULDER_WIDTH` rejects - a golfer turned
+    side-on. `hand_offset_from_hips_norm` divides by that width and must say `SCALE_UNAVAILABLE`;
+    the roll never asks for it, and refusing anyway would report a reason that was not the problem.
+    """
+    smoothed, phases = _analyzed()
+    for frame in smoothed:
+        for side in (PoseLandmark.LEFT_SHOULDER, PoseLandmark.RIGHT_SHOULDER):
+            frame.landmarks[side] = frame.landmarks[side].model_copy(update={"x": _SHOULDER_LEFT_X})
+
+    offset = measure_hand_offset_from_hips(smoothed, phases)
+    assert offset.reason is UnscoredReason.SCALE_UNAVAILABLE
+    assert measure_trail_hand_roll(smoothed, phases).value is not None
+
+
+def test_trail_hand_roll_refuses_a_collapsed_hand_rather_than_reporting_zero() -> None:
+    """A knuckle sitting on its wrist has no direction, and `atan2(0, 0)` is a confident 0.0.
+
+    The failure this guards is specific and silent: 0 degrees is "the hand points straight down",
+    an entirely ordinary address reading, so a fabricated one is indistinguishable from a measured
+    one downstream. `MIN_DIRECTION_LENGTH` drops those frames; with none left the metric refuses.
+    """
+    smoothed, phases = _analyzed()
+    _place_trail_knuckle(smoothed, 0.0, 0.0)
+
+    outcome = measure_trail_hand_roll(smoothed, phases)
+    assert outcome.value is None
+    assert outcome.reason is UnscoredReason.LANDMARKS_UNCONFIDENT
+
+
+def test_dim_trail_hand_measures_no_roll() -> None:
+    """The visibility gate on the landmarks M14 P2 placed, which nothing read until now."""
+    smoothed, phases = _analyzed()
+    for frame in smoothed:
+        frame.landmarks[PoseLandmark.RIGHT_INDEX] = frame.landmarks[
+            PoseLandmark.RIGHT_INDEX
+        ].model_copy(update={"visibility": 0.4})
+
+    outcome = measure_trail_hand_roll(smoothed, phases)
+    assert outcome.value is None
+    assert outcome.reason is UnscoredReason.LANDMARKS_UNCONFIDENT
+    assert "trail wrist" in outcome.detail

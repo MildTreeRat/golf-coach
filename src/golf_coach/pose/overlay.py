@@ -2,9 +2,10 @@
 
 Draws a `FrameKeypoints` skeleton onto a BGR frame for visual accuracy review. Works purely
 off our own contract (no MediaPipe): it denormalizes landmark coordinates back to pixels and
-connects them with a small bone list. This proves `FrameKeypoints` carries everything a
-consumer needs to visualize a pose. OpenCV is imported lazily so importing this module stays
-cheap.
+connects them with a small bone list, drawing a dot at every landmark that list touches — the
+dot set is derived from the bones so the two cannot disagree. This proves `FrameKeypoints`
+carries everything a consumer needs to visualize a pose. OpenCV is imported lazily so
+importing this module stays cheap.
 """
 
 from __future__ import annotations
@@ -34,7 +35,31 @@ _BONES: tuple[tuple[PoseLandmark, PoseLandmark], ...] = (
     (PoseLandmark.LEFT_KNEE, PoseLandmark.LEFT_ANKLE),
     (PoseLandmark.RIGHT_HIP, PoseLandmark.RIGHT_KNEE),
     (PoseLandmark.RIGHT_KNEE, PoseLandmark.RIGHT_ANKLE),
+    # head — exactly one bone, and it is the quantity `evaluate_head_sway` scores: the midpoint
+    # of these two ears is the head centre (`measure.head_center_points`, whose docstring records
+    # why the ears and not the nose — the nose swings with head rotation and read a stable head
+    # as 1.18 shoulder-widths of sway). Drawing the pair joined puts the measured thing on screen.
+    # It is not decorative; do not tidy it away as a redundant line.
+    (PoseLandmark.LEFT_EAR, PoseLandmark.RIGHT_EAR),
+    # hands — a three-spoke fan per side. Nothing reads landmarks 17-22 yet (M14 P3 is the
+    # reliability screen that decides whether anything ever will), so this draws structure rather
+    # than a measurement: a fan can be reviewed by eye for whether the hands are tracked, and six
+    # loose specks could not be. That review is the prerequisite for trusting P3's numbers.
+    (PoseLandmark.LEFT_WRIST, PoseLandmark.LEFT_INDEX),
+    (PoseLandmark.LEFT_WRIST, PoseLandmark.LEFT_PINKY),
+    (PoseLandmark.LEFT_WRIST, PoseLandmark.LEFT_THUMB),
+    (PoseLandmark.RIGHT_WRIST, PoseLandmark.RIGHT_INDEX),
+    (PoseLandmark.RIGHT_WRIST, PoseLandmark.RIGHT_PINKY),
+    (PoseLandmark.RIGHT_WRIST, PoseLandmark.RIGHT_THUMB),
 )
+
+# Which landmarks get a dot — *derived* from `_BONES`, never listed separately. The two lists
+# used to be independent (the dot loop walked all 33 of `PoseLandmark`) and they drifted: the
+# overlay rendered eleven head dots — four eye points, two mouth corners, two ears, the nose,
+# plus two heels and two foot indices below — that no bone touched and no checkpoint measured.
+# Deriving is the same rule CLAUDE.md states for the checkpoint panel: derive membership, never
+# restate it. Sorted so the draw order is landmark order and a render is reproducible. [M14 P1]
+_JOINTS: tuple[PoseLandmark, ...] = tuple(sorted({lm for bone in _BONES for lm in bone}))
 
 # A landmark dimmer than this is treated as not-confidently-seen and skipped.
 _MIN_VISIBILITY = 0.5
@@ -64,7 +89,7 @@ def draw_skeleton(
         if pa is not None and pb is not None:
             cv2.line(canvas, pa, pb, _BONE_COLOR, 2)
 
-    for landmark in PoseLandmark:
+    for landmark in _JOINTS:
         p = pixel(landmark)
         if p is not None:
             cv2.circle(canvas, p, 3, _JOINT_COLOR, -1)

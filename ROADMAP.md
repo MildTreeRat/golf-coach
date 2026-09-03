@@ -1,6 +1,6 @@
 # Roadmap: AI Golf Swing Trainer
 
-## Last Updated: 2026-09-01
+## Last Updated: 2026-09-03
 
 Grouped by **state**, not by number, because the numbers no longer run in order: the pose-only
 slices (M4-PoC, M4-PoC+, M4-REF, M5-FB) delivered the mechanics half of M4 and the ranking half
@@ -29,6 +29,7 @@ wording; only the grouping and the M4 checklist have been corrected.
 | **M11** Acoustic sync | ✅ Done *(2026-08-30)*, 12/12 phases | — (P10 and P11 closed the addendum's residual: the anchor now matches contact by eye to within a frame on all ten clips read frame by frame) | [§M11](#m11-acoustic-sync--the-ball-strike-is-the-clock--done) |
 | **M12** Club specs | ✅ Done *(2026-09-01)*, 8/8 phases | — (desk work, and it produced the first `.bag.json` this repo has ever held; only the form's **layout on a phone** is unverified) | [§M12](#m12-club-specs--the-golfer-names-a-club-the-program-determines-what-it-is--done) |
 | **M13** Downswing tempo | ✅ Done *(2026-09-02)*, 8/8 phases | — (desk work; all 15 stored swings re-analysed onto the new sentence with no score moved. Only the two pages' **layout** is unverified) | [§M13](#m13-downswing-tempo--the-downswing-is-what-you-feel-the-backswing-is-what-you-change--done) |
+| **M14** Hand landmarks | ✅ Done *(2026-09-03)*, 6/6 phases | — (desk work on artifacts already on disk; it re-opened a closed question and answered it, and shipped four metrics with **no band, no checkpoint and no `ANALYSIS_VERSION` bump**. The overlay change is unverified in a browser) | [§M14](#m14-hand-landmarks--six-points-nobody-reads-and-the-head-dots-nobody-measures--done) |
 | **M5** Feedback UI | ⬜ Not started | M7 Phase 5 gives the host | [§M5](#milestone-5-feedback-ui) |
 | **M2** Club & ball detection | 🔒 Gated, **and M1.5 said no-go** | Bay lighting for a ~1/2000 s exposure — *not* a global-shutter camera | [§M2](#milestone-2-club--ball-detection) |
 | Hardware re-validation | 🔒 Gated | Cameras / launch monitor arriving | [§Gate](#hardware-re-validation-gate-revisit-when-cameras--launch-monitor-arrive) |
@@ -259,6 +260,28 @@ MCP tools and a career page. The counter prints **n = 2 for every metric**, so e
 surfaces refuses. Every swing on disk is measured, `career_baseline.py` refuses all 27 claims over
 those measurements, `career_dispersion.py` refuses both findings on all nine metrics, and the tour
 join refuses all nine placements. The mechanism is complete and silent; only `n` is missing.
+
+> **Addendum (2026-09-03, M14 P3):** **the word "grip" in that list was narrowed by measurement,
+> and the rest of the list stands.** The evidence behind "invisible" is
+> [M4_POSE_BAKEOFF.md](docs/M4_POSE_BAKEOFF.md) §Phase G, and §Phase G screened hands
+> **down-the-line**: the *lead* thumb / index / pinky come in at 0.37 / 0.39 / 0.40 against its
+> 0.60 exclusion floor. Asked of the other camera — same screen, same floor, over the address
+> window — all six hand landmarks track in **1.00 of frames on 15 of 15 stored swings**, the
+> weakest of them (lead thumb) at p10 0.67 against a 0.50 visibility gate. The control is what
+> makes it a finding: the same script over the same swings in the same window, one flag apart,
+> puts the lead hand at **0.25** down-the-line and clears the floor on 4 of 15. **The variable is
+> the camera, not the landmark** — and mechanics are scored from the face-on one. Four hand
+> metrics now measure over that window; see
+> [docs/M14_HAND_LANDMARKS.md](docs/M14_HAND_LANDMARKS.md) §P3–§P5 and [§M14](#m14-hand-landmarks--six-points-nobody-reads-and-the-head-dots-nobody-measures--done).
+>
+> **What does not change, and it is most of it.** There is no grip verdict: a visibility screen is
+> an exclusion floor and not a relevance ranking, so a landmark at 1.00 is *measurable* and not yet
+> *useful*, and none of the four metrics has a band. It is an **address** result and not a swing
+> one — face-on over the whole clip the same hands fall to 0.63–0.68. Grip *strength*, the V's and
+> the knuckle count, needs MediaPipe Hands, which this repo has never evaluated. **Wrists and
+> clubface are untouched**: a visible wrist landmark is not a lead-wrist *angle*, and the club
+> still needs M2. And the argument built on this sentence is unaffected — dispersion is still the
+> discriminator, and it is still `n` that blocks it.
 
 *(Counts read nine rather than eight as of 2026-08-13: M6.5's `head_hip_gain_norm` is picked up by
 the corpus reader with no career-mode change at all, which is the registry-driven derivation doing
@@ -520,6 +543,17 @@ answerable, not just what is displayed.
   points at a *static* cause (grip, setup — checkable before you swing), while a wide spread points
   at *timing/release*. Those have completely different fixes. Three shots read +8.6, +2.8, -5.0 —
   suggestive of timing, and nowhere near enough to say so.
+
+  > **Addendum (2026-09-03, M14 P3):** "grip … invisible to this instrument" is narrowed — the
+  > hands are measurable face-on **at address**, at 1.00 tracked frames on 15 of 15 stored swings,
+  > and the screen that said otherwise was run down-the-line. The full correction, and the four
+  > things it does *not* license, sit with the other statement of this claim — the **Biggest
+  > constraint on coaching** paragraph in the status prose at the top of this file, which is
+  > unlinkable because it lives above the first heading.
+  > **The argument on this line survives it intact**, and this is the place to notice why: what is
+  > measurable is where the hands *are*, not whether the grip is *good* — there is no band and no
+  > verdict — so the cause is still unknowable from a single swing and the variance is still what
+  > splits it. Lead-wrist angle and release timing are untouched.
 - **A fix becomes testable.** Since the cause is unknowable from this data, the honest method is
   empirical: baseline the golfer's face-to-path, change one thing, measure whether it moved toward
   zero. That needs a per-golfer baseline to move *from*.
@@ -1817,6 +1851,71 @@ the beat strip plays the golfer's own downswing interval, and the tempo checkpoi
 backswing target in milliseconds — with no row added to `ranges.json`. On the stored swing it reads
 *"your downswing was 384 ms; at the tour ratio that wants a 1044-1808 ms backswing, and yours was
 868"*.
+
+---
+
+## M14: Hand landmarks — six points nobody reads, and the head dots nobody measures — done
+
+**Status**: ✅ Done 2026-09-03, 6/6 phases. All desk work, on artifacts already on disk — no bay
+session, no `n`, no re-capture. P0 wrote the milestone document; P1 made `pose/overlay.py` derive
+its dot set from its bone list; P2 placed landmarks 17–22 in the synthetic fixture; **P3 was the
+gate and it passed**; P4 and P5 added four measured, unjudged metrics; P6 reconciled the docs.
+**No checkpoint, no band, and no `ANALYSIS_VERSION` bump** — so no stored score moved, and nothing
+needed re-analysing.
+
+**It began as a rendering complaint and turned into a reopened claim.** The question was "can the
+plot points move to better spots — fewer in the head, more in the hands". They cannot: BlazePose's
+33-point topology is trained weights, and `pose_model_variant` picks a capacity, not a layout. But
+the question decomposed into two real findings. The overlay drew **all 33** landmarks and connected
+**twelve**, so eleven head dots and two foot dots were rendered that no bone touched and no
+checkpoint measures — a rendering defect, fixed in P1, moving no numbers. And landmarks 17–22 —
+the pinkies, index knuckles and thumbs — have been written into **every `.keypoints.json` this repo
+has ever stored** and read by nothing. That is what made the screen cheap.
+
+**P3 is the result worth carrying**, and it is the one that corrects this document: see the
+addendum under [§Biggest constraint on coaching](#career-mode-one-golfer-tracked-over-time--done-built-and-silent).
+Face-on over the address window, all six hand landmarks track in 1.00 of frames on 15 of 15 stored
+swings; down-the-line, same script and same swings, the lead hand reads 0.25 and clears the floor
+on 4 of 15. §Phase G's finding was about the camera, not the landmark. The three limits stated
+alongside it are load-bearing: it is an exclusion floor and not a relevance ranking, the corpus is
+15 clips from one golfer against §Phase G's 584 from 166, and face-on over the *whole* clip the
+hands fall to 0.63–0.68 — which is why every metric is scoped to address and none is scoped wider.
+
+**Four metrics, all `signal`, none judged.** `hand_separation_norm` and `hand_height_norm` (P4),
+`hand_offset_from_hips_norm` and the labelled proxy `trail_hand_roll_deg` (P5), each with a
+tolerance in `contracts/dispersion.py` and a `no_target_reason` in place of a target, so each can
+carry a **scatter** finding in career mode and none can carry a **bias** one. Declaring a target is
+declaring what good is, and this repo does that in exactly one place — a band with a derivation
+behind it (ADR-010 §2). The spread/error harness re-run over all 461 face-on GolfDB clips
+reproduced every pre-existing tolerance to the digit, three runs running, which is the only
+available check that a number derived weeks apart came off the same instrument.
+
+**P5 found the thing nobody went looking for.** `hand_offset_from_hips_norm` came back **bimodal —
+26% of 455 clips negative** — which is the camera-relative-sign-over-mixed-handedness warning
+`measure.py` has carried since metric definitions v2, firing for the first time. The irony is that
+the metric the warning was written for, `head_hip_offset_impact_norm`, was then measured and found
+clear of it. A band cut across both modes would sit in the empty middle and read every left-handed
+golfer as a gross fault, so that metric has a measured tolerance and no target until handedness is
+resolved.
+
+Phases, tables and the three design calls behind the rotation proxy are in
+[docs/M14_HAND_LANDMARKS.md](docs/M14_HAND_LANDMARKS.md).
+
+**Exit criteria**, all met: the overlay draws only what a bone connects, the fixture places the
+hand landmarks against their own wrist, the reliability screen ran and published its table either
+way, and any metric that shipped did so measured and unjudged. **What is unverified is the
+overlay in a browser** — stored `aligned.mp4` clips still carry the old dots until re-rendered, and
+nobody has looked at a freshly rendered one.
+
+**What this deliberately did not do, and what it sets up.** It is not MediaPipe Hands: the
+21-landmark-per-hand model is the only thing that could deliver grip *strength* — the V's, the
+knuckle count — and it has never been evaluated here. It needs a `spikes/` probe first on the
+`spikes/club-head-detectability/` + ADR-017 pattern, because two interlocked hands wrapped around
+a shaft are out of distribution for a model trained on open gesturing hands, and it would force an
+**L3** change: a parallel optional field on `FrameKeypoints`, never an extension of the flat
+33-list. That is the natural next milestone. Grip *consistency* — whether one golfer sets the hands
+the same way twice — now falls out for free once these numbers are stored, and belongs with the
+dispersion work rather than here.
 
 ---
 

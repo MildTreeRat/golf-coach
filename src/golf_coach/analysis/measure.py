@@ -43,20 +43,39 @@ Two further constraints shape what is included:
 
 - **`x`-over-`x` is aspect-immune.** A lateral distance divided by a shoulder width cancels the
   16:9 pixel-aspect assumption entirely (recorded for `head_sway_norm` in `ranges.json`). A `y`
-  quantity against an `x` ruler does not, so vertical metrics and shoulder tilt are deliberately
-  left out for now rather than quietly inheriting a source assumption.
+  quantity against an `x` ruler does not, so shoulder tilt is deliberately left out rather than
+  quietly inheriting a source assumption. **Four metrics do mix the axes** —
+  `finish_balance_norm`, M14 P4's two hand metrics, and P5's `trail_hand_roll_deg`, which is an
+  angle and so carries the aspect in a third way again: it *rotates* with it rather than scaling.
+  P5's other metric, `hand_offset_from_hips_norm`, is `x`-over-`x` and cancels it. Each says which
+  it is in its own `detail` string, which is the difference between inheriting an assumption and
+  declaring one. The offline
+  path corrects for it (`derive_pose_metrics._apply_pixel_aspect`, from `ReferenceSwing`'s
+  measured `pixel_aspect`); the live path has no per-clip aspect to correct with, so a band cut
+  from GolfDB and applied to a phone clip carries the frame-shape difference. That is why the hand
+  pair ships **unjudged**: nothing compares an aspect-bearing number across two corpora until
+  something has to.
 - **Only well-conditioned landmarks.** Hips, shoulders and ears are the structures the bake-off
   found intact even at the finish (`M4_POSE_BAKEOFF.md`); wrists jitter ~6x more, and there is
-  *zero* recorded reliability evidence for ankles or knees on this corpus. Nothing here reads them.
+  *zero* recorded reliability evidence for ankles or knees on this corpus. **M14's four hand
+  metrics are the first things here to read a wrist**, and P5's `trail_hand_roll_deg` the first to
+  read landmarks 17-22 at all — all of them only over the address window, where the golfer is
+  still and M14 P3 measured both wrists *and* all six hand points at a tracked-frame fraction of
+  1.00 face-on. That screen is a visibility floor and not a jitter figure — it says the landmarks
+  are *there*, not that they are steady — so the jitter above is unretracted, and it is a second
+  reason all four ship unjudged, with only `tune_spatial_metric.py`'s spread-over-error ratio
+  behind them.
 
 Pure functions, stdlib + contracts only (ADR-008).
 """
 
 from __future__ import annotations
 
+import math
 from collections.abc import Callable
 from typing import NamedTuple
 
+from golf_coach.analysis.phases import TRAIL_WRIST
 from golf_coach.analysis.stats import percentile
 from golf_coach.contracts.keypoints import FrameKeypoints, PoseLandmark
 from golf_coach.contracts.swing import PhaseSegment, SwingPhase
@@ -129,6 +148,19 @@ ADDRESS_SAMPLE_MIN_FRAMES = 5
 # "how far does the body actually stagger" — it is a high quantile, not a central one — while
 # needing the drift to persist across several frames before it counts.
 FINISH_DRIFT_QUANTILE = 0.90
+
+# Below this length (normalized frame units) a wrist-to-knuckle vector is treated as collapsed and
+# the frame is dropped: its direction is then pure landmark jitter, and normalizing it divides by
+# roughly nothing. Two orders of magnitude below the ~0.03 a real trail hand spans face-on, so it
+# excludes only genuine coincidence rather than a small hand or a distant golfer. [M14 P5]
+MIN_DIRECTION_LENGTH = 3e-4
+
+# How much the per-frame directions must agree before their circular mean is reported: the length
+# of the mean unit vector, which is 1.0 when every frame points the same way and 0.0 when they
+# cancel. Low, because this is a sentinel guard and not a steadiness band — the golfer is still
+# over the ball across this window, and anything near zero is landmarks pointing every which
+# way rather than a hand. [M14 P5]
+MIN_DIRECTION_CONSENSUS = 0.05
 
 
 # --------------------------------------------------------------------------- geometry helpers
@@ -388,6 +420,100 @@ def _lateral_travel(
             f"no confident {landmarks} frames in the {to_phase.value} window",
         )
     return MeasureOutcome.measured(abs(end[0] - start[0]) / width)
+
+
+def _address_ruler(
+    keypoints: list[FrameKeypoints], phases: list[PhaseSegment]
+) -> tuple[tuple[int, int], float] | MeasureOutcome:
+    """The address window and its shoulder-width ruler, or the refusal that stopped both. [M14 P4]
+
+    Shared by the metrics read entirely at setup, in `_lateral_travel`'s order: window first, then
+    scale, because a golfer who stood side-on has no ruler and telling them their landmarks were
+    unconfident sends them off to fix the wrong thing.
+
+    Deliberately **not** retrofitted onto `_lateral_travel`, `measure_head_hip_offset_impact` and
+    `measure_finish_balance`, which open with the same two guards. Each interleaves a second
+    `phase_bounds` call between them — for the phase travel is measured *to* — so folding this in
+    would reorder their guards and change which reason a clip missing that phase reports. That is a
+    behaviour change with no business riding along inside a new metric.
+
+    Returns the pieces, or the `MeasureOutcome` to hand straight back: a union rather than a
+    NamedTuple-with-a-reason (`TempoTimings`) because the caller has nothing to add to the refusal
+    and `isinstance` narrows it in one line.
+    """
+    setup = address_sample_bounds(phases)
+    if setup is None:
+        return MeasureOutcome.unmeasurable(
+            UnscoredReason.PHASE_NOT_SEGMENTED,
+            "the address sampling window needs the address and downswing phases",
+        )
+    width = shoulder_width(keypoints, setup[0], setup[1])
+    if width is None:
+        return MeasureOutcome.unmeasurable(
+            UnscoredReason.SCALE_UNAVAILABLE,
+            "no confident, non-degenerate shoulder width across the address window",
+        )
+    return setup, width
+
+
+def separation_series(
+    keypoints: list[FrameKeypoints],
+    lo: int,
+    hi: int,
+    first: PoseLandmark,
+    second: PoseLandmark,
+    min_visibility: float = MIN_VISIBILITY,
+) -> list[float]:
+    """Per-frame distance between two landmarks over the inclusive span, confident frames only.
+
+    `midpoint_series`'s sibling and gated the same way, for the same reason: a distance with one
+    guessed endpoint is not a shorter distance, it is a made-up one.
+
+    Distances per frame, to be averaged by the caller — *not* the distance between the two mean
+    positions. They coincide only when nothing moves, and they answer different questions when
+    something does: the mean of per-frame distances is how far apart the landmarks actually were,
+    which is what a "this should be constant" canary needs, while the distance between means
+    quietly shortens as soon as the pair travels together.
+    """
+    distances: list[float] = []
+    for kp in keypoints[lo : hi + 1]:
+        a = kp.landmark(first)
+        b = kp.landmark(second)
+        if a.visibility >= min_visibility and b.visibility >= min_visibility:
+            distances.append(((a.x - b.x) ** 2 + (a.y - b.y) ** 2) ** 0.5)
+    return distances
+
+
+def direction_series(
+    keypoints: list[FrameKeypoints],
+    lo: int,
+    hi: int,
+    origin: PoseLandmark,
+    tip: PoseLandmark,
+    min_visibility: float = MIN_VISIBILITY,
+) -> list[tuple[float, float]]:
+    """Per-frame **unit** vector from `origin` to `tip` over the inclusive span. [M14 P5]
+
+    The third member of `midpoint_series`'s family and gated the same way, plus one gate of its
+    own: a frame whose two landmarks have collapsed to within `MIN_DIRECTION_LENGTH` is dropped
+    rather than normalized, because its direction is jitter divided by roughly nothing.
+
+    Unit vectors rather than raw ones, so a caller averaging them gets a **circular mean** of the
+    directions instead of a length-weighted one. The distinction matters exactly when it is least
+    visible: a frame where the pose model placed the knuckle twice as far out would otherwise
+    count twice toward the answer, on no evidence that its angle was any better.
+    """
+    directions: list[tuple[float, float]] = []
+    for kp in keypoints[lo : hi + 1]:
+        a = kp.landmark(origin)
+        b = kp.landmark(tip)
+        if a.visibility < min_visibility or b.visibility < min_visibility:
+            continue
+        dx, dy = b.x - a.x, b.y - a.y
+        length = math.hypot(dx, dy)
+        if length >= MIN_DIRECTION_LENGTH:
+            directions.append((dx / length, dy / length))
+    return directions
 
 
 # --------------------------------------------------------------------------- the measurements
@@ -651,6 +777,188 @@ def measure_finish_balance(
     return MeasureOutcome.measured(percentile(drifts, FINISH_DRIFT_QUANTILE) / width)
 
 
+def measure_hand_separation(
+    keypoints: list[FrameKeypoints], phases: list[PhaseSegment]
+) -> MeasureOutcome:
+    """Mean wrist-to-wrist distance across the address window, in shoulder widths. [M14 P4]
+
+    Both hands are on one grip, so this quantity is close to a **constant of the golfer** rather
+    than a description of the swing: hand size and how far apart the hands are placed on the club.
+    That is what makes it the pair's canary. A swing whose separation reads far from the golfer's
+    own usual value did not have a wider grip in it — the wrists were mis-placed, and any other
+    hand number from the same clip is suspect for the same reason. It is recorded so that check is
+    possible later, from stored numbers, without re-reading a frame.
+
+    Read at address only, and that is M14 P3's finding rather than caution: face-on the wrists
+    track in 1.00 of address frames and about 0.65 across the whole clip, so a swing-wide version
+    of this would be a much weaker instrument measuring a quantity that barely changes.
+
+    **It mixes `x` and `y`, so unlike the lateral family it does not cancel the frame's pixel
+    aspect** — the two wrists are separated mostly *along the shaft*, which face-on is mostly
+    vertical, so an `|dx|` version would measure the small residual and be dominated by jitter.
+    The module docstring says what that costs and where it is corrected.
+    """
+    setup = _address_ruler(keypoints, phases)
+    if isinstance(setup, MeasureOutcome):
+        return setup
+    (lo, hi), width = setup
+
+    separations = separation_series(
+        keypoints, lo, hi, PoseLandmark.LEFT_WRIST, PoseLandmark.RIGHT_WRIST
+    )
+    if not separations:
+        return MeasureOutcome.unmeasurable(
+            UnscoredReason.LANDMARKS_UNCONFIDENT,
+            "no address-window frames with both wrists confident",
+        )
+    return MeasureOutcome.measured(sum(separations) / len(separations) / width)
+
+
+def measure_hand_height(
+    keypoints: list[FrameKeypoints], phases: list[PhaseSegment]
+) -> MeasureOutcome:
+    """How far the hands hang below the shoulders at address, in shoulder widths. [M14 P4]
+
+    Signed `y` of the wrist midpoint minus the shoulder midpoint, so **positive is hands below
+    shoulders** — which is every address position a golfer has ever taken, making the sign a
+    sanity check rather than a distinction. Its size is the posture: how far the golfer reaches
+    down to the ball, which moves with club length, spine angle and how far they stand from it.
+
+    **The sign is not camera-relative and no handedness question arises**, which is the one way
+    this differs from `head_hip_offset_impact_norm`. Down is down in an image whichever way the
+    golfer faces, so a mixed-handedness population is not bimodal in this quantity and a band cut
+    from one would mean something. What it is not free of is the frame's pixel aspect — a `y`
+    quantity over an `x` ruler, see the module docstring — and *that* is the reason there is no
+    band yet, not handedness.
+    """
+    setup = _address_ruler(keypoints, phases)
+    if isinstance(setup, MeasureOutcome):
+        return setup
+    (lo, hi), width = setup
+
+    hands = mean_of(
+        midpoint_series(keypoints, lo, hi, PoseLandmark.LEFT_WRIST, PoseLandmark.RIGHT_WRIST)
+    )
+    if hands is None:
+        return MeasureOutcome.unmeasurable(
+            UnscoredReason.LANDMARKS_UNCONFIDENT,
+            "no confident wrist midpoint frames in the address window",
+        )
+    shoulders = mean_of(
+        midpoint_series(keypoints, lo, hi, PoseLandmark.LEFT_SHOULDER, PoseLandmark.RIGHT_SHOULDER)
+    )
+    if shoulders is None:  # pragma: no cover - the ruler above needed these two, same window
+        return MeasureOutcome.unmeasurable(
+            UnscoredReason.LANDMARKS_UNCONFIDENT,
+            "no confident shoulder midpoint frames in the address window",
+        )
+    return MeasureOutcome.measured((hands[1] - shoulders[1]) / width)
+
+
+def measure_hand_offset_from_hips(
+    keypoints: list[FrameKeypoints], phases: list[PhaseSegment]
+) -> MeasureOutcome:
+    """Signed wrist-midpoint minus hip-center offset at address, in shoulder widths. [M14 P5]
+
+    Where the hands sit along the body at setup — the 2D shadow of shaft lean. Hands ahead of the
+    hip center and hands behind it are opposite setups with the same absolute value, so like
+    `head_hip_offset_impact_norm` this is stored **signed** and for the same reason: the magnitude
+    alone says nothing.
+
+    **The sign is camera-relative, and that is the same known limitation.** Positive means the
+    hands sit to the image-right of the hip center. Which side that is in swing terms depends on
+    handedness, nothing in this pipeline records or infers it, and a distribution over a
+    mixed-handedness corpus will be bimodal. Resolving that is a *judging* problem —
+    `mechanics.evaluate_head_stays_back` is how this repo handles one — and it does not belong
+    here. `tune_spatial_metric.py` flags bimodality, so it surfaces there rather than after a band
+    ships.
+
+    Read over the address window, where M14 P3 measured both wrists at a tracked-frame fraction of
+    1.00 face-on, and the hips are gated harder still by `hip_center_points` — so unlike
+    `hand_height_norm`'s shoulder branch, the missing-hips refusal below is genuinely reachable.
+
+    Unlike the other two hand metrics this one is `x`-over-`x`, so it **does** cancel the frame's
+    pixel aspect (see the module docstring). It is unjudged for the handedness reason above, not
+    for that one.
+    """
+    setup = _address_ruler(keypoints, phases)
+    if isinstance(setup, MeasureOutcome):
+        return setup
+    (lo, hi), width = setup
+
+    hands = mean_of(
+        midpoint_series(keypoints, lo, hi, PoseLandmark.LEFT_WRIST, PoseLandmark.RIGHT_WRIST)
+    )
+    if hands is None:
+        return MeasureOutcome.unmeasurable(
+            UnscoredReason.LANDMARKS_UNCONFIDENT,
+            "no confident wrist midpoint frames in the address window",
+        )
+    hips = mean_of(hip_center_points(keypoints, lo, hi))
+    if hips is None:
+        return MeasureOutcome.unmeasurable(
+            UnscoredReason.LANDMARKS_UNCONFIDENT,
+            "no confident hip midpoint frames in the address window",
+        )
+    return MeasureOutcome.measured((hands[0] - hips[0]) / width)
+
+
+def measure_trail_hand_roll(
+    keypoints: list[FrameKeypoints], phases: list[PhaseSegment]
+) -> MeasureOutcome:
+    """Angle of the trail wrist-to-index-knuckle vector off image-vertical, degrees. [M14 P5]
+
+    **A proxy, and labelled one everywhere it appears.** Grip rotation is a three-dimensional
+    quantity about the shaft axis; this is two image points on the back of one hand, seen from the
+    camera that is worst placed to see rotation *in* the swing plane. What it can see is how the
+    trail hand is set on the club relative to the frame, and that is what the number is. It is
+    stored so the question "does this golfer's trail hand sit the same way every swing?" becomes
+    answerable from stored numbers; it is not a strong-or-weak grip reading, and only MediaPipe
+    Hands could deliver one (§"What this milestone is not").
+
+    Positive is the knuckle falling to the image-right of straight down. Zero means the hand points
+    at the bottom of the frame. **"Trail" is `phases.TRAIL_WRIST`**, which is the right side —
+    a right-handed convention, so like the metric above this reads mirrored for a left-handed
+    golfer and is a second reason it ships unjudged.
+
+    **No shoulder ruler is taken, deliberately.** An angle is already scale-free, so calling
+    `_address_ruler` would refuse a side-on clip for `SCALE_UNAVAILABLE` over a ruler this
+    measurement never divides by — a refusal for a reason that was not the problem.
+
+    The average is a **circular mean** — the direction of the summed unit vectors — not the mean of
+    the per-frame angles. Angles wrap at +/-180 degrees, which for this vector is the hand pointing
+    at the top of the frame, so a pair of mis-detected frames either side of the wrap would average
+    to a confident straight-down. `direction_series` also drops frames where the two landmarks have
+    collapsed together, because a zero-length vector has no angle and normalizing one is division
+    by roughly nothing.
+    """
+    window = address_sample_bounds(phases)
+    if window is None:
+        return MeasureOutcome.unmeasurable(
+            UnscoredReason.PHASE_NOT_SEGMENTED,
+            "the address sampling window needs the address and downswing phases",
+        )
+    lo, hi = window
+
+    directions = direction_series(keypoints, lo, hi, TRAIL_WRIST, PoseLandmark.RIGHT_INDEX)
+    if not directions:
+        return MeasureOutcome.unmeasurable(
+            UnscoredReason.LANDMARKS_UNCONFIDENT,
+            "no address-window frames with a readable trail wrist-to-index-knuckle vector",
+        )
+    dx = sum(x for x, _ in directions) / len(directions)
+    dy = sum(y for _, y in directions) / len(directions)
+    if math.hypot(dx, dy) < MIN_DIRECTION_CONSENSUS:
+        # `atan2(0.0, 0.0)` is 0.0 in Python, and 0 degrees is a perfectly plausible reading here.
+        # Directions that cancel this completely are landmarks pointing every which way, not a
+        # hand pointing straight down, and ADR-010 s2 says refuse rather than report the sentinel.
+        return MeasureOutcome.unmeasurable(
+            UnscoredReason.LANDMARKS_UNCONFIDENT,
+            "the trail hand's direction did not survive averaging across the address window",
+        )
+    return MeasureOutcome.measured(math.degrees(math.atan2(dx, dy)))
+
+
 class PoseMeasurement(NamedTuple):
     """How to take one pose measurement, and what the resulting number is.
 
@@ -737,6 +1045,40 @@ POSE_MEASUREMENTS: dict[str, PoseMeasurement] = {
         "shoulder_widths",
         "change in signed (head - hips) dx, address window -> impact window, one shared "
         "shoulder-width ruler; + is image-right, camera-frame, handedness resolved when judged",
+    ),
+    # The two hand metrics [M14 P4]. Both read the address window and nothing wider — face-on the
+    # wrists track in 1.00 of address frames against about 0.65 over the whole clip, so the margin
+    # this rests on is the setup's, not the swing's. Both mix `x` and `y` and say so, because a
+    # stored number that quietly carries the frame shape cannot be re-normalized later and one that
+    # declares it can. Neither has a band, a checkpoint or a target it aims at.
+    "hand_separation_norm": PoseMeasurement(
+        measure_hand_separation,
+        "shoulder_widths",
+        "mean per-frame wrist-to-wrist distance over the address window; mixes x and y, so it "
+        "carries the frame's pixel aspect where the lateral metrics cancel it",
+    ),
+    "hand_height_norm": PoseMeasurement(
+        measure_hand_height,
+        "shoulder_widths",
+        "signed (wrists - shoulders) dy over the address window, + is hands below shoulders; a y "
+        "quantity over an x ruler, so it carries the frame's pixel aspect. Not handedness-relative",
+    ),
+    # M14 P5's pair, and the two of them differ in every way the P4 pair matched. One is x-over-x
+    # and cancels the pixel aspect; the other is an angle and never had a ruler. One is signed and
+    # camera-relative; the other is signed about image-vertical, which no handedness moves — but
+    # names the *right* side, which handedness does. Neither has a band, and both say why in their
+    # `no_target_reason` in `contracts/dispersion.py` rather than here.
+    "hand_offset_from_hips_norm": PoseMeasurement(
+        measure_hand_offset_from_hips,
+        "shoulder_widths",
+        "signed (wrists - hips) dx over the address window; + is image-right, camera-frame, "
+        "handedness resolved when judged. x over x, so the frame's pixel aspect cancels",
+    ),
+    "trail_hand_roll_deg": PoseMeasurement(
+        measure_trail_hand_roll,
+        "degrees",
+        "PROXY: circular-mean angle of the trail wrist-to-index-knuckle vector off image-vertical "
+        "at address, + is image-right. Two points on one hand, not grip rotation about the shaft",
     ),
 }
 

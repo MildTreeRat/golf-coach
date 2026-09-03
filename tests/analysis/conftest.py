@@ -13,6 +13,12 @@ The head moves as a **rigid unit** — nose and both ears translate together —
 only the nose would model a head that rotates in place, which is the very thing the ear-midpoint
 definition is designed to ignore.
 
+Both hands are placed in full — each wrist plus its pinky, index and thumb (landmarks 17-22) —
+because the builder initializes all 33 landmarks at frame centre with `visibility=1.0`, so a
+landmark left unplaced is *confidently wrong* rather than absent: a metric reading it would return
+a plausible number computed from the middle of the frame. Nothing in `analysis/` reads 17-22 yet,
+so `tests/analysis/test_conftest.py` is what pins the placement.
+
 It can also prepend a **near-horizontal takeaway** (`takeaway_frames` / `takeaway_x`): the lead
 wrist slides sideways at address *height* before the vertical rise begins. That models the early
 takeaway a wrist-*height* rule can't see, so tests can exercise the 2D-speed motion-start
@@ -44,6 +50,7 @@ _FOLLOWTHROUGH_FRAMES = 8
 # Fixed face-on shoulder span (normalized x) — the scale-invariance ruler (~0.16 wide).
 _SHOULDER_LEFT_X = 0.42
 _SHOULDER_RIGHT_X = 0.58
+_SHOULDER_Y = 0.4
 _HEAD_BASE_X = 0.5
 _HIP_BASE_X = 0.5
 _WRIST_BASE_X = 0.5
@@ -58,11 +65,34 @@ _EAR_HALF_SPAN = 0.03
 _GRIP_OFFSET_X = 0.012
 _GRIP_OFFSET_Y = 0.018
 
+# The hand fan (landmarks 17-22), as `(along, across)` multiples of that same grip offset: `along`
+# runs from a wrist toward the club head, `across` runs perpendicular to it — the width of the hand.
+# Expressing the fan in shaft-relative units rather than raw dx/dy is what keeps a retuned grip
+# offset from leaving six knuckles pointing off the club. The index and pinky knuckles straddle the
+# shaft at the hand's far end; the thumb sits shorter and on the index side.
+_INDEX_FAN = (0.65, 0.20)
+_PINKY_FAN = (0.60, -0.20)
+_THUMB_FAN = (0.40, 0.14)
+
+
+def _hand_point(wrist_x: float, wrist_y: float, along: float, across: float) -> Landmark:
+    """One hand landmark, placed relative to *its own* wrist in shaft-relative units.
+
+    The perpendicular is `(+_GRIP_OFFSET_Y, -_GRIP_OFFSET_X)`, so `across` is measured in the same
+    grip-lengths as `along` and neither needs the vector normalized.
+    """
+    return Landmark(
+        x=wrist_x + along * _GRIP_OFFSET_X + across * _GRIP_OFFSET_Y,
+        y=wrist_y + along * _GRIP_OFFSET_Y - across * _GRIP_OFFSET_X,
+        z=0.0,
+        visibility=1.0,
+    )
+
 
 def _frame(
     index: int, wrist_y: float, wrist_x: float, head_x: float, hip_x: float
 ) -> FrameKeypoints:
-    """One frame: body parked mid-frame, with both wrists, head, shoulders, hips placed."""
+    """One frame: body parked mid-frame, with both hands, head, shoulders, hips placed."""
     landmarks = [
         Landmark(x=0.5, y=0.5, z=0.0, visibility=1.0) for _ in range(NUM_POSE_LANDMARKS)
     ]
@@ -72,9 +102,21 @@ def _frame(
     # harmless while nothing read the trail wrist, and immediately wrong once the down-the-line
     # path started tracking it (M4_POSE_BAKEOFF §Phase F). Placed here rather than in that change
     # so every existing expectation about the lead wrist is untouched.
-    landmarks[PoseLandmark.RIGHT_WRIST] = Landmark(
-        x=wrist_x + _GRIP_OFFSET_X, y=wrist_y + _GRIP_OFFSET_Y, z=0.0, visibility=1.0
-    )
+    trail_x, trail_y = wrist_x + _GRIP_OFFSET_X, wrist_y + _GRIP_OFFSET_Y
+    landmarks[PoseLandmark.RIGHT_WRIST] = Landmark(x=trail_x, y=trail_y, z=0.0, visibility=1.0)
+    # Each hand's knuckles and thumb ride with that hand's wrist. Same defect as the trail wrist
+    # above, one joint further out: the initializer parks all 33 landmarks at frame centre with
+    # `visibility=1.0`, so 17-22 cleared the confidence gate while detached from the wrists — a
+    # hand metric would have returned a plausible number computed from nothing and its test would
+    # have gone green (M14_HAND_LANDMARKS §"Five things that will look obvious and are wrong", 5).
+    # Placed here rather than in the change that first reads them, so every existing wrist, head,
+    # shoulder and hip expectation is untouched.
+    landmarks[PoseLandmark.LEFT_INDEX] = _hand_point(wrist_x, wrist_y, *_INDEX_FAN)
+    landmarks[PoseLandmark.LEFT_PINKY] = _hand_point(wrist_x, wrist_y, *_PINKY_FAN)
+    landmarks[PoseLandmark.LEFT_THUMB] = _hand_point(wrist_x, wrist_y, *_THUMB_FAN)
+    landmarks[PoseLandmark.RIGHT_INDEX] = _hand_point(trail_x, trail_y, *_INDEX_FAN)
+    landmarks[PoseLandmark.RIGHT_PINKY] = _hand_point(trail_x, trail_y, *_PINKY_FAN)
+    landmarks[PoseLandmark.RIGHT_THUMB] = _hand_point(trail_x, trail_y, *_THUMB_FAN)
     landmarks[PoseLandmark.NOSE] = Landmark(x=head_x, y=0.2, z=0.0, visibility=1.0)
     landmarks[PoseLandmark.LEFT_EAR] = Landmark(
         x=head_x - _EAR_HALF_SPAN, y=0.2, z=0.0, visibility=1.0
@@ -82,8 +124,12 @@ def _frame(
     landmarks[PoseLandmark.RIGHT_EAR] = Landmark(
         x=head_x + _EAR_HALF_SPAN, y=0.2, z=0.0, visibility=1.0
     )
-    landmarks[PoseLandmark.LEFT_SHOULDER] = Landmark(x=_SHOULDER_LEFT_X, y=0.4, visibility=1.0)
-    landmarks[PoseLandmark.RIGHT_SHOULDER] = Landmark(x=_SHOULDER_RIGHT_X, y=0.4, visibility=1.0)
+    landmarks[PoseLandmark.LEFT_SHOULDER] = Landmark(
+        x=_SHOULDER_LEFT_X, y=_SHOULDER_Y, visibility=1.0
+    )
+    landmarks[PoseLandmark.RIGHT_SHOULDER] = Landmark(
+        x=_SHOULDER_RIGHT_X, y=_SHOULDER_Y, visibility=1.0
+    )
     landmarks[PoseLandmark.LEFT_HIP] = Landmark(x=hip_x, y=0.6, z=0.0, visibility=1.0)
     landmarks[PoseLandmark.RIGHT_HIP] = Landmark(x=hip_x, y=0.6, z=0.0, visibility=1.0)
     return FrameKeypoints(

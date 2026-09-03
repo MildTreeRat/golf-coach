@@ -617,13 +617,21 @@ how a swing is scored (ADR-010 §2). The boundary moved out by one layer rather 
 a test parses those two files' source to keep it there — a runtime `sys.modules` check cannot see
 the property, because `analysis/__init__.py` imports `engine`, which reads the bands.
 
-Three of the eight metrics are refused the tour join outright, for two different reasons. The two
-launch-monitor metrics have no population at all: every distribution here comes from GolfDB, which
-is pose estimated from broadcast video and holds no ball flight. `head_hip_offset_impact_norm` is
-the interesting one — it *has* a stored distribution and may not be placed in it, because its sign
-is camera-relative and that population mixes both handednesses. A personal corpus is single-handed
-by construction, which is why the one metric a personal baseline can interpret is the one metric
-the tour band cannot. The spread is never compared to the tour spread either: `Distribution.sd` is
+**Most of the metrics in `METRIC_TARGETS` are refused the tour join outright, for three different
+reasons** — the count is deliberately not written here, because membership is derived and a
+sentence stating it goes stale the next time a metric is added. The **launch-monitor** metrics have
+no population at all: every distribution here comes from GolfDB, which is pose estimated from
+broadcast video and holds no ball flight, so a reference would have to be *acquired* rather than
+derived (`NO_LAUNCH_MONITOR_POPULATION`, keyed on `Measurement.source` so a metric added tomorrow
+inherits the right sentence instead of the generic one). M14's **hand** metrics are a different
+absence and say so in different words: they are measured, over the same GolfDB corpus, and simply
+have no distribution cut yet — a row that could exist rather than a corpus that does not
+(`NO_POPULATION`). `head_hip_offset_impact_norm` is the interesting one — it *has* a stored
+distribution and may not be placed in it, because its sign is camera-relative and that population
+mixes both handednesses (`TOUR_COMPARISON_BLOCKED`, which is why it refuses by a different route
+and before `load_distribution` is even consulted). A personal corpus is single-handed by
+construction, which is why the one metric a personal baseline can interpret is the one metric the
+tour band cannot. The spread is never compared to the tour spread either: `Distribution.sd` is
 between-player variation and a personal `sd` is within-player repeatability, so the comparison
 would flatter every golfer alive.
 

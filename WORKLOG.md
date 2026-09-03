@@ -5,6 +5,292 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-09-03 — M14 P6: the correction is longer than the finding, and that is the point
+
+**Duration**: one sitting. `ROADMAP.md`, `docs/M14_HAND_LANDMARKS.md`, `docs/README.md` and
+`docs/ARCHITECTURE.md`. **No source file changed.** Full suite **1434 green** — the same 1434 that
+was green before the phase, which for a documentation phase is the result rather than a formality.
+`ruff` and `mypy` clean. **M14 is closed at 6/6.**
+
+**The `ROADMAP.md` grip claim is stated in two places, so it is corrected in two places and only
+once in full.** The long addendum sits under *Biggest constraint on coaching*, where "grip, wrists
+and clubface are all invisible to it" lives; the career-mode bullet gets a short one pointing at it.
+Neither original was edited. The addenda are the most-read part of `docs/decisions/` precisely
+because a reader who lands on the claim meets the claim *and* its correction, in that order.
+
+**Both addenda spend more words on what did not change than on what did.** The measured finding is
+narrow — the hands are visible face-on **at address** — and four reasonable readings of it are
+false: a visibility screen is an exclusion floor and not a relevance ranking; whole-clip face-on the
+same hands fall to 0.63–0.68, so it is not a swing result; grip *strength* still needs MediaPipe
+Hands; and wrists and clubface are untouched, because a visible wrist landmark is not a lead-wrist
+*angle*. The fifth point is the one the career-mode site is for: **the dispersion-as-discriminator
+argument survives intact**, because what became measurable is where the hands *are*, not whether
+the grip is *good*.
+
+**`ROADMAP.md` had no M14 at all**, which nobody noticed until P6 went looking for the claim. M13's
+section was written by its own P0; this milestone was designed in `docs/` and never entered on the
+board. So the phase added the *Status at a glance* row and the detail section too, beyond what §P6
+named. A done milestone missing from the board is exactly the drift the board exists to prevent.
+
+**`docs/ARCHITECTURE.md`'s "three of the eight metrics are refused the tour join" was wrong before
+this milestone started, and the fix was to delete the count rather than to update it.** §P4
+predicted the failure and P6 declined the obvious repair: "twelve of twenty" would be wrong again
+the next time a metric is registered, and `CLAUDE.md` requires a derived set's membership to be
+pointed at rather than copied. What replaced it names the **three** reasons — and the third is new.
+A launch-monitor metric has no corpus and would need one *acquired*; M14's hand metrics have the
+same GolfDB corpus everything else does and merely no distribution cut yet. Those are different
+absences and `contracts/comparison.py` already says so in different words (`NO_POPULATION` versus
+`NO_LAUNCH_MONITOR_POPULATION`); the doc had flattened them into one.
+
+**One trap found by reading the tour-join code, recorded rather than fixed.**
+`hand_offset_from_hips_norm` is refused today only because `load_distribution` returns `None`. It
+is **not** in `TOUR_COMPARISON_BLOCKED`, whose one entry — `head_hip_offset_impact_norm` — is there
+for *exactly* the property P5 measured on this metric and never measured on that one. Cut hand
+distributions from GolfDB and a bimodal metric silently becomes placeable in a bimodal population.
+It needs its row **in the commit that gives it a distribution**, and both §P6 and the
+`docs/README.md` row say so. Not fixed now because a row blocking a join against a distribution
+that does not exist is untestable and reads as dead code.
+
+**One piece of drift found and deliberately left**, since P6's brief is to fix from doc-truth
+failures and this fails nothing. `ROADMAP.md`'s career-mode paragraph still says the counter prints
+**n = 2 for every metric** and the tour join refuses **all nine** placements; `read_corpus` against
+`data/processed/sessions` today returns **13 swings over 19 metrics**. That went stale somewhere
+between M9 and M13, has nothing to do with hands, and re-deriving those four sentences is its own
+piece of work. It is written into §P6 so it is not found a third time by accident.
+
+**Next**: M14 is closed and the board is again empty of desk work. Two things it leaves. The
+overlay is **unverified in a browser** — P1's pins are unit tests, and stored `aligned.mp4` clips
+carry the old dots until re-rendered. And the milestone's own successor is a `spikes/` probe of
+**MediaPipe Hands** on the `spikes/club-head-detectability/` + ADR-017 pattern, which is the only
+route to grip *strength* and an L3 change when it comes. Everything else still wants the bay, or
+wants `n`.
+
+---
+
+## 2026-09-03 — M14 P5: the handedness warning finally fires
+
+**Duration**: one sitting. `src/golf_coach/analysis/measure.py`, `src/golf_coach/contracts/dispersion.py`
+and `tests/analysis/test_measure.py`; `docs/M14_HAND_LANDMARKS.md` §P5 and `docs/README.md`'s row.
+Full suite **1434 green**, `ruff` and `mypy` clean. No checkpoint, no band, no `ANALYSIS_VERSION`
+bump. **M14 is 5/6, and only P6 — documentation — is left.**
+
+**P4 never got an entry here**, so this one covers the gap: the 1417 below is P3's, and the 17 tests
+between it and 1434 are P4's 5 and P5's 12. P4 itself is written up in full in
+`docs/M14_HAND_LANDMARKS.md` §P4 — `hand_separation_norm` and `hand_height_norm`, both `signal`,
+both unjudged, plus `separation_series` and `_address_ruler`. Nothing about it is lost, but the
+worklog is the "what happened last session" document and it skipped one.
+
+**`hand_offset_from_hips_norm` came back bimodal, 26% of 455 face-on GolfDB clips negative.** That
+is the prediction `measure_head_hip_offset_impact`'s docstring has carried since metric definitions
+v2 — a camera-relative sign over a mixed-handedness corpus splits into two opposite populations —
+landing for the first time. The irony is that the metric the warning was *written for* was then
+measured and found clear of it (458 clips, consistently head-behind-hips), so the flag in
+`tune_spatial_metric.py` had never actually fired at anything until now. The consequence is
+concrete: a band across both modes would sit in the empty middle, and a left-handed golfer would
+read as a gross fault. The row gets a measured tolerance and `target=None`, because our error in
+measuring the number does not care which way the golfer stands and a *target* does.
+
+**Both metrics score `signal` and neither gets a band.** `tune_spatial_metric.py` re-run over the
+same 461 clips: `hand_offset_from_hips_norm` at spread 0.302 over error 0.050 (ratio 6.1),
+`trail_hand_roll_deg` at 30.9° over 7.4° (ratio 4.2). The run reproduced **all nine** prior
+tolerances in `METRIC_TARGETS` unchanged, third time running — which is the only available check
+that a number derived weeks apart came off the same instrument.
+
+**`trail_hand_roll_deg` shipped rather than being dropped**, because §P3's condition did not fire:
+the index knuckle tracks at 1.00 across the address window on both hands, not marginally. It is the
+first thing in `analysis/` to read landmarks 17–22, which is exactly what P2 placed the fixture's
+fan for — and `tests/analysis/test_conftest.py`'s reason for existing expires with this phase.
+
+**Three design calls, each with a plausible wrong version that would have passed a test.**
+
+- **The roll takes no shoulder ruler.** An angle is scale-free, so reusing P4's `_address_ruler`
+  would have refused a side-on clip for `SCALE_UNAVAILABLE` over a ruler it never divides by — a
+  refusal naming a reason that was not the problem, which is the exact failure `contracts/unscored.py`
+  exists to prevent. It calls `address_sample_bounds` directly, and a test asserts the pair split:
+  same clip, `SCALE_UNAVAILABLE` for the offset, a number for the roll.
+- **The average is circular.** `direction_series` returns *unit* vectors so the caller's mean is a
+  circular one. Angles wrap at ±180°, which for this vector is a hand pointing at the top of the
+  frame; alternate frames at +179 and −179 average to a confident straight-down under a mean of
+  angles and to the correct 180° under a mean of unit vectors. Unit vectors also stop a frame where
+  the model placed the knuckle twice as far out from counting twice, on no evidence its angle was
+  better.
+- **A collapsed hand refuses rather than reporting 0.** `math.atan2(0.0, 0.0)` is `0.0`, and 0° here
+  reads as "hand points straight down" — an ordinary address value, so a fabricated one is
+  indistinguishable downstream from a measured one. `MIN_DIRECTION_LENGTH` drops those frames,
+  `MIN_DIRECTION_CONSENSUS` catches a whole window of them (ADR-010 §2).
+
+**`measure.py` now imports `analysis.phases` for the first time**, for `TRAIL_WRIST`. Within-package
+and cycle-free (`phases` imports only `contracts`), and it is the alternative to writing
+`PoseLandmark.RIGHT_WRIST` as a literal somewhere `phases.py` cannot see it drift — which is the
+reason that constant was made public in the first place.
+
+**The P5 pair diverges in every way the P4 pair matched**, and that is worth carrying forward
+because it means "the hand metrics" is not a category that can be reasoned about as one thing.
+`hand_offset_from_hips_norm` is `x`-over-`x` and *cancels* the pixel aspect the P4 pair carries;
+`trail_hand_roll_deg` carries it a third way again, since an angle rotates with the aspect rather
+than scaling. Only the offset is bimodal. Only the roll is a labelled proxy.
+
+**Next**: P6, the only phase left and documentation-only — the `ROADMAP.md` addendum carrying P3's
+real numbers (grip was never rejected face-on, it was untested), flipping this document to
+REFERENCE, and `docs/ARCHITECTURE.md`'s "three of the eight metrics are refused the tour join",
+which is now four of twelve.
+
+---
+
+## 2026-09-03 — M14 P3: the gate passed, and the camera was the variable all along
+
+**Duration**: one sitting. A new `scripts/hand_landmark_reliability.py`; `docs/M14_HAND_LANDMARKS.md`
+gained §P3's tables and `docs/README.md` its row. Full suite 1417 green (unchanged — P3 adds a
+script, and `scripts/` has no mirrored test directory), `ruff` and `mypy` clean. No `src/` edit, no
+behaviour, no `ANALYSIS_VERSION` bump. **M14 is 3/6, and P4/P5 are unblocked.**
+
+**All six hand landmarks track in 100% of address frames, face-on, on 15 of 15 stored swings.**
+Pooled tracked-frame fraction at `measure.MIN_VISIBILITY` over `address_sample_bounds`, against
+§Phase G's 0.60 floor. Not marginal: the weakest of the six, the lead thumb, has **p10 0.67** over
+the address window against a 0.50 visibility floor, so a landmark at the tenth percentile of its
+worst frames still clears the gate comfortably.
+
+**The down-the-line control is the part of this worth trusting.** Same script, same 15 swings, same
+window, one flag — `--view down-the-line` reads the other artifact and passes `TRAIL_WRIST` to
+`segment_phases` because from behind the lead wrist is the far arm. The lead hand goes from **1.00
+to 0.25**, clearing the floor on 4 of 15 swings instead of 15. Over the whole clip it lands at
+0.44/0.48/0.47 lead against 0.90/0.91/0.91 trail, which reproduces §Phase G's 0.37/0.39/0.40 and
+0.84/0.85/0.85 on a completely independent corpus — the same sides, the same ordering, the same
+verdict. That agreement is the harness checking itself, the way `check_metric_transfer.py` does it,
+and it is what turns "our hands score well" into **the variable is the camera, not the landmark**.
+
+**So the roadmap's claim was true of §Phase G's camera and false of ours.** Grip was never rejected
+here, it was untested — the 0.37/0.39/0.40 the non-goal rests on are the *lead* hand *down-the-line*,
+and the face-on camera this program actually scores mechanics from had never been screened. P6
+writes that as a `ROADMAP.md` addendum rather than an edit.
+
+**Two design calls in the script, both to stop it flattering itself.** Shoulders and elbows are
+screened as **controls and are not gated** — §Phase G puts shoulders at 1.00 in the harder view, so
+anything else would mean the windows or artifacts were being read wrong and the hand numbers would
+be worthless; both came in at 1.00. And the stored `face_on_window` is re-applied before smoothing,
+because the pipeline segments phases over the *trimmed* clip and `address_sample_bounds` anchors to
+the **end** of the ADDRESS segment — skipping the trim would move the very window being measured.
+
+**The per-clip column exists because the corpus is 15 clips from one golfer.** A landmark tracked
+perfectly on nine swings and absent on six pools to 0.60 and clears the floor while being unusable
+on 40% of them. Here every landmark is 15/15 so the two readings agree, but pooling alone stops
+being enough the moment this corpus has a second golfer in it. §P3 states that, the 584-vs-15
+asymmetry, and §Phase G's own caveat that this is an exclusion floor and not a relevance ranking —
+a landmark being visible is not a landmark being useful, which is how `z` passed §Phase E's screen
+and then lost the fit.
+
+**One number that scopes P4.** Face-on over the *whole* clip the hands fall to 0.63–0.68 — above the
+floor, but that is a different regime, and it is ADR-017's point about the club head arriving again:
+address is static, the swing is not. P4 and P5 read `address_sample_bounds` and nothing wider.
+
+**Next**: P4 — `hand_separation_norm` and `hand_height_norm` as `POSE_MEASUREMENTS` rows with no
+checkpoint and no band, reusing `shoulder_width` and `midpoint_series`, plus the refusal test that
+drives the hand landmarks below the visibility gate and expects `LANDMARKS_UNCONFIDENT` rather than
+a fabricated number.
+
+---
+
+## 2026-09-03 — M14 P2: the fixture's hands stop being parked at frame centre
+
+**Duration**: one short sitting. `tests/analysis/conftest.py` and a new
+`tests/analysis/test_conftest.py`; `docs/M14_HAND_LANDMARKS.md` and `docs/README.md` for the phase
+count. Full suite 1417 green (1414 before, +3 here), `ruff` and `mypy` clean. Test-only change — no
+`src/` edit, no behaviour, no `ANALYSIS_VERSION` bump. **M14 is 2/6.**
+
+**Landmarks 17-22 now ride with their own wrist.** The frame builder initialises all 33 landmarks
+at `(0.5, 0.5)` with `visibility=1.0` and then overwrites only what current metrics read, so the
+six hand points were *confidently wrong* rather than absent — they cleared the visibility gate
+while sitting detached at frame centre. A hand metric written against that fixture would have
+returned a plausible non-`None` number computed from the middle of the frame and its test would
+have gone green. That is the whole reason P2 must land before P4.
+
+**The fan is expressed in shaft-relative units, not raw dx/dy.** Each of the six is placed as an
+`(along, across)` multiple of the existing `_GRIP_OFFSET_X` / `_GRIP_OFFSET_Y` — `along` toward the
+club head, `across` perpendicular to it — so the direction the hand points is the direction the two
+wrists already define. Raw offsets would have left six knuckles pointing off the club the first
+time the grip offset was retuned. The perpendicular is `(+offset_y, -offset_x)`, which puts both
+coefficients in the same grip-lengths and needs no normalisation, so the fixture stays arithmetic a
+reader can follow.
+
+**Same defect, one joint further out — and the same placement decision.** The trail wrist had this
+fixed already, with a comment recording that a fixture animating only the lead wrist "described a
+golfer letting go of it". The hands sit beside it for the reason that note gives: putting the
+change here rather than in the change that first reads 17-22 leaves every existing wrist, head,
+shoulder and hip expectation untouched. It moved no assertion — 1414 of the 1417 are the same
+assertions passing the same way.
+
+**P2 added a test where the precedent did not, deliberately.** The trail-wrist fix could rely on
+the down-the-line path to notice a regression. Nothing in `analysis/` reads 17-22 and nothing will
+until P4, so dropping the placement would stay green for an entire phase and then surface as a hand
+metric measuring frame centre — exactly the silent falsehood P2 exists to prevent.
+`tests/analysis/test_conftest.py` pins three things: the landmarks are within a hand's reach of
+their wrist, the wrist-to-hand offset is identical in every frame (both hands stay on the club), and
+the six are six distinct points. The first is checked **at the top of the backswing** and phrased as
+*distance from the wrist* rather than as the literal value `(0.5, 0.5)` — the wrist is at `y=0.15`
+there, so an unplaced landmark is 0.35 away, whereas an assertion about frame centre stops catching
+anything the moment a wrist passes through the middle of the frame. The third exists because a fan
+collapsed onto one point passes the other two.
+
+**Nothing else reads them, confirmed rather than assumed**: `LEFT_INDEX` and friends appear only in
+`pose/overlay.py`'s bones (P1) and its test. `smoothing.smooth_keypoints` walks all 33, so the new
+placements are smoothed along with everything else — consistent, because they move rigidly with the
+wrist.
+
+**Next**: P3, the gate — `scripts/hand_landmark_reliability.py`, the §Phase G screen re-asked of the
+face-on camera over `measure.address_sample_bounds`, at the same 0.60 tracked-frame floor. If the
+hands fail it, the table goes into `docs/M14_HAND_LANDMARKS.md` and the milestone stops there; P4
+and P5 do not happen.
+
+---
+
+## 2026-09-03 — M14 P1: the overlay stops drawing thirteen dots nothing measures
+
+**Duration**: one short sitting. `src/golf_coach/pose/overlay.py` and a new
+`tests/pose/test_overlay.py`; `docs/M14_HAND_LANDMARKS.md` and `docs/README.md` for the phase count.
+Full suite 1414 green (1408 before, +6 here), `ruff` and `mypy` clean. No behaviour outside the
+renderer, no `ANALYSIS_VERSION` bump. **M14 is 1/6.**
+
+**The dot set is now derived from `_BONES`, not maintained beside it.** The loop walked all 33
+members of `PoseLandmark` while the bone list connected twelve, so the overlay rendered nine head
+dots (eyes, mouth corners, nose) and four foot dots (heels, foot indices) that no bone touched and
+no checkpoint reads. `_JOINTS` is a sorted set comprehension over `_BONES`; the two lists cannot
+disagree again. Same rule `CLAUDE.md` states for the checkpoint panel — derive membership, never
+restate it.
+
+**Two ear dots survive, joined by a bone, and that bone is not decorative.** `evaluate_head_sway`
+scores the midpoint of `LEFT_EAR`/`RIGHT_EAR` (`measure.head_center_points`, whose docstring records
+why the ears and not the nose), so drawing them joined puts the measured quantity on screen. The
+comment says so, because the next reader's instinct is to tidy a redundant-looking line away.
+
+**Each hand gets a three-spoke fan** — `WRIST → INDEX/PINKY/THUMB` per side. Nothing reads
+landmarks 17-22 yet; this is structure, not measurement, and it exists because P3's reliability
+numbers are only worth believing if a human can first see by eye whether the hands are tracked. Six
+loose specks could not be reviewed that way.
+
+**The test pins both halves, and the second half is the one that matters.** A drifted dot set
+renders a slightly cluttered video that still encodes and still plays, and nothing downstream reads
+an `aligned.mp4` back — so a topology assertion alone would be a test of a tuple. The ink test parks
+everything at frame centre, sends the nose to a corner and asserts that corner is black, then
+asserts the wrist-to-index bone really did draw so the first assertion cannot pass by drawing
+nothing. `_NEVER_DRAWN` is listed by hand on purpose: deriving it from `_BONES` would make the test
+restate the implementation and pass whatever `_BONES` said. The topology tests need no OpenCV, so
+they run on a base install; only the ink test asks for the vision extra.
+
+**Looked at, not assumed.** Address and impact frames of `2026-08-23/9` were re-rendered from the
+stored `face_on.keypoints.json` and read at 3x: two ear dots on one bone with no eye, nose or mouth
+dot, and a three-spoke fan on each hand including the gloved lead one. That is P1's stated
+verification, done.
+
+**Consequence nobody will notice until they open one**: every stored `aligned.mp4` was rendered by
+the old code and still shows thirteen dots that are gone from the renderer. They are stale, not
+wrong-by-a-number, and re-rendering is not on any phase's list.
+
+**Next**: P2 — place landmarks 17-22 relative to each wrist in `tests/analysis/conftest.py`, which
+currently parks all 33 at frame centre with `visibility=1.0`. It must land before P4, or a hand
+metric passes its tests while measuring nothing. P1 and P2 are independent; P3 is the gate.
+
+---
+
 ## 2026-09-02 — M13: the anchor flips, and 15 artifacts change their sentence without changing a number
 
 **Duration**: one day across several sittings — P1-P7. `contracts/tempo.py`,

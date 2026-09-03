@@ -172,6 +172,35 @@ _TUNED = (
     "`python scripts/golfdb/tune_spatial_metric.py`, tolerance = noise + bound"
 )
 
+#: The same harness, the same corpus, the same command, re-run for the four hand metrics [M14
+#: P4, P5].
+#:
+#: A second constant rather than a reuse of `_TUNED`, because a provenance string carries a date
+#: and these were not measured on that one. The re-run also **reproduced all seven earlier
+#: tolerances to the digit** — 0.060, 0.024, 0.050, 0.053, 0.073, 0.080 and 0.943 — which is the
+#: only available check that a number derived three weeks apart came off the same instrument, and
+#: it is worth more here than usual: `hand_separation_norm`'s noise column is 0.057, the largest
+#: of any pose metric, exactly as `measure.py`'s "wrists jitter ~6x more" would predict. It still
+#: clears at a ratio of 4.1 because the population varies more than the jitter does, but a
+#: tolerance this wide is the reason a *stored* hand number is worth more than a single one.
+#:
+#: P5's two were added on the same string because the run that produced them was the same run,
+#: re-executed once more with both registered — which reproduced all *nine* prior tolerances,
+#: P4's included. All four clear the ratio-of-2 screen: 4.1, 11.5, 6.1 and 4.2.
+#:
+#: All four carry `_TUNED`'s standing caveat unchanged, and three carry one of their own:
+#: `hand_separation_norm`, `hand_height_norm` and `trail_hand_roll_deg` mix `x` and `y`, so the
+#: harness's numbers include GolfDB's `pixel_aspect` correction and a bay clip's would not
+#: (`measure.py`, "what is safe to measure face-on"). That is a second reason to treat those
+#: three as an estimate of our error rather than a measurement of it.
+#: `hand_offset_from_hips_norm` is `x`-over-`x` and is free of it — and is instead the only one
+#: of the four the harness flagged **bimodal**.
+_TUNED_HANDS = (
+    "spread/error harness over 461 face-on GolfDB clips, 2026-09-03: "
+    "`python scripts/golfdb/tune_spatial_metric.py`, tolerance = noise + bound. Same run "
+    "reproduced the 2026-08-12 tolerances unchanged"
+)
+
 #: The judgment behind the two launch-monitor tolerances, and it is judgment.
 #:
 #: There is **no instrument-error evidence for the OCR path at all** — the estimator-disagreement
@@ -483,6 +512,70 @@ METRIC_TARGETS: dict[str, MetricTarget] = {
             "`analysis.baseline` holds on purpose (ADR-010 §2). `analysis.comparison` answers the "
             "band's question directly instead — whether the center's interval sits inside it — so "
             "no point target has to be invented here (career mode step 6)"
+        ),
+    ),
+    # The two hand metrics [M14 P4]. Registered on the day they were added rather than left to be
+    # noticed, which is what `test_every_production_metric_has_a_tolerance` is for: a metric absent
+    # from this table is silent in career mode, and silent-by-omission is the one outcome nobody
+    # chose. Both get a scatter finding and neither gets a bias finding, because a tolerance needs
+    # only our error and a target needs someone to declare what good is.
+    "hand_separation_norm": MetricTarget(
+        metric="hand_separation_norm",
+        target=None,
+        tolerance=0.074,
+        provenance=_TUNED_HANDS,
+        no_target_reason=(
+            "how far apart a golfer's hands sit on the grip is not a fault, it is a grip - "
+            "overlapping, interlocking and ten-finger are all played on tour and this repo has no "
+            "position on which. What the scatter finding buys is the thing the metric was added "
+            "for: a separation that moves between swings of one golfer is the wrists being "
+            "mis-placed rather than the hands moving, so it reads as a warning about the other "
+            "hand numbers rather than about the swing"
+        ),
+    ),
+    "hand_height_norm": MetricTarget(
+        metric="hand_height_norm",
+        target=None,
+        tolerance=0.069,
+        provenance=_TUNED_HANDS,
+        no_target_reason=(
+            "how far the hands hang below the shoulders at address is set by club length and the "
+            "golfer's build before posture gets a say - a driver and a wedge are different numbers "
+            "for the same golfer standing correctly to both. There is no band, and a single value "
+            "across the bag would be wrong for every club in it. `narrow_to(club=)` (M9 P13) is "
+            "what makes the per-club version askable"
+        ),
+    ),
+    # M14 P5's pair, from the same harness re-run again on 2026-09-03, which for the third time
+    # reproduced every earlier tolerance in this table unchanged.
+    "hand_offset_from_hips_norm": MetricTarget(
+        metric="hand_offset_from_hips_norm",
+        target=None,
+        tolerance=0.050,
+        provenance=_TUNED_HANDS,
+        no_target_reason=(
+            "the harness flagged this one **bimodal - 26% of 455 face-on clips negative** - which "
+            "is the camera-relative sign meeting a mixed-handedness corpus, exactly as "
+            "`measure.py` predicted and exactly what `head_hip_offset_impact_norm` was checked "
+            "for and found clear of. A target cut across both modes would sit in the empty middle "
+            "and read every left-handed golfer as a gross fault. Handedness has to be resolved "
+            "before this has a target; the tolerance below is unaffected, because our error in "
+            "measuring the number does not care which way the golfer stands"
+        ),
+    ),
+    "trail_hand_roll_deg": MetricTarget(
+        metric="trail_hand_roll_deg",
+        target=None,
+        tolerance=7.4,
+        provenance=_TUNED_HANDS,
+        no_target_reason=(
+            "it is a proxy and is labelled one in `POSE_MEASUREMENTS`: two image points on the "
+            "back of one hand, standing in for rotation about the shaft, seen from the camera "
+            "worst placed to see it. A target would assert that a particular face-on angle is the "
+            "right grip, which is a claim about golf this repo has no evidence for and which "
+            "MediaPipe Hands, not this, would be the instrument for. The scatter finding still "
+            "works: whether one golfer sets the trail hand the same way twice is answerable "
+            "without knowing where it should be"
         ),
     ),
     "backswing_ms": MetricTarget(
