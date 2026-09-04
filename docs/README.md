@@ -1,6 +1,6 @@
 # Documentation map
 
-60 markdown documents: 50 in `docs/` — 19 here at the top level (including this map), 27 ADRs,
+61 markdown documents: 51 in `docs/` — 19 here at the top level (including this map), 28 ADRs,
 3 archived, 1 in `proposals/` — plus 10 outside it (the four at the repo root, and one each in
 `data/` and `frontend/`, four in `spikes/`). This page says which one to read, and — just as
 importantly — which ones are records of the past rather than descriptions of the present.
@@ -91,7 +91,7 @@ everything on this page is supposed to be trustworthy.
 
 ## Decisions (ADRs)
 
-26 decisions, 37 addenda between them (`grep -c '^#\+ *Addendum' docs/decisions/*.md` — the
+27 decisions, 37 addenda between them (`grep -c '^#\+ *Addendum' docs/decisions/*.md` — the
 stated total had drifted to 11, then to 13, and is now pinned by `tests/test_docs_truth.py`
 along with every per-ADR count in the last column).
 **The addenda are where reality corrected the original call**, so a doc's original Decision
@@ -125,6 +125,7 @@ section is not always the final word — the counts below exist so you don't mis
 | [024](decisions/024-per-club-shot-history.md) | Per-club shot history — the tag that makes distance measurable | **Accepted**, 20/20 phases built | **2** — a club that leaves the bag is kept on an append-only shelf rather than overwritten, because deleting it re-creates the loss recording lofts early exists to prevent; and why that is retention and not the bag entry versioning this ADR defers. Then the reversal, and it is the one to read before touching the bag: **§2's "never a catalogue default" is retired** — the choice a golfer with no loft machine faces is book loft versus *nothing*, and nothing won for a whole milestone, so `loft_deg` is the manufacturer's number now (ADR-026 §1) |
 | [025](decisions/025-acoustic-synchronization.md) | Acoustic synchronization — the ball strike as a shared clock | **Accepted**, and it takes ADR-015's parked Option C | **1** — the second defect its §Context reports was the container after all: it excluded a container A/V bias at ≈22 ms without weighing the *video* track's edit list, which is 105–125 ms on those same four clips. The pose estimate was right to within a frame; the arithmetic below this ADR was not |
 | [026](decisions/026-club-specification-lookup.md) | Club specification lookup — the golfer names a club, the program determines what it is | **Accepted**, and it **reverses ADR-024 §2** | — (built in full, M12 P1–P7; §6's refusal is the section the measurements bear out, and §1's *book loft versus nothing* holds for the half of the bag whose loft the model will state) |
+| [027](decisions/027-ball-flight-simulation.md) | Ball-flight simulation — the model the launch angle was recorded for | **Accepted**, and **ahead of its code** — P1–P18 unbuilt | — (it **lifts a deferral** ADR-024 opened and ADR-026 kept, and leaves the other three closed. Two claims to read before touching it: **loft and lie are not inputs to ball flight** — they belong to the impact model, so M15's bag correction and M15's simulator are not cause and effect; and **spin, not loft, was the blocker** — 11 of the 13 stored shots print no spin at all, so §3 solves it backwards from the printed carry and says plainly that this fits our model to HD Golf's rather than to reality. §4 is the one most likely to be implemented wrong: carry is **unimodal** in spin, not monotonic, so a bisection that assumes otherwise returns a confident wrong answer. §5 answers ADR-014's spin-axis blocker from the `Shot Type` tile, which prints the direction word the numeric tile omits) |
 
 Format: [000-template.md](decisions/000-template.md).
 

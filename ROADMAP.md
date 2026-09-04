@@ -30,6 +30,8 @@ wording; only the grouping and the M4 checklist have been corrected.
 | **M12** Club specs | ✅ Done *(2026-09-01)*, 8/8 phases | — (desk work, and it produced the first `.bag.json` this repo has ever held; only the form's **layout on a phone** is unverified) | [§M12](#m12-club-specs--the-golfer-names-a-club-the-program-determines-what-it-is--done) |
 | **M13** Downswing tempo | ✅ Done *(2026-09-02)*, 8/8 phases | — (desk work; all 15 stored swings re-analysed onto the new sentence with no score moved. Only the two pages' **layout** is unverified) | [§M13](#m13-downswing-tempo--the-downswing-is-what-you-feel-the-backswing-is-what-you-change--done) |
 | **M14** Hand landmarks | ✅ Done *(2026-09-03)*, 6/6 phases | — (desk work on artifacts already on disk; it re-opened a closed question and answered it, and shipped four metrics with **no band, no checkpoint and no `ANALYSIS_VERSION` bump**. The overlay change is unverified in a browser) | [§M14](#m14-hand-landmarks--six-points-nobody-reads-and-the-head-dots-nobody-measures--done) |
+| **Hands spike** MediaPipe Hands on a grip | ✅ Done *(2026-09-03, **no-go**)* | — (ran on the fifteen face-on swings already on disk; M14's successor milestone does not open, and only the ADR is left to write) | [§Hands spike](#hands-spike-mediapipe-hands-on-a-golf-grip--m14s-successor-and-a-no-go) |
+| **M15** Ball flight | 🟡 In progress, 1/19 phases | — (P0 only: ADR-027 and this table. The physics is unbuilt, and P4 is the gate — two stored shots carry the spin needed to check it against the simulator's own carry) | [§M15](#m15-ball-flight--the-model-the-launch-angle-was-recorded-for--in-progress) |
 | **M5** Feedback UI | ⬜ Not started | M7 Phase 5 gives the host | [§M5](#milestone-5-feedback-ui) |
 | **M2** Club & ball detection | 🔒 Gated, **and M1.5 said no-go** | Bay lighting for a ~1/2000 s exposure — *not* a global-shutter camera | [§M2](#milestone-2-club--ball-detection) |
 | Hardware re-validation | 🔒 Gated | Cameras / launch monitor arriving | [§Gate](#hardware-re-validation-gate-revisit-when-cameras--launch-monitor-arrive) |
@@ -282,6 +284,28 @@ join refuses all nine placements. The mechanism is complete and silent; only `n`
 > clubface are untouched**: a visible wrist landmark is not a lead-wrist *angle*, and the club
 > still needs M2. And the argument built on this sentence is unaffected — dispersion is still the
 > discriminator, and it is still `n` that blocks it.
+
+> **Addendum (2026-09-03, MediaPipe Hands spike):** the sentence above says grip strength "needs
+> MediaPipe Hands, which this repo has never evaluated." **It has now been evaluated, and the
+> answer is no-go** — so *grip strength* returns to the invisible list, this time measured rather
+> than inherited from a screen run in the wrong view.
+>
+> The model does not fail to find a hand. Over the same fifteen face-on swings and the same address
+> window, at the best pose-guided crop, it returns a hand on **179 of 179 frames**, places it on
+> the correct wrist (1.00), labels its handedness correctly (1.00 trail) and puts its index knuckle
+> **1.6–3.6 cm** from the pose model's own. It fails to find **two**: a golf grip reads to a model
+> trained on open, gesturing hands as a single hand, and two are resolved on **0.15** of frames
+> against a 0.60 floor. The hand it keeps is the **trail** hand (1.00); the lead hand, which is the
+> one grip strength is read on, comes back at **0.14**. Dropping the detection threshold to 0.2
+> takes that to 0.35 — the second hand is partly suppressed as an overlapping duplicate and partly
+> never proposed, and neither half reaches the floor.
+>
+> **What this does not change.** M14's four hand metrics are untouched: they come from the *pose*
+> model's coarse hand points, which still track at 1.00 at address, and where the hands *are*
+> remains measurable. The narrowing above stands. What closes is the successor milestone — there is
+> no route from this instrument to the V's or the knuckle count, and the next one would be training
+> a hand model on interlocked hands on a club, which is M1.5's declined labelling effort in a
+> different costume. Findings: [spikes/mediapipe-hands/log.md](spikes/mediapipe-hands/log.md).
 
 *(Counts read nine rather than eight as of 2026-08-13: M6.5's `head_hip_gain_norm` is picked up by
 the corpus reader with no career-mode change at all, which is the registry-driven derivation doing
@@ -554,6 +578,13 @@ answerable, not just what is displayed.
   > measurable is where the hands *are*, not whether the grip is *good* — there is no band and no
   > verdict — so the cause is still unknowable from a single swing and the variance is still what
   > splits it. Lead-wrist angle and release timing are untouched.
+
+  > **Addendum (2026-09-03, MediaPipe Hands spike):** grip *strength* — the static cause this
+  > bullet would most like to see — is now measured as **out of reach**, not merely unbuilt. The
+  > full correction sits with the other statement of this claim, in the **Biggest constraint on
+  > coaching** paragraph above; the short version is that a golf grip reads to `HandLandmarker` as
+  > one hand, and the one it keeps is the trail hand. **This bullet's argument is again unaffected**
+  > — it never needed to see the grip, only to split static causes from timing ones by variance.
 - **A fix becomes testable.** Since the cause is unknowable from this data, the honest method is
   empirical: baseline the golfer's face-to-path, change one thing, measure whether it moved toward
   zero. That needs a per-golfer baseline to move *from*.
@@ -1475,6 +1506,32 @@ defers all four and ADR-026 keeps them deferred; the flight model additionally s
 `spin_axis`, which the HD Golf screen prints with no direction word (ADR-014's addendum records two
 fades stored as draws). M12 lands the inputs, which are the half that cannot be recovered later.
 
+> **Addendum (2026-09-04, M15):** **ball trajectory is now in scope** —
+> [ADR-027](docs/decisions/027-ball-flight-simulation.md) lifts that one deferral and leaves the
+> other three exactly where this paragraph put them. Two corrections to the sentence above, and the
+> second is the useful one.
+>
+> **The `spin_axis` blocker is answered rather than waived.** The screen prints no direction word on
+> the *numeric* tile, which is true and is what ADR-014's addendum records. It prints one on the
+> **`Shot Type`** tile — `FADE`, `DRAW`, `SLIGHT FADE` — on every one of the thirteen stored shots,
+> and `analysis/shot_measure.py`'s `normalize_shot_shape` has been parsing it since M6.5. The sign
+> was on the screen the whole time, in a tile nobody had thought to read for it.
+>
+> **And the blocker was the wrong field anyway.** `spin_axis` is missing from 11 of the 13 stored
+> shots, but so is `spin_rate`, and the rate is the one that decides the carry — the whole
+> 2026-08-23 bay session records `Spin: no value text under the label`. So what actually blocked the
+> flight model was **spin, not the axis and not loft**, and ADR-027 §3 recovers the rate by solving
+> the integrator backwards against the printed carry, on the record that this fits our model to HD
+> Golf's rather than to reality.
+>
+> **What this paragraph got right, and it is the load-bearing half**: M12 landed the inputs. Ball
+> speed and launch angle have been stored since M9 against a model nobody had scheduled, and M15 is
+> the milestone that collects on that ordering. **What it implied and should not have**: that the
+> club specification is what the flight model was waiting for. It is not — loft and lie are inputs
+> to the *impact* model, not to ball flight, so M15's correction of the 7 iron from a T150 to a T250
+> changes no simulated flight. ADR-027 §Context 1 spends its words on that, because it is the
+> assumption most likely to be re-introduced by the next reader.
+
 ---
 
 ## Milestone 3: Launch Monitor Integration — in progress
@@ -1916,6 +1973,155 @@ a shaft are out of distribution for a model trained on open gesturing hands, and
 33-list. That is the natural next milestone. Grip *consistency* — whether one golfer sets the hands
 the same way twice — now falls out for free once these numbers are stored, and belongs with the
 dispersion work rather than here.
+
+> **Addendum (2026-09-03, MediaPipe Hands spike):** "that is the natural next milestone" — the
+> probe ran on the day M14 closed, and **it is a no-go, so the milestone does not exist.** The
+> prediction in the sentence above is half right and the half it got wrong is the interesting one.
+> Two interlocked hands *are* out of distribution, but not because the model cannot see them: at
+> the best pose-guided crop it returns a hand on 179 of 179 address frames, on the right wrist,
+> with its index knuckle 1.6–3.6 cm from the pose model's own. It returns **one**. Two hands come
+> back on 0.15 of frames against a 0.60 floor, and the hand it keeps is the **trail** one (1.00
+> against the lead's 0.14) — the wrong one, since grip strength is read on the lead hand. Grip
+> *consistency* is unaffected and still falls out of the stored pose metrics for free.
+> [spikes/mediapipe-hands/log.md](spikes/mediapipe-hands/log.md).
+
+---
+
+## Hands spike: MediaPipe Hands on a golf grip — M14's successor, and a no-go
+
+**Goal**: before an L3 change — a parallel hand field on `FrameKeypoints`, a `pose_estimator` stamp
+bump, every cached pose in `data/processed/` re-run — prove the 21-point hand model resolves a golf
+grip at all. Time-boxed, on the M1.5 pattern, and it needed no new footage.
+
+> **Status (2026-09-03): done, and the answer is no-go.** Thresholds were committed before the
+> model was run over a frame. Findings:
+> [spikes/mediapipe-hands/log.md](spikes/mediapipe-hands/log.md).
+>
+> **The model does not fail to find a hand; it fails to find two.** Fifteen face-on swings, 179
+> frames inside the same address window M14 P3 screened. At the best pose-guided crop it returns a
+> hand on **179 of 179** frames, places it on the correct wrist (1.00), gets the handedness label
+> right (1.00) and puts the index MCP **1.6–3.6 cm** from the pose model's own index landmark. Two
+> hands come back on **0.15** of frames against a 0.60 floor — a golf grip reads as a single hand
+> to a model trained on open, gesturing ones — and the hand it keeps is the **trail** hand (1.00)
+> while the **lead** hand, the one grip strength is read on, comes back at **0.14**.
+
+- [x] Commit the pass/fail bar first — [thresholds.md](spikes/mediapipe-hands/thresholds.md),
+      written before the model ran: two-hand detection ≥ 0.60 (§Phase G's floor, reused),
+      placement and distinctness ≥ 0.90 against the pose wrists, jitter ≤ 2.0x raw pose
+- [x] Full-frame arm as the control — **failed as predicted**, 0.16 detection and 0.00 two-hand at
+      4K, which is what says the crop arm is doing real work
+- [x] Pose-guided crop arm, `k` swept over {1.0, 1.5, 2.0, 3.0} — best at **k=2.0**, and no crop
+      scale gets two-hand detection above 0.15
+- [x] Eyeball the landmarks — `probe.py frames` wrote one annotated crop per swing; **one** hand on
+      all fifteen
+- [x] Rule out the cheap follow-ups: the **glove** is not the cause (gloved and bare-handed swings
+      behave identically), and lowering the detection threshold to 0.2 only reaches 0.35
+- [x] Controls: **down-the-line** is worse in every column (0.17 two-hand, 0.62 placement), and
+      whole-clip face-on collapses to 0.08 as M14 predicted it would
+- [ ] Write the finding into an ADR — **open.** The M1.5 pattern ends in one, and the decision this
+      would record is "no camera-only route to grip strength; the V's stay out of scope until a
+      hand model is trained on hands holding a club"
+
+**Exit criteria (go/no-go gate)**: ✅ met. The L3 change is **not** authorised, the successor
+milestone M14 named does not open, and the residual question is a training effort of the same shape
+M1.5 declined for the club head — not a re-run and not a bay session.
+
+---
+
+## M15: Ball flight — the model the launch angle was recorded for — in progress
+
+**Status**: 🟡 In progress, 1/19 phases. **P0 only** — [ADR-027](docs/decisions/027-ball-flight-simulation.md),
+this section, the addendum on M12's out-of-scope paragraph, and the map's counts. No code, no data,
+no tests. Everything below P0 is a plan and not a measurement.
+
+**Goal**: simulate the ball's path from the launch conditions the simulator prints, draw it, and be
+honest about which of its inputs were measured and which were solved for.
+
+**Why now.** Two sentences in the code have been describing this model in the negative for a
+milestone. `analysis/shot_measure.py` records ball speed and launch angle as *"fitting inputs… for a
+model that does not exist yet"*, and the club profile refuses a launch-angle target because
+*"optimal launch is per club, per ball speed and per spin rate… the same missing model as ball speed
+and the same deferral."* This is that model, and the measure-now-judge-later ordering M6.5 chose is
+what makes it buildable from artifacts already on disk.
+
+**The two facts that shape it**, both from ADR-027 §Context and both worth knowing before reading
+any phase below:
+
+- **Loft and lie are not inputs to ball flight.** They belong to the *impact* model — club delivery
+  to launch conditions — which is not being built. So P1's bag correction and the simulator are not
+  cause and effect, and a club bent 2° strong flies exactly as its launch conditions say it does.
+- **Spin is missing on 11 of the 13 shots on disk.** The whole 2026-08-23 bay session records
+  `Spin: no value text under the label`; only the two 2026-08-10 reference shots carry it. Spin, not
+  loft, is what was blocking this.
+
+**The validation set is two shots, and that is the gate.** `2026-08-10-1` (90.7 mph, 20.9°, 5991 rpm
+→ 125.6 yd) and `2026-08-10-2` (90.5 mph, 23.5°, 8100 rpm → 121.0 yd) carry a full launch-condition
+set *and* the simulator's own carry beside it. P4 is where the integrator meets them. **The tolerance
+is not chosen in advance** — it is measured, recorded in ADR-027 as a finding, and pinned at what was
+achieved. If the agreement is poor, that is a disagreement between two models to investigate, and not
+a number to widen until it passes: P9 bakes this error into every inferred spin.
+
+### Stage A — decide it, record it, fix the data
+
+- [x] **P0** — ADR-027, this section, M12's addendum, `docs/README.md`'s counts *(2026-09-04)*
+- [ ] **P1** — the bag correction. `aaron.bag.json`'s 7 iron reads `Titleist T150, loft_deg 32.0,
+      lie_deg null`; the club is a **T250** (30.5°, 63°, 37"). The file is also still in the pre-M12
+      five-field shape, so its stale `shaft` key is dropped on load and every M12 field reads blank.
+      Book loft, not measured, per M12's retired-reversal note
+
+### Stage B — the physics (`analysis/`, stdlib only)
+
+- [ ] **P2** — `benchmarks/flight_model_v1.json` + its evaluator, on `joint.py`'s convention.
+      Published constants, **not a fit** — the precedent is `clubs/catalogue.py`. Ships *before* the
+      integrator, so the integrator never carries a fallback constant
+- [ ] **P3** — `analysis/flight.py`, vertical plane only. RK4, gravity + drag + Magnus, coefficients
+      against **spin ratio** `S = ωR/v` and not against speed, landing by interpolation within the
+      final step
+- [ ] **P4** — ⚠️ **the gate**: reproduce 125.6 yd and 121.0 yd
+- [ ] **P5** — the third dimension. Spin axis, curvature, `landing_offline`; signs per
+      `contracts/shot.py`
+- [ ] **P6** — atmosphere (the altitude what-if), and a `test_pipeline_imports.py` pin that
+      `analysis.flight` pulls in no numpy
+
+### Stage C — inference, and the CLI
+
+- [ ] **P7** — `scripts/simulate_flight.py`, explicit launch conditions only
+- [ ] **P8** — solve spin from carry. **Carry is unimodal in spin, not monotonic** — below the peak
+      there are two answers, above it there are none, and a solver that assumes monotonicity returns
+      a confident wrong number
+- [ ] **P9** — the loft prior picks the branch (loft's only job here); spin axis from face-to-path,
+      sign-checked against `Shot Type`. No loft → no branch → `None` with a reason
+- [ ] **P10** — the CLI reads real shots, through the existing tolerant readers
+
+### Stage D — into the pipeline
+
+- [ ] **P11** — six `flight_*` measurements. **Distinct names, never a variant flag** —
+      `pooled_samples` groups by name, so a predicted carry sharing `carry_distance_yds` would pool a
+      model output into a measurement's distribution
+- [ ] **P12** — ⚠️ the `model:flight_v1` source prefix in `storage/corpus.py::artifact_key`. An
+      unrecognised prefix falls through to `swing:{ref}` and prints *"Unrecognised measurement
+      sources"* — **a warning that has already fired unread once**, for `population:golfdb`. Lands
+      before the version bump so the re-analysis is what proves it
+- [ ] **P13** — `ANALYSIS_VERSION` 14 → 15, `reanalyze.py --all`. No score moves; the panel does not
+      change size
+
+### Stage E — the surfaces
+
+- [ ] **P14** — `GET /api/sessions/{id}/swings/{id}/flight`, with its `ARCHITECTURE.md` §1 row in the
+      same commit
+- [ ] **P15** — `api/static/flight.html`. Canvas projection, vanilla JS, **no framework, no bundler,
+      no CDN**
+- [ ] **P16** — viewer honesty: measured landing point beside the simulated one, inferred spin
+      labelled on the line carrying the value, a refused curve visibly planar with its reason
+- [ ] **P17** — the `simulate_flight` MCP tool
+- [ ] **P18** — the doc-truth cascade. Tool count **ten → eleven**, ADR-027 flips to AS-BUILT, this
+      section flips to done
+
+**Deliberately out of scope**: the impact model, gapping, club fitting, swing efficiency, wind,
+roll-out. ADR-027's *Deferred, by choice* records each with what it is actually waiting on. The one
+worth watching is a **spin measurement** — Milestone 3's open profile-tuning item is the real repair,
+and the day a shot arrives with both a real spin and an inferred one, that comparison is the honest
+test of ADR-027 §3.
 
 ---
 
