@@ -543,7 +543,13 @@ function shotBlock(shot) {
     ? `<div class="banner warn"><strong>Needs review.</strong> These numbers were read off the
        screen photo with ${num((prov.parse_confidence || 0) * 100, 0)}% confidence.
        ${(prov.warnings || []).map(esc).join(" ")}</div>` : "";
-  return `<h2>Shot data</h2><div class="shot">${cells}</div>${review}`;
+  // The way in to the flight page (M15 P15). Offered whenever a shot screen was read and never
+  // conditioned on whether the shot can actually be flown: ten of the thirteen on disk cannot,
+  // and the refusal — a carry above the model's own peak, a club whose loft nobody has declared
+  // — is a finding about the shot rather than an empty page. Hiding the link on those would hide
+  // exactly the shots with something to say.
+  const flight = `<p class="muted"><a href="/flight.html?session=${encodeURIComponent(sessionId)}&swing=${encodeURIComponent(swingId)}">See the simulated ball flight</a></p>`;
+  return `<h2>Shot data</h2><div class="shot">${cells}</div>${review}${flight}`;
 }
 
 // Where this swing sits against a population of tour professionals. Expanded rather than

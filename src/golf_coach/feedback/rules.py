@@ -28,7 +28,7 @@ from __future__ import annotations
 
 from golf_coach.contracts.feedback import FeedbackPayload, Severity, Tip
 from golf_coach.contracts.swing import CheckpointScore, SwingResult
-from golf_coach.contracts.unscored import UnscoredCheckpoint
+from golf_coach.contracts.unscored import INFERENCE_REASONS, UnscoredCheckpoint
 
 # A checkpoint that failed but still scored at/above this is a minor miss; below it, major.
 _MINOR_SCORE_FLOOR = 0.5
@@ -141,12 +141,26 @@ def _headline(checkpoints: list[CheckpointScore]) -> str | None:
 
 
 def build_feedback(result: SwingResult) -> FeedbackPayload:
-    """Produce ranked rule-based tips from a swing result (LLM coaching added in M6)."""
+    """Produce ranked rule-based tips from a swing result (LLM coaching added in M6).
+
+    **The ball-flight entries in `unscored` are deliberately not turned into tips** [M15 P11].
+    They share that list because `contracts.unscored` is where this repo names an absence, but a
+    `Tip` carries a `checkpoint` and a simulated flight is not one — ADR-027 §Decision 6 gives it
+    measurement names and no `CHECKPOINT_REGISTRY` entry. `_unmeasured_tip`'s sentence is the
+    specific harm: *"so it is not included in the score"* is true of every checkpoint and false of
+    a `flight_*` measurement, which was never in `overall_score` to be excluded from. The refusal
+    still reaches every reader through `SwingResult.unscored` and `mcp.query`, which is where a
+    fact about the launch monitor's tiles belongs; it does not belong in a golfer's tips.
+    """
     ranked = sorted(result.checkpoint_scores, key=_rank_key)
     return FeedbackPayload(
         swing_id=result.swing_id,
         overall_score=result.overall_score,
         headline=_headline(result.checkpoint_scores),
         tips=[_tip_for(checkpoint) for checkpoint in ranked]
-        + [_unmeasured_tip(entry) for entry in result.unscored],
+        + [
+            _unmeasured_tip(entry)
+            for entry in result.unscored
+            if entry.reason not in INFERENCE_REASONS
+        ],
     )

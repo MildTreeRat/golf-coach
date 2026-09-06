@@ -123,8 +123,8 @@ python scripts/club_profile.py [--name NAME | --player-id ID] [--club CLUB] [--v
 python scripts/ask_swing.py <SESSION/SWING> "<question>"
 python scripts/ask_swing.py --resume <CONVERSATION-ID> "<question>"
 python scripts/ask_swing.py [--list | --show <CONVERSATION-ID>]
-#   seeds from the swing's stored analysis, then looks anything else up through the same ten
-#   tools the MCP server offers — called in-process, not over stdio
+#   seeds from the swing's stored analysis, then looks anything else up through the same
+#   eleven tools the MCP server offers — called in-process, not over stdio
 #   exit 0 answered · 1 answered with something flagged · 2 no answer
 
 # Bring stored analyses up to the current engine (`vision` only with --video)
@@ -132,14 +132,38 @@ python scripts/reanalyze.py [SESSION/SWING ...] [--all] [--player ID] [--dry-run
                             [--coaching] [--verbose]
 #   default targets: never analyzed, inputs re-uploaded since, or analysis_version < current
 #   pose and shots are cached, so an unchanged bundle re-runs in seconds
+
+# Ball flight, typed or read off disk (base install — M15 P7 and P10, ADR-027)
+python scripts/simulate_flight.py --ball-speed MPH --launch-angle DEG --spin RPM
+                                  [--launch-direction D] [--spin-axis A] [--altitude M]
+                                  [--step S] [--points N] [--verbose]
+python scripts/simulate_flight.py --gate [--altitude M] [--verbose]
+python scripts/simulate_flight.py --shots [--altitude M] [--step S]
+python scripts/simulate_flight.py --shot SHOT-ID [--points N] [--altitude M]
+#   four modes, one at a time: a what-if you type, the validation gate, the whole shot store, one
+#   stored shot in full
+#   --shots joins each parsed shot to the swing it arrived with — that is where the club is — and
+#   flies what it can; the refusals are the output, each with its reason and the case behind it
+#   every carry prints with its clamp and with the gate's inverted ordering beside it
+#   exit 0 a ball flew · 2 none did (a launch angle at the horizontal rolls; roll is out of scope)
+#   over stored shots a refusal is a finding, so --shots exits 0; only an unknown --shot id is 2
 ```
 
 One long-running service: the FastAPI upload server (`scripts/run_server.py`, M7 Phase 5),
 which also carries the background analysis worker and serves the upload and results pages. The
 MCP server (M3, `scripts/run_mcp_server.py`) is not a service in the same sense — it speaks
-stdio, so the MCP client launches it per connection and there is no port to bind. No React UI
-(M5); the static pages under `api/static/` — upload, library, results, career — are what
-stands in for it.
+stdio, so the MCP client launches it per connection and there is no port to bind. Its tools are
+`contracts/tool_descriptions.py::TOOL_DESCRIPTIONS`, six of them offered on any server and five
+more once a golfer registry is configured; `simulate_flight` (M15 P17) is in the first group,
+because a shot whose screen printed its own spin borrows nothing from a bag. No React UI
+(M5); the static pages under `api/static/` — upload, library, results, career, flight — are what
+stands in for it. The last is the only one that *draws*: `flight.html` projects the simulated
+polyline onto a canvas in two views, side and plan, with the plan view's offline axis stretched by
+a printed factor and the part of the path that read a held coefficient row dashed rather than
+solid (M15 P15). What the launch monitor printed is drawn beside it — a hollow ring for the carry
+it measured, a rule for where that carry falls in the plan view — and every simulated number the
+screen printed a counterpart for carries the sentence saying whether the gap between them is an
+error at all (M15 P16).
 
 ### The routes, precisely
 
@@ -163,6 +187,7 @@ the module declares, so a new endpoint fails the suite until it is listed here.
 | `GET` | `/api/sessions` | Every session that holds a swing, newest first, with each swing's row. The library page's one round trip, and the only route that *enumerates* — before it, a swing outside today's session was reachable only by typing its results URL by hand |
 | `GET` | `/api/sessions/{session_id}` | A session's swings and their analysis state — the 5 s status poll |
 | `GET` | `/api/sessions/{session_id}/swings/{swing_id}` | One swing's stored result, plus the tempo plan derived at read time |
+| `GET` | `/api/sessions/{session_id}/swings/{swing_id}/flight` | The simulated ball flight for that swing's shot — the path, the six `flight_*` numbers, what the launch monitor printed beside them, and the caveats none of it may be read without. **Flown at read time**, because `analysis.json` stores the numbers and not the path, and because the bag is editable: declaring a 3 wood's loft turns a refusal into a flight with no re-analysis. A shot the model cannot fly is a 200 carrying its reason — ten of the thirteen on disk are — and only a swing with no shot screen, or one never parsed, is a 404 (M15 P14) |
 | `DELETE` | `/api/sessions/{session_id}/swings/{swing_id}` | Remove one swing and its directory. The undo for a *phantom* — a corrective re-upload cannot replace a role a swing already has, so it opens a new swing, and a phantom missing both clips then swallows the next real shot's footage. Refused with 409 while a run is queued or in flight |
 | `POST` | `/api/sessions/{session_id}/swings/{swing_id}/golfer` | Re-attribute one swing; the repair path for a misfiled golfer |
 | `POST` | `/api/sessions/{session_id}/swings/{swing_id}/club` | Retag one swing. The club's **only** repair path, and deliberately per-swing — a session holds many clubs, so there is no bulk backfill (M9 P6, ADR-024 §5) |
@@ -195,11 +220,11 @@ flowchart TD
     ANA["analysis/<br/>smoothing, phases, alignment,<br/>checkpoints, scoring, benchmarks"] --> C
     FB["feedback/<br/>rules"] --> C
     DET["detection/ — stub"] -.-> C
-    STO["storage/<br/>bundle, golfer + bag stores,<br/>career corpus reader"] --> C
+    STO["storage/<br/>bundle, golfer + bag stores,<br/>career corpus reader,<br/>shot-to-swing flight-input join"] --> C
     CLB["clubs/<br/>committed catalogue,<br/>LLM specification lookup"] --> C
 
     API["api/ — upload server,<br/>pipeline, analysis worker"] --> C
-    MCP["mcp/ — query, career + club tools"] --> C
+    MCP["mcp/ — query, career, club + flight tools"] --> C
 
     API --> CAP
     API --> POSE
@@ -427,9 +452,17 @@ are residuals whose exceedance rate was never validated — `PlacementSpec.calib
 that says which, and `tests/test_docs_truth.py` fails if the prose and the flag disagree.
 
 Both consumers of that prose get it from one place: `feedback/coach.py` renders the placements into
-the coaching brief, and `mcp/query.py` ships them as `SwingView.population` — the one part of
-`measurements` that keeps its `detail` string, because for a placement that string is not
+the coaching brief, and `mcp/query.py` ships them as `SwingView.population` — one of the two parts
+of `measurements` that keep their `detail` string, because for a placement that string is not
 provenance but meaning.
+
+The other is `SwingView.simulated`, and it is the same split made for the opposite reason (M15
+P17). A `model:`-sourced measurement — ADR-027's ball flight is the only family today — loses more
+than meaning when it is flattened to a float: it loses the fact that **nothing measured it**, and
+lands in a payload whose field description opens *"quantities measured off this swing"*. Membership
+is decided by `Measurement.source` through `contracts.career.MODEL_SOURCE_PREFIX` rather than by a
+name prefix, so a second model's numbers are split out the day they exist rather than the day
+someone notices.
 
 Deferred by physics, not by schedule: spine tilt and forward bend foreshorten to ≈0 face-on;
 hip rotation, X-factor and kinematic sequence need 3D; swing plane and club path need
@@ -539,6 +572,73 @@ byte-identical on every stored swing across all four bumps that added them (`7 -
 `start_line_offline_yds` a target of `0.0` — straight is straight **by geometry**, not by a
 population — so a repeatable miss can be told from a scattered one. The distances get no target at
 all, and that absence is deliberate: it is the one thing here no measurement can supply.
+
+### What a model contributes — simulated, and named apart from everything measured
+
+A third family joined `measurements` in M15 P11: the ball's simulated flight.
+`analysis/flight_measure.py`'s `FLIGHT_MEASUREMENTS` is the registry — read the membership there —
+and it is the first entry in `measurements` that is not a reading of anything. Its
+`Measurement.source` says so: `model:flight_v1`, versioned with the coefficient artifact it
+evaluates, beside `pose:face_on`, `launch_monitor:*` and `population:golfdb`.
+
+**Every name is prefixed `flight_`, and that prefix is load-bearing.** `analysis/baseline.py`'s
+`pooled_samples` groups by name, so a simulated carry sharing `carry_distance_yds` would build a
+personal mean over a mixture of a measurement and a model output — the hazard
+[ADR-027](decisions/027-ball-flight-simulation.md) §Decision 6 exists to prevent, and the same one
+ADR-022 met when the down-the-line trajectory model needed its own names.
+
+**A flight dedupes on the shot photo, not on the swing.** `contracts/career.py`'s
+`KNOWN_SOURCE_PREFIXES` is where a provenance is registered and `CorpusSwing.artifact_key` is the
+single definition of the rule; M15 P12 mapped `model:` onto the **shot photo's** identity, because
+the integrator is fed that tile's launch conditions and nothing the body did — so two swings
+sharing one photo are one flight, and a parse flagged under ADR-014 takes the flight down with it.
+`population:golfdb` is still unregistered, by decision rather than by omission: see the note beside
+that tuple, and ADR-022's fourth addendum.
+
+**On the corpus as it stands that key is unobservable, and a reader should know it before trusting
+it.** M15 P13 put every stored swing on `ANALYSIS_VERSION` 15, and no two *distinct* swings in it
+share a shot photo — the only repeated photo sits under three directories `read_corpus` already
+collapses as re-uploads of one clip — so `model:{photo}` and the `swing:{ref}` fallback partition
+this corpus identically and the honest `n` would be the same either way. What the registration buys
+today is the other half: `artifact_key` returns `None` for a parse flagged under ADR-014, and the
+fallback has no such rule. `scripts/career_corpus.py` prints the per-metric `n` this all feeds.
+
+**Two of the six record conditionally, and both conditions are the same rule.** One provenance per
+name: `flight_landing_offline_yds` is withheld unless the spin axis resolved, because a flight drawn
+in the vertical plane lands at `carry × sin(start line)` and that is `start_line_offline_yds`
+already; and `flight_spin_rpm` records only a *solved* spin, because a printed one is the launch
+monitor's reading rather than the model's output. The flight is simulated either way.
+
+**Which printed number a simulated one may be set beside is decided once**, in
+`analysis/flight_measure.py`'s `compare_to_printed` — the flight route serves it as `comparison`
+and `scripts/simulate_flight.py --shot` prints the same rows, so the page derives no pairing of its
+own. There are two pairs and neither is a validation: the carry is a check only where the screen
+printed the *spin* (elsewhere the printed carry is the spin solve's own input and the flight
+reproduces it by construction), and the two offlines are where the ball started against where it
+finished. The other four simulated numbers have no printed counterpart at all. Each row carries
+`comparable` and a `reading` that says which kind of non-check it is, because two numbers side by
+side without that sentence read as a validation (M15 P16, ADR-027's 2026-09-06e addendum).
+
+**A refused flight is reported and never coached.** `SwingResult.unscored` carries it — one entry
+for the flight, a second for a refused axis — with a reason from
+`contracts/unscored.py`'s `INFERENCE_REASONS`, none of which `refilming_helps`. Nothing here is a
+checkpoint: no band, no `ranges.json` row, no `CHECKPOINT_REGISTRY` entry, no `METRIC_TARGETS` row,
+and no effect on `overall_score`. `feedback/rules.py` therefore skips these entries when building
+tips, because "not included in the score" is false for a quantity that was never in it.
+
+**The loft it needs comes from the shell, like handedness.** `api/pipeline.py::_loft_for` reads the
+golfer's bag through `storage/flight_inputs.py::loft_for_club` and passes a number into
+`analyze_swing`; `analysis` never opens a bag file (ADR-008). Loft picks the branch of the spin
+solve and nothing else — it is not an input to ball flight.
+
+**Which means a stored flight can disagree with a live one, and both are honest.** Those two inputs
+live in artifacts a golfer edits — the bag and the golfer registry — while `analysis.json` records
+what they said when the engine ran. `GET .../flight` re-resolves them per request (`api/flight_view.py`),
+so declaring a club's loft makes the page draw a flight the corpus still counts as `no_club_loft`
+until someone re-analyses. Nothing on disk can see the gap: `is_outdated` compares engine versions
+and `AnalysisState.inputs` hashes the uploads, neither of which moved. The stored answer is what
+every count reads; the live one is what the viewer draws. M15 P14 and ADR-027's 2026-09-06c
+addendum.
 
 
 ---

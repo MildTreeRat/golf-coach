@@ -10,6 +10,10 @@ bands without re-deriving them. See `distributions.py`.
 `joint` answers the question neither of the other two can: whether the six metrics **together**
 form a combination the tour population produces. Also off the scoring path (M8-JOINT, ADR-022).
 See `joint.py`.
+
+`flight_model` is the odd one out: it holds no tour population at all. It is the published
+aerodynamic constants `analysis/flight.py` integrates a ball with — nothing fitted, nothing
+scored, and nothing about a golfer (M15 P2, ADR-027). See `flight_model.py`.
 """
 
 from golf_coach.analysis.benchmarks.distributions import (
@@ -17,6 +21,21 @@ from golf_coach.analysis.benchmarks.distributions import (
     Distribution,
     dataset_info,
     load_distribution,
+)
+from golf_coach.analysis.benchmarks.flight_model import (
+    AeroCoefficients,
+    AeroRow,
+    AeroTable,
+    Atmosphere,
+    AtmosphereProfile,
+    BallSpec,
+    FlightDatasetInfo,
+    FlightModel,
+    SourceNote,
+    SpinDecay,
+    coefficients_for,
+    flight_dataset_info,
+    load_flight_model,
 )
 from golf_coach.analysis.benchmarks.joint import (
     JointDatasetInfo,
@@ -37,18 +56,31 @@ from golf_coach.analysis.benchmarks.trajectory import (
 )
 
 __all__ = [
+    "AeroCoefficients",
+    "AeroRow",
+    "AeroTable",
+    "Atmosphere",
+    "AtmosphereProfile",
+    "BallSpec",
     "DatasetInfo",
     "Distribution",
+    "FlightDatasetInfo",
+    "FlightModel",
     "JointDatasetInfo",
     "JointModel",
     "JointPlacement",
     "ResolvedRange",
+    "SourceNote",
+    "SpinDecay",
     "TrajectoryDatasetInfo",
     "TrajectoryModel",
     "TrajectoryPlacement",
+    "coefficients_for",
     "dataset_info",
+    "flight_dataset_info",
     "joint_dataset_info",
     "load_distribution",
+    "load_flight_model",
     "load_joint_model",
     "load_trajectory_model",
     "placement_for",

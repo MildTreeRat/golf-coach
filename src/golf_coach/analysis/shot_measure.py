@@ -48,10 +48,15 @@ of ball speed for 125.6 and 121.0 yards of carry — the same ball speed, near e
 corroborates. That is evidence rather than proof, and it points at the club-speed reading, so
 `ball_speed_mph` is recorded and `club_head_speed` stays out.
 
-**`spin_axis`.** Its sign is unresolved and contradicts `contracts/shot.py`, which documents
-`+ = fade`: both fades on disk carry a *negative* value. The parser warns it stored an
-uninterpreted magnitude because the screen prints no direction word. Face-to-path answers the same
-question with signs that demonstrably work.
+**`spin_axis`.** Excluded because its sign was unresolved, and **that ground is gone** — the
+sentence this paragraph used to make, that both fades on disk carry a negative value, describes
+the *screen* and stopped describing the stored field when `screen/profiles.json` gave the tile a
+`printed_sign` of -1. Both stored axes now read `+` against a printed fade, agreeing with
+`contracts/shot.py`'s `+ = fade`, and `screen/validate.py` cross-checks that against the `Shot
+Type` tile on every parse. M15 P9 owns ADR-027 §Decision 5 and so corrected this sentence; whether
+the field is re-admitted as a *measurement* is a separate question, and it belongs to M15 P11,
+which is the phase that decides what `pooled_samples` groups a flight quantity with. Face-to-path
+stays the derived reading here either way — it is what the screen does not print.
 
 **Dispersion, and anything else needing more than one shot.** There is one shot per session on
 disk. A spread over n=1 is not a spread.

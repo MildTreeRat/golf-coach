@@ -73,16 +73,19 @@ from golf_coach.contracts.audio import (
     AudioFile,
     AudioStrike,
 )
+from golf_coach.contracts.club import ClubId
 from golf_coach.contracts.golfer import Handedness
 from golf_coach.contracts.intent import ClubCategory, PracticeGoal
 from golf_coach.contracts.keypoints import ClipMetadata, KeypointsFile, PoseLandmark
 from golf_coach.contracts.shot import ShotData
 from golf_coach.contracts.swing import SwingBundleResult
+from golf_coach.contracts.unscored import UnscoredReason
 from golf_coach.feedback.coach import generate_coaching
 from golf_coach.feedback.rules import build_feedback
 from golf_coach.launch_monitor.screen.store import ShotStore
 from golf_coach.pose.estimator import pose_estimator_name
 from golf_coach.storage.audio_io import load_audio, save_audio
+from golf_coach.storage.flight_inputs import LoftGap, loft_for_club
 from golf_coach.storage.golfer_store import GolferStore
 from golf_coach.storage.keypoints_io import load_keypoints, save_keypoints
 from golf_coach.storage.manifest import Role, SwingManifest, load_manifest, manifest_path
@@ -634,6 +637,62 @@ def _handedness_for(manifest: SwingManifest) -> tuple[Handedness | None, str | N
     return golfer.handedness, None
 
 
+def _loft_for(manifest: SwingManifest) -> tuple[float | None, str | None]:
+    """The declared loft of the club this swing was hit with, and the repair when there is none.
+
+    [M15 P11] The third artifact read this shell performs on `analysis`'s behalf, beside the shot
+    and the handedness, and for the same ADR-008 reason: opening a bag file to find out what a `7i`
+    is bent to is not something a pure analysis core may do.
+
+    **The second element is a candidate remedy, not a note to append.** Loft picks a branch of the
+    *spin solve*, so a shot whose screen printed a spin never reaches for it and flies perfectly
+    well without one — two swings on disk are exactly that. The caller appends this only once the
+    engine has reported `NO_CLUB_LOFT`, which is the only evidence that the loft was wanted.
+
+    **It is not a duplicate of that reason either, and the difference is the layer** — the same
+    split `_handedness_for` above makes. `analysis` learns only that no loft arrived; which of the
+    four repairs is wanted — tag the swing with a club, add the club to the bag, put a number on
+    the entry — exists only here, and they are different minutes of work on different pages.
+    `storage.flight_inputs.LoftGap` is that distinction, and the reason it is enumerated rather
+    than being one bare `None`.
+    """
+    loft, gap = loft_for_club(manifest.player_id, manifest.club, golfers_dir=settings.golfers_dir)
+    if loft is not None:
+        return loft, None
+    return None, loft_remedy(gap, manifest.club)
+
+
+def loft_remedy(gap: LoftGap | None, club: ClubId | None) -> str | None:
+    """The minutes of work that would give this swing a loft, named per gap.
+
+    Public, and the only thing in this module that is: [M15 P14] gave the flight an HTTP route,
+    and `api/app.py` resolves the same loft through the same `loft_for_club` in order to draw the
+    flight on demand. Both shells owe the golfer the same sentence, and a second copy of four
+    repair strings is four strings that drift — `contracts/caveats.py`'s argument, one layer up.
+
+    It stays in `api/` rather than moving down beside `LoftGap` in `storage/flight_inputs.py`
+    because every sentence here names a *page*: which of the repairs is wanted is storage's
+    knowledge, but "the bag page" is this shell's.
+    """
+    remedy = {
+        LoftGap.NO_CLUB_TAG: (
+            "no club is tagged on this swing, so its ball flight could not be simulated — tag one "
+            "on the results page and re-analyze"
+        ),
+        LoftGap.NO_BAG_ENTRY: (
+            f"club {club} is not in this golfer's bag, so its loft is unknown and the "
+            "ball flight could not be simulated — add the club on the bag page"
+        ),
+        LoftGap.NO_DECLARED_LOFT: (
+            f"the bag entry for {club} carries no loft, so the ball flight could not be "
+            "simulated — the club's book loft on the bag page is enough"
+        ),
+    }
+    # `NO_SWING` cannot arrive from either caller: both are holding the swing. Defaulted rather
+    # than asserted, because a note is not worth taking an analysis down over.
+    return remedy.get(gap) if gap is not None else None
+
+
 def _pick_swing(
     keypoints: KeypointsFile,
     *,
@@ -1153,6 +1212,9 @@ def analyze_swing_dir(
         log(f"\nGolfer:\n  {handedness_note}")
         notes.append(handedness_note)
 
+    # Resolved before the analysis and **narrated after it**, which is not fussiness — see below.
+    loft_deg, loft_remedy = _loft_for(manifest) if shot is not None else (None, None)
+
     result = analyze_swing_bundle(
         swing_id=manifest.swing_id,
         session_id=manifest.session_id,
@@ -1165,7 +1227,21 @@ def analyze_swing_dir(
         face_on_strikes=strikes.get(Role.FACE_ON),
         down_the_line_strikes=strikes.get(Role.DOWN_THE_LINE),
         handedness=handedness,
+        loft_deg=loft_deg,
     )
+
+    # ⚠️ **The loft note is gated on the engine having actually missed it**, and the corpus is why.
+    # Loft picks a branch of the *spin solve*, so a shot whose screen printed a spin needs none at
+    # all — and the two 2026-08-10 swings are exactly that: no club tagged, and they fly anyway.
+    # Narrating the gap up front told those two swings to go and tag a club so their ball flight
+    # could be simulated, beside the simulated ball flight. `NO_CLUB_LOFT` in `unscored` is the
+    # engine saying the loft was reached for and missing, which is the only condition under which
+    # the repair below is a repair.
+    if loft_remedy and any(
+        entry.reason is UnscoredReason.NO_CLUB_LOFT for entry in result.swing.unscored
+    ):
+        log(f"\nBall flight:\n  {loft_remedy}")
+        notes.append(loft_remedy)
 
     video_path: Path | None = None
     video_codec: str | None = None

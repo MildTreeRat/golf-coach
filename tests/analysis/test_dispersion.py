@@ -21,6 +21,7 @@ import pytest
 
 from golf_coach.analysis.baseline import build_baseline
 from golf_coach.analysis.dispersion import build_dispersion, dispersion_for
+from golf_coach.analysis.flight_measure import FLIGHT_MEASUREMENTS
 from golf_coach.analysis.measure import POSE_MEASUREMENTS
 from golf_coach.analysis.shot_measure import SHOT_MEASUREMENTS
 from golf_coach.contracts.baseline import BaselineClaim
@@ -245,6 +246,31 @@ def test_every_production_metric_has_a_tolerance() -> None:
     produced = set(POSE_MEASUREMENTS) | set(SHOT_MEASUREMENTS)
 
     assert produced == set(METRIC_TARGETS)
+
+
+def test_the_simulated_flight_is_registered_nowhere_and_that_is_the_choice() -> None:
+    """M15 P11's answer to the test above, made explicit rather than left to omission.
+
+    `FLIGHT_MEASUREMENTS` is a third production registry and its six names have **no**
+    `METRIC_TARGETS` row. That is deliberate: a dispersion finding is a claim about how repeatable
+    *this golfer* is, and five of the six are a deterministic function of measurements already
+    registered — a scatter finding on `flight_carry_yds` would re-report `carry_distance_yds`'s own
+    spread with a model's error folded in, under a second name. The sixth, `flight_spin_rpm`, is
+    solved rather than measured, and its error floor is the gate's own inversion rather than any
+    instrument's.
+
+    `dispersion.py` already refuses out loud for an unregistered metric — the `unavailable` reason
+    names `METRIC_TARGETS` — so this is a stated refusal and not a silence. The assertion is here
+    so that adding a row becomes a decision someone makes on purpose.
+    """
+    assert set(FLIGHT_MEASUREMENTS).isdisjoint(METRIC_TARGETS)
+    assert set(FLIGHT_MEASUREMENTS).isdisjoint(set(POSE_MEASUREMENTS) | set(SHOT_MEASUREMENTS))
+
+    metric = _one("flight_carry_yds", _spread(150.0, 3.0, 12))
+
+    assert metric.tolerance is None
+    assert metric.bias is Finding.WITHHELD and metric.scatter is Finding.WITHHELD
+    assert any("METRIC_TARGETS" in reason for reason in metric.unavailable)
 
 
 def test_a_target_less_metric_must_say_why() -> None:

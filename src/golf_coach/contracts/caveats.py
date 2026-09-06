@@ -282,6 +282,46 @@ Reading one golfer's own history:
 - `n` counts distinct swings, not swing directories. A session can score perfectly well and still
   contribute no samples, because its clips were re-uploads of a swing already counted elsewhere."""
 
+#: How to read a number nothing measured. [M15 P17]
+#:
+#: The block every other one in this file is the opposite of. The rest warn that a *reading* is
+#: provisional — a flagged parse, a small sample, an uncalibrated basis — and this warns about a
+#: number that is not a reading at all: a ball flight integrated from the launch conditions the
+#: screen printed. It ships whenever the server does, because a simulated flight reaches a model
+#: through `get_swing` as well as through its own tool, and a caveat that arrived only with the
+#: tool would be absent exactly where a model was not looking for one.
+#:
+#: **Prose rather than derived from the flight registry.** ADR-008 puts `analysis.flight_measure`
+#: downstream of this file, so those names cannot be interpolated the way `CHECKPOINT_REGISTRY`'s
+#: are — and the rule here is about a *kind* of number rather than about the ones that exist
+#: today, so it stays true when a second model produces a seventh.
+READING_A_SIMULATED_FLIGHT = """\
+Reading a simulated ball flight:
+
+- **Nothing in it was measured.** The flight is integrated from the launch conditions the
+  simulator printed, so the carry, apex, hang time, descent angle and landing offline are all a
+  model's output. Say "simulated" whenever you quote one, never average one with a printed
+  figure, and never present one as something the launch monitor recorded.
+- **The spin is often solved rather than read.** Where the screen printed no spin it is recovered
+  backwards from the printed carry — it is the spin this model needs in order to agree with that
+  number. Where that happened, the simulated carry matching the printed one is not a check of
+  anything: it is the input read back out. `spin.source` says which case you are in, and
+  `comparison` carries the sentence for it.
+- **A refused flight is a fact about the shot and never about the clip.** A carry no spin can
+  reach, a club whose loft nobody declared, a screen that printed neither a spin nor a carry to
+  solve from — those are the reasons, and re-filming the swing fixes none of them. Say what is
+  missing, and where it is a declared loft say that the repair is a bag entry rather than a range
+  session.
+- **The landing offline is not the printed one.** What the screen prints is where the ball
+  *started*, projected out to the carry; the simulated number is where the model has it finishing.
+  The difference between them is the curve, and it is an error in neither. Where the curve could
+  not be resolved the flight is drawn flat and that number is withheld rather than guessed.
+- **The apex, hang time and descent angle have no printed counterpart at all**, so nothing on file
+  can check them. Quote them as what the model says and never describe one as confirmed.
+- `caveats` is not a footnote. Read it before quoting any figure and pass on what it says — the
+  first of them is about the range the model's coefficients were published for, and it applies to
+  every shot on file."""
+
 #: What the per-club tools add, and **only** they do. [M9 P18]
 #:
 #: Ships beside `READING_A_PERSONAL_HISTORY` and never instead of it: the two are gated by the same

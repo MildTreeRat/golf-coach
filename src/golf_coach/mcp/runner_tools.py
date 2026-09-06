@@ -1,8 +1,9 @@
 """The same tools, for the in-process tool runner instead of the wire. [M6, ADR-020]
 
-`server.py`'s sibling. Both are thin adapters over `query.py` and `career.py`; the difference is
-only who is calling. `server.py` answers an **external** client — Claude Desktop, Claude Code —
-over stdio, and that round trip is the point there. This module answers *this application*, which
+`server.py`'s sibling. Both are thin adapters over `query.py` and the three modules beside it
+(`career.py`, `club.py`, `flight.py`); the difference is only who is calling. `server.py` answers
+an **external** client — Claude Desktop, Claude Code — over stdio, and that round trip is the point
+there. This module answers *this application*, which
 already has the functions importable, so it calls them directly and skips the subprocess.
 
 Three things are deliberately shared with `server.py` rather than restated, because a model
@@ -49,9 +50,10 @@ from golf_coach.contracts.tool_descriptions import (
     GET_SHOT_TRENDS,
     GET_SWING,
     LIST_SESSIONS,
+    SIMULATE_FLIGHT,
 )
 from golf_coach.launch_monitor.source import ShotDataSource
-from golf_coach.mcp import career, query
+from golf_coach.mcp import career, flight, query
 
 # By name and not as `club.*`, for `server.py`'s reason: the tool below takes a parameter called
 # `club`, and a module of that name in scope would be shadowed inside the function that needs it.
@@ -61,6 +63,7 @@ from golf_coach.mcp.club import (
     missing_golfer_bag,
     missing_golfer_club,
 )
+from golf_coach.mcp.flight import missing_swing_flight
 
 
 def _json(value: BaseModel | Sequence[BaseModel]) -> str:
@@ -129,6 +132,12 @@ def build_tools(
         shot = query.get_shot(shot_source, shot_id)
         return _json(shot if shot is not None else query.missing_shot(shot_id))
 
+    def simulate_flight(session_id: str, swing_id: str) -> str:
+        view = flight.flight_for_swing(
+            sessions_dir, shot_source, session_id, swing_id, golfers_dir=golfers_dir
+        )
+        return _json(view if view is not None else missing_swing_flight(session_id, swing_id))
+
     tools = [
         _tool(
             list_sessions,
@@ -155,6 +164,15 @@ def build_tools(
             get_shot_by_id,
             GET_SHOT_BY_ID,
             shot_id="Shot id from get_recent_shots, or from a swing's attached shot.",
+        ),
+        # Unconditional, beside the five above and not with the registry-gated ones below: a
+        # flight borrows the loft and the handedness from the swing where they exist and flies
+        # without them where they do not. `build_server` registers it on the same terms.
+        _tool(
+            simulate_flight,
+            SIMULATE_FLIGHT,
+            session_id="Session id from list_sessions, e.g. '2026-08-23'.",
+            swing_id="Swing id within that session, e.g. '4'.",
         ),
     ]
 

@@ -27,6 +27,7 @@ from golf_coach.contracts.tool_descriptions import (
     GET_SWING,
     LIST_SESSIONS,
     REGISTRY_TOOL_NAMES,
+    SIMULATE_FLIGHT,
     TOOL_DESCRIPTIONS,
 )
 
@@ -44,6 +45,7 @@ def test_the_mapping_covers_every_constant_and_nothing_else() -> None:
         COMPARE_SESSIONS,
         GET_BAG_PROFILE,
         GET_CLUB_PROFILE,
+        SIMULATE_FLIGHT,
     }
 
     assert set(TOOL_DESCRIPTIONS.values()) == declared

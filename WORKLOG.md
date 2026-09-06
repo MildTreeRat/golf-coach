@@ -5,6 +5,1244 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-09-06 — M15 P17-P18: the eleventh tool, and six numbers that reached a model saying nothing
+
+**Duration**: one sitting. **M15 is done, 19/19.** Added: `src/golf_coach/mcp/flight.py`,
+`tests/mcp/test_flight_tool.py`. Edited: `contracts/tool_descriptions.py` (`SIMULATE_FLIGHT`, and
+the mapping that moves the pinned count), `contracts/caveats.py`
+(`READING_A_SIMULATED_FLIGHT`), `mcp/query.py` (`SimulatedView`, `_simulated`, `_is_modelled`,
+`_version`, and `SwingView` gains `simulated` and `analysis_version`), `mcp/server.py`,
+`mcp/runner_tools.py`, `storage/flight_inputs.py` (`loft_for_club` takes `golfers_dir=None`),
+`tests/mcp/test_query.py` (+3), `tests/mcp/test_server.py` (+1),
+`tests/contracts/test_tool_descriptions.py`, then the P18 cascade across `ROADMAP.md`,
+`docs/README.md`, `docs/ARCHITECTURE.md`, `scripts/ask_swing.py` and ADR-027 (fifteenth addendum,
+Status block flipped to built). Full suite **1662 passed**, `ruff` and `mypy` clean.
+
+**The tool is `simulate_flight(session_id, swing_id)`** — the shot a stored swing arrived with,
+flown, with the six numbers and their provenance, the refusal where there is one, the launch
+conditions, the spin's source and cap, the axis and `sign_disagrees`, P16's printed pairing and
+`caveats_for`'s sentences. No path: a model cannot look at a polyline, and that is the only thing
+this surface drops relative to the route. It is **not** registry-gated, unlike the career and club
+five — a shot whose screen printed its own spin borrows nothing from a bag, so gating it would
+remove answers rather than protect them.
+
+⚠️ **The finding: the surface that talks had been saying nothing.** ADR-027 §Decision 6 puts
+`model:flight_v1` on every one of the six, `engine.py` writes it, `analysis.json` carries it and
+`flight.html` has said SIMULATED on every row since P15 — but `mcp/query.py::_measurements`
+flattens `measurements` to name -> value, which is right for a pose metric and drops exactly the
+two fields that carry this. So what reached a **coaching model** was `flight_carry_yds: 122.36` and
+`flight_spin_rpm: 2923.86`, bare, under a field description opening *"quantities measured off this
+swing"*. A solved spin and a printed one were the same kind of number on the one surface whose
+output is sentences spoken to a golfer. The repair is `PlacementView`'s split made for the opposite
+reason — there a bare float loses the meaning, here it loses the fact that nothing measured it —
+and membership is `Measurement.source` through `MODEL_SOURCE_PREFIX`, never the `flight_` name.
+
+⚠️ **And a join has a direction.** The first build used `read_flight_inputs`, which answers "which
+swing was this shot hit on" and names one survivor per photo. **One screen photo on this corpus is
+attached to three swings** — `2026-08-07-aaron1/1`, `2026-08-09/2`, `2026-08-10/1`, all three roles
+identical, one physical swing uploaded three times while the upload path was being tested — so two
+of them were told their screen had never been read while `get_swing` returned their recorded flight
+in the same conversation. It resolves the manifest's own photo now, which is what the route does.
+This does not correct P13: `CorpusSwing` groups by the face-on clip, which those three also share.
+
+**P14's seam is visible for the first time.** `differs_from_recorded` sets the stored `flight_*`
+rows — read back through `query.get_swing`, not a second reader of the artifact — beside the flown
+ones at the engine's own rounding, and `recorded_reading` splits the two causes on
+`analysis_version`: an older artifact differs because of the engine, a current one because an input
+living outside it was edited. Empty on all thirteen shots today, which is what it should be.
+
+**Next**: M15 is closed. The one thing it never verified is `flight.html`'s **layout** — no browser
+was driven in P15, P16 or here.
+
+---
+
+## 2026-09-06 — M15 P16: the comparison that is not one, and a flag nothing rendered
+
+**Duration**: one sitting. Edited: `analysis/flight_measure.py` (`compare_to_printed`,
+`PrintedComparison`, `circular_carry_note`, `_COMPARISON_PAIRS`), `api/flight_view.py` (a
+`comparison` key), `api/static/flight.html` (the two printed marks, the comparison block, the
+caveats block, the planar sentence, the spin cap, the sign flag),
+`scripts/simulate_flight.py` (prints the same rows under `--shot`, and its `--shots` paragraph is
+now the shared sentence), `tests/analysis/test_flight_measure.py` (+7),
+`tests/api/test_flight_route.py` (+3), `tests/api/test_flight_page.py` (+5), `ROADMAP.md`,
+`docs/README.md`, `docs/decisions/027-ball-flight-simulation.md` (fourteenth addendum). Full suite
+**1644 passed**, `ruff` and `mypy` clean. **M15 is at 17/19; only the MCP tool and the doc cascade
+are left.**
+
+**The phase P15 called rendering turned out to have a registry decision in it.** Putting a printed
+number beside a simulated one means answering *which* printed name is the same quantity as which
+simulated one, and *whether the difference is an error* — the question the `flight_` prefix answers
+from the other side. So `compare_to_printed` lives in `analysis/flight_measure.py` beside
+`FLIGHT_MEASUREMENTS`, the route sends the rows as `comparison`, and both the page and the CLI
+render them. A page pairing `flight_carry_yds` with `carry_distance_yds` in JavaScript would have
+been the third copy of two registries on the one page whose tests exist to keep it free of them.
+
+⚠️ **The finding: neither of the two available pairs is a check.** Where the spin was *solved*, the
+printed carry is the solve's own input — `2026-08-23-4` flies 126.101 yd against a printed 126.100,
+which is the most convincing pair of numbers on the page and evidence of nothing. (That sentence
+has been in the CLI since P7; it is `circular_carry_note` now, composing both the column form and
+the per-row one, because P16 was about to write it a second time.) And the two offlines are not one
+quantity twice: printed is where the ball *started*, projected to the carry; simulated is where the
+model has it finishing. Their gap splits exactly into `curvature * cos(direction)` **plus** the
+carry error leaning on the start line — +1.71 and +0.30 on `2026-08-10-1`, where the lean is 15% of
+the gap — so calling all of it "the curve" would have re-reported the carry error as bend on the
+one row whose job is to say a number was never measured. The other four measurements have no
+printed counterpart at all: **no shot on disk carries an apex tile**, and `flight_spin_rpm` is
+structurally unpairable because it records only a solved spin.
+
+⚠️ **And a flag that had never reached a golfer.** `sign_disagrees` has ridden the payload since P9
+and the CLI prints it. Written into this page's launch-conditions block — where a fact about the
+spin axis belongs — it *still* would not have shown: the one shot on disk that sets it is a
+`carry_unreachable` refusal, so it has no launch conditions and that block does not render for it.
+It renders from `render()` now, beside the refusal banner, both readings shown and neither picked.
+
+**Three things the drawing stopped asserting.** A planar flight's line no longer ends in a filled
+landing mark — that was the page asserting the number `FLIGHT_MEASUREMENTS` withholds — and the
+panel now says so in the refusal's own words. The printed carry is a *rule* across the plan view
+rather than a point on it, because the screen prints no offline tile and a ring on the target line
+would have invented a landing; the ring it does get sits on that rule at the start line projected
+out. And the printed carry now sets the down-range span, since it is the longer of the two on both
+measured-spin shots and was being drawn off the edge of the canvas.
+
+**Layout is still unverified, but every payload was replayed.** No browser was driven. All thirteen
+live payloads were run through the page's own JavaScript under a stubbed DOM at 600px and 320px —
+which is how the sign-flag hole was found — and the panel geometry, the captions, the legend and
+the planar sentence were read off the result. A dev server on the real corpus is still the way to
+look at it.
+
+---
+
+## 2026-09-06 — M15 P15: the flight gets drawn, and the axis it is allowed to stretch
+
+**Duration**: one sitting. New: `src/golf_coach/api/static/flight.html`,
+`tests/api/test_flight_page.py` (+8). Edited: `api/static/results.html` (the link in, from the
+shot block), `tests/test_docs_truth.py` (+1 pin), `ROADMAP.md`, `docs/ARCHITECTURE.md`,
+`docs/README.md`, `docs/decisions/027-ball-flight-simulation.md` (thirteenth addendum, **and its
+Status block, which was a phase behind**). Full suite **1629 passed**, `ruff` and `mypy` clean.
+**M15 is at 16/19 and Stage E is half built.**
+
+**Two projections of one polyline, not a camera on it.** A side elevation for height and a plan
+view for offline, sharing one down-range scale so they stay column-aligned. A single 3D view would
+need a camera, and every camera angle makes one of those two questions unreadable while still
+looking authoritative about both. Vanilla JS on a canvas with no framework, no bundler and no CDN,
+which is ADR-027's *Alternatives* call arriving as code — and the first canvas in this repo.
+
+⚠️ **The finding is the plan view's vertical axis, and it inverts what I wrote first.** The side
+view is 1:1 with distance, so the panel's height falls out of the scale rather than being chosen
+and a flat shot draws flat. Offline cannot be: at 1:1 a two-yard drift across a
+hundred-and-twenty-yard carry is a line one pixel thick. So the plan view stretches it by a round
+factor and prints the factor at full opacity. The first rule was *the largest factor that fits the
+panel*, and the arithmetic over the two flights on disk at a 600px canvas is what argued it down —
+`2026-08-10-1` drifts 9.6 yd against an 18.5 yd apex, which at ×2 is a **214px plan panel above a
+117px side view**: the lateral miss drawn taller than the height of the shot, directly under a
+caption reading 1:1. Every flight on this corpus drifts a third to a half of its own apex, so that
+rule magnified all of them. It is now the *smallest* factor that lifts the drawn curve over a
+legibility floor — both real flights come out at ×1, and the machinery still earns its place for
+the shot hit dead straight, where 0.4 yd of drift at 122 yd needs ×10 to be a curve at all.
+
+**What the page draws that the six numbers do not carry.** The clamped part of the path is dashed,
+per point and not per flight, because the spin ratio climbs as the ball sheds speed faster than it
+sheds spin — `2026-08-10-1` is dashed end to end (905 of 905 steps) and `2026-08-23-4` is solid
+for all 919, which is the 2026-09-05b addendum's pairing visible on a screen: the only shot that
+reads the coefficient table is the one whose spin was invented. The spin's provenance rides on the
+line carrying the value rather than waiting for P16, because a number shipped bare even for one
+phase is the erosion §Decision 3 names as the trigger for falling back to refusing outright. And a
+refusal is content, not an error state — a neutral banner with the reason, the remedy where there
+is one, and which of the seven solve cases the carry landed on, matching the route's own 200.
+
+**The link is offered on every swing whose screen has been read, including the ten that refuse.**
+Hiding it there would hide exactly the shots with something to say, and one of them — the 3 wood —
+carries a repair the golfer can make from the bag page.
+
+**Eight pins, all on failures that are silent.** The page holds no second copy of
+`FLIGHT_MEASUREMENTS`, `FLIGHT_SOURCE`, `INFERENCE_REASONS` or `SpinSolveCase` — labels are
+derived off the payload, so a seventh measurement renders the day it ships — it decides its
+re-filming sentence on `refilming_helps` and never on a reason's name, and it reports all four
+failure paths including the 404 that means *this server is older than the route*. What is **not**
+verified is layout: no browser was driven, so the projection arithmetic was replayed against the
+live payloads at 600px and 320px instead. A dev server on the real corpus is the way to look.
+
+⚠️ **A doc finding, found by writing the addendum.** ADR-027's Status block was a phase behind —
+"eleven addenda" over twelve, P14 listed as unbuilt after P14 had shipped its own addendum, and
+the *three flights* count `docs/README.md` was corrected away from in P14. `test_docs_truth.py`
+pinned the **map's** per-row addendum count and nothing else, so an ADR's account of *itself* —
+the header of the longest ADR in the repo, and the part a reader actually reads — was the one
+place a correction could go stale unwatched. New pin:
+`test_an_adr_that_counts_its_own_addenda_counts_them_correctly`. Its first version required a
+literal space before "addenda", matched nothing where ADR-027 wraps the phrase across a line, and
+passed over the very error it was written for; it takes `\s+` now.
+
+---
+
+## 2026-09-06 — M15 P14: the flight gets a route, and the route can disagree with the artifact beside it
+
+**Duration**: one sitting. New: `src/golf_coach/analysis/flight_caveats.py`,
+`src/golf_coach/api/flight_view.py`, `tests/analysis/test_flight_caveats.py` (+11),
+`tests/api/test_flight_route.py` (+23). Edited: `api/app.py` (the route,
+`GET /api/sessions/{id}/swings/{id}/flight`), `api/pipeline.py` (`loft_remedy` made public),
+`analysis/flight.py` (`FlightResult.sample`), `scripts/simulate_flight.py` (imports the two
+lifted rules instead of defining them), `tests/analysis/test_flight.py` (+4), `ROADMAP.md`,
+`docs/ARCHITECTURE.md` (§1 route row and a §3 paragraph), `docs/README.md`,
+`docs/decisions/027-ball-flight-simulation.md` (twelfth addendum). Full suite **1620 passed**,
+`ruff` and `mypy` clean. **M15 is at 15/19 and Stage E has started.**
+
+**The route re-flies rather than reading `analysis.json`.** The artifact holds the six `flight_*`
+numbers and no path; a path is the whole of what a viewer draws, and re-integrating one costs about
+ten milliseconds. `api/flight_view.py` is the derivation and imports no `fastapi`, so it is
+testable on a base install; the route in `app.py` is manifest reads — shot photo sha256 →
+`ShotStore` (cache only, no OCR in a request handler), then `loft_for_club` and the golfer's
+handedness off the stores `create_app` already holds. Over the real corpus it reproduces P13's disk
+state exactly: **five flew, ten refused** — seven `carry_unreachable`, two `no_club_loft`, one
+`spin_not_recoverable`.
+
+⚠️ **The finding: two of a flight's inputs live in editable artifacts.** The loft and the
+handedness are not on the swing; they are in the bag and the golfer registry, which a golfer edits
+from a different page. So one shot has two answers at once — what the engine resolved when it ran
+(`analysis.json`, what `career_baseline` counts) and what resolves now (what the route draws).
+Declare the 3 wood's loft and the page flies a shot the corpus still records as `no_club_loft`,
+with **no re-analysis, no version change, and nothing on disk that can see the difference**:
+`is_outdated` is a version comparison (P13's finding arriving from the other side) and
+`AnalysisState.inputs` hashes the *uploads*, which did not move. The shape is not new —
+re-attributing a swing leaves `head_stays_back` scored under the old handedness, and has since
+M6.5 — but the size is: a loft flips **five** measurements between recorded and withheld rather
+than moving one number. Left as a finding: re-analysing on a bag edit would re-run pose over every
+swing that club ever hit, and the cheap half (serving the stored value beside the live one) is a
+payload question for P16.
+
+**A refusal is a 200; a 404 is something else.** Ten of thirteen shots cannot be flown, so a route
+that erred on a refusal would report this repo as broken every time it was read honestly. The 404
+is a swing with no shot-screen photo, or one whose photo has never been parsed — no flight
+resource, and no sentence about physics to offer.
+
+**Two rules moved out of `scripts/`, both because P7 wrote them when the CLI was the only surface.**
+The four caveats are now `analysis/flight_caveats.py`, with `caveats_for` composing them so *which*
+caveats a flight owes is one rule and not two — `contracts/caveats.py`'s own argument, one layer
+up — and the path sampling is `FlightResult.sample`, which guarantees the point the integrator
+*solved* for survives the sample. The CLI prints byte-identical output through both. Same reason
+`pipeline.loft_remedy` is public, and it keeps its rule: the remedy is offered only once a flight
+has actually asked for a loft and gone without, because a shot whose screen printed a spin never
+reaches for one.
+
+**The only sync handler in `app.py`, and the reason is measured.** Every other route answers in
+3-24 ms; this one in 15 ms where the screen printed a spin and up to ~960 ms where it did not,
+because `carry_window` measures the whole carry-against-spin curve in about forty flights. `def`
+rather than `async def` puts that in a threadpool instead of on the event loop, where it would
+stall the upload page's 5 s poll in another tab.
+
+**One stale count fixed in passing**: `docs/README.md`'s ADR-027 row said "three flights and ten
+refused ones on disk" — three is the deduped corpus `n`, and the directories hold five.
+
+---
+
+## 2026-09-06 — M15 P13: the corpus moves to engine 15, and the re-run cannot prove what it was supposed to prove
+
+**Duration**: one sitting. Edited: `src/golf_coach/contracts/swing.py` (`ANALYSIS_VERSION` 14 → 15
+and its ledger entry), `tests/test_docs_truth.py` (+1 pin), `ROADMAP.md`, `docs/ARCHITECTURE.md`,
+`docs/README.md`, `docs/M14_HAND_LANDMARKS.md` (an addendum on a claim that was half wrong),
+`docs/decisions/027-ball-flight-simulation.md` (eleventh addendum). Data: all fifteen stored
+`analysis.json` files rewritten by `reanalyze.py --all`, 15/15, exit 0. Full suite
+**1582 passed**, `ruff` and `mypy` clean. **M15 is at 14/19 and Stage D is done.**
+
+**The prediction held to the digit.** Every `overall_score` is byte-identical, and so is every
+`score`, `observed` and `passed` in every `checkpoint_scores` entry; no window moved, no alignment
+anchor moved, so no `aligned.mp4` went stale and nothing wanted a human. What is new on disk is the
+`flight_*` family — **five artifacts carry a flight, ten carry a refused one** (seven
+`carry_unreachable`, two `no_club_loft`, one `spin_not_recoverable`), plus the eleventh entry on the
+one flight that flew without an axis (`flight_landing_offline_yds` / `spin_axis_unresolved`). Two
+swings gained a sentence the golfer actually sees: the 3 wood's *"add the club on the bag page"*.
+
+⚠️ **The finding: this re-analysis cannot prove P12's prefix, and the argument is P12's own.**
+ADR-027 §Decision 6 says the registration "lands before the `ANALYSIS_VERSION` bump so that the
+re-analysis is what proves it". `flight_carry_yds` reports `n = 3` against five artifacts carrying
+a flight, which is right — but `model:` is not what made it right: three of those five are
+re-uploads of one face-on clip that `read_corpus` had already collapsed. Fifteen directories hold
+**13 distinct shot photos** and the only repeat is that same triple, so across the 13 distinct
+swings the photo key and the `swing:{ref}` fallback partition identically. P12's other half — the
+ADR-014 flagged-parse refusal — is unexercised too, because no stored parse is flagged. Both halves
+are correct and neither is evidenced; the first bay session where one photo backs two swings, or one
+tile is flagged, is the first evidence either way. This is exactly the argument P12 used *against*
+registering `population:golfdb`, arriving now at the registration it made *for*.
+
+⚠️ **And the bump carried four M14 measurements onto disk that nothing could see were missing.**
+`hand_separation_norm`, `hand_height_norm`, `hand_offset_from_hips_norm` and `trail_hand_roll_deg`
+shipped 2026-09-03 under *"no checkpoint, no band, and no `ANALYSIS_VERSION` bump"* — the first two
+clauses right, the third wrong by the rule at the top of the ledger itself (*"bump it whenever the
+engine's output changes meaning — a new measurement"*) and against `3 -> 4`, `6 -> 7`, `7 -> 8` and
+`9 -> 10`, four precedents that bumped for measurements nothing judges. `is_outdated` is a version
+comparison and nothing else, so no stored artifact held them and no check could notice: their honest
+`n` was **0** for three days and is 13 now. M14 read the band question and the version question as
+one question; they are not one question. Recorded in M14's own document, in the ledger entry, and in
+ADR-027's 2026-09-06b addendum.
+
+**Checked downstream rather than assumed**: `career_baseline.py` over the re-analysed corpus reads
+`flight_carry_yds` at `n = 3` across 3 sessions, withholds a centre and a spread against the
+minimum-sample guards, and refuses the tour comparison with P12's own sentence — *"it is a model
+output rather than a reading, and no population of model outputs is a population of swings"*. That
+is the first time career mode has read a `model:` metric off a stored artifact, and it is the last
+seam this milestone had not exercised end to end.
+
+**One new pin, and it is the smallest useful one.** `tests/test_docs_truth.py::test_the_version_
+ledger_documents_the_installed_version` asserts the comment block documents every version up to the
+installed one. A bump with no entry was the one part of this phase nothing in the suite would have
+caught — every other test reads the constant, not the paragraph that says what an older artifact is
+*missing* versus what it *disagrees* about.
+
+**Two stale counts fixed in passing**, both in prose that P12 had appended to without re-counting:
+`docs/README.md`'s ADR-027 row said "nine corrections" over ten listed phases, and `ROADMAP.md`'s
+M15 section said "all eight phases that ran the model" over the same list. Both now read eleven,
+with P13 in them. The addendum totals (`docs/README.md` line 94 and the ADR-027 row) are pinned by
+`tests/test_docs_truth.py` and moved with the new addendum.
+
+**Next**: P14 — `GET /api/sessions/{id}/swings/{id}/flight`, with its `docs/ARCHITECTURE.md` §1 row
+in the same commit. Stage E is four phases of surfaces, and nothing below them is still a plan.
+
+---
+
+## 2026-09-06 — M15 P12: the fallback was not conservative, it was missing a refusal
+
+**Duration**: one sitting. Edited: `src/golf_coach/contracts/career.py` (the `model:` prefix,
+`KNOWN_SOURCE_PREFIXES`, and the note on the prefix that is deliberately *not* in it),
+`src/golf_coach/contracts/comparison.py` (`NO_MODEL_POPULATION`),
+`src/golf_coach/analysis/flight_measure.py` (P11's argument, corrected),
+`tests/storage/test_corpus.py` (+3), `tests/analysis/test_engine.py`, `ROADMAP.md`,
+`docs/ARCHITECTURE.md`, `docs/README.md`, `docs/decisions/027-ball-flight-simulation.md` (tenth
+addendum), `docs/decisions/022-learned-artifacts-as-committed-data.md` (its fourth addendum, read
+for the first time). Full suite **1581 passed**, `ruff` and `mypy` clean. **M15 is at 13/19 and
+Stage D has one phase left.**
+
+**`model:` keys on the shot photo.** A flight is integrated from that tile's launch conditions and
+nothing the golfer's body did, so two swings sharing one photo are one flight however many times it
+is flown — the same key `launch_monitor:` uses, for the same reason. `KNOWN_SOURCE_PREFIXES` is new
+beside it because `count_metrics` had the membership test spelled out a second time, and P12 would
+have made three.
+
+⚠️ **P11's reason for shipping ahead of this was wrong, and wrong in the direction that hides.**
+The note in `flight_measure.py` said the `swing:{ref}` fallback "can only over-count against a real
+artifact key, never under-count". True of the dedupe, silent about the refusal: `artifact_key`
+returns `None` for a launch-monitor metric whose parse was flagged under ADR-014, and the fallback
+branch has no such rule in it. So between P11 and P12 a flight simulated off a flagged tile counted
+as a sample while the `carry_distance_yds` printed beside it on that same screen did not — the
+model's number trusted where the reading it was computed from was not. Nothing on disk is flagged,
+so it moved nothing; the first bay session is where it would have.
+
+⚠️ **The phase nearly registered `population:golfdb` in passing, and that would have been the real
+mistake.** It looks free — `read_corpus` groups swings *by* `face_on_sha256`, so `CorpusSwing` is
+one-to-one with that hash and `swing:{ref}` already partitions any corpus exactly as `pose:` would,
+so no count moves and every test stays green. That is the hazard, not the reassurance. ADR-022's
+fourth addendum defers two questions the one-line change answers by accident: whether a
+distance-from-a-tour-population is a personal quantity at all (the honest return may be `None`
+rather than a key), and, if it is, that the two `_dtl` placements are read off a clip `CorpusSwing`
+carries no hash for — `pose:` would over-count them exactly where the shot photo over-counted
+before it was split out. **The deferral is now visible in code**: the argument sits beside the
+tuple the prefix is absent from, and `test_a_placement_is_still_an_unknown_source_and_that_is_the_
+deferral` fails if someone tidies the warning away. ADR-022's addendum ends "The reader's own
+coverage warning fired correctly. Nobody read it" — it has now been read, and the answer was to
+leave it firing.
+
+**One refusal sentence, on the second site that dispatches on the prefix.**
+`contracts/comparison.py::no_population_reason` was giving a simulated carry the generic *"no
+reference distribution is stored for it"*, which tells a reader the repair is to go and cut one. It
+is not: no population of model outputs is a population of swings, and the launch-monitor reference
+ADR-027 §Deferred asks for would sharpen the measured carry beside it and leave the simulated one
+exactly as unplaceable.
+
+**Path correction, now landed in three places.** ADR-027 §Decision 6, this milestone's roadmap and
+`docs/README.md`'s ADR row all put `artifact_key` in `storage/corpus.py`. It is
+`CorpusSwing.artifact_key` in `contracts/career.py` and always has been. P11's addendum spotted it;
+P12 is where it stopped being repeated.
+
+**Next**: P13 — `ANALYSIS_VERSION` 14 → 15 and `reanalyze.py --all`. No score moves and the panel
+does not change size; the re-analysis is what puts three `model:flight_v1` measurements through the
+key registered here for the first time.
+
+---
+
+## 2026-09-05 — M15 P11: the corpus records three flights, and the two that curve are the two with no solved spin
+
+**Duration**: one sitting. New: `src/golf_coach/analysis/flight_measure.py`,
+`tests/analysis/test_flight_measure.py` (+13). Edited: `src/golf_coach/analysis/engine.py` (a third
+measurement family, and `loft_deg` on both entry points), `src/golf_coach/api/pipeline.py`
+(`_loft_for`), `src/golf_coach/storage/flight_inputs.py` (`loft_for_club` and the shared
+`_resolve_loft`), `src/golf_coach/feedback/rules.py`, `src/golf_coach/feedback/coach.py`,
+`src/golf_coach/contracts/dispersion.py` (the argument for an absent row),
+`tests/analysis/test_engine.py` (+5), `tests/analysis/test_dispersion.py` (+1),
+`tests/feedback/test_rules.py` (+1, one rewritten), `tests/storage/test_flight_inputs.py` (+3),
+`tests/api/test_pipeline_imports.py`, `ROADMAP.md`, `docs/ARCHITECTURE.md`, `docs/README.md`,
+`docs/decisions/027-ball-flight-simulation.md` (ninth addendum, plus the status block). Full suite
+**PLACEHOLDER_SUITE green**, `ruff` and `mypy` clean. **M15 is at 12/19 and Stage D has begun.**
+
+**The headline is a census, and it is bigger than P10's.** P10 reported one spin named and ten
+refused, and read as a forecast of what the pipeline would record that undercounts by two. Loft
+picks a branch of the *spin solve*, so a shot whose screen printed a spin never reaches for one —
+and the two 2026-08-10 reference shots are exactly that: **no club tagged on either swing, and both
+fly.** So the corpus records **three flights of thirteen shots** and fifteen measurements:
+`flight_carry_yds`, `flight_apex_yds`, `flight_descent_angle_deg` and `flight_time_s` three times
+each, `flight_landing_offline_yds` twice, `flight_spin_rpm` once.
+
+**And the two halves do not overlap.** The two shots that draw a curve are the two whose spin was
+*measured*, so neither records a `flight_spin_rpm`; the one shot with a solved spin printed no axis,
+so it is drawn planar and records no landing point. **No shot on disk records both**, which is a
+sentence P16 has to be able to say without implying the model is choosing.
+
+⚠️ **Two corrections to ADR-027 §Decision 6, and both are the same rule: one provenance per name.**
+
+**`flight_spin_rpm` records only a solved spin.** §Decision 6 named the measurement without
+splitting the two spins that can fill it, and `SpinSource` exists precisely because they are not
+interchangeable — a printed spin is a reading of a ball, a solved one is *the spin this integrator
+needs in order to agree with HD Golf's carry*. `pooled_samples` groups by name, so recording both
+would average a measured 5,991 rpm with a solved 2,924 and print the result as one golfer's spin
+rate. That is the hazard the `flight_` prefix was introduced to prevent, one layer in. The measured
+spin is not lost: it is on `ShotData.spin_rate` where the launch monitor put it, and
+`ShotFlight.spin_rpm` is what P14–P16 read to say what the line was drawn with.
+
+**P10's planar-offline identity is not structural, and the correction argues the same rule
+harder.** P10 measured 2.6e-5 yd between a planar flight's `landing_offline_yds` and
+`measure_start_line_offline` and read it as an identity. The two are `simulated carry × sin(start
+line)` and `printed carry × sin(start line)`, so they agree only where the two carries do — which
+on `2026-08-23-4` they do *by construction*, its spin having been solved from that printed carry.
+On a shot whose spin was measured they differ by the gate's own ±2.59%: **0.29 yd apart on
+`2026-08-10-1`**, with nothing available to say which is right. A duplicate number pools badly; two
+numbers named for one quantity that quietly disagree is what `measure_total_distance` declines to
+create in so many words. So the withholding rule now covers both halves of the corpus, for two
+different reasons.
+
+⚠️ **A refused flight was one line from becoming a coaching tip.** P9 put the inference reasons in
+`contracts/unscored.py`, which is right — that module is where this repo names an absence — and
+neither phase noticed that two consumers of `SwingResult.unscored` assume every entry is a
+checkpoint that *would have been* in `overall_score`. `feedback/rules.py` renders "could not be
+scored on this swing, so it is not included in the score" and `feedback/coach.py` puts the same
+claim in the brief a coaching model reads. Both are false of a `flight_*` measurement, which was
+never in the score to be excluded from — and the second would have had a model explaining a score
+that never moved. The tips now skip `INFERENCE_REASONS`; the brief gives the flight its own
+heading.
+
+⚠️ **The loft note this phase added was wrong on the first two swings it met, and the fix is where
+it is gated.** `_loft_for` narrating the gap up front told the two 2026-08-10 swings to go and tag
+a club so their ball flight could be simulated — printed directly beside the simulated ball flight.
+Found by running the shell read over all fifteen manifests rather than by a test, which is worth
+noting: the four-way `LoftGap` was right, the remedy text was right, and the *timing* was the bug.
+It is now appended only once the engine has reported `NO_CLUB_LOFT`, which is the only evidence
+that the loft was reached for. The shell read otherwise reproduces P10's join to the row: five 7
+irons at 30.5°, six 3 woods with no bag entry, four older swings with no club tag.
+
+**Three smaller things, each recorded so P12 does not re-derive it.**
+
+**A refused flight is one `unscored` entry and not five**, filed under `flight_carry_yds` with the
+cause in `detail`. `mcp.query.get_session_summary` counts unscored entries by name, and one missing
+flight counted five times reports a session as five times more broken than it is. The axis is a
+second entry and is genuinely separate — a refused axis does not stop the flight, which is why
+`ShotFlight` carries two reason fields.
+
+**`simulate_flight`'s guards needed a catcher.** `flight_for_shot` owns two of the five; a negative
+spin, a launch direction or a spin axis past a quarter turn can still arrive from a parse, and
+reaching `analyze_swing` they would take the whole swing down — discarding pose that had already
+run and every checkpoint that had already scored, which is the failure `_shot_for`'s broad `except`
+was added to prevent one layer out. `fly_shot` catches `ValueError`.
+
+**No `METRIC_TARGETS` rows, and the pin that would have missed it.** Five of the six are a
+deterministic function of metrics already in that table, so a scatter finding would re-report
+`carry_distance_yds`'s own spread with a model's error folded in; the sixth is solved, and its
+error floor is the gate's inversion rather than any instrument's. `test_dispersion.py`'s pin was
+written as `POSE | SHOT == METRIC_TARGETS` and a *third* registry slips past that in silence, which
+is the state its own docstring warns about — so the absence is now asserted.
+
+**One path correction for P12**: ADR-027 §Decision 6 and this milestone's roadmap both put
+`artifact_key` in `storage/corpus.py`. It is `CorpusSwing.artifact_key` in `contracts/career.py`.
+
+**The cost is real and is in the right place.** A spin-less shot costs 0.7–4.0 s in `analyze_swing`,
+because the solve flies the ball up to ninety times; a shot with a printed spin costs one flight.
+Against pose that is nothing, and the pipeline is where it lands. It is visible in the test suite,
+which is the one place a pure function's runtime was previously free.
+
+**Next**: P12, the `model:` prefix in `CorpusSwing.artifact_key`. Until it lands every flight
+measurement falls through to `swing:{ref}` and is named in `CareerCorpus.unknown_sources` —
+conservative, since that can only over-count against a real artifact key, which is why P12 is
+allowed to land after this and before the version bump rather than with it.
+
+---
+
+## 2026-09-05 — M15 P10: the CLI reads the corpus, and the club was on the swing all along
+
+**Duration**: one sitting. New: `src/golf_coach/storage/flight_inputs.py`,
+`tests/storage/test_flight_inputs.py` (+9). Edited: `src/golf_coach/analysis/flight_infer.py`
+(`flight_for_shot`, `ShotFlight`, `SpinSource`), `tests/analysis/test_flight_infer.py` (+12),
+`src/golf_coach/contracts/unscored.py` (a fifth inference reason, and one docstring corrected),
+`scripts/simulate_flight.py` (`--shots`, `--shot ID`), `ROADMAP.md`, `docs/ARCHITECTURE.md`,
+`docs/README.md`, `docs/decisions/027-ball-flight-simulation.md` (eighth addendum, plus the status
+block). Full suite **1556 green**, `ruff` and `mypy` clean. **M15 is at 11/19 and Stage C is done.**
+
+**The headline is a correction, and it is the previous session's headline.** P9 reported that the
+inference produces nothing on any of the thirteen stored shots because none of them carries a
+club. That is true of `ShotData` and false of the corpus. A launch monitor reports a ball; the
+**swing** the shot arrived with is what carries the club, and eleven of the thirteen shots are
+attached to one that does — five `7i` and six `3w`, tagged at capture on 2026-08-23, months before
+this milestone opened. Nothing needed re-tagging. The tag was on the other side of a join nobody
+had performed, which is exactly what this phase was scheduled to write.
+
+**What the corpus actually says, run end to end**: one spin named and ten refused. `2026-08-23-4`
+solves at **2,924 rpm** under a 5,103 rpm cap; seven shots are `carry_unreachable`, sitting 0.6–3.6
+yd above the peak of what their own launch conditions can fly; two are `no_club_loft`, both 3
+woods, both in the two-branch case (2,161/2,849 and 2,450/3,200 rpm); one is
+`spin_not_recoverable`. So the outstanding repair is **narrower and cheaper than a bay session**:
+only the 7 iron has a declared loft, and looking the 3 wood up on the bag page turns two of those
+refusals into answers with no new physics and no new data. `LoftGap` is that distinction made
+countable — no swing, no club tag, no bag entry, no declared loft are four different errands, and
+`NO_CLUB_LOFT`'s own docstring was telling a golfer with a fully tagged session to go and tag it.
+
+**The join is a dictionary and deliberately not a reader.** `ShotStore` files a parse under the
+photo's sha256 and `SwingManifest.roles[SHOT_SCREEN].content_sha256` is the same digest, so
+`storage/flight_inputs.py` matches them and reads the loft and handedness through the bag and
+golfer stores that already exist. It takes its shots as an argument rather than opening the store,
+because `storage/` may not import `launch_monitor/` (ADR-008) — `scripts/` is where the two are
+allowed to meet, and `api/pipeline.py` will hand it the one shot it is already holding in P11.
+
+⚠️ **Three things it found that nothing was looking for.**
+
+**P4's gate constant has never been checked, and it checks out.** `VALIDATION_SHOTS` was typed by
+hand off two screens and is this model's only external reference; the same two screens were also
+parsed into the shot store, so resolving one through the ordinary path must land on the constant.
+It does — every field, both lateral ones included — and it is pinned in `test_flight_infer.py`.
+
+**A planar flight's landing offline is a number this repo already stores.** With the axis
+unresolved the flight is drawn in the vertical plane and `landing_offline_yds` comes out as
+`carry * sin(start line)`: 1e-14 structurally, 2.6e-5 yd on the real shot. That is
+`measure_start_line_offline`, recorded since M9, reached by forty flights instead of one sine. **So
+P11 must not record `flight_landing_offline_yds` on a shot whose axis is unresolved** — eleven of
+the thirteen — or `pooled_samples` gets two names for one quantity, which is the hazard ADR-027
+§Decision 6 exists to prevent arriving from the direction it did not anticipate.
+`ShotFlight.curve_is_drawn` is the bit that says when.
+
+**The one shot the model can invert is the only flight in the corpus that reads the table.**
+`2026-08-23-4` flies its whole path inside the published coefficient rows — 0 of 919 points held —
+while every other shot, both validation shots included, is clamped end to end. That is structural:
+a carry the solve can invert is a carry still responding to spin, and spin only reaches carry
+through the coefficients. Which means the flight with the invented spin is the aerodynamically
+best-founded one on disk, and every flight with a *measured* spin is flown on a held constant pair.
+P16 has to draw both without implying the opposite.
+
+**A fifth inference reason that fires on nothing.** `NO_LAUNCH_CONDITIONS`: no ball speed, no
+launch angle, or a launch angle at or below the horizontal. Nothing on disk produces it. It exists
+because the OCR drops tiles one at a time rather than all at once — one stored shot is already
+missing its face angle — and because `simulate_flight` names its launch-angle guard as the
+*caller's* to own, so without a reason to return that guard reaches a corpus read as a traceback.
+
+**Refusals are the output, so `--shots` exits 0 whatever it finds.** Ten of thirteen shots cannot
+be flown; exiting 2 on the corpus's own state would report the repo as broken every time it is read
+honestly. The only exit 2 the stored modes have is a `--shot` id nothing on disk carries.
+
+**Next**: P11, the six `flight_*` measurements, which is where `ShotFlight` meets
+`analysis/measure.py`'s registry. It arrives with two constraints this phase measured rather than
+guessed: distinct names (never a variant flag), and **no `flight_landing_offline_yds` where the
+curve is not drawn**.
+
+---
+
+## 2026-09-05 — M15 P9: the branch rule is built, and it names a spin for none of the thirteen
+
+**Duration**: one sitting. New: `src/golf_coach/analysis/flight_infer.py`,
+`tests/analysis/test_flight_infer.py` (+21). Edited: `src/golf_coach/contracts/unscored.py` (four
+reasons and a third family), `tests/contracts/test_unscored.py` (its partition test was a
+complement and is now three-way), `src/golf_coach/analysis/shot_measure.py` (one stale sentence),
+`tests/api/test_pipeline_imports.py`, `ROADMAP.md`, `docs/README.md`,
+`docs/decisions/027-ball-flight-simulation.md` (seventh addendum, plus the status block). Full
+suite green, `ruff` and `mypy` clean. **M15 is at 10/19 and Stage C wants only its reader.**
+
+**The headline is a count and the count is zero.** Run over the thirteen stored shots the whole
+inference produces **no spin at all** — eight `carry_unreachable`, five `no_club_loft` — because
+not one shot on disk carries a `club`, and loft is the entire branch rule. The spin axis resolves
+on the two shots that printed one and refuses the other eleven. So M15's Stage C is built and
+silent in exactly the way M9 is, waiting on exactly the same missing tag, and **one bay session
+with the club cursor set turns both on at once**.
+
+**The loft prior needs no loft-to-spin table, and that is the phase's one design decision.** It
+looked like it wanted a published spin-by-club table and it does not: the branch is one bit — does
+this club spin faster than the peak-carry spin — and `carry_window` *measures* that peak per shot
+rather than assuming it. On the three two-branch shots it is 2,402, 2,555 and 2,781 rpm, which is a
+driver's own spin rate. Everything more lofted than a driver beats it, so the falling branch is
+theirs; a driver is the one club whose two candidates straddle its own spin, and there the prior
+refuses. The single constant therefore sits in the 12–15° gap no club occupies, and a test pins
+that the branch chosen is identical for every loft above the gap and refused for every loft below
+it. That invariance is what makes a coarse prior honest rather than merely admitted.
+
+⚠️ **And it corrected ADR-027 §Decision 5.** That section reads as though face-to-path stands in
+for the spin axis. It resolves the *sign* and not the magnitude, and the two shots carrying both
+are what rule the magnitude out: 10.9° of face-to-path against a 2.5° axis, and 13.2° against 9.3°
+— three times the tilt per degree at `n = 2`, and **ordered the wrong way round**, since the shot
+with more backspin should tilt *less* under the same sidespin. Two points pointing the wrong way is
+not a calibration. So the second branch collapses into the third: the flight is drawn planar and
+`landing_offline` goes unscored. `InferredSpinAxis` carries the direction anyway, because a
+consumer drawing a straight line still wants to say *"this was a fade and we are not drawing it."*
+
+**The sign check runs and one shot on disk fails it** — 114.8 mph, screen printed `SLIGHT FADE`,
+face-to-path −1.3°, a draw. Flagged, never overwritten, which is §Decision 5's own instruction:
+resolving a disagreement quietly is how ADR-014's sign inversion survived a milestone. At 1.3° it
+is as likely to be a `Shot Type` threshold as a parse fault, and flagging it is what would let
+anyone find out.
+
+**Four reasons over P8's seven cases**, and the criterion is what the reader must *do*: for three
+of the four the answer is nothing, and `NO_CLUB_LOFT` is the one it is not — cleared from the
+results page by tagging a club. `SpinSolveCase` already names all seven and rides along on
+`InferredSpin.solution`, so a second copy of that taxonomy in `contracts/` would be a second thing
+to keep in step. The four are collected as `INFERENCE_REASONS`, the vocabulary's **third family**;
+`test_unscored.py`'s partition was written as the *complement* of `MEASUREMENT_REASONS` and would
+have absorbed them silently, so it is now a three-way partition with the judging four still spelt
+out.
+
+**The cap and the gate are computed, never quoted.** `honest_test()` re-solves the two shots whose
+real spin is on disk as if it never had been — 3,185 rpm against 5,991, 46.8% low, and a refusal —
+and `gate_ordering()` re-flies both shots twice, as recorded and stripped to planar, so the
+inversion is measured at run time: HD Golf +4.60 yd between the two shots, this model −1.03, a
+**residual of 5.63 yd against a 4.60 yd effect**, of which the recorded spin axis closes 10.1%. That
+residual is what a caveat should print. "Accurate to 2.6%" says the opposite of what the gate found.
+
+**One old sentence went with it.** `shot_measure.py` still described the stored `spin_axis` as
+sign-inverted — true of the *screen*, false of the field since `screen/profiles.json` gained its
+`printed_sign`. The 2026-09-05d addendum spotted it and left it; §Decision 5's owner is this phase,
+so this phase fixed it, and said in the same breath that whether the field is re-admitted as a
+measurement is M15 P11's call and not a side effect of correcting prose.
+
+**Next**: P10, the CLI reads real shots through the existing tolerant readers. It is where the
+table above stops being a scratch script and becomes something anyone can run — and the first
+phase whose output is mostly refusals, so it wants the reasons printed as findings rather than
+swallowed.
+
+---
+
+## 2026-09-05 — M15 P8: the solve is built, and it refuses seven of the eleven
+
+**Duration**: one sitting. New: `src/golf_coach/analysis/spin_solve.py`,
+`tests/analysis/test_spin_solve.py` (+15). Edited: `tests/api/test_pipeline_imports.py` (the
+no-numpy/scipy pin now covers the new module), `ROADMAP.md`, `docs/README.md`,
+`docs/decisions/027-ball-flight-simulation.md` (sixth addendum, plus the status block). Full suite
+**1514 green**, `ruff` and `mypy` clean. **M15 is at 9/19 and Stage C is half built.**
+
+**The phase ran no new physics and its headline is a count.** The integrator, the window's edges
+and every coefficient were already built; what was missing was the inverse. Run over the corpus,
+the solve **names a spin for 4 of the 11 spin-less shots and refuses 7** — seven printed carries
+sit above anything those launch conditions can fly. ADR-027 §Decision 3 reads as though the
+inference is the ordinary path and the refusal the exception; on this corpus it is the other way
+round, and the addendum says so.
+
+**Seven cases rather than §Decision 4's five**, because two of the five split in ways P3 and P4
+already measured: the plateau case is two plateaus that mean opposite things (one below any spin a
+golfer makes, one at the cap), and the inside-the-window case is two bands, since between the
+plateau values only the rising branch reaches and the answer is unique rather than paired. Nothing
+new was invented for the enum — it is those findings written where code can read them.
+
+**`UnspunLaunch` rather than a `LaunchConditions` with its spin ignored.** An ignored field is a
+trap: every caller here holds conditions that genuinely have no spin on them, and a solve that
+quietly overwrote a spin the caller *did* pass would be invisible at the call site.
+
+**The high plateau's edge is analytic and the low one's is bisected**, and the asymmetry is the
+physics. `S = wR/v` is smallest at launch, so the launch ratio alone decides whether the whole
+flight is clamped high — one flight calibrates the scale (it is linear in spin) and the edge falls
+out exactly. Below the table there is no such shortcut: a low-spin ball starts under the first row
+and climbs into it, so the shoulder is found by bisecting on `spin_ratio_max` — on the *mechanism*
+rather than on a flat carry, because a carry that happens to be flat somewhere else would fool an
+equality test.
+
+**The honest test, re-run in three dimensions**: 3,185 rpm against a recorded 5,991 on shot one
+(46.8% low) and a refusal on shot two, whose printed 121.0 yd is 1.62 yd below the floor. Both
+moved a hair from the 2026-09-05b addendum's figures because P5's spin axes are now flown, and
+neither moved enough to change a word of it. Both true spins are above their own cap, which is the
+mechanism rather than the size of the error: at 5,991 rpm the carry has stopped depending on spin.
+
+⚠️ **And it corrected two things in its own predecessors.** The OCR consistency check §Consequences
+claimed **has no survivors left**. The 2026-09-05b addendum found one printed carry its margin
+could not explain — `2026-08-23-2`, 33.6 yd, *"25% below anything the model can fly"* — against a
+floor that was the high plateau, measured before P4 found the low one underneath it. The real floor
+there is **26.89 yd**, and the shot solves at 2,307 rpm.
+
+That same shot then qualifies the 2026-09-05c addendum's instruction to refuse a unique answer
+between the plateaus. On the reference shot that band is 1,129–1,538 rpm, which is not a spin a
+7 iron makes, and refusing is right. On this one it runs 1,323–4,572 rpm and the answer is an
+ordinary iron number. So the refusal has to be argued from where the answer sits, and
+`CarryWindow` carries the band edges so P9 can do that rather than branch on a case name.
+
+**One defensive-looking branch is not defensive.** `carry_window` takes the best of three known
+points instead of trusting the golden section, because that same shallow shot rises to the high
+plateau and never falls — its peak *is* its plateau, to the last bit, so it has no falling branch
+and no two-solution band at all. A golden section on a monotone interval walks to the edge, which
+is the right answer there and would be an artefact anywhere else.
+
+**A window costs about forty flights (~0.5 s)**, which is why it is a separate function that can be
+handed back to the solve rather than re-measured — P10's CLI will want to print both. The tests
+share two cached reference windows for the same reason; the file adds ~8 s to the suite.
+
+**Next**: P9, the loft prior. It is a smaller phase than it looks — the branch is only ever a
+*choice* in one of the seven cases (three of the eleven shots), so most of it is mapping the other
+six onto `contracts/unscored.py` reasons with `refilming_helps` false, and reporting the cap and
+the 46.8% beside any number that does come out.
+
+---
+
+## 2026-09-05 — M15 P7: the first surface, and it is not allowed to read anything
+
+**Duration**: one sitting. New: `scripts/simulate_flight.py`. Edited: `ROADMAP.md`,
+`docs/ARCHITECTURE.md` (§1's command block), `docs/README.md` (the ADR-027 row), and
+`docs/decisions/027-ball-flight-simulation.md` — **its status line only; there is no sixth
+addendum**, because this is the first phase since P1 that ran no new physics and so found nothing
+to correct. Full suite **1499 green** (unchanged — no new test, and that is a decision below),
+`ruff` and `mypy` clean. **M15 is at 8/19 and Stage C has started.**
+
+**The phase added no arithmetic.** The integrator, the gate and the atmosphere were all already
+built; what was missing was a way for a human to run them. So the whole script is formatting over
+`simulate_flight`, `gate_comparisons` and `load_flight_model`, and it reproduces the committed
+numbers exactly — 122.36 and 123.39 yd on the two validation shots, 127.95 at Denver.
+
+**It reads nothing off disk, and that is the phase boundary rather than an oversight.** P10 is the
+phase that hands it the tolerant readers. Until P8 exists, a CLI pointed at the corpus would have to
+invent a spin for 11 of the 13 stored shots, which is the solver arriving early and unannounced.
+Keeping the two apart also buys the thing a what-if is actually for: conditions nobody hit.
+
+**`--gate` is that same rule and not an exception to it** — `VALIDATION_SHOTS` is a constant in
+`analysis/flight.py`, hand-typed from two screens, so flying it reads no artifact either. It earns
+the surface because the percentage on its own is the reading P4 exists to prevent: the mode prints
+the per-shot table *and* the sentence that HD Golf has shot one 4.6 yd further while this model has
+it 1.03 yd shorter, both measured at run time from a re-flown gate rather than quoted.
+
+**Every number inside a caveat is derived** (`docs/CODE_STANDARDS.md` R4). The clamp threshold comes
+off `AeroTable`, the tolerance off `GATE_AGREEMENT_FRACTION`, the ordering off `gate_comparisons()`.
+A caveat with a typed number in it is the failure mode this repo has already had once: prose that
+still reads as true after the thing it describes moved.
+
+**No exit 1, and it is worth writing down why**, because `analyze_bundle.py` established the
+0 / 1 / 2 convention and this deliberately declines the middle code. Every iron in this corpus flies
+its whole path on a held end row, so "flew, but flagged" would fire on essentially every real shot
+and be ignored by the second run. Exit 0 means a ball flew, exit 2 means none did — which is also
+argparse's own code for a usage error, so the two agree. The clamp is said in words every time
+instead of being encoded in a status nobody reads.
+
+**No test file, which is the repo's convention and not a gap.** Nothing under `scripts/` has one;
+the logic those CLIs present is tested in `analysis/` and `contracts/`, and here there is genuinely
+nothing but layout on top of functions with 1499 tests behind them. Worth saying out loud rather
+than leaving as an absence: if the caveat prose ever grows a rule of its own — a threshold, a
+branch on which sentence to print — that rule belongs in `analysis/flight.py` where it can be
+pinned, not in the formatter.
+
+**And one thing the CLI made visible for free.** Flying a driver-shaped shot — 150 mph, 12°,
+2400 rpm — returns **245.36 yd with only 47 of 1210 points clamped**, and those 47 are at the
+*low* end: it launches at `S = 0.080`, just under the table's first row at 0.085, and climbs into
+measured rows within a fifth of a second. **It is the first flight in this repo that mostly reads
+the published table rather than holding it**, which is exactly what P2 predicted from the table
+being a driver's, and it is the shape the low-spin floor P4 found takes on a real shot. The carry
+is in the right neighbourhood for that ball speed, but nothing here validates it — there is no
+driver on disk with a printed carry, so it is a plausible number and not a checked one.
+
+**Also fixed a stale count** in `docs/README.md`'s ADR-027 row, which said "three corrections" over
+a list of five. No test covers that prose; P5 and P6 each appended to the list without touching the
+word in front of it.
+
+**Next**: P8, the spin solve — the phase to slow down for. Read ADR-027's 2026-09-05b **and**
+2026-09-05c addenda before writing a line of it: carry is not unimodal-then-falling but five cases,
+the window is 1.3–10.6 yd wide, and the floor is the *low*-spin clamp rather than the high one.
+`--gate` and `--points` are now the two ways to look at a candidate answer by hand.
+
+---
+
+## 2026-09-05 — M15 P6: the altitude what-if, and the inversion gets worse the thinner the air
+
+**Duration**: one sitting. New: nothing. Edited:
+`src/golf_coach/analysis/benchmarks/flight_model_v1.json` (a fifth block),
+`src/golf_coach/analysis/benchmarks/flight_model.py` (`AtmosphereProfile`, `FlightModel.at_altitude`),
+`src/golf_coach/analysis/benchmarks/__init__.py`, `src/golf_coach/analysis/flight.py` (docstring
+only — no code change), `tests/analysis/test_flight_model.py` (+7), `tests/analysis/test_flight.py`
+(+7), `tests/api/test_pipeline_imports.py` (+1), `ROADMAP.md`, `docs/README.md`,
+`docs/decisions/027-ball-flight-simulation.md` (fifth addendum, plus the status block). Full suite
+**1499 green**, `ruff` and `mypy` clean. **M15 is at 7/19 and Stage B is closed.**
+
+**`simulate_flight` did not change, and that is the phase's first decision.** The air is a block of
+the model; the model is already a parameter. So the what-if is
+`simulate_flight(launch, model=load_flight_model().at_altitude(1609))` and the integrator learns no
+new argument. An `altitude_m` keyword beside `model` would have been a second way to say one thing,
+and the two would have drifted the first time somebody passed both.
+
+**The profile is written as ratios rather than as the standard's absolute formulas, and I got the
+reason wrong before I measured it.** I expected `p0/(R*T0)` to disagree with the committed 1.225 in
+the fifth significant figure and wrote a docstring saying 1.2250166. It is **1.22500002** — ISO 2533
+chose its gas constant to make that sea-level triple self-consistent, so density is exact to 1.5e-8.
+The quantity that *is* rounded is the kinematic viscosity: Sutherland at 288.15 K gives 1.4607186e-5
+against a committed 1.4607e-5, a relative 1.3e-5.
+
+Which makes the argument for ratios better than the one I had. The committed row is exact in one
+quantity and rounded in another, and *which* one depends on how the artifact was transcribed rather
+than on any physics. Ratios are exact in all four regardless: `at_altitude(0.0)` returns every number
+to the bit and a flight flown through it is point-for-point identical to the default — asserted, not
+hoped for. Only `name` and `source` differ there, deliberately, because a generated air state should
+say which law generated it.
+
+**Thin air is not simply longer, and the second half of that sentence is the coaching-relevant one.**
+Density scales lift and drag together, so altitude takes away the force holding the ball up as well
+as the one slowing it down. At Denver the two reference shots carry **+2.97% and +3.70%** — about 3%
+for a 7 iron at a mile up, not the ~10% the driver rule of thumb is quoted at, because a lofted shot
+spends much of its carry on lift. And the same shot arrives *flatter*: apex 21.30 → 20.59 yd, hang
+time 4.74 → 4.63 s, descent 40.1° → 37.7°, and its curve shrinks from 6.58 yd to 5.96. A shot that
+holds a green at sea level runs through it at altitude, and the curve a golfer plays for gets smaller
+with the air.
+
+**Altitude cannot escape the clamp**, which is worth knowing because it bounds what this phase can be
+blamed for. The launch spin ratio is `wR/v` — launch conditions only, no air in it — so no atmosphere
+moves it and `S` only climbs from there. Both shots stay `fully_clamped` at every altitude, and
+altitude acts on them as a pure scaling of two held coefficients.
+
+**Then the thing worth the phase.** The model's gap between the two validation shots is **−1.03 yd at
+sea level, −1.97 at Denver, −3.78 at Tactu**, against HD Golf's constant **+4.6 yd the other way**. It
+nearly quadruples across a range over which carry moves 6%. That is a diagnosis of P4's inversion
+rather than a new fault: above the clamp the only lever this model has between these two shots is 2.6°
+of launch angle, thin air amplifies exactly that lever, and a mistyped launch condition would have
+scaled with the carry instead. It also closes off a repair that would otherwise have looked available
+— **no atmosphere is the free parameter that fixes the gate.** Every direction of air makes the
+ordering worse or leaves it alone.
+
+**And the gate is a sea-level gate.** `gate_comparisons()` takes a model, so it will happily fly the
+validation shots at Denver, where shot one agrees with HD Golf to **0.3%** instead of 2.6%. That is
+numerology — HD Golf printed a carry for a ball hit indoors near sea level — and tuning an altitude
+until the agreement improved would be fitting the atmosphere to the residual of a clamped coefficient
+table. There is a test whose only job is to say so, in the shape P4 wrote one against the bias
+correction, and it pins that the same altitude pushes shot two *outside* the tolerance.
+
+**The import pin covers `scipy` beside `numpy`**, which is a small widening of what ADR-027 asked for
+and I think the right one: the shortcut here is not really an array, it is `scipy.integrate.solve_ivp`,
+which would replace the integrator, the solved landing and the convergence measurements in one import
+and take the per-point spin ratio and clamp flag with it. It also covers `benchmarks/flight_model.py`,
+which is upstream and is the second place an array would look natural. Worth noting this pin is a
+*different kind* from the ones beside it: every other test in that file protects an install that might
+lack a library, while this one protects a rule about a library that is present and would otherwise
+have no enforcement at all.
+
+**Next**: P7, `scripts/simulate_flight.py` with explicit launch conditions only — the first surface,
+and the natural place for an `--altitude` flag now that there is something behind it. P8 is the spin
+solve and is the phase to slow down for: read ADR-027's 2026-09-05b **and** 2026-09-05c addenda
+before writing a line of it.
+
+---
+
+## 2026-09-05 — M15 P5: the third dimension, and the gate had been flying the wrong shot
+
+**Duration**: one sitting. Edited: `src/golf_coach/analysis/flight.py` (three dimensions, and the
+gate re-pinned), `tests/analysis/test_flight.py` (+8 tests), `tests/analysis/test_flight_validation.py`
+(rewritten around the re-flown gate, +3 tests), `ROADMAP.md`, `docs/README.md` (addendum counts),
+`docs/decisions/027-ball-flight-simulation.md` (fourth addendum, plus the status block). Full suite
+**1484 green**, `ruff` and `mypy` clean. **M15 is at 6/19 and Stage B has only P6 left.**
+
+**The physics was the easy half and it behaved.** `LaunchConditions` gained `launch_direction_deg`
+and `spin_axis_deg`, the state went to `(x, y, z, vx, vy, vz)` in a right-handed frame — `x`
+downrange, `y` up, `z` right — and the Magnus term became `Cl * (w_hat x v_hat)` with the axis
+computed once at launch and held fixed in space. Both lateral fields default to zero, and at zero
+they contribute *exactly* zero: **every planar number P3 and P4 measured came back to the last
+bit**, which is asserted rather than hoped for.
+
+The one modelling choice worth recording is that the cross product is **not renormalised**. Only
+spin perpendicular to the velocity makes a Magnus force, so the `sin(theta)` it carries is the
+physics; renormalising would hold full lift on a ball spinning about its own line of flight, which
+makes none. The factor is 1 at launch by construction and has fallen only to 0.94 by landing on a
+21°/15° flight, so it is a small effect with a clear right answer.
+
+**`carry_m` is projected onto the launch azimuth, not the target line, and that is the phase's one
+real decision.** Turning a whole flight about the vertical cannot change how far the ball flew, so
+carry has to be invariant to the launch direction — and it is, to a nanometre over 110 m. The
+obvious reading of "carry" would have shortened it by `cos(direction)`: 0.43% and 0.24% on the two
+validation shots, a sixth of the gate's tolerance, and it would have gone into P8's spin solve as a
+bias shaped like the start line. `(carry, curvature)` are the landing point's coordinates in the
+launch-line frame and `landing_offline` is its deviation from the target line, so the three are one
+point in two frames, and there is a test that says so as an identity rather than as three numbers.
+
+**Then the thing worth the phase.** Both validation shots have a launch direction *and* a spin axis
+on disk, and had all along — `2026-08-10-1` at −5.3° with a 2.5° axis, `2026-08-10-2` at +4.0° with
+a 9.3° one. **The gate had been flying neither.** The direction cannot move the carry by
+construction; the axis does, because lift is one vector and what it spends bending the ball it does
+not spend holding it up. Flown as recorded: **122.3567 yd (−2.582%) and 123.3868 yd (+1.973%)**,
+against the planar 122.4110 (−2.539%) and 124.0747 (+2.541%).
+
+So `GATE_AGREEMENT_FRACTION` is re-pinned **0.0255 → 0.0259**. I asked before doing it, because
+`ROADMAP.md` says the tolerance must never be *"a number to widen until it passes"* and this raises
+it. It is not that: the *inputs* became complete, the mean absolute error **fell** from 3.13 to
+2.82 yd, and the pin rose 0.0004 because one shot got slightly worse while the other got markedly
+better. Flying a planar approximation of a shot that finished 6.6 yd right of its start line, and
+reporting the agreement as the model's accuracy, was the quieter error.
+
+**Two of P4's conclusions took damage, and one of them was P4's own warning coming true.**
+
+The inversion survives — HD Golf still has the lower-spin shot 4.6 yd further and this model still
+has it shorter — but the gap narrowed from 1.664 yd to 1.030 yd. **The recorded spin axis closed a
+tenth of the inversion**, from a launch condition that is not the spin rate. P4's sentence, that
+±2.5% is *"the size of the missing spin effect"*, is therefore an over-attribution, and P9 has to
+report the residual rather than the whole.
+
+And the errors no longer cancel: the mean went from −0.057 yd to **−0.428 yd**. P4 pinned that
+cancellation as a *warning* — two near-equal errors of opposite sign at `n = 2` are the signature of
+a model that cannot separate two shots, not of an unbiased one — and it turns out part of it was an
+artefact of flying both shots planar. The test survives inverted: it now pins that they do *not*
+cancel, so nobody can reach for the mean as evidence there is no bias to correct.
+
+**A finding for P9 that I did not act on.** §Decision 5's first branch is already live.
+`screen/profiles.json` carries `printed_sign: -1` for the Spin Axis tile, so HD Golf prints `-9.3`
+and the parser stores `+9.3`; both shots on disk now carry a **positive** axis beside a `Shot Type`
+of `FADE`, which agrees with `contracts/shot.py`'s `+ = fade`, and `validate.py`'s cross-check fires
+on neither. But `analysis/shot_measure.py`'s exclusion note still reads *"both fades on disk carry a
+negative value"* — true of the **printed** sign, false as a statement about `ShotData`. Left alone
+because the axis is P9's field and P9 implements §Decision 5's ordering; it is the first thing P9
+should read and correct.
+
+**The handedness seam, and why it does not reach the gate.** `LaunchConditions.spin_axis_deg` is
+geometric — positive curves the ball right — and `ShotData.spin_axis` is `+ = fade`, which is right
+for a right-hander and left for a left-hander. That mapping is deliberately not in `flight.py`,
+which flies a ball, and a ball has no handedness. Carry is *even* in the axis, so reading both
+shots as a left-handed golfer's leaves the whole gate unchanged; handedness decides only which side
+the ball finishes. Pinned, because `contracts/dispersion.py` records what a camera-relative sign
+did to a mixed-handedness corpus.
+
+**One flake, not mine.** `tests/api/test_worker.py::test_failure_is_recorded_and_the_consumer_survives`
+failed once in a randomised full run and passes on its own and in a second full run. Nothing in
+this phase is upstream of the worker.
+
+**Next**: P6, the atmosphere what-if and the `test_pipeline_imports.py` subprocess pin that
+`analysis.flight` pulls in no numpy — the last of Stage B. The pin is worth its own phase now
+rather than less: the module has doubled in vector arithmetic and is the most numpy-shaped code in
+the repo.
+
+---
+
+## 2026-09-05 — M15 P4: the gate passes at ±2.55%, and passing is not the interesting part
+
+**Duration**: one sitting. New: `tests/analysis/test_flight_validation.py`. Edited:
+`src/golf_coach/analysis/flight.py` (the gate, at the foot of the module), `ROADMAP.md`,
+`docs/decisions/027-ball-flight-simulation.md` (third addendum, plus the status block).
+Full suite **1473 green**, `ruff` and `mypy` clean. **M15 is at 5/19 and Stage B is two-thirds
+through.**
+
+**The gate passed and there was never much doubt it would**, because P2 and P3 had already measured
+the numbers it reports. 122.4110 yd against HD Golf's 125.6, 124.0747 against its 121.0 — **−2.539%
+and +2.541%**. The tolerance is pinned at 0.0255, which is the achieved worst case rounded up in the
+fourth decimal, and there is a test asserting the pin is *that tight*: `ROADMAP.md` said the
+tolerance must not be "a number to widen until it passes", and a budget with slack in it is a budget
+that can be widened later without anyone noticing.
+
+**Two explanations checked and ruled out before writing the number down.** The tiles print one
+decimal place, so ball speed and launch angle each carry ±0.05 of rounding — sweeping both across
+that whole interval moves the carry **0.31 yd**, against errors of 3.19 and 3.07. Not OCR precision.
+And the two errors average to **−0.057 yd**, which is the most flattering way to state this model's
+accuracy and the least honest one: two near-equal errors of opposite sign at `n = 2` are the
+signature of a model that cannot *separate* the two shots, not of one that is unbiased. There is now
+a test whose only job is to argue against that bias correction before somebody writes it.
+
+**Then the thing worth the phase.** HD Golf has `2026-08-10-1` — the lower launch, the lower spin —
+carrying **4.6 yd further** than `2026-08-10-2`. This model has it **1.7 yd shorter**. *The sign of
+the difference between the only two shots that can be checked is inverted*, and no per-shot
+tolerance can see it because each shot passes on its own. The mechanism is P3's, arriving as a
+consequence: above the clamp the only difference the model can see between these two is 2.6° of
+launch angle, so reproducing HD's ordering would need 6.26 yd of separation out of a spin term with
+no route into the answer. **±2.55% is therefore the size of the missing spin effect, not a
+calibration error**, and P9 has to carry that sentence rather than the percentage.
+
+**§Decision 4 took a second correction, and this one I went looking for.** P3's addendum found the
+high-spin plateau and called it the floor. It is not the floor. **The clamp has a low end too** and
+it behaves identically — below `S = 0.085` the first row is held, so at 800 rpm the whole flight
+runs `S = 0.044` to `0.060` and never enters the table, and carry is constant at 118.02 yd for every
+launch spin from 0 up to about 1,130. So carry against spin is low plateau, rise, peak, fall, high
+plateau, and the two plateau values cut the range into bands with *different solution counts*.
+Between them — 118.02 to 122.41 yd on the first shot — there is exactly **one** solution rather than
+two, because the falling branch never reaches down there. That band is not good news: it sits at
+1,100–1,600 rpm, which no 7 iron produces, so P8 should read a unique answer there as a refusal.
+
+It also corrects a number: the floor that refuses `2026-08-10-2` is **123.0 yd, not the 124.1** P3's
+addendum used. Still refused, by 2.0 yd rather than 3.1.
+
+**Where the gate lives, and the wrong answer I nearly committed.** `VALIDATION_SHOTS`,
+`GATE_AGREEMENT_FRACTION` and `gate_comparisons()` are at the foot of `analysis/flight.py`, and
+`gate_comparisons()` *re-flies* the shots rather than returning stored results, so a re-sourced
+coefficient table moves the gate instead of leaving a quoted number behind. My first instinct was a
+`validation` block in `flight_model_v1.json` — provenanced data, the repo's own pattern, R4's
+argument for one source of truth. It is wrong, and the artifact says so itself: its `license_note`
+claims every number in it is a published measurement and its `dataset.note` claims nothing in it was
+derived from this repo's corpus. A model output over two shots on disk is neither. Keeping one
+number tidy is not worth making the file's central claim false.
+
+**Next**: P5, the third dimension — spin axis, curvature, `landing_offline`, signs per
+`contracts/shot.py`. It is the last phase of Stage B alongside P6's atmosphere and import pin, and
+neither touches the findings above.
+
+---
+
+## 2026-09-05 — M15 P3: the integrator works, and it says the spin solve cannot
+
+**Duration**: one sitting. New: `src/golf_coach/analysis/flight.py`, `tests/analysis/test_flight.py`.
+Edited: `ROADMAP.md`, `docs/decisions/027-ball-flight-simulation.md` (second addendum, plus the
+status block and the *Deferred* entry it corrects). Full suite green, `ruff` and `mypy` clean.
+**M15 is at 4/19 and Stage B is halfway.**
+
+**The integrator is the easy half and it went exactly as planned.** `LaunchConditions` →
+`FlightResult`, RK4 at a fixed step, gravity + drag + Magnus, coefficients read against spin ratio,
+spin decayed against *absolute* time so each RK4 stage evaluates its own. It reproduces P2's
+throwaway RK4 to the digit — **122.4110 yd and 124.0747 yd** — which is the point of having written
+that throwaway.
+
+**Two numerical choices, both measured rather than argued.** Landing is *solved* inside the crossing
+step, not rounded to it: a linear seed on `y`, then Newton on `y(θ)` re-running the integrator over
+the shortened step. That lands the reference shot 3.6e-12 m off the ground against the 9.5 cm a
+whole-step termination would have overshot by. And **the step is not where this model's error lives**
+— carry is identical to 1e-4 yd at every step from 0.02 s down to 0.0005 s, so `DEFAULT_STEP_S` is
+0.005 s (four times finer than the coarsest step already measured to converge) and the ~2.5% against
+HD Golf cannot be blamed on the integration. That mattered enough to pin as a test, because P4 is
+about to quote that 2.5% as the model's agreement and someone will ask.
+
+**Then it found the thing.** ADR-027's first addendum said that with `Cl` and `Cd` pinned at one row,
+*"the only route spin still has into carry is the Magnus term's own ω"*. **There is no such route.**
+Lift is written with a coefficient — `½ρA·Cl·v²` — so `ω` enters only through `S = ωR/v`, and `S`
+only through `Cl` and `Cd`. Clamp those and spin has left the problem. Carry at 90.6 mph and 22° is
+**bit-identical at 5,200 rpm and at 30,000 rpm**, 123.2108933755 yd throughout, and swapping the two
+reference shots' spin rates between them moves neither flight by a last digit — they differ from each
+other because their *launch angles* differ. I had written the first addendum's sentence myself the
+session before and it read as obviously true; it took running the thing to see it was not.
+
+**So carry-against-spin rises, peaks, falls, and then floors on a plateau.** §Decision 4's three cases
+are five — the plateau (infinitely many answers) and the floor (none, for the opposite reason to the
+peak) are both new. Across the eleven spin-less shots the window between floor and peak is
+**1.3–10.6 yd** wide and the peak sits at **2,400–3,500 rpm**, so the solve is badly conditioned
+nearly everywhere it is defined.
+
+**And the honest test ADR-027 deferred turned out to be runnable today.** Its *Deferred, by choice*
+section says the inferred spin on a shot that later reports a real one *"is the honest test of this
+ADR's weakest claim, and it should be run the day such a shot exists"*. Such shots have existed since
+2026-08-10 — the two reference shots carry a measured spin **and** a printed carry, which is
+everything the test needs. Nobody noticed, myself included, until the plateau made me go looking for
+where the solve would land. Run against them:
+
+- `2026-08-10-1`, measured **5,991 rpm** → the solve returns **3,201 rpm**. 47% low.
+- `2026-08-10-2`, measured **8,100 rpm** → **refused**: HD's 121.0 yd is below the model's 124.1 yd
+  floor.
+
+Both true spins sit above their own plateau threshold, which is exactly where carry carries no
+information about spin. One refusal and one 47% error is the whole of the evidence and it is all the
+evidence there is.
+
+**This does not kill the milestone; it shrinks a claim that was already written small.** §Decision 3
+already said the inferred value is *"the spin our integrator needs in order to agree with the
+simulator"* and *"not a measurement of spin"*. That turns out to be the literal and complete truth
+rather than a caution on a mostly-good number. Drawing a path whose carry matches the measured carry
+still works, and that is what the milestone was asked for. P9 now has to report the cap — every
+inferred spin is capped at the plateau threshold, 4,500–6,500 rpm at these ball speeds — or a
+`flight_spin_rpm` will read as a low-spin diagnosis of a swing.
+
+**One claimed by-product does not survive.** §Consequences said a printed carry no spin can produce
+is an independent consistency check on the OCR. Seven of the eleven printed carries sit above the
+achievable peak — but by **+0.56% to +3.45%, median +0.97%**, against a model whose own disagreement
+with HD Golf is ~2.5%. Refusing those would report the model's bias as a fault in the reading. Exactly
+one clears the margin and is worth a look: 83.8 mph at **3.4°** with a printed carry of 33.6 yd
+against a floor of 44.8 — 25% below anything the model can fly, on a near-horizontal launch where a
+printed "carry" is most likely measuring something else.
+
+**Two things I checked and did not find, recorded so nobody re-checks them.** A descent angle above
+90° — swept from 80° to 89.9°, the ball is always travelling forwards again by the time it lands,
+because drag kills the backward velocity a steep Magnus lift builds and the lift itself turns forward
+once the ball descends. The carry *does* go negative there, and nothing clamps it. And the low end of
+the coefficient table: a zero-spin ball still flies with `Cl = 0.141` because the clamp holds the
+first row, which is unphysical and is P2's committed decision rather than P3's to reverse — it is
+untouched, it is out of reach of every shot on disk, and it is noted here rather than quietly fixed.
+
+**Next**: P4, the gate. It is now a reporting phase more than a risk — the numbers are in hand and
+the tolerance falls out of them. What it must not do is pin ~2.5% as a validation without saying that
+`fully_clamped` is true on both shots and not one coefficient in either flight was read from the
+measured rows.
+
+---
+
+
+## 2026-09-05 — M15 P2: the constants are somebody else's measurements, and both our shots fly off the end of them
+
+**Duration**: one sitting. New: `src/golf_coach/analysis/benchmarks/flight_model_v1.json`,
+`analysis/benchmarks/flight_model.py`, `tests/analysis/test_flight_model.py`. Edited:
+`analysis/benchmarks/__init__.py`, `ROADMAP.md`, `docs/decisions/027-ball-flight-simulation.md`
+(first addendum). Full suite **1448 green** (1434 + 14), `ruff` and `mypy` clean.
+**M15 is at 3/19 and Stage B has started.**
+
+**Sourcing the coefficients was the phase, and it did not go where ADR-027 assumed.** §Decision 2
+says "published wind-tunnel measurements of a golf ball". The canonical ones — Bearman & Harvey
+(1976), Smits & Smith (1994) — are paywalled, and every open paper that cites them reproduces the
+data as *figures*, so the numbers are in the pictures. Six PDFs and a handful of searches later,
+the numeric table turned up somewhere I had not thought to look: **US patent 7,156,757 B2**
+(Acushnet, published 2007-01-02), whose Table 3 gives measured `Cl` and `Cd` at eight spin ratios,
+in two seam orientations, for a 1.68 in / 1.61 oz ball. Patents publish their test data because
+they have to. That is the source, cited as such, and the two orientations are stored apart and
+averaged on read — the averaging rule is the patent family's own, stated in US 6,945,880 B2.
+
+**Provenance is per block, because four blocks had four sources.** Ball from the R&A/USGA
+Equipment Rules, atmosphere from ISO 2533 sea level, spin decay 4%/s from Lyu et al. 2018
+(CC BY, quoting TrackMan), coefficients from the patent. `ranges.json`-style per-row provenance
+would have been the wrong granularity here: the eight coefficient rows share one source, and the
+things that *differ* are the blocks.
+
+**The finding, and it is the reason this phase mattered more than "commit some constants".** The
+patent's eight rows are points along a **driver's** flight — each spin ratio paired with one
+Reynolds number, 0.085/230,000 down to 0.284/69,000 — because a driver's spin ratio rises as the
+ball slows. Our validation shots are irons. `2026-08-10-1` launches at `S = 0.330` and
+`2026-08-10-2` at `S = 0.447`, both **above** the table's last row, and `S = ωR/v` only climbs
+from there because the ball sheds speed faster than 4%/s sheds spin. **Neither shot ever reads an
+interpolated row.** Both fly the whole way on the clamp, and so will every iron in the corpus.
+
+**I checked what that costs before committing the artifact, with a throwaway RK4 in the
+scratchpad.** 122.4 yd against HD Golf's 125.6, and 124.1 yd against its 121.0 — about 2.5% out on
+each, **with opposite signs**. That signature is the point: with `Cl` and `Cd` pinned at one row,
+the only route spin still has into carry is the Magnus term's own `ω`, so the model cannot fully
+tell 5991 rpm from 8100 rpm. The agreement is encouraging *and* it was produced by a constant pair
+rather than by the table, and **P4 has to report both or it will read as a validation of data that
+was never consulted.**
+
+**Clamping, not extrapolating, and the choice is recorded rather than defaulted.** Smits & Smith
+measured out to `S = 1.4` and report lift saturating rather than continuing to climb, so holding
+the last row is closer to the physics than extending its slope and can never return an unbounded
+coefficient. `AeroCoefficients.clamped` reports it on every read — the same shape as
+`JointPlacement.percentile_clamped`, for the same reason.
+
+**One test exists to make a docstring rot loudly.**
+`test_both_validation_shots_launch_above_the_published_table` asserts the very thing the module
+docstring, the roadmap entry and the ADR addendum all claim. If coefficient data at iron spin
+ratios ever arrives and the table is extended, that test fails and the three prose claims have to
+be rewritten in the same commit. Nothing else in the repo would have caught them going stale.
+
+**The Reynolds column is stored and nothing reads it.** Deliberate: dropping it would destroy the
+provenance of what each row actually is, and a later two-dimensional `(Re, S)` read — which is the
+real fix for the clamp, if data ever supports it — should not have to re-source the table.
+`Atmosphere.reynolds_for` exists for the same reason, and a test uses it to establish the other
+half of the picture: our 7 iron sits at Re ≈ 118,000, comfortably *inside* the measured range. The
+Reynolds number was never the problem; the spin ratio is.
+
+**What P2 did not do**: no integrator, no solver, no `contracts/` change, no `ANALYSIS_VERSION`
+move, and nothing imports `flight_model` outside its own tests. The artifact ships before the
+integrator precisely so P3 has nowhere to put a fallback constant, and that is now true.
+
+**Next**: **P3** — `analysis/flight.py`, vertical plane only. RK4 at a fixed step, gravity + drag +
+Magnus, coefficients from `flight_model.coefficients_at`, landing by interpolation within the final
+step. The scratch integrator that produced the numbers above is *not* committed and should not be
+lifted verbatim — it has no unscored handling, no sign conventions from `contracts/shot.py` and no
+step-size justification. Still open from earlier milestones: the M14 overlay is **unverified in a
+browser**, the career-mode prose still says n = 2 for every metric when the corpus reader returns
+13 swings over 19, and the M1.5-pattern **ADR for the hands spike** is still unwritten and is the
+user's call to make.
+
+---
+
+## 2026-09-05 — M15 P1: the club was never a T150, and the caveat that fires about it was already right
+
+**Duration**: one sitting. `ROADMAP.md` and `src/golf_coach/clubs/club_catalogue.json`. Local data:
+`data/processed/golfers/aaron.bag.json` (gitignored). **No source file changed** — the correction ran
+through the writers that already exist. Full suite **1434 green**, `ruff` and `mypy` clean.
+**M15 is at 2/19 and Stage A is closed.**
+
+**The correction, and where the numbers came from.** The 7 iron slot read `Titleist T150, loft_deg
+32.0, lie_deg null`; the physical club is a **2025 Titleist T250**. Titleist's published table for
+that model gives 30.5° loft, 63° lie, 37" — which is exactly what M15 P0 had written into the
+`ROADMAP.md` checklist, re-checked rather than trusted. `model_year` is 2025: the T-Series
+generation carrying the T250 was announced 2025-07-10, and the year is part of `catalogue_key`, so
+guessing it would have keyed the row to a set that does not exist.
+
+**It was applied through `BagStore.set_entry` plus `catalogue.remember(_spec_of(entry), …)` — the
+two writes the save route performs — and deliberately not by editing the JSON.** A hand-edit would
+have destroyed the outgoing entry instead of shelving it, and a committed one-off migration script
+would have put a second bag writer in a repo whose bag semantics live in one place. The store did
+what it says it does: the T150 is on `Bag.retired` with its 32.0° loft intact, and `recorded_at` was
+stamped by the layer that knows when the write happened.
+
+**The pre-M12 shape repaired itself as a side effect, for every entry and not just the edited one.**
+The file still had the five-field `shaft: ""` key that `BagEntry` has not accepted since ADR-026 §3;
+pydantic was dropping it silently on every load. Re-serialising the bag wrote all seven entries in
+the M12 shape, so the stale key is gone from 4i, 5i, 8i, 9i and pw as well — none of which had their
+*content* touched.
+
+**Only the 7 iron was corrected, and the mixed set that leaves is on purpose.** Every other slot
+still reads T150 from M12 P6's set lookup. Correcting them on the assumption that a golfer's irons
+are one model would have been exactly the interpolation ADR-026 refuses, and the roadmap entry now
+says so, so the next session does not read it as an oversight to tidy.
+
+**The consequence I went looking for turned out to have already happened.** Moving `recorded_at`
+hands `_bag_changed_caveats` a later date, and the worry was a new caveat appearing over shots hit
+with a club that never changed — the exact failure `same_club_as` exists to prevent on an unchanged
+save. It cannot happen here: all five 7 iron swings are from 2026-08-23 and the entry was already
+dated 2026-09-01, so the all-predate sentence was **already firing** and only its date moved. Worth
+recording as a measurement rather than an argument, because the reasoning that says "this is fine"
+is the same reasoning that would have been wrong had one swing been captured after 2026-09-01.
+
+**One row is committed and the rest is not.** `club_catalogue.json` gained
+`titleist/t250/2025/7i`, provenanced `typed` — a club somebody owns, which is what that file says
+every row will be. The bag itself lives under `data/processed/`, which is gitignored, so P1's main
+artifact is invisible to `git status` and this entry is the only record of it in the repo.
+
+**What this phase did *not* do, and ADR-027 §Context 1 is emphatic about it**: none of this changes
+a simulated flight. Loft and lie are inputs to the impact model, which is not being built. P1 is a
+data repair that happened to be scheduled inside this milestone, and a reader who takes it as the
+thing that unlocked the physics has the causation backwards.
+
+**Next**: **P2** — `benchmarks/flight_model_v1.json` and its evaluator, on `joint.py`'s convention.
+Published aerodynamic constants and **not a fit**, shipped *before* the integrator so P3 never
+carries a fallback constant. The precedent to copy is `clubs/catalogue.py` for the data-as-artifact
+shape and `analysis/benchmarks/joint.py` for the evaluator. Still open from earlier milestones: the
+M14 overlay is **unverified in a browser**, the career-mode prose still says n = 2 for every metric
+when the corpus reader returns 13 swings over 19, and the M1.5-pattern **ADR for the hands spike**
+is still unwritten and is the user's call to make.
+
+---
+
+## 2026-09-03 — MediaPipe Hands spike: it finds a hand on every frame, and that is the problem
+
+**Duration**: one sitting. New: `spikes/mediapipe-hands/{thresholds.md,probe.py,log.md}`. Edited:
+`spikes/README.md`, `ROADMAP.md`. **No source file changed** — the probe reads stored artifacts
+through the shipped code and writes nothing. Full suite **1434 green**, `ruff` clean on the spike
+and on `src tests scripts`. **M14's successor milestone is closed before it opened.**
+
+**One flaky failure worth recording, since nothing in this session could have caused it.** The
+first full run had `tests/api/test_worker.py::test_failure_is_recorded_and_the_consumer_survives`
+red. It passes alone, passes on three repeat runs of `tests/api` under randomised order, and the
+next full run was 1434/1434. No source file changed all session, so this is a pre-existing
+order-or-timing flake in a test about a background consumer thread surviving a failure — noted
+here rather than chased, because the next session to see it red should know it has been seen.
+
+**Verdict: no-go, and not the no-go that was predicted.** M14 §"What this milestone is not" expected
+two interlocked hands to be out of distribution for a model trained on open gesturing ones, and it
+is — but not by being invisible. Over the fifteen face-on swings and the *same* address window M14
+P3 screened (179 frames), at the best pose-guided crop, `HandLandmarker` returns a hand on **179 of
+179** frames, on the correct wrist (placement 1.00), with the right handedness label (1.00) and its
+index MCP **1.6–3.6 cm** from the pose model's own index landmark. It returns **one**. Two hands
+come back on **0.15** of frames against §Phase G's 0.60 floor, and the one it keeps is the **trail**
+hand (1.00) against the lead's **0.14** — the wrong hand, because grip strength is read on the lead.
+
+**The pre-registration is what made this quick to call.** `thresholds.md` was written before the
+model ran and it had already decided that a trail-only pass is *not* a grip-strength result. Without
+that sentence, a column reading 1.00 detection / 1.00 placement / 1.00 handedness is exactly the
+kind of green a tired reader promotes.
+
+**Three cheap follow-ups were killed by measurement rather than by argument.** The **glove** is not
+the cause — the address frames include gloved and bare-handed swings and both return one hand.
+Lowering the palm-detection threshold to 0.2 (a post-hoc diagnostic, labelled as one, and it cannot
+promote a FAIL) takes two-hand detection to 0.35, so the second hand is *partly* suppressed as an
+overlapping duplicate and partly never proposed — and 0.35 is still not 0.60. And **down-the-line**
+is worse in every column, which is also the control that says the face-on numbers are the instrument
+and not a broken probe.
+
+**One claim I made from the pictures did not survive its own measurement.** The annotated crops read
+as landmarks heaped over the grip and the shaft, so a `span` column went in — wrist to middle
+fingertip against the ~0.47 sw an *open* hand measures. It came back 0.28 sw, which looks like a
+collapse until you notice a hand curled around a grip is genuinely shorter than an open one. The
+column stays in the probe as context, flagged as settling nothing; the two **knuckle-offset** columns
+are what carry the finding, and they say the returned hand is anatomically placed. The probe's
+constant now says so in its docstring, so the next reader does not re-run the same wrong inference.
+
+**The stability gate fails too and it is the one worth arguing about.** Trail jitter is 3.14x raw
+pose against a 2.0 bar — but the denominator is a pose landmark on a *static* golfer and barely
+moves (0.0021 sw/frame against the hand model's 0.0148). A reader who wants to call that acceptable
+can; the verdict does not move, because the lead hand is not there to measure. The absolute columns
+were added while implementing, before the sweep ran, precisely so that argument could be had from
+numbers.
+
+**Next**: one thing left, and it is a decision rather than desk work. The M1.5 pattern ends in an
+**ADR**, and this spike has not written one — the call it would record is "no camera-only route to
+grip strength; the V's and the knuckle count stay out of scope until a hand model is trained on
+hands holding a club." That is the user's to accept, and the `ROADMAP.md` checklist carries it as
+the one unticked box. Everything else from M14 still stands: the overlay is **unverified in a
+browser**, and the career-mode prose still says n = 2 for every metric when the corpus reader
+returns 13 swings over 19.
+
+---
+
 ## 2026-09-03 — M14 P6: the correction is longer than the finding, and that is the point
 
 **Duration**: one sitting. `ROADMAP.md`, `docs/M14_HAND_LANDMARKS.md`, `docs/README.md` and

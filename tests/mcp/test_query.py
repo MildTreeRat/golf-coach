@@ -12,6 +12,7 @@ from pathlib import Path
 
 from golf_coach.contracts.club import ClubId
 from golf_coach.contracts.shot import ShotData, ShotProvenance, ShotSource
+from golf_coach.contracts.swing import ANALYSIS_VERSION
 from golf_coach.mcp import query
 from golf_coach.storage.manifest import Role
 
@@ -290,6 +291,106 @@ def test_a_placement_is_split_out_of_measurements_and_keeps_its_detail(
 
     # The plain metric stays where it was, flat and without its provenance string.
     assert view.measurements == {"head_sway_norm": 0.1234}
+
+
+#: A flight as `engine.py` writes one, a pose metric beside it, and a row from an artifact old
+#: enough to carry no provenance at all. The three cases `_measurements` has to tell apart.
+_SIMULATED_MEASUREMENTS = [
+    {
+        "name": "flight_carry_yds",
+        "value": 122.3567,
+        "unit": "yards",
+        "source": "model:flight_v1",
+        "detail": "SIMULATED carry from the printed launch conditions; not the printed carry",
+    },
+    {
+        "name": "flight_spin_rpm",
+        "value": 2923.8568,
+        "unit": "rpm",
+        "source": "model:flight_v1",
+        "detail": "SOLVED backspin - the spin this model needs to agree with the printed carry",
+    },
+    {
+        "name": "head_sway_norm",
+        "value": 0.1234,
+        "unit": "shoulder_widths",
+        "source": "pose:face_on",
+        "detail": "address window -> impact window",
+    },
+    {"name": "tempo_ratio", "value": 2.42, "unit": "ratio"},
+]
+
+
+def test_a_simulated_number_is_split_out_of_measurements_and_keeps_its_provenance(
+    tmp_path: Path, swing_writer, analysis_factory
+) -> None:
+    """⚠️ The gap M15 P11 left, found by P17 while building the tool that would have repeated it.
+
+    The six `flight_*` numbers went into `SwingResult.measurements` carrying `source` and a detail
+    beginning SIMULATED — and this flattener drops both, so what reached a coaching model was bare
+    floats under a field description reading "quantities measured off this swing". The page had
+    said SIMULATED on every row since P15 and the CLI since P7; the surface that talks said
+    nothing, which is the one place ADR-027 §Decision 6's pooling hazard actually bites.
+    """
+    root = tmp_path / "sessions"
+    swing_writer(
+        root,
+        "2026-08-10",
+        "1",
+        analysis=analysis_factory("2026-08-10", "1", measurements=_SIMULATED_MEASUREMENTS),
+    )
+
+    view = query.get_swing(root, "2026-08-10", "1")
+
+    assert view is not None
+    assert [row.name for row in view.simulated] == ["flight_carry_yds", "flight_spin_rpm"]
+    assert "flight_carry_yds" not in view.measurements
+    assert "flight_spin_rpm" not in view.measurements
+
+    carry, spin = view.simulated
+    assert carry.value == 122.3567
+    assert carry.unit == "yards"
+    assert carry.source == "model:flight_v1"
+    assert carry.detail.startswith("SIMULATED")
+    # The two are not the same claim, and the detail is the only thing that says so.
+    assert spin.detail.startswith("SOLVED")
+
+
+def test_a_measured_row_and_an_unprovenanced_one_both_stay_in_measurements(
+    tmp_path: Path, swing_writer, analysis_factory
+) -> None:
+    """Membership is decided by `source`, and a missing one is not evidence of a model.
+
+    A row with no provenance is every artifact written before it was recorded. Calling one of those
+    simulated would be the same error as leaving a simulated number bare, pointing the other way.
+    """
+    root = tmp_path / "sessions"
+    swing_writer(
+        root,
+        "2026-08-10",
+        "1",
+        analysis=analysis_factory("2026-08-10", "1", measurements=_SIMULATED_MEASUREMENTS),
+    )
+
+    view = query.get_swing(root, "2026-08-10", "1")
+
+    assert view is not None
+    assert view.measurements == {"head_sway_norm": 0.1234, "tempo_ratio": 2.42}
+
+
+def test_the_engine_version_is_reported_and_absent_when_the_artifact_does_not_say(
+    tmp_path: Path, swing_writer, analysis_factory, career_writer
+) -> None:
+    """`status: stale` answers a different question — it is about the uploads, not the engine."""
+    root = tmp_path / "sessions"
+    swing_writer(root, "2026-08-10", "1", analysis=analysis_factory("2026-08-10", "1"))
+    swing_writer(root, "2026-08-10", "2", analysis=career_writer({"tempo_ratio": 2.42}))
+
+    unstamped = query.get_swing(root, "2026-08-10", "1")
+    stamped = query.get_swing(root, "2026-08-10", "2")
+
+    assert unstamped is not None and unstamped.analysis_version is None
+    assert stamped is not None and stamped.analysis_version == ANALYSIS_VERSION
 
 
 def test_a_swing_with_no_placements_reports_an_empty_list(sessions_dir: Path) -> None:

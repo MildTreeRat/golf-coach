@@ -4,7 +4,12 @@ from __future__ import annotations
 
 from golf_coach.contracts.feedback import Severity
 from golf_coach.contracts.swing import CheckpointScore, SwingResult
-from golf_coach.contracts.unscored import UNSCORED_REASONS, UnscoredCheckpoint, UnscoredReason
+from golf_coach.contracts.unscored import (
+    INFERENCE_REASONS,
+    UNSCORED_REASONS,
+    UnscoredCheckpoint,
+    UnscoredReason,
+)
 from golf_coach.feedback.rules import build_feedback
 
 
@@ -207,15 +212,46 @@ def test_every_reason_produces_a_tip_rather_than_a_key_error() -> None:
     `UNSCORED_REASONS` is checked for completeness in `tests/contracts/test_unscored.py`; this
     asserts the thing that actually breaks a golfer's results page if it is not — a reason with no
     row raises on lookup, mid-render, for a swing that was otherwise fine.
+
+    **The lookup is asserted for every reason and the tip only for the judging ones** [M15 P11].
+    The ball-flight family is named in `unscored` and deliberately produces no tip — see
+    `build_feedback` — so a blanket "every reason ends in its remedy" would now be asserting the
+    thing that phase removed. Both halves stay covered: the `spec` below is the lookup that used
+    to raise.
     """
     for reason in UnscoredReason:
-        payload = build_feedback(
-            _result_with(
-                _passing("balance", 20.0),
-                unscored=[UnscoredCheckpoint(name="tempo", reason=reason)],
-            )
-        )
+        entry = UnscoredCheckpoint(name="tempo", reason=reason)
+        assert entry.spec.remedy, f"{reason} has no remedy to render"
+        payload = build_feedback(_result_with(_passing("balance", 20.0), unscored=[entry]))
+        if reason in INFERENCE_REASONS:
+            assert [tip.checkpoint for tip in payload.tips] == ["balance"]
+            continue
         assert payload.tips[-1].text.endswith(UNSCORED_REASONS[reason].remedy)
+
+
+def test_a_refused_ball_flight_never_becomes_a_coaching_tip() -> None:
+    """M15 P11's rule, stated on the entry the engine actually emits.
+
+    `_unmeasured_tip` says a checkpoint "is not included in the score", which is true of every
+    checkpoint and false of a `flight_*` measurement — ADR-027 §Decision 6 gives the flight
+    measurement names and no `CHECKPOINT_REGISTRY` entry, so it was never in `overall_score` to be
+    excluded from. The refusal is reported; it is not coached.
+    """
+    payload = build_feedback(
+        _result_with(
+            _passing("balance", 20.0),
+            unscored=[
+                UnscoredCheckpoint(
+                    name="flight_carry_yds",
+                    reason=UnscoredReason.NO_CLUB_LOFT,
+                    detail="no loft declared for 3w",
+                )
+            ],
+        )
+    )
+
+    assert [tip.checkpoint for tip in payload.tips] == ["balance"]
+    assert not any("flight" in tip.text for tip in payload.tips)
 
 
 def test_a_legacy_result_still_gets_a_tip() -> None:

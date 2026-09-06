@@ -12,6 +12,7 @@ Three properties, and each one has a failure mode that reaches a golfer rather t
 from __future__ import annotations
 
 from golf_coach.contracts.unscored import (
+    INFERENCE_REASONS,
     MEASUREMENT_REASONS,
     UNSCORED_REASONS,
     UnscoredCheckpoint,
@@ -38,7 +39,7 @@ def test_every_row_says_something_in_both_registers() -> None:
         assert spec.remedy.endswith("."), f"{reason}'s remedy is not a sentence"
 
 
-def test_the_reasons_that_are_not_capture_problems_are_the_expected_four() -> None:
+def test_the_reasons_that_are_not_capture_problems_are_pinned_by_name() -> None:
     """`refilming_helps` is the one bit every consumer branches on, so it is pinned by name.
 
     Derived prose in `contracts.caveats` tells every coaching model which reasons must never be
@@ -47,10 +48,16 @@ def test_the_reasons_that_are_not_capture_problems_are_the_expected_four() -> No
     stated once instead of inferred.
 
     `CROSS_VIEW_CONTRADICTED` is the one whose membership is worth arguing about, because unlike
-    the other three it *is* about the footage: a top the other view contradicts came out of a real
+    the others it *is* about the footage: a top the other view contradicts came out of a real
     clip. It belongs here anyway. The cause is a golfer pausing at the top, which fragments the
     rising run `phases._top_and_impact` reads (`_DRAWDOWN_FLOOR`) — a second clip of the same swing
     reproduces it, so "film it again" is advice that costs a trip to the bay and changes nothing.
+
+    **Every inference reason is on this side, and that is the whole of ADR-027 §Decision 5's last
+    paragraph as a test**: a spin field the launch monitor never printed is not a camera problem,
+    and a golfer must never be sent back to the bay because a screen withheld a number. The
+    assertion is written as the union rather than as eight names so that the argument stays
+    visible — the four judging reasons are listed, and the inference family is admitted wholesale.
     """
     not_capture = {reason for reason, spec in UNSCORED_REASONS.items() if not spec.refilming_helps}
     assert not_capture == {
@@ -58,7 +65,7 @@ def test_the_reasons_that_are_not_capture_problems_are_the_expected_four() -> No
         UnscoredReason.NO_HANDEDNESS,
         UnscoredReason.CROSS_VIEW_CONTRADICTED,
         UnscoredReason.UNRECORDED,
-    }
+    } | INFERENCE_REASONS
 
 
 def test_the_judging_reasons_are_exactly_the_ones_measure_may_not_report() -> None:
@@ -71,6 +78,11 @@ def test_the_judging_reasons_are_exactly_the_ones_measure_may_not_report() -> No
     other three are: it is written by `analysis.engine.analyze_swing_bundle` at the two-view seam,
     which is neither measuring nor banding. What the partition asserts is only that
     `analysis.measure` may not produce it, and it may not — measure sees one clip.
+
+    **M15 P9 made this a three-way partition** rather than a complement. `INFERENCE_REASONS` is
+    neither measuring a swing nor banding one; it is `analysis.flight_infer` failing to recover a
+    launch condition. Naming the third family is what keeps the assertion an assertion — the
+    judging four are still written out, so a fifth judging reason cannot slip in under the union.
     """
     judging = {
         UnscoredReason.NO_BAND,
@@ -78,8 +90,9 @@ def test_the_judging_reasons_are_exactly_the_ones_measure_may_not_report() -> No
         UnscoredReason.CROSS_VIEW_CONTRADICTED,
         UnscoredReason.UNRECORDED,
     }
-    assert MEASUREMENT_REASONS | judging == set(UnscoredReason)
+    assert MEASUREMENT_REASONS | judging | INFERENCE_REASONS == set(UnscoredReason)
     assert not MEASUREMENT_REASONS & judging
+    assert not INFERENCE_REASONS & (MEASUREMENT_REASONS | judging)
 
 
 def test_the_engine_never_writes_unrecorded() -> None:

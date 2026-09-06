@@ -141,12 +141,29 @@ GET_CLUB_PROFILE = (
 #: Exists so a consumer can iterate the surface and so `tests/contracts/test_tool_descriptions.py`
 #: can assert both adapters expose exactly these names. The names are the wire identifiers a model
 #: calls, so they belong beside the prose they identify.
+SIMULATE_FLIGHT = (
+    "Fly the ball for one swing's shot: the carry, apex, hang time, descent angle and how far "
+    "offline it finishes, integrated from the launch conditions the simulator printed. Call this "
+    "when the user asks what a shot did in the air — how high, how far it carried, whether it "
+    "curved — rather than what the screen printed, which is get_shot_by_id. **Every number it "
+    "returns is SIMULATED and none of them was measured**; say so, and never average one with a "
+    "printed figure or present it as what the launch monitor recorded. Most shots cannot be "
+    "flown: the screen prints no spin on them, and the spin is solved backwards from the printed "
+    "carry where that is possible and refused where it is not. A refusal comes back with "
+    "`flew: false` and the reason, which is a fact about the shot and not a fault — never answer "
+    "one by telling the golfer to film the swing again, because the video is not an input to any "
+    "of this. Read `caveats` before quoting any number: the model is run outside the range its "
+    "coefficients were published for on every shot on file. Needs a session_id and swing_id from "
+    "list_sessions; if no such swing exists it says so rather than returning data."
+)
+
 TOOL_DESCRIPTIONS: dict[str, str] = {
     "list_sessions": LIST_SESSIONS,
     "get_swing": GET_SWING,
     "get_session_summary": GET_SESSION_SUMMARY,
     "get_recent_shots": GET_RECENT_SHOTS,
     "get_shot_by_id": GET_SHOT_BY_ID,
+    "simulate_flight": SIMULATE_FLIGHT,
     "get_golfer_profile": GET_GOLFER_PROFILE,
     "get_shot_trends": GET_SHOT_TRENDS,
     "compare_sessions": COMPARE_SESSIONS,
