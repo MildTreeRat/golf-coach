@@ -398,6 +398,16 @@ Unrecognised measurement sources: population:golfdb
 
 The reader's own coverage warning fired correctly. Nobody read it.
 
+**⚠️ Read for the first time on 2026-09-06, by M15 P12** — the phase registering ADR-027's
+`model:` prefix in the same dispatch. It considered taking `population:` along and declined, for
+the reason this addendum exists: registering it moves no count today (`read_corpus` groups *by*
+`face_on_sha256`, so `CorpusSwing` is one-to-one with that hash and the `swing:{ref}` fallback
+partitions a corpus exactly as `pose:` would) and turns every test green, which would have decided
+both questions below by accident. The deferral is now visible in code rather than only here:
+`KNOWN_SOURCE_PREFIXES` in `contracts/career.py` carries the argument beside the tuple this prefix
+is absent from, and `tests/storage/test_corpus.py
+::test_a_placement_is_still_an_unknown_source_and_that_is_the_deferral` fails if it is added.
+
 ### What already refuses, and it is most of the surface
 
 Two of the three consumers of a `PersonalBaseline` decline the placements without being told to:

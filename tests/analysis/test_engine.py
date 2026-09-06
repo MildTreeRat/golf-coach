@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 from golf_coach.analysis import analyze_swing
+from golf_coach.contracts.career import MODEL_SOURCE_PREFIX
 from golf_coach.contracts.golfer import Handedness
 from golf_coach.contracts.intent import PracticeGoal, PracticeMode
 from golf_coach.contracts.keypoints import FrameKeypoints
@@ -15,6 +16,7 @@ from golf_coach.contracts.placements import (
     placement_names,
 )
 from golf_coach.contracts.shot import ShotData, ShotProvenance, ShotSource
+from golf_coach.contracts.unscored import UnscoredReason
 
 #: The `Measurement.source` every population placement carries. Consumers partition on the registry
 #: rather than on this string, but a placement recorded under a different source is one the caveats
@@ -134,3 +136,115 @@ def test_every_emitted_placement_carries_its_registered_unit_and_a_detail(
         assert measurement.unit == spec.unit
         assert measurement.source == _POPULATION
         assert measurement.detail, f"{spec.name} carries no detail — its meaning is in that string"
+
+
+# ------------------------------------------------------- the simulated flight [M15 P11]
+
+
+def _flyable(**fields) -> ShotData:
+    """`2026-08-23-4` as the screen printed it — the one shot on disk whose spin the solve names."""
+    base = dict(
+        shot_id="shot-1",
+        session_id="session-1",
+        timestamp=datetime(2026, 8, 23, tzinfo=UTC),
+        source=ShotSource.SCREEN,
+        ball_speed=89.8,
+        launch_angle=22.4,
+        launch_direction=2.8,
+        carry_distance=126.1,
+        provenance=ShotProvenance(device="hd_golf", parse_confidence=0.95),
+    )
+    return ShotData(**{**base, **fields})
+
+
+def test_a_swing_with_a_loft_carries_the_simulated_flight(swing: list[FrameKeypoints]) -> None:
+    """The second registry-to-artifact pin: `FLIGHT_MEASUREMENTS` -> `SwingResult`.
+
+    The source is asserted for the reason the distances' is: `CorpusSwing.artifact_key` partitions
+    on the prefix, and `model:` is the fourth one — registered in M15 P12, where it keys on the
+    shot photo the launch conditions were read off. A source string edited here without editing
+    that dispatch is a flight silently counted per swing again, so the prefix is asserted against
+    the constant the corpus reader actually tests rather than against a literal.
+    """
+    result = analyze_swing(
+        "swing-1",
+        "session-1",
+        swing,
+        shot=_flyable(),
+        handedness=Handedness.RIGHT,
+        loft_deg=30.5,
+    )
+    flight = {m.name: m for m in result.measurements if m.name.startswith("flight_")}
+
+    assert set(flight) == {
+        "flight_carry_yds",
+        "flight_apex_yds",
+        "flight_descent_angle_deg",
+        "flight_time_s",
+        "flight_spin_rpm",
+    }
+    for measurement in flight.values():
+        assert measurement.source == "model:flight_v1"
+        assert measurement.source.startswith(MODEL_SOURCE_PREFIX)
+    # No axis on the screen, so the curve is not drawn and the landing point is withheld — it would
+    # be `start_line_offline_yds` under a second name (ADR-027's 2026-09-05i addendum).
+    assert "flight_landing_offline_yds" not in flight
+    assert [entry.name for entry in result.unscored if entry.name.startswith("flight_")] == [
+        "flight_landing_offline_yds"
+    ]
+
+
+def test_no_loft_costs_the_flight_and_nothing_else(swing: list[FrameKeypoints]) -> None:
+    """The corpus's own state on six of the thirteen shots, and it must not touch the score.
+
+    `overall_score` is a mean over the checkpoints that scored. Nothing in the ball flight is a
+    checkpoint, so a swing that could not be flown has to grade identically to one that could.
+    """
+    flown = analyze_swing(
+        "s", "sess", swing, shot=_flyable(), handedness=Handedness.RIGHT, loft_deg=30.5
+    )
+    grounded = analyze_swing(
+        "s", "sess", swing, shot=_flyable(), handedness=Handedness.RIGHT, loft_deg=None
+    )
+
+    assert grounded.overall_score == flown.overall_score
+    assert not [m for m in grounded.measurements if m.name.startswith("flight_")]
+    refusals = [entry for entry in grounded.unscored if entry.name.startswith("flight_")]
+    assert [entry.name for entry in refusals] == ["flight_carry_yds"]
+    assert refusals[0].reason is UnscoredReason.NO_CLUB_LOFT
+
+
+def test_a_swing_with_no_shot_attempts_no_flight(swing: list[FrameKeypoints]) -> None:
+    """No launch conditions were ever going to arrive, so a refusal here would be noise.
+
+    The pipeline gates its "tag a club" note the same way, and for the same reason: a repair for a
+    thing that was not attempted is worse than silence.
+    """
+    result = analyze_swing("s", "sess", swing, handedness=Handedness.RIGHT, loft_deg=30.5)
+
+    assert not [m for m in result.measurements if m.name.startswith("flight_")]
+    assert not [entry for entry in result.unscored if entry.name.startswith("flight_")]
+
+
+def test_a_printed_spin_flies_without_any_loft_at_all(swing: list[FrameKeypoints]) -> None:
+    """⚠️ The fact `api/pipeline`'s loft note is gated on, pinned where it is actually true.
+
+    Loft picks a branch of the *spin solve*, so a shot whose screen printed a spin never reaches
+    for it. The two 2026-08-10 swings on disk are exactly that — no club tagged, and they fly — and
+    narrating the loft gap up front told them to go and tag a club so their ball flight could be
+    simulated, printed beside the simulated ball flight. `NO_CLUB_LOFT` is the engine saying the
+    loft was reached for and missing, and it is the only evidence that repair is a repair.
+    """
+    result = analyze_swing(
+        "s",
+        "sess",
+        swing,
+        shot=_flyable(spin_rate=5991.0, spin_axis=2.5),
+        handedness=Handedness.RIGHT,
+        loft_deg=None,
+    )
+
+    assert [m.name for m in result.measurements if m.name == "flight_carry_yds"]
+    assert not [
+        entry for entry in result.unscored if entry.reason is UnscoredReason.NO_CLUB_LOFT
+    ]

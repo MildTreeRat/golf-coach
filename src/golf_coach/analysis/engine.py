@@ -26,6 +26,13 @@ from golf_coach.analysis.benchmarks.trajectory import (
     trajectory_placement_for,
 )
 from golf_coach.analysis.checkpoints import CHECKPOINT_EVALUATORS
+from golf_coach.analysis.flight_measure import (
+    FLIGHT_MEASUREMENTS,
+    FLIGHT_SOURCE,
+    FlownShot,
+    flight_unscored,
+    fly_shot,
+)
 from golf_coach.analysis.measure import POSE_MEASUREMENTS
 from golf_coach.analysis.phases import TRAIL_WRIST, segment_phases
 from golf_coach.analysis.scoring import policy_for
@@ -191,6 +198,7 @@ def _measurements(
     phases: list[PhaseSegment],
     shot: ShotData | None,
     handedness: Handedness | None = None,
+    flown: FlownShot | None = None,
 ) -> list[Measurement]:
     """Every quantity we can measure off this swing, judged by nothing.
 
@@ -199,8 +207,15 @@ def _measurements(
     so a metric that could only be measured once it had a band could never acquire one. Recording
     them now is also what makes a swing captured today worth re-reading after the bands land.
 
-    Order is pose first then shot, and within each the registry's order — stable across runs so a
-    diff of two `analysis.json` files is readable.
+    Order is pose first, then shot, then the simulated flight, and within each the registry's
+    order — stable across runs so a diff of two `analysis.json` files is readable. The flight goes
+    last because it is the only family that *consumes* another: `flight_infer` reads the shot's
+    tiles through `shot_measure`'s own extractors, so a reader meeting `flight_carry_yds` has
+    already met the `carry_distance_yds` it was solved from.
+
+    **`flown` is passed in rather than computed here**, because a refused flight is reported in
+    `unscored` and this function does not build that list. `analyze_swing` flies the ball once and
+    hands the result to both.
     """
     out: list[Measurement] = []
     pose_values: dict[str, float] = {}
@@ -241,6 +256,25 @@ def _measurements(
                 )
             )
 
+    if flown is not None:
+        # One flight, six readings. The registry's functions take the flown shot rather than the
+        # launch conditions for exactly that reason — `SHOT_MEASUREMENTS`' one-function-per-number
+        # shape would re-integrate the whole trajectory six times, and the spin solve behind it
+        # dozens more.
+        for name, (read_flight, unit, detail) in FLIGHT_MEASUREMENTS.items():
+            flight_value = read_flight(flown)
+            if flight_value is None:
+                continue
+            out.append(
+                Measurement(
+                    name=name,
+                    value=round(flight_value, 4),
+                    unit=unit,
+                    source=FLIGHT_SOURCE,
+                    detail=detail,
+                )
+            )
+
     return out
 
 
@@ -252,6 +286,7 @@ def analyze_swing(
     shot: ShotData | None = None,
     intent: PracticeGoal | None = None,
     handedness: Handedness | None = None,
+    loft_deg: float | None = None,
 ) -> SwingResult:
     """Analyze one swing from its data streams, judged against a practice intent.
 
@@ -269,6 +304,16 @@ def analyze_swing(
     Passing `None` costs the swing that one checkpoint, reported in `unscored` with reason
     `NO_HANDEDNESS`, and costs it nothing else. `analysis` stays pure: resolving a `player_id` to
     a `Golfer` is the shell's job (`api.pipeline`), and nothing here imports the golfer registry.
+
+    **`loft_deg` is a third argument of that same kind** [M15 P11]. It is the club's declared loft,
+    and its entire involvement is choosing between the two candidate spins the ball-flight solve
+    returns (ADR-027 §Decision 3) — loft is not an input to ball flight, so a club bent 2° strong
+    changes the inferred spin and not the path. It arrives here rather than on `PracticeGoal`
+    because `intent.club` is a *slot* (`7i`), and what a 7 iron is bent to is a fact about this
+    golfer's bag: `storage/flight_inputs.py` reads it and `api.pipeline` passes it. `None` is the
+    corpus's own state on most shots and costs the flight measurements, reported in `unscored`
+    with reason `NO_CLUB_LOFT` — never guessed, because a 7 iron's loft is exactly the
+    plausible-looking wrong answer.
     """
     intent = intent or PracticeGoal()
 
@@ -307,6 +352,17 @@ def analyze_swing(
                 UnscoredCheckpoint(name=spec.name, reason=judged.reason, detail=judged.detail)
             )
 
+    # The simulated flight [M15 P11]. Flown once, read by both halves below: six `flight_*`
+    # measurements, and one or two `unscored` entries when it could not be drawn. It is appended
+    # *after* the checkpoint loop rather than inside it because nothing here is a checkpoint —
+    # ADR-027 §Decision 6 gives the flight its own measurement names and no `CHECKPOINT_REGISTRY`
+    # entry — and registry order is what `contracts.checkpoints` promises for the entries above.
+    flown = (
+        fly_shot(shot, loft_deg=loft_deg, handedness=handedness) if shot is not None else None
+    )
+    if flown is not None:
+        unscored.extend(flight_unscored(flown))
+
     # Pose-only PoC: no outcome checkpoints yet (needs M2 detection / M3 shot data).
     outcome: list[CheckpointScore] = []
 
@@ -317,7 +373,7 @@ def analyze_swing(
         session_id=session_id,
         phases=phases,
         checkpoint_scores=mechanics + outcome,
-        measurements=_measurements(smoothed, phases, shot, handedness),
+        measurements=_measurements(smoothed, phases, shot, handedness, flown),
         unscored=unscored,
         intent=intent,
         mechanics_score=scores.mechanics,
@@ -341,6 +397,7 @@ def analyze_swing_bundle(
     face_on_strikes: list[int] | None = None,
     down_the_line_strikes: list[int] | None = None,
     handedness: Handedness | None = None,
+    loft_deg: float | None = None,
 ) -> SwingBundleResult:
     """Analyze one assembled swing bundle: two camera views plus the launch-monitor shot.
 
@@ -382,6 +439,7 @@ def analyze_swing_bundle(
         shot=shot,
         intent=intent,
         handedness=handedness,
+        loft_deg=loft_deg,
     )
 
     # Back into whole-clip coordinates, and re-attach the frames the window sliced away. Keyed

@@ -23,3 +23,12 @@ Each spike gets its own dated folder.
   measured at **~1/2000 s**. Findings: [log.md](club-head-detectability/log.md). Decision:
   [ADR-017](../docs/decisions/017-club-head-detection-strategy.md).
   `frames/` is git-ignored and regenerates from `probe.py frames`.
+- `mediapipe-hands/` — **M14's successor**, **run 2026-09-03 and closed**. Needed no new footage:
+  the fifteen face-on swings on disk were enough. Contains `thresholds.md` (committed before the
+  model was run over a frame), `probe.py` (`measure` and `frames`) and `log.md`. M14 P3 proved the
+  *coarse* pose hand points are measurable face-on at address and left the 21-point model as the
+  only route to grip **strength**; this ran it. **No-go, and not for the expected reason** — the
+  model returns a correctly-placed hand on 179 of 179 address frames and resolves **two** hands on
+  15% of them, because a golf grip reads as one hand. The one it keeps is the **trail** hand, and
+  grip strength is read on the lead. Findings: [log.md](mediapipe-hands/log.md). `frames/` is
+  git-ignored and regenerates from `probe.py frames`.

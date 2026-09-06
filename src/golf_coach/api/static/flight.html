@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Golf Coach Ball Flight</title>
+<style>
+  :root { color-scheme: light dark; }
+  /* Wider than results.html's 480px, because on this page the drawing *is* the content and a
+     flight is four to five times longer than it is high — at 480px the side view is 80px tall
+     before any padding. library.html's 640px is the existing precedent for a wider page. */
+  body { font-family: system-ui, sans-serif; margin: 0; padding: 1.25rem; max-width: 640px; }
+  h1 { font-size: 1.1rem; margin: 0 0 0.15rem; }
+  h2 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em;
+       opacity: 0.6; margin: 1.5rem 0 0.5rem; }
+  a.back { font-size: 0.85rem; margin-right: 0.8rem; }
+  .sub { font-size: 0.85rem; opacity: 0.65; margin: 0 0 1rem; }
+  .muted { opacity: 0.65; font-size: 0.83rem; }
+  .banner { padding: 0.7rem 0.85rem; border-radius: 8px; margin-top: 1rem; font-size: 0.9rem; }
+  .banner.warn { background: rgba(220,160,40,0.18); border: 1px solid rgba(220,160,40,0.5); }
+  .banner.error { background: rgba(200,60,60,0.18); border: 1px solid rgba(200,60,60,0.5); }
+  .banner.info { background: rgba(128,128,128,0.15); }
+  .banner p { margin: 0 0 0.5rem; }
+  .banner p:last-child { margin-bottom: 0; }
+
+  /* The two panels. No border and no card: a frame around a trajectory reads as a chart with
+     axes it does not have, and the only two reference lines here are the ground and the target
+     line, both of which are drawn. */
+  .panel { margin-bottom: 1.1rem; }
+  .panel canvas { display: block; width: 100%; }
+  .panel .cap { display: flex; justify-content: space-between; gap: 0.6rem;
+                font-size: 0.72rem; opacity: 0.6; margin-top: 0.2rem; }
+  /* The scale note is the one caption that must never be quiet: the plan view is drawn with its
+     offline axis stretched, and a reader who misses that is reading a wild hook off a two-yard
+     drift. Full opacity, and never smaller than the panel's own name. */
+  .panel .cap .scale { opacity: 1; font-weight: 600; }
+
+  /* Simulated measurements. `detail` is the row's primary content rather than a tooltip — the
+     lesson results.html learned the expensive way with population placements, and it is sharper
+     here because every one of these strings opens with the word SIMULATED. */
+  .rows { font-size: 0.85rem; }
+  .rows .r { border-top: 1px solid rgba(128,128,128,0.2); padding: 0.4rem 0; }
+  .rows .r:first-child { border-top: none; }
+  .rows .top { display: flex; justify-content: space-between; gap: 0.6rem; align-items: baseline; }
+  .rows .name { font-family: ui-monospace, monospace; font-size: 0.8rem; }
+  .rows .v { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap;
+             font-weight: 600; }
+  .rows .v .u { opacity: 0.6; font-size: 0.78rem; margin-left: 0.2rem; font-weight: 400; }
+  .rows .d { opacity: 0.7; font-size: 0.8rem; margin: 0.15rem 0 0; }
+  .rows .flag { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.04em;
+                border: 1px solid rgba(128,128,128,0.5); border-radius: 4px; opacity: 0.75;
+                padding: 0.02rem 0.25rem; }
+  /* The block's source stamp, sent by the route so this page never types it. */
+  .src { font-size: 0.72rem; opacity: 0.6; margin: 0.4rem 0 0;
+         font-family: ui-monospace, monospace; }
+
+  /* The two numbers of a comparison row, side by side and equally weighted. Neither is the
+     answer: one is what a model produced and the other is what a screen printed, and on this
+     corpus the gap between them is never simply an error. */
+  .rows .pair { display: flex; gap: 0.9rem; margin: 0.15rem 0 0; font-variant-numeric: tabular-nums; }
+  .rows .pair span { opacity: 0.9; }
+  .rows .pair em { font-style: normal; opacity: 0.6; font-size: 0.78rem; margin-left: 0.2rem; }
+
+  /* What the drawing's two marks mean. Printed hollow, simulated filled — a legend rather than a
+     colour, because the canvas takes its one ink from the theme. */
+  .legend { font-size: 0.72rem; opacity: 0.7; margin: -0.5rem 0 1rem; }
+  .legend b { font-weight: 400; }
+
+  .cond { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.4rem 0.8rem;
+          font-size: 0.87rem; }
+  .cond div { display: flex; justify-content: space-between; gap: 0.5rem;
+              border-bottom: 1px solid rgba(128,128,128,0.2); padding-bottom: 0.2rem; }
+  .cond .v { font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; }
+  .cond .v em { font-style: normal; font-weight: 400; opacity: 0.6; font-size: 0.78rem;
+                margin-left: 0.25rem; }
+</style>
+</head>
+<body>
+<a class="back" href="/">&larr; Upload</a>
+<a class="back" href="/library.html">Library</a>
+<a class="back" id="swingLink" href="/library.html">Swing</a>
+<div id="root"><p class="muted">Loading...</p></div>
+
+<script>
+const TOKEN_KEY = "golf_coach_token";
+const params = new URLSearchParams(location.search);
+const sessionId = params.get("session");
+const swingId = params.get("swing");
+const root = document.getElementById("root");
+
+// The whole payload, kept because the canvases are redrawn on a resize and on a theme flip, and
+// neither of those is a reason to ask the server to fly the shot again.
+let payload = null;
+
+function token() { return localStorage.getItem(TOKEN_KEY); }
+function authHeaders() {
+  const t = token();
+  return t ? { "X-Upload-Token": t } : {};
+}
+
+// Copied rather than shared, which is the standing shape of these pages: REFACTOR_LEDGER's
+// 2026-08-13 row declines a build step for `api/static/`, and the one extraction it has allowed
+// (`tempo.js`) was made because a *scheduler* drifting changes what a golfer hears. Three
+// three-line helpers are not that.
+function esc(value) {
+  return String(value).replace(/[&<>"']/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+}
+
+function num(value, digits = 1) {
+  if (typeof value !== "number") return "-";
+  const fixed = value.toFixed(digits);
+  return fixed.includes(".") ? fixed.replace(/0+$/, "").replace(/\.$/, "") : fixed;
+}
+
+// A measurement's display name, derived from its registry name rather than looked up in a table
+// this page holds. `FLIGHT_MEASUREMENTS` is the one list of what a flight produces (ADR-027
+// §Decision 6); a second copy here would go stale the next time that list grows, silently, which
+// is exactly how five population placements once shipped with prose naming none of them. The
+// unit suffix comes off because the payload carries `unit` beside every value.
+const UNIT_SUFFIX = /_(yds|deg|rpm|mph|ms|norm|s)$/;
+function label(name) {
+  return name.replace(/^flight_/, "").replace(UNIT_SUFFIX, "").replace(/_/g, " ");
+}
+
+// Enum values arrive as `carry_unreachable`; nothing is translated here, only respaced. The
+// words themselves belong to `contracts/unscored.py` and to the spin solve, and the sentence
+// that goes with them arrives in `detail`.
+function words(value) { return String(value).replace(/_/g, " "); }
+
+async function load() {
+  if (!sessionId || !swingId) {
+    root.innerHTML = `<div class="banner error">No swing in the URL. Open this page from a
+      swing's results page rather than by typing the address.</div>`;
+    return;
+  }
+  document.getElementById("swingLink").href =
+    `/results.html?session=${encodeURIComponent(sessionId)}&swing=${encodeURIComponent(swingId)}`;
+
+  const url = `/api/sessions/${encodeURIComponent(sessionId)}` +
+              `/swings/${encodeURIComponent(swingId)}/flight`;
+  let res;
+  try {
+    res = await fetch(url, { headers: authHeaders() });
+  } catch (err) {
+    root.innerHTML = `<div class="banner error">Could not load: ${esc(err.message)}</div>`;
+    return;
+  }
+  if (res.status === 401) {
+    root.innerHTML = `<div class="banner error">This phone isn't set up. Reopen the setup
+      link (the one ending in /?t=...) to register it.</div>`;
+    return;
+  }
+
+  // A 404 on this route has three causes and only one of them is a broken install, so the body
+  // decides which sentence gets printed. The route answers its own two — a swing with no
+  // shot-screen photo, or a photo nobody has read — with a `detail` written for a human. A 404
+  // with no detail is library.html's case: a server process older than the route it is being
+  // asked for, which happens because `StaticFiles` serves a brand-new page off disk the moment
+  // it is written and the running app still holds the old route table.
+  if (res.status === 404) {
+    let detail = null;
+    try { detail = (await res.json()).detail; } catch (err) { detail = null; }
+    root.innerHTML = detail
+      ? `<div class="banner info">${esc(detail)}</div>`
+      : `<div class="banner error">This server has no flight route, so it was started before
+         the ball-flight page existed. Restart it (<code>scripts/run_server.py</code>) and
+         reload.</div>`;
+    return;
+  }
+  if (!res.ok) {
+    root.innerHTML = `<div class="banner error">The server answered ${res.status} for this
+      swing's flight.</div>`;
+    return;
+  }
+
+  // Everything that can throw stays inside a try, for the reason library.html records: a
+  // rejection escaping here leaves the page reading "Loading..." for ever with nothing in the
+  // DOM to say why.
+  try {
+    payload = await res.json();
+    render();
+  } catch (err) {
+    root.innerHTML = `<div class="banner error">Could not read the flight:
+      ${esc(err.message)}</div>`;
+  }
+}
+
+function header() {
+  const shot = payload.shot;
+  const bits = [shot.club ? words(shot.club) : "no club on this swing", `shot ${shot.shot_id}`];
+  if (shot.shot_type) bits.push(shot.shot_type);
+  return `<h1>Ball flight <span class="muted">&middot; swing ${esc(payload.swing_id)}</span></h1>
+    <p class="sub">${bits.map(esc).join(" &middot; ")}</p>`;
+}
+
+// What the ball left on. Above the drawing rather than below it because the drawing is made from
+// these five and not the other way round — each is either printed on the screen or resolved from
+// something that was.
+function launchBlock() {
+  const launch = payload.launch;
+  if (!launch) return "";
+  const spin = payload.spin || {};
+  const axis = payload.axis || {};
+  const cells = [
+    ["ball speed", num(launch.ball_speed_mph), "mph", null],
+    ["launch angle", num(launch.launch_angle_deg), "&deg;", null],
+    // The spin's provenance rides on the line carrying the value and never in a footnote: a
+    // printed spin is a reading of a ball, and a solved one is the spin this integrator needs in
+    // order to fly the carry the screen printed. Two different quantities in one unit (ADR-027
+    // §Decision 3). The cap travels with a solved one because above it carry stops responding to
+    // spin at all, so the cap is what bounds the claim — `InferredSpin.cap_rpm` requires it, and
+    // an answer sitting on it is a floor rather than a reading.
+    ["spin", num(launch.spin_rpm, 0), "rpm", spinNote(spin)],
+    ["start line", num(launch.launch_direction_deg), "&deg;", null],
+    // The axis is the field that says whether the curve on the drawing is a curve at all, so a
+    // missing one shows its refusal rather than a blank: `launch.spin_axis_deg` is zero on a
+    // planar flight and zero is also a real measurement.
+    ["spin axis",
+     axis.spin_axis_deg === null || axis.spin_axis_deg === undefined
+       ? "&ndash;" : num(axis.spin_axis_deg),
+     "&deg;",
+     axis.source ? words(axis.source) : (axis.reason ? words(axis.reason) : null)],
+  ];
+  return `<h2>Launch conditions</h2><div class="cond">` + cells.map(([name, value, unit, note]) =>
+    `<div><span>${esc(name)}</span><span class="v">${value}<em>${unit}</em>${
+      note ? `<em>${esc(note)}</em>` : ""}</span></div>`).join("") + `</div>`;
+}
+
+// The one place this shot contradicts itself, printed and never resolved (ADR-027 §Decision 5).
+// The `Shot Type` tile and the direction derived from face-to-path disagree on one shot on disk,
+// and quietly picking one of them is how ADR-014's sign inversion survived a milestone — so the
+// page shows both readings rather than the winner, because there is no winner.
+//
+// ⚠️ **Rendered outside the launch block, and that is the whole of why it is a separate function.**
+// The one shot on disk carrying this flag is a `carry_unreachable` refusal, so it has no launch
+// conditions and the block that would have held this sentence never renders for it. A flag shown
+// only on flights is a flag that has never been shown.
+function signNote() {
+  const axis = payload.axis || {};
+  if (!axis.sign_disagrees) return "";
+  const printed = payload.shot.shot_type || words(axis.screen_shape || "no shape");
+  return `<p class="muted">This shot disagrees with itself about which way it curved: the screen
+    printed <strong>${esc(printed)}</strong> and the face-to-path
+    behind it says <strong>${esc(words(axis.curve_direction))}</strong>. Flagged, not resolved —
+    neither reading is overwritten by the other.</p>`;
+}
+
+// The note beside a spin: where it came from, and — where it was solved — the cap that bounds it.
+function spinNote(spin) {
+  if (!spin || !spin.source) return null;
+  const source = words(spin.source);
+  if (typeof spin.cap_rpm !== "number") return source;
+  return spin.at_cap
+    ? `${source}, sitting on its ${num(spin.cap_rpm, 0)} rpm cap`
+    : `${source}, cap ${num(spin.cap_rpm, 0)} rpm`;
+}
+
+function panels() {
+  // Two projections of one polyline rather than a perspective view of it. A single 3D view needs
+  // a camera, and every camera angle makes one of the two questions — how high, how far offline
+  // — unreadable while still looking authoritative about both.
+  return `<h2>The flight</h2>
+    <div class="panel">
+      <canvas id="side" role="img" aria-label="Side view: height against distance down range.
+        The same numbers are listed below."></canvas>
+      <div class="cap"><span>side view &middot; height</span>
+        <span class="scale" id="sideScale"></span></div>
+    </div>
+    <div class="panel">
+      <canvas id="plan" role="img" aria-label="Seen from above: offline deviation against
+        distance down range. The same numbers are listed below."></canvas>
+      <div class="cap"><span>from above &middot; offline</span>
+        <span class="scale" id="planScale"></span></div>
+    </div>
+    <p class="legend" id="legend"></p>
+    <p class="muted" id="planarNote"></p>
+    <p class="muted" id="clampNote"></p>`;
+}
+
+function measurements() {
+  const rows = payload.measurements || [];
+  if (!rows.length) return "";
+  return `<h2>What the model produced</h2><div class="rows">` + rows.map((row) =>
+    `<div class="r"><div class="top">
+       <span class="name">${esc(label(row.name))}</span>
+       <span class="v">${num(row.value)}<span class="u">${esc(row.unit)}</span></span>
+     </div><p class="d">${esc(row.detail)}</p></div>`).join("") +
+    `</div><p class="src">source: ${esc(payload.source)}</p>`;
+}
+
+// The simulated numbers the screen printed a counterpart for — and, in the same row, whether the
+// gap between them is an error at all. **Which number pairs with which is not decided here**: the
+// pairing, the flag and the sentence all arrive from `analysis/flight_measure.compare_to_printed`,
+// because "these two names are one quantity from two provenances" is the question the `flight_`
+// prefix answers from the other side, and a page answering it again in JavaScript would be the
+// third copy of two registries.
+//
+// Both values are given the same weight on the line. The printed one is not a truth the simulated
+// one is scored against — on this corpus one row is the model's error and the other is not a
+// comparison at all — and a layout with a "target" column would have decided that silently.
+function comparisonBlock() {
+  const rows = payload.comparison || [];
+  if (!rows.length) return "";
+  return `<h2>Beside what the screen printed</h2><div class="rows">` + rows.map((row) =>
+    `<div class="r"><div class="top">
+       <span class="name">${esc(label(row.simulated_name))}</span>
+       <span class="flag">${row.comparable ? "model error" : "not a check"}</span>
+     </div>
+     <p class="pair">
+       <span>${num(row.simulated, 2)}<em>simulated</em></span>
+       <span>${num(row.measured, 2)}<em>${esc(label(row.measured_name))}, printed</em></span>
+       <span>${num(row.difference, 2)}<em>apart</em></span>
+     </p>
+     <p class="d">${esc(row.reading)}</p></div>`).join("") + `</div>`;
+}
+
+// Everything one flown shot has to be read with, in the order `caveats_for` sent them — the order
+// is part of that rule and not a layout choice: the clamp first because it is about this flight,
+// the gate second because it is about the model, and a page that led with the gate would be
+// answering "how good is this model" before "what is this line".
+function caveatsBlock() {
+  const said = payload.caveats || [];
+  if (!said.length) return "";
+  return `<h2>Read it with</h2><div class="rows">` + said.map((caveat) =>
+    `<div class="r"><p class="d">${esc(caveat)}</p></div>`).join("") + `</div>`;
+}
+
+// What could not be produced, and why. Never phrased as a fault of the footage: every reason a
+// flight can return has `refilming_helps` false, and it is the flag that decides that sentence
+// rather than the reason's name (ADR-010 §2, and the MCP server's own reading rules).
+function unscoredBlock() {
+  const rows = payload.unscored || [];
+  if (!rows.length) return "";
+  const refilm = rows.some((row) => row.refilming_helps);
+  return `<h2>Not recorded</h2><div class="rows">` + rows.map((row) =>
+    `<div class="r"><div class="top">
+       <span class="name">${esc(label(row.name))}</span>
+       <span class="flag">${esc(words(row.reason))}</span>
+     </div><p class="d">${esc(row.detail)}</p></div>`).join("") + `</div>` +
+    (refilm ? `<p class="muted">Filming this swing again would change that.</p>` : "");
+}
+
+function refusal() {
+  const remedy = payload.shot.loft_remedy;
+  const spin = payload.spin || {};
+  // Not an error banner. Ten of the thirteen shots on disk cannot be flown, and a red page would
+  // be reporting the corpus's own state as a fault — the same distinction the route makes by
+  // answering 200 here and keeping its 404 for a swing with no shot screen at all.
+  return `<div class="banner info">
+      <p><strong>No flight for this shot.</strong> ${esc(payload.detail)}</p>
+      ${remedy ? `<p>${esc(remedy)}</p>` : ""}
+      ${spin.case ? `<p class="muted">The carry solve landed on the
+        <strong>${esc(words(spin.case))}</strong> case${
+          spin.cap_rpm ? `, under a cap of ${esc(num(spin.cap_rpm, 0))} rpm` : ""}.</p>` : ""}
+    </div>`;
+}
+
+function render() {
+  root.innerHTML = header() +
+    (payload.flew
+      ? panels() + launchBlock() + measurements() + comparisonBlock()
+      : refusal() + launchBlock()) +
+    signNote() + unscoredBlock() + caveatsBlock();
+  if (payload.flew) draw();
+}
+
+/* ---- the projection ------------------------------------------------------------------ */
+
+// Padding in CSS pixels. The bottom is deeper than the top because the distance labels hang
+// under the ground line, which is the axis both panels share.
+// M15 P16 widened the sides from 2px: a printed carry longer than the flown one puts a hollow
+// mark at the very end of the span, and at 2px the ring was drawn half outside the canvas.
+const PAD = { left: 4, right: 6, top: 10, bottom: 16 };
+
+// Candidate stretches for the plan view's offline axis. Round numbers only, because the factor
+// is printed and then read: "×7.3" is not something anyone can hold a flight in their head
+// against.
+const EXAGGERATIONS = [1, 2, 5, 10, 20, 50, 100, 200, 500];
+
+// Half-height in CSS pixels below which a curve cannot be read off the drawing at all, and the
+// only thing a stretch is for. Above it the drawing is already legible and a stretch buys nothing
+// but distortion.
+const LEGIBLE_HALF = 14;
+
+// Distance ticks, in yards. The first step leaving at most `MAX_TICKS` gridlines wins.
+const TICK_STEPS = [10, 25, 50, 100, 200];
+const MAX_TICKS = 6;
+
+function tickStep(span) {
+  for (const step of TICK_STEPS) {
+    if (span / step <= MAX_TICKS) return step;
+  }
+  return TICK_STEPS[TICK_STEPS.length - 1];
+}
+
+// A canvas inherits no colour, so the theme is sampled off the element at draw time rather than
+// written into this file. That is what lets the drawing follow `color-scheme: light dark`
+// without a single colour being named here — and it is why a theme flip has to redraw.
+function ink(canvas) { return getComputedStyle(canvas).color; }
+
+function fit(canvas, cssHeight) {
+  const dpr = window.devicePixelRatio || 1;
+  const cssWidth = canvas.clientWidth;
+  canvas.style.height = `${cssHeight}px`;
+  canvas.width = Math.round(cssWidth * dpr);
+  canvas.height = Math.round(cssHeight * dpr);
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, cssWidth, cssHeight);
+  return { ctx, cssWidth, cssHeight };
+}
+
+// The polyline, drawn with two pens: solid where every point read a measured row of the
+// published coefficient table, dashed where it read a held end row instead. Per point and not
+// per flight, because the spin ratio climbs as the ball sheds speed faster than it sheds spin —
+// a flight can start inside the table and leave it — and because the clamped part is the part
+// where spin has no route into the answer at all (ADR-027, 2026-09-05b addendum). One confident
+// line for both would draw the extrapolation as though it were the measured half.
+function stroke(ctx, points, project, colour) {
+  ctx.lineWidth = 2;
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
+  ctx.strokeStyle = colour;
+  for (let i = 1; i < points.length; i++) {
+    const clamped = points[i - 1].clamped || points[i].clamped;
+    const from = project(points[i - 1]);
+    const to = project(points[i]);
+    ctx.beginPath();
+    ctx.setLineDash(clamped ? [4, 3] : []);
+    ctx.globalAlpha = clamped ? 0.75 : 1;
+    ctx.moveTo(from.x, from.y);
+    ctx.lineTo(to.x, to.y);
+    ctx.stroke();
+  }
+  ctx.setLineDash([]);
+  ctx.globalAlpha = 1;
+}
+
+// The printed counterpart of something drawn: hollow, on the same ink. Hollow rather than a
+// second colour because the canvas takes its one colour off the theme (`ink`), and rather than a
+// second *shape* because the two marks are the same quantity from two provenances — which is the
+// whole point of putting them on one drawing.
+function ring(ctx, at, colour, radius) {
+  ctx.beginPath();
+  ctx.strokeStyle = colour;
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([]);
+  ctx.arc(at.x, at.y, radius, 0, Math.PI * 2);
+  ctx.stroke();
+}
+
+function dot(ctx, at, colour, radius) {
+  ctx.beginPath();
+  ctx.fillStyle = colour;
+  ctx.arc(at.x, at.y, radius, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+// Distance ticks along the ground line, on the same scale in both panels so the two views stay
+// column-aligned and a reader can drop a finger from the apex to the plan view under it.
+function ticks(ctx, colour, xSpan, toX, baseline, height) {
+  const step = tickStep(xSpan);
+  ctx.font = "10px system-ui, sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "top";
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = colour;
+  ctx.fillStyle = colour;
+  for (let yards = step; yards <= xSpan; yards += step) {
+    const x = toX(yards);
+    ctx.globalAlpha = 0.22;
+    ctx.beginPath();
+    ctx.moveTo(x, baseline - height);
+    ctx.lineTo(x, baseline);
+    ctx.stroke();
+    ctx.globalAlpha = 0.6;
+    ctx.fillText(String(yards), x, baseline + 3);
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawSide(points, xSpan, printedDown) {
+  const canvas = document.getElementById("side");
+  const apex = Math.max(...points.map((p) => p.y_yds), 0);
+  const cssWidth = canvas.clientWidth;
+  const scale = (cssWidth - PAD.left - PAD.right) / xSpan;
+  // **1:1, and that is the whole design of this panel.** Its height falls out of the scale
+  // rather than being chosen, so the panel's shape is the flight's shape — a vertical axis
+  // stretched to fill a fixed box is how a wedge and a 3 iron come to look alike, and the apex
+  // is one of the six numbers this page exists to report.
+  const plotHeight = apex * scale;
+  const { ctx, cssHeight } = fit(canvas, plotHeight + PAD.top + PAD.bottom);
+  const colour = ink(canvas);
+  const baseline = cssHeight - PAD.bottom;
+  const toX = (yards) => PAD.left + yards * scale;
+  const project = (p) => ({ x: toX(p.x_yds), y: baseline - p.y_yds * scale });
+
+  ticks(ctx, colour, xSpan, toX, baseline, plotHeight);
+  ctx.globalAlpha = 0.55;
+  ctx.strokeStyle = colour;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(PAD.left, baseline);
+  ctx.lineTo(cssWidth - PAD.right, baseline);
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+
+  stroke(ctx, points, project, colour);
+  dot(ctx, project(points[0]), colour, 2.5);
+  dot(ctx, project(points[points.length - 1]), colour, 3.5);
+  // The carry the launch monitor printed, on the ground line where the ball it measured came
+  // down. The one place on this page where a measurement and a simulation are the same quantity
+  // in the same frame, so it is the one place they can honestly be drawn together — and on both
+  // shots whose spin was measured the two marks are three yards apart, which is the gate made
+  // visible rather than quoted.
+  if (printedDown) ring(ctx, { x: toX(printedDown.measured), y: baseline }, colour, 4);
+  document.getElementById("sideScale").textContent = "1:1 with distance";
+}
+
+function drawPlan(points, xSpan, printedDown, printedOffline) {
+  const canvas = document.getElementById("plan");
+  const offlines = points.map((p) => p.z_yds);
+  // The printed start line is inside the reach as well as the flight is, because a mark drawn
+  // outside the panel it is measured in is worse than no mark: on the fade on disk it sits six
+  // yards inside the simulated landing and would have been clipped by the panel's own edge.
+  const reach = Math.max(
+    Math.abs(Math.min(...offlines)), Math.abs(Math.max(...offlines)),
+    printedOffline ? Math.abs(printedOffline.measured) : 0,
+  );
+  const cssWidth = canvas.clientWidth;
+  const scale = (cssWidth - PAD.left - PAD.right) / xSpan;
+  // Down range is drawn at the side view's scale so the panels stay column-aligned. Offline is
+  // not, because at 1:1 a two-yard drift across a hundred-and-twenty-yard carry is a straight
+  // line one pixel thick. So it can be stretched — by a round factor, printed at full opacity in
+  // the caption.
+  //
+  // **The smallest stretch that makes the curve readable, never the largest that fits.** Written
+  // the other way round first, and the arithmetic over the real corpus is what argued it down:
+  // every flight on disk drifts a third to a half of its own apex, so "largest that fits"
+  // magnified all of them and drew the plan panel at nearly twice the height of the 1:1 side
+  // view above it — a lateral miss looking bigger than the height of the shot, on a page whose
+  // whole job is to be read literally. Below the floor a stretch is the only way to see the
+  // curve at all; above it, it buys nothing but distortion.
+  const budget = (cssWidth - PAD.left - PAD.right) * 0.18;
+  let exaggeration = 1;
+  for (const factor of EXAGGERATIONS) {
+    const drawn = reach * scale * factor;
+    if (drawn >= LEGIBLE_HALF && drawn <= budget) {
+      exaggeration = factor;
+      break;
+    }
+  }
+  // A floor, so a flight drawn in the vertical plane still gets a panel with a target line in it
+  // rather than collapsing to nothing. That flight is a straight line here, which is the honest
+  // drawing of it — M15 P16 is what makes it say so in words.
+  const half = Math.max(reach * scale * exaggeration, 12);
+  const { ctx, cssHeight } = fit(canvas, half * 2 + PAD.top + PAD.bottom);
+  const colour = ink(canvas);
+  const middle = PAD.top + half;
+  const toX = (yards) => PAD.left + yards * scale;
+  const project = (p) => ({ x: toX(p.x_yds), y: middle + p.z_yds * scale * exaggeration });
+
+  ticks(ctx, colour, xSpan, toX, cssHeight - PAD.bottom, cssHeight - PAD.bottom - PAD.top);
+  // The target line, dashed, because it is a reference and not something the ball did.
+  ctx.globalAlpha = 0.55;
+  ctx.strokeStyle = colour;
+  ctx.lineWidth = 1;
+  ctx.setLineDash([2, 3]);
+  ctx.beginPath();
+  ctx.moveTo(PAD.left, middle);
+  ctx.lineTo(cssWidth - PAD.right, middle);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.globalAlpha = 1;
+
+  stroke(ctx, points, project, colour);
+  dot(ctx, project(points[0]), colour, 2.5);
+  // **The end of a planar line is not a landing point**, so it does not get the mark that says it
+  // is one. With the spin axis unresolved the flight is flown in the vertical plane, and what this
+  // panel then shows is the start line projected out — `flight_landing_offline_yds` is withheld
+  // from the artifact for exactly that reason, and a filled landing dot here would be the page
+  // asserting the number the pipeline refused to record. The sentence under the panels says it in
+  // words; this is the same thing said in ink.
+  if (payload.axis && payload.axis.curve_is_drawn) {
+    dot(ctx, project(points[points.length - 1]), colour, 3.5);
+  }
+  // The printed carry, as a rule across the panel rather than a point on it: the screen prints no
+  // offline tile at all, so the launch monitor knows how far this ball went and nothing whatever
+  // about where it finished sideways. A ring on the target line would have invented a landing.
+  if (printedDown) {
+    const x = toX(printedDown.measured);
+    ctx.globalAlpha = 0.45;
+    ctx.strokeStyle = colour;
+    ctx.lineWidth = 1;
+    ctx.setLineDash([2, 3]);
+    ctx.beginPath();
+    ctx.moveTo(x, PAD.top);
+    ctx.lineTo(x, cssHeight - PAD.bottom);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.globalAlpha = 1;
+    // Where the ball *started* toward, projected out to that carry — which is the only lateral
+    // number the screen supports, and is why the ring sits on the printed carry's rule rather
+    // than beside the simulated landing. The gap between this mark and the filled one is the
+    // bend, and the comparison row under the drawing is the same gap in words.
+    if (printedOffline) {
+      ring(ctx, { x, y: middle + printedOffline.measured * scale * exaggeration }, colour, 4);
+    }
+  }
+  document.getElementById("planScale").textContent =
+    exaggeration === 1 ? "1:1 with distance" : `offline stretched ×${exaggeration}`;
+}
+
+function draw() {
+  const path = payload.path;
+  if (!path || !path.points || path.points.length < 2) return;
+  const points = path.points;
+  // Which printed number goes on which axis is `quantity`, sent with the comparison row, so the
+  // drawing places a measurement without knowing what it is called. `find` rather than an index:
+  // a shot missing one of the two tiles sends one row, and a flight drawn planar sends no offline
+  // row at all because the model withheld its half of that pair.
+  const rows = payload.comparison || [];
+  const printedDown = rows.find((row) => row.quantity === "down_range") || null;
+  const printedOffline = rows.find((row) => row.quantity === "offline") || null;
+  // The printed carry sets the span when it is the longer of the two — which it is on both shots
+  // whose spin the screen printed, by about three yards — or the mark for it lands off the canvas
+  // and the disagreement this phase exists to show is the one thing not drawn.
+  const xSpan = Math.max(
+    Math.max(...points.map((p) => p.x_yds)), printedDown ? printedDown.measured : 0,
+  );
+  if (!(xSpan > 0)) return;
+  drawSide(points, xSpan, printedDown);
+  drawPlan(points, xSpan, printedDown, printedOffline);
+
+  // What the two kinds of mark are. Written here rather than in the HTML because which marks were
+  // actually drawn depends on what the screen printed for this shot.
+  const legend = document.getElementById("legend");
+  legend.innerHTML = printedDown
+    ? `&#9679; <b>simulated</b> &mdash; launch and landing. &#9675; <b>printed</b> &mdash; the ` +
+      `carry the launch monitor measured, on the ground line and as a rule below` +
+      (printedOffline
+        ? `, with the start line projected out to it. The gap between the two marks below is the `
+          + `bend; the screen prints no offline tile of its own.`
+        : `.`)
+    : `&#9679; simulated launch and landing. The screen printed no carry for this shot, so there ` +
+      `is nothing measured to draw beside it.`;
+
+  // A flight with no spin axis is straight *by construction*, and a straight line drawn under a
+  // caption about offline is the most misreadable thing on this page: it looks like a shot that
+  // drifted, and what it actually shows is the start line projected out. `curve_is_drawn` is the
+  // bit that says which, and `axis.detail` is the refusal's own sentence rather than a second one
+  // written here.
+  const planar = document.getElementById("planarNote");
+  const axis = payload.axis || {};
+  planar.textContent = axis.curve_is_drawn
+    ? ""
+    : `Drawn straight, and not because the ball flew straight: ` +
+      `${String(axis.detail || "").replace(/[.\s]+$/, "")}. So the line above ` +
+      `is the start line projected out to the carry, its end is not a landing point, and the ` +
+      `curve — which on a shot the screen called a fade is most of the lateral miss — is missing ` +
+      `from it.`;
+
+  // Said in words as well as in dashes, because a dashed line is a convention and this is a
+  // claim: above the table's last row, spin does not reach the carry at all.
+  const note = document.getElementById("clampNote");
+  if (path.fully_clamped) {
+    note.textContent = `Dashed end to end: every one of the ${path.steps} integration steps sat ` +
+      `above the published coefficient table and read a held end row, so spin does not reach ` +
+      `this carry at all.`;
+  } else if (path.clamped_points) {
+    note.textContent = `Dashed where the flight read a held end row rather than a measured one ` +
+      `— ${path.clamped_points} of ${path.steps} integration steps.`;
+  } else {
+    note.textContent = `Every one of the ${path.steps} integration steps read a measured row of ` +
+      `the coefficient table.`;
+  }
+}
+
+// Both panels are sized off `clientWidth`, so a rotated phone needs the drawing back. The theme
+// query is here for the reason one layer up: `ink()` samples the colour at draw time, and
+// nothing else would resample it.
+addEventListener("resize", () => { if (payload && payload.flew) draw(); });
+matchMedia("(prefers-color-scheme: dark)")
+  .addEventListener("change", () => { if (payload && payload.flew) draw(); });
+
+load();
+</script>
+</body>
+</html>

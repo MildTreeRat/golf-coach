@@ -70,6 +70,10 @@ def test_every_planned_tool_is_declared(server) -> None:
         "get_session_summary",
         "get_recent_shots",
         "get_shot_by_id",
+        # [M15 P17] Registered without a golfer registry, unlike the five the next test covers: a
+        # shot whose screen printed its own spin borrows nothing from a bag, and a flight that
+        # cannot resolve a loft refuses in the payload rather than by being absent from the server.
+        "simulate_flight",
     }
 
 
@@ -191,6 +195,23 @@ def test_the_instructions_carry_the_standing_caveats(server) -> None:
         assert spec.label in instructions, (
             f"{spec.name} ships as a checkpoint but the MCP instructions never name it"
         )
+
+
+def test_the_simulated_flight_caveat_ships_without_a_registry(server, registry_server) -> None:
+    """[M15 P17] Unconditional, unlike the career and bag blocks — and for the opposite reason.
+
+    Those two are about reading a refusal from tools a registry-less server does not offer, so
+    shipping them would describe a different server. This one is about a *kind of number*, and it
+    reaches a model through `get_swing`'s `simulated` block on every shape of this server whether
+    or not `simulate_flight` is ever called.
+    """
+    for instructions in (server.instructions or "", registry_server.instructions or ""):
+        assert "simulated ball flight" in instructions
+        assert "Nothing in it was measured" in instructions
+        # The two ways a model would otherwise get a refused flight wrong: reading it as a capture
+        # problem, and reading a solved spin's carry as a check.
+        assert "re-filming the swing fixes none of them" in instructions
+        assert "it is the input read back out" in instructions
 
 
 def test_reading_the_data_does_not_require_the_mcp_sdk() -> None:

@@ -43,7 +43,7 @@ from enum import StrEnum
 from pydantic import BaseModel, Field
 
 from golf_coach.contracts.baseline import Interval, WithheldClaim
-from golf_coach.contracts.career import LAUNCH_MONITOR_SOURCE_PREFIX
+from golf_coach.contracts.career import LAUNCH_MONITOR_SOURCE_PREFIX, MODEL_SOURCE_PREFIX
 
 
 class Standing(StrEnum):
@@ -117,6 +117,17 @@ NO_LAUNCH_MONITOR_POPULATION = (
     "no tour population exists for it. Every distribution in this repo comes from GolfDB, which is "
     "pose estimated from broadcast video and contains no ball flight — a launch-monitor reference "
     "would have to be acquired, not derived"
+)
+
+#: A simulated quantity, and the one refusal here that is not about missing data. ADR-027's
+#: flight is a model evaluated on this shot's launch conditions, so placing it in a population of
+#: *measured* swings would report the model's agreement with itself as a fact about the golfer —
+#: the same pooling hazard the `flight_` prefix exists to prevent (ADR-027 §Decision 6), one layer
+#: out. Acquiring a launch-monitor population would not unlock this one; it would sharpen the
+#: measured carry beside it and leave the simulated carry exactly as unplaceable.
+NO_MODEL_POPULATION = (
+    "it is a model output rather than a reading, and no population of model outputs is a "
+    "population of swings — compare the measured quantity beside it instead"
 )
 
 #: The generic case: a pose metric nobody cut a distribution for.
@@ -246,8 +257,13 @@ def no_population_reason(metric: str, source: str) -> str:
 
     Keyed on `Measurement.source` rather than on a list of metric names, so a launch-monitor metric
     added tomorrow inherits the right sentence instead of the generic one — the same reason
-    `CorpusSwing.artifact_key` dispatches on the prefix rather than on a hardcoded pair.
+    `CorpusSwing.artifact_key` dispatches on the prefix rather than on a hardcoded pair. The two
+    functions are a pair in the other direction too: M15 P12 registered `model:` there, and the
+    generic sentence here would have told a reader of a simulated carry that the repair is to cut a
+    distribution for it. It is not — no population of model outputs is a population of swings.
     """
     if source.startswith(LAUNCH_MONITOR_SOURCE_PREFIX):
         return f"{metric}: {NO_LAUNCH_MONITOR_POPULATION}"
+    if source.startswith(MODEL_SOURCE_PREFIX):
+        return f"{metric}: {NO_MODEL_POPULATION}"
     return f"{metric}: {NO_POPULATION}"

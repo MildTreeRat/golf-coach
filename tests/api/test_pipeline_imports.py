@@ -9,6 +9,12 @@ The same holds for the `llm` extra since M6: `pipeline.py` imports `feedback.coa
 allowed to *use* `anthropic` but not to import it at module scope. A top-level import there would
 make the whole CLI unrunnable without a dependency it needs only when a key is configured. And for
 the `audio` extra since M11, where `audio_for` reaches for a decoder and numpy inside the call.
+
+The last test here is a different **kind** of pin and is worth reading as one. Every test above
+protects an install that might not have a library; M15 P6's protects a *rule* about a library that
+is present — `analysis/` is stdlib and `contracts` only, and a physics integrator is where that
+rule gets broken by someone being helpful. ADR-027 §Decision 1 asked for it by name before the
+module it guards was written.
 """
 
 from __future__ import annotations
@@ -195,3 +201,59 @@ def test_the_club_lookup_imports_without_anthropic() -> None:
         "golf_coach.clubs.lookup imports anthropic at module scope — it must stay inside "
         "`_sdk()` so the upload server starts without the `llm` extra"
     )
+
+
+def test_the_flight_integrator_imports_without_numpy_or_scipy() -> None:
+    """M15 P6, and ADR-027 §Decision 1 asked for this pin by name before the module existed.
+
+    `analysis/flight.py` is the most numpy-shaped code in the repo: a fixed-step RK4 over a
+    six-component state, six-element tuples added componentwise, and a cross product spelled out
+    by hand. Every one of those is a line somebody could shorten with an array, and the analysis
+    core's stdlib-only rule (ADR-008, `docs/CODE_STANDARDS.md` R2) is the only thing saying they
+    should not be. Unlike the pins above this is not about an *extra* being absent — it is about
+    a rule that has no other enforcement, because `numpy` is installed here and an import of it
+    would break nothing a test would otherwise notice.
+
+    `scipy` is checked beside it because the shortcut is not really `numpy` — it is
+    `scipy.integrate.solve_ivp`, which would replace this module's integrator, its solved landing
+    and its convergence measurements in one import, and take the per-point spin ratio and clamp
+    flag (M15 P16 draws them) with it.
+
+    The benchmark loader is checked too. `flight_model.py` is where the coefficient table lives,
+    so it is the second place an array would look natural, and it is upstream of this module —
+    an import there would fail this test rather than go unnoticed.
+
+    **M15 P8 added the third and it is the sharpest of them.** `spin_solve.py` is a root find and
+    a golden-section search written out by hand, and `scipy.optimize.brentq` and
+    `minimize_scalar` are a one-line substitution for each — with the bracket check that
+    distinguishes a one-solution band from a two-solution one, and the peak search's own handling
+    of a shot whose carry never falls, disappearing into a library that has no opinion about
+    either.
+
+    **M15 P9 added the fourth, and it is the one with the weakest pull toward a library.**
+    `flight_infer.py` holds no search of its own — it is comparisons over what `spin_solve`
+    returned. It is here anyway because it sits *between* two modules that are pinned and imports
+    both: a `numpy` arriving through it would be an import the two sharper pins could not see.
+
+    **M15 P11 added the fifth for a reason none of the others has.** `flight_measure.py` is the
+    module `analysis/engine.py` imports, so it is the one that carries whatever it pulls in into
+    *every* `analyze_swing` call — including the ones on a base install with no extras. The four
+    above are reachable only from the CLI until this one exists.
+    """
+    for module in (
+        "golf_coach.analysis.flight",
+        "golf_coach.analysis.spin_solve",
+        "golf_coach.analysis.flight_infer",
+        "golf_coach.analysis.flight_measure",
+        "golf_coach.analysis.benchmarks.flight_model",
+    ):
+        code = f"import {module}, sys; print(bool({{'numpy', 'scipy'}} & sys.modules.keys()))"
+
+        out = subprocess.run(
+            [sys.executable, "-c", code], capture_output=True, text=True, check=True
+        )
+
+        assert out.stdout.strip() == "False", (
+            f"importing {module} pulled in numpy or scipy — the analysis core is stdlib and "
+            "contracts only (ADR-008), and a physics integrator is where that rule gets broken"
+        )

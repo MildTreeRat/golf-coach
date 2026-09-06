@@ -143,6 +143,22 @@
         "retrieved_at": "2026-09-01T13:51:39.545201Z",
         "notes": "4i: Stock steel shaft was the ascending-weight True Temper AMT Tour White (offered in regular and stiff, plus graphite and other no-upcharge options); I could not confirm the published loft, lie, offset or length figures for this slot so they are left blank rather than interpolated. 5i: AMT shafts step up in weight through the set, so no single shaft weight applies; loft/lie/length left null because I am not confident of the published numbers. 6i: Lofts in this model are stronger than the companion T100 of the same generation, but I cannot recall the exact published figure, so it is left blank. 8i: Numeric specs left blank deliberately; only the stock shaft and grip are reported with confidence. 9i: Loft, lie and length left null rather than derived from the set progression. pw: Because the set lofts are strengthened, many fitters add a gap wedge; the published W loft and bounce are left blank as I cannot confirm them."
       }
+    },
+    {
+      "spec": {
+        "club": "7i",
+        "make": "Titleist",
+        "model": "T250",
+        "model_year": 2025,
+        "loft_deg": 30.5,
+        "lie_deg": 63.0,
+        "length_in": 37.0
+      },
+      "provenance": {
+        "source": "typed",
+        "retrieved_at": "2026-09-05T14:36:04.980652Z",
+        "notes": "M15 P1. The slot was declared a Titleist T150 at 32.0 deg by M12 P6's set lookup; the physical club is a 2025 Titleist T250. Loft 30.5, lie 63.0 and length 37.0 are the published figures for the T250 7 iron, read off the manufacturer's spec table -- book loft and not a measured one (ADR-026 s1). Every other spec field is left blank rather than carried over from the T150 row or interpolated across the set."
+      }
     }
   ]
 }

@@ -9,7 +9,7 @@ Usage:
 
 `scripts/analyze_bundle.py` produces one coaching paragraph and stops. This is the conversation
 after it: the swing is seeded from its stored `analysis.json`, and everything past that the model
-looks up through the same ten tools the MCP server offers external clients — the difference is
+looks up through the same eleven tools the MCP server offers external clients — the difference is
 that these are called in-process rather than over stdio (ADR-020).
 
 The transcript is stored under `settings.conversations_dir`, one JSON per conversation, so

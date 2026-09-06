@@ -1,7 +1,8 @@
-"""The MCP adapter: tool definitions over `query.py`. [M3]
+"""The MCP adapter: tool definitions over `query.py` and its siblings. [M3]
 
-Thin by construction. Every tool here validates its arguments, calls one `query` function and
-returns its result — no reading, joining or aggregating happens in this file. That is what lets
+Thin by construction. Every tool here validates its arguments, calls one function in `query.py`,
+`career.py`, `club.py` or `flight.py` and returns its result — no reading, joining or aggregating
+happens in this file. That is what lets
 the interesting half be tested without standing up a server, and what keeps the `llm` extra off
 the base install (ADR-008).
 
@@ -29,6 +30,7 @@ from mcp.server import MCPServer
 from golf_coach.contracts.caveats import (
     READING_A_BAG,
     READING_A_PERSONAL_HISTORY,
+    READING_A_SIMULATED_FLIGHT,
     READING_THIS_DATA_HONESTLY,
     TWO_AXES,
 )
@@ -43,9 +45,10 @@ from golf_coach.contracts.tool_descriptions import (
     GET_SHOT_TRENDS,
     GET_SWING,
     LIST_SESSIONS,
+    SIMULATE_FLIGHT,
 )
 from golf_coach.launch_monitor.source import ShotDataSource
-from golf_coach.mcp import career, query
+from golf_coach.mcp import career, flight, query
 from golf_coach.mcp.career import GolferProfile, MetricTrend, SessionsCompared
 
 # Imported by name rather than as `club.*`, unlike `career` and `query` above: the tool below takes
@@ -59,6 +62,7 @@ from golf_coach.mcp.club import (
     missing_golfer_bag,
     missing_golfer_club,
 )
+from golf_coach.mcp.flight import FlightView, missing_swing_flight
 from golf_coach.mcp.query import (
     NotFound,
     SessionDetail,
@@ -92,8 +96,12 @@ def instructions(*, career_tools: bool) -> str:
     learns that the briefing describes something other than this server. `READING_A_BAG` ships
     beside `READING_A_PERSONAL_HISTORY` and never instead of it: it adds only what a club changes
     and leans on that block for everything about what a withheld claim is.
+
+    `READING_A_SIMULATED_FLIGHT` is unconditional for the mirror-image reason: `simulate_flight` is
+    offered on every shape of this server, and the flight reaches a model through `get_swing`'s
+    `simulated` block even if it never calls that tool.
     """
-    blocks = [_OPENING, TWO_AXES, READING_THIS_DATA_HONESTLY]
+    blocks = [_OPENING, TWO_AXES, READING_THIS_DATA_HONESTLY, READING_A_SIMULATED_FLIGHT]
     if career_tools:
         blocks += [READING_A_PERSONAL_HISTORY, READING_A_BAG]
     return "\n\n".join(blocks) + "\n"
@@ -147,6 +155,17 @@ def build_server(
     def get_shot_by_id(shot_id: str) -> ShotView | NotFound:
         shot = query.get_shot(shot_source, shot_id)
         return shot if shot is not None else query.missing_shot(shot_id)
+
+    # Offered whether or not a golfer registry is configured, unlike the five below it. A flight
+    # borrows the loft and the handedness from the swing when they are there and flies without
+    # them when they are not — a shot whose screen printed its own spin needs neither — so the
+    # gate that makes the career tools honest would only remove an answer here.
+    @server.tool(description=SIMULATE_FLIGHT)
+    def simulate_flight(session_id: str, swing_id: str) -> FlightView | NotFound:
+        view = flight.flight_for_swing(
+            sessions_dir, shot_source, session_id, swing_id, golfers_dir=golfers_dir
+        )
+        return view if view is not None else missing_swing_flight(session_id, swing_id)
 
     if golfers_dir is not None:
         _add_career_tools(server, sessions_dir, golfers_dir)

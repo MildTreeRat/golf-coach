@@ -33,6 +33,8 @@ from golf_coach.analysis.club_profile import build_bag_profile
 from golf_coach.analysis.comparison import build_standing
 from golf_coach.analysis.dispersion import build_dispersion
 from golf_coach.analysis.tempo_trainer import build_career_tempo
+from golf_coach.api.flight_view import DEFAULT_PATH_POINTS, flight_view
+from golf_coach.api.pipeline import loft_remedy
 from golf_coach.api.state import (
     judged_metrics,
     load_analysis,
@@ -56,9 +58,11 @@ from golf_coach.contracts.club_spec import (
 )
 from golf_coach.contracts.conversation import Transcript
 from golf_coach.contracts.golfer import Golfer, Handedness, slugify
+from golf_coach.launch_monitor.screen.store import ShotStore
 from golf_coach.storage.bag_store import BagStore
 from golf_coach.storage.bundle_store import SwingBundleStore
 from golf_coach.storage.corpus import read_corpus
+from golf_coach.storage.flight_inputs import loft_for_club
 from golf_coach.storage.golfer_store import GolferStore
 from golf_coach.storage.manifest import EXPECTED_ROLES, Role, SwingManifest
 from golf_coach.storage.session_meta import (
@@ -1155,6 +1159,87 @@ def create_app(
             # holds the verdict, while *what the beats are* is this side's and must not be
             # recomputed there (ADR-023).
             "tempo_plan": resolve_tempo_plan(result),
+        }
+
+    # `def`, not `async def`, and it is the only route here that is. FastAPI runs a sync handler
+    # in a threadpool and an async one on the event loop, so the choice only matters for a handler
+    # that does real arithmetic — and this is the only one that does. Measured on this corpus:
+    # every other route answers in 3-24 ms, this one in 15 ms where the screen printed a spin and
+    # up to ~960 ms where it did not, because `spin_solve.carry_window` measures the whole
+    # carry-against-spin curve in about forty flights. Blocking the loop for a second would stall
+    # the upload page's 5 s status poll in another tab, which is a real second user on a
+    # single-user server.
+    @app.get("/api/sessions/{session_id}/swings/{swing_id}/flight", dependencies=guard)
+    def swing_flight(
+        session_id: str,
+        swing_id: str,
+        points: int = Query(DEFAULT_PATH_POINTS, ge=2, le=1000),
+    ) -> dict:
+        """The simulated ball flight for this swing's shot — the path, and what it is not. [M15 P14]
+
+        **Flown here rather than read off `analysis.json`.** The stored artifact carries the six
+        `flight_*` measurements but no path, and a path is what a viewer draws; re-integrating it
+        costs about ten milliseconds. `api/flight_view.py` holds the derivation and the reasons.
+
+        **A refusal is a 200 and a 404 is something else entirely**, and the line between them is
+        whether there is a shot to fly. Ten of the thirteen shots on disk cannot be flown — a
+        carry above the model's own peak, a 3 wood whose loft nobody has declared — and those are
+        findings about the shot that come back with `flew: false` and a reason a page can print.
+        A swing with no shot-screen photo, or one whose photo has never been read, has no flight
+        resource at all and no sentence about physics to offer; that is the 404, and it is the
+        same rule `swing_video` applies to a render that was never made.
+
+        **No OCR here.** The store is keyed on the photo's sha256 and `api/pipeline.py::_shot_for`
+        files a parse under exactly that digest, so an imported screen attaches without opening
+        the image — and a request handler is the wrong place to start PaddleOCR on a phone's
+        upload. An unread photo says so and names the two things that read it.
+        """
+        _safe(session_id, "session id")
+        _safe(swing_id, "swing id")
+        manifest = bundle_store.get_swing(session_id, swing_id)
+        if manifest is None:
+            raise HTTPException(status_code=404, detail="no such swing")
+
+        role_file = manifest.roles.get(Role.SHOT_SCREEN)
+        if role_file is None:
+            raise HTTPException(
+                status_code=404,
+                detail=(
+                    "this swing has no shot-screen photo, so there are no launch conditions to "
+                    "fly — ball flight is simulated from what the launch monitor printed"
+                ),
+            )
+        shot = ShotStore(settings.shots_dir).get(role_file.content_sha256)
+        if shot is None:
+            raise HTTPException(
+                status_code=404,
+                detail=(
+                    "this swing's shot screen has not been read yet — analyze the swing, or "
+                    "import the screen with scripts/import_shot_screens.py"
+                ),
+            )
+
+        # The two artifacts a shot has to borrow from the swing it was hit with (M15 P10): the
+        # club's loft, which picks a branch of the spin solve, and the golfer's handedness, which
+        # flips the spin axis into the integrator's sign. Both are resolved off the stores this
+        # app is already holding rather than through `flight_inputs.read_flight_inputs`, whose
+        # photo-sha256 join exists for a caller that has a shot and no manifest. This one has the
+        # manifest.
+        golfer = golfer_store.get(manifest.player_id) if manifest.player_id else None
+        loft_deg, gap = loft_for_club(
+            manifest.player_id, manifest.club, golfers_dir=golfer_store.root
+        )
+        return {
+            "session_id": session_id,
+            "swing_id": swing_id,
+            **flight_view(
+                shot,
+                club=manifest.club,
+                loft_deg=loft_deg,
+                loft_remedy=loft_remedy(gap, manifest.club),
+                handedness=golfer.handedness if golfer is not None else None,
+                points=points,
+            ),
         }
 
     @app.post("/api/sessions/{session_id}/swings/{swing_id}/golfer", dependencies=guard)

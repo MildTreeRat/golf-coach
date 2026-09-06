@@ -363,7 +363,35 @@ class SwingResult(BaseModel):
 #:                   them only approximately comparable to a heavy-measured swing — `api/pipeline.
 #:                   py::_band_estimator_note` says so on every affected result until the corpus is
 #:                   re-derived.
-ANALYSIS_VERSION = 14
+#: 14 -> 15 (2026-09-06, M15 P13): the `flight_*` family joined `measurements` — six numbers read
+#:                   off one simulated ball flight (`analysis/flight_measure.py`'s
+#:                   `FLIGHT_MEASUREMENTS`; read the membership there), integrated from the launch
+#:                   conditions the shot photo printed. Same shape of bump as `3 -> 4`, `6 -> 7`,
+#:                   `7 -> 8` and `9 -> 10`: a version-14 artifact is *missing* them rather than
+#:                   disagreeing about anything, nothing judges them — no band, no checkpoint, no
+#:                   `METRIC_TARGETS` row — so `overall_score` is byte-identical on every stored
+#:                   swing, and `reanalyze.py` is how a stored bundle acquires them.
+#:                   **What is new here is the provenance, not the arithmetic**: the six carry
+#:                   `model:flight_v1` (ADR-027 §Decision 6), so this is the first version whose
+#:                   `measurements` are not all a reading of something. Two of the six record
+#:                   conditionally, and a flight the model refuses to fly is named in `unscored`
+#:                   under an `INFERENCE_REASONS` reason instead — `refilming_helps` false, and
+#:                   never a checkpoint that failed — so a version-15 artifact can carry *fewer*
+#:                   than six of them without anything having gone wrong with the clip.
+#:                   Measured over the corpus on 2026-09-06: fifteen directories re-analysed, every
+#:                   `overall_score` and every `checkpoint_scores` entry byte-identical, five
+#:                   artifacts carrying a flight and ten a refusal.
+#:                   ⚠️ **It also swept in four measurements that owed a bump of their own.** M14's
+#:                   `hand_separation_norm`, `hand_height_norm`, `hand_offset_from_hips_norm` and
+#:                   `trail_hand_roll_deg` (2026-09-03) shipped under "no checkpoint, no band, no
+#:                   bump" — the first two right, the third against the rule at the top of this
+#:                   block and against `3 -> 4`, `6 -> 7`, `7 -> 8` and `9 -> 10`, all of which
+#:                   bumped for measurements nothing judges. `is_outdated` compares this number and
+#:                   nothing else, so no stored artifact carried them and nothing could tell: their
+#:                   honest `n` was 0 until this bump wrote them. **A band and a version answer
+#:                   different questions** — *does anything judge this* and *does a stored artifact
+#:                   still mean what it says* — and a phase that adds a measurement answers both.
+ANALYSIS_VERSION = 15
 
 
 class SwingBundleResult(BaseModel):

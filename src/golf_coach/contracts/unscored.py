@@ -30,6 +30,16 @@ solves for the standing warnings and `contracts.dispersion.METRIC_TARGETS` for t
 shared vocabulary, no shared module. `feedback`, `mcp`, `api` and `caveats` all read the one table
 below.
 
+## Three families, not one
+
+The vocabulary started as "why a *checkpoint* produced no score" and has outgrown the noun twice.
+`MEASUREMENT_REASONS` are what `analysis.measure` may report, their complement was the judging
+half, and M15 P9 added `INFERENCE_REASONS` — why a *simulated* flight could not recover an input
+the launch monitor never printed. Nothing about that third family is a checkpoint: ADR-027
+§Decision 6 gives the flight its own measurement names and no `CHECKPOINT_REGISTRY` entry. What it
+shares with the other two, and the only thing this module has ever really been about, is that the
+absence is *named* instead of being filled in.
+
 `ExcludedSwing` in `contracts.career` is the shape this mirrors deliberately — reason plus a
 human-readable `detail`, on the same principle that nothing is dropped silently. The two answer
 the same question one level apart: that one says why a *swing* is not in a corpus, this says why a
@@ -99,6 +109,43 @@ class UnscoredReason(StrEnum):
     #: shorter one is the late top (`analysis.alignment._arbitrate_tops`, M11 P7). The face-on
     #: clip alone looks fine, which is the point — nothing inside it could have found this.
     CROSS_VIEW_CONTRADICTED = "cross_view_contradicted"
+
+    #: No spin at all reproduces the carry the launch monitor printed, from the launch conditions
+    #: it printed beside it (`analysis.spin_solve`: `ABOVE_PEAK` or `BELOW_FLOOR`). A finding about
+    #: the two models rather than about the golfer — read it beside this model's own ~2.6%
+    #: disagreement with HD Golf before calling it an OCR fault, because most of the shots on disk
+    #: that land here miss by less than that (ADR-027's 2026-09-05f addendum).
+    CARRY_UNREACHABLE = "carry_unreachable"
+
+    #: Two spins fly that carry, one either side of the peak, and no loft is on record to choose
+    #: between them (ADR-027 §Decision 3: loft's only job in ball flight is this branch). Not a
+    #: capture problem and **not a dead end** — it is the one reason in this family a golfer can
+    #: clear, and M15 P10 found which half of the repair is actually outstanding here: every
+    #: 2026-08-23 swing already carries a club tag, so what is missing is the *declared loft* on
+    #: the bag entry that tag points at. Six shots on disk say `3w` and no 3 wood has ever been
+    #: declared; the repair is the bag page, not the bay.
+    NO_CLUB_LOFT = "no_club_loft"
+
+    #: The carry does not pin a spin the club could have produced. Three of `SpinSolveCase`'s
+    #: shapes arrive here and `detail` says which: either plateau, where infinitely many spins fly
+    #: exactly that carry because the coefficient table is clamped and spin has left the problem;
+    #: and the unique answer between the plateaus, which sits on the rising branch below the
+    #: peak-carry spin while the loft prior says the club spins above it.
+    SPIN_NOT_RECOVERABLE = "spin_not_recoverable"
+
+    #: Nothing on the screen fixes how far the spin axis is tilted, so the flight is simulated in
+    #: the vertical plane and its landing offline is withheld (ADR-027 §Decision 5's third branch).
+    #: The *direction* of the curve is usually known — `Shot Type` prints it in words and
+    #: face-to-path agrees with it — and a direction with no magnitude is not an axis.
+    SPIN_AXIS_UNRESOLVED = "spin_axis_unresolved"
+
+    #: The screen printed too little of the launch to fly anything — no ball speed, no launch
+    #: angle, or a launch angle at or below the horizontal, which is a ball that rolls rather than
+    #: one that flies (`analysis.flight.simulate_flight` names that guard as the caller's to own).
+    #: Fires on nothing in this repo's corpus today and exists because the OCR drops tiles one at a
+    #: time rather than all at once: one stored shot is already missing its face angle, and the
+    #: same gap in the ball-speed tile would reach the integrator as a crash instead of a reason.
+    NO_LAUNCH_CONDITIONS = "no_launch_conditions"
 
     #: The stored result predates reasons being recorded at all. Never produced by the engine — it
     #: exists so a tolerant reader can say "this artifact does not know" instead of inventing a
@@ -213,6 +260,55 @@ UNSCORED_REASONS: dict[UnscoredReason, ReasonSpec] = {
         ),
         refilming_helps=False,
     ),
+    UnscoredReason.CARRY_UNREACHABLE: ReasonSpec(
+        summary="no spin flies the ball the distance the launch monitor printed",
+        remedy=(
+            "The launch conditions and the carry the simulator printed do not fit together: no "
+            "spin rate at all makes this model fly the ball that far. Nothing to re-film and "
+            "probably nothing you did - the two flight models disagree by about as much as this "
+            "shot misses by."
+        ),
+        refilming_helps=False,
+    ),
+    UnscoredReason.NO_CLUB_LOFT: ReasonSpec(
+        summary="two spins fly that carry and no club loft is on record to choose between them",
+        remedy=(
+            "Two different spin rates fly this ball exactly as far as the simulator says it went, "
+            "and the club's loft is what decides which one it was. Tag this swing with the club "
+            "you hit, and fill that club's loft into your bag, and it resolves without "
+            "re-filming."
+        ),
+        refilming_helps=False,
+    ),
+    UnscoredReason.SPIN_NOT_RECOVERABLE: ReasonSpec(
+        summary="the printed carry does not pin a spin the club could have produced",
+        remedy=(
+            "The carry is reachable, but not by a spin rate this club plausibly makes - either "
+            "every spin above a threshold flies exactly this far, or the only one that fits is "
+            "far below anything a struck golf shot spins at. Nothing to fix; a launch monitor "
+            "that prints spin is what settles it."
+        ),
+        refilming_helps=False,
+    ),
+    UnscoredReason.SPIN_AXIS_UNRESOLVED: ReasonSpec(
+        summary="the screen printed which way the ball curved but not how far the axis is tilted",
+        remedy=(
+            "Which way this shot curved is known - the simulator prints it in words - but nothing "
+            "on the screen says how much the spin axis was tilted, so the flight is drawn "
+            "straight and where it finished sideways is left blank. Nothing to re-film."
+        ),
+        refilming_helps=False,
+    ),
+    UnscoredReason.NO_LAUNCH_CONDITIONS: ReasonSpec(
+        summary="the screen did not print enough of the launch for a flight to be simulated",
+        remedy=(
+            "Drawing the ball's path needs the ball speed and the launch angle, and this shot "
+            "did not arrive with both of them - so there is no flight to draw. Nothing about the "
+            "swing: the number never came off the photo of the simulator's screen, and re-reading "
+            "that photo is what would recover it."
+        ),
+        refilming_helps=False,
+    ),
     UnscoredReason.UNRECORDED: ReasonSpec(
         summary="this result was produced before the reason was recorded",
         remedy=(
@@ -241,6 +337,33 @@ MEASUREMENT_REASONS: frozenset[UnscoredReason] = frozenset(
         UnscoredReason.LANDMARKS_UNCONFIDENT,
         UnscoredReason.TOO_FEW_FRAMES,
         UnscoredReason.SCALE_UNAVAILABLE,
+    }
+)
+
+
+#: The reasons the **ball-flight inference** may report (ADR-027 §Decisions 3 and 5, M15 P9).
+#: Nothing about a swing produces one of these; they come from `analysis.flight_infer` failing to
+#: recover a launch condition the launch monitor's screen did not print.
+#:
+#: They are named here rather than in `analysis/` for the reason the whole module is here — `mcp`
+#: and `api` have to render them and may not import `analysis` (ADR-008) — and they are a *set*
+#: rather than a loose handful so the partition below stays a partition. Before M15 P9 the
+#: complement of `MEASUREMENT_REASONS` was exactly the judging reasons, and
+#: `tests/contracts/test_unscored.py` said so by name; a third family arriving with no name of its
+#: own would have turned that assertion into a list that grows silently.
+#:
+#: **Four reasons over `SpinSolveCase`'s seven shapes, and the split is deliberate.** The criterion
+#: here is what the *reader* must do, and for three of the four the answer is "nothing" — so the
+#: seven cases collapse onto them and `UnscoredCheckpoint.detail` carries which one it was.
+#: `analysis.spin_solve.SpinSolveCase` already names all seven and travels beside the result; a
+#: second copy of that taxonomy in this file is a second thing to keep in step.
+INFERENCE_REASONS: frozenset[UnscoredReason] = frozenset(
+    {
+        UnscoredReason.CARRY_UNREACHABLE,
+        UnscoredReason.NO_CLUB_LOFT,
+        UnscoredReason.SPIN_NOT_RECOVERABLE,
+        UnscoredReason.SPIN_AXIS_UNRESOLVED,
+        UnscoredReason.NO_LAUNCH_CONDITIONS,
     }
 )
 

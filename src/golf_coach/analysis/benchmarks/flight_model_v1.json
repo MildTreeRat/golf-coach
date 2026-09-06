@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "dataset": {
+    "name": "flight_model_v1",
+    "kind": "published_constants",
+    "assembled_on": "2026-09-05",
+    "assembled_by": "M15 P2",
+    "fitted": false,
+    "license_note": "Every number here is a published physical measurement or a standard constant, transcribed with its source. Measured coefficients are facts about a golf ball rather than expression, and eight rows of a granted US patent's data table are not a substantial reproduction of it - the same test ADR-012 applies to the GolfDB aggregate statistics.",
+    "note": "Not a fit. Nothing in this file was derived from this repo's corpus, so there is no scripts/ fitting stage under the research extra and none should be written (ADR-027 Decision 2). Provenance is per block because the five blocks come from four different sources - atmosphere and atmosphere_profile are the sea-level row and the lowest layer of one standard."
+  },
+  "model": {
+    "kind": "aero_table_vs_spin_ratio",
+    "gravity_m_s2": 9.80665,
+    "ball": {
+      "mass_kg": 0.04593,
+      "diameter_m": 0.04267,
+      "source": {
+        "citation": "R&A and USGA, Equipment Rules, Part 4 (The Ball), Rules 2 and 3",
+        "url": "https://www.randa.org/en/equipment-standards",
+        "note": "The conforming limits: weight not greater than 1.620 oz avoirdupois (45.93 g), diameter not less than 1.680 in (42.67 mm). The ball the coefficients below were measured on was 1.68 in and 1.61 oz (45.63 g), so this mass is 0.66% heavier than that ball. Coefficients are dimensionless and unaffected; the flight is not, and this is the number to revisit first if a measured ball mass ever arrives."
+      }
+    },
+    "atmosphere": {
+      "name": "isa_sea_level",
+      "density_kg_m3": 1.225,
+      "kinematic_viscosity_m2_s": 1.4607e-05,
+      "temperature_k": 288.15,
+      "pressure_pa": 101325.0,
+      "source": {
+        "citation": "ISO 2533:1975, International Standard Atmosphere, sea level",
+        "url": "https://www.iso.org/standard/7472.html",
+        "note": "The anchor. Every shot on disk was hit indoors near sea level, so this is the atmosphere every stored flight is flown in; atmosphere_profile below is the law that moves it to another altitude, and it is written as ratios against these numbers so that evaluating it at zero returns this block unchanged."
+      }
+    },
+    "atmosphere_profile": {
+      "name": "isa_troposphere",
+      "lapse_rate_k_per_m": 0.0065,
+      "gas_constant_j_kg_k": 287.05287,
+      "sutherland_beta_kg_m_s_sqrt_k": 1.458e-06,
+      "sutherland_s_k": 110.4,
+      "altitude_min_m": -2000.0,
+      "altitude_max_m": 11000.0,
+      "source": {
+        "citation": "ISO 2533:1975, International Standard Atmosphere, clauses 4.4-4.7 and 5 - the lowest layer (-2000 m to 11000 m geopotential, constant lapse rate) and the Sutherland viscosity relation",
+        "url": "https://www.iso.org/standard/7472.html",
+        "note": "The same standard the sea-level block is the zero row of, which is why the two agree exactly there by construction rather than by luck. The altitude bounds are the layer's own domain and not a golf judgement - they happen to contain every golf course on earth, from the Dead Sea at about -390 m to Tactu at about 4369 m. Geopotential and geometric altitude are treated as equal: they differ by 2.5 m at 4000 m, which is 0.06% of the altitude and far below the difference between a standard atmosphere and a real day's weather.",
+        "reynolds_note": "sutherland_beta is stored and nothing evaluates it, for the same reason the Reynolds column below is stored: the profile is written as ratios, which need only sutherland_s_k, and a later absolute evaluation should not have to re-source the standard. The two are cross-checked - beta and S reproduce the committed kinematic viscosity to the precision it is stored at."
+      }
+    },
+    "spin_decay": {
+      "kind": "exponential",
+      "rate_per_s": 0.04,
+      "source": {
+        "citation": "Lyu, Kensrud, Smith and Tosaya, Aerodynamics of Golf Balls in Still Air, Proceedings 2018, 2, 238, section 3.3",
+        "url": "https://doi.org/10.3390/proceedings2060238",
+        "note": "Their trajectory simulation used '3000 rpm backspin with 4% per second spin decay', citing TrackMan Newsletter #7. Published CC BY 4.0. A single rate independent of speed and spin ratio is the simplification here; Smits and Smith (1994) measured decay as a function of both."
+      }
+    },
+    "coefficients": {
+      "index": "spin_ratio",
+      "orientation_rule": "mean_of_pp_and_ph",
+      "out_of_range": "clamp",
+      "source": {
+        "citation": "US 7,156,757 B2 (Acushnet Company, 'Golf ball with improved flight performance', published 2007-01-02), Table 3",
+        "url": "https://patents.google.com/patent/US7156757B2/en",
+        "note": "Measured aerodynamic characteristics of a 1.68 in, 1.61 oz ball with a 392-dimple icosahedron pattern, in the two seam orientations the patent reports (PP and PH). The averaging rule is the patent family's own: US 6,945,880 B2 states its coefficients 'are obtained from measuring the coefficients in the PH and PP orientations and averaging these two values'.",
+        "reynolds_note": "The Reynolds number is stored because the source table pairs one with each spin ratio - the eight rows are points along a driver's flight, where the ball slows (Re falls) as the spin ratio rises. Reading the table against spin ratio alone therefore imports that pairing (ADR-027 Decision 1 chose the spin-ratio index). Nothing evaluates this column today; it is here so a later 2-D read does not have to re-source the table."
+      },
+      "rows": [
+        {"spin_ratio": 0.085, "reynolds": 230000, "cl_pp": 0.144, "cd_pp": 0.219, "cl_ph": 0.138, "cd_ph": 0.217},
+        {"spin_ratio": 0.095, "reynolds": 207000, "cl_pp": 0.159, "cd_pp": 0.216, "cl_ph": 0.154, "cd_ph": 0.214},
+        {"spin_ratio": 0.106, "reynolds": 184000, "cl_pp": 0.169, "cd_pp": 0.220, "cl_ph": 0.166, "cd_ph": 0.216},
+        {"spin_ratio": 0.122, "reynolds": 161000, "cl_pp": 0.185, "cd_pp": 0.221, "cl_ph": 0.181, "cd_ph": 0.221},
+        {"spin_ratio": 0.142, "reynolds": 138000, "cl_pp": 0.202, "cd_pp": 0.232, "cl_ph": 0.199, "cd_ph": 0.233},
+        {"spin_ratio": 0.170, "reynolds": 115000, "cl_pp": 0.229, "cd_pp": 0.252, "cl_ph": 0.228, "cd_ph": 0.252},
+        {"spin_ratio": 0.213, "reynolds": 92000, "cl_pp": 0.264, "cd_pp": 0.281, "cl_ph": 0.270, "cd_ph": 0.285},
+        {"spin_ratio": 0.284, "reynolds": 69000, "cl_pp": 0.278, "cd_pp": 0.305, "cl_ph": 0.290, "cd_ph": 0.309}
+      ]
+    }
+  }
+}

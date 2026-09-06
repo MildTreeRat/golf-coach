@@ -54,6 +54,7 @@ from golf_coach.contracts.feedback import CoachingProvenance
 from golf_coach.contracts.placements import PLACEMENTS_BY_NAME
 from golf_coach.contracts.shot import ShotData
 from golf_coach.contracts.swing import CheckpointScore, Measurement, SwingBundleResult
+from golf_coach.contracts.unscored import INFERENCE_REASONS
 
 #: Big enough that adaptive thinking plus a short paragraph never truncates. Thinking is ON by
 #: default on Opus 5 and `max_tokens` bounds thinking *and* response text together, so sizing
@@ -247,7 +248,14 @@ def build_brief(result: SwingBundleResult) -> str:
         out.append("- none scored")
 
     out.append("")
-    if swing.unscored:
+    # Split by family [M15 P11]. Both halves are absences named in the same list, and the heading
+    # below is true of only one of them: a checkpoint that could not be scored *was* going to be in
+    # `overall_score`, and a `flight_*` measurement never was. Telling a coaching model that a
+    # simulated carry was "excluded from overall_score" invites it to explain a score that never
+    # moved. `contracts.unscored.INFERENCE_REASONS` is what tells them apart.
+    unscored = [entry for entry in swing.unscored if entry.reason not in INFERENCE_REASONS]
+    flight = [entry for entry in swing.unscored if entry.reason in INFERENCE_REASONS]
+    if unscored:
         # The reason goes in the brief, not just the name. A model told only that tempo is missing
         # will reach for the likeliest explanation and state it — and "your camera moved" is a
         # confident wrong answer to give a golfer whose clip was fine and whose band simply does
@@ -257,9 +265,17 @@ def build_brief(result: SwingBundleResult) -> str:
             "unscored (attempted but could not be scored, and excluded from overall_score"
             " rather than counted as zero):"
         )
-        out += [f"- {entry.name}: {entry.spec.summary}" for entry in swing.unscored]
+        out += [f"- {entry.name}: {entry.spec.summary}" for entry in unscored]
     else:
         out.append("unscored: none - every checkpoint was scored on this swing")
+
+    if flight:
+        out.append("")
+        out.append(
+            "simulated ball flight (a model over the printed launch conditions, in no score at"
+            " all - not a checkpoint and never part of overall_score):"
+        )
+        out += [f"- {entry.name}: {entry.spec.summary}" for entry in flight]
 
     placements = _placement_lines(swing.measurements)
     out += ["", "POPULATION PLACEMENT (recorded, never scored - nothing here has a band)"]

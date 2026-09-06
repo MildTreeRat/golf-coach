@@ -22,6 +22,11 @@ from golf_coach.contracts.swing import ANALYSIS_VERSION
 from golf_coach.storage.corpus import narrow_to, read_corpus
 
 LM = "launch_monitor:hd_golf"
+#: The two provenances M15 P12 registered. Spelled out rather than imported from the modules that
+#: emit them, so a source string renamed in `analysis` fails here as a corpus-counting change
+#: rather than being silently followed.
+POPULATION = "population:golfdb"
+FLIGHT = "model:flight_v1"
 
 
 def _at(day: int) -> datetime:
@@ -162,6 +167,57 @@ def test_an_unrecognised_source_counts_per_swing_and_says_so(
 
     assert corpus.unknown_sources == ["radar:trackman"]
     assert corpus.metric_counts == {"club_lag_deg": 1}
+
+
+def test_a_placement_is_still_an_unknown_source_and_that_is_the_deferral(
+    corpus_dir, swing, analysis, metric
+) -> None:
+    """M8's placements stay unregistered, and this is the pin that says so out loud.
+
+    M15 P12 registered `model:` and very nearly took this prefix with it, because doing so looks
+    free: `read_corpus` groups *by* `face_on_sha256`, so `CorpusSwing` is one-to-one with it and
+    the `swing:{ref}` fallback partitions a corpus exactly as `pose:` would. No count moves and
+    nothing goes red — which is the hazard, not the reassurance. ADR-022's fourth addendum defers
+    whether a distance-from-a-tour-population is a personal quantity at all, and notes that the two
+    down-the-line placements are read off a clip `CorpusSwing` carries no hash for. Registering the
+    prefix would answer both by accident.
+    """
+    placement = analysis([metric("tour_joint_distance", 2.4, source=POPULATION, unit="sd")])
+    swing(corpus_dir, "2026-08-10", "1", face_on="clip-a", analysis=placement)
+
+    corpus = read_corpus(corpus_dir, "aaron")
+
+    assert corpus.unknown_sources == [POPULATION], (
+        "if this now passes empty, ADR-022's fourth addendum has been decided — update it, and "
+        "give the two `_dtl` placements a dedupe key that is not the face-on clip's"
+    )
+
+
+def test_a_simulated_flight_dedupes_on_the_shot_photo_and_not_the_clip(
+    corpus_dir, swing, analysis, metric, shot
+) -> None:
+    """ADR-027's flight is a reading of the tile, not of the swing that produced it.
+
+    Two genuinely different swings, one shot photo attached to both — the shape
+    `bundle_store`'s "newest swing missing this role" rule can produce. The integrator is fed the
+    tile's launch conditions and nothing the body did, so flying it twice is one flight, however
+    much the two clips differ. Under `swing:{ref}` this counted 2 and reported a dispersion over a
+    single set of launch conditions.
+    """
+    both = analysis(
+        [
+            metric("head_sway_norm", 0.25),
+            metric("flight_carry_yds", 141.2, source=FLIGHT, unit="yards"),
+        ],
+        shot=shot(needs_review=False),
+    )
+    swing(corpus_dir, "2026-08-10", "1", face_on="clip-a", shot_screen="shot-a", analysis=both)
+    swing(corpus_dir, "2026-08-10", "2", face_on="clip-b", shot_screen="shot-a", analysis=both)
+
+    corpus = read_corpus(corpus_dir, "aaron")
+
+    assert corpus.metric_counts["head_sway_norm"] == 2
+    assert corpus.metric_counts["flight_carry_yds"] == 1
 
 
 # --------------------------------------------------------------------------- attribution
@@ -390,6 +446,31 @@ def test_a_trusted_shot_does_contribute(corpus_dir, swing, analysis, metric, sho
     swing(corpus_dir, "2026-08-10", "1", face_on="clip-a", analysis=trusted)
 
     assert read_corpus(corpus_dir, "aaron").metric_counts == {"face_to_path_deg": 1}
+
+
+def test_a_flagged_parse_takes_the_simulated_flight_with_it(
+    corpus_dir, swing, analysis, metric, shot
+) -> None:
+    """The half of M15 P12 that moves a number, and the reason `model:` keys on the shot photo.
+
+    A flight is integrated *from* the flagged tile's launch conditions, so it is exactly as suspect
+    as the tile — more so, since the model's own error rides on top. Before P12 it fell through to
+    `swing:{ref}`, which has no flagged-parse refusal in it, and a simulated carry counted as a
+    sample while the `carry_distance_yds` printed beside it on that same screen did not.
+    """
+    flagged = analysis(
+        [
+            metric("head_sway_norm", 0.25),
+            metric("flight_carry_yds", 141.2, source=FLIGHT, unit="yards"),
+        ],
+        shot=shot(),
+    )
+    swing(corpus_dir, "2026-08-10", "1", face_on="clip-a", analysis=flagged)
+
+    corpus = read_corpus(corpus_dir, "aaron")
+
+    assert corpus.swings[0].shot_needs_review is True
+    assert corpus.metric_counts == {"head_sway_norm": 1}
 
 
 # ------------------------------------------------------------------ the engine-generation axis

@@ -42,6 +42,7 @@ from pydantic import BaseModel, Field
 
 from golf_coach.api.state import load_analysis, load_state, resolve_placements
 from golf_coach.contracts.alignment import AlignmentQuality
+from golf_coach.contracts.career import MODEL_SOURCE_PREFIX
 from golf_coach.contracts.caveats import (
     ALIGNMENT_CAVEAT,
     ONLY_CHECKPOINTS_ARE_JUDGED,
@@ -197,6 +198,48 @@ class PlacementView(BaseModel):
     detail: str
 
 
+class SimulatedView(BaseModel):
+    """One number this repo modelled rather than measured, with the sentence that says so. [M15 P17]
+
+    The second exception to `_measurements`' rule that a row is worth a name and a float, and it
+    is `PlacementView`'s reason arriving from the other direction. There the detail carries the
+    *meaning* a bare number loses; here it carries the **provenance**, and losing that is worse
+    than losing meaning: a simulated carry reduced to `flight_carry_yds: 122.36` is
+    indistinguishable from something a launch monitor printed, and the whole of ADR-027 §Decision 6
+    is the argument that those two must never be poolable.
+
+    ⚠️ **This shape exists because they were poolable here for a milestone.** M15 P11 put the six
+    `flight_*` numbers into `SwingResult.measurements` with `source` and `detail` carrying the
+    provenance, and P13 wrote them onto every stored artifact — but `_measurements` flattens to
+    name -> value, so what reached a coaching model was six bare floats under a field description
+    that calls them "quantities measured off this swing". The page had said SIMULATED on every row
+    since P15 and the CLI since P7; this surface, the one that talks, said nothing.
+
+    Membership is decided by `Measurement.source` through `contracts.career.MODEL_SOURCE_PREFIX`,
+    not by the `flight_` name prefix — the same choice `_measurements` records for placements, and
+    for the same reason: a name test silently reclassifies whatever gets named that way later, in
+    the direction that drops the caveat. The prefix is already the repo's answer to "which
+    artifact is this a reading of" (`CorpusSwing.artifact_key`), so a second model's numbers land
+    here the day they exist.
+    """
+
+    name: str
+    value: float
+    unit: str
+    source: str = Field(
+        description=(
+            "Which model produced it, versioned with the artifact it evaluates — "
+            "`model:flight_v1`. Never an instrument."
+        )
+    )
+    detail: str = Field(
+        description=(
+            "What the number is and what it is not, in the words the engine recorded it with. "
+            "Read it before describing the number; SIMULATED and SOLVED are not the same claim."
+        )
+    )
+
+
 class UnscoredView(BaseModel):
     """One checkpoint that produced no score, and why — carried, never inferred.
 
@@ -259,7 +302,7 @@ class SwingView(BaseModel):
     measurements: dict[str, float] = Field(
         default_factory=dict,
         description=(
-            "Quantities measured off this swing that are NOT judged: no benchmark band exists for "
+            "Quantities MEASURED off this swing that are NOT judged: no benchmark band exists for "
             "them, so there is no good or bad value and no percentile. Report them only if "
             f"asked for a raw number, and never say whether one is good — "
             f"{ONLY_CHECKPOINTS_ARE_JUDGED}. `face_to_path_deg` is the exception worth knowing: "
@@ -268,7 +311,22 @@ class SwingView(BaseModel):
             "`downswing_ms` are a second kind of exception: they will never have a band, because "
             "tempo is already scored as the ratio of the two and a band on each half would judge "
             "one fundamental three times (ADR-023). They are still the honest answer to which "
-            "*half* is off, which the ratio alone cannot tell you."
+            "*half* is off, which the ratio alone cannot tell you. Nothing simulated is in here — "
+            "see `simulated`."
+        ),
+    )
+    simulated: list[SimulatedView] = Field(
+        default_factory=list,
+        description=(
+            "Numbers a MODEL produced for this swing rather than an instrument measuring "
+            "anything: the ball flight ADR-027 integrates from the launch conditions the "
+            "simulator printed. Split out of `measurements` rather than mixed into it because a "
+            "simulated carry and a measured one are different kinds of quantity wearing the same "
+            "unit, and the difference does not survive being reduced to a bare number. Say a "
+            "number here is simulated whenever you quote one, read each row's `detail` before "
+            "describing it, and never pool one with a printed figure or average the two. "
+            "`simulate_flight` is the tool that returns the same flight with what it must be read "
+            "with."
         ),
     )
     population: list[PlacementView] = Field(
@@ -279,6 +337,14 @@ class SwingView(BaseModel):
             "rather than mixed into it because these are the entries whose meaning does not "
             "survive being reduced to a number — read each one's `detail`, `calibrated` and "
             "`view` before saying anything about it."
+        ),
+    )
+    analysis_version: int | None = Field(
+        default=None,
+        description=(
+            "Which generation of the engine wrote this result. Not a quality score: an older "
+            "number means the swing has not been re-analyzed since the engine moved on, which is "
+            "what `status: stale` cannot tell you, because staleness is about the uploads."
         ),
     )
     alignment_quality: str | None = None
@@ -392,7 +458,9 @@ def get_swing(sessions_dir: Path, session_id: str, swing_id: str) -> SwingView |
         tips=[_tip(t) for t in _list(feedback.get("tips"))],
         unscored=[_unscored(entry) for entry in _list(swing.get("unscored"))],
         measurements=_measurements(swing),
+        simulated=_simulated(swing),
         population=placements,
+        analysis_version=_version(analysis),
         alignment_quality=quality,
         alignment_caveat=caveat,
         shot=_shot_view_from_dict(shot_raw) if isinstance(shot_raw, dict) else None,
@@ -587,6 +655,12 @@ def _measurements(swing: dict[str, Any]) -> dict[str, float]:
     their detail is not provenance but meaning — see `PlacementView`. Membership comes from
     `contracts.placements.PLACEMENTS_BY_NAME` rather than a name prefix: a `tour_` test would have
     silently reclassified anything later named that way, in the direction that loses the caveat.
+
+    **The simulated rows are the second exception, and they leave for the opposite reason** (M15
+    P17): what a bare float loses there is not the meaning but the fact that nothing measured it.
+    See `SimulatedView`. A row with no `source` at all stays here — that is every artifact written
+    before provenance was recorded, and calling one of those simulated on no evidence would be the
+    same error pointing the other way.
     """
     flat: dict[str, float] = {}
     for entry in _list(swing.get("measurements")):
@@ -595,8 +669,57 @@ def _measurements(swing: dict[str, Any]) -> dict[str, float]:
         name, value = entry.get("name"), _number(entry.get("value"))
         if not isinstance(name, str) or value is None or name in PLACEMENTS_BY_NAME:
             continue
+        if _is_modelled(entry):
+            continue
         flat[name] = value
     return flat
+
+
+def _is_modelled(entry: dict[str, Any]) -> bool:
+    """Whether one stored measurement row is a model's output rather than a reading."""
+    source = entry.get("source")
+    return isinstance(source, str) and source.startswith(MODEL_SOURCE_PREFIX)
+
+
+def _simulated(swing: dict[str, Any]) -> list[SimulatedView]:
+    """The `model:`-sourced half of `measurements`, with the provenance a float cannot carry.
+
+    Unit and detail are kept here precisely where `_measurements` drops them: for a modelled
+    number the detail is the sentence that stops it being read as a measurement, and it is the
+    same string the results page prints and the engine stored.
+
+    A row missing its unit or detail is still returned, with what it has. This reads artifacts,
+    and an artifact from a build that recorded less is not a reason to withhold the number — it is
+    a reason not to claim more about it than is on disk.
+    """
+    rows: list[SimulatedView] = []
+    for entry in _list(swing.get("measurements")):
+        if not isinstance(entry, dict) or not _is_modelled(entry):
+            continue
+        name, value = entry.get("name"), _number(entry.get("value"))
+        if not isinstance(name, str) or value is None:
+            continue
+        rows.append(
+            SimulatedView(
+                name=name,
+                value=value,
+                unit=str(entry.get("unit", "")),
+                source=str(entry.get("source", "")),
+                detail=str(entry.get("detail", "")),
+            )
+        )
+    return rows
+
+
+def _version(analysis: dict[str, Any]) -> int | None:
+    """The engine generation that wrote this artifact, or None when it does not say.
+
+    `api.state.stored_analysis_version` reads the same field and coerces an unreadable one to 0,
+    which is right for a staleness check ("old enough that I cannot tell"). Here the honest answer
+    is `None`: a model told a version of 0 would report it as a number, and there is no engine 0.
+    """
+    version = analysis.get("analysis_version")
+    return version if isinstance(version, int) and not isinstance(version, bool) else None
 
 
 def _alignment_view(alignment: dict[str, Any]) -> tuple[str | None, str | None]:

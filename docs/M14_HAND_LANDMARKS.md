@@ -20,6 +20,16 @@ warning in `measure.py` firing for the first time. **What is unverified is the o
 browser** — P1's pins are unit tests, stored `aligned.mp4` clips carry the old dots until
 re-rendered, and nobody has looked at a freshly rendered one.
 
+> **Addendum (2026-09-06, M15 P13): "nothing needed re-analysing" was the wrong half of the
+> sentence.** No stored *score* moved — that part holds, and every checkpoint number survived M15's
+> re-run byte-identical. But four new entries in `measurements` are exactly what
+> `ANALYSIS_VERSION`'s own rule bumps for (*"a new measurement"*), and `3 -> 4`, `6 -> 7`, `7 -> 8`
+> and `9 -> 10` are four precedents that bumped for measurements nothing judges. Because this
+> milestone read the band question and the version question as one question, `is_outdated` could
+> not see that **no stored artifact carried these four metrics at all**: their honest `n` was 0 for
+> three days, and M15 P13's bump is what finally wrote them (`n = 13` now). The band decision was
+> right and the version decision was not; ADR-027's 2026-09-06b addendum carries the rule.
+
 ## What this milestone is
 
 It began as "can we move the plot points from MediaPipe to better spots — fewer in the head, more

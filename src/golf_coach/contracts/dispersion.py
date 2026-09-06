@@ -605,6 +605,28 @@ METRIC_TARGETS: dict[str, MetricTarget] = {
             "is a reason it makes a good metronome, not a reason to score it"
         ),
     ),
+    # **The six `flight_*` measurements are deliberately absent** [M15 P11]. There is a third
+    # production registry — `analysis.flight_measure.FLIGHT_MEASUREMENTS`, ADR-027 §Decision 6's
+    # simulated ball flight — and none of its names has a row here, which is a choice rather than
+    # an oversight. `test_dispersion.py` asserts the absence so that adding one has to be argued.
+    #
+    # A dispersion finding is a claim about how repeatable *this golfer* is. Five of the six are a
+    # deterministic function of measurements that are already in this table — the flight is
+    # integrated from the printed ball speed, launch angle and start line — so a scatter finding on
+    # `flight_carry_yds` would re-report `carry_distance_yds`'s own spread with a model's error
+    # folded into it, under a second name. That is the pooling hazard §Decision 6 names, arriving
+    # one layer out: the `flight_` prefix keeps the two out of one *mean*, and this keeps them out
+    # of one *finding*.
+    #
+    # The sixth, `flight_spin_rpm`, is refused for a different reason and a stronger one: it is not
+    # measured at all. It is the spin the integrator needs in order to agree with the printed
+    # carry, and a tolerance for it would be an error floor for a *model*, whose known error is an
+    # inversion the gate measured rather than an instrument's scatter (ADR-027's 2026-09-05c
+    # addendum). There is no honest number to put in the column.
+    #
+    # `analysis.dispersion` refuses out loud for an unregistered metric — the `unavailable` reason
+    # names this table — so nothing is silent. Nothing here is judged either: no band, no
+    # `ranges.json` row, no `CHECKPOINT_REGISTRY` entry.
 }
 
 #: How much larger the pooled spread must be than the within-session spread before it is worth

@@ -15,10 +15,13 @@ variance is the whole reason career mode is worth building (dispersion splits a 
 timing cause without seeing the body). A confident "your face angle is remarkably repeatable" built
 out of a re-upload is the exact failure this milestone was deferred to avoid.
 
-**Two dedupe keys, because a measurement's `n` depends on which artifact it came from.**
-`Measurement.source` is `pose:face_on` for the seven pose metrics and `launch_monitor:hd_golf` for
-`face_to_path_deg` and `start_line_deg`. So a pose metric's sample count is the number of distinct
-**face-on clips**, and a shot metric's is the number of distinct **shot photos**. They agree today
+**Two dedupe keys, because a measurement's `n` depends on which artifact it came from — and
+that is the artifact it was *derived from*, not the instrument that named it.** `Measurement.source`
+is `pose:face_on` for the pose metrics, `launch_monitor:hd_golf` for `face_to_path_deg` and
+`start_line_deg`, and `model:flight_v1` for ADR-027's simulated flight, which keys on the **shot
+photo** because the integrator is fed that tile's launch conditions and nothing the golfer's body
+did. So a pose metric's sample count is the number of distinct **face-on clips**, and a shot
+metric's is the number of distinct **shot photos**. They agree today
 and are free to diverge, in one direction: `bundle_store`'s "newest swing missing this role" rule
 can attach one shot photo to two genuinely different swings, which is two pose samples and one
 launch-monitor sample. Counting both on a single all-three-roles key would report 2 for
@@ -57,6 +60,37 @@ from golf_coach.contracts.swing import Measurement
 #: visible, because `CareerCorpus.unknown_sources` names it rather than absorbing it.
 POSE_SOURCE_PREFIX = "pose:"
 LAUNCH_MONITOR_SOURCE_PREFIX = "launch_monitor:"
+#: ADR-027's simulated flight, and the one provenance that is not a reading of anything — so it is
+#: versioned with the coefficient artifact it evaluates (`model:flight_v1`), and a re-sourced table
+#: gets a new name rather than quietly changing what the old one meant. **Registering this one does
+#: move counts**, in the direction the fallback had wrong: a flight is flown from the shot tile's
+#: launch conditions, so it inherits the photo's identity *and* ADR-014's flagged-parse refusal.
+#: Under `swing:{ref}` a flight simulated off a parse flagged for review counted as a sample while
+#: the `carry_distance_yds` printed beside it on that same tile did not.
+MODEL_SOURCE_PREFIX = "model:"
+
+#: Every prefix `artifact_key` recognises, in one place because two callers test membership: the
+#: dispatch itself, and `count_metrics`'s unknown-source report. The two drifting apart is worse
+#: than either being wrong alone — a source would take a real artifact key *and* be reported as
+#: unrecognised, or be absorbed by a key that does not fit it with nothing naming the fact.
+KNOWN_SOURCE_PREFIXES = (
+    POSE_SOURCE_PREFIX,
+    LAUNCH_MONITOR_SOURCE_PREFIX,
+    MODEL_SOURCE_PREFIX,
+)
+
+# ⚠️ **`population:golfdb` is missing from that tuple on purpose, and adding it is a decision
+# rather than a tidy-up.** M15 P12 registered `model:` beside it and nearly took this one along:
+# the counts do not move (`read_corpus` groups *by* `face_on_sha256`, so `CorpusSwing` is
+# one-to-one with it and the `swing:{ref}` fallback partitions a corpus exactly as `pose:` would),
+# and every test stays green, which is the whole hazard. ADR-022's fourth addendum defers two
+# questions this would answer by accident: whether a distance-from-a-tour-population is a personal
+# quantity at all — the answer may be `None` here rather than a key — and, if it is, that the two
+# down-the-line placements are read off a clip `CorpusSwing` carries no hash for, so `pose:` would
+# over-count them exactly where the shot photo over-counted before it was split out. The bay
+# session is the evidence, `tests/analysis/test_baseline.py
+# ::test_a_placement_pools_as_a_metric_today_and_that_is_deferred` is the pin, and until then this
+# prefix staying in `CareerCorpus.unknown_sources` is the deferral being visible rather than a gap.
 
 
 class ExclusionReason(StrEnum):
@@ -221,10 +255,16 @@ class CorpusSwing(BaseModel):
         Keys are namespaced (`pose:` / `shot:` / `swing:`) so a clip hash can never collide with a
         photo hash. Returning the same key from two swings is the assertion that they are one
         reading; returning None is the assertion that there is no reading here at all.
+
+        **Three prefixes map onto two keys, and the mapping is "derived from" rather than "named
+        by".** `model:` is ADR-027 flying the shot tile's launch conditions, so it dedupes on the
+        photo rather than on the swing — refusal included, because a flight simulated from a parse
+        flagged for review is exactly as suspect as the parse. `population:` is deliberately absent;
+        see the note under `KNOWN_SOURCE_PREFIXES`.
         """
         if measurement.source.startswith(POSE_SOURCE_PREFIX):
             return f"pose:{self.face_on_sha256}"
-        if measurement.source.startswith(LAUNCH_MONITOR_SOURCE_PREFIX):
+        if measurement.source.startswith((LAUNCH_MONITOR_SOURCE_PREFIX, MODEL_SOURCE_PREFIX)):
             # A flagged parse contributes nothing rather than a suspect sample — the rule
             # `mcp.query.get_session_summary` already applies before averaging a shot metric.
             if self.shot_needs_review or self.shot_sha256 is None:
@@ -302,9 +342,11 @@ class CareerCorpus(BaseModel):
     unknown_sources: list[str] = Field(
         default_factory=list,
         description=(
-            "`Measurement.source` values matching neither known prefix, sorted. They fall back to "
-            "swing identity for counting; naming them here is what stops a new provenance from "
-            "silently acquiring the wrong sample size."
+            "`Measurement.source` values matching no prefix in `KNOWN_SOURCE_PREFIXES`, sorted. "
+            "They fall back to swing identity for counting; naming them here is what stops a new "
+            "provenance from silently acquiring the wrong sample size. **Not a to-do list**: "
+            "`population:golfdb` is in it by decision (ADR-022's fourth addendum), so a reader "
+            "checking this must ask what each entry is waiting on rather than register it."
         ),
     )
 
@@ -454,6 +496,9 @@ def count_metrics(swings: Sequence[CorpusSwing]) -> tuple[dict[str, int], list[s
     needs it on a bare list *before* there is a corpus to call it on. `narrowed_to` is its second
     caller, and that is what moved it here from the reader in M9 P15: ADR-008 needed the filter
     reachable from `analysis`, and the filter cannot recompute its counts without this.
+
+    The membership test reads `KNOWN_SOURCE_PREFIXES` rather than naming prefixes of its own, so a
+    provenance registered in `artifact_key` cannot go on being reported as unrecognised here.
     """
     artifacts: dict[str, set[str]] = {}
     unknown: set[str] = set()
@@ -462,10 +507,7 @@ def count_metrics(swings: Sequence[CorpusSwing]) -> tuple[dict[str, int], list[s
         if not swing.counts_toward_metrics():
             continue
         for measurement in swing.measurements:
-            if not (
-                measurement.source.startswith(POSE_SOURCE_PREFIX)
-                or measurement.source.startswith(LAUNCH_MONITOR_SOURCE_PREFIX)
-            ):
+            if not measurement.source.startswith(KNOWN_SOURCE_PREFIXES):
                 unknown.add(measurement.source)
             key = swing.artifact_key(measurement)
             if key is None:

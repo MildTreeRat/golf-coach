@@ -28,6 +28,7 @@ import pytest
 
 from golf_coach.contracts.checkpoints import CHECKPOINT_REGISTRY
 from golf_coach.contracts.placements import POPULATION_PLACEMENT_REGISTRY
+from golf_coach.contracts.swing import ANALYSIS_VERSION
 
 REPO = Path(__file__).resolve().parent.parent
 DOCS = REPO / "docs"
@@ -542,6 +543,76 @@ def test_each_adr_row_states_that_adrs_own_addendum_count() -> None:
         assert claimed == actual, (
             f"ADR-{number} row claims {claimed} addenda; {filename} has {actual}"
         )
+
+
+#: `**eleven addenda**` / `**Three addenda at the foot**` — an ADR counting its own corrections in
+#: its Status section. Words rather than digits, which is how both ADRs that do this write it, and
+#: `\s+` rather than a space because ADR-027 wraps between the two: the first version of this pin
+#: required a literal space, matched nothing there, and passed over the very error it was written
+#: for.
+_SELF_COUNT = re.compile(r"\*\*(\w+)\s+addenda", re.IGNORECASE)
+_IN_WORDS = {
+    word: value
+    for value, word in enumerate(
+        "zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen "
+        "fifteen sixteen seventeen eighteen nineteen twenty".split()
+    )
+}
+
+
+def test_an_adr_that_counts_its_own_addenda_counts_them_correctly() -> None:
+    """The map's per-row count has a pin; an ADR's own header did not, and had gone stale.
+
+    [M15 P15]
+
+    `test_each_adr_row_states_that_adrs_own_addendum_count` reads `docs/README.md`, so an ADR that
+    states the number in its *own* Status section states it in the one place nothing checks — and
+    ADR-027 was found here saying "eleven addenda" over twelve of them, with the bullet list under
+    it stopping a phase short. That header is the first thing a reader of a long ADR sees and it
+    is exactly the reader who most needs the corrections, so an undercount there points them at a
+    decision reality has already moved.
+
+    Only ADRs that make the claim are checked. Not making it is fine — most do not.
+    """
+    for path in sorted(DECISIONS.glob("*.md")):
+        text = _read(path)
+        stated = _SELF_COUNT.search(text)
+        if stated is None:
+            continue
+        word = stated.group(1).lower()
+        assert word in _IN_WORDS, (
+            f"{path.name} counts its addenda as '{word}', which this pin cannot read — spell it "
+            "in words up to twenty, or take the count out of the prose"
+        )
+        actual = len(_ADDENDUM.findall(text))
+        assert _IN_WORDS[word] == actual, (
+            f"{path.name} says it has {word} ({_IN_WORDS[word]}) addenda; it has {actual}"
+        )
+
+
+def test_the_version_ledger_documents_the_installed_version() -> None:
+    """`ANALYSIS_VERSION` and the comment block above it move together, or neither moves.
+
+    That block is the only place that says what an older artifact is *missing* versus what it
+    **disagrees** about, and the difference decides whether a stored swing may be compared against
+    a fresh one or has to be re-run first. A bump with no entry is this file's own failure mode —
+    prose that has quietly stopped describing the code — and nothing else in the suite would see
+    it: every test here reads the constant, not the paragraph explaining it. [M15 P13]
+    """
+    text = _read(REPO / "src" / "golf_coach" / "contracts" / "swing.py")
+    documented = {int(n) for n in re.findall(r"^#:\s*\d+ -> (\d+) \(", text, re.MULTILINE)}
+    documented |= {int(n) for n in re.findall(r"^#:\s+(\d+)\s\s+\S", text, re.MULTILINE)}
+
+    assert documented, (
+        "no version ledger parsed out of contracts/swing.py — has its format changed?"
+    )
+
+    missing = sorted(set(range(1, ANALYSIS_VERSION + 1)) - documented)
+    assert not missing, (
+        f"ANALYSIS_VERSION is {ANALYSIS_VERSION}; the ledger in contracts/swing.py documents no "
+        f"entry for {missing} — say what a stored artifact from the older engine is missing or "
+        "disagrees about, in the same edit as the bump"
+    )
 
 
 # --------------------------------------------------------------------- tiers and routing
