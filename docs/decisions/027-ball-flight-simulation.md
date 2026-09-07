@@ -1,9 +1,9 @@
 # ADR-027: Ball-flight simulation — the model the launch angle was recorded for
 
 ## Status
-**Accepted** 2026-09-04, and **built** — P1 through P18 have landed, so this document is no longer
+**Accepted** 2026-09-04, and **built** — P1 through P19 have landed, so this document is no longer
 ahead of its code. The phases are M15, whose section in [ROADMAP.md](../../ROADMAP.md) this
-document's P0 wrote alongside it. Read the **fifteen addenda** before any claim in the body: they
+document's P0 wrote alongside it. Read the **sixteen addenda** before any claim in the body: they
 are where reality corrected this document, and on the points they touch they are the account that
 holds — as are the counts of what is on disk in §Context:
 
@@ -81,6 +81,13 @@ holds — as are the counts of what is on disk in §Context:
   provenance lives in the two fields it drops. It also found that M15 P10's join runs the wrong
   way for this question — three swings on this corpus share one shot photo — and it is the first
   surface anywhere that can **see** the 2026-09-06c seam rather than only re-fly past it.
+- **2026-09-06g (P19)** is the perspective view, added because the two panels P15 built are not
+  what a golfer means by seeing a shot. It corrects P15's rationale rather than overturning it:
+  a camera really does foreshorten both questions at once, so the answer is a **third** panel that
+  is captioned as unmeasurable, not a replacement for the two that can be read. Its own finding is
+  that the top of a perspective frame is **not the apex** — a camera sees angular elevation, which
+  peaks earlier than the flight does — and that a camera at literal eye height is the literal
+  answer and a bad picture.
 
 ## Date
 2026-09-04
@@ -1608,3 +1615,60 @@ behind the current engine differs *because of the engine* and re-analysis is the
 artifact that differs is an input edited outside it, and saying "you swung differently" would be the
 one reading that is certainly false. On the corpus today it is empty on all thirteen shots, which is
 what it should be until someone edits a bag.
+
+## Addendum (2026-09-06g, M15 P19): the shot as a golfer sees it, and the frame that is not the apex
+
+P15 drew this flight as two orthographic projections and wrote the reason into the page: *a single
+3D view needs a camera, and every camera angle makes one of the two questions — how high, how far
+offline — unreadable while still looking authoritative about both.* That is correct, and it answers
+a question nobody had asked. Asked to see the shot, a golfer means the thing a simulator and a
+broadcast tracer both draw: from behind the ball, down the target line, with a line following where
+it went.
+
+Both are true at once, so the page now carries **three** panels rather than two. The tracer is
+first, because it is what the shot *looked like*; the side and plan views stay under it, because
+they are what the shot *measures*; and the difference between them is said in the tracer's own
+caption, in the slot the other two use for their scale — `perspective — nothing measurable`, at
+the same full opacity the stretch factor gets. Nothing in this phase changed the payload:
+`api/flight_view.py` has served the polyline in three dimensions since P14, so this is a rendering
+change and the route, the artifact and the eleventh tool are untouched.
+
+**⚠️ The top of the frame is not the apex.** The camera is fitted rather than positioned: two
+constraints — the highest the ball ever appears sits on the top padding, the near ground sits on
+the bottom — solve for the focal length and the horizon, so the framing is the shot's rather than a
+number typed into the file. Written the obvious way first, fitting on the highest point of the
+*flight*, and the tracer left the top of the canvas by nine pixels. What a camera sees is angular
+elevation, `(height - eye) / depth`, and on every flight on this corpus that peaks **earlier** than
+the apex does — around 30 yards out rather than 70, where the ball is lower but very much closer.
+Fitting on the apex fits the wrong point, and it fails only at wide layouts, where the padding in
+hand is smallest.
+
+**⚠️ And eye height is the literal answer and a bad picture.** A camera 1.9 yards up, standing at
+the ball, is where the golfer's eyes are. Measured against the two flights on disk it compresses
+everything between 25 yards and the landing into about **seventeen pixels** just above the horizon,
+while the turf nearer than 25 yards fills half the panel — the whole flight drawn over a squashed
+band, with the distance labels colliding into two. Six yards up and fourteen back spreads the same
+125 yards over about 200 pixels and puts the horizon a third of the way down. It is the framing
+every simulator uses, and the reason is this arithmetic rather than a house style.
+
+**What the panel is allowed to assert is the same list as the plan view's.** The ball's track on the
+turf is drawn under the flight in ink rather than red, because it is a shadow and not a second
+tracer, and because it is the only thing that makes the bend legible at all — the objection P15
+recorded is real, and this is what answers it inside the drawing. The printed carry is a rule
+**across** the strip and not a mark on it, for the reason P16 gives: the screen prints no offline
+tile, so a point would invent a place the ball came down. And a planar flight gets no landing ring
+and no offline sentence, because the end of a straight line is the start line projected out —
+`tracerLanding` returns on `curve_is_drawn` before it draws anything, which
+`tests/api/test_flight_page.py` now pins in the order the two appear.
+
+The tracer is the only moving thing on any page in this repo, so it carries the two failures that
+come with that: a redraw cancels the frame already queued rather than letting two loops paint one
+canvas, and the replay button is bound by assignment rather than `addEventListener`, since `draw()`
+re-runs on every resize and theme flip and a stacked listener would replay the shot once per redraw
+the page had ever had. `prefers-reduced-motion` gets the finished line rather than a faster one.
+
+**Layout is still unverified.** No browser has been driven on this page in P15, P16 or here. All
+five payload shapes were replayed through the page's own JavaScript under a stubbed DOM at 600px
+and 320px — which is how both findings above were found — and every drawn coordinate lands inside
+the canvas, the landing label reads `9.6 yd left` and `15.2 yd right` on the two measured-spin
+shots, and the one planar flight draws no label at all.

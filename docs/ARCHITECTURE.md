@@ -158,9 +158,11 @@ more once a golfer registry is configured; `simulate_flight` (M15 P17) is in the
 because a shot whose screen printed its own spin borrows nothing from a bag. No React UI
 (M5); the static pages under `api/static/` — upload, library, results, career, flight — are what
 stands in for it. The last is the only one that *draws*: `flight.html` projects the simulated
-polyline onto a canvas in two views, side and plan, with the plan view's offline axis stretched by
+polyline onto a canvas in three views — a perspective tracer from behind the ball looking down the
+target line, then a side elevation and a plan view — with the plan view's offline axis stretched by
 a printed factor and the part of the path that read a held coefficient row dashed rather than
-solid (M15 P15). What the launch monitor printed is drawn beside it — a hollow ring for the carry
+solid (M15 P15, P19). Only the two orthographic panels may be read off; the tracer's caption says
+so, and it is the only animated thing anywhere in `api/static/`. What the launch monitor printed is drawn beside it — a hollow ring for the carry
 it measured, a rule for where that carry falls in the plan view — and every simulated number the
 screen printed a counterpart for carries the sentence saying whether the gap between them is an
 error at all (M15 P16).
