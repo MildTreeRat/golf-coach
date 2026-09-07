@@ -5,6 +5,62 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-09-06 — M15 P19: the shot as a golfer sees it, and the frame that is not the apex
+
+**Duration**: one sitting. **M15 is 20/20.** Edited: `api/static/flight.html` (a third panel, its
+CSS, `tracerCamera`, `tracerScene`, `along`, `tracerStroke`, `tracerLanding`, `drawTracer`, and
+`draw()` gains the call and the Replay binding), `tests/api/test_flight_page.py` (+3),
+`docs/ARCHITECTURE.md` §1, `docs/README.md` (the map's document count, addendum totals and the
+ADR-027 row), `docs/decisions/027-ball-flight-simulation.md` (sixteenth addendum, Status block to
+P19), `ROADMAP.md`. Full suite **1665 passed**, `ruff` and `mypy` clean.
+
+**The ask was a simulator's view and the page had two charts.** P15 wrote its reason into the file
+— *every camera angle makes one of the two questions unreadable while looking authoritative about
+both* — and that is correct about **measuring** and answers a question nobody asked. So the page
+carries three panels now: the tracer first, because it is what the shot looked like; the side and
+plan views under it, because they are what it measures; and the difference said in the tracer's
+own caption, `perspective — nothing measurable`, at the full opacity the stretch factor gets.
+Rendering only — `api/flight_view.py` has served the polyline in three dimensions since P14, so no
+route, artifact, contract or tool changed.
+
+⚠️ **The finding: the top of a perspective frame is not the apex.** The camera is fitted rather
+than placed — the highest the ball ever *appears* goes on the top padding, the near ground on the
+bottom — and written the obvious way, fitting on the highest point of the flight, the tracer left
+the canvas by nine pixels. What a camera sees is angular elevation, `(height - eye) / depth`, and
+on every flight here that peaks around 30 yards out rather than 70: the ball is lower and very much
+closer. It fails only at wide layouts, where the padding in hand is smallest, which is why a
+320px replay would not have caught it.
+
+⚠️ **And "from my perspective" taken literally is a bad picture.** A camera at eye height, 1.9 yd
+up standing at the ball, compresses everything between 25 yards and the landing into about
+**seventeen pixels** just above the horizon, while the turf nearer than 25 yards fills half the
+panel — the flight drawn over a squashed band, with the distance labels colliding down to two. Six
+yards up and fourteen back spreads the same 125 yards over ~200px and puts the horizon a third of
+the way down. That is the framing every simulator uses and the reason is this arithmetic.
+
+**What it is allowed to assert is the plan view's list, not a longer one.** The ball's ground track
+is drawn in ink and not red, because it is a shadow rather than a second tracer — and because it is
+what makes the bend legible at all, which is the objection P15 recorded, answered inside the
+drawing. The printed carry is a rule **across** the strip (P16's reason: the screen prints no
+offline tile, so a point would invent a landing). And `tracerLanding` returns on `curve_is_drawn`
+before it draws a ring or names an offline, so the one planar flight on disk gets neither; the new
+test pins that in the order the two appear in the function.
+
+**It is the only moving thing on any page here**, so a redraw cancels the queued frame rather than
+letting two loops paint one canvas, the Replay button is bound by assignment because `draw()`
+re-runs on every resize and theme flip, and `prefers-reduced-motion` gets the finished line rather
+than a faster animation.
+
+**A commit-time finding, unrelated to the tracer:** landing the milestone turned the MediaPipe
+Hands spike's `log.md` and `thresholds.md` from untracked into tracked, and `docs/README.md`'s
+document count is `git ls-files`-based — so the doc-truth suite went red on `main` the moment M15
+was merged, on a count that had only ever been right because two files were uncommitted. 61 → 63.
+
+**Next**: unchanged. `flight.html`'s **layout** has never been looked at in a browser — now across
+three panels rather than two.
+
+---
+
 ## 2026-09-06 — M15 P17-P18: the eleventh tool, and six numbers that reached a model saying nothing
 
 **Duration**: one sitting. **M15 is done, 19/19.** Added: `src/golf_coach/mcp/flight.py`,

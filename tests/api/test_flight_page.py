@@ -254,6 +254,55 @@ def test_a_planar_flight_is_drawn_without_a_landing_point() -> None:
     assert "axis.detail" in page, "the refusal's own sentence, not a second one written here"
 
 
+def test_the_tracer_replays_and_can_be_asked_not_to() -> None:
+    """The perspective panel is the one moving thing on any page in this repo.
+
+    Two failures it has to not have. A listener added on every `draw()` would replay the shot once
+    per resize the page has ever had, so the button is bound by assignment; and an animation left
+    running while a second one starts is a flicker nobody can debug off a screenshot, so a redraw
+    cancels first. `prefers-reduced-motion` gets the finished line rather than a faster one --
+    a shorter animation is still an animation.
+    """
+    page = _PAGE.read_text(encoding="utf-8")
+
+    assert "requestAnimationFrame" in page
+    assert "cancelAnimationFrame" in page, "a redraw must cancel the frame already queued"
+    assert "prefers-reduced-motion" in page
+    assert 'id="replay"' in page
+    assert "replay.onclick" in page, (
+        "addEventListener would stack one replay per redraw; the binding has to be an assignment"
+    )
+
+
+def test_the_perspective_panel_says_nothing_may_be_measured_off_it() -> None:
+    """It is the only drawing here with a camera in it, and a camera foreshortens.
+
+    The two panels under it carry a scale caption at full opacity for the opposite reason -- they
+    *can* be read, once the reader knows what they were stretched by. This one cannot be read at
+    all, and the caption is where that is said. `.scale` is the class both use, so the warning
+    sits in the same place and at the same weight in all three.
+    """
+    page = _PAGE.read_text(encoding="utf-8")
+
+    assert 'id="tracer"' in page
+    assert "nothing measurable" in page
+
+
+def test_the_tracer_draws_no_landing_the_plan_view_would_refuse() -> None:
+    """The same rule as `test_a_planar_flight_is_drawn_without_a_landing_point`, one panel up.
+
+    A perspective view is the easiest place to assert a landing by accident, because a ring on the
+    turf reads as a place rather than as a number. `tracerLanding` is the only thing that draws one
+    and the only thing that names an offline in words, and both are behind `curve_is_drawn`.
+    """
+    page = _PAGE.read_text(encoding="utf-8")
+
+    body = page.split("function tracerLanding(")[1].split("\nfunction ")[0]
+    assert "curve_is_drawn" in body, "the ring and the label must both sit behind the flag"
+    guard = body.index("curve_is_drawn")
+    assert body.index("ring(") > guard, "the landing ring is drawn before the flag is checked"
+
+
 def test_the_sign_disagreement_is_shown_outside_the_launch_block() -> None:
     """⚠️ The one shot on disk carrying the flag is a refusal, so it has no launch conditions.
 

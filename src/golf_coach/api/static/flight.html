@@ -35,6 +35,17 @@
      drift. Full opacity, and never smaller than the panel's own name. */
   .panel .cap .scale { opacity: 1; font-weight: 600; }
 
+  /* The tracer panel. It sits above the two charts and answers a different question from them:
+     they are what the numbers are, this one is what the shot looked like. It gets a fill and a
+     radius because unlike them it *is* a picture rather than a measurement, and the reader
+     should not go looking for an axis on it. */
+  .tracer { position: relative; }
+  .tracer canvas { display: block; width: 100%; border-radius: 10px; }
+  .replay { position: absolute; top: 0.5rem; right: 0.5rem; font: inherit; font-size: 0.72rem;
+            padding: 0.2rem 0.6rem; border-radius: 999px; cursor: pointer; color: inherit;
+            border: 1px solid rgba(128,128,128,0.45); background: rgba(128,128,128,0.16); }
+  .replay:hover { background: rgba(128,128,128,0.32); }
+
   /* Simulated measurements. `detail` is the row's primary content rather than a tooltip — the
      lesson results.html learned the expensive way with population placements, and it is sharper
      here because every one of these strings opens with the word SIMULATED. */
@@ -257,10 +268,22 @@ function spinNote(spin) {
 }
 
 function panels() {
-  // Two projections of one polyline rather than a perspective view of it. A single 3D view needs
-  // a camera, and every camera angle makes one of the two questions — how high, how far offline
-  // — unreadable while still looking authoritative about both.
+  // Three views of one polyline, and the split is deliberate. The perspective panel is the shot a
+  // golfer recognises — from behind the ball, down the target line — and the two orthographic
+  // ones under it are the shot that can be *read*. This page had only the second kind for two
+  // phases, on the argument that a camera foreshortens both "how high" and "how far offline"
+  // while still looking authoritative about both. That argument is right about *measuring* and
+  // wrong about recognising, so the answer is to keep all three rather than pick: the tracer's
+  // caption says at full opacity that nothing may be taken off it, and the numbers stay below.
   return `<h2>The flight</h2>
+    <div class="panel tracer">
+      <canvas id="tracer" role="img" aria-label="The shot seen from behind the ball, looking
+        down the target line, with a tracer following the path the ball flew. The same flight is
+        drawn to scale in the two panels below and listed as numbers under them."></canvas>
+      <button type="button" id="replay" class="replay">Replay</button>
+      <div class="cap"><span>down the target line &middot; from behind the ball</span>
+        <span class="scale">perspective &mdash; nothing measurable</span></div>
+    </div>
     <div class="panel">
       <canvas id="side" role="img" aria-label="Side view: height against distance down range.
         The same numbers are listed below."></canvas>
@@ -480,6 +503,313 @@ function ticks(ctx, colour, xSpan, toX, baseline, height) {
   ctx.globalAlpha = 1;
 }
 
+/* ---- the view from behind the ball ---------------------------------------------------- */
+
+// The camera, in yards: behind the ball and above it, aimed straight down the target line — so a
+// right-handed golfer's pull leaves the middle of the frame going left, exactly as it did through
+// their own eyes.
+//
+// ⚠️ **Not eye height, and that was measured rather than chosen.** A camera at a person's actual
+// eye — 1.9 yards up, standing at the ball — is the literal answer and a bad picture: the ground
+// between 25 yards and the landing then compresses into about seventeen pixels just above the
+// horizon, while the turf nearer than 25 yards fills half the panel. The whole flight would be
+// drawn over a squashed band. Six yards up and fourteen back is the same view from a step behind
+// and a little above, and it is what every simulator and every broadcast tracer does for this
+// reason. Raise it further and the shot becomes a plan view with extra steps.
+const CAM_UP_YDS = 6;
+const CAM_BACK_YDS = 14;
+
+// The one colour on this page that is not the theme's ink, and it is the request rather than a
+// decoration: a red tracer is a convention a golfer already reads. Everything it has to be told
+// apart from — the turf, the gridlines, the target line, the printed carry — stays ink, so the
+// page still has exactly one colour decision in it. This red holds contrast on both a white and
+// a near-black ground, which `color-scheme: light dark` means it has to.
+const TRACER_INK = "#ef4444";
+
+// The animation, cancelled rather than left running whenever the panel is redrawn. A resize or a
+// theme flip re-enters `draw()`, and two loops painting one canvas is a flicker nobody can debug
+// from a screenshot.
+let tracerAnim = null;
+
+// How wide the mown strip is drawn, in yards either side of the target line. Wide enough that
+// every flight stays inside its rails, because a ball crossing them reads as a shot that left the
+// fairway — a claim about a hole this program knows nothing about.
+function fairwayHalf(points) {
+  let reach = 0;
+  for (const p of points) reach = Math.max(reach, Math.abs(p.z_yds));
+  return Math.max(15, reach * 2);
+}
+
+// Perspective, and the only foreshortening on this page. `d` is depth from the camera and is
+// never zero: the ball starts `CAM_BACK_YDS` in front of it and only ever goes away.
+function project3d(cam, x, y, z) {
+  const d = x + CAM_BACK_YDS;
+  return { x: cam.cx + cam.f * z / d, y: cam.cy - cam.f * (y - CAM_UP_YDS) / d, d };
+}
+
+// Two constraints and two unknowns: the highest the ball ever *appears* lands on the top padding
+// and the near ground on the bottom, so the frame is the shot's rather than a number typed here.
+// The horizon falls out of it — at infinite distance every ground point projects to the camera's
+// own eye level — which is why nothing in this file names one.
+//
+// ⚠️ **The top of the frame is not the apex.** Written that way first and the tracer left the
+// canvas by nine pixels: what a camera sees is angular elevation, `(height - eye) / depth`, and
+// that peaks *earlier* than the flight does — the ball is lower but very much closer. Fitting on
+// the highest point of the flight fits the wrong point, and it fails only at wide widths, where
+// there is the least padding in hand.
+function tracerCamera(points, cssWidth, cssHeight) {
+  let rise = 0.05;
+  for (const p of points) rise = Math.max(rise, (p.y_yds - CAM_UP_YDS) / (p.x_yds + CAM_BACK_YDS));
+  const drop = CAM_UP_YDS / CAM_BACK_YDS;
+  const cx = cssWidth / 2;
+  let f = (cssHeight - PAD.top - PAD.bottom) / (rise + drop);
+  // Then narrowed if the flight would leave the sides. Shrinking `f` keeps the near ground pinned
+  // to the bottom and buys the apex headroom, so the fit degrades in the one direction that
+  // cannot mislead: the shot gets smaller in frame, never clipped out of it.
+  let lateral = 0;
+  for (const p of points) lateral = Math.max(lateral, Math.abs(p.z_yds) / (p.x_yds + CAM_BACK_YDS));
+  const halfWidth = Math.max(cx - PAD.left - 40, 20);  // 40px: the landing's label lives out here
+  if (lateral > 0 && f * lateral > halfWidth) f = halfWidth / lateral;
+  return { f, cx, cy: cssHeight - PAD.bottom - f * drop };
+}
+
+// The turf, the rails, the distance lines and the two references. Redrawn every animation frame,
+// which at a hundred and twenty points and six gridlines is cheaper than compositing two canvases
+// and leaves one code path rather than a static one and a moving one that can drift apart.
+function tracerScene(ctx, cam, points, cssWidth, cssHeight, colour, xSpan, printedDown) {
+  const half = fairwayHalf(points);
+
+  // Everything below the horizon is ground, as a wash rather than a colour — this panel takes its
+  // one ink from the theme exactly like the two below it.
+  ctx.fillStyle = colour;
+  ctx.globalAlpha = 0.07;
+  ctx.fillRect(0, cam.cy, cssWidth, cssHeight - cam.cy);
+
+  ctx.strokeStyle = colour;
+  ctx.lineWidth = 1;
+  ctx.globalAlpha = 0.3;
+  ctx.beginPath();
+  ctx.moveTo(0, cam.cy);
+  ctx.lineTo(cssWidth, cam.cy);
+  ctx.stroke();
+
+  // The rails. A straight line in the world stays a straight line under this projection, so two
+  // points are the whole of each one.
+  ctx.globalAlpha = 0.22;
+  for (const side of [-half, half]) {
+    const a = project3d(cam, 0, 0, side);
+    const b = project3d(cam, xSpan, 0, side);
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+    ctx.stroke();
+  }
+
+  // Distance lines across the strip, on the step the two charts below already use, so a reader
+  // counting gridlines is counting the same ones in all three panels.
+  const step = tickStep(xSpan);
+  ctx.font = "10px system-ui, sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "top";
+  ctx.fillStyle = colour;
+  let lastLabel = Infinity;
+  for (let yards = step; yards <= xSpan; yards += step) {
+    const l = project3d(cam, yards, 0, -half);
+    const r = project3d(cam, yards, 0, half);
+    ctx.globalAlpha = 0.2;
+    ctx.beginPath();
+    ctx.moveTo(l.x, l.y);
+    ctx.lineTo(r.x, r.y);
+    ctx.stroke();
+    // The labels thin themselves out toward the horizon, because that is where the lines they
+    // belong to converge. Drawing all of them would stack the far half into six pixels.
+    const at = project3d(cam, yards, 0, 0);
+    if (lastLabel - at.y >= 11) {
+      ctx.globalAlpha = 0.55;
+      ctx.fillText(String(yards), at.x, at.y + 2);
+      lastLabel = at.y;
+    }
+  }
+
+  // The target line: dashed, because it is a reference and not something the ball did. The same
+  // convention as the plan view below, and for the same reason.
+  ctx.globalAlpha = 0.45;
+  ctx.setLineDash([3, 4]);
+  const near = project3d(cam, 0, 0, 0);
+  const far = project3d(cam, xSpan, 0, 0);
+  ctx.beginPath();
+  ctx.moveTo(near.x, near.y);
+  ctx.lineTo(far.x, far.y);
+  ctx.stroke();
+
+  // The printed carry, across the strip rather than a mark on it. The screen prints no offline
+  // tile, so a point would invent a place the ball came down; a rule says only the distance,
+  // which is the only part of it anything measured.
+  if (printedDown) {
+    const l = project3d(cam, printedDown.measured, 0, -half);
+    const r = project3d(cam, printedDown.measured, 0, half);
+    ctx.globalAlpha = 0.7;
+    ctx.setLineDash([2, 3]);
+    ctx.beginPath();
+    ctx.moveTo(l.x, l.y);
+    ctx.lineTo(r.x, r.y);
+    ctx.stroke();
+  }
+  ctx.setLineDash([]);
+  ctx.globalAlpha = 1;
+}
+
+// Where the head of the tracer has got to, interpolated inside a segment so the ball moves
+// smoothly rather than in a hundred and twenty visible hops.
+function along(points, progress) {
+  const span = (points.length - 1) * Math.min(Math.max(progress, 0), 1);
+  const index = Math.min(Math.floor(span), points.length - 2);
+  const t = span - index;
+  const a = points[index];
+  const b = points[index + 1];
+  return {
+    index,
+    point: {
+      x_yds: a.x_yds + (b.x_yds - a.x_yds) * t,
+      y_yds: a.y_yds + (b.y_yds - a.y_yds) * t,
+      z_yds: a.z_yds + (b.z_yds - a.z_yds) * t,
+      clamped: a.clamped || b.clamped,
+    },
+  };
+}
+
+function tracerStroke(ctx, cam, points, head, colour) {
+  // The ball's own track on the turf, under the flight. It is what makes the bend legible at all
+  // — a curve seen end-on from behind is mostly foreshortened away, which is the objection
+  // `panels()` records — and it is a shadow rather than a second tracer, so it is ink, not red.
+  ctx.strokeStyle = colour;
+  ctx.globalAlpha = 0.35;
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([]);
+  ctx.beginPath();
+  const first = project3d(cam, points[0].x_yds, 0, points[0].z_yds);
+  ctx.moveTo(first.x, first.y);
+  for (let i = 1; i <= head.index; i++) {
+    const g = project3d(cam, points[i].x_yds, 0, points[i].z_yds);
+    ctx.lineTo(g.x, g.y);
+  }
+  const shadow = project3d(cam, head.point.x_yds, 0, head.point.z_yds);
+  ctx.lineTo(shadow.x, shadow.y);
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+
+  // The tracer itself — and dashed where the flight read a held end row of the coefficient table,
+  // exactly as the two charts below are dashed. The line is red so a golfer can follow it, not so
+  // it can claim more than they do.
+  const walk = points.slice(0, head.index + 1).concat([head.point]);
+  ctx.lineWidth = 2.5;
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
+  ctx.strokeStyle = TRACER_INK;
+  for (let i = 1; i < walk.length; i++) {
+    const clamped = walk[i - 1].clamped || walk[i].clamped;
+    const from = project3d(cam, walk[i - 1].x_yds, walk[i - 1].y_yds, walk[i - 1].z_yds);
+    const to = project3d(cam, walk[i].x_yds, walk[i].y_yds, walk[i].z_yds);
+    ctx.beginPath();
+    ctx.setLineDash(clamped ? [5, 4] : []);
+    ctx.globalAlpha = clamped ? 0.85 : 1;
+    ctx.moveTo(from.x, from.y);
+    ctx.lineTo(to.x, to.y);
+    ctx.stroke();
+  }
+  ctx.setLineDash([]);
+  ctx.globalAlpha = 1;
+
+  // The ball, at the head of the tracer, at a fixed size and not a physical one: a golf ball a
+  // hundred yards out subtends about a twentieth of a pixel here, so anything visible at all is
+  // a marker. Small enough to read as a position rather than a splash.
+  const at = project3d(cam, head.point.x_yds, head.point.y_yds, head.point.z_yds);
+  dot(ctx, at, TRACER_INK, 3.5);
+}
+
+// Drawn only once the tracer has landed, and only when there is a landing to draw.
+function tracerLanding(ctx, cam, points, colour) {
+  // The plan view's rule, in this frame. With the axis unresolved the flight is flown in the
+  // vertical plane, so the end of the line is the start line projected out and not a place the
+  // ball finished — no mark, and no number said about it.
+  if (!(payload.axis && payload.axis.curve_is_drawn)) return;
+  const last = points[points.length - 1];
+  const at = project3d(cam, last.x_yds, 0, last.z_yds);
+  ring(ctx, at, TRACER_INK, 5);
+
+  const target = project3d(cam, last.x_yds, 0, 0);
+  ctx.strokeStyle = colour;
+  ctx.globalAlpha = 0.5;
+  ctx.lineWidth = 1;
+  ctx.setLineDash([2, 2]);
+  ctx.beginPath();
+  ctx.moveTo(target.x, target.y);
+  ctx.lineTo(at.x, at.y);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Said in words as well as in ink. From behind the ball a nine-yard miss at the end of a
+  // hundred-and-twenty-yard carry is a few degrees of arc, and a reader should not have to take
+  // the one number this panel can honestly label off the stretched panel below it.
+  ctx.globalAlpha = 0.85;
+  ctx.fillStyle = colour;
+  ctx.font = "10px system-ui, sans-serif";
+  ctx.textBaseline = "middle";
+  const left = last.z_yds < 0;
+  ctx.textAlign = left ? "right" : "left";
+  ctx.fillText(
+    num(Math.abs(last.z_yds), 1) + " yd " + (left ? "left" : "right"),
+    at.x + (left ? -9 : 9), at.y,
+  );
+  ctx.globalAlpha = 1;
+}
+
+// The flight's own time, slowed: replayed at 1x, a four-and-a-half second carry is a long time to
+// watch a web page, and replayed in half a second it is not a tracer. Bounded both ends so a
+// wedge and a 3 wood take a comparable time to watch.
+function tracerDuration(points) {
+  const flown = points[points.length - 1].t_s || 2;
+  return Math.min(3200, Math.max(1200, flown * 600));
+}
+
+function drawTracer(points, xSpan, printedDown) {
+  const canvas = document.getElementById("tracer");
+  if (!canvas) return;
+  if (tracerAnim) {
+    cancelAnimationFrame(tracerAnim);
+    tracerAnim = null;
+  }
+  const cssWidth = canvas.clientWidth;
+  // Between a strip and a square. Shorter and the apex crowds the top of the frame; taller and
+  // the panel pushes the measurements it exists to illustrate off a phone screen entirely.
+  const box = Math.round(Math.min(340, Math.max(210, cssWidth * 0.55)));
+  const { ctx, cssHeight } = fit(canvas, box);
+  const colour = ink(canvas);
+  const cam = tracerCamera(points, cssWidth, cssHeight);
+
+  const frame = (progress) => {
+    ctx.clearRect(0, 0, cssWidth, cssHeight);
+    tracerScene(ctx, cam, points, cssWidth, cssHeight, colour, xSpan, printedDown);
+    tracerStroke(ctx, cam, points, along(points, progress), colour);
+    if (progress >= 1) tracerLanding(ctx, cam, points, colour);
+  };
+
+  // A tracer is motion, so a reader who has asked for less of it gets the finished line rather
+  // than a shorter animation: the whole path, drawn at once, with nothing to wait for.
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    frame(1);
+    return;
+  }
+  const duration = tracerDuration(points);
+  const started = performance.now();
+  const step = (now) => {
+    const progress = Math.min((now - started) / duration, 1);
+    frame(progress);
+    tracerAnim = progress < 1 ? requestAnimationFrame(step) : null;
+  };
+  tracerAnim = requestAnimationFrame(step);
+}
+
 function drawSide(points, xSpan, printedDown) {
   const canvas = document.getElementById("side");
   const apex = Math.max(...points.map((p) => p.y_yds), 0);
@@ -630,8 +960,13 @@ function draw() {
     Math.max(...points.map((p) => p.x_yds)), printedDown ? printedDown.measured : 0,
   );
   if (!(xSpan > 0)) return;
+  drawTracer(points, xSpan, printedDown);
   drawSide(points, xSpan, printedDown);
   drawPlan(points, xSpan, printedDown, printedOffline);
+  // Assignment and not addEventListener: `draw()` re-runs on every resize and theme flip, and a
+  // listener added each time would replay the shot once per redraw the page has ever had.
+  const replay = document.getElementById("replay");
+  if (replay) replay.onclick = () => drawTracer(points, xSpan, printedDown);
 
   // What the two kinds of mark are. Written here rather than in the HTML because which marks were
   // actually drawn depends on what the screen printed for this shot.
