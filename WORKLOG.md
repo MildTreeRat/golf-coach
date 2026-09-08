@@ -5,6 +5,36 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-09-07 — M16 P6: the per-club MCP surfaces carry the exclusion out
+
+**Duration**: one sitting. **M16 is 7/9.** Edited: `mcp/club.py` (`ClubView.mishits` /
+`mishit_refs` / `mishits_unconfirmed`, `BagView.mishits_excluded`, populated in `_club_view` and
+`bag_profile`), `mcp/career.py` (`GolferProfile.mishits_excluded`, and `_note_mishit_exclusion`
+appending one sentence in `golfer_profile`), `tests/mcp/test_club_tools.py` (+1 test, +1 assert),
+`tests/mcp/test_career_tools.py` (+2). Full suite green, `ruff` and `mypy` clean.
+
+**Nothing new is computed here.** `ClubProfile` (P4) and `CareerCorpus.mishit_shots` /
+`mishit_refs` / `mishit_shots_unconfirmed` (P3) already hold every number; P6 is the wire shape
+only — the club view mirrors `ClubProfile` field for field, the way P4 sat on P2/P3.
+`BagView.mishits_excluded` rides beside `untagged_swings`: the same "distance history the per-club
+averages deliberately do not see" kind of number, carried whole from the corpus.
+
+**The career caveat is appended, never assigned.** `_profile` sets `MetricProfile.caveats =
+list(dispersion.caveats)` wholesale, so a sentence handed to it earlier would be dropped —
+`_note_mishit_exclusion` runs over the built `metrics` list instead. Its metric names come from
+`MISHIT_EXCLUDED_METRICS`, the frozenset `CorpusSwing.artifact_key` withholds on, so the prose can
+never name a metric the exclusion does not touch. `get_bag_profile` keeps the per-club form
+(`_mishit_caveats`, P4); this one-liner is `get_golfer_profile`'s whole-history flag and points
+back at the bag tool for which club and which shots.
+
+**Next**: P7 — `mcp/query.py` (`SwingView.mishit` from `manifest.mishit`,
+`SessionDetail.mishits_excluded`, and `get_session_summary` skipping `carry_distance` /
+`total_distance` for a **manually CONFIRMED** mishit only) and `contracts/caveats.py` (a derived
+`READING_A_BAG` / `READING_A_PERSONAL_HISTORY` bullet from `MISHIT_EXCLUDED_METRICS`, plus a new
+`tests/test_docs_truth.py` pin).
+
+---
+
 ## 2026-09-07 — M16 P5: only the golfer who hit swing 3 knows they topped it
 
 **Duration**: one sitting. **M16 is 6/9.** Added: `scripts/flag_mishit.py`,
