@@ -5,6 +5,310 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-09-08 — M16 P8: the docs catch up, and the rule's first real subject
+
+**Duration**: one sitting. **M16 is 9/9 — done.** Edited: `docs/decisions/028-mishit-exclusion.md`
+(Status → built, no addendum — building corrected nothing), `ROADMAP.md` (status row + §M16 header
+and Status to done, `Phases` → past tense, a new `Exit criteria` paragraph, `Last Updated`),
+`docs/README.md` (ADR-028 row → built), `docs/ARCHITECTURE.md` (§1 command block gains
+`scripts/flag_mishit.py`; §3 a launch-monitor paragraph on the exclusion; §4 a `SwingManifest.mishit`
+storage row and a mishit sentence in the career-corpus subsection), `scripts/flag_mishit.py` (one
+docstring line: the auto-flag lives in `storage/corpus.py::read_corpus`, not `analysis/club_profile.py`).
+No code touched. Full suite **1709 passed**, `ruff` and `mypy` clean. Doc-truth suite green (83).
+
+**Building corrected nothing in ADR-028**, so its Status flips to built with **no addendum** —
+`MISHIT_EXCLUDED_METRICS`, the `0.50 × median` floor gated at five, the `CorpusSwing.artifact_key`
+chokepoint, `_flag_auto_mishits` before `count_metrics`, and the manual override winning both ways
+all shipped as §Decision wrote them. The one thing the corpus added over the ADR is a real subject,
+and it lives in the Status section rather than an addendum because it confirms the design rather
+than moving it.
+
+⚠️ **The exit fixture and the corpus disagree on shape, and the corpus is the better test.** The
+exit criteria imagined *five clean shots plus a top* — six total. Aaron's 7 iron is **five total**:
+121.8, 33.6, 124.7, 126.1, 101.9 (median 121.8, floor 60.9), so holding out `2026-08-23/2` leaves
+**four** clean carries — below the CENTER-claim floor the same `MISHIT_MIN_CLEAN_SHOTS = 5` sets.
+`get_club_profile --club 7i` now *withholds* `carry_distance_yds` and `total_distance_yds`
+entirely ("needs 5 samples; there are 4") where before P3 it printed ≈101.6 yd — the top-dragged
+mean. `ball_speed_mph` and `backswing_ms` still report `n = 5`. So on the only real data we have,
+the milestone's effect was to replace a confident wrong number with an honest refusal, which is
+ADR-010 §2 exactly. The ROADMAP `Exit criteria` paragraph and the ADR Status both record this;
+WORKLOG P5's "mean built from 4 shots (≈118.6)" was the arithmetic, not what the tool prints.
+
+**Next**: on the user's go-ahead, merge `GOLF-6` → `main` (`--no-ff`, `Merge GOLF-6: M16 mishits`)
+and delete the branch. Nothing is pushed; the branch is P0–P8, one commit each, gate green at every
+one. After the merge, `docs/README.md`'s `git ls-files`-based document count should be re-checked on
+`main` — M15's merge went red on exactly that (two spike files flipped from untracked to tracked),
+and this branch adds no `.md` file so it *should* stay at 64, but confirm.
+
+---
+
+## 2026-09-07 — M16 P7: the swing and session surfaces, and the derived caveat prose
+
+**Duration**: one sitting. **M16 is 8/9.** Edited: `mcp/query.py` (`SwingView.mishit` from
+`manifest.mishit`, `SessionDetail.mishits_excluded`, `_MISHIT_SKIP`, and `get_session_summary`
+dropping carry + total for a **manually CONFIRMED** verdict only), `contracts/caveats.py` (two
+derived mishit bullets, one per per-golfer briefing), `contracts/tool_descriptions.py`
+(`GET_SESSION_SUMMARY` names the new exclusion), `tests/mcp/conftest.py` (`make_manifest` /
+`write_swing` gain a `mishit` kwarg), `tests/mcp/test_query.py` (+4), `tests/test_docs_truth.py`
+(+1 pin). Full suite green, `ruff` and `mypy` clean.
+
+**`get_session_summary` acts on the manual verdict, never the auto flag (ADR-028 §3).** A single
+session rarely holds five shots of one club, so it has no distribution to detect an outlier
+against — the automatic rule is `read_corpus`'s alone. A `CONFIRMED` verdict drops that shot's
+`carry_distance` / `total_distance` from `shot_averages` and nothing else; its ball speed and
+launch still count. `_MISHIT_SKIP` is `MISHIT_EXCLUDED_METRICS` with `_yds` stripped — the
+measurement names carry the suffix, the `ShotData` fields do not — and a test pins every name it
+produces to a real shot metric field.
+
+**Two caveat bullets, not one.** `mishit_refs` and `mishits_unconfirmed` are on the per-club
+views only, so the `READING_A_PERSONAL_HISTORY` bullet names just `mishits_excluded` and the
+per-metric caveat, while `READING_A_BAG` names all four fields. Both derive the excluded-metric
+names from `MISHIT_EXCLUDED_METRICS`; the new doc-truth pin fails if either bullet stops naming
+one — the same shape as the placement and unscored pins beside it.
+
+**Next**: P8 — `docs/ARCHITECTURE.md` §1 command block (`scripts/flag_mishit.py`), §3
+launch-monitor paragraph, §4 `SwingManifest` row; flip ADR-028 and ROADMAP §M16 status to done;
+re-check `docs/README.md` counts; full gate; then **on the user's go-ahead** merge `GOLF-6` →
+`main` (`--no-ff`, `Merge GOLF-6: M16 mishits`) and delete the branch.
+
+---
+
+## 2026-09-07 — M16 P6: the per-club MCP surfaces carry the exclusion out
+
+**Duration**: one sitting. **M16 is 7/9.** Edited: `mcp/club.py` (`ClubView.mishits` /
+`mishit_refs` / `mishits_unconfirmed`, `BagView.mishits_excluded`, populated in `_club_view` and
+`bag_profile`), `mcp/career.py` (`GolferProfile.mishits_excluded`, and `_note_mishit_exclusion`
+appending one sentence in `golfer_profile`), `tests/mcp/test_club_tools.py` (+1 test, +1 assert),
+`tests/mcp/test_career_tools.py` (+2). Full suite green, `ruff` and `mypy` clean.
+
+**Nothing new is computed here.** `ClubProfile` (P4) and `CareerCorpus.mishit_shots` /
+`mishit_refs` / `mishit_shots_unconfirmed` (P3) already hold every number; P6 is the wire shape
+only — the club view mirrors `ClubProfile` field for field, the way P4 sat on P2/P3.
+`BagView.mishits_excluded` rides beside `untagged_swings`: the same "distance history the per-club
+averages deliberately do not see" kind of number, carried whole from the corpus.
+
+**The career caveat is appended, never assigned.** `_profile` sets `MetricProfile.caveats =
+list(dispersion.caveats)` wholesale, so a sentence handed to it earlier would be dropped —
+`_note_mishit_exclusion` runs over the built `metrics` list instead. Its metric names come from
+`MISHIT_EXCLUDED_METRICS`, the frozenset `CorpusSwing.artifact_key` withholds on, so the prose can
+never name a metric the exclusion does not touch. `get_bag_profile` keeps the per-club form
+(`_mishit_caveats`, P4); this one-liner is `get_golfer_profile`'s whole-history flag and points
+back at the bag tool for which club and which shots.
+
+**Next**: P7 — `mcp/query.py` (`SwingView.mishit` from `manifest.mishit`,
+`SessionDetail.mishits_excluded`, and `get_session_summary` skipping `carry_distance` /
+`total_distance` for a **manually CONFIRMED** mishit only) and `contracts/caveats.py` (a derived
+`READING_A_BAG` / `READING_A_PERSONAL_HISTORY` bullet from `MISHIT_EXCLUDED_METRICS`, plus a new
+`tests/test_docs_truth.py` pin).
+
+---
+
+## 2026-09-07 — M16 P5: only the golfer who hit swing 3 knows they topped it
+
+**Duration**: one sitting. **M16 is 6/9.** Added: `scripts/flag_mishit.py`,
+`tests/api/test_mishit_route.py`. Edited: `storage/bundle_store.py` (`set_mishit`, mirror
+`set_club`), `api/app.py` (`MishitRequest`, `POST .../swings/{swing_id}/mishit`),
+`docs/ARCHITECTURE.md` §1 route table, `tests/storage/test_bundle_store.py` (+2). Full suite
+green, `ruff` and `mypy` clean.
+
+**The route mirrors `set_swing_club`**: the explicit per-swing override, no bulk backfill, a
+`null` verdict resets to automatic. 409 (not 404) when the swing has no shot screen — the manifest
+exists, but a mishit verdict on a swing with no ball flight has nothing to act on.
+
+⚠️ **P3's WORKLOG said "no club on disk has 5 tagged shots yet" — wrong, and running
+`flag_mishit.py --list` against the real corpus is what showed it.** Aaron's 7 iron has exactly 5
+tagged shots: carries 121.8, **33.6**, 124.7, 126.1, 101.9. Median 121.8, floor 60.9, so
+`2026-08-23/2` at 33.6 yards is auto-flagged — a genuine top, the exact case this milestone
+exists for. `get_club_profile` for that club now reports a mean built from 4 shots (≈118.6)
+instead of 5 (≈101.6), with a caveat naming the held-out shot. This is the ~17-yard correction the
+ADR Context predicted, on real data, unprompted. The full suite still passes because every test
+builds its own corpus in a tmp dir — none reads `data/`.
+
+**`--list` output format**: per golfer, per club with `n_shots > 0`, the mishit count split into
+confirmed vs auto-and-unconfirmed, then each `mishit_ref` on its own line.
+
+---
+
+### HANDOFF — stopping here deliberately, at 6/9 (P0–P5)
+
+The session is being handed off to keep one chat from carrying the whole milestone. **P0–P5 are
+committed on branch `GOLF-6`, one commit each, full suite + `ruff` + `mypy` green at every one.**
+The working tree is clean. Nothing is pushed; the branch stays local until P8.
+
+**What is done and live:** `contracts/mishit.py` (the rule), `SwingManifest.mishit`, the
+`CorpusSwing` flag + `artifact_key` chokepoint, auto-detection in `read_corpus`, the
+`ClubProfile` / `BagProfile` fields + `_mishit_caveats`, `bundle_store.set_mishit`, the
+`POST .../swings/{swing_id}/mishit` route, `scripts/flag_mishit.py`. `get_club_profile` /
+`get_bag_profile` / career already exclude mishits from carry + total distance and report them.
+
+**What remains — P6, P7, P8.** The plan file
+`.claude/plans/right-now-we-have-starry-bear.md` sequences them; §9 has the exact field names and
+§12 the phase list. In short:
+
+- **P6** — `mcp/club.py`: add `ClubView.mishits` / `mishit_refs` / `mishits_unconfirmed` and
+  `BagView.mishits_excluded`, populate in `_club_view` / `bag_profile`. `mcp/career.py`: add
+  `GolferProfile.mishits_excluded` and, in `golfer_profile` *after* `metrics` is built, append a
+  one-line caveat to every `MetricProfile` whose `name in MISHIT_EXCLUDED_METRICS` when
+  `corpus.mishit_shots > 0` (append, not assign — `_profile` sets `.caveats = list(dispersion.caveats)`).
+  Tests: `tests/mcp/test_club_tools.py`, `tests/mcp/test_career_tools.py`. *(This phase was
+  started this session and reverted — the edits above are the full scope.)*
+- **P7** — `mcp/query.py`: `SwingView.mishit` (from `manifest.mishit`), `SessionDetail.mishits_excluded`,
+  and in `get_session_summary` skip `carry_distance` / `total_distance` (ShotView field names, not
+  the `_yds` measurement names) for a **manually CONFIRMED** mishit only. `contracts/caveats.py`:
+  a derived `READING_A_BAG` / `READING_A_PERSONAL_HISTORY` bullet whose metric names come from
+  `MISHIT_EXCLUDED_METRICS`, plus a new `tests/test_docs_truth.py` pin.
+- **P8** — `docs/ARCHITECTURE.md` §1 command block (add `scripts/flag_mishit.py`), §3
+  launch-monitor paragraph, §4 `SwingManifest` row; flip ADR-028 / ROADMAP §M16 status to done;
+  re-check `docs/README.md` counts; full gate; then **on the user's go-ahead** merge `GOLF-6` →
+  `main` (`--no-ff`, `Merge GOLF-6: M16 mishits`) and delete the branch.
+
+**One real-data fact to carry:** aaron's 7 iron shot `2026-08-23/2` (33.6 yd carry) is
+auto-flagged as a mishit — a genuine top, not a false positive. It is the only mishit on disk.
+
+---
+
+## 2026-09-07 — M16 P4: the mishits are counted and named, never just gone
+
+**Duration**: one sitting. **M16 is 5/9.** Edited: `contracts/club_profile.py`
+(`ClubProfile.mishits` / `mishit_refs` / `mishits_unconfirmed`, `BagProfile.mishits_excluded`),
+`analysis/club_profile.py` (populate them in `_profile_for` / `build_bag_profile`, new
+`_mishit_caveats` + a module-docstring section), `tests/contracts/test_club_profile.py` (+1),
+`tests/analysis/test_club_profile_builder.py` (+4, `_swing` gains `auto_mishit` / `mishit` kwargs).
+Full suite green, `ruff` and `mypy` clean.
+
+**`_mishit_caveats` adds a sentence and removes nothing** — the samples were already withheld by
+`CorpusSwing.artifact_key` in P2. Shaped like `_bag_changed_caveats`: "N of the M shots on this
+club were set aside as a mishit … every other metric still counts them", plus a second clause
+naming how many are still awaiting the golfer's verdict. No threshold constant here — the 0.50
+lives once, in `contracts/mishit.py`.
+
+**The builder tests set the flag directly** (`auto_mishit=True` / `manual_mishit=CONFIRMED` on a
+hand-built `CorpusSwing`) because `_flag_auto_mishits` lives in `read_corpus` and this file never
+touches disk — detection is pinned in `test_corpus.py`, surfacing is pinned here.
+
+**Next**: P5 — the write surface: `bundle_store.set_mishit` (mirror `set_club`), the
+`POST .../swings/{swing_id}/mishit` route, and `scripts/flag_mishit.py` (`--confirm` / `--clear` /
+`--auto` / `--list`).
+
+---
+
+## 2026-09-07 — M16 P3: the club's median decides, before the count is taken
+
+**Duration**: one sitting. **M16 is 4/9.** Edited: `storage/corpus.py` (`_flag_auto_mishits`,
+`_carry_of`, `manual_mishit=manifest.mishit` in the `_corpus_swing` constructor, the call before
+`count_metrics`), `tests/storage/conftest.py` (`write_swing` gains a `mishit` kwarg),
+`tests/storage/test_corpus.py` (+7). Full suite green, `ruff` and `mypy` clean.
+
+**Behaviour is live.** `read_corpus` now groups the sorted swings by club, takes one carry per
+distinct shot photo, and stamps `auto_mishit` on anything below `0.50 × median` — but only once
+the club has 5 clean carry samples, so a bag hit twice flags nothing. Run before `count_metrics`,
+so the mishit's carry is already gone when `n` is counted; the seven new pins include the printed-n
+== pooled-n check with a top present.
+
+**The realistic corpus is unaffected.** No club on disk has 5 tagged shots yet (every stored swing
+predates the club tag), so the whole full suite passing without a single count moving is the
+expected result — and the mishit tests build their own tagged corpora to exercise the path.
+
+**Grammar of the seam, pinned in `test_career.py` and `test_corpus.py`**: `shot_needs_review` is
+checked before the mishit clause, so a flagged parse still wins (its carry was never a sample); a
+`CLEARED` verdict on an auto-flagged top puts it back; a `CONFIRMED` verdict removes a 120-yard
+chunk the 0.50 rule left alone.
+
+**Next**: P4 — `contracts/club_profile.py` (`ClubProfile.mishits` / `mishit_refs` /
+`mishits_unconfirmed`, `BagProfile.mishits_excluded`) and `analysis/club_profile.py` (populate them
++ `_mishit_caveats`, shaped like `_bag_changed_caveats`).
+
+---
+
+## 2026-09-07 — M16 P2: a topped shot is a different event, not a low sample
+
+**Duration**: one sitting. **M16 is 3/9.** Edited: `src/golf_coach/contracts/career.py`
+(`CorpusSwing.auto_mishit` / `manual_mishit` fields + `is_mishit` property; the `artifact_key`
+clause; `CareerCorpus.mishit_shots` / `mishit_refs` / `mishit_shots_unconfirmed` +
+`_suppressed_as_mishit` helper). Added: `tests/contracts/test_career.py`. Full suite green, `ruff`
+and `mypy` clean.
+
+**Still inert.** Both new fields default to False/None and nothing sets them yet — `is_mishit` is
+False on every swing until P3 stamps `auto_mishit` in `read_corpus` and lifts `manual_mishit` off
+the manifest. The whole suite passing unchanged is the point: this phase adds the mechanism without
+turning it on.
+
+**The chokepoint is `CorpusSwing.artifact_key`.** One clause, after the flagged-parse check:
+`carry_distance_yds` and `total_distance_yds` return `None` when `is_mishit`. Because both
+`count_metrics` and `analysis/baseline.py::pooled_samples` route through `artifact_key`, the
+printed `n` and the pooled `n` stay equal for free — the invariant
+`tests/storage/test_corpus.py` pins. Metric-scoped: `test_career.py` checks the same mishit shot
+still keys `ball_speed_mph`, `launch_angle_deg`, `start_line_offline_yds` and every pose metric.
+`shot_needs_review` is still checked first, so a bad parse wins over a cleared mishit — the parse,
+not the strike, is the reason.
+
+**Next**: P3 — `storage/corpus.py`: `_flag_auto_mishits` (group by club, `0.50 × median`, gated at
+5) run before `count_metrics`, and `manual_mishit=manifest.mishit` in the `_corpus_swing`
+constructor. Behaviour goes live: `get_club_profile` / `get_bag_profile` / career start excluding
+mishits.
+
+---
+
+## 2026-09-07 — M16 P1: half a club's median carry is a topped shot, not the low edge of dispersion
+
+**Duration**: one sitting. **M16 is 2/9.** Added: `src/golf_coach/contracts/mishit.py`
+(`MishitVerdict`, `MISHIT_EXCLUDED_METRICS`, `MISHIT_MIN_CLEAN_SHOTS`, `MISHIT_CARRY_FRACTION` with
+its provenance string, `mishit_carry_floor`), `tests/contracts/test_mishit.py`. Edited:
+`storage/manifest.py` (`SwingManifest.mishit: MishitVerdict | None`, tolerant-loader pattern, +
+module docstring), `tests/storage/test_manifest.py` (+2). Full suite green, `ruff` and `mypy`
+clean.
+
+**Both are pure additions — nothing consumes them yet.** The rule and the enum are on the table;
+P2 wires `CorpusSwing` to read them and P3 runs the detection. `contracts/mishit.py` is
+stdlib-only (`statistics.median`), so it sits below both `storage` and `analysis` the way
+`count_metrics` and `narrowed_to` do (ADR-008).
+
+**The floor is `0.50 × median`, gated at 5 clean carry samples.** Median not mean, because one or
+two tops already in the sample barely move it — the test
+`test_the_median_does_not_chase_the_tops_it_is_looking_for` is the pin: a mean over
+`[150,152,148,151,20]` is 124, half of that (62) waves a real 130-yard shot through; the median is
+150, floor 75, and the 130 stays in while the 20 goes. 5 is the CENTER-claim floor from
+`contracts/baseline.py`, reused — below it there is no club history to be an outlier of.
+
+**Next**: P2 — `contracts/career.py`: `CorpusSwing.auto_mishit` / `manual_mishit` / `is_mishit`,
+the `artifact_key` skip for the two distance metrics, and `CareerCorpus.mishit_shots` /
+`mishit_refs` / `mishit_shots_unconfirmed`. Defaults keep `is_mishit` False everywhere until P3.
+
+---
+
+## 2026-09-07 — M16 P0 (docs only): the topped seven iron that is not your seven iron
+
+**Duration**: one sitting. **M16 is 1/9**, on branch `GOLF-6` (merges to `main` at P8). Edited:
+`docs/decisions/028-mishit-exclusion.md` (new), `ROADMAP.md` (§M16 + status row + Last Updated),
+`docs/README.md` (ADR-028 row, doc count 63 → 64, decisions 27 → 28, ADRs 28 → 29). Full suite
+green, `ruff` and `mypy` clean. No code touched.
+
+**The ask.** Club/bag distance averages pool every tagged shot; a topped 7 iron carrying 20 yards
+pulls "how far do I hit my 7 iron" down by a shot the golfer already knows was a mistake. Explored
+first (three parallel sweeps): no mishit concept exists anywhere, and "miss" is already load-bearing
+in `analysis/dispersion.py` for error-distribution *shape*, so this is `mishit` throughout.
+
+**The design, agreed with the user.** Auto-detect + manual override; excluded from
+`carry_distance_yds` and `total_distance_yds` only (ball speed, launch, offline, every pose
+checkpoint still count the shot). Auto rule: carry below **0.50 ×** the club's own median, gated at
+**5** clean carry samples (the CENTER-claim floor, reused). A genuine top is physically
+self-consistent — low ball speed *and* short carry agree — so `spin_solve`'s `BELOW_FLOOR` /
+`carry_unreachable` never fire on it; detection has to be relative to the golfer's own club history
+or manual. Override lives on `SwingManifest.mishit` (`confirmed` / `cleared`), the `club`-retag
+pattern exactly; the manual verdict always wins.
+
+**The seam.** One chokepoint: `CorpusSwing.artifact_key` returns `None` for the two distance
+metrics when `is_mishit`, so `count_metrics` and `pooled_samples` stay in agreement automatically.
+Auto-flagging runs in `read_corpus` before `count_metrics`, grouped by club. **No `ANALYSIS_VERSION`
+bump** — aggregates are computed live from the corpus, nothing in `analysis.json` changes (ADR-010's
+2026-08-19 posture, not M15 P13's).
+
+**Next**: P1 — `contracts/mishit.py` (the rule + `MishitVerdict` + `MISHIT_EXCLUDED_METRICS`) and
+`SwingManifest.mishit`, both pure additions nothing consumes yet. Plan file:
+`.claude/plans/right-now-we-have-starry-bear.md`, §12 sequences all nine phases.
+
+---
+
 ## 2026-09-06 — M15 P19: the shot as a golfer sees it, and the frame that is not the apex
 
 **Duration**: one sitting. **M15 is 20/20.** Edited: `api/static/flight.html` (a third panel, its

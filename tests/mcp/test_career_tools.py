@@ -23,6 +23,7 @@ from pathlib import Path
 
 import pytest
 
+from golf_coach.contracts.club import ClubId
 from golf_coach.mcp import career
 from golf_coach.storage.manifest import load_manifest, manifest_path, save_manifest
 
@@ -151,6 +152,59 @@ def test_a_refused_trend_ships_the_counts_labelled_as_evidence(refusing_dir, gol
     assert all(point.n > 0 for point in trend.sessions)
     assert trend.withheld is not None and trend.withheld.claim == "trend"
     assert "not a series" in trend.note
+
+
+def test_a_mishit_is_counted_and_caveated_on_the_two_distance_metrics_only(
+    tmp_path, golfers_dir, swing_writer, career_writer
+) -> None:
+    """ADR-028 §4: the whole-history reader names the exclusion and flags the metrics it touched.
+
+    The exclusion is the corpus's (M16 P3). This asserts that `get_golfer_profile` carries
+    `mishits_excluded` out and appends the sentence to carry and total distance — and to nothing
+    else, because the names come from `MISHIT_EXCLUDED_METRICS` rather than a hand-typed list.
+    Five real 7 irons near 150 and one 22-yard top.
+    """
+    root = tmp_path / "sessions"
+    carries = [150.0, 152.0, 148.0, 151.0, 149.0, 22.0]
+    for i, carry in enumerate(carries):
+        swing_writer(
+            root,
+            f"2026-09-{i + 1:02d}",
+            "1",
+            player_id="aaron",
+            club=ClubId.SEVEN_IRON,
+            created_at=datetime(2026, 9, i + 1, 12, tzinfo=UTC),
+            analysis=career_writer(
+                {
+                    "carry_distance_yds": carry,
+                    "total_distance_yds": carry + 12.0,
+                    "ball_speed_mph": 118.0,
+                    "head_sway_norm": 0.200,
+                }
+            ),
+        )
+
+    profile = career.golfer_profile(root, golfers_dir, "Aaron")
+    assert profile is not None
+
+    assert profile.mishits_excluded == 1
+    for name in ("carry_distance_yds", "total_distance_yds"):
+        caveats = _metric(profile, name).caveats
+        assert any("set aside as a mishit" in c for c in caveats), name
+    assert not _metric(profile, "ball_speed_mph").caveats, "ball speed still counts the top"
+    assert not _metric(profile, "head_sway_norm").caveats, "so does its pose"
+
+
+def test_a_history_with_no_mishit_carries_neither_the_count_nor_the_caveat(
+    speaking_dir, golfers_dir
+) -> None:
+    profile = career.golfer_profile(speaking_dir, golfers_dir, "Aaron")
+    assert profile is not None
+
+    assert profile.mishits_excluded == 0
+    assert all(
+        "mishit" not in c for metric in profile.metrics for c in metric.caveats
+    )
 
 
 def test_a_metric_the_golfer_has_never_recorded_is_empty_not_missing(

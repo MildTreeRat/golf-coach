@@ -48,6 +48,7 @@ from golf_coach.contracts.caveats import (
     ONLY_CHECKPOINTS_ARE_JUDGED,
     PLACEMENTS_ARE_NOT_SCORES,
 )
+from golf_coach.contracts.mishit import MISHIT_EXCLUDED_METRICS, MishitVerdict
 from golf_coach.contracts.placements import PLACEMENTS_BY_NAME
 from golf_coach.contracts.shot import ShotData
 from golf_coach.contracts.unscored import UnscoredCheckpoint, UnscoredReason
@@ -280,6 +281,17 @@ class SwingView(BaseModel):
             "get_club_profile reports on."
         ),
     )
+    mishit: str | None = Field(
+        default=None,
+        description=(
+            "The golfer's verdict on the shot this swing hit: `confirmed` (a top or duff, so its "
+            "carry and total distance are meaningless and every per-club average leaves them "
+            "out), `cleared` (a real shot the automatic rule flagged, put back), or None (no "
+            "verdict — the automatic rule in get_bag_profile decides). Set only through the mishit "
+            "repair route or flag_mishit.py, never inferred. The mechanics are a fair sample "
+            "either way; only the distance is in question (ADR-028)."
+        ),
+    )
     overall_score: float | None = None
     mechanics_score: float | None = None
     outcome_score: float | None = Field(
@@ -375,6 +387,16 @@ class SessionDetail(BaseModel):
     shots_needing_review: int = Field(
         default=0, description="Attached shots whose OCR parse was flagged (ADR-014)."
     )
+    mishits_excluded: int = Field(
+        default=0,
+        description=(
+            "Attached shots whose carry and total distance were left out of `shot_averages` "
+            "because the golfer confirmed the swing was a mishit. Only a manual `confirmed` "
+            "verdict does this here: a single session rarely holds enough of one club to spot an "
+            "outlier, so the automatic rule get_bag_profile uses is not applied (ADR-028 §3). "
+            "Ball speed, launch and the rest still count the shot."
+        ),
+    )
     shot_averages: dict[str, float] = Field(
         default_factory=dict, description="Mean of each metric over attached, trusted shots."
     )
@@ -427,13 +449,15 @@ def get_swing(sessions_dir: Path, session_id: str, swing_id: str) -> SwingView |
     state = load_state(swing_dir)
     status = _status_of(state, swing_dir)
     analysis = load_analysis(swing_dir)
-    # Off the manifest, not the analysis: the club is stamped when the swing arrives and an
-    # unanalyzed swing has one too. Both returns carry it for that reason.
+    # Off the manifest, not the analysis: the club and the mishit verdict are both stamped on the
+    # swing rather than derived by the engine, so an unanalyzed swing carries them too. Both
+    # returns carry them for that reason.
     club = manifest.club.value if manifest.club is not None else None
+    mishit = manifest.mishit.value if manifest.mishit is not None else None
 
     if analysis is None:
         return SwingView(
-            swing_id=swing_id, session_id=session_id, status=status, club=club
+            swing_id=swing_id, session_id=session_id, status=status, club=club, mishit=mishit
         )
 
     swing = _dict(analysis.get("swing"))
@@ -450,6 +474,7 @@ def get_swing(sessions_dir: Path, session_id: str, swing_id: str) -> SwingView |
         session_id=session_id,
         status=status,
         club=club,
+        mishit=mishit,
         overall_score=_number(swing.get("overall_score")),
         mechanics_score=_number(swing.get("mechanics_score")),
         outcome_score=_number(swing.get("outcome_score")),
@@ -489,6 +514,7 @@ def get_session_summary(sessions_dir: Path, session_id: str) -> SessionDetail | 
     metric_totals: dict[str, list[float]] = {}
     shots_attached = 0
     shots_flagged = 0
+    mishits_excluded = 0
 
     for manifest in manifests:
         view = get_swing(sessions_dir, session_id, manifest.swing_id)
@@ -508,7 +534,16 @@ def get_session_summary(sessions_dir: Path, session_id: str) -> SessionDetail | 
             if view.shot.needs_review:
                 shots_flagged += 1
                 continue  # a flagged parse must not move an average it would silently poison
+            # The manual verdict only. A session is too small to hold one club's distribution, so
+            # the automatic rule read_corpus applies is deliberately not run here (ADR-028 §3) —
+            # and it is scoped to the two distance keys, so this shot's ball speed and launch
+            # still count.
+            topped = manifest.mishit is MishitVerdict.CONFIRMED
+            if topped:
+                mishits_excluded += 1
             for key, value in view.shot.metrics.items():
+                if topped and key in _MISHIT_SKIP:
+                    continue
                 if isinstance(value, float):
                     metric_totals.setdefault(key, []).append(value)
 
@@ -525,6 +560,7 @@ def get_session_summary(sessions_dir: Path, session_id: str) -> SessionDetail | 
         unscored_counts=dict(sorted(unscored_counts.items())),
         shots_attached=shots_attached,
         shots_needing_review=shots_flagged,
+        mishits_excluded=mishits_excluded,
         shot_averages={
             key: round(sum(values) / len(values), 1)
             for key, values in sorted(metric_totals.items())
@@ -596,6 +632,13 @@ _NON_METRIC_FIELDS = (
     "source",
     "provenance",
 )
+
+#: The `ShotView.metrics` keys a CONFIRMED mishit's shot is held out of a session average on
+#: (ADR-028 §3). `contracts.mishit` names the metrics with a `_yds` suffix because those are
+#: *measurement* names; the launch-monitor shot fields they are read off do not carry it. Derived
+#: by stripping the suffix rather than re-typed, so this and `MISHIT_EXCLUDED_METRICS` cannot name
+#: two different sets — `tests/mcp/test_query.py` pins that every name here is a real shot metric.
+_MISHIT_SKIP = frozenset(name.removesuffix("_yds") for name in MISHIT_EXCLUDED_METRICS)
 
 
 def _summarize(manifest: Any, swing_dir: Path) -> SwingSummary:

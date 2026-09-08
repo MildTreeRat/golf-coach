@@ -144,6 +144,22 @@ def test_swings_and_shots_are_independent_counts() -> None:
     assert restored.n_swings > restored.n_shots
 
 
+def test_the_mishit_fields_default_to_nothing_and_survive_a_round_trip() -> None:
+    """A profile built before M16 — or for a club with no mishit — reads clean, not as an error."""
+    bare = _profile(ClubId.SEVEN_IRON)
+    assert (bare.mishits, bare.mishit_refs, bare.mishits_unconfirmed) == (0, [], 0)
+    assert BagProfile(player_id="aaron", clubs=(bare,)).mishits_excluded == 0
+
+    populated = _profile(
+        ClubId.SEVEN_IRON, mishits=2, mishit_refs=["2026-09-01/3", "2026-09-02/1"],
+        mishits_unconfirmed=1,
+    )
+    bag = BagProfile(player_id="aaron", clubs=(populated,), mishits_excluded=2)
+    restored = BagProfile.model_validate_json(bag.model_dump_json())
+    assert restored == bag
+    assert restored.clubs[0].mishit_refs == ["2026-09-01/3", "2026-09-02/1"]
+
+
 def test_clubs_must_be_in_bag_order() -> None:
     """The ordering pin, with a set where insertion, alphabetical and bag order all differ.
 

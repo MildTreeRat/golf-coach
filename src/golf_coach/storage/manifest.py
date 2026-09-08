@@ -10,9 +10,9 @@ pure addition, with no migration of manifests written by this code.
 `player_id` was added exactly that way (career mode, step 1): optional, defaulted,
 and read through the same tolerant loader, so the four manifests written before it
 existed still load and simply report `None`. `club` (M9 P4) is the second field
-added under that pattern, and the pattern is the reason neither addition needed a
-migration: a new optional field is a pure addition, so every manifest already on
-disk keeps loading and answers `None`.
+added under that pattern, and `mishit` (M16 P1) the third; the pattern is the
+reason none of them needed a migration: a new optional field is a pure addition,
+so every manifest already on disk keeps loading and answers `None`.
 """
 
 from __future__ import annotations
@@ -27,6 +27,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 from golf_coach.contracts.club import ClubId
+from golf_coach.contracts.mishit import MishitVerdict
 
 
 class Role(StrEnum):
@@ -95,6 +96,21 @@ class SwingManifest(BaseModel):
             "golfer, whereas a session has many clubs and nothing but memory can say which hit "
             "what. Optional in the shape, required at the boundary (R12) — which is what lets "
             "every manifest written before M9 keep loading."
+        ),
+    )
+
+    mishit: MishitVerdict | None = Field(
+        default=None,
+        description=(
+            "The golfer's own verdict on the shot hit with this swing, set through the "
+            "`.../swings/{swing_id}/mishit` repair route or `scripts/flag_mishit.py` — never "
+            "stamped from a cursor and never inferred. `None` is the common case and means 'no "
+            "verdict': the automatic rule in `contracts.mishit` decides whether this shot's carry "
+            "counts toward the club's distance averages. `CONFIRMED` or `CLEARED` overrides that "
+            "rule in either direction. The third optional field added under the tolerant-loader "
+            "pattern (`player_id`, then `club`), so every manifest written before M16 still loads "
+            "and reports `None`. No bulk backfill, for `club`'s reason (ADR-024 §5): only the "
+            "golfer who hit the swing knows whether they topped it."
         ),
     )
 

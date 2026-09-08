@@ -17,6 +17,7 @@ import pytest
 from golf_coach.api.state import AnalysisState, input_hashes, save_state
 from golf_coach.contracts.club import ClubId
 from golf_coach.contracts.golfer import Handedness
+from golf_coach.contracts.mishit import MishitVerdict
 from golf_coach.contracts.swing import ANALYSIS_VERSION
 from golf_coach.storage.golfer_store import GolferStore
 from golf_coach.storage.manifest import (
@@ -38,6 +39,7 @@ def make_manifest(
     player_id: str | None = None,
     created_at: datetime = _WHEN,
     club: ClubId | None = None,
+    mishit: MishitVerdict | None = None,
 ) -> SwingManifest:
     return SwingManifest(
         swing_id=swing_id,
@@ -46,6 +48,7 @@ def make_manifest(
         updated_at=created_at,
         player_id=player_id,
         club=club,
+        mishit=mishit,
         roles={
             role: RoleFile(
                 role=role,
@@ -135,6 +138,7 @@ def write_swing(
     player_id: str | None = None,
     created_at: datetime = _WHEN,
     club: ClubId | None = None,
+    mishit: MishitVerdict | None = None,
 ) -> Path:
     """One swing directory. `state=False` mimics a CLI-analyzed swing from before Phase 5.
 
@@ -143,7 +147,9 @@ def write_swing(
     both have to be settable per swing rather than fixed at `_WHEN`.
 
     `club` exists for the club tools (M9 P18) and defaults to None on purpose — that is the shape
-    of every swing on disk today, and it is the state `BagProfile.untagged_swings` counts.
+    of every swing on disk today, and it is the state `BagProfile.untagged_swings` counts. `mishit`
+    (M16 P7) is the golfer's verdict on the shot, and `get_session_summary` acts on a `CONFIRMED`
+    one only — the auto rule needs a club distribution a single session rarely has (ADR-028 §3).
     """
     swing_dir = sessions_dir / session_id / swing_id
     swing_dir.mkdir(parents=True, exist_ok=True)
@@ -155,6 +161,7 @@ def write_swing(
         player_id=player_id,
         created_at=created_at,
         club=club,
+        mishit=mishit,
     )
     save_manifest(manifest, manifest_path(swing_dir))
 

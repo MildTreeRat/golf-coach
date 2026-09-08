@@ -10,6 +10,7 @@ from datetime import UTC, datetime
 import pytest
 
 from golf_coach.contracts.club import ClubId
+from golf_coach.contracts.mishit import MishitVerdict
 from golf_coach.storage.bundle_store import SwingBundleStore
 from golf_coach.storage.manifest import Role
 
@@ -312,6 +313,24 @@ def test_attribute_unlabeled_stamps_the_golfer_and_touches_no_club(store) -> Non
 
     assert [m.player_id for m in store.get_session(_SESSION)] == ["aaron", "aaron"]
     assert [m.club for m in store.get_session(_SESSION)] == [None, ClubId.SEVEN_IRON]
+
+
+def test_set_mishit_records_a_verdict_and_a_null_clears_it(store) -> None:
+    """The explicit per-swing override, and reset back to automatic (ADR-028)."""
+    _upload(store, _SESSION, Role.FACE_ON, b"one", club=ClubId.SEVEN_IRON)
+
+    confirmed = store.set_mishit(_SESSION, "1", MishitVerdict.CONFIRMED)
+    assert confirmed.mishit is MishitVerdict.CONFIRMED
+    assert store.get_swing(_SESSION, "1").mishit is MishitVerdict.CONFIRMED
+
+    reset = store.set_mishit(_SESSION, "1", None)
+    assert reset.mishit is None
+    assert store.get_swing(_SESSION, "1").mishit is None
+    assert reset.club is ClubId.SEVEN_IRON  # the verdict is the only thing it touches
+
+
+def test_set_mishit_on_a_missing_swing_returns_none(store) -> None:
+    assert store.set_mishit(_SESSION, "99", MishitVerdict.CONFIRMED) is None
 
 
 # ---------------------------------------------------------------- deleting a swing [phantoms]

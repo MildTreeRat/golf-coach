@@ -6,6 +6,7 @@ import hashlib
 from datetime import UTC, datetime
 
 from golf_coach.contracts.club import ClubId
+from golf_coach.contracts.mishit import MishitVerdict
 from golf_coach.storage.manifest import (
     Role,
     RoleFile,
@@ -189,3 +190,35 @@ def test_club_and_player_are_independent_on_a_manifest(tmp_path) -> None:
 
     assert loaded.player_id == "aaron"
     assert loaded.club is None
+
+
+def test_a_manifest_written_before_mishit_existed_still_loads(tmp_path) -> None:
+    """M16 P1's half of the no-migration guarantee — same bytes the two fields before it pin."""
+    path = tmp_path / "manifest.json"
+    path.write_text(
+        '{"swing_id": "1", "session_id": "2026-08-07-aaron1",'
+        ' "created_at": "2026-08-07T12:00:00Z", "updated_at": "2026-08-07T12:00:00Z",'
+        ' "roles": {}}',
+        encoding="utf-8",
+    )
+
+    manifest = load_manifest(path)
+
+    assert manifest is not None
+    assert manifest.mishit is None
+
+
+def test_mishit_verdict_round_trips(tmp_path) -> None:
+    manifest = SwingManifest(
+        swing_id="1",
+        session_id="2026-08-06",
+        created_at=_NOW,
+        updated_at=_NOW,
+        club=ClubId.SEVEN_IRON,
+        mishit=MishitVerdict.CONFIRMED,
+    )
+    path = tmp_path / "manifest.json"
+
+    save_manifest(manifest, path)
+
+    assert load_manifest(path).mishit is MishitVerdict.CONFIRMED

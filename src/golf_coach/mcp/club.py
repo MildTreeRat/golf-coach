@@ -248,6 +248,25 @@ class ClubView(BaseModel):
     )
     n_sessions: int = Field(description="Distinct sessions those swings came from.")
 
+    mishits: int = Field(
+        default=0,
+        description="Distinct shot photos held out of this club's carry and total-distance "
+        "averages ONLY as mishits — a top or duff carrying far below the club's own median "
+        "(ADR-028). `n_shots` still counts them, and so does every other metric: ball speed, "
+        "launch, offline and every pose checkpoint. Each one is named in `mishit_refs`, not just "
+        "totalled here.",
+    )
+    mishit_refs: list[str] = Field(
+        default_factory=list,
+        description="`session/swing` of every shot in `mishits`, sorted — a held-out sample the "
+        "golfer can go and look at, rather than an `n` that shrank for a reason nobody wrote down.",
+    )
+    mishits_unconfirmed: int = Field(
+        default=0,
+        description="Of `mishits`, how many the automatic rule flagged and the golfer has not yet "
+        "confirmed or cleared. The 'waiting for you' count a bag page surfaces.",
+    )
+
     metrics: list[ClubMetric] = Field(default_factory=list)
     caveats: list[str] = Field(
         default_factory=list,
@@ -291,6 +310,14 @@ class BagView(BaseModel):
         "above can see, and it is not lost — it counts toward every whole-bag figure "
         "get_golfer_profile reports. It is only invisible per club.",
     )
+    mishits_excluded: int = Field(
+        default=0,
+        description="Shot photos across the whole bag held out of a club's carry and "
+        "total-distance average as mishits (ADR-028), carried whole from "
+        "`CareerCorpus.mishit_shots`. Beside `untagged_swings` because it is the same kind of "
+        "number: distance history the per-club averages deliberately do not see. Which club and "
+        "which shots is on each club entry's `mishit_refs`.",
+    )
 
     nothing_tagged: bool = Field(
         default=False,
@@ -326,6 +353,7 @@ def bag_profile(sessions_dir: Path, golfers_dir: Path, player: str) -> BagView |
         clubs_used=len(profile.clubs_used),
         clubs_declared=len(profile.clubs_declared),
         untagged_swings=profile.untagged_swings,
+        mishits_excluded=profile.mishits_excluded,
         nothing_tagged=not clubs,
         note=_bag_note(clubs, profile.untagged_swings),
     )
@@ -430,6 +458,9 @@ def _club_view(player_id: str, profile: ClubProfile) -> ClubView:
         n_swings=profile.n_swings,
         n_shots=profile.n_shots,
         n_sessions=profile.n_sessions,
+        mishits=profile.mishits,
+        mishit_refs=list(profile.mishit_refs),
+        mishits_unconfirmed=profile.mishits_unconfirmed,
         metrics=metrics,
         caveats=list(profile.caveats),
         nothing_sayable=nothing_sayable,

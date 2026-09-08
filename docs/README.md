@@ -1,6 +1,6 @@
 # Documentation map
 
-63 markdown documents: 51 in `docs/` — 19 here at the top level (including this map), 28 ADRs,
+64 markdown documents: 52 in `docs/` — 19 here at the top level (including this map), 29 ADRs,
 3 archived, 1 in `proposals/` — plus 12 outside it (the four at the repo root, and one each in
 `data/` and `frontend/`, six in `spikes/`). This page says which one to read, and — just as
 importantly — which ones are records of the past rather than descriptions of the present.
@@ -94,7 +94,7 @@ everything on this page is supposed to be trustworthy.
 
 ## Decisions (ADRs)
 
-27 decisions, 53 addenda between them (`grep -c '^#\+ *Addendum' docs/decisions/*.md` — the
+28 decisions, 53 addenda between them (`grep -c '^#\+ *Addendum' docs/decisions/*.md` — the
 stated total had drifted to 11, then to 13, and is now pinned by `tests/test_docs_truth.py`
 along with every per-ADR count in the last column).
 **The addenda are where reality corrected the original call**, so a doc's original Decision
@@ -180,6 +180,7 @@ fly": it names one survivor per photo, and one photo on this corpus is attached 
 two of them were told their screen had never been read. And it is the first surface that can *see*
 P14's seam rather than re-fly past it, setting the stored numbers beside the flown ones and
 splitting the two causes on the engine version); and P19 added the view a golfer means by *seeing a shot* — a perspective tracer from behind the ball — which corrects P15's rationale without overturning it (a camera does foreshorten both questions, so the tracer is a **third** panel captioned as unmeasurable rather than a replacement for the two that can be read), and found that the top of a perspective frame is **not the apex**, because angular elevation peaks earlier than the flight does |
+| [028](decisions/028-mishit-exclusion.md) | Mishit exclusion — the topped shot that is not your seven iron | **Accepted** 2026-09-07, **built** 2026-09-08 ([M16](../ROADMAP.md), 9/9 phases) | — (a shot carrying below half its club's own median is held out of the carry and total-distance averages only — every other metric still counts it — auto-flagged before the count is taken, overridable per swing, and every held-out shot named; no `ANALYSIS_VERSION` bump, because the aggregates are live and nothing in `analysis.json` changes. Built as designed, no addendum; the Status section records the one real mishit on disk) |
 
 Format: [000-template.md](decisions/000-template.md).
 

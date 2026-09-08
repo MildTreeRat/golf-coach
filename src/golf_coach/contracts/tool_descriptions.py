@@ -52,7 +52,9 @@ GET_SESSION_SUMMARY = (
     "checkpoint passed, which checkpoints went unmeasured, and averages over the "
     "launch-monitor shots attached to that session's swings. Call this when the user asks "
     "how a whole session or day went, rather than fetching every swing individually. "
-    "Shots flagged as uncertain are counted but excluded from the averages. A session "
+    "Shots flagged as uncertain are counted but excluded from the averages, and so are the "
+    "carry and total distance of a swing the golfer confirmed was a mishit (only that "
+    "manual verdict, not the automatic per-club rule get_bag_profile uses). A session "
     "with nothing analyzed yet returns zero counts, which is a real answer; only a "
     "session id that does not exist at all reports a miss."
 )

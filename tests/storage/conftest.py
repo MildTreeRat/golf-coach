@@ -22,6 +22,7 @@ import pytest
 
 from golf_coach.api.state import AnalysisState, input_hashes, save_state
 from golf_coach.contracts.club import ClubId
+from golf_coach.contracts.mishit import MishitVerdict
 from golf_coach.contracts.swing import ANALYSIS_VERSION
 from golf_coach.storage.manifest import (
     Role,
@@ -103,6 +104,7 @@ def write_swing(
     *,
     player_id: str | None = "aaron",
     club: ClubId | None = None,
+    mishit: MishitVerdict | None = None,
     face_on: str | None = "face-on-hash",
     shot_screen: str | None = "shot-hash",
     down_the_line: str | None = "dtl-hash",
@@ -131,6 +133,7 @@ def write_swing(
         updated_at=created_at,
         player_id=player_id,
         club=club,
+        mishit=mishit,
         roles={
             role: RoleFile(
                 role=role,

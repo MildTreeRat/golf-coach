@@ -46,6 +46,14 @@ count honestly. So the loose reading wins, for `SESSION_DRIFT_FACTOR`'s reason o
 entry recorded late for a club that never changed is the likelier case, and being wrong about it
 has to cost a sentence rather than a verdict.
 
+## A mishit is subtracted upstream and only *named* here
+
+`CorpusSwing.artifact_key` already withheld the topped shot's carry and total from the pool
+(ADR-028), so `_profile_for` reads a mean that is already right. `_mishit_caveats` adds the
+sentence that says a mean was built from fewer shots than `n_shots` — the same "output, not
+control flow" posture `_bag_changed_caveats` takes, and for the same reason: a number that shrank
+with nothing explaining it is indistinguishable from a bug.
+
 Pure functions over contracts, base install only. No I/O — the corpus and the bag both arrive
 assembled, from `storage.corpus.read_corpus` and `storage.bag_store.BagStore.get` respectively.
 """
@@ -84,10 +92,11 @@ def build_bag_profile(corpus: CareerCorpus, bag: Bag | None = None) -> BagProfil
     return BagProfile(
         player_id=corpus.player_id,
         clubs=tuple(_profile_for(corpus, club, bag) for club in clubs),
-        # Read off the **whole** corpus. A narrowed one reports 0 by construction, so taking it
-        # from anywhere inside the loop would silently erase the one number on this model that
-        # describes the history no profile above it can see.
+        # Both read off the **whole** corpus. A narrowed one reports 0 by construction, so taking
+        # either from inside the loop would silently erase a number on this model that describes
+        # history no profile above it can see.
         untagged_swings=corpus.untagged_swings,
+        mishits_excluded=corpus.mishit_shots,
     )
 
 
@@ -136,11 +145,14 @@ def _profile_for(corpus: CareerCorpus, club: ClubId, bag: Bag | None) -> ClubPro
         # be paired with another's sessions. The cost is a second pass over a swing list this repo
         # counts in tens.
         dispersion=build_dispersion(narrowed).metrics,
+        mishits=narrowed.mishit_shots,
+        mishit_refs=narrowed.mishit_refs,
+        mishits_unconfirmed=narrowed.mishit_shots_unconfirmed,
         # `narrowed.swings`, never `corpus.swings`. The sentence counts *this club's* history, and
         # the module docstring's first section is the same property one layer up: the whole bag's
         # swing list attached to one club produces a caveat that is wrong about its own subject
         # while looking exactly like a working one.
-        caveats=_bag_changed_caveats(entry, narrowed.swings),
+        caveats=_bag_changed_caveats(entry, narrowed.swings) + _mishit_caveats(narrowed),
     )
 
 
@@ -209,3 +221,37 @@ def _bag_changed_caveats(entry: BagEntry | None, swings: Sequence[CorpusSwing]) 
         f"bag entry recorded on {date}. A club replaced under the same name would put two "
         f"different clubs in one average, and these numbers pool both."
     ]
+
+
+def _mishit_caveats(narrowed: CareerCorpus) -> list[str]:
+    """Say how many of this club's shots were set aside as mishits, and how many await a verdict.
+
+    Shaped like `_bag_changed_caveats`: one sentence, appended, and it **removes nothing here** —
+    the samples were already withheld upstream by `CorpusSwing.artifact_key`. It names the count
+    against `distinct_shots`, the "N of M" form the bag-changed caveat uses, so a reader can see
+    how much of the distance history it touches. No threshold constant — the 0.50 lives once, in
+    `contracts/mishit.py`, and a number here would be a second home for it to drift from.
+    """
+    total = narrowed.mishit_shots
+    if total == 0:
+        return []
+
+    shots = narrowed.distinct_shots
+    head = (
+        f"1 of the {shots} shots on this club was"
+        if total == 1
+        else f"{total} of the {shots} shots on this club were"
+    )
+    sentence = (
+        f"{head} set aside as a mishit — a top or duff carrying far below this club's median — "
+        "and left out of the carry and total-distance averages; every other metric still counts "
+        "them."
+    )
+
+    unconfirmed = narrowed.mishit_shots_unconfirmed
+    if unconfirmed:
+        verb = "was" if unconfirmed == 1 else "were"
+        sentence += (
+            f" {unconfirmed} {verb} flagged automatically and {verb} not yet confirmed or cleared."
+        )
+    return [sentence]

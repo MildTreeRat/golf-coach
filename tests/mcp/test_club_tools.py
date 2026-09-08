@@ -262,6 +262,7 @@ def test_with_enough_swings_on_one_club_it_speaks(speaking_dir, golfers_dir) -> 
 
     assert not view.nothing_sayable and not view.note
     assert view.n_swings == _SWINGS and view.n_sessions == _SESSIONS
+    assert view.mishits == 0 and not view.mishit_refs, "no shot here carries below half the median"
 
     carry = _metric(view, "carry_distance_yds")
     assert carry.n == _SWINGS
@@ -469,3 +470,54 @@ def test_swings_that_carry_no_measurement_say_so_rather_than_refusing(
     assert view.n_swings == 2 and not view.metrics
     assert view.note == club.NO_MEASUREMENTS
     assert "get_golfer_profile" in view.note
+
+
+# ------------------------------------------------------------------ the held-out mishit
+
+
+def test_a_topped_shot_is_held_out_named_and_still_counted_elsewhere(
+    tmp_path, golfers_dir, swing_writer, career_writer
+) -> None:
+    """ADR-028 §4 on the wire: the top leaves the carry average and the payload says which shot.
+
+    The exclusion is the corpus's (M16 P3); this phase is only that `get_club_profile` and
+    `get_bag_profile` carry it out to a model as three explicit numbers rather than an `n` that
+    quietly shrank. Five real 7 irons near 150 and one 22-yard top — below half the club's median,
+    which is what the automatic rule flags.
+    """
+    root = tmp_path / "sessions"
+    carries = [150.0, 152.0, 148.0, 151.0, 149.0, 22.0]
+    for i, carry in enumerate(carries):
+        swing_writer(
+            root,
+            f"2026-09-{i + 1:02d}",
+            "1",
+            player_id="aaron",
+            club=ClubId.SEVEN_IRON,
+            created_at=datetime(2026, 9, i + 1, 12, tzinfo=UTC),
+            analysis=career_writer(
+                {
+                    "carry_distance_yds": carry,
+                    "total_distance_yds": carry + 12.0,
+                    "ball_speed_mph": 118.0,
+                    "head_sway_norm": 0.200,
+                }
+            ),
+        )
+
+    view = club.club_profile(root, golfers_dir, "Aaron", "7i")
+    assert isinstance(view, club.ClubView)
+
+    assert view.mishits == 1
+    assert view.mishit_refs == ["2026-09-06/1"]
+    assert view.mishits_unconfirmed == 1
+    assert view.n_shots == 6, "the top is still a shot photo"
+    assert _metric(view, "carry_distance_yds").n == 5, "but not a carry sample"
+    assert _metric(view, "total_distance_yds").n == 5
+    assert _metric(view, "ball_speed_mph").n == 6, "and its ball speed still counts"
+    assert _metric(view, "head_sway_norm").n == 6, "and its pose still counts"
+
+    bag = club.bag_profile(root, golfers_dir, "Aaron")
+    assert bag is not None
+    assert bag.mishits_excluded == 1, "carried whole from the corpus, beside untagged_swings"
+    assert _club(bag).mishit_refs == ["2026-09-06/1"], "and the per-club detail is on the entry"

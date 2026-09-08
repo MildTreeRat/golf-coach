@@ -50,6 +50,7 @@ from golf_coach.contracts.baseline import (
 from golf_coach.contracts.comparison import MetricComparison
 from golf_coach.contracts.dispersion import MetricDispersion
 from golf_coach.contracts.golfer import Golfer, slugify
+from golf_coach.contracts.mishit import MISHIT_EXCLUDED_METRICS
 from golf_coach.mcp import query
 from golf_coach.storage.corpus import narrow_to, read_corpus
 from golf_coach.storage.golfer_store import GolferStore
@@ -185,6 +186,13 @@ class GolferProfile(BaseModel):
         description="Swings that contributed at least one value. An unanalyzed, stale or "
         "outdated swing is a real swing of theirs that contributed nothing."
     )
+    mishits_excluded: int = Field(
+        default=0,
+        description="Shot photos held out of the carry and total-distance averages as mishits — a "
+        "top or duff carrying far below that club's own median (ADR-028). Every other metric still "
+        "counts them, and get_bag_profile has the per-club breakdown. When this is above 0, the "
+        "two distance metrics below carry a caveat saying so.",
+    )
 
     metrics: list[MetricProfile] = Field(default_factory=list)
 
@@ -299,6 +307,7 @@ def golfer_profile(sessions_dir: Path, golfers_dir: Path, player: str) -> Golfer
         )
         for name, metric in sorted(baseline.metrics.items())
     ]
+    _note_mishit_exclusion(metrics, corpus.mishit_shots)
 
     return GolferProfile(
         player_id=golfer.player_id,
@@ -308,6 +317,7 @@ def golfer_profile(sessions_dir: Path, golfers_dir: Path, player: str) -> Golfer
         swing_dirs_seen=corpus.swing_dirs_seen,
         sessions=baseline.built_from_sessions,
         built_from_swings=baseline.built_from_swings,
+        mishits_excluded=corpus.mishit_shots,
         metrics=metrics,
         nothing_sayable=baseline.nothing_sayable,
         note=THE_UNBLOCK if baseline.nothing_sayable else "",
@@ -474,6 +484,30 @@ def _profile(
 
     profile.unavailable = list(dict.fromkeys(profile.unavailable))
     return profile
+
+
+def _note_mishit_exclusion(metrics: list[MetricProfile], mishit_shots: int) -> None:
+    """Append the mishit sentence to carry and total distance, once the corpus holds a mishit.
+
+    Appended here rather than passed into `_profile`, because `_profile` sets `.caveats` from the
+    dispersion layer wholesale (`list(dispersion.caveats)`) and a caveat handed in earlier would be
+    overwritten. The names come from `MISHIT_EXCLUDED_METRICS` — the same frozenset
+    `CorpusSwing.artifact_key` withholds on — so the prose can never name a metric the exclusion
+    does not touch. This is the whole-history reader's one-line flag; which club and which shots is
+    get_bag_profile's job (`_mishit_caveats` there carries the per-club form).
+    """
+    if mishit_shots == 0:
+        return
+
+    shots, were = ("shot", "was") if mishit_shots == 1 else ("shots", "were")
+    sentence = (
+        f"{mishit_shots} {shots} {were} set aside as a mishit — a top or duff carrying far below "
+        "that club's own median — and left out of this average; every other metric still counts "
+        "them, and get_bag_profile names which club and which shots."
+    )
+    for metric in metrics:
+        if metric.name in MISHIT_EXCLUDED_METRICS:
+            metric.caveats.append(sentence)
 
 
 def _sampleless(
