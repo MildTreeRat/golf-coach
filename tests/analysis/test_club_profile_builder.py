@@ -40,6 +40,7 @@ from golf_coach.contracts.baseline import BaselineClaim
 from golf_coach.contracts.career import CareerCorpus, CorpusSwing
 from golf_coach.contracts.club import ClubId
 from golf_coach.contracts.intent import ClubCategory
+from golf_coach.contracts.mishit import MishitVerdict
 from golf_coach.contracts.swing import Measurement
 
 CARRY = "carry_distance_yds"
@@ -58,8 +59,15 @@ def _swing(
     session_id: str | None = None,
     face_on: str | None = None,
     shot: str | None = None,
+    auto_mishit: bool = False,
+    mishit: MishitVerdict | None = None,
 ) -> CorpusSwing:
-    """One distinct swing. Defaults give every swing its own clip, photo and session."""
+    """One distinct swing. Defaults give every swing its own clip, photo and session.
+
+    `auto_mishit` / `mishit` are set directly because `_flag_auto_mishits` lives in
+    `storage.corpus.read_corpus` and this file never touches disk — detection is pinned in
+    `tests/storage/test_corpus.py`, and what is tested here is that the builder surfaces the flag.
+    """
     return CorpusSwing(
         player_id="aaron",
         session_id=session_id or f"2026-08-{index:02d}",
@@ -68,6 +76,8 @@ def _swing(
         face_on_sha256=face_on or f"clip-{index}",
         shot_sha256=shot or f"photo-{index}",
         club=club,
+        auto_mishit=auto_mishit,
+        manual_mishit=mishit,
         analyzed=True,
         measurements=(
             []
@@ -408,6 +418,58 @@ def test_the_caveat_qualifies_the_statistics_and_never_withholds_them() -> None:
     assert BaselineClaim.CENTER in profile.metrics[CARRY].ready
     assert profile.metrics[CARRY].mean is not None
     assert profile.metrics[CARRY].n == 6, "the caveat must not narrow what the mean is built from"
+
+
+# --------------------------------------------------------------------- the mishit caveat [M16 P4]
+
+
+def test_a_mishit_is_counted_named_and_left_out_of_the_carry_mean_only() -> None:
+    corpus = _corpus(
+        *_hits(ClubId.SEVEN_IRON, 6),  # carries 151..156
+        _swing(9, club=ClubId.SEVEN_IRON, carry=20.0, auto_mishit=True),
+    )
+
+    irons = build_bag_profile(corpus).profile_for(ClubId.SEVEN_IRON)
+    assert irons is not None
+
+    assert irons.n_shots == 7, "the top is still a shot"
+    assert irons.mishits == 1
+    assert irons.mishit_refs == ["2026-08-09/9"]
+    assert irons.mishits_unconfirmed == 1
+    assert irons.metrics[CARRY].n == 6, "but not a carry sample"
+    assert any("set aside as a mishit" in c for c in irons.caveats)
+    assert any("7 shots on this club" in c for c in irons.caveats)
+
+
+def test_a_confirmed_mishit_reads_as_ruled_on_not_waiting() -> None:
+    corpus = _corpus(
+        *_hits(ClubId.SEVEN_IRON, 6),
+        _swing(9, club=ClubId.SEVEN_IRON, carry=110.0, mishit=MishitVerdict.CONFIRMED),
+    )
+    irons = build_bag_profile(corpus).profile_for(ClubId.SEVEN_IRON)
+    assert irons is not None
+
+    assert irons.mishits == 1
+    assert irons.mishits_unconfirmed == 0
+    assert irons.metrics[CARRY].n == 6
+    assert not any("not yet confirmed" in c for c in irons.caveats)
+
+
+def test_the_bag_profile_sums_mishits_across_clubs() -> None:
+    corpus = _corpus(
+        *_hits(ClubId.SEVEN_IRON, 6),
+        _swing(9, club=ClubId.SEVEN_IRON, carry=20.0, auto_mishit=True),
+        *_hits(ClubId.DRIVER, 6, start=13, carry=250.0),
+        _swing(20, club=ClubId.DRIVER, carry=30.0, auto_mishit=True),
+    )
+    assert build_bag_profile(corpus).mishits_excluded == 2
+
+
+def test_no_mishit_no_caveat_and_zero_counts() -> None:
+    irons = build_bag_profile(_corpus(*_hits(ClubId.SEVEN_IRON, 6))).profile_for(ClubId.SEVEN_IRON)
+    assert irons is not None
+    assert (irons.mishits, irons.mishit_refs, irons.mishits_unconfirmed) == (0, [], 0)
+    assert not any("mishit" in c for c in irons.caveats)
 
 
 # ------------------------------------------------------------------------- the import boundary

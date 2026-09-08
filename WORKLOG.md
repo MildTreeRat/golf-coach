@@ -5,6 +5,31 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-09-07 — M16 P4: the mishits are counted and named, never just gone
+
+**Duration**: one sitting. **M16 is 5/9.** Edited: `contracts/club_profile.py`
+(`ClubProfile.mishits` / `mishit_refs` / `mishits_unconfirmed`, `BagProfile.mishits_excluded`),
+`analysis/club_profile.py` (populate them in `_profile_for` / `build_bag_profile`, new
+`_mishit_caveats` + a module-docstring section), `tests/contracts/test_club_profile.py` (+1),
+`tests/analysis/test_club_profile_builder.py` (+4, `_swing` gains `auto_mishit` / `mishit` kwargs).
+Full suite green, `ruff` and `mypy` clean.
+
+**`_mishit_caveats` adds a sentence and removes nothing** — the samples were already withheld by
+`CorpusSwing.artifact_key` in P2. Shaped like `_bag_changed_caveats`: "N of the M shots on this
+club were set aside as a mishit … every other metric still counts them", plus a second clause
+naming how many are still awaiting the golfer's verdict. No threshold constant here — the 0.50
+lives once, in `contracts/mishit.py`.
+
+**The builder tests set the flag directly** (`auto_mishit=True` / `manual_mishit=CONFIRMED` on a
+hand-built `CorpusSwing`) because `_flag_auto_mishits` lives in `read_corpus` and this file never
+touches disk — detection is pinned in `test_corpus.py`, surfacing is pinned here.
+
+**Next**: P5 — the write surface: `bundle_store.set_mishit` (mirror `set_club`), the
+`POST .../swings/{swing_id}/mishit` route, and `scripts/flag_mishit.py` (`--confirm` / `--clear` /
+`--auto` / `--list`).
+
+---
+
 ## 2026-09-07 — M16 P3: the club's median decides, before the count is taken
 
 **Duration**: one sitting. **M16 is 4/9.** Edited: `storage/corpus.py` (`_flag_auto_mishits`,

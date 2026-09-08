@@ -111,6 +111,31 @@ class ClubProfile(BaseModel):
         description="Distinct sessions those swings came from. The axis a TREND claim gates on.",
     )
 
+    mishits: int = Field(
+        default=0,
+        description=(
+            "Distinct shot photos held out of the **carry and total-distance averages only** as "
+            "mishits — a top or duff carrying far below this club's own median "
+            "(`contracts.mishit`, ADR-028). `n_shots` still counts them, and so does every other "
+            "metric: ball speed, launch, offline and every pose checkpoint. The exclusion is "
+            "named in `mishit_refs`, not just totalled here."
+        ),
+    )
+    mishit_refs: list[str] = Field(
+        default_factory=list,
+        description=(
+            "`session/swing` of every shot in `mishits`, sorted. Present so a held-out sample is "
+            "something a golfer can go and look at — the `ExcludedSwing` posture, one metric in."
+        ),
+    )
+    mishits_unconfirmed: int = Field(
+        default=0,
+        description=(
+            "Of `mishits`, how many the automatic rule flagged and the golfer has not yet "
+            "confirmed or cleared. The number a bag page surfaces as 'waiting for you'."
+        ),
+    )
+
     # --- what the evidence supports ---------------------------------------------------
     metrics: dict[str, MetricBaseline] = Field(
         default_factory=dict,
@@ -168,6 +193,17 @@ class BagProfile(BaseModel):
             "number with two spellings is two things that can be reported differently. This is "
             "the history no profile above can see, and it belongs beside them — every swing on "
             "disk today is in here, because they all predate the tag."
+        ),
+    )
+
+    mishits_excluded: int = Field(
+        default=0,
+        description=(
+            "Shot photos across the whole bag held out of a club's carry and total-distance "
+            "average as mishits, carried whole from `CareerCorpus.mishit_shots` (ADR-028). Beside "
+            "`untagged_swings` because it is the same kind of number: distance history the "
+            "per-club averages deliberately do not see. Per-club detail — which club, which shots "
+            "— is on each `ClubProfile`."
         ),
     )
 
