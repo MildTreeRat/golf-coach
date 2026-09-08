@@ -46,6 +46,7 @@ from golf_coach.contracts.career import (
     count_metrics,
 )
 from golf_coach.contracts.club import ClubId
+from golf_coach.contracts.mishit import mishit_carry_floor
 from golf_coach.contracts.shot import ShotData
 from golf_coach.contracts.swing import ANALYSIS_VERSION, Measurement
 from golf_coach.storage.bundle_store import SwingBundleStore
@@ -122,6 +123,11 @@ def read_corpus(sessions_dir: Path, player_id: str) -> CareerCorpus:
         swings.append(swing)
 
     swings.sort(key=lambda swing: (swing.captured_at, swing.session_id, swing.swing_id))
+
+    # Group the sorted swings by club and stamp `auto_mishit` on the gross tops — **before**
+    # `count_metrics`, so a mishit's carry is already withheld when the sample count is taken and
+    # the printed `n` cannot disagree with the pooled one (`CorpusSwing.artifact_key`, ADR-028).
+    _flag_auto_mishits(swings)
     metric_counts, unknown_sources = count_metrics(swings)
 
     return CareerCorpus(
@@ -199,7 +205,9 @@ def _corpus_swing(
     # `POST /api/sessions/{session_id}/swings/{swing_id}/club`, and that is the only route.
     #
     # It belongs in this constructor rather than below it: the NOT_ANALYZED branch returns early, so
-    # a field assigned after that point would be silently absent on every unanalyzed swing.
+    # a field assigned after that point would be silently absent on every unanalyzed swing. The
+    # golfer's `mishit` verdict is lifted here for the same reason — the automatic half is stamped
+    # later, by `_flag_auto_mishits` once every club's carries are in hand.
     swing = CorpusSwing(
         player_id=manifest.player_id or "",
         session_id=manifest.session_id,
@@ -208,6 +216,7 @@ def _corpus_swing(
         face_on_sha256=face_on_sha256,
         shot_sha256=shot_file.content_sha256 if shot_file else None,
         club=manifest.club,
+        manual_mishit=manifest.mishit,
         duplicates=duplicates,
         missing_roles=[role.value for role in manifest.missing_roles()],
     )
@@ -293,6 +302,55 @@ def _measurements(raw: object) -> list[Measurement]:
         except ValueError:
             continue
     return out
+
+
+def _flag_auto_mishits(swings: list[CorpusSwing]) -> None:
+    """Stamp `auto_mishit` on the shots that carried far below their club's own median (ADR-028).
+
+    Mutates `swings` in place, and must run **before `count_metrics`**: the flag has to be visible
+    when the sample count is taken, or the printed `n` and the `n` the baseline pools drift apart —
+    the disagreement `CorpusSwing.artifact_key` exists to prevent. Grouped by club, because a
+    20-yard carry is a mishit only relative to what *that* club normally does; `contracts.mishit`
+    holds the rule and the 0.50 constant.
+
+    A `manual_mishit` verdict is never touched here — it was lifted straight off the manifest and
+    `CorpusSwing.is_mishit` lets it win. This sets only the automatic half.
+    """
+    by_club: dict[ClubId, list[CorpusSwing]] = {}
+    for swing in swings:
+        if swing.club is None or not swing.counts_toward_metrics():
+            continue
+        if swing.shot_sha256 is None or swing.shot_needs_review:
+            continue
+        if _carry_of(swing) is None:
+            continue
+        by_club.setdefault(swing.club, []).append(swing)
+
+    for club_swings in by_club.values():
+        # One carry per distinct shot photo — the set `analysis.baseline` pools, so this median is
+        # the one a golfer is shown. `club_swings` is in `captured_at` order, so first-seen is the
+        # earliest, matching the survivor the reader kept when it collapsed the re-uploads.
+        seen_photos: set[str] = set()
+        carries: list[float] = []
+        for swing in club_swings:
+            photo, carry = swing.shot_sha256, _carry_of(swing)
+            if photo is None or carry is None or photo in seen_photos:
+                continue
+            seen_photos.add(photo)
+            carries.append(carry)
+
+        floor = mishit_carry_floor(carries)
+        if floor is None:
+            continue
+        for swing in club_swings:
+            carry = _carry_of(swing)
+            if carry is not None and carry < floor:
+                swing.auto_mishit = True
+
+
+def _carry_of(swing: CorpusSwing) -> float | None:
+    """This swing's printed carry, or None if it carries no `carry_distance_yds` measurement."""
+    return next((m.value for m in swing.measurements if m.name == "carry_distance_yds"), None)
 
 
 def _needs_review(raw: object) -> bool:

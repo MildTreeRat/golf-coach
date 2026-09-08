@@ -5,6 +5,34 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-09-07 — M16 P3: the club's median decides, before the count is taken
+
+**Duration**: one sitting. **M16 is 4/9.** Edited: `storage/corpus.py` (`_flag_auto_mishits`,
+`_carry_of`, `manual_mishit=manifest.mishit` in the `_corpus_swing` constructor, the call before
+`count_metrics`), `tests/storage/conftest.py` (`write_swing` gains a `mishit` kwarg),
+`tests/storage/test_corpus.py` (+7). Full suite green, `ruff` and `mypy` clean.
+
+**Behaviour is live.** `read_corpus` now groups the sorted swings by club, takes one carry per
+distinct shot photo, and stamps `auto_mishit` on anything below `0.50 × median` — but only once
+the club has 5 clean carry samples, so a bag hit twice flags nothing. Run before `count_metrics`,
+so the mishit's carry is already gone when `n` is counted; the seven new pins include the printed-n
+== pooled-n check with a top present.
+
+**The realistic corpus is unaffected.** No club on disk has 5 tagged shots yet (every stored swing
+predates the club tag), so the whole full suite passing without a single count moving is the
+expected result — and the mishit tests build their own tagged corpora to exercise the path.
+
+**Grammar of the seam, pinned in `test_career.py` and `test_corpus.py`**: `shot_needs_review` is
+checked before the mishit clause, so a flagged parse still wins (its carry was never a sample); a
+`CLEARED` verdict on an auto-flagged top puts it back; a `CONFIRMED` verdict removes a 120-yard
+chunk the 0.50 rule left alone.
+
+**Next**: P4 — `contracts/club_profile.py` (`ClubProfile.mishits` / `mishit_refs` /
+`mishits_unconfirmed`, `BagProfile.mishits_excluded`) and `analysis/club_profile.py` (populate them
++ `_mishit_caveats`, shaped like `_bag_changed_caveats`).
+
+---
+
 ## 2026-09-07 — M16 P2: a topped shot is a different event, not a low sample
 
 **Duration**: one sitting. **M16 is 3/9.** Edited: `src/golf_coach/contracts/career.py`

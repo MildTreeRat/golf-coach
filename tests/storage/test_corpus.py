@@ -18,6 +18,7 @@ from golf_coach.analysis.comparison import build_standing
 from golf_coach.analysis.dispersion import build_dispersion
 from golf_coach.contracts.career import ExclusionReason
 from golf_coach.contracts.club import ClubId
+from golf_coach.contracts.mishit import MishitVerdict
 from golf_coach.contracts.swing import ANALYSIS_VERSION
 from golf_coach.storage.corpus import narrow_to, read_corpus
 
@@ -745,3 +746,139 @@ def test_a_club_narrowing_drops_untagged_swings_and_untagged_swings_follows(
     assert corpus.metric_counts == {"head_sway_norm": 2}
     assert irons.untagged_swings == 0
     assert irons.metric_counts == {"head_sway_norm": 1}
+
+
+# --------------------------------------------------------------------------- mishits [M16 P3]
+
+
+def _seven_iron(swing, analysis, metric, corpus_dir, day, carry, **kw) -> None:
+    """One tagged 7-iron swing carrying `carry` yards, with clip and photo hashes of its own."""
+    swing(
+        corpus_dir, f"2026-08-{day:02d}", "1",
+        face_on=f"clip-{day}", shot_screen=f"photo-{day}",
+        club=ClubId.SEVEN_IRON, created_at=_at(day),
+        analysis=analysis(
+            [
+                metric("carry_distance_yds", carry, source=LM, unit="yards"),
+                metric("ball_speed_mph", 120.0, source=LM, unit="mph"),
+                metric("head_sway_norm", 0.2),
+            ]
+        ),
+        **kw,
+    )
+
+
+def test_a_topped_shot_leaves_the_carry_average_and_stays_in_every_other(
+    corpus_dir, swing, analysis, metric
+) -> None:
+    """The shape the milestone exists for: five real 7 irons and one 20-yard top."""
+    for day, carry in [(7, 155.0), (8, 160.0), (9, 158.0), (10, 162.0), (11, 159.0), (12, 20.0)]:
+        _seven_iron(swing, analysis, metric, corpus_dir, day, carry)
+
+    corpus = read_corpus(corpus_dir, "aaron")
+
+    assert corpus.mishit_shots == 1
+    assert corpus.mishit_refs == ["2026-08-12/1"]
+    assert corpus.mishit_shots_unconfirmed == 1
+    assert corpus.metric_counts["carry_distance_yds"] == 5  # the top is out
+    assert corpus.metric_counts["ball_speed_mph"] == 6  # its ball speed still counts
+    assert corpus.metric_counts["head_sway_norm"] == 6  # so does its pose
+
+    baseline = build_baseline(corpus)
+    # the printed n and the pooled n stay equal with a mishit present — the seam this guards
+    assert baseline.metrics["carry_distance_yds"].n == corpus.metric_counts["carry_distance_yds"]
+    assert baseline.metrics["carry_distance_yds"].n == 5
+    assert baseline.metrics["ball_speed_mph"].n == 6
+
+
+def test_the_rule_stays_quiet_below_the_clean_sample_floor(
+    corpus_dir, swing, analysis, metric
+) -> None:
+    """Four shots is not enough club history for a fifth to be an outlier of it."""
+    for day, carry in [(7, 155.0), (8, 160.0), (9, 158.0), (10, 20.0)]:
+        _seven_iron(swing, analysis, metric, corpus_dir, day, carry)
+
+    corpus = read_corpus(corpus_dir, "aaron")
+
+    assert corpus.mishit_shots == 0
+    assert corpus.metric_counts["carry_distance_yds"] == 4
+
+
+def test_normal_dispersion_is_not_a_mishit(corpus_dir, swing, analysis, metric) -> None:
+    """A club whose good and bad days span 135–165 has no shot below half its median."""
+    for day, carry in [(7, 150.0), (8, 165.0), (9, 140.0), (10, 158.0), (11, 148.0), (12, 135.0)]:
+        _seven_iron(swing, analysis, metric, corpus_dir, day, carry)
+
+    corpus = read_corpus(corpus_dir, "aaron")
+
+    assert corpus.mishit_shots == 0
+    assert corpus.metric_counts["carry_distance_yds"] == 6
+
+
+def test_a_cleared_verdict_puts_an_auto_flagged_shot_back(
+    corpus_dir, swing, analysis, metric
+) -> None:
+    for day, carry in [(7, 155.0), (8, 160.0), (9, 158.0), (10, 162.0), (11, 159.0)]:
+        _seven_iron(swing, analysis, metric, corpus_dir, day, carry)
+    _seven_iron(swing, analysis, metric, corpus_dir, 12, 20.0, mishit=MishitVerdict.CLEARED)
+
+    corpus = read_corpus(corpus_dir, "aaron")
+
+    assert corpus.mishit_shots == 0
+    assert corpus.metric_counts["carry_distance_yds"] == 6
+
+
+def test_a_confirmed_verdict_removes_a_shot_the_rule_would_have_kept(
+    corpus_dir, swing, analysis, metric
+) -> None:
+    """A 120-yard chunk off a 150-yard club is above the 0.50 floor; the golfer calls it anyway."""
+    for day, carry in [(7, 155.0), (8, 160.0), (9, 158.0), (10, 162.0), (11, 159.0)]:
+        _seven_iron(swing, analysis, metric, corpus_dir, day, carry)
+    _seven_iron(swing, analysis, metric, corpus_dir, 12, 120.0, mishit=MishitVerdict.CONFIRMED)
+
+    corpus = read_corpus(corpus_dir, "aaron")
+
+    assert corpus.mishit_shots == 1
+    assert corpus.mishit_shots_unconfirmed == 0  # a human ruled on this one
+    assert corpus.metric_counts["carry_distance_yds"] == 5
+
+
+def test_a_club_narrowing_carries_the_mishit_flags(
+    corpus_dir, swing, analysis, metric
+) -> None:
+    for day, carry in [(7, 155.0), (8, 160.0), (9, 158.0), (10, 162.0), (11, 159.0), (12, 20.0)]:
+        _seven_iron(swing, analysis, metric, corpus_dir, day, carry)
+    swing(
+        corpus_dir, "2026-08-13", "1", face_on="clip-d", shot_screen="photo-d",
+        club=ClubId.DRIVER, created_at=_at(13),
+        analysis=analysis([metric("carry_distance_yds", 250.0, source=LM, unit="yards")]),
+    )
+
+    corpus = read_corpus(corpus_dir, "aaron")
+    irons = narrow_to(corpus, club=ClubId.SEVEN_IRON)
+
+    assert corpus.mishit_shots == 1
+    assert irons.mishit_shots == 1
+    assert irons.metric_counts["carry_distance_yds"] == 5
+
+
+def test_a_flagged_parse_is_neither_a_mishit_nor_in_the_median(
+    corpus_dir, swing, analysis, metric, shot
+) -> None:
+    """A shot whose OCR was flagged contributes no carry sample either way, so it cannot be a
+    mishit and cannot drag the median down to make one of a real shot."""
+    for day, carry in [(7, 155.0), (8, 160.0), (9, 158.0), (10, 162.0), (11, 159.0)]:
+        _seven_iron(swing, analysis, metric, corpus_dir, day, carry)
+    swing(
+        corpus_dir, "2026-08-12", "1", face_on="clip-12", shot_screen="photo-12",
+        club=ClubId.SEVEN_IRON, created_at=_at(12),
+        analysis=analysis(
+            [metric("carry_distance_yds", 25.0, source=LM, unit="yards")],
+            shot=shot(needs_review=True),
+        ),
+    )
+
+    corpus = read_corpus(corpus_dir, "aaron")
+
+    assert corpus.mishit_shots == 0
+    assert corpus.metric_counts["carry_distance_yds"] == 5
