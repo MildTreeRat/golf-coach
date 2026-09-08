@@ -11,6 +11,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from golf_coach.contracts.club import ClubId
+from golf_coach.contracts.mishit import MishitVerdict
 from golf_coach.contracts.shot import ShotData, ShotProvenance, ShotSource
 from golf_coach.contracts.swing import ANALYSIS_VERSION
 from golf_coach.mcp import query
@@ -512,6 +513,119 @@ def test_session_summary_is_none_only_when_the_session_is_absent(sessions_dir: P
 
 def test_listing_a_missing_sessions_dir_is_empty_not_an_error(tmp_path: Path) -> None:
     assert query.list_sessions(tmp_path / "nope") == []
+
+
+# --------------------------------------------------------------------------------------
+# Mishits [M16 P7]
+# --------------------------------------------------------------------------------------
+
+
+def _shot_with_distances(shot_id: str, *, carry: float, total: float) -> ShotData:
+    return ShotData(
+        shot_id=shot_id,
+        session_id="2026-08-10",
+        timestamp=datetime(2026, 8, 10, 1, 39, tzinfo=UTC),
+        source=ShotSource.SCREEN,
+        ball_speed=118.0,
+        carry_distance=carry,
+        total_distance=total,
+        provenance=ShotProvenance(device="hd_golf", parse_confidence=0.95, needs_review=False),
+    )
+
+
+def test_a_swing_carries_the_golfers_mishit_verdict(
+    tmp_path: Path, swing_writer, analysis_factory
+) -> None:
+    """Off the manifest, like `club`: an unanalyzed swing has it too, and None is the common case.
+
+    The verdict is the only mishit signal a human sets — the automatic rule lives in
+    get_bag_profile and never writes here.
+    """
+    root = tmp_path / "sessions"
+    swing_writer(
+        root, "2026-08-10", "1", mishit=MishitVerdict.CONFIRMED,
+        analysis=analysis_factory("2026-08-10", "1"),
+    )
+    swing_writer(
+        root, "2026-08-10", "2", mishit=MishitVerdict.CLEARED,
+        analysis=analysis_factory("2026-08-10", "2"),
+    )
+    swing_writer(root, "2026-08-10", "3", analysis=analysis_factory("2026-08-10", "3"))
+
+    confirmed = query.get_swing(root, "2026-08-10", "1")
+    cleared = query.get_swing(root, "2026-08-10", "2")
+    unset = query.get_swing(root, "2026-08-10", "3")
+
+    assert confirmed is not None and confirmed.mishit == "confirmed"
+    assert cleared is not None and cleared.mishit == "cleared"
+    assert unset is not None and unset.mishit is None
+
+
+def test_a_confirmed_mishit_leaves_its_distance_out_of_the_session_averages(
+    tmp_path: Path, swing_writer, analysis_factory
+) -> None:
+    """ADR-028 §3: a manual CONFIRMED verdict drops carry and total from `shot_averages` — and
+    only those two, so the topped shot's ball speed still counts. The automatic rule is NOT run
+    here; a single session rarely holds enough of one club to spot an outlier.
+    """
+    root = tmp_path / "sessions"
+    real = _shot_with_distances("real", carry=150.0, total=165.0)
+    top = _shot_with_distances("top", carry=20.0, total=24.0)
+    swing_writer(
+        root, "2026-08-10", "1",
+        analysis=analysis_factory("2026-08-10", "1", shot=real.model_dump(mode="json")),
+    )
+    swing_writer(
+        root, "2026-08-10", "2", mishit=MishitVerdict.CONFIRMED,
+        analysis=analysis_factory("2026-08-10", "2", shot=top.model_dump(mode="json")),
+    )
+
+    detail = query.get_session_summary(root, "2026-08-10")
+
+    assert detail is not None
+    assert detail.shots_attached == 2
+    assert detail.mishits_excluded == 1
+    assert detail.shot_averages["carry_distance"] == 150.0  # the 20-yard top is out
+    assert detail.shot_averages["total_distance"] == 165.0
+    assert detail.shot_averages["ball_speed"] == 118.0  # both shots still count for this
+
+
+def test_an_unconfirmed_short_shot_still_counts_in_the_session_averages(
+    tmp_path: Path, swing_writer, analysis_factory
+) -> None:
+    """The asymmetry the ADR documents: `get_session_summary` acts on the manual verdict only.
+
+    A 20-yard shot with a CLEARED verdict — or none at all — stays in the average here, even
+    though the per-club profile's automatic rule would flag it. "How did I hit it today" is a
+    lighter read than the considered career statistic.
+    """
+    root = tmp_path / "sessions"
+    real = _shot_with_distances("real", carry=150.0, total=165.0)
+    top = _shot_with_distances("top", carry=20.0, total=24.0)
+    swing_writer(
+        root, "2026-08-10", "1",
+        analysis=analysis_factory("2026-08-10", "1", shot=real.model_dump(mode="json")),
+    )
+    swing_writer(
+        root, "2026-08-10", "2", mishit=MishitVerdict.CLEARED,
+        analysis=analysis_factory("2026-08-10", "2", shot=top.model_dump(mode="json")),
+    )
+
+    detail = query.get_session_summary(root, "2026-08-10")
+
+    assert detail is not None
+    assert detail.mishits_excluded == 0
+    assert detail.shot_averages["carry_distance"] == 85.0  # (150 + 20) / 2 — the top is in
+
+
+def test_the_mishit_skip_set_names_real_shot_metric_fields() -> None:
+    """`_MISHIT_SKIP` strips `_yds` off `MISHIT_EXCLUDED_METRICS`; pin that every name it produces
+    is an actual `ShotView.metrics` key, so the derivation cannot silently stop matching a field.
+    """
+    from golf_coach.contracts.mishit import MISHIT_EXCLUDED_METRICS
+
+    assert len(query._MISHIT_SKIP) == len(MISHIT_EXCLUDED_METRICS)
+    assert query._MISHIT_SKIP <= set(query._METRIC_FIELDS)
 
 
 # --------------------------------------------------------------------------------------

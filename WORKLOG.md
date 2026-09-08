@@ -5,6 +5,37 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-09-07 — M16 P7: the swing and session surfaces, and the derived caveat prose
+
+**Duration**: one sitting. **M16 is 8/9.** Edited: `mcp/query.py` (`SwingView.mishit` from
+`manifest.mishit`, `SessionDetail.mishits_excluded`, `_MISHIT_SKIP`, and `get_session_summary`
+dropping carry + total for a **manually CONFIRMED** verdict only), `contracts/caveats.py` (two
+derived mishit bullets, one per per-golfer briefing), `contracts/tool_descriptions.py`
+(`GET_SESSION_SUMMARY` names the new exclusion), `tests/mcp/conftest.py` (`make_manifest` /
+`write_swing` gain a `mishit` kwarg), `tests/mcp/test_query.py` (+4), `tests/test_docs_truth.py`
+(+1 pin). Full suite green, `ruff` and `mypy` clean.
+
+**`get_session_summary` acts on the manual verdict, never the auto flag (ADR-028 §3).** A single
+session rarely holds five shots of one club, so it has no distribution to detect an outlier
+against — the automatic rule is `read_corpus`'s alone. A `CONFIRMED` verdict drops that shot's
+`carry_distance` / `total_distance` from `shot_averages` and nothing else; its ball speed and
+launch still count. `_MISHIT_SKIP` is `MISHIT_EXCLUDED_METRICS` with `_yds` stripped — the
+measurement names carry the suffix, the `ShotData` fields do not — and a test pins every name it
+produces to a real shot metric field.
+
+**Two caveat bullets, not one.** `mishit_refs` and `mishits_unconfirmed` are on the per-club
+views only, so the `READING_A_PERSONAL_HISTORY` bullet names just `mishits_excluded` and the
+per-metric caveat, while `READING_A_BAG` names all four fields. Both derive the excluded-metric
+names from `MISHIT_EXCLUDED_METRICS`; the new doc-truth pin fails if either bullet stops naming
+one — the same shape as the placement and unscored pins beside it.
+
+**Next**: P8 — `docs/ARCHITECTURE.md` §1 command block (`scripts/flag_mishit.py`), §3
+launch-monitor paragraph, §4 `SwingManifest` row; flip ADR-028 and ROADMAP §M16 status to done;
+re-check `docs/README.md` counts; full gate; then **on the user's go-ahead** merge `GOLF-6` →
+`main` (`--no-ff`, `Merge GOLF-6: M16 mishits`) and delete the branch.
+
+---
+
 ## 2026-09-07 — M16 P6: the per-club MCP surfaces carry the exclusion out
 
 **Duration**: one sitting. **M16 is 7/9.** Edited: `mcp/club.py` (`ClubView.mishits` /

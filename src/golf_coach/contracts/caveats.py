@@ -23,6 +23,7 @@ from __future__ import annotations
 from textwrap import fill
 
 from golf_coach.contracts.checkpoints import CHECKPOINT_REGISTRY
+from golf_coach.contracts.mishit import MISHIT_EXCLUDED_METRICS
 from golf_coach.contracts.placements import POPULATION_PLACEMENT_REGISTRY
 from golf_coach.contracts.unscored import UNSCORED_REASONS, UnscoredReason
 
@@ -211,6 +212,40 @@ _ONLY_THESE_FUNDAMENTALS = fill(
     subsequent_indent="  ",
 )
 
+# The mishit-exclusion bullets [M16 P7], one per per-golfer briefing below. Both name the excluded
+# metrics from `MISHIT_EXCLUDED_METRICS` for the same reason the placement and unscored bullets are
+# derived: that frozenset is what `CorpusSwing.artifact_key` actually withholds on, and a bullet
+# naming carry but not total would tell a model the total-distance average still counts a topped
+# shot (ADR-028 §4). Two bullets rather than one because the fields differ — `mishit_refs` and
+# `mishits_unconfirmed` are on the per-club views only, and a history briefing that named them
+# would point a model at fields its tools do not return.
+_MISHIT_EXCLUDED_NAMES = _and_list([f"`{name}`" for name in sorted(MISHIT_EXCLUDED_METRICS)])
+_MISHIT_HEAD = (
+    "A **mishit** — a shot carrying far below that club's own median, a top or a duff — is held "
+    f"out of {_MISHIT_EXCLUDED_NAMES} and no other metric: the same shot still counts toward ball "
+    "speed, launch, start line and every pose checkpoint, because the swing was real and only its "
+    "distance is meaningless."
+)
+_MISHIT_EXCLUSION_HISTORY = fill(
+    f"{_MISHIT_HEAD} `mishits_excluded` counts them across the whole history, and while it is "
+    "above zero those two distance metrics carry a caveat that names the count. This is not a "
+    "sample-size refusal — the golfer confirmed the shot or the per-club rule flagged it, and "
+    "more swings do not change it.",
+    width=_WIDTH,
+    initial_indent="- ",
+    subsequent_indent="  ",
+)
+_MISHIT_EXCLUSION_BAG = fill(
+    f"{_MISHIT_HEAD} `mishits` counts them for the club, `mishit_refs` names every held-out "
+    "shot, `mishits_excluded` is the bag-wide total, and `mishits_unconfirmed` is how many the "
+    "automatic rule flagged that the golfer has not yet confirmed or cleared. The verdict "
+    "overrides the rule either way, so one `flag_mishit.py --clear` on a borderline shot puts it "
+    "back in the average.",
+    width=_WIDTH,
+    initial_indent="- ",
+    subsequent_indent="  ",
+)
+
 #: The provisional-data warnings, one per way this repo can be honestly wrong.
 READING_THIS_DATA_HONESTLY = f"""\
 Reading this data honestly:
@@ -260,7 +295,7 @@ change over time has to come from something that counted the swings behind it.""
 #: B: 5 swings" and a withheld mean, a model can average them itself and narrate the trend the
 #: guard just declined to make — the arithmetic is trivial and the numbers are right there. Nothing
 #: in a payload can stop it. Saying so is the only control that exists.
-READING_A_PERSONAL_HISTORY = """\
+READING_A_PERSONAL_HISTORY = f"""\
 Reading one golfer's own history:
 
 - A figure the sample size cannot support is **absent, not flagged**. `null` here means the guard
@@ -280,7 +315,8 @@ Reading one golfer's own history:
   why this system compares a golfer to themselves first. Read `outside_by` for the direction; on a
   one-sided magnitude like head sway or finish balance, below the band is the good side.
 - `n` counts distinct swings, not swing directories. A session can score perfectly well and still
-  contribute no samples, because its clips were re-uploads of a swing already counted elsewhere."""
+  contribute no samples, because its clips were re-uploads of a swing already counted elsewhere.
+{_MISHIT_EXCLUSION_HISTORY}"""
 
 #: How to read a number nothing measured. [M15 P17]
 #:
@@ -334,7 +370,7 @@ Reading a simulated ball flight:
 #: balls, the other says nothing on disk names a club and no amount of hitting fixes that on its
 #: own. A model that cannot tell them apart will give the wrong instruction confidently, because
 #: "you need more data" is true of both and useless for one.
-READING_A_BAG = """\
+READING_A_BAG = f"""\
 Reading one golfer's bag, per club:
 
 - **An empty bag profile is not a refusal.** No clubs listed means no swing on record names a club
@@ -357,4 +393,5 @@ Reading one golfer's bag, per club:
   loft that is on record is the manufacturer's published one unless the golfer measured it
   (ADR-026 §1), so it describes the model rather than a club that has since been bent. Where a bag
   entry exists and a caveat says swings predate it, the numbers may pool two physical clubs under
-  one name."""
+  one name.
+{_MISHIT_EXCLUSION_BAG}"""

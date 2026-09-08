@@ -179,6 +179,30 @@ def test_the_caveats_do_not_name_a_reason_re_filming_does_fix() -> None:
             )
 
 
+def test_the_mishit_bullet_names_every_excluded_metric() -> None:
+    """ADR-028 §4: the mishit-exclusion prose is derived from `MISHIT_EXCLUDED_METRICS`.
+
+    Both per-golfer briefings carry the bullet, and it names the metrics a mishit is held out of.
+    A bullet naming carry but not total would tell a model the total-distance average still counts
+    a topped shot — the drift the derivation exists to prevent, in the channel that ships inside
+    `mcp/server.py`'s connect-time instructions.
+    """
+    from golf_coach.contracts.caveats import READING_A_BAG, READING_A_PERSONAL_HISTORY
+    from golf_coach.contracts.mishit import MISHIT_EXCLUDED_METRICS
+
+    for name, block in (
+        ("READING_A_BAG", READING_A_BAG),
+        ("READING_A_PERSONAL_HISTORY", READING_A_PERSONAL_HISTORY),
+    ):
+        flat = _flat(block)
+        assert "**mishit**" in flat, f"{name} carries no mishit bullet"
+        for metric in MISHIT_EXCLUDED_METRICS:
+            assert f"`{metric}`" in flat, (
+                f"{name}'s mishit bullet does not name `{metric}` — derive the names from "
+                "MISHIT_EXCLUDED_METRICS so the prose cannot drift from what artifact_key withholds"
+            )
+
+
 def test_the_caveats_name_every_population_placement_that_ships() -> None:
     """The M6.5 bug's shape, in the channel M8 opened.
 
