@@ -5,6 +5,35 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-09-07 — M16 P2: a topped shot is a different event, not a low sample
+
+**Duration**: one sitting. **M16 is 3/9.** Edited: `src/golf_coach/contracts/career.py`
+(`CorpusSwing.auto_mishit` / `manual_mishit` fields + `is_mishit` property; the `artifact_key`
+clause; `CareerCorpus.mishit_shots` / `mishit_refs` / `mishit_shots_unconfirmed` +
+`_suppressed_as_mishit` helper). Added: `tests/contracts/test_career.py`. Full suite green, `ruff`
+and `mypy` clean.
+
+**Still inert.** Both new fields default to False/None and nothing sets them yet — `is_mishit` is
+False on every swing until P3 stamps `auto_mishit` in `read_corpus` and lifts `manual_mishit` off
+the manifest. The whole suite passing unchanged is the point: this phase adds the mechanism without
+turning it on.
+
+**The chokepoint is `CorpusSwing.artifact_key`.** One clause, after the flagged-parse check:
+`carry_distance_yds` and `total_distance_yds` return `None` when `is_mishit`. Because both
+`count_metrics` and `analysis/baseline.py::pooled_samples` route through `artifact_key`, the
+printed `n` and the pooled `n` stay equal for free — the invariant
+`tests/storage/test_corpus.py` pins. Metric-scoped: `test_career.py` checks the same mishit shot
+still keys `ball_speed_mph`, `launch_angle_deg`, `start_line_offline_yds` and every pose metric.
+`shot_needs_review` is still checked first, so a bad parse wins over a cleared mishit — the parse,
+not the strike, is the reason.
+
+**Next**: P3 — `storage/corpus.py`: `_flag_auto_mishits` (group by club, `0.50 × median`, gated at
+5) run before `count_metrics`, and `manual_mishit=manifest.mishit` in the `_corpus_swing`
+constructor. Behaviour goes live: `get_club_profile` / `get_bag_profile` / career start excluding
+mishits.
+
+---
+
 ## 2026-09-07 — M16 P1: half a club's median carry is a topped shot, not the low edge of dispersion
 
 **Duration**: one sitting. **M16 is 2/9.** Added: `src/golf_coach/contracts/mishit.py`

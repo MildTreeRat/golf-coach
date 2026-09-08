@@ -51,6 +51,7 @@ from enum import StrEnum
 from pydantic import BaseModel, Field
 
 from golf_coach.contracts.club import ClubId
+from golf_coach.contracts.mishit import MISHIT_EXCLUDED_METRICS, MishitVerdict
 from golf_coach.contracts.swing import Measurement
 
 #: `Measurement.source` prefixes, and the artifact each provenance dedupes on. A pose metric is
@@ -229,6 +230,24 @@ class CorpusSwing(BaseModel):
             "`mcp.query.get_session_summary` applies before averaging a metric."
         ),
     )
+    auto_mishit: bool = Field(
+        default=False,
+        description=(
+            "The attached shot carried far below this club's own median (`contracts.mishit`, "
+            "ADR-028). Set by `storage.corpus` after the swings are grouped by club, so it is "
+            "always False on a swing with no club, no shot photo, or a flagged parse — there is "
+            "nothing to compare against and nothing this rule should touch. A verdict in "
+            "`manual_mishit` overrides it; read `is_mishit`, never this."
+        ),
+    )
+    manual_mishit: MishitVerdict | None = Field(
+        default=None,
+        description=(
+            "The golfer's own verdict, lifted from `SwingManifest.mishit`. `CONFIRMED` or "
+            "`CLEARED` wins over `auto_mishit` in either direction; `None` defers to it. The only "
+            "mishit signal a human ever sets."
+        ),
+    )
     missing_roles: list[str] = Field(default_factory=list)
 
     @property
@@ -244,6 +263,21 @@ class CorpusSwing(BaseModel):
         """
         return self.analyzed and not self.stale and not self.outdated
 
+    @property
+    def is_mishit(self) -> bool:
+        """Should this shot's carry and total distance be held out of the club's averages?
+
+        Three states collapse to a bool: the golfer said yes (`CONFIRMED`), the golfer said no
+        (`CLEARED`), or nobody said anything and the automatic rule stands. The override is
+        absolute both ways — a `CLEARED` shot counts however far below the floor its carry fell,
+        because the golfer is the one who knows it was a stung punch shot and not a top.
+        """
+        if self.manual_mishit is MishitVerdict.CONFIRMED:
+            return True
+        if self.manual_mishit is MishitVerdict.CLEARED:
+            return False
+        return self.auto_mishit
+
     def artifact_key(self, measurement: Measurement) -> str | None:
         """Which artifact this measurement is a reading *of*, or None if it contributes nothing.
 
@@ -255,6 +289,12 @@ class CorpusSwing(BaseModel):
         Keys are namespaced (`pose:` / `shot:` / `swing:`) so a clip hash can never collide with a
         photo hash. Returning the same key from two swings is the assertion that they are one
         reading; returning None is the assertion that there is no reading here at all.
+
+        **A mishit is the one None that is not "no reading" (ADR-028).** `carry_distance_yds` and
+        `total_distance_yds` return None on a swing whose shot was topped, because a 20-yard 7 iron
+        is a real reading of the wrong thing — the average is for the distance the golfer *meant*.
+        It is deliberately narrow: every other metric on that same shot photo keys normally below,
+        so the mishit still counts toward ball speed, launch, offline and every pose checkpoint.
 
         **Three prefixes map onto two keys, and the mapping is "derived from" rather than "named
         by".** `model:` is ADR-027 flying the shot tile's launch conditions, so it dedupes on the
@@ -268,6 +308,11 @@ class CorpusSwing(BaseModel):
             # A flagged parse contributes nothing rather than a suspect sample — the rule
             # `mcp.query.get_session_summary` already applies before averaging a shot metric.
             if self.shot_needs_review or self.shot_sha256 is None:
+                return None
+            if measurement.name in MISHIT_EXCLUDED_METRICS and self.is_mishit:
+                # A topped shot is a different event, not a low distance sample. Scoped to the two
+                # distance metrics: this same shot's ball speed, launch angle and offline fall
+                # through to the key below and count normally, as does every pose metric (ADR-028).
                 return None
             return f"shot:{self.shot_sha256}"
         # An unrecognised provenance falls back to swing identity: conservative, since it can only
@@ -482,6 +527,57 @@ class CareerCorpus(BaseModel):
     def shot_conflicts(self) -> int:
         """Swings whose re-uploads disagree about which shot photo belongs to them."""
         return sum(1 for swing in self.swings if swing.conflicting_shots)
+
+    @property
+    def mishit_shots(self) -> int:
+        """Distinct shot photos held out of the carry and total-distance averages as mishits.
+
+        Counts photos, not swings, and on the same footing as `distinct_shots` — a mishit is a
+        property of the ball flight and the ball flight dedupes on the photo. Derived, like every
+        counter here, so a club-narrowed corpus reports its own figure with nothing to recompute.
+        Carried whole onto `BagProfile` and `GolferProfile` (ADR-028 §4).
+        """
+        return len(
+            {swing.shot_sha256 for swing in self.swings if self._suppressed_as_mishit(swing)}
+        )
+
+    @property
+    def mishit_refs(self) -> list[str]:
+        """`session/swing` of every mishit, sorted — so the exclusion is named, not just counted.
+
+        `ExcludedSwing` is the shape this echoes: a held-out sample a reader can go and look at,
+        rather than an `n` that shrank for a reason nobody wrote down.
+        """
+        return sorted(swing.ref for swing in self.swings if self._suppressed_as_mishit(swing))
+
+    @property
+    def mishit_shots_unconfirmed(self) -> int:
+        """Of `mishit_shots`, the ones the automatic rule flagged and no golfer has ruled on.
+
+        The "waiting for you" number: a club surfaces it so the tops get confirmed and the punch
+        shots get cleared, rather than the flag standing forever unexamined.
+        """
+        return len(
+            {
+                swing.shot_sha256
+                for swing in self.swings
+                if self._suppressed_as_mishit(swing) and swing.manual_mishit is None
+            }
+        )
+
+    def _suppressed_as_mishit(self, swing: CorpusSwing) -> bool:
+        """A mishit whose shot would otherwise have been a launch-monitor sample.
+
+        `is_mishit` alone is not it: a swing with no shot photo, a flagged parse, or an engine too
+        old to count contributes nothing to a distance average with or without the flag, so
+        counting it here would report an exclusion that moved no number.
+        """
+        return (
+            swing.is_mishit
+            and swing.counts_toward_metrics()
+            and swing.shot_sha256 is not None
+            and not swing.shot_needs_review
+        )
 
 
 def count_metrics(swings: Sequence[CorpusSwing]) -> tuple[dict[str, int], list[str]]:
