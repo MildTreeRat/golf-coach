@@ -5,6 +5,39 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-09-07 — M16 P0 (docs only): the topped seven iron that is not your seven iron
+
+**Duration**: one sitting. **M16 is 1/9**, on branch `GOLF-6` (merges to `main` at P8). Edited:
+`docs/decisions/028-mishit-exclusion.md` (new), `ROADMAP.md` (§M16 + status row + Last Updated),
+`docs/README.md` (ADR-028 row, doc count 63 → 64, decisions 27 → 28, ADRs 28 → 29). Full suite
+green, `ruff` and `mypy` clean. No code touched.
+
+**The ask.** Club/bag distance averages pool every tagged shot; a topped 7 iron carrying 20 yards
+pulls "how far do I hit my 7 iron" down by a shot the golfer already knows was a mistake. Explored
+first (three parallel sweeps): no mishit concept exists anywhere, and "miss" is already load-bearing
+in `analysis/dispersion.py` for error-distribution *shape*, so this is `mishit` throughout.
+
+**The design, agreed with the user.** Auto-detect + manual override; excluded from
+`carry_distance_yds` and `total_distance_yds` only (ball speed, launch, offline, every pose
+checkpoint still count the shot). Auto rule: carry below **0.50 ×** the club's own median, gated at
+**5** clean carry samples (the CENTER-claim floor, reused). A genuine top is physically
+self-consistent — low ball speed *and* short carry agree — so `spin_solve`'s `BELOW_FLOOR` /
+`carry_unreachable` never fire on it; detection has to be relative to the golfer's own club history
+or manual. Override lives on `SwingManifest.mishit` (`confirmed` / `cleared`), the `club`-retag
+pattern exactly; the manual verdict always wins.
+
+**The seam.** One chokepoint: `CorpusSwing.artifact_key` returns `None` for the two distance
+metrics when `is_mishit`, so `count_metrics` and `pooled_samples` stay in agreement automatically.
+Auto-flagging runs in `read_corpus` before `count_metrics`, grouped by club. **No `ANALYSIS_VERSION`
+bump** — aggregates are computed live from the corpus, nothing in `analysis.json` changes (ADR-010's
+2026-08-19 posture, not M15 P13's).
+
+**Next**: P1 — `contracts/mishit.py` (the rule + `MishitVerdict` + `MISHIT_EXCLUDED_METRICS`) and
+`SwingManifest.mishit`, both pure additions nothing consumes yet. Plan file:
+`.claude/plans/right-now-we-have-starry-bear.md`, §12 sequences all nine phases.
+
+---
+
 ## 2026-09-06 — M15 P19: the shot as a golfer sees it, and the frame that is not the apex
 
 **Duration**: one sitting. **M15 is 20/20.** Edited: `api/static/flight.html` (a third panel, its
