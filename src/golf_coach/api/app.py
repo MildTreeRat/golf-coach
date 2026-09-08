@@ -58,6 +58,7 @@ from golf_coach.contracts.club_spec import (
 )
 from golf_coach.contracts.conversation import Transcript
 from golf_coach.contracts.golfer import Golfer, Handedness, slugify
+from golf_coach.contracts.mishit import MishitVerdict
 from golf_coach.launch_monitor.screen.store import ShotStore
 from golf_coach.storage.bag_store import BagStore
 from golf_coach.storage.bundle_store import SwingBundleStore
@@ -126,6 +127,18 @@ class ClubRequest(BaseModel):
     """
 
     club: str
+
+
+class MishitRequest(BaseModel):
+    """The golfer's verdict on a shot, from the per-swing repair control (ADR-028).
+
+    `verdict` is `null` (or absent) to **clear** a verdict back to "no verdict", so the automatic
+    rule decides again — `"confirmed"` and `"cleared"` are the only other values. Typed as the enum
+    directly, unlike `ClubRequest`: this is a closed three-value vocabulary with no tolerant
+    spellings to preserve, so a 422 on anything else is the right boundary.
+    """
+
+    verdict: MishitVerdict | None = None
 
 
 class BagEntryRequest(BaseModel):
@@ -1280,6 +1293,33 @@ def create_app(
         if manifest is None:
             raise HTTPException(status_code=404, detail="no such swing")
         return {"session_id": session_id, "swing_id": swing_id, "club": club.value}
+
+    @app.post("/api/sessions/{session_id}/swings/{swing_id}/mishit", dependencies=guard)
+    async def set_swing_mishit(session_id: str, swing_id: str, payload: MishitRequest) -> dict:
+        """Confirm, clear, or reset the mishit verdict on one swing's shot (ADR-028).
+
+        The explicit human override, `set_swing_club`'s shape exactly — and, like it, with no bulk
+        counterpart, because only the golfer who hit the swing knows whether they topped it. A
+        `null` verdict resets to automatic. 409 rather than 404 when the swing has no shot screen:
+        the manifest exists, but a mishit verdict on a swing with no ball flight has nothing to act
+        on.
+        """
+        _safe(session_id, "session id")
+        _safe(swing_id, "swing id")
+        existing = bundle_store.get_swing(session_id, swing_id)
+        if existing is None:
+            raise HTTPException(status_code=404, detail="no such swing")
+        if Role.SHOT_SCREEN not in existing.roles:
+            raise HTTPException(
+                status_code=409,
+                detail="this swing has no shot screen, so there is no shot to flag as a mishit",
+            )
+        bundle_store.set_mishit(session_id, swing_id, payload.verdict)
+        return {
+            "session_id": session_id,
+            "swing_id": swing_id,
+            "mishit": payload.verdict.value if payload.verdict else None,
+        }
 
     @app.post("/api/sessions/{session_id}/swings/{swing_id}/analyze", dependencies=guard)
     async def analyze_swing(session_id: str, swing_id: str) -> dict:

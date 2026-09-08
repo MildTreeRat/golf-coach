@@ -193,6 +193,7 @@ the module declares, so a new endpoint fails the suite until it is listed here.
 | `DELETE` | `/api/sessions/{session_id}/swings/{swing_id}` | Remove one swing and its directory. The undo for a *phantom* — a corrective re-upload cannot replace a role a swing already has, so it opens a new swing, and a phantom missing both clips then swallows the next real shot's footage. Refused with 409 while a run is queued or in flight |
 | `POST` | `/api/sessions/{session_id}/swings/{swing_id}/golfer` | Re-attribute one swing; the repair path for a misfiled golfer |
 | `POST` | `/api/sessions/{session_id}/swings/{swing_id}/club` | Retag one swing. The club's **only** repair path, and deliberately per-swing — a session holds many clubs, so there is no bulk backfill (M9 P6, ADR-024 §5) |
+| `POST` | `/api/sessions/{session_id}/swings/{swing_id}/mishit` | Confirm, clear, or reset (`null`) the mishit verdict on one swing's shot — the golfer's override of the automatic "carried far below this club's median" rule. Per-swing, no bulk backfill, `set_swing_club`'s shape. 409 when the swing has no shot screen (M16 P5, ADR-028) |
 | `POST` | `/api/sessions/{session_id}/swings/{swing_id}/analyze` | The "Analyze anyway" override, for a bundle that will never be complete |
 | `POST` | `/api/sessions/{session_id}/swings/{swing_id}/ask` | A follow-up question, continuing a conversation if one is given (ADR-020) |
 | `GET` | `/api/sessions/{session_id}/swings/{swing_id}/conversation` | That swing's most recent conversation, rendered for display |

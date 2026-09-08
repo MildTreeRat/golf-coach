@@ -5,6 +5,35 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-09-07 — M16 P5: only the golfer who hit swing 3 knows they topped it
+
+**Duration**: one sitting. **M16 is 6/9.** Added: `scripts/flag_mishit.py`,
+`tests/api/test_mishit_route.py`. Edited: `storage/bundle_store.py` (`set_mishit`, mirror
+`set_club`), `api/app.py` (`MishitRequest`, `POST .../swings/{swing_id}/mishit`),
+`docs/ARCHITECTURE.md` §1 route table, `tests/storage/test_bundle_store.py` (+2). Full suite
+green, `ruff` and `mypy` clean.
+
+**The route mirrors `set_swing_club`**: the explicit per-swing override, no bulk backfill, a
+`null` verdict resets to automatic. 409 (not 404) when the swing has no shot screen — the manifest
+exists, but a mishit verdict on a swing with no ball flight has nothing to act on.
+
+⚠️ **P3's WORKLOG said "no club on disk has 5 tagged shots yet" — wrong, and running
+`flag_mishit.py --list` against the real corpus is what showed it.** Aaron's 7 iron has exactly 5
+tagged shots: carries 121.8, **33.6**, 124.7, 126.1, 101.9. Median 121.8, floor 60.9, so
+`2026-08-23/2` at 33.6 yards is auto-flagged — a genuine top, the exact case this milestone
+exists for. `get_club_profile` for that club now reports a mean built from 4 shots (≈118.6)
+instead of 5 (≈101.6), with a caveat naming the held-out shot. This is the ~17-yard correction the
+ADR Context predicted, on real data, unprompted. The full suite still passes because every test
+builds its own corpus in a tmp dir — none reads `data/`.
+
+**`--list` output format**: per golfer, per club with `n_shots > 0`, the mishit count split into
+confirmed vs auto-and-unconfirmed, then each `mishit_ref` on its own line.
+
+**Next**: P6 — the per-club MCP surfaces: `mcp/club.py` (`ClubView` / `BagView` fields) and
+`mcp/career.py` (`GolferProfile.mishits_excluded` + the whole-bag carry/total caveat).
+
+---
+
 ## 2026-09-07 — M16 P4: the mishits are counted and named, never just gone
 
 **Duration**: one sitting. **M16 is 5/9.** Edited: `contracts/club_profile.py`

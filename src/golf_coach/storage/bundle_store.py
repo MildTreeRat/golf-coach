@@ -48,6 +48,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from golf_coach.contracts.club import ClubId
+from golf_coach.contracts.mishit import MishitVerdict
 from golf_coach.storage.manifest import (
     Role,
     RoleFile,
@@ -231,6 +232,27 @@ class SwingBundleStore:
             if manifest is None:
                 return None
             manifest.club = club
+            manifest.updated_at = datetime.now(tz=UTC)
+            save_manifest(manifest, manifest_path(swing_dir))
+            return manifest
+
+    def set_mishit(
+        self, session_id: str, swing_id: str, verdict: MishitVerdict | None
+    ) -> SwingManifest | None:
+        """Record the golfer's verdict on the shot this swing hit, or clear it (ADR-028).
+
+        Same shape as `set_club`: the explicit per-swing human override, and the one place
+        `manifest.mishit` is written. `verdict=None` clears it back to "no verdict", so the
+        automatic rule decides again. There is no bulk counterpart, for `set_club`'s reason — only
+        the golfer who hit swing 3 knows whether they topped it. Returns None if there is no such
+        swing.
+        """
+        with self._lock:
+            swing_dir = self._root / session_id / swing_id
+            manifest = load_manifest(manifest_path(swing_dir))
+            if manifest is None:
+                return None
+            manifest.mishit = verdict
             manifest.updated_at = datetime.now(tz=UTC)
             save_manifest(manifest, manifest_path(swing_dir))
             return manifest
