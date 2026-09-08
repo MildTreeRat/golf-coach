@@ -5,6 +5,33 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-09-07 — M16 P1: half a club's median carry is a topped shot, not the low edge of dispersion
+
+**Duration**: one sitting. **M16 is 2/9.** Added: `src/golf_coach/contracts/mishit.py`
+(`MishitVerdict`, `MISHIT_EXCLUDED_METRICS`, `MISHIT_MIN_CLEAN_SHOTS`, `MISHIT_CARRY_FRACTION` with
+its provenance string, `mishit_carry_floor`), `tests/contracts/test_mishit.py`. Edited:
+`storage/manifest.py` (`SwingManifest.mishit: MishitVerdict | None`, tolerant-loader pattern, +
+module docstring), `tests/storage/test_manifest.py` (+2). Full suite green, `ruff` and `mypy`
+clean.
+
+**Both are pure additions — nothing consumes them yet.** The rule and the enum are on the table;
+P2 wires `CorpusSwing` to read them and P3 runs the detection. `contracts/mishit.py` is
+stdlib-only (`statistics.median`), so it sits below both `storage` and `analysis` the way
+`count_metrics` and `narrowed_to` do (ADR-008).
+
+**The floor is `0.50 × median`, gated at 5 clean carry samples.** Median not mean, because one or
+two tops already in the sample barely move it — the test
+`test_the_median_does_not_chase_the_tops_it_is_looking_for` is the pin: a mean over
+`[150,152,148,151,20]` is 124, half of that (62) waves a real 130-yard shot through; the median is
+150, floor 75, and the 130 stays in while the 20 goes. 5 is the CENTER-claim floor from
+`contracts/baseline.py`, reused — below it there is no club history to be an outlier of.
+
+**Next**: P2 — `contracts/career.py`: `CorpusSwing.auto_mishit` / `manual_mishit` / `is_mishit`,
+the `artifact_key` skip for the two distance metrics, and `CareerCorpus.mishit_shots` /
+`mishit_refs` / `mishit_shots_unconfirmed`. Defaults keep `is_mishit` False everywhere until P3.
+
+---
+
 ## 2026-09-07 — M16 P0 (docs only): the topped seven iron that is not your seven iron
 
 **Duration**: one sitting. **M16 is 1/9**, on branch `GOLF-6` (merges to `main` at P8). Edited:
