@@ -5,6 +5,43 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-09-08 — M16 P8: the docs catch up, and the rule's first real subject
+
+**Duration**: one sitting. **M16 is 9/9 — done.** Edited: `docs/decisions/028-mishit-exclusion.md`
+(Status → built, no addendum — building corrected nothing), `ROADMAP.md` (status row + §M16 header
+and Status to done, `Phases` → past tense, a new `Exit criteria` paragraph, `Last Updated`),
+`docs/README.md` (ADR-028 row → built), `docs/ARCHITECTURE.md` (§1 command block gains
+`scripts/flag_mishit.py`; §3 a launch-monitor paragraph on the exclusion; §4 a `SwingManifest.mishit`
+storage row and a mishit sentence in the career-corpus subsection), `scripts/flag_mishit.py` (one
+docstring line: the auto-flag lives in `storage/corpus.py::read_corpus`, not `analysis/club_profile.py`).
+No code touched. Full suite **1709 passed**, `ruff` and `mypy` clean. Doc-truth suite green (83).
+
+**Building corrected nothing in ADR-028**, so its Status flips to built with **no addendum** —
+`MISHIT_EXCLUDED_METRICS`, the `0.50 × median` floor gated at five, the `CorpusSwing.artifact_key`
+chokepoint, `_flag_auto_mishits` before `count_metrics`, and the manual override winning both ways
+all shipped as §Decision wrote them. The one thing the corpus added over the ADR is a real subject,
+and it lives in the Status section rather than an addendum because it confirms the design rather
+than moving it.
+
+⚠️ **The exit fixture and the corpus disagree on shape, and the corpus is the better test.** The
+exit criteria imagined *five clean shots plus a top* — six total. Aaron's 7 iron is **five total**:
+121.8, 33.6, 124.7, 126.1, 101.9 (median 121.8, floor 60.9), so holding out `2026-08-23/2` leaves
+**four** clean carries — below the CENTER-claim floor the same `MISHIT_MIN_CLEAN_SHOTS = 5` sets.
+`get_club_profile --club 7i` now *withholds* `carry_distance_yds` and `total_distance_yds`
+entirely ("needs 5 samples; there are 4") where before P3 it printed ≈101.6 yd — the top-dragged
+mean. `ball_speed_mph` and `backswing_ms` still report `n = 5`. So on the only real data we have,
+the milestone's effect was to replace a confident wrong number with an honest refusal, which is
+ADR-010 §2 exactly. The ROADMAP `Exit criteria` paragraph and the ADR Status both record this;
+WORKLOG P5's "mean built from 4 shots (≈118.6)" was the arithmetic, not what the tool prints.
+
+**Next**: on the user's go-ahead, merge `GOLF-6` → `main` (`--no-ff`, `Merge GOLF-6: M16 mishits`)
+and delete the branch. Nothing is pushed; the branch is P0–P8, one commit each, gate green at every
+one. After the merge, `docs/README.md`'s `git ls-files`-based document count should be re-checked on
+`main` — M15's merge went red on exactly that (two spike files flipped from untracked to tracked),
+and this branch adds no `.md` file so it *should* stay at 64, but confirm.
+
+---
+
 ## 2026-09-07 — M16 P7: the swing and session surfaces, and the derived caveat prose
 
 **Duration**: one sitting. **M16 is 8/9.** Edited: `mcp/query.py` (`SwingView.mishit` from

@@ -118,6 +118,11 @@ python scripts/career_dispersion.py [--name NAME | --player-id ID] [--verbose]
 python scripts/club_profile.py [--name NAME | --player-id ID] [--club CLUB] [--verbose]
 #   the same question narrowed to one club: how far this golfer hits it, and where the
 #   history refuses to say. --club takes a name a human would type ('7i', 'seven iron')
+python scripts/flag_mishit.py <SESSION/SWING> (--confirm | --clear | --auto)
+python scripts/flag_mishit.py --list [--name NAME]
+#   the golfer's override of the automatic "carried below half this club's median" rule
+#   (M16, ADR-028): one shot at a time, or --list for every club's mishit tally. A mishit
+#   is held out of the carry and total-distance averages only; --clear puts it back
 
 # Follow-up questions about a swing (needs the `llm` extra and a key — ADR-020)
 python scripts/ask_swing.py <SESSION/SWING> "<question>"
@@ -576,6 +581,20 @@ byte-identical on every stored swing across all four bumps that added them (`7 -
 population — so a repeatable miss can be told from a scattered one. The distances get no target at
 all, and that absence is deliberate: it is the one thing here no measurement can supply.
 
+**A topped shot is held out of the two distance averages, and only those** (M16, ADR-028).
+`MISHIT_EXCLUDED_METRICS` in `contracts/mishit.py` is the frozenset — `carry_distance_yds` and
+`total_distance_yds`. A carry below half its club's own median is flagged automatically by
+`storage/corpus.py::_flag_auto_mishits`, which runs in `read_corpus` after the swings are grouped
+by club and **before** `count_metrics`, so the flag is set when the sample count is taken; the
+golfer confirms or clears any shot through `POST …/mishit` and the manual verdict wins. The
+exclusion itself is one clause in `CorpusSwing.artifact_key` — it returns `None` for those two
+metrics on a mishit, the same shape as the flagged-parse skip beside it, so the printed `n` and the
+pooled `n` cannot disagree. Ball speed, launch, offline and every pose checkpoint still count the
+shot; the swing was real and only its distance is meaningless. Every held-out shot is counted on
+`ClubProfile.mishits`, named in `mishit_refs`, and caveated in the golfer's own briefing. No
+`ANALYSIS_VERSION` bump — the aggregates are computed live from the corpus and nothing in
+`analysis.json` changes.
+
 ### What a model contributes — simulated, and named apart from everything measured
 
 A third family joined `measurements` in M15 P11: the ball's simulated flight.
@@ -660,6 +679,7 @@ gitignored and never created. Everything persists as files:
 | Parsed shots | `data/processed/shots/` (content-addressed) | ✅ written by `import_shot_screens.py` and by `analyze_bundle.py` |
 | Swing bundles | `data/processed/sessions/<session>/<swing>/` + `manifest.json` | ✅ written by the upload route (M7 Phase 3/5) |
 | ↳ *who swung it, and with what* | `player_id` and `club` on `SwingManifest`, both stamped from the session cursor at swing creation | ✅ `player_id` is **write-once** (career mode step 1); `club` is required — an upload against a cursor naming no club is refused with a 409 (M9 P4–P6). Neither is sent by the uploading phone: two phones would have to type matching names, and a free-text club turns a typo into a tag |
+| ↳ *and whether it was topped* | `mishit: MishitVerdict \| None` on `SwingManifest` (M16 P1, ADR-028) | ✅ `None` by default and tolerantly loaded, the `club` field's pattern exactly. Set only by `POST …/mishit` or `scripts/flag_mishit.py` — `confirmed` / `cleared`, or `null` to reset to automatic — with **no bulk backfill**, because only the golfer who hit the swing knows they topped it. The automatic flag is *not* stored: `storage/corpus.py` recomputes it from the club's median on every `read_corpus`, so the 0.50 constant can move without a migration |
 | ↳ *analysis artifacts* | `analysis.json`, `aligned.mp4`, `<role>.keypoints.json`, `<role>.audio.json` in the same directory | ✅ written by `api/pipeline.py`, from the worker or the CLI; `analysis.json` is a `SwingBundleResult` with the heavy streams excluded (the keypoints sit beside it). The two caches are keyed on the clip's sha256; `<role>.audio.json` also carries `detector_version` and is re-detected when `AUDIO_DETECTOR_VERSION` moves, because a changed detector is invisible to a content hash |
 | ↳ *analysis state* | `analysis.state.json` in the same directory | ✅ `AnalysisState` — queued/running/done/failed, the role→sha256 map the result was computed from (so a re-upload invalidates it), and a denormalised score/headline so the 5 s status poll never parses `analysis.json`. The terminal status is written by `pipeline.record_state` as part of writing `analysis.json`, because a denormalised copy must be written by whatever writes the original; the worker owns only `queued`/`running`/crash |
 | ↳ *session cursor* | `session.json` in the **session** directory | ✅ `storage/session_meta.py` — **two** cursors, `player_id` and `club` (M9 P4): who the *next* swing belongs to and what it will be hit with. Both are pointers, never records — what actually happened lives on each manifest, so a buddy taking a few swings mid-session rewrites nobody's history and changing clubs mid-bucket rewrites no swing's tag. The club moves far more often, which is why the upload page keeps its picker open and the per-swing repair collapses behind a control |
@@ -697,7 +717,12 @@ exists (a tight spread points at a static cause, a wide one at timing).
 
 Every swing that contributes no sample is named with a reason (`ExclusionReason`: unattributed,
 no face-on clip, duplicate, not analyzed, stale, outdated). Read it with `python
-scripts/career_corpus.py`.
+scripts/career_corpus.py`. A **mishit** is a narrower exclusion that sits alongside these rather
+than among them: `_flag_auto_mishits` runs at the end of `read_corpus`, groups the swings by club,
+and stamps `CorpusSwing.auto_mishit` on any shot carrying below half that club's own median — which
+drops it from the carry and total-distance averages *only*, with every other metric on the same
+shot still counting (M16, ADR-028). `CareerCorpus.mishit_shots` / `mishit_refs` /
+`mishit_shots_unconfirmed` count and name them.
 
 Three pure consumers sit on top of it, all in `analysis/` and none doing any I/O.
 `analysis/baseline.py` turns the corpus into a `PersonalBaseline`: per-metric center, spread and

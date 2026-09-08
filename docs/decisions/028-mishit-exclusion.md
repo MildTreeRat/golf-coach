@@ -1,9 +1,23 @@
 # ADR-028: Mishit exclusion — the topped shot that is not your seven iron
 
 ## Status
-**Accepted** 2026-09-07. The design is agreed; [ROADMAP §M16](../../ROADMAP.md) builds it as nine
-phases on branch `GOLF-6`. This document is the *why*; where building corrects it, an addendum
-lands below.
+**Accepted** 2026-09-07, **built** 2026-09-08 — [ROADMAP §M16](../../ROADMAP.md), nine phases
+(P0–P8) on branch `GOLF-6`, one commit each, the full suite / `ruff` / `mypy` green at every one.
+**Building corrected nothing here**: `MISHIT_EXCLUDED_METRICS`, the `0.50 × median` floor gated at
+five clean carries, the `CorpusSwing.artifact_key` chokepoint, `read_corpus`'s `_flag_auto_mishits`
+before `count_metrics`, the `SwingManifest.mishit` override winning both ways, and the metric scope
+all shipped as §Decision describes them — so there is no addendum below.
+
+What the corpus added is one real subject the §Context example only imagined. P5's
+`scripts/flag_mishit.py --list` found aaron's 7 iron carrying five tagged shots — 121.8, **33.6**,
+124.7, 126.1, 101.9 yd — with `2026-08-23/2` a genuine 33.6-yd top, auto-flagged against a floor of
+60.9. It is the only mishit on disk. The case is *tighter* than the exit fixture (five total, not
+five clean plus a top): the exclusion leaves four clean carries, which is **below** the CENTER-claim
+floor the same constant sets, so `get_club_profile` stops reporting that club's `carry_distance_yds`
+and `total_distance_yds` altogether rather than meaning over four. Where it used to print ≈101.6 yd —
+a top-dragged number — it now says five samples are needed and there are four. That is §Decision 1
+resolving into ADR-010 §2 ("no score beats a wrong one") on real data, which is the outcome this
+milestone wanted. `ball_speed_mph` and `backswing_ms` for that club still count all five.
 
 ## Date
 2026-09-07

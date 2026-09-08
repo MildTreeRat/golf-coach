@@ -7,8 +7,8 @@ Usage:
     python scripts/flag_mishit.py --list                   # every golfer's per-club mishit tally
     python scripts/flag_mishit.py --list --name Aaron      # one golfer
 
-`analysis/club_profile.py` flags a carry below half its club's median automatically, once the club
-has five clean shots. This CLI is for the shots that rule cannot see: a heavier miss the golfer
+`storage/corpus.py::read_corpus` flags a carry below half its club's median automatically, once the
+club has five clean shots. This CLI is for the shots that rule cannot see: a heavier miss the golfer
 wants gone, or a punch shot the rule flagged that should stay. One swing at a time, because a
 session has many shots and nothing but memory says which was a top (ADR-028, ADR-024 §5).
 
