@@ -29,8 +29,43 @@ builds its own corpus in a tmp dir — none reads `data/`.
 **`--list` output format**: per golfer, per club with `n_shots > 0`, the mishit count split into
 confirmed vs auto-and-unconfirmed, then each `mishit_ref` on its own line.
 
-**Next**: P6 — the per-club MCP surfaces: `mcp/club.py` (`ClubView` / `BagView` fields) and
-`mcp/career.py` (`GolferProfile.mishits_excluded` + the whole-bag carry/total caveat).
+---
+
+### HANDOFF — stopping here deliberately, at 6/9 (P0–P5)
+
+The session is being handed off to keep one chat from carrying the whole milestone. **P0–P5 are
+committed on branch `GOLF-6`, one commit each, full suite + `ruff` + `mypy` green at every one.**
+The working tree is clean. Nothing is pushed; the branch stays local until P8.
+
+**What is done and live:** `contracts/mishit.py` (the rule), `SwingManifest.mishit`, the
+`CorpusSwing` flag + `artifact_key` chokepoint, auto-detection in `read_corpus`, the
+`ClubProfile` / `BagProfile` fields + `_mishit_caveats`, `bundle_store.set_mishit`, the
+`POST .../swings/{swing_id}/mishit` route, `scripts/flag_mishit.py`. `get_club_profile` /
+`get_bag_profile` / career already exclude mishits from carry + total distance and report them.
+
+**What remains — P6, P7, P8.** The plan file
+`.claude/plans/right-now-we-have-starry-bear.md` sequences them; §9 has the exact field names and
+§12 the phase list. In short:
+
+- **P6** — `mcp/club.py`: add `ClubView.mishits` / `mishit_refs` / `mishits_unconfirmed` and
+  `BagView.mishits_excluded`, populate in `_club_view` / `bag_profile`. `mcp/career.py`: add
+  `GolferProfile.mishits_excluded` and, in `golfer_profile` *after* `metrics` is built, append a
+  one-line caveat to every `MetricProfile` whose `name in MISHIT_EXCLUDED_METRICS` when
+  `corpus.mishit_shots > 0` (append, not assign — `_profile` sets `.caveats = list(dispersion.caveats)`).
+  Tests: `tests/mcp/test_club_tools.py`, `tests/mcp/test_career_tools.py`. *(This phase was
+  started this session and reverted — the edits above are the full scope.)*
+- **P7** — `mcp/query.py`: `SwingView.mishit` (from `manifest.mishit`), `SessionDetail.mishits_excluded`,
+  and in `get_session_summary` skip `carry_distance` / `total_distance` (ShotView field names, not
+  the `_yds` measurement names) for a **manually CONFIRMED** mishit only. `contracts/caveats.py`:
+  a derived `READING_A_BAG` / `READING_A_PERSONAL_HISTORY` bullet whose metric names come from
+  `MISHIT_EXCLUDED_METRICS`, plus a new `tests/test_docs_truth.py` pin.
+- **P8** — `docs/ARCHITECTURE.md` §1 command block (add `scripts/flag_mishit.py`), §3
+  launch-monitor paragraph, §4 `SwingManifest` row; flip ADR-028 / ROADMAP §M16 status to done;
+  re-check `docs/README.md` counts; full gate; then **on the user's go-ahead** merge `GOLF-6` →
+  `main` (`--no-ff`, `Merge GOLF-6: M16 mishits`) and delete the branch.
+
+**One real-data fact to carry:** aaron's 7 iron shot `2026-08-23/2` (33.6 yd carry) is
+auto-flagged as a mishit — a genuine top, not a false positive. It is the only mishit on disk.
 
 ---
 
