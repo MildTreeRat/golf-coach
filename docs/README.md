@@ -1,6 +1,6 @@
 # Documentation map
 
-64 markdown documents: 52 in `docs/` — 19 here at the top level (including this map), 29 ADRs,
+66 markdown documents: 54 in `docs/` — 20 here at the top level (including this map), 30 ADRs,
 3 archived, 1 in `proposals/` — plus 12 outside it (the four at the repo root, and one each in
 `data/` and `frontend/`, six in `spikes/`). This page says which one to read, and — just as
 importantly — which ones are records of the past rather than descriptions of the present.
@@ -78,6 +78,7 @@ instrument).
 clause wrong**: four new measurements are exactly what a bump is for, so `is_outdated` could not
 see that no stored artifact carried them and their honest `n` was 0 until M15's bump swept them
 in. Read ADR-027's 2026-09-06b addendum for the rule, not this row. |
+| [M17_PIVOT_POINTS.md](M17_PIVOT_POINTS.md) | TARGET | Track the shoulder, hip and hand pivot points through the swing, draw them and the two rotation lines on `aligned.mp4`, and flag a "wonky" turn with stdlib rule checks. **0/9 phases built** — an explicit interim 2-D-per-view instrument behind a seam for a fiducial-calibrated source later. The *why* is [ADR-029](decisions/029-pivot-points.md), the constraint is [ADR-011](decisions/011-camera-synchronization.md). |
 | [BAY_SESSION_RUNBOOK.md](BAY_SESSION_RUNBOOK.md) | AS-BUILT | Taking the two-phone capture to a real sim: preflight at home, phone settings and why 1080p60, measured timings, and what to check when it doesn't work. *(Failure modes are predicted until the first bay session.)* |
 | [M7_TWO_PHONE_SPIKE.md](M7_TWO_PHONE_SPIKE.md) | REFERENCE | Does phase detection survive down-the-line, does OpenCV decode iPhone HEVC, and does `CAP_PROP_FPS` mean anything on slo-mo? Thresholds committed 2026-08-07; **results pending footage**. |
 | [../data/README.md](../data/README.md) | AS-BUILT | The data layout, the three-tier reference cache, and how to rebuild the GolfDB corpus. |
@@ -94,7 +95,7 @@ everything on this page is supposed to be trustworthy.
 
 ## Decisions (ADRs)
 
-28 decisions, 53 addenda between them (`grep -c '^#\+ *Addendum' docs/decisions/*.md` — the
+29 decisions, 54 addenda between them (`grep -c '^#\+ *Addendum' docs/decisions/*.md` — the
 stated total had drifted to 11, then to 13, and is now pinned by `tests/test_docs_truth.py`
 along with every per-ADR count in the last column).
 **The addenda are where reality corrected the original call**, so a doc's original Decision
@@ -112,7 +113,7 @@ section is not always the final word — the counts below exist so you don't mis
 | [008](decisions/008-project-structure.md) | Project structure & the `contracts/` seam | Accepted | **2** — two modules import *upward* into `api.state` for the tolerant artifact readers, knowingly; `mcp` named as a second imperative shell alongside `api`, and the `pose`/`detection` → `Frame` edge made type-only |
 | [009](decisions/009-swing-scoring-model.md) | Dual-axis scoring with intent-driven policies | Accepted | — |
 | [010](decisions/010-benchmark-ranges.md) | Benchmark ranges as versioned data with provenance | Accepted | **8** — JSON not YAML; two provisional rows; tempo re-sourced from GolfDB; **percentiles ride on `CheckpointScore` but never on the scoring path**; **two hip checkpoints promoted, and a rule for which band edges may be asserted**; **`hip_sway_norm`'s lower edge revisited and kept — the rule gains a second axis, resolution vs. placement**; **per-club bands gated and none cut — the club is not an axis this panel varies on**; **`unscored` carries the reason, not just the name — and `refilming_helps` is the bit that decides what a golfer is told** |
-| [011](decisions/011-camera-synchronization.md) | Camera sync & multi-view 3D fusion | **Partially accepted** | **1** — a second capture tier: hand-held phones can be *aligned* but never *fused* |
+| [011](decisions/011-camera-synchronization.md) | Camera sync & multi-view 3D fusion | **Partially accepted** | **2** — a second capture tier: hand-held phones can be *aligned* but never *fused*; then a third handling for that tier (M17) — rotation *measured per view* as an explicitly interim 2-D instrument, pending the fiducial calibration this ADR names as the prerequisite for real 3D |
 | [012](decisions/012-golfdb-reference-data.md) | GolfDB as a reference-swing source | Accepted | — |
 | [013](decisions/013-clip-relative-detection.md) | Clip-relative detection windows; explicit detection confidence | Accepted | — |
 | [014](decisions/014-screen-capture-shot-ingestion.md) | Shot data by OCR of the simulator screen | Accepted | **1** — `spin_axis` was stored sign-inverted; the sign table gains the one tile the device prints already signed |
@@ -181,6 +182,7 @@ two of them were told their screen had never been read. And it is the first surf
 P14's seam rather than re-fly past it, setting the stored numbers beside the flown ones and
 splitting the two causes on the engine version); and P19 added the view a golfer means by *seeing a shot* — a perspective tracer from behind the ball — which corrects P15's rationale without overturning it (a camera does foreshorten both questions, so the tracer is a **third** panel captioned as unmeasurable rather than a replacement for the two that can be read), and found that the top of a perspective frame is **not the apex**, because angular elevation peaks earlier than the flight does |
 | [028](decisions/028-mishit-exclusion.md) | Mishit exclusion — the topped shot that is not your seven iron | **Accepted** 2026-09-07, **built** 2026-09-08 ([M16](../ROADMAP.md), 9/9 phases) | — (a shot carrying below half its club's own median is held out of the carry and total-distance averages only — every other metric still counts it — auto-flagged before the count is taken, overridable per swing, and every held-out shot named; no `ANALYSIS_VERSION` bump, because the aggregates are live and nothing in `analysis.json` changes. Built as designed, no addendum; the Status section records the one real mishit on disk) |
+| [029](decisions/029-pivot-points.md) | Pivot points — an interim 2-D-per-view rotation instrument behind a fiducial-ready seam | **Accepted** 2026-09-09 ([M17](../ROADMAP.md), 0/9 phases) | — (the shoulder-line, hip-line and hand pivot points, drawn on `aligned.mp4` and tracked per view; a "wonky" turn flagged by stdlib rule checks on their paths, surfaced as unjudged per-view `Measurement`s. True rotation stays 3-D and unreachable for this tier ([ADR-011](decisions/011-camera-synchronization.md)); the numbers are explicitly interim and `contracts/pivots.py` is the seam a fiducial-calibrated source slots into. `ANALYSIS_VERSION` 15 → 16) |
 
 Format: [000-template.md](decisions/000-template.md).
 

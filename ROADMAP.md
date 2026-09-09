@@ -1,6 +1,6 @@
 # Roadmap: AI Golf Swing Trainer
 
-## Last Updated: 2026-09-08
+## Last Updated: 2026-09-09
 
 Grouped by **state**, not by number, because the numbers no longer run in order: the pose-only
 slices (M4-PoC, M4-PoC+, M4-REF, M5-FB) delivered the mechanics half of M4 and the ranking half
@@ -33,6 +33,7 @@ wording; only the grouping and the M4 checklist have been corrected.
 | **Hands spike** MediaPipe Hands on a grip | ✅ Done *(2026-09-03, **no-go**)* | — (ran on the fifteen face-on swings already on disk; M14's successor milestone does not open, and only the ADR is left to write) | [§Hands spike](#hands-spike-mediapipe-hands-on-a-golf-grip--m14s-successor-and-a-no-go) |
 | **M15** Ball flight | ✅ Done *(2026-09-06)*, 20/20 phases. **The flight is measured, stored, served, drawn as a golfer sees it, said and answerable — and every surface names the numbers nothing measured** | — (P0–P9: ADR-027, this table, one bag entry corrected, the published constants committed, the RK4 integrator built in three dimensions, **the gate passed at ±2.59%**, the altitude what-if, a CLI over all of it, **the flight solved backwards**, **P9 the loft prior and the axis**, and **P10 the corpus, read through a join**. Read the agreement with its five caveats before quoting it: both validation shots fly the whole way above the only public coefficient table; above that clamp **spin does not reach the flight at all**; the gate passes per shot while the model ranks the two shots backwards, an inversion the recorded spin axis closes only a tenth of and altitude *widens*; and the spin solve **names a number for 4 of the 11 spin-less shots and refuses 7**. P9 added a sixth about the corpus rather than the physics — run end to end the inference produced no spin at all — and **P10 corrected it**: the club is on the *swing*, not on the shot, eleven of the thirteen shots are attached to a swing that carries one, and the inference names **one spin** (`2026-08-23-4`, 2,924 rpm under a 5,103 rpm cap) and refuses ten. Two of those refusals are a 3 wood nobody has declared in the bag — the bag page, not the bay. P10 also checked P4's hand-typed gate constant against disk for the first time, and it matches to the digit. **P11 landed the six measurements** and corrected §Decision 6 twice: `flight_spin_rpm` records only a *solved* spin, because pooling it with a printed one is the hazard that section exists to prevent; and P10's planar-offline identity is not structural — it holds where the spin was solved from the carry and breaks by 0.29 yd where it was measured. **P12 registered the `model:` prefix** in `contracts/career.py::CorpusSwing.artifact_key` — not `storage/corpus.py`, where the ADR and this roadmap both had it — keying a flight on the **shot photo** it was flown from, and found P11's reason for shipping ahead of it inverted: the `swing:{ref}` fallback can only over-count on the dedupe but carries **no flagged-parse refusal**, so a flight built on a tile flagged under ADR-014 counted as a sample while the carry printed beside it did not. `population:golfdb` stays unregistered on purpose — it moves no count and would decide ADR-022's fourth addendum by accident. **P13 bumped `ANALYSIS_VERSION` 14 → 15** and re-analysed all fifteen stored swing directories onto it: every score byte-identical, five artifacts carrying a flight and ten a refused one — and the finding is that this re-run **cannot prove P12's registration**, since no two distinct swings on this corpus share a shot photo, so the photo key and the `swing:{ref}` fallback partition it identically. It also swept in four M14 measurements no stored artifact had ever carried, which is the milestone that read the band question and the version question as one question. **P14 put the flight behind `GET .../flight`**, which re-flies at read time because the artifact stores the six numbers and no path — and found the seam twelve earlier corrections had not: two of a flight's inputs live in *editable* artifacts, so the route and the stored artifact can disagree about one shot. Declare the 3 wood's loft and the page draws a flight the corpus still counts as refused, with nothing on disk able to see the difference. **P15 drew it** — a canvas, vanilla JS, two projections of one polyline rather than a camera on it — and the finding is the plan view's vertical axis: it must be stretched by the **smallest factor that makes the curve readable, not the largest that fits**, because every flight on this corpus drifts a third to a half of its own apex and the first rule drew the lateral miss *taller than the height of the shot* beside a panel captioned 1:1. On this corpus the stretch now never fires. P15 also found ADR-027's own Status block a phase behind — eleven addenda over twelve, P14 still listed as unbuilt, and the *three flights* count `docs/README.md` had already been corrected to five — because the doc-truth suite pinned the map's row and not an ADR's account of itself. **P16 put the printed numbers beside the simulated ones** — the carry as a hollow ring on the ground line, the start line as a rule across the plan view, the four `caveats_for` sentences rendered for the first time — and the finding is that **neither of the two available pairs is a check**: where the spin was solved the printed carry is the solve's own *input*, reproduced to +0.001 yd, which is the most convincing pair of numbers on the page and evidence of nothing; and the two offlines are where the ball started against where it finished, a gap that splits exactly into bend **plus** the carry error leaning on the start line rather than being "the curve". The pairing itself turned out to be a registry decision rather than a rendering one, correcting P15's framing of this phase. P16 also found `sign_disagrees` had **never been rendered to a golfer**: the one shot on disk that sets it is a refusal, so the launch-conditions block the sentence was first written into never renders for it. **P17 added the eleventh MCP tool** — `simulate_flight(session_id, swing_id)`, offered without a golfer registry because a printed spin borrows nothing from a bag — and found the surface that had been quietest: `mcp/query.py` flattens `measurements` to name -> value, so the six reached a **coaching model as bare floats** under a field description calling them measured, and a solved spin was indistinguishable from a printed one exactly where the output is sentences spoken to a golfer. `SwingView.simulated` is the split, keyed on `Measurement.source` and never on the name. P17 also found P10's join runs the **wrong way** for this question — one screen photo here is attached to three swings, and a shot-to-swing join names one survivor — and built `differs_from_recorded`, the first thing anywhere that can *see* P14's seam instead of re-flying past it. **P18 cascaded the docs**: the tool count ten → eleven, ADR-027's Status block to built with its fifteenth addendum, and this section to done. **P19 added the view a golfer means by seeing a shot** — a perspective tracer from behind the ball, down the target line, red and animated, with the ball's own track on the turf under it because a curve seen end-on is mostly foreshortened away. It corrects P15's rationale without overturning it: a camera really does foreshorten both questions at once, so the tracer is a **third** panel captioned `perspective — nothing measurable` rather than a replacement for the two that can be read, and it asserts exactly what the plan view asserts — no landing ring and no offline sentence on a planar flight. Its two findings are geometry: the top of a perspective frame is **not the apex**, because a camera sees angular elevation and that peaks a good forty yards earlier than the flight does (fitting on the apex put the tracer nine pixels off the top of the canvas); and a camera at literal eye height is the literal answer and a bad picture, compressing everything past 25 yards into about **seventeen pixels** above the horizon. **The only unverified thing in the milestone is still the page's layout** — no browser has ever been driven) | [§M15](#m15-ball-flight--the-model-the-launch-angle-was-recorded-for--done) |
 | **M16** Mishits | ✅ Done *(2026-09-08)*, 9/9 phases (P0–P8) | — (desk work over the corpus already on disk; building corrected nothing in ADR-028. The rule went live in P3 and found its first real subject unprompted in P5 — aaron's 7 iron `2026-08-23/2` carried 33.6 yd against a 121.8 yd median. Holding it out drops that club's clean carries to four, below the CENTER floor, so `get_club_profile` now *withholds* its carry mean where it used to print a top-dragged ≈101.6 yd — no number beats a wrong one. No `ANALYSIS_VERSION` bump — the aggregates are live) | [§M16](#m16-mishits--the-topped-seven-iron-that-is-not-your-seven-iron--done) |
+| **M17** Pivot points | 🟡 In progress, 0/9 phases | Nothing — desk work over the corpus on disk; the overlay and the rule checks need no bay session | [§M17](#m17-pivot-points--the-shoulder-line-the-hip-line-and-the-three-points-they-turn-about) |
 | **M5** Feedback UI | ⬜ Not started | M7 Phase 5 gives the host | [§M5](#milestone-5-feedback-ui) |
 | **M2** Club & ball detection | 🔒 Gated, **and M1.5 said no-go** | Bay lighting for a ~1/2000 s exposure — *not* a global-shutter camera | [§M2](#milestone-2-club--ball-detection) |
 | Hardware re-validation | 🔒 Gated | Cameras / launch monitor arriving | [§Gate](#hardware-re-validation-gate-revisit-when-cameras--launch-monitor-arrive) |
@@ -2679,6 +2680,51 @@ down by the top. That is the ADR-010 posture landing exactly where it should —
 wrong one. `ball_speed_mph` and `backswing_ms` still count all five. `--clear` on the shot restores
 the five-sample carry mean; `--confirm` on a heavier miss above the floor removes one. The full
 suite, `ruff` and `mypy` stayed green at every phase.
+
+---
+
+## M17: Pivot points — the shoulder line, the hip line, and the three points they turn about
+
+**Status**: 🟡 In progress, 0/9 phases (P0–P8). Desk work over the corpus already on disk — no
+bay session, the overlay and the rule checks need none. On branch `GOLF-5`, one commit per
+phase. The *why* is [ADR-029](docs/decisions/029-pivot-points.md); the phase list and the
+resume point is [docs/M17_PIVOT_POINTS.md](docs/M17_PIVOT_POINTS.md).
+
+**The ask.** Track the pivot points a golfer watches to judge a turn — the shoulder-line
+midpoint, the hip-line midpoint and the hands — through the swing; draw them and the two
+rotation lines on `aligned.mp4`; and flag when the turn is clean versus "wonky".
+
+**Why it is an interim instrument.** [ADR-011](docs/decisions/011-camera-synchronization.md)
+established that true rotation — hip turn, shoulder turn, X-factor — is 3-D, and its 2026-08-05
+addendum established that the two hand-held phones "can be aligned but never fused": no stable
+extrinsics, so triangulation is unreachable and one 2-D camera foreshortens the turn (37°
+down-the-line vs 2° face-on for the same posture). The golfer is printing QR-code fiducial
+markers for the hitting area, which gives real calibration and a 3-D source later. So M17's
+rotation numbers are an **explicit interim 2-D-per-view instrument**: unjudged, per-camera,
+never blended, each carrying the sentence saying why it is provisional — built behind a
+`contracts/pivots.py` seam so the calibrated source drops in as a second producer of one shape.
+
+**Not a checkpoint.** A 2-D image-plane line angle carries the frame's pixel aspect (the
+`trail_hand_roll_deg` precedent — it ships unjudged) and, measured through the swing, an
+unknown amount of foreshortening. There is no band to earn yet and no calibrated instrument to
+earn it with, so the pivot numbers ride on `measurements`, never `checkpoint_scores`
+([ADR-010](docs/decisions/010-benchmark-ranges.md) §2). Wonky detection is stdlib rule checks
+on the pivot paths — path smoothness, no against-the-turn reversal, the hip and shoulder
+centres staying near a stable vertical axis.
+
+**The phases.** P0 the docs (this section, ADR-029, the ADR-011 addendum). P1 the overlay —
+`pose/overlay.py` gains the guide lines and the pivot markers, reaching both `aligned.mp4`
+panels unchanged. P2 `contracts/pivots.py` — `FrameOfReference`, `PivotObservation`, the
+per-view registry. P3 and P4 `analysis/pivot.py` — the pivot paths, then the rule checks. P5
+the engine wiring and `ANALYSIS_VERSION` 15 → 16. P6 the derived caveat and the
+`SwingView.rotation` MCP field, both saying the numbers are interim. P7 re-render every stored
+`aligned.mp4`. P8 docs reconciliation and the merge.
+
+**Exit criteria.** A two-view swing's `aligned.mp4` shows the three pivot markers and the two
+rotation lines on both panels, the down-the-line lines visibly turning; `get_swing` returns a
+`rotation` block of per-view numbers each labelled interim; a swing that sways or reverses
+scores its `pivot_*` values high against a clean one; and `reanalyze.py --all` reports every
+`overall_score` byte-identical. The full suite, `ruff` and `mypy` green at every phase.
 
 ---
 

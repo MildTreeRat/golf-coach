@@ -5,6 +5,48 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-09-09 — M17 P0 (docs only): joint centres, drawn and tracked, with the fiducial seam left open
+
+**Duration**: one sitting. **M17 is 0/9 — the milestone enters the repo.** New branch `GOLF-5`
+off `main`. Created: `docs/decisions/029-pivot-points.md` (Status *Accepted*, four options,
+seven decisions), `docs/M17_PIVOT_POINTS.md` (tier TARGET, the resume point — brief plan then
+P0–P8 as checkboxes). Edited: `docs/decisions/011-camera-synchronization.md` (a second
+addendum — a third handling for the phone tier, measured per view, explicitly interim),
+`docs/README.md` (ADR-029 row, ADR-011 addenda 1 → 2, a Living-docs row for the M17 doc,
+markdown-doc count 64 → 66, "28 decisions / 53 addenda" → "29 / 54"), `ROADMAP.md` (status row
++ a `## M17` detail section, `Last Updated`). No code touched. Full suite **1713 passed**
+(1709 + 4 parametrized doc-truth instances for the new doc), `ruff` and `mypy` clean, doc-truth
+suite green (87).
+
+**The milestone is designed around a constraint, not toward a capability.** True rotation is
+3-D; [ADR-011](docs/decisions/011-camera-synchronization.md) says the two hand-held phones
+cannot be fused to recover it, and one 2-D camera foreshortens the turn. So M17's rotation
+numbers are an **explicit interim 2-D-per-view instrument** — unjudged, per-camera, never
+blended — built behind a `contracts/pivots.py` seam (`FrameOfReference`) so that when the
+golfer's printed QR fiducial markers land and give real calibration, a 3-D source slots in as a
+second producer of one shape: the rule checks, the registry and the overlay do not change,
+only the "interim" prose flips. That seam is the reason there is an ADR at all.
+
+**Two decisions in P0 that a later phase could get wrong.** The pivot measurements go in their
+*own* registry (`contracts/pivots.PIVOT_MEASUREMENT_REGISTRY`), never `POSE_MEASUREMENTS` —
+that keeps `tests/analysis/test_dispersion.py`'s `POSE_MEASUREMENTS | SHOT_MEASUREMENTS ==
+METRIC_TARGETS` pin green untouched, the same separation the `flight_*` family has. And wonky
+detection is stdlib rule checks producing unjudged `Measurement`s, **not** a checkpoint — a 2-D
+through-swing angle carries the pixel aspect (`trail_hand_roll_deg` is the precedent, and it
+ships unjudged) and there is no calibrated instrument to earn a band with.
+
+⚠️ **The doc-count pin fails until the new files are `git add`ed.** `test_the_documentation_
+map_counts_the_documents_correctly` reads `git ls-files`, so the two new `.md` files were
+staged before the doc-truth suite went green — the same order M14 P0 / M16 P0 needed.
+
+**Next**: clear the chat for a fresh context, then P1 — `pose/overlay.py` gains `_GUIDE_LINES`
+and `_PIVOT_POINTS` (the two rotation lines + the three midpoint markers), reaching both
+`aligned.mp4` panels through the unchanged `annotate_frame` path. `docs/M17_PIVOT_POINTS.md`
+§P1 has the scope; the plan file is `.claude/plans/can-we-create-a-generic-heron.md`. Nothing
+is pushed; `GOLF-5` is one commit (P0).
+
+---
+
 ## 2026-09-08 — M16 P8: the docs catch up, and the rule's first real subject
 
 **Duration**: one sitting. **M16 is 9/9 — done.** Edited: `docs/decisions/028-mishit-exclusion.md`
