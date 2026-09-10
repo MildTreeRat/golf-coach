@@ -158,3 +158,24 @@ event-anchored warp absorbs all of that; host timestamps would not.
   stay two is settled in **ADR-015**, drafted during M7 Phase 2.
 - Nothing here changes the phased plan for the ELP rig. Phases 2–3 (software sync → hardware
   trigger) and the calibration prerequisite are still the route to real 3D, and still the only one.
+
+## Addendum (2026-09-09, M17): a third handling for the phone tier — measured per view, explicitly interim
+
+The 2026-08-05 addendum split the phone tier's rotation quantities cleanly in two: aligned,
+yes; fused, never. M17 ([ADR-029](029-pivot-points.md)) adds a third handling between those,
+for the "pivot points" a golfer watches to judge a turn — the shoulder-line and hip-line
+midpoints, and the hands. They are **measured per view as an explicitly interim instrument**:
+2-D image-plane paths from each camera, tracked through the swing, checked with stdlib rule
+checks for a clean versus a "wonky" turn, and surfaced as unjudged `Measurement`s that each
+carry the sentence saying why they are provisional. Not fused — the extrinsics still do not
+exist; not refused — the paths are visible face-on (M14 P3) and the axis-drift checks are
+largely aspect-immune; measured, and labelled.
+
+**The fiducial markers are why "interim" is the right word and not "permanent".** The golfer is
+printing QR-code fiducial squares to place around the hitting area — which is exactly the
+calibration target §Architecture names as the prerequisite for extrinsics and real 3D. When
+that lands, a calibrated pose / 3D source becomes a second producer of one
+`contracts/pivots.py` shape (`FrameOfReference.CALIBRATED_3D`); the rule checks and the overlay
+do not change, and the "interim" prose flips to a judgeable quantity. The `fusion/` module
+above stays unreachable for two hand-held phones with nothing in frame to solve against — a
+printed target *in* frame is a different capture setup, and its own milestone.

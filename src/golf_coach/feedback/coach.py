@@ -51,6 +51,7 @@ from golf_coach.contracts.caveats import (
     TWO_AXES,
 )
 from golf_coach.contracts.feedback import CoachingProvenance
+from golf_coach.contracts.pivots import PIVOTS_BY_NAME
 from golf_coach.contracts.placements import PLACEMENTS_BY_NAME
 from golf_coach.contracts.shot import ShotData
 from golf_coach.contracts.swing import CheckpointScore, Measurement, SwingBundleResult
@@ -182,6 +183,32 @@ def _placement_lines(measurements: list[Measurement]) -> list[str]:
     return lines
 
 
+def _pivot_lines(measurements: list[Measurement]) -> list[str]:
+    """The rotation measurements, each labelled with its view and why it is interim.
+
+    `_placement_lines`'s sibling and one step short of it: a placement is at least a distance from
+    a population that exists, where a pivot row has no reference population behind it at all — only
+    the fact that a calibrated source would replace it. Rendering `spec.interim_reason` on every
+    line rather than leaving it to the caveat block is the same call `_placement_lines` makes about
+    `calibrated`: a warning stated once, far above the numbers, is a warning a model applies to the
+    numbers it still remembers.
+
+    Only pivot rows are rendered, for `_placement_lines`'s reason: the rest of `measurements` is
+    pose metrics the checkpoints already judged or shot fields `_shot_lines` already prints.
+    """
+    lines: list[str] = []
+    for measurement in measurements:
+        spec = PIVOTS_BY_NAME.get(measurement.name)
+        if spec is None:
+            continue
+        lines.append(
+            f"- {measurement.name} ({spec.view} view, interim): "
+            f"{_fmt(measurement.value)} {measurement.unit}"
+        )
+        lines.append(f"  {spec.interim_reason}")
+    return lines
+
+
 def _shot_lines(shot: ShotData) -> list[str]:
     """The launch-monitor numbers, with the OCR flag first so it is read before them."""
     lines: list[str] = []
@@ -224,8 +251,9 @@ def build_brief(result: SwingBundleResult) -> str:
     Deliberately excludes `keypoints`, `detections` and `phases`: several hundred frames of 33
     landmarks each, none of which a coach reasons from, all of which would dominate the prompt.
 
-    Of `measurements` it renders the population placements only — see `_placement_lines` for why
-    the rest would be every number in this brief a second time.
+    Of `measurements` it renders the population placements and the rotation readings only — see
+    `_placement_lines` and `_pivot_lines` for why the rest would be every number in this brief a
+    second time.
     """
     swing = result.swing
     out: list[str] = [
@@ -285,6 +313,20 @@ def build_brief(result: SwingBundleResult) -> str:
         out.append(
             "none - this swing did not produce a placement, which happens when a metric or a "
             "phase anchor the model needs was missing. Say nothing about where it sits."
+        )
+
+    pivots = _pivot_lines(swing.measurements)
+    out += [
+        "",
+        "ROTATION (interim - a 2-D-per-view reading, no reference population, never a band, "
+        "never part of overall_score, never blended across views)",
+    ]
+    if pivots:
+        out += pivots
+    else:
+        out.append(
+            "none - this swing did not produce a rotation reading, which happens when the "
+            "tracking a check needs was missing. Say nothing about the golfer's turn."
         )
 
     feedback = result.feedback

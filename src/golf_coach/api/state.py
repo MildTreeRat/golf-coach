@@ -39,6 +39,7 @@ from pydantic import BaseModel, Field, TypeAdapter, ValidationError
 
 from golf_coach.analysis.tempo_trainer import build_tempo_plan
 from golf_coach.contracts.checkpoints import CHECKPOINT_REGISTRY
+from golf_coach.contracts.pivots import PIVOTS_BY_NAME
 from golf_coach.contracts.placements import PLACEMENTS_BY_NAME
 from golf_coach.contracts.swing import ANALYSIS_VERSION, PhaseSegment
 from golf_coach.storage.manifest import SwingManifest
@@ -213,6 +214,51 @@ def resolve_placements(analysis: dict | None) -> list[dict]:
                 "detail": detail if isinstance(detail, str) else "",
                 "view": spec.view,
                 "calibrated": spec.calibrated,
+            }
+        )
+    return resolved
+
+
+def resolve_pivots(analysis: dict | None) -> list[dict]:
+    """The rotation measurements on a stored swing, each carrying the sentence that says interim.
+
+    `placements.py`'s counterpart and `resolve_placements`'s sibling — a pivot row shipped as a
+    bare float is the same failure `contracts/pivots.py` exists to stop, one instrument short of
+    the population placements: there is no band and no reference population behind these at all,
+    only the fact that a calibrated source would replace them.
+
+    **One resolver, three channels** (see `resolve_placements`'s docstring for the shape this
+    repeats): `mcp/query.py` wraps this in `PivotView`, `api/app.py` hands it to the results page,
+    and `feedback/coach.py` partitions a measurement list through `PIVOTS_BY_NAME` the same way it
+    already does for placements.
+
+    Membership is `PIVOTS_BY_NAME` and never a `pivot_` prefix test, for `resolve_placements`'s
+    reason: a prefix test would silently reclassify a future name in the direction that loses the
+    caveat.
+    """
+    resolved: list[dict] = []
+    for entry in _measurement_entries(analysis):
+        name = entry.get("name")
+        if not isinstance(name, str):
+            continue
+        spec = PIVOTS_BY_NAME.get(name)
+        if spec is None:
+            continue
+        value = entry.get("value")
+        if isinstance(value, bool) or not isinstance(value, int | float):
+            continue
+        unit = entry.get("unit")
+        detail = entry.get("detail")
+        resolved.append(
+            {
+                "name": name,
+                "value": float(value),
+                # Unit and detail come off the stored entry, view and interim_reason off the spec —
+                # `resolve_placements`'s split, for the same reason.
+                "unit": unit if isinstance(unit, str) and unit else spec.unit,
+                "detail": detail if isinstance(detail, str) else "",
+                "view": spec.view,
+                "interim_reason": spec.interim_reason,
             }
         )
     return resolved

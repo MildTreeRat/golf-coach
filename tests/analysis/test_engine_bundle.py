@@ -18,8 +18,10 @@ from conftest import make_swing
 
 from golf_coach.analysis.engine import analyze_swing, analyze_swing_bundle
 from golf_coach.contracts.alignment import AlignmentQuality
+from golf_coach.contracts.career import POSE_DTL_SOURCE
 from golf_coach.contracts.checkpoints import checkpoint_names
 from golf_coach.contracts.keypoints import ClipMetadata, FrameKeypoints, KeypointsFile
+from golf_coach.contracts.pivots import PIVOTS_BY_NAME, pivot_measurement_names
 from golf_coach.contracts.shot import ShotData, ShotProvenance, ShotSource
 from golf_coach.contracts.swing import ANALYSIS_VERSION, SwingBundleResult
 from golf_coach.contracts.unscored import UnscoredReason
@@ -510,3 +512,87 @@ def test_a_disagreement_without_a_shared_clock_withdraws_nothing() -> None:
     assert not bundle.alignment.a.top_is_late
     assert "tempo" in {score.name for score in bundle.swing.checkpoint_scores}
     assert not any("withdrawn" in note for note in bundle.notes)
+
+
+# --- the second camera's rotation numbers ----------------------------------------------- [M17 P5]
+#
+# The face-on half is pinned in `tests/analysis/test_engine.py`. What is only visible here is the
+# thing M17 is designed around: two cameras, two scales, ten names that must never be one.
+
+
+def test_the_second_camera_contributes_its_own_pivot_rows(
+    swing: list[FrameKeypoints],
+) -> None:
+    """The down-the-line five, in registry order, beside the face-on five and never merged.
+
+    Down-the-line is where the turn is least foreshortened, so these are the numbers that matter
+    most — and they are still a separate scale. The name is what carries that rule: the suffix is
+    part of the identifier and not a `view` field, because `analysis/baseline.py::pooled_samples`
+    groups a golfer's history by name and one name for two cameras would pool two instruments.
+    """
+    face_on, dtl = _two_views(swing)
+    bundle = analyze_swing_bundle("s", "sess", face_on, dtl)
+
+    emitted = [m.name for m in bundle.swing.measurements if m.name in PIVOTS_BY_NAME]
+
+    assert emitted == list(pivot_measurement_names())
+    assert len(set(emitted)) == len(emitted), "a face-on name collided with a `_dtl` one"
+
+
+def test_the_dtl_pivots_carry_the_source_that_keys_on_nothing(
+    swing: list[FrameKeypoints],
+) -> None:
+    """The one `pose:` source `CorpusSwing.artifact_key` returns None for, asserted at the emitter.
+
+    `CorpusSwing` carries `face_on_sha256` and no hash for the rear clip, so a `_dtl` row sourced
+    `pose:face_on` would assert that two different rear clips over one face-on clip are a single
+    reading of it — and the pooled value would be whichever was read first. The two halves are
+    checked together because the bug is the pair being equal, not either being wrong alone.
+    """
+    face_on, dtl = _two_views(swing)
+    bundle = analyze_swing_bundle("s", "sess", face_on, dtl)
+
+    by_source: dict[str, set[str]] = {}
+    for measurement in bundle.swing.measurements:
+        if measurement.name in PIVOTS_BY_NAME:
+            by_source.setdefault(measurement.source, set()).add(measurement.name)
+
+    assert by_source[POSE_DTL_SOURCE] == {
+        name for name in pivot_measurement_names() if name.endswith("_dtl")
+    }
+    assert by_source["pose:face_on"].isdisjoint(by_source[POSE_DTL_SOURCE])
+
+
+def test_a_bundle_with_no_rear_clip_records_only_the_face_on_half(
+    swing: list[FrameKeypoints],
+) -> None:
+    """No second camera, no second reading — the direction that would be silent if it broke.
+
+    A `_dtl` row on a one-view bundle is a number about a clip nobody filmed, and every consumer
+    downstream presents it as the view where the turn is best seen.
+    """
+    bundle = analyze_swing_bundle("s", "sess", _file(swing))
+
+    emitted = [m.name for m in bundle.swing.measurements if m.name in PIVOTS_BY_NAME]
+
+    assert emitted, "the face-on half went missing with the rear clip"
+    assert not [name for name in emitted if name.endswith("_dtl")]
+
+
+def test_the_pivot_rows_move_no_score(swing: list[FrameKeypoints]) -> None:
+    """Ten unjudged numbers arrived and the verdict is byte-identical, both views included.
+
+    This is the claim `ANALYSIS_VERSION` 15 -> 16 makes about every stored artifact — that
+    `reanalyze.py` adds rows and changes no grade — asserted against the one-view result rather
+    than against a recorded constant, so it stays true as the checkpoints themselves move.
+    """
+    face_on, dtl = _two_views(swing)
+    bare = analyze_swing("s", "sess", swing)
+    bundle = analyze_swing_bundle("s", "sess", face_on, dtl)
+
+    assert bundle.swing.overall_score == bare.overall_score
+    assert bundle.swing.mechanics_score == bare.mechanics_score
+    assert [(c.name, c.observed, c.passed) for c in bundle.swing.checkpoint_scores] == [
+        (c.name, c.observed, c.passed) for c in bare.checkpoint_scores
+    ]
+    assert bundle.swing.unscored == bare.unscored

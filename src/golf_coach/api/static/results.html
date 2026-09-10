@@ -76,12 +76,15 @@
   .hist .v { font-variant-numeric: tabular-nums; text-align: right; }
   .hist .v em { font-style: normal; opacity: 0.6; font-size: 0.78rem; display: block;
                 font-variant-numeric: normal; }
-  /* Population placements. A sibling of `.hist` and deliberately not of the checkpoint table:
-     both say where a number sits against a distribution, and neither is a verdict. The one thing
-     that must never happen here is a placement borrowing the panel's pass/miss colours — a
+  /* Population placements, and the rotation block beside them — same shape (name, value, a
+     grey flag, a detail sentence, grouped by view), so one class serves both rather than a near-
+     duplicate `.rot`. Both are a sibling of `.hist` and deliberately not of the checkpoint table:
+     all three say where a number sits, and neither placement nor rotation is a verdict. The one
+     thing that must never happen here is either borrowing the panel's pass/miss colours — a
      distance from a tour population is not a fault, and `#c93` on `tour_trajectory_q_dtl` would
-     assert exactly the thing no band exists to support. So the uncalibrated flag is grey: it is
-     a statement about how well we know the number, not about the swing. */
+     assert exactly the thing no band exists to support. So the flag is grey: it is a statement
+     about how well we know the number (uncalibrated, or — for every rotation row — interim), not
+     about the swing. */
   .plc { font-size: 0.85rem; }
   .plc .vw { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.55;
              margin: 0.7rem 0 0.1rem; }
@@ -277,6 +280,7 @@ function render(payload) {
   parts.push(coachBlock(result.feedback));
   parts.push(shotBlock(swing.shot));
   parts.push(populationBlock(payload));
+  parts.push(rotationBlock(payload));
   parts.push(measurementsBlock(payload));
   parts.push(`<div id="history"></div>`);
   parts.push(videoBlock(analysis, result));
@@ -595,19 +599,55 @@ function populationBlock(payload) {
     <div class="plc">${groups}</div>`;
 }
 
+// Your rotation, read off the same two cameras: the shoulder and hip centres' drift off their
+// address position, how rough the hip path was, and whether the shoulder line ever turned back on
+// itself. Below the tour population block and not inside it — a placement is a distance from a
+// population that exists; a pivot row has no reference population behind it at all, only the fact
+// that a calibrated (fiducial-marker) source will one day replace it. `interim` is stamped on
+// every row rather than only some, because unlike the placements above there is no calibrated half
+// to contrast it with — every one of these numbers is provisional until then.
+function rotationBlock(payload) {
+  const list = payload.rotation || [];
+  if (!list.length) return "";
+  const views = [];
+  for (const p of list) {
+    let group = views.find((g) => g.view === p.view);
+    if (!group) views.push((group = { view: p.view, rows: [] }));
+    group.rows.push(p);
+  }
+  const groups = views.map((g) => `<p class="vw">${esc(g.view)}</p>` +
+    g.rows.map((p) => `<div class="p">
+      <div class="top">
+        <span class="name">${esc(p.name)}</span>
+        <span class="v">${num(p.value)}<span class="u">${esc(p.unit.replace(/_/g, " "))}</span>
+          <span class="flag">interim</span></span>
+      </div>
+      <p class="d">${esc(p.detail)}</p>
+    </div>`).join("")).join("");
+  return `<h2>Your rotation (interim)</h2>
+    <p class="muted">How the shoulder line, the hip line and their centres moved, read off one
+      uncalibrated phone's image plane — a 2-D picture of a 3-D turn, foreshortened by wherever
+      the camera stood. The face-on and down-the-line numbers are two different instruments and
+      are never blended. None of these has a band and none is part of your score; a fiducial
+      calibration is what would make one judgeable.</p>
+    <div class="plc">${groups}</div>`;
+}
+
 // Measured but not judged: no band, so no pass/fail, no percentile, no colour. Collapsed by
 // default and placed last, because a number nobody can yet say is good or bad is reference
 // material rather than feedback — and rendering it like the checkpoint table above would invite
 // exactly the reading it cannot support.
 //
-// Both exclusions are the API's lists rather than names typed here, so the block cannot go stale
-// the way the caption did. Placements leave because they have a population and belong above;
-// the checkpoint metrics leave because they are judged in the table at the top of this page, and
-// a block captioned "not yet judged" listing them again was false about six of its fourteen rows.
+// All three exclusions are the API's lists rather than names typed here, so the block cannot go
+// stale the way the caption did. Placements and pivots leave because they belong to their own
+// blocks above (a population distance, an interim rotation reading); the checkpoint metrics leave
+// because they are judged in the table at the top of this page, and a block captioned "not yet
+// judged" listing them again was false about six of its fourteen rows.
 function measurementsBlock(payload) {
   const swing = (payload.result || {}).swing || {};
   const shown = new Set([
     ...(payload.population || []).map((p) => p.name),
+    ...(payload.rotation || []).map((p) => p.name),
     ...(payload.judged_metrics || []),
   ]);
   const list = (swing.measurements || []).filter((m) => !shown.has(m.name));

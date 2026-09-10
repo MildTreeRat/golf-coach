@@ -32,6 +32,7 @@ from golf_coach.contracts.dispersion import (
     Finding,
     MetricTarget,
 )
+from golf_coach.contracts.pivots import pivot_measurement_names
 from golf_coach.contracts.swing import Measurement
 
 POSE = "pose:face_on"
@@ -267,6 +268,34 @@ def test_the_simulated_flight_is_registered_nowhere_and_that_is_the_choice() -> 
     assert set(FLIGHT_MEASUREMENTS).isdisjoint(set(POSE_MEASUREMENTS) | set(SHOT_MEASUREMENTS))
 
     metric = _one("flight_carry_yds", _spread(150.0, 3.0, 12))
+
+    assert metric.tolerance is None
+    assert metric.bias is Finding.WITHHELD and metric.scatter is Finding.WITHHELD
+    assert any("METRIC_TARGETS" in reason for reason in metric.unavailable)
+
+
+def test_the_pivot_family_is_registered_nowhere_either_and_that_is_the_choice() -> None:
+    """M17 P5's answer to the same test, and it refuses for a different reason. [M17 P5]
+
+    `PIVOT_MEASUREMENT_REGISTRY` is a fourth production registry with no `METRIC_TARGETS` row. The
+    flight above is excluded because it re-reports a spread already registered under another name;
+    these are excluded because a dispersion finding is a claim about how repeatable *this golfer* is
+    and the instrument is not repeatable yet — an uncalibrated image plane, foreshortened by
+    wherever the phone stood, so a scatter over two sessions would be reading the camera position.
+    A tolerance also implies a scale, and there is no calibrated one until the fiducials land
+    (ADR-029, ADR-011).
+
+    The membership assertion is the one with teeth: `POSE_MEASUREMENTS` is pinned equal to
+    `METRIC_TARGETS` by the test above, so a pivot name that drifted into that registry would give
+    every pivot metric a tolerance by inheritance rather than by anyone choosing one.
+    """
+    pivots = set(pivot_measurement_names())
+
+    assert pivots.isdisjoint(METRIC_TARGETS)
+    assert pivots.isdisjoint(set(POSE_MEASUREMENTS) | set(SHOT_MEASUREMENTS))
+    assert pivots.isdisjoint(FLIGHT_MEASUREMENTS)
+
+    metric = _one("pivot_hip_axis_drift_norm", _spread(0.30, 0.02, 12))
 
     assert metric.tolerance is None
     assert metric.bias is Finding.WITHHELD and metric.scatter is Finding.WITHHELD

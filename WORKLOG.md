@@ -5,6 +5,470 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-09-10 — M17 P8: docs reconciled, M17 closed 9/9
+
+**Duration**: one sitting. **M17 is 9/9 — done.** Docs only, the milestone's last phase.
+`ruff` and `mypy` clean; `tests/test_docs_truth.py` green (89 passed) confirming every pinned
+cross-doc count agrees before the full suite finished.
+
+Flipped [ADR-029](docs/decisions/029-pivot-points.md)'s Status to **Accepted, built 2026-09-10**
+and gave it a second addendum (2026-09-09c): P5's corpus run found the hands sharing one
+`_interpolate_gaps` call with the shoulder and hip centres, so the worst-tracked of the three
+points was vetoing the whole face-on view on every swing before the fix — Decision 6 said the
+hands are drawn and unmeasured, and the shape hadn't carried that far. Two gates now,
+`PivotObservation.hands` optional. Because building corrected the design a second time (the
+ADR-028 precedent for when a second addendum is owed), `docs/README.md`'s ADR-029 row moves to
+**2**, and the doc's "N addenda between them" line moves 55 → 56.
+
+`docs/M17_PIVOT_POINTS.md`: tier TARGET → REFERENCE, status line → **9/9 phases built, closed
+2026-09-10**, P8's checkbox flipped, and the standalone ⚠️ P2–P6-rewrite banner folded into the
+status paragraph as history rather than a live warning. Added a "what remains unverified"
+paragraph (browser playback of `aligned.mp4` — still unconfirmed, decoded frames only) and an
+"exit criteria met" paragraph. Also fixed a gap the read-back found: P4 was the one phase with no
+`**Built <date>.**` line; it has one now.
+
+`docs/README.md`: M17's row → REFERENCE, 9/9 phases built. `git ls-files '*.md' ':!.claude'`
+still returns 66, matching the stated count, so no recount was owed there.
+
+`ROADMAP.md`: status table row → ✅ Done *(2026-09-10)*, 9/9 phases; §M17 rewritten past-tense,
+P8 entry closed, exit-criteria paragraph marked met; `Last Updated` → 2026-09-10.
+
+**Next**: `git merge --no-ff GOLF-5 -m "Merge GOLF-5: M17 pivot points"` and `git branch -d
+GOLF-5`, once the full suite (running as this entry is written) confirms green — on the user's
+go-ahead.
+
+---
+
+## 2026-09-10 — M17 P7: every stored swing re-rendered onto the new overlay
+
+**Duration**: one sitting, mostly wall-clock. **M17 is 8/9.** Operational phase, no source change.
+Ran `.venv/Scripts/python.exe scripts/reanalyze.py --all --video --verbose` over all fifteen
+stored swings. Edited: `docs/M17_PIVOT_POINTS.md` (P7 checked off, status 7/9 → 8/9), `ROADMAP.md`
+(status row and §M17 detail), `docs/README.md` (M17 row). No test or source file touched — P7's
+gate is the corpus run itself, not the suite (full `pytest`/`ruff`/`mypy` were already green from
+P6 and nothing here could move them).
+
+**15/15 re-analyzed, 0 failures, 0 flagged for attention** (exit code 0). Every one of the five
+compared fields (`version`, `score`, `measurements`, `window`, `anchors`) read `no change` on
+every swing — the new overlay redraws pixels, it moves no number. Every render's `[reads back N]`
+count matched its `Wrote N aligned frames` count exactly (111–202 frames across the corpus,
+codec `avc1` on all fifteen). The wall of `Failed to load OpenH264 library` / `VIDEOIO/FFMPEG:
+Failed to initialize VideoWriter` stderr — one block per render — is the documented noise above
+`pose/side_by_side.py::_CODECS`: OpenCV's bundled FFmpeg gives up on the GPL-free `libopenh264`
+and falls back to Media Foundation, which is exactly what fifteen-for-fifteen `avc1` opens
+confirm. `--verbose`'s stdout is block-buffered under a redirect, so the log looked stalled for
+several minutes with only stderr visible; it was not — `Get-Process`'s climbing CPU time said the
+run was live, and the buffered prints all landed at once as later swings completed.
+
+**Visual check**: pulled three frames (`cv2.VideoCapture`, no browser) from `2026-08-23/2`'s fresh
+`aligned.mp4` — address, mid-downswing, follow-through. Both panels carry all three magenta pivot
+markers and both cyan guide lines at every sampled frame. The down-the-line line is the
+legible one: a near-point at address (§9's singularity — that line is nearly perpendicular to the
+rear camera at address) opening into a long diagonal by follow-through, visibly tracking the turn.
+Face-on shows the complementary collapse, shrinking through the same swing — neither is a defect,
+both are the projection singularity ADR-029 §9 already named, now seen in a real render rather
+than only in the reversal-angle statistics from P5. Browser playback itself is still unverified —
+the M14 P1 honesty carries forward: a decoded frame confirms the pixels on disk, not that a
+browser plays this file inline.
+
+**Next**: P8 — docs reconciliation and the merge. Flip ADR-029's Status to built, this doc to
+9/9, `ROADMAP.md`'s M17 row to ✅ Done, `docs/README.md`'s M17 row to REFERENCE at 9/9. Then
+`git merge --no-ff GOLF-5` on the user's go-ahead.
+
+---
+
+## 2026-09-10 — M17 P6: the numbers leave the system saying they are interim
+
+**Duration**: one sitting. **M17 is 7/9.** Edited: `src/golf_coach/contracts/caveats.py`
+(`PIVOTS_ARE_INTERIM`, `_PIVOT_NAMES`, `_PIVOTS_ARE_INTERIM_PROSE`, wired into
+`READING_THIS_DATA_HONESTLY`), `src/golf_coach/api/state.py` (`resolve_pivots`),
+`src/golf_coach/api/app.py` (a `"rotation"` key beside `"population"`),
+`src/golf_coach/api/static/results.html` (`rotationBlock`, and `measurementsBlock`'s `shown` set
+now excludes pivot names too), `src/golf_coach/feedback/coach.py` (`_pivot_lines`, a ROTATION
+section in `build_brief`), `src/golf_coach/mcp/query.py` (`PivotView`, `SwingView.rotation`,
+`_measurements`'s skip list gains `PIVOTS_BY_NAME`), plus `tests/test_docs_truth.py` (+2),
+`tests/api/test_state.py` (+2), `tests/mcp/test_query.py` (+2), `tests/feedback/test_coach.py`
+(+4), and the phase-count docs (`ROADMAP.md`, `docs/README.md`, this file's own P6 section).
+Full suite **1778 passed** (1768 + 10), `ruff` and `mypy` clean.
+
+Built as written — four surfaces, one rule, `resolve_pivots` mirroring `resolve_placements`
+field-for-field with `interim_reason` standing in for `calibrated` (there is no calibrated half
+to a pivot row; every one is interim, so one bullet and one field cover all ten rather than two
+of each). The one judgement call: `_ONLY_THESE_FUNDAMENTALS` — the caveat bullet stating "hip
+**rotation** ... NOT measured here" — is left untouched rather than cross-referenced against the
+new `rotation` block. That bullet is scoped to the six *judged checkpoints*, which still measure
+none of those; `tour_trajectory_q`'s placement already introduced a motion-shaped number without
+needing an edit there, and the new `_PIVOTS_ARE_INTERIM_PROSE` bullet two lines below it already
+says `rotation` is unjudged and has no band. Recorded here in case a future reader stares at that
+apparent contradiction the way this session did.
+
+**Next**: P7 — re-render every stored swing. Operational: `scripts/reanalyze.py --all --video`,
+then open one fresh `aligned.mp4` and confirm both panels show the three pivot markers and the
+two rotation lines, and the down-the-line panel's lines visibly track the turn. Record score
+byte-identity and `frames_read == frames` per bundle in `WORKLOG.md` and this doc's P7 section.
+
+---
+
+## 2026-09-09 — M17 P5: the numbers reach the engine, and the corpus run found a veto
+
+**Duration**: one sitting. **M17 is 6/9.** Edited: `src/golf_coach/analysis/engine.py`
+(`_PIVOT_VIEWS`, `_pivot_measurements`, both call sites, `_dtl_placements`'s signature),
+`src/golf_coach/contracts/career.py` (`POSE_DTL_SOURCE` + its `artifact_key` branch),
+`src/golf_coach/contracts/swing.py` (`ANALYSIS_VERSION` 15 → 16 and its ledger entry),
+`src/golf_coach/contracts/pivots.py` and `src/golf_coach/analysis/pivot.py` (the fix below),
+`tests/analysis/test_engine.py` (+4), `test_engine_bundle.py` (+4), `test_pivot.py` (+1),
+`tests/contracts/test_career.py` (+2), `test_dispersion.py` (+1), plus the phase-count docs.
+Full suite **1768 passed** (1756 + 12), `ruff` and `mypy` clean.
+
+**⚠️ The corpus run is what found the defect, and nothing in the suite could have.** The first
+`reanalyze.py --all` re-analysed all fifteen swings and every one of them gained **exactly the five
+`_dtl` rows and none of the face-on five** — the milestone's primary view recording no rotation
+number at all, on a green suite. The cause is in P3: `pivot_observations` put the shoulder, hip and
+hand columns through **one** `_interpolate_gaps` call, which refuses if *any* column is holier than
+`MAX_MISSING`. Face-on, 44-61% of the resampled samples on these clips have no readable wrist pair —
+M14 P3's 0.63-0.68 whole-clip hand tracking, which is exactly why M14 scoped its own hand metrics to
+the address window — while the shoulder and hip midpoints read on **every single sample**. So the
+one point the milestone deliberately *does not measure* held a veto over the five metrics that never
+read it. Down-the-line the trail wrist tracks well (§Phase F: 7% / 2% misses), which is why the
+second camera looked fine and the failure presented as "the dtl half works".
+
+The fix is two gates rather than one: shoulder and hip refuse the swing, the hands refuse only
+themselves, and `PivotObservation.hands` becomes `tuple[float, float] | None`. That is a
+`contracts/` shape change, so **this phase went from L2 to L3 mid-task** — the escalation was worth
+it: the alternative was dropping the hands from the observation entirely, which throws away the slot
+the overlay and a future club detector need. The synthetic fixture could never have caught this: it
+places all 33 landmarks at `visibility=1.0`, so its wrists are perfect. `test_unreadable_wrists
+_cost_the_hands_and_nothing_else` blinds both wrists and asserts the *other two points are
+unchanged* — a test that only checked `hands is None` would pass on a producer that had quietly
+stopped placing them too.
+
+**After the fix: 15/15 artifacts, 10 pivot rows each, no check refused, every `overall_score`,
+`checkpoint_scores` entry and `unscored` list byte-identical.** Measurement counts went 20-26 → 30-36.
+Nothing was lost.
+
+**The two views are visibly two instruments, and the reversal pair is the strong case for the
+caveat.** Medians across the fifteen: hip drift 0.58 face-on against 0.26 down-the-line, shoulder
+drift 0.35 against 0.14 — a scale difference, as ADR-029 says, so never blend them. The reversal
+metrics are sharper than that: face-on the backswing figure runs 5.0-**71.0**° and the downswing
+0.3-**37.3**°, while their `_dtl` partners sit at 0.0-2.9° and 0.0-0.8°. That is
+[ADR-029](docs/decisions/029-pivot-points.md) §9's projection singularity showing up in real data on
+the first run — face-on the shoulder line collapses toward zero width at the top, which is precisely
+where `BACKSWING_SPAN` ends, so `atan2` is worst-conditioned exactly where the backswing figure is
+taken. It is not a bug and it is not a fault in those swings; it is why `_ANGLE_INTERIM_FACE_ON`
+says *read the pair, never one alone*, and why a band cut off the face-on reversal alone would be
+cut off the noise. Recorded here because it is the first number this milestone has produced that a
+reader would otherwise take at face value.
+
+**Two engine choices worth the line.** `_dtl_placements` now takes the smoothed frames and the
+anchor tuple instead of the raw clip and a `SwingAnchors`: the rear clip gained a second reader this
+phase, and the plan's shape would have had each of them smooth the same frames and build the same
+three floats independently — two copies of one conversion, in the one place `analyze_swing_bundle`
+already argues must not be able to disagree. And `trajectory.anchors_from_phases` is imported as
+`event_time_anchors`, because `alignment.anchors_from_phases` is already in scope under its own name
+and the two answer different questions.
+
+**Next**: P6 — the numbers leave the system saying they are interim. Four surfaces, one rule:
+`PIVOTS_ARE_INTERIM` derived from the registry in `contracts/caveats.py`, `resolve_pivots` beside
+`resolve_placements` in `api/state.py`, and the three channels that read through it
+(`api/app.py` + `results.html`, `feedback/coach.py`, `mcp/query.py`). §P6 is specific. Note that
+`PivotObservation.hands` is now optional — nothing renders it yet, but P7's overlay work is the
+phase most likely to meet the `None`.
+
+---
+
+## 2026-09-09 — M17 P4: the rule checks that call a turn wonky
+
+**Duration**: one sitting. **M17 is 5/9.** Edited: `src/golf_coach/analysis/pivot.py`
+(`PivotCheckFn`, `PIVOT_CHECKS`, five checks, `MIN_PATH_SAMPLES` / `MIN_JITTER_SAMPLES` /
+`MAX_UNORIENTED`), `tests/analysis/test_pivot.py` (+11), plus the phase-count docs. Full suite
+**1756 passed** (1745 + 11), `ruff` and `mypy` clean. No other module touched: P4 is still
+measuring, and nothing calls a check until P5.
+
+**The plan named three refusal reasons and only two are reachable.** §P4 says the checks may
+report `LANDMARKS_UNCONFIDENT`, `TOO_FEW_FRAMES` and `SCALE_UNAVAILABLE`; read against P3, the
+third cannot happen here. The shoulder-width gate lives in `pivot_observations`, which returns
+`None` for the *whole swing* before any check sees it, and what a check receives is already
+normalised — there is no scale left to be missing. Writing the branch would have been an
+unreachable line pretending to be a guard. The reason is still real; it belongs to the engine in
+P5, where `pivot_observations` returning `None` means no `Measurement` row at all rather than a
+refused one (`Measurement.value` is a required float, so a refusal ships as an absence).
+
+**A perfectly smooth slide is not smooth in event time, and the floor is at the top.** The
+fixture's hip slides at one constant speed and `hip_path_jitter` reads 3.1e-4 rather than 0. The
+cause is the resampling changing gear: 41 samples spread evenly between the anchors read this
+clip's backswing at ~1.45 frames per sample and its downswing at ~0.5, so a constant speed *in
+frames* is a speed change *in samples* exactly at the top, and the second difference sees a bend
+there. It is two orders of magnitude below a real shake (3e-2), so it is a floor and not a signal —
+and it is deliberately not subtracted, because the transition is precisely where a genuine hip jerk
+would live and skipping the pair spanning the top to buy a clean zero would discard the most
+interesting sample in the swing. The consequence to carry into any future band: this one metric is
+tempo-sensitive in a way the other four are not.
+
+**"Skipping `None` samples" had to mean adjacent pairs only.** Read the other way — pair sample
+`i` with the next readable one — a single delta is charged with the entire turn that happened
+during the collapse. Face-on the collapse is *at the top*, so the fuller the turn the longer the
+gap and the larger the phantom reversal: the check would fire hardest on the best swings, which is
+the exact hazard ADR-029's addendum §4 raised against reading degrees off a projected line.
+Adjacent-only drops those pairs instead, and `MAX_UNORIENTED = 0.40` is what stops the check
+calling a turn monotone on the strength of the third of it that survived. Its own constant at
+`trajectory.MAX_MISSING`'s value rather than an import: that one is a *bridging budget* and an
+orientation is never bridged, this one is a *coverage floor*. Neither is set by evidence from this
+corpus.
+
+**The two hip metrics are not clean of each other, and the honest pin is a ratio.** A shake in
+place registers an excursion — it is one, briefly — and its size is exact arithmetic worth pinning:
+the path alternates about its address sample, which sits at one extreme, so the drift is the full
+peak-to-peak `2a/scale` and not `a/scale`. Meanwhile the slide registers the bend above. So the
+first draft's "fires this check and zeroes the others" was wrong in both directions; what the test
+asserts now is the separation, ~85x rougher one way and ~10x further travelled the other. Roughness
+is the **second** difference for the same reason — a first difference is speed, which a smooth
+slide has plenty of, and the two metrics would have been one measurement twice.
+
+**Two things chosen rather than inherited.** Roughness is a mean, not a `max()`, on
+`FINISH_DRIFT_QUANTILE`'s precedent — one bad sample must not become the whole number on a path
+interpolated from an occlusion-prone landmark. And `_one_instrument` **raises** on a list mixing
+frames of reference rather than refusing: `pivot_observations` cannot emit one, so it is a caller
+assembling observations by hand, which is this module's existing rule for `CALIBRATED_3D`.
+
+**Handedness is in the docstring, as §P4 asked.** The mirrored-swing test is the pin: reflect every
+`x` and all five numbers hold to 1e-9, because every one of them is a magnitude. The note says what
+breaks it — a signed pivot metric needs `handedness` at *both* engine call sites in P5, and the
+face-on one is the one that gets forgotten.
+
+**Next**: P5 — `_pivot_measurements(frames, anchors, view)` in `analysis/engine.py`,
+`POSE_DTL_SOURCE` and its `artifact_key` branch in `contracts/career.py`, `ANALYSIS_VERSION`
+15 → 16, then `scripts/reanalyze.py --all`. §P5 is specific; note that a refused check emits no
+row, so "five per view" is a ceiling and the engine has to be written for fewer.
+
+---
+
+## 2026-09-09 — M17 P3: the swing as three points moving
+
+**Duration**: one sitting. **M17 is 4/9.** Added: `src/golf_coach/analysis/pivot.py`,
+`tests/analysis/test_pivot.py` (+14), a hip span in `tests/analysis/conftest.py` with its pin in
+`test_conftest.py` (+1), plus the phase-count docs. Full suite **1745 passed** (1730 + 15), `ruff`
+and `mypy` clean. `pivot_observations(frames, anchors, *, frame_of_reference)` is the whole public
+surface: one producer, one signature, both cameras, exactly as §P3 specified.
+
+**Two calls the plan left to a phrase, and both had to move.** §P3 said "hip-relative; scaled by
+one shoulder width for the whole swing", and read against the registry neither of the obvious
+readings survives. *Hip-relative* in `build_trajectory` means a **per-sample** hip origin — which
+puts the hip at `(0, 0)` in every observation and zeroes the travel `hip_axis_drift` and
+`hip_path_jitter` are the measurement of. The origin is therefore the hip centre **at address**,
+one point for the whole swing: same invariance (a golfer standing anywhere in frame gives the same
+numbers), motion left in. And *one shoulder width* pointed at `measure.shoulder_width`, which is a
+**mean** written for the address window; averaged across address → impact the same quantity is
+dragged down by the collapse at the top that `shoulder_line` reports `None` for, so the ruler
+shrinks with the turn and the biggest turns would score the wonkiest. Took `build_trajectory`'s
+median over the samples instead — the precedent for a resampled path, and it keeps the two
+resamplings on one ruler.
+
+**The reuse list was two-thirds right, and the third is worth writing down.**
+`_interpolate_gaps` imported from `trajectory.py` across the underscore, deliberately: it is the
+rule for how much of a timeline may be bridged and a copy would be a second `MAX_MISSING`. But
+`midpoint_series` and `direction_series` could not be reused at all — both **drop** an unconfident
+frame instead of reporting it, which throws away the frame index, and an index is what a resampled
+path is made of. `_read` is `build_trajectory`'s inner `read` named and returning both axes; the
+*gates* are reused as imported constants so a retune still moves everything at once.
+
+**The fixture's two hips sat on one point.** Invisible for as long as everything read their
+midpoint, and wrong the moment something read the hip *line*: a segment of zero length has no
+orientation, so every `hip_line` would have been `None` and §P3's "no `None` orientation" test was
+unwritable. `conftest.make_swing` now straddles `hip_x` symmetrically (`_HIP_HALF_SPAN`, the
+`_EAR_HALF_SPAN` precedent), which leaves every midpoint it ever produced untouched — the full
+suite says so — and `test_conftest.py` pins both halves, distinctness *and* the unmoved centre.
+
+**One thing P4 inherits.** The shoulder line is **undirected**: the stored vector points left
+landmark → right landmark and flips sign as the shoulders cross the camera axis, so a check
+measuring turn between two samples must fold the angle onto ±90° rather than reading ±180°. A flip
+is the same line, not half a revolution. It is in `_unit`'s docstring where the next reader of that
+function will meet it.
+
+**Next**: P4 — `PivotCheckFn`, `PIVOT_CHECKS`, five checks over `list[PivotObservation]`, keyed by
+`PivotMeasurementSpec.check` and never by metric name. §P4 is specific; the `detail` prose already
+on each spec is the contract for what each check must compute.
+
+---
+
+## 2026-09-09 — M17 P2: the shape a fiducial source will produce instead
+
+**Duration**: one sitting. **M17 is 3/9.** Added: `src/golf_coach/contracts/pivots.py`,
+`tests/contracts/test_pivots.py` (+11), plus the phase-count docs. Full suite **1730 passed**
+(1719 + 11), `ruff` and `mypy` clean. No existing module touched — the seam has no consumer until
+P3, which is the point of landing it alone.
+
+**The module is `placements.py` with the fields the ADR moved.** `FrameOfReference`,
+`PivotObservation`, `PivotMeasurementSpec`, a ten-row `PIVOT_MEASUREMENT_REGISTRY` (five face-on,
+then their `_dtl` partners), `PIVOTS_BY_NAME`, `pivot_measurement_names()`, `spec_for()`. The one
+field `PlacementSpec` does not have is `detail`: a placement's is written at the engine call site
+because it interpolates a percentile, and a pivot's is fixed prose, so it lives on the spec.
+
+**`PIVOT_SAMPLES = 41`, and the reason is arithmetic rather than taste.** `sample_positions` walks
+event time as `t = span·i/(steps−1)`, so the middle anchor lands on an integer sample only when
+`steps` is odd; 41 is the odd neighbour of the fitted trajectory models' `steps = 40`, so the two
+resamplings read a swing at the same temporal resolution. `BACKSWING_SPAN` and `DOWNSWING_SPAN`
+are `range(21)` and `range(20, 41)` — half-open as Python spells them, contents inclusive of the
+top on both sides, which is how the ADR addendum's "half-open spans" and the phase doc's "both
+inclusive" were describing one thing from two sides. A reversal is a move *between* consecutive
+samples, so the pair spanning the top has to belong to both halves.
+
+**The test that would actually catch the mistake is the one against `analysis/`.** Every
+assertion about the two spans passes with an even `PIVOT_SAMPLES` — they still tile
+`range(PIVOT_SAMPLES)` and still meet on one index — while the top of the backswing sits *between*
+two samples and `BACKSWING_SPAN[-1]` is not the top at all. So `test_pivots.py` imports
+`trajectory.sample_positions` and pins the middle sample onto the top anchor, the way
+`test_placements.py` pins the view strings against `benchmarks/trajectory`.
+
+**One thing P4 is now committed to.** The `detail` prose on each spec names what the check
+computes ("peak lateral excursion of the hip centre from its address x", "sample-to-sample
+roughness", "largest against-the-turn move … between consecutive samples"). That prose ships on
+every `Measurement` and cannot be corrected on stored `analysis.json` afterwards, so a check that
+ends up measuring something else changes its spec in the same commit. The three `interim_reason`
+sentences are module constants rather than ten retypings, and the four angle specs take the
+*view's own* one — addendum §4's narrowing (face-on collapses at the top, down-the-line at
+address; neither view is the good one throughout) made structural instead of remembered.
+
+**Next**: P3 — `analysis/pivot.py::pivot_observations`, one producer over anchors serving both
+views. §P3 is specific; `analysis/trajectory.py` and `analysis/benchmarks/trajectory.py`'s
+`placement_from_anchors` are the shapes to read first.
+
+---
+
+## 2026-09-09 — M17 P1: the shoulder line, the hip line, and the three points they turn about
+
+**Duration**: one sitting. **M17 is 2/9.** Edited: `src/golf_coach/pose/overlay.py`
+(`_GUIDE_LINES`, `_PIVOT_POINTS`, `_GUIDE_EXTENSION`, `_GUIDE_COLOR` cyan / `_PIVOT_COLOR`
+magenta, and the two new draw loops), `tests/pose/test_overlay.py` (+6), plus the phase-count
+docs. Full suite **1719 passed** (1713 + 6), `ruff` and `mypy` clean. One file of source, as
+ADR-029 said it would be — `pose/side_by_side.py` and `api/pipeline.py` untouched, so both
+`aligned.mp4` panels and every script render pick it up unchanged.
+
+**Draw order is the whole correctness story.** Bones, then the guide lines over them, then the
+joints, then the pivot markers last. The hip centre sits *on* its own guide line and the shoulder
+centre sits on its own bone, so a marker drawn any earlier is a marker painted over — the ink test
+asserts `_PIVOT_COLOR` at all three midpoints, which is that pin from the other side.
+
+**Two small decisions a later reader could undo.** (1) The guide lines run 25% of their own length
+past each endpoint, and the extension is applied as a proportion of the segment vector with **no
+normalisation** — so a collapsed line (both landmarks on one pixel, which is the face-on shoulder
+line at the top of the swing) extends to itself rather than dividing by zero. That is the same
+degeneracy P2's `None` orientation answers, and the comment says so. (2) `_PIVOT_POINTS` derives
+its first two pairs from `_GUIDE_LINES` rather than restating them — the `_JOINTS`-from-`_BONES`
+rule — and the topology test names the contents explicitly on the other side so the derivation pin
+is not a tautology. The overdraw against `_BONES` is deliberate and now has a test
+(`test_the_guide_lines_are_still_bones`): removing those pairs from `_BONES` to stop drawing them
+twice would re-derive `_JOINTS` and silently take the shoulder and hip dots with it.
+
+**Looked at it.** `scripts/run_pose.py data/raw/aaron-1/Aaron-front-1.MOV --camera-id face_on`,
+926 frames, then four frames through the top of the backswing side by side. The cyan lines are
+legible over the white bones, visibly rotate through the turn, and the overshoot makes them read
+as axes rather than as one more bone; the three magenta centres land where the swing turns. At
+full 4K the marks are small — the pre-existing fixed-pixel-size property of this module, which is
+why `side_by_side._draw` scales *before* annotating — so the in-proportion surface is the 720-tall
+`aligned.mp4` panel, and that stays **unverified until P7 re-renders one** (the M14 P1 honesty).
+
+**Next**: P2 — `contracts/pivots.py`, the fiducial-ready seam and the registry. It is independent
+of P1 and §P2 is specific enough to build from; `contracts/placements.py` is the shape to read
+first.
+
+---
+
+## 2026-09-09 — M17 P0b (docs only): the phase plan read back against the code, before it cost a phase
+
+**Duration**: one sitting. **M17 is 1/9** — P0 was already built; this corrects its plan and
+flips the count, which P0 left at 0/9 while its own commit was on the branch. No code touched.
+Edited: `docs/decisions/029-pivot-points.md` (a 2026-09-09b addendum, six corrections),
+`docs/M17_PIVOT_POINTS.md` (P2–P6 rewritten, P0 checked with a *Built* note, four new entries in
+§Things that will look obvious and are wrong, the phase table's file lists widened),
+`docs/README.md` (M17 row 0/9 → 1/9 with the rewrite noted, ADR-029 row `—` → **1** addendum and
+0/9 → 1/9, addenda count 54 → 55), `ROADMAP.md` (status row and §M17).
+
+**The review's finding: the decisions were right and the phase list had drifted off them.**
+Five of the six corrections are P4–P6 contradicting ADR-029's own Decision 3. The worst was the
+rule-check type — P4 said `PIVOT_MEASUREMENTS: dict[str, MeasureFn]`, and `measure.MeasureFn` is
+`(list[FrameKeypoints], list[PhaseSegment]) -> MeasureOutcome`. Building that would have shipped
+the milestone with its seam already closed: a `CALIBRATED_3D` producer cannot feed a check that
+takes `FrameKeypoints`, and the seam is the only reason ADR-029 exists. `analysis/pivot.py` now
+declares `PivotCheckFn` over `PivotObservation`.
+
+**Three of them were only findable by opening the module.** (1) The down-the-line view has no
+`list[PhaseSegment]` at all — `engine.py` segments the face-on clip and gives the second camera a
+`SwingAnchors`, which is why `_dtl_placements` has the signature it has. P3's producer takes
+anchors, so one function serves both views and `phase_bounds` / `address_sample_bounds` leave the
+milestone. (2) P3 resampled onto event time while P4 asked `phase_bounds` for frame indices —
+two index spaces that look alike. `PIVOT_SAMPLES` is now odd (`sample_positions` lands an anchor
+on an integer sample only then) and `contracts/pivots.py` exports the two spans. (3)
+`artifact_key` maps any `pose:`-prefixed measurement to `pose:{face_on_sha256}`, and the corpus
+holds no hash for the second clip — so `_dtl` rows would have deduped on the wrong artifact and
+silently pooled two different down-the-line clips into one sample. P5 adds the `None` branch.
+
+⚠️ **The one that would have shipped a plausible wrong number.** `PivotObservation` was specified
+with `shoulder_line_deg` / `hip_line_deg` floats. A 2-D line angle here passes through a
+**projection singularity** — face-on the shoulder line collapses toward zero width at the top,
+down-the-line it is collapsed at address — so `atan2` is worst-conditioned exactly where
+MediaPipe is estimating an occluded shoulder, and a reversal check on raw degrees fires hardest
+on the *cleanest* turns. `measure.direction_series` already had the rule (drop below
+`MIN_DIRECTION_LENGTH`, return unit vectors so an averaging caller gets a circular mean); the
+observation now carries `tuple[float, float] | None` and the gate is structural. This also
+narrows ADR-029 Decision 2: "down-the-line's numbers matter most" is true of the centre *paths*
+and false of the line *angles*.
+
+**Also**: P6 was going to build a second implementation of a splitter whose docstring says it is
+not one — `resolve_placements` lives in `api/state.py` and feeds both the results page and MCP,
+and `feedback/coach.py` partitions the same list for the coaching prompt. P6 now names all four
+surfaces. And the registry went from four names (one of which broke the `pivot_` prefix, in an
+append-only registry, and folded backswing and downswing into one number that
+`pooled_samples` would have pooled) to five `pivot_`-prefixed pairs — with the hands **drawn but
+deliberately unmeasured**, since M14 P3 put face-on hand tracking at 0.63–0.68 over a whole clip
+and jitter on that path would report the tracker rather than the golfer.
+
+**Next**: P1, unchanged by any of this — `pose/overlay.py` gains `_GUIDE_LINES` and
+`_PIVOT_POINTS`. Then P2 against the corrected §P2, which is now specific enough to build from.
+
+---
+
+## 2026-09-09 — M17 P0 (docs only): joint centres, drawn and tracked, with the fiducial seam left open
+
+**Duration**: one sitting. **M17 is 0/9 — the milestone enters the repo.** New branch `GOLF-5`
+off `main`. Created: `docs/decisions/029-pivot-points.md` (Status *Accepted*, four options,
+seven decisions), `docs/M17_PIVOT_POINTS.md` (tier TARGET, the resume point — brief plan then
+P0–P8 as checkboxes). Edited: `docs/decisions/011-camera-synchronization.md` (a second
+addendum — a third handling for the phone tier, measured per view, explicitly interim),
+`docs/README.md` (ADR-029 row, ADR-011 addenda 1 → 2, a Living-docs row for the M17 doc,
+markdown-doc count 64 → 66, "28 decisions / 53 addenda" → "29 / 54"), `ROADMAP.md` (status row
++ a `## M17` detail section, `Last Updated`). No code touched. Full suite **1713 passed**
+(1709 + 4 parametrized doc-truth instances for the new doc), `ruff` and `mypy` clean, doc-truth
+suite green (87).
+
+**The milestone is designed around a constraint, not toward a capability.** True rotation is
+3-D; [ADR-011](docs/decisions/011-camera-synchronization.md) says the two hand-held phones
+cannot be fused to recover it, and one 2-D camera foreshortens the turn. So M17's rotation
+numbers are an **explicit interim 2-D-per-view instrument** — unjudged, per-camera, never
+blended — built behind a `contracts/pivots.py` seam (`FrameOfReference`) so that when the
+golfer's printed QR fiducial markers land and give real calibration, a 3-D source slots in as a
+second producer of one shape: the rule checks, the registry and the overlay do not change,
+only the "interim" prose flips. That seam is the reason there is an ADR at all.
+
+**Two decisions in P0 that a later phase could get wrong.** The pivot measurements go in their
+*own* registry (`contracts/pivots.PIVOT_MEASUREMENT_REGISTRY`), never `POSE_MEASUREMENTS` —
+that keeps `tests/analysis/test_dispersion.py`'s `POSE_MEASUREMENTS | SHOT_MEASUREMENTS ==
+METRIC_TARGETS` pin green untouched, the same separation the `flight_*` family has. And wonky
+detection is stdlib rule checks producing unjudged `Measurement`s, **not** a checkpoint — a 2-D
+through-swing angle carries the pixel aspect (`trail_hand_roll_deg` is the precedent, and it
+ships unjudged) and there is no calibrated instrument to earn a band with.
+
+⚠️ **The doc-count pin fails until the new files are `git add`ed.** `test_the_documentation_
+map_counts_the_documents_correctly` reads `git ls-files`, so the two new `.md` files were
+staged before the doc-truth suite went green — the same order M14 P0 / M16 P0 needed.
+
+**Next**: clear the chat for a fresh context, then P1 — `pose/overlay.py` gains `_GUIDE_LINES`
+and `_PIVOT_POINTS` (the two rotation lines + the three midpoint markers), reaching both
+`aligned.mp4` panels through the unchanged `annotate_frame` path. `docs/M17_PIVOT_POINTS.md`
+§P1 has the scope; the plan file is `.claude/plans/can-we-create-a-generic-heron.md`. Nothing
+is pushed; `GOLF-5` is one commit (P0).
+
+---
+
 ## 2026-09-08 — M16 P8: the docs catch up, and the rule's first real subject
 
 **Duration**: one sitting. **M16 is 9/9 — done.** Edited: `docs/decisions/028-mishit-exclusion.md`

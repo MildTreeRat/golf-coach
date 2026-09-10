@@ -39,6 +39,7 @@ from golf_coach.api.state import (
     judged_metrics,
     load_analysis,
     load_state,
+    resolve_pivots,
     resolve_placements,
     resolve_tempo_plan,
 )
@@ -1165,6 +1166,10 @@ def create_app(
             # population read as a bare float looks like a score. The registries decide which is
             # which (`contracts/placements.py`, `contracts/checkpoints.py`); the page renders.
             "population": resolve_placements(result),
+            # A fourth kind, `contracts/pivots.py`'s: interim 2-D-per-view rotation numbers, with
+            # no reference population behind them at all — even less settled than a placement, and
+            # rendered as their own block for the same reason (`resolve_pivots`'s docstring).
+            "rotation": resolve_pivots(result),
             "judged_metrics": judged_metrics(result),
             # And a third: a metronome built from the tour's own durations, for the one checkpoint
             # that ships a verdict a golfer cannot act on. Sent whenever it can be built rather

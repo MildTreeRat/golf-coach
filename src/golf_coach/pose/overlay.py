@@ -6,6 +6,11 @@ connects them with a small bone list, drawing a dot at every landmark that list 
 dot set is derived from the bones so the two cannot disagree. This proves `FrameKeypoints`
 carries everything a consumer needs to visualize a pose. OpenCV is imported lazily so
 importing this module stays cheap.
+
+Over that skeleton it draws the rotation picture [M17 P1]: the shoulder line and the hip line as
+emphasised axes, and a marker at the three points a swing turns about — those two lines' midpoints
+and the hands. That is a picture only; the numbers read off the same three points live in
+`analysis/pivot.py` and are measured from the keypoints, never from these pixels.
 """
 
 from __future__ import annotations
@@ -61,11 +66,47 @@ _BONES: tuple[tuple[PoseLandmark, PoseLandmark], ...] = (
 # restate it. Sorted so the draw order is landmark order and a render is reproducible. [M14 P1]
 _JOINTS: tuple[PoseLandmark, ...] = tuple(sorted({lm for bone in _BONES for lm in bone}))
 
+# The two segments a turn is visible in, drawn a second time over the bones that already join
+# those same pairs. The overdraw is deliberate: the shoulder segment and the hip segment are two of
+# twenty-one identical white bones, and the whole of M17 is asking a golfer to watch those two
+# rotate. Emphasis is the point — the same reason the ear bone above is drawn. Not decorative; do
+# not tidy either away as a redundant line. [M17 P1]
+#
+# The tempting tidy-up — move these pairs out of `_BONES` so nothing is drawn twice — would
+# re-derive `_JOINTS` and silently drop the shoulder and hip dots. Leave `_BONES` alone; the guide
+# line is thicker and covers the bone anyway.
+_GUIDE_LINES: tuple[tuple[PoseLandmark, PoseLandmark], ...] = (
+    (PoseLandmark.LEFT_SHOULDER, PoseLandmark.RIGHT_SHOULDER),
+    (PoseLandmark.LEFT_HIP, PoseLandmark.RIGHT_HIP),
+)
+
+# The pivot points: each pair's midpoint gets a marker. The first two are *derived* from
+# `_GUIDE_LINES` — the centres those lines turn about, which is what makes them the same two pairs
+# and not a second list that can drift. The third is the hands, drawn here and deliberately
+# unmeasured: M14 P3 put face-on hand tracking at 0.63-0.68 over a whole clip, so a through-swing
+# hand number would report the tracker rather than the golfer (ADR-029). Seeing them is still worth
+# it — the hands are what a golfer recognises the swing by. [M17 P1]
+_PIVOT_POINTS: tuple[tuple[PoseLandmark, PoseLandmark], ...] = (
+    *_GUIDE_LINES,
+    (PoseLandmark.LEFT_WRIST, PoseLandmark.RIGHT_WRIST),
+)
+
+# How far past each endpoint a guide line runs, as a fraction of that segment's own length. A line
+# stopping at the joints reads as one more bone; one that overshoots reads as an axis. Scaled by the
+# segment rather than by the frame so it shrinks with the golfer and cannot run off a close crop.
+# Applied as a proportion of the segment vector, with no normalisation, so a collapsed line — both
+# landmarks on one pixel, which is the face-on shoulder line at the top of the swing — extends to
+# itself instead of dividing by zero. That collapse is the honest picture, and it is the same
+# degeneracy `contracts/pivots.py` will answer with a `None` orientation.
+_GUIDE_EXTENSION = 0.25
+
 # A landmark dimmer than this is treated as not-confidently-seen and skipped.
 _MIN_VISIBILITY = 0.5
 
 _JOINT_COLOR = (0, 255, 0)  # BGR green
 _BONE_COLOR = (255, 255, 255)  # BGR white
+_GUIDE_COLOR = (255, 255, 0)  # BGR cyan — the rotation axes
+_PIVOT_COLOR = (255, 0, 255)  # BGR magenta — the points they turn about
 
 
 def draw_skeleton(
@@ -89,10 +130,29 @@ def draw_skeleton(
         if pa is not None and pb is not None:
             cv2.line(canvas, pa, pb, _BONE_COLOR, 2)
 
+    # The rotation axes, over the bones they repeat and under the joints. Both endpoints must be
+    # confidently seen: half a shoulder line is a line at an invented angle.
+    for a, b in _GUIDE_LINES:
+        pa, pb = pixel(a), pixel(b)
+        if pa is None or pb is None:
+            continue
+        dx = int((pb[0] - pa[0]) * _GUIDE_EXTENSION)
+        dy = int((pb[1] - pa[1]) * _GUIDE_EXTENSION)
+        start = (pa[0] - dx, pa[1] - dy)
+        end = (pb[0] + dx, pb[1] + dy)
+        cv2.line(canvas, start, end, _GUIDE_COLOR, 3)
+
     for landmark in _JOINTS:
         p = pixel(landmark)
         if p is not None:
             cv2.circle(canvas, p, 3, _JOINT_COLOR, -1)
+
+    # The pivot markers last, so a centre is never hidden under the joint or bone it sits between.
+    for a, b in _PIVOT_POINTS:
+        pa, pb = pixel(a), pixel(b)
+        if pa is None or pb is None:
+            continue
+        cv2.circle(canvas, ((pa[0] + pb[0]) // 2, (pa[1] + pb[1]) // 2), 5, _PIVOT_COLOR, -1)
 
     return canvas
 

@@ -353,6 +353,75 @@ def test_plain_measurements_are_not_rendered_as_placements() -> None:
     assert "Say nothing about where it sits." in brief
 
 
+# ------------------------------------------------------- the pivot (rotation) readings [M17 P6]
+
+
+def _pivots() -> list[Measurement]:
+    """One face-on and one down-the-line pivot row — both interim, for different reasons."""
+    return [
+        Measurement(
+            name="pivot_hip_axis_drift_norm",
+            value=0.5821,
+            unit="shoulder_widths",
+            source="pose:face_on",
+            detail="peak lateral excursion of the hip centre from its address x",
+        ),
+        Measurement(
+            name="pivot_shoulder_reversal_backswing_deg_dtl",
+            value=2.9,
+            unit="degrees",
+            source="pose:down_the_line",
+            detail="largest against-the-turn move of the shoulder line within the backswing",
+        ),
+    ]
+
+
+def test_the_pivot_rows_reach_the_brief_labelled_interim() -> None:
+    """One instrument short of a placement — no reference population at all — and the flag has to
+    ride on the line carrying the value, `_placement_lines`'s reason for stamping `calibrated`."""
+    brief = build_brief(_bundle(measurements=_pivots()))
+
+    hip_line = next(line for line in brief.splitlines() if "pivot_hip_axis_drift_norm" in line)
+    assert "interim" in hip_line
+    assert "face-on view" in hip_line
+
+    dtl_line = next(
+        line for line in brief.splitlines() if "pivot_shoulder_reversal_backswing_deg_dtl" in line
+    )
+    assert "interim" in dtl_line
+    assert "down-the-line view" in dtl_line
+
+
+def test_a_pivot_row_carries_its_interim_reason_not_just_the_flag() -> None:
+    """`interim` alone says nothing about what would clear it; the reason is the next line."""
+    brief = build_brief(_bundle(measurements=_pivots()))
+
+    assert "Fiducial calibration clears it." in brief
+
+
+def test_a_swing_with_no_pivot_rows_says_nothing_rather_than_going_silent() -> None:
+    """Same discipline as the placement section: an absent block reads as one nobody looked at."""
+    brief = build_brief(_bundle(measurements=[]))
+
+    assert "ROTATION" in brief
+    assert "Say nothing about the golfer's turn." in brief
+
+
+def test_plain_measurements_are_not_rendered_as_pivots() -> None:
+    """`measurements` also holds pose metrics the checkpoints above already judged."""
+    pose = Measurement(
+        name="head_sway_norm",
+        value=0.1234,
+        unit="shoulder_widths",
+        source="pose:face_on",
+        detail="address window -> impact window",
+    )
+    brief = build_brief(_bundle(measurements=[pose]))
+
+    assert "head_sway_norm" not in brief
+    assert "Say nothing about the golfer's turn." in brief
+
+
 # --------------------------------------------------------------------------- the call
 
 

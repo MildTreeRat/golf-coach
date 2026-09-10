@@ -21,7 +21,6 @@ from golf_coach.analysis.alignment import (
 )
 from golf_coach.analysis.benchmarks.joint import placement_for as joint_placement
 from golf_coach.analysis.benchmarks.trajectory import (
-    DOWN_THE_LINE,
     placement_from_anchors,
     trajectory_placement_for,
 )
@@ -35,10 +34,18 @@ from golf_coach.analysis.flight_measure import (
 )
 from golf_coach.analysis.measure import POSE_MEASUREMENTS
 from golf_coach.analysis.phases import TRAIL_WRIST, segment_phases
+from golf_coach.analysis.pivot import PIVOT_CHECKS, pivot_observations
 from golf_coach.analysis.scoring import policy_for
 from golf_coach.analysis.shot_measure import SHOT_MEASUREMENTS
 from golf_coach.analysis.smoothing import smooth_keypoints
+
+# Aliased because this package holds **two** functions called `anchors_from_phases` and they answer
+# different questions: `alignment`'s builds a `SwingAnchors` for two clips to be warped onto each
+# other, while this one returns the three fractional frame positions the resamplers read. Imported
+# under a name that says which, rather than shadowing the one imported above.
+from golf_coach.analysis.trajectory import anchors_from_phases as event_time_anchors
 from golf_coach.contracts.alignment import ClipAlignment, SwingAnchors
+from golf_coach.contracts.career import POSE_DTL_SOURCE
 from golf_coach.contracts.checkpoints import (
     CHECKPOINT_REGISTRY,
     CONTRADICTED_BY_A_LATE_TOP,
@@ -48,6 +55,8 @@ from golf_coach.contracts.detections import FrameDetections
 from golf_coach.contracts.golfer import Handedness
 from golf_coach.contracts.intent import PracticeGoal
 from golf_coach.contracts.keypoints import FrameKeypoints, KeypointsFile
+from golf_coach.contracts.pivots import PIVOT_MEASUREMENT_REGISTRY, FrameOfReference
+from golf_coach.contracts.placements import DOWN_THE_LINE, FACE_ON
 from golf_coach.contracts.placements import spec_for as placement_spec
 from golf_coach.contracts.shot import ShotData
 from golf_coach.contracts.swing import (
@@ -144,8 +153,8 @@ def _placements(
 
 
 def _dtl_placements(
-    frames: list[FrameKeypoints],
-    anchors: SwingAnchors,
+    smoothed: list[FrameKeypoints],
+    anchors: tuple[float, float, float],
     handedness: Handedness | None,
 ) -> list[Measurement]:
     """The down-the-line view's own trajectory placement, against its own basis.
@@ -154,10 +163,15 @@ def _dtl_placements(
     by name everywhere downstream — `analysis/baseline.py::pooled_samples` groups by it, so two
     entries called `tour_trajectory_t2` would silently pool a face-on and a down-the-line number
     into one personal baseline.
+
+    Takes the smoothed frames and the three instants rather than the raw clip and a `SwingAnchors`,
+    because M17 P5 gave the rear clip a second reader: denoising and building the anchor tuple at
+    the one call site is what keeps the trajectory and the pivot paths resampling onto literally the
+    same numbers, instead of two copies of that conversion drifting apart.
     """
     placement = placement_from_anchors(
-        smooth_keypoints(frames),
-        (float(anchors.motion_start), float(anchors.top), float(anchors.impact)),
+        smoothed,
+        anchors,
         left_handed=handedness == Handedness.LEFT,
         view=DOWN_THE_LINE,
     )
@@ -191,6 +205,78 @@ def _dtl_placements(
             ),
         ),
     ]
+
+
+#: view -> the space its pivot coordinates live in, and the `Measurement.source` its rows carry.
+#:
+#: One table rather than two lookups, because the pair has to move together. The source is what
+#: `CorpusSwing.artifact_key` dedupes on: a `_dtl` row borrowing `pose:face_on` would be counted as
+#: a reading of a clip it was never taken from, so the second camera's rows carry
+#: `POSE_DTL_SOURCE` — the one `pose:` source that keys on nothing, because `CorpusSwing` holds no
+#: hash for the rear clip (ADR-029's 2026-09-09b addendum §5).
+#:
+#: `CALIBRATED_3D` is deliberately absent and is not an omission: `pivot_observations` raises on it.
+#: A calibrated source arrives as a second *producer* of `PivotObservation`, not as a third row
+#: here.
+_PIVOT_VIEWS: dict[str, tuple[FrameOfReference, str]] = {
+    FACE_ON: (FrameOfReference.IMAGE_PLANE_FACE_ON, "pose:face_on"),
+    DOWN_THE_LINE: (FrameOfReference.IMAGE_PLANE_DTL, POSE_DTL_SOURCE),
+}
+
+
+def _pivot_measurements(
+    smoothed: list[FrameKeypoints],
+    anchors: tuple[float, float, float],
+    view: str,
+) -> list[Measurement]:
+    """One view's rotation numbers: the swing read as three moving points. [M17 P5]
+
+    One helper for both cameras, because `pivot_observations` has one signature for both — it takes
+    the three anchors rather than a `list[PhaseSegment]`, which the down-the-line clip never has
+    (nothing segments it). The face-on caller converts its phases with `event_time_anchors`; the
+    bundle already holds the rear clip's three instants for the warp.
+
+    **Recorded, not judged**, behind the same firewall as `_placements`: no band, no
+    `CheckpointScore`, nothing that reaches `overall_score`. A rotation checkpoint needs a
+    calibrated instrument and a population and M17 has neither (ADR-010 §2), so each row carries its
+    `PivotMeasurementSpec.interim_reason` into the derived caveat prose instead.
+
+    **Two ways to record nothing, and they are not the same one.** An unreadable swing — collapsed
+    anchors, no usable shoulder width, a landmark missing too much of its timeline — yields no
+    observations and therefore no rows at all; a single check that refuses drops its own row and
+    leaves the other four. Neither is reported in `unscored`, which is a list of
+    `UnscoredCheckpoint`s and nothing here is a checkpoint: `Measurement.value` is a required float,
+    so a refusal ships as an absence. Five per view is a ceiling, not a count.
+
+    Name, unit and detail come off the registry rather than being written here, for the reason
+    `contracts/pivots.py` exists — `caveats.py` derives the prose every MCP client reads from those
+    same rows, and a name typed at this call site could be renamed without the warning following it.
+    The spec is in hand from walking the registry, so there is no `spec_for` lookup to do.
+    """
+    space, source = _PIVOT_VIEWS[view]
+    observations = pivot_observations(smoothed, anchors, frame_of_reference=space)
+    if observations is None:
+        return []
+
+    out: list[Measurement] = []
+    for spec in PIVOT_MEASUREMENT_REGISTRY:
+        if spec.view != view:
+            continue
+        # Keyed by `spec.check` and never by `spec.name`: a face-on spec and its `_dtl` partner name
+        # the same implementation, and the view is already decided by the caller.
+        value = PIVOT_CHECKS[spec.check](observations).value
+        if value is None:
+            continue
+        out.append(
+            Measurement(
+                name=spec.name,
+                value=round(value, 4),
+                unit=spec.unit,
+                source=source,
+                detail=spec.detail,
+            )
+        )
+    return out
 
 
 def _measurements(
@@ -239,6 +325,14 @@ def _measurements(
         )
 
     out.extend(_placements(smoothed, phases, pose_values, handedness))
+
+    # The face-on rotation numbers, after the placements because they are the same kind of thing —
+    # measured off the whole swing and judged by nothing. `None` is a swing that could not be
+    # segmented into three usable instants, which is already the reason `_placements` recorded no
+    # trajectory placement above; the pivot rows simply go missing with it.
+    face_on_anchors = event_time_anchors(phases)
+    if face_on_anchors is not None:
+        out.extend(_pivot_measurements(smoothed, face_on_anchors, FACE_ON))
 
     if shot is not None:
         device = shot.provenance.device if shot.provenance else shot.source.value
@@ -511,12 +605,26 @@ def analyze_swing_bundle(
     # Built from `dtl_anchors` rather than by segmenting again — those are already the three
     # instants this model resamples onto, so reusing them makes it impossible for the frames the
     # trajectory reads and the frames the warp pins to disagree.
+    # The pivot paths ride along [M17 P5]: the second camera is where the turn is least
+    # foreshortened, so its five rotation numbers are the ones that matter most — and they are still
+    # never combined with the face-on five, for the reason stated just above. The `_dtl` suffix in
+    # `PIVOT_MEASUREMENT_REGISTRY` carries that rule the same way it does here.
     if down_the_line is not None and dtl_anchors is not None:
+        # Denoised once and the three instants built once, for both readers of this clip. Two
+        # constructions of the same anchor tuple would be two things to keep in step, and what is
+        # worth keeping is that the trajectory and the pivot paths resample onto the same numbers.
+        dtl_frames = smooth_keypoints(down_the_line.frames)
+        dtl_events = (
+            float(dtl_anchors.motion_start),
+            float(dtl_anchors.top),
+            float(dtl_anchors.impact),
+        )
         swing = swing.model_copy(
             update={
                 "measurements": [
                     *swing.measurements,
-                    *_dtl_placements(down_the_line.frames, dtl_anchors, handedness),
+                    *_dtl_placements(dtl_frames, dtl_events, handedness),
+                    *_pivot_measurements(dtl_frames, dtl_events, DOWN_THE_LINE),
                 ]
             }
         )
