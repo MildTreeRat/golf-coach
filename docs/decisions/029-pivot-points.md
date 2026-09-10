@@ -1,10 +1,10 @@
 # ADR-029: Pivot points — an interim 2-D-per-view rotation instrument behind a fiducial-ready seam
 
 ## Status
-**Accepted** 2026-09-09 — [ROADMAP §M17](../../ROADMAP.md), nine phases (P0–P8) on branch
-`GOLF-5`, one commit each, the full suite / `ruff` / `mypy` green at every one. P0 is this
-document, the [ADR-011](011-camera-synchronization.md) addendum, and the milestone's entry on
-the board; the phase list lives in [M17_PIVOT_POINTS.md](../M17_PIVOT_POINTS.md).
+**Accepted** 2026-09-09, **built** 2026-09-10 — [ROADMAP §M17](../../ROADMAP.md), nine phases
+(P0–P8) on branch `GOLF-5`, one commit each, the full suite / `ruff` / `mypy` green at every one.
+P0 is this document, the [ADR-011](011-camera-synchronization.md) addendum, and the milestone's
+entry on the board; the phase list lives in [M17_PIVOT_POINTS.md](../M17_PIVOT_POINTS.md).
 
 ## Date
 2026-09-09
@@ -317,3 +317,34 @@ baseline may *assert*, and absence from `METRIC_TARGETS` already makes career mo
 `unavailable` (Decision 6). The `_dtl` rows contribute nothing, by the `artifact_key` change
 above. Recorded here because a silent inheritance is not a decision, and the next reader would
 otherwise have to work out whether it was one.
+
+## Addendum (2026-09-09c, M17 P5): the hands' own gate was vetoing the swing they are not measured on
+
+Decision 6 says the hands are drawn and unmeasured — that the three points do not share a fate.
+P3's implementation did not carry that far enough: `shoulder`, `hip` and `hands` were bridged
+through **one** `trajectory._interpolate_gaps` call, and that function refuses the whole call the
+moment *any* column it was given exceeds `MAX_MISSING`. Face-on, 44–61% of the resampled samples
+across the fifteen stored clips have no readable wrist pair (M14 P3's 0.63–0.68 whole-clip hand
+tracking is exactly why M14 scoped its own hand metrics to the address window) while the shoulder
+and hip midpoints read on every sample. P5's first `reanalyze.py --all` recorded the `_dtl` five
+on every swing and the **face-on** five on **none** of them — the milestone's primary view,
+[Decision 2](#decision) says down-the-line is the more foreshortened camera and face-on's centre
+paths matter most, producing nothing, on a green suite. Only down-the-line was visible in the
+result because the trail wrist tracks well from behind.
+
+**The fix is two gates, not one.** `pivot_observations` now bridges `shoulder` and `hip` through
+one `_interpolate_gaps` call — if either exceeds `MAX_MISSING` the whole observation list refuses,
+which is correct, since Decision 6 needs both centres on every sample — and bridges `hands`
+through a second, independent call, so a wrist pair that cannot be bridged costs only the hands.
+`PivotObservation.hands` is now `tuple[float, float] | None` rather than a bare `(x, y)`: a
+consumer that wants a hand path must handle its absence, while `shoulder` and `hip` stay
+non-optional because a swing that cannot produce them is not an observation at all
+([contracts/pivots.py](../../src/golf_coach/contracts/pivots.py)'s field docstring carries this).
+`test_unreadable_wrists_cost_the_hands_and_nothing_else` blinds both wrists on the synthetic swing
+and asserts the *other two points are unchanged* — a test that only checked `hands is None` would
+still pass on a producer that had silently stopped placing them too.
+
+**No decision above moved.** The registry, the checks, the seam and "the hands are drawn and
+unmeasured" are exactly as Decision 6 states; what was wrong was a shared gate the shape did not
+prevent. Re-run after the fix: fifteen artifacts, ten pivot rows each, no check refused, every
+`overall_score`, `checkpoint_scores` entry and `unscored` list byte-identical to before P5.

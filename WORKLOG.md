@@ -5,6 +5,40 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-09-10 — M17 P8: docs reconciled, M17 closed 9/9
+
+**Duration**: one sitting. **M17 is 9/9 — done.** Docs only, the milestone's last phase.
+`ruff` and `mypy` clean; `tests/test_docs_truth.py` green (89 passed) confirming every pinned
+cross-doc count agrees before the full suite finished.
+
+Flipped [ADR-029](docs/decisions/029-pivot-points.md)'s Status to **Accepted, built 2026-09-10**
+and gave it a second addendum (2026-09-09c): P5's corpus run found the hands sharing one
+`_interpolate_gaps` call with the shoulder and hip centres, so the worst-tracked of the three
+points was vetoing the whole face-on view on every swing before the fix — Decision 6 said the
+hands are drawn and unmeasured, and the shape hadn't carried that far. Two gates now,
+`PivotObservation.hands` optional. Because building corrected the design a second time (the
+ADR-028 precedent for when a second addendum is owed), `docs/README.md`'s ADR-029 row moves to
+**2**, and the doc's "N addenda between them" line moves 55 → 56.
+
+`docs/M17_PIVOT_POINTS.md`: tier TARGET → REFERENCE, status line → **9/9 phases built, closed
+2026-09-10**, P8's checkbox flipped, and the standalone ⚠️ P2–P6-rewrite banner folded into the
+status paragraph as history rather than a live warning. Added a "what remains unverified"
+paragraph (browser playback of `aligned.mp4` — still unconfirmed, decoded frames only) and an
+"exit criteria met" paragraph. Also fixed a gap the read-back found: P4 was the one phase with no
+`**Built <date>.**` line; it has one now.
+
+`docs/README.md`: M17's row → REFERENCE, 9/9 phases built. `git ls-files '*.md' ':!.claude'`
+still returns 66, matching the stated count, so no recount was owed there.
+
+`ROADMAP.md`: status table row → ✅ Done *(2026-09-10)*, 9/9 phases; §M17 rewritten past-tense,
+P8 entry closed, exit-criteria paragraph marked met; `Last Updated` → 2026-09-10.
+
+**Next**: `git merge --no-ff GOLF-5 -m "Merge GOLF-5: M17 pivot points"` and `git branch -d
+GOLF-5`, once the full suite (running as this entry is written) confirms green — on the user's
+go-ahead.
+
+---
+
 ## 2026-09-10 — M17 P7: every stored swing re-rendered onto the new overlay
 
 **Duration**: one sitting, mostly wall-clock. **M17 is 8/9.** Operational phase, no source change.

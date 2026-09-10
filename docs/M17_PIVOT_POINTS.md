@@ -1,46 +1,62 @@
 # M17 — Pivot points: the shoulder line, the hip line, and the three points they turn about
 
-> **Tier: TARGET.** This is the plan, not a record — P5 onward is unbuilt as of 2026-09-09, and
-> the numbers and file names below are what the plan intends, not what shipped. Verify against
-> code once a phase lands and flip its checkbox. The governing decision is
-> [ADR-029](decisions/029-pivot-points.md); the constraint it is designed around is
-> [ADR-011](decisions/011-camera-synchronization.md) and its 2026-08-05 addendum.
->
-> ⚠️ **P2–P6 were rewritten on 2026-09-09 after the first phase list was read back against the
-> code**, which found six places it could not be built as written — the wrong function type for
-> the rule checks, phases the second camera does not have, two index spaces, a raw line angle
-> through a projection singularity, three unwalked consumers, and a registry whose names would
-> not have pooled. [ADR-029](decisions/029-pivot-points.md)'s 2026-09-09b addendum is the
-> record; the phases below already carry the corrections.
+> **Tier: REFERENCE.** All nine phases are built, so read the reasoning and not the digits —
+> every measurement, tolerance and frame count below is dated 2026-09-09/2026-09-10 over a
+> corpus of fifteen swings from one golfer, and a bigger corpus can answer differently. What is
+> not a snapshot is the shape of the decision: rotation stays an explicit interim 2-D-per-view
+> instrument, behind the `contracts/pivots.py` seam, until the fiducial markers land. The
+> governing decision is [ADR-029](decisions/029-pivot-points.md); the constraint it is designed
+> around is [ADR-011](decisions/011-camera-synchronization.md) and its 2026-08-05 addendum.
 
-**Status: 8/9 phases built.** P0 wrote this document, [ADR-029](decisions/029-pivot-points.md)
-and the [ADR-011](decisions/011-camera-synchronization.md) addendum, and put M17 on the board.
-P1 drew the pivot markers and the two rotation lines into the overlay. P2 landed
-`contracts/pivots.py` — the shape a fiducial-calibrated source will later produce instead of
-pose. P3 built the producer that fills that shape: `analysis/pivot.py::pivot_observations`, one
-signature over anchors serving both cameras. P4 added the five stdlib rule checks that call a turn
-wonky, keyed by `PivotMeasurementSpec.check` so one implementation serves both views. P5 wired the
-numbers into the engine and moved `ANALYSIS_VERSION` 15 → 16 — including the `pose:down_the_line`
-source that keys on nothing, so the second camera's rows are reported and pool into no baseline.
-P6 gives the numbers a voice — a derived caveat, and one resolver in `api/state.py` feeding the
+**Status: 9/9 phases built, closed 2026-09-10.** P0 wrote this document,
+[ADR-029](decisions/029-pivot-points.md) and the
+[ADR-011](decisions/011-camera-synchronization.md) addendum, and put M17 on the board — a
+same-day follow-up rewrote P2–P6 against the code once the first phase list was read back
+against the modules it named and found six places it could not be built as written: the wrong
+function type for the rule checks, phases the second camera does not have, two index spaces, a
+raw line angle through a projection singularity, three unwalked consumers, and a registry whose
+names would not have pooled. [ADR-029](decisions/029-pivot-points.md)'s 2026-09-09b addendum is
+the record; the phases below already carry the corrections. P1 drew the pivot markers and the
+two rotation lines into the overlay. P2 landed `contracts/pivots.py` — the shape a
+fiducial-calibrated source will later produce instead of pose. P3 built the producer that fills
+that shape: `analysis/pivot.py::pivot_observations`, one signature over anchors serving both
+cameras. P4 added the five stdlib rule checks that call a turn wonky, keyed by
+`PivotMeasurementSpec.check` so one implementation serves both views. P5 wired the numbers into
+the engine and moved `ANALYSIS_VERSION` 15 → 16 — including the `pose:down_the_line` source that
+keys on nothing, so the second camera's rows are reported and pool into no baseline — and its
+corpus run found the milestone's own veto: the hands shared the shoulder/hip interpolation gate
+and, being the worst-tracked of the three face-on, were refusing the whole face-on view on every
+swing. [ADR-029](decisions/029-pivot-points.md)'s second addendum (2026-09-09c) records the fix.
+P6 gave the numbers a voice — a derived caveat, and one resolver in `api/state.py` feeding the
 three surfaces that read `measurements` (the results page, the coaching prompt, `get_swing`), all
-saying the numbers are interim. P7 re-renders every stored swing; **built 2026-09-10** — all
-fifteen re-rendered, every score byte-identical, every file's frame count reads back exactly what
-was written. P8 reconciles the docs and merges `GOLF-5`.
+saying the numbers are interim. P7 re-rendered every stored swing onto the new overlay: fifteen
+for fifteen, every score byte-identical, every file's frame count reading back exactly what was
+written. P8 reconciled these docs.
 
-**Built 2026-09-10 (P6).** `contracts/caveats.py` gained `PIVOTS_ARE_INTERIM` and a derived
-block naming every `PIVOT_MEASUREMENT_REGISTRY` row, wired into `READING_THIS_DATA_HONESTLY`
-beside the two placement bullets. `api/state.py::resolve_pivots` mirrors `resolve_placements`
-field-for-field, with `interim_reason` off the spec standing in for `calibrated` — there is no
-calibrated half to contrast pivots against, so one bullet and one field cover all ten rather than
-two of each. The three channels: `api/app.py` hands the results page a `"rotation"` key beside
-`"population"` and `results.html` renders a "Your rotation (interim)" block reusing `.plc`'s
-styling (the `measurements` fallback table excludes both now, not just placements);
-`feedback/coach.py` gained `_pivot_lines` and a ROTATION section in the brief, labelling each row
-`interim` and its `spec.interim_reason` on the next line, the same two-line shape
-`_placement_lines` uses for `calibrated`; `mcp/query.py` gained `PivotView` and
-`SwingView.rotation`, and `_measurements` now skips `PIVOTS_BY_NAME` names the way it already
-skipped `PLACEMENTS_BY_NAME` ones. Full suite green, `ruff` and `mypy` clean.
+`contracts/caveats.py` gained `PIVOTS_ARE_INTERIM` and a derived block naming every
+`PIVOT_MEASUREMENT_REGISTRY` row, wired into `READING_THIS_DATA_HONESTLY` beside the two
+placement bullets. `api/state.py::resolve_pivots` mirrors `resolve_placements` field-for-field,
+with `interim_reason` off the spec standing in for `calibrated` — there is no calibrated half to
+contrast pivots against, so one bullet and one field cover all ten rather than two of each. The
+three channels: `api/app.py` hands the results page a `"rotation"` key beside `"population"` and
+`results.html` renders a "Your rotation (interim)" block reusing `.plc`'s styling (the
+`measurements` fallback table excludes both now, not just placements); `feedback/coach.py`
+gained `_pivot_lines` and a ROTATION section in the brief, labelling each row `interim` and its
+`spec.interim_reason` on the next line, the same two-line shape `_placement_lines` uses for
+`calibrated`; `mcp/query.py` gained `PivotView` and `SwingView.rotation`, and `_measurements`
+now skips `PIVOTS_BY_NAME` names the way it already skipped `PLACEMENTS_BY_NAME` ones.
+
+**What remains unverified is playback in a browser.** Every check across P1–P7 confirms pixels on
+disk — a direct frame read (`cv2.VideoCapture`) shows all three markers and both guide lines on a
+freshly rendered clip, and `[reads back N]` matched `Wrote N frames` on all fifteen renders — but
+nobody has opened a re-rendered `aligned.mp4` in a browser. The M14 P1 note carries forward
+unchanged.
+
+**Exit criteria met.** A two-view swing's `aligned.mp4` shows the three pivot markers and the two
+rotation lines on both panels, the down-the-line lines visibly turning; `get_swing` returns a
+`rotation` block of per-view numbers each labelled interim; a swing that sways or reverses scores
+its `pivot_*` values high against a clean one; `reanalyze.py --all` reports every `overall_score`
+byte-identical across the corpus. The full suite, `ruff` and `mypy` were green at every phase.
 
 ## What this milestone is
 
@@ -363,6 +379,9 @@ Commit: `M17 P3: analysis/pivot.py — the swing as three points moving`
 
 ### [x] P4 — the stdlib rule checks that call a turn wonky
 
+**Built 2026-09-09.** Built as written — five checks, ten metrics, every one unsigned so a
+mirrored swing scores identically.
+
 Extend `analysis/pivot.py` with its own function type and a check table keyed by `check`, not by
 metric name:
 
@@ -593,18 +612,20 @@ in a browser" note carries forward unchanged.
 
 Commit: `M17 P7: re-render every stored swing onto the new overlay and engine`
 
-### [ ] P8 — docs reconciled, `GOLF-5` merged
+### [x] P8 — docs reconciled, `GOLF-5` merged
 
-Flip [ADR-029](decisions/029-pivot-points.md) Status to built (a *second* addendum only if
-building corrected the design again — the ADR-028 precedent; the 2026-09-09b one is already
-there, so `docs/README.md`'s ADR-029 row goes to **2** if you write one). This doc →
-`**Status: 9/9 phases built.**`, every `### [x]`, a `**Built <date>.**` note per phase, tier
-TARGET → REFERENCE, a "what is unverified" paragraph, an exit-criteria paragraph, and the ⚠️
-banner about the P2–P6 rewrite folded into that history. `docs/README.md` — M17 row → REFERENCE,
-`9/9 phases built`; ADR-029 → built; re-check the `git ls-files '*.md'` count on the branch.
-`ROADMAP.md` — status row → ✅ Done, `## M17` detail → done, phases past-tense, exit-criteria
-paragraph, `Last Updated`. `WORKLOG.md` — closing entry, "Next: merge `GOLF-5` on the user's
-go-ahead".
+**Built 2026-09-10.** Built as written, plus the one gap the read-back found: P4 had no
+`**Built <date>.**` line while every other phase did, fixed in the same commit. ADR-029's Status
+flipped to *built*, and it gained a second addendum (2026-09-09c) — building *did* correct the
+design again past P0 (the ADR-028 precedent that gates a second addendum): P5's corpus run found
+the hands' shared interpolation gate vetoing the whole face-on view, which Decision 6 did not
+anticipate. `docs/README.md`'s ADR-029 row moves to **2** for it. This doc's tier flipped
+TARGET → REFERENCE, the ⚠️ P2–P6 rewrite banner folded into the Status paragraph as history
+rather than a live warning, and a "what remains unverified" and an "exit criteria met" paragraph
+were added. `docs/README.md`'s M17 row → REFERENCE, `9/9 phases built`; the `git ls-files '*.md'`
+count held at 66, so no recount was owed. `ROADMAP.md`'s status row → ✅ Done, `## M17` phases
+read past-tense, `Last Updated` moved to 2026-09-10. `WORKLOG.md` gained a closing entry: merge
+`GOLF-5` on the user's go-ahead.
 
 *Verify by:* full `-m pytest` and `-m pytest tests/test_docs_truth.py` (phase count 9/9 both
 sides, tier REFERENCE both sides, ADR row counts, markdown doc count); `ruff`; `mypy`. Then
