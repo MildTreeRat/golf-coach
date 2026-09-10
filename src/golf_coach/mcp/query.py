@@ -40,15 +40,17 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from golf_coach.api.state import load_analysis, load_state, resolve_placements
+from golf_coach.api.state import load_analysis, load_state, resolve_pivots, resolve_placements
 from golf_coach.contracts.alignment import AlignmentQuality
 from golf_coach.contracts.career import MODEL_SOURCE_PREFIX
 from golf_coach.contracts.caveats import (
     ALIGNMENT_CAVEAT,
     ONLY_CHECKPOINTS_ARE_JUDGED,
+    PIVOTS_ARE_INTERIM,
     PLACEMENTS_ARE_NOT_SCORES,
 )
 from golf_coach.contracts.mishit import MISHIT_EXCLUDED_METRICS, MishitVerdict
+from golf_coach.contracts.pivots import PIVOTS_BY_NAME
 from golf_coach.contracts.placements import PLACEMENTS_BY_NAME
 from golf_coach.contracts.shot import ShotData
 from golf_coach.contracts.unscored import UnscoredCheckpoint, UnscoredReason
@@ -194,6 +196,33 @@ class PlacementView(BaseModel):
             "False means the number is real but its rate is not: an uncalibrated placement "
             "over-flags any golfer the tour basis never saw. Read it beside its calibrated "
             "partner, never alone."
+        )
+    )
+    detail: str
+
+
+class PivotView(BaseModel):
+    """One rotation measurement, with the sentence that says it is interim attached to it.
+
+    `PlacementView`'s sibling and one step short of it: a placement is a distance from a
+    reference population that exists; a pivot row has none — only the fact that a calibrated
+    (fiducial-marker) source would replace it. Shipped as a float alone, `pivot_shoulder_reversal
+    _backswing_deg: 41.2` reads as a measured turn, when it is a 2-D image-plane line angle at
+    exactly the point ADR-029 §9 says that projection is worst-conditioned.
+
+    The fields are filled by `api.state.resolve_pivots`, which the results page reads through as
+    well and `feedback/coach.py` partitions the same list for — three surfaces, one rule, the same
+    shape `PlacementView` repeats.
+    """
+
+    name: str
+    value: float
+    unit: str
+    view: str = Field(description="Which camera produced it — never compare across.")
+    interim_reason: str = Field(
+        description=(
+            "Why this number is provisional, in terms of what is missing — never a hedge. "
+            "Fiducial calibration is the only thing that clears it."
         )
     )
     detail: str
@@ -351,6 +380,15 @@ class SwingView(BaseModel):
             "`view` before saying anything about it."
         ),
     )
+    rotation: list[PivotView] = Field(
+        default_factory=list,
+        description=(
+            "How the shoulder line, the hip line and their centres moved: "
+            f"{PIVOTS_ARE_INTERIM}. Split out of `measurements` for `population`'s reason — read "
+            "each row's `detail` and `interim_reason` before saying anything about it, and never "
+            "compare a `view` against the other one."
+        ),
+    )
     analysis_version: int | None = Field(
         default=None,
         description=(
@@ -469,6 +507,7 @@ def get_swing(sessions_dir: Path, session_id: str, swing_id: str) -> SwingView |
     # Resolved off the whole artifact rather than off `swing`, because `state.resolve_placements`
     # is the one definition the results page reads through too — see its docstring.
     placements = [PlacementView(**row) for row in resolve_placements(analysis)]
+    pivots = [PivotView(**row) for row in resolve_pivots(analysis)]
     return SwingView(
         swing_id=swing_id,
         session_id=session_id,
@@ -485,6 +524,7 @@ def get_swing(sessions_dir: Path, session_id: str, swing_id: str) -> SwingView |
         measurements=_measurements(swing),
         simulated=_simulated(swing),
         population=placements,
+        rotation=pivots,
         analysis_version=_version(analysis),
         alignment_quality=quality,
         alignment_caveat=caveat,
@@ -699,7 +739,11 @@ def _measurements(swing: dict[str, Any]) -> dict[str, float]:
     `contracts.placements.PLACEMENTS_BY_NAME` rather than a name prefix: a `tour_` test would have
     silently reclassified anything later named that way, in the direction that loses the caveat.
 
-    **The simulated rows are the second exception, and they leave for the opposite reason** (M15
+    **The pivot rows are the same exception for the same reason**, one step short of a placement:
+    they carry no reference population at all, only the fact that they are interim. Membership is
+    `contracts.pivots.PIVOTS_BY_NAME`, never a `pivot_` prefix test, for the identical reason.
+
+    **The simulated rows are a third exception, and they leave for the opposite reason** (M15
     P17): what a bare float loses there is not the meaning but the fact that nothing measured it.
     See `SimulatedView`. A row with no `source` at all stays here — that is every artifact written
     before provenance was recorded, and calling one of those simulated on no evidence would be the
@@ -710,7 +754,9 @@ def _measurements(swing: dict[str, Any]) -> dict[str, float]:
         if not isinstance(entry, dict):
             continue
         name, value = entry.get("name"), _number(entry.get("value"))
-        if not isinstance(name, str) or value is None or name in PLACEMENTS_BY_NAME:
+        if not isinstance(name, str) or value is None:
+            continue
+        if name in PLACEMENTS_BY_NAME or name in PIVOTS_BY_NAME:
             continue
         if _is_modelled(entry):
             continue

@@ -6,9 +6,14 @@ from datetime import UTC, datetime
 
 from golf_coach.analysis import analyze_swing
 from golf_coach.contracts.career import MODEL_SOURCE_PREFIX
+from golf_coach.contracts.checkpoints import checkpoint_names
 from golf_coach.contracts.golfer import Handedness
 from golf_coach.contracts.intent import PracticeGoal, PracticeMode
 from golf_coach.contracts.keypoints import FrameKeypoints
+from golf_coach.contracts.pivots import (
+    PIVOT_MEASUREMENT_REGISTRY,
+    PIVOTS_BY_NAME,
+)
 from golf_coach.contracts.placements import (
     FACE_ON,
     PLACEMENTS_BY_NAME,
@@ -136,6 +141,86 @@ def test_every_emitted_placement_carries_its_registered_unit_and_a_detail(
         assert measurement.unit == spec.unit
         assert measurement.source == _POPULATION
         assert measurement.detail, f"{spec.name} carries no detail — its meaning is in that string"
+
+
+# ------------------------------------------------------- the pivot paths [M17 P5]
+#
+# The half `tests/contracts/test_pivots.py` could not assert: that the ten registry rows are rows
+# the engine actually emits. A registry naming a metric nothing computes is internally consistent
+# and wrong about the data, and until this section existed nothing in the suite could tell.
+
+
+def test_the_engine_emits_exactly_the_face_on_pivots_the_registry_describes(
+    swing: list[FrameKeypoints],
+) -> None:
+    """Five rows in registry order, and not one of the `_dtl` five.
+
+    The second half is the load-bearing direction, as it is for the placements above: there was no
+    rear camera in this call, so a down-the-line rotation number would be a reading of a clip that
+    does not exist. Order is asserted rather than membership because `contracts/pivots.py` says the
+    registry's order is the recorded order and `feedback/coach.py` renders them in it.
+    """
+    result = analyze_swing("swing-1", "session-1", swing, handedness=Handedness.RIGHT)
+
+    emitted = [m.name for m in result.measurements if m.name in PIVOTS_BY_NAME]
+
+    assert emitted == [s.name for s in PIVOT_MEASUREMENT_REGISTRY if s.view == FACE_ON]
+    assert not [name for name in emitted if name.endswith("_dtl")]
+
+
+def test_every_emitted_pivot_carries_its_registered_unit_detail_and_the_face_on_source(
+    swing: list[FrameKeypoints],
+) -> None:
+    """Unit and detail come off the spec in `engine._pivot_measurements`; this proves it still does.
+
+    The source is asserted for the reason the distances' and the flight's are, and here it decides
+    something the others do not: `CorpusSwing.artifact_key` keys a `pose:`-prefixed row on the
+    face-on clip's hash, which is exactly right for these five and exactly wrong for their `_dtl`
+    partners — `contracts/career.py::POSE_DTL_SOURCE` is the branch that separates them, and a
+    face-on row that quietly acquired that source would pool into no baseline at all.
+    """
+    result = analyze_swing("swing-1", "session-1", swing, handedness=Handedness.RIGHT)
+
+    pivots = [m for m in result.measurements if m.name in PIVOTS_BY_NAME]
+    assert pivots, "no pivot row was recorded on a swing the producer can read"
+
+    for measurement in pivots:
+        spec = PIVOTS_BY_NAME[measurement.name]
+        assert measurement.unit == spec.unit
+        assert measurement.detail == spec.detail
+        assert measurement.source == "pose:face_on"
+
+
+def test_a_pivot_is_measured_and_never_judged(swing: list[FrameKeypoints]) -> None:
+    """ADR-010 §2's firewall, at the one boundary that could breach it.
+
+    A rotation checkpoint needs a calibrated instrument and a population and M17 has neither, so
+    these ten ship as `Measurement`s. Nothing here is in `CHECKPOINT_REGISTRY`, nothing reaches
+    `overall_score`, and a refused check leaves an *absence* rather than an `unscored` row —
+    `unscored` is a list of checkpoints, and a swing judged on fewer fundamentals is what it means.
+    """
+    result = analyze_swing("swing-1", "session-1", swing, handedness=Handedness.RIGHT)
+
+    assert set(PIVOTS_BY_NAME).isdisjoint(checkpoint_names())
+    assert not [c for c in result.checkpoint_scores if c.name in PIVOTS_BY_NAME]
+    assert not [entry for entry in result.unscored if entry.name in PIVOTS_BY_NAME]
+
+
+def test_an_unsegmentable_swing_records_no_pivot_rather_than_a_flat_one(
+    swing: list[FrameKeypoints],
+) -> None:
+    """A still golfer has no three instants to resample between, and zero is not the answer.
+
+    Three static frames give `segment_phases` nothing to find, so `anchors_from_phases` refuses and
+    the pivot paths never get built. Every check here is an excursion or a reversal *magnitude*, so
+    a swing recorded as all-zeroes would read as the cleanest turn in the corpus rather than as the
+    absence it is — the same hazard `_placements` avoids by returning None on the same input.
+    """
+    still = [swing[0].model_copy(update={"frame_index": i}) for i in range(3)]
+
+    result = analyze_swing("swing-1", "session-1", still)
+
+    assert not [m for m in result.measurements if m.name in PIVOTS_BY_NAME]
 
 
 # ------------------------------------------------------- the simulated flight [M15 P11]

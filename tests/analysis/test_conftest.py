@@ -14,7 +14,8 @@ from __future__ import annotations
 
 import math
 
-from conftest import _GRIP_OFFSET_X, _GRIP_OFFSET_Y, make_swing
+import pytest
+from conftest import _GRIP_OFFSET_X, _GRIP_OFFSET_Y, _HIP_BASE_X, _HIP_HALF_SPAN, make_swing
 
 from golf_coach.contracts.keypoints import PoseLandmark
 
@@ -68,6 +69,28 @@ def test_hand_landmarks_ride_with_their_own_wrist() -> None:
             for frame in swing
         }
         assert len(offsets) == 1, f"{part.name} drifts relative to {wrist.name}: {offsets}"
+
+
+def test_the_hips_are_two_points_straddling_the_hip_centre() -> None:
+    """A hip *line* with an orientation, and a hip *centre* that has not moved. [M17 P3]
+
+    Both halves matter and only together. The two hips sat on one point until something read the
+    line through them (`analysis/pivot.py`), which is `None` for a segment of zero length — so a
+    revert here does not fail loudly, it quietly makes every hip orientation unreadable. And the
+    straddle is symmetric so that the midpoint is untouched: every hip metric in this repo reads
+    that midpoint, and they would all have moved had the span been added to one side.
+    """
+    for frame in make_swing(hip_sway=0.05, finish_drift=0.04):
+        left = frame.landmarks[PoseLandmark.LEFT_HIP]
+        right = frame.landmarks[PoseLandmark.RIGHT_HIP]
+        assert right.x - left.x == pytest.approx(2 * _HIP_HALF_SPAN)
+        assert left.y == right.y
+
+    address = make_swing()[0]
+    midpoint = (
+        address.landmarks[PoseLandmark.LEFT_HIP].x + address.landmarks[PoseLandmark.RIGHT_HIP].x
+    ) / 2
+    assert midpoint == pytest.approx(_HIP_BASE_X)
 
 
 def test_the_six_hand_landmarks_are_six_distinct_points() -> None:

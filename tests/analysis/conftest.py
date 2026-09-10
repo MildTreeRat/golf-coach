@@ -59,6 +59,13 @@ _WRIST_BASE_X = 0.5
 # `head_x` — a rigid head translation, with no rotation component for the metric to cancel.
 _EAR_HALF_SPAN = 0.03
 
+# Half the hip-to-hip span, straddling `hip_x` the same way and for the same reason. The two hips
+# sat on one point until M17 P3, which was invisible while everything read their *midpoint* — and
+# wrong the moment something read the hip *line*, which has no orientation at all when its two
+# endpoints coincide. Straddling symmetrically leaves every midpoint this fixture ever produced
+# unchanged, so no existing expectation moves. Narrower than the shoulders, as a body is.
+_HIP_HALF_SPAN = 0.045
+
 # Where the trail hand sits relative to the lead hand — a grip's width down the shaft. Small, and
 # constant through the swing, because the two hands do not move relative to each other while the
 # club is held.
@@ -130,8 +137,12 @@ def _frame(
     landmarks[PoseLandmark.RIGHT_SHOULDER] = Landmark(
         x=_SHOULDER_RIGHT_X, y=_SHOULDER_Y, visibility=1.0
     )
-    landmarks[PoseLandmark.LEFT_HIP] = Landmark(x=hip_x, y=0.6, z=0.0, visibility=1.0)
-    landmarks[PoseLandmark.RIGHT_HIP] = Landmark(x=hip_x, y=0.6, z=0.0, visibility=1.0)
+    landmarks[PoseLandmark.LEFT_HIP] = Landmark(
+        x=hip_x - _HIP_HALF_SPAN, y=0.6, z=0.0, visibility=1.0
+    )
+    landmarks[PoseLandmark.RIGHT_HIP] = Landmark(
+        x=hip_x + _HIP_HALF_SPAN, y=0.6, z=0.0, visibility=1.0
+    )
     return FrameKeypoints(
         frame_index=index,
         timestamp_ms=index * _MS_PER_FRAME,

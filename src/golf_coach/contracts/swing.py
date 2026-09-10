@@ -391,7 +391,24 @@ class SwingResult(BaseModel):
 #:                   honest `n` was 0 until this bump wrote them. **A band and a version answer
 #:                   different questions** — *does anything judge this* and *does a stored artifact
 #:                   still mean what it says* — and a phase that adds a measurement answers both.
-ANALYSIS_VERSION = 15
+#: 15 -> 16 (2026-09-09, M17 P5): the `pivot_*` family joined `measurements` — the swing as three
+#:                   moving points, up to five numbers per camera off
+#:                   `contracts/pivots.py`'s `PIVOT_MEASUREMENT_REGISTRY` (read the membership
+#:                   there). The `14 -> 15` shape again: a version-15 artifact is *missing* them
+#:                   rather than disagreeing about anything, nothing judges them — no band, no
+#:                   checkpoint, no `METRIC_TARGETS` row — so `overall_score` and every
+#:                   `checkpoint_scores` entry are byte-identical on every stored swing, and
+#:                   `reanalyze.py` is how a stored bundle acquires them.
+#:                   **What is new here is that a measurement can now come from the second camera.**
+#:                   The five `_dtl` rows carry `career.POSE_DTL_SOURCE`, the first `pose:` source
+#:                   `CorpusSwing.artifact_key` returns None for, because no hash of the rear clip
+#:                   exists to dedupe them on — so they are recorded and reported but pool into no
+#:                   personal baseline, while their face-on partners pool normally (ADR-029's
+#:                   2026-09-09b addendum §5). Ten is a ceiling and not a count: a view whose swing
+#:                   cannot be resampled records none of its five, a single check that refuses drops
+#:                   its own row, and a bundle with no rear clip records only the face-on half —
+#:                   none of which is a checkpoint, so none of it reaches `unscored`.
+ANALYSIS_VERSION = 16
 
 
 class SwingBundleResult(BaseModel):

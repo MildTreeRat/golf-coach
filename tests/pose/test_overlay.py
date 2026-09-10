@@ -20,7 +20,16 @@ from golf_coach.contracts.keypoints import (
     Landmark,
     PoseLandmark,
 )
-from golf_coach.pose.overlay import _BONES, _JOINTS, draw_skeleton
+from golf_coach.pose.overlay import (
+    _BONES,
+    _GUIDE_COLOR,
+    _GUIDE_LINES,
+    _JOINT_COLOR,
+    _JOINTS,
+    _PIVOT_COLOR,
+    _PIVOT_POINTS,
+    draw_skeleton,
+)
 
 #: The thirteen landmarks the overlay used to draw with no bone touching them and no checkpoint
 #: reading them — nine of the eleven head points (the two ears are the exception, below) and the
@@ -110,3 +119,105 @@ def test_the_overlay_leaves_no_ink_on_a_landmark_it_does_not_draw() -> None:
     assert not canvas[5:16, 5:16].any(), "the nose was drawn"
     # ... and the fan really is rendered, so the assertion above is not passing by drawing nothing.
     assert canvas[50, 70].any(), "the wrist-to-index bone was not drawn"
+
+
+# --- the rotation picture [M17 P1] ------------------------------------------------------------
+
+
+def test_the_guide_lines_are_the_shoulder_and_the_hip_segment() -> None:
+    """Named, not derived: deriving the expectation would pass whatever `_GUIDE_LINES` said.
+
+    These two and no others, because these two are the segments whose rotation *is* the turn.
+    """
+    assert _GUIDE_LINES == (
+        (PoseLandmark.LEFT_SHOULDER, PoseLandmark.RIGHT_SHOULDER),
+        (PoseLandmark.LEFT_HIP, PoseLandmark.RIGHT_HIP),
+    )
+
+
+def test_the_guide_lines_are_still_bones() -> None:
+    """The overdraw is on purpose, and a tidy-up that removes it fails here.
+
+    Dropping these pairs from `_BONES` to stop drawing them twice would re-derive `_JOINTS` and
+    silently take the shoulder and hip dots with it.
+    """
+    for pair in _GUIDE_LINES:
+        assert pair in _BONES
+
+
+def test_every_guide_line_is_also_a_pivot_pair() -> None:
+    """The derivation itself, the way `_JOINTS` is derived from `_BONES`.
+
+    A guide line the golfer cannot see the centre of is half the picture, so the two lists cannot
+    be allowed to drift apart.
+    """
+    for pair in _GUIDE_LINES:
+        assert pair in _PIVOT_POINTS
+
+
+def test_the_hands_are_the_third_pivot_point_and_carry_no_line() -> None:
+    """Drawn, deliberately unmeasured (M14 P3's 0.63-0.68 hand tracking), and not an axis."""
+    hands = (PoseLandmark.LEFT_WRIST, PoseLandmark.RIGHT_WRIST)
+    assert hands in _PIVOT_POINTS
+    assert hands not in _GUIDE_LINES
+    assert len(_PIVOT_POINTS) == len(_GUIDE_LINES) + 1
+
+
+def _rotation_frame(dim: PoseLandmark | None = None) -> FrameKeypoints:
+    """A pose with only the six pivot landmarks visible, at known and distinct pixels.
+
+    On a 200x200 canvas: shoulders (60, 60) and (140, 60), hips (70, 120) and (130, 120), wrists
+    (80, 90) and (120, 90) — so all three midpoints share x=100 and no two marks collide.
+    """
+    landmarks = [Landmark(x=0.5, y=0.5, visibility=0.0) for _ in range(NUM_POSE_LANDMARKS)]
+    placed = {
+        PoseLandmark.LEFT_SHOULDER: (0.3, 0.3),
+        PoseLandmark.RIGHT_SHOULDER: (0.7, 0.3),
+        PoseLandmark.LEFT_HIP: (0.35, 0.6),
+        PoseLandmark.RIGHT_HIP: (0.65, 0.6),
+        PoseLandmark.LEFT_WRIST: (0.4, 0.45),
+        PoseLandmark.RIGHT_WRIST: (0.6, 0.45),
+    }
+    for landmark, (x, y) in placed.items():
+        visibility = 0.0 if landmark is dim else 1.0
+        landmarks[landmark] = Landmark(x=x, y=y, visibility=visibility)
+    return FrameKeypoints(frame_index=0, timestamp_ms=0.0, landmarks=landmarks)
+
+
+def test_the_rotation_marks_land_where_the_swing_turns() -> None:
+    """The behavioural half: three midpoint markers, and a shoulder axis that runs past the joints.
+
+    Marker colour at a midpoint is also the "last, on top" pin — a marker drawn before the joints
+    or the guide line would be painted over at the hip centre, which sits on its own guide line.
+    """
+    np = pytest.importorskip("numpy")
+    pytest.importorskip("cv2")
+
+    canvas = draw_skeleton(np.zeros((200, 200, 3), dtype=np.uint8), _rotation_frame())
+
+    for label, (y, x) in {"shoulder": (60, 100), "hip": (120, 100), "hands": (90, 100)}.items():
+        assert canvas[y, x].tolist() == list(_PIVOT_COLOR), f"no marker at the {label} centre"
+
+    # The hands marker sits *between* the wrists, which are themselves already ordinary joints.
+    assert canvas[90, 80].tolist() == list(_JOINT_COLOR), "the left wrist lost its joint dot"
+    assert canvas[90, 120].tolist() == list(_JOINT_COLOR), "the right wrist lost its joint dot"
+
+    # The shoulder line, over the white bone it repeats and out past the shoulder at x=60 — the
+    # overshoot is what makes it read as an axis rather than as one more bone.
+    assert canvas[60, 80].tolist() == list(_GUIDE_COLOR), "the shoulder bone was not emphasised"
+    assert canvas[60, 45].tolist() == list(_GUIDE_COLOR), "the shoulder axis stopped at the joint"
+
+
+def test_a_half_seen_line_is_not_drawn_at_an_invented_angle() -> None:
+    """One dim endpoint takes out that pair's line and its marker, and nothing else."""
+    np = pytest.importorskip("numpy")
+    pytest.importorskip("cv2")
+
+    canvas = draw_skeleton(
+        np.zeros((200, 200, 3), dtype=np.uint8), _rotation_frame(dim=PoseLandmark.RIGHT_HIP)
+    )
+
+    assert not canvas[120, 100].any(), "a hip centre was drawn from one visible hip"
+    assert not canvas[120, 58].any(), "a hip axis was drawn from one visible hip"
+    # ... while the whole pairs are untouched, so this is not passing on a blank frame.
+    assert canvas[60, 100].tolist() == list(_PIVOT_COLOR), "the shoulder centre went with it"

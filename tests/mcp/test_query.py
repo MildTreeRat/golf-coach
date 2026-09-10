@@ -402,6 +402,64 @@ def test_a_swing_with_no_placements_reports_an_empty_list(sessions_dir: Path) ->
     assert view.population == []
 
 
+# ---------------------------------------------------------- the pivot (rotation) rows [M17 P6]
+
+#: One pivot row and one plain pose metric, as `analysis.json` stores them.
+_PIVOT_MEASUREMENTS = [
+    {
+        "name": "pivot_hip_axis_drift_norm",
+        "value": 0.42,
+        "unit": "shoulder_widths",
+        "source": "pose:face_on",
+        "detail": "peak lateral excursion of the hip centre from its address x",
+    },
+    {
+        "name": "head_sway_norm",
+        "value": 0.1234,
+        "unit": "shoulder_widths",
+        "source": "pose:face_on",
+        "detail": "address window -> impact window",
+    },
+]
+
+
+def test_a_pivot_row_is_split_out_of_measurements_and_keeps_its_detail(
+    tmp_path: Path, swing_writer, analysis_factory
+) -> None:
+    """`test_a_placement_is_split_out_of_measurements_and_keeps_its_detail`'s sibling, one
+    instrument short of a placement: a rotation reading has no reference population at all, only
+    the fact that it is interim, and a bare float loses that entirely.
+    """
+    root = tmp_path / "sessions"
+    swing_writer(
+        root,
+        "2026-08-10",
+        "1",
+        analysis=analysis_factory("2026-08-10", "1", measurements=_PIVOT_MEASUREMENTS),
+    )
+
+    view = query.get_swing(root, "2026-08-10", "1")
+
+    assert view is not None
+    assert [p.name for p in view.rotation] == ["pivot_hip_axis_drift_norm"]
+
+    pivot = view.rotation[0]
+    assert pivot.value == 0.42
+    assert pivot.view == "face-on"
+    assert pivot.interim_reason
+
+    # The plain metric stays where it was, flat and without a pivot row's provenance.
+    assert view.measurements == {"head_sway_norm": 0.1234}
+
+
+def test_a_swing_with_no_pivot_rows_reports_an_empty_list(sessions_dir: Path) -> None:
+    """Absence is not an error — a swing analyzed before M17 simply has none to report."""
+    view = query.get_swing(sessions_dir, "2026-08-10", "1")
+
+    assert view is not None
+    assert view.rotation == []
+
+
 def test_a_degraded_alignment_carries_a_caveat(sessions_dir: Path) -> None:
     view = query.get_swing(sessions_dir, "2026-08-10", "1")
 

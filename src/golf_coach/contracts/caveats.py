@@ -24,6 +24,7 @@ from textwrap import fill
 
 from golf_coach.contracts.checkpoints import CHECKPOINT_REGISTRY
 from golf_coach.contracts.mishit import MISHIT_EXCLUDED_METRICS
+from golf_coach.contracts.pivots import PIVOT_MEASUREMENT_REGISTRY
 from golf_coach.contracts.placements import POPULATION_PLACEMENT_REGISTRY
 from golf_coach.contracts.unscored import UNSCORED_REASONS, UnscoredReason
 
@@ -113,6 +114,20 @@ PLACEMENTS_ARE_NOT_SCORES = (
     "exists for any of them, and none of them is included in `overall_score`"
 )
 
+#: The same bound for the pivot measurements, for consumers composing their own sentence around
+#: it. `mcp/query.py` interpolates it into the `rotation` field description, the same way
+#: `PLACEMENTS_ARE_NOT_SCORES` bounds `population`.
+#:
+#: A third shape rather than a reuse of either constant above, because a pivot row is neither a
+#: judged checkpoint nor a placement against a population — it is a 2-D-per-view reading with no
+#: reference population behind it at all, interim until a calibrated source exists (ADR-029).
+PIVOTS_ARE_INTERIM = (
+    f"the {_count_word(len(PIVOT_MEASUREMENT_REGISTRY))} entries in `rotation` are an interim, "
+    "uncalibrated 2-D-per-view reading of the swing's rotation — foreshortened, never blended or "
+    "compared across the two camera views, not judged and not part of `overall_score` — until "
+    "fiducial calibration lands"
+)
+
 #: Attached to any alignment tier below FULL, which is the only tier that anchored on all three
 #: instants and so the only one a reader may treat as synchronized throughout (ADR-015). Takes
 #: the tier's own `summary` clause, so the sentence names *which* anchors held.
@@ -200,6 +215,28 @@ _PLACEMENTS_PER_VIEW = fill(
     subsequent_indent="  ",
 )
 
+# The pivot measurements, named the same way the placement bullet names its five — every entry in
+# the registry, so a row missing from this prose is a number nothing warns about (the M6.5 shape,
+# in the channel M17 opened). There is no calibrated/uncalibrated split to derive a second bullet
+# for, the way there is for placements: every pivot row is interim until a fiducial source exists,
+# so one bullet says so for all ten.
+_PIVOT_NAMES = _and_list([f"`{spec.name}`" for spec in PIVOT_MEASUREMENT_REGISTRY])
+
+_PIVOTS_ARE_INTERIM_PROSE = fill(
+    f"**The `rotation` entries are an interim reading, not a score.** {_PIVOT_NAMES} say how far "
+    "the shoulder and hip centres travelled off their address position and how the shoulder line "
+    "turned, read off one uncalibrated phone's image plane — a 2-D projection of a 3-D turn, "
+    "foreshortened by wherever the camera stood. The face-on and down-the-line numbers are two "
+    "different instruments and must never be blended or compared to each other. None has a band, "
+    "none contributes to `overall_score`, and career mode reports them unavailable rather than "
+    "treating the camera's own noise as a repeatability statistic. Fiducial calibration is what "
+    "promotes one from interim to judged; each row's own `detail` says what is still missing "
+    "until then.",
+    width=_WIDTH,
+    initial_indent="- ",
+    subsequent_indent="  ",
+)
+
 _ONLY_THESE_FUNDAMENTALS = fill(
     f"Only {_COUNT} fundamentals are measured, all from the face-on view, and all of them are "
     "lateral (side-to-side) or timing quantities. Spine angle, hip **rotation**, swing plane and "
@@ -267,6 +304,7 @@ Reading this data honestly:
   attributed, it appears in `unscored` rather than being scored on a guess.
 {_PLACEMENTS_ARE_NOT_SCORES}
 {_PLACEMENTS_PER_VIEW}
+{_PIVOTS_ARE_INTERIM_PROSE}
 - `needs_review` on a shot means its numbers were read off a photograph by OCR and the parse
   was flagged. Do not quote a flagged shot's figures as fact; say the reading is uncertain.
 - `alignment_caveat`, when present, means the two camera views were anchored on some swing

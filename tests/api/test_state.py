@@ -26,10 +26,12 @@ from golf_coach.api.state import (
     is_outdated,
     load_state,
     now,
+    resolve_pivots,
     save_state,
     stored_analysis_version,
 )
 from golf_coach.contracts.feedback import FeedbackPayload
+from golf_coach.contracts.pivots import PIVOT_MEASUREMENT_REGISTRY
 from golf_coach.contracts.swing import ANALYSIS_VERSION, SwingBundleResult, SwingResult
 from golf_coach.storage.manifest import (
     Role,
@@ -285,3 +287,46 @@ def test_a_directory_with_no_manifest_gets_no_state(tmp_path) -> None:
 
     assert outcome.error is not None
     assert load_state(swing_dir) is None
+
+
+# ------------------------------------------------------------- the pivot rows [M17 P6]
+
+
+def _pivot_analysis() -> dict:
+    """An `analysis.json` carrying one measurement row per registered pivot metric."""
+    return {
+        "swing": {
+            "measurements": [
+                {
+                    "name": spec.name,
+                    "value": 1.5,
+                    "unit": spec.unit,
+                    "source": "pose:face_on",
+                    "detail": f"detail for {spec.name}",
+                }
+                for spec in PIVOT_MEASUREMENT_REGISTRY
+            ]
+        }
+    }
+
+
+def test_resolve_pivots_resolves_every_registry_row() -> None:
+    """Every pivot row on a stored artifact comes back, carrying the spec's view and reason.
+
+    `resolve_placements`'s pattern, one field different: there is no `calibrated` to split on, so
+    every row carries its own `interim_reason` off the spec instead.
+    """
+    resolved = resolve_pivots(_pivot_analysis())
+
+    assert [row["name"] for row in resolved] == [spec.name for spec in PIVOT_MEASUREMENT_REGISTRY]
+    for row, spec in zip(resolved, PIVOT_MEASUREMENT_REGISTRY, strict=True):
+        assert row["value"] == 1.5
+        assert row["detail"] == f"detail for {spec.name}"
+        assert row["view"] == spec.view
+        assert row["interim_reason"] == spec.interim_reason
+
+
+def test_resolve_pivots_on_an_artifact_without_them_is_empty() -> None:
+    """A swing analyzed before M17 has no pivot rows to resolve — absence, not an error."""
+    assert resolve_pivots({"swing": {"measurements": []}}) == []
+    assert resolve_pivots(None) == []

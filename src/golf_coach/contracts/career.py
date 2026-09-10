@@ -70,6 +70,17 @@ LAUNCH_MONITOR_SOURCE_PREFIX = "launch_monitor:"
 #: the `carry_distance_yds` printed beside it on that same tile did not.
 MODEL_SOURCE_PREFIX = "model:"
 
+#: The second camera's own pose provenance [M17 P5]. It is under `POSE_SOURCE_PREFIX` and is the one
+#: source there that keys on nothing, so it is a full source string rather than a prefix — the
+#: dispatch below tests it by equality, before the prefix that would otherwise claim it.
+#:
+#: `CorpusSwing` carries `face_on_sha256` and no hash for the down-the-line clip, so a `_dtl` row
+#: keyed `pose:{face_on_sha256}` would assert that two different rear clips over one face-on clip
+#: are one reading of it, and the pooled value would be whichever was read first. The fiducial work
+#: — or anything else that gives the second clip an identity — is what reverses this
+#: (ADR-029's 2026-09-09b addendum §5).
+POSE_DTL_SOURCE = "pose:down_the_line"
+
 #: Every prefix `artifact_key` recognises, in one place because two callers test membership: the
 #: dispatch itself, and `count_metrics`'s unknown-source report. The two drifting apart is worse
 #: than either being wrong alone — a source would take a real artifact key *and* be reported as
@@ -301,7 +312,15 @@ class CorpusSwing(BaseModel):
         photo rather than on the swing — refusal included, because a flight simulated from a parse
         flagged for review is exactly as suspect as the parse. `population:` is deliberately absent;
         see the note under `KNOWN_SOURCE_PREFIXES`.
+
+        **One `pose:` source keys on nothing, and it is the second camera's** (M17 P5). The rear
+        clip has no hash in this shape, so a `_dtl` pivot row is a reading of an artifact this
+        corpus cannot name — the None is the same assertion as above, reached because the identity
+        is missing rather than because the sample is suspect. Tested first, or the prefix below
+        absorbs it into the face-on clip's count.
         """
+        if measurement.source == POSE_DTL_SOURCE:
+            return None
         if measurement.source.startswith(POSE_SOURCE_PREFIX):
             return f"pose:{self.face_on_sha256}"
         if measurement.source.startswith((LAUNCH_MONITOR_SOURCE_PREFIX, MODEL_SOURCE_PREFIX)):

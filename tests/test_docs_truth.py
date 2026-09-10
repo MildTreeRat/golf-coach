@@ -27,6 +27,7 @@ from pathlib import Path
 import pytest
 
 from golf_coach.contracts.checkpoints import CHECKPOINT_REGISTRY
+from golf_coach.contracts.pivots import PIVOT_MEASUREMENT_REGISTRY
 from golf_coach.contracts.placements import POPULATION_PLACEMENT_REGISTRY
 from golf_coach.contracts.swing import ANALYSIS_VERSION
 
@@ -241,6 +242,23 @@ def test_the_uncalibrated_placements_are_named_as_uncalibrated() -> None:
         )
 
 
+def test_the_caveats_name_every_pivot_measurement_that_ships() -> None:
+    """The M6.5 bug's shape again, in the channel M17 opened.
+
+    Ten pivot rows ship onto `SwingResult.measurements` and the caveats have to say a word about
+    every one of them, or an MCP client receives a rotation reading as a bare float under a field
+    description that never warns it is interim.
+    """
+    from golf_coach.contracts.caveats import READING_THIS_DATA_HONESTLY as honestly
+
+    flat = _flat(honestly)
+    for spec in PIVOT_MEASUREMENT_REGISTRY:
+        assert f"`{spec.name}`" in flat, (
+            f"{spec.name} ships on every swing but the caveats never name it — every MCP client "
+            "and every coaching call is being handed it with no way to read it"
+        )
+
+
 # --------------------------------------------------------------------- the other prose channel
 
 
@@ -340,6 +358,19 @@ def test_the_population_description_derives_its_caveat() -> None:
     assert PLACEMENTS_ARE_NOT_SCORES in _flat(description), (
         "SwingView.population no longer interpolates caveats.PLACEMENTS_ARE_NOT_SCORES — the "
         "count of placements is stated in its own words again"
+    )
+
+
+def test_the_rotation_description_derives_its_caveat() -> None:
+    """Same pin for the field that carries the pivot rows."""
+    from golf_coach.contracts.caveats import PIVOTS_ARE_INTERIM
+    from golf_coach.mcp.query import SwingView
+
+    description = SwingView.model_fields["rotation"].description or ""
+
+    assert PIVOTS_ARE_INTERIM in _flat(description), (
+        "SwingView.rotation no longer interpolates caveats.PIVOTS_ARE_INTERIM — the count of "
+        "pivot measurements is stated in its own words again"
     )
 
 

@@ -199,3 +199,121 @@ populates it, no measurement reads it, and the overlay draws no club.
   turn angle a real quantity to fit a basis on.
 - **The `Impact Position` / club path** as a rotation input. Waits on club detection (M2) and
   a bay session, the same posture [ADR-028](028-mishit-exclusion.md) took on the tile.
+
+## Addendum (2026-09-09b): the phase plan read back against the code — six corrections before P1
+
+P0 shipped the decisions above and a phase list in [M17_PIVOT_POINTS.md](../M17_PIVOT_POINTS.md).
+Reading that phase list against the modules it names found six places where it could not be built
+as written. **The decisions are unchanged — five of the six are P4–P6 contradicting them**, which
+is the useful shape of the finding: the ADR was right and the plan drifted off it. This addendum
+records the corrections so the building session inherits them rather than rediscovering them.
+
+**1. The rule checks get their own function type; `MeasureFn` was the wrong one.** P4 typed
+`PIVOT_MEASUREMENTS: dict[str, MeasureFn]`, and `measure.MeasureFn` is
+`Callable[[list[FrameKeypoints], list[PhaseSegment]], MeasureOutcome]` — it takes
+`FrameKeypoints`, which is exactly what Decision 3 forbids. Under that type a `CALIBRATED_3D`
+producer cannot feed the checks and the seam buys nothing, so the type deletes the milestone's
+stated payoff. `analysis/pivot.py` declares its own instead:
+
+```python
+PivotCheckFn = Callable[[list[PivotObservation]], MeasureOutcome]
+```
+
+It lives in `analysis/` rather than `contracts/` because `MeasureOutcome` does
+([ADR-008](008-project-structure.md) — `contracts` imports nothing of ours).
+
+**2. One producer signature for both views, and it takes anchors, not phases.** The
+down-the-line view never holds a `list[PhaseSegment]`: `analysis/engine.py` segments the face-on
+clip and, for the second camera, builds only a `SwingAnchors` from
+`anchors_from_keypoints(..., wrist=TRAIL_WRIST)`. That is why `_dtl_placements` takes
+`(frames, anchors, handedness)` and converts to `(float(motion_start), float(top),
+float(impact))` at the call. So `pivot_observations` takes those three anchor positions too —
+`trajectory.anchors_from_phases(phases)` supplies them on the face-on side — and there is one
+producer serving both views rather than a `from_anchors` variant beside it. This also removes
+`phase_bounds` and `address_sample_bounds` from the milestone: both are `PhaseSegment`-only and
+neither can run on the second camera.
+
+**3. Event time is the index space, and the sample count must be odd.** P3 resamples onto event
+time via `trajectory.sample_positions`, whose output is *fractional frame positions* — so the
+frame indices `phase_bounds` returns do not index the observation list P4 reads. Event time
+already carries the answer and needs no phase lookup: with the three anchors, sample 0 is
+address, the middle sample is the top and the last is impact. `contracts/pivots.py` therefore
+pins `PIVOT_SAMPLES` **odd**, because `sample_positions` puts an anchor on an integer sample only
+when it does (`t = span·i/(steps-1)` reaches 1 at an integer `i` iff `steps` is odd), and exports
+the two half-open spans the checks read. A slow-motion clip, a real-time clip and the two
+cameras all land on the same index space, which is the reason the resampling is there at all.
+
+**4. The line orientation is a unit vector, not an angle in degrees.** `PivotObservation` was
+specified with `shoulder_line_deg` / `hip_line_deg` floats. A 2-D line angle is not merely
+imprecise here — it passes through a **projection singularity**. Face-on, the shoulder line is
+full-width at address and collapses toward zero width at the top, where the shoulders point at
+the camera; down-the-line it is the reverse. `atan2(dy, dx)` is worst-conditioned exactly where
+the projected segment is shortest, and it is the same place MediaPipe is estimating an occluded
+shoulder. A reversal check reading raw degrees would fire hardest on the cleanest turns.
+
+`measure.direction_series` already solved this and states the rule in its docstring: a frame
+whose two landmarks have collapsed within `MIN_DIRECTION_LENGTH` is **dropped rather than
+normalized**, "because its direction is jitter divided by roughly nothing", and unit vectors are
+returned so an averaging caller gets a circular mean. `PivotObservation` follows it — the two
+orientations are `tuple[float, float] | None`, `None` where the segment collapsed — which makes
+the gate structural instead of something each check has to remember. Degrees are derived once, at
+the measurement boundary. A check whose samples are mostly `None` refuses with
+`LANDMARKS_UNCONFIDENT` (in `MEASUREMENT_REASONS`) rather than averaging what is left.
+
+This narrows Decision 2. "Down-the-line is where the turn is least foreshortened, so its numbers
+matter most" holds for the hip and shoulder **centre paths** and is wrong for the **line
+angles**, which are worst-conditioned from behind at address and best face-on. Neither view is
+the good one throughout; each is good over the half of the swing the other is blind to, and the
+`interim_reason` on the four angle specs says so.
+
+**5. Two consumers and one contract were missed.** Consequences claimed "every consumer of
+`SwingResult.measurements` was walked during planning"; three had not been.
+
+- **`api/state.py::resolve_placements`** is the real implementation P6 meant to mirror.
+  `mcp/query.py`'s `PlacementView` docstring says it is "the MCP-shaped wrapper around it and
+  **not a second implementation**", and `api/app.py` hands the same resolver's output to the
+  results page. Splitting `measurements` inside `mcp/query.py` alone would build the second
+  implementation that docstring exists to prevent, and leave
+  `api/static/results.html` rendering pivot rows as bare unexplained floats — the failure
+  `contracts/placements.py` was written to stop. P6 adds `resolve_pivots` beside
+  `resolve_placements`, and both channels read through it.
+- **`feedback/coach.py`** partitions measurements through `PLACEMENTS_BY_NAME`. Pivot rows fall
+  through into the plain-pose-metric bucket and reach the coaching model as naked numbers. The
+  derived caveat block helps every call, but the per-measurement path needs the matching
+  `PIVOTS_BY_NAME` branch or the block is describing rows the prompt presents as ordinary.
+- **`contracts/career.py::CorpusSwing.artifact_key`** maps *any* `pose:`-prefixed measurement to
+  `pose:{face_on_sha256}`. This ADR already noted that the down-the-line clip carries no hash of
+  its own in `CorpusSwing`; the consequence was not followed through. A `_dtl` row sourced
+  `pose:down_the_line` would dedupe on the **face-on** hash, so two different down-the-line clips
+  paired with one face-on clip collapse into a single sample and the pooled value is whichever
+  was read first. `artifact_key` returns `None` for that source instead — the module's own
+  vocabulary for it: "returning None is the assertion that there is no reading here at all",
+  which is precisely true while no hash for that clip exists. The fiducial work, or any change
+  that gives the second clip an identity, is what reverses it.
+
+**6. The registry: five pairs, one prefix, and the hands are drawn but not measured.** P2's
+starter set was four names of which one (`shoulder_turn_reversal_deg`) broke the `pivot_` prefix
+the others shared, in a registry that is append-only. It also folded the backswing and the
+downswing into one reversal number, so a firing value could not say which half of the swing
+produced it — and `analysis/baseline.py::pooled_samples` groups by name, so the two halves would
+pool. The set is now five face-on + `_dtl` pairs, every name `pivot_`-prefixed:
+`pivot_hip_axis_drift_norm`, `pivot_shoulder_axis_drift_norm`, `pivot_hip_path_jitter_norm`,
+`pivot_shoulder_reversal_backswing_deg`, `pivot_shoulder_reversal_downswing_deg`.
+
+Jitter is measured on the **hip centre** and not the hands, and the hands are drawn without being
+measured at all. The hip midpoint is the best-tracked of the three pivot points; M14 P3 measured
+face-on hand tracking at 0.63–0.68 **over the whole clip**, which is why M14 scoped its own hand
+metrics to the address window where tracking is 1.00. A jitter number over a through-swing hand
+path would report the tracker's noise as the golfer's, and no number beats a wrong one
+([ADR-010](010-benchmark-ranges.md) §2). The hands earn a metric when a calibrated source or a
+better tracker makes their path a real one; until then the overlay shows them and the registry
+does not.
+
+**And one decision that was absent rather than wrong: face-on pivot rows do enter the personal
+baseline.** `pooled_samples` and `build_baseline` filter by no registry — every measurement name
+gets an entry — so the face-on pivot rows acquire a personal mean and sd exactly as `flight_*`
+already does. That is left in place deliberately: `baseline.refuse` already governs what a
+baseline may *assert*, and absence from `METRIC_TARGETS` already makes career mode report them
+`unavailable` (Decision 6). The `_dtl` rows contribute nothing, by the `artifact_key` change
+above. Recorded here because a silent inheritance is not a decision, and the next reader would
+otherwise have to work out whether it was one.
