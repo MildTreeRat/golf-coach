@@ -5,6 +5,44 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-09-10 — M17 P7: every stored swing re-rendered onto the new overlay
+
+**Duration**: one sitting, mostly wall-clock. **M17 is 8/9.** Operational phase, no source change.
+Ran `.venv/Scripts/python.exe scripts/reanalyze.py --all --video --verbose` over all fifteen
+stored swings. Edited: `docs/M17_PIVOT_POINTS.md` (P7 checked off, status 7/9 → 8/9), `ROADMAP.md`
+(status row and §M17 detail), `docs/README.md` (M17 row). No test or source file touched — P7's
+gate is the corpus run itself, not the suite (full `pytest`/`ruff`/`mypy` were already green from
+P6 and nothing here could move them).
+
+**15/15 re-analyzed, 0 failures, 0 flagged for attention** (exit code 0). Every one of the five
+compared fields (`version`, `score`, `measurements`, `window`, `anchors`) read `no change` on
+every swing — the new overlay redraws pixels, it moves no number. Every render's `[reads back N]`
+count matched its `Wrote N aligned frames` count exactly (111–202 frames across the corpus,
+codec `avc1` on all fifteen). The wall of `Failed to load OpenH264 library` / `VIDEOIO/FFMPEG:
+Failed to initialize VideoWriter` stderr — one block per render — is the documented noise above
+`pose/side_by_side.py::_CODECS`: OpenCV's bundled FFmpeg gives up on the GPL-free `libopenh264`
+and falls back to Media Foundation, which is exactly what fifteen-for-fifteen `avc1` opens
+confirm. `--verbose`'s stdout is block-buffered under a redirect, so the log looked stalled for
+several minutes with only stderr visible; it was not — `Get-Process`'s climbing CPU time said the
+run was live, and the buffered prints all landed at once as later swings completed.
+
+**Visual check**: pulled three frames (`cv2.VideoCapture`, no browser) from `2026-08-23/2`'s fresh
+`aligned.mp4` — address, mid-downswing, follow-through. Both panels carry all three magenta pivot
+markers and both cyan guide lines at every sampled frame. The down-the-line line is the
+legible one: a near-point at address (§9's singularity — that line is nearly perpendicular to the
+rear camera at address) opening into a long diagonal by follow-through, visibly tracking the turn.
+Face-on shows the complementary collapse, shrinking through the same swing — neither is a defect,
+both are the projection singularity ADR-029 §9 already named, now seen in a real render rather
+than only in the reversal-angle statistics from P5. Browser playback itself is still unverified —
+the M14 P1 honesty carries forward: a decoded frame confirms the pixels on disk, not that a
+browser plays this file inline.
+
+**Next**: P8 — docs reconciliation and the merge. Flip ADR-029's Status to built, this doc to
+9/9, `ROADMAP.md`'s M17 row to ✅ Done, `docs/README.md`'s M17 row to REFERENCE at 9/9. Then
+`git merge --no-ff GOLF-5` on the user's go-ahead.
+
+---
+
 ## 2026-09-10 — M17 P6: the numbers leave the system saying they are interim
 
 **Duration**: one sitting. **M17 is 7/9.** Edited: `src/golf_coach/contracts/caveats.py`

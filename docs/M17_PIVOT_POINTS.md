@@ -13,7 +13,7 @@
 > not have pooled. [ADR-029](decisions/029-pivot-points.md)'s 2026-09-09b addendum is the
 > record; the phases below already carry the corrections.
 
-**Status: 7/9 phases built.** P0 wrote this document, [ADR-029](decisions/029-pivot-points.md)
+**Status: 8/9 phases built.** P0 wrote this document, [ADR-029](decisions/029-pivot-points.md)
 and the [ADR-011](decisions/011-camera-synchronization.md) addendum, and put M17 on the board.
 P1 drew the pivot markers and the two rotation lines into the overlay. P2 landed
 `contracts/pivots.py` — the shape a fiducial-calibrated source will later produce instead of
@@ -24,8 +24,9 @@ numbers into the engine and moved `ANALYSIS_VERSION` 15 → 16 — including the
 source that keys on nothing, so the second camera's rows are reported and pool into no baseline.
 P6 gives the numbers a voice — a derived caveat, and one resolver in `api/state.py` feeding the
 three surfaces that read `measurements` (the results page, the coaching prompt, `get_swing`), all
-saying the numbers are interim. P7 re-renders every stored swing. P8 reconciles the docs and
-merges `GOLF-5`.
+saying the numbers are interim. P7 re-renders every stored swing; **built 2026-09-10** — all
+fifteen re-rendered, every score byte-identical, every file's frame count reads back exactly what
+was written. P8 reconciles the docs and merges `GOLF-5`.
 
 **Built 2026-09-10 (P6).** `contracts/caveats.py` gained `PIVOTS_ARE_INTERIM` and a derived
 block naming every `PIVOT_MEASUREMENT_REGISTRY` row, wired into `READING_THIS_DATA_HONESTLY`
@@ -558,14 +559,37 @@ it.
 
 Commit: `M17 P6: the rotation numbers leave the system saying they are interim`
 
-### [ ] P7 — re-render every stored swing
+### [x] P7 — re-render every stored swing
 
-Operational; no source change (an optional one-line `scripts/reanalyze.py` docstring touch).
-Run `.venv/Scripts/python.exe scripts/reanalyze.py --all --video`. Open one freshly rendered
-`aligned.mp4` — both panels show the three pivot markers and the two rotation lines, and the
-down-the-line panel's lines track the turn. Record in `WORKLOG.md` and in this doc's P7
-section: score byte-identity, `frames_read == frames` on every bundle, and the one visual check
-(the M14 P1 "unverified in a browser" honesty applies until a browser has shown it).
+**Built 2026-09-10.** Operational, no source change. Ran
+`.venv/Scripts/python.exe scripts/reanalyze.py --all --video --verbose` over all fifteen stored
+swings. **15/15 re-analyzed, 0 failures, 0 flagged for attention** (exit code 0). Every one of the
+five compared fields — `version`, `score`, `measurements`, `window`, `anchors` — reported `no
+change`: the new overlay redraws pixels, nothing it draws moves a number. Every render's `[reads
+back N]` count matched the `Wrote N aligned frames` count exactly, on all fifteen files (frame
+counts ranged 111–202 across the corpus), so no file decodes short of what was written. Every
+render opened codec `avc1` — the OpenH264 stderr wall (`Failed to load OpenH264 library` /
+`VIDEOIO/FFMPEG: Failed to initialize VideoWriter`, once per render) is the documented noise from
+`pose/side_by_side.py`'s comment above `_CODECS`, not a failure: OpenCV's bundled FFmpeg gives up
+on its GPL-free `libopenh264` and falls back to Media Foundation, which is exactly what `avc1`
+succeeding fifteen times confirms.
+
+**Visual check** (not yet a browser — that honesty still applies below): read three frames back
+out of `2026-08-23/2`'s fresh `aligned.mp4` with `cv2.VideoCapture` — address, mid-downswing and
+follow-through. Both panels carry all three magenta pivot markers (shoulder-line midpoint,
+hip-line midpoint, hand midpoint) and both cyan guide lines at every sampled frame. The
+down-the-line panel is the one worth reading closely: at address its shoulder line is nearly a
+point (§9's singularity — the line is nearly perpendicular to that camera at address), and by
+follow-through it has opened into a long, clearly diagonal line — the guide line visibly tracking
+the turn, exactly as the exit criterion asks. The face-on panel shows the complementary
+foreshortening, shrinking through the same swing. Neither collapse is a defect; it is the
+projection singularity P3/§9 already named, now visible in a real render rather than only in the
+angle statistics.
+
+**Still unverified**: actual playback in a browser. The three frames above were decoded directly
+from the file, which confirms the pixels on disk are correct; it does not confirm a browser plays
+this `avc1` file inline the way `aligned.mp4` is meant to be watched. The M14 P1 / M17 P1 "unverified
+in a browser" note carries forward unchanged.
 
 Commit: `M17 P7: re-render every stored swing onto the new overlay and engine`
 
