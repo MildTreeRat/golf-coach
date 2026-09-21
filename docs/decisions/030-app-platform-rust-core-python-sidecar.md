@@ -220,6 +220,16 @@ silently is the failure mode this whole decision has to survive, and code review
 0.29-yard drift. M19's JSON Schemas, golden vectors and `scripts/conformance.py` are what M22 is
 checked against, clause by clause, and they must exist first.
 
+> **Built, 2026-09-21.** M19 closed the same day this ADR was accepted: `spec/schemas/` (five
+> roots), `spec/vectors/` (6 synthetic + 15 corpus, 8.3 MB gzipped) and
+> `python scripts/conformance.py check`, with the rules in
+> [docs/CONFORMANCE.md](../CONFORMANCE.md). Two things it found are corrections to this section's
+> assumptions rather than confirmations of them, and both are M22's to carry: the serialization a
+> port must match is an `exclude=` set at a **call site** in `api/pipeline.py` and appears in no
+> schema; and `analyze_swing_bundle` alone does **not** produce the artifact this repo writes,
+> because ADR-008 forbids it importing `feedback` — so the conformance runner makes two calls, not
+> one. §5's inventory promise is [CONFORMANCE.md §5](../CONFORMANCE.md#5-what-ships-in-the-app-and-what-stays-in-the-lab).
+
 Two assets already exist and should be used rather than rebuilt:
 `tests/analysis/conftest.py::make_swing` is deterministic, pure-stdlib and RNG-free, so it
 re-implements in Rust exactly; and the **15 stored swings with 30 keypoint files and 30 audio

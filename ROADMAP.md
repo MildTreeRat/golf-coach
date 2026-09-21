@@ -35,10 +35,10 @@ wording; only the grouping and the M4 checklist have been corrected.
 | **M16** Mishits | ✅ Done *(2026-09-08)*, 9/9 phases (P0–P8) | — (desk work over the corpus already on disk; building corrected nothing in ADR-028. The rule went live in P3 and found its first real subject unprompted in P5 — aaron's 7 iron `2026-08-23/2` carried 33.6 yd against a 121.8 yd median. Holding it out drops that club's clean carries to four, below the CENTER floor, so `get_club_profile` now *withholds* its carry mean where it used to print a top-dragged ≈101.6 yd — no number beats a wrong one. No `ANALYSIS_VERSION` bump — the aggregates are live) | [§M16](#m16-mishits--the-topped-seven-iron-that-is-not-your-seven-iron--done) |
 | **M17** Pivot points | ✅ Done *(2026-09-10)*, 9/9 phases | — (desk work over the corpus already on disk; the overlay and the rule checks needed no bay session) | [§M17](#m17-pivot-points--the-shoulder-line-the-hip-line-and-the-three-points-they-turn-about) |
 | **M18** The platform decided | ✅ Done *(2026-09-21)*. Docs only — the spikes were dropped when the two-iPhone premise was, and **the ADR became the milestone**. Rust core, MediaPipe pose in a bundled Python sidecar pool, Flutter shell, phone-as-camera later, cloud closed. **ADR-030 supersedes ADR-001**, the first superseded ADR here. The load-bearing choice was not the language or the shell but *where pose runs*: `ranges.json` is cut from MediaPipe's landmarks, so keeping pose in Python is what lets everything else be rewritten without reopening the scoring model | — (desk work; the decisions were taken directly) | [§M18](#m18-the-platform-decided--a-rust-core-a-python-pose-sidecar-and-a-flutter-shell) |
-| **M19** The core as a specification | ⬜ Not started, **and now the prerequisite for M22** | Nothing — Python desk work over artifacts already on disk | [§M19](#m19-the-python-core-becomes-a-specification--schemas-golden-vectors-and-a-conformance-runner) |
+| **M19** The core as a specification | ✅ Done *(2026-09-21)*, 5/5 phases. **M22 is unblocked** — `python scripts/conformance.py check` diffs any implementation against this one, 21 vectors at v16 in ~7 s. Five schemas in `spec/schemas/`, 6 synthetic vectors and the 15 real swings gzipped to 8.3 MB in `spec/vectors/`, the rules in [docs/CONFORMANCE.md](docs/CONFORMANCE.md). Two findings a port would otherwise have inherited: the `exclude=` set that makes `analysis.json` what it is lives at a **call site** and in no schema; and a bare engine call leaves `feedback` None, so the first build pinned `"feedback": null` on all 21 vectors — a spec telling a port to ship no coaching | — (desk work; done) | [§M19](#m19-the-python-core-becomes-a-specification--schemas-golden-vectors-and-a-conformance-runner) |
 | **M20** The trigger | ⬜ Not started | Nothing for the algorithm (replay over the stored clips); one bay trip for false positives | [§M20](#m20-the-trigger--hearing-the-ball-strike-live-and-cutting-the-clip) |
 | **M21** Capture edge | ⬜ Not started — **the file source needs nothing**; the webcam and phone sources need M20's spec | Nothing for source 1; cameras for 2 and 3 | [§M21](#m21-capture-edge--a-file-then-a-webcam-then-a-phone) |
-| **M22** The Rust core | 🔒 Blocked | M19 (the oracle) | [§M22](#m22-the-rust-core--the-analysis-engine-passing-the-conformance-suite) |
+| **M22** The Rust core | ⬜ Not started, **unblocked 2026-09-21** | Nothing — M19 shipped the oracle; read [docs/CONFORMANCE.md](docs/CONFORMANCE.md) first | [§M22](#m22-the-rust-core--the-analysis-engine-passing-the-conformance-suite) |
 | **M23** The pose sidecar | 🔒 Blocked | M22 (something has to send the jobs) | [§M23](#m23-the-pose-sidecar--a-long-lived-python-worker-pool) |
 | **M24** Session engine | 🔒 Blocked | M21 and M22 | [§M24](#m24-session-engine--start-a-session-and-swings-flow-through-to-the-profile) |
 | **M25** The app | 🔒 Blocked | M24 | [§M25](#m25-the-app--the-flutter-shell-and-the-setup-wizard) |
@@ -1719,6 +1719,12 @@ real 3-D (the printed fiducial squares) is still only a seam in `contracts/pivot
 gated on M19 — a Rust core and a Python core that disagree silently is the failure mode this whole
 plan has to survive, and only a conformance suite catches it. M23–M26 follow in a line.
 
+> **M19 closed 2026-09-21**, so **M22 is open** and the gate it was waiting for exists:
+> `python scripts/conformance.py check`. M20 and M21's file source are still startable in
+> parallel and still need no Rust. Read [docs/CONFORMANCE.md](docs/CONFORMANCE.md) before M22 —
+> in particular §3's two Rust-specific edges, which are the difference between a numeric failure
+> that is a bug and one that is a language.
+
 ---
 
 ## M18: The platform decided — a Rust core, a Python pose sidecar and a Flutter shell
@@ -1750,8 +1756,9 @@ ADR-011 addendum — camera topology is genuinely unaffected, the same disclaime
 
 ## M19: The Python core becomes a specification — schemas, golden vectors and a conformance runner
 
-**Status**: ⬜ Not started. **Startable now**, and the prerequisite for M22: Python desk work over
-artifacts already on disk.
+**Status**: ✅ Done *(2026-09-21)*, 5/5 phases. Desk work over artifacts already on disk. **M22 is
+unblocked.** The document is [docs/CONFORMANCE.md](docs/CONFORMANCE.md); the artifacts are
+[`spec/`](spec/README.md); the runner is `scripts/conformance.py`.
 
 **The ask.** Make the existing implementation something a port can be checked against with one
 command. Today the only oracle is the Python test suite, which cannot be run by a different
@@ -1761,38 +1768,67 @@ language — and ADR-030 has committed to a second implementation of the swing l
 failure mode the whole platform decision has to survive, and review does not catch a drift of a
 fraction of a unit. This must exist before M22 starts, not alongside it.
 
-**The phases.**
-- **P1 schemas** — export `contracts/` as JSON Schema (pydantic's `model_json_schema`) for the
-  shapes that cross the seam (`SwingResult`, `SwingBundleResult`, keypoints, manifests), committed,
-  with a test that fails when a model changes without regenerating.
-- **P2 golden vectors** — for every stored swing: keypoints → `analysis.json` at the current
-  `ANALYSIS_VERSION`; for every clip: the strike frames; plus the synthetic fixtures in
-  `tests/analysis/conftest.py`. Decide where they live — the videos are private, the JSON derived
-  from them is not.
-- **P3 tolerance rules** — which outputs must match exactly (phase indices, pass/fail) and which to
-  an epsilon (floats), and how `None` and `unscored` are encoded, since ADR-010 §2 forbids a port
-  turning "could not measure" into zero. Two known edges belong here: Python's **banker's rounding**
-  differs from Rust's half-away-from-zero, which moves `impact.py`'s hop size at 44.1 kHz; and
-  `%g` / `.0f` float formatting reaches the `message` strings that get compared.
-- **P4 `scripts/conformance.py`** — keypoints in on stdin, analysis out on stdout, so any
-  implementation is diffed against Python by a script.
-- **P5 inventory** — which modules ship in the app and which stay lab, in tiers: the swing loop
-  (`analysis`, `contracts`, `audio`, `storage`); shots, flight and clubs (`launch_monitor`,
-  `clubs`); LLM coaching and `mcp/`.
+**The phases, as built.**
+- **P1 schemas** — five roots exported to `spec/schemas/` from
+  `conformance.py::SCHEMA_ROOTS`: `KeypointsFile`, `AudioFile`, `ShotData`, `SwingResult`,
+  `SwingBundleResult`. The rule for adding one is that *something other than Python parses it*,
+  which is why the list is shorter than `contracts/`. `SwingManifest` was in the original list and
+  is not exported: nothing outside Python reads it, and a schema is a promise to hold a shape
+  still.
+- **P2 golden vectors** — 21 in `spec/vectors/`: **6 synthetic** from
+  `tests/analysis/conftest.py::make_swing` (uncompressed and readable, each one there for a code
+  path) and **15 corpus**, gzipped, one per stored swing. The storage question the plan left open
+  was settled by measurement: the full keypoint set is 239 MB, sliced to the scored window 25.6 MB,
+  gzipped **8.3 MB**, which commits. A further cut to 3.0 MB — `analysis/` names 15 of the 33
+  landmarks and reads `z` on none — was declined, because a reduced file is no longer a
+  `KeypointsFile` a port can parse with the shipped schema.
+- **P3 tolerance rules** — `compare_results`, and both predicted edges confirmed in shipped code.
+  Floats admit `RTOL = 1e-9` (a different summation order, nothing wider); everything else is
+  exact, `bool` **before** `int` because `isinstance(True, int)` is true in Python, and a `None` is
+  compared to nothing but a `None`.
+- **P4 `scripts/conformance.py`** — `check`, `run` (stdin/stdout, the cross-language seam), `list`,
+  `regenerate`. `check` runs the whole suite in ~7 s off a base install and `spec/` alone.
+- **P5 inventory** — [CONFORMANCE.md §5](docs/CONFORMANCE.md#5-what-ships-in-the-app-and-what-stays-in-the-lab),
+  four tiers plus the stub, module by module.
 
-**Reuses.** `scripts/reanalyze.py`, the tolerant readers in `api/state.py`, and
-`analysis/benchmarks/*.json`. Two assets already exist and should not be rebuilt:
-`tests/analysis/conftest.py::make_swing` is deterministic, pure-stdlib and RNG-free, so it
-re-implements in another language exactly; and the **15 stored swings, 30 keypoint files and 30
-audio files** are a real-capture golden set needing no new fixtures.
+**The two findings worth carrying to M22.**
 
-**Risks:** freezing a contract that M17 has only just stopped moving — do it now while it is still;
-`ANALYSIS_VERSION` bumps then have to regenerate the vectors. And `detect_strikes` has no
-reproducible oracle in the test suite, because `tests/audio/test_impact.py` synthesizes its clips
-from a seeded numpy RNG — the stored `*.audio.json` files are the golden set to use instead.
+1. **The serialization a port must match is not in any schema.** `api/pipeline.py` writes
+   `analysis.json` as `model_dump_json(exclude={"swing": {"keypoints", "detections"}})` — the
+   exclusion is a *call-site* decision, so a port that implemented `SwingBundleResult` exactly as
+   the schema describes it would emit the whole keypoint list and differ on a field nobody meant to
+   compare. `conformance.EXCLUDED_FROM_RESULT` is the one copy, pinned against the literal in
+   `pipeline.py` by a test that reads it back out of the source.
+2. **A bare engine call does not produce the artifact this repo writes.** `analysis` may not import
+   `feedback` (ADR-008), so `analyze_swing_bundle` leaves `SwingBundleResult.feedback` as None and
+   `api/pipeline.py` fills it a line later. The first build of the vectors went through the engine
+   alone and pinned `"feedback": null` on all twenty-one — a specification instructing a port to
+   ship a results page with no coaching on it. `run_vector` now makes both calls, and every vector
+   reproduces the archive's ranked tips.
+
+The build also caught its own first reconstruction error, which is the reason
+`_verify_against_stored` exists: recovering a swing's declared loft from its own result works only
+where the flight *succeeded*, because a refusal leaves no `club_loft_deg` measurement behind — so
+`2026-08-23/2` silently rebuilt as `None` and produced a refusal sentence blaming a missing loft
+the original run had. Both arguments `analysis` is forbidden to fetch for itself now come from the
+registry and the bag, the way the shell fetches them.
+
+**Reused, not rebuilt:** `make_swing`, the stored `*.audio.json` strike frames (`detect_strikes`
+has no reproducible oracle in the suite — `tests/audio/test_impact.py` synthesizes from a seeded
+numpy RNG), `scripts/reanalyze.py` as the precondition, and `api/pipeline.py`'s own resolution of
+handedness and loft.
+
+**What it does not cover**, named rather than left to be found: `feedback/coach.py`'s LLM call
+(non-deterministic and pinned *absent*), `audio/impact.py` end to end (the vectors take strike
+frames as an input), pose itself (ADR-030 §3 pins the sidecar against the 30 keypoint files
+instead), and wall-clock performance.
+
+**The standing obligation this creates:** an `ANALYSIS_VERSION` bump must regenerate the vectors in
+the same change. `tests/test_conformance.py` fails until it does, and `CLAUDE.md` carries it as an
+invariant.
 
 **Exit Criteria**: A port can be diffed against the Python reference with one command, and the
-schemas and vectors are in the repo.
+schemas and vectors are in the repo. ✅ — `python scripts/conformance.py check` → 21/21 at v16.
 
 ---
 
@@ -1866,7 +1902,11 @@ built from.
 
 ## M22: The Rust core — the analysis engine passing the conformance suite
 
-**Status**: 🔒 Blocked on M19 (the oracle). The language is settled (ADR-030).
+**Status**: ⬜ Not started, **unblocked 2026-09-21**. The language is settled (ADR-030) and the
+oracle exists: read [docs/CONFORMANCE.md](docs/CONFORMANCE.md) before writing a line of Rust, and
+§3's two known edges — banker's rounding, and `%g` formatting reaching the sentences a golfer is
+shown — before assuming a numeric failure is a numeric bug. `spec/vectors/synthetic/` is where to
+start; `make_swing` re-implements in Rust exactly, so a port can generate its own inputs.
 
 **The ask.** Port the engine to Rust, in dependency order — contracts → measure → phases →
 checkpoints and scoring → alignment → audio → benchmark loaders → career and profile → storage —

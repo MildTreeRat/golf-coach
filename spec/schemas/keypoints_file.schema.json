@@ -1,0 +1,192 @@
+{
+  "$defs": {
+    "ClipMetadata": {
+      "description": "What the source clip was, recorded alongside the pose extracted from it.\n\nEvery field is optional: these are facts about a video file, and a `FrameKeypoints` list can\nlegitimately exist without one (synthetic test fixtures, a corpus whose videos are long gone).\nNone means unknown, never zero.\n\n**`fps` is the container's claim, not measured real time.** It is `CAP_PROP_FPS` as reported,\nwhich iPhone slo-mo is known to stretch \u2014 see docs/M7_TWO_PHONE_SPIKE.md Q3. If that spike shows\nthe reported rate does not describe real time, a companion real-time rate lands here as a pure\nfield addition; nothing already written needs migrating.",
+      "properties": {
+        "fps": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Container-reported frames/second.",
+          "title": "Fps"
+        },
+        "frame_count": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Frames actually DECODED, which is the honest number \u2014 a container can claim more frames than it yields, and a silently-short decode is the failure mode this records.",
+          "title": "Frame Count"
+        },
+        "height": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Height"
+        },
+        "source_sha256": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Content hash of the source video, tying pose back to its clip.",
+          "title": "Source Sha256"
+        },
+        "width": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Width"
+        }
+      },
+      "title": "ClipMetadata",
+      "type": "object"
+    },
+    "FrameKeypoints": {
+      "description": "All body landmarks for one video frame.",
+      "properties": {
+        "camera_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Which camera produced this frame (ADR-011). None means not recorded \u2014 the state of every file written before M7 Phase 1. Free-form by design: the value is whatever the `VideoSource` was told it is. M7 uses the same words as `storage.manifest.Role` ('face_on', 'down_the_line') by convention, not by import.",
+          "title": "Camera Id"
+        },
+        "frame_index": {
+          "minimum": 0,
+          "title": "Frame Index",
+          "type": "integer"
+        },
+        "landmarks": {
+          "description": "Exactly 33 landmarks, indexed by PoseLandmark.",
+          "items": {
+            "$ref": "#/$defs/Landmark"
+          },
+          "title": "Landmarks",
+          "type": "array"
+        },
+        "timestamp_ms": {
+          "description": "Milliseconds from start of clip.",
+          "minimum": 0.0,
+          "title": "Timestamp Ms",
+          "type": "number"
+        }
+      },
+      "required": [
+        "frame_index",
+        "timestamp_ms",
+        "landmarks"
+      ],
+      "title": "FrameKeypoints",
+      "type": "object"
+    },
+    "Landmark": {
+      "description": "A single body landmark in normalized image coordinates.\n\nx/y are normalized to [0, 1] relative to image width/height (MediaPipe convention).\nz is depth relative to the hips (roughly normalized, smaller = closer to camera).\nvisibility is MediaPipe's confidence the landmark is present and not occluded.",
+      "properties": {
+        "visibility": {
+          "default": 0.0,
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Visibility",
+          "type": "number"
+        },
+        "x": {
+          "title": "X",
+          "type": "number"
+        },
+        "y": {
+          "title": "Y",
+          "type": "number"
+        },
+        "z": {
+          "default": 0.0,
+          "title": "Z",
+          "type": "number"
+        }
+      },
+      "required": [
+        "x",
+        "y"
+      ],
+      "title": "Landmark",
+      "type": "object"
+    }
+  },
+  "description": "The on-disk shape of a `*.keypoints.json`: the frames plus what clip they came from.\n\nFiles written before M7 Phase 1 are a bare JSON array of frames with no envelope. Read through\n`storage.keypoints_io.load_keypoints`, which accepts both and reports `clip=None` for the old\nshape, rather than parsing this model directly.",
+  "properties": {
+    "clip": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ClipMetadata"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "frames": {
+      "items": {
+        "$ref": "#/$defs/FrameKeypoints"
+      },
+      "title": "Frames",
+      "type": "array"
+    },
+    "pose_estimator": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Which pose estimator measured these landmarks \u2014 `pose.estimator.pose_estimator_name()`, e.g. `mediapipe:heavy`. **None means unknown, not lite**: every file written before this field existed reads None, and the reader (`api.pipeline.keypoints_for`) re-runs pose on one rather than guessing which bundle produced it. Kept beside `clip` because it is the other half of the same question \u2014 `clip.source_sha256` says which footage was measured, this says with what \u2014 and a cache keyed on the footage alone cannot see a changed instrument, which is the failure `AUDIO_DETECTOR_VERSION` (`contracts/audio.py`) documents one module over. Landmarks from two variants are not interchangeable: they move the phase instants and therefore every score built on them.",
+      "title": "Pose Estimator"
+    }
+  },
+  "required": [
+    "frames"
+  ],
+  "title": "KeypointsFile",
+  "type": "object"
+}

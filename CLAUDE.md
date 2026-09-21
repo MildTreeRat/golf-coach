@@ -20,6 +20,7 @@ every coaching call a false fact for a milestone.
                                             # silences the summary line
 .venv/Scripts/python.exe -m ruff check src tests scripts
 .venv/Scripts/python.exe -m mypy src
+.venv/Scripts/python.exe scripts/conformance.py check   # the committed golden vectors
 ```
 
 `.venv/` is the real environment. A `venv/` directory also exists and is an empty stub — ignore
@@ -49,6 +50,10 @@ Break one of these and something breaks a long way from your edit.
 - **Measuring is separate from judging.** `analysis/measure.py` produces numbers with no band in
   sight; `analysis/checkpoints/mechanics.py` turns them into verdicts. That split is what lets a
   new metric be measured across the corpus *before* a band for it exists.
+- **An `ANALYSIS_VERSION` bump regenerates `spec/vectors/`, in the same change.** They are this
+  repo's answer to a Rust port that disagrees silently (ADR-030 §8), and a vector recorded by an
+  older engine certifies a port against answers that have been retracted.
+  `tests/test_conformance.py` fails until they are re-recorded; `docs/CONFORMANCE.md` is the how.
 - **Models are fitted offline and ship as data** (ADR-022). Fitting lives in `scripts/` under the
   `research` extra and may use numpy/scikit-learn; what enters the package is a provenanced JSON
   artifact plus stdlib arithmetic to evaluate it. `ranges.json` and `golfdb_v1.json` already work
@@ -75,6 +80,7 @@ of its five sections costs a fraction of reading the file.
 | Has this been tried and rejected? | `docs/M4_POSE_BAKEOFF.md` — grep it |
 | Why is there a trained model, and where? | ADR-022, then `analysis/benchmarks/joint.py` |
 | What is the app written in, and why? | ADR-030 — Rust core, MediaPipe pose in a Python sidecar, Flutter shell. **Nothing below is built yet**; this repo is still the Python pipeline it describes |
+| How is a port checked against this core? | `docs/CONFORMANCE.md` — schemas, golden vectors and the tolerance rules. Artifacts in `spec/`, runner `scripts/conformance.py`. **Regenerate the vectors in the same change that bumps `ANALYSIS_VERSION`** |
 | What rules is code held to? | `docs/CODE_STANDARDS.md` — each rule with its precedent *and* a known non-violation |
 | Has this refactor already been declined? | `docs/REFACTOR_LEDGER.md` — read it before proposing a structural change |
 

@@ -5,6 +5,81 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-09-21 — M19 done: the core is a specification, and M22 is unblocked
+
+**Duration**: one sitting, same day as the entry below. **Source + tests + docs.** M19 is ✅ done,
+5/5 phases. No `ANALYSIS_VERSION` bump — nothing in `analysis/` was touched.
+
+**What shipped.** `docs/CONFORMANCE.md` (the specification), `spec/` (the artifacts),
+`scripts/conformance.py` + `scripts/conformance_vectors.py` (the runner and its builder), and
+`tests/test_conformance.py`. One command diffs any implementation against this one:
+
+```
+.venv/Scripts/python.exe scripts/conformance.py check    →  21/21 vectors conform (engine v16)
+```
+
+21 vectors: **6 synthetic** from `tests/analysis/conftest.py::make_swing`, each there for a code
+path (a window that must be un-applied, a failing checkpoint, a `no_handedness` refusal, a bundle
+with one view), and **15 corpus** — every stored swing. Five schemas exported from `contracts/`.
+
+**The storage question the plan left open, settled by measurement.** The full keypoint set is
+239 MB; sliced to the window the pipeline actually scores, 25.6 MB; gzipped, **8.3 MB**, which
+commits. A further cut to 3.0 MB is available — `analysis/` names 15 of the 33 landmarks and reads
+`z` on none — and was **declined**: a reduced file is no longer a `KeypointsFile` a port can parse
+with the shipped schema, and 5 MB does not buy a second shape plus the test that would have to
+prove the reduction sound. Windowing is not lossy: `select_swing` picks the window before the
+engine sees it. What it costs is recorded — a corpus vector's frame indices are window-relative,
+`provenance.frame_offset` maps them back, and `_verify_against_stored` adds it back at build time
+and requires the archive to be reproduced exactly.
+
+**Three findings, and two of them are things a port would have inherited.**
+
+1. **The serialization a port must match is in no schema.** `api/pipeline.py:1289` writes
+   `analysis.json` as `model_dump_json(exclude={"swing": {"keypoints", "detections"}})` — a
+   *call-site* decision. A port implementing `SwingBundleResult` exactly as the schema describes it
+   emits the whole keypoint list. `conformance.EXCLUDED_FROM_RESULT` is the one copy, pinned by a
+   test that reads the literal back out of `pipeline.py`.
+2. **A bare engine call does not produce the artifact this repo writes.** ADR-008 forbids
+   `analysis` importing `feedback`, so `analyze_swing_bundle` leaves `SwingBundleResult.feedback`
+   None and `pipeline.py:1259` fills it a line later. The first build went through the engine alone
+   and pinned `"feedback": null` on all twenty-one vectors — a specification instructing a port to
+   ship a results page with no coaching on it. `run_vector` now makes both calls; every vector
+   reproduces the archive's ranked tips, and two tests hold it there (one requiring tips, one
+   requiring the LLM paragraph to stay absent, because a model is not reproducible and
+   `regenerate` must not make a paid call).
+3. **The build caught its own first reconstruction error**, which is why `_verify_against_stored`
+   was worth writing before it was needed. Recovering a swing's declared loft from its own result
+   works only where the flight *succeeded* — a refusal leaves no `club_loft_deg` measurement
+   behind — so `2026-08-23/2` silently rebuilt as `None` and produced a refusal sentence blaming a
+   missing loft the original run had. Both arguments `analysis` is forbidden to fetch for itself
+   (handedness, loft) now come from the registry and the bag, the way the shell fetches them.
+
+**P3's two predicted Rust edges are both real in shipped code** and are written down with call
+sites: banker's rounding (`alignment.py`'s anchor fallbacks, `impact.py`'s hop at 44.1 kHz, and
+`round(x, ndigits)` being decimal-aware in `benchmarks/joint.py` and `trajectory.py`, reaching
+`percentile`), and `%g` / `.0f` / `.1f` reaching `message` and `detail` — which §3 compares
+exactly, so a port can get every number right and fail on a sentence.
+
+**Deliberately not covered, and named:** `feedback/coach.py`'s LLM call, `audio/impact.py` end to
+end (the vectors take strike frames as an input; `detect_strikes` has no reproducible oracle
+because `tests/audio/test_impact.py` synthesizes from a seeded numpy RNG, so the stored
+`*.audio.json` are the golden set), pose itself (ADR-030 §3 pins the sidecar against the 30
+keypoint files instead), and wall-clock performance.
+
+**The standing obligation:** an `ANALYSIS_VERSION` bump regenerates `spec/vectors/` in the same
+change. `tests/test_conformance.py` fails until it does, and it is now a `CLAUDE.md` invariant —
+a vector recorded by an older engine certifies a port against answers this repo has retracted.
+
+**Docs cascaded:** `docs/CONFORMANCE.md` and `spec/README.md` written, the map's row and its count
+(67 → 69), `CLAUDE.md`'s routing table, commands block and invariant list, `ARCHITECTURE.md` §1's
+commands and §5's verification posture, ADR-030 §8's built note, and this roadmap's M19 section,
+status row, group order and M22's status.
+
+**Where to start next: M22, M20 or M21's file source.** M22 is now open and is the long one; M20
+and M21 still need no Rust and no hardware. Everything else on the board still wants a bay session.
+
+---
+
 ## 2026-09-21 — M18 done: the platform decided, and the premise under it replaced
 
 **Duration**: one planning sitting, same day as the entry below. **Docs only — no source, no

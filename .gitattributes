@@ -1,0 +1,11 @@
+# `spec/` is a specification a second implementation is checked against, and it is meant to be
+# byte-identical on every machine that clones it. With `core.autocrlf=true` — which this repo is
+# developed under — git would otherwise decide per file by sniffing its contents, so a schema
+# checked out on Windows and the same schema on Linux hash differently. Nothing in the repo
+# depends on that today (the freshness test reads through Python's universal newlines), but a
+# port author comparing sha256s would have no way to tell a real difference from a checkout.
+spec/** -text
+
+# The gzipped vectors are already detected as binary by content. Stated anyway, because "already
+# detected" is a property of the bytes and not a guarantee.
+*.gz binary

@@ -1,0 +1,944 @@
+{
+  "$defs": {
+    "BoundingBox": {
+      "description": "Axis-aligned box in normalized image coordinates (xyxy, each in [0, 1]).",
+      "properties": {
+        "x1": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "X1",
+          "type": "number"
+        },
+        "x2": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "X2",
+          "type": "number"
+        },
+        "y1": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Y1",
+          "type": "number"
+        },
+        "y2": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Y2",
+          "type": "number"
+        }
+      },
+      "required": [
+        "x1",
+        "y1",
+        "x2",
+        "y2"
+      ],
+      "title": "BoundingBox",
+      "type": "object"
+    },
+    "CheckpointScore": {
+      "description": "Result of evaluating one swing checkpoint (e.g. 'address posture').",
+      "properties": {
+        "expected_high": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Expected High"
+        },
+        "expected_low": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Expected Low"
+        },
+        "message": {
+          "default": "",
+          "title": "Message",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "observed": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Measured value.",
+          "title": "Observed"
+        },
+        "one_sided": {
+          "default": false,
+          "description": "True when lower is strictly better (head sway, finish balance) and the band is `[0, high]`; False when both tails are faults (tempo). Consumers need this to turn a percentile into a distance from *ideal* \u2014 at the 10th percentile a one-sided metric is excellent and a two-sided one is as wrong as it is at the 90th.",
+          "title": "One Sided",
+          "type": "boolean"
+        },
+        "passed": {
+          "title": "Passed",
+          "type": "boolean"
+        },
+        "percentile": {
+          "anyOf": [
+            {
+              "maximum": 100.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Percentile of `observed` within the reference population, or None when no distribution covers this metric. Clamped to [10, 90] by `Distribution.percentile_of` because the tails were never stored \u2014 read 90 as 'at or beyond the 90th', not as a precise rank.",
+          "title": "Percentile"
+        },
+        "population_n": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Sample size behind `percentile`, so a reader can weigh how much it is worth.",
+          "title": "Population N"
+        },
+        "score": {
+          "description": "0=fail .. 1=ideal",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Score",
+          "type": "number"
+        }
+      },
+      "required": [
+        "name",
+        "score",
+        "passed"
+      ],
+      "title": "CheckpointScore",
+      "type": "object"
+    },
+    "ClubCategory": {
+      "description": "Club family used to key benchmark rows (ADR-010 \u00a73).\n\n``ALL`` is the club-independent fallback \u2014 tempo and posture key on it.",
+      "enum": [
+        "driver",
+        "wood",
+        "hybrid",
+        "long_iron",
+        "mid_iron",
+        "short_iron",
+        "wedge",
+        "putter",
+        "all"
+      ],
+      "title": "ClubCategory",
+      "type": "string"
+    },
+    "Detection": {
+      "description": "A single detected object in a frame.",
+      "properties": {
+        "bbox": {
+          "$ref": "#/$defs/BoundingBox"
+        },
+        "confidence": {
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "object_class": {
+          "$ref": "#/$defs/ObjectClass"
+        },
+        "track_id": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Track Id"
+        }
+      },
+      "required": [
+        "object_class",
+        "bbox",
+        "confidence"
+      ],
+      "title": "Detection",
+      "type": "object"
+    },
+    "FrameDetections": {
+      "description": "All detections for one video frame.",
+      "properties": {
+        "detections": {
+          "items": {
+            "$ref": "#/$defs/Detection"
+          },
+          "title": "Detections",
+          "type": "array"
+        },
+        "frame_index": {
+          "minimum": 0,
+          "title": "Frame Index",
+          "type": "integer"
+        },
+        "timestamp_ms": {
+          "minimum": 0.0,
+          "title": "Timestamp Ms",
+          "type": "number"
+        }
+      },
+      "required": [
+        "frame_index",
+        "timestamp_ms"
+      ],
+      "title": "FrameDetections",
+      "type": "object"
+    },
+    "FrameKeypoints": {
+      "description": "All body landmarks for one video frame.",
+      "properties": {
+        "camera_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Which camera produced this frame (ADR-011). None means not recorded \u2014 the state of every file written before M7 Phase 1. Free-form by design: the value is whatever the `VideoSource` was told it is. M7 uses the same words as `storage.manifest.Role` ('face_on', 'down_the_line') by convention, not by import.",
+          "title": "Camera Id"
+        },
+        "frame_index": {
+          "minimum": 0,
+          "title": "Frame Index",
+          "type": "integer"
+        },
+        "landmarks": {
+          "description": "Exactly 33 landmarks, indexed by PoseLandmark.",
+          "items": {
+            "$ref": "#/$defs/Landmark"
+          },
+          "title": "Landmarks",
+          "type": "array"
+        },
+        "timestamp_ms": {
+          "description": "Milliseconds from start of clip.",
+          "minimum": 0.0,
+          "title": "Timestamp Ms",
+          "type": "number"
+        }
+      },
+      "required": [
+        "frame_index",
+        "timestamp_ms",
+        "landmarks"
+      ],
+      "title": "FrameKeypoints",
+      "type": "object"
+    },
+    "Landmark": {
+      "description": "A single body landmark in normalized image coordinates.\n\nx/y are normalized to [0, 1] relative to image width/height (MediaPipe convention).\nz is depth relative to the hips (roughly normalized, smaller = closer to camera).\nvisibility is MediaPipe's confidence the landmark is present and not occluded.",
+      "properties": {
+        "visibility": {
+          "default": 0.0,
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Visibility",
+          "type": "number"
+        },
+        "x": {
+          "title": "X",
+          "type": "number"
+        },
+        "y": {
+          "title": "Y",
+          "type": "number"
+        },
+        "z": {
+          "default": 0.0,
+          "title": "Z",
+          "type": "number"
+        }
+      },
+      "required": [
+        "x",
+        "y"
+      ],
+      "title": "Landmark",
+      "type": "object"
+    },
+    "Measurement": {
+      "description": "A quantity measured off one swing, carrying no claim about whether it is good.\n\nDeliberately **not** a `CheckpointScore`: no band, no `passed`, no `score`. The distinction is\nthe point. A metric earns a verdict only once a population distribution exists to judge it\nagainst (ADR-010 \u00a72 \u2014 no score beats a wrong one), and until then it is data. Making that a\n*type* rather than a convention means a measurement is structurally incapable of being rendered\nas a fault, however it travels.\n\nRecording them before they can be judged is what breaks the chicken-and-egg that kept this\npanel at three checkpoints: bands are derived from a population of measurements\n(`scripts/golfdb/derive_pose_metrics.py` -> `derive_reference.py`), so a metric that cannot be\nmeasured without a band can never acquire one. It is also why a session's swings stay worth\nre-analyzing later \u2014 the measurement is on disk even though nothing yet knows what it means.",
+      "properties": {
+        "detail": {
+          "default": "",
+          "description": "How and where it was taken \u2014 'address window -> impact window', and any sign convention. A bare number cannot be re-derived or re-normalized later; this is what makes it auditable when a band is eventually cut from it.",
+          "title": "Detail",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "source": {
+          "description": "Where it came from: 'pose:face_on', 'launch_monitor:hd_golf'.",
+          "title": "Source",
+          "type": "string"
+        },
+        "unit": {
+          "description": "'shoulder_widths' | 'degrees' | 'ratio' | 'mph' | 'yards' | 'rpm'.",
+          "title": "Unit",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "number"
+        }
+      },
+      "required": [
+        "name",
+        "value",
+        "unit",
+        "source"
+      ],
+      "title": "Measurement",
+      "type": "object"
+    },
+    "ObjectClass": {
+      "description": "The objects we train YOLOv8 to detect (ADR-005).",
+      "enum": [
+        "club_head",
+        "ball"
+      ],
+      "title": "ObjectClass",
+      "type": "string"
+    },
+    "PhaseSegment": {
+      "description": "A contiguous span of frames belonging to one swing phase.",
+      "properties": {
+        "detected": {
+          "default": true,
+          "description": "False when this boundary is an estimate rather than something found in the signal. A detector that fails should say so rather than return a plausible-looking number (ADR-013): the estimate is good enough to place a measurement window, but a consumer that *divides* by the boundary \u2014 tempo does \u2014 must drop its score instead of reporting one. Defaults True so a segment nobody flagged reads as detected.",
+          "title": "Detected",
+          "type": "boolean"
+        },
+        "end_frame": {
+          "minimum": 0,
+          "title": "End Frame",
+          "type": "integer"
+        },
+        "end_ms": {
+          "minimum": 0.0,
+          "title": "End Ms",
+          "type": "number"
+        },
+        "phase": {
+          "$ref": "#/$defs/SwingPhase"
+        },
+        "start_frame": {
+          "minimum": 0,
+          "title": "Start Frame",
+          "type": "integer"
+        },
+        "start_ms": {
+          "minimum": 0.0,
+          "title": "Start Ms",
+          "type": "number"
+        }
+      },
+      "required": [
+        "phase",
+        "start_frame",
+        "end_frame",
+        "start_ms",
+        "end_ms"
+      ],
+      "title": "PhaseSegment",
+      "type": "object"
+    },
+    "PracticeGoal": {
+      "description": "The golfer's intent for a swing (ADR-009 \u00a7Concepts).\n\nSelected at session level, overridable per shot. Defaults describe the PoC case:\nFundamentals mode, no declared shape, club-agnostic.",
+      "properties": {
+        "club": {
+          "$ref": "#/$defs/ClubCategory",
+          "default": "all"
+        },
+        "focus_checkpoint": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Focus Checkpoint"
+        },
+        "mode": {
+          "$ref": "#/$defs/PracticeMode",
+          "default": "fundamentals"
+        },
+        "target_shape": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TargetShape"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "title": "PracticeGoal",
+      "type": "object"
+    },
+    "PracticeMode": {
+      "description": "What the golfer is practicing \u2014 selects a scoring policy (ADR-009).\n\nOnly ``FUNDAMENTALS`` is implemented in the PoC; the rest are named seams that\n``scoring.policy_for`` rejects with ``NotImplementedError`` until full M4.",
+      "enum": [
+        "fundamentals",
+        "shot_shaping",
+        "performance",
+        "drill"
+      ],
+      "title": "PracticeMode",
+      "type": "string"
+    },
+    "ShotData": {
+      "description": "Metrics for a single shot. Units in field descriptions (ADR-004).",
+      "properties": {
+        "apex_height": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "yards",
+          "title": "Apex Height"
+        },
+        "ball_speed": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "mph",
+          "title": "Ball Speed"
+        },
+        "bounce_and_roll": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "yards, total - carry",
+          "title": "Bounce And Roll"
+        },
+        "carry_distance": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "yards",
+          "title": "Carry Distance"
+        },
+        "club_face_angle": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "degrees, + = open",
+          "title": "Club Face Angle"
+        },
+        "club_head_speed": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "mph",
+          "title": "Club Head Speed"
+        },
+        "club_path": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "degrees, + = in-to-out",
+          "title": "Club Path"
+        },
+        "impact_position": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "e.g. 'CENTER', 'TOE'",
+          "title": "Impact Position"
+        },
+        "launch_angle": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "degrees, vertical",
+          "title": "Launch Angle"
+        },
+        "launch_direction": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "degrees, + = right",
+          "title": "Launch Direction"
+        },
+        "provenance": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ShotProvenance"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "session_id": {
+          "title": "Session Id",
+          "type": "string"
+        },
+        "shot_id": {
+          "title": "Shot Id",
+          "type": "string"
+        },
+        "shot_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "e.g. 'DRAW', 'SLIGHT FADE'",
+          "title": "Shot Type"
+        },
+        "smash_factor": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "ball_speed / club_head_speed",
+          "title": "Smash Factor"
+        },
+        "source": {
+          "$ref": "#/$defs/ShotSource",
+          "default": "mock"
+        },
+        "spin_axis": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "degrees, + = fade",
+          "title": "Spin Axis"
+        },
+        "spin_rate": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "rpm",
+          "title": "Spin Rate"
+        },
+        "timestamp": {
+          "format": "date-time",
+          "title": "Timestamp",
+          "type": "string"
+        },
+        "total_distance": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "yards",
+          "title": "Total Distance"
+        }
+      },
+      "required": [
+        "shot_id",
+        "session_id",
+        "timestamp"
+      ],
+      "title": "ShotData",
+      "type": "object"
+    },
+    "ShotProvenance": {
+      "description": "How a shot was obtained, for sources that *infer* rather than *receive* metrics.\n\nA shot read off a photograph is a measurement of a measurement: OCR can drop a digit\nand produce a number that is wrong but perfectly plausible. Carrying the confidence,\nthe physics-check warnings, and the raw on-screen text alongside the metrics is what\nmakes a bad parse auditable after the fact instead of silently poisoning a session's\nscores (ADR-014). Sources that receive metrics directly (R10, mock) leave this `None`.",
+      "properties": {
+        "device": {
+          "description": "Device profile that parsed this, e.g. 'hd_golf'.",
+          "title": "Device",
+          "type": "string"
+        },
+        "image_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Where the image was read from.",
+          "title": "Image Path"
+        },
+        "image_sha256": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Content hash of the source image.",
+          "title": "Image Sha256"
+        },
+        "needs_review": {
+          "default": false,
+          "description": "True when confidence fell below threshold or a physics check failed.",
+          "title": "Needs Review",
+          "type": "boolean"
+        },
+        "parse_confidence": {
+          "description": "0-1; 1 = fully trusted.",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Parse Confidence",
+          "type": "number"
+        },
+        "raw_fields": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "On-screen label -> raw recognized text, exactly as read.",
+          "title": "Raw Fields",
+          "type": "object"
+        },
+        "warnings": {
+          "description": "Human-readable reasons this parse is suspect.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "device",
+        "parse_confidence"
+      ],
+      "title": "ShotProvenance",
+      "type": "object"
+    },
+    "ShotSource": {
+      "description": "Where a ShotData record came from \u2014 for provenance and debugging.",
+      "enum": [
+        "mock",
+        "r10",
+        "import",
+        "screen"
+      ],
+      "title": "ShotSource",
+      "type": "string"
+    },
+    "SwingPhase": {
+      "description": "The six segments of a golf swing (ROADMAP M4).",
+      "enum": [
+        "address",
+        "backswing",
+        "transition",
+        "downswing",
+        "impact",
+        "follow_through"
+      ],
+      "title": "SwingPhase",
+      "type": "string"
+    },
+    "TargetShape": {
+      "description": "Intended ball flight \u2014 parameterizes outcome ranges in full M4.",
+      "enum": [
+        "straight",
+        "draw",
+        "fade"
+      ],
+      "title": "TargetShape",
+      "type": "string"
+    },
+    "UnscoredCheckpoint": {
+      "description": "One checkpoint that was attempted and produced no score, with the reason in both forms.",
+      "properties": {
+        "detail": {
+          "default": "",
+          "description": "Which window or landmark group, in the words of the code that failed - 'no confident ear frames in the impact window'. The reason is what a consumer branches on; this is the part a human needs to tell two clips apart.",
+          "title": "Detail",
+          "type": "string"
+        },
+        "name": {
+          "description": "The registered checkpoint name, taken from `CHECKPOINT_REGISTRY` rather than retyped, so it cannot disagree with the `CheckpointScore` the same spec would have produced.",
+          "title": "Name",
+          "type": "string"
+        },
+        "reason": {
+          "$ref": "#/$defs/UnscoredReason"
+        }
+      },
+      "required": [
+        "name",
+        "reason"
+      ],
+      "title": "UnscoredCheckpoint",
+      "type": "object"
+    },
+    "UnscoredReason": {
+      "description": "Every way a checkpoint can fail to produce a score. Closed, and reported rather than guessed.\n\nThe members are not a taxonomy designed top-down \u2014 each one is a condition that already existed\nas a `return None`, given a name. Adding a member means a new failure condition was written; it\ndoes not mean this list was incomplete.",
+      "enum": [
+        "phase_not_segmented",
+        "boundary_estimated",
+        "timing_degenerate",
+        "landmarks_unconfident",
+        "too_few_frames",
+        "scale_unavailable",
+        "no_band",
+        "no_handedness",
+        "cross_view_contradicted",
+        "carry_unreachable",
+        "no_club_loft",
+        "spin_not_recoverable",
+        "spin_axis_unresolved",
+        "no_launch_conditions",
+        "unrecorded"
+      ],
+      "title": "UnscoredReason",
+      "type": "string"
+    }
+  },
+  "description": "The complete analyzed result for one swing.",
+  "properties": {
+    "checkpoint_scores": {
+      "items": {
+        "$ref": "#/$defs/CheckpointScore"
+      },
+      "title": "Checkpoint Scores",
+      "type": "array"
+    },
+    "detections": {
+      "items": {
+        "$ref": "#/$defs/FrameDetections"
+      },
+      "title": "Detections",
+      "type": "array"
+    },
+    "intent": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/PracticeGoal"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "keypoints": {
+      "items": {
+        "$ref": "#/$defs/FrameKeypoints"
+      },
+      "title": "Keypoints",
+      "type": "array"
+    },
+    "measurements": {
+      "description": "Quantities measured off this swing that are **not** judged \u2014 no band, no score, no pass/fail. A consumer must never render these as verdicts or infer one from them; they exist so bands can be derived from a real population later, and so a swing captured today is still worth re-reading once they are. Independent of `checkpoint_scores`: a metric can be measured here and scored there, or measured here and scored nowhere.",
+      "items": {
+        "$ref": "#/$defs/Measurement"
+      },
+      "title": "Measurements",
+      "type": "array"
+    },
+    "mechanics_score": {
+      "anyOf": [
+        {
+          "maximum": 100.0,
+          "minimum": 0.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Mechanics Score"
+    },
+    "outcome_score": {
+      "anyOf": [
+        {
+          "maximum": 100.0,
+          "minimum": 0.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Outcome Score"
+    },
+    "overall_score": {
+      "description": "0-100 policy-weighted blend.",
+      "maximum": 100.0,
+      "minimum": 0.0,
+      "title": "Overall Score",
+      "type": "number"
+    },
+    "phases": {
+      "items": {
+        "$ref": "#/$defs/PhaseSegment"
+      },
+      "title": "Phases",
+      "type": "array"
+    },
+    "session_id": {
+      "title": "Session Id",
+      "type": "string"
+    },
+    "shot": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ShotData"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "swing_id": {
+      "title": "Swing Id",
+      "type": "string"
+    },
+    "unscored": {
+      "description": "Checkpoints that were attempted but could not be scored, each with the reason \u2014 no benchmark band, unusable landmarks, a boundary that was estimated rather than detected (ADR-013), or no golfer attributed. Dropping the score is correct (ADR-010 \u00a72: no score beats a wrong one), but dropping it *silently* is not: `overall_score` is a mean over whatever survived, so without this list a two-checkpoint swing and a three-checkpoint swing are indistinguishable. The reason decides what to tell the golfer, which is why it is carried rather than inferred downstream \u2014 see `contracts.unscored`.",
+      "items": {
+        "$ref": "#/$defs/UnscoredCheckpoint"
+      },
+      "title": "Unscored",
+      "type": "array"
+    }
+  },
+  "required": [
+    "swing_id",
+    "session_id",
+    "overall_score"
+  ],
+  "title": "SwingResult",
+  "type": "object"
+}

@@ -1,0 +1,171 @@
+{
+  "$defs": {
+    "AudioClipMetadata": {
+      "description": "What audio was decoded, recorded alongside the strikes found in it.\n\nEvery field is optional, mirroring `keypoints.ClipMetadata`: these are facts about a decode,\nand a strike list can legitimately exist without them (a synthetic fixture, a clip long gone).\nNone means unknown, never zero.",
+      "properties": {
+        "duration_s": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Length of the waveform actually decoded, which is the honest number: it includes the edit list's effect, where the container's own duration field does not (\u00a7E2).",
+          "title": "Duration S"
+        },
+        "fps": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The frame rate every `AudioStrike.frame` on this file was derived under, or None when no frame was derivable. Recorded for `stream_index`'s reason rather than to duplicate `keypoints.ClipMetadata.fps`: a stored frame index that cannot be re-derived is a number nobody can check.",
+          "title": "Fps"
+        },
+        "sample_rate": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Samples per second of the waveform the strikes index into.",
+          "title": "Sample Rate"
+        },
+        "source_sha256": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Content hash of the source video, tying these strikes back to their clip. Same cache key `keypoints.ClipMetadata` uses, so a re-uploaded clip invalidates both together.",
+          "title": "Source Sha256"
+        },
+        "stream_index": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Which audio stream was decoded. Not decoration: face-on clips here carry two `soun` tracks with different edit offsets (\u00a7E2), so a sample index only means something alongside the stream it counts into.",
+          "title": "Stream Index"
+        },
+        "video_start_s": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Presentation time of the first frame the video decoder hands back, subtracted from every sample time before it becomes a `frame`. Almost always 0.0; it is not on four down-the-line clips in this corpus, whose containers carry a leading empty edit that the audio decode honours and the frame counter does not (`audio/ffmpeg.py`'s `video_start_seconds`, measured at 0.105-0.125 s \u2014 6.3 to 7.5 frames at 60 fps). Recorded rather than re-measured because it is the difference between two clocks and a stored frame index is unreadable without it. None means nobody measured it, which is not the same as a measured zero.",
+          "title": "Video Start S"
+        }
+      },
+      "title": "AudioClipMetadata",
+      "type": "object"
+    },
+    "AudioStrike": {
+      "description": "One transient the detector found, ranked among its siblings by `prominence`.\n\nA strike is a *candidate*, not a verdict. The bay produces four transients per shot \u2014 club-ball\ncontact, the club hitting the mat, the ball hitting the impact screen 85-145 ms later, and the\nsimulator's own ball-flight audio \u2014 and the screen strike is the louder of the first two pair on\nevery clip measured (docs/M11_ACOUSTIC_SYNC.md \u00a7E5). So `detect_strikes` returns all of them and\nlets the caller see how many there were, the same choice `analysis.phases.candidate_downswings`\nmade for the same reason: discovering by eye that the wrong peak was taken is the failure this\nshape exists to prevent.",
+      "properties": {
+        "confidence": {
+          "description": "How sure the detector is this is a real onset, normalized to [0, 1].",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "frame": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The video frame this strike lands on, or None when it could not be worked out. Derived, not measured: the detector sees a waveform and a sample rate and never the video, so this is filled in by the caller that holds the clip's fps *and* its `video_start_s`. None means unknown \u2014 a strike whose frame could not be worked out is not frame 0 (ADR-010 \u00a72) \u2014 and it has two causes: nobody knew the fps, or the strike sounded before the first frame the decoder hands back, which is a real possibility on a clip whose video starts late (see `video_start_s`) and is honestly no frame at all rather than frame 0.",
+          "title": "Frame"
+        },
+        "prominence": {
+          "description": "How far this onset stands above its local background, in the detector's own units (unbounded, and not comparable across detectors). Ranks candidates within one clip; `confidence` is the number to compare across clips.",
+          "minimum": 0.0,
+          "title": "Prominence",
+          "type": "number"
+        },
+        "sample": {
+          "description": "Offset into the decoded mono waveform, in samples, after the container's edit list has been applied. This is the measurement; everything else here is derived from it.",
+          "minimum": 0,
+          "title": "Sample",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "sample",
+        "confidence",
+        "prominence"
+      ],
+      "title": "AudioStrike",
+      "type": "object"
+    }
+  },
+  "description": "The on-disk shape of a `{role}.audio.json`: the strikes plus what decode produced them.\n\nRead and written through `storage.audio_io`, not by parsing this model directly, so there is\none place that knows the file layout.\n\n**An empty `strikes` list is a result, not a gap.** The file exists only once detection has run,\nso empty means the detector ran and found no transient \u2014 which is exactly what a rehearsal swing\nsounds like, and is the signal M11 P5 reads. \"Never analysed\" is the absence of the file.",
+  "properties": {
+    "clip": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/AudioClipMetadata"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "detector_version": {
+      "default": 0,
+      "description": "Which generation of the detector found these (`AUDIO_DETECTOR_VERSION` above). **Defaults to 0, not to the current version**, for the reason `SwingBundleResult.analysis_version` does: a file written before this field existed must read as older-than-current, because a default of 'current' would make every legacy artifact claim to be up to date and there is no way back from that. `api.pipeline.audio_for` re-detects anything that does not match.",
+      "title": "Detector Version",
+      "type": "integer"
+    },
+    "strikes": {
+      "items": {
+        "$ref": "#/$defs/AudioStrike"
+      },
+      "title": "Strikes",
+      "type": "array"
+    }
+  },
+  "required": [
+    "strikes"
+  ],
+  "title": "AudioFile",
+  "type": "object"
+}

@@ -1,0 +1,319 @@
+{
+  "$defs": {
+    "ShotProvenance": {
+      "description": "How a shot was obtained, for sources that *infer* rather than *receive* metrics.\n\nA shot read off a photograph is a measurement of a measurement: OCR can drop a digit\nand produce a number that is wrong but perfectly plausible. Carrying the confidence,\nthe physics-check warnings, and the raw on-screen text alongside the metrics is what\nmakes a bad parse auditable after the fact instead of silently poisoning a session's\nscores (ADR-014). Sources that receive metrics directly (R10, mock) leave this `None`.",
+      "properties": {
+        "device": {
+          "description": "Device profile that parsed this, e.g. 'hd_golf'.",
+          "title": "Device",
+          "type": "string"
+        },
+        "image_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Where the image was read from.",
+          "title": "Image Path"
+        },
+        "image_sha256": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Content hash of the source image.",
+          "title": "Image Sha256"
+        },
+        "needs_review": {
+          "default": false,
+          "description": "True when confidence fell below threshold or a physics check failed.",
+          "title": "Needs Review",
+          "type": "boolean"
+        },
+        "parse_confidence": {
+          "description": "0-1; 1 = fully trusted.",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Parse Confidence",
+          "type": "number"
+        },
+        "raw_fields": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "On-screen label -> raw recognized text, exactly as read.",
+          "title": "Raw Fields",
+          "type": "object"
+        },
+        "warnings": {
+          "description": "Human-readable reasons this parse is suspect.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "device",
+        "parse_confidence"
+      ],
+      "title": "ShotProvenance",
+      "type": "object"
+    },
+    "ShotSource": {
+      "description": "Where a ShotData record came from \u2014 for provenance and debugging.",
+      "enum": [
+        "mock",
+        "r10",
+        "import",
+        "screen"
+      ],
+      "title": "ShotSource",
+      "type": "string"
+    }
+  },
+  "description": "Metrics for a single shot. Units in field descriptions (ADR-004).",
+  "properties": {
+    "apex_height": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "yards",
+      "title": "Apex Height"
+    },
+    "ball_speed": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "mph",
+      "title": "Ball Speed"
+    },
+    "bounce_and_roll": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "yards, total - carry",
+      "title": "Bounce And Roll"
+    },
+    "carry_distance": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "yards",
+      "title": "Carry Distance"
+    },
+    "club_face_angle": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "degrees, + = open",
+      "title": "Club Face Angle"
+    },
+    "club_head_speed": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "mph",
+      "title": "Club Head Speed"
+    },
+    "club_path": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "degrees, + = in-to-out",
+      "title": "Club Path"
+    },
+    "impact_position": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "e.g. 'CENTER', 'TOE'",
+      "title": "Impact Position"
+    },
+    "launch_angle": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "degrees, vertical",
+      "title": "Launch Angle"
+    },
+    "launch_direction": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "degrees, + = right",
+      "title": "Launch Direction"
+    },
+    "provenance": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ShotProvenance"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "session_id": {
+      "title": "Session Id",
+      "type": "string"
+    },
+    "shot_id": {
+      "title": "Shot Id",
+      "type": "string"
+    },
+    "shot_type": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "e.g. 'DRAW', 'SLIGHT FADE'",
+      "title": "Shot Type"
+    },
+    "smash_factor": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "ball_speed / club_head_speed",
+      "title": "Smash Factor"
+    },
+    "source": {
+      "$ref": "#/$defs/ShotSource",
+      "default": "mock"
+    },
+    "spin_axis": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "degrees, + = fade",
+      "title": "Spin Axis"
+    },
+    "spin_rate": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "rpm",
+      "title": "Spin Rate"
+    },
+    "timestamp": {
+      "format": "date-time",
+      "title": "Timestamp",
+      "type": "string"
+    },
+    "total_distance": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "yards",
+      "title": "Total Distance"
+    }
+  },
+  "required": [
+    "shot_id",
+    "session_id",
+    "timestamp"
+  ],
+  "title": "ShotData",
+  "type": "object"
+}

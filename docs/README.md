@@ -1,8 +1,8 @@
 # Documentation map
 
-67 markdown documents: 55 in `docs/` — 20 here at the top level (including this map), 31 ADRs,
-3 archived, 1 in `proposals/` — plus 12 outside it (the four at the repo root, and one each in
-`data/` and `frontend/`, six in `spikes/`). This page says which one to read, and — just as
+69 markdown documents: 56 in `docs/` — 21 here at the top level (including this map), 31 ADRs,
+3 archived, 1 in `proposals/` — plus 13 outside it (the four at the repo root, and one each in
+`data/`, `frontend/` and `spec/`, six in `spikes/`). This page says which one to read, and — just as
 importantly — which ones are records of the past rather than descriptions of the present.
 
 *(The breakdown is spelled out so the count can be checked rather than trusted — `git ls-files
@@ -64,6 +64,7 @@ instrument).
 | [PROJECT_CHARTER.md](PROJECT_CHARTER.md) | FOUNDING | Why does this project exist, what's in and out of scope, what are the risks? Plus how later ADRs sharpened it. |
 | [CODE_STANDARDS.md](CODE_STANDARDS.md) | AS-BUILT | What rules is code held to here, and — just as importantly — which deliberate choices are *not* violations? Every rule cites a repo precedent or states plainly that it has none yet. |
 | [REFACTOR_LEDGER.md](REFACTOR_LEDGER.md) | AS-BUILT | Has this refactor already been considered and declined? Append-only, one line per decision. Read before proposing a structural change, so the same idea isn't re-litigated. |
+| [CONFORMANCE.md](CONFORMANCE.md) | AS-BUILT | How is a second implementation of the swing loop checked against this one? The exported schemas, the golden vectors and what they do and do not cover, the tolerance rules (and the two Rust-specific edges — banker's rounding, and `%g` reaching the sentences a golfer reads), and the tier-by-tier inventory of which modules port and which stay lab. **Read before M22.** The artifacts are [`../spec/`](../spec/README.md); the *why* is [ADR-030](decisions/030-app-platform-rust-core-python-sidecar.md) §8. |
 | [M4_ADDRESS_DETECTION.md](M4_ADDRESS_DETECTION.md) | AS-BUILT | How is the address instant found, why is it the weak one (7 frames vs 2 and 1), and why is tempo *dropped* rather than guessed on 14% of clips? |
 | [M5_COACHING_FEEDBACK.md](M5_COACHING_FEEDBACK.md) | AS-BUILT | How are tips ranked and why does ranking need two different signals? Why was the panel held at three checkpoints for so long, and what unblocked it? |
 | [M4_FUNDAMENTALS_PANEL.md](M4_FUNDAMENTALS_PANEL.md) | REFERENCE | What can face-on 2D pose measure, and what is deferred to a second view / detection / launch monitor? *(Its Findings numbers are superseded.)* |

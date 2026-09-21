@@ -152,6 +152,18 @@ python scripts/simulate_flight.py --shot SHOT-ID [--points N] [--altitude M]
 #   every carry prints with its clamp and with the gate's inverted ordering beside it
 #   exit 0 a ball flew · 2 none did (a launch angle at the horizontal rolls; roll is out of scope)
 #   over stored shots a refusal is a finding, so --shots exits 0; only an unknown --shot id is 2
+
+# The core as an oracle: what a second implementation is diffed against (base install — M19)
+python scripts/conformance.py check [--id VECTOR-ID ...] [--max-diffs N] [-v]
+python scripts/conformance.py run < vector.json    # vector in, serialized result out
+python scripts/conformance.py list
+python scripts/conformance.py regenerate [--schemas-only]
+#   check and run need `spec/` and nothing else — that is what committing the vectors buys.
+#   regenerate needs data/processed/, so it only runs on the capture machine, and it refuses a
+#   swing whose stored analysis is behind ANALYSIS_VERSION (run reanalyze.py first)
+#   run is the cross-language seam: stdin to stdout, no Python in the loop but the reference
+#   exit 0 every vector conforms · 1 one did not, or was recorded by an older engine · 2 no such
+#   vector. Rules and coverage: docs/CONFORMANCE.md
 ```
 
 One long-running service: the FastAPI upload server (`scripts/run_server.py`, M7 Phase 5),
@@ -819,6 +831,12 @@ is trustworthy without hardware.
 - **Rejected alternatives stay runnable** — `scripts/golfdb/tune_*.py` keep every losing
   candidate rule as a named row, including deliberate no-pose baselines that any future
   candidate must beat.
+- **A specification a second implementation can be checked against** — M19's `spec/` holds
+  schemas exported from `contracts/` and golden vectors pairing an input with the output this
+  engine produces, and `python scripts/conformance.py check` diffs any implementation against
+  Python in one command. It is the only assertion here that survives the code being rewritten in
+  another language, which is why ADR-030 §8 gates M22 on it rather than on review. The rules and
+  what they deliberately do not cover are [CONFORMANCE.md](CONFORMANCE.md).
 - **Not measured:** end-to-end wall-clock latency. The target is <15s swing-to-feedback
   (charter), but nothing has been benchmarked, and there is no UI to measure to. Any timing
   table you find in [FLOW.md](FLOW.md) is an estimate, not a measurement.
