@@ -74,6 +74,7 @@ of its five sections costs a fraction of reading the file.
 | What happened last session? | `WORKLOG.md` — **the top entry, and only the top entry** |
 | Has this been tried and rejected? | `docs/M4_POSE_BAKEOFF.md` — grep it |
 | Why is there a trained model, and where? | ADR-022, then `analysis/benchmarks/joint.py` |
+| What is the app written in, and why? | ADR-030 — Rust core, MediaPipe pose in a Python sidecar, Flutter shell. **Nothing below is built yet**; this repo is still the Python pipeline it describes |
 | What rules is code held to? | `docs/CODE_STANDARDS.md` — each rule with its precedent *and* a known non-violation |
 | Has this refactor already been declined? | `docs/REFACTOR_LEDGER.md` — read it before proposing a structural change |
 

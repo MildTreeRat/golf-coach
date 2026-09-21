@@ -216,3 +216,34 @@ Raising `MIN_VISIBILITY` for heavy was considered and declined — the floor gat
 the analysis core, not just this one, so admitting heavy's given-up frames would trade a visible
 failure for a silent one. One clip and five landmarks is also all this measures; it is the clip
 that failed, not a sample.
+
+## Addendum (2026-09-21, M18): pose stays here, and "here" becomes a sidecar process
+
+[ADR-030](030-app-platform-rust-core-python-sidecar.md) moves the backend to Rust. **This ADR's
+decision is unchanged in every particular** — MediaPipe, the Tasks API, `RunningMode.VIDEO`, the
+`.task` bundles, and `settings.pose_model_variant` with the bay running `heavy`. What changes is
+only the *process* that calls them: instead of being imported by the pipeline, `pose/estimator.py`
+is driven by a long-lived pool of Python workers that a Rust core sends jobs to.
+
+**This addendum exists to record why Rust does not get pose**, because that is the decision the
+port could most easily have got wrong. This ADR's 2026-08-02 addendum already measured the cost of
+a different pose pipeline: RTMPose through `onnxruntime` lost by **24.7pp** on event recovery and
+ran 1.5x noisier at the wrist, 2.4x at the shoulder and 4.3x at the hip. `ranges.json` is cut from
+*this* estimator's landmark output, so a Rust reimplementation through ONNX would put every band
+back in question to save shipping an interpreter. ADR-030 judged that trade the wrong way round.
+
+Two mechanics from this ADR become constraints on the pool, and both are consequences of
+`RunningMode.VIDEO`'s cross-frame tracking:
+
+- **A worker takes one clip start to finish**, and gets a fresh `PoseLandmarker` between jobs.
+  Tracking state and the strictly-increasing-timestamp rule in `pose/estimator.py` mean two clips
+  cannot be interleaved on one instance. It is the *process* that stays warm — the interpreter and
+  the ~30 MB heavy bundle — not the landmarker.
+- **The reply is a `KeypointsFile` as `contracts/keypoints.py` already defines it**, `pose_estimator`
+  stamp included. That makes the sidecar's output byte-comparable against the 30 keypoint files
+  already on disk, which is how the new stack is verified rather than trusted.
+
+The ~24 fps this ADR measured for `heavy` is the throughput the whole live design is built around:
+a 10 s 60 fps clip is roughly 25 s of pose, a two-view swing roughly 50 s. The `lite` variant's
+~4x speed at no significant cost on event recovery is also ADR-030's answer for a slow laptop, in
+place of the cloud worker it declined to build.

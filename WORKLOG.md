@@ -5,6 +5,98 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-09-21 — M18 done: the platform decided, and the premise under it replaced
+
+**Duration**: one planning sitting, same day as the entry below. **Docs only — no source, no
+tests.** M18 is ✅ done.
+
+**What happened.** The entry below planned M18–M27 around *"two iPhones must be enough on their
+own"* — one recording, the other recording and analysing. The user replaced that premise: **the
+machine is a laptop**, the phone is a camera, and cloud analysis for weak hardware is not being
+built. M18 was five spikes sized against the old premise; the questions they existed to answer
+stopped being open, so the spikes were dropped and **the ADR became the milestone**.
+
+**Decided, in [ADR-030](docs/decisions/030-app-platform-rust-core-python-sidecar.md):** the backend
+is **Rust**; **pose stays MediaPipe-in-Python**, driven by a long-lived bundled **worker pool** that
+Rust sends jobs to (a clip path and a frame range, never pixels); Python also keeps OCR, LLM
+coaching and the whole lab; the shell is **Flutter** over the Rust core via `flutter_rust_bridge`,
+with **no web UI**; the **phone app comes after the laptop app works** and carries capture and
+strike detection but never pose; capture sources are pluggable with **file upload first and
+first-class**; **cloud is closed, not deferred** (M27).
+
+**The finding worth keeping.** The load-bearing decision was not the language or the shell — it was
+*where pose runs*. `ranges.json` is cut from MediaPipe's landmark output, and ADR-002's 2026-08-02
+addendum had already measured what a rival pose pipeline costs: RTMPose lost by **24.7pp** on event
+recovery and ran 4.3x noisier at the hip. Keeping pose in Python is what lets everything else be
+rewritten without putting the scoring model back in question. Every other choice here is
+reversible; that one would not have been. The corollary is that **M19 is promoted from a useful
+track to M22's prerequisite** — two cores that disagree silently is the failure mode this plan has
+to survive, and review does not catch it.
+
+**Written:** ADR-030; addenda on ADR-002 (*pose stays here, and "here" becomes a sidecar process*)
+and ADR-016 (*a phone app, after all* — one clause superseded, the no-cloud and no-open-port
+clauses reinforced); **ADR-001 marked superseded**, the first in this repo; the charter's
+`"Mobile app"` line moved *into* scope in §0 with §3 left as written; the whole M18–M27 group and
+the status table rewritten; one `CLAUDE.md` routing row.
+
+**Not done, on purpose.** No spike report doc — there are no measurements to hold, and a new living
+doc would pull in a tier banner and a map row for prose the ADR already carries. No ADR for the
+trigger or the capture edge: M20 and M21 have evidence to gather first. No ADR-011 addendum —
+camera topology is genuinely unaffected. No source, no `Cargo.toml`, no `ANALYSIS_VERSION` bump.
+
+**Where to start next: M19, M20 or M21's file source** — all three are startable now, all three are
+Python or spec work, and none needs Rust or hardware. **M19 first if you want M22 unblocked.**
+
+**Carried open questions:** whether a USB webcam's microphone hears the strike; how shot data
+arrives in a live flow (today it is a hand-taken photo of the simulator screen); where an LLM key
+lives in a shipped app (ADR-019 does not put one in something distributed); practice swings with no
+strike; what continuous background recording costs an iPhone thermally; and `config.py::REPO_ROOT`
+assuming a source checkout, which dies at packaging.
+
+---
+
+## 2026-09-21 — App transition planned: M18–M27 written into the roadmap
+
+> **Superseded the same day by the entry above.** Its two-iPhone premise, its Dart-versus-Rust
+> spike and its "Flutter/MediaPipe-Tasks provisional" stances were all replaced by ADR-030. Kept
+> as the record of how the group was first shaped.
+
+**Duration**: one planning sitting. **Docs only — no source, no tests, no ADR changed.**
+
+The ask: an installed app (Windows, Linux, iOS, Android) where the golfer connects two cameras,
+verifies and positions them, starts a session, and the app records continuously, cuts ±5 s around
+each ball strike, analyses each pair in the background and updates the profile. **Two iPhones must
+be enough on their own — one records, the other is the main that also analyses.** No web UI.
+`ROADMAP.md` now has a group, *The app — from an offline pipeline to a live product (M18–M27)*,
+ahead of *Next*; read that group's intro and then only the milestone you are opening. (M14–M17 were
+already taken, hence M18.)
+
+**Decided with the user:** first camera types are USB/UVC webcams and a phone as a camera over
+Wi-Fi (Bluetooth cannot carry the video); a phone can be the main machine, so analysis has to run
+on iOS and Android; no web UI.
+
+**Provisional, for M18 to settle by spike** (the user asked for a recommendation and has not
+decided): Flutter over .NET MAUI (MAUI has no official Linux); MediaPipe's native Tasks SDKs on
+phones so the bands' calibration carries over — there is no Rust MediaPipe, and a different pose
+pipeline means re-fitting; Python stays as the lab, the reference implementation and the oracle
+because it cannot be the iPhone runtime. Dart versus Rust for the ported core is undecided.
+
+**Where to start — three fresh chats, in parallel:** **M18** (spikes and ADR-030), **M19** (the
+Python core as a specification: JSON Schemas, golden vectors, a conformance runner) and **M20** (the
+live trigger, replayed over the stored clips). M19 and M20 need no language decision. Everything
+from M21 on is blocked on them and gets rewritten by M18's ADR.
+
+**Carried open questions:** Mac/Xcode access for iOS builds; which phone models; whether a USB
+webcam's microphone hears the strike; how shot data arrives in a live flow; where an LLM key lives
+in a shipped app; practice swings with no strike; one golfer or several; iPhone thermals under
+record-plus-pose.
+
+**Not touched on purpose:** no new document and no ADR-030 — `tests/test_docs_truth.py` pins the
+document count, tiers and addenda counts, and the ADR is M18's deliverable once it has evidence. The
+charter still lists a mobile app and multi-user as out of scope; M18 P5 owes that addendum.
+
+---
+
 ## 2026-09-10 — M17 P8: docs reconciled, M17 closed 9/9
 
 **Duration**: one sitting. **M17 is 9/9 — done.** Docs only, the milestone's last phase.

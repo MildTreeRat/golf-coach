@@ -1,7 +1,21 @@
 # ADR-001: Primary Language — Python
 
 ## Status
-Accepted
+**Superseded by [ADR-030](030-app-platform-rust-core-python-sidecar.md)** (2026-09-21) on the
+primary-language question. Accepted 2026-03-16 and correct for what it judged: a desk pipeline,
+where development speed dominated and nothing had to be installed by anyone. ADR-030 chooses Rust
+for a *shipped app* that records two camera streams while analysing in the background — a
+different subject, not a reversal.
+
+**What survives is Option A's actual finding — the ML and CV ecosystem is Python's** — and that is
+why ADR-030 keeps pose in MediaPipe-Python rather than porting it. Python remains the lab: fitting
+under the `research` extra ([ADR-022](022-learned-artifacts-as-committed-data.md)), the corpus
+tools, the conformance oracle, LLM coaching and OCR. What does not survive is "all backend".
+
+The Decision's other clause — *"JavaScript/React for the web UI only"* — never happened. What got
+built is five hand-written HTML pages with no framework and no build step, which
+[REFACTOR_LEDGER.md](../REFACTOR_LEDGER.md) has twice declined to revisit. ADR-030 replaces that
+clause with Flutter rather than fulfilling it.
 
 ## Date
 2026-03-16

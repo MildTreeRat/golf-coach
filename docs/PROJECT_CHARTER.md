@@ -11,8 +11,11 @@ Home Lab AI Golf Swing Trainer
 2026-03-16
 
 ## Last Updated
-2026-08-05 — reviewed, **purpose / goals / scope unchanged since 2026-03-16**. Only the
-"How the charter has been refined" section below is new; everything else is the original text.
+2026-09-21 — **scope has moved for the first time**: "Mobile app" is no longer out of scope
+([ADR-030](decisions/030-app-platform-rust-core-python-sidecar.md)). Purpose and goals are still
+unchanged since 2026-03-16. Everything outside "How the charter has been refined" below is still
+the original text — §3's out-of-scope list included, because this charter records what changed
+rather than rewriting what it said.
 
 ---
 
@@ -36,7 +39,7 @@ success criteria in §4 read as pre-decision as a result:
   zero-setup hand-held two-phone tier that trades 3D away for portability (M7). The second was
   not foreseen here.
 
-Two out-of-scope lines worth re-reading in light of what happened:
+Three out-of-scope lines worth re-reading in light of what happened:
 
 - **"Real-time 3D modeling / digital twin"** stays out of scope, and ADR-011's addendum explains
   why it is genuinely unreachable for hand-held capture rather than merely deferred.
@@ -44,6 +47,14 @@ Two out-of-scope lines worth re-reading in light of what happened:
   still is — [ADR-014](decisions/014-screen-capture-shot-ingestion.md) reads the HD Golf
   simulator's `SHOT DATA` screen *optically*, precisely **because** there is no integration and
   no data export. Photographing a screen is the opposite of integrating with it.
+- **"Mobile app" has moved *into* scope** — the first out-of-scope line to do so, on 2026-09-21 by
+  [ADR-030](decisions/030-app-platform-rust-core-python-sidecar.md). §3's line is left as written
+  because it records a real decision correctly made at the time; this bullet is what changed. Note
+  what moved and what did not: the phone becomes a **camera** — recording and hearing the ball
+  strike — while pose and analysis stay on a laptop, so the heading's hedge, *"(for now)"*, turns
+  out to have been the operative word. **"Multi-user support" is unaffected and stays out of
+  scope**: the corpus, the profile and the bag are one golfer's, and nothing in ADR-030 needs them
+  to be otherwise.
 
 The risk register in §6 is unchanged and still current — the club-head detectability risk is
 live and unretired, since the M1.5 spike that would settle it has not been run.

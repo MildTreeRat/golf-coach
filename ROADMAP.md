@@ -1,6 +1,6 @@
 # Roadmap: AI Golf Swing Trainer
 
-## Last Updated: 2026-09-10
+## Last Updated: 2026-09-21
 
 Grouped by **state**, not by number, because the numbers no longer run in order: the pose-only
 slices (M4-PoC, M4-PoC+, M4-REF, M5-FB) delivered the mechanics half of M4 and the ranking half
@@ -34,7 +34,17 @@ wording; only the grouping and the M4 checklist have been corrected.
 | **M15** Ball flight | ✅ Done *(2026-09-06)*, 20/20 phases. **The flight is measured, stored, served, drawn as a golfer sees it, said and answerable — and every surface names the numbers nothing measured** | — (P0–P9: ADR-027, this table, one bag entry corrected, the published constants committed, the RK4 integrator built in three dimensions, **the gate passed at ±2.59%**, the altitude what-if, a CLI over all of it, **the flight solved backwards**, **P9 the loft prior and the axis**, and **P10 the corpus, read through a join**. Read the agreement with its five caveats before quoting it: both validation shots fly the whole way above the only public coefficient table; above that clamp **spin does not reach the flight at all**; the gate passes per shot while the model ranks the two shots backwards, an inversion the recorded spin axis closes only a tenth of and altitude *widens*; and the spin solve **names a number for 4 of the 11 spin-less shots and refuses 7**. P9 added a sixth about the corpus rather than the physics — run end to end the inference produced no spin at all — and **P10 corrected it**: the club is on the *swing*, not on the shot, eleven of the thirteen shots are attached to a swing that carries one, and the inference names **one spin** (`2026-08-23-4`, 2,924 rpm under a 5,103 rpm cap) and refuses ten. Two of those refusals are a 3 wood nobody has declared in the bag — the bag page, not the bay. P10 also checked P4's hand-typed gate constant against disk for the first time, and it matches to the digit. **P11 landed the six measurements** and corrected §Decision 6 twice: `flight_spin_rpm` records only a *solved* spin, because pooling it with a printed one is the hazard that section exists to prevent; and P10's planar-offline identity is not structural — it holds where the spin was solved from the carry and breaks by 0.29 yd where it was measured. **P12 registered the `model:` prefix** in `contracts/career.py::CorpusSwing.artifact_key` — not `storage/corpus.py`, where the ADR and this roadmap both had it — keying a flight on the **shot photo** it was flown from, and found P11's reason for shipping ahead of it inverted: the `swing:{ref}` fallback can only over-count on the dedupe but carries **no flagged-parse refusal**, so a flight built on a tile flagged under ADR-014 counted as a sample while the carry printed beside it did not. `population:golfdb` stays unregistered on purpose — it moves no count and would decide ADR-022's fourth addendum by accident. **P13 bumped `ANALYSIS_VERSION` 14 → 15** and re-analysed all fifteen stored swing directories onto it: every score byte-identical, five artifacts carrying a flight and ten a refused one — and the finding is that this re-run **cannot prove P12's registration**, since no two distinct swings on this corpus share a shot photo, so the photo key and the `swing:{ref}` fallback partition it identically. It also swept in four M14 measurements no stored artifact had ever carried, which is the milestone that read the band question and the version question as one question. **P14 put the flight behind `GET .../flight`**, which re-flies at read time because the artifact stores the six numbers and no path — and found the seam twelve earlier corrections had not: two of a flight's inputs live in *editable* artifacts, so the route and the stored artifact can disagree about one shot. Declare the 3 wood's loft and the page draws a flight the corpus still counts as refused, with nothing on disk able to see the difference. **P15 drew it** — a canvas, vanilla JS, two projections of one polyline rather than a camera on it — and the finding is the plan view's vertical axis: it must be stretched by the **smallest factor that makes the curve readable, not the largest that fits**, because every flight on this corpus drifts a third to a half of its own apex and the first rule drew the lateral miss *taller than the height of the shot* beside a panel captioned 1:1. On this corpus the stretch now never fires. P15 also found ADR-027's own Status block a phase behind — eleven addenda over twelve, P14 still listed as unbuilt, and the *three flights* count `docs/README.md` had already been corrected to five — because the doc-truth suite pinned the map's row and not an ADR's account of itself. **P16 put the printed numbers beside the simulated ones** — the carry as a hollow ring on the ground line, the start line as a rule across the plan view, the four `caveats_for` sentences rendered for the first time — and the finding is that **neither of the two available pairs is a check**: where the spin was solved the printed carry is the solve's own *input*, reproduced to +0.001 yd, which is the most convincing pair of numbers on the page and evidence of nothing; and the two offlines are where the ball started against where it finished, a gap that splits exactly into bend **plus** the carry error leaning on the start line rather than being "the curve". The pairing itself turned out to be a registry decision rather than a rendering one, correcting P15's framing of this phase. P16 also found `sign_disagrees` had **never been rendered to a golfer**: the one shot on disk that sets it is a refusal, so the launch-conditions block the sentence was first written into never renders for it. **P17 added the eleventh MCP tool** — `simulate_flight(session_id, swing_id)`, offered without a golfer registry because a printed spin borrows nothing from a bag — and found the surface that had been quietest: `mcp/query.py` flattens `measurements` to name -> value, so the six reached a **coaching model as bare floats** under a field description calling them measured, and a solved spin was indistinguishable from a printed one exactly where the output is sentences spoken to a golfer. `SwingView.simulated` is the split, keyed on `Measurement.source` and never on the name. P17 also found P10's join runs the **wrong way** for this question — one screen photo here is attached to three swings, and a shot-to-swing join names one survivor — and built `differs_from_recorded`, the first thing anywhere that can *see* P14's seam instead of re-flying past it. **P18 cascaded the docs**: the tool count ten → eleven, ADR-027's Status block to built with its fifteenth addendum, and this section to done. **P19 added the view a golfer means by seeing a shot** — a perspective tracer from behind the ball, down the target line, red and animated, with the ball's own track on the turf under it because a curve seen end-on is mostly foreshortened away. It corrects P15's rationale without overturning it: a camera really does foreshorten both questions at once, so the tracer is a **third** panel captioned `perspective — nothing measurable` rather than a replacement for the two that can be read, and it asserts exactly what the plan view asserts — no landing ring and no offline sentence on a planar flight. Its two findings are geometry: the top of a perspective frame is **not the apex**, because a camera sees angular elevation and that peaks a good forty yards earlier than the flight does (fitting on the apex put the tracer nine pixels off the top of the canvas); and a camera at literal eye height is the literal answer and a bad picture, compressing everything past 25 yards into about **seventeen pixels** above the horizon. **The only unverified thing in the milestone is still the page's layout** — no browser has ever been driven) | [§M15](#m15-ball-flight--the-model-the-launch-angle-was-recorded-for--done) |
 | **M16** Mishits | ✅ Done *(2026-09-08)*, 9/9 phases (P0–P8) | — (desk work over the corpus already on disk; building corrected nothing in ADR-028. The rule went live in P3 and found its first real subject unprompted in P5 — aaron's 7 iron `2026-08-23/2` carried 33.6 yd against a 121.8 yd median. Holding it out drops that club's clean carries to four, below the CENTER floor, so `get_club_profile` now *withholds* its carry mean where it used to print a top-dragged ≈101.6 yd — no number beats a wrong one. No `ANALYSIS_VERSION` bump — the aggregates are live) | [§M16](#m16-mishits--the-topped-seven-iron-that-is-not-your-seven-iron--done) |
 | **M17** Pivot points | ✅ Done *(2026-09-10)*, 9/9 phases | — (desk work over the corpus already on disk; the overlay and the rule checks needed no bay session) | [§M17](#m17-pivot-points--the-shoulder-line-the-hip-line-and-the-three-points-they-turn-about) |
-| **M5** Feedback UI | ⬜ Not started | M7 Phase 5 gives the host | [§M5](#milestone-5-feedback-ui) |
+| **M18** The platform decided | ✅ Done *(2026-09-21)*. Docs only — the spikes were dropped when the two-iPhone premise was, and **the ADR became the milestone**. Rust core, MediaPipe pose in a bundled Python sidecar pool, Flutter shell, phone-as-camera later, cloud closed. **ADR-030 supersedes ADR-001**, the first superseded ADR here. The load-bearing choice was not the language or the shell but *where pose runs*: `ranges.json` is cut from MediaPipe's landmarks, so keeping pose in Python is what lets everything else be rewritten without reopening the scoring model | — (desk work; the decisions were taken directly) | [§M18](#m18-the-platform-decided--a-rust-core-a-python-pose-sidecar-and-a-flutter-shell) |
+| **M19** The core as a specification | ⬜ Not started, **and now the prerequisite for M22** | Nothing — Python desk work over artifacts already on disk | [§M19](#m19-the-python-core-becomes-a-specification--schemas-golden-vectors-and-a-conformance-runner) |
+| **M20** The trigger | ⬜ Not started | Nothing for the algorithm (replay over the stored clips); one bay trip for false positives | [§M20](#m20-the-trigger--hearing-the-ball-strike-live-and-cutting-the-clip) |
+| **M21** Capture edge | ⬜ Not started — **the file source needs nothing**; the webcam and phone sources need M20's spec | Nothing for source 1; cameras for 2 and 3 | [§M21](#m21-capture-edge--a-file-then-a-webcam-then-a-phone) |
+| **M22** The Rust core | 🔒 Blocked | M19 (the oracle) | [§M22](#m22-the-rust-core--the-analysis-engine-passing-the-conformance-suite) |
+| **M23** The pose sidecar | 🔒 Blocked | M22 (something has to send the jobs) | [§M23](#m23-the-pose-sidecar--a-long-lived-python-worker-pool) |
+| **M24** Session engine | 🔒 Blocked | M21 and M22 | [§M24](#m24-session-engine--start-a-session-and-swings-flow-through-to-the-profile) |
+| **M25** The app | 🔒 Blocked | M24 | [§M25](#m25-the-app--the-flutter-shell-and-the-setup-wizard) |
+| **M26** Ship it | 🔒 Blocked | M25 (CI can start as soon as there is a `Cargo.toml`) | [§M26](#m26-ship-it--ci-packaging-signing-and-distribution-per-os) |
+| **M27** Remote worker | ❌ **Closed** *(2026-09-21)* by ADR-030 §7 — not deferred. Kept as the record of a decision | — | [§M27](#m27-remote-worker--closed-not-deferred) |
+| **M5** Feedback UI | ⬜ Not started, **superseded in shape by M25** (no web UI) | M7 Phase 5 gives the host | [§M5](#milestone-5-feedback-ui) |
 | **M2** Club & ball detection | 🔒 Gated, **and M1.5 said no-go** | Bay lighting for a ~1/2000 s exposure — *not* a global-shutter camera | [§M2](#milestone-2-club--ball-detection) |
 | Hardware re-validation | 🔒 Gated | Cameras / launch monitor arriving | [§Gate](#hardware-re-validation-gate-revisit-when-cameras--launch-monitor-arrive) |
 
@@ -1647,6 +1657,325 @@ fades stored as draws). M12 lands the inputs, which are the half that cannot be 
 
 **Exit Criteria**: Claude provides specific, grounded coaching advice referencing actual swing data and shot metrics.
 
+# The app — from an offline pipeline to a live product (M18–M27)
+
+Planned 2026-09-21 in one sitting and **re-decided the same day**, so that each milestone below can
+be pinned down in its own fresh session. **The ask:** an installed app for Windows, Linux, macOS
+and — later — a phone. The golfer connects two cameras, verifies them, positions them and starts a
+session; the cameras record continuously, a ball strike triggers a ±5 s clip from each, every pair
+is analysed in the background while recording carries on, and each result updates the golfer's
+profile. (The numbering is M18 because M14–M17 were already taken.)
+
+This group is kept in one place although its members are in different states — M18 is done, M19–M21
+are startable, M22–M26 wait on them — because reading it in pieces across *Next* and *Blocked*
+would lose the order. The state is in each header and in the status table.
+
+**The premise changed once, and it changed everything below it.** The first version of this group
+assumed *two iPhones must be enough on their own*, one recording and the other recording **and**
+analysing. That single assumption drove most of its content, because an iPhone cannot run
+MediaPipe-Python, OpenCV, pydantic-core or ffmpeg: it forced a Dart-versus-Rust bake-off, a
+MediaPipe Tasks iOS spike, and the standing risk that a different pose pipeline would mean
+**re-fitting every band in `ranges.json`**. The premise is now that the machine is a **laptop** and
+the phone is a **camera**. That deleted the pose risk and the spike programme with it.
+
+**Decided, in [ADR-030](docs/decisions/030-app-platform-rust-core-python-sidecar.md).** Read the ADR
+for the reasoning; the short form is:
+
+- **The backend is Rust** — app process, capture, trigger, analysis engine, storage.
+  **Supersedes [ADR-001](docs/decisions/001-language-python.md)**, the first superseded ADR here.
+- **Pose stays MediaPipe-in-Python, unchanged**, driven by a long-lived **worker pool** the Rust
+  core sends jobs to. Jobs carry a clip path and a frame range, never pixels. `ranges.json` is
+  therefore untouched and needs no re-validation — that is the entire point of the split.
+- **Python also keeps** OCR, LLM coaching and the whole lab: fitting under the `research` extra
+  ([ADR-022](docs/decisions/022-learned-artifacts-as-committed-data.md) is unaffected), the corpus
+  tools and the conformance oracle. It ships as a **bundled sidecar**, not as the app.
+- **The shell is Flutter** over the Rust core via `flutter_rust_bridge`. **No web UI** — M5 is
+  superseded in shape and `api/static/`'s five pages stay a lab surface.
+- **The phone app comes after the laptop app works**, and carries capture and strike detection but
+  never pose. Supersedes [ADR-016](docs/decisions/016-local-first-host-and-phone-upload-topology.md)'s
+  "no phone app" clause and nothing else in it.
+- **Capture sources are pluggable and file upload is the first one** — it works today with no
+  hardware, and stays first-class after cameras exist.
+- **Cloud analysis is closed**, not deferred. M27 records why.
+
+**What the code already gives.** `capture/source.py::VideoSource` and `audio/source.py::AudioSource`
+are ports whose docstrings name a live adapter that was never built. `api/pipeline.py` already picks
+the swing out of a longer clip (`select_swing`, `_auto_windows`). `analysis/` is stdlib-only over
+stored JSON and every band and model ships as JSON, which is the seam ADR-008 and ADR-022 drew and
+**the reason the Rust port is affordable at all** — the swing loop is roughly a thousand lines of
+logic that actually executes, not the ~5,600 the import graph suggests. The per-swing directory (two
+clips and a manifest) is the unit of work, and the golfer's profile is recomputed on read from
+`storage/corpus.py::read_corpus`, so a new result shows up without an invalidation step.
+
+**What it does not.** No live camera, microphone, ring buffer or device enumeration; a "session" is
+the UTC date. `audio/impact.py::detect_strikes` is offline over a whole decoded clip, tuned on one
+golfer, one bay and iPhone audio, and a bay makes about four transients per shot. `AnalysisWorker`
+runs one job at a time with no timeout or retry, in one process, and the UI polls. A bundle needs a
+shot photo and a club cursor before it analyses, and both cameras must target one `swing_id`. There
+is no packaging and no CI, `config.py::REPO_ROOT` assumes a source checkout, and calibration for
+real 3-D (the printed fiducial squares) is still only a seam in `contracts/pivots.py`.
+
+**Order.** M19, M20 and M21's first source need no Rust and no hardware, so they start now. M22 is
+gated on M19 — a Rust core and a Python core that disagree silently is the failure mode this whole
+plan has to survive, and only a conformance suite catches it. M23–M26 follow in a line.
+
+---
+
+## M18: The platform decided — a Rust core, a Python pose sidecar and a Flutter shell
+
+**Status**: ✅ Done *(2026-09-21)*. Docs only — no source, no tests.
+
+**What happened.** This milestone was five spikes ending in an ADR. The spikes were sized against
+the two-iPhone premise; when that premise was dropped for a laptop, the questions they existed to
+answer stopped being open. The decisions were taken directly and the milestone became its own
+deliverable: [ADR-030](docs/decisions/030-app-platform-rust-core-python-sidecar.md), an addendum
+each on [ADR-002](docs/decisions/002-pose-estimation-mediapipe.md) and
+[ADR-016](docs/decisions/016-local-first-host-and-phone-upload-topology.md),
+[ADR-001](docs/decisions/001-language-python.md) marked superseded, the charter's "Mobile app" line
+moved into scope, and this group rewritten.
+
+**The finding worth carrying forward** is which decision was actually load-bearing. It was not the
+language and not the shell — it was **where pose runs**. `ranges.json` is cut from MediaPipe's
+landmark output, and ADR-002 had already measured what a different pose pipeline costs: RTMPose
+lost by 24.7pp on event recovery and ran 4.3x noisier at the hip. Keeping pose in Python is what
+lets everything else be rewritten without putting the scoring model back in question. Every other
+choice here is reversible; that one would not have been.
+
+**Not done, on purpose.** No spike report doc — there are no measurements to hold, and a new living
+doc would pull in a tier banner and a map row for prose the ADR already carries. No ADR for the
+trigger or the capture edge: those are M20 and M21 and they have evidence to gather first. No
+ADR-011 addendum — camera topology is genuinely unaffected, the same disclaimer ADR-016 made.
+
+---
+
+## M19: The Python core becomes a specification — schemas, golden vectors and a conformance runner
+
+**Status**: ⬜ Not started. **Startable now**, and the prerequisite for M22: Python desk work over
+artifacts already on disk.
+
+**The ask.** Make the existing implementation something a port can be checked against with one
+command. Today the only oracle is the Python test suite, which cannot be run by a different
+language — and ADR-030 has committed to a second implementation of the swing loop.
+
+**Promoted from "useful" to "first".** A Rust core and a Python core that disagree silently is the
+failure mode the whole platform decision has to survive, and review does not catch a drift of a
+fraction of a unit. This must exist before M22 starts, not alongside it.
+
+**The phases.**
+- **P1 schemas** — export `contracts/` as JSON Schema (pydantic's `model_json_schema`) for the
+  shapes that cross the seam (`SwingResult`, `SwingBundleResult`, keypoints, manifests), committed,
+  with a test that fails when a model changes without regenerating.
+- **P2 golden vectors** — for every stored swing: keypoints → `analysis.json` at the current
+  `ANALYSIS_VERSION`; for every clip: the strike frames; plus the synthetic fixtures in
+  `tests/analysis/conftest.py`. Decide where they live — the videos are private, the JSON derived
+  from them is not.
+- **P3 tolerance rules** — which outputs must match exactly (phase indices, pass/fail) and which to
+  an epsilon (floats), and how `None` and `unscored` are encoded, since ADR-010 §2 forbids a port
+  turning "could not measure" into zero. Two known edges belong here: Python's **banker's rounding**
+  differs from Rust's half-away-from-zero, which moves `impact.py`'s hop size at 44.1 kHz; and
+  `%g` / `.0f` float formatting reaches the `message` strings that get compared.
+- **P4 `scripts/conformance.py`** — keypoints in on stdin, analysis out on stdout, so any
+  implementation is diffed against Python by a script.
+- **P5 inventory** — which modules ship in the app and which stay lab, in tiers: the swing loop
+  (`analysis`, `contracts`, `audio`, `storage`); shots, flight and clubs (`launch_monitor`,
+  `clubs`); LLM coaching and `mcp/`.
+
+**Reuses.** `scripts/reanalyze.py`, the tolerant readers in `api/state.py`, and
+`analysis/benchmarks/*.json`. Two assets already exist and should not be rebuilt:
+`tests/analysis/conftest.py::make_swing` is deterministic, pure-stdlib and RNG-free, so it
+re-implements in another language exactly; and the **15 stored swings, 30 keypoint files and 30
+audio files** are a real-capture golden set needing no new fixtures.
+
+**Risks:** freezing a contract that M17 has only just stopped moving — do it now while it is still;
+`ANALYSIS_VERSION` bumps then have to regenerate the vectors. And `detect_strikes` has no
+reproducible oracle in the test suite, because `tests/audio/test_impact.py` synthesizes its clips
+from a seeded numpy RNG — the stored `*.audio.json` files are the golden set to use instead.
+
+**Exit Criteria**: A port can be diffed against the Python reference with one command, and the
+schemas and vectors are in the repo.
+
+---
+
+## M20: The trigger — hearing the ball strike live and cutting the clip
+
+**Status**: ⬜ Not started. The algorithm is startable now: it is replayed over the stored clips.
+The false-positive check needs one bay trip.
+
+**The ask.** Turn "the cameras always record and the program notices the ball being hit" into a
+specified, measured algorithm, in Python first, so the code that implements it implements a spec and
+not a hunch.
+
+**Doubly load-bearing now.** Under ADR-030 this spec is implemented twice over: it is the Rust
+core's trigger on the laptop, **and** it is what runs on the phone so that a phone sends triggered
+clips instead of a video stream. Getting it wrong is a bandwidth decision as well as a correctness
+one.
+
+**The phases.**
+- **P1 an online detector** — the spec and a Python reference: block-wise spectral flux, a rolling
+  robust-z floor (ADR-013's clip-relative principle applied to a moving window), a refractory
+  period that covers the ball → mat → screen burst (85–145 ms apart) and the simulator's own
+  audio, and the earliest-wins rule from `analysis/alignment.py::with_measured_impact`.
+- **P2 a replay harness** — stream the stored clips' audio through it, and concatenations of them
+  with silence and voices in between; report precision, recall and how late the decision comes.
+- **P3 ring-buffer and cutting rules** — five seconds either side against what the pipeline needs
+  (`window_around` wants at least 1.5 s of quiet address and three downswing-lengths after impact),
+  two swings closer than ten seconds, a practice swing with no strike, and a maximum clip.
+- **P4 a continuous recording** — 30–60 minutes at a bay with phones just recording, for false
+  positives; fold it into `docs/BAY_SESSION_RUNBOOK.md`.
+
+**Reuses.** `audio/impact.py`, `contracts/audio.py::AudioStrike`, `AUDIO_DETECTOR_VERSION`.
+**Risks:** voices, a neighbouring bay, simulator sound; the thresholds were tuned on one golfer, one
+bay and iPhone-AAC audio, and "voice" was only synthetic modulated noise; a USB webcam's microphone
+may not hear the strike at all. The detector is also numerically fussy — clip-relative by ADR-013,
+dependent on numpy's `hanning` specifically, and carrying a calibrated `+1` sample convention — so
+the spec must state what a reimplementation has to match and to what tolerance.
+
+**Exit Criteria**: Measured precision and recall over the stored clips and one continuous
+recording, and a written spec the capture edge implements.
+
+---
+
+## M21: Capture edge — a file, then a webcam, then a phone
+
+**Status**: ⬜ Not started. **The first source is startable now and needs no hardware and no Rust.**
+
+**The ask.** `capture/source.py::VideoSource` is already a `Protocol` with `FileVideoSource` built
+and `LiveCameraSource` never written. Keep that shape and fill it in, in this order:
+
+1. **File / upload** — works today, needs nothing bought, and is the only source that can replay the
+   stored corpus through the new stack. **First-class, not a test fixture**: it must still work once
+   the other two exist, because a golfer with footage and no rig is a supported case.
+2. **USB / UVC webcam** on the laptop — Media Foundation on Windows, V4L2 on Linux, AVFoundation on
+   macOS.
+3. **Phone over Wi-Fi**, sending encoded clips its own detector triggered (ADR-030 §5), not a
+   stream.
+
+**Tasks.** Enumerate and verify devices; preview; microphone; a ring buffer with host-clock
+timestamps; the camera-to-microphone offset (M11 P10's `video_start_s` was a 105–125 ms surprise on
+four clips, so it is measured here, not assumed); dropped frames; thermal and storage budgets. The
+`SYNCHRONIZED` alignment tier needs each view's audio and video presented against one clock.
+
+**Questions for its own chat:** whether a USB webcam's microphone is usable or a host microphone is
+muxed into both clips; what continuous background recording costs an iPhone thermally.
+
+**Exit Criteria**: A stored clip replays end to end through the new stack from the file source, and
+two webcams record continuously with a trigger from M20's spec cutting two clips a bundle can be
+built from.
+
+---
+
+## M22: The Rust core — the analysis engine passing the conformance suite
+
+**Status**: 🔒 Blocked on M19 (the oracle). The language is settled (ADR-030).
+
+**The ask.** Port the engine to Rust, in dependency order — contracts → measure → phases →
+checkpoints and scoring → alignment → audio → benchmark loaders → career and profile → storage —
+**each stage gated by M19's conformance suite**, not by review. The swing loop is the first tier;
+shots, flight and clubs the second; LLM coaching stays Python (third tier, via the sidecar).
+
+**What makes it affordable.** ADR-008 made `analysis/` stdlib + `contracts` only and ADR-022 made
+every model ship as JSON, so the semantic closure is roughly a thousand lines of executing logic.
+`ranges.json` and `golfdb_v1.json` port as data with no reimplementation. Prune the import graph
+rather than following it: `analysis/benchmarks/__init__.py` re-exports flight, joint and trajectory
+models that the checkpoint path never reaches.
+
+**Where it bites.** `contracts/` is pydantic, and its `Field(ge=…, le=…)` constraints are *runtime
+validators* — a port that treats them as annotations silently accepts values Python rejects.
+`detect_strikes` needs numpy's `hanning` reproduced exactly and is the one piece with no
+deterministic oracle in the test suite. The stdlib-only invariant carries over as a rule the Rust
+core inherits: no numeric library in the scoring path.
+
+**Open, and for its own chat:** shot-screen OCR stays Python in the sidecar (it was PaddleOCR);
+the MCP server stays a lab tool unless something asks for it in the app.
+
+**Exit Criteria**: Tier 1 passes M19's suite byte-for-byte on the exact outputs and within tolerance
+on the floats.
+
+---
+
+## M23: The pose sidecar — a long-lived Python worker pool
+
+**Status**: 🔒 Blocked on M22 (something has to send the jobs).
+
+**The ask.** The Rust↔Python boundary ADR-030 §3 specifies, built: a pool of warm worker processes,
+each with the interpreter up and the `.task` bundle resident, driven by a job protocol.
+
+**Tasks.** The job envelope (`job_id`, `clip_path`, `frame_range`, `camera_id`,
+`pose_model_variant`) and the `KeypointsFile` reply; pool sizing and backpressure; worker lifecycle,
+crash detection and restart; timeouts and retry, which `AnalysisWorker` has neither of today;
+bundling a standalone Python runtime per OS (`python-build-standalone`); and the model files, which
+must ship rather than download on first run.
+
+**The constraint that shapes it:** `RunningMode.VIDEO` carries cross-frame tracking state, so a
+worker takes **one clip start to finish** and gets a fresh `PoseLandmarker` between jobs. The warm
+thing is the process, not the landmarker. Budget from ADR-002's ~24 fps at `heavy`: a 10 s 60 fps
+clip is ~25 s of pose, a two-view swing ~50 s.
+
+**Verification is free and should be used**: the sidecar's output is diffed against the 30 keypoint
+files already on disk, which were produced by the same estimator at `mediapipe:heavy`.
+
+**Deferred here**: the shared-memory frame handoff for live preview (ADR-030 §3 specifies it,
+nothing needs it yet).
+
+---
+
+## M24: Session engine — start a session and swings flow through to the profile
+
+**Status**: 🔒 Blocked on M21 and M22.
+
+**The ask.** An explicit start and stop in place of the UTC-date session; capture isolated from
+analysis so frames are never dropped while pose runs; a queue with a backlog and a thermal budget;
+swing ids assigned for both cameras; a bundle that does not need a shot photo; results pushed to
+the UI instead of polled; the profile updated as each result returns (it is already recomputed on
+read, so this is a notification and not an invalidation).
+
+**Open, and for its own chat:** how shot data arrives in a live flow, since today it is a photo of
+the simulator screen taken by hand.
+
+---
+
+## M25: The app — the Flutter shell and the setup wizard
+
+**Status**: 🔒 Blocked on M24.
+
+**The ask.** The workflow the golfer described: connect cameras → verify → position → start
+session, then results, history, career and ball-flight screens. Flutter over the Rust core via
+`flutter_rust_bridge` (ADR-030 §4). Positioning uses pose-landmark visibility as the "golfer fully
+in frame" check, ADR-003's placement guidance, and the fiducial seam.
+
+**Not a port of the HTML pages.** `api/static/`'s five pages stay what they are — a lab surface for
+the desk pipeline. **M5's web UI is superseded in shape by this milestone**, not revived by it.
+
+---
+
+## M26: Ship it — CI, packaging, signing and distribution per OS
+
+**Status**: 🔒 Blocked on M25. CI can start as soon as there is a `Cargo.toml` to run it against.
+
+**Tasks.** There is no CI today. Per-user data directories (`config.py::REPO_ROOT` assumes a source
+checkout, and every path constant flows from it); the bundled Python sidecar and the pose models
+shipped rather than downloaded on first run; signing; MSIX, AppImage and a `.dmg`; an update path;
+crash and privacy handling. TestFlight and Google Play only once the phone app exists.
+
+---
+
+## M27: Remote worker — closed, not deferred
+
+**Status**: ❌ **Closed 2026-09-21** by [ADR-030](docs/decisions/030-app-platform-rust-core-python-sidecar.md) §7.
+Kept here as the record of a decision, not as a backlog item.
+
+**Why.** Remote analysis for people without a capable laptop brings accounts, authentication,
+per-swing compute cost, video privacy and retention, and the exposure of a public endpoint — each a
+project rather than a phase — and it contradicts the local-first posture ADR-014 and ADR-016 both
+rest on. Reopening it needs a new ADR and a reason.
+
+**The cheaper lever, still untried.** ADR-002 measured the `lite` pose model at about four times
+the speed of `heavy` with no significant difference on event recovery across twelve paired McNemar
+tests. A slow laptop gets a faster variant and shorter clips; that is the answer until someone
+shows it is not enough.
+
+---
+
 # Next — nothing blocking
 
 Startable today. **M1.5 has now run** (2026-08-14) and closed as a no-go on pure-ML club
@@ -2868,5 +3197,7 @@ the `PROVISIONAL / UNCALIBRATED` provenance strings in `ranges.json`.
       redirected**, see [§M8](#m8-learning-what-good-means--gates-run-model-fitted). Regression
       against *outcome* is closed (ADR-021: face-on pose does not predict ball flight). What shipped
       instead is a normative model of the tour population's joint distribution (ADR-022)
-- [ ] Mobile companion app
+- [ ] ~~Mobile companion app~~ — **superseded 2026-09-21 by the app milestones, [M18](#m18-the-platform-decided--a-rust-core-a-python-pose-sidecar-and-a-flutter-shell)–M26**:
+      a phone is a **camera** that hears the strike and sends the clip; the machine that analyses
+      is a laptop (ADR-030). The charter's "Mobile app" out-of-scope line moved with it
 - [ ] Export swing reports as PDF

@@ -149,3 +149,35 @@ question for both of this repo's secrets. Two consequences land here:
 
 The `?t=` query parameter, the `localStorage` handoff, and rotation-as-revocation are all as
 described above. This narrows one operational edge; it does not reopen the design.
+
+## Addendum (2026-09-21, M18): a phone app, after all — and everything else here holds
+
+[ADR-030](030-app-platform-rust-core-python-sidecar.md) builds an installed app, and a downloadable
+phone app with it. That contradicts exactly **one clause of one bullet** above — *"Still no cloud,
+no phone app, no open router port"* — and nothing else in this ADR. The phone app supersedes "no
+phone app". The other two stand, and are reinforced rather than merely survived:
+
+- **Still no cloud.** ADR-030 §7 closes remote analysis outright rather than deferring it, on this
+  ADR's and [ADR-014](014-screen-capture-shot-ingestion.md)'s offline-first grounds. The clips
+  still never leave hardware the golfer owns.
+- **Still no open router port.** The phone talks to a laptop on the same network; Funnel remains
+  what it is, off by default and turned on for a guest phone.
+
+**The door this ADR left open is the one being walked through, at a different angle.** The
+Consequences above note that a secure context makes `getUserMedia` possible — *"Not built; no
+longer blocked."* ADR-030 does not take that route: it puts a native app on the phone instead of a
+capture page, because the phone needs to run the strike detector to avoid streaming video. The
+observation was right that in-app capture had stopped being blocked; the mechanism is native rather
+than browser.
+
+**What the phone sends changes, and the upload design mostly does not.** Today a golfer records with
+the stock camera app and uploads from the camera roll. Under ADR-030 the phone records continuously
+and sends a ~10-second clip when its own detector hears a strike — encoded by the phone's hardware
+encoder at roughly 10-20 MB, never raw frames and never a continuous stream. The two views still
+need no shared clock in flight, because [ADR-025](025-acoustic-synchronization.md) recovers the
+offset acoustically afterwards.
+
+**Upload does not go away.** ADR-030 §6 makes file upload a first-class capture source that must
+keep working after cameras exist — it is how the system stays testable before any hardware is
+bought, and the only source that can replay the stored corpus through the new stack. This addendum
+narrows one clause; it does not retire the topology.
