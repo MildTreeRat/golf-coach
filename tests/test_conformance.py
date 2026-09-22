@@ -70,6 +70,72 @@ def test_every_committed_schema_is_what_contracts_exports_today() -> None:
     )
 
 
+#: Every `*.json` a `golf_coach` module names as a filename constant, split by whether a Rust core
+#: has to *parse* it. The split is the rule `SCHEMA_ROOTS` applies, made explicit so a new artifact
+#: has to be classified rather than forgotten.
+#:
+#: The exempt half is package data: committed, provenanced JSON that ships *inside* the wheel and
+#: ports as bytes (ADR-022). A Rust core loads `ranges.json` the way Python does — as numbers to
+#: evaluate, not as a contract two implementations must agree on the shape of.
+_PACKAGE_DATA = {
+    "ranges.json",  # ADR-010/022: the benchmark bands
+    "golfdb_v1.json",  # ADR-012: the tour distributions
+    "joint_model_v1.json",  # ADR-022: the first learned artifact
+    "flight_model_v1.json",  # ADR-027: the drag/lift coefficient table
+    "club_catalogue.json",  # ADR-026: the committed specification dictionary
+    "profiles.json",  # ADR-014: OCR device profiles, and OCR stays Python (tier 4)
+}
+
+#: artifact filename -> the `SCHEMA_ROOTS` key that describes it.
+_ARTIFACT_SCHEMAS = {
+    "manifest.json": "swing_manifest",
+    "session.json": "session_meta",
+    "analysis.json": "swing_bundle_result",
+    "analysis.state.json": "analysis_state",
+    ".bag.json": "bag",
+    ".golfer.json": "golfer",
+    ".shot.json": "shot_data",
+    # No filename constant — these are built from the clip's role at the call site.
+    "{role}.keypoints.json": "keypoints_file",
+    "{role}.audio.json": "audio_file",
+}
+
+
+def test_every_on_disk_artifact_has_a_schema() -> None:
+    """The rule `SCHEMA_ROOTS` applies, checked rather than trusted.
+
+    This test exists because the first pass at that list got it wrong. `SwingManifest` was dropped
+    as "internal to Python" — but ADR-030 §1 gives Rust **storage**, so a Rust core opens
+    `manifest.json` on the way to every swing, and would have had to reverse-engineer the shape
+    from an example file. Three more went the same way: `session.json`, the golfer registry and
+    the bag, the last two being the files behind the `handedness` and `loft_deg` arguments
+    `analysis` is forbidden to fetch for itself.
+
+    Discovery over a listing, so a *new* artifact fails here: the constants are scraped out of the
+    source, and each one must be either exempt package data or mapped to a schema root.
+    """
+    constants = set()
+    for path in (REPO / "src" / "golf_coach").rglob("*.py"):
+        for match in re.finditer(
+            r'^_?[A-Z][A-Z_]* = "([^"]*\.json)"', path.read_text(encoding="utf-8"), re.MULTILINE
+        ):
+            constants.add(match.group(1))
+
+    unclassified = constants - _PACKAGE_DATA - set(_ARTIFACT_SCHEMAS)
+    assert not unclassified, (
+        f"{sorted(unclassified)} is a JSON artifact nothing here has classified. Either it ships "
+        "inside the wheel as data (add it to _PACKAGE_DATA with its ADR) or a non-Python "
+        "implementation has to parse it (give it a SCHEMA_ROOTS entry and map it here)."
+    )
+
+    missing = {
+        name: root
+        for name, root in _ARTIFACT_SCHEMAS.items()
+        if root not in conformance.SCHEMA_ROOTS
+    }
+    assert not missing, f"these artifacts map to schema roots that do not exist: {missing}"
+
+
 def test_no_schema_is_committed_without_a_root_that_produces_it() -> None:
     """The other direction: a file left behind by a root that was renamed or dropped.
 

@@ -1,0 +1,444 @@
+{
+  "$defs": {
+    "BagEntry": {
+      "description": "The physical club occupying one slot, as the golfer declared it. [M12 P2]\n\nA `ClubSpec` \u2014 the whole published field list, `club` included \u2014 plus the three facts that are\nabout the *declaration* rather than about the club: `recorded_at`, `retired_at` and\n`provenance`. Inheriting rather than re-listing is what makes a field added to `ClubSpec`\ncompared by `same_club_as`, carried by the save route and rendered by the bag form without three\nseparate edits, and the reason the split could happen at all is that no `.bag.json` existed on\ndisk to migrate \u2014 free on the day of ADR-026, a migration the day after the first bag is saved\n(ADR-026 \u00a73).\n\nEvery spec field stays optional, `loft_deg` most importantly: a golfer who has never put their\nirons on a loft machine still has a bag, and refusing to record one until they do meant\nrecording nothing \u2014 which is precisely what happened for a whole milestone. What has narrowed\nis what `None` *means* here. Under ADR-026 \u00a71 the published loft fills the field, so a blank is\nno longer \"unmeasured\" but \"nobody, the manufacturer included, has said\". The work that needs\nloft still refuses **per club** when it is absent, which is `SwingResult.unscored`'s posture\napplied to a different missing input: the clubs that do have a loft are unaffected, and the one\nthat does not is named rather than filled with a number nobody has (ADR-010 \u00a72).",
+      "properties": {
+        "adjustable_hosel": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Whether the hosel adjusts. `None` is not `False`: an unknown hosel and a fixed one are different states, and collapsing them would make `loft_range_deg` look absent when it is merely unretrieved.",
+          "title": "Adjustable Hosel"
+        },
+        "bounce_deg": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Bounce Deg"
+        },
+        "club": {
+          "$ref": "#/$defs/ClubId",
+          "description": "The slot of the manufacturer's set this describes. Carried on the spec rather than implied by where it is filed, for `BagEntry`'s reason: an entry travels alone, and the container pins its key against this rather than trusting them to agree."
+        },
+        "cor": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cor"
+        },
+        "face_angle_deg": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Face Angle Deg"
+        },
+        "grind": {
+          "default": "",
+          "title": "Grind",
+          "type": "string"
+        },
+        "grip": {
+          "default": "",
+          "title": "Grip",
+          "type": "string"
+        },
+        "head_type": {
+          "default": "",
+          "title": "Head Type",
+          "type": "string"
+        },
+        "head_weight_g": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Head Weight G"
+        },
+        "length_in": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Length In"
+        },
+        "lie_deg": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Lie Deg"
+        },
+        "loft_deg": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The published loft. **This is ADR-026 \u00a71's reversal of ADR-024 \u00a72** \u2014 it used to read 'measured loft, never a catalogue default', and the alternative that reasoning assumed (a measured number) is not one a home golfer has. A club that has been bent reads its book loft here and nothing downstream knows; that is accepted, and a separate measured field is deferred to the day someone models the difference.",
+          "title": "Loft Deg"
+        },
+        "loft_range_deg": {
+          "anyOf": [
+            {
+              "maxItems": 2,
+              "minItems": 2,
+              "prefixItems": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                }
+              ],
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The adjustable range as (min, max), for a club whose hosel moves. `loft_deg` stays the setting the club is in, so the two answer different questions and a driver at 9.0\u00b0 with a 7.25-10.75 range is fully described by both.",
+          "title": "Loft Range Deg"
+        },
+        "make": {
+          "default": "",
+          "title": "Make",
+          "type": "string"
+        },
+        "model": {
+          "default": "",
+          "title": "Model",
+          "type": "string"
+        },
+        "model_year": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The model year, which is part of the key and not decoration: makers reuse a model name across generations with different lofts, so two `P790` 7 irons four years apart are two specifications. `None` means the year was not established \u2014 the lookup is expected to leave it blank rather than pick the newest.",
+          "title": "Model Year"
+        },
+        "moi_g_cm2": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Moi G Cm2"
+        },
+        "offset_mm": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Offset Mm"
+        },
+        "provenance": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SpecProvenance"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Where the spec fields came from, or None for an entry declared before anything recorded it. **Not part of club identity** \u2014 `same_club_as` excludes it, and that exclusion is load-bearing rather than tidy: see that method's docstring, which is where the failure it prevents is written out."
+        },
+        "recorded_at": {
+          "description": "When this entry was declared. Load-bearing, not bookkeeping: a bag entry that changes makes the shots before and after it two different physical clubs pooled under one name. P16 turns that into a caveat naming this date rather than withholding the statistic, because an entry recorded late for a club that never changed is the more likely case and the cost of being wrong is one sentence.",
+          "format": "date-time",
+          "title": "Recorded At",
+          "type": "string"
+        },
+        "retired_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "When this club left the bag, or None while it is still in it. `Bag` pins the two states against the list the entry is in, so this field is never the only thing claiming a club is current. It exists because a club can leave with no successor \u2014 taking the 3 wood out and putting nothing in the slot \u2014 and then nothing else on disk says when. A stint's end is derivable from the next stint's `recorded_at` only while there is a next stint, which is exactly the case this field is not needed for.",
+          "title": "Retired At"
+        },
+        "set_composition": {
+          "default": "",
+          "title": "Set Composition",
+          "type": "string"
+        },
+        "shaft_flex": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ShaftFlex"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "shaft_kick_point": {
+          "default": "",
+          "title": "Shaft Kick Point",
+          "type": "string"
+        },
+        "shaft_material": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ShaftMaterial"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "shaft_model": {
+          "default": "",
+          "title": "Shaft Model",
+          "type": "string"
+        },
+        "shaft_torque_deg": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Shaft Torque Deg"
+        },
+        "shaft_weight_g": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Shaft Weight G"
+        },
+        "swing_weight": {
+          "default": "",
+          "description": "The swing-weight code, e.g. `\"D2\"`. A string because the scale is a letter and a digit \u2014 D2 to D3 is one point but D9 to E0 is also one point, so nothing may do arithmetic on it, and storing it as a number would invite exactly that.",
+          "title": "Swing Weight",
+          "type": "string"
+        },
+        "total_weight_g": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Total Weight G"
+        },
+        "usga_conforming": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Usga Conforming"
+        }
+      },
+      "required": [
+        "club",
+        "recorded_at"
+      ],
+      "title": "BagEntry",
+      "type": "object"
+    },
+    "ClubId": {
+      "description": "One slot in a bag. **Declaration order is canonical bag order** and is read, not decorative.\n\nP2's `Bag.club_ids` presents clubs in this order and the bag page lists them in it, so a golfer\nreads their bag the way it sits in the bag rather than alphabetically \u2014 where `3w` would land\nbetween `2h` and `5h`. Sorting anywhere downstream is the bug this ordering exists to prevent.\n\nMember *names* are spelled out because `3w` is not a valid Python identifier. That is not\nincidental bookkeeping: `parse_club` derives \"3 wood\" from the name and \"3wood\" from the value,\nso the two spellings of every club come from the declaration itself rather than a second list.",
+      "enum": [
+        "driver",
+        "3w",
+        "5w",
+        "7w",
+        "2h",
+        "3h",
+        "4h",
+        "5h",
+        "1i",
+        "2i",
+        "3i",
+        "4i",
+        "5i",
+        "6i",
+        "7i",
+        "8i",
+        "9i",
+        "pw",
+        "gw",
+        "sw",
+        "lw",
+        "putter"
+      ],
+      "title": "ClubId",
+      "type": "string"
+    },
+    "ShaftFlex": {
+      "description": "How much the shaft bends. **Declaration order is softest to stiffest** and is read.\n\nOrdering the members is not decorative: a flex scale has a direction, and a page listing them\nalphabetically would put ladies between extra-stiff and regular. `ClubId` makes the same\npromise about bag order for the same reason \u2014 the enum is the one place the order is written\ndown, so nothing downstream has to sort and get it backwards.\n\nThe scale is not linear and is not comparable across makers: one brand's regular is another's\nstiff, and no number here would make that true. So this is a label, never an arithmetic\nquantity, and nothing should subtract two of them.",
+      "enum": [
+        "ladies",
+        "senior",
+        "regular",
+        "stiff",
+        "x_stiff",
+        "xx_stiff"
+      ],
+      "title": "ShaftFlex",
+      "type": "string"
+    },
+    "ShaftMaterial": {
+      "description": "What the shaft is made of. Three answers, because that is how shafts are actually sold.",
+      "enum": [
+        "steel",
+        "graphite",
+        "multi_material"
+      ],
+      "title": "ShaftMaterial",
+      "type": "string"
+    },
+    "SpecProvenance": {
+      "description": "Where a specification came from, so a looked-up number and a typed one stay distinguishable.\n\n`ranges.json` carries provenance per row for this reason and it is the same reason here: the\nfields on `ClubSpec` do not say whether a loft was read off a manufacturer's page, recalled by\na model, or typed in by the golfer holding the club, and those are not equally trustworthy. A\nreader that cannot tell them apart has to treat all three as the weakest.\n\nIt is a separate block rather than three fields on `ClubSpec` because it is **not part of club\nidentity** \u2014 see `BagEntry.same_club_as`, which compares by exclusion and must exclude this\nwhole block (ADR-026 \u00a74). Nesting it makes that exclusion one name instead of three, and three\nnames is three chances to add a fourth field that is never excluded.",
+      "properties": {
+        "notes": {
+          "default": "",
+          "description": "Anything the source said about its own confidence, kept verbatim. Empty is the normal case; a value here is usually the reason a field beside it is blank.",
+          "title": "Notes",
+          "type": "string"
+        },
+        "retrieved_at": {
+          "description": "When it was retrieved. A specification is stable for the life of a model, so this dates the *retrieval* and not the club \u2014 it is what lets a catalogue row looked up under one model be re-checked later without guessing how old it is.",
+          "format": "date-time",
+          "title": "Retrieved At",
+          "type": "string"
+        },
+        "source": {
+          "description": "What produced these values \u2014 `\"llm:claude-opus-5\"`, `\"catalogue\"` or `\"typed\"`. A string and not an enum: the model id is part of the answer, and pinning the set would mean editing a contract every time the coaching model moves.",
+          "title": "Source",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source",
+        "retrieved_at"
+      ],
+      "title": "SpecProvenance",
+      "type": "object"
+    }
+  },
+  "description": "One golfer's declared bag, plus every club that has left it. The unit `BagStore` stores.",
+  "properties": {
+    "entries": {
+      "additionalProperties": {
+        "$ref": "#/$defs/BagEntry"
+      },
+      "description": "Slot -> the club in it. Sparse: a bag holds what has been declared, and an absent club is undeclared rather than missing.",
+      "propertyNames": {
+        "$ref": "#/$defs/ClubId"
+      },
+      "title": "Entries",
+      "type": "object"
+    },
+    "player_id": {
+      "description": "The `Golfer.player_id` this bag belongs to.",
+      "title": "Player Id",
+      "type": "string"
+    },
+    "retired": {
+      "default": [],
+      "description": "Finished stints, oldest first \u2014 every club that has left the bag, in the order it left. **Append-only**: `BagStore.restore_entry` copies off this list and leaves the record in place, so a 7 iron swapped out, back in and out again is three stints here rather than one. A flat list and not a dict keyed by club, because `BagEntry.club` already names the slot and a second key is a second thing that can disagree with the entry it holds \u2014 the bug `_keys_match_entries` exists to catch.",
+      "items": {
+        "$ref": "#/$defs/BagEntry"
+      },
+      "title": "Retired",
+      "type": "array"
+    },
+    "updated_at": {
+      "format": "date-time",
+      "title": "Updated At",
+      "type": "string"
+    }
+  },
+  "required": [
+    "player_id",
+    "updated_at"
+  ],
+  "title": "Bag",
+  "type": "object"
+}

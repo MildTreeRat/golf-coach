@@ -26,14 +26,32 @@ does not have to call anything in this repo.
 
 ## 1. The schemas
 
-Exported from `contracts/` by `pydantic`'s `model_json_schema`, one file per root, `$defs` inlined.
-The roots are listed in `scripts/conformance.py::SCHEMA_ROOTS`, and the rule for adding one is that
-**something other than Python parses it** — a schema is a promise to keep a shape stable, and
-promising that for shapes only this package reads would freeze parts of the contract that still
-move.
+Exported by `pydantic`'s `model_json_schema`, one file per root, `$defs` inlined. The roots are
+`scripts/conformance.py::SCHEMA_ROOTS`, and the rule is:
 
-`tests/test_conformance.py` regenerates them in memory and compares, so a field added to
-`SwingResult` without a re-export fails at the commit rather than at the port.
+> **A schema exists for every JSON artifact a non-Python implementation opens off disk.**
+
+Not "every model in `contracts/`" — a schema is a promise to keep a shape stable, and promising
+that for shapes only this package reads would freeze parts of the contract that still move. But
+the looser form of the rule ("something other than Python parses it") is what the first pass at
+this list applied, and it got four wrong: `SwingManifest` was dropped as internal, along with
+`SessionMeta`, `Golfer` and `Bag`. ADR-030 §1 gives Rust **storage**, so a Rust core opens
+`manifest.json` on the way to every swing, and the golfer registry and the bag are the two files
+behind the `handedness` and `loft_deg` arguments `analysis` is forbidden to fetch for itself. A
+port would have had to reverse-engineer all four from example files.
+
+The ten roots cover a swing directory end to end — `manifest.json`, `{role}.keypoints.json`,
+`{role}.audio.json`, `analysis.json`, `analysis.state.json` — plus `session.json` a level up and
+the `.golfer.json`, `.bag.json` and `.shot.json` a swing resolves through.
+
+`tests/test_conformance.py` holds two pins. One regenerates the schemas in memory and compares, so
+a field added to `SwingResult` without a re-export fails at the commit rather than at the port. The
+other **scrapes every `*.json` filename constant out of `src/golf_coach/`** and requires each to be
+either mapped to a schema root or named as package data — the committed, provenanced JSON that
+ships inside the wheel and ports as bytes (ADR-022: `ranges.json`, `golfdb_v1.json`,
+`joint_model_v1.json`, `flight_model_v1.json`, `club_catalogue.json`, and OCR's `profiles.json`,
+which stays Python). Discovery rather than a listing, so a *new* artifact fails here instead of
+being forgotten the way these four were.
 
 **The serialization is the shell's, not the contract's**, and this is the detail most likely to be
 implemented faithfully and wrongly. `api/pipeline.py` writes `analysis.json` as

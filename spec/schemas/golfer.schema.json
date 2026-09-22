@@ -1,0 +1,42 @@
+{
+  "$defs": {
+    "Handedness": {
+      "description": "Which side the golfer swings from \u2014 the frame of reference for every signed metric.",
+      "enum": [
+        "right",
+        "left"
+      ],
+      "title": "Handedness",
+      "type": "string"
+    }
+  },
+  "description": "One person, tracked across sessions. The unit a career baseline is cut per.",
+  "properties": {
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "display_name": {
+      "description": "The name as originally typed, for showing back.",
+      "title": "Display Name",
+      "type": "string"
+    },
+    "handedness": {
+      "$ref": "#/$defs/Handedness"
+    },
+    "player_id": {
+      "description": "Stable id, the slug of the name first used. Never changes once created.",
+      "title": "Player Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "player_id",
+    "display_name",
+    "handedness",
+    "created_at"
+  ],
+  "title": "Golfer",
+  "type": "object"
+}

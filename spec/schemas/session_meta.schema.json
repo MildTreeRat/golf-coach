@@ -1,0 +1,74 @@
+{
+  "$defs": {
+    "ClubId": {
+      "description": "One slot in a bag. **Declaration order is canonical bag order** and is read, not decorative.\n\nP2's `Bag.club_ids` presents clubs in this order and the bag page lists them in it, so a golfer\nreads their bag the way it sits in the bag rather than alphabetically \u2014 where `3w` would land\nbetween `2h` and `5h`. Sorting anywhere downstream is the bug this ordering exists to prevent.\n\nMember *names* are spelled out because `3w` is not a valid Python identifier. That is not\nincidental bookkeeping: `parse_club` derives \"3 wood\" from the name and \"3wood\" from the value,\nso the two spellings of every club come from the declaration itself rather than a second list.",
+      "enum": [
+        "driver",
+        "3w",
+        "5w",
+        "7w",
+        "2h",
+        "3h",
+        "4h",
+        "5h",
+        "1i",
+        "2i",
+        "3i",
+        "4i",
+        "5i",
+        "6i",
+        "7i",
+        "8i",
+        "9i",
+        "pw",
+        "gw",
+        "sw",
+        "lw",
+        "putter"
+      ],
+      "title": "ClubId",
+      "type": "string"
+    }
+  },
+  "description": "Session-scoped choices: the golfer cursor and the club cursor.\n\nThe two are independent \u2014 a golfer swings many clubs and a club is swung by many golfers \u2014 and\nkeeping them independent is what `_update_cursor` exists to guarantee.\n\n`updated_at` is **one timestamp for the whole record**, not one per cursor: it says when the\nsession's choices last changed, and nothing reads it today. It therefore cannot answer \"when\nwas the club chosen\", so a surface wanting that (P19) needs a field, not this one.",
+  "properties": {
+    "club": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ClubId"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "player_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Player Id"
+    },
+    "updated_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Updated At"
+    }
+  },
+  "title": "SessionMeta",
+  "type": "object"
+}

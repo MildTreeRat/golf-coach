@@ -1,0 +1,179 @@
+{
+  "$defs": {
+    "ClubId": {
+      "description": "One slot in a bag. **Declaration order is canonical bag order** and is read, not decorative.\n\nP2's `Bag.club_ids` presents clubs in this order and the bag page lists them in it, so a golfer\nreads their bag the way it sits in the bag rather than alphabetically \u2014 where `3w` would land\nbetween `2h` and `5h`. Sorting anywhere downstream is the bug this ordering exists to prevent.\n\nMember *names* are spelled out because `3w` is not a valid Python identifier. That is not\nincidental bookkeeping: `parse_club` derives \"3 wood\" from the name and \"3wood\" from the value,\nso the two spellings of every club come from the declaration itself rather than a second list.",
+      "enum": [
+        "driver",
+        "3w",
+        "5w",
+        "7w",
+        "2h",
+        "3h",
+        "4h",
+        "5h",
+        "1i",
+        "2i",
+        "3i",
+        "4i",
+        "5i",
+        "6i",
+        "7i",
+        "8i",
+        "9i",
+        "pw",
+        "gw",
+        "sw",
+        "lw",
+        "putter"
+      ],
+      "title": "ClubId",
+      "type": "string"
+    },
+    "MishitVerdict": {
+      "description": "The golfer's own verdict on a shot, set through the per-swing repair route.\n\n`None` on a `SwingManifest` \u2014 the common case \u2014 means no verdict, and the automatic rule\ndecides. A verdict here overrides that rule in either direction and is never inferred.",
+      "enum": [
+        "confirmed",
+        "cleared"
+      ],
+      "title": "MishitVerdict",
+      "type": "string"
+    },
+    "Role": {
+      "description": "Which camera angle or document an uploaded file represents.",
+      "enum": [
+        "face_on",
+        "down_the_line",
+        "shot_screen"
+      ],
+      "title": "Role",
+      "type": "string"
+    },
+    "RoleFile": {
+      "description": "One uploaded file, filling one role slot in a swing.",
+      "properties": {
+        "content_sha256": {
+          "title": "Content Sha256",
+          "type": "string"
+        },
+        "content_type": {
+          "title": "Content Type",
+          "type": "string"
+        },
+        "filename": {
+          "title": "Filename",
+          "type": "string"
+        },
+        "original_filename": {
+          "title": "Original Filename",
+          "type": "string"
+        },
+        "received_at": {
+          "format": "date-time",
+          "title": "Received At",
+          "type": "string"
+        },
+        "role": {
+          "$ref": "#/$defs/Role"
+        },
+        "size_bytes": {
+          "title": "Size Bytes",
+          "type": "integer"
+        },
+        "warnings": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "role",
+        "filename",
+        "content_sha256",
+        "original_filename",
+        "content_type",
+        "size_bytes",
+        "received_at"
+      ],
+      "title": "RoleFile",
+      "type": "object"
+    }
+  },
+  "description": "Everything known about one swing: identity plus whichever roles have arrived.",
+  "properties": {
+    "club": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ClubId"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Which club hit it, stamped from the session cursor when the swing was created (`storage.session_meta`), exactly as `player_id` is. **Write-once in practice** for the same reason: switching the cursor to the next club mid-session must not rewrite the swings already hit with the last one. None means the swing predates the field \u2014 and unlike `player_id`, that is the *only* thing it means, because the upload route refuses a swing with no club selected (ADR-024 \u00a75). The asymmetry is repairability: an untagged golfer can be reached backwards over a session that usually had one golfer, whereas a session has many clubs and nothing but memory can say which hit what. Optional in the shape, required at the boundary (R12) \u2014 which is what lets every manifest written before M9 keep loading."
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "mishit": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/MishitVerdict"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "The golfer's own verdict on the shot hit with this swing, set through the `.../swings/{swing_id}/mishit` repair route or `scripts/flag_mishit.py` \u2014 never stamped from a cursor and never inferred. `None` is the common case and means 'no verdict': the automatic rule in `contracts.mishit` decides whether this shot's carry counts toward the club's distance averages. `CONFIRMED` or `CLEARED` overrides that rule in either direction. The third optional field added under the tolerant-loader pattern (`player_id`, then `club`), so every manifest written before M16 still loads and reports `None`. No bulk backfill, for `club`'s reason (ADR-024 \u00a75): only the golfer who hit the swing knows whether they topped it."
+    },
+    "player_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Who swung it, stamped from the session cursor when the swing was created (`storage.session_meta`). None means nobody had selected a golfer yet \u2014 an expected state, since uploads are never blocked on it, and one the upload page surfaces so it can be repaired while the session is still happening. **Write-once in practice**: the store sets it only when it is None, so switching the cursor to a second golfer mid-session cannot rewrite swings already attributed to the first.",
+      "title": "Player Id"
+    },
+    "roles": {
+      "additionalProperties": {
+        "$ref": "#/$defs/RoleFile"
+      },
+      "propertyNames": {
+        "$ref": "#/$defs/Role"
+      },
+      "title": "Roles",
+      "type": "object"
+    },
+    "session_id": {
+      "title": "Session Id",
+      "type": "string"
+    },
+    "swing_id": {
+      "title": "Swing Id",
+      "type": "string"
+    },
+    "updated_at": {
+      "format": "date-time",
+      "title": "Updated At",
+      "type": "string"
+    }
+  },
+  "required": [
+    "swing_id",
+    "session_id",
+    "created_at",
+    "updated_at"
+  ],
+  "title": "SwingManifest",
+  "type": "object"
+}

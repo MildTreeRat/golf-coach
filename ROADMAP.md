@@ -35,7 +35,7 @@ wording; only the grouping and the M4 checklist have been corrected.
 | **M16** Mishits | ✅ Done *(2026-09-08)*, 9/9 phases (P0–P8) | — (desk work over the corpus already on disk; building corrected nothing in ADR-028. The rule went live in P3 and found its first real subject unprompted in P5 — aaron's 7 iron `2026-08-23/2` carried 33.6 yd against a 121.8 yd median. Holding it out drops that club's clean carries to four, below the CENTER floor, so `get_club_profile` now *withholds* its carry mean where it used to print a top-dragged ≈101.6 yd — no number beats a wrong one. No `ANALYSIS_VERSION` bump — the aggregates are live) | [§M16](#m16-mishits--the-topped-seven-iron-that-is-not-your-seven-iron--done) |
 | **M17** Pivot points | ✅ Done *(2026-09-10)*, 9/9 phases | — (desk work over the corpus already on disk; the overlay and the rule checks needed no bay session) | [§M17](#m17-pivot-points--the-shoulder-line-the-hip-line-and-the-three-points-they-turn-about) |
 | **M18** The platform decided | ✅ Done *(2026-09-21)*. Docs only — the spikes were dropped when the two-iPhone premise was, and **the ADR became the milestone**. Rust core, MediaPipe pose in a bundled Python sidecar pool, Flutter shell, phone-as-camera later, cloud closed. **ADR-030 supersedes ADR-001**, the first superseded ADR here. The load-bearing choice was not the language or the shell but *where pose runs*: `ranges.json` is cut from MediaPipe's landmarks, so keeping pose in Python is what lets everything else be rewritten without reopening the scoring model | — (desk work; the decisions were taken directly) | [§M18](#m18-the-platform-decided--a-rust-core-a-python-pose-sidecar-and-a-flutter-shell) |
-| **M19** The core as a specification | ✅ Done *(2026-09-21)*, 5/5 phases. **M22 is unblocked** — `python scripts/conformance.py check` diffs any implementation against this one, 21 vectors at v16 in ~7 s. Five schemas in `spec/schemas/`, 6 synthetic vectors and the 15 real swings gzipped to 8.3 MB in `spec/vectors/`, the rules in [docs/CONFORMANCE.md](docs/CONFORMANCE.md). Two findings a port would otherwise have inherited: the `exclude=` set that makes `analysis.json` what it is lives at a **call site** and in no schema; and a bare engine call leaves `feedback` None, so the first build pinned `"feedback": null` on all 21 vectors — a spec telling a port to ship no coaching | — (desk work; done) | [§M19](#m19-the-python-core-becomes-a-specification--schemas-golden-vectors-and-a-conformance-runner) |
+| **M19** The core as a specification | ✅ Done *(2026-09-21)*, 5/5 phases. **M22 is unblocked** — `python scripts/conformance.py check` diffs any implementation against this one, 21 vectors at v16 in ~7 s. Ten schemas in `spec/schemas/` (a swing directory end to end), 6 synthetic vectors and the 15 real swings gzipped to 8.3 MB in `spec/vectors/`, the rules in [docs/CONFORMANCE.md](docs/CONFORMANCE.md). Two findings a port would otherwise have inherited: the `exclude=` set that makes `analysis.json` what it is lives at a **call site** and in no schema; and a bare engine call leaves `feedback` None, so the first build pinned `"feedback": null` on all 21 vectors — a spec telling a port to ship no coaching | — (desk work; done) | [§M19](#m19-the-python-core-becomes-a-specification--schemas-golden-vectors-and-a-conformance-runner) |
 | **M20** The trigger | ⬜ Not started | Nothing for the algorithm (replay over the stored clips); one bay trip for false positives | [§M20](#m20-the-trigger--hearing-the-ball-strike-live-and-cutting-the-clip) |
 | **M21** Capture edge | ⬜ Not started — **the file source needs nothing**; the webcam and phone sources need M20's spec | Nothing for source 1; cameras for 2 and 3 | [§M21](#m21-capture-edge--a-file-then-a-webcam-then-a-phone) |
 | **M22** The Rust core | ⬜ Not started, **unblocked 2026-09-21** | Nothing — M19 shipped the oracle; read [docs/CONFORMANCE.md](docs/CONFORMANCE.md) first | [§M22](#m22-the-rust-core--the-analysis-engine-passing-the-conformance-suite) |
@@ -1769,12 +1769,15 @@ failure mode the whole platform decision has to survive, and review does not cat
 fraction of a unit. This must exist before M22 starts, not alongside it.
 
 **The phases, as built.**
-- **P1 schemas** — five roots exported to `spec/schemas/` from
-  `conformance.py::SCHEMA_ROOTS`: `KeypointsFile`, `AudioFile`, `ShotData`, `SwingResult`,
-  `SwingBundleResult`. The rule for adding one is that *something other than Python parses it*,
-  which is why the list is shorter than `contracts/`. `SwingManifest` was in the original list and
-  is not exported: nothing outside Python reads it, and a schema is a promise to hold a shape
-  still.
+- **P1 schemas** — ten roots exported to `spec/schemas/` from `conformance.py::SCHEMA_ROOTS`,
+  covering a swing directory end to end plus the three files a swing resolves through. The rule is
+  **a schema exists for every JSON artifact a non-Python implementation opens off disk**, and it is
+  pinned by a test that scrapes the filename constants out of `src/golf_coach/` and requires each
+  to be either mapped or named as package data. That pin exists because the first pass applied the
+  rule loosely and shipped **five** roots, dropping `SwingManifest` as internal — ADR-030 §1 gives
+  Rust *storage*, so a Rust core opens `manifest.json` on the way to every swing. `SessionMeta`,
+  `Golfer` and `Bag` went the same way; the last two are the files behind the `handedness` and
+  `loft_deg` arguments `analysis` is forbidden to fetch for itself.
 - **P2 golden vectors** — 21 in `spec/vectors/`: **6 synthetic** from
   `tests/analysis/conftest.py::make_swing` (uncompressed and readable, each one there for a code
   path) and **15 corpus**, gzipped, one per stored swing. The storage question the plan left open

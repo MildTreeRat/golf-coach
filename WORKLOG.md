@@ -20,7 +20,20 @@ This is your "pick up where I left off" document.
 
 21 vectors: **6 synthetic** from `tests/analysis/conftest.py::make_swing`, each there for a code
 path (a window that must be un-applied, a failing checkpoint, a `no_handedness` refusal, a bundle
-with one view), and **15 corpus** — every stored swing. Five schemas exported from `contracts/`.
+with one view), and **15 corpus** — every stored swing. Ten schemas, covering a swing directory
+end to end.
+
+**P1 was shipped wrong first and the fix is the interesting part.** The roots went out as five,
+under the rule *"something other than Python parses it"* — which read loosely enough to drop
+`SwingManifest` as internal. ADR-030 §1 gives Rust **storage**, so a Rust core opens
+`manifest.json` on the way to every swing; `SessionMeta`, `Golfer` and `Bag` were missing for the
+same reason, the last two being the files behind the `handedness` and `loft_deg` arguments
+`analysis` is forbidden to fetch for itself. The rule is now **a schema exists for every JSON
+artifact a non-Python implementation opens off disk**, which is mechanically checkable where the
+old phrasing was not: a test scrapes every `*.json` filename constant out of `src/golf_coach/` and
+requires each to be mapped to a schema root or named as package data (the ADR-022 artifacts that
+ship inside the wheel and port as bytes). Discovery rather than a listing, so the *next* artifact
+fails the test instead of being forgotten the way these four were.
 
 **The storage question the plan left open, settled by measurement.** The full keypoint set is
 239 MB; sliced to the window the pipeline actually scores, 25.6 MB; gzipped, **8.3 MB**, which

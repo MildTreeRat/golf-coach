@@ -47,12 +47,16 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from golf_coach.api.state import AnalysisState
 from golf_coach.contracts.audio import AudioFile
-from golf_coach.contracts.golfer import Handedness
+from golf_coach.contracts.bag import Bag
+from golf_coach.contracts.golfer import Golfer, Handedness
 from golf_coach.contracts.intent import PracticeGoal
 from golf_coach.contracts.keypoints import KeypointsFile
 from golf_coach.contracts.shot import ShotData
 from golf_coach.contracts.swing import ANALYSIS_VERSION, SwingBundleResult, SwingResult
+from golf_coach.storage.manifest import SwingManifest
+from golf_coach.storage.session_meta import SessionMeta
 
 REPO = Path(__file__).resolve().parent.parent
 SPEC = REPO / "spec"
@@ -70,21 +74,42 @@ EXCLUDED_FROM_RESULT: dict[str, set[str]] = {"swing": {"keypoints", "detections"
 # --------------------------------------------------------------------------- schemas (P1)
 
 #: The shapes that cross the seam between the Rust core, the Python pose sidecar and the store.
+#:
 #: Deliberately not "every model in `contracts/`": a schema is a promise to keep a shape stable,
 #: and promising that for shapes nothing outside Python reads would freeze the parts of the
-#: contract that still move. The rule for adding a row is that something *other than Python*
-#: parses it.
+#: contract that still move.
+#:
+#: **The rule is: a schema exists for every JSON artifact a non-Python implementation opens off
+#: disk.** That is mechanically checkable against a swing directory, which the looser "something
+#: other than Python parses it" is not — the first pass at this list read that loosely, dropped
+#: `SwingManifest` as internal, and missed that ADR-030 §1 gives Rust *storage*, so a Rust core
+#: opens `manifest.json` on its way to every swing. `tests/test_conformance.py` now pins the list
+#: against the artifacts a stored swing actually holds.
 SCHEMA_ROOTS: dict[str, type] = {
-    # In: what the pose sidecar hands the core, one file per clip.
+    # In: what the pose sidecar hands the core, one file per clip — `{role}.keypoints.json`.
     "keypoints_file": KeypointsFile,
-    # In: what the audio edge hands the core. The core itself receives frame indices (ADR-025),
-    # but the stored artifact is this, and it is what a port reads off disk.
+    # In: what the audio edge hands the core — `{role}.audio.json`. The core itself receives frame
+    # indices (ADR-025), but the stored artifact is this, and it is what a port reads off disk.
     "audio_file": AudioFile,
     # In: what the launch-monitor edge attaches. Carried and reported, never scored (ADR-009).
     "shot_data": ShotData,
-    # Out: the scored face-on view, and the whole bundle verdict around it.
+    # In: the swing directory's own index — `manifest.json`. Which clip plays which role, the
+    # content hash that keys every cache, the club tag and the `player_id` that resolves to a
+    # handedness. A port cannot find a clip without parsing this.
+    "swing_manifest": SwingManifest,
+    # In: `session.json`, one level up — what the session was.
+    "session_meta": SessionMeta,
+    # In: the golfer registry and the bag — the two files behind the `handedness` and `loft_deg`
+    # arguments `analysis` is forbidden to fetch for itself, and which a vector therefore has to
+    # be handed. A Rust core owns that resolution (ADR-030 §1) and so parses both.
+    "golfer": Golfer,
+    "bag": Bag,
+    # Out: the scored face-on view, and the whole bundle verdict around it — `analysis.json`.
     "swing_result": SwingResult,
     "swing_bundle_result": SwingBundleResult,
+    # Out: `analysis.state.json`, the denormalised sidecar that decides whether a stored result is
+    # stale. `reanalyze.py` is built on it, and a Rust core needs the same judgement.
+    "analysis_state": AnalysisState,
 }
 
 
