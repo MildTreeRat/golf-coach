@@ -319,9 +319,33 @@ def test_an_install_that_cannot_listen_again_keeps_the_older_detection(bundle, m
     assert audio is not None
     assert [strike.frame for strike in audio.strikes] == [90]
     assert notes == [
-        "the face_on strikes were found by an older detector (v0) and the audio extra is not "
-        "installed to re-run it"
+        "the face_on strikes were found by an older detector (v0) and this machine cannot re-run "
+        "it: the audio extra is not installed"
     ]
+
+
+def test_an_unbuilt_detector_degrades_the_same_way_a_missing_extra_does(
+    bundle, decoder, monkeypatch
+) -> None:
+    """The second way a machine can fail to listen, since M20 moved the detector to Rust.
+
+    An install can now have the `audio` extra and still not be able to detect, because
+    `golf-trigger` has not been built. It is the same situation as a missing extra — nothing to
+    re-detect with — and it lands on the same path, but the note has to say *which*, because
+    `pip install` and `cargo build` are different repairs and a reader given only "no detector"
+    will try the wrong one.
+    """
+    from golf_coach.audio import trigger
+
+    def unbuilt() -> Path:
+        raise trigger.TriggerUnavailable("golf-trigger.exe is not on PATH")
+
+    monkeypatch.setattr(trigger, "binary", unbuilt)
+    swing_dir, manifest = bundle
+    notes: list[str] = []
+
+    assert audio_for(swing_dir, manifest, Role.FACE_ON, fps=_FPS, notes=notes) is None
+    assert notes == ["no audio for face_on: golf-trigger.exe is not on PATH"]
 
 
 def test_force_listens_again_even_with_a_matching_cache(bundle, decoder) -> None:

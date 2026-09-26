@@ -63,3 +63,7 @@ Thumbs.db
 *.pem
 *.pfx
 *.p12
+
+# Rust build output. `Cargo.lock` is committed on purpose: this workspace ships a binary, not
+# a library, so a reproducible build matters more than dependency-range flexibility.
+target/

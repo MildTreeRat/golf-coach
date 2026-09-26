@@ -6,7 +6,11 @@
 [ADR-002](002-pose-estimation-mediapipe.md) and
 [ADR-016](016-local-first-host-and-phone-upload-topology.md) by addendum. This document *is* the
 M18 milestone: the phases it originally carried were five spikes, and the spikes were dropped
-when the premise they were sized against changed. Nothing is built yet — M19 onward build it.
+when the premise they were sized against changed. **Three of the milestones that build it are
+done**: M19 made the Python core a specification, M20 ported the strike detector and deleted its
+Python (which is what this ADR's addendum is about), and **M22 ported the whole analysis engine**
+— all 21 committed vectors conforming, and wired to nothing until M24. §1's Rust core therefore
+exists and §2's sidecar, §4's session engine and §5's shell do not. M21 is part-built.
 
 ## Date
 2026-09-21
@@ -243,6 +247,10 @@ files** are a real-capture golden set that needs no new fixtures.
   reference, the oracle and the lab — [ADR-022](022-learned-artifacts-as-committed-data.md)'s
   offline fitting is unchanged and still Python under the `research` extra. "Which one is right" is
   answerable only because M19 makes it answerable.
+
+  > **Amended 2026-09-22 by the addendum below.** A ported module's Python original is *deleted*,
+  > not kept, once the vectors that prove the port exist. The oracle survives as `spec/`, which is
+  > the artifact, rather than as the code that recorded it.
 - **`ranges.json` is untouched, and that is the point.** The one thing that could have invalidated
   the scoring model — a different pose pipeline — is the one thing this decision refuses to change.
 - **[ADR-001](001-language-python.md) is superseded**, the first superseded ADR in the repo.
@@ -272,3 +280,75 @@ files** are a real-capture golden set that needs no new fixtures.
   one golfer's today, and nothing above changes that.
 - **Cloud analysis** (Decision 7). Closed rather than deferred — it needs its own ADR and a reason,
   and it has neither.
+
+---
+
+## Addendum, 2026-09-22 — the retirement rule, and the first module to meet it
+
+**M20 moved ball-strike detection to Rust and deleted the Python that had done it.** Decision 1
+already gave Rust "audio strike detection" and [CONFORMANCE.md](../CONFORMANCE.md) §5 already
+filed `audio/impact.py` as tier 1, so *what* moved is not new. What is new is that the original
+was removed rather than kept beside it, which amends this ADR's second Consequence, and the rule
+that made that safe.
+
+### The rule
+
+> **Python keeps only what does not translate.** A module is retired from Python once a conforming
+> Rust implementation exists *and* the golden vectors that prove it are committed. The vectors are
+> the oracle, not the code that recorded them.
+
+"Does not translate" is narrower than it first reads, and the narrowness is the point. It means
+**MediaPipe** — a graph, not a model, with no mature Rust binding, and the instrument every band in
+`ranges.json` was cut from (Decision 2). It does not mean "uses numpy". `impact.py` was numpy, and
+a spectral flux detector is portable arithmetic plus one FFT; `rustfft` reproduced it to a worst
+relative difference of **7.7e-15**, six orders of magnitude inside `CONFORMANCE.md` §3's tolerance.
+The lab stays Python too — tier 4 — because it is not shipped, not because it could not be ported.
+
+> **Amended 2026-09-23 by [ADR-032](032-the-rust-core.md) §7.** "Stays" was doing more work than it
+> can. The lab is not shipped *and is not permanent*: §M29 retires `api/` into the Flutter shell and
+> ports `mcp/` to Rust, because the rule above cannot fire on `analysis/` while twenty-eight lab
+> modules import it. The clause the rule was missing is **…and nothing that stays Python calls it**,
+> where *stays* means the sidecar — pose and the LLM — and not *not ported yet*. What survives is
+> `pose/estimator.py`, `feedback/coach.py` and `feedback/conversation.py`, and nothing else.
+
+### Why deleting is safe, and what it costs
+
+Keeping both implementations sounds strictly safer and is not. A second copy nothing runs is a
+second copy that **drifts**: a constant changed in one and not the other is invisible until a
+number moves, which is exactly the silent disagreement §8 exists to prevent. One implementation
+plus a committed oracle has fewer places to be wrong than two implementations and a hope.
+
+It costs two things, and both are load-bearing:
+
+1. **Coverage has to be right before the delete, because there is no second chance.** Once the
+   Python is gone, nothing can regenerate what the vectors failed to capture. M20 built the oracle
+   first (P0) and deleted last (P6), and it covered *both* halves of `impact.py` — `detect_strikes`
+   on thirty clips and `offset_between` on the fifteen two-view swings — even though the second
+   has no caller in this repo at all, precisely because "no caller today" is not "no caller ever".
+2. **The vectors stop being regenerable, and that is now enforced.**
+   `conformance_vectors._audio` returns nothing and explains why. Rebuilding them from the Rust
+   detector would replace a reference-derived oracle with a **self-portrait** — it would pass by
+   construction and detect nothing. If `AUDIO_DETECTOR_VERSION` ever moves, re-recording is a
+   decision needing a new oracle named first, not a script anybody can run.
+
+### What this does not change
+
+`regenerate` still builds the synthetic and corpus families from Python, because the engine has
+not been ported yet — M22 is when that same question arrives for `analysis/`, at far greater
+scope. The rule above is what M22 inherits, and the order it implies is the order M20 used:
+vectors, port, conform, then delete.
+
+### The seam M20 drew, and the one it did not
+
+Python still **decodes** and Rust **detects**. `audio/ffmpeg.py` holds what M11 paid for — container
+edit lists, the two `soun` tracks the face-on clips carry, the `video_start_seconds` probe that was
+a 105–125 ms surprise on four clips — and it reaches ffmpeg through the binary the `imageio-ffmpeg`
+wheel ships rather than a system install. It is tier 1 and unported, and naming it here is the
+point: **`CONFORMANCE.md` §5's inventory listed `audio/impact.py` and not `audio/ffmpeg.py`**, so
+the decoder was tier 1 by implication and in no table. It is in one now.
+
+The call is a **subprocess**, not a native extension: `audio/ffmpeg.py` already shells out in that
+same module, and a PyO3 build would make `pip install -e '.[audio]'` require a Rust toolchain,
+which is a real regression for a lab install that mostly reads artifacts. `config.py::REPO_ROOT`'s
+source-checkout assumption is inherited by the binary lookup and dies at packaging with everything
+else (M26).

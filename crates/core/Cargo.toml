@@ -1,0 +1,37 @@
+# The shell. [M22 P6]
+#
+# **Named `golf-core` rather than `core`, and that is not a style preference**: a library target
+# called `core` shadows the Rust sysroot crate of that name in every dependent, so `use core::fmt`
+# would stop resolving. The directory keeps the short name the other four crates use and the targets
+# carry the binary's.
+[package]
+name = "golf-core"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "The shell: the stdin -> stdout `run` seam conformance.py diffs a port through, and the golf-core binary."
+
+[lib]
+name = "golf_core"
+path = "src/lib.rs"
+
+[[bin]]
+name = "golf-core"
+path = "src/bin/golf_core.rs"
+
+[dependencies]
+# The one crate allowed to hold both halves of the engine, because it is the shell rather than a
+# module of it: `api/pipeline.py` and `conformance.py::run_vector` are its Python counterparts and
+# both import `analysis` and `feedback`. ADR-008 forbids the two *modules* reaching for each other,
+# not a caller reaching for both — see `crates/feedback/Cargo.toml` for the edge that is enforced.
+analysis = { path = "../analysis" }
+contracts = { path = "../contracts" }
+feedback = { path = "../feedback" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+# The end-to-end gate reads `spec/vectors/synthetic/` and reports on the corpus half it defers, and
+# those files are committed gzipped the way every other family's are.
+flate2.workspace = true

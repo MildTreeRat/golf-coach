@@ -1,0 +1,17 @@
+[package]
+name = "trigger"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Ball-strike detection: the offline detector this repo's Python reference defines, and the online one that cuts a clip live."
+
+[[bin]]
+name = "golf-trigger"
+path = "src/bin/golf_trigger.rs"
+
+[dependencies]
+rustfft.workspace = true
+flate2.workspace = true
+serde.workspace = true
+serde_json.workspace = true

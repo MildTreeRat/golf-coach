@@ -1,0 +1,15 @@
+[package]
+name = "feedback"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Rule-based ranked coaching tips: the port of src/golf_coach/feedback/rules.py."
+
+[dependencies]
+# **`analysis` is deliberately absent, and cargo is what enforces that** (ADR-008, ADR-032 §1). In
+# Python `feedback` and `analysis` each import `contracts` and neither imports the other, which is
+# why `conformance.py::run_vector` makes *two* calls rather than one and why
+# `SwingBundleResult.feedback` is left `None` by the engine. A dependency edge in either direction
+# here would make that separation a convention again. `crates/core` is the shell that may hold both.
+contracts = { path = "../contracts" }

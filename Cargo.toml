@@ -1,0 +1,64 @@
+# The Rust workspace. [M20 P0]
+#
+# First Rust in this repo. ADR-030 §1 gives Rust the app process, capture, the trigger, the
+# analysis engine and storage; M20 builds the first of those and M22 the rest, so this is laid
+# out as a workspace from the start rather than as one crate that has to be broken up later.
+#
+# It lives beside `pyproject.toml` rather than under a `rust/` subdirectory on purpose: `cargo`
+# commands then run from the repo root the same way the Python ones do, and `CLAUDE.md`'s
+# commands block stays one list rather than two with a `cd` between them.
+
+[workspace]
+members = [
+    "crates/analysis",
+    "crates/capture",
+    "crates/contracts",
+    "crates/core",
+    "crates/feedback",
+    "crates/trigger",
+]
+resolver = "2"
+
+[workspace.package]
+edition = "2021"
+rust-version = "1.87"
+license = "MIT"
+
+[workspace.dependencies]
+# The one numeric dependency, and `docs/CONFORMANCE.md` §5 already names it as the single place
+# the port needs a library rather than arithmetic. A hand-rolled radix-2 transform was considered
+# and declined: `_flux_envelope`'s window is `round(rate * 1024 / 48_000)` samples, which is 1024
+# at the corpus's 48 kHz but **941 — a prime — at 44.1 kHz**, so matching numpy across sample
+# rates means Bluestein's algorithm, and hand-rolling that to agree with numpy in the last bits
+# is a worse trade than one well-tested crate.
+rustfft = "6.2"
+# Vectors are committed gzipped, the same way `spec/vectors/corpus/` already is.
+flate2 = "1.0"
+# The capture edge's one platform dependency, and ADR-031 §4 draws the line it sits on: the
+# stdlib-only invariant binds the *scoring path*, not the I/O edge, where `rustfft` and
+# `audio/ffmpeg.py`'s shelled-out binary already live. Windows first because that is the machine
+# this is built on; the crate is behind `cfg(windows)` so V4L2 and AVFoundation slot in beside it
+# rather than under it.
+#
+# Media Foundation *directly* rather than through `nokhwa`, and the reason is measured rather
+# than preferred — see `crates/capture/src/lib.rs` "Which camera crate". Not a verdict: M21 P1
+# could not reach a camera, so the bake-off ADR-031 §4 asks for is unfinished.
+windows = { version = "0.62", features = [
+    "Win32_Media_MediaFoundation",
+    "Win32_System_Com",
+] }
+serde = { version = "1.0", features = ["derive"] }
+# `float_roundtrip` is not optional here, and M22 P8 is where that was measured. Without it
+# `serde_json`'s fast decimal path returns a value **one ulp off** the correctly-rounded one on some
+# 17-significant-digit literals — `"0.030000000000000002"` reads back as `0.03` and
+# `"14.464487278077161"` as `14.46448727807716`, both of which `str::parse` and CPython get right.
+# Every committed vector is full of 17-digit floats, so without this the port's own oracle is read
+# slightly wrong: about 9% of the values in one flight's 905 points, absorbed silently by
+# `RTOL = 1e-9` six orders above them. The feature makes the parse exact and costs nothing that
+# matters here — it is a slower path in a test harness, not in the scoring loop.
+serde_json = { version = "1.0", features = ["float_roundtrip"] }
+
+[profile.release]
+# The strike detector runs live against a microphone; overflow checks stay on because a wrong
+# sample index is worse than a slow one, and this is nowhere near a bottleneck.
+overflow-checks = true

@@ -1,0 +1,22 @@
+[package]
+name = "analysis"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "The swing analysis engine: the port of src/golf_coach/analysis/, gated stage by stage against spec/vectors/."
+
+[dependencies]
+# ADR-008's import rule as a cargo dependency edge (ADR-032 §1): this crate depends on `contracts`
+# and `contracts` depends on nothing of ours, so a cycle is a build failure rather than something
+# a reviewer has to notice. Declared from this crate's first commit even though P3 reads no shape
+# through it — P4 is the first phase that does, and a manifest that states the direction only once
+# there is a caller is not enforcing a rule, it is recording one.
+contracts = { path = "../contracts" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+# P4's gate reads `spec/vectors/stages/corpus/`, which is committed gzipped the same way the engine
+# vectors it derives from are.
+flate2.workspace = true

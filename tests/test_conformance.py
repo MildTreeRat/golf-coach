@@ -43,7 +43,7 @@ import conformance  # noqa: E402
 
 
 def _vector_ids() -> list[str]:
-    return [conformance._vector_id(p) for p in conformance.vector_paths()]
+    return [conformance._vector_id(p) for p in conformance.engine_vector_paths()]
 
 
 # --------------------------------------------------------------------------- P1: the schemas
@@ -159,7 +159,7 @@ def test_there_are_vectors_at_all() -> None:
     assert any(i.startswith("corpus/") for i in ids), "no corpus vectors"
 
 
-@pytest.mark.parametrize("path", conformance.vector_paths(), ids=conformance._vector_id)
+@pytest.mark.parametrize("path", conformance.engine_vector_paths(), ids=conformance._vector_id)
 def test_each_vector_still_conforms(path: Path) -> None:
     """The oracle, run against itself — a port's `check` and this are the same comparison.
 
@@ -174,7 +174,7 @@ def test_each_vector_still_conforms(path: Path) -> None:
     ])
 
 
-@pytest.mark.parametrize("path", conformance.vector_paths(), ids=conformance._vector_id)
+@pytest.mark.parametrize("path", conformance.engine_vector_paths(), ids=conformance._vector_id)
 def test_each_vector_was_recorded_at_the_current_engine_version(path: Path) -> None:
     """A vector from an older engine certifies a port against answers this repo has retracted.
 
@@ -188,7 +188,7 @@ def test_each_vector_was_recorded_at_the_current_engine_version(path: Path) -> N
     )
 
 
-@pytest.mark.parametrize("path", conformance.vector_paths(), ids=conformance._vector_id)
+@pytest.mark.parametrize("path", conformance.engine_vector_paths(), ids=conformance._vector_id)
 def test_each_vector_carries_its_provenance(path: Path) -> None:
     """Where a vector came from is the difference between evidence and a plausible file.
 
@@ -207,7 +207,7 @@ def test_the_corpus_vectors_record_the_offset_that_maps_them_back() -> None:
     Without `frame_offset` there is no way to check one against the swing directory it came from,
     and the vectors become fifteen files that agree only with themselves.
     """
-    for path in conformance.vector_paths():
+    for path in conformance.engine_vector_paths():
         vector = conformance._read_json(path)
         if vector["provenance"]["kind"] != "corpus":
             continue
@@ -302,13 +302,13 @@ def test_a_vector_round_trips_through_the_stdin_seam() -> None:
     In-process rather than through a subprocess: what is being checked is that the serialized
     result parses back and still conforms, not that argparse works.
     """
-    path = next(p for p in conformance.vector_paths() if "synthetic" in p.as_posix())
+    path = next(p for p in conformance.engine_vector_paths() if "synthetic" in p.as_posix())
     vector = conformance._read_json(path)
     produced = json.loads(json.dumps(conformance.run_vector(vector)))
     assert not conformance.compare_results(vector["expected"], produced)
 
 
-@pytest.mark.parametrize("path", conformance.vector_paths(), ids=conformance._vector_id)
+@pytest.mark.parametrize("path", conformance.engine_vector_paths(), ids=conformance._vector_id)
 def test_no_vector_carries_an_llm_call(path: Path) -> None:
     """`FeedbackPayload.coaching` is a model's prose, and a model is not reproducible.
 
@@ -332,7 +332,7 @@ def test_every_vector_carries_the_ranked_feedback_a_results_page_renders() -> No
     """
     bare = [
         conformance._vector_id(p)
-        for p in conformance.vector_paths()
+        for p in conformance.engine_vector_paths()
         if not (conformance._read_json(p)["expected"].get("feedback") or {}).get("tips")
     ]
     assert not bare, f"these vectors carry no ranked tips: {bare}"
@@ -347,7 +347,249 @@ def test_the_vectors_cover_a_refusal_and_not_only_a_pass() -> None:
     """
     refusals = [
         conformance._vector_id(p)
-        for p in conformance.vector_paths()
+        for p in conformance.engine_vector_paths()
         if conformance._read_json(p)["expected"]["swing"]["unscored"]
     ]
     assert refusals, "no committed vector produces an unscored checkpoint"
+
+# --------------------------------------------------------------------------- M22 P1: the stages
+
+
+def _engine_by_id() -> dict[str, Path]:
+    return {conformance._vector_id(p): p for p in conformance.engine_vector_paths()}
+
+
+def _stage_ids() -> list[str]:
+    return [conformance._vector_id(p) for p in conformance.stage_vector_paths()]
+
+
+def test_every_engine_vector_has_a_stage_vector() -> None:
+    """Discovery, not a listing — an engine vector with no stages is a phase gate with a hole.
+
+    The stages family exists so M22's phases are gated by a committed answer rather than by
+    review (ADR-032 §2). A vector that is in the engine family and not in this one is a swing the
+    port is judged on at the end and on nothing in between, which is the exact failure the family
+    was added to prevent — and it would arrive silently, because `check` defers these to
+    `cargo test` and would not miss them.
+    """
+    missing = sorted(set(_engine_by_id()) - {i.removeprefix("stages/") for i in _stage_ids()})
+    assert not missing, (
+        f"no stage vector for {missing} — run `python scripts/conformance.py regenerate "
+        f"--stages-only`"
+    )
+
+
+@pytest.mark.parametrize(
+    "path", conformance.stage_vector_paths(), ids=conformance._vector_id
+)
+def test_each_stage_vector_names_an_input_that_exists(path: Path) -> None:
+    """The input is held by reference, so the reference has to resolve.
+
+    This family duplicates none of the 8.6 MB of committed inputs — it names the engine vector it
+    was derived from and stops. That is only safe while the name resolves: a dangling
+    `derived_from` is a file of expected answers with no question attached to it.
+    """
+    vector = conformance._read_json(path)
+    assert vector["provenance"]["kind"] == "stages"
+    derived = vector["provenance"].get("derived_from")
+    assert derived in _engine_by_id(), (
+        f"{path.name} says it derives from {derived!r}, which is not a committed engine vector"
+    )
+
+
+@pytest.mark.parametrize(
+    "path", conformance.stage_vector_paths(), ids=conformance._vector_id
+)
+def test_each_stage_vector_was_recorded_at_the_current_engine_version(path: Path) -> None:
+    """Same rule as the engine family, and it bites earlier.
+
+    A stale *bundle* vector certifies a finished port against retracted answers. A stale *stage*
+    vector does it four phases sooner, to a port that then builds everything after it on top —
+    which is why `conformance.py check` reads these versions even though it defers running them.
+    """
+    stated = conformance._read_json(path)["analysis_version"]
+    assert stated == ANALYSIS_VERSION, (
+        f"{path.name} was recorded at v{stated}, engine is v{ANALYSIS_VERSION} — run "
+        f"`python scripts/conformance.py regenerate --stages-only`"
+    )
+
+
+@pytest.mark.parametrize(
+    "path", conformance.stage_vector_paths(), ids=conformance._vector_id
+)
+def test_each_stage_vector_is_what_this_build_produces(path: Path) -> None:
+    """The committed intermediates, against this engine. Nothing else checks these bytes.
+
+    `check` defers the family to `cargo test`, which is right — `crates/analysis` is the
+    implementation under test. But that leaves the Python side unwatched, and the Python side is
+    what *recorded* the file: a change to `smoothing.py` that moves a landmark without moving any
+    final score would leave 21 committed files quietly lying to the port reading them. This is
+    the only thing in the repo that would notice.
+    """
+    vector = conformance._read_json(path)
+    engine = conformance._read_json(_engine_by_id()[vector["provenance"]["derived_from"]])
+    diffs = conformance.compare_results(vector["stages"], conformance.run_stages(engine))
+    assert not diffs, "\n".join(
+        ["this build disagrees with the committed stage vector:"] + [f"  {d}" for d in diffs[:10]]
+    )
+
+
+@pytest.mark.parametrize(
+    "path", conformance.stage_vector_paths(), ids=conformance._vector_id
+)
+def test_each_stage_vector_still_composes_onto_its_bundle_answer(path: Path) -> None:
+    """The guard that makes these evidence rather than twenty-one self-consistent files.
+
+    `run_stages` re-orchestrates the engine, and the order it calls things in is a second copy of
+    `analyze_swing_bundle`'s. The composition check is what catches that copy drifting: every
+    stage that reaches the artifact is composed forward and compared against the committed
+    bundle. It runs at build time, and here too — because a build-time-only guard stops running
+    the moment nobody regenerates, which on this family is most of the time.
+    """
+    sys.path.insert(0, str(REPO / "scripts"))
+    from conformance_vectors import _verify_stages_compose
+
+    vector = conformance._read_json(path)
+    engine = conformance._read_json(_engine_by_id()[vector["provenance"]["derived_from"]])
+    _verify_stages_compose(vector["stages"], engine)
+
+
+def test_the_recorded_stages_are_exactly_the_ones_the_runner_names() -> None:
+    """A stage added to `run_stages` without a regeneration is a key nothing committed holds."""
+    for path in conformance.stage_vector_paths():
+        got = set(conformance._read_json(path)["stages"])
+        assert got == set(conformance.STAGE_NAMES), (
+            f"{path.name} holds {sorted(got)}, runner names {sorted(conformance.STAGE_NAMES)}"
+        )
+
+
+def test_feedback_is_not_a_stage_and_that_is_deliberate() -> None:
+    """ADR-032 §2 lists `feedback` as a ninth stage. It is not recorded, and this says why.
+
+    `build_feedback` takes the *assembled* `SwingResult`, which no stage produces and this family
+    does not hold — so a port cannot run it from a stage vector at all, and by the time it can,
+    `expected.feedback` on the engine vector already gates it (M22 P6). Recording it would be a
+    second copy of an answer committed a few hundred bytes away.
+
+    Pinned rather than left to a comment because the *absence* is the decision, and an absence
+    reads as an oversight to everyone who did not make it — including the session that regenerates
+    this family after the next `ANALYSIS_VERSION` bump.
+    """
+    assert "feedback" not in conformance.STAGE_NAMES
+    for path in conformance.engine_vector_paths():
+        assert conformance._read_json(path)["expected"].get("feedback"), (
+            f"{path.name} carries no feedback, so nothing gates `feedback/rules.py` at all"
+        )
+
+
+# ----------------------------------------------------------------------- M22 P3: the format table
+
+
+def test_the_format_family_is_committed_and_covers_every_formatting_edge() -> None:
+    """Five vectors, and a port that reads the table can solve every formatting edge found so far.
+
+    Discovery rather than a listing, the same choice the rest of this file makes — but the reason
+    here is sharper: `check` *defers* this family to `cargo test`, so the Python suite is the only
+    thing that would notice it going missing, and a `pyfmt` with no table under it is exactly the
+    "gated by review" state ADR-032 §2 exists to forbid.
+
+    **Five families for four edges**, because ADR-032 §3 names three and M22 P5 found a fourth:
+    `str(x)` on a float, which an f-string with no format spec reaches and which Rust's `{}`
+    renders under different rules. `rounding` covers edge 1 in both its arities. (M22 P4 found a
+    fifth edge — Python's `max` returns the first maximum — which is not CPython *formatting* and
+    is gated by the stage vectors rather than here.)
+    """
+    by_id = {
+        conformance._vector_id(path): conformance._read_json(path)
+        for path in conformance.format_vector_paths()
+    }
+    assert set(by_id) == {
+        "format/rounding",
+        "format/fixed",
+        "format/general",
+        "format/repr",
+        "format/ordering",
+    }, f"the format family is {sorted(by_id)} — run `regenerate --format-only`"
+    for name, vector in by_id.items():
+        assert vector["provenance"]["kind"] == "format", name
+        assert vector["cases"], f"{name} records no cases"
+
+
+def test_the_format_family_does_not_age_on_the_engine_version() -> None:
+    """It records CPython's rules, not this engine's answers, and the field names say which.
+
+    Pinned because the *absence* of `analysis_version` is the decision. `cmd_check` keys its
+    staleness test on that field, so a format vector carrying one would report as stale on every
+    `ANALYSIS_VERSION` bump with nothing to regenerate about it — and the next session would
+    dutifully rebuild four files whose contents cannot have changed. What it ages on is CPython.
+    """
+    for path in conformance.format_vector_paths():
+        vector = conformance._read_json(path)
+        assert "analysis_version" not in vector, f"{path.name} claims an engine version"
+        assert vector["python_version"].startswith("3."), path.name
+
+
+def test_the_format_table_regenerates_byte_identically() -> None:
+    """The one property that makes a seeded sweep safe to commit.
+
+    Half the cases come from `random.Random(20260923)`, which is only acceptable while a rebuild on
+    another machine produces the same file — otherwise this family shows up as a diff in every
+    session that runs a full `regenerate`, and a diff nobody can explain is a diff nobody reads.
+    Checked against what is on disk rather than against a second call, because agreeing with itself
+    is not the claim.
+    """
+    sys.path.insert(0, str(Path(conformance.__file__).resolve().parent))
+    from conformance_vectors import build_format
+
+    for path, payload in build_format():
+        assert path.exists(), f"{path} is not committed"
+        assert payload == conformance._read_json(path), (
+            f"{path.name} differs from a fresh build — run `regenerate --format-only`"
+        )
+
+
+def test_the_rounding_table_holds_the_exact_ties_and_not_only_a_sweep() -> None:
+    """The cases that separate half-to-even from half-away-from-zero are the only ones that matter.
+
+    A tie at `n` decimal places is an odd multiple of `2**-(n+1)` and nothing else is one, so they
+    are enumerable — and a uniform sweep hits none of them. This asserts the table actually carries
+    them, because a rounding gate made only of random values would pass a port with the wrong rule.
+    """
+    cases = conformance._read_json(
+        next(p for p in conformance.format_vector_paths() if p.name == "rounding.json")
+    )["cases"]
+    for ndigits in (None, 1, 2, 4):
+        step = 2.0 ** -((ndigits or 0) + 1)
+        present = {
+            float(case["value"])
+            for case in cases
+            if case["ndigits"] == ndigits and float(case["value"]) == float(case["value"])
+        }
+        ties = [step * (2 * i + 1) for i in range(8)]
+        missing = [tie for tie in ties if tie not in present]
+        assert not missing, f"ndigits={ndigits} is missing exact ties {missing}"
+
+
+def test_every_ordering_case_is_a_tie() -> None:
+    """A sort with distinct keys agrees under any algorithm, so a case without a tie gates nothing.
+
+    This is the edge that produces a correct number under the wrong *name*, and it is only reachable
+    when two keys collide. A case list that drifted towards distinct values would still pass in Rust
+    and would have stopped testing anything, which is the failure mode worth a pin of its own.
+    """
+    cases = conformance._read_json(
+        next(p for p in conformance.format_vector_paths() if p.name == "ordering.json")
+    )["cases"]
+    for case in cases:
+        if case["key"] == "registry":
+            ranks = [
+                case["registry"].index(n) if n in case["registry"] else len(case["registry"])
+                for n in case["names"]
+            ]
+            assert len(set(ranks)) < len(ranks), f"no collision in {case['names']}"
+        else:
+            keys = [
+                -abs(float(v)) if case["key"] == "neg_abs" else -float(v)
+                for _, v in case["entries"]
+            ]
+            assert len(set(keys)) < len(keys), f"no tie in {case['entries']}"
