@@ -1,0 +1,15 @@
+[package]
+name = "contracts"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "The shapes the analysis engine reads and writes, with pydantic's runtime bounds ported as runtime checks."
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+
+[dev-dependencies]
+# The round-trip gate reads `spec/vectors/corpus/`, which is committed gzipped.
+flate2.workspace = true

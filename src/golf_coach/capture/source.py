@@ -2,7 +2,13 @@
 
 Adapters:
   - FileVideoSource  (capture/file.py)   — read a sample/phone clip  [M1, today]
-  - LiveCameraSource (capture/camera.py) — read the ELP USB camera   [needs hardware]
+
+**There is no live adapter here and there will not be one** [ADR-031, M21 P0]. This docstring
+advertised a `LiveCameraSource (capture/camera.py)` from M1 until 2026-09-22; live capture is
+`crates/capture` in Rust, under ADR-030 §1 ("camera capture, the ring buffer, clip cutting") and
+its 2026-09-22 addendum. The port below is not deprecated by that — a clip on disk is how the lab
+works, and per ADR-030 §3 the pose worker decodes its own frames from a path, so the Rust core
+never asks anyone for pixels out of a file.
 
 Frames are yielded as raw numpy arrays (BGR, OpenCV convention). We keep numpy out of
 the `contracts` package on purpose — pixels are an implementation detail of the I/O

@@ -1,7 +1,7 @@
 # Architecture — the system AS BUILT
 
 > **Tier: AS-BUILT.** This document describes what actually exists and runs, reviewed
-> **2026-09-02**. Everything here has been executed. For the *target* design — the full
+> **2026-09-26**. Everything here has been executed. For the *target* design — the full
 > component/deployment picture, the build order, and the parts not yet written — see
 > [FLOW.md](FLOW.md).
 >
@@ -158,6 +158,25 @@ python scripts/conformance.py check [--id VECTOR-ID ...] [--max-diffs N] [-v]
 python scripts/conformance.py run < vector.json    # vector in, serialized result out
 python scripts/conformance.py list
 python scripts/conformance.py regenerate [--schemas-only]
+
+# The Rust half — six crates, and only one of them has a Python caller. `crates/trigger` is
+# ball-strike detection and the clip-cutting rules around it (M20), and it is the one:
+# `audio/trigger.py` pipes PCM to `golf-trigger`. `crates/capture` is the camera edge (M21).
+# `crates/{contracts,analysis,feedback,core}` are the engine port (M22) — a second
+# implementation of everything `analyze_swing_bundle` does, wired to nothing. Its first real
+# caller is M24's session engine; until then its only caller is its own test harness, and
+# `api/pipeline.py` still calls `analysis/engine.py`. `cargo test` runs every vector family
+# `conformance.py check` defers: audio against `trigger`, the format table and all seven stages
+# against `analysis`, every vector's shapes against `contracts`, and all 21 engine vectors
+# **end to end** against `core`.
+cargo build --release          # api/pipeline.py needs this before it can detect a strike
+cargo test
+cargo run --bin golf-core -- run < vector.json   # the port's answer to one vector, on stdout —
+#   the cross-language seam, diffed against `conformance.py run` at zero differences on all 21
+python scripts/trigger_replay.py [--sweep] [--concat] [--id SESSION/SWING]
+golf-capture list [--formats]  # the cameras this host can see, with their identities
+#   `no cameras` is a successful answer and exits 0 — it is also the only one this repo has
+#   ever gotten back, because the build machine is a desktop with nothing plugged in
 #   check and run need `spec/` and nothing else — that is what committing the vectors buys.
 #   regenerate needs data/processed/, so it only runs on the capture machine, and it refuses a
 #   swing whose stored analysis is behind ANALYSIS_VERSION (run reanalyze.py first)
@@ -235,7 +254,7 @@ flowchart TD
 
     CAP["capture/<br/>FileVideoSource"] --> C
     POSE["pose/<br/>estimator + overlay"] --> C
-    AUD["audio/<br/>decode port, strike detection"] --> C
+    AUD["audio/<br/>decode port, Rust detector over a pipe"] --> C
     LMM["launch_monitor/<br/>mock, screen, composite"] --> C
     ANA["analysis/<br/>smoothing, phases, alignment,<br/>checkpoints, scoring, benchmarks"] --> C
     FB["feedback/<br/>rules"] --> C
@@ -288,7 +307,26 @@ altogether, which made the shells invisible and the one rule-breaking edge below
 M7 Phases 3 and 5 built the bundle store, the upload server and the background worker. `detection/`
 is the last real stub, gated on M1.5.
 
-**`audio/` is the newest module and it is deliberately shaped exactly like `pose/`** (M11,
+**`audio/` is half-ported, and the split is the interesting part** (M20). Python still *decodes*
+— `audio/ffmpeg.py` holds the container edit lists, the two `soun` tracks the face-on clips carry
+and the `video_start_seconds` probe, and reaches ffmpeg through the `imageio-ffmpeg` wheel rather
+than a system install. Rust *detects*: `audio/trigger.py` pipes raw PCM to `golf-trigger` and
+parses an `AudioFile` back. The numpy detector that used to live here is **deleted**, per ADR-030's
+2026-09-22 addendum — Python keeps only what does not translate, and a spectral flux detector is
+portable arithmetic plus one FFT. A missing binary degrades exactly the way a missing extra does:
+an older stored detection is kept and noted, never a silent fall back to the pose impact.
+
+**Six of these modules now have a Rust counterpart, and the seam above is why the diagram does
+not change** (M22). `crates/{contracts,analysis,feedback,core}` mirror `contracts/`, `analysis/`,
+`feedback/rules.py` and the two calls `api/pipeline.py` makes between them — and the mirroring is
+the point: ADR-008's rule is **compile-time** on the Rust side, because `crates/analysis` does not
+list `crates/feedback` in its `Cargo.toml` and therefore cannot reach it, which is exactly the edge
+`analysis/` may not have. That is what forced a fourth crate: something has to make both calls, and
+`crates/core` is the counterpart of `api/pipeline.py`. Nothing in Python imports any of them. The
+port conforms on all 21 committed vectors and is wired to nothing until M24 — both implementations
+stand, and ADR-032 §7 says why the Python is not deleted the way M20's detector was.
+
+**`audio/` is otherwise deliberately shaped exactly like `pose/`** (M11,
 ADR-025): an I/O-edge adapter behind an extra (`audio`, on `imageio-ffmpeg`), producing a contract
 shape, imported by the shells and by nothing in `analysis/`. The core receives **frame indices**
 and never a waveform, which is what keeps it stdlib-only and keeps a base install passing every
@@ -342,7 +380,7 @@ on a `vision`-only install — pinned by `tests/api/test_pipeline_imports.py`.
 |-----------|-----------|------------|--------|
 | Keypoints | Pose → Analysis | `List[FrameKeypoints]` — 33 landmarks per frame with x, y, z, visibility | ✅ |
 | Detections | Detection → Analysis | `List[FrameDetections]` — bounding boxes + class (club_head, ball) per frame | contract only |
-| Ball strikes | Audio → Analysis | `list[int]` — the frames a strike was heard on, in each clip's **own** numbering, decoded from `AudioFile` by `audio/impact.py` and passed to `analyze_swing_bundle` as `face_on_strikes` / `down_the_line_strikes`. Indices rather than a waveform is the whole seam: `analysis/` stays stdlib-only (ADR-025). The sample→frame conversion happens in `api/pipeline.py` and subtracts the clip's `video_start_s`, because a sample index is a time on the container's presentation clock and a frame index is not | ✅ |
+| Ball strikes | Audio → Analysis | `list[int]` — the frames a strike was heard on, in each clip's **own** numbering, decoded from `AudioFile` and passed to `analyze_swing_bundle` as `face_on_strikes` / `down_the_line_strikes`. Indices rather than a waveform is the whole seam: `analysis/` stays stdlib-only (ADR-025). The sample→frame conversion happens in `api/pipeline.py` and subtracts the clip's `video_start_s`, because a sample index is a time on the container's presentation clock and a frame index is not | ✅ |
 | Shot Data | Launch monitor → Analysis | `ShotData` — club_speed, ball_speed, launch_angle, spin_rate, club_face_angle, club_path, smash_factor, distances, plus `provenance` (confidence + audit trail) for sources that *infer* metrics rather than receive them (ADR-014) | ✅ produced, not consumed |
 | Swing Result | Analysis → Feedback | `SwingResult` — phases, checkpoint scores with tour percentiles, mechanics/outcome/overall scores, `unscored` entries carrying a reason, judged `intent` | ✅ (`outcome_score` always `None`) |
 | Feedback | Feedback → UI | `FeedbackPayload` — overall score, ranked tips with severity, headline | ✅ produced and rendered by `api/static/results.html` |
@@ -837,6 +875,27 @@ is trustworthy without hardware.
   Python in one command. It is the only assertion here that survives the code being rewritten in
   another language, which is why ADR-030 §8 gates M22 on it rather than on review. The rules and
   what they deliberately do not cover are [CONFORMANCE.md](CONFORMANCE.md).
+- **And it has now survived its first deletion.** M20 ported ball-strike detection to Rust and
+  *removed* the Python that had done it, which is only defensible because the vectors outlive the
+  code: `spec/vectors/audio/` was recorded by the reference implementation and verified against
+  the thirty stored artifacts before that implementation was deleted. `cargo test` is the second
+  runner now — `conformance.py check` defers that family to it and says so rather than skipping
+  quietly. The corollary is written into `conformance_vectors._audio`, which **refuses** to
+  rebuild them: an oracle regenerated by the implementation it judges is a self-portrait.
+- **And the specification has now been used, which is a different claim from having one.**
+  M22 ported the whole engine to Rust against those vectors — stage by stage, each phase gated by
+  a committed answer rather than by review — and all 21 conform through `cargo test`, with
+  `golf-core run` and `conformance.py run` agreeing at zero differences through Python's *own*
+  comparator. The load-bearing part is what it cost to find out: **a green gate licenses less than
+  it looks like**, and every phase measured the gap by mutation rather than asserting there wasn't
+  one. **211 deliberate divergences** were introduced across six phases and run against both gates;
+  the ones that survive every vector in `spec/` — a couple of dozen, listed phase by phase in
+  ADR-032's addenda — are caught only by the Rust unit tests standing where the corpus cannot
+  reach: a left-handed mirror the one left-handed swing cannot exercise, three of five sync tiers
+  that never reach a committed answer, twenty-odd refusal branches no committed swing takes. `CONFORMANCE.md`
+  §2 and ADR-032's eleventh addendum carry the list. **No vector moved and `ANALYSIS_VERSION` did
+  not bump**, which means the port found no defect in this engine that changed an answer — and is
+  silent about the two it could not see, both of which turned out to be overstated docstrings.
 - **Not measured:** end-to-end wall-clock latency. The target is <15s swing-to-feedback
   (charter), but nothing has been benchmarked, and there is no UI to measure to. Any timing
   table you find in [FLOW.md](FLOW.md) is an estimate, not a measurement.

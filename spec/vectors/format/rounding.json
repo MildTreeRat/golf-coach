@@ -1,0 +1,6021 @@
+{
+  "cases": [
+    {
+      "expected": 0,
+      "ndigits": null,
+      "value": "0.49999999999999994"
+    },
+    {
+      "expected": 0,
+      "ndigits": null,
+      "value": "0.5"
+    },
+    {
+      "expected": 1,
+      "ndigits": null,
+      "value": "0.5000000000000001"
+    },
+    {
+      "expected": 1,
+      "ndigits": null,
+      "value": "1.4999999999999998"
+    },
+    {
+      "expected": 2,
+      "ndigits": null,
+      "value": "1.5"
+    },
+    {
+      "expected": 2,
+      "ndigits": null,
+      "value": "1.5000000000000002"
+    },
+    {
+      "expected": 2,
+      "ndigits": null,
+      "value": "2.4999999999999996"
+    },
+    {
+      "expected": 2,
+      "ndigits": null,
+      "value": "2.5"
+    },
+    {
+      "expected": 3,
+      "ndigits": null,
+      "value": "2.5000000000000004"
+    },
+    {
+      "expected": 3,
+      "ndigits": null,
+      "value": "3.4999999999999996"
+    },
+    {
+      "expected": 4,
+      "ndigits": null,
+      "value": "3.5"
+    },
+    {
+      "expected": 4,
+      "ndigits": null,
+      "value": "3.5000000000000004"
+    },
+    {
+      "expected": 4,
+      "ndigits": null,
+      "value": "4.499999999999999"
+    },
+    {
+      "expected": 4,
+      "ndigits": null,
+      "value": "4.5"
+    },
+    {
+      "expected": 5,
+      "ndigits": null,
+      "value": "4.500000000000001"
+    },
+    {
+      "expected": 5,
+      "ndigits": null,
+      "value": "5.499999999999999"
+    },
+    {
+      "expected": 6,
+      "ndigits": null,
+      "value": "5.5"
+    },
+    {
+      "expected": 6,
+      "ndigits": null,
+      "value": "5.500000000000001"
+    },
+    {
+      "expected": 6,
+      "ndigits": null,
+      "value": "6.499999999999999"
+    },
+    {
+      "expected": 6,
+      "ndigits": null,
+      "value": "6.5"
+    },
+    {
+      "expected": 7,
+      "ndigits": null,
+      "value": "6.500000000000001"
+    },
+    {
+      "expected": 7,
+      "ndigits": null,
+      "value": "7.499999999999999"
+    },
+    {
+      "expected": 8,
+      "ndigits": null,
+      "value": "7.5"
+    },
+    {
+      "expected": 8,
+      "ndigits": null,
+      "value": "7.500000000000001"
+    },
+    {
+      "expected": 8,
+      "ndigits": null,
+      "value": "8.499999999999998"
+    },
+    {
+      "expected": 8,
+      "ndigits": null,
+      "value": "8.5"
+    },
+    {
+      "expected": 9,
+      "ndigits": null,
+      "value": "8.500000000000002"
+    },
+    {
+      "expected": 9,
+      "ndigits": null,
+      "value": "9.499999999999998"
+    },
+    {
+      "expected": 10,
+      "ndigits": null,
+      "value": "9.5"
+    },
+    {
+      "expected": 10,
+      "ndigits": null,
+      "value": "9.500000000000002"
+    },
+    {
+      "expected": 10,
+      "ndigits": null,
+      "value": "10.499999999999998"
+    },
+    {
+      "expected": 10,
+      "ndigits": null,
+      "value": "10.5"
+    },
+    {
+      "expected": 11,
+      "ndigits": null,
+      "value": "10.500000000000002"
+    },
+    {
+      "expected": 11,
+      "ndigits": null,
+      "value": "11.499999999999998"
+    },
+    {
+      "expected": 12,
+      "ndigits": null,
+      "value": "11.5"
+    },
+    {
+      "expected": 12,
+      "ndigits": null,
+      "value": "11.500000000000002"
+    },
+    {
+      "expected": 12,
+      "ndigits": null,
+      "value": "12.499999999999998"
+    },
+    {
+      "expected": 12,
+      "ndigits": null,
+      "value": "12.5"
+    },
+    {
+      "expected": 13,
+      "ndigits": null,
+      "value": "12.500000000000002"
+    },
+    {
+      "expected": 13,
+      "ndigits": null,
+      "value": "13.499999999999998"
+    },
+    {
+      "expected": 14,
+      "ndigits": null,
+      "value": "13.5"
+    },
+    {
+      "expected": 14,
+      "ndigits": null,
+      "value": "13.500000000000002"
+    },
+    {
+      "expected": 14,
+      "ndigits": null,
+      "value": "14.499999999999998"
+    },
+    {
+      "expected": 14,
+      "ndigits": null,
+      "value": "14.5"
+    },
+    {
+      "expected": 15,
+      "ndigits": null,
+      "value": "14.500000000000002"
+    },
+    {
+      "expected": 15,
+      "ndigits": null,
+      "value": "15.499999999999998"
+    },
+    {
+      "expected": 16,
+      "ndigits": null,
+      "value": "15.5"
+    },
+    {
+      "expected": 16,
+      "ndigits": null,
+      "value": "15.500000000000002"
+    },
+    {
+      "expected": 16,
+      "ndigits": null,
+      "value": "16.499999999999996"
+    },
+    {
+      "expected": 16,
+      "ndigits": null,
+      "value": "16.5"
+    },
+    {
+      "expected": 17,
+      "ndigits": null,
+      "value": "16.500000000000004"
+    },
+    {
+      "expected": 17,
+      "ndigits": null,
+      "value": "17.499999999999996"
+    },
+    {
+      "expected": 18,
+      "ndigits": null,
+      "value": "17.5"
+    },
+    {
+      "expected": 18,
+      "ndigits": null,
+      "value": "17.500000000000004"
+    },
+    {
+      "expected": 18,
+      "ndigits": null,
+      "value": "18.499999999999996"
+    },
+    {
+      "expected": 18,
+      "ndigits": null,
+      "value": "18.5"
+    },
+    {
+      "expected": 19,
+      "ndigits": null,
+      "value": "18.500000000000004"
+    },
+    {
+      "expected": 19,
+      "ndigits": null,
+      "value": "19.499999999999996"
+    },
+    {
+      "expected": 20,
+      "ndigits": null,
+      "value": "19.5"
+    },
+    {
+      "expected": 20,
+      "ndigits": null,
+      "value": "19.500000000000004"
+    },
+    {
+      "expected": 20,
+      "ndigits": null,
+      "value": "20.499999999999996"
+    },
+    {
+      "expected": 20,
+      "ndigits": null,
+      "value": "20.5"
+    },
+    {
+      "expected": 21,
+      "ndigits": null,
+      "value": "20.500000000000004"
+    },
+    {
+      "expected": 21,
+      "ndigits": null,
+      "value": "21.499999999999996"
+    },
+    {
+      "expected": 22,
+      "ndigits": null,
+      "value": "21.5"
+    },
+    {
+      "expected": 22,
+      "ndigits": null,
+      "value": "21.500000000000004"
+    },
+    {
+      "expected": 22,
+      "ndigits": null,
+      "value": "22.499999999999996"
+    },
+    {
+      "expected": 22,
+      "ndigits": null,
+      "value": "22.5"
+    },
+    {
+      "expected": 23,
+      "ndigits": null,
+      "value": "22.500000000000004"
+    },
+    {
+      "expected": 23,
+      "ndigits": null,
+      "value": "23.499999999999996"
+    },
+    {
+      "expected": 24,
+      "ndigits": null,
+      "value": "23.5"
+    },
+    {
+      "expected": 24,
+      "ndigits": null,
+      "value": "23.500000000000004"
+    },
+    {
+      "expected": 24,
+      "ndigits": null,
+      "value": "24.499999999999996"
+    },
+    {
+      "expected": 24,
+      "ndigits": null,
+      "value": "24.5"
+    },
+    {
+      "expected": 25,
+      "ndigits": null,
+      "value": "24.500000000000004"
+    },
+    {
+      "expected": 25,
+      "ndigits": null,
+      "value": "25.499999999999996"
+    },
+    {
+      "expected": 26,
+      "ndigits": null,
+      "value": "25.5"
+    },
+    {
+      "expected": 26,
+      "ndigits": null,
+      "value": "25.500000000000004"
+    },
+    {
+      "expected": 26,
+      "ndigits": null,
+      "value": "26.499999999999996"
+    },
+    {
+      "expected": 26,
+      "ndigits": null,
+      "value": "26.5"
+    },
+    {
+      "expected": 27,
+      "ndigits": null,
+      "value": "26.500000000000004"
+    },
+    {
+      "expected": 27,
+      "ndigits": null,
+      "value": "27.499999999999996"
+    },
+    {
+      "expected": 28,
+      "ndigits": null,
+      "value": "27.5"
+    },
+    {
+      "expected": 28,
+      "ndigits": null,
+      "value": "27.500000000000004"
+    },
+    {
+      "expected": 28,
+      "ndigits": null,
+      "value": "28.499999999999996"
+    },
+    {
+      "expected": 28,
+      "ndigits": null,
+      "value": "28.5"
+    },
+    {
+      "expected": 29,
+      "ndigits": null,
+      "value": "28.500000000000004"
+    },
+    {
+      "expected": 29,
+      "ndigits": null,
+      "value": "29.499999999999996"
+    },
+    {
+      "expected": 30,
+      "ndigits": null,
+      "value": "29.5"
+    },
+    {
+      "expected": 30,
+      "ndigits": null,
+      "value": "29.500000000000004"
+    },
+    {
+      "expected": 30,
+      "ndigits": null,
+      "value": "30.499999999999996"
+    },
+    {
+      "expected": 30,
+      "ndigits": null,
+      "value": "30.5"
+    },
+    {
+      "expected": 31,
+      "ndigits": null,
+      "value": "30.500000000000004"
+    },
+    {
+      "expected": 31,
+      "ndigits": null,
+      "value": "31.499999999999996"
+    },
+    {
+      "expected": 32,
+      "ndigits": null,
+      "value": "31.5"
+    },
+    {
+      "expected": 32,
+      "ndigits": null,
+      "value": "31.500000000000004"
+    },
+    {
+      "expected": 32,
+      "ndigits": null,
+      "value": "32.49999999999999"
+    },
+    {
+      "expected": 32,
+      "ndigits": null,
+      "value": "32.5"
+    },
+    {
+      "expected": 33,
+      "ndigits": null,
+      "value": "32.50000000000001"
+    },
+    {
+      "expected": 33,
+      "ndigits": null,
+      "value": "33.49999999999999"
+    },
+    {
+      "expected": 34,
+      "ndigits": null,
+      "value": "33.5"
+    },
+    {
+      "expected": 34,
+      "ndigits": null,
+      "value": "33.50000000000001"
+    },
+    {
+      "expected": 34,
+      "ndigits": null,
+      "value": "34.49999999999999"
+    },
+    {
+      "expected": 34,
+      "ndigits": null,
+      "value": "34.5"
+    },
+    {
+      "expected": 35,
+      "ndigits": null,
+      "value": "34.50000000000001"
+    },
+    {
+      "expected": 35,
+      "ndigits": null,
+      "value": "35.49999999999999"
+    },
+    {
+      "expected": 36,
+      "ndigits": null,
+      "value": "35.5"
+    },
+    {
+      "expected": 36,
+      "ndigits": null,
+      "value": "35.50000000000001"
+    },
+    {
+      "expected": 36,
+      "ndigits": null,
+      "value": "36.49999999999999"
+    },
+    {
+      "expected": 36,
+      "ndigits": null,
+      "value": "36.5"
+    },
+    {
+      "expected": 37,
+      "ndigits": null,
+      "value": "36.50000000000001"
+    },
+    {
+      "expected": 37,
+      "ndigits": null,
+      "value": "37.49999999999999"
+    },
+    {
+      "expected": 38,
+      "ndigits": null,
+      "value": "37.5"
+    },
+    {
+      "expected": 38,
+      "ndigits": null,
+      "value": "37.50000000000001"
+    },
+    {
+      "expected": 38,
+      "ndigits": null,
+      "value": "38.49999999999999"
+    },
+    {
+      "expected": 38,
+      "ndigits": null,
+      "value": "38.5"
+    },
+    {
+      "expected": 39,
+      "ndigits": null,
+      "value": "38.50000000000001"
+    },
+    {
+      "expected": 39,
+      "ndigits": null,
+      "value": "39.49999999999999"
+    },
+    {
+      "expected": 40,
+      "ndigits": null,
+      "value": "39.5"
+    },
+    {
+      "expected": 40,
+      "ndigits": null,
+      "value": "39.50000000000001"
+    },
+    {
+      "expected": 0,
+      "ndigits": null,
+      "value": "-0.49999999999999994"
+    },
+    {
+      "expected": 0,
+      "ndigits": null,
+      "value": "-0.5"
+    },
+    {
+      "expected": -1,
+      "ndigits": null,
+      "value": "-0.5000000000000001"
+    },
+    {
+      "expected": -1,
+      "ndigits": null,
+      "value": "-1.4999999999999998"
+    },
+    {
+      "expected": -2,
+      "ndigits": null,
+      "value": "-1.5"
+    },
+    {
+      "expected": -2,
+      "ndigits": null,
+      "value": "-1.5000000000000002"
+    },
+    {
+      "expected": -2,
+      "ndigits": null,
+      "value": "-2.4999999999999996"
+    },
+    {
+      "expected": -2,
+      "ndigits": null,
+      "value": "-2.5"
+    },
+    {
+      "expected": -3,
+      "ndigits": null,
+      "value": "-2.5000000000000004"
+    },
+    {
+      "expected": -3,
+      "ndigits": null,
+      "value": "-3.4999999999999996"
+    },
+    {
+      "expected": -4,
+      "ndigits": null,
+      "value": "-3.5"
+    },
+    {
+      "expected": -4,
+      "ndigits": null,
+      "value": "-3.5000000000000004"
+    },
+    {
+      "expected": -4,
+      "ndigits": null,
+      "value": "-4.499999999999999"
+    },
+    {
+      "expected": -4,
+      "ndigits": null,
+      "value": "-4.5"
+    },
+    {
+      "expected": -5,
+      "ndigits": null,
+      "value": "-4.500000000000001"
+    },
+    {
+      "expected": -5,
+      "ndigits": null,
+      "value": "-5.499999999999999"
+    },
+    {
+      "expected": -6,
+      "ndigits": null,
+      "value": "-5.5"
+    },
+    {
+      "expected": -6,
+      "ndigits": null,
+      "value": "-5.500000000000001"
+    },
+    {
+      "expected": -6,
+      "ndigits": null,
+      "value": "-6.499999999999999"
+    },
+    {
+      "expected": -6,
+      "ndigits": null,
+      "value": "-6.5"
+    },
+    {
+      "expected": -7,
+      "ndigits": null,
+      "value": "-6.500000000000001"
+    },
+    {
+      "expected": -7,
+      "ndigits": null,
+      "value": "-7.499999999999999"
+    },
+    {
+      "expected": -8,
+      "ndigits": null,
+      "value": "-7.5"
+    },
+    {
+      "expected": -8,
+      "ndigits": null,
+      "value": "-7.500000000000001"
+    },
+    {
+      "expected": -8,
+      "ndigits": null,
+      "value": "-8.499999999999998"
+    },
+    {
+      "expected": -8,
+      "ndigits": null,
+      "value": "-8.5"
+    },
+    {
+      "expected": -9,
+      "ndigits": null,
+      "value": "-8.500000000000002"
+    },
+    {
+      "expected": -9,
+      "ndigits": null,
+      "value": "-9.499999999999998"
+    },
+    {
+      "expected": -10,
+      "ndigits": null,
+      "value": "-9.5"
+    },
+    {
+      "expected": -10,
+      "ndigits": null,
+      "value": "-9.500000000000002"
+    },
+    {
+      "expected": -10,
+      "ndigits": null,
+      "value": "-10.499999999999998"
+    },
+    {
+      "expected": -10,
+      "ndigits": null,
+      "value": "-10.5"
+    },
+    {
+      "expected": -11,
+      "ndigits": null,
+      "value": "-10.500000000000002"
+    },
+    {
+      "expected": -11,
+      "ndigits": null,
+      "value": "-11.499999999999998"
+    },
+    {
+      "expected": -12,
+      "ndigits": null,
+      "value": "-11.5"
+    },
+    {
+      "expected": -12,
+      "ndigits": null,
+      "value": "-11.500000000000002"
+    },
+    {
+      "expected": -12,
+      "ndigits": null,
+      "value": "-12.499999999999998"
+    },
+    {
+      "expected": -12,
+      "ndigits": null,
+      "value": "-12.5"
+    },
+    {
+      "expected": -13,
+      "ndigits": null,
+      "value": "-12.500000000000002"
+    },
+    {
+      "expected": -13,
+      "ndigits": null,
+      "value": "-13.499999999999998"
+    },
+    {
+      "expected": -14,
+      "ndigits": null,
+      "value": "-13.5"
+    },
+    {
+      "expected": -14,
+      "ndigits": null,
+      "value": "-13.500000000000002"
+    },
+    {
+      "expected": -14,
+      "ndigits": null,
+      "value": "-14.499999999999998"
+    },
+    {
+      "expected": -14,
+      "ndigits": null,
+      "value": "-14.5"
+    },
+    {
+      "expected": -15,
+      "ndigits": null,
+      "value": "-14.500000000000002"
+    },
+    {
+      "expected": -15,
+      "ndigits": null,
+      "value": "-15.499999999999998"
+    },
+    {
+      "expected": -16,
+      "ndigits": null,
+      "value": "-15.5"
+    },
+    {
+      "expected": -16,
+      "ndigits": null,
+      "value": "-15.500000000000002"
+    },
+    {
+      "expected": -16,
+      "ndigits": null,
+      "value": "-16.499999999999996"
+    },
+    {
+      "expected": -16,
+      "ndigits": null,
+      "value": "-16.5"
+    },
+    {
+      "expected": -17,
+      "ndigits": null,
+      "value": "-16.500000000000004"
+    },
+    {
+      "expected": -17,
+      "ndigits": null,
+      "value": "-17.499999999999996"
+    },
+    {
+      "expected": -18,
+      "ndigits": null,
+      "value": "-17.5"
+    },
+    {
+      "expected": -18,
+      "ndigits": null,
+      "value": "-17.500000000000004"
+    },
+    {
+      "expected": -18,
+      "ndigits": null,
+      "value": "-18.499999999999996"
+    },
+    {
+      "expected": -18,
+      "ndigits": null,
+      "value": "-18.5"
+    },
+    {
+      "expected": -19,
+      "ndigits": null,
+      "value": "-18.500000000000004"
+    },
+    {
+      "expected": -19,
+      "ndigits": null,
+      "value": "-19.499999999999996"
+    },
+    {
+      "expected": -20,
+      "ndigits": null,
+      "value": "-19.5"
+    },
+    {
+      "expected": -20,
+      "ndigits": null,
+      "value": "-19.500000000000004"
+    },
+    {
+      "expected": -20,
+      "ndigits": null,
+      "value": "-20.499999999999996"
+    },
+    {
+      "expected": -20,
+      "ndigits": null,
+      "value": "-20.5"
+    },
+    {
+      "expected": -21,
+      "ndigits": null,
+      "value": "-20.500000000000004"
+    },
+    {
+      "expected": -21,
+      "ndigits": null,
+      "value": "-21.499999999999996"
+    },
+    {
+      "expected": -22,
+      "ndigits": null,
+      "value": "-21.5"
+    },
+    {
+      "expected": -22,
+      "ndigits": null,
+      "value": "-21.500000000000004"
+    },
+    {
+      "expected": -22,
+      "ndigits": null,
+      "value": "-22.499999999999996"
+    },
+    {
+      "expected": -22,
+      "ndigits": null,
+      "value": "-22.5"
+    },
+    {
+      "expected": -23,
+      "ndigits": null,
+      "value": "-22.500000000000004"
+    },
+    {
+      "expected": -23,
+      "ndigits": null,
+      "value": "-23.499999999999996"
+    },
+    {
+      "expected": -24,
+      "ndigits": null,
+      "value": "-23.5"
+    },
+    {
+      "expected": -24,
+      "ndigits": null,
+      "value": "-23.500000000000004"
+    },
+    {
+      "expected": -24,
+      "ndigits": null,
+      "value": "-24.499999999999996"
+    },
+    {
+      "expected": -24,
+      "ndigits": null,
+      "value": "-24.5"
+    },
+    {
+      "expected": -25,
+      "ndigits": null,
+      "value": "-24.500000000000004"
+    },
+    {
+      "expected": -25,
+      "ndigits": null,
+      "value": "-25.499999999999996"
+    },
+    {
+      "expected": -26,
+      "ndigits": null,
+      "value": "-25.5"
+    },
+    {
+      "expected": -26,
+      "ndigits": null,
+      "value": "-25.500000000000004"
+    },
+    {
+      "expected": -26,
+      "ndigits": null,
+      "value": "-26.499999999999996"
+    },
+    {
+      "expected": -26,
+      "ndigits": null,
+      "value": "-26.5"
+    },
+    {
+      "expected": -27,
+      "ndigits": null,
+      "value": "-26.500000000000004"
+    },
+    {
+      "expected": -27,
+      "ndigits": null,
+      "value": "-27.499999999999996"
+    },
+    {
+      "expected": -28,
+      "ndigits": null,
+      "value": "-27.5"
+    },
+    {
+      "expected": -28,
+      "ndigits": null,
+      "value": "-27.500000000000004"
+    },
+    {
+      "expected": -28,
+      "ndigits": null,
+      "value": "-28.499999999999996"
+    },
+    {
+      "expected": -28,
+      "ndigits": null,
+      "value": "-28.5"
+    },
+    {
+      "expected": -29,
+      "ndigits": null,
+      "value": "-28.500000000000004"
+    },
+    {
+      "expected": -29,
+      "ndigits": null,
+      "value": "-29.499999999999996"
+    },
+    {
+      "expected": -30,
+      "ndigits": null,
+      "value": "-29.5"
+    },
+    {
+      "expected": -30,
+      "ndigits": null,
+      "value": "-29.500000000000004"
+    },
+    {
+      "expected": -30,
+      "ndigits": null,
+      "value": "-30.499999999999996"
+    },
+    {
+      "expected": -30,
+      "ndigits": null,
+      "value": "-30.5"
+    },
+    {
+      "expected": -31,
+      "ndigits": null,
+      "value": "-30.500000000000004"
+    },
+    {
+      "expected": -31,
+      "ndigits": null,
+      "value": "-31.499999999999996"
+    },
+    {
+      "expected": -32,
+      "ndigits": null,
+      "value": "-31.5"
+    },
+    {
+      "expected": -32,
+      "ndigits": null,
+      "value": "-31.500000000000004"
+    },
+    {
+      "expected": -32,
+      "ndigits": null,
+      "value": "-32.49999999999999"
+    },
+    {
+      "expected": -32,
+      "ndigits": null,
+      "value": "-32.5"
+    },
+    {
+      "expected": -33,
+      "ndigits": null,
+      "value": "-32.50000000000001"
+    },
+    {
+      "expected": -33,
+      "ndigits": null,
+      "value": "-33.49999999999999"
+    },
+    {
+      "expected": -34,
+      "ndigits": null,
+      "value": "-33.5"
+    },
+    {
+      "expected": -34,
+      "ndigits": null,
+      "value": "-33.50000000000001"
+    },
+    {
+      "expected": -34,
+      "ndigits": null,
+      "value": "-34.49999999999999"
+    },
+    {
+      "expected": -34,
+      "ndigits": null,
+      "value": "-34.5"
+    },
+    {
+      "expected": -35,
+      "ndigits": null,
+      "value": "-34.50000000000001"
+    },
+    {
+      "expected": -35,
+      "ndigits": null,
+      "value": "-35.49999999999999"
+    },
+    {
+      "expected": -36,
+      "ndigits": null,
+      "value": "-35.5"
+    },
+    {
+      "expected": -36,
+      "ndigits": null,
+      "value": "-35.50000000000001"
+    },
+    {
+      "expected": -36,
+      "ndigits": null,
+      "value": "-36.49999999999999"
+    },
+    {
+      "expected": -36,
+      "ndigits": null,
+      "value": "-36.5"
+    },
+    {
+      "expected": -37,
+      "ndigits": null,
+      "value": "-36.50000000000001"
+    },
+    {
+      "expected": -37,
+      "ndigits": null,
+      "value": "-37.49999999999999"
+    },
+    {
+      "expected": -38,
+      "ndigits": null,
+      "value": "-37.5"
+    },
+    {
+      "expected": -38,
+      "ndigits": null,
+      "value": "-37.50000000000001"
+    },
+    {
+      "expected": -38,
+      "ndigits": null,
+      "value": "-38.49999999999999"
+    },
+    {
+      "expected": -38,
+      "ndigits": null,
+      "value": "-38.5"
+    },
+    {
+      "expected": -39,
+      "ndigits": null,
+      "value": "-38.50000000000001"
+    },
+    {
+      "expected": -39,
+      "ndigits": null,
+      "value": "-39.49999999999999"
+    },
+    {
+      "expected": -40,
+      "ndigits": null,
+      "value": "-39.5"
+    },
+    {
+      "expected": -40,
+      "ndigits": null,
+      "value": "-39.50000000000001"
+    },
+    {
+      "expected": 0,
+      "ndigits": null,
+      "value": "0.49999999999999994"
+    },
+    {
+      "expected": 0,
+      "ndigits": null,
+      "value": "-0.49999999999999994"
+    },
+    {
+      "expected": 0,
+      "ndigits": null,
+      "value": "-0.0030917088319951393"
+    },
+    {
+      "expected": 0,
+      "ndigits": null,
+      "value": "-0.0002595998825771406"
+    },
+    {
+      "expected": 0,
+      "ndigits": null,
+      "value": "-0.00015733235338931606"
+    },
+    {
+      "expected": -9455,
+      "ndigits": null,
+      "value": "-9455.208509505204"
+    },
+    {
+      "expected": -9343826,
+      "ndigits": null,
+      "value": "-9343825.501387317"
+    },
+    {
+      "expected": 61,
+      "ndigits": null,
+      "value": "60.89323790298593"
+    },
+    {
+      "expected": 2,
+      "ndigits": null,
+      "value": "1.6316640461003562"
+    },
+    {
+      "expected": 3159,
+      "ndigits": null,
+      "value": "3158.5511469920966"
+    },
+    {
+      "expected": -83311583,
+      "ndigits": null,
+      "value": "-83311583.01007764"
+    },
+    {
+      "expected": 0,
+      "ndigits": null,
+      "value": "-0.00034024836243811476"
+    },
+    {
+      "expected": -94,
+      "ndigits": null,
+      "value": "-93.78283054093465"
+    },
+    {
+      "expected": 0,
+      "ndigits": null,
+      "value": "0.07380048538612063"
+    },
+    {
+      "expected": 0,
+      "ndigits": null,
+      "value": "-0.000987671185614434"
+    },
+    {
+      "expected": 1133,
+      "ndigits": null,
+      "value": "1133.4959607565543"
+    },
+    {
+      "expected": 78,
+      "ndigits": null,
+      "value": "77.54862067601083"
+    },
+    {
+      "expected": -33454757,
+      "ndigits": null,
+      "value": "-33454757.087094557"
+    },
+    {
+      "expected": 0,
+      "ndigits": null,
+      "value": "-1.6605888908030965e-05"
+    },
+    {
+      "expected": 46925162,
+      "ndigits": null,
+      "value": "46925162.16530533"
+    },
+    {
+      "expected": -78,
+      "ndigits": null,
+      "value": "-78.13527389674589"
+    },
+    {
+      "expected": 15626,
+      "ndigits": null,
+      "value": "15626.30151651967"
+    },
+    {
+      "expected": 88273032,
+      "ndigits": null,
+      "value": "88273031.66923088"
+    },
+    {
+      "expected": 4904628,
+      "ndigits": null,
+      "value": "4904628.404621718"
+    },
+    {
+      "expected": -454490,
+      "ndigits": null,
+      "value": "-454489.7653667193"
+    },
+    {
+      "expected": 3564,
+      "ndigits": null,
+      "value": "3563.6732241121294"
+    },
+    {
+      "expected": -10,
+      "ndigits": null,
+      "value": "-9.90680060414675"
+    },
+    {
+      "expected": 70,
+      "ndigits": null,
+      "value": "69.86300714007359"
+    },
+    {
+      "expected": 0,
+      "ndigits": null,
+      "value": "-0.0008497598258838632"
+    },
+    {
+      "expected": -513,
+      "ndigits": null,
+      "value": "-513.0543319743632"
+    },
+    {
+      "expected": 0,
+      "ndigits": null,
+      "value": "-0.0004972248571103603"
+    },
+    {
+      "expected": 0,
+      "ndigits": null,
+      "value": "0.2347364521566997"
+    },
+    {
+      "expected": 0,
+      "ndigits": null,
+      "value": "-0.0006847460853848353"
+    },
+    {
+      "expected": 5053657,
+      "ndigits": null,
+      "value": "5053657.452326074"
+    },
+    {
+      "expected": 8,
+      "ndigits": null,
+      "value": "8.294695235179539"
+    },
+    {
+      "expected": 0,
+      "ndigits": null,
+      "value": "-0.012073045595667709"
+    },
+    {
+      "expected": 670,
+      "ndigits": null,
+      "value": "670.0169895437349"
+    },
+    {
+      "expected": 0,
+      "ndigits": null,
+      "value": "-0.004087056589346209"
+    },
+    {
+      "expected": 0,
+      "ndigits": null,
+      "value": "0.0001374430316765327"
+    },
+    {
+      "expected": 5224224,
+      "ndigits": null,
+      "value": "5224224.480209218"
+    },
+    {
+      "expected": 2988255,
+      "ndigits": null,
+      "value": "2988254.516305742"
+    },
+    {
+      "expected": -5367,
+      "ndigits": null,
+      "value": "-5367.310256180557"
+    },
+    {
+      "expected": 3467386,
+      "ndigits": null,
+      "value": "3467386.2544725356"
+    },
+    {
+      "expected": 61199316,
+      "ndigits": null,
+      "value": "61199315.524116814"
+    },
+    {
+      "expected": 0,
+      "ndigits": null,
+      "value": "1.7074765907319203e-06"
+    },
+    {
+      "expected": 117547,
+      "ndigits": null,
+      "value": "117547.14765428376"
+    },
+    {
+      "expected": -91628223,
+      "ndigits": null,
+      "value": "-91628222.88616064"
+    },
+    {
+      "expected": 0,
+      "ndigits": null,
+      "value": "4.307350620804278e-06"
+    },
+    {
+      "expected": 0,
+      "ndigits": null,
+      "value": "6.056390723521621e-07"
+    },
+    {
+      "expected": 0,
+      "ndigits": null,
+      "value": "0.008914643864562324"
+    },
+    {
+      "expected": -9,
+      "ndigits": null,
+      "value": "-9.290659209599267"
+    },
+    {
+      "expected": 0,
+      "ndigits": null,
+      "value": "-2.800024538551162e-07"
+    },
+    {
+      "expected": 0,
+      "ndigits": null,
+      "value": "-4.899002626541049e-05"
+    },
+    {
+      "expected": -79261,
+      "ndigits": null,
+      "value": "-79261.3839183749"
+    },
+    {
+      "expected": 0,
+      "ndigits": null,
+      "value": "-0.0004914995289707882"
+    },
+    {
+      "expected": 0,
+      "ndigits": null,
+      "value": "-0.005084930874781502"
+    },
+    {
+      "expected": 9647,
+      "ndigits": null,
+      "value": "9646.719863314334"
+    },
+    {
+      "expected": 0,
+      "ndigits": null,
+      "value": "-3.005853030906225e-06"
+    },
+    {
+      "expected": -86165,
+      "ndigits": null,
+      "value": "-86164.50183872588"
+    },
+    {
+      "expected": 0,
+      "ndigits": null,
+      "value": "0.03753769160015255"
+    },
+    {
+      "expected": 0,
+      "ndigits": null,
+      "value": "7.759191707037054e-05"
+    },
+    {
+      "expected": 78514,
+      "ndigits": null,
+      "value": "78513.56704822987"
+    },
+    {
+      "expected": "0.1",
+      "ndigits": 1,
+      "value": "0.145"
+    },
+    {
+      "expected": "0.1",
+      "ndigits": 1,
+      "value": "0.135"
+    },
+    {
+      "expected": "2.7",
+      "ndigits": 1,
+      "value": "2.675"
+    },
+    {
+      "expected": "1.0",
+      "ndigits": 1,
+      "value": "1.005"
+    },
+    {
+      "expected": "0.2",
+      "ndigits": 1,
+      "value": "0.215"
+    },
+    {
+      "expected": "5.6",
+      "ndigits": 1,
+      "value": "5.565"
+    },
+    {
+      "expected": "8.8",
+      "ndigits": 1,
+      "value": "8.835"
+    },
+    {
+      "expected": "2.3",
+      "ndigits": 1,
+      "value": "2.345"
+    },
+    {
+      "expected": "1234.6",
+      "ndigits": 1,
+      "value": "1234.5678"
+    },
+    {
+      "expected": "0.0",
+      "ndigits": 1,
+      "value": "0.0001235"
+    },
+    {
+      "expected": "-0.4",
+      "ndigits": 1,
+      "value": "-0.40299178787112405"
+    },
+    {
+      "expected": "-0.4",
+      "ndigits": 1,
+      "value": "-0.3951798367578031"
+    },
+    {
+      "expected": "-0.4",
+      "ndigits": 1,
+      "value": "-0.3806867168557748"
+    },
+    {
+      "expected": "-0.4",
+      "ndigits": 1,
+      "value": "-0.35212041487712065"
+    },
+    {
+      "expected": "-0.4",
+      "ndigits": 1,
+      "value": "-0.3509828523001702"
+    },
+    {
+      "expected": "-0.3",
+      "ndigits": 1,
+      "value": "-0.3395573949756931"
+    },
+    {
+      "expected": "-0.3",
+      "ndigits": 1,
+      "value": "-0.3045788491941166"
+    },
+    {
+      "expected": "-0.3",
+      "ndigits": 1,
+      "value": "-0.30068479363089184"
+    },
+    {
+      "expected": "-0.3",
+      "ndigits": 1,
+      "value": "-0.2711081361046332"
+    },
+    {
+      "expected": "-0.3",
+      "ndigits": 1,
+      "value": "-0.2602157507388403"
+    },
+    {
+      "expected": "-0.3",
+      "ndigits": 1,
+      "value": "-0.2540244633827551"
+    },
+    {
+      "expected": "-0.2",
+      "ndigits": 1,
+      "value": "-0.23934615921414706"
+    },
+    {
+      "expected": "-0.2",
+      "ndigits": 1,
+      "value": "-0.21882289543527625"
+    },
+    {
+      "expected": "-0.2",
+      "ndigits": 1,
+      "value": "-0.21603023739369134"
+    },
+    {
+      "expected": "-0.2",
+      "ndigits": 1,
+      "value": "-0.18903843600565934"
+    },
+    {
+      "expected": "-0.1",
+      "ndigits": 1,
+      "value": "-0.13631259586469363"
+    },
+    {
+      "expected": "-0.1",
+      "ndigits": 1,
+      "value": "-0.13366534350860904"
+    },
+    {
+      "expected": "-0.1",
+      "ndigits": 1,
+      "value": "-0.13361386634701122"
+    },
+    {
+      "expected": "-0.1",
+      "ndigits": 1,
+      "value": "-0.11699472922348783"
+    },
+    {
+      "expected": "-0.1",
+      "ndigits": 1,
+      "value": "-0.10356096170078338"
+    },
+    {
+      "expected": "-0.1",
+      "ndigits": 1,
+      "value": "-0.08686367190749705"
+    },
+    {
+      "expected": "-0.1",
+      "ndigits": 1,
+      "value": "-0.07615540202134752"
+    },
+    {
+      "expected": "-0.1",
+      "ndigits": 1,
+      "value": "-0.07293058354587281"
+    },
+    {
+      "expected": "-0.0",
+      "ndigits": 1,
+      "value": "-0.034079132454510386"
+    },
+    {
+      "expected": "-0.0",
+      "ndigits": 1,
+      "value": "-0.02473780925011159"
+    },
+    {
+      "expected": "-0.0",
+      "ndigits": 1,
+      "value": "-0.002129290840320155"
+    },
+    {
+      "expected": "-0.0",
+      "ndigits": 1,
+      "value": "-0.0015530225716794462"
+    },
+    {
+      "expected": "0.0",
+      "ndigits": 1,
+      "value": "0.0"
+    },
+    {
+      "expected": "0.0",
+      "ndigits": 1,
+      "value": "0.00463073945147097"
+    },
+    {
+      "expected": "0.0",
+      "ndigits": 1,
+      "value": "0.005493591728208108"
+    },
+    {
+      "expected": "0.0",
+      "ndigits": 1,
+      "value": "0.006090251892507418"
+    },
+    {
+      "expected": "0.0",
+      "ndigits": 1,
+      "value": "0.0078797368249681"
+    },
+    {
+      "expected": "0.0",
+      "ndigits": 1,
+      "value": "0.007939101648847353"
+    },
+    {
+      "expected": "0.0",
+      "ndigits": 1,
+      "value": "0.008132345164282191"
+    },
+    {
+      "expected": "0.0",
+      "ndigits": 1,
+      "value": "0.011890818166805045"
+    },
+    {
+      "expected": "0.0",
+      "ndigits": 1,
+      "value": "0.015350437424627713"
+    },
+    {
+      "expected": "0.0",
+      "ndigits": 1,
+      "value": "0.017179789300229967"
+    },
+    {
+      "expected": "0.0",
+      "ndigits": 1,
+      "value": "0.021336824630924737"
+    },
+    {
+      "expected": "0.0",
+      "ndigits": 1,
+      "value": "0.028685862748839018"
+    },
+    {
+      "expected": "0.0",
+      "ndigits": 1,
+      "value": "0.029864931964233843"
+    },
+    {
+      "expected": "0.0",
+      "ndigits": 1,
+      "value": "0.03031777145297258"
+    },
+    {
+      "expected": "0.0",
+      "ndigits": 1,
+      "value": "0.03462793969709347"
+    },
+    {
+      "expected": "0.0",
+      "ndigits": 1,
+      "value": "0.03579602653216856"
+    },
+    {
+      "expected": "0.0",
+      "ndigits": 1,
+      "value": "0.03691518970391318"
+    },
+    {
+      "expected": "0.0",
+      "ndigits": 1,
+      "value": "0.037500000000000054"
+    },
+    {
+      "expected": "0.0",
+      "ndigits": 1,
+      "value": "0.03858372861430222"
+    },
+    {
+      "expected": "0.0",
+      "ndigits": 1,
+      "value": "0.04209067839269233"
+    },
+    {
+      "expected": "0.0",
+      "ndigits": 1,
+      "value": "0.04290235719050887"
+    },
+    {
+      "expected": "0.0",
+      "ndigits": 1,
+      "value": "0.043173491139447275"
+    },
+    {
+      "expected": "0.0",
+      "ndigits": 1,
+      "value": "0.04652949852477092"
+    },
+    {
+      "expected": "0.0",
+      "ndigits": 1,
+      "value": "0.04737989132593744"
+    },
+    {
+      "expected": "0.0",
+      "ndigits": 1,
+      "value": "0.04761904761904775"
+    },
+    {
+      "expected": "0.1",
+      "ndigits": 1,
+      "value": "0.05074954222241811"
+    },
+    {
+      "expected": "0.1",
+      "ndigits": 1,
+      "value": "0.053484677737748364"
+    },
+    {
+      "expected": "0.1",
+      "ndigits": 1,
+      "value": "0.056809072148658074"
+    },
+    {
+      "expected": "0.1",
+      "ndigits": 1,
+      "value": "0.07213481636012146"
+    },
+    {
+      "expected": "0.1",
+      "ndigits": 1,
+      "value": "0.07296787620252249"
+    },
+    {
+      "expected": "0.1",
+      "ndigits": 1,
+      "value": "0.07422671666355184"
+    },
+    {
+      "expected": "0.1",
+      "ndigits": 1,
+      "value": "0.0864229962951107"
+    },
+    {
+      "expected": "0.1",
+      "ndigits": 1,
+      "value": "0.09749158999906267"
+    },
+    {
+      "expected": "0.1",
+      "ndigits": 1,
+      "value": "0.09759006164885045"
+    },
+    {
+      "expected": "0.1",
+      "ndigits": 1,
+      "value": "0.09913569284360174"
+    },
+    {
+      "expected": "0.1",
+      "ndigits": 1,
+      "value": "0.10021010573841503"
+    },
+    {
+      "expected": "0.1",
+      "ndigits": 1,
+      "value": "0.10149496710801086"
+    },
+    {
+      "expected": "0.1",
+      "ndigits": 1,
+      "value": "0.1057022297676262"
+    },
+    {
+      "expected": "0.1",
+      "ndigits": 1,
+      "value": "0.10790892280321912"
+    },
+    {
+      "expected": "0.1",
+      "ndigits": 1,
+      "value": "0.10899810320250296"
+    },
+    {
+      "expected": "0.1",
+      "ndigits": 1,
+      "value": "0.11184036693605934"
+    },
+    {
+      "expected": "0.1",
+      "ndigits": 1,
+      "value": "0.11547954428584652"
+    },
+    {
+      "expected": "0.1",
+      "ndigits": 1,
+      "value": "0.1266372977131318"
+    },
+    {
+      "expected": "0.1",
+      "ndigits": 1,
+      "value": "0.12929373775643344"
+    },
+    {
+      "expected": "0.1",
+      "ndigits": 1,
+      "value": "0.1296695073136331"
+    },
+    {
+      "expected": "0.1",
+      "ndigits": 1,
+      "value": "0.13187408854019134"
+    },
+    {
+      "expected": "0.1",
+      "ndigits": 1,
+      "value": "0.13520817282989978"
+    },
+    {
+      "expected": "0.1",
+      "ndigits": 1,
+      "value": "0.14305127275914287"
+    },
+    {
+      "expected": "0.2",
+      "ndigits": 1,
+      "value": "0.155585027612895"
+    },
+    {
+      "expected": "0.2",
+      "ndigits": 1,
+      "value": "0.1560432616514023"
+    },
+    {
+      "expected": "0.2",
+      "ndigits": 1,
+      "value": "0.15761404078855135"
+    },
+    {
+      "expected": "0.2",
+      "ndigits": 1,
+      "value": "0.15857770093720153"
+    },
+    {
+      "expected": "0.2",
+      "ndigits": 1,
+      "value": "0.1683673469387754"
+    },
+    {
+      "expected": "0.2",
+      "ndigits": 1,
+      "value": "0.16990588014206934"
+    },
+    {
+      "expected": "0.2",
+      "ndigits": 1,
+      "value": "0.1792614827449467"
+    },
+    {
+      "expected": "0.2",
+      "ndigits": 1,
+      "value": "0.18378061742198076"
+    },
+    {
+      "expected": "0.2",
+      "ndigits": 1,
+      "value": "0.20349021449828192"
+    },
+    {
+      "expected": "0.2",
+      "ndigits": 1,
+      "value": "0.20544913977778095"
+    },
+    {
+      "expected": "0.2",
+      "ndigits": 1,
+      "value": "0.20616941271409303"
+    },
+    {
+      "expected": "0.2",
+      "ndigits": 1,
+      "value": "0.20623325750869312"
+    },
+    {
+      "expected": "0.2",
+      "ndigits": 1,
+      "value": "0.20937749877694906"
+    },
+    {
+      "expected": "0.2",
+      "ndigits": 1,
+      "value": "0.21120739741346034"
+    },
+    {
+      "expected": "0.2",
+      "ndigits": 1,
+      "value": "0.21429053281676352"
+    },
+    {
+      "expected": "0.2",
+      "ndigits": 1,
+      "value": "0.21496551157729774"
+    },
+    {
+      "expected": "0.2",
+      "ndigits": 1,
+      "value": "0.2174487523328919"
+    },
+    {
+      "expected": "0.2",
+      "ndigits": 1,
+      "value": "0.22172884104841745"
+    },
+    {
+      "expected": "0.2",
+      "ndigits": 1,
+      "value": "0.2378973056518421"
+    },
+    {
+      "expected": "0.3",
+      "ndigits": 1,
+      "value": "0.25415017436796394"
+    },
+    {
+      "expected": "0.3",
+      "ndigits": 1,
+      "value": "0.2584510763916153"
+    },
+    {
+      "expected": "0.3",
+      "ndigits": 1,
+      "value": "0.2771983879971406"
+    },
+    {
+      "expected": "0.3",
+      "ndigits": 1,
+      "value": "0.2823080823228219"
+    },
+    {
+      "expected": "0.3",
+      "ndigits": 1,
+      "value": "0.2891988939599062"
+    },
+    {
+      "expected": "0.3",
+      "ndigits": 1,
+      "value": "0.31567573371879115"
+    },
+    {
+      "expected": "0.3",
+      "ndigits": 1,
+      "value": "0.32393916019691044"
+    },
+    {
+      "expected": "0.4",
+      "ndigits": 1,
+      "value": "0.37421332455543643"
+    },
+    {
+      "expected": "0.4",
+      "ndigits": 1,
+      "value": "0.3836939706963882"
+    },
+    {
+      "expected": "0.4",
+      "ndigits": 1,
+      "value": "0.39211641990022433"
+    },
+    {
+      "expected": "0.4",
+      "ndigits": 1,
+      "value": "0.41625901239024254"
+    },
+    {
+      "expected": "0.4",
+      "ndigits": 1,
+      "value": "0.44855549817819607"
+    },
+    {
+      "expected": "0.5",
+      "ndigits": 1,
+      "value": "0.450118545143772"
+    },
+    {
+      "expected": "0.5",
+      "ndigits": 1,
+      "value": "0.4777742862562198"
+    },
+    {
+      "expected": "0.5",
+      "ndigits": 1,
+      "value": "0.4808968225941898"
+    },
+    {
+      "expected": "0.5",
+      "ndigits": 1,
+      "value": "0.5110347985347987"
+    },
+    {
+      "expected": "0.6",
+      "ndigits": 1,
+      "value": "0.5586538461538465"
+    },
+    {
+      "expected": "0.8",
+      "ndigits": 1,
+      "value": "0.8072618736591106"
+    },
+    {
+      "expected": "0.8",
+      "ndigits": 1,
+      "value": "0.8137822851283751"
+    },
+    {
+      "expected": "0.8",
+      "ndigits": 1,
+      "value": "0.8213010171104957"
+    },
+    {
+      "expected": "0.8",
+      "ndigits": 1,
+      "value": "0.821464338973518"
+    },
+    {
+      "expected": "0.8",
+      "ndigits": 1,
+      "value": "0.8274077932833411"
+    },
+    {
+      "expected": "0.8",
+      "ndigits": 1,
+      "value": "0.8318893771501815"
+    },
+    {
+      "expected": "0.8",
+      "ndigits": 1,
+      "value": "0.8320759301947858"
+    },
+    {
+      "expected": "0.8",
+      "ndigits": 1,
+      "value": "0.8372953663939646"
+    },
+    {
+      "expected": "0.8",
+      "ndigits": 1,
+      "value": "0.8405026745986929"
+    },
+    {
+      "expected": "2.7",
+      "ndigits": 1,
+      "value": "2.72"
+    },
+    {
+      "expected": "-2.7",
+      "ndigits": 1,
+      "value": "-2.72"
+    },
+    {
+      "expected": "4.7",
+      "ndigits": 1,
+      "value": "4.71"
+    },
+    {
+      "expected": "-4.7",
+      "ndigits": 1,
+      "value": "-4.71"
+    },
+    {
+      "expected": "0.0",
+      "ndigits": 1,
+      "value": "0.0"
+    },
+    {
+      "expected": "0.4",
+      "ndigits": 1,
+      "value": "0.43"
+    },
+    {
+      "expected": "-0.4",
+      "ndigits": 1,
+      "value": "-0.43"
+    },
+    {
+      "expected": "0.3",
+      "ndigits": 1,
+      "value": "0.29"
+    },
+    {
+      "expected": "-0.3",
+      "ndigits": 1,
+      "value": "-0.29"
+    },
+    {
+      "expected": "0.1",
+      "ndigits": 1,
+      "value": "0.14"
+    },
+    {
+      "expected": "-0.1",
+      "ndigits": 1,
+      "value": "-0.14"
+    },
+    {
+      "expected": "0.5",
+      "ndigits": 1,
+      "value": "0.5"
+    },
+    {
+      "expected": "-0.5",
+      "ndigits": 1,
+      "value": "-0.5"
+    },
+    {
+      "expected": "0.2",
+      "ndigits": 1,
+      "value": "0.21"
+    },
+    {
+      "expected": "-0.2",
+      "ndigits": 1,
+      "value": "-0.21"
+    },
+    {
+      "expected": "-0.7",
+      "ndigits": 1,
+      "value": "-0.67"
+    },
+    {
+      "expected": "0.7",
+      "ndigits": 1,
+      "value": "0.67"
+    },
+    {
+      "expected": "-0.0",
+      "ndigits": 1,
+      "value": "-0.0030917088319951393"
+    },
+    {
+      "expected": "-0.0",
+      "ndigits": 1,
+      "value": "-0.0002595998825771406"
+    },
+    {
+      "expected": "-0.0",
+      "ndigits": 1,
+      "value": "-0.00015733235338931606"
+    },
+    {
+      "expected": "-9455.2",
+      "ndigits": 1,
+      "value": "-9455.208509505204"
+    },
+    {
+      "expected": "-9343825.5",
+      "ndigits": 1,
+      "value": "-9343825.501387317"
+    },
+    {
+      "expected": "60.9",
+      "ndigits": 1,
+      "value": "60.89323790298593"
+    },
+    {
+      "expected": "1.6",
+      "ndigits": 1,
+      "value": "1.6316640461003562"
+    },
+    {
+      "expected": "3158.6",
+      "ndigits": 1,
+      "value": "3158.5511469920966"
+    },
+    {
+      "expected": "-83311583.0",
+      "ndigits": 1,
+      "value": "-83311583.01007764"
+    },
+    {
+      "expected": "-0.0",
+      "ndigits": 1,
+      "value": "-0.00034024836243811476"
+    },
+    {
+      "expected": "-93.8",
+      "ndigits": 1,
+      "value": "-93.78283054093465"
+    },
+    {
+      "expected": "0.1",
+      "ndigits": 1,
+      "value": "0.07380048538612063"
+    },
+    {
+      "expected": "-0.0",
+      "ndigits": 1,
+      "value": "-0.000987671185614434"
+    },
+    {
+      "expected": "1133.5",
+      "ndigits": 1,
+      "value": "1133.4959607565543"
+    },
+    {
+      "expected": "77.5",
+      "ndigits": 1,
+      "value": "77.54862067601083"
+    },
+    {
+      "expected": "-33454757.1",
+      "ndigits": 1,
+      "value": "-33454757.087094557"
+    },
+    {
+      "expected": "-0.0",
+      "ndigits": 1,
+      "value": "-1.6605888908030965e-05"
+    },
+    {
+      "expected": "46925162.2",
+      "ndigits": 1,
+      "value": "46925162.16530533"
+    },
+    {
+      "expected": "-78.1",
+      "ndigits": 1,
+      "value": "-78.13527389674589"
+    },
+    {
+      "expected": "15626.3",
+      "ndigits": 1,
+      "value": "15626.30151651967"
+    },
+    {
+      "expected": "88273031.7",
+      "ndigits": 1,
+      "value": "88273031.66923088"
+    },
+    {
+      "expected": "4904628.4",
+      "ndigits": 1,
+      "value": "4904628.404621718"
+    },
+    {
+      "expected": "-454489.8",
+      "ndigits": 1,
+      "value": "-454489.7653667193"
+    },
+    {
+      "expected": "3563.7",
+      "ndigits": 1,
+      "value": "3563.6732241121294"
+    },
+    {
+      "expected": "-9.9",
+      "ndigits": 1,
+      "value": "-9.90680060414675"
+    },
+    {
+      "expected": "69.9",
+      "ndigits": 1,
+      "value": "69.86300714007359"
+    },
+    {
+      "expected": "-0.0",
+      "ndigits": 1,
+      "value": "-0.0008497598258838632"
+    },
+    {
+      "expected": "-513.1",
+      "ndigits": 1,
+      "value": "-513.0543319743632"
+    },
+    {
+      "expected": "-0.0",
+      "ndigits": 1,
+      "value": "-0.0004972248571103603"
+    },
+    {
+      "expected": "0.2",
+      "ndigits": 1,
+      "value": "0.2347364521566997"
+    },
+    {
+      "expected": "-0.0",
+      "ndigits": 1,
+      "value": "-0.0006847460853848353"
+    },
+    {
+      "expected": "5053657.5",
+      "ndigits": 1,
+      "value": "5053657.452326074"
+    },
+    {
+      "expected": "8.3",
+      "ndigits": 1,
+      "value": "8.294695235179539"
+    },
+    {
+      "expected": "-0.0",
+      "ndigits": 1,
+      "value": "-0.012073045595667709"
+    },
+    {
+      "expected": "670.0",
+      "ndigits": 1,
+      "value": "670.0169895437349"
+    },
+    {
+      "expected": "-0.0",
+      "ndigits": 1,
+      "value": "-0.004087056589346209"
+    },
+    {
+      "expected": "0.0",
+      "ndigits": 1,
+      "value": "0.0001374430316765327"
+    },
+    {
+      "expected": "5224224.5",
+      "ndigits": 1,
+      "value": "5224224.480209218"
+    },
+    {
+      "expected": "2988254.5",
+      "ndigits": 1,
+      "value": "2988254.516305742"
+    },
+    {
+      "expected": "-5367.3",
+      "ndigits": 1,
+      "value": "-5367.310256180557"
+    },
+    {
+      "expected": "3467386.3",
+      "ndigits": 1,
+      "value": "3467386.2544725356"
+    },
+    {
+      "expected": "61199315.5",
+      "ndigits": 1,
+      "value": "61199315.524116814"
+    },
+    {
+      "expected": "0.0",
+      "ndigits": 1,
+      "value": "1.7074765907319203e-06"
+    },
+    {
+      "expected": "117547.1",
+      "ndigits": 1,
+      "value": "117547.14765428376"
+    },
+    {
+      "expected": "-91628222.9",
+      "ndigits": 1,
+      "value": "-91628222.88616064"
+    },
+    {
+      "expected": "0.0",
+      "ndigits": 1,
+      "value": "4.307350620804278e-06"
+    },
+    {
+      "expected": "0.0",
+      "ndigits": 1,
+      "value": "6.056390723521621e-07"
+    },
+    {
+      "expected": "0.0",
+      "ndigits": 1,
+      "value": "0.008914643864562324"
+    },
+    {
+      "expected": "-9.3",
+      "ndigits": 1,
+      "value": "-9.290659209599267"
+    },
+    {
+      "expected": "-0.0",
+      "ndigits": 1,
+      "value": "-2.800024538551162e-07"
+    },
+    {
+      "expected": "-0.0",
+      "ndigits": 1,
+      "value": "-4.899002626541049e-05"
+    },
+    {
+      "expected": "-79261.4",
+      "ndigits": 1,
+      "value": "-79261.3839183749"
+    },
+    {
+      "expected": "-0.0",
+      "ndigits": 1,
+      "value": "-0.0004914995289707882"
+    },
+    {
+      "expected": "-0.0",
+      "ndigits": 1,
+      "value": "-0.005084930874781502"
+    },
+    {
+      "expected": "9646.7",
+      "ndigits": 1,
+      "value": "9646.719863314334"
+    },
+    {
+      "expected": "-0.0",
+      "ndigits": 1,
+      "value": "-3.005853030906225e-06"
+    },
+    {
+      "expected": "-86164.5",
+      "ndigits": 1,
+      "value": "-86164.50183872588"
+    },
+    {
+      "expected": "0.0",
+      "ndigits": 1,
+      "value": "0.03753769160015255"
+    },
+    {
+      "expected": "0.0",
+      "ndigits": 1,
+      "value": "7.759191707037054e-05"
+    },
+    {
+      "expected": "78513.6",
+      "ndigits": 1,
+      "value": "78513.56704822987"
+    },
+    {
+      "expected": "-0.7",
+      "ndigits": 1,
+      "value": "-0.7180557881068164"
+    },
+    {
+      "expected": "0.0",
+      "ndigits": 1,
+      "value": "3.655500506503295e-07"
+    },
+    {
+      "expected": "12886.5",
+      "ndigits": 1,
+      "value": "12886.525070491662"
+    },
+    {
+      "expected": "-9459809.0",
+      "ndigits": 1,
+      "value": "-9459809.011158861"
+    },
+    {
+      "expected": "0.0",
+      "ndigits": 1,
+      "value": "0.0036389066203825204"
+    },
+    {
+      "expected": "1031733.6",
+      "ndigits": 1,
+      "value": "1031733.5625239954"
+    },
+    {
+      "expected": "-780487.3",
+      "ndigits": 1,
+      "value": "-780487.274860167"
+    },
+    {
+      "expected": "-144.3",
+      "ndigits": 1,
+      "value": "-144.26881812722914"
+    },
+    {
+      "expected": "-0.1",
+      "ndigits": 1,
+      "value": "-0.08261097880568993"
+    },
+    {
+      "expected": "-7.2",
+      "ndigits": 1,
+      "value": "-7.180153571896031"
+    },
+    {
+      "expected": "-0.0",
+      "ndigits": 1,
+      "value": "-4.091290350716577e-05"
+    },
+    {
+      "expected": "0.0",
+      "ndigits": 1,
+      "value": "6.5636408845329495e-06"
+    },
+    {
+      "expected": "568.4",
+      "ndigits": 1,
+      "value": "568.4202749772315"
+    },
+    {
+      "expected": "1.1",
+      "ndigits": 1,
+      "value": "1.0945386044938532"
+    },
+    {
+      "expected": "-0.0",
+      "ndigits": 1,
+      "value": "-5.113645653050092e-05"
+    },
+    {
+      "expected": "-0.0",
+      "ndigits": 1,
+      "value": "-4.062588151126021e-06"
+    },
+    {
+      "expected": "4757119.7",
+      "ndigits": 1,
+      "value": "4757119.732401769"
+    },
+    {
+      "expected": "-1900430.1",
+      "ndigits": 1,
+      "value": "-1900430.1407891288"
+    },
+    {
+      "expected": "1849727.4",
+      "ndigits": 1,
+      "value": "1849727.434816395"
+    },
+    {
+      "expected": "-54481.6",
+      "ndigits": 1,
+      "value": "-54481.63766151499"
+    },
+    {
+      "expected": "0.2",
+      "ndigits": 1,
+      "value": "0.24999999999999997"
+    },
+    {
+      "expected": "0.2",
+      "ndigits": 1,
+      "value": "0.25"
+    },
+    {
+      "expected": "0.3",
+      "ndigits": 1,
+      "value": "0.25000000000000006"
+    },
+    {
+      "expected": "0.7",
+      "ndigits": 1,
+      "value": "0.7499999999999999"
+    },
+    {
+      "expected": "0.8",
+      "ndigits": 1,
+      "value": "0.75"
+    },
+    {
+      "expected": "0.8",
+      "ndigits": 1,
+      "value": "0.7500000000000001"
+    },
+    {
+      "expected": "1.2",
+      "ndigits": 1,
+      "value": "1.2499999999999998"
+    },
+    {
+      "expected": "1.2",
+      "ndigits": 1,
+      "value": "1.25"
+    },
+    {
+      "expected": "1.3",
+      "ndigits": 1,
+      "value": "1.2500000000000002"
+    },
+    {
+      "expected": "1.7",
+      "ndigits": 1,
+      "value": "1.7499999999999998"
+    },
+    {
+      "expected": "1.8",
+      "ndigits": 1,
+      "value": "1.75"
+    },
+    {
+      "expected": "1.8",
+      "ndigits": 1,
+      "value": "1.7500000000000002"
+    },
+    {
+      "expected": "2.2",
+      "ndigits": 1,
+      "value": "2.2499999999999996"
+    },
+    {
+      "expected": "2.2",
+      "ndigits": 1,
+      "value": "2.25"
+    },
+    {
+      "expected": "2.3",
+      "ndigits": 1,
+      "value": "2.2500000000000004"
+    },
+    {
+      "expected": "2.7",
+      "ndigits": 1,
+      "value": "2.7499999999999996"
+    },
+    {
+      "expected": "2.8",
+      "ndigits": 1,
+      "value": "2.75"
+    },
+    {
+      "expected": "2.8",
+      "ndigits": 1,
+      "value": "2.7500000000000004"
+    },
+    {
+      "expected": "3.2",
+      "ndigits": 1,
+      "value": "3.2499999999999996"
+    },
+    {
+      "expected": "3.2",
+      "ndigits": 1,
+      "value": "3.25"
+    },
+    {
+      "expected": "3.3",
+      "ndigits": 1,
+      "value": "3.2500000000000004"
+    },
+    {
+      "expected": "3.7",
+      "ndigits": 1,
+      "value": "3.7499999999999996"
+    },
+    {
+      "expected": "3.8",
+      "ndigits": 1,
+      "value": "3.75"
+    },
+    {
+      "expected": "3.8",
+      "ndigits": 1,
+      "value": "3.7500000000000004"
+    },
+    {
+      "expected": "4.2",
+      "ndigits": 1,
+      "value": "4.249999999999999"
+    },
+    {
+      "expected": "4.2",
+      "ndigits": 1,
+      "value": "4.25"
+    },
+    {
+      "expected": "4.3",
+      "ndigits": 1,
+      "value": "4.250000000000001"
+    },
+    {
+      "expected": "4.7",
+      "ndigits": 1,
+      "value": "4.749999999999999"
+    },
+    {
+      "expected": "4.8",
+      "ndigits": 1,
+      "value": "4.75"
+    },
+    {
+      "expected": "4.8",
+      "ndigits": 1,
+      "value": "4.750000000000001"
+    },
+    {
+      "expected": "5.2",
+      "ndigits": 1,
+      "value": "5.249999999999999"
+    },
+    {
+      "expected": "5.2",
+      "ndigits": 1,
+      "value": "5.25"
+    },
+    {
+      "expected": "5.3",
+      "ndigits": 1,
+      "value": "5.250000000000001"
+    },
+    {
+      "expected": "5.7",
+      "ndigits": 1,
+      "value": "5.749999999999999"
+    },
+    {
+      "expected": "5.8",
+      "ndigits": 1,
+      "value": "5.75"
+    },
+    {
+      "expected": "5.8",
+      "ndigits": 1,
+      "value": "5.750000000000001"
+    },
+    {
+      "expected": "6.2",
+      "ndigits": 1,
+      "value": "6.249999999999999"
+    },
+    {
+      "expected": "6.2",
+      "ndigits": 1,
+      "value": "6.25"
+    },
+    {
+      "expected": "6.3",
+      "ndigits": 1,
+      "value": "6.250000000000001"
+    },
+    {
+      "expected": "6.7",
+      "ndigits": 1,
+      "value": "6.749999999999999"
+    },
+    {
+      "expected": "6.8",
+      "ndigits": 1,
+      "value": "6.75"
+    },
+    {
+      "expected": "6.8",
+      "ndigits": 1,
+      "value": "6.750000000000001"
+    },
+    {
+      "expected": "7.2",
+      "ndigits": 1,
+      "value": "7.249999999999999"
+    },
+    {
+      "expected": "7.2",
+      "ndigits": 1,
+      "value": "7.25"
+    },
+    {
+      "expected": "7.3",
+      "ndigits": 1,
+      "value": "7.250000000000001"
+    },
+    {
+      "expected": "7.7",
+      "ndigits": 1,
+      "value": "7.749999999999999"
+    },
+    {
+      "expected": "7.8",
+      "ndigits": 1,
+      "value": "7.75"
+    },
+    {
+      "expected": "7.8",
+      "ndigits": 1,
+      "value": "7.750000000000001"
+    },
+    {
+      "expected": "8.2",
+      "ndigits": 1,
+      "value": "8.249999999999998"
+    },
+    {
+      "expected": "8.2",
+      "ndigits": 1,
+      "value": "8.25"
+    },
+    {
+      "expected": "8.3",
+      "ndigits": 1,
+      "value": "8.250000000000002"
+    },
+    {
+      "expected": "8.7",
+      "ndigits": 1,
+      "value": "8.749999999999998"
+    },
+    {
+      "expected": "8.8",
+      "ndigits": 1,
+      "value": "8.75"
+    },
+    {
+      "expected": "8.8",
+      "ndigits": 1,
+      "value": "8.750000000000002"
+    },
+    {
+      "expected": "9.2",
+      "ndigits": 1,
+      "value": "9.249999999999998"
+    },
+    {
+      "expected": "9.2",
+      "ndigits": 1,
+      "value": "9.25"
+    },
+    {
+      "expected": "9.3",
+      "ndigits": 1,
+      "value": "9.250000000000002"
+    },
+    {
+      "expected": "9.7",
+      "ndigits": 1,
+      "value": "9.749999999999998"
+    },
+    {
+      "expected": "9.8",
+      "ndigits": 1,
+      "value": "9.75"
+    },
+    {
+      "expected": "9.8",
+      "ndigits": 1,
+      "value": "9.750000000000002"
+    },
+    {
+      "expected": "10.2",
+      "ndigits": 1,
+      "value": "10.249999999999998"
+    },
+    {
+      "expected": "10.2",
+      "ndigits": 1,
+      "value": "10.25"
+    },
+    {
+      "expected": "10.3",
+      "ndigits": 1,
+      "value": "10.250000000000002"
+    },
+    {
+      "expected": "10.7",
+      "ndigits": 1,
+      "value": "10.749999999999998"
+    },
+    {
+      "expected": "10.8",
+      "ndigits": 1,
+      "value": "10.75"
+    },
+    {
+      "expected": "10.8",
+      "ndigits": 1,
+      "value": "10.750000000000002"
+    },
+    {
+      "expected": "11.2",
+      "ndigits": 1,
+      "value": "11.249999999999998"
+    },
+    {
+      "expected": "11.2",
+      "ndigits": 1,
+      "value": "11.25"
+    },
+    {
+      "expected": "11.3",
+      "ndigits": 1,
+      "value": "11.250000000000002"
+    },
+    {
+      "expected": "11.7",
+      "ndigits": 1,
+      "value": "11.749999999999998"
+    },
+    {
+      "expected": "11.8",
+      "ndigits": 1,
+      "value": "11.75"
+    },
+    {
+      "expected": "11.8",
+      "ndigits": 1,
+      "value": "11.750000000000002"
+    },
+    {
+      "expected": "0.14",
+      "ndigits": 2,
+      "value": "0.145"
+    },
+    {
+      "expected": "0.14",
+      "ndigits": 2,
+      "value": "0.135"
+    },
+    {
+      "expected": "2.67",
+      "ndigits": 2,
+      "value": "2.675"
+    },
+    {
+      "expected": "1.0",
+      "ndigits": 2,
+      "value": "1.005"
+    },
+    {
+      "expected": "0.21",
+      "ndigits": 2,
+      "value": "0.215"
+    },
+    {
+      "expected": "5.57",
+      "ndigits": 2,
+      "value": "5.565"
+    },
+    {
+      "expected": "8.84",
+      "ndigits": 2,
+      "value": "8.835"
+    },
+    {
+      "expected": "2.35",
+      "ndigits": 2,
+      "value": "2.345"
+    },
+    {
+      "expected": "1234.57",
+      "ndigits": 2,
+      "value": "1234.5678"
+    },
+    {
+      "expected": "0.0",
+      "ndigits": 2,
+      "value": "0.0001235"
+    },
+    {
+      "expected": "-0.4",
+      "ndigits": 2,
+      "value": "-0.40299178787112405"
+    },
+    {
+      "expected": "-0.4",
+      "ndigits": 2,
+      "value": "-0.3951798367578031"
+    },
+    {
+      "expected": "-0.38",
+      "ndigits": 2,
+      "value": "-0.3806867168557748"
+    },
+    {
+      "expected": "-0.35",
+      "ndigits": 2,
+      "value": "-0.35212041487712065"
+    },
+    {
+      "expected": "-0.35",
+      "ndigits": 2,
+      "value": "-0.3509828523001702"
+    },
+    {
+      "expected": "-0.34",
+      "ndigits": 2,
+      "value": "-0.3395573949756931"
+    },
+    {
+      "expected": "-0.3",
+      "ndigits": 2,
+      "value": "-0.3045788491941166"
+    },
+    {
+      "expected": "-0.3",
+      "ndigits": 2,
+      "value": "-0.30068479363089184"
+    },
+    {
+      "expected": "-0.27",
+      "ndigits": 2,
+      "value": "-0.2711081361046332"
+    },
+    {
+      "expected": "-0.26",
+      "ndigits": 2,
+      "value": "-0.2602157507388403"
+    },
+    {
+      "expected": "-0.25",
+      "ndigits": 2,
+      "value": "-0.2540244633827551"
+    },
+    {
+      "expected": "-0.24",
+      "ndigits": 2,
+      "value": "-0.23934615921414706"
+    },
+    {
+      "expected": "-0.22",
+      "ndigits": 2,
+      "value": "-0.21882289543527625"
+    },
+    {
+      "expected": "-0.22",
+      "ndigits": 2,
+      "value": "-0.21603023739369134"
+    },
+    {
+      "expected": "-0.19",
+      "ndigits": 2,
+      "value": "-0.18903843600565934"
+    },
+    {
+      "expected": "-0.14",
+      "ndigits": 2,
+      "value": "-0.13631259586469363"
+    },
+    {
+      "expected": "-0.13",
+      "ndigits": 2,
+      "value": "-0.13366534350860904"
+    },
+    {
+      "expected": "-0.13",
+      "ndigits": 2,
+      "value": "-0.13361386634701122"
+    },
+    {
+      "expected": "-0.12",
+      "ndigits": 2,
+      "value": "-0.11699472922348783"
+    },
+    {
+      "expected": "-0.1",
+      "ndigits": 2,
+      "value": "-0.10356096170078338"
+    },
+    {
+      "expected": "-0.09",
+      "ndigits": 2,
+      "value": "-0.08686367190749705"
+    },
+    {
+      "expected": "-0.08",
+      "ndigits": 2,
+      "value": "-0.07615540202134752"
+    },
+    {
+      "expected": "-0.07",
+      "ndigits": 2,
+      "value": "-0.07293058354587281"
+    },
+    {
+      "expected": "-0.03",
+      "ndigits": 2,
+      "value": "-0.034079132454510386"
+    },
+    {
+      "expected": "-0.02",
+      "ndigits": 2,
+      "value": "-0.02473780925011159"
+    },
+    {
+      "expected": "-0.0",
+      "ndigits": 2,
+      "value": "-0.002129290840320155"
+    },
+    {
+      "expected": "-0.0",
+      "ndigits": 2,
+      "value": "-0.0015530225716794462"
+    },
+    {
+      "expected": "0.0",
+      "ndigits": 2,
+      "value": "0.0"
+    },
+    {
+      "expected": "0.0",
+      "ndigits": 2,
+      "value": "0.00463073945147097"
+    },
+    {
+      "expected": "0.01",
+      "ndigits": 2,
+      "value": "0.005493591728208108"
+    },
+    {
+      "expected": "0.01",
+      "ndigits": 2,
+      "value": "0.006090251892507418"
+    },
+    {
+      "expected": "0.01",
+      "ndigits": 2,
+      "value": "0.0078797368249681"
+    },
+    {
+      "expected": "0.01",
+      "ndigits": 2,
+      "value": "0.007939101648847353"
+    },
+    {
+      "expected": "0.01",
+      "ndigits": 2,
+      "value": "0.008132345164282191"
+    },
+    {
+      "expected": "0.01",
+      "ndigits": 2,
+      "value": "0.011890818166805045"
+    },
+    {
+      "expected": "0.02",
+      "ndigits": 2,
+      "value": "0.015350437424627713"
+    },
+    {
+      "expected": "0.02",
+      "ndigits": 2,
+      "value": "0.017179789300229967"
+    },
+    {
+      "expected": "0.02",
+      "ndigits": 2,
+      "value": "0.021336824630924737"
+    },
+    {
+      "expected": "0.03",
+      "ndigits": 2,
+      "value": "0.028685862748839018"
+    },
+    {
+      "expected": "0.03",
+      "ndigits": 2,
+      "value": "0.029864931964233843"
+    },
+    {
+      "expected": "0.03",
+      "ndigits": 2,
+      "value": "0.03031777145297258"
+    },
+    {
+      "expected": "0.03",
+      "ndigits": 2,
+      "value": "0.03462793969709347"
+    },
+    {
+      "expected": "0.04",
+      "ndigits": 2,
+      "value": "0.03579602653216856"
+    },
+    {
+      "expected": "0.04",
+      "ndigits": 2,
+      "value": "0.03691518970391318"
+    },
+    {
+      "expected": "0.04",
+      "ndigits": 2,
+      "value": "0.037500000000000054"
+    },
+    {
+      "expected": "0.04",
+      "ndigits": 2,
+      "value": "0.03858372861430222"
+    },
+    {
+      "expected": "0.04",
+      "ndigits": 2,
+      "value": "0.04209067839269233"
+    },
+    {
+      "expected": "0.04",
+      "ndigits": 2,
+      "value": "0.04290235719050887"
+    },
+    {
+      "expected": "0.04",
+      "ndigits": 2,
+      "value": "0.043173491139447275"
+    },
+    {
+      "expected": "0.05",
+      "ndigits": 2,
+      "value": "0.04652949852477092"
+    },
+    {
+      "expected": "0.05",
+      "ndigits": 2,
+      "value": "0.04737989132593744"
+    },
+    {
+      "expected": "0.05",
+      "ndigits": 2,
+      "value": "0.04761904761904775"
+    },
+    {
+      "expected": "0.05",
+      "ndigits": 2,
+      "value": "0.05074954222241811"
+    },
+    {
+      "expected": "0.05",
+      "ndigits": 2,
+      "value": "0.053484677737748364"
+    },
+    {
+      "expected": "0.06",
+      "ndigits": 2,
+      "value": "0.056809072148658074"
+    },
+    {
+      "expected": "0.07",
+      "ndigits": 2,
+      "value": "0.07213481636012146"
+    },
+    {
+      "expected": "0.07",
+      "ndigits": 2,
+      "value": "0.07296787620252249"
+    },
+    {
+      "expected": "0.07",
+      "ndigits": 2,
+      "value": "0.07422671666355184"
+    },
+    {
+      "expected": "0.09",
+      "ndigits": 2,
+      "value": "0.0864229962951107"
+    },
+    {
+      "expected": "0.1",
+      "ndigits": 2,
+      "value": "0.09749158999906267"
+    },
+    {
+      "expected": "0.1",
+      "ndigits": 2,
+      "value": "0.09759006164885045"
+    },
+    {
+      "expected": "0.1",
+      "ndigits": 2,
+      "value": "0.09913569284360174"
+    },
+    {
+      "expected": "0.1",
+      "ndigits": 2,
+      "value": "0.10021010573841503"
+    },
+    {
+      "expected": "0.1",
+      "ndigits": 2,
+      "value": "0.10149496710801086"
+    },
+    {
+      "expected": "0.11",
+      "ndigits": 2,
+      "value": "0.1057022297676262"
+    },
+    {
+      "expected": "0.11",
+      "ndigits": 2,
+      "value": "0.10790892280321912"
+    },
+    {
+      "expected": "0.11",
+      "ndigits": 2,
+      "value": "0.10899810320250296"
+    },
+    {
+      "expected": "0.11",
+      "ndigits": 2,
+      "value": "0.11184036693605934"
+    },
+    {
+      "expected": "0.12",
+      "ndigits": 2,
+      "value": "0.11547954428584652"
+    },
+    {
+      "expected": "0.13",
+      "ndigits": 2,
+      "value": "0.1266372977131318"
+    },
+    {
+      "expected": "0.13",
+      "ndigits": 2,
+      "value": "0.12929373775643344"
+    },
+    {
+      "expected": "0.13",
+      "ndigits": 2,
+      "value": "0.1296695073136331"
+    },
+    {
+      "expected": "0.13",
+      "ndigits": 2,
+      "value": "0.13187408854019134"
+    },
+    {
+      "expected": "0.14",
+      "ndigits": 2,
+      "value": "0.13520817282989978"
+    },
+    {
+      "expected": "0.14",
+      "ndigits": 2,
+      "value": "0.14305127275914287"
+    },
+    {
+      "expected": "0.16",
+      "ndigits": 2,
+      "value": "0.155585027612895"
+    },
+    {
+      "expected": "0.16",
+      "ndigits": 2,
+      "value": "0.1560432616514023"
+    },
+    {
+      "expected": "0.16",
+      "ndigits": 2,
+      "value": "0.15761404078855135"
+    },
+    {
+      "expected": "0.16",
+      "ndigits": 2,
+      "value": "0.15857770093720153"
+    },
+    {
+      "expected": "0.17",
+      "ndigits": 2,
+      "value": "0.1683673469387754"
+    },
+    {
+      "expected": "0.17",
+      "ndigits": 2,
+      "value": "0.16990588014206934"
+    },
+    {
+      "expected": "0.18",
+      "ndigits": 2,
+      "value": "0.1792614827449467"
+    },
+    {
+      "expected": "0.18",
+      "ndigits": 2,
+      "value": "0.18378061742198076"
+    },
+    {
+      "expected": "0.2",
+      "ndigits": 2,
+      "value": "0.20349021449828192"
+    },
+    {
+      "expected": "0.21",
+      "ndigits": 2,
+      "value": "0.20544913977778095"
+    },
+    {
+      "expected": "0.21",
+      "ndigits": 2,
+      "value": "0.20616941271409303"
+    },
+    {
+      "expected": "0.21",
+      "ndigits": 2,
+      "value": "0.20623325750869312"
+    },
+    {
+      "expected": "0.21",
+      "ndigits": 2,
+      "value": "0.20937749877694906"
+    },
+    {
+      "expected": "0.21",
+      "ndigits": 2,
+      "value": "0.21120739741346034"
+    },
+    {
+      "expected": "0.21",
+      "ndigits": 2,
+      "value": "0.21429053281676352"
+    },
+    {
+      "expected": "0.21",
+      "ndigits": 2,
+      "value": "0.21496551157729774"
+    },
+    {
+      "expected": "0.22",
+      "ndigits": 2,
+      "value": "0.2174487523328919"
+    },
+    {
+      "expected": "0.22",
+      "ndigits": 2,
+      "value": "0.22172884104841745"
+    },
+    {
+      "expected": "0.24",
+      "ndigits": 2,
+      "value": "0.2378973056518421"
+    },
+    {
+      "expected": "0.25",
+      "ndigits": 2,
+      "value": "0.25415017436796394"
+    },
+    {
+      "expected": "0.26",
+      "ndigits": 2,
+      "value": "0.2584510763916153"
+    },
+    {
+      "expected": "0.28",
+      "ndigits": 2,
+      "value": "0.2771983879971406"
+    },
+    {
+      "expected": "0.28",
+      "ndigits": 2,
+      "value": "0.2823080823228219"
+    },
+    {
+      "expected": "0.29",
+      "ndigits": 2,
+      "value": "0.2891988939599062"
+    },
+    {
+      "expected": "0.32",
+      "ndigits": 2,
+      "value": "0.31567573371879115"
+    },
+    {
+      "expected": "0.32",
+      "ndigits": 2,
+      "value": "0.32393916019691044"
+    },
+    {
+      "expected": "0.37",
+      "ndigits": 2,
+      "value": "0.37421332455543643"
+    },
+    {
+      "expected": "0.38",
+      "ndigits": 2,
+      "value": "0.3836939706963882"
+    },
+    {
+      "expected": "0.39",
+      "ndigits": 2,
+      "value": "0.39211641990022433"
+    },
+    {
+      "expected": "0.42",
+      "ndigits": 2,
+      "value": "0.41625901239024254"
+    },
+    {
+      "expected": "0.45",
+      "ndigits": 2,
+      "value": "0.44855549817819607"
+    },
+    {
+      "expected": "0.45",
+      "ndigits": 2,
+      "value": "0.450118545143772"
+    },
+    {
+      "expected": "0.48",
+      "ndigits": 2,
+      "value": "0.4777742862562198"
+    },
+    {
+      "expected": "0.48",
+      "ndigits": 2,
+      "value": "0.4808968225941898"
+    },
+    {
+      "expected": "0.51",
+      "ndigits": 2,
+      "value": "0.5110347985347987"
+    },
+    {
+      "expected": "0.56",
+      "ndigits": 2,
+      "value": "0.5586538461538465"
+    },
+    {
+      "expected": "0.81",
+      "ndigits": 2,
+      "value": "0.8072618736591106"
+    },
+    {
+      "expected": "0.81",
+      "ndigits": 2,
+      "value": "0.8137822851283751"
+    },
+    {
+      "expected": "0.82",
+      "ndigits": 2,
+      "value": "0.8213010171104957"
+    },
+    {
+      "expected": "0.82",
+      "ndigits": 2,
+      "value": "0.821464338973518"
+    },
+    {
+      "expected": "0.83",
+      "ndigits": 2,
+      "value": "0.8274077932833411"
+    },
+    {
+      "expected": "0.83",
+      "ndigits": 2,
+      "value": "0.8318893771501815"
+    },
+    {
+      "expected": "0.83",
+      "ndigits": 2,
+      "value": "0.8320759301947858"
+    },
+    {
+      "expected": "0.84",
+      "ndigits": 2,
+      "value": "0.8372953663939646"
+    },
+    {
+      "expected": "0.84",
+      "ndigits": 2,
+      "value": "0.8405026745986929"
+    },
+    {
+      "expected": "2.72",
+      "ndigits": 2,
+      "value": "2.72"
+    },
+    {
+      "expected": "-2.72",
+      "ndigits": 2,
+      "value": "-2.72"
+    },
+    {
+      "expected": "4.71",
+      "ndigits": 2,
+      "value": "4.71"
+    },
+    {
+      "expected": "-4.71",
+      "ndigits": 2,
+      "value": "-4.71"
+    },
+    {
+      "expected": "0.0",
+      "ndigits": 2,
+      "value": "0.0"
+    },
+    {
+      "expected": "0.43",
+      "ndigits": 2,
+      "value": "0.43"
+    },
+    {
+      "expected": "-0.43",
+      "ndigits": 2,
+      "value": "-0.43"
+    },
+    {
+      "expected": "0.29",
+      "ndigits": 2,
+      "value": "0.29"
+    },
+    {
+      "expected": "-0.29",
+      "ndigits": 2,
+      "value": "-0.29"
+    },
+    {
+      "expected": "0.14",
+      "ndigits": 2,
+      "value": "0.14"
+    },
+    {
+      "expected": "-0.14",
+      "ndigits": 2,
+      "value": "-0.14"
+    },
+    {
+      "expected": "0.5",
+      "ndigits": 2,
+      "value": "0.5"
+    },
+    {
+      "expected": "-0.5",
+      "ndigits": 2,
+      "value": "-0.5"
+    },
+    {
+      "expected": "0.21",
+      "ndigits": 2,
+      "value": "0.21"
+    },
+    {
+      "expected": "-0.21",
+      "ndigits": 2,
+      "value": "-0.21"
+    },
+    {
+      "expected": "-0.67",
+      "ndigits": 2,
+      "value": "-0.67"
+    },
+    {
+      "expected": "0.67",
+      "ndigits": 2,
+      "value": "0.67"
+    },
+    {
+      "expected": "-0.0",
+      "ndigits": 2,
+      "value": "-0.0030917088319951393"
+    },
+    {
+      "expected": "-0.0",
+      "ndigits": 2,
+      "value": "-0.0002595998825771406"
+    },
+    {
+      "expected": "-0.0",
+      "ndigits": 2,
+      "value": "-0.00015733235338931606"
+    },
+    {
+      "expected": "-9455.21",
+      "ndigits": 2,
+      "value": "-9455.208509505204"
+    },
+    {
+      "expected": "-9343825.5",
+      "ndigits": 2,
+      "value": "-9343825.501387317"
+    },
+    {
+      "expected": "60.89",
+      "ndigits": 2,
+      "value": "60.89323790298593"
+    },
+    {
+      "expected": "1.63",
+      "ndigits": 2,
+      "value": "1.6316640461003562"
+    },
+    {
+      "expected": "3158.55",
+      "ndigits": 2,
+      "value": "3158.5511469920966"
+    },
+    {
+      "expected": "-83311583.01",
+      "ndigits": 2,
+      "value": "-83311583.01007764"
+    },
+    {
+      "expected": "-0.0",
+      "ndigits": 2,
+      "value": "-0.00034024836243811476"
+    },
+    {
+      "expected": "-93.78",
+      "ndigits": 2,
+      "value": "-93.78283054093465"
+    },
+    {
+      "expected": "0.07",
+      "ndigits": 2,
+      "value": "0.07380048538612063"
+    },
+    {
+      "expected": "-0.0",
+      "ndigits": 2,
+      "value": "-0.000987671185614434"
+    },
+    {
+      "expected": "1133.5",
+      "ndigits": 2,
+      "value": "1133.4959607565543"
+    },
+    {
+      "expected": "77.55",
+      "ndigits": 2,
+      "value": "77.54862067601083"
+    },
+    {
+      "expected": "-33454757.09",
+      "ndigits": 2,
+      "value": "-33454757.087094557"
+    },
+    {
+      "expected": "-0.0",
+      "ndigits": 2,
+      "value": "-1.6605888908030965e-05"
+    },
+    {
+      "expected": "46925162.17",
+      "ndigits": 2,
+      "value": "46925162.16530533"
+    },
+    {
+      "expected": "-78.14",
+      "ndigits": 2,
+      "value": "-78.13527389674589"
+    },
+    {
+      "expected": "15626.3",
+      "ndigits": 2,
+      "value": "15626.30151651967"
+    },
+    {
+      "expected": "88273031.67",
+      "ndigits": 2,
+      "value": "88273031.66923088"
+    },
+    {
+      "expected": "4904628.4",
+      "ndigits": 2,
+      "value": "4904628.404621718"
+    },
+    {
+      "expected": "-454489.77",
+      "ndigits": 2,
+      "value": "-454489.7653667193"
+    },
+    {
+      "expected": "3563.67",
+      "ndigits": 2,
+      "value": "3563.6732241121294"
+    },
+    {
+      "expected": "-9.91",
+      "ndigits": 2,
+      "value": "-9.90680060414675"
+    },
+    {
+      "expected": "69.86",
+      "ndigits": 2,
+      "value": "69.86300714007359"
+    },
+    {
+      "expected": "-0.0",
+      "ndigits": 2,
+      "value": "-0.0008497598258838632"
+    },
+    {
+      "expected": "-513.05",
+      "ndigits": 2,
+      "value": "-513.0543319743632"
+    },
+    {
+      "expected": "-0.0",
+      "ndigits": 2,
+      "value": "-0.0004972248571103603"
+    },
+    {
+      "expected": "0.23",
+      "ndigits": 2,
+      "value": "0.2347364521566997"
+    },
+    {
+      "expected": "-0.0",
+      "ndigits": 2,
+      "value": "-0.0006847460853848353"
+    },
+    {
+      "expected": "5053657.45",
+      "ndigits": 2,
+      "value": "5053657.452326074"
+    },
+    {
+      "expected": "8.29",
+      "ndigits": 2,
+      "value": "8.294695235179539"
+    },
+    {
+      "expected": "-0.01",
+      "ndigits": 2,
+      "value": "-0.012073045595667709"
+    },
+    {
+      "expected": "670.02",
+      "ndigits": 2,
+      "value": "670.0169895437349"
+    },
+    {
+      "expected": "-0.0",
+      "ndigits": 2,
+      "value": "-0.004087056589346209"
+    },
+    {
+      "expected": "0.0",
+      "ndigits": 2,
+      "value": "0.0001374430316765327"
+    },
+    {
+      "expected": "5224224.48",
+      "ndigits": 2,
+      "value": "5224224.480209218"
+    },
+    {
+      "expected": "2988254.52",
+      "ndigits": 2,
+      "value": "2988254.516305742"
+    },
+    {
+      "expected": "-5367.31",
+      "ndigits": 2,
+      "value": "-5367.310256180557"
+    },
+    {
+      "expected": "3467386.25",
+      "ndigits": 2,
+      "value": "3467386.2544725356"
+    },
+    {
+      "expected": "61199315.52",
+      "ndigits": 2,
+      "value": "61199315.524116814"
+    },
+    {
+      "expected": "0.0",
+      "ndigits": 2,
+      "value": "1.7074765907319203e-06"
+    },
+    {
+      "expected": "117547.15",
+      "ndigits": 2,
+      "value": "117547.14765428376"
+    },
+    {
+      "expected": "-91628222.89",
+      "ndigits": 2,
+      "value": "-91628222.88616064"
+    },
+    {
+      "expected": "0.0",
+      "ndigits": 2,
+      "value": "4.307350620804278e-06"
+    },
+    {
+      "expected": "0.0",
+      "ndigits": 2,
+      "value": "6.056390723521621e-07"
+    },
+    {
+      "expected": "0.01",
+      "ndigits": 2,
+      "value": "0.008914643864562324"
+    },
+    {
+      "expected": "-9.29",
+      "ndigits": 2,
+      "value": "-9.290659209599267"
+    },
+    {
+      "expected": "-0.0",
+      "ndigits": 2,
+      "value": "-2.800024538551162e-07"
+    },
+    {
+      "expected": "-0.0",
+      "ndigits": 2,
+      "value": "-4.899002626541049e-05"
+    },
+    {
+      "expected": "-79261.38",
+      "ndigits": 2,
+      "value": "-79261.3839183749"
+    },
+    {
+      "expected": "-0.0",
+      "ndigits": 2,
+      "value": "-0.0004914995289707882"
+    },
+    {
+      "expected": "-0.01",
+      "ndigits": 2,
+      "value": "-0.005084930874781502"
+    },
+    {
+      "expected": "9646.72",
+      "ndigits": 2,
+      "value": "9646.719863314334"
+    },
+    {
+      "expected": "-0.0",
+      "ndigits": 2,
+      "value": "-3.005853030906225e-06"
+    },
+    {
+      "expected": "-86164.5",
+      "ndigits": 2,
+      "value": "-86164.50183872588"
+    },
+    {
+      "expected": "0.04",
+      "ndigits": 2,
+      "value": "0.03753769160015255"
+    },
+    {
+      "expected": "0.0",
+      "ndigits": 2,
+      "value": "7.759191707037054e-05"
+    },
+    {
+      "expected": "78513.57",
+      "ndigits": 2,
+      "value": "78513.56704822987"
+    },
+    {
+      "expected": "-0.72",
+      "ndigits": 2,
+      "value": "-0.7180557881068164"
+    },
+    {
+      "expected": "0.0",
+      "ndigits": 2,
+      "value": "3.655500506503295e-07"
+    },
+    {
+      "expected": "12886.53",
+      "ndigits": 2,
+      "value": "12886.525070491662"
+    },
+    {
+      "expected": "-9459809.01",
+      "ndigits": 2,
+      "value": "-9459809.011158861"
+    },
+    {
+      "expected": "0.0",
+      "ndigits": 2,
+      "value": "0.0036389066203825204"
+    },
+    {
+      "expected": "1031733.56",
+      "ndigits": 2,
+      "value": "1031733.5625239954"
+    },
+    {
+      "expected": "-780487.27",
+      "ndigits": 2,
+      "value": "-780487.274860167"
+    },
+    {
+      "expected": "-144.27",
+      "ndigits": 2,
+      "value": "-144.26881812722914"
+    },
+    {
+      "expected": "-0.08",
+      "ndigits": 2,
+      "value": "-0.08261097880568993"
+    },
+    {
+      "expected": "-7.18",
+      "ndigits": 2,
+      "value": "-7.180153571896031"
+    },
+    {
+      "expected": "-0.0",
+      "ndigits": 2,
+      "value": "-4.091290350716577e-05"
+    },
+    {
+      "expected": "0.0",
+      "ndigits": 2,
+      "value": "6.5636408845329495e-06"
+    },
+    {
+      "expected": "568.42",
+      "ndigits": 2,
+      "value": "568.4202749772315"
+    },
+    {
+      "expected": "1.09",
+      "ndigits": 2,
+      "value": "1.0945386044938532"
+    },
+    {
+      "expected": "-0.0",
+      "ndigits": 2,
+      "value": "-5.113645653050092e-05"
+    },
+    {
+      "expected": "-0.0",
+      "ndigits": 2,
+      "value": "-4.062588151126021e-06"
+    },
+    {
+      "expected": "4757119.73",
+      "ndigits": 2,
+      "value": "4757119.732401769"
+    },
+    {
+      "expected": "-1900430.14",
+      "ndigits": 2,
+      "value": "-1900430.1407891288"
+    },
+    {
+      "expected": "1849727.43",
+      "ndigits": 2,
+      "value": "1849727.434816395"
+    },
+    {
+      "expected": "-54481.64",
+      "ndigits": 2,
+      "value": "-54481.63766151499"
+    },
+    {
+      "expected": "0.12",
+      "ndigits": 2,
+      "value": "0.12499999999999999"
+    },
+    {
+      "expected": "0.12",
+      "ndigits": 2,
+      "value": "0.125"
+    },
+    {
+      "expected": "0.13",
+      "ndigits": 2,
+      "value": "0.12500000000000003"
+    },
+    {
+      "expected": "0.37",
+      "ndigits": 2,
+      "value": "0.37499999999999994"
+    },
+    {
+      "expected": "0.38",
+      "ndigits": 2,
+      "value": "0.375"
+    },
+    {
+      "expected": "0.38",
+      "ndigits": 2,
+      "value": "0.37500000000000006"
+    },
+    {
+      "expected": "0.62",
+      "ndigits": 2,
+      "value": "0.6249999999999999"
+    },
+    {
+      "expected": "0.62",
+      "ndigits": 2,
+      "value": "0.625"
+    },
+    {
+      "expected": "0.63",
+      "ndigits": 2,
+      "value": "0.6250000000000001"
+    },
+    {
+      "expected": "0.87",
+      "ndigits": 2,
+      "value": "0.8749999999999999"
+    },
+    {
+      "expected": "0.88",
+      "ndigits": 2,
+      "value": "0.875"
+    },
+    {
+      "expected": "0.88",
+      "ndigits": 2,
+      "value": "0.8750000000000001"
+    },
+    {
+      "expected": "1.12",
+      "ndigits": 2,
+      "value": "1.1249999999999998"
+    },
+    {
+      "expected": "1.12",
+      "ndigits": 2,
+      "value": "1.125"
+    },
+    {
+      "expected": "1.13",
+      "ndigits": 2,
+      "value": "1.1250000000000002"
+    },
+    {
+      "expected": "1.37",
+      "ndigits": 2,
+      "value": "1.3749999999999998"
+    },
+    {
+      "expected": "1.38",
+      "ndigits": 2,
+      "value": "1.375"
+    },
+    {
+      "expected": "1.38",
+      "ndigits": 2,
+      "value": "1.3750000000000002"
+    },
+    {
+      "expected": "1.62",
+      "ndigits": 2,
+      "value": "1.6249999999999998"
+    },
+    {
+      "expected": "1.62",
+      "ndigits": 2,
+      "value": "1.625"
+    },
+    {
+      "expected": "1.63",
+      "ndigits": 2,
+      "value": "1.6250000000000002"
+    },
+    {
+      "expected": "1.87",
+      "ndigits": 2,
+      "value": "1.8749999999999998"
+    },
+    {
+      "expected": "1.88",
+      "ndigits": 2,
+      "value": "1.875"
+    },
+    {
+      "expected": "1.88",
+      "ndigits": 2,
+      "value": "1.8750000000000002"
+    },
+    {
+      "expected": "2.12",
+      "ndigits": 2,
+      "value": "2.1249999999999996"
+    },
+    {
+      "expected": "2.12",
+      "ndigits": 2,
+      "value": "2.125"
+    },
+    {
+      "expected": "2.13",
+      "ndigits": 2,
+      "value": "2.1250000000000004"
+    },
+    {
+      "expected": "2.37",
+      "ndigits": 2,
+      "value": "2.3749999999999996"
+    },
+    {
+      "expected": "2.38",
+      "ndigits": 2,
+      "value": "2.375"
+    },
+    {
+      "expected": "2.38",
+      "ndigits": 2,
+      "value": "2.3750000000000004"
+    },
+    {
+      "expected": "2.62",
+      "ndigits": 2,
+      "value": "2.6249999999999996"
+    },
+    {
+      "expected": "2.62",
+      "ndigits": 2,
+      "value": "2.625"
+    },
+    {
+      "expected": "2.63",
+      "ndigits": 2,
+      "value": "2.6250000000000004"
+    },
+    {
+      "expected": "2.87",
+      "ndigits": 2,
+      "value": "2.8749999999999996"
+    },
+    {
+      "expected": "2.88",
+      "ndigits": 2,
+      "value": "2.875"
+    },
+    {
+      "expected": "2.88",
+      "ndigits": 2,
+      "value": "2.8750000000000004"
+    },
+    {
+      "expected": "3.12",
+      "ndigits": 2,
+      "value": "3.1249999999999996"
+    },
+    {
+      "expected": "3.12",
+      "ndigits": 2,
+      "value": "3.125"
+    },
+    {
+      "expected": "3.13",
+      "ndigits": 2,
+      "value": "3.1250000000000004"
+    },
+    {
+      "expected": "3.37",
+      "ndigits": 2,
+      "value": "3.3749999999999996"
+    },
+    {
+      "expected": "3.38",
+      "ndigits": 2,
+      "value": "3.375"
+    },
+    {
+      "expected": "3.38",
+      "ndigits": 2,
+      "value": "3.3750000000000004"
+    },
+    {
+      "expected": "3.62",
+      "ndigits": 2,
+      "value": "3.6249999999999996"
+    },
+    {
+      "expected": "3.62",
+      "ndigits": 2,
+      "value": "3.625"
+    },
+    {
+      "expected": "3.63",
+      "ndigits": 2,
+      "value": "3.6250000000000004"
+    },
+    {
+      "expected": "3.87",
+      "ndigits": 2,
+      "value": "3.8749999999999996"
+    },
+    {
+      "expected": "3.88",
+      "ndigits": 2,
+      "value": "3.875"
+    },
+    {
+      "expected": "3.88",
+      "ndigits": 2,
+      "value": "3.8750000000000004"
+    },
+    {
+      "expected": "4.12",
+      "ndigits": 2,
+      "value": "4.124999999999999"
+    },
+    {
+      "expected": "4.12",
+      "ndigits": 2,
+      "value": "4.125"
+    },
+    {
+      "expected": "4.13",
+      "ndigits": 2,
+      "value": "4.125000000000001"
+    },
+    {
+      "expected": "4.37",
+      "ndigits": 2,
+      "value": "4.374999999999999"
+    },
+    {
+      "expected": "4.38",
+      "ndigits": 2,
+      "value": "4.375"
+    },
+    {
+      "expected": "4.38",
+      "ndigits": 2,
+      "value": "4.375000000000001"
+    },
+    {
+      "expected": "4.62",
+      "ndigits": 2,
+      "value": "4.624999999999999"
+    },
+    {
+      "expected": "4.62",
+      "ndigits": 2,
+      "value": "4.625"
+    },
+    {
+      "expected": "4.63",
+      "ndigits": 2,
+      "value": "4.625000000000001"
+    },
+    {
+      "expected": "4.87",
+      "ndigits": 2,
+      "value": "4.874999999999999"
+    },
+    {
+      "expected": "4.88",
+      "ndigits": 2,
+      "value": "4.875"
+    },
+    {
+      "expected": "4.88",
+      "ndigits": 2,
+      "value": "4.875000000000001"
+    },
+    {
+      "expected": "5.12",
+      "ndigits": 2,
+      "value": "5.124999999999999"
+    },
+    {
+      "expected": "5.12",
+      "ndigits": 2,
+      "value": "5.125"
+    },
+    {
+      "expected": "5.13",
+      "ndigits": 2,
+      "value": "5.125000000000001"
+    },
+    {
+      "expected": "5.37",
+      "ndigits": 2,
+      "value": "5.374999999999999"
+    },
+    {
+      "expected": "5.38",
+      "ndigits": 2,
+      "value": "5.375"
+    },
+    {
+      "expected": "5.38",
+      "ndigits": 2,
+      "value": "5.375000000000001"
+    },
+    {
+      "expected": "5.62",
+      "ndigits": 2,
+      "value": "5.624999999999999"
+    },
+    {
+      "expected": "5.62",
+      "ndigits": 2,
+      "value": "5.625"
+    },
+    {
+      "expected": "5.63",
+      "ndigits": 2,
+      "value": "5.625000000000001"
+    },
+    {
+      "expected": "5.87",
+      "ndigits": 2,
+      "value": "5.874999999999999"
+    },
+    {
+      "expected": "5.88",
+      "ndigits": 2,
+      "value": "5.875"
+    },
+    {
+      "expected": "5.88",
+      "ndigits": 2,
+      "value": "5.875000000000001"
+    },
+    {
+      "expected": "0.145",
+      "ndigits": 4,
+      "value": "0.145"
+    },
+    {
+      "expected": "0.135",
+      "ndigits": 4,
+      "value": "0.135"
+    },
+    {
+      "expected": "2.675",
+      "ndigits": 4,
+      "value": "2.675"
+    },
+    {
+      "expected": "1.005",
+      "ndigits": 4,
+      "value": "1.005"
+    },
+    {
+      "expected": "0.215",
+      "ndigits": 4,
+      "value": "0.215"
+    },
+    {
+      "expected": "5.565",
+      "ndigits": 4,
+      "value": "5.565"
+    },
+    {
+      "expected": "8.835",
+      "ndigits": 4,
+      "value": "8.835"
+    },
+    {
+      "expected": "2.345",
+      "ndigits": 4,
+      "value": "2.345"
+    },
+    {
+      "expected": "1234.5678",
+      "ndigits": 4,
+      "value": "1234.5678"
+    },
+    {
+      "expected": "0.0001",
+      "ndigits": 4,
+      "value": "0.0001235"
+    },
+    {
+      "expected": "-0.403",
+      "ndigits": 4,
+      "value": "-0.40299178787112405"
+    },
+    {
+      "expected": "-0.3952",
+      "ndigits": 4,
+      "value": "-0.3951798367578031"
+    },
+    {
+      "expected": "-0.3807",
+      "ndigits": 4,
+      "value": "-0.3806867168557748"
+    },
+    {
+      "expected": "-0.3521",
+      "ndigits": 4,
+      "value": "-0.35212041487712065"
+    },
+    {
+      "expected": "-0.351",
+      "ndigits": 4,
+      "value": "-0.3509828523001702"
+    },
+    {
+      "expected": "-0.3396",
+      "ndigits": 4,
+      "value": "-0.3395573949756931"
+    },
+    {
+      "expected": "-0.3046",
+      "ndigits": 4,
+      "value": "-0.3045788491941166"
+    },
+    {
+      "expected": "-0.3007",
+      "ndigits": 4,
+      "value": "-0.30068479363089184"
+    },
+    {
+      "expected": "-0.2711",
+      "ndigits": 4,
+      "value": "-0.2711081361046332"
+    },
+    {
+      "expected": "-0.2602",
+      "ndigits": 4,
+      "value": "-0.2602157507388403"
+    },
+    {
+      "expected": "-0.254",
+      "ndigits": 4,
+      "value": "-0.2540244633827551"
+    },
+    {
+      "expected": "-0.2393",
+      "ndigits": 4,
+      "value": "-0.23934615921414706"
+    },
+    {
+      "expected": "-0.2188",
+      "ndigits": 4,
+      "value": "-0.21882289543527625"
+    },
+    {
+      "expected": "-0.216",
+      "ndigits": 4,
+      "value": "-0.21603023739369134"
+    },
+    {
+      "expected": "-0.189",
+      "ndigits": 4,
+      "value": "-0.18903843600565934"
+    },
+    {
+      "expected": "-0.1363",
+      "ndigits": 4,
+      "value": "-0.13631259586469363"
+    },
+    {
+      "expected": "-0.1337",
+      "ndigits": 4,
+      "value": "-0.13366534350860904"
+    },
+    {
+      "expected": "-0.1336",
+      "ndigits": 4,
+      "value": "-0.13361386634701122"
+    },
+    {
+      "expected": "-0.117",
+      "ndigits": 4,
+      "value": "-0.11699472922348783"
+    },
+    {
+      "expected": "-0.1036",
+      "ndigits": 4,
+      "value": "-0.10356096170078338"
+    },
+    {
+      "expected": "-0.0869",
+      "ndigits": 4,
+      "value": "-0.08686367190749705"
+    },
+    {
+      "expected": "-0.0762",
+      "ndigits": 4,
+      "value": "-0.07615540202134752"
+    },
+    {
+      "expected": "-0.0729",
+      "ndigits": 4,
+      "value": "-0.07293058354587281"
+    },
+    {
+      "expected": "-0.0341",
+      "ndigits": 4,
+      "value": "-0.034079132454510386"
+    },
+    {
+      "expected": "-0.0247",
+      "ndigits": 4,
+      "value": "-0.02473780925011159"
+    },
+    {
+      "expected": "-0.0021",
+      "ndigits": 4,
+      "value": "-0.002129290840320155"
+    },
+    {
+      "expected": "-0.0016",
+      "ndigits": 4,
+      "value": "-0.0015530225716794462"
+    },
+    {
+      "expected": "0.0",
+      "ndigits": 4,
+      "value": "0.0"
+    },
+    {
+      "expected": "0.0046",
+      "ndigits": 4,
+      "value": "0.00463073945147097"
+    },
+    {
+      "expected": "0.0055",
+      "ndigits": 4,
+      "value": "0.005493591728208108"
+    },
+    {
+      "expected": "0.0061",
+      "ndigits": 4,
+      "value": "0.006090251892507418"
+    },
+    {
+      "expected": "0.0079",
+      "ndigits": 4,
+      "value": "0.0078797368249681"
+    },
+    {
+      "expected": "0.0079",
+      "ndigits": 4,
+      "value": "0.007939101648847353"
+    },
+    {
+      "expected": "0.0081",
+      "ndigits": 4,
+      "value": "0.008132345164282191"
+    },
+    {
+      "expected": "0.0119",
+      "ndigits": 4,
+      "value": "0.011890818166805045"
+    },
+    {
+      "expected": "0.0154",
+      "ndigits": 4,
+      "value": "0.015350437424627713"
+    },
+    {
+      "expected": "0.0172",
+      "ndigits": 4,
+      "value": "0.017179789300229967"
+    },
+    {
+      "expected": "0.0213",
+      "ndigits": 4,
+      "value": "0.021336824630924737"
+    },
+    {
+      "expected": "0.0287",
+      "ndigits": 4,
+      "value": "0.028685862748839018"
+    },
+    {
+      "expected": "0.0299",
+      "ndigits": 4,
+      "value": "0.029864931964233843"
+    },
+    {
+      "expected": "0.0303",
+      "ndigits": 4,
+      "value": "0.03031777145297258"
+    },
+    {
+      "expected": "0.0346",
+      "ndigits": 4,
+      "value": "0.03462793969709347"
+    },
+    {
+      "expected": "0.0358",
+      "ndigits": 4,
+      "value": "0.03579602653216856"
+    },
+    {
+      "expected": "0.0369",
+      "ndigits": 4,
+      "value": "0.03691518970391318"
+    },
+    {
+      "expected": "0.0375",
+      "ndigits": 4,
+      "value": "0.037500000000000054"
+    },
+    {
+      "expected": "0.0386",
+      "ndigits": 4,
+      "value": "0.03858372861430222"
+    },
+    {
+      "expected": "0.0421",
+      "ndigits": 4,
+      "value": "0.04209067839269233"
+    },
+    {
+      "expected": "0.0429",
+      "ndigits": 4,
+      "value": "0.04290235719050887"
+    },
+    {
+      "expected": "0.0432",
+      "ndigits": 4,
+      "value": "0.043173491139447275"
+    },
+    {
+      "expected": "0.0465",
+      "ndigits": 4,
+      "value": "0.04652949852477092"
+    },
+    {
+      "expected": "0.0474",
+      "ndigits": 4,
+      "value": "0.04737989132593744"
+    },
+    {
+      "expected": "0.0476",
+      "ndigits": 4,
+      "value": "0.04761904761904775"
+    },
+    {
+      "expected": "0.0507",
+      "ndigits": 4,
+      "value": "0.05074954222241811"
+    },
+    {
+      "expected": "0.0535",
+      "ndigits": 4,
+      "value": "0.053484677737748364"
+    },
+    {
+      "expected": "0.0568",
+      "ndigits": 4,
+      "value": "0.056809072148658074"
+    },
+    {
+      "expected": "0.0721",
+      "ndigits": 4,
+      "value": "0.07213481636012146"
+    },
+    {
+      "expected": "0.073",
+      "ndigits": 4,
+      "value": "0.07296787620252249"
+    },
+    {
+      "expected": "0.0742",
+      "ndigits": 4,
+      "value": "0.07422671666355184"
+    },
+    {
+      "expected": "0.0864",
+      "ndigits": 4,
+      "value": "0.0864229962951107"
+    },
+    {
+      "expected": "0.0975",
+      "ndigits": 4,
+      "value": "0.09749158999906267"
+    },
+    {
+      "expected": "0.0976",
+      "ndigits": 4,
+      "value": "0.09759006164885045"
+    },
+    {
+      "expected": "0.0991",
+      "ndigits": 4,
+      "value": "0.09913569284360174"
+    },
+    {
+      "expected": "0.1002",
+      "ndigits": 4,
+      "value": "0.10021010573841503"
+    },
+    {
+      "expected": "0.1015",
+      "ndigits": 4,
+      "value": "0.10149496710801086"
+    },
+    {
+      "expected": "0.1057",
+      "ndigits": 4,
+      "value": "0.1057022297676262"
+    },
+    {
+      "expected": "0.1079",
+      "ndigits": 4,
+      "value": "0.10790892280321912"
+    },
+    {
+      "expected": "0.109",
+      "ndigits": 4,
+      "value": "0.10899810320250296"
+    },
+    {
+      "expected": "0.1118",
+      "ndigits": 4,
+      "value": "0.11184036693605934"
+    },
+    {
+      "expected": "0.1155",
+      "ndigits": 4,
+      "value": "0.11547954428584652"
+    },
+    {
+      "expected": "0.1266",
+      "ndigits": 4,
+      "value": "0.1266372977131318"
+    },
+    {
+      "expected": "0.1293",
+      "ndigits": 4,
+      "value": "0.12929373775643344"
+    },
+    {
+      "expected": "0.1297",
+      "ndigits": 4,
+      "value": "0.1296695073136331"
+    },
+    {
+      "expected": "0.1319",
+      "ndigits": 4,
+      "value": "0.13187408854019134"
+    },
+    {
+      "expected": "0.1352",
+      "ndigits": 4,
+      "value": "0.13520817282989978"
+    },
+    {
+      "expected": "0.1431",
+      "ndigits": 4,
+      "value": "0.14305127275914287"
+    },
+    {
+      "expected": "0.1556",
+      "ndigits": 4,
+      "value": "0.155585027612895"
+    },
+    {
+      "expected": "0.156",
+      "ndigits": 4,
+      "value": "0.1560432616514023"
+    },
+    {
+      "expected": "0.1576",
+      "ndigits": 4,
+      "value": "0.15761404078855135"
+    },
+    {
+      "expected": "0.1586",
+      "ndigits": 4,
+      "value": "0.15857770093720153"
+    },
+    {
+      "expected": "0.1684",
+      "ndigits": 4,
+      "value": "0.1683673469387754"
+    },
+    {
+      "expected": "0.1699",
+      "ndigits": 4,
+      "value": "0.16990588014206934"
+    },
+    {
+      "expected": "0.1793",
+      "ndigits": 4,
+      "value": "0.1792614827449467"
+    },
+    {
+      "expected": "0.1838",
+      "ndigits": 4,
+      "value": "0.18378061742198076"
+    },
+    {
+      "expected": "0.2035",
+      "ndigits": 4,
+      "value": "0.20349021449828192"
+    },
+    {
+      "expected": "0.2054",
+      "ndigits": 4,
+      "value": "0.20544913977778095"
+    },
+    {
+      "expected": "0.2062",
+      "ndigits": 4,
+      "value": "0.20616941271409303"
+    },
+    {
+      "expected": "0.2062",
+      "ndigits": 4,
+      "value": "0.20623325750869312"
+    },
+    {
+      "expected": "0.2094",
+      "ndigits": 4,
+      "value": "0.20937749877694906"
+    },
+    {
+      "expected": "0.2112",
+      "ndigits": 4,
+      "value": "0.21120739741346034"
+    },
+    {
+      "expected": "0.2143",
+      "ndigits": 4,
+      "value": "0.21429053281676352"
+    },
+    {
+      "expected": "0.215",
+      "ndigits": 4,
+      "value": "0.21496551157729774"
+    },
+    {
+      "expected": "0.2174",
+      "ndigits": 4,
+      "value": "0.2174487523328919"
+    },
+    {
+      "expected": "0.2217",
+      "ndigits": 4,
+      "value": "0.22172884104841745"
+    },
+    {
+      "expected": "0.2379",
+      "ndigits": 4,
+      "value": "0.2378973056518421"
+    },
+    {
+      "expected": "0.2542",
+      "ndigits": 4,
+      "value": "0.25415017436796394"
+    },
+    {
+      "expected": "0.2585",
+      "ndigits": 4,
+      "value": "0.2584510763916153"
+    },
+    {
+      "expected": "0.2772",
+      "ndigits": 4,
+      "value": "0.2771983879971406"
+    },
+    {
+      "expected": "0.2823",
+      "ndigits": 4,
+      "value": "0.2823080823228219"
+    },
+    {
+      "expected": "0.2892",
+      "ndigits": 4,
+      "value": "0.2891988939599062"
+    },
+    {
+      "expected": "0.3157",
+      "ndigits": 4,
+      "value": "0.31567573371879115"
+    },
+    {
+      "expected": "0.3239",
+      "ndigits": 4,
+      "value": "0.32393916019691044"
+    },
+    {
+      "expected": "0.3742",
+      "ndigits": 4,
+      "value": "0.37421332455543643"
+    },
+    {
+      "expected": "0.3837",
+      "ndigits": 4,
+      "value": "0.3836939706963882"
+    },
+    {
+      "expected": "0.3921",
+      "ndigits": 4,
+      "value": "0.39211641990022433"
+    },
+    {
+      "expected": "0.4163",
+      "ndigits": 4,
+      "value": "0.41625901239024254"
+    },
+    {
+      "expected": "0.4486",
+      "ndigits": 4,
+      "value": "0.44855549817819607"
+    },
+    {
+      "expected": "0.4501",
+      "ndigits": 4,
+      "value": "0.450118545143772"
+    },
+    {
+      "expected": "0.4778",
+      "ndigits": 4,
+      "value": "0.4777742862562198"
+    },
+    {
+      "expected": "0.4809",
+      "ndigits": 4,
+      "value": "0.4808968225941898"
+    },
+    {
+      "expected": "0.511",
+      "ndigits": 4,
+      "value": "0.5110347985347987"
+    },
+    {
+      "expected": "0.5587",
+      "ndigits": 4,
+      "value": "0.5586538461538465"
+    },
+    {
+      "expected": "0.8073",
+      "ndigits": 4,
+      "value": "0.8072618736591106"
+    },
+    {
+      "expected": "0.8138",
+      "ndigits": 4,
+      "value": "0.8137822851283751"
+    },
+    {
+      "expected": "0.8213",
+      "ndigits": 4,
+      "value": "0.8213010171104957"
+    },
+    {
+      "expected": "0.8215",
+      "ndigits": 4,
+      "value": "0.821464338973518"
+    },
+    {
+      "expected": "0.8274",
+      "ndigits": 4,
+      "value": "0.8274077932833411"
+    },
+    {
+      "expected": "0.8319",
+      "ndigits": 4,
+      "value": "0.8318893771501815"
+    },
+    {
+      "expected": "0.8321",
+      "ndigits": 4,
+      "value": "0.8320759301947858"
+    },
+    {
+      "expected": "0.8373",
+      "ndigits": 4,
+      "value": "0.8372953663939646"
+    },
+    {
+      "expected": "0.8405",
+      "ndigits": 4,
+      "value": "0.8405026745986929"
+    },
+    {
+      "expected": "2.72",
+      "ndigits": 4,
+      "value": "2.72"
+    },
+    {
+      "expected": "-2.72",
+      "ndigits": 4,
+      "value": "-2.72"
+    },
+    {
+      "expected": "4.71",
+      "ndigits": 4,
+      "value": "4.71"
+    },
+    {
+      "expected": "-4.71",
+      "ndigits": 4,
+      "value": "-4.71"
+    },
+    {
+      "expected": "0.0",
+      "ndigits": 4,
+      "value": "0.0"
+    },
+    {
+      "expected": "0.43",
+      "ndigits": 4,
+      "value": "0.43"
+    },
+    {
+      "expected": "-0.43",
+      "ndigits": 4,
+      "value": "-0.43"
+    },
+    {
+      "expected": "0.29",
+      "ndigits": 4,
+      "value": "0.29"
+    },
+    {
+      "expected": "-0.29",
+      "ndigits": 4,
+      "value": "-0.29"
+    },
+    {
+      "expected": "0.14",
+      "ndigits": 4,
+      "value": "0.14"
+    },
+    {
+      "expected": "-0.14",
+      "ndigits": 4,
+      "value": "-0.14"
+    },
+    {
+      "expected": "0.5",
+      "ndigits": 4,
+      "value": "0.5"
+    },
+    {
+      "expected": "-0.5",
+      "ndigits": 4,
+      "value": "-0.5"
+    },
+    {
+      "expected": "0.21",
+      "ndigits": 4,
+      "value": "0.21"
+    },
+    {
+      "expected": "-0.21",
+      "ndigits": 4,
+      "value": "-0.21"
+    },
+    {
+      "expected": "-0.67",
+      "ndigits": 4,
+      "value": "-0.67"
+    },
+    {
+      "expected": "0.67",
+      "ndigits": 4,
+      "value": "0.67"
+    },
+    {
+      "expected": "-0.0031",
+      "ndigits": 4,
+      "value": "-0.0030917088319951393"
+    },
+    {
+      "expected": "-0.0003",
+      "ndigits": 4,
+      "value": "-0.0002595998825771406"
+    },
+    {
+      "expected": "-0.0002",
+      "ndigits": 4,
+      "value": "-0.00015733235338931606"
+    },
+    {
+      "expected": "-9455.2085",
+      "ndigits": 4,
+      "value": "-9455.208509505204"
+    },
+    {
+      "expected": "-9343825.5014",
+      "ndigits": 4,
+      "value": "-9343825.501387317"
+    },
+    {
+      "expected": "60.8932",
+      "ndigits": 4,
+      "value": "60.89323790298593"
+    },
+    {
+      "expected": "1.6317",
+      "ndigits": 4,
+      "value": "1.6316640461003562"
+    },
+    {
+      "expected": "3158.5511",
+      "ndigits": 4,
+      "value": "3158.5511469920966"
+    },
+    {
+      "expected": "-83311583.0101",
+      "ndigits": 4,
+      "value": "-83311583.01007764"
+    },
+    {
+      "expected": "-0.0003",
+      "ndigits": 4,
+      "value": "-0.00034024836243811476"
+    },
+    {
+      "expected": "-93.7828",
+      "ndigits": 4,
+      "value": "-93.78283054093465"
+    },
+    {
+      "expected": "0.0738",
+      "ndigits": 4,
+      "value": "0.07380048538612063"
+    },
+    {
+      "expected": "-0.001",
+      "ndigits": 4,
+      "value": "-0.000987671185614434"
+    },
+    {
+      "expected": "1133.496",
+      "ndigits": 4,
+      "value": "1133.4959607565543"
+    },
+    {
+      "expected": "77.5486",
+      "ndigits": 4,
+      "value": "77.54862067601083"
+    },
+    {
+      "expected": "-33454757.0871",
+      "ndigits": 4,
+      "value": "-33454757.087094557"
+    },
+    {
+      "expected": "-0.0",
+      "ndigits": 4,
+      "value": "-1.6605888908030965e-05"
+    },
+    {
+      "expected": "46925162.1653",
+      "ndigits": 4,
+      "value": "46925162.16530533"
+    },
+    {
+      "expected": "-78.1353",
+      "ndigits": 4,
+      "value": "-78.13527389674589"
+    },
+    {
+      "expected": "15626.3015",
+      "ndigits": 4,
+      "value": "15626.30151651967"
+    },
+    {
+      "expected": "88273031.6692",
+      "ndigits": 4,
+      "value": "88273031.66923088"
+    },
+    {
+      "expected": "4904628.4046",
+      "ndigits": 4,
+      "value": "4904628.404621718"
+    },
+    {
+      "expected": "-454489.7654",
+      "ndigits": 4,
+      "value": "-454489.7653667193"
+    },
+    {
+      "expected": "3563.6732",
+      "ndigits": 4,
+      "value": "3563.6732241121294"
+    },
+    {
+      "expected": "-9.9068",
+      "ndigits": 4,
+      "value": "-9.90680060414675"
+    },
+    {
+      "expected": "69.863",
+      "ndigits": 4,
+      "value": "69.86300714007359"
+    },
+    {
+      "expected": "-0.0008",
+      "ndigits": 4,
+      "value": "-0.0008497598258838632"
+    },
+    {
+      "expected": "-513.0543",
+      "ndigits": 4,
+      "value": "-513.0543319743632"
+    },
+    {
+      "expected": "-0.0005",
+      "ndigits": 4,
+      "value": "-0.0004972248571103603"
+    },
+    {
+      "expected": "0.2347",
+      "ndigits": 4,
+      "value": "0.2347364521566997"
+    },
+    {
+      "expected": "-0.0007",
+      "ndigits": 4,
+      "value": "-0.0006847460853848353"
+    },
+    {
+      "expected": "5053657.4523",
+      "ndigits": 4,
+      "value": "5053657.452326074"
+    },
+    {
+      "expected": "8.2947",
+      "ndigits": 4,
+      "value": "8.294695235179539"
+    },
+    {
+      "expected": "-0.0121",
+      "ndigits": 4,
+      "value": "-0.012073045595667709"
+    },
+    {
+      "expected": "670.017",
+      "ndigits": 4,
+      "value": "670.0169895437349"
+    },
+    {
+      "expected": "-0.0041",
+      "ndigits": 4,
+      "value": "-0.004087056589346209"
+    },
+    {
+      "expected": "0.0001",
+      "ndigits": 4,
+      "value": "0.0001374430316765327"
+    },
+    {
+      "expected": "5224224.4802",
+      "ndigits": 4,
+      "value": "5224224.480209218"
+    },
+    {
+      "expected": "2988254.5163",
+      "ndigits": 4,
+      "value": "2988254.516305742"
+    },
+    {
+      "expected": "-5367.3103",
+      "ndigits": 4,
+      "value": "-5367.310256180557"
+    },
+    {
+      "expected": "3467386.2545",
+      "ndigits": 4,
+      "value": "3467386.2544725356"
+    },
+    {
+      "expected": "61199315.5241",
+      "ndigits": 4,
+      "value": "61199315.524116814"
+    },
+    {
+      "expected": "0.0",
+      "ndigits": 4,
+      "value": "1.7074765907319203e-06"
+    },
+    {
+      "expected": "117547.1477",
+      "ndigits": 4,
+      "value": "117547.14765428376"
+    },
+    {
+      "expected": "-91628222.8862",
+      "ndigits": 4,
+      "value": "-91628222.88616064"
+    },
+    {
+      "expected": "0.0",
+      "ndigits": 4,
+      "value": "4.307350620804278e-06"
+    },
+    {
+      "expected": "0.0",
+      "ndigits": 4,
+      "value": "6.056390723521621e-07"
+    },
+    {
+      "expected": "0.0089",
+      "ndigits": 4,
+      "value": "0.008914643864562324"
+    },
+    {
+      "expected": "-9.2907",
+      "ndigits": 4,
+      "value": "-9.290659209599267"
+    },
+    {
+      "expected": "-0.0",
+      "ndigits": 4,
+      "value": "-2.800024538551162e-07"
+    },
+    {
+      "expected": "-0.0",
+      "ndigits": 4,
+      "value": "-4.899002626541049e-05"
+    },
+    {
+      "expected": "-79261.3839",
+      "ndigits": 4,
+      "value": "-79261.3839183749"
+    },
+    {
+      "expected": "-0.0005",
+      "ndigits": 4,
+      "value": "-0.0004914995289707882"
+    },
+    {
+      "expected": "-0.0051",
+      "ndigits": 4,
+      "value": "-0.005084930874781502"
+    },
+    {
+      "expected": "9646.7199",
+      "ndigits": 4,
+      "value": "9646.719863314334"
+    },
+    {
+      "expected": "-0.0",
+      "ndigits": 4,
+      "value": "-3.005853030906225e-06"
+    },
+    {
+      "expected": "-86164.5018",
+      "ndigits": 4,
+      "value": "-86164.50183872588"
+    },
+    {
+      "expected": "0.0375",
+      "ndigits": 4,
+      "value": "0.03753769160015255"
+    },
+    {
+      "expected": "0.0001",
+      "ndigits": 4,
+      "value": "7.759191707037054e-05"
+    },
+    {
+      "expected": "78513.567",
+      "ndigits": 4,
+      "value": "78513.56704822987"
+    },
+    {
+      "expected": "-0.7181",
+      "ndigits": 4,
+      "value": "-0.7180557881068164"
+    },
+    {
+      "expected": "0.0",
+      "ndigits": 4,
+      "value": "3.655500506503295e-07"
+    },
+    {
+      "expected": "12886.5251",
+      "ndigits": 4,
+      "value": "12886.525070491662"
+    },
+    {
+      "expected": "-9459809.0112",
+      "ndigits": 4,
+      "value": "-9459809.011158861"
+    },
+    {
+      "expected": "0.0036",
+      "ndigits": 4,
+      "value": "0.0036389066203825204"
+    },
+    {
+      "expected": "1031733.5625",
+      "ndigits": 4,
+      "value": "1031733.5625239954"
+    },
+    {
+      "expected": "-780487.2749",
+      "ndigits": 4,
+      "value": "-780487.274860167"
+    },
+    {
+      "expected": "-144.2688",
+      "ndigits": 4,
+      "value": "-144.26881812722914"
+    },
+    {
+      "expected": "-0.0826",
+      "ndigits": 4,
+      "value": "-0.08261097880568993"
+    },
+    {
+      "expected": "-7.1802",
+      "ndigits": 4,
+      "value": "-7.180153571896031"
+    },
+    {
+      "expected": "-0.0",
+      "ndigits": 4,
+      "value": "-4.091290350716577e-05"
+    },
+    {
+      "expected": "0.0",
+      "ndigits": 4,
+      "value": "6.5636408845329495e-06"
+    },
+    {
+      "expected": "568.4203",
+      "ndigits": 4,
+      "value": "568.4202749772315"
+    },
+    {
+      "expected": "1.0945",
+      "ndigits": 4,
+      "value": "1.0945386044938532"
+    },
+    {
+      "expected": "-0.0001",
+      "ndigits": 4,
+      "value": "-5.113645653050092e-05"
+    },
+    {
+      "expected": "-0.0",
+      "ndigits": 4,
+      "value": "-4.062588151126021e-06"
+    },
+    {
+      "expected": "4757119.7324",
+      "ndigits": 4,
+      "value": "4757119.732401769"
+    },
+    {
+      "expected": "-1900430.1408",
+      "ndigits": 4,
+      "value": "-1900430.1407891288"
+    },
+    {
+      "expected": "1849727.4348",
+      "ndigits": 4,
+      "value": "1849727.434816395"
+    },
+    {
+      "expected": "-54481.6377",
+      "ndigits": 4,
+      "value": "-54481.63766151499"
+    },
+    {
+      "expected": "0.0312",
+      "ndigits": 4,
+      "value": "0.031249999999999997"
+    },
+    {
+      "expected": "0.0312",
+      "ndigits": 4,
+      "value": "0.03125"
+    },
+    {
+      "expected": "0.0313",
+      "ndigits": 4,
+      "value": "0.03125000000000001"
+    },
+    {
+      "expected": "0.0937",
+      "ndigits": 4,
+      "value": "0.09374999999999999"
+    },
+    {
+      "expected": "0.0938",
+      "ndigits": 4,
+      "value": "0.09375"
+    },
+    {
+      "expected": "0.0938",
+      "ndigits": 4,
+      "value": "0.09375000000000001"
+    },
+    {
+      "expected": "0.1562",
+      "ndigits": 4,
+      "value": "0.15624999999999997"
+    },
+    {
+      "expected": "0.1562",
+      "ndigits": 4,
+      "value": "0.15625"
+    },
+    {
+      "expected": "0.1563",
+      "ndigits": 4,
+      "value": "0.15625000000000003"
+    },
+    {
+      "expected": "0.2187",
+      "ndigits": 4,
+      "value": "0.21874999999999997"
+    },
+    {
+      "expected": "0.2188",
+      "ndigits": 4,
+      "value": "0.21875"
+    },
+    {
+      "expected": "0.2188",
+      "ndigits": 4,
+      "value": "0.21875000000000003"
+    },
+    {
+      "expected": "0.2812",
+      "ndigits": 4,
+      "value": "0.28124999999999994"
+    },
+    {
+      "expected": "0.2812",
+      "ndigits": 4,
+      "value": "0.28125"
+    },
+    {
+      "expected": "0.2813",
+      "ndigits": 4,
+      "value": "0.28125000000000006"
+    },
+    {
+      "expected": "0.3437",
+      "ndigits": 4,
+      "value": "0.34374999999999994"
+    },
+    {
+      "expected": "0.3438",
+      "ndigits": 4,
+      "value": "0.34375"
+    },
+    {
+      "expected": "0.3438",
+      "ndigits": 4,
+      "value": "0.34375000000000006"
+    },
+    {
+      "expected": "0.4062",
+      "ndigits": 4,
+      "value": "0.40624999999999994"
+    },
+    {
+      "expected": "0.4062",
+      "ndigits": 4,
+      "value": "0.40625"
+    },
+    {
+      "expected": "0.4063",
+      "ndigits": 4,
+      "value": "0.40625000000000006"
+    },
+    {
+      "expected": "0.4687",
+      "ndigits": 4,
+      "value": "0.46874999999999994"
+    },
+    {
+      "expected": "0.4688",
+      "ndigits": 4,
+      "value": "0.46875"
+    },
+    {
+      "expected": "0.4688",
+      "ndigits": 4,
+      "value": "0.46875000000000006"
+    },
+    {
+      "expected": "0.5312",
+      "ndigits": 4,
+      "value": "0.5312499999999999"
+    },
+    {
+      "expected": "0.5312",
+      "ndigits": 4,
+      "value": "0.53125"
+    },
+    {
+      "expected": "0.5313",
+      "ndigits": 4,
+      "value": "0.5312500000000001"
+    },
+    {
+      "expected": "0.5937",
+      "ndigits": 4,
+      "value": "0.5937499999999999"
+    },
+    {
+      "expected": "0.5938",
+      "ndigits": 4,
+      "value": "0.59375"
+    },
+    {
+      "expected": "0.5938",
+      "ndigits": 4,
+      "value": "0.5937500000000001"
+    },
+    {
+      "expected": "0.6562",
+      "ndigits": 4,
+      "value": "0.6562499999999999"
+    },
+    {
+      "expected": "0.6562",
+      "ndigits": 4,
+      "value": "0.65625"
+    },
+    {
+      "expected": "0.6563",
+      "ndigits": 4,
+      "value": "0.6562500000000001"
+    },
+    {
+      "expected": "0.7187",
+      "ndigits": 4,
+      "value": "0.7187499999999999"
+    },
+    {
+      "expected": "0.7188",
+      "ndigits": 4,
+      "value": "0.71875"
+    },
+    {
+      "expected": "0.7188",
+      "ndigits": 4,
+      "value": "0.7187500000000001"
+    },
+    {
+      "expected": "0.7812",
+      "ndigits": 4,
+      "value": "0.7812499999999999"
+    },
+    {
+      "expected": "0.7812",
+      "ndigits": 4,
+      "value": "0.78125"
+    },
+    {
+      "expected": "0.7813",
+      "ndigits": 4,
+      "value": "0.7812500000000001"
+    },
+    {
+      "expected": "0.8437",
+      "ndigits": 4,
+      "value": "0.8437499999999999"
+    },
+    {
+      "expected": "0.8438",
+      "ndigits": 4,
+      "value": "0.84375"
+    },
+    {
+      "expected": "0.8438",
+      "ndigits": 4,
+      "value": "0.8437500000000001"
+    },
+    {
+      "expected": "0.9062",
+      "ndigits": 4,
+      "value": "0.9062499999999999"
+    },
+    {
+      "expected": "0.9062",
+      "ndigits": 4,
+      "value": "0.90625"
+    },
+    {
+      "expected": "0.9063",
+      "ndigits": 4,
+      "value": "0.9062500000000001"
+    },
+    {
+      "expected": "0.9687",
+      "ndigits": 4,
+      "value": "0.9687499999999999"
+    },
+    {
+      "expected": "0.9688",
+      "ndigits": 4,
+      "value": "0.96875"
+    },
+    {
+      "expected": "0.9688",
+      "ndigits": 4,
+      "value": "0.9687500000000001"
+    },
+    {
+      "expected": "1.0312",
+      "ndigits": 4,
+      "value": "1.0312499999999998"
+    },
+    {
+      "expected": "1.0312",
+      "ndigits": 4,
+      "value": "1.03125"
+    },
+    {
+      "expected": "1.0313",
+      "ndigits": 4,
+      "value": "1.0312500000000002"
+    },
+    {
+      "expected": "1.0937",
+      "ndigits": 4,
+      "value": "1.0937499999999998"
+    },
+    {
+      "expected": "1.0938",
+      "ndigits": 4,
+      "value": "1.09375"
+    },
+    {
+      "expected": "1.0938",
+      "ndigits": 4,
+      "value": "1.0937500000000002"
+    },
+    {
+      "expected": "1.1562",
+      "ndigits": 4,
+      "value": "1.1562499999999998"
+    },
+    {
+      "expected": "1.1562",
+      "ndigits": 4,
+      "value": "1.15625"
+    },
+    {
+      "expected": "1.1563",
+      "ndigits": 4,
+      "value": "1.1562500000000002"
+    },
+    {
+      "expected": "1.2187",
+      "ndigits": 4,
+      "value": "1.2187499999999998"
+    },
+    {
+      "expected": "1.2188",
+      "ndigits": 4,
+      "value": "1.21875"
+    },
+    {
+      "expected": "1.2188",
+      "ndigits": 4,
+      "value": "1.2187500000000002"
+    },
+    {
+      "expected": "1.2812",
+      "ndigits": 4,
+      "value": "1.2812499999999998"
+    },
+    {
+      "expected": "1.2812",
+      "ndigits": 4,
+      "value": "1.28125"
+    },
+    {
+      "expected": "1.2813",
+      "ndigits": 4,
+      "value": "1.2812500000000002"
+    },
+    {
+      "expected": "1.3437",
+      "ndigits": 4,
+      "value": "1.3437499999999998"
+    },
+    {
+      "expected": "1.3438",
+      "ndigits": 4,
+      "value": "1.34375"
+    },
+    {
+      "expected": "1.3438",
+      "ndigits": 4,
+      "value": "1.3437500000000002"
+    },
+    {
+      "expected": "1.4062",
+      "ndigits": 4,
+      "value": "1.4062499999999998"
+    },
+    {
+      "expected": "1.4062",
+      "ndigits": 4,
+      "value": "1.40625"
+    },
+    {
+      "expected": "1.4063",
+      "ndigits": 4,
+      "value": "1.4062500000000002"
+    },
+    {
+      "expected": "1.4687",
+      "ndigits": 4,
+      "value": "1.4687499999999998"
+    },
+    {
+      "expected": "1.4688",
+      "ndigits": 4,
+      "value": "1.46875"
+    },
+    {
+      "expected": "1.4688",
+      "ndigits": 4,
+      "value": "1.4687500000000002"
+    },
+    {
+      "expected": "inf",
+      "ndigits": 4,
+      "value": "inf"
+    },
+    {
+      "expected": "-inf",
+      "ndigits": 4,
+      "value": "-inf"
+    },
+    {
+      "expected": "nan",
+      "ndigits": 4,
+      "value": "nan"
+    }
+  ],
+  "id": "format/rounding",
+  "provenance": {
+    "edges": "ADR-032 \u00a73; docs/CONFORMANCE.md \u00a73 'The known edges a Rust port will hit'",
+    "kind": "format",
+    "note": "`round(x)` and `round(x, n)` over the exact ties, their nearest neighbours, the decimal traps, the engine's own unrounded values and a seeded magnitude sweep"
+  },
+  "python_version": "3.13.3"
+}

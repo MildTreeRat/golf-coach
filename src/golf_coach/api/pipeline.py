@@ -379,25 +379,44 @@ def audio_for(
         _note(notes, f"the {role.value} clip is recorded in the manifest but missing from disk")
         return None
 
+    # The detector is a Rust binary now (M20), so "can this machine listen?" is two questions
+    # rather than one: the `audio` extra has to be installed *and* `golf-trigger` has to have been
+    # built. They are asked separately because they cannot be asked together — naming
+    # `TriggerUnavailable` in the same `except` as `ImportError` reads a name the failed import
+    # never bound, which is an `UnboundLocalError` on exactly the path meant to degrade politely.
+    # Both are asked before the clip is decoded, so a machine that cannot detect does not spend
+    # thirty seconds of ffmpeg finding that out.
+    why: str | None = None
     try:
         from golf_coach.audio.ffmpeg import FfmpegAudioSource, video_start_seconds
-        from golf_coach.audio.impact import detect_strikes
         from golf_coach.audio.source import NoAudioTrackError
+        from golf_coach.audio.trigger import TriggerUnavailable, binary, detect_strikes
     except ImportError:
+        why = "the audio extra is not installed"
+    else:
+        try:
+            binary()
+        except TriggerUnavailable as missing:
+            why = str(missing)
+
+    if why is not None:
         # An older detection beats none — a stored strike list is a measurement, where the pose
         # impact it would otherwise fall back to is an estimate. Said out loud rather than used
         # quietly: a reader comparing this run against one made on an install that *could* listen
-        # has to be able to see why the two differ.
+        # has to be able to see why the two differ. And said with the reason attached rather than
+        # as one word, because the two causes want different things from the reader: an extra is
+        # `pip install`, an unbuilt binary is `cargo build --release`, and a note saying only
+        # "no detector" sends them to the wrong one.
         if superseded is not None:
-            log(f"  {role.value}: no audio extra to re-detect with, keeping the older detection")
+            log(f"  {role.value}: cannot re-detect ({why}), keeping the older detection")
             _note(
                 notes,
                 f"the {role.value} strikes were found by an older detector (v"
-                f"{superseded.detector_version}) and the audio extra is not installed to re-run it",
+                f"{superseded.detector_version}) and this machine cannot re-run it: {why}",
             )
             return _frames_derived(superseded, fps)
-        log(f"  {role.value}: audio needs the audio extra — pip install -e '.[audio]'")
-        _note(notes, f"no audio for {role.value}: the audio extra is not installed")
+        log(f"  {role.value}: no strike detection — {why}")
+        _note(notes, f"no audio for {role.value}: {why}")
         return None
 
     log(f"  {role.value}: decoding audio from {role_file.original_filename} ...")
@@ -445,7 +464,15 @@ def audio_for(
             # four clips in this corpus start their video 105-125 ms after their audio (§E2).
             log(f"  {role.value}: video starts {video_start_s * 1000:.0f} ms after the audio")
 
-    strikes = detect_strikes(clip.samples, clip.sample_rate)
+    try:
+        strikes = detect_strikes(clip.samples, clip.sample_rate)
+    except TriggerUnavailable as error:
+        # Checked before the decode, so reaching here means the binary went away underneath us or
+        # failed on this particular waveform. Either way a stored measurement beats none and a
+        # guess beats neither (ADR-010 §2).
+        log(f"  {role.value}: strike detection failed — {error}")
+        _note(notes, f"the {role.value} clip's audio could not be searched for a strike: {error}")
+        return _frames_derived(superseded, fps) if superseded is not None else None
     audio = _frames_derived(
         AudioFile(
             clip=AudioClipMetadata(

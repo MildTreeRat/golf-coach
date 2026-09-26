@@ -1,0 +1,368 @@
+{
+  "cases": [
+    {
+      "entries": [
+        [
+          "tempo_ratio",
+          "0.0"
+        ],
+        [
+          "head_sway_norm",
+          "0.0"
+        ],
+        [
+          "finish_balance_norm",
+          "0.0"
+        ],
+        [
+          "hip_sway_norm",
+          "0.0"
+        ],
+        [
+          "hip_shift_at_top_norm",
+          "0.0"
+        ],
+        [
+          "head_hip_gain_norm",
+          "0.0"
+        ]
+      ],
+      "expected_first": "tempo_ratio",
+      "expected_order": [
+        "tempo_ratio",
+        "head_sway_norm",
+        "finish_balance_norm",
+        "hip_sway_norm",
+        "hip_shift_at_top_norm",
+        "head_hip_gain_norm"
+      ],
+      "key": "neg_abs"
+    },
+    {
+      "entries": [
+        [
+          "tempo_ratio",
+          "0.3"
+        ],
+        [
+          "head_sway_norm",
+          "0.3"
+        ],
+        [
+          "finish_balance_norm",
+          "0.2"
+        ],
+        [
+          "hip_sway_norm",
+          "0.1"
+        ],
+        [
+          "hip_shift_at_top_norm",
+          "0.05"
+        ],
+        [
+          "head_hip_gain_norm",
+          "0.05"
+        ]
+      ],
+      "expected_first": "tempo_ratio",
+      "expected_order": [
+        "tempo_ratio",
+        "head_sway_norm",
+        "finish_balance_norm",
+        "hip_sway_norm",
+        "hip_shift_at_top_norm",
+        "head_hip_gain_norm"
+      ],
+      "key": "neg_abs"
+    },
+    {
+      "entries": [
+        [
+          "tempo_ratio",
+          "-0.4"
+        ],
+        [
+          "head_sway_norm",
+          "0.4"
+        ],
+        [
+          "finish_balance_norm",
+          "-0.1"
+        ],
+        [
+          "hip_sway_norm",
+          "0.1"
+        ],
+        [
+          "hip_shift_at_top_norm",
+          "0.0"
+        ],
+        [
+          "head_hip_gain_norm",
+          "-0.0"
+        ]
+      ],
+      "expected_first": "tempo_ratio",
+      "expected_order": [
+        "tempo_ratio",
+        "head_sway_norm",
+        "finish_balance_norm",
+        "hip_sway_norm",
+        "hip_shift_at_top_norm",
+        "head_hip_gain_norm"
+      ],
+      "key": "neg_abs"
+    },
+    {
+      "entries": [
+        [
+          "tempo_ratio",
+          "-0.4"
+        ],
+        [
+          "head_sway_norm",
+          "0.4"
+        ],
+        [
+          "finish_balance_norm",
+          "-0.1"
+        ],
+        [
+          "hip_sway_norm",
+          "0.1"
+        ],
+        [
+          "hip_shift_at_top_norm",
+          "0.0"
+        ],
+        [
+          "head_hip_gain_norm",
+          "-0.0"
+        ]
+      ],
+      "expected_first": "head_sway_norm",
+      "expected_order": [
+        "head_sway_norm",
+        "hip_sway_norm",
+        "hip_shift_at_top_norm",
+        "head_hip_gain_norm",
+        "finish_balance_norm",
+        "tempo_ratio"
+      ],
+      "key": "neg"
+    },
+    {
+      "entries": [
+        [
+          "head_hip_gain_norm",
+          "0.3"
+        ],
+        [
+          "hip_shift_at_top_norm",
+          "0.3"
+        ],
+        [
+          "hip_sway_norm",
+          "0.2"
+        ],
+        [
+          "finish_balance_norm",
+          "0.1"
+        ],
+        [
+          "head_sway_norm",
+          "0.05"
+        ],
+        [
+          "tempo_ratio",
+          "0.05"
+        ]
+      ],
+      "expected_first": "head_hip_gain_norm",
+      "expected_order": [
+        "head_hip_gain_norm",
+        "hip_shift_at_top_norm",
+        "hip_sway_norm",
+        "finish_balance_norm",
+        "head_sway_norm",
+        "tempo_ratio"
+      ],
+      "key": "neg_abs"
+    },
+    {
+      "entries": [
+        [
+          "address->top",
+          "0.5"
+        ],
+        [
+          "top->impact",
+          "0.25"
+        ],
+        [
+          "impact->finish",
+          "0.25"
+        ]
+      ],
+      "expected_first": "address->top",
+      "expected_order": [
+        "address->top",
+        "top->impact",
+        "impact->finish"
+      ],
+      "key": "neg"
+    },
+    {
+      "entries": [
+        [
+          "address->top",
+          "0.25"
+        ],
+        [
+          "top->impact",
+          "0.5"
+        ],
+        [
+          "impact->finish",
+          "0.25"
+        ]
+      ],
+      "expected_first": "top->impact",
+      "expected_order": [
+        "top->impact",
+        "address->top",
+        "impact->finish"
+      ],
+      "key": "neg"
+    },
+    {
+      "entries": [
+        [
+          "address->top",
+          "0.0"
+        ],
+        [
+          "top->impact",
+          "0.0"
+        ],
+        [
+          "impact->finish",
+          "0.0"
+        ]
+      ],
+      "expected_first": "address->top",
+      "expected_order": [
+        "address->top",
+        "top->impact",
+        "impact->finish"
+      ],
+      "key": "neg"
+    },
+    {
+      "expected_order": [
+        "tempo",
+        "finish_balance",
+        "hip_sway",
+        "zzz_unregistered",
+        "aaa_unregistered",
+        "mmm"
+      ],
+      "key": "registry",
+      "names": [
+        "hip_sway",
+        "zzz_unregistered",
+        "tempo",
+        "aaa_unregistered",
+        "finish_balance",
+        "mmm"
+      ],
+      "registry": [
+        "tempo",
+        "head_sway",
+        "finish_balance",
+        "hip_sway",
+        "hip_shift_at_top"
+      ]
+    },
+    {
+      "expected_order": [
+        "zzz",
+        "aaa",
+        "mmm"
+      ],
+      "key": "registry",
+      "names": [
+        "zzz",
+        "aaa",
+        "mmm"
+      ],
+      "registry": [
+        "tempo",
+        "head_sway",
+        "finish_balance",
+        "hip_sway",
+        "hip_shift_at_top"
+      ]
+    },
+    {
+      "expected_order": [
+        "zz",
+        "aaaa",
+        "m",
+        "kkkkkk",
+        "bbb"
+      ],
+      "key": "registry",
+      "names": [
+        "zz",
+        "aaaa",
+        "m",
+        "kkkkkk",
+        "bbb"
+      ],
+      "registry": [
+        "tempo",
+        "head_sway",
+        "finish_balance",
+        "hip_sway",
+        "hip_shift_at_top"
+      ]
+    },
+    {
+      "expected_order": [
+        "tempo",
+        "hip_sway",
+        "zz",
+        "aaaa",
+        "m",
+        "kkkkkk",
+        "bbb"
+      ],
+      "key": "registry",
+      "names": [
+        "zz",
+        "hip_sway",
+        "aaaa",
+        "m",
+        "tempo",
+        "kkkkkk",
+        "bbb"
+      ],
+      "registry": [
+        "tempo",
+        "head_sway",
+        "finish_balance",
+        "hip_sway",
+        "hip_shift_at_top"
+      ]
+    }
+  ],
+  "id": "format/ordering",
+  "provenance": {
+    "edges": "ADR-032 \u00a73; docs/CONFORMANCE.md \u00a73 'The known edges a Rust port will hit'",
+    "kind": "format",
+    "note": "the tie cases of `joint.py`'s `-abs(share)`, `trajectory.py`'s `-share` and `engine.py`'s registry rank \u2014 every case a tie, because a distinct-keyed sort gates nothing"
+  },
+  "python_version": "3.13.3"
+}

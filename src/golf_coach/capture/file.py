@@ -1,9 +1,12 @@
 """FileVideoSource: read frames from a video file on disk. [M1]
 
 A `VideoSource` adapter over `cv2.VideoCapture`. This is the hardware-free way to feed the
-pipeline today (ADR-007) — point it at a phone/sample swing clip. The live ELP camera
-adapter (capture/camera.py) will implement the same `VideoSource` port later, so nothing
-downstream changes when we swap to real hardware.
+pipeline today (ADR-007) — point it at a phone/sample swing clip.
+
+**And it stays the only adapter** [ADR-031, M21 P0]. This docstring used to promise a
+`capture/camera.py` implementing the same port "later"; live capture went to Rust instead
+(`crates/capture`, ADR-030 §1). Nothing here is superseded by that — ADR-031 §2 keeps file and
+upload first-class precisely by leaving them alone.
 
 Requires the `vision` extra (`pip install -e '.[vision]'`) for OpenCV, which is why this
 adapter is imported directly (`from golf_coach.capture.file import FileVideoSource`) rather

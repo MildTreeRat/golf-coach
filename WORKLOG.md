@@ -5,6 +5,1367 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-09-26 — M22 P9: the docs cascade, and M22 is done
+
+**Duration**: one sitting. M22 goes ✅ **12/12** and the milestone is closed. No code but a
+formatter run — the phase is `CLAUDE.md`, `ROADMAP.md`, `docs/{CONFORMANCE,ARCHITECTURE,README}.md`,
+`docs/decisions/030` and `032`, `spec/README.md` and this file. Nothing under `src/golf_coach/` was
+touched and `ANALYSIS_VERSION` stays at 16.
+
+**What shipped.** Eight documents reconciled with a port that finished yesterday, and the three
+ADR addenda P8 and P8b had deferred — the ninth (the ball flight), the tenth (the join) and the
+eleventh, which is the closing one [ADR-032](docs/decisions/032-the-rust-core.md)'s own Consequences
+section asked for at the start of the milestone: *"the port's own numbers — which edges actually
+fired, what the stage family costs in bytes, whether any vector moved — belong in an addendum
+written at the end."*
+
+`pytest` **1,962** green — including `test_worker.py::test_failure_is_recorded_and_the_consumer_survives`,
+which P8b recorded failing under full-suite load, so its wall-clock deadline is marginal rather than
+broken. `ruff` and `mypy` clean, `cargo test` 507 across six crates, `cargo clippy --all-targets`
+clean, `conformance.py check` 21/21. Run to prove a docs phase moved nothing, rather than assumed.
+
+**And one of those commands was not clean, which is the small finding.** P8b's entry says
+`cargo fmt` clean and it was not: two test assertions in `crates/analysis/src/flight_infer.rs`
+(lines 735 and 987) had been left long. `cargo fmt --check` exits 1 on them, and the reason it read
+as clean is a pipeline — `cargo fmt --check | tail` reports **tail's** exit status, so a check run
+through a pager silently always passes. Fixed by running `cargo fmt`, which is the only reason this
+phase touched `crates/` at all; the 336 unit tests in that crate still pass. Worth the line because
+it is a whole class: every verification command in `CLAUDE.md`'s block is a *status code*, and
+piping one into `grep` or `tail` to keep the output short throws that status away.
+
+**`tests/test_docs_truth.py` failed exactly where CLAUDE.md promises it does** — two assertions, both
+counting addenda, the moment the ADR gained three. That is the whole mechanism working: 92 tests,
+two of them failed within a second of the first append and passed once `docs/README.md` said 71 and
+11 instead of 68 and 8.
+
+**Four documents were stating something false rather than merely stale**, which is the distinction
+worth recording because only one of the four was visible to any test:
+
+- `docs/CONFORMANCE.md` §3 said *"Four, and the count has moved twice"* and there are **six**. Worse
+  than the count, the framing: *"all land on the strings this section compares exactly"* — which
+  P8's `math.hypot` edge falsifies outright, and that edge is the one a port most needs to be
+  warned about, because it is invisible to every string comparison in the suite.
+- §5's tier table had `analysis/` and the flight modules as **future work**. A reader arriving at
+  the inventory that answers "does this module get rewritten?" would have been told the engine
+  hadn't been.
+- `spec/README.md` claimed **three of seven** stages ran under `cargo test`. Seven do.
+- ADR-032's Status block read **Partly built**, with P8 named as the only thing the corpus half
+  still waited on.
+
+**The finding, and it is about the edge list rather than any edge.** §3 predicted three portability
+edges and the port found three more. Setting the count aside, the interesting split is *which* ones
+fired: **one of the three predicted edges never fired on a single committed vector**. Dict insertion
+order decides which contributor is named only when two shares tie, and no two shares tie anywhere in
+the corpus — so it ships gated by unit tests alone. Meanwhile all three of the unpredicted edges
+fired, and two of them (`max`'s tie-break in P4, `math.hypot` in P8) each cost a phase to find.
+A predicted-risk list written by reading the code is worth keeping and is worth **nothing** as a
+coverage claim; the only reason this one reads as prescient is that its two live entries were the
+two everybody expects.
+
+**The second finding is what "no vector moved" does and does not say.** §9 wrote that a moved vector
+would mean the port had found a Python bug. None moved, across seven porting phases — but that is a
+statement about the defects a port *can* see, and a port judged against an implementation is blind
+to a misunderstanding the two share. Both of the things P8 and P8b actually found in the Python were
+of exactly that kind and neither was a number: `FlightResult.curvature_m` promising "exactly zero"
+where it means the planar case, and `flight_infer.py` saying no shot on disk carries a club when five
+do. Both were pinned as measured rather than quietly rewritten, which is the right disposal and also
+the reason they are easy to miss in a green run.
+
+**The third is a shape rather than a fact.** The coverage the port does *not* have was spread over
+seven addenda, one phase at a time, each reading as a local caveat about that phase's corpus luck.
+Gathered into one list it is a paragraph — a left-handed mirror the one left-handed swing cannot
+exercise, four of seven `SpinSolveCase`s, three of five sync tiers, `measure.py`'s twenty-odd refusal
+branches, everything `EXCLUDED_FROM_RESULT` drops including one of `analyze_swing_bundle`'s own
+documented promises — and as a paragraph it says something none of the seven pieces did: **the port
+is conforming, not covered**, and the gap is not guessable from "21 vectors, all green". It now lives
+in ADR-032's eleventh addendum, in `CONFORMANCE.md` §2, and as a bullet in `ARCHITECTURE.md` §5.
+
+**Three status flips the milestone earned elsewhere.** M23 is **unblocked** — its blocker was M22
+alone. M24 drops to M21 only. M29 drops to M25 only, which makes ADR-030's retirement rule for
+`analysis/` held open by its **third** clause alone (*and nothing that stays Python calls it*), and
+discharging those 28 callers is precisely what §M29 is.
+
+**Next: M21 P2**, or M23 — M21 is the only thing still in progress and it is hardware-gated at P1's
+camera-crate bake-off, so the honest next move is the one that needs nothing plugged in. §M23's
+status now says so.
+
+---
+
+## 2026-09-25 — M22 P8b: the join, and 21/21
+
+**Duration**: one sitting. M22 goes 🟡 **11/12** and **ADR-032 §9's exit criterion is met**. No
+`ANALYSIS_VERSION` bump and none was expected; nothing under `src/golf_coach/` changed at all — the
+phase is `crates/`, `ROADMAP.md` and this file. **P9, the docs cascade, is all that is left, and it
+is no code.**
+
+**What shipped.** `shot_measure.py`, `flight_infer.py` and `flight_measure.py` in Rust — the shot's
+seven derived tiles, ADR-027 §Decisions 3 and 5's resolution of the two launch conditions the screen
+did not print, and the layer that decides which of the six flight numbers becomes a `Measurement`.
+**1,219 lines of Rust before their tests against 1,494 of Python**, plus `engine`'s last two
+`measurements` groups (`shot_measurements`, `flight_measurements`) and the `fly_shot` call whose
+refusals extend `unscored`. 42 unit tests added (336 in the crate), and three gates widened: the
+`flight` stage now runs its whole payload on all 15, the `measurements` stage runs five groups
+instead of three, and `crates/core/tests/engine.rs` runs **the whole bundle on all 21**.
+
+`cargo test` green across seven crates and **507 tests**; `cargo clippy --all-targets` and
+`cargo fmt` clean; `conformance.py check` 21/21; `ruff` and `mypy` clean. The Python suite is
+1,961 of 1,962 — `tests/api/test_worker.py::test_failure_is_recorded_and_the_consumer_survives`
+fails under full-suite load and passes alone and with its file; it is a wall-clock deadline on a
+background worker thread and nothing this phase touched is upstream of it.
+
+**The exit criterion, twice.** All 21 conform through `cargo test`, and separately `golf-core run`
+was diffed against `conformance.py run` through Python's *own* `compare_results` on all 21:
+**zero differences**. The byte sizes differ on five of them by one to three bytes, which is P2's
+no-byte-comparison finding standing exactly where it was predicted.
+
+**The finding about the gate, and it is the one to carry forward.** P8's three gates each hand a
+committed *intermediate* to the function under it — a recorded `LaunchConditions` to the integrator,
+a recorded `UnspunLaunch` to the window and the solve — and its module doc called that the phase's
+luck. **P8b is that luck running out**: `fly_shot` *is* the caller, so its input is not in the stage
+at all and `tests/flight.rs` had to read the engine vector for the first time in five gates. That is
+worth more than the inconvenience: until the two ends met, `resolved.launch` was an assumption shared
+by the port and the gate, and a port that built the wrong `UnspunLaunch` would have passed all three
+of P8's cleanly.
+
+**Three things earlier phases recorded that are false, corrected rather than left standing.**
+
+- **The loft prior is gated.** `flight_infer.py`'s docstring says no shot on disk carries a club, and
+  `conformance_vectors._identity` has since resolved one from the swing manifest: **five** of the
+  fifteen carry `loft_deg: 30.5` and two reach the comparison. What is still ungated is the floor's
+  *value* — all five sit seventeen degrees above it, so moving `LOFT_FLOOR_FOR_THE_FALLING_BRANCH_DEG`
+  anywhere in `(0, 30.5)` passes all 21.
+- **One corpus shot refuses a `shot` measurement.** `2026-08-23-3` printed a club path and no face
+  angle, so the group is fourteen face-to-path readings against fifteen shots. That single vector is
+  the whole of what stands between a port reading `and` for `or` in `measure_face_to_path` and a
+  number it invents.
+- **P6's "no vector moves an impact onto a strike" is now false.** Nineteen of the twenty-one produce
+  that note. It was true of the six P6 was gated by, and the corpus half landing turns it over —
+  which is the shape of claim that goes stale when a gate widens, so `crates/core/tests/engine.rs`
+  now counts it rather than asserting its absence.
+
+**The mutation sweep: 27 divergences, 26 caught.** The survivor is a provable equivalence —
+`solve_spin_from_carry` sets *both* branches to `peak_rpm` at `AtPeak`, so returning the rising one
+is the same number. Two were caught only by unit tests written in response to it, and both are the
+kind a vector structurally cannot see: the `between_plateaus` loft comparison is `>=` and only a club
+built to exactly 13.0° can tell `>` from it, and a refused axis reaching the integrator through
+`or(shot.spin_axis)` passes everything because every printed axis in `spec/` arrives with a golfer
+attached.
+
+**What reaches no committed answer, measured and pinned.** A **left-handed shot** — the one
+left-handed vector is synthetic and carries none, so `infer_spin_axis`'s mirror, the flip ADR-014's
+addendum got wrong for a milestone, ships against unit tests; `engine::tempo_notes`' two sentences
+(the four committed notes mentioning tempo are `alignment.py`'s); and a flight that is **both solved
+and curved**, which is the only combination in which all six `flight_*` rows record at once and which
+this repo's data has never produced. One more the stage vector cannot hold at all: `2026-08-23-11`
+derives a draw against a `FADE` on the screen, so `InferredSpinAxis::sign_disagrees` is true on a
+committed swing — and it is a method rather than a field, so `run_stages` records neither it nor
+anything computed from it.
+
+**Not ported**, per ADR-032 §8: `honest_test`, `gate_ordering` and M15 P16's `compare_to_printed`
+layer — 130 of `flight_measure.py`'s 475 lines — whose callers are `scripts/simulate_flight.py` and
+the flight page, and which `run_vector` reaches not at all.
+
+---
+
+## 2026-09-25 — M22 P8: the ball flight, and one ulp that was a bool
+
+**Duration**: one sitting. M22 goes 🟡 **10/12** — the phase was written as the whole outcome and
+split, so the count moved again. No `ANALYSIS_VERSION` bump and none was expected; nothing under
+`src/golf_coach/` changed at all — the phase is `crates/`, `Cargo.toml` and the docs.
+
+**What shipped.** The forward model and the inverse over it, in Rust: `benchmarks/flight_model.py`
+(the published constants), `flight.py` (the RK4 integrator in three dimensions) and `spin_solve.py`
+(the spin recovered backwards out of a printed carry). **1,570 lines of Rust before their tests
+against 1,598 of Python**, and `crates/analysis/tests/flight.rs` is the **seventh and last stage
+runner** — every stage in `spec/vectors/stages/` now has one. 39 unit tests added (291 in the crate),
+6 gate tests; `cargo test` green across seven crates and 459 tests, `cargo clippy --all-targets` and
+`cargo fmt` clean, the Python suite **1,962** green and untouched, `ruff` and `mypy` clean,
+`conformance.py check` 21/21.
+
+`flight_model_v1.json` crosses by `include_str!` from the Python package path, the third artifact to.
+It is also the odd one out in `crates/analysis/src/benchmarks/`: nothing in it was fitted and nothing
+in it places a swing against a population, so it is `clubs/catalogue.py`'s shape rather than
+`joint.py`'s. It lives there because the Python's does.
+
+**The split, and why the line fell here.** `spin_solve.py`'s own docstring argues for it — the forward
+model and the inverse problem over it stay apart so the forward model's property, that every number
+is re-flown rather than remembered, stays obvious. The practical reason is that the two halves have
+**independent committed gates**, which is P5's rule for splitting. `shot_measure`, `flight_infer` and
+`flight_measure` are P8b, along with the `measurements` stage's `shot` and `flight` groups and the
+whole-bundle gate on all 21 that is this milestone's exit.
+
+**Three gates, all inside one stage, and the stage did something for the port it has not done
+before.** P7's sharpest finding was that a per-stage gate records a call's inputs and its output and
+never the two lines of the caller between them. Here the same shape works the other way: the `flight`
+stage recorded `flown.resolved.launch` *and* `flown.flight`, and `resolved.spin.solution.window.launch`
+*and* the whole `CarryWindow` — so the integrator is gated **without the inference chain above it** and
+the solve **without the loft prior that reads it**. 4,583 points on the five corpus vectors that fly,
+eleven carry windows and eleven solve cases on the eleven that solve.
+
+**The finding: ADR-032 §3 is an edge short for the fourth time, and this one is not a string.**
+`flight.py` takes the ball's speed as `math.hypot(vx, vy, vz)`. Rust's std has only the two-argument
+`hypot`, so a port reaches for a chain or for `(x²+y²+z²).sqrt()` — and both sit within **1 ulp** of
+CPython at every point of a committed flight, which is five orders inside `RTOL` and looks like
+nothing. One ulp is the whole difference. `carry_window` computes `high_plateau_min_rpm` *analytically*
+so that the launch spin ratio lands **exactly** on the coefficient table's last row; CPython's norm
+gives the reference shot `40.546527999999995` where both approximations give `40.546528`, and
+`AeroTable.coefficients_for`'s `>=` therefore clamps in one language and interpolates in the other.
+`clamped` is a bool and §3 compares bools exactly. So `pyfmt` gained CPython's `vector_norm` —
+Dekker's split, three Neumaier registers and a compensated Newton correction — with a 32-case table of
+`math.hypot`'s own answers beside it. Where P3's three edges reach a *sentence* a golfer is shown,
+this one reaches a *branch*. The two-argument sites in `measure` and `pivot` were deliberately left on
+`f64::hypot`: this weakens P5b's "provable equivalence" to "within a ulp", but every one of those
+answers reaches a float compared within `RTOL` and none reaches a bool, and moving them would move
+numbers four green stages already agree on for no gate.
+
+**The second finding is about the oracle rather than the port: `serde_json` was reading it a ulp
+wrong.** Its fast decimal path returns `0.03` for `"0.030000000000000002"` and `14.46448727807716` for
+`"14.464487278077161"` — both of which `str::parse` and CPython get right. The committed vectors are
+full of 17-significant-digit floats, so **9.2% of the values one flight is compared against were the
+wrong f64**, absorbed in silence by a tolerance six orders above them. `Cargo.toml` now takes
+serde_json's `float_roundtrip` feature and carries the measurement; the correction applies to all six
+earlier stage runners as much as to this one, and none of them moved.
+
+With both fixed, **all 41,287 floats in the five committed flights come back bit-identical** — not
+merely inside `RTOL`. That is a stronger statement than the phase set out to make, so the gate keeps
+§3's tolerance *and* adds a census beside it with a 99% floor: a tolerance six orders above a ulp is
+structurally unable to tell a converged integration from a systematically wrong primitive, and the
+census is what caught this one. The floor is 99% and not 100% because `exp`, `cos`, `sin` and `atan2`
+are the platform's libm on both sides and another target may legitimately move a last bit.
+
+**And the coverage is narrower than "21 vectors" suggests, again.** Ten of the fifteen corpus vectors
+**refuse before the integrator is reached** — `above_peak`, `between_plateaus` or `no_club_loft` — so
+they gate the solve and never the flight. Of the five that fly, four are fully clamped for their whole
+path and one, `2026-08-23-4`, is the only flight in `spec/` that reads an interpolated coefficient row;
+nothing designed that, and it is pinned before a re-recorded corpus loses it. **Three of the seven
+`SpinSolveCase`s reach a committed answer** (`above_peak`, `between_plateaus`, `two_branches`); the
+other four ship against unit tests, and `below_floor` is the one to know about, because it is the case
+ADR-027 §Decision 4 did not know existed. The 416-line `flight_model.py` reduces to **seven numbers
+and eight rows** on `run_vector`'s path — everything else is per-block provenance or the altitude
+what-if, whose only caller is `scripts/simulate_flight.py --altitude`.
+
+**One Python docstring is overstated, and was pinned as measured rather than corrected.**
+`FlightResult.curvature_m` promises "exactly zero whenever the spin axis is zero, however far offline
+the shot started". It is exactly zero only when the launch direction is zero too; with a start line on
+it, `z*cos - x*sin` leaves the rounding residue of a rotation — `-1.9539925233402755e-14` m on the
+reference shot, in **both languages to the bit**. The guarantee a caller can rely on is the planar
+case, and the test says so.
+
+**Next: P8b**, the join — `shot_measure.py`, `flight_infer.py` and `flight_measure.py`. Gated by the
+rest of the `flight` stage (`resolved.axis`, the `InferredSpin` wrapper and its sentences,
+`flown.reason`/`detail`, `flight_unscored`) on all 15, by the `measurements` stage's `shot` and
+`flight` groups, and then by the whole bundle on all 21 — which closes the milestone's exit criterion.
+`flight.rs`'s six `UnflyableLaunch` messages are already pinned byte for byte for it, because
+`fly_shot` reports them as a `NO_LAUNCH_CONDITIONS` detail and no committed vector reaches one.
+
+---
+
+## 2026-09-25 — M22 P7: the second view, and the arbiter the corpus can no longer reach
+
+**Duration**: one sitting. M22 goes 🟡 **9/11**. No `ANALYSIS_VERSION` bump and none was expected;
+nothing under `src/golf_coach/` changed at all — the phase is `crates/` and the docs.
+
+**What shipped.** The second view, in Rust: `alignment.py`'s reachable half —
+`anchors_from_keypoints`, `tau_of_frame`, `align_swings` and its nine helpers (`_synchronized`, the
+two disagreement notes, `_which_half_is_wrong`, `_Arbitration`/`_arbitrate_tops`, `_top_at`,
+`_tempo_restated`, `_shared_tops`, `_clip_alignment`, `_estimated_motion_start`,
+`_shared_motion_starts`, `_relative_gap`, `_overlap`) — plus `benchmarks/trajectory.py`'s second
+basis and `placement_from_anchors`, `engine.py`'s `_dtl_placements`, the down-the-line pivot rows and
+`_without_contradicted_scores`. **1,197 lines of Rust before their tests against 1,070 of Python**,
+green on the `alignment` stage **and** on the `measurements` stage's last two groups across all 21
+vectors. `crates/analysis/tests/alignment.rs` is the sixth of the seven stage runners; only `flight`
+is left. 41 unit tests added (258 in the crate) and 7 gate tests; `cargo test` green across seven
+crates, `cargo clippy --all-targets` and `cargo fmt` clean, the Python suite **1,962** green and
+untouched, `conformance.py check` 21/21.
+
+`trajectory_model_dtl_v1.json` crosses by `include_str!` from the Python package path, the second
+artifact to. It needs its **own** cache slot rather than sharing one, because both bases are read on
+every two-camera bundle — which is what Python's `lru_cache(maxsize=len(_MODEL_FILES))` has been
+saying all along, and a shared slot re-parses 64 KB twice a swing. `POSE_DTL_SOURCE` came with
+`pivot_view`, its only ported reader: Python keeps it in `contracts/career.py` because it is the one
+`pose:` source `artifact_key` keys on *nothing*, and `career.py` is not ported.
+
+**The render half stayed Python, and unlike P4's deferral it is not waiting on anything.**
+`frame_of_tau`, `map_frame`, `warp_speeds`, `_segment_rates`, `pair_frames`, `DEFAULT_TAU_RANGE` and
+`_MAX_WARP_SPEED_ERROR` are 220 lines whose only callers are `api/pipeline.py`, `scripts/` and
+`pose/side_by_side.py`, so `run_vector` never reaches them and no committed vector holds an answer
+for one. §M29 retires those callers into the Flutter shell, which is where a render schedule belongs.
+It leaves one asymmetry that reads as an omission and is not: `tau_of_frame` is ported and its exact
+inverse is not, because `align_swings` calls the first and only a renderer calls the second.
+
+**The finding: the corpus no longer contains a pair `_arbitrate_tops` can decide, and that is a
+repair rather than a hole.** M11 P7 installed the arbiter for a measured defect — the face-on top
+landing late on five of eleven bundles, 0.183-0.267 s of downswing against down-the-line's
+0.367-0.484 s of the same swing — and it fires only past `_DOWNSWING_AGREEMENT`'s 30%. Across the
+fifteen committed vectors **the widest disagreement is 27.6%**, and **21.7% before the strike pins
+tau=2**, so the pinning moves it *towards* the threshold and still falls short. M10's windowing and
+M11 P10/P11's strike selection closed the case between them. So `_shared_tops`, `_top_at`,
+`_tempo_restated`, the `IMPACT_ONLY` tier, `ClipAlignment.top_late_by` and
+`engine._without_contradicted_scores` — the only place in the engine where a cross-view finding
+re-opens a face-on score — all ship against unit tests alone. The test records both margins rather
+than the outcome, so the day a vector gets close it fails *with a number* and the answer is that the
+ladder has become gated.
+
+**And all fifteen pairs report `SYNCHRONIZED`**, because every corpus clip pair heard the strike and
+`_synchronized` runs last and overwrites the anchor count. `FULL`, `TOP_IMPACT` and `IMPACT_ONLY`
+never reach a committed answer, so returning that constant from `align_swings` passes the whole
+family. The decision *underneath* is gated — seven pairs accept the soft anchor and eight refuse it,
+which reaches the payload through `warp_motion_start` and the notes — so four of the module's ten
+sentences are compared byte for byte on real footage and six are not.
+
+**The second trajectory basis is reached by four corpus vectors where the face-on one is reached by
+none**, which is P5b's finding turned inside out rather than repeated. Face-on the *trail* arm
+crosses the torso past `MAX_MISSING`; from behind it is the *lead* arm that hides, and the rear fit
+drops it and adds both ankles. Beside it: no two-camera vector is left-handed, so the rear mirror runs
+on no committed swing (P5b's face-on counterpart *was* gated, by `synthetic/face-on-only`), and none
+carries a `down_the_line_window` — which matters because `anchors_from_keypoints` *refuses* an empty
+window where `engine._windowed` ignores one, a one-line difference between two functions that look
+interchangeable.
+
+**Forty-eight deliberate divergences, 41 caught, and the two that mattered were caught on the second
+pass.** Of the seven survivors: two provable equivalences (`frame >= pivot` against `>`, where both
+arms answer tau=1 and the contract's validator makes both divisors non-zero; and `_relative_gap`'s
+dead zero guard, whose NaN would fail the same comparison the guard's `0.0` fails), three
+exact-equality boundaries on the three agreement thresholds — the closest anything comes is three
+corpus vectors at 0.1666… against 0.167 — and **`{}` for `%g` and `sort_unstable_by` for the fourth
+time each**, both with the same explanations P3 and P5 recorded. The two real gaps: nothing checked
+that `align_swings`' notes reach the bundle under the `alignment: ` prefix, because the test's loop
+was **vacuous** — its fixture's two views agreed and produced no notes at all, the failure mode
+`testing::a_swinging_body`'s own doc warns about, met for a second time; and nothing checked that
+`analyze_swing_bundle` builds the `_dtl` rows off the **smoothed** rear clip and the **pinned**
+anchors. The second is the more interesting one, because it is a shape a per-stage gate is
+structurally bad at seeing: the stage records a call's inputs and its output, and never the two lines
+of the caller in between. `conformance.py::run_stages` does that setup itself, so the port's own
+version of it was unexercised in both languages.
+
+One smaller thing worth writing down: `alignment.py`'s comment at the window's `frame_count` line
+says "the window's own length" and the code says `len(keypoints)`. **The code is right** — `offset`
+has already put every index into whole-clip coordinates, and that is what `frame_count` clamps — so
+the port reproduces the code and the Rust records why the comment is not to be trusted.
+
+**Next**: P8, the outcome — `shot_measure`, `flight_measure`, `flight`, `flight_infer`, `spin_solve`
+and `benchmarks/flight_model.py`, gated by the `flight` stage and the fifteen corpus vectors. It is
+the largest phase in the milestone and §M22 says to split it rather than absorb it.
+`crates/core/tests/engine.rs` now asserts that the shot is the **only** thing holding the fifteen out
+of the whole-bundle gate, narrowed from the three reasons P6 deferred them for.
+
+---
+
+## 2026-09-25 — M22 P6: the assembly, the first whole-bundle green, and a promise the suite cannot check
+
+**Duration**: one sitting. M22 goes 🟡 **8/11**. No `ANALYSIS_VERSION` bump and none was expected;
+nothing under `src/golf_coach/` changed at all — the phase is `crates/` and the docs.
+
+**What shipped.** The assembly, in Rust: `engine.rs`'s `analyze_swing`, `analyze_swing_bundle`,
+`measurements`, `windowed`, `shifted`, `camera_id`, `anchored_on_strike` and `tempo_notes`;
+`scoring.rs`; the face-on slice of `alignment.rs`; `crates/feedback`'s `rules.rs`; and
+`crates/core`'s `run` seam with the `golf-core` binary over it — **1,034 lines of Rust before their
+tests against 1,233 of Python**, plus `crates/core/tests/engine.rs`, which runs
+`conformance.py::run_vector`'s whole seam on the six synthetic vectors and compares `expected` in
+full. **That is the first whole-bundle green in this repo and the first gate here that is not a
+stage**: `mechanics_score`, `overall_score`, `unscored` and its order, `notes`, `analysis_version`
+and the ranked `feedback` payload are all inside the criterion, and none of them is recordable as a
+stage. 60 unit tests beside the modules and 4 gate tests; `cargo test` green across seven crates,
+`cargo clippy --all-targets` and `cargo fmt` clean, the Python suite **1,962** green and untouched,
+`conformance.py check` 21/21, `ruff` and `mypy` clean.
+
+`contracts/unscored.py`'s `UNSCORED_REASONS` and `INFERENCE_REASONS` came with `rules.rs`, their only
+ported caller — so **all four of `contracts/`'s tables have now arrived beside their walkers**, which
+was P2's rule and has held for every one. The fifteen prose rows were generated from the Python table
+rather than transcribed, and byte-compared against it afterwards: a remedy is interpolated into a
+`Tip.text` the suite compares exactly, and a typo in one is a sentence a golfer reads.
+
+**ADR-032 §1 says two crates and this makes four — the one decision the phase had to take rather
+than port.** `analysis` may not import `feedback` (ADR-008), and that is not incidental: it is *why*
+`conformance.py::run_vector` makes two calls, and why a vector recorded off the engine alone pinned
+`"feedback": null` and told a port to ship a results page with no coaching. So the `run` seam has no
+home inside either half. `crates/feedback` holds `rules.rs` and depends on `contracts` alone, which
+keeps ADR-008 a cargo edge rather than a reviewer's job; `crates/core` depends on both and holds the
+seam, the binary and the gate. It is the counterpart of `api/pipeline.py`, which §7 retires into the
+Flutter shell rather than porting, and it is where M24's first real caller attaches. The three
+cheaper layouts each bought a smaller crate count by spending exactly the edge §1 exists to install.
+
+**The seam was checked against Python rather than against my own comparator.** `golf-core run` and
+`python scripts/conformance.py run` were diffed on all six vectors through
+`conformance.compare_results` itself, with no Rust in the comparison: **zero differences**. The two
+stdout streams are 13,569 and 13,221 bytes for one vector, which is P2's finding standing exactly
+where §4 predicted it — the seam needs no formatter because nothing compares bytes.
+
+**The finding worth more than the port: `EXCLUDED_FROM_RESULT` makes one of this milestone's own
+promises unverifiable.** `analyze_swing_bundle` promises everything comes back in whole-clip
+coordinates — the phases shifted back by the window offset **and** the sliced frames re-attached, so
+`swing.phases[i].start_frame` indexes `swing.keypoints`. The comparison drops `keypoints`, so
+`expected` holds no frame list at all and mutating the re-attachment to a no-op **passes all 21
+vectors in either language**. `synthetic/windowed.json` gates the shift and is structurally incapable
+of gating the frames those shifted indices address. The exclusion is still right — round-tripping
+keypoints would make every vector 30x larger and check nothing — but the silence is wider than one
+field: on a one-camera bundle `alignment` serializes as `null`, so **no `SwingAnchors` field reaches
+a compared payload at all**, and hard-coding `motion_start_detected` to `true` (which inverts an
+ADR-013 disclosure) passes everything P6 can run. Unit tests now stand in both places.
+
+**And `_tempo_notes`' sentence is reached by nothing in `spec/vectors/`, either half.** Not "the
+synthetic six are clean swings" — the reason is specific and I had it backwards until I looked at the
+corpus's recorded notes. Every collapsed motion-start boundary in the fifteen real swings is in the
+**down-the-line** view, and `_tempo_notes` reads the face-on anchors alone. The corpus notes that
+look like it (`alignment: down_the_line: backswing measures 0.05 downswings…`) are `align_swings`'
+own string, a different function and P7's. `aaron-1` — the swing the sentence was written for, which
+reads 0.43:1 — is on disk as `corpus/2026-08-07-aaron1-1`, and its *face-on* view is fine.
+`_anchored_on_strike`'s sentence four lines away **is** gated, at P7, by fourteen corpus vectors with
+six of them face-on. Two sentences in the same function with nothing alike about their coverage.
+
+**Sixty-two deliberate divergences, and nine of the sixteen first-pass survivors were one root
+cause.** The gate runs six clean single-camera swings, so six of the seven sentences `engine.rs` can
+append are unreachable through it and `_windowed`'s three guards — an empty window ignored, a
+negative start clamped, an end past the clip clamped — are never exercised at all. Twelve unit tests
+closed them and the second pass catches 60. It also caught two of my own tests being vacuous: the
+`a_body` fixture stands perfectly still, so `segment_phases` returns nothing and every assertion over
+`SwingResult.phases` was passing on an empty list. `testing.rs` gained `a_swinging_body`,
+`with_preroll` and `a_body_that_pauses_at_the_top` — the last one is the reproducible case
+`MIN_PLAUSIBLE_TEMPO` exists for, and finding a trace that produces it took four attempts.
+
+**The two survivors are equivalences with a stated domain.** `round(0.20 * fps)` never ties: a tie
+needs `fps == 5n + 2.5`, a frame rate with a half in it, which no camera reports — so `round_index`
+is there because the *site* is one of the seventeen that round a frame index, not because this
+multiplication needs it. And `sort_unstable_by` passes everything for the **third** time in this
+port: Rust's unstable sort is an insertion sort below 20 elements and `CHECKPOINT_REGISTRY` holds
+six, so the stability assurance comes from the documented call and from no table. P3 wrote that about
+`OrderedMap::sorted_by` and P5 about the same call; it is now a standing fact about this workspace
+rather than a per-phase discovery.
+
+**`pyfmt` gained two functions and no new vector family, which is the part worth carrying forward.**
+`signed_fixed` (`:+.Nf`) and `percent` (`:.N%`) are **compositions of the already-gated `fixed`** —
+CPython renders the digits first and inserts the sign or appends the `%` after — so
+`spec/vectors/format/fixed.json` gates every digit either can produce, and a sixth format vector
+would regenerate for no new answer. P5 added a 362-case table for its fifth edge and was right to;
+this is the case where the same instinct would have been waste. The three non-obvious cases are unit
+tests: `-0.0` must not gain a `+`, a NaN is `+nan` because CPython signs the word too, and `:.0%`
+multiplies **before** it rounds (`0.015` is `2%`, not `1%`).
+
+**One correction to landed code.** `trajectory.rs`'s `anchors_from_phases` carried a comment saying
+"the first match wins in both languages", and Python's `{segment.phase: segment for segment in
+phases}` is a dict comprehension, where the **last** duplicate wins. Writing the same lookup into
+`alignment.rs` is what forced the rule to be stated. The behaviour is unchanged and provably
+equivalent — `segment_phases` emits the six phases once each and every caller passes its output — but
+a comment asserting a false equivalence is worse than none, so both siblings now carry the accurate
+note with its domain.
+
+**Three things left in Python deliberately**, on the rule P2 set. `align_swings` and the rest of
+`alignment.py` are P7's, so `analyze_swing_bundle` **panics** on a bundle carrying a second clip
+rather than answering for one camera — the choice `pivot_view` already made in the same file, and for
+the same reason: a plausible single-view result is indistinguishable from a bundle that never had a
+second clip. `_without_contradicted_scores` is unreachable without `align_swings`, so it would ship
+ungated a phase early. And `MEASUREMENT_REASONS`' only reader is a Python test, so porting it would
+be a table nothing in this workspace walks.
+
+---
+
+## 2026-09-24 — M22 P5b: the placements and the rotation numbers, and a corpus that never reaches the basis
+
+**Duration**: one sitting. M22 goes 🟡 **7/11**. No `ANALYSIS_VERSION` bump and none was expected;
+nothing under `src/golf_coach/` changed at all this time — the phase is Rust and docs.
+
+**What shipped.** The recorded-but-unjudged half of a swing, in Rust: `analysis/trajectory.rs`,
+`analysis/pivot.rs`, `benchmarks/joint.rs`, `benchmarks/trajectory.rs` and a deliberately
+half-written `analysis/engine.rs` holding `_measurements`' first three stanzas — **2,131 lines
+before their tests against 1,619 of Python** — plus `contracts/placements.rs` and
+`contracts/pivots.rs`, the last two registries. `crates/analysis/tests/measurements.rs` runs the
+`measurements` stage's `pose`, `placements` and `pivot_face_on` groups on all 21 committed vectors
+and is green, so **five of the seven stages now have a runner**. 75 unit tests beside the modules
+and 6 gate tests; `cargo test` green across five crates, `cargo clippy --all-targets` and
+`cargo fmt` clean, the Python suite **1,962** green, `conformance.py check` 21/21.
+`joint_model_v1.json` and `trajectory_model_v1.json` cross by `include_str!` from the Python
+package path (ADR-032 §5).
+
+**All three `contracts/` registries are now in Rust, and each arrived beside its walker.** That was
+P2's rule — a round-trip gate proves a shape carries every field on disk and can say nothing about a
+table — and it held for all three: `CHECKPOINT_REGISTRY` came with `mechanics` in P5,
+`POPULATION_PLACEMENT_REGISTRY` and `PIVOT_MEASUREMENT_REGISTRY` came here with the groups that emit
+them. Half of the pivot registry is still unrun: the five `_dtl` specs are P7's, their answers are
+already committed in every corpus vector's `pivot_dtl` group, and the five *checks* behind them do
+run today because a face-on spec and its `_dtl` partner name the same implementation.
+
+**`engine.rs` arrives half-written, and that is the phase boundary rather than a shortcut.** Each of
+the seven `measurements` groups belongs to a different phase — P5b's three, P7's two, P8's two — so
+a module that waited for all of them would have no gate until the end, which is exactly what
+ADR-032 §2 exists to prevent. P6 brings `analyze_swing_bundle` and the rest.
+
+**The finding worth more than the port: the fifteen real swings never reach the trajectory basis.**
+`build_trajectory` refuses a swing whose landmark is missing more than 40% of its resampled
+timeline, and face-on the trail elbow and trail wrist always are — 45-70% across the corpus,
+because the trail arm crosses the torso for most of the swing. So **every** corpus vector records
+`tour_joint_distance` alone, and T², Q, the `%g` percentile in their sentences and the interval name
+in Q's are gated by the **six synthetic vectors** — the ones with perfect visibility by
+construction. "21 vectors, all green" reads as full coverage of this stage and is the opposite of
+it: the real footage gates the refusal and the synthetic footage gates the answer.
+`the_corpus_never_reaches_the_trajectory_basis` pins that and fails the day a corpus vector reaches
+the basis, which is the good failure.
+
+**The counterpart to P5's mirror hole, and this time it is the other way up.** P5 found that the
+corpus's one left-handed vector could not gate `head_stays_back`'s mirror, its `head_hip_gain_norm`
+being exactly zero. The trajectory mirror is genuinely gated: `synthetic/face-on-only` is
+left-handed *and* one of the six that reach the basis, so `build_trajectory`'s left/right swap and
+`x` negation both sit on the tested path — confirmed by deleting each half and watching that
+vector's T² and Q move. Worth recording because the two cases look identical from outside and are
+not.
+
+**Forty-five deliberate divergences: four survive, and all four are provably equivalent rather than
+uncovered.** `sample_positions`' association order is bit-identical while `span` is a power of two,
+which it is at every call site (three anchors) — the docstring first claimed the opposite and was
+corrected. A *different fixed* pivot origin cancels out of all five rotation checks, because
+`axis_drift` subtracts its own address sample, jitter is a second difference and the reversals read
+orientations; a **per-sample** origin is caught at once, so the address hip is load-bearing for the
+overlay and for the first signed metric rather than for any number today. `hypot` against
+`(dx²+dy²)**0.5` is P4's wart again, agreeing to within an ulp on every reachable magnitude. And
+`{}` for `%g` at the two percentile sites is exact on the whole reachable domain — a percentile is
+`round(x, 1)` clamped into `[10, 90]`, so it never reaches the exponent boundary. That last one is
+**P5's fifth edge recurring in a second module**, invisible for a second independent reason, which
+is the strongest argument yet for `spec/vectors/format/` existing at all.
+
+**Three gaps the vectors genuinely could not see, closed by unit tests.** The shoulder-width ruler
+is the `len/2` **median**: the mean and the lower median are each one character away, every
+synthetic swing has a constant width so all three agree on them, and the corpus never reaches the
+line — so nothing in 21 vectors could tell. And a sample needs **both** its bracketing frames
+confident: `max` for `min` reads every sample here and passes everything. Two tests now stand
+there, and they are the phase's answer to "a green stage is not a covered stage".
+
+**Two things left deliberately in Python**, on the rule P2 set and P4 and P5 applied. The
+**down-the-line trajectory artifact** did not cross: its reader is `_dtl_placements`, which is P7's,
+and `load_trajectory_model` refuses that view by name so the second file is a one-line addition
+rather than a plumbing change. Nor did `contracts/career.py`'s `POSE_DTL_SOURCE`, which is why
+`_PIVOT_VIEWS` has one row here instead of two. Neither `JointDatasetInfo` nor
+`TrajectoryDatasetInfo` came either — `run_vector` reads no provenance block.
+
+---
+
+## 2026-09-24 — M22 P5: the judging ports, a fifth edge in the sentences, and the phase splits in two
+
+**Duration**: one sitting. M22 goes 🟡 **6/11** — the count moved, see below. No `ANALYSIS_VERSION`
+bump and none was expected; nothing under `src/golf_coach/` changed except two test/vector-builder
+files and the docs.
+
+**What shipped.** The judging half of the panel, in Rust: `benchmarks/store.rs`,
+`benchmarks/distributions.rs`, `checkpoints/mechanics.rs` and `contracts/checkpoints.rs`'s
+`CHECKPOINT_REGISTRY` — **1,227 lines before their tests against 1,166 of Python** — plus
+`crates/analysis/tests/judging.rs`, which runs the `checkpoints` stage on all 21 committed vectors
+and is green. 47 unit tests beside them; `cargo test` green across five crates, `cargo clippy
+--all-targets` and `cargo fmt` clean, the Python suite **1,962** green, `conformance.py check`
+21/21. `ranges.json` and `golfdb_v1.json` cross by `include_str!` **from the Python package path**
+(ADR-032 §5), so there is still exactly one copy of a band on disk. `contracts` gained
+`ClubCategory::as_str` (a `NO_BAND` refusal names the club in prose) and `PlayerProfile`.
+
+**The phase was written as the whole judging half and it was split.** §M22's own rule — *if a phase
+turns out bigger than written, split it and stop, and amend the phase list* — and the written scope
+measured at roughly 2,900 lines of Rust against P4's 1,591. The seam is not arbitrary: P5 named two
+gates and they are independent. The `checkpoints` stage needs `store`, `distributions` and
+`mechanics`; the `measurements` stage needs `joint`, the trajectory model, `analysis/trajectory`,
+`pivot` and `contracts/pivots`, and neither half reads the other. So **P5b** is the second half and
+M22 is eleven phases. P6–P9 keep their numbers, which is why every cross-reference written into the
+crates this session is still true.
+
+**ADR-032 §3 names three edges, P4 found a fourth, and there is a fifth.** `f"aim under
+{band.high}"` — three of `mechanics.py`'s sentences — interpolates a float with **no format spec at
+all**, and in Python 3 `str`, `repr` and `format(v, "")` are one function for a float. Rust's `{}`
+gives the same shortest-round-trip digits under different presentation rules: `4.0` against `4`,
+and an exponent form at `decpt <= -4 || decpt > 16` that Rust's `{}` does not have. It went into
+`pyfmt` — a CPython formatting rule is that module's whole subject, where P4's `max` tie-break
+deliberately was not — with a table beside it: `spec/vectors/format/repr.json`, **362 cases**,
+taking the family to five vectors and 3,059.
+
+**And the edge is currently invisible, which is the part worth carrying forward.** Every band edge
+in `ranges.json` today formats identically in both languages, so swapping `pyfmt::repr` for Rust's
+`{}` passes all 21 vectors, every unit test in the workspace and the whole Python suite. So does
+the same swap at the `:g` sites. A future band of `1.0` is what makes it a bug, and the table is
+the only thing standing there.
+
+**The finding worth more than the port: the corpus's one left-handed vector cannot gate the
+mirror.** `evaluate_head_stays_back` re-signs its observation into the right-handed camera frame
+the band was cut in — the entire reason that checkpoint takes a `Handedness`, and the difference
+between reading a left-handed swing and calling an ordinary impact position a gross fault. Of the
+21 vectors, 19 are right-handed, one has no golfer, and **the one left-handed vector has a
+`head_hip_gain_norm` of exactly `0.0`** — so `-raw == raw` and deleting the mirror outright passes
+everything. The first version of the gate asserted only that both handednesses appear in the
+corpus. That is true, and it is exactly the kind of reassurance that stops someone looking;
+`the_left_handed_vector_cannot_gate_the_mirror` now asserts the hole, and fails the day a
+left-handed vector with a non-zero gain is captured.
+
+**Seventeen deliberate divergences, and the run changed the tests more than it changed the code.**
+Ten survived the first pass — and several of those survived my *own unit tests*, which is what the
+exercise is for. Three of my tests turned out vacuous: a degenerate-quantile case the bracket
+before it was already answering, a resolver-precedence claim the shipped store cannot exercise
+because it holds one row per checkpoint, and a fallback the marginals never reach. Closing them
+meant splitting `resolve_range` and `load_distribution` into pure walks over a caller-supplied row
+set, so the precedence they document can be asserted today rather than discovered the day a
+per-club row lands. After that, five survive:
+
+- **Three are provably equivalent** — dead defensive code the Python carries and the port
+  reproduces. `_score_within_range`'s zero-width guard is load-bearing in Python, where
+  `1.0 - distance / 0.0` raises, and redundant in Rust, where it is `-inf` and the `max` flattens it
+  to the same `0.0`. `observed > band.high` is the same test as `>=`, because that arm is only
+  reached when `passed` is false and equality makes it true. And `percentile_of`'s
+  `high_val == low_val` arm, with the `50.0` fall-through under it, is unreachable for **any**
+  quantile arrangement: a degenerate bracket selected at `observed` means the bracket before it
+  already contained `observed`, and at the ends the clamps answer first. A 15,625-arrangement
+  search finds no way in. All three stay — §3 is about matching an implementation, not improving
+  one — and each now carries the reason in a comment.
+- **Two are the formatting call sites**, above.
+
+**What the stage covers, measured rather than assumed.** 126 evaluations across the 21 vectors and
+**exactly one refusal**, a single `no_handedness`. So `checkpoints` gates 125 happy paths and one
+refusal branch, and `NO_BAND` is never reached at all — `resolve_range` is asked for `club=all` or
+the default on every committed vector, so the per-club fallback that produces it in production is
+never walked. `every_vector_scores_almost_everything` pins that, and fails the day it changes.
+
+**One thing left deliberately in Python**, on the rule P2 set and P4 applied: `analysis/scoring.py`.
+No stage records `mechanics_score`, so its gate is the engine vector and it lands with the assembly
+in P6. `benchmarks/distributions.py`'s `dataset_info` did not come either — its callers are
+`comparison.py` and `tempo_trainer.py`, which are the lab.
+
+**A small refactor of P4's file, and why.** `measure.rs`'s test fixtures (`frame`, `put`, `a_body`,
+`phase`, `a_segmentation`) moved to `crates/analysis/src/testing.rs`, because `mechanics`'s tests
+became the second thing that needs a body to point a camera at — the argument
+`crates/trigger/src/testing.rs` already makes about its room tone. Same fixtures, one copy; P4's 63
+tests are untouched and still green.
+
+---
+
+## 2026-09-24 — M22 P4: the geometry ports, and a green stage turns out to cover less than it looks
+
+**Duration**: one sitting. M22 goes 🟡 **5/10**. No `ANALYSIS_VERSION` bump and none was expected —
+nothing under `src/golf_coach/` was touched at all. `crates/`, and the docs.
+
+**What shipped.** The measuring half of the engine, in Rust: `smoothing.rs`, `phases.rs`,
+`measure.rs` and `stats.rs`, **1,591 lines before their tests against 2,266 of Python**, plus
+`crates/analysis/tests/geometry.rs` — which runs the `smoothed`, `phases` and `measure` stages on
+all 21 committed vectors and is green. 63 unit tests beside them; `cargo test` green across five
+crates, `cargo clippy --all-targets` and `cargo fmt` clean, the Python suite **1,962** green and
+untouched, `conformance.py check` 21/21. `contracts` gained one method, `SwingPhase::as_str`,
+because two refusal sentences interpolate the phase's name and a serializer is not where a sentence
+should get its words.
+
+**ADR-032 §3 names three portability edges and there is a fourth.** Python's `max` returns the
+**first** maximum; Rust's `max_by` returns the **last**. `min` agrees in both languages, which is
+exactly what makes this easy to miss — half the pattern is safe. `phases._top_and_impact`'s no-runs
+fallback is `max(range(top, n), key=ys.__getitem__)`, so on a clip whose wrist `y` repeats the two
+languages disagree about **which frame impact is** — the same failure §3's rounding edge is about,
+arriving through a door that rounds nothing. `phases::first_argmax` is it solved once. It did *not*
+go into `pyfmt`: that module's subject is CPython's formatting and rounding rules, and a tie-break
+in an iterator would make it "things Python does differently", which is not a boundary anyone holds.
+
+**And the finding worth more than the port: a green stage is not a covered stage.** Twelve
+deliberate divergences were introduced one at a time and run against both gates. Six were caught by
+the vectors — the window seam, the `.Nf` interpolation, the p90, the smoothing width, the direction
+floor, the transition half-window. **Five survived all 21 vectors** and were caught only by the
+port's own unit tests, and the reasons are facts about this corpus rather than about the code: **0
+of 21** clips have no rising run, so the argmin/argmax fallback never executes; **0 frames** anywhere
+carry a hip in `[0.5, 0.7)`, so `MIN_HIP_VISIBILITY` never rejects a frame the ordinary gate accepts;
+**21 of 21** have the earliest major descent also be the largest, so the rule that exists for the
+practice-swing case is inert; and of **660** half-confident landmark pairs across the family, **none**
+sits in a (pair, window) combination any measurement reads. The rounding tie *is* reached — three
+vectors land the downswing on `round(2.5)` or `round(4.5)` — and on none of them does it move an
+answer.
+
+**The refusal paths are the same shape and larger.** Not one of the 21 vectors refuses a single
+measurement, so the `measure` stage gates thirteen happy paths and **none** of `measure.py`'s
+twenty-odd refusal branches — every one of which carries a `detail` sentence `docs/CONFORMANCE.md`
+§3 compares **exactly** and a golfer reads under `SwingResult.unscored`. A port that got every one of
+those sentences wrong would have passed this phase cleanly. Three of the five survivors were real
+holes in my own tests and are closed (a stall on an exact tie, the flat-timeline argmax, a descent
+after the finish that is genuinely larger); the refusal hole is pinned by
+`every_vector_measures_everything`, which **fails the day a vector refuses something** — the good
+failure, to be answered by extending the stage comparison rather than relaxing the test.
+
+**Three things left deliberately in Python**, on the rule P2 set for the `contracts/` registries —
+code lands with the phase that can prove it. `stats`' `mean_and_sd`/`mean_ci`/`sd_ci` and their three
+critical-value tables are career mode's and `run_vector` never reaches them. `phases.py`'s
+clip-*choosing* half — `candidate_downswings`, `select_swing`, `select_matching_swing`,
+`window_around` — is reached only from `api/pipeline.py` and `scripts/`; `alignment.py` reaches only
+`segment_phases` and three constants, which is P7's.
+
+**Two warts reproduced rather than improved.** `smooth_keypoints` **drops `camera_id`** — the Python
+builds its `FrameKeypoints` without one — which is why `run_stages` reads the camera off the
+*unsmoothed* frames, and P7 reads that field and needs the `None`. And `math.hypot` is **not**
+`(dx**2 + dy**2) ** 0.5`: `hypot` is scaled and correctly rounded, the naive form is a multiply, an
+add and a sqrt, and `measure.py` uses both at different sites, so the port matches each one.
+
+**Next**: P5, the judging — the four benchmark loaders, `checkpoints/`, `scoring`, `pivot`,
+`trajectory`, gated by the `measurements` and `checkpoints` stages, and carrying the two
+`contracts/` registries P2 left out. Read ADR-032 §3 **and its P4 addendum** first: the addendum is
+where the fourth edge and the coverage measurement are, and P5 walks two registries whose order a
+sentence depends on.
+
+---
+
+## 2026-09-23 — M22 P3: the three edges, and two of them turn out to be Rust's own formatter
+
+**Duration**: one sitting. M22 goes 🟡 **4/10**. No `ANALYSIS_VERSION` bump — and this family could
+not have caused one, because it does not age on it. Nothing under `src/` was touched except
+`scripts/`; `crates/`, `spec/vectors/format/`, `tests/test_conformance.py` and the docs were.
+
+**What shipped.** `crates/analysis`, with exactly one module in it — `src/pyfmt.rs`, ADR-032 §3's
+three portability edges solved before anything calls them. The gate is a fifth vector family,
+`spec/vectors/format/`: **4 vectors, 2,697 cases, 266 KB**, uncompressed because they exist to be
+read when a test fails. 11 unit tests plus `tests/format.rs`; `cargo test` green across five crates,
+`cargo clippy --all-targets` clean, the Python suite **1,962** green with five new pins.
+
+**Two of the three edges collapse into Rust's own formatter, and that is the finding that made the
+phase small.** `core::fmt`'s exact path generates digits from the f64's **exact** binary value and
+breaks a tie **to even** — which is the rule CPython applies through `_Py_dg_dtoa`. So
+`round(x, ndigits)` ports as `format!("{x:.n$}")` parsed back, `%g` takes its mantissa and exponent
+from `{:.5e}`, and the one-argument `round()` is `f64::round_ties_even` in a single call. None of it
+needed the decimal arithmetic §3 implied. What does *not* reduce to it is the two places the
+languages print different text: a NaN is `NaN` here and `nan` there, and Rust has no `%g` at all.
+
+**Which leaves the scaled form as the whole of edge 1's risk, and it is worse than a corner case.**
+`(x * 10f64.powi(n)).round() / 10f64.powi(n)` disagrees with CPython on **4.6% of 200,000
+three-decimal values** in `[0, 10)` at two places, *even when given ties-to-even*. The multiply is
+what breaks it: `0.215` is exactly `0.21499999999999999667` and rounds down, but `0.215 * 100.0` is
+`21.5` on the nose and rounds up. Two of those measured disagreements are now literals in the table.
+
+**The exact ties are enumerable rather than sampled, which is why the table is 266 KB and not a fuzz
+harness.** A tie at `n` decimal places needs `x * 10**n == j + 0.5` with no representation error, so
+the `5**n` has to cancel and `x` is forced to be an odd multiple of `2**-(n+1)`. Half-to-even and
+half-away-from-zero differ on those and **nowhere else** — so they can be listed completely, and a
+uniform sweep hits *none* of them. The family carries each tie with its two nearest neighbours,
+which must round the other way, plus the decimal traps, the engine's own unrounded values read off
+the stage family's `measure` rows, and a seeded sweep for the breadth the rest lacks.
+
+**The one- and two-argument `round` need different comparison rules, and the bit-level comparison
+found it on the first run.** `round(-0.49999999999999994)` is the `int` `0`, which has no sign to
+carry, where `round_ties_even` legitimately answers `-0.0` — asserting bits there asserts a sign the
+specification does not have. But `round(-0.04, 1)` **is** `-0.0`, a float, and a port that
+normalizes it writes a different number into `Measurement.value`. So one comparison in the family is
+by value and everything else is by bits, and that is the only relaxed comparison in it: there is no
+tolerance anywhere here, because nothing in `pyfmt` computes a measurement — `CONFORMANCE` §3's
+`RTOL` is sized for a different summation order and there is no summation.
+
+**This is the first vector family that does not age on `ANALYSIS_VERSION`**, which took a small
+change in three places rather than none. Its subject is CPython's `round`, `format` and `sorted`, so
+an engine bump leaves every answer true; it carries `python_version`, `check` reports it with no
+staleness test, and `cmd_list` needed a third fallback for the version column. Pinned, because the
+*absence* of the field is the decision and would otherwise read as an oversight to the next session
+that regenerates.
+
+**Verified by mutation, and one mutation survived on purpose.** Half-away-from-zero, the scaled form
+with ties-to-even, Rust's `NaN` spelling, and deciding `%g`'s form before the six-digit rounding each
+fail exactly one vector and no others; an alphabetically-keyed map fails `ordering`. `sort_unstable_by`
+**passes all 10 ordering cases** — Rust's unstable sort is an insertion sort below 20 elements and
+these maps hold three to six — so that assurance comes from the documented stability of `sort_by` and
+not from the gate, and `pyfmt.rs` says so where a reader would otherwise assume the table covered it.
+A second survivor was a real gap: a registry rank of `MAX - len(name)` passed both original cases,
+one because two unregistered names tied on length and one because they all did. Closed by adding
+unregistered names of **distinct** lengths in neither alphabetical nor length order.
+
+**Float encoding, which the vectors could not sidestep.** Every float in this family travels as its
+Python `repr`, not as a JSON number. `repr` is shortest-round-trip and Rust's `str::parse` is
+correctly rounded, so both sides land on identical bits and the table is comparable with `==`; and
+`json.dumps(float("nan"))` writes a bare `NaN` that `serde_json` rejects outright, where
+`repr(float("nan"))` is `"nan"`, which Rust parses. Non-finite input is not decoration in a table
+whose subject includes what `.Nf` does to a NaN.
+
+**Where P4 picks up.** `crates/analysis` has `pyfmt` and no dependency on it from anywhere yet;
+`contracts` is declared in its manifest and unread. P4 is the geometry — `smoothing`, `stats`,
+`measure`, `phases` — gated by the `smoothed`, `phases` and `measure` stages on all 21 vectors, and
+it is the first phase that both reads a shape through `crates/contracts` and calls `pyfmt`. The
+`measure` stage records values **unrounded**, so `round_to(value, 4)` is the seam between it and the
+`measurements` stage P5 gates.
+
+---
+
+## 2026-09-23 — M22 P2: the shapes cross, and the gate finds its own defect first
+
+**Duration**: one sitting. M22 goes 🟡 **3/10**. No `ANALYSIS_VERSION` bump. **The first Rust of
+the port** — nothing under `src/` was touched; `crates/`, `Cargo.toml` and the docs were.
+
+**What shipped.** `crates/contracts` — nine modules mirroring the nine `contracts/` modules the
+payload reaches (`alignment`, `detections`, `feedback`, `golfer`, `intent`, `keypoints`, `shot`,
+`swing`, `unscored`), **47 bounds and 3 validators**, plus `crates/contracts/tests/round_trip.rs`,
+which reads all 21 committed vectors' `input` and `expected` into those shapes and writes them
+back. 31 unit tests beside it. `cargo test` is green across four crates, `cargo clippy
+--all-targets` is clean, and the Python suite is 1957 green.
+
+**Pydantic bounds become a `Validate` trait wired into `Deserialize`, and the mechanism is the
+decision worth recording.** ADR-032 §4 says the constraints are runtime checks, so rendering them
+as doc comments was never an option. The idiomatic serde answer — a mirror struct per model that
+exists only to be validated and converted — is thirty duplicated field lists, i.e. thirty things
+that drift out of step with the shapes they shadow, which is the argument this repo already makes
+about second copies. `#[serde(remote = "Self")]` avoids it: the derive emits `Type::serialize` and
+`Type::deserialize` as *inherent* functions and an eight-line `validated!` macro writes the trait
+impls that call through. Rust has no constructor hook, so validation runs at the two moments it
+can — deserialization, automatically, and an explicit `validate()` a builder calls; it recurses, so
+one call at the root checks the tree the way pydantic's per-model construction adds up to.
+
+**§4's "seventy bounds and eleven validators" is a whole-package count and the ported surface is
+47 and 3.** The other 23 bounds are in `audio`, `baseline`, `dispersion`, `reference` and `tempo`;
+the other validators in `bag`, `club_profile`, `club_spec`, `dispersion`, `tempo` and `golfer`'s
+name coercion — every one in a module §8 does not port. The coincidence underneath is the useful
+part: the three reachable validators are **exactly** the three §4 singles out as "not bounds", so on
+this surface that footnote is the whole list rather than a sample. ROADMAP's "Where it bites" and
+ADR-032's Status block now say which count is which.
+
+**A byte-for-byte round trip is not available in either direction, and that is a consequence rather
+than a detail.** Python writes `-1.636758133827243e-05`; `serde_json` writes
+`-0.00001636758133827243`. Same f64, same bits back, different opinion about when to reach for an
+exponent — and **77 distinct floats in the committed vectors take the exponent form**, all of them
+landmark `z`. So every cross-language comparison here stays structural, over parsed values, which is
+what `compare_results` already does and why P6's `run` seam needs no formatter. Worth separating
+from §3's `pyfmt`: that is `%g` and `.Nf` reaching *sentences*, and this is JSON. Anything that
+wanted to hash or byte-diff an artifact across the two languages is a third piece of work nobody has
+asked for.
+
+**The gate found its own defect on its first run, which is the argument for building it strict.**
+Ten corpus vectors carry `"loft_deg": null` and `windowed.json` simply has no `shot` key.
+`run_vector` reads both with `.get()` and cannot tell them apart, so nothing before now had to — but
+a round trip can, and the harness input flattened them, rewriting ten files' `null` as no key. It
+reported itself as eleven differences and the fix is a two-deep `Option` behind a `deserialize_with`
+that fires only on a present key. A looser comparator would have passed and the distinction would
+have surfaced at P6, as a vector the Rust `run` could not reproduce. The strictness is deliberate
+elsewhere too: this gate has no tolerance at all, because nothing in it computes anything —
+`CONFORMANCE` §3's `RTOL` is sized for a different summation order and P4 is where that starts
+earning its keep. Verified by mutation: dropping `CheckpointScore.one_sided` from the serialized
+form reports 125 differences naming every one.
+
+**Three `contracts/` registries stay out of the crate, and it is the same rule that made P1 seven
+stages.** `CHECKPOINT_REGISTRY`, `PIVOT_MEASUREMENT_REGISTRY` and `UNSCORED_REASONS`' prose are
+tables the engine walks rather than shapes the payload carries. They belong in `crates/contracts`
+under ADR-008 and are not there yet, because **a round-trip gate cannot see a table**. The first two
+are named in P5 and the prose table in P6, with their walkers. Two smaller calls in the same
+family: `CheckpointOutcome` and `FramePairing` are not payload shapes either — the first goes to P5
+(and wants to be a Rust enum rather than a struct of two optionals, which is a thing the type system
+can enforce where the Python `NamedTuple` only conventions it), the second never comes, because it
+is the renderer's seam and §M29 retires the renderers.
+
+**One field is a string on purpose.** `ShotData.timestamp` and `CoachingProvenance.generated_at`
+are carried as lexemes, not parsed instants. Nothing on the ported surface reads either — checked
+rather than assumed — so the only property that matters is that they come out the way they went in,
+which a parse-and-reformat cannot promise across `Z` and `+00:00`. It also costs the crate a
+date-time dependency it would otherwise carry for nothing. If a phase ever needs to *order* two
+shots, that is when it becomes a parsed type and the parse gets its own vectors.
+
+**Next is P3**, `crates/analysis` and `pyfmt` — §3's three edges solved once, before anything calls
+them, gated by a committed `spec/vectors/format/` table of Python's exact answers. Nothing in P2
+changes what P3 has to do; what it changes is that P3 has a crate to depend on and a gate that
+already proved its inputs cross intact.
+
+---
+
+## 2026-09-23 — M22 P1: the gate before the port, and a stage that is not one
+
+**Duration**: one sitting. M22 goes 🟡 **2/10**. No `ANALYSIS_VERSION` bump and no Rust written —
+P1 is the oracle, the way M20 P0 built its oracle before `crates/trigger`. Nothing under `src/` or
+`crates/` was touched; `scripts/`, `spec/`, `tests/` and the docs were.
+
+**What shipped.** `spec/vectors/stages/` — **21 vectors, 3.2 MB**, one per engine vector, taking
+`spec/vectors/` from 15 MB to 18 MB. `conformance.py` gained `run_stages`, `STAGE_NAMES`,
+`MEASUREMENT_GROUPS`, `stage_vector_paths` and `regenerate --stages-only`;
+`conformance_vectors.py` gained `build_stages`, `build_stages_from_disk` and
+`_verify_stages_compose`. Seven new pins in `tests/test_conformance.py`. `check` is green at 21/21
+with 30 audio deferred and 21 stage vectors fresh; the full suite is green.
+
+**The family is seven stages, and ADR-032 §2 named eight.** The rule that decides it is worth
+having written down: **a port must be able to run a stage in isolation from the vector's input.**
+`build_feedback` takes the assembled `SwingResult`, which no stage produces and the stages file
+does not hold — so a port cannot reach `feedback` until the engine is finished, and at that moment
+`expected.feedback` on the engine vector already gates it, which is what P6's end-to-end gate is.
+Recording it would have been a second copy of an answer sitting a few hundred bytes away. The
+absence is pinned, because an absence reads as an oversight to everyone who did not make it.
+
+**Grouping `measurements` by `Measurement.source` is the obvious implementation and is wrong.**
+Caught by the build producing eighteen `pose` rows against thirteen pose measurements:
+`engine._PIVOT_VIEWS` gives the face-on pivot rows `source="pose:face_on"` as well, and
+`_placements` and `_dtl_placements` both emit `population:golfdb`. `source` answers *which
+instrument read this*; the phases need *which function appended it*. The groups are a **positional
+partition** of the one list `_measurements` returns, asserted to cover it exactly. This is the same
+class of mistake as §3's third edge one level up — a field that looks like a key and is a
+description — and it would have shown up at P5 as a port failing a gate that was itself wrong.
+
+**The guard is what makes these evidence rather than twenty-one self-consistent files.**
+`run_stages` calls the engine's own functions, including its privates, rather than reimplementing
+any of them — but it *re-orchestrates* them, and that orchestration is a second copy of
+`analyze_swing_bundle`'s. `_verify_stages_compose` refuses to build a vector whose parts do not add
+back up to the committed bundle: `phases` shifted back by the window offset, `measure` rounded the
+way `_measurements` rounds it, the groups concatenated, `clip_alignment` against
+`expected.alignment`, the flight's refusals against `unscored`. That is the corpus family's
+`_verify_against_stored` argument applied one level down. It runs in the test suite as well as at
+build time, because a build-time-only guard stops running the moment nobody regenerates — which on
+this family is most of the time. Deliberately corrupting each of the six composing stages was
+checked to fail it, and `smoothed` — the one stage that reaches `expected` only transitively — is
+covered by the pin that compares the committed bytes against this build.
+
+**The bytes went somewhere §2 did not predict, and only one of the two was reducible.** Two stages
+are 97% of the family. `smoothed` records `x`/`y` alone: `smooth_keypoints` copies `z`,
+`visibility`, `frame_index` and `timestamp_ms` through untouched, so recording them costs 2.3 MB
+gzipped to test a copy — the full dump measured 4.34 MB against 2.06 MB for the halves that move.
+The pass-through is asserted at build time instead, the same trade the audio family makes buying
+chunk-independence as a property rather than 1.7 MB of waveform. `flight` is the other and is
+**not** reduced: most of it is the integrated path at `DEFAULT_STEP_S`, ~919 points on a flown
+shot, and that path is a product surface M15 P15 and P19 draw, which the Flutter shell inherits
+when `api/` retires. A third, smaller finding: `smooth_keypoints` **drops `camera_id`** — nothing
+reads it back, so no vector would ever have shown it, and the guard asserts it rather than letting
+a port carry the field through and be right by accident.
+
+**And P1 broke `check` before it fixed it.** Adding a family took `python scripts/conformance.py
+check` from 7 s to over two minutes, because `cmd_check` calls three `*_vector_paths()` helpers and
+each one re-parses every committed vector to read one `provenance.kind` — 18 MB parsed three times
+over. `_kind` is now memoized on `(path, mtime_ns, size)` rather than on the path, so a
+`regenerate` inside one process still invalidates it, which is what `tests/test_conformance.py`
+does. `check` is back to 8.9 s. Worth noting as a shape rather than a bug: every future family
+costs three parses of itself on every `check` until that loop is restructured, and the fourth one
+is the one that will hurt.
+
+**`check` defers the stages and still reads their version**, which is a smaller distinction than
+it looks and the reason `stage_vector_paths` carries a docstring about it. Audio is deferred
+because there is no Python left to run it and `regenerate` refuses; stages are deferred because the
+implementation under test is `crates/analysis`, but they rebuild on any machine, so a stale one is
+reported and exits non-zero. A stale bundle vector certifies a finished port against retracted
+answers; a stale stage vector does it four phases sooner, to a port that then builds everything
+after it on top. The conform ratio printed at the end stays the engine's — the stage line is
+separate, because one number meaning two things is how a green run gets quoted for something it
+did not check.
+
+**Next is P2**, `crates/contracts`: the shapes, the seventy bounds and the eleven validators,
+gated by round-tripping every committed vector's `input` and `expected`. Nothing in P1 changes
+what P2 has to do; what it changes is that P3 onward now has an answer to fail against.
+
+---
+
+## 2026-09-23 — M22 P0: the port has a gate per stage, and the Python is staying
+
+**Duration**: one sitting. **Docs only — no code, by design.** M22 goes 🟡 **1/10**. M21 is on hold
+until there is a camera and a range session; M22 needs neither. No `ANALYSIS_VERSION` and no
+`AUDIO_DETECTOR_VERSION` bump, and nothing under `src/`, `crates/` or `spec/` was touched.
+
+**What shipped.** [ADR-032](docs/decisions/032-the-rust-core.md) — the 32nd decision — plus a
+rewritten ROADMAP §M22 with a ten-phase list, `docs/CONFORMANCE.md` §2/§3/§4, two new `CLAUDE.md`
+routing rows and the map. `tests/test_docs_truth.py` is green at 92 tests; it failed once on the
+document count, which is the suite doing its job.
+
+**The milestone could not have been built as written, and the reason is structural.** ADR-030 §8
+and §M22 both say each stage is gated by the conformance suite rather than by review. The committed
+vectors gate the **whole bundle** and nothing smaller — there is no committed answer for "phases
+alone" — so every phase between the first line of Rust and a finished engine would have been gated
+by review while quoting the rule that forbids it, and the first honest signal would have landed
+several thousand lines in. ADR-032 §2 closes it with a **stages family**: one file per existing
+engine vector, holding the intermediates Python produces for that vector's input, input held by
+reference so it duplicates none of the 8.6 MB. It derives from the *committed* vectors rather than
+from `data/processed/`, which means — unlike the corpus family — it regenerates on a machine with
+no captures on it. P1 builds it, before any porting, the way M20 P0 built its oracle first.
+
+**Four of §M22's claims were false, and each one would have cost a session.** The entry point it
+names does not exist (`analyze_swing_dir` → `analyze_swing_bundle`, not `analyze_swing` — and §M21
+and ADR-031 §3 carried the same wrong name, now fixed in the ROADMAP). Its "prune the import graph"
+advice is wrong: `engine.py` calls the joint and trajectory models *directly* and `flight_measure.py`
+reaches the flight model on every swing with a shot, so there is nothing to prune and a session
+that trusted the line would have found out four stages in. `detect_strikes` was ported **and
+deleted** by M20 and has thirty vectors as an oracle, so the piece §M22 called hardest is not in the
+milestone. And the core is not "roughly a thousand lines" — the reachable surface is 9,629 lines
+across 22 modules, and the ROADMAP now carries the per-group figures instead of an estimate.
+
+**The retirement rule was incomplete, and the missing clause is a schedule.** ADR-030's 2026-09-22
+addendum retires a module once a conforming Rust implementation exists *and* the vectors that prove
+it are committed. Both will be true at the end of M22 and `analysis/` still cannot go that day, so
+the rule needed the clause that says why: **…and nothing that stays Python calls it** — where
+*stays* means the sidecar, not *not ported yet*. `audio/impact.py` had one production caller,
+swapped to a subprocess in M20 P5 before the delete. `analysis/` has **twenty-eight** importers
+outside itself — seven in `api/` and `mcp/`, twenty-one in `scripts/` — and **none of them is a
+sidecar module**. So this is sequencing, not a refusal, and the schedule now exists.
+
+**That is a correction to this entry's first draft, and to ADR-032 as first written.** §7 originally
+read *"`analysis/` does not meet the third clause and will not"*, which treats today's lab callers
+as permanent. They are not. The end state is the one ADR-030 §2 and §3 already describe: **Rust,
+plus a Python sidecar for MediaPipe pose and the LLM, and nothing else.** §7 and CONFORMANCE §5's
+tier table were rewritten to say so, and the ROADMAP gained **§M29 — The last Python**, blocked on
+M22 and M25: `api/` (3,804 lines) retires into the Flutter shell rather than being ported, `mcp/`
+(3,191) ports to Rust and takes `contracts/caveats.py` and `tool_descriptions.py` with it, and then
+`analysis/` is deleted. What survives is `pose/estimator.py` plus `feedback/coach.py` and
+`conversation.py` — under a thousand lines against the ~32,000 in `src/golf_coach/` today. Tier 4
+stops saying *"stays Python"*.
+
+**M29 opens with the one question that was left unsettled, and it gates the delete.** ADR-022
+requires the model fitting in `scripts/` to be Python — numpy and scikit-learn, offline, shipping
+provenanced JSON — so part of `scripts/` is permanent by an existing decision. How those scripts
+reach a measurement once `analysis/measure.py` is gone is not decided: a `golf-core` subprocess
+seam, or the entry points becoming Rust binaries. Nothing in M22 depends on the answer; M29 cannot
+start without it.
+
+**And the oracle's afterlife is decided, against `_audio`'s precedent and deliberately.** Deleting
+`analysis/` retires `conformance.py::run_vector`, which is the *specification* and not merely an
+implementation, so `spec/` stops being regenerable from a reference. After M29 an
+`ANALYSIS_VERSION` bump **re-records the engine family from the Rust core**. That is the
+self-portrait `conformance_vectors._audio` refuses — accepted here because the two families are for
+different things at different times: before a port conforms the vectors are a cross-language oracle
+and re-recording proves nothing, and after it conforms there is no second implementation left to
+disagree with, so they become a changelog plus a regression suite. The audio family stays frozen.
+Freezing the engine family instead would freeze the product: `AUDIO_DETECTOR_VERSION` has moved
+twice, `ANALYSIS_VERSION` is at 16 and is how a new measurement reaches the corpus at all.
+
+M22 itself is unchanged by any of this — ten phases, same gates. No Python swaps over in M22
+either: `api/pipeline.py` keeps calling `analysis/engine.py`, the Rust core's first real caller is
+M24, and the delete is M29's.
+
+**A third portability edge, found by reading for it.** `CONFORMANCE.md` §3 predicted two. The third
+is **dict insertion order deciding which name appears in a sentence**: `benchmarks/joint.py:111` and
+`benchmarks/trajectory.py:168` build ordered dicts of contribution shares, `engine.py` takes
+`next(iter(...))` and writes the winner into `Measurement.detail` as "Largest contributor", and on a
+tie the answer comes from Python's stable sort over the dict's *original insertion order*. A Rust
+`HashMap` destroys that, and the failure is a correct number under a wrong label on the swings where
+two shares happen to tie — which is the hardest of the three to diagnose and the least likely to be
+noticed in review. All three reach the **strings** the suite compares exactly rather than the floats
+it compares within tolerance, which is why P3 solves them in one `pyfmt` module before anything
+calls it. The rounding edge is bigger than §3 implied too: 46 sites, and the 17 that round a **frame
+index** are the dangerous ones, because a one-frame divergence changes which frame a checkpoint is
+measured on and cascades into every score after it.
+
+**Left.** P1–P9. The phase list is in ROADMAP §M22 and the rule above it is the one M21 carries:
+**one phase per session, complete it and stop**. If a phase runs bigger than written, split it and
+amend the list rather than absorbing it.
+
+---
+
+## 2026-09-22 — M21 P1: the crate is built, the choice it was supposed to make is not
+
+**Duration**: one sitting, same day as the entry below. **Source + tests + docs.** M21 goes 🟡
+**1.5/7** — the half is deliberate and named below. No `ANALYSIS_VERSION` and no
+`AUDIO_DETECTOR_VERSION` bump; nothing in `analysis/` or `crates/trigger` was touched.
+
+**What shipped.** `crates/capture` — the second crate in the workspace — with `device.rs` (the
+backend-free types), `mf.rs` (Media Foundation behind `cfg(windows)`) and `src/bin/golf_capture.rs`
+(`golf-capture list [--formats]`). 15 tests, every one of them hardware-free. `cargo clippy
+--all-targets`, `cargo fmt`, `cargo doc` and the Python suite are clean, and
+`tests/test_docs_truth.py` failed twice on the way — once for ADR-031's addendum count and once for
+the map's total — which is the suite doing its job.
+
+**The phase is half done and the missing half is its whole point.** ADR-031 §4 says the camera
+crate is chosen *"against hardware rather than against documentation"*. **There was no hardware.**
+The machine this repo is built on is a desktop — MSI MS-7D25 — with no built-in camera, and the
+only camera Windows holds a record of is a phantom: `CM_PROB_PHANTOM`, code 45, not connected.
+`nokhwa::query` returns zero devices; so does `crates/capture`. A bake-off with nothing to
+enumerate decides nothing, so Media Foundation is **provisional** and §4 is still open. Finishing
+it is twenty minutes with the camera plugged in: `golf-capture list --formats`, re-run the
+six-line `nokhwa::query` probe, and see whether either finds what the other cannot.
+
+**That gating error is itself a finding.** §M21 said "built-in webcam for P1–P3; the USB camera
+for P4", inherited from ADR-030 §5's *"the machine is a laptop"* — which is about the machine the
+app will **run** on, not the one it is **written** on. Three phases were scheduled as desk work
+that are not. §M21 and the status table now say the USB camera is wanted from P1.
+
+**The real finding: an identity that survives a replug survives it into the *same port*.** ADR-031
+§7 asks for "a stable identifier that survives a replug, not an index", which on Windows is Media
+Foundation's symbolic link. Read out of the registry *while the camera was unplugged* — the
+interface registration outlives the device, which is how a phase with no hardware got a real string
+to reason about — it is
+
+```text
+\?\USB#VID_1BCF&PID_28C4&MI_00#6&1da11eb4&2&0000#{e5323777-f976-4f5b-9b55-b94699c46e44}
+```
+
+and the middle segment **is not a serial number**. It is the instance id Windows generates from the
+hub and port for a USB device that reports none of its own; a device on this same machine that does
+report one enumerates as `USB\VID_0CF2&PID_A100\6243168001`, the serial verbatim in that position.
+So the identity names the device *and the port*: a replug into the same port keeps it, a move to
+another port makes the camera **gone** (which §7 already requires, so only the sentence needed
+amending), and two identical cameras are told apart **only** by port.
+
+That last part is why it is a property rather than a limitation. ADR-003 buys two of the same
+camera, and what makes one of them the face-on view is which tripod it is bolted to — not which of
+two indistinguishable serial-less sensors it is. The port is the closest thing the host has to that
+fact. The cost lands on P5: the face-on/down-the-line assignment is a setup step a human does once
+per port, and `storage/manifest.py`'s `Role` takes it unchanged.
+
+**`nokhwa` cost something to rule in, let alone out.** 0.10.11 does not build under this
+workspace's `rust-version = "1.87"` — it pulls `image` 0.25.10, which wants 1.88 — and its default
+`decoding` feature drags `mozjpeg-sys` and `nasm-rs`, a C and NASM toolchain, into the half of this
+repo whose entire dependency list is four crates. It builds with `default-features = false` and
+`image` pinned back to 0.25.5. That is a measurement and it is not a verdict; the second reason for
+going direct — that `nokhwa`'s Windows backend *is* Media Foundation, through the same `windows`
+crate — is documentation, which is the thing §4 forbids deciding on.
+
+**Two smaller calls, both the same shape as `Ring::copy` refusing.** Frame rate is stored as the
+ratio the driver reports and never as a float: 30000/1001 is a real UVC rate, it is not 30, and the
+capture edge is the one place a timing error cannot be recovered afterwards. And `Capabilities` is
+an enum rather than a `Vec`, because a camera already open in another application enumerates fine
+and then refuses to describe itself — an empty list for that reads as "this camera offers no
+formats", which is a different fact.
+
+**Next:** finish P1 with the camera attached — the bake-off, then the verdict in ADR-031's
+addendum — and only then P2.
+
+---
+
+## 2026-09-22 — M21 P0: the capture edge decided, and the first source turned out to be finished
+
+**Duration**: one sitting, same day as the entry below. **Docs only — no source logic, no tests.**
+M21 goes 🟡 1/7. No `ANALYSIS_VERSION` and no `AUDIO_DETECTOR_VERSION` bump; nothing in `analysis/`
+or `crates/` was touched.
+
+**What shipped.** [ADR-031](docs/decisions/031-the-capture-edge.md), a rewritten ROADMAP §M21 with
+seven phases, a new §M28, the two status-table rows, the docs map's counts and its new ADR row, and
+two `capture/` docstrings that had been promising a file nobody will ever write.
+
+**§M21 was still telling a session to build the wrong thing.** It said to keep
+`capture/source.py::VideoSource`'s shape and *"fill it in"* — a Python `LiveCameraSource` over
+OpenCV. That is the same sentence M20 had to re-scope against, written in the same M18 sitting, and
+it survived because M20 only re-scoped its own milestone. ADR-030 §1 gives Rust camera capture, the
+ring buffer and clip cutting; the 2026-09-22 addendum keeps in Python only what does not translate.
+A camera loop is neither. `ring.rs` was already made generic over its item **for this**, and
+`clip.rs::BUFFER_S` already says "the video ring multiplies this by its own frame rate" — M20 had
+written half of M21's design into a crate while M21's prose still pointed at OpenCV.
+
+**The finding, and it deletes a phase: source 1 is finished, not first.** ADR-030 §6 ranks
+file/upload first among capture sources, and the obvious reading is "port `FileVideoSource` to Rust
+before touching a camera". Following that reading produces a decoder with **no caller**: the lab
+reads clips through `capture/file.py`, and ADR-030 §3's pose worker takes
+`{job_id, clip_path, frame_range, …}` and **decodes its own frames**. The Rust core is never handed
+pixels out of a file. So "file stays first-class" is satisfied by leaving it alone, and M21 is about
+the webcam. The ROADMAP had said since M18 that "M21's first source needs no Rust"; the truer
+sentence is that it needs *nothing*.
+
+**The second correction is an ordering error.** §M21 listed phone-over-Wi-Fi as its third source
+while ADR-030 §5 says the phone app comes after the laptop app works end to end — i.e. after M25. A
+phase blocked by three milestones is not a phase of this milestone, and keeping it there made the
+capture edge look more blocked than it was. It is **§M28** now.
+
+**What un-blocks M21 from M22: capture writes a swing directory.** Not frames to an analysis engine
+that does not exist. The per-swing directory is already a contract — `storage/manifest.py`'s `Role`,
+`EXPECTED_ROLES`, and a `status()` that is computed rather than persisted — so the consumer is
+today's `analyze_swing`, unmodified, and every phase is testable against fifteen swings of prior art
+instead of against M22. `Role.SHOT_SCREEN` stays ADR-014's; a camera-written directory is
+`collecting` until the photo arrives, which is exactly what computing `status()` bought.
+
+**The ring holds encoded frames, and the arithmetic is not close.** `BUFFER_S` is
+`MAX_CLIP_S + SLACK_S` = 31 s. At ADR-030 §5's ~180 MB/s for raw 1080p60 that is **~5.6 GB per
+camera**, ~11 GB for a two-camera session, before anything is analysed; encoded at ~1–2 MB/s it is
+**~31–62 MB**. Raw is not expensive, it is impossible. The cost that buys is named rather than
+hidden: a clip cut out of encoded frames has to start at a keyframe, so **keyframe interval becomes
+a correctness setting** and P3 owns it.
+
+**One rule written into §M21 itself, not just into the plan: one phase per session, complete a
+phase and stop.** Every M20 phase produced a finding that changed the phase after it — the peak-hold
+that decoupled the trigger instant from the bar, the unlabelled second shot that had been scored as
+a false positive, cut rules that turned out to be `phases.py`'s. A session that runs two phases
+commits the second before the first one's finding has landed anywhere, and at this edge the mistakes
+are the unrecoverable kind: a frame not captured, a clip cut short, a timestamp never taken.
+
+**Hardware gating, so a session knows where it can stop:** P1–P3 on the laptop's built-in webcam,
+P4 on the USB/UVC camera (and P4 is where M20's standing risk — that a webcam microphone may not
+hear the strike at all — finally gets an answer), P5 on both, P6 on a bay trip that can share with
+M20 P7.
+
+**Next:** M21 P1 — `crates/capture`, device enumeration with an identity that survives a replug, and
+the camera-crate choice made against hardware rather than documentation.
+
+---
+
+## 2026-09-22 — M20 P4: the cutting rules, and none of the numbers were ours
+
+**Duration**: one sitting, same day as the entry below. **Source + tests + docs.** M20 is 🟡 6/7
+phases; only P7, the continuous bay recording, is left and it needs hardware. No `ANALYSIS_VERSION`
+and no `AUDIO_DETECTOR_VERSION` bump — nothing in `analysis/` was touched and the detector returns
+the same list.
+
+**What shipped.** `crates/trigger/src/ring.rs` and `src/clip.rs`, plus `src/testing.rs` (the
+deterministic bay fixture, moved out of `stream.rs`'s test module because two modules now need it).
+`tests/audio/test_trigger.py` gains the cross-language pin. 38 lib tests and the 2 conformance
+tests pass; `ruff`, `mypy`, `clippy` and the 1870-test Python suite are clean.
+
+**The finding, and it is the whole phase: none of these numbers were ours to choose.** The obvious
+way to write a ring buffer is to pick five seconds because five is a nice number. But a clip is
+only worth cutting if `phases.py::window_around` can frame the swing inside it, and that function
+already decided: it keeps `[top − max(5·dn, 1.5 s), impact + 3·dn)`. The worst case is the
+*slowest* downswing `select_swing` will admit at all — `POSSIBLE_DOWNSWING_S` tops out at 0.80 s —
+so the most footage a swing can ask for before impact is `0.80 + 5×0.80 = 4.8 s`. Add
+`PEAK_HOLD_S`, because the instant a trigger names is the loudest hop within 50 ms of the bar being
+crossed and can sit that far *after* the ball, and the requirement is **4.85 s**.
+
+So five seconds of pre-roll is not a comfortable choice. It is a **0.15 s margin**, and that was
+worth finding out before a bay session rather than after one. `tests/audio/test_trigger.py` now
+pins it from the Python side — two languages cannot share a constant, so the test reads the three
+`const`s out of `clip.rs` and checks them against `phases.py`. It fails if the downswing band
+widens, if `_WINDOW_LEAD` rises, or if the address floor ever passes `5 × dn`.
+
+**The two-swing rule fell out of the same arithmetic instead of being picked.** A clip stays open
+for exactly its post-roll — one number doing two jobs, deliberately, because holding it open longer
+to catch a slightly later swing would pay latency on *every* shot and bounded latency is the reason
+the live detector exists. So:
+
+- **under 5 s apart → one clip.** Two clips could not both have a lead, and a multi-swing clip is
+  precisely what `select_swing` was built for.
+- **5 s to 7.25 s → two clips, the later one short.** It buys its lead out of the earlier clip's
+  *spare* trail, and may never reach back over the earlier strike — which is what stops one swing
+  being scored twice.
+- **over 7.25 s → two whole clips.** And 7.25 is `MIN_LEAD_S + MIN_TRAIL_S`; nobody chose it.
+
+`Clip::is_measurable` says which of those a clip is, rather than the clip being dropped or silently
+framed wrong — ADR-010 §2 one stage earlier than usual. `MAX_CLIP_S` caps a merge chain at 30 s,
+priced in pose rather than disk: ADR-002's ~24 fps makes a nominal 10 s clip ~50 s of two-view pose,
+so the ceiling is three of those.
+
+**The rule behind every one of those calls: cutting is irreversible and analysis is not.** The ring
+buffer is gone the moment it is overwritten, so a lead cut too short can never be recovered; a clip
+that turned out to hold two swings costs a pose run and is still on disk for a human. When unsure,
+keep more footage. That is the same asymmetry `MIN_TRIGGER_Z` was set by, one step further down.
+
+**Two test-level findings.**
+
+1. **A fixture balanced on the threshold is not evidence.** The practice-swing test needs a whoosh
+   the detector declines, and the first one fired. Rather than nudging its amplitude until the test
+   went green, the fixture's peak z was *measured* — by sweeping the bar until it stopped firing,
+   because the peak-hold means a low bar reports the rising edge and not the peak. At the shipped
+   amplitude the whoosh peaks at **z = 32.5** against a bar of 70, and the crack dropped into the
+   same room tone clears **3000**. Two orders of magnitude apart is a fixture that proves
+   something; 68-versus-70 would not have been.
+2. **An exactly-derived boundary is the wrong thing to assert on.** The first version of the
+   derivation test placed two swings exactly `MIN_LEAD_S + MIN_TRAIL_S` apart and asserted both
+   were measurable. It failed by one bit — `0.80 × 6 + 0.05` is not the `f64` nearest 4.85. The
+   test now checks 0.1 s either side, which is the claim actually worth making: the boundary is
+   *there*.
+
+**`ring.rs` refuses rather than approximating.** `Ring::copy` returns `None` for a span that has
+been overwritten. A ring that quietly returned the oldest data it still held would hand back a clip
+of the wrong moment with no way to tell — the same reasoning as a checkpoint returning `None`
+rather than a zero. It is generic over the item because ADR-030 §1 gives Rust "camera capture, the
+ring buffer, clip cutting" as one job and ROADMAP §M21 asks for the video-side ring; that is the
+named second implementation R11 wants, and it holds encoded frames rather than samples.
+
+**Left in M20:** P7 alone — 30–60 minutes of continuous bay audio for the false-positive rate,
+which is still the one number the stored corpus cannot produce, because every clip on disk was
+recorded around a swing.
+
+---
+
+## 2026-09-22 — M20 P0–P3, P5–P6: the trigger, in Rust, and the first Python deleted
+
+**Duration**: one sitting. **Source + tests + docs, in two languages for the first time.** M20 is
+🟡 5/7 phases. No `ANALYSIS_VERSION` bump and no `AUDIO_DETECTOR_VERSION` bump — nothing in
+`analysis/` was touched and the detector does not return a different list.
+
+**The scope change that started it.** ROADMAP §M20 said *"in Python first, so the code that
+implements it implements a spec and not a hunch"*. That was the one line on the board contradicting
+ADR-030 §1, which already gives Rust audio strike detection, and `CONFORMANCE.md` §5, which already
+filed `audio/impact.py` as tier 1. The user's rule sharpened it: **Python keeps only what does not
+translate — MediaPipe, and the lab.** `impact.py` was numpy, not MediaPipe. So the trigger was
+built in Rust directly, and the Python original was *deleted* rather than kept beside it.
+
+**What shipped.** A cargo workspace at the repo root and `crates/trigger` (flux, offline detector,
+online detector, clip offset, a `golf-trigger` binary), `spec/vectors/audio/` (30 vectors, 4.3 MB),
+`scripts/trigger_replay.py`, `src/golf_coach/audio/trigger.py`, `tests/audio/test_trigger.py`.
+Deleted: `src/golf_coach/audio/impact.py` and `tests/audio/test_impact.py`.
+
+```
+cargo test        →  30 audio vectors conform: 74 strikes, 15 clip offsets;
+                     worst relative difference 7.7e-15 (RTOL 1e-9)
+conformance.py check  →  21/21 vectors conform (engine v16)
+                         30 audio vectors are the Rust detector's — run `cargo test`
+```
+
+**The oracle had to exist before the delete, and building it found the interesting constraint.**
+`CONFORMANCE.md` §5 had named `audio/impact.py` end to end as the one tier-1 module the M19 suite
+could not cover — its vectors take strike *frames* as an input, and `tests/audio/test_impact.py`
+synthesized from a **seeded numpy RNG**, which does not reproduce in another language. Closing that
+ran into a property keypoints do not have: **windowing audio is lossy where windowing keypoints was
+not.** M19 could ship a keypoint file's scored slice because `select_swing` picks that window before
+the engine sees it. `detect_strikes` takes its median, MAD and relative-prominence floor over the
+*whole* clip, so an excerpt has different statistics and a different answer, and the full waveforms
+are 68 MB. The resolution is two layers that compose: the whole clip's flux envelope (1.1 MB across
+the corpus) for the statistics, and 0.5 s full-rate excerpts (2.1 MB) for the FFT. JSON number
+arrays beat base64 by 0.23 MB *and* round-trip exactly, so the vectors stayed readable. The one gap
+neither layer reaches — a signal long enough to cross the Python reference's 20.5 s block boundary
+— is covered by a **property** instead of 1.7 MB of bytes: the Rust implementation has no block
+structure, so there is no stitch to get wrong, and a test asserts a 25-second signal agrees with
+its own parts.
+
+**Four portability traps, all real in shipped code**, two of them unpredicted by `CONFORMANCE.md`
+§3: `np.hanning` is the *symmetric* window and numpy evaluates it as `0.5 + 0.5·cos(πn/(m−1))`;
+`round(rate × 0.005)` is exactly 220.5 at 44.1 kHz and Python breaks that tie to **even**;
+`np.argsort(z)[::-1]` is **not** "sort descending" — argsort is not stable by default, so numpy's
+own tie order is unspecified and there is nothing to match; and `rustfft` is not pocketfft, which
+the 1e-9 tolerance absorbs with six orders of magnitude to spare.
+
+**P3 produced the real numbers, and two of its three findings corrected the measurement rather than
+the code.** At the shipped bar: **recall 30/30, precision 0.909, latency +0 ms on every clip.**
+
+1. **`detect_strikes` is ground truth for *transients*, not for *shots*.** The first harness
+   clustered its output into bursts, and on `2026-08-07-aaron1/1 down_the_line` that scored a
+   golfer setting up at 0.37 s — a third of the real strike's prominence — as a swing the live
+   detector had missed. The honest ground truth is the strike `with_measured_impact` *chose*, read
+   out of the stored `analysis.json` and matched back by frame. Recall went 0.921 → 1.000 on that
+   correction alone, and the three "misses" were one clip counted three times.
+2. **A low threshold made the *timing* worse, not just the precision.** Without a peak-hold the
+   detector fires on the first hop over the bar and starts its refractory period there — on
+   `2026-08-23/3 face_on` at z = 8 it fired on the rising edge at z = 8.2 and swallowed the actual
+   strike 35 ms later at **z = 245**. Recall hid it, because a trigger 35 ms early still lands
+   inside any sane match window. Holding 50 ms and reporting the loudest hop decoupled the instant
+   from the bar: the same strike now lands on the same sample whether the bar is 8 or 140, and
+   latency went from a −60…0 ms spread to **+0 ms on all thirty**.
+3. **`2026-08-23/8 down_the_line` holds a second shot the corpus never labelled**, and counting it
+   as a false positive was the only thing making the two populations overlap. `detect_strikes`
+   gives it 16.82M prominence against the anchored shot's 19.35M, with a second transient 120 ms
+   behind it — the ball-to-screen gap §E5 measures at 85–145 ms. Real strikes run z = 137.5–647;
+   false positives top out at 111.3.
+
+`MIN_TRIGGER_Z` is **70** — 2.0× below the quietest real strike rather than in the middle of a
+1.24× gap. The asymmetry is the argument: a false negative is a swing nothing downstream can
+recover, and a false positive is *filtered* by the offline pass on the clip it cut. Thirty clips
+from one bay, one golfer and one phone is not a sample to fit a threshold tightly to.
+
+**Replaying the corpus as one 944-second stream found a real regression.** After 8 s of digital
+silence the rolling floor's scale collapses and the next sound divides by almost nothing: it fired
+on **20 of the 29 seams**, precision 0.600. Recovering from silence and starting up are the same
+situation, so they now get the same answer — a degenerate floor restarts the warm-up — and that
+took the seams to zero without moving a real strike (0.600 → 0.909, recall unchanged at 30/30).
+
+**Two of my own test fixtures were wrong before the code was**, and both are worth keeping in mind:
+a *flat* synthetic background has a MAD of zero, so the detector declines it by design and the test
+never reaches the peak-picking it claimed to test; and a hard cut from tone to digital zero is a
+step discontinuity that splatters broadband energy, so the detector fires on it correctly and the
+silence-recovery test was measuring its own fixture until the edges were faded.
+
+**The delete, and what it cost.** `offset_between` was covered *first* even though it has **no
+caller in this repo at all** — "no caller today" is not "no caller ever", and M21's two-camera work
+wants it. It cost three floats per swing, because the cross-correlation reads the two flux
+envelopes and both were already committed as the other layer's input. Then `impact.py` went.
+
+The consequence that needed writing down: **`conformance.py regenerate` now refuses to rebuild the
+audio family.** Rebuilding it from the Rust detector would replace a reference-derived oracle with
+a self-portrait that passes by construction and detects nothing — precisely the silent disagreement
+ADR-030 §8 exists to prevent. `conformance_vectors._audio` returns nothing and explains why. If
+`AUDIO_DETECTOR_VERSION` ever moves, re-recording is a decision that needs a new oracle named
+first, not a script anyone can run.
+
+**One false green caught, and it is the kind worth remembering.** The offset conformance check sat
+in the test file for one run without executing — a patch anchor had not matched, so `offset_between`
+and `by_id` were unused and the suite reported 30/30 conforming without having correlated anything.
+Compiler warnings were the only evidence. A passing suite that does not run the assertion is worth
+less than a failing one.
+
+**The seam M20 drew, and the one it did not.** Python still **decodes** and Rust **detects**:
+`audio/ffmpeg.py` holds what M11 paid for (edit lists, the two `soun` tracks on the face-on clips,
+the `video_start_seconds` probe that was a 105–125 ms surprise on four clips) and reaches ffmpeg
+through the `imageio-ffmpeg` wheel rather than a system install. It is tier 1 and unported — and
+naming it was itself a finding, because **`CONFORMANCE.md` §5's inventory listed `impact.py` and
+not `ffmpeg.py`**, so the decoder was tier 1 by implication and in no table. It is in one now. The
+call is a subprocess rather than PyO3, because that module already shells out and a native
+extension would make `pip install -e '.[audio]'` require a Rust toolchain.
+
+**Verified end to end:** all 30 stored `{role}.audio.json` reproduce through the new Rust path
+within `CONFORMANCE.md` §3 tolerance, **every sample index exact**, worst relative float difference
+2.1e-15. (My first check used exact float equality and reported 0/30 — the wrong rule for floats,
+and the reason §3 has a tolerance at all.)
+
+**Docs cascaded:** ADR-030 gains its first addendum — the **retirement rule**, which amends the
+Consequence that said the Python core stays — plus `CONFORMANCE.md` §2 (the audio family), §4
+(`cargo test`, and `regenerate`'s refusal) and §5 (the inventory, with `ffmpeg.py` named for the
+first time and the `impact.py` gap closed); `CLAUDE.md`'s commands block, invariant list and
+routing table; `ARCHITECTURE.md` §1, §2 and §5; `docs/README.md`'s map and both addendum counts;
+and this roadmap's M20 section and status row.
+
+**Left in M20:** P4, the ring buffer and cutting rules — no hardware needed, and
+`OnlineDetector::push` already reports absolute sample indices to cut against. P7, a continuous
+30–60 minute bay recording for false positives, which is **the one number P3 cannot produce**:
+every clip on disk was recorded around a swing, so there is no empty-bay background to measure
+against, and `--concat` stands in for the seams and not for a voice.
+
+---
+
 ## 2026-09-21 — M19 done: the core is a specification, and M22 is unblocked
 
 **Duration**: one sitting, same day as the entry below. **Source + tests + docs.** M19 is ✅ done,
