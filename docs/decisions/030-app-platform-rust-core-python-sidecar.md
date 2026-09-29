@@ -6,11 +6,18 @@
 [ADR-002](002-pose-estimation-mediapipe.md) and
 [ADR-016](016-local-first-host-and-phone-upload-topology.md) by addendum. This document *is* the
 M18 milestone: the phases it originally carried were five spikes, and the spikes were dropped
-when the premise they were sized against changed. **Three of the milestones that build it are
+when the premise they were sized against changed. **Four of the milestones that build it are
 done**: M19 made the Python core a specification, M20 ported the strike detector and deleted its
-Python (which is what this ADR's addendum is about), and **M22 ported the whole analysis engine**
-— all 21 committed vectors conforming, and wired to nothing until M24. §1's Rust core therefore
-exists and §2's sidecar, §4's session engine and §5's shell do not. M21 is part-built.
+Python (which is what the first addendum below is about), **M22 ported the whole analysis
+engine** — all 21 committed vectors conforming, and wired to nothing until M24 — and **M23 built
+§3's worker pool**, whose protocol is [ADR-033](033-the-pose-sidecar-protocol.md). §1's Rust core
+and §3's boundary to the sidecar therefore exist, both with no caller above them; §4's session
+engine and §5's shell do not. M21 is part-built.
+
+**Two addenda, and read the second before budgeting anything against §3.** M23 P1 measured pose on
+this repo's own footage and it runs at **9.2 fps, not ~24** — so §3's "a two-view swing is roughly
+50 s" is about 2.5× optimistic for 4K portrait phone video. The protocol §3 left open is
+[ADR-033](033-the-pose-sidecar-protocol.md).
 
 ## Date
 2026-09-21
@@ -352,3 +359,68 @@ same module, and a PyO3 build would make `pip install -e '.[audio]'` require a R
 which is a real regression for a lab install that mostly reads artifacts. `config.py::REPO_ROOT`'s
 source-checkout assumption is inherited by the binary lookup and dies at packaging with everything
 else (M26).
+
+---
+
+## Addendum, 2026-09-26 — §3's throughput budget is 2.5x optimistic, measured
+
+**M23 P1 measured pose on this repo's own footage before writing
+[ADR-033](033-the-pose-sidecar-protocol.md), and §3's last paragraph does not survive it.** That
+paragraph says:
+
+> Throughput is the reason any of this matters. ADR-002 measured heavy at ~24 fps, so a 10 s 60 fps
+> clip is roughly 25 s of pose and a two-view swing roughly 50 s.
+
+The **conclusion is reinforced** and only the arithmetic changes — the pool and background analysis
+exist to hide this number, and there is more of it to hide than §3 thought.
+
+### What was measured
+
+`mediapipe:heavy` over `data/processed/sessions/2026-08-23/11/face_on.mov` — 344 frames at
+2160x3840 portrait, 59.965 fps — took **37.3 s, or 9.2 fps**. So a 10 s 60 fps clip is roughly
+**65 s** of pose and a two-view swing roughly **two minutes**, not 50 s.
+
+Two things make this a correction rather than one contradictory sample:
+
+- **`api/worker.py`'s docstring already said so**, independently: *"about 9.5 fps"* for a 4K clip,
+  written when the worker was built and never reconciled with this section. Two Python measurements
+  agree with each other and disagree with the ADR.
+- **ADR-002's ~24 fps is not wrong, it is about different footage.** The bake-off ran GolfDB
+  reference clips, which are small; this corpus is 4K portrait phone video, which is roughly nine
+  times the pixels per frame. The number that belongs in a *budget* is the one measured on the
+  footage the app will actually be handed.
+
+### What it changes
+
+**Nothing in the decision.** Option B still beats Option C on §2's grounds — the bands, not the
+speed — and §7's cheaper lever is if anything more attractive: ADR-002 measured `lite` at roughly
+four times `heavy`, and four times 9.2 fps is the difference between a two-minute swing and a
+thirty-second one.
+
+What it does change is every number downstream that was sized against 25 s per clip:
+
+- **The corpus is ~77 minutes of pose to re-run**, not ~30. Thirty stored keypoint files, 42,648
+  frames, 344 to 4,837 each. §M23's claim that *"verification is free"* was true of the diff and
+  false of the re-pose, and M23 P1 corrected that sentence too.
+- **A flat timeout cannot serve this.** The 14.1x spread between the shortest clip and the longest
+  is why [ADR-033](033-the-pose-sidecar-protocol.md) clause 6 derives the deadline from the clip's
+  frame count, and why the worker has to report that count before posing — which is the one message
+  ADR-033 adds beyond the request/reply pair §3 implies.
+- **Pool sizing is a measurement, not a pick.** At 9.2 fps pose is CPU-bound with no headroom to
+  speak of, so a second concurrent worker may buy very little; M23 P8 measures it rather than
+  choosing a number here.
+
+  > **Measured 2026-09-27 by M23 P8, and this bullet's guess was wrong** — which is the argument for
+  > having made it a measurement. A second worker buys **1.71×** and a fourth **2.34×**, because one
+  > worker occupies only **1.63 cores**: MediaPipe is internally threaded and never saturated this
+  > box, so "CPU-bound" was being read as "one core busy" when it never was. The default is **2**,
+  > capped by memory rather than by throughput — the incremental worker is **~1.3 GB** resident, so
+  > four is 5.1 GB against a laptop that also has two captures running. The table is in
+  > [ADR-033](033-the-pose-sidecar-protocol.md)'s fourth addendum and in
+  > [§M23](../../ROADMAP.md#m23-the-pose-sidecar--a-long-lived-python-worker-pool); the re-pose of
+  > the whole corpus ran at **9.5–10.7 fps** per clip, so this addendum's 9.2 is conservative and
+  > everything it concludes about the budget stands.
+
+`audio/trigger.py`'s docstring says the pipeline *"already spends ~25 s per clip in pose"*, which
+inherited this figure. It is left as written: it is an argument about a subprocess spawn being cheap
+by comparison, and it gets stronger, not weaker, at 65 s.

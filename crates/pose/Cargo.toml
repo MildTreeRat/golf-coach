@@ -1,0 +1,33 @@
+# The pose sidecar's Rust half. [M23 P2]
+#
+# Seventh crate, and the one ADR-033 decides into existence. It depends on `contracts` alone, so
+# ADR-008's rule is cargo's to enforce here as it is for the other six: the `KeypointsFile` a worker
+# returns is the one `crates/contracts` already defines (M22 P2), never a second copy of it.
+#
+# Putting this inside `crates/core` was declined — that crate's doc claims to be *only* the `run`
+# seam, and a child-process pool is not that (ADR-033 "Consequences").
+[package]
+name = "pose"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "The pose sidecar boundary: the job protocol the Rust core speaks to a warm Python MediaPipe worker."
+
+# The lib target keeps the short directory name, unlike `crates/core` — that crate is `golf-core`
+# because a library called `core` shadows the Rust sysroot crate of that name in every dependent.
+# Checked rather than assumed, as that manifest's comment invites: `pose` shadows nothing in the
+# sysroot (`core`, `std`, `alloc`, `proc_macro`, `test`), so only the binary carries the prefix.
+[[bin]]
+name = "golf-pose"
+path = "src/bin/golf_pose.rs"
+
+[dependencies]
+contracts = { path = "../contracts" }
+serde = { workspace = true }
+# `float_roundtrip` comes from the workspace, and it is load-bearing here rather than inherited
+# scenery: a reply is ~160k landmark coordinates written by CPython's repr, and M22 P8 measured
+# serde_json's fast decimal path returning a value one ulp off on 17-significant-digit literals.
+# P6 diffs a parsed reply against a committed file for **exact** equality, so a one-ulp parse error
+# would be a difference this crate invented.
+serde_json = { workspace = true }

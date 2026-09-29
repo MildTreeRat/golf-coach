@@ -152,11 +152,19 @@ def test_the_pose_modules_import_without_the_vision_stack() -> None:
     module. Hoisting `import numpy as np` in `capture/source.py` is a one-line edit that
     `docs/CODE_STANDARDS.md` R2 explicitly permits (`capture` may use numpy), and it would have
     silently made all three `pose` modules require the ML stack at import time.
+
+    **`pose/worker.py` is the fourth, and it is here for a different reason** [M23 P3]. That module
+    is ADR-033's sidecar, and it is the one module in this repo that is *supposed* to reach
+    MediaPipe — the inverse of every pin above. It still has to import cheaply, because `_startup`
+    reports an absent `vision` extra as an `unavailable` handshake line carrying the fix, which the
+    pool prints. A module-scope `import cv2` would turn that message into an ImportError traceback
+    on stderr and an empty protocol channel, which the pool can only report as a worker that died.
     """
     modules = (
         "golf_coach.pose.estimator",
         "golf_coach.pose.overlay",
         "golf_coach.pose.side_by_side",
+        "golf_coach.pose.worker",
     )
 
     for module in modules:

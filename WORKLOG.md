@@ -5,6 +5,63 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-09-27 — M23 P9: the docs cascade, and the pose sidecar closes
+
+**Duration**: one sitting. M23 goes ✅ **10/10** and the milestone is closed. No code but a module
+doc — the phase is `CLAUDE.md`, `ROADMAP.md`, `docs/{ARCHITECTURE,CONFORMANCE,README}.md`,
+`docs/decisions/030` and `033`, `crates/pose/src/writer.rs`'s doc comment, the plan and this file.
+Nothing under `src/golf_coach/` was touched, `ANALYSIS_VERSION` stays at 16 and no vector moved.
+
+**Why this is the first M23 entry here.** M23 kept its per-phase record in
+`docs/plans/m23-pose-sidecar.md` — the plan doc M23 P0 introduced, and the reason `docs/README.md`
+grew a `plans/` line — so P0 through P8 wrote no entry and this one covers the milestone's close
+rather than one phase of it. **To pick up where this left off, read that plan's findings**, not this
+entry; the phase order and every measurement live there.
+
+**What M23 built.** The Rust↔Python boundary ADR-030 §3 specifies: `crates/pose`, the seventh crate
+(`protocol`, `worker`, `pool`, `writer` and the `golf-pose` binary with `run` and `sweep`), and
+`src/golf_coach/pose/worker.py`, the warm Python worker `crates/pose` spawns and speaks NDJSON to.
+`scripts/pose_replay.py` is the gate a vector family could not be — ADR-033 declined one because the
+true input is a 4K `.MOV` that cannot be committed — and it replayed all 30 stored clips at **0
+differing values of 5,757,660** over 42,648 frames. The pool's default width is **2**, measured. Like
+M22's engine, **nothing calls any of it**: M24 gives both halves a caller at once.
+
+**What the docs said that was wrong.** §M23's status-table row was **seven phases behind**, which
+P2 through P8 each recorded leaving alone because the plan routes the cascade here.
+`docs/CONFORMANCE.md` was not on the plan's list and needed three edits — §5's tier-3 row did not
+name `pose/worker.py`, its crate sentence said six in the workspace, and its pose bullet said the
+comparison against the stored files *would be* a different oracle where P7 has since run it. That is
+the same document M22 P9 found the same way: the plan lists what the milestone built and forgets the
+one that describes how this repo knows things work.
+
+**And the addendum is worth more than the status flips**, as it was for M22. ADR-033's fourth is the
+closing one: **measurement 4 is wrong about the float repr** — `model_dump_json` serializes inside
+pydantic-core, which is Rust and reaches for `serde_json`, so both writers have always spelled every
+float the same way, over **239,214,827 bytes** a side. Clause 8's structural comparison stands on the
+reason that was always load-bearing (nothing compares these files as text) and is deliberately not
+upgraded now that the bytes agree, because that agreement is a dependency's to retract. It also
+carries the API clause 7 does not name, clause 5 implemented literally and what that costs, the
+defect the failure taxonomy found in shipped Python — a missing clip path reported as a *crashed
+worker* — the measured pool width against ADR-030's guess that a second worker would buy little (it
+buys **1.71×**), and the coverage the sidecar does **not** have as one list in one place.
+
+**Two findings for whoever picks up M24.** `pose/worker.py` holds the first *runtime* edge out of
+`pose/` into another module (`capture.file.FileVideoSource`, imported lazily), which ADR-008's
+addendum says is a finding; it is recorded in `docs/ARCHITECTURE.md` §2 as a shell depending
+downward, the way that addendum already reads `api` and `mcp`, and if M24 disagrees then ADR-008
+wants a clause. And M22 P9's piped-command trap recurred exactly: `cargo test 2>&1 | tail -5` reports
+**tail's** exit status, so this phase's first two cargo runs said *exit 0* about nothing. Redone
+unpiped.
+
+All six verify commands green after the edits: `pytest` **1,991**, `ruff` clean, `mypy` 118 files
+clean, `conformance.py check` **21/21 at v16**, `cargo test` **30 binaries, 582 tests**,
+`cargo clippy --all-targets` and `cargo fmt --check` clean.
+
+**Next**: M21 is the only thing M24 waits on — the capture edge, still needing the USB camera
+plugged in for its own P1 decision. §M30 (clip trimming) is unblocked now that P7 has run.
+
+---
+
 ## 2026-09-26 — M22 P9: the docs cascade, and M22 is done
 
 **Duration**: one sitting. M22 goes ✅ **12/12** and the milestone is closed. No code but a

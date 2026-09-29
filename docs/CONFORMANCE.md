@@ -519,7 +519,7 @@ The inventory ADR-030 implies, made explicit — the answer to "does this module
 | **1 — ported** | ~~`audio/impact.py`~~ → `crates/trigger` | **Done, M20.** The Python original is **deleted**, per ADR-030's 2026-09-22 addendum: the vectors are the oracle, not the code that recorded them. `rustfft` is the one numeric library the port needed rather than arithmetic |
 | **1 — not yet** | `audio/ffmpeg.py` | **Ports to Rust, next.** Listed here because it was tier 1 by implication and in no table until M20 went looking: it holds the container edit lists, the two `soun` tracks the face-on clips carry and the `video_start_seconds` probe, and it reaches ffmpeg through the `imageio-ffmpeg` wheel rather than a system install. Until it moves, **Python decodes and Rust detects** |
 | **2 — shots and clubs** | `launch_monitor/{mock,composite,source}.py`, `clubs/catalogue.py` | **Ports to Rust, after tier 1.** Committed JSON plus stdlib arithmetic already (ADR-022), so the data crosses unchanged. `analysis/{flight,flight_infer,flight_measure,spin_solve,shot_measure}.py` were listed here and are **done** — they are inside `run_vector`'s reach, so M22 P8 and P8b took them with tier 1 rather than after it |
-| **3 — the Python sidecar** | `pose/estimator.py`, `feedback/coach.py`, `feedback/conversation.py` | **Stays Python, bundled** (ADR-030 §2, §3) — and this is *all* that stays. Pose is the load-bearing one: `ranges.json` is cut from these landmarks, and MediaPipe is a graph with no mature Rust binding. The LLM call is the other, and `coach.py` sits here rather than in tier 4 because it is bundled rather than lab |
+| **3 — the Python sidecar** | `pose/estimator.py`, `pose/worker.py`, `feedback/coach.py`, `feedback/conversation.py` | **Stays Python, bundled** (ADR-030 §2, §3) — and this is *all* that stays. Pose is the load-bearing one: `ranges.json` is cut from these landmarks, and MediaPipe is a graph with no mature Rust binding. `pose/worker.py` (M23, ADR-033) is the process `crates/pose` spawns — the sidecar's own entry point, reusing `estimate_pose` unchanged, which is what makes this tier a *process* boundary rather than a library one. The LLM call is the other, and `coach.py` sits here rather than in tier 4 because it is bundled rather than lab |
 | **4 — the lab** | `mcp/`, `api/`, `clubs/lookup.py`, `launch_monitor/screen/`, `pose/{overlay,side_by_side}.py`, `scripts/` | **Not shipped, and not permanent.** Retired or ported in [§M29](../ROADMAP.md), which is what makes tier 1's delete possible at all — ADR-032 §7. **Settled**: `api/` retires into the Flutter shell (M25) rather than being ported, `api/static/`'s pages with it; `mcp/` ports to Rust. **Open**: `clubs/lookup.py`, `launch_monitor/screen/` and the overlay tools; and how ADR-022's fitting scripts — permanently Python, numpy and scikit-learn — reach a measurement once `analysis/measure.py` is gone |
 | **stub** | `detection/` | Gated on M1.5's no-go. Nothing to port |
 
@@ -531,8 +531,9 @@ vectors off the engine alone pinned `"feedback": null` on all twenty-one and wou
 to ship a results page with no coaching on it. They now carry the real payload, and
 `_verify_against_stored` checks it against the archive like everything else.
 
-**That two-call shape is why the port has four crates and not ADR-032 §1's two** (M22 P6) — six
-in the workspace, counting M20's `trigger` and M21's `capture`, which are edges rather than ports.
+**That two-call shape is why the port has four crates and not ADR-032 §1's two** (M22 P6) — seven
+in the workspace, counting M20's `trigger`, M21's `capture` and M23's `pose`, which are edges rather
+than ports.
 The rule
 is enforced by cargo: `crates/feedback` holds `rules.rs` and depends on `contracts` alone, so it
 *cannot* reach `analysis` and `analysis` cannot reach it. Something above both has to make the two
@@ -557,8 +558,14 @@ Named rather than left to be discovered:
   where windowing keypoints was not. What remains uncovered is `audio/ffmpeg.py`: the vectors
   begin at a decoded waveform, so a port's *decoder* — edit lists, stream selection, the video
   timebase — is judged by nothing here.
-- **Pose itself.** Deliberately: ADR-030 §3 pins the sidecar against the 30 keypoint files already
-  on disk, which is a different comparison with a different oracle.
+- **Pose itself.** Deliberately, and by a different oracle: ADR-030 §3 pins the sidecar against the
+  30 keypoint files already on disk, because its true input is a 4K `.MOV` that cannot be committed
+  and a keypoints-only family would be 239 MB before gzip
+  ([ADR-033](decisions/033-the-pose-sidecar-protocol.md)'s Consequences). **That comparison has now
+  been run** (M23 P7): `scripts/pose_replay.py` re-posed all 30 clips through `golf-pose` and found
+  **0 differing values of 5,757,660** over 42,648 frames, key sets included. What it does not reach
+  is listed in ADR-033's fourth addendum — no left-handed clip and no live capture beside the pool
+  being the two that matter.
 - **Anything `EXCLUDED_FROM_RESULT` drops, which is wider than it looks** — found by M22 P6's
   mutation sweep. §4's exclusion is right and stays: round-tripping keypoints would make every
   vector 30x larger and check nothing. But it means the suite cannot see `swing.keypoints` **at

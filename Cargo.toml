@@ -15,6 +15,7 @@ members = [
     "crates/contracts",
     "crates/core",
     "crates/feedback",
+    "crates/pose",
     "crates/trigger",
 ]
 resolver = "2"

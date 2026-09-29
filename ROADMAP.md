@@ -1,6 +1,6 @@
 # Roadmap: AI Golf Swing Trainer
 
-## Last Updated: 2026-09-26
+## Last Updated: 2026-09-27
 
 Grouped by **state**, not by number, because the numbers no longer run in order: the pose-only
 slices (M4-PoC, M4-PoC+, M4-REF, M5-FB) delivered the mechanics half of M4 and the ranking half
@@ -39,13 +39,14 @@ wording; only the grouping and the M4 checklist have been corrected.
 | **M20** The trigger | 🟡 In progress *(2026-09-22)*, 6/7 phases — **and the first Rust in this repo**. P0-P6 done: a cargo workspace, `crates/trigger`, 30 audio conformance vectors, the live detector at **recall 30/30 and precision 0.909** over 11.9 minutes of bay audio, the ring buffer and cutting rules **derived from `phases.py::window_around`** rather than chosen, the pipeline swapped onto the Rust binary, and **`audio/impact.py` deleted** — the first module retired from Python under ADR-030's 2026-09-22 addendum | One bay trip for P7 | [§M20](#m20-the-trigger--hearing-the-ball-strike-live-and-cutting-the-clip) |
 | **M21** Capture edge | 🟡 In progress *(2026-09-22)*, **1.5/7 phases**. P0 wrote [ADR-031](docs/decisions/031-the-capture-edge.md) and it changed the shape: capture is **Rust** (`crates/capture`), not the Python `LiveCameraSource` the old plan asked for; the **file source is finished rather than first** (the lab has `FileVideoSource` and ADR-030 §3's pose worker decodes its own frames, so a Rust one would have no caller); and the phone moved to [§M28](#m28-the-phone-as-a-camera). What capture writes is a **swing directory today's `analyze_swing` reads**, which is what takes it off M22's critical path. **P1 is built and half-finished**: `crates/capture` enumerates devices and capabilities behind a stable identity and `golf-capture list` prints them, but ADR-031 §4's camera-crate choice is still owed because **no camera was attached to make it against** — this box is a desktop with no built-in webcam, which is itself the correction to the gating in the next column. Two findings, both in ADR-031's addendum: the identity is **port-derived** (this camera reports no USB serial), so "survives a replug" means *the same port* and two identical cameras are told apart only by port; and frame rate is kept as the driver's ratio, because 30000/1001 is not 30 | **The USB camera from P1 on** (the built-in webcam the old plan assumed does not exist); both cameras for P5; a bay for P6 | [§M21](#m21-capture-edge--the-laptop-records-and-a-strike-cuts-a-swing-directory) |
 | **M22** The Rust core | ✅ Done *(2026-09-26)*, **12/12 phases**. P0 wrote [ADR-032](docs/decisions/032-the-rust-core.md), which added the thing M19 did not have: a **committed gate per stage** rather than one whole-bundle gate at the end; **P1 built it** — `spec/vectors/stages/`, 21 vectors and 3.2 MB, seven stages rather than the ADR's eight (`feedback` cannot be run in isolation, so the engine vector already gates it), regenerable on any machine and guarded by a composition check that requires every recorded intermediate to add back up to the committed bundle answer. Two crates, `crates/contracts` and `crates/analysis`, so ADR-008's import rule is cargo's to enforce. **P2 built the first of them** — nine modules, 47 of the package's 70 bounds and 3 of its validators, gated by round-tripping all 21 vectors' `input` and `expected` through the ported shapes; it found that §4's seventy-and-eleven is a whole-package count rather than the ported surface, that a byte-for-byte round trip is unavailable in either direction because Python and `serde_json` disagree about when to reach for an exponent (so every cross-language comparison stays structural), and that a vector distinguishes an absent key from a null one — which the gate caught its own harness flattening, on the first run. **P3 built `crates/analysis` with one module in it** — `pyfmt.rs`, §3's three edges solved before anything calls them, gated by `spec/vectors/format/`: 4 vectors and **2,697 cases** of CPython's own answers, compared with no tolerance at all because nothing in them computes a measurement. Its findings are that **two of the three edges collapse into Rust's own exact formatter** (which ties to even, as CPython's does), that the rounding rules differ *only* on values that are odd multiples of `2**-(n+1)` — enumerable, and a random sweep hits none of them — that the one- and two-argument `round` need **different comparison rules** because one returns an `int` with no signed zero and the other a float where `-0.0` is real, and that this is the first vector family that does not age on `ANALYSIS_VERSION` at all. **P4 ported the geometry** — `smoothing`, `phases`, `measure` and `stats.percentile`, 1,591 lines of Rust before their tests against 2,266 of Python, green on the `smoothed`, `phases` and `measure` stages across all 21. Its findings are that **ADR-032 §3 is one edge short**: Python's `max` returns the first maximum where Rust's returns the last (`min` agrees, which is what hides it), and `_top_and_impact`'s fallback is a `max` over frame indices — the rounding edge's failure through a door that rounds nothing; that **a green stage is not a covered stage**, measured by mutation rather than asserted — twelve divergences, six caught by the vectors and **five only by the port's unit tests**, because 0 of 21 clips lack a rising run, 0 frames carry a hip in `[0.5, 0.7)`, 21 of 21 have the earliest major descent also be the largest, and none of 660 half-confident landmark pairs sits in a window a measurement reads; and that **not one vector refuses a measurement**, so thirteen happy paths are gated and none of the twenty-odd refusal branches, each carrying a sentence §3 compares exactly and a golfer reads. Two warts were reproduced rather than improved — `smooth_keypoints` drops `camera_id`, and `math.hypot` is not `(dx**2 + dy**2) ** 0.5`. **P5 ported the checkpoint judging** — the two benchmark loaders, `checkpoints/mechanics` and `CHECKPOINT_REGISTRY`, 1,227 lines of Rust green on the `checkpoints` stage across all 21, with the bands crossing by `include_str!` from the Python package path so there is still one copy on disk. It was **written as the whole judging half and split**, which takes the milestone to eleven phases: the two gates it named are independent, so `measurements` becomes P5b. Its findings are that **§3 is a further edge short** — `f"aim under {band.high}"` has no format spec at all, and Rust's `{}` writes `4` where CPython writes `4.0`, now gated by a 362-case `repr` table — and that this edge is **currently invisible**, because every band edge shipping today formats identically in both languages, so a port using `{}` passes everything in this repo; that **the corpus's one left-handed vector cannot gate the mirror** whose existence is the whole reason `head_stays_back` takes a handedness, its `head_hip_gain_norm` being exactly `0.0`; and that of seventeen deliberate divergences **five survive everything and all five are explained** — three provably equivalent mutations over dead defensive code the Python carries, two the formatting call sites the band values hide. **P5b ported the placements and the rotation numbers** — `benchmarks/{joint,trajectory}`, `analysis/trajectory`, `analysis/pivot` and the `measurements` assembly's first three groups, 2,131 lines of Rust green on all 21, carrying the last two `contracts/` registries so **all three now sit beside their walkers**. Its findings are that **every one of the fifteen corpus vectors refuses the face-on trajectory placement** — the trail elbow and wrist are missing 45-70% of their resampled timeline against a 40% ceiling, so T2 and Q are gated by the six *synthetic* vectors alone and the real swings gate the refusal; that the left-handed vector **does** gate this mirror, unlike P5's; that of forty-five deliberate divergences **four survive and all four are provably equivalent** — an association order bit-identical while `span` is a power of two, a *fixed* pivot origin that cancels out of all five checks (a per-sample one does not), `hypot`, and `{}` for `%g` on a clamped percentile, which is P5's fifth edge recurring invisibly in a second module; and that **three real gaps were invisible to all 21 and needed unit tests** — the ruler is the `len/2` median rather than the mean or the lower median, and a sample needs *both* bracketing frames confident. Nothing is deleted **in M22** — the lab calls `analysis/` from 28 places, and ADR-030's retirement rule gains a third clause that reads as a schedule: *and nothing that stays Python calls it*. §M29 discharges those callers and does the delete. **P6 assembled it and the bundle is green end to end** — `engine`'s `analyze_swing_bundle`, `scoring`, the face-on slice of `alignment`, `feedback/rules` and a `golf-core run` binary, **1,034 lines of Rust** against 1,233 of Python, conforming on all **six synthetic vectors** including `feedback`, `mechanics_score`, `unscored`'s order and `notes` — the first gate here that is not a stage. `golf-core run` was diffed against `conformance.py run` through Python's *own* `compare_results` on all six: **zero differences**, and the two outputs are 13,569 and 13,221 bytes, which is P2's no-byte-comparison finding standing where it was predicted. It carries `UNSCORED_REASONS` and `INFERENCE_REASONS`, so all four `contracts/` tables now sit beside their walkers. **ADR-032 §1 says two crates and this makes four**: `analysis` may not import `feedback` (ADR-008), which is *why* `run_vector` makes two calls, so `crates/feedback` keeps that edge cargo-enforced and `crates/core` is the shell that holds both — the counterpart of `api/pipeline.py`, which §7 retires rather than ports. Its findings are that **`EXCLUDED_FROM_RESULT` makes one of this milestone's own promises unverifiable**: the whole-clip-coordinates contract needs the phases shifted *and* the sliced frames re-attached, and the comparison drops `keypoints`, so `windowed.json` gates the shift and cannot see the re-attachment at all — mutating it to a no-op passes all 21 vectors in either language; that **`_tempo_notes`' sentence is reached by nothing in `spec/`, either half**, because every collapsed motion-start boundary in the corpus is in the *down-the-line* view and that function reads the face-on anchors alone, `aaron-1`'s face-on view being fine; and that of **62 deliberate divergences, 31 were caught first pass and nine of the sixteen survivors were one root cause** — six of the seven sentences `engine.rs` can append are unreachable through six clean single-camera swings — with twelve unit tests taking it to 60 caught and the last two provable equivalences, one of them `sort_unstable_by` for the **third** time. **P7 ported the second view and the `alignment` stage is green on all 21** — `alignment.py`'s reachable half (`anchors_from_keypoints`, `tau_of_frame`, `align_swings` and its nine helpers), the down-the-line trajectory basis and pivot rows, and `_without_contradicted_scores`: **1,197 lines of Rust before their tests against 1,070 of Python**, with the `measurements` stage's last two groups green too, so six of the seven stages now run. Its findings are that **the corpus no longer contains a pair `_arbitrate_tops` can decide** — the two views' downswings disagree by at most 27.6% against a 30% threshold, and 21.7% before the strike pins tau=2, so the defect M11 P7 built the arbiter for has been repaired upstream and `_shared_tops`, `_top_at`, `_tempo_restated`, the `IMPACT_ONLY` tier and `_without_contradicted_scores` all ship against unit tests alone; that **all fifteen two-camera pairs report `SYNCHRONIZED`**, so three of the five tiers never reach a committed answer and returning that constant passes the family, while the soft-anchor decision underneath *is* gated (seven accepting, eight refusing, four of the module's ten sentences compared byte for byte); that **the second trajectory basis is reached by four corpus vectors where the face-on one is reached by none** — face-on the trail arm hides and from behind the lead arm does, which the rear fit drops — with no left-handed two-camera vector to gate its mirror and no `down_the_line_window` anywhere; and that of **forty-eight deliberate divergences seven survive**, two provable equivalences, three exact-equality boundaries on the agreement thresholds, and `{}`-for-`%g` and `sort_unstable_by` for the **fourth** time each. Two survivors were real gaps and were closed, the sharper one being a shape a per-stage gate is structurally bad at seeing: the stage records a call's inputs and its output, never the two lines of the caller between them. The render half stayed Python — `pair_frames`, `warp_speeds`, `frame_of_tau` and the rest, 220 lines whose only callers are `api/`, `scripts/` and the overlay, so no committed vector holds an answer for one. **P8 ported the ball flight and the seventh stage now has a runner** — `benchmarks/flight_model`, `flight` and `spin_solve`, **1,570 lines of Rust before their tests against 1,598 of Python**, gated inside the `flight` stage three ways: the whole 4,583-point path on the **five** corpus vectors that fly, and the whole carry window and solve on the **eleven** that solve. It is the first gate here that reads a committed *input* beside its output, which is why the integrator can be checked without the inference chain above it. Written as the whole outcome and split, so the count goes to twelve and `shot_measure`/`flight_infer`/`flight_measure` become **P8b**. Its findings are that **the ported surface of a 416-line artifact reader is seven numbers and eight rows** — the rest is per-block provenance and an altitude what-if only a CLI calls; that **§3 is an edge short and this one is not a string** — CPython's three-argument `math.hypot` is a compensated norm and both Rust stand-ins are 1 ulp out, which is the whole difference because `carry_window` constructs `high_plateau_min_rpm` so the launch spin ratio lands *exactly* on the coefficient table's last row, so the approximation flips `clamped` at that shoulder; that **`serde_json` was reading the oracle a ulp wrong** on 17-digit literals until `float_roundtrip` was turned on, which corrects all six earlier runners too; and that with both fixed **all 41,287 floats come back bit-identical** rather than merely inside `RTOL` — so the gate adds a *census* beside the tolerance, because a tolerance six orders above a ulp cannot tell a converged integration from a systematically wrong primitive. Coverage is narrower than the vector count suggests: **three of seven `SpinSolveCase`s** reach a committed answer and ten of the fifteen refuse before the integrator. **P8b joined it to the swing and the milestone's exit criterion is met**: `shot_measure`, `flight_infer` and `flight_measure` — **1,219 lines of Rust before their tests against 1,494 of Python** — plus `engine`'s last two `measurements` groups and the `fly_shot` call whose refusals extend `unscored`, so **all 21 engine vectors conform end to end** and `golf-core run` diffs against `conformance.py run` through Python's own `compare_results` with **zero differences** on all of them. No `ANALYSIS_VERSION` bump and nothing under `src/golf_coach/` touched. Its findings are that **the stage vector cannot supply this phase's input** — `fly_shot` is the caller, so `tests/flight.rs` reads the engine vector for the first time in five gates, and the two ends meeting is what makes `resolved.launch` an answer rather than a shared assumption; that **the loft prior is gated after all**, five vectors carrying a 30.5° loft resolved from the swing manifest against a docstring saying no shot on disk carries a club, though all five sit seventeen degrees clear of the floor so its *value* is gated by nothing; that **one corpus shot refuses a `shot` measurement** (`2026-08-23-3` printed a path and no face angle), which is the whole of what stands between a port reading `and` for `or` and a wrong number; and that **P6's "no vector moves an impact onto a strike" is now false** — nineteen of twenty-one produce that note, and it was true only of the six P6 was gated by. A 27-mutation sweep caught 26, one being a provable equivalence and two caught only by unit tests written for them. Still ungated anywhere: a **left-handed shot**, so the spin-axis mirror ships against unit tests; `tempo_notes`' two sentences; and a flight both solved *and* curved, the one combination where all six `flight_*` rows record at once. **P9 cascaded the docs and closed the milestone** — no code, and the doc-truth suite caught the two counts it always catches. What it corrected is worth more than the status flips: `docs/CONFORMANCE.md` §3 carried **four** edges and there are six, of which the two that were *not* predicted cost a phase each; §5's tier table had `analysis/` and the flight modules as future work; `spec/README.md` claimed three of seven stages ran; and ADR-032's Status block still read *partly built*. It also wrote the three addenda P8 and P8b had deferred, the last being the closing one the ADR's own Consequences section asked for: **of §3's three predicted edges, one — dict insertion order — never fired on a committed vector at all**, while all three of the unpredicted ones did; the families cost 3.2 MB and 304 KB; **no vector moved and `ANALYSIS_VERSION` is still 16**, which is a claim about the defects a port *can* see and silent about the two it shares (both surfaced as overstated docstrings, both pinned as measured rather than rewritten); and the coverage the port does **not** have is now one list in one place, because conforming is not covered and every phase measured that gap rather than assuming it | Nothing — M19 shipped the oracle; read [docs/CONFORMANCE.md](docs/CONFORMANCE.md) §3 and §5, then [ADR-032](docs/decisions/032-the-rust-core.md), first | [§M22](#m22-the-rust-core--the-analysis-engine-passing-the-conformance-suite) |
-| **M23** The pose sidecar | ⬜ Not started — **unblocked** *(2026-09-26)*: M22 conformed, so there is a core to send the jobs | — | [§M23](#m23-the-pose-sidecar--a-long-lived-python-worker-pool) |
-| **M24** Session engine | 🔒 Blocked | **M21 only** — M22 conformed 2026-09-25, and M24 is where the core gets its first real caller | [§M24](#m24-session-engine--start-a-session-and-swings-flow-through-to-the-profile) |
+| **M23** The pose sidecar | ✅ Done *(2026-09-27)*, **10/10 phases**. The Rust↔Python boundary ADR-030 §3 specifies, built: a pool of warm worker processes, a job protocol, a binary and a corpus diff — and, exactly like M22's engine, **no caller until M24**. P0 wrote the plan, and the phases live in [docs/plans/m23-pose-sidecar.md](docs/plans/m23-pose-sidecar.md) rather than in this file, so there is one copy of them. **P1 wrote [ADR-033](docs/decisions/033-the-pose-sidecar-protocol.md)**: NDJSON on stdin/stdout, one process per worker — the `golf-trigger` precedent reversed, so a crash is EOF on a pipe and nothing listens on a port — a handshake that verifies the model at **startup** rather than 30 seconds into a golfer's first swing, one retry on a fresh worker and then a typed failure, and a bounded queue whose `submit` refuses rather than grows. It adds **one message ADR-030 §3 did not imply**, an acceptance line carrying the clip's frame count, because the deadline has to scale with a corpus that spans **14.1×** and the Rust core has no decoder to learn that count from — so the process about to decode the clip says it. Four things §M23 claimed are corrected here with the measurement each time: throughput is **9.2 fps** at `heavy` on 4K portrait, not ADR-002's ~24, so a two-view swing is ~**two minutes** and not 50 s (ADR-030's second addendum carries it, and `api/worker.py`'s docstring had independently said ~9.5 fps all along); **bundling and model shipping were claimed twice** and belong to §M26 alone; *"verification is free"* is true of the diff and false of the **~77-minute** re-pose that produces its left-hand side; and clip trimming becomes **[§M30](#m30-clip-trimming--the-corpus-stops-being-eighty-seconds-of-walk-up)**, gated behind P7 because trimming re-cuts the clips and invalidates the 30 keypoint files that are this milestone's only oracle. **P2** built the seventh crate, `crates/pose` — the message shapes, the line framing and clause 5's retry table as two methods pinned against the ADR row by row — and measured the framing cost it was declined a length prefix for: **16,424,762 bytes on one line**, 0.44 s to parse, against 8.8 minutes of posing that clip. **P3** built `golf_coach.pose.worker`, reusing `estimate_pose`, `FileVideoSource` and `_to_frame_keypoints` unchanged (ADR-030 §2's rule), and it reproduced a stored keypoints file **structurally identical** on its first real run. **P4** built `Worker` — one child process, the handshake, clause 6's two timeouts — against a stub worker with **17 modes**, one per way a child can misbehave, and found that **clause 9 cannot resolve on a first hit**: the `python` on `PATH` here is a system 3.13 that cannot `import golf_coach`, so "answer" had to be defined. **P5** built `Pool` — N workers, a bounded queue, one retry on a *fresh* worker, a shutdown bounded at about a second for any N — and **found a real defect in shipped code**: a job naming a missing clip escaped as a traceback, so the pool read it as a crashed worker and retried the one failure clause 5 says never to retry. **P6** built `golf-pose` and the writer, and found the plan's own `skip_serializing_if` fix would silently drop **397 committed keys**, so the nulls are dropped in the writer and `crates/contracts` was left alone; its gate passed at **46,446 values, 0 differing** on one clip. **P7** is the corpus run above. **P8** measured the pool width and **contradicted the hypothesis it was written against** — a second worker buys **1.71×**, not nothing, because one worker occupies only **1.63 cores**. **P9** cascaded the docs and wrote the closing addendum, which is where the milestone's two corrections of itself live: **ADR-033's measurement 4 is wrong about the float repr** — `model_dump_json` serializes inside pydantic-core, which is Rust, so both writers have always spelled every float identically, now measured over **239,214,827 bytes** a side — and ADR-030's *"a second concurrent worker may buy very little"* is false. The coverage this does **not** have is one list in one place (ADR-033's fourth addendum): no left-handed clip, no `frame_range` anywhere, no variant but `heavy`, only two of the real worker's outcomes ever observed — the other failures are stub workers — and no pool running beside a live capture, which is M24's to measure | — (the pool ran against `.venv` on this box; a camera is M21's) | [§M23](#m23-the-pose-sidecar--a-long-lived-python-worker-pool) |
+| **M24** Session engine | 🔒 Blocked | **M21 only** — M22 conformed 2026-09-25 and M23 closed 2026-09-27, so both halves this milestone joins are built and callerless; M24 is where they get one | [§M24](#m24-session-engine--start-a-session-and-swings-flow-through-to-the-profile) |
 | **M25** The app | 🔒 Blocked | M24 | [§M25](#m25-the-app--the-flutter-shell-and-the-setup-wizard) |
 | **M26** Ship it | 🔒 Blocked | M25 (CI can start as soon as there is a `Cargo.toml`) | [§M26](#m26-ship-it--ci-packaging-signing-and-distribution-per-os) |
 | **M27** Remote worker | ❌ **Closed** *(2026-09-21)* by ADR-030 §7 — not deferred. Kept as the record of a decision | — | [§M27](#m27-remote-worker--closed-not-deferred) |
 | **M28** The phone as a camera | 🔒 Blocked on M25. **Split out of M21** *(2026-09-22)* by ADR-031 §8 — it was M21's "source 3" and ADR-030 §5 puts the phone app after the laptop app works end to end | A phone (already owned); nothing bought | [§M28](#m28-the-phone-as-a-camera) |
 | **M29** The last Python | 🔒 Blocked | **M25 only** — M22 conformed 2026-09-25, discharging the first of the two (the shell still has to replace the pages). Reduces Python to the sidecar ADR-030 §2/§3 describe — MediaPipe pose and the LLM — and deletes the rest: `api/` retires into the shell, `mcp/` ports to Rust, `analysis/` goes. **Opens with the one unsettled question**: how ADR-022's fitting scripts reach a measurement once `analysis/measure.py` is gone | [§M29](#m29-the-last-python--retiring-the-lab-and-deleting-analysis) |
+| **M30** Clip trimming | ⬜ Not started. **Raised 2026-09-26** by M23's planning interview and kept out of it. Trim the stored clips to `window_around`'s `[start, end)` plus a second either side — the corpus is **whole uploads**, which is why 30 keypoint files come to 42,648 frames and 239 MB. Carries one correction in advance: measured from the **ball strike** a 1 s lead is destructive, because `clip.rs::MIN_LEAD_S` is **4.85 s** before impact and the window has to contain the address for motion-start detection to work at all. Its gate is **discharged** — trimming changes every clip's frame numbering and sha256 and those 30 files are M23's only oracle, so M23 P7 had to run first and did, on **2026-09-27**, finding all 30 reproducible | — (desk work over the corpus on disk) | [§M30](#m30-clip-trimming--the-corpus-stops-being-eighty-seconds-of-walk-up) |
 | **M5** Feedback UI | ⬜ Not started, **superseded in shape by M25** (no web UI) | M7 Phase 5 gives the host | [§M5](#milestone-5-feedback-ui) |
 | **M2** Club & ball detection | 🔒 Gated, **and M1.5 said no-go** | Bay lighting for a ~1/2000 s exposure — *not* a global-shutter camera | [§M2](#milestone-2-club--ball-detection) |
 | Hardware re-validation | 🔒 Gated | Cameras / launch monitor arriving | [§Gate](#hardware-re-validation-gate-revisit-when-cameras--launch-monitor-arrive) |
@@ -1669,7 +1670,7 @@ is analysed in the background while recording carries on, and each result update
 profile. (The numbering is M18 because M14–M17 were already taken.)
 
 This group is kept in one place although its members are in different states — M18 and M19 are
-done, M20 and M22 are done, M21 is in progress, M23–M26 and M28 wait on them — because reading it in pieces
+done, M20, M22 and M23 are done, M21 is in progress, M24–M26 and M28 wait on them — because reading it in pieces
 across *Next* and *Blocked* would lose the order. The state is in each header and in the status
 table.
 
@@ -2583,35 +2584,127 @@ if a vector moves, the port found a Python bug and that is its own change.
 
 ## M23: The pose sidecar — a long-lived Python worker pool
 
-**Status**: ⬜ Not started, **unblocked** *(2026-09-26)*. M22 conformed, so the core that sends the jobs
-exists — though nothing calls *it* either until M24, which is the milestone that gives both a
-caller at once.
+**Status**: ✅ **Done** *(2026-09-27)*, **10/10 phases**. Seven crates now, the seventh being
+`crates/pose`; the protocol is [ADR-033](docs/decisions/033-the-pose-sidecar-protocol.md) and its
+**fourth addendum is the closing one** — read it for what the milestone corrected about itself and
+for the coverage this sidecar does not have. The phases live in
+[docs/plans/m23-pose-sidecar.md](docs/plans/m23-pose-sidecar.md) rather than here, so there is one
+copy of them; this section is the milestone's *shape*. **Nothing calls the pool**, exactly as
+nothing called `crates/analysis` when M22 closed — M24 is the milestone that gives both a caller at
+once.
 
 **The ask.** The Rust↔Python boundary ADR-030 §3 specifies, built: a pool of warm worker processes,
 each with the interpreter up and the `.task` bundle resident, driven by a job protocol.
 
+**The protocol is decided**, in [ADR-033](docs/decisions/033-the-pose-sidecar-protocol.md): NDJSON
+on stdin/stdout with one process per worker (the `golf-trigger` precedent reversed, so a crash is
+EOF on a pipe and nothing listens on a port); a handshake that **verifies the model at startup**; an
+acceptance line carrying the clip's frame count before any frame is posed, which is the one message
+ADR-030 §3 did not imply and the thing that makes a derived timeout possible at all; one retry on a
+fresh worker and then a typed failure, with the retry decided by *what could change* rather than by
+the phase; and a bounded queue whose `submit` refuses rather than grows.
+
 **Tasks.** The job envelope (`job_id`, `clip_path`, `frame_range`, `camera_id`,
-`pose_model_variant`) and the `KeypointsFile` reply; pool sizing and backpressure; worker lifecycle,
-crash detection and restart; timeouts and retry, which `AnalysisWorker` has neither of today;
-bundling a standalone Python runtime per OS (`python-build-standalone`); and the model files, which
-must ship rather than download on first run.
+`pose_model_variant`) and the `KeypointsFile` reply; `crates/pose` and the Python worker; pool
+sizing and backpressure; worker lifecycle, crash detection and restart; timeouts and retry, which
+`AnalysisWorker` has neither of today; a `golf-pose` binary and the diff harness that gates the
+whole thing.
+
+**What shipped, in one place.** `crates/pose` — `protocol` (the message shapes and the line
+framing), `worker` (one child interpreter, the handshake, clause 6's two timeouts), `pool` (N
+workers behind a bounded queue, one retry on a *fresh* worker, a shutdown bounded at ~1 s for any
+N), `writer` (the `{camera_id}.keypoints.json` the worker refuses to decide) and the `golf-pose`
+binary with its `run` and `sweep` subcommands. In Python: `src/golf_coach/pose/worker.py`, which
+reuses `estimate_pose`, `FileVideoSource` and `_to_frame_keypoints` unchanged and adds no entry
+point anyone in Python calls, and `scripts/pose_replay.py`, the corpus harness. `cargo test` drives
+a stub worker with 17 modes, so **no test in either language needs MediaPipe**; the real worker runs
+behind `GOLF_POSE_REAL_WORKER`.
+
+> **Corrected 2026-09-26 by P1 — bundling was claimed twice.** This list used to end with *"bundling
+> a standalone Python runtime per OS (`python-build-standalone`); and the model files, which must
+> ship rather than download on first run"*. Both are [§M26](#m26-ship-it--ci-packaging-signing-and-distribution-per-os)'s,
+> which already claims them, and they are removed here rather than done twice. M23 resolves its
+> interpreter the way `audio/trigger.py::binary()` resolves `golf-trigger` — config, then `PATH`,
+> then the known build location — and runs against `.venv` on this box; M26 swaps in a bundled
+> runtime with **no change to any message shape** (ADR-033 §9).
 
 **The constraint that shapes it:** `RunningMode.VIDEO` carries cross-frame tracking state, so a
 worker takes **one clip start to finish** and gets a fresh `PoseLandmarker` between jobs. The warm
-thing is the process, not the landmarker. Budget from ADR-002's ~24 fps at `heavy`: a 10 s 60 fps
-clip is ~25 s of pose, a two-view swing ~50 s.
+thing is the process, not the landmarker.
 
-**Verification is free and should be used**: the sidecar's output is diffed against the 30 keypoint
-files already on disk, which were produced by the same estimator at `mediapipe:heavy`.
+**The budget, measured rather than inherited: 9.2 fps at `heavy` on 4K portrait**, so a 10 s 60 fps
+clip is ~65 s of pose and a two-view swing ~**two minutes**.
+
+> **Corrected 2026-09-26 by P1.** This paragraph used to say *"Budget from ADR-002's ~24 fps at
+> `heavy`: a 10 s 60 fps clip is ~25 s of pose, a two-view swing ~50 s"* — about **2.5× optimistic**
+> for this corpus's footage. `mediapipe:heavy` over `2026-08-23/11 face_on` took **37.3 s for 344
+> frames** at 2160×3840, and `api/worker.py`'s docstring independently says *"about 9.5 fps"* for a
+> 4K clip, so two Python measurements agree and the ADR's number was the odd one out. ADR-002's ~24
+> fps is not wrong — it was measured on small GolfDB reference clips, roughly a ninth of the pixels
+> per frame. [ADR-030](docs/decisions/030-app-platform-rust-core-python-sidecar.md)'s **2026-09-26
+> addendum** carries it, since it is that ADR's sentence.
+
+**Verification is cheap and the re-pose is not.** The diff is free — the sidecar's output goes
+against the 30 keypoint files already on disk, all stamped `mediapipe:heavy`. Re-posing the corpus to
+get there took **69.8 minutes**: 42,648 frames at 10.2 fps overall.
+
+**And it agreed, measured by P7 on 2026-09-27: 30/30 clips, 42,648 frames, 5,757,660 values compared,
+0 differing, worst absolute delta 0.0**, with 16 key paths on each side of every clip and no set
+difference — so an absent key never passed for a null. `scripts/pose_replay.py` is the harness, on
+`scripts/trigger_replay.py`'s model, and the census is reported instead of a verdict for M22 P8's
+reason in reverse: *"0 of 5,757,660"* is a stronger claim than *"passed"* at the same price. Per-clip
+throughput ran **9.5–10.7 fps**, so the 9.2 the derived deadline assumes is below every clip measured.
+Two caveats on the word *corpus*: it is 30 comparisons over **26 distinct containers**, two of them
+shared by three fixture sessions each — which buys a second determinism claim, that the same container
+posed three times on three freshly spawned interpreters writes **byte-identical** files — and **no job
+exercised a `frame_range`**, so that field is still validated and unused.
+
+> **Corrected 2026-09-26 by P1.** This used to read *"Verification is free and should be used"*,
+> which is true of the comparison and false of the thing that produces the left-hand side of it. The
+> number matters because it is what makes P7 a phase and not a step, and because it is the reason
+> P8 measures pool size instead of picking one.
+
+**The default pool size is two, and the measurement that chose it contradicted the hypothesis it was
+written against.** P8 ran the 6 shortest corpus clips — 2,899 frames of 4K portrait — through one
+pool at each width on 2026-09-27 (`scripts/pose_replay.py --shortest 6 --sweep 1,2,4`):
+
+| workers | pose | throughput | speedup | aggregate CPU | cores busy | peak RSS |
+|---|---|---|---|---|---|---|
+| 1 | 288.9 s | 10.0 fps | 1.00x | 470.7 s | 1.63 | 1,344 MB |
+| **2** | **168.8 s** | **17.2 fps** | **1.71x** | **505.2 s** | **2.99** | **2,652 MB** |
+| 4 | 123.7 s | 23.4 fps | 2.34x | 593.5 s | 4.80 | 5,134 MB |
+
+Pose being CPU-bound at ~10 fps was expected to mean a second worker buys nothing. It buys **1.71×**,
+because one worker is multi-threaded but only **1.63 cores' worth** — the per-frame graph was never
+the whole bottleneck. **4 is rejected on memory**: 2.34× costs **5.1 GB resident** and 26% more CPU
+than one worker, where ADR-033 clause 6 names the target as a laptop running pose *and* two camera
+captures. The incremental worker is **~1.3 GB**, not the ~30 MB `.task` bundle
+`crates/pose/src/pool.rs` used to assume. Two also matches the unit of work — a two-view swing is two
+jobs, so two workers halve a *swing's* latency where four only help a backlog. And the sweep closed
+one of P7's two coverage gaps as a side effect: **all 6 digests were identical at 1, 2 and 4
+workers**, so running four MediaPipe graphs at once changes no landmark and mis-attributes no reply.
+The speedup is a property of the dev desktop (12 physical / 20 logical cores, 34 GB) and M24 is where
+it gets measured again under a session's real load.
 
 **Deferred here**: the shared-memory frame handoff for live preview (ADR-030 §3 specifies it,
-nothing needs it yet).
+nothing needs it yet); a conformance vector family, because the true input is a 4K `.MOV` that
+cannot be committed and a keypoints-only family would be 239 MB before gzip (ADR-033's Consequences).
+
+**The ordering constraint it hands out, now discharged**: the 30 stored keypoint files are this
+milestone's only oracle, and they key on frame numbering and on each clip's sha256, so **P7 had to
+run before [§M30](#m30-clip-trimming--the-corpus-stops-being-eighty-seconds-of-walk-up) started.**
+It ran on **2026-09-27** and all 30 agreed, so trimming is free to re-cut the clips — the answer they
+were the only record of is now also recorded above.
 
 ---
 
 ## M24: Session engine — start a session and swings flow through to the profile
 
-**Status**: 🔒 Blocked on **M21** alone — M22 conformed on 2026-09-25 and is done.
+**Status**: 🔒 Blocked on **M21** alone — M22 conformed on 2026-09-25 and M23 closed on
+2026-09-27, so both halves of what this milestone joins are built and waiting: `crates/core` runs a
+swing bundle and `crates/pose` produces the keypoints one needs. What M24 adds is the caller, and
+the two measurements it inherits as its own to make are the pool running beside a live capture and
+the swing-to-feedback wall clock.
 
 **The ask.** An explicit start and stop in place of the UTC-date session; capture isolated from
 analysis so frames are never dropped while pose runs; a queue with a backlog and a thermal budget;
@@ -2751,6 +2844,47 @@ frozen**; this applies to the engine family only.
 **Exit Criteria**: `src/golf_coach/` holds the sidecar and nothing else;
 `grep -rl 'golf_coach.analysis' src scripts` returns only what ADR-022 keeps; and the app runs a
 swing end to end with no Python anywhere on the analysis path.
+
+---
+
+## M30: Clip trimming — the corpus stops being eighty seconds of walk-up
+
+**Status**: ⬜ Not started. **Raised 2026-09-26** during M23's planning interview and deliberately
+kept out of that milestone. **Its gate is discharged**: it was blocked on
+[§M23](#m23-the-pose-sidecar--a-long-lived-python-worker-pool) P7, which ran on **2026-09-27** and
+found all 30 stored keypoint files reproducible — see the ordering constraint below, which is the
+reason this entry exists now rather than when someone gets to it. Needs its own `/plan` session.
+
+**The ask.** Automatically trim over-long stored clips and keep the trimmed ones, so the corpus stops
+being 80-second uploads of mostly walk-up and walk-back. The clips on disk are **whole uploads** —
+walk up, swing, walk back — which is why 30 keypoint files come to **42,648 frames and 239 MB of
+JSON**, 344 to 4,837 frames each. A typical clip would become ~8 s.
+
+**What a trimmed clip keeps**: `analysis/phases.py::window_around`'s `[start, end)` — address,
+takeaway, swing and finish — plus **one second either side**.
+
+**The correction any scoping of this has to carry.** "One second before and after the swing" is safe
+only if *the swing* means address-through-finish. Measured from the **ball strike** it is
+destructive: `crates/trigger/src/clip.rs::MIN_LEAD_S` is `0.80 × (1 + 5) + PEAK_HOLD_S` = **4.85 s
+before impact** in the worst case, because `window_around`'s lead is five downswing-lengths floored
+at `_MIN_ADDRESS_LEAD_S = 1.5 s` and the window has to contain the address for motion-start
+detection to work at all. That module's docs already say its 5 s pre-roll *"is not a comfortable
+choice, it is very nearly the minimum"*. A 1 s cut around impact would take the address out of every
+clip and the tempo measurement with it.
+
+**The ordering constraint, and it is why this is written down now.** Trimming re-cuts the clips,
+which changes their frame numbering and their sha256 — and therefore invalidates the **30 stored
+keypoints files that are M23's only oracle**. **M23 P7 had to run before this milestone starts, and
+did, on 2026-09-27.** Had trimming landed first, M23's gate would have had nothing to diff against
+and the stored files would have had to be
+re-recorded by an engine nobody has verified yet — which is the self-portrait
+`conformance_vectors._audio` refuses in three sentences, arrived at by accident instead of by
+argument.
+
+**Open**: whether the originals are kept beside the trimmed clips or replaced (disk against
+recoverability, and the answer decides whether the keypoints can ever be re-derived); whether the
+re-pose is part of the trim or a separate pass; and what happens to the `aligned.mp4` renders and the
+`*.audio.json` detections, both of which are indexed against the untrimmed footage.
 
 ---
 

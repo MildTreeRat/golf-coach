@@ -1,7 +1,7 @@
 # Architecture — the system AS BUILT
 
 > **Tier: AS-BUILT.** This document describes what actually exists and runs, reviewed
-> **2026-09-26**. Everything here has been executed. For the *target* design — the full
+> **2026-09-27**. Everything here has been executed. For the *target* design — the full
 > component/deployment picture, the build order, and the parts not yet written — see
 > [FLOW.md](FLOW.md).
 >
@@ -159,16 +159,20 @@ python scripts/conformance.py run < vector.json    # vector in, serialized resul
 python scripts/conformance.py list
 python scripts/conformance.py regenerate [--schemas-only]
 
-# The Rust half — six crates, and only one of them has a Python caller. `crates/trigger` is
+# The Rust half — seven crates, and only one of them has a Python caller. `crates/trigger` is
 # ball-strike detection and the clip-cutting rules around it (M20), and it is the one:
 # `audio/trigger.py` pipes PCM to `golf-trigger`. `crates/capture` is the camera edge (M21).
 # `crates/{contracts,analysis,feedback,core}` are the engine port (M22) — a second
 # implementation of everything `analyze_swing_bundle` does, wired to nothing. Its first real
 # caller is M24's session engine; until then its only caller is its own test harness, and
-# `api/pipeline.py` still calls `analysis/engine.py`. `cargo test` runs every vector family
+# `api/pipeline.py` still calls `analysis/engine.py`. `crates/pose` is the sidecar boundary
+# (M23, ADR-033) and runs the other way round: it *spawns* Python, one warm
+# `golf_coach.pose.worker` per pool slot, and speaks NDJSON to it. It has no caller either —
+# `api/pipeline.py` still poses in-process. `cargo test` runs every vector family
 # `conformance.py check` defers: audio against `trigger`, the format table and all seven stages
 # against `analysis`, every vector's shapes against `contracts`, and all 21 engine vectors
-# **end to end** against `core`.
+# **end to end** against `core`. No MediaPipe in any of it: `crates/pose`'s tests drive a stub
+# worker, and the real one is behind `GOLF_POSE_REAL_WORKER`.
 cargo build --release          # api/pipeline.py needs this before it can detect a strike
 cargo test
 cargo run --bin golf-core -- run < vector.json   # the port's answer to one vector, on stdout —
@@ -177,6 +181,18 @@ python scripts/trigger_replay.py [--sweep] [--concat] [--id SESSION/SWING]
 golf-capture list [--formats]  # the cameras this host can see, with their identities
 #   `no cameras` is a successful answer and exits 0 — it is also the only one this repo has
 #   ever gotten back, because the build machine is a desktop with nothing plugged in
+golf-pose run <clip> --out <dir> [--camera-id ID] [--variant V] [--python PATH] [--force]
+#   one clip through the pool, written as `{camera_id}.keypoints.json`. `--out` is required and
+#   replacing a file needs `--force`: a clip lives beside the keypoints file the Python
+#   pipeline wrote, which is M23's only oracle, so the convenient default would overwrite it
+golf-pose sweep <clip>... [--workers N] [--variant V] [--python PATH]
+#   several clips through ONE pool of N workers, printing the rate and a digest per reply and
+#   writing nothing — how `DEFAULT_POOL_SIZE` was measured (M23 P8)
+python scripts/pose_replay.py [--id SESSION/SWING] [--role ROLE] [--out DIR] [--shortest N]
+                              [--sweep N,N,...] [--python PATH] [--variant V]
+#   the stored corpus re-posed through `golf-pose` and diffed against the keypoints files on
+#   disk — ~70 minutes for all 30, reporting a census (clips, frames, values, values
+#   differing, worst delta) rather than a verdict. `--sweep` measures pool width instead
 #   check and run need `spec/` and nothing else — that is what committing the vectors buys.
 #   regenerate needs data/processed/, so it only runs on the capture machine, and it refuses a
 #   swing whose stored analysis is behind ANALYSIS_VERSION (run reanalyze.py first)
@@ -253,7 +269,7 @@ flowchart TD
     C["contracts/ — shared Pydantic shapes"]
 
     CAP["capture/<br/>FileVideoSource"] --> C
-    POSE["pose/<br/>estimator + overlay"] --> C
+    POSE["pose/<br/>estimator + overlay,<br/>sidecar worker (M23)"] --> C
     AUD["audio/<br/>decode port, Rust detector over a pipe"] --> C
     LMM["launch_monitor/<br/>mock, screen, composite"] --> C
     ANA["analysis/<br/>smoothing, phases, alignment,<br/>checkpoints, scoring, benchmarks"] --> C
@@ -325,6 +341,20 @@ list `crates/feedback` in its `Cargo.toml` and therefore cannot reach it, which 
 `crates/core` is the counterpart of `api/pipeline.py`. Nothing in Python imports any of them. The
 port conforms on all 21 committed vectors and is wired to nothing until M24 — both implementations
 stand, and ADR-032 §7 says why the Python is not deleted the way M20's detector was.
+
+**`pose/` gained a fourth entry point, and it is a shell rather than a module** (M23, ADR-033).
+`pose/worker.py` is what `crates/pose` spawns — `python -m golf_coach.pose.worker`, a handshake
+then one job line per clip — and it *orchestrates*: `capture.file.FileVideoSource` decodes,
+`pose.estimator.estimate_pose` poses, `contracts.keypoints` is the shape it replies in. That import
+of `capture` is the one **runtime** edge out of `pose/` into another module, taken lazily inside
+`_open_clip` so an absent `vision` extra is reported as a handshake failure rather than as an
+ImportError mid-job. Read it the way ADR-008's addendum reads `api` and `mcp` — a shell depending
+downward, with the graph still acyclic and `analysis/` untouched — rather than as a module reaching
+sideways; the type-only `capture.source.Frame` edge that addendum already records is unchanged, and
+`tests/api/test_pipeline_imports.py` pins that all four `pose` modules still import without numpy,
+cv2 or MediaPipe. Nothing in Python calls the worker: `api/pipeline.py` and `scripts/run_pose.py`
+keep calling `estimate_pose` in-process, deliberately, because nothing here should route through
+Rust to reach a Python function.
 
 **`audio/` is otherwise deliberately shaped exactly like `pose/`** (M11,
 ADR-025): an I/O-edge adapter behind an extra (`audio`, on `imageio-ffmpeg`), producing a contract
@@ -896,6 +926,18 @@ is trustworthy without hardware.
   §2 and ADR-032's eleventh addendum carry the list. **No vector moved and `ANALYSIS_VERSION` did
   not bump**, which means the port found no defect in this engine that changed an answer — and is
   silent about the two it could not see, both of which turned out to be overstated docstrings.
+- **And where a vector family could not exist, the gate is a binary and a corpus diff** (M23).
+  The pose sidecar's true input is a 4K `.MOV` that cannot be committed and a keypoints-only
+  family would be 239 MB before gzip, so ADR-033 declined one and `golf-pose` plus
+  `scripts/pose_replay.py` stand in its place: all 30 stored clips re-posed and diffed against the
+  keypoints files the Python pipeline left on disk — **42,648 frames, 5,757,660 values, 0
+  differing, worst absolute delta 0.0**, with the key *sets* compared too so an absent key cannot
+  pass for a null. The census is printed instead of a verdict for the same reason M22's flight gate
+  prints one. What it does *not* reach is one list in ADR-033's fourth addendum, and the two
+  headline gaps are no left-handed clip and no pool running beside a live capture.
 - **Not measured:** end-to-end wall-clock latency. The target is <15s swing-to-feedback
   (charter), but nothing has been benchmarked, and there is no UI to measure to. Any timing
-  table you find in [FLOW.md](FLOW.md) is an estimate, not a measurement.
+  table you find in [FLOW.md](FLOW.md) is an estimate, not a measurement. The largest known term
+  in it *is* now measured, and it is bigger than the charter: pose runs at **9.5–10.7 fps** on this
+  corpus's 4K portrait footage, so a two-view swing is about **two minutes** of posing on one
+  worker and about **70 seconds** on the two M23 measured as the right default.
