@@ -1,7 +1,7 @@
 # Documentation map
 
-73 markdown documents: 60 in `docs/` — 21 here at the top level (including this map), 34 ADRs,
-3 archived, 1 in `proposals/`, 1 in `plans/` — plus 13 outside it (the four at the repo root, and
+74 markdown documents: 61 in `docs/` — 21 here at the top level (including this map), 34 ADRs,
+3 archived, 1 in `proposals/`, 2 in `plans/` — plus 13 outside it (the four at the repo root, and
 one each in `data/`, `frontend/` and `spec/`, six in `spikes/`). This page says which one to read,
 and — just as importantly — which ones are records of the past rather than descriptions of the
 present.
@@ -9,7 +9,9 @@ present.
 *(`plans/` is new as of M23 and holds one file per milestone being built: the phase list and the
 findings each phase hands the next, which used to live in `ROADMAP.md`'s milestone section. A plan is
 read by the session building that milestone and nothing else routes to it, so it is listed in the
-count and not in a table below.)*
+count and not in a table below. The one exception to "one file per milestone" is
+`m31-m40-shot-first-pivot.md`, a program plan spanning ten milestones that each get their own file
+when they start.)*
 
 *(The breakdown is spelled out so the count can be checked rather than trusted — `git ls-files
 '*.md' ':!.claude'` — because a bare number here has gone stale twice. It is now pinned by
