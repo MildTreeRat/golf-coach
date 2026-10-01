@@ -13,15 +13,20 @@ the message types and the framing (P2), `golf_coach.pose.worker` answers jobs ov
 `pose::Worker` drives one child process end to end (P4), `pose::Pool` drives N of them (P5),
 `golf-pose` writes the artifact (P6), and the pool's default width is **2**, measured (P8). **The
 whole corpus agrees**: P7 replayed all 30 stored clips and found **0 differing values of 5,757,660**.
-The first *caller* is M24.
+The first *caller* was to be M24, then M40's, and is now M29's Rust lab CLI; the fifth and sixth
+addenda say why.
 
-**Four addenda at the foot, and the fourth is the closing one.** The first settles clause 4's open
+**Six addenda at the foot, and the fourth is the closing one.** The first settles clause 4's open
 field and three things the worker had to decide; the second settles what clause 9 means by "answer"
 and fills in clause 6's numbers — **and corrects one sentence of clause 6**, so read it before
 trusting that clause's account of what each timeout catches; the third carries the corpus measurement
 and narrows one of P6's; the fourth **rebuilds clause 8's reasoning on the right measurement**
 (measurement 4 below is wrong about the float repr), records the API clause 7 does not name, the
-measured pool size, and the coverage this sidecar does *not* have.
+measured pool size, and the coverage this sidecar does *not* have. The fifth is
+[ADR-034](034-shot-first-phone-first.md)'s: the sidecar is **laptop-only**, because the phone has no
+Python, and nothing in the protocol changes. The sixth is
+[ADR-035](035-rust-everywhere-python-where-required.md)'s: M29's lab CLI is the first caller, the
+Python keypoints writer lasts until M40, and nothing in the protocol changes either.
 [docs/plans/m23-pose-sidecar.md](../plans/m23-pose-sidecar.md) is the phase order and the per-phase
 findings.
 
@@ -317,7 +322,7 @@ sha256, never the keypoints file's.
 > `conformance.py`'s artifacts and not this one. Structural equality stays the rule for the reason in
 > the sentence after it, which is the one that was always load-bearing. Reusing `pyfmt` to reproduce CPython's repr on a write path with no
 reader was declined, and
-[§M29](../../ROADMAP.md#m29-the-last-python--retiring-the-lab-and-deleting-analysis) deletes the Python
+[§M29](../../ROADMAP.md#m29-the-lab-port--a-rust-lab-cli-the-rmcp-server-and-the-archive-move) deletes the Python
 writer anyway.
 
 ### 9. The interpreter is resolved the way `golf-trigger` is, and bundling is M26's
@@ -689,7 +694,7 @@ and the `with` sat outside the guard that maps a bad clip to `clip_unreadable`. 
 
 Recorded here rather than left in the plan because it is the argument for having a taxonomy at all: a
 protocol with one failure shape would have reported this correctly and uselessly forever. It is also
-[ADR-010](010-scoring-model-bands-and-caveats.md) §2 at a process boundary — a fact about the clip
+[ADR-010](010-benchmark-ranges.md) §2 at a process boundary — a fact about the clip
 reported as one — holding by accident until something checked.
 
 ### Clause 6's `fps_estimate` is confirmed conservative, and the pool size is a measurement
@@ -753,3 +758,120 @@ here, because one list is the form a reader can act on:
   and against files the Python pipeline wrote weeks earlier; it says nothing about another machine,
   and clause 8's structural comparison is what keeps that from being a question this repo has to
   answer.
+
+---
+
+## Addendum, 2026-09-29 — laptop-only: the phone has no Python, and the first caller moves to M40
+
+**[ADR-034](034-shot-first-phone-first.md) made a standalone iPhone the host.** This sidecar is a
+Python process that a Rust core spawns, and a phone runs no Python interpreter, so the sidecar cannot
+exist there. It is **laptop-only**. None of the nine clauses changes to say so, because the protocol
+was never about where it runs. It is about what crosses the pipe.
+
+### Where pose runs now
+
+- **On the phone**, pose is
+  [ADR-034 clause 8](034-shot-first-phone-first.md#8-pose-on-the-phone-is-reopened-behind-a-conformance-gate)'s:
+  MediaPipe's iOS `PoseLandmarker`, in process, behind M39 P0's gate. What the gate asks of the pose
+  decision is in [ADR-002](002-pose-estimation-mediapipe.md)'s 2026-09-29 addendum. That route never
+  reaches this protocol: there is no child to spawn and no pipe to frame.
+- **On the laptop**, pose is this sidecar, exactly as built.
+  [ADR-030](030-app-platform-rust-core-python-sidecar.md) §2 and §3 still hold there, word for word.
+
+### The first caller moves from M24 to M40
+
+M24 is paused and re-scoped under
+[M40](../plans/m31-m40-shot-first-pivot.md#m40--the-laptop-client-resumes), with M25 and M26. So the
+first caller of `pose::Pool` is M40's desktop app.
+
+One route gives the sidecar a purpose sooner than M40 would. If M39 P0's gate fails, the phone
+records and **mechanics are computed on the laptop**, and on the laptop that is this sidecar's job.
+A failed gate therefore gives the sidecar a second source of clips, not a new protocol: a clip that
+leaves the phone reaches the laptop as a file, and clause 2's envelope moves a path.
+
+Several sentences above name M24 or M26 as the place something is measured or decided. Rather than
+editing each one, this addendum is where the move is recorded, and **each now means M40**:
+
+- clause 7's *"backlog and thermal budget"*;
+- the fourth addendum's named cost, that a bad path spends a warm interpreter. *"If M24 measures that
+  churn as a problem"* is M40's measurement now;
+- the pool's width under a session's real load. `DEFAULT_POOL_SIZE` 2 was measured on the
+  development desktop, and nowhere else;
+- contention with capture running beside the pool, which is the fourth addendum's coverage list, on
+  M21's hardware, and M21 moved to M40 as well;
+- clause 9's bundling of the interpreter and the `.task` file. It is M26's, and M26 moves to M40
+  whole.
+
+### Pinning the model needs nothing from this protocol
+
+ADR-002's addendum has M39 P0 pin the laptop's `.task` by sha256 before the phone is compared to
+it. That happens beneath this protocol, in `pose/estimator.py`'s download, and it needs no field
+here. The `ready` handshake names an estimator and a variant, not bytes. If M39 P0 wants the
+handshake to carry the hash, that is a protocol change, and it belongs in an addendum here.
+
+### What this does not change
+
+- **The nine clauses**, and every number the M23 addenda measured.
+- **The fourth addendum's list of the coverage this sidecar does not have.** It is still owed, now
+  by M40.
+
+---
+
+## Addendum, 2026-09-30 — the Python writer outlives M29, the lab CLI is the first caller, and the protocol is unchanged
+
+[ADR-035](035-rust-everywhere-python-where-required.md) keeps Python only where it is required, and
+MediaPipe pose is the first thing it names
+([clause 1](035-rust-everywhere-python-where-required.md#1-the-rule-and-the-two-exceptions-it-names)).
+This boundary is how Python stays for it, so **none of the nine clauses changes**. What moves is when
+the things around the boundary happen, because ADR-035 re-scopes §M29 as the lab port and splits
+retirement into two moments
+([clause 5](035-rust-everywhere-python-where-required.md#5-the-lab-port-is-m29-re-scoped)). **Nothing
+here is built.**
+
+### The Python keypoints writer is deleted in M40, not in §M29
+
+Clause 8's note ends "§M29 deletes the Python writer anyway". That writer is
+`storage/keypoints_io.py::save_keypoints`, and `api/pipeline.py` calls it to cache each view's pose
+(`:298`, read 2026-09-30). ADR-035 draws the line between M29 and M40 at the frozen FastAPI server's
+import closure, and `api/pipeline.py` is inside it. So M29 does not delete the writer. M40 does, with
+`storage/`.
+
+Between M29 and M40, two writers produce `{role}.keypoints.json`: the Rust lab's, through
+`crates/pose`'s writer, and the frozen pipeline's. Clause 8 already covers that case. The comparison
+is structural, nothing compares these files as text, and the pose cache keys on the clip's sha256.
+The fourth addendum's reason for declining the `pyfmt` reuse therefore holds for the longer window
+too.
+
+### The first caller is M29's lab CLI, not M40's desktop app
+
+The fifth addendum moved the first caller of `crates/pose` from M24 to M40. ADR-035 brings it
+forward. M29's Rust lab CLI "calls Python only as a worker, for MediaPipe, through `crates/pose`"
+(clause 5), and M40 depends on M29
+([clause 6](035-rust-everywhere-python-where-required.md#6-order-the-phone-path-first)). So the lab CLI
+is the first caller. Whether it drives `pose::Pool` or a single `pose::Worker` is M29's plan.
+
+**The fifth addendum's list of what M40 measures stays M40's.** Four of its items are about a live
+session on the desktop app, or about packaging that app: the backlog and thermal budget, the pool's
+width under a session's real load, contention with capture, and the bundling of the interpreter and
+the `.task` file. The lab CLI poses stored clips offline, which is what `golf-pose run` did over the
+whole corpus in P7, so it measures none of them. The fifth item, the fourth addendum's named cost
+that a bad path spends a warm interpreter, is not tied to a session. The lab CLI is the first caller
+that could meet it, and whether M29 measures it is M29's plan.
+
+### The two pointers the Consequences hold
+
+- **The standalone `sidecar/` package stays M29's to decide**, and ADR-035's Deferred list keeps it
+  there. What such a package would hold has grown. The question was asked of the pose worker alone,
+  and ADR-035's survivors are the worker with `capture/` (which the worker decodes frames through),
+  and the LLM side as well (clause 1).
+- **"No Python entry point is added" holds, and one of its two examples goes.** `scripts/run_pose.py`
+  is deleted in M29, because `golf-pose run` already poses a clip (clause 2, Q10). `api/pipeline.py`
+  keeps calling `estimate_pose` in process until M40. The rule that nothing in Python routes through
+  Rust to reach a Python function stands.
+
+### What this does not change
+
+- **The nine clauses**, and every number the M23 addenda measured.
+- **The fifth addendum**: the sidecar is laptop-only, and a failed M39 gate gives it a second source
+  of clips rather than a new protocol.
+- **The fourth addendum's list of the coverage this sidecar does not have.** It is still owed by M40.

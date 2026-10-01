@@ -3,6 +3,10 @@
 ## Status
 Accepted
 
+**Amended by [ADR-035](035-rust-everywhere-python-where-required.md)** 2026-09-30: Option C ends
+with the Python MCP server in M40, and from M29 the LLM reaches the Rust server over stdio, which is
+Option B. The addendum at the foot says why, and the rest of this ADR stands.
+
 ## Date
 2026-08-15
 
@@ -167,3 +171,71 @@ becomes per-parameter schema descriptions, so nothing is lost by routing the pro
 - **What this does not do**: it does not let a conversation change anything. Every tool is a read.
   There is no "log this drill", no annotation, no write path — and adding one would need its own
   decision, because it would put a model's output into the artifacts the analysis reads back.
+
+---
+
+## Addendum (2026-09-30, M31.5): Option C ends with the Python MCP server, and the LLM drives the Rust one over stdio
+
+[ADR-035](035-rust-everywhere-python-where-required.md) ports the MCP server to Rust in M29 and keeps
+the LLM in Python
+([clause 1](035-rust-everywhere-python-where-required.md#1-the-rule-and-the-two-exceptions-it-names)).
+Option C, the decision above, calls `mcp/query.py`'s functions in process, and those functions are
+the Python server that is being ported. So Option C cannot outlive the port. This addendum records
+what replaces it, and when. **Nothing here is built**; M29 builds it.
+
+**Why not keep Option C over a Python copy of the query layer.** That copy would call `analysis/`, and
+under ADR-032 §7's third clause `analysis/` could then never retire
+([ADR-035's sub-decision](035-rust-everywhere-python-where-required.md#sub-decision-how-the-llm-reaches-its-tools-once-mcp-is-rust)).
+The other way out was to move the LLM to Rust. The user declined it, because Anthropic has no official
+Rust SDK and the LLM would need a hand-written tool loop over raw HTTP (Q9 and finding 3 of
+[M31.5 P2](../plans/m31-5-rust-first-replan.md#p2--found-2026-09-30)).
+
+**Option B, declined above, is chosen now.** `feedback/conversation.py` drives the Rust MCP server over
+stdio. Each of Option B's costs is paid as follows:
+
+- **"a process spawn and a wire round trip per tool call"**. A long-lived client session pays the
+  spawn once, not per call. The round trip is what every external client of the server already pays.
+- **"makes the `mcp` SDK a runtime dependency of the web server"**. The `mcp` package is
+  already in the `llm` extra, which survives whole for this reason (clause 1). The web server that the
+  dependency would have burdened is the frozen FastAPI one, and M40 ports or drops it.
+- **"makes every follow-up answer depend on a subprocess launching correctly"**. Accepted. ADR-035's
+  Consequences name it as the price of letting `analysis/` retire.
+
+**One of Option C's own costs goes away.** The Consequence "Two tool definitions over one
+implementation" was the drift risk that the tool-description seam existed to contain. Under Option B
+there is one set of definitions.
+
+- The SDK's `anthropic.lib.tools.mcp.mcp_tool` builds each runner tool from the server's `list_tools`
+  result. It takes the tool's `description` and `input_schema` from the server, and passes the
+  description as an argument (read in `anthropic` 0.121.0, 2026-09-30).
+- So the `__doc__` mechanism recorded above is not needed on that route. It stays true of
+  `mcp/runner_tools.py` for as long as that file exists.
+
+**When** ([clause 5](035-rust-everywhere-python-where-required.md#5-the-lab-port-is-m29-re-scoped),
+Q17):
+
+- **M29 adds the stdio route beside the in-process one.** It does not rewire the frozen server:
+  `api/app.py` keeps handing `conversation.py` the in-process tools from `mcp/runner_tools.py`. M29's
+  plan names which callers take the new route.
+- **M40 ends Option C.** It deletes Python `mcp/` and ports or drops the frozen server, and from then
+  on stdio is the only route.
+- **The injection seam is what makes this a change of caller.** `conversation.py` takes `tools` as an
+  argument (§Decision), so its loop does not need to know which route built them.
+- **One thing is new, and M29's plan settles it.** `mcp_tool` is synchronous, but it reaches the async
+  client session through `anyio.from_thread.run`. So the session has to live on an event loop that the
+  runner's thread can call into.
+
+**The caveat prose is still open.** `conversation.py` imports `ONLY_CHECKPOINTS_ARE_JUDGED` from
+`contracts/caveats.py` into its own instructions, `ANSWERING_FOLLOWUPS`. That module ports with the
+server in M29 (finding 4 of
+[M31.5 P2](../plans/m31-5-rust-first-replan.md#p2--found-2026-09-30)). Whether the prose then reaches
+Python through the server or through a kept copy is M29's to settle (ADR-035 clause 1, and its
+Deferred list).
+
+**Not changed**:
+
+- the transcript store, and the reasons it is not optional. `contracts/conversation.py` and
+  `storage/transcript_store.py` both survive by name (clause 1);
+- verbatim blocks, the model-bound transcript and `brief_digest`;
+- Options A and D, still rejected on their own grounds;
+- the model parameters, and "every tool is a read".

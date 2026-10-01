@@ -247,3 +247,65 @@ The ~24 fps this ADR measured for `heavy` is the throughput the whole live desig
 a 10 s 60 fps clip is roughly 25 s of pose, a two-view swing roughly 50 s. The `lite` variant's
 ~4x speed at no significant cost on event recovery is also ADR-030's answer for a slow laptop, in
 place of the cloud worker it declined to build.
+
+## Addendum (2026-09-29, M31): pose on the phone, behind a gate, and the model pinned first
+
+[ADR-034](034-shot-first-phone-first.md) makes a standalone iPhone the host. A phone has no Python,
+so the previous addendum's *"pose stays here"* cannot hold there, and
+[ADR-034 clause 8](034-shot-first-phone-first.md#8-pose-on-the-phone-is-reopened-behind-a-conformance-gate)
+reopens pose on the phone. This addendum records what that asks of *this* decision. **On the laptop
+the decision is unchanged in every particular**, and the sidecar keeps running it; ADR-033's
+2026-09-29 addendum makes the sidecar laptop-only.
+
+**On the phone it is still MediaPipe, and still this model.**
+
+- **iOS's Tasks `PoseLandmarker`.** This is the Tasks API the 2026-06-28 addendum chose, through its
+  native SDK rather than its Python binding.
+- **The same `.task` bytes, pinned by sha256.** The variant is `settings.pose_model_variant`'s. It
+  has been `heavy` since the 2026-08-30 addendum, and all 30 stored keypoint files are `heavy`, so
+  the phone is gated against the variant the corpus was posed with.
+- **`RunningMode.VIDEO`.** The cross-frame tracking the 2026-08-02 addendum named as the likely
+  reason RTMPose lost comes with it.
+- **The CPU delegate.** `pose/estimator.py` names no delegate, so the phone is asked for the plainest
+  path, not the fastest. A GPU or Neural Engine delegate is different arithmetic: a question to
+  measure once the gate has passed, not a way to pass it.
+
+**The laptop's model is pinned before anything is compared to it.** M31 P2 measured this on
+2026-09-29:
+
+- `pose/estimator.py`'s `_MODEL_URL` (lines 43–45) fetches `…/float16/latest/…`, the URL the
+  2026-06-28 addendum records;
+- `urllib.request.urlretrieve` downloads it (line 98) with **no hash check**.
+
+`latest` is a pointer Google can move. The `pose_estimator` stamp that
+`api.pipeline.keypoints_for` compares reads `mediapipe:heavy`, which names a variant and not bytes,
+so a re-download after the pointer moves would change the laptop's instrument, and nothing would
+notice. A phone-to-laptop comparison against that URL would compare whichever bytes each side
+happened to fetch. So M39 P0 pins the laptop first, and the phone loads those same bytes.
+
+**The gate is M39 P0.** The stored face-on clips are re-posed on the phone and scored by
+`golf-core run`. The gate passes only when **every `passed` verdict is identical and every delta is
+within its tolerance**.
+
+- It is deliberately a **tolerance** gate, not ADR-033's zero-tolerance one. Bit-determinism was
+  measured on one Windows desktop, and ADR-033's closing addendum says it *"says nothing about
+  another machine"*. The phone decodes frames with a different decoder, on a different CPU
+  architecture.
+- Verdicts must match **exactly**, because a verdict is what the golfer reads. Landmarks need not,
+  and cannot be expected to.
+
+**If the gate fails**, the phone records, and mechanics are computed on the laptop (M40) by this
+decision exactly as it runs today. There is no third branch: the bands are not re-fitted against
+the phone's landmarks, and no other pose model stands in.
+
+**`ranges.json` is untouched either way.** That is what the gate protects. The 2026-08-02
+measurement is why a different pose pipeline is not a detail: RTMPose lost **24.7pp** on event
+recovery. M39 P0 is there to answer whether the phone's MediaPipe is "a different pose pipeline" in
+that sense, rather than assume it is not.
+
+**Not changed**:
+
+- the Tasks API, and the variant as configuration;
+- the bay's `heavy`, and the 2026-08-30 addendum's band caveat: `ranges.json` was cut from `lite`,
+  and `_band_estimator_note` still says so;
+- the laptop's sidecar.

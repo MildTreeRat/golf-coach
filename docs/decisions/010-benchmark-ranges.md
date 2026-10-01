@@ -460,3 +460,93 @@ is the fusion that kept the panel at three checkpoints.
   handedness reached it; whether nobody picked a golfer or a `player_id` names one missing from the
   registry is knowledge that exists only in the shell, and the two want different fixes. The reason
   says what was missing, the note says how.
+
+## Addendum (2026-09-30, M31): not printed is not unscored, and shot metrics get no bands
+
+[ADR-034](034-shot-first-phone-first.md) grades launch-monitor shots, over many of them, per club
+and per player. This ADR governs two things that decision leans on: what happens when a number is
+missing, and where the numbers that judge come from. ADR-034 **extends §2's rule** (its last
+sentence, "a missing range yields no score for that checkpoint rather than a wrong one", which the
+addenda above call *no score beats a wrong one*) with three neighbours and one exception, and it
+**takes shot metrics out of this file**. Each point routes to an ADR-034 clause. **Nothing here is
+built**; M32, M35 and M37 build it.
+
+**§2 extended: four ways to be without a number, and each says something different.**
+
+| Case | What it produces | ADR-034 |
+|---|---|---|
+| A field the golfer's device does not print | **Nothing**: no measurement, no `unscored` entry, no caveat, no tip and no topic | [clause 2](034-shot-first-phone-first.md#2-printed-and-not-printed-the-device-capability-model) |
+| A printed field that is blank or unreadable on one shot | `unscored`, excluded and named, exactly as §2 and the 2026-08-19 addendum already do it | clause 2 |
+| A topic that is printed but has too few tracked shots to grade | **Excluded from its blend and named** | [5.5](034-shot-first-phone-first.md#55-ungraded-is-named-impossible-is-absent) |
+| A shape the golfer never declared | **Absent**, because nothing was asked | [5.3](034-shot-first-phone-first.md#53-shot-shapes), 5.5 |
+
+**Why "not printed" is not `unscored`.** `unscored` exists because `overall_score` is a mean over
+survivors, and a swing judged on fewer fundamentals must not print the same shape of number as one
+judged on all of them (the 2026-08-19 addendum). That argument needs the missing number to have been
+*possible*. A golfer whose screen never shows low point was not judged on less than a golfer whose
+screen does: they own a different screen. Naming it on every shot would tell them, on every shot,
+about a stat they cannot see, and a refusal repeated on every shot stops being read. So the printed
+set is decided per golfer, not per shot: declared by the device's entry in `devices.json`,
+intersected with what the golfer's own shots have actually carried (M32).
+
+**Why a blank printed field *is* `unscored`.** The stat is on this golfer's screen, so this shot is
+judged on less than their others, which is precisely the case the disclosure exists for.
+
+**Absent, not zero.** A blend with no graded topic is absent
+([5.5](034-shot-first-phone-first.md#55-ungraded-is-named-impossible-is-absent)).
+`analysis/scoring.py::_mean_percent` returns 0.0 for an empty list, so a swing with every checkpoint
+unscored prints an `overall_score` of 0.0 today (M31 P2, 2026-09-29). The blends do not copy that.
+M31 changes no code, so the swing's edge is recorded here and not fixed.
+
+**The one sanctioned inference.** ADR-034 clause 2 says nothing stands in for a stat that is not
+printed, which is §2's rule applied to a device. It has exactly one exception: the **projected
+landing offline** of [5.3](034-shot-first-phone-first.md#53-shot-shapes), which the shape topics'
+"finished on line" share needs and HD Golf does not print. It is the user's choice, made knowing
+the objection.
+
+- It is **named as projected** everywhere it appears, following
+  [ADR-024](024-per-club-shot-history.md) §3's start-line projection.
+- It **includes the curve**, because a start-line-only projection would mark every well-hit fade
+  offline.
+- Where it cannot be computed, the on-line share is **withheld and named**, which is §2's rule
+  again. At the bay as seen that is every shot: the curve reaches the flight only through a printed
+  spin axis, so the projection reaches 2 of the 13 stored shots and none of the 11 from 2026-08-23
+  (M31 P2, 2026-09-29).
+- **Printed replaces projected** as soon as a device prints a landing offline.
+
+This ADR records the exception because it is the one place where a number that judges is not a
+number that was measured. A second exception needs a decision of its own, not this one as its
+precedent.
+
+**Shot metrics get no bands**
+([5.6](034-shot-first-phone-first.md#56-no-tour-bands-for-shot-metrics)).
+
+- **`ranges.json` is untouched, and gains no shot row.** Shot metrics are judged against the
+  golfer's personal baseline plus the targets and tolerances in
+  `contracts/dispersion.py::METRIC_TARGETS`. The shot rows' tolerances there are judgment
+  (`_JUDGED_*`: "no instrument-error evidence exists for the OCR path"), and the code says so.
+- **Why.** A topic's grade is a share of good shots, which is honest without a band
+  ([5.1](034-shot-first-phone-first.md#51-a-topics-grade-is-a-share-of-good-shots)). And a tour
+  band would be judging the wrong thing. TrackMan's tour averages describe tour players on a radar,
+  while these shots are one amateur's, read by OCR off a simulator whose smash factor prints
+  0.76–1.06 (M31 P2, 2026-09-29).
+- **Three sentences of this ADR's body are superseded for shot metrics**, and stand for the
+  mechanics panel:
+  - §3's "club/skill keying matters mostly on the **outcome** axis (launch/spin/distance)";
+  - §4's "TrackMan + Arccos/Shot Scope per-club outcome norms";
+  - the last Consequence's "intent selects *which* range applies (e.g. fade vs. straight
+    face-to-path)". Intent now selects the shape topic a shot is graded in, and one tolerance
+    classifies every shape. ADR-009's addendum of this date records that half.
+- §4's longest-term line, *"eventually a personal baseline: 'vs. your last month'"*, is the route
+  shot metrics take instead. It is the conclusion the 2026-08-18 addendum reached for tempo, a
+  personal signature whose axis is the golfer and not a band in this file.
+
+**Not changed**:
+
+- §1 and §2 for the mechanics panel: bands are versioned data with provenance, `resolve_range`
+  falls back most-specific-first, and a checkpoint with no band is `NO_BAND`;
+- every band in `ranges.json`, and `ANALYSIS_VERSION`;
+- the `unscored` vocabulary and `refilming_helps` (the 2026-08-19 addendum). "Not printed" is not a
+  new reason, because it produces no entry at all;
+- the 2026-08-18 addendum's "no per-club row". The shot grades are per club, but they are shares
+  against a criterion, not bands, so that gate is neither reopened nor needed.

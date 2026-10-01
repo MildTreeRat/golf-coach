@@ -10,6 +10,10 @@ and ADR-025 are all unaffected, and §5 below says why.
 "survives a replug" turned out to need a qualifier. Read the **2026-09-22 addendum** below before
 either clause — it is where the hardware corrected them.
 
+**Paused 2026-09-29.** [ADR-034](034-shot-first-phone-first.md) made the phone the host, and M21 is
+re-scoped under M40 as the desktop target of the same app. The **2026-09-29 addendum** says what
+that leaves standing, which is every clause.
+
 ## Date
 2026-09-22
 
@@ -299,3 +303,46 @@ than planned, and §M21 now says so.
 A smaller finding than the two above, recorded for the reason M20's cut rules were: a phase that
 believes it needs no hardware gets scheduled as desk work, and then spends its session finding
 out that it is not.
+
+## Addendum, 2026-09-29 — paused under M40, as the desktop target of the same app
+
+**[ADR-034](034-shot-first-phone-first.md) made a standalone iPhone the host, and the laptop a later
+client.** M21 is paused and re-scoped under
+[M40](../plans/m31-m40-shot-first-pivot.md#m40--the-laptop-client-resumes), as the desktop target of
+the same Flutter app ([ADR-034 clause 6](034-shot-first-phone-first.md#6-the-phone-is-the-host)).
+The cameras this ADR was building for are still wanted. They are wanted later, by a client that
+comes after the phone rather than before it. None of the eight clauses is wrong, so this addendum
+changes none of them. It records what waits, and the one place where the ADR's premise moved under
+it.
+
+### What stays as it is
+
+- **`crates/capture` stays built, and has no caller.** That is how P1 left it: enumeration only, with
+  nothing above it. Nothing is deleted. [ADR-030](030-app-platform-rust-core-python-sidecar.md)'s
+  retirement rule is about Python that has a conforming Rust port, and this crate has no Python
+  original. With no second implementation, a crate nothing calls has nothing to drift from. It costs
+  a `cargo test`, the same position `crates/analysis` held when M22 closed.
+- **§4's camera choice stays unmade.** Media Foundation is still the provisional backend, and the
+  crate doc still says the verdict is owed. The reason has not moved: the build machine is still a
+  desktop with no camera attached, and a bake-off with nothing to enumerate decides nothing. M40
+  inherits the first addendum's hardware finding along with the choice. The USB camera is wanted from
+  P1, not P4.
+- **§3's swing directory, §5's host clock, §6's encoded ring and §7's identity** are the laptop's,
+  and they wait with M21, unchanged.
+
+### Where the premise moved: §8's phone
+
+§8 sent **phone over Wi-Fi** to M28, *"blocked on M25"*, because ADR-030 §5 put the phone app after
+the laptop's. ADR-034 supersedes that §5. M28 is superseded by
+[M39](../plans/m31-m40-shot-first-pivot.md#m39--optional-video-on-the-phone-mac-then-bay), where the
+phone records its own optional clip and keeps it. So the source §8 moved out of M21 does not come
+back to this edge: the phone no longer feeds the laptop.
+
+*Deferred, by choice* named the phone's capture, in M28, as the second implementation that would
+make a capture conformance family worth building. That is M39's recording now, and whether it
+reopens the bullet is M39's question. This addendum does not answer it.
+
+### What this does not change
+
+The eight clauses, the first addendum's findings, and the non-effect on ADR-011, ADR-015 and ADR-025.
+Nothing in `analysis/` moves, and `ANALYSIS_VERSION` does not bump.

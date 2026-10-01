@@ -8,6 +8,10 @@ whose phase list and interview record are [m31-shot-first-adr.md](../plans/m31-s
 is a camera, and its app comes after the laptop's") and the premise its Context states, *the machine
 is a laptop*. The rest of ADR-030 stands, and §7 (cloud closed) is reinforced.
 
+**Superseded in part by [ADR-035](035-rust-everywhere-python-where-required.md)** 2026-09-30: §7's
+lab reader, §9 in part, and the Consequence that blocked M29 on M40. The addendum at the
+foot names each sentence, and the rest of this ADR stands.
+
 It amends ten ADRs, each by an addendum in that ADR rather than by editing it here:
 [002](002-pose-estimation-mediapipe.md), [009](009-swing-scoring-model.md),
 [010](010-benchmark-ranges.md), [014](014-screen-capture-shot-ingestion.md),
@@ -43,8 +47,9 @@ in a session. Per-club strengths, weaknesses and grades come from those numbers.
 optional visual aid, and the first host is a standalone iPhone app. The laptop comes back later as
 a client for what only a laptop can do. The program plan's
 [Why](../plans/m31-m40-shot-first-pivot.md#why) and
-[Decisions](../plans/m31-m40-shot-first-pivot.md#decisions-the-users-2026-09-29) are the long form,
-and the M31 interview's Decisions 6–17 are what clauses 2–5 below turn into rules.
+[Decisions](../plans/m31-m40-shot-first-pivot.md#decisions-the-users-2026-09-29) are the long form.
+"Decision N" below means that list's numbering, and its items 6–17, from the M31 interview, are
+what clauses 2–5 turn into rules.
 
 **What the HD Golf data supports, measured.** Thirteen shots are stored, all `hd_golf`, all from two
 bay sessions: a pair on 2026-08-10 and eleven on 2026-08-23. The two reference photos in
@@ -110,9 +115,11 @@ The phone photographs, reads, stores and grades. The laptop becomes a later clie
   in `launch_monitor/screen/recognizer.py` already takes, and VisionKit's document camera does the
   rectification that `preprocess.py` does with OpenCV today. Whether it reads *this* screen well
   enough is the product's biggest unknown, so M33 tests it first, before any app work.
-- **PaddleOCR on-device**: the lab's recognizer, so its boxes would be closest to what the vectors
-  record. It means converting a model and bundling a second inference runtime for a recognizer
-  whose only advantage is familiarity, and OpenCV's preprocessing would still have to come along.
+- **PaddleOCR on-device**: the lab's recognizer, so its boxes would be closest to the ones the
+  stored shots were read from. It means converting a model and bundling a second inference runtime,
+  and OpenCV's preprocessing would have to come along too. The closeness buys less than it seems:
+  what the vectors gate is the parser, boxes in and a shot out, and any recognizer behind the seam
+  feeds the same parser.
 - **ML Kit**: Android-first. Android is deferred (Decision 13), and the seam keeps ML Kit reachable
   when it is not.
 - **A vision LLM**: still rejected, on [ADR-014](014-screen-capture-shot-ingestion.md) Option D's
@@ -384,8 +391,9 @@ stays a laptop and lab feature.
 - **Handedness has no route to a photo-only shot.** It reaches a shot today only through the swing
   manifest that holds the photo, then the player and the golfer store, so a photo with no swing gets
   `None`. M35 needs another route, or every photo-only shot withholds its on-line share.
-- **The screen is read by two recognizers**, Vision on the phone and PaddleOCR in the lab, and their
-  boxes are not identical. The parser is the one they share, and it is what the M34 vectors gate.
+- **The screen is read by two recognizers**, Vision on the phone and PaddleOCR in the lab, and
+  nothing makes their boxes identical. The parser is what they share, and it is what the M34 vectors
+  gate; whether Vision's boxes parse as well is M33's question, answered before any app work.
 - **A known label hazard ships into the port unless it is fixed first.** OCR drops the `V` from
   `Impact Position V` on 2 of the 13 bay photos, and on one of them the wrong tile then wins the
   field. M32/M34 own the fix and its test, and ADR-014's next addendum corrects the cause its first
@@ -407,3 +415,89 @@ stays a laptop and lab feature.
   and nothing stands in for it. A device that prints it gets the topic with no new rule.
 - **User-set blend weights.** Equal until a weighting has been measured, and the blend names the
   topics it averaged, so a later weighting has something to act on.
+
+## Addendum (2026-09-30, M31.5): the oracle moves to Rust, the lab's reader ports, and M35 follows M36
+
+**M31.5 P4**, docs only. [ADR-035](035-rust-everywhere-python-where-required.md) supersedes §7's lab
+reader, part of §9, and the Consequence that blocked M29 on M40
+([its clause 7](035-rust-everywhere-python-where-required.md#7-what-this-supersedes-sentence-by-sentence)).
+The rest of this ADR stands. Nothing here was built, so nothing built changes. The reasons are
+ADR-035's. This addendum names the sentences above that stop holding.
+
+### §9: recorded from Python once, and by Rust after that
+
+- **"A port of existing Python is recorded from Python, as M22 was" now means once.**
+  - The recording happens before the port moves. After that, Rust re-records under a structural diff
+    gate ([clause 3](035-rust-everywhere-python-where-required.md#3-the-oracle-moves-to-rust)).
+  - M34's parser and M36's aggregates and stores are recorded from the frozen Python lab. Adding
+    those families to the recorder is the one change the frozen lab is allowed
+    ([clause 4](035-rust-everywhere-python-where-required.md#4-the-frozen-python-lab)).
+- **"New analysis is Rust first, against hand-worked vectors" stands, and it widens to all new
+  behaviour.** That includes new behaviour on a port.
+  - M34's tie rule and its `Impact Position V` tile are new behaviour on a port. They get hand-worked
+    vectors on top of the Python recording
+    ([P2 finding 6](../plans/m31-5-rust-first-replan.md#p2--found-2026-09-30)).
+  - M37's pin, that every family names its oracle, stands.
+- **"The lab reaches Rust-only analysis through `golf-core` subcommands" is superseded.**
+  - The frozen lab reaches no new analysis at all. From §M29 the lab is a Rust CLI.
+  - The sentence's other half, "never through a second Python copy", stands and now covers
+    everything.
+- **§9's reason now applies to M35 too.** That reason is that a Python module written first "would
+  be a module born to be retired". ADR-035 applies it to M35, which the program plan had planned as
+  Python (ADR-035's Option A).
+
+### §7: the lab's reader ports too
+
+- **"PaddleOCR and OpenCV stay as the lab's reader" is superseded.** The reader ports in §M29, using
+  `ort` to run the same Paddle models
+  ([clauses 2](035-rust-everywhere-python-where-required.md#2-everything-else-ports-including-the-three-things-considered-and-not-kept)
+  and [5](035-rust-everywhere-python-where-required.md#5-the-lab-port-is-m29-re-scoped)).
+  - Its gate is the 13 stored bay photos. On each photo, the shot parsed from the Rust reader's boxes
+    is compared with the shot parsed from PaddleOCR's boxes.
+  - The two recognizers still meet at the seam, and the parser is still what the vectors gate.
+  - The vision LLM stays rejected.
+- **"The port is recorded from Python" means once**, as in §9 above.
+- **The Python parser is frozen with its tie hazard** (clause 4). So from M34 until §M29, the phone
+  and the lab read the two label-fix shots differently (ADR-035's Consequences).
+
+### Clause 6 and the Consequences
+
+- **Clause 6 says "Export (M38 P4) is how data leaves it, and the lab imports it".** The lab's
+  importer becomes a verb of §M29's Rust lab CLI (Q8), so M38 P4 waits on M29.
+- **"M29 is blocked on M40 instead of M25, and its job is unchanged" is superseded by clause 5.**
+  §M29 is the lab port. It runs after M36, depends on M34 and M36, and is not blocked on M40. M40
+  does the deletes.
+- **"`ANALYSIS_VERSION` is forced to move in M32 … The vectors are regenerated in the same change"
+  still holds, in Rust only.**
+  - `golf-core` re-records them, diff-gated. The declared diff is the new `ShotData` keys, plus the
+    version number itself.
+  - Frozen Python's version stays at 16, by design (clause 3).
+- **The Consequences that give work to M35 are still M35's, but in Rust and after M36**
+  ([clause 6](035-rust-everywhere-python-where-required.md#6-order-the-phone-path-first)). There are
+  three: a policy for a mode other than `FUNDAMENTALS`, photo-only corpus admission, and a
+  handedness route for a photo-only shot.
+  - M31's program plan had M35 write them in Python, as M36's oracle.
+  - Now M36 ports `read_corpus` as it behaves today. M35 then changes it in Rust, with hand-worked
+    vectors.
+  - `shot_result` moves from M36's list to M35's.
+- **"A known label hazard ships into the port unless it is fixed first … M32/M34 own the fix."**
+  M34 owns it, in Rust only, and the frozen Python parser keeps it (clause 4).
+- **"The screen is read by two recognizers, Vision on the phone and PaddleOCR in the lab."** There
+  are still two. From §M29 the lab's recognizer runs Paddle's models through `ort`.
+- **"The stdlib-only scoring core in both languages"**, in the list of what is unchanged. The Python
+  half is frozen from M32 and deleted with `analysis/` in M40. The Rust half is the one that matters
+  from M32.
+
+### What this does not change
+
+- **Clauses 1–5, 8 and 10.** These are the shot as the unit, the capability model, tracked shots,
+  the two levels, the grades, pose on the phone behind M39's gate, and no LLM on the phone.
+  - Clause 10's `feedback/coach.py` stays a laptop and lab feature.
+  - It is one of the two things ADR-035 keeps in Python
+    ([clause 1](035-rust-everywhere-python-where-required.md#1-the-rule-and-the-two-exceptions-it-names)).
+- **Clause 6's standalone iPhone, and its on-device storage.**
+- **`ranges.json`, ADR-008's import rule, and "no score beats a wrong one".**
+- **The order this ADR set for M32–M34 and M37–M39.** ADR-035 changes only three things in it:
+  - it puts M31.5 before M32;
+  - it runs M36 before M35;
+  - it moves §M29 from after M40 to before it.

@@ -1,14 +1,20 @@
 # AI Golf Swing Trainer
 
-A home-lab AI-powered golf swing analysis system that captures your swing via camera, integrates launch monitor data, analyzes mechanics, and delivers coaching feedback.
+A home-lab golf trainer that is becoming **shot-first and phone-first**
+([ADR-034](docs/decisions/034-shot-first-phone-first.md)): you photograph the launch-monitor
+screen shot after shot, and a standalone iPhone app grades each club, and the player, from those
+numbers, with swing video an optional aid. None of that is built yet, and
+[ROADMAP.md's M31–M40 group](ROADMAP.md#shot-first-phone-first-m31m40) is the plan.
+
+What runs today is what it grew out of: an AI-powered golf swing analysis system that
+captures your swing via camera, integrates launch monitor data, analyzes mechanics, and delivers
+coaching feedback.
 
 ## Project Status
 
-> **⭐ NEXT ACTION — do this first:** add a real `GOLF_ANTHROPIC_API_KEY` to `.env` and run
-> `python scripts/analyze_bundle.py 2026-08-10/2 --no-video` to verify M6 coaching against the
-> live API. The coaching path is built and green, but only against a fake client — no real request
-> has been sent yet. See the **NEXT ACTION** note atop [ROADMAP.md](ROADMAP.md) for what to check
-> in the output.
+> **⭐ NEXT ACTION** lives in one place: under the status table in
+> [ROADMAP.md](ROADMAP.md#status-at-a-glance). This file used to carry its own copy, and the copy
+> went stale.
 
 **Working today, no hardware required:** drop a face-on swing clip in `data/raw/`, and the
 pipeline extracts pose, segments the swing, scores six checkpoints against tour-derived
@@ -22,21 +28,9 @@ photo of the shot screen from two phone browsers, and the third file triggers th
 in the background — the results page has the score, the bands, the tips and the aligned video by
 the time you have walked back from the bay.
 
-| Milestone | State |
-|---|---|
-| **M1** Capture & skeleton | ✅ Done — MediaPipe pose, face-on canonical angle |
-| **M1.5** Club-head detectability spike | ✅ Done *(2026-08-14)* — **no-go**: the head is destroyed by exposure, not by the detector |
-| **M2** Club & ball detection (YOLOv8) | 🔒 Gated — needs bay lighting for a ~1/2000 s exposure, *not* a global-shutter camera ([ADR-017](docs/decisions/017-club-head-detection-strategy.md)) |
-| **M3** Launch monitor / MCP | 🟡 Shot ingestion (screen OCR) + MCP server done; OCR tuning left |
-| **M4-PoC / PoC+ / REF** Pose-only analysis | ✅ Done — 6 checkpoints, bands validated vs 461 tour clips |
-| **M5-FB** Prioritised coaching feedback | ✅ Done — ranked tips, tour percentiles |
-| **M4** full (outcome axis) | ⬜ Needs the M2 + M3 streams |
-| **M6** LLM coaching | 🟡 Claude writes the per-swing verdict; follow-up Q&A left |
-| **M6.5** Measure now, judge later | ✅ Done — 9 metrics recorded per swing, 6 of them scored |
-| **Career mode** One golfer over time | ✅ 6/6 steps — built, and currently **silent by design**: it reports **n = 2** per metric and refuses every claim over that. A bay session is what makes it speak |
-| **M9** Player tracking (per-club) | ✅ Done *(2026-08-22)*, 20/20 phases — the club tag at capture, a declared bag with lofts, and the per-club profile behind a CLI, a bag page and two MCP tools. **Silent by design** until swings carry the tag |
-| **M5** Feedback UI | ⬜ Not started — a static results page stands in for it |
-| **M7** Two-phone sim capture | 🟡 6/7 phases — only the Phase 0 field spike is left |
+Where each milestone stands is [ROADMAP.md's *Status at a glance*](ROADMAP.md#status-at-a-glance),
+and nowhere else. This file kept a second copy of that table, and by the time it was removed it
+stopped at M9 and still called M6 unfinished.
 
 See **[docs/README.md](docs/README.md)** for the documentation map,
 [ROADMAP.md](ROADMAP.md) for milestone detail, and [WORKLOG.md](WORKLOG.md) for

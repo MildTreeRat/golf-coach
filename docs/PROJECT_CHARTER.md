@@ -11,24 +11,44 @@ Home Lab AI Golf Swing Trainer
 2026-03-16
 
 ## Last Updated
-2026-09-21 — **scope has moved for the first time**: "Mobile app" is no longer out of scope
-([ADR-030](decisions/030-app-platform-rust-core-python-sidecar.md)). Purpose and goals are still
-unchanged since 2026-03-16. Everything outside "How the charter has been refined" below is still
-the original text — §3's out-of-scope list included, because this charter records what changed
-rather than rewriting what it said.
+2026-09-30 — **scope has moved a second time, and further than the first move took it.** On
+2026-09-21 "Mobile app" left the out-of-scope list with the phone as a camera
+([ADR-030](decisions/030-app-platform-rust-core-python-sidecar.md)). On 2026-09-29
+[ADR-034](decisions/034-shot-first-phone-first.md) made the launch-monitor shot the unit of the
+product and a standalone iPhone its host. Purpose and goals are still the 2026-03-16 text, and §1
+still names both halves of the product, the camera and the launch monitor; what ADR-034 changed is
+which one leads. Everything outside "How the charter has been refined" below is still the original
+text — §3's out-of-scope list included, because this charter records what changed rather than
+rewriting what it said.
 
 ---
 
 ## 0. How the charter has been refined
 
 The charter has held up well — the purpose, the four goals, and the in/out-of-scope lines all
-still describe the project. Three things have been *sharpened* by later decisions, and the
-success criteria in §4 read as pre-decision as a result:
+still describe the project. Three things have been *sharpened* by later decisions, a fourth has
+turned the product round, and the success criteria in §4 read as pre-decision as a result:
 
+- **The shot is the unit of the product, and mechanics are optional**
+  ([ADR-034](decisions/034-shot-first-phone-first.md#1-the-unit-of-the-product-is-the-shot),
+  2026-09-29). The golfer photographs the launch-monitor screen, shot after shot, and each club and
+  the player are graded from the numbers the device prints. A session of photos with no video is
+  complete. When video exists, the pose checkpoints are scored as before, in a separate panel that
+  never moves a grade. §1's sentence still holds, but its launch-monitor half now leads and its
+  camera half is optional. The project's biggest unknown moves with it: not whether the club head
+  can be seen (§6's first risk), but whether the phone can read the simulator's screen, which §6
+  did not foresee and M33 tests first.
 - **Scoring is dual-axis, not a single score.** [ADR-009](decisions/009-swing-scoring-model.md)
   separates `mechanics_score` from `outcome_score`, combined by a policy chosen from the
   golfer's practice intent. §4's "scores swing quality" is therefore two numbers and a policy,
-  not one number.
+  not one number. **Since ADR-034, outcome is not a per-swing number at all**
+  ([clause 5](decisions/034-shot-first-phone-first.md#5-grades-a-grade-and-a-list-per-topic)):
+  `outcome_score` stays `None`, because a share of one shot means nothing. Outcome is graded per
+  **topic** (where on the face, consistency, low point where the device prints it, and each shot
+  shape the golfer declared) as the share of a club's tracked shots meeting the topic's criterion,
+  then blended once per club and once for the player. The two axes are no longer combined, and
+  intent now decides which shots count (a drill does not) and which shape is graded, rather than
+  how two scores are weighted.
 - **"Known fundamentals" now means a measured population, not a book.**
   [ADR-012](decisions/012-golfdb-reference-data.md) replaced eyeballed and book-sourced bands
   with p10–p90 ranges derived from 1,399 hand-annotated tour swings. §1's "against known
@@ -52,9 +72,16 @@ Three out-of-scope lines worth re-reading in light of what happened:
   because it records a real decision correctly made at the time; this bullet is what changed. Note
   what moved and what did not: the phone becomes a **camera** — recording and hearing the ball
   strike — while pose and analysis stay on a laptop, so the heading's hedge, *"(for now)"*, turns
-  out to have been the operative word. **"Multi-user support" is unaffected and stays out of
-  scope**: the corpus, the profile and the bag are one golfer's, and nothing in ADR-030 needs them
-  to be otherwise.
+  out to have been the operative word. **On 2026-09-29 it moved further: the phone is now the
+  host, not only a camera**
+  ([ADR-034](decisions/034-shot-first-phone-first.md#6-the-phone-is-the-host)). A standalone
+  iPhone app reads the screen, stores the shots and grades them, with the Rust core on the device,
+  no laptop at the bay and nothing on the phone listening on a port. Pose on the phone waits
+  behind a conformance gate (M39), and the laptop becomes a later client (M40). **"Multi-user
+  support" is unaffected and stays out of scope**: the corpus, the profile and the bag are one
+  golfer's, and nothing in ADR-030 needs them to be otherwise. ADR-034 does not either. There are
+  no accounts and no sync. The app opens by picking a golfer and a bag, and that picker is local:
+  names kept on one phone, not logins.
 
 The risk register in §6 is unchanged and still current — the club-head detectability risk is
 live and unretired, since the M1.5 spike that would settle it has not been run.

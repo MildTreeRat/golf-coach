@@ -476,3 +476,58 @@ and a third dedupe branch keyed on `PlacementSpec.view`.
 
 `tests/analysis/test_baseline.py::test_a_placement_pools_as_a_metric_today_and_that_is_deferred`
 pins the current behaviour and names this addendum, so the day it changes, it changes on purpose.
+
+---
+
+## Addendum (2026-09-30, M31.5): fitting is archived, the artifacts stay, and Rust evaluates them
+
+[ADR-035](035-rust-everywhere-python-where-required.md) archives the research scripts rather than
+porting them
+([clause 5](035-rust-everywhere-python-where-required.md#5-the-lab-port-is-m29-re-scoped)), and §1's
+table is where that lands. Its first row moves, and its other two do not. **Nothing moves in M31.5**;
+M29 does the archive move.
+
+| stage | where, from M29 | may import |
+|---|---|---|
+| fit | `archive/`, with the rest of `scripts/golfdb/` and the `research` extra | numpy, scikit-learn — kept as a record, not as a running stage |
+| ship | `analysis/benchmarks/joint_model_v1.json`, where it is today, until M40 moves the benchmark JSON crates-side | — it is data |
+| evaluate | `crates/analysis`'s `benchmarks/joint`, which reads the artifact by `include_str!` today. Python's `joint.py` goes with `analysis/` in M40 | `contracts`, `serde` and `serde_json`, and no numeric library: the rule [ADR-030](030-app-platform-rust-core-python-sidecar.md) carried into Rust |
+
+**Why this is §1 working rather than §1 failing.** §1's claim was "fit offline, ship the artifact,
+evaluate in stdlib". That is what made the evaluation cheap to port: the engine needs only the JSON and
+the arithmetic, and M22 has already ported the arithmetic. Only the fitting needed numpy, and fitting
+is the one stage that never runs at analysis time.
+
+**ADR-032 §7 read §1's fit row as "some of `scripts/` is permanent by an existing decision".** That
+reading is dissolved: the fitting scripts are archived rather than kept running
+([clause 7](035-rust-everywhere-python-where-required.md#7-what-this-supersedes-sentence-by-sentence)).
+
+**The archive can re-derive nothing that Rust has changed.** The Limits above say that a change to
+the pose estimator or to `metric_definitions_version` "**must** bump the artifact and re-derive". The
+archive cannot do that for any change made in Rust.
+
+- The fit reads `data/reference/golfdb/swings.jsonl`. Its metric columns are measured by
+  `scripts/golfdb/derive_pose_metrics.py` through Python's `analysis.measure` (read 2026-09-30).
+- From M32, a change to a metric's definition lands in Rust only, and frozen Python keeps the old one
+  ([clause 4](035-rust-everywhere-python-where-required.md#4-the-frozen-python-lab)). So a re-derive
+  run from the archive would fit the artifact to definitions that the engine no longer uses.
+- After M40 the archive cannot run at all. Eleven of the 20 `golfdb/` scripts import
+  `golf_coach.analysis` (finding 11 of
+  [M31.5 P1](../plans/m31-5-rust-first-replan.md#p1--found-2026-09-30)), and the archive is a record
+  from then on.
+- **So the first change that needs a re-derive also needs a decision** about how to measure the corpus
+  in Rust, or whether to refit at all. ADR-035 does not make that decision. It is recorded here because
+  §1's Limits are where a reader looks for it.
+
+**The paths above are left as they are.** The command block under "What is deliberately not done
+here" and the References name `scripts/golfdb/`. The archive move rewrites them in the same change
+(clause 5, and finding 14 of M31.5 P1), and nothing has moved yet.
+
+**Not changed**:
+
+- §2 to §5: interpretable estimators, the aggregates-only reason the artifact may ship
+  ([ADR-012](012-golfdb-reference-data.md) §2), "unusual, never bad" and its firewall, and "all six
+  metrics or nothing";
+- the artifacts themselves, including the trajectory models of the first two addenda above, which
+  ship and are evaluated the same way;
+- what the four addenda above decided, including the deferral in the last of them.

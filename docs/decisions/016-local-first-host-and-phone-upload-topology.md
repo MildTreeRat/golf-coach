@@ -181,3 +181,112 @@ offset acoustically afterwards.
 keep working after cameras exist — it is how the system stays testable before any hardware is
 bought, and the only source that can replay the stored corpus through the new stack. This addendum
 narrows one clause; it does not retire the topology.
+
+## Addendum (2026-09-30, M31): the phone is the host and listens on nothing, and this topology is the lab's
+
+[ADR-034](034-shot-first-phone-first.md) makes a standalone iPhone the host. It photographs the
+screen, reads it, stores the shot and grades it, with no laptop at the bay. This ADR answered *how a
+phone reaches the desktop*, and on the product's path the phone no longer needs to. Each point
+routes to an ADR-034 clause rather than restating it. **Nothing here is built**; M38 builds the
+phone's side.
+
+**The phone is the host, and nothing on it listens on a port**
+([clause 6](034-shot-first-phone-first.md#6-the-phone-is-the-host)). Storage is on the device, and a
+session completes with no network at all. That is the local-first posture Option E chose, in its
+strongest form: there is no bind to widen, because nothing binds, and no endpoint for a token to
+gate.
+
+**Export is how data leaves the phone** (M38 P4), and the lab imports it with
+`scripts/import_phone_export.py`. How the file travels from the phone to the laptop is M38 P4's to
+settle. Nothing here assumes it is this ADR's upload route.
+
+**This topology stays the lab's path until M40 says otherwise.** Serve for the golfer's own devices,
+Funnel on demand for a guest's, the loopback bind, the refused non-loopback start and
+`GOLF_UPLOAD_TOKEN` are all unchanged. They are still how a clip or a photo reaches the laptop's
+`api/` today, and
+[ADR-030's addendum of 2026-09-29](030-app-platform-rust-core-python-sidecar.md#addendum-2026-09-29--the-machine-is-the-phone-what-adr-034-superseded-here-and-what-it-left)
+keeps file upload first-class on the laptop, because it is the only source that replays the corpus.
+What the laptop client needs from this ADR is
+[M40](../plans/m31-m40-shot-first-pivot.md#m40--the-laptop-client-resumes)'s to decide. Until then
+the topology lasts as long as `api/` does, and M29 retires `api/` once M40 has landed.
+
+**[ADR-019](019-secret-handling.md)'s API key never reaches the phone.** It pays for an LLM call,
+and the phone makes none ([clause 10](034-shot-first-phone-first.md#10-no-llm-coaching-on-the-phone)).
+The upload token still gates the laptop's `/api/`, and the phone serves nothing a token could gate.
+The first addendum's rules for holding the token are unchanged.
+
+**The previous addendum's picture of the phone is superseded; this ADR's body is not.**
+
+- *"The phone talks to a laptop on the same network"*, and *"What the phone sends changes"*, where
+  the phone records continuously and sends a clip at each strike, described ADR-030 §5's phone app.
+  ADR-034 supersedes §5, and M28, which was to build phone-over-Wi-Fi capture, is superseded by M39,
+  where the phone keeps its own clip.
+- *"Upload does not go away"* still holds, on the laptop (above).
+- The body's one superseded clause, "no phone app", is still the only one. The rest of the body
+  describes the lab, which still works that way.
+
+**Reinforced: no cloud, and no open router port.** The previous addendum reinforced both against a
+phone that talked to a laptop. A phone that talks to nothing holds both without effort: no data
+leaves hardware the golfer owns except by an export they make, and ADR-034 reinforces ADR-030 §7's
+closed cloud in turn, because the phone needs no network.
+
+**Not changed**:
+
+- the Decision, *The bind never widens* and *Tailnet membership is not enough once Funnel exists*,
+  all on the laptop;
+- the first addendum: how the token is held is ADR-019's question;
+- Funnel as a deliberate, temporary act, off by default.
+
+## Addendum (2026-09-30, M31.5): M40, not M29, decides `api/`, and the phone export is a verb of the Rust lab
+
+[ADR-035](035-rust-everywhere-python-where-required.md) ports to Rust everything that has no required
+library, and the lab with it, in a re-scoped M29
+([clause 5](035-rust-everywhere-python-where-required.md#5-the-lab-port-is-m29-re-scoped)). Two
+sentences of the previous addendum became false: one names the wrong milestone, and the other names
+a Python script that will not be written. Each point routes to an ADR-035 clause rather than
+restating it. **Nothing here is built.**
+
+**"M29 retires `api/` once M40 has landed" now means that M40 decides `api/` and deletes it.** ADR-035
+splits retirement into two moments (clause 5, and Q17 of
+[M31.5 P2](../plans/m31-5-rust-first-replan.md#p2--found-2026-09-30)):
+
+- **M29 replaces the lab's entry points** with a Rust lab CLI. It adds its Rust routes beside the
+  frozen Python ones, and it neither rewires nor retires the FastAPI server. M29 is also no longer
+  blocked on M40, so it now lands first, and the old sentence's order does not hold either.
+- **M40 decides `api/`**: it ports it to `axum` or drops it
+  ([clause 2](035-rust-everywhere-python-where-required.md#2-everything-else-ports-including-the-three-things-considered-and-not-kept)).
+  Either way, M40 deletes the Python server and everything it imports.
+
+So this topology still lasts as long as the FastAPI server does, and that is until M40. If M40 ports
+`api/` to `axum`, the port decides whether it keeps this ADR's rules: the loopback bind, the refused
+non-loopback start, and the token as a route dependency that resolves before a byte is written. It
+records that decision here, by addendum. If M40 drops `api/`, the rules go with it.
+
+**The phone export is imported by the Rust lab CLI, not by `scripts/import_phone_export.py`** (Q8,
+clause 5). The previous addendum named that script, and it was planned as new Python. Under ADR-035
+there is no new Python, so the import becomes a verb of M29's lab CLI. Two things follow:
+
+- M38 P4 waits on M29.
+- M38 P4's exit compares what was imported against the Rust corpus reader, not Python's
+  `read_corpus`.
+
+How the file travels from the phone to the laptop is still M38 P4's question, and it still assumes
+nothing about this ADR's upload route.
+
+**After M29, the upload route is the one path by which Python still writes `data/`.**
+`POST /api/uploads` hands a clip to `api/worker.py`, which runs `api/pipeline.py`'s frozen analysis
+over it (read 2026-09-30). From M29 the Rust lab writes `data/`. A swing that arrives by this route is
+written by frozen Python instead, at `ANALYSIS_VERSION` 16 and without the keys only Rust writes
+([clauses 3](035-rust-everywhere-python-where-required.md#3-the-oracle-moves-to-rust) and
+[4](035-rust-everywhere-python-where-required.md#4-the-frozen-python-lab)). M29 decides whether the
+route stays open between M29 and M40, and ADR-035 defers that question to it by name. Until M29, the
+route is the lab's path exactly as the previous addendum describes it.
+
+**Not changed**:
+
+- the Decision, *The bind never widens* and *Tailnet membership is not enough once Funnel exists*,
+  for as long as the server they guard exists;
+- the first addendum: how the token is held is still ADR-019's question;
+- the previous addendum's phone, which is the host, listens on nothing and exports. ADR-035 changes
+  which language imports the export, and not what the phone does;
+- no cloud, and no open router port.

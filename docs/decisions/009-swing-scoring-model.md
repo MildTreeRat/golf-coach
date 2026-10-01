@@ -103,3 +103,88 @@ against the existing `MockShotDataSource` before the Garmin R10 arrives (per ADR
   Fundamentals PoC deliberately needs neither.
 - Expected ranges become intent- and club-dependent — handled by the benchmark store in
   [ADR-010](010-benchmark-ranges.md).
+
+## Addendum (2026-09-30, M31): the outcome axis is graded over many shots, and intent decides which shots count
+
+[ADR-034](034-shot-first-phone-first.md) makes the launch-monitor shot the product and video
+optional. It keeps this decision's two axes and its `PracticeGoal`, and changes two things: where
+the outcome axis is judged, and what the intent is for. This addendum records what that asks of
+*this* decision. ADR-034's numbered clauses are the authority, and each point below routes to one
+rather than restating it. **Nothing here is built**; M35 and M37 build it.
+
+**The outcome axis is graded over many shots, never per swing**
+([clause 5](034-shot-first-phone-first.md#5-grades-a-grade-and-a-list-per-topic)).
+
+- Outcome becomes **per-topic grades at club and player level**: each a share of good shots with a
+  Wilson interval, withheld below a minimum n, and combined into **two equal-weight blends**, one
+  per club and one for the player
+  ([5.4](034-shot-first-phone-first.md#54-two-blends-with-an-honest-pooling-rule)).
+- **`SwingResult.outcome_score` stays `None`.** A share of one shot is 0 or 100 and means nothing.
+  §PoC boundary left it `None` as a placeholder; it is now the decision.
+- So Option C's per-swing *"policy-weighted blend of the two sub-scores"* is not built. ADR-034's
+  blends average topics, not the two axes, and nothing anywhere weights mechanics against outcome.
+  That meets Option A's objection (a fixed internal weighting nobody agreed to) by not weighting at
+  all, which is a stronger form of this decision's separation rather than a retreat from it.
+
+**The mechanics axis is optional, and a panel of its own**
+([clause 1](034-shot-first-phone-first.md#1-the-unit-of-the-product-is-the-shot)). When video
+exists, the pose checkpoints are scored exactly as today and sit beside the shot grades. They never
+enter a topic grade or a blend, so adding video never moves a club grade, and a golfer with no
+video is graded on the same terms as one with it.
+
+**`PracticeGoal` gains a second job: whether a shot counts**
+([clause 3](034-shot-first-phone-first.md#3-tracked-shots-are-derived-from-intent-and-a-drill-is-not-tracked)).
+
+- `mode` decides whether a shot is **tracked**. A `DRILL` shot is not; every other mode is,
+  `SHOT_SHAPING` and challenge-mode shots included.
+- It is **derived from the mode and never stored** as a second flag, so the two cannot disagree.
+- An untracked shot is still stored, shown and analysed on its own. It never enters club or player
+  stats.
+- This is not §Concepts' Drill policy ("spotlight one checkpoint"). That is a way to score one
+  swing, and it stays unbuilt. What a drill now does is stay out of the aggregates, which is what
+  the user asked for: "Some drills we do not want to add to the player stats as if they were
+  actually swinging or actually playing."
+- It is distinct from [ADR-028](028-mishit-exclusion.md)'s mishit rule, which is automatic and
+  scoped to two metrics. This one is the golfer's choice, and it takes the whole shot.
+
+**Shape intent is judged at last, as topics**
+([5.3](034-shot-first-phone-first.md#53-shot-shapes)).
+
+- `SHOT_SHAPING` with a `target_shape` is what the **fade**, **draw** and **straight** topics are
+  graded against. The golfer declares it per session or per shot, or challenge mode calls it before
+  each shot and records the call.
+- **A shape never declared is absent**: not graded, not mentioned, and not in a blend.
+- This is the case this ADR's Context opened with. A perfectly struck fade, declared straight, is
+  not a "hit the shape" shot, and it lowers the straight topic's share.
+- **It is not built the way §Concepts drew it.** Intent does not parameterize a checkpoint's
+  expected range. It chooses which topic a shot is graded in, and one rule classifies every shot:
+  face-to-path against `METRIC_TARGETS["face_to_path_deg"]`'s tolerance. So there is no
+  `analysis/checkpoints/outcome.py` and no intent-keyed row in `ranges.json`; ADR-010's addendum of
+  this date takes shot metrics out of that file. "Checkpoints stay generic" remains true of the
+  mechanics panel, which is where the checkpoints are.
+
+**The single-swing policies stay unbuilt.** Shot-shaping, performance and drill as
+`ScoringPolicy`s are not needed by anything ADR-034 decides. Performance's "grade the result vs.
+benchmarks for that club/skill" is superseded outright: shot metrics get no tour bands
+([5.6](034-shot-first-phone-first.md#56-no-tour-bands-for-shot-metrics)), and a club's performance
+is its topic grades beside its strengths-and-weaknesses list.
+
+**Open, and whose: a mode other than `FUNDAMENTALS` cannot reach the engine today.**
+`analysis/scoring.py::policy_for` raises `NotImplementedError` for every other mode,
+`crates/analysis`' mirror panics, and `analysis/engine.py` calls it on every `analyze_swing` (M31 P2,
+2026-09-29). So a `DRILL` or `SHOT_SHAPING` shot that has video needs either a policy for its mode,
+or its mode carried beside the swing rather than into it.
+[ADR-034's Consequences](034-shot-first-phone-first.md#consequences) give that choice to **M35**,
+which records it by a further addendum here. One constraint binds either answer: clause 1 scores the
+pose checkpoints exactly as today, and clause 5 leaves the single-swing policies unbuilt, so neither
+answer is a new weighting. The mode decides whether a shot counts and which shape it is graded
+against, not how a swing's mechanics are scored.
+
+**Not changed**:
+
+- `PracticeGoal`'s shape: `mode`, `target_shape`, `club` and `focus_checkpoint`, with the enums
+  `contracts/intent.py` already has;
+- "selected at session level, overridable per shot", which the pivot reuses as written, now for a
+  photo-only shot as well as a swing;
+- `SwingResult`'s two sub-scores and its `intent`, and the Fundamentals policy that fills them;
+- the mechanics checkpoints and `ranges.json`.

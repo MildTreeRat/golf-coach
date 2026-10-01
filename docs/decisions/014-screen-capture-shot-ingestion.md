@@ -230,3 +230,193 @@ describes a layout HD Golf can be configured out of. Enumerating those configura
 a bay session, not a decision here. And on the one photo where `rectify` fails, `Impact
 Position`'s value is claimed by the `Shot Type` tile next door (`'CENTER SLIGHT FADE'`),
 which is a cell-boundary bug that only appears on an uncropped frame.
+
+## Addendum (2026-09-30, M31): the screen is read on the phone, what it prints is decided per golfer, and the first addendum named the wrong cause
+
+[ADR-034](034-shot-first-phone-first.md) makes the launch-monitor photo the product and a
+standalone iPhone its host. This ADR is how a photo becomes a `ShotData`, so the pivot moves where
+each piece of it runs, and it turns the screen's configurability from a surviving warning into a
+rule. Each point routes to an ADR-034 clause rather than restating it. **Nothing here is built**;
+M32, M33 and M34 build it.
+
+**Where each piece runs** ([clause 7](034-shot-first-phone-first.md#7-ocr-on-the-phone)).
+
+| Piece of this ADR | On the phone | In the lab |
+|---|---|---|
+| Recognizer (`TextRecognizer`) | Apple Vision, behind the same boxes seam | PaddleOCR, unchanged |
+| Preprocessing (the table above) | VisionKit's document camera rectifies | `preprocess.py` and OpenCV, unchanged |
+| Parser, validator and `profiles.json` | the Rust port, `crates/screen` (M34) | the Python the port is recorded from |
+
+- **The seam this ADR drew is what makes the move cheap.** §Structure put the OCR engine behind
+  `TextRecognizer` so that a second recognizer would be one new class. Vision is that class, on
+  another platform: boxes in, and the same parser after them. Whether Vision's boxes parse as well
+  as PaddleOCR's on *this* screen is the product's biggest unknown, so M33 measures it before any
+  app work ([ADR-034's sub-decision](034-shot-first-phone-first.md#sub-decision-ocr-on-the-phone)).
+- **The parser and validator port because they are pure.** §Structure kept them dependency-free for
+  ADR-008's sake, and that is also what lets the port be recorded from Python and gated by vectors.
+  They carry six portability edges of their own, which
+  [ADR-032's addendum](032-the-rust-core.md#the-screen-parser-has-edges-of-its-own-and-they-are-m34s-list-not-3s)
+  lists as M34's. `profiles.json` stays one file, read by both languages.
+- **The trust model travels with the validator**, confidence, both cross-checks and `needs_review`
+  alike. One term of the confidence blend is the recognizer's own, the mean OCR confidence, and
+  Vision's confidences are coarse, so M33 re-checks that term's weight and the review threshold for
+  this recognizer. `needs_review` also gains its first reader that can act at the bay: M38's review
+  step, where the golfer corrects a flagged shot.
+- **Preprocessing's regression net stays the lab's.** The reference photos and the integration test
+  over them (Consequences above) guard PaddleOCR and OpenCV. They cannot guard VisionKit, whose
+  rectification is Apple's, so M33's measurement is the phone's net for the recognizer, and the M34
+  vectors are its net for the parser.
+
+**Option D stays rejected, on its own grounds and now one more.** The Consequence above keeps a
+vision-model recognizer as "a cheap option" if local OCR proves too fragile. In the lab it is still
+exactly that: one class behind the seam, not chosen, for Option D's reasons (a per-shot cost, a
+network round trip and an API key for basic ingestion). On the phone it is closed, because the phone
+holds no key ([clause 10](034-shot-first-phone-first.md#10-no-llm-coaching-on-the-phone)).
+
+**What the device prints is decided per golfer**
+([clause 2](034-shot-first-phone-first.md#2-printed-and-not-printed-the-device-capability-model)).
+The first addendum left one warning standing because it was true: the bay's layout shows
+`Impact Position V` where the reference photos show `Bounce & Roll`, and enumerating the
+configurations "needs a bay session". M31 P2 read all 15 photos with the recognizer on 2026-09-29,
+which made that precise without one:
+
+- the two layouts have 15 tiles each and differ by **exactly one**, `Bounce & Roll` ↔
+  `Impact Position V`;
+- both carry `Custom`, a settings-gear tile with no value, which `profiles.json` already holds as
+  boundary-only. It shows that the screen is configurable, and it does not tell the two apart;
+- `Impact Position V` reads `---` on all 13 bay photos, so face impact on HD Golf is horizontal only.
+
+So what one golfer's device prints is not what the device can print, and the Consequence *"adding a
+second launch monitor is a data change"* now names two files. `profiles.json` stays the reader's
+knowledge: labels, targets and sign rules. **`contracts/devices.json`** (M32) is the analysis side's:
+every field the device can print, each `analysed` or `shown_only` with a note, and
+**printed = declared ∩ `fields_present`** across the golfer's own shots. M32 adds
+`Impact Position V` to `profiles.json` and `fields_present` to `ShotProvenance`, which is what makes
+the intersection computable. What `Custom` can be set to show is still unknown, and the next bay trip
+enumerates it.
+
+**The surviving warning now meets clause 2.** `no tile found for 'Bounce & Roll'` is true of the
+photo. But it reaches a golfer (the first addendum's *Why any of this mattered*), and it is about a
+stat their screen does not show, which clause 2 says produces nothing. Whether it stays in
+`provenance.warnings` and stops reaching the golfer, or stops firing once the printed set is known,
+is M32's to settle. This addendum only records that clause 2 now bears on it.
+
+**The first addendum named the wrong cause.** Its last sentence blames `CENTER` landing in
+`Shot Type` on "a cell-boundary bug that only appears on an uncropped frame". The frame is
+incidental:
+
+- On `Aaron-shot-1.png` (stored as `2026-08-10-1`, the photo that sentence was about), the OCR reads
+  the `Impact Position V` tile's label as plain `Impact Position`, dropping the `V`. Two label boxes
+  then score 1.0 for one field, and `_find_labels` keeps the first (`>`). The V tile's box came
+  first, so `impact_position` read blank ("no value text under the label"), and the real tile's
+  `CENTER` was left for its neighbour: `shot_type` is stored as `'CENTER SLIGHT FADE'`
+  ([M31 P2](../plans/m31-shot-first-adr.md#p2--found-2026-09-29), 2026-09-29).
+- The same `V` is dropped on the 2026-08-23 session's first photo, which *was* rectified. There the
+  real tile's box came first, and `HEEL` read correctly.
+- Six of the 13 stored shots carry "screen outline not found - parsing the photo uncropped", and only
+  `2026-08-10-1` shows the spill (their stored warnings, read 2026-09-30).
+
+So the cause is the program plan's
+[finding 6](../plans/m31-m40-shot-first-pivot.md#what-the-code-says-before-anyone-re-derives-it),
+`Impact Position` scoring 0.9375 against `Impact Position V`, meeting ADR-032's edge 5 on a real
+photo. Finding 6 expected the hazard to fail as a missing value, never a wrong one. It did fail as
+missing, and it also left a wrong string in the next field. That string still normalizes to a fade
+only because `shot_measure.normalize_shot_shape` tries curvature words before start-line words
+(`_SHAPE_TOKENS`' order). **M32/M34 own the fix and its test**,
+so the port does not ship the hazard (ADR-034's Consequences).
+
+**The sign table now decides a grade.**
+[5.3](034-shot-first-phone-first.md#53-shot-shapes) classifies a shot's shape from face − path, in
+the golfer-relative signs §Sign conventions stores (open, in-to-out). A flipped sign here would now
+move a shot between the fade and draw topics, not only mis-describe it.
+
+- The table ports as profile data, `printed_sign` included, with the rest of `profiles.json`.
+- Whether HD Golf prints golfer-relative words for a **left-hander** is unverified, because no
+  left-handed shot exists. M37's left-handed vector pins the contract's reading. Only a bay photo of
+  a left-hander's shot can confirm the device's.
+
+**Not changed**:
+
+- Option E, as the lab's decision, and every row of the preprocessing table for the lab's reader;
+- "guessing is worse than declining", the trust model and both cross-checks;
+- §Sign conventions, and the first addendum's `spin_axis` row and its self-check;
+- `ShotDataSource` and the adapters behind it. M32 widens `ShotData`, and every new field is
+  optional for the reason the Consequences give: a blank must read as `None`.
+
+## Addendum (2026-09-30, M31.5): the lab's reader ports too, and the parser is recorded from Python once
+
+[ADR-035](035-rust-everywhere-python-where-required.md) keeps Python only where a library the project
+depends on has no alternative the user would take today. PaddleOCR was weighed against that bar and
+did not meet it
+([clause 2](035-rust-everywhere-python-where-required.md#2-everything-else-ports-including-the-three-things-considered-and-not-kept)).
+So the M31 addendum's lab column is wrong in all three rows: two say "unchanged", and the third keeps
+Python as the lab's parser. **Nothing here is built**; M34 and M29 build it.
+
+| Piece of this ADR | On the phone | In the lab, from M29 |
+|---|---|---|
+| Recognizer (`TextRecognizer`) | Apple Vision (unchanged) | Rust, through `ort` (ONNX Runtime), running **the same Paddle models** |
+| Preprocessing | VisionKit (unchanged) | ported with the reader, as clause 2 names them together |
+| Parser, validator and `profiles.json` | `crates/screen` (M34, unchanged) | the same crate. Frozen Python records it once, before M34 ports it |
+
+**The reader ports behind the same seam.** There are still two recognizers behind one boxes-in seam,
+and the parser is still what the vectors gate
+([clause 7](035-rust-everywhere-python-where-required.md#7-what-this-supersedes-sentence-by-sentence)).
+
+- **The gate** ([clause 5](035-rust-everywhere-python-where-required.md#5-the-lab-port-is-m29-re-scoped)).
+  The Rust reader reads the 13 stored bay photos. Each resulting shot is compared with the shot parsed
+  from PaddleOCR's boxes on the same photo, and M29's plan sets what may differ.
+- **PaddleOCR stops being the lab's reader once the gate passes.** It is deleted in M40, with the
+  rest of `launch_monitor/` and the `ocr` extra. `launch_monitor/screen/paddle.py` sits inside the
+  frozen FastAPI server's import closure, because the upload path imports the screen importer
+  (clause 5's two moments).
+- **The preprocessing table above stays the lab's until then.** Its reference photos and the
+  integration test over them guard PaddleOCR and OpenCV for as long as the frozen lab runs them. What
+  replaces OpenCV's steps in Rust is M29's plan.
+
+**"Recorded from Python" now means once**
+([clause 3](035-rust-everywhere-python-where-required.md#3-the-oracle-moves-to-rust), Q7 of
+[M31.5 P2](../plans/m31-5-rust-first-replan.md#p2--found-2026-09-30)). The M31 addendum said that the
+parser ports because it is pure, and that the port is recorded from Python and gated by vectors. Both
+still hold, for the behaviour the parser has today.
+
+- **M34 records today's parser from frozen Python first**, including the `CENTER` spill on
+  `2026-08-10-1` that the M31 addendum traced, and then ports it. That recording is the port's one
+  independent reference. Adding its family to the frozen recorder is the one change the frozen lab
+  allows ([clause 4](035-rust-everywhere-python-where-required.md#4-the-frozen-python-lab)).
+- **The fix the M31 addendum gave to "M32/M34" is M34's alone, in Rust only.** It is the tie rule
+  (withhold on tie) and the `Impact Position V` tile, with hand-worked vectors, and the two label-fix
+  shots are the only intended diffs (carried decisions 1, 2 and 4 in
+  [the M31.5 plan](../plans/m31-5-rust-first-replan.md#decisions-carried-to-m32-and-m34-from-the-m32-interview-2026-09-30)).
+- **The frozen Python parser keeps the hazard**, because frozen means no new behaviour (clause 4).
+  So from M34 the phone and the lab read `2026-08-10-1` and `2026-08-23-1` differently. That lasts
+  until M29 switches the lab to Rust (ADR-035's Consequences), and on the frozen server's upload path
+  for as long as M29 leaves it open (ADR-035's Deferred list). The difference is declared, not a
+  regression.
+
+**One sentence of the M31 addendum is now a question for M34.** It says "`profiles.json` stays one
+file, read by both languages".
+
+- The frozen parser reads `launch_monitor/screen/profiles.json` as package data (finding 12 of
+  [M31.5 P1](../plans/m31-5-rust-first-replan.md#p1--found-2026-09-30)).
+- The program plan's M34 reads the same file into `crates/screen` by `include_str!`.
+- The `Impact Position V` tile is an entry in that file. Adding it would change what the frozen parser
+  reads, which is new behaviour in the frozen lab (clause 4). It would add a warning to every bay shot
+  and move each one's `parse_confidence` by about −0.02 (planning findings 2 and 3 in
+  [the M31.5 plan](../plans/m31-5-rust-first-replan.md#what-the-planning-read-found-2026-09-30)).
+- Whether M34 forks the file or accepts that change is M34's to decide. ADR-035 decides neither.
+
+**Two more of the M31 addendum's routings moved.**
+
+- **"M32 adds `Impact Position V` to `profiles.json` and `fields_present` to `ShotProvenance`."** The
+  tile, and filling `fields_present`, are M34's parser work in Rust (carried decision 1). M32 defines
+  the field, in `crates/contracts`.
+- **The surviving warning, left "M32's to settle".** It was settled before the re-plan: the warning
+  stays in `provenance.warnings` and never reaches the golfer (carried decision 3).
+
+**Not changed**:
+
+- Option E as the lab's design, local OCR and geometric parsing, now in Rust;
+- Option D, still rejected in the lab and closed on the phone;
+- "guessing is worse than declining", the trust model and both cross-checks;
+- §Sign conventions, and the first addendum's `spin_axis` row and its self-check;
+- the M31 addendum's phone column, and its corrected cause for the `CENTER` spill.

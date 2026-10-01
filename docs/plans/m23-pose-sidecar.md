@@ -115,7 +115,7 @@ needs a reason the interview did not have, and should record it here rather than
 ## The clip-trimming milestone (not M23)
 
 Raised during the interview and deliberately kept out of this milestone. P1 adds a ROADMAP entry for
-it; it gets its own `/plan` session afterwards.
+it; it gets its own `/plan-phases` session afterwards.
 
 **The ask**: automatically trim over-long stored clips and keep the trimmed ones, so the corpus stops
 being 80-second uploads of mostly walk-up and walk-back.

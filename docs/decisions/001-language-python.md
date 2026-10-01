@@ -8,9 +8,20 @@ for a *shipped app* that records two camera streams while analysing in the backg
 different subject, not a reversal.
 
 **What survives is Option A's actual finding — the ML and CV ecosystem is Python's** — and that is
-why ADR-030 keeps pose in MediaPipe-Python rather than porting it. Python remains the lab: fitting
-under the `research` extra ([ADR-022](022-learned-artifacts-as-committed-data.md)), the corpus
-tools, the conformance oracle, LLM coaching and OCR. What does not survive is "all backend".
+why ADR-030 keeps pose in MediaPipe-Python rather than porting it. What does not survive is "all
+backend". ADR-030 left Python as the lab: fitting under the `research` extra
+([ADR-022](022-learned-artifacts-as-committed-data.md)), the corpus tools, the conformance oracle,
+LLM coaching and OCR.
+
+**[ADR-035](035-rust-everywhere-python-where-required.md) narrows that list to what is required**
+(2026-09-30). Python stays only for **MediaPipe pose and the LLM**, and of the five lab roles above
+only LLM coaching is left. Fitting is archived, the corpus tools port to Rust in M36 and M29,
+the lab's OCR reader ports in M29, and Rust is the conformance oracle from M32. Option A's finding is still the reason for
+both exceptions. It is no longer a reason on its own: the lab's OCR runs the same Paddle models from
+Rust through ONNX Runtime, so depending on a Python library is not the bar
+([clause 1](035-rust-everywhere-python-where-required.md#1-the-rule-and-the-two-exceptions-it-names)).
+This is a pointer and not an addendum (ADR-035 clause 7 offered either), because the body below is
+history, and this Status is where a reader who asks "why Python?" starts.
 
 The Decision's other clause — *"JavaScript/React for the web UI only"* — never happened. What got
 built is five hand-written HTML pages with no framework and no build step, which

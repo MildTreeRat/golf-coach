@@ -295,3 +295,157 @@ added later is compared from the day it is added — so that timestamp would cou
 and re-looking-up an unchanged club would retire it and produce exactly the false bag-changed caveat
 the first addendum's *"Two smaller calls"* bullet exists to prevent. The provenance is a **third
 timestamp**, and it must be excluded alongside `recorded_at` and `retired_at`.
+
+## Addendum (2026-09-30, M31): the shot is the unit, a drill is not tracked, and the landing offline is a second projection
+
+[ADR-034](034-shot-first-phone-first.md) makes the launch-monitor shot the product, graded per club
+and per player. This ADR is what made a shot poolable per club: the club tag, the bag, the
+start-line projection and the reuse of career mode's statistics. Its five decisions stand as the
+addenda above left them. This addendum records what the pivot adds beside them, each point routed
+to an ADR-034 clause. **Nothing here is built**; M35, M36 and M37 build it.
+
+**The shot is the unit, and a photo with no video is admitted**
+([clause 1](034-shot-first-phone-first.md#1-the-unit-of-the-product-is-the-shot)). §4's pipeline
+reaches a shot only through a swing today. `read_corpus` excludes a manifest with no face-on clip
+(`ExclusionReason.NO_FACE_ON`), even though `CorpusSwing.artifact_key` already keys a launch-monitor
+sample on its photo, as `shot:{sha}`
+([M31 P2](../plans/m31-shot-first-adr.md#p2--found-2026-09-29), 2026-09-29, confirming
+[program-plan finding 2](../plans/m31-m40-shot-first-pivot.md#what-the-code-says-before-anyone-re-derives-it)).
+[M35](../plans/m31-m40-shot-first-pivot.md#m35--shot-first-sessions-in-rust)
+admits photo-only entries, deduped by photo hash, so the per-club statistics §4 built reach every
+photographed shot and not only the filmed ones. §4's reuse is otherwise unchanged, and M36 ports the
+corpus, baseline and dispersion to Rust with Python as the oracle.
+
+**§5 carries to the phone: the club comes from the session cursor.** The golfer picks the club
+before the camera opens, and each photo takes it from the session (M38 P1–P2). §5 gives two
+reasons, and only one of them moves with it:
+
+- the cursor is server-side because two phones posting into one swing would disagree. On a phone
+  that is the only device, that cannot arise, and the cursor is simply the session's state;
+- the club is required because an untagged club is not recoverable after the fact, and a mistagged
+  one pools a wedge into a 7 iron. That holds on the phone unchanged, and it is why the club is
+  picked before the first photo rather than after.
+
+"No bulk backfill for club" holds as written.
+
+- M35 records a `PracticeGoal` per shot, and its `club` stays `ALL`, for the reason *Alternatives
+  Considered* gives. The shot's club is the `ClubId` tag. `PracticeGoal.club` is a band-lookup key
+  that `ranges.json` has no rows for, and the pivot gives it no new job.
+
+**A drill is not tracked, and that is neither untagged nor a mishit**
+([clause 3](034-shot-first-phone-first.md#3-tracked-shots-are-derived-from-intent-and-a-drill-is-not-tracked)).
+A `DRILL` shot never enters a per-club or a per-player aggregate. It is still stored, shown in
+history and analysed on its own. Three exclusions now touch §4's statistics, and they differ in
+where they come from and what they take:
+
+| Exclusion | Comes from | What it takes |
+|---|---|---|
+| Untagged (Consequences above) | no club was recorded | the club's stats, and nothing else. It is counted, and still feeds every pose metric |
+| Mishit ([ADR-028](028-mishit-exclusion.md)) | the shot's own numbers, automatically | carry and total only |
+| Untracked (`DRILL`, clause 3) | the golfer's intent, derived from `PracticeGoal.mode` and never stored | the whole shot, from every aggregate |
+
+ADR-028's rule is unchanged, and so is the untagged count.
+
+**Two levels, and which stats pool across clubs**
+([clause 4](034-shot-first-phone-first.md#4-two-levels-club-and-player)). §4's per-club answers are
+the **club** level. The **player** level is new, and it has two routes:
+
+- **raw averages**, only for club-independent stats: strike location, face-to-path, start line and
+  the consistency rates. A player-level carry average would be the Context's mean over a driver and
+  a sand wedge, which this ADR opened by refusing;
+- **topic grades**, which pool across clubs by judging each shot against its own club's criterion
+  first ([5.4](034-shot-first-phone-first.md#54-two-blends-with-an-honest-pooling-rule)), so
+  judgments pool where raw values cannot.
+
+Two things this ADR already said bear on it:
+
+- **§4's per-club guard is the posture of 5.1's minimum n.** "The guard applying per club is the
+  point" means a topic grade is withheld per club, not per golfer
+  ([5.1](034-shot-first-phone-first.md#51-a-topics-grade-is-a-share-of-good-shots)). The number is
+  M37's; the posture is §4's.
+- **The offline in yards is club-scoped by this ADR's own reasoning.** Clause 4 lists start line
+  (degrees) as club-independent. `start_line_offline_yds` scales with carry, which is why the
+  Consequences call its single tolerance "known to be the wrong shape". It reads as club-only, and
+  that reason is on the record here for M37's per-stat scope to use.
+
+**The landing offline is a second projection, and §3 is its precedent**
+([5.3](034-shot-first-phone-first.md#53-shot-shapes)). The shape topics' "finished on line" share
+needs where the ball *landed*. HD Golf prints no offline tile, so ADR-034 projects it, including the
+curve, as its one sanctioned inference. §3's rule governs how: **a projection ships named as one**.
+§3's "*started* and never *finished*" gains its mirror, "projected" and never "measured".
+
+- It is a **second** projection beside §3's, not a replacement. §3's is exact trigonometry over two
+  printed numbers, and it assumes no curve. The new one flies the shot through
+  [ADR-027](027-ball-flight-simulation.md)'s model, which lifted this ADR's deferred ball-flight
+  model, and it **includes the curve**. That is why §3's number cannot stand in for it: a well-hit
+  fade starts away from the target on purpose, so a start-line projection marks it offline.
+- ADR-027 records it as `flight_landing_offline_yds`, and only when the curve was actually drawn.
+  The curve reaches the flight only through a printed spin axis, so the projection reaches 2 of the
+  13 stored shots, and none of the 11 from 2026-08-23 (M31 P2, 2026-09-29). Where it cannot be
+  computed, the on-line share is withheld and named.
+- **§3's last paragraph is 5.3's "printed replaces projected".** §3 says a printed offline "should
+  **supersede** this derived one rather than sit beside it". If the simulator can be configured to
+  print an offline tile, the printed value supersedes both projections for this device.
+- **The on-line tolerance has a reason on the record here.** 5.3 takes `METRIC_TARGETS`' offline
+  row "unless M37 finds a reason otherwise". The Consequences above already give one: that row is a
+  single constant set at the widest club, known to be the wrong shape, with per-club tolerances
+  deferred. They call erring wide the safe direction, and for a claim it is, because it costs
+  claims. For a share it is not: a wider tolerance counts more shots on line, so it flatters the
+  grade, most for the shortest clubs. M37 decides; this addendum only records that the argument
+  for erring wide does not carry over.
+
+**Not changed**:
+
+- §1–§5, and both addenda above;
+- `start_line_offline_yds` and "*started* and never *finished*". The new projection sits beside it
+  and changes neither its formula nor its name;
+- *Deferred*'s per-club benchmark bands stay uncut. ADR-010's addendum of this date says the shot
+  grades need none;
+- bag entry versioning stays deferred, and the first addendum's one-line test for it still applies.
+
+## Addendum (2026-09-30, M31.5): M36 ports the corpus first, and M35 admits photo-only shots in Rust
+
+[ADR-035](035-rust-everywhere-python-where-required.md) makes Rust the oracle from M32 and puts M36
+before M35 ([clause 6](035-rust-everywhere-python-where-required.md#6-order-the-phone-path-first)).
+The previous addendum routes its work to both milestones, and each routing sentence names Python.
+This addendum records what each now means. **Nothing here is built.**
+
+**"M36 ports the corpus, baseline and dispersion to Rust with Python as the oracle" holds, once.**
+M36 ports §4's pipeline faithfully, including `read_corpus` exactly as it behaves today, with no
+photo-only admission. Frozen Python records that behaviour a single time, before the port moves,
+because it is the only reference that is independent of the port (Q7 of
+[M31.5 P2](../plans/m31-5-rust-first-replan.md#p2--found-2026-09-30), and
+[clause 3](035-rust-everywhere-python-where-required.md#3-the-oracle-moves-to-rust)). After that,
+Rust re-records, and every re-record is diff-gated.
+
+**M35 is Rust, and it comes after M36.** The previous addendum's link names M35 "Python, which is
+M36's oracle", and Q4 reversed that order. A Rust M35 needs the corpus and the stores that M36
+builds, so M35 depends on M36 (P1 finding 7). What M35 does is unchanged, and it now does it in Rust
+with hand-worked vectors:
+
+- It admits photo-only entries to the corpus, deduped by photo hash, so that §4's statistics reach
+  every photographed shot and not only the filmed ones.
+- It records a `PracticeGoal` per shot, whose `club` stays `ALL` for the reason the previous addendum
+  gives.
+- It builds `shot_result`, which moved from M36's list to M35's because it is M35's new contract
+  ([P2 finding 5](../plans/m31-5-rust-first-replan.md#p2--found-2026-09-30)).
+
+**That link breaks when the heading it names is renamed.** It targets the program plan's §M35 heading
+as M31 wrote it. M31.5 re-details §M35 in Rust, renames the heading, and fixes this link in the same
+change (P1 finding 5). This addendum routes to ADR-035 instead, so that it adds no second link to fix.
+
+**The frozen lab never admits a photo-only entry.** Frozen means no new behaviour
+([clause 4](035-rust-everywhere-python-where-required.md#4-the-frozen-python-lab)). Python's
+`read_corpus` therefore keeps excluding a manifest that has no face-on clip, as `NO_FACE_ON`
+(`storage/corpus.py:97`, read 2026-09-30). The frozen server's career view and Python `mcp/`'s club
+and career tools both read through it (`api/app.py:925` and `:947`, `mcp/club.py:438` and
+`mcp/career.py`). So wherever frozen Python answers a per-club question, from M35 until M40 deletes
+it, it pools fewer shots than Rust does. That disagreement is by design, like the two readings of
+the parser's label-fix shots in ADR-035's Consequences, and it is not a defect to fix in Python.
+
+**Not changed**:
+
+- §1–§5, and the three addenda above;
+- the previous addendum's drill rule, its two levels, and its landing-offline projection. All three
+  are M37's, and M37 was Rust first already;
+- "No bulk backfill for club".

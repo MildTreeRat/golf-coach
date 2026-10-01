@@ -1,6 +1,6 @@
 # Roadmap: AI Golf Swing Trainer
 
-## Last Updated: 2026-09-27
+## Last Updated: 2026-09-30
 
 Grouped by **state**, not by number, because the numbers no longer run in order: the pose-only
 slices (M4-PoC, M4-PoC+, M4-REF, M5-FB) delivered the mechanics half of M4 and the ranking half
@@ -16,10 +16,10 @@ wording; only the grouping and the M4 checklist have been corrected.
 | **M4-PoC+** Hardened panel | ✅ Done | — | [§M4-PoC+](#m4-poc-hardened-fundamentals-panel-pose-only-slice-of-m4--done) |
 | **M4-REF** GolfDB validation | ✅ Done | — | [§M4-REF](#m4-ref-golfdb-reference-data-pose-only-slice-of-m4--done) |
 | **M5-FB** Ranked coaching | ✅ Done | — | [§M5-FB](#m5-fb-prioritised-coaching-feedback-pose-only-slice-of-m5--done) |
-| **M3** Launch monitor / MCP | 🟡 In progress | Nothing — ingestion + MCP server done; OCR tuning left | [§M3](#milestone-3-launch-monitor-integration--in-progress) |
+| **M3** Launch monitor / MCP | ✅ **Closed** *(2026-09-29)* by [ADR-034](docs/decisions/034-shot-first-phone-first.md#consequences). Ingestion and the MCP server are done, and the open items are routed: OCR tuning and the tile enumeration → M32–M34 (the label fix moved from M32 to M34 with M31.5), the R10 → M40, and the "data merger" retired, because the join it asked for was built another way | — | [§M3](#milestone-3-launch-monitor-integration--in-progress) |
 | **M1.5** Detectability spike | ✅ Done *(2026-08-14, **no-go**)* | — (ran on footage already on disk) | [§M1.5](#milestone-15-club-head-detectability-spike-de-risk-before-investing) |
 | **M7** Two-phone sim capture | 🟡 In progress, 6/7 phases (3 trimmed) | Nothing — two iPhones + a sim bay | [§M7](#milestone-7-two-phone-sim-capture-no-hardware-purchase) |
-| **M4** full (outcome axis) | ⬜ Blocked | The M2 + M3 streams | [§M4 full](#milestone-4-full-swing-analysis-engine--the-outcome-axis) |
+| **M4** full (outcome axis) | ❌ **Superseded** *(2026-09-29)* for the outcome axis by [M37](#m37-strike-profile-topic-grades-and-strengthsweaknesses-rust-first) ([ADR-034](docs/decisions/034-shot-first-phone-first.md#consequences)): graded per topic over many shots, not scored per swing. Its second-view and detection items stay parked where they were gated | Nothing on the outcome side. The parked items still need M2, or a second view and 3D (ADR-011) | [§M4 full](#milestone-4-full-swing-analysis-engine--the-outcome-axis) |
 | **M6** LLM coaching | ✅ Done *(2026-08-15)* | — (live coaching, the MCP handshake and follow-up questions are all proven) | [§M6](#milestone-6-llm-powered-coaching--done) |
 | **M6.5** Measure now, judge later | ✅ Done | — (9 recorded, **6 scored**; the handedness seam landed and the last candidate was settled) | [§M6.5](#m65-measure-now-judge-later--done) |
 | **Career mode** One golfer over time | ✅ Done, 6/6 steps | — (built and silent; a bay session gives it the `n` to speak) | [§Career](#career-mode-one-golfer-tracked-over-time--done-built-and-silent) |
@@ -37,17 +37,28 @@ wording; only the grouping and the M4 checklist have been corrected.
 | **M18** The platform decided | ✅ Done *(2026-09-21)*. Docs only — the spikes were dropped when the two-iPhone premise was, and **the ADR became the milestone**. Rust core, MediaPipe pose in a bundled Python sidecar pool, Flutter shell, phone-as-camera later, cloud closed. **ADR-030 supersedes ADR-001**, the first superseded ADR here. The load-bearing choice was not the language or the shell but *where pose runs*: `ranges.json` is cut from MediaPipe's landmarks, so keeping pose in Python is what lets everything else be rewritten without reopening the scoring model | — (desk work; the decisions were taken directly) | [§M18](#m18-the-platform-decided--a-rust-core-a-python-pose-sidecar-and-a-flutter-shell) |
 | **M19** The core as a specification | ✅ Done *(2026-09-21)*, 5/5 phases. **M22 is unblocked** — `python scripts/conformance.py check` diffs any implementation against this one, 21 vectors at v16 in ~7 s. Ten schemas in `spec/schemas/` (a swing directory end to end), 6 synthetic vectors and the 15 real swings gzipped to 8.3 MB in `spec/vectors/`, the rules in [docs/CONFORMANCE.md](docs/CONFORMANCE.md). Two findings a port would otherwise have inherited: the `exclude=` set that makes `analysis.json` what it is lives at a **call site** and in no schema; and a bare engine call leaves `feedback` None, so the first build pinned `"feedback": null` on all 21 vectors — a spec telling a port to ship no coaching | — (desk work; done) | [§M19](#m19-the-python-core-becomes-a-specification--schemas-golden-vectors-and-a-conformance-runner) |
 | **M20** The trigger | 🟡 In progress *(2026-09-22)*, 6/7 phases — **and the first Rust in this repo**. P0-P6 done: a cargo workspace, `crates/trigger`, 30 audio conformance vectors, the live detector at **recall 30/30 and precision 0.909** over 11.9 minutes of bay audio, the ring buffer and cutting rules **derived from `phases.py::window_around`** rather than chosen, the pipeline swapped onto the Rust binary, and **`audio/impact.py` deleted** — the first module retired from Python under ADR-030's 2026-09-22 addendum | One bay trip for P7 | [§M20](#m20-the-trigger--hearing-the-ball-strike-live-and-cutting-the-clip) |
-| **M21** Capture edge | 🟡 In progress *(2026-09-22)*, **1.5/7 phases**. P0 wrote [ADR-031](docs/decisions/031-the-capture-edge.md) and it changed the shape: capture is **Rust** (`crates/capture`), not the Python `LiveCameraSource` the old plan asked for; the **file source is finished rather than first** (the lab has `FileVideoSource` and ADR-030 §3's pose worker decodes its own frames, so a Rust one would have no caller); and the phone moved to [§M28](#m28-the-phone-as-a-camera). What capture writes is a **swing directory today's `analyze_swing` reads**, which is what takes it off M22's critical path. **P1 is built and half-finished**: `crates/capture` enumerates devices and capabilities behind a stable identity and `golf-capture list` prints them, but ADR-031 §4's camera-crate choice is still owed because **no camera was attached to make it against** — this box is a desktop with no built-in webcam, which is itself the correction to the gating in the next column. Two findings, both in ADR-031's addendum: the identity is **port-derived** (this camera reports no USB serial), so "survives a replug" means *the same port* and two identical cameras are told apart only by port; and frame rate is kept as the driver's ratio, because 30000/1001 is not 30 | **The USB camera from P1 on** (the built-in webcam the old plan assumed does not exist); both cameras for P5; a bay for P6 | [§M21](#m21-capture-edge--the-laptop-records-and-a-strike-cuts-a-swing-directory) |
+| **M21** Capture edge | ⏸ **Paused** *(2026-09-29)* at **1.5/7 phases**, and re-scoped under [M40](#m40-the-laptop-client-resumes) as the desktop target of the same Flutter app ([ADR-034](docs/decisions/034-shot-first-phone-first.md#consequences)). `crates/capture` stays built and callerless, and ADR-031 §4's camera choice stays unmade. Before the pause: P0 wrote [ADR-031](docs/decisions/031-the-capture-edge.md) and it changed the shape: capture is **Rust** (`crates/capture`), not the Python `LiveCameraSource` the old plan asked for; the **file source is finished rather than first** (the lab has `FileVideoSource` and ADR-030 §3's pose worker decodes its own frames, so a Rust one would have no caller); and the phone moved to [§M28](#m28-the-phone-as-a-camera). What capture writes is a **swing directory today's `analyze_swing` reads**, which is what takes it off M22's critical path. **P1 is built and half-finished**: `crates/capture` enumerates devices and capabilities behind a stable identity and `golf-capture list` prints them, but ADR-031 §4's camera-crate choice is still owed because **no camera was attached to make it against** — this box is a desktop with no built-in webcam, which is itself the correction to the gating in the next column. Two findings, both in ADR-031's addendum: the identity is **port-derived** (this camera reports no USB serial), so "survives a replug" means *the same port* and two identical cameras are told apart only by port; and frame rate is kept as the driver's ratio, because 30000/1001 is not 30 | [M40](#m40-the-laptop-client-resumes), which needs M38 and M29. Then, inside it, **the USB camera from P1 on** (the built-in webcam the old plan assumed does not exist); both cameras for P5; a bay for P6 | [§M21](#m21-capture-edge--the-laptop-records-and-a-strike-cuts-a-swing-directory) |
 | **M22** The Rust core | ✅ Done *(2026-09-26)*, **12/12 phases**. P0 wrote [ADR-032](docs/decisions/032-the-rust-core.md), which added the thing M19 did not have: a **committed gate per stage** rather than one whole-bundle gate at the end; **P1 built it** — `spec/vectors/stages/`, 21 vectors and 3.2 MB, seven stages rather than the ADR's eight (`feedback` cannot be run in isolation, so the engine vector already gates it), regenerable on any machine and guarded by a composition check that requires every recorded intermediate to add back up to the committed bundle answer. Two crates, `crates/contracts` and `crates/analysis`, so ADR-008's import rule is cargo's to enforce. **P2 built the first of them** — nine modules, 47 of the package's 70 bounds and 3 of its validators, gated by round-tripping all 21 vectors' `input` and `expected` through the ported shapes; it found that §4's seventy-and-eleven is a whole-package count rather than the ported surface, that a byte-for-byte round trip is unavailable in either direction because Python and `serde_json` disagree about when to reach for an exponent (so every cross-language comparison stays structural), and that a vector distinguishes an absent key from a null one — which the gate caught its own harness flattening, on the first run. **P3 built `crates/analysis` with one module in it** — `pyfmt.rs`, §3's three edges solved before anything calls them, gated by `spec/vectors/format/`: 4 vectors and **2,697 cases** of CPython's own answers, compared with no tolerance at all because nothing in them computes a measurement. Its findings are that **two of the three edges collapse into Rust's own exact formatter** (which ties to even, as CPython's does), that the rounding rules differ *only* on values that are odd multiples of `2**-(n+1)` — enumerable, and a random sweep hits none of them — that the one- and two-argument `round` need **different comparison rules** because one returns an `int` with no signed zero and the other a float where `-0.0` is real, and that this is the first vector family that does not age on `ANALYSIS_VERSION` at all. **P4 ported the geometry** — `smoothing`, `phases`, `measure` and `stats.percentile`, 1,591 lines of Rust before their tests against 2,266 of Python, green on the `smoothed`, `phases` and `measure` stages across all 21. Its findings are that **ADR-032 §3 is one edge short**: Python's `max` returns the first maximum where Rust's returns the last (`min` agrees, which is what hides it), and `_top_and_impact`'s fallback is a `max` over frame indices — the rounding edge's failure through a door that rounds nothing; that **a green stage is not a covered stage**, measured by mutation rather than asserted — twelve divergences, six caught by the vectors and **five only by the port's unit tests**, because 0 of 21 clips lack a rising run, 0 frames carry a hip in `[0.5, 0.7)`, 21 of 21 have the earliest major descent also be the largest, and none of 660 half-confident landmark pairs sits in a window a measurement reads; and that **not one vector refuses a measurement**, so thirteen happy paths are gated and none of the twenty-odd refusal branches, each carrying a sentence §3 compares exactly and a golfer reads. Two warts were reproduced rather than improved — `smooth_keypoints` drops `camera_id`, and `math.hypot` is not `(dx**2 + dy**2) ** 0.5`. **P5 ported the checkpoint judging** — the two benchmark loaders, `checkpoints/mechanics` and `CHECKPOINT_REGISTRY`, 1,227 lines of Rust green on the `checkpoints` stage across all 21, with the bands crossing by `include_str!` from the Python package path so there is still one copy on disk. It was **written as the whole judging half and split**, which takes the milestone to eleven phases: the two gates it named are independent, so `measurements` becomes P5b. Its findings are that **§3 is a further edge short** — `f"aim under {band.high}"` has no format spec at all, and Rust's `{}` writes `4` where CPython writes `4.0`, now gated by a 362-case `repr` table — and that this edge is **currently invisible**, because every band edge shipping today formats identically in both languages, so a port using `{}` passes everything in this repo; that **the corpus's one left-handed vector cannot gate the mirror** whose existence is the whole reason `head_stays_back` takes a handedness, its `head_hip_gain_norm` being exactly `0.0`; and that of seventeen deliberate divergences **five survive everything and all five are explained** — three provably equivalent mutations over dead defensive code the Python carries, two the formatting call sites the band values hide. **P5b ported the placements and the rotation numbers** — `benchmarks/{joint,trajectory}`, `analysis/trajectory`, `analysis/pivot` and the `measurements` assembly's first three groups, 2,131 lines of Rust green on all 21, carrying the last two `contracts/` registries so **all three now sit beside their walkers**. Its findings are that **every one of the fifteen corpus vectors refuses the face-on trajectory placement** — the trail elbow and wrist are missing 45-70% of their resampled timeline against a 40% ceiling, so T2 and Q are gated by the six *synthetic* vectors alone and the real swings gate the refusal; that the left-handed vector **does** gate this mirror, unlike P5's; that of forty-five deliberate divergences **four survive and all four are provably equivalent** — an association order bit-identical while `span` is a power of two, a *fixed* pivot origin that cancels out of all five checks (a per-sample one does not), `hypot`, and `{}` for `%g` on a clamped percentile, which is P5's fifth edge recurring invisibly in a second module; and that **three real gaps were invisible to all 21 and needed unit tests** — the ruler is the `len/2` median rather than the mean or the lower median, and a sample needs *both* bracketing frames confident. Nothing is deleted **in M22** — the lab calls `analysis/` from 28 places, and ADR-030's retirement rule gains a third clause that reads as a schedule: *and nothing that stays Python calls it*. §M29 discharges those callers and does the delete. **P6 assembled it and the bundle is green end to end** — `engine`'s `analyze_swing_bundle`, `scoring`, the face-on slice of `alignment`, `feedback/rules` and a `golf-core run` binary, **1,034 lines of Rust** against 1,233 of Python, conforming on all **six synthetic vectors** including `feedback`, `mechanics_score`, `unscored`'s order and `notes` — the first gate here that is not a stage. `golf-core run` was diffed against `conformance.py run` through Python's *own* `compare_results` on all six: **zero differences**, and the two outputs are 13,569 and 13,221 bytes, which is P2's no-byte-comparison finding standing where it was predicted. It carries `UNSCORED_REASONS` and `INFERENCE_REASONS`, so all four `contracts/` tables now sit beside their walkers. **ADR-032 §1 says two crates and this makes four**: `analysis` may not import `feedback` (ADR-008), which is *why* `run_vector` makes two calls, so `crates/feedback` keeps that edge cargo-enforced and `crates/core` is the shell that holds both — the counterpart of `api/pipeline.py`, which §7 retires rather than ports. Its findings are that **`EXCLUDED_FROM_RESULT` makes one of this milestone's own promises unverifiable**: the whole-clip-coordinates contract needs the phases shifted *and* the sliced frames re-attached, and the comparison drops `keypoints`, so `windowed.json` gates the shift and cannot see the re-attachment at all — mutating it to a no-op passes all 21 vectors in either language; that **`_tempo_notes`' sentence is reached by nothing in `spec/`, either half**, because every collapsed motion-start boundary in the corpus is in the *down-the-line* view and that function reads the face-on anchors alone, `aaron-1`'s face-on view being fine; and that of **62 deliberate divergences, 31 were caught first pass and nine of the sixteen survivors were one root cause** — six of the seven sentences `engine.rs` can append are unreachable through six clean single-camera swings — with twelve unit tests taking it to 60 caught and the last two provable equivalences, one of them `sort_unstable_by` for the **third** time. **P7 ported the second view and the `alignment` stage is green on all 21** — `alignment.py`'s reachable half (`anchors_from_keypoints`, `tau_of_frame`, `align_swings` and its nine helpers), the down-the-line trajectory basis and pivot rows, and `_without_contradicted_scores`: **1,197 lines of Rust before their tests against 1,070 of Python**, with the `measurements` stage's last two groups green too, so six of the seven stages now run. Its findings are that **the corpus no longer contains a pair `_arbitrate_tops` can decide** — the two views' downswings disagree by at most 27.6% against a 30% threshold, and 21.7% before the strike pins tau=2, so the defect M11 P7 built the arbiter for has been repaired upstream and `_shared_tops`, `_top_at`, `_tempo_restated`, the `IMPACT_ONLY` tier and `_without_contradicted_scores` all ship against unit tests alone; that **all fifteen two-camera pairs report `SYNCHRONIZED`**, so three of the five tiers never reach a committed answer and returning that constant passes the family, while the soft-anchor decision underneath *is* gated (seven accepting, eight refusing, four of the module's ten sentences compared byte for byte); that **the second trajectory basis is reached by four corpus vectors where the face-on one is reached by none** — face-on the trail arm hides and from behind the lead arm does, which the rear fit drops — with no left-handed two-camera vector to gate its mirror and no `down_the_line_window` anywhere; and that of **forty-eight deliberate divergences seven survive**, two provable equivalences, three exact-equality boundaries on the agreement thresholds, and `{}`-for-`%g` and `sort_unstable_by` for the **fourth** time each. Two survivors were real gaps and were closed, the sharper one being a shape a per-stage gate is structurally bad at seeing: the stage records a call's inputs and its output, never the two lines of the caller between them. The render half stayed Python — `pair_frames`, `warp_speeds`, `frame_of_tau` and the rest, 220 lines whose only callers are `api/`, `scripts/` and the overlay, so no committed vector holds an answer for one. **P8 ported the ball flight and the seventh stage now has a runner** — `benchmarks/flight_model`, `flight` and `spin_solve`, **1,570 lines of Rust before their tests against 1,598 of Python**, gated inside the `flight` stage three ways: the whole 4,583-point path on the **five** corpus vectors that fly, and the whole carry window and solve on the **eleven** that solve. It is the first gate here that reads a committed *input* beside its output, which is why the integrator can be checked without the inference chain above it. Written as the whole outcome and split, so the count goes to twelve and `shot_measure`/`flight_infer`/`flight_measure` become **P8b**. Its findings are that **the ported surface of a 416-line artifact reader is seven numbers and eight rows** — the rest is per-block provenance and an altitude what-if only a CLI calls; that **§3 is an edge short and this one is not a string** — CPython's three-argument `math.hypot` is a compensated norm and both Rust stand-ins are 1 ulp out, which is the whole difference because `carry_window` constructs `high_plateau_min_rpm` so the launch spin ratio lands *exactly* on the coefficient table's last row, so the approximation flips `clamped` at that shoulder; that **`serde_json` was reading the oracle a ulp wrong** on 17-digit literals until `float_roundtrip` was turned on, which corrects all six earlier runners too; and that with both fixed **all 41,287 floats come back bit-identical** rather than merely inside `RTOL` — so the gate adds a *census* beside the tolerance, because a tolerance six orders above a ulp cannot tell a converged integration from a systematically wrong primitive. Coverage is narrower than the vector count suggests: **three of seven `SpinSolveCase`s** reach a committed answer and ten of the fifteen refuse before the integrator. **P8b joined it to the swing and the milestone's exit criterion is met**: `shot_measure`, `flight_infer` and `flight_measure` — **1,219 lines of Rust before their tests against 1,494 of Python** — plus `engine`'s last two `measurements` groups and the `fly_shot` call whose refusals extend `unscored`, so **all 21 engine vectors conform end to end** and `golf-core run` diffs against `conformance.py run` through Python's own `compare_results` with **zero differences** on all of them. No `ANALYSIS_VERSION` bump and nothing under `src/golf_coach/` touched. Its findings are that **the stage vector cannot supply this phase's input** — `fly_shot` is the caller, so `tests/flight.rs` reads the engine vector for the first time in five gates, and the two ends meeting is what makes `resolved.launch` an answer rather than a shared assumption; that **the loft prior is gated after all**, five vectors carrying a 30.5° loft resolved from the swing manifest against a docstring saying no shot on disk carries a club, though all five sit seventeen degrees clear of the floor so its *value* is gated by nothing; that **one corpus shot refuses a `shot` measurement** (`2026-08-23-3` printed a path and no face angle), which is the whole of what stands between a port reading `and` for `or` and a wrong number; and that **P6's "no vector moves an impact onto a strike" is now false** — nineteen of twenty-one produce that note, and it was true only of the six P6 was gated by. A 27-mutation sweep caught 26, one being a provable equivalence and two caught only by unit tests written for them. Still ungated anywhere: a **left-handed shot**, so the spin-axis mirror ships against unit tests; `tempo_notes`' two sentences; and a flight both solved *and* curved, the one combination where all six `flight_*` rows record at once. **P9 cascaded the docs and closed the milestone** — no code, and the doc-truth suite caught the two counts it always catches. What it corrected is worth more than the status flips: `docs/CONFORMANCE.md` §3 carried **four** edges and there are six, of which the two that were *not* predicted cost a phase each; §5's tier table had `analysis/` and the flight modules as future work; `spec/README.md` claimed three of seven stages ran; and ADR-032's Status block still read *partly built*. It also wrote the three addenda P8 and P8b had deferred, the last being the closing one the ADR's own Consequences section asked for: **of §3's three predicted edges, one — dict insertion order — never fired on a committed vector at all**, while all three of the unpredicted ones did; the families cost 3.2 MB and 304 KB; **no vector moved and `ANALYSIS_VERSION` is still 16**, which is a claim about the defects a port *can* see and silent about the two it shares (both surfaced as overstated docstrings, both pinned as measured rather than rewritten); and the coverage the port does **not** have is now one list in one place, because conforming is not covered and every phase measured that gap rather than assuming it | Nothing — M19 shipped the oracle; read [docs/CONFORMANCE.md](docs/CONFORMANCE.md) §3 and §5, then [ADR-032](docs/decisions/032-the-rust-core.md), first | [§M22](#m22-the-rust-core--the-analysis-engine-passing-the-conformance-suite) |
 | **M23** The pose sidecar | ✅ Done *(2026-09-27)*, **10/10 phases**. The Rust↔Python boundary ADR-030 §3 specifies, built: a pool of warm worker processes, a job protocol, a binary and a corpus diff — and, exactly like M22's engine, **no caller until M24**. P0 wrote the plan, and the phases live in [docs/plans/m23-pose-sidecar.md](docs/plans/m23-pose-sidecar.md) rather than in this file, so there is one copy of them. **P1 wrote [ADR-033](docs/decisions/033-the-pose-sidecar-protocol.md)**: NDJSON on stdin/stdout, one process per worker — the `golf-trigger` precedent reversed, so a crash is EOF on a pipe and nothing listens on a port — a handshake that verifies the model at **startup** rather than 30 seconds into a golfer's first swing, one retry on a fresh worker and then a typed failure, and a bounded queue whose `submit` refuses rather than grows. It adds **one message ADR-030 §3 did not imply**, an acceptance line carrying the clip's frame count, because the deadline has to scale with a corpus that spans **14.1×** and the Rust core has no decoder to learn that count from — so the process about to decode the clip says it. Four things §M23 claimed are corrected here with the measurement each time: throughput is **9.2 fps** at `heavy` on 4K portrait, not ADR-002's ~24, so a two-view swing is ~**two minutes** and not 50 s (ADR-030's second addendum carries it, and `api/worker.py`'s docstring had independently said ~9.5 fps all along); **bundling and model shipping were claimed twice** and belong to §M26 alone; *"verification is free"* is true of the diff and false of the **~77-minute** re-pose that produces its left-hand side; and clip trimming becomes **[§M30](#m30-clip-trimming--the-corpus-stops-being-eighty-seconds-of-walk-up)**, gated behind P7 because trimming re-cuts the clips and invalidates the 30 keypoint files that are this milestone's only oracle. **P2** built the seventh crate, `crates/pose` — the message shapes, the line framing and clause 5's retry table as two methods pinned against the ADR row by row — and measured the framing cost it was declined a length prefix for: **16,424,762 bytes on one line**, 0.44 s to parse, against 8.8 minutes of posing that clip. **P3** built `golf_coach.pose.worker`, reusing `estimate_pose`, `FileVideoSource` and `_to_frame_keypoints` unchanged (ADR-030 §2's rule), and it reproduced a stored keypoints file **structurally identical** on its first real run. **P4** built `Worker` — one child process, the handshake, clause 6's two timeouts — against a stub worker with **17 modes**, one per way a child can misbehave, and found that **clause 9 cannot resolve on a first hit**: the `python` on `PATH` here is a system 3.13 that cannot `import golf_coach`, so "answer" had to be defined. **P5** built `Pool` — N workers, a bounded queue, one retry on a *fresh* worker, a shutdown bounded at about a second for any N — and **found a real defect in shipped code**: a job naming a missing clip escaped as a traceback, so the pool read it as a crashed worker and retried the one failure clause 5 says never to retry. **P6** built `golf-pose` and the writer, and found the plan's own `skip_serializing_if` fix would silently drop **397 committed keys**, so the nulls are dropped in the writer and `crates/contracts` was left alone; its gate passed at **46,446 values, 0 differing** on one clip. **P7** is the corpus run above. **P8** measured the pool width and **contradicted the hypothesis it was written against** — a second worker buys **1.71×**, not nothing, because one worker occupies only **1.63 cores**. **P9** cascaded the docs and wrote the closing addendum, which is where the milestone's two corrections of itself live: **ADR-033's measurement 4 is wrong about the float repr** — `model_dump_json` serializes inside pydantic-core, which is Rust, so both writers have always spelled every float identically, now measured over **239,214,827 bytes** a side — and ADR-030's *"a second concurrent worker may buy very little"* is false. The coverage this does **not** have is one list in one place (ADR-033's fourth addendum): no left-handed clip, no `frame_range` anywhere, no variant but `heavy`, only two of the real worker's outcomes ever observed — the other failures are stub workers — and no pool running beside a live capture, which is M24's to measure | — (the pool ran against `.venv` on this box; a camera is M21's) | [§M23](#m23-the-pose-sidecar--a-long-lived-python-worker-pool) |
-| **M24** Session engine | 🔒 Blocked | **M21 only** — M22 conformed 2026-09-25 and M23 closed 2026-09-27, so both halves this milestone joins are built and callerless; M24 is where they get one | [§M24](#m24-session-engine--start-a-session-and-swings-flow-through-to-the-profile) |
-| **M25** The app | 🔒 Blocked | M24 | [§M25](#m25-the-app--the-flutter-shell-and-the-setup-wizard) |
-| **M26** Ship it | 🔒 Blocked | M25 (CI can start as soon as there is a `Cargo.toml`) | [§M26](#m26-ship-it--ci-packaging-signing-and-distribution-per-os) |
+| **M24** Session engine | ⏸ **Paused** *(2026-09-29)*, and re-scoped under [M40](#m40-the-laptop-client-resumes) as the desktop target of the same app ([ADR-034](docs/decisions/034-shot-first-phone-first.md#consequences)). Its open question, how shot data arrives in a live flow, is answered: a photo of the screen, read on the phone | [M40](#m40-the-laptop-client-resumes), which needs M38 and M29; then M21 inside it. M22 conformed 2026-09-25 and M23 closed 2026-09-27, so both halves this milestone joins are still built and callerless | [§M24](#m24-session-engine--start-a-session-and-swings-flow-through-to-the-profile) |
+| **M25** The app | ⏸ **Paused** *(2026-09-29)*, and re-scoped under [M40](#m40-the-laptop-client-resumes) as the desktop target of the same Flutter app ([ADR-034](docs/decisions/034-shot-first-phone-first.md#consequences)). The shell reaches the phone first, as [M38](#m38-the-iphone-app) | [M40](#m40-the-laptop-client-resumes), which needs M38 and M29; then M24 inside it | [§M25](#m25-the-app--the-flutter-shell-and-the-setup-wizard) |
+| **M26** Ship it | ⏸ **Paused** *(2026-09-29)*, and moved **whole** under [M40](#m40-the-laptop-client-resumes): CI, packaging, signing and distribution ([ADR-034](docs/decisions/034-shot-first-phone-first.md#consequences)). Until then, M38's free Personal Team signing is the iOS path | [M40](#m40-the-laptop-client-resumes), which needs M38 and M29. CI moves with the rest | [§M26](#m26-ship-it--ci-packaging-signing-and-distribution-per-os) |
 | **M27** Remote worker | ❌ **Closed** *(2026-09-21)* by ADR-030 §7 — not deferred. Kept as the record of a decision | — | [§M27](#m27-remote-worker--closed-not-deferred) |
-| **M28** The phone as a camera | 🔒 Blocked on M25. **Split out of M21** *(2026-09-22)* by ADR-031 §8 — it was M21's "source 3" and ADR-030 §5 puts the phone app after the laptop app works end to end | A phone (already owned); nothing bought | [§M28](#m28-the-phone-as-a-camera) |
-| **M29** The last Python | 🔒 Blocked | **M25 only** — M22 conformed 2026-09-25, discharging the first of the two (the shell still has to replace the pages). Reduces Python to the sidecar ADR-030 §2/§3 describe — MediaPipe pose and the LLM — and deletes the rest: `api/` retires into the shell, `mcp/` ports to Rust, `analysis/` goes. **Opens with the one unsettled question**: how ADR-022's fitting scripts reach a measurement once `analysis/measure.py` is gone | [§M29](#m29-the-last-python--retiring-the-lab-and-deleting-analysis) |
+| **M28** The phone as a camera | ❌ **Superseded** *(2026-09-29)* by [M39](#m39-optional-video-on-the-phone) ([ADR-034](docs/decisions/034-shot-first-phone-first.md#consequences)): the phone is the host, not a laptop's camera, and video returns on it as an optional aid. It had been **split out of M21** *(2026-09-22)* by ADR-031 §8 — it was M21's "source 3" and ADR-030 §5 put the phone app after the laptop app | — | [§M28](#m28-the-phone-as-a-camera) |
 | **M30** Clip trimming | ⬜ Not started. **Raised 2026-09-26** by M23's planning interview and kept out of it. Trim the stored clips to `window_around`'s `[start, end)` plus a second either side — the corpus is **whole uploads**, which is why 30 keypoint files come to 42,648 frames and 239 MB. Carries one correction in advance: measured from the **ball strike** a 1 s lead is destructive, because `clip.rs::MIN_LEAD_S` is **4.85 s** before impact and the window has to contain the address for motion-start detection to work at all. Its gate is **discharged** — trimming changes every clip's frame numbering and sha256 and those 30 files are M23's only oracle, so M23 P7 had to run first and did, on **2026-09-27**, finding all 30 reproducible | — (desk work over the corpus on disk) | [§M30](#m30-clip-trimming--the-corpus-stops-being-eighty-seconds-of-walk-up) |
-| **M5** Feedback UI | ⬜ Not started, **superseded in shape by M25** (no web UI) | M7 Phase 5 gives the host | [§M5](#milestone-5-feedback-ui) |
+| **M31** The pivot decided | ✅ Done *(2026-09-30)*, 13/13 phases. Docs only. [ADR-034](docs/decisions/034-shot-first-phone-first.md) makes the shot the unit and the phone the host, its ten addenda are written, the milestones it moves are re-scoped, and `CLAUDE.md`, the README, the charter and `FLOW.md` say so. No code, no vector and no `ANALYSIS_VERSION` moved | — (desk work; done) | [§M31](#m31-the-pivot-decided--adr-034-docs-only) |
+| **M31.5** The Rust re-plan | ✅ Done *(2026-09-30)*, 12/12 phases. Docs only. [ADR-035](docs/decisions/035-rust-everywhere-python-where-required.md) makes the project Rust everywhere, with Python only where it is required (MediaPipe pose and the LLM); Rust becomes the oracle from M32, the Python lab is frozen until M40, M36 moves ahead of M35, and M29 becomes the lab port | — (desk work; done) | [§M31.5](#m315-the-rust-re-plan--python-only-where-required-docs-only) |
+| **M32** Wider shot contract and device capability, in Rust | ⬜ Not started, and **next**. M31.5 re-detailed it Rust-only in the program plan: the contract, the capability model, the two photo-side reasons and the first Rust re-record. The screen-parser work moved to M34 | M31.5 — this box | [§M32](#m32-wider-shot-contract-and-device-capability) |
+| **M33** Apple Vision spike | 🔒 Blocked. **Runs early on purpose**: whether Vision reads the HD Golf screen is the product's biggest unknown. It measures the frozen Python parser, which M32 no longer touches | M31.5, and a Mac | [§M33](#m33-apple-vision-spike--can-the-phone-read-the-screen) |
+| **M34** The screen reader in Rust | 🔒 Blocked. All the screen-parser work is here now, in Rust only: the port, the `Impact Position V` tile, the tie rule and the 13-shot re-read | M32 — this box | [§M34](#m34-the-screen-reader-in-rust) |
+| **M35** Shot-first sessions, in Rust | 🔒 Blocked. Changes what M36 ported, with hand-worked vectors | M36 — this box | [§M35](#m35-shot-first-sessions-in-rust) |
+| **M36** The many-shot layer in Rust | 🔒 Blocked. **Runs before M35**: a faithful port, recorded once from frozen Python | M32 — this box | [§M36](#m36-the-many-shot-layer-in-rust) |
+| **M37** Strike profile, topic grades and strengths/weaknesses | 🔒 Blocked | M35 — desk, then the bay | [§M37](#m37-strike-profile-topic-grades-and-strengthsweaknesses-rust-first) |
+| **M38** The iPhone app | 🔒 Blocked | M34 for the skeleton, M37 for the profile screens, M29 for P4's export import; a Mac, then the bay | [§M38](#m38-the-iphone-app) |
+| **M39** Optional video on the phone | 🔒 Blocked | M38; a Mac, then the bay | [§M39](#m39-optional-video-on-the-phone) |
+| **M40** The laptop client resumes | 🔒 Blocked. M21, M24, M25 and M26 re-scoped under it, as the desktop target of the same app. It also decides `api/` (`axum` or dropped) and deletes the frozen Python | M38 and M29 | [§M40](#m40-the-laptop-client-resumes) |
+| **M29** The lab port | 🔒 Blocked. **Re-scoped 2026-09-30 by [ADR-035](docs/decisions/035-rust-everywhere-python-where-required.md#5-the-lab-port-is-m29-re-scoped), number kept.** It was "the last Python", blocked on M40. It is now the port of the lab: a Rust lab CLI, the `rmcp` server, OCR through `ort`, and the archive move. It deletes only what the frozen FastAPI server does not import, and M40 deletes the rest. Its old opening question, how ADR-022's fitting reaches a measurement, is dissolved: the fitting is archived | M34 and M36 — this box, beside M37 and M38 | [§M29](#m29-the-lab-port--a-rust-lab-cli-the-rmcp-server-and-the-archive-move) |
+| **M5** Feedback UI | ⬜ Not started, **superseded in shape by [M38](#m38-the-iphone-app)** (no web UI). It was M25 until 2026-09-29, when [ADR-034](docs/decisions/034-shot-first-phone-first.md#consequences) made the phone app the first shell | — (its screens are M38's, in the app's shape) | [§M5](#milestone-5-feedback-ui) |
 | **M2** Club & ball detection | 🔒 Gated, **and M1.5 said no-go** | Bay lighting for a ~1/2000 s exposure — *not* a global-shutter camera | [§M2](#milestone-2-club--ball-detection) |
 | Hardware re-validation | 🔒 Gated | Cameras / launch monitor arriving | [§Gate](#hardware-re-validation-gate-revisit-when-cameras--launch-monitor-arrive) |
 
@@ -66,6 +77,27 @@ schemas, and
 served live `call_tool` requests including the not-found path. It is registered with Claude Code
 (`claude mcp add`, per the README) and reports `✔ Connected`, which is a second client completing
 the same handshake independently.
+
+**NEXT ACTION — M32, in Rust *(2026-09-30)*.**
+[ADR-034](docs/decisions/034-shot-first-phone-first.md) moved the product to the shot and the phone.
+The user then redirected M32's planning, and
+[ADR-035](docs/decisions/035-rust-everywhere-python-where-required.md) makes the project Rust
+everywhere, with Python only where it is required: MediaPipe pose and the LLM.
+[M31.5](#m315-the-rust-re-plan--python-only-where-required-docs-only) re-planned the program under
+it, docs only, and closed on 2026-09-30; [the shot-first group](#shot-first-phone-first-m31m40) is
+the result. The next desk work is **[M32](#m32-wider-shot-contract-and-device-capability)** on this box,
+in Rust only: the wider shot contract, the device capability model and the first Rust re-record.
+From M32 the Python lab is frozen until M40, so it keeps working and gains nothing. M34 and M36
+follow M32, then M35 and M37, and
+[M29](#m29-the-lab-port--a-rust-lab-cli-the-rmcp-server-and-the-archive-move) ports the lab once
+M34 and M36 have landed. **[M33](#m33-apple-vision-spike--can-the-phone-read-the-screen)
+runs early on purpose.** Whether Apple Vision reads the HD Golf screen is the product's biggest
+unknown, it needs a Mac and no Rust, and if it fails the plan changes before any app work starts.
+The next bay trip serves the pivot too. It should enumerate what the screen's `Custom` tile can be
+set to show, because a printed landing offline replaces M37's projected one with no code change
+(ADR-034 §5.3), and a printed spin axis is what lets that projection reach a shot at all. And the
+bay is where [M38](#m38-the-iphone-app) P5's photo session runs, once there is an app to take it
+with. The bay-session paragraph below still stands.
 
 **NEXT ACTION — one bay session.** M9 closed on 2026-08-22 with P20 and M10 closed on
 2026-08-26, so this board is again empty of desk work and everything left wants the bay or wants
@@ -1550,6 +1582,33 @@ fades stored as draws). M12 lands the inputs, which are the half that cannot be 
 ---
 
 ## Milestone 3: Launch Monitor Integration — in progress
+
+> **Closed 2026-09-29 by [ADR-034](docs/decisions/034-shot-first-phone-first.md#consequences), and
+> its three open items are routed rather than finished here.** The heading keeps its old wording
+> because the status table links to it. The body below is the record.
+>
+> - **OCR tuning and the tile enumeration → [M32](#m32-wider-shot-contract-and-device-capability)
+>   and [M33](#m33-apple-vision-spike--can-the-phone-read-the-screen).** M32 makes a stat the device
+>   does not print produce nothing at all, which is the problem the "no tile found" item below was
+>   describing. It carried the `Impact Position V` label fix until M31.5 moved that, in Rust, to
+>   [M34](#m34-the-screen-reader-in-rust). M33 asks whether Apple Vision reads the screen at all. Enumerating what the `Custom` tile can be set to show is the next bay trip's
+>   (the NEXT ACTION).
+> - **The Garmin R10 → [M40](#m40-the-laptop-client-resumes)**, as a `devices.json` entry plus a
+>   BLE adapter (ADR-034's Deferred list).
+> - **"Connect MCP server to analysis engine data merger" is retired, not routed.** It was
+>   [FLOW.md](docs/FLOW.md) §3's `MCP --> MERGE` arrow: shot data reaching the engine through the
+>   MCP server, and a `merge.py` lining it up with the keypoints on one timeline. The join was built
+>   another way, and it runs in the other direction. A swing directory holds its photo under the
+>   `SHOT_SCREEN` role, `api/pipeline.py::_shot_for` reads the shot from `ShotStore` by that photo's
+>   hash and hands it to the engine, and `mcp/query.py` reads the joined shot back out of
+>   `analysis.json`. So the MCP server reads the engine rather than feeding it, and a photo has no
+>   timeline to align. ADR-034 turns the join around again, from the shot outward (M35's shot-keyed
+>   corpus). What `merge.py` still names is the detection stream, which stays parked with
+>   [§M4 full](#milestone-4-full-swing-analysis-engine--the-outcome-axis) on M2.
+>
+> The exit criterion's second half, "analysis engine can query them", is met by that join. Its
+> first half, "complete shot metrics", is M32's wider contract.
+
 **Goal**: Ingest real shot data from a launch monitor and expose it via MCP server.
 **Hardware to start**: None any more. Shot data now comes from photos of the **HD Golf** simulator's `SHOT DATA` screen, parsed by local OCR ([ADR-014](docs/decisions/014-screen-capture-shot-ingestion.md)) — hardware already owned. The Garmin R10 (ADR-004) stays the right answer for real-time streaming and drops into the same port when bought. `club_path` is the quantitative counterpart to M2's visual club-path arc.
 
@@ -1660,7 +1719,332 @@ fades stored as draws). M12 lands the inputs, which are the half that cannot be 
 
 **Exit Criteria**: Claude provides specific, grounded coaching advice referencing actual swing data and shot metrics.
 
+# Shot-first, phone-first (M31–M40)
+
+Planned 2026-09-29, and the second time the premise under the app changed. **The pivot:** the
+golfer photographs the launch-monitor screen, many times, and per-club strengths, weaknesses and
+grades come from those numbers. Video becomes an optional visual aid, and the first host is a
+standalone iPhone app, with the laptop a later client. **Nothing in this group is built**, and the
+repo still runs the pipeline [ARCHITECTURE](docs/ARCHITECTURE.md) §1 describes.
+
+**Two routes, and this file is neither.** [ADR-034](docs/decisions/034-shot-first-phone-first.md) is
+the decision and its reasons, and its numbered clauses are what the ten ADRs it amends cite; its
+Consequences name the earlier milestones it moves. The program plan,
+[m31-m40-shot-first-pivot.md](docs/plans/m31-m40-shot-first-pivot.md), holds each milestone's files,
+tests and order. The sections below are short on purpose and route to it, so the detail lives in
+one place.
+
+**Re-planned on 2026-09-30 by M31.5.**
+[ADR-035](docs/decisions/035-rust-everywhere-python-where-required.md) is the second decision this
+group answers to: everything is Rust, and Python stays only where it is required, for MediaPipe pose
+and the LLM. It changes the language things are written in and the order they land in, not what the
+product does, and the program plan's
+[re-plan section](docs/plans/m31-m40-shot-first-pivot.md#re-planned-by-m315-2026-09-30) routes to
+its clauses. Two things follow for this group. M36 now runs before M35. And
+[§M29](#m29-the-lab-port--a-rust-lab-cli-the-rmcp-server-and-the-archive-move) belongs to this
+program now, as the lab port after M34 and M36. Its section stays under its number in the app group
+below, beside the milestones it used to wait on.
+
+---
+
+## M31: The pivot decided — ADR-034, docs only
+
+**Status**: ✅ Done *(2026-09-30)*. The phases, and what each found, are in
+[m31-shot-first-adr.md](docs/plans/m31-shot-first-adr.md). Nothing under `src/`, `crates/`,
+`tests/`, `spec/` or `scripts/` moves, and `ANALYSIS_VERSION` stays where it is.
+
+**The ask.** Write the pivot down as a decision: ADR-034, an addendum on each ADR it moves, and this
+roadmap, `CLAUDE.md`, the root README, the charter and `FLOW.md` brought in line. The interview's
+decisions ride in it: shots are *tracked* and device stats *printed*, a drill is not tracked, grades
+are per-topic shares at club and player level, and fade, draw and straight are graded only where
+declared.
+
+**Depends on**: nothing. **Where it runs**: the desk.
+
+**Exit**: `pytest tests/test_docs_truth.py` passes.
+
+**Detail**: the program plan's
+[§M31](docs/plans/m31-m40-shot-first-pivot.md#m31--adr-034-shot-first-the-launch-monitor-screen-is-the-product-the-phone-is-the-host).
+
+---
+
+## M31.5: The Rust re-plan — Python only where required, docs only
+
+**Status**: ✅ Done *(2026-09-30)*, 12/12 phases. The phases, and what each found, are in
+[m31-5-rust-first-replan.md](docs/plans/m31-5-rust-first-replan.md). Nothing under `src/`,
+`crates/`, `tests/`, `spec/` or `scripts/` moves, and `ANALYSIS_VERSION` stays where it is.
+
+**The ask.** The user's directive of 2026-09-30, written down before M32 writes any code: rewrite
+everything in Rust except where Python is required. Two things are: MediaPipe pose, which already
+runs as a worker behind `crates/pose`, and the LLM.
+[ADR-035](docs/decisions/035-rust-everywhere-python-where-required.md) is the decision, resting on
+an inventory of every Python area that the user signed off. The ADRs it amends carry addenda that
+route to its clauses, and the program plan, this roadmap, `CLAUDE.md` and `docs/CONFORMANCE.md` are
+brought in line. Rust becomes the oracle from M32, the Python lab is frozen from M32 until M40, M36
+moves ahead of M35, and M29 is re-scoped as the lab port.
+
+**Depends on**: M31. **Where it runs**: the desk.
+
+**Exit**: `pytest tests/test_docs_truth.py` passes after every phase, and the closing phase runs the
+whole verify suite, as green as M31 left it.
+
+**Detail**: the program plan's
+[re-plan section](docs/plans/m31-m40-shot-first-pivot.md#re-planned-by-m315-2026-09-30).
+
+---
+
+## M32: Wider shot contract and device capability
+
+**Status**: ⬜ Not started, and next. M31.5 re-detailed it Rust-only. It is the first milestone of the ten
+that writes code, and the first where Rust is the oracle.
+
+**The ask.** In Rust only
+([ADR-035 clause 6](docs/decisions/035-rust-everywhere-python-where-required.md#6-order-the-phone-path-first)).
+`crates/contracts`' `ShotData` gains the fields a launch monitor can print and today's contract
+cannot hold, and each device declares every field it prints as `analysed` or `shown_only`, so a stat
+the device does not print produces nothing at all (ADR-034 §2). It defines the two photo-side
+unscored reasons, `printed_blank` and `misread`, which later milestones emit. Rust's
+`ANALYSIS_VERSION` bump moves no number, and `golf-core rerecord` re-records the committed vectors
+for the first time, diff-gated
+([clause 3](docs/decisions/035-rust-everywhere-python-where-required.md#3-the-oracle-moves-to-rust)).
+Frozen Python's contracts, parser and `ANALYSIS_VERSION` stay where they are, and nothing under
+`data/` is read or written. The screen-parser work, the `Impact Position V` label fix included,
+moved to M34. This is L3.
+
+**Depends on**: M31.5. **Where it runs**: this box.
+
+**Exit**: every suite green, with `conformance.py check` passing in the frozen view; the re-record's
+report lists only the declared differences, a second run writes nothing, and every undeclared value
+is still the committed Python value; frozen Python is untouched outside the conformance tooling.
+
+**Detail**: the program plan's
+[§M32](docs/plans/m31-m40-shot-first-pivot.md#m32--wider-shot-contract-and-device-capability-detailed).
+
+---
+
+## M33: Apple Vision spike — can the phone read the screen?
+
+**Status**: 🔒 Blocked on a Mac, now that M31.5 has closed. **Runs early on purpose**: whether Apple Vision reads the HD Golf
+screen well enough is the product's biggest unknown, and if it cannot, the plan changes before any
+app work starts.
+
+**The ask.** A Swift CLI runs Vision's text recognizer over the stored bay photos and emits boxes. A
+`TextRecognizer` kept in `spikes/`, outside the package, feeds them through the frozen Python parser
+and validator, and the resulting shots are diffed field by field against the stored ones, on the
+lab's rectified images and on raw photos Vision rectifies itself. No Rust is needed. That uses the
+frozen lab rather than changing it
+([ADR-035 clause 4](docs/decisions/035-rust-everywhere-python-where-required.md#4-the-frozen-python-lab)).
+The frozen parser still carries the `Impact Position V` tie that M34 fixes, so on `2026-08-10-1`
+and `2026-08-23-1` a differing field may be the tie's doing rather than Vision's.
+
+**Depends on**: M31.5 alone, because M32 no longer touches the parser. **Where it runs**: a Mac.
+
+**Exit**: no field value differs unless it is flagged `needs_review`, with the review threshold
+re-checked against Vision's coarser confidences. A threshold that has to change changes in
+`crates/screen` (M34), not in the frozen parser.
+
+**Detail**: the program plan's
+[§M33](docs/plans/m31-m40-shot-first-pivot.md#m33--apple-vision-spike-mac).
+
+---
+
+## M34: The screen reader in Rust
+
+**Status**: 🔒 Blocked on M32.
+
+**The ask.** The screen parser and validator port to a new `crates/screen`, reached through
+`golf-core parse-screen`: boxes in, `ShotData` out. All the screen-parser work M32 used to carry is
+here now, in Rust only, and the frozen Python parser is not touched. The order is record, port, then
+change. Today's parser is recorded once from frozen Python, its `CENTER` spill included, and ported
+faithfully. Then the change lands in Rust against hand-worked vectors: the tie rule (withhold on a
+tie), the `Impact Position V` tile, `fields_present` and parser-version stamping
+([ADR-035 clause 3](docs/decisions/035-rust-everywhere-python-where-required.md#3-the-oracle-moves-to-rust)).
+The 13-shot re-read runs over the boxes the recorder committed and writes no `data/`. The stored
+shots are re-read into `data/` by M29, and until then the phone and the lab read the two label-fix
+shots differently, by design. Whether `profiles.json` is forked or shared is this milestone's call.
+`pyfmt` moves to its own crate so that `screen` does not depend on `analysis`.
+
+**Depends on**: M32. **Where it runs**: this box.
+
+**Exit**: `cargo test` passes on every screen vector, Python-recorded and hand-worked. The 13-shot
+re-read changes a shot number only on the two label-fix shots: `2026-08-10-1` stops spilling
+`CENTER` into `Shot Type`, and `2026-08-23-1`'s `HEEL` becomes `None`. Each change to parse
+bookkeeping is listed and explained, no `needs_review` flips, and nothing under `data/` changes.
+
+**Detail**: the program plan's
+[§M34](docs/plans/m31-m40-shot-first-pivot.md#m34--the-screen-reader-in-rust).
+
+---
+
+## M35: Shot-first sessions, in Rust
+
+**Status**: 🔒 Blocked on M36. It was Python first, as M36's oracle, until M31.5 put M36 ahead of it
+([ADR-035 clause 6](docs/decisions/035-rust-everywhere-python-where-required.md#6-order-the-phone-path-first)).
+
+**The ask.** A directory holding only a shot photo becomes first-class, in Rust, by changing what
+M36 ported. `analyze_shot` writes a `ShotResult`, the corpus in `crates/storage` admits photo-only
+entries, and the swing output stays unchanged. Each shot carries ADR-009's `PracticeGoal`, and a
+`DRILL` shot is stored, listed and analysed on its own but never reaches an aggregate (ADR-034 §3).
+The two photo-side reasons M32 defined are first written here, into `ShotResult` only. Frozen Python
+gains none of it and disagrees on purpose until M40: it goes on excluding photo-only entries, and it
+pools a Rust-written `DRILL` swing that has a face-on clip.
+
+**Open, from ADR-034's Consequences**: how a mode other than `FUNDAMENTALS` reaches an engine whose
+`policy_for` panics on it, as Python's raises, and how handedness reaches a photo that has no swing.
+
+**Depends on**: M36. **Where it runs**: this box.
+
+**Exit**: the program plan names pins rather than an exit line: the swing output pinned unchanged, a
+`DRILL` shot that is stored and reaches no aggregate, and `spec/vectors/shot/` hand-worked, since
+there is no Python to record it from. M35's own plan sets the exit.
+
+**Detail**: the program plan's
+[§M35](docs/plans/m31-m40-shot-first-pivot.md#m35--shot-first-sessions-in-rust).
+
+---
+
+## M36: The many-shot layer in Rust
+
+**Status**: 🔒 Blocked on M32. **Runs before M35**
+([ADR-035 clause 6](docs/decisions/035-rust-everywhere-python-where-required.md#6-order-the-phone-path-first)).
+
+**The ask.** The aggregates and their stores port to Rust faithfully, `read_corpus` included,
+exactly as it behaves today: career, baseline, dispersion and club profile into `crates/contracts`
+and `crates/analysis`, the bag and the club catalogue with them, and a new `crates/storage` for the
+manifest, the bundle store, the corpus and the shot store. The `career/` and `storage/` families are
+recorded once from frozen Python before the port moves, and Rust re-records them after that,
+diff-gated
+([clause 3](docs/decisions/035-rust-everywhere-python-where-required.md#3-the-oracle-moves-to-rust)).
+The career and club CLIs get Rust verbs. `ShotResult` has left this milestone for M35, because it is
+new.
+
+**Open**: `read_corpus` leaves out an analysis older than the installed `ANALYSIS_VERSION`, and
+Rust's moves in M32 while every `analysis.json` in `data/` stays at frozen Python's. M36's plan
+decides what its verbs do over `data/` before M29 re-analyses it.
+
+**Depends on**: M32. **Where it runs**: this box.
+
+**Exit**: the program plan names vector families rather than an exit line, synthetic corpora that
+cross every `n` gate and the mishit floor. M36's own plan sets the exit.
+
+**Detail**: the program plan's
+[§M36](docs/plans/m31-m40-shot-first-pivot.md#m36--the-many-shot-layer-in-rust).
+
+---
+
+## M37: Strike profile, topic grades and strengths/weaknesses (Rust first)
+
+**Status**: 🔒 Blocked on M35.
+
+**The ask.** The product's answer, and the first new analysis written Rust first against hand-worked
+vectors (ADR-034 §9). Per club, a strike profile, and per topic a grade that is the share of good
+shots, withheld below the minimum `n`: strike location, consistency, low point only where printed,
+and fade, draw and straight only where declared (ADR-034 §5). A club blend and a player blend, the
+strengths/weaknesses list beside them, and mechanics never entering either. In the lab it is reached
+through `golf-core profile`, and `get_strike_profile` is a tool of M29's `rmcp` server, not of the
+frozen Python `mcp/`.
+
+**Depends on**: M35. **Where it runs**: the desk, then the bay.
+
+**Exit**: the program plan names vectors rather than an exit line: hand-worked synthetic vectors
+that cross the straight tolerance from both sides and include a left-handed shot, and a pin that
+every vector family names its oracle. M37's own plan sets the exit.
+
+**Detail**: the program plan's
+[§M37](docs/plans/m31-m40-shot-first-pivot.md#m37--strike-profile-topic-grades-and-strengthsweaknesses-rust-first).
+
+---
+
+## M38: The iPhone app
+
+**Status**: 🔒 Blocked on M34 for its skeleton, M37 for its profile screens and M29 for P4's
+export import. The skeleton can start once M34 lands, in parallel with M36, M35, M37 and M29.
+
+**The ask.** A standalone Flutter app over the Rust core (ADR-034 §6). Pick the golfer, club and
+the session's intent, photograph the screen, read it with Vision and parse it in Rust, review it,
+and store it on the phone. Then history, the per-club profile, its grades and both blends. Export
+is how data leaves the phone, and a verb of M29's Rust lab CLI imports it into `data/`. Free
+Personal Team signing serves until M40.
+
+**Depends on**: M34 (skeleton), M37 (profile screens) and M29 (P4). **Where it runs**: a Mac; P5 at
+the bay.
+
+**Exit**: at the bay, with no laptop, photos become stored, validated shots and the per-club profile
+renders; and the lab's Rust reader agrees with the phone on the exported data. Frozen Python's
+`read_corpus` is not the reference, because it leaves photo-only entries out by design.
+
+**Detail**: the program plan's
+[§M38](docs/plans/m31-m40-shot-first-pivot.md#m38--the-iphone-app-mac-p5-at-the-bay).
+
+---
+
+## M39: Optional video on the phone
+
+**Status**: 🔒 Blocked on M38.
+
+**The ask.** Video returns as an optional visual aid. P0 is a pose conformance gate: iOS
+`PoseLandmarker` on the laptop's `.task` file pinned by sha256, re-posing the stored face-on clips
+and scoring them with `golf-core run` (ADR-034 §8). Then face-on capture, with `crates/trigger`
+detecting the strike on the phone, and an overlay of the impact frame carrying that shot's numbers.
+
+**Depends on**: M38. **Where it runs**: a Mac, then the bay.
+
+**Exit**: P0's gate, every `passed` verdict identical and every delta within its tolerance. If it
+fails, the phone records and mechanics are computed on the laptop (M40), and `ranges.json` is
+untouched either way.
+
+**Detail**: the program plan's
+[§M39](docs/plans/m31-m40-shot-first-pivot.md#m39--optional-video-on-the-phone-mac-then-bay).
+
+---
+
+## M40: The laptop client resumes
+
+**Status**: 🔒 Blocked on M38 and M29.
+
+**The ask.** The same Flutter app as a desktop target. M21, M24 and M25 are re-scoped here, and M26
+moves here whole: CI, packaging, signing and distribution. It adds what only a laptop has: an R10
+over BLE and launch-monitor APIs, each a `devices.json` entry plus an adapter, and the laptop's OCR
+recognizer, which is M29's `ort` reader behind the same boxes seam. `crates/pose`'s live-session
+measurements stay here, although M29 is the crate's first caller. It decides `api/`: port it to
+`axum`, or drop it
+([ADR-035's Deferred list](docs/decisions/035-rust-everywhere-python-where-required.md#deferred-by-choice)).
+Then it deletes the frozen Python, which is everything the frozen FastAPI server imports. That is
+the second of the two moments
+[ADR-035 clause 5](docs/decisions/035-rust-everywhere-python-where-required.md#5-the-lab-port-is-m29-re-scoped)
+splits "retire" into, and M29 is the first.
+
+**Depends on**: M38 and M29. **Where it runs**: later, on a laptop with the cameras M21 was waiting
+on.
+
+**Exit**: none yet. Its own plan sets one when it starts.
+
+**Detail**: the program plan's
+[§M40](docs/plans/m31-m40-shot-first-pivot.md#m40--the-laptop-client-resumes).
+
+---
+
 # The app — from an offline pipeline to a live product (M18–M28)
+
+> **The premise changed a second time, on 2026-09-29.** The first change, described below, made the
+> machine a laptop and the phone a camera. [ADR-034](docs/decisions/034-shot-first-phone-first.md)
+> makes the machine **the phone**: a standalone iPhone app is the host, the shot is the unit, video
+> is optional, and the laptop becomes a later client. What that does to this group:
+>
+> - M18, M19, M22 and M23 are done and stand as built.
+> - M20 is untouched, and M39 reuses its trigger on the phone.
+> - M21, M24, M25 and M26 are paused and re-scoped under [§M40](#m40-the-laptop-client-resumes).
+> - M28 is superseded by [§M39](#m39-optional-video-on-the-phone).
+> - M29 was blocked on M40 instead of M25, until M31.5 re-scoped it (next paragraph).
+> - M27 stays closed, and ADR-034 reinforces it: the phone needs no network.
+>
+> The plan now lives in [the shot-first group](#shot-first-phone-first-m31m40). The ask below, and
+> the **Order** paragraph, are historical. Each section carries its own banner.
+>
+> **The language changed on 2026-09-30.** [ADR-035](docs/decisions/035-rust-everywhere-python-where-required.md) keeps
+> Python only for MediaPipe pose and the LLM, so the "Python also keeps" bullet below is
+> superseded, and OCR and the lab port to Rust. [§M29](#m29-the-lab-port--a-rust-lab-cli-the-rmcp-server-and-the-archive-move)
+> is re-scoped as that port, after M34 and M36, and M40 deletes the frozen Python.
 
 Planned 2026-09-21 in one sitting and **re-decided the same day**, so that each milestone below can
 be pinned down in its own fresh session. **The ask:** an installed app for Windows, Linux, macOS
@@ -1975,6 +2359,13 @@ recording ⬜, and a written spec the capture edge implements ✅ — which is `
 
 ## M21: Capture edge — the laptop records, and a strike cuts a swing directory
 
+> **Paused 2026-09-29, and re-scoped under [§M40](#m40-the-laptop-client-resumes) as the desktop
+> target of the same Flutter app** ([ADR-034](docs/decisions/034-shot-first-phone-first.md#consequences),
+> and [ADR-031's addendum](docs/decisions/031-the-capture-edge.md#addendum-2026-09-29--paused-under-m40-as-the-desktop-target-of-the-same-app)).
+> The phone is the host now, so a laptop that records is no longer the first product. `crates/capture`
+> stays built and callerless, and the camera-crate choice ADR-031 §4 asks for stays unmade until M40
+> has a camera to make it against. Nothing below is withdrawn: it is where M40 picks this up.
+
 **Status**: 🟡 In progress *(2026-09-22)*, **1.5/7 phases**. P0 is done — the decisions are
 [ADR-031](docs/decisions/031-the-capture-edge.md). P1 is built and **not finished**: `crates/capture`
 enumerates, but the crate choice ADR-031 §4 asks for is still owed, because there was no camera to
@@ -2130,7 +2521,7 @@ language.
 vector** rather than by review. Two crates, `crates/contracts` and `crates/analysis`, mirroring the
 Python packages so [ADR-008](docs/decisions/008-project-structure.md)'s import rule is enforced by
 cargo. LLM coaching stays Python (tier 3, via the sidecar) and is one of only two things that
-do — MediaPipe pose is the other. The lab does **not**: [§M29](#m29-the-last-python--retiring-the-lab-and-deleting-analysis)
+do — MediaPipe pose is the other. The lab does **not**: [§M29](#m29-the-lab-port--a-rust-lab-cli-the-rmcp-server-and-the-archive-move)
 retires it, which is what lets `analysis/` be deleted at all.
 
 **What is actually reachable**, measured rather than estimated — the surface
@@ -2431,7 +2822,7 @@ invariant carries over as a rule the Rust core inherits: no numeric library in t
   `map_frame`, `warp_speeds`, `_segment_rates`, `pair_frames`, `DEFAULT_TAU_RANGE` and
   `_MAX_WARP_SPEED_ERROR` are 220 lines whose only callers are `api/pipeline.py`, `scripts/` and
   `pose/side_by_side.py`, so `conformance.py::run_vector` never reaches them and no committed vector
-  holds an answer for one — the rule P4 applied to `phases.py`'s clip-choosing half. [§M29](#m29-the-last-python--retiring-the-lab-and-deleting-analysis)
+  holds an answer for one — the rule P4 applied to `phases.py`'s clip-choosing half. [§M29](#m29-the-lab-port--a-rust-lab-cli-the-rmcp-server-and-the-archive-move)
   retires those callers into the Flutter shell, which is where a render schedule belongs. It leaves
   one asymmetry that reads as an omission and is not: `tau_of_frame` is here and its exact inverse is
   not, because `align_swings` calls the first and only a renderer calls the second.
@@ -2569,9 +2960,9 @@ invariant carries over as a rule the Rust core inherits: no numeric library in t
   thing: *conforming is not covered*, and the gap is not guessable from "21 vectors, all green".
 
 **Not this milestone's, and settled elsewhere:** the MCP server is **ported to Rust** in
-[§M29](#m29-the-last-python--retiring-the-lab-and-deleting-analysis), not kept as a lab tool.
+[§M29](#m29-the-lab-port--a-rust-lab-cli-the-rmcp-server-and-the-archive-move), not kept as a lab tool.
 Shot-screen OCR (PaddleOCR) is still open there — sidecar, ported, or gone — along with
-`clubs/lookup.py` and the overlay tools.
+`clubs/lookup.py` and the overlay tools. M31.5 settled all three, and §M29 now says how.
 
 **Exit Criteria** — **met 2026-09-25 (P8b)**: all **21** engine vectors conform through
 `cargo test` — 6 synthetic and 15 corpus, exact on the strings, bools and ints and within
@@ -2700,6 +3091,22 @@ were the only record of is now also recorded above.
 
 ## M24: Session engine — start a session and swings flow through to the profile
 
+> **Paused 2026-09-29, and re-scoped under [§M40](#m40-the-laptop-client-resumes) as the desktop
+> target of the same app** ([ADR-034](docs/decisions/034-shot-first-phone-first.md#consequences)).
+> This milestone joins `crates/core` and `crates/pose` into a live laptop session, and the laptop is
+> now a later client. The measurements it inherits below move with it ([ADR-033's addendum](docs/decisions/033-the-pose-sidecar-protocol.md#addendum-2026-09-29--laptop-only-the-phone-has-no-python-and-the-first-caller-moves-to-m40)).
+> **M31.5 moved two things out of it** on 2026-09-30. The pose pool's first caller is now
+> [§M29](#m29-the-lab-port--a-rust-lab-cli-the-rmcp-server-and-the-archive-move)'s lab CLI, which poses offline,
+> while the live-session measurements stay here, under M40
+> ([ADR-033's M31.5 addendum](docs/decisions/033-the-pose-sidecar-protocol.md#addendum-2026-09-30--the-python-writer-outlives-m29-the-lab-cli-is-the-first-caller-and-the-protocol-is-unchanged)).
+> And `api/pipeline.py`'s orchestration, which the old §M29 gave to this milestone, is replaced by
+> M29's lab CLI. M40 deletes the frozen copy.
+>
+> **The open question at the foot of this section is answered.** Shot data arrives as a photo of
+> the screen, taken and read on the phone (ADR-034 §6 and §7). When M40 brings the laptop back, its
+> live feeds are an R10 over BLE and launch-monitor APIs, each a `devices.json` entry plus an
+> adapter.
+
 **Status**: 🔒 Blocked on **M21** alone — M22 conformed on 2026-09-25 and M23 closed on
 2026-09-27, so both halves of what this milestone joins are built and waiting: `crates/core` runs a
 swing bundle and `crates/pose` produces the keypoints one needs. What M24 adds is the caller, and
@@ -2719,6 +3126,13 @@ the simulator screen taken by hand.
 
 ## M25: The app — the Flutter shell and the setup wizard
 
+> **Paused 2026-09-29, and re-scoped under [§M40](#m40-the-laptop-client-resumes) as the desktop
+> target** ([ADR-034](docs/decisions/034-shot-first-phone-first.md#consequences)). Flutter over the
+> Rust core is still ADR-030 §4's choice, but the shell reaches the phone first, as
+> [§M38](#m38-the-iphone-app), and this section's camera wizard is the desktop target's.
+> **[§M5](#milestone-5-feedback-ui) is now superseded in shape by M38**, not by this milestone, so
+> the paragraph below saying otherwise is the record.
+
 **Status**: 🔒 Blocked on M24.
 
 **The ask.** The workflow the golfer described: connect cameras → verify → position → start
@@ -2732,6 +3146,13 @@ the desk pipeline. **M5's web UI is superseded in shape by this milestone**, not
 ---
 
 ## M26: Ship it — CI, packaging, signing and distribution per OS
+
+> **Paused 2026-09-29, and moved whole under [§M40](#m40-the-laptop-client-resumes): CI, packaging,
+> signing and distribution** ([ADR-034](docs/decisions/034-shot-first-phone-first.md#consequences)).
+> Until then the iOS path is M38's free Personal Team signing (seven-day installs), and the paid
+> Apple Developer Program is deferred by choice. The status line's "CI can start as soon as there is
+> a `Cargo.toml`" goes with the rest, because CI moves with M26. "Google Play" below waits on
+> Android, which ADR-034 also defers.
 
 **Status**: 🔒 Blocked on M25. CI can start as soon as there is a `Cargo.toml` to run it against.
 
@@ -2761,6 +3182,16 @@ shows it is not enough.
 
 ## M28: The phone as a camera
 
+> **Superseded 2026-09-29 by [§M39](#m39-optional-video-on-the-phone)**
+> ([ADR-034](docs/decisions/034-shot-first-phone-first.md#consequences)). This milestone made the
+> phone a camera for a laptop. ADR-034 makes the phone the host, so there is no laptop for it to
+> feed. Video returns as an optional aid recorded on the phone itself and attached to the current
+> shot, with `crates/trigger` detecting the strike on the device, as this section planned. Pose on
+> the phone, which this section ruled out, is reopened behind M39 P0's gate (ADR-034 §8).
+>
+> **The open question below is not answered by the move.** What recording costs an iPhone thermally
+> falls to M39 P1, which records on the phone, and the program plan does not name it yet.
+
 **Status**: 🔒 Blocked on M25. **Moved out of M21 on 2026-09-22** by
 [ADR-031](docs/decisions/031-the-capture-edge.md) §8 — it was listed there as "source 3", which
 contradicted [ADR-030](docs/decisions/030-app-platform-rust-core-python-sidecar.md) §5.
@@ -2789,61 +3220,84 @@ one a USB camera produced.
 
 ---
 
-## M29: The last Python — retiring the lab, and deleting `analysis/`
+## M29: The lab port — a Rust lab CLI, the `rmcp` server, and the archive move
 
-**Status**: 🔒 Blocked on **M25** (the shell has to exist before the pages can stop existing).
-M22's half is discharged — the port conformed on 2026-09-25 — which means ADR-030's retirement rule
-now has its first two clauses satisfied for `analysis/` and is held open by its **third** alone:
-*and nothing that stays Python calls it*. That is this milestone's whole job.
+> **Re-scoped 2026-09-30 by M31.5, number kept**
+> ([ADR-035 clause 5](docs/decisions/035-rust-everywhere-python-where-required.md#5-the-lab-port-is-m29-re-scoped)).
+> This section was "The last Python — retiring the lab, and deleting `analysis/`", and ADR-034 had
+> blocked it on M40. Its ask stands: Python shrinks to the two things that require it. Its job
+> changed from deleting the lab to **porting** it, and it now belongs to
+> [the shot-first group](#shot-first-phone-first-m31m40). It stays here under its number, beside the
+> milestones it used to wait on. The old body is in git history, and the list at the foot of this
+> section says where each part of it went.
 
-**The ask.** Reduce Python to the sidecar
-[ADR-030](docs/decisions/030-app-platform-rust-core-python-sidecar.md) §2 and §3 describe —
-MediaPipe pose, and the LLM — and delete everything else. ADR-030's 2026-09-22 addendum retires a
-module once a conforming Rust implementation exists and the vectors that prove it are committed;
-[ADR-032](docs/decisions/032-the-rust-core.md) §7 adds the clause that makes it a schedule rather
-than a promise — **and nothing that stays Python calls it**, where *stays* means the sidecar and
-not *not ported yet*. This milestone discharges those callers.
+**Status**: 🔒 Blocked on M34 and M36. It is no longer blocked on M40.
 
-**What is settled.**
+**The ask.** Python is reduced to the two exceptions
+[ADR-035 clause 1](docs/decisions/035-rust-everywhere-python-where-required.md#1-the-rule-and-the-two-exceptions-it-names)
+names, MediaPipe pose and the LLM, by porting what is left of the lab rather than deleting it. A Rust
+lab CLI runs the lab end to end and replaces `api/pipeline.py` as the lab's pipeline:
+- strike detection through `crates/trigger` directly, and strike audio through ffmpeg;
+- OCR through `ort`, running the same Paddle models, and the parse through M34's `crates/screen`;
+- the engine through `crates/core`, and the storage M36 did not port;
+- pose through `crates/pose`, so the lab CLI is that crate's first caller.
 
-- **`api/` (3,804 lines) retires into the Flutter shell.** ADR-030 §4 already replaces the five
-  hand-written pages; nothing is ported. `api/pipeline.py` is the exception and it is **M24's**, not
-  this milestone's — it is orchestration, and the Rust core takes it over there.
-- **`mcp/` (3,191 lines) is ported to Rust.** The surface survives; the Python `mcp.server` SDK does
-  not. `contracts/caveats.py` and `contracts/tool_descriptions.py` go with it — they exist to build
-  MCP prose out of `CHECKPOINT_REGISTRY` and have no other caller.
-- **`analysis/` (11,168 lines) and the non-sidecar half of `contracts/` are deleted**, once the two
-  above have landed and M22 has conformed.
+It re-reads the 13 stored shots into `data/`, which is where the lab's reading of the two label-fix
+shots changes. Beside the CLI, M29 carries:
+- the `rmcp` server, which replaces Python `mcp/` for MCP clients;
+- `conversation.py`'s stdio route to that server and `coach.py`'s JSON entry, the only Python M29
+  writes, inside the LLM exception;
+- the vector builder that reads `data/`;
+- the phone-export verb that M38 P4 waits on;
+- the archive move, which sends `scripts/golfdb/`, `scripts/caddieset/`, three closed measurement
+  scripts and `contracts/reference.py` to `archive/`, with the `research` extra.
 
-**What stays, and it is short.** `pose/estimator.py` — MediaPipe, a graph with no mature Rust
-binding, and the instrument every band in `ranges.json` was cut from. `feedback/coach.py` and
-`feedback/conversation.py` — the LLM call. Both are sidecar by ADR-030 §2 and §3, and together they
-are under a thousand lines against the ~32,000 in `src/golf_coach/` today.
+**Retiring happens at two moments.** M29 replaces. It adds its Rust routes beside the frozen Python
+ones, does not rewire the frozen FastAPI server, and deletes only what that server does not import:
+the lab scripts, `detection/` and `frontend/`. [M40](#m40-the-laptop-client-resumes) deletes the
+rest, `analysis/` included, once it has decided `api/`. Until then the frozen server reads what the
+Rust lab writes
+([clause 4](docs/decisions/035-rust-everywhere-python-where-required.md#4-the-frozen-python-lab)).
 
-**The question this milestone opens with, before any deleting.**
-[ADR-022](docs/decisions/022-learned-artifacts-as-committed-data.md) requires the model fitting in
-`scripts/` to be Python — numpy and scikit-learn, offline, producing provenanced JSON — so part of
-`scripts/` is permanent by a decision already made. What is **not** settled is how those scripts
-reach a measurement once `analysis/measure.py` is gone: a `golf-core` subprocess seam (the shape
-M20 P5 already used for the trigger, and for the reason it gave — a PyO3 build would make a lab
-install require cargo), or those entry points becoming Rust binaries whose output the fitting
-scripts read. **Settle it first**, because it decides whether `analysis/` can be deleted at all.
-Open alongside it, and smaller: `launch_monitor/screen/` (PaddleOCR), `clubs/lookup.py` and
-`pose/{overlay,side_by_side}.py` — sidecar, ported, or gone.
+**Open, and M29's to decide**
+([ADR-035's Deferred list](docs/decisions/035-rust-everywhere-python-where-required.md#deferred-by-choice)):
+- what the OCR gate allows to differ;
+- whether the frozen server's upload path stays open until M40;
+- how the caveat prose reaches Python;
+- whether a standalone `sidecar/` package holds the surviving Python.
 
-**What it costs, and the cost is accepted rather than avoided.**
-`scripts/conformance.py::run_vector` **is** the Python core, so this milestone retires the
-*specification* along with the implementation and `spec/vectors/` stops being regenerable from a
-reference. Afterwards an `ANALYSIS_VERSION` bump **re-records the engine family from the Rust
-core** — the self-portrait `conformance_vectors._audio` refuses in three sentences, accepted here
-because once M22 has conformed there is no second implementation left to disagree with and the
-vectors' job changes from oracle to changelog-plus-regression.
-[ADR-032](docs/decisions/032-the-rust-core.md) §7 carries the argument. **The audio family stays
-frozen**; this applies to the engine family only.
+**Depends on**: M34 and M36. **Where it runs**: this box, where `data/` lives, beside M37 and M38.
 
-**Exit Criteria**: `src/golf_coach/` holds the sidecar and nothing else;
-`grep -rl 'golf_coach.analysis' src scripts` returns only what ADR-022 keeps; and the app runs a
-swing end to end with no Python anywhere on the analysis path.
+**Exit**: M29's own plan refines the program plan's.
+- The OCR gate passes on the 13 stored bay photos.
+- The Rust lab CLI re-runs every stored bundle, and the frozen server still reads what it wrote.
+- The stored shots are stamped, and only the two label-fix shots change a field value.
+- `scripts/ask_swing.py` answers through the `rmcp` server.
+- The archive move and the deletions are done, with the doc paths rewritten in the same change.
+
+**Detail**: the program plan's
+[§M29](docs/plans/m31-m40-shot-first-pivot.md#m29--the-lab-port-a-rust-lab-cli-the-rmcp-server-and-the-archive-move).
+
+**What the old section said, and where each part went.**
+- **"`api/` retires into the Flutter shell."** M40 decides: `api/` is ported to `axum`, or dropped.
+- **"`api/pipeline.py` is M24's."** The lab CLI replaces it here, and M40 deletes the frozen copy.
+- **"`mcp/` is ported to Rust."** That stands, as the `rmcp` server.
+- **"`analysis/` and the non-sidecar half of `contracts/` are deleted."** That happens in M40, not
+  here, because the frozen server imports both (the M31.5 plan's Q17).
+- **"What stays"** was `pose/estimator.py`, `feedback/coach.py` and `feedback/conversation.py`. Clause
+  1's list is longer: it adds the pose worker and what it imports, `clubs/lookup.py`, and the LLM's
+  own shapes.
+- **The opening question**, how ADR-022's fitting scripts reach a measurement once
+  `analysis/measure.py` is gone, is dissolved. The fitting is archived rather than run.
+- **PaddleOCR, `clubs/lookup.py` and the overlay tools**, left as "sidecar, ported, or gone". The OCR
+  ports through `ort`, `clubs/lookup.py` stays Python because it is an LLM call, and the overlay goes
+  with `alignment.py`'s render half. Neither is ported, and both are deleted, the scripts here and
+  the modules in M40 (the M31.5 plan's Q10).
+- **"What it costs"** accepted a Rust re-record of the engine family after M29.
+  [Clause 3](docs/decisions/035-rust-everywhere-python-where-required.md#3-the-oracle-moves-to-rust)
+  brings it forward to M32, diff-gated.
+- **The exit**, "`src/golf_coach/` holds the sidecar and nothing else", is M40's now, after it deletes
+  the frozen Python.
 
 ---
 
@@ -2853,7 +3307,7 @@ swing end to end with no Python anywhere on the analysis path.
 kept out of that milestone. **Its gate is discharged**: it was blocked on
 [§M23](#m23-the-pose-sidecar--a-long-lived-python-worker-pool) P7, which ran on **2026-09-27** and
 found all 30 stored keypoint files reproducible — see the ordering constraint below, which is the
-reason this entry exists now rather than when someone gets to it. Needs its own `/plan` session.
+reason this entry exists now rather than when someone gets to it. Needs its own `/plan-phases` session.
 
 **The ask.** Automatically trim over-long stored clips and keep the trimmed ones, so the corpus stops
 being 80-second uploads of mostly walk-up and walk-back. The clips on disk are **whole uploads** —
@@ -3054,6 +3508,31 @@ These need a data stream or a host that does not exist yet.
 ---
 
 ## Milestone 4 (full): Swing Analysis Engine — the outcome axis
+
+> **Superseded for the outcome axis on 2026-09-29, by
+> [§M37](#m37-strike-profile-topic-grades-and-strengthsweaknesses-rust-first)**
+> ([ADR-034](docs/decisions/034-shot-first-phone-first.md#consequences) §5). The outcome axis is no
+> longer a per-swing score built from intent-parameterised checkpoints and tour norms. It is a
+> per-topic grade, the share of good shots, over many shots at club and player level, and ADR-009's
+> per-swing `outcome_score` stays `None`. The checklist below is the record. Item by item:
+>
+> - **Superseded by M37**: the outcome checkpoints. Shape becomes the fade, draw and straight topics,
+>   graded only where a shape was declared; start line, distance and dispersion are judged against
+>   the personal baseline and `METRIC_TARGETS`. The outcome norms go too, because shot metrics get
+>   **no tour bands** (ADR-034 §5.6). And "scoring those numbers" under `SwingResult.shot`, whose
+>   attach half is done: the field is set today.
+> - **Decided elsewhere**: the practice modes. `DRILL` decides whether a shot is tracked (M35,
+>   ADR-034 §3), `SHOT_SHAPING` and `target_shape` select the shape topics (M37), and the
+>   single-swing policies stay unbuilt. How a mode other than `FUNDAMENTALS` gets past `policy_for`
+>   is [§M35](#m35-shot-first-sessions-in-rust)'s open question.
+> - **Still parked where they were gated**: `merge.py`, and the backswing-plane and face-angle
+>   checkpoints, on M2's detections; address posture on the down-the-line view, and hip rotation, the transition
+>   sequence and the 3D mechanics ranges on 3D (ADR-011). These are the mechanics axis, which
+>   ADR-034 §1 keeps as a separate panel.
+> - **Not routed**: SQLite. M7 Phase 3 shipped a file store (`storage/bundle_store.py`) in its
+>   place, and where results live next is ADR-034 §6's on-device storage, which is M36's and M38's
+>   to shape.
+
 **Goal**: Analyze merged pose + detection + shot data and score the swing across both the
 **mechanics** and **outcome** axes, combined by an intent-driven scoring policy
 (see [ADR-009](docs/decisions/009-swing-scoring-model.md)).
@@ -4005,6 +4484,14 @@ every phase.
 ---
 
 ## Milestone 5: Feedback UI
+
+> **Superseded in shape by [§M38](#m38-the-iphone-app), not M25, since 2026-09-29**
+> ([ADR-034](docs/decisions/034-shot-first-phone-first.md#consequences)). ADR-030 §4 had already
+> made the UI a Flutter shell rather than a web page, and M25 was to be that shell. ADR-034 makes
+> the first shell the iPhone app, and M25 is paused under M40. History, the per-club profile and its
+> grades are M38's screens. A video view returns in M39, as the impact frame carrying that shot's
+> numbers. `api/static/`'s pages stay a lab surface. The checklist below is the record.
+
 **Goal**: Present swing analysis to the user in a clear, visual web interface.
 
 - [ ] Set up React project (or Streamlit for rapid prototype)

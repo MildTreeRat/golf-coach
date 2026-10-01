@@ -154,6 +154,8 @@ were each weighed against this clause and did not meet it (clause 2).
 - **The shapes the LLM side owns**: `contracts/conversation.py` (the transcript), and
   `contracts/club.py` and `contracts/club_spec.py`, which `clubs/lookup.py` builds and writes (P2
   finding 4).
+- **Two extras**: `vision` without `ultralytics`, and `llm` whole, because its `mcp` package is the
+  client the LLM drives the Rust server with (R44).
 
 Of the contract Rust already mirrors, **only `contracts/keypoints.py` survives** (Q14). `coach.py`
 reads its swing and shot as JSON from the Rust MCP server, as `conversation.py` does, and not as
@@ -277,6 +279,7 @@ Python PaddleOCR retires once the gate passes.
   from `src/golf_coach/analysis/benchmarks/`, until M40 moves them crates-side.
 - **Archived `golfdb/` runs until M40 deletes `analysis/`**, and is a record after that (P1 finding 11).
 - **The move rewrites the doc paths that name those scripts, in the same change** (P1 finding 14).
+- **`spikes/` stays where it is**, as history rather than code anyone runs (Q15).
 
 **Retirement happens at two moments** (Q17, P2 finding 2). The line between them is the frozen
 FastAPI server's import closure.
@@ -287,7 +290,8 @@ FastAPI server's import closure.
 - **M40 deletes** everything in the closure: `analysis/`, `storage/` except `transcript_store.py`,
   `launch_monitor/`, `audio/`, `feedback/rules.py`, `pose/{overlay,side_by_side}.py`, Python `mcp/`,
   the ported half of `contracts/`, the conformance scripts, and `api/` unless M40 ports it. The
-  benchmark JSON moves crates-side in the same change.
+  benchmark JSON moves crates-side in the same change, and the `api`, `ocr` and `audio` extras go
+  with the code they served.
 
 ### 6. Order: the phone path first
 

@@ -2,7 +2,10 @@
 
 A home-lab golf swing trainer: face-on phone video → pose → phase segmentation → checkpoints
 scored against bands cut from tour footage → ranked coaching tips. Shot data arrives by OCR of a
-simulator screen. Python 3.11, `src/` layout, stdlib-only analysis core.
+simulator screen. Python 3.11, `src/` layout, stdlib-only analysis core. That is what *runs*; the
+product is now **shot-first and phone-first** (ADR-034) — many photos of the launch-monitor
+screen, graded per club on a standalone iPhone app, with video an optional aid — and none of that
+is built yet.
 
 **This file exists to stop you reading the whole repo before you start.** It is ~39,000 lines
 across source, tests, docs and HTML; a full orientation sweep costs more than most tasks are
@@ -20,7 +23,9 @@ every coaching call a false fact for a milestone.
                                             # silences the summary line
 .venv/Scripts/python.exe -m ruff check src tests scripts
 .venv/Scripts/python.exe -m mypy src
-.venv/Scripts/python.exe scripts/conformance.py check   # the committed golden vectors
+.venv/Scripts/python.exe scripts/conformance.py check   # certifies the committed vectors until
+                                            # M32's first Rust re-record; after it `cargo test`
+                                            # does (ADR-035 §3), and `check` retires in M40
 cargo test                                  # the Rust crates, and every vector family `check`
                                             # defers: audio, format, all seven stages, and all 21
                                             # engine vectors end to end against the port
@@ -32,16 +37,17 @@ crates, and exactly one of them has a Python caller: `crates/trigger` — ball-s
 clip cutting, and `cargo build --release` is what `api/pipeline.py` needs before it can detect a
 strike at all. `crates/capture` (M21) is the camera edge, and
 `crates/{contracts,analysis,feedback,core}` (M22) are a **complete second implementation of the
-analysis engine**, conforming on all 21 committed vectors and wired to nothing until M24. Nothing
-in Python calls any of those five, and `api/pipeline.py` still calls `analysis/engine.py` — so a
-change to the Python engine now silently puts two implementations out of step, and the committed
-vectors are the only thing that says so.
+analysis engine**, conforming on all 21 committed vectors and wired to nothing — its first callers
+are now the phone app (M38) and §M29's Rust lab CLI, since ADR-034 paused M24 under M40 and
+ADR-035 made §M29 the lab port. Nothing in Python calls any of those five, and `api/pipeline.py`
+still calls `analysis/engine.py` — so a change to the Python engine now silently puts two
+implementations out of step, and the committed vectors are the only thing that says so.
 
 `crates/pose` (M23) is the seventh and it runs the boundary the other way: the first crate with a
 Python **callee**, spawning `python -m golf_coach.pose.worker` and speaking ADR-033's NDJSON to it,
-because MediaPipe is the one thing staying in Python. It has no caller either — `api/pipeline.py`
-still calls `estimate_pose` in-process, and that is deliberate (nothing in Python should route
-through Rust to reach a Python function).
+because MediaPipe is one of the two things staying in Python. It has no caller either —
+`api/pipeline.py` still calls `estimate_pose` in-process, and that is deliberate (nothing in
+Python should route through Rust to reach a Python function).
 
 `.venv/` is the real environment. A `venv/` directory also exists and is an empty stub — ignore
 it. Entry points are the thin CLIs in `scripts/`; `docs/ARCHITECTURE.md` §1 "The commands,
@@ -56,16 +62,20 @@ Break one of these and something breaks a long way from your edit.
   depends on `contracts` alone. No cycles. The one knowing exception is recorded in ADR-008's
   addendum: `src/golf_coach/storage/corpus.py` and `src/golf_coach/mcp/query.py` import *upward*
   into `api.state` for the tolerant artifact readers.
-- **The analysis core is stdlib + `contracts` only.** No numpy in `analysis/`. This is a
-  *two-language* invariant since ADR-030: the Rust core inherits it, so no numeric library in the
-  scoring path there either. `crates/trigger` carries the one sanctioned exception, `rustfft`,
-  for the same FFT the Python detector needed numpy for.
-- **Python keeps only what does not translate** (ADR-030's 2026-09-22 addendum). That means
-  MediaPipe, and the lab. It does *not* mean "uses numpy" — the strike detector `audio/` used to
-  hold was numpy, and M20 ported it and **deleted** it. A module is retired from Python once a
-  conforming Rust implementation exists *and* the vectors that prove it are committed; the vectors
-  are the oracle, not the code that recorded them, which is why they must be right *before* the
-  delete, and why `conformance.py regenerate` now refuses to rebuild that family.
+- **The analysis core is stdlib + `contracts` only, and the Rust half is the one that matters** —
+  the Python `analysis/` is frozen from M32 and deleted in M40 (ADR-035 §4–§5). No numpy in
+  `analysis/`, and no numeric library in the Rust scoring path (two-language since ADR-030). A
+  numeric library *outside* that path is named, never assumed: `crates/trigger`'s `rustfft`, for
+  the FFT the Python detector needed numpy for, and from §M29 `ort`, for the lab's OCR reader
+  (ADR-035's Consequences).
+- **Python stays only where it is required** (ADR-035 §1, replacing ADR-030's 2026-09-22
+  addendum): MediaPipe pose, as the worker behind `crates/pose`, and the LLM. §1 names every file
+  that survives with them; everything else ports, and a third exception needs a decision of its
+  own. So **new work is Rust**, and the rest of the Python lab is **frozen from M32 to M40** — it
+  gains nothing, is fixed only when it breaks, and must keep reading what Rust writes (§4). §M29
+  ports it and M40 deletes it (§5). What stands from the old rule: the vectors are the oracle, not
+  the code that recorded them, which is why M20 could **delete** the numpy strike detector and why
+  `conformance.py regenerate` refuses to rebuild that family.
 - **`api/pipeline.py` must not import `fastapi`, and `feedback/coach.py` must not import
   `anthropic` at module scope.** Both are pinned by `tests/api/test_pipeline_imports.py`, because
   the offline CLIs run on installs without those extras.
@@ -79,10 +89,13 @@ Break one of these and something breaks a long way from your edit.
 - **Measuring is separate from judging.** `analysis/measure.py` produces numbers with no band in
   sight; `analysis/checkpoints/mechanics.py` turns them into verdicts. That split is what lets a
   new metric be measured across the corpus *before* a band for it exists.
-- **An `ANALYSIS_VERSION` bump regenerates `spec/vectors/`, in the same change.** They are this
+- **An `ANALYSIS_VERSION` bump re-records `spec/vectors/`, in the same change.** They are this
   repo's answer to a Rust port that disagrees silently (ADR-030 §8), and a vector recorded by an
-  older engine certifies a port against answers that have been retracted.
-  `tests/test_conformance.py` fails until they are re-recorded; `docs/CONFORMANCE.md` is the how.
+  older engine certifies a port against answers that have been retracted. **From M32, Rust
+  records** (ADR-035 §3): the bump is Rust's, `golf-core` re-records, and a structural diff gate
+  lets the change move only what it declares. Frozen Python's version stays behind on purpose —
+  never "fix" the gap by bumping it. A version pin fails until the vectors are re-recorded;
+  `docs/CONFORMANCE.md` is the how.
 - **Models are fitted offline and ship as data** (ADR-022). Fitting lives in `scripts/` under the
   `research` extra and may use numpy/scikit-learn; what enters the package is a provenanced JSON
   artifact plus stdlib arithmetic to evaluate it. `ranges.json` and `golfdb_v1.json` already work
@@ -108,11 +121,12 @@ of its five sections costs a fraction of reading the file.
 | What happened last session? | `WORKLOG.md` — **the top entry, and only the top entry** |
 | Has this been tried and rejected? | `docs/M4_POSE_BAKEOFF.md` — grep it |
 | Why is there a trained model, and where? | ADR-022, then `analysis/benchmarks/joint.py` |
-| What is the app written in, and why? | ADR-030 — Rust core, MediaPipe pose in a Python sidecar, Flutter shell. **The core is built and wired to nothing** (M22), and so is the sidecar's pool (M23, ADR-033); the session engine and the shell are not, so this repo still *runs* as the Python pipeline it describes |
-| How is a port checked against this core? | `docs/CONFORMANCE.md` — schemas, golden vectors and the tolerance rules. Artifacts in `spec/`, runners `scripts/conformance.py` *and* `cargo test`. **Regenerate the vectors in the same change that bumps `ANALYSIS_VERSION`** |
+| What is the product now, and why did it pivot? | ADR-034 (`docs/decisions/034-shot-first-phone-first.md`) — the shot is the unit and the phone is the host; its Consequences name every milestone it moved. Then the program plan, `docs/plans/m31-m40-shot-first-pivot.md`, for M31–M40's detail, and `ROADMAP.md`'s status table for where each stands |
+| What is the app written in, and why? | ADR-030 **as amended by ADR-034 and ADR-035** — a standalone iPhone app, with the Rust core on the device through Flutter and `flutter_rust_bridge`; pose on the phone only behind M39's gate, the laptop computing mechanics if it fails. **The rest is Rust too**: Python stays only for MediaPipe pose and the LLM (ADR-035 §1), and the Python pose sidecar is laptop-only, with §M29's Rust lab CLI as its first caller (ADR-033's last addendum). **The core is built and wired to nothing** (M22), and so is the sidecar's pool (M23, ADR-033); the app is not, so this repo still *runs* as the Python pipeline it describes, frozen from M32 (ADR-035 §4) |
+| How is a port checked against the core? | `docs/CONFORMANCE.md` — schemas, golden vectors and the tolerance rules. Artifacts in `spec/`, runners `scripts/conformance.py` *and* `cargo test`. **The oracle moves to Rust at M32** (ADR-035 §3, which also says when the frozen Python records once more and when a vector is worked by hand): `golf-core` re-records, diff-gated, `cargo test` is the gate, and Python's `check` stops certifying. **Re-record the vectors in the same change that bumps `ANALYSIS_VERSION`** |
 | How is the *port itself* gated, stage by stage? | ADR-032 — the crates, the committed stage vectors, and §3's edges. **M22 is done** and the body is a phase behind the addenda on both counts: §1's two crates are four (six in the workspace), and §3's three edges are **six** — banker's rounding, `%g`/`.Nf` reaching the sentences, dict insertion order deciding which name lands in one, `str()` on a bare float, `max` returning the *first* maximum, and three-argument `math.hypot`, whose last bit decides a **bool**. Read the eleventh addendum for what the whole port measured, and the Status block before touching the port |
 | Where is the Rust, and what is in it? | Seven crates. `crates/trigger` — ball-strike detection offline and live, plus the ring buffer and cutting rules that turn a trigger into a clip. `crates/capture` — which cameras a host can see and what they can be asked for. `crates/pose` — the sidecar boundary (M23, ADR-033): `protocol` is the NDJSON message shapes and the line framing, `worker` is one child interpreter under two derived timeouts, `pool` is N of them behind a bounded queue with one retry on a *fresh* worker, `writer` writes the `{camera_id}.keypoints.json` the worker refuses to, and `golf-pose run` poses one clip while `golf-pose sweep` is what measured the default pool size of two. `crates/contracts` — the payload shapes and their runtime bounds, mirroring the nine `contracts/` modules the engine's result is built from (M22 P2), plus all three registries and the `unscored` prose table, each landed beside its walker — `CHECKPOINT_REGISTRY` (P5), `placements` and `pivots` (P5b), `UNSCORED_REASONS` (P6). `crates/analysis` — the engine port (M22, ADR-032). `pyfmt` is §3's portability edges solved before any caller (P3); `smoothing`, `phases`, `measure` and `stats` are the **geometry**, the measuring half (P4); `benchmarks/store` and `checkpoints/` are the **judging**, the half that turns a number into a verdict and a sentence (P5); `trajectory`, `pivot`, `benchmarks/{joint,trajectory}` and `engine`'s three face-on measurement groups are the **population and rotation** numbers, recorded and judged by nothing (P5b); `engine`'s `analyze_swing_bundle`, `scoring` and the face-on slice of `alignment` are the **assembly** (P6); the rest of `alignment`, the second trajectory basis, the two `_dtl` measurement groups and `_without_contradicted_scores` are the **second view** (P7); `benchmarks/flight_model`, `flight` and `spin_solve` are the **ball flight**, the forward model and the inverse over it (P8) — `pyfmt` gained CPython's `math.hypot` there, the first §3 edge that reaches a bool rather than a sentence — and `shot_measure`, `flight_infer` and `flight_measure` are the **join** from a stored shot to those numbers (P8b), which is where the milestone's exit criterion was met. `crates/feedback` — `rules.py`'s ranked tips, depending on `contracts` and **not** on `analysis`, which is ADR-008's rule as a cargo edge. `crates/core` — the shell: the `run` seam and the `golf-core` binary, the only crate allowed to hold both halves, and where the first whole-bundle gate lives. What stayed in Python is named rather than left to be noticed: `alignment`'s render half (`pair_frames`, `warp_speeds`) and 130 lines of `flight_measure.py`, both because §M29 retires their callers rather than porting them, and neither reached by any committed vector. Start at any `src/lib.rs`; the constants carry their measurements, and `capture`'s crate doc carries the choice it has **not** yet made |
-| Why did a module leave Python? | ADR-030's **2026-09-22 addendum** — the retirement rule, and M20 as the first module to meet it. ADR-032 §7 adds its third clause — *and nothing that stays Python calls it* — which makes the rule a schedule: `analysis/` leaves in §M29, once `api/` and `mcp/` have |
+| Why does a module leave Python, and when? | ADR-035 (`docs/decisions/035-rust-everywhere-python-where-required.md`) — §1 is the rule (only what is required stays), §5 the schedule (§M29 ports the lab and deletes what the frozen FastAPI server does not import; M40 deletes the rest, `analysis/` included), and §7 the sentences it replaced: ADR-030's **2026-09-22 addendum**, where M20 was the first module to leave, and ADR-032 §7's schedule, whose third clause — *and nothing that stays Python calls it* — still stands as the rule |
 | What rules is code held to? | `docs/CODE_STANDARDS.md` — each rule with its precedent *and* a known non-violation |
 | Has this refactor already been declined? | `docs/REFACTOR_LEDGER.md` — read it before proposing a structural change |
 

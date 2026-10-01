@@ -24,10 +24,13 @@ and no vector moved**, which §9 predicted and the eleventh addendum qualifies.
 
 **Nothing is deleted.** §7's third clause is why, and it reads as a schedule rather than an
 exemption: `analysis/` has a conforming port and committed vectors that prove it, and it stays
-until the 28 lab callers that reach it have gone. Two implementations stand until §M29.
+until the 28 lab callers that reach it have gone. **§7's schedule is superseded by
+[ADR-035](035-rust-everywhere-python-where-required.md)** 2026-09-30, and its rule is not. §M29
+now ports the lab, M40 deletes `analysis/`, and two implementations stand until then. Rust
+re-records the vectors from M32, under a structural diff gate, rather than after §M29.
 
 Read §3's edges — **six now, and three of them were found by building** — and §7 before starting
-a phase, and the **eleven addenda** below for what building corrected: the first records seven stages, not the eight §2 names; the second corrects §4's
+a phase, and the **thirteen addenda** below for what building corrected: the first records seven stages, not the eight §2 names; the second corrects §4's
 counts and records what a round trip cannot be asked for; the third records that two of §3's three
 edges are Rust's own formatter, and which assurance the format table cannot give; the fourth adds a
 **fourth portability edge** §3 does not name, and measures how much of a green stage is actually
@@ -47,9 +50,16 @@ sentence — CPython's three-argument `math.hypot` is a compensated norm and bot
 `serde_json` was reading the oracle a ulp wrong until `float_roundtrip` was turned on; the tenth
 closes the port, records that the one gate whose input no stage could supply is the one that made
 `resolved.launch` an answer rather than a shared assumption, and corrects three things earlier
-phases recorded as true; and the eleventh is the closing one the Consequences section asked for —
+phases recorded as true; the eleventh is the closing one the Consequences section asked for —
 which edges actually fired, what the families cost, that **no vector moved**, and the coverage the
-whole port does *not* have, gathered into one list.
+whole port does *not* have, gathered into one list; and the twelfth (M31, ADR-034) records that
+**every vector family will name its oracle**, because Python-recorded, hand-worked and
+Rust-recorded families are about to stand side by side, that **the screen parser's six
+portability edges are M34's list and not additions to §3**, and the planned `crates/pyfmt` split,
+pending the refactor ledger; and the thirteenth (M31.5, ADR-035) records that **Rust
+records the vectors from M32**, under a structural diff gate, that §7's rule stands while
+its schedule becomes §M29 to port and M40 to delete, and that a family Python recorded
+and Rust re-records is a kind of oracle M32 has to name.
 
 ## Date
 2026-09-23
@@ -1183,3 +1193,239 @@ ADR-030's retirement rule — and it is not deleted, because 28 callers that sta
 it. The schedule holds: M24 gives the core its first real caller, M25 retires `api/` into the
 shell, §M29 ports `mcp/` and does the delete. Until then two implementations stand, and the vectors
 are what stops them drifting.
+
+## Addendum, 2026-09-29 — who records each family, and the screen parser's edges are M34's
+
+**M31 P5**, docs only. [ADR-034](034-shot-first-phone-first.md) moved the product onto the phone,
+and the phone runs only Rust ([clause 6](034-shot-first-phone-first.md#6-the-phone-is-the-host)).
+[ADR-030's 2026-09-29 addendum](030-app-platform-rust-core-python-sidecar.md#addendum-2026-09-29--the-machine-is-the-phone-what-adr-034-superseded-here-and-what-it-left)
+left it to this ADR to say how the new work is gated. Three things follow, and none of them reopens
+§1–§9: no vector moves, `ANALYSIS_VERSION` stays where it is, and §3's list stays at six.
+
+### Every family names its oracle, because there are about to be three kinds
+
+Until now there was one kind, because CPython recorded every family. The engine families
+(`synthetic`, `corpus`, `stages`) come from `analysis/` through `conformance.py`, and `format` comes
+from CPython's own formatter. `audio` comes from a detector M20 deleted, which is why `regenerate`
+refuses to rebuild it. **None of the five says so.** Their `provenance` carries `kind`, a `note`
+and what the input was cut from, and no `oracle` key (read 2026-09-29). The oracle is implied by
+which runner wrote the file.
+
+[ADR-034 clause 9](034-shot-first-phone-first.md#9-the-oracle-per-vector-family) makes it a choice
+per family:
+
+- **A port of existing Python is recorded from Python**, as M22 was. M34's screen parser and M36's
+  many-shot layer are ports, so §2 and §7 apply to them as written.
+- **New analysis is Rust first, against hand-worked vectors** (`provenance.oracle: "hand"`). That
+  covers M37's strike profile, topic grades and blends. There is deliberately no Python to record
+  from: one written first would be born to be retired on §7's own schedule. An answer worked by hand
+  from the stated rule is independent of both languages.
+- **M37's corpus vectors are recorded from the Rust core**, and that is the third kind. §7 says the
+  engine family becomes a changelog and a regression suite after §M29, rather than an oracle. This
+  family is that from the start, because it never had a Python reference.
+
+So the kind has to be written down, because a regenerate means something different for each:
+
+- re-recording a Python family from Python is §7's changelog;
+- re-recording a hand family from Rust is the self-portrait `conformance_vectors._audio` refuses;
+- a Rust-recorded family proves only that nothing moved.
+
+**M37 adds the pin that every family names its oracle**, and the pin covers the five that exist.
+
+**The lab reaches Rust-only analysis through `golf-core` subcommands**, never through a second
+Python copy (clause 9). That is the `run` seam's shape (the seventh addendum), and it is the
+subprocess M20 P5 put between `api/pipeline.py` and `crates/trigger`. For analysis that only Rust
+has, this settles §7's open question in favour of the subprocess seam. For the scripts that reach
+`analysis/` today, the question is still §M29's.
+
+### The screen parser has edges of its own, and they are M34's list, not §3's
+
+[Clause 7](034-shot-first-phone-first.md#7-ocr-on-the-phone) ports `launch_monitor/screen/`'s
+parser and validator to a new `crates/screen` (M34). They are pure functions of OCR boxes and a
+device profile, so the port is recorded from Python and gated the way M22's was. The program plan
+found six places where CPython decides the answer
+([finding 5](../plans/m31-m40-shot-first-pivot.md#what-the-code-says-before-anyone-re-derives-it)).
+Each was re-read against the code on 2026-09-29, and the Rust side of 3, 4 and 6 was checked with
+`rustc`:
+
+1. **`difflib.SequenceMatcher.ratio`** scores every OCR label against every field
+   (`ProfileField.matches`, `profiles.py`). Rust's standard library has no counterpart. The score is
+   compared against a threshold and against the other fields' scores, so it must be reproduced
+   exactly or labels land on different fields. `Impact Position` scores 0.9375 against
+   `Impact Position V`.
+2. **`_THOUSANDS` is a look-behind regex** (`parser.py`). The `regex` crate has no look-around, and
+   the program plan keeps that crate out anyway, so this is hand-written.
+3. **Float floor division.** `int(b.center_y // bucket)` sorts value boxes into lines. CPython's
+   `//` is not the floor of the quotient: `1.0 // 0.1` is `9.0`, where `(1.0 / 0.1).floor()` and
+   `f64::div_euclid` both give `10`.
+4. **`{text!r}` in warnings**, which are compared exactly. `repr` picks its quote by content
+   (`'Open'`, but `"it's"`). Rust's `{:?}` always writes double quotes, and it escapes in its own
+   notation (`\u{1c}` where CPython writes `\x1c`).
+5. **Two tie rules that point opposite ways.** `DeviceProfile.field_for` keeps the *last* field at
+   a tie (`>=`), and `_find_labels` keeps the *first* box (`>`).
+   - The second has fired on a real photo
+     ([M31 P2 finding 2](../plans/m31-shot-first-adr.md#p2--found-2026-09-29)). OCR drops the
+     `V` from `Impact Position V`, so two boxes score 1.0 for one field, and the first box wins it.
+   - A port with the other tie-break passes every screen where nothing ties.
+6. **Unicode `upper()` and `split()`.** Both depend on Unicode tables that CPython applies its own
+   way. For example, a bare `split()` splits on U+001C–U+001F, and Rust's `split_whitespace` does
+   not, because those four characters are not Unicode `White_Space`.
+
+**They are not added to §3.** §3 lists the places where CPython computes something differently
+*for the engine*, and [`docs/CONFORMANCE.md`](../CONFORMANCE.md) §3 is the copy an engine port
+reads. `analysis/` reaches none of these six. Adding them there would send the next reader of the
+engine looking for a `difflib` it never calls. They belong to the crate that hits them, and M34
+records them beside its own vectors and the format tables it generates from CPython.
+
+The parser also reaches two of §3's six edges. `validate_parse`'s warnings interpolate `:g` and
+`.3f`, and `to_shot_data` calls `round(parsed.confidence, 3)`. The next section follows from that.
+
+**What the screen family gates is the parser**: boxes in, `ShotData` out. The phone reads the
+screen with Apple Vision, the lab reads it with PaddleOCR, and nothing makes their boxes identical.
+Whether Vision's boxes parse as well is M33's question, which it answers by diffing each field
+against the stored shots. No vector here answers it.
+
+### `pyfmt` moves out of `analysis`, pending the ledger
+
+`crates/screen` needs `pyfmt`, for the reason above, and it may not depend on `analysis`. The two
+are siblings over `contracts`, which is ADR-008 as a cargo edge. So M34 plans to move
+`crates/analysis/src/pyfmt.rs` into its own `crates/pyfmt`.
+
+The cost of leaving it where it is already shows in the tree. `crates/feedback` cannot import
+`analysis::pyfmt` either, so it re-spells `percent` for its one fallback call, and
+`the_percent_fallback_agrees_with_pyfmt` holds the two spellings to one rule. One call can afford
+that. A parser's worth of `%g`, `.Nf` and banker's rounding cannot, because a second copy of §3's
+module is exactly the drift §3 exists to prevent.
+
+**It is planned, not decided.** [`docs/REFACTOR_LEDGER.md`](../REFACTOR_LEDGER.md) has no row for
+it (read 2026-09-29), and a structural change is checked against the ledger first. M34 either lands
+it with a `Done` row or records why it did not. The move changes no function, so the format family
+gates it without being re-recorded. It adds a crate to §1's count, which the seventh addendum has
+already moved once.
+
+### What this does not change
+
+- **§3's six edges**, §2's rule that every stage is gated by a committed vector, and §9's criterion
+  for the engine.
+- **§7's retirement rule and its third clause.** The schedule holds under ADR-034's milestone names.
+  - M24's first caller and M25's retirement of `api/` are re-scoped under M40.
+  - §M29 is blocked on M40 rather than M25.
+  - The core gains callers on the phone (M38) before it gains one on the laptop. Neither moves §7's
+    clock, because the clause counts the Python callers that stay, and the phone has none.
+- **The committed vectors.** No family moves in M31. The `profiles.json` comment in
+  `tests/test_conformance.py` ("OCR stays Python") changes in M34, when the parser ports.
+
+## Addendum, 2026-09-30 — Rust records from M32, and §7's schedule is §M29 to port and M40 to delete
+
+**M31.5 P4**, docs only. [ADR-035](035-rust-everywhere-python-where-required.md) moves the oracle to
+Rust and re-scopes §M29 as the port of the Python lab.
+[Its clause 7](035-rust-everywhere-python-where-required.md#7-what-this-supersedes-sentence-by-sentence)
+supersedes §7's schedule, and keeps §7's rule and §7's argument. The reasons are ADR-035's. This
+addendum names the sentences above that stop holding. No vector moves, `ANALYSIS_VERSION` stays at
+16, and §3's list stays at six.
+
+### §7's third clause stands, and *stays* now means clause 1's list
+
+**"…and nothing that stays Python calls it" is still the rule, and it still reads as a schedule.**
+What changes is what *stays* covers.
+
+- **§7 wrote "the sidecar", and ADR-030's first addendum spelled that as three files.**
+  [Clause 1](035-rust-everywhere-python-where-required.md#1-the-rule-and-the-two-exceptions-it-names)
+  now names every file. It covers the pose worker with its imports, and the LLM with its transcript
+  store, its club lookup and the three shapes it owns.
+- **None of those files imports `analysis/` directly** (read 2026-09-30).
+- **The LLM's tools reach it indirectly, and §M29 replaces that route.** `scripts/ask_swing.py`
+  builds them from Python `mcp/`, which calls `analysis/`, and hands them to `conversation.py`. The
+  stdio route to the Rust MCP server replaces them (Q9 in
+  [M31.5 P2's findings](../plans/m31-5-rust-first-replan.md#p2--found-2026-09-30)).
+- **What `coach.py` imports from the ported half of `contracts/` goes too.** Under Q14, `coach.py`
+  reads its swing and shot as JSON from the Rust MCP server instead.
+
+### §7's schedule: §M29 ports, and M40 deletes
+
+[Clause 5](035-rust-everywhere-python-where-required.md#5-the-lab-port-is-m29-re-scoped) supersedes
+§7's bullet list:
+
+- **"`api/` retires into the Flutter shell … `api/pipeline.py` is the exception … M24 is where the
+  Rust core takes it over."** `api/pipeline.py`'s job goes to §M29's Rust lab CLI. `api/` itself is
+  ported to `axum` or dropped in M40
+  ([clause 2](035-rust-everywhere-python-where-required.md#2-everything-else-ports-including-the-three-things-considered-and-not-kept)).
+  Until then the frozen `api/pipeline.py` keeps running as the FastAPI worker's pipeline.
+- **"`mcp/` is ported to Rust" stands.** It happens in §M29, on `rmcp`, and `contracts/caveats.py` and
+  `contracts/tool_descriptions.py` still go with it.
+- **"`scripts/` is the blocker still open … some of `scripts/` is permanent by an existing decision"
+  is dissolved.**
+  - The fitting scripts are archived in §M29 rather than kept running, and the lab's entry points
+    become the Rust lab CLI.
+  - So the question §M29 was to open with has nobody left to ask it. That question was how fitting
+    reaches a measurement once `analysis/measure.py` is gone.
+  - An archived `golfdb/` runs until M40 deletes `analysis/`, and is a record after that
+    ([P1 finding 11](../plans/m31-5-rust-first-replan.md#p1--found-2026-09-30)).
+- **"§M29 is when it fires" becomes M40.** §M29 replaces the lab, and deletes only what the frozen
+  FastAPI server does not import. M40 deletes the rest, `analysis/` included (Q17).
+  - Three sentences above now mean M40 for the delete: §7's closing "§M29 is when it fires", the
+    Consequences' "`analysis/` is deleted in §M29", and the eleventh addendum's "§M29 ports `mcp/`
+    and does the delete". The Status block says so itself.
+  - The twelfth addendum's "§M29 is blocked on M40" is superseded. §M29 now runs after M36 and
+    before M40.
+
+### Rust records from M32, not after §M29
+
+**§7's "After M29, an `ANALYSIS_VERSION` bump re-records the engine family from the Rust core" is
+brought forward to M32**
+([clause 3](035-rust-everywhere-python-where-required.md#3-the-oracle-moves-to-rust)).
+
+- **§7's argument for it is unchanged, and clause 3 rests on it.** Once a port conforms, a re-record
+  is a changelog and a regression suite, not an oracle.
+- **Clause 3 makes mechanical the part §7 left to a person.** In §7, "a reviewer reads what moved".
+  Under clause 3, a structural diff gate does. Every re-recorded output may differ from the committed
+  one only by the keys or values the change declares. Anything else fails the re-record.
+- **The gate is structural, never a text diff.** The second addendum found the reason: Python and
+  `serde_json` disagree about exponents on 77 floats, so the text churns when nothing has changed.
+- **What M32 builds for it** (P1 finding 3):
+  - The engine family needs a thin re-record verb around `golf-core run`. `crates/core/tests/engine.rs`'s
+    structural comparison moves into library code with it.
+  - The stage family needs a Rust port of `conformance.py::run_stages` and its compose check first.
+    §2's stage tests recompute each stage and compare it; no Rust code assembles a stage document.
+  - `format` and `audio` need nothing.
+- **`golf-core`'s module doc says the opposite**, and M32 rewrites it with the verb. It reads:
+  "`regenerate` is deliberately not a candidate: the vectors are the oracle and a port that can
+  rewrite them is a port that passes by construction". That was §7 before a port conformed.
+
+### The twelfth addendum's kinds of oracle
+
+- **"A port of existing Python is recorded from Python" now means once.** M34's parser and M36's
+  aggregates and stores are recorded from the frozen Python before the port moves (Q7). Rust
+  re-records them after that, diff-gated. Adding such a family to `scripts/conformance_vectors.py` is
+  the one change the frozen lab is allowed
+  ([clause 4](035-rust-everywhere-python-where-required.md#4-the-frozen-python-lab)).
+- **The engine family joins the Rust-recorded kind at M32.** The twelfth addendum said M37's corpus
+  vectors are that kind "from the start", and that the engine family becomes one after §M29. It now
+  becomes one at M32.
+- **"The lab reaches Rust-only analysis through `golf-core` subcommands" is superseded** (clause 7).
+  The frozen lab reaches no new analysis at all, and from §M29 the lab is the Rust CLI. The twelfth
+  addendum left one question with §M29: how the scripts that reach `analysis/` today reach it. The
+  answer is that they are ported or archived.
+- **One question the taxonomy does not answer, and M32 has to.** A family recorded by Python and then
+  re-recorded by Rust under the gate holds Python's values, except where a change declared
+  otherwise. So it is neither of the twelfth addendum's kinds as written. M37's pin will read its
+  `provenance.oracle`, and M32 does the first such re-record, so M32's plan names what that field
+  says.
+
+### What this does not change
+
+- **§1–§6, §8 and §9.** That includes §3's six edges and §2's rule that every stage is gated by a
+  committed vector.
+- **§5's one copy on disk.**
+  - `crates/analysis` keeps reading the benchmark JSON by `include_str!` from
+    `src/golf_coach/analysis/benchmarks/`.
+  - M40 moves that JSON crates-side, in the change that deletes `analysis/` (clause 5). §5's rule
+    survives the move; only the path changes.
+- **§6's numeric-library ban in the scoring path.** `ort`, §M29's OCR runtime, sits outside it, as
+  `rustfft` does.
+- **The committed vectors.** They stay as the record of what Python said, because the gate lets a
+  re-record change only what the change names (clause 3). The audio family stays frozen.
+- **The twelfth addendum's list of M34's parser edges, and the planned `crates/pyfmt` split.**
+- **The Consequences' "Drift between them is a real risk"**, which stays true in a new form. From M32
+  the frozen Python and the Rust core disagree on purpose. Freezing is what keeps that disagreement
+  to the declared diffs (ADR-035's Consequences).

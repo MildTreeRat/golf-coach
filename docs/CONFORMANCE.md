@@ -4,9 +4,10 @@
 > **So does the Rust core they exist to check.** As of M22 P8b all 21 engine vectors conform
 > through `cargo test`, and `golf-core run` diffs against `conformance.py run` at zero differences
 > on every one of them. This document stays written for a port that has to be *judged* rather than
-> in the past tense, because the Python it judges against is still here until
-> [§M29](../ROADMAP.md) deletes it — and because the next port to be judged is the one that reads
-> this file after that.
+> in the past tense, because the Python it judges against is still here until M40 deletes it —
+> frozen from M32, when the oracle moves to Rust
+> ([ADR-035 §3](decisions/035-rust-everywhere-python-where-required.md#3-the-oracle-moves-to-rust))
+> — and because the next port to be judged is the one that reads this file after that.
 
 [ADR-030](decisions/030-app-platform-rust-core-python-sidecar.md) commits this project to a second
 implementation of the swing loop. **Two cores that disagree silently is the failure mode that
@@ -301,9 +302,11 @@ moment nobody regenerates — which on this family is most of the time.
 Two properties this family keeps. It regenerates from the **committed** vectors rather than from
 `data/processed/`, so unlike the corpus family it needs no capture machine —
 `regenerate --stages-only` is the one rebuild in §4 that runs anywhere. And it stays regenerable
-for as long as the Python engine exists, which is through M22 and into
-[§M29](../ROADMAP.md) — see [ADR-032](decisions/032-the-rust-core.md) §7 for when the retirement
-rule fires on `analysis/` and what happens to this family afterwards.
+from Python only until M32's first Rust re-record, after which `golf-core` re-records it through a
+Rust port of `run_stages`
+([ADR-035 §3](decisions/035-rust-everywhere-python-where-required.md#3-the-oracle-moves-to-rust)).
+The Python engine stays, frozen, until M40 deletes it — see [ADR-032](decisions/032-the-rust-core.md)
+§7 and its 2026-09-30 addendum for that schedule.
 
 ### Format (`spec/vectors/format/`) — 5 vectors, 3,059 cases, run by `cargo test`
 
@@ -433,6 +436,14 @@ lives in `phases.rs` and is gated by the stage vectors. See ADR-032's 2026-09-24
 
 ## 4. The commands
 
+**These are the commands as M22 left them, and they hold until M32**
+([ADR-035 §3](decisions/035-rust-everywhere-python-where-required.md#3-the-oracle-moves-to-rust)).
+At M32's first Rust re-record the oracle moves: `golf-core` re-records the engine and stage
+families, every re-record diff-gated against the committed file, and `cargo test` becomes what
+certifies the vectors. `check` stops certifying them there. What `check` and `regenerate` do after
+that is [§M32's](plans/m31-m40-shot-first-pivot.md#what-changes-in-python-and-why) to build, and
+M32 rewrites this section with its verb. `check` retires with `analysis/` in M40.
+
 ```bash
 python scripts/conformance.py check                 # every committed vector, against this build
 python scripts/conformance.py check --id corpus/2026-08-09-2 -v
@@ -511,17 +522,32 @@ every cross-language comparison here is structural, over parsed values, which is
 ## 5. What ships in the app, and what stays in the lab
 
 The inventory ADR-030 implies, made explicit — the answer to "does this module get rewritten?"
+[ADR-034](decisions/034-shot-first-phone-first.md) (2026-09-29, M31) makes the phone the first
+host, and **the phone runs no Python**. That moved three rows: the screen parser now ports, tier 3
+is laptop-only, and tier 4's retirement waits on M40.
+[ADR-035](decisions/035-rust-everywhere-python-where-required.md) (2026-09-30, M31.5) moved the
+rest: **Python stays only where it is required**, for MediaPipe pose and the LLM
+([§1](decisions/035-rust-everywhere-python-where-required.md#1-the-rule-and-the-two-exceptions-it-names)
+names every file), and everything else ports, the lab included. So tier 3 is §1's list, tier 4 is
+[§M29](../ROADMAP.md#m29-the-lab-port--a-rust-lab-cli-the-rmcp-server-and-the-archive-move)'s port
+rather than a lab that stays, and retirement happens twice: §M29 deletes what the frozen FastAPI
+server does not import, and M40 deletes the rest
+([§5](decisions/035-rust-everywhere-python-where-required.md#5-the-lab-port-is-m29-re-scoped)). The
+rows below say so where they changed, and
+[the M31.5 plan's inventory](plans/m31-5-rust-first-replan.md#the-inventory) gives each module its
+milestone.
 
 | Tier | Modules | Disposition |
 |---|---|---|
-| **1 — ported, M22** | `contracts/`, `analysis/`, `feedback/rules.py` | **Done** — `crates/{contracts,analysis,feedback,core}`, all 21 engine vectors conforming through `cargo test` (M22 P2–P8b). **Nothing was deleted**, unlike M20: ADR-032 §7 adds a third clause to the retirement rule — *and nothing that stays Python calls it* — and `analysis/` has 28 callers in the lab, so both implementations stand until [§M29](../ROADMAP.md). Two parts stayed behind on purpose and are named in ADR-032 §8 and its P7 addendum: `alignment.py`'s render half (220 lines a side-by-side video is drawn from) and 130 lines of `flight_measure.py` that only a script and a page call. No committed vector reaches either |
-| **1 — the rest of the swing loop** | `storage/`, `capture/` | **Ports to Rust** (ADR-030 §1), and outside M22's criterion because no committed vector crosses either. Already stdlib-only. `crates/capture` (M21) is the *camera edge* rather than a port of this `capture/`, whose `FileVideoSource` ADR-031 leaves in the lab deliberately |
+| **1 — ported, M22** | `contracts/`, `analysis/`, `feedback/rules.py` | **Done** — `crates/{contracts,analysis,feedback,core}`, all 21 engine vectors conforming through `cargo test` (M22 P2–P8b). **Nothing was deleted**, unlike M20: ADR-032 §7 adds a third clause to the retirement rule — *and nothing that stays Python calls it* — and `analysis/` has 28 callers in the lab, so both implementations stand until M40: [§M29](../ROADMAP.md#m29-the-lab-port--a-rust-lab-cli-the-rmcp-server-and-the-archive-move) ports the lab off it, and the frozen FastAPI server imports it until M40 deletes both (ADR-035 §5). Two parts stayed behind on purpose and are named in ADR-032 §8 and its P7 addendum: `alignment.py`'s render half (220 lines a side-by-side video is drawn from) and 130 lines of `flight_measure.py` that only a script and a page call. No committed vector reaches either, and ADR-035 §2 deletes both rather than porting them |
+| **1 — the rest of the swing loop** | `storage/`, `capture/` | **`storage/` ports to Rust** (ADR-030 §1): M36 takes the stores the many-shot layer reads and §M29 the rest, except `transcript_store.py`, which stays with the LLM (ADR-035 §1). **`capture/` stays Python**, because the pose worker decodes its frames through `FileVideoSource` (ADR-035 §1; this row said "ports" until M31.5 P1 found the worker's import). Both are outside M22's criterion, because no committed vector crosses either. `crates/capture` (M21) is the *camera edge* rather than a port of this `capture/` |
 | **1 — ported** | ~~`audio/impact.py`~~ → `crates/trigger` | **Done, M20.** The Python original is **deleted**, per ADR-030's 2026-09-22 addendum: the vectors are the oracle, not the code that recorded them. `rustfft` is the one numeric library the port needed rather than arithmetic |
-| **1 — not yet** | `audio/ffmpeg.py` | **Ports to Rust, next.** Listed here because it was tier 1 by implication and in no table until M20 went looking: it holds the container edit lists, the two `soun` tracks the face-on clips carry and the `video_start_seconds` probe, and it reaches ffmpeg through the `imageio-ffmpeg` wheel rather than a system install. Until it moves, **Python decodes and Rust detects** |
-| **2 — shots and clubs** | `launch_monitor/{mock,composite,source}.py`, `clubs/catalogue.py` | **Ports to Rust, after tier 1.** Committed JSON plus stdlib arithmetic already (ADR-022), so the data crosses unchanged. `analysis/{flight,flight_infer,flight_measure,spin_solve,shot_measure}.py` were listed here and are **done** — they are inside `run_vector`'s reach, so M22 P8 and P8b took them with tier 1 rather than after it |
-| **3 — the Python sidecar** | `pose/estimator.py`, `pose/worker.py`, `feedback/coach.py`, `feedback/conversation.py` | **Stays Python, bundled** (ADR-030 §2, §3) — and this is *all* that stays. Pose is the load-bearing one: `ranges.json` is cut from these landmarks, and MediaPipe is a graph with no mature Rust binding. `pose/worker.py` (M23, ADR-033) is the process `crates/pose` spawns — the sidecar's own entry point, reusing `estimate_pose` unchanged, which is what makes this tier a *process* boundary rather than a library one. The LLM call is the other, and `coach.py` sits here rather than in tier 4 because it is bundled rather than lab |
-| **4 — the lab** | `mcp/`, `api/`, `clubs/lookup.py`, `launch_monitor/screen/`, `pose/{overlay,side_by_side}.py`, `scripts/` | **Not shipped, and not permanent.** Retired or ported in [§M29](../ROADMAP.md), which is what makes tier 1's delete possible at all — ADR-032 §7. **Settled**: `api/` retires into the Flutter shell (M25) rather than being ported, `api/static/`'s pages with it; `mcp/` ports to Rust. **Open**: `clubs/lookup.py`, `launch_monitor/screen/` and the overlay tools; and how ADR-022's fitting scripts — permanently Python, numpy and scikit-learn — reach a measurement once `analysis/measure.py` is gone |
-| **stub** | `detection/` | Gated on M1.5's no-go. Nothing to port |
+| **1 — not yet** | `audio/ffmpeg.py` | **Ports to Rust in §M29**, whose lab CLI runs ffmpeg as a subprocess (ADR-035 §5). Listed here because it was tier 1 by implication and in no table until M20 went looking: it holds the container edit lists, the two `soun` tracks the face-on clips carry and the `video_start_seconds` probe, and it reaches ffmpeg through the `imageio-ffmpeg` wheel rather than a system install. Until it moves, **Python decodes and Rust detects** |
+| **2 — shots and clubs** | `launch_monitor/{mock,composite,source}.py`, `clubs/catalogue.py` | **Ports to Rust in M36**, with the many-shot layer, and §M29 takes what M36 leaves (the M31.5 plan's R16 and R25). Committed JSON plus stdlib arithmetic already (ADR-022), so the data crosses unchanged. `analysis/{flight,flight_infer,flight_measure,spin_solve,shot_measure}.py` were listed here and are **done** — they are inside `run_vector`'s reach, so M22 P8 and P8b took them with tier 1 rather than after it |
+| **2 — the screen reader** | `launch_monitor/screen/{parser,validate,profiles}.py` and `profiles.json`, with `recognizer.py`'s `TextBox` | **Ports to Rust, M34** (ADR-034 clause 7), as `crates/screen`, recorded once from the frozen Python and then by Rust (ADR-035 §3), and gated by a screen vector family like every other port. Moved out of tier 4 on 2026-09-29: the phone reads its own photos, so the parser has to run there. `TextBox` crosses because it is the seam, the one shape both recognizers produce. The recognizer and the preprocessing (`paddle.py`, `preprocess.py`, `importer.py`) were to **stay the lab's reader**, with PaddleOCR and OpenCV. ADR-035 §2 ports them too, in §M29, through `ort` running the same Paddle models and gated on the 13 stored bay photos. On the phone, Apple Vision stands where they do. The parser has portability edges of its own, and they are M34's list rather than §3's ([ADR-032](decisions/032-the-rust-core.md)'s 2026-09-29 addendum) |
+| **3 — the Python sidecar** | `pose/estimator.py`, `pose/worker.py`, `capture/`; `feedback/coach.py`, `feedback/conversation.py`, `storage/transcript_store.py`, `clubs/lookup.py`, and the shapes they own — [ADR-035 §1](decisions/035-rust-everywhere-python-where-required.md#1-the-rule-and-the-two-exceptions-it-names) names every file | **Stays Python, bundled — and laptop-only** (ADR-030 §2, §3; ADR-034 clauses 8 and 10; ADR-035 §1). This is *all* that stays: the two exceptions, each with its import closure — `capture/` because the pose worker decodes through it, and `clubs/lookup.py` because it is an LLM call. **The phone has no Python**: pose there is an in-process iOS `PoseLandmarker` behind M39 P0's gate, and it never reaches this tier. Bundling, which was M26's, is now M40's. Pose is the load-bearing one: `ranges.json` is cut from these landmarks, and MediaPipe is a graph with no mature Rust binding. `pose/worker.py` (M23, ADR-033) is the process `crates/pose` spawns — the sidecar's own entry point, reusing `estimate_pose` unchanged, which is what makes this tier a *process* boundary rather than a library one. The LLM call is the other. `coach.py` sits here rather than in tier 4 because it is bundled with the laptop client rather than lab-only, and it **never reaches the phone**: there is no LLM there (ADR-034 clause 10) |
+| **4 — the lab** | `mcp/`, `api/`, the rest of `launch_monitor/screen/`, `pose/{overlay,side_by_side}.py`, `scripts/` | **Not shipped, and ported rather than kept.** [§M29](../ROADMAP.md#m29-the-lab-port--a-rust-lab-cli-the-rmcp-server-and-the-archive-move) is the lab port since [ADR-035 §5](decisions/035-rust-everywhere-python-where-required.md#5-the-lab-port-is-m29-re-scoped), after M34 and M36 and no longer blocked on M40: a Rust lab CLI takes over `api/pipeline.py`'s job and the lab scripts, `mcp/` ports on `rmcp`, the screen's recognizer ports through `ort`, and the research scripts move to `archive/`. The overlay tools are deleted rather than ported (ADR-035 §2). **§M29 deletes only what the frozen FastAPI server does not import**; M40 decides `api/` — ported to `axum` or dropped — and deletes the rest, which is what makes tier 1's delete possible at all (ADR-032 §7's rule). Superseded by ADR-035: `api/` retiring into the Flutter shell, the screen's reader staying PaddleOCR, `clubs/lookup.py` as open (it is tier 3), and the question of how ADR-022's fitting reaches a measurement, which is archived rather than run |
+| **stub** | `detection/` | Gated on M1.5's no-go. Nothing to port, and §M29 deletes it (ADR-035 §5) |
 
 `feedback/rules.py` is tier 1 and is the reason `run_vector` makes **two** calls rather than one.
 `analysis` may not import `feedback` (ADR-008), so `analyze_swing_bundle` leaves
@@ -537,8 +563,8 @@ than ports.
 The rule
 is enforced by cargo: `crates/feedback` holds `rules.rs` and depends on `contracts` alone, so it
 *cannot* reach `analysis` and `analysis` cannot reach it. Something above both has to make the two
-calls, and `crates/core` is it — the counterpart of `api/pipeline.py`, which §M29 retires into the
-Flutter shell rather than porting. See ADR-032's 2026-09-25 addendum for the three cheaper layouts
+calls, and `crates/core` is it — the counterpart of `api/pipeline.py`, whose job §M29's Rust lab
+CLI takes over rather than porting it (ADR-035 §5). See ADR-032's 2026-09-25 addendum for the three cheaper layouts
 that were declined, each of which bought a smaller crate count by spending that edge.
 
 `config.py::REPO_ROOT` assumes a source checkout and dies at packaging, which is tier 1's one known
@@ -551,7 +577,8 @@ unported assumption; it is in ADR-030's carried open questions.
 Named rather than left to be discovered:
 
 - **`feedback/coach.py`.** The *ranking* is covered; the LLM call is not and will not be — it is
-  tier 4, it is non-deterministic, and `FeedbackPayload.coaching` is `None` on every vector.
+  tier 3 and laptop-only (§5; this bullet said tier 4 until 2026-09-29), it is non-deterministic,
+  and `FeedbackPayload.coaching` is `None` on every vector.
 - ~~**`audio/impact.py` end to end.**~~ **Closed by M20.** `spec/vectors/audio/` covers it: 30
   vectors, one per stored clip, 4.3 MB. The waveforms were never the obstacle they looked like —
   see §2's audio family for what is shipped instead of them, and why windowing audio is lossy

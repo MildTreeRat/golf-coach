@@ -14,10 +14,24 @@ engine** — all 21 committed vectors conforming, and wired to nothing until M24
 and §3's boundary to the sidecar therefore exist, both with no caller above them; §4's session
 engine and §5's shell do not. M21 is part-built.
 
-**Two addenda, and read the second before budgeting anything against §3.** M23 P1 measured pose on
+**Partially superseded by [ADR-034](034-shot-first-phone-first.md)** 2026-09-29: §5, and the
+premise the Context states, *the machine is a laptop*. The phone is now the host and the laptop a
+later client, so M21 and M24–M26 are paused and re-scoped under M40. The rest of this ADR stands,
+and §7 is reinforced.
+
+**Superseded in part by [ADR-035](035-rust-everywhere-python-where-required.md)** 2026-09-30: the
+first addendum's rule, the survivor list it carries, and the schedule on which the lab
+retires. Python stays only where it is required, which means MediaPipe and the LLM. The
+lab is ported in §M29 rather than kept, and Rust records the vectors from M32. The
+Decision section stands as ADR-034 left it.
+
+**Four addenda, and read the second before budgeting anything against §3.** M23 P1 measured pose on
 this repo's own footage and it runs at **9.2 fps, not ~24** — so §3's "a two-view swing is roughly
 50 s" is about 2.5× optimistic for 4K portrait phone video. The protocol §3 left open is
-[ADR-033](033-the-pose-sidecar-protocol.md).
+[ADR-033](033-the-pose-sidecar-protocol.md). **Read the third before building on §1, §2, §5 or §6**:
+it says clause by clause what ADR-034 superseded, amended, reopened and left alone. **Read
+the fourth before relying on the first**: it names the sentences of the first and the
+third that ADR-035 replaced.
 
 ## Date
 2026-09-21
@@ -424,3 +438,215 @@ What it does change is every number downstream that was sized against 25 s per c
 `audio/trigger.py`'s docstring says the pipeline *"already spends ~25 s per clip in pose"*, which
 inherited this figure. It is left as written: it is an argument about a subprocess spawn being cheap
 by comparison, and it gets stronger, not weaker, at 65 s.
+
+---
+
+## Addendum, 2026-09-29 — the machine is the phone: what ADR-034 superseded here, and what it left
+
+**[ADR-034](034-shot-first-phone-first.md) moved the product from the swing video to the
+launch-monitor shot, and the host from a laptop to a standalone iPhone.** It is the second time this
+ADR's premise has moved, and the Context above records the first: M18–M27 were planned against *two
+iPhones on their own*, and this ADR was written when that became *the machine is a laptop*. ADR-034
+does not go back to the first premise. What made that one expensive was asking a phone to run
+MediaPipe-Python, OpenCV, pydantic-core and ffmpeg, and the phone is now asked to run the **Rust
+core** — the thing §1 built, and the thing ADR-008 and ADR-022 had made portable before anyone
+planned to port it. The reasons are ADR-034's and are not restated here; this addendum says which
+sentences above no longer hold.
+
+### Superseded: §5, and the premise that the machine is a laptop
+
+§5, *"the phone is a camera, and its app comes after the laptop's"*, is superseded whole. The phone
+app comes **first** and is the product ([ADR-034 clause 6](034-shot-first-phone-first.md#6-the-phone-is-the-host)),
+and the laptop is a later client
+([M40](../plans/m31-m40-shot-first-pivot.md#m40--the-laptop-client-resumes)). §5's reason for its
+order was that until the laptop app worked *"there is nothing for a phone to feed"*. That was true
+of a video product whose analysis ran on the laptop. A shot-first phone feeds nothing: the photo is
+read, analysed and stored on the phone that took it.
+
+The Context's *"The premise is now: the machine is a laptop"* goes with it. What that premise
+deleted was the pose risk, and it comes back **scoped to optional video** rather than to the
+product, behind a gate (below).
+
+Two parts of §5 outlive it, for reasons of their own:
+
+- **Its Wi-Fi arithmetic** (triggered clips of 10–20 MB, not a raw stream at ~180 MB/s) has no
+  caller now. M28, which was to build phone-over-Wi-Fi, is superseded by M39, where the phone keeps
+  its own clip. The measurement is still right, and [ADR-031](031-the-capture-edge.md) §6 still
+  sizes the laptop's ring by it.
+- **"This supersedes ADR-016's 'no phone app' clause and nothing else in it"** stays true of *this*
+  ADR. What ADR-034 changes in ADR-016 is recorded in ADR-016.
+
+### Amended: §1 — storage is on the device too
+
+§1 gives Rust *"… storage and the IPC layer"*. On the phone, "storage" is the phone's own: nothing
+on it listens on a port, and export is how data leaves it (ADR-034 clause 6). The IPC layer §1
+names is the sidecar's ([ADR-033](033-the-pose-sidecar-protocol.md)), and the phone has **none**,
+because it has no Python. `flutter_rust_bridge` is an in-process call. The rest of §1 stands.
+
+### Reopened, for the phone only: §2, behind M39's gate
+
+§2, *"Pose stays MediaPipe, in Python, unchanged"*, **still holds on the laptop**, word for word.
+It cannot hold on the phone, which has no interpreter.
+[ADR-034 clause 8](034-shot-first-phone-first.md#8-pose-on-the-phone-is-reopened-behind-a-conformance-gate)
+reopens pose there on §2's own terms:
+
+- it is **MediaPipe's graph**, through iOS's Tasks `PoseLandmarker` and the same pinned `.task`
+  bytes, not a reimplementation of it — so Option C's objection is met rather than overruled;
+- the gate is **M39 P0**, and it protects §2's reason: pose is the calibration of everything
+  downstream, so `ranges.json` is untouched whether the gate passes or fails;
+- **if it fails**, the phone records, and mechanics are computed on the laptop (M40), through the
+  sidecar §3 built.
+
+[ADR-002](002-pose-estimation-mediapipe.md)'s 2026-09-29 addendum records what the gate asks of the
+pose decision itself.
+
+*Deferred, by choice*'s **"Pose on the phone … Revisit only if the laptop stops being required"**
+has had its condition met. It is
+[M39](../plans/m31-m40-shot-first-pivot.md#m39--optional-video-on-the-phone-mac-then-bay) now.
+
+### Re-scoped: the milestones that were building this ADR
+
+- **M21, M24, M25 and M26 are paused** and re-scoped under M40, as the desktop target of the same
+  Flutter app. M26 moves whole, and the last Consequence's `config.py::REPO_ROOT` goes with it: that
+  assumption now dies at M40's packaging.
+- **M28 is superseded by M39.**
+- **M29 is blocked on M40**, not M25. Its job is unchanged: it retires `api/` and `mcp/`, so that
+  [ADR-032](032-the-rust-core.md) §7's clause can fire on `analysis/`.
+
+`ROADMAP.md` records each of them (M31 P8–P9).
+
+§4 reaches the target it was chosen for. It said the phone *"matters for Decision 5 and for nothing
+else today"*. The phone is now the first target rather than the last, and the desktop targets are
+M40's.
+
+§6's list of capture sources is the laptop's, and it splits three ways:
+
+- **File/upload** stays first-class, for §6's reason: it is the only source that replays the corpus.
+- **The USB/UVC webcam** moves with M21 to M40.
+- **Phone over Wi-Fi** is superseded with M28.
+
+On the phone, the shot photo is the first source and a video clip is optional (ADR-034 clause 1).
+
+### Reinforced: §7
+
+Cloud analysis stays closed, and the pivot strengthens the case: **the phone needs no network at
+all**. There is no upload, no account, and no LLM on the phone
+([ADR-034 clause 10](034-shot-first-phone-first.md#10-no-llm-coaching-on-the-phone)), so
+[ADR-019](019-secret-handling.md)'s key never reaches it.
+
+### What this does not change
+
+- **§1's choice of Rust, and the retirement rule** in the first addendum.
+  [ADR-034 clause 9](034-shot-first-phone-first.md#9-the-oracle-per-vector-family) *extends* the
+  rule rather than amending it: new analysis is written in Rust first against hand-worked vectors,
+  because a Python one written first would be born to be retired.
+- **§3.** The sidecar is unchanged and becomes laptop-only. ADR-033's 2026-09-29 addendum says
+  what that moves.
+- **§8.** The port is still gated by the conformance suite, not by review. How the screen
+  parser's port (M34) is gated is [ADR-032](032-the-rust-core.md)'s to record, by its own addendum.
+- **The second addendum's numbers.** They were measured on this desktop, and they say nothing about
+  a phone. M39 P0 is where the phone's are measured.
+- **`ranges.json`, ADR-001's supersession, and the two-language stdlib-only invariant.**
+
+---
+
+## Addendum, 2026-09-30 — what is required replaces what does not translate, and the lab is ported rather than kept
+
+**M31.5 P4**, docs only. [ADR-035](035-rust-everywhere-python-where-required.md) writes down the
+user's directive of 2026-09-30: everything is Rust, and Python stays only where it is required. It
+replaces the rule the first addendum wrote, keeps the reasoning that rule rested on, and moves the
+schedule that [ADR-032](032-the-rust-core.md) §7 hung from it. The reasons are ADR-035's and are not
+restated here. This addendum names the sentences above that no longer hold. Nothing is built, no
+vector moves, and `ANALYSIS_VERSION` stays at 16.
+
+### Replaced: the first addendum's rule, and who it left standing
+
+- **"Python keeps only what does not translate"** is replaced by
+  [clause 1](035-rust-everywhere-python-where-required.md#1-the-rule-and-the-two-exceptions-it-names):
+  Python stays only where the project depends on a library that has no alternative the user would
+  take today. The two rules agree about MediaPipe. They part on the sentence after it, *"The lab
+  stays Python too — tier 4 — because it is not shipped, not because it could not be ported."* The
+  lab is ported now, in §M29
+  ([clause 5](035-rust-everywhere-python-where-required.md#5-the-lab-port-is-m29-re-scoped)), for the
+  reason this ADR's own first addendum gave for deleting: a second copy is a second thing that
+  drifts.
+- **The survivor list is replaced by clause 1's, which names each file.** The inline amendment's
+  list, *"`pose/estimator.py`, `feedback/coach.py` and `feedback/conversation.py`, and nothing
+  else"*, was short in two ways. It missed the pose worker's own imports
+  ([P1 finding 10](../plans/m31-5-rust-first-replan.md#p1--found-2026-09-30), 2026-09-30), and it
+  missed the club lookup, which is an LLM call (P1 finding 8).
+- **§3's sidecar carries MediaPipe and nothing else.** The inline amendment read *stays* as "the
+  sidecar — pose and the LLM". The LLM stays Python, but it is not a worker in §3's pool.
+  - Once `mcp/` is Rust, `conversation.py` drives the Rust MCP server over stdio. That is ADR-035's
+    sub-decision, and [ADR-020](020-conversational-followups.md)'s Option B.
+  - How the Rust lab reaches `coach.py` is §M29's to build (clause 5's JSON entry).
+- **"The vectors are the oracle, not the code that recorded them" stands**, and so does M20's
+  delete
+  ([clause 7](035-rust-everywhere-python-where-required.md#7-what-this-supersedes-sentence-by-sentence)).
+  What changes is who records. From M32 `golf-core` does, under a structural diff gate
+  ([clause 3](035-rust-everywhere-python-where-required.md#3-the-oracle-moves-to-rust)). So the first
+  addendum's *"`regenerate` still builds the synthetic and corpus families from Python"* holds only
+  until M32's first Rust re-record.
+
+### Replaced: the schedule
+
+- **The inline amendment's "§M29 retires `api/` into the Flutter shell and ports `mcp/` to Rust"
+  splits.** `mcp/` still ports in §M29, on `rmcp`. `api/` is ported to `axum` or dropped, in M40
+  ([clause 2](035-rust-everywhere-python-where-required.md#2-everything-else-ports-including-the-three-things-considered-and-not-kept)).
+- **The third addendum's "M29 is blocked on M40 … Its job is unchanged" is superseded by clause 5.**
+  §M29 *is* the lab port. It runs after M36, depends on M34 and M36, and is not blocked on M40.
+- **Retirement happens at two moments.** §M29 switches the lab's entry points to Rust, and deletes
+  only what the frozen FastAPI server does not import. M40 deletes the rest, `analysis/` included
+  (Q17 in [P2's findings](../plans/m31-5-rust-first-replan.md#p2--found-2026-09-30)).
+- **The third addendum's "What this does not change" was right about ADR-034 and is now incomplete.**
+  It said that [ADR-034 §9](034-shot-first-phone-first.md#9-the-oracle-per-vector-family) *extends*
+  the retirement rule rather than amending it. ADR-035 does amend it, in the two places above.
+
+### Superseded: the second Consequence, as the first addendum left it
+
+The Consequence reads: *"Two implementations of the analysis core will exist, and the Python one
+stays. It is the reference, the oracle and the lab — ADR-022's offline fitting is unchanged and
+still Python under the `research` extra."* The first addendum already retracted *stays*. The rest
+moves as follows:
+
+- **The oracle is Rust from M32** (clause 3). The exception is a port of behaviour that frozen Python
+  already has. That is recorded from Python once, before the port moves.
+- **The lab is frozen from M32 and ported in §M29**
+  ([clauses 4](035-rust-everywhere-python-where-required.md#4-the-frozen-python-lab) and 5), and the
+  frozen copy is deleted in M40.
+  - Two implementations therefore stand until M40.
+  - From M32 they disagree on purpose. Rust's `ANALYSIS_VERSION` moves, and frozen Python's stays at
+    16.
+- **ADR-022's fitting is archived** with `scripts/golfdb/` and `scripts/caddieset/` in §M29, and the
+  `research` extra goes with it. The artifacts it produced stay, and Rust evaluates them (clause 5).
+
+### Moved to §M29: the seam M20 drew
+
+**"Python still decodes and Rust detects" holds until §M29.** Then the Rust lab reaches ffmpeg as a
+subprocess itself (clause 5).
+
+- **The first addendum's case for a subprocess** over a native extension carries over unchanged.
+- **Its case against PyO3 goes away with the Python caller.** That case was that a lab install would
+  need a Rust toolchain.
+- **`audio/ffmpeg.py` is deleted in M40**, because the frozen server reaches it until then.
+
+### What this does not change
+
+- **§1.** ADR-035 extends it rather than amending it. The lab's orchestration becomes Rust too.
+- **§2, word for word on the laptop.** MediaPipe stays in Python (clause 1). ADR-035's Option C
+  declined pose through ONNX Runtime on §2's own grounds.
+- **§3 and [ADR-033](033-the-pose-sidecar-protocol.md)'s protocol.** The pool, the job that moves a
+  path rather than pixels, and the worker that decodes its own frames all stay as built. The last of
+  these is why `capture/` survives (P1 finding 10).
+- **§7, §8 and the second addendum's numbers.** §7 keeps cloud analysis closed. §8's gate is still
+  the conformance suite, and from M32 the suite includes the diff-gated re-record.
+- **"Why deleting is safe."** ADR-035 chose delete over archive, on this ADR's reasoning, for any
+  retired Python whose Rust twin conforms (Q1, clause 2). Only the research record goes to
+  `archive/`.
+- **The audio family stays frozen**, and `regenerate` still refuses it (clause 3).
+- **The two-language stdlib-only invariant, in the scoring path.**
+  - `ort` is a second numeric library, and it sits outside that path, beside `rustfft`. Clause 5
+    brings it into the lab's OCR reader.
+  - The invariant's Python half is deleted with `analysis/` in M40.
+- **`ranges.json`, and ADR-001's supersession.** ADR-035 clause 7 routes what ADR-001's Status still
+  claims for Python.

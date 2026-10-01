@@ -147,3 +147,49 @@ which is what the dependency direction actually wants.
 rationale for MCP over REST, and the addendum above's correction that parsing lives behind the
 `ShotDataSource` port rather than inside the server. Nothing here re-decides any of that, which
 is why this is an addendum and not ADR-017. The next free number stays 017.
+
+---
+
+## Addendum (2026-09-30, M31.5): the server ports to Rust on `rmcp`, and the tool surface outlives the language
+
+[ADR-035](035-rust-everywhere-python-where-required.md) keeps Python only where a library the project
+depends on has no alternative the user would take today. The MCP server was weighed against that bar
+and did not meet it
+([clause 2](035-rust-everywhere-python-where-required.md#2-everything-else-ports-including-the-three-things-considered-and-not-kept)).
+It has no AI inside it: it is Claude's data interface, not an LLM call. And a Python MCP SDK existing
+is not the bar
+([clause 1](035-rust-everywhere-python-where-required.md#1-the-rule-and-the-two-exceptions-it-names)).
+**Nothing here is built**; M29 builds it.
+
+**The Consequence that became false** is the first one: "MCP server is a standalone Python service
+(port 8081)".
+
+- **Python.** The server ports to Rust on `rmcp`, the official SDK, in M29, the lab port
+  ([clause 5](035-rust-everywhere-python-where-required.md#5-the-lab-port-is-m29-re-scoped)). It
+  takes `contracts/tool_descriptions.py` and `contracts/caveats.py` with it, because the tool
+  descriptions and the caveat prose are the server's own text. Which crate holds it is M29's plan.
+- **Port 8081 was never how it ran**, and the correction belongs here while the sentence is open.
+  `scripts/run_mcp_server.py` speaks stdio: the client launches the process and talks to it over the
+  pipe, and `settings.mcp_port` is not used (its docstring, read 2026-09-30). The Rust server speaks
+  stdio too, because that is how the Python LLM reaches it
+  ([ADR-020's addendum](020-conversational-followups.md#addendum-2026-09-30-m315-option-c-ends-with-the-python-mcp-server-and-the-llm-drives-the-rust-one-over-stdio)).
+
+**The Python server retires at two moments, not one**
+([clause 5](035-rust-everywhere-python-where-required.md#5-the-lab-port-is-m29-re-scoped), Q17 of
+[M31.5 P2](../plans/m31-5-rust-first-replan.md#p2--found-2026-09-30)).
+
+- **M29 replaces it.** MCP clients switch to the Rust binary, and `feedback/conversation.py` gains
+  the stdio route to it. The Python server is not deleted then. The frozen FastAPI server imports
+  `mcp.runner_tools` (`api/app.py:1384`, read 2026-09-30), so Python `mcp/` stays for as long as that
+  server does.
+- **M40 deletes it**, when M40 ports or drops `api/`. The one exception
+  [ADR-008](008-project-structure.md) records, `mcp/query.py` importing `api.state` upward, goes with
+  it ([clause 7](035-rust-everywhere-python-where-required.md#7-what-this-supersedes-sentence-by-sentence)).
+
+**Not changed**:
+
+- the decision to build an MCP server, and the rationale for MCP over REST;
+- the tool surface, which the port serves as it stands: the 2026-08-10 table, plus the club and
+  flight tools added since in `mcp/club.py` and `mcp/flight.py`;
+- the 2026-08-05 correction that parsing lives behind a port and not in the server. In Rust the parse
+  is `crates/screen` (M34), not the server.
