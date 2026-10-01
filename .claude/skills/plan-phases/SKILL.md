@@ -1,6 +1,6 @@
 ---
-name: plan
-description: Deep phased planning. Interviews the user thoroughly, then produces a plan split into small, low-context phases, documents it, and stops after every phase. Use when the user types /plan or asks to plan a feature, refactor, or project.
+name: plan-phases
+description: Deep phased planning. Interviews the user thoroughly, then produces a plan split into small, low-context phases, documents it, and stops after every phase. Use when the user types /plan-phases or asks to plan a feature, refactor, or project.
 disable-model-invocation: true
 ---
 
