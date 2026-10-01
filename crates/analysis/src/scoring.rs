@@ -87,11 +87,15 @@ fn fundamentals(mechanics: &[CheckpointScore], _outcome: &[CheckpointScore]) -> 
 /// The `match` is exhaustive rather than an `if` with a fall-through, so adding a `PracticeMode`
 /// stops the build here — at the table that has to grow — rather than compiling and failing at
 /// runtime on the first golfer who selects it.
+///
+/// The message no longer says "lands in full M4", as Python's still does (M32). ADR-034 §5 retired
+/// that wait — a shot is graded per club over many shots, never one swing at a time — and the
+/// frozen copy stays wrong until M40 deletes it, as `contracts/intent.py`'s docs do.
 pub fn policy_for(mode: PracticeMode) -> Combine {
     match mode {
         PracticeMode::Fundamentals => fundamentals,
         PracticeMode::ShotShaping | PracticeMode::Performance | PracticeMode::Drill => {
-            panic!("scoring policy for {mode:?} lands in full M4")
+            panic!("{mode:?} has no single-swing scoring policy (ADR-034 §5)")
         }
     }
 }
@@ -157,7 +161,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "lands in full M4")]
+    #[should_panic(expected = "has no single-swing scoring policy")]
     fn an_unimplemented_mode_refuses_rather_than_grading_mechanics_anyway() {
         policy_for(PracticeMode::Performance);
     }

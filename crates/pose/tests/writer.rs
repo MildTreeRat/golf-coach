@@ -34,9 +34,7 @@ fn synthetic_dir() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../../spec/vectors/synthetic")
         .canonicalize()
-        .expect(
-            "spec/vectors/synthetic is missing — run `python scripts/conformance.py regenerate`",
-        )
+        .expect("spec/vectors/synthetic is missing — it is committed: restore it from git")
 }
 
 /// Every synthetic vector's `input.face_on`, as `(id, raw JSON, parsed)`.

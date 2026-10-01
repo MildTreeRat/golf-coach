@@ -29,14 +29,29 @@ use crate::{each, ge, le, nested, ContractError, Validate};
 /// instant, a re-cut benchmark band. Not for refactors, and not for anything that leaves every
 /// number where it was.
 ///
-/// The history of the sixteen versions lives in `contracts/swing.py`, where each one records what
-/// moved and whether a stored artifact from the version before is *missing* a quantity or
-/// *disagrees* about one. It is deliberately not copied here: it is three hundred lines of
-/// measurement that a second copy could only get wrong, and `CLAUDE.md`'s rule about counts in prose
-/// applies to a port as much as to a doc. What is copied is the number, because the version gates
-/// every vector in `spec/` and a port that claims a different one is certifying against answers this
-/// engine has retracted — `tests/round_trip.rs` pins it against the committed vectors.
-pub const ANALYSIS_VERSION: i64 = 16;
+/// **The history is in two halves, and each lives where it was made.** Versions 1–16 are in
+/// `contracts/swing.py`'s ledger, where each records what moved and whether a stored artifact from
+/// the version before is *missing* a quantity or *disagrees* about one. They are not copied here:
+/// three hundred lines of measurement that a second copy could only get wrong. From 17 the bump is
+/// Rust's (ADR-035 clause 3) and frozen Python's constant stays at 16 on purpose, so those entries
+/// have no Python twin and are written below, in the same form. The test
+/// `every_version_from_seventeen_has_a_ledger_entry` holds the two together, as
+/// `tests/test_docs_truth.py` does for the Python half. The number itself gates every vector in
+/// `spec/`, and `tests/round_trip.rs` pins it against the committed ones.
+///
+/// 16 -> 17 (2026-10-01, M32 P8): **shape only — no number moved.** `ShotData` gained seven keys
+///   (`attack_angle`, `dynamic_loft`, `low_point`, `impact_offset_h`, `impact_offset_v`,
+///   `impact_position_v`, `carry_offline`) and `ShotProvenance` three (`parser_version`,
+///   `fields_present`, `corrections`), every one defaulting. A version-16 artifact is *missing*
+///   them and disagrees about nothing: its shot reads with each at its default, which is what this
+///   engine writes for every shot stored so far, since no source fills any of them yet. Every
+///   committed vector was re-recorded by `golf-core rerecord` against `spec/declarations/v17.json`,
+///   which moved the version and added the ten keys and nothing else, so every other value in
+///   `spec/` is still the one Python recorded. **`contracts/swing.py` stays at 16 on purpose**: the
+///   frozen lab never writes these keys, and `api/state.py::is_outdated` compares with `<`, so it
+///   reads a v17 artifact as current rather than asking for a re-run it cannot do. Nobody should
+///   "fix" the gap by bumping Python.
+pub const ANALYSIS_VERSION: i64 = 17;
 
 /// The six segments of a golf swing.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -437,5 +452,39 @@ mod tests {
             "checkpoint_scores":[{"name":"tempo","score":1.5,"passed":true}]}}"#;
         let err = serde_json::from_str::<SwingBundleResult>(json).unwrap_err();
         assert!(err.to_string().contains("CheckpointScore.score"), "{err}");
+    }
+
+    /// `ANALYSIS_VERSION` and the ledger in its doc move together, or neither moves — the Rust half
+    /// of `tests/test_docs_truth.py::test_the_version_ledger_documents_the_installed_version`, over
+    /// the versions only Rust has (17 on). A bump with no entry is prose that has quietly stopped
+    /// describing the code, and every other test reads the constant, not the paragraph. [M32 P8]
+    #[test]
+    fn every_version_from_seventeen_has_a_ledger_entry() {
+        // Entries are doc lines spelled `/// 16 -> 17 (`, Python's `#: 16 -> 17 (` in Rust's comment.
+        let documented: Vec<i64> = include_str!("swing.rs")
+            .lines()
+            .filter_map(|line| line.trim_start().strip_prefix("/// "))
+            .filter_map(|entry| {
+                let (from, rest) = entry.split_once(" -> ")?;
+                let (to, rest) = rest.split_once(' ')?;
+                rest.starts_with('(').then_some(())?;
+                from.parse::<i64>().ok()?;
+                to.parse().ok()
+            })
+            .collect();
+
+        assert!(
+            !documented.is_empty(),
+            "no version ledger parsed out of swing.rs — has its format changed?"
+        );
+        let missing: Vec<i64> = (17..=ANALYSIS_VERSION)
+            .filter(|version| !documented.contains(version))
+            .collect();
+        assert!(
+            missing.is_empty(),
+            "ANALYSIS_VERSION is {ANALYSIS_VERSION}; the ledger above it documents no entry for \
+             {missing:?} — say what a stored artifact from the older engine is missing or disagrees \
+             about, in the same edit as the bump"
+        );
     }
 }

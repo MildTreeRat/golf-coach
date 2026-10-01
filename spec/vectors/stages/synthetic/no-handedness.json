@@ -1,10 +1,22 @@
 {
-  "analysis_version": 16,
+  "analysis_version": 17,
   "id": "stages/synthetic/no-handedness",
   "provenance": {
     "derived_from": "synthetic/no-handedness",
     "kind": "stages",
-    "note": "intermediates of synthetic/no-handedness, recorded at each function boundary `analyze_swing_bundle` already has"
+    "note": "intermediates of synthetic/no-handedness, recorded at each function boundary `analyze_swing_bundle` already has",
+    "oracle": "python",
+    "rerecords": [
+      {
+        "added": [],
+        "analysis_version": 17,
+        "by": "golf-core rerecord",
+        "declaration": "spec/declarations/v17.json",
+        "moved": [
+          "analysis_version"
+        ]
+      }
+    ]
   },
   "stages": {
     "alignment": {
@@ -263,7 +275,7 @@
             "value": 0.0
           },
           {
-            "detail": "signed (head - hips) dx over the impact window; + is image-right, camera-frame \u2014 carries a static camera bias, see head_hip_gain_norm",
+            "detail": "signed (head - hips) dx over the impact window; + is image-right, camera-frame — carries a static camera bias, see head_hip_gain_norm",
             "name": "head_hip_offset_impact_norm",
             "source": "pose:face_on",
             "unit": "shoulder_widths",
@@ -324,7 +336,7 @@
             "value": 6.251
           },
           {
-            "detail": "residual off the tour subspace \u2014 shape the basis cannot represent; most of it falls in top->impact. NOT calibrated: it over-flags golfers the basis never saw, so read it beside T2 rather than alone",
+            "detail": "residual off the tour subspace — shape the basis cannot represent; most of it falls in top->impact. NOT calibrated: it over-flags golfers the basis never saw, so read it beside T2 rather than alone",
             "name": "tour_trajectory_q",
             "source": "population:golfdb",
             "unit": "shoulder_widths",

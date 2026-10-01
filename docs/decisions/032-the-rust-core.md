@@ -20,17 +20,20 @@ through Python's own `compare_results` at zero differences on every one of them.
 crates" is amended to four** by the seventh addendum — `crates/feedback` and `crates/core`, because
 the `run` seam needs both halves of the engine and ADR-008 forbids either half reaching the other;
 the workspace holds six, counting M20's `trigger` and M21's `capture`. **No `ANALYSIS_VERSION` bump
-and no vector moved**, which §9 predicted and the eleventh addendum qualifies.
+and no vector moved** in M22, which §9 predicted and the eleventh addendum qualifies. The first
+bump after the port was M32's, in Rust alone: 16 → 17, shape only, and frozen Python stays at 16.
 
 **Nothing is deleted.** §7's third clause is why, and it reads as a schedule rather than an
 exemption: `analysis/` has a conforming port and committed vectors that prove it, and it stays
 until the 28 lab callers that reach it have gone. **§7's schedule is superseded by
 [ADR-035](035-rust-everywhere-python-where-required.md)** 2026-09-30, and its rule is not. §M29
-now ports the lab, M40 deletes `analysis/`, and two implementations stand until then. Rust
-re-records the vectors from M32, under a structural diff gate, rather than after §M29.
+now ports the lab, M40 deletes `analysis/`, and two implementations stand until then. **Rust
+has recorded the vectors since M32** (the fourteenth addendum), under a structural diff gate,
+rather than after §M29. A re-recorded vector keeps `provenance.oracle: "python"`, and its
+`provenance.rerecords` ledger names the values that are Rust's.
 
 Read §3's edges — **six now, and three of them were found by building** — and §7 before starting
-a phase, and the **thirteen addenda** below for what building corrected: the first records seven stages, not the eight §2 names; the second corrects §4's
+a phase, and the **fourteen addenda** below for what building corrected: the first records seven stages, not the eight §2 names; the second corrects §4's
 counts and records what a round trip cannot be asked for; the third records that two of §3's three
 edges are Rust's own formatter, and which assurance the format table cannot give; the fourth adds a
 **fourth portability edge** §3 does not name, and measures how much of a green stage is actually
@@ -59,7 +62,11 @@ portability edges are M34's list and not additions to §3**, and the planned `cr
 pending the refactor ledger; and the thirteenth (M31.5, ADR-035) records that **Rust
 records the vectors from M32**, under a structural diff gate, that §7's rule stands while
 its schedule becomes §M29 to port and M40 to delete, and that a family Python recorded
-and Rust re-records is a kind of oracle M32 has to name.
+and Rust re-records is a kind of oracle M32 has to name; and the fourteenth (M32) is that
+re-record — **`oracle` stays `"python"` and a `rerecords` ledger names what is Rust's**, the gate
+let M32's ten new shot keys and the version move and nothing else, every other value is still
+Python's to the bit, and §M32's typo guard and its "a second run writes nothing" contradicted each
+other until the ledger reconciled them.
 
 ## Date
 2026-09-23
@@ -1429,3 +1436,128 @@ brought forward to M32**
 - **The Consequences' "Drift between them is a real risk"**, which stays true in a new form. From M32
   the frozen Python and the Rust core disagree on purpose. Freezing is what keeps that disagreement
   to the declared diffs (ADR-035's Consequences).
+
+## Addendum, 2026-10-01 — the first Rust re-record, and what a re-recorded vector says about itself
+
+**M32**, built in [the M32 plan](../plans/m32-shot-contract.md)'s phases P1–P10, whose findings
+carry the detail this summarises. The previous addendum left one question with M32: what a family
+Python recorded and Rust re-records says about its oracle. M32 answers it and does the re-record
+the question was about. `ANALYSIS_VERSION` is **17 in Rust and 16 in frozen Python**, on purpose
+([ADR-035 clause 3](035-rust-everywhere-python-where-required.md#3-the-oracle-moves-to-rust)).
+§3's list stays at six, and no number moved.
+
+### What was built, in the order that kept every phase green
+
+- **`crates/core/src/compare.rs`**: §3's rules as library code, moved out of `tests/engine.rs`.
+  Each difference is a path and a kind (an added key, a removed key, a moved value), because that is
+  what a declaration is matched against.
+- **`crates/core/src/stages.rs`**: the first Rust code that assembles a stage document
+  (`run_stages`), and the port of `_verify_stages_compose` (`verify_compose`). It reaches four engine
+  helpers made `pub` rather than copying them, as the Python imports `E._windowed` and its siblings.
+  It reproduced all twenty-one committed stage documents on its first run.
+- **`crates/core/src/rerecord.rs` and `golf-core rerecord --declare <file> [--dry-run] [--spec
+  <dir>]`**: the gate, the apply, the ledger, and the verb. It was proved first on an empty
+  declaration at v16, which is §M32's Sequence step 1: forty-two vectors run, nothing differs,
+  nothing written.
+- **Frozen Python's tooling, before the bump**, not after it as §M32's Sequence had it, so that no
+  phase ended red (the plan's call 1). `conformance.py` gained `frozen_view`, `ledger_covers`,
+  `RUST_OWNED_SCHEMAS` and `regenerate`'s refusal, and was proved a no-op on vectors with no ledger.
+- **Then the change itself**: `ShotData` gained seven keys and `ShotProvenance` three, each at its
+  default on every committed shot, and Rust's `ANALYSIS_VERSION` moved to 17 with a ledger entry of
+  its own in `crates/contracts/src/swing.rs`. The declaration is
+  [`spec/declarations/v17.json`](../../spec/declarations/v17.json).
+
+### The answer: `oracle` stays `"python"`, and a ledger names what is Rust's
+
+- **`provenance.oracle` is `"python"`** on every engine and stage vector. None carried the key
+  before, so M32 wrote it, and it is true: every value the re-record did not declare is still the
+  one Python recorded, bit for bit. That was checked in a second language across all forty-two
+  files. Windows Python took the declared paths out of each re-recorded file and compared the rest
+  with its committed twin, type for type and every float by `float.hex()`, and found zero
+  differences.
+- **`provenance.rerecords` gains one entry per re-record**: the version it moved the file to,
+  `"by": "golf-core rerecord"`, the declaration's path, and the `added` and `moved` paths **that
+  matched in that file**, rather than the whole declaration. So M32's entry on a synthetic engine
+  vector moves `analysis_version` and `expected.analysis_version` and adds nothing, because synthetic
+  vectors carry no shot. A corpus one adds the ten keys as well. A stage vector moves
+  `analysis_version` alone, because no stage holds a copy of the shot.
+- **So the family needs no third `oracle` value.** It is Python-recorded with a Rust ledger, and
+  "which values are Rust's" is read off the ledger, not off a family-level label that would be wrong
+  for most of the file. M37's pin, that every family names its oracle, can also require every
+  `rerecords` entry to carry a declaration.
+- **A ledger path is document-rooted, with no leading dot**: `analysis_version`,
+  `expected.swing.shot.attack_angle`, `[i]` for an index. Neither comparator's spelling is that
+  (Python's `Difference.path` starts with `.`), so both languages parse a ledger path with one
+  grammar, `key(.key|[n])*`, and refuse anything else. A wildcard is refused until a declaration
+  needs one.
+
+### §7's reviewer became three rules, and one pair of them contradicted
+
+§7 had "a reviewer reads what moved". The gate that replaced the reviewer is three rules, all
+`golf_core::rerecord`'s:
+
+1. **A difference passes only if it is declared**: an added key at a declared `added` path, or a
+   moved value at a declared `moved` path. A removed key never passes.
+2. **The file written is the committed one with only the declared paths replaced.** That rule is not
+   academic. P2 counted **142** of the 286,343 numbers in the stage documents that land inside
+   `RTOL` without being bit-identical, on every one of the twenty-one vectors: 133 unrounded
+   `measure` values, 8 checkpoint scores and 1 launch direction. A recorder that wrote its own
+   document would have rewritten every one of them, and a port drifting inside the tolerance could
+   have laundered the drift into the oracle.
+3. **The run is atomic and idempotent.** One refusal anywhere writes nothing anywhere, and a second
+   run writes nothing.
+
+**§M32's typo guard contradicted rule 3 as written.** A declared path that matches nothing is
+refused, so that a misspelled path cannot "declare" nothing and let the gate pass. But on a second
+run nothing differs, nothing matches, and the guard fails the run that must succeed. The ledger
+reconciles them: a declared path also counts as matched where a committed ledger entry at the
+declaration's version, by `golf-core rerecord`, already lists it. A misspelled path can never reach
+a ledger, because a path only gets there by matching, so the guard still catches the typo. The
+other guards are as planned: a declaration whose version is not `ANALYSIS_VERSION` is refused before
+any vector is read, and so is one under `spec/vectors/`, where `conformance.py` would read it as a
+vector.
+
+### What the run measured
+
+- **The dry run reported only declared paths**: 150 added keys (ten on each of the fifteen corpus
+  engine vectors) and 63 moved values (`analysis_version` on all forty-two, and
+  `expected.analysis_version` on the twenty-one engine vectors). The real run wrote forty-two
+  files, and a second run wrote none.
+- **The text churns, so the report is the review.** The twelve plain synthetic files differ by 210
+  added and 60 removed lines: the ledger, the version, and `—` that `serde_json` writes raw where
+  Python escaped it. The corpus files are binary to `git diff`. The writer keeps each file's own
+  line endings (every plain vector is CRLF) and `GzipFile`'s header; the deflate stream is
+  `miniz_oxide`'s rather than zlib's, and nothing reads it.
+- **Inputs were not rewritten.** `input.shot` keeps frozen Python's shape. So the Rust round trip
+  has exactly one allowance: an input key that went in absent may come out at its default only
+  where its twin under `expected.swing.shot` is a ledgered `added` path holding that value.
+
+### What else M32 settled that this ADR's readers will meet
+
+- **Three schemas are Rust's and edited by hand**: `shot_data`, `swing_result` and
+  `swing_bundle_result`, pinned by `crates/contracts/tests/schemas.rs`. ADR-035 left the choice
+  open, and §M32 declined `schemars`, because the files carry pydantic's bound keywords and Rust
+  keeps those bounds in `Validate`, where a derive cannot see them. The swing schemas keep frozen
+  Python's `UnscoredReason` set. The two photo-side reasons M32 added, `printed_blank` and `misread`,
+  never reach a `SwingResult`, and the pin says so by name.
+- **`crates/contracts` gained its first module with no Python twin**: `capability.rs`, with
+  `devices.json` beside the crate, read by `include_str!` (ADR-034 §2's declared ∩ printed).
+  `shot_measurements` now asks it for the device name, and the corpus `measurements` stage still
+  conforms, so the source string did not move.
+- **`conformance.py check` now certifies the freeze, not the vectors.** It compares frozen Python
+  with each vector outside its ledgered paths, and its version rule is `ledger_covers`: a vector
+  above frozen v16 needs a ledger entry for each version in between. `regenerate` refuses the
+  engine and stage families, on the audio family's precedent. §M32's Python list missed one test,
+  `test_a_vector_round_trips_through_the_stdin_seam`, which compares frozen Python with a synthetic
+  vector's answer. It joined the frozen view.
+
+### What this does not change
+
+- **§1–§9, and §3's six edges.** The re-record ported orchestration and plumbing, not arithmetic,
+  and the gate compares under §3's rules.
+- **§7's rule.** Frozen Python's `analysis/` still has callers that stay until §M29 and M40, so it
+  stands, and `api/state.py::is_outdated` compares with `<`, so the frozen lab reads a v17 artifact
+  as current. Nobody "fixes" the version gap by bumping Python.
+- **The audio and format families.** Neither is re-recorded, and neither carries `oracle` yet.
+- **What creates a vector.** `rerecord` re-records the ones that exist. A new engine vector and its
+  stages are §M29's Rust vector builder's, and until then no command makes one.

@@ -102,7 +102,7 @@ fn spec_dir() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../../spec/vectors/audio")
         .canonicalize()
-        .expect("spec/vectors/audio is missing — run `python scripts/conformance.py regenerate`")
+        .expect("spec/vectors/audio is missing — it is committed: restore it from git")
 }
 
 fn vectors() -> Vec<Vector> {

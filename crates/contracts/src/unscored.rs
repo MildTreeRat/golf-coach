@@ -22,6 +22,20 @@
 //! bringing it here would be a table no gate in this workspace can see, which is the same rule that
 //! kept this one out of P2. It follows its test, not this module.
 //!
+//! # The photo-side reasons are Rust's alone
+//!
+//! [`UnscoredReason::PrintedBlank`] and [`UnscoredReason::Misread`] arrived in M32 (the M31.5
+//! plan's carried decision 5) for the shot-first product, where the photo of the launch monitor's
+//! screen is the capture and one tile on one shot can fail in two ways a golfer must be told apart:
+//! the screen printed nothing there, or it printed something the photo did not give up. ADR-034 §2
+//! routes "printed but blank on one shot" through this table, and `Misread` is the case beside it.
+//!
+//! **Python has neither and never will.** `contracts/unscored.py` is frozen (ADR-035 clause 4) and
+//! its `UnscoredReason` is closed, so a `SwingResult` carrying one would be refused by every frozen
+//! reader. Nothing emits either in M32; M35 and M37 are the first, into `shot_analysis.json`,
+//! never `analysis.json`. Neither is in [`INFERENCE_REASONS`]: they are about reading the screen,
+//! where the inference family is about what the screen's numbers can and cannot be made to fly.
+//!
 //! # Why the vocabulary lives in `contracts/` at all
 //!
 //! `feedback` may not import `analysis` (ADR-008), which is why `rules.py` used to hold checkpoint
@@ -90,6 +104,23 @@ pub enum UnscoredReason {
     /// it exists so a tolerant reader can say "this artifact does not know" instead of inventing a
     /// cause or dropping the entry.
     Unrecorded,
+    /// The launch monitor printed this number's tile and left it empty, or printed `---`, on this
+    /// shot. ADR-034 §2's "printed but blank on one shot": the device declares the field and the
+    /// golfer's screen shows it, so the shot is named rather than guessed — and nothing about the
+    /// photo went wrong, because another photo of the same screen reads the same blank.
+    ///
+    /// **Photo-side, and never written into a [`crate::swing::SwingResult`].** Frozen Python's
+    /// `UnscoredReason` is a closed enum, so an `analysis.json` carrying this would be refused by
+    /// every Python reader of it (ADR-035 clause 4). M35 and M37 are the first to emit it, into
+    /// `shot_analysis.json`; nothing does in M32. [M32 P7]
+    PrintedBlank,
+    /// Text sat under the tile and no value could be read from it. The screen *did* print
+    /// something, which is what separates this from [`Self::PrintedBlank`] and why it is the
+    /// photo-side twin of the capture reasons: a sharper, square-on photo may recover it.
+    ///
+    /// Photo-side and never in a `SwingResult`, for [`Self::PrintedBlank`]'s reason; M35 and M37
+    /// are the first to emit it. [M32 P7]
+    Misread,
 }
 
 /// What one reason means, and what to tell the golfer about it.
@@ -106,21 +137,31 @@ pub struct ReasonSpec {
     /// than by inference, so it can be specific without being a guess. `feedback::rules` puts this
     /// on a `Tip` verbatim, which is what makes it a compared string.
     pub remedy: &'static str,
-    /// Whether shooting the clip again could plausibly fix this. The one bit every consumer needs
-    /// and none could previously derive — `NoBand` and `NoHandedness` are not capture problems, and
-    /// telling those golfers to steady their camera answers a question they did not ask.
+    /// Whether capturing again — the clip, or for [`UnscoredReason::Misread`] the photo of the
+    /// screen — could plausibly fix this. The one bit every consumer needs and none could
+    /// previously derive — `NoBand` and `NoHandedness` are not capture problems, and telling those
+    /// golfers to steady their camera answers a question they did not ask.
+    ///
+    /// The name is the clip's because consumers already read it by that name (the MCP server's
+    /// instructions promise a `refilming_helps` flag), and a photo-side reason reuses it rather
+    /// than adding a second bit that every consumer would have to learn to `or` with the first.
     pub refilming_helps: bool,
 }
 
 /// Reason -> what it means and what to do. One table, so the prose cannot drift between the tip,
 /// the brief, the MCP view and the results page.
 ///
-/// **A slice of pairs in the Python dict's order, not a map.** Fifteen entries looked up by a
-/// reason that came off an `UnscoredCheckpoint`, which is the shape
-/// [`crate::checkpoints::CHECKPOINT_REGISTRY`] and `CHECKPOINT_EVALUATORS` already use — and a
-/// `HashMap` would buy nothing here but a nondeterministic iteration order in a crate where order
-/// is repeatedly an answer. Nothing iterates it today; keeping the Python's order is what makes a
-/// future iteration agree rather than something to discover later.
+/// **A slice of pairs in the Python dict's order, not a map.** Entries looked up by a reason that
+/// came off an `UnscoredCheckpoint`, which is the shape [`crate::checkpoints::CHECKPOINT_REGISTRY`]
+/// and `CHECKPOINT_EVALUATORS` already use — and a `HashMap` would buy nothing here but a
+/// nondeterministic iteration order in a crate where order is repeatedly an answer. Nothing
+/// iterates it today; keeping the Python's order is what makes a future iteration agree rather
+/// than something to discover later.
+///
+/// **The photo-side rows come last, after `Unrecorded`**, so the Python dict's rows stay an
+/// unbroken prefix in its own order: a walk that stops where the Python's table ends still agrees
+/// with it row for row. Grouping them beside the capture reasons they resemble would have read
+/// better and broken that.
 pub static UNSCORED_REASONS: &[(UnscoredReason, ReasonSpec)] = &[
     (
         UnscoredReason::PhaseNotSegmented,
@@ -282,6 +323,25 @@ pub static UNSCORED_REASONS: &[(UnscoredReason, ReasonSpec)] = &[
             refilming_helps: false,
         },
     ),
+    (
+        UnscoredReason::PrintedBlank,
+        ReasonSpec {
+            summary: "the launch monitor printed nothing for this number on this shot",
+            remedy: "The simulator showed the tile for this number but left it blank on this shot - \
+                         empty, or dashes - so there was no value to read. Nothing went wrong with the \
+                         photo: another photo of the same screen would read the same blank.",
+            refilming_helps: false,
+        },
+    ),
+    (
+        UnscoredReason::Misread,
+        ReasonSpec {
+            summary: "the number on the screen could not be read from the photo",
+            remedy: "There was text under this tile on the screen, but no number could be read from \
+                         it in the photo. A sharper photo, taken square-on to the screen, may fix it.",
+            refilming_helps: true,
+        },
+    ),
 ];
 
 /// The prose registered for `reason`.
@@ -381,14 +441,21 @@ mod tests {
             UnscoredReason::SpinAxisUnresolved,
             UnscoredReason::NoLaunchConditions,
             UnscoredReason::Unrecorded,
+            UnscoredReason::PrintedBlank,
+            UnscoredReason::Misread,
         ]
     }
 
     /// Every member's wire form, pinned against `contracts/unscored.py`'s `StrEnum` values.
     ///
-    /// `rename_all = "snake_case"` is a rule, and a rule is a thing that can be right about fifteen
-    /// members and wrong about the sixteenth. These are the strings on disk in every stored
-    /// `analysis.json`, so getting one wrong is an artifact this port cannot read.
+    /// `rename_all = "snake_case"` is a rule, and a rule is a thing that can be right about every
+    /// member but one. These are the strings on disk in every stored `analysis.json`, so getting one
+    /// wrong is an artifact this port cannot read.
+    ///
+    /// **The last two have no Python twin, by design** (M32 P7). `printed_blank` and `misread` are
+    /// photo-side and never reach an `analysis.json` (ADR-035 clause 4), so there is no Python value
+    /// to pin them against; they are pinned here anyway, because `shot_analysis.json` (M35) is where
+    /// these strings will sit on disk.
     #[test]
     fn the_reason_wire_names_are_the_python_values() {
         let pairs = [
@@ -413,6 +480,8 @@ mod tests {
             (UnscoredReason::SpinAxisUnresolved, "spin_axis_unresolved"),
             (UnscoredReason::NoLaunchConditions, "no_launch_conditions"),
             (UnscoredReason::Unrecorded, "unrecorded"),
+            (UnscoredReason::PrintedBlank, "printed_blank"),
+            (UnscoredReason::Misread, "misread"),
         ];
         for (variant, wire) in pairs {
             assert_eq!(
@@ -492,8 +561,11 @@ mod tests {
     }
 
     /// `refilming_helps` is the one bit a consumer branches on, and it splits the table the way
-    /// the MCP server's own instructions promise: a capture problem is a clip worth taking again,
-    /// and everything else is not the footage's fault.
+    /// the MCP server's own instructions promise: a capture problem — the clip or the photo — is
+    /// one worth taking again, and everything else is not the capture's fault.
+    ///
+    /// `Misread` is the one photo-side reason on the true side; `PrintedBlank` is on the false side
+    /// with `NoBand`, because a blank the screen printed reads blank in every photo of it.
     #[test]
     fn refilming_helps_exactly_where_the_clip_is_the_problem() {
         let helps: Vec<UnscoredReason> = UNSCORED_REASONS
@@ -510,6 +582,7 @@ mod tests {
                 UnscoredReason::LandmarksUnconfident,
                 UnscoredReason::TooFewFrames,
                 UnscoredReason::ScaleUnavailable,
+                UnscoredReason::Misread,
             ]
         );
         // No inference reason is a capture problem: nothing about a screen the OCR could not read

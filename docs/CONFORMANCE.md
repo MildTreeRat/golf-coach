@@ -5,9 +5,11 @@
 > through `cargo test`, and `golf-core run` diffs against `conformance.py run` at zero differences
 > on every one of them. This document stays written for a port that has to be *judged* rather than
 > in the past tense, because the Python it judges against is still here until M40 deletes it —
-> frozen from M32, when the oracle moves to Rust
+> frozen since M32, when the oracle moved to Rust
 > ([ADR-035 §3](decisions/035-rust-everywhere-python-where-required.md#3-the-oracle-moves-to-rust))
-> — and because the next port to be judged is the one that reads this file after that.
+> — and because the next port to be judged is the one that reads this file after that. **What
+> moved at M32** is §4: `golf-core rerecord` records the engine and stage families under a
+> structural gate, `cargo test` certifies them, and `conformance.py check` certifies the freeze.
 
 [ADR-030](decisions/030-app-platform-rust-core-python-sidecar.md) commits this project to a second
 implementation of the swing loop. **Two cores that disagree silently is the failure mode that
@@ -32,7 +34,8 @@ does not have to call anything in this repo.
 
 ## 1. The schemas
 
-Exported by `pydantic`'s `model_json_schema`, one file per root, `$defs` inlined. The roots are
+Exported by `pydantic`'s `model_json_schema`, one file per root, `$defs` inlined — seven of the ten
+still are, and three have been **Rust's, edited by hand, since M32** (below). The roots are
 `scripts/conformance.py::SCHEMA_ROOTS`, and the rule is:
 
 > **A schema exists for every JSON artifact a non-Python implementation opens off disk.**
@@ -51,7 +54,8 @@ The ten roots cover a swing directory end to end — `manifest.json`, `{role}.ke
 the `.golfer.json`, `.bag.json` and `.shot.json` a swing resolves through.
 
 `tests/test_conformance.py` holds two pins. One regenerates the schemas in memory and compares, so
-a field added to `SwingResult` without a re-export fails at the commit rather than at the port. The
+a field added to a Python-owned shape without a re-export fails at the commit rather than at the
+port; it skips the three Rust-owned roots, which have a pin of their own. The
 other **scrapes every `*.json` filename constant out of `src/golf_coach/`** and requires each to be
 either mapped to a schema root or named as package data — the committed, provenanced JSON that
 ships inside the wheel and ports as bytes (ADR-022: `ranges.json`, `golfdb_v1.json`,
@@ -68,11 +72,56 @@ would emit the whole keypoint list and differ on a field nobody meant to compare
 `test_the_spec_serializes_a_result_exactly_as_the_pipeline_stores_one` reads the literal back out
 of `pipeline.py` so the two cannot drift.
 
+### Three roots are Rust's, and edited by hand (M32)
+
+**`shot_data`, `swing_result` and `swing_bundle_result`** are the roots whose shape M32 moved:
+`ShotData` gained seven keys and `ShotProvenance` three, in `crates/contracts` alone. Frozen Python
+never gains them ([ADR-035 §4](decisions/035-rust-everywhere-python-where-required.md#4-the-frozen-python-lab)),
+so its exporter would write them back out of all three files. So those three are listed in
+`conformance.py::RUST_OWNED_SCHEMAS`: `regenerate --schemas-only` writes the other seven and never
+these, the freshness pin skips them, and `SCHEMA_ROOTS` keeps all ten, so
+`test_every_on_disk_artifact_has_a_schema` still maps every artifact to a root.
+
+**Whoever changes one of those shapes in `crates/contracts` edits the three files, in the same
+change.** Spell a new property the way pydantic spells its neighbours (`anyOf [{type}, {type:
+null}]`, `default`, a Title Case `title`, the units in `description`), and the reliable way to do
+that is to generate it: declare the field on a throwaway pydantic model, take
+`model_json_schema()["properties"]`, and write the file in `export_schemas`' format (indent 2,
+sorted keys, ASCII escapes, a trailing newline, and the CRLF the files carry under `spec/** -text`).
+That is how M32 P9 made its edit, after checking that format re-serialized all three committed
+files byte for byte. Generating them from the structs with `schemars` was declined in
+[§M32](plans/m31-m40-shot-first-pivot.md#schemas-split-ownership-with-the-rust-half-hand-maintained):
+the files carry pydantic's bound keywords, Rust holds those bounds in its `Validate` impls where a
+derive cannot see them, and restating each as an attribute is a second copy that drifts. M36,
+which takes the storage roots, is where that is weighed again.
+
+**The pin is `crates/contracts/tests/schemas.rs`**, four tests over the three files:
+
+- the property sets of `ShotData` and `ShotProvenance` equal the keys the Rust structs serialize,
+  both ways, so a key added to either struct without a schema edit fails `cargo test`;
+- the three copies of each shape are identical (the root's `$defs` set aside), because a hand edit
+  is made three times and the key-set test cannot see a description fixed in one file only;
+- the swing files' `UnscoredReason` enum is Rust's wire names **minus `printed_blank` and
+  `misread`**, compared by name. Those two are photo-side and never reach a `SwingResult`, so the
+  schema leaving them out is the contract, and the pin makes that a checked choice;
+- every key M32 added carries a `description`, with the keys read from
+  [`spec/declarations/v17.json`](../spec/declarations/v17.json)'s `added` list rather than listed
+  again.
+
+**Two lists name the Rust-owned roots and nothing checks one against the other**: `RUST_OWNED` in
+`schemas.rs` and `RUST_OWNED_SCHEMAS` in `conformance.py`. A root added to one only is unpinned or
+pinned twice, so when M36 takes more roots over, both change together.
+
+`crates/contracts/devices.json` (M32, the device capability model) is committed data a Rust crate
+reads by `include_str!`, not an artifact opened off disk, so it is no schema root. It is not in the
+package-data pin either, which scrapes `src/golf_coach/` and is Python's.
+
 ## 2. The vectors
 
-Five families, covering different things. The first two are the **engine** families and are what
-`conformance.py check` runs; the other three name a Rust crate as their implementation and are
-deferred to `cargo test`.
+Five families, covering different things. The first two are the **engine** families: `cargo test`
+certifies them end to end against `crates/core`, `golf-core rerecord` records them from M32, and
+`conformance.py check` runs frozen Python against them to certify the freeze (§4). The other three
+name a Rust crate as their implementation and are deferred to `cargo test`.
 
 **Synthetic** (`spec/vectors/synthetic/`) comes from `tests/analysis/conftest.py::make_swing`,
 which is deterministic, RNG-free and pure stdlib — so it re-implements in another language exactly
@@ -80,11 +129,58 @@ and a port can generate its own inputs rather than trusting ours. Small, uncompr
 These cover the **code paths**: a window that has to be un-applied, a checkpoint that fails, a
 checkpoint that cannot be scored at all, a bundle with no second view. Each vector's
 `provenance.note` says which path it is there for; a case that only re-runs a path another case
-covers is a vector that costs a regeneration and buys nothing.
+covers is a vector that costs a re-record and buys nothing.
 
 **Corpus** (`spec/vectors/corpus/`) is the fifteen real swings on disk, gzipped. These cover what
 synthetic input never can: real MediaPipe landmark noise, dropped-visibility frames, two genuinely
 unsynchronised cameras, and a launch monitor.
+
+### Who recorded each value: `provenance.oracle` and the `rerecords` ledger (M32)
+
+**Every engine and stage vector says who recorded it**, since M32's first Rust re-record wrote the
+two keys onto all forty-two (21 engine, 21 stage; counted 2026-10-01). `audio` and `format` carry
+neither yet; M37's pin, that every family names its oracle, extends `oracle` to them
+([ADR-032](decisions/032-the-rust-core.md)'s 2026-09-29 addendum).
+
+- **`provenance.oracle` is `"python"`**, and stays so after a Rust re-record, because every value
+  the re-record did not declare is still the one Python recorded, bit for bit. M32 P8 checked that
+  in a second language across all forty-two files, comparing every float by `float.hex()` once the
+  declared paths were taken out: zero differences.
+- **`provenance.rerecords` is a list with one entry appended per re-record**, and it is what says
+  which values are Rust's. An entry holds `analysis_version` (the version the re-record moved the
+  file to), `by` (`"golf-core rerecord"`), `declaration` (the declaration's repo-relative path, with
+  `/`), and `added` and `moved`: the declared paths **that matched in that file**, in the
+  declaration's order. So M32's entry on a synthetic engine vector moves `analysis_version` and
+  `expected.analysis_version` and adds nothing (synthetic vectors carry no shot); a corpus one adds
+  the ten new shot keys as well; a stage vector moves `analysis_version` alone, because no stage
+  holds a copy of the shot.
+- **A ledger path is rooted at the vector document**, with no leading dot: `analysis_version`,
+  `expected.swing.shot.attack_angle`, and `[i]` for a list index. Both languages *parse* it
+  (`golf_core::rerecord::LedgerPath::parse`, `conformance.parse_ledger_path`) with one grammar,
+  `key(.key|[n])*`, and refuse anything else, a wildcard included, rather than match it as a
+  string. That is not the spelling either comparator prints — Python's `Difference.path` starts with
+  `.` — which is why neither is matched as text.
+- **Inputs are not rewritten.** `input.shot` keeps the shape frozen Python writes, because the lab
+  goes on writing that shape until M40 and Rust has to read it. So the round trip
+  (`crates/contracts/tests/round_trip.rs`) carries one allowance: an `input.shot` key that went in
+  absent may come out at its default only where its twin under `expected.swing.shot` is an `added`
+  path in that vector's own ledger, holding that value.
+
+**The declarations are committed, in `spec/declarations/`**, one file per re-record, named for the
+version it records (`v17.json` is M32's). Each has four required keys — `analysis_version`, a
+`note`, `added` and `moved` — and loads or is refused whole: an unknown key, a path declared twice,
+or an `added` path ending in an index is refused before any vector is read. They sit outside
+`spec/vectors/` on purpose, because `conformance.py::vector_paths` would read a file there as a
+vector. The declaration is what a reviewer reads, beside the verb's report (§4), and it is
+load-bearing twice: the verb reads it, and `crates/contracts/tests/schemas.rs` reads `v17.json`'s
+`added` to know which schema properties must carry a description (§1).
+
+**What reads the ledger.** On the Rust side, nothing but the round-trip allowance above and the
+re-record's own second-run rule (§4): the end-to-end gate and the stage tests compare the whole
+file, Rust's values and Python's alike, with `analysis_version` equal to `ANALYSIS_VERSION`. On the
+Python side, `conformance.frozen_view` takes every ledgered path out of both `expected` and frozen
+Python's answer before comparing, and `ledger_covers` accepts a vector above frozen Python's version
+only when it carries an entry for every version in between (§4).
 
 ### Why the corpus vectors are a slice, and what that costs
 
@@ -299,14 +395,27 @@ offset, `measure` rounded the way `_measurements` rounds it, the groups concaten
 build time *and* in `tests/test_conformance.py`, because a build-time-only guard stops running the
 moment nobody regenerates — which on this family is most of the time.
 
-Two properties this family keeps. It regenerates from the **committed** vectors rather than from
-`data/processed/`, so unlike the corpus family it needs no capture machine —
-`regenerate --stages-only` is the one rebuild in §4 that runs anywhere. And it stays regenerable
-from Python only until M32's first Rust re-record, after which `golf-core` re-records it through a
-Rust port of `run_stages`
-([ADR-035 §3](decisions/035-rust-everywhere-python-where-required.md#3-the-oracle-moves-to-rust)).
-The Python engine stays, frozen, until M40 deletes it — see [ADR-032](decisions/032-the-rust-core.md)
-§7 and its 2026-09-30 addendum for that schedule.
+**From M32 both halves of that have a Rust copy, and the Rust one is what records.**
+`crates/core/src/stages.rs` ports `run_stages` (`run_stages`) and the guard (`verify_compose`),
+reaching the engine's own helpers rather than copying them, as the Python imports `E._windowed` and
+its siblings. `crates/core/tests/stages.rs` holds both to the committed family — every stage
+document reproduced under §3's rules, every one composing onto its engine vector's answer — and
+`golf-core rerecord` runs the compose check on every re-record, against the engine document as it
+will be written (§4). The port reproduced all twenty-one documents at zero differences on its first
+run, though not bit for bit: **142** of their 286,343 numbers land inside `RTOL` without being
+bit-identical (133 unrounded `measure` values, 8 checkpoint scores, 1 launch direction; M32 P2).
+That is why a re-record writes Python's bits back for every undeclared value rather than Rust's
+document. The stage tests in `crates/analysis/tests/` keep their own orchestration, which gates
+the port one stage at a time; the compose check is what catches this second Rust copy drifting.
+
+The family derives from the **committed** engine vectors rather than from `data/processed/`, so it
+never needed the capture machine. `regenerate --stages-only` used to rebuild it on any box; it
+refuses since M32
+([ADR-035 §3](decisions/035-rust-everywhere-python-where-required.md#3-the-oracle-moves-to-rust)),
+and `golf-core rerecord` re-records the stage vectors that exist. **No command creates one**: a new
+engine vector and its stages are §M29's Rust vector builder's. The Python engine stays, frozen,
+until M40 deletes it — see [ADR-032](decisions/032-the-rust-core.md) §7 and its 2026-09-30
+addendum for that schedule.
 
 ### Format (`spec/vectors/format/`) — 5 vectors, 3,059 cases, run by `cargo test`
 
@@ -344,12 +453,21 @@ completely, and a uniform sweep hits **none** of them. The table carries each ti
 nearest neighbours, which must round the other way, then the decimal traps, the engine's own
 unrounded values read off the stage family's `measure` rows, and a seeded sweep for breadth.
 
-`regenerate --format-only` is the second rebuild in §4 that runs anywhere.
+`regenerate --format-only` rebuilds it on any machine, and since M32 it is the one vector rebuild
+`regenerate` still does (§4): this family records CPython rather than the engine, so moving the
+engine's oracle to Rust left it where it was.
 
 ## 3. The rules
 
-Implemented once, in `conformance.compare_results`, and unit-tested in `tests/test_conformance.py`
-— because "it passed" from a comparator that cannot see a difference is worth nothing.
+Implemented twice, once per side of the freeze, and each is unit-tested against the differences it
+must see — because "it passed" from a comparator that cannot see a difference is worth nothing.
+`conformance.compare_results` is frozen Python's, tested in `tests/test_conformance.py`.
+`golf_core::compare` (`crates/core/src/compare.rs`) is Rust's: it moved out of
+`crates/core/tests/engine.rs` into the library at M32 so the re-record could gate on the same
+answers the end-to-end test reads, and it reports each difference as a path and a kind (an added
+key, a removed key, or a moved value), which is what a declaration is matched against. The two agree
+on every rule below. Where they could have parted, they do not: an int and a float that agree are
+not a difference in either, because both read an int as exact only when *both* sides are ints.
 
 | Kind | Rule | Why |
 |---|---|---|
@@ -436,48 +554,114 @@ lives in `phases.rs` and is gated by the stage vectors. See ADR-032's 2026-09-24
 
 ## 4. The commands
 
-**These are the commands as M22 left them, and they hold until M32**
+**Since M32 the oracle is Rust**
 ([ADR-035 §3](decisions/035-rust-everywhere-python-where-required.md#3-the-oracle-moves-to-rust)).
-At M32's first Rust re-record the oracle moves: `golf-core` re-records the engine and stage
-families, every re-record diff-gated against the committed file, and `cargo test` becomes what
-certifies the vectors. `check` stops certifying them there. What `check` and `regenerate` do after
-that is [§M32's](plans/m31-m40-shot-first-pivot.md#what-changes-in-python-and-why) to build, and
-M32 rewrites this section with its verb. `check` retires with `analysis/` in M40.
+`golf-core rerecord` records the engine and stage families, every re-record gated against the
+committed file, and `cargo test` is what certifies the vectors. `conformance.py` is the frozen
+half: `check` now certifies **the freeze, not the vectors**, `regenerate` refuses both families,
+and `check` retires with `analysis/` in M40. Why each of those moved is
+[§M32](plans/m31-m40-shot-first-pivot.md#what-changes-in-python-and-why), and what building it
+found is [the M32 plan's findings](plans/m32-shot-contract.md#phase-findings).
 
 ```bash
-python scripts/conformance.py check                 # every committed vector, against this build
+cargo test                                          # certifies every family: audio against
+                                                    # crates/trigger, every vector's shapes
+                                                    # against crates/contracts, the format table
+                                                    # and all seven stages against
+                                                    # crates/analysis, and the engine vectors end
+                                                    # to end and the stage documents whole
+                                                    # against crates/core
+cargo run --release --bin golf-core -- rerecord --declare spec/declarations/v17.json --dry-run
+cargo run --release --bin golf-core -- rerecord --declare spec/declarations/v17.json
+                                                    # re-record the engine and stage families,
+                                                    # gated; --dry-run reports and writes nothing
+cargo run --bin golf-core -- run < vector.json      # the port's own answer, for the diff below
+python scripts/conformance.py check                 # the freeze: frozen Python against every
+                                                    # vector, outside the paths Rust re-recorded
 python scripts/conformance.py check --id corpus/2026-08-09-2 -v
 python scripts/conformance.py list                  # what is committed, and where it came from
-python scripts/conformance.py run < vector.json     # vector in, serialized result out
-python scripts/conformance.py regenerate            # rewrite spec/ from contracts + data/
-python scripts/conformance.py regenerate --stages-only   # the stages family — needs no captures
+python scripts/conformance.py run < vector.json     # frozen Python's answer, on stdout
+python scripts/conformance.py regenerate --schemas-only  # the Python-owned schema roots only
 python scripts/conformance.py regenerate --format-only   # the format table, from CPython itself
-cargo test                                          # the audio family against crates/trigger,
-                                                    # every vector's shapes against
-                                                    # crates/contracts, the format table and all
-                                                    # seven stages against crates/analysis, and
-                                                    # all 21 vectors **end to end** against
-                                                    # crates/core (M22 P8b)
-cargo run --bin golf-core -- run < vector.json      # the port's own answer, for the diff below
 ```
 
-`check` and `run` need the base install and `spec/` alone — that is what committing the vectors
-buys. **`regenerate` needs the capture machine**, because building corpus vectors reads
-`data/processed/sessions/`, which is gitignored and exists nowhere else. It refuses to record a
-swing whose stored analysis is behind `ANALYSIS_VERSION`; run `scripts/reanalyze.py` first.
+Every one of these needs the base install and `spec/` alone — that is what committing the vectors
+buys — and none of them reads `data/`.
 
-`run` is the cross-language seam: a Rust implementation is diffed by a shell pipeline, with no
-Python in the loop but the reference. **Both ends of it exist as of M22 P6, and they agree on all
-21 as of P8b** — `golf-core run` is `crates/core`'s binary, and the two were compared through
-`compare_results` itself, with no Rust comparator involved: zero differences on every vector.
+### `rerecord`: how a vector changes now
 
-**The `diff` is a diagnostic and not the gate**, and the difference is worth keeping straight. A
-byte comparison of the two streams is unavailable in either direction: they are 13,569 and 13,221
-bytes for one vector, because Python writes `-1.636758133827243e-05` where `serde_json` writes
-`-0.00001636758133827243`. So the pipeline shows *where* two implementations disagree once
-something has already decided they do, and the deciding is `compare_results`' — on whichever side
-runs it. `crates/core/tests/engine.rs` is §3's rules implemented for the Rust side, and it is
-unit-tested against differences it must see, for the reason `compare_results` is.
+**A change that moves an engine answer re-records in the same change**, and from M32 that change is
+Rust's. `ANALYSIS_VERSION` is `crates/contracts/src/swing.rs`' constant, and frozen Python's stays
+behind on purpose: `api/state.py::is_outdated` compares with `<`, so the frozen lab reads a newer
+artifact as current. Never "fix" the gap by bumping Python. The steps:
+
+1. Write the declaration, `spec/declarations/v<N>.json` (§2): the version, a note, the paths where
+   the change adds keys, and the paths whose values it moves.
+2. Run `rerecord --dry-run` and read the report. It lists, per vector, every declared path that
+   matched. An undeclared difference anywhere fails the run and names every path.
+3. Run it without `--dry-run`, then once more. **The second run must write nothing.**
+
+The rules are `golf_core::rerecord`'s, unit-tested there and in `crates/core/tests/rerecord.rs`:
+
+- **The gate.** Each engine vector's committed input goes through `golf_core::run`, and each stage
+  vector's (its engine vector's input, found by `provenance.derived_from`) through
+  `stages::run_stages`. The output is compared with the committed answer through
+  `golf_core::compare`, under §3's rules. A difference passes only when the declaration names it:
+  an added key at a declared `added` path, or a moved value at a declared `moved` path. A removed
+  key never passes. Every stage document is also composed onto its engine vector's answer, as that
+  answer will be written.
+- **What is written is the committed document with only the declared paths replaced**, plus
+  `provenance.oracle` and one new `rerecords` entry (§2). Every undeclared value keeps the bits
+  Python recorded, even where Rust's lands inside the tolerance on other bits, so a port that
+  drifts inside `RTOL` cannot launder the drift into the file. Matching is exact, at the
+  difference's own path. A value that moved only inside the tolerance is no difference, so it
+  matches nothing and the committed value stays.
+- **The guards.** A declaration whose `analysis_version` is not `ANALYSIS_VERSION` is refused before
+  any vector is read, so a stale one cannot be re-run against a later engine. A declared path that
+  matches nothing in any vector fails the run as a typo, unless a committed ledger entry at the
+  declaration's version already lists it, which is what lets the second run pass. A declaration
+  under `spec/vectors/` is refused, and one outside the repo can drive only a run that writes
+  nothing.
+- **The run is atomic.** Every vector in both families is run, gated and composed before a byte is
+  written, so one refusal anywhere writes nothing anywhere. Changed files are staged beside their
+  targets and renamed over them.
+- **The file is written the way `conformance.py::_write_json` wrote it**: through
+  `serde_json::Value` (so keys are sorted), indent 2, in the committed file's own line endings (the
+  plain synthetic files are CRLF), and `corpus/`'s gzip with `GzipFile`'s header and mtime 0. The
+  deflate stream is not zlib's byte for byte, and nothing reads it.
+
+**The report is what gets reviewed, never `git diff`.** The text churns where nothing moved:
+`serde_json` writes a decimal where Python wrote one of the seventy-seven exponent-form floats, and
+writes `—` raw where Python escaped it. M32's own run is the worked example: 150 added keys and 63
+moved values on the 42 files, every one of them declared, and a second run that wrote nothing.
+
+**`rerecord` cannot create a vector.** It re-records the ones that exist; a new engine vector and
+its stages are §M29's Rust vector builder's. So a missing `spec/vectors/` is a broken checkout, and
+the Rust tests that find one say "restore it from git" rather than naming a command.
+
+### `check`: the freeze held, not the vectors are right
+
+**`check` runs frozen Python against every engine vector through `conformance.frozen_view`.** Every
+path any `rerecords` entry lists is taken out of both the committed answer and frozen Python's, and
+the rest is compared under `compare_results`. So a pass says frozen Python still reproduces every
+value it recorded, which is ADR-035 §4's freeze, checked. It says nothing about whether the vectors
+are right; that is `cargo test`'s to say. The line reads `21/21 vectors hold the freeze (frozen
+engine v16; 21 re-recorded by Rust)`, and the re-recorded count is the quick check that every
+engine vector took a ledger. A vector with no ledger is compared as it stands, which is all `check`
+did before M32.
+
+**The version rule is `ledger_covers`, not equality.** A vector at frozen Python's version passes
+it. One above it passes only with a `rerecords` entry for each version in between, because those
+entries are what say which values the later versions moved. One below it, or above it without the
+entries, is STALE. Exit 0 is the freeze holding; 1 is a recorded value frozen Python no longer
+reproduces, or a stale vector; 2 is no such vector, or an empty `spec/vectors/`.
+
+**`check` defers the stages to `cargo test` and still reads their version**, under the same rule.
+The implementation under test is Rust, so running them here would prove nothing about the port. But
+they carry `ANALYSIS_VERSION`, and a stage vector from a retracted engine certifies a port mid-build
+against retracted answers, four phases sooner than a stale bundle vector would. The ratio printed at
+the end stays the **engine's**, and the stage line is separate, because one number meaning two
+things is how a green run gets quoted for something it did not check.
 
 **`check` does not run the audio family and says so**, because this program is not its
 implementation: ADR-030 §1 gives strike detection to Rust and M20 deleted the Python detector, so
@@ -486,34 +670,48 @@ splits the two with `engine_vector_paths()` and `audio_vector_paths()`; `vector_
 means *everything committed*, because that discovery is what stops a vector existing on disk and
 in no index.
 
-**`regenerate` refuses to rebuild the audio family**, and the refusal is the point. Those vectors
-were recorded by `audio/impact.py`, which no longer exists; rebuilding them from the Rust detector
-would replace a reference-derived oracle with a self-portrait that passes by construction. If
-`AUDIO_DETECTOR_VERSION` ever moves, re-recording is a decision that needs a new oracle named
-first — see `conformance_vectors._audio`, which returns nothing and explains why.
+### `regenerate` refuses the engine and stage families
 
-**`regenerate --stages-only` is the one rebuild that runs anywhere.** §2's stages family derives
-from the committed engine vectors rather than from `data/processed/`, so it needs no captures. It
-is not a partial `regenerate` — it writes no schemas and touches no other family, because it is a
-different job (ADR-032 §2). The full `regenerate` builds the stages from the engine payloads it has
-**in hand**, never from disk: it has just rewritten those files, and a stage vector derived from
-the previous generation's input would be a pair of self-consistent halves describing a question
-that no longer exists.
+**The full `regenerate` and `--stages-only` refuse with exit 2, before anything is imported or
+written**, schemas included. A rebuild from frozen Python would write its v16 answers over the
+Rust-recorded vectors and drop the ledger that says which of their values are Rust's. The refusal
+names `golf-core rerecord` and the command line to run instead.
 
-**`check` defers the stages to `cargo test` and still reads their version.** The implementation
-under test is `crates/analysis`, so running them here would prove nothing about the port — but
-unlike audio, these carry `ANALYSIS_VERSION` and rebuild on any machine, so a stale one is
-reported and exits non-zero rather than being left for someone to notice. A stale *bundle* vector
-certifies a finished port against retracted answers; a stale *stage* vector does it four phases
-sooner, to a port that then builds everything after it on top. The conform ratio printed at the end
-stays the **engine's** — the stage line is separate, because one number meaning two things is how a
-green run gets quoted for something it did not check.
+**It follows the audio precedent, which has stood since M20.** Those vectors were recorded by
+`audio/impact.py`, which no longer exists, and rebuilding them from the Rust detector would replace
+a reference-derived oracle with a self-portrait that passes by construction. If
+`AUDIO_DETECTOR_VERSION` ever moves, re-recording is a decision that needs a new oracle named first
+— see `conformance_vectors._audio`, which returns nothing and explains why. What keeps
+`golf-core rerecord` from being that self-portrait is the gate above: it can change only what a
+declaration names.
+
+`regenerate` still does two jobs. `--schemas-only` writes the Python-owned schema roots and never
+the three in `RUST_OWNED_SCHEMAS` (§1), and `--format-only` rebuilds the format family from CPython
+(§2). `scripts/conformance_vectors.py`'s module doc and `build_stages_from_disk`'s docstring still name
+`regenerate` and `--stages-only` as the way in. They are frozen Python, so they stay wrong until
+M40 deletes them, and this paragraph is the correction.
+
+### `run`: the cross-language seam
+
+`run` is diffed by a shell pipeline, with no Python in the loop but the reference. **Both ends of it
+exist as of M22 P6, and they agreed on all 21 as of P8b**: `golf-core run` is `crates/core`'s
+binary, and the two were compared through `compare_results` itself, with no Rust comparator
+involved, at zero differences on every vector. Since M32 the two ends answer at different versions
+on purpose, and differ by exactly the paths the ledger declares.
+
+**The `diff` is a diagnostic and not the gate**, and the difference is worth keeping straight. A
+byte comparison of the two streams is unavailable in either direction: they are 13,569 and 13,221
+bytes for one vector, because Python writes `-1.636758133827243e-05` where `serde_json` writes
+`-0.00001636758133827243`. So the pipeline shows *where* two implementations disagree once
+something has already decided they do, and the deciding is a comparator's: `compare_results` on the
+Python side, `golf_core::compare` on the Rust one (§3).
 
 **`cargo test` also reads every engine vector without running one** (M22 P2).
 `crates/contracts/tests/round_trip.rs` deserializes each vector's `input` and `expected` into the
 ported shapes and writes them back, asking only whether a field survives the crossing. It is
 *stricter* than §3 and deliberately so: nothing there computes anything, so a float must come back
-with the same bits and a key must come back at all. What it cannot ask for is a byte comparison —
+with the same bits and a key must come back at all, with the one ledgered allowance for an
+`input.shot` key that §2 describes. What it cannot ask for is a byte comparison —
 Python writes `-1.636758133827243e-05` where `serde_json` writes `-0.00001636758133827243` for the
 identical f64, and seventy-seven distinct floats in the committed vectors take the exponent form. So
 every cross-language comparison here is structural, over parsed values, which is what

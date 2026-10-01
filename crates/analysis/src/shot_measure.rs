@@ -13,9 +13,31 @@
 //! `carry_distance_yds`, `total_distance_yds`, `ball_speed_mph`, `launch_angle_deg` and
 //! `start_line_deg` read a `ShotData` field and return it. What [`SHOT_MEASUREMENTS`] holds is what
 //! `storage.corpus` pools and what `analysis.baseline` builds a personal mean from, and a field that
-//! stays on `ShotData` reaches neither. The Python module docstring argues each exclusion —
-//! `smash_factor`, `club_head_speed`, `spin_axis`, dispersion — and none of that reasoning is
-//! re-litigated here; what a port owes is the seven rows and their order.
+//! stays on `ShotData` reaches neither. What a port owes is the seven rows and their order; what
+//! follows is why the other printed fields are not rows.
+//!
+//! # What stays on `ShotData`, and the measurement behind it
+//!
+//! This used to be a pointer to the Python module docstring. That docstring is frozen with stale
+//! numbers in it and goes when M40 deletes `analysis/` (ADR-035 §5), so the measurement lives here
+//! now. [M32 P7]
+//!
+//! **`smash_factor` and `club_head_speed`.** HD Golf's printed smash factor reads **0.76–1.06 over
+//! the 13 stored shots** (M31 P2 finding 1, 2026-09-29: 8 below 1.00, 2 at it, 3 above) — every one
+//! far below what a struck ball comes off the face at, and most of them ball speed *below* club
+//! speed, which a real strike cannot produce. The OCR is faithful: `ball_speed / club_head_speed`
+//! reproduces the printed smash to rounding on all 13, so the simulator itself prints these.
+//! Recording them as measurements would invite a later derivation step to cut a band from a device
+//! artifact, which is a wrong number with a provenance string attached. ADR-034 §2 carries the same
+//! finding into the capability model, where HD Golf declares both `shown_only`. (The Python
+//! docstring's 0.89–1.00 is the figure M31 P2 corrected.)
+//!
+//! **Why ball speed survives that and club speed does not** is [`measure_ball_speed`]'s doc.
+//!
+//! **`spin_axis`** was left out because its sign was unresolved, and that ground went when
+//! `screen/profiles.json` gave the tile a `printed_sign`; whether it becomes a row is a decision
+//! of its own, not an omission here. **Dispersion** needs more than one shot, and a row here reads
+//! one.
 //!
 //! # What is gated, and what is not
 //!
@@ -109,8 +131,12 @@ pub fn measure_start_line_offline(shot: &ShotData) -> Option<f64> {
 /// Ball speed off the face, in mph, exactly as the screen printed it. Judged by nothing.
 ///
 /// A fitting input rather than a coaching number. It survives the smash-factor exclusion that keeps
-/// club speed out because the printed smash implicates the *pair* and the two shots on disk isolate
-/// the fault to club speed — the Python module docstring has the measurement.
+/// club speed out (the module doc has that measurement) because a smash below 1.0 implicates the
+/// *pair*, and the consistency check cannot say which of the two is wrong: it divides one printed
+/// number by another and recovers the third. **The 2026-08-10 pair can.** They read 90.7 and 90.5
+/// mph of ball speed for 125.6 and 121.0 yards of carry — the same ball speed, near enough the same
+/// carry — while their club speeds read 91.0 and 98.3, 7.3 mph apart on the one field nothing else
+/// corroborates. That is evidence rather than proof, and it points at the club-speed reading.
 pub fn measure_ball_speed(shot: &ShotData) -> Option<f64> {
     shot.ball_speed
 }

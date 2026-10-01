@@ -10,7 +10,7 @@ version = "0.1.0"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
-description = "The shell: the stdin -> stdout `run` seam conformance.py diffs a port through, and the golf-core binary."
+description = "The shell: the stdin -> stdout `run` seam conformance.py diffs a port through, the gated re-record of spec/vectors/, and the golf-core binary."
 
 [lib]
 name = "golf_core"
@@ -28,10 +28,9 @@ path = "src/bin/golf_core.rs"
 analysis = { path = "../analysis" }
 contracts = { path = "../contracts" }
 feedback = { path = "../feedback" }
+# A dependency rather than a dev-dependency since M32 P5: `golf-core rerecord` reads and writes the
+# corpus and stage vectors, which are committed gzipped (`conformance.py::_write_json`'s level 9 and
+# mtime 0). Until then only the tests read them.
+flate2.workspace = true
 serde = { workspace = true }
 serde_json = { workspace = true }
-
-[dev-dependencies]
-# The end-to-end gate reads `spec/vectors/synthetic/` and reports on the corpus half it defers, and
-# those files are committed gzipped the way every other family's are.
-flate2.workspace = true

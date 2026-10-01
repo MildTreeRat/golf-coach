@@ -153,19 +153,27 @@ python scripts/simulate_flight.py --shot SHOT-ID [--points N] [--altitude M]
 #   exit 0 a ball flew · 2 none did (a launch angle at the horizontal rolls; roll is out of scope)
 #   over stored shots a refusal is a finding, so --shots exits 0; only an unknown --shot id is 2
 
-# The core as an oracle: what a second implementation is diffed against (base install — M19)
+# The frozen half of the oracle (base install — M19; frozen since M32, when the oracle moved to
+# Rust and `golf-core rerecord` became what records the vectors — ADR-035 §3)
 python scripts/conformance.py check [--id VECTOR-ID ...] [--max-diffs N] [-v]
+#   the freeze: frozen Python against every engine vector, with each Rust re-record's declared
+#   paths taken out of both sides. A pass says frozen Python still reproduces every value it
+#   recorded — not that the vectors are right, which is `cargo test`'s to say now
 python scripts/conformance.py run < vector.json    # vector in, serialized result out
 python scripts/conformance.py list
-python scripts/conformance.py regenerate [--schemas-only]
+python scripts/conformance.py regenerate --schemas-only | --format-only
+#   the Python-owned schema roots, or the format table from CPython. The engine and stage
+#   families are refused, exit 2: a rebuild from frozen Python would overwrite Rust's record
 
 # The Rust half — seven crates, and only one of them has a Python caller. `crates/trigger` is
 # ball-strike detection and the clip-cutting rules around it (M20), and it is the one:
 # `audio/trigger.py` pipes PCM to `golf-trigger`. `crates/capture` is the camera edge (M21).
 # `crates/{contracts,analysis,feedback,core}` are the engine port (M22) — a second
 # implementation of everything `analyze_swing_bundle` does, wired to nothing. Its first real
-# caller is M24's session engine; until then its only caller is its own test harness, and
-# `api/pipeline.py` still calls `analysis/engine.py`. `crates/pose` is the sidecar boundary
+# callers are the phone app (M38) and §M29's Rust lab CLI; until then its only callers are its
+# own test harness and `golf-core`, and `api/pipeline.py` still calls `analysis/engine.py`.
+# Since M32 `golf-core` is also the recorder of `spec/vectors/` (`rerecord`, below), and
+# `crates/contracts` holds the one module with no Python twin, the device capability model. `crates/pose` is the sidecar boundary
 # (M23, ADR-033) and runs the other way round: it *spawns* Python, one warm
 # `golf_coach.pose.worker` per pool slot, and speaks NDJSON to it. It has no caller either —
 # `api/pipeline.py` still poses in-process. `cargo test` runs every vector family
@@ -177,6 +185,13 @@ cargo build --release          # api/pipeline.py needs this before it can detect
 cargo test
 cargo run --bin golf-core -- run < vector.json   # the port's answer to one vector, on stdout —
 #   the cross-language seam, diffed against `conformance.py run` at zero differences on all 21
+#   until M32; since then the two differ by exactly the paths each vector's ledger declares
+cargo run --release --bin golf-core -- rerecord --declare spec/declarations/v17.json [--dry-run]
+#   re-record the engine and stage families from the Rust core (M32, ADR-035 §3). Rust's answer
+#   is compared with each committed vector, and the whole run is refused on any difference the
+#   declaration does not name; what is written is the committed file with only the declared
+#   paths replaced, plus a `provenance.rerecords` entry saying which. A second run writes
+#   nothing. --dry-run prints the report, which is what gets reviewed, never `git diff`
 python scripts/trigger_replay.py [--sweep] [--concat] [--id SESSION/SWING]
 golf-capture list [--formats]  # the cameras this host can see, with their identities
 #   `no cameras` is a successful answer and exits 0 — it is also the only one this repo has
@@ -193,12 +208,12 @@ python scripts/pose_replay.py [--id SESSION/SWING] [--role ROLE] [--out DIR] [--
 #   the stored corpus re-posed through `golf-pose` and diffed against the keypoints files on
 #   disk — ~70 minutes for all 30, reporting a census (clips, frames, values, values
 #   differing, worst delta) rather than a verdict. `--sweep` measures pool width instead
-#   check and run need `spec/` and nothing else — that is what committing the vectors buys.
-#   regenerate needs data/processed/, so it only runs on the capture machine, and it refuses a
-#   swing whose stored analysis is behind ANALYSIS_VERSION (run reanalyze.py first)
+#   check, run and rerecord need `spec/` and nothing else — that is what committing the vectors
+#   buys, and none of them reads data/
 #   run is the cross-language seam: stdin to stdout, no Python in the loop but the reference
-#   exit 0 every vector conforms · 1 one did not, or was recorded by an older engine · 2 no such
-#   vector. Rules and coverage: docs/CONFORMANCE.md
+#   check exits 0 the freeze held · 1 a value frozen Python recorded moved, or a vector is stale
+#   (below frozen v16, or above it without a ledger entry per version) · 2 no such vector.
+#   Rules and coverage: docs/CONFORMANCE.md
 ```
 
 One long-running service: the FastAPI upload server (`scripts/run_server.py`, M7 Phase 5),
@@ -901,9 +916,10 @@ is trustworthy without hardware.
   candidate must beat.
 - **A specification a second implementation can be checked against** — M19's `spec/` holds
   schemas exported from `contracts/` and golden vectors pairing an input with the output this
-  engine produces, and `python scripts/conformance.py check` diffs any implementation against
-  Python in one command. It is the only assertion here that survives the code being rewritten in
-  another language, which is why ADR-030 §8 gates M22 on it rather than on review. The rules and
+  engine produces, and `python scripts/conformance.py check` diffed any implementation against
+  Python in one command until M32 moved the oracle to Rust (below). It is the only assertion
+  here that survives the code being rewritten in another language, which is why ADR-030 §8 gates
+  M22 on it rather than on review. The rules and
   what they deliberately do not cover are [CONFORMANCE.md](CONFORMANCE.md).
 - **And it has now survived its first deletion.** M20 ported ball-strike detection to Rust and
   *removed* the Python that had done it, which is only defensible because the vectors outlive the
@@ -926,6 +942,15 @@ is trustworthy without hardware.
   §2 and ADR-032's eleventh addendum carry the list. **No vector moved and `ANALYSIS_VERSION` did
   not bump**, which means the port found no defect in this engine that changed an answer — and is
   silent about the two it could not see, both of which turned out to be overstated docstrings.
+- **And the oracle has now moved, under a gate rather than a reviewer** (M32, ADR-035 §3). The
+  first `ANALYSIS_VERSION` bump after the port was Rust's alone, and `golf-core rerecord` recorded
+  it: Rust's answer compared with every committed vector, the run refused on any difference a
+  committed declaration (`spec/declarations/`) does not name, and only the declared paths written
+  back. On M32's run that was ten added shot keys and the version, on all 42 engine and stage
+  vectors; a second-language check then found every other value bit-identical to what Python had
+  recorded. Each vector's `provenance.rerecords` says which of its values are Rust's, and
+  `conformance.py check` now takes those out and certifies only that the frozen Python still
+  reproduces the rest — the freeze, checked, rather than the vectors.
 - **And where a vector family could not exist, the gate is a binary and a corpus diff** (M23).
   The pose sidecar's true input is a 4K `.MOV` that cannot be committed and a keypoints-only
   family would be 239 MB before gzip, so ADR-033 declined one and `golf-pose` plus

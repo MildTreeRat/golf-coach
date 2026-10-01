@@ -262,7 +262,7 @@ fn the_judging_conforms_on_all_twenty_one_vectors() {
         assert_eq!(
             stage.analysis_version, ANALYSIS_VERSION,
             "{id}: recorded at v{} against a port claiming v{ANALYSIS_VERSION} — \
-             regenerate the vectors in the change that bumped it",
+             re-record the vectors with `golf-core rerecord` in the change that bumped it",
             stage.analysis_version
         );
 

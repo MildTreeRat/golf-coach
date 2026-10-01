@@ -34,6 +34,11 @@
 //! five `_dtl` rows ship gated only by the structural tests beside them. That is recorded in
 //! `analysis`'s `tests/measurements.rs` rather than hidden.
 //!
+//! **[`capability`] is the one module with no Python twin** (M32). It is ADR-034 §2's device
+//! capability model, frozen Python never gains it (ADR-035 clause 4), and the data it reads,
+//! `devices.json`, sits beside this crate's `Cargo.toml` rather than under `src/golf_coach/`,
+//! because nothing Python reads it.
+//!
 //! # Pydantic constraints are runtime checks, and so are these
 //!
 //! ADR-032 §4: `Field(ge=…)` is a *validator*, not an annotation. A port that renders the bounds
@@ -70,6 +75,7 @@
 use std::fmt;
 
 pub mod alignment;
+pub mod capability;
 pub mod checkpoints;
 pub mod detections;
 pub mod feedback;

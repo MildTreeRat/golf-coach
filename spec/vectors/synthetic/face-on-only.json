@@ -1,8 +1,8 @@
 {
-  "analysis_version": 16,
+  "analysis_version": 17,
   "expected": {
     "alignment": null,
-    "analysis_version": 16,
+    "analysis_version": 17,
     "down_the_line_window": null,
     "face_on_window": null,
     "feedback": {
@@ -46,7 +46,7 @@
       ]
     },
     "notes": [
-      "no down-the-line view in this bundle \u2014 face-on analysis only"
+      "no down-the-line view in this bundle — face-on analysis only"
     ],
     "session_id": "synthetic",
     "swing": {
@@ -181,7 +181,7 @@
           "value": 0.0
         },
         {
-          "detail": "signed (head - hips) dx over the impact window; + is image-right, camera-frame \u2014 carries a static camera bias, see head_hip_gain_norm",
+          "detail": "signed (head - hips) dx over the impact window; + is image-right, camera-frame — carries a static camera bias, see head_hip_gain_norm",
           "name": "head_hip_offset_impact_norm",
           "source": "pose:face_on",
           "unit": "shoulder_widths",
@@ -237,7 +237,7 @@
           "value": 6.168
         },
         {
-          "detail": "residual off the tour subspace \u2014 shape the basis cannot represent; most of it falls in top->impact. NOT calibrated: it over-flags golfers the basis never saw, so read it beside T2 rather than alone",
+          "detail": "residual off the tour subspace — shape the basis cannot represent; most of it falls in top->impact. NOT calibrated: it over-flags golfers the basis never saw, so read it beside T2 rather than alone",
           "name": "tour_trajectory_q",
           "source": "population:golfdb",
           "unit": "shoulder_widths",
@@ -10404,6 +10404,19 @@
   },
   "provenance": {
     "kind": "synthetic",
-    "note": "No second view at all. `alignment` is None, a note says so, and the face-on result stands on its own \u2014 degradation reported rather than raised (ADR-013)."
+    "note": "No second view at all. `alignment` is None, a note says so, and the face-on result stands on its own — degradation reported rather than raised (ADR-013).",
+    "oracle": "python",
+    "rerecords": [
+      {
+        "added": [],
+        "analysis_version": 17,
+        "by": "golf-core rerecord",
+        "declaration": "spec/declarations/v17.json",
+        "moved": [
+          "analysis_version",
+          "expected.analysis_version"
+        ]
+      }
+    ]
   }
 }

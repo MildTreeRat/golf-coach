@@ -1,4 +1,5 @@
-//! The shell: `conformance.py::run_vector`'s seam, in Rust. [M22 P6]
+//! The shell: `conformance.py::run_vector`'s seam, in Rust [M22 P6] — and from M32 the recorder of
+//! the vectors that seam is judged by.
 //!
 //! One vector's `input` in, the serialized `SwingBundleResult` out — which is *the whole of what a
 //! port has to reimplement* (M19). `docs/CONFORMANCE.md` §4 calls `run` "the cross-language seam: a
@@ -27,14 +28,39 @@
 //! `-1.636758133827243e-05` where `serde_json` writes `-0.00001636758133827243` for the identical
 //! f64, and seventy-seven distinct floats in the committed vectors take the exponent form (M22 P2).
 //! So **`run`'s stdout seam needs no formatter** — `docs/CONFORMANCE.md` §4 says so — and the
-//! diffing is `compare_results`' job on whichever side runs it. `tests/engine.rs` implements §3's
-//! rules for the Rust side.
+//! diffing is `compare_results`' job on whichever side runs it. [`compare`] implements §3's rules
+//! for the Rust side, as library code since M32 because the re-record gates on its answers, and
+//! `tests/engine.rs` is the gate that runs it over the committed vectors.
 //!
-//! # `ANALYSIS_VERSION` is not stamped here
+//! # The stage document
 //!
-//! `analyze_swing_bundle` sets it, because it is the thing that did the work. This crate reads the
-//! vector's own `analysis_version` for nothing at all — the staleness check belongs to the gate, and
-//! `tests/engine.rs` is where it lives.
+//! [`stages::run_stages`] is `conformance.py::run_stages`' counterpart: the same input, the
+//! engine's seven intermediates out, as a stage vector's `stages` object (M32). It is here rather
+//! than in `analysis` because what a committed file holds is vector plumbing, and the engine stays a
+//! library that knows nothing about `spec/`. `tests/stages.rs` holds it to every committed stage
+//! vector.
+//!
+//! # The re-record
+//!
+//! [`rerecord`] is how the committed engine and stage vectors are re-recorded from M32 (ADR-035
+//! clause 3), and `golf-core rerecord` is its verb. Its rules are pure functions over
+//! `serde_json::Value`: [`compare`]'s typed differences matched against declared paths, applied onto
+//! the *committed* document so every undeclared value keeps the bits Python recorded, and written
+//! down in the vector's own `provenance`. Its run, [`rerecord::plan`] and [`rerecord::Run::write`],
+//! walks `spec/vectors/` with them — every vector gated and composed before any file is written.
+//!
+//! # `ANALYSIS_VERSION` is stamped here once, and only through the gate
+//!
+//! `analyze_swing_bundle` sets the answer's, because it is the thing that did the work. A vector's
+//! *top-level* `analysis_version` says which engine recorded the file, and only the re-record writes
+//! it: it substitutes the constant into Rust's side of the comparison, so the move reaches the file
+//! only if the declaration names it, as every other move does. The staleness check — a vector
+//! recorded by another version than this build's — belongs to the gates, `tests/engine.rs` and
+//! `tests/stages.rs`.
+
+pub mod compare;
+pub mod rerecord;
+pub mod stages;
 
 use serde::Deserialize;
 

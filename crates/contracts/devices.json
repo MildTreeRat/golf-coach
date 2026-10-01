@@ -1,0 +1,71 @@
+{
+  "_comment": [
+    "Which ShotData fields each launch monitor can print, and which of those analysis may use",
+    "(ADR-034 §2, M32). Read by crates/contracts/src/capability.rs through include_str!, so this",
+    "is the one copy (ADR-032 §5). It sits in crates/ because nothing Python reads it.",
+    "Field names are ShotData keys, never the screen's labels: the labels are the parser's",
+    "business (launch_monitor/screen/profiles.json, and crates/screen from M34).",
+    "'analysed' may be measured and graded. 'shown_only' is displayed as printed and never",
+    "analysed, and carries a note saying why. A field a device does not declare is 'not printed'",
+    "and produces nothing downstream - no measurement, no unscored entry, no caveat, no tip.",
+    "What one golfer's screen prints is narrower than what the device declares, because layouts",
+    "vary per bay: declared ∩ the tiles the parse located (ShotProvenance.fields_present), over",
+    "their own shots. capability.rs's printed_on and printed_fields are that rule.",
+    "Each entry says where its declaration came from (ADR-022: committed data carries its source)."
+  ],
+  "devices": [
+    {
+      "device": "hd_golf",
+      "source": "The non-null targets of the hd_golf profile in src/golf_coach/launch_monitor/screen/profiles.json, in its tile order, plus impact_position_v from the bay layout. The bay photos print Custom and Impact Position V where the two reference photos print Bounce & Roll (M31 P2), which is why a golfer's printed set is cut per shot rather than read off this list. Holding this entry equal to the profile is M34's pin, because the profile gains its V tile there.",
+      "added": "2026-10-01, M32 P10",
+      "fields": [
+        { "field": "total_distance", "use": "analysed" },
+        { "field": "carry_distance", "use": "analysed" },
+        { "field": "bounce_and_roll", "use": "analysed" },
+        { "field": "ball_speed", "use": "analysed" },
+        { "field": "launch_angle", "use": "analysed" },
+        {
+          "field": "club_head_speed",
+          "use": "shown_only",
+          "note": "The simulator's club speed does not agree with its own ball speed: the smash factor the two imply sits far below what a struck ball leaves the face at, and below 1.0 on most stored shots, which a real strike cannot produce. Ball speed is the half kept, because carry corroborates it and nothing corroborates club speed. The measurement is crates/analysis/src/shot_measure.rs's module doc and measure_ball_speed (M31 P2 finding 1); ADR-034 §2."
+        },
+        { "field": "club_path", "use": "analysed" },
+        { "field": "club_face_angle", "use": "analysed" },
+        { "field": "spin_rate", "use": "analysed" },
+        {
+          "field": "smash_factor",
+          "use": "shown_only",
+          "note": "The simulator prints ball_speed / club_head_speed to rounding, so this carries club speed's fault rather than measuring anything of its own, and reads below what a struck ball comes off the face at. The measurement is crates/analysis/src/shot_measure.rs's module doc (M31 P2 finding 1); ADR-034 §2."
+        },
+        { "field": "impact_position", "use": "analysed" },
+        { "field": "shot_type", "use": "analysed" },
+        { "field": "launch_direction", "use": "analysed" },
+        { "field": "spin_axis", "use": "analysed" },
+        {
+          "field": "impact_position_v",
+          "use": "analysed",
+          "note": "The bay layout's Impact Position V tile, which profiles.json does not name yet: M34 adds it. Until then no parse locates it and no stored shot holds a value, so it is declared and never printed. Declared now because the device prints it, and this file describes the device rather than today's parser."
+        }
+      ]
+    },
+    {
+      "device": "mock",
+      "source": "What src/golf_coach/launch_monitor/mock.py fills in, in its argument order. All analysed: a test device whose numbers are self-consistent by construction (ball speed is club speed times a smash drawn around 1.38), so nothing on it is untrustworthy the way HD Golf's club speed is (docs/plans/m32-shot-contract.md, decision 4).",
+      "added": "2026-10-01, M32 P10",
+      "fields": [
+        { "field": "club_head_speed", "use": "analysed" },
+        { "field": "club_face_angle", "use": "analysed" },
+        { "field": "club_path", "use": "analysed" },
+        { "field": "ball_speed", "use": "analysed" },
+        { "field": "launch_angle", "use": "analysed" },
+        { "field": "launch_direction", "use": "analysed" },
+        { "field": "spin_rate", "use": "analysed" },
+        { "field": "spin_axis", "use": "analysed" },
+        { "field": "smash_factor", "use": "analysed" },
+        { "field": "carry_distance", "use": "analysed" },
+        { "field": "total_distance", "use": "analysed" },
+        { "field": "apex_height", "use": "analysed" }
+      ]
+    }
+  ]
+}

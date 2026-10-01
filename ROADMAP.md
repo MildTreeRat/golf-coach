@@ -1,6 +1,6 @@
 # Roadmap: AI Golf Swing Trainer
 
-## Last Updated: 2026-09-30
+## Last Updated: 2026-10-01
 
 Grouped by **state**, not by number, because the numbers no longer run in order: the pose-only
 slices (M4-PoC, M4-PoC+, M4-REF, M5-FB) delivered the mechanics half of M4 and the ranking half
@@ -48,11 +48,11 @@ wording; only the grouping and the M4 checklist have been corrected.
 | **M30** Clip trimming | ⬜ Not started. **Raised 2026-09-26** by M23's planning interview and kept out of it. Trim the stored clips to `window_around`'s `[start, end)` plus a second either side — the corpus is **whole uploads**, which is why 30 keypoint files come to 42,648 frames and 239 MB. Carries one correction in advance: measured from the **ball strike** a 1 s lead is destructive, because `clip.rs::MIN_LEAD_S` is **4.85 s** before impact and the window has to contain the address for motion-start detection to work at all. Its gate is **discharged** — trimming changes every clip's frame numbering and sha256 and those 30 files are M23's only oracle, so M23 P7 had to run first and did, on **2026-09-27**, finding all 30 reproducible | — (desk work over the corpus on disk) | [§M30](#m30-clip-trimming--the-corpus-stops-being-eighty-seconds-of-walk-up) |
 | **M31** The pivot decided | ✅ Done *(2026-09-30)*, 13/13 phases. Docs only. [ADR-034](docs/decisions/034-shot-first-phone-first.md) makes the shot the unit and the phone the host, its ten addenda are written, the milestones it moves are re-scoped, and `CLAUDE.md`, the README, the charter and `FLOW.md` say so. No code, no vector and no `ANALYSIS_VERSION` moved | — (desk work; done) | [§M31](#m31-the-pivot-decided--adr-034-docs-only) |
 | **M31.5** The Rust re-plan | ✅ Done *(2026-09-30)*, 12/12 phases. Docs only. [ADR-035](docs/decisions/035-rust-everywhere-python-where-required.md) makes the project Rust everywhere, with Python only where it is required (MediaPipe pose and the LLM); Rust becomes the oracle from M32, the Python lab is frozen until M40, M36 moves ahead of M35, and M29 becomes the lab port | — (desk work; done) | [§M31.5](#m315-the-rust-re-plan--python-only-where-required-docs-only) |
-| **M32** Wider shot contract and device capability, in Rust | ⬜ Not started, and **next**. M31.5 re-detailed it Rust-only in the program plan: the contract, the capability model, the two photo-side reasons and the first Rust re-record. The screen-parser work moved to M34 | M31.5 — this box | [§M32](#m32-wider-shot-contract-and-device-capability) |
+| **M32** Wider shot contract and device capability, in Rust | ✅ Done *(2026-10-01)*, **13/13 phases** — the phases and what each found are in [m32-shot-contract.md](docs/plans/m32-shot-contract.md). `ShotData` gained seven keys and its provenance three, each device declares what it prints in `crates/contracts/devices.json`, and `printed_blank` and `misread` exist for M35/M37 to emit. Rust's `ANALYSIS_VERSION` went 16 → 17 with no number moving, and **`golf-core rerecord` re-recorded the vectors for the first time**, diff-gated against a committed declaration, with a `rerecords` ledger in each file saying which values are Rust's. Frozen Python stays at 16, and `conformance.py check` now certifies the freeze rather than the vectors. The screen-parser work moved to M34 | — (desk work; done) | [§M32](#m32-wider-shot-contract-and-device-capability) |
 | **M33** Apple Vision spike | 🔒 Blocked. **Runs early on purpose**: whether Vision reads the HD Golf screen is the product's biggest unknown. It measures the frozen Python parser, which M32 no longer touches | M31.5, and a Mac | [§M33](#m33-apple-vision-spike--can-the-phone-read-the-screen) |
-| **M34** The screen reader in Rust | 🔒 Blocked. All the screen-parser work is here now, in Rust only: the port, the `Impact Position V` tile, the tie rule and the 13-shot re-read | M32 — this box | [§M34](#m34-the-screen-reader-in-rust) |
+| **M34** The screen reader in Rust | ⬜ Not started, and **next**, beside M36: M32 landed on 2026-10-01. All the screen-parser work is here now, in Rust only: the port, the `Impact Position V` tile, the tie rule and the 13-shot re-read | M32 — this box | [§M34](#m34-the-screen-reader-in-rust) |
 | **M35** Shot-first sessions, in Rust | 🔒 Blocked. Changes what M36 ported, with hand-worked vectors | M36 — this box | [§M35](#m35-shot-first-sessions-in-rust) |
-| **M36** The many-shot layer in Rust | 🔒 Blocked. **Runs before M35**: a faithful port, recorded once from frozen Python | M32 — this box | [§M36](#m36-the-many-shot-layer-in-rust) |
+| **M36** The many-shot layer in Rust | ⬜ Not started, and **next**, beside M34: M32 landed on 2026-10-01. **Runs before M35**: a faithful port, recorded once from frozen Python | M32 — this box | [§M36](#m36-the-many-shot-layer-in-rust) |
 | **M37** Strike profile, topic grades and strengths/weaknesses | 🔒 Blocked | M35 — desk, then the bay | [§M37](#m37-strike-profile-topic-grades-and-strengthsweaknesses-rust-first) |
 | **M38** The iPhone app | 🔒 Blocked | M34 for the skeleton, M37 for the profile screens, M29 for P4's export import; a Mac, then the bay | [§M38](#m38-the-iphone-app) |
 | **M39** Optional video on the phone | 🔒 Blocked | M38; a Mac, then the bay | [§M39](#m39-optional-video-on-the-phone) |
@@ -78,17 +78,18 @@ served live `call_tool` requests including the not-found path. It is registered 
 (`claude mcp add`, per the README) and reports `✔ Connected`, which is a second client completing
 the same handshake independently.
 
-**NEXT ACTION — M32, in Rust *(2026-09-30)*.**
+**NEXT ACTION — M34 and M36, in Rust *(2026-10-01)*.**
 [ADR-034](docs/decisions/034-shot-first-phone-first.md) moved the product to the shot and the phone.
 The user then redirected M32's planning, and
 [ADR-035](docs/decisions/035-rust-everywhere-python-where-required.md) makes the project Rust
 everywhere, with Python only where it is required: MediaPipe pose and the LLM.
 [M31.5](#m315-the-rust-re-plan--python-only-where-required-docs-only) re-planned the program under
 it, docs only, and closed on 2026-09-30; [the shot-first group](#shot-first-phone-first-m31m40) is
-the result. The next desk work is **[M32](#m32-wider-shot-contract-and-device-capability)** on this box,
-in Rust only: the wider shot contract, the device capability model and the first Rust re-record.
-From M32 the Python lab is frozen until M40, so it keeps working and gains nothing. M34 and M36
-follow M32, then M35 and M37, and
+the result. **[M32](#m32-wider-shot-contract-and-device-capability)** closed on 2026-10-01: the
+wider shot contract, the device capability model and the first Rust re-record, so Rust is now the
+oracle and the Python lab is frozen until M40, working and gaining nothing. The next desk work is
+**[M34](#m34-the-screen-reader-in-rust)** and **[M36](#m36-the-many-shot-layer-in-rust)** on this
+box, in either order, then M35 and M37, and
 [M29](#m29-the-lab-port--a-rust-lab-cli-the-rmcp-server-and-the-archive-move) ports the lab once
 M34 and M36 have landed. **[M33](#m33-apple-vision-spike--can-the-phone-read-the-screen)
 runs early on purpose.** Whether Apple Vision reads the HD Golf screen is the product's biggest
@@ -1795,8 +1796,11 @@ whole verify suite, as green as M31 left it.
 
 ## M32: Wider shot contract and device capability
 
-**Status**: ⬜ Not started, and next. M31.5 re-detailed it Rust-only. It is the first milestone of the ten
-that writes code, and the first where Rust is the oracle.
+**Status**: ✅ Done *(2026-10-01)*, 13/13 phases. The phases, and what each found, are in
+[docs/plans/m32-shot-contract.md](docs/plans/m32-shot-contract.md). M31.5 re-detailed it Rust-only. It is the first milestone of the ten
+that writes code, and the first where Rust is the oracle. Every exit item below was checked at the
+close, and [ADR-032's fourteenth addendum](docs/decisions/032-the-rust-core.md) records the first
+Rust re-record.
 
 **The ask.** In Rust only
 ([ADR-035 clause 6](docs/decisions/035-rust-everywhere-python-where-required.md#6-order-the-phone-path-first)).
@@ -1850,7 +1854,10 @@ re-checked against Vision's coarser confidences. A threshold that has to change 
 
 ## M34: The screen reader in Rust
 
-**Status**: 🔒 Blocked on M32.
+**Status**: ⬜ Not started, and unblocked: M32 landed on 2026-10-01. It can run before or after M36.
+M32 left it `SCREEN_PARSER_VERSION`, whose first ledger entry is this milestone's and which nothing
+stamps yet, `parse_is_current`, which nothing calls yet, and the `fields_present` key the parser is
+to fill, all in `crates/contracts/src/shot.rs`.
 
 **The ask.** The screen parser and validator port to a new `crates/screen`, reached through
 `golf-core parse-screen`: boxes in, `ShotData` out. All the screen-parser work M32 used to carry is
@@ -1905,7 +1912,7 @@ there is no Python to record it from. M35's own plan sets the exit.
 
 ## M36: The many-shot layer in Rust
 
-**Status**: 🔒 Blocked on M32. **Runs before M35**
+**Status**: ⬜ Not started, and unblocked: M32 landed on 2026-10-01. **Runs before M35**
 ([ADR-035 clause 6](docs/decisions/035-rust-everywhere-python-where-required.md#6-order-the-phone-path-first)).
 
 **The ask.** The aggregates and their stores port to Rust faithfully, `read_corpus` included,
@@ -1919,7 +1926,8 @@ The career and club CLIs get Rust verbs. `ShotResult` has left this milestone fo
 new.
 
 **Open**: `read_corpus` leaves out an analysis older than the installed `ANALYSIS_VERSION`, and
-Rust's moves in M32 while every `analysis.json` in `data/` stays at frozen Python's. M36's plan
+Rust's moved past frozen Python's in M32, while every `analysis.json` in `data/` stays at frozen
+Python's. M36's plan
 decides what its verbs do over `data/` before M29 re-analyses it.
 
 **Depends on**: M32. **Where it runs**: this box.

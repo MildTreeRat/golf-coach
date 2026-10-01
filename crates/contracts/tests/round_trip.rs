@@ -13,6 +13,11 @@
 //! bits, and a key that came in must go out. §3's `RTOL` is sized for a different *summation order*,
 //! and nothing here sums anything. P4 onward is where that tolerance starts earning its keep.
 //!
+//! **One allowance, since M32's re-record**: an `input.shot` key that went in absent may come out at
+//! its default when this vector's own ledger added its twin under `expected.swing.shot` — the
+//! committed inputs keep the shape frozen Python writes. [`DECLARED_BY_THE_ANSWER`] says exactly
+//! where, and everything else absent-then-present is still a difference.
+//!
 //! **The comparison is structural, over parsed values, because a byte comparison is not available.**
 //! Python writes `-1.636758133827243e-05` and `serde_json` writes `-0.00001636758133827243` for the
 //! identical f64 — both shortest-round-trip forms, differing only on when to reach for an exponent.
@@ -34,7 +39,7 @@ use contracts::shot::ShotData;
 use contracts::swing::{SwingBundleResult, ANALYSIS_VERSION};
 use flate2::read::GzDecoder;
 use serde::{Deserialize, Deserializer, Serialize};
-use serde_json::Value;
+use serde_json::{json, Value};
 
 /// `conformance.py::run_vector`'s parameters, as they sit in a vector file.
 ///
@@ -141,7 +146,7 @@ fn spec_dir() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../../spec/vectors")
         .canonicalize()
-        .expect("spec/vectors is missing — run `python scripts/conformance.py regenerate`")
+        .expect("spec/vectors is missing — it is committed: restore it from git")
 }
 
 /// Every committed engine vector, synthetic and corpus, as `(id, parsed file)`.
@@ -184,11 +189,73 @@ fn vectors() -> Vec<(String, Value)> {
         .collect()
 }
 
+/// Where an `input` key may come back that went in absent: the owner it sits on, and the owner in
+/// `expected` whose ledgered key licenses it. [M32 P8]
+///
+/// **This is the one allowance, and it is spelled out rather than derived.** M32's re-record added
+/// ten keys to `expected.swing.shot` and rewrote no input (§M32: inputs keep the shape frozen Python
+/// writes, because the frozen lab goes on writing exactly that until M40). So a corpus vector's
+/// `input.shot` goes in without them and comes out of `ShotData` with each at its serde default — a
+/// key this gate would otherwise call invented. The engine echoes the shot into its answer, so the
+/// same key under `expected.swing.shot` is where the re-record declared it, and that declaration is
+/// what licenses the input's copy. Two owners, because `ShotProvenance` is a struct of its own and a
+/// key is matched against its *parent*: a key invented anywhere else — deeper, shallower, or under
+/// an owner not in this table — is still a difference, ledger or not.
+const DECLARED_BY_THE_ANSWER: [(&str, &str); 2] = [
+    ("input.shot", "expected.swing.shot"),
+    ("input.shot.provenance", "expected.swing.shot.provenance"),
+];
+
+/// Whether the key at `path`, absent from the committed `input` and present at `value` after the
+/// round trip, is one the allowance above covers for this `vector`.
+///
+/// Two conditions, both required:
+/// - **the answer's twin is in this vector's ledger**, as an `added` path of some
+///   `provenance.rerecords` entry — so the allowance reaches exactly the keys a reviewed declaration
+///   added to *this* file, and no vector that was never re-recorded;
+/// - **the value is the one the answer carries there.** The re-record wrote that value from Rust's
+///   reading of this same absent key, so it *is* the serde default as of the re-record. Comparing
+///   against the committed file rather than against today's default is what makes this a check: a
+///   default that changed later would come out here as a value the committed answer does not hold.
+///   (`shot.rs`'s unit tests are what pin the defaults themselves.)
+fn declared_by_the_answer(vector: &Value, path: &str, value: &Value) -> bool {
+    let Some((owner, key)) = path.rsplit_once('.') else {
+        return false;
+    };
+    let Some(twin) = DECLARED_BY_THE_ANSWER
+        .iter()
+        .find(|(input_owner, _)| *input_owner == owner)
+        .map(|(_, answer_owner)| format!("{answer_owner}.{key}"))
+    else {
+        return false;
+    };
+
+    let ledgered = vector["provenance"]["rerecords"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(|entry| entry["added"].as_array())
+        .flatten()
+        .any(|added| added.as_str() == Some(twin.as_str()));
+    let recorded = twin
+        .split('.')
+        .try_fold(vector, |node, step| node.get(step));
+    ledgered && recorded == Some(value)
+}
+
 /// Every place two parsed JSON values disagree, as `path: got != want` lines.
 ///
 /// Key sets are compared in both directions, which is the half that matters: a dropped field and an
-/// invented one are different mistakes and a port can make either.
-fn differences(actual: &Value, expected: &Value, path: &str, into: &mut Vec<String>) {
+/// invented one are different mistakes and a port can make either. `licensed` is asked about each
+/// invented key, with its path and value, and a key it accepts is not a difference — the expected
+/// half passes one that accepts nothing, and the input half [`declared_by_the_answer`].
+fn differences(
+    actual: &Value,
+    expected: &Value,
+    path: &str,
+    licensed: &dyn Fn(&str, &Value) -> bool,
+    into: &mut Vec<String>,
+) {
     match (actual, expected) {
         (Value::Object(a), Value::Object(e)) => {
             let actual_keys: BTreeSet<&String> = a.keys().collect();
@@ -197,10 +264,13 @@ fn differences(actual: &Value, expected: &Value, path: &str, into: &mut Vec<Stri
                 into.push(format!("{path}.{key}: dropped (was {})", e[*key]));
             }
             for key in actual_keys.difference(&expected_keys) {
-                into.push(format!("{path}.{key}: invented (is {})", a[*key]));
+                let at = format!("{path}.{key}");
+                if !licensed(&at, &a[*key]) {
+                    into.push(format!("{at}: invented (is {})", a[*key]));
+                }
             }
             for key in actual_keys.intersection(&expected_keys) {
-                differences(&a[*key], &e[*key], &format!("{path}.{key}"), into);
+                differences(&a[*key], &e[*key], &format!("{path}.{key}"), licensed, into);
             }
         }
         (Value::Array(a), Value::Array(e)) if a.len() != e.len() => {
@@ -208,7 +278,7 @@ fn differences(actual: &Value, expected: &Value, path: &str, into: &mut Vec<Stri
         }
         (Value::Array(a), Value::Array(e)) => {
             for (i, (a, e)) in a.iter().zip(e).enumerate() {
-                differences(a, e, &format!("{path}[{i}]"), into);
+                differences(a, e, &format!("{path}[{i}]"), licensed, into);
             }
         }
         (Value::Number(a), Value::Number(e)) => {
@@ -239,6 +309,143 @@ fn strip_excluded(value: &mut Value) {
     }
 }
 
+/// `vector`'s `input`, read into the harness shape and written back, against what was committed —
+/// under [`declared_by_the_answer`]'s allowance, and nothing else's.
+///
+/// Walked from `"input"` rather than from the id, so a path reaches the allowance spelled the way a
+/// ledger spells it; the caller puts the id back on for the report.
+fn input_differences(id: &str, vector: &Value) -> Vec<String> {
+    let input: VectorInput = serde_json::from_value(vector["input"].clone())
+        .unwrap_or_else(|e| panic!("{id}: reading `input`: {e}"));
+    let mut found = Vec::new();
+    differences(
+        &serde_json::to_value(&input).expect("serialize input"),
+        &vector["input"],
+        "input",
+        &|path, value| declared_by_the_answer(vector, path, value),
+        &mut found,
+    );
+    found
+}
+
+/// The allowance is a door, so this is the test that it opens only where it should: a ledgered key
+/// at the value the answer recorded, under one of the two owners — and shut for a key the answer
+/// holds but no ledger names, a value the answer does not hold, an owner the table does not list, and
+/// a vector with no ledger at all.
+#[test]
+fn the_allowance_reaches_only_ledgered_keys_at_their_recorded_value() {
+    let vector = json!({
+        "provenance": {"rerecords": [{"added": [
+            "expected.swing.shot.attack_angle",
+            "expected.swing.shot.provenance.corrections"
+        ], "moved": []}]},
+        "expected": {"swing": {"shot": {
+            "attack_angle": null,
+            "low_point": null,
+            "provenance": {"corrections": {}}
+        }}}
+    });
+
+    assert!(declared_by_the_answer(
+        &vector,
+        "input.shot.attack_angle",
+        &Value::Null
+    ));
+    assert!(declared_by_the_answer(
+        &vector,
+        "input.shot.provenance.corrections",
+        &json!({})
+    ));
+
+    // In the answer, but no ledger entry added it.
+    assert!(!declared_by_the_answer(
+        &vector,
+        "input.shot.low_point",
+        &Value::Null
+    ));
+    // Ledgered, but not the value the answer recorded.
+    assert!(!declared_by_the_answer(
+        &vector,
+        "input.shot.attack_angle",
+        &json!(0.0)
+    ));
+    // A ledgered key's name under an owner the table does not list.
+    assert!(!declared_by_the_answer(
+        &vector,
+        "input.attack_angle",
+        &Value::Null
+    ));
+    assert!(!declared_by_the_answer(
+        &vector,
+        "input.shot.provenance.raw_fields.corrections",
+        &json!({})
+    ));
+
+    let mut unledgered = vector.clone();
+    unledgered["provenance"]
+        .as_object_mut()
+        .unwrap()
+        .remove("rerecords");
+    assert!(!declared_by_the_answer(
+        &unledgered,
+        "input.shot.attack_angle",
+        &Value::Null
+    ));
+}
+
+/// On the committed set, the allowance is doing real work and exactly the declared work: take a
+/// corpus vector's ledger away and its `input` comes back with one invented key per `input`-side
+/// twin of an `added` path it listed — no more, no fewer.
+///
+/// Read off the vector's own ledger rather than spelled here, so a later declaration that adds keys
+/// to the shot is checked by the same test without an edit.
+#[test]
+fn without_its_ledger_a_corpus_input_comes_back_with_exactly_the_declared_keys() {
+    let (id, vector) = vectors()
+        .into_iter()
+        .find(|(id, _)| id.starts_with("corpus/"))
+        .expect("at least one corpus vector");
+    assert!(
+        input_differences(&id, &vector).is_empty(),
+        "{id}: the allowance does not hold with the ledger in place"
+    );
+
+    let mut declared: Vec<String> = vector["provenance"]["rerecords"]
+        .as_array()
+        .expect("a re-recorded corpus vector carries a ledger")
+        .iter()
+        .flat_map(|entry| entry["added"].as_array().expect("`added` is a list"))
+        .filter_map(|added| {
+            let added = added.as_str().expect("a ledger path is a string");
+            DECLARED_BY_THE_ANSWER
+                .iter()
+                .find_map(|(input_owner, answer_owner)| {
+                    let key = added.strip_prefix(answer_owner)?.strip_prefix('.')?;
+                    (!key.contains('.')).then(|| format!("{input_owner}.{key}"))
+                })
+        })
+        .collect();
+    declared.sort();
+    assert!(!declared.is_empty(), "{id}: its ledger adds no shot key");
+
+    let mut unledgered = vector.clone();
+    unledgered["provenance"]
+        .as_object_mut()
+        .unwrap()
+        .remove("rerecords");
+    let mut invented: Vec<String> = input_differences(&id, &unledgered)
+        .iter()
+        .map(|line| {
+            line.split_once(": invented")
+                .unwrap_or_else(|| panic!("{id}: not an invented key: {line}"))
+                .0
+                .to_string()
+        })
+        .collect();
+    invented.sort();
+    assert_eq!(invented, declared);
+}
+
 #[test]
 fn every_vector_survives_the_crossing() {
     let mut report: Vec<String> = Vec::new();
@@ -250,17 +457,14 @@ fn every_vector_survives_the_crossing() {
         assert!(
             !stale,
             "{id} was recorded at analysis_version {} and this crate is {ANALYSIS_VERSION} — \
-             regenerate the vectors in the change that bumped it",
+             re-record the vectors with `golf-core rerecord` in the change that bumped it",
             vector["analysis_version"]
         );
 
-        let input: VectorInput = serde_json::from_value(vector["input"].clone())
-            .unwrap_or_else(|e| panic!("{id}: reading `input`: {e}"));
-        differences(
-            &serde_json::to_value(&input).expect("serialize input"),
-            &vector["input"],
-            &format!("{id}.input"),
-            &mut report,
+        report.extend(
+            input_differences(&id, &vector)
+                .iter()
+                .map(|line| format!("{id}.{line}")),
         );
         inputs += 1;
 
@@ -272,6 +476,7 @@ fn every_vector_survives_the_crossing() {
             &round_tripped,
             &vector["expected"],
             &format!("{id}.expected"),
+            &|_, _| false,
             &mut report,
         );
         expecteds += 1;

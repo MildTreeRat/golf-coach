@@ -67,11 +67,11 @@ are ADR-035's.
 |---|---|---|---|---|
 | **M31** | The pivot decided (ADR-034, docs only) | desk | – | ✅ Done *(2026-09-30)*, 13/13 phases — [m31-shot-first-adr.md](m31-shot-first-adr.md) |
 | **M31.5** | The Rust re-plan: Python only where required ([ADR-035](../decisions/035-rust-everywhere-python-where-required.md), docs only) | desk | M31 | ✅ Done *(2026-09-30)*, 12/12 phases — [m31-5-rust-first-replan.md](m31-5-rust-first-replan.md) |
-| **M32** | Wider shot contract and device capability, in Rust; the first Rust re-record | this box | M31.5 | ⬜ Not started — **next**. Re-detailed Rust-only below (M31.5 P6a) |
+| **M32** | Wider shot contract and device capability, in Rust; the first Rust re-record | this box | M31.5 | ✅ Done *(2026-10-01)*, 13/13 phases — [m32-shot-contract.md](m32-shot-contract.md). Re-detailed Rust-only below (M31.5 P6a) |
 | **M33** | Apple Vision spike: can the phone read the screen? | Mac | M31.5 | ⬜ Not started |
-| **M34** | The screen reader in Rust (`crates/screen`): the parser port, the V tile and tie rule, the 13-shot re-read | this box | M32 | ⬜ Not started |
+| **M34** | The screen reader in Rust (`crates/screen`): the parser port, the V tile and tie rule, the 13-shot re-read | this box | M32 | ⬜ Not started — unblocked by M32 *(2026-10-01)* |
 | **M35** | Shot-first sessions in Rust: photo-only shots, `ShotResult` and `analyze_shot` | this box | M36 | ⬜ Not started |
-| **M36** | The many-shot layer and its stores ported to Rust, recorded once from frozen Python | this box | M32 | ⬜ Not started — runs before M35 |
+| **M36** | The many-shot layer and its stores ported to Rust, recorded once from frozen Python | this box | M32 | ⬜ Not started — unblocked by M32 *(2026-10-01)*; runs before M35 |
 | **M37** | Strike profile, topic grades and strengths/weaknesses (Rust first) | desk, then bay | M35 | ⬜ Not started |
 | **M38** | The iPhone app | Mac, then bay | M34 (skeleton), M37 (profile screens), M29 (P4, the export import) | ⬜ Not started |
 | **M39** | Optional video on the phone | Mac, then bay | M38 | ⬜ Not started |
@@ -477,6 +477,21 @@ record of Decisions 6–17, and what each phase found.
 **Exit:** `pytest tests/test_docs_truth.py` passes.
 
 ## M32 — Wider shot contract and device capability (detailed)
+
+**As built (2026-10-01):** this section is the design, and [the M32 plan](m32-shot-contract.md) is
+what built it, phase by phase. Its "Phase findings" carry what building found, and where a finding
+contradicts this section the finding wins. Two corrections were made before building, as that
+plan's calls 1 and 2:
+1. **The order.** The Python tooling landed *before* the bump and the re-record, not after them as
+   "Sequence" below has it, so that no phase ended with `pytest` red. The frozen view is a no-op on
+   a vector with no ledger, so it was proved on fixtures first.
+2. **A gap in "What changes in Python".** `tests/test_conformance.py::test_a_vector_round_trips_through_the_stdin_seam`
+   also compares frozen Python's output with a synthetic vector's `expected`, so it joined the
+   frozen view with the two tests named below.
+
+One more was found while building: the typo guard and "a second run writes nothing" contradict each
+other as written below, and the ledger reconciles them
+([ADR-032](../decisions/032-the-rust-core.md)'s 2026-10-01 addendum).
 
 **Rust only.** M31.5 P6a re-detailed this section under ADR-035's clauses 3, 4 and 6. It is L3:
 `crates/contracts`, `ANALYSIS_VERSION` and the committed vectors. It is also where the oracle moves.

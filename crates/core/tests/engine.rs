@@ -33,13 +33,11 @@
 //!
 //! # The rules
 //!
-//! `docs/CONFORMANCE.md` §3's, implemented over `serde_json::Value` because that is what
-//! `compare_results` compares — parsed values, never bytes, for the reason M22 P2 measured: Python
-//! writes `-1.636758133827243e-05` where `serde_json` writes `-0.00001636758133827243` for the
-//! identical f64. Bools before ints, because `isinstance(True, int)` is true in Python and the
-//! recorded JSON therefore has to be read with the same ordering; floats within `RTOL = 1e-9`;
-//! everything else exact, list order included. Every difference across all six is accumulated and
-//! reported in one assertion — the template `crates/trigger/tests/conformance.rs` set.
+//! `docs/CONFORMANCE.md` §3's, in [`golf_core::compare`] — written here until M32 moved them into
+//! the library, because the re-record gates on the same answers this test reads. The rules and
+//! their reasons are that module's doc; what stays here is the gate. Every difference across every
+//! vector is accumulated and reported in one assertion — the template
+//! `crates/trigger/tests/conformance.rs` set.
 
 use std::fs;
 use std::io::Read;
@@ -47,11 +45,8 @@ use std::path::{Path, PathBuf};
 
 use contracts::swing::ANALYSIS_VERSION;
 use flate2::read::GzDecoder;
+use golf_core::compare::compare;
 use serde_json::Value;
-
-/// `docs/CONFORMANCE.md` §3's float rule, and the same constants every other gate here uses.
-const RTOL: f64 = 1e-9;
-const ATOL: f64 = 1e-12;
 
 fn spec_dir() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -103,103 +98,6 @@ fn vectors(half: &str) -> Vec<(String, Value)> {
         .collect()
 }
 
-/// §3's comparison, accumulating every difference rather than stopping at the first.
-///
-/// `path` is a dotted trail into the payload (`swing.checkpoint_scores[3].message`), so a failure
-/// says *where* without anyone having to re-run with a debugger. That is the one thing this owes a
-/// reader that a bare `assert_eq!` on two `Value`s does not — and the reason it is written out rather
-/// than delegated to `PartialEq`, which would also compare floats exactly.
-fn compare(expected: &Value, actual: &Value, path: &str, out: &mut Vec<String>) {
-    let at = |p: &str| {
-        if p.is_empty() {
-            "<root>".to_string()
-        } else {
-            p.to_string()
-        }
-    };
-
-    match (expected, actual) {
-        // A refusal compares equal to nothing but a refusal (ADR-010 §2). Reported as a type
-        // difference and never tested numerically: a port returning `0.0` where this returns `None`
-        // has turned "could not measure" into "measured zero".
-        (Value::Null, Value::Null) => {}
-        (Value::Null, other) => out.push(format!("{}: expected a refusal, got {other}", at(path))),
-        (other, Value::Null) => out.push(format!("{}: expected {other}, got a refusal", at(path))),
-
-        // Bools before numbers, because `isinstance(True, int)` is true in Python: the obvious
-        // ordering compares a verdict numerically and lets `1` through for `true`.
-        (Value::Bool(a), Value::Bool(b)) => {
-            if a != b {
-                out.push(format!("{}: {a} != {b}", at(path)));
-            }
-        }
-        (Value::String(a), Value::String(b)) => {
-            if a != b {
-                out.push(format!("{}: {a:?} != {b:?}", at(path)));
-            }
-        }
-        (Value::Number(a), Value::Number(b)) => {
-            // An int is exact — frame indices, `population_n`, `analysis_version` — and a float is
-            // within tolerance. Which one this is comes off the *recorded* value, because that is
-            // what pydantic's declared type produced.
-            match (a.as_i64(), b.as_i64()) {
-                (Some(x), Some(y)) => {
-                    if x != y {
-                        out.push(format!("{}: {x} != {y}", at(path)));
-                    }
-                }
-                _ => {
-                    let (x, y) = (
-                        a.as_f64().expect("a JSON number is an f64"),
-                        b.as_f64().expect("a JSON number is an f64"),
-                    );
-                    if (x - y).abs() > ATOL + RTOL * x.abs() {
-                        out.push(format!("{}: {x} != {y}", at(path)));
-                    }
-                }
-            }
-        }
-        (Value::Array(a), Value::Array(b)) => {
-            if a.len() != b.len() {
-                out.push(format!("{}: length {} != {}", at(path), a.len(), b.len()));
-                return;
-            }
-            for (index, (x, y)) in a.iter().zip(b).enumerate() {
-                compare(x, y, &format!("{path}[{index}]"), out);
-            }
-        }
-        (Value::Object(a), Value::Object(b)) => {
-            // Same keys, both ways. A key the port *added* is as much a finding as one it dropped:
-            // `spec/schemas/` describes the shape and an extra field means the two implementations
-            // disagree about what a `SwingBundleResult` is.
-            for key in a.keys() {
-                if !b.contains_key(key) {
-                    out.push(format!("{}: key {key:?} missing from the port", at(path)));
-                }
-            }
-            for key in b.keys() {
-                if !a.contains_key(key) {
-                    out.push(format!(
-                        "{}: key {key:?} the vector does not have",
-                        at(path)
-                    ));
-                }
-            }
-            for (key, x) in a {
-                if let Some(y) = b.get(key) {
-                    let child = if path.is_empty() {
-                        key.clone()
-                    } else {
-                        format!("{path}.{key}")
-                    };
-                    compare(x, y, &child, out);
-                }
-            }
-        }
-        (a, b) => out.push(format!("{}: type difference, {a} against {b}", at(path))),
-    }
-}
-
 /// **All twenty-one vectors, end to end, in one report — this milestone's exit criterion.**
 /// [M22 P8b]
 ///
@@ -221,15 +119,19 @@ fn the_whole_bundle_conforms_on_all_twenty_one_vectors() {
         assert_eq!(
             vector["analysis_version"].as_i64(),
             Some(ANALYSIS_VERSION),
-            "{id}: recorded at v{} against a port claiming v{ANALYSIS_VERSION} — regenerate the \
-             vectors in the change that bumped it",
+            "{id}: recorded at v{} against a port claiming v{ANALYSIS_VERSION} — re-record the \
+             vectors with `golf-core rerecord` in the change that bumped it",
             vector["analysis_version"]
         );
 
         let input = serde_json::from_value(vector["input"].clone())
             .unwrap_or_else(|e| panic!("{id}: input does not parse into the ported shapes: {e}"));
         let actual = golf_core::run(&input);
-        compare(&vector["expected"], &actual, id, &mut differences);
+        differences.extend(
+            compare(&vector["expected"], &actual)
+                .iter()
+                .map(|difference| format!("{id}: {difference}")),
+        );
     }
 
     assert!(
@@ -240,73 +142,6 @@ fn the_whole_bundle_conforms_on_all_twenty_one_vectors() {
         differences.join("\n")
     );
     println!("the whole bundle conforms on {} vectors", committed.len());
-}
-
-/// The comparator is worth nothing if it cannot see a difference, which is why
-/// `tests/test_conformance.py` unit-tests the Python one. The four rules that are easy to get wrong.
-#[test]
-fn the_comparator_sees_the_differences_it_exists_to_see() {
-    let cases: [(Value, Value, &str); 7] = [
-        // A refusal is not a zero. ADR-010 §2, the rule this suite is built around.
-        (
-            serde_json::json!({"observed": null}),
-            serde_json::json!({"observed": 0.0}),
-            "expected a refusal",
-        ),
-        (
-            serde_json::json!({"observed": 0.0}),
-            serde_json::json!({"observed": null}),
-            "got a refusal",
-        ),
-        // A bool is not an int, in the direction Python gets wrong.
-        (
-            serde_json::json!({"passed": true}),
-            serde_json::json!({"passed": 1}),
-            "type difference",
-        ),
-        // A sentence is exact, to the byte.
-        (
-            serde_json::json!({"message": "Good tempo - 2.7:1."}),
-            serde_json::json!({"message": "Good tempo - 2.70:1."}),
-            "!=",
-        ),
-        // A float past the tolerance, and list order.
-        (
-            serde_json::json!({"score": 0.611_111_111_111_111}),
-            serde_json::json!({"score": 0.611_111_2}),
-            "!=",
-        ),
-        (
-            serde_json::json!({"tips": ["a", "b"]}),
-            serde_json::json!({"tips": ["b", "a"]}),
-            "tips[0]",
-        ),
-        // A key the port invented.
-        (
-            serde_json::json!({}),
-            serde_json::json!({"spine_angle": 1.0}),
-            "the vector does not have",
-        ),
-    ];
-    for (expected, actual, wanted) in cases {
-        let mut out = Vec::new();
-        compare(&expected, &actual, "", &mut out);
-        assert!(
-            out.iter().any(|d| d.contains(wanted)),
-            "comparing {expected} against {actual} did not report {wanted:?}: {out:?}"
-        );
-    }
-
-    // And it must not cry wolf: a float inside the tolerance is the same measurement summed in a
-    // different order, which is exactly what `RTOL` is sized for.
-    let mut quiet = Vec::new();
-    compare(
-        &serde_json::json!({"score": 0.611_111_111_111_111}),
-        &serde_json::json!({"score": 0.611_111_111_111_111_2}),
-        "",
-        &mut quiet,
-    );
-    assert!(quiet.is_empty(), "{quiet:?}");
 }
 
 /// **Which half of the committed set exercises what**, now that both halves are inside the gate.

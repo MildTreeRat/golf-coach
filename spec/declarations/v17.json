@@ -1,0 +1,20 @@
+{
+  "analysis_version": 17,
+  "note": "M32: ShotData gains seven keys and ShotProvenance three, each at its default on every committed shot, and ANALYSIS_VERSION moves 16 -> 17 in Rust alone. Shape only: no number moves. The first Rust re-record (ADR-035 clause 3) - every value not listed here stays the one Python recorded. Inputs are not rewritten: input.shot keeps the shape frozen Python writes.",
+  "added": [
+    "expected.swing.shot.attack_angle",
+    "expected.swing.shot.dynamic_loft",
+    "expected.swing.shot.low_point",
+    "expected.swing.shot.impact_offset_h",
+    "expected.swing.shot.impact_offset_v",
+    "expected.swing.shot.impact_position_v",
+    "expected.swing.shot.carry_offline",
+    "expected.swing.shot.provenance.parser_version",
+    "expected.swing.shot.provenance.fields_present",
+    "expected.swing.shot.provenance.corrections"
+  ],
+  "moved": [
+    "analysis_version",
+    "expected.analysis_version"
+  ]
+}

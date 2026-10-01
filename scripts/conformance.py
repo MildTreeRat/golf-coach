@@ -1,10 +1,19 @@
 """The Python core as an oracle: schemas out, golden vectors in, a diff either way. [M19]
 
-    python scripts/conformance.py check              # every committed vector, against this build
+    python scripts/conformance.py check              # the freeze: frozen Python against each vector
     python scripts/conformance.py check --id corpus/2026-08-09-2
     python scripts/conformance.py run < vector.json  # one vector in, its result on stdout
     python scripts/conformance.py list               # what is committed, and where it came from
-    python scripts/conformance.py regenerate         # rewrite spec/ from contracts + data/
+    python scripts/conformance.py regenerate --schemas-only   # the Python-owned schema roots
+    python scripts/conformance.py regenerate --format-only    # the format family, from CPython
+
+**From M32 this is the frozen half, not the oracle** (ADR-035 clauses 3 and 4). `golf-core
+rerecord` records the engine and stage families, and `cargo test` certifies them. Each Rust
+re-record leaves a `provenance.rerecords` entry naming the paths it moved or added, and every
+other value in the file is still the one Python recorded. So `check` compares in `frozen_view`,
+with those paths taken out of both sides: what it certifies is that frozen Python still
+reproduces every value it recorded, which is the freeze, checked. It no longer says the vectors
+are right. `regenerate` refuses the two families for the same reason, below.
 
 **Why this exists.** ADR-030 commits to a second implementation of the swing loop in Rust, and
 two cores that disagree *silently* is the failure mode that whole plan has to survive. Review does
@@ -39,9 +48,11 @@ of committing them.
 from __future__ import annotations
 
 import argparse
+import copy
 import gzip
 import json
 import math
+import re
 import sys
 from dataclasses import dataclass
 from enum import Enum
@@ -113,6 +124,16 @@ SCHEMA_ROOTS: dict[str, type] = {
     "analysis_state": AnalysisState,
 }
 
+#: The roots whose committed schema Rust owns from M32, edited by hand rather than exported here.
+#:
+#: They are the three whose shape M32's wider `ShotData` moves. Frozen Python's models never gain
+#: those keys (ADR-035 clause 4), so an export from them would write the old shape back over the
+#: new one. `crates/contracts/tests/schemas.rs` pins the three against the Rust structs instead.
+#: They stay in `SCHEMA_ROOTS`, because that dict is also the map
+#: `test_every_on_disk_artifact_has_a_schema` checks every stored artifact against, and an
+#: artifact's schema does not stop existing when its owner changes.
+RUST_OWNED_SCHEMAS = frozenset({"shot_data", "swing_result", "swing_bundle_result"})
+
 
 def export_schemas() -> dict[str, str]:
     """Render each root as JSON Schema text, keyed by filename stem.
@@ -127,9 +148,12 @@ def export_schemas() -> dict[str, str]:
 
 
 def write_schemas() -> list[Path]:
+    """Write the Python-owned roots, and never a `RUST_OWNED_SCHEMAS` one."""
     SCHEMAS.mkdir(parents=True, exist_ok=True)
     written = []
     for name, text in export_schemas().items():
+        if name in RUST_OWNED_SCHEMAS:
+            continue
         path = SCHEMAS / f"{name}.schema.json"
         path.write_text(text, encoding="utf-8")
         written.append(path)
@@ -219,10 +243,11 @@ def stage_vector_paths() -> list[Path]:
 
     Deferred by `check` for the same reason the audio family is — the implementation under test is
     Rust — but for a *different* reason than audio's, and the difference matters when one of these
-    goes stale. Audio has no Python left to rebuild it and `regenerate` refuses; these rebuild
-    from the committed engine vectors on any machine, with `regenerate --stages-only`. So `check`
-    still reads their `analysis_version` and still fails on a stale one, because unlike audio
-    there is always something to do about it.
+    goes stale. Audio has no recorder at all, and `regenerate` refuses it. These had
+    `regenerate --stages-only` until M32, and have `golf-core rerecord` from it (ADR-035 clause
+    3). So `check` still reads their `analysis_version` and still fails on a stale one, because
+    unlike audio there is always something to do about it. Since M32 "stale" means `ledger_covers`
+    says no: a version below frozen Python's, or one above it with no ledger entry saying so.
     """
     return [p for p in vector_paths() if _kind(p) == "stages"]
 
@@ -655,6 +680,136 @@ def compare_results(expected: Any, actual: Any, path: str = "") -> list[Differen
     return [Difference(path, expected, actual, "unhandled type")]
 
 
+# --------------------------------------------------------------------------- the freeze (M32 P6)
+#
+# From M32 Rust records the engine and stage families (ADR-035 clause 3), and frozen Python stops
+# moving (clause 4). A Rust re-record writes the committed document with only its declared paths
+# replaced, and lists those paths in `provenance.rerecords`. Every other value is still the one
+# Python recorded. So what frozen Python can still be held to is exactly those other values: take
+# the ledgered paths out of both sides and compare what is left. That is a check that the freeze
+# held. It is not a check that the vectors are right; `cargo test` is that.
+
+#: A ledger path, in the one spelling `golf-core rerecord` writes (M32's plan, call 3): rooted at
+#: the document, no leading dot, a list index as `[i]` — `expected.swing.shot.attack_angle`.
+#:
+#: The grammar is `crates/core/src/rerecord.rs::LedgerPath::parse`'s, and it is *parsed*, not
+#: matched as a string, in both languages. `compare_results` spells the same place
+#: `.swing.shot.attack_angle`, rooted at the answer and with a leading dot, so a string match
+#: between the two would quietly match nothing. Refused like Rust refuses: the empty path, a
+#: leading dot, a `[*]` wildcard (call 4), an empty step, and an index spelled `01` or `+1`.
+_LEDGER_PATH = re.compile(r"[^.\[\]]+(?:\.[^.\[\]]+|\[(?:0|[1-9][0-9]*)\])*")
+_LEDGER_STEP = re.compile(r"(?:^|\.)([^.\[\]]+)|\[([0-9]+)\]")
+
+
+def parse_ledger_path(text: str) -> list[str | int]:
+    """`"expected.swing[0].x"` -> `["expected", "swing", 0, "x"]`, or `ValueError`."""
+    if not _LEDGER_PATH.fullmatch(text):
+        raise ValueError(
+            f"{text!r} is not a ledger path: the spelling is `key(.key|[n])*`, with no leading "
+            f"dot and no wildcard (crates/core/src/rerecord.rs::LedgerPath)"
+        )
+    return [key or int(index) for key, index in _LEDGER_STEP.findall(text)]
+
+
+def _ledger(vector: dict[str, Any]) -> list[dict[str, Any]]:
+    """The vector's `provenance.rerecords`, or no entries for a vector Rust never re-recorded."""
+    return list(vector.get("provenance", {}).get("rerecords") or [])
+
+
+def _answer_key(vector: dict[str, Any]) -> str:
+    """Where a vector keeps the answer a run is compared with: `stages` on a stage vector."""
+    return "stages" if vector.get("provenance", {}).get("kind") == "stages" else "expected"
+
+
+def _remove(document: Any, steps: list[str | int]) -> None:
+    """Take the value at `steps` out of `document`, if it is there.
+
+    Absent is not an error, on either side. Frozen Python never writes a key Rust added, so on
+    the produced side an added path is absent by design. A `None` on the way down is absent too:
+    a synthetic vector's `swing.shot` is null.
+
+    **A list element is blanked to `None`, not popped.** Popping would shift every index after it,
+    so the two lists would line up wrongly for everything beyond the declared element. Blanking
+    both sides keeps the lengths and the alignment, and `None` against `None` compares equal.
+    """
+    *parents, last = steps
+    node = document
+    for step in parents:
+        if isinstance(step, str) and isinstance(node, dict):
+            node = node.get(step)
+        elif isinstance(step, int) and isinstance(node, list) and step < len(node):
+            node = node[step]
+        else:
+            return
+    if isinstance(last, str) and isinstance(node, dict):
+        node.pop(last, None)
+    elif isinstance(last, int) and isinstance(node, list) and last < len(node):
+        node[last] = None
+
+
+def frozen_view(vector: dict[str, Any], actual: Any) -> tuple[Any, Any]:
+    """The vector's answer and frozen Python's, each without the paths a Rust re-record owns.
+
+    Every path any `provenance.rerecords` entry lists, `added` and `moved` alike, comes out of
+    both. A path is rooted at the vector document, so only the ones under its answer key reach the
+    comparison (`expected.swing.shot.attack_angle` comes out of `expected` as
+    `swing.shot.attack_angle`, and out of `actual` the same way). A top-level path like
+    `analysis_version` is not inside the answer, and the version rule is `ledger_covers`'.
+
+    **A vector with no ledger comes back as-is**, not copied, so before M32's first re-record
+    this is the plain comparison it replaced. With a ledger both sides are deep-copied first:
+    the caller's vector is read again by later checks, and a view must not edit what it views.
+
+    A ledger path in any spelling but `parse_ledger_path`'s raises rather than removing nothing.
+    A hand-edited ledger in Python's spelling would otherwise hide nothing, and leave a declared
+    difference failing for a reason nobody could see in the file.
+    """
+    answer = _answer_key(vector)
+    entries = _ledger(vector)
+    if not entries:
+        return vector[answer], actual
+    expected, actual = copy.deepcopy(vector[answer]), copy.deepcopy(actual)
+    for entry in entries:
+        for text in [*entry.get("added", []), *entry.get("moved", [])]:
+            steps = parse_ledger_path(text)
+            if steps[0] == answer and len(steps) > 1:
+                _remove(expected, steps[1:])
+                _remove(actual, steps[1:])
+    return expected, actual
+
+
+def ledger_covers(vector: dict[str, Any], version: int) -> bool:
+    """Whether `vector` may be compared with an engine at `version`. The version rule since M32.
+
+    True at `version` exactly, as before M32. True above it only when the vector carries a
+    `rerecords` entry for every version between: frozen Python stays at its version for good
+    (ADR-035 clause 4), and those entries are what say which values the later versions moved, so
+    `frozen_view` can take them out. Above it without them, nothing says which values are Rust's.
+    Below it, the vector is from an engine older than the one that is frozen. Both are stale.
+    """
+    stated = vector.get("analysis_version")
+    if not isinstance(stated, int) or stated < version:
+        return False
+    ledgered = {entry.get("analysis_version") for entry in _ledger(vector)}
+    return all(v in ledgered for v in range(version + 1, stated + 1))
+
+
+def _staleness(vector: dict[str, Any]) -> str | None:
+    """Why `check` cannot compare `vector` with frozen Python, or `None` when it can."""
+    if ledger_covers(vector, ANALYSIS_VERSION):
+        return None
+    stated = vector.get("analysis_version")
+    if isinstance(stated, int) and stated > ANALYSIS_VERSION:
+        return (
+            f"recorded at v{stated}, above frozen v{ANALYSIS_VERSION}, with no `rerecords` entry "
+            f"for each version between — only `golf-core rerecord` writes one"
+        )
+    return (
+        f"recorded at v{stated}, frozen engine is v{ANALYSIS_VERSION} — re-record with "
+        f"`golf-core rerecord` (ADR-035 clause 3)"
+    )
+
+
 # --------------------------------------------------------------------------- the commands (P4)
 
 
@@ -666,7 +821,9 @@ def cmd_check(args: argparse.Namespace) -> int:
             print(f"no vector matches {args.id}", file=sys.stderr)
             return 2
     if not paths:
-        print(f"no vectors under {VECTORS} — run `regenerate` first", file=sys.stderr)
+        # Not "run `regenerate`": it refuses the engine and stage families from M32, and the
+        # vectors are committed, so an empty `spec/vectors/` is a broken checkout.
+        print(f"no vectors under {VECTORS} — is this a full checkout?", file=sys.stderr)
         return 2
 
     # Named rather than silently skipped: these are committed vectors that this program is not
@@ -679,30 +836,31 @@ def cmd_check(args: argparse.Namespace) -> int:
 
     failed = 0
     stale_stages = 0
+    ledgered = 0
     # The stages family is `crates/analysis`' to run, but its freshness is this program's to
-    # judge: it carries `ANALYSIS_VERSION` and goes stale the moment that constant moves, and
-    # a stage vector from an older engine certifies a port mid-build against answers this repo
-    # has retracted — which is worse than the whole-bundle version of the same mistake, because
-    # it is believed four phases earlier.
+    # judge: it carries `ANALYSIS_VERSION`, and a stage vector from an older engine certifies a
+    # port mid-build against answers this repo has retracted — which is worse than the
+    # whole-bundle version of the same mistake, because it is believed four phases earlier. From
+    # M32 the rule is `ledger_covers`, not equality: a Rust re-record moves the version past
+    # frozen Python's on purpose, and says so in the ledger.
     for path in stages:
-        stated = _read_json(path).get("analysis_version")
-        if stated != ANALYSIS_VERSION:
-            print(
-                f"STALE {_vector_id(path)}: recorded at v{stated}, engine is v{ANALYSIS_VERSION}"
-                f" — run `regenerate --stages-only`"
-            )
+        reason = _staleness(_read_json(path))
+        if reason:
+            print(f"STALE {_vector_id(path)}: {reason}")
             stale_stages += 1
     for path in paths:
         vector = _read_json(path)
         name = _vector_id(path)
-        stated = vector.get("analysis_version")
-        if stated != ANALYSIS_VERSION:
+        reason = _staleness(vector)
+        if reason:
             # Not a conformance failure: the vector and the engine are different generations, so
             # a diff between them measures the version bump rather than the implementation.
-            print(f"STALE {name}: recorded at v{stated}, engine is v{ANALYSIS_VERSION}")
+            print(f"STALE {name}: {reason}")
             failed += 1
             continue
-        diffs = compare_results(vector["expected"], run_vector(vector))
+        if _ledger(vector):
+            ledgered += 1
+        diffs = compare_results(*frozen_view(vector, run_vector(vector)))
         if diffs:
             failed += 1
             print(f"FAIL  {name}  ({len(diffs)} difference{'s' if len(diffs) > 1 else ''})")
@@ -718,12 +876,22 @@ def cmd_check(args: argparse.Namespace) -> int:
     # ratio stays *the engine's*: a stale stage vector is a real failure and exits non-zero, but
     # it is not a vector this program ran, and folding it into this line would make the one
     # number a reader quotes mean two different things.
-    print(f"\n{len(paths) - failed}/{len(paths)} vectors conform (engine v{ANALYSIS_VERSION})")
+    #
+    # "Hold the freeze", not "conform", since M32: this compares frozen Python with the values it
+    # recorded, outside the paths a Rust re-record owns. Whether the vectors are *right* is
+    # `cargo test`'s to say now (ADR-035 clause 3), and a line reading "conform" would claim it.
+    print(
+        f"\n{len(paths) - failed}/{len(paths)} vectors hold the freeze (frozen engine "
+        f"v{ANALYSIS_VERSION}; {ledgered} re-recorded by Rust) — `cargo test` certifies them"
+    )
     if deferred:
         print(f"{deferred} audio vectors are the Rust detector's — run `cargo test`")
     if stages:
         fresh = len(stages) - stale_stages
-        print(f"{fresh}/{len(stages)} stage vectors are fresh — `crates/analysis` runs them (M22)")
+        print(
+            f"{fresh}/{len(stages)} stage vectors are at frozen v{ANALYSIS_VERSION} or ledgered "
+            f"above it — `cargo test` runs them"
+        )
     if formats:
         # No freshness line, and the absence is the point: these age on CPython rather than on
         # `ANALYSIS_VERSION`, so there is no version here for this program to compare against.
@@ -795,16 +963,20 @@ def main(argv: list[str] | None = None) -> int:
     listing = sub.add_parser("list", help="what is committed, and where it came from")
     listing.set_defaults(func=cmd_list)
 
-    regen = sub.add_parser("regenerate", help="rewrite spec/ from contracts and data/processed")
+    regen = sub.add_parser(
+        "regenerate",
+        help="rewrite the Python-owned schemas or the format family; the engine and stage "
+        "families are `golf-core rerecord`'s from M32",
+    )
     regen.add_argument(
         "--schemas-only",
         action="store_true",
-        help="skip the vectors, which need data/processed and exist on the capture machine only",
+        help="rewrite the Python-owned schema roots — not the three in RUST_OWNED_SCHEMAS",
     )
     regen.add_argument(
         "--stages-only",
         action="store_true",
-        help="rebuild only spec/vectors/stages/, from the committed vectors — needs no captures",
+        help="refused from M32: the stage family is `golf-core rerecord`'s (ADR-035 clause 3)",
     )
     regen.add_argument(
         "--format-only",
@@ -817,26 +989,43 @@ def main(argv: list[str] | None = None) -> int:
     return int(args.func(args))
 
 
-def cmd_regenerate(args: argparse.Namespace) -> int:
-    # Imported here, not at module scope: building vectors reads `data/processed/` and the
-    # synthetic fixtures under `tests/`, neither of which a *checking* run should need to exist.
-    # The bare name relies on this directory being on `sys.path`, which is the convention
-    # `scripts/golfdb/common.py` already documents — inserted explicitly because this module is
-    # also imported by `tests/test_conformance.py`, where it is not.
-    sys.path.insert(0, str(Path(__file__).resolve().parent))
-    from conformance_vectors import build_all, build_format, build_stages_from_disk
+#: Why `regenerate` will not rebuild the engine or stage family, printed when it is asked to.
+_REFUSED = """\
+refused: the engine and stage families are recorded by `golf-core rerecord` from M32
+(ADR-035 clause 3).
 
-    # The two rebuilds that run anywhere. Every other family needs `data/processed/sessions/`,
-    # which is gitignored and exists on the capture machine alone; the stages derive from the
-    # committed engine vectors and the format table from CPython itself, so these branches are
-    # deliberately taken *before* the schemas are written — neither is a partial `regenerate`,
-    # each is a different job (ADR-032 §2).
-    if args.stages_only:
-        for path, payload in build_stages_from_disk():
-            _write_json(path, payload)
-            print(f"stage    {path.relative_to(REPO).as_posix()}")
-        return 0
+A rebuild from frozen Python would write its v{version} answers over the Rust-recorded vectors,
+and drop the `provenance.rerecords` ledger that says which of their values are Rust's. Re-record
+through the verb's gate instead, from the repo root:
+
+    cargo run --release --bin golf-core -- rerecord --declare spec/declarations/v<N>.json
+
+`regenerate` still does two jobs: --schemas-only (the Python-owned schema roots) and
+--format-only (the format family, which records CPython rather than this engine)."""
+
+
+def cmd_regenerate(args: argparse.Namespace) -> int:
+    # **The full rebuild and `--stages-only` are refused from M32**, on the precedent of
+    # `conformance_vectors._audio`: a family whose recorder has moved is rebuilt by the new
+    # recorder or not at all, and a working-looking rebuild path here would let that decision be
+    # skipped by running a script. `build_all` and `build_stages_from_disk` stay in
+    # `conformance_vectors` and stay runnable (docs/README.md §Conventions); only this command
+    # stops reaching them. Refused before anything is imported or written, schemas included,
+    # so a refused run touches nothing.
+    if args.stages_only or not (args.schemas_only or args.format_only):
+        print(_REFUSED.format(version=ANALYSIS_VERSION), file=sys.stderr)
+        return 2
+
+    # The format table derives from CPython itself and runs anywhere, so this branch is taken
+    # *before* the schemas are written — it is not a partial `regenerate`, it is a different job
+    # (ADR-032 §2). Imported here, not at module scope: the bare name relies on this directory
+    # being on `sys.path`, which is the convention `scripts/golfdb/common.py` already documents —
+    # inserted explicitly because this module is also imported by `tests/test_conformance.py`,
+    # where it is not.
     if args.format_only:
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        from conformance_vectors import build_format
+
         for path, payload in build_format():
             _write_json(path, payload)
             print(f"format   {path.relative_to(REPO).as_posix()}")
@@ -844,11 +1033,6 @@ def cmd_regenerate(args: argparse.Namespace) -> int:
 
     for path in write_schemas():
         print(f"schema   {path.relative_to(REPO).as_posix()}")
-    if args.schemas_only:
-        return 0
-    for path, payload in build_all():
-        _write_json(path, payload)
-        print(f"vector   {path.relative_to(REPO).as_posix()}")
     return 0
 
 

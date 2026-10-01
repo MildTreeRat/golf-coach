@@ -14,24 +14,35 @@ use serde::{Deserialize, Serialize};
 
 use crate::{ContractError, Validate};
 
-/// What the golfer is practicing — selects a scoring policy (ADR-009).
+/// What the golfer is practicing — selects a scoring policy (ADR-009), and since ADR-034 whether a
+/// shot is tracked at all.
 ///
-/// Only `Fundamentals` is implemented; the rest are named seams that `scoring.policy_for` rejects
-/// until full M4.
+/// **Only `Fundamentals` has a single-swing policy, and the other three stay without one.** That
+/// was once "until full M4"; ADR-034 §5 retired the wait. A shot is graded per club over many shots
+/// (M35, M37), never one swing at a time, so ADR-009's single-swing shot-shaping, performance and
+/// drill policies stay unbuilt, `analysis::scoring::policy_for` keeps refusing them, and the
+/// per-swing `outcome_score` stays `None`. What each mode means now is on its variant.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum PracticeMode {
     /// Grade mechanics only; outcome informational.
     Fundamentals,
-    /// Grade outcome-vs-intended-shape (full M4).
+    /// Trying to shape the ball. Judged in M37's shape topics — over the shots declared as one
+    /// [`TargetShape`], each classified by its face-to-path — rather than per swing (ADR-034 §5.3).
+    /// Tracked, and challenge-mode shots are this mode.
     ShotShaping,
-    /// Grade result vs club/skill benchmarks (full M4).
+    /// Tracked, and graded per club over many shots like any tracked shot (ADR-034 §5). Its
+    /// single-swing policy stays unbuilt, and no shot metric is banded against tour benchmarks
+    /// (§5.6).
     Performance,
-    /// Spotlight one checkpoint (full M4).
+    /// **Not tracked** (ADR-034 §3, M35): a drill shot is stored, shown and analysed on its own, and
+    /// never enters club or player stats. Tracked-ness is derived from this mode and never stored as
+    /// a second flag, so the two cannot disagree.
     Drill,
 }
 
-/// Intended ball flight — parameterizes outcome ranges in full M4.
+/// Intended ball flight. With [`PracticeMode::ShotShaping`] it chooses which of M37's shape topics
+/// a shot is graded under (ADR-034 §5.3); a shape never declared is not graded or mentioned.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum TargetShape {

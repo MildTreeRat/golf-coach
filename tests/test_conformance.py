@@ -19,6 +19,12 @@ The comparison rules themselves get unit tests below, because `compare_results` 
 spec a port is judged by and "it passed" from a comparator that cannot see a difference is worth
 nothing. The `None`-is-not-zero case is the one to read first: ADR-010 §2 is the rule this whole
 repo is built around and a lenient comparator is how a port would be allowed to break it.
+
+**From M32 the second pin is the freeze, not the oracle** (ADR-035 clauses 3 and 4). Rust
+re-records the engine and stage families and `cargo test` certifies them; what is pinned here is
+that frozen Python still reproduces every value it recorded, compared in
+`conformance.frozen_view` with the paths a Rust re-record owns taken out. The three schema roots
+Rust owns are pinned by `crates/contracts/tests/schemas.rs`, and skipped by the first pin.
 """
 
 from __future__ import annotations
@@ -26,7 +32,10 @@ from __future__ import annotations
 import json
 import re
 import sys
+import types
+from collections.abc import Sequence
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -55,9 +64,15 @@ def test_every_committed_schema_is_what_contracts_exports_today() -> None:
     It fails on a field added to `SwingResult`, on a description reworded, and on a validator that
     changes a bound — all of which are things a port has to be told about, and none of which any
     other test in this repo can see.
+
+    **Not for `RUST_OWNED_SCHEMAS`.** From M32 those three files are edited by hand to Rust's
+    wider shape, which frozen Python's models never gain, so this export is no longer what they
+    should hold. `crates/contracts/tests/schemas.rs` pins them against the Rust structs instead.
     """
     stale = []
     for name, expected in conformance.export_schemas().items():
+        if name in conformance.RUST_OWNED_SCHEMAS:
+            continue
         path = conformance.SCHEMAS / f"{name}.schema.json"
         if not path.exists():
             stale.append(f"{name}: never exported")
@@ -149,6 +164,22 @@ def test_no_schema_is_committed_without_a_root_that_produces_it() -> None:
     )
 
 
+def test_schemas_only_writes_the_python_owned_roots_and_none_of_rusts(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`regenerate --schemas-only` must not write frozen Python's shape over a Rust-owned file.
+
+    Written into a temporary directory, never `spec/`. The subset check is the typo guard: a
+    misspelled name in `RUST_OWNED_SCHEMAS` would protect nothing and skip nothing, and the
+    freshness test above would still pass on it.
+    """
+    assert conformance.RUST_OWNED_SCHEMAS <= set(conformance.SCHEMA_ROOTS)
+    monkeypatch.setattr(conformance, "SCHEMAS", tmp_path)
+    written = {p.name.removesuffix(".schema.json") for p in conformance.write_schemas()}
+    assert written == set(conformance.SCHEMA_ROOTS) - conformance.RUST_OWNED_SCHEMAS
+    assert {p.name for p in tmp_path.iterdir()} == {f"{name}.schema.json" for name in written}
+
+
 # --------------------------------------------------------------------------- P2: the vectors
 
 
@@ -161,30 +192,37 @@ def test_there_are_vectors_at_all() -> None:
 
 @pytest.mark.parametrize("path", conformance.engine_vector_paths(), ids=conformance._vector_id)
 def test_each_vector_still_conforms(path: Path) -> None:
-    """The oracle, run against itself — a port's `check` and this are the same comparison.
+    """The freeze, checked: frozen Python still reproduces every value it recorded.
 
-    A failure here is one of two things and the message cannot tell them apart, which is correct:
-    either the engine changed and the vectors need regenerating, or the engine changed and should
-    not have. `ANALYSIS_VERSION` is what distinguishes them, and the next test is what asks.
+    `conformance.py check` runs the same comparison. Both compare in `frozen_view`, which takes
+    the paths a Rust re-record owns out of both sides (M32). On a vector with no ledger that is the
+    whole answer, which is the comparison this test made before M32.
+
+    A failure here means frozen Python moved, outside the paths Rust declared. The lab is frozen
+    from M32 (ADR-035 clause 4), so that is either a fix to something that broke, which should
+    say so, or a change nobody meant. It never means "re-record": Rust re-records, against Rust.
     """
     vector = conformance._read_json(path)
-    diffs = conformance.compare_results(vector["expected"], conformance.run_vector(vector))
-    assert not diffs, "\n".join(["this build disagrees with the committed vector:"] + [
+    expected, actual = conformance.frozen_view(vector, conformance.run_vector(vector))
+    diffs = conformance.compare_results(expected, actual)
+    assert not diffs, "\n".join(["frozen Python disagrees with the committed vector:"] + [
         f"  {d}" for d in diffs[:10]
     ])
 
 
 @pytest.mark.parametrize("path", conformance.engine_vector_paths(), ids=conformance._vector_id)
-def test_each_vector_was_recorded_at_the_current_engine_version(path: Path) -> None:
-    """A vector from an older engine certifies a port against answers this repo has retracted.
+def test_each_vector_is_at_the_frozen_version_or_ledgered_above_it(path: Path) -> None:
+    """A vector frozen Python can be held to: at its version, or above it with a ledger.
 
-    Regenerating is the fix, and it is deliberately not automatic: an `ANALYSIS_VERSION` bump is
-    supposed to be a moment where someone looks at what moved.
+    Before M32 this pinned equality with `ANALYSIS_VERSION`. From M32, Rust re-records, and the
+    version moves past frozen Python's on purpose (ADR-035 clauses 3 and 4). So above it, the
+    vector needs a `provenance.rerecords` entry for each version between, saying which values that
+    version moved. Without one, `frozen_view` cannot tell Rust's values from Python's. "Recorded at
+    the current version" is still pinned, against Rust's constant, in `crates/core/tests/engine.rs`.
     """
     vector = conformance._read_json(path)
-    assert vector["analysis_version"] == ANALYSIS_VERSION, (
-        f"{path.name} was recorded at v{vector['analysis_version']}, engine is "
-        f"v{ANALYSIS_VERSION} — run `python scripts/conformance.py regenerate`"
+    assert conformance.ledger_covers(vector, ANALYSIS_VERSION), (
+        f"{path.name}: {conformance._staleness(vector)}"
     )
 
 
@@ -271,6 +309,227 @@ def test_a_difference_names_the_path_a_reader_can_find_it_at() -> None:
     assert [d.path for d in diffs] == [".swing.checkpoint_scores[0].score"]
 
 
+# --------------------------------------------------------------------------- M32 P6: the freeze
+#
+# Every test here runs on an in-memory vector. No committed vector carries a `rerecords` ledger
+# until M32 P8, so on the real files `frozen_view` takes nothing out and `ledger_covers` is plain
+# equality. That makes these fixtures the only thing that reaches the new branches before P8, and
+# the real suite passing beside them is the proof the view changes nothing today.
+
+_ABOVE = ANALYSIS_VERSION + 1
+
+
+def _entry(
+    version: int, *, added: Sequence[str] = (), moved: Sequence[str] = ()
+) -> dict[str, Any]:
+    """One `provenance.rerecords` entry, in the shape `golf-core rerecord` writes."""
+    return {
+        "analysis_version": version,
+        "by": "golf-core rerecord",
+        "declaration": f"spec/declarations/v{version}.json",
+        "added": list(added),
+        "moved": list(moved),
+    }
+
+
+def _rerecorded(*, carry: float = 150.0) -> tuple[dict[str, Any], dict[str, Any]]:
+    """A vector Rust re-recorded one version above frozen Python, and frozen Python's answer.
+
+    Shaped like M32's own re-record: the version moved at both of its paths, and a shot key added
+    that frozen Python's `ShotData` does not have. `carry` is frozen Python's carry, so a test can
+    move a value nobody declared.
+    """
+    vector = {
+        "analysis_version": _ABOVE,
+        "provenance": {
+            "kind": "corpus",
+            "oracle": "python",
+            "rerecords": [
+                _entry(
+                    _ABOVE,
+                    added=["expected.swing.shot.attack_angle"],
+                    moved=["analysis_version", "expected.analysis_version"],
+                )
+            ],
+        },
+        "expected": {
+            "analysis_version": _ABOVE,
+            "swing": {"shot": {"carry": 150.0, "attack_angle": -3.1}},
+        },
+    }
+    actual = {"analysis_version": ANALYSIS_VERSION, "swing": {"shot": {"carry": carry}}}
+    return vector, actual
+
+
+def test_the_frozen_view_takes_out_what_rust_declared() -> None:
+    """A declared move and a declared added key are Rust's, so frozen Python is not held to them."""
+    vector, actual = _rerecorded()
+    assert conformance.compare_results(vector["expected"], actual), "the fixture differs at all"
+    assert not conformance.compare_results(*conformance.frozen_view(vector, actual))
+
+
+def test_the_frozen_view_still_sees_a_value_nobody_declared() -> None:
+    """The freeze is only checked while everything undeclared is still compared."""
+    vector, actual = _rerecorded(carry=151.0)
+    diffs = conformance.compare_results(*conformance.frozen_view(vector, actual))
+    assert [d.path for d in diffs] == [".swing.shot.carry"]
+
+
+def test_the_frozen_view_edits_neither_the_vector_nor_the_answer_it_views() -> None:
+    """A view that removed paths in place would hide them from every later check of the vector."""
+    vector, actual = _rerecorded()
+    before = json.dumps([vector, actual], sort_keys=True)
+    conformance.frozen_view(vector, actual)
+    assert json.dumps([vector, actual], sort_keys=True) == before
+
+
+def test_without_a_ledger_the_frozen_view_is_the_plain_comparison() -> None:
+    """Before M32's re-record, which is every vector until P8, the view must change nothing."""
+    vector = {
+        "analysis_version": ANALYSIS_VERSION,
+        "provenance": {"kind": "synthetic"},
+        "expected": {"analysis_version": ANALYSIS_VERSION, "swing": {"score": 80.0}},
+    }
+    actual = {"analysis_version": ANALYSIS_VERSION, "swing": {"score": 60.0}}
+    expected, viewed = conformance.frozen_view(vector, actual)
+    assert expected is vector["expected"] and viewed is actual
+    assert [d.path for d in conformance.compare_results(expected, viewed)] == [".swing.score"]
+
+
+def test_a_stage_vector_is_viewed_through_its_stages() -> None:
+    """A stage vector's answer is `stages`, so a ledger path under it comes out of `stages`."""
+    vector = {
+        "analysis_version": _ABOVE,
+        "provenance": {
+            "kind": "stages",
+            "rerecords": [
+                _entry(_ABOVE, moved=["analysis_version", "stages.measure[1].value"]),
+            ],
+        },
+        "stages": {"measure": [{"value": 1.0}, {"value": 2.0}, {"value": 3.0}]},
+    }
+    actual = {"measure": [{"value": 1.0}, {"value": 2.5}, {"value": 3.0}]}
+    assert not conformance.compare_results(*conformance.frozen_view(vector, actual))
+
+
+def test_a_declared_list_element_is_blanked_and_the_rest_stay_aligned() -> None:
+    """Popping a declared element would shift every later one onto the wrong partner."""
+    vector = {
+        "analysis_version": _ABOVE,
+        "provenance": {"kind": "corpus", "rerecords": [_entry(_ABOVE, moved=["expected.v[0]"])]},
+        "expected": {"v": [9.0, 2.0, 3.0]},
+    }
+    assert not conformance.compare_results(
+        *conformance.frozen_view(vector, {"v": [1.0, 2.0, 3.0]})
+    )
+    diffs = conformance.compare_results(*conformance.frozen_view(vector, {"v": [1.0, 2.0, 4.0]}))
+    assert [d.path for d in diffs] == [".v[2]"]
+
+
+@pytest.mark.parametrize(
+    ("text", "steps"),
+    [
+        ("analysis_version", ["analysis_version"]),
+        ("expected.swing.shot.attack_angle", ["expected", "swing", "shot", "attack_angle"]),
+        ("a.b[1].c", ["a", "b", 1, "c"]),
+        ("a[0][10]", ["a", 0, 10]),
+    ],
+)
+def test_a_ledger_path_parses_in_rusts_spelling(text: str, steps: list[str | int]) -> None:
+    assert conformance.parse_ledger_path(text) == steps
+
+
+@pytest.mark.parametrize(
+    "text", ["", ".analysis_version", "a[*].b", "a..b", "a.", "a[01]", "a[+1]", "[0]", "a[1]b"]
+)
+def test_a_ledger_path_rust_would_refuse_is_refused(text: str) -> None:
+    """The grammar of `crates/core/src/rerecord.rs::LedgerPath::parse`, and nothing looser.
+
+    A ledger path that parsed here and not there, or there and not here, would be a path one
+    language takes out of the comparison and the other does not. The leading dot is the one most
+    worth refusing: it is `compare_results`' spelling, and the obvious thing to write by hand.
+    """
+    with pytest.raises(ValueError, match="not a ledger path"):
+        conformance.parse_ledger_path(text)
+
+
+def test_ledger_covers_a_version_only_where_the_ledger_says_so() -> None:
+    """At frozen Python's version as before; above it, only with an entry for every step."""
+    at = {"analysis_version": ANALYSIS_VERSION, "provenance": {"kind": "corpus"}}
+    assert conformance.ledger_covers(at, ANALYSIS_VERSION)
+
+    unledgered = {"analysis_version": _ABOVE, "provenance": {"kind": "corpus"}}
+    assert not conformance.ledger_covers(unledgered, ANALYSIS_VERSION)
+
+    ledgered = {
+        "analysis_version": _ABOVE,
+        "provenance": {"kind": "corpus", "rerecords": [_entry(_ABOVE, moved=["analysis_version"])]},
+    }
+    assert conformance.ledger_covers(ledgered, ANALYSIS_VERSION)
+
+    # Two versions above, with the ledger for only the first: the second moved values nobody
+    # wrote down, so the view would have nothing to take them out by.
+    skipped = {**ledgered, "analysis_version": _ABOVE + 1}
+    assert not conformance.ledger_covers(skipped, ANALYSIS_VERSION)
+
+    below = {"analysis_version": ANALYSIS_VERSION - 1, "provenance": {"kind": "corpus"}}
+    assert not conformance.ledger_covers(below, ANALYSIS_VERSION)
+    assert "golf-core rerecord" in (conformance._staleness(below) or "")
+    assert "golf-core rerecord" in (conformance._staleness(unledgered) or "")
+
+
+def _refuse_to_build(monkeypatch: pytest.MonkeyPatch) -> list[str]:
+    """Stand every builder and writer `regenerate` could reach in for a recorder.
+
+    So a refusal that regressed would record a call here rather than read `data/processed/` or
+    write over `spec/`. The fake `conformance_vectors` matters as much as the writers: the real
+    `build_all` reads the capture machine's archive.
+    """
+    calls: list[str] = []
+
+    def recorder(name: str) -> object:
+        def record(*args: object, **kwargs: object) -> list[object]:
+            calls.append(name)
+            return []
+
+        return record
+
+    fake = types.ModuleType("conformance_vectors")
+    for name in ("build_all", "build_stages", "build_stages_from_disk", "build_format"):
+        setattr(fake, name, recorder(name))
+    monkeypatch.setitem(sys.modules, "conformance_vectors", fake)
+    monkeypatch.setattr(conformance, "_write_json", recorder("_write_json"))
+    monkeypatch.setattr(conformance, "write_schemas", recorder("write_schemas"))
+    return calls
+
+
+@pytest.mark.parametrize("argv", [["regenerate"], ["regenerate", "--stages-only"]])
+def test_regenerate_refuses_the_families_rust_records(
+    argv: list[str], monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Frozen Python would write its answers over Rust's, and drop the ledger (ADR-035 clause 3).
+
+    Refused on `conformance_vectors._audio`'s precedent, and refused before anything runs: the
+    full rebuild does not get to write the schemas first and then stop.
+    """
+    calls = _refuse_to_build(monkeypatch)
+    assert conformance.main(argv) == 2
+    assert not calls, f"a refused `regenerate` still reached {calls}"
+    message = capsys.readouterr().err
+    assert "golf-core rerecord" in message
+    assert "ADR-035 clause 3" in message
+
+
+def test_regenerate_still_does_the_two_jobs_that_are_pythons(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The refusal is for the engine and stage families only, and must not catch these two."""
+    calls = _refuse_to_build(monkeypatch)
+    assert conformance.main(["regenerate", "--schemas-only"]) == 0
+    assert conformance.main(["regenerate", "--format-only"]) == 0
+    assert calls == ["write_schemas", "build_format"]
+
+
 # --------------------------------------------------------------------------- the seam itself
 
 
@@ -301,11 +560,14 @@ def test_a_vector_round_trips_through_the_stdin_seam() -> None:
 
     In-process rather than through a subprocess: what is being checked is that the serialized
     result parses back and still conforms, not that argparse works.
+
+    Compared in `frozen_view`, like the vectors themselves (M32's plan, call 2): what crosses the
+    seam is frozen Python's answer, and a re-recorded vector's declared paths are Rust's.
     """
     path = next(p for p in conformance.engine_vector_paths() if "synthetic" in p.as_posix())
     vector = conformance._read_json(path)
     produced = json.loads(json.dumps(conformance.run_vector(vector)))
-    assert not conformance.compare_results(vector["expected"], produced)
+    assert not conformance.compare_results(*conformance.frozen_view(vector, produced))
 
 
 @pytest.mark.parametrize("path", conformance.engine_vector_paths(), ids=conformance._vector_id)
@@ -373,9 +635,12 @@ def test_every_engine_vector_has_a_stage_vector() -> None:
     `cargo test` and would not miss them.
     """
     missing = sorted(set(_engine_by_id()) - {i.removeprefix("stages/") for i in _stage_ids()})
+    # No command creates one from M32: `regenerate --stages-only` is refused (ADR-035 clause 3),
+    # and `golf-core rerecord` re-records the stage vectors that exist rather than adding any.
+    # A new vector is §M29's Rust vector builder's, stages included.
     assert not missing, (
-        f"no stage vector for {missing} — run `python scripts/conformance.py regenerate "
-        f"--stages-only`"
+        f"no stage vector for {missing} — from M32 a new vector and its stages come from the "
+        f"Rust vector builder (§M29), not from `regenerate`"
     )
 
 
@@ -400,17 +665,19 @@ def test_each_stage_vector_names_an_input_that_exists(path: Path) -> None:
 @pytest.mark.parametrize(
     "path", conformance.stage_vector_paths(), ids=conformance._vector_id
 )
-def test_each_stage_vector_was_recorded_at_the_current_engine_version(path: Path) -> None:
+def test_each_stage_vector_is_at_the_frozen_version_or_ledgered_above_it(path: Path) -> None:
     """Same rule as the engine family, and it bites earlier.
 
     A stale *bundle* vector certifies a finished port against retracted answers. A stale *stage*
     vector does it four phases sooner, to a port that then builds everything after it on top —
     which is why `conformance.py check` reads these versions even though it defers running them.
+    From M32 the rule is `ledger_covers`, as the engine family's is: at frozen Python's version,
+    or above it with a `rerecords` entry for each version between. Equality with the current
+    version is pinned against Rust's constant, in `crates/core/tests/stages.rs`.
     """
-    stated = conformance._read_json(path)["analysis_version"]
-    assert stated == ANALYSIS_VERSION, (
-        f"{path.name} was recorded at v{stated}, engine is v{ANALYSIS_VERSION} — run "
-        f"`python scripts/conformance.py regenerate --stages-only`"
+    vector = conformance._read_json(path)
+    assert conformance.ledger_covers(vector, ANALYSIS_VERSION), (
+        f"{path.name}: {conformance._staleness(vector)}"
     )
 
 
@@ -425,12 +692,18 @@ def test_each_stage_vector_is_what_this_build_produces(path: Path) -> None:
     what *recorded* the file: a change to `smoothing.py` that moves a landmark without moving any
     final score would leave 21 committed files quietly lying to the port reading them. This is
     the only thing in the repo that would notice.
+
+    Compared in `frozen_view` from M32, as the engine family is. M32's declaration reaches no
+    stage value, only the stage vector's top-level `analysis_version`, so the view takes nothing
+    out today. A later declaration that moves a stage value is what it is for.
     """
     vector = conformance._read_json(path)
     engine = conformance._read_json(_engine_by_id()[vector["provenance"]["derived_from"]])
-    diffs = conformance.compare_results(vector["stages"], conformance.run_stages(engine))
+    expected, actual = conformance.frozen_view(vector, conformance.run_stages(engine))
+    diffs = conformance.compare_results(expected, actual)
     assert not diffs, "\n".join(
-        ["this build disagrees with the committed stage vector:"] + [f"  {d}" for d in diffs[:10]]
+        ["frozen Python disagrees with the committed stage vector:"]
+        + [f"  {d}" for d in diffs[:10]]
     )
 
 

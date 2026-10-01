@@ -5,6 +5,90 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-10-01 — M32 P12: the wider shot contract, and the first Rust re-record
+
+**Duration**: one day, thirteen phases (P0–P12). M32 goes ✅ **13/13** and the milestone is closed,
+in one commit onto `main`. It is the first milestone of the shot-first group that writes code, and
+the first where Rust is the oracle.
+
+**To pick up where this left off, read the findings in `docs/plans/m32-shot-contract.md`**, not this
+entry, and then [ADR-032's fourteenth addendum](docs/decisions/032-the-rust-core.md), which records
+the re-record. The per-phase record lives in the plan, as it did for M31.5.
+
+**What was built.**
+- **`golf-core rerecord --declare <file> [--dry-run] [--spec <dir>]`** (`crates/core/src/rerecord.rs`),
+  over three new library modules: `compare.rs` (the comparator, out of a test file), `stages.rs`
+  (the seven-stage document, produced in Rust, and the compose check) and the gate. It runs every
+  engine and stage vector, refuses any difference a committed declaration does not name, keeps the
+  committed bits of every value it does not name, and writes atomically, staged and then renamed.
+  Each re-recorded file gains `provenance.oracle: "python"` and a `rerecords` ledger entry naming
+  the declared paths that matched *that file*.
+- **The contract** (`crates/contracts/src/shot.rs`): `ShotData` gained seven keys and
+  `ShotProvenance` three, each `#[serde(default)]`, plus `SCREEN_PARSER_VERSION` and
+  `parse_is_current`. `UnscoredReason` gained `printed_blank` and `misread`, which are photo-side and
+  never reach a `SwingResult`.
+- **The capability model** (`crates/contracts/src/capability.rs`, `crates/contracts/devices.json`):
+  each device declares what it prints as `analysed` or `shown_only`, and `printed_on`/`printed_fields`
+  are declared ∩ printed. It is the one module in `crates/contracts` with no Python twin.
+- **Rust's `ANALYSIS_VERSION` 16 → 17**, with no number moving, and its own ledger from 17 in
+  `swing.rs`, pinned. The declaration is `spec/declarations/v17.json`. The re-record wrote all 42
+  engine and stage vectors and touched only declared paths. A second-language check in Windows
+  Python, run by `float.hex()` against `HEAD`, found every undeclared value bit-identical to the one
+  Python recorded. A second run writes nothing.
+- **The three Rust-owned schemas** (`shot_data`, `swing_result`, `swing_bundle_result`) are edited by
+  hand and pinned by `crates/contracts/tests/schemas.rs`. Their `UnscoredReason` stays at frozen
+  Python's set on purpose.
+- **Python, in two files only**: `scripts/conformance.py` gained the frozen view, so `check` now
+  certifies **the freeze, not the vectors**. `regenerate` refuses the engine and stage families with
+  exit 2. `tests/test_conformance.py` pins both. `src/` is untouched, and `contracts/swing.py` says 16.
+- **Stale comments in the Rust mirrors**: `intent.rs`, `engine.rs` and `scoring.rs`' panic now cite
+  ADR-034 §5 rather than "full M4". `shot_measure.rs` now holds the measurement its doc used to point
+  at in a Python docstring that M40 deletes.
+
+**What M34 and M36 should know.**
+- **No recorder exists for their one-time Python recordings.** `regenerate` refuses only the engine
+  and stage families, and `conformance.py` has no screen, career or storage family. Each plan must
+  name how its family is recorded once from frozen Python (ADR-035 clause 3), and every later change
+  goes through `golf-core rerecord` with a declaration.
+- **M34**: `SCREEN_PARSER_VERSION`'s first ledger entry is M34's, and nothing stamps it yet.
+  `parse_is_current` has no caller. `printed_on` reads an unstamped shot (`fields_present: None`) as
+  declared ∩ the fields holding a value. `devices.json`'s `hd_golf` already declares
+  `impact_position_v` (analysed, with a note that no profile locates it before M34). **Nothing pins
+  `devices.json` against `profiles.json`**, so a tile M34 adds is a hand edit in both.
+  `tests/capability.rs`' corpus test, where the corpus never prints `impact_position_v`, moves only
+  when M29 re-reads the stored shots, because M34 writes no `data/`.
+- **M36**: Rust is at 17 and every `analysis.json` in `data/` is frozen Python's 16, so a faithful
+  `read_corpus` port pools nothing until M29 re-analyses the lab. That is still open, and still M36's.
+- **A declaration matches by exact path.** A key added whole at a new parent object surfaces at the
+  parent, and `[*]` is refused by both parsers until a declaration needs it (plan call 4).
+- **A contract type read from a borrowed `Value` must go through the trait**, as
+  `stages.rs::parse<T>` does. The inherent `T::deserialize` that `#[serde(remote = "Self")]` leaves
+  skips `Validate`.
+- **142 stage-family floats agree only within tolerance** (P2's census). This is why the re-record
+  keeps committed bits rather than writing Rust's own document.
+- **Line endings**: the plain `.json` vectors are CRLF and the writer keeps them. Git Bash heredocs
+  mangle `—`, so use the Edit tool or Windows Python for in-place edits.
+
+**Left open.**
+- ADR-032's M31 addendum still says the core gains a phone caller before a laptop one (M31.5 P8
+  finding 6). The M32 addendum, the first change to touch ADR-032 since, did not take it, so it is
+  now §M29's plan's to correct.
+- `scripts/conformance_vectors.py`'s docstrings still name `regenerate`/`--stages-only`. They are
+  frozen, and CONFORMANCE §4 carries the correction until M40.
+
+All verify commands are green. `cargo test` passed 634 tests (1 ignored, the existing `clip::Cutter`
+doc-test) across 34 binaries. `cargo clippy --all-targets` has 0 warnings and `cargo fmt --check`
+is clean. `pytest` passed **2,015**, `ruff` is clean and `mypy` is clean over 118 files.
+`conformance.py check` reads **21/21 vectors hold the freeze (frozen engine v16; 21 re-recorded by
+Rust)** and 21/21 stage vectors at frozen v16 or ledgered above it. `golf-core rerecord --declare
+spec/declarations/v17.json` reports `0 changed; 0 files written`. `git diff -- src/` is empty, and
+nothing under `data/` changed.
+
+**Next**: M34 and M36 on this box, in Rust only, in either order. Then M35, which changes what M36
+ported, then M37. M33, the Apple Vision spike, still runs early on purpose, and it needs a Mac.
+
+---
+
 ## 2026-09-30 — M31.5 P9: the Rust re-plan closes, and Rust is the oracle from M32
 
 **Duration**: one day, twelve phases (P0–P9, with P5 and P6 each split in two). M31.5 goes ✅

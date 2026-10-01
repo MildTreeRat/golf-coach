@@ -43,6 +43,7 @@
 //! `pyfmt`'s module doc, which records the same shape at `mechanics.rs`'s call sites.
 
 use contracts::alignment::{ClipAlignment, SwingAlignment, SwingAnchors};
+use contracts::capability::device_of;
 use contracts::checkpoints::{checkpoint_names, CHECKPOINT_REGISTRY, CONTRADICTED_BY_A_LATE_TOP};
 use contracts::detections::FrameDetections;
 use contracts::golfer::Handedness;
@@ -371,16 +372,14 @@ pub fn face_on_measurements(
 /// `_measurements`' fourth stanza. Seven rows on every corpus vector, none on a swing with no shot —
 /// and the *source* is per shot rather than constant, which is the one thing here that is not a
 /// registry walk: `launch_monitor:{device}`, where the device is the OCR parse's own provenance and
-/// falls back to the source enum when a shot arrived without one.
+/// falls back to the source enum when a shot arrived without one. That rule is
+/// [`device_of`]'s, called rather than restated (M32 P10), so the corpus `measurements` stage that
+/// compares this string exactly is what gates the capability model's reading of a shot's device.
 ///
 /// Recorded and judged by nothing, like everything else in [`measurements`]. Carry has no band, and
 /// ADR-010 §4 names TrackMan / Arccos as the population that would eventually cut one.
 pub fn shot_measurements(shot: &ShotData) -> Vec<Measurement> {
-    let device = match shot.provenance.as_ref() {
-        Some(provenance) => provenance.device.clone(),
-        None => shot.source.as_str().to_string(),
-    };
-    let source = format!("launch_monitor:{device}");
+    let source = format!("launch_monitor:{}", device_of(shot));
     SHOT_MEASUREMENTS
         .iter()
         .filter_map(|(name, row)| {
@@ -475,8 +474,12 @@ pub struct SwingRequest<'a> {
     /// Club and ball detections, echoed onto the result and read by nothing. M2's seam, and M1.5
     /// said no-go.
     pub detections: Option<&'a [FrameDetections]>,
-    /// Attached and reported, never scored: outcome checkpoints need per-club benchmark bands
-    /// `ranges.json` does not have, and grading the ball flight is full M4 (ADR-009).
+    /// Attached and reported, never scored — and not waiting to be. ADR-034 §5 grades a shot per
+    /// club over many shots (M35, M37), against the golfer's own baseline and `METRIC_TARGETS`
+    /// rather than a tour band (§5.6), so no shot metric is ever banded in `ranges.json` and the
+    /// per-swing `outcome_score` stays `None`: a share of one shot is 0 or 100 and means nothing.
+    /// What a shot reaches here is [`shot_measurements`] and [`flight_measurements`], recorded and
+    /// judged by nothing. [M32 P7]
     pub shot: Option<&'a ShotData>,
     /// `None` is Fundamentals — grade mechanics only.
     pub intent: Option<&'a PracticeGoal>,
@@ -580,7 +583,8 @@ pub fn analyze_swing(request: &SwingRequest) -> SwingResult {
         unscored.extend(flight_unscored(flown));
     }
 
-    // Pose-only: no outcome checkpoints yet (needs M2 detection / M3 shot data).
+    // Pose-only, and staying so: ADR-034 §5 grades a shot over many shots per club, never as a
+    // per-swing outcome checkpoint, so this list is empty by decision rather than by schedule.
     let outcome: Vec<CheckpointScore> = Vec::new();
     let scores = policy_for(intent.mode)(&mechanics, &outcome);
 
@@ -630,6 +634,7 @@ pub struct BundleRequest<'a> {
     pub face_on: &'a KeypointsFile,
     /// **P7's**, and [`analyze_swing_bundle`] refuses a bundle carrying one until then.
     pub down_the_line: Option<&'a KeypointsFile>,
+    /// Never scored, for [`SwingRequest::shot`]'s reason.
     pub shot: Option<&'a ShotData>,
     pub intent: Option<&'a PracticeGoal>,
     /// Restrict the view to `[start, end)`, which is how a clip containing practice swings is
@@ -854,7 +859,14 @@ pub fn analyze_swing_bundle(request: &BundleRequest) -> SwingBundleResult {
 }
 
 /// `(offset, frames)` for a window, clamped into range. An empty window is ignored. `_windowed`.
-fn windowed(keypoints: &[FrameKeypoints], window: Option<(i64, i64)>) -> (i64, &[FrameKeypoints]) {
+///
+/// `pub` for one outside caller, `crates/core`'s stage recorder (M32 P2), which slices the clip the
+/// way this function does because `conformance.py::run_stages` calls `E._windowed` for the same
+/// reason: a second copy of the clamping is a thing that drifts.
+pub fn windowed(
+    keypoints: &[FrameKeypoints],
+    window: Option<(i64, i64)>,
+) -> (i64, &[FrameKeypoints]) {
     let Some((lo, hi)) = window else {
         return (0, keypoints);
     };
@@ -870,7 +882,11 @@ fn windowed(keypoints: &[FrameKeypoints], window: Option<(i64, i64)>) -> (i64, &
 ///
 /// Only the frame indices move. `start_ms` / `end_ms` are read off the frames themselves, which
 /// carry the original clip's timestamps through a slice untouched, so they are already right.
-fn shifted(segment: &PhaseSegment, offset: i64) -> PhaseSegment {
+///
+/// `pub` for one outside caller, `crates/core`'s stage module (M32), whose compose check puts the
+/// window-relative `phases` stage back onto the bundle's whole-clip phases with it — as
+/// `conformance_vectors._verify_stages_compose` does with `E._shifted`.
+pub fn shifted(segment: &PhaseSegment, offset: i64) -> PhaseSegment {
     PhaseSegment {
         start_frame: segment.start_frame + offset,
         end_frame: segment.end_frame + offset,
@@ -883,7 +899,10 @@ fn shifted(segment: &PhaseSegment, offset: i64) -> PhaseSegment {
 /// Reads the **raw** frames rather than the smoothed ones, and that is load-bearing:
 /// `smooth_keypoints` drops `camera_id` (P4's reproduced wart), so asking the smoothed timeline
 /// would answer `None` on every clip in the corpus.
-fn camera_id(keypoints: &[FrameKeypoints]) -> Option<&str> {
+///
+/// `pub` for one outside caller, `crates/core`'s stage recorder (M32 P2), which names the face-on
+/// anchors' camera the way `run_stages` does, through `E._camera_id`.
+pub fn camera_id(keypoints: &[FrameKeypoints]) -> Option<&str> {
     keypoints
         .iter()
         .find_map(|frame| frame.camera_id.as_deref())
@@ -899,7 +918,12 @@ fn camera_id(keypoints: &[FrameKeypoints]) -> Option<&str> {
 ///
 /// Runs on `None` too, so the two call sites do not each need the guard: a view that could not be
 /// segmented has no anchor to pin.
-fn anchored_on_strike(
+///
+/// `pub` for one outside caller, `crates/core`'s stage recorder (M32 P2), which records the pinned
+/// anchors beside the unpinned ones through this function rather than through
+/// `with_measured_impact` alone — `run_stages` calls `E._anchored_on_strike`, and the notes it
+/// writes are discarded there as they are here.
+pub fn anchored_on_strike(
     anchors: Option<SwingAnchors>,
     strikes: Option<&[i64]>,
     label: &str,

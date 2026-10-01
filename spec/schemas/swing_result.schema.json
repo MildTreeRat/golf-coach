@@ -450,6 +450,19 @@
           "description": "yards",
           "title": "Apex Height"
         },
+        "attack_angle": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "degrees, + = up (hitting up on the ball)",
+          "title": "Attack Angle"
+        },
         "ball_speed": {
           "anyOf": [
             {
@@ -488,6 +501,19 @@
           "default": null,
           "description": "yards",
           "title": "Carry Distance"
+        },
+        "carry_offline": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "yards, + = right \u2014 the ball's lateral distance off the target line at carry",
+          "title": "Carry Offline"
         },
         "club_face_angle": {
           "anyOf": [
@@ -528,6 +554,45 @@
           "description": "degrees, + = in-to-out",
           "title": "Club Path"
         },
+        "dynamic_loft": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "degrees",
+          "title": "Dynamic Loft"
+        },
+        "impact_offset_h": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "millimetres, + = toe",
+          "title": "Impact Offset H"
+        },
+        "impact_offset_v": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "millimetres, + = high",
+          "title": "Impact Offset V"
+        },
         "impact_position": {
           "anyOf": [
             {
@@ -540,6 +605,19 @@
           "default": null,
           "description": "e.g. 'CENTER', 'TOE'",
           "title": "Impact Position"
+        },
+        "impact_position_v": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "the vertical partner of impact_position, in the source's own words",
+          "title": "Impact Position V"
         },
         "launch_angle": {
           "anyOf": [
@@ -566,6 +644,19 @@
           "default": null,
           "description": "degrees, + = right",
           "title": "Launch Direction"
+        },
+        "low_point": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "inches, + = ahead of the ball",
+          "title": "Low Point"
         },
         "provenance": {
           "anyOf": [
@@ -672,10 +763,34 @@
     "ShotProvenance": {
       "description": "How a shot was obtained, for sources that *infer* rather than *receive* metrics.\n\nA shot read off a photograph is a measurement of a measurement: OCR can drop a digit\nand produce a number that is wrong but perfectly plausible. Carrying the confidence,\nthe physics-check warnings, and the raw on-screen text alongside the metrics is what\nmakes a bad parse auditable after the fact instead of silently poisoning a session's\nscores (ADR-014). Sources that receive metrics directly (R10, mock) leave this `None`.",
       "properties": {
+        "corrections": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Field name -> text, for M38's review-and-edit of a parse. Empty until M38 writes one.",
+          "title": "Corrections",
+          "type": "object"
+        },
         "device": {
           "description": "Device profile that parsed this, e.g. 'hd_golf'.",
           "title": "Device",
           "type": "string"
+        },
+        "fields_present": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The ShotData field names whose tiles the parse located, blank or not. None means not recorded, not 'nothing located'.",
+          "title": "Fields Present"
         },
         "image_path": {
           "anyOf": [
@@ -715,6 +830,13 @@
           "minimum": 0.0,
           "title": "Parse Confidence",
           "type": "number"
+        },
+        "parser_version": {
+          "default": 0,
+          "description": "Which screen parser produced this record \u2014 an entry in SCREEN_PARSER_VERSION's ledger. 0 means unstamped, which is every shot frozen Python's parser wrote.",
+          "minimum": 0,
+          "title": "Parser Version",
+          "type": "integer"
         },
         "raw_fields": {
           "additionalProperties": {
