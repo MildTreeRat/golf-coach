@@ -58,7 +58,6 @@ use contracts::unscored::UnscoredReason;
 
 use crate::benchmarks::flight_model::FlightModel;
 use crate::flight::{LaunchConditions, UnflyableLaunch};
-use crate::pyfmt::{fixed, signed_fixed};
 use crate::shot_measure::{
     measure_ball_speed, measure_carry_distance, measure_face_to_path, measure_launch_angle,
     measure_start_line, normalize_shot_shape,
@@ -66,6 +65,7 @@ use crate::shot_measure::{
 use crate::spin_solve::{
     solve_spin_from_carry, CarryWindow, SpinSolution, SpinSolveCase, UnspunLaunch,
 };
+use pyfmt::{fixed, signed_fixed};
 
 /// The loft above which a club spins the ball faster than any peak-carry spin this model produces,
 /// so the falling branch is the answer and the rising one is not.

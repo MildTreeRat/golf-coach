@@ -1,0 +1,1169 @@
+{
+  "cases": [
+    {
+      "expected": "AARON",
+      "text": "Aaron"
+    },
+    {
+      "expected": "SHOT DISTANCE",
+      "text": "Shot Distance"
+    },
+    {
+      "expected": "CARRY",
+      "text": "Carry"
+    },
+    {
+      "expected": "BALL SPEED",
+      "text": "Ball Speed"
+    },
+    {
+      "expected": "LAUNCH ANGLE",
+      "text": "Launch Angle"
+    },
+    {
+      "expected": "CLUB SPEED",
+      "text": "Club Speed"
+    },
+    {
+      "expected": "CLUB PATH",
+      "text": "Club Path"
+    },
+    {
+      "expected": "CLUB FACE ANGLE",
+      "text": "Club Face Angle"
+    },
+    {
+      "expected": "8 1 0 1",
+      "text": "8.1\u00b00>1"
+    },
+    {
+      "expected": "2 8",
+      "text": "2.8"
+    },
+    {
+      "expected": "131 0",
+      "text": "131.0"
+    },
+    {
+      "expected": "125 6",
+      "text": "125.6"
+    },
+    {
+      "expected": "90 7",
+      "text": "90.7"
+    },
+    {
+      "expected": "20 9",
+      "text": "20.9"
+    },
+    {
+      "expected": "91 0",
+      "text": "91.0"
+    },
+    {
+      "expected": "OPEN",
+      "text": "Open"
+    },
+    {
+      "expected": "YDS",
+      "text": "yds"
+    },
+    {
+      "expected": "MPH",
+      "text": "mph"
+    },
+    {
+      "expected": "SPIN AXIS",
+      "text": "Spin Axis"
+    },
+    {
+      "expected": "IMPACT POSITION",
+      "text": "Impact Position"
+    },
+    {
+      "expected": "SPIN",
+      "text": "Spin"
+    },
+    {
+      "expected": "SMASH FACTOR",
+      "text": "Smash Factor"
+    },
+    {
+      "expected": "SHOT TYPE",
+      "text": "Shot Type"
+    },
+    {
+      "expected": "HORIZONTAL ANGLE",
+      "text": "Horizontal Angle"
+    },
+    {
+      "expected": "2 5",
+      "text": "-2.5\u00b0"
+    },
+    {
+      "expected": "5991",
+      "text": "5991"
+    },
+    {
+      "expected": "1 00",
+      "text": "1.00"
+    },
+    {
+      "expected": "CENTER",
+      "text": "CENTER"
+    },
+    {
+      "expected": "SLIGHT",
+      "text": "SLIGHT"
+    },
+    {
+      "expected": "5 3 L",
+      "text": "5.3\u00b0L"
+    },
+    {
+      "expected": "FADE",
+      "text": "FADE"
+    },
+    {
+      "expected": "RPM",
+      "text": "rpm"
+    },
+    {
+      "expected": "131 YDS",
+      "text": "131 yds."
+    },
+    {
+      "expected": "350 YDS",
+      "text": "350 yds."
+    },
+    {
+      "expected": "73 VDS",
+      "text": "73 vds."
+    },
+    {
+      "expected": "HD GOLF",
+      "text": "HD GOLF"
+    },
+    {
+      "expected": "SHOTDATA",
+      "text": "SHOTDATA"
+    },
+    {
+      "expected": "CUSTOM",
+      "text": "Custom"
+    },
+    {
+      "expected": "124 2",
+      "text": "124.2"
+    },
+    {
+      "expected": "121 0",
+      "text": "121.0"
+    },
+    {
+      "expected": "90 5",
+      "text": "90.5"
+    },
+    {
+      "expected": "23 5",
+      "text": "23.5"
+    },
+    {
+      "expected": "98 3",
+      "text": "98.3"
+    },
+    {
+      "expected": "4 6 0 1",
+      "text": "4.6\u00b00>1"
+    },
+    {
+      "expected": "8 6",
+      "text": "8.6\u00b0"
+    },
+    {
+      "expected": "IMPACT POSITION V",
+      "text": "Impact Position V"
+    },
+    {
+      "expected": "8100",
+      "text": "8100"
+    },
+    {
+      "expected": "0 92",
+      "text": "0.92"
+    },
+    {
+      "expected": "4 0 R",
+      "text": "4.0\u00b0R"
+    },
+    {
+      "expected": "9 3",
+      "text": "-9.3\u00b0"
+    },
+    {
+      "expected": "71 YDS",
+      "text": "71 yds."
+    },
+    {
+      "expected": "124 YDS",
+      "text": "124 yds."
+    },
+    {
+      "expected": "BALL TRAJECTORY",
+      "text": "BALL TRAJECTORY"
+    },
+    {
+      "expected": "C",
+      "text": "C"
+    },
+    {
+      "expected": "SHOT DATA PLAYER 1",
+      "text": "SHOT DATA Player 1"
+    },
+    {
+      "expected": "134 1",
+      "text": "134.1"
+    },
+    {
+      "expected": "127 0",
+      "text": "127.0"
+    },
+    {
+      "expected": "90 9",
+      "text": "90.9"
+    },
+    {
+      "expected": "20 7",
+      "text": "20.7"
+    },
+    {
+      "expected": "103 0",
+      "text": "103.0"
+    },
+    {
+      "expected": "3 2 0 1",
+      "text": "3.2\u00b00>1"
+    },
+    {
+      "expected": "6 0",
+      "text": "6.0"
+    },
+    {
+      "expected": "0 88",
+      "text": "0.88"
+    },
+    {
+      "expected": "2 8 R",
+      "text": "2.8\u00b0R"
+    },
+    {
+      "expected": "74 YDS",
+      "text": "74 yds."
+    },
+    {
+      "expected": "134 YDS",
+      "text": "134 yds."
+    },
+    {
+      "expected": "NOTIFICATIONS",
+      "text": "NOTIFICATIONS"
+    },
+    {
+      "expected": "BIGSCREEN",
+      "text": "BIGSCREEN"
+    },
+    {
+      "expected": "PRINT",
+      "text": "PRINT"
+    },
+    {
+      "expected": "TIPS",
+      "text": "TIPS"
+    },
+    {
+      "expected": "SETTINGS",
+      "text": "SETTINGS"
+    },
+    {
+      "expected": "BACK",
+      "text": "BACK"
+    },
+    {
+      "expected": "HELP",
+      "text": "HELP"
+    },
+    {
+      "expected": "LO",
+      "text": "\u0113lo"
+    },
+    {
+      "expected": "MAINMENU",
+      "text": "MAINMENU"
+    },
+    {
+      "expected": "188 0",
+      "text": "188.0"
+    },
+    {
+      "expected": "178 2",
+      "text": "178.2"
+    },
+    {
+      "expected": "114 8",
+      "text": "114.8"
+    },
+    {
+      "expected": "15 3",
+      "text": "15.3"
+    },
+    {
+      "expected": "109 5",
+      "text": "109.5"
+    },
+    {
+      "expected": "2 1 1 0",
+      "text": "2.1\u00b01>0"
+    },
+    {
+      "expected": "0 8",
+      "text": "0.8"
+    },
+    {
+      "expected": "1 05",
+      "text": "1.05"
+    },
+    {
+      "expected": "HEEL",
+      "text": "HEEL"
+    },
+    {
+      "expected": "2 9 R",
+      "text": "2.9\u00b0R"
+    },
+    {
+      "expected": "109 YDS",
+      "text": "109 yds."
+    },
+    {
+      "expected": "188 YDS",
+      "text": "188 yds."
+    },
+    {
+      "expected": "TA PLAYER 1",
+      "text": "TA Player 1"
+    },
+    {
+      "expected": "HD",
+      "text": "HD"
+    },
+    {
+      "expected": "130 9",
+      "text": "130.9"
+    },
+    {
+      "expected": "121 8",
+      "text": "121.8"
+    },
+    {
+      "expected": "88 9",
+      "text": "88.9"
+    },
+    {
+      "expected": "19 5",
+      "text": "19.5"
+    },
+    {
+      "expected": "87 0",
+      "text": "87.0"
+    },
+    {
+      "expected": "9 8 0 1",
+      "text": "9.8\u00b00>1"
+    },
+    {
+      "expected": "3 1",
+      "text": "3.1\u00b0"
+    },
+    {
+      "expected": "IMPACTPOSITION",
+      "text": "ImpactPosition"
+    },
+    {
+      "expected": "1 02",
+      "text": "1.02"
+    },
+    {
+      "expected": "6 7 L",
+      "text": "6.7\u00b0L"
+    },
+    {
+      "expected": "",
+      "text": "?"
+    },
+    {
+      "expected": "69 4",
+      "text": "69.4"
+    },
+    {
+      "expected": "33 6",
+      "text": "33.6"
+    },
+    {
+      "expected": "83 8",
+      "text": "83.8"
+    },
+    {
+      "expected": "3 4",
+      "text": "3.4"
+    },
+    {
+      "expected": "93 7",
+      "text": "93.7"
+    },
+    {
+      "expected": "7 7 0 1",
+      "text": "7.7\u00b00>1"
+    },
+    {
+      "expected": "7 6",
+      "text": "7.6\u00b0"
+    },
+    {
+      "expected": "0 89",
+      "text": "0.89"
+    },
+    {
+      "expected": "0 1 L",
+      "text": "0.1\u00b0L"
+    },
+    {
+      "expected": "18 YDS",
+      "text": "18.yds."
+    },
+    {
+      "expected": "69 YDS",
+      "text": "69 yds."
+    },
+    {
+      "expected": "OT DATA PLAYER 1",
+      "text": "OT DATA Player 1"
+    },
+    {
+      "expected": "H",
+      "text": "H"
+    },
+    {
+      "expected": "CUSTO",
+      "text": "Custo"
+    },
+    {
+      "expected": "135 1",
+      "text": "135.1"
+    },
+    {
+      "expected": "124 7",
+      "text": "124.7"
+    },
+    {
+      "expected": "91 1",
+      "text": "91.1"
+    },
+    {
+      "expected": "18 2",
+      "text": "18.2"
+    },
+    {
+      "expected": "98 2",
+      "text": "98.2"
+    },
+    {
+      "expected": "4 5 0 1",
+      "text": "4.5\u00b00>1"
+    },
+    {
+      "expected": "0 93",
+      "text": "0.93"
+    },
+    {
+      "expected": "1 0 R",
+      "text": "1.0\u00b0R"
+    },
+    {
+      "expected": "I",
+      "text": "I"
+    },
+    {
+      "expected": "72 YDS",
+      "text": "72 yds."
+    },
+    {
+      "expected": "135 YDS",
+      "text": "135 yds."
+    },
+    {
+      "expected": "T DATA PLAYER 1",
+      "text": "T DATA Player 1"
+    },
+    {
+      "expected": "131 5",
+      "text": "131.5"
+    },
+    {
+      "expected": "126 1",
+      "text": "126.1"
+    },
+    {
+      "expected": "89 8",
+      "text": "89.8"
+    },
+    {
+      "expected": "22 4",
+      "text": "22.4\u00b0"
+    },
+    {
+      "expected": "103 6",
+      "text": "103.6"
+    },
+    {
+      "expected": "1 1 0 1",
+      "text": "1.1\u00b00>1"
+    },
+    {
+      "expected": "3 9",
+      "text": "3.9"
+    },
+    {
+      "expected": "0 87",
+      "text": "0.87"
+    },
+    {
+      "expected": "TOE",
+      "text": "TOE"
+    },
+    {
+      "expected": "73 YDS",
+      "text": "73 yds."
+    },
+    {
+      "expected": "132 YDS",
+      "text": "132 yds."
+    },
+    {
+      "expected": "BIG SCREEN",
+      "text": "BIG SCREEN"
+    },
+    {
+      "expected": "109 7",
+      "text": "109.7"
+    },
+    {
+      "expected": "101 9",
+      "text": "101.9"
+    },
+    {
+      "expected": "78 9",
+      "text": "78.9"
+    },
+    {
+      "expected": "22 4",
+      "text": "22.4"
+    },
+    {
+      "expected": "103 8",
+      "text": "103.8"
+    },
+    {
+      "expected": "3 7 0 1",
+      "text": "3.7\u00b00>1"
+    },
+    {
+      "expected": "10 2",
+      "text": "10.2"
+    },
+    {
+      "expected": "0 76",
+      "text": "0.76"
+    },
+    {
+      "expected": "HARD",
+      "text": "HARD"
+    },
+    {
+      "expected": "6 5 R",
+      "text": "6.5\u00b0R"
+    },
+    {
+      "expected": "56 YDS",
+      "text": "56 yds."
+    },
+    {
+      "expected": "110 YDS",
+      "text": "110 yds."
+    },
+    {
+      "expected": "HDG",
+      "text": "HDG"
+    },
+    {
+      "expected": "159 2",
+      "text": "159.2"
+    },
+    {
+      "expected": "137 7",
+      "text": "137.7"
+    },
+    {
+      "expected": "11 4",
+      "text": "11.4"
+    },
+    {
+      "expected": "105 5",
+      "text": "105.5"
+    },
+    {
+      "expected": "0 5 1 0",
+      "text": "0.5\u00b01>0"
+    },
+    {
+      "expected": "2 4",
+      "text": "2.4\u00b0"
+    },
+    {
+      "expected": "CLOSED",
+      "text": "Closed"
+    },
+    {
+      "expected": "0 98",
+      "text": "0.98"
+    },
+    {
+      "expected": "1 8 L",
+      "text": "1.8\u00b0L"
+    },
+    {
+      "expected": "DRAW",
+      "text": "DRAW"
+    },
+    {
+      "expected": "80 YDS",
+      "text": "80 yds."
+    },
+    {
+      "expected": "159 YDS",
+      "text": "159 yds."
+    },
+    {
+      "expected": "154 1",
+      "text": "154.1"
+    },
+    {
+      "expected": "144 5",
+      "text": "144.5"
+    },
+    {
+      "expected": "100 9",
+      "text": "100.9"
+    },
+    {
+      "expected": "17 0",
+      "text": "17.0"
+    },
+    {
+      "expected": "105 7",
+      "text": "105.7"
+    },
+    {
+      "expected": "2 3 0 1",
+      "text": "2.3\u00b00>1"
+    },
+    {
+      "expected": "6 9",
+      "text": "6.9"
+    },
+    {
+      "expected": "0 95",
+      "text": "0.95"
+    },
+    {
+      "expected": "4 6 R",
+      "text": "4.6\u00b0R"
+    },
+    {
+      "expected": "85 YDS",
+      "text": "85 yds."
+    },
+    {
+      "expected": "154 YDS",
+      "text": "154 yds."
+    },
+    {
+      "expected": "SHOTDATA PLAYER 1",
+      "text": "SHOTDATA Player 1"
+    },
+    {
+      "expected": "122 7",
+      "text": "122.7"
+    },
+    {
+      "expected": "107 2",
+      "text": "107.2"
+    },
+    {
+      "expected": "85 1",
+      "text": "85.1"
+    },
+    {
+      "expected": "15 9",
+      "text": "15.9"
+    },
+    {
+      "expected": "85 0",
+      "text": "85.0"
+    },
+    {
+      "expected": "1 3 0 1",
+      "text": "1.3\u00b00>1"
+    },
+    {
+      "expected": "1 3",
+      "text": "1.3\u00b0"
+    },
+    {
+      "expected": "0 0 L",
+      "text": "0.0\u00b0L"
+    },
+    {
+      "expected": "61 YDS",
+      "text": "61 yds."
+    },
+    {
+      "expected": "123 YDS",
+      "text": "123 yds."
+    },
+    {
+      "expected": "1",
+      "text": "1"
+    },
+    {
+      "expected": "146 0",
+      "text": "146.0"
+    },
+    {
+      "expected": "95 9",
+      "text": "95.9"
+    },
+    {
+      "expected": "17 5",
+      "text": "17.5"
+    },
+    {
+      "expected": "90 2",
+      "text": "90.2"
+    },
+    {
+      "expected": "135 8",
+      "text": "135.8"
+    },
+    {
+      "expected": "O",
+      "text": "o"
+    },
+    {
+      "expected": "1 3 1 0",
+      "text": "1.3\u00b01>0"
+    },
+    {
+      "expected": "4 6",
+      "text": "4.6"
+    },
+    {
+      "expected": "1 06",
+      "text": "1.06"
+    },
+    {
+      "expected": "5 9 R",
+      "text": "5.9\u00b0R"
+    },
+    {
+      "expected": "79 YDS",
+      "text": "79 yds."
+    },
+    {
+      "expected": "146 YDS",
+      "text": "146 yds."
+    },
+    {
+      "expected": "BOUNCE ROLL",
+      "text": "Bounce & Roll"
+    },
+    {
+      "expected": "BOUNCE ROLL",
+      "text": "Bounce Roll"
+    },
+    {
+      "expected": "BOUNCE AND ROLL",
+      "text": "Bounce and Roll"
+    },
+    {
+      "expected": "SHOT DATA",
+      "text": "SHOT DATA"
+    },
+    {
+      "expected": "",
+      "text": "---"
+    },
+    {
+      "expected": "",
+      "text": "--"
+    },
+    {
+      "expected": "",
+      "text": "\u2014"
+    },
+    {
+      "expected": "",
+      "text": "- - -"
+    },
+    {
+      "expected": "CARNY",
+      "text": "Carny"
+    },
+    {
+      "expected": "BOUNCE ROLL",
+      "text": "Bounce &Roll"
+    },
+    {
+      "expected": "BOUNCE ROL",
+      "text": "Bounce Rol"
+    },
+    {
+      "expected": "LMPACT POSITION",
+      "text": "lmpact Position"
+    },
+    {
+      "expected": "IMPACT POSITION Y",
+      "text": "Impact Position Y"
+    },
+    {
+      "expected": "CLUB PEED",
+      "text": "Club Peed"
+    },
+    {
+      "expected": "CLUB PATH",
+      "text": "  Club--Path  "
+    },
+    {
+      "expected": "SPIN AXIS",
+      "text": "spin_axis"
+    },
+    {
+      "expected": "SHOT DISTANCE",
+      "text": "Shot\tDistance"
+    },
+    {
+      "expected": "CARRY",
+      "text": "CARRY!"
+    },
+    {
+      "expected": "CARRY",
+      "text": "carry"
+    },
+    {
+      "expected": "",
+      "text": "\uff23\uff41\uff52\uff52\uff59"
+    },
+    {
+      "expected": "ARRY",
+      "text": "\uff23arry"
+    },
+    {
+      "expected": "SPIN AXIS 2",
+      "text": "Spin Axis 2"
+    },
+    {
+      "expected": "SPINN",
+      "text": "Spinn"
+    },
+    {
+      "expected": "",
+      "text": ""
+    },
+    {
+      "expected": "",
+      "text": " "
+    },
+    {
+      "expected": "",
+      "text": "'"
+    },
+    {
+      "expected": "",
+      "text": "\""
+    },
+    {
+      "expected": "IT S",
+      "text": "it's"
+    },
+    {
+      "expected": "SAY HI",
+      "text": "say \"hi\""
+    },
+    {
+      "expected": "BOTH AND",
+      "text": "both ' and \""
+    },
+    {
+      "expected": "BACK SLASH",
+      "text": "back\\slash"
+    },
+    {
+      "expected": "TAB HERE",
+      "text": "tab\there"
+    },
+    {
+      "expected": "NEW LINE",
+      "text": "new\nline"
+    },
+    {
+      "expected": "CR HERE",
+      "text": "cr\rhere"
+    },
+    {
+      "expected": "",
+      "text": "\u0000"
+    },
+    {
+      "expected": "",
+      "text": "\u0007\b"
+    },
+    {
+      "expected": "0M",
+      "text": "\u001b[0m"
+    },
+    {
+      "expected": "",
+      "text": "\u007f"
+    },
+    {
+      "expected": "A B C D E",
+      "text": "a\u001cb\u001dc\u001ed\u001fe"
+    },
+    {
+      "expected": "",
+      "text": " \u001c\u001d\u001e\u001f "
+    },
+    {
+      "expected": "",
+      "text": "\t\n\u000b\f\r"
+    },
+    {
+      "expected": "A B",
+      "text": "a\u0085b"
+    },
+    {
+      "expected": "A B",
+      "text": "a\u00a0b"
+    },
+    {
+      "expected": "A B",
+      "text": "a\u1680b"
+    },
+    {
+      "expected": "A B",
+      "text": "a\u2003b"
+    },
+    {
+      "expected": "A B C",
+      "text": "a\u2028b\u2029c"
+    },
+    {
+      "expected": "A B C",
+      "text": "a\u202fb\u205fc"
+    },
+    {
+      "expected": "A B",
+      "text": "a\u3000b"
+    },
+    {
+      "expected": "A B",
+      "text": "a\u200bb"
+    },
+    {
+      "expected": "A B",
+      "text": "a\ufeffb"
+    },
+    {
+      "expected": "A B",
+      "text": "a\u180eb"
+    },
+    {
+      "expected": "LEAD AND TRAIL",
+      "text": "  lead and trail  "
+    },
+    {
+      "expected": "MULTIPLE SPACES",
+      "text": "multiple   spaces"
+    },
+    {
+      "expected": "",
+      "text": "\u0080\u009f"
+    },
+    {
+      "expected": "",
+      "text": "\u00ad"
+    },
+    {
+      "expected": "",
+      "text": "\u200c\u200d"
+    },
+    {
+      "expected": "",
+      "text": "\u202e"
+    },
+    {
+      "expected": "",
+      "text": "\ue000"
+    },
+    {
+      "expected": "",
+      "text": "\u0378"
+    },
+    {
+      "expected": "",
+      "text": "\uffff"
+    },
+    {
+      "expected": "",
+      "text": "\udb40\udc01"
+    },
+    {
+      "expected": "",
+      "text": "\udbff\udfff"
+    },
+    {
+      "expected": "E",
+      "text": "e\u0301"
+    },
+    {
+      "expected": "",
+      "text": "\u0301"
+    },
+    {
+      "expected": "",
+      "text": "\ud83d\ude00"
+    },
+    {
+      "expected": "",
+      "text": "\u00b0"
+    },
+    {
+      "expected": "",
+      "text": "\u0113"
+    },
+    {
+      "expected": "",
+      "text": "\u2013"
+    },
+    {
+      "expected": "",
+      "text": "\u2192"
+    },
+    {
+      "expected": "",
+      "text": "\u03a9"
+    },
+    {
+      "expected": "",
+      "text": "\u4e2d\u6587"
+    },
+    {
+      "expected": "SS",
+      "text": "\u00df"
+    },
+    {
+      "expected": "STRASSE",
+      "text": "stra\u00dfe"
+    },
+    {
+      "expected": "FINAL",
+      "text": "\ufb01nal"
+    },
+    {
+      "expected": "FF",
+      "text": "\ufb00"
+    },
+    {
+      "expected": "N",
+      "text": "\u0149"
+    },
+    {
+      "expected": "J",
+      "text": "\u01f0"
+    },
+    {
+      "expected": "",
+      "text": "\u0390"
+    },
+    {
+      "expected": "",
+      "text": "\u0587"
+    },
+    {
+      "expected": "",
+      "text": "\u1fb3"
+    },
+    {
+      "expected": "",
+      "text": "\u1fbc"
+    },
+    {
+      "expected": "I",
+      "text": "\u0131"
+    },
+    {
+      "expected": "I",
+      "text": "i\u0307"
+    },
+    {
+      "expected": "",
+      "text": "\u00b5"
+    },
+    {
+      "expected": "",
+      "text": "\u00ff"
+    },
+    {
+      "expected": "S",
+      "text": "\u017f"
+    },
+    {
+      "expected": "",
+      "text": "\u01c5"
+    },
+    {
+      "expected": "",
+      "text": "\u10d0"
+    },
+    {
+      "expected": "",
+      "text": "\u0345"
+    },
+    {
+      "expected": "",
+      "text": "\u212a"
+    },
+    {
+      "expected": "",
+      "text": "\u1e9e"
+    }
+  ],
+  "id": "screen/units/normalize_label",
+  "provenance": {
+    "kind": "screen",
+    "note": "`normalize_label`: upper-cased, everything outside `A-Z0-9` a space, stripped \u2014 over every box text of the planning run, the profile's strings, OCR damage and crafted Unicode",
+    "oracle": "python",
+    "python_version": "3.13.3",
+    "source": "src/golf_coach/launch_monitor/screen/profiles.py::normalize_label"
+  },
+  "screen_parser_version": 0
+}

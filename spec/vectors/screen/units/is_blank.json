@@ -1,0 +1,726 @@
+{
+  "cases": [
+    {
+      "blank_markers": [
+        "---",
+        "--",
+        "\u2014",
+        "- - -"
+      ],
+      "expected": true,
+      "text": "---"
+    },
+    {
+      "blank_markers": [
+        "---",
+        "--",
+        "\u2014",
+        "- - -"
+      ],
+      "expected": true,
+      "text": "--"
+    },
+    {
+      "blank_markers": [
+        "---",
+        "--",
+        "\u2014",
+        "- - -"
+      ],
+      "expected": true,
+      "text": "\u2014"
+    },
+    {
+      "blank_markers": [
+        "---",
+        "--",
+        "\u2014",
+        "- - -"
+      ],
+      "expected": true,
+      "text": "- - -"
+    },
+    {
+      "blank_markers": [
+        "---",
+        "--",
+        "\u2014",
+        "- - -"
+      ],
+      "expected": true,
+      "text": " --- "
+    },
+    {
+      "blank_markers": [
+        "---",
+        "--",
+        "\u2014",
+        "- - -"
+      ],
+      "expected": true,
+      "text": " -- "
+    },
+    {
+      "blank_markers": [
+        "---",
+        "--",
+        "\u2014",
+        "- - -"
+      ],
+      "expected": true,
+      "text": " \u2014 "
+    },
+    {
+      "blank_markers": [
+        "---",
+        "--",
+        "\u2014",
+        "- - -"
+      ],
+      "expected": true,
+      "text": " - - - "
+    },
+    {
+      "blank_markers": [
+        "---",
+        "--",
+        "\u2014",
+        "- - -"
+      ],
+      "expected": false,
+      "text": "-"
+    },
+    {
+      "blank_markers": [
+        "---",
+        "--",
+        "\u2014",
+        "- - -"
+      ],
+      "expected": false,
+      "text": "----"
+    },
+    {
+      "blank_markers": [
+        "---",
+        "--",
+        "\u2014",
+        "- - -"
+      ],
+      "expected": true,
+      "text": "-\u00a0-\u00a0-"
+    },
+    {
+      "blank_markers": [
+        "---",
+        "--",
+        "\u2014",
+        "- - -"
+      ],
+      "expected": true,
+      "text": "-\u001c-\u001d-"
+    },
+    {
+      "blank_markers": [
+        "---",
+        "--",
+        "\u2014",
+        "- - -"
+      ],
+      "expected": true,
+      "text": "---\n"
+    },
+    {
+      "blank_markers": [
+        "---",
+        "--",
+        "\u2014",
+        "- - -"
+      ],
+      "expected": true,
+      "text": "\t---\t"
+    },
+    {
+      "blank_markers": [
+        "---",
+        "--",
+        "\u2014",
+        "- - -"
+      ],
+      "expected": false,
+      "text": "\u2013"
+    },
+    {
+      "blank_markers": [
+        "---",
+        "--",
+        "\u2014",
+        "- - -"
+      ],
+      "expected": true,
+      "text": "\u2014 "
+    },
+    {
+      "blank_markers": [
+        "---",
+        "--",
+        "\u2014",
+        "- - -"
+      ],
+      "expected": true,
+      "text": "\u3000-\u3000-\u3000-"
+    },
+    {
+      "blank_markers": [
+        "---",
+        "--",
+        "\u2014",
+        "- - -"
+      ],
+      "expected": false,
+      "text": ""
+    },
+    {
+      "blank_markers": [
+        "---",
+        "--",
+        "\u2014",
+        "- - -"
+      ],
+      "expected": false,
+      "text": " "
+    },
+    {
+      "blank_markers": [
+        "---",
+        "--",
+        "\u2014",
+        "- - -"
+      ],
+      "expected": false,
+      "text": "\u001c"
+    },
+    {
+      "blank_markers": [
+        "---",
+        "--",
+        "\u2014",
+        "- - -"
+      ],
+      "expected": false,
+      "text": "N/A"
+    },
+    {
+      "blank_markers": [
+        "---",
+        "--",
+        "\u2014",
+        "- - -"
+      ],
+      "expected": false,
+      "text": "0"
+    },
+    {
+      "blank_markers": [
+        "---",
+        "--",
+        "\u2014",
+        "- - -"
+      ],
+      "expected": false,
+      "text": "--- yds"
+    },
+    {
+      "blank_markers": [
+        "---"
+      ],
+      "expected": true,
+      "text": "---"
+    },
+    {
+      "blank_markers": [
+        "---"
+      ],
+      "expected": false,
+      "text": "--"
+    },
+    {
+      "blank_markers": [
+        "---"
+      ],
+      "expected": false,
+      "text": "\u2014"
+    },
+    {
+      "blank_markers": [
+        "---"
+      ],
+      "expected": true,
+      "text": "- - -"
+    },
+    {
+      "blank_markers": [
+        "---"
+      ],
+      "expected": true,
+      "text": " --- "
+    },
+    {
+      "blank_markers": [
+        "---"
+      ],
+      "expected": false,
+      "text": " -- "
+    },
+    {
+      "blank_markers": [
+        "---"
+      ],
+      "expected": false,
+      "text": " \u2014 "
+    },
+    {
+      "blank_markers": [
+        "---"
+      ],
+      "expected": true,
+      "text": " - - - "
+    },
+    {
+      "blank_markers": [
+        "---"
+      ],
+      "expected": false,
+      "text": "-"
+    },
+    {
+      "blank_markers": [
+        "---"
+      ],
+      "expected": false,
+      "text": "----"
+    },
+    {
+      "blank_markers": [
+        "---"
+      ],
+      "expected": true,
+      "text": "-\u00a0-\u00a0-"
+    },
+    {
+      "blank_markers": [
+        "---"
+      ],
+      "expected": true,
+      "text": "-\u001c-\u001d-"
+    },
+    {
+      "blank_markers": [
+        "---"
+      ],
+      "expected": true,
+      "text": "---\n"
+    },
+    {
+      "blank_markers": [
+        "---"
+      ],
+      "expected": true,
+      "text": "\t---\t"
+    },
+    {
+      "blank_markers": [
+        "---"
+      ],
+      "expected": false,
+      "text": "\u2013"
+    },
+    {
+      "blank_markers": [
+        "---"
+      ],
+      "expected": false,
+      "text": "\u2014 "
+    },
+    {
+      "blank_markers": [
+        "---"
+      ],
+      "expected": true,
+      "text": "\u3000-\u3000-\u3000-"
+    },
+    {
+      "blank_markers": [
+        "---"
+      ],
+      "expected": false,
+      "text": ""
+    },
+    {
+      "blank_markers": [
+        "---"
+      ],
+      "expected": false,
+      "text": " "
+    },
+    {
+      "blank_markers": [
+        "---"
+      ],
+      "expected": false,
+      "text": "\u001c"
+    },
+    {
+      "blank_markers": [
+        "---"
+      ],
+      "expected": false,
+      "text": "N/A"
+    },
+    {
+      "blank_markers": [
+        "---"
+      ],
+      "expected": false,
+      "text": "0"
+    },
+    {
+      "blank_markers": [
+        "---"
+      ],
+      "expected": false,
+      "text": "--- yds"
+    },
+    {
+      "blank_markers": [
+        " "
+      ],
+      "expected": false,
+      "text": "---"
+    },
+    {
+      "blank_markers": [
+        " "
+      ],
+      "expected": false,
+      "text": "--"
+    },
+    {
+      "blank_markers": [
+        " "
+      ],
+      "expected": false,
+      "text": "\u2014"
+    },
+    {
+      "blank_markers": [
+        " "
+      ],
+      "expected": false,
+      "text": "- - -"
+    },
+    {
+      "blank_markers": [
+        " "
+      ],
+      "expected": false,
+      "text": " --- "
+    },
+    {
+      "blank_markers": [
+        " "
+      ],
+      "expected": false,
+      "text": " -- "
+    },
+    {
+      "blank_markers": [
+        " "
+      ],
+      "expected": false,
+      "text": " \u2014 "
+    },
+    {
+      "blank_markers": [
+        " "
+      ],
+      "expected": false,
+      "text": " - - - "
+    },
+    {
+      "blank_markers": [
+        " "
+      ],
+      "expected": false,
+      "text": "-"
+    },
+    {
+      "blank_markers": [
+        " "
+      ],
+      "expected": false,
+      "text": "----"
+    },
+    {
+      "blank_markers": [
+        " "
+      ],
+      "expected": false,
+      "text": "-\u00a0-\u00a0-"
+    },
+    {
+      "blank_markers": [
+        " "
+      ],
+      "expected": false,
+      "text": "-\u001c-\u001d-"
+    },
+    {
+      "blank_markers": [
+        " "
+      ],
+      "expected": false,
+      "text": "---\n"
+    },
+    {
+      "blank_markers": [
+        " "
+      ],
+      "expected": false,
+      "text": "\t---\t"
+    },
+    {
+      "blank_markers": [
+        " "
+      ],
+      "expected": false,
+      "text": "\u2013"
+    },
+    {
+      "blank_markers": [
+        " "
+      ],
+      "expected": false,
+      "text": "\u2014 "
+    },
+    {
+      "blank_markers": [
+        " "
+      ],
+      "expected": false,
+      "text": "\u3000-\u3000-\u3000-"
+    },
+    {
+      "blank_markers": [
+        " "
+      ],
+      "expected": true,
+      "text": ""
+    },
+    {
+      "blank_markers": [
+        " "
+      ],
+      "expected": true,
+      "text": " "
+    },
+    {
+      "blank_markers": [
+        " "
+      ],
+      "expected": true,
+      "text": "\u001c"
+    },
+    {
+      "blank_markers": [
+        " "
+      ],
+      "expected": false,
+      "text": "N/A"
+    },
+    {
+      "blank_markers": [
+        " "
+      ],
+      "expected": false,
+      "text": "0"
+    },
+    {
+      "blank_markers": [
+        " "
+      ],
+      "expected": false,
+      "text": "--- yds"
+    },
+    {
+      "blank_markers": [
+        "\u001c-\u001c"
+      ],
+      "expected": false,
+      "text": "---"
+    },
+    {
+      "blank_markers": [
+        "\u001c-\u001c"
+      ],
+      "expected": false,
+      "text": "--"
+    },
+    {
+      "blank_markers": [
+        "\u001c-\u001c"
+      ],
+      "expected": false,
+      "text": "\u2014"
+    },
+    {
+      "blank_markers": [
+        "\u001c-\u001c"
+      ],
+      "expected": false,
+      "text": "- - -"
+    },
+    {
+      "blank_markers": [
+        "\u001c-\u001c"
+      ],
+      "expected": false,
+      "text": " --- "
+    },
+    {
+      "blank_markers": [
+        "\u001c-\u001c"
+      ],
+      "expected": false,
+      "text": " -- "
+    },
+    {
+      "blank_markers": [
+        "\u001c-\u001c"
+      ],
+      "expected": false,
+      "text": " \u2014 "
+    },
+    {
+      "blank_markers": [
+        "\u001c-\u001c"
+      ],
+      "expected": false,
+      "text": " - - - "
+    },
+    {
+      "blank_markers": [
+        "\u001c-\u001c"
+      ],
+      "expected": true,
+      "text": "-"
+    },
+    {
+      "blank_markers": [
+        "\u001c-\u001c"
+      ],
+      "expected": false,
+      "text": "----"
+    },
+    {
+      "blank_markers": [
+        "\u001c-\u001c"
+      ],
+      "expected": false,
+      "text": "-\u00a0-\u00a0-"
+    },
+    {
+      "blank_markers": [
+        "\u001c-\u001c"
+      ],
+      "expected": false,
+      "text": "-\u001c-\u001d-"
+    },
+    {
+      "blank_markers": [
+        "\u001c-\u001c"
+      ],
+      "expected": false,
+      "text": "---\n"
+    },
+    {
+      "blank_markers": [
+        "\u001c-\u001c"
+      ],
+      "expected": false,
+      "text": "\t---\t"
+    },
+    {
+      "blank_markers": [
+        "\u001c-\u001c"
+      ],
+      "expected": false,
+      "text": "\u2013"
+    },
+    {
+      "blank_markers": [
+        "\u001c-\u001c"
+      ],
+      "expected": false,
+      "text": "\u2014 "
+    },
+    {
+      "blank_markers": [
+        "\u001c-\u001c"
+      ],
+      "expected": false,
+      "text": "\u3000-\u3000-\u3000-"
+    },
+    {
+      "blank_markers": [
+        "\u001c-\u001c"
+      ],
+      "expected": false,
+      "text": ""
+    },
+    {
+      "blank_markers": [
+        "\u001c-\u001c"
+      ],
+      "expected": false,
+      "text": " "
+    },
+    {
+      "blank_markers": [
+        "\u001c-\u001c"
+      ],
+      "expected": false,
+      "text": "\u001c"
+    },
+    {
+      "blank_markers": [
+        "\u001c-\u001c"
+      ],
+      "expected": false,
+      "text": "N/A"
+    },
+    {
+      "blank_markers": [
+        "\u001c-\u001c"
+      ],
+      "expected": false,
+      "text": "0"
+    },
+    {
+      "blank_markers": [
+        "\u001c-\u001c"
+      ],
+      "expected": false,
+      "text": "--- yds"
+    }
+  ],
+  "id": "screen/units/is_blank",
+  "provenance": {
+    "kind": "screen",
+    "note": "`_is_blank(text, profile)`: `\\s+` removed from both sides, then equality with any marker. Each case carries the profile's `blank_markers`",
+    "oracle": "python",
+    "python_version": "3.13.3",
+    "source": "src/golf_coach/launch_monitor/screen/parser.py::_is_blank"
+  },
+  "screen_parser_version": 0
+}

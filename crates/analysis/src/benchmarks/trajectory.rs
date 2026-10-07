@@ -43,8 +43,8 @@ use contracts::placements::{DOWN_THE_LINE, FACE_ON};
 use contracts::swing::PhaseSegment;
 use serde::Deserialize;
 
-use crate::pyfmt::{round_to, OrderedMap};
 use crate::trajectory::{anchors_from_phases, build_trajectory};
+use pyfmt::{round_to, OrderedMap};
 
 /// ADR-032 §5: embedded from the Python package path, one copy on disk.
 const FACE_ON_MODEL_JSON: &str =

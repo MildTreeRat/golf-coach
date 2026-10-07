@@ -4,9 +4,15 @@
 //! them here for the same reason it defers the audio family: the implementation under test is
 //! Rust, and running CPython against CPython would gate nothing.
 //!
-//! **Five families, for four edges.** ADR-032 §3 names three; `repr.json` is M22 P5's fourth, an
-//! f-string with no format spec at all. (P4 found one more — Python's `max` returns the first
-//! maximum — which is not CPython *formatting* and lives in `phases.rs` instead.)
+//! **Five tables for the engine's four edges.** ADR-032 §3 names three; `repr.json` is M22 P5's
+//! fourth, an f-string with no format spec at all. (P4 found one more — Python's `max` returns the
+//! first maximum — which is not CPython *formatting* and lives in `phases.rs` instead.)
+//!
+//! **And five for the screen parser's**, from M34 P2: `str_repr`, `floor_div`, `text_case` and
+//! `sum` are this crate's, and `difflib_ratio` is `crates/screen`'s. A table names its implementing
+//! crate in `provenance.implemented_by`; the five engine tables predate the key, and its absence
+//! means this crate. The parser's tables also break the rule below in one place: their inputs are
+//! **strings**, which JSON carries exactly, so only the floats travel as `repr`.
 //!
 //! **There is no tolerance in this file, and that is deliberate.** `docs/CONFORMANCE.md` §3's
 //! `RTOL = 1e-9` is sized for a different *summation order* — the last bits of a float that was
@@ -22,20 +28,38 @@
 //! only a tie that reads the insertion order back out, which is the answer ADR-032 §3's third edge
 //! is about.
 
+use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use analysis::pyfmt::{
-    fixed, g, registry_rank, repr, round_half_even, round_index, round_to, OrderedMap,
+use pyfmt::{
+    fixed, floor_div, g, is_space, registry_rank, repr, round_half_even, round_index, round_to,
+    split, str_repr, strip, strip_space, sum, upper, OrderedMap,
 };
+use serde::de::DeserializeOwned;
 use serde::Deserialize;
 
+/// One table: its cases, in whichever shape that table records.
 #[derive(Deserialize)]
-struct Vector {
+struct Table<C> {
     id: String,
     #[allow(dead_code)]
     python_version: String,
-    cases: Vec<Case>,
+    cases: Vec<C>,
+}
+
+/// The engine tables' one flat shape — see [`Case`].
+type Vector = Table<Case>;
+
+/// Just enough of a vector to say which crate implements it.
+#[derive(Deserialize)]
+struct Header {
+    provenance: Provenance,
+}
+
+#[derive(Deserialize)]
+struct Provenance {
+    implemented_by: Option<String>,
 }
 
 /// One flat shape for every family rather than one per family, because `serde` can tell them apart
@@ -100,37 +124,81 @@ impl Case {
 }
 
 fn spec_dir() -> PathBuf {
-    // `CARGO_MANIFEST_DIR` is `crates/analysis`; the spec is two levels up, beside `pyproject.toml`.
+    // `CARGO_MANIFEST_DIR` is `crates/pyfmt`; the spec is two levels up, beside `pyproject.toml`.
     Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .and_then(Path::parent)
-        .expect("crates/analysis has a grandparent")
+        .expect("crates/pyfmt has a grandparent")
         .join("spec")
         .join("vectors")
         .join("format")
 }
 
+fn table<C: DeserializeOwned>(name: &str) -> Table<C> {
+    load(name)
+}
+
 fn vector(name: &str) -> Vector {
+    table(name)
+}
+
+fn load<T: DeserializeOwned>(name: &str) -> T {
     let path = spec_dir().join(format!("{name}.json"));
     let text = fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {path:?}: {e}"));
     serde_json::from_str(&text).unwrap_or_else(|e| panic!("parse {path:?}: {e}"))
 }
 
+/// A float the vector carries as its Python `repr`.
+fn float(text: &str) -> f64 {
+    text.parse()
+        .unwrap_or_else(|e| panic!("cannot parse {text:?}: {e}"))
+}
+
 /// Discovered rather than listed, the same choice `conformance.vector_paths` makes: a vector that
 /// exists on disk and in no index is a vector nothing runs. This is the test that fails when a
 /// family is added and nothing is taught to run it.
+///
+/// **Split by implementing crate since M34 P2**, because the family is no longer all this crate's.
+/// The tables another crate implements are listed by name and crate, so moving one, or adding one
+/// for a crate, fails here too. `difflib_ratio`'s runner is `crates/screen/tests/difflib.rs`, since
+/// M34 P3; between P2 recording it and P3 it was committed and run by nothing, and this list is
+/// where that was written down.
 #[test]
 fn every_committed_format_vector_is_run_by_a_test_in_this_file() {
-    let mut found: Vec<String> = fs::read_dir(spec_dir())
+    let mut ours: Vec<String> = Vec::new();
+    let mut elsewhere: Vec<(String, String)> = Vec::new();
+    for entry in fs::read_dir(spec_dir())
         .expect("cannot read spec/vectors/format")
         .filter_map(|entry| entry.ok())
-        .map(|entry| entry.file_name().to_string_lossy().replace(".json", ""))
-        .collect();
-    found.sort();
+    {
+        let name = entry.file_name().to_string_lossy().replace(".json", "");
+        let header: Header = load(&name);
+        match header.provenance.implemented_by.as_deref() {
+            None | Some("pyfmt") => ours.push(name),
+            Some(other) => elsewhere.push((name, other.to_string())),
+        }
+    }
+    ours.sort();
+    elsewhere.sort();
     assert_eq!(
-        found,
-        ["fixed", "general", "ordering", "repr", "rounding"],
+        ours,
+        [
+            "fixed",
+            "floor_div",
+            "general",
+            "ordering",
+            "repr",
+            "rounding",
+            "str_repr",
+            "sum",
+            "text_case"
+        ],
         "a format vector was added or renamed and this file was not told about it"
+    );
+    assert_eq!(
+        elsewhere,
+        [("difflib_ratio".to_string(), "screen".to_string())],
+        "a format vector names another crate and this file was not told about it"
     );
 }
 
@@ -291,4 +359,167 @@ fn ordering() {
         assert_eq!(&actual, expected, "order under {key}");
     }
     println!("{}: {} cases", vector.id, vector.cases.len());
+}
+
+// ------------------------------------------------------------------- the screen parser's (M34 P2)
+
+#[derive(Deserialize)]
+struct TextCase {
+    value: String,
+    expected: String,
+}
+
+/// `repr(s)` on a `str`, compared byte for byte: the quote, the escapes and the printable test.
+#[test]
+fn string_representation() {
+    let table: Table<TextCase> = table("str_repr");
+    let mut differences = Vec::new();
+    for case in &table.cases {
+        let actual = str_repr(&case.value);
+        if actual != case.expected {
+            differences.push(format!(
+                "{:?}: {actual}, CPython says {}",
+                case.value, case.expected
+            ));
+        }
+    }
+    assert!(
+        differences.is_empty(),
+        "{} of {} differ:\n{}",
+        differences.len(),
+        table.cases.len(),
+        differences.join("\n")
+    );
+    println!("{}: {} cases", table.id, table.cases.len());
+}
+
+#[derive(Deserialize)]
+struct FloorDivCase {
+    a: String,
+    b: String,
+    expected: String,
+    as_int: i64,
+}
+
+/// Float `//` by bits, and `int(a // b)` — what `_Cell.text` keys on — as an integer.
+#[test]
+fn floor_division() {
+    let table: Table<FloorDivCase> = table("floor_div");
+    for case in &table.cases {
+        let (a, b) = (float(&case.a), float(&case.b));
+        let actual = floor_div(a, b);
+        let expected = float(&case.expected);
+        assert!(
+            actual.to_bits() == expected.to_bits(),
+            "{} // {}: {actual:?}, CPython says {expected:?}",
+            case.a,
+            case.b
+        );
+        // The parser's own use. Python's `int` has no signed zero, so this one is blind to it.
+        assert_eq!(actual as i64, case.as_int, "int({} // {})", case.a, case.b);
+    }
+    println!("{}: {} cases", table.id, table.cases.len());
+}
+
+/// One shape for four string operations and the two whole-set cases, told apart by `op`.
+#[derive(Deserialize)]
+struct StringOpCase {
+    op: String,
+    value: Option<String>,
+    source: Option<String>,
+    expected: serde_json::Value,
+}
+
+impl StringOpCase {
+    fn value(&self) -> &str {
+        self.value.as_deref().expect("case carries no `value`")
+    }
+
+    fn expected_text(&self) -> &str {
+        self.expected.as_str().expect("`expected` is not a string")
+    }
+}
+
+/// `upper`, `split`, `strip`, the `\s+` deletion, and the whitespace set **whole**.
+///
+/// The whole-set cases are why this test walks every code point: the table records each one
+/// CPython calls whitespace, by `str.isspace` and by `re`'s `\s`, and [`is_space`] has to agree on
+/// all 1,114,112 — so a character nobody thought to put in a string is still checked.
+#[test]
+fn text_case() {
+    let table: Table<StringOpCase> = table("text_case");
+    let mut sets = 0;
+    for case in &table.cases {
+        match case.op.as_str() {
+            "upper" => assert_eq!(
+                upper(case.value()),
+                case.expected_text(),
+                "{:?}.upper()",
+                case.value()
+            ),
+            "split" => {
+                let expected: Vec<String> = serde_json::from_value(case.expected.clone())
+                    .expect("`split` expects a list of strings");
+                let actual: Vec<&str> = split(case.value()).collect();
+                assert_eq!(actual, expected, "{:?}.split()", case.value());
+            }
+            "strip" => assert_eq!(
+                strip(case.value()),
+                case.expected_text(),
+                "{:?}.strip()",
+                case.value()
+            ),
+            "strip_space" => assert_eq!(
+                strip_space(case.value()),
+                case.expected_text(),
+                "re.sub(r'\\s+', '', {:?})",
+                case.value()
+            ),
+            "space_set" => {
+                let expected: HashSet<u32> = serde_json::from_value(case.expected.clone())
+                    .expect("`space_set` expects a list of code points");
+                let source = case.source.as_deref().unwrap_or("?");
+                let wrong: Vec<String> = (0..=char::MAX as u32)
+                    .filter_map(char::from_u32)
+                    .filter(|&c| is_space(c) != expected.contains(&(c as u32)))
+                    .map(|c| format!("U+{:04X}", c as u32))
+                    .collect();
+                assert!(
+                    wrong.is_empty(),
+                    "is_space disagrees with {source} on {wrong:?}"
+                );
+                sets += 1;
+            }
+            other => panic!("unknown text_case op {other:?}"),
+        }
+    }
+    assert_eq!(sets, 2, "the table carries both whole-set cases");
+    println!("{}: {} cases", table.id, table.cases.len());
+}
+
+#[derive(Deserialize)]
+struct SumCase {
+    values: Vec<String>,
+    expected: String,
+}
+
+/// `sum()` by bits. A left fold passes about half of these and is wrong on the rest.
+///
+/// A NaN is matched as a NaN rather than by bits, and that is the vector's limit, not a tolerance:
+/// `repr` writes `nan` for every NaN, so the table cannot say which one CPython produced. `inf +
+/// -inf` is the sign-bit-set default NaN on x86 in both languages; parsing `"nan"` is not.
+#[test]
+fn compensated_sum() {
+    let table: Table<SumCase> = table("sum");
+    for case in &table.cases {
+        let values: Vec<f64> = case.values.iter().map(|v| float(v)).collect();
+        let actual = sum(&values);
+        let expected = float(&case.expected);
+        assert!(
+            actual.to_bits() == expected.to_bits() || (actual.is_nan() && expected.is_nan()),
+            "sum({:?}) = {actual:?}, CPython says {expected:?}",
+            case.values
+        );
+    }
+    println!("{}: {} cases", table.id, table.cases.len());
 }

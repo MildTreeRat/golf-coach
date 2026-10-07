@@ -30,12 +30,11 @@
 //! reached from here (ADR-008), so [`first_max_by_tail`] is it spelled again, with the rule in its
 //! name rather than in a comment.
 //!
-//! **`:.0%`**, in [`tip_for`]'s fallback, which is why `analysis::pyfmt` grew a `percent`. It is
-//! unreachable on every committed vector — each scored checkpoint carries a `message` — so it is
-//! gated by that module's unit tests. `analysis::pyfmt` cannot be imported here either, and the
-//! fallback needs one call, so this file formats it with the identity that function documents:
-//! multiply by 100, then `.0f`. Both spellings of that rule now exist and
-//! [`the_percent_fallback_agrees_with_pyfmt`] is what keeps them one rule.
+//! **`:.0%`**, in [`tip_for`]'s fallback, which is why `pyfmt` grew a `percent`. It is unreachable
+//! on every committed vector — each scored checkpoint carries a `message` — so it is gated by
+//! `pyfmt`'s unit tests. Until M34 P1 that function lived in `analysis`, which this crate may not
+//! import, so it was re-spelled here and pinned against the same CPython answers. `pyfmt` is its
+//! own crate now, below both, and the copy and its agreement test are gone: one rule, one spelling.
 //!
 //! Nothing else here formats a float. The sentences a golfer reads come off
 //! `checkpoints/mechanics.rs` and `contracts::unscored`, already rendered.
@@ -109,15 +108,6 @@ fn severity_for(checkpoint: &CheckpointScore) -> Severity {
     }
 }
 
-/// Python's `f"{x:.0%}"`, which is `val *= 100` and then `.0f` — CPython's own order, from
-/// `formatter_unicode.c`'s `'%'` branch. See this module's doc for why it is spelled here.
-fn percent_0(value: f64) -> String {
-    if value.is_nan() {
-        return "nan%".to_string();
-    }
-    format!("{:.0}%", value * 100.0)
-}
-
 fn tip_for(checkpoint: &CheckpointScore) -> Tip {
     // Python's `message or …` — an empty string is as falsy as a missing one, and `message` defaults
     // to `""` rather than to `None`.
@@ -125,7 +115,7 @@ fn tip_for(checkpoint: &CheckpointScore) -> Tip {
         format!(
             "{}: score {}.",
             checkpoint.name,
-            percent_0(checkpoint.score)
+            pyfmt::percent(checkpoint.score, 0)
         )
     } else {
         checkpoint.message.clone()
@@ -543,26 +533,5 @@ mod tests {
         bare.message = String::new();
         let result = a_result(vec![bare], Vec::new());
         assert_eq!(build_feedback(&result).tips[0].text, "mystery: score 61%.");
-    }
-
-    /// `percent_0` is `analysis::pyfmt::percent(x, 0)` spelled in a crate that cannot import it, so
-    /// the two are pinned against the same CPython answers rather than against each other.
-    #[test]
-    fn the_percent_fallback_agrees_with_pyfmt() {
-        for (value, want) in [
-            (0.611_111_111_111_111, "61%"),
-            (0.735_849_056_603_773_6, "74%"),
-            (0.0, "0%"),
-            (1.0, "100%"),
-            (0.005, "0%"),
-            // `0.015 * 100` is `1.5`, which ties and goes to even: `2`, not `1`. Rounding `0.015`
-            // first and scaling after answers `1`.
-            (0.015, "2%"),
-            (0.125, "12%"),
-            (-0.0, "-0%"),
-            (f64::NAN, "nan%"),
-        ] {
-            assert_eq!(percent_0(value), want, "{value:?}");
-        }
     }
 }

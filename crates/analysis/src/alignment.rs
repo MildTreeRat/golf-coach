@@ -70,8 +70,8 @@ use contracts::Validate;
 use crate::phases::{
     segment_phases, FALLBACK_TEMPO_RATIO, LEAD_WRIST, POSSIBLE_DOWNSWING_S, STRIKE_TOLERANCE_S,
 };
-use crate::pyfmt::{fixed, round_index};
 use crate::smoothing::{smooth_keypoints, DEFAULT_WINDOW};
+use pyfmt::{fixed, round_index};
 
 /// The `camera_id` the face-on view records, which two tie-breaks below compare against.
 ///

@@ -22,10 +22,14 @@
 //! 3. A stable sort over an **insertion-ordered** dict decides which *name* a sentence names.
 //!
 //! Solving them in one module before anything calls it is what stops each one being re-solved,
-//! differently, at the seven call sites downstream. The gate is `spec/vectors/format/` — 2,681
-//! cases of CPython's own answers, run by `tests/format.rs` — and it exists for the same reason
-//! M20 P0's audio vectors did: the first line of an implementation should have something to fail
-//! against.
+//! differently, at the seven call sites downstream. The gate is `spec/vectors/format/` — CPython's
+//! own answers, 2,681 cases at P3 and grown since, now run by `crates/pyfmt/tests/format.rs` — and
+//! it exists for the same reason M20 P0's audio vectors did: the first line of an implementation
+//! should have something to fail against.
+//!
+//! It is no longer a module of this crate. M34 P1 moved it to `crates/pyfmt`, unchanged, because
+//! `feedback` and `screen` need the same edges and may not depend on `analysis`. Every
+//! [`pyfmt`] below names that crate, and this one does not re-export it.
 //!
 //! # P4 is the geometry, and the first phase with a caller
 //!
@@ -98,7 +102,6 @@ pub mod flight_measure;
 pub mod measure;
 pub mod phases;
 pub mod pivot;
-pub mod pyfmt;
 pub mod scoring;
 pub mod shot_measure;
 pub mod smoothing;

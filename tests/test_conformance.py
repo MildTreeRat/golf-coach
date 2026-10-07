@@ -30,6 +30,7 @@ Rust owns are pinned by `crates/contracts/tests/schemas.rs`, and skipped by the 
 from __future__ import annotations
 
 import json
+import math
 import re
 import sys
 import types
@@ -98,7 +99,9 @@ _PACKAGE_DATA = {
     "joint_model_v1.json",  # ADR-022: the first learned artifact
     "flight_model_v1.json",  # ADR-027: the drag/lift coefficient table
     "club_catalogue.json",  # ADR-026: the committed specification dictionary
-    "profiles.json",  # ADR-014: OCR device profiles, and OCR stays Python (tier 4)
+    # ADR-014: the frozen screen parser's device profiles. `crates/screen` forks it rather than
+    # reading it (M34), so this copy lacks the `Impact Position V` tile, and M40 deletes it.
+    "profiles.json",
 }
 
 #: artifact filename -> the `SCHEMA_ROOTS` key that describes it.
@@ -495,7 +498,13 @@ def _refuse_to_build(monkeypatch: pytest.MonkeyPatch) -> list[str]:
         return record
 
     fake = types.ModuleType("conformance_vectors")
-    for name in ("build_all", "build_stages", "build_stages_from_disk", "build_format"):
+    for name in (
+        "build_all",
+        "build_stages",
+        "build_stages_from_disk",
+        "build_format",
+        "build_screen",
+    ):
         setattr(fake, name, recorder(name))
     monkeypatch.setitem(sys.modules, "conformance_vectors", fake)
     monkeypatch.setattr(conformance, "_write_json", recorder("_write_json"))
@@ -759,18 +768,20 @@ def test_feedback_is_not_a_stage_and_that_is_deliberate() -> None:
 
 
 def test_the_format_family_is_committed_and_covers_every_formatting_edge() -> None:
-    """Five vectors, and a port that reads the table can solve every formatting edge found so far.
+    """Ten vectors, and a port that reads the table can solve every CPython edge found so far.
 
     Discovery rather than a listing, the same choice the rest of this file makes — but the reason
     here is sharper: `check` *defers* this family to `cargo test`, so the Python suite is the only
     thing that would notice it going missing, and a `pyfmt` with no table under it is exactly the
     "gated by review" state ADR-032 §2 exists to forbid.
 
-    **Five families for four edges**, because ADR-032 §3 names three and M22 P5 found a fourth:
-    `str(x)` on a float, which an f-string with no format spec reaches and which Rust's `{}`
-    renders under different rules. `rounding` covers edge 1 in both its arities. (M22 P4 found a
-    fifth edge — Python's `max` returns the first maximum — which is not CPython *formatting* and
-    is gated by the stage vectors rather than here.)
+    **Five for the engine's four edges**, because ADR-032 §3 names three and M22 P5 found a
+    fourth: `str(x)` on a float, which an f-string with no format spec reaches and which Rust's
+    `{}` renders under different rules. `rounding` covers edge 1 in both its arities. (M22 P4
+    found a fifth edge — Python's `max` returns the first maximum — which is not CPython
+    *formatting* and is gated by the stage vectors rather than here.) **And five for the screen
+    parser's** (M34 P2): `repr` on a `str`, float `//`, string case and whitespace, `sum`, and
+    `difflib`.
     """
     by_id = {
         conformance._vector_id(path): conformance._read_json(path)
@@ -782,10 +793,76 @@ def test_the_format_family_is_committed_and_covers_every_formatting_edge() -> No
         "format/general",
         "format/repr",
         "format/ordering",
+        "format/str_repr",
+        "format/floor_div",
+        "format/text_case",
+        "format/sum",
+        "format/difflib_ratio",
     }, f"the format family is {sorted(by_id)} — run `regenerate --format-only`"
     for name, vector in by_id.items():
         assert vector["provenance"]["kind"] == "format", name
         assert vector["cases"], f"{name} records no cases"
+
+
+def test_every_format_vector_names_the_crate_that_runs_it() -> None:
+    """`difflib_ratio` is `crates/screen`'s, and every other format vector is `pyfmt`'s.
+
+    The family stopped being one crate's at M34 P2, so `check`'s line and `tests/format.rs`'s
+    discovery both read `provenance.implemented_by`. The five engine tables predate the key and
+    mean `pyfmt` by its absence; every table since names its crate, which this holds to, so a new
+    table cannot be silently claimed by whichever reader defaults it.
+    """
+    engine = {"rounding", "fixed", "general", "repr", "ordering"}
+    owners = {}
+    for path in conformance.format_vector_paths():
+        provenance = conformance._read_json(path)["provenance"]
+        name = path.name.removesuffix(".json")
+        if name in engine:
+            assert "implemented_by" not in provenance, f"{name} predates the key"
+        else:
+            assert "implemented_by" in provenance, f"{name} names no implementing crate"
+        owners[name] = provenance.get("implemented_by", "pyfmt")
+    assert {name for name, crate in owners.items() if crate != "pyfmt"} == {"difflib_ratio"}
+    assert owners["difflib_ratio"] == "screen"
+
+
+def test_the_parser_tables_hold_the_cases_that_separate_cpython_from_the_obvious_port() -> None:
+    """`//` that is not `floor(a / b)`, a `sum` that is not a left fold, the C0 separators.
+
+    The rounding table's pin, for the parser's edges: each of these tables is only worth its
+    bytes for the cases where CPython and the call a port reaches for disagree, and a table that
+    drifted towards cases they agree on would keep passing in Rust after it stopped gating
+    anything.
+    """
+    tables = {
+        path.name: conformance._read_json(path)["cases"]
+        for path in conformance.format_vector_paths()
+    }
+    floor_div = [
+        case
+        for case in tables["floor_div.json"]
+        if math.floor(float(case["a"]) / float(case["b"])) != float(case["expected"])
+    ]
+    assert floor_div, "no `//` case separates CPython from `floor(a / b)`"
+    assert any(case["a"] == "21.0" and case["b"] == "4.2" for case in floor_div)
+
+    def left_fold(values: list[float]) -> float:
+        total = 0.0
+        for value in values:
+            total += value
+        return total
+
+    compensated = [
+        case
+        for case in tables["sum.json"]
+        if repr(left_fold([float(v) for v in case["values"]])) != case["expected"]
+    ]
+    assert len(compensated) * 3 > len(tables["sum.json"]), "the `sum` table stopped gating"
+
+    space_sets = [case for case in tables["text_case.json"] if case["op"] == "space_set"]
+    assert len(space_sets) == 2
+    for case in space_sets:
+        assert {0x1C, 0x1D, 0x1E, 0x1F} <= set(case["expected"]), case["source"]
 
 
 def test_the_format_family_does_not_age_on_the_engine_version() -> None:
@@ -866,3 +943,236 @@ def test_every_ordering_case_is_a_tie() -> None:
                 for _, v in case["entries"]
             ]
             assert len(set(keys)) < len(keys), f"no tie in {case['entries']}"
+
+
+# ----------------------------------------------------------------------- M34 P4: the screen family
+
+#: The sub-families frozen Python recorded through `regenerate --screen-once`. M34 P8 added
+#: `hand/`, whose oracle is a person. P10 re-recorded three of these four through `golf-core
+#: rerecord`, which keeps `provenance.oracle` as it found it. `units/` holds case tables, not
+#: documents, so the verb never reads it, and it stays frozen Python's at version 0.
+_PYTHON_RECORDED_SCREEN = ("corpus", "reference", "synthetic", "units")
+
+
+def _screen_by_family() -> dict[str, list[tuple[Path, dict[str, Any]]]]:
+    by_family: dict[str, list[tuple[Path, dict[str, Any]]]] = {}
+    for path in conformance.screen_vector_paths():
+        family = path.relative_to(conformance.VECTORS / "screen").parts[0]
+        by_family.setdefault(family, []).append((path, conformance._read_json(path)))
+    return by_family
+
+
+def _copy_screen_family(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """The committed screen family, copied under a temporary `spec/vectors/`, with `conformance`
+    pointed at it, so a pin can add to the family or try to write over it without touching `spec/`.
+    """
+    import shutil
+
+    vectors = tmp_path / "spec" / "vectors"
+    shutil.copytree(conformance.VECTORS / "screen", vectors / "screen")
+    monkeypatch.setattr(conformance, "VECTORS", vectors)
+    return vectors
+
+
+def _snapshot(directory: Path) -> dict[str, bytes]:
+    files = (p for p in directory.rglob("*") if p.is_file())
+    return {p.relative_to(directory).as_posix(): p.read_bytes() for p in files}
+
+
+def test_the_screen_family_is_committed_in_the_four_sub_families_python_recorded() -> None:
+    """Each sub-family covers what the others cannot, so an empty one is a gate that went missing.
+
+    `check` defers the whole family to `cargo test`, which makes this suite the only Python-side
+    thing that notices it shrinking: the corpus is the real OCR, the reference photos the other
+    layout, the synthetic screens the paths the parser tests take, and the units the edges no
+    screen reaches.
+    """
+    by_family = _screen_by_family()
+    for family in _PYTHON_RECORDED_SCREEN:
+        assert by_family.get(family), f"spec/vectors/screen/{family}/ is empty"
+        for path, vector in by_family[family]:
+            assert vector["provenance"]["kind"] == "screen", path.name
+            assert vector["provenance"]["oracle"] == "python", path.name
+            assert vector["provenance"]["python_version"].startswith("3."), path.name
+
+
+def test_the_screen_family_ages_on_the_parser_version_and_never_on_the_engines() -> None:
+    """`screen_parser_version`, top-level where every family keeps its version, and no other.
+
+    The format family's pin, for the screen: `check` keys staleness on `analysis_version`, so a
+    screen vector carrying one would go stale on every engine bump with nothing to re-record about
+    it. What it ages on is `SCREEN_PARSER_VERSION`, Rust's constant, and frozen Python's parse is
+    entry 0 of its ledger.
+    """
+    for family, vectors in _screen_by_family().items():
+        for path, vector in vectors:
+            name = f"{family}/{path.name}"
+            assert "analysis_version" not in vector, f"{name} claims an engine version"
+            assert isinstance(vector.get("screen_parser_version"), int), name
+            assert "screen_parser_version" not in vector["provenance"], f"{name}: version twice"
+            if family in _PYTHON_RECORDED_SCREEN and not vector["provenance"].get("rerecords"):
+                assert vector["screen_parser_version"] == 0, name
+
+
+def test_a_screen_document_carries_what_a_port_reads() -> None:
+    """Call 1's shape: boxes and notes in, the parse before validation and the record after it out.
+
+    `expected.parsed` and `expected.shot` are split so `crates/screen` can be gated on its parser
+    (P5) before it has a validator (P6), and `shot` is `None` exactly where `import_screen` returns
+    `failed` — which the synthetic family has to reach at least once, or nothing gates that `None`.
+    Supersets rather than equalities on `expected`, because P10's re-record adds keys there.
+    """
+    given_keys = {
+        "device", "boxes", "notes", "shot_id", "session_id", "timestamp", "image_sha256",
+        "image_path", "min_confidence",
+    }
+    box_keys = {"text", "x", "y", "width", "height", "confidence"}
+    failed = 0
+    for family, vectors in _screen_by_family().items():
+        if family == "units":
+            continue
+        for path, vector in vectors:
+            name = f"{family}/{path.name}"
+            assert set(vector["input"]) == given_keys, name
+            assert all(set(box) == box_keys for box in vector["input"]["boxes"]), name
+            assert {"label_ratio", "parsed", "shot"} <= set(vector["expected"]), name
+            assert {"values", "raw_fields", "confidence", "warnings"} <= set(
+                vector["expected"]["parsed"]
+            ), name
+            failed += vector["expected"]["shot"] is None
+    assert failed, "no screen vector records a failed read, so nothing gates `shot: None`"
+
+
+def test_a_photo_vector_names_its_photo_portably_and_once() -> None:
+    """Repo-relative `/` paths, one vector per distinct photo, and the OCR that read it.
+
+    The store holds absolute Windows paths, and a vector must read the same on every machine.
+    Deduplicated on the photo's sha256 because one photo can be the shot screen of several
+    bundles, and a vector per bundle would be several files recording one parse.
+    """
+    by_family = _screen_by_family()
+    for family in ("corpus", "reference"):
+        digests = []
+        for path, vector in by_family[family]:
+            given = vector["input"]
+            image_path = given["image_path"]
+            assert "\\" not in image_path and not re.match(r"^([A-Za-z]:|/)", image_path), path.name
+            assert image_path.startswith("data/"), path.name
+            assert re.fullmatch(r"[0-9a-f]{64}", given["image_sha256"]), path.name
+            assert vector["provenance"]["paddleocr_version"], path.name
+            digests.append(given["image_sha256"])
+            if family == "corpus":
+                assert given["shot_id"] == path.name.removesuffix(".json"), path.name
+        assert len(digests) == len(set(digests)), f"two {family} vectors record one photo"
+
+
+def test_the_synthetic_screens_gate_cpythons_compensated_sum(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """M34 P2 found OCR confidences are float32, which sum exactly either way, so no corpus photo
+    can tell CPython's compensated `sum` from a left fold — the synthetic screens must.
+
+    Run on the vectors' *inputs* through frozen Python with `sum` swapped for a left fold, not
+    against `expected`, so the pin still measures the inputs after P10 re-records the answers.
+    """
+    from golf_coach.launch_monitor.screen import parser
+    from golf_coach.launch_monitor.screen.profiles import load_profile
+    from golf_coach.launch_monitor.screen.recognizer import TextBox
+
+    def left_fold(values: Any, start: float = 0) -> Any:
+        total = start
+        for value in values:
+            total += value
+        return total
+
+    profile = load_profile("hd_golf")
+    inputs = [
+        [TextBox(**box) for box in vector["input"]["boxes"]]
+        for _, vector in _screen_by_family()["synthetic"]
+    ]
+    compensated = [parser.parse_screen(boxes, profile).confidence for boxes in inputs]
+    # A module global shadows the builtin for every `sum(...)` in `parser`, `_score`'s included.
+    monkeypatch.setattr(parser, "sum", left_fold, raising=False)
+    folded = [parser.parse_screen(boxes, profile).confidence for boxes in inputs]
+    assert any(a != b for a, b in zip(compensated, folded, strict=True)), (
+        "no synthetic screen's confidence depends on how `sum` adds — `pyfmt::sum` is ungated"
+    )
+
+
+def test_check_defers_the_screen_family_and_judges_no_staleness(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Named and deferred, never run, and never STALE — even at a version frozen Python lacks.
+
+    Frozen Python has no `SCREEN_PARSER_VERSION`, so it has nothing to call a screen vector stale
+    against, and `golf-core rerecord` is the only thing that moves the version. A vector far above
+    anything recorded is here to prove `check` does not try.
+    """
+    vectors = _copy_screen_family(tmp_path, monkeypatch)
+    ahead = next(vectors.rglob("*.json"))
+    document = json.loads(ahead.read_text(encoding="utf-8"))
+    document["screen_parser_version"] = 99
+    (ahead.parent / "ahead.json").write_text(json.dumps(document), encoding="utf-8")
+
+    def never(vector: dict[str, Any]) -> dict[str, Any]:
+        raise AssertionError(f"`check` ran screen vector {vector.get('id')} through the engine")
+
+    monkeypatch.setattr(conformance, "run_vector", never)
+    assert conformance.main(["check"]) == 0
+    out = capsys.readouterr().out
+    count = len(conformance.screen_vector_paths())
+    assert f"{count} screen vectors are `crates/screen`'s" in out
+    assert "STALE" not in out
+
+
+@pytest.mark.parametrize("what", ["a committed vector", "any file at all"])
+def test_screen_once_refuses_while_the_family_has_anything_in_it(
+    what: str,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Once means once: a second run from frozen Python would write over what Rust re-recorded.
+
+    Refused on any file under `screen/`, not only on one that reads as a screen vector, because
+    the writer would go over either. Refused before the recorder is imported, so a refusal cannot
+    reach PaddleOCR or `data/`, and it writes nothing.
+    """
+    if what == "a committed vector":
+        vectors = _copy_screen_family(tmp_path, monkeypatch)
+    else:
+        vectors = tmp_path / "spec" / "vectors"
+        (vectors / "screen").mkdir(parents=True)
+        (vectors / "screen" / "README").write_text("not a vector", encoding="utf-8")
+        monkeypatch.setattr(conformance, "VECTORS", vectors)
+    before = _snapshot(vectors)
+    calls = _refuse_to_build(monkeypatch)
+
+    assert conformance.main(["regenerate", "--screen-once"]) == 2
+    assert not calls, f"a refused `--screen-once` still reached {calls}"
+    assert _snapshot(vectors) == before
+    assert "golf-core rerecord" in capsys.readouterr().err
+
+
+def test_screen_once_records_an_empty_family_and_then_refuses(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The one run writes what `build_screen` returned, and the next run is refused by it."""
+    vectors = tmp_path / "spec" / "vectors"
+    vectors.mkdir(parents=True)
+    monkeypatch.setattr(conformance, "VECTORS", vectors)
+    recorded = vectors / "screen" / "synthetic" / "only.json"
+    builds: list[str] = []
+
+    def build_screen() -> list[tuple[Path, dict[str, Any]]]:
+        builds.append("build_screen")
+        return [(recorded, {"id": "screen/synthetic/only", "provenance": {"kind": "screen"}})]
+
+    fake = types.ModuleType("conformance_vectors")
+    fake.build_screen = build_screen  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "conformance_vectors", fake)
+
+    assert conformance.main(["regenerate", "--screen-once"]) == 0
+    assert recorded.exists()
+    assert conformance.main(["regenerate", "--screen-once"]) == 2
+    assert builds == ["build_screen"], "the second run reached the recorder"

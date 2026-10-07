@@ -69,13 +69,13 @@ use analysis::flight_infer::{InferredSpin, InferredSpinAxis, ShotFlight};
 use analysis::flight_measure::{flight_unscored, fly_shot, FlownShot};
 use analysis::measure::POSE_MEASUREMENTS;
 use analysis::phases::{segment_phases, LEAD_WRIST, TRAIL_WRIST};
-use analysis::pyfmt::round_to;
 use analysis::smoothing::{smooth_keypoints, DEFAULT_WINDOW};
 use analysis::spin_solve::{CarryWindow, SpinSolution, UnspunLaunch};
 use contracts::checkpoints::CHECKPOINT_REGISTRY;
 use contracts::keypoints::{FrameKeypoints, KeypointsFile};
 use contracts::placements::DOWN_THE_LINE;
 use contracts::swing::{Measurement, PhaseSegment};
+use pyfmt::round_to;
 
 use crate::compare::{compare, Difference};
 use crate::VectorInput;

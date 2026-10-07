@@ -4,7 +4,8 @@
     "(ADR-034 §2, M32). Read by crates/contracts/src/capability.rs through include_str!, so this",
     "is the one copy (ADR-032 §5). It sits in crates/ because nothing Python reads it.",
     "Field names are ShotData keys, never the screen's labels: the labels are the parser's",
-    "business (launch_monitor/screen/profiles.json, and crates/screen from M34).",
+    "business (crates/screen/profiles.json, the Rust fork of the frozen lab's",
+    "launch_monitor/screen/profiles.json, M34).",
     "'analysed' may be measured and graded. 'shown_only' is displayed as printed and never",
     "analysed, and carries a note saying why. A field a device does not declare is 'not printed'",
     "and produces nothing downstream - no measurement, no unscored entry, no caveat, no tip.",
@@ -16,7 +17,7 @@
   "devices": [
     {
       "device": "hd_golf",
-      "source": "The non-null targets of the hd_golf profile in src/golf_coach/launch_monitor/screen/profiles.json, in its tile order, plus impact_position_v from the bay layout. The bay photos print Custom and Impact Position V where the two reference photos print Bounce & Roll (M31 P2), which is why a golfer's printed set is cut per shot rather than read off this list. Holding this entry equal to the profile is M34's pin, because the profile gains its V tile there.",
+      "source": "The non-null targets of the hd_golf profile in crates/screen/profiles.json, in its tile order. Written at M32 from the frozen lab's copy (src/golf_coach/launch_monitor/screen/profiles.json) plus impact_position_v from the bay layout, and equal to the Rust fork since M34 gave the fork that tile; the frozen copy still lacks it, and crates/screen/tests/profile_fork.rs holds the two to that one difference. crates/screen/tests/capability.rs holds this entry equal to the fork's targets, as a set. The bay photos print Custom and Impact Position V where the two reference photos print Bounce & Roll (M31 P2), which is why a golfer's printed set is cut per shot rather than read off this list.",
       "added": "2026-10-01, M32 P10",
       "fields": [
         { "field": "total_distance", "use": "analysed" },
@@ -44,7 +45,7 @@
         {
           "field": "impact_position_v",
           "use": "analysed",
-          "note": "The bay layout's Impact Position V tile, which profiles.json does not name yet: M34 adds it. Until then no parse locates it and no stored shot holds a value, so it is declared and never printed. Declared now because the device prints it, and this file describes the device rather than today's parser."
+          "note": "The bay layout's Impact Position V tile. The Rust parser locates it (crates/screen/profiles.json, M34), so a shot it reads from a bay photo lists it in fields_present; the frozen lab's parser does not, and no stored shot holds a value or a fields_present until M29's lab re-reads them through crates/screen. On every bay photo the screen vectors hold, the Rust parser locates the tile and either reads it blank (no value text under the label) or withholds it by the tie rule, so no value has yet been read from it. Declared because the device prints it, and this file describes the device rather than any one parser."
         }
       ]
     },

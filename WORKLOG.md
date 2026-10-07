@@ -5,6 +5,106 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-10-02 — M34 P12: the screen reader in Rust, and the label fix
+
+**Duration**: two days, thirteen phases (P0–P12). M34 goes ✅ **13/13** and the milestone is closed,
+in one commit onto `main`. It is the first family recorded *once* from frozen Python and then owned
+by Rust, and the first with hand-worked vectors.
+
+**To pick up where this left off, read the findings in `docs/plans/m34-screen-reader.md`**, not this
+entry. Then read [ADR-014's fourth addendum](docs/decisions/014-screen-capture-shot-ingestion.md)
+for what was decided, and [ADR-032's fifteenth](docs/decisions/032-the-rust-core.md) for what was
+measured.
+
+**What was built.**
+- **`crates/pyfmt`** (P1): the CPython-formatting edges leave `analysis` for a crate of their own,
+  so `screen` reaches them without depending on the engine. `feedback` depends on it too and dropped
+  its own copy of `percent`. P2 added the parser's edges to it: float `//`, `repr` of a string,
+  Unicode case and `split()`, and CPython 3.12+'s compensated `sum()`. `difflib`'s ratio is the
+  fifth new table, and `crates/screen` implements it. CPython recorded all five.
+- **`crates/screen`** (P3–P9): the profile and its label matcher, `difflib`, the orientation vote's
+  `label_ratio`, the parser and the validator, behind `screen::read(&ScreenInput) -> Result<Option<ShotData>, UnknownProfile>`.
+  It is reached by **`golf-core parse-screen`** (a vector or bare `input` on stdin, a `ShotData`
+  or `null` on stdout) and is wired to nothing else yet.
+- **The order was record, port, then change.** P4 recorded the screen family once from frozen
+  Python with `conformance.py regenerate --screen-once`, which refuses a second run. P5–P6 ported
+  the parser faithfully, the `CENTER` spill included. P8–P9 changed it in Rust against seven
+  hand-worked vectors (`oracle: "hand"`):
+  - **The `Impact Position V` tile**, in a forked `crates/screen/profiles.json`. A pin
+    (`profile_fork.rs`) holds the fork equal to the frozen copy except for that one tile.
+  - **The tie rule.** When two label assignments within `TIE_MARGIN` (0.02 on the assignment total)
+    put different boxes on a field, the field is withheld, not guessed.
+  - **`fields_present`** and the `SCREEN_PARSER_VERSION` stamp, which is now 1.
+  - **Ranges** for the new numeric fields.
+  - **`screen::golfer_warnings`**, the golfer-facing filter.
+  - **The `hd_golf` capability pin** against the profile.
+- **`golf-core rerecord` gained the screen family** (P7, P10). It runs under a second version key,
+  `screen_parser_version`, which picks the family a declaration re-records. A screen declaration may
+  name keys it `removed`, and an engine one still may not. The user chose this as option (a), and
+  `rerecord.rs`' module doc records the two options rejected. The declaration is
+  `spec/declarations/screen-v1.json`.
+- **The 13-shot re-read** (P10) re-recorded the 35 documents frozen Python had recorded outside
+  `units/`: the 13 corpus shots, the 2 reference photos and 20 synthetic screens. A shot value
+  moved only on the two label-fix shots: `2026-08-10-1`'s `shot_type` lost its spilled `CENTER`, and
+  `2026-08-23-1`'s `HEEL` became `None`. No `needs_review` flipped. Every bookkeeping change is in
+  P10 finding 3's table. A second run writes nothing. Then the faithful port was deleted, so every
+  screen test runs the shipping reader.
+- **Python, in three files only**: `scripts/conformance.py`, `scripts/conformance_vectors.py` and
+  `tests/test_conformance.py`. `src/` is untouched, including the frozen `profiles.json`, and so is
+  everything under `data/`.
+
+**What M29, M35 and M38 should know.**
+- **The misread rule (M35, M37).** Take a stored field whose `ShotData` key is in
+  `provenance.fields_present` but whose profile label has no key in `provenance.raw_fields`. The tie
+  rule located that field and withheld it, so grade it `misread`. Every label the parser *read* has
+  a `raw_fields` key, `""` and `---` included. A key absent from `fields_present` was not on the
+  screen. No warning text needs parsing. `hand.rs` pins this.
+- **`screen::read` returns a `Result` (M38, M29).** `Err(UnknownProfile)` means the caller named a
+  device no profile knows, so it is the caller's fault. `Ok(None)` is a photo that read nothing.
+  `ScreenInput.min_confidence` is **required, with no default**. The lab's value is
+  `settings.ocr_min_confidence`, and M38 must pass its own.
+- **Show a golfer `screen::golfer_warnings`, not the raw list (M38, M35).** It drops `no tile found
+  for …`, which describes the layout: a bay photo has no `Bounce & Roll`, and a reference photo has
+  no V tile. A golfer is never told about a stat their screen does not show (ADR-034 §2). It keeps
+  the tie line, because that is a visible tile that was not read, and a retake can fix it.
+- **The phone and the lab disagree on the two label-fix shots, by design, until M29.** M34 re-read
+  committed boxes and wrote no `data/`. The 13 stored shots stay frozen Python's, unstamped
+  (`parser_version` 0). M29's re-read through `crates/screen` ends the disagreement. `parse_is_current`
+  is what that re-read reads, and it still has no caller.
+- **The engine's `sum()` question is open, and it is routed to the user or M29, not fixed.** CPython
+  3.12+'s `sum()` over floats is compensated. The parser reproduces it through `pyfmt::sum`, but the
+  engine's ported `sum()` sites are left folds. They part by 1–2 ulp inside `RTOL` on four engine
+  vectors. `pivot.rs`' `sum(deltas) >= 0` picks the turn direction, so it reaches a **branch**, and
+  nobody has measured how near zero any vector's net turn sits. CONFORMANCE §3 and ADR-032's
+  fifteenth addendum carry it. `scoring.rs`' test `the_mean_sums_in_the_pythons_order` is now known
+  to be misnamed.
+- **`units/` is still frozen Python's, at `screen_parser_version` 0, with no ledger**, because
+  `rerecord` does not read it (`SCREEN_UNREAD`). `hand/` is at 1 with `oracle: "hand"`.
+- **Line endings and encoding**: the screen vectors are CRLF and the writer keeps them. Rust writes
+  non-ASCII as raw UTF-8 (`7.6° Open`), where Python wrote `°`. That is text churn, not value
+  churn.
+
+**Left open.**
+- The `sum()` routing question above.
+- `ruff format --check` flags `tests/test_conformance.py`, but only on lines already in `HEAD`
+  before M34 (P11 finding 6).
+- `ROADMAP.md`'s §M22 and §M23 still say "seven crates" in their dated Status lines. They were true
+  on the day they were written, and are left as history.
+
+All verify commands are green. `cargo test` passed 725 tests (1 ignored, the existing
+`clip::Cutter` doc-test) across 47 binaries. `cargo clippy --all-targets` has 0 warnings and
+`cargo fmt --check` is clean. `pytest` passed **PYTEST_COUNT**, `ruff` is clean and `mypy` is clean
+over 118 files. `conformance.py check` passes: 21/21 engine vectors hold the freeze, and it defers
+48 screen vectors to `cargo test`. Both `golf-core rerecord --declare spec/declarations/{v17,screen-v1}.json
+--dry-run` report `0 changed; 0 files written`. `git diff -- src/` is empty, and the `data/` digest
+is still P4's.
+
+**Next**: M36 on this box, in Rust only, then M35 and M37. M29 ports the lab once M36 has landed.
+M33, the Apple Vision spike, still runs early on purpose and needs a Mac. M38's skeleton now waits
+only on a Mac.
+
+---
+
 ## 2026-10-01 — M32 P12: the wider shot contract, and the first Rust re-record
 
 **Duration**: one day, thirteen phases (P0–P12). M32 goes ✅ **13/13** and the milestone is closed,

@@ -6,6 +6,7 @@
     python scripts/conformance.py list               # what is committed, and where it came from
     python scripts/conformance.py regenerate --schemas-only   # the Python-owned schema roots
     python scripts/conformance.py regenerate --format-only    # the format family, from CPython
+    python scripts/conformance.py regenerate --screen-once    # the screen family, once (M34 P4)
 
 **From M32 this is the frozen half, not the oracle** (ADR-035 clauses 3 and 4). `golf-core
 rerecord` records the engine and stage families, and `cargo test` certifies them. Each Rust
@@ -253,14 +254,31 @@ def stage_vector_paths() -> list[Path]:
 
 
 def format_vector_paths() -> list[Path]:
-    """Every committed vector `crates/analysis/src/pyfmt.rs` is the implementation for (M22 P3).
+    """Every committed vector of CPython's own behaviour, which a Rust crate implements (M22 P3).
 
     The third deferred family, and the only one that does **not** age on `ANALYSIS_VERSION`: what
-    it records is CPython's own `round`, `format` and `sorted`, so an engine version bump leaves
-    every answer in it true. `check` therefore reports these without a staleness test, where it
-    runs one over the stages — the field these carry is `python_version`.
+    it records is CPython's own `round`, `format` and `sorted` — and since M34 P2 its `repr` of a
+    `str`, float `//`, string case and whitespace, `sum` and `difflib` — so an engine version bump
+    leaves every answer in it true. `check` therefore reports these without a staleness test,
+    where it runs one over the stages — the field these carry is `python_version`.
+
+    Most are `crates/pyfmt`'s. A vector naming another crate in `provenance.implemented_by` is that
+    crate's (`difflib_ratio` is `crates/screen`'s), and one without the key predates it.
     """
     return [p for p in vector_paths() if _kind(p) == "format"]
+
+
+def screen_vector_paths() -> list[Path]:
+    """Every committed vector `crates/screen` is the implementation for (M34 P4).
+
+    The fourth deferred family, and the second that does not age on `ANALYSIS_VERSION`: what it
+    records is the screen parser, whose generation is `SCREEN_PARSER_VERSION` in
+    `crates/contracts/src/shot.rs`, a constant frozen Python does not have. So `check` reports these
+    without a staleness test of its own. Freshness is `golf-core rerecord`'s to judge, because it is
+    the only thing that moves the version these carry. Frozen Python recorded them once, through
+    `regenerate --screen-once`, and refuses to again.
+    """
+    return [p for p in vector_paths() if _kind(p) == "screen"]
 
 
 def run_vector(vector: dict[str, Any]) -> dict[str, Any]:
@@ -832,6 +850,7 @@ def cmd_check(args: argparse.Namespace) -> int:
     deferred = len([p for p in paths if p in set(audio_vector_paths())])
     stages = [p for p in paths if p in set(stage_vector_paths())]
     formats = [p for p in paths if p in set(format_vector_paths())]
+    screens = [p for p in paths if p in set(screen_vector_paths())]
     paths = [p for p in paths if p in set(engine_vector_paths())]
 
     failed = 0
@@ -895,9 +914,20 @@ def cmd_check(args: argparse.Namespace) -> int:
     if formats:
         # No freshness line, and the absence is the point: these age on CPython rather than on
         # `ANALYSIS_VERSION`, so there is no version here for this program to compare against.
-        cases = sum(len(_read_json(p).get("cases", [])) for p in formats)
+        vectors = [_read_json(p) for p in formats]
+        cases = sum(len(vector.get("cases", [])) for vector in vectors)
+        crates = sorted(
+            {vector["provenance"].get("implemented_by", "pyfmt") for vector in vectors}
+        )
+        owners = " and ".join(f"`{crate}`'s" for crate in crates)
+        print(f"{len(formats)} format vectors ({cases} cases) are {owners} — run `cargo test`")
+    if screens:
+        # No freshness line either, for a different reason: these age on `SCREEN_PARSER_VERSION`,
+        # which is Rust's alone, and the only thing that moves it on a vector is `golf-core
+        # rerecord`. Nothing here can say a screen vector is stale, so nothing here tries.
         print(
-            f"{len(formats)} format vectors ({cases} cases) are `pyfmt`'s — run `cargo test`"
+            f"{len(screens)} screen vectors are `crates/screen`'s, and age on its "
+            f"SCREEN_PARSER_VERSION — run `cargo test`"
         )
     return 1 if failed or stale_stages else 0
 
@@ -921,11 +951,23 @@ def cmd_list(args: argparse.Namespace) -> int:
                 # An audio vector ages on `AUDIO_DETECTOR_VERSION`, not on `ANALYSIS_VERSION` —
                 # a detector change and an engine change are not the same event. A format vector
                 # ages on neither: it records CPython's own rounding and formatting, so what it
-                # carries is the interpreter version that answered.
+                # carries is the interpreter version that answered. A screen vector ages on
+                # `SCREEN_PARSER_VERSION`, which is 0 for frozen Python's parse — so the first key
+                # *present* wins here, not the first truthy one.
                 "v{}".format(
-                    vector.get("analysis_version")
-                    or vector.get("detector_version")
-                    or vector.get("python_version")
+                    next(
+                        (
+                            vector[key]
+                            for key in (
+                                "analysis_version",
+                                "detector_version",
+                                "screen_parser_version",
+                                "python_version",
+                            )
+                            if vector.get(key) is not None
+                        ),
+                        None,
+                    )
                 ),
                 prov.get("kind", "?"),
                 prov.get("note", ""),
@@ -936,6 +978,16 @@ def cmd_list(args: argparse.Namespace) -> int:
         print(f"{name:<{width}}  {version:>4}  {kind:<9}  {note}")
     print(f"\n{len(rows)} vectors, engine v{ANALYSIS_VERSION}")
     return 0
+
+
+def _shown(path: Path) -> str:
+    """`path` as a reader of this repo would type it, or whole when it is outside the repo."""
+    return path.relative_to(REPO).as_posix() if path.is_relative_to(REPO) else path.as_posix()
+
+
+def _files_under(directory: Path) -> list[Path]:
+    """Every file below `directory`, or none when it does not exist."""
+    return [p for p in directory.rglob("*") if p.is_file()] if directory.exists() else []
 
 
 def _vector_id(path: Path) -> str:
@@ -983,6 +1035,12 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="rebuild only spec/vectors/format/, from CPython itself — needs no captures",
     )
+    regen.add_argument(
+        "--screen-once",
+        action="store_true",
+        help="record spec/vectors/screen/ from the frozen parser, once: needs the `ocr` extra and "
+        "data/, and refuses once any screen vector is committed (M34 P4)",
+    )
     regen.set_defaults(func=cmd_regenerate)
 
     args = parser.parse_args(argv)
@@ -1001,7 +1059,23 @@ through the verb's gate instead, from the repo root:
     cargo run --release --bin golf-core -- rerecord --declare spec/declarations/v<N>.json
 
 `regenerate` still does two jobs: --schemas-only (the Python-owned schema roots) and
---format-only (the format family, which records CPython rather than this engine)."""
+--format-only (the format family, which records CPython rather than this engine). A third,
+--screen-once, recorded the screen family and refuses to run again."""
+
+
+#: Why `--screen-once` will not run a second time, printed when it is asked to.
+_SCREEN_RECORDED = """\
+refused: the screen family is already recorded ({count} file{plural} under {where}).
+
+`--screen-once` is the one run of frozen Python's screen parser over the photos (M34 P4, ADR-035
+clause 3: record once from frozen Python). From there `crates/screen` is the implementation, and
+`golf-core rerecord` is the only thing that writes these files, behind a declaration that names
+every value it moves:
+
+    cargo run --release --bin golf-core -- rerecord --declare spec/declarations/screen-v<N>.json
+
+A second run from frozen Python would write its answers over Rust's, and drop the
+`provenance.rerecords` ledger that says which of them are Rust's."""
 
 
 def cmd_regenerate(args: argparse.Namespace) -> int:
@@ -1012,9 +1086,42 @@ def cmd_regenerate(args: argparse.Namespace) -> int:
     # `conformance_vectors` and stay runnable (docs/README.md §Conventions); only this command
     # stops reaching them. Refused before anything is imported or written, schemas included,
     # so a refused run touches nothing.
-    if args.stages_only or not (args.schemas_only or args.format_only):
+    if args.stages_only or not (args.schemas_only or args.format_only or args.screen_once):
         print(_REFUSED.format(version=ANALYSIS_VERSION), file=sys.stderr)
         return 2
+
+    # **The screen family is recorded once** (M34 P4), and this branch is the whole of "once": it
+    # refuses on any file under `spec/vectors/screen/`, not only on a file that reads as a screen
+    # vector, because `_write_json` would write over either. Refused before `conformance_vectors`
+    # is imported, so a refused run cannot reach PaddleOCR or `data/`. A run on an empty family
+    # builds everything first and writes only if the whole build, the corpus verify included,
+    # succeeded — `build_screen` returns nothing until it has.
+    if args.screen_once:
+        recorded = sorted({*screen_vector_paths(), *_files_under(VECTORS / "screen")})
+        if recorded:
+            print(
+                _SCREEN_RECORDED.format(
+                    count=len(recorded),
+                    plural="" if len(recorded) == 1 else "s",
+                    where=_shown(VECTORS / "screen"),
+                ),
+                file=sys.stderr,
+            )
+            return 2
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        from conformance_vectors import build_screen
+
+        from golf_coach.launch_monitor.screen.importer import MissingOCRExtra
+
+        try:
+            built = build_screen()
+        except MissingOCRExtra as exc:
+            print(f"refused: {exc}", file=sys.stderr)
+            return 2
+        for path, payload in built:
+            _write_json(path, payload)
+            print(f"screen   {_shown(path)}")
+        return 0
 
     # The format table derives from CPython itself and runs anywhere, so this branch is taken
     # *before* the schemas are written — it is not a partial `regenerate`, it is a different job

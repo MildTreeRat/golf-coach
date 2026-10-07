@@ -3,7 +3,8 @@
 //!
 //! ```text
 //! golf-core run < vector.json                                      # vector in, result out
-//! golf-core rerecord --declare <file> [--dry-run] [--spec <dir>]   # re-record spec/vectors/, gated
+//! golf-core rerecord --declare <file> [--dry-run] [--spec <dir>]   # re-record one family, gated
+//! golf-core parse-screen < screen-vector.json                      # OCR boxes in, ShotData out
 //! ```
 //!
 //! # `run`
@@ -34,8 +35,10 @@
 //!
 //! - **Rust's answer is compared with the committed one**, and the whole run is refused on any
 //!   difference the declaration (`--declare`, committed under `spec/declarations/`) does not name:
-//!   an added key at a declared path or a moved value at a declared path, and never a removed key.
-//!   A change to the engine's output has to be *named* before it can be recorded.
+//!   an added key at a declared path or a moved value at a declared path, and never a removed key
+//!   — except that a screen declaration may name removals path by path in `removed` (M34 P10),
+//!   because the tie rule's withheld tiles lose a key Python recorded. A change to the engine's
+//!   output has to be *named* before it can be recorded.
 //! - **The file written is the committed one with only the declared paths replaced**, so every
 //!   undeclared value keeps the bits Python recorded — the file stays the record of what Python said,
 //!   and a port that drifts inside the tolerance cannot launder the drift into it.
@@ -47,10 +50,25 @@
 //! churns where `serde_json` and `json.dumps` spell the same value differently. The rules are
 //! `golf_core::rerecord`'s and are unit-tested there; this file parses arguments and prints.
 //!
+//! **Which vectors a run re-records is the declaration's to say, by its version key** (M34 P7, the
+//! M34 plan's call 6): `analysis_version` re-records the engine and stage families, and
+//! `screen_parser_version` the screen family, each held to its own constant. There is no flag for
+//! it, because a flag that disagreed with the declaration would be a second answer to one question.
+//!
 //! `--dry-run` prints the report and writes nothing. `--spec` points the verb at another `spec/` —
 //! its own tests run on a copy — and defaults to this repository's, found from the source rather than
 //! from the working directory, the way `conformance.py` finds `REPO` from `__file__`: a run started
 //! from `crates/core/` should re-record the repo's vectors, not refuse to find any.
+//!
+//! # `parse-screen`
+//!
+//! The screen reader's seam (M34 P6), `run`'s shape for `crates/screen`: a screen vector, or its
+//! bare `input`, on stdin; the `ShotData` that [`screen::read`] makes of it on stdout, or `null`
+//! where the read failed, which is `import_screen`'s `failed`. A failed read is an answer, not an
+//! error, so it exits 0; a device no profile names is the caller's mistake, and exits 1 with
+//! nothing on stdout. Nothing here is Python's: there is no `conformance.py` verb to diff it
+//! against, because the screen family is recorded once and then belongs to `golf-core rerecord`
+//! (the M34 plan's call 3). It is the way to see what the reader makes of a vector without a test.
 //!
 //! # Why subcommands
 //!
@@ -64,14 +82,20 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 use golf_core::rerecord;
+use screen::ScreenInput;
+use serde::{Deserialize, Serialize};
 
 const USAGE: &str = "usage: golf-core run < vector.json\n       \
-                     golf-core rerecord --declare <file> [--dry-run] [--spec <dir>]";
+                     golf-core rerecord --declare <file> [--dry-run] [--spec <dir>]\n         \
+                     (the declaration's version key picks the family: analysis_version for the \
+                     engine and stage vectors, screen_parser_version for the screen vectors)\n       \
+                     golf-core parse-screen < screen-vector.json";
 
 fn main() -> ExitCode {
     let mut args = std::env::args().skip(1);
     match args.next().as_deref() {
         Some("run") if args.next().is_none() => run(),
+        Some("parse-screen") if args.next().is_none() => parse_screen(),
         Some("rerecord") => match RerecordArgs::parse(args) {
             Ok(parsed) => rerecord(&parsed),
             Err(problem) => usage(&problem),
@@ -94,33 +118,65 @@ fn usage(problem: &str) -> ExitCode {
 /// contract `conformance.py run` has and a batching mode nobody asked for would make the two
 /// commands' stdin mean different things.
 fn run() -> ExitCode {
+    let input = match read_stdin::<golf_core::Vector, golf_core::VectorInput>(|vector| vector.input)
+    {
+        Ok(input) => input,
+        Err(failed) => return failed,
+    };
+    write_stdout(&golf_core::run(&input))
+}
+
+/// A whole screen vector, of which only `input` is read. `golf_core::Vector`'s counterpart.
+#[derive(Deserialize)]
+struct ScreenVector {
+    input: ScreenInput,
+}
+
+/// Read one screen vector from stdin and write the shot it reads as, or `null`.
+fn parse_screen() -> ExitCode {
+    let input = match read_stdin::<ScreenVector, ScreenInput>(|vector| vector.input) {
+        Ok(input) => input,
+        Err(failed) => return failed,
+    };
+    match screen::read(&input) {
+        Ok(shot) => write_stdout(&shot),
+        Err(unknown) => {
+            eprintln!("golf-core parse-screen: {unknown}");
+            ExitCode::FAILURE
+        }
+    }
+}
+
+/// Stdin, read to EOF, as either a whole vector file or its bare `input` object, the way a caller
+/// piping a slice of one would expect. `conformance.py run` takes the whole file; the bare form costs
+/// one fallback and saves anyone diffing a hand-built input from having to wrap it. Every verb that
+/// reads a vector reads it this way, so the two forms mean the same thing on each.
+fn read_stdin<W, I>(unwrap: impl FnOnce(W) -> I) -> Result<I, ExitCode>
+where
+    W: for<'de> Deserialize<'de>,
+    I: for<'de> Deserialize<'de>,
+{
     let mut text = String::new();
     if let Err(e) = io::stdin().read_to_string(&mut text) {
         eprintln!("golf-core: reading stdin: {e}");
-        return ExitCode::FAILURE;
+        return Err(ExitCode::FAILURE);
     }
+    match serde_json::from_str::<W>(&text) {
+        Ok(vector) => Ok(unwrap(vector)),
+        Err(whole) => serde_json::from_str::<I>(&text).map_err(|bare| {
+            eprintln!("golf-core: stdin is neither a vector nor a vector input");
+            eprintln!("  as a vector:       {whole}");
+            eprintln!("  as a vector input: {bare}");
+            ExitCode::FAILURE
+        }),
+    }
+}
 
-    // Accept either a whole vector file or a bare `input` object, the way a caller piping a slice of
-    // one would expect. `conformance.py run` takes the whole file; the bare form costs one fallback
-    // and saves anyone diffing a hand-built input from having to wrap it.
-    let input = match serde_json::from_str::<golf_core::Vector>(&text) {
-        Ok(vector) => vector.input,
-        Err(whole) => match serde_json::from_str::<golf_core::VectorInput>(&text) {
-            Ok(input) => input,
-            Err(bare) => {
-                eprintln!("golf-core: stdin is neither a vector nor a vector input");
-                eprintln!("  as a vector:       {whole}");
-                eprintln!("  as a vector input: {bare}");
-                return ExitCode::FAILURE;
-            }
-        },
-    };
-
-    let result = golf_core::run(&input);
-    // Pretty-printed, because the thing on the other side of this pipe is usually a human reading a
-    // diff. `compare_results` parses either way.
+/// Write one answer to stdout, pretty-printed, because the thing on the other side of this pipe is
+/// usually a human reading a diff. `compare_results` parses either way.
+fn write_stdout(answer: &impl Serialize) -> ExitCode {
     let mut out = io::stdout().lock();
-    let written = serde_json::to_writer_pretty(&mut out, &result)
+    let written = serde_json::to_writer_pretty(&mut out, answer)
         .map_err(|e| e.to_string())
         .and_then(|()| {
             out.write_all(b"\n")

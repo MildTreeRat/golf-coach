@@ -1,0 +1,1224 @@
+{
+  "cases": [
+    {
+      "expected": -1,
+      "field": {
+        "aliases": [],
+        "kind": "number",
+        "label": "Club Path",
+        "printed_sign": null,
+        "sign_tokens": [
+          {
+            "sign": 1,
+            "tokens": [
+              "I>O",
+              "I O",
+              "IO",
+              "1>0",
+              "I>0"
+            ]
+          },
+          {
+            "sign": -1,
+            "tokens": [
+              "O>I",
+              "O I",
+              "OI",
+              "0>1",
+              "O>1"
+            ]
+          }
+        ],
+        "target": "club_path",
+        "unit": "degrees"
+      },
+      "residual": " \u00b0 O>I"
+    },
+    {
+      "expected": 1,
+      "field": {
+        "aliases": [],
+        "kind": "number",
+        "label": "Club Path",
+        "printed_sign": null,
+        "sign_tokens": [
+          {
+            "sign": 1,
+            "tokens": [
+              "I>O",
+              "I O",
+              "IO",
+              "1>0",
+              "I>0"
+            ]
+          },
+          {
+            "sign": -1,
+            "tokens": [
+              "O>I",
+              "O I",
+              "OI",
+              "0>1",
+              "O>1"
+            ]
+          }
+        ],
+        "target": "club_path",
+        "unit": "degrees"
+      },
+      "residual": " \u00b0 I>O"
+    },
+    {
+      "expected": -1,
+      "field": {
+        "aliases": [],
+        "kind": "number",
+        "label": "Club Path",
+        "printed_sign": null,
+        "sign_tokens": [
+          {
+            "sign": 1,
+            "tokens": [
+              "I>O",
+              "I O",
+              "IO",
+              "1>0",
+              "I>0"
+            ]
+          },
+          {
+            "sign": -1,
+            "tokens": [
+              "O>I",
+              "O I",
+              "OI",
+              "0>1",
+              "O>1"
+            ]
+          }
+        ],
+        "target": "club_path",
+        "unit": "degrees"
+      },
+      "residual": "\u00b00>1"
+    },
+    {
+      "expected": 1,
+      "field": {
+        "aliases": [],
+        "kind": "number",
+        "label": "Club Path",
+        "printed_sign": null,
+        "sign_tokens": [
+          {
+            "sign": 1,
+            "tokens": [
+              "I>O",
+              "I O",
+              "IO",
+              "1>0",
+              "I>0"
+            ]
+          },
+          {
+            "sign": -1,
+            "tokens": [
+              "O>I",
+              "O I",
+              "OI",
+              "0>1",
+              "O>1"
+            ]
+          }
+        ],
+        "target": "club_path",
+        "unit": "degrees"
+      },
+      "residual": "\u00b01>0"
+    },
+    {
+      "expected": null,
+      "field": {
+        "aliases": [],
+        "kind": "number",
+        "label": "Club Path",
+        "printed_sign": null,
+        "sign_tokens": [
+          {
+            "sign": 1,
+            "tokens": [
+              "I>O",
+              "I O",
+              "IO",
+              "1>0",
+              "I>0"
+            ]
+          },
+          {
+            "sign": -1,
+            "tokens": [
+              "O>I",
+              "O I",
+              "OI",
+              "0>1",
+              "O>1"
+            ]
+          }
+        ],
+        "target": "club_path",
+        "unit": "degrees"
+      },
+      "residual": "\u00b00>I"
+    },
+    {
+      "expected": -1,
+      "field": {
+        "aliases": [],
+        "kind": "number",
+        "label": "Club Path",
+        "printed_sign": null,
+        "sign_tokens": [
+          {
+            "sign": 1,
+            "tokens": [
+              "I>O",
+              "I O",
+              "IO",
+              "1>0",
+              "I>0"
+            ]
+          },
+          {
+            "sign": -1,
+            "tokens": [
+              "O>I",
+              "O I",
+              "OI",
+              "0>1",
+              "O>1"
+            ]
+          }
+        ],
+        "target": "club_path",
+        "unit": "degrees"
+      },
+      "residual": " O I"
+    },
+    {
+      "expected": 1,
+      "field": {
+        "aliases": [],
+        "kind": "number",
+        "label": "Club Path",
+        "printed_sign": null,
+        "sign_tokens": [
+          {
+            "sign": 1,
+            "tokens": [
+              "I>O",
+              "I O",
+              "IO",
+              "1>0",
+              "I>0"
+            ]
+          },
+          {
+            "sign": -1,
+            "tokens": [
+              "O>I",
+              "O I",
+              "OI",
+              "0>1",
+              "O>1"
+            ]
+          }
+        ],
+        "target": "club_path",
+        "unit": "degrees"
+      },
+      "residual": "IO"
+    },
+    {
+      "expected": -1,
+      "field": {
+        "aliases": [],
+        "kind": "number",
+        "label": "Club Path",
+        "printed_sign": null,
+        "sign_tokens": [
+          {
+            "sign": 1,
+            "tokens": [
+              "I>O",
+              "I O",
+              "IO",
+              "1>0",
+              "I>0"
+            ]
+          },
+          {
+            "sign": -1,
+            "tokens": [
+              "O>I",
+              "O I",
+              "OI",
+              "0>1",
+              "O>1"
+            ]
+          }
+        ],
+        "target": "club_path",
+        "unit": "degrees"
+      },
+      "residual": " \u00b0 o>i"
+    },
+    {
+      "expected": 1,
+      "field": {
+        "aliases": [],
+        "kind": "number",
+        "label": "Club Path",
+        "printed_sign": null,
+        "sign_tokens": [
+          {
+            "sign": 1,
+            "tokens": [
+              "I>O",
+              "I O",
+              "IO",
+              "1>0",
+              "I>0"
+            ]
+          },
+          {
+            "sign": -1,
+            "tokens": [
+              "O>I",
+              "O I",
+              "OI",
+              "0>1",
+              "O>1"
+            ]
+          }
+        ],
+        "target": "club_path",
+        "unit": "degrees"
+      },
+      "residual": " \u00b0 O>I I>O"
+    },
+    {
+      "expected": null,
+      "field": {
+        "aliases": [],
+        "kind": "number",
+        "label": "Club Path",
+        "printed_sign": null,
+        "sign_tokens": [
+          {
+            "sign": 1,
+            "tokens": [
+              "I>O",
+              "I O",
+              "IO",
+              "1>0",
+              "I>0"
+            ]
+          },
+          {
+            "sign": -1,
+            "tokens": [
+              "O>I",
+              "O I",
+              "OI",
+              "0>1",
+              "O>1"
+            ]
+          }
+        ],
+        "target": "club_path",
+        "unit": "degrees"
+      },
+      "residual": " \u00b0 "
+    },
+    {
+      "expected": null,
+      "field": {
+        "aliases": [],
+        "kind": "number",
+        "label": "Club Path",
+        "printed_sign": null,
+        "sign_tokens": [
+          {
+            "sign": 1,
+            "tokens": [
+              "I>O",
+              "I O",
+              "IO",
+              "1>0",
+              "I>0"
+            ]
+          },
+          {
+            "sign": -1,
+            "tokens": [
+              "O>I",
+              "O I",
+              "OI",
+              "0>1",
+              "O>1"
+            ]
+          }
+        ],
+        "target": "club_path",
+        "unit": "degrees"
+      },
+      "residual": ""
+    },
+    {
+      "expected": -1,
+      "field": {
+        "aliases": [],
+        "kind": "number",
+        "label": "Club Path",
+        "printed_sign": null,
+        "sign_tokens": [
+          {
+            "sign": 1,
+            "tokens": [
+              "I>O",
+              "I O",
+              "IO",
+              "1>0",
+              "I>0"
+            ]
+          },
+          {
+            "sign": -1,
+            "tokens": [
+              "O>I",
+              "O I",
+              "OI",
+              "0>1",
+              "O>1"
+            ]
+          }
+        ],
+        "target": "club_path",
+        "unit": "degrees"
+      },
+      "residual": " \u00b0 OI!"
+    },
+    {
+      "expected": -1,
+      "field": {
+        "aliases": [],
+        "kind": "number",
+        "label": "Club Face Angle",
+        "printed_sign": null,
+        "sign_tokens": [
+          {
+            "sign": 1,
+            "tokens": [
+              "OPEN"
+            ]
+          },
+          {
+            "sign": -1,
+            "tokens": [
+              "CLOSED",
+              "CLOSE"
+            ]
+          }
+        ],
+        "target": "club_face_angle",
+        "unit": "degrees"
+      },
+      "residual": " \u00b0 Closed"
+    },
+    {
+      "expected": 1,
+      "field": {
+        "aliases": [],
+        "kind": "number",
+        "label": "Club Face Angle",
+        "printed_sign": null,
+        "sign_tokens": [
+          {
+            "sign": 1,
+            "tokens": [
+              "OPEN"
+            ]
+          },
+          {
+            "sign": -1,
+            "tokens": [
+              "CLOSED",
+              "CLOSE"
+            ]
+          }
+        ],
+        "target": "club_face_angle",
+        "unit": "degrees"
+      },
+      "residual": " Open"
+    },
+    {
+      "expected": -1,
+      "field": {
+        "aliases": [],
+        "kind": "number",
+        "label": "Club Face Angle",
+        "printed_sign": null,
+        "sign_tokens": [
+          {
+            "sign": 1,
+            "tokens": [
+              "OPEN"
+            ]
+          },
+          {
+            "sign": -1,
+            "tokens": [
+              "CLOSED",
+              "CLOSE"
+            ]
+          }
+        ],
+        "target": "club_face_angle",
+        "unit": "degrees"
+      },
+      "residual": " \u00b0 Close"
+    },
+    {
+      "expected": -1,
+      "field": {
+        "aliases": [],
+        "kind": "number",
+        "label": "Club Face Angle",
+        "printed_sign": null,
+        "sign_tokens": [
+          {
+            "sign": 1,
+            "tokens": [
+              "OPEN"
+            ]
+          },
+          {
+            "sign": -1,
+            "tokens": [
+              "CLOSED",
+              "CLOSE"
+            ]
+          }
+        ],
+        "target": "club_face_angle",
+        "unit": "degrees"
+      },
+      "residual": "\u00b0CLOSED"
+    },
+    {
+      "expected": 1,
+      "field": {
+        "aliases": [],
+        "kind": "number",
+        "label": "Club Face Angle",
+        "printed_sign": null,
+        "sign_tokens": [
+          {
+            "sign": 1,
+            "tokens": [
+              "OPEN"
+            ]
+          },
+          {
+            "sign": -1,
+            "tokens": [
+              "CLOSED",
+              "CLOSE"
+            ]
+          }
+        ],
+        "target": "club_face_angle",
+        "unit": "degrees"
+      },
+      "residual": " \u00b0 Reopen"
+    },
+    {
+      "expected": 1,
+      "field": {
+        "aliases": [],
+        "kind": "number",
+        "label": "Club Face Angle",
+        "printed_sign": null,
+        "sign_tokens": [
+          {
+            "sign": 1,
+            "tokens": [
+              "OPEN"
+            ]
+          },
+          {
+            "sign": -1,
+            "tokens": [
+              "CLOSED",
+              "CLOSE"
+            ]
+          }
+        ],
+        "target": "club_face_angle",
+        "unit": "degrees"
+      },
+      "residual": " \u00b0 Open\u017f"
+    },
+    {
+      "expected": 1,
+      "field": {
+        "aliases": [],
+        "kind": "number",
+        "label": "Club Face Angle",
+        "printed_sign": null,
+        "sign_tokens": [
+          {
+            "sign": 1,
+            "tokens": [
+              "OPEN"
+            ]
+          },
+          {
+            "sign": -1,
+            "tokens": [
+              "CLOSED",
+              "CLOSE"
+            ]
+          }
+        ],
+        "target": "club_face_angle",
+        "unit": "degrees"
+      },
+      "residual": " \u00b0 OPEN CLOSED"
+    },
+    {
+      "expected": null,
+      "field": {
+        "aliases": [],
+        "kind": "number",
+        "label": "Club Face Angle",
+        "printed_sign": null,
+        "sign_tokens": [
+          {
+            "sign": 1,
+            "tokens": [
+              "OPEN"
+            ]
+          },
+          {
+            "sign": -1,
+            "tokens": [
+              "CLOSED",
+              "CLOSE"
+            ]
+          }
+        ],
+        "target": "club_face_angle",
+        "unit": "degrees"
+      },
+      "residual": " \u00b0 cl\u014dsed"
+    },
+    {
+      "expected": 1,
+      "field": {
+        "aliases": [],
+        "kind": "number",
+        "label": "Club Face Angle",
+        "printed_sign": null,
+        "sign_tokens": [
+          {
+            "sign": 1,
+            "tokens": [
+              "OPEN"
+            ]
+          },
+          {
+            "sign": -1,
+            "tokens": [
+              "CLOSED",
+              "CLOSE"
+            ]
+          }
+        ],
+        "target": "club_face_angle",
+        "unit": "degrees"
+      },
+      "residual": " \u00b0 Opened"
+    },
+    {
+      "expected": -1,
+      "field": {
+        "aliases": [],
+        "kind": "number",
+        "label": "Horizontal Angle",
+        "printed_sign": null,
+        "sign_tokens": [
+          {
+            "sign": 1,
+            "tokens": [
+              "R",
+              "RIGHT"
+            ]
+          },
+          {
+            "sign": -1,
+            "tokens": [
+              "L",
+              "LEFT"
+            ]
+          }
+        ],
+        "target": "launch_direction",
+        "unit": "degrees"
+      },
+      "residual": " \u00b0 L"
+    },
+    {
+      "expected": -1,
+      "field": {
+        "aliases": [],
+        "kind": "number",
+        "label": "Horizontal Angle",
+        "printed_sign": null,
+        "sign_tokens": [
+          {
+            "sign": 1,
+            "tokens": [
+              "R",
+              "RIGHT"
+            ]
+          },
+          {
+            "sign": -1,
+            "tokens": [
+              "L",
+              "LEFT"
+            ]
+          }
+        ],
+        "target": "launch_direction",
+        "unit": "degrees"
+      },
+      "residual": "\u00b0L"
+    },
+    {
+      "expected": 1,
+      "field": {
+        "aliases": [],
+        "kind": "number",
+        "label": "Horizontal Angle",
+        "printed_sign": null,
+        "sign_tokens": [
+          {
+            "sign": 1,
+            "tokens": [
+              "R",
+              "RIGHT"
+            ]
+          },
+          {
+            "sign": -1,
+            "tokens": [
+              "L",
+              "LEFT"
+            ]
+          }
+        ],
+        "target": "launch_direction",
+        "unit": "degrees"
+      },
+      "residual": " \u00b0 R"
+    },
+    {
+      "expected": -1,
+      "field": {
+        "aliases": [],
+        "kind": "number",
+        "label": "Horizontal Angle",
+        "printed_sign": null,
+        "sign_tokens": [
+          {
+            "sign": 1,
+            "tokens": [
+              "R",
+              "RIGHT"
+            ]
+          },
+          {
+            "sign": -1,
+            "tokens": [
+              "L",
+              "LEFT"
+            ]
+          }
+        ],
+        "target": "launch_direction",
+        "unit": "degrees"
+      },
+      "residual": " \u00b0 Left"
+    },
+    {
+      "expected": 1,
+      "field": {
+        "aliases": [],
+        "kind": "number",
+        "label": "Horizontal Angle",
+        "printed_sign": null,
+        "sign_tokens": [
+          {
+            "sign": 1,
+            "tokens": [
+              "R",
+              "RIGHT"
+            ]
+          },
+          {
+            "sign": -1,
+            "tokens": [
+              "L",
+              "LEFT"
+            ]
+          }
+        ],
+        "target": "launch_direction",
+        "unit": "degrees"
+      },
+      "residual": " \u00b0 RIGHT"
+    },
+    {
+      "expected": null,
+      "field": {
+        "aliases": [],
+        "kind": "number",
+        "label": "Horizontal Angle",
+        "printed_sign": null,
+        "sign_tokens": [
+          {
+            "sign": 1,
+            "tokens": [
+              "R",
+              "RIGHT"
+            ]
+          },
+          {
+            "sign": -1,
+            "tokens": [
+              "L",
+              "LEFT"
+            ]
+          }
+        ],
+        "target": "launch_direction",
+        "unit": "degrees"
+      },
+      "residual": " \u00b0 LR"
+    },
+    {
+      "expected": null,
+      "field": {
+        "aliases": [],
+        "kind": "number",
+        "label": "Horizontal Angle",
+        "printed_sign": null,
+        "sign_tokens": [
+          {
+            "sign": 1,
+            "tokens": [
+              "R",
+              "RIGHT"
+            ]
+          },
+          {
+            "sign": -1,
+            "tokens": [
+              "L",
+              "LEFT"
+            ]
+          }
+        ],
+        "target": "launch_direction",
+        "unit": "degrees"
+      },
+      "residual": " \u00b0 CLOSED"
+    },
+    {
+      "expected": -1,
+      "field": {
+        "aliases": [],
+        "kind": "number",
+        "label": "Horizontal Angle",
+        "printed_sign": null,
+        "sign_tokens": [
+          {
+            "sign": 1,
+            "tokens": [
+              "R",
+              "RIGHT"
+            ]
+          },
+          {
+            "sign": -1,
+            "tokens": [
+              "L",
+              "LEFT"
+            ]
+          }
+        ],
+        "target": "launch_direction",
+        "unit": "degrees"
+      },
+      "residual": " l"
+    },
+    {
+      "expected": -1,
+      "field": {
+        "aliases": [],
+        "kind": "number",
+        "label": "Horizontal Angle",
+        "printed_sign": null,
+        "sign_tokens": [
+          {
+            "sign": 1,
+            "tokens": [
+              "R",
+              "RIGHT"
+            ]
+          },
+          {
+            "sign": -1,
+            "tokens": [
+              "L",
+              "LEFT"
+            ]
+          }
+        ],
+        "target": "launch_direction",
+        "unit": "degrees"
+      },
+      "residual": " \u00b0 L."
+    },
+    {
+      "expected": null,
+      "field": {
+        "aliases": [],
+        "kind": "number",
+        "label": "Horizontal Angle",
+        "printed_sign": null,
+        "sign_tokens": [
+          {
+            "sign": 1,
+            "tokens": [
+              "R",
+              "RIGHT"
+            ]
+          },
+          {
+            "sign": -1,
+            "tokens": [
+              "L",
+              "LEFT"
+            ]
+          }
+        ],
+        "target": "launch_direction",
+        "unit": "degrees"
+      },
+      "residual": " \u00b0 RL"
+    },
+    {
+      "expected": null,
+      "field": {
+        "aliases": [],
+        "kind": "number",
+        "label": "Spin Axis",
+        "printed_sign": -1,
+        "sign_tokens": [
+          {
+            "sign": 1,
+            "tokens": [
+              "R",
+              "RIGHT"
+            ]
+          },
+          {
+            "sign": -1,
+            "tokens": [
+              "L",
+              "LEFT"
+            ]
+          }
+        ],
+        "target": "spin_axis",
+        "unit": "degrees"
+      },
+      "residual": " \u00b0"
+    },
+    {
+      "expected": 1,
+      "field": {
+        "aliases": [],
+        "kind": "number",
+        "label": "Spin Axis",
+        "printed_sign": -1,
+        "sign_tokens": [
+          {
+            "sign": 1,
+            "tokens": [
+              "R",
+              "RIGHT"
+            ]
+          },
+          {
+            "sign": -1,
+            "tokens": [
+              "L",
+              "LEFT"
+            ]
+          }
+        ],
+        "target": "spin_axis",
+        "unit": "degrees"
+      },
+      "residual": " \u00b0 R"
+    },
+    {
+      "expected": -1,
+      "field": {
+        "aliases": [],
+        "kind": "number",
+        "label": "Spin Axis",
+        "printed_sign": -1,
+        "sign_tokens": [
+          {
+            "sign": 1,
+            "tokens": [
+              "R",
+              "RIGHT"
+            ]
+          },
+          {
+            "sign": -1,
+            "tokens": [
+              "L",
+              "LEFT"
+            ]
+          }
+        ],
+        "target": "spin_axis",
+        "unit": "degrees"
+      },
+      "residual": "\u00b0 L"
+    },
+    {
+      "expected": null,
+      "field": {
+        "aliases": [],
+        "kind": "number",
+        "label": "Spin Axis",
+        "printed_sign": -1,
+        "sign_tokens": [
+          {
+            "sign": 1,
+            "tokens": [
+              "R",
+              "RIGHT"
+            ]
+          },
+          {
+            "sign": -1,
+            "tokens": [
+              "L",
+              "LEFT"
+            ]
+          }
+        ],
+        "target": "spin_axis",
+        "unit": "degrees"
+      },
+      "residual": "-"
+    },
+    {
+      "expected": null,
+      "field": {
+        "aliases": [],
+        "kind": "number",
+        "label": "Crafted",
+        "printed_sign": null,
+        "sign_tokens": [
+          {
+            "sign": 1,
+            "tokens": [
+              "\u00b0",
+              "X"
+            ]
+          },
+          {
+            "sign": -1,
+            "tokens": [
+              "-",
+              "Y"
+            ]
+          }
+        ],
+        "target": "crafted",
+        "unit": null
+      },
+      "residual": " \u00b0 "
+    },
+    {
+      "expected": 1,
+      "field": {
+        "aliases": [],
+        "kind": "number",
+        "label": "Crafted",
+        "printed_sign": null,
+        "sign_tokens": [
+          {
+            "sign": 1,
+            "tokens": [
+              "\u00b0",
+              "X"
+            ]
+          },
+          {
+            "sign": -1,
+            "tokens": [
+              "-",
+              "Y"
+            ]
+          }
+        ],
+        "target": "crafted",
+        "unit": null
+      },
+      "residual": " X"
+    },
+    {
+      "expected": 1,
+      "field": {
+        "aliases": [],
+        "kind": "number",
+        "label": "Crafted",
+        "printed_sign": null,
+        "sign_tokens": [
+          {
+            "sign": 1,
+            "tokens": [
+              "\u00b0",
+              "X"
+            ]
+          },
+          {
+            "sign": -1,
+            "tokens": [
+              "-",
+              "Y"
+            ]
+          }
+        ],
+        "target": "crafted",
+        "unit": null
+      },
+      "residual": " x"
+    },
+    {
+      "expected": -1,
+      "field": {
+        "aliases": [],
+        "kind": "number",
+        "label": "Crafted",
+        "printed_sign": null,
+        "sign_tokens": [
+          {
+            "sign": 1,
+            "tokens": [
+              "\u00b0",
+              "X"
+            ]
+          },
+          {
+            "sign": -1,
+            "tokens": [
+              "-",
+              "Y"
+            ]
+          }
+        ],
+        "target": "crafted",
+        "unit": null
+      },
+      "residual": " Y"
+    },
+    {
+      "expected": null,
+      "field": {
+        "aliases": [],
+        "kind": "number",
+        "label": "Crafted",
+        "printed_sign": null,
+        "sign_tokens": [
+          {
+            "sign": 1,
+            "tokens": [
+              "\u00b0",
+              "X"
+            ]
+          },
+          {
+            "sign": -1,
+            "tokens": [
+              "-",
+              "Y"
+            ]
+          }
+        ],
+        "target": "crafted",
+        "unit": null
+      },
+      "residual": "XY"
+    },
+    {
+      "expected": null,
+      "field": {
+        "aliases": [],
+        "kind": "number",
+        "label": "Crafted",
+        "printed_sign": null,
+        "sign_tokens": [
+          {
+            "sign": 1,
+            "tokens": [
+              "\u00b0",
+              "X"
+            ]
+          },
+          {
+            "sign": -1,
+            "tokens": [
+              "-",
+              "Y"
+            ]
+          }
+        ],
+        "target": "crafted",
+        "unit": null
+      },
+      "residual": " - "
+    }
+  ],
+  "id": "screen/units/sign_from",
+  "provenance": {
+    "kind": "screen",
+    "note": "`_sign_from(residual, field)`: the residual upper-cased and cut to `A-Z0-9>`, against each rule's tokens in order; one-letter tokens must be the whole residual. Each case carries its field",
+    "oracle": "python",
+    "python_version": "3.13.3",
+    "source": "src/golf_coach/launch_monitor/screen/parser.py::_sign_from"
+  },
+  "screen_parser_version": 0
+}

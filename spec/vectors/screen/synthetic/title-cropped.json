@@ -1,0 +1,432 @@
+{
+  "expected": {
+    "label_ratio": 0.8,
+    "parsed": {
+      "confidence": 0.845,
+      "raw_fields": {
+        "Ball Speed": "101.5 mph",
+        "Bounce & Roll": "23.4 yds",
+        "Carry": "128.1 yds",
+        "Club Face Angle": "1.1 ° Closed",
+        "Club Path": "1.6 ° O>I",
+        "Club Speed": "88.6 mph",
+        "Horizontal Angle": "SLIGHT 2.6 ° L DRAW",
+        "Impact Position": "CENTER",
+        "Launch Angle": "10.2 °",
+        "Smash Factor": "1.15",
+        "Spin": "---",
+        "Spin Axis": "---"
+      },
+      "values": {
+        "ball_speed": 101.5,
+        "bounce_and_roll": 23.4,
+        "carry_distance": 128.1,
+        "club_face_angle": -1.1,
+        "club_head_speed": 88.6,
+        "club_path": -1.6,
+        "impact_position": "CENTER",
+        "launch_angle": 10.2,
+        "launch_direction": 2.6,
+        "smash_factor": 1.15
+      },
+      "warnings": [
+        "Horizontal Angle: no direction word in 'SLIGHT 2.6 ° L DRAW' - sign unknown, storing the magnitude as printed",
+        "no tile found for 'Shot Distance'",
+        "no tile found for 'Shot Type'",
+        "no tile found for 'Impact Position V'"
+      ]
+    },
+    "shot": {
+      "apex_height": null,
+      "attack_angle": null,
+      "ball_speed": 101.5,
+      "bounce_and_roll": 23.4,
+      "carry_distance": 128.1,
+      "carry_offline": null,
+      "club_face_angle": -1.1,
+      "club_head_speed": 88.6,
+      "club_path": -1.6,
+      "dynamic_loft": null,
+      "impact_offset_h": null,
+      "impact_offset_v": null,
+      "impact_position": "CENTER",
+      "impact_position_v": null,
+      "launch_angle": 10.2,
+      "launch_direction": 2.6,
+      "low_point": null,
+      "provenance": {
+        "corrections": {},
+        "device": "hd_golf",
+        "fields_present": [
+          "carry_distance",
+          "bounce_and_roll",
+          "ball_speed",
+          "launch_angle",
+          "club_head_speed",
+          "club_path",
+          "club_face_angle",
+          "spin_rate",
+          "smash_factor",
+          "impact_position",
+          "launch_direction",
+          "spin_axis"
+        ],
+        "image_path": null,
+        "image_sha256": null,
+        "needs_review": false,
+        "parse_confidence": 0.845,
+        "parser_version": 1,
+        "raw_fields": {
+          "Ball Speed": "101.5 mph",
+          "Bounce & Roll": "23.4 yds",
+          "Carry": "128.1 yds",
+          "Club Face Angle": "1.1 ° Closed",
+          "Club Path": "1.6 ° O>I",
+          "Club Speed": "88.6 mph",
+          "Horizontal Angle": "SLIGHT 2.6 ° L DRAW",
+          "Impact Position": "CENTER",
+          "Launch Angle": "10.2 °",
+          "Smash Factor": "1.15",
+          "Spin": "---",
+          "Spin Axis": "---"
+        },
+        "warnings": [
+          "Horizontal Angle: no direction word in 'SLIGHT 2.6 ° L DRAW' - sign unknown, storing the magnitude as printed",
+          "no tile found for 'Shot Distance'",
+          "no tile found for 'Shot Type'",
+          "no tile found for 'Impact Position V'"
+        ]
+      },
+      "session_id": "synthetic",
+      "shot_id": "synthetic-title-cropped",
+      "shot_type": null,
+      "smash_factor": 1.15,
+      "source": "screen",
+      "spin_axis": null,
+      "spin_rate": null,
+      "timestamp": "2026-08-04T12:00:00Z",
+      "total_distance": null
+    }
+  },
+  "id": "screen/synthetic/title-cropped",
+  "input": {
+    "boxes": [
+      {
+        "confidence": 0.95,
+        "height": 24.0,
+        "text": "151.5",
+        "width": 45.0,
+        "x": 57.5,
+        "y": 135.0
+      },
+      {
+        "confidence": 0.95,
+        "height": 24.0,
+        "text": "yds",
+        "width": 27.0,
+        "x": 66.5,
+        "y": 165.0
+      },
+      {
+        "confidence": 0.95,
+        "height": 20.0,
+        "text": "Carry",
+        "width": 35.0,
+        "x": 222.5,
+        "y": 100.0
+      },
+      {
+        "confidence": 0.95,
+        "height": 24.0,
+        "text": "128.1",
+        "width": 45.0,
+        "x": 217.5,
+        "y": 135.0
+      },
+      {
+        "confidence": 0.95,
+        "height": 24.0,
+        "text": "yds",
+        "width": 27.0,
+        "x": 226.5,
+        "y": 165.0
+      },
+      {
+        "confidence": 0.95,
+        "height": 20.0,
+        "text": "Bounce & Roll",
+        "width": 91.0,
+        "x": 354.5,
+        "y": 100.0
+      },
+      {
+        "confidence": 0.95,
+        "height": 24.0,
+        "text": "23.4",
+        "width": 36.0,
+        "x": 382.0,
+        "y": 135.0
+      },
+      {
+        "confidence": 0.95,
+        "height": 24.0,
+        "text": "yds",
+        "width": 27.0,
+        "x": 386.5,
+        "y": 165.0
+      },
+      {
+        "confidence": 0.95,
+        "height": 20.0,
+        "text": "Ball Speed",
+        "width": 70.0,
+        "x": 525.0,
+        "y": 100.0
+      },
+      {
+        "confidence": 0.95,
+        "height": 24.0,
+        "text": "101.5",
+        "width": 45.0,
+        "x": 537.5,
+        "y": 135.0
+      },
+      {
+        "confidence": 0.95,
+        "height": 24.0,
+        "text": "mph",
+        "width": 27.0,
+        "x": 546.5,
+        "y": 165.0
+      },
+      {
+        "confidence": 0.95,
+        "height": 20.0,
+        "text": "Launch Angle",
+        "width": 84.0,
+        "x": 678.0,
+        "y": 100.0
+      },
+      {
+        "confidence": 0.95,
+        "height": 24.0,
+        "text": "10.2 °",
+        "width": 54.0,
+        "x": 693.0,
+        "y": 135.0
+      },
+      {
+        "confidence": 0.95,
+        "height": 20.0,
+        "text": "Club Speed",
+        "width": 70.0,
+        "x": 845.0,
+        "y": 100.0
+      },
+      {
+        "confidence": 0.95,
+        "height": 24.0,
+        "text": "88.6",
+        "width": 36.0,
+        "x": 862.0,
+        "y": 135.0
+      },
+      {
+        "confidence": 0.95,
+        "height": 24.0,
+        "text": "mph",
+        "width": 27.0,
+        "x": 866.5,
+        "y": 165.0
+      },
+      {
+        "confidence": 0.95,
+        "height": 20.0,
+        "text": "Club Path",
+        "width": 63.0,
+        "x": 1008.5,
+        "y": 100.0
+      },
+      {
+        "confidence": 0.95,
+        "height": 24.0,
+        "text": "1.6 ° O>I",
+        "width": 81.0,
+        "x": 999.5,
+        "y": 135.0
+      },
+      {
+        "confidence": 0.95,
+        "height": 20.0,
+        "text": "Custom",
+        "width": 42.0,
+        "x": 1179.0,
+        "y": 100.0
+      },
+      {
+        "confidence": 0.95,
+        "height": 20.0,
+        "text": "Club Face Angle",
+        "width": 105.0,
+        "x": 27.5,
+        "y": 250.0
+      },
+      {
+        "confidence": 0.95,
+        "height": 24.0,
+        "text": "1.1 °",
+        "width": 45.0,
+        "x": 57.5,
+        "y": 285.0
+      },
+      {
+        "confidence": 0.95,
+        "height": 24.0,
+        "text": "Closed",
+        "width": 54.0,
+        "x": 53.0,
+        "y": 315.0
+      },
+      {
+        "confidence": 0.95,
+        "height": 20.0,
+        "text": "Spin",
+        "width": 28.0,
+        "x": 226.0,
+        "y": 250.0
+      },
+      {
+        "confidence": 0.95,
+        "height": 24.0,
+        "text": "---",
+        "width": 27.0,
+        "x": 226.5,
+        "y": 285.0
+      },
+      {
+        "confidence": 0.95,
+        "height": 20.0,
+        "text": "Smash Factor",
+        "width": 84.0,
+        "x": 358.0,
+        "y": 250.0
+      },
+      {
+        "confidence": 0.95,
+        "height": 24.0,
+        "text": "1.15",
+        "width": 36.0,
+        "x": 382.0,
+        "y": 285.0
+      },
+      {
+        "confidence": 0.95,
+        "height": 20.0,
+        "text": "Impact Position",
+        "width": 105.0,
+        "x": 507.5,
+        "y": 250.0
+      },
+      {
+        "confidence": 0.95,
+        "height": 24.0,
+        "text": "CENTER",
+        "width": 54.0,
+        "x": 533.0,
+        "y": 285.0
+      },
+      {
+        "confidence": 0.95,
+        "height": 24.0,
+        "text": "SLIGHT",
+        "width": 54.0,
+        "x": 693.0,
+        "y": 285.0
+      },
+      {
+        "confidence": 0.95,
+        "height": 24.0,
+        "text": "DRAW",
+        "width": 36.0,
+        "x": 702.0,
+        "y": 315.0
+      },
+      {
+        "confidence": 0.95,
+        "height": 20.0,
+        "text": "Horizontal Angle",
+        "width": 112.0,
+        "x": 824.0,
+        "y": 250.0
+      },
+      {
+        "confidence": 0.95,
+        "height": 24.0,
+        "text": "2.6 ° L",
+        "width": 63.0,
+        "x": 848.5,
+        "y": 285.0
+      },
+      {
+        "confidence": 0.95,
+        "height": 20.0,
+        "text": "Spin Axis",
+        "width": 63.0,
+        "x": 1008.5,
+        "y": 250.0
+      },
+      {
+        "confidence": 0.95,
+        "height": 24.0,
+        "text": "---",
+        "width": 27.0,
+        "x": 1026.5,
+        "y": 285.0
+      }
+    ],
+    "device": "hd_golf",
+    "image_path": null,
+    "image_sha256": null,
+    "min_confidence": 0.6,
+    "notes": [],
+    "session_id": "synthetic",
+    "shot_id": "synthetic-title-cropped",
+    "timestamp": "2026-08-04T12:00:00Z"
+  },
+  "provenance": {
+    "kind": "screen",
+    "note": "No box above the grid at all: the title's absence is a fact about the crop, so it is not warned about. The test's filter drops every box containing `SHOT`, so the Shot Distance and Shot Type labels go too, their neighbours' columns widen, and Horizontal Angle reads `SLIGHT 2.6 ° L DRAW`, a residual no sign rule matches.",
+    "oracle": "python",
+    "python_version": "3.13.3",
+    "rerecords": [
+      {
+        "added": [
+          "expected.shot.attack_angle",
+          "expected.shot.dynamic_loft",
+          "expected.shot.low_point",
+          "expected.shot.impact_offset_h",
+          "expected.shot.impact_offset_v",
+          "expected.shot.impact_position_v",
+          "expected.shot.carry_offline",
+          "expected.shot.provenance.parser_version",
+          "expected.shot.provenance.fields_present",
+          "expected.shot.provenance.corrections"
+        ],
+        "by": "golf-core rerecord",
+        "declaration": "spec/declarations/screen-v1.json",
+        "moved": [
+          "screen_parser_version",
+          "expected.label_ratio",
+          "expected.parsed.confidence",
+          "expected.parsed.warnings",
+          "expected.shot.provenance.parse_confidence",
+          "expected.shot.provenance.warnings"
+        ],
+        "removed": [],
+        "screen_parser_version": 1
+      }
+    ],
+    "source": "tests/launch_monitor/conftest.py::build_screen; tests/launch_monitor/test_screen_parser.py::test_a_title_cropped_out_of_frame_is_not_reported_as_missing"
+  },
+  "screen_parser_version": 1
+}

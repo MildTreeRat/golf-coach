@@ -66,7 +66,7 @@
 //! `AeroCoefficients::clamped` true at that shoulder and the second makes it false. A flipped clamp is
 //! a different flight, and `clamped` is compared exactly.
 //!
-//! So [`hypot3`] goes through [`crate::pyfmt::hypot`], which is CPython's `vector_norm` transcribed —
+//! So [`hypot3`] goes through [`pyfmt::hypot`], which is CPython's `vector_norm` transcribed —
 //! the fourth edge in a module whose first three all reached a *string*. With it, all 41,287 floats in
 //! the five committed flights come back **bit-identical**, not merely inside `RTOL`
 //! (`tests/flight.rs`), which is a stronger statement than this phase set out to make and is the one
@@ -287,13 +287,13 @@ struct Integrand<'a> {
     axis: Vec3,
 }
 
-/// `math.hypot(a, b, c)`, through [`crate::pyfmt::hypot`] rather than a chain of [`f64::hypot`].
+/// `math.hypot(a, b, c)`, through [`pyfmt::hypot`] rather than a chain of [`f64::hypot`].
 ///
 /// The module doc records why: the two differ by one ulp on the reference shot's launch velocity, and
 /// one ulp flips a `clamped` bool at the shoulder [`crate::spin_solve`] constructs to sit exactly on
 /// the coefficient table's last row.
 fn hypot3(a: f64, b: f64, c: f64) -> f64 {
-    crate::pyfmt::hypot(&[a, b, c])
+    pyfmt::hypot(&[a, b, c])
 }
 
 fn cross(a: Vec3, b: Vec3) -> Vec3 {
@@ -495,14 +495,14 @@ pub fn simulate_flight(
     if launch.ball_speed_mph <= 0.0 {
         return Err(refuse(format!(
             "ball speed must be positive to fly, got {} mph",
-            crate::pyfmt::repr(launch.ball_speed_mph)
+            pyfmt::repr(launch.ball_speed_mph)
         )));
     }
     if !(launch.launch_angle_deg > 0.0 && launch.launch_angle_deg < 90.0) {
         return Err(refuse(format!(
             "launch angle must be above the horizontal and below the vertical to leave the ground, \
              got {} deg",
-            crate::pyfmt::repr(launch.launch_angle_deg)
+            pyfmt::repr(launch.launch_angle_deg)
         )));
     }
     if launch.spin_rpm < 0.0 {
@@ -511,7 +511,7 @@ pub fn simulate_flight(
         // ball with lift. Refused here rather than flown wrong.
         return Err(refuse(format!(
             "spin rate must not be negative, got {} rpm",
-            crate::pyfmt::repr(launch.spin_rpm)
+            pyfmt::repr(launch.spin_rpm)
         )));
     }
     if !(launch.launch_direction_deg > -90.0 && launch.launch_direction_deg < 90.0) {
@@ -520,7 +520,7 @@ pub fn simulate_flight(
         // prints one, so a caller holding one has a parse error rather than a shot.
         return Err(refuse(format!(
             "launch direction must be within a quarter turn of the target line, got {} deg",
-            crate::pyfmt::repr(launch.launch_direction_deg)
+            pyfmt::repr(launch.launch_direction_deg)
         )));
     }
     if !(-90.0..=90.0).contains(&launch.spin_axis_deg) {
@@ -529,13 +529,13 @@ pub fn simulate_flight(
         // same reason a negative spin rate is: the coefficient table is one-sided.
         return Err(refuse(format!(
             "spin axis must be within a quarter turn of horizontal, got {} deg",
-            crate::pyfmt::repr(launch.spin_axis_deg)
+            pyfmt::repr(launch.spin_axis_deg)
         )));
     }
     if step_s <= 0.0 {
         return Err(refuse(format!(
             "step must be positive, got {} s",
-            crate::pyfmt::repr(step_s)
+            pyfmt::repr(step_s)
         )));
     }
 
@@ -928,7 +928,7 @@ mod tests {
     /// `hypot(vx, vy)`, which is the property that lets M15 P3's planar numbers survive the third
     /// dimension.
     ///
-    /// **Against [`crate::pyfmt::hypot`] and not against [`f64::hypot`]**, because those two are one
+    /// **Against [`pyfmt::hypot`] and not against [`f64::hypot`]**, because those two are one
     /// ulp apart here as well — `40.48099063694415` against `40.48099063694414`. The two-argument
     /// call is the same `vector_norm`, so the invariant is about the zero and not about the language.
     #[test]
@@ -936,7 +936,7 @@ mod tests {
         let flown = fly(&LaunchConditions::planar(90.7, 20.9, 5991.0));
         for p in &flown.points {
             assert_eq!(p.vz_m_s, 0.0);
-            assert_eq!(p.speed_m_s(), crate::pyfmt::hypot(&[p.vx_m_s, p.vy_m_s]));
+            assert_eq!(p.speed_m_s(), pyfmt::hypot(&[p.vx_m_s, p.vy_m_s]));
         }
     }
 }

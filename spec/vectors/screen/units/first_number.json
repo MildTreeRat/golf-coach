@@ -1,0 +1,1290 @@
+{
+  "cases": [
+    {
+      "expected": {
+        "matched": "8.1",
+        "value": "8.1"
+      },
+      "text": "8.1\u00b00>1"
+    },
+    {
+      "expected": {
+        "matched": "2.8",
+        "value": "2.8"
+      },
+      "text": "2.8"
+    },
+    {
+      "expected": {
+        "matched": "131.0",
+        "value": "131.0"
+      },
+      "text": "131.0"
+    },
+    {
+      "expected": {
+        "matched": "125.6",
+        "value": "125.6"
+      },
+      "text": "125.6"
+    },
+    {
+      "expected": {
+        "matched": "90.7",
+        "value": "90.7"
+      },
+      "text": "90.7"
+    },
+    {
+      "expected": {
+        "matched": "20.9",
+        "value": "20.9"
+      },
+      "text": "20.9"
+    },
+    {
+      "expected": {
+        "matched": "91.0",
+        "value": "91.0"
+      },
+      "text": "91.0"
+    },
+    {
+      "expected": {
+        "matched": "-2.5",
+        "value": "-2.5"
+      },
+      "text": "-2.5\u00b0"
+    },
+    {
+      "expected": {
+        "matched": "5991",
+        "value": "5991.0"
+      },
+      "text": "5991"
+    },
+    {
+      "expected": {
+        "matched": "1.00",
+        "value": "1.0"
+      },
+      "text": "1.00"
+    },
+    {
+      "expected": {
+        "matched": "5.3",
+        "value": "5.3"
+      },
+      "text": "5.3\u00b0L"
+    },
+    {
+      "expected": {
+        "matched": "131",
+        "value": "131.0"
+      },
+      "text": "131 yds."
+    },
+    {
+      "expected": {
+        "matched": "350",
+        "value": "350.0"
+      },
+      "text": "350 yds."
+    },
+    {
+      "expected": {
+        "matched": "73",
+        "value": "73.0"
+      },
+      "text": "73 vds."
+    },
+    {
+      "expected": {
+        "matched": "124.2",
+        "value": "124.2"
+      },
+      "text": "124.2"
+    },
+    {
+      "expected": {
+        "matched": "121.0",
+        "value": "121.0"
+      },
+      "text": "121.0"
+    },
+    {
+      "expected": {
+        "matched": "90.5",
+        "value": "90.5"
+      },
+      "text": "90.5"
+    },
+    {
+      "expected": {
+        "matched": "23.5",
+        "value": "23.5"
+      },
+      "text": "23.5"
+    },
+    {
+      "expected": {
+        "matched": "98.3",
+        "value": "98.3"
+      },
+      "text": "98.3"
+    },
+    {
+      "expected": {
+        "matched": "4.6",
+        "value": "4.6"
+      },
+      "text": "4.6\u00b00>1"
+    },
+    {
+      "expected": {
+        "matched": "8.6",
+        "value": "8.6"
+      },
+      "text": "8.6\u00b0"
+    },
+    {
+      "expected": {
+        "matched": "8100",
+        "value": "8100.0"
+      },
+      "text": "8100"
+    },
+    {
+      "expected": {
+        "matched": "0.92",
+        "value": "0.92"
+      },
+      "text": "0.92"
+    },
+    {
+      "expected": {
+        "matched": "4.0",
+        "value": "4.0"
+      },
+      "text": "4.0\u00b0R"
+    },
+    {
+      "expected": {
+        "matched": "-9.3",
+        "value": "-9.3"
+      },
+      "text": "-9.3\u00b0"
+    },
+    {
+      "expected": {
+        "matched": "71",
+        "value": "71.0"
+      },
+      "text": "71 yds."
+    },
+    {
+      "expected": {
+        "matched": "124",
+        "value": "124.0"
+      },
+      "text": "124 yds."
+    },
+    {
+      "expected": {
+        "matched": "1",
+        "value": "1.0"
+      },
+      "text": "SHOT DATA Player 1"
+    },
+    {
+      "expected": {
+        "matched": "134.1",
+        "value": "134.1"
+      },
+      "text": "134.1"
+    },
+    {
+      "expected": {
+        "matched": "127.0",
+        "value": "127.0"
+      },
+      "text": "127.0"
+    },
+    {
+      "expected": {
+        "matched": "90.9",
+        "value": "90.9"
+      },
+      "text": "90.9"
+    },
+    {
+      "expected": {
+        "matched": "20.7",
+        "value": "20.7"
+      },
+      "text": "20.7"
+    },
+    {
+      "expected": {
+        "matched": "103.0",
+        "value": "103.0"
+      },
+      "text": "103.0"
+    },
+    {
+      "expected": {
+        "matched": "3.2",
+        "value": "3.2"
+      },
+      "text": "3.2\u00b00>1"
+    },
+    {
+      "expected": {
+        "matched": "6.0",
+        "value": "6.0"
+      },
+      "text": "6.0"
+    },
+    {
+      "expected": {
+        "matched": "0.88",
+        "value": "0.88"
+      },
+      "text": "0.88"
+    },
+    {
+      "expected": {
+        "matched": "2.8",
+        "value": "2.8"
+      },
+      "text": "2.8\u00b0R"
+    },
+    {
+      "expected": {
+        "matched": "74",
+        "value": "74.0"
+      },
+      "text": "74 yds."
+    },
+    {
+      "expected": {
+        "matched": "134",
+        "value": "134.0"
+      },
+      "text": "134 yds."
+    },
+    {
+      "expected": {
+        "matched": "188.0",
+        "value": "188.0"
+      },
+      "text": "188.0"
+    },
+    {
+      "expected": {
+        "matched": "178.2",
+        "value": "178.2"
+      },
+      "text": "178.2"
+    },
+    {
+      "expected": {
+        "matched": "114.8",
+        "value": "114.8"
+      },
+      "text": "114.8"
+    },
+    {
+      "expected": {
+        "matched": "15.3",
+        "value": "15.3"
+      },
+      "text": "15.3"
+    },
+    {
+      "expected": {
+        "matched": "109.5",
+        "value": "109.5"
+      },
+      "text": "109.5"
+    },
+    {
+      "expected": {
+        "matched": "2.1",
+        "value": "2.1"
+      },
+      "text": "2.1\u00b01>0"
+    },
+    {
+      "expected": {
+        "matched": "0.8",
+        "value": "0.8"
+      },
+      "text": "0.8"
+    },
+    {
+      "expected": {
+        "matched": "1.05",
+        "value": "1.05"
+      },
+      "text": "1.05"
+    },
+    {
+      "expected": {
+        "matched": "2.9",
+        "value": "2.9"
+      },
+      "text": "2.9\u00b0R"
+    },
+    {
+      "expected": {
+        "matched": "109",
+        "value": "109.0"
+      },
+      "text": "109 yds."
+    },
+    {
+      "expected": {
+        "matched": "188",
+        "value": "188.0"
+      },
+      "text": "188 yds."
+    },
+    {
+      "expected": {
+        "matched": "1",
+        "value": "1.0"
+      },
+      "text": "TA Player 1"
+    },
+    {
+      "expected": {
+        "matched": "130.9",
+        "value": "130.9"
+      },
+      "text": "130.9"
+    },
+    {
+      "expected": {
+        "matched": "121.8",
+        "value": "121.8"
+      },
+      "text": "121.8"
+    },
+    {
+      "expected": {
+        "matched": "88.9",
+        "value": "88.9"
+      },
+      "text": "88.9"
+    },
+    {
+      "expected": {
+        "matched": "19.5",
+        "value": "19.5"
+      },
+      "text": "19.5"
+    },
+    {
+      "expected": {
+        "matched": "87.0",
+        "value": "87.0"
+      },
+      "text": "87.0"
+    },
+    {
+      "expected": {
+        "matched": "9.8",
+        "value": "9.8"
+      },
+      "text": "9.8\u00b00>1"
+    },
+    {
+      "expected": {
+        "matched": "3.1",
+        "value": "3.1"
+      },
+      "text": "3.1\u00b0"
+    },
+    {
+      "expected": {
+        "matched": "1.02",
+        "value": "1.02"
+      },
+      "text": "1.02"
+    },
+    {
+      "expected": {
+        "matched": "6.7",
+        "value": "6.7"
+      },
+      "text": "6.7\u00b0L"
+    },
+    {
+      "expected": {
+        "matched": "69.4",
+        "value": "69.4"
+      },
+      "text": "69.4"
+    },
+    {
+      "expected": {
+        "matched": "33.6",
+        "value": "33.6"
+      },
+      "text": "33.6"
+    },
+    {
+      "expected": {
+        "matched": "83.8",
+        "value": "83.8"
+      },
+      "text": "83.8"
+    },
+    {
+      "expected": {
+        "matched": "3.4",
+        "value": "3.4"
+      },
+      "text": "3.4"
+    },
+    {
+      "expected": {
+        "matched": "93.7",
+        "value": "93.7"
+      },
+      "text": "93.7"
+    },
+    {
+      "expected": {
+        "matched": "7.7",
+        "value": "7.7"
+      },
+      "text": "7.7\u00b00>1"
+    },
+    {
+      "expected": {
+        "matched": "7.6",
+        "value": "7.6"
+      },
+      "text": "7.6\u00b0"
+    },
+    {
+      "expected": {
+        "matched": "0.89",
+        "value": "0.89"
+      },
+      "text": "0.89"
+    },
+    {
+      "expected": {
+        "matched": "0.1",
+        "value": "0.1"
+      },
+      "text": "0.1\u00b0L"
+    },
+    {
+      "expected": {
+        "matched": "18",
+        "value": "18.0"
+      },
+      "text": "18.yds."
+    },
+    {
+      "expected": {
+        "matched": "69",
+        "value": "69.0"
+      },
+      "text": "69 yds."
+    },
+    {
+      "expected": {
+        "matched": "1",
+        "value": "1.0"
+      },
+      "text": "OT DATA Player 1"
+    },
+    {
+      "expected": {
+        "matched": "135.1",
+        "value": "135.1"
+      },
+      "text": "135.1"
+    },
+    {
+      "expected": {
+        "matched": "124.7",
+        "value": "124.7"
+      },
+      "text": "124.7"
+    },
+    {
+      "expected": {
+        "matched": "91.1",
+        "value": "91.1"
+      },
+      "text": "91.1"
+    },
+    {
+      "expected": {
+        "matched": "18.2",
+        "value": "18.2"
+      },
+      "text": "18.2"
+    },
+    {
+      "expected": {
+        "matched": "98.2",
+        "value": "98.2"
+      },
+      "text": "98.2"
+    },
+    {
+      "expected": {
+        "matched": "4.5",
+        "value": "4.5"
+      },
+      "text": "4.5\u00b00>1"
+    },
+    {
+      "expected": {
+        "matched": "0.93",
+        "value": "0.93"
+      },
+      "text": "0.93"
+    },
+    {
+      "expected": {
+        "matched": "1.0",
+        "value": "1.0"
+      },
+      "text": "1.0\u00b0R"
+    },
+    {
+      "expected": {
+        "matched": "72",
+        "value": "72.0"
+      },
+      "text": "72 yds."
+    },
+    {
+      "expected": {
+        "matched": "135",
+        "value": "135.0"
+      },
+      "text": "135 yds."
+    },
+    {
+      "expected": {
+        "matched": "1",
+        "value": "1.0"
+      },
+      "text": "T DATA Player 1"
+    },
+    {
+      "expected": {
+        "matched": "131.5",
+        "value": "131.5"
+      },
+      "text": "131.5"
+    },
+    {
+      "expected": {
+        "matched": "126.1",
+        "value": "126.1"
+      },
+      "text": "126.1"
+    },
+    {
+      "expected": {
+        "matched": "89.8",
+        "value": "89.8"
+      },
+      "text": "89.8"
+    },
+    {
+      "expected": {
+        "matched": "22.4",
+        "value": "22.4"
+      },
+      "text": "22.4\u00b0"
+    },
+    {
+      "expected": {
+        "matched": "103.6",
+        "value": "103.6"
+      },
+      "text": "103.6"
+    },
+    {
+      "expected": {
+        "matched": "1.1",
+        "value": "1.1"
+      },
+      "text": "1.1\u00b00>1"
+    },
+    {
+      "expected": {
+        "matched": "3.9",
+        "value": "3.9"
+      },
+      "text": "3.9"
+    },
+    {
+      "expected": {
+        "matched": "0.87",
+        "value": "0.87"
+      },
+      "text": "0.87"
+    },
+    {
+      "expected": {
+        "matched": "73",
+        "value": "73.0"
+      },
+      "text": "73 yds."
+    },
+    {
+      "expected": {
+        "matched": "132",
+        "value": "132.0"
+      },
+      "text": "132 yds."
+    },
+    {
+      "expected": {
+        "matched": "109.7",
+        "value": "109.7"
+      },
+      "text": "109.7"
+    },
+    {
+      "expected": {
+        "matched": "101.9",
+        "value": "101.9"
+      },
+      "text": "101.9"
+    },
+    {
+      "expected": {
+        "matched": "78.9",
+        "value": "78.9"
+      },
+      "text": "78.9"
+    },
+    {
+      "expected": {
+        "matched": "22.4",
+        "value": "22.4"
+      },
+      "text": "22.4"
+    },
+    {
+      "expected": {
+        "matched": "103.8",
+        "value": "103.8"
+      },
+      "text": "103.8"
+    },
+    {
+      "expected": {
+        "matched": "3.7",
+        "value": "3.7"
+      },
+      "text": "3.7\u00b00>1"
+    },
+    {
+      "expected": {
+        "matched": "10.2",
+        "value": "10.2"
+      },
+      "text": "10.2"
+    },
+    {
+      "expected": {
+        "matched": "0.76",
+        "value": "0.76"
+      },
+      "text": "0.76"
+    },
+    {
+      "expected": {
+        "matched": "6.5",
+        "value": "6.5"
+      },
+      "text": "6.5\u00b0R"
+    },
+    {
+      "expected": {
+        "matched": "56",
+        "value": "56.0"
+      },
+      "text": "56 yds."
+    },
+    {
+      "expected": {
+        "matched": "110",
+        "value": "110.0"
+      },
+      "text": "110 yds."
+    },
+    {
+      "expected": {
+        "matched": "159.2",
+        "value": "159.2"
+      },
+      "text": "159.2"
+    },
+    {
+      "expected": {
+        "matched": "137.7",
+        "value": "137.7"
+      },
+      "text": "137.7"
+    },
+    {
+      "expected": {
+        "matched": "11.4",
+        "value": "11.4"
+      },
+      "text": "11.4"
+    },
+    {
+      "expected": {
+        "matched": "105.5",
+        "value": "105.5"
+      },
+      "text": "105.5"
+    },
+    {
+      "expected": {
+        "matched": "0.5",
+        "value": "0.5"
+      },
+      "text": "0.5\u00b01>0"
+    },
+    {
+      "expected": {
+        "matched": "2.4",
+        "value": "2.4"
+      },
+      "text": "2.4\u00b0"
+    },
+    {
+      "expected": {
+        "matched": "0.98",
+        "value": "0.98"
+      },
+      "text": "0.98"
+    },
+    {
+      "expected": {
+        "matched": "1.8",
+        "value": "1.8"
+      },
+      "text": "1.8\u00b0L"
+    },
+    {
+      "expected": {
+        "matched": "80",
+        "value": "80.0"
+      },
+      "text": "80 yds."
+    },
+    {
+      "expected": {
+        "matched": "159",
+        "value": "159.0"
+      },
+      "text": "159 yds."
+    },
+    {
+      "expected": {
+        "matched": "154.1",
+        "value": "154.1"
+      },
+      "text": "154.1"
+    },
+    {
+      "expected": {
+        "matched": "144.5",
+        "value": "144.5"
+      },
+      "text": "144.5"
+    },
+    {
+      "expected": {
+        "matched": "100.9",
+        "value": "100.9"
+      },
+      "text": "100.9"
+    },
+    {
+      "expected": {
+        "matched": "17.0",
+        "value": "17.0"
+      },
+      "text": "17.0"
+    },
+    {
+      "expected": {
+        "matched": "105.7",
+        "value": "105.7"
+      },
+      "text": "105.7"
+    },
+    {
+      "expected": {
+        "matched": "2.3",
+        "value": "2.3"
+      },
+      "text": "2.3\u00b00>1"
+    },
+    {
+      "expected": {
+        "matched": "6.9",
+        "value": "6.9"
+      },
+      "text": "6.9"
+    },
+    {
+      "expected": {
+        "matched": "0.95",
+        "value": "0.95"
+      },
+      "text": "0.95"
+    },
+    {
+      "expected": {
+        "matched": "4.6",
+        "value": "4.6"
+      },
+      "text": "4.6\u00b0R"
+    },
+    {
+      "expected": {
+        "matched": "85",
+        "value": "85.0"
+      },
+      "text": "85 yds."
+    },
+    {
+      "expected": {
+        "matched": "154",
+        "value": "154.0"
+      },
+      "text": "154 yds."
+    },
+    {
+      "expected": {
+        "matched": "1",
+        "value": "1.0"
+      },
+      "text": "SHOTDATA Player 1"
+    },
+    {
+      "expected": {
+        "matched": "122.7",
+        "value": "122.7"
+      },
+      "text": "122.7"
+    },
+    {
+      "expected": {
+        "matched": "107.2",
+        "value": "107.2"
+      },
+      "text": "107.2"
+    },
+    {
+      "expected": {
+        "matched": "85.1",
+        "value": "85.1"
+      },
+      "text": "85.1"
+    },
+    {
+      "expected": {
+        "matched": "15.9",
+        "value": "15.9"
+      },
+      "text": "15.9"
+    },
+    {
+      "expected": {
+        "matched": "85.0",
+        "value": "85.0"
+      },
+      "text": "85.0"
+    },
+    {
+      "expected": {
+        "matched": "1.3",
+        "value": "1.3"
+      },
+      "text": "1.3\u00b00>1"
+    },
+    {
+      "expected": {
+        "matched": "1.3",
+        "value": "1.3"
+      },
+      "text": "1.3\u00b0"
+    },
+    {
+      "expected": {
+        "matched": "0.0",
+        "value": "0.0"
+      },
+      "text": "0.0\u00b0L"
+    },
+    {
+      "expected": {
+        "matched": "61",
+        "value": "61.0"
+      },
+      "text": "61 yds."
+    },
+    {
+      "expected": {
+        "matched": "123",
+        "value": "123.0"
+      },
+      "text": "123 yds."
+    },
+    {
+      "expected": {
+        "matched": "1",
+        "value": "1.0"
+      },
+      "text": "1"
+    },
+    {
+      "expected": {
+        "matched": "146.0",
+        "value": "146.0"
+      },
+      "text": "146.0"
+    },
+    {
+      "expected": {
+        "matched": "95.9",
+        "value": "95.9"
+      },
+      "text": "95.9"
+    },
+    {
+      "expected": {
+        "matched": "17.5",
+        "value": "17.5"
+      },
+      "text": "17.5"
+    },
+    {
+      "expected": {
+        "matched": "90.2",
+        "value": "90.2"
+      },
+      "text": "90.2"
+    },
+    {
+      "expected": {
+        "matched": "135.8",
+        "value": "135.8"
+      },
+      "text": "135.8"
+    },
+    {
+      "expected": {
+        "matched": "1.3",
+        "value": "1.3"
+      },
+      "text": "1.3\u00b01>0"
+    },
+    {
+      "expected": {
+        "matched": "4.6",
+        "value": "4.6"
+      },
+      "text": "4.6"
+    },
+    {
+      "expected": {
+        "matched": "1.06",
+        "value": "1.06"
+      },
+      "text": "1.06"
+    },
+    {
+      "expected": {
+        "matched": "5.9",
+        "value": "5.9"
+      },
+      "text": "5.9\u00b0R"
+    },
+    {
+      "expected": {
+        "matched": "79",
+        "value": "79.0"
+      },
+      "text": "79 yds."
+    },
+    {
+      "expected": {
+        "matched": "146",
+        "value": "146.0"
+      },
+      "text": "146 yds."
+    },
+    {
+      "expected": null,
+      "text": ""
+    },
+    {
+      "expected": null,
+      "text": "---"
+    },
+    {
+      "expected": null,
+      "text": "abc"
+    },
+    {
+      "expected": {
+        "matched": "128.1",
+        "value": "128.1"
+      },
+      "text": "128.1"
+    },
+    {
+      "expected": {
+        "matched": "128.1",
+        "value": "128.1"
+      },
+      "text": "128.1 yds"
+    },
+    {
+      "expected": {
+        "matched": "+3.0",
+        "value": "3.0"
+      },
+      "text": "+3.0"
+    },
+    {
+      "expected": {
+        "matched": "-0.0",
+        "value": "-0.0"
+      },
+      "text": "-0.0"
+    },
+    {
+      "expected": {
+        "matched": "5",
+        "value": "5.0"
+      },
+      "text": ".5"
+    },
+    {
+      "expected": {
+        "matched": "5",
+        "value": "5.0"
+      },
+      "text": "-.5"
+    },
+    {
+      "expected": {
+        "matched": "5",
+        "value": "5.0"
+      },
+      "text": "- 5"
+    },
+    {
+      "expected": {
+        "matched": "-5",
+        "value": "-5.0"
+      },
+      "text": "--5"
+    },
+    {
+      "expected": {
+        "matched": "-5",
+        "value": "-5.0"
+      },
+      "text": "+-5"
+    },
+    {
+      "expected": {
+        "matched": "1",
+        "value": "1.0"
+      },
+      "text": "1."
+    },
+    {
+      "expected": {
+        "matched": "1.2",
+        "value": "1.2"
+      },
+      "text": "1.2.3"
+    },
+    {
+      "expected": {
+        "matched": "1",
+        "value": "1.0"
+      },
+      "text": "1e5"
+    },
+    {
+      "expected": {
+        "matched": "5,991",
+        "value": "5991.0"
+      },
+      "text": "5,991"
+    },
+    {
+      "expected": {
+        "matched": "5,991",
+        "value": "5991.0"
+      },
+      "text": "5,991 rpm"
+    },
+    {
+      "expected": {
+        "matched": "5,991",
+        "value": "5991.0"
+      },
+      "text": "5,991rpm"
+    },
+    {
+      "expected": {
+        "matched": "5,991",
+        "value": "5991.0"
+      },
+      "text": "5,991_"
+    },
+    {
+      "expected": {
+        "matched": "5,991",
+        "value": "5991.0"
+      },
+      "text": "5,991\u00e9"
+    },
+    {
+      "expected": {
+        "matched": "5,991",
+        "value": "5991.0"
+      },
+      "text": "5,991\u00b0"
+    },
+    {
+      "expected": {
+        "matched": "5,991",
+        "value": "5991.0"
+      },
+      "text": "5,991\u001c"
+    },
+    {
+      "expected": {
+        "matched": "1,234,567",
+        "value": "1234567.0"
+      },
+      "text": "1,234,567"
+    },
+    {
+      "expected": {
+        "matched": "1,234,567.5",
+        "value": "1234567.5"
+      },
+      "text": "1,234,567.5"
+    },
+    {
+      "expected": {
+        "matched": "12,345.6",
+        "value": "12345.6"
+      },
+      "text": "12,345.6"
+    },
+    {
+      "expected": {
+        "matched": "1,234,56",
+        "value": "1234.56"
+      },
+      "text": "1,234,56"
+    },
+    {
+      "expected": {
+        "matched": "1,000,000",
+        "value": "1000000.0"
+      },
+      "text": "1,000,000"
+    },
+    {
+      "expected": {
+        "matched": "12,34",
+        "value": "12.34"
+      },
+      "text": "12,34"
+    },
+    {
+      "expected": {
+        "matched": "1,2345",
+        "value": "1.2345"
+      },
+      "text": "1,2345"
+    },
+    {
+      "expected": null,
+      "text": "1,2,3"
+    },
+    {
+      "expected": null,
+      "text": "1,2.5"
+    },
+    {
+      "expected": {
+        "matched": "\u0661\u0662\u0663",
+        "value": "123.0"
+      },
+      "text": "\u0661\u0662\u0663"
+    },
+    {
+      "expected": {
+        "matched": "\uff11\uff12.\uff15",
+        "value": "12.5"
+      },
+      "text": "\uff11\uff12.\uff15"
+    },
+    {
+      "expected": {
+        "matched": "1\u06623",
+        "value": "123.0"
+      },
+      "text": "1\u06623"
+    },
+    {
+      "expected": {
+        "matched": "\u0663,\u0664\u0665\u0666",
+        "value": "3456.0"
+      },
+      "text": "\u0663,\u0664\u0665\u0666"
+    },
+    {
+      "expected": null,
+      "text": "\u00b2"
+    },
+    {
+      "expected": {
+        "matched": "4",
+        "value": "4.0"
+      },
+      "text": "x\u00b2 = 4"
+    }
+  ],
+  "id": "screen/units/first_number",
+  "provenance": {
+    "kind": "screen",
+    "note": "`_first_number`: the first `[-+]?\\d[\\d,]*(?:\\.\\d+)?`, `,` dropped before three digits and a word boundary and read as `.` otherwise, then `float()`; `None` where nothing matches or `float()` refuses. `value` is a `repr`",
+    "oracle": "python",
+    "python_version": "3.13.3",
+    "source": "src/golf_coach/launch_monitor/screen/parser.py::_first_number"
+  },
+  "screen_parser_version": 0
+}

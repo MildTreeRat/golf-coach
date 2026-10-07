@@ -3,11 +3,22 @@
 //! ADR-032 §3's three portability edges. They are one module rather than three because they are
 //! one problem: all three reach the **strings** `docs/CONFORMANCE.md` §3 compares exactly, so
 //! getting any of them wrong fails a vector on a sentence a golfer was shown rather than on a
-//! number, and the failure looks nothing like its cause. Nothing here is called from elsewhere in
-//! this crate yet — P3 builds it before the engine so the edges are solved once instead of
-//! rediscovered at each of the seven call sites downstream.
+//! number, and the failure looks nothing like its cause. M22 P3 built it before the engine had a
+//! line in it, so the edges were solved once instead of rediscovered at each of the seven call
+//! sites downstream.
 //!
-//! The gate is `spec/vectors/format/`, run by `tests/format.rs`: 2,681 cases recorded from CPython
+//! # A crate of its own since M34 P1
+//!
+//! It was `crates/analysis/src/pyfmt.rs`, and it moved without a function changing. What moved it
+//! is that the callers are no longer all inside `analysis`. `crates/feedback` may not import
+//! `analysis` (ADR-008 as a cargo edge), so for one fallback sentence it had re-spelled
+//! [`percent`] beside a test holding the two spellings to one rule. `crates/screen` is in the
+//! same position with a whole parser's worth of `%g`, `.Nf` and banker's rounding, and a second
+//! copy of this module is exactly the drift it exists to prevent. Depending on nothing of ours
+//! puts it below every crate that has to say what Python said. No crate re-exports it, so each
+//! one names it by the same path.
+//!
+//! The gate is `spec/vectors/format/`, run by `tests/format.rs`: every case recorded from CPython
 //! itself, compared **exactly** with no tolerance at all, because nothing in this module computes
 //! a measurement — a rounding rule is either the same rule or it is a different one.
 //!
@@ -35,13 +46,25 @@
 //! # A fourth edge landed here in P8, and it is not a string
 //!
 //! [`hypot`] is CPython's `math.hypot`, which Rust's std does not have in the three-argument form the
-//! ball-flight integrator calls it in. It is here rather than in [`crate::flight`] for the reason this
+//! ball-flight integrator calls it in. It is here rather than in `analysis::flight` for the reason this
 //! module exists at all — one home, so the next call site does not re-solve it differently — and its
 //! own doc carries the measurement. What makes it belong beside the other three is that it is the
 //! same *kind* of thing: a CPython semantic Rust's standard library does not reproduce, whose
 //! difference reaches a value `docs/CONFORMANCE.md` §3 compares **exactly**. Where the first three
 //! reach a sentence, this one reaches a **bool** — `AeroCoefficients::clamped`, at a spin the solve
 //! constructs to sit exactly on the coefficient table's last row.
+//!
+//! # The screen parser's edges, from M34 P2
+//!
+//! The frozen screen parser leans on CPython in places the engine never did, and each is the same
+//! kind of thing as the four above: a CPython semantic whose Rust look-alike is close enough to
+//! pass a glance and differs where it is measured. [`str_repr`] is `{text!r}` inside a warning;
+//! [`floor_div`] is `_Cell.text`'s line bucket; [`upper`], [`split`], [`strip`] and
+//! [`strip_space`] are its Unicode string handling, all four standing on [`is_space`]; and [`sum`]
+//! is `_score`'s mean, compensated since CPython 3.12. Each is gated by its own table in
+//! `spec/vectors/format/`, recorded from the interpreter that recorded everything else, and each
+//! doc says what the Rust call it replaces gets wrong. `difflib`'s `ratio` is the sixth of the
+//! parser's edges and lives in `crates/screen`, which is its only caller.
 
 /// Python's `round(x)` — the one-argument form, which is half-to-**even** where Rust's
 /// [`f64::round`] is half-away-from-zero.
@@ -563,6 +586,217 @@ impl<V> FromIterator<(String, V)> for OrderedMap<V> {
         }
         out
     }
+}
+
+/// Python's `repr(s)` for a `str` — what every `{text!r}` in a parser warning writes. [M34 P2]
+///
+/// Warnings are compared exactly, and three of the parser's carry a `!r`: a cell's text, a missing
+/// label, and the screen's title. Rust's `{:?}` is the call a port reaches for, and over the
+/// `str_repr` table as recorded it gave a different string on 272 of 274 cases — agreeing only on
+/// the two where CPython itself chose double quotes — for four separate reasons:
+///
+/// 1. **The quote.** `{:?}` always writes `"`. CPython writes `'` unless the text holds a `'` and
+///    no `"`, and then writes `"` — so `it's` is `"it's"` and `say "hi"` is `'say "hi"'`.
+/// 2. **Which quote is escaped.** Only the one CPython chose. `{:?}` escapes every `"` and no `'`.
+/// 3. **The escape spelling.** CPython writes `\x00`, `\x1b`, `\xad`, `​` and `\U000e0001`,
+///    with lowercase hex padded to two, four or eight digits by the code point's width. Rust writes
+///    `\0` and `\u{1b}`.
+/// 4. **A combining mark.** Rust's `Debug` escapes a grapheme extender wherever it stands, so `é`
+///    spelled `e` + U+0301 comes out as `e\u{301}`; CPython keeps it, because Mn is printable.
+///
+/// Everything else in CPython's `unicode_repr` is ported as written: `\\`, `\t`, `\n` and `\r` by
+/// name, other C0 controls and DEL as `\xhh`, printable ASCII as itself, and non-ASCII kept or
+/// escaped by [`is_printable`].
+pub fn str_repr(text: &str) -> String {
+    let quote = if text.contains('\'') && !text.contains('"') {
+        '"'
+    } else {
+        '\''
+    };
+    let mut out = String::with_capacity(text.len() + 2);
+    out.push(quote);
+    for c in text.chars() {
+        match c {
+            '\\' => out.push_str("\\\\"),
+            c if c == quote => {
+                out.push('\\');
+                out.push(c);
+            }
+            '\t' => out.push_str("\\t"),
+            '\n' => out.push_str("\\n"),
+            '\r' => out.push_str("\\r"),
+            c if c < ' ' || c == '\x7f' => out.push_str(&format!("\\x{:02x}", c as u32)),
+            c if c.is_ascii() || is_printable(c) => out.push(c),
+            c => {
+                let code = c as u32;
+                let escaped = if code <= 0xff {
+                    format!("\\x{code:02x}")
+                } else if code <= 0xffff {
+                    format!("\\u{code:04x}")
+                } else {
+                    format!("\\U{code:08x}")
+                };
+                out.push_str(&escaped);
+            }
+        }
+    }
+    out.push(quote);
+    out
+}
+
+/// CPython's `Py_UNICODE_ISPRINTABLE` for a non-ASCII character: false for the categories `Cc`,
+/// `Cf`, `Cs`, `Co`, `Cn`, `Zl`, `Zp` and `Zs`.
+///
+/// **Read off `core`'s own table rather than carried as one here**, because that table is built from
+/// exactly that rule (`library/core/src/unicode/printable.py`) and is not public. `str::escape_debug`
+/// is the door to it: past the first character it escapes a character only when that table says it
+/// is not printable, and — unlike `char::escape_debug` and `{:?}` — leaves a grapheme extender
+/// alone. So a probe of `a` followed by the character comes back unchanged exactly when CPython
+/// would print the character as itself.
+///
+/// The one place the two can differ is the Unicode version under each table — 16.0 in Rust 1.87,
+/// 15.1 in CPython 3.13 — and measured over every code point that is all they differ by: they agree
+/// on everything 15.1 had assigned, and part on exactly the 5,185 characters 16.0 added, which Rust
+/// prints and CPython escapes as unassigned. None is a character a launch monitor prints, so the
+/// table carries none, and the gap is left standing rather than closed with a copy of CPython's
+/// table. A toolchain on a later Unicode widens it the same way, and only there.
+fn is_printable(c: char) -> bool {
+    let mut probe = String::with_capacity(8);
+    probe.push('a');
+    probe.push(c);
+    probe.escape_debug().skip(1).eq(std::iter::once(c))
+}
+
+/// Python's `a // b` on two floats — CPython's `float_floor_div`, not `(a / b).floor()`. [M34 P2]
+///
+/// `_Cell.text` sorts a tile's value boxes into lines by `int(center_y // bucket)`, where the bucket
+/// is the label's height times 0.6. CPython computes `//` from `fmod`: the quotient is
+/// `(a - fmod(a, b)) / b`, corrected by one when the remainder's sign disagrees with `b`'s, then
+/// floored and nudged up if the floor fell more than a half below it. That is exact where `a / b`
+/// is not, and the two part company on precisely the parser's geometry: a center sitting on a
+/// multiple of a bucket the binary point cannot represent. `21.0 // 4.2` is `4.0` — the remainder
+/// is `4.199999999999999` — while `21.0 / 4.2` rounds to exactly `5.0`, which is a 7 px label and a
+/// value box centred at y=21, put on a different line. Over the integer-pixel grid PaddleOCR
+/// returns (centers on the half-pixel to 2,000, labels 1-80 px tall) that is 300 of 320,080 pairs,
+/// and over the same span drawn uniformly at random it is none of 200,000 — so the `floor_div`
+/// table carries all 300, and `(a / b).floor()` fails every one of them, as an integer too.
+///
+/// A zero divisor panics, as CPython raises `ZeroDivisionError`; the parser's bucket is floored at
+/// `1e-6` first and never reaches it. A zero quotient keeps the sign of `a / b`, so `-0.0 // 0.6`
+/// is `-0.0`, which `int()` then forgets.
+pub fn floor_div(a: f64, b: f64) -> f64 {
+    assert!(b != 0.0, "float floor division by zero");
+    let remainder = a % b;
+    let mut div = (a - remainder) / b;
+    // `if (mod)` in C is true for a NaN too, which `!= 0.0` keeps.
+    if remainder != 0.0 && ((b < 0.0) != (remainder < 0.0)) {
+        div -= 1.0;
+    }
+    if div != 0.0 {
+        let floored = div.floor();
+        if div - floored > 0.5 {
+            floored + 1.0
+        } else {
+            floored
+        }
+    } else {
+        0.0f64.copysign(a / b)
+    }
+}
+
+/// Python's whitespace: `str.isspace`, `str.split()`, `str.strip()` and `re`'s `\s` all use this
+/// one set (`Py_UNICODE_ISSPACE`). [M34 P2]
+///
+/// It is Rust's [`char::is_whitespace`] plus **the four C0 separators U+001C–U+001F**, which Python
+/// counts as whitespace (their bidirectional class is `B` or `S`) and Unicode's `White_Space`
+/// property does not. Measured over every code point against the `text_case` table's two whole-set
+/// cases: those four are the only difference, in either direction. A port on `split_whitespace`
+/// therefore reads a cell holding `12\x1c3` as one token where Python reads two.
+pub fn is_space(c: char) -> bool {
+    c.is_whitespace() || matches!(c, '\x1c'..='\x1f')
+}
+
+/// Python's `str.upper()`. [M34 P2]
+///
+/// Rust's [`str::to_uppercase`] is the same full mapping — `ß` to `SS`, `ﬁ` to `FI`, `ŉ` to `ʼN`,
+/// three characters out of `ΐ` — because both apply `SpecialCasing.txt`'s unconditional rules on
+/// top of `UnicodeData.txt`, and neither has a context-sensitive rule for upper case. What differs
+/// is only the Unicode version underneath (16.0 against 15.1, as in [`is_printable`]), and measured
+/// over every code point it is 27 of them: 25 that 16.0 assigned, Garay's letters among them, and
+/// two older ones it gave a new capital, `ƛ` (U+019B) and `ɤ` (U+0264). Rust maps all 27 and
+/// CPython 3.13 none, and none is on a launch monitor's screen. A function of its own all the same,
+/// so the parser names one CPython operation in one place, and the day the two drift the fix has an
+/// address.
+pub fn upper(text: &str) -> String {
+    text.to_uppercase()
+}
+
+/// Python's `str.split()` with no argument: split on runs of [`is_space`], dropping empty pieces,
+/// so leading and trailing whitespace produce nothing. [M34 P2]
+///
+/// `split_whitespace` is the same algorithm on [`char::is_whitespace`], so it differs exactly where
+/// that does — on U+001C–U+001F.
+pub fn split(text: &str) -> impl Iterator<Item = &str> {
+    text.split(is_space).filter(|piece| !piece.is_empty())
+}
+
+/// Python's `str.strip()` with no argument. [M34 P2]
+///
+/// [`str::trim`] differs on U+001C–U+001F, as [`split`] does. `_Cell.text` strips every box before
+/// joining a tile's text, so a box of only a separator is dropped in Python and kept by `trim`.
+pub fn strip(text: &str) -> &str {
+    text.trim_matches(is_space)
+}
+
+/// Python's `re.sub(r"\s+", "", text)` — every whitespace character deleted. [M34 P2]
+///
+/// `_is_blank`'s comparison form. `\s` in a `str` pattern is [`is_space`], measured whole in the
+/// `text_case` table, so this needs no regex: deleting every run of a class is deleting every member.
+pub fn strip_space(text: &str) -> String {
+    text.chars().filter(|&c| !is_space(c)).collect()
+}
+
+/// Python's `sum(values)` over floats — **compensated** since CPython 3.12. [M34 P2]
+///
+/// CPython 3.12 replaced the left-to-right float sum with Neumaier's improvement of Kahan's: the
+/// running total keeps a separate compensation term, fed by whichever addend lost low bits, and
+/// adds it back once at the end. So `sum([0.1] * 10)` is `1.0` where `values.iter().sum()` gives
+/// `0.9999999999999999`, and over the `sum` table as recorded the two differed on 82 of 149 lists:
+/// 80 by the compensation, and the two lists of negative zeros by the start value below.
+///
+/// Transcribed from `builtin_sum_impl`, details included:
+///
+/// - The start is the `int` 0, which the first float absorbs as `0 + x`: so the running total
+///   begins at `0.0 + first` and the loop runs over the rest. `0 + -0.0` is `0.0`, which is why a
+///   list of negative zeros sums to `0.0` here, where Rust's `Sum` (which starts from `-0.0`)
+///   answers `-0.0`.
+/// - The compensation is added back only if it is non-zero and finite, so an overflowed or
+///   infinite total stays infinite instead of becoming `inf + nan`.
+/// - An empty list is CPython's `int` 0; this returns `0.0`, the float the parser's
+///   `sum(ocr) / len(ocr) if ocr else 0.0` would never divide anyway.
+///
+/// Where this bites is narrower than it looks. A real OCR confidence is a float32 widened to a
+/// float64, and fifty 24-bit values sum *exactly* in 53 bits, so compensation never moves a photo's
+/// mean; the synthetic screens' constant `0.95` is what it moves (`format/sum` carries both).
+pub fn sum(values: &[f64]) -> f64 {
+    let Some((&first, rest)) = values.split_first() else {
+        return 0.0;
+    };
+    let mut total = 0.0 + first;
+    let mut compensation = 0.0f64;
+    for &x in rest {
+        let t = total + x;
+        if total.abs() >= x.abs() {
+            compensation += (total - t) + x;
+        } else {
+            compensation += (x - t) + total;
+        }
+        total = t;
+    }
+    if compensation != 0.0 && compensation.is_finite() {
+        total += compensation;
+    }
+    total
 }
 
 #[cfg(test)]

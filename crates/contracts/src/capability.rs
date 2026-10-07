@@ -27,8 +27,9 @@
 //! `devices.json` sits beside this crate's `Cargo.toml` and is read by `include_str!`, which keeps
 //! ADR-032 §5's one copy on disk. It is not beside `profiles.json` because nothing Python reads it.
 //! Its field names are `ShotData` keys, never screen labels: turning a label into a key is the
-//! parser's business (`launch_monitor/screen/profiles.json`, and `crates/screen` from M34). Holding
-//! `hd_golf`'s entry equal to its profile is M34's pin, because the profile gains its V tile there.
+//! parser's business (`crates/screen/profiles.json`, the Rust fork of the frozen lab's copy, M34).
+//! `hd_golf`'s entry is held equal to that profile's targets by `crates/screen/tests/capability.rs`,
+//! on that crate's side because this one cannot see it.
 
 use std::collections::BTreeSet;
 use std::sync::OnceLock;
@@ -65,8 +66,8 @@ pub struct DeclaredField {
     #[serde(rename = "use")]
     pub field_use: FieldUse,
     /// Why, where the declaration needs a reason: always on [`FieldUse::ShownOnly`], and on an
-    /// analysed field only when its declaration is not what the parser does today
-    /// (`impact_position_v`, which no profile locates before M34).
+    /// analysed field only when the parsers do not all deliver what it declares
+    /// (`impact_position_v`, which the Rust parser locates from M34 and the frozen lab's never does).
     #[serde(default)]
     pub note: Option<String>,
 }

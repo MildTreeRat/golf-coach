@@ -164,8 +164,11 @@ python scripts/conformance.py list
 python scripts/conformance.py regenerate --schemas-only | --format-only
 #   the Python-owned schema roots, or the format table from CPython. The engine and stage
 #   families are refused, exit 2: a rebuild from frozen Python would overwrite Rust's record
+python scripts/conformance.py regenerate --screen-once
+#   recorded the screen family from frozen Python and PaddleOCR, once (M34 P4: the `ocr` extra
+#   and data/). It refuses with exit 2 whenever any screen vector exists, naming the Rust verb
 
-# The Rust half — seven crates, and only one of them has a Python caller. `crates/trigger` is
+# The Rust half — nine crates, and only one of them has a Python caller. `crates/trigger` is
 # ball-strike detection and the clip-cutting rules around it (M20), and it is the one:
 # `audio/trigger.py` pipes PCM to `golf-trigger`. `crates/capture` is the camera edge (M21).
 # `crates/{contracts,analysis,feedback,core}` are the engine port (M22) — a second
@@ -176,11 +179,20 @@ python scripts/conformance.py regenerate --schemas-only | --format-only
 # `crates/contracts` holds the one module with no Python twin, the device capability model. `crates/pose` is the sidecar boundary
 # (M23, ADR-033) and runs the other way round: it *spawns* Python, one warm
 # `golf_coach.pose.worker` per pool slot, and speaks NDJSON to it. It has no caller either —
-# `api/pipeline.py` still poses in-process. `cargo test` runs every vector family
-# `conformance.py check` defers: audio against `trigger`, the format table and all seven stages
-# against `analysis`, every vector's shapes against `contracts`, and all 21 engine vectors
-# **end to end** against `core`. No MediaPipe in any of it: `crates/pose`'s tests drive a stub
-# worker, and the real one is behind `GOLF_POSE_REAL_WORKER`.
+# `api/pipeline.py` still poses in-process. `crates/screen` (M34) is the launch-monitor screen
+# reader: OCR boxes in, a stamped `ShotData` out, through the tie rule and a forked
+# `profiles.json` that has the `Impact Position V` tile. It does no OCR; the phone brings Vision's
+# boxes (M38), and the lab will bring `ort`'s (§M29). It is wired to nothing, and the lab still
+# reads every photo through `launch_monitor/screen/importer.py`, so the two read the two label-fix
+# shots differently, which is declared. `screen::golfer_warnings` is what a Rust surface shows a
+# golfer: the warnings without `no tile found for`, which is about the layout, not the photo.
+# `crates/pyfmt` (M34) is CPython's formatting, rounding, `repr`, `//`, Unicode and `sum`,
+# solved once below `analysis`, `feedback` and `screen`. `cargo test` runs every vector family
+# `conformance.py check` defers: audio against `trigger`, the format table against `pyfmt` and
+# `screen`, all seven stages against `analysis`, the screen family against `screen`, every
+# vector's shapes against `contracts`, and all 21 engine vectors **end to end** against `core`.
+# No MediaPipe in any of it: `crates/pose`'s tests drive a stub worker, and the real one is
+# behind `GOLF_POSE_REAL_WORKER`.
 cargo build --release          # api/pipeline.py needs this before it can detect a strike
 cargo test
 cargo run --bin golf-core -- run < vector.json   # the port's answer to one vector, on stdout —
@@ -192,6 +204,12 @@ cargo run --release --bin golf-core -- rerecord --declare spec/declarations/v17.
 #   declaration does not name; what is written is the committed file with only the declared
 #   paths replaced, plus a `provenance.rerecords` entry saying which. A second run writes
 #   nothing. --dry-run prints the report, which is what gets reviewed, never `git diff`
+cargo run --release --bin golf-core -- rerecord --declare spec/declarations/screen-v1.json [--dry-run]
+#   the same verb on the screen family (M34): the declaration's `screen_parser_version` picks it,
+#   and a screen declaration may also name the keys it removes
+cargo run --bin golf-core -- parse-screen < spec/vectors/screen/corpus/2026-08-23-2.json
+#   the screen reader's seam: a screen vector, or its `input`, in; the `ShotData` out, or `null`
+#   for a failed read (exit 0). An unknown device exits 1. No Python end to diff it against
 python scripts/trigger_replay.py [--sweep] [--concat] [--id SESSION/SWING]
 golf-capture list [--formats]  # the cameras this host can see, with their identities
 #   `no cameras` is a successful answer and exits 0 — it is also the only one this repo has

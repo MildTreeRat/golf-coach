@@ -48,6 +48,8 @@
 //! the *committed* document so every undeclared value keeps the bits Python recorded, and written
 //! down in the vector's own `provenance`. Its run, [`rerecord::plan`] and [`rerecord::Run::write`],
 //! walks `spec/vectors/` with them — every vector gated and composed before any file is written.
+//! Since M34 P7 it re-records the screen family too, through [`rerecord::run_screen`], one family
+//! per run as the declaration's version key says.
 //!
 //! # `ANALYSIS_VERSION` is stamped here once, and only through the gate
 //!

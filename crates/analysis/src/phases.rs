@@ -24,7 +24,7 @@
 //! languages take the first one.
 //!
 //! **`round` is half-to-even.** Two sites here round a frame count — the stall length and the tempo
-//! fallback — and both go through [`crate::pyfmt::round_index`].
+//! fallback — and both go through [`pyfmt::round_index`].
 //!
 //! # What is not ported yet, and why
 //!
@@ -38,7 +38,7 @@
 use contracts::keypoints::{FrameKeypoints, PoseLandmark};
 use contracts::swing::{PhaseSegment, SwingPhase};
 
-use crate::pyfmt::round_index;
+use pyfmt::round_index;
 
 /// The wrist to track from a face-on camera. Measured, not assumed: over 1,045 labelled GolfDB
 /// clips the rule does better on the lead wrist face-on (9%/7% failure against 17%/10%) even though

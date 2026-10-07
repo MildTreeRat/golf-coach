@@ -1,0 +1,546 @@
+{
+  "expected": {
+    "label_ratio": 0.9333333333333333,
+    "parsed": {
+      "confidence": 0.8822722844158608,
+      "raw_fields": {
+        "Ball Speed": "114.8 mph",
+        "Carry": "178.2 yds",
+        "Club Face Angle": "0.8 Open",
+        "Club Path": "2.1°1>0",
+        "Club Speed": "109.5 mph",
+        "Horizontal Angle": "2.9°R",
+        "Impact Position": "HEEL",
+        "Impact Position V": "",
+        "Launch Angle": "15.3",
+        "Shot Distance": "188.0 yds",
+        "Shot Type": "SLIGHT FADE",
+        "Smash Factor": "1.05",
+        "Spin": "",
+        "Spin Axis": ""
+      },
+      "values": {
+        "ball_speed": 114.8,
+        "carry_distance": 178.2,
+        "club_face_angle": 0.8,
+        "club_head_speed": 109.5,
+        "club_path": 2.1,
+        "impact_position": "HEEL",
+        "launch_angle": 15.3,
+        "launch_direction": 2.9,
+        "shot_type": "SLIGHT FADE",
+        "smash_factor": 1.05,
+        "total_distance": 188.0
+      },
+      "warnings": [
+        "Spin: no value text under the label",
+        "Spin Axis: no value text under the label",
+        "Impact Position V: no value text under the label",
+        "no tile found for 'Bounce & Roll'"
+      ]
+    },
+    "shot": {
+      "apex_height": null,
+      "attack_angle": null,
+      "ball_speed": 114.8,
+      "bounce_and_roll": null,
+      "carry_distance": 178.2,
+      "carry_offline": null,
+      "club_face_angle": 0.8,
+      "club_head_speed": 109.5,
+      "club_path": 2.1,
+      "dynamic_loft": null,
+      "impact_offset_h": null,
+      "impact_offset_v": null,
+      "impact_position": "HEEL",
+      "impact_position_v": null,
+      "launch_angle": 15.3,
+      "launch_direction": 2.9,
+      "low_point": null,
+      "provenance": {
+        "corrections": {},
+        "device": "hd_golf",
+        "fields_present": [
+          "total_distance",
+          "carry_distance",
+          "ball_speed",
+          "launch_angle",
+          "club_head_speed",
+          "club_path",
+          "club_face_angle",
+          "spin_rate",
+          "smash_factor",
+          "impact_position",
+          "shot_type",
+          "launch_direction",
+          "spin_axis",
+          "impact_position_v"
+        ],
+        "image_path": "data/processed/sessions/2026-08-23/11/shot_screen.c214d50f98b0.jpg",
+        "image_sha256": "c214d50f98b0617a9da1a4e52f488d83c339ab33601c4d520ba016279aa5d636",
+        "needs_review": false,
+        "parse_confidence": 0.882,
+        "parser_version": 1,
+        "raw_fields": {
+          "Ball Speed": "114.8 mph",
+          "Carry": "178.2 yds",
+          "Club Face Angle": "0.8 Open",
+          "Club Path": "2.1°1>0",
+          "Club Speed": "109.5 mph",
+          "Horizontal Angle": "2.9°R",
+          "Impact Position": "HEEL",
+          "Impact Position V": "",
+          "Launch Angle": "15.3",
+          "Shot Distance": "188.0 yds",
+          "Shot Type": "SLIGHT FADE",
+          "Smash Factor": "1.05",
+          "Spin": "",
+          "Spin Axis": ""
+        },
+        "warnings": [
+          "Spin: no value text under the label",
+          "Spin Axis: no value text under the label",
+          "Impact Position V: no value text under the label",
+          "no tile found for 'Bounce & Roll'"
+        ]
+      },
+      "session_id": "2026-08-23",
+      "shot_id": "2026-08-23-11",
+      "shot_type": "SLIGHT FADE",
+      "smash_factor": 1.05,
+      "source": "screen",
+      "spin_axis": null,
+      "spin_rate": null,
+      "timestamp": "2026-08-23T04:51:04.419926Z",
+      "total_distance": 188.0
+    }
+  },
+  "id": "screen/corpus/2026-08-23-11",
+  "input": {
+    "boxes": [
+      {
+        "confidence": 0.9739052653312683,
+        "height": 41.0,
+        "text": "SHOT DATA Player 1",
+        "width": 280.0,
+        "x": 2.0,
+        "y": 119.0
+      },
+      {
+        "confidence": 0.9868912696838379,
+        "height": 33.0,
+        "text": "HD GOLF",
+        "width": 186.0,
+        "x": 1371.0,
+        "y": 116.0
+      },
+      {
+        "confidence": 0.9999914169311523,
+        "height": 33.0,
+        "text": "Carry",
+        "width": 59.0,
+        "x": 338.0,
+        "y": 186.0
+      },
+      {
+        "confidence": 0.9980524182319641,
+        "height": 31.0,
+        "text": "Ball Speed",
+        "width": 107.0,
+        "x": 483.0,
+        "y": 186.0
+      },
+      {
+        "confidence": 0.9999613165855408,
+        "height": 30.0,
+        "text": "Launch Angle",
+        "width": 135.0,
+        "x": 638.0,
+        "y": 188.0
+      },
+      {
+        "confidence": 0.9999942779541016,
+        "height": 34.0,
+        "text": "Club Speed",
+        "width": 119.0,
+        "x": 820.0,
+        "y": 183.0
+      },
+      {
+        "confidence": 0.9835168123245239,
+        "height": 27.0,
+        "text": "Club Path",
+        "width": 101.0,
+        "x": 1003.0,
+        "y": 185.0
+      },
+      {
+        "confidence": 0.9999786615371704,
+        "height": 32.0,
+        "text": "Club Face Angle",
+        "width": 157.0,
+        "x": 1147.0,
+        "y": 181.0
+      },
+      {
+        "confidence": 0.9999957084655762,
+        "height": 29.0,
+        "text": "Custom",
+        "width": 79.0,
+        "x": 1358.0,
+        "y": 182.0
+      },
+      {
+        "confidence": 0.9749285578727722,
+        "height": 25.0,
+        "text": "Shot Distance",
+        "width": 125.0,
+        "x": 140.0,
+        "y": 193.0
+      },
+      {
+        "confidence": 0.9999983906745911,
+        "height": 43.0,
+        "text": "188.0",
+        "width": 94.0,
+        "x": 156.0,
+        "y": 240.0
+      },
+      {
+        "confidence": 0.9999992251396179,
+        "height": 43.0,
+        "text": "178.2",
+        "width": 96.0,
+        "x": 317.0,
+        "y": 236.0
+      },
+      {
+        "confidence": 0.9999990463256836,
+        "height": 40.0,
+        "text": "114.8",
+        "width": 98.0,
+        "x": 484.0,
+        "y": 238.0
+      },
+      {
+        "confidence": 0.9999974966049194,
+        "height": 41.0,
+        "text": "15.3",
+        "width": 77.0,
+        "x": 648.0,
+        "y": 238.0
+      },
+      {
+        "confidence": 0.9999988675117493,
+        "height": 39.0,
+        "text": "109.5",
+        "width": 100.0,
+        "x": 826.0,
+        "y": 238.0
+      },
+      {
+        "confidence": 0.9642773866653442,
+        "height": 41.0,
+        "text": "2.1°1>0",
+        "width": 158.0,
+        "x": 964.0,
+        "y": 236.0
+      },
+      {
+        "confidence": 0.9999955296516418,
+        "height": 42.0,
+        "text": "0.8",
+        "width": 74.0,
+        "x": 1180.0,
+        "y": 233.0
+      },
+      {
+        "confidence": 0.9999868869781494,
+        "height": 30.0,
+        "text": "yds",
+        "width": 38.0,
+        "x": 181.0,
+        "y": 277.0
+      },
+      {
+        "confidence": 0.998812735080719,
+        "height": 33.0,
+        "text": "yds",
+        "width": 40.0,
+        "x": 340.0,
+        "y": 272.0
+      },
+      {
+        "confidence": 0.999992847442627,
+        "height": 31.0,
+        "text": "mph",
+        "width": 49.0,
+        "x": 505.0,
+        "y": 274.0
+      },
+      {
+        "confidence": 0.9999831318855286,
+        "height": 32.0,
+        "text": "mph",
+        "width": 50.0,
+        "x": 846.0,
+        "y": 273.0
+      },
+      {
+        "confidence": 0.9999900460243225,
+        "height": 29.0,
+        "text": "Open",
+        "width": 56.0,
+        "x": 1192.0,
+        "y": 271.0
+      },
+      {
+        "confidence": 0.9999925494194031,
+        "height": 32.0,
+        "text": "Spin",
+        "width": 49.0,
+        "x": 171.0,
+        "y": 332.0
+      },
+      {
+        "confidence": 0.9999442100524902,
+        "height": 30.0,
+        "text": "Smash Factor",
+        "width": 128.0,
+        "x": 293.0,
+        "y": 329.0
+      },
+      {
+        "confidence": 0.9824174046516418,
+        "height": 30.0,
+        "text": "Impact Position",
+        "width": 149.0,
+        "x": 450.0,
+        "y": 331.0
+      },
+      {
+        "confidence": 0.990788996219635,
+        "height": 35.0,
+        "text": "Shot Type",
+        "width": 102.0,
+        "x": 641.0,
+        "y": 332.0
+      },
+      {
+        "confidence": 0.9999343156814575,
+        "height": 32.0,
+        "text": "Horizontal Angle",
+        "width": 169.0,
+        "x": 782.0,
+        "y": 332.0
+      },
+      {
+        "confidence": 0.9998782277107239,
+        "height": 35.0,
+        "text": "Spin Axis",
+        "width": 98.0,
+        "x": 993.0,
+        "y": 330.0
+      },
+      {
+        "confidence": 0.9982849359512329,
+        "height": 30.0,
+        "text": "Impact Position V",
+        "width": 148.0,
+        "x": 1143.0,
+        "y": 327.0
+      },
+      {
+        "confidence": 0.9999376535415649,
+        "height": 43.0,
+        "text": "1.05",
+        "width": 78.0,
+        "x": 316.0,
+        "y": 380.0
+      },
+      {
+        "confidence": 0.9999468922615051,
+        "height": 45.0,
+        "text": "HEEL",
+        "width": 94.0,
+        "x": 474.0,
+        "y": 381.0
+      },
+      {
+        "confidence": 0.9999898076057434,
+        "height": 45.0,
+        "text": "SLIGHT",
+        "width": 134.0,
+        "x": 623.0,
+        "y": 381.0
+      },
+      {
+        "confidence": 0.9980963468551636,
+        "height": 48.0,
+        "text": "2.9°R",
+        "width": 137.0,
+        "x": 794.0,
+        "y": 380.0
+      },
+      {
+        "confidence": 0.9981593489646912,
+        "height": 46.0,
+        "text": "FADE",
+        "width": 103.0,
+        "x": 638.0,
+        "y": 415.0
+      },
+      {
+        "confidence": 0.9942786693572998,
+        "height": 32.0,
+        "text": "109 yds.",
+        "width": 85.0,
+        "x": 209.0,
+        "y": 940.0
+      },
+      {
+        "confidence": 0.9419820308685303,
+        "height": 31.0,
+        "text": "188 yds.",
+        "width": 80.0,
+        "x": 411.0,
+        "y": 944.0
+      },
+      {
+        "confidence": 0.9964498281478882,
+        "height": 35.0,
+        "text": "350 yds.",
+        "width": 81.0,
+        "x": 674.0,
+        "y": 950.0
+      },
+      {
+        "confidence": 0.9994267821311951,
+        "height": 24.0,
+        "text": "BALL TRAJECTORY",
+        "width": 185.0,
+        "x": 7.0,
+        "y": 980.0
+      },
+      {
+        "confidence": 0.999970555305481,
+        "height": 21.0,
+        "text": "NOTIFICATIONS",
+        "width": 124.0,
+        "x": 45.0,
+        "y": 1057.0
+      },
+      {
+        "confidence": 0.9999676942825317,
+        "height": 24.0,
+        "text": "BIGSCREEN",
+        "width": 86.0,
+        "x": 219.0,
+        "y": 1056.0
+      },
+      {
+        "confidence": 0.9999721646308899,
+        "height": 19.0,
+        "text": "PRINT",
+        "width": 44.0,
+        "x": 342.0,
+        "y": 1061.0
+      },
+      {
+        "confidence": 0.9999704360961914,
+        "height": 30.0,
+        "text": "TIPS",
+        "width": 43.0,
+        "x": 924.0,
+        "y": 1081.0
+      },
+      {
+        "confidence": 0.9999395608901978,
+        "height": 27.0,
+        "text": "SETTINGS",
+        "width": 76.0,
+        "x": 1129.0,
+        "y": 1095.0
+      },
+      {
+        "confidence": 0.9999954104423523,
+        "height": 23.0,
+        "text": "BACK",
+        "width": 46.0,
+        "x": 1256.0,
+        "y": 1102.0
+      },
+      {
+        "confidence": 0.9999805688858032,
+        "height": 23.0,
+        "text": "HELP",
+        "width": 45.0,
+        "x": 1371.0,
+        "y": 1105.0
+      },
+      {
+        "confidence": 0.9490571618080139,
+        "height": 52.0,
+        "text": "ēlo",
+        "width": 67.0,
+        "x": 726.0,
+        "y": 1117.0
+      },
+      {
+        "confidence": 0.9998837113380432,
+        "height": 24.0,
+        "text": "MAINMENU",
+        "width": 103.0,
+        "x": 1462.0,
+        "y": 1108.0
+      }
+    ],
+    "device": "hd_golf",
+    "image_path": "data/processed/sessions/2026-08-23/11/shot_screen.c214d50f98b0.jpg",
+    "image_sha256": "c214d50f98b0617a9da1a4e52f488d83c339ab33601c4d520ba016279aa5d636",
+    "min_confidence": 0.6,
+    "notes": [],
+    "session_id": "2026-08-23",
+    "shot_id": "2026-08-23-11",
+    "timestamp": "2026-08-23T04:51:04.419926Z"
+  },
+  "provenance": {
+    "kind": "screen",
+    "note": "a stored bay photo, PaddleOCR's boxes and frozen Python's parse of them, verified equal to the stored shot on every key but provenance.image_path. More than one box matches 'Impact Position' by 'Impact Position' at x=450 scores 1.0000, 'Impact Position V' at x=1143 scores 0.9375 (`_find_labels` keeps the first box with the best score)",
+    "oracle": "python",
+    "paddleocr_version": "3.7.0",
+    "python_version": "3.13.3",
+    "rerecords": [
+      {
+        "added": [
+          "expected.shot.attack_angle",
+          "expected.shot.dynamic_loft",
+          "expected.shot.low_point",
+          "expected.shot.impact_offset_h",
+          "expected.shot.impact_offset_v",
+          "expected.shot.impact_position_v",
+          "expected.shot.carry_offline",
+          "expected.shot.provenance.parser_version",
+          "expected.shot.provenance.fields_present",
+          "expected.shot.provenance.corrections",
+          "expected.parsed.raw_fields.Impact Position V",
+          "expected.shot.provenance.raw_fields.Impact Position V"
+        ],
+        "by": "golf-core rerecord",
+        "declaration": "spec/declarations/screen-v1.json",
+        "moved": [
+          "screen_parser_version",
+          "expected.label_ratio",
+          "expected.parsed.confidence",
+          "expected.parsed.warnings",
+          "expected.shot.provenance.parse_confidence",
+          "expected.shot.provenance.warnings"
+        ],
+        "removed": [],
+        "screen_parser_version": 1
+      }
+    ],
+    "source": "data/processed/sessions/2026-08-23/11/shot_screen.c214d50f98b0.jpg (shot screen of data/processed/sessions/2026-08-23/11); stored shot data/processed/shots/c214d50f98b0617a9da1a4e52f488d83c339ab33601c4d520ba016279aa5d636.shot.json"
+  },
+  "screen_parser_version": 1
+}

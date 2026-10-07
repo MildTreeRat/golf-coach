@@ -1,0 +1,20 @@
+[package]
+name = "pyfmt"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "CPython's rounding, float formatting, dict ordering and math.hypot, for every crate that has to say what Python said."
+
+# **No dependencies, and that is the reason this is a crate.** [M34 P1] It was
+# `crates/analysis/src/pyfmt.rs` until two siblings of `analysis` needed it: `crates/feedback`
+# re-spelled `percent` for its one fallback call because ADR-008 forbids it importing `analysis`,
+# and `crates/screen` (M34) needs a parser's worth of `%g`, `.Nf` and banker's rounding under the
+# same rule. A crate that depends on nothing of ours sits below all of them, so the edge cargo
+# enforces is still ADR-008's, and §3's edges keep one home.
+[dependencies]
+
+[dev-dependencies]
+# `tests/format.rs` reads `spec/vectors/format/`, which is plain JSON with every float as its `repr`.
+serde.workspace = true
+serde_json.workspace = true

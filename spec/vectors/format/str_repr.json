@@ -1,0 +1,1108 @@
+{
+  "cases": [
+    {
+      "expected": "''",
+      "value": ""
+    },
+    {
+      "expected": "' '",
+      "value": " "
+    },
+    {
+      "expected": "\"'\"",
+      "value": "'"
+    },
+    {
+      "expected": "'\"'",
+      "value": "\""
+    },
+    {
+      "expected": "\"it's\"",
+      "value": "it's"
+    },
+    {
+      "expected": "'say \"hi\"'",
+      "value": "say \"hi\""
+    },
+    {
+      "expected": "'both \\' and \"'",
+      "value": "both ' and \""
+    },
+    {
+      "expected": "'back\\\\slash'",
+      "value": "back\\slash"
+    },
+    {
+      "expected": "'tab\\there'",
+      "value": "tab\there"
+    },
+    {
+      "expected": "'new\\nline'",
+      "value": "new\nline"
+    },
+    {
+      "expected": "'cr\\rhere'",
+      "value": "cr\rhere"
+    },
+    {
+      "expected": "'\\x00'",
+      "value": "\u0000"
+    },
+    {
+      "expected": "'\\x07\\x08'",
+      "value": "\u0007\b"
+    },
+    {
+      "expected": "'\\x1b[0m'",
+      "value": "\u001b[0m"
+    },
+    {
+      "expected": "'\\x7f'",
+      "value": "\u007f"
+    },
+    {
+      "expected": "'a\\x1cb\\x1dc\\x1ed\\x1fe'",
+      "value": "a\u001cb\u001dc\u001ed\u001fe"
+    },
+    {
+      "expected": "' \\x1c\\x1d\\x1e\\x1f '",
+      "value": " \u001c\u001d\u001e\u001f "
+    },
+    {
+      "expected": "'\\t\\n\\x0b\\x0c\\r'",
+      "value": "\t\n\u000b\f\r"
+    },
+    {
+      "expected": "'a\\x85b'",
+      "value": "a\u0085b"
+    },
+    {
+      "expected": "'a\\xa0b'",
+      "value": "a\u00a0b"
+    },
+    {
+      "expected": "'a\\u1680b'",
+      "value": "a\u1680b"
+    },
+    {
+      "expected": "'a\\u2003b'",
+      "value": "a\u2003b"
+    },
+    {
+      "expected": "'a\\u2028b\\u2029c'",
+      "value": "a\u2028b\u2029c"
+    },
+    {
+      "expected": "'a\\u202fb\\u205fc'",
+      "value": "a\u202fb\u205fc"
+    },
+    {
+      "expected": "'a\\u3000b'",
+      "value": "a\u3000b"
+    },
+    {
+      "expected": "'a\\u200bb'",
+      "value": "a\u200bb"
+    },
+    {
+      "expected": "'a\\ufeffb'",
+      "value": "a\ufeffb"
+    },
+    {
+      "expected": "'a\\u180eb'",
+      "value": "a\u180eb"
+    },
+    {
+      "expected": "'  lead and trail  '",
+      "value": "  lead and trail  "
+    },
+    {
+      "expected": "'multiple   spaces'",
+      "value": "multiple   spaces"
+    },
+    {
+      "expected": "'\\x80\\x9f'",
+      "value": "\u0080\u009f"
+    },
+    {
+      "expected": "'\\xad'",
+      "value": "\u00ad"
+    },
+    {
+      "expected": "'\\u200c\\u200d'",
+      "value": "\u200c\u200d"
+    },
+    {
+      "expected": "'\\u202e'",
+      "value": "\u202e"
+    },
+    {
+      "expected": "'\\ue000'",
+      "value": "\ue000"
+    },
+    {
+      "expected": "'\\u0378'",
+      "value": "\u0378"
+    },
+    {
+      "expected": "'\\uffff'",
+      "value": "\uffff"
+    },
+    {
+      "expected": "'\\U000e0001'",
+      "value": "\udb40\udc01"
+    },
+    {
+      "expected": "'\\U0010ffff'",
+      "value": "\udbff\udfff"
+    },
+    {
+      "expected": "'e\u0301'",
+      "value": "e\u0301"
+    },
+    {
+      "expected": "'\u0301'",
+      "value": "\u0301"
+    },
+    {
+      "expected": "'\ud83d\ude00'",
+      "value": "\ud83d\ude00"
+    },
+    {
+      "expected": "'\u00b0'",
+      "value": "\u00b0"
+    },
+    {
+      "expected": "'\u0113'",
+      "value": "\u0113"
+    },
+    {
+      "expected": "'\u2014'",
+      "value": "\u2014"
+    },
+    {
+      "expected": "'\u2013'",
+      "value": "\u2013"
+    },
+    {
+      "expected": "'\u2192'",
+      "value": "\u2192"
+    },
+    {
+      "expected": "'\u03a9'",
+      "value": "\u03a9"
+    },
+    {
+      "expected": "'\u4e2d\u6587'",
+      "value": "\u4e2d\u6587"
+    },
+    {
+      "expected": "'\u00df'",
+      "value": "\u00df"
+    },
+    {
+      "expected": "'stra\u00dfe'",
+      "value": "stra\u00dfe"
+    },
+    {
+      "expected": "'\ufb01nal'",
+      "value": "\ufb01nal"
+    },
+    {
+      "expected": "'\ufb00'",
+      "value": "\ufb00"
+    },
+    {
+      "expected": "'\u0149'",
+      "value": "\u0149"
+    },
+    {
+      "expected": "'\u01f0'",
+      "value": "\u01f0"
+    },
+    {
+      "expected": "'\u0390'",
+      "value": "\u0390"
+    },
+    {
+      "expected": "'\u0587'",
+      "value": "\u0587"
+    },
+    {
+      "expected": "'\u1fb3'",
+      "value": "\u1fb3"
+    },
+    {
+      "expected": "'\u1fbc'",
+      "value": "\u1fbc"
+    },
+    {
+      "expected": "'\u0131'",
+      "value": "\u0131"
+    },
+    {
+      "expected": "'i\u0307'",
+      "value": "i\u0307"
+    },
+    {
+      "expected": "'\u00b5'",
+      "value": "\u00b5"
+    },
+    {
+      "expected": "'\u00ff'",
+      "value": "\u00ff"
+    },
+    {
+      "expected": "'\u017f'",
+      "value": "\u017f"
+    },
+    {
+      "expected": "'\u01c5'",
+      "value": "\u01c5"
+    },
+    {
+      "expected": "'\u10d0'",
+      "value": "\u10d0"
+    },
+    {
+      "expected": "'\u0345'",
+      "value": "\u0345"
+    },
+    {
+      "expected": "'\u212a'",
+      "value": "\u212a"
+    },
+    {
+      "expected": "'\u1e9e'",
+      "value": "\u1e9e"
+    },
+    {
+      "expected": "'Aaron'",
+      "value": "Aaron"
+    },
+    {
+      "expected": "'Shot Distance'",
+      "value": "Shot Distance"
+    },
+    {
+      "expected": "'Carry'",
+      "value": "Carry"
+    },
+    {
+      "expected": "'Ball Speed'",
+      "value": "Ball Speed"
+    },
+    {
+      "expected": "'Launch Angle'",
+      "value": "Launch Angle"
+    },
+    {
+      "expected": "'Club Speed'",
+      "value": "Club Speed"
+    },
+    {
+      "expected": "'Club Path'",
+      "value": "Club Path"
+    },
+    {
+      "expected": "'Club Face Angle'",
+      "value": "Club Face Angle"
+    },
+    {
+      "expected": "'8.1\u00b00>1'",
+      "value": "8.1\u00b00>1"
+    },
+    {
+      "expected": "'2.8'",
+      "value": "2.8"
+    },
+    {
+      "expected": "'131.0'",
+      "value": "131.0"
+    },
+    {
+      "expected": "'125.6'",
+      "value": "125.6"
+    },
+    {
+      "expected": "'90.7'",
+      "value": "90.7"
+    },
+    {
+      "expected": "'20.9'",
+      "value": "20.9"
+    },
+    {
+      "expected": "'91.0'",
+      "value": "91.0"
+    },
+    {
+      "expected": "'Open'",
+      "value": "Open"
+    },
+    {
+      "expected": "'yds'",
+      "value": "yds"
+    },
+    {
+      "expected": "'mph'",
+      "value": "mph"
+    },
+    {
+      "expected": "'Spin Axis'",
+      "value": "Spin Axis"
+    },
+    {
+      "expected": "'Impact Position'",
+      "value": "Impact Position"
+    },
+    {
+      "expected": "'Spin'",
+      "value": "Spin"
+    },
+    {
+      "expected": "'Smash Factor'",
+      "value": "Smash Factor"
+    },
+    {
+      "expected": "'Shot Type'",
+      "value": "Shot Type"
+    },
+    {
+      "expected": "'Horizontal Angle'",
+      "value": "Horizontal Angle"
+    },
+    {
+      "expected": "'-2.5\u00b0'",
+      "value": "-2.5\u00b0"
+    },
+    {
+      "expected": "'5991'",
+      "value": "5991"
+    },
+    {
+      "expected": "'1.00'",
+      "value": "1.00"
+    },
+    {
+      "expected": "'CENTER'",
+      "value": "CENTER"
+    },
+    {
+      "expected": "'SLIGHT'",
+      "value": "SLIGHT"
+    },
+    {
+      "expected": "'5.3\u00b0L'",
+      "value": "5.3\u00b0L"
+    },
+    {
+      "expected": "'FADE'",
+      "value": "FADE"
+    },
+    {
+      "expected": "'rpm'",
+      "value": "rpm"
+    },
+    {
+      "expected": "'131 yds.'",
+      "value": "131 yds."
+    },
+    {
+      "expected": "'350 yds.'",
+      "value": "350 yds."
+    },
+    {
+      "expected": "'73 vds.'",
+      "value": "73 vds."
+    },
+    {
+      "expected": "'HD GOLF'",
+      "value": "HD GOLF"
+    },
+    {
+      "expected": "'SHOTDATA'",
+      "value": "SHOTDATA"
+    },
+    {
+      "expected": "'Custom'",
+      "value": "Custom"
+    },
+    {
+      "expected": "'124.2'",
+      "value": "124.2"
+    },
+    {
+      "expected": "'121.0'",
+      "value": "121.0"
+    },
+    {
+      "expected": "'90.5'",
+      "value": "90.5"
+    },
+    {
+      "expected": "'23.5'",
+      "value": "23.5"
+    },
+    {
+      "expected": "'98.3'",
+      "value": "98.3"
+    },
+    {
+      "expected": "'4.6\u00b00>1'",
+      "value": "4.6\u00b00>1"
+    },
+    {
+      "expected": "'8.6\u00b0'",
+      "value": "8.6\u00b0"
+    },
+    {
+      "expected": "'Impact Position V'",
+      "value": "Impact Position V"
+    },
+    {
+      "expected": "'8100'",
+      "value": "8100"
+    },
+    {
+      "expected": "'0.92'",
+      "value": "0.92"
+    },
+    {
+      "expected": "'4.0\u00b0R'",
+      "value": "4.0\u00b0R"
+    },
+    {
+      "expected": "'-9.3\u00b0'",
+      "value": "-9.3\u00b0"
+    },
+    {
+      "expected": "'71 yds.'",
+      "value": "71 yds."
+    },
+    {
+      "expected": "'124 yds.'",
+      "value": "124 yds."
+    },
+    {
+      "expected": "'BALL TRAJECTORY'",
+      "value": "BALL TRAJECTORY"
+    },
+    {
+      "expected": "'C'",
+      "value": "C"
+    },
+    {
+      "expected": "'SHOT DATA Player 1'",
+      "value": "SHOT DATA Player 1"
+    },
+    {
+      "expected": "'134.1'",
+      "value": "134.1"
+    },
+    {
+      "expected": "'127.0'",
+      "value": "127.0"
+    },
+    {
+      "expected": "'90.9'",
+      "value": "90.9"
+    },
+    {
+      "expected": "'20.7'",
+      "value": "20.7"
+    },
+    {
+      "expected": "'103.0'",
+      "value": "103.0"
+    },
+    {
+      "expected": "'3.2\u00b00>1'",
+      "value": "3.2\u00b00>1"
+    },
+    {
+      "expected": "'6.0'",
+      "value": "6.0"
+    },
+    {
+      "expected": "'0.88'",
+      "value": "0.88"
+    },
+    {
+      "expected": "'2.8\u00b0R'",
+      "value": "2.8\u00b0R"
+    },
+    {
+      "expected": "'74 yds.'",
+      "value": "74 yds."
+    },
+    {
+      "expected": "'134 yds.'",
+      "value": "134 yds."
+    },
+    {
+      "expected": "'NOTIFICATIONS'",
+      "value": "NOTIFICATIONS"
+    },
+    {
+      "expected": "'BIGSCREEN'",
+      "value": "BIGSCREEN"
+    },
+    {
+      "expected": "'PRINT'",
+      "value": "PRINT"
+    },
+    {
+      "expected": "'TIPS'",
+      "value": "TIPS"
+    },
+    {
+      "expected": "'SETTINGS'",
+      "value": "SETTINGS"
+    },
+    {
+      "expected": "'BACK'",
+      "value": "BACK"
+    },
+    {
+      "expected": "'HELP'",
+      "value": "HELP"
+    },
+    {
+      "expected": "'\u0113lo'",
+      "value": "\u0113lo"
+    },
+    {
+      "expected": "'MAINMENU'",
+      "value": "MAINMENU"
+    },
+    {
+      "expected": "'188.0'",
+      "value": "188.0"
+    },
+    {
+      "expected": "'178.2'",
+      "value": "178.2"
+    },
+    {
+      "expected": "'114.8'",
+      "value": "114.8"
+    },
+    {
+      "expected": "'15.3'",
+      "value": "15.3"
+    },
+    {
+      "expected": "'109.5'",
+      "value": "109.5"
+    },
+    {
+      "expected": "'2.1\u00b01>0'",
+      "value": "2.1\u00b01>0"
+    },
+    {
+      "expected": "'0.8'",
+      "value": "0.8"
+    },
+    {
+      "expected": "'1.05'",
+      "value": "1.05"
+    },
+    {
+      "expected": "'HEEL'",
+      "value": "HEEL"
+    },
+    {
+      "expected": "'2.9\u00b0R'",
+      "value": "2.9\u00b0R"
+    },
+    {
+      "expected": "'109 yds.'",
+      "value": "109 yds."
+    },
+    {
+      "expected": "'188 yds.'",
+      "value": "188 yds."
+    },
+    {
+      "expected": "'TA Player 1'",
+      "value": "TA Player 1"
+    },
+    {
+      "expected": "'HD'",
+      "value": "HD"
+    },
+    {
+      "expected": "'130.9'",
+      "value": "130.9"
+    },
+    {
+      "expected": "'121.8'",
+      "value": "121.8"
+    },
+    {
+      "expected": "'88.9'",
+      "value": "88.9"
+    },
+    {
+      "expected": "'19.5'",
+      "value": "19.5"
+    },
+    {
+      "expected": "'87.0'",
+      "value": "87.0"
+    },
+    {
+      "expected": "'9.8\u00b00>1'",
+      "value": "9.8\u00b00>1"
+    },
+    {
+      "expected": "'3.1\u00b0'",
+      "value": "3.1\u00b0"
+    },
+    {
+      "expected": "'ImpactPosition'",
+      "value": "ImpactPosition"
+    },
+    {
+      "expected": "'1.02'",
+      "value": "1.02"
+    },
+    {
+      "expected": "'6.7\u00b0L'",
+      "value": "6.7\u00b0L"
+    },
+    {
+      "expected": "'?'",
+      "value": "?"
+    },
+    {
+      "expected": "'69.4'",
+      "value": "69.4"
+    },
+    {
+      "expected": "'33.6'",
+      "value": "33.6"
+    },
+    {
+      "expected": "'83.8'",
+      "value": "83.8"
+    },
+    {
+      "expected": "'3.4'",
+      "value": "3.4"
+    },
+    {
+      "expected": "'93.7'",
+      "value": "93.7"
+    },
+    {
+      "expected": "'7.7\u00b00>1'",
+      "value": "7.7\u00b00>1"
+    },
+    {
+      "expected": "'7.6\u00b0'",
+      "value": "7.6\u00b0"
+    },
+    {
+      "expected": "'0.89'",
+      "value": "0.89"
+    },
+    {
+      "expected": "'0.1\u00b0L'",
+      "value": "0.1\u00b0L"
+    },
+    {
+      "expected": "'18.yds.'",
+      "value": "18.yds."
+    },
+    {
+      "expected": "'69 yds.'",
+      "value": "69 yds."
+    },
+    {
+      "expected": "'OT DATA Player 1'",
+      "value": "OT DATA Player 1"
+    },
+    {
+      "expected": "'H'",
+      "value": "H"
+    },
+    {
+      "expected": "'Custo'",
+      "value": "Custo"
+    },
+    {
+      "expected": "'135.1'",
+      "value": "135.1"
+    },
+    {
+      "expected": "'124.7'",
+      "value": "124.7"
+    },
+    {
+      "expected": "'91.1'",
+      "value": "91.1"
+    },
+    {
+      "expected": "'18.2'",
+      "value": "18.2"
+    },
+    {
+      "expected": "'98.2'",
+      "value": "98.2"
+    },
+    {
+      "expected": "'4.5\u00b00>1'",
+      "value": "4.5\u00b00>1"
+    },
+    {
+      "expected": "'0.93'",
+      "value": "0.93"
+    },
+    {
+      "expected": "'1.0\u00b0R'",
+      "value": "1.0\u00b0R"
+    },
+    {
+      "expected": "'I'",
+      "value": "I"
+    },
+    {
+      "expected": "'72 yds.'",
+      "value": "72 yds."
+    },
+    {
+      "expected": "'135 yds.'",
+      "value": "135 yds."
+    },
+    {
+      "expected": "'T DATA Player 1'",
+      "value": "T DATA Player 1"
+    },
+    {
+      "expected": "'131.5'",
+      "value": "131.5"
+    },
+    {
+      "expected": "'126.1'",
+      "value": "126.1"
+    },
+    {
+      "expected": "'89.8'",
+      "value": "89.8"
+    },
+    {
+      "expected": "'22.4\u00b0'",
+      "value": "22.4\u00b0"
+    },
+    {
+      "expected": "'103.6'",
+      "value": "103.6"
+    },
+    {
+      "expected": "'1.1\u00b00>1'",
+      "value": "1.1\u00b00>1"
+    },
+    {
+      "expected": "'3.9'",
+      "value": "3.9"
+    },
+    {
+      "expected": "'0.87'",
+      "value": "0.87"
+    },
+    {
+      "expected": "'TOE'",
+      "value": "TOE"
+    },
+    {
+      "expected": "'73 yds.'",
+      "value": "73 yds."
+    },
+    {
+      "expected": "'132 yds.'",
+      "value": "132 yds."
+    },
+    {
+      "expected": "'BIG SCREEN'",
+      "value": "BIG SCREEN"
+    },
+    {
+      "expected": "'109.7'",
+      "value": "109.7"
+    },
+    {
+      "expected": "'101.9'",
+      "value": "101.9"
+    },
+    {
+      "expected": "'78.9'",
+      "value": "78.9"
+    },
+    {
+      "expected": "'22.4'",
+      "value": "22.4"
+    },
+    {
+      "expected": "'103.8'",
+      "value": "103.8"
+    },
+    {
+      "expected": "'3.7\u00b00>1'",
+      "value": "3.7\u00b00>1"
+    },
+    {
+      "expected": "'10.2'",
+      "value": "10.2"
+    },
+    {
+      "expected": "'0.76'",
+      "value": "0.76"
+    },
+    {
+      "expected": "'HARD'",
+      "value": "HARD"
+    },
+    {
+      "expected": "'6.5\u00b0R'",
+      "value": "6.5\u00b0R"
+    },
+    {
+      "expected": "'56 yds.'",
+      "value": "56 yds."
+    },
+    {
+      "expected": "'110 yds.'",
+      "value": "110 yds."
+    },
+    {
+      "expected": "'HDG'",
+      "value": "HDG"
+    },
+    {
+      "expected": "'159.2'",
+      "value": "159.2"
+    },
+    {
+      "expected": "'137.7'",
+      "value": "137.7"
+    },
+    {
+      "expected": "'11.4'",
+      "value": "11.4"
+    },
+    {
+      "expected": "'105.5'",
+      "value": "105.5"
+    },
+    {
+      "expected": "'0.5\u00b01>0'",
+      "value": "0.5\u00b01>0"
+    },
+    {
+      "expected": "'2.4\u00b0'",
+      "value": "2.4\u00b0"
+    },
+    {
+      "expected": "'Closed'",
+      "value": "Closed"
+    },
+    {
+      "expected": "'0.98'",
+      "value": "0.98"
+    },
+    {
+      "expected": "'1.8\u00b0L'",
+      "value": "1.8\u00b0L"
+    },
+    {
+      "expected": "'DRAW'",
+      "value": "DRAW"
+    },
+    {
+      "expected": "'80 yds.'",
+      "value": "80 yds."
+    },
+    {
+      "expected": "'159 yds.'",
+      "value": "159 yds."
+    },
+    {
+      "expected": "'154.1'",
+      "value": "154.1"
+    },
+    {
+      "expected": "'144.5'",
+      "value": "144.5"
+    },
+    {
+      "expected": "'100.9'",
+      "value": "100.9"
+    },
+    {
+      "expected": "'17.0'",
+      "value": "17.0"
+    },
+    {
+      "expected": "'105.7'",
+      "value": "105.7"
+    },
+    {
+      "expected": "'2.3\u00b00>1'",
+      "value": "2.3\u00b00>1"
+    },
+    {
+      "expected": "'6.9'",
+      "value": "6.9"
+    },
+    {
+      "expected": "'0.95'",
+      "value": "0.95"
+    },
+    {
+      "expected": "'4.6\u00b0R'",
+      "value": "4.6\u00b0R"
+    },
+    {
+      "expected": "'85 yds.'",
+      "value": "85 yds."
+    },
+    {
+      "expected": "'154 yds.'",
+      "value": "154 yds."
+    },
+    {
+      "expected": "'SHOTDATA Player 1'",
+      "value": "SHOTDATA Player 1"
+    },
+    {
+      "expected": "'122.7'",
+      "value": "122.7"
+    },
+    {
+      "expected": "'107.2'",
+      "value": "107.2"
+    },
+    {
+      "expected": "'85.1'",
+      "value": "85.1"
+    },
+    {
+      "expected": "'15.9'",
+      "value": "15.9"
+    },
+    {
+      "expected": "'85.0'",
+      "value": "85.0"
+    },
+    {
+      "expected": "'1.3\u00b00>1'",
+      "value": "1.3\u00b00>1"
+    },
+    {
+      "expected": "'1.3\u00b0'",
+      "value": "1.3\u00b0"
+    },
+    {
+      "expected": "'0.0\u00b0L'",
+      "value": "0.0\u00b0L"
+    },
+    {
+      "expected": "'61 yds.'",
+      "value": "61 yds."
+    },
+    {
+      "expected": "'123 yds.'",
+      "value": "123 yds."
+    },
+    {
+      "expected": "'1'",
+      "value": "1"
+    },
+    {
+      "expected": "'146.0'",
+      "value": "146.0"
+    },
+    {
+      "expected": "'95.9'",
+      "value": "95.9"
+    },
+    {
+      "expected": "'17.5'",
+      "value": "17.5"
+    },
+    {
+      "expected": "'90.2'",
+      "value": "90.2"
+    },
+    {
+      "expected": "'135.8'",
+      "value": "135.8"
+    },
+    {
+      "expected": "'o'",
+      "value": "o"
+    },
+    {
+      "expected": "'1.3\u00b01>0'",
+      "value": "1.3\u00b01>0"
+    },
+    {
+      "expected": "'4.6'",
+      "value": "4.6"
+    },
+    {
+      "expected": "'1.06'",
+      "value": "1.06"
+    },
+    {
+      "expected": "'5.9\u00b0R'",
+      "value": "5.9\u00b0R"
+    },
+    {
+      "expected": "'79 yds.'",
+      "value": "79 yds."
+    },
+    {
+      "expected": "'146 yds.'",
+      "value": "146 yds."
+    },
+    {
+      "expected": "'Bounce & Roll'",
+      "value": "Bounce & Roll"
+    },
+    {
+      "expected": "'Bounce Roll'",
+      "value": "Bounce Roll"
+    },
+    {
+      "expected": "'Bounce and Roll'",
+      "value": "Bounce and Roll"
+    },
+    {
+      "expected": "'SHOT DATA'",
+      "value": "SHOT DATA"
+    },
+    {
+      "expected": "'---'",
+      "value": "---"
+    },
+    {
+      "expected": "'--'",
+      "value": "--"
+    },
+    {
+      "expected": "'- - -'",
+      "value": "- - -"
+    }
+  ],
+  "id": "format/str_repr",
+  "provenance": {
+    "edges": "docs/plans/m31-m40-shot-first-pivot.md 'What the code says' finding 5; docs/plans/m34-screen-reader.md planning finding 5 and call 2",
+    "implemented_by": "pyfmt",
+    "kind": "format",
+    "note": "`repr(s)` on a `str`: quote choice, backslash escapes, `\\xhh`/`\\uhhhh`/`\\Uhhhhhhhh` for the non-printable, printable non-ASCII kept \u2014 over every box text of the planning run, the frozen profile's strings and crafted cases"
+  },
+  "python_version": "3.13.3"
+}

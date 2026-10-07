@@ -52,9 +52,13 @@ pub type Combine = fn(&[CheckpointScore], &[CheckpointScore]) -> AxisScores;
 /// written because `SwingBundleResult.overall_score` is a required float on disk and every stored
 /// artifact carries this convention.
 ///
-/// The sum is left-to-right from `0.0`, which is what Python's `sum()` does, so the last bits of a
-/// six-term mean land in the same place. `docs/CONFORMANCE.md` §3's `RTOL` is sized for a different
-/// summation order and this is not one.
+/// The sum is left to right, and that is **not** what Python's `sum()` does on the interpreter that
+/// recorded the vectors: since CPython 3.12 it is compensated (Neumaier; `pyfmt::sum` is the port).
+/// This comment said otherwise until M34 P2 measured it. On four of the 21 engine vectors —
+/// `2026-08-23-1`, `-3`, `-5` and `tempo-too-quick` — the two means part by one or two ulp, which
+/// `docs/CONFORMANCE.md` §3's `RTOL` absorbs, so every vector still conforms. The code is left as
+/// it is on purpose: whether the engine's `sum()` sites move to `pyfmt::sum` is a question M34 P2
+/// routed rather than answered (`docs/plans/m34-screen-reader.md`, its findings).
 fn mean_percent(scores: &[CheckpointScore]) -> f64 {
     if scores.is_empty() {
         return 0.0;
@@ -150,9 +154,12 @@ mod tests {
         assert_eq!(blend.overall, 0.0);
     }
 
-    /// The mean is summed left to right from `0.0`, which is what `docs/CONFORMANCE.md` §3's `RTOL`
-    /// is *not* sized to absorb: the six scores of a real swing are not exactly representable, so a
-    /// reassociated sum lands a bit or two away and this pins the order rather than the value.
+    /// The mean is summed left to right, and this pins that order rather than the value.
+    ///
+    /// **The name is older than the finding that this is not Python's order** (M34 P2): CPython
+    /// 3.12's compensated `sum()` makes this very input's mean exactly `20.0`, where the left fold
+    /// asserted here gives `20.000000000000004`. The difference sits inside `RTOL`, and the test
+    /// stays as written until the routing question in `mean_percent`'s doc is answered.
     #[test]
     fn the_mean_sums_in_the_pythons_order() {
         let scores = [scored("a", 0.1), scored("b", 0.2), scored("c", 0.3)];

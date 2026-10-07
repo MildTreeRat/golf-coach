@@ -46,9 +46,22 @@
 //!
 //! - **No wildcard.** §M32 says "pattern", and nothing M32 declares needs one, so `[*]` is refused at
 //!   parse time (call 4): a later declaration that writes one gets an error, not a silent non-match.
-//! - **No removal.** §M32 names two kinds a declaration covers, an added key and a moved value. A
-//!   [`DifferenceKind::RemovedKey`] is never declarable, so a port that drops a key cannot re-record
-//!   its way past the drop.
+//! - **No removal in an engine declaration.** §M32 names two kinds a declaration covers, an added
+//!   key and a moved value. A [`DifferenceKind::RemovedKey`] is never declarable there, so a port
+//!   that drops a key from the engine's answer cannot re-record its way past the drop.
+//! - **A screen declaration names its removals, path by path** (M34 P10, the user's answer to P7's
+//!   finding 3). The M34 plan's decision 3 makes a field the tie rule withholds *located, unread*:
+//!   in `fields_present`, with no `raw_fields` key, and that absence is the structural mark M35 and
+//!   M37 grade `misread`. The screen family's first re-record therefore has to drop keys Python
+//!   recorded, so a screen declaration may carry `removed`, which works as `added` does — each path
+//!   exact, ending in a key, held to the typo guard, and written into the ledger — and [`apply`]
+//!   deletes the key. The rule's purpose survives the exception: a key still never goes *silently*,
+//!   because the report lists every removal as it lists every addition. An engine declaration that
+//!   carries the key at all is refused at load, so M32's rule stands there unchanged, and frozen
+//!   Python's `frozen_view` and `ledger_covers`, which read only engine ledgers, learn nothing new.
+//!   A removal for both families was rejected because it would teach frozen Python a case no
+//!   engine change has needed; and keeping the rule by giving a withheld field a `raw_fields` entry
+//!   was rejected because it erases the mark M35 reads.
 //! - **Not the root, and not Python's spelling.** `""` would declare the whole document, and
 //!   `.analysis_version` — `compare_results`' spelling — would match nothing here, declaring nothing
 //!   while looking right. Both are refused, and so is any spelling [`compare`] would not produce
@@ -63,17 +76,43 @@
 //! no shot and match none of M32's added keys. Whether an entry matched *anywhere* is the run's
 //! check (call 5), made across every document's [`Applied`].
 //!
+//! **A list is named at its own path when its length changes, and at each index when it does
+//! not** (M34 P7, asked before the screen family's first re-record, whose warnings lists grow).
+//! [`compare`] reports a list of another length as one [`DifferenceKind::Moved`] of the whole list,
+//! never as a move per index past the shorter end, so `expected.parsed.warnings` declared `moved`
+//! matches it and [`apply`] copies the whole list across. A list of the *same* length whose entries
+//! differ is a move per differing index, which the list's own path does not cover. A declaration
+//! that has both kinds across its vectors names both spellings, and the typo guard holds each to
+//! having matched somewhere. `a_list_is_declared_whole_when_its_length_changes` pins all three.
+//!
+//! # Two families, one gate (M34 P7)
+//!
+//! A declaration names the family it re-records by the version key it carries, and carries exactly
+//! one (the M34 plan's call 6). `analysis_version` is M32's: the engine and stage families, run
+//! through [`crate::run`] and [`run_stages`]. `screen_parser_version` is the screen family's, the
+//! documents under `vectors/screen/`, run through [`run_screen`]. A run never reads the other
+//! family's files, so a screen re-record cannot move an engine vector, and the reverse: the two age
+//! different records ([`SCREEN_PARSER_VERSION`]'s doc says why), and a declaration describes one
+//! version's change of one of them. Everything else — the gate, [`apply`], [`ledger`], the typo guard
+//! and the writer — is the same code for both, so the screen family is held to every rule M32's
+//! re-record was.
+//!
 //! # The run
 //!
-//! [`plan`] walks the engine family (`vectors/synthetic/`, `vectors/corpus/`) and then the stage
-//! family (`vectors/stages/{synthetic,corpus}/`), and does everything but write:
+//! [`plan`] walks one family and does everything but write. For an engine declaration that is the
+//! engine family (`vectors/synthetic/`, `vectors/corpus/`) and then the stage family
+//! (`vectors/stages/{synthetic,corpus}/`); for a screen declaration, the [`SCREEN_DOCUMENTS`] under
+//! `vectors/screen/`.
 //!
-//! - **The version guard first** (call 6): a declaration not at [`ANALYSIS_VERSION`] is refused before
-//!   a vector is read, so a stale one cannot be re-run against a later engine.
+//! - **The version guard first** (call 6): a declaration not at its family's constant —
+//!   [`ANALYSIS_VERSION`] or [`SCREEN_PARSER_VERSION`] — is refused before a vector is read, so a
+//!   stale one cannot be re-run against a later engine or parser.
 //! - **Each engine vector** is run through [`crate::run`], gated, applied and ledgered. **Each stage
 //!   vector** is joined to its engine vector by `provenance.derived_from`, run through
 //!   [`run_stages`], gated, applied, ledgered — and then composed onto the engine document *as it
 //!   will be written* (call 9), so the family is held to the bundle answer it is about to sit beside.
+//!   **Each screen document** is run through [`run_screen`], gated, applied and ledgered; nothing
+//!   composes onto it, because nothing else holds a copy of a screen's answer.
 //! - **Every refusal across the run is collected**, and one anywhere means [`plan`] returns no
 //!   [`Run`] at all — so nothing can be written anywhere (call 7). A reviewer fixes a declaration
 //!   once, from one red report.
@@ -115,11 +154,16 @@ use std::fs;
 use std::io::{Read as _, Write as _};
 use std::path::{Component, Path, PathBuf};
 
+use contracts::shot::SCREEN_PARSER_VERSION;
 use contracts::swing::ANALYSIS_VERSION;
 use flate2::read::GzDecoder;
 use flate2::{Compression, GzBuilder};
+use screen::orient::label_ratio;
+use screen::parser::parse_screen;
+use screen::profile::{load_profile, UnknownProfile};
+use screen::ScreenInput;
 use serde::Deserialize;
-use serde_json::{json, Value};
+use serde_json::{json, Map, Value};
 
 use crate::compare::{compare, Difference, DifferenceKind};
 use crate::stages::{run_stages, verify_compose};
@@ -242,13 +286,7 @@ impl LedgerPath {
     /// Put `value` at this path: insert or replace a key, or replace a list element. `None` if the
     /// parent is not there, or is not an object (for a key) or a list long enough (for an index).
     fn put(&self, document: &mut Value, value: Value) -> Option<()> {
-        let (last, parent) = self.segments.split_last()?;
-        let parent = parent
-            .iter()
-            .try_fold(document, |node, segment| match segment {
-                Segment::Key(key) => node.get_mut(key.as_str()),
-                Segment::Index(index) => node.get_mut(*index),
-            })?;
+        let (last, parent) = self.parent_mut(document)?;
         match last {
             Segment::Key(key) => {
                 parent.as_object_mut()?.insert(key.clone(), value);
@@ -256,6 +294,28 @@ impl LedgerPath {
             Segment::Index(index) => *parent.as_array_mut()?.get_mut(*index)? = value,
         }
         Some(())
+    }
+
+    /// Take the key at this path out of its object, returning what it held. `None` if the key is not
+    /// there, or the path ends in a list index — a removal is of a key, never of a list element,
+    /// because the comparator reports a shorter list as a moved list.
+    fn remove(&self, document: &mut Value) -> Option<Value> {
+        let (Segment::Key(key), parent) = self.parent_mut(document)? else {
+            return None;
+        };
+        parent.as_object_mut()?.remove(key)
+    }
+
+    /// The last step and the node it steps from.
+    fn parent_mut<'a>(&'a self, document: &'a mut Value) -> Option<(&'a Segment, &'a mut Value)> {
+        let (last, parent) = self.segments.split_last()?;
+        let parent = parent
+            .iter()
+            .try_fold(document, |node, segment| match segment {
+                Segment::Key(key) => node.get_mut(key.as_str()),
+                Segment::Index(index) => node.get_mut(*index),
+            })?;
+        Some((last, parent))
     }
 }
 
@@ -292,65 +352,163 @@ impl fmt::Display for LedgerPath {
     }
 }
 
-/// What a re-record may change, read from `spec/declarations/v{N}.json` (M32's decision 2).
+/// The version a re-record moves to, and by its key the family it re-records (the M34 plan's
+/// call 6).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Version {
+    /// `analysis_version`: the engine and stage families (M32).
+    Analysis(i64),
+    /// `screen_parser_version`: the screen family alone (M34).
+    ScreenParser(i64),
+}
+
+impl Version {
+    /// The key a declaration, a vector's top level and a ledger entry all spell this version with.
+    pub fn key(self) -> &'static str {
+        match self {
+            Self::Analysis(_) => "analysis_version",
+            Self::ScreenParser(_) => "screen_parser_version",
+        }
+    }
+
+    pub fn number(self) -> i64 {
+        match self {
+            Self::Analysis(n) | Self::ScreenParser(n) => n,
+        }
+    }
+
+    /// This build's version for the family: what the guard holds a declaration to, and what Rust's
+    /// side of every comparison carries at the top level.
+    pub fn current(self) -> i64 {
+        match self {
+            Self::Analysis(_) => ANALYSIS_VERSION,
+            Self::ScreenParser(_) => SCREEN_PARSER_VERSION,
+        }
+    }
+
+    /// What has that version, for a refusal to name.
+    fn of(self) -> &'static str {
+        match self {
+            Self::Analysis(_) => "engine",
+            Self::ScreenParser(_) => "screen parser",
+        }
+    }
+}
+
+impl fmt::Display for Version {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{} {}", self.key(), self.number())
+    }
+}
+
+/// What a re-record may change, read from `spec/declarations/` (M32's decision 2).
 ///
-/// Every key is required and no other is allowed. A misspelled `"moves"` would otherwise declare
-/// nothing and still load, and a gate fed an empty declaration refuses everything — which fails
-/// safe, but names the wrong mistake.
+/// Every key is required but the version, of which there must be exactly one, and `removed`, which
+/// only a screen declaration may carry; no other key is allowed. A misspelled `"moves"` would
+/// otherwise declare nothing and still load, and a gate fed an empty declaration refuses everything
+/// — which fails safe, but names the wrong mistake.
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(try_from = "DeclarationFile")]
 pub struct Declaration {
-    /// The version the re-record moves to. The verb refuses a declaration that is not at
-    /// `contracts::swing::ANALYSIS_VERSION` (call 6), so a stale one cannot be re-run against a
-    /// later engine; [`ledger`] writes it into each entry.
-    pub analysis_version: i64,
+    /// The version the re-record moves to, whose key picks the family (call 6). The verb refuses a
+    /// declaration not at its family's constant, so a stale one cannot be re-run against a later
+    /// engine or parser; [`ledger`] writes it into each entry under the same key.
+    pub version: Version,
     /// Why, for the reviewer. Not copied into the ledger, which points at the file instead.
     pub note: String,
     /// Keys Rust's answer has and the recorded one lacks, each matched exactly.
     pub added: Vec<LedgerPath>,
     /// Values Rust's answer moves, each matched exactly.
     pub moved: Vec<LedgerPath>,
+    /// Keys the recorded answer has and Rust's lacks, each matched exactly. Empty on every engine
+    /// declaration, which the load refuses to give one (the module doc, "What a declaration can
+    /// name"). [M34 P10]
+    pub removed: Vec<LedgerPath>,
 }
 
-/// The file's shape before the checks that need more than one path at once.
+/// The file's shape before the checks that need more than one key at once.
+///
+/// The two version keys are optional *here* so that the check that exactly one is present can name
+/// the mistake; `serde` alone would say "missing field" of whichever key it tried first. `removed`
+/// is optional for good: an engine declaration must not carry it, and `v17.json` predates it. A
+/// misspelling of it is still refused, by `deny_unknown_fields`.
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 struct DeclarationFile {
-    analysis_version: i64,
+    #[serde(default)]
+    analysis_version: Option<i64>,
+    #[serde(default)]
+    screen_parser_version: Option<i64>,
     note: String,
     added: Vec<LedgerPath>,
     moved: Vec<LedgerPath>,
+    #[serde(default)]
+    removed: Option<Vec<LedgerPath>>,
 }
 
 impl TryFrom<DeclarationFile> for Declaration {
     type Error = String;
 
     fn try_from(file: DeclarationFile) -> Result<Self, String> {
-        // A path in both lists says a place both gained a key and moved a value, which no one
-        // difference is; and twice in one list is a copy-paste that the ledger would echo.
+        // One key, because a run re-records one family: a declaration naming both would describe
+        // two versions' changes in one review, and the ledger entry could only spell one of them.
+        let version = match (file.analysis_version, file.screen_parser_version) {
+            (Some(n), None) => Version::Analysis(n),
+            (None, Some(n)) => Version::ScreenParser(n),
+            (Some(_), Some(_)) => {
+                return Err("a declaration carries both `analysis_version` and \
+                            `screen_parser_version`; a run re-records one family, so it names \
+                            one (the M34 plan's call 6)"
+                    .to_string())
+            }
+            (None, None) => {
+                return Err(
+                    "a declaration carries no version: `analysis_version` re-records the \
+                            engine and stage families, `screen_parser_version` the screen family \
+                            (the M34 plan's call 6)"
+                        .to_string(),
+                )
+            }
+        };
+        // Present at all, even empty, on an engine declaration: an empty list there would say a
+        // removal is something an engine re-record could declare, and it is not (M32's rule, kept
+        // by the user's answer to the M34 plan's P7 finding 3).
+        if matches!(version, Version::Analysis(_)) && file.removed.is_some() {
+            return Err(
+                "a declaration at `analysis_version` carries `removed`, and an engine \
+                        re-record never removes a key; only a screen declaration names its \
+                        removals (M34 P10)"
+                    .to_string(),
+            );
+        }
+        let removed = file.removed.unwrap_or_default();
+        // A path in two lists says one place differs in two ways, which no one difference does;
+        // and twice in one list is a copy-paste that the ledger would echo.
         let mut seen = BTreeSet::new();
-        for path in file.added.iter().chain(&file.moved) {
+        for path in file.added.iter().chain(&file.moved).chain(&removed) {
             if !seen.insert(path.as_str()) {
                 return Err(format!("{path} is declared twice"));
             }
         }
-        // The comparator reports an added key at the key's own path, so an `added` path ending in a
-        // list index can never match. A list that grew is a `moved` list.
-        if let Some(path) = file
-            .added
-            .iter()
-            .find(|path| matches!(path.segments.last(), Some(Segment::Index(_))))
-        {
-            return Err(format!(
-                "{path} is declared `added`, but it ends in a list index and an added key's path \
-                 ends in the key; a list of another length is a `moved` list"
-            ));
+        // The comparator reports an added or removed key at the key's own path, so such a path
+        // ending in a list index can never match. A list that grew or shrank is a `moved` list.
+        for (kind, paths) in [("added", &file.added), ("removed", &removed)] {
+            if let Some(path) = paths
+                .iter()
+                .find(|path| matches!(path.segments.last(), Some(Segment::Index(_))))
+            {
+                return Err(format!(
+                    "{path} is declared `{kind}`, but it ends in a list index and an {kind} key's \
+                     path ends in the key; a list of another length is a `moved` list"
+                ));
+            }
         }
         Ok(Self {
-            analysis_version: file.analysis_version,
+            version,
             note: file.note,
             added: file.added,
             moved: file.moved,
+            removed,
         })
     }
 }
@@ -363,6 +521,7 @@ impl TryFrom<DeclarationFile> for Declaration {
 pub struct Applied {
     added: Vec<LedgerPath>,
     moved: Vec<LedgerPath>,
+    removed: Vec<LedgerPath>,
 }
 
 impl Applied {
@@ -374,9 +533,14 @@ impl Applied {
         &self.moved
     }
 
+    /// Empty on every engine re-record, whose declaration has no `removed`. [M34 P10]
+    pub fn removed(&self) -> &[LedgerPath] {
+        &self.removed
+    }
+
     /// Nothing differs — the second run of a re-record, and the verb writes nothing.
     pub fn is_empty(&self) -> bool {
-        self.added.is_empty() && self.moved.is_empty()
+        self.added.is_empty() && self.moved.is_empty() && self.removed.is_empty()
     }
 }
 
@@ -390,7 +554,10 @@ impl fmt::Display for Undeclared {
         let why = match self.0.kind {
             DifferenceKind::AddedKey => "and the declaration's `added` does not name it",
             DifferenceKind::Moved { .. } => "and the declaration's `moved` does not name it",
-            DifferenceKind::RemovedKey => "and a re-record never removes a key",
+            DifferenceKind::RemovedKey => {
+                "and the declaration's `removed` does not name it — an engine re-record never \
+                 removes a key, and a screen one only where it is named"
+            }
         };
         write!(f, "{} — {why}", self.0)
     }
@@ -402,7 +569,9 @@ impl fmt::Display for Undeclared {
 /// `stages` from `run_stages`, and `analysis_version` from the constant — so the version move and
 /// the answer go through one comparison, at the document-rooted paths a declaration is written in.
 /// An added key passes only at a declared `added` path, a moved value only at a declared `moved`
-/// path, and a removed key never. Every refusal is returned, so one red run names them all.
+/// path, and a removed key only at a declared `removed` path — which an engine declaration never
+/// has, so there a removed key never passes. Every refusal is returned, so one red run names them
+/// all.
 pub fn gate(
     committed: &Value,
     ours: &Value,
@@ -410,15 +579,13 @@ pub fn gate(
 ) -> Result<Applied, Vec<Undeclared>> {
     let mut added = BTreeSet::new();
     let mut moved = BTreeSet::new();
+    let mut removed = BTreeSet::new();
     let mut undeclared = Vec::new();
     for difference in compare(committed, ours) {
         let (declared, matched) = match difference.kind {
             DifferenceKind::AddedKey => (&declaration.added, &mut added),
             DifferenceKind::Moved { .. } => (&declaration.moved, &mut moved),
-            DifferenceKind::RemovedKey => {
-                undeclared.push(Undeclared(difference));
-                continue;
-            }
+            DifferenceKind::RemovedKey => (&declaration.removed, &mut removed),
         };
         if declared.iter().any(|path| path.as_str() == difference.path) {
             matched.insert(difference.path);
@@ -439,10 +606,12 @@ pub fn gate(
     Ok(Applied {
         added: pick(&declaration.added, &added),
         moved: pick(&declaration.moved, &moved),
+        removed: pick(&declaration.removed, &removed),
     })
 }
 
-/// Step 4: the committed document with only `applied`'s paths taken from `ours`.
+/// Step 4: the committed document with only `applied`'s paths taken from `ours`, and its removed
+/// keys taken out.
 ///
 /// Every other value is the committed one, untouched — in-tolerance floats included, which is the
 /// module doc's reason this starts from `committed` rather than from `ours`.
@@ -450,8 +619,9 @@ pub fn gate(
 /// # Panics
 ///
 /// If `applied` is not [`gate`]'s answer for this same pair. Every path it holds is one [`compare`]
-/// found as a value in both documents (a move) or as a key under a parent both share (an addition),
-/// so for the pair it came from both lookups below succeed.
+/// found as a value in both documents (a move), as a key under a parent both share (an addition),
+/// or as a key `committed` has under such a parent (a removal), so for the pair it came from every
+/// lookup below succeeds.
 pub fn apply(committed: &Value, ours: &Value, applied: &Applied) -> Value {
     let mut document = committed.clone();
     for path in applied.added.iter().chain(&applied.moved) {
@@ -465,6 +635,11 @@ pub fn apply(committed: &Value, ours: &Value, applied: &Applied) -> Value {
             panic!(
                 "{path}: no parent in `committed`, so `applied` is not gate's answer for this pair"
             )
+        });
+    }
+    for path in &applied.removed {
+        path.remove(&mut document).unwrap_or_else(|| {
+            panic!("{path}: not in `committed`, so `applied` is not gate's answer for this pair")
         });
     }
     document
@@ -505,13 +680,23 @@ pub fn ledger(
     }
 
     let spelled = |paths: &[LedgerPath]| paths.iter().map(LedgerPath::as_str).collect::<Value>();
-    let entry = json!({
-        "analysis_version": declaration.analysis_version,
-        "by": RERECORDED_BY,
-        "declaration": declaration_path,
-        "added": spelled(&applied.added),
-        "moved": spelled(&applied.moved),
-    });
+    // Under the declaration's own version key, so an engine vector's entry says `analysis_version`
+    // and a screen vector's `screen_parser_version`, each the version that vector ages on.
+    let mut entry = Map::new();
+    entry.insert(
+        declaration.version.key().to_string(),
+        json!(declaration.version.number()),
+    );
+    entry.insert("by".to_string(), json!(RERECORDED_BY));
+    entry.insert("declaration".to_string(), json!(declaration_path));
+    entry.insert("added".to_string(), spelled(&applied.added));
+    entry.insert("moved".to_string(), spelled(&applied.moved));
+    // On every screen entry, empty or not, so the family's entries share one shape; on no engine
+    // entry, whose shape frozen Python's `frozen_view` reads and which M32 fixed. [M34 P10]
+    if let Version::ScreenParser(_) = declaration.version {
+        entry.insert("removed".to_string(), spelled(&applied.removed));
+    }
+    let entry = Value::Object(entry);
     provenance
         .entry("oracle")
         .or_insert_with(|| json!(PYTHON_ORACLE));
@@ -533,6 +718,31 @@ pub const ENGINE_HALVES: [&str; 2] = ["synthetic", "corpus"];
 /// The stage family's directory under `spec/vectors/`, and the `provenance.kind` its files carry.
 pub const STAGES: &str = "stages";
 
+/// The screen family's directory under `spec/vectors/`, and the `provenance.kind` every one of its
+/// files carries, whichever sub-family it sits in. [M34 P7]
+pub const SCREEN: &str = "screen";
+
+/// The screen sub-families a screen declaration re-records, in this order: each file one screen's
+/// `input` and its `expected`, which [`run_screen`] answers whole.
+///
+/// `hand/` (M34 P8) is a document like the others, whose oracle is a person rather than frozen
+/// Python. A later parser change re-records it under a declaration as it does the rest, and the
+/// ledger says which of its values are then Rust's, as it does on an engine vector: the re-record
+/// keeps `provenance.oracle` as it found it.
+pub const SCREEN_DOCUMENTS: [&str; 4] = ["corpus", "reference", "synthetic", "hand"];
+
+/// The screen sub-families the re-record never reads.
+///
+/// `units/` is tables of cases for the parser's private functions, not documents, so [`run_screen`]
+/// has nothing to answer them with. Nothing a re-record could declare moves them either: each
+/// `field_for` case carries the profile it ran against, so a tile the shipping profile gains cannot
+/// reach one, and the functions themselves are gated case by case in `crates/screen/tests/units.rs`.
+/// A change that needs one re-recorded is a change that gives this module a runner for it.
+///
+/// Every other directory under `vectors/screen/` is refused rather than skipped, so a sub-family
+/// added later is placed in one list or the other on purpose, never left out by default.
+pub const SCREEN_UNREAD: [&str; 1] = ["units"];
+
 /// Which of Rust's answers a vector is re-recorded from.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Family {
@@ -540,6 +750,8 @@ pub enum Family {
     Engine,
     /// `stages/`: `stages` is [`run_stages`]' answer, composed onto its engine vector.
     Stage,
+    /// `screen/`'s [`SCREEN_DOCUMENTS`]: `expected` is [`run_screen`]'s answer. [M34 P7]
+    Screen,
 }
 
 /// Why a run wrote nothing. Every variant is a refusal of the whole run (call 7).
@@ -628,7 +840,8 @@ impl Rerecorded {
 }
 
 /// A gated, composed re-record that has not been written: [`plan`]'s answer. Holding one means every
-/// vector in both families passed.
+/// vector the declaration's family walks passed — both families for an engine declaration, the
+/// screen documents for a screen one.
 #[derive(Debug)]
 pub struct Run {
     declaration: Declaration,
@@ -636,8 +849,9 @@ pub struct Run {
 }
 
 impl Run {
-    /// Every vector the run read: the engine family, then the stage family; within each, the
-    /// [`ENGINE_HALVES`] in their order, and each half in path order.
+    /// Every vector the run read. For an engine declaration, the engine family, then the stage
+    /// family; within each, the [`ENGINE_HALVES`] in their order, and each half in path order. For a
+    /// screen declaration, the [`SCREEN_DOCUMENTS`] in their order, each in path order.
     pub fn vectors(&self) -> &[Rerecorded] {
         &self.vectors
     }
@@ -697,12 +911,18 @@ impl Run {
     /// every changed vector, with its value before and after, then the totals.
     pub fn report(&self, dry_run: bool, files_written: usize) -> String {
         let d = &self.declaration;
+        let declared = match d.version {
+            Version::Analysis(_) => format!("{} added and {} moved", d.added.len(), d.moved.len()),
+            Version::ScreenParser(_) => format!(
+                "{} added, {} moved and {} removed",
+                d.added.len(),
+                d.moved.len(),
+                d.removed.len()
+            ),
+        };
         let mut out = format!(
-            "golf-core rerecord: a declaration at analysis_version {}, {} added and {} moved — {}\n",
-            d.analysis_version,
-            d.added.len(),
-            d.moved.len(),
-            d.note
+            "golf-core rerecord: a declaration at {}, {declared} — {}\n",
+            d.version, d.note
         );
         if dry_run {
             out.push_str("--dry-run: nothing is written\n");
@@ -713,44 +933,100 @@ impl Run {
                 writeln!(out, "  {line}").expect("writing to a String does not fail");
             }
         }
-        let engine = self
-            .vectors
-            .iter()
-            .filter(|v| v.family == Family::Engine)
-            .count();
+        let count = |family: Family| self.vectors.iter().filter(|v| v.family == family).count();
+        let run = match d.version {
+            Version::Analysis(_) => format!(
+                "{} engine, {} stage",
+                count(Family::Engine),
+                count(Family::Stage)
+            ),
+            Version::ScreenParser(_) => format!("{} screen", count(Family::Screen)),
+        };
         let changed = self.changed().count();
         if changed == 0 {
             out.push_str("nothing differs from the committed vectors\n");
         }
         writeln!(
             out,
-            "{} vectors run ({engine} engine, {} stage); {changed} changed; {files_written} files \
-             written",
+            "{} vectors run ({run}); {changed} changed; {files_written} files written",
             self.vectors.len(),
-            self.vectors.len() - engine,
         )
         .expect("writing to a String does not fail");
         out
     }
 }
 
-/// Run, gate, apply, ledger and compose every engine and stage vector under `spec`, writing nothing.
+/// Run, gate, apply and ledger every vector of the declaration's family under `spec` — composing
+/// each stage vector onto its engine vector on the way — and write nothing.
 ///
-/// `Ok` only if every vector in both families passed and every declared path matched (calls 5–7);
+/// `Ok` only if every vector the family walks passed and every declared path matched (calls 5–7);
 /// [`Run::write`] is then the only thing left to do, and `--dry-run` is not calling it.
 pub fn plan(spec: &Path, declaration_file: &Path) -> Result<Run, Refused> {
     let declaration = load_declaration(declaration_file)?;
-    if declaration.analysis_version != ANALYSIS_VERSION {
+    let version = declaration.version;
+    if version.number() != version.current() {
         return Err(Refused::Declaration(format!(
-            "{} is at analysis_version {}, and this engine is at {ANALYSIS_VERSION}; a declaration \
-             describes one version's change, so it is re-run against no other (M32's plan, call 6)",
+            "{} is at {version}, and this {} is at {}; a declaration describes one version's \
+             change, so it is re-run against no other (M32's plan, call 6)",
             declaration_file.display(),
-            declaration.analysis_version
+            version.of(),
+            version.current()
         )));
     }
     let spelling = ledger_spelling(spec, declaration_file)?;
     let vectors_dir = spec.join("vectors");
 
+    let Walked {
+        vectors,
+        refusals,
+        ledgered,
+    } = match version {
+        Version::Analysis(_) => walk_engine(&vectors_dir, &declaration, spelling.as_deref())?,
+        Version::ScreenParser(_) => walk_screen(&vectors_dir, &declaration, spelling.as_deref())?,
+    };
+
+    if !refusals.is_empty() {
+        return Err(Refused::Gate(refusals));
+    }
+    if spelling.is_none() {
+        if let Some(changed) = vectors.iter().find(|v| !v.applied.is_empty()) {
+            return Err(Refused::Declaration(format!(
+                "{} is outside the directory that holds {}, so a ledger cannot name it — and {} \
+                 (and perhaps others) would carry that ledger. Commit the declaration under \
+                 `spec/declarations/` (M32's decision 2)",
+                declaration_file.display(),
+                spec.display(),
+                changed.id
+            )));
+        }
+    }
+
+    let unmatched = unmatched(&declaration, &vectors, &ledgered);
+    if !unmatched.is_empty() {
+        return Err(Refused::Unmatched(unmatched));
+    }
+    Ok(Run {
+        declaration,
+        vectors,
+    })
+}
+
+/// One family's walk: every vector it read, every refusal across them, and the ledger entries
+/// already committed at the declaration's version. [`plan`] judges the three the same way whichever
+/// family made them.
+struct Walked {
+    vectors: Vec<Rerecorded>,
+    refusals: Vec<String>,
+    ledgered: Ledgered,
+}
+
+/// The engine family and then the stage family, each stage document composed onto its engine
+/// vector as that vector will be written (call 9). M32's walk, unchanged but for being one of two.
+fn walk_engine(
+    vectors_dir: &Path,
+    declaration: &Declaration,
+    spelling: Option<&str>,
+) -> Result<Walked, Refused> {
     let mut vectors: Vec<Rerecorded> = Vec::new();
     let mut refusals: Vec<String> = Vec::new();
     let mut ledgered = Ledgered::default();
@@ -762,14 +1038,14 @@ pub fn plan(spec: &Path, declaration_file: &Path) -> Result<Run, Refused> {
         for path in vector_files(&vectors_dir.join(half))? {
             let (committed, crlf) = read_vector(&path)?;
             let id = identify(&committed, &path, half)?;
-            ledgered.note(&committed, &declaration);
+            ledgered.note(&committed, declaration);
             let input = parse_input(&committed, &id)?;
 
             let mut ours = committed.clone();
             ours["expected"] = crate::run(&input);
             ours["analysis_version"] = json!(ANALYSIS_VERSION);
 
-            let entry = match one(&id, &committed, &ours, &declaration, spelling.as_deref()) {
+            let entry = match one(&id, &committed, &ours, declaration, spelling) {
                 Ok((applied, written, lines)) => {
                     vectors.push(Rerecorded {
                         id: id.clone(),
@@ -806,7 +1082,7 @@ pub fn plan(spec: &Path, declaration_file: &Path) -> Result<Run, Refused> {
         for path in vector_files(&vectors_dir.join(STAGES).join(half))? {
             let (committed, crlf) = read_vector(&path)?;
             let id = identify(&committed, &path, STAGES)?;
-            ledgered.note(&committed, &declaration);
+            ledgered.note(&committed, declaration);
             let derived_from = committed["provenance"]["derived_from"]
                 .as_str()
                 .ok_or_else(|| {
@@ -823,7 +1099,7 @@ pub fn plan(spec: &Path, declaration_file: &Path) -> Result<Run, Refused> {
             ours["stages"] = run_stages(&input);
             ours["analysis_version"] = json!(ANALYSIS_VERSION);
 
-            match one(&id, &committed, &ours, &declaration, spelling.as_deref()) {
+            match one(&id, &committed, &ours, declaration, spelling) {
                 Ok((applied, written, lines)) => {
                     // A refused engine vector has no document "as it will be written", and the run
                     // fails on its refusal anyway, so composing onto the committed one would only add
@@ -856,31 +1132,141 @@ pub fn plan(spec: &Path, declaration_file: &Path) -> Result<Run, Refused> {
             }
         }
     }
+    Ok(Walked {
+        vectors,
+        refusals,
+        ledgered,
+    })
+}
 
-    if !refusals.is_empty() {
-        return Err(Refused::Gate(refusals));
-    }
-    if spelling.is_none() {
-        if let Some(changed) = vectors.iter().find(|v| !v.applied.is_empty()) {
-            return Err(Refused::Declaration(format!(
-                "{} is outside the directory that holds {}, so a ledger cannot name it — and {} \
-                 (and perhaps others) would carry that ledger. Commit the declaration under \
-                 `spec/declarations/` (M32's decision 2)",
-                declaration_file.display(),
-                spec.display(),
-                changed.id
+/// The screen family's [`SCREEN_DOCUMENTS`], each run through [`run_screen`], gated, applied and
+/// ledgered. [M34 P7]
+///
+/// Nothing composes onto a screen document, because nothing else holds a copy of its answer. Every
+/// entry under `vectors/screen/` must be a directory named in [`SCREEN_DOCUMENTS`] or
+/// [`SCREEN_UNREAD`], checked before any vector is read, so a sub-family nobody placed stops the walk
+/// instead of going un-re-recorded while its tests go on reading the old answers.
+fn walk_screen(
+    vectors_dir: &Path,
+    declaration: &Declaration,
+    spelling: Option<&str>,
+) -> Result<Walked, Refused> {
+    let screen_dir = vectors_dir.join(SCREEN);
+    let listing =
+        |e: &dyn fmt::Display| Refused::Files(format!("listing {}: {e}", screen_dir.display()));
+    for entry in fs::read_dir(&screen_dir).map_err(|e| listing(&e))? {
+        let path = entry.map_err(|e| listing(&e))?.path();
+        let name = path.file_name().and_then(OsStr::to_str).unwrap_or_default();
+        let placed = SCREEN_DOCUMENTS.contains(&name) || SCREEN_UNREAD.contains(&name);
+        if !(placed && path.is_dir()) {
+            return Err(Refused::Files(format!(
+                "{} is not a screen sub-family the re-record knows. A directory of documents \
+                 belongs in `SCREEN_DOCUMENTS`, and one it must never read in `SCREEN_UNREAD` \
+                 (golf_core::rerecord), so that a new one is placed on purpose",
+                path.display()
             )));
         }
     }
 
-    let unmatched = unmatched(&declaration, &vectors, &ledgered);
-    if !unmatched.is_empty() {
-        return Err(Refused::Unmatched(unmatched));
+    let mut vectors: Vec<Rerecorded> = Vec::new();
+    let mut refusals: Vec<String> = Vec::new();
+    let mut ledgered = Ledgered::default();
+    let mut ids: BTreeSet<String> = BTreeSet::new();
+    for half in SCREEN_DOCUMENTS {
+        for path in vector_files(&screen_dir.join(half))? {
+            let (committed, crlf) = read_vector(&path)?;
+            let id = identify(&committed, &path, SCREEN)?;
+            if !ids.insert(id.clone()) {
+                return Err(Refused::Files(format!(
+                    "{id} is the id of two screen vectors"
+                )));
+            }
+            ledgered.note(&committed, declaration);
+            // The trait method, so `ScreenInput`'s `deny_unknown_fields` holds here as it does in
+            // `parse-screen`: a vector whose input the reader would not take is a broken `spec/`.
+            let input = ScreenInput::deserialize(&committed["input"]).map_err(|e| {
+                Refused::Files(format!(
+                    "{id}: input does not parse into `screen::ScreenInput`: {e}"
+                ))
+            })?;
+
+            let mut ours = committed.clone();
+            ours["expected"] =
+                run_screen(&input).map_err(|e| Refused::Files(format!("{id}: {e}")))?;
+            ours["screen_parser_version"] = json!(SCREEN_PARSER_VERSION);
+
+            match one(&id, &committed, &ours, declaration, spelling) {
+                Ok((applied, written, lines)) => {
+                    let written = (!applied.is_empty()).then_some(written);
+                    vectors.push(Rerecorded {
+                        id,
+                        path,
+                        family: Family::Screen,
+                        applied,
+                        lines,
+                        crlf,
+                        written,
+                    });
+                }
+                Err(refused) => refusals.extend(refused),
+            }
+        }
     }
-    Ok(Run {
-        declaration,
+    if ids.is_empty() {
+        return Err(Refused::Files(format!(
+            "no screen document under {}",
+            screen_dir.display()
+        )));
+    }
+    Ok(Walked {
         vectors,
+        refusals,
+        ledgered,
     })
+}
+
+/// One screen document's `input` through `crates/screen`, as that document's whole `expected` —
+/// `conformance_vectors._run_screen`'s counterpart, the definition every screen vector records.
+/// [M34 P7]
+///
+/// The M34 plan's call 1, three answers:
+///
+/// - `label_ratio`, [`label_ratio`] over the boxes and the device's profile;
+/// - `parsed`, the parse *before* validation: its `confidence` unrounded, its `warnings` without
+///   the notes, and neither `device` nor `needs_review`, which `_run_screen` does not record — so a
+///   key `ParsedShot` gains reaches a vector only by being listed here. M34 P8's `fields_present`
+///   is deliberately not: it reaches every document that reads as a shot through
+///   `shot.provenance.fields_present`, and a second copy here would be a second path to declare;
+/// - `shot`, [`screen::read`]'s record, `null` where the read failed.
+///
+/// Each is this build's reader, whatever `parse_screen` and `read` are when the verb runs: a
+/// re-record records the reader that ships, and the gate is what holds it to the committed answer.
+/// Here rather than in `screen` for [`run_stages`]' reason: a vector's layout is vector plumbing, and
+/// the reader knows nothing about `spec/`. P6's `parse-screen` is not reused, because it is a seam for
+/// a person and prints the shot alone.
+pub fn run_screen(input: &ScreenInput) -> Result<Value, UnknownProfile> {
+    let profile = load_profile(&input.device)?;
+    let parsed = parse_screen(&input.boxes, profile);
+    let values: Map<String, Value> = parsed
+        .values
+        .iter()
+        .map(|(target, value)| (target.to_string(), json!(value)))
+        .collect();
+    let raw_fields: Map<String, Value> = parsed
+        .raw_fields
+        .iter()
+        .map(|(label, text)| (label.to_string(), json!(text)))
+        .collect();
+    Ok(json!({
+        "label_ratio": label_ratio(&input.boxes, profile),
+        "parsed": {
+            "values": values,
+            "raw_fields": raw_fields,
+            "confidence": parsed.confidence,
+            "warnings": parsed.warnings,
+        },
+        "shot": screen::read(input)?,
+    }))
 }
 
 /// One document's steps 2–4 and its ledger: what applied, the document as it will be written, and
@@ -914,6 +1300,12 @@ fn one(
             brief(path.get(&written))
         )
     }));
+    lines.extend(
+        applied
+            .removed
+            .iter()
+            .map(|path| format!("removed {path} (was {})", brief(path.get(committed)))),
+    );
     if let Some(spelling) = spelling.filter(|_| !applied.is_empty()) {
         ledger(&mut written, &applied, declaration, spelling).map_err(|e| vec![e])?;
     }
@@ -939,18 +1331,24 @@ fn brief(value: Option<&Value>) -> String {
 struct Ledgered {
     added: BTreeSet<String>,
     moved: BTreeSet<String>,
+    removed: BTreeSet<String>,
 }
 
 impl Ledgered {
     fn note(&mut self, committed: &Value, declaration: &Declaration) {
         let entries = committed["provenance"]["rerecords"].as_array();
+        let version = declaration.version;
         for entry in entries.into_iter().flatten() {
-            if entry["analysis_version"].as_i64() != Some(declaration.analysis_version)
+            if entry[version.key()].as_i64() != Some(version.number())
                 || entry["by"] != RERECORDED_BY
             {
                 continue;
             }
-            for (kind, into) in [("added", &mut self.added), ("moved", &mut self.moved)] {
+            for (kind, into) in [
+                ("added", &mut self.added),
+                ("moved", &mut self.moved),
+                ("removed", &mut self.removed),
+            ] {
                 let paths = entry[kind].as_array().into_iter().flatten();
                 into.extend(paths.filter_map(Value::as_str).map(str::to_string));
             }
@@ -968,11 +1366,19 @@ fn unmatched(
     for vector in vectors {
         found.extend(vector.applied.added.iter().map(|p| ("added", p.as_str())));
         found.extend(vector.applied.moved.iter().map(|p| ("moved", p.as_str())));
+        found.extend(
+            vector
+                .applied
+                .removed
+                .iter()
+                .map(|p| ("removed", p.as_str())),
+        );
     }
     let mut unmatched = Vec::new();
     for (kind, declared, recorded) in [
         ("added", &declaration.added, &ledgered.added),
         ("moved", &declaration.moved, &ledgered.moved),
+        ("removed", &declaration.removed, &ledgered.removed),
     ] {
         for path in declared {
             if found.contains(&(kind, path.as_str())) || recorded.contains(path.as_str()) {
@@ -980,9 +1386,9 @@ fn unmatched(
             }
             unmatched.push(format!(
                 "{path} (declared `{kind}`): no vector differs there and no vector's ledger records \
-                 it at v{} — a misspelling, or a value that moved within the tolerance or not at all, \
+                 it at {} — a misspelling, or a value that moved within the tolerance or not at all, \
                  which the gate does not report as a difference (M32's plan, call 5)",
-                declaration.analysis_version
+                declaration.version
             ));
         }
     }
@@ -1268,10 +1674,10 @@ mod tests {
         );
     }
 
-    /// Declared or not, a dropped key is refused: no declaration kind covers it, so naming the path
-    /// under `moved` changes nothing.
+    /// Declared or not, a key dropped from an engine answer is refused: an engine declaration has no
+    /// `removed` (the load refuses one), so naming the path under `moved` changes nothing.
     #[test]
-    fn a_removed_key_never_passes() {
+    fn a_removed_key_never_passes_an_engine_declaration() {
         let mut dropped = ours();
         dropped["expected"]["swing"]["shot"]
             .as_object_mut()
@@ -1586,7 +1992,226 @@ mod tests {
             assert!(refused.to_string().contains(why), "{file}: {refused}");
         }
         assert_eq!(m32().added.len() + m32().moved.len(), 12);
-        assert_eq!(m32().analysis_version, 17);
+        assert_eq!(m32().version, Version::Analysis(17));
+    }
+
+    /// Call 6 (M34's): the version key a declaration carries picks its family, and it carries
+    /// exactly one — both would be two versions' changes in one review, and neither leaves the run
+    /// with no family to walk.
+    #[test]
+    fn a_declaration_names_exactly_one_version_and_it_picks_the_family() {
+        let screen: Declaration = serde_json::from_value(json!({
+            "screen_parser_version": 1, "note": "", "added": [], "moved": [],
+        }))
+        .expect("a screen declaration");
+        assert_eq!(screen.version, Version::ScreenParser(1));
+        assert_eq!(screen.version.key(), "screen_parser_version");
+        assert_eq!(screen.version.current(), SCREEN_PARSER_VERSION);
+        assert_eq!(screen.version.to_string(), "screen_parser_version 1");
+        assert_eq!(m32().version.key(), "analysis_version");
+        assert_eq!(m32().version.current(), ANALYSIS_VERSION);
+
+        for (file, why) in [
+            (
+                json!({"analysis_version": 17, "screen_parser_version": 1, "note": "",
+                       "added": [], "moved": []}),
+                "carries both",
+            ),
+            (
+                json!({"note": "", "added": [], "moved": []}),
+                "carries no version",
+            ),
+        ] {
+            let refused =
+                serde_json::from_value::<Declaration>(file.clone()).expect_err(&file.to_string());
+            assert!(refused.to_string().contains(why), "{file}: {refused}");
+        }
+    }
+
+    /// A screen vector's ledger entry says `screen_parser_version`, the version that vector ages on,
+    /// and never `analysis_version`: a screen vector carrying an engine version would go stale on
+    /// every engine bump (`tests/test_conformance.py` pins the top level the same way).
+    #[test]
+    fn a_screen_ledger_entry_is_keyed_by_the_screen_parser_version() {
+        let screen: Declaration = serde_json::from_value(json!({
+            "screen_parser_version": 1,
+            "note": "",
+            "added": ["expected.shot.provenance.parser_version"],
+            "moved": ["screen_parser_version"],
+        }))
+        .expect("a screen declaration");
+        let committed = json!({
+            "id": "screen/corpus/2026-08-23-2",
+            "screen_parser_version": 0,
+            "provenance": {"kind": "screen", "oracle": "python"},
+            "expected": {"shot": {"provenance": {"device": "hd_golf"}}},
+        });
+        let mut ours = committed.clone();
+        ours["screen_parser_version"] = json!(1);
+        ours["expected"]["shot"]["provenance"]["parser_version"] = json!(0);
+
+        let applied = gate(&committed, &ours, &screen).expect("declared");
+        let mut written = apply(&committed, &ours, &applied);
+        ledger(
+            &mut written,
+            &applied,
+            &screen,
+            "spec/declarations/screen-v1.json",
+        )
+        .expect("a ledger");
+        assert_eq!(
+            written["provenance"]["rerecords"],
+            json!([{
+                "screen_parser_version": 1,
+                "by": "golf-core rerecord",
+                "declaration": "spec/declarations/screen-v1.json",
+                "added": ["expected.shot.provenance.parser_version"],
+                "moved": ["screen_parser_version"],
+                "removed": [],
+            }])
+        );
+        assert_eq!(written["provenance"]["oracle"], json!("python"));
+    }
+
+    /// The user's answer to the M34 plan's P7 finding 3, on the shape decision 3 makes: a tile the
+    /// tie rule withholds loses its `raw_fields` key. A screen declaration's `removed` lets exactly
+    /// the named key go, [`apply`] takes it out, the ledger lists it, and the report says what it
+    /// held — while an unnamed removal in the same document is still refused, saying why.
+    #[test]
+    fn a_screen_declaration_removes_exactly_the_keys_it_names() {
+        let named = "expected.parsed.raw_fields.Impact Position";
+        let screen = |removed: &[&str]| -> Declaration {
+            serde_json::from_value(json!({
+                "screen_parser_version": 1,
+                "note": "",
+                "added": [],
+                "moved": ["screen_parser_version"],
+                "removed": removed,
+            }))
+            .expect("a screen declaration")
+        };
+        let committed = json!({
+            "id": "screen/corpus/2026-08-23-1",
+            "screen_parser_version": 0,
+            "provenance": {"kind": "screen", "oracle": "python"},
+            "expected": {"parsed": {"raw_fields": {"Carry": "151.5", "Impact Position": "HEEL"}}},
+        });
+        let mut ours = committed.clone();
+        ours["screen_parser_version"] = json!(1);
+        ours["expected"]["parsed"]["raw_fields"]
+            .as_object_mut()
+            .expect("raw fields")
+            .remove("Impact Position");
+
+        let applied = gate(&committed, &ours, &screen(&[named])).expect("the removal is named");
+        assert_eq!(applied.removed().len(), 1);
+        assert_eq!(applied.removed()[0].as_str(), named);
+        let mut written = apply(&committed, &ours, &applied);
+        assert_eq!(written, ours, "the key is gone and nothing else moved");
+        ledger(
+            &mut written,
+            &applied,
+            &screen(&[named]),
+            "spec/declarations/screen-v1.json",
+        )
+        .expect("a ledger");
+        assert_eq!(
+            written["provenance"]["rerecords"][0]["removed"],
+            json!([named])
+        );
+
+        let (_, _, lines) = one(
+            "screen/corpus/2026-08-23-1",
+            &committed,
+            &ours,
+            &screen(&[named]),
+            None,
+        )
+        .expect("declared");
+        assert!(
+            lines.contains(&format!("removed {named} (was \"HEEL\")")),
+            "{lines:?}"
+        );
+
+        let refused = gate(&committed, &ours, &screen(&[])).expect_err("an unnamed removal");
+        assert_eq!(paths(&refused), [named]);
+        assert_eq!(refused[0].0.kind, DifferenceKind::RemovedKey);
+        assert!(
+            refused[0].to_string().contains("`removed`"),
+            "{}",
+            refused[0]
+        );
+
+        // A removal named where nothing is removed matches nothing here, as an `added` path that
+        // finds no key does; whether it matched anywhere is the run's typo guard.
+        let applied = gate(&committed, &committed, &screen(&[named])).expect("nothing differs");
+        assert!(applied.is_empty());
+    }
+
+    /// `removed` is the screen family's alone, and held to `added`'s spelling rules.
+    #[test]
+    fn removed_is_a_screen_declarations_alone() {
+        for (file, why) in [
+            (
+                json!({"analysis_version": 17, "note": "", "added": [], "moved": [],
+                       "removed": ["expected.swing.shot.ball_speed"]}),
+                "never removes a key",
+            ),
+            (
+                json!({"analysis_version": 17, "note": "", "added": [], "moved": [],
+                       "removed": []}),
+                "never removes a key",
+            ),
+            (
+                json!({"screen_parser_version": 1, "note": "", "added": [], "moved": [],
+                       "removed": ["expected.parsed.warnings[2]"]}),
+                "ends in a list index",
+            ),
+            (
+                json!({"screen_parser_version": 1, "note": "", "added": [], "moved": ["a"],
+                       "removed": ["a"]}),
+                "declared twice",
+            ),
+            (
+                json!({"screen_parser_version": 1, "note": "", "added": [], "moved": [],
+                       "remove": ["a"]}),
+                "unknown field",
+            ),
+        ] {
+            let refused =
+                serde_json::from_value::<Declaration>(file.clone()).expect_err(&file.to_string());
+            assert!(refused.to_string().contains(why), "{file}: {refused}");
+        }
+        assert!(
+            m32().removed.is_empty(),
+            "v17's shape loads with no removal"
+        );
+    }
+
+    /// The question M34 P7 was asked before the screen family's warnings lists grow: a list of
+    /// another length is one move *at the list's own path*, declared there, and lands whole; a list
+    /// of the same length moves per index, which the list's path does not cover. So a declaration
+    /// can name a grown list, and needs the index spelling only where a list kept its length.
+    #[test]
+    fn a_list_is_declared_whole_when_its_length_changes() {
+        let committed = json!({"id": "x", "provenance": {}, "warnings": ["a", "b"]});
+        let grown = json!({"id": "x", "provenance": {}, "warnings": ["a", "b", "c"]});
+        let replaced = json!({"id": "x", "provenance": {}, "warnings": ["a", "z"]});
+        let whole = declaration(&[], &["warnings"]);
+
+        let applied = gate(&committed, &grown, &whole).expect("the grown list is declared whole");
+        assert_eq!(applied.moved()[0].as_str(), "warnings");
+        assert_eq!(apply(&committed, &grown, &applied), grown);
+
+        let refused = gate(&committed, &replaced, &whole).expect_err("a same-length list");
+        assert_eq!(paths(&refused), ["warnings[1]"]);
+        let indexed = declaration(&[], &["warnings", "warnings[1]"]);
+        let applied = gate(&committed, &replaced, &indexed).expect("declared at the index");
+        assert_eq!(apply(&committed, &replaced, &applied), replaced);
+        assert_eq!(
+            gate(&committed, &grown, &indexed).map(|a| a.moved().len()),
+            Ok(1)
+        );
     }
 
     /// The writer's bytes, against what `_write_json` and `GzipFile` wrote into the committed files:

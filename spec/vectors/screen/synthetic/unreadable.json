@@ -1,0 +1,55 @@
+{
+  "expected": {
+    "label_ratio": 0.0,
+    "parsed": {
+      "confidence": 0.0,
+      "raw_fields": {},
+      "values": {},
+      "warnings": [
+        "no hd_golf tile labels recognized - wrong screen, or the crop failed"
+      ]
+    },
+    "shot": null
+  },
+  "id": "screen/synthetic/unreadable",
+  "input": {
+    "boxes": [
+      {
+        "confidence": 0.9,
+        "height": 20.0,
+        "text": "BALL TRAJECTORY",
+        "width": 200.0,
+        "x": 0.0,
+        "y": 0.0
+      }
+    ],
+    "device": "hd_golf",
+    "image_path": null,
+    "image_sha256": null,
+    "min_confidence": 0.6,
+    "notes": [],
+    "session_id": "synthetic",
+    "shot_id": "synthetic-unreadable",
+    "timestamp": "2026-08-04T12:00:00Z"
+  },
+  "provenance": {
+    "kind": "screen",
+    "note": "One box and no label: no values, confidence 0, and `shot` is None because `import_screen` returns `failed` rather than a half-populated shot.",
+    "oracle": "python",
+    "python_version": "3.13.3",
+    "rerecords": [
+      {
+        "added": [],
+        "by": "golf-core rerecord",
+        "declaration": "spec/declarations/screen-v1.json",
+        "moved": [
+          "screen_parser_version"
+        ],
+        "removed": [],
+        "screen_parser_version": 1
+      }
+    ],
+    "source": "tests/launch_monitor/conftest.py::build_screen; tests/launch_monitor/test_screen_parser.py::test_unreadable_screen_yields_nothing_rather_than_garbage"
+  },
+  "screen_parser_version": 1
+}

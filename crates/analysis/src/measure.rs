@@ -30,8 +30,8 @@
 //! # The two portability edges that reach this module
 //!
 //! [`address_sample_bounds`] rounds a **frame count**, so it goes through
-//! [`crate::pyfmt::round_index`] — one of ADR-032 §3's seventeen. And [`tempo_timings`] formats two
-//! floats with `.0f` into a refusal sentence, so that goes through [`crate::pyfmt::fixed`]. Both are
+//! [`pyfmt::round_index`] — one of ADR-032 §3's seventeen. And [`tempo_timings`] formats two
+//! floats with `.0f` into a refusal sentence, so that goes through [`pyfmt::fixed`]. Both are
 //! solved in `pyfmt` rather than here, which is what P3 bought.
 
 use contracts::keypoints::{FrameKeypoints, PoseLandmark};
@@ -39,8 +39,8 @@ use contracts::swing::{PhaseSegment, SwingPhase};
 use contracts::unscored::UnscoredReason;
 
 use crate::phases::TRAIL_WRIST;
-use crate::pyfmt::{fixed, round_index};
 use crate::stats::percentile;
+use pyfmt::{fixed, round_index};
 
 /// Landmarks dimmer than this are treated as unreliable (MediaPipe convention, matches
 /// [`crate::phases`]).

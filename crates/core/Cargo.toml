@@ -10,7 +10,7 @@ version = "0.1.0"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
-description = "The shell: the stdin -> stdout `run` seam conformance.py diffs a port through, the gated re-record of spec/vectors/, and the golf-core binary."
+description = "The shell: the stdin -> stdout `run` seam conformance.py diffs a port through, the gated re-record of spec/vectors/, the screen reader's `parse-screen` seam, and the golf-core binary."
 
 [lib]
 name = "golf_core"
@@ -28,6 +28,14 @@ path = "src/bin/golf_core.rs"
 analysis = { path = "../analysis" }
 contracts = { path = "../contracts" }
 feedback = { path = "../feedback" }
+# `stages` rounds the pose rows the way `round(x, 4)` does. Its own edge since M34 P1, because no
+# crate re-exports `pyfmt`.
+pyfmt = { path = "../pyfmt" }
+# `golf-core parse-screen`, the screen reader's stdin -> stdout seam (M34 P6). The shell is where a
+# crate's entry point meets a pipe, as `run` is for the engine; `screen` itself knows nothing of
+# stdin. `screen` dev-depends on this crate for `compare`, which makes a dev-dependency cycle cargo
+# permits (`crates/screen/Cargo.toml` says why).
+screen = { path = "../screen" }
 # A dependency rather than a dev-dependency since M32 P5: `golf-core rerecord` reads and writes the
 # corpus and stage vectors, which are committed gzipped (`conformance.py::_write_json`'s level 9 and
 # mtime 0). Until then only the tests read them.

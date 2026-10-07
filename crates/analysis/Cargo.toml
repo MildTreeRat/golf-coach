@@ -13,6 +13,10 @@ description = "The swing analysis engine: the port of src/golf_coach/analysis/, 
 # through it — P4 is the first phase that does, and a manifest that states the direction only once
 # there is a caller is not enforcing a rule, it is recording one.
 contracts = { path = "../contracts" }
+# §3's edges, which were this crate's own `pyfmt` module until M34 P1 moved them below it so that
+# `feedback` and `screen` could share them without depending on `analysis`. Nothing here re-exports
+# it: one path, not two that drift.
+pyfmt = { path = "../pyfmt" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 

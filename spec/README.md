@@ -4,34 +4,56 @@
 > by a pin, and re-checked on every run of `cargo test` and `tests/test_conformance.py`.
 
 **Read [`docs/CONFORMANCE.md`](../docs/CONFORMANCE.md) first.** It is the specification; this is
-the data. Two kinds of file here are written by hand, on purpose, and both are pinned: the three
-Rust-owned schemas and the re-record declarations. No vector is.
+the data. Three kinds of file here are written by hand, on purpose, and all three are pinned: the
+three Rust-owned schemas, the re-record declarations, and the hand-worked screen vectors under
+`vectors/screen/hand/`, whose answers are worked in their own `note` from the rule rather than
+produced by any code. No other vector is.
 
 ```
 spec/
   schemas/       JSON Schema per shape that crosses the seam. Seven are exported from
                  src/golf_coach/contracts/; shot_data, swing_result and swing_bundle_result
                  are Rust's, edited by hand and pinned by crates/contracts/tests/schemas.rs [M32]
-  declarations/  one per Rust re-record: the paths it may add and move               [M32]
+  declarations/  one per Rust re-record: the paths it may add, move and (screen only)
+                 remove. v17.json is the engine's [M32], screen-v1.json the screen's      [M34]
   vectors/
     synthetic/   deterministic fixtures — small, readable, cover the code paths
     corpus/      the 15 real swings on disk, gzipped — cover the numerics
     audio/       one per stored clip — the ball-strike detector's oracle          [M20]
     stages/      one per engine vector — the intermediates, so a port has a gate
                  per stage instead of one gate at the end                         [M22 P1]
-    format/      CPython's own rounding, float formatting and dict ordering —
-                 the three edges a Rust port diverges on                          [M22 P3]
+    format/      CPython's own rounding, float formatting and dict ordering, and
+                 the screen parser's string, `//`, Unicode, `sum()` and difflib
+                 edges — each table naming the crate that runs it            [M22 P3, M34]
+    screen/      OCR boxes in, ShotData out — the screen reader's oracle          [M34]
+      corpus/      PaddleOCR's boxes for the 13 stored bay photos
+      reference/   the 2 reference photos, the other layout
+      synthetic/   build_screen's screens, one per parser or validator path
+      hand/        the tie rule and the Impact Position V tile, worked by hand
+      units/       case tables over the frozen parser's private functions
 ```
 
 The first two are the **engine** families. `crates/core` runs them end to end under `cargo test`,
 all 21 vectors, and since M32 it is also what records them: **the oracle is Rust**
 ([ADR-035 §3](../docs/decisions/035-rust-everywhere-python-where-required.md#3-the-oracle-moves-to-rust)).
 `conformance.py check` still runs frozen Python against them, and what a pass means now is that the
-freeze held, not that the vectors are right. The other three name a Rust crate, so `check` reports
-them and defers: `crates/trigger` runs `audio/`, `crates/analysis` runs `format/` and **all seven of
-`stages/`'s stages**, and `crates/core` reproduces each stage document whole. The end-to-end run
-is what closed M22 (P8b): the port these were written for conforms, so what is here now is the gate
-a *second* port is held to. `docs/CONFORMANCE.md` §2's table says which stage gates what.
+freeze held, not that the vectors are right. The other four name a Rust crate, so `check` reports
+them and defers:
+
+- `crates/trigger` runs `audio/`;
+- `crates/pyfmt` runs `format/`, except `difflib_ratio`, which is `crates/screen`'s;
+- `crates/analysis` runs **all seven of `stages/`'s stages**, and `crates/core` reproduces each
+  stage document whole;
+- `crates/screen` runs `screen/`.
+
+The end-to-end run is what closed M22 (P8b): the port these were written for conforms, so what is
+here now is the gate a *second* port is held to. `docs/CONFORMANCE.md` §2's table says which stage
+gates what.
+
+`screen/` is the second family Rust records (M34). Frozen Python recorded it once, with
+`conformance.py regenerate --screen-once`, which now refuses. `crates/screen` ported it, the parser
+changed, and `golf-core rerecord` re-recorded it under `screen-v1.json`. `docs/CONFORMANCE.md` §2's
+screen section says what each sub-family gates, and what none of them does.
 
 A green stage is worth less than it looks, which M22 P4 measured and every phase after it
 re-measured: the vectors gate the path this corpus takes, and a guard that is inert on all 21
@@ -39,18 +61,27 @@ swings — or a refusal branch none of them reaches — is the crate's own unit 
 gap is not small and it is not guessable from the file count; see that same section, and ADR-032's
 closing addendum for the whole list of it.
 
-`format/` is the one family whose subject is not this engine, so it is also the only one that does
-not age on `ANALYSIS_VERSION` — a rounding rule belongs to the language, and what it carries is
-`python_version`.
+**Each family ages on its own version.**
+
+- The engine and stage families age on `ANALYSIS_VERSION`.
+- `screen/` ages on `SCREEN_PARSER_VERSION` (`crates/contracts/src/shot.rs`), as a top-level
+  `screen_parser_version`.
+- `format/` ages on no version of this repo's, because its subject is the language: a rounding rule
+  belongs to CPython, and what the family carries is `python_version`.
 
 ```bash
-cargo test                             # certifies every family: the three check defers, and the
+cargo test                             # certifies every family: the four check defers, and the
                                        #   engine vectors end to end against the port
 cargo run --release --bin golf-core -- rerecord --declare spec/declarations/v17.json --dry-run
                                        # re-record the engine and stage families, gated;
                                        #   drop --dry-run to write, then run it again: it must
                                        #   write nothing
+cargo run --release --bin golf-core -- rerecord --declare spec/declarations/screen-v1.json --dry-run
+                                       # the same verb on screen/: the declaration's version
+                                       #   key picks the family
 cargo run --bin golf-core -- run < vector.json   # the port's own answer to one vector
+cargo run --bin golf-core -- parse-screen < spec/vectors/screen/corpus/2026-08-23-2.json
+                                       # the screen reader's answer: ShotData, or null
 python scripts/conformance.py check    # the freeze: frozen Python against every engine vector
 python scripts/conformance.py list     # what is here, and where it came from
 ```
@@ -68,28 +99,57 @@ Every engine and stage vector carries two keys under `provenance` since M32's re
 
 A path is rooted at the vector document with no leading dot (`expected.swing.shot.attack_angle`,
 `analysis_version`, `[i]` for an index), and both languages parse it with one grammar rather than
-match it as text. `audio/` and `format/` carry neither key yet; M37's pin extends `oracle` to them.
+match it as text.
 
-**A declaration is a short JSON file**: `analysis_version`, which must equal the Rust
-`ANALYSIS_VERSION` the verb is built at; a `note`; `added`, the exact paths where the change may
-add a key; and `moved`, the paths whose values it may move. Anything else in the output fails the
-run. `v17.json` is M32's, and it is load-bearing twice: `golf-core rerecord` reads it, and
+**Every screen vector carries `oracle`**, which M34 wrote when it recorded the family:
+
+- **`corpus/`, `reference/` and `synthetic/`** are `oracle: "python"`, with one ledger entry each
+  since M34's re-record. The entry is keyed `screen_parser_version`, and it carries a third list,
+  `removed`.
+- **`hand/`** is `oracle: "hand"`, at version 1, with no ledger yet.
+- **`units/`** is `oracle: "python"`, with no ledger, and it stays at version 0, frozen Python's. It
+  holds case tables, not documents, so the re-record never reads it.
+
+`audio/` and `format/` carry neither key yet. M37's pin extends `oracle` to them.
+
+**A declaration is a short JSON file.** It carries exactly one version key, and that key picks the
+family:
+
+- `analysis_version` for the engine and stage families, which must equal the Rust
+  `ANALYSIS_VERSION` the verb is built at;
+- or `screen_parser_version` for `screen/`, which must equal `SCREEN_PARSER_VERSION`.
+
+Beside it are a `note`; `added`, the exact paths where the change may add a key; and `moved`, the
+paths whose values it may move. A screen declaration may also carry `removed`, the exact paths whose
+keys it may drop. M34 needed that because a tile the tie rule withholds has no `raw_fields` key.
+Anything else in the output fails the run.
+
+`v17.json` is M32's, and it is load-bearing twice: `golf-core rerecord` reads it, and
 `crates/contracts/tests/schemas.rs` reads its `added` list to know which schema properties must
-carry a description. It lives here and not under `vectors/`, because `conformance.py` reads every
-JSON file there as a vector.
+carry a description. `screen-v1.json` is M34's. Declarations live here and not under `vectors/`,
+because `conformance.py` reads every JSON file there as a vector.
 
 ## How a file here changes
 
 **Do not edit a vector by hand.** An edit that no tool made is an expectation nothing produced.
-`golf-core rerecord` is the only writer of the engine and stage families, and it changes only what
-a committed declaration names, writing the committed value back for everything else.
+`golf-core rerecord` is the only writer of the engine, stage and screen families, and it changes
+only what a committed declaration names, writing the committed value back for everything else.
 
-**`regenerate` writes almost nothing now, and each refusal is a decision rather than a gap.** The
-engine and stage families are **refused** from M32: a rebuild from frozen Python would write v16
-answers over Rust-recorded vectors and drop their ledgers. `audio/` has been refused since M20: the
-Python detector that recorded it was deleted, and rebuilding it from the Rust one would be a
-self-portrait that passes by construction. What is left is `regenerate --schemas-only`, which
-writes the seven Python-owned schemas and never the three Rust-owned ones, and
-`regenerate --format-only`, which rebuilds `format/` from CPython. **No command creates a new
-vector** from M32: that is §M29's Rust vector builder's. A missing `vectors/` is a broken checkout;
-restore it from git. `docs/CONFORMANCE.md` §4 has all of it.
+**The one exception is a new hand-worked vector, which is written once, from the rule.** Its answer
+is typed from the working in its `note`, never from a parser's output. M34's `screen/hand/` are the
+first. After that it changes like the rest, through `golf-core rerecord`, with a ledger.
+
+**`regenerate` writes almost nothing now, and each refusal is a decision rather than a gap.**
+
+- **The engine and stage families are refused from M32.** A rebuild from frozen Python would write
+  v16 answers over Rust-recorded vectors and drop their ledgers.
+- **`audio/` has been refused since M20.** The Python detector that recorded it was deleted, and
+  rebuilding it from the Rust one would be a self-portrait that passes by construction.
+- **`screen/` is refused once any of it exists.** `regenerate --screen-once` recorded it from frozen
+  Python, once (M34), and it now exits 2, naming `golf-core rerecord`.
+
+What is left is `regenerate --schemas-only`, which writes the seven Python-owned schemas and never
+the three Rust-owned ones, and `regenerate --format-only`, which rebuilds `format/` from CPython.
+**No command creates a new engine vector** from M32: that is §M29's Rust vector builder's. A
+missing `vectors/` is a broken checkout; restore it from git. `docs/CONFORMANCE.md` §4 has all of
+it.

@@ -1,0 +1,46 @@
+{
+  "screen_parser_version": 1,
+  "note": "M34: the screen family's first re-record, frozen Python's parse (screen_parser_version 0) -> the Rust parser M34 ships (1). The shipping parser adds the tie rule (TIE_MARGIN 0.02 on the label assignment total; a tied or duplicated tile is located, unread), the forked profile's Impact Position V tile, fields_present and the parser_version stamp, and ShotData's ten M32 keys reach the record. Corpus values move on the two label-fix shots alone: 2026-08-10-1's shot_type loses the CENTER spill and 2026-08-23-1's impact_position HEEL -> null. One synthetic value moves, and was wrong before: duplicate-label's bounce_and_roll was the real Carry's 128.1 spilled in, and is 23.4. A withheld tile has no raw_fields key (the M34 plan's decision 3), so those keys are removed, which a screen declaration alone may name (the user's answer to the plan's P7 finding 3). The rest is bookkeeping: the V tile's raw field and warning, label_ratio's new denominator, the confidence that follows from one more stored label, and the tie and no-tile warnings. Every value not listed here stays the one frozen Python recorded.",
+  "added": [
+    "expected.shot.attack_angle",
+    "expected.shot.dynamic_loft",
+    "expected.shot.low_point",
+    "expected.shot.impact_offset_h",
+    "expected.shot.impact_offset_v",
+    "expected.shot.impact_position_v",
+    "expected.shot.carry_offline",
+    "expected.shot.provenance.parser_version",
+    "expected.shot.provenance.fields_present",
+    "expected.shot.provenance.corrections",
+    "expected.parsed.raw_fields.Impact Position V",
+    "expected.shot.provenance.raw_fields.Impact Position V"
+  ],
+  "moved": [
+    "screen_parser_version",
+    "expected.label_ratio",
+    "expected.parsed.confidence",
+    "expected.parsed.warnings",
+    "expected.shot.provenance.parse_confidence",
+    "expected.shot.provenance.warnings",
+    "expected.parsed.values.shot_type",
+    "expected.shot.shot_type",
+    "expected.parsed.raw_fields.Shot Type",
+    "expected.shot.provenance.raw_fields.Shot Type",
+    "expected.parsed.raw_fields.Smash Factor",
+    "expected.shot.provenance.raw_fields.Smash Factor",
+    "expected.shot.impact_position",
+    "expected.parsed.values.bounce_and_roll",
+    "expected.shot.bounce_and_roll",
+    "expected.parsed.raw_fields.Shot Distance",
+    "expected.shot.provenance.raw_fields.Shot Distance",
+    "expected.parsed.raw_fields.Bounce & Roll",
+    "expected.shot.provenance.raw_fields.Bounce & Roll"
+  ],
+  "removed": [
+    "expected.parsed.raw_fields.Impact Position",
+    "expected.shot.provenance.raw_fields.Impact Position",
+    "expected.parsed.values.impact_position",
+    "expected.parsed.raw_fields.Carry",
+    "expected.shot.provenance.raw_fields.Carry"
+  ]
+}

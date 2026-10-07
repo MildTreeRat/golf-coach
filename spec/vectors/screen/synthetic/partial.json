@@ -1,0 +1,318 @@
+{
+  "expected": {
+    "label_ratio": 0.4666666666666667,
+    "parsed": {
+      "confidence": 0.6116666666666666,
+      "raw_fields": {
+        "Ball Speed": "101.5 mph",
+        "Bounce & Roll": "23.4 yds",
+        "Carry": "128.1 yds",
+        "Club Path": "1.6 ° O>I",
+        "Club Speed": "88.6 mph",
+        "Launch Angle": "10.2 °",
+        "Shot Distance": "151.5 yds"
+      },
+      "values": {
+        "ball_speed": 101.5,
+        "bounce_and_roll": 23.4,
+        "carry_distance": 128.1,
+        "club_head_speed": 88.6,
+        "club_path": -1.6,
+        "launch_angle": 10.2,
+        "total_distance": 151.5
+      },
+      "warnings": [
+        "no tile found for 'Club Face Angle'",
+        "no tile found for 'Spin'",
+        "no tile found for 'Smash Factor'",
+        "no tile found for 'Impact Position'",
+        "no tile found for 'Shot Type'",
+        "no tile found for 'Horizontal Angle'",
+        "no tile found for 'Spin Axis'",
+        "no tile found for 'Impact Position V'"
+      ]
+    },
+    "shot": {
+      "apex_height": null,
+      "attack_angle": null,
+      "ball_speed": 101.5,
+      "bounce_and_roll": 23.4,
+      "carry_distance": 128.1,
+      "carry_offline": null,
+      "club_face_angle": null,
+      "club_head_speed": 88.6,
+      "club_path": -1.6,
+      "dynamic_loft": null,
+      "impact_offset_h": null,
+      "impact_offset_v": null,
+      "impact_position": null,
+      "impact_position_v": null,
+      "launch_angle": 10.2,
+      "launch_direction": null,
+      "low_point": null,
+      "provenance": {
+        "corrections": {},
+        "device": "hd_golf",
+        "fields_present": [
+          "total_distance",
+          "carry_distance",
+          "bounce_and_roll",
+          "ball_speed",
+          "launch_angle",
+          "club_head_speed",
+          "club_path"
+        ],
+        "image_path": null,
+        "image_sha256": null,
+        "needs_review": false,
+        "parse_confidence": 0.612,
+        "parser_version": 1,
+        "raw_fields": {
+          "Ball Speed": "101.5 mph",
+          "Bounce & Roll": "23.4 yds",
+          "Carry": "128.1 yds",
+          "Club Path": "1.6 ° O>I",
+          "Club Speed": "88.6 mph",
+          "Launch Angle": "10.2 °",
+          "Shot Distance": "151.5 yds"
+        },
+        "warnings": [
+          "no tile found for 'Club Face Angle'",
+          "no tile found for 'Spin'",
+          "no tile found for 'Smash Factor'",
+          "no tile found for 'Impact Position'",
+          "no tile found for 'Shot Type'",
+          "no tile found for 'Horizontal Angle'",
+          "no tile found for 'Spin Axis'",
+          "no tile found for 'Impact Position V'"
+        ]
+      },
+      "session_id": "synthetic",
+      "shot_id": "synthetic-partial",
+      "shot_type": null,
+      "smash_factor": null,
+      "source": "screen",
+      "spin_axis": null,
+      "spin_rate": null,
+      "timestamp": "2026-08-04T12:00:00Z",
+      "total_distance": 151.5
+    }
+  },
+  "id": "screen/synthetic/partial",
+  "input": {
+    "boxes": [
+      {
+        "confidence": 0.95,
+        "height": 20.0,
+        "text": "SHOTDATA Aaron",
+        "width": 220.0,
+        "x": 10.0,
+        "y": 40.0
+      },
+      {
+        "confidence": 0.95,
+        "height": 20.0,
+        "text": "Shot Distance",
+        "width": 91.0,
+        "x": 34.5,
+        "y": 100.0
+      },
+      {
+        "confidence": 0.95,
+        "height": 24.0,
+        "text": "151.5",
+        "width": 45.0,
+        "x": 57.5,
+        "y": 135.0
+      },
+      {
+        "confidence": 0.95,
+        "height": 24.0,
+        "text": "yds",
+        "width": 27.0,
+        "x": 66.5,
+        "y": 165.0
+      },
+      {
+        "confidence": 0.95,
+        "height": 20.0,
+        "text": "Carry",
+        "width": 35.0,
+        "x": 222.5,
+        "y": 100.0
+      },
+      {
+        "confidence": 0.95,
+        "height": 24.0,
+        "text": "128.1",
+        "width": 45.0,
+        "x": 217.5,
+        "y": 135.0
+      },
+      {
+        "confidence": 0.95,
+        "height": 24.0,
+        "text": "yds",
+        "width": 27.0,
+        "x": 226.5,
+        "y": 165.0
+      },
+      {
+        "confidence": 0.95,
+        "height": 20.0,
+        "text": "Bounce & Roll",
+        "width": 91.0,
+        "x": 354.5,
+        "y": 100.0
+      },
+      {
+        "confidence": 0.95,
+        "height": 24.0,
+        "text": "23.4",
+        "width": 36.0,
+        "x": 382.0,
+        "y": 135.0
+      },
+      {
+        "confidence": 0.95,
+        "height": 24.0,
+        "text": "yds",
+        "width": 27.0,
+        "x": 386.5,
+        "y": 165.0
+      },
+      {
+        "confidence": 0.95,
+        "height": 20.0,
+        "text": "Ball Speed",
+        "width": 70.0,
+        "x": 525.0,
+        "y": 100.0
+      },
+      {
+        "confidence": 0.95,
+        "height": 24.0,
+        "text": "101.5",
+        "width": 45.0,
+        "x": 537.5,
+        "y": 135.0
+      },
+      {
+        "confidence": 0.95,
+        "height": 24.0,
+        "text": "mph",
+        "width": 27.0,
+        "x": 546.5,
+        "y": 165.0
+      },
+      {
+        "confidence": 0.95,
+        "height": 20.0,
+        "text": "Launch Angle",
+        "width": 84.0,
+        "x": 678.0,
+        "y": 100.0
+      },
+      {
+        "confidence": 0.95,
+        "height": 24.0,
+        "text": "10.2 °",
+        "width": 54.0,
+        "x": 693.0,
+        "y": 135.0
+      },
+      {
+        "confidence": 0.95,
+        "height": 20.0,
+        "text": "Club Speed",
+        "width": 70.0,
+        "x": 845.0,
+        "y": 100.0
+      },
+      {
+        "confidence": 0.95,
+        "height": 24.0,
+        "text": "88.6",
+        "width": 36.0,
+        "x": 862.0,
+        "y": 135.0
+      },
+      {
+        "confidence": 0.95,
+        "height": 24.0,
+        "text": "mph",
+        "width": 27.0,
+        "x": 866.5,
+        "y": 165.0
+      },
+      {
+        "confidence": 0.95,
+        "height": 20.0,
+        "text": "Club Path",
+        "width": 63.0,
+        "x": 1008.5,
+        "y": 100.0
+      },
+      {
+        "confidence": 0.95,
+        "height": 24.0,
+        "text": "1.6 ° O>I",
+        "width": 81.0,
+        "x": 999.5,
+        "y": 135.0
+      },
+      {
+        "confidence": 0.95,
+        "height": 20.0,
+        "text": "Custom",
+        "width": 42.0,
+        "x": 1179.0,
+        "y": 100.0
+      }
+    ],
+    "device": "hd_golf",
+    "image_path": null,
+    "image_sha256": null,
+    "min_confidence": 0.6,
+    "notes": [],
+    "session_id": "synthetic",
+    "shot_id": "synthetic-partial",
+    "timestamp": "2026-08-04T12:00:00Z"
+  },
+  "provenance": {
+    "kind": "screen",
+    "note": "The top row alone: half the labels, a warning per missing tile, and a confidence that clears the threshold.",
+    "oracle": "python",
+    "python_version": "3.13.3",
+    "rerecords": [
+      {
+        "added": [
+          "expected.shot.attack_angle",
+          "expected.shot.dynamic_loft",
+          "expected.shot.low_point",
+          "expected.shot.impact_offset_h",
+          "expected.shot.impact_offset_v",
+          "expected.shot.impact_position_v",
+          "expected.shot.carry_offline",
+          "expected.shot.provenance.parser_version",
+          "expected.shot.provenance.fields_present",
+          "expected.shot.provenance.corrections"
+        ],
+        "by": "golf-core rerecord",
+        "declaration": "spec/declarations/screen-v1.json",
+        "moved": [
+          "screen_parser_version",
+          "expected.label_ratio",
+          "expected.parsed.confidence",
+          "expected.parsed.warnings",
+          "expected.shot.provenance.parse_confidence",
+          "expected.shot.provenance.warnings"
+        ],
+        "removed": [],
+        "screen_parser_version": 1
+      }
+    ],
+    "source": "tests/launch_monitor/conftest.py::build_screen; tests/launch_monitor/test_screen_parser.py::test_partial_screen_lowers_confidence"
+  },
+  "screen_parser_version": 1
+}

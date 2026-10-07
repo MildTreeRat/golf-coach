@@ -40,7 +40,7 @@
 //! exponent — and Rust's `{}` drops a trailing `.0` the same way `%g` does. The two functions agree
 //! on the whole reachable domain. They stop agreeing the moment something interpolates a value that
 //! is not a clamped percentile, and `spec/vectors/format/` is what stands there; see
-//! `pyfmt`'s module doc, which records the same shape at `mechanics.rs`'s call sites.
+//! `pyfmt`'s crate doc, which records the same shape at `mechanics.rs`'s call sites.
 
 use contracts::alignment::{ClipAlignment, SwingAlignment, SwingAnchors};
 use contracts::capability::device_of;
@@ -73,11 +73,11 @@ use crate::flight_measure::{
 use crate::measure::POSE_MEASUREMENTS;
 use crate::phases::{segment_phases, LEAD_WRIST, TRAIL_WRIST};
 use crate::pivot::{check_for, pivot_observations};
-use crate::pyfmt::{fixed, g, registry_rank, round_to, signed_fixed, OrderedMap};
 use crate::scoring::policy_for;
 use crate::shot_measure::SHOT_MEASUREMENTS;
 use crate::smoothing::{smooth_keypoints, DEFAULT_WINDOW};
 use crate::trajectory::anchors_from_phases as event_time_anchors;
+use pyfmt::{fixed, g, registry_rank, round_to, signed_fixed, OrderedMap};
 
 /// `Measurement.source` for anything read off the face-on pose stream.
 const POSE_FACE_ON_SOURCE: &str = "pose:face_on";

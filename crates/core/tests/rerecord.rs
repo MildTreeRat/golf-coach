@@ -14,6 +14,18 @@
 //!
 //! The two picked are the smallest of their halves, because every run here is a debug build running
 //! the engine on them.
+//!
+//! **The screen family's tests copy all of `spec/vectors/screen/`** [M34 P7], because reading a
+//! screen costs nothing next to running the engine, and a run over every document is the run M34
+//! P10 made. Their real difference is the shape-only declaration (the M34 plan's call 7): the ten
+//! keys Rust's `ShotData` gained in M32, and the version. **Since M34 P8 the copy is given this
+//! build's answer first**, because from P8 the shipping parser no longer gave frozen Python's (the
+//! tie rule, the `Impact Position V` tile, the stamp) while the committed documents kept frozen
+//! Python's until P10 re-recorded them. [`Slice::age_the_screen_documents`] answers each copy through
+//! [`run_screen`], which is what P10 committed, and then takes the ten keys out and the version
+//! back, so the shape-only change is the whole difference on either side of P10, and on a later
+//! parser version's. These tests are about the verb; which answers are committed is
+//! `crates/screen`'s tests' business.
 
 use std::collections::BTreeMap;
 use std::fs;
@@ -21,12 +33,14 @@ use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 
+use contracts::shot::SCREEN_PARSER_VERSION;
 use contracts::swing::ANALYSIS_VERSION;
 use flate2::read::GzDecoder;
 use flate2::write::GzEncoder;
 use flate2::Compression;
 use golf_core::compare::compare;
-use golf_core::rerecord::{plan, Refused};
+use golf_core::rerecord::{plan, run_screen, Family, Refused, SCREEN_DOCUMENTS};
+use screen::ScreenInput;
 use serde_json::{json, Value};
 
 const SYNTHETIC: &str = "synthetic/tempo-too-quick.json";
@@ -86,6 +100,54 @@ impl Slice {
         Self { root }
     }
 
+    /// [`Slice::new`], plus the whole committed screen family, every sub-family in it.
+    fn with_screen(name: &str) -> Self {
+        fn copy_tree(from: &Path, to: &Path) {
+            fs::create_dir_all(to).expect("mkdir");
+            for entry in fs::read_dir(from).unwrap_or_else(|e| panic!("list {from:?}: {e}")) {
+                let path = entry.expect("an entry").path();
+                let target = to.join(path.file_name().expect("a name"));
+                if path.is_dir() {
+                    copy_tree(&path, &target);
+                } else {
+                    fs::copy(&path, &target).unwrap_or_else(|e| panic!("copy {path:?}: {e}"));
+                }
+            }
+        }
+        let slice = Self::new(name);
+        copy_tree(
+            &committed_spec().join("vectors").join("screen"),
+            &slice.vector("screen"),
+        );
+        slice
+    }
+
+    /// A screen declaration, `spec/declarations/{name}.json`: the screen family's version key in
+    /// place of the engine's.
+    fn declare_screen(&self, name: &str, version: i64, added: &[&str], moved: &[&str]) -> PathBuf {
+        let path = self.declare(name, 0, added, moved);
+        let mut declaration = read(&path);
+        let fields = declaration.as_object_mut().expect("a declaration");
+        fields.remove("analysis_version");
+        fields.insert("screen_parser_version".to_string(), json!(version));
+        fs::write(&path, declaration.to_string()).expect("write a declaration");
+        path
+    }
+
+    /// Every screen document in the slice, by path: the files a screen run reads.
+    fn screen_documents(&self) -> Vec<PathBuf> {
+        let mut paths: Vec<PathBuf> = SCREEN_DOCUMENTS
+            .iter()
+            .flat_map(|half| {
+                fs::read_dir(self.vector("screen").join(half))
+                    .expect("list")
+                    .map(|entry| entry.expect("an entry").path())
+            })
+            .collect();
+        paths.sort();
+        paths
+    }
+
     /// `{root}/repo/spec`: one level down, so `{root}` is a place outside the "repository" to put
     /// a declaration in.
     fn spec(&self) -> PathBuf {
@@ -137,6 +199,38 @@ impl Slice {
         self.edit(&format!("stages/{SYNTHETIC}"), |v| {
             v["analysis_version"] = json!(ANALYSIS_VERSION - 1);
         });
+    }
+
+    /// Every screen document answered by this build and then put back to frozen Python's shape:
+    /// `expected` is [`run_screen`]'s, one parser version back, without `keys` in its shot, and with
+    /// no ledger. The shape-only change is then the whole difference between a copy and this build,
+    /// whether or not the committed documents have been re-recorded (the module doc says why the
+    /// answer is this build's since M34 P8). Written CRLF, as the committed files are, so the
+    /// writer's line-ending rule stays under test.
+    fn age_the_screen_documents(&self, keys: &[String]) {
+        for path in self.screen_documents() {
+            let mut document = read(&path);
+            let input: ScreenInput = serde_json::from_value(document["input"].clone())
+                .unwrap_or_else(|e| panic!("{path:?}: input: {e}"));
+            document["expected"] = run_screen(&input).unwrap_or_else(|e| panic!("{path:?}: {e}"));
+            document["screen_parser_version"] = json!(SCREEN_PARSER_VERSION - 1);
+            if let Some(provenance) = document["provenance"].as_object_mut() {
+                provenance.remove("rerecords");
+            }
+            if document["expected"]["shot"].is_object() {
+                for key in keys {
+                    let (parent, last) = key.rsplit_once('.').expect("a nested key");
+                    if let Some(parent) = document
+                        .pointer_mut(&pointer(parent))
+                        .and_then(Value::as_object_mut)
+                    {
+                        parent.remove(last);
+                    }
+                }
+            }
+            let text = serde_json::to_string_pretty(&document).expect("serializes");
+            fs::write(&path, format!("{text}\n").replace('\n', "\r\n")).expect("write");
+        }
     }
 
     fn drop_the_corpus_score(&self) {
@@ -502,5 +596,383 @@ fn the_verb_refuses_arguments_it_does_not_understand() {
             stderr.contains(says) && stderr.contains("usage:"),
             "{args:?}: {stderr}"
         );
+    }
+}
+
+// ------------------------------------------------------------------ the screen family [M34 P7]
+
+/// `spec/declarations/v17.json`'s `added`, re-rooted from the engine vectors' shot to a screen
+/// document's: the ten keys Rust's `ShotData` has and frozen Python's records lack (the M34 plan's
+/// call 7), spelt as `spec/declarations/screen-v1.json` added them, and read from `v17.json` rather
+/// than written out, so this test and M32's declaration cannot spell the ten differently.
+fn m32_shot_keys() -> Vec<String> {
+    let v17 = read(&committed_spec().join("declarations").join("v17.json"));
+    let keys: Vec<String> = v17["added"]
+        .as_array()
+        .expect("v17 lists what it added")
+        .iter()
+        .map(|added| {
+            let added = added.as_str().expect("a declared path is a string");
+            let key = added
+                .strip_prefix("expected.swing.shot.")
+                .unwrap_or_else(|| panic!("v17 added {added:?}, which is not on the shot"));
+            format!("expected.shot.{key}")
+        })
+        .collect();
+    assert!(!keys.is_empty(), "v17.json adds no shot key");
+    keys
+}
+
+/// The shape-only screen declaration: M32's keys added, and the version moved from frozen Python's
+/// unversioned 0 to this build's — the move every re-record makes, as M32's moved
+/// `analysis_version`. A real difference on a slice after [`Slice::age_the_screen_documents`].
+fn declare_shape_only(slice: &Slice, name: &str, keys: &[String]) -> PathBuf {
+    let keys: Vec<&str> = keys.iter().map(String::as_str).collect();
+    slice.declare_screen(
+        name,
+        SCREEN_PARSER_VERSION,
+        &keys,
+        &["screen_parser_version"],
+    )
+}
+
+/// `/a/b` for `a.b`, for the keys here, none of which holds a `.`, `/` or `~`.
+fn pointer(path: &str) -> String {
+    format!("/{}", path.replace('.', "/"))
+}
+
+/// **The screen family re-records behind M32's gate**: an undeclared key is refused everywhere at
+/// once and nothing is written; the shape-only declaration then lands exactly its keys and the
+/// version on every document, each ledgered under `screen_parser_version`, every other value and
+/// every file outside the screen documents left byte for byte; and a second run writes nothing.
+#[test]
+fn a_screen_shape_only_declaration_lands_exactly_its_keys_and_a_second_run_writes_nothing() {
+    let slice = Slice::with_screen("screen-shape");
+    let keys = m32_shot_keys();
+    slice.age_the_screen_documents(&keys);
+    let documents = slice.screen_documents();
+    let before = slice.snapshot();
+
+    // One key left out: refused on every document that has a shot, and nowhere written.
+    let short = declare_shape_only(&slice, "screen-short", &keys[..keys.len() - 1]);
+    let left_out = &keys[keys.len() - 1];
+    let with_a_shot = documents
+        .iter()
+        .filter(|path| !read(path)["expected"]["shot"].is_null())
+        .count();
+    assert!(
+        with_a_shot > 0 && with_a_shot < documents.len(),
+        "the family should hold shots and at least one failed read"
+    );
+    match plan(&slice.spec(), &short) {
+        Err(Refused::Gate(refusals)) => {
+            assert_eq!(refusals.len(), with_a_shot, "{refusals:#?}");
+            assert!(
+                refusals
+                    .iter()
+                    .all(|r| r.starts_with("screen/") && r.contains(left_out.as_str())),
+                "{refusals:#?}"
+            );
+        }
+        other => panic!("expected the gate to refuse, got {other:?}"),
+    }
+    fs::remove_file(&short).expect("remove the short declaration");
+    assert_eq!(slice.snapshot(), before, "a refused run wrote something");
+
+    let declaration = declare_shape_only(&slice, "screen-shape", &keys);
+    let run = plan(&slice.spec(), &declaration).expect("the shape-only change is declared");
+    assert_eq!(run.vectors().len(), documents.len());
+    let committed: BTreeMap<PathBuf, Value> = documents
+        .iter()
+        .map(|path| (path.clone(), read(path)))
+        .collect();
+    for vector in run.vectors() {
+        assert_eq!(vector.family(), Family::Screen, "{}", vector.id());
+        let added: Vec<&str> = vector
+            .applied()
+            .added()
+            .iter()
+            .map(|p| p.as_str())
+            .collect();
+        let moved: Vec<&str> = vector
+            .applied()
+            .moved()
+            .iter()
+            .map(|p| p.as_str())
+            .collect();
+        let had_a_shot = !committed[vector.path()]["expected"]["shot"].is_null();
+        let want: Vec<&str> = if had_a_shot {
+            keys.iter().map(String::as_str).collect()
+        } else {
+            Vec::new()
+        };
+        assert_eq!(added, want, "{}", vector.id());
+        assert_eq!(moved, ["screen_parser_version"], "{}", vector.id());
+    }
+    assert_eq!(run.write().expect("writes"), documents.len());
+
+    // Outside the screen documents nothing moved: the engine and stage slice, `units/`, and the
+    // declarations directory are the bytes they were, and no staged file was left behind.
+    let after = slice.snapshot();
+    assert_eq!(
+        after
+            .keys()
+            .filter(|path| !path.ends_with("screen-shape.json"))
+            .collect::<Vec<_>>(),
+        before.keys().collect::<Vec<_>>(),
+        "the run added or removed a file"
+    );
+    for (path, bytes) in &before {
+        if !documents.contains(path) {
+            assert_eq!(
+                &after[path], bytes,
+                "{path:?} is not a screen document and changed"
+            );
+        }
+    }
+
+    for vector in run.changed() {
+        let path = vector.path();
+        let written = read(path);
+        assert_eq!(
+            &written,
+            vector.written().expect("planned"),
+            "{}",
+            vector.id()
+        );
+        let bytes = &after[path];
+        assert!(
+            bytes.ends_with(b"}\r\n") && !text(bytes).replace("\r\n", "").contains('\n'),
+            "{}: the committed CRLF was not kept",
+            vector.id()
+        );
+
+        // Each ledger lists what matched in that file, under the screen family's version key.
+        let entries = written["provenance"]["rerecords"]
+            .as_array()
+            .expect("a ledger");
+        assert_eq!(entries.len(), 1, "{}", vector.id());
+        let had_a_shot = !committed[path]["expected"]["shot"].is_null();
+        assert_eq!(
+            entries[0],
+            json!({
+                "screen_parser_version": SCREEN_PARSER_VERSION,
+                "by": "golf-core rerecord",
+                "declaration": "spec/declarations/screen-shape.json",
+                "added": if had_a_shot { json!(keys) } else { json!([]) },
+                "moved": ["screen_parser_version"],
+                "removed": [],
+            }),
+            "{}",
+            vector.id()
+        );
+        assert_eq!(
+            written["provenance"]["oracle"],
+            committed[path]["provenance"]["oracle"],
+            "{}: the re-record keeps the oracle it found",
+            vector.id()
+        );
+
+        // Undo the declared paths and the ledger, and what is left is the document as aged.
+        let mut undone = written.clone();
+        undone["provenance"] = committed[path]["provenance"].clone();
+        undone["screen_parser_version"] = committed[path]["screen_parser_version"].clone();
+        if had_a_shot {
+            for key in &keys {
+                let (parent, last) = key.rsplit_once('.').expect("a nested key");
+                undone
+                    .pointer_mut(&pointer(parent))
+                    .and_then(Value::as_object_mut)
+                    .expect("the key's parent")
+                    .remove(last)
+                    .unwrap_or_else(|| panic!("{}: {key} did not land", vector.id()));
+            }
+        }
+        assert_eq!(
+            undone,
+            committed[path],
+            "{}: an undeclared value moved",
+            vector.id()
+        );
+    }
+
+    // The second run: nothing differs, every declared path is in a ledger, nothing is written.
+    let second = plan(&slice.spec(), &declaration).expect("a second run is a no-op, not a refusal");
+    assert_eq!(second.changed().count(), 0);
+    assert_eq!(second.write().expect("writes nothing"), 0);
+    assert_eq!(slice.snapshot(), after, "a second run wrote something");
+}
+
+/// **A screen declaration's `removed` lets exactly the named key go, in the one document that has
+/// it** (M34 P10, the user's answer to the plan's P7 finding 3). One aged copy is given a
+/// `raw_fields` key this build's answer lacks — the shape the tie rule's withheld tiles take. Without
+/// the removal declared the run refuses on that key alone; with it, the key is gone from that file
+/// and only that file's ledger lists it, every other ledger says `removed: []`, and a second run is
+/// a no-op that the typo guard accepts from the ledger.
+#[test]
+fn a_screen_removal_lands_where_it_is_named_and_nowhere_else() {
+    let slice = Slice::with_screen("screen-removed");
+    let keys = m32_shot_keys();
+    slice.age_the_screen_documents(&keys);
+    let stray = "expected.parsed.raw_fields.Impact Position";
+    let target = slice
+        .screen_documents()
+        .into_iter()
+        .find(|path| {
+            let document = read(path);
+            document["expected"]["shot"].is_object()
+                && document["expected"]["parsed"]["raw_fields"]
+                    .get("Impact Position")
+                    .is_none()
+        })
+        .expect("a document whose answer has no `Impact Position` raw field");
+    let mut document = read(&target);
+    document["expected"]["parsed"]["raw_fields"]["Impact Position"] = json!("HEEL");
+    let text = serde_json::to_string_pretty(&document).expect("serializes");
+    fs::write(&target, format!("{text}\n").replace('\n', "\r\n")).expect("write");
+    let target_id = document["id"].as_str().expect("an id").to_string();
+
+    let unnamed = declare_shape_only(&slice, "screen-unnamed", &keys);
+    match plan(&slice.spec(), &unnamed) {
+        Err(Refused::Gate(refusals)) => {
+            assert_eq!(refusals.len(), 1, "{refusals:#?}");
+            assert!(
+                refusals[0].starts_with(&format!("{target_id}: {stray}"))
+                    && refusals[0].contains("`removed`"),
+                "{}",
+                refusals[0]
+            );
+        }
+        other => panic!("expected the gate to refuse the unnamed removal, got {other:?}"),
+    }
+    fs::remove_file(&unnamed).expect("remove the declaration");
+
+    let declaration = declare_shape_only(&slice, "screen-removing", &keys);
+    let mut file = read(&declaration);
+    file["removed"] = json!([stray]);
+    fs::write(&declaration, file.to_string()).expect("write a declaration");
+
+    let run = plan(&slice.spec(), &declaration).expect("the removal is named");
+    run.write().expect("writes");
+    for path in slice.screen_documents() {
+        let written = read(&path);
+        let entry = &written["provenance"]["rerecords"][0];
+        if path == target {
+            assert!(
+                written["expected"]["parsed"]["raw_fields"]
+                    .get("Impact Position")
+                    .is_none(),
+                "the named key is still there"
+            );
+            assert_eq!(entry["removed"], json!([stray]), "{target_id}");
+        } else {
+            assert_eq!(entry["removed"], json!([]), "{path:?}");
+        }
+    }
+
+    let after = slice.snapshot();
+    let second = plan(&slice.spec(), &declaration).expect("a second run is a no-op, not a refusal");
+    assert_eq!(second.changed().count(), 0);
+    assert_eq!(second.write().expect("writes nothing"), 0);
+    assert_eq!(slice.snapshot(), after, "a second run wrote something");
+}
+
+/// **A run reads its own family and nothing else** (call 6). With every engine and stage vector in
+/// the slice made unreadable, a screen run still passes, so it never opened one; with a screen
+/// document unreadable and a sub-family nobody placed beside it, an engine run passes and writes
+/// its own files alone.
+#[test]
+fn a_screen_run_reads_no_engine_vector_and_an_engine_run_reads_no_screen_vector() {
+    let unreadable = b"not a vector";
+
+    let slice = Slice::with_screen("screen-only");
+    for relative in [SYNTHETIC, CORPUS] {
+        for family in ["", "stages/"] {
+            fs::write(slice.vector(&format!("{family}{relative}")), unreadable).expect("write");
+        }
+    }
+    let keys = m32_shot_keys();
+    slice.age_the_screen_documents(&keys);
+    let declaration = declare_shape_only(&slice, "screen-shape", &keys);
+    let run = plan(&slice.spec(), &declaration).expect("a screen run never reads an engine vector");
+    assert!(run.vectors().iter().all(|v| v.family() == Family::Screen));
+    assert_eq!(run.changed().count(), slice.screen_documents().len());
+
+    let slice = Slice::with_screen("engine-only");
+    slice.age_the_synthetic_pair();
+    let first = slice.screen_documents()[0].clone();
+    fs::write(&first, unreadable).expect("write");
+    fs::create_dir_all(slice.vector("screen/unplaced")).expect("mkdir");
+    let screen_before: BTreeMap<PathBuf, Vec<u8>> = slice
+        .snapshot()
+        .into_iter()
+        .filter(|(path, _)| path.starts_with(slice.vector("screen")))
+        .collect();
+    let declaration = slice.declare(
+        "versions",
+        ANALYSIS_VERSION,
+        &[],
+        &["analysis_version", "expected.analysis_version"],
+    );
+    let run = plan(&slice.spec(), &declaration).expect("an engine run never reads a screen vector");
+    assert!(run.vectors().iter().all(|v| v.family() != Family::Screen));
+    assert_eq!(run.write().expect("writes"), 2);
+    let screen_after: BTreeMap<PathBuf, Vec<u8>> = slice
+        .snapshot()
+        .into_iter()
+        .filter(|(path, _)| path.starts_with(slice.vector("screen")))
+        .collect();
+    assert_eq!(
+        screen_after, screen_before,
+        "an engine run wrote a screen file"
+    );
+}
+
+/// The version guard reads the screen family's own constant, and before a vector is read: the spec
+/// here does not exist.
+#[test]
+fn a_screen_declaration_at_another_version_is_refused_before_anything_is_read() {
+    let slice = Slice::new("screen-version");
+    let declaration = slice.declare_screen("screen-next", SCREEN_PARSER_VERSION + 1, &[], &[]);
+    match plan(&slice.root.join("no-such-spec"), &declaration) {
+        Err(Refused::Declaration(why)) => {
+            assert!(why.contains("call 6"), "{why}");
+            assert!(
+                why.contains(&format!("this screen parser is at {SCREEN_PARSER_VERSION}")),
+                "{why}"
+            );
+        }
+        other => panic!("expected the version guard, got {other:?}"),
+    }
+}
+
+/// A directory under `vectors/screen/` that is neither re-recorded nor deliberately unread stops
+/// the walk, and so does a loose file: a sub-family is placed in one list or the other on purpose,
+/// never skipped because nobody told the re-record about it.
+#[test]
+fn a_screen_sub_family_nobody_placed_stops_the_walk() {
+    for (name, make) in [
+        ("screen-unplaced-dir", "unplaced/"),
+        ("screen-unplaced-file", "README.json"),
+    ] {
+        let slice = Slice::with_screen(name);
+        let target = slice.vector("screen").join(make.trim_end_matches('/'));
+        if make.ends_with('/') {
+            fs::create_dir_all(&target).expect("mkdir");
+        } else {
+            fs::write(&target, "{}").expect("write");
+        }
+        let declaration = declare_shape_only(&slice, "screen-shape", &m32_shot_keys());
+        let before = slice.snapshot();
+        match plan(&slice.spec(), &declaration) {
+            Err(Refused::Files(why)) => {
+                assert!(
+                    why.contains(make.trim_end_matches('/')) && why.contains("SCREEN_DOCUMENTS"),
+                    "{why}"
+                );
+            }
+            other => panic!("{make}: expected the walk to stop, got {other:?}"),
+        }
+        assert_eq!(slice.snapshot(), before);
     }
 }

@@ -420,3 +420,103 @@ file, read by both languages".
 - "guessing is worse than declining", the trust model and both cross-checks;
 - §Sign conventions, and the first addendum's `spin_axis` row and its self-check;
 - the M31 addendum's phone column, and its corrected cause for the `CENTER` spill.
+
+## Addendum (2026-10-02, M34): the parser is Rust's, the profile is forked, and a tie is withheld
+
+**Built**, in [the M34 plan](../plans/m34-screen-reader.md)'s phases P1–P10, whose findings carry the
+detail this summarises. The parser, the validator and the profile are `crates/screen`, recorded once
+from frozen Python, ported faithfully, then changed, then re-recorded by Rust. The vectors and the
+gate are [`docs/CONFORMANCE.md`](../CONFORMANCE.md) §2 and §4, and the port's side of it is
+[ADR-032's fifteenth addendum](032-the-rust-core.md#addendum-2026-10-02--the-screen-familys-first-re-record-a-second-version-key-and-nine-crates).
+This addendum records the four choices the M31.5 addendum left open or routed here. The frozen
+Python parser and its `profiles.json` do not change
+([ADR-035 clause 4](035-rust-everywhere-python-where-required.md#4-the-frozen-python-lab)).
+
+**`profiles.json` is forked** (the plan's decision 1), which answers the M31.5 addendum's question.
+"`profiles.json` stays one file, read by both languages" is superseded.
+
+- `crates/screen/profiles.json` is the Rust copy. It gains `Impact Position V` → `impact_position_v`,
+  kind `text`, as the **last** tile, after Spin Axis, which is the bay screen's order. It has no alias.
+- `src/golf_coach/launch_monitor/screen/profiles.json` stays frozen without it, because sharing the
+  file would have given every bay shot in the frozen lab a new warning and about −0.02 of
+  `parse_confidence`, which is new behaviour there.
+- ADR-032 §5's one copy on disk is given up for this file until M40 deletes the Python one.
+  `crates/screen/tests/profile_fork.rs` holds the two equal except a delta it declares by name, the
+  V tile alone. It compares parsed JSON rather than bytes, because `core.autocrlf` decides the bytes.
+- `crates/screen/tests/capability.rs` holds `crates/contracts/devices.json`'s `hd_golf` field set
+  equal to the fork's targets, as a set. So "adding a second launch monitor is a data change" now
+  means two files and a pin between them.
+
+**A tie is withheld, and a tie is a margin** (decisions 3, 5 and 6, as P8 built them in
+`crates/screen/src/parser.rs`). This is the fix the M31 addendum traced and the M31.5 addendum gave
+to M34.
+
+- **The rule.** Every `(box, field)` pair scoring at least 0.8 is a candidate, with the threshold and
+  scoring unchanged. Within each connected group of candidates, the best one-to-one assignment
+  of boxes to fields is found. Every assignment within `TIE_MARGIN` (0.02) of the best one is one the
+  evidence cannot rule out. A field is read only if all of those give it the same box.
+- **What a withheld field is: located, unread.** It is in `provenance.fields_present`, it has **no
+  `raw_fields` key**, its value is `None`, and a warning names the boxes:
+  `Impact Position: label tie between 'Impact Position' and 'ImpactPosition' - not read`. Every tile
+  the parser *read* has a `raw_fields` key, `""` and `---` included. So "in `fields_present`, with no
+  `raw_fields` key" is the structural mark that M35 and M37 grade `misread`, with no warning text
+  parsed.
+- **Its boxes still bound their neighbours.** Every box that any near-best assignment gives a field
+  is a label box, so it bounds its row's columns and is never value text. That is what stops the
+  spill, and not the withholding.
+- **Duplicates are the same ambiguity.** Two boxes that fit one field equally well, like two `Carry`
+  boxes, are two equally good reads of one tile, so the field is withheld.
+- **A tie of more than eight boxes or labels is refused whole, with a warning**, rather than
+  enumerated (`TIE_CAP`). Every tie on a stored photo is 2×2, and no `hd_golf` label is near another
+  except the `Impact Position` pair.
+- **Why a margin and not equality.** The two ways of assigning the `Impact Position` pair were
+  measured on the stored photos before the margin was chosen. OCR damage to a label moves the total
+  by 0.0002 to 0.004, and real evidence moves it by 0.066 or more (an `Impact Position Y` V tile is
+  0.066, and an exact `Impact Position V` is 0.125). Strict equality would have read `2026-08-23-1`
+  on a 0.0002 margin. On that photo's mirror image, where the V tile reads exactly and the real tile
+  is damaged, it would have stored `HEEL` as `impact_position_v`, which is a wrong value. "Guessing is
+  worse than declining" ranks that below a missing one.
+
+**An erratum to the M31 addendum.** It says the `V` "is dropped on the 2026-08-23 session's first
+photo" as on `Aaron-shot-1.png`, so that two boxes score 1.0. On that photo the V tile's label reads
+**`ImpactPosition`**, with the `V` and the space both dropped, and it scores 0.9655, not 1.0
+([planning finding 4](../plans/m34-screen-reader.md#what-the-planning-read-found-2026-10-01)). So the
+real tile won on score there, not on order, and `HEEL` was right by a margin of 0.0002. That is
+inside the noise above, and it is why `HEEL` becomes `None`.
+
+**What the re-read changed**, on the boxes the recorder committed (the plan's
+[P10 findings](../plans/m34-screen-reader.md#p10--the-13-shot-re-read-2026-10-02) have the per-shot
+table):
+
+- **Two shots read differently, as the M31.5 addendum predicted.** `2026-08-10-1`'s `shot_type`
+  goes from `CENTER SLIGHT FADE` to `SLIGHT FADE`, and its `impact_position` stays `None`.
+  `2026-08-23-1`'s `impact_position` goes from `HEEL` to `None`. No other value on the 13 bay shots
+  moved, and no `needs_review` flipped.
+- **The V tile is located on all 13 bay photos.** It reads blank on eleven and is withheld on the two
+  label-fix shots, so no value has been read from it yet. `fields_present` tells the two layouts
+  apart: every bay photo carries `impact_position_v`, and both reference photos carry
+  `bounce_and_roll`.
+- **`data/processed/shots/` is untouched.** The stored shots stay frozen Python's, unstamped, and the
+  lab goes on reading the two label-fix shots the old way until M29 switches it to Rust. The
+  difference is declared, not a regression.
+
+**The surviving warning is filtered, by prefix.** `screen::golfer_warnings` drops each
+`no tile found for '<label>'` line before a golfer sees it, and keeps the line in
+`provenance.warnings`. It reads the same constant as the line that writes it (`NO_TILE_FOUND`), so
+the two cannot drift. A tie line is **not** dropped, because it is about a tile on the golfer's own
+screen that was there and was not read, and a retake can fix it.
+
+**`ProfileField.scale` is dropped** (decision 4). The M32 interview's carried decision 1 and §M34
+listed it, with the scale applied when a cell is read. No device prints a unit that needs
+converting, so it would be code with no caller. It lands with the first profile that needs one.
+Ranges for M32's six new numeric fields did land in `validate.rs`, because ranges are data and
+cheap. Each one is argued as catching a dropped or inserted digit, and no shipped profile reads any
+of those fields yet.
+
+**Not changed**:
+
+- the frozen Python parser, its profile and its tie rule, which keep the hazard until M40;
+- Option E, the trust model and both cross-checks, which the Rust validator carries over faithfully,
+  messages included;
+- §Sign conventions and the sign table, which port as profile data;
+- the M31.5 addendum's lab column. The Rust recognizer is still M29's, through `ort`.

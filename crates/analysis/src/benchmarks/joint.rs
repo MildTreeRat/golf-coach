@@ -29,7 +29,7 @@ use std::sync::OnceLock;
 
 use serde::Deserialize;
 
-use crate::pyfmt::{round_to, OrderedMap};
+use pyfmt::{round_to, OrderedMap};
 
 /// ADR-032 §5, as in [`super::store`]: embedded from the Python package path, one copy on disk.
 const JOINT_MODEL_JSON: &str =

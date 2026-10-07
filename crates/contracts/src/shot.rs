@@ -139,11 +139,20 @@ impl Validate for ShotProvenance {
 /// said, and an engine bump does the reverse.
 ///
 /// **Nothing stamps it before M34.** 0 is not an entry (it is the unstamped default), and frozen
-/// Python's parser never gains a version: it is the thing entry 1 replaces.
+/// Python's parser never gains a version: it is the thing entry 1 replaces. So a stored shot is
+/// either frozen Python's, 0, or read by a parser on this ledger.
 ///
-/// 1 (M34, not yet landed): the screen reader in Rust, `crates/screen`. Whether M34's faithful port
-///   of the frozen parser and the tie rule it then changes are one version or two is M34's call,
-///   and this entry is rewritten when it makes it.
+/// 1 (M34): the screen reader in Rust, `screen::read` in `crates/screen`, as M34 ships it. Frozen
+///   Python's rules ported, with one changed: labels are located by the **tie rule**
+///   (`screen::parser::TIE_MARGIN`), which withholds a field whose box the evidence cannot decide,
+///   where the frozen parser gave it to the first box with the best score. Read with the **forked
+///   profile**, which adds the bay layout's `Impact Position V` tile. Each record carries
+///   `fields_present`, the tiles located, withheld ones included. Validation gains ranges for the
+///   fields M32 added, which no profile reads yet. **The faithful port M34 built on the way has no
+///   entry**: it never stamped a shot, it existed only to hold the shared code to the
+///   Python-recorded vectors, and it went when M34 P10 re-recorded them
+///   (`spec/declarations/screen-v1.json`). One version, not two, because nothing ever shipped
+///   between them.
 pub const SCREEN_PARSER_VERSION: i64 = 1;
 
 /// Whether `shot`'s parse is as new as this build's screen parser — `false` means re-reading its

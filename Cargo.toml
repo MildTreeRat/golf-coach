@@ -16,6 +16,8 @@ members = [
     "crates/core",
     "crates/feedback",
     "crates/pose",
+    "crates/pyfmt",
+    "crates/screen",
     "crates/trigger",
 ]
 resolver = "2"

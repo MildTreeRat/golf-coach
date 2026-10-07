@@ -23,7 +23,7 @@
 //!
 //! # Where the strings come from
 //!
-//! Every interpolation below goes through [`crate::pyfmt`], and `docs/CONFORMANCE.md` §3 compares
+//! Every interpolation below goes through [`pyfmt`], and `docs/CONFORMANCE.md` §3 compares
 //! these sentences **exactly**. Three of them reach the fifth edge — `f"aim under {band.high}"`
 //! has no format spec at all, so it is [`pyfmt::repr`] and not Rust's `{}`, which would write `4`
 //! where CPython writes `4.0`.
@@ -42,7 +42,6 @@ use crate::measure::{
     measure_finish_balance, measure_head_hip_gain, measure_head_sway, measure_hip_shift_at_top,
     measure_hip_sway, measure_tempo_ratio, tempo_timings, MeasureOutcome,
 };
-use crate::pyfmt;
 
 // Name, band key and band shape all come off the spec rather than being retyped here.
 // `contracts::checkpoints` owns the pairing because `caveats.py` has to build prose out of it and

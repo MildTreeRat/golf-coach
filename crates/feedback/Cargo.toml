@@ -13,3 +13,7 @@ description = "Rule-based ranked coaching tips: the port of src/golf_coach/feedb
 # `SwingBundleResult.feedback` is left `None` by the engine. A dependency edge in either direction
 # here would make that separation a convention again. `crates/core` is the shell that may hold both.
 contracts = { path = "../contracts" }
+# §3's edges, for `rules::tip_for`'s `:.0%` fallback. Until M34 P1 they lived in `analysis`, which
+# this crate may not import, so it re-spelled `percent` and pinned the copy against the original.
+# `pyfmt` is its own crate now and depends on nothing of ours, so the edge above still holds.
+pyfmt = { path = "../pyfmt" }

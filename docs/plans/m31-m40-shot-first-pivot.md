@@ -69,9 +69,9 @@ are ADR-035's.
 | **M31.5** | The Rust re-plan: Python only where required ([ADR-035](../decisions/035-rust-everywhere-python-where-required.md), docs only) | desk | M31 | ✅ Done *(2026-09-30)*, 12/12 phases — [m31-5-rust-first-replan.md](m31-5-rust-first-replan.md) |
 | **M32** | Wider shot contract and device capability, in Rust; the first Rust re-record | this box | M31.5 | ✅ Done *(2026-10-01)*, 13/13 phases — [m32-shot-contract.md](m32-shot-contract.md). Re-detailed Rust-only below (M31.5 P6a) |
 | **M33** | Apple Vision spike: can the phone read the screen? | Mac | M31.5 | ⬜ Not started |
-| **M34** | The screen reader in Rust (`crates/screen`): the parser port, the V tile and tie rule, the 13-shot re-read | this box | M32 | ⬜ Not started — unblocked by M32 *(2026-10-01)* |
+| **M34** | The screen reader in Rust (`crates/screen`): the parser port, the V tile and tie rule, the 13-shot re-read | this box | M32 | ✅ Done *(2026-10-02)*, 13/13 phases — [m34-screen-reader.md](m34-screen-reader.md) |
 | **M35** | Shot-first sessions in Rust: photo-only shots, `ShotResult` and `analyze_shot` | this box | M36 | ⬜ Not started |
-| **M36** | The many-shot layer and its stores ported to Rust, recorded once from frozen Python | this box | M32 | ⬜ Not started — unblocked by M32 *(2026-10-01)*; runs before M35 |
+| **M36** | The many-shot layer and its stores ported to Rust, recorded once from frozen Python | this box | M32 | ⬜ Not started — unblocked by M32 *(2026-10-01)*, and next since M34 closed *(2026-10-02)*; runs before M35 |
 | **M37** | Strike profile, topic grades and strengths/weaknesses (Rust first) | desk, then bay | M35 | ⬜ Not started |
 | **M38** | The iPhone app | Mac, then bay | M34 (skeleton), M37 (profile screens), M29 (P4, the export import) | ⬜ Not started |
 | **M39** | Optional video on the phone | Mac, then bay | M38 | ⬜ Not started |
@@ -902,6 +902,12 @@ It depends on M31.5 alone, because M32 no longer touches that parser. Two things
 
 ## M34 — The screen reader in Rust
 
+**Phases (2026-10-01):** [the M34 plan](m34-screen-reader.md) builds this section, phase by phase.
+Its interview changed four things here, and where the two disagree the plan wins. A tie is a margin
+of 0.02 on the assignment total rather than an equality, which its planning finding 3 measured. A
+withheld field is recorded as "located, unread". `ProfileField.scale` is dropped. `profiles.json`
+is forked.
+
 **Re-detailed by M31.5 P6b.** All the screen-parser work is here now, in Rust only (the M31.5 plan's
 [carried decisions 1–4](m31-5-rust-first-replan.md#decisions-carried-to-m32-and-m34-from-the-m32-interview-2026-09-30)),
 and the frozen Python parser is not touched
@@ -918,6 +924,7 @@ It depends on M32 and runs on this box, where `data/` and the `ocr` extra are.
 
 **Crate split:** move `crates/analysis/src/pyfmt.rs` into its own `crates/pyfmt`, so that `screen`
 does not depend on `analysis` (ADR-008 as a cargo edge). Check `docs/REFACTOR_LEDGER.md` first.
+*Done in M34 P1, as the ledger's row R1, and `feedback` dropped its copy of `percent` with it.*
 
 **Entry point:** `golf-core parse-screen`, boxes in, `ShotData` out.
 
@@ -951,6 +958,19 @@ This is the M31.5 plan's Q4 and Q7, applied to the parser.
      `validate.rs` for the new `ShotData` fields.
 4. **Re-record the corpus family, diff-gated.** `golf-core rerecord` (§M32) is extended to the screen
    family. This is the 13-shot re-read, and its declaration is the exit below.
+
+*As built:*
+
+- **The tie is a margin.** It is `TIE_MARGIN`, 0.02 on the assignment total, not equality (the M34
+  plan's decision 5).
+- **A withheld field is "located, unread".** It is in `fields_present`, has no `raw_fields` key,
+  and its value is `None` (decision 3). Two equal boxes for one tile are withheld the same way
+  (decision 6).
+- **`ProfileField.scale` was dropped,** because it would be code with no caller (decision 4).
+- **The re-record needed one new rule.** A screen declaration may name the keys it removes, because
+  a withheld tile's `raw_fields` key goes. The user chose that on 2026-10-02, and ADR-032's
+  fifteenth addendum records it.
+- **ADR-014's M34 addendum** records all of it.
 
 ### `SCREEN_PARSER_VERSION`
 
@@ -993,6 +1013,11 @@ ADR-014's M31.5 addendum leaves this to M34, and ADR-035 decides neither.
   ADR-034's Consequences also hand M34 the `_PACKAGE_DATA` comment in `tests/test_conformance.py`
   that calls the file "OCR stays Python", and the choice decides what that comment should say.
 
+*Decided: forked* (the M34 plan's decision 1). `crates/screen/profiles.json` gains the V tile, and
+`crates/screen/tests/profile_fork.rs` pins it equal to the frozen copy except that tile. ADR-014's
+M34 addendum records the choice, and the `_PACKAGE_DATA` comment now calls the file the frozen
+parser's copy.
+
 ### The capability pin and the golfer-facing filter
 
 - **`hd_golf` equals its profile.** §M32's `devices.json` declares `hd_golf`'s fields. M34 pins them
@@ -1006,6 +1031,12 @@ ADR-014's M31.5 addendum leaves this to M34, and ADR-035 decides neither.
     (M29). `coach.py`'s JSON entry (M29) reads its shot through that view.
   - Frozen Python keeps showing the warning until M40, in `mcp/query.py`'s shot view and in the brief
     that `api/pipeline.py` builds through `coach.py`'s pydantic entry. Both are frozen (clause 4).
+
+*Built in M34 P9.*
+
+- **The filter.** It is `screen::golfer_warnings`, which drops the line by a shared prefix constant
+  and keeps the tie warning, because that one is about a tile the golfer can see.
+- **The pin.** It is `crates/screen/tests/capability.rs`.
 
 ### Exit
 

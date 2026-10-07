@@ -1,0 +1,2056 @@
+{
+  "cases": [
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "Aaron"
+    },
+    {
+      "label": "Shot Distance",
+      "profile": "hd_golf",
+      "score": "1.0",
+      "text": "Shot Distance"
+    },
+    {
+      "label": "Carry",
+      "profile": "hd_golf",
+      "score": "1.0",
+      "text": "Carry"
+    },
+    {
+      "label": "Ball Speed",
+      "profile": "hd_golf",
+      "score": "1.0",
+      "text": "Ball Speed"
+    },
+    {
+      "label": "Launch Angle",
+      "profile": "hd_golf",
+      "score": "1.0",
+      "text": "Launch Angle"
+    },
+    {
+      "label": "Club Speed",
+      "profile": "hd_golf",
+      "score": "1.0",
+      "text": "Club Speed"
+    },
+    {
+      "label": "Club Path",
+      "profile": "hd_golf",
+      "score": "1.0",
+      "text": "Club Path"
+    },
+    {
+      "label": "Club Face Angle",
+      "profile": "hd_golf",
+      "score": "1.0",
+      "text": "Club Face Angle"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "8.1\u00b00>1"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "2.8"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "131.0"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "125.6"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "90.7"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "20.9"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "91.0"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "Open"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "yds"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "mph"
+    },
+    {
+      "label": "Spin Axis",
+      "profile": "hd_golf",
+      "score": "1.0",
+      "text": "Spin Axis"
+    },
+    {
+      "label": "Impact Position",
+      "profile": "hd_golf",
+      "score": "1.0",
+      "text": "Impact Position"
+    },
+    {
+      "label": "Spin",
+      "profile": "hd_golf",
+      "score": "1.0",
+      "text": "Spin"
+    },
+    {
+      "label": "Smash Factor",
+      "profile": "hd_golf",
+      "score": "1.0",
+      "text": "Smash Factor"
+    },
+    {
+      "label": "Shot Type",
+      "profile": "hd_golf",
+      "score": "1.0",
+      "text": "Shot Type"
+    },
+    {
+      "label": "Horizontal Angle",
+      "profile": "hd_golf",
+      "score": "1.0",
+      "text": "Horizontal Angle"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "-2.5\u00b0"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "5991"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "1.00"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "CENTER"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "SLIGHT"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "5.3\u00b0L"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "FADE"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "rpm"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "131 yds."
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "350 yds."
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "73 vds."
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "HD GOLF"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "SHOTDATA"
+    },
+    {
+      "label": "Custom",
+      "profile": "hd_golf",
+      "score": "1.0",
+      "text": "Custom"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "124.2"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "121.0"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "90.5"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "23.5"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "98.3"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "4.6\u00b00>1"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "8.6\u00b0"
+    },
+    {
+      "label": "Impact Position",
+      "profile": "hd_golf",
+      "score": "0.9375",
+      "text": "Impact Position V"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "8100"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "0.92"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "4.0\u00b0R"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "-9.3\u00b0"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "71 yds."
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "124 yds."
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "BALL TRAJECTORY"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "C"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "SHOT DATA Player 1"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "134.1"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "127.0"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "90.9"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "20.7"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "103.0"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "3.2\u00b00>1"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "6.0"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "0.88"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "2.8\u00b0R"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "74 yds."
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "134 yds."
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "NOTIFICATIONS"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "BIGSCREEN"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "PRINT"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "TIPS"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "SETTINGS"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "BACK"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "HELP"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "\u0113lo"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "MAINMENU"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "188.0"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "178.2"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "114.8"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "15.3"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "109.5"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "2.1\u00b01>0"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "0.8"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "1.05"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "HEEL"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "2.9\u00b0R"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "109 yds."
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "188 yds."
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "TA Player 1"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "HD"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "130.9"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "121.8"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "88.9"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "19.5"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "87.0"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "9.8\u00b00>1"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "3.1\u00b0"
+    },
+    {
+      "label": "Impact Position",
+      "profile": "hd_golf",
+      "score": "0.9655172413793104",
+      "text": "ImpactPosition"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "1.02"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "6.7\u00b0L"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "?"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "69.4"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "33.6"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "83.8"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "3.4"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "93.7"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "7.7\u00b00>1"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "7.6\u00b0"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "0.89"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "0.1\u00b0L"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "18.yds."
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "69 yds."
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "OT DATA Player 1"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "H"
+    },
+    {
+      "label": "Custom",
+      "profile": "hd_golf",
+      "score": "0.9090909090909091",
+      "text": "Custo"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "135.1"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "124.7"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "91.1"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "18.2"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "98.2"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "4.5\u00b00>1"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "0.93"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "1.0\u00b0R"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "I"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "72 yds."
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "135 yds."
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "T DATA Player 1"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "131.5"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "126.1"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "89.8"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "22.4\u00b0"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "103.6"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "1.1\u00b00>1"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "3.9"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "0.87"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "TOE"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "73 yds."
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "132 yds."
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "BIG SCREEN"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "109.7"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "101.9"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "78.9"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "22.4"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "103.8"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "3.7\u00b00>1"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "10.2"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "0.76"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "HARD"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "6.5\u00b0R"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "56 yds."
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "110 yds."
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "HDG"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "159.2"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "137.7"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "11.4"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "105.5"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "0.5\u00b01>0"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "2.4\u00b0"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "Closed"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "0.98"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "1.8\u00b0L"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "DRAW"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "80 yds."
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "159 yds."
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "154.1"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "144.5"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "100.9"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "17.0"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "105.7"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "2.3\u00b00>1"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "6.9"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "0.95"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "4.6\u00b0R"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "85 yds."
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "154 yds."
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "SHOTDATA Player 1"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "122.7"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "107.2"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "85.1"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "15.9"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "85.0"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "1.3\u00b00>1"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "1.3\u00b0"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "0.0\u00b0L"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "61 yds."
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "123 yds."
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "1"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "146.0"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "95.9"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "17.5"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "90.2"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "135.8"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "o"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "1.3\u00b01>0"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "4.6"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "1.06"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "5.9\u00b0R"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "79 yds."
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "146 yds."
+    },
+    {
+      "label": "Bounce & Roll",
+      "profile": "hd_golf",
+      "score": "1.0",
+      "text": "Bounce & Roll"
+    },
+    {
+      "label": "Bounce & Roll",
+      "profile": "hd_golf",
+      "score": "1.0",
+      "text": "Bounce Roll"
+    },
+    {
+      "label": "Bounce & Roll",
+      "profile": "hd_golf",
+      "score": "1.0",
+      "text": "Bounce and Roll"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "SHOT DATA"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "---"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "--"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "\u2014"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "- - -"
+    },
+    {
+      "label": "Carry",
+      "profile": "hd_golf",
+      "score": "0.8",
+      "text": "Carny"
+    },
+    {
+      "label": "Bounce & Roll",
+      "profile": "hd_golf",
+      "score": "1.0",
+      "text": "Bounce &Roll"
+    },
+    {
+      "label": "Bounce & Roll",
+      "profile": "hd_golf",
+      "score": "0.9523809523809523",
+      "text": "Bounce Rol"
+    },
+    {
+      "label": "Impact Position",
+      "profile": "hd_golf",
+      "score": "0.9333333333333333",
+      "text": "lmpact Position"
+    },
+    {
+      "label": "Impact Position",
+      "profile": "hd_golf",
+      "score": "0.9375",
+      "text": "Impact Position Y"
+    },
+    {
+      "label": "Club Speed",
+      "profile": "hd_golf",
+      "score": "0.9473684210526315",
+      "text": "Club Peed"
+    },
+    {
+      "label": "Club Path",
+      "profile": "hd_golf",
+      "score": "1.0",
+      "text": "  Club--Path  "
+    },
+    {
+      "label": "Spin Axis",
+      "profile": "hd_golf",
+      "score": "1.0",
+      "text": "spin_axis"
+    },
+    {
+      "label": "Shot Distance",
+      "profile": "hd_golf",
+      "score": "1.0",
+      "text": "Shot\tDistance"
+    },
+    {
+      "label": "Carry",
+      "profile": "hd_golf",
+      "score": "1.0",
+      "text": "CARRY!"
+    },
+    {
+      "label": "Carry",
+      "profile": "hd_golf",
+      "score": "1.0",
+      "text": "carry"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "\uff23\uff41\uff52\uff52\uff59"
+    },
+    {
+      "label": "Carry",
+      "profile": "hd_golf",
+      "score": "0.8888888888888888",
+      "text": "\uff23arry"
+    },
+    {
+      "label": "Spin Axis",
+      "profile": "hd_golf",
+      "score": "0.9",
+      "text": "Spin Axis 2"
+    },
+    {
+      "label": "Spin",
+      "profile": "hd_golf",
+      "score": "0.8888888888888888",
+      "text": "Spinn"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": ""
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": " "
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "'"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "\""
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "it's"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "say \"hi\""
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "both ' and \""
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "back\\slash"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "tab\there"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "new\nline"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "cr\rhere"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "\u0000"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "\u0007\b"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "\u001b[0m"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "\u007f"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "a\u001cb\u001dc\u001ed\u001fe"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": " \u001c\u001d\u001e\u001f "
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "\t\n\u000b\f\r"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "a\u0085b"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "a\u00a0b"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "a\u1680b"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "a\u2003b"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "a\u2028b\u2029c"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "a\u202fb\u205fc"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "a\u3000b"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "a\u200bb"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "a\ufeffb"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "a\u180eb"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "  lead and trail  "
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "multiple   spaces"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "\u0080\u009f"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "\u00ad"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "\u200c\u200d"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "\u202e"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "\ue000"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "\u0378"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "\uffff"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "\udb40\udc01"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "\udbff\udfff"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "e\u0301"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "\u0301"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "\ud83d\ude00"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "\u00b0"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "\u0113"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "\u2013"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "\u2192"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "\u03a9"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "\u4e2d\u6587"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "\u00df"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "stra\u00dfe"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "\ufb01nal"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "\ufb00"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "\u0149"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "\u01f0"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "\u0390"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "\u0587"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "\u1fb3"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "\u1fbc"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "\u0131"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "i\u0307"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "\u00b5"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "\u00ff"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "\u017f"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "\u01c5"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "\u10d0"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "\u0345"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "\u212a"
+    },
+    {
+      "label": null,
+      "profile": "hd_golf",
+      "score": null,
+      "text": "\u1e9e"
+    },
+    {
+      "label": "Spin Y",
+      "profile": "tie",
+      "score": "0.8333333333333334",
+      "text": "Spin Z"
+    },
+    {
+      "label": "Spin Y",
+      "profile": "tie",
+      "score": "0.8",
+      "text": "Spin"
+    },
+    {
+      "label": "Spin X",
+      "profile": "tie",
+      "score": "1.0",
+      "text": "Spin X"
+    },
+    {
+      "label": "Spin Y",
+      "profile": "tie",
+      "score": "1.0",
+      "text": "Spin Y"
+    },
+    {
+      "label": "Spin Y",
+      "profile": "tie",
+      "score": "1.0",
+      "text": "SPIN-Y"
+    },
+    {
+      "label": null,
+      "profile": "tie",
+      "score": null,
+      "text": "Spi"
+    },
+    {
+      "label": "Boundary",
+      "profile": "tie",
+      "score": "1.0",
+      "text": "Boundary"
+    },
+    {
+      "label": null,
+      "profile": "tie",
+      "score": null,
+      "text": "Bound"
+    },
+    {
+      "label": null,
+      "profile": "tie",
+      "score": null,
+      "text": ""
+    }
+  ],
+  "id": "screen/units/field_for",
+  "profiles": {
+    "hd_golf": {
+      "blank_markers": [
+        "---",
+        "--",
+        "\u2014",
+        "- - -"
+      ],
+      "device": "hd_golf",
+      "fields": [
+        {
+          "aliases": [],
+          "kind": "number",
+          "label": "Shot Distance",
+          "printed_sign": null,
+          "sign_tokens": [],
+          "target": "total_distance",
+          "unit": "yards"
+        },
+        {
+          "aliases": [],
+          "kind": "number",
+          "label": "Carry",
+          "printed_sign": null,
+          "sign_tokens": [],
+          "target": "carry_distance",
+          "unit": "yards"
+        },
+        {
+          "aliases": [
+            "Bounce Roll",
+            "Bounce and Roll"
+          ],
+          "kind": "number",
+          "label": "Bounce & Roll",
+          "printed_sign": null,
+          "sign_tokens": [],
+          "target": "bounce_and_roll",
+          "unit": "yards"
+        },
+        {
+          "aliases": [],
+          "kind": "number",
+          "label": "Ball Speed",
+          "printed_sign": null,
+          "sign_tokens": [],
+          "target": "ball_speed",
+          "unit": "mph"
+        },
+        {
+          "aliases": [],
+          "kind": "number",
+          "label": "Launch Angle",
+          "printed_sign": null,
+          "sign_tokens": [],
+          "target": "launch_angle",
+          "unit": "degrees"
+        },
+        {
+          "aliases": [],
+          "kind": "number",
+          "label": "Club Speed",
+          "printed_sign": null,
+          "sign_tokens": [],
+          "target": "club_head_speed",
+          "unit": "mph"
+        },
+        {
+          "aliases": [],
+          "kind": "number",
+          "label": "Club Path",
+          "printed_sign": null,
+          "sign_tokens": [
+            {
+              "sign": 1,
+              "tokens": [
+                "I>O",
+                "I O",
+                "IO",
+                "1>0",
+                "I>0"
+              ]
+            },
+            {
+              "sign": -1,
+              "tokens": [
+                "O>I",
+                "O I",
+                "OI",
+                "0>1",
+                "O>1"
+              ]
+            }
+          ],
+          "target": "club_path",
+          "unit": "degrees"
+        },
+        {
+          "aliases": [],
+          "kind": "text",
+          "label": "Custom",
+          "printed_sign": null,
+          "sign_tokens": [],
+          "target": null,
+          "unit": null
+        },
+        {
+          "aliases": [],
+          "kind": "number",
+          "label": "Club Face Angle",
+          "printed_sign": null,
+          "sign_tokens": [
+            {
+              "sign": 1,
+              "tokens": [
+                "OPEN"
+              ]
+            },
+            {
+              "sign": -1,
+              "tokens": [
+                "CLOSED",
+                "CLOSE"
+              ]
+            }
+          ],
+          "target": "club_face_angle",
+          "unit": "degrees"
+        },
+        {
+          "aliases": [],
+          "kind": "number",
+          "label": "Spin",
+          "printed_sign": null,
+          "sign_tokens": [],
+          "target": "spin_rate",
+          "unit": "rpm"
+        },
+        {
+          "aliases": [],
+          "kind": "number",
+          "label": "Smash Factor",
+          "printed_sign": null,
+          "sign_tokens": [],
+          "target": "smash_factor",
+          "unit": "ratio"
+        },
+        {
+          "aliases": [],
+          "kind": "text",
+          "label": "Impact Position",
+          "printed_sign": null,
+          "sign_tokens": [],
+          "target": "impact_position",
+          "unit": null
+        },
+        {
+          "aliases": [],
+          "kind": "text",
+          "label": "Shot Type",
+          "printed_sign": null,
+          "sign_tokens": [],
+          "target": "shot_type",
+          "unit": null
+        },
+        {
+          "aliases": [],
+          "kind": "number",
+          "label": "Horizontal Angle",
+          "printed_sign": null,
+          "sign_tokens": [
+            {
+              "sign": 1,
+              "tokens": [
+                "R",
+                "RIGHT"
+              ]
+            },
+            {
+              "sign": -1,
+              "tokens": [
+                "L",
+                "LEFT"
+              ]
+            }
+          ],
+          "target": "launch_direction",
+          "unit": "degrees"
+        },
+        {
+          "aliases": [],
+          "kind": "number",
+          "label": "Spin Axis",
+          "printed_sign": -1,
+          "sign_tokens": [
+            {
+              "sign": 1,
+              "tokens": [
+                "R",
+                "RIGHT"
+              ]
+            },
+            {
+              "sign": -1,
+              "tokens": [
+                "L",
+                "LEFT"
+              ]
+            }
+          ],
+          "target": "spin_axis",
+          "unit": "degrees"
+        }
+      ],
+      "title": "SHOT DATA",
+      "value_span_ratio": 3.5
+    },
+    "tie": {
+      "blank_markers": [
+        "---"
+      ],
+      "device": "tie",
+      "fields": [
+        {
+          "aliases": [],
+          "kind": "number",
+          "label": "Spin X",
+          "printed_sign": null,
+          "sign_tokens": [],
+          "target": "x",
+          "unit": null
+        },
+        {
+          "aliases": [],
+          "kind": "number",
+          "label": "Spin Y",
+          "printed_sign": null,
+          "sign_tokens": [],
+          "target": "y",
+          "unit": null
+        },
+        {
+          "aliases": [],
+          "kind": "number",
+          "label": "Boundary",
+          "printed_sign": null,
+          "sign_tokens": [],
+          "target": null,
+          "unit": null
+        }
+      ],
+      "title": "TIE",
+      "value_span_ratio": 3.5
+    }
+  },
+  "provenance": {
+    "kind": "screen",
+    "note": "`field_for(text)` and the winner's `matches(text)`, threshold met at equality and the later field winning a tie (`>=`), against the frozen `hd_golf` profile and a crafted `tie` profile; each case names its profile in `profiles`",
+    "oracle": "python",
+    "python_version": "3.13.3",
+    "source": "src/golf_coach/launch_monitor/screen/profiles.py::DeviceProfile.field_for"
+  },
+  "screen_parser_version": 0
+}
