@@ -73,13 +73,14 @@ are ADR-035's.
 | **M35** | Shot-first sessions in Rust: photo-only shots, `ShotResult` and `analyze_shot` | this box | M36 | ⬜ Not started |
 | **M36** | The many-shot layer and its stores ported to Rust, recorded once from frozen Python | this box | M32 | ⬜ Not started — unblocked by M32 *(2026-10-01)*, and next since M34 closed *(2026-10-02)*; runs before M35 |
 | **M37** | Strike profile, topic grades and strengths/weaknesses (Rust first) | desk, then bay | M35 | ⬜ Not started |
+| **M41** | The course-play screen layout in `crates/screen`: aliases, lit L/R and D/F signs, backspin and sidespin | this box, after new photos | M35, by order only | ⬜ Not started — raised 2026-10-07, detailed in [ROADMAP §M41](../../ROADMAP.md#m41-the-course-play-screen-layout) rather than here |
 | **M38** | The iPhone app | Mac, then bay | M34 (skeleton), M37 (profile screens), M29 (P4, the export import) | ⬜ Not started |
 | **M39** | Optional video on the phone | Mac, then bay | M38 | ⬜ Not started |
 | **M40** | The laptop client resumes (M21/M24/M25/M26 re-scoped, R10/API adapters); `api/` ported or dropped, and the frozen Python deleted | later | M38, M29 | ⬜ Not started |
 | **M29** | The lab port: a Rust lab CLI, the `rmcp` server, OCR through `ort`, and the archive move | this box | M34, M36 | ⬜ Not started — re-scoped by ADR-035, number kept (Q2) |
 
-**The order, since two rows are out of numeric order.** M32 comes first. M34 and M36 follow it,
-then M35, then M37. M29 needs M34 and M36 and runs on this box beside M37 and M38. M38 P4 waits on
+**The order, since three rows are out of numeric order.** M32 comes first. M34 and M36 follow it,
+then M35, then M37. M41 comes after M35 by the user's choice (2026-10-07), not by a dependency. M29 needs M34 and M36 and runs on this box beside M37 and M38. M38 P4 waits on
 M29, and M40 comes last. M33 needs nothing but M31.5, because the frozen parser it measures is one
 M32 no longer touches.
 

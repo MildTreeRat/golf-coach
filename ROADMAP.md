@@ -1,6 +1,6 @@
 # Roadmap: AI Golf Swing Trainer
 
-## Last Updated: 2026-10-02
+## Last Updated: 2026-10-07
 
 Grouped by **state**, not by number, because the numbers no longer run in order: the pose-only
 slices (M4-PoC, M4-PoC+, M4-REF, M5-FB) delivered the mechanics half of M4 and the ranking half
@@ -54,7 +54,8 @@ wording; only the grouping and the M4 checklist have been corrected.
 | **M35** Shot-first sessions, in Rust | 🔒 Blocked. Changes what M36 ported, with hand-worked vectors | M36 — this box | [§M35](#m35-shot-first-sessions-in-rust) |
 | **M36** The many-shot layer in Rust | ⬜ Not started, and **next**: M32 landed on 2026-10-01 and M34 on 2026-10-02. **Runs before M35**: a faithful port, recorded once from frozen Python | M32 — this box | [§M36](#m36-the-many-shot-layer-in-rust) |
 | **M37** Strike profile, topic grades and strengths/weaknesses | 🔒 Blocked | M35 — desk, then the bay | [§M37](#m37-strike-profile-topic-grades-and-strengthsweaknesses-rust-first) |
-| **M38** The iPhone app | 🔒 Blocked | M34 for the skeleton, M37 for the profile screens, M29 for P4's export import; a Mac, then the bay | [§M38](#m38-the-iphone-app) |
+| **M41** The course-play screen layout | ⬜ Not started. **Raised 2026-10-07** from one photo of a second screen layout, and ordered after M36 and M35 by the user's choice, not by a dependency: `crates/screen` matches 4 of its 12 stat labels today. Not data-only, because its left/right signs are lit letters rather than printed words | M35, by order — this box, plus a handful of new photos | [§M41](#m41-the-course-play-screen-layout) |
+| **M38** The iPhone app | 🔒 Blocked | A Mac for the skeleton (M34 landed 2026-10-02), M37 for the profile screens, M29 for P4's export import; then the bay | [§M38](#m38-the-iphone-app) |
 | **M39** Optional video on the phone | 🔒 Blocked | M38; a Mac, then the bay | [§M39](#m39-optional-video-on-the-phone) |
 | **M40** The laptop client resumes | 🔒 Blocked. M21, M24, M25 and M26 re-scoped under it, as the desktop target of the same app. It also decides `api/` (`axum` or dropped) and deletes the frozen Python | M38 and M29 | [§M40](#m40-the-laptop-client-resumes) |
 | **M29** The lab port | 🔒 Blocked. **Re-scoped 2026-09-30 by [ADR-035](docs/decisions/035-rust-everywhere-python-where-required.md#5-the-lab-port-is-m29-re-scoped), number kept.** It was "the last Python", blocked on M40. It is now the port of the lab: a Rust lab CLI, the `rmcp` server, OCR through `ort`, and the archive move. It deletes only what the frozen FastAPI server does not import, and M40 deletes the rest. Its old opening question, how ADR-022's fitting reaches a measurement, is dissolved: the fitting is archived | M34 and M36 — this box, beside M37 and M38 | [§M29](#m29-the-lab-port--a-rust-lab-cli-the-rmcp-server-and-the-archive-move) |
@@ -1969,10 +1970,56 @@ every vector family names its oracle. M37's own plan sets the exit.
 
 ---
 
+## M41: The course-play screen layout
+
+**Status**: ⬜ Not started. **Raised 2026-10-07** from one photo of the simulator's shot screen during
+course play (`TEAM 1`, `TO HOLE YD`, a `SHOT RESULT` of `NATURAL AREA`), a layout the `hd_golf`
+profile was not written from. The photo is `data/raw/shot_screens/2026-10-07-1.jpg` (sha256
+`96241978…`, gitignored like every pixel here), tagged `aaron` and `driver` in the JSON beside it. **Runs after M36 and M35**, by the user's choice: nothing in it
+depends on them, and nothing in them depends on it.
+
+**The ask.** `crates/screen` reads this layout. Its tiles are `CARRY YD`, `TOTAL YD` (printed
+twice: once in the header row, once in the data row), `CLUB SPEED MPH`, `BALL SPEED MPH`,
+`PATH DEG`, `FACE DEG`, `BALL DIRECTION DEG`, `LAUNCH ANGLE`, `APEX FT`, `SMASH FACTOR`,
+`BACKSPIN RPM` and `SIDESPIN RPM`, plus the course-only `SHOT RESULT` and `TO HOLE YD`. Part of it
+is data and part is not:
+
+- **Data only** — a profile, or aliases, in `crates/screen/profiles.json`. The labels carry their
+  units. Scored as printed against `hd_golf`'s labels, only `LAUNCH ANGLE` and `SMASH FACTOR` (1.0)
+  and `CLUB SPEED MPH` and `BALL SPEED MPH` (0.833) reach `LABEL_MATCH_THRESHOLD` (0.8);
+  `CARRY YD` scores 0.769 against `Carry`, and the rest score 0.6 or less. `APEX FT` has a home
+  already, `apex_height`. `SHOT RESULT` and `TO HOLE YD` are boundary-only (`target: null`).
+- **Not data — the signs are lit, not printed.** `BALL DIRECTION DEG` prints both `L` and `R`
+  above the value and lights one yellow, and `SIDESPIN RPM` does the same with `D` and `F`. The
+  boxes seam carries text and geometry and no colour, so both letters arrive and neither says which
+  side the shot went. `sign_tokens` cannot express it. `PATH DEG` and `FACE DEG` print no marker at
+  all on the one photo, and how they print a negative is unknown.
+- **Not data — backspin and sidespin have no `ShotData` key.** The contract holds `spin_rate` and
+  `spin_axis`. Either the contract widens, as M32's did, or the two are converted to rate and axis,
+  which needs the user's ruling against the program plan's Decision 2 (nothing inferred).
+- **The duplicate `TOTAL YD`.** Two boxes for one label may trip the tie rule (`TIE_MARGIN`) and
+  withhold the field rather than read it.
+
+**Open**: whether this is a second `hd_golf` layout or a device of its own in
+`crates/contracts/devices.json`. The capability model already allows layouts to vary per bay
+(declared ∩ `fields_present`), so a second layout of the same device would only widen `hd_golf`'s
+declared set by `apex_height`.
+
+**Depends on**: M35, by order. **Where it runs**: this box, but it starts with photos: a handful of
+this screen, including a ball that starts left, a draw, and a negative path and face, so the sign
+questions are answered from the screen rather than guessed.
+
+**Exit**: set by M41's own plan. Any change to what the reader produces bumps
+`SCREEN_PARSER_VERSION` and re-records `spec/vectors/screen/` under a `screen-v<N>.json`
+declaration, as M34 did, and the new layout gets hand-worked vectors.
+
+---
+
 ## M38: The iPhone app
 
-**Status**: 🔒 Blocked on M34 for its skeleton, M37 for its profile screens and M29 for P4's
-export import. The skeleton can start once M34 lands, in parallel with M36, M35, M37 and M29.
+**Status**: 🔒 Blocked on a Mac for its skeleton, M37 for its profile screens and M29 for P4's
+export import. M34 landed on 2026-10-02, so the skeleton can start on a Mac, in parallel with M36,
+M35, M37 and M29.
 
 **The ask.** A standalone Flutter app over the Rust core (ADR-034 §6). Pick the golfer, club and
 the session's intent, photograph the screen, read it with Vision and parse it in Rust, review it,
