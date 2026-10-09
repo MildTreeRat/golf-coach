@@ -1,0 +1,430 @@
+{
+  "career_version": 1,
+  "expected": {
+    "corpus": {
+      "analyzed_without_measurements": 0,
+      "excluded": [
+        {
+          "detail": "analyzed by engine version 13, older than 14, the oldest engine whose numbers still agree with today's \u2014 they are not comparable with a swing analyzed today, so they are reported rather than pooled. Re-run scripts/reanalyze.py",
+          "reason": "outdated",
+          "session_id": "2026-08-12",
+          "swing_id": "1"
+        },
+        {
+          "detail": "analyzed by engine version 13, older than 14, the oldest engine whose numbers still agree with today's \u2014 they are not comparable with a swing analyzed today, so they are reported rather than pooled. Re-run scripts/reanalyze.py",
+          "reason": "outdated",
+          "session_id": "2026-08-12",
+          "swing_id": "3"
+        },
+        {
+          "detail": "analyzed by engine version 13, older than 14, the oldest engine whose numbers still agree with today's \u2014 they are not comparable with a swing analyzed today, so they are reported rather than pooled. Re-run scripts/reanalyze.py",
+          "reason": "outdated",
+          "session_id": "2026-08-12",
+          "swing_id": "5"
+        },
+        {
+          "detail": "analyzed by engine version 13, older than 14, the oldest engine whose numbers still agree with today's \u2014 they are not comparable with a swing analyzed today, so they are reported rather than pooled. Re-run scripts/reanalyze.py",
+          "reason": "outdated",
+          "session_id": "2026-08-12",
+          "swing_id": "7"
+        }
+      ],
+      "metric_counts": {
+        "carry_distance_yds": 4,
+        "head_sway_norm": 5
+      },
+      "other_golfers": 0,
+      "outdated_swings": 4,
+      "player_id": "aaron",
+      "sessions_scanned": 1,
+      "swing_dirs_seen": 9,
+      "swings": [
+        {
+          "analysis_version": 13,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-12T12:01:00Z",
+          "club": "7i",
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "clip-12-1",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "hand",
+              "name": "carry_distance_yds",
+              "source": "launch_monitor:hd_golf",
+              "unit": "yards",
+              "value": 120.0
+            },
+            {
+              "detail": "hand",
+              "name": "head_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.2
+            }
+          ],
+          "missing_roles": [
+            "down_the_line"
+          ],
+          "outdated": true,
+          "player_id": "aaron",
+          "session_id": "2026-08-12",
+          "shot_needs_review": false,
+          "shot_sha256": "photo-1",
+          "stale": false,
+          "swing_id": "1"
+        },
+        {
+          "analysis_version": 14,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-12T12:02:00Z",
+          "club": "7i",
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "clip-12-2",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "hand",
+              "name": "carry_distance_yds",
+              "source": "launch_monitor:hd_golf",
+              "unit": "yards",
+              "value": 150.0
+            },
+            {
+              "detail": "hand",
+              "name": "head_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.2
+            }
+          ],
+          "missing_roles": [
+            "down_the_line"
+          ],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-12",
+          "shot_needs_review": false,
+          "shot_sha256": "photo-2",
+          "stale": false,
+          "swing_id": "2"
+        },
+        {
+          "analysis_version": 13,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-12T12:03:00Z",
+          "club": "7i",
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "clip-12-3",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "hand",
+              "name": "carry_distance_yds",
+              "source": "launch_monitor:hd_golf",
+              "unit": "yards",
+              "value": 125.0
+            },
+            {
+              "detail": "hand",
+              "name": "head_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.2
+            }
+          ],
+          "missing_roles": [
+            "down_the_line"
+          ],
+          "outdated": true,
+          "player_id": "aaron",
+          "session_id": "2026-08-12",
+          "shot_needs_review": false,
+          "shot_sha256": "photo-3",
+          "stale": false,
+          "swing_id": "3"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-12T12:04:00Z",
+          "club": "7i",
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "clip-12-4",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "hand",
+              "name": "carry_distance_yds",
+              "source": "launch_monitor:hd_golf",
+              "unit": "yards",
+              "value": 152.0
+            },
+            {
+              "detail": "hand",
+              "name": "head_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.2
+            }
+          ],
+          "missing_roles": [
+            "down_the_line"
+          ],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-12",
+          "shot_needs_review": false,
+          "shot_sha256": "photo-4",
+          "stale": false,
+          "swing_id": "4"
+        },
+        {
+          "analysis_version": 13,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-12T12:05:00Z",
+          "club": "7i",
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "clip-12-5",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "hand",
+              "name": "carry_distance_yds",
+              "source": "launch_monitor:hd_golf",
+              "unit": "yards",
+              "value": 130.0
+            },
+            {
+              "detail": "hand",
+              "name": "head_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.2
+            }
+          ],
+          "missing_roles": [
+            "down_the_line"
+          ],
+          "outdated": true,
+          "player_id": "aaron",
+          "session_id": "2026-08-12",
+          "shot_needs_review": false,
+          "shot_sha256": "photo-5",
+          "stale": false,
+          "swing_id": "5"
+        },
+        {
+          "analysis_version": 17,
+          "analyzed": true,
+          "auto_mishit": true,
+          "captured_at": "2026-08-12T12:06:00Z",
+          "club": "7i",
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "clip-12-6",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "hand",
+              "name": "carry_distance_yds",
+              "source": "launch_monitor:hd_golf",
+              "unit": "yards",
+              "value": 70.0
+            },
+            {
+              "detail": "hand",
+              "name": "head_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.2
+            }
+          ],
+          "missing_roles": [
+            "down_the_line"
+          ],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-12",
+          "shot_needs_review": false,
+          "shot_sha256": "photo-6",
+          "stale": false,
+          "swing_id": "6"
+        },
+        {
+          "analysis_version": 13,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-12T12:07:00Z",
+          "club": "7i",
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "clip-12-7",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "hand",
+              "name": "carry_distance_yds",
+              "source": "launch_monitor:hd_golf",
+              "unit": "yards",
+              "value": 135.0
+            },
+            {
+              "detail": "hand",
+              "name": "head_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.2
+            }
+          ],
+          "missing_roles": [
+            "down_the_line"
+          ],
+          "outdated": true,
+          "player_id": "aaron",
+          "session_id": "2026-08-12",
+          "shot_needs_review": false,
+          "shot_sha256": "photo-7",
+          "stale": false,
+          "swing_id": "7"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-12T12:08:00Z",
+          "club": "7i",
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "clip-12-8",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "hand",
+              "name": "carry_distance_yds",
+              "source": "launch_monitor:hd_golf",
+              "unit": "yards",
+              "value": 155.0
+            },
+            {
+              "detail": "hand",
+              "name": "head_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.2
+            }
+          ],
+          "missing_roles": [
+            "down_the_line"
+          ],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-12",
+          "shot_needs_review": false,
+          "shot_sha256": "photo-8",
+          "stale": false,
+          "swing_id": "8"
+        },
+        {
+          "analysis_version": 17,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-12T12:09:00Z",
+          "club": "7i",
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "clip-12-9",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "hand",
+              "name": "carry_distance_yds",
+              "source": "launch_monitor:hd_golf",
+              "unit": "yards",
+              "value": 158.0
+            },
+            {
+              "detail": "hand",
+              "name": "head_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.2
+            }
+          ],
+          "missing_roles": [
+            "down_the_line"
+          ],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-12",
+          "shot_needs_review": false,
+          "shot_sha256": "photo-9",
+          "stale": false,
+          "swing_id": "9"
+        }
+      ],
+      "unattributed_swings": 0,
+      "unknown_sources": []
+    },
+    "narrowed": {},
+    "properties": {
+      "distinct_sessions": 1,
+      "distinct_shots": 9,
+      "distinct_swings": 9,
+      "duplicates_collapsed": 0,
+      "mishit_refs": [
+        "2026-08-12/6"
+      ],
+      "mishit_shots": 1,
+      "mishit_shots_unconfirmed": 1,
+      "shot_conflicts": 0,
+      "untagged_swings": 0
+    }
+  },
+  "id": "storage/hand/mishit-sees-only-comparable",
+  "input": {
+    "files": {
+      "2026-08-12/1/analysis.json": "{\"analysis_version\": 13, \"swing\": {\"measurements\": [{\"name\": \"carry_distance_yds\", \"value\": 120.0, \"unit\": \"yards\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"hand\"}, {\"name\": \"head_sway_norm\", \"value\": 0.2, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"hand\"}], \"shot\": null}}",
+      "2026-08-12/1/manifest.json": "{\n  \"swing_id\": \"1\",\n  \"session_id\": \"2026-08-12\",\n  \"created_at\": \"2026-08-12T12:01:00Z\",\n  \"updated_at\": \"2026-08-12T12:01:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.clip-12-1.mov\",\n      \"content_sha256\": \"clip-12-1\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-12T12:01:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.photo-1.mov\",\n      \"content_sha256\": \"photo-1\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-12T12:01:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": \"7i\",\n  \"mishit\": null\n}",
+      "2026-08-12/2/analysis.json": "{\"analysis_version\": 14, \"swing\": {\"measurements\": [{\"name\": \"carry_distance_yds\", \"value\": 150.0, \"unit\": \"yards\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"hand\"}, {\"name\": \"head_sway_norm\", \"value\": 0.2, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"hand\"}], \"shot\": null}}",
+      "2026-08-12/2/manifest.json": "{\n  \"swing_id\": \"2\",\n  \"session_id\": \"2026-08-12\",\n  \"created_at\": \"2026-08-12T12:02:00Z\",\n  \"updated_at\": \"2026-08-12T12:02:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.clip-12-2.mov\",\n      \"content_sha256\": \"clip-12-2\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-12T12:02:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.photo-2.mov\",\n      \"content_sha256\": \"photo-2\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-12T12:02:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": \"7i\",\n  \"mishit\": null\n}",
+      "2026-08-12/3/analysis.json": "{\"analysis_version\": 13, \"swing\": {\"measurements\": [{\"name\": \"carry_distance_yds\", \"value\": 125.0, \"unit\": \"yards\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"hand\"}, {\"name\": \"head_sway_norm\", \"value\": 0.2, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"hand\"}], \"shot\": null}}",
+      "2026-08-12/3/manifest.json": "{\n  \"swing_id\": \"3\",\n  \"session_id\": \"2026-08-12\",\n  \"created_at\": \"2026-08-12T12:03:00Z\",\n  \"updated_at\": \"2026-08-12T12:03:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.clip-12-3.mov\",\n      \"content_sha256\": \"clip-12-3\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-12T12:03:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.photo-3.mov\",\n      \"content_sha256\": \"photo-3\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-12T12:03:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": \"7i\",\n  \"mishit\": null\n}",
+      "2026-08-12/4/analysis.json": "{\"analysis_version\": 16, \"swing\": {\"measurements\": [{\"name\": \"carry_distance_yds\", \"value\": 152.0, \"unit\": \"yards\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"hand\"}, {\"name\": \"head_sway_norm\", \"value\": 0.2, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"hand\"}], \"shot\": null}}",
+      "2026-08-12/4/manifest.json": "{\n  \"swing_id\": \"4\",\n  \"session_id\": \"2026-08-12\",\n  \"created_at\": \"2026-08-12T12:04:00Z\",\n  \"updated_at\": \"2026-08-12T12:04:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.clip-12-4.mov\",\n      \"content_sha256\": \"clip-12-4\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-12T12:04:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.photo-4.mov\",\n      \"content_sha256\": \"photo-4\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-12T12:04:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": \"7i\",\n  \"mishit\": null\n}",
+      "2026-08-12/5/analysis.json": "{\"analysis_version\": 13, \"swing\": {\"measurements\": [{\"name\": \"carry_distance_yds\", \"value\": 130.0, \"unit\": \"yards\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"hand\"}, {\"name\": \"head_sway_norm\", \"value\": 0.2, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"hand\"}], \"shot\": null}}",
+      "2026-08-12/5/manifest.json": "{\n  \"swing_id\": \"5\",\n  \"session_id\": \"2026-08-12\",\n  \"created_at\": \"2026-08-12T12:05:00Z\",\n  \"updated_at\": \"2026-08-12T12:05:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.clip-12-5.mov\",\n      \"content_sha256\": \"clip-12-5\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-12T12:05:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.photo-5.mov\",\n      \"content_sha256\": \"photo-5\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-12T12:05:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": \"7i\",\n  \"mishit\": null\n}",
+      "2026-08-12/6/analysis.json": "{\"analysis_version\": 17, \"swing\": {\"measurements\": [{\"name\": \"carry_distance_yds\", \"value\": 70.0, \"unit\": \"yards\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"hand\"}, {\"name\": \"head_sway_norm\", \"value\": 0.2, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"hand\"}], \"shot\": null}}",
+      "2026-08-12/6/manifest.json": "{\n  \"swing_id\": \"6\",\n  \"session_id\": \"2026-08-12\",\n  \"created_at\": \"2026-08-12T12:06:00Z\",\n  \"updated_at\": \"2026-08-12T12:06:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.clip-12-6.mov\",\n      \"content_sha256\": \"clip-12-6\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-12T12:06:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.photo-6.mov\",\n      \"content_sha256\": \"photo-6\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-12T12:06:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": \"7i\",\n  \"mishit\": null\n}",
+      "2026-08-12/7/analysis.json": "{\"analysis_version\": 13, \"swing\": {\"measurements\": [{\"name\": \"carry_distance_yds\", \"value\": 135.0, \"unit\": \"yards\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"hand\"}, {\"name\": \"head_sway_norm\", \"value\": 0.2, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"hand\"}], \"shot\": null}}",
+      "2026-08-12/7/manifest.json": "{\n  \"swing_id\": \"7\",\n  \"session_id\": \"2026-08-12\",\n  \"created_at\": \"2026-08-12T12:07:00Z\",\n  \"updated_at\": \"2026-08-12T12:07:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.clip-12-7.mov\",\n      \"content_sha256\": \"clip-12-7\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-12T12:07:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.photo-7.mov\",\n      \"content_sha256\": \"photo-7\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-12T12:07:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": \"7i\",\n  \"mishit\": null\n}",
+      "2026-08-12/8/analysis.json": "{\"analysis_version\": 16, \"swing\": {\"measurements\": [{\"name\": \"carry_distance_yds\", \"value\": 155.0, \"unit\": \"yards\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"hand\"}, {\"name\": \"head_sway_norm\", \"value\": 0.2, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"hand\"}], \"shot\": null}}",
+      "2026-08-12/8/manifest.json": "{\n  \"swing_id\": \"8\",\n  \"session_id\": \"2026-08-12\",\n  \"created_at\": \"2026-08-12T12:08:00Z\",\n  \"updated_at\": \"2026-08-12T12:08:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.clip-12-8.mov\",\n      \"content_sha256\": \"clip-12-8\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-12T12:08:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.photo-8.mov\",\n      \"content_sha256\": \"photo-8\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-12T12:08:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": \"7i\",\n  \"mishit\": null\n}",
+      "2026-08-12/9/analysis.json": "{\"analysis_version\": 17, \"swing\": {\"measurements\": [{\"name\": \"carry_distance_yds\", \"value\": 158.0, \"unit\": \"yards\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"hand\"}, {\"name\": \"head_sway_norm\", \"value\": 0.2, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"hand\"}], \"shot\": null}}",
+      "2026-08-12/9/manifest.json": "{\n  \"swing_id\": \"9\",\n  \"session_id\": \"2026-08-12\",\n  \"created_at\": \"2026-08-12T12:09:00Z\",\n  \"updated_at\": \"2026-08-12T12:09:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.clip-12-9.mov\",\n      \"content_sha256\": \"clip-12-9\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-12T12:09:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.photo-9.mov\",\n      \"content_sha256\": \"photo-9\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-12T12:09:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": \"7i\",\n  \"mishit\": null\n}"
+    },
+    "narrowings": {},
+    "player_id": "aaron",
+    "versions": {
+      "comparable_from": 14,
+      "installed": 17
+    }
+  },
+  "provenance": {
+    "kind": "storage",
+    "note": "Versions {installed 17, comparable_from 14}: nine 7i swings in session 2026-08-12 (captured 12:01 to 12:09, swing ids 1-9), each with a face-on clip and a shot photo of its own, a printed carry (launch_monitor:hd_golf) and head_sway_norm 0.2. Swings 1, 3, 5 and 7 were stored by engine 13 and carry 120, 125, 130 and 135: OUTDATED, so they are neither mishit candidates nor samples, and the automatic rule never flags them. The comparable five are 2 (v14, 150), 4 (v16, 152), 6 (v17, 70), 8 (v16, 155) and 9 (v17, 158): exactly MISHIT_MIN_CLEAN_SHOTS distinct carries, sorted 70 150 152 155 158, median 152, floor 0.50 x 152 = 76, and 70 < 76 makes swing 6 an automatic mishit. Its carry leaves the count and its head sway stays: carry_distance_yds n = 4, head_sway_norm n = 5. Had the four outdated carries been pooled, the median of nine would be 135, the floor 67.5, and nothing flagged; under frozen Python's rule asked of installed 17, only swings 6 and 9 would count, too few for any floor. mishit_shots 1 (photo-6), unconfirmed 1, mishit_refs [2026-08-12/6]. distinct_shots is 9, since a photo is a distinct photo whichever engine read the swing; each swing lacks only down_the_line.",
+    "oracle": "hand",
+    "source": "worked by hand in M36 P14, the M36 plan's P14 list; each tree spelled as tests/storage/conftest.py::write_swing writes one, with no analysis.state.json",
+    "worked_against": "scripts/conformance_vectors.py::_run_corpus"
+  }
+}

@@ -44,6 +44,7 @@
 
 use contracts::alignment::{ClipAlignment, SwingAlignment, SwingAnchors};
 use contracts::capability::device_of;
+use contracts::career::POSE_DTL_SOURCE;
 use contracts::checkpoints::{checkpoint_names, CHECKPOINT_REGISTRY, CONTRADICTED_BY_A_LATE_TOP};
 use contracts::detections::FrameDetections;
 use contracts::golfer::Handedness;
@@ -82,18 +83,17 @@ use pyfmt::{fixed, g, registry_rank, round_to, signed_fixed, OrderedMap};
 /// `Measurement.source` for anything read off the face-on pose stream.
 const POSE_FACE_ON_SOURCE: &str = "pose:face_on";
 
-/// `Measurement.source` for anything read off the down-the-line pose stream. [M22 P7]
-///
-/// **Python keeps this one in `contracts/career.py` and the face-on one at its call site**, and the
-/// split is not arbitrary: this is the one `pose:` source that `CorpusSwing::artifact_key` keys on
-/// *nothing*, because the corpus holds no hash for the rear clip (ADR-029's 2026-09-09b addendum
-/// §5), so `career.py` has to name it in order to special-case it. `career.py` is not ported — §8
-/// does not list it — and its only ported reader is [`pivot_view`], so the constant arrives here
-/// beside its partner rather than dragging a module in for one string.
-const POSE_DTL_SOURCE: &str = "pose:down_the_line";
+// `Measurement.source` for anything read off the down-the-line pose stream is
+// `contracts::career::POSE_DTL_SOURCE`, imported above as Python's engine imports it. [M22 P7,
+// M36 P6] Python keeps that one in `contracts/career.py` and the face-on one at its call site, and
+// the split is not arbitrary: it is the one `pose:` source that `CorpusSwing::artifact_key` keys on
+// *nothing*, because the corpus holds no hash for the rear clip (ADR-029's 2026-09-09b addendum §5),
+// so `career.py` has to name it in order to special-case it. Until M36 P6 ported `career.py` this
+// module held a private copy beside its partner; now the string that writes a `_dtl` row and the
+// string the corpus special-cases are one constant (the M36 plan's finding 7).
 
 /// `Measurement.source` for a placement, whichever basis produced it. One string for both views:
-/// `CorpusSwing.artifact_key` deliberately does not dedupe on `population:` at all, so the two
+/// [`contracts::career::KNOWN_SOURCE_PREFIXES`] deliberately leaves `population:` out, so the two
 /// bases share it where the two pose streams do not.
 const POPULATION_SOURCE: &str = "population:golfdb";
 

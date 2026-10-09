@@ -1,0 +1,33 @@
+[package]
+name = "storage"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "The stores the many-shot layer reads and writes: swing manifests, analysis state, golfers, bags, parsed shots, the bundle store and the corpus. The port of src/golf_coach/storage/."
+
+[dependencies]
+# ADR-008 as a cargo edge (the M36 plan's rules): this crate holds shapes and reads files, so it
+# depends on `contracts`, and on `pyfmt` for the CPython edges a store's answers carry (`str.strip`
+# and `str.lower` in `slugify`, `repr` in a refusal). Never `analysis`: a store that reached for the
+# engine is the inversion ADR-008 forbids, and `crates/core` is the one crate that may hold both.
+contracts = { path = "../contracts" }
+pyfmt = { path = "../pyfmt" }
+serde.workspace = true
+serde_json.workspace = true
+# The manifest's content hashes and the shot store's keys are SHA-256, which frozen Python takes
+# from `hashlib` and std does not carry. A hash is the dedupe identity of every upload, so it has to
+# be the same digest bit for bit, and a hand-rolled SHA-256 is a worse trade than the RustCrypto
+# crate every Rust project reaches for (the M36 plan's decision 6).
+sha2 = "0.10"
+# `slugify` folds a name through NFD and drops what `unicodedata.combining` calls combining, and
+# both need Unicode's decomposition and combining-class tables, which std does not expose. Its
+# `canonical_combining_class` is the function `unicodedata.combining` is, where `is_combining_mark`
+# is a general-category test that strips two marks Python keeps (P2's finding 4). Taken here, not
+# in `contracts`, because `contracts` takes no third-party dependency but `serde` (decision 6).
+unicode-normalization = "0.1"
+
+[dev-dependencies]
+# A scratch directory per test, removed when it drops. Test-only: nothing a store does at runtime
+# needs a temporary directory, because every write is beside its target (`with_suffix(".tmp")`).
+tempfile = "3"

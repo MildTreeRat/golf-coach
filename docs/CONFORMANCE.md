@@ -12,7 +12,10 @@
 > structural gate, `cargo test` certifies them, and `conformance.py check` certifies the freeze.
 > **What M34 added** is a second family recorded that way, the screen reader's (§2). Frozen Python
 > recorded it once, `crates/screen` ported it, and Rust re-records it under a version key of its
-> own. It brought the parser's CPython edges (§3's second list).
+> own. It brought the parser's CPython edges (§3's second list). **What M36 added** is two more,
+> the many-shot layer's `storage` and `career` families (§2), recorded and ported the same way and
+> re-recorded under a third version key, `CAREER_VERSION`, after the one change M36 made in Rust
+> alone: the corpus's `OUTDATED` now means *not comparable*. Its edges are §3's third list.
 
 [ADR-030](decisions/030-app-platform-rust-core-python-sidecar.md) commits this project to a second
 implementation of the swing loop. **Two cores that disagree silently is the failure mode that
@@ -96,8 +99,11 @@ That is how M32 P9 made its edit, after checking that format re-serialized all t
 files byte for byte. Generating them from the structs with `schemars` was declined in
 [§M32](plans/m31-m40-shot-first-pivot.md#schemas-split-ownership-with-the-rust-half-hand-maintained):
 the files carry pydantic's bound keywords, Rust holds those bounds in its `Validate` impls where a
-derive cannot see them, and restating each as an attribute is a second copy that drifts. M36,
-which takes the storage roots, is where that is weighed again.
+derive cannot see them, and restating each as an attribute is a second copy that drifts. M36
+weighed it again and kept the answer: it moved no shape, so `swing_manifest`, `golfer`, `bag` and
+`analysis_state` stay Python-exported, and Rust pins its structs' key sets, required sets and
+nullability against those committed files instead (`crates/contracts/tests/python_schemas.rs`,
+`crates/storage/tests/python_schemas.rs`). A root becomes Rust's when Rust first moves its shape.
 
 **The pin is `crates/contracts/tests/schemas.rs`**, four tests over the three files:
 
@@ -114,7 +120,7 @@ which takes the storage roots, is where that is weighed again.
 
 **Two lists name the Rust-owned roots and nothing checks one against the other**: `RUST_OWNED` in
 `schemas.rs` and `RUST_OWNED_SCHEMAS` in `conformance.py`. A root added to one only is unpinned or
-pinned twice, so when M36 takes more roots over, both change together.
+pinned twice, so when a later milestone takes more roots over, both change together.
 
 `crates/contracts/devices.json` (M32, the device capability model) and `crates/screen/profiles.json`
 (M34, the forked device profiles) are committed data that a Rust crate reads by `include_str!`. They
@@ -124,14 +130,23 @@ either, because that pin scrapes `src/golf_coach/` and is Python's. Each has a R
 tile, and `crates/screen/tests/capability.rs` holds `devices.json`'s `hd_golf` fields equal to the
 fork's targets.
 
+`club_catalogue.json` is the other way round (M36). It stays package data, in the package-data pin,
+because `clubs/lookup.py` writes it and stays Python. `crates/contracts::catalogue` reads that one
+copy by `include_str!`, so a row Python remembers reaches Rust at the next build.
+`crates/contracts/tests/catalogue.rs` pins the direction that matters: every committed row parses,
+and every value `contracts/club_spec.py` can write reads back
+([ADR-026](decisions/026-club-specification-lookup.md)'s M36 addendum).
+
 ## 2. The vectors
 
-Six families, covering different things. The first two are the **engine** families: `cargo test`
+Eight families, covering different things. The first two are the **engine** families: `cargo test`
 certifies them end to end against `crates/core`, `golf-core rerecord` records them from M32, and
-`conformance.py check` runs frozen Python against them to certify the freeze (§4). The other four
+`conformance.py check` runs frozen Python against them to certify the freeze (§4). The other six
 name a Rust crate as their implementation and are deferred to `cargo test`. `audio`, `stages` and
 `format` serve the engine port and its edges. **`screen`** (M34) is the screen reader's, a port of
-its own that `golf-core rerecord` also records, under its own version key.
+its own that `golf-core rerecord` also records, under its own version key. **`storage`** and
+**`career`** (M36) are the many-shot layer's: the stores and the corpus reader, then the aggregates
+and the five career reports over a corpus. The verb records the two together, under a third key.
 
 **Synthetic** (`spec/vectors/synthetic/`) comes from `tests/analysis/conftest.py::make_swing`,
 which is deterministic, RNG-free and pure stdlib — so it re-implements in another language exactly
@@ -152,7 +167,9 @@ two keys onto all forty-two (21 engine, 21 stage; counted 2026-10-01). **So does
 vector, and from the day it was recorded**, because M34 wrote `oracle` when it recorded the family.
 It is `"python"` on everything frozen Python recorded and `"hand"` on `hand/`. The three document
 sub-families have carried a Rust ledger since M34's re-record. `units/` has none, because the
-re-record never reads it. `audio` and `format` carry neither key yet. M37's pin, that every family
+re-record never reads it. **So does every storage and career vector** (M36): `"python"` on what
+frozen Python recorded, each with a `career-v1` ledger since M36 P14, and `"hand"` on
+`storage/hand/`, which was written at version 1 and has none. `audio` and `format` carry neither key yet. M37's pin, that every family
 names its oracle, extends `oracle` to them
 ([ADR-032](decisions/032-the-rust-core.md)'s 2026-09-29 addendum).
 
@@ -163,7 +180,8 @@ names its oracle, extends `oracle` to them
 - **`provenance.rerecords` is a list with one entry appended per re-record**, and it is what says
   which values are Rust's. An entry holds the declaration's version key and value (the version the
   re-record moved the file to: `analysis_version` on an engine or stage vector,
-  `screen_parser_version` on a screen one), `by` (`"golf-core rerecord"`), `declaration` (the
+  `screen_parser_version` on a screen one, `career_version` on a storage or career one), `by`
+  (`"golf-core rerecord"`), `declaration` (the
   declaration's repo-relative path, with `/`), and `added` and `moved`: the declared paths **that
   matched in that file**, in the declaration's order. A screen entry carries a third list,
   `removed`, empty or not, so the family's entries share one shape; an engine entry never does (§4
@@ -184,26 +202,27 @@ names its oracle, extends `oracle` to them
   path in that vector's own ledger, holding that value.
 
 **The declarations are committed, in `spec/declarations/`**, one file per re-record, named for the
-version it records (`v17.json` is M32's, `screen-v1.json` M34's). Each carries **exactly one version
-key**, and that key picks the family it re-records: `analysis_version` for the engine and stage
-families, or `screen_parser_version` for the screen family. Each also carries a `note`, `added` and
-`moved`, and a screen declaration may carry `removed` as well (§4). A declaration loads or is refused
-whole, before any vector is read. Refused are: an unknown key; both version keys, or neither; a path
-declared twice across the lists; an `added` or `removed` path ending in an index; and `removed` in an
-engine declaration. They sit outside
+version it records (`v17.json` is M32's, `screen-v1.json` M34's, `career-v1.json` M36's). Each
+carries **exactly one version key**, and that key picks the family it re-records: `analysis_version`
+for the engine and stage families, `screen_parser_version` for the screen family, or
+`career_version` for the storage and career families together. Each also carries a `note`, `added`
+and `moved`, and a screen declaration may carry `removed` as well (§4). A declaration loads or is
+refused whole, before any vector is read. Refused are: an unknown key; more than one version key, or
+none; a path declared twice across the lists; an `added` or `removed` path ending in an index; and
+`removed` in an engine or career declaration. They sit outside
 `spec/vectors/` on purpose, because `conformance.py::vector_paths` would read a file there as a
 vector. The declaration is what a reviewer reads, beside the verb's report (§4), and it is
 load-bearing twice: the verb reads it, and `crates/contracts/tests/schemas.rs` reads `v17.json`'s
 `added` to know which schema properties must carry a description (§1).
 
 **What reads the ledger.** On the Rust side, nothing but the round-trip allowance above and the
-re-record's own second-run rule (§4): the end-to-end gate, the stage tests and the screen tests
-compare the whole file, Rust's values and Python's alike, with the version equal to
-`ANALYSIS_VERSION` or `SCREEN_PARSER_VERSION`. On the Python side, `conformance.frozen_view` takes
-every ledgered path out of both `expected` and frozen Python's answer before comparing, and
-`ledger_covers` accepts a vector above frozen Python's version only when it carries an entry for
-every version in between (§4). Both read engine and stage ledgers only. `check` never reads a screen
-ledger, because it never runs the screen family.
+re-record's own second-run rule (§4): the end-to-end gate, the stage tests, the screen tests and the
+storage, career and report gates compare the whole file, Rust's values and Python's alike, with the
+version equal to `ANALYSIS_VERSION`, `SCREEN_PARSER_VERSION` or `CAREER_VERSION`. On the Python side,
+`conformance.frozen_view` takes every ledgered path out of both `expected` and frozen Python's answer
+before comparing, and `ledger_covers` accepts a vector above frozen Python's version only when it
+carries an entry for every version in between (§4). Both read engine and stage ledgers only. `check`
+never reads a screen, storage or career ledger, because it runs none of those families.
 
 ### Why the corpus vectors are a slice, and what that costs
 
@@ -440,20 +459,22 @@ engine vector and its stages are §M29's Rust vector builder's. The Python engin
 until M40 deletes it — see [ADR-032](decisions/032-the-rust-core.md) §7 and its 2026-09-30
 addendum for that schedule.
 
-### Format (`spec/vectors/format/`) — 10 vectors, run by `cargo test`
+### Format (`spec/vectors/format/`) — 13 vectors, run by `cargo test`
 
-Added by M22 P3, extended by P5, and extended again by M34 P2. It is the only family whose subject
+Added by M22 P3, extended by P5, and extended again by M34 P2 and M36 P4. It is the only family whose subject
 is **not this repo's code at all**. It records what CPython itself does, because §3's edges below
 are where a Rust port diverges from Python on the *same* arithmetic, and nearly every one of them
 lands on the strings §3 compares exactly. The tables are ported before anything calls them, so each
 edge is solved once rather than at every call site downstream. The case count is `check`'s to print.
 
-**Each table names the crate that implements it.** The five M34 added carry
+**Each table names the crate that implements it.** The five M34 added and the three M36 added carry
 `provenance.implemented_by`. The five engine tables predate the key and were not regenerated to gain
-it, because M34 P2's rule was that they come back byte-identical. So its absence means `pyfmt`. Three
+it, because M34 P2's rule was that they come back byte-identical, and M36 P4 held the ten older
+tables to the same rule. So its absence means `pyfmt`. Three
 things read it: `crates/pyfmt/tests/format.rs`'s discovery pin, which fails on a table no test runs;
 `check`'s summary line; and `tests/test_conformance.py::test_every_format_vector_names_the_crate_that_runs_it`,
-which holds every *new* table to naming its crate.
+which holds every *new* table to naming its crate. M36's edges each got a table of their own rather
+than rows in an old one, because adding rows would have rewritten that table's note.
 
 | vector | what it records | the edge | implemented by |
 |---|---|---|---|
@@ -467,10 +488,14 @@ which holds every *new* table to naming its crate.
 | `floor_div` | float `a // b`, and `int(a // b)` | parser 3 | `pyfmt` |
 | `text_case` | `str.upper()`, `split()`, `strip()` and `re`'s `\s`, plus both whole whitespace sets | parser 4 | `pyfmt` |
 | `sum` | `sum()` over float lists, compensated since CPython 3.12 | parser 5 | `pyfmt` |
+| `general_precision` | `f"{x:.Ng}"` at precisions other than 6, the session-drift caveat's `:.3g` among them | many-shot 1 | `pyfmt` |
+| `lower` | `str.lower()` over every code point it moves, and the string cases (`İ`, `Final_Sigma`) | many-shot 2 | `pyfmt` |
+| `timestamp` | a pydantic `datetime` as `model_dump_json` writes it, with its `isoformat()` and its `%Y-%m-%d` in its own offset; the other spellings pydantic reads back; and strings `Timestamp` refuses | many-shot 3 | `contracts` |
 
-**It does not age on a version of this repo's.** `ANALYSIS_VERSION` and `SCREEN_PARSER_VERSION` both
-leave every answer in it true, because a rounding rule is the language's, not the engine's or the
-parser's. What it carries instead is `python_version`. `check` therefore reports these without a
+**It does not age on a version of this repo's.** `ANALYSIS_VERSION`, `SCREEN_PARSER_VERSION` and
+`CAREER_VERSION` all leave every answer in it true, because a rounding rule is the language's, not
+the engine's, the parser's or the corpus reader's. What it carries instead is `python_version`, and
+`timestamp`'s provenance carries `pydantic_version` beside it, because its subject is pydantic's. `check` therefore reports these without a
 staleness test, where it runs one over the stages. That is pinned in `tests/test_conformance.py`,
 because the *absence* of the field is the decision, and it reads as an oversight otherwise.
 
@@ -587,6 +612,126 @@ leaning on a green run:
   cannot tell the two rules apart, and the frozen Python test it came from has the same gap.
 
 The M34 plan's P5 and P6 findings list each of these, with the mutation that found it.
+
+### Storage (`spec/vectors/storage/`) — 64 vectors, run by `cargo test`
+
+Added by M36. It is the oracle for the flat-file stores and the corpus reader: a tree of files in,
+and what each store answers and leaves on disk out. The implementation under test is
+`crates/storage`, ported from `storage/`, from `api/state.py`'s tolerant readers and from the shot
+store (`launch_monitor/screen/store.py`).
+
+| sub-family | what it is | oracle | version |
+|---|---|---|---|
+| `corpus/` | `read_corpus` and its narrowings over a sessions tree. Every `ExclusionReason`, both `MishitVerdict`s and the automatic flag, the sort and both duplicate tiebreaks, corrupt manifests, states and analyses. `real.json.gz` is `data/`'s swing directories, each `analysis.json` slimmed to the three keys `read_corpus` reads, and verified at record time to read exactly as `data/` itself does | `python`, with a Rust ledger | 1 |
+| `bundle/` | the bundle store: its reads; `assign_from_path` into an empty session, into the newest swing lacking the role, at an explicit `swing_id` (existing and new), and on a duplicate digest; `set_player`, `set_club`, `set_mishit`, `attribute_unlabeled` and `delete_swing` | `python`, with a Rust ledger | 1 |
+| `stores/` | the bag, golfer and shot stores, with the bag's validator refusals, and a `slugify` table | `python`, with a Rust ledger | 1 |
+| `hand/` | where the corpus's `OUTDATED` rule moved (below): stored versions either side of `comparable_from`, a line at the caller's number rather than the constant, and a mishit median that sees only comparable swings. Each `note` holds its working | `hand` | 1 |
+
+**Two shapes.**
+
+- **A corpus case.** `input` is `{player_id, versions: {installed, comparable_from}, files,
+  narrowings}`, where `files` is the sessions directory as raw text, so a half-written state file is
+  a case like any other. `files: null` is a root that does not exist, `{}` an empty one, and a key
+  ending in `/` an empty directory. `expected` is `{corpus, properties, narrowed}`. `properties`
+  holds `CareerCorpus`'s derived counts, which `model_dump` drops and every report prints.
+- **An operation case.** `input` is `{files, ops: [{op, args, now}]}`, and `expected` is `{results,
+  files}`: each op's `{"returned": …}` or `{"raised": {type, message}}`, then the whole tree after
+  the last op. The clock is an argument. Each op carries its own `now`, and one that cannot stamp
+  carries `null`. A written JSON file is compared as a value, never as bytes, because key order and
+  float spelling are not what frozen Python reads by.
+
+`provenance.recorded_by` names the runner that recorded a case (`_run_corpus` or `_run_ops`), and
+`crates/core::storage_family::run_storage` dispatches on it. A `hand/` case names the runner it was
+worked against in `provenance.worked_against` instead. A hand case carrying `recorded_by`, or a
+Python one carrying `worked_against`, is refused.
+
+**The engine versions are input, not the build's.** `read_corpus` takes `{installed,
+comparable_from}` from its caller, and each corpus case records the pair it was read under. So an
+`ANALYSIS_VERSION` bump moves neither this family nor the career family. Frozen Python recorded every
+case at `{16, 16}`, and the verbs pass `{ANALYSIS_VERSION, COMPARABLE_FROM}`.
+
+### Career (`spec/vectors/career/`) — 56 vectors, run by `cargo test`
+
+Added by M36. It is the oracle for what a golfer's history may say: a corpus and a bag in, and the
+four aggregates and the five career scripts' report text out. The implementation under test is the
+career half of `crates/analysis` (`baseline`, `dispersion`, `comparison`, `club_profile`, and
+`stats`' interval helpers), with `crates/core::reports` for the text.
+
+- **`input`** is `{corpus, bag, display_name, versions, clubs}`. `clubs` is every club in the bag
+  profile, then the first club that is in neither the history nor the bag, whose report is the
+  "never hit and not in the bag" sentence.
+- **`expected`** is `{baseline, dispersion, standing, bag_profile, properties, reports}`.
+  `properties` holds what each aggregate derives and `model_dump` drops.
+- **`reports`** is each script's own report function, captured: `career_corpus`, `career_baseline`,
+  `career_dispersion` and `club_profile`, plain and `_verbose`; `club_profile_<club>` for each of
+  `input.clubs`; and `flag_mishit_list`, rendered over the bag profile built with no bag, as the
+  script builds it. Recording the text is what keeps it gated after §M29 deletes the scripts.
+
+`synthetic/` crosses every floor at n − 1 and n, the default row and both per-metric override rows,
+and the sessions gate at 2 and 3. It reaches every dispersion pattern, standing and caveat form, and
+sample sizes past the critical-value tables, so the interval expansions are gated too. Most of its
+cases are **adopted**: a synthetic storage corpus case's `expected.corpus`, taken as `input.corpus`
+and named in `provenance.source`. `real/aaron.json.gz` is the real corpus, with the real bag.
+
+**An adopted corpus is derived, so the two families cannot drift apart.** `golf-core rerecord` runs
+each adopting career vector on its source's answer as that answer will be written (§4), and
+`crates/core/tests/career.rs::every_adopted_corpus_is_its_storage_vectors_answer` holds the
+committed families equal.
+
+**Both families age on `CAREER_VERSION`** (`crates/contracts/src/career.rs`, whose ledger says what
+each version is), one key for both, carried at the top level as `career_version`. Version 0 is
+frozen Python's. Version 1 is M36's change to `OUTDATED`. M35's change to `read_corpus` will be
+`career-v2`.
+
+**How they came to be at version 1**, in M34's order:
+
+- **Recorded once.** `regenerate --storage-once` and `--career-once` (M36 P2 and P3) recorded them
+  from frozen Python. Each now refuses (§4).
+- **Ported faithfully.** `crates/storage` and the career half of `crates/analysis` passed every
+  recorded vector, `OUTDATED` at the installed engine included.
+- **Changed, against the hand-worked vectors.** The corpus excludes a swing as `OUTDATED` when its
+  `analysis_version` is older than `versions.comparable_from`, no longer than the installed engine.
+  The verbs pass `contracts::swing::COMPARABLE_FROM`, the oldest engine generation whose stored
+  numbers today's engine still agrees with. The faithful rule had excluded every swing on disk once
+  Rust's `ANALYSIS_VERSION` reached 17, though 16 → 17 moved no number. `is_outdated`, the other
+  question (*is there a newer engine to run?*), is unchanged.
+  [ADR-024](decisions/024-per-club-shot-history.md)'s M36 addendum is the decision.
+- **Re-recorded.** `golf-core rerecord --declare spec/declarations/career-v1.json` moved the
+  `OUTDATED` sentence, its adopted copies, and `career_version`, and nothing else. No swing, count or
+  aggregate moved, because under `{16, 16}` the two rules exclude the same swings (§4 has the run).
+
+**The runners** are in `crates/core/tests/`, each calling the definition the re-record calls:
+
+- `storage.rs` runs every storage vector through `storage_family::run_storage`;
+- `career.rs` builds every aggregate through `career_family::run_career`, and holds a built metric's
+  withheld claims to exactly what its floors refuse;
+- `reports.rs` holds every report to the recorded text, character for character, and the verbs end
+  to end through the binary.
+
+`crates/contracts/tests/{stores,career,aggregates}.rs` read and write back every bag, golfer, corpus
+and aggregate either family holds, exactly. `crates/contracts/tests/data/python_tables.json` holds
+the dispersion and comparison prose tables word for word, as frozen Python declares them.
+
+Two pins are worth knowing before leaning on a green run:
+
+- **The floats are held to the bit, not to `RTOL`.** With plain folds for the compensated `sum()`s,
+  about one baseline float in six moved by a bit, and every one passed the gate. So
+  `every_aggregate_float_is_frozen_pythons_to_the_bit` compares every float the four aggregates hold
+  by its bits. It runs on Windows with MSVC, where the vectors were recorded, because another libm
+  may answer a last bit differently, and CPython over it would too.
+- **Float `**` is C `pow`, and no vector can see it.** The product for `x ** 2`, and `sqrt` for
+  `** 0.5`, both pass every career vector, the bit pin included. `stats`' and `dispersion`'s own
+  bit pins hold CPython's answers on the rows that separate them (§3's third list).
+
+**What reaches no vector**, pinned by unit tests instead: two swings tied on the instant across
+sessions, two sessions tied on it, an interval ending exactly on a band edge, a signed-zero tie in a
+range, and a shot that fails only a bound. Each is a case no recording reaches, and all but the
+last were found by a deliberate divergence that passed the whole family. The M36 plan's P10–P12
+findings list them, with the mutation that found each.
+
+**Over `data/` the verbs print what the scripts print.** M36 P16 ran all five against their scripts
+with every flag the scripts take: 85 runs, identical bytes, once Windows' `\r\n` and cp1252 console
+were taken off the Python side. That was a one-time check, not a gate. `reports.rs` is the gate.
 
 ## 3. The rules
 
@@ -746,18 +891,82 @@ The parser also reaches two of the engine's edges. `validate_parse`'s messages i
   ([ADR-014's M34 addendum](decisions/014-screen-capture-shot-ingestion.md#addendum-2026-10-02-m34-the-parser-is-rusts-the-profile-is-forked-and-a-tie-is-withheld)).
   That is now a declared change of behaviour, not an edge.
 
+### The many-shot layer's edges, a third list (M36)
+
+Found porting the stores, the corpus reader and the career aggregates, and kept apart from the
+engine's six for the screen list's reason: `analyze_swing` reaches none of them, except possibly the
+first, whose engine sites are unmeasured (below). Each is solved in `crates/pyfmt`, in
+`contracts::time`, or at its call site, and gated by a format table, a family, or a bit pin where
+§3's `RTOL` cannot see it. The M36 plan's P3 format scan and the P4, P5, P8, P11 and P12 findings
+have each measurement.
+
+- **Float `**` is C `pow`.** `(value - mean) ** 2`, `sd ** 2`, the critical-value expansions' cubes
+  and fifth powers, and `_within_session_sd`'s `(squares / degrees) ** 0.5` all call the C library's
+  `pow`. On this box's UCRT that is not the correctly rounded product even at an exponent of 2: the
+  product missed 12 of 20,000 random squares, and `pow(x, 0.5)` differs from `sqrt` on 524 of
+  1,000,000. So `stats::pow` is `x.powf(black_box(y))`. **The `black_box` is load-bearing**: with the
+  2.0 visible, LLVM rewrites `pow(x, 2.0)` to `x * x` in a release build and not in a test build, so
+  the gate would certify arithmetic the verbs do not run. No career vector can see this. The bit pins
+  in `stats` and `dispersion` hold it, on Windows with MSVC. **The engine has `**` sites too**
+  (`measure.py`, `phases.py`, `benchmarks/trajectory.py`, `benchmarks/flight_model.py`), and its port
+  writes them as `powi(2)` and `sqrt`. Every engine and stage vector passes, so no committed answer
+  moved, but nobody has measured whether any engine float differs in its last bit.
+  [ADR-032](decisions/032-the-rust-core.md)'s sixteenth addendum routes that, as the fifteenth routed
+  `sum()`.
+- **The compensated `sum()` reaches the baseline**, in `mean_and_sd` (both sums) and
+  `_session_means`, through `pyfmt::sum`. `_within_session_sd` accumulates with a plain `+=`, so it
+  must **not** use `pyfmt::sum`. The `RTOL` gate cannot see either choice. §2's career bit pin can.
+- **`:.3g`.** The session-drift caveat formats its two spreads at precision 3, and `pyfmt::g` was
+  precision 6 only. `pyfmt::general(x, precision)` is CPython's `:.Ng` (a precision of 0 is read as
+  1, as CPython reads it), gated by `format/general_precision`.
+- **`str.lower()`.** `pyfmt::lower` is `str::to_lowercase`, which agrees with CPython 3.13 on every
+  code point CPython lowers, `İ` and `Final_Sigma` included. Rust also lowers 27 code points that
+  Unicode 16.0 added and CPython's 15.1 leaves alone. Each lands on a non-ASCII letter, so it can
+  only make a name match nothing. Gated by `format/lower`.
+- **`str.isalnum()` is not `char::is_alphanumeric`.** `club.py` and `club_spec.py` normalise by
+  keeping `isalnum` characters. Measured over every code point, Rust's set is CPython's plus 5,877
+  more (combining marks among them), and none less. So `7i` with a combining accent normalises to `7i`
+  in Python and matches nothing in Rust. This is **named, not fixed**: every alias is ASCII, so Rust
+  can only refuse what Python takes, never the reverse, which is the safe direction under ADR-024
+  §5. `club.rs`'s module doc carries the argument.
+- **`slugify`'s "combining" is the canonical combining class**, not general category M.
+  `unicodedata.combining` keeps U+0903 and U+20DD, which have class 0, so `aःb` slugs to `a-b`. The
+  normalization tables differ by Unicode version too: 46 combining marks assigned after 15.1 have a
+  class in `unicode-normalization`'s tables and none in CPython's, so Rust can only merge two
+  spellings Python keeps apart. No name on disk holds one.
+- **Timestamps are pydantic's spelling, and the corpus sorts on CPython's other one.**
+  `contracts::time::Timestamp` writes what `model_dump_json` writes: `Z` for UTC, and a fraction
+  only when it is non-zero, as six digits. Its `isoformat()` is CPython's (`+00:00` for UTC), because
+  `read_corpus` breaks a duplicate tie on that **string**, so 15:00+05:30 loses to 12:00Z, and a
+  whole second beats `.500000` because `+` sorts before `.`. Equality and order are by instant;
+  `date_ymd()` is `%Y-%m-%d` in the timestamp's own offset. pydantic also reads naive values, bare
+  dates, Unix numbers and other lax spellings, and `Timestamp` refuses them all, so a file holding
+  one reads as `None` in Rust (`crates/storage`'s crate doc names that divergence). Gated by
+  `format/timestamp`. `Timestamp` replaced the lexeme type at `contracts::Timestamp`, and the engine
+  and screen families came through byte for byte.
+- **`statistics.median`** averages the middle two of an even count, and the mishit floor's
+  comparison is a strict `<`.
+- **`Path.suffix` is not `Path::extension`.** `content_filename` keeps an upload's suffix, and
+  Python gives `clip.` and `.hidden` none where Rust answers `Some("")` for the first, so the port
+  takes Python's rule.
+- **Swing numbers are ASCII digits.** `_swing_sort_key` uses `str.isdigit()`, which is true for 798
+  non-ASCII code points, and some of those make `int()` raise. The store names every swing
+  `str(int)`, so only a hand-made directory reaches the difference, and `bundle_store.rs` names it.
+
 ## 4. The commands
 
 **Since M32 the oracle is Rust**
 ([ADR-035 §3](decisions/035-rust-everywhere-python-where-required.md#3-the-oracle-moves-to-rust)).
 `golf-core rerecord` records the engine and stage families, every re-record gated against the
 committed file, and `cargo test` is what certifies the vectors. Since M34 the verb also records the
-screen family, chosen by the declaration's version key. `conformance.py` is the frozen half: `check`
-now certifies **the freeze, not the vectors**, `regenerate` refuses both engine families and the
-screen family, and `check` retires with `analysis/` in M40. Why each of those moved is
+screen family, and since M36 the storage and career families, each chosen by the declaration's
+version key. `conformance.py` is the frozen half: `check` now certifies **the freeze, not the
+vectors**, `regenerate` refuses both engine families and the screen, storage and career families,
+and `check` retires with `analysis/` in M40. Why each of those moved is
 [§M32](plans/m31-m40-shot-first-pivot.md#what-changes-in-python-and-why), and what building it
-found is [the M32 plan's findings](plans/m32-shot-contract.md#phase-findings) and
-[the M34 plan's](plans/m34-screen-reader.md#phase-findings).
+found is [the M32 plan's findings](plans/m32-shot-contract.md#phase-findings),
+[the M34 plan's](plans/m34-screen-reader.md#phase-findings) and
+[the M36 plan's](plans/m36-many-shot-layer.md#phase-findings).
 
 ```bash
 cargo test                                          # certifies every family: audio against
@@ -765,7 +974,10 @@ cargo test                                          # certifies every family: au
                                                     # against crates/contracts, the format table
                                                     # against crates/pyfmt and crates/screen, all
                                                     # seven stages against crates/analysis, the
-                                                    # screen family against crates/screen, and
+                                                    # screen family against crates/screen, the
+                                                    # storage family against crates/storage, the
+                                                    # career family and its report text against
+                                                    # crates/analysis and crates/core, and
                                                     # the engine vectors end to end and the stage
                                                     # documents whole against crates/core
 cargo run --release --bin golf-core -- rerecord --declare spec/declarations/v17.json --dry-run
@@ -775,6 +987,9 @@ cargo run --release --bin golf-core -- rerecord --declare spec/declarations/v17.
 cargo run --release --bin golf-core -- rerecord --declare spec/declarations/screen-v1.json --dry-run
                                                     # the same verb on the screen family, picked
                                                     # by the declaration's screen_parser_version
+cargo run --release --bin golf-core -- rerecord --declare spec/declarations/career-v1.json --dry-run
+                                                    # the storage and career families together,
+                                                    # picked by career_version (M36)
 cargo run --bin golf-core -- run < vector.json      # the port's own answer, for the diff below
 cargo run --bin golf-core -- parse-screen < spec/vectors/screen/corpus/2026-08-23-2.json
                                                     # the screen reader's answer: a screen vector
@@ -788,11 +1003,16 @@ python scripts/conformance.py regenerate --schemas-only  # the Python-owned sche
 python scripts/conformance.py regenerate --format-only   # the format table, from CPython itself
 python scripts/conformance.py regenerate --screen-once   # recorded the screen family, once (M34);
                                                          # refuses now, exit 2
+python scripts/conformance.py regenerate --storage-once  # recorded the storage family, once (M36);
+                                                         # refuses now, exit 2
+python scripts/conformance.py regenerate --career-once   # recorded the career family, once (M36);
+                                                         # refuses now, exit 2
 ```
 
 Every one of these needs the base install and `spec/` alone — that is what committing the vectors
-buys — and none of them reads `data/`. The one exception is `--screen-once`, which needed the `ocr`
-extra and `data/` for the one run it was allowed, and refuses before it reads either.
+buys — and none of them reads `data/`. The exceptions are the three record-once flags, and each
+refuses before it reads anything. `--screen-once` needed the `ocr` extra and `data/` for the one run
+it was allowed. `--storage-once` and `--career-once` read `data/` for their real cases.
 
 ### `rerecord`: how a vector changes now
 
@@ -806,11 +1026,17 @@ is `crates/contracts/src/shot.rs`' constant, and frozen Python's parser has no v
 vectors say 0. The same verb re-records `spec/vectors/screen/` from a declaration named
 `spec/declarations/screen-v<N>.json`. M34's `screen-v1.json` is the worked example.
 
+**A change that moves a storage or career answer does the same, under a third version.**
+`CAREER_VERSION` is `crates/contracts/src/career.rs`' constant, frozen Python's families say 0, and
+one key covers both families, because a corpus the reader answers is the corpus the aggregates read.
+The same verb re-records `spec/vectors/storage/` and `spec/vectors/career/` together from a
+declaration named `spec/declarations/career-v<N>.json`. M36's `career-v1.json` is the worked example.
+
 The steps:
 
-1. Write the declaration, `spec/declarations/v<N>.json` or `screen-v<N>.json` (§2). It holds the
-   version, a note, the paths where the change adds keys, the paths whose values it moves, and, on a
-   screen declaration only, the paths whose keys it removes.
+1. Write the declaration, `spec/declarations/v<N>.json`, `screen-v<N>.json` or `career-v<N>.json`
+   (§2). It holds the version, a note, the paths where the change adds keys, the paths whose values it
+   moves, and, on a screen declaration only, the paths whose keys it removes.
 2. Run `rerecord --dry-run` and read the report. It lists, per vector, every declared path that
    matched. An undeclared difference anywhere fails the run and names every path. An empty
    declaration's dry run is the quickest way to find what to declare, as long as every path it
@@ -823,9 +1049,11 @@ The rules are `golf_core::rerecord`'s, unit-tested there and in `crates/core/tes
   engine family and then the stage family. A declaration at `screen_parser_version` walks the screen
   documents: `corpus/`, `reference/`, `synthetic/` and `hand/`. `units/` is not read, because it
   holds case tables rather than documents (`SCREEN_UNREAD`). Any other entry under `vectors/screen/`
-  is refused before a vector is read. A run never opens the other family's files. There is no flag
-  for the family, because a flag that disagreed with the declaration would be a second answer to one
-  question.
+  is refused before a vector is read. A declaration at `career_version` walks `storage/` (`corpus/`,
+  `bundle/`, `stores/` and `hand/`) and then `career/` (`synthetic/` and `real/`), storage first
+  because the career family adopts its answers. A run never opens another family's files. There is no
+  flag for the family, because a flag that disagreed with the declaration would be a second answer to
+  one question.
 - **The gate.** Each engine vector's committed input goes through `golf_core::run`, and each stage
   vector's (its engine vector's input, found by `provenance.derived_from`) through
   `stages::run_stages`. Each screen document's input goes through `rerecord::run_screen`, the
@@ -834,7 +1062,24 @@ The rules are `golf_core::rerecord`'s, unit-tested there and in `crates/core/tes
   difference passes only when the declaration names it: an added key at a declared `added` path, or
   a moved value at a declared `moved` path. Every stage document is also composed onto its engine
   vector's answer, as that answer will be written. Nothing composes onto a screen document, because
-  nothing else holds a copy of a screen's answer.
+  nothing else holds a copy of a screen's answer. Each storage vector goes through
+  `storage_family::run_storage`, and each career vector through `career_family::run_career`, which
+  builds the four aggregates and renders the five scripts' reports. A script listed in
+  `career_family::CARRIED` has its reports copied from the committed vector rather than run. It held
+  all five until a renderer existed, and has been empty since M36 P16.
+- **An adopted corpus is derived** (M36). A career vector whose `input.corpus` is a storage case's
+  `expected.corpus` is run on that case's answer as it will be written, so a storage answer that moved
+  moves its copy, and a copy that drifted from an unchanged source is a difference. Either is a
+  difference at `input.corpus…` that the declaration must name. That copy is the one `input` a
+  re-record can change.
+- **A store's written file keeps its committed text where its value agrees.** `run_storage` answers
+  each written JSON file in the recorded spelling wherever its value matches under the rules above,
+  as an in-tolerance float keeps Python's bits. Without that, files differ from Python's text in
+  spelling alone, and the gate would report them.
+- **A path through a dotted key is refused by name.** A store's written file is keyed by its path
+  (`…/manifest.json`), so a declared `expected.files.<path>` cannot be told from a walk through
+  `manifest` and `json`. The run refuses it, naming the path, rather than writing the wrong place.
+  Nothing in M36 moves a store's write. M35, the first change that does, builds the way to declare one.
 - **A removed key passes only on a screen declaration, path by path.** In an engine declaration a
   removed key never passes, so a port cannot drop a key from the engine's answer and re-record its
   way past the drop. A screen declaration may carry `removed`, added by M34 P10 on the user's call.
@@ -845,7 +1090,8 @@ The rules are `golf_core::rerecord`'s, unit-tested there and in `crates/core/tes
     to the typo guard, is written into the ledger, and is listed in the report. So a key still never
     goes *silently*.
   - **Engine declarations are untouched.** An engine declaration carrying the key at all is refused
-    at load, and frozen Python's `frozen_view` and `ledger_covers` learn nothing.
+    at load, and frozen Python's `frozen_view` and `ledger_covers` learn nothing. A career
+    declaration is refused the same way (M36), so a career ledger entry has no `removed` list.
   - **What was rejected.** A `removed` list for both families would have taught frozen Python a case
     no engine change has needed. Keeping the old rule by giving a withheld field a `raw_fields` entry
     would have erased the mark M35 reads.
@@ -860,9 +1106,9 @@ The rules are `golf_core::rerecord`'s, unit-tested there and in `crates/core/tes
   drifts inside `RTOL` cannot launder the drift into the file. Matching is exact, at the
   difference's own path. A value that moved only inside the tolerance is no difference, so it
   matches nothing and the committed value stays.
-- **The guards.** A declaration whose version is not its family's constant (`ANALYSIS_VERSION` or
-  `SCREEN_PARSER_VERSION`) is refused before any vector is read, so a stale one cannot be re-run
-  against a later engine or parser. A declared path that
+- **The guards.** A declaration whose version is not its family's constant (`ANALYSIS_VERSION`,
+  `SCREEN_PARSER_VERSION` or `CAREER_VERSION`) is refused before any vector is read, so a stale one
+  cannot be re-run against a later engine, parser or corpus reader. A declared path that
   matches nothing in any vector fails the run as a typo, unless a committed ledger entry at the
   declaration's version already lists it, which is what lets the second run pass. A declaration
   under `spec/vectors/` is refused, and one outside the repo can drive only a run that writes
@@ -872,9 +1118,9 @@ The rules are `golf_core::rerecord`'s, unit-tested there and in `crates/core/tes
   targets and renamed over them.
 - **The file is written the way `conformance.py::_write_json` wrote it**: through
   `serde_json::Value` (so keys are sorted), indent 2, in the committed file's own line endings (the
-  plain synthetic files are CRLF, and so is every screen file), and `corpus/`'s gzip with
-  `GzipFile`'s header and mtime 0. The deflate stream is not zlib's byte for byte, and nothing reads
-  it.
+  plain synthetic files are CRLF, and so is every screen, storage and career file), and the gzipped
+  files (`corpus/`, and the real storage and career cases) with `GzipFile`'s header and mtime 0. The
+  deflate stream is not zlib's byte for byte, and nothing reads it.
 
 **The report is what gets reviewed, never `git diff`.** The text churns where nothing moved:
 `serde_json` writes a decimal where Python wrote one of the seventy-seven exponent-form floats, and
@@ -884,10 +1130,21 @@ writes `—` and `°` raw where Python escaped them. There are two worked exampl
   declared, and a second run wrote nothing.
 - **M34's run** declared 12 added paths, 19 moved and 5 removed, and wrote 35 screen files. Their
   values moved on three documents, and nothing differed on `hand/`. A second run wrote nothing.
+- **M36's run** (`career-v1.json`) added nothing and moved 23 paths: `career_version` on every
+  Python-recorded storage and career vector, the `OUTDATED` sentence in the four storage corpus
+  cases that hold an outdated swing and in their narrowings, and the same sentence in each one's
+  adopted career copy. Then M36 P15 rendered the `career_corpus` report, whose `--verbose` form prints
+  that sentence, and the four copies' `expected.reports.career_corpus_verbose` differed. No rule had
+  changed: the change had reached a report that was now run. So that path was added to
+  `career-v1.json`, in the same uncommitted change, and the declaration was run again. Those four
+  files carry two `career-v1` ledger entries. On the second run the typo guard passed the 23 earlier
+  paths, which matched nothing any more, because the first entries already ledger them. P16 rendered
+  the last two scripts and needed no declaration change. A second run writes nothing.
 
 **`rerecord` cannot create a vector.** It re-records the ones that exist; a new engine vector and
-its stages are §M29's Rust vector builder's. A new screen case is a hand-worked vector, written once
-with its working in its `note`, as M34's `hand/` were. So a missing `spec/vectors/` is a broken checkout, and
+its stages are §M29's Rust vector builder's. A new screen, storage or career case is a hand-worked
+vector, written once with its working in its `note`, as M34's `screen/hand/` and M36's
+`storage/hand/` were. So a missing `spec/vectors/` is a broken checkout, and
 the Rust tests that find one say "restore it from git" rather than naming a command.
 
 ### `check`: the freeze held, not the vectors are right
@@ -927,7 +1184,12 @@ implementation, and since the re-record it is the oracle too, so `check` counts 
 family ages on `SCREEN_PARSER_VERSION`, which frozen Python does not have. `list` shows the screen
 documents at `v1` and `units/` at `v0`.
 
-### `regenerate` refuses the engine, stage and screen families
+**Nor the storage and career families** (M36), on the screen family's rule. `check` counts them
+through `storage_vector_paths()` and `career_vector_paths()`, defers both to `cargo test`, and applies
+no `ANALYSIS_VERSION` test, because both age on `CAREER_VERSION`. `list` shows each vector's own
+`career_version`.
+
+### `regenerate` refuses the engine, stage, screen, storage and career families
 
 **The full `regenerate` and `--stages-only` refuse with exit 2, before anything is imported or
 written**, schemas included. A rebuild from frozen Python would write its v16 answers over the
@@ -954,6 +1216,13 @@ declaration names.
   answers.
 - **What stays runnable.** `conformance_vectors.build_screen` stays, on `_audio`'s precedent, as the
   record of how the family was made.
+
+**`--storage-once` and `--career-once` recorded the many-shot layer's families, and refuse the same
+way** (M36 P2 and P3). Each was one run of frozen Python's stores, corpus reader, aggregates and
+script reports, through the one sanctioned recorder change (ADR-035 clause 4). Each refuses with exit
+2 on any file under its family's directory, before the recorder is imported, and names
+`golf-core rerecord`. `build_storage` and `build_career` stay as the record, and their `_run_corpus`,
+`_run_ops` and `_run_career` are the definitions the Rust runners reproduce.
 
 `regenerate` still does two jobs. `--schemas-only` writes the Python-owned schema roots and never
 the three in `RUST_OWNED_SCHEMAS` (§1), and `--format-only` rebuilds the format family from CPython
@@ -1023,11 +1292,11 @@ milestone.
 
 | Tier | Modules | Disposition |
 |---|---|---|
-| **1 — ported, M22** | `contracts/`, `analysis/`, `feedback/rules.py` | **Done** — `crates/{contracts,analysis,feedback,core}`, all 21 engine vectors conforming through `cargo test` (M22 P2–P8b). **Nothing was deleted**, unlike M20: ADR-032 §7 adds a third clause to the retirement rule — *and nothing that stays Python calls it* — and `analysis/` has 28 callers in the lab, so both implementations stand until M40: [§M29](../ROADMAP.md#m29-the-lab-port--a-rust-lab-cli-the-rmcp-server-and-the-archive-move) ports the lab off it, and the frozen FastAPI server imports it until M40 deletes both (ADR-035 §5). Two parts stayed behind on purpose and are named in ADR-032 §8 and its P7 addendum: `alignment.py`'s render half (220 lines a side-by-side video is drawn from) and 130 lines of `flight_measure.py` that only a script and a page call. No committed vector reaches either, and ADR-035 §2 deletes both rather than porting them |
-| **1 — the rest of the swing loop** | `storage/`, `capture/` | **`storage/` ports to Rust** (ADR-030 §1): M36 takes the stores the many-shot layer reads and §M29 the rest, except `transcript_store.py`, which stays with the LLM (ADR-035 §1). **`capture/` stays Python**, because the pose worker decodes its frames through `FileVideoSource` (ADR-035 §1; this row said "ports" until M31.5 P1 found the worker's import). Both are outside M22's criterion, because no committed vector crosses either. `crates/capture` (M21) is the *camera edge* rather than a port of this `capture/` |
+| **1 — ported, M22** | `contracts/`, `analysis/`, `feedback/rules.py` | **Done** — `crates/{contracts,analysis,feedback,core}`, all 21 engine vectors conforming through `cargo test` (M22 P2–P8b). **Nothing was deleted**, unlike M20: ADR-032 §7 adds a third clause to the retirement rule — *and nothing that stays Python calls it* — and `analysis/` has 28 callers in the lab, so both implementations stand until M40: [§M29](../ROADMAP.md#m29-the-lab-port--a-rust-lab-cli-the-rmcp-server-and-the-archive-move) ports the lab off it, and the frozen FastAPI server imports it until M40 deletes both (ADR-035 §5). Two parts stayed behind on purpose and are named in ADR-032 §8 and its P7 addendum: `alignment.py`'s render half (220 lines a side-by-side video is drawn from) and 130 lines of `flight_measure.py` that only a script and a page call. No committed vector reaches either, and ADR-035 §2 deletes both rather than porting them. **M36 ported the career half** that M22's criterion did not reach: `analysis/{baseline,dispersion,comparison,club_profile}.py`, `stats.py`'s interval helpers, and the many-shot contracts they read, gated by §2's career family |
+| **1 — the rest of the swing loop** | `storage/`, `capture/` | **`storage/` ports to Rust** (ADR-030 §1). **M36 took the stores the many-shot layer reads**: `crates/storage` holds the manifest, the bundle, bag, golfer and shot stores, the corpus reader, and `api/state.py`'s tolerant readers, gated by §2's storage family. So ADR-008's one Python exception, `storage/corpus.py` importing *upward* into `api.state`, has no Rust twin. §M29 takes the rest, except `transcript_store.py`, which stays with the LLM (ADR-035 §1). **`capture/` stays Python**, because the pose worker decodes its frames through `FileVideoSource` (ADR-035 §1; this row said "ports" until M31.5 P1 found the worker's import), and no committed vector crosses it. `crates/capture` (M21) is the *camera edge* rather than a port of this `capture/` |
 | **1 — ported** | ~~`audio/impact.py`~~ → `crates/trigger` | **Done, M20.** The Python original is **deleted**, per ADR-030's 2026-09-22 addendum: the vectors are the oracle, not the code that recorded them. `rustfft` is the one numeric library the port needed rather than arithmetic |
 | **1 — not yet** | `audio/ffmpeg.py` | **Ports to Rust in §M29**, whose lab CLI runs ffmpeg as a subprocess (ADR-035 §5). Listed here because it was tier 1 by implication and in no table until M20 went looking: it holds the container edit lists, the two `soun` tracks the face-on clips carry and the `video_start_seconds` probe, and it reaches ffmpeg through the `imageio-ffmpeg` wheel rather than a system install. Until it moves, **Python decodes and Rust detects** |
-| **2 — shots and clubs** | `launch_monitor/{mock,composite,source}.py`, `clubs/catalogue.py` | **Ports to Rust in M36**, with the many-shot layer, and §M29 takes what M36 leaves (the M31.5 plan's R16 and R25). Committed JSON plus stdlib arithmetic already (ADR-022), so the data crosses unchanged. `analysis/{flight,flight_infer,flight_measure,spin_solve,shot_measure}.py` were listed here and are **done** — they are inside `run_vector`'s reach, so M22 P8 and P8b took them with tier 1 rather than after it |
+| **2 — shots and clubs** | `launch_monitor/{mock,composite,source}.py`, `clubs/catalogue.py` | **`clubs/catalogue.py` is done, M36**, with the bag (the M31.5 plan's R25): `crates/contracts::catalogue` reads the committed rows by `include_str!` and `crates/storage::catalogue` keys them, while `remember` stays Python's beside `clubs/lookup.py` (§1). M36 also took the shot store (`launch_monitor/screen/store.py`) into `crates/storage`. **`launch_monitor/{mock,composite,source}.py` port in §M29** (R16, whose shot store was M36's). Committed JSON plus stdlib arithmetic already (ADR-022), so the data crosses unchanged. `analysis/{flight,flight_infer,flight_measure,spin_solve,shot_measure}.py` were listed here and are **done** — they are inside `run_vector`'s reach, so M22 P8 and P8b took them with tier 1 rather than after it |
 | **2 — the screen reader** | `launch_monitor/screen/{parser,validate,profiles}.py` and `profiles.json`, with `recognizer.py`'s `TextBox` | **Done, M34** (ADR-034 clause 7) — `crates/screen`, with `crates/pyfmt` split out of `analysis` so that it could say what CPython says without reaching the engine. §2's screen family was recorded once from the frozen Python, ported faithfully, then changed in Rust alone: the tie rule, the `Impact Position V` tile in a **forked** `profiles.json`, `fields_present` and the `parser_version` stamp. Rust re-recorded the family after that (ADR-035 §3), and the faithful port was deleted. `screen::read` is the entry point, wired to nothing yet: its first callers are M38's phone and §M29's lab, and `golf-core parse-screen` is its seam. **Nothing Python was deleted**, by ADR-032 §7's rule. The frozen parser and its `profiles.json` stay, because the lab's importer and the frozen FastAPI server's upload path call them, until M40. Until §M29 switches the lab, the two read `2026-08-10-1` and `2026-08-23-1` differently, and the difference is declared. Moved out of tier 4 on 2026-09-29: the phone reads its own photos, so the parser has to run there. `TextBox` crosses because it is the seam, the one shape both recognizers produce. The recognizer and the preprocessing (`paddle.py`, `preprocess.py`, `importer.py`) were to **stay the lab's reader**, with PaddleOCR and OpenCV. ADR-035 §2 ports them too, in §M29, through `ort` running the same Paddle models and gated on the 13 stored bay photos. On the phone, Apple Vision stands where they do. The parser's portability edges are a list of their own, §3's second list, and do not belong to the engine's |
 | **3 — the Python sidecar** | `pose/estimator.py`, `pose/worker.py`, `capture/`; `feedback/coach.py`, `feedback/conversation.py`, `storage/transcript_store.py`, `clubs/lookup.py`, and the shapes they own — [ADR-035 §1](decisions/035-rust-everywhere-python-where-required.md#1-the-rule-and-the-two-exceptions-it-names) names every file | **Stays Python, bundled — and laptop-only** (ADR-030 §2, §3; ADR-034 clauses 8 and 10; ADR-035 §1). This is *all* that stays: the two exceptions, each with its import closure — `capture/` because the pose worker decodes through it, and `clubs/lookup.py` because it is an LLM call. **The phone has no Python**: pose there is an in-process iOS `PoseLandmarker` behind M39 P0's gate, and it never reaches this tier. Bundling, which was M26's, is now M40's. Pose is the load-bearing one: `ranges.json` is cut from these landmarks, and MediaPipe is a graph with no mature Rust binding. `pose/worker.py` (M23, ADR-033) is the process `crates/pose` spawns — the sidecar's own entry point, reusing `estimate_pose` unchanged, which is what makes this tier a *process* boundary rather than a library one. The LLM call is the other. `coach.py` sits here rather than in tier 4 because it is bundled with the laptop client rather than lab-only, and it **never reaches the phone**: there is no LLM there (ADR-034 clause 10) |
 | **4 — the lab** | `mcp/`, `api/`, the rest of `launch_monitor/screen/`, `pose/{overlay,side_by_side}.py`, `scripts/` | **Not shipped, and ported rather than kept.** [§M29](../ROADMAP.md#m29-the-lab-port--a-rust-lab-cli-the-rmcp-server-and-the-archive-move) is the lab port since [ADR-035 §5](decisions/035-rust-everywhere-python-where-required.md#5-the-lab-port-is-m29-re-scoped), after M34 and M36 and no longer blocked on M40: a Rust lab CLI takes over `api/pipeline.py`'s job and the lab scripts, `mcp/` ports on `rmcp`, the screen's recognizer ports through `ort`, and the research scripts move to `archive/`. The overlay tools are deleted rather than ported (ADR-035 §2). **§M29 deletes only what the frozen FastAPI server does not import**; M40 decides `api/` — ported to `axum` or dropped — and deletes the rest, which is what makes tier 1's delete possible at all (ADR-032 §7's rule). Superseded by ADR-035: `api/` retiring into the Flutter shell, the screen's reader staying PaddleOCR, `clubs/lookup.py` as open (it is tier 3), and the question of how ADR-022's fitting reaches a measurement, which is archived rather than run |
@@ -1042,9 +1311,11 @@ to ship a results page with no coaching on it. They now carry the real payload, 
 `_verify_against_stored` checks it against the archive like everything else.
 
 **That two-call shape is why the port has four crates and not ADR-032 §1's two** (M22 P6). There are
-nine in the workspace. M20's `trigger`, M21's `capture` and M23's `pose` are edges rather than
+ten in the workspace. M20's `trigger`, M21's `capture` and M23's `pose` are edges rather than
 ports. M34 added `pyfmt`, the CPython edges below every crate that needs them, and `screen`, the
-tier-2 port.
+tier-2 port. M36 added `storage`, which depends on `contracts` and `pyfmt` and never on `analysis`,
+so `crates/core` is the one crate holding the stores, the aggregates and the reports together, and
+the career verbs live there.
 The rule
 is enforced by cargo: `crates/feedback` holds `rules.rs` and depends on `contracts` alone, so it
 *cannot* reach `analysis` and `analysis` cannot reach it. Something above both has to make the two
@@ -1114,5 +1385,10 @@ Named rather than left to be discovered:
   nothing here, and neither is Apple Vision. M33 measures Vision against the stored shots, and §M29's
   Rust reader is gated on the 13 bay photos against PaddleOCR's parse. The notes reach a vector only
   as recorded input, and on the stored photos that is just the uncropped-frame note.
+- **The many-shot layer off this machine.** The bit pins on the career aggregates, `stats::pow` and
+  the pooled spread run on Windows with MSVC only, because another libm may answer a last bit
+  differently and CPython over it would too. The storage family takes the POSIX answer on case and
+  line endings (`crates/storage`'s crate doc), so a case-insensitive filesystem's behaviour, which
+  is this box's, is reached by no case.
 - **Wall-clock performance.** No vector is timed. The charter's <15 s target remains unmeasured,
   as `ARCHITECTURE.md` §5 says.

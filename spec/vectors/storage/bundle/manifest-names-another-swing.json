@@ -1,0 +1,329 @@
+{
+  "career_version": 1,
+  "expected": {
+    "files": {
+      ".incoming/": "",
+      "2026-08-06/1/down_the_line.97440dd3c48e.mov": "clip",
+      "2026-08-06/1/face_on.57bf96a5fcd4.mov": "clip",
+      "2026-08-06/1/manifest.json": "{\n  \"swing_id\": \"1\",\n  \"session_id\": \"2026-08-06\",\n  \"created_at\": \"2026-08-05T09:30:00Z\",\n  \"updated_at\": \"2026-08-05T09:30:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.57bf96a5fcd4.mov\",\n      \"content_sha256\": \"57bf96a5fcd47059dae681f21498d081df766ef579b8819c3931be8281e869b2\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 4,\n      \"received_at\": \"2026-08-05T09:30:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.97440dd3c48e.mov\",\n      \"content_sha256\": \"97440dd3c48ee9fce5f2fd89fc81e37b73eb69397796b1febedadcc42043ad16\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 4,\n      \"received_at\": \"2026-08-05T09:30:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.591c1f52732a.mov\",\n      \"content_sha256\": \"591c1f52732ab2a728adfda37074fccd1e8fac220c4916c660c27fee405df7b3\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 4,\n      \"received_at\": \"2026-08-05T09:30:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": \"7i\",\n  \"mishit\": null\n}",
+      "2026-08-06/1/shot_screen.591c1f52732a.mov": "clip",
+      "2026-08-06/3/face_on.78e75c8ffb6b.mov": "clip",
+      "2026-08-06/3/manifest.json": "{\n  \"swing_id\": \"5\",\n  \"session_id\": \"2026-08-01\",\n  \"created_at\": \"2026-08-05T09:30:00Z\",\n  \"updated_at\": \"2026-08-05T09:30:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.78e75c8ffb6b.mov\",\n      \"content_sha256\": \"78e75c8ffb6b409345e13cc76637d77c372efc5ecf6c08fb433cc0e3514f6473\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 4,\n      \"received_at\": \"2026-08-05T09:30:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": null,\n  \"club\": \"7i\",\n  \"mishit\": null\n}",
+      "2026-08-06/5/down_the_line.687ecd963082.mov": "follows-the-manifest",
+      "2026-08-06/5/manifest.json": "{\n  \"swing_id\": \"5\",\n  \"session_id\": \"2026-08-01\",\n  \"created_at\": \"2026-08-05T09:30:00Z\",\n  \"updated_at\": \"2026-08-06T12:02:00.000001Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.78e75c8ffb6b.mov\",\n      \"content_sha256\": \"78e75c8ffb6b409345e13cc76637d77c372efc5ecf6c08fb433cc0e3514f6473\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 4,\n      \"received_at\": \"2026-08-05T09:30:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.687ecd963082.mov\",\n      \"content_sha256\": \"687ecd9630827f44b24a22c7f37fa8939a22bab86169eae0308c31b64f55f29d\",\n      \"original_filename\": \"clip.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 20,\n      \"received_at\": \"2026-08-06T12:00:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": \"7i\",\n  \"mishit\": null\n}",
+      "2026-08-06/6/face_on.606830916f2f.mov": "next-number",
+      "2026-08-06/6/manifest.json": "{\n  \"swing_id\": \"6\",\n  \"session_id\": \"2026-08-06\",\n  \"created_at\": \"2026-08-06T12:01:00.120000Z\",\n  \"updated_at\": \"2026-08-06T12:02:00.000001Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.606830916f2f.mov\",\n      \"content_sha256\": \"606830916f2f4a2cf268a1eff77cd87c3f420e748e541cb3dfe431ed2c4819e1\",\n      \"original_filename\": \"clip.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 11,\n      \"received_at\": \"2026-08-06T12:01:00.120000Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": null,\n  \"mishit\": null\n}"
+    },
+    "results": [
+      {
+        "returned": [
+          {
+            "club": "7i",
+            "created_at": "2026-08-05T09:30:00Z",
+            "mishit": null,
+            "player_id": "aaron",
+            "roles": {
+              "down_the_line": {
+                "content_sha256": "97440dd3c48ee9fce5f2fd89fc81e37b73eb69397796b1febedadcc42043ad16",
+                "content_type": "video/quicktime",
+                "filename": "down_the_line.97440dd3c48e.mov",
+                "original_filename": "down_the_line.mov",
+                "received_at": "2026-08-05T09:30:00Z",
+                "role": "down_the_line",
+                "size_bytes": 4,
+                "warnings": []
+              },
+              "face_on": {
+                "content_sha256": "57bf96a5fcd47059dae681f21498d081df766ef579b8819c3931be8281e869b2",
+                "content_type": "video/quicktime",
+                "filename": "face_on.57bf96a5fcd4.mov",
+                "original_filename": "face_on.mov",
+                "received_at": "2026-08-05T09:30:00Z",
+                "role": "face_on",
+                "size_bytes": 4,
+                "warnings": []
+              },
+              "shot_screen": {
+                "content_sha256": "591c1f52732ab2a728adfda37074fccd1e8fac220c4916c660c27fee405df7b3",
+                "content_type": "video/quicktime",
+                "filename": "shot_screen.591c1f52732a.mov",
+                "original_filename": "shot_screen.mov",
+                "received_at": "2026-08-05T09:30:00Z",
+                "role": "shot_screen",
+                "size_bytes": 4,
+                "warnings": []
+              }
+            },
+            "session_id": "2026-08-06",
+            "swing_id": "1",
+            "updated_at": "2026-08-05T09:30:00Z"
+          },
+          {
+            "club": "7i",
+            "created_at": "2026-08-05T09:30:00Z",
+            "mishit": null,
+            "player_id": null,
+            "roles": {
+              "face_on": {
+                "content_sha256": "78e75c8ffb6b409345e13cc76637d77c372efc5ecf6c08fb433cc0e3514f6473",
+                "content_type": "video/quicktime",
+                "filename": "face_on.78e75c8ffb6b.mov",
+                "original_filename": "face_on.mov",
+                "received_at": "2026-08-05T09:30:00Z",
+                "role": "face_on",
+                "size_bytes": 4,
+                "warnings": []
+              }
+            },
+            "session_id": "2026-08-01",
+            "swing_id": "5",
+            "updated_at": "2026-08-05T09:30:00Z"
+          }
+        ]
+      },
+      {
+        "returned": {
+          "club": "7i",
+          "deduped": false,
+          "missing_roles": [
+            "shot_screen"
+          ],
+          "player_id": null,
+          "role": "down_the_line",
+          "session_id": "2026-08-01",
+          "status": "collecting",
+          "swing_id": "5"
+        }
+      },
+      {
+        "returned": {
+          "club": null,
+          "deduped": false,
+          "missing_roles": [
+            "down_the_line",
+            "shot_screen"
+          ],
+          "player_id": null,
+          "role": "face_on",
+          "session_id": "2026-08-06",
+          "status": "collecting",
+          "swing_id": "6"
+        }
+      },
+      {
+        "returned": [
+          "5",
+          "5",
+          "6"
+        ]
+      },
+      {
+        "returned": [
+          {
+            "club": "7i",
+            "created_at": "2026-08-05T09:30:00Z",
+            "mishit": null,
+            "player_id": "aaron",
+            "roles": {
+              "down_the_line": {
+                "content_sha256": "97440dd3c48ee9fce5f2fd89fc81e37b73eb69397796b1febedadcc42043ad16",
+                "content_type": "video/quicktime",
+                "filename": "down_the_line.97440dd3c48e.mov",
+                "original_filename": "down_the_line.mov",
+                "received_at": "2026-08-05T09:30:00Z",
+                "role": "down_the_line",
+                "size_bytes": 4,
+                "warnings": []
+              },
+              "face_on": {
+                "content_sha256": "57bf96a5fcd47059dae681f21498d081df766ef579b8819c3931be8281e869b2",
+                "content_type": "video/quicktime",
+                "filename": "face_on.57bf96a5fcd4.mov",
+                "original_filename": "face_on.mov",
+                "received_at": "2026-08-05T09:30:00Z",
+                "role": "face_on",
+                "size_bytes": 4,
+                "warnings": []
+              },
+              "shot_screen": {
+                "content_sha256": "591c1f52732ab2a728adfda37074fccd1e8fac220c4916c660c27fee405df7b3",
+                "content_type": "video/quicktime",
+                "filename": "shot_screen.591c1f52732a.mov",
+                "original_filename": "shot_screen.mov",
+                "received_at": "2026-08-05T09:30:00Z",
+                "role": "shot_screen",
+                "size_bytes": 4,
+                "warnings": []
+              }
+            },
+            "session_id": "2026-08-06",
+            "swing_id": "1",
+            "updated_at": "2026-08-05T09:30:00Z"
+          },
+          {
+            "club": "7i",
+            "created_at": "2026-08-05T09:30:00Z",
+            "mishit": null,
+            "player_id": null,
+            "roles": {
+              "face_on": {
+                "content_sha256": "78e75c8ffb6b409345e13cc76637d77c372efc5ecf6c08fb433cc0e3514f6473",
+                "content_type": "video/quicktime",
+                "filename": "face_on.78e75c8ffb6b.mov",
+                "original_filename": "face_on.mov",
+                "received_at": "2026-08-05T09:30:00Z",
+                "role": "face_on",
+                "size_bytes": 4,
+                "warnings": []
+              }
+            },
+            "session_id": "2026-08-01",
+            "swing_id": "5",
+            "updated_at": "2026-08-05T09:30:00Z"
+          },
+          {
+            "club": "7i",
+            "created_at": "2026-08-05T09:30:00Z",
+            "mishit": null,
+            "player_id": "aaron",
+            "roles": {
+              "down_the_line": {
+                "content_sha256": "687ecd9630827f44b24a22c7f37fa8939a22bab86169eae0308c31b64f55f29d",
+                "content_type": "video/quicktime",
+                "filename": "down_the_line.687ecd963082.mov",
+                "original_filename": "clip.mov",
+                "received_at": "2026-08-06T12:00:00Z",
+                "role": "down_the_line",
+                "size_bytes": 20,
+                "warnings": []
+              },
+              "face_on": {
+                "content_sha256": "78e75c8ffb6b409345e13cc76637d77c372efc5ecf6c08fb433cc0e3514f6473",
+                "content_type": "video/quicktime",
+                "filename": "face_on.78e75c8ffb6b.mov",
+                "original_filename": "face_on.mov",
+                "received_at": "2026-08-05T09:30:00Z",
+                "role": "face_on",
+                "size_bytes": 4,
+                "warnings": []
+              }
+            },
+            "session_id": "2026-08-01",
+            "swing_id": "5",
+            "updated_at": "2026-08-06T12:02:00.000001Z"
+          },
+          {
+            "club": null,
+            "created_at": "2026-08-06T12:01:00.120000Z",
+            "mishit": null,
+            "player_id": "aaron",
+            "roles": {
+              "face_on": {
+                "content_sha256": "606830916f2f4a2cf268a1eff77cd87c3f420e748e541cb3dfe431ed2c4819e1",
+                "content_type": "video/quicktime",
+                "filename": "face_on.606830916f2f.mov",
+                "original_filename": "clip.mov",
+                "received_at": "2026-08-06T12:01:00.120000Z",
+                "role": "face_on",
+                "size_bytes": 11,
+                "warnings": []
+              }
+            },
+            "session_id": "2026-08-06",
+            "swing_id": "6",
+            "updated_at": "2026-08-06T12:02:00.000001Z"
+          }
+        ]
+      }
+    ]
+  },
+  "id": "storage/bundle/manifest-names-another-swing",
+  "input": {
+    "files": {
+      ".incoming/1.part": "follows-the-manifest",
+      ".incoming/2.part": "next-number",
+      "2026-08-06/1/down_the_line.97440dd3c48e.mov": "clip",
+      "2026-08-06/1/face_on.57bf96a5fcd4.mov": "clip",
+      "2026-08-06/1/manifest.json": "{\n  \"swing_id\": \"1\",\n  \"session_id\": \"2026-08-06\",\n  \"created_at\": \"2026-08-05T09:30:00Z\",\n  \"updated_at\": \"2026-08-05T09:30:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.57bf96a5fcd4.mov\",\n      \"content_sha256\": \"57bf96a5fcd47059dae681f21498d081df766ef579b8819c3931be8281e869b2\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 4,\n      \"received_at\": \"2026-08-05T09:30:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.97440dd3c48e.mov\",\n      \"content_sha256\": \"97440dd3c48ee9fce5f2fd89fc81e37b73eb69397796b1febedadcc42043ad16\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 4,\n      \"received_at\": \"2026-08-05T09:30:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.591c1f52732a.mov\",\n      \"content_sha256\": \"591c1f52732ab2a728adfda37074fccd1e8fac220c4916c660c27fee405df7b3\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 4,\n      \"received_at\": \"2026-08-05T09:30:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": \"7i\",\n  \"mishit\": null\n}",
+      "2026-08-06/1/shot_screen.591c1f52732a.mov": "clip",
+      "2026-08-06/3/face_on.78e75c8ffb6b.mov": "clip",
+      "2026-08-06/3/manifest.json": "{\n  \"swing_id\": \"5\",\n  \"session_id\": \"2026-08-01\",\n  \"created_at\": \"2026-08-05T09:30:00Z\",\n  \"updated_at\": \"2026-08-05T09:30:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.78e75c8ffb6b.mov\",\n      \"content_sha256\": \"78e75c8ffb6b409345e13cc76637d77c372efc5ecf6c08fb433cc0e3514f6473\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 4,\n      \"received_at\": \"2026-08-05T09:30:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": null,\n  \"club\": \"7i\",\n  \"mishit\": null\n}"
+    },
+    "ops": [
+      {
+        "args": {
+          "session_id": "2026-08-06"
+        },
+        "now": null,
+        "op": "bundle.get_session"
+      },
+      {
+        "args": {
+          "club": null,
+          "content_type": "video/quicktime",
+          "digest": "687ecd9630827f44b24a22c7f37fa8939a22bab86169eae0308c31b64f55f29d",
+          "original_filename": "clip.mov",
+          "player_id": null,
+          "role": "down_the_line",
+          "session_id": "2026-08-06",
+          "size_bytes": 20,
+          "swing_id": null,
+          "tmp_path": ".incoming/1.part"
+        },
+        "now": "2026-08-06T12:00:00Z",
+        "op": "bundle.assign_from_path"
+      },
+      {
+        "args": {
+          "club": null,
+          "content_type": "video/quicktime",
+          "digest": "606830916f2f4a2cf268a1eff77cd87c3f420e748e541cb3dfe431ed2c4819e1",
+          "original_filename": "clip.mov",
+          "player_id": null,
+          "role": "face_on",
+          "session_id": "2026-08-06",
+          "size_bytes": 11,
+          "swing_id": null,
+          "tmp_path": ".incoming/2.part"
+        },
+        "now": "2026-08-06T12:01:00.120000Z",
+        "op": "bundle.assign_from_path"
+      },
+      {
+        "args": {
+          "player_id": "aaron",
+          "session_id": "2026-08-06"
+        },
+        "now": "2026-08-06T12:02:00.000001Z",
+        "op": "bundle.attribute_unlabeled"
+      },
+      {
+        "args": {
+          "session_id": "2026-08-06"
+        },
+        "now": null,
+        "op": "bundle.get_session"
+      }
+    ]
+  },
+  "provenance": {
+    "kind": "storage",
+    "note": "a manifest is trusted over the directory it was found in. Directory 3 holds a manifest naming session 2026-08-01 and swing 5: a down-the-line upload into it is written to directory 5, and its answer names session 2026-08-01, the manifest's, while the dedupe answer would have named the call's. The next new swing is 6, one past the manifests' highest id. `attribute_unlabeled` saves each manifest to the directory its `swing_id` names, so directory 3's copy is written over directory 5 and then directory 5's own copy over that, and the answer names 5 twice",
+    "oracle": "python",
+    "pydantic_version": "2.13.4",
+    "python_version": "3.13.3",
+    "recorded_by": "scripts/conformance_vectors.py::_run_ops",
+    "rerecords": [
+      {
+        "added": [],
+        "by": "golf-core rerecord",
+        "career_version": 1,
+        "declaration": "spec/declarations/career-v1.json",
+        "moved": [
+          "career_version"
+        ]
+      }
+    ],
+    "source": "tests/storage/test_bundle_store.py, as store calls"
+  }
+}

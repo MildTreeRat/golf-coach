@@ -24,6 +24,10 @@
 //! have written, which matters because non-finite input is one of the two cases where these two
 //! languages genuinely print different text.
 //!
+//! **And two for the many-shot layer's**, from M36 P4: `general_precision` (`:.Ng` at the
+//! precisions the career aggregates format with) and `lower`. The third table that milestone
+//! recorded, `timestamp`, is pydantic's `datetime` and `crates/contracts`' to run.
+//!
 //! **Every ordering case is a tie.** A sort with distinct keys agrees under any algorithm; it is
 //! only a tie that reads the insertion order back out, which is the answer ADR-032 §3's third edge
 //! is about.
@@ -33,8 +37,8 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use pyfmt::{
-    fixed, floor_div, g, is_space, registry_rank, repr, round_half_even, round_index, round_to,
-    split, str_repr, strip, strip_space, sum, upper, OrderedMap,
+    fixed, floor_div, g, is_space, lower, registry_rank, repr, round_half_even, round_index,
+    round_to, split, str_repr, strip, strip_space, sum, upper, OrderedMap,
 };
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
@@ -162,7 +166,7 @@ fn float(text: &str) -> f64 {
 /// The tables another crate implements are listed by name and crate, so moving one, or adding one
 /// for a crate, fails here too. `difflib_ratio`'s runner is `crates/screen/tests/difflib.rs`, since
 /// M34 P3; between P2 recording it and P3 it was committed and run by nothing, and this list is
-/// where that was written down.
+/// where that was written down. `timestamp`'s (M36 P4) is `crates/contracts/tests/time.rs`.
 #[test]
 fn every_committed_format_vector_is_run_by_a_test_in_this_file() {
     let mut ours: Vec<String> = Vec::new();
@@ -186,6 +190,8 @@ fn every_committed_format_vector_is_run_by_a_test_in_this_file() {
             "fixed",
             "floor_div",
             "general",
+            "general_precision",
+            "lower",
             "ordering",
             "repr",
             "rounding",
@@ -197,7 +203,10 @@ fn every_committed_format_vector_is_run_by_a_test_in_this_file() {
     );
     assert_eq!(
         elsewhere,
-        [("difflib_ratio".to_string(), "screen".to_string())],
+        [
+            ("difflib_ratio".to_string(), "screen".to_string()),
+            ("timestamp".to_string(), "contracts".to_string()),
+        ],
         "a format vector names another crate and this file was not told about it"
     );
 }
@@ -521,5 +530,87 @@ fn compensated_sum() {
             case.values
         );
     }
+    println!("{}: {} cases", table.id, table.cases.len());
+}
+
+// -------------------------------------------------------------- the many-shot layer's (M36 P4)
+
+/// `:.Ng` at every precision other than `%g`'s six that M36's surface formats with.
+#[test]
+fn general_at_a_precision() {
+    let vector = vector("general_precision");
+    for case in &vector.cases {
+        let precision = case.precision.expect("case carries no `precision`");
+        // By path: this file's `general` test is the default precision's, and keeps its name.
+        let actual = pyfmt::general(case.value(), precision);
+        assert_eq!(
+            actual,
+            case.expected_text(),
+            "{:?} at :.{precision}g",
+            case.value.as_deref().unwrap_or("?")
+        );
+    }
+    println!("{}: {} cases", vector.id, vector.cases.len());
+}
+
+/// `str.lower()` over strings, and every code point CPython lowers to something else.
+///
+/// The `lower_map` case is checked one way only, and that is the direction that can be: every code
+/// point CPython 3.13 lowers, Rust must lower identically, multi-character answers (`İ`) included.
+/// The other way — a code point Rust lowers and CPython leaves alone — is a capital Unicode 16.0
+/// added after CPython's 15.1 (`pyfmt::lower`'s doc has the count), and telling those from a real
+/// disagreement would need CPython's table of assigned code points, which this table declines to
+/// copy for `is_printable`'s reason. So it is counted and printed rather than asserted.
+#[test]
+fn lower_case() {
+    let table: Table<StringOpCase> = table("lower");
+    let mut maps = 0;
+    for case in &table.cases {
+        match case.op.as_str() {
+            "lower" => assert_eq!(
+                lower(case.value()),
+                case.expected_text(),
+                "{:?}.lower()",
+                case.value()
+            ),
+            "lower_map" => {
+                let expected: Vec<(u32, String)> = serde_json::from_value(case.expected.clone())
+                    .expect("`lower_map` expects [code point, lowered] pairs");
+                let mut wrong = Vec::new();
+                for (code, lowered) in &expected {
+                    let c = char::from_u32(*code).expect("a recorded code point is a char");
+                    let actual = lower(&c.to_string());
+                    if &actual != lowered {
+                        wrong.push(format!(
+                            "U+{code:04X}: {actual:?}, CPython says {lowered:?}"
+                        ));
+                    }
+                }
+                assert!(
+                    wrong.is_empty(),
+                    "{} of {} differ:\n{}",
+                    wrong.len(),
+                    expected.len(),
+                    wrong.join("\n")
+                );
+                let recorded: HashSet<u32> = expected.iter().map(|(code, _)| *code).collect();
+                let rust_only: Vec<String> = (0..=char::MAX as u32)
+                    .filter_map(char::from_u32)
+                    .filter(|c| {
+                        !recorded.contains(&(*c as u32)) && lower(&c.to_string()) != c.to_string()
+                    })
+                    .map(|c| format!("U+{:04X}", c as u32))
+                    .collect();
+                println!(
+                    "lower_map: {} recorded, all agree; Rust alone lowers {}: {rust_only:?}",
+                    expected.len(),
+                    rust_only.len()
+                );
+                maps += 1;
+            }
+            other => panic!("unknown lower op {other:?}"),
+        }
+    }
+    assert_eq!(maps, 1, "the table carries the whole-map case");
     println!("{}: {} cases", table.id, table.cases.len());
 }

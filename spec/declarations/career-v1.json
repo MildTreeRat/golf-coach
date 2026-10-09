@@ -1,0 +1,31 @@
+{
+  "career_version": 1,
+  "note": "M36 P14: the corpus's OUTDATED means 'not comparable'. read_corpus excludes a swing stored below versions.comparable_from (the verbs pass COMPARABLE_FROM, 14) instead of below versions.installed, frozen Python's rule, which excluded every swing on disk once Rust's ANALYSIS_VERSION reached 17 though 16 -> 17 moved no number. Every Python-recorded corpus case was read under {installed 16, comparable_from 16}, where the two rules exclude the same swings, so no swing, count or aggregate moves: only the OUTDATED exclusion's sentence, which now names the line a swing fell under instead of the installed engine. It moves in the four corpus cases holding an outdated swing (mishit-ineligible, narrowing and its eight narrowings, outdated-versions, stale-and-outdated), and in each one's adopted copy, the input.corpus of career/synthetic/storage-<case>. career_version moves 0 -> 1 on every storage and career vector. No career answer moves. The scripts' report text was carried as frozen Python printed it until a renderer ran it, and M36 P15 rendered the career_corpus report: its --verbose form prints each exclusion's detail sentence, so expected.reports.career_corpus_verbose moves in those same four adopted copies. That path was added to this declaration at P15 and ledgered by a second run of it, because it is this change reaching the report rather than a new rule. The plain report's outdated paragraph names the installed engine, not the line, and does not move. The cases where the two rules part are hand-worked, at career_version 1, under spec/vectors/storage/hand/. Every value not listed here stays the one frozen Python recorded.",
+  "added": [],
+  "moved": [
+    "career_version",
+    "expected.corpus.excluded[0].detail",
+    "expected.corpus.excluded[1].detail",
+    "expected.corpus.excluded[2].detail",
+    "expected.corpus.excluded[3].detail",
+    "expected.corpus.excluded[4].detail",
+    "expected.corpus.excluded[5].detail",
+    "expected.corpus.excluded[6].detail",
+    "expected.narrowed.club-7i.corpus.excluded[1].detail",
+    "expected.narrowed.club-driver-unhit.corpus.excluded[1].detail",
+    "expected.narrowed.no-filter.corpus.excluded[1].detail",
+    "expected.narrowed.no-sessions.corpus.excluded[1].detail",
+    "expected.narrowed.sessions.corpus.excluded[1].detail",
+    "expected.narrowed.since-the-8th-7i.corpus.excluded[1].detail",
+    "expected.narrowed.since-the-9th.corpus.excluded[1].detail",
+    "expected.narrowed.since-the-9th-in-ist.corpus.excluded[1].detail",
+    "expected.reports.career_corpus_verbose",
+    "input.corpus.excluded[0].detail",
+    "input.corpus.excluded[1].detail",
+    "input.corpus.excluded[2].detail",
+    "input.corpus.excluded[3].detail",
+    "input.corpus.excluded[4].detail",
+    "input.corpus.excluded[5].detail",
+    "input.corpus.excluded[6].detail"
+  ]
+}

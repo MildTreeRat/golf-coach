@@ -22,7 +22,9 @@ Explore the relevant code, docs, and existing plans in `docs/plans/` before aski
 Break the work into phases P0, P1, P2...
 - Each phase must be small in scope and completable by a fresh session with minimal context.
 - If a phase fails that test, split it until it passes.
-- For each phase list: goal, files likely touched, done criteria, how to verify.
+- **One phase, one gate.** A phase's cost grows with the square of its length, because every tool call re-sends everything before it. M36's three costliest phases (P2, P3, P8) each had a title joined by "and" over parts with their own done criteria. They peaked past 300k context and cost 17–25M input tokens each, against 7–11M for the rest. If a title needs an "and" and each half could go green on its own, make it two phases. Aim for a phase that finishes under ~250k context.
+- For each phase list: goal, **what to read** (files, plus the earlier phases' findings it depends on, by phase number), files likely touched, done criteria, how to verify.
+- **Lay the plan out for `/next-phase`'s map.** It reads everything above `## Phases` and the phase's own section, and greps the findings. So keep what every phase must know above `## Phases`: status checklist, rules, verify commands, decisions. Phases go under `## Phases` as `### Pn — title`. Findings go last, under `## Phase findings`, as `### Pn (date)`, and anything a later phase must know is addressed to it by number (`**For P12**: …`).
 - **P0 is always:** write this plan to `docs/plans/<short-name>.md` with a status checklist, so other sessions can see where things stand.
 - The plan must state: **stop after every phase. Every time.** Update the checklist in the plan doc when a phase is done.
 - The plan itself can be verbose.

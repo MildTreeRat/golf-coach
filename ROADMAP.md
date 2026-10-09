@@ -1,6 +1,6 @@
 # Roadmap: AI Golf Swing Trainer
 
-## Last Updated: 2026-10-07
+## Last Updated: 2026-10-08
 
 Grouped by **state**, not by number, because the numbers no longer run in order: the pose-only
 slices (M4-PoC, M4-PoC+, M4-REF, M5-FB) delivered the mechanics half of M4 and the ranking half
@@ -51,14 +51,14 @@ wording; only the grouping and the M4 checklist have been corrected.
 | **M32** Wider shot contract and device capability, in Rust | ✅ Done *(2026-10-01)*, **13/13 phases** — the phases and what each found are in [m32-shot-contract.md](docs/plans/m32-shot-contract.md). `ShotData` gained seven keys and its provenance three, each device declares what it prints in `crates/contracts/devices.json`, and `printed_blank` and `misread` exist for M35/M37 to emit. Rust's `ANALYSIS_VERSION` went 16 → 17 with no number moving, and **`golf-core rerecord` re-recorded the vectors for the first time**, diff-gated against a committed declaration, with a `rerecords` ledger in each file saying which values are Rust's. Frozen Python stays at 16, and `conformance.py check` now certifies the freeze rather than the vectors. The screen-parser work moved to M34 | — (desk work; done) | [§M32](#m32-wider-shot-contract-and-device-capability) |
 | **M33** Apple Vision spike | 🔒 Blocked. **Runs early on purpose**: whether Vision reads the HD Golf screen is the product's biggest unknown. It measures the frozen Python parser, which M32 no longer touches | M31.5, and a Mac | [§M33](#m33-apple-vision-spike--can-the-phone-read-the-screen) |
 | **M34** The screen reader in Rust | ✅ Done *(2026-10-02)*, **13/13 phases** — the phases and what each found are in [m34-screen-reader.md](docs/plans/m34-screen-reader.md). The screen parser and validator are ported to a new `crates/screen`, reached by `golf-core parse-screen` and wired to nothing yet, and `pyfmt` left `analysis` for a crate of its own. The parser was recorded once from frozen Python and ported faithfully, then changed in Rust against hand-worked vectors: the `Impact Position V` tile, a tie rule that withholds a field on a margin rather than an equality, `fields_present` and the parser-version stamp. **`golf-core rerecord` re-recorded the screen family under its own version key**, and the 13-shot re-read moved a value only on the two label-fix shots, with no `needs_review` flip. `profiles.json` is forked until M40, and nothing under `data/` changed | — (desk work; done) | [§M34](#m34-the-screen-reader-in-rust) |
-| **M35** Shot-first sessions, in Rust | 🔒 Blocked. Changes what M36 ported, with hand-worked vectors | M36 — this box | [§M35](#m35-shot-first-sessions-in-rust) |
-| **M36** The many-shot layer in Rust | ⬜ Not started, and **next**: M32 landed on 2026-10-01 and M34 on 2026-10-02. **Runs before M35**: a faithful port, recorded once from frozen Python | M32 — this box | [§M36](#m36-the-many-shot-layer-in-rust) |
+| **M35** Shot-first sessions, in Rust | ⬜ Not started, and **next**: M36 landed on 2026-10-08. Changes what M36 ported, with hand-worked vectors, and its `read_corpus` change re-records the storage and career families as `career-v2` | M36 — this box | [§M35](#m35-shot-first-sessions-in-rust) |
+| **M36** The many-shot layer in Rust | ✅ Done *(2026-10-08)*, **19/19 phases** — the phases and what each found are in [m36-many-shot-layer.md](docs/plans/m36-many-shot-layer.md). The stores, the corpus reader, the career aggregates and the five career scripts are ported: a tenth crate, `crates/storage`, the many-shot shapes in `crates/contracts`, the career half of `crates/analysis`, and five `golf-core` verbs that print what the scripts print over `data/`, byte for byte. Two vector families, `storage/` and `career/`, were recorded once from frozen Python and passed by the faithful port. Then **one rule changed in Rust**: the corpus's `OUTDATED` now means older than `COMPARABLE_FROM` (14), not older than the installed engine, so a Rust `read_corpus` over `data/` pools what frozen Python pools. Rust re-recorded both families under a third version key, `CAREER_VERSION`. No engine, stage or screen vector moved, and nothing under `src/` or `data/` changed | — (desk work; done) | [§M36](#m36-the-many-shot-layer-in-rust) |
 | **M37** Strike profile, topic grades and strengths/weaknesses | 🔒 Blocked | M35 — desk, then the bay | [§M37](#m37-strike-profile-topic-grades-and-strengthsweaknesses-rust-first) |
 | **M41** The course-play screen layout | ⬜ Not started. **Raised 2026-10-07** from one photo of a second screen layout, and ordered after M36 and M35 by the user's choice, not by a dependency: `crates/screen` matches 4 of its 12 stat labels today. Not data-only, because its left/right signs are lit letters rather than printed words | M35, by order — this box, plus a handful of new photos | [§M41](#m41-the-course-play-screen-layout) |
 | **M38** The iPhone app | 🔒 Blocked | A Mac for the skeleton (M34 landed 2026-10-02), M37 for the profile screens, M29 for P4's export import; then the bay | [§M38](#m38-the-iphone-app) |
 | **M39** Optional video on the phone | 🔒 Blocked | M38; a Mac, then the bay | [§M39](#m39-optional-video-on-the-phone) |
 | **M40** The laptop client resumes | 🔒 Blocked. M21, M24, M25 and M26 re-scoped under it, as the desktop target of the same app. It also decides `api/` (`axum` or dropped) and deletes the frozen Python | M38 and M29 | [§M40](#m40-the-laptop-client-resumes) |
-| **M29** The lab port | 🔒 Blocked. **Re-scoped 2026-09-30 by [ADR-035](docs/decisions/035-rust-everywhere-python-where-required.md#5-the-lab-port-is-m29-re-scoped), number kept.** It was "the last Python", blocked on M40. It is now the port of the lab: a Rust lab CLI, the `rmcp` server, OCR through `ort`, and the archive move. It deletes only what the frozen FastAPI server does not import, and M40 deletes the rest. Its old opening question, how ADR-022's fitting reaches a measurement, is dissolved: the fitting is archived | M34 and M36 — this box, beside M37 and M38 | [§M29](#m29-the-lab-port--a-rust-lab-cli-the-rmcp-server-and-the-archive-move) |
+| **M29** The lab port | ⬜ Not started, and unblocked: M34 landed on 2026-10-02 and M36 on 2026-10-08. **Re-scoped 2026-09-30 by [ADR-035](docs/decisions/035-rust-everywhere-python-where-required.md#5-the-lab-port-is-m29-re-scoped), number kept.** It was "the last Python", blocked on M40. It is now the port of the lab: a Rust lab CLI, the `rmcp` server, OCR through `ort`, and the archive move. It deletes only what the frozen FastAPI server does not import, and M40 deletes the rest. Its old opening question, how ADR-022's fitting reaches a measurement, is dissolved: the fitting is archived | M34 and M36 — this box, beside M37 and M38 | [§M29](#m29-the-lab-port--a-rust-lab-cli-the-rmcp-server-and-the-archive-move) |
 | **M5** Feedback UI | ⬜ Not started, **superseded in shape by [M38](#m38-the-iphone-app)** (no web UI). It was M25 until 2026-09-29, when [ADR-034](docs/decisions/034-shot-first-phone-first.md#consequences) made the phone app the first shell | — (its screens are M38's, in the app's shape) | [§M5](#milestone-5-feedback-ui) |
 | **M2** Club & ball detection | 🔒 Gated, **and M1.5 said no-go** | Bay lighting for a ~1/2000 s exposure — *not* a global-shutter camera | [§M2](#milestone-2-club--ball-detection) |
 | Hardware re-validation | 🔒 Gated | Cameras / launch monitor arriving | [§Gate](#hardware-re-validation-gate-revisit-when-cameras--launch-monitor-arrive) |
@@ -79,7 +79,7 @@ served live `call_tool` requests including the not-found path. It is registered 
 (`claude mcp add`, per the README) and reports `✔ Connected`, which is a second client completing
 the same handshake independently.
 
-**NEXT ACTION — M36, in Rust *(2026-10-02)*.**
+**NEXT ACTION — M35, in Rust *(2026-10-08)*.**
 [ADR-034](docs/decisions/034-shot-first-phone-first.md) moved the product to the shot and the phone.
 The user then redirected M32's planning, and
 [ADR-035](docs/decisions/035-rust-everywhere-python-where-required.md) makes the project Rust
@@ -90,10 +90,13 @@ the result. **[M32](#m32-wider-shot-contract-and-device-capability)** closed on 
 wider shot contract, the device capability model and the first Rust re-record, so Rust is now the
 oracle and the Python lab is frozen until M40, working and gaining nothing.
 **[M34](#m34-the-screen-reader-in-rust)** closed on 2026-10-02: the screen reader is Rust, in
-`crates/screen`, with the label fix and a second re-recorded family. The next desk work is
-**[M36](#m36-the-many-shot-layer-in-rust)** on this box, then M35 and M37, and
-[M29](#m29-the-lab-port--a-rust-lab-cli-the-rmcp-server-and-the-archive-move) ports the lab once
-M36 has landed. [M38](#m38-the-iphone-app)'s skeleton no longer waits on M34, only on a Mac. **[M33](#m33-apple-vision-spike--can-the-phone-read-the-screen)
+`crates/screen`, with the label fix and a second re-recorded family.
+**[M36](#m36-the-many-shot-layer-in-rust)** closed on 2026-10-08: the stores, the corpus reader and
+the career aggregates are Rust, in a new `crates/storage` and the career half of `crates/analysis`,
+with five `golf-core` verbs and two more re-recorded families. The next desk work is
+**[M35](#m35-shot-first-sessions-in-rust)** on this box, then M37, with M41 after M35 by the user's
+order. [M29](#m29-the-lab-port--a-rust-lab-cli-the-rmcp-server-and-the-archive-move) can now port
+the lab, beside M37 and M38. [M38](#m38-the-iphone-app)'s skeleton no longer waits on M34, only on a Mac. **[M33](#m33-apple-vision-spike--can-the-phone-read-the-screen)
 runs early on purpose.** Whether Apple Vision reads the HD Golf screen is the product's biggest
 unknown, it needs a Mac and no Rust, and if it fails the plan changes before any app work starts.
 The next bay trip serves the pivot too. It should enumerate what the screen's `Custom` tile can be
@@ -1892,8 +1895,12 @@ bookkeeping is listed and explained, no `needs_review` flips, and nothing under 
 
 ## M35: Shot-first sessions, in Rust
 
-**Status**: 🔒 Blocked on M36. It was Python first, as M36's oracle, until M31.5 put M36 ahead of it
+**Status**: ⬜ Not started, and unblocked: M36 landed on 2026-10-08. It was Python first, as M36's
+oracle, until M31.5 put M36 ahead of it
 ([ADR-035 clause 6](docs/decisions/035-rust-everywhere-python-where-required.md#6-order-the-phone-path-first)).
+M36 already changed one rule of `read_corpus`, the corpus's `OUTDATED`
+([ADR-024's M36 addendum](docs/decisions/024-per-club-shot-history.md)), so M35's change is
+`career-v2`. M36's WORKLOG entry lists what M35 inherits.
 
 **The ask.** A directory holding only a shot photo becomes first-class, in Rust, by changing what
 M36 ported. `analyze_shot` writes a `ShotResult`, the corpus in `crates/storage` admits photo-only
@@ -1919,8 +1926,14 @@ there is no Python to record it from. M35's own plan sets the exit.
 
 ## M36: The many-shot layer in Rust
 
-**Status**: ⬜ Not started, and unblocked: M32 landed on 2026-10-01. **Runs before M35**
-([ADR-035 clause 6](docs/decisions/035-rust-everywhere-python-where-required.md#6-order-the-phone-path-first)).
+**Status**: ✅ Done *(2026-10-08)*, 19/19 phases. The phase list, the interview's decisions and what
+each phase found are in [m36-many-shot-layer.md](docs/plans/m36-many-shot-layer.md), and where that
+plan and this section disagree, the plan wins. Every exit item below was checked at the close.
+[ADR-024's M36 addendum](docs/decisions/024-per-club-shot-history.md) records the one rule that
+changed, [ADR-026's](docs/decisions/026-club-specification-lookup.md) the catalogue read from both
+languages, and [ADR-032's sixteenth](docs/decisions/032-the-rust-core.md) what the port measured.
+`docs/CONFORMANCE.md` §2 describes the two new families. The crate and the verbs are wired to
+nothing yet: M35, M38 and M29 are their first callers.
 
 **The ask.** The aggregates and their stores port to Rust faithfully, `read_corpus` included,
 exactly as it behaves today: career, baseline, dispersion and club profile into `crates/contracts`
@@ -1932,15 +1945,21 @@ diff-gated
 The career and club CLIs get Rust verbs. `ShotResult` has left this milestone for M35, because it is
 new.
 
-**Open**: `read_corpus` leaves out an analysis older than the installed `ANALYSIS_VERSION`, and
-Rust's moved past frozen Python's in M32, while every `analysis.json` in `data/` stays at frozen
-Python's. M36's plan
-decides what its verbs do over `data/` before M29 re-analyses it.
+**Decided** *(2026-10-07, built 2026-10-08)*: `read_corpus` left out an analysis older than the
+installed `ANALYSIS_VERSION`, Rust's moved past frozen Python's in M32, and every `analysis.json` in
+`data/` stays at frozen Python's, so the faithful port pooled nothing. The corpus now excludes an
+analysis older than `COMPARABLE_FROM` (14), the oldest engine generation whose numbers today's
+engine still agrees with. `is_outdated`, the question a re-analysis asks, is unchanged. Frozen
+Python keeps the old rule until M40, by design.
 
 **Depends on**: M32. **Where it runs**: this box.
 
-**Exit**: the program plan names vector families rather than an exit line, synthetic corpora that
-cross every `n` gate and the mishit floor. M36's own plan sets the exit.
+**Exit**: `spec/vectors/storage/` and `spec/vectors/career/` were recorded once from frozen Python,
+with synthetic corpora that cross every `n` gate and the mishit floor, and `regenerate` refuses
+both. Rust passes every one, report text included. `golf-core rerecord` re-recorded both under
+`CAREER_VERSION`, moving only declared paths, and a second run writes nothing. The five verbs print
+what the Python scripts print over `data/`. The engine, stage and screen families, `src/` and
+`data/` are untouched.
 
 **Detail**: the program plan's
 [§M36](docs/plans/m31-m40-shot-first-pivot.md#m36--the-many-shot-layer-in-rust).
@@ -3292,7 +3311,8 @@ one a USB camera produced.
 > milestones it used to wait on. The old body is in git history, and the list at the foot of this
 > section says where each part of it went.
 
-**Status**: 🔒 Blocked on M34 and M36. It is no longer blocked on M40.
+**Status**: ⬜ Not started, and unblocked: M34 landed on 2026-10-02 and M36 on 2026-10-08. It is no
+longer blocked on M40.
 
 **The ask.** Python is reduced to the two exceptions
 [ADR-035 clause 1](docs/decisions/035-rust-everywhere-python-where-required.md#1-the-rule-and-the-two-exceptions-it-names)

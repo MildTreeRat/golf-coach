@@ -1,0 +1,99 @@
+{
+  "career_version": 1,
+  "expected": {
+    "files": {
+      "2026-08-06/notes": "a file, not a swing"
+    },
+    "results": [
+      {
+        "returned": true
+      },
+      {
+        "returned": false
+      },
+      {
+        "returned": false
+      },
+      {
+        "returned": false
+      },
+      {
+        "returned": []
+      }
+    ]
+  },
+  "id": "storage/bundle/delete-swing",
+  "input": {
+    "files": {
+      "2026-08-06/1/analysis.json": "{}",
+      "2026-08-06/1/analysis.state.json": "{}",
+      "2026-08-06/1/down_the_line.97440dd3c48e.mov": "clip",
+      "2026-08-06/1/face_on.57bf96a5fcd4.mov": "clip",
+      "2026-08-06/1/face_on.keypoints.json": "{}",
+      "2026-08-06/1/manifest.json": "{\n  \"swing_id\": \"1\",\n  \"session_id\": \"2026-08-06\",\n  \"created_at\": \"2026-08-05T09:30:00Z\",\n  \"updated_at\": \"2026-08-05T09:30:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.57bf96a5fcd4.mov\",\n      \"content_sha256\": \"57bf96a5fcd47059dae681f21498d081df766ef579b8819c3931be8281e869b2\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 4,\n      \"received_at\": \"2026-08-05T09:30:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.97440dd3c48e.mov\",\n      \"content_sha256\": \"97440dd3c48ee9fce5f2fd89fc81e37b73eb69397796b1febedadcc42043ad16\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 4,\n      \"received_at\": \"2026-08-05T09:30:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.591c1f52732a.mov\",\n      \"content_sha256\": \"591c1f52732ab2a728adfda37074fccd1e8fac220c4916c660c27fee405df7b3\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 4,\n      \"received_at\": \"2026-08-05T09:30:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": null,\n  \"club\": \"7i\",\n  \"mishit\": null\n}",
+      "2026-08-06/1/shot_screen.591c1f52732a.mov": "clip",
+      "2026-08-06/notes": "a file, not a swing"
+    },
+    "ops": [
+      {
+        "args": {
+          "session_id": "2026-08-06",
+          "swing_id": "1"
+        },
+        "now": null,
+        "op": "bundle.delete_swing"
+      },
+      {
+        "args": {
+          "session_id": "2026-08-06",
+          "swing_id": "1"
+        },
+        "now": null,
+        "op": "bundle.delete_swing"
+      },
+      {
+        "args": {
+          "session_id": "2026-08-06",
+          "swing_id": "99"
+        },
+        "now": null,
+        "op": "bundle.delete_swing"
+      },
+      {
+        "args": {
+          "session_id": "2026-08-06",
+          "swing_id": "notes"
+        },
+        "now": null,
+        "op": "bundle.delete_swing"
+      },
+      {
+        "args": {
+          "session_id": "2026-08-06"
+        },
+        "now": null,
+        "op": "bundle.get_session"
+      }
+    ]
+  },
+  "provenance": {
+    "kind": "storage",
+    "note": "a delete takes the whole directory, keypoints, analysis and state included, and leaves the session; deleting it again, a swing that never existed, or a file that is not a directory answers False (`test_delete_swing_removes_the_directory`, `test_delete_swing_on_a_missing_swing_returns_false`, `test_delete_swing_takes_everything_in_the_directory`)",
+    "oracle": "python",
+    "pydantic_version": "2.13.4",
+    "python_version": "3.13.3",
+    "recorded_by": "scripts/conformance_vectors.py::_run_ops",
+    "rerecords": [
+      {
+        "added": [],
+        "by": "golf-core rerecord",
+        "career_version": 1,
+        "declaration": "spec/declarations/career-v1.json",
+        "moved": [
+          "career_version"
+        ]
+      }
+    ],
+    "source": "tests/storage/test_bundle_store.py, as store calls"
+  }
+}

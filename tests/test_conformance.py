@@ -29,6 +29,7 @@ Rust owns are pinned by `crates/contracts/tests/schemas.rs`, and skipped by the 
 
 from __future__ import annotations
 
+import functools
 import json
 import math
 import re
@@ -504,6 +505,8 @@ def _refuse_to_build(monkeypatch: pytest.MonkeyPatch) -> list[str]:
         "build_stages_from_disk",
         "build_format",
         "build_screen",
+        "build_storage",
+        "build_career",
     ):
         setattr(fake, name, recorder(name))
     monkeypatch.setitem(sys.modules, "conformance_vectors", fake)
@@ -768,7 +771,7 @@ def test_feedback_is_not_a_stage_and_that_is_deliberate() -> None:
 
 
 def test_the_format_family_is_committed_and_covers_every_formatting_edge() -> None:
-    """Ten vectors, and a port that reads the table can solve every CPython edge found so far.
+    """Thirteen vectors, and a port that reads the table can solve every CPython edge found so far.
 
     Discovery rather than a listing, the same choice the rest of this file makes — but the reason
     here is sharper: `check` *defers* this family to `cargo test`, so the Python suite is the only
@@ -781,7 +784,8 @@ def test_the_format_family_is_committed_and_covers_every_formatting_edge() -> No
     found a fifth edge — Python's `max` returns the first maximum — which is not CPython
     *formatting* and is gated by the stage vectors rather than here.) **And five for the screen
     parser's** (M34 P2): `repr` on a `str`, float `//`, string case and whitespace, `sum`, and
-    `difflib`.
+    `difflib`. **And three for the many-shot layer's** (M36 P4): `:.Ng` at another precision,
+    `str.lower()`, and pydantic's `datetime`.
     """
     by_id = {
         conformance._vector_id(path): conformance._read_json(path)
@@ -798,6 +802,9 @@ def test_the_format_family_is_committed_and_covers_every_formatting_edge() -> No
         "format/text_case",
         "format/sum",
         "format/difflib_ratio",
+        "format/general_precision",
+        "format/lower",
+        "format/timestamp",
     }, f"the format family is {sorted(by_id)} — run `regenerate --format-only`"
     for name, vector in by_id.items():
         assert vector["provenance"]["kind"] == "format", name
@@ -805,7 +812,8 @@ def test_the_format_family_is_committed_and_covers_every_formatting_edge() -> No
 
 
 def test_every_format_vector_names_the_crate_that_runs_it() -> None:
-    """`difflib_ratio` is `crates/screen`'s, and every other format vector is `pyfmt`'s.
+    """`difflib_ratio` is `crates/screen`'s, `timestamp` is `crates/contracts`', and every other
+    format vector is `pyfmt`'s.
 
     The family stopped being one crate's at M34 P2, so `check`'s line and `tests/format.rs`'s
     discovery both read `provenance.implemented_by`. The five engine tables predate the key and
@@ -822,8 +830,12 @@ def test_every_format_vector_names_the_crate_that_runs_it() -> None:
         else:
             assert "implemented_by" in provenance, f"{name} names no implementing crate"
         owners[name] = provenance.get("implemented_by", "pyfmt")
-    assert {name for name, crate in owners.items() if crate != "pyfmt"} == {"difflib_ratio"}
+    assert {name for name, crate in owners.items() if crate != "pyfmt"} == {
+        "difflib_ratio",
+        "timestamp",
+    }
     assert owners["difflib_ratio"] == "screen"
+    assert owners["timestamp"] == "contracts"
 
 
 def test_the_parser_tables_hold_the_cases_that_separate_cpython_from_the_obvious_port() -> None:
@@ -864,6 +876,50 @@ def test_the_parser_tables_hold_the_cases_that_separate_cpython_from_the_obvious
     for case in space_sets:
         assert {0x1C, 0x1D, 0x1E, 0x1F} <= set(case["expected"]), case["source"]
 
+
+
+def test_the_many_shot_tables_hold_the_cases_that_separate_cpython_from_the_obvious_port() -> None:
+    """`:.3g`'s moved threshold and its ties, `Final_Sigma`, and pydantic's re-spellings. [M36 P4]
+
+    The parser tables' pin, for M36's three: each table earns its bytes on the cases where CPython
+    or pydantic and the call a port reaches for disagree — `:g` at the wrong precision, a lowercase
+    that ignores its neighbours, a timestamp carried as its lexeme or ordered as a string — so a
+    table drifting away from them would keep passing in Rust after it stopped gating anything.
+    """
+    tables = {
+        path.name: conformance._read_json(path) for path in conformance.format_vector_paths()
+    }
+    general = {
+        (case["value"], case["precision"]): case["expected"]
+        for case in tables["general_precision.json"]["cases"]
+    }
+    assert general[("999.5", 3)] == "1e+03", "the exponent form starts at 10**P"
+    assert general[("12.25", 3)] == "12.2" and general[("12.75", 3)] == "12.8", "ties to even"
+    assert general[("9.996", 3)] == "10", "a decade crossed by rounding"
+
+    lower = tables["lower.json"]["cases"]
+    by_text = {case["value"]: case["expected"] for case in lower if case["op"] == "lower"}
+    assert by_text["ΑΣ"] == "ας" and by_text["ΑΣΑ"] == "ασα" and by_text["Σ"] == "σ"
+    assert by_text["Α'Σ"] == "α'ς", "a case-ignorable character is skipped"
+    whole = dict(next(case for case in lower if case["op"] == "lower_map")["expected"])
+    assert whole[0x0130] == "i̇", "İ lowers to two code points"
+    assert whole[0x212A] == "k", "the Kelvin sign lowers into ASCII"
+
+    timestamp = tables["timestamp.json"]
+    assert timestamp["provenance"]["pydantic_version"], "the table names the pydantic it records"
+    rows = timestamp["cases"]
+    assert {row["kind"] for row in rows} == {"written", "respelled", "refused"}
+    spelled = {row["value"]: row for row in rows}
+    assert spelled["2026-08-04T12:00:00+00:00"]["pydantic"] == "2026-08-04T12:00:00Z"
+    assert spelled["2026-08-04T12:00:00.12Z"]["pydantic"] == "2026-08-04T12:00:00.120000Z"
+    assert spelled["2026-08-04T12:00:00Z"]["isoformat"] == "2026-08-04T12:00:00+00:00"
+    assert spelled["2026-08-20T23:30:00-05:00"]["date"] == "2026-08-20", "the date in its offset"
+    assert any(row["epoch_us"] is not None and row["epoch_us"] < 0 for row in rows), "pre-epoch"
+    instants: dict[int, set[str]] = {}
+    for row in rows:
+        if row["epoch_us"] is not None:
+            instants.setdefault(row["epoch_us"], set()).add(row["pydantic"][19:])
+    assert any(len(offsets) > 1 for offsets in instants.values()), "one instant, two offsets"
 
 def test_the_format_family_does_not_age_on_the_engine_version() -> None:
     """It records CPython's rules, not this engine's answers, and the field names say which.
@@ -1176,3 +1232,704 @@ def test_screen_once_records_an_empty_family_and_then_refuses(
     assert recorded.exists()
     assert conformance.main(["regenerate", "--screen-once"]) == 2
     assert builds == ["build_screen"], "the second run reached the recorder"
+
+
+# ------------------------------------------------------------- M36 P1: the storage corpus cases
+
+#: Where the real corpus is read from. Spelled here rather than imported, so the skip below is
+#: decided at collection without loading the recorder.
+_SESSIONS = REPO / "data" / "processed" / "sessions"
+
+
+@functools.cache
+def _storage_corpus_built() -> tuple[tuple[Path, dict[str, Any]], ...]:
+    """The synthetic corpus cases, built once per run: each pin below reads the same build."""
+    from conformance_vectors import build_storage_corpus
+
+    return tuple(build_storage_corpus(real=False))
+
+
+def test_the_storage_corpus_cases_build_in_memory_and_write_nothing() -> None:
+    """P1's dry run: every case builds, carries an answer, and has a name of its own.
+
+    In memory only — `regenerate --storage-once` (P2) is the one writer — so whatever is under
+    `spec/vectors/storage/` is byte-identical afterwards, nothing included.
+    """
+    storage = conformance.VECTORS / "storage"
+    before = _snapshot(storage) if storage.exists() else {}
+    built = _storage_corpus_built()
+    assert (_snapshot(storage) if storage.exists() else {}) == before
+
+    ids = [vector["id"] for _, vector in built]
+    assert len(ids) == len(set(ids)), "two storage corpus cases share an id"
+    assert len({path for path, _ in built}) == len(built), "two cases would write one file"
+    for path, vector in built:
+        name = vector["id"]
+        assert path.is_relative_to(conformance.VECTORS / "storage" / "corpus"), name
+        assert name == f"storage/corpus/{path.name.removesuffix('.json')}", name
+        assert vector["career_version"] == 0, name
+        assert "analysis_version" not in vector, f"{name} would age on the engine version"
+        assert vector["provenance"]["kind"] == "storage", name
+        assert vector["provenance"]["oracle"] == "python", name
+        assert set(vector["input"]) == {"player_id", "versions", "files", "narrowings"}, name
+        expected = vector["expected"]
+        assert set(expected) == {"corpus", "properties", "narrowed"}, name
+        assert set(expected["narrowed"]) == set(vector["input"]["narrowings"]), name
+
+
+def test_the_storage_corpus_cases_reach_every_exclusion_and_both_mishit_halves() -> None:
+    """The rows a port is most likely to answer differently, each reached at least once.
+
+    Every `ExclusionReason`, the automatic flag and both verdicts, a narrowing, and a root that
+    does not exist, because `check` defers this family to `cargo test` and nothing else on the
+    Python side would notice a case list that quietly lost one.
+    """
+    from golf_coach.contracts.career import ExclusionReason
+    from golf_coach.contracts.mishit import MishitVerdict
+
+    reasons: set[str] = set()
+    verdicts: set[str] = set()
+    auto = narrowed = 0
+    missing_root = False
+    for _, vector in _storage_corpus_built():
+        corpus = vector["expected"]["corpus"]
+        reasons |= {entry["reason"] for entry in corpus["excluded"]}
+        verdicts |= {swing["manual_mishit"] for swing in corpus["swings"]} - {None}
+        auto += sum(swing["auto_mishit"] for swing in corpus["swings"])
+        narrowed += len(vector["expected"]["narrowed"])
+        missing_root |= vector["input"]["files"] is None
+    assert reasons == {reason.value for reason in ExclusionReason}
+    assert verdicts == {verdict.value for verdict in MishitVerdict}
+    assert auto, "no case flags a mishit automatically"
+    assert narrowed, "no case narrows its corpus"
+    assert missing_root, "no case reads a sessions root that does not exist"
+
+
+def test_frozen_python_answers_a_corpus_case_only_under_its_own_engine() -> None:
+    """`input.versions` is the parameter Rust's `read_corpus` takes (the plan's call 7). Frozen
+    Python reads `ANALYSIS_VERSION` for itself, so any other pair is a question it cannot answer,
+    and the recorder says so rather than recording an answer to a different question."""
+    from conformance_vectors import _run_corpus
+
+    given = {
+        "player_id": "aaron",
+        "versions": {"installed": ANALYSIS_VERSION + 1, "comparable_from": ANALYSIS_VERSION - 2},
+        "files": {},
+        "narrowings": {},
+    }
+    with pytest.raises(ValueError, match="answers only under"):
+        _run_corpus(given)
+
+
+@pytest.mark.skipif(
+    not _SESSIONS.is_dir(),
+    reason="no data/processed/sessions/: the real storage corpus case is read from the captures",
+)
+def test_the_real_corpus_case_reads_exactly_as_data_does() -> None:
+    """The slimmed tree is a claim about what `read_corpus` reads (the plan's finding 11), and
+    `_storage_corpus_real` raises unless reading it equals reading `data/` itself. Gzipped, since
+    P1 measured it at 480 KB plain."""
+    from conformance_vectors import _REAL_SUFFIX, _storage_corpus_real
+
+    vector = _storage_corpus_real()
+    assert _REAL_SUFFIX == ".json.gz"
+    assert vector["id"] == "storage/corpus/real"
+    assert vector["expected"]["corpus"]["swings"], "the real corpus pooled no swing"
+    assert vector["input"]["narrowings"], "the real corpus holds no tagged club"
+    for rel in vector["input"]["files"]:
+        assert not rel.startswith("."), f"{rel}: a dotted directory `read_corpus` never enters"
+        assert rel.endswith(("/", ".json")), f"{rel}: not a file `read_corpus` reads"
+
+
+# ------------------------------------------------------------ M36 P2: the store operations, on disk
+
+#: The sub-families frozen Python recorded through `regenerate --storage-once`. M36 P14 adds
+#: `hand/`, whose oracle is a person, and re-records these through `golf-core rerecord`, which
+#: keeps `provenance.oracle` as it found it.
+_PYTHON_RECORDED_STORAGE = ("corpus", "bundle", "stores")
+
+
+@functools.cache
+def _storage_ops_built() -> tuple[tuple[Path, dict[str, Any]], ...]:
+    """The operation cases, built once per run: each pin below reads the same build."""
+    from conformance_vectors import build_storage_ops
+
+    return tuple(build_storage_ops())
+
+
+def _copy_storage_family(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """The committed storage family under a temporary `spec/vectors/`, `_copy_screen_family`'s
+    way, so a pin can add to it or try to write over it without touching `spec/`."""
+    import shutil
+
+    vectors = tmp_path / "spec" / "vectors"
+    shutil.copytree(conformance.VECTORS / "storage", vectors / "storage")
+    monkeypatch.setattr(conformance, "VECTORS", vectors)
+    return vectors
+
+
+def test_the_storage_ops_cases_build_in_memory_and_write_nothing() -> None:
+    """The plan's call 1: a tree and calls in, each call's answer and the tree after out.
+
+    One answer per call, each exactly one of `returned` and `raised`, and every call carrying the
+    `now` it was run under (`null` for one that may not read a clock). Built in memory, so
+    `spec/vectors/storage/` is byte-identical afterwards.
+    """
+    storage = conformance.VECTORS / "storage"
+    before = _snapshot(storage) if storage.exists() else {}
+    built = _storage_ops_built()
+    assert (_snapshot(storage) if storage.exists() else {}) == before
+
+    ids = [vector["id"] for _, vector in built]
+    assert len(ids) == len(set(ids)), "two storage op cases share an id"
+    for path, vector in built:
+        name = vector["id"]
+        family = path.parent.name
+        assert family in {"bundle", "stores"}, name
+        assert name == f"storage/{family}/{path.name.removesuffix('.json')}", name
+        assert vector["career_version"] == 0, name
+        assert "analysis_version" not in vector, f"{name} would age on the engine version"
+        assert "analysis_version" not in vector["provenance"], f"{name}: no op reads an engine"
+        assert vector["provenance"]["recorded_by"].endswith("::_run_ops"), name
+        given, expected = vector["input"], vector["expected"]
+        assert set(given) == {"files", "ops"}, name
+        assert set(expected) == {"results", "files"}, name
+        assert len(expected["results"]) == len(given["ops"]), name
+        for op, result in zip(given["ops"], expected["results"], strict=True):
+            assert set(op) == {"op", "args", "now"}, f"{name}: {op}"
+            assert len(result) == 1 and set(result) <= {"returned", "raised"}, f"{name}: {result}"
+
+
+def test_the_storage_ops_cases_reach_every_op_and_every_kind_of_answer() -> None:
+    """Every op the recorder knows, and the answers a port is likeliest to get wrong.
+
+    `check` defers this family to `cargo test`, so nothing else on the Python side would notice a
+    case list that quietly stopped reaching a raise, a dedupe, an explicit target or a verdict.
+    """
+    from conformance_vectors import _op_table
+
+    reached: set[str] = set()
+    verdicts: set[str | None] = set()
+    deduped = targeted = with_message = without_message = absent_roots = 0
+    for _, vector in _storage_ops_built():
+        absent_roots += vector["input"]["files"] is None
+        for op, result in zip(vector["input"]["ops"], vector["expected"]["results"], strict=True):
+            reached.add(op["op"])
+            if op["op"] == "bundle.set_mishit":
+                verdicts.add(op["args"]["verdict"])
+            if op["op"] == "bundle.assign_from_path" and "returned" in result:
+                deduped += result["returned"]["deduped"]
+                targeted += op["args"]["swing_id"] is not None
+            if "raised" in result:
+                with_message += result["raised"]["message"] is not None
+                without_message += result["raised"]["message"] is None
+    assert reached == set(_op_table()), f"never reached: {set(_op_table()) - reached}"
+    assert verdicts == {"confirmed", "cleared", None}
+    assert deduped and targeted, "no upload is deduped, or none names its swing"
+    assert with_message and without_message, "a raise of each kind (ours, pydantic's) is missing"
+    assert absent_roots, "no case runs on a root that does not exist"
+
+
+def test_an_op_recorded_without_a_clock_may_not_read_one() -> None:
+    """`now: null` is a claim the recorder checks: a call that stamps, given no instant, stops
+    the build rather than recording whatever this machine's clock said (the plan's call 4)."""
+    from conformance_vectors import _run_ops
+
+    given = {
+        "files": {},
+        "ops": [
+            {
+                "op": "golfer.get_or_create",
+                "args": {"name": "Aaron", "handedness": "right"},
+                "now": None,
+            }
+        ],
+    }
+    with pytest.raises(AssertionError, match="read the clock"):
+        _run_ops(given)
+
+
+def test_the_storage_family_is_committed_in_the_sub_families_python_recorded() -> None:
+    """Recorded once, by `regenerate --storage-once`, at `career_version` 0 unless a Rust
+    re-record has ledgered it since, and never at an engine version: `read_corpus` takes the
+    engine's as a parameter (the plan's decision 8)."""
+    by_family: dict[str, list[Path]] = {}
+    for path in conformance.storage_vector_paths():
+        family = path.relative_to(conformance.VECTORS / "storage").parts[0]
+        by_family.setdefault(family, []).append(path)
+    for family in _PYTHON_RECORDED_STORAGE:
+        assert by_family.get(family), f"spec/vectors/storage/{family}/ is empty"
+        for path in by_family[family]:
+            vector = conformance._read_json(path)
+            name = vector["id"]
+            assert name == conformance._vector_id(path), f"{path.name} names itself {name}"
+            assert vector["provenance"]["kind"] == "storage", name
+            assert vector["provenance"]["oracle"] == "python", name
+            assert vector["provenance"]["python_version"].startswith("3."), name
+            assert "analysis_version" not in vector, f"{name} claims an engine version"
+            assert isinstance(vector.get("career_version"), int), name
+            # `conformance.py list` prints every note, and a Windows console encodes as cp1252:
+            # M36 P2's first recording carried a U+0130 that made `list` raise there.
+            vector["provenance"]["note"].encode("cp1252")
+            if not vector["provenance"].get("rerecords"):
+                assert vector["career_version"] == 0, name
+    assert (conformance.VECTORS / "storage" / "corpus" / "real.json.gz").is_file()
+
+
+def test_check_defers_the_storage_family_and_judges_no_staleness(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Named and deferred, never run, and never STALE — even at a version frozen Python lacks,
+    `test_check_defers_the_screen_family_and_judges_no_staleness`'s pin for `CAREER_VERSION`."""
+    vectors = _copy_storage_family(tmp_path, monkeypatch)
+    ahead = next(vectors.rglob("*.json"))
+    document = json.loads(ahead.read_text(encoding="utf-8"))
+    document["career_version"] = 99
+    (ahead.parent / "ahead.json").write_text(json.dumps(document), encoding="utf-8")
+
+    def never(vector: dict[str, Any]) -> dict[str, Any]:
+        raise AssertionError(f"`check` ran storage vector {vector.get('id')} through the engine")
+
+    monkeypatch.setattr(conformance, "run_vector", never)
+    assert conformance.main(["check"]) == 0
+    out = capsys.readouterr().out
+    count = len(conformance.storage_vector_paths())
+    assert f"{count} storage vectors are `crates/storage`'s" in out
+    assert "STALE" not in out
+
+
+def test_list_shows_a_storage_vector_at_its_career_version(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """`list` prints the first version key a vector carries; without `career_version` in that
+    tuple a storage vector would print `vNone`. Each row shows the vector's own version, read off
+    the file: 0 as frozen Python recorded them, and whatever `golf-core rerecord` has moved them to
+    since (M36 P14's `career-v1`, and the hand-worked cases, which start there)."""
+    _copy_storage_family(tmp_path, monkeypatch)
+    versions = {
+        conformance._vector_id(path): conformance._read_json(path)["career_version"]
+        for path in conformance.storage_vector_paths()
+    }
+    assert conformance.main(["list"]) == 0
+    rows = [line for line in capsys.readouterr().out.splitlines() if line.startswith("storage/")]
+    assert rows, "`list` showed no storage vector"
+    assert len(rows) == len(versions), rows[:3]
+    for row in rows:
+        version = versions[row.split()[0]]
+        assert isinstance(version, int), row
+        assert re.search(rf"\s+v{version}\s+storage\s", row), row
+
+
+@pytest.mark.parametrize("what", ["a committed vector", "any file at all"])
+def test_storage_once_refuses_while_the_family_has_anything_in_it(
+    what: str,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Once means once, `--screen-once`'s rule: refused on any file under `storage/`, before the
+    recorder is imported, so a refusal cannot reach `data/`, and it writes nothing."""
+    if what == "a committed vector":
+        vectors = _copy_storage_family(tmp_path, monkeypatch)
+    else:
+        vectors = tmp_path / "spec" / "vectors"
+        (vectors / "storage").mkdir(parents=True)
+        (vectors / "storage" / "README").write_text("not a vector", encoding="utf-8")
+        monkeypatch.setattr(conformance, "VECTORS", vectors)
+    before = _snapshot(vectors)
+    calls = _refuse_to_build(monkeypatch)
+
+    assert conformance.main(["regenerate", "--storage-once"]) == 2
+    assert not calls, f"a refused `--storage-once` still reached {calls}"
+    assert _snapshot(vectors) == before
+    message = capsys.readouterr().err
+    assert "golf-core rerecord" in message
+    assert "career-v<N>.json" in message
+
+
+def test_storage_once_records_an_empty_family_and_then_refuses(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The one run writes what `build_storage` returned, and the next run is refused by it."""
+    vectors = tmp_path / "spec" / "vectors"
+    vectors.mkdir(parents=True)
+    monkeypatch.setattr(conformance, "VECTORS", vectors)
+    recorded = vectors / "storage" / "stores" / "only.json"
+    builds: list[str] = []
+
+    def build_storage() -> list[tuple[Path, dict[str, Any]]]:
+        builds.append("build_storage")
+        return [(recorded, {"id": "storage/stores/only", "provenance": {"kind": "storage"}})]
+
+    fake = types.ModuleType("conformance_vectors")
+    fake.build_storage = build_storage  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "conformance_vectors", fake)
+
+    assert conformance.main(["regenerate", "--storage-once"]) == 0
+    assert recorded.exists()
+    assert conformance.main(["regenerate", "--storage-once"]) == 2
+    assert builds == ["build_storage"], "the second run reached the recorder"
+
+
+# ------------------------------------------------ M36 P3: the career aggregates and the reports
+
+#: Where the real career case reads the golfer's record and bag. Spelled here for the skip, as
+#: `_SESSIONS` is.
+_GOLFERS = REPO / "data" / "processed" / "golfers"
+
+#: The reports every career case records plain and `--verbose`, by script.
+_CAREER_REPORTS = ("career_corpus", "career_baseline", "career_dispersion", "club_profile")
+
+#: A sentence each branch of the five reports prints, by the report key it appears under
+#: (`club_profile_*` is every per-club key). Reached by at least one case, or a renderer branch
+#: has no recorded text to be gated by.
+_CAREER_BRANCHES: dict[str, tuple[str, ...]] = {
+    "career_corpus": (
+        "Collapsed",
+        "disagree on the shot photo",
+        "analyzed by an older engine",
+        "carrying no measurement at all",
+        "naming no club",
+        "Unrecognised measurement sources",
+        "Contributing no sample",
+        "belong to someone else",
+        "no distinct swing carries a measurement yet",
+    ),
+    "career_corpus_verbose": ("not_analyzed — no analysis.json",),
+    "career_baseline": (
+        "Nothing is sayable yet",
+        "No measurement on any swing yet",
+        "trend    per session:",
+        "inside tour range",
+        "above tour range",
+        "below tour range",
+        "cannot tell",
+        "at least 90th pct",
+        "at least 10th pct",
+        "past the edge",
+        "the spread is not placed against the tour spread",
+        "no tour population exists",
+        "it is a model output",
+        "no reference distribution is stored",
+        "has a stored distribution and may not be placed in it",
+    ),
+    "career_baseline_verbose": ("sessions so far:",),
+    "career_dispersion": (
+        "No metric can be asked yet",
+        "No measurement on any swing yet",
+        "    pattern   biased and scattered",
+        "    caveat    Pooled spread",
+        "    waiting   ",
+        "    blocked   ",
+        "within-session",
+    ),
+    "career_dispersion_verbose": ("    tolerance ",),
+    "club_profile": (
+        "No club has been hit or declared",
+        "No swings on record either",
+        "on record name no club. That is real history",
+        "In the bag, nothing hit with it yet",
+        "These swings carry no measurement",
+        "capped at the shot count",
+        "No bag entry declared",
+        "make and model not recorded",
+        "loft not recorded",
+        "nothing above counts them",
+        "    finding   bias ",
+    ),
+    "club_profile_verbose": ("sessions so far:",),
+    "club_profile_*": ("never hit and not in the bag",),
+    "flag_mishit_list": ("(no tagged shots yet)", "   clean", "auto and unconfirmed"),
+}
+
+
+@functools.cache
+def _career_built() -> tuple[tuple[Path, dict[str, Any]], ...]:
+    """The synthetic career cases, built once per run: each pin below reads the same build."""
+    from conformance_vectors import build_career
+
+    return tuple(build_career(real=False))
+
+
+def _copy_career_family(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """The committed career family under a temporary `spec/vectors/`, `_copy_storage_family`'s
+    way, so a pin can add to it or try to write over it without touching `spec/`."""
+    import shutil
+
+    vectors = tmp_path / "spec" / "vectors"
+    shutil.copytree(conformance.VECTORS / "career", vectors / "career")
+    monkeypatch.setattr(conformance, "VECTORS", vectors)
+    return vectors
+
+
+def test_the_career_cases_build_in_memory_and_write_nothing() -> None:
+    """The plan's call 2, as P3 made it concrete: a corpus, a bag and a name in; the four
+    aggregates, what they derive, and every report out. Built in memory, so whatever is under
+    `spec/vectors/career/` is byte-identical afterwards."""
+    career = conformance.VECTORS / "career"
+    before = _snapshot(career) if career.exists() else {}
+    built = _career_built()
+    assert (_snapshot(career) if career.exists() else {}) == before
+
+    ids = [vector["id"] for _, vector in built]
+    assert len(ids) == len(set(ids)), "two career cases share an id"
+    for path, vector in built:
+        name = vector["id"]
+        assert path.is_relative_to(conformance.VECTORS / "career" / "synthetic"), name
+        assert name == f"career/synthetic/{path.name.removesuffix('.json')}", name
+        assert vector["career_version"] == 0, name
+        assert "analysis_version" not in vector, f"{name} would age on the engine version"
+        assert vector["provenance"]["kind"] == "career", name
+        assert vector["provenance"]["oracle"] == "python", name
+        assert vector["provenance"]["recorded_by"].endswith("::_run_career"), name
+        given, expected = vector["input"], vector["expected"]
+        assert set(given) == {"corpus", "bag", "display_name", "versions", "clubs"}, name
+        assert set(expected) == {
+            "baseline",
+            "dispersion",
+            "standing",
+            "bag_profile",
+            "properties",
+            "reports",
+        }, name
+        keys = {f"{script}{tail}" for script in _CAREER_REPORTS for tail in ("", "_verbose")}
+        keys |= {f"club_profile_{club}" for club in given["clubs"]}
+        assert set(expected["reports"]) == keys | {"flag_mishit_list"}, name
+        # Every club the profile holds, in its order, then one it does not.
+        profiled = [one["club"] for one in expected["bag_profile"]["clubs"]]
+        assert given["clubs"][:-1] == profiled, name
+        assert given["clubs"][-1] not in profiled, name
+
+
+def test_the_career_cases_cross_every_floor_and_reach_every_reading() -> None:
+    """The rows a port is likeliest to answer differently, each reached at least once.
+
+    Every floor of the M36 plan's finding 4 shut at n - 1 and open at n, and the TREND sessions
+    gate shut at 2 and open at 3; every `Standing`, both sides of the band and every
+    `DispersionPattern`, the scatter-only reading and the drift caveat on both sides of its factor;
+    every caveat form a club profile writes; an interval each side of the critical-value tables'
+    edge. `check` defers this family to `cargo test`, so nothing else on the Python side would
+    notice a case list that quietly lost one.
+    """
+    from golf_coach.contracts.baseline import BaselineClaim, minimum_n, minimum_sessions
+    from golf_coach.contracts.comparison import Standing
+    from golf_coach.contracts.dispersion import SCATTER_ONLY_READING, DispersionPattern
+
+    floored = ("head_sway_norm", "tempo_ratio", "hip_shift_at_top_norm")
+    crossed: set[tuple[str, str, int]] = set()
+    sessions_gate: set[tuple[int, bool]] = set()
+    standings: set[str] = set()
+    sides: set[bool] = set()
+    patterns: set[str] = set()
+    readings: set[str] = set()
+    drift: set[bool] = set()
+    caveats: list[str] = []
+    intervals: set[int] = set()
+    for _, vector in _career_built():
+        expected = vector["expected"]
+        for name, metric in expected["baseline"]["metrics"].items():
+            if metric["sd_ci"] is not None:
+                intervals.add(metric["n"])
+            for claim in BaselineClaim:
+                ready = claim.value in metric["ready"]
+                need = minimum_n(name, claim)
+                enough_sessions = metric["n_sessions"] >= minimum_sessions(claim)
+                if enough_sessions and metric["n"] in (need - 1, need):
+                    assert ready is (metric["n"] == need), (vector["id"], name, claim)
+                    crossed.add((name, claim.value, metric["n"] - need))
+                if claim is BaselineClaim.TREND and metric["n"] >= need:
+                    sessions_gate.add((metric["n_sessions"], ready))
+        for metric in expected["standing"]["metrics"].values():
+            standings.add(metric["standing"])
+            if metric["outside_by"] is not None:
+                sides.add(metric["outside_by"] > 0)
+        for metric in expected["dispersion"]["metrics"].values():
+            if metric["pattern"] is not None:
+                patterns.add(metric["pattern"])
+            elif metric["points_at"] is not None:
+                readings.add(metric["points_at"])
+            if metric["within_session_sd"] is not None:
+                drift.add(bool(metric["caveats"]))
+        caveats += [c for club in expected["bag_profile"]["clubs"] for c in club["caveats"]]
+
+    every = {(name, claim.value) for name in floored for claim in BaselineClaim}
+    assert crossed >= {(*row, offset) for row in every for offset in (-1, 0)}, "a floor uncrossed"
+    assert {(2, False), (3, True)} <= sessions_gate, sessions_gate
+    # `analysis/stats.py`'s tables end at df 30 and its expansions start at 31.
+    assert 31 in intervals and max(intervals) > 32, "no interval past the critical-value tables"
+    assert standings == {standing.value for standing in Standing}
+    assert sides == {True, False}, "an OUTSIDE standing on only one side of the band"
+    assert patterns == {pattern.value for pattern in DispersionPattern}
+    assert SCATTER_ONLY_READING in readings
+    assert drift == {True, False}, "the drift caveat on only one side of SESSION_DRIFT_FACTOR"
+    for opening in ("The single swing", "All 3 swings", "2 of the 6 swings"):
+        assert any(c.startswith(opening) for c in caveats), opening
+    for phrase in (
+        "shots on this club was set aside",
+        "shots on this club were set aside",
+        " 1 was flagged automatically",
+        " 2 were flagged automatically",
+    ):
+        assert any(phrase in c for c in caveats), phrase
+
+
+def test_every_report_branch_has_recorded_text() -> None:
+    """Each branch of the five reports, found by a sentence it prints, in at least one case: the
+    recorded text is what gates `crates/core`'s renderers, and a branch no case reaches is a
+    renderer nothing checks."""
+    printed: dict[str, list[str]] = {key: [] for key in _CAREER_BRANCHES}
+    for _, vector in _career_built():
+        for key, text in vector["expected"]["reports"].items():
+            group = key if key in printed else "club_profile_*"
+            assert group != "club_profile_*" or key.startswith("club_profile_"), key
+            printed[group].append(text)
+    for key, phrases in _CAREER_BRANCHES.items():
+        joined = "\n".join(printed[key])
+        for phrase in phrases:
+            assert phrase in joined, f"no case's {key} prints {phrase!r}"
+
+
+def test_frozen_python_answers_a_career_case_only_under_its_own_engine() -> None:
+    """The corpus report prints frozen Python's engine as the installed one, so a case asking
+    under any other pair is a question for Rust's renderer, and the recorder says so."""
+    from conformance_vectors import _run_career
+
+    given = dict(_career_built()[0][1]["input"])
+    given["versions"] = {"installed": ANALYSIS_VERSION + 1, "comparable_from": ANALYSIS_VERSION - 2}
+    with pytest.raises(ValueError, match="answers only under"):
+        _run_career(given)
+
+
+@pytest.mark.skipif(
+    not (_SESSIONS.is_dir() and _GOLFERS.is_dir()),
+    reason="no data/processed/{sessions,golfers}/: the real career case is read from the captures",
+)
+def test_the_real_career_case_starts_from_the_real_storage_corpus() -> None:
+    """The plan's call 2: the real case's corpus is the real storage vector's, copied, and
+    `_career_real` raises unless that still equals `read_corpus` over `data/` and the mishit
+    listing prints the same over the real trees as over the corpus."""
+    from conformance_vectors import _career_real
+
+    vector = _career_real()
+    stored = conformance._read_json(conformance.VECTORS / "storage" / "corpus" / "real.json.gz")
+    assert vector["id"] == "career/real/aaron"
+    assert vector["input"]["corpus"] == stored["expected"]["corpus"]
+    assert vector["input"]["bag"] is not None, "the real case carries the declared bag"
+    assert vector["expected"]["bag_profile"]["clubs"], "the real golfer profiles no club"
+
+
+def test_the_career_family_is_committed_in_the_sub_families_python_recorded() -> None:
+    """Recorded once, by `regenerate --career-once`, at `career_version` 0 unless a Rust
+    re-record has ledgered it since, and never at an engine version."""
+    by_family: dict[str, list[Path]] = {}
+    for path in conformance.career_vector_paths():
+        family = path.relative_to(conformance.VECTORS / "career").parts[0]
+        by_family.setdefault(family, []).append(path)
+    assert set(by_family) == {"synthetic", "real"}, sorted(by_family)
+    for paths in by_family.values():
+        for path in paths:
+            vector = conformance._read_json(path)
+            name = vector["id"]
+            assert name == conformance._vector_id(path), f"{path.name} names itself {name}"
+            assert vector["provenance"]["kind"] == "career", name
+            assert vector["provenance"]["oracle"] == "python", name
+            assert vector["provenance"]["python_version"].startswith("3."), name
+            assert "analysis_version" not in vector, f"{name} claims an engine version"
+            assert isinstance(vector.get("career_version"), int), name
+            # `list` prints every note to a console that may encode as cp1252 (M36 P2).
+            vector["provenance"]["note"].encode("cp1252")
+            if not vector["provenance"].get("rerecords"):
+                assert vector["career_version"] == 0, name
+    assert (conformance.VECTORS / "career" / "real" / "aaron.json.gz").is_file()
+
+
+def test_check_defers_the_career_family_and_judges_no_staleness(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Named and deferred, never run, and never STALE, even at a `career_version` frozen Python
+    never had: the storage family's pin, for the family that shares its key."""
+    vectors = _copy_career_family(tmp_path, monkeypatch)
+    ahead = next(vectors.rglob("*.json"))
+    document = json.loads(ahead.read_text(encoding="utf-8"))
+    document["career_version"] = 99
+    (ahead.parent / "ahead.json").write_text(json.dumps(document), encoding="utf-8")
+
+    def never(vector: dict[str, Any]) -> dict[str, Any]:
+        raise AssertionError(f"`check` ran career vector {vector.get('id')} through the engine")
+
+    monkeypatch.setattr(conformance, "run_vector", never)
+    assert conformance.main(["check"]) == 0
+    out = capsys.readouterr().out
+    count = len(conformance.career_vector_paths())
+    assert f"{count} career vectors are `crates/analysis`' and `crates/core`'s" in out
+    assert "STALE" not in out
+
+
+def test_list_shows_a_career_vector_at_its_career_version(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The storage family's pin, over the career family: each row at the vector's own version."""
+    _copy_career_family(tmp_path, monkeypatch)
+    versions = {
+        conformance._vector_id(path): conformance._read_json(path)["career_version"]
+        for path in conformance.career_vector_paths()
+    }
+    assert conformance.main(["list"]) == 0
+    rows = [line for line in capsys.readouterr().out.splitlines() if line.startswith("career/")]
+    assert rows, "`list` showed no career vector"
+    assert len(rows) == len(versions), rows[:3]
+    for row in rows:
+        version = versions[row.split()[0]]
+        assert isinstance(version, int), row
+        assert re.search(rf"\s+v{version}\s+career\s", row), row
+
+
+@pytest.mark.parametrize("what", ["a committed vector", "any file at all"])
+def test_career_once_refuses_while_the_family_has_anything_in_it(
+    what: str,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Once means once, `--storage-once`'s rule: refused on any file under `career/`, before the
+    recorder is imported, so a refusal cannot reach `data/`, and it writes nothing."""
+    if what == "a committed vector":
+        vectors = _copy_career_family(tmp_path, monkeypatch)
+    else:
+        vectors = tmp_path / "spec" / "vectors"
+        (vectors / "career").mkdir(parents=True)
+        (vectors / "career" / "README").write_text("not a vector", encoding="utf-8")
+        monkeypatch.setattr(conformance, "VECTORS", vectors)
+    before = _snapshot(vectors)
+    calls = _refuse_to_build(monkeypatch)
+
+    assert conformance.main(["regenerate", "--career-once"]) == 2
+    assert not calls, f"a refused `--career-once` still reached {calls}"
+    assert _snapshot(vectors) == before
+    message = capsys.readouterr().err
+    assert "golf-core rerecord" in message
+    assert "career-v<N>.json" in message
+
+
+def test_career_once_records_an_empty_family_and_then_refuses(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The one run writes what `build_career` returned, and the next run is refused by it."""
+    vectors = tmp_path / "spec" / "vectors"
+    vectors.mkdir(parents=True)
+    monkeypatch.setattr(conformance, "VECTORS", vectors)
+    recorded = vectors / "career" / "synthetic" / "only.json"
+    builds: list[str] = []
+
+    def build_career() -> list[tuple[Path, dict[str, Any]]]:
+        builds.append("build_career")
+        return [(recorded, {"id": "career/synthetic/only", "provenance": {"kind": "career"}})]
+
+    fake = types.ModuleType("conformance_vectors")
+    fake.build_career = build_career  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "conformance_vectors", fake)
+
+    assert conformance.main(["regenerate", "--career-once"]) == 0
+    assert recorded.exists()
+    assert conformance.main(["regenerate", "--career-once"]) == 2
+    assert builds == ["build_career"], "the second run reached the recorder"

@@ -70,14 +70,14 @@ are ADR-035's.
 | **M32** | Wider shot contract and device capability, in Rust; the first Rust re-record | this box | M31.5 | ✅ Done *(2026-10-01)*, 13/13 phases — [m32-shot-contract.md](m32-shot-contract.md). Re-detailed Rust-only below (M31.5 P6a) |
 | **M33** | Apple Vision spike: can the phone read the screen? | Mac | M31.5 | ⬜ Not started |
 | **M34** | The screen reader in Rust (`crates/screen`): the parser port, the V tile and tie rule, the 13-shot re-read | this box | M32 | ✅ Done *(2026-10-02)*, 13/13 phases — [m34-screen-reader.md](m34-screen-reader.md) |
-| **M35** | Shot-first sessions in Rust: photo-only shots, `ShotResult` and `analyze_shot` | this box | M36 | ⬜ Not started |
-| **M36** | The many-shot layer and its stores ported to Rust, recorded once from frozen Python | this box | M32 | ⬜ Not started — unblocked by M32 *(2026-10-01)*, and next since M34 closed *(2026-10-02)*; runs before M35 |
+| **M35** | Shot-first sessions in Rust: photo-only shots, `ShotResult` and `analyze_shot` | this box | M36 | ⬜ Not started — unblocked by M36 *(2026-10-08)*, and next |
+| **M36** | The many-shot layer and its stores ported to Rust, recorded once from frozen Python | this box | M32 | ✅ Done *(2026-10-08)*, 19/19 phases — [m36-many-shot-layer.md](m36-many-shot-layer.md). The corpus's `OUTDATED` now means older than `COMPARABLE_FROM` (14), changed in Rust alone ([ADR-024's M36 addendum](../decisions/024-per-club-shot-history.md)) |
 | **M37** | Strike profile, topic grades and strengths/weaknesses (Rust first) | desk, then bay | M35 | ⬜ Not started |
 | **M41** | The course-play screen layout in `crates/screen`: aliases, lit L/R and D/F signs, backspin and sidespin | this box, after new photos | M35, by order only | ⬜ Not started — raised 2026-10-07, detailed in [ROADMAP §M41](../../ROADMAP.md#m41-the-course-play-screen-layout) rather than here |
 | **M38** | The iPhone app | Mac, then bay | M34 (skeleton), M37 (profile screens), M29 (P4, the export import) | ⬜ Not started |
 | **M39** | Optional video on the phone | Mac, then bay | M38 | ⬜ Not started |
 | **M40** | The laptop client resumes (M21/M24/M25/M26 re-scoped, R10/API adapters); `api/` ported or dropped, and the frozen Python deleted | later | M38, M29 | ⬜ Not started |
-| **M29** | The lab port: a Rust lab CLI, the `rmcp` server, OCR through `ort`, and the archive move | this box | M34, M36 | ⬜ Not started — re-scoped by ADR-035, number kept (Q2) |
+| **M29** | The lab port: a Rust lab CLI, the `rmcp` server, OCR through `ort`, and the archive move | this box | M34, M36 | ⬜ Not started — re-scoped by ADR-035, number kept (Q2); unblocked by M36 *(2026-10-08)* |
 
 **The order, since three rows are out of numeric order.** M32 comes first. M34 and M36 follow it,
 then M35, then M37. M41 comes after M35 by the user's choice (2026-10-07), not by a dependency. M29 needs M34 and M36 and runs on this box beside M37 and M38. M38 P4 waits on
@@ -334,6 +334,9 @@ before leaning on it.
 9. **`bundle_store` attaches an upload to "the newest swing lacking this role."**
    - Photo-only sessions are fine: each photo opens a new entry.
    - Mixed sessions misattach. The phone's storage API should take explicit targets.
+   - *(M36, 2026-10-07)* The explicit target already exists: `assign_from_path` has taken
+     `swing_id` since 2026-08-07, and `api/app.py` passes the upload's `?swing_id=`. M36 ported it
+     faithfully. The default still misattaches, so M35 and the phone should always pass the target.
 
 **Errata, M31 P2 (2026-09-29).** These were measured on this box. The detail and the commands are
 in [M31's P2 findings](m31-shot-first-adr.md#p2--found-2026-09-29), and where this plan disagrees
@@ -1139,6 +1142,10 @@ the corpus it changes (the M31.5 plan's P1 finding 7). Frozen Python gains none 
 
 ## M36 — The many-shot layer in Rust
 
+**The phase list is [m36-many-shot-layer.md](m36-many-shot-layer.md)**, and where it and this
+section disagree, its decisions and findings win. The two that changed this section are marked
+below: the explicit target was not new, and `OUTDATED` became "not comparable".
+
 **Runs before M35, and depends on M32**
 ([ADR-035 clause 6](../decisions/035-rust-everywhere-python-where-required.md#6-order-the-phone-path-first)).
 It ports the many-shot layer and its stores **faithfully**, `read_corpus` included, exactly as it
@@ -1163,8 +1170,12 @@ records them, and only then ports. That recording is the port's one independent 
   - It takes the tolerant readers `read_corpus` calls from `api/state.py` (R9) inside the crate. So
     ADR-008's one Python exception, `storage/corpus.py` importing *upward* into `api.state`, does not
     carry over to Rust.
-  - The bundle store gains an explicit target beside the faithful "newest swing lacking this role"
-    ("What the code says" finding 9). That is new behaviour, with hand-worked vectors.
+  - ~~The bundle store gains an explicit target beside the faithful "newest swing lacking this role"
+    ("What the code says" finding 9). That is new behaviour, with hand-worked vectors.~~ **Corrected
+    by the M36 plan's planning-read finding 1:** `assign_from_path` has taken an explicit `swing_id`
+    since 2026-08-07, so it is faithful behaviour, ported and Python-recorded like the rest, and no
+    explicit-target vector is hand-worked. Finding 9's point stands: the default misattaches in a
+    mixed session, so M35 and the phone should always pass the target.
 - **The catalogue** (`clubs/catalogue.py` and `club_catalogue.json`, R25) ports with the bag.
   - The JSON becomes a two-language file: `clubs/lookup.py` writes it, and it stays Python because it
     is an LLM call. Rust reads it.
@@ -1183,10 +1194,17 @@ records them, and only then ports. That recording is the port's one independent 
 - The vectors are unaffected if each fixture's version is set relative to the installed one. What
   the verbs do over `data/` before M29 is the open part, for instance whether a shape-only bump makes
   an artifact outdated at all.
+- **Decided** (the M36 plan's interview decisions 1 and 2): the corpus excludes a swing only when it
+  is older than `COMPARABLE_FROM` (14), the oldest engine whose numbers today's still agrees with,
+  and `is_outdated` keeps the installed version for `reanalyze.py`. `read_corpus` takes both numbers
+  as a parameter, so the vectors carry them. Frozen Python keeps the old rule until M40.
+  [ADR-024's M36 addendum](../decisions/024-per-club-shot-history.md) is the decision.
 
 **Also:**
 - **Schemas.** Each schema root whose shape ports here becomes Rust-owned, by §M32's split. M36
-  revisits `schemars` if hand-maintenance has proved the larger cost.
+  revisits `schemars` if hand-maintenance has proved the larger cost. *(Answered by the M36 plan's
+  call 8: no shape moved, so no root became Rust-owned. Rust pins its key sets against the four
+  Python-exported schemas instead, and `schemars` stays declined.)*
 - **Writes.** Anything M36's verbs write under `data/` is bound by clause 4: they may add keys, and
   may never write a value a frozen enum or bound refuses.
 
@@ -1194,8 +1212,9 @@ records them, and only then ports. That recording is the port's one independent 
 - `spec/vectors/career/`: synthetic corpora crossing every n-gate (4/5/9/10/11/12) and the mishit
   floor.
 - `spec/vectors/storage/`.
-- Both are Python-recorded (`provenance.oracle: "python"`), except the explicit-target cases, which
-  are hand-worked.
+- Both are Python-recorded (`provenance.oracle: "python"`). ~~except the explicit-target cases, which
+  are hand-worked.~~ The hand-worked cases are the `OUTDATED` change's, under
+  `spec/vectors/storage/hand/`, since the explicit target is faithful (above).
 
 ## M37 — Strike profile, topic grades and strengths/weaknesses (Rust first)
 

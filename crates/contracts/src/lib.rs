@@ -4,7 +4,11 @@
 //! [ADR-008](../../../docs/decisions/008-project-structure.md)'s rule — *"modules never import
 //! each other; everything imports `contracts/`"* — becomes a cargo dependency edge here:
 //! `crates/analysis` will depend on this crate and this crate depends on nothing of ours, so the
-//! rule is enforced by the build rather than by reading a diff (ADR-032 §1).
+//! rule is enforced by the build rather than by reading a diff (ADR-032 §1). **One exception since
+//! M36 P5: `pyfmt`**, which depends on nothing of ours either and sits below every crate that has to
+//! say what Python said. The many-shot layer's validators refuse with Python's own messages, which
+//! `repr` an id, and its parsers lower text as `str.lower()` does; a second copy of either edge
+//! here is the drift `pyfmt` exists to prevent. The edge still runs one way.
 //!
 //! Module names carry over one for one, so `swing.py` ↔ [`swing`]. Every phase of M22 is going to
 //! be diffed against its Python source by eye at least once, and a port that renames things while
@@ -29,6 +33,23 @@
 //! here and each arrived with its walker. A `Bag` with no Rust caller would be the same mistake one
 //! step further out, and ADR-030's addendum already makes that argument about implementations.
 //!
+//! **M36 is where the bag got its callers, so it is here now.** The many-shot layer — the stores,
+//! the corpus, the career aggregates and the five report verbs — reads the identity and equipment
+//! shapes, and M36 P5 ported them: [`club`], [`club_spec`], [`bag`], [`mishit`], [`catalogue`] and
+//! [`golfer`]'s `Golfer`. Their gate is not the engine family but the two families M36 recorded
+//! from frozen Python, `spec/vectors/storage/` and `spec/vectors/career/`, which every bag and golfer
+//! they hold round-trips against (`tests/stores.rs`), beside the Python-exported schemas that
+//! describe them (`tests/python_schemas.rs`) and the committed club catalogue
+//! (`tests/catalogue.rs`). **M36 P6 added the corpus and the baseline**, [`career`] and
+//! [`baseline`], which no schema describes: every corpus and baseline in the two families
+//! round-trips, and each corpus's derived counts, narrowings and claim floors answer as Python
+//! recorded them (`tests/career.rs`). [`career::CAREER_VERSION`] is the families' version key.
+//! **M36 P7 added the other three aggregates' shapes**, [`dispersion`], [`comparison`] and
+//! [`club_profile`], with the prose tables the reports print: every dispersion, standing and bag
+//! profile the career family holds round-trips and answers its derived values as recorded, and every
+//! table is held word for word to frozen Python's, through the sentences the family recorded and a
+//! table extracted from the Python modules (`tests/aggregates.rs`).
+//!
 //! One thing a registry's arrival does *not* settle is that every row of it is exercised. Half of
 //! [`pivots::PIVOT_MEASUREMENT_REGISTRY`] is down-the-line and P7 is the phase that walks it, so the
 //! five `_dtl` rows ship gated only by the structural tests beside them. That is recorded in
@@ -37,7 +58,9 @@
 //! **[`capability`] is the one module with no Python twin** (M32). It is ADR-034 §2's device
 //! capability model, frozen Python never gains it (ADR-035 clause 4), and the data it reads,
 //! `devices.json`, sits beside this crate's `Cargo.toml` rather than under `src/golf_coach/`,
-//! because nothing Python reads it.
+//! because nothing Python reads it. **[`time`] is the second** (M36 P4): Python's contracts each
+//! hold a `datetime`, and this is what every one of those fields is here, gated by a format table
+//! recorded from pydantic.
 //!
 //! # Pydantic constraints are runtime checks, and so are these
 //!
@@ -51,7 +74,13 @@
 //! exactly the three ADR-032 §4 singles out as *"not bounds"* — so on the ported surface the
 //! footnote is the whole list, and the other twenty-three bounds and seven validators sit in
 //! modules §8 does not port (`audio`, `baseline`, `dispersion`, `reference`, `tempo`, `bag`,
-//! `club_profile`, `club_spec`, `golfer`'s name coercion).
+//! `club_profile`, `club_spec`, `golfer`'s name coercion). M36 ports the many-shot layer's share of
+//! those: from P5, [`bag::Bag`]'s two model validators and its slug check, [`golfer::Golfer`]'s slug
+//! check, and [`club_spec::ClubSpec`]'s range order, each refusing with Python's own message,
+//! because the storage vectors record a refusal's text; from P6, [`baseline::Interval`]'s two
+//! bounds on `confidence`, the second of which needed [`lt`]; from P7,
+//! [`dispersion::MetricTarget`]'s bound on `tolerance` and its reason rule, and
+//! [`club_profile::BagProfile`]'s bag order.
 //!
 //! **Rust has no constructor hook, so the check runs at the two moments it can.** Deserialization
 //! is one — [`validated!`] wires [`Validate`] into every payload type's `Deserialize` impl, which
@@ -75,17 +104,28 @@
 use std::fmt;
 
 pub mod alignment;
+pub mod bag;
+pub mod baseline;
 pub mod capability;
+pub mod career;
+pub mod catalogue;
 pub mod checkpoints;
+pub mod club;
+pub mod club_profile;
+pub mod club_spec;
+pub mod comparison;
 pub mod detections;
+pub mod dispersion;
 pub mod feedback;
 pub mod golfer;
 pub mod intent;
 pub mod keypoints;
+pub mod mishit;
 pub mod pivots;
 pub mod placements;
 pub mod shot;
 pub mod swing;
+pub mod time;
 pub mod unscored;
 
 /// A value a contract refuses, naming the field the way pydantic's error does.
@@ -158,33 +198,21 @@ pub(crate) fn yes() -> bool {
     true
 }
 
-/// An instant, carried in the lexical form it arrived in.
+/// An instant, as every contract that holds a Python `datetime` holds one. [M36 P4]
 ///
-/// **A string rather than a parsed date-time, and that is a decision rather than a shortcut.**
-/// Nothing on the ported surface does arithmetic with one: `grep` over `analysis/` and
-/// `feedback/rules.py` finds no read of `ShotData.timestamp` or `CoachingProvenance.generated_at` at
-/// all. They are carried through the engine and written back out unchanged, so the only property
-/// that matters is that they come out the way they went in — which a parse-and-reformat cannot
-/// promise, since pydantic writes `2026-08-10T01:38:46.828488Z` and a normalizing round trip is free
-/// to answer `+00:00`. Keeping the lexeme makes that class of drift impossible and costs this crate
-/// a dependency it would otherwise carry for nothing.
+/// Re-exported at the crate root, where [`shot`] and [`feedback`] have always named it, because
+/// the Python modules do not depend on each other — they each reach for `datetime` — and a
+/// `Timestamp` owned by either would invent an edge between two modules that have none. Its home
+/// is [`time`], which says what it reads and writes.
 ///
-/// It sits at the crate root rather than in [`shot`] because [`feedback`] wants one too, and the
-/// Python modules do not depend on each other — they each reach for `datetime`. A `Timestamp` owned
-/// by `shot` would invent an edge between two modules that have none.
-///
-/// If a phase ever needs to *order* two shots, this becomes a parsed type and the parse gets its own
-/// vectors. Until then a comparison would be lexical and wrong on any pair that disagreed about the
-/// spelling of UTC, so no comparison is offered.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
-#[serde(transparent)]
-pub struct Timestamp(pub String);
-
-impl Validate for Timestamp {
-    fn validate(&self) -> Result<(), ContractError> {
-        Ok(())
-    }
-}
+/// **Until M36 P4 this was the lexeme, carried as it arrived**, on the argument that nothing on the
+/// ported surface compared two, and with the note that the day a phase had to *order* two shots it
+/// would become a parsed type with vectors of its own. The shot store's `all()` is that phase. The
+/// lexeme's other argument — a normalizing round trip is free to answer `+00:00` for `Z` — is met by
+/// writing pydantic's spelling back exactly: every timestamp in the engine and screen families is
+/// already in it, so both came through the change byte for byte, and a non-canonical spelling now
+/// comes back the way frozen Python would have written it rather than the way it arrived.
+pub use time::Timestamp;
 
 /// `Field(ge=bound)`. Passes when the value is absent, exactly as an unset optional does.
 pub fn ge<T>(field: &str, value: impl Into<Option<T>>, bound: T) -> Result<(), ContractError>
@@ -208,6 +236,15 @@ where
     T: PartialOrd + fmt::Display,
 {
     check(field, value, bound, "<=", |v, b| v <= b)
+}
+
+/// `Field(lt=bound)`. [M36 P6] `baseline::Interval.confidence` is the first bound on the ported
+/// surface that is strict from above: a 100% interval is not an interval.
+pub fn lt<T>(field: &str, value: impl Into<Option<T>>, bound: T) -> Result<(), ContractError>
+where
+    T: PartialOrd + fmt::Display,
+{
+    check(field, value, bound, "<", |v, b| v < b)
 }
 
 fn check<T>(
@@ -292,5 +329,14 @@ mod tests {
     fn gt_and_ge_differ_on_the_bound_itself() {
         assert!(ge("x", 0.0, 0.0).is_ok());
         assert!(gt("x", 0.0, 0.0).is_err());
+    }
+
+    #[test]
+    fn lt_and_le_differ_on_the_bound_itself() {
+        assert!(le("x", 1.0, 1.0).is_ok());
+        let err = lt("Interval.confidence", 1.0, 1.0).unwrap_err();
+        assert_eq!(err.to_string(), "Interval.confidence: 1 is not < 1");
+        assert!(lt("x", None::<f64>, 1.0).is_ok());
+        assert!(lt("x", f64::NAN, 1.0).is_err());
     }
 }

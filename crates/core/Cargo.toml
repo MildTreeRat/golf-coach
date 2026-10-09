@@ -42,3 +42,10 @@ screen = { path = "../screen" }
 flate2.workspace = true
 serde = { workspace = true }
 serde_json = { workspace = true }
+# The storage family's runner, `storage_family::run_storage`, which its gate (`tests/storage.rs`)
+# and `golf-core rerecord` share (M36 P13); a dev-dependency from P8 until then, on `screen`'s
+# precedent that an edge nothing in the library crosses is a claim cargo cannot check. `crates/core`
+# is the one crate that may hold `storage` beside `analysis` (ADR-008 as cargo edges). Each op case's
+# scratch root is the runner's own `Scratch`, not `tempfile`'s, which the M36 plan keeps
+# dev-only: the gate's `tempfile` dev-dependency went with the runner, which was its one user.
+storage = { path = "../storage" }

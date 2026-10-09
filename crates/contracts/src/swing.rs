@@ -39,7 +39,13 @@ use crate::{each, ge, le, nested, ContractError, Validate};
 /// `tests/test_docs_truth.py` does for the Python half. The number itself gates every vector in
 /// `spec/`, and `tests/round_trip.rs` pins it against the committed ones.
 ///
-/// 16 -> 17 (2026-10-01, M32 P8): **shape only — no number moved.** `ShotData` gained seven keys
+/// **Each entry from 17 names its class in brackets after the date** (M36 P14), because
+/// [`COMPARABLE_FROM`] is read off them: `[disagrees]` when an artifact from the version before
+/// reports a number this engine would not, `[missing]` when it only lacks a new measurement, and
+/// `[shape]` when no number moved at all. Python's half says the same thing in prose — *disagrees*
+/// and *missing* are its words, bump by bump — and the classes are those words made checkable.
+///
+/// 16 -> 17 (2026-10-01, M32 P8) [shape]: **no number moved.** `ShotData` gained seven keys
 ///   (`attack_angle`, `dynamic_loft`, `low_point`, `impact_offset_h`, `impact_offset_v`,
 ///   `impact_position_v`, `carry_offline`) and `ShotProvenance` three (`parser_version`,
 ///   `fields_present`, `corrections`), every one defaulting. A version-16 artifact is *missing*
@@ -52,6 +58,39 @@ use crate::{each, ge, le, nested, ContractError, Validate};
 ///   reads a v17 artifact as current rather than asking for a re-run it cannot do. Nobody should
 ///   "fix" the gap by bumping Python.
 pub const ANALYSIS_VERSION: i64 = 17;
+
+/// The oldest engine generation whose stored numbers today's engine still agrees with. The corpus
+/// reader pools a swing stored by this generation or a later one, and excludes one stored by an
+/// older one as `OUTDATED`, named and counted but contributing no sample (`storage::corpus`).
+/// [M36 P14, the M36 plan's decisions 1 and 2]
+///
+/// **Two questions, so two numbers.** [`ANALYSIS_VERSION`] answers *is there a newer engine to
+/// run*, which a re-analysis picks its targets by (`storage::state::is_outdated`). This answers
+/// *does a stored number still mean what today's would*, which is what pooling needs. Frozen
+/// Python's corpus asks the first question, and asked of Rust's 17 it excluded all 13 swings on
+/// disk though 16 -> 17 moved no number (M36 P10's scratch run). A bump that only *adds* a
+/// measurement is no reason to drop a swing either: the older artifact lacks the new number, which
+/// shows as a smaller `n` for that metric alone, and that is the honest count.
+///
+/// **Why 14.** Python's ledger (`contracts/swing.py`) says of every bump whether an older artifact
+/// *disagrees* about a number or is only *missing* one. 13 -> 14, the heavy pose model, is the
+/// newest that disagrees: every landmark moved under every score. 14 -> 15 (the `flight_*` family)
+/// and 15 -> 16 (the `pivot_*` family) are missing bumps, each measured byte-identical on every
+/// stored `overall_score` and `checkpoint_scores` entry, and 16 -> 17 is shape only. No version-14
+/// or version-15 artifact exists in `data/`, so today 14 pools exactly what 16 would.
+///
+/// **It moves on a `[disagrees]` entry and on nothing else.** The test
+/// `comparable_from_is_the_newest_disagreeing_generation` holds it to the newest `[disagrees]`
+/// entry in the ledger above, or to 14, Python's half's answer, while there is none. It needs no
+/// re-record when it moves: `read_corpus` takes the generations as a parameter, and every vector
+/// records the pair it was read under (the M36 plan's call 7). Frozen Python has no such constant
+/// and keeps its own rule until M40 deletes it (ADR-035 clause 4); over `data/` the two pool the
+/// same swings, because everything stored there is at Python's installed 16.
+pub const COMPARABLE_FROM: i64 = 14;
+
+// The oldest generation this engine agrees with cannot be one newer than this engine: a build
+// where it is fails to compile rather than excluding every swing on disk.
+const _: () = assert!(COMPARABLE_FROM <= ANALYSIS_VERSION);
 
 /// The six segments of a golf swing.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -460,18 +499,7 @@ mod tests {
     /// describing the code, and every other test reads the constant, not the paragraph. [M32 P8]
     #[test]
     fn every_version_from_seventeen_has_a_ledger_entry() {
-        // Entries are doc lines spelled `/// 16 -> 17 (`, Python's `#: 16 -> 17 (` in Rust's comment.
-        let documented: Vec<i64> = include_str!("swing.rs")
-            .lines()
-            .filter_map(|line| line.trim_start().strip_prefix("/// "))
-            .filter_map(|entry| {
-                let (from, rest) = entry.split_once(" -> ")?;
-                let (to, rest) = rest.split_once(' ')?;
-                rest.starts_with('(').then_some(())?;
-                from.parse::<i64>().ok()?;
-                to.parse().ok()
-            })
-            .collect();
+        let documented: Vec<i64> = ledger().into_iter().map(|(to, _)| to).collect();
 
         assert!(
             !documented.is_empty(),
@@ -485,6 +513,66 @@ mod tests {
             "ANALYSIS_VERSION is {ANALYSIS_VERSION}; the ledger above it documents no entry for \
              {missing:?} — say what a stored artifact from the older engine is missing or disagrees \
              about, in the same edit as the bump"
+        );
+    }
+
+    /// The three classes a ledger entry from 17 may name (the ledger's doc).
+    const CLASSES: [&str; 3] = ["shape", "missing", "disagrees"];
+
+    /// What [`COMPARABLE_FROM`] is while Rust's half of the ledger holds no `[disagrees]` entry:
+    /// 13 -> 14 in `contracts/swing.py`, the newest bump Python's half calls a disagreement.
+    const PYTHON_NEWEST_DISAGREES: i64 = 14;
+
+    /// Rust's half of the version ledger, as `(to, class)` per entry, from the doc lines spelled
+    /// `/// 16 -> 17 (when) [class]: …` — Python's `#: 16 -> 17 (` in Rust's comment, with the class
+    /// after the date. An entry with no class reads as `None`, for the test that refuses one.
+    fn ledger() -> Vec<(i64, Option<&'static str>)> {
+        include_str!("swing.rs")
+            .lines()
+            .filter_map(|line| line.trim_start().strip_prefix("/// "))
+            .filter_map(|entry| {
+                let (from, rest) = entry.split_once(" -> ")?;
+                let (to, rest) = rest.split_once(' ')?;
+                rest.starts_with('(').then_some(())?;
+                from.parse::<i64>().ok()?;
+                let class = rest
+                    .split_once(") [")
+                    .and_then(|(_, after)| after.split_once("]:"))
+                    .map(|(class, _)| class);
+                Some((to.parse().ok()?, class))
+            })
+            .collect()
+    }
+
+    /// **`COMPARABLE_FROM` is what the ledger says it is**, so it cannot be left behind by a bump
+    /// that makes stored numbers disagree, nor moved by one that only adds a key: every entry from 17
+    /// names one class, and the constant is the newest `[disagrees]` entry's version, else Python's
+    /// 14. [M36 P14, the M36 plan's decision 2]
+    #[test]
+    fn comparable_from_is_the_newest_disagreeing_generation() {
+        let entries = ledger();
+        let unclassed: Vec<i64> = entries
+            .iter()
+            .filter(|(to, class)| *to >= 17 && !class.is_some_and(|c| CLASSES.contains(&c)))
+            .map(|(to, _)| *to)
+            .collect();
+        assert!(
+            unclassed.is_empty(),
+            "the ledger entries to {unclassed:?} name no class — say which of {CLASSES:?} the bump \
+             is, after the date, `(when) [class]:`"
+        );
+
+        let newest = entries
+            .iter()
+            .filter(|(_, class)| *class == Some("disagrees"))
+            .map(|(to, _)| *to)
+            .max()
+            .unwrap_or(PYTHON_NEWEST_DISAGREES);
+        assert_eq!(
+            COMPARABLE_FROM, newest,
+            "the ledger's newest `[disagrees]` entry, or Python's {PYTHON_NEWEST_DISAGREES} while \
+             there is none, puts COMPARABLE_FROM at {newest}; it moves with that entry, in the same \
+             edit"
         );
     }
 }

@@ -26,6 +26,12 @@
 //! back, so the shape-only change is the whole difference on either side of P10, and on a later
 //! parser version's. These tests are about the verb; which answers are committed is
 //! `crates/screen`'s tests' business.
+//!
+//! **The storage and career families' tests copy both families whole** [M36 P13], for the screen
+//! family's reason: the whole of both runs in well under a second, and a career run is always both.
+//! Their real differences are made on the copies, by moving `career_version` back one (the shape
+//! of P14's re-record) or by giving a corpus case and its career twin an older sentence than the
+//! reader writes, which is how a re-record meets an adopted corpus that moved with its source.
 
 use std::collections::BTreeMap;
 use std::fs;
@@ -33,13 +39,17 @@ use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 
+use contracts::career::CAREER_VERSION;
 use contracts::shot::SCREEN_PARSER_VERSION;
 use contracts::swing::ANALYSIS_VERSION;
 use flate2::read::GzDecoder;
 use flate2::write::GzEncoder;
 use flate2::Compression;
 use golf_core::compare::compare;
-use golf_core::rerecord::{plan, run_screen, Family, Refused, SCREEN_DOCUMENTS};
+use golf_core::rerecord::{
+    plan, run_screen, Family, Refused, CAREER, CAREER_DOCUMENTS, SCREEN_DOCUMENTS, STORAGE,
+    STORAGE_DOCUMENTS,
+};
 use screen::ScreenInput;
 use serde_json::{json, Value};
 
@@ -102,24 +112,69 @@ impl Slice {
 
     /// [`Slice::new`], plus the whole committed screen family, every sub-family in it.
     fn with_screen(name: &str) -> Self {
-        fn copy_tree(from: &Path, to: &Path) {
-            fs::create_dir_all(to).expect("mkdir");
-            for entry in fs::read_dir(from).unwrap_or_else(|e| panic!("list {from:?}: {e}")) {
-                let path = entry.expect("an entry").path();
-                let target = to.join(path.file_name().expect("a name"));
-                if path.is_dir() {
-                    copy_tree(&path, &target);
-                } else {
-                    fs::copy(&path, &target).unwrap_or_else(|e| panic!("copy {path:?}: {e}"));
-                }
-            }
-        }
         let slice = Self::new(name);
         copy_tree(
             &committed_spec().join("vectors").join("screen"),
             &slice.vector("screen"),
         );
         slice
+    }
+
+    /// [`Slice::new`], plus the whole committed storage and career families. [M36 P13]
+    fn with_career(name: &str) -> Self {
+        let slice = Self::new(name);
+        for family in [STORAGE, CAREER] {
+            copy_tree(
+                &committed_spec().join("vectors").join(family),
+                &slice.vector(family),
+            );
+        }
+        slice
+    }
+
+    /// A career declaration, `spec/declarations/{name}.json`: the career families' version key in
+    /// place of the engine's. [M36 P13]
+    fn declare_career(&self, name: &str, version: i64, moved: &[&str]) -> PathBuf {
+        let path = self.declare(name, 0, &[], moved);
+        let mut declaration = read(&path);
+        let fields = declaration.as_object_mut().expect("a declaration");
+        fields.remove("analysis_version");
+        fields.insert("career_version".to_string(), json!(version));
+        fs::write(&path, declaration.to_string()).expect("write a declaration");
+        path
+    }
+
+    /// Every storage and career document in the slice, by path: the files a career run reads.
+    fn career_documents(&self) -> Vec<PathBuf> {
+        let mut paths = Vec::new();
+        for (family, halves) in [
+            (STORAGE, &STORAGE_DOCUMENTS[..]),
+            (CAREER, &CAREER_DOCUMENTS[..]),
+        ] {
+            for half in halves {
+                for entry in fs::read_dir(self.vector(family).join(half)).expect("list") {
+                    paths.push(entry.expect("an entry").path());
+                }
+            }
+        }
+        paths.sort();
+        paths
+    }
+
+    /// Edit a committed copy in place and write it back as the committed files are written: CRLF
+    /// with a trailing newline when plain, LF inside a gzip. Unlike [`Slice::edit`], so a re-record
+    /// of the edited copy is held to the writer's line-ending rule.
+    fn edit_like_committed(&self, path: &Path, change: impl FnOnce(&mut Value)) {
+        let mut document = read(path);
+        change(&mut document);
+        let text = serde_json::to_string_pretty(&document).expect("serializes");
+        if path.extension().is_some_and(|e| e == "gz") {
+            let mut encoder = GzEncoder::new(Vec::new(), Compression::fast());
+            encoder.write_all(text.as_bytes()).expect("gzip");
+            fs::write(path, encoder.finish().expect("gzip")).expect("write");
+        } else {
+            fs::write(path, format!("{text}\n").replace('\n', "\r\n")).expect("write");
+        }
     }
 
     /// A screen declaration, `spec/declarations/{name}.json`: the screen family's version key in
@@ -283,6 +338,19 @@ impl Drop for Slice {
 
 fn text(bytes: &[u8]) -> String {
     String::from_utf8_lossy(bytes).into_owned()
+}
+
+fn copy_tree(from: &Path, to: &Path) {
+    fs::create_dir_all(to).expect("mkdir");
+    for entry in fs::read_dir(from).unwrap_or_else(|e| panic!("list {from:?}: {e}")) {
+        let path = entry.expect("an entry").path();
+        let target = to.join(path.file_name().expect("a name"));
+        if path.is_dir() {
+            copy_tree(&path, &target);
+        } else {
+            fs::copy(&path, &target).unwrap_or_else(|e| panic!("copy {path:?}: {e}"));
+        }
+    }
 }
 
 /// **An undeclared difference anywhere writes nothing anywhere** (call 7) — checked through the
@@ -974,5 +1042,430 @@ fn a_screen_sub_family_nobody_placed_stops_the_walk() {
             other => panic!("{make}: expected the walk to stop, got {other:?}"),
         }
         assert_eq!(slice.snapshot(), before);
+    }
+}
+
+// --------------------------------------------------- the storage and career families [M36 P13]
+
+const OUTDATED_CASE: &str = "storage/corpus/stale-and-outdated.json";
+const OUTDATED_TWIN: &str = "career/synthetic/storage-stale-and-outdated.json";
+const OUTDATED_TWIN_ID: &str = "career/synthetic/storage-stale-and-outdated";
+/// The outdated swing's exclusion in the case's answer, and the same entry in its twin's copy.
+const OUTDATED_DETAIL: &str = "expected.corpus.excluded[1].detail";
+const ADOPTED_DETAIL: &str = "input.corpus.excluded[1].detail";
+const OLDER_SENTENCE: &str = "an older sentence than the reader writes";
+
+/// How many storage and how many career documents the slice holds, for the report's count line.
+fn career_counts(slice: &Slice) -> (usize, usize) {
+    let documents = slice.career_documents();
+    let storage = slice.vector(STORAGE);
+    let in_storage = documents.iter().filter(|p| p.starts_with(&storage)).count();
+    (in_storage, documents.len() - in_storage)
+}
+
+/// **An empty declaration at this build's career version finds nothing and writes nothing**, dry
+/// or not: the committed families are what this build answers, the op cases' written files
+/// included, whose committed spelling the runner keeps wherever the values agree.
+#[test]
+fn an_empty_career_declaration_finds_nothing_and_writes_nothing() {
+    let slice = Slice::with_career("career-empty");
+    let declaration = slice.declare_career("career-empty", CAREER_VERSION, &[]);
+    let (storage, career) = career_counts(&slice);
+    assert!(storage > 0 && career > 0);
+    let before = slice.snapshot();
+
+    for extra in [&["--dry-run"][..], &[][..]] {
+        let output = slice.verb(&declaration, extra);
+        let stdout = text(&output.stdout);
+        assert!(output.status.success(), "{}", text(&output.stderr));
+        let count = format!(
+            "{} vectors run ({storage} storage, {career} career); 0 changed; 0 files written",
+            storage + career
+        );
+        for expected in [
+            format!("a declaration at career_version {CAREER_VERSION}, 0 added and 0 moved"),
+            "nothing differs from the committed vectors".to_string(),
+            count,
+        ] {
+            assert!(
+                stdout.contains(&expected),
+                "{extra:?}: missing {expected:?} in:\n{stdout}"
+            );
+        }
+        assert_eq!(slice.snapshot(), before, "{extra:?} wrote something");
+    }
+}
+
+/// The version guard reads the career families' own constant, and before a vector is read: the spec
+/// here does not exist.
+#[test]
+fn a_career_declaration_at_another_version_is_refused_before_anything_is_read() {
+    let slice = Slice::new("career-version");
+    let declaration = slice.declare_career("career-next", CAREER_VERSION + 1, &[]);
+    match plan(&slice.root.join("no-such-spec"), &declaration) {
+        Err(Refused::Declaration(why)) => {
+            assert!(why.contains("call 6"), "{why}");
+            assert!(
+                why.contains(&format!("this many-shot layer is at {CAREER_VERSION}")),
+                "{why}"
+            );
+        }
+        other => panic!("expected the version guard, got {other:?}"),
+    }
+}
+
+/// **A career re-record moves both families behind the gate**: with every copy recorded one
+/// version back, an empty declaration is refused on every document at once and writes nothing; the
+/// version declared, it lands on every storage and career document alone, each ledgered under
+/// `career_version` with no `removed` list, every other value and every other family's file left
+/// byte for byte, the committed line endings kept; and a second run writes nothing. P14's re-record
+/// is this move plus the sentences it declares.
+///
+/// Aging a copy also drops its ledger, as `age_the_screen_documents` does, so each file's entry is
+/// the only one: since `career-v1.json` ran (M36 P14) the committed vectors carry its entry, and a
+/// run appends to a ledger rather than replacing it.
+#[test]
+fn a_career_version_move_lands_on_both_families_and_a_second_run_writes_nothing() {
+    let slice = Slice::with_career("career-move");
+    let documents = slice.career_documents();
+    for path in &documents {
+        slice.edit_like_committed(path, |v| {
+            v["career_version"] = json!(CAREER_VERSION - 1);
+            if let Some(provenance) = v["provenance"].as_object_mut() {
+                provenance.remove("rerecords");
+            }
+        });
+    }
+    let before = slice.snapshot();
+
+    let empty = slice.declare_career("career-empty", CAREER_VERSION, &[]);
+    match plan(&slice.spec(), &empty) {
+        Err(Refused::Gate(refusals)) => {
+            assert_eq!(refusals.len(), documents.len(), "{refusals:#?}");
+            assert!(
+                refusals
+                    .iter()
+                    .all(|r| r.contains(": career_version: ") && r.contains("`moved`")),
+                "{refusals:#?}"
+            );
+        }
+        other => panic!("expected the gate to refuse, got {other:?}"),
+    }
+    fs::remove_file(&empty).expect("remove the empty declaration");
+    assert_eq!(slice.snapshot(), before, "a refused run wrote something");
+
+    let declaration = slice.declare_career("career-move", CAREER_VERSION, &["career_version"]);
+    let run = plan(&slice.spec(), &declaration).expect("the version move is declared");
+    let families: Vec<Family> = run.vectors().iter().map(|v| v.family()).collect();
+    let storage = families.iter().filter(|f| **f == Family::Storage).count();
+    assert!(storage > 0 && storage < families.len());
+    assert!(
+        families[..storage].iter().all(|f| *f == Family::Storage)
+            && families[storage..].iter().all(|f| *f == Family::Career),
+        "the storage family first, then the career family"
+    );
+    for vector in run.vectors() {
+        let moved: Vec<&str> = vector
+            .applied()
+            .moved()
+            .iter()
+            .map(|p| p.as_str())
+            .collect();
+        assert_eq!(moved, ["career_version"], "{}", vector.id());
+        assert!(vector.applied().added().is_empty(), "{}", vector.id());
+    }
+    let aged: BTreeMap<PathBuf, Value> = documents.iter().map(|p| (p.clone(), read(p))).collect();
+    assert_eq!(run.write().expect("writes"), documents.len());
+
+    let after = slice.snapshot();
+    for (path, bytes) in &before {
+        if !documents.contains(path) {
+            assert_eq!(
+                &after[path], bytes,
+                "{path:?} is not a career document and changed"
+            );
+        }
+    }
+    for path in &documents {
+        let written = read(path);
+        let bytes = &after[path];
+        if path.extension().is_some_and(|e| e == "gz") {
+            assert!(
+                !text(&decompressed(bytes)).contains('\r'),
+                "{path:?}: CRLF in a gzip"
+            );
+        } else {
+            assert!(
+                bytes.ends_with(b"}\r\n") && !text(bytes).replace("\r\n", "").contains('\n'),
+                "{path:?}: the committed CRLF was not kept"
+            );
+        }
+        assert_eq!(
+            written["provenance"]["rerecords"],
+            json!([{
+                "career_version": CAREER_VERSION,
+                "by": "golf-core rerecord",
+                "declaration": "spec/declarations/career-move.json",
+                "added": [],
+                "moved": ["career_version"],
+            }]),
+            "{path:?}"
+        );
+        let mut undone = written.clone();
+        undone["provenance"] = aged[path]["provenance"].clone();
+        undone["career_version"] = aged[path]["career_version"].clone();
+        assert_eq!(undone, aged[path], "{path:?}: an undeclared value moved");
+    }
+
+    let second = plan(&slice.spec(), &declaration).expect("a second run is a no-op, not a refusal");
+    assert_eq!(second.changed().count(), 0);
+    assert_eq!(second.write().expect("writes nothing"), 0);
+    assert_eq!(slice.snapshot(), after, "a second run wrote something");
+}
+
+fn decompressed(bytes: &[u8]) -> Vec<u8> {
+    let mut out = Vec::new();
+    GzDecoder::new(bytes).read_to_end(&mut out).expect("a gzip");
+    out
+}
+
+/// **An adopted corpus moves with its storage vector, and only where the declaration says so.** A
+/// corpus case and its career twin are both given an older exclusion sentence than the reader
+/// writes, as two vectors recorded under an older rule would hold. Declaring the case's sentence
+/// alone is refused on the twin's copy, which the run derived from the case as it will write it;
+/// declaring both lands both, and the twin's aggregates, which never read the sentence, stay as
+/// they were. And a twin whose copy drifted from an unchanged case is refused by an empty
+/// declaration: the two families cannot come apart silently.
+#[test]
+fn an_adopted_corpus_moves_with_its_storage_vector_and_only_where_declared() {
+    let slice = Slice::with_career("career-adopted");
+    let (case, twin) = (slice.vector(OUTDATED_CASE), slice.vector(OUTDATED_TWIN));
+    let reader_writes = read(&case)["expected"]["corpus"]["excluded"][1]["detail"].clone();
+    assert!(
+        reader_writes
+            .as_str()
+            .is_some_and(|s| s.contains("engine version")),
+        "the case's second exclusion is the outdated swing: {reader_writes}"
+    );
+    slice.edit_like_committed(&case, |v| {
+        v["expected"]["corpus"]["excluded"][1]["detail"] = json!(OLDER_SENTENCE);
+    });
+    slice.edit_like_committed(&twin, |v| {
+        v["input"]["corpus"]["excluded"][1]["detail"] = json!(OLDER_SENTENCE);
+    });
+    let before = slice.snapshot();
+
+    let half = slice.declare_career("career-half", CAREER_VERSION, &[OUTDATED_DETAIL]);
+    match plan(&slice.spec(), &half) {
+        Err(Refused::Gate(refusals)) => {
+            assert_eq!(refusals.len(), 1, "{refusals:#?}");
+            assert!(
+                refusals[0].starts_with(&format!("{OUTDATED_TWIN_ID}: {ADOPTED_DETAIL}: ")),
+                "{}",
+                refusals[0]
+            );
+        }
+        other => panic!("expected the twin's copy to be refused, got {other:?}"),
+    }
+    fs::remove_file(&half).expect("remove the half declaration");
+    assert_eq!(slice.snapshot(), before, "a refused run wrote something");
+
+    let both = slice.declare_career(
+        "career-both",
+        CAREER_VERSION,
+        &[OUTDATED_DETAIL, ADOPTED_DETAIL],
+    );
+    let twin_expected = read(&twin)["expected"].clone();
+    let run = plan(&slice.spec(), &both).expect("both are declared");
+    let changed: Vec<(&str, Vec<&str>)> = run
+        .changed()
+        .map(|v| {
+            let moved = v.applied().moved().iter().map(|p| p.as_str()).collect();
+            (v.id(), moved)
+        })
+        .collect();
+    assert_eq!(
+        changed,
+        [
+            ("storage/corpus/stale-and-outdated", vec![OUTDATED_DETAIL]),
+            (OUTDATED_TWIN_ID, vec![ADOPTED_DETAIL]),
+        ]
+    );
+    assert_eq!(run.write().expect("writes"), 2);
+    assert_eq!(
+        read(&case)["expected"]["corpus"]["excluded"][1]["detail"],
+        reader_writes
+    );
+    let written_twin = read(&twin);
+    assert_eq!(
+        written_twin["input"]["corpus"],
+        read(&case)["expected"]["corpus"],
+        "the twin's copy is its case's answer again"
+    );
+    assert_eq!(
+        written_twin["expected"], twin_expected,
+        "the twin's answer moved"
+    );
+
+    let after = slice.snapshot();
+    let second = plan(&slice.spec(), &both).expect("a second run is a no-op, not a refusal");
+    assert_eq!(second.changed().count(), 0);
+    assert_eq!(slice.snapshot(), after);
+
+    let slice = Slice::with_career("career-drifted");
+    let twin = slice.vector(OUTDATED_TWIN);
+    slice.edit_like_committed(&twin, |v| {
+        v["input"]["corpus"]["excluded"][1]["detail"] = json!(OLDER_SENTENCE);
+    });
+    let empty = slice.declare_career("career-empty", CAREER_VERSION, &[]);
+    match plan(&slice.spec(), &empty) {
+        Err(Refused::Gate(refusals)) => {
+            assert_eq!(refusals.len(), 1, "{refusals:#?}");
+            assert!(
+                refusals[0].starts_with(&format!("{OUTDATED_TWIN_ID}: {ADOPTED_DETAIL}: ")),
+                "{}",
+                refusals[0]
+            );
+        }
+        other => panic!("expected the drifted copy to be refused, got {other:?}"),
+    }
+}
+
+/// **A career run reads its own families and nothing else**, and neither of the others reads one of
+/// its files. With every engine, stage and screen document unreadable, a career run still passes;
+/// with every storage and career document unreadable and a sub-family nobody placed beside them, an
+/// engine run and a screen run pass and write their own files alone.
+#[test]
+fn a_career_run_reads_no_engine_or_screen_vector_and_neither_reads_a_career_one() {
+    let unreadable = b"not a vector";
+
+    let slice = Slice::with_screen("career-only");
+    for family in [STORAGE, CAREER] {
+        copy_tree(
+            &committed_spec().join("vectors").join(family),
+            &slice.vector(family),
+        );
+    }
+    for path in slice.snapshot().into_keys() {
+        let career = [STORAGE, CAREER]
+            .iter()
+            .any(|family| path.starts_with(slice.vector(family)));
+        if !career && path.starts_with(slice.spec().join("vectors")) {
+            fs::write(&path, unreadable).expect("write");
+        }
+    }
+    let declaration = slice.declare_career("career-empty", CAREER_VERSION, &[]);
+    let run = plan(&slice.spec(), &declaration).expect("a career run never reads another family");
+    assert!(run
+        .vectors()
+        .iter()
+        .all(|v| matches!(v.family(), Family::Storage | Family::Career)));
+    assert_eq!(run.vectors().len(), slice.career_documents().len());
+
+    let slice = Slice::with_screen("not-career");
+    for family in [STORAGE, CAREER] {
+        copy_tree(
+            &committed_spec().join("vectors").join(family),
+            &slice.vector(family),
+        );
+    }
+    for path in slice.career_documents() {
+        fs::write(&path, unreadable).expect("write");
+    }
+    fs::create_dir_all(slice.vector("storage/unplaced")).expect("mkdir");
+    slice.age_the_synthetic_pair();
+    let keys = m32_shot_keys();
+    slice.age_the_screen_documents(&keys);
+    let career_before: BTreeMap<PathBuf, Vec<u8>> = slice
+        .snapshot()
+        .into_iter()
+        .filter(|(path, _)| {
+            [STORAGE, CAREER]
+                .iter()
+                .any(|family| path.starts_with(slice.vector(family)))
+        })
+        .collect();
+
+    let engine = slice.declare(
+        "versions",
+        ANALYSIS_VERSION,
+        &[],
+        &["analysis_version", "expected.analysis_version"],
+    );
+    let run = plan(&slice.spec(), &engine).expect("an engine run never reads a career vector");
+    assert_eq!(run.write().expect("writes"), 2);
+    let screen = declare_shape_only(&slice, "screen-shape", &keys);
+    let run = plan(&slice.spec(), &screen).expect("a screen run never reads a career vector");
+    assert!(run.vectors().iter().all(|v| v.family() == Family::Screen));
+    run.write().expect("writes");
+
+    let career_after: BTreeMap<PathBuf, Vec<u8>> = slice
+        .snapshot()
+        .into_iter()
+        .filter(|(path, _)| {
+            [STORAGE, CAREER]
+                .iter()
+                .any(|family| path.starts_with(slice.vector(family)))
+        })
+        .collect();
+    assert_eq!(
+        career_after, career_before,
+        "another family's run wrote a career file"
+    );
+}
+
+/// A directory under `vectors/storage/` or `vectors/career/` that the re-record does not place stops
+/// the walk, and so does a loose file; and a storage vector naming a runner the family does not
+/// have stops it too, rather than panicking.
+#[test]
+fn a_career_sub_family_nobody_placed_or_a_runner_nobody_has_stops_the_walk() {
+    for (name, make, list) in [
+        (
+            "career-unplaced-dir",
+            "storage/unplaced/",
+            "STORAGE_DOCUMENTS",
+        ),
+        (
+            "career-unplaced-file",
+            "career/README.json",
+            "CAREER_DOCUMENTS",
+        ),
+    ] {
+        let slice = Slice::with_career(name);
+        let target = slice.vector(make.trim_end_matches('/'));
+        if make.ends_with('/') {
+            fs::create_dir_all(&target).expect("mkdir");
+        } else {
+            fs::write(&target, "{}").expect("write");
+        }
+        let declaration = slice.declare_career("career-empty", CAREER_VERSION, &[]);
+        let before = slice.snapshot();
+        match plan(&slice.spec(), &declaration) {
+            Err(Refused::Files(why)) => {
+                let leaf = make
+                    .trim_end_matches('/')
+                    .rsplit('/')
+                    .next()
+                    .expect("a name");
+                assert!(why.contains(leaf) && why.contains(list), "{why}");
+            }
+            other => panic!("{make}: expected the walk to stop, got {other:?}"),
+        }
+        assert_eq!(slice.snapshot(), before);
+    }
+
+    let slice = Slice::with_career("career-unknown-runner");
+    slice.edit_like_committed(&slice.vector(OUTDATED_CASE), |v| {
+        v["provenance"]["recorded_by"] = json!("by hand");
+    });
+    let declaration = slice.declare_career("career-empty", CAREER_VERSION, &[]);
+    match plan(&slice.spec(), &declaration) {
+        Err(Refused::Files(why)) => {
+            assert!(
+                why.contains("a runner the storage family does not have"),
+                "{why}"
+            );
+        }
+        other => panic!("expected the walk to stop, got {other:?}"),
     }
 }

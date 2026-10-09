@@ -248,3 +248,52 @@ exists the split stops being free. Doing it now costs nothing and doing it later
 **Write the looked-up specification straight into the bag.** One step instead of two, and the bag
 would fill itself. Rejected — §5. The confirm step is what distinguishes a model's proposal from a
 golfer's declaration, and without it the provenance field would be the only thing that knew.
+
+## Addendum (2026-10-08, M36): the catalogue is a two-language file, read by `include_str!`
+
+M36 ported the bag, the club and specification shapes and §7's catalogue reader to Rust
+([the M36 plan](../plans/m36-many-shot-layer.md), phases P5 and P8). §7 assumed one language, and
+there are now two. Python still writes the catalogue and Rust now reads it. This addendum records what
+that changes. §1–§7 stand as decided.
+
+**Who writes and who reads.** `clubs/lookup.py` is an LLM call, so it stays Python
+([ADR-035 §1](035-rust-everywhere-python-where-required.md#1-the-rule-and-the-two-exceptions-it-names)),
+and frozen Python's `remember` goes on writing `src/golf_coach/clubs/club_catalogue.json` when a
+golfer confirms a club. Rust reads that file in two places:
+
+- **`crates/contracts::catalogue`** reads the committed rows by `include_str!`, in file order. There
+  is one copy on disk, as the benchmark data crosses ([ADR-032](032-the-rust-core.md) §5).
+- **`crates/storage::catalogue`** keys them through `slugify` and answers `lookup`. A repeated key's
+  last row wins, in its first row's place, as Python's dict assignment does. The key sits in a second
+  crate for a dependency reason, not a design one: `slugify` needs `unicode-normalization`, and
+  `contracts` takes no third-party dependency beyond `serde` and `serde_json`.
+
+**A row Python remembers reaches Rust at the next build**, not at the next lookup. Nothing in Rust
+confirms a club yet, so no Rust caller is waiting on a fresher row.
+
+**The direction of the pin is reversed.** ADR-035 clause 4 holds frozen Python to reading what Rust
+writes. Here Rust reads what Python writes, so `crates/contracts/tests/catalogue.rs` pins that
+direction:
+
+- every committed row parses, and writes back under `exclude_defaults` as the row on disk;
+- every value `contracts/club_spec.py` can write reads back: each `ShaftMaterial`, each `ShaftFlex`,
+  a row with every optional key absent, and one with every key present.
+
+**§3 and §4 survive the crossing.** `BagEntry` is a `ClubSpec` flattened beside its three declaration
+fields, so the file stays one flat object and there is still one field list. `same_club_as` is
+equality on the spec. Its implementation destructures the entry, so a new field beside the spec does
+not compile until someone says whether it is part of a club's identity.
+
+**Two places where Rust refuses what Python takes, both named:**
+
+- **`str.isalnum()`.** §3's tolerant parsers keep a name's `isalnum` characters. Rust's
+  `char::is_alphanumeric` is a strict superset of CPython's set, so a name carrying a combining mark,
+  such as `7i` with U+0345, normalises to `7i` in Python and to nothing Rust recognises. Every alias
+  is ASCII, so Rust can only refuse a name Python takes, never accept one Python refuses. That is
+  §3's "refuses rather than nudges", applied to the port.
+- **pydantic's lax coercions.** pydantic reads `"2023"` or `2023.0` as a `model_year`, `"9.5"` as a
+  loft and `1` as a bool. Rust refuses each. Nothing writes those values, so a row holding one can
+  only have been hand-edited.
+
+**Not changed**: §1–§7, and the catalogue's place in `src/golf_coach/clubs/`. The file stays where
+`clubs/lookup.py` writes it, and moves only with that writer, whose caller ADR-035 leaves to M40.

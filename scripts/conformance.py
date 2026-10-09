@@ -7,6 +7,8 @@
     python scripts/conformance.py regenerate --schemas-only   # the Python-owned schema roots
     python scripts/conformance.py regenerate --format-only    # the format family, from CPython
     python scripts/conformance.py regenerate --screen-once    # the screen family, once (M34 P4)
+    python scripts/conformance.py regenerate --storage-once   # the storage family, once (M36 P2)
+    python scripts/conformance.py regenerate --career-once    # the career family, once (M36 P3)
 
 **From M32 this is the frozen half, not the oracle** (ADR-035 clauses 3 and 4). `golf-core
 rerecord` records the engine and stage families, and `cargo test` certifies them. Each Rust
@@ -279,6 +281,30 @@ def screen_vector_paths() -> list[Path]:
     `regenerate --screen-once`, and refuses to again.
     """
     return [p for p in vector_paths() if _kind(p) == "screen"]
+
+
+def storage_vector_paths() -> list[Path]:
+    """Every committed vector `crates/storage` is the implementation for (M36 P2).
+
+    The fifth deferred family, and the third that does not age on `ANALYSIS_VERSION`: it records
+    the stores and the corpus reader over them, whose generation is `CAREER_VERSION`, Rust's
+    constant (the M36 plan's decision 8). `read_corpus` takes the engine versions as a parameter
+    recorded in each case's input, so an engine bump moves nothing here, and `check` runs no
+    staleness test, as it runs none over the screen family. Frozen Python recorded them once,
+    through `regenerate --storage-once`, and refuses to again.
+    """
+    return [p for p in vector_paths() if _kind(p) == "storage"]
+
+
+def career_vector_paths() -> list[Path]:
+    """Every committed vector of the career aggregates and the scripts' reports (M36 P3).
+
+    The sixth deferred family, aging on the storage family's key: `CAREER_VERSION`, Rust's alone
+    (the M36 plan's decision 8), so `check` runs no staleness test over it either. The aggregates
+    are `crates/analysis`' to reproduce and the report text `crates/core`'s. Frozen Python recorded
+    them once, through `regenerate --career-once`, and refuses to again.
+    """
+    return [p for p in vector_paths() if _kind(p) == "career"]
 
 
 def run_vector(vector: dict[str, Any]) -> dict[str, Any]:
@@ -851,6 +877,8 @@ def cmd_check(args: argparse.Namespace) -> int:
     stages = [p for p in paths if p in set(stage_vector_paths())]
     formats = [p for p in paths if p in set(format_vector_paths())]
     screens = [p for p in paths if p in set(screen_vector_paths())]
+    storages = [p for p in paths if p in set(storage_vector_paths())]
+    careers = [p for p in paths if p in set(career_vector_paths())]
     paths = [p for p in paths if p in set(engine_vector_paths())]
 
     failed = 0
@@ -929,6 +957,19 @@ def cmd_check(args: argparse.Namespace) -> int:
             f"{len(screens)} screen vectors are `crates/screen`'s, and age on its "
             f"SCREEN_PARSER_VERSION — run `cargo test`"
         )
+    if storages:
+        # The screen family's reason again, under the many-shot layer's key: `CAREER_VERSION` is
+        # Rust's alone, and `golf-core rerecord` is the only thing that moves it on a vector.
+        print(
+            f"{len(storages)} storage vectors are `crates/storage`'s, and age on "
+            f"CAREER_VERSION — run `cargo test`"
+        )
+    if careers:
+        # The same key, so the same silence: nothing here can say a career vector is stale.
+        print(
+            f"{len(careers)} career vectors are `crates/analysis`' and `crates/core`'s, and age "
+            f"on CAREER_VERSION — run `cargo test`"
+        )
     return 1 if failed or stale_stages else 0
 
 
@@ -953,7 +994,8 @@ def cmd_list(args: argparse.Namespace) -> int:
                 # ages on neither: it records CPython's own rounding and formatting, so what it
                 # carries is the interpreter version that answered. A screen vector ages on
                 # `SCREEN_PARSER_VERSION`, which is 0 for frozen Python's parse — so the first key
-                # *present* wins here, not the first truthy one.
+                # *present* wins here, not the first truthy one. A storage or career vector ages
+                # on `CAREER_VERSION`, 0 for frozen Python's stores and aggregates in the same way.
                 "v{}".format(
                     next(
                         (
@@ -962,6 +1004,7 @@ def cmd_list(args: argparse.Namespace) -> int:
                                 "analysis_version",
                                 "detector_version",
                                 "screen_parser_version",
+                                "career_version",
                                 "python_version",
                             )
                             if vector.get(key) is not None
@@ -1041,6 +1084,19 @@ def main(argv: list[str] | None = None) -> int:
         help="record spec/vectors/screen/ from the frozen parser, once: needs the `ocr` extra and "
         "data/, and refuses once any screen vector is committed (M34 P4)",
     )
+    regen.add_argument(
+        "--storage-once",
+        action="store_true",
+        help="record spec/vectors/storage/ from the frozen stores and corpus reader, once: needs "
+        "data/, and refuses once anything is under spec/vectors/storage/ (M36 P2)",
+    )
+    regen.add_argument(
+        "--career-once",
+        action="store_true",
+        help="record spec/vectors/career/ from the frozen career aggregates and the scripts' "
+        "reports, once: needs data/ and the storage family, and refuses once anything is under "
+        "spec/vectors/career/ (M36 P3)",
+    )
     regen.set_defaults(func=cmd_regenerate)
 
     args = parser.parse_args(argv)
@@ -1059,8 +1115,9 @@ through the verb's gate instead, from the repo root:
     cargo run --release --bin golf-core -- rerecord --declare spec/declarations/v<N>.json
 
 `regenerate` still does two jobs: --schemas-only (the Python-owned schema roots) and
---format-only (the format family, which records CPython rather than this engine). A third,
---screen-once, recorded the screen family and refuses to run again."""
+--format-only (the format family, which records CPython rather than this engine). Three more,
+--screen-once, --storage-once and --career-once, recorded the screen, storage and career families
+and refuse to run again."""
 
 
 #: Why `--screen-once` will not run a second time, printed when it is asked to.
@@ -1078,6 +1135,36 @@ A second run from frozen Python would write its answers over Rust's, and drop th
 `provenance.rerecords` ledger that says which of them are Rust's."""
 
 
+#: Why `--storage-once` will not run a second time, printed when it is asked to.
+_STORAGE_RECORDED = """\
+refused: the storage family is already recorded ({count} file{plural} under {where}).
+
+`--storage-once` is the one run of frozen Python's stores and corpus reader (M36 P2, ADR-035
+clause 3: record once from frozen Python). From there `crates/storage` is the implementation, and
+`golf-core rerecord` is the only thing that writes these files, behind a declaration that names
+every value it moves:
+
+    cargo run --release --bin golf-core -- rerecord --declare spec/declarations/career-v<N>.json
+
+A second run from frozen Python would write its answers over Rust's, and drop the
+`provenance.rerecords` ledger that says which of them are Rust's."""
+
+
+#: Why `--career-once` will not run a second time, printed when it is asked to.
+_CAREER_RECORDED = """\
+refused: the career family is already recorded ({count} file{plural} under {where}).
+
+`--career-once` is the one run of frozen Python's career aggregates and the five career scripts'
+reports (M36 P3, ADR-035 clause 3: record once from frozen Python). From there `crates/analysis`
+and `crates/core` are the implementation, and `golf-core rerecord` is the only thing that writes
+these files, behind a declaration that names every value it moves:
+
+    cargo run --release --bin golf-core -- rerecord --declare spec/declarations/career-v<N>.json
+
+A second run from frozen Python would write its answers over Rust's, and drop the
+`provenance.rerecords` ledger that says which of them are Rust's."""
+
+
 def cmd_regenerate(args: argparse.Namespace) -> int:
     # **The full rebuild and `--stages-only` are refused from M32**, on the precedent of
     # `conformance_vectors._audio`: a family whose recorder has moved is rebuilt by the new
@@ -1086,9 +1173,64 @@ def cmd_regenerate(args: argparse.Namespace) -> int:
     # `conformance_vectors` and stay runnable (docs/README.md §Conventions); only this command
     # stops reaching them. Refused before anything is imported or written, schemas included,
     # so a refused run touches nothing.
-    if args.stages_only or not (args.schemas_only or args.format_only or args.screen_once):
+    jobs = (
+        args.schemas_only,
+        args.format_only,
+        args.screen_once,
+        args.storage_once,
+        args.career_once,
+    )
+    if args.stages_only or not any(jobs):
         print(_REFUSED.format(version=ANALYSIS_VERSION), file=sys.stderr)
         return 2
+
+    # **The career family is recorded once** (M36 P3), on `--storage-once`'s rule: refused on any
+    # file under `spec/vectors/career/`, before `conformance_vectors` is imported. A run on an
+    # empty family writes nothing until `build_career` has built every case, which reads the
+    # committed storage family and holds the real case's corpus to `data/` before it returns.
+    if args.career_once:
+        recorded = sorted({*career_vector_paths(), *_files_under(VECTORS / "career")})
+        if recorded:
+            print(
+                _CAREER_RECORDED.format(
+                    count=len(recorded),
+                    plural="" if len(recorded) == 1 else "s",
+                    where=_shown(VECTORS / "career"),
+                ),
+                file=sys.stderr,
+            )
+            return 2
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        from conformance_vectors import build_career
+
+        for path, payload in build_career():
+            _write_json(path, payload)
+            print(f"career   {_shown(path)}")
+        return 0
+
+    # **The storage family is recorded once** (M36 P2), on `--screen-once`'s rule below: refused
+    # on any file under `spec/vectors/storage/`, before `conformance_vectors` is imported, so a
+    # refused run cannot reach `data/`. A run on an empty family writes nothing until
+    # `build_storage` has built every case, the real corpus's verify included.
+    if args.storage_once:
+        recorded = sorted({*storage_vector_paths(), *_files_under(VECTORS / "storage")})
+        if recorded:
+            print(
+                _STORAGE_RECORDED.format(
+                    count=len(recorded),
+                    plural="" if len(recorded) == 1 else "s",
+                    where=_shown(VECTORS / "storage"),
+                ),
+                file=sys.stderr,
+            )
+            return 2
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        from conformance_vectors import build_storage
+
+        for path, payload in build_storage():
+            _write_json(path, payload)
+            print(f"storage  {_shown(path)}")
+        return 0
 
     # **The screen family is recorded once** (M34 P4), and this branch is the whole of "once": it
     # refuses on any file under `spec/vectors/screen/`, not only on a file that reads as a screen

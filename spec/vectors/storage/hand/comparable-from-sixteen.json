@@ -1,0 +1,200 @@
+{
+  "career_version": 1,
+  "expected": {
+    "corpus": {
+      "analyzed_without_measurements": 0,
+      "excluded": [
+        {
+          "detail": "analyzed by engine version 15, older than 16, the oldest engine whose numbers still agree with today's \u2014 they are not comparable with a swing analyzed today, so they are reported rather than pooled. Re-run scripts/reanalyze.py",
+          "reason": "outdated",
+          "session_id": "2026-08-10",
+          "swing_id": "1"
+        }
+      ],
+      "metric_counts": {
+        "head_sway_norm": 1
+      },
+      "other_golfers": 0,
+      "outdated_swings": 1,
+      "player_id": "aaron",
+      "sessions_scanned": 2,
+      "swing_dirs_seen": 2,
+      "swings": [
+        {
+          "analysis_version": 15,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-10T12:00:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "clip-10-1",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "hand",
+              "name": "head_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.2
+            }
+          ],
+          "missing_roles": [
+            "down_the_line",
+            "shot_screen"
+          ],
+          "outdated": true,
+          "player_id": "aaron",
+          "session_id": "2026-08-10",
+          "shot_needs_review": false,
+          "shot_sha256": null,
+          "stale": false,
+          "swing_id": "1"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-11T12:00:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "clip-11-1",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "hand",
+              "name": "head_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.2
+            }
+          ],
+          "missing_roles": [
+            "down_the_line",
+            "shot_screen"
+          ],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-11",
+          "shot_needs_review": false,
+          "shot_sha256": null,
+          "stale": false,
+          "swing_id": "1"
+        }
+      ],
+      "unattributed_swings": 0,
+      "unknown_sources": []
+    },
+    "narrowed": {
+      "the-later-session": {
+        "corpus": {
+          "analyzed_without_measurements": 0,
+          "excluded": [
+            {
+              "detail": "analyzed by engine version 15, older than 16, the oldest engine whose numbers still agree with today's \u2014 they are not comparable with a swing analyzed today, so they are reported rather than pooled. Re-run scripts/reanalyze.py",
+              "reason": "outdated",
+              "session_id": "2026-08-10",
+              "swing_id": "1"
+            }
+          ],
+          "metric_counts": {
+            "head_sway_norm": 1
+          },
+          "other_golfers": 0,
+          "outdated_swings": 0,
+          "player_id": "aaron",
+          "sessions_scanned": 2,
+          "swing_dirs_seen": 2,
+          "swings": [
+            {
+              "analysis_version": 16,
+              "analyzed": true,
+              "auto_mishit": false,
+              "captured_at": "2026-08-11T12:00:00Z",
+              "club": null,
+              "conflicting_shots": [],
+              "duplicates": [],
+              "face_on_sha256": "clip-11-1",
+              "manual_mishit": null,
+              "measurements": [
+                {
+                  "detail": "hand",
+                  "name": "head_sway_norm",
+                  "source": "pose:face_on",
+                  "unit": "shoulder_widths",
+                  "value": 0.2
+                }
+              ],
+              "missing_roles": [
+                "down_the_line",
+                "shot_screen"
+              ],
+              "outdated": false,
+              "player_id": "aaron",
+              "session_id": "2026-08-11",
+              "shot_needs_review": false,
+              "shot_sha256": null,
+              "stale": false,
+              "swing_id": "1"
+            }
+          ],
+          "unattributed_swings": 0,
+          "unknown_sources": []
+        },
+        "properties": {
+          "distinct_sessions": 1,
+          "distinct_shots": 0,
+          "distinct_swings": 1,
+          "duplicates_collapsed": 0,
+          "mishit_refs": [],
+          "mishit_shots": 0,
+          "mishit_shots_unconfirmed": 0,
+          "shot_conflicts": 0,
+          "untagged_swings": 1
+        }
+      }
+    },
+    "properties": {
+      "distinct_sessions": 2,
+      "distinct_shots": 0,
+      "distinct_swings": 2,
+      "duplicates_collapsed": 0,
+      "mishit_refs": [],
+      "mishit_shots": 0,
+      "mishit_shots_unconfirmed": 0,
+      "shot_conflicts": 0,
+      "untagged_swings": 2
+    }
+  },
+  "id": "storage/hand/comparable-from-sixteen",
+  "input": {
+    "files": {
+      "2026-08-10/1/analysis.json": "{\"analysis_version\": 15, \"swing\": {\"measurements\": [{\"name\": \"head_sway_norm\", \"value\": 0.2, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"hand\"}], \"shot\": null}}",
+      "2026-08-10/1/manifest.json": "{\n  \"swing_id\": \"1\",\n  \"session_id\": \"2026-08-10\",\n  \"created_at\": \"2026-08-10T12:00:00Z\",\n  \"updated_at\": \"2026-08-10T12:00:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.clip-10-1.mov\",\n      \"content_sha256\": \"clip-10-1\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T12:00:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": null,\n  \"mishit\": null\n}",
+      "2026-08-11/1/analysis.json": "{\"analysis_version\": 16, \"swing\": {\"measurements\": [{\"name\": \"head_sway_norm\", \"value\": 0.2, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"hand\"}], \"shot\": null}}",
+      "2026-08-11/1/manifest.json": "{\n  \"swing_id\": \"1\",\n  \"session_id\": \"2026-08-11\",\n  \"created_at\": \"2026-08-11T12:00:00Z\",\n  \"updated_at\": \"2026-08-11T12:00:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.clip-11-1.mov\",\n      \"content_sha256\": \"clip-11-1\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-11T12:00:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": null,\n  \"mishit\": null\n}"
+    },
+    "narrowings": {
+      "the-later-session": {
+        "club": null,
+        "sessions": [
+          "2026-08-11"
+        ],
+        "since": null
+      }
+    },
+    "player_id": "aaron",
+    "versions": {
+      "comparable_from": 16,
+      "installed": 17
+    }
+  },
+  "provenance": {
+    "kind": "storage",
+    "note": "Versions {installed 17, comparable_from 16}: the line is the caller's number, not the constant COMPARABLE_FROM (14) and not installed, so a reader comparing against either fails here. Session 2026-08-10 holds a swing stored by engine 15, one below the line: OUTDATED, its sentence naming 16. Session 2026-08-11 holds one stored by 16, exactly on the line: pooled, so head_sway_norm n = 1 and outdated_swings 1. The narrowing to 2026-08-11 keeps the pooled swing alone and recomputes outdated_swings to 0 and n to 1, while excluded and the scan counters (2 sessions, 2 directories) are carried unchanged, as narrowed_to documents. Face-on only and untagged, as in versions-either-side.",
+    "oracle": "hand",
+    "source": "worked by hand in M36 P14, the M36 plan's P14 list; each tree spelled as tests/storage/conftest.py::write_swing writes one, with no analysis.state.json",
+    "worked_against": "scripts/conformance_vectors.py::_run_corpus"
+  }
+}

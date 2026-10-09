@@ -1,0 +1,757 @@
+{
+  "career_version": 1,
+  "expected": {
+    "bag_profile": {
+      "clubs": [],
+      "mishits_excluded": 0,
+      "player_id": "aaron",
+      "untagged_swings": 2
+    },
+    "baseline": {
+      "built_from_sessions": 1,
+      "built_from_swings": 2,
+      "metrics": {
+        "club_lag_deg": {
+          "maximum": null,
+          "mean": null,
+          "mean_ci": null,
+          "median": null,
+          "minimum": null,
+          "n": 2,
+          "n_sessions": 1,
+          "name": "club_lag_deg",
+          "ready": [],
+          "sd": null,
+          "sd_ci": null,
+          "sessions": [
+            {
+              "captured_at": "2026-08-10T01:39:00Z",
+              "mean": null,
+              "n": 2,
+              "session_id": "2026-08-10"
+            }
+          ],
+          "source": "radar:trackman",
+          "unit": "degrees",
+          "withheld": [
+            {
+              "claim": "center",
+              "have_n": 2,
+              "have_sessions": 1,
+              "need_n": 5,
+              "need_sessions": 1,
+              "reason": "a typical value for this golfer needs 5 samples (there are 2)"
+            },
+            {
+              "claim": "spread",
+              "have_n": 2,
+              "have_sessions": 1,
+              "need_n": 10,
+              "need_sessions": 1,
+              "reason": "a claim about how repeatable this is needs 10 samples (there are 2)"
+            },
+            {
+              "claim": "trend",
+              "have_n": 2,
+              "have_sessions": 1,
+              "need_n": 12,
+              "need_sessions": 3,
+              "reason": "a claim that this has moved needs 12 samples (there are 2) and 3 sessions (there are 1) — repeated swings in one bay hour are one occasion, not several"
+            }
+          ]
+        },
+        "face_to_path_deg": {
+          "maximum": null,
+          "mean": null,
+          "mean_ci": null,
+          "median": null,
+          "minimum": null,
+          "n": 1,
+          "n_sessions": 1,
+          "name": "face_to_path_deg",
+          "ready": [],
+          "sd": null,
+          "sd_ci": null,
+          "sessions": [
+            {
+              "captured_at": "2026-08-10T01:39:00Z",
+              "mean": null,
+              "n": 1,
+              "session_id": "2026-08-10"
+            }
+          ],
+          "source": "launch_monitor:hd_golf",
+          "unit": "degrees",
+          "withheld": [
+            {
+              "claim": "center",
+              "have_n": 1,
+              "have_sessions": 1,
+              "need_n": 5,
+              "need_sessions": 1,
+              "reason": "a typical value for this golfer needs 5 samples (there are 1)"
+            },
+            {
+              "claim": "spread",
+              "have_n": 1,
+              "have_sessions": 1,
+              "need_n": 10,
+              "need_sessions": 1,
+              "reason": "a claim about how repeatable this is needs 10 samples (there are 1)"
+            },
+            {
+              "claim": "trend",
+              "have_n": 1,
+              "have_sessions": 1,
+              "need_n": 12,
+              "need_sessions": 3,
+              "reason": "a claim that this has moved needs 12 samples (there are 1) and 3 sessions (there are 1) — repeated swings in one bay hour are one occasion, not several"
+            }
+          ]
+        },
+        "flight_carry_yds": {
+          "maximum": null,
+          "mean": null,
+          "mean_ci": null,
+          "median": null,
+          "minimum": null,
+          "n": 1,
+          "n_sessions": 1,
+          "name": "flight_carry_yds",
+          "ready": [],
+          "sd": null,
+          "sd_ci": null,
+          "sessions": [
+            {
+              "captured_at": "2026-08-10T01:39:00Z",
+              "mean": null,
+              "n": 1,
+              "session_id": "2026-08-10"
+            }
+          ],
+          "source": "model:flight_v1",
+          "unit": "yards",
+          "withheld": [
+            {
+              "claim": "center",
+              "have_n": 1,
+              "have_sessions": 1,
+              "need_n": 5,
+              "need_sessions": 1,
+              "reason": "a typical value for this golfer needs 5 samples (there are 1)"
+            },
+            {
+              "claim": "spread",
+              "have_n": 1,
+              "have_sessions": 1,
+              "need_n": 10,
+              "need_sessions": 1,
+              "reason": "a claim about how repeatable this is needs 10 samples (there are 1)"
+            },
+            {
+              "claim": "trend",
+              "have_n": 1,
+              "have_sessions": 1,
+              "need_n": 12,
+              "need_sessions": 3,
+              "reason": "a claim that this has moved needs 12 samples (there are 1) and 3 sessions (there are 1) — repeated swings in one bay hour are one occasion, not several"
+            }
+          ]
+        },
+        "head_sway_norm": {
+          "maximum": null,
+          "mean": null,
+          "mean_ci": null,
+          "median": null,
+          "minimum": null,
+          "n": 2,
+          "n_sessions": 1,
+          "name": "head_sway_norm",
+          "ready": [],
+          "sd": null,
+          "sd_ci": null,
+          "sessions": [
+            {
+              "captured_at": "2026-08-10T01:39:00Z",
+              "mean": null,
+              "n": 2,
+              "session_id": "2026-08-10"
+            }
+          ],
+          "source": "pose:face_on",
+          "unit": "shoulder_widths",
+          "withheld": [
+            {
+              "claim": "center",
+              "have_n": 2,
+              "have_sessions": 1,
+              "need_n": 5,
+              "need_sessions": 1,
+              "reason": "a typical value for this golfer needs 5 samples (there are 2)"
+            },
+            {
+              "claim": "spread",
+              "have_n": 2,
+              "have_sessions": 1,
+              "need_n": 10,
+              "need_sessions": 1,
+              "reason": "a claim about how repeatable this is needs 10 samples (there are 2)"
+            },
+            {
+              "claim": "trend",
+              "have_n": 2,
+              "have_sessions": 1,
+              "need_n": 12,
+              "need_sessions": 3,
+              "reason": "a claim that this has moved needs 12 samples (there are 2) and 3 sessions (there are 1) — repeated swings in one bay hour are one occasion, not several"
+            }
+          ]
+        },
+        "tour_joint_distance": {
+          "maximum": null,
+          "mean": null,
+          "mean_ci": null,
+          "median": null,
+          "minimum": null,
+          "n": 2,
+          "n_sessions": 1,
+          "name": "tour_joint_distance",
+          "ready": [],
+          "sd": null,
+          "sd_ci": null,
+          "sessions": [
+            {
+              "captured_at": "2026-08-10T01:39:00Z",
+              "mean": null,
+              "n": 2,
+              "session_id": "2026-08-10"
+            }
+          ],
+          "source": "population:golfdb",
+          "unit": "sd",
+          "withheld": [
+            {
+              "claim": "center",
+              "have_n": 2,
+              "have_sessions": 1,
+              "need_n": 5,
+              "need_sessions": 1,
+              "reason": "a typical value for this golfer needs 5 samples (there are 2)"
+            },
+            {
+              "claim": "spread",
+              "have_n": 2,
+              "have_sessions": 1,
+              "need_n": 10,
+              "need_sessions": 1,
+              "reason": "a claim about how repeatable this is needs 10 samples (there are 2)"
+            },
+            {
+              "claim": "trend",
+              "have_n": 2,
+              "have_sessions": 1,
+              "need_n": 12,
+              "need_sessions": 3,
+              "reason": "a claim that this has moved needs 12 samples (there are 2) and 3 sessions (there are 1) — repeated swings in one bay hour are one occasion, not several"
+            }
+          ]
+        }
+      },
+      "player_id": "aaron"
+    },
+    "dispersion": {
+      "built_from_sessions": 1,
+      "built_from_swings": 2,
+      "metrics": {
+        "club_lag_deg": {
+          "bias": "withheld",
+          "caveats": [],
+          "center": null,
+          "center_ci": null,
+          "n": 2,
+          "n_sessions": 1,
+          "name": "club_lag_deg",
+          "offset": null,
+          "pattern": null,
+          "points_at": null,
+          "scatter": "withheld",
+          "sd": null,
+          "sd_ci": null,
+          "source": "radar:trackman",
+          "target": null,
+          "tolerance": null,
+          "unavailable": [
+            "club_lag_deg is not registered in METRIC_TARGETS, so there is no measurement error to judge either a bias or a spread against"
+          ],
+          "unit": "degrees",
+          "withheld": [],
+          "within_session_sd": null
+        },
+        "face_to_path_deg": {
+          "bias": "withheld",
+          "caveats": [],
+          "center": null,
+          "center_ci": null,
+          "n": 1,
+          "n_sessions": 1,
+          "name": "face_to_path_deg",
+          "offset": null,
+          "pattern": null,
+          "points_at": null,
+          "scatter": "withheld",
+          "sd": null,
+          "sd_ci": null,
+          "source": "launch_monitor:hd_golf",
+          "target": 0.0,
+          "tolerance": 2.0,
+          "unavailable": [],
+          "unit": "degrees",
+          "withheld": [
+            {
+              "claim": "center",
+              "have_n": 1,
+              "have_sessions": 1,
+              "need_n": 5,
+              "need_sessions": 1,
+              "reason": "a typical value for this golfer needs 5 samples (there are 1)"
+            },
+            {
+              "claim": "spread",
+              "have_n": 1,
+              "have_sessions": 1,
+              "need_n": 10,
+              "need_sessions": 1,
+              "reason": "a claim about how repeatable this is needs 10 samples (there are 1)"
+            }
+          ],
+          "within_session_sd": null
+        },
+        "flight_carry_yds": {
+          "bias": "withheld",
+          "caveats": [],
+          "center": null,
+          "center_ci": null,
+          "n": 1,
+          "n_sessions": 1,
+          "name": "flight_carry_yds",
+          "offset": null,
+          "pattern": null,
+          "points_at": null,
+          "scatter": "withheld",
+          "sd": null,
+          "sd_ci": null,
+          "source": "model:flight_v1",
+          "target": null,
+          "tolerance": null,
+          "unavailable": [
+            "flight_carry_yds is not registered in METRIC_TARGETS, so there is no measurement error to judge either a bias or a spread against"
+          ],
+          "unit": "yards",
+          "withheld": [],
+          "within_session_sd": null
+        },
+        "head_sway_norm": {
+          "bias": "withheld",
+          "caveats": [],
+          "center": null,
+          "center_ci": null,
+          "n": 2,
+          "n_sessions": 1,
+          "name": "head_sway_norm",
+          "offset": null,
+          "pattern": null,
+          "points_at": null,
+          "scatter": "withheld",
+          "sd": null,
+          "sd_ci": null,
+          "source": "pose:face_on",
+          "target": 0.0,
+          "tolerance": 0.06,
+          "unavailable": [],
+          "unit": "shoulder_widths",
+          "withheld": [
+            {
+              "claim": "center",
+              "have_n": 2,
+              "have_sessions": 1,
+              "need_n": 5,
+              "need_sessions": 1,
+              "reason": "a typical value for this golfer needs 5 samples (there are 2)"
+            },
+            {
+              "claim": "spread",
+              "have_n": 2,
+              "have_sessions": 1,
+              "need_n": 10,
+              "need_sessions": 1,
+              "reason": "a claim about how repeatable this is needs 10 samples (there are 2)"
+            }
+          ],
+          "within_session_sd": null
+        },
+        "tour_joint_distance": {
+          "bias": "withheld",
+          "caveats": [],
+          "center": null,
+          "center_ci": null,
+          "n": 2,
+          "n_sessions": 1,
+          "name": "tour_joint_distance",
+          "offset": null,
+          "pattern": null,
+          "points_at": null,
+          "scatter": "withheld",
+          "sd": null,
+          "sd_ci": null,
+          "source": "population:golfdb",
+          "target": null,
+          "tolerance": null,
+          "unavailable": [
+            "tour_joint_distance is not registered in METRIC_TARGETS, so there is no measurement error to judge either a bias or a spread against"
+          ],
+          "unit": "sd",
+          "withheld": [],
+          "within_session_sd": null
+        }
+      },
+      "player_id": "aaron"
+    },
+    "properties": {
+      "bag_profile": {
+        "categories": {},
+        "clubs_declared": [],
+        "clubs_used": []
+      },
+      "baseline": {
+        "claims_ready": 0,
+        "nothing_sayable": true
+      },
+      "dispersion": {
+        "nothing_established": true,
+        "patterns_established": 0
+      },
+      "standing": {
+        "nothing_placed": true,
+        "placements": 0
+      }
+    },
+    "reports": {
+      "career_baseline": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  Built from 2 distinct swings across 1 session.\n\n  Nothing is sayable yet. Every claim below is refused, with what it needs.\n\n  club_lag_deg  (degrees)\n    n = 2 over 1 session\n    center   withheld — a typical value for this golfer needs 5 samples (there are 2)\n    spread   withheld — a claim about how repeatable this is needs 10 samples (there are 2)\n    trend    withheld — a claim that this has moved needs 12 samples (there are 2) and 3 sessions (there are 1) — repeated swings in one bay hour are one occasion, not several\n    vs tour  withheld\n             blocked  — club_lag_deg: no reference distribution is stored for it\n\n  face_to_path_deg  (degrees)\n    n = 1 over 1 session\n    center   withheld — a typical value for this golfer needs 5 samples (there are 1)\n    spread   withheld — a claim about how repeatable this is needs 10 samples (there are 1)\n    trend    withheld — a claim that this has moved needs 12 samples (there are 1) and 3 sessions (there are 1) — repeated swings in one bay hour are one occasion, not several\n    vs tour  withheld\n             blocked  — face_to_path_deg: no tour population exists for it. Every distribution in this repo comes from GolfDB, which is pose estimated from broadcast video and contains no ball flight — a launch-monitor reference would have to be acquired, not derived\n\n  flight_carry_yds  (yards)\n    n = 1 over 1 session\n    center   withheld — a typical value for this golfer needs 5 samples (there are 1)\n    spread   withheld — a claim about how repeatable this is needs 10 samples (there are 1)\n    trend    withheld — a claim that this has moved needs 12 samples (there are 1) and 3 sessions (there are 1) — repeated swings in one bay hour are one occasion, not several\n    vs tour  withheld\n             blocked  — flight_carry_yds: it is a model output rather than a reading, and no population of model outputs is a population of swings — compare the measured quantity beside it instead\n\n  head_sway_norm  (shoulder_widths)\n    n = 2 over 1 session\n    center   withheld — a typical value for this golfer needs 5 samples (there are 2)\n    spread   withheld — a claim about how repeatable this is needs 10 samples (there are 2)\n    trend    withheld — a claim that this has moved needs 12 samples (there are 2) and 3 sessions (there are 1) — repeated swings in one bay hour are one occasion, not several\n    vs tour  withheld   tour 0.029 .. 0.431 (122 players)\n\n  tour_joint_distance  (sd)\n    n = 2 over 1 session\n    center   withheld — a typical value for this golfer needs 5 samples (there are 2)\n    spread   withheld — a claim about how repeatable this is needs 10 samples (there are 2)\n    trend    withheld — a claim that this has moved needs 12 samples (there are 2) and 3 sessions (there are 1) — repeated swings in one bay hour are one occasion, not several\n    vs tour  withheld\n             blocked  — tour_joint_distance: no reference distribution is stored for it\n\n  The unblock is a bay session: 20-30 swings with shots attached.\n",
+      "career_baseline_verbose": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  Built from 2 distinct swings across 1 session.\n\n  Nothing is sayable yet. Every claim below is refused, with what it needs.\n\n  club_lag_deg  (degrees)\n    n = 2 over 1 session\n    center   withheld — a typical value for this golfer needs 5 samples (there are 2)\n    spread   withheld — a claim about how repeatable this is needs 10 samples (there are 2)\n    trend    withheld — a claim that this has moved needs 12 samples (there are 2) and 3 sessions (there are 1) — repeated swings in one bay hour are one occasion, not several\n    vs tour  withheld\n             blocked  — club_lag_deg: no reference distribution is stored for it\n             sessions so far:\n               2026-08-10  n=2\n\n  face_to_path_deg  (degrees)\n    n = 1 over 1 session\n    center   withheld — a typical value for this golfer needs 5 samples (there are 1)\n    spread   withheld — a claim about how repeatable this is needs 10 samples (there are 1)\n    trend    withheld — a claim that this has moved needs 12 samples (there are 1) and 3 sessions (there are 1) — repeated swings in one bay hour are one occasion, not several\n    vs tour  withheld\n             blocked  — face_to_path_deg: no tour population exists for it. Every distribution in this repo comes from GolfDB, which is pose estimated from broadcast video and contains no ball flight — a launch-monitor reference would have to be acquired, not derived\n             sessions so far:\n               2026-08-10  n=1\n\n  flight_carry_yds  (yards)\n    n = 1 over 1 session\n    center   withheld — a typical value for this golfer needs 5 samples (there are 1)\n    spread   withheld — a claim about how repeatable this is needs 10 samples (there are 1)\n    trend    withheld — a claim that this has moved needs 12 samples (there are 1) and 3 sessions (there are 1) — repeated swings in one bay hour are one occasion, not several\n    vs tour  withheld\n             blocked  — flight_carry_yds: it is a model output rather than a reading, and no population of model outputs is a population of swings — compare the measured quantity beside it instead\n             sessions so far:\n               2026-08-10  n=1\n\n  head_sway_norm  (shoulder_widths)\n    n = 2 over 1 session\n    center   withheld — a typical value for this golfer needs 5 samples (there are 2)\n    spread   withheld — a claim about how repeatable this is needs 10 samples (there are 2)\n    trend    withheld — a claim that this has moved needs 12 samples (there are 2) and 3 sessions (there are 1) — repeated swings in one bay hour are one occasion, not several\n    vs tour  withheld   tour 0.029 .. 0.431 (122 players)\n             sessions so far:\n               2026-08-10  n=2\n\n  tour_joint_distance  (sd)\n    n = 2 over 1 session\n    center   withheld — a typical value for this golfer needs 5 samples (there are 2)\n    spread   withheld — a claim about how repeatable this is needs 10 samples (there are 2)\n    trend    withheld — a claim that this has moved needs 12 samples (there are 2) and 3 sessions (there are 1) — repeated swings in one bay hour are one occasion, not several\n    vs tour  withheld\n             blocked  — tour_joint_distance: no reference distribution is stored for it\n             sessions so far:\n               2026-08-10  n=2\n\n  The unblock is a bay session: 20-30 swings with shots attached.\n",
+      "career_corpus": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  2 swing directories across 1 session  ->  2 distinct swings, 1 distinct shot\n\n  Honest n per metric:\n    club_lag_deg         n = 2\n    face_to_path_deg     n = 1\n    flight_carry_yds     n = 1\n    head_sway_norm       n = 2\n    tour_joint_distance  n = 2\n\n  2 distinct swing(s) naming no club (of 2).\n    They still count toward every metric above and toward every whole-bag\n    number — the club was never an input to measuring head sway — and are\n    absent only from per-club views. Repair them one at a time on the upload\n    page: a session has many clubs, so there is no bulk backfill (ADR-024 §5).\n\n  Unrecognised measurement sources: population:golfdb, radar:trackman\n    Counted per swing rather than per artifact — check the dedupe key still fits.\n",
+      "career_corpus_verbose": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  2 swing directories across 1 session  ->  2 distinct swings, 1 distinct shot\n\n  Honest n per metric:\n    club_lag_deg         n = 2\n    face_to_path_deg     n = 1\n    flight_carry_yds     n = 1\n    head_sway_norm       n = 2\n    tour_joint_distance  n = 2\n\n  2 distinct swing(s) naming no club (of 2).\n    They still count toward every metric above and toward every whole-bag\n    number — the club was never an input to measuring head sway — and are\n    absent only from per-club views. Repair them one at a time on the upload\n    page: a session has many clubs, so there is no bulk backfill (ADR-024 §5).\n\n  Unrecognised measurement sources: population:golfdb, radar:trackman\n    Counted per swing rather than per artifact — check the dedupe key still fits.\n",
+      "career_dispersion": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  Built from 2 distinct swings across 1 session.\n\n  No metric can be asked yet. A repeatable miss and a scattered one are the same\n  two numbers until there are enough of them to tell apart.\n\n  club_lag_deg  (degrees)\n    n = 2 over 1 session\n    bias      withheld\n    scatter   withheld\n    blocked   club_lag_deg is not registered in METRIC_TARGETS, so there is no measurement\n              error to judge either a bias or a spread against\n\n  face_to_path_deg  (degrees)\n    n = 1 over 1 session    target 0.0 +/- 2.0\n    bias      withheld\n    scatter   withheld\n    waiting   a typical value for this golfer needs 5 samples (there are 1)\n    waiting   a claim about how repeatable this is needs 10 samples (there are 1)\n\n  flight_carry_yds  (yards)\n    n = 1 over 1 session\n    bias      withheld\n    scatter   withheld\n    blocked   flight_carry_yds is not registered in METRIC_TARGETS, so there is no\n              measurement error to judge either a bias or a spread against\n\n  head_sway_norm  (shoulder_widths)\n    n = 2 over 1 session    target 0.000 +/- 0.060\n    bias      withheld\n    scatter   withheld\n    waiting   a typical value for this golfer needs 5 samples (there are 2)\n    waiting   a claim about how repeatable this is needs 10 samples (there are 2)\n\n  tour_joint_distance  (sd)\n    n = 2 over 1 session\n    bias      withheld\n    scatter   withheld\n    blocked   tour_joint_distance is not registered in METRIC_TARGETS, so there is no\n              measurement error to judge either a bias or a spread against\n\n  The unblock is a bay session: 20-30 swings with shots attached.\n",
+      "career_dispersion_verbose": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  Built from 2 distinct swings across 1 session.\n\n  No metric can be asked yet. A repeatable miss and a scattered one are the same\n  two numbers until there are enough of them to tell apart.\n\n  club_lag_deg  (degrees)\n    n = 2 over 1 session\n    bias      withheld\n    scatter   withheld\n    blocked   club_lag_deg is not registered in METRIC_TARGETS, so there is no measurement\n              error to judge either a bias or a spread against\n\n  face_to_path_deg  (degrees)\n    n = 1 over 1 session    target 0.0 +/- 2.0\n    bias      withheld\n    scatter   withheld\n    waiting   a typical value for this golfer needs 5 samples (there are 1)\n    waiting   a claim about how repeatable this is needs 10 samples (there are 1)\n    tolerance 2 — judgment, 2026-08-12: no instrument-error evidence exists for the OCR\n              path. 2 degrees is below the level a coaching action follows from. Revise from\n              a real bay session's repeats\n\n  flight_carry_yds  (yards)\n    n = 1 over 1 session\n    bias      withheld\n    scatter   withheld\n    blocked   flight_carry_yds is not registered in METRIC_TARGETS, so there is no\n              measurement error to judge either a bias or a spread against\n\n  head_sway_norm  (shoulder_widths)\n    n = 2 over 1 session    target 0.000 +/- 0.060\n    bias      withheld\n    scatter   withheld\n    waiting   a typical value for this golfer needs 5 samples (there are 2)\n    waiting   a claim about how repeatable this is needs 10 samples (there are 2)\n    tolerance 0.06 — spread/error harness over 461 face-on GolfDB clips, 2026-08-12: `python\n              scripts/golfdb/tune_spatial_metric.py`, tolerance = noise + bound\n\n  tour_joint_distance  (sd)\n    n = 2 over 1 session\n    bias      withheld\n    scatter   withheld\n    blocked   tour_joint_distance is not registered in METRIC_TARGETS, so there is no\n              measurement error to judge either a bias or a spread against\n\n  The unblock is a bay session: 20-30 swings with shots attached.\n",
+      "club_profile": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  No club has been hit or declared — there is nothing to profile yet.\n  untagged  All 2 swings on record name no club. That is real history, and no per-club number\n            can be cut from it until each one is tagged.\n  next      New swings get a club at upload — `python scripts/run_server.py`, then the picker\n            on the upload page. A swing already stored is retagged one at a time, from the\n            change control on its row in that page's swing list or with POST\n            /api/sessions/<session>/swings/<swing>/club.\n",
+      "club_profile_driver": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  driver: never hit and not in the bag — there is no history to report.\n\n  untagged  2 swings on record name no club, so nothing above counts them. Retag one at a\n            time, from the change control on the swing's row in the upload page or with POST\n            /api/sessions/<session>/swings/<swing>/club.\n",
+      "club_profile_verbose": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  No club has been hit or declared — there is nothing to profile yet.\n  untagged  All 2 swings on record name no club. That is real history, and no per-club number\n            can be cut from it until each one is tagged.\n  next      New swings get a club at upload — `python scripts/run_server.py`, then the picker\n            on the upload page. A swing already stored is retagged one at a time, from the\n            change control on its row in that page's swing list or with POST\n            /api/sessions/<session>/swings/<swing>/club.\n",
+      "flag_mishit_list": "\naaron -- 0 shot(s) held out across the bag\n  (no tagged shots yet)\n"
+    },
+    "standing": {
+      "built_from_sessions": 1,
+      "built_from_swings": 2,
+      "metrics": {
+        "club_lag_deg": {
+          "band_high": null,
+          "band_low": null,
+          "center": null,
+          "center_ci": null,
+          "n": 2,
+          "n_sessions": 1,
+          "name": "club_lag_deg",
+          "outside_by": null,
+          "percentile": null,
+          "percentile_clamped": false,
+          "population_n": null,
+          "population_players": null,
+          "reading": null,
+          "source": "radar:trackman",
+          "standing": "withheld",
+          "unavailable": [
+            "club_lag_deg: no reference distribution is stored for it"
+          ],
+          "unit": "degrees",
+          "withheld": []
+        },
+        "face_to_path_deg": {
+          "band_high": null,
+          "band_low": null,
+          "center": null,
+          "center_ci": null,
+          "n": 1,
+          "n_sessions": 1,
+          "name": "face_to_path_deg",
+          "outside_by": null,
+          "percentile": null,
+          "percentile_clamped": false,
+          "population_n": null,
+          "population_players": null,
+          "reading": null,
+          "source": "launch_monitor:hd_golf",
+          "standing": "withheld",
+          "unavailable": [
+            "face_to_path_deg: no tour population exists for it. Every distribution in this repo comes from GolfDB, which is pose estimated from broadcast video and contains no ball flight — a launch-monitor reference would have to be acquired, not derived"
+          ],
+          "unit": "degrees",
+          "withheld": []
+        },
+        "flight_carry_yds": {
+          "band_high": null,
+          "band_low": null,
+          "center": null,
+          "center_ci": null,
+          "n": 1,
+          "n_sessions": 1,
+          "name": "flight_carry_yds",
+          "outside_by": null,
+          "percentile": null,
+          "percentile_clamped": false,
+          "population_n": null,
+          "population_players": null,
+          "reading": null,
+          "source": "model:flight_v1",
+          "standing": "withheld",
+          "unavailable": [
+            "flight_carry_yds: it is a model output rather than a reading, and no population of model outputs is a population of swings — compare the measured quantity beside it instead"
+          ],
+          "unit": "yards",
+          "withheld": []
+        },
+        "head_sway_norm": {
+          "band_high": 0.4311,
+          "band_low": 0.0294,
+          "center": null,
+          "center_ci": null,
+          "n": 2,
+          "n_sessions": 1,
+          "name": "head_sway_norm",
+          "outside_by": null,
+          "percentile": null,
+          "percentile_clamped": false,
+          "population_n": 458,
+          "population_players": 122,
+          "reading": null,
+          "source": "pose:face_on",
+          "standing": "withheld",
+          "unavailable": [],
+          "unit": "shoulder_widths",
+          "withheld": [
+            {
+              "claim": "center",
+              "have_n": 2,
+              "have_sessions": 1,
+              "need_n": 5,
+              "need_sessions": 1,
+              "reason": "a typical value for this golfer needs 5 samples (there are 2)"
+            }
+          ]
+        },
+        "tour_joint_distance": {
+          "band_high": null,
+          "band_low": null,
+          "center": null,
+          "center_ci": null,
+          "n": 2,
+          "n_sessions": 1,
+          "name": "tour_joint_distance",
+          "outside_by": null,
+          "percentile": null,
+          "percentile_clamped": false,
+          "population_n": null,
+          "population_players": null,
+          "reading": null,
+          "source": "population:golfdb",
+          "standing": "withheld",
+          "unavailable": [
+            "tour_joint_distance: no reference distribution is stored for it"
+          ],
+          "unit": "sd",
+          "withheld": []
+        }
+      },
+      "player_id": "aaron"
+    }
+  },
+  "id": "career/synthetic/storage-every-source",
+  "input": {
+    "bag": null,
+    "clubs": [
+      "driver"
+    ],
+    "corpus": {
+      "analyzed_without_measurements": 0,
+      "excluded": [],
+      "metric_counts": {
+        "club_lag_deg": 2,
+        "face_to_path_deg": 1,
+        "flight_carry_yds": 1,
+        "head_sway_norm": 2,
+        "tour_joint_distance": 2
+      },
+      "other_golfers": 0,
+      "outdated_swings": 0,
+      "player_id": "aaron",
+      "sessions_scanned": 1,
+      "swing_dirs_seen": 2,
+      "swings": [
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-10T01:39:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "clip-1",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "test",
+              "name": "head_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.25
+            },
+            {
+              "detail": "test",
+              "name": "pelvis_turn_dtl",
+              "source": "pose:down_the_line",
+              "unit": "degrees",
+              "value": 30.0
+            },
+            {
+              "detail": "test",
+              "name": "flight_carry_yds",
+              "source": "model:flight_v1",
+              "unit": "yards",
+              "value": 141.2
+            },
+            {
+              "detail": "test",
+              "name": "club_lag_deg",
+              "source": "radar:trackman",
+              "unit": "degrees",
+              "value": 4.0
+            },
+            {
+              "detail": "test",
+              "name": "tour_joint_distance",
+              "source": "population:golfdb",
+              "unit": "sd",
+              "value": 2.4
+            },
+            {
+              "detail": "test",
+              "name": "face_to_path_deg",
+              "source": "launch_monitor:hd_golf",
+              "unit": "degrees",
+              "value": 13.2
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-10",
+          "shot_needs_review": false,
+          "shot_sha256": "shot-a",
+          "stale": false,
+          "swing_id": "1"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-10T01:39:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "clip-2",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "test",
+              "name": "head_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.25
+            },
+            {
+              "detail": "test",
+              "name": "pelvis_turn_dtl",
+              "source": "pose:down_the_line",
+              "unit": "degrees",
+              "value": 30.0
+            },
+            {
+              "detail": "test",
+              "name": "flight_carry_yds",
+              "source": "model:flight_v1",
+              "unit": "yards",
+              "value": 141.2
+            },
+            {
+              "detail": "test",
+              "name": "club_lag_deg",
+              "source": "radar:trackman",
+              "unit": "degrees",
+              "value": 4.0
+            },
+            {
+              "detail": "test",
+              "name": "tour_joint_distance",
+              "source": "population:golfdb",
+              "unit": "sd",
+              "value": 2.4
+            },
+            {
+              "detail": "test",
+              "name": "face_to_path_deg",
+              "source": "launch_monitor:hd_golf",
+              "unit": "degrees",
+              "value": 13.2
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-10",
+          "shot_needs_review": false,
+          "shot_sha256": "shot-a",
+          "stale": false,
+          "swing_id": "2"
+        }
+      ],
+      "unattributed_swings": 0,
+      "unknown_sources": [
+        "population:golfdb",
+        "radar:trackman"
+      ]
+    },
+    "display_name": "Aaron",
+    "versions": {
+      "comparable_from": 16,
+      "installed": 16
+    }
+  },
+  "provenance": {
+    "analysis_version": 16,
+    "kind": "career",
+    "note": "the corpus storage/corpus/every-source reads, adopted whole and rendered",
+    "oracle": "python",
+    "pydantic_version": "2.13.4",
+    "python_version": "3.13.3",
+    "recorded_by": "scripts/conformance_vectors.py::_run_career",
+    "rerecords": [
+      {
+        "added": [],
+        "by": "golf-core rerecord",
+        "career_version": 1,
+        "declaration": "spec/declarations/career-v1.json",
+        "moved": [
+          "career_version"
+        ]
+      }
+    ],
+    "source": "spec/vectors/storage/corpus/every-source.json, expected.corpus"
+  }
+}

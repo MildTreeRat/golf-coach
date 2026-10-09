@@ -449,3 +449,91 @@ the parser's label-fix shots in ADR-035's Consequences, and it is not a defect t
 - the previous addendum's drill rule, its two levels, and its landing-offline projection. All three
   are M37's, and M37 was Rust first already;
 - "No bulk backfill for club".
+
+## Addendum (2026-10-08, M36): the corpus's `OUTDATED` means "not comparable", and frozen Python disagrees on purpose
+
+M36 ported §4's pipeline to Rust, in [the M36 plan](../plans/m36-many-shot-layer.md)'s phases P1–P16:
+`crates/storage::corpus` for `read_corpus` and `narrow_to`, and the career half of `crates/analysis`
+for the baseline, the dispersion, the tour comparison and the bag profile. It went in the order the
+previous addendum set. Frozen Python recorded the behaviour once, the port reproduced every recorded
+vector, and then **one rule changed in Rust alone**: what the corpus calls `OUTDATED`. This addendum
+records that change. The other milestones the previous addendum routed are unchanged.
+
+**Why the rule had to move.** `read_corpus` excluded an analysis older than the *installed*
+`ANALYSIS_VERSION`, because its numbers "are not comparable with a swing analyzed today". Rust's
+version has been 17 since M32, a bump that changed a shape and no number, and every `analysis.json`
+on disk is frozen Python's 16. So the faithful port pooled nothing over `data/`. Measured at P10 and
+P14, for `aaron`:
+
+| versions `{installed, comparable_from}` | distinct swings | duplicates | `OUTDATED` | metrics with a sample |
+|---|---|---|---|---|
+| `{16, 16}`: frozen Python's | 13 | 2 | 0 | 34 |
+| `{17, 17}`: the faithful port | 13 | 2 | **13** | **0** |
+| `{17, 14}`: the port after this change | 13 | 2 | **0** | **34** |
+
+Frozen Python's own `read_corpus` over the same directory pools the same 13 swings and 34 metrics.
+
+**The decision** (the M36 plan's interview decisions 1 and 2, 2026-10-07) is to keep two questions
+apart, each with its own number:
+
+- **Is there a newer engine to run?** That is `is_outdated`, at the installed version, unchanged in
+  both languages. `scripts/reanalyze.py` asks it, and so will §M29's re-analysis verb.
+- **May this swing be pooled with one analyzed today?** That is the corpus's question. The answer is
+  no only when the swing's version is older than **`COMPARABLE_FROM`**
+  (`crates/contracts/src/swing.rs`), the oldest engine generation whose stored numbers today's
+  engine still agrees with.
+
+`COMPARABLE_FROM` is 14. Frozen Python's ledger in `contracts/swing.py` says, for each bump, whether
+an older artifact *disagrees* about a number or is only *missing* new measurements. 13 → 14, the
+heavy pose model, is the newest that disagrees. 14 → 15 (flight) and 15 → 16 (pivots) are missing
+bumps, measured byte-identical on every `overall_score`, and 16 → 17 is Rust's shape-only bump. A
+missing measurement already shows as a smaller per-metric `n`, which is honest, so it is no reason
+to drop the swing. From 17 every Rust ledger entry names its class (`shape`, `missing` or
+`disagrees`), and `comparable_from_is_the_newest_disagreeing_generation` holds the constant to the
+newest `disagrees` entry, or 14 when there is none.
+
+**How it is built.** `read_corpus` takes the engine versions as a parameter,
+`EngineVersions { installed, comparable_from }`, and excludes on `stored < comparable_from`. The
+verbs pass `{ANALYSIS_VERSION, COMPARABLE_FROM}`. Every vector records the pair it was read under,
+so an `ANALYSIS_VERSION` bump moves neither vector family. The `OUTDATED` sentence a golfer reads
+now names the line the swing fell under, not the installed engine. The change was worked by hand
+first, in three cases under `spec/vectors/storage/hand/`:
+
+- a line at 14, with stored versions 13, 14, 16 and 17 on either side of it;
+- a line at the caller's 16 rather than the constant;
+- a mishit median that sees only the comparable swings of a club.
+
+The Python-recorded vectors were then re-recorded under `spec/declarations/career-v1.json`. Only
+the sentence and its adopted copies moved. No swing, count or aggregate moved, because every one of
+them was read at `{16, 16}`, where the two rules agree. `docs/CONFORMANCE.md` §2 and §4 have the
+detail.
+
+**Frozen Python keeps the old rule until M40, and that disagreement is by design.** Frozen means no
+new behaviour ([ADR-035 clause 4](035-rust-everywhere-python-where-required.md#4-the-frozen-python-lab)),
+so `storage/corpus.py` still excludes below the installed 16. The two languages part on an artifact
+at version 14 or 15: Python excludes it and Rust pools it. None exists on disk, so over `data/` both
+pool the same 13 swings today, and P16's parity run found the five verbs printing what the five
+scripts print, byte for byte. An artifact Rust writes at 17 is current to both, because Python's
+`<` compares it with 16. This sits beside the previous addendum's photo-only entries, and beside the
+parser's label-fix shots in ADR-035's Consequences. It is not a defect to fix in Python.
+
+**ADR-035 clause 6 has M35 change `read_corpus`, and M36 changed one rule of it first.** The change
+followed clause 3's order: a faithful port recorded from Python, then a change against hand-worked
+vectors, then a declared re-record. So the clause is not false, but it no longer covers every change.
+M35's photo-only admission is still M35's, and it will be `career-v2`.
+
+**What else M36 found here:**
+
+- **§4 held in Rust.** `narrowed_to` with a club is still the whole of the per-club path. It recomputes
+  the counts as it does in Python, and the per-club guard is the same `minimum_n`. Nothing in
+  `crates/analysis::club_profile` learns a rule of its own.
+- **§5's upload path already takes an explicit swing.** `SwingBundleStore.assign_from_path` has taken
+  `swing_id` since 2026-08-07, and `api/app.py` passes the upload's `?swing_id=`. The Rust store
+  ports it faithfully, as `Upload::swing_id`. The default, "the newest swing lacking this role",
+  still misattaches in a mixed session, so M35 and the phone should always pass the target.
+
+**Not changed**:
+
+- §1–§5, and the addenda above;
+- `is_outdated`, and what `scripts/reanalyze.py` re-runs;
+- the previous addendum's rule that the frozen lab never admits a photo-only entry.

@@ -1,0 +1,121 @@
+{
+  "career_version": 1,
+  "expected": {
+    "files": null,
+    "results": [
+      {
+        "returned": []
+      },
+      {
+        "returned": []
+      },
+      {
+        "returned": null
+      },
+      {
+        "returned": []
+      },
+      {
+        "returned": null
+      },
+      {
+        "returned": null
+      },
+      {
+        "returned": null
+      },
+      {
+        "returned": false
+      }
+    ]
+  },
+  "id": "storage/bundle/missing-root",
+  "input": {
+    "files": null,
+    "ops": [
+      {
+        "args": {},
+        "now": null,
+        "op": "bundle.list_session_ids"
+      },
+      {
+        "args": {
+          "session_id": "2026-08-06"
+        },
+        "now": null,
+        "op": "bundle.get_session"
+      },
+      {
+        "args": {
+          "session_id": "2026-08-06",
+          "swing_id": "1"
+        },
+        "now": null,
+        "op": "bundle.get_swing"
+      },
+      {
+        "args": {
+          "player_id": "aaron",
+          "session_id": "2026-08-06"
+        },
+        "now": "2026-08-06T12:00:00Z",
+        "op": "bundle.attribute_unlabeled"
+      },
+      {
+        "args": {
+          "player_id": "aaron",
+          "session_id": "2026-08-06",
+          "swing_id": "1"
+        },
+        "now": "2026-08-06T12:01:00.120000Z",
+        "op": "bundle.set_player"
+      },
+      {
+        "args": {
+          "club": "7i",
+          "session_id": "2026-08-06",
+          "swing_id": "1"
+        },
+        "now": "2026-08-06T12:02:00.000001Z",
+        "op": "bundle.set_club"
+      },
+      {
+        "args": {
+          "session_id": "2026-08-06",
+          "swing_id": "1",
+          "verdict": "confirmed"
+        },
+        "now": "2026-08-06T12:03:00.999999Z",
+        "op": "bundle.set_mishit"
+      },
+      {
+        "args": {
+          "session_id": "2026-08-06",
+          "swing_id": "1"
+        },
+        "now": null,
+        "op": "bundle.delete_swing"
+      }
+    ]
+  },
+  "provenance": {
+    "kind": "storage",
+    "note": "a root that does not exist reads as empty and every write on a swing in it is a None or False, never an error, and none of them creates the root (`test_missing_session_directory_is_empty_not_an_error`)",
+    "oracle": "python",
+    "pydantic_version": "2.13.4",
+    "python_version": "3.13.3",
+    "recorded_by": "scripts/conformance_vectors.py::_run_ops",
+    "rerecords": [
+      {
+        "added": [],
+        "by": "golf-core rerecord",
+        "career_version": 1,
+        "declaration": "spec/declarations/career-v1.json",
+        "moved": [
+          "career_version"
+        ]
+      }
+    ],
+    "source": "tests/storage/test_bundle_store.py, as store calls"
+  }
+}

@@ -1,0 +1,428 @@
+{
+  "career_version": 1,
+  "expected": {
+    "files": {
+      "2026-08-04-12-00-swing-1.shot.json": "{\n  \"shot_id\": \"2026-08-04 12:00/swing#1\",\n  \"session_id\": \"range\",\n  \"timestamp\": \"2026-08-04T12:05:00Z\",\n  \"source\": \"screen\",\n  \"club_head_speed\": null,\n  \"club_face_angle\": null,\n  \"club_path\": null,\n  \"ball_speed\": null,\n  \"launch_angle\": null,\n  \"launch_direction\": null,\n  \"spin_rate\": null,\n  \"spin_axis\": null,\n  \"smash_factor\": null,\n  \"carry_distance\": 128.1,\n  \"total_distance\": null,\n  \"bounce_and_roll\": null,\n  \"apex_height\": null,\n  \"shot_type\": null,\n  \"impact_position\": null,\n  \"provenance\": null\n}",
+      "55c64d0fcd6f9d5f7c828093857e3fdfda68478bb4e9bd24d481ef391c7804e8.shot.json": "{\n  \"shot_id\": \"s1\",\n  \"session_id\": \"range\",\n  \"timestamp\": \"2026-08-04T12:00:00Z\",\n  \"source\": \"screen\",\n  \"club_head_speed\": null,\n  \"club_face_angle\": null,\n  \"club_path\": null,\n  \"ball_speed\": null,\n  \"launch_angle\": null,\n  \"launch_direction\": null,\n  \"spin_rate\": null,\n  \"spin_axis\": null,\n  \"smash_factor\": null,\n  \"carry_distance\": 131.4,\n  \"total_distance\": null,\n  \"bounce_and_roll\": null,\n  \"apex_height\": null,\n  \"shot_type\": null,\n  \"impact_position\": null,\n  \"provenance\": {\n    \"device\": \"hd_golf\",\n    \"parse_confidence\": 0.95,\n    \"needs_review\": false,\n    \"warnings\": [],\n    \"image_sha256\": \"55c64d0fcd6f9d5f7c828093857e3fdfda68478bb4e9bd24d481ef391c7804e8\",\n    \"image_path\": null,\n    \"raw_fields\": {}\n  }\n}",
+      "na-ve-.shot.json": "{\n  \"shot_id\": \"naïve…\",\n  \"session_id\": \"range\",\n  \"timestamp\": \"2026-08-04T12:20:00Z\",\n  \"source\": \"screen\",\n  \"club_head_speed\": null,\n  \"club_face_angle\": null,\n  \"club_path\": null,\n  \"ball_speed\": null,\n  \"launch_angle\": null,\n  \"launch_direction\": null,\n  \"spin_rate\": null,\n  \"spin_axis\": null,\n  \"smash_factor\": null,\n  \"carry_distance\": 128.1,\n  \"total_distance\": null,\n  \"bounce_and_roll\": null,\n  \"apex_height\": null,\n  \"shot_type\": null,\n  \"impact_position\": null,\n  \"provenance\": {\n    \"device\": \"hd_golf\",\n    \"parse_confidence\": 0.95,\n    \"needs_review\": false,\n    \"warnings\": [],\n    \"image_sha256\": null,\n    \"image_path\": null,\n    \"raw_fields\": {}\n  }\n}",
+      "s3.shot.json": "{\n  \"shot_id\": \"s3\",\n  \"session_id\": \"range\",\n  \"timestamp\": \"2026-08-04T12:10:00Z\",\n  \"source\": \"screen\",\n  \"club_head_speed\": null,\n  \"club_face_angle\": null,\n  \"club_path\": null,\n  \"ball_speed\": null,\n  \"launch_angle\": null,\n  \"launch_direction\": null,\n  \"spin_rate\": null,\n  \"spin_axis\": null,\n  \"smash_factor\": null,\n  \"carry_distance\": 128.1,\n  \"total_distance\": null,\n  \"bounce_and_roll\": null,\n  \"apex_height\": null,\n  \"shot_type\": null,\n  \"impact_position\": null,\n  \"provenance\": {\n    \"device\": \"hd_golf\",\n    \"parse_confidence\": 0.95,\n    \"needs_review\": false,\n    \"warnings\": [],\n    \"image_sha256\": null,\n    \"image_path\": null,\n    \"raw_fields\": {}\n  }\n}",
+      "s4.shot.json": "{\n  \"shot_id\": \"s4\",\n  \"session_id\": \"range\",\n  \"timestamp\": \"2026-08-04T12:15:00Z\",\n  \"source\": \"screen\",\n  \"club_head_speed\": null,\n  \"club_face_angle\": null,\n  \"club_path\": null,\n  \"ball_speed\": null,\n  \"launch_angle\": null,\n  \"launch_direction\": null,\n  \"spin_rate\": null,\n  \"spin_axis\": null,\n  \"smash_factor\": null,\n  \"carry_distance\": 128.1,\n  \"total_distance\": null,\n  \"bounce_and_roll\": null,\n  \"apex_height\": null,\n  \"shot_type\": null,\n  \"impact_position\": null,\n  \"provenance\": {\n    \"device\": \"hd_golf\",\n    \"parse_confidence\": 0.95,\n    \"needs_review\": false,\n    \"warnings\": [],\n    \"image_sha256\": \"\",\n    \"image_path\": null,\n    \"raw_fields\": {}\n  }\n}"
+    },
+    "results": [
+      {
+        "returned": "55c64d0fcd6f9d5f7c828093857e3fdfda68478bb4e9bd24d481ef391c7804e8.shot.json"
+      },
+      {
+        "returned": true
+      },
+      {
+        "returned": {
+          "apex_height": null,
+          "ball_speed": null,
+          "bounce_and_roll": null,
+          "carry_distance": 128.1,
+          "club_face_angle": null,
+          "club_head_speed": null,
+          "club_path": null,
+          "impact_position": null,
+          "launch_angle": null,
+          "launch_direction": null,
+          "provenance": {
+            "device": "hd_golf",
+            "image_path": null,
+            "image_sha256": "55c64d0fcd6f9d5f7c828093857e3fdfda68478bb4e9bd24d481ef391c7804e8",
+            "needs_review": false,
+            "parse_confidence": 0.95,
+            "raw_fields": {},
+            "warnings": []
+          },
+          "session_id": "range",
+          "shot_id": "s1",
+          "shot_type": null,
+          "smash_factor": null,
+          "source": "screen",
+          "spin_axis": null,
+          "spin_rate": null,
+          "timestamp": "2026-08-04T12:00:00Z",
+          "total_distance": null
+        }
+      },
+      {
+        "returned": false
+      },
+      {
+        "returned": null
+      },
+      {
+        "returned": "2026-08-04-12-00-swing-1.shot.json"
+      },
+      {
+        "returned": true
+      },
+      {
+        "returned": "s3.shot.json"
+      },
+      {
+        "returned": "s4.shot.json"
+      },
+      {
+        "returned": "na-ve-.shot.json"
+      },
+      {
+        "returned": [
+          {
+            "apex_height": null,
+            "ball_speed": null,
+            "bounce_and_roll": null,
+            "carry_distance": 128.1,
+            "club_face_angle": null,
+            "club_head_speed": null,
+            "club_path": null,
+            "impact_position": null,
+            "launch_angle": null,
+            "launch_direction": null,
+            "provenance": {
+              "device": "hd_golf",
+              "image_path": null,
+              "image_sha256": null,
+              "needs_review": false,
+              "parse_confidence": 0.95,
+              "raw_fields": {},
+              "warnings": []
+            },
+            "session_id": "range",
+            "shot_id": "naïve…",
+            "shot_type": null,
+            "smash_factor": null,
+            "source": "screen",
+            "spin_axis": null,
+            "spin_rate": null,
+            "timestamp": "2026-08-04T12:20:00Z",
+            "total_distance": null
+          },
+          {
+            "apex_height": null,
+            "ball_speed": null,
+            "bounce_and_roll": null,
+            "carry_distance": 128.1,
+            "club_face_angle": null,
+            "club_head_speed": null,
+            "club_path": null,
+            "impact_position": null,
+            "launch_angle": null,
+            "launch_direction": null,
+            "provenance": {
+              "device": "hd_golf",
+              "image_path": null,
+              "image_sha256": "",
+              "needs_review": false,
+              "parse_confidence": 0.95,
+              "raw_fields": {},
+              "warnings": []
+            },
+            "session_id": "range",
+            "shot_id": "s4",
+            "shot_type": null,
+            "smash_factor": null,
+            "source": "screen",
+            "spin_axis": null,
+            "spin_rate": null,
+            "timestamp": "2026-08-04T12:15:00Z",
+            "total_distance": null
+          },
+          {
+            "apex_height": null,
+            "ball_speed": null,
+            "bounce_and_roll": null,
+            "carry_distance": 128.1,
+            "club_face_angle": null,
+            "club_head_speed": null,
+            "club_path": null,
+            "impact_position": null,
+            "launch_angle": null,
+            "launch_direction": null,
+            "provenance": {
+              "device": "hd_golf",
+              "image_path": null,
+              "image_sha256": null,
+              "needs_review": false,
+              "parse_confidence": 0.95,
+              "raw_fields": {},
+              "warnings": []
+            },
+            "session_id": "range",
+            "shot_id": "s3",
+            "shot_type": null,
+            "smash_factor": null,
+            "source": "screen",
+            "spin_axis": null,
+            "spin_rate": null,
+            "timestamp": "2026-08-04T12:10:00Z",
+            "total_distance": null
+          },
+          {
+            "apex_height": null,
+            "ball_speed": null,
+            "bounce_and_roll": null,
+            "carry_distance": 128.1,
+            "club_face_angle": null,
+            "club_head_speed": null,
+            "club_path": null,
+            "impact_position": null,
+            "launch_angle": null,
+            "launch_direction": null,
+            "provenance": null,
+            "session_id": "range",
+            "shot_id": "2026-08-04 12:00/swing#1",
+            "shot_type": null,
+            "smash_factor": null,
+            "source": "screen",
+            "spin_axis": null,
+            "spin_rate": null,
+            "timestamp": "2026-08-04T12:05:00Z",
+            "total_distance": null
+          },
+          {
+            "apex_height": null,
+            "ball_speed": null,
+            "bounce_and_roll": null,
+            "carry_distance": 128.1,
+            "club_face_angle": null,
+            "club_head_speed": null,
+            "club_path": null,
+            "impact_position": null,
+            "launch_angle": null,
+            "launch_direction": null,
+            "provenance": {
+              "device": "hd_golf",
+              "image_path": null,
+              "image_sha256": "55c64d0fcd6f9d5f7c828093857e3fdfda68478bb4e9bd24d481ef391c7804e8",
+              "needs_review": false,
+              "parse_confidence": 0.95,
+              "raw_fields": {},
+              "warnings": []
+            },
+            "session_id": "range",
+            "shot_id": "s1",
+            "shot_type": null,
+            "smash_factor": null,
+            "source": "screen",
+            "spin_axis": null,
+            "spin_rate": null,
+            "timestamp": "2026-08-04T12:00:00Z",
+            "total_distance": null
+          }
+        ]
+      },
+      {
+        "returned": "55c64d0fcd6f9d5f7c828093857e3fdfda68478bb4e9bd24d481ef391c7804e8.shot.json"
+      },
+      {
+        "returned": {
+          "apex_height": null,
+          "ball_speed": null,
+          "bounce_and_roll": null,
+          "carry_distance": 131.4,
+          "club_face_angle": null,
+          "club_head_speed": null,
+          "club_path": null,
+          "impact_position": null,
+          "launch_angle": null,
+          "launch_direction": null,
+          "provenance": {
+            "device": "hd_golf",
+            "image_path": null,
+            "image_sha256": "55c64d0fcd6f9d5f7c828093857e3fdfda68478bb4e9bd24d481ef391c7804e8",
+            "needs_review": false,
+            "parse_confidence": 0.95,
+            "raw_fields": {},
+            "warnings": []
+          },
+          "session_id": "range",
+          "shot_id": "s1",
+          "shot_type": null,
+          "smash_factor": null,
+          "source": "screen",
+          "spin_axis": null,
+          "spin_rate": null,
+          "timestamp": "2026-08-04T12:00:00Z",
+          "total_distance": null
+        }
+      }
+    ]
+  },
+  "id": "storage/stores/shot-store",
+  "input": {
+    "files": {},
+    "ops": [
+      {
+        "args": {
+          "shot": {
+            "carry_distance": 128.1,
+            "provenance": {
+              "device": "hd_golf",
+              "image_sha256": "55c64d0fcd6f9d5f7c828093857e3fdfda68478bb4e9bd24d481ef391c7804e8",
+              "parse_confidence": 0.95
+            },
+            "session_id": "range",
+            "shot_id": "s1",
+            "source": "screen",
+            "timestamp": "2026-08-04T12:00:00Z"
+          }
+        },
+        "now": null,
+        "op": "shot.put"
+      },
+      {
+        "args": {
+          "key": "55c64d0fcd6f9d5f7c828093857e3fdfda68478bb4e9bd24d481ef391c7804e8"
+        },
+        "now": null,
+        "op": "shot.has"
+      },
+      {
+        "args": {
+          "key": "55c64d0fcd6f9d5f7c828093857e3fdfda68478bb4e9bd24d481ef391c7804e8"
+        },
+        "now": null,
+        "op": "shot.get"
+      },
+      {
+        "args": {
+          "key": "91af69ce7fb7fa1196de8018e46a26284c270780b0809a211f454905c803815c"
+        },
+        "now": null,
+        "op": "shot.has"
+      },
+      {
+        "args": {
+          "key": "91af69ce7fb7fa1196de8018e46a26284c270780b0809a211f454905c803815c"
+        },
+        "now": null,
+        "op": "shot.get"
+      },
+      {
+        "args": {
+          "shot": {
+            "carry_distance": 128.1,
+            "session_id": "range",
+            "shot_id": "2026-08-04 12:00/swing#1",
+            "source": "screen",
+            "timestamp": "2026-08-04T12:05:00Z"
+          }
+        },
+        "now": null,
+        "op": "shot.put"
+      },
+      {
+        "args": {
+          "key": "2026-08-04 12:00/swing#1"
+        },
+        "now": null,
+        "op": "shot.has"
+      },
+      {
+        "args": {
+          "shot": {
+            "carry_distance": 128.1,
+            "provenance": {
+              "device": "hd_golf",
+              "parse_confidence": 0.95
+            },
+            "session_id": "range",
+            "shot_id": "s3",
+            "source": "screen",
+            "timestamp": "2026-08-04T12:10:00Z"
+          }
+        },
+        "now": null,
+        "op": "shot.put"
+      },
+      {
+        "args": {
+          "shot": {
+            "carry_distance": 128.1,
+            "provenance": {
+              "device": "hd_golf",
+              "image_sha256": "",
+              "parse_confidence": 0.95
+            },
+            "session_id": "range",
+            "shot_id": "s4",
+            "source": "screen",
+            "timestamp": "2026-08-04T12:15:00Z"
+          }
+        },
+        "now": null,
+        "op": "shot.put"
+      },
+      {
+        "args": {
+          "shot": {
+            "carry_distance": 128.1,
+            "provenance": {
+              "device": "hd_golf",
+              "parse_confidence": 0.95
+            },
+            "session_id": "range",
+            "shot_id": "naïve…",
+            "source": "screen",
+            "timestamp": "2026-08-04T12:20:00Z"
+          }
+        },
+        "now": null,
+        "op": "shot.put"
+      },
+      {
+        "args": {},
+        "now": null,
+        "op": "shot.all"
+      },
+      {
+        "args": {
+          "shot": {
+            "carry_distance": 131.4,
+            "provenance": {
+              "device": "hd_golf",
+              "image_sha256": "55c64d0fcd6f9d5f7c828093857e3fdfda68478bb4e9bd24d481ef391c7804e8",
+              "parse_confidence": 0.95
+            },
+            "session_id": "range",
+            "shot_id": "s1",
+            "source": "screen",
+            "timestamp": "2026-08-04T12:00:00Z"
+          }
+        },
+        "now": null,
+        "op": "shot.put"
+      },
+      {
+        "args": {
+          "key": "55c64d0fcd6f9d5f7c828093857e3fdfda68478bb4e9bd24d481ef391c7804e8"
+        },
+        "now": null,
+        "op": "shot.get"
+      }
+    ]
+  },
+  "provenance": {
+    "kind": "storage",
+    "note": "the shot store is content-addressed: `put` keys a shot by its photo's sha256 and falls back to `shot_id` when there is no provenance, no hash or an empty one, each `[^A-Za-z0-9._-]+` run of the key becoming one `-`, non-ASCII included; it answers the path written, and a second `put` of a key writes over the first (`test_round_trip_through_the_store`, `test_reimporting_the_same_image_hits_the_cache`)",
+    "oracle": "python",
+    "pydantic_version": "2.13.4",
+    "python_version": "3.13.3",
+    "recorded_by": "scripts/conformance_vectors.py::_run_ops",
+    "rerecords": [
+      {
+        "added": [],
+        "by": "golf-core rerecord",
+        "career_version": 1,
+        "declaration": "spec/declarations/career-v1.json",
+        "moved": [
+          "career_version"
+        ]
+      }
+    ],
+    "source": "tests/launch_monitor/test_screen_store.py, as store calls"
+  }
+}

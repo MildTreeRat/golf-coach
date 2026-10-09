@@ -1,0 +1,293 @@
+{
+  "career_version": 1,
+  "expected": {
+    "files": {
+      "aaron.golfer.json": "{\n  \"player_id\": \"aaron\",\n  \"display_name\": \"Aaron\",\n  \"handedness\": \"right\",\n  \"created_at\": \"2026-08-06T12:00:00Z\"\n}",
+      "bjorn-eamon-o-brien.golfer.json": "{\n  \"player_id\": \"bjorn-eamon-o-brien\",\n  \"display_name\": \"Björn Éamon O'Brien\",\n  \"handedness\": \"left\",\n  \"created_at\": \"2026-08-06T12:06:00Z\"\n}",
+      "bob.golfer.json": "{\n  \"player_id\": \"bob\",\n  \"display_name\": \"Bob\",\n  \"handedness\": \"right\",\n  \"created_at\": \"2026-08-06T12:08:00.000001Z\"\n}",
+      "maria.golfer.json": "{\n  \"player_id\": \"maria\",\n  \"display_name\": \"María\",\n  \"handedness\": \"right\",\n  \"created_at\": \"2026-08-06T12:04:00.500000Z\"\n}",
+      "zoe.golfer.json": "{\n  \"player_id\": \"zoe\",\n  \"display_name\": \"Zoë\",\n  \"handedness\": \"left\",\n  \"created_at\": \"2026-08-06T12:07:00.120000Z\"\n}"
+    },
+    "results": [
+      {
+        "returned": {
+          "created_at": "2026-08-06T12:00:00Z",
+          "display_name": "Aaron",
+          "handedness": "right",
+          "player_id": "aaron"
+        }
+      },
+      {
+        "returned": {
+          "created_at": "2026-08-06T12:00:00Z",
+          "display_name": "Aaron",
+          "handedness": "right",
+          "player_id": "aaron"
+        }
+      },
+      {
+        "returned": {
+          "created_at": "2026-08-06T12:00:00Z",
+          "display_name": "Aaron",
+          "handedness": "right",
+          "player_id": "aaron"
+        }
+      },
+      {
+        "returned": {
+          "created_at": "2026-08-06T12:00:00Z",
+          "display_name": "Aaron",
+          "handedness": "right",
+          "player_id": "aaron"
+        }
+      },
+      {
+        "returned": {
+          "created_at": "2026-08-06T12:04:00.500000Z",
+          "display_name": "María",
+          "handedness": "right",
+          "player_id": "maria"
+        }
+      },
+      {
+        "returned": {
+          "created_at": "2026-08-06T12:04:00.500000Z",
+          "display_name": "María",
+          "handedness": "right",
+          "player_id": "maria"
+        }
+      },
+      {
+        "returned": {
+          "created_at": "2026-08-06T12:06:00Z",
+          "display_name": "Björn Éamon O'Brien",
+          "handedness": "left",
+          "player_id": "bjorn-eamon-o-brien"
+        }
+      },
+      {
+        "returned": {
+          "created_at": "2026-08-06T12:07:00.120000Z",
+          "display_name": "Zoë",
+          "handedness": "left",
+          "player_id": "zoe"
+        }
+      },
+      {
+        "returned": {
+          "created_at": "2026-08-06T12:08:00.000001Z",
+          "display_name": "Bob",
+          "handedness": "right",
+          "player_id": "bob"
+        }
+      },
+      {
+        "raised": {
+          "message": "name '!!!' has no usable characters for an id",
+          "type": "ValueError"
+        }
+      },
+      {
+        "raised": {
+          "message": "name '' has no usable characters for an id",
+          "type": "ValueError"
+        }
+      },
+      {
+        "raised": {
+          "message": "name '   ' has no usable characters for an id",
+          "type": "ValueError"
+        }
+      },
+      {
+        "raised": {
+          "message": "name '\\u200b' has no usable characters for an id",
+          "type": "ValueError"
+        }
+      },
+      {
+        "raised": {
+          "message": "name \"'\" has no usable characters for an id",
+          "type": "ValueError"
+        }
+      },
+      {
+        "returned": [
+          {
+            "created_at": "2026-08-06T12:00:00Z",
+            "display_name": "Aaron",
+            "handedness": "right",
+            "player_id": "aaron"
+          },
+          {
+            "created_at": "2026-08-06T12:06:00Z",
+            "display_name": "Björn Éamon O'Brien",
+            "handedness": "left",
+            "player_id": "bjorn-eamon-o-brien"
+          },
+          {
+            "created_at": "2026-08-06T12:08:00.000001Z",
+            "display_name": "Bob",
+            "handedness": "right",
+            "player_id": "bob"
+          },
+          {
+            "created_at": "2026-08-06T12:04:00.500000Z",
+            "display_name": "María",
+            "handedness": "right",
+            "player_id": "maria"
+          },
+          {
+            "created_at": "2026-08-06T12:07:00.120000Z",
+            "display_name": "Zoë",
+            "handedness": "left",
+            "player_id": "zoe"
+          }
+        ]
+      }
+    ]
+  },
+  "id": "storage/stores/golfer-get-or-create",
+  "input": {
+    "files": {},
+    "ops": [
+      {
+        "args": {
+          "handedness": "right",
+          "name": "Aaron"
+        },
+        "now": "2026-08-06T12:00:00Z",
+        "op": "golfer.get_or_create"
+      },
+      {
+        "args": {
+          "handedness": "right",
+          "name": "Aaron"
+        },
+        "now": "2026-08-06T12:01:00.120000Z",
+        "op": "golfer.get_or_create"
+      },
+      {
+        "args": {
+          "handedness": "right",
+          "name": "  aaron "
+        },
+        "now": "2026-08-06T12:02:00.000001Z",
+        "op": "golfer.get_or_create"
+      },
+      {
+        "args": {
+          "handedness": "left",
+          "name": "aaron"
+        },
+        "now": "2026-08-06T12:03:00.999999Z",
+        "op": "golfer.get_or_create"
+      },
+      {
+        "args": {
+          "handedness": "right",
+          "name": "María"
+        },
+        "now": "2026-08-06T12:04:00.500000Z",
+        "op": "golfer.get_or_create"
+      },
+      {
+        "args": {
+          "handedness": "left",
+          "name": "Maria"
+        },
+        "now": "2026-08-06T12:05:00.345678Z",
+        "op": "golfer.get_or_create"
+      },
+      {
+        "args": {
+          "handedness": "left",
+          "name": "Björn Éamon O'Brien"
+        },
+        "now": "2026-08-06T12:06:00Z",
+        "op": "golfer.get_or_create"
+      },
+      {
+        "args": {
+          "handedness": "left",
+          "name": " Zoë "
+        },
+        "now": "2026-08-06T12:07:00.120000Z",
+        "op": "golfer.get_or_create"
+      },
+      {
+        "args": {
+          "handedness": "right",
+          "name": "\u001cBob\u001f"
+        },
+        "now": "2026-08-06T12:08:00.000001Z",
+        "op": "golfer.get_or_create"
+      },
+      {
+        "args": {
+          "handedness": "right",
+          "name": "!!!"
+        },
+        "now": "2026-08-06T12:09:00.999999Z",
+        "op": "golfer.get_or_create"
+      },
+      {
+        "args": {
+          "handedness": "right",
+          "name": ""
+        },
+        "now": "2026-08-06T12:10:00.500000Z",
+        "op": "golfer.get_or_create"
+      },
+      {
+        "args": {
+          "handedness": "right",
+          "name": "   "
+        },
+        "now": "2026-08-06T12:11:00.345678Z",
+        "op": "golfer.get_or_create"
+      },
+      {
+        "args": {
+          "handedness": "right",
+          "name": "​"
+        },
+        "now": "2026-08-06T12:12:00Z",
+        "op": "golfer.get_or_create"
+      },
+      {
+        "args": {
+          "handedness": "right",
+          "name": "'"
+        },
+        "now": "2026-08-06T12:13:00.120000Z",
+        "op": "golfer.get_or_create"
+      },
+      {
+        "args": {},
+        "now": null,
+        "op": "golfer.list_all"
+      }
+    ]
+  },
+  "provenance": {
+    "kind": "storage",
+    "note": "`get_or_create` is read-biased: a name that slugs to a known golfer returns the stored record, its handedness and original display name untouched, so a retyped or accented spelling is the same golfer (`test_a_retyped_name_resolves_to_the_existing_golfer`, `test_handedness_of_a_known_golfer_is_never_overwritten`, `test_accented_and_unaccented_spellings_are_the_same_golfer`). The display name is `name.strip()`, which strips what `str.isspace` calls whitespace: NBSP and EM SPACE, and the separators \\x1c and \\x1f, which Rust's `trim` keeps. A name that slugs to nothing raises, its `repr` in the message (`'\\u200b'`, and `\"'\"` in double quotes)",
+    "oracle": "python",
+    "pydantic_version": "2.13.4",
+    "python_version": "3.13.3",
+    "recorded_by": "scripts/conformance_vectors.py::_run_ops",
+    "rerecords": [
+      {
+        "added": [],
+        "by": "golf-core rerecord",
+        "career_version": 1,
+        "declaration": "spec/declarations/career-v1.json",
+        "moved": [
+          "career_version"
+        ]
+      }
+    ],
+    "source": "tests/storage/test_golfer_store.py, as store calls"
+  }
+}

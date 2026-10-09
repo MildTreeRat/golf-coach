@@ -8,7 +8,8 @@ description = "The swing analysis engine: the port of src/golf_coach/analysis/, 
 
 [dependencies]
 # ADR-008's import rule as a cargo dependency edge (ADR-032 §1): this crate depends on `contracts`
-# and `contracts` depends on nothing of ours, so a cycle is a build failure rather than something
+# and `contracts` depends on nothing of ours but `pyfmt` (M36 P5), which depends on nothing of ours
+# at all, so a cycle is a build failure rather than something
 # a reviewer has to notice. Declared from this crate's first commit even though P3 reads no shape
 # through it — P4 is the first phase that does, and a manifest that states the direction only once
 # there is a caller is not enforcing a rule, it is recording one.

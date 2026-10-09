@@ -1,0 +1,281 @@
+{
+  "career_version": 1,
+  "expected": {
+    "bag_profile": {
+      "clubs": [
+        {
+          "bag_entry": {
+            "adjustable_hosel": null,
+            "bounce_deg": null,
+            "club": "sw",
+            "cor": null,
+            "face_angle_deg": null,
+            "grind": "",
+            "grip": "",
+            "head_type": "",
+            "head_weight_g": null,
+            "length_in": null,
+            "lie_deg": null,
+            "loft_deg": 56.0,
+            "loft_range_deg": null,
+            "make": "Vokey",
+            "model": "SM10",
+            "model_year": null,
+            "moi_g_cm2": null,
+            "offset_mm": null,
+            "provenance": null,
+            "recorded_at": "2026-08-01T12:00:00Z",
+            "retired_at": null,
+            "set_composition": "",
+            "shaft_flex": null,
+            "shaft_kick_point": "",
+            "shaft_material": null,
+            "shaft_model": "",
+            "shaft_torque_deg": null,
+            "shaft_weight_g": null,
+            "swing_weight": "",
+            "total_weight_g": null,
+            "usga_conforming": null
+          },
+          "caveats": [],
+          "club": "sw",
+          "dispersion": {},
+          "in_bag": true,
+          "metrics": {},
+          "mishit_refs": [],
+          "mishits": 0,
+          "mishits_unconfirmed": 0,
+          "n_sessions": 0,
+          "n_shots": 0,
+          "n_swings": 0
+        },
+        {
+          "bag_entry": {
+            "adjustable_hosel": null,
+            "bounce_deg": null,
+            "club": "lw",
+            "cor": null,
+            "face_angle_deg": null,
+            "grind": "",
+            "grip": "",
+            "head_type": "",
+            "head_weight_g": null,
+            "length_in": 35.125,
+            "lie_deg": null,
+            "loft_deg": 60.0,
+            "loft_range_deg": null,
+            "make": "Vokey",
+            "model": "",
+            "model_year": null,
+            "moi_g_cm2": null,
+            "offset_mm": null,
+            "provenance": null,
+            "recorded_at": "2026-08-01T12:00:00Z",
+            "retired_at": null,
+            "set_composition": "",
+            "shaft_flex": null,
+            "shaft_kick_point": "",
+            "shaft_material": null,
+            "shaft_model": "",
+            "shaft_torque_deg": null,
+            "shaft_weight_g": null,
+            "swing_weight": "",
+            "total_weight_g": null,
+            "usga_conforming": null
+          },
+          "caveats": [],
+          "club": "lw",
+          "dispersion": {},
+          "in_bag": true,
+          "metrics": {},
+          "mishit_refs": [],
+          "mishits": 0,
+          "mishits_unconfirmed": 0,
+          "n_sessions": 0,
+          "n_shots": 0,
+          "n_swings": 0
+        }
+      ],
+      "mishits_excluded": 0,
+      "player_id": "aaron",
+      "untagged_swings": 0
+    },
+    "baseline": {
+      "built_from_sessions": 0,
+      "built_from_swings": 0,
+      "metrics": {},
+      "player_id": "aaron"
+    },
+    "dispersion": {
+      "built_from_sessions": 0,
+      "built_from_swings": 0,
+      "metrics": {},
+      "player_id": "aaron"
+    },
+    "properties": {
+      "bag_profile": {
+        "categories": {
+          "lw": "wedge",
+          "sw": "wedge"
+        },
+        "clubs_declared": [
+          "sw",
+          "lw"
+        ],
+        "clubs_used": []
+      },
+      "baseline": {
+        "claims_ready": 0,
+        "nothing_sayable": true
+      },
+      "dispersion": {
+        "nothing_established": true,
+        "patterns_established": 0
+      },
+      "standing": {
+        "nothing_placed": true,
+        "placements": 0
+      }
+    },
+    "reports": {
+      "career_baseline": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  No measurement on any swing yet — nothing to build a baseline from.\n  Check `python scripts/career_corpus.py` for why: the commonest causes are\n  swings that were never analyzed, and swings analyzed by an older engine.\n",
+      "career_baseline_verbose": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  No measurement on any swing yet — nothing to build a baseline from.\n  Check `python scripts/career_corpus.py` for why: the commonest causes are\n  swings that were never analyzed, and swings analyzed by an older engine.\n",
+      "career_corpus": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  0 swing directories across 0 sessions  ->  0 distinct swings, 0 distinct shots\n\n  Honest n per metric:\n    (none — no distinct swing carries a measurement yet)\n",
+      "career_corpus_verbose": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  0 swing directories across 0 sessions  ->  0 distinct swings, 0 distinct shots\n\n  Honest n per metric:\n    (none — no distinct swing carries a measurement yet)\n",
+      "career_dispersion": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  No measurement on any swing yet — nothing to read a miss-shape from.\n  Check `python scripts/career_corpus.py` for why.\n",
+      "career_dispersion_verbose": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  No measurement on any swing yet — nothing to read a miss-shape from.\n  Check `python scripts/career_corpus.py` for why.\n",
+      "club_profile": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  2 clubs with history or a declared bag entry: 0 hit, 2 in the bag.\n\n  sw  (wedge)\n    club      Vokey SM10, 56 deg loft (declared 2026-08-01)\n    evidence  0 swings, 0 shot photos, 0 sessions\n    history   In the bag, nothing hit with it yet. No statistics, and that is not an error —\n              the profile is here so the club is visible before it has any history.\n\n  lw  (wedge)\n    club      Vokey, 60 deg loft, 35.125 in (declared 2026-08-01)\n    evidence  0 swings, 0 shot photos, 0 sessions\n    history   In the bag, nothing hit with it yet. No statistics, and that is not an error —\n              the profile is here so the club is visible before it has any history.\n",
+      "club_profile_driver": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  driver: never hit and not in the bag — there is no history to report.\n",
+      "club_profile_lw": "\nAaron  (aaron)\n------------------------------------------------------------------------\n\n  lw  (wedge)\n    club      Vokey, 60 deg loft, 35.125 in (declared 2026-08-01)\n    evidence  0 swings, 0 shot photos, 0 sessions\n    history   In the bag, nothing hit with it yet. No statistics, and that is not an error —\n              the profile is here so the club is visible before it has any history.\n",
+      "club_profile_sw": "\nAaron  (aaron)\n------------------------------------------------------------------------\n\n  sw  (wedge)\n    club      Vokey SM10, 56 deg loft (declared 2026-08-01)\n    evidence  0 swings, 0 shot photos, 0 sessions\n    history   In the bag, nothing hit with it yet. No statistics, and that is not an error —\n              the profile is here so the club is visible before it has any history.\n",
+      "club_profile_verbose": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  2 clubs with history or a declared bag entry: 0 hit, 2 in the bag.\n\n  sw  (wedge)\n    club      Vokey SM10, 56 deg loft (declared 2026-08-01)\n    evidence  0 swings, 0 shot photos, 0 sessions\n    history   In the bag, nothing hit with it yet. No statistics, and that is not an error —\n              the profile is here so the club is visible before it has any history.\n\n  lw  (wedge)\n    club      Vokey, 60 deg loft, 35.125 in (declared 2026-08-01)\n    evidence  0 swings, 0 shot photos, 0 sessions\n    history   In the bag, nothing hit with it yet. No statistics, and that is not an error —\n              the profile is here so the club is visible before it has any history.\n",
+      "flag_mishit_list": "\naaron -- 0 shot(s) held out across the bag\n  (no tagged shots yet)\n"
+    },
+    "standing": {
+      "built_from_sessions": 0,
+      "built_from_swings": 0,
+      "metrics": {},
+      "player_id": "aaron"
+    }
+  },
+  "id": "career/synthetic/declared-unhit",
+  "input": {
+    "bag": {
+      "entries": {
+        "lw": {
+          "adjustable_hosel": null,
+          "bounce_deg": null,
+          "club": "lw",
+          "cor": null,
+          "face_angle_deg": null,
+          "grind": "",
+          "grip": "",
+          "head_type": "",
+          "head_weight_g": null,
+          "length_in": 35.125,
+          "lie_deg": null,
+          "loft_deg": 60.0,
+          "loft_range_deg": null,
+          "make": "Vokey",
+          "model": "",
+          "model_year": null,
+          "moi_g_cm2": null,
+          "offset_mm": null,
+          "provenance": null,
+          "recorded_at": "2026-08-01T12:00:00Z",
+          "retired_at": null,
+          "set_composition": "",
+          "shaft_flex": null,
+          "shaft_kick_point": "",
+          "shaft_material": null,
+          "shaft_model": "",
+          "shaft_torque_deg": null,
+          "shaft_weight_g": null,
+          "swing_weight": "",
+          "total_weight_g": null,
+          "usga_conforming": null
+        },
+        "sw": {
+          "adjustable_hosel": null,
+          "bounce_deg": null,
+          "club": "sw",
+          "cor": null,
+          "face_angle_deg": null,
+          "grind": "",
+          "grip": "",
+          "head_type": "",
+          "head_weight_g": null,
+          "length_in": null,
+          "lie_deg": null,
+          "loft_deg": 56.0,
+          "loft_range_deg": null,
+          "make": "Vokey",
+          "model": "SM10",
+          "model_year": null,
+          "moi_g_cm2": null,
+          "offset_mm": null,
+          "provenance": null,
+          "recorded_at": "2026-08-01T12:00:00Z",
+          "retired_at": null,
+          "set_composition": "",
+          "shaft_flex": null,
+          "shaft_kick_point": "",
+          "shaft_material": null,
+          "shaft_model": "",
+          "shaft_torque_deg": null,
+          "shaft_weight_g": null,
+          "swing_weight": "",
+          "total_weight_g": null,
+          "usga_conforming": null
+        }
+      },
+      "player_id": "aaron",
+      "retired": [],
+      "updated_at": "2026-08-24T12:00:00Z"
+    },
+    "clubs": [
+      "sw",
+      "lw",
+      "driver"
+    ],
+    "corpus": {
+      "analyzed_without_measurements": 0,
+      "excluded": [],
+      "metric_counts": {},
+      "other_golfers": 0,
+      "outdated_swings": 0,
+      "player_id": "aaron",
+      "sessions_scanned": 0,
+      "swing_dirs_seen": 0,
+      "swings": [],
+      "unattributed_swings": 0,
+      "unknown_sources": []
+    },
+    "display_name": "Aaron",
+    "versions": {
+      "comparable_from": 16,
+      "installed": 16
+    }
+  },
+  "provenance": {
+    "analysis_version": 16,
+    "kind": "career",
+    "note": "a declared bag and no swings: two profiles with nothing behind them",
+    "oracle": "python",
+    "pydantic_version": "2.13.4",
+    "python_version": "3.13.3",
+    "recorded_by": "scripts/conformance_vectors.py::_run_career",
+    "rerecords": [
+      {
+        "added": [],
+        "by": "golf-core rerecord",
+        "career_version": 1,
+        "declaration": "spec/declarations/career-v1.json",
+        "moved": [
+          "career_version"
+        ]
+      }
+    ],
+    "source": "CorpusSwing built by scripts/conformance_vectors.py, as tests/analysis/ does"
+  }
+}

@@ -1,0 +1,225 @@
+{
+  "career_version": 1,
+  "expected": {
+    "files": {
+      "a.shot.json": "{\n  \"shot_id\": \"a\",\n  \"session_id\": \"range\",\n  \"timestamp\": \"2026-08-04T12:00:00Z\",\n  \"source\": \"screen\",\n  \"club_head_speed\": null,\n  \"club_face_angle\": null,\n  \"club_path\": null,\n  \"ball_speed\": null,\n  \"launch_angle\": null,\n  \"launch_direction\": null,\n  \"spin_rate\": null,\n  \"spin_axis\": null,\n  \"smash_factor\": null,\n  \"carry_distance\": 128.1,\n  \"total_distance\": null,\n  \"bounce_and_roll\": null,\n  \"apex_height\": null,\n  \"shot_type\": null,\n  \"impact_position\": null,\n  \"provenance\": {\n    \"device\": \"hd_golf\",\n    \"parse_confidence\": 0.95,\n    \"needs_review\": false,\n    \"warnings\": [],\n    \"image_sha256\": null,\n    \"image_path\": null,\n    \"raw_fields\": {}\n  }\n}",
+      "b.shot.json": "{\n  \"shot_id\": \"b\",\n  \"session_id\": \"range\",\n  \"timestamp\": \"2026-08-04T12:00:00Z\",\n  \"source\": \"screen\",\n  \"club_head_speed\": null,\n  \"club_face_angle\": null,\n  \"club_path\": null,\n  \"ball_speed\": null,\n  \"launch_angle\": null,\n  \"launch_direction\": null,\n  \"spin_rate\": null,\n  \"spin_axis\": null,\n  \"smash_factor\": null,\n  \"carry_distance\": 128.1,\n  \"total_distance\": null,\n  \"bounce_and_roll\": null,\n  \"apex_height\": null,\n  \"shot_type\": null,\n  \"impact_position\": null,\n  \"provenance\": {\n    \"device\": \"hd_golf\",\n    \"parse_confidence\": 0.95,\n    \"needs_review\": false,\n    \"warnings\": [],\n    \"image_sha256\": null,\n    \"image_path\": null,\n    \"raw_fields\": {}\n  }\n}",
+      "c.shot.json": "{\n  \"shot_id\": \"c\",\n  \"session_id\": \"range\",\n  \"timestamp\": \"2026-08-04T17:00:00+05:30\",\n  \"source\": \"screen\",\n  \"club_head_speed\": null,\n  \"club_face_angle\": null,\n  \"club_path\": null,\n  \"ball_speed\": null,\n  \"launch_angle\": null,\n  \"launch_direction\": null,\n  \"spin_rate\": null,\n  \"spin_axis\": null,\n  \"smash_factor\": null,\n  \"carry_distance\": 128.1,\n  \"total_distance\": null,\n  \"bounce_and_roll\": null,\n  \"apex_height\": null,\n  \"shot_type\": null,\n  \"impact_position\": null,\n  \"provenance\": {\n    \"device\": \"hd_golf\",\n    \"parse_confidence\": 0.95,\n    \"needs_review\": false,\n    \"warnings\": [],\n    \"image_sha256\": null,\n    \"image_path\": null,\n    \"raw_fields\": {}\n  }\n}",
+      "d.shot.json": "{\n  \"shot_id\": \"d\",\n  \"session_id\": \"range\",\n  \"timestamp\": \"2026-08-04T08:00:00-05:00\",\n  \"source\": \"screen\",\n  \"club_head_speed\": null,\n  \"club_face_angle\": null,\n  \"club_path\": null,\n  \"ball_speed\": null,\n  \"launch_angle\": null,\n  \"launch_direction\": null,\n  \"spin_rate\": null,\n  \"spin_axis\": null,\n  \"smash_factor\": null,\n  \"carry_distance\": 128.1,\n  \"total_distance\": null,\n  \"bounce_and_roll\": null,\n  \"apex_height\": null,\n  \"shot_type\": null,\n  \"impact_position\": null,\n  \"provenance\": {\n    \"device\": \"hd_golf\",\n    \"parse_confidence\": 0.95,\n    \"needs_review\": false,\n    \"warnings\": [],\n    \"image_sha256\": null,\n    \"image_path\": null,\n    \"raw_fields\": {}\n  }\n}",
+      "e.shot.json": "{not json",
+      "f.shot.json": "{\"shot_id\": \"f\", \"session_id\": \"range\"}",
+      "g.json": "{\n  \"shot_id\": \"g\",\n  \"session_id\": \"range\",\n  \"timestamp\": \"2026-08-04T12:00:00Z\",\n  \"source\": \"screen\",\n  \"club_head_speed\": null,\n  \"club_face_angle\": null,\n  \"club_path\": null,\n  \"ball_speed\": null,\n  \"launch_angle\": null,\n  \"launch_direction\": null,\n  \"spin_rate\": null,\n  \"spin_axis\": null,\n  \"smash_factor\": null,\n  \"carry_distance\": 128.1,\n  \"total_distance\": null,\n  \"bounce_and_roll\": null,\n  \"apex_height\": null,\n  \"shot_type\": null,\n  \"impact_position\": null,\n  \"provenance\": {\n    \"device\": \"hd_golf\",\n    \"parse_confidence\": 0.95,\n    \"needs_review\": false,\n    \"warnings\": [],\n    \"image_sha256\": null,\n    \"image_path\": null,\n    \"raw_fields\": {}\n  }\n}"
+    },
+    "results": [
+      {
+        "returned": [
+          {
+            "apex_height": null,
+            "ball_speed": null,
+            "bounce_and_roll": null,
+            "carry_distance": 128.1,
+            "club_face_angle": null,
+            "club_head_speed": null,
+            "club_path": null,
+            "impact_position": null,
+            "launch_angle": null,
+            "launch_direction": null,
+            "provenance": {
+              "device": "hd_golf",
+              "image_path": null,
+              "image_sha256": null,
+              "needs_review": false,
+              "parse_confidence": 0.95,
+              "raw_fields": {},
+              "warnings": []
+            },
+            "session_id": "range",
+            "shot_id": "d",
+            "shot_type": null,
+            "smash_factor": null,
+            "source": "screen",
+            "spin_axis": null,
+            "spin_rate": null,
+            "timestamp": "2026-08-04T08:00:00-05:00",
+            "total_distance": null
+          },
+          {
+            "apex_height": null,
+            "ball_speed": null,
+            "bounce_and_roll": null,
+            "carry_distance": 128.1,
+            "club_face_angle": null,
+            "club_head_speed": null,
+            "club_path": null,
+            "impact_position": null,
+            "launch_angle": null,
+            "launch_direction": null,
+            "provenance": {
+              "device": "hd_golf",
+              "image_path": null,
+              "image_sha256": null,
+              "needs_review": false,
+              "parse_confidence": 0.95,
+              "raw_fields": {},
+              "warnings": []
+            },
+            "session_id": "range",
+            "shot_id": "a",
+            "shot_type": null,
+            "smash_factor": null,
+            "source": "screen",
+            "spin_axis": null,
+            "spin_rate": null,
+            "timestamp": "2026-08-04T12:00:00Z",
+            "total_distance": null
+          },
+          {
+            "apex_height": null,
+            "ball_speed": null,
+            "bounce_and_roll": null,
+            "carry_distance": 128.1,
+            "club_face_angle": null,
+            "club_head_speed": null,
+            "club_path": null,
+            "impact_position": null,
+            "launch_angle": null,
+            "launch_direction": null,
+            "provenance": {
+              "device": "hd_golf",
+              "image_path": null,
+              "image_sha256": null,
+              "needs_review": false,
+              "parse_confidence": 0.95,
+              "raw_fields": {},
+              "warnings": []
+            },
+            "session_id": "range",
+            "shot_id": "b",
+            "shot_type": null,
+            "smash_factor": null,
+            "source": "screen",
+            "spin_axis": null,
+            "spin_rate": null,
+            "timestamp": "2026-08-04T12:00:00Z",
+            "total_distance": null
+          },
+          {
+            "apex_height": null,
+            "ball_speed": null,
+            "bounce_and_roll": null,
+            "carry_distance": 128.1,
+            "club_face_angle": null,
+            "club_head_speed": null,
+            "club_path": null,
+            "impact_position": null,
+            "launch_angle": null,
+            "launch_direction": null,
+            "provenance": {
+              "device": "hd_golf",
+              "image_path": null,
+              "image_sha256": null,
+              "needs_review": false,
+              "parse_confidence": 0.95,
+              "raw_fields": {},
+              "warnings": []
+            },
+            "session_id": "range",
+            "shot_id": "c",
+            "shot_type": null,
+            "smash_factor": null,
+            "source": "screen",
+            "spin_axis": null,
+            "spin_rate": null,
+            "timestamp": "2026-08-04T17:00:00+05:30",
+            "total_distance": null
+          }
+        ]
+      },
+      {
+        "raised": {
+          "message": null,
+          "type": "ValidationError"
+        }
+      },
+      {
+        "raised": {
+          "message": null,
+          "type": "ValidationError"
+        }
+      },
+      {
+        "returned": null
+      },
+      {
+        "returned": true
+      }
+    ]
+  },
+  "id": "storage/stores/shot-all-order",
+  "input": {
+    "files": {
+      "a.shot.json": "{\n  \"shot_id\": \"a\",\n  \"session_id\": \"range\",\n  \"timestamp\": \"2026-08-04T12:00:00Z\",\n  \"source\": \"screen\",\n  \"club_head_speed\": null,\n  \"club_face_angle\": null,\n  \"club_path\": null,\n  \"ball_speed\": null,\n  \"launch_angle\": null,\n  \"launch_direction\": null,\n  \"spin_rate\": null,\n  \"spin_axis\": null,\n  \"smash_factor\": null,\n  \"carry_distance\": 128.1,\n  \"total_distance\": null,\n  \"bounce_and_roll\": null,\n  \"apex_height\": null,\n  \"shot_type\": null,\n  \"impact_position\": null,\n  \"provenance\": {\n    \"device\": \"hd_golf\",\n    \"parse_confidence\": 0.95,\n    \"needs_review\": false,\n    \"warnings\": [],\n    \"image_sha256\": null,\n    \"image_path\": null,\n    \"raw_fields\": {}\n  }\n}",
+      "b.shot.json": "{\n  \"shot_id\": \"b\",\n  \"session_id\": \"range\",\n  \"timestamp\": \"2026-08-04T12:00:00Z\",\n  \"source\": \"screen\",\n  \"club_head_speed\": null,\n  \"club_face_angle\": null,\n  \"club_path\": null,\n  \"ball_speed\": null,\n  \"launch_angle\": null,\n  \"launch_direction\": null,\n  \"spin_rate\": null,\n  \"spin_axis\": null,\n  \"smash_factor\": null,\n  \"carry_distance\": 128.1,\n  \"total_distance\": null,\n  \"bounce_and_roll\": null,\n  \"apex_height\": null,\n  \"shot_type\": null,\n  \"impact_position\": null,\n  \"provenance\": {\n    \"device\": \"hd_golf\",\n    \"parse_confidence\": 0.95,\n    \"needs_review\": false,\n    \"warnings\": [],\n    \"image_sha256\": null,\n    \"image_path\": null,\n    \"raw_fields\": {}\n  }\n}",
+      "c.shot.json": "{\n  \"shot_id\": \"c\",\n  \"session_id\": \"range\",\n  \"timestamp\": \"2026-08-04T17:00:00+05:30\",\n  \"source\": \"screen\",\n  \"club_head_speed\": null,\n  \"club_face_angle\": null,\n  \"club_path\": null,\n  \"ball_speed\": null,\n  \"launch_angle\": null,\n  \"launch_direction\": null,\n  \"spin_rate\": null,\n  \"spin_axis\": null,\n  \"smash_factor\": null,\n  \"carry_distance\": 128.1,\n  \"total_distance\": null,\n  \"bounce_and_roll\": null,\n  \"apex_height\": null,\n  \"shot_type\": null,\n  \"impact_position\": null,\n  \"provenance\": {\n    \"device\": \"hd_golf\",\n    \"parse_confidence\": 0.95,\n    \"needs_review\": false,\n    \"warnings\": [],\n    \"image_sha256\": null,\n    \"image_path\": null,\n    \"raw_fields\": {}\n  }\n}",
+      "d.shot.json": "{\n  \"shot_id\": \"d\",\n  \"session_id\": \"range\",\n  \"timestamp\": \"2026-08-04T08:00:00-05:00\",\n  \"source\": \"screen\",\n  \"club_head_speed\": null,\n  \"club_face_angle\": null,\n  \"club_path\": null,\n  \"ball_speed\": null,\n  \"launch_angle\": null,\n  \"launch_direction\": null,\n  \"spin_rate\": null,\n  \"spin_axis\": null,\n  \"smash_factor\": null,\n  \"carry_distance\": 128.1,\n  \"total_distance\": null,\n  \"bounce_and_roll\": null,\n  \"apex_height\": null,\n  \"shot_type\": null,\n  \"impact_position\": null,\n  \"provenance\": {\n    \"device\": \"hd_golf\",\n    \"parse_confidence\": 0.95,\n    \"needs_review\": false,\n    \"warnings\": [],\n    \"image_sha256\": null,\n    \"image_path\": null,\n    \"raw_fields\": {}\n  }\n}",
+      "e.shot.json": "{not json",
+      "f.shot.json": "{\"shot_id\": \"f\", \"session_id\": \"range\"}",
+      "g.json": "{\n  \"shot_id\": \"g\",\n  \"session_id\": \"range\",\n  \"timestamp\": \"2026-08-04T12:00:00Z\",\n  \"source\": \"screen\",\n  \"club_head_speed\": null,\n  \"club_face_angle\": null,\n  \"club_path\": null,\n  \"ball_speed\": null,\n  \"launch_angle\": null,\n  \"launch_direction\": null,\n  \"spin_rate\": null,\n  \"spin_axis\": null,\n  \"smash_factor\": null,\n  \"carry_distance\": 128.1,\n  \"total_distance\": null,\n  \"bounce_and_roll\": null,\n  \"apex_height\": null,\n  \"shot_type\": null,\n  \"impact_position\": null,\n  \"provenance\": {\n    \"device\": \"hd_golf\",\n    \"parse_confidence\": 0.95,\n    \"needs_review\": false,\n    \"warnings\": [],\n    \"image_sha256\": null,\n    \"image_path\": null,\n    \"raw_fields\": {}\n  }\n}"
+    },
+    "ops": [
+      {
+        "args": {},
+        "now": null,
+        "op": "shot.all"
+      },
+      {
+        "args": {
+          "key": "e"
+        },
+        "now": null,
+        "op": "shot.get"
+      },
+      {
+        "args": {
+          "key": "f"
+        },
+        "now": null,
+        "op": "shot.get"
+      },
+      {
+        "args": {
+          "key": "g"
+        },
+        "now": null,
+        "op": "shot.get"
+      },
+      {
+        "args": {
+          "key": "e"
+        },
+        "now": null,
+        "op": "shot.has"
+      }
+    ]
+  },
+  "provenance": {
+    "kind": "storage",
+    "note": "`all` is newest first by instant, not by spelling: 08:00-05:00 is 13:00Z and leads, 17:00+05:30 is 11:30Z and trails. Two shots at one instant keep the files' sorted order (a stable sort, reversed by `reverse=True` and not by reversing the list). Unreadable files are skipped (`test_unreadable_files_are_skipped_not_fatal`), but `get` on one raises, unlike every other reader here; `g.json` is not a `.shot.json` and is never seen",
+    "oracle": "python",
+    "pydantic_version": "2.13.4",
+    "python_version": "3.13.3",
+    "recorded_by": "scripts/conformance_vectors.py::_run_ops",
+    "rerecords": [
+      {
+        "added": [],
+        "by": "golf-core rerecord",
+        "career_version": 1,
+        "declaration": "spec/declarations/career-v1.json",
+        "moved": [
+          "career_version"
+        ]
+      }
+    ],
+    "source": "tests/launch_monitor/test_screen_store.py, as store calls"
+  }
+}

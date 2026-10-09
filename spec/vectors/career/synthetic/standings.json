@@ -1,0 +1,2752 @@
+{
+  "career_version": 1,
+  "expected": {
+    "bag_profile": {
+      "clubs": [],
+      "mishits_excluded": 0,
+      "player_id": "aaron",
+      "untagged_swings": 12
+    },
+    "baseline": {
+      "built_from_sessions": 3,
+      "built_from_swings": 12,
+      "metrics": {
+        "backswing_ms": {
+          "maximum": 960.6123112941475,
+          "mean": 905.7109355266131,
+          "mean_ci": {
+            "confidence": 0.95,
+            "high": 932.8760722715867,
+            "low": 878.5457987816394
+          },
+          "median": 905.9151334876486,
+          "minimum": 842.1342553752492,
+          "n": 12,
+          "n_sessions": 3,
+          "name": "backswing_ms",
+          "ready": [
+            "center",
+            "spread",
+            "trend"
+          ],
+          "sd": 42.75456341376704,
+          "sd_ci": {
+            "confidence": 0.95,
+            "high": 72.58963883051835,
+            "low": 30.287159431796912
+          },
+          "sessions": [
+            {
+              "captured_at": "2026-08-03T12:01:00Z",
+              "mean": 929.3395515104854,
+              "n": 4,
+              "session_id": "2026-08-03"
+            },
+            {
+              "captured_at": "2026-08-10T12:02:00Z",
+              "mean": 868.8548890899337,
+              "n": 4,
+              "session_id": "2026-08-10"
+            },
+            {
+              "captured_at": "2026-08-17T12:03:00Z",
+              "mean": 918.9383659794203,
+              "n": 4,
+              "session_id": "2026-08-17"
+            }
+          ],
+          "source": "pose:face_on",
+          "unit": "ms",
+          "withheld": []
+        },
+        "downswing_ms": {
+          "maximum": 270.8446,
+          "mean": 266.8446,
+          "mean_ci": {
+            "confidence": 0.95,
+            "high": 269.49910587766266,
+            "low": 264.19009412233737
+          },
+          "median": 266.8446,
+          "minimum": 262.8446,
+          "n": 12,
+          "n_sessions": 3,
+          "name": "downswing_ms",
+          "ready": [
+            "center",
+            "spread",
+            "trend"
+          ],
+          "sd": 4.177863742936748,
+          "sd_ci": {
+            "confidence": 0.95,
+            "high": 7.093269021319086,
+            "low": 2.9595817420019404
+          },
+          "sessions": [
+            {
+              "captured_at": "2026-08-03T12:01:00Z",
+              "mean": 266.8446,
+              "n": 4,
+              "session_id": "2026-08-03"
+            },
+            {
+              "captured_at": "2026-08-10T12:02:00Z",
+              "mean": 266.8446,
+              "n": 4,
+              "session_id": "2026-08-10"
+            },
+            {
+              "captured_at": "2026-08-17T12:03:00Z",
+              "mean": 266.8446,
+              "n": 4,
+              "session_id": "2026-08-17"
+            }
+          ],
+          "source": "pose:face_on",
+          "unit": "ms",
+          "withheld": []
+        },
+        "face_to_path_deg": {
+          "maximum": 9.1,
+          "mean": 8.6,
+          "mean_ci": {
+            "confidence": 0.95,
+            "high": 8.931813234707828,
+            "low": 8.268186765292171
+          },
+          "median": 8.6,
+          "minimum": 8.1,
+          "n": 12,
+          "n_sessions": 3,
+          "name": "face_to_path_deg",
+          "ready": [
+            "center",
+            "spread",
+            "trend"
+          ],
+          "sd": 0.5222329678670935,
+          "sd_ci": {
+            "confidence": 0.95,
+            "high": 0.8866586276648858,
+            "low": 0.36994771775024254
+          },
+          "sessions": [
+            {
+              "captured_at": "2026-08-03T12:01:00Z",
+              "mean": 8.6,
+              "n": 4,
+              "session_id": "2026-08-03"
+            },
+            {
+              "captured_at": "2026-08-10T12:02:00Z",
+              "mean": 8.6,
+              "n": 4,
+              "session_id": "2026-08-10"
+            },
+            {
+              "captured_at": "2026-08-17T12:03:00Z",
+              "mean": 8.6,
+              "n": 4,
+              "session_id": "2026-08-17"
+            }
+          ],
+          "source": "launch_monitor:hd_golf",
+          "unit": "degrees",
+          "withheld": []
+        },
+        "finish_balance_norm": {
+          "maximum": 0.043250000000000004,
+          "mean": 0.04225,
+          "mean_ci": {
+            "confidence": 0.95,
+            "high": 0.04291362646941566,
+            "low": 0.04158637353058434
+          },
+          "median": 0.04225,
+          "minimum": 0.04125,
+          "n": 12,
+          "n_sessions": 3,
+          "name": "finish_balance_norm",
+          "ready": [
+            "center",
+            "spread",
+            "trend"
+          ],
+          "sd": 0.001044465935734188,
+          "sd_ci": {
+            "confidence": 0.95,
+            "high": 0.0017733172553297731,
+            "low": 0.0007398954355004857
+          },
+          "sessions": [
+            {
+              "captured_at": "2026-08-03T12:01:00Z",
+              "mean": 0.04225,
+              "n": 4,
+              "session_id": "2026-08-03"
+            },
+            {
+              "captured_at": "2026-08-10T12:02:00Z",
+              "mean": 0.04225,
+              "n": 4,
+              "session_id": "2026-08-10"
+            },
+            {
+              "captured_at": "2026-08-17T12:03:00Z",
+              "mean": 0.04225,
+              "n": 4,
+              "session_id": "2026-08-17"
+            }
+          ],
+          "source": "pose:face_on",
+          "unit": "shoulder_widths",
+          "withheld": []
+        },
+        "flight_carry_yds": {
+          "maximum": 153.97091174077644,
+          "mean": 150.34082524683419,
+          "mean_ci": {
+            "confidence": 0.95,
+            "high": 152.1479075940223,
+            "low": 148.53374289964606
+          },
+          "median": 150.34713428499492,
+          "minimum": 146.17364640903847,
+          "n": 12,
+          "n_sessions": 3,
+          "name": "flight_carry_yds",
+          "ready": [
+            "center",
+            "spread",
+            "trend"
+          ],
+          "sd": 2.8441239789102,
+          "sd_ci": {
+            "confidence": 0.95,
+            "high": 4.828816293135852,
+            "low": 2.0147658990083963
+          },
+          "sessions": [
+            {
+              "captured_at": "2026-08-03T12:01:00Z",
+              "mean": 151.34944427349396,
+              "n": 4,
+              "session_id": "2026-08-03"
+            },
+            {
+              "captured_at": "2026-08-10T12:02:00Z",
+              "mean": 147.84621061862094,
+              "n": 4,
+              "session_id": "2026-08-10"
+            },
+            {
+              "captured_at": "2026-08-17T12:03:00Z",
+              "mean": 151.82682084838768,
+              "n": 4,
+              "session_id": "2026-08-17"
+            }
+          ],
+          "source": "model:flight_v1",
+          "unit": "yards",
+          "withheld": []
+        },
+        "flight_spin_rpm": {
+          "maximum": 6449.997231337775,
+          "mean": 6124.2871288347715,
+          "mean_ci": {
+            "confidence": 0.95,
+            "high": 6286.237775606104,
+            "low": 5962.336482063439
+          },
+          "median": 6167.707696444319,
+          "minimum": 5755.594687011539,
+          "n": 12,
+          "n_sessions": 3,
+          "name": "flight_spin_rpm",
+          "ready": [
+            "center",
+            "spread",
+            "trend"
+          ],
+          "sd": 254.89027580789568,
+          "sd_ci": {
+            "confidence": 0.95,
+            "high": 432.7583206322382,
+            "low": 180.56323827464468
+          },
+          "sessions": [
+            {
+              "captured_at": "2026-08-03T12:01:00Z",
+              "mean": 6289.939256793916,
+              "n": 4,
+              "session_id": "2026-08-03"
+            },
+            {
+              "captured_at": "2026-08-10T12:02:00Z",
+              "mean": 5946.521463200279,
+              "n": 4,
+              "session_id": "2026-08-10"
+            },
+            {
+              "captured_at": "2026-08-17T12:03:00Z",
+              "mean": 6136.400666510119,
+              "n": 4,
+              "session_id": "2026-08-17"
+            }
+          ],
+          "source": "model:flight_v1",
+          "unit": "rpm",
+          "withheld": []
+        },
+        "hand_height_norm": {
+          "maximum": 0.6499019595550165,
+          "mean": 0.60130954908997,
+          "mean_ci": {
+            "confidence": 0.95,
+            "high": 0.6253413851281534,
+            "low": 0.5772777130517867
+          },
+          "median": 0.6043623938734506,
+          "minimum": 0.5503156741631282,
+          "n": 12,
+          "n_sessions": 3,
+          "name": "hand_height_norm",
+          "ready": [
+            "center",
+            "spread",
+            "trend"
+          ],
+          "sd": 0.037823135863060776,
+          "sd_ci": {
+            "confidence": 0.95,
+            "high": 0.06421695258974697,
+            "low": 0.026793756142675672
+          },
+          "sessions": [
+            {
+              "captured_at": "2026-08-03T12:01:00Z",
+              "mean": 0.5885413392426443,
+              "n": 4,
+              "session_id": "2026-08-03"
+            },
+            {
+              "captured_at": "2026-08-10T12:02:00Z",
+              "mean": 0.5917245187949816,
+              "n": 4,
+              "session_id": "2026-08-10"
+            },
+            {
+              "captured_at": "2026-08-17T12:03:00Z",
+              "mean": 0.6236627892322842,
+              "n": 4,
+              "session_id": "2026-08-17"
+            }
+          ],
+          "source": "pose:face_on",
+          "unit": "shoulder_widths",
+          "withheld": []
+        },
+        "head_hip_gain_norm": {
+          "maximum": -0.1590333333333333,
+          "mean": -0.1610333333333333,
+          "mean_ci": {
+            "confidence": 0.95,
+            "high": -0.159706080394502,
+            "low": -0.16236058627216463
+          },
+          "median": -0.1610333333333333,
+          "minimum": -0.1630333333333333,
+          "n": 12,
+          "n_sessions": 3,
+          "name": "head_hip_gain_norm",
+          "ready": [
+            "center",
+            "spread",
+            "trend"
+          ],
+          "sd": 0.002088931871468376,
+          "sd_ci": {
+            "confidence": 0.95,
+            "high": 0.0035466345106595462,
+            "low": 0.0014797908710009714
+          },
+          "sessions": [
+            {
+              "captured_at": "2026-08-03T12:01:00Z",
+              "mean": -0.1610333333333333,
+              "n": 4,
+              "session_id": "2026-08-03"
+            },
+            {
+              "captured_at": "2026-08-10T12:02:00Z",
+              "mean": -0.1610333333333333,
+              "n": 4,
+              "session_id": "2026-08-10"
+            },
+            {
+              "captured_at": "2026-08-17T12:03:00Z",
+              "mean": -0.1610333333333333,
+              "n": 4,
+              "session_id": "2026-08-17"
+            }
+          ],
+          "source": "pose:face_on",
+          "unit": "shoulder_widths",
+          "withheld": []
+        },
+        "head_hip_offset_impact_norm": {
+          "maximum": 0.15000000000000002,
+          "mean": 0.14,
+          "mean_ci": {
+            "confidence": 0.95,
+            "high": 0.1466362646941566,
+            "low": 0.13336373530584342
+          },
+          "median": 0.14,
+          "minimum": 0.13,
+          "n": 12,
+          "n_sessions": 3,
+          "name": "head_hip_offset_impact_norm",
+          "ready": [
+            "center",
+            "spread",
+            "trend"
+          ],
+          "sd": 0.01044465935734188,
+          "sd_ci": {
+            "confidence": 0.95,
+            "high": 0.017733172553297736,
+            "low": 0.007398954355004858
+          },
+          "sessions": [
+            {
+              "captured_at": "2026-08-03T12:01:00Z",
+              "mean": 0.14,
+              "n": 4,
+              "session_id": "2026-08-03"
+            },
+            {
+              "captured_at": "2026-08-10T12:02:00Z",
+              "mean": 0.14,
+              "n": 4,
+              "session_id": "2026-08-10"
+            },
+            {
+              "captured_at": "2026-08-17T12:03:00Z",
+              "mean": 0.14,
+              "n": 4,
+              "session_id": "2026-08-17"
+            }
+          ],
+          "source": "pose:face_on",
+          "unit": "shoulder_widths",
+          "withheld": []
+        },
+        "head_sway_norm": {
+          "maximum": 0.14305,
+          "mean": 0.14105,
+          "mean_ci": {
+            "confidence": 0.95,
+            "high": 0.14237725293883133,
+            "low": 0.1397227470611687
+          },
+          "median": 0.14105,
+          "minimum": 0.13905,
+          "n": 12,
+          "n_sessions": 3,
+          "name": "head_sway_norm",
+          "ready": [
+            "center",
+            "spread",
+            "trend"
+          ],
+          "sd": 0.002088931871468376,
+          "sd_ci": {
+            "confidence": 0.95,
+            "high": 0.0035466345106595462,
+            "low": 0.0014797908710009714
+          },
+          "sessions": [
+            {
+              "captured_at": "2026-08-03T12:01:00Z",
+              "mean": 0.14105,
+              "n": 4,
+              "session_id": "2026-08-03"
+            },
+            {
+              "captured_at": "2026-08-10T12:02:00Z",
+              "mean": 0.14105,
+              "n": 4,
+              "session_id": "2026-08-10"
+            },
+            {
+              "captured_at": "2026-08-17T12:03:00Z",
+              "mean": 0.14105,
+              "n": 4,
+              "session_id": "2026-08-17"
+            }
+          ],
+          "source": "pose:face_on",
+          "unit": "shoulder_widths",
+          "withheld": []
+        },
+        "hip_shift_at_top_norm": {
+          "maximum": null,
+          "mean": null,
+          "mean_ci": null,
+          "median": null,
+          "minimum": null,
+          "n": 3,
+          "n_sessions": 3,
+          "name": "hip_shift_at_top_norm",
+          "ready": [],
+          "sd": null,
+          "sd_ci": null,
+          "sessions": [
+            {
+              "captured_at": "2026-08-03T12:01:00Z",
+              "mean": null,
+              "n": 1,
+              "session_id": "2026-08-03"
+            },
+            {
+              "captured_at": "2026-08-10T12:02:00Z",
+              "mean": null,
+              "n": 1,
+              "session_id": "2026-08-10"
+            },
+            {
+              "captured_at": "2026-08-17T12:03:00Z",
+              "mean": null,
+              "n": 1,
+              "session_id": "2026-08-17"
+            }
+          ],
+          "source": "pose:face_on",
+          "unit": "shoulder_widths",
+          "withheld": [
+            {
+              "claim": "center",
+              "have_n": 3,
+              "have_sessions": 3,
+              "need_n": 6,
+              "need_sessions": 1,
+              "reason": "a typical value for this golfer needs 6 samples (there are 3)"
+            },
+            {
+              "claim": "spread",
+              "have_n": 3,
+              "have_sessions": 3,
+              "need_n": 12,
+              "need_sessions": 1,
+              "reason": "a claim about how repeatable this is needs 12 samples (there are 3)"
+            },
+            {
+              "claim": "trend",
+              "have_n": 3,
+              "have_sessions": 3,
+              "need_n": 14,
+              "need_sessions": 3,
+              "reason": "a claim that this has moved needs 14 samples (there are 3)"
+            }
+          ]
+        },
+        "hip_sway_norm": {
+          "maximum": 0.7015,
+          "mean": 0.6995,
+          "mean_ci": {
+            "confidence": 0.95,
+            "high": 0.7008272529388313,
+            "low": 0.6981727470611687
+          },
+          "median": 0.6995,
+          "minimum": 0.6975,
+          "n": 12,
+          "n_sessions": 3,
+          "name": "hip_sway_norm",
+          "ready": [
+            "center",
+            "spread",
+            "trend"
+          ],
+          "sd": 0.002088931871468376,
+          "sd_ci": {
+            "confidence": 0.95,
+            "high": 0.0035466345106595462,
+            "low": 0.0014797908710009714
+          },
+          "sessions": [
+            {
+              "captured_at": "2026-08-03T12:01:00Z",
+              "mean": 0.6995,
+              "n": 4,
+              "session_id": "2026-08-03"
+            },
+            {
+              "captured_at": "2026-08-10T12:02:00Z",
+              "mean": 0.6995,
+              "n": 4,
+              "session_id": "2026-08-10"
+            },
+            {
+              "captured_at": "2026-08-17T12:03:00Z",
+              "mean": 0.6995,
+              "n": 4,
+              "session_id": "2026-08-17"
+            }
+          ],
+          "source": "pose:face_on",
+          "unit": "shoulder_widths",
+          "withheld": []
+        },
+        "tempo_ratio": {
+          "maximum": null,
+          "mean": 4.7106,
+          "mean_ci": {
+            "confidence": 0.95,
+            "high": 4.909687940824697,
+            "low": 4.5115120591753035
+          },
+          "median": 4.7106,
+          "minimum": null,
+          "n": 12,
+          "n_sessions": 3,
+          "name": "tempo_ratio",
+          "ready": [
+            "center"
+          ],
+          "sd": null,
+          "sd_ci": null,
+          "sessions": [
+            {
+              "captured_at": "2026-08-03T12:01:00Z",
+              "mean": null,
+              "n": 4,
+              "session_id": "2026-08-03"
+            },
+            {
+              "captured_at": "2026-08-10T12:02:00Z",
+              "mean": null,
+              "n": 4,
+              "session_id": "2026-08-10"
+            },
+            {
+              "captured_at": "2026-08-17T12:03:00Z",
+              "mean": null,
+              "n": 4,
+              "session_id": "2026-08-17"
+            }
+          ],
+          "source": "pose:face_on",
+          "unit": "ratio",
+          "withheld": [
+            {
+              "claim": "spread",
+              "have_n": 12,
+              "have_sessions": 3,
+              "need_n": 15,
+              "need_sessions": 1,
+              "reason": "a claim about how repeatable this is needs 15 samples (there are 12)"
+            },
+            {
+              "claim": "trend",
+              "have_n": 12,
+              "have_sessions": 3,
+              "need_n": 18,
+              "need_sessions": 3,
+              "reason": "a claim that this has moved needs 18 samples (there are 12)"
+            }
+          ]
+        }
+      },
+      "player_id": "aaron"
+    },
+    "dispersion": {
+      "built_from_sessions": 3,
+      "built_from_swings": 12,
+      "metrics": {
+        "backswing_ms": {
+          "bias": "withheld",
+          "caveats": [],
+          "center": null,
+          "center_ci": null,
+          "n": 12,
+          "n_sessions": 3,
+          "name": "backswing_ms",
+          "offset": null,
+          "pattern": null,
+          "points_at": null,
+          "scatter": "not_established",
+          "sd": 42.75456341376704,
+          "sd_ci": {
+            "confidence": 0.95,
+            "high": 72.58963883051835,
+            "low": 30.287159431796912
+          },
+          "source": "pose:face_on",
+          "target": null,
+          "tolerance": 300.0,
+          "unavailable": [
+            "no target for backswing_ms: there is a tour median (about 901 ms) and it is deliberately not a target. Tempo is already scored once, as a ratio, and declaring a target for each half would put a second verdict on one fundamental and count it twice — ADR-023 is explicit that these ship as distributions and never as a band. The tour distribution is still readable where it belongs, in `analysis/tempo_trainer.py`, which builds a metronome from it rather than a judgment"
+          ],
+          "unit": "ms",
+          "withheld": [],
+          "within_session_sd": 36.11847995011355
+        },
+        "downswing_ms": {
+          "bias": "withheld",
+          "caveats": [],
+          "center": null,
+          "center_ci": null,
+          "n": 12,
+          "n_sessions": 3,
+          "name": "downswing_ms",
+          "offset": null,
+          "pattern": null,
+          "points_at": null,
+          "scatter": "not_established",
+          "sd": 4.177863742936748,
+          "sd_ci": {
+            "confidence": 0.95,
+            "high": 7.093269021319086,
+            "low": 2.9595817420019404
+          },
+          "source": "pose:face_on",
+          "target": null,
+          "tolerance": 100.0,
+          "unavailable": [
+            "no target for downswing_ms: the same reason as `backswing_ms` — one fundamental is scored once. Worth noting what the corpus says about this half in particular: tour downswing duration barely moves at all (p10 200 ms, p90 300 ms, and a between-club sd of 6.9 ms against 47.0 ms between golfers), so it looks more like a constant than any other quantity here. That is a reason it makes a good metronome, not a reason to score it"
+          ],
+          "unit": "ms",
+          "withheld": [],
+          "within_session_sd": 4.618802153517006
+        },
+        "face_to_path_deg": {
+          "bias": "established",
+          "caveats": [],
+          "center": 8.6,
+          "center_ci": {
+            "confidence": 0.95,
+            "high": 8.931813234707828,
+            "low": 8.268186765292171
+          },
+          "n": 12,
+          "n_sessions": 3,
+          "name": "face_to_path_deg",
+          "offset": 8.6,
+          "pattern": "biased",
+          "points_at": "A miss that repeats at about the same size every swing. Whatever produces it is the same every time, which points at something already set before the swing starts rather than at something that happens during it. None of that is visible here, so the test is empirical: change one thing at setup, hit another set, and see whether the center moves.",
+          "scatter": "not_established",
+          "sd": 0.5222329678670935,
+          "sd_ci": {
+            "confidence": 0.95,
+            "high": 0.8866586276648858,
+            "low": 0.36994771775024254
+          },
+          "source": "launch_monitor:hd_golf",
+          "target": 0.0,
+          "tolerance": 2.0,
+          "unavailable": [],
+          "unit": "degrees",
+          "withheld": [],
+          "within_session_sd": 0.5773502691896257
+        },
+        "finish_balance_norm": {
+          "bias": "established",
+          "caveats": [],
+          "center": 0.04225,
+          "center_ci": {
+            "confidence": 0.95,
+            "high": 0.04291362646941566,
+            "low": 0.04158637353058434
+          },
+          "n": 12,
+          "n_sessions": 3,
+          "name": "finish_balance_norm",
+          "offset": 0.04225,
+          "pattern": "biased",
+          "points_at": "A miss that repeats at about the same size every swing. Whatever produces it is the same every time, which points at something already set before the swing starts rather than at something that happens during it. None of that is visible here, so the test is empirical: change one thing at setup, hit another set, and see whether the center moves.",
+          "scatter": "not_established",
+          "sd": 0.001044465935734188,
+          "sd_ci": {
+            "confidence": 0.95,
+            "high": 0.0017733172553297731,
+            "low": 0.0007398954355004857
+          },
+          "source": "pose:face_on",
+          "target": 0.0,
+          "tolerance": 0.024,
+          "unavailable": [],
+          "unit": "shoulder_widths",
+          "withheld": [],
+          "within_session_sd": 0.0011547005383792527
+        },
+        "flight_carry_yds": {
+          "bias": "withheld",
+          "caveats": [],
+          "center": null,
+          "center_ci": null,
+          "n": 12,
+          "n_sessions": 3,
+          "name": "flight_carry_yds",
+          "offset": null,
+          "pattern": null,
+          "points_at": null,
+          "scatter": "withheld",
+          "sd": null,
+          "sd_ci": null,
+          "source": "model:flight_v1",
+          "target": null,
+          "tolerance": null,
+          "unavailable": [
+            "flight_carry_yds is not registered in METRIC_TARGETS, so there is no measurement error to judge either a bias or a spread against"
+          ],
+          "unit": "yards",
+          "withheld": [],
+          "within_session_sd": null
+        },
+        "flight_spin_rpm": {
+          "bias": "withheld",
+          "caveats": [],
+          "center": null,
+          "center_ci": null,
+          "n": 12,
+          "n_sessions": 3,
+          "name": "flight_spin_rpm",
+          "offset": null,
+          "pattern": null,
+          "points_at": null,
+          "scatter": "withheld",
+          "sd": null,
+          "sd_ci": null,
+          "source": "model:flight_v1",
+          "target": null,
+          "tolerance": null,
+          "unavailable": [
+            "flight_spin_rpm is not registered in METRIC_TARGETS, so there is no measurement error to judge either a bias or a spread against"
+          ],
+          "unit": "rpm",
+          "withheld": [],
+          "within_session_sd": null
+        },
+        "hand_height_norm": {
+          "bias": "withheld",
+          "caveats": [],
+          "center": null,
+          "center_ci": null,
+          "n": 12,
+          "n_sessions": 3,
+          "name": "hand_height_norm",
+          "offset": null,
+          "pattern": null,
+          "points_at": null,
+          "scatter": "not_established",
+          "sd": 0.037823135863060776,
+          "sd_ci": {
+            "confidence": 0.95,
+            "high": 0.06421695258974697,
+            "low": 0.026793756142675672
+          },
+          "source": "pose:face_on",
+          "target": null,
+          "tolerance": 0.069,
+          "unavailable": [
+            "no target for hand_height_norm: how far the hands hang below the shoulders at address is set by club length and the golfer's build before posture gets a say - a driver and a wedge are different numbers for the same golfer standing correctly to both. There is no band, and a single value across the bag would be wrong for every club in it. `narrow_to(club=)` (M9 P13) is what makes the per-club version askable"
+          ],
+          "unit": "shoulder_widths",
+          "withheld": [],
+          "within_session_sd": 0.03759168988898485
+        },
+        "head_hip_gain_norm": {
+          "bias": "withheld",
+          "caveats": [],
+          "center": null,
+          "center_ci": null,
+          "n": 12,
+          "n_sessions": 3,
+          "name": "head_hip_gain_norm",
+          "offset": null,
+          "pattern": null,
+          "points_at": null,
+          "scatter": "not_established",
+          "sd": 0.002088931871468376,
+          "sd_ci": {
+            "confidence": 0.95,
+            "high": 0.0035466345106595462,
+            "low": 0.0014797908710009714
+          },
+          "source": "pose:face_on",
+          "target": null,
+          "tolerance": 0.08,
+          "unavailable": [
+            "no target for head_hip_gain_norm: it has a band (a two-sided tour range) rather than a value, and the band is the wrong shape to read a target off: too little head-hip separation is the head drifting forward with the hips, too much is hanging back through impact, and the right amount for one golfer is not a number this repo has. `analysis.comparison` asks the band's own question instead — whether the personal center's interval sits inside it — which needs no point target invented here. Note the sign convention: values live in a right-handed camera frame, so a personal center is only meaningful against a corpus folded the same way"
+          ],
+          "unit": "shoulder_widths",
+          "withheld": [],
+          "within_session_sd": 0.0023094010767585054
+        },
+        "head_hip_offset_impact_norm": {
+          "bias": "withheld",
+          "caveats": [],
+          "center": null,
+          "center_ci": null,
+          "n": 12,
+          "n_sessions": 3,
+          "name": "head_hip_offset_impact_norm",
+          "offset": null,
+          "pattern": null,
+          "points_at": null,
+          "scatter": "not_established",
+          "sd": 0.01044465935734188,
+          "sd_ci": {
+            "confidence": 0.95,
+            "high": 0.017733172553297736,
+            "low": 0.007398954355004858
+          },
+          "source": "pose:face_on",
+          "target": null,
+          "tolerance": 0.073,
+          "unavailable": [
+            "no target for head_hip_offset_impact_norm: career mode step 4 established that the sign is readable here — a personal corpus is single-handed by construction, so the camera-relative ambiguity that blocks a tour band does not apply. A readable sign is not a target: staying behind the ball is right, and how far behind is not established"
+          ],
+          "unit": "shoulder_widths",
+          "withheld": [],
+          "within_session_sd": 0.011547005383792526
+        },
+        "head_sway_norm": {
+          "bias": "established",
+          "caveats": [],
+          "center": 0.14105,
+          "center_ci": {
+            "confidence": 0.95,
+            "high": 0.14237725293883133,
+            "low": 0.1397227470611687
+          },
+          "n": 12,
+          "n_sessions": 3,
+          "name": "head_sway_norm",
+          "offset": 0.14105,
+          "pattern": "biased",
+          "points_at": "A miss that repeats at about the same size every swing. Whatever produces it is the same every time, which points at something already set before the swing starts rather than at something that happens during it. None of that is visible here, so the test is empirical: change one thing at setup, hit another set, and see whether the center moves.",
+          "scatter": "not_established",
+          "sd": 0.002088931871468376,
+          "sd_ci": {
+            "confidence": 0.95,
+            "high": 0.0035466345106595462,
+            "low": 0.0014797908710009714
+          },
+          "source": "pose:face_on",
+          "target": 0.0,
+          "tolerance": 0.06,
+          "unavailable": [],
+          "unit": "shoulder_widths",
+          "withheld": [],
+          "within_session_sd": 0.0023094010767585054
+        },
+        "hip_shift_at_top_norm": {
+          "bias": "withheld",
+          "caveats": [],
+          "center": null,
+          "center_ci": null,
+          "n": 3,
+          "n_sessions": 3,
+          "name": "hip_shift_at_top_norm",
+          "offset": null,
+          "pattern": null,
+          "points_at": null,
+          "scatter": "withheld",
+          "sd": null,
+          "sd_ci": null,
+          "source": "pose:face_on",
+          "target": null,
+          "tolerance": 0.053,
+          "unavailable": [
+            "no target for hip_shift_at_top_norm: same as hip_sway_norm: it has a one-sided band as of 2026-08-12, but a band edge is not a target, and the right amount of hip travel going back is not a number this repo has. Its lower edge is omitted for being unmeasurable, not for being zero"
+          ],
+          "unit": "shoulder_widths",
+          "withheld": [
+            {
+              "claim": "center",
+              "have_n": 3,
+              "have_sessions": 3,
+              "need_n": 6,
+              "need_sessions": 1,
+              "reason": "a typical value for this golfer needs 6 samples (there are 3)"
+            },
+            {
+              "claim": "spread",
+              "have_n": 3,
+              "have_sessions": 3,
+              "need_n": 12,
+              "need_sessions": 1,
+              "reason": "a claim about how repeatable this is needs 12 samples (there are 3)"
+            }
+          ],
+          "within_session_sd": null
+        },
+        "hip_sway_norm": {
+          "bias": "withheld",
+          "caveats": [],
+          "center": null,
+          "center_ci": null,
+          "n": 12,
+          "n_sessions": 3,
+          "name": "hip_sway_norm",
+          "offset": null,
+          "pattern": null,
+          "points_at": null,
+          "scatter": "not_established",
+          "sd": 0.002088931871468376,
+          "sd_ci": {
+            "confidence": 0.95,
+            "high": 0.0035466345106595462,
+            "low": 0.0014797908710009714
+          },
+          "source": "pose:face_on",
+          "target": null,
+          "tolerance": 0.05,
+          "unavailable": [
+            "no target for hip_sway_norm: 'less is better' is not established for it — some lateral hip travel is a weight shift rather than a fault, and nothing here knows how much. It has a two-sided band as of 2026-08-12, which is a range rather than a target: `analysis.comparison` asks whether the personal center sits inside it, so no point value has to be invented here"
+          ],
+          "unit": "shoulder_widths",
+          "withheld": [],
+          "within_session_sd": 0.0023094010767585054
+        },
+        "tempo_ratio": {
+          "bias": "withheld",
+          "caveats": [],
+          "center": null,
+          "center_ci": null,
+          "n": 12,
+          "n_sessions": 3,
+          "name": "tempo_ratio",
+          "offset": null,
+          "pattern": null,
+          "points_at": null,
+          "scatter": "withheld",
+          "sd": null,
+          "sd_ci": null,
+          "source": "pose:face_on",
+          "target": null,
+          "tolerance": 0.943,
+          "unavailable": [
+            "no target for tempo_ratio: its target is a band (2.72-4.71 from 1,399 tour swings), not a value. Reading it would import `benchmarks` into the personal-baseline path, which is the boundary `analysis.baseline` holds on purpose (ADR-010 §2). `analysis.comparison` answers the band's question directly instead — whether the center's interval sits inside it — so no point target has to be invented here (career mode step 6)"
+          ],
+          "unit": "ratio",
+          "withheld": [
+            {
+              "claim": "spread",
+              "have_n": 12,
+              "have_sessions": 3,
+              "need_n": 15,
+              "need_sessions": 1,
+              "reason": "a claim about how repeatable this is needs 15 samples (there are 12)"
+            }
+          ],
+          "within_session_sd": null
+        }
+      },
+      "player_id": "aaron"
+    },
+    "properties": {
+      "bag_profile": {
+        "categories": {},
+        "clubs_declared": [],
+        "clubs_used": []
+      },
+      "baseline": {
+        "claims_ready": 34,
+        "nothing_sayable": false
+      },
+      "dispersion": {
+        "nothing_established": false,
+        "patterns_established": 3
+      },
+      "standing": {
+        "nothing_placed": false,
+        "placements": 7
+      }
+    },
+    "reports": {
+      "career_baseline": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  Built from 12 distinct swings across 3 sessions.\n\n  backswing_ms  (ms)\n    n = 12 over 3 sessions\n    center   905.7   95% CI 878.5 .. 932.9   (median 905.9)\n    spread   sd 42.8   95% CI 30.3 .. 72.6   (range 842.1 .. 960.6)\n    trend    per session:\n               2026-08-03  n=4  mean 929.3\n               2026-08-10  n=4  mean 868.9\n               2026-08-17  n=4  mean 918.9\n    vs tour  inside tour range   tour 700.6 .. 1204.5 (168 players)   51th pct\n             blocked  — backswing_ms: the spread is not placed against the tour spread — the tour sd measures how much 122 players differ from each other, while a personal sd measures how much one golfer varies shot to shot. They are different quantities and comparing them would flatter every golfer alive\n\n  downswing_ms  (ms)\n    n = 12 over 3 sessions\n    center   266.8   95% CI 264.2 .. 269.5   (median 266.8)\n    spread   sd 4.2   95% CI 3.0 .. 7.1   (range 262.8 .. 270.8)\n    trend    per session:\n               2026-08-03  n=4  mean 266.8\n               2026-08-10  n=4  mean 266.8\n               2026-08-17  n=4  mean 266.8\n    vs tour  inside tour range   tour 200.2 .. 300.3 (168 players)   50th pct\n             blocked  — downswing_ms: the spread is not placed against the tour spread — the tour sd measures how much 122 players differ from each other, while a personal sd measures how much one golfer varies shot to shot. They are different quantities and comparing them would flatter every golfer alive\n\n  face_to_path_deg  (degrees)\n    n = 12 over 3 sessions\n    center   8.6   95% CI 8.3 .. 8.9   (median 8.6)\n    spread   sd 0.5   95% CI 0.4 .. 0.9   (range 8.1 .. 9.1)\n    trend    per session:\n               2026-08-03  n=4  mean 8.6\n               2026-08-10  n=4  mean 8.6\n               2026-08-17  n=4  mean 8.6\n    vs tour  withheld\n             blocked  — face_to_path_deg: no tour population exists for it. Every distribution in this repo comes from GolfDB, which is pose estimated from broadcast video and contains no ball flight — a launch-monitor reference would have to be acquired, not derived\n\n  finish_balance_norm  (shoulder_widths)\n    n = 12 over 3 sessions\n    center   0.042   95% CI 0.042 .. 0.043   (median 0.042)\n    spread   sd 0.001   95% CI 0.001 .. 0.002   (range 0.041 .. 0.043)\n    trend    per session:\n               2026-08-03  n=4  mean 0.042\n               2026-08-10  n=4  mean 0.042\n               2026-08-17  n=4  mean 0.042\n    vs tour  below tour range   tour 0.085 .. 0.287 (122 players)   at least 10th pct   -0.042 past the edge\n             blocked  — finish_balance_norm: the spread is not placed against the tour spread — the tour sd measures how much 122 players differ from each other, while a personal sd measures how much one golfer varies shot to shot. They are different quantities and comparing them would flatter every golfer alive\n\n  flight_carry_yds  (yards)\n    n = 12 over 3 sessions\n    center   150.3   95% CI 148.5 .. 152.1   (median 150.3)\n    spread   sd 2.8   95% CI 2.0 .. 4.8   (range 146.2 .. 154.0)\n    trend    per session:\n               2026-08-03  n=4  mean 151.3\n               2026-08-10  n=4  mean 147.8\n               2026-08-17  n=4  mean 151.8\n    vs tour  withheld\n             blocked  — flight_carry_yds: it is a model output rather than a reading, and no population of model outputs is a population of swings — compare the measured quantity beside it instead\n\n  flight_spin_rpm  (rpm)\n    n = 12 over 3 sessions\n    center   6124.287   95% CI 5962.336 .. 6286.238   (median 6167.708)\n    spread   sd 254.890   95% CI 180.563 .. 432.758   (range 5755.595 .. 6449.997)\n    trend    per session:\n               2026-08-03  n=4  mean 6289.939\n               2026-08-10  n=4  mean 5946.521\n               2026-08-17  n=4  mean 6136.401\n    vs tour  withheld\n             blocked  — flight_spin_rpm: it is a model output rather than a reading, and no population of model outputs is a population of swings — compare the measured quantity beside it instead\n\n  hand_height_norm  (shoulder_widths)\n    n = 12 over 3 sessions\n    center   0.601   95% CI 0.577 .. 0.625   (median 0.604)\n    spread   sd 0.038   95% CI 0.027 .. 0.064   (range 0.550 .. 0.650)\n    trend    per session:\n               2026-08-03  n=4  mean 0.589\n               2026-08-10  n=4  mean 0.592\n               2026-08-17  n=4  mean 0.624\n    vs tour  withheld\n             blocked  — hand_height_norm: no reference distribution is stored for it\n\n  head_hip_gain_norm  (shoulder_widths)\n    n = 12 over 3 sessions\n    center   -0.161   95% CI -0.162 .. -0.160   (median -0.161)\n    spread   sd 0.002   95% CI 0.001 .. 0.004   (range -0.163 .. -0.159)\n    trend    per session:\n               2026-08-03  n=4  mean -0.161\n               2026-08-10  n=4  mean -0.161\n               2026-08-17  n=4  mean -0.161\n    vs tour  inside tour range   tour -0.674 .. -0.137 (122 players)   88th pct\n             blocked  — head_hip_gain_norm: the spread is not placed against the tour spread — the tour sd measures how much 122 players differ from each other, while a personal sd measures how much one golfer varies shot to shot. They are different quantities and comparing them would flatter every golfer alive\n\n  head_hip_offset_impact_norm  (shoulder_widths)\n    n = 12 over 3 sessions\n    center   0.140   95% CI 0.133 .. 0.147   (median 0.140)\n    spread   sd 0.010   95% CI 0.007 .. 0.018   (range 0.130 .. 0.150)\n    trend    per session:\n               2026-08-03  n=4  mean 0.140\n               2026-08-10  n=4  mean 0.140\n               2026-08-17  n=4  mean 0.140\n    vs tour  withheld\n             blocked  — head_hip_offset_impact_norm has a stored distribution and may not be placed in it: its sign is camera-relative, and the tour distribution is cut from GolfDB's mixed-handedness population — the reason M6.5 blocked this metric from becoming a checkpoint. A personal baseline reads the sign because one golfer swings from one side; averaging left- and right-handed swings puts the two signs in one number, so placing a personal center in that population would compare a real quantity against a meaningless one\n\n  head_sway_norm  (shoulder_widths)\n    n = 12 over 3 sessions\n    center   0.141   95% CI 0.140 .. 0.142   (median 0.141)\n    spread   sd 0.002   95% CI 0.001 .. 0.004   (range 0.139 .. 0.143)\n    trend    per session:\n               2026-08-03  n=4  mean 0.141\n               2026-08-10  n=4  mean 0.141\n               2026-08-17  n=4  mean 0.141\n    vs tour  inside tour range   tour 0.029 .. 0.431 (122 players)   42th pct\n             blocked  — head_sway_norm: the spread is not placed against the tour spread — the tour sd measures how much 122 players differ from each other, while a personal sd measures how much one golfer varies shot to shot. They are different quantities and comparing them would flatter every golfer alive\n\n  hip_shift_at_top_norm  (shoulder_widths)\n    n = 3 over 3 sessions\n    center   withheld — a typical value for this golfer needs 6 samples (there are 3)\n    spread   withheld — a claim about how repeatable this is needs 12 samples (there are 3)\n    trend    withheld — a claim that this has moved needs 14 samples (there are 3)\n    vs tour  withheld   tour 0.015 .. 0.207 (122 players)\n\n  hip_sway_norm  (shoulder_widths)\n    n = 12 over 3 sessions\n    center   0.700   95% CI 0.698 .. 0.701   (median 0.700)\n    spread   sd 0.002   95% CI 0.001 .. 0.004   (range 0.698 .. 0.702)\n    trend    per session:\n               2026-08-03  n=4  mean 0.700\n               2026-08-10  n=4  mean 0.700\n               2026-08-17  n=4  mean 0.700\n    vs tour  above tour range   tour 0.141 .. 0.499 (122 players)   at least 90th pct   +0.200 past the edge\n             blocked  — hip_sway_norm: the spread is not placed against the tour spread — the tour sd measures how much 122 players differ from each other, while a personal sd measures how much one golfer varies shot to shot. They are different quantities and comparing them would flatter every golfer alive\n\n  tempo_ratio  (ratio)\n    n = 12 over 3 sessions\n    center   4.711   95% CI 4.512 .. 4.910   (median 4.711)\n    spread   withheld — a claim about how repeatable this is needs 15 samples (there are 12)\n    trend    withheld — a claim that this has moved needs 18 samples (there are 12)\n    vs tour  cannot tell   tour 2.718 .. 4.711 (246 players)   at least 90th pct\n",
+      "career_baseline_verbose": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  Built from 12 distinct swings across 3 sessions.\n\n  backswing_ms  (ms)\n    n = 12 over 3 sessions\n    center   905.7   95% CI 878.5 .. 932.9   (median 905.9)\n    spread   sd 42.8   95% CI 30.3 .. 72.6   (range 842.1 .. 960.6)\n    trend    per session:\n               2026-08-03  n=4  mean 929.3\n               2026-08-10  n=4  mean 868.9\n               2026-08-17  n=4  mean 918.9\n    vs tour  inside tour range   tour 700.6 .. 1204.5 (168 players)   51th pct\n             blocked  — backswing_ms: the spread is not placed against the tour spread — the tour sd measures how much 122 players differ from each other, while a personal sd measures how much one golfer varies shot to shot. They are different quantities and comparing them would flatter every golfer alive\n\n  downswing_ms  (ms)\n    n = 12 over 3 sessions\n    center   266.8   95% CI 264.2 .. 269.5   (median 266.8)\n    spread   sd 4.2   95% CI 3.0 .. 7.1   (range 262.8 .. 270.8)\n    trend    per session:\n               2026-08-03  n=4  mean 266.8\n               2026-08-10  n=4  mean 266.8\n               2026-08-17  n=4  mean 266.8\n    vs tour  inside tour range   tour 200.2 .. 300.3 (168 players)   50th pct\n             blocked  — downswing_ms: the spread is not placed against the tour spread — the tour sd measures how much 122 players differ from each other, while a personal sd measures how much one golfer varies shot to shot. They are different quantities and comparing them would flatter every golfer alive\n\n  face_to_path_deg  (degrees)\n    n = 12 over 3 sessions\n    center   8.6   95% CI 8.3 .. 8.9   (median 8.6)\n    spread   sd 0.5   95% CI 0.4 .. 0.9   (range 8.1 .. 9.1)\n    trend    per session:\n               2026-08-03  n=4  mean 8.6\n               2026-08-10  n=4  mean 8.6\n               2026-08-17  n=4  mean 8.6\n    vs tour  withheld\n             blocked  — face_to_path_deg: no tour population exists for it. Every distribution in this repo comes from GolfDB, which is pose estimated from broadcast video and contains no ball flight — a launch-monitor reference would have to be acquired, not derived\n\n  finish_balance_norm  (shoulder_widths)\n    n = 12 over 3 sessions\n    center   0.042   95% CI 0.042 .. 0.043   (median 0.042)\n    spread   sd 0.001   95% CI 0.001 .. 0.002   (range 0.041 .. 0.043)\n    trend    per session:\n               2026-08-03  n=4  mean 0.042\n               2026-08-10  n=4  mean 0.042\n               2026-08-17  n=4  mean 0.042\n    vs tour  below tour range   tour 0.085 .. 0.287 (122 players)   at least 10th pct   -0.042 past the edge\n             blocked  — finish_balance_norm: the spread is not placed against the tour spread — the tour sd measures how much 122 players differ from each other, while a personal sd measures how much one golfer varies shot to shot. They are different quantities and comparing them would flatter every golfer alive\n\n  flight_carry_yds  (yards)\n    n = 12 over 3 sessions\n    center   150.3   95% CI 148.5 .. 152.1   (median 150.3)\n    spread   sd 2.8   95% CI 2.0 .. 4.8   (range 146.2 .. 154.0)\n    trend    per session:\n               2026-08-03  n=4  mean 151.3\n               2026-08-10  n=4  mean 147.8\n               2026-08-17  n=4  mean 151.8\n    vs tour  withheld\n             blocked  — flight_carry_yds: it is a model output rather than a reading, and no population of model outputs is a population of swings — compare the measured quantity beside it instead\n\n  flight_spin_rpm  (rpm)\n    n = 12 over 3 sessions\n    center   6124.287   95% CI 5962.336 .. 6286.238   (median 6167.708)\n    spread   sd 254.890   95% CI 180.563 .. 432.758   (range 5755.595 .. 6449.997)\n    trend    per session:\n               2026-08-03  n=4  mean 6289.939\n               2026-08-10  n=4  mean 5946.521\n               2026-08-17  n=4  mean 6136.401\n    vs tour  withheld\n             blocked  — flight_spin_rpm: it is a model output rather than a reading, and no population of model outputs is a population of swings — compare the measured quantity beside it instead\n\n  hand_height_norm  (shoulder_widths)\n    n = 12 over 3 sessions\n    center   0.601   95% CI 0.577 .. 0.625   (median 0.604)\n    spread   sd 0.038   95% CI 0.027 .. 0.064   (range 0.550 .. 0.650)\n    trend    per session:\n               2026-08-03  n=4  mean 0.589\n               2026-08-10  n=4  mean 0.592\n               2026-08-17  n=4  mean 0.624\n    vs tour  withheld\n             blocked  — hand_height_norm: no reference distribution is stored for it\n\n  head_hip_gain_norm  (shoulder_widths)\n    n = 12 over 3 sessions\n    center   -0.161   95% CI -0.162 .. -0.160   (median -0.161)\n    spread   sd 0.002   95% CI 0.001 .. 0.004   (range -0.163 .. -0.159)\n    trend    per session:\n               2026-08-03  n=4  mean -0.161\n               2026-08-10  n=4  mean -0.161\n               2026-08-17  n=4  mean -0.161\n    vs tour  inside tour range   tour -0.674 .. -0.137 (122 players)   88th pct\n             blocked  — head_hip_gain_norm: the spread is not placed against the tour spread — the tour sd measures how much 122 players differ from each other, while a personal sd measures how much one golfer varies shot to shot. They are different quantities and comparing them would flatter every golfer alive\n\n  head_hip_offset_impact_norm  (shoulder_widths)\n    n = 12 over 3 sessions\n    center   0.140   95% CI 0.133 .. 0.147   (median 0.140)\n    spread   sd 0.010   95% CI 0.007 .. 0.018   (range 0.130 .. 0.150)\n    trend    per session:\n               2026-08-03  n=4  mean 0.140\n               2026-08-10  n=4  mean 0.140\n               2026-08-17  n=4  mean 0.140\n    vs tour  withheld\n             blocked  — head_hip_offset_impact_norm has a stored distribution and may not be placed in it: its sign is camera-relative, and the tour distribution is cut from GolfDB's mixed-handedness population — the reason M6.5 blocked this metric from becoming a checkpoint. A personal baseline reads the sign because one golfer swings from one side; averaging left- and right-handed swings puts the two signs in one number, so placing a personal center in that population would compare a real quantity against a meaningless one\n\n  head_sway_norm  (shoulder_widths)\n    n = 12 over 3 sessions\n    center   0.141   95% CI 0.140 .. 0.142   (median 0.141)\n    spread   sd 0.002   95% CI 0.001 .. 0.004   (range 0.139 .. 0.143)\n    trend    per session:\n               2026-08-03  n=4  mean 0.141\n               2026-08-10  n=4  mean 0.141\n               2026-08-17  n=4  mean 0.141\n    vs tour  inside tour range   tour 0.029 .. 0.431 (122 players)   42th pct\n             blocked  — head_sway_norm: the spread is not placed against the tour spread — the tour sd measures how much 122 players differ from each other, while a personal sd measures how much one golfer varies shot to shot. They are different quantities and comparing them would flatter every golfer alive\n\n  hip_shift_at_top_norm  (shoulder_widths)\n    n = 3 over 3 sessions\n    center   withheld — a typical value for this golfer needs 6 samples (there are 3)\n    spread   withheld — a claim about how repeatable this is needs 12 samples (there are 3)\n    trend    withheld — a claim that this has moved needs 14 samples (there are 3)\n    vs tour  withheld   tour 0.015 .. 0.207 (122 players)\n             sessions so far:\n               2026-08-03  n=1\n               2026-08-10  n=1\n               2026-08-17  n=1\n\n  hip_sway_norm  (shoulder_widths)\n    n = 12 over 3 sessions\n    center   0.700   95% CI 0.698 .. 0.701   (median 0.700)\n    spread   sd 0.002   95% CI 0.001 .. 0.004   (range 0.698 .. 0.702)\n    trend    per session:\n               2026-08-03  n=4  mean 0.700\n               2026-08-10  n=4  mean 0.700\n               2026-08-17  n=4  mean 0.700\n    vs tour  above tour range   tour 0.141 .. 0.499 (122 players)   at least 90th pct   +0.200 past the edge\n             blocked  — hip_sway_norm: the spread is not placed against the tour spread — the tour sd measures how much 122 players differ from each other, while a personal sd measures how much one golfer varies shot to shot. They are different quantities and comparing them would flatter every golfer alive\n\n  tempo_ratio  (ratio)\n    n = 12 over 3 sessions\n    center   4.711   95% CI 4.512 .. 4.910   (median 4.711)\n    spread   withheld — a claim about how repeatable this is needs 15 samples (there are 12)\n    trend    withheld — a claim that this has moved needs 18 samples (there are 12)\n    vs tour  cannot tell   tour 2.718 .. 4.711 (246 players)   at least 90th pct\n             sessions so far:\n               2026-08-03  n=4\n               2026-08-10  n=4\n               2026-08-17  n=4\n",
+      "career_corpus": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  12 swing directories across 3 sessions  ->  12 distinct swings, 12 distinct shots\n\n  Honest n per metric:\n    backswing_ms                 n = 12\n    downswing_ms                 n = 12\n    face_to_path_deg             n = 12\n    finish_balance_norm          n = 12\n    flight_carry_yds             n = 12\n    flight_spin_rpm              n = 12\n    hand_height_norm             n = 12\n    head_hip_gain_norm           n = 12\n    head_hip_offset_impact_norm  n = 12\n    head_sway_norm               n = 12\n    hip_shift_at_top_norm        n = 3\n    hip_sway_norm                n = 12\n    tempo_ratio                  n = 12\n\n  12 distinct swing(s) naming no club (of 12).\n    They still count toward every metric above and toward every whole-bag\n    number — the club was never an input to measuring head sway — and are\n    absent only from per-club views. Repair them one at a time on the upload\n    page: a session has many clubs, so there is no bulk backfill (ADR-024 §5).\n",
+      "career_corpus_verbose": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  12 swing directories across 3 sessions  ->  12 distinct swings, 12 distinct shots\n\n  Honest n per metric:\n    backswing_ms                 n = 12\n    downswing_ms                 n = 12\n    face_to_path_deg             n = 12\n    finish_balance_norm          n = 12\n    flight_carry_yds             n = 12\n    flight_spin_rpm              n = 12\n    hand_height_norm             n = 12\n    head_hip_gain_norm           n = 12\n    head_hip_offset_impact_norm  n = 12\n    head_sway_norm               n = 12\n    hip_shift_at_top_norm        n = 3\n    hip_sway_norm                n = 12\n    tempo_ratio                  n = 12\n\n  12 distinct swing(s) naming no club (of 12).\n    They still count toward every metric above and toward every whole-bag\n    number — the club was never an input to measuring head sway — and are\n    absent only from per-club views. Repair them one at a time on the upload\n    page: a session has many clubs, so there is no bulk backfill (ADR-024 §5).\n",
+      "career_dispersion": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  Built from 12 distinct swings across 3 sessions.\n\n  backswing_ms  (ms)\n    n = 12 over 3 sessions\n    bias      withheld\n    scatter   cannot tell    sd 42.8 (95% CI 30.3 .. 72.6)    within-session 36.1\n    blocked   no target for backswing_ms: there is a tour median (about 901 ms) and it is\n              deliberately not a target. Tempo is already scored once, as a ratio, and\n              declaring a target for each half would put a second verdict on one fundamental\n              and count it twice — ADR-023 is explicit that these ship as distributions and\n              never as a band. The tour distribution is still readable where it belongs, in\n              `analysis/tempo_trainer.py`, which builds a metronome from it rather than a\n              judgment\n\n  downswing_ms  (ms)\n    n = 12 over 3 sessions\n    bias      withheld\n    scatter   cannot tell    sd 4.2 (95% CI 3.0 .. 7.1)    within-session 4.6\n    blocked   no target for downswing_ms: the same reason as `backswing_ms` — one\n              fundamental is scored once. Worth noting what the corpus says about this half\n              in particular: tour downswing duration barely moves at all (p10 200 ms, p90\n              300 ms, and a between-club sd of 6.9 ms against 47.0 ms between golfers), so\n              it looks more like a constant than any other quantity here. That is a reason\n              it makes a good metronome, not a reason to score it\n\n  face_to_path_deg  (degrees)\n    n = 12 over 3 sessions    target 0.0 +/- 2.0\n    bias      yes    center 8.6 (95% CI 8.3 .. 8.9)\n    scatter   cannot tell    sd 0.5 (95% CI 0.4 .. 0.9)    within-session 0.6\n    pattern   biased\n              A miss that repeats at about the same size every swing. Whatever produces it\n              is the same every time, which points at something already set before the swing\n              starts rather than at something that happens during it. None of that is\n              visible here, so the test is empirical: change one thing at setup, hit another\n              set, and see whether the center moves.\n\n  finish_balance_norm  (shoulder_widths)\n    n = 12 over 3 sessions    target 0.000 +/- 0.024\n    bias      yes    center 0.042 (95% CI 0.042 .. 0.043)\n    scatter   cannot tell    sd 0.001 (95% CI 0.001 .. 0.002)    within-session 0.001\n    pattern   biased\n              A miss that repeats at about the same size every swing. Whatever produces it\n              is the same every time, which points at something already set before the swing\n              starts rather than at something that happens during it. None of that is\n              visible here, so the test is empirical: change one thing at setup, hit another\n              set, and see whether the center moves.\n\n  flight_carry_yds  (yards)\n    n = 12 over 3 sessions\n    bias      withheld\n    scatter   withheld\n    blocked   flight_carry_yds is not registered in METRIC_TARGETS, so there is no\n              measurement error to judge either a bias or a spread against\n\n  flight_spin_rpm  (rpm)\n    n = 12 over 3 sessions\n    bias      withheld\n    scatter   withheld\n    blocked   flight_spin_rpm is not registered in METRIC_TARGETS, so there is no\n              measurement error to judge either a bias or a spread against\n\n  hand_height_norm  (shoulder_widths)\n    n = 12 over 3 sessions\n    bias      withheld\n    scatter   cannot tell    sd 0.038 (95% CI 0.027 .. 0.064)    within-session 0.038\n    blocked   no target for hand_height_norm: how far the hands hang below the shoulders at\n              address is set by club length and the golfer's build before posture gets a say\n              - a driver and a wedge are different numbers for the same golfer standing\n              correctly to both. There is no band, and a single value across the bag would\n              be wrong for every club in it. `narrow_to(club=)` (M9 P13) is what makes the\n              per-club version askable\n\n  head_hip_gain_norm  (shoulder_widths)\n    n = 12 over 3 sessions\n    bias      withheld\n    scatter   cannot tell    sd 0.002 (95% CI 0.001 .. 0.004)    within-session 0.002\n    blocked   no target for head_hip_gain_norm: it has a band (a two-sided tour range)\n              rather than a value, and the band is the wrong shape to read a target off: too\n              little head-hip separation is the head drifting forward with the hips, too\n              much is hanging back through impact, and the right amount for one golfer is\n              not a number this repo has. `analysis.comparison` asks the band's own question\n              instead — whether the personal center's interval sits inside it — which needs\n              no point target invented here. Note the sign convention: values live in a\n              right-handed camera frame, so a personal center is only meaningful against a\n              corpus folded the same way\n\n  head_hip_offset_impact_norm  (shoulder_widths)\n    n = 12 over 3 sessions\n    bias      withheld\n    scatter   cannot tell    sd 0.010 (95% CI 0.007 .. 0.018)    within-session 0.012\n    blocked   no target for head_hip_offset_impact_norm: career mode step 4 established that\n              the sign is readable here — a personal corpus is single-handed by\n              construction, so the camera-relative ambiguity that blocks a tour band does\n              not apply. A readable sign is not a target: staying behind the ball is right,\n              and how far behind is not established\n\n  head_sway_norm  (shoulder_widths)\n    n = 12 over 3 sessions    target 0.000 +/- 0.060\n    bias      yes    center 0.141 (95% CI 0.140 .. 0.142)\n    scatter   cannot tell    sd 0.002 (95% CI 0.001 .. 0.004)    within-session 0.002\n    pattern   biased\n              A miss that repeats at about the same size every swing. Whatever produces it\n              is the same every time, which points at something already set before the swing\n              starts rather than at something that happens during it. None of that is\n              visible here, so the test is empirical: change one thing at setup, hit another\n              set, and see whether the center moves.\n\n  hip_shift_at_top_norm  (shoulder_widths)\n    n = 3 over 3 sessions\n    bias      withheld\n    scatter   withheld\n    waiting   a typical value for this golfer needs 6 samples (there are 3)\n    waiting   a claim about how repeatable this is needs 12 samples (there are 3)\n    blocked   no target for hip_shift_at_top_norm: same as hip_sway_norm: it has a one-sided\n              band as of 2026-08-12, but a band edge is not a target, and the right amount\n              of hip travel going back is not a number this repo has. Its lower edge is\n              omitted for being unmeasurable, not for being zero\n\n  hip_sway_norm  (shoulder_widths)\n    n = 12 over 3 sessions\n    bias      withheld\n    scatter   cannot tell    sd 0.002 (95% CI 0.001 .. 0.004)    within-session 0.002\n    blocked   no target for hip_sway_norm: 'less is better' is not established for it — some\n              lateral hip travel is a weight shift rather than a fault, and nothing here\n              knows how much. It has a two-sided band as of 2026-08-12, which is a range\n              rather than a target: `analysis.comparison` asks whether the personal center\n              sits inside it, so no point value has to be invented here\n\n  tempo_ratio  (ratio)\n    n = 12 over 3 sessions\n    bias      withheld\n    scatter   withheld\n    waiting   a claim about how repeatable this is needs 15 samples (there are 12)\n    blocked   no target for tempo_ratio: its target is a band (2.72-4.71 from 1,399 tour\n              swings), not a value. Reading it would import `benchmarks` into the\n              personal-baseline path, which is the boundary `analysis.baseline` holds on\n              purpose (ADR-010 §2). `analysis.comparison` answers the band's question\n              directly instead — whether the center's interval sits inside it — so no point\n              target has to be invented here (career mode step 6)\n",
+      "career_dispersion_verbose": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  Built from 12 distinct swings across 3 sessions.\n\n  backswing_ms  (ms)\n    n = 12 over 3 sessions\n    bias      withheld\n    scatter   cannot tell    sd 42.8 (95% CI 30.3 .. 72.6)    within-session 36.1\n    blocked   no target for backswing_ms: there is a tour median (about 901 ms) and it is\n              deliberately not a target. Tempo is already scored once, as a ratio, and\n              declaring a target for each half would put a second verdict on one fundamental\n              and count it twice — ADR-023 is explicit that these ship as distributions and\n              never as a band. The tour distribution is still readable where it belongs, in\n              `analysis/tempo_trainer.py`, which builds a metronome from it rather than a\n              judgment\n    tolerance 300 — composed from M4-REF instant errors, 2026-08-20: a duration is a\n              subtraction of two instants, so its error is theirs summed - address 7 frames,\n              top 2, impact 1, at the corpus's 30 fps. tune_spatial_metric.py cannot measure\n              these; see ADR-023\n\n  downswing_ms  (ms)\n    n = 12 over 3 sessions\n    bias      withheld\n    scatter   cannot tell    sd 4.2 (95% CI 3.0 .. 7.1)    within-session 4.6\n    blocked   no target for downswing_ms: the same reason as `backswing_ms` — one\n              fundamental is scored once. Worth noting what the corpus says about this half\n              in particular: tour downswing duration barely moves at all (p10 200 ms, p90\n              300 ms, and a between-club sd of 6.9 ms against 47.0 ms between golfers), so\n              it looks more like a constant than any other quantity here. That is a reason\n              it makes a good metronome, not a reason to score it\n    tolerance 100 — composed from M4-REF instant errors, 2026-08-20: a duration is a\n              subtraction of two instants, so its error is theirs summed - address 7 frames,\n              top 2, impact 1, at the corpus's 30 fps. tune_spatial_metric.py cannot measure\n              these; see ADR-023\n\n  face_to_path_deg  (degrees)\n    n = 12 over 3 sessions    target 0.0 +/- 2.0\n    bias      yes    center 8.6 (95% CI 8.3 .. 8.9)\n    scatter   cannot tell    sd 0.5 (95% CI 0.4 .. 0.9)    within-session 0.6\n    pattern   biased\n              A miss that repeats at about the same size every swing. Whatever produces it\n              is the same every time, which points at something already set before the swing\n              starts rather than at something that happens during it. None of that is\n              visible here, so the test is empirical: change one thing at setup, hit another\n              set, and see whether the center moves.\n    tolerance 2 — judgment, 2026-08-12: no instrument-error evidence exists for the OCR\n              path. 2 degrees is below the level a coaching action follows from. Revise from\n              a real bay session's repeats\n\n  finish_balance_norm  (shoulder_widths)\n    n = 12 over 3 sessions    target 0.000 +/- 0.024\n    bias      yes    center 0.042 (95% CI 0.042 .. 0.043)\n    scatter   cannot tell    sd 0.001 (95% CI 0.001 .. 0.002)    within-session 0.001\n    pattern   biased\n              A miss that repeats at about the same size every swing. Whatever produces it\n              is the same every time, which points at something already set before the swing\n              starts rather than at something that happens during it. None of that is\n              visible here, so the test is empirical: change one thing at setup, hit another\n              set, and see whether the center moves.\n    tolerance 0.024 — spread/error harness over 461 face-on GolfDB clips, 2026-08-12:\n              `python scripts/golfdb/tune_spatial_metric.py`, tolerance = noise + bound\n\n  flight_carry_yds  (yards)\n    n = 12 over 3 sessions\n    bias      withheld\n    scatter   withheld\n    blocked   flight_carry_yds is not registered in METRIC_TARGETS, so there is no\n              measurement error to judge either a bias or a spread against\n\n  flight_spin_rpm  (rpm)\n    n = 12 over 3 sessions\n    bias      withheld\n    scatter   withheld\n    blocked   flight_spin_rpm is not registered in METRIC_TARGETS, so there is no\n              measurement error to judge either a bias or a spread against\n\n  hand_height_norm  (shoulder_widths)\n    n = 12 over 3 sessions\n    bias      withheld\n    scatter   cannot tell    sd 0.038 (95% CI 0.027 .. 0.064)    within-session 0.038\n    blocked   no target for hand_height_norm: how far the hands hang below the shoulders at\n              address is set by club length and the golfer's build before posture gets a say\n              - a driver and a wedge are different numbers for the same golfer standing\n              correctly to both. There is no band, and a single value across the bag would\n              be wrong for every club in it. `narrow_to(club=)` (M9 P13) is what makes the\n              per-club version askable\n    tolerance 0.069 — spread/error harness over 461 face-on GolfDB clips, 2026-09-03:\n              `python scripts/golfdb/tune_spatial_metric.py`, tolerance = noise + bound.\n              Same run reproduced the 2026-08-12 tolerances unchanged\n\n  head_hip_gain_norm  (shoulder_widths)\n    n = 12 over 3 sessions\n    bias      withheld\n    scatter   cannot tell    sd 0.002 (95% CI 0.001 .. 0.004)    within-session 0.002\n    blocked   no target for head_hip_gain_norm: it has a band (a two-sided tour range)\n              rather than a value, and the band is the wrong shape to read a target off: too\n              little head-hip separation is the head drifting forward with the hips, too\n              much is hanging back through impact, and the right amount for one golfer is\n              not a number this repo has. `analysis.comparison` asks the band's own question\n              instead — whether the personal center's interval sits inside it — which needs\n              no point target invented here. Note the sign convention: values live in a\n              right-handed camera frame, so a personal center is only meaningful against a\n              corpus folded the same way\n    tolerance 0.08 — spread/error harness over 461 face-on GolfDB clips, 2026-08-12: `python\n              scripts/golfdb/tune_spatial_metric.py`, tolerance = noise + bound\n\n  head_hip_offset_impact_norm  (shoulder_widths)\n    n = 12 over 3 sessions\n    bias      withheld\n    scatter   cannot tell    sd 0.010 (95% CI 0.007 .. 0.018)    within-session 0.012\n    blocked   no target for head_hip_offset_impact_norm: career mode step 4 established that\n              the sign is readable here — a personal corpus is single-handed by\n              construction, so the camera-relative ambiguity that blocks a tour band does\n              not apply. A readable sign is not a target: staying behind the ball is right,\n              and how far behind is not established\n    tolerance 0.073 — spread/error harness over 461 face-on GolfDB clips, 2026-08-12:\n              `python scripts/golfdb/tune_spatial_metric.py`, tolerance = noise + bound\n\n  head_sway_norm  (shoulder_widths)\n    n = 12 over 3 sessions    target 0.000 +/- 0.060\n    bias      yes    center 0.141 (95% CI 0.140 .. 0.142)\n    scatter   cannot tell    sd 0.002 (95% CI 0.001 .. 0.004)    within-session 0.002\n    pattern   biased\n              A miss that repeats at about the same size every swing. Whatever produces it\n              is the same every time, which points at something already set before the swing\n              starts rather than at something that happens during it. None of that is\n              visible here, so the test is empirical: change one thing at setup, hit another\n              set, and see whether the center moves.\n    tolerance 0.06 — spread/error harness over 461 face-on GolfDB clips, 2026-08-12: `python\n              scripts/golfdb/tune_spatial_metric.py`, tolerance = noise + bound\n\n  hip_shift_at_top_norm  (shoulder_widths)\n    n = 3 over 3 sessions\n    bias      withheld\n    scatter   withheld\n    waiting   a typical value for this golfer needs 6 samples (there are 3)\n    waiting   a claim about how repeatable this is needs 12 samples (there are 3)\n    blocked   no target for hip_shift_at_top_norm: same as hip_sway_norm: it has a one-sided\n              band as of 2026-08-12, but a band edge is not a target, and the right amount\n              of hip travel going back is not a number this repo has. Its lower edge is\n              omitted for being unmeasurable, not for being zero\n    tolerance 0.053 — spread/error harness over 461 face-on GolfDB clips, 2026-08-12:\n              `python scripts/golfdb/tune_spatial_metric.py`, tolerance = noise + bound\n\n  hip_sway_norm  (shoulder_widths)\n    n = 12 over 3 sessions\n    bias      withheld\n    scatter   cannot tell    sd 0.002 (95% CI 0.001 .. 0.004)    within-session 0.002\n    blocked   no target for hip_sway_norm: 'less is better' is not established for it — some\n              lateral hip travel is a weight shift rather than a fault, and nothing here\n              knows how much. It has a two-sided band as of 2026-08-12, which is a range\n              rather than a target: `analysis.comparison` asks whether the personal center\n              sits inside it, so no point value has to be invented here\n    tolerance 0.05 — spread/error harness over 461 face-on GolfDB clips, 2026-08-12: `python\n              scripts/golfdb/tune_spatial_metric.py`, tolerance = noise + bound\n\n  tempo_ratio  (ratio)\n    n = 12 over 3 sessions\n    bias      withheld\n    scatter   withheld\n    waiting   a claim about how repeatable this is needs 15 samples (there are 12)\n    blocked   no target for tempo_ratio: its target is a band (2.72-4.71 from 1,399 tour\n              swings), not a value. Reading it would import `benchmarks` into the\n              personal-baseline path, which is the boundary `analysis.baseline` holds on\n              purpose (ADR-010 §2). `analysis.comparison` answers the band's question\n              directly instead — whether the center's interval sits inside it — so no point\n              target has to be invented here (career mode step 6)\n    tolerance 0.943 — spread/error harness over 461 face-on GolfDB clips, 2026-08-12:\n              `python scripts/golfdb/tune_spatial_metric.py`, tolerance = noise + bound\n",
+      "club_profile": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  No club has been hit or declared — there is nothing to profile yet.\n  untagged  All 12 swings on record name no club. That is real history, and no per-club number\n            can be cut from it until each one is tagged.\n  next      New swings get a club at upload — `python scripts/run_server.py`, then the picker\n            on the upload page. A swing already stored is retagged one at a time, from the\n            change control on its row in that page's swing list or with POST\n            /api/sessions/<session>/swings/<swing>/club.\n",
+      "club_profile_driver": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  driver: never hit and not in the bag — there is no history to report.\n\n  untagged  12 swings on record name no club, so nothing above counts them. Retag one at a\n            time, from the change control on the swing's row in the upload page or with POST\n            /api/sessions/<session>/swings/<swing>/club.\n",
+      "club_profile_verbose": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  No club has been hit or declared — there is nothing to profile yet.\n  untagged  All 12 swings on record name no club. That is real history, and no per-club number\n            can be cut from it until each one is tagged.\n  next      New swings get a club at upload — `python scripts/run_server.py`, then the picker\n            on the upload page. A swing already stored is retagged one at a time, from the\n            change control on its row in that page's swing list or with POST\n            /api/sessions/<session>/swings/<swing>/club.\n",
+      "flag_mishit_list": "\naaron -- 0 shot(s) held out across the bag\n  (no tagged shots yet)\n"
+    },
+    "standing": {
+      "built_from_sessions": 3,
+      "built_from_swings": 12,
+      "metrics": {
+        "backswing_ms": {
+          "band_high": 1204.5379,
+          "band_low": 700.5932,
+          "center": 905.7109355266131,
+          "center_ci": {
+            "confidence": 0.95,
+            "high": 932.8760722715867,
+            "low": 878.5457987816394
+          },
+          "n": 12,
+          "n_sessions": 3,
+          "name": "backswing_ms",
+          "outside_by": null,
+          "percentile": 50.9,
+          "percentile_clamped": false,
+          "population_n": 310,
+          "population_players": 168,
+          "reading": "This golfer's typical value sits inside the range tour swings occupy. That is a statement about where the number falls in a population, not a pass — the band describes what tour players do, and being inside it is not evidence that nothing here is worth working on.",
+          "source": "pose:face_on",
+          "standing": "inside",
+          "unavailable": [
+            "backswing_ms: the spread is not placed against the tour spread — the tour sd measures how much 122 players differ from each other, while a personal sd measures how much one golfer varies shot to shot. They are different quantities and comparing them would flatter every golfer alive"
+          ],
+          "unit": "ms",
+          "withheld": []
+        },
+        "downswing_ms": {
+          "band_high": 300.3003,
+          "band_low": 200.2002,
+          "center": 266.8446,
+          "center_ci": {
+            "confidence": 0.95,
+            "high": 269.49910587766266,
+            "low": 264.19009412233737
+          },
+          "n": 12,
+          "n_sessions": 3,
+          "name": "downswing_ms",
+          "outside_by": null,
+          "percentile": 50.0,
+          "percentile_clamped": false,
+          "population_n": 310,
+          "population_players": 168,
+          "reading": "This golfer's typical value sits inside the range tour swings occupy. That is a statement about where the number falls in a population, not a pass — the band describes what tour players do, and being inside it is not evidence that nothing here is worth working on.",
+          "source": "pose:face_on",
+          "standing": "inside",
+          "unavailable": [
+            "downswing_ms: the spread is not placed against the tour spread — the tour sd measures how much 122 players differ from each other, while a personal sd measures how much one golfer varies shot to shot. They are different quantities and comparing them would flatter every golfer alive"
+          ],
+          "unit": "ms",
+          "withheld": []
+        },
+        "face_to_path_deg": {
+          "band_high": null,
+          "band_low": null,
+          "center": null,
+          "center_ci": null,
+          "n": 12,
+          "n_sessions": 3,
+          "name": "face_to_path_deg",
+          "outside_by": null,
+          "percentile": null,
+          "percentile_clamped": false,
+          "population_n": null,
+          "population_players": null,
+          "reading": null,
+          "source": "launch_monitor:hd_golf",
+          "standing": "withheld",
+          "unavailable": [
+            "face_to_path_deg: no tour population exists for it. Every distribution in this repo comes from GolfDB, which is pose estimated from broadcast video and contains no ball flight — a launch-monitor reference would have to be acquired, not derived"
+          ],
+          "unit": "degrees",
+          "withheld": []
+        },
+        "finish_balance_norm": {
+          "band_high": 0.2872,
+          "band_low": 0.0845,
+          "center": 0.04225,
+          "center_ci": {
+            "confidence": 0.95,
+            "high": 0.04291362646941566,
+            "low": 0.04158637353058434
+          },
+          "n": 12,
+          "n_sessions": 3,
+          "name": "finish_balance_norm",
+          "outside_by": -0.04225,
+          "percentile": 10.0,
+          "percentile_clamped": true,
+          "population_n": 458,
+          "population_players": 122,
+          "reading": "This golfer's typical value sits outside the middle 80% of tour swings. Read it as a distance from a population, not as a fault: the band describes what tour professionals do, and holding an amateur to it means failing everything forever. What makes it useful is direction — `outside_by` says which way this metric would move to look more like that population, and by how much. On a one-sided magnitude, below the band is the good side.",
+          "source": "pose:face_on",
+          "standing": "outside",
+          "unavailable": [
+            "finish_balance_norm: the spread is not placed against the tour spread — the tour sd measures how much 122 players differ from each other, while a personal sd measures how much one golfer varies shot to shot. They are different quantities and comparing them would flatter every golfer alive"
+          ],
+          "unit": "shoulder_widths",
+          "withheld": []
+        },
+        "flight_carry_yds": {
+          "band_high": null,
+          "band_low": null,
+          "center": null,
+          "center_ci": null,
+          "n": 12,
+          "n_sessions": 3,
+          "name": "flight_carry_yds",
+          "outside_by": null,
+          "percentile": null,
+          "percentile_clamped": false,
+          "population_n": null,
+          "population_players": null,
+          "reading": null,
+          "source": "model:flight_v1",
+          "standing": "withheld",
+          "unavailable": [
+            "flight_carry_yds: it is a model output rather than a reading, and no population of model outputs is a population of swings — compare the measured quantity beside it instead"
+          ],
+          "unit": "yards",
+          "withheld": []
+        },
+        "flight_spin_rpm": {
+          "band_high": null,
+          "band_low": null,
+          "center": null,
+          "center_ci": null,
+          "n": 12,
+          "n_sessions": 3,
+          "name": "flight_spin_rpm",
+          "outside_by": null,
+          "percentile": null,
+          "percentile_clamped": false,
+          "population_n": null,
+          "population_players": null,
+          "reading": null,
+          "source": "model:flight_v1",
+          "standing": "withheld",
+          "unavailable": [
+            "flight_spin_rpm: it is a model output rather than a reading, and no population of model outputs is a population of swings — compare the measured quantity beside it instead"
+          ],
+          "unit": "rpm",
+          "withheld": []
+        },
+        "hand_height_norm": {
+          "band_high": null,
+          "band_low": null,
+          "center": null,
+          "center_ci": null,
+          "n": 12,
+          "n_sessions": 3,
+          "name": "hand_height_norm",
+          "outside_by": null,
+          "percentile": null,
+          "percentile_clamped": false,
+          "population_n": null,
+          "population_players": null,
+          "reading": null,
+          "source": "pose:face_on",
+          "standing": "withheld",
+          "unavailable": [
+            "hand_height_norm: no reference distribution is stored for it"
+          ],
+          "unit": "shoulder_widths",
+          "withheld": []
+        },
+        "head_hip_gain_norm": {
+          "band_high": -0.1369,
+          "band_low": -0.6741,
+          "center": -0.1610333333333333,
+          "center_ci": {
+            "confidence": 0.95,
+            "high": -0.159706080394502,
+            "low": -0.16236058627216463
+          },
+          "n": 12,
+          "n_sessions": 3,
+          "name": "head_hip_gain_norm",
+          "outside_by": null,
+          "percentile": 87.5,
+          "percentile_clamped": false,
+          "population_n": 458,
+          "population_players": 122,
+          "reading": "This golfer's typical value sits inside the range tour swings occupy. That is a statement about where the number falls in a population, not a pass — the band describes what tour players do, and being inside it is not evidence that nothing here is worth working on.",
+          "source": "pose:face_on",
+          "standing": "inside",
+          "unavailable": [
+            "head_hip_gain_norm: the spread is not placed against the tour spread — the tour sd measures how much 122 players differ from each other, while a personal sd measures how much one golfer varies shot to shot. They are different quantities and comparing them would flatter every golfer alive"
+          ],
+          "unit": "shoulder_widths",
+          "withheld": []
+        },
+        "head_hip_offset_impact_norm": {
+          "band_high": null,
+          "band_low": null,
+          "center": null,
+          "center_ci": null,
+          "n": 12,
+          "n_sessions": 3,
+          "name": "head_hip_offset_impact_norm",
+          "outside_by": null,
+          "percentile": null,
+          "percentile_clamped": false,
+          "population_n": null,
+          "population_players": null,
+          "reading": null,
+          "source": "pose:face_on",
+          "standing": "withheld",
+          "unavailable": [
+            "head_hip_offset_impact_norm has a stored distribution and may not be placed in it: its sign is camera-relative, and the tour distribution is cut from GolfDB's mixed-handedness population — the reason M6.5 blocked this metric from becoming a checkpoint. A personal baseline reads the sign because one golfer swings from one side; averaging left- and right-handed swings puts the two signs in one number, so placing a personal center in that population would compare a real quantity against a meaningless one"
+          ],
+          "unit": "shoulder_widths",
+          "withheld": []
+        },
+        "head_sway_norm": {
+          "band_high": 0.4311,
+          "band_low": 0.0294,
+          "center": 0.14105,
+          "center_ci": {
+            "confidence": 0.95,
+            "high": 0.14237725293883133,
+            "low": 0.1397227470611687
+          },
+          "n": 12,
+          "n_sessions": 3,
+          "name": "head_sway_norm",
+          "outside_by": null,
+          "percentile": 42.5,
+          "percentile_clamped": false,
+          "population_n": 458,
+          "population_players": 122,
+          "reading": "This golfer's typical value sits inside the range tour swings occupy. That is a statement about where the number falls in a population, not a pass — the band describes what tour players do, and being inside it is not evidence that nothing here is worth working on.",
+          "source": "pose:face_on",
+          "standing": "inside",
+          "unavailable": [
+            "head_sway_norm: the spread is not placed against the tour spread — the tour sd measures how much 122 players differ from each other, while a personal sd measures how much one golfer varies shot to shot. They are different quantities and comparing them would flatter every golfer alive"
+          ],
+          "unit": "shoulder_widths",
+          "withheld": []
+        },
+        "hip_shift_at_top_norm": {
+          "band_high": 0.2069,
+          "band_low": 0.015,
+          "center": null,
+          "center_ci": null,
+          "n": 3,
+          "n_sessions": 3,
+          "name": "hip_shift_at_top_norm",
+          "outside_by": null,
+          "percentile": null,
+          "percentile_clamped": false,
+          "population_n": 458,
+          "population_players": 122,
+          "reading": null,
+          "source": "pose:face_on",
+          "standing": "withheld",
+          "unavailable": [],
+          "unit": "shoulder_widths",
+          "withheld": [
+            {
+              "claim": "center",
+              "have_n": 3,
+              "have_sessions": 3,
+              "need_n": 6,
+              "need_sessions": 1,
+              "reason": "a typical value for this golfer needs 6 samples (there are 3)"
+            }
+          ]
+        },
+        "hip_sway_norm": {
+          "band_high": 0.4995,
+          "band_low": 0.1414,
+          "center": 0.6995,
+          "center_ci": {
+            "confidence": 0.95,
+            "high": 0.7008272529388313,
+            "low": 0.6981727470611687
+          },
+          "n": 12,
+          "n_sessions": 3,
+          "name": "hip_sway_norm",
+          "outside_by": 0.2,
+          "percentile": 90.0,
+          "percentile_clamped": true,
+          "population_n": 458,
+          "population_players": 122,
+          "reading": "This golfer's typical value sits outside the middle 80% of tour swings. Read it as a distance from a population, not as a fault: the band describes what tour professionals do, and holding an amateur to it means failing everything forever. What makes it useful is direction — `outside_by` says which way this metric would move to look more like that population, and by how much. On a one-sided magnitude, below the band is the good side.",
+          "source": "pose:face_on",
+          "standing": "outside",
+          "unavailable": [
+            "hip_sway_norm: the spread is not placed against the tour spread — the tour sd measures how much 122 players differ from each other, while a personal sd measures how much one golfer varies shot to shot. They are different quantities and comparing them would flatter every golfer alive"
+          ],
+          "unit": "shoulder_widths",
+          "withheld": []
+        },
+        "tempo_ratio": {
+          "band_high": 4.7106,
+          "band_low": 2.7179,
+          "center": 4.7106,
+          "center_ci": {
+            "confidence": 0.95,
+            "high": 4.909687940824697,
+            "low": 4.5115120591753035
+          },
+          "n": 12,
+          "n_sessions": 3,
+          "name": "tempo_ratio",
+          "outside_by": null,
+          "percentile": 90.0,
+          "percentile_clamped": true,
+          "population_n": 1399,
+          "population_players": 246,
+          "reading": "The interval around this golfer's typical value crosses the edge of the tour range, so which side of it they sit on is not settled by this much data. Not 'borderline' — unresolved.",
+          "source": "pose:face_on",
+          "standing": "straddles",
+          "unavailable": [],
+          "unit": "ratio",
+          "withheld": []
+        }
+      },
+      "player_id": "aaron"
+    }
+  },
+  "id": "career/synthetic/standings",
+  "input": {
+    "bag": null,
+    "clubs": [
+      "driver"
+    ],
+    "corpus": {
+      "analyzed_without_measurements": 0,
+      "excluded": [],
+      "metric_counts": {
+        "backswing_ms": 12,
+        "downswing_ms": 12,
+        "face_to_path_deg": 12,
+        "finish_balance_norm": 12,
+        "flight_carry_yds": 12,
+        "flight_spin_rpm": 12,
+        "hand_height_norm": 12,
+        "head_hip_gain_norm": 12,
+        "head_hip_offset_impact_norm": 12,
+        "head_sway_norm": 12,
+        "hip_shift_at_top_norm": 3,
+        "hip_sway_norm": 12,
+        "tempo_ratio": 12
+      },
+      "other_golfers": 0,
+      "outdated_swings": 0,
+      "player_id": "aaron",
+      "sessions_scanned": 3,
+      "swing_dirs_seen": 12,
+      "swings": [
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-03T12:01:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "70a273391cb26be19e81a157e2614c6fe5955bc6ce9560f77e4170777dcc2154",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "head_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.14305
+            },
+            {
+              "detail": "synthetic",
+              "name": "head_hip_gain_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": -0.1590333333333333
+            },
+            {
+              "detail": "synthetic",
+              "name": "hip_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.7015
+            },
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.043250000000000004
+            },
+            {
+              "detail": "synthetic",
+              "name": "tempo_ratio",
+              "source": "pose:face_on",
+              "unit": "ratio",
+              "value": 5.0106
+            },
+            {
+              "detail": "synthetic",
+              "name": "downswing_ms",
+              "source": "pose:face_on",
+              "unit": "ms",
+              "value": 270.8446
+            },
+            {
+              "detail": "synthetic",
+              "name": "backswing_ms",
+              "source": "pose:face_on",
+              "unit": "ms",
+              "value": 939.3285612342615
+            },
+            {
+              "detail": "synthetic",
+              "name": "hip_shift_at_top_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.08
+            },
+            {
+              "detail": "synthetic",
+              "name": "head_hip_offset_impact_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.15000000000000002
+            },
+            {
+              "detail": "synthetic",
+              "name": "face_to_path_deg",
+              "source": "launch_monitor:hd_golf",
+              "unit": "degrees",
+              "value": 9.1
+            },
+            {
+              "detail": "synthetic",
+              "name": "flight_carry_yds",
+              "source": "model:flight_v1",
+              "unit": "yards",
+              "value": 153.56482944024575
+            },
+            {
+              "detail": "synthetic",
+              "name": "hand_height_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.6404248201909795
+            },
+            {
+              "detail": "synthetic",
+              "name": "flight_spin_rpm",
+              "source": "model:flight_v1",
+              "unit": "rpm",
+              "value": 6203.432072331469
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-03",
+          "shot_needs_review": false,
+          "shot_sha256": "9e6dbb065c29ce8052addfabf844817acd39577c4420f4fc9cfa9230e11b425d",
+          "stale": false,
+          "swing_id": "1"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-03T12:04:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "f97ffca87320fb8178101598ca9b11ee4cf7bf9737fbb07ffd632fa94626c8f1",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "head_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.13905
+            },
+            {
+              "detail": "synthetic",
+              "name": "head_hip_gain_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": -0.1630333333333333
+            },
+            {
+              "detail": "synthetic",
+              "name": "hip_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.6975
+            },
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.04125
+            },
+            {
+              "detail": "synthetic",
+              "name": "tempo_ratio",
+              "source": "pose:face_on",
+              "unit": "ratio",
+              "value": 4.4106000000000005
+            },
+            {
+              "detail": "synthetic",
+              "name": "downswing_ms",
+              "source": "pose:face_on",
+              "unit": "ms",
+              "value": 262.8446
+            },
+            {
+              "detail": "synthetic",
+              "name": "backswing_ms",
+              "source": "pose:face_on",
+              "unit": "ms",
+              "value": 960.6123112941475
+            },
+            {
+              "detail": "synthetic",
+              "name": "head_hip_offset_impact_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.13
+            },
+            {
+              "detail": "synthetic",
+              "name": "face_to_path_deg",
+              "source": "launch_monitor:hd_golf",
+              "unit": "degrees",
+              "value": 8.1
+            },
+            {
+              "detail": "synthetic",
+              "name": "flight_carry_yds",
+              "source": "model:flight_v1",
+              "unit": "yards",
+              "value": 153.60889436992773
+            },
+            {
+              "detail": "synthetic",
+              "name": "hand_height_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.6012447694219866
+            },
+            {
+              "detail": "synthetic",
+              "name": "flight_spin_rpm",
+              "source": "model:flight_v1",
+              "unit": "rpm",
+              "value": 6428.285430824085
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-03",
+          "shot_needs_review": false,
+          "shot_sha256": "1169827c7d149b1b9cddcb26c89166a0a2032456f0f9d285bd01f3ff759a4937",
+          "stale": false,
+          "swing_id": "4"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-03T12:07:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "12bbf851e398cd97717c89a3c62f86f3640f3c89c81b77a2e9a93b4cf08acc19",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "head_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.14305
+            },
+            {
+              "detail": "synthetic",
+              "name": "head_hip_gain_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": -0.1590333333333333
+            },
+            {
+              "detail": "synthetic",
+              "name": "hip_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.7015
+            },
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.043250000000000004
+            },
+            {
+              "detail": "synthetic",
+              "name": "tempo_ratio",
+              "source": "pose:face_on",
+              "unit": "ratio",
+              "value": 5.0106
+            },
+            {
+              "detail": "synthetic",
+              "name": "downswing_ms",
+              "source": "pose:face_on",
+              "unit": "ms",
+              "value": 270.8446
+            },
+            {
+              "detail": "synthetic",
+              "name": "backswing_ms",
+              "source": "pose:face_on",
+              "unit": "ms",
+              "value": 934.9591309010184
+            },
+            {
+              "detail": "synthetic",
+              "name": "head_hip_offset_impact_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.15000000000000002
+            },
+            {
+              "detail": "synthetic",
+              "name": "face_to_path_deg",
+              "source": "launch_monitor:hd_golf",
+              "unit": "degrees",
+              "value": 9.1
+            },
+            {
+              "detail": "synthetic",
+              "name": "flight_carry_yds",
+              "source": "model:flight_v1",
+              "unit": "yards",
+              "value": 150.82680921928142
+            },
+            {
+              "detail": "synthetic",
+              "name": "hand_height_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.5610899311304627
+            },
+            {
+              "detail": "synthetic",
+              "name": "flight_spin_rpm",
+              "source": "model:flight_v1",
+              "unit": "rpm",
+              "value": 6396.056203462942
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-03",
+          "shot_needs_review": false,
+          "shot_sha256": "3fcd4678e0191af07b2fe0e15a2d5b3cdc1badaa5b93e85e1c06b125391e6e52",
+          "stale": false,
+          "swing_id": "7"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-03T12:10:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "1fb17e9e9c5fb07e3f5aab8bbb529df2a698b80e3b5fe3d4a61295ed6a7a0d26",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "head_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.13905
+            },
+            {
+              "detail": "synthetic",
+              "name": "head_hip_gain_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": -0.1630333333333333
+            },
+            {
+              "detail": "synthetic",
+              "name": "hip_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.6975
+            },
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.04125
+            },
+            {
+              "detail": "synthetic",
+              "name": "tempo_ratio",
+              "source": "pose:face_on",
+              "unit": "ratio",
+              "value": 4.4106000000000005
+            },
+            {
+              "detail": "synthetic",
+              "name": "downswing_ms",
+              "source": "pose:face_on",
+              "unit": "ms",
+              "value": 262.8446
+            },
+            {
+              "detail": "synthetic",
+              "name": "backswing_ms",
+              "source": "pose:face_on",
+              "unit": "ms",
+              "value": 882.4582026125142
+            },
+            {
+              "detail": "synthetic",
+              "name": "head_hip_offset_impact_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.13
+            },
+            {
+              "detail": "synthetic",
+              "name": "face_to_path_deg",
+              "source": "launch_monitor:hd_golf",
+              "unit": "degrees",
+              "value": 8.1
+            },
+            {
+              "detail": "synthetic",
+              "name": "flight_carry_yds",
+              "source": "model:flight_v1",
+              "unit": "yards",
+              "value": 147.39724406452098
+            },
+            {
+              "detail": "synthetic",
+              "name": "hand_height_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.5514058362271483
+            },
+            {
+              "detail": "synthetic",
+              "name": "flight_spin_rpm",
+              "source": "model:flight_v1",
+              "unit": "rpm",
+              "value": 6131.9833205571695
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-03",
+          "shot_needs_review": false,
+          "shot_sha256": "851f92dee0da7982e25b130bde4bc3406bde82d1dfe8e65c4608427354dd3ed0",
+          "stale": false,
+          "swing_id": "10"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-10T12:02:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "2844a9782fc36af66e84277f36903e9ec4ae04ce042aefe0c0d35256add81a8b",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "head_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.13905
+            },
+            {
+              "detail": "synthetic",
+              "name": "head_hip_gain_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": -0.1630333333333333
+            },
+            {
+              "detail": "synthetic",
+              "name": "hip_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.6975
+            },
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.04125
+            },
+            {
+              "detail": "synthetic",
+              "name": "tempo_ratio",
+              "source": "pose:face_on",
+              "unit": "ratio",
+              "value": 4.4106000000000005
+            },
+            {
+              "detail": "synthetic",
+              "name": "downswing_ms",
+              "source": "pose:face_on",
+              "unit": "ms",
+              "value": 262.8446
+            },
+            {
+              "detail": "synthetic",
+              "name": "backswing_ms",
+              "source": "pose:face_on",
+              "unit": "ms",
+              "value": 903.1727376683616
+            },
+            {
+              "detail": "synthetic",
+              "name": "hip_shift_at_top_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.09350985351518788
+            },
+            {
+              "detail": "synthetic",
+              "name": "head_hip_offset_impact_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.13
+            },
+            {
+              "detail": "synthetic",
+              "name": "face_to_path_deg",
+              "source": "launch_monitor:hd_golf",
+              "unit": "degrees",
+              "value": 8.1
+            },
+            {
+              "detail": "synthetic",
+              "name": "flight_carry_yds",
+              "source": "model:flight_v1",
+              "unit": "yards",
+              "value": 148.59701692343396
+            },
+            {
+              "detail": "synthetic",
+              "name": "hand_height_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.5503156741631282
+            },
+            {
+              "detail": "synthetic",
+              "name": "flight_spin_rpm",
+              "source": "model:flight_v1",
+              "unit": "rpm",
+              "value": 6249.595614972159
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-10",
+          "shot_needs_review": false,
+          "shot_sha256": "15cd446c6ee5474de09b0f98868a32c7c6aa3d7e08202ca11fdb6b3bc6657021",
+          "stale": false,
+          "swing_id": "2"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-10T12:05:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "d3bb3f478f50cbfcf6891727d8b11cdc51f3bc3a09209711ef513c2f6acaca0a",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "head_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.14305
+            },
+            {
+              "detail": "synthetic",
+              "name": "head_hip_gain_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": -0.1590333333333333
+            },
+            {
+              "detail": "synthetic",
+              "name": "hip_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.7015
+            },
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.043250000000000004
+            },
+            {
+              "detail": "synthetic",
+              "name": "tempo_ratio",
+              "source": "pose:face_on",
+              "unit": "ratio",
+              "value": 5.0106
+            },
+            {
+              "detail": "synthetic",
+              "name": "downswing_ms",
+              "source": "pose:face_on",
+              "unit": "ms",
+              "value": 270.8446
+            },
+            {
+              "detail": "synthetic",
+              "name": "backswing_ms",
+              "source": "pose:face_on",
+              "unit": "ms",
+              "value": 854.6205039373506
+            },
+            {
+              "detail": "synthetic",
+              "name": "head_hip_offset_impact_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.15000000000000002
+            },
+            {
+              "detail": "synthetic",
+              "name": "face_to_path_deg",
+              "source": "launch_monitor:hd_golf",
+              "unit": "degrees",
+              "value": 9.1
+            },
+            {
+              "detail": "synthetic",
+              "name": "flight_carry_yds",
+              "source": "model:flight_v1",
+              "unit": "yards",
+              "value": 146.17364640903847
+            },
+            {
+              "detail": "synthetic",
+              "name": "hand_height_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.5653179827451925
+            },
+            {
+              "detail": "synthetic",
+              "name": "flight_spin_rpm",
+              "source": "model:flight_v1",
+              "unit": "rpm",
+              "value": 5939.912233932732
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-10",
+          "shot_needs_review": false,
+          "shot_sha256": "7ae26ed541448863c963482df087f0c84bc258d67a5ed876803b4ba78beaa0bb",
+          "stale": false,
+          "swing_id": "5"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-10T12:08:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "42ef1f401a94117aa8514c0692873bc0b94f3be0bf6d0f6f046961d19f44db01",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "head_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.13905
+            },
+            {
+              "detail": "synthetic",
+              "name": "head_hip_gain_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": -0.1630333333333333
+            },
+            {
+              "detail": "synthetic",
+              "name": "hip_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.6975
+            },
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.04125
+            },
+            {
+              "detail": "synthetic",
+              "name": "tempo_ratio",
+              "source": "pose:face_on",
+              "unit": "ratio",
+              "value": 4.4106000000000005
+            },
+            {
+              "detail": "synthetic",
+              "name": "downswing_ms",
+              "source": "pose:face_on",
+              "unit": "ms",
+              "value": 262.8446
+            },
+            {
+              "detail": "synthetic",
+              "name": "backswing_ms",
+              "source": "pose:face_on",
+              "unit": "ms",
+              "value": 842.1342553752492
+            },
+            {
+              "detail": "synthetic",
+              "name": "head_hip_offset_impact_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.13
+            },
+            {
+              "detail": "synthetic",
+              "name": "face_to_path_deg",
+              "source": "launch_monitor:hd_golf",
+              "unit": "degrees",
+              "value": 8.1
+            },
+            {
+              "detail": "synthetic",
+              "name": "flight_carry_yds",
+              "source": "model:flight_v1",
+              "unit": "yards",
+              "value": 146.74671979130292
+            },
+            {
+              "detail": "synthetic",
+              "name": "hand_height_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.6074800183249145
+            },
+            {
+              "detail": "synthetic",
+              "name": "flight_spin_rpm",
+              "source": "model:flight_v1",
+              "unit": "rpm",
+              "value": 5755.594687011539
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-10",
+          "shot_needs_review": false,
+          "shot_sha256": "a66eb576a05a12ca917417e46d67f1f50a7e0daa7495a1b1c3ce50d61bd67c1d",
+          "stale": false,
+          "swing_id": "8"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-10T12:11:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "8d1759e51ab735ea8674a32ba7bb0d3ffc881dc840f06ac3e4d6991039c80b24",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "head_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.14305
+            },
+            {
+              "detail": "synthetic",
+              "name": "head_hip_gain_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": -0.1590333333333333
+            },
+            {
+              "detail": "synthetic",
+              "name": "hip_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.7015
+            },
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.043250000000000004
+            },
+            {
+              "detail": "synthetic",
+              "name": "tempo_ratio",
+              "source": "pose:face_on",
+              "unit": "ratio",
+              "value": 5.0106
+            },
+            {
+              "detail": "synthetic",
+              "name": "downswing_ms",
+              "source": "pose:face_on",
+              "unit": "ms",
+              "value": 270.8446
+            },
+            {
+              "detail": "synthetic",
+              "name": "backswing_ms",
+              "source": "pose:face_on",
+              "unit": "ms",
+              "value": 875.4920593787734
+            },
+            {
+              "detail": "synthetic",
+              "name": "head_hip_offset_impact_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.15000000000000002
+            },
+            {
+              "detail": "synthetic",
+              "name": "face_to_path_deg",
+              "source": "launch_monitor:hd_golf",
+              "unit": "degrees",
+              "value": 9.1
+            },
+            {
+              "detail": "synthetic",
+              "name": "flight_carry_yds",
+              "source": "model:flight_v1",
+              "unit": "yards",
+              "value": 149.86745935070843
+            },
+            {
+              "detail": "synthetic",
+              "name": "hand_height_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.643784399946691
+            },
+            {
+              "detail": "synthetic",
+              "name": "flight_spin_rpm",
+              "source": "model:flight_v1",
+              "unit": "rpm",
+              "value": 5840.983316884685
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-10",
+          "shot_needs_review": false,
+          "shot_sha256": "8b6745214aa9fa38b652ec7161daf5314c2fa3529046c34095c9e6c23cd3a47a",
+          "stale": false,
+          "swing_id": "11"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-17T12:03:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "0fc25f3e2d308eaffd3285e56a137cd2e1a1f856e0f664ad1d7eb50bf4a2ea0a",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "head_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.14305
+            },
+            {
+              "detail": "synthetic",
+              "name": "head_hip_gain_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": -0.1590333333333333
+            },
+            {
+              "detail": "synthetic",
+              "name": "hip_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.7015
+            },
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.043250000000000004
+            },
+            {
+              "detail": "synthetic",
+              "name": "tempo_ratio",
+              "source": "pose:face_on",
+              "unit": "ratio",
+              "value": 5.0106
+            },
+            {
+              "detail": "synthetic",
+              "name": "downswing_ms",
+              "source": "pose:face_on",
+              "unit": "ms",
+              "value": 270.8446
+            },
+            {
+              "detail": "synthetic",
+              "name": "backswing_ms",
+              "source": "pose:face_on",
+              "unit": "ms",
+              "value": 858.3396789863273
+            },
+            {
+              "detail": "synthetic",
+              "name": "hip_shift_at_top_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.06007656788866437
+            },
+            {
+              "detail": "synthetic",
+              "name": "head_hip_offset_impact_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.15000000000000002
+            },
+            {
+              "detail": "synthetic",
+              "name": "face_to_path_deg",
+              "source": "launch_monitor:hd_golf",
+              "unit": "degrees",
+              "value": 9.1
+            },
+            {
+              "detail": "synthetic",
+              "name": "flight_carry_yds",
+              "source": "model:flight_v1",
+              "unit": "yards",
+              "value": 148.50419655236715
+            },
+            {
+              "detail": "synthetic",
+              "name": "hand_height_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.6328463142218075
+            },
+            {
+              "detail": "synthetic",
+              "name": "flight_spin_rpm",
+              "source": "model:flight_v1",
+              "unit": "rpm",
+              "value": 5775.954278845422
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-17",
+          "shot_needs_review": false,
+          "shot_sha256": "4b5ee33d9b185bd0b449a4d5a3b72b96749be33c4dd0f4555d21c598d03e16c3",
+          "stale": false,
+          "swing_id": "3"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-17T12:06:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "9900bf67fed3e5929d8bf39c0fe23e4cd400acce087c10f067ff38ec7342366c",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "head_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.13905
+            },
+            {
+              "detail": "synthetic",
+              "name": "head_hip_gain_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": -0.1630333333333333
+            },
+            {
+              "detail": "synthetic",
+              "name": "hip_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.6975
+            },
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.04125
+            },
+            {
+              "detail": "synthetic",
+              "name": "tempo_ratio",
+              "source": "pose:face_on",
+              "unit": "ratio",
+              "value": 4.4106000000000005
+            },
+            {
+              "detail": "synthetic",
+              "name": "downswing_ms",
+              "source": "pose:face_on",
+              "unit": "ms",
+              "value": 262.8446
+            },
+            {
+              "detail": "synthetic",
+              "name": "backswing_ms",
+              "source": "pose:face_on",
+              "unit": "ms",
+              "value": 908.6575293069357
+            },
+            {
+              "detail": "synthetic",
+              "name": "head_hip_offset_impact_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.13
+            },
+            {
+              "detail": "synthetic",
+              "name": "face_to_path_deg",
+              "source": "launch_monitor:hd_golf",
+              "unit": "degrees",
+              "value": 8.1
+            },
+            {
+              "detail": "synthetic",
+              "name": "flight_carry_yds",
+              "source": "model:flight_v1",
+              "unit": "yards",
+              "value": 152.033957043508
+            },
+            {
+              "detail": "synthetic",
+              "name": "hand_height_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.6499019595550165
+            },
+            {
+              "detail": "synthetic",
+              "name": "flight_spin_rpm",
+              "source": "model:flight_v1",
+              "unit": "rpm",
+              "value": 6007.80134358179
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-17",
+          "shot_needs_review": false,
+          "shot_sha256": "93aa51020543068e3e5f810a0ffcf022c547a86b07f73900cf471c2e28f6b680",
+          "stale": false,
+          "swing_id": "6"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-17T12:09:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "537282f1b4fdb2f46c3d919fb5d7f82892baec9e985d8d23f0dd4001a4a047bd",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "head_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.14305
+            },
+            {
+              "detail": "synthetic",
+              "name": "head_hip_gain_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": -0.1590333333333333
+            },
+            {
+              "detail": "synthetic",
+              "name": "hip_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.7015
+            },
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.043250000000000004
+            },
+            {
+              "detail": "synthetic",
+              "name": "tempo_ratio",
+              "source": "pose:face_on",
+              "unit": "ratio",
+              "value": 5.0106
+            },
+            {
+              "detail": "synthetic",
+              "name": "downswing_ms",
+              "source": "pose:face_on",
+              "unit": "ms",
+              "value": 270.8446
+            },
+            {
+              "detail": "synthetic",
+              "name": "backswing_ms",
+              "source": "pose:face_on",
+              "unit": "ms",
+              "value": 952.7245974059989
+            },
+            {
+              "detail": "synthetic",
+              "name": "head_hip_offset_impact_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.15000000000000002
+            },
+            {
+              "detail": "synthetic",
+              "name": "face_to_path_deg",
+              "source": "launch_monitor:hd_golf",
+              "unit": "degrees",
+              "value": 9.1
+            },
+            {
+              "detail": "synthetic",
+              "name": "flight_carry_yds",
+              "source": "model:flight_v1",
+              "unit": "yards",
+              "value": 153.97091174077644
+            },
+            {
+              "detail": "synthetic",
+              "name": "hand_height_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.6278790360666691
+            },
+            {
+              "detail": "synthetic",
+              "name": "flight_spin_rpm",
+              "source": "model:flight_v1",
+              "unit": "rpm",
+              "value": 6311.849812275488
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-17",
+          "shot_needs_review": false,
+          "shot_sha256": "87989b33a304fa8846d574b106dab8756547cf68b1d1e125a45568de035c0d58",
+          "stale": false,
+          "swing_id": "9"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-17T12:12:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "e75b8173164c6869297fa001a134a9429779ba36dc08ed578ccb99e402c0e941",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "head_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.13905
+            },
+            {
+              "detail": "synthetic",
+              "name": "head_hip_gain_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": -0.1630333333333333
+            },
+            {
+              "detail": "synthetic",
+              "name": "hip_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.6975
+            },
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.04125
+            },
+            {
+              "detail": "synthetic",
+              "name": "tempo_ratio",
+              "source": "pose:face_on",
+              "unit": "ratio",
+              "value": 4.4106000000000005
+            },
+            {
+              "detail": "synthetic",
+              "name": "downswing_ms",
+              "source": "pose:face_on",
+              "unit": "ms",
+              "value": 262.8446
+            },
+            {
+              "detail": "synthetic",
+              "name": "backswing_ms",
+              "source": "pose:face_on",
+              "unit": "ms",
+              "value": 956.0316582184194
+            },
+            {
+              "detail": "synthetic",
+              "name": "head_hip_offset_impact_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.13
+            },
+            {
+              "detail": "synthetic",
+              "name": "face_to_path_deg",
+              "source": "launch_monitor:hd_golf",
+              "unit": "degrees",
+              "value": 8.1
+            },
+            {
+              "detail": "synthetic",
+              "name": "flight_carry_yds",
+              "source": "model:flight_v1",
+              "unit": "yards",
+              "value": 152.7982180568991
+            },
+            {
+              "detail": "synthetic",
+              "name": "hand_height_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.584023847085644
+            },
+            {
+              "detail": "synthetic",
+              "name": "flight_spin_rpm",
+              "source": "model:flight_v1",
+              "unit": "rpm",
+              "value": 6449.997231337775
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-17",
+          "shot_needs_review": false,
+          "shot_sha256": "50cb4adbae607403d8ecde4ba7ecd029c100071c55e314fe1b4eb82f381fe139",
+          "stale": false,
+          "swing_id": "12"
+        }
+      ],
+      "unattributed_swings": 0,
+      "unknown_sources": []
+    },
+    "display_name": "Aaron",
+    "versions": {
+      "comparable_from": 16,
+      "installed": 16
+    }
+  },
+  "provenance": {
+    "analysis_version": 16,
+    "kind": "career",
+    "note": "every Standing and every refusal beside one: inside (at the 42.5th and 87.5th percentiles, half-even under `:.0f`), above and below the band, straddling, a center the guard withheld, the blocked metric, and no population for a launch-monitor, a model and a pose metric; the spread line wherever SPREAD is ready",
+    "oracle": "python",
+    "pydantic_version": "2.13.4",
+    "python_version": "3.13.3",
+    "recorded_by": "scripts/conformance_vectors.py::_run_career",
+    "rerecords": [
+      {
+        "added": [],
+        "by": "golf-core rerecord",
+        "career_version": 1,
+        "declaration": "spec/declarations/career-v1.json",
+        "moved": [
+          "career_version"
+        ]
+      }
+    ],
+    "source": "CorpusSwing built by scripts/conformance_vectors.py, as tests/analysis/ does"
+  }
+}

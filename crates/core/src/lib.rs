@@ -49,7 +49,25 @@
 //! down in the vector's own `provenance`. Its run, [`rerecord::plan`] and [`rerecord::Run::write`],
 //! walks `spec/vectors/` with them — every vector gated and composed before any file is written.
 //! Since M34 P7 it re-records the screen family too, through [`rerecord::run_screen`], one family
-//! per run as the declaration's version key says.
+//! per run as the declaration's version key says, and since M36 P13 the storage and career
+//! families together, under `career_version`.
+//!
+//! # The many-shot layer's runners
+//!
+//! [`storage_family::run_storage`] and [`career_family::run_career`] answer one vector of the
+//! storage and career families (M36). Each is the definition its gate (`tests/storage.rs`,
+//! `tests/career.rs`) and the re-record share, so a re-record writes what the gate checks. They are
+//! why this crate depends on `storage`, which is the one crate allowed to hold it beside `analysis`
+//! (ADR-008 as cargo edges).
+//!
+//! # The career reports and their verbs
+//!
+//! [`reports`] renders what the career scripts print (M36 P15–P16), from the aggregates alone, so
+//! [`career_family::run_career`] records the text into the career family and the verbs print it over
+//! `data/`: `golf-core career-corpus`, `career-baseline`, `career-dispersion` and `club-profile`,
+//! and `flag-mishit`, the one that writes. The verbs' `main` (who to report on, which data
+//! directories, and `flag-mishit`'s flag and listing) is there too; `bin/golf_core.rs` parses flags
+//! and prints.
 //!
 //! # `ANALYSIS_VERSION` is stamped here once, and only through the gate
 //!
@@ -60,9 +78,12 @@
 //! recorded by another version than this build's — belongs to the gates, `tests/engine.rs` and
 //! `tests/stages.rs`.
 
+pub mod career_family;
 pub mod compare;
+pub mod reports;
 pub mod rerecord;
 pub mod stages;
+pub mod storage_family;
 
 use serde::Deserialize;
 

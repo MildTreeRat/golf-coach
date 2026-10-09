@@ -35,20 +35,26 @@ longer a `KeypointsFile` a port can parse with the shipped schema, and 5 MB is n
 shape plus the test that would have to prove the reduction.
 
 **Later families have sections of their own at the foot of this file**: the stages (M22 P1), the
-format tables (M22 P3, M34 P2), and the screen family (M34 P4), which is recorded once, by
-`regenerate --screen-once`, and never rebuilt from here.
+format tables (M22 P3, M34 P2), the screen family (M34 P4), which is recorded once, by
+`regenerate --screen-once`, and never rebuilt from here, and the storage family (M36), the corpus
+reader and the stores, recorded once in the same way by `regenerate --storage-once`.
 """
 
 from __future__ import annotations
 
+import contextlib
 import copy
+import hashlib
 import importlib.util
 import json
 import math
+import os
 import random
 import re
 import struct
 import sys
+import tempfile
+from collections.abc import Callable, Iterator
 from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Any
@@ -673,7 +679,8 @@ def build_format(stage_vectors: list[dict[str, Any]] | None = None) -> list[
     when a Rust test fails, and a reader who has to decompress a vector to see that 0.145 rounds to
     0.14 will guess instead.
 
-    The last five tables are the screen parser's (M34 P2), and see their own section below.
+    The next five tables are the screen parser's (M34 P2), and the last three the many-shot
+    layer's (M36 P4); each group has its own section below.
     """
     if stage_vectors is None:
         # Read once here rather than in each consumer, because two of them want it now and the
@@ -693,6 +700,9 @@ def build_format(stage_vectors: list[dict[str, Any]] | None = None) -> list[
         (VECTORS / "format" / "text_case.json", _format_text_case()),
         (VECTORS / "format" / "sum.json", _format_sum(stage_vectors)),
         (VECTORS / "format" / "difflib_ratio.json", _format_difflib_ratio()),
+        (VECTORS / "format" / "general_precision.json", _format_general_precision(pool)),
+        (VECTORS / "format" / "lower.json", _format_lower()),
+        (VECTORS / "format" / "timestamp.json", _format_timestamp()),
     ]
 
 
@@ -1538,6 +1548,373 @@ def _format_difflib_ratio() -> dict[str, Any]:
         edges=_PARSER_EDGES,
         implemented_by="screen",
     )
+
+
+# ------------------------------------------------------------- format: the many-shot layer (M36 P4)
+#
+# Three more tables, for the CPython and pydantic the career aggregates, the stores and the five
+# report scripts lean on where neither the engine nor the parser did. Two are `pyfmt`'s: `:.Ng` at a
+# precision other than `%g`'s default, and `str.lower()`. The third is **`crates/contracts`'**, the
+# first format table whose answer is pydantic's rather than the interpreter's: how a `datetime`
+# field reads and writes, which every manifest, golfer, bag and shot on disk spells. They join this
+# family for the parser's reason (docs/plans/m34-screen-reader.md, call 2): every answer is the
+# language's or the library's, so they rebuild anywhere and age on `python_version` (and, for the
+# timestamp table, the `pydantic_version` it also carries).
+#
+# What M36 found and these do not cover is named where it was found rather than tabled here: the
+# float `**` choice is P11's to measure, and the report padding is std formatting by code point
+# (the M36 plan's P3 finding 5).
+
+#: Where these three tables' edges are written down.
+_CAREER_EDGES = (
+    "docs/plans/m36-many-shot-layer.md 'What the planning read found' finding 5, "
+    "and its P1 and P3 findings 5"
+)
+
+#: The precisions `:.Ng` is interpolated with across M36's surface, measured with `grep -rnoE
+#: '\.[0-9]+g\}' src/golf_coach scripts` and not chosen: `analysis/dispersion.py:208-209`, the
+#: drift caveat's two spreads. (`scripts/pose_replay.py`'s `.3g` and `.6g` are a lab tool's and
+#: port with it, not here.) `general.json` is `%g`'s default precision of 6 and stays the gate for
+#: that; this table is every other precision, so the default is not tabled twice.
+_G_PRECISIONS = (3,)
+
+
+def _format_general_precision(engine_pool: list[float]) -> dict[str, Any]:
+    """`:.Ng` at the precisions the many-shot layer formats with — `%g` with `P` other than 6.
+
+    The same two thresholds as `general.json`, moved: exponent form when the exponent of the value
+    *after* rounding to `P` significant digits is below -4 or at least `P`. At `P = 3` that puts
+    the boundary at 1000 rather than at 1e6, so `999.5` prints `1e+03` — a spread in yards or rpm
+    is a magnitude this caveat really prints — and the exact ties sit at the third significant
+    digit: `12.25` goes down to `12.2` and `12.75` up to `12.8`, half to even.
+    """
+    pool = _band_edges() + engine_pool + _sweep(80)
+    # The decade walk across both thresholds, and values that cross a decade *by rounding* at the
+    # third digit (`9.996` is `10`, `999.6` is `1e+03`), each with both signs.
+    pool += [
+        sign * 10.0**exp
+        for exp in range(-8, 8)
+        for sign in (1.0, -1.0, 2.5, -2.5, 9.996, -9.996, 9.994)
+    ]
+    # Exact ties at the third significant digit, one decade at a time: odd eighths in [1, 10),
+    # quarter-past and quarter-to in [10, 20), half-integers in the hundreds and fives in the
+    # thousands. Every one is representable, so the tie is real and not a decimal look.
+    pool += [k / 8 for k in range(9, 80, 2)]
+    pool += [n + f for n in range(10, 20) for f in (0.25, 0.75)]
+    pool += [n + 0.5 for n in range(120, 130)]
+    pool += [float(n * 10 + 5) for n in range(120, 130)]
+    # And the tie that is also the threshold: `999.5` ties up to `1e+03`, `998.5` down to `998`.
+    pool += [999.5, -999.5, 998.5]
+    pool += [0.0, -0.0, 0.0001, 0.00001, 1e16, 1e-100, math.inf, -math.inf, math.nan]
+    cases = [
+        {"value": repr(value), "precision": precision, "expected": f"{value:.{precision}g}"}
+        for precision in _G_PRECISIONS
+        for value in pool
+    ]
+    return _format_vector(
+        "format/general_precision",
+        f"`:.Ng` at {', '.join(str(p) for p in _G_PRECISIONS)}, the precisions M36's surface "
+        "formats with: walked across both form thresholds, through the values that cross a decade "
+        "by rounding, and over the exact ties at the last significant digit",
+        cases,
+        edges=_CAREER_EDGES,
+        implemented_by="pyfmt",
+    )
+
+
+#: `str.lower()`'s inputs on the many-shot surface: golfer names (`golfer.py::slugify`, the golfer
+#: store's `list_all` sort) and club names (`club.py::_normalize`, `club_spec.py::_normalize`), and
+#: Greek capital sigma in each context CPython's `Final_Sigma` rule tells apart — the one place
+#: `lower` reads a character's neighbours, which `upper` never does.
+_LOWER_TEXTS: tuple[str, ...] = (
+    # Final sigma: a `Σ` preceded by a cased letter and not followed by one lowers to `ς`, with
+    # case-ignorable characters (an apostrophe, a combining mark, a soft hyphen) skipped both ways.
+    "Σ",
+    "ΣΣ",
+    "ΑΣ",
+    "ΑΣΣ",
+    "ΑΣΑ",
+    "ΑΣ.",
+    "Α.Σ",
+    "Α'Σ",
+    "ΑΣ'",
+    "ΑΣ'Α",
+    "1Σ",
+    "ΑΣ1",
+    "ΑΣ́",
+    "ΆΣ",
+    "ΑΣ\xad",
+    "ΑΣ\xadΑ",
+    "AΣ",
+    "ΟΔΟΣ ΟΔΟΣ",
+    "ΣΩΚΡΆΤΗΣ",
+    "Σωκράτης",
+    # Names, the slug's input: accents, a dotted capital I that lowers to two code points, the
+    # three letterlike symbols that lower *into* ASCII or Greek, titlecase digraphs, a roman
+    # numeral, a circled letter and full-width forms.
+    "Aaron Sierra",
+    "AARON",
+    "María",
+    "MARÍA",
+    "José-María Ruiz",
+    "ÉAMON",
+    "NGUYỄN",
+    "İnci",
+    "İ",
+    "Kelvin",
+    "Å",
+    "Ωmega",
+    "STRASSE",
+    "Straße",
+    "ẞ",
+    "SØREN",
+    "ﬁne",
+    "ǄEMAL",
+    "ǅemal",
+    "ǈ",
+    "ǋ",
+    "ǲ",
+    "Ⅻ",
+    "Ⓐ",
+    "Ａaron",
+    "ＡＢＣ",
+    "ZOË",
+    "ДМИТРИЙ",
+    "Ἀθῆναι",
+    "ᾼ",
+    # Club names, as a golfer types one at `--club`.
+    "7I",
+    "Driver",
+    "3W",
+    "PW",
+    "Pitching Wedge",
+    "HYBRID 4",
+    "60\xb0",
+)
+
+
+def _format_lower() -> dict[str, Any]:
+    """`str.lower()`, over strings and over the whole code space.
+
+    Rust's `str::to_lowercase` is the same full mapping (`İ` to `i` plus a combining dot, both
+    applying `SpecialCasing.txt`'s unconditional rules) and the same `Final_Sigma` context, so
+    `pyfmt::lower` is a function of its own for `upper`'s reason: the two drift where their Unicode
+    versions do, and the day they do the fix has an address. The `lower_map` case records every
+    code point CPython lowers to something else, with what it lowers to, so the Rust test checks
+    every one of them rather than the ones somebody thought to type.
+    """
+    pool = _unique([*_CRAFTED_TEXTS, *_OCR_TEXTS, *_profile_texts(), *_LOWER_TEXTS])
+    cases: list[dict[str, Any]] = [
+        {"op": "lower", "value": text, "expected": text.lower()} for text in pool
+    ]
+    cases.append(
+        {
+            "op": "lower_map",
+            "expected": [
+                [cp, chr(cp).lower()]
+                for cp in range(sys.maxunicode + 1)
+                if chr(cp).lower() != chr(cp)
+            ],
+        }
+    )
+    return _format_vector(
+        "format/lower",
+        "`str.lower()` over golfer and club names, the parser tables' strings and every "
+        "`Final_Sigma` context, plus every code point CPython lowers to something else",
+        cases,
+        edges=_CAREER_EDGES,
+        implemented_by="pyfmt",
+    )
+
+
+#: Offsets the timestamp sweep writes every local time in, in minutes east of UTC: UTC, the two the
+#: career family carries (`+05:30`, `-05:00`), a half-hour and a quarter-hour zone, both ends of the
+#: real world (`+14:00`, `-12:00`), and the widest pydantic accepts (`±23:59`).
+_TIMESTAMP_OFFSETS = (0, 330, -300, -480, 120, -210, 345, 840, -720, 1439, -1439)
+
+#: Local times the sweep writes in each offset, as `datetime` fields: a whole second, a fraction
+#: with trailing zeros (`.120000`, which pydantic keeps), six digits, the smallest and largest
+#: fraction, the first and last instants of a year, leap days in each kind of century, and the
+#: epoch from both sides (negative microseconds are where a truncating division goes wrong).
+_TIMESTAMP_LOCALS: tuple[tuple[int, ...], ...] = (
+    (2026, 8, 4, 12, 0, 0, 0),
+    (2026, 8, 4, 12, 0, 0, 120000),
+    (2026, 8, 4, 12, 0, 0, 500000),
+    (2026, 8, 4, 12, 0, 0, 100000),
+    (2026, 8, 4, 12, 0, 0, 1),
+    (2026, 8, 4, 12, 0, 0, 999999),
+    (2026, 8, 10, 1, 38, 46, 828488),
+    (2026, 8, 23, 4, 49, 25, 21296),
+    (2026, 1, 1, 0, 0, 0, 0),
+    (2025, 12, 31, 23, 59, 59, 999999),
+    (2024, 2, 29, 12, 0, 0, 0),
+    (2000, 2, 29, 0, 0, 0, 0),
+    (1900, 2, 28, 23, 59, 59, 0),
+    (1970, 1, 1, 0, 0, 0, 0),
+    (1969, 12, 31, 23, 59, 59, 999999),
+    (1969, 12, 31, 23, 59, 59, 500000),
+)
+
+#: Spellings pydantic reads to an instant it then writes differently: `+00:00` and `-00:00` for
+#: `Z`, a fraction shorter than six digits, and a zero fraction it drops. Each is inside the
+#: grammar `contracts::time` accepts, so each is a case both sides must re-spell identically.
+_TIMESTAMP_RESPELLED = (
+    "2026-08-04T12:00:00+00:00",
+    "2026-08-04T12:00:00-00:00",
+    "2026-08-04T12:00:00.1Z",
+    "2026-08-04T12:00:00.12Z",
+    "2026-08-04T12:00:00.120Z",
+    "2026-08-04T12:00:00.1200Z",
+    "2026-08-04T12:00:00.12000Z",
+    "2026-08-04T12:00:00.000000Z",
+    "2026-08-04T12:00:00.5+00:00",
+    "2026-08-04T12:00:00.5-00:00",
+    "2026-08-04T17:30:00.25+05:30",
+    "2026-08-04T12:00:00.000+05:30",
+    "2026-08-04T12:00:00.0-08:00",
+    "2026-08-04T03:00:00.99999-09:00",
+    "1969-12-31T23:59:59.9Z",
+    "0001-01-01T00:00:00.000000+00:00",
+)
+
+#: Strings pydantic refuses, so `contracts::time` must too. What pydantic *accepts* and the Rust
+#: grammar refuses — naive, a space or a lowercase `t`, `+0530`, no seconds, seven fraction digits,
+#: a comma, a Unix number — is the M36 plan's call 9 divergence and is pinned in
+#: `crates/contracts/tests/time.rs`, not here: this table records only what the two agree on.
+_TIMESTAMP_REFUSED = (
+    "",
+    "not a timestamp",
+    "2026-08-04T24:00:00Z",
+    "2026-08-04T23:59:60Z",
+    "2026-08-04T12:60:00Z",
+    "2026-02-29T12:00:00Z",
+    "1900-02-29T12:00:00Z",
+    "2026-04-31T00:00:00Z",
+    "2026-13-01T00:00:00Z",
+    "2026-00-01T00:00:00Z",
+    "2026-08-00T00:00:00Z",
+    "0000-01-01T00:00:00Z",
+    "2026-08-04T12:00:00+24:00",
+    "2026-08-04T12:00:00+23:60",
+    "2026-08-04T12:00:00.Z",
+    "2026-8-04T12:00:00Z",
+    "+2026-08-04T12:00:00Z",
+    "2026-08-+4T12:00:00Z",
+    "2026-08-04T12:00:00+05:30:15",
+    "2026-08-04T12:00:00 Z",
+    "2026-08-04T12:00:00+05",
+    "2026-08-04T12:00:00ZZ",
+    " 2026-08-04T12:00:00Z",
+    "１９７０-01-01T00:00:00Z",
+)
+
+
+def _format_timestamp() -> dict[str, Any]:
+    """A pydantic `datetime` field: what it reads, how it writes, and three things read off it.
+
+    Every timestamp on disk is a pydantic `datetime` written by `model_dump_json`: `Z` for UTC and
+    `±HH:MM` otherwise, the fraction as six digits whenever it is non-zero (trailing zeros kept)
+    and dropped when it is zero. `contracts::time::Timestamp` writes that spelling back, keeping
+    the offset it read. Each row also records what the many-shot layer reads off a parsed value:
+
+    - `isoformat` — `datetime.isoformat()`, which `storage/corpus.py::_arrival` sorts on **as a
+      string** (the M36 plan's P1 finding 5). It is pydantic's spelling with `+00:00` for `Z`.
+    - `date` — `f"{dt:%Y-%m-%d}"` in the value's own offset (`club_profile.py`'s bag entry and
+      bag-changed caveat). `null` below year 1000, where `%Y` is the C library's `strftime` and so
+      the platform's to pad; nothing on disk is that old.
+    - `epoch_us` — the instant, as whole microseconds since 1970-01-01T00:00:00Z. Python compares
+      two aware datetimes by instant alone, so this one integer is the whole ordering and equality
+      a port owes: equal instants in different offsets are equal, and hash alike.
+
+    Three kinds of row: `written` (a value the sweep built, in pydantic's spelling, which reads
+    back to itself), `respelled` (another spelling pydantic reads, with what it writes instead),
+    and `refused` (every answer `null`). The builder asserts each row is the kind it claims.
+    """
+    from datetime import UTC, datetime, timedelta, timezone
+
+    import pydantic
+    from pydantic import BaseModel, ValidationError
+
+    class _At(BaseModel):
+        at: datetime
+
+    epoch = datetime(1970, 1, 1, tzinfo=UTC)
+
+    def read(text: str) -> datetime | None:
+        try:
+            return _At.model_validate({"at": text}).at
+        except ValidationError:
+            return None
+
+    def written_by_pydantic(value: datetime) -> str:
+        spelled: str = json.loads(_At(at=value).model_dump_json())["at"]
+        return spelled
+
+    def row(kind: str, text: str) -> dict[str, Any]:
+        parsed = read(text)
+        if parsed is None:
+            assert kind == "refused", f"pydantic refuses {text!r}, which is filed as {kind}"
+            return {
+                "kind": kind,
+                "value": text,
+                "pydantic": None,
+                "isoformat": None,
+                "date": None,
+                "epoch_us": None,
+            }
+        assert kind != "refused", f"pydantic reads {text!r}, so it is not a refusal both make"
+        assert parsed.tzinfo is not None, f"{text!r} reads naive, which is a divergence, not a row"
+        spelled = written_by_pydantic(parsed)
+        assert (spelled == text) == (kind == "written"), f"{text!r} filed as {kind}: {spelled!r}"
+        again = read(spelled)
+        assert again == parsed and again is not None and again.utcoffset() == parsed.utcoffset()
+        return {
+            "kind": kind,
+            "value": text,
+            "pydantic": spelled,
+            "isoformat": parsed.isoformat(),
+            "date": f"{parsed:%Y-%m-%d}" if parsed.year >= 1000 else None,
+            "epoch_us": (parsed - epoch) // timedelta(microseconds=1),
+        }
+
+    def zone(minutes: int) -> timezone:
+        return UTC if minutes == 0 else timezone(timedelta(minutes=minutes))
+
+    built = [
+        datetime(*fields, tzinfo=zone(minutes))
+        for fields in _TIMESTAMP_LOCALS
+        for minutes in _TIMESTAMP_OFFSETS
+    ]
+    built += [
+        # The career family's own offsets on its own dates, and the instants where a date in the
+        # value's offset and the date in UTC disagree, from both sides of midnight.
+        datetime(2026, 8, 20, 23, 30, tzinfo=zone(-300)),
+        datetime(2026, 8, 10, 17, 39, tzinfo=zone(330)),
+        datetime(2026, 8, 3, 14, 1, tzinfo=zone(120)),
+        datetime(2026, 8, 11, 8, 0, tzinfo=zone(-300)),
+        datetime(2025, 12, 31, 19, 0, tzinfo=zone(-300)),
+        datetime(2026, 1, 1, 5, 29, 59, tzinfo=zone(330)),
+        # The range's ends, in UTC only: an offset there would put the instant outside it.
+        datetime(1, 1, 1, tzinfo=UTC),
+        datetime(999, 12, 31, 23, 59, 59, 999999, tzinfo=UTC),
+        datetime(1000, 1, 1, tzinfo=UTC),
+        datetime(9999, 12, 31, 23, 59, 59, 999999, tzinfo=UTC),
+    ]
+    cases = [row("written", written_by_pydantic(value)) for value in built]
+    cases += [row("respelled", text) for text in _TIMESTAMP_RESPELLED]
+    cases += [row("refused", text) for text in _TIMESTAMP_REFUSED]
+    vector = _format_vector(
+        "format/timestamp",
+        f"a pydantic `datetime` field: a sweep of instants in {len(_TIMESTAMP_OFFSETS)} offsets "
+        "as `model_dump_json` writes them, the other spellings it reads and re-spells, and "
+        "strings it refuses — each "
+        "with `isoformat()`, `%Y-%m-%d` in its own offset, and the instant in microseconds",
+        cases,
+        edges=_CAREER_EDGES,
+        implemented_by="contracts",
+    )
+    vector["provenance"]["pydantic_version"] = pydantic.VERSION
+    return vector
 
 
 # --------------------------------------------------------------------------- screen (M34 P4)
@@ -2470,3 +2847,3356 @@ def _units_vector(
         "cases": cases,
         **extra,
     }
+
+
+# ===================================================================== storage: the corpus reader
+#
+# **The storage family records the many-shot layer's stores and the reader over them** (M36, the
+# M36 plan's call 1). This half, from P1, exercises `storage/corpus.py::read_corpus` and
+# `narrow_to`; the store operations are the next section's (P2). `regenerate --storage-once`
+# records the whole family once, through `build_storage`, and refuses a second run, on the screen
+# family's precedent. From there `crates/storage` is the implementation and `golf-core rerecord`
+# the only writer.
+#
+# **A case's input is the sessions directory as raw text.** `input.files` maps a path relative to
+# the sessions root to that file's text, so a corrupt manifest or a half-written state file is a
+# case like any other. `_materialise` is how a port lays it out: a key ending in `/` is an empty
+# directory, and `files: null` is a root that does not exist. Frozen Python answers a missing root
+# as it answers an empty one, but a port's directory read meets two different things. Only what
+# `read_corpus` opens travels (`manifest.json`, `analysis.json`, `analysis.state.json`), plus
+# `session.json`, because a session directory holding only that is still a session scanned.
+#
+# **The synthetic trees are written by `tests/storage/conftest.py::write_swing`**, the builder the
+# Python tests trust, so a manifest or a state file here is what `save_manifest` and `save_state`
+# wrote rather than a hand-typed imitation of it, and edited afterwards only where a case says so.
+# Their line endings are normalised to `\n`, because `write_text` writes `\r\n` on Windows and a
+# vector should not depend on the machine that recorded it; JSON reads the same either way. The
+# real tree keeps the bytes on disk.
+#
+# **`input.versions` is the parameter Rust's `read_corpus` will take** (the plan's call 7):
+# `{installed, comparable_from}`. Frozen Python's reader reads `ANALYSIS_VERSION` for itself, so
+# `_run_corpus` refuses any pair but `{v, v}` at its own `v`, which is where the installed-version
+# rule and P14's comparable-from rule agree.
+#
+# **`expected` is `{corpus, properties, narrowed}`.** `properties` are `CareerCorpus`'s derived
+# counts (`distinct_swings`, `mishit_refs` and the rest), which `model_dump` leaves out and every
+# report prints, so a port's are gated here rather than only through report text. Each narrowing's
+# arguments are in `input.narrowings` and its answer, the same `{corpus, properties}`, in
+# `expected.narrowed`: the plan's call 1 put the arguments under `expected`, where `_run_corpus`
+# could not read them.
+#
+# **The version is `career_version`, top-level**, M34's finding for `screen_parser_version`: it is
+# where `conformance.py list` and `golf-core rerecord` look. 0 is frozen Python's, which has no
+# `CAREER_VERSION`. `provenance.analysis_version` names the engine whose `is_outdated` answered; a
+# storage vector does not age on it.
+
+#: Frozen Python's place in `CAREER_VERSION`'s ledger. See the section header.
+_FROZEN_CAREER = 0
+
+#: The golfer the real corpus is read for, and the only one `data/` holds.
+_REAL_PLAYER = "aaron"
+
+#: What `read_corpus` opens in a swing directory besides `analysis.json`, which travels slimmed.
+_SWING_FILES = ("manifest.json", "analysis.state.json")
+
+#: Measured at M36 P1: the real case is 480 KB as plain JSON, over the plan's ~200 KB line, and
+#: 27 KB gzipped, so it is gzipped, as `spec/vectors/corpus/` is.
+_REAL_SUFFIX = ".json.gz"
+
+
+def build_storage_corpus(*, real: bool = True) -> list[tuple[Path, dict[str, Any]]]:
+    """The corpus half of the storage family, as (path, payload) pairs. Writes nothing.
+
+    `real=False` leaves out the case read from `data/`, which is what lets the dry-run pin in
+    `tests/test_conformance.py` run on a checkout with no captures. With it, a missing `data/` is
+    an error rather than a smaller family.
+    """
+    corpus_dir = VECTORS / "storage" / "corpus"
+    out = [(corpus_dir / f"{name}.json", v) for name, v in _storage_corpus_synthetic().items()]
+    if real:
+        out.append((corpus_dir / f"real{_REAL_SUFFIX}", _storage_corpus_real()))
+    return out
+
+
+def _run_corpus(given: dict[str, Any]) -> dict[str, Any]:
+    """One corpus case's input through frozen Python: the definition a port reproduces.
+
+    `input.files` materialised into a scratch sessions root, `read_corpus` over it for
+    `input.player_id`, then `narrow_to` once per entry of `input.narrowings` over that one corpus.
+    """
+    versions = given["versions"]
+    frozen = {"installed": ANALYSIS_VERSION, "comparable_from": ANALYSIS_VERSION}
+    if versions != frozen:
+        raise ValueError(
+            f"frozen Python's `read_corpus` answers only under {frozen}, its own installed engine; "
+            f"{versions} is a question for Rust's"
+        )
+    with tempfile.TemporaryDirectory() as scratch:
+        root = Path(scratch) / "sessions"
+        _materialise(given["files"], root)
+        return _read_and_narrow(root, given)
+
+
+def _read_and_narrow(root: Path, given: dict[str, Any]) -> dict[str, Any]:
+    """`_run_corpus` from the directory read on, so the real case can be read off `data/` itself."""
+    from datetime import datetime
+
+    from golf_coach.contracts.club import ClubId
+    from golf_coach.storage.corpus import narrow_to, read_corpus
+
+    corpus = read_corpus(root, given["player_id"])
+    narrowed = {}
+    for name, args in given["narrowings"].items():
+        narrowed[name] = _corpus_answer(
+            narrow_to(
+                corpus,
+                since=None if args["since"] is None else datetime.fromisoformat(args["since"]),
+                sessions=args["sessions"],
+                club=None if args["club"] is None else ClubId(args["club"]),
+            )
+        )
+    return {**_corpus_answer(corpus), "narrowed": narrowed}
+
+
+def _corpus_answer(corpus: Any) -> dict[str, Any]:
+    """A `CareerCorpus` as `model_dump(mode="json")` writes it, and the counts it derives."""
+    return {
+        "corpus": corpus.model_dump(mode="json"),
+        "properties": {
+            "distinct_swings": corpus.distinct_swings,
+            "distinct_shots": corpus.distinct_shots,
+            "distinct_sessions": corpus.distinct_sessions,
+            "untagged_swings": corpus.untagged_swings,
+            "duplicates_collapsed": corpus.duplicates_collapsed,
+            "shot_conflicts": corpus.shot_conflicts,
+            "mishit_shots": corpus.mishit_shots,
+            "mishit_refs": corpus.mishit_refs,
+            "mishit_shots_unconfirmed": corpus.mishit_shots_unconfirmed,
+        },
+    }
+
+
+def _materialise(files: dict[str, str] | None, root: Path) -> None:
+    """Lay `input.files` out under `root`. `None` leaves the root absent; a `/` key is a directory.
+
+    Written as UTF-8 bytes rather than through `write_text`, so what lands on disk is the text in
+    the vector and not the text with Windows' line endings substituted into it.
+    """
+    if files is None:
+        return
+    root.mkdir(parents=True)
+    for rel, text in files.items():
+        parts = rel.rstrip("/").split("/")
+        if rel.startswith("/") or ".." in parts or "" in parts:
+            raise ValueError(f"{rel!r} is not a path inside the sessions root")
+        target = root.joinpath(*parts)
+        if rel.endswith("/"):
+            assert text == "", f"{rel!r} names a directory and carries text"
+            target.mkdir(parents=True, exist_ok=True)
+            continue
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(text.encode("utf-8"))
+
+
+def _read_tree(root: Path) -> dict[str, str]:
+    """A scratch sessions root read back as `input.files`, `\\r\\n` normalised (the header says
+    why), with an empty directory as its `/` key."""
+    files: dict[str, str] = {}
+    for path in sorted(root.rglob("*")):
+        rel = path.relative_to(root).as_posix()
+        if path.is_file():
+            files[rel] = path.read_bytes().decode("utf-8").replace("\r\n", "\n")
+        elif not any(path.iterdir()):
+            files[f"{rel}/"] = ""
+    return files
+
+
+def _storage_vector(
+    vector_id: str,
+    given: dict[str, Any],
+    *,
+    note: str,
+    source: str,
+    run: Callable[[dict[str, Any]], dict[str, Any]] = _run_corpus,
+) -> dict[str, Any]:
+    """Serialize the input, run it through `run`, and pair the two (`_vector`'s rule).
+
+    `run` is `_run_corpus` or `_run_ops`, and `provenance.recorded_by` names it, so a port reads
+    there which of the two definitions a case reproduces. `provenance.analysis_version` is the
+    corpus reader's alone: it names the engine whose `is_outdated` answered, and no store operation
+    reads one.
+    """
+    import pydantic
+
+    given_json = json.loads(json.dumps(given))
+    engine = {"analysis_version": ANALYSIS_VERSION} if run is _run_corpus else {}
+    return {
+        "id": vector_id,
+        "career_version": _FROZEN_CAREER,
+        "provenance": {
+            "kind": "storage",
+            "oracle": "python",
+            "note": note,
+            "source": source,
+            **engine,
+            "python_version": _python_version(),
+            "pydantic_version": pydantic.VERSION,
+            "recorded_by": f"scripts/conformance_vectors.py::{run.__name__}",
+        },
+        "input": given_json,
+        "expected": run(given_json),
+    }
+
+
+# ------------------------------------------------------------------- storage: the corpus, synthetic
+
+
+def _storage_corpus_synthetic() -> dict[str, dict[str, Any]]:
+    """`read_corpus`'s cases, at least one per row of the M36 plan's P1 list.
+
+    Each note names the Python test it mirrors, or says what it pins that no test does — mostly the
+    places a port reading the same files would naturally answer differently: the string tiebreaks,
+    the scan order `excluded` inherits, and a manifest whose ids are trusted over its directory.
+    """
+    from datetime import UTC, datetime, timedelta, timezone
+
+    from golf_coach.contracts.club import ClubId
+    from golf_coach.contracts.mishit import MishitVerdict
+
+    kit = _load_conftest(REPO / "tests" / "storage" / "conftest.py", "_conformance_storage_kit")
+    metric, analysis = kit.measurement, kit.analysis_with
+    lm_source, flight, population = "launch_monitor:hd_golf", "model:flight_v1", "population:golfdb"
+    seven, wedge, driver = ClubId.SEVEN_IRON, ClubId.SAND_WEDGE, ClubId.DRIVER
+
+    def at(day: int, hour: int = 12, minute: int = 0, *, tz: Any = UTC, micro: int = 0) -> Any:
+        return datetime(2026, 8, day, hour, minute, 0, micro, tzinfo=tz)
+
+    def lm(name: str, value: float, unit: str = "yards") -> dict[str, Any]:
+        return metric(name, value, source=lm_source, unit=unit)
+
+    def trusted() -> dict[str, Any]:
+        return kit.flagged_shot(needs_review=False)
+
+    pose = analysis([metric("head_sway_norm", 0.25)])
+    shot_metrics = analysis(
+        [metric("head_sway_norm", 0.25), lm("face_to_path_deg", 13.2, "degrees")], shot=trusted()
+    )
+
+    def with_version(value: Any) -> dict[str, Any]:
+        stored = analysis([metric("head_sway_norm", 0.25)])
+        stored["analysis_version"] = value
+        return stored
+
+    def club_shot(day: int, carry: float, club: Any = seven, **kw: Any) -> tuple[Any, ...]:
+        """`test_corpus.py::_seven_iron`, for any club: its own clip and photo, three metrics."""
+        fields: dict[str, Any] = {
+            "face_on": f"clip-{club.value}-{day}",
+            "shot_screen": f"photo-{club.value}-{day}",
+            "club": club,
+            "created_at": at(day),
+            "analysis": analysis(
+                [
+                    lm("carry_distance_yds", carry),
+                    lm("ball_speed_mph", 120.0, "mph"),
+                    metric("head_sway_norm", 0.2),
+                ]
+            ),
+        }
+        fields.update(kw)
+        return (f"2026-08-{day:02d}", club.value, fields)
+
+    cases: dict[str, dict[str, Any]] = {}
+
+    def case(
+        name: str,
+        note: str,
+        swings: Any = (),
+        *,
+        edits: dict[str, str | None] | None = None,
+        player: str = _REAL_PLAYER,
+        narrowings: dict[str, dict[str, Any]] | None = None,
+        files: Any = True,
+    ) -> None:
+        """Record one case. `files` is the tree `swings` and `edits` build, unless a case passes a
+        tree of its own, or `None` for a root that does not exist."""
+        assert name not in cases, f"two storage corpus cases are named {name}"
+        tree = _sessions_tree(kit, swings, edits) if files is True else files
+        given = {
+            "player_id": player,
+            "versions": {"installed": ANALYSIS_VERSION, "comparable_from": ANALYSIS_VERSION},
+            "files": tree,
+            "narrowings": {
+                key: {"since": None, "sessions": None, "club": None, **args}
+                for key, args in (narrowings or {}).items()
+            },
+        }
+        cases[name] = _storage_vector(
+            f"storage/corpus/{name}",
+            given,
+            note=note,
+            source="tests/storage/conftest.py::write_swing, edited where the note says",
+        )
+
+    def s(session_id: str, swing_id: str, **fields: Any) -> tuple[str, str, dict[str, Any]]:
+        return (session_id, swing_id, fields)
+
+    # ------------------------------------------------------------- the root, and who swung it
+
+    case(
+        "missing-sessions-dir",
+        "a sessions root that does not exist reads as an empty corpus, not an error "
+        "(`test_a_missing_sessions_directory_is_not_an_error`); a port's directory read must not "
+        "raise here",
+        files=None,
+    )
+    case(
+        "empty-sessions-dir",
+        "a root that exists and holds nothing. Frozen Python answers it as it answers a missing "
+        "one, and a port's directory listing meets something different",
+        files={},
+    )
+    case(
+        "dotted-and-stray-entries",
+        "what `list_session_ids` and `get_session` skip: a dotted session (`.incoming`, which "
+        "holds a whole swing here), a dotted swing directory, and stray files at both levels. A "
+        "session holding only `session.json`, and an empty session directory, are still sessions "
+        "scanned",
+        [
+            s("2026-08-10", "1", face_on="clip-a", analysis=pose),
+            s(".incoming", "1", face_on="clip-b", analysis=pose),
+            s("2026-08-10", ".partial", face_on="clip-c", analysis=pose),
+        ],
+        edits={
+            "notes.txt": "not a session",
+            "2026-08-10/README": "not a swing",
+            "2026-08-10/session.json": '{"player_id": "aaron"}',
+            "2026-08-12/session.json": '{"player_id": "aaron"}',
+            "2026-08-13/": "",
+        },
+    )
+    case(
+        "unknown-player",
+        "a golfer with no swings is an empty corpus whose scan still counted the others "
+        "(`test_an_unknown_golfer_reads_as_an_empty_corpus`)",
+        [s("2026-08-10", "1", face_on="clip-a", analysis=pose)],
+        player="nobody",
+    )
+    case(
+        "unattributed",
+        "a swing naming nobody is itemised, because it may be this golfer's "
+        "(`test_unattributed_swings_are_itemised_because_they_are_repairable`)",
+        [
+            s("2026-08-10", "1", face_on="clip-a", analysis=pose),
+            s("2026-08-10", "2", player_id=None, face_on="clip-b", analysis=pose),
+        ],
+    )
+    case(
+        "another-golfer",
+        "another golfer's swing is counted and never itemised "
+        "(`test_another_golfers_swings_are_counted_but_never_included`)",
+        [
+            s("2026-08-10", "1", face_on="clip-a", analysis=pose),
+            s("2026-08-10", "2", player_id="dave", face_on="clip-b", analysis=pose),
+        ],
+    )
+
+    # ------------------------------------------------------------------- identity and dedupe
+
+    case(
+        "no-face-on",
+        "no face-on clip is `NO_FACE_ON`, and never a swing "
+        "(`test_a_swing_with_no_face_on_clip_can_never_carry_a_pose_measurement`); the second has "
+        "no shot photo either, and is excluded for the clip alone",
+        [
+            s("2026-08-10", "1", face_on=None, analysis=pose),
+            s("2026-08-10", "2", face_on=None, shot_screen=None, analysis=pose),
+            s("2026-08-10", "3", face_on="clip-a", analysis=pose),
+        ],
+    )
+    case(
+        "duplicate-three-uploads",
+        "one clip in three directories, scanned in an order that is not arrival order: the "
+        "earliest arrival survives and the other two are `DUPLICATE`, listed in arrival order "
+        "(`test_the_earliest_arrival_survives_and_names_what_it_absorbed`)",
+        [
+            s("2026-08-07", "1", face_on="clip-a", created_at=at(10), analysis=pose),
+            s("2026-08-09", "2", face_on="clip-a", created_at=at(7), analysis=pose),
+            s("2026-08-10", "1", face_on="clip-a", created_at=at(9), analysis=pose),
+        ],
+    )
+    case(
+        "duplicate-same-second",
+        "two arrivals in the same second, which `_arrival`'s tiebreak decides: the session id, "
+        "then the swing id, **as strings**. So swing `10` survives swing `9` in one session, "
+        "though `get_session` scanned `9` first — a numeric tiebreak would keep the other",
+        [
+            s("2026-08-09", "1", face_on="clip-a", created_at=at(9), analysis=pose),
+            s("2026-08-10", "1", face_on="clip-a", created_at=at(9), analysis=pose),
+            s("2026-08-11", "9", face_on="clip-b", created_at=at(11), analysis=pose),
+            s("2026-08-11", "10", face_on="clip-b", created_at=at(11), analysis=pose),
+        ],
+    )
+    case(
+        "duplicate-across-offsets",
+        "`_arrival` sorts on `created_at.isoformat()`, a **string** in the manifest's own offset, "
+        "not on the instant. Clip a: 15:00+05:30 (09:30Z) loses to 12:00Z, because '12' < '15'. "
+        "Clip b: 08:00-05:00 (13:00Z) beats 12:00Z, and its later time becomes `captured_at`. "
+        "Clip c: a whole second sorts before a fraction because isoformat writes `+00:00` and "
+        "'+' < '.'; a key spelled with `Z` would reverse it. `swings` itself then sorts by "
+        "instant",
+        [
+            s("2026-08-10", "1", face_on="clip-a", created_at=at(10), analysis=pose),
+            s(
+                "2026-08-10",
+                "2",
+                face_on="clip-a",
+                created_at=at(10, 15, tz=timezone(timedelta(hours=5, minutes=30))),
+                analysis=pose,
+            ),
+            s(
+                "2026-08-11",
+                "1",
+                face_on="clip-b",
+                created_at=at(11, 8, tz=timezone(timedelta(hours=-5))),
+                analysis=pose,
+            ),
+            s("2026-08-11", "2", face_on="clip-b", created_at=at(11), analysis=pose),
+            s("2026-08-12", "1", face_on="clip-c", created_at=at(12, micro=500000), analysis=pose),
+            s("2026-08-12", "2", face_on="clip-c", created_at=at(12), analysis=pose),
+        ],
+    )
+    case(
+        "conflicting-shot-photos",
+        "re-uploads carrying other photos: the survivor's photo is never a conflict, the rest "
+        "are, sorted and named once each "
+        "(`test_one_clip_with_two_shot_photos_is_a_conflict_not_a_second_reading`). Clip b's "
+        "survivor has no photo, so every photo on its duplicates conflicts",
+        [
+            s("2026-08-07", "1", face_on="clip-a", shot_screen="shot-a", created_at=at(7),
+              analysis=shot_metrics),
+            s("2026-08-08", "1", face_on="clip-a", shot_screen="shot-c", created_at=at(8),
+              analysis=shot_metrics),
+            s("2026-08-09", "1", face_on="clip-a", shot_screen="shot-b", created_at=at(9),
+              analysis=shot_metrics),
+            s("2026-08-10", "1", face_on="clip-a", shot_screen="shot-a", created_at=at(10),
+              analysis=shot_metrics),
+            s("2026-08-11", "1", face_on="clip-a", shot_screen=None, created_at=at(11),
+              analysis=shot_metrics),
+            s("2026-08-07", "2", face_on="clip-b", shot_screen=None, created_at=at(7),
+              analysis=shot_metrics),
+            s("2026-08-08", "2", face_on="clip-b", shot_screen="shot-z", created_at=at(8),
+              analysis=shot_metrics),
+        ],
+    )
+    case(
+        "one-photo-two-clips",
+        "two real swings sharing one photo are two pose samples and one shot sample, the "
+        "simulated flight included "
+        "(`test_two_clips_sharing_a_shot_photo_is_two_pose_samples_and_one_shot_sample`, "
+        "`test_a_simulated_flight_dedupes_on_the_shot_photo_and_not_the_clip`)",
+        [
+            s("2026-08-10", str(n), face_on=f"clip-{n}", shot_screen="shot-a",
+              analysis=analysis(
+                  [
+                      metric("head_sway_norm", 0.25),
+                      lm("face_to_path_deg", 13.2, "degrees"),
+                      metric("flight_carry_yds", 141.2, source=flight, unit="yards"),
+                  ],
+                  shot=trusted(),
+              ))
+            for n in (1, 2)
+        ],
+    )
+
+    # ------------------------------------------------------------- the analysis and its state
+
+    case(
+        "not-analyzed",
+        "no `analysis.json` is a swing and not a sample "
+        "(`test_an_unanalyzed_swing_is_counted_as_a_swing_but_not_as_a_sample`)",
+        [s("2026-08-10", "1", face_on="clip-a", analysis=None)],
+    )
+    case(
+        "corrupt-analysis",
+        "an `analysis.json` `load_analysis` cannot use reads as no analysis at all: truncated "
+        "JSON, an array, and `null` (`json.loads` succeeds on the last two and they are not a "
+        "dict). Each still has a state file, which is never read for an unanalyzed swing",
+        [s("2026-08-10", str(n), face_on=f"clip-{n}", analysis=pose) for n in (1, 2, 3)],
+        edits={
+            "2026-08-10/1/analysis.json": '{"analysis_version": 16, "swing": {"measure',
+            "2026-08-10/2/analysis.json": "[1, 2, 3]",
+            "2026-08-10/3/analysis.json": "null",
+        },
+    )
+    case(
+        "stale",
+        "inputs re-uploaded since the run: a real swing that contributes nothing "
+        "(`test_a_stale_analysis_is_a_real_swing_that_contributes_nothing`), beside a fresh one",
+        [
+            s("2026-08-10", "1", face_on="clip-a", analysis=pose, stale=True),
+            s("2026-08-10", "2", face_on="clip-b", analysis=pose),
+        ],
+    )
+    case(
+        "unreadable-state",
+        "a state file `load_state` cannot read is no state, so **not** stale: truncated JSON (1), "
+        "a status outside the literal (2), and no file (3). A readable state with no `inputs` "
+        "(4) defaults them to `{}`, which matches no manifest, so it **is** stale",
+        [s("2026-08-10", str(n), face_on=f"clip-{n}", analysis=pose) for n in (1, 2, 3, 4)],
+        edits={
+            "2026-08-10/1/analysis.state.json": '{"status": "done", "inputs": {"face_on"',
+            "2026-08-10/2/analysis.state.json": '{"status": "finished", "inputs": {}}',
+            "2026-08-10/3/analysis.state.json": None,
+            "2026-08-10/4/analysis.state.json": '{"status": "done"}',
+        },
+    )
+    versions: list[Any] = [None, 0, 15, 16.0, "16", -1, True, ANALYSIS_VERSION, 17]
+    outdated_swings = []
+    for n, value in enumerate(versions, start=1):
+        stored = analysis([metric("head_sway_norm", 0.25)], version=None)
+        if value is not None:
+            stored["analysis_version"] = value
+        outdated_swings.append(s("2026-08-10", str(n), face_on=f"clip-{n}", analysis=stored))
+    case(
+        "outdated-versions",
+        "`stored_analysis_version` over every shape it meets: no key, 0, 15, a float 16.0, a "
+        "string '16', -1 and `true` all read as an engine older than 16 and are `OUTDATED`, "
+        "stamped with what the stamp read as (0 for all but 15). 16 is current, and 17, newer "
+        "than the installed engine, is not outdated under frozen Python's `<`. "
+        "(`test_an_artifact_from_an_older_engine_is_a_real_swing_that_contributes_nothing`)",
+        outdated_swings,
+    )
+    case(
+        "stale-and-outdated",
+        "both axes at once: one swing, excluded twice, `STALE` before `OUTDATED`",
+        [
+            s("2026-08-10", "1", face_on="clip-a", stale=True,
+              analysis=analysis([metric("head_sway_norm", 0.25)], version=15)),
+        ],
+    )
+    case(
+        "swing-not-a-dict",
+        "an analysis whose `swing` is `null`, an array, absent, or a dict with no "
+        "`measurements`, and a current one whose measurements are `[]`: each is analyzed and "
+        "counted, with no measurements and no review flag "
+        "(`test_a_current_artifact_with_no_measurements_is_reported_not_reconstructed`)",
+        [
+            s("2026-08-10", "1", face_on="clip-1",
+              analysis={"analysis_version": ANALYSIS_VERSION, "swing": None}),
+            s("2026-08-10", "2", face_on="clip-2",
+              analysis={"analysis_version": ANALYSIS_VERSION, "swing": [1]}),
+            s("2026-08-10", "3", face_on="clip-3",
+              analysis={"analysis_version": ANALYSIS_VERSION}),
+            s("2026-08-10", "4", face_on="clip-4",
+              analysis={"analysis_version": ANALYSIS_VERSION, "swing": {"shot": None}}),
+            s("2026-08-10", "5", face_on="clip-5", analysis=analysis(None)),
+        ],
+    )
+    entries: list[Any] = [
+        metric("head_sway_norm", 0.25),
+        {"name": "no_unit", "value": 1.0, "source": "pose:face_on"},
+        {"name": "null_value", "value": None, "unit": "ratio", "source": "pose:face_on"},
+        {"name": "word_value", "value": "abc", "unit": "ratio", "source": "pose:face_on"},
+        {"value": 1.0, "unit": "ratio", "source": "pose:face_on"},
+        "not an entry",
+        42,
+        {"name": "extra_key", "value": 0.5, "unit": "ratio", "source": "pose:face_on", "x": 1},
+        {"name": "no_detail", "value": 0.75, "unit": "ratio", "source": "pose:face_on"},
+    ]
+    case(
+        "invalid-measurements",
+        "`_measurements` keeps the entries `Measurement` validates and drops the rest one by "
+        "one: no unit, a null or non-numeric value, no name, and entries that are not objects "
+        "are dropped; an unknown key is ignored and a missing `detail` defaults to ''. Swing 2's "
+        "`measurements` is an object, not a list, so it has none. No entry leans on a lax "
+        "pydantic coercion (the plan's call 9)",
+        [
+            s("2026-08-10", "1", face_on="clip-1",
+              analysis={"analysis_version": ANALYSIS_VERSION, "swing": {"measurements": entries}}),
+            s("2026-08-10", "2", face_on="clip-2",
+              analysis={"analysis_version": ANALYSIS_VERSION,
+                        "swing": {"measurements": {"head_sway_norm": 0.2}}}),
+        ],
+    )
+    unvalidated = trusted()
+    del unvalidated["timestamp"]
+    unprovenanced = {**trusted(), "provenance": None}
+    review_metrics = [
+        metric("head_sway_norm", 0.25),
+        lm("face_to_path_deg", 13.2, "degrees"),
+        metric("flight_carry_yds", 141.2, source=flight, unit="yards"),
+    ]
+    case(
+        "shot-review",
+        "`_needs_review` over the attached shot: a flagged parse (1) and a shot that no longer "
+        "validates (3, no timestamp) take every shot-keyed sample with them, the flight "
+        "included; a trusted parse (2), a shot that is not an object (4) and one with no "
+        "provenance (5) do not (`test_a_flagged_shot_contributes_to_no_launch_monitor_count`, "
+        "`test_a_flagged_parse_takes_the_simulated_flight_with_it`)",
+        [
+            s("2026-08-10", str(n), face_on=f"clip-{n}", shot_screen=f"photo-{n}",
+              analysis=analysis(review_metrics, shot=shot))
+            for n, shot in enumerate(
+                [kit.flagged_shot(), trusted(), unvalidated, "screen", unprovenanced], start=1
+            )
+        ],
+    )
+
+    # --------------------------------------------------------------------------- the mishits
+
+    case(
+        "mishit-four-carries",
+        "four distinct carries is under `MISHIT_MIN_CLEAN_SHOTS`, so a 20-yard top stays in "
+        "(`test_the_rule_stays_quiet_below_the_clean_sample_floor`)",
+        [club_shot(day, carry) for day, carry in [(7, 155.0), (8, 160.0), (9, 158.0), (10, 20.0)]],
+    )
+    case(
+        "mishit-five-carries",
+        "five distinct carries cross the floor: median 158 of an odd count, floor 79, and the "
+        "20-yard top leaves the carry count while its ball speed and pose stay "
+        "(`test_a_topped_shot_leaves_the_carry_average_and_stays_in_every_other`)",
+        [
+            club_shot(day, carry)
+            for day, carry in [(7, 155.0), (8, 160.0), (9, 158.0), (10, 162.0), (11, 20.0)]
+        ],
+    )
+    case(
+        "mishit-two-clubs",
+        "each club against its own median. 7 iron: six carries, median (158 + 159) / 2 = 158.5, "
+        "floor 79.25, so its 90 stays. Driver: seven, median 248, floor exactly 124.0 — its 124 "
+        "stays (the rule is a strict `<`) and its 110 goes. 90 would have gone under the "
+        "driver's floor. Narrowed to each club, and to one never hit "
+        "(`test_a_club_narrowing_carries_the_mishit_flags`)",
+        [
+            club_shot(day, carry)
+            for day, carry in [
+                (7, 155.0), (8, 160.0), (9, 158.0), (10, 162.0), (11, 159.0), (12, 90.0),
+            ]
+        ]
+        + [
+            club_shot(day, carry, driver)
+            for day, carry in [
+                (13, 250.0), (14, 246.0), (15, 255.0), (16, 248.0), (17, 124.0), (18, 110.0),
+                (19, 260.0),
+            ]
+        ],
+        narrowings={
+            "club-7i": {"club": seven.value},
+            "club-driver": {"club": driver.value},
+            "club-sw-unhit": {"club": wedge.value},
+        },
+    )
+    case(
+        "mishit-verdicts",
+        "the golfer's verdict wins both ways. Carries 155 160 158 162 159, a CLEARED 20, a "
+        "CONFIRMED 120 and an unruled 25: all eight are in the median ((155 + 158) / 2 = 156.5, "
+        "floor 78.25) because the verdict decides `is_mishit`, not the median. The 20 counts, "
+        "the 120 and the 25 do not, and only the 25 is unconfirmed "
+        "(`test_a_cleared_verdict_puts_an_auto_flagged_shot_back`, "
+        "`test_a_confirmed_verdict_removes_a_shot_the_rule_would_have_kept`)",
+        [
+            club_shot(day, carry)
+            for day, carry in [(7, 155.0), (8, 160.0), (9, 158.0), (10, 162.0), (11, 159.0)]
+        ]
+        + [
+            club_shot(12, 20.0, mishit=MishitVerdict.CLEARED),
+            club_shot(13, 120.0, mishit=MishitVerdict.CONFIRMED),
+            club_shot(14, 25.0),
+        ],
+    )
+    reused_iron = [
+        club_shot(day, carry)
+        for day, carry in [(7, 155.0), (8, 160.0), (9, 158.0), (10, 20.0)]
+    ]
+    reused_iron.append(club_shot(11, 20.0, shot_screen=f"photo-{seven.value}-10"))
+    reused_driver = [
+        club_shot(day, carry, driver)
+        for day, carry in [(12, 250.0), (13, 245.0), (14, 255.0), (15, 248.0), (16, 90.0)]
+    ]
+    reused_driver.append(club_shot(17, 90.0, driver, shot_screen=f"photo-{driver.value}-16"))
+    case(
+        "mishit-reused-photo",
+        "the median counts one carry per distinct photo, first seen. 7 iron: five swings but "
+        "four photos, so the rule stays quiet. Driver: six swings, five photos, median 248: the "
+        "photo both 90s share is one mishit shot, and both swings are named in `mishit_refs`",
+        reused_iron + reused_driver,
+    )
+    case(
+        "mishit-ineligible",
+        "five clean 7 irons (median 159, floor 79.5) beside five 25-yard carries the rule must "
+        "not see: a flagged parse, an outdated engine, a stale analysis, no shot photo, and no "
+        "club. None is flagged and none moves the median; admitted, all five would drag it to "
+        "90 (floor 45) and be flagged with it "
+        "(`test_a_flagged_parse_is_neither_a_mishit_nor_in_the_median`)",
+        [
+            club_shot(day, carry)
+            for day, carry in [(7, 155.0), (8, 160.0), (9, 158.0), (10, 162.0), (11, 159.0)]
+        ]
+        + [
+            club_shot(12, 25.0, analysis=analysis(
+                [lm("carry_distance_yds", 25.0)], shot=kit.flagged_shot())),
+            club_shot(13, 25.0, analysis=analysis([lm("carry_distance_yds", 25.0)], version=15)),
+            club_shot(14, 25.0, stale=True),
+            club_shot(15, 25.0, shot_screen=None),
+            s("2026-08-16", "untagged", face_on="clip-untagged", shot_screen="photo-untagged",
+              created_at=at(16), analysis=analysis([lm("carry_distance_yds", 25.0)])),
+        ],
+    )
+
+    # --------------------------------------------------------------------- sources and order
+
+    every_source = analysis(
+        [
+            metric("head_sway_norm", 0.25),
+            metric("pelvis_turn_dtl", 30.0, source="pose:down_the_line", unit="degrees"),
+            metric("flight_carry_yds", 141.2, source=flight, unit="yards"),
+            metric("club_lag_deg", 4.0, source="radar:trackman", unit="degrees"),
+            metric("tour_joint_distance", 2.4, source=population, unit="sd"),
+            lm("face_to_path_deg", 13.2, "degrees"),
+        ],
+        shot=trusted(),
+    )
+    case(
+        "every-source",
+        "two untagged clips sharing one photo, each carrying every provenance: `pose:` keys on "
+        "the clip (2), `pose:down_the_line` on nothing and is not unknown, `model:` and "
+        "`launch_monitor:` on the photo (1), and an unknown source and `population:golfdb` on the "
+        "swing (2), both named in `unknown_sources` "
+        "(`test_a_placement_is_still_an_unknown_source_and_that_is_the_deferral`)",
+        [
+            s("2026-08-10", str(n), face_on=f"clip-{n}", shot_screen="shot-a",
+              analysis=every_source)
+            for n in (1, 2)
+        ],
+    )
+    case(
+        "sort-order",
+        "`swings` sorts by instant, then session id, then swing id as a string: swings `10`, "
+        "`2` and `x` at one instant in one session sort in that order, and 20:00-05:00 on the "
+        "8th (01:00Z on the 9th) sorts after 00:30Z on the 9th, which a string sort would "
+        "reverse. `excluded` keeps the scan order instead: `get_session`'s numeric sort, "
+        "non-numeric names last, so session 2026-08-12's unattributed swings are 2, 9, 10, x "
+        "(`test_swings_are_ordered_oldest_first`)",
+        [
+            s("2026-08-11", "1", face_on="clip-11", created_at=at(11), analysis=pose),
+            s("2026-08-07", "1", face_on="clip-7", created_at=at(7), analysis=pose),
+            s("2026-08-09", "2", face_on="clip-9-2", created_at=at(9), analysis=pose),
+            s("2026-08-09", "10", face_on="clip-9-10", created_at=at(9), analysis=pose),
+            s("2026-08-09", "x", face_on="clip-9-x", created_at=at(9), analysis=pose),
+            s("2026-08-09", "3", face_on="clip-9-3", created_at=at(9, 0, 30), analysis=pose),
+            s("2026-08-08", "1", face_on="clip-8", analysis=pose,
+              created_at=at(8, 20, tz=timezone(timedelta(hours=-5)))),
+        ]
+        + [
+            s("2026-08-12", swing_id, player_id=None, face_on=f"clip-12-{swing_id}",
+              analysis=pose)
+            for swing_id in ("10", "9", "x", "2")
+        ],
+    )
+    case(
+        "narrowing",
+        "`narrow_to` by a window (inclusive, compared by instant, so the same instant written "
+        "in +05:30 narrows identically), by sessions (one that does not exist, and the empty "
+        "collection, which keeps nothing where `None` keeps everything), by club (one never hit "
+        "is empty), and a window with a club. Counts, `outdated_swings` and "
+        "`analyzed_without_measurements` are recomputed; `excluded` and the scan counters are not "
+        "(`test_narrowing_recomputes_the_counts_it_leaves_behind`, `test_club_and_since_compose`, "
+        "`test_narrowing_leaves_the_scan_counters_describing_the_whole_read`)",
+        [
+            club_shot(7, 155.0),
+            club_shot(8, 70.0, wedge),
+            club_shot(9, 158.0),
+            s("2026-08-09", "untagged", face_on="clip-untagged", created_at=at(9, 13),
+              analysis=pose),
+            club_shot(10, 160.0, analysis=analysis([metric("head_sway_norm", 0.3)], version=15)),
+            s("2026-08-10", "empty", face_on="clip-empty", club=seven, created_at=at(10, 13),
+              analysis=analysis(None)),
+            s("2026-08-10", "nobody", player_id=None, face_on="clip-nobody", analysis=pose),
+        ],
+        narrowings={
+            "since-the-9th": {"since": "2026-08-09T12:00:00Z"},
+            "since-the-9th-in-ist": {"since": "2026-08-09T17:30:00+05:30"},
+            "sessions": {"sessions": ["2026-08-07", "2026-08-10", "2026-09-01"]},
+            "no-sessions": {"sessions": []},
+            "club-7i": {"club": seven.value},
+            "club-driver-unhit": {"club": driver.value},
+            "since-the-8th-7i": {"since": "2026-08-08T00:00:00Z", "club": seven.value},
+            "no-filter": {},
+        },
+    )
+
+    # ---------------------------------------------------------------------- the manifests
+
+    misplaced = _sessions_tree(
+        kit,
+        [
+            s("2026-08-10", "1", face_on="clip-a", analysis=pose),
+            s("2026-08-10", "7", face_on="clip-b", analysis=pose),
+        ],
+        None,
+    )
+    for name in (*_SWING_FILES, "analysis.json"):
+        misplaced[f"2026-08-10/2/{name}"] = misplaced.pop(f"2026-08-10/7/{name}")
+    case(
+        "manifest-names-another-dir",
+        "directory 2 holds a manifest naming swing 7, beside an analysis. `read_corpus` trusts "
+        "the manifest's ids and looks for the analysis in `2026-08-10/7/`, which does not exist, "
+        "so the swing is `NOT_ANALYZED` under ref 2026-08-10/7. A port that read from the "
+        "directory it listed would count it",
+        files=dict(sorted(misplaced.items())),
+    )
+    manifests = _sessions_tree(
+        kit,
+        [s("2026-08-10", str(n), face_on=f"clip-{n}", analysis=pose) for n in range(1, 10)],
+        None,
+    )
+
+    def edit_manifest(n: int, change: Any) -> None:
+        path = f"2026-08-10/{n}/manifest.json"
+        document = json.loads(manifests[path])
+        change(document)
+        manifests[path] = json.dumps(document, indent=2)
+
+    manifests["2026-08-10/2/manifest.json"] = manifests["2026-08-10/2/manifest.json"][:80]
+    for name in (*_SWING_FILES, "analysis.json"):
+        del manifests[f"2026-08-10/3/{name}"]
+    manifests["2026-08-10/3/"] = ""
+    edit_manifest(4, lambda m: m.pop("created_at"))
+    edit_manifest(5, lambda m: m.update(club="9w"))
+    edit_manifest(6, lambda m: m["roles"].update(side_on=m["roles"]["face_on"]))
+    edit_manifest(7, lambda m: m.update(phone_model="iPhone 15"))
+    edit_manifest(8, lambda m: m.update(mishit="maybe"))
+    manifests["2026-08-10/9/manifest.json"] = "[]"
+    case(
+        "corrupt-manifests",
+        "`load_manifest` is tolerant, so each of these is skipped and not seen: truncated JSON "
+        "(2), no manifest at all (3), no `created_at` (4), a club no `ClubId` names (5), a role "
+        "no `Role` names (6), a verdict no `MishitVerdict` names (8), and an array (9). An "
+        "unknown key (7) is ignored and the manifest reads. `swing_dirs_seen` is 2",
+        files=dict(sorted(manifests.items())),
+    )
+    return cases
+
+
+def _sessions_tree(
+    kit: Any,
+    swings: Any,
+    edits: dict[str, str | None] | None,
+) -> dict[str, str]:
+    """`swings` written by `write_swing` into a scratch root and read back as `input.files`, then
+    `edits` applied: a text replaces or adds a file, and `None` removes one."""
+    with tempfile.TemporaryDirectory() as scratch:
+        root = Path(scratch) / "sessions"
+        root.mkdir()
+        for session_id, swing_id, fields in swings:
+            kit.write_swing(root, session_id, swing_id, **fields)
+        files = _read_tree(root)
+    for path, text in (edits or {}).items():
+        if text is None:
+            del files[path]  # a removal that removes nothing is a typo in the case
+        else:
+            files[path] = text
+    return dict(sorted(files.items()))
+
+
+# ------------------------------------------------------------------------ storage: the real corpus
+
+
+def _storage_corpus_real() -> dict[str, Any]:
+    """The sessions on disk, as one case, verified to read exactly as `data/` itself reads.
+
+    Each `analysis.json` travels slimmed to the keys `read_corpus` reads (the plan's finding 11),
+    which is what keeps the case small. That is a claim about the reader, and the verify is what
+    holds it: `read_corpus` and every narrowing over the slim tree must equal the same calls over
+    `data/processed/sessions/`, or this raises and nothing is built. Narrowed once per club the
+    corpus holds, in `ClubId`'s order.
+    """
+    from golf_coach.contracts.club import ClubId
+    from golf_coach.storage.corpus import read_corpus
+
+    if not SESSIONS.is_dir():
+        raise AssertionError(f"{_rel(SESSIONS)} is missing — the real corpus is read from it")
+    clubs = {swing.club for swing in read_corpus(SESSIONS, _REAL_PLAYER).swings}
+    given = {
+        "player_id": _REAL_PLAYER,
+        "versions": {"installed": ANALYSIS_VERSION, "comparable_from": ANALYSIS_VERSION},
+        "files": _real_sessions_tree(SESSIONS),
+        "narrowings": {
+            f"club-{club.value}": {"since": None, "sessions": None, "club": club.value}
+            for club in ClubId
+            if club in clubs
+        },
+    }
+    vector = _storage_vector(
+        "storage/corpus/real",
+        given,
+        note=(
+            "every session on disk: manifests, state files and session files as written, each "
+            "analysis.json slimmed to analysis_version, swing.measurements and swing.shot, "
+            "verified to read exactly as data/processed/sessions/ does"
+        ),
+        source=_rel(SESSIONS),
+    )
+    direct = _read_and_narrow(SESSIONS, vector["input"])
+    if direct != vector["expected"]:
+        from conformance import compare_results
+
+        diffs = compare_results(direct, vector["expected"], "real") or ["(float bits differ)"]
+        raise AssertionError(
+            "the slimmed tree does not read as data/ does — "
+            + "; ".join(str(d) for d in diffs[:5])
+        )
+    return vector
+
+
+def _real_sessions_tree(root: Path) -> dict[str, str]:
+    """`input.files` for the real sessions root: what `read_corpus` opens, nothing it skips.
+
+    Dotted directories are left out because `list_session_ids` and `get_session` never enter
+    them, and a directory left with nothing to carry keeps its `/` key so it is still listed.
+    """
+    files: dict[str, str] = {}
+    for session in sorted(p for p in root.iterdir() if p.is_dir() and not p.name.startswith(".")):
+        carried = len(files)
+        if (session / "session.json").is_file():
+            files[f"{session.name}/session.json"] = _raw_text(session / "session.json")
+        for swing in sorted(
+            p for p in session.iterdir() if p.is_dir() and not p.name.startswith(".")
+        ):
+            prefix = f"{session.name}/{swing.name}/"
+            before = len(files)
+            for name in _SWING_FILES:
+                if (swing / name).is_file():
+                    files[prefix + name] = _raw_text(swing / name)
+            if (swing / "analysis.json").is_file():
+                files[prefix + "analysis.json"] = _slim_analysis(_raw_text(swing / "analysis.json"))
+            if len(files) == before:
+                files[prefix] = ""
+        if len(files) == carried:
+            files[f"{session.name}/"] = ""
+    return files
+
+
+def _raw_text(path: Path) -> str:
+    return path.read_bytes().decode("utf-8")
+
+
+def _slim_analysis(text: str) -> str:
+    """An `analysis.json` cut to `analysis_version`, `swing.measurements` and `swing.shot`.
+
+    Each key only where the file has it, since an absent `analysis_version` reads as 0 and an
+    absent `swing` as no measurements, and adding either would change the answer. A file that is
+    not a JSON object travels as it is, because it is read as no analysis either way.
+    """
+    try:
+        loaded = json.loads(text)
+    except ValueError:
+        return text
+    if not isinstance(loaded, dict):
+        return text
+    slim: dict[str, Any] = {}
+    if "analysis_version" in loaded:
+        slim["analysis_version"] = loaded["analysis_version"]
+    if "swing" in loaded:
+        swing = loaded["swing"]
+        slim["swing"] = (
+            {key: swing[key] for key in ("measurements", "shot") if key in swing}
+            if isinstance(swing, dict)
+            else swing
+        )
+    return json.dumps(slim)
+
+
+# ================================================================== storage: the store operations
+#
+# **The other half of the storage family: what the stores do to a directory** (M36 P2, the plan's
+# calls 1 and 4). A case is a tree and a sequence of store calls on it. `input.files` is the store
+# root as raw text, laid out by `_materialise` exactly as a corpus case's sessions root is, and
+# `input.ops` is the calls, each `{op, args, now}`. `expected.results` holds what each call
+# returned, as `{"returned": value}`, or what it raised, as `{"raised": {type, message}}`, and
+# `expected.files` is the whole root after the last call, read back by `_read_tree` (`null` if it
+# still does not exist). The sequence carries on past a raise, because what a refused write left
+# on disk is the point of those cases.
+#
+# **Every store in a case is opened on the one root**, and an op names its store:
+# `bundle.assign_from_path`, `bag.set_entry`, `golfer.get_or_create`, `shot.put`. One root is how
+# `data/processed/golfers/` already holds two stores, and it is what lets a case put a bag beside
+# a golfer. `slugify` is the one op with no store, and its cases have no root at all. A bundle
+# case's scratch uploads sit where `api/app.py` streams them, `.incoming/<name>.part` under the
+# root, and are in `input.files` from the start: an upload's `tmp_path` names one.
+#
+# **The clock is an argument** (call 4). Rust's store operations take `now` from their caller;
+# frozen Python's read `datetime.now(tz=UTC)` for themselves. So `_frozen_clock` replaces the
+# `datetime` name in the three store modules that stamp, for one op, with a subclass whose `now()`
+# answers that op's `now` in the zone asked for. `src/` is not edited. An op that cannot stamp is
+# recorded with `now: null`, and the clock then raises if it is read, so a `null` in a vector is a
+# claim the recorder checked rather than an omission. One op reads one instant however many times
+# it asks, which is why `created_at`, `received_at` and `updated_at` agree on a new swing here and
+# differ by microseconds on disk.
+#
+# **A JSON file in `expected.files` is compared as a value, anything else as text** (call 1). What
+# pins a store's write is the value pydantic serialized, the timestamps' spelling included since
+# they are strings, and not its key order, indentation or line endings. Each op's `now` moves on
+# by a minute and a cycle of microseconds that pydantic spells differently (none, trailing zeros,
+# one, six nines), so the written files carry every spelling `contracts::time::Timestamp` (P4) has
+# to write.
+#
+# **A raise is recorded by class and message, and the message only where this repo wrote it.** The
+# bag store's own `ValueError` names the bag's path, so the scratch root is spelled `<root>/` in
+# it. A pydantic `ValidationError` whose every error is a validator's own `ValueError` records
+# those messages, joined by `; `. One carrying any of pydantic's own errors (bad JSON, a missing
+# key) records `message: null`, because that text is pydantic's and no port is asked to match it.
+#
+# **What no case reaches, on purpose**: a `str.isdigit` swing directory `int()` cannot parse (`²`
+# crashes `get_session`), two directories `_swing_sort_key` ties (`7` and `007`, which leaves the
+# order to the filesystem), an original filename with a path separator in it (`Path.suffix` reads
+# `\` differently on Windows and POSIX, and the recorder ran on Windows), a key that differs from
+# a file on disk only in case (Windows' filesystem finds `aaron.bag.json` for `Aaron`, so the bag
+# store's write guard fires there where `Bag`'s slug validator fires on Linux), and a `player_id`
+# that climbs out of the root other than `test_bag_store.py`'s own `../aaron`, which the validator
+# refuses before anything is written. Each would record this machine rather than the store.
+
+#: Where an op case's clock starts. `_OpsCase.tick` moves it on by a minute and one of these.
+_OPS_EPOCH = "2026-08-06T12:00:00Z"
+_OPS_TICK_MICROS = (0, 120000, 1, 999999, 500000, 345678)
+
+#: The bundle cases' session, `tests/storage/test_bundle_store.py::_SESSION`.
+_OPS_SESSION = "2026-08-06"
+
+
+def build_storage(*, real: bool = True) -> list[tuple[Path, dict[str, Any]]]:
+    """The whole storage family, built in full before anything is returned. Writes nothing.
+
+    `regenerate --storage-once` writes what this returns, and only once it has returned: a failed
+    build, the real corpus's verify included, leaves `spec/` untouched (P1's finding 6).
+    """
+    return build_storage_corpus(real=real) + build_storage_ops()
+
+
+def build_storage_ops() -> list[tuple[Path, dict[str, Any]]]:
+    """The operation half of the storage family, as (path, payload) pairs. Writes nothing."""
+    storage = VECTORS / "storage"
+    out = [(storage / "bundle" / f"{name}.json", v) for name, v in _storage_bundle_cases().items()]
+    out += [(storage / "stores" / f"{name}.json", v) for name, v in _storage_store_cases().items()]
+    return out
+
+
+def _run_ops(given: dict[str, Any]) -> dict[str, Any]:
+    """One operation case's input through frozen Python: the definition a port reproduces.
+
+    `input.files` materialised as the root, every store opened on it once, each op run in order
+    under its own clock, and the root read back after the last.
+    """
+    table = _op_table()
+    with tempfile.TemporaryDirectory() as scratch:
+        root = Path(scratch) / "root"
+        _materialise(given["files"], root)
+        stores = _open_stores(root)
+        results = [_run_op(table, stores, root, op) for op in given["ops"]]
+        files = _read_tree(root) if root.exists() else None
+    return {"results": results, "files": files}
+
+
+def _open_stores(root: Path) -> dict[str, Any]:
+    from golf_coach.launch_monitor.screen.store import ShotStore
+    from golf_coach.storage.bag_store import BagStore
+    from golf_coach.storage.bundle_store import SwingBundleStore
+    from golf_coach.storage.golfer_store import GolferStore
+
+    return {
+        "bundle": SwingBundleStore(root),
+        "bag": BagStore(root),
+        "golfer": GolferStore(root),
+        "shot": ShotStore(root),
+    }
+
+
+def _run_op(
+    table: dict[str, Callable[..., Any]], stores: dict[str, Any], root: Path, op: dict[str, Any]
+) -> dict[str, Any]:
+    """One call, under its own clock. A `ValueError` is a recorded answer; anything else is a
+    recorder bug and stops the build."""
+    with _frozen_clock(op["now"]):
+        try:
+            returned = table[op["op"]](stores, root, op["args"])
+        except ValueError as exc:
+            return {"raised": _raised(exc, root)}
+    return {"returned": returned}
+
+
+def _op_table() -> dict[str, Callable[..., Any]]:
+    """Every op a case may name, each `(stores, root, args) -> JSON`.
+
+    Enum arguments travel as their values and are rebuilt here, and a model argument travels as
+    its `model_dump(mode="json")` and is validated here, so a vector holds JSON a port can read and
+    frozen Python is handed exactly the objects its callers hand it.
+    """
+    from datetime import datetime
+
+    from golf_coach.contracts.bag import Bag, BagEntry
+    from golf_coach.contracts.club import ClubId
+    from golf_coach.contracts.golfer import Handedness, slugify
+    from golf_coach.contracts.mishit import MishitVerdict
+    from golf_coach.contracts.shot import ShotData
+    from golf_coach.storage.manifest import Role
+
+    def club(value: str | None) -> ClubId | None:
+        return None if value is None else ClubId(value)
+
+    def assign(stores: dict[str, Any], root: Path, a: dict[str, Any]) -> Any:
+        result = stores["bundle"].assign_from_path(
+            session_id=a["session_id"],
+            role=Role(a["role"]),
+            tmp_path=root.joinpath(*a["tmp_path"].split("/")),
+            digest=a["digest"],
+            original_filename=a["original_filename"],
+            content_type=a["content_type"],
+            size_bytes=a["size_bytes"],
+            swing_id=a["swing_id"],
+            player_id=a["player_id"],
+            club=club(a["club"]),
+        )
+        return {
+            "session_id": result.session_id,
+            "swing_id": result.swing_id,
+            "role": result.role.value,
+            "status": result.status,
+            "missing_roles": [role.value for role in result.missing_roles],
+            "deduped": result.deduped,
+            "player_id": result.player_id,
+            "club": None if result.club is None else result.club.value,
+        }
+
+    def stamp_date(stores: dict[str, Any], root: Path, a: dict[str, Any]) -> Any:
+        now = None if a["now"] is None else datetime.fromisoformat(a["now"])
+        return stores["bundle"].current_session_id(now=now)
+
+    def verdict(value: str | None) -> MishitVerdict | None:
+        return None if value is None else MishitVerdict(value)
+
+    def put(stores: dict[str, Any], root: Path, a: dict[str, Any]) -> Any:
+        return stores["shot"].put(ShotData.model_validate(a["shot"])).relative_to(root).as_posix()
+
+    return {
+        "bundle.list_session_ids": lambda s, r, a: s["bundle"].list_session_ids(),
+        "bundle.get_session": lambda s, r, a: _dumped(s["bundle"].get_session(a["session_id"])),
+        "bundle.get_swing": lambda s, r, a: _dumped(
+            s["bundle"].get_swing(a["session_id"], a["swing_id"])
+        ),
+        "bundle.current_session_id": stamp_date,
+        "bundle.assign_from_path": assign,
+        "bundle.attribute_unlabeled": lambda s, r, a: s["bundle"].attribute_unlabeled(
+            a["session_id"], a["player_id"]
+        ),
+        "bundle.set_player": lambda s, r, a: _dumped(
+            s["bundle"].set_player(a["session_id"], a["swing_id"], a["player_id"])
+        ),
+        "bundle.set_club": lambda s, r, a: _dumped(
+            s["bundle"].set_club(a["session_id"], a["swing_id"], ClubId(a["club"]))
+        ),
+        "bundle.set_mishit": lambda s, r, a: _dumped(
+            s["bundle"].set_mishit(a["session_id"], a["swing_id"], verdict(a["verdict"]))
+        ),
+        "bundle.delete_swing": lambda s, r, a: s["bundle"].delete_swing(
+            a["session_id"], a["swing_id"]
+        ),
+        "bag.get": lambda s, r, a: _dumped(s["bag"].get(a["player_id"])),
+        "bag.save": lambda s, r, a: s["bag"].save(Bag.model_validate(a["bag"])),
+        "bag.set_entry": lambda s, r, a: _dumped(
+            s["bag"].set_entry(a["player_id"], BagEntry.model_validate(a["entry"]))
+        ),
+        "bag.remove_entry": lambda s, r, a: _dumped(
+            s["bag"].remove_entry(a["player_id"], ClubId(a["club"]))
+        ),
+        "bag.restore_entry": lambda s, r, a: _dumped(
+            s["bag"].restore_entry(a["player_id"], ClubId(a["club"]))
+        ),
+        "golfer.get": lambda s, r, a: _dumped(s["golfer"].get(a["player_id"])),
+        "golfer.list_all": lambda s, r, a: _dumped(s["golfer"].list_all()),
+        "golfer.get_or_create": lambda s, r, a: _dumped(
+            s["golfer"].get_or_create(a["name"], Handedness(a["handedness"]))
+        ),
+        "shot.put": put,
+        "shot.get": lambda s, r, a: _dumped(s["shot"].get(a["key"])),
+        "shot.has": lambda s, r, a: s["shot"].has(a["key"]),
+        "shot.all": lambda s, r, a: _dumped(s["shot"].all()),
+        "slugify": lambda s, r, a: slugify(a["name"]),
+    }
+
+
+def _dumped(value: Any) -> Any:
+    """A store's answer as JSON: a model as `model_dump(mode="json")`, a list item by item."""
+    if isinstance(value, list):
+        return [_dumped(item) for item in value]
+    if hasattr(value, "model_dump"):
+        return value.model_dump(mode="json")
+    return value
+
+
+def _raised(exc: ValueError, root: Path) -> dict[str, Any]:
+    """What a refused call raised, as the section header says: class, and this repo's message."""
+    from pydantic import ValidationError
+
+    if isinstance(exc, ValidationError):
+        errors = exc.errors(include_url=False)
+        if errors and all(error["type"] == "value_error" for error in errors):
+            message: str | None = "; ".join(str(error["ctx"]["error"]) for error in errors)
+        else:
+            message = None
+        return {"type": "ValidationError", "message": message}
+    message = str(exc).replace(f"{root}{os.sep}", "<root>/")
+    assert str(root.parent) not in message, f"a scratch path leaked into {message!r}"
+    return {"type": type(exc).__name__, "message": message}
+
+
+@contextlib.contextmanager
+def _frozen_clock(now: str | None) -> Iterator[None]:
+    """`datetime.now` answering `now` in the three store modules that stamp, for one op.
+
+    A subclass rather than a stand-in object, so anything else those modules ask of the name still
+    answers as `datetime` does. `now: null` makes reading the clock an error (the section header).
+    """
+    from datetime import datetime, tzinfo
+
+    from golf_coach.storage import bag_store, bundle_store, golfer_store
+
+    instant = None if now is None else datetime.fromisoformat(now)
+
+    class Frozen(datetime):
+        @classmethod
+        def now(cls, tz: tzinfo | None = None) -> datetime:
+            if instant is None:
+                raise AssertionError("an op recorded with `now: null` read the clock")
+            if tz is None:
+                raise AssertionError("a store read a naive clock, which no store does today")
+            return instant.astimezone(tz)
+
+    modules: tuple[Any, ...] = (bag_store, bundle_store, golfer_store)
+    saved = [module.datetime for module in modules]
+    for module in modules:
+        module.datetime = Frozen
+    try:
+        yield
+    finally:
+        for module, original in zip(modules, saved, strict=True):
+            module.datetime = original
+
+
+class _OpsCase:
+    """One operation case under construction: a starting tree, then calls on it, in order.
+
+    `tick` hands each op that may stamp the next instant of the case's clock; an op that cannot
+    stamp gets `None`. An upload writes its scratch file into the starting tree, under the name
+    `api/app.py` would stream it to, and is then an ordinary `bundle.assign_from_path`.
+    """
+
+    def __init__(self, files: dict[str, str] | None) -> None:
+        self.files = None if files is None else dict(files)
+        self.ops: list[dict[str, Any]] = []
+        self._ticks = 0
+        self._uploads = 0
+
+    def tick(self) -> str:
+        from datetime import datetime, timedelta
+
+        step = timedelta(
+            minutes=self._ticks,
+            microseconds=_OPS_TICK_MICROS[self._ticks % len(_OPS_TICK_MICROS)],
+        )
+        self._ticks += 1
+        return _zulu(datetime.fromisoformat(_OPS_EPOCH) + step)
+
+    def op(self, op_name: str, /, *, stamps: bool = False, **args: Any) -> None:
+        """One call. Positional-only, so `name` (`get_or_create`'s, `slugify`'s) is an arg."""
+        self.ops.append({"op": op_name, "args": args, "now": self.tick() if stamps else None})
+
+    def upload(
+        self,
+        role: str,
+        content: str,
+        *,
+        session_id: str = _OPS_SESSION,
+        filename: str = "clip.mov",
+        content_type: str = "video/quicktime",
+        swing_id: str | None = None,
+        player_id: str | None = None,
+        club: str | None = None,
+    ) -> None:
+        assert self.files is not None, "an upload needs a root to stream into"
+        self._uploads += 1
+        tmp_path = f".incoming/{self._uploads}.part"
+        self.files[tmp_path] = content
+        data = content.encode("utf-8")
+        self.op(
+            "bundle.assign_from_path",
+            stamps=True,
+            session_id=session_id,
+            role=role,
+            tmp_path=tmp_path,
+            digest=hashlib.sha256(data).hexdigest(),
+            original_filename=filename,
+            content_type=content_type,
+            size_bytes=len(data),
+            swing_id=swing_id,
+            player_id=player_id,
+            club=club,
+        )
+
+    def given(self) -> dict[str, Any]:
+        return {"files": self.files, "ops": self.ops}
+
+
+def _zulu(when: Any) -> str:
+    """An aware UTC datetime as RFC 3339 with `Z`, the spelling every op's `now` travels in."""
+    return when.isoformat().replace("+00:00", "Z")
+
+
+def _manifest_files(
+    session_id: str,
+    swing_id: str,
+    roles: tuple[str, ...] = (),
+    *,
+    directory: str | None = None,
+    day: int = 5,
+    **fields: Any,
+) -> dict[str, str]:
+    """A swing directory as `save_manifest` writes one, with each role's file beside it.
+
+    `directory` is where it sits under the root when that is not `<session_id>/<swing_id>`, for
+    the case that pins a manifest trusted over the directory it was found in. Each role's digest is
+    derived from where the role belongs, so no two pre-written files share one by accident.
+    """
+    from datetime import UTC, datetime
+
+    from golf_coach.storage.manifest import Role, RoleFile, SwingManifest, content_filename
+
+    at = datetime(2026, 8, day, 9, 30, tzinfo=UTC)
+    role_files = {}
+    files = {}
+    for name in roles:
+        role = Role(name)
+        digest = hashlib.sha256(f"{session_id}/{swing_id}/{name}".encode()).hexdigest()
+        filename = content_filename(role, digest, f"{name}.mov")
+        role_files[role] = RoleFile(
+            role=role,
+            filename=filename,
+            content_sha256=digest,
+            original_filename=f"{name}.mov",
+            content_type="video/quicktime",
+            size_bytes=4,
+            received_at=at,
+        )
+        files[filename] = "clip"
+    manifest = SwingManifest(
+        swing_id=swing_id,
+        session_id=session_id,
+        created_at=at,
+        updated_at=at,
+        roles=role_files,
+        **fields,
+    )
+    files["manifest.json"] = manifest.model_dump_json(indent=2)
+    prefix = f"{directory or f'{session_id}/{swing_id}'}/"
+    return {prefix + name: text for name, text in files.items()}
+
+
+#: The manifest `tests/storage/test_manifest.py` pins as written before `player_id`, `club` and
+#: `mishit` existed: the bytes such a file on disk actually holds, not a model that carries the
+#: three fields today.
+_PRE_M9_MANIFEST = (
+    '{"swing_id": "1", "session_id": "2026-08-07-aaron1",'
+    ' "created_at": "2026-08-07T12:00:00Z", "updated_at": "2026-08-07T12:00:00Z",'
+    ' "roles": {}}'
+)
+
+
+# --------------------------------------------------------------------- storage: the bundle store
+
+
+def _storage_bundle_cases() -> dict[str, dict[str, Any]]:
+    """`SwingBundleStore`'s cases: each test in `tests/storage/test_bundle_store.py`, as calls,
+    and the places a port reading the same files would naturally answer differently."""
+    face, dtl, screen = "face_on", "down_the_line", "shot_screen"
+    seven, wedge = "7i", "pw"
+    session = _OPS_SESSION
+    cases: dict[str, dict[str, Any]] = {}
+
+    def record(name: str, note: str, case: _OpsCase) -> None:
+        assert name not in cases, f"two bundle cases are named {name}"
+        cases[name] = _storage_vector(
+            f"storage/bundle/{name}",
+            case.given(),
+            note=note,
+            source="tests/storage/test_bundle_store.py, as store calls",
+            run=_run_ops,
+        )
+
+    def where(swing_id: str, session_id: str = session) -> dict[str, str]:
+        return {"session_id": session_id, "swing_id": swing_id}
+
+    # ------------------------------------------------------------------------------ the reads
+
+    tree = {
+        **_manifest_files(session, "1", (face, dtl, screen), player_id="aaron", club=seven),
+        **_manifest_files(session, "2", (face,), player_id="aaron"),
+        **_manifest_files(session, "9", (face, dtl)),
+        **_manifest_files(session, "10", (screen,), club=wedge, mishit="confirmed"),
+        **_manifest_files(session, "x", (face,)),
+        **_manifest_files(session, ".partial", (face,)),
+        f"{session}/3/manifest.json": "{not json",
+        f"{session}/4/face_on.abc.mov": "clip",
+        f"{session}/README": "not a swing",
+        "2026-08-07-aaron1/1/manifest.json": _PRE_M9_MANIFEST,
+        "2026-08-10/": "",
+        ".incoming/stale.part": "half an upload",
+        "notes.txt": "not a session",
+    }
+    reads = _OpsCase(tree)
+    reads.op("bundle.list_session_ids")
+    reads.op("bundle.get_session", session_id=session)
+    reads.op("bundle.get_session", session_id="2026-08-09")
+    reads.op("bundle.get_session", session_id="2026-08-10")
+    reads.op("bundle.get_swing", **where("10"))
+    reads.op("bundle.get_swing", **where("3"))
+    reads.op("bundle.get_swing", **where("4"))
+    reads.op("bundle.get_swing", **where("99"))
+    reads.op("bundle.get_swing", **where("1", "2026-08-07-aaron1"))
+    reads.op("bundle.current_session_id", now="2026-08-07T00:30:00+05:30")
+    reads.op("bundle.current_session_id", now="2026-08-06T23:30:00-05:00")
+    reads.op("bundle.current_session_id", stamps=True, now=None)
+    record(
+        "reads",
+        "`list_session_ids` is lexical and skips dotted directories and files; `get_session` "
+        "sorts numeric swing directories numerically (1, 2, 9, 10) and the rest after, and skips "
+        "a dotted directory, a stray file, a corrupt manifest (3) and a directory with none (4); "
+        "a missing and an empty session are both []; a manifest written before `player_id`, "
+        "`club` and `mishit` existed loads with all three None; `current_session_id` formats "
+        "`now` in its own offset, so 00:30+05:30 is the 7th though it is the 6th in UTC, and "
+        "reads the clock when given no `now`",
+        reads,
+    )
+
+    missing = _OpsCase(None)
+    missing.op("bundle.list_session_ids")
+    missing.op("bundle.get_session", session_id=session)
+    missing.op("bundle.get_swing", **where("1"))
+    missing.op("bundle.attribute_unlabeled", stamps=True, session_id=session, player_id="aaron")
+    missing.op("bundle.set_player", stamps=True, **where("1"), player_id="aaron")
+    missing.op("bundle.set_club", stamps=True, **where("1"), club=seven)
+    missing.op("bundle.set_mishit", stamps=True, **where("1"), verdict="confirmed")
+    missing.op("bundle.delete_swing", **where("1"))
+    record(
+        "missing-root",
+        "a root that does not exist reads as empty and every write on a swing in it is a None or "
+        "False, never an error, and none of them creates the root "
+        "(`test_missing_session_directory_is_empty_not_an_error`)",
+        missing,
+    )
+
+    # ---------------------------------------------------------------------------- assignment
+
+    roles = _OpsCase({})
+    roles.upload(face, "swing1-face", player_id="aaron", club=seven)
+    roles.upload(dtl, "swing1-dtl", player_id="aaron", club=seven)
+    roles.upload(
+        screen, "swing1-screen", filename="shot.jpg", content_type="image/jpeg",
+        player_id="aaron", club=seven,
+    )
+    roles.upload(face, "swing2-face", player_id="aaron", club=seven)
+    roles.op("bundle.get_session", session_id=session)
+    record(
+        "assign-roles",
+        "the first upload into an empty root opens swing 1, a second role lands in it, the third "
+        "completes it, and only then does a face-on open swing 2 "
+        "(`test_two_different_roles_arrive_into_the_same_swing`, "
+        "`test_second_swing_only_opens_once_first_is_complete`)",
+        roles,
+    )
+
+    order = _OpsCase({})
+    order.upload(screen, "screen", filename="shot.jpg", content_type="image/jpeg")
+    order.upload(dtl, "dtl")
+    order.upload(face, "face-on")
+    record(
+        "assign-arrival-order",
+        "roles arriving in reverse still make one complete swing "
+        "(`test_role_arrival_order_does_not_matter`)",
+        order,
+    )
+
+    dedupe = _OpsCase({})
+    dedupe.upload(face, "same-bytes", club=seven)
+    dedupe.upload(face, "same-bytes", club=wedge, player_id="dave")
+    dedupe.upload(dtl, "same-bytes")
+    dedupe.upload(face, "same-bytes", session_id="2026-08-07")
+    dedupe.op("bundle.get_session", session_id=session)
+    record(
+        "assign-dedupe",
+        "the same bytes in the same role are deduped: the scratch file is removed, nothing is "
+        "stamped, and the answer reports the stored club and golfer, not the requested ones "
+        "(`test_duplicate_bytes_dedupe_instead_of_opening_a_new_swing`, "
+        "`test_a_deduped_upload_reports_the_stored_club_not_the_requested_one`). The same bytes "
+        "in another role, or in another session, are not a duplicate",
+        dedupe,
+    )
+
+    newest = _OpsCase({})
+    newest.upload(face, "first-recording")
+    newest.upload(face, "different-recording")
+    newest.upload(dtl, "dtl-a")
+    newest.upload(dtl, "dtl-b")
+    newest.upload(dtl, "dtl-c")
+    record(
+        "assign-newest-wins",
+        "different bytes for a role a swing already has open the next swing, and a role both "
+        "swings lack lands in the newest: the documented limitation "
+        "(`test_different_bytes_reupload_of_a_filled_role_opens_a_new_swing`, "
+        "`test_newest_wins_when_two_swings_are_missing_the_same_role`), then the older swing, "
+        "then a third",
+        newest,
+    )
+
+    target = _OpsCase({})
+    target.upload(face, "first-recording", club=seven)
+    target.upload(face, "corrected-recording", swing_id="1", club=wedge)
+    target.upload(face, "corrected-recording", swing_id="1")
+    target.upload(screen, "bad-photo", swing_id="1")
+    target.upload(
+        screen, "good-photo", filename="shot.jpg", content_type="image/jpeg", swing_id="1"
+    )
+    target.upload(screen, "photo-7", swing_id="7", player_id="aaron", club=wedge)
+    target.upload(face, "next-face")
+    target.upload(face, "after-that")
+    target.upload(dtl, "named", swing_id="x")
+    target.upload(face, "lands-in-x")
+    target.op("bundle.get_session", session_id=session)
+    record(
+        "assign-explicit-target",
+        "`swing_id` names the swing outright (the plan's finding 1): an existing slot is "
+        "overwritten and the superseded file unlinked, the club already on the swing is kept, the "
+        "same bytes again are re-placed rather than deduped, and an unknown id opens that swing, "
+        "stamped from the call (`test_swing_id_repair_path_overwrites_the_original_slot`, "
+        "`test_swing_id_override_replaces_a_role_in_place`). The next automatic upload then lands "
+        "in the newest swing lacking its role (7), the one after opens 8 (one more than the "
+        "highest numeric id), and a non-numeric `x` is newest and never counted",
+        target,
+    )
+
+    corrupt = _OpsCase(
+        {
+            **_manifest_files(session, "1", (face, dtl, screen)),
+            f"{session}/2/manifest.json": "{not json",
+            f"{session}/2/face_on.0123456789ab.mov": "an orphaned clip",
+            f"{session}/5/manifest.json": "{not json",
+        }
+    )
+    corrupt.upload(face, "new-swing", club=seven)
+    corrupt.upload(dtl, "named-over-corrupt", swing_id="5", club=wedge)
+    corrupt.op("bundle.get_session", session_id=session)
+    record(
+        "assign-over-corrupt",
+        "a corrupt manifest is invisible, so its swing number is reused: the next automatic swing "
+        "is 2, written over directory 2's bad manifest, and the file already there stays. An "
+        "explicit target with a corrupt manifest (5) is opened afresh the same way",
+        corrupt,
+    )
+
+    golfer = _OpsCase({})
+    golfer.upload(face, "a", player_id="aaron")
+    golfer.upload(face, "b")
+    golfer.upload(dtl, "c", player_id="aaron")
+    golfer.upload(dtl, "d", player_id="dave")
+    golfer.upload(face, "e", player_id="dave")
+    golfer.op("bundle.get_session", session_id=session)
+    record(
+        "assign-golfer-stamping",
+        "a new swing takes the call's golfer, an upload naming none leaves its swing anonymous, a "
+        "later role labels that swing, an attributed swing is never restamped, and switching "
+        "golfer stamps only what comes after "
+        "(`test_a_new_swing_is_stamped_with_the_current_golfer` and the four tests after it)",
+        golfer,
+    )
+
+    clubs = _OpsCase({})
+    clubs.upload(face, "the-seven", club=seven)
+    clubs.upload(face, "untagged")
+    clubs.upload(dtl, "tags-it", club=seven)
+    clubs.upload(dtl, "no-retag", club=wedge)
+    clubs.upload(face, "the-wedge", club=wedge)
+    clubs.op("bundle.get_session", session_id=session)
+    record(
+        "assign-club-stamping",
+        "the club stamps by the golfer's rule: a new swing takes it, a later role tags an untagged "
+        "swing, a tagged swing is never retagged, and switching club tags only what comes after "
+        "(`test_a_new_swing_is_stamped_with_the_current_club` and the tests after it)",
+        clubs,
+    )
+
+    names = _OpsCase({})
+    for swing_id, (role, filename) in enumerate(
+        [
+            (face, "IMG_0001.MOV"),
+            (face, "noext"),
+            (dtl, "clip."),
+            (screen, ".hidden"),
+            (screen, "photo.tar.gz"),
+            (face, "a b.MoV"),
+            (screen, "IMG_2.HEIC"),
+        ],
+        start=1,
+    ):
+        names.upload(role, f"bytes-{swing_id}", filename=filename, swing_id=str(swing_id))
+    names.op("bundle.get_session", session_id=session)
+    record(
+        "assign-content-filenames",
+        "`content_filename` is `<role>.<sha256[:12]><suffix>`, the suffix `Path.suffix` of the "
+        "original name as typed, else the role's default (`.mov`, or `.jpg` for the shot screen). "
+        "`clip.` and `.hidden` have no suffix to `Path` (Rust's `Path::extension` reads `clip.` "
+        "as an empty extension and would write a bare dot), and `photo.tar.gz` keeps only `.gz`",
+        names,
+    )
+
+    other = _OpsCase(
+        {
+            **_manifest_files(session, "1", (face, dtl, screen), player_id="aaron", club=seven),
+            **_manifest_files("2026-08-01", "5", (face,), directory=f"{session}/3", club=seven),
+        }
+    )
+    other.op("bundle.get_session", session_id=session)
+    other.upload(dtl, "follows-the-manifest")
+    other.upload(face, "next-number")
+    other.op("bundle.attribute_unlabeled", stamps=True, session_id=session, player_id="aaron")
+    other.op("bundle.get_session", session_id=session)
+    record(
+        "manifest-names-another-swing",
+        "a manifest is trusted over the directory it was found in. Directory 3 holds a manifest "
+        "naming session 2026-08-01 and swing 5: a down-the-line upload into it is written to "
+        "directory 5, and its answer names session 2026-08-01, the manifest's, while the dedupe "
+        "answer would have named the call's. The next new swing is 6, one past the manifests' "
+        "highest id. `attribute_unlabeled` saves each manifest to the directory its `swing_id` "
+        "names, so directory 3's copy is written over directory 5 and then directory 5's own "
+        "copy over that, and the answer names 5 twice",
+        other,
+    )
+
+    # -------------------------------------------------------------------------------- repairs
+
+    adopt = _OpsCase({})
+    adopt.upload(face, "one")
+    adopt.upload(face, "two", player_id="dave")
+    adopt.upload(face, "three", club=seven)
+    adopt.op("bundle.attribute_unlabeled", stamps=True, session_id=session, player_id="aaron")
+    adopt.op("bundle.attribute_unlabeled", stamps=True, session_id=session, player_id="aaron")
+    adopt.op("bundle.attribute_unlabeled", stamps=True, session_id="2026-08-09", player_id="aaron")
+    adopt.op("bundle.get_session", session_id=session)
+    record(
+        "attribute-unlabeled",
+        "the backfill adopts only the anonymous swings and returns their ids, is idempotent, "
+        "touches no club, and on a missing session is [] "
+        "(`test_attribute_unlabeled_adopts_only_the_anonymous_swings`, "
+        "`test_attribute_unlabeled_is_idempotent`, "
+        "`test_attribute_unlabeled_stamps_the_golfer_and_touches_no_club`)",
+        adopt,
+    )
+
+    repairs = _OpsCase(
+        {
+            f"{session}/4/manifest.json": "{not json",
+            "2026-08-07-aaron1/1/manifest.json": _PRE_M9_MANIFEST,
+            "2026-08-07-aaron1/1/manifest.tmp": "a write that never finished",
+        }
+    )
+    repairs.upload(face, "one", player_id="dave", club=wedge)
+    repairs.upload(face, "two", player_id="dave", club=wedge)
+    repairs.op("bundle.set_player", stamps=True, **where("1"), player_id="aaron")
+    repairs.op("bundle.set_player", stamps=True, **where("99"), player_id="aaron")
+    repairs.op("bundle.set_club", stamps=True, **where("2"), club=seven)
+    repairs.op("bundle.set_club", stamps=True, **where("99"), club=seven)
+    repairs.op("bundle.set_mishit", stamps=True, **where("1"), verdict="confirmed")
+    repairs.op("bundle.set_mishit", stamps=True, **where("1"), verdict="cleared")
+    repairs.op("bundle.set_mishit", stamps=True, **where("1"), verdict=None)
+    repairs.op("bundle.set_mishit", stamps=True, **where("99"), verdict="confirmed")
+    repairs.op("bundle.set_club", stamps=True, **where("4"), club=seven)
+    repairs.op(
+        "bundle.set_player", stamps=True, **where("1", "2026-08-07-aaron1"), player_id="aaron"
+    )
+    repairs.op("bundle.get_session", session_id=session)
+    record(
+        "repairs",
+        "`set_player`, `set_club` and `set_mishit` overwrite one swing, leave its neighbours and "
+        "each other's field alone, stamp `updated_at`, and answer None for a missing swing or a "
+        "corrupt manifest, which stays as it was. `set_mishit` takes each verdict and None, which "
+        "clears it. A manifest written before the three fields gains all three on its first "
+        "save, through `manifest.tmp`, so a stale tmp file of that name is consumed",
+        repairs,
+    )
+
+    deletes = _OpsCase(
+        {
+            **_manifest_files(session, "1", (face, dtl, screen), club=seven),
+            f"{session}/1/analysis.json": "{}",
+            f"{session}/1/analysis.state.json": "{}",
+            f"{session}/1/face_on.keypoints.json": "{}",
+            f"{session}/notes": "a file, not a swing",
+        }
+    )
+    deletes.op("bundle.delete_swing", **where("1"))
+    deletes.op("bundle.delete_swing", **where("1"))
+    deletes.op("bundle.delete_swing", **where("99"))
+    deletes.op("bundle.delete_swing", **where("notes"))
+    deletes.op("bundle.get_session", session_id=session)
+    record(
+        "delete-swing",
+        "a delete takes the whole directory, keypoints, analysis and state included, and leaves "
+        "the session; deleting it again, a swing that never existed, or a file that is not a "
+        "directory answers False (`test_delete_swing_removes_the_directory`, "
+        "`test_delete_swing_on_a_missing_swing_returns_false`, "
+        "`test_delete_swing_takes_everything_in_the_directory`)",
+        deletes,
+    )
+
+    phantom = _OpsCase({})
+    phantom.upload(face, "clip-1", club=seven)
+    phantom.upload(screen, "bad-photo", club=seven)
+    phantom.upload(screen, "good-photo", club=seven)
+    phantom.upload(face, "clip-2", club=seven)
+    phantom.op("bundle.delete_swing", **where("2"))
+    phantom.op("bundle.get_session", session_id=session)
+    record(
+        "delete-phantom",
+        "why `delete_swing` exists: a corrective shot-screen upload opens a phantom swing 2, the "
+        "next swing's face-on is swallowed into it, and deleting it leaves swing 1 alone "
+        "(`test_deleting_a_phantom_stops_it_swallowing_the_next_swing`)",
+        phantom,
+    )
+    return cases
+
+
+# ------------------------------------------------------------- storage: the bag, golfer and shots
+
+
+def _storage_store_cases() -> dict[str, dict[str, Any]]:
+    """The bag, golfer and shot stores' cases, and `slugify`'s table."""
+    from datetime import UTC, datetime, timedelta, timezone
+
+    from golf_coach.contracts.bag import Bag, BagEntry
+    from golf_coach.contracts.club import ClubId
+    from golf_coach.contracts.club_spec import SpecProvenance
+    from golf_coach.contracts.golfer import Golfer, Handedness
+    from golf_coach.contracts.shot import ShotData, ShotProvenance, ShotSource
+
+    stale = datetime(2020, 1, 1, tzinfo=UTC)
+    cases: dict[str, dict[str, Any]] = {}
+
+    def record(name: str, note: str, case: _OpsCase, source: str) -> None:
+        assert name not in cases, f"two store cases are named {name}"
+        cases[name] = _storage_vector(
+            f"storage/stores/{name}", case.given(), note=note, source=source, run=_run_ops
+        )
+
+    def entry(club: str, **fields: Any) -> dict[str, Any]:
+        """A declaration as a caller writes one: `recorded_at` supplied and about to be ignored
+        (`test_bag_store.py::_entry`), with only the fields it sets."""
+        built = BagEntry(club=ClubId(club), recorded_at=fields.pop("recorded_at", stale), **fields)
+        return built.model_dump(mode="json", exclude_defaults=True)
+
+    def bag_text(player_id: str, entries: dict[str, Any], **fields: Any) -> str:
+        bag = Bag(
+            player_id=player_id,
+            entries={ClubId(club): BagEntry.model_validate(e) for club, e in entries.items()},
+            updated_at=fields.pop("updated_at", stale),
+            **fields,
+        )
+        return bag.model_dump_json(indent=2)
+
+    def golfer_text(player_id: str, name: str, handedness: str = "right") -> str:
+        return Golfer(
+            player_id=player_id,
+            display_name=name,
+            handedness=Handedness(handedness),
+            created_at=datetime(2026, 8, 12, 9, 0, tzinfo=UTC),
+        ).model_dump_json(indent=2)
+
+    def shot(shot_id: str, when: datetime, *, digest: str | None, **fields: Any) -> dict[str, Any]:
+        """`test_screen_store.py::_shot`: a parsed screen shot, keyed by `digest` if it has one."""
+        provenance = fields.pop(
+            "provenance",
+            ShotProvenance(
+                device="hd_golf", parse_confidence=0.95, needs_review=False, image_sha256=digest
+            ),
+        )
+        built = ShotData(
+            shot_id=shot_id,
+            session_id=fields.pop("session_id", "range"),
+            timestamp=when,
+            source=ShotSource.SCREEN,
+            carry_distance=fields.pop("carry_distance", 128.1),
+            provenance=provenance,
+            **fields,
+        )
+        return built.model_dump(mode="json", exclude_defaults=True)
+
+    bag_source = "tests/storage/test_bag_store.py, as store calls"
+    golfer_source = "tests/storage/test_golfer_store.py, as store calls"
+    shot_source = "tests/launch_monitor/test_screen_store.py, as store calls"
+
+    # ------------------------------------------------------------------------------ the bag
+
+    seven = {
+        "club": "7i",
+        "make": "Titleist",
+        "loft_deg": 34.0,
+        "recorded_at": "2026-08-01T10:00:00Z",
+    }
+    reads = _OpsCase(
+        {
+            "aaron.bag.json": bag_text("aaron", {"7i": seven}),
+            "bob.bag.json": "{not json",
+            "carol.bag.json": json.dumps(
+                {
+                    "player_id": "carol",
+                    "entries": {"7i": {**seven, "club": "pw"}},
+                    "updated_at": "2026-08-01T10:00:00Z",
+                }
+            ),
+            "dave.bag.json": json.dumps({"player_id": "dave", "entries": {}}),
+            "erin.bag.json": json.dumps(
+                {"player_id": "Erin", "entries": {}, "updated_at": "2026-08-01T10:00:00Z"}
+            ),
+            "frank.bag.json": json.dumps(
+                {
+                    "player_id": "frank",
+                    "entries": {"7i": {**seven, "retired_at": "2026-08-02T10:00:00Z"}},
+                    "updated_at": "2026-08-01T10:00:00Z",
+                }
+            ),
+        }
+    )
+    for player in ("aaron", "bob", "carol", "dave", "erin", "frank", "nobody"):
+        reads.op("bag.get", player_id=player)
+    given_bag = json.loads(bag_text("gina", {"pw": entry("pw", loft_deg=46.0)}))
+    reads.op("bag.save", bag=given_bag)
+    reads.op("bag.get", player_id="gina")
+    reads.op("bag.save", bag={**given_bag, "player_id": "aaron"})
+    reads.op("bag.get", player_id="aaron")
+    record(
+        "bag-reads",
+        "`get` is tolerant: no bag, bad JSON, a slot holding another club (`_keys_match_entries`), "
+        "a missing `updated_at`, a `player_id` that is not a slug and a live entry carrying "
+        "`retired_at` all read as None (`test_a_golfer_with_no_bag_reads_as_none`, "
+        "`test_a_corrupt_bag_reads_as_none`). `save` writes the bag it was given, overwriting, and "
+        "stamps nothing, so it reads no clock (`test_save_writes_the_bag_it_was_given`)",
+        reads,
+        bag_source,
+    )
+
+    upsert = _OpsCase({})
+    titleist = {"make": "Titleist", "loft_deg": 34.0}
+    upsert.op("bag.set_entry", stamps=True, player_id="aaron", entry=entry("7i", **titleist))
+    upsert.op("bag.set_entry", stamps=True, player_id="aaron", entry=entry("7i", **titleist))
+    upsert.op(
+        "bag.set_entry",
+        stamps=True,
+        player_id="aaron",
+        entry=entry(
+            "7i",
+            **titleist,
+            provenance=SpecProvenance(source="llm:claude-opus-5", retrieved_at=stale),
+        ),
+    )
+    upsert.op(
+        "bag.set_entry",
+        stamps=True,
+        player_id="aaron",
+        entry=entry("7i", **titleist, shaft_model="Modus 105"),
+    )
+    upsert.op(
+        "bag.set_entry",
+        stamps=True,
+        player_id="aaron",
+        entry=entry("7i", **titleist, shaft_model="Project X LZ"),
+    )
+    upsert.op("bag.set_entry", stamps=True, player_id="aaron", entry=entry("pw", make="Ping"))
+    upsert.op(
+        "bag.set_entry",
+        stamps=True,
+        player_id="aaron",
+        entry=entry("pw", make="Ping", loft_deg=46.0),
+    )
+    upsert.op(
+        "bag.set_entry",
+        stamps=True,
+        player_id="aaron",
+        entry=entry(
+            "driver",
+            make="Callaway",
+            model="Paradym",
+            model_year=2023,
+            loft_deg=9.0,
+            adjustable_hosel=True,
+            loft_range_deg=(7.25, 10.75),
+            shaft_material="graphite",
+            shaft_flex="x_stiff",
+            shaft_weight_g=62.5,
+            usga_conforming=True,
+            provenance=SpecProvenance(
+                source="catalogue",
+                retrieved_at=datetime(2026, 8, 31, 8, 15, 30, 250000, tzinfo=UTC),
+                notes="published",
+            ),
+        ),
+    )
+    upsert.op(
+        "bag.set_entry",
+        stamps=True,
+        player_id="aaron",
+        entry=entry(
+            "7i", make="Ping", loft_deg=32.0, retired_at=datetime(2021, 1, 1, tzinfo=UTC)
+        ),
+    )
+    upsert.op("bag.get", player_id="aaron")
+    record(
+        "bag-set-entry",
+        "`set_entry`'s three cases: an empty slot is installed stamped `now`, the caller's "
+        "`recorded_at` discarded; the same club again, or the same club with only a fresh "
+        "`provenance`, is returned untouched and not written (`same_club_as`); a different club, "
+        "a re-shaft or a first measured loft among them, retires the old entry stamped `now` onto "
+        "the shelf. A caller's `retired_at` is cleared on install "
+        "(`test_re_saving_an_unchanged_club_does_not_move_recorded_at` and the upsert tests "
+        "after it)",
+        upsert,
+        bag_source,
+    )
+
+    shelf = _OpsCase({})
+    shelf.op(
+        "bag.set_entry",
+        stamps=True,
+        player_id="aaron",
+        entry=entry("3w", make="TaylorMade", loft_deg=15.0),
+    )
+    shelf.op("bag.set_entry", stamps=True, player_id="aaron", entry=entry("7i", **titleist))
+    shelf.op(
+        "bag.set_entry",
+        stamps=True,
+        player_id="aaron",
+        entry=entry("7i", make="Ping", loft_deg=32.0),
+    )
+    shelf.op("bag.remove_entry", stamps=True, player_id="aaron", club="3w")
+    shelf.op("bag.remove_entry", stamps=True, player_id="aaron", club="3w")
+    shelf.op("bag.remove_entry", stamps=True, player_id="aaron", club="driver")
+    shelf.op("bag.remove_entry", stamps=True, player_id="nobody", club="driver")
+    shelf.op("bag.restore_entry", stamps=True, player_id="aaron", club="7i")
+    shelf.op("bag.restore_entry", stamps=True, player_id="aaron", club="3w")
+    shelf.op("bag.restore_entry", stamps=True, player_id="aaron", club="driver")
+    shelf.op("bag.restore_entry", stamps=True, player_id="nobody", club="7i")
+    shelf.op("bag.restore_entry", stamps=True, player_id="aaron", club="7i")
+    shelf.op("bag.remove_entry", stamps=True, player_id="aaron", club="3w")
+    shelf.op(
+        "bag.set_entry",
+        stamps=True,
+        player_id="aaron",
+        entry=entry("3w", make="TaylorMade", loft_deg=15.0),
+    )
+    shelf.op("bag.restore_entry", stamps=True, player_id="aaron", club="3w")
+    shelf.op("bag.get", player_id="aaron")
+    record(
+        "bag-remove-restore",
+        "`remove_entry` shelves the club stamped `now`, and answers None without writing for an "
+        "empty slot or no bag; `restore_entry` copies the slot's newest stint back, freshly "
+        "stamped, and leaves the stint on the append-only shelf, so out and back is two stints; "
+        "None for a slot that never held another or no bag. A restore whose stint is the club "
+        "already in the slot is `set_entry`'s same-club case: untouched and not written "
+        "(`test_removing_a_club_shelves_it` and the restore tests after it)",
+        shelf,
+        bag_source,
+    )
+
+    guard = _OpsCase(
+        {
+            "aaron.bag.json": "{not json",
+            "carol.bag.json": json.dumps(
+                {
+                    "player_id": "carol",
+                    "entries": {"7i": {**seven, "club": "pw"}},
+                    "updated_at": "2026-08-01T10:00:00Z",
+                }
+            ),
+        }
+    )
+    guard.op("bag.set_entry", stamps=True, player_id="aaron", entry=entry("driver"))
+    guard.op("bag.remove_entry", stamps=True, player_id="aaron", club="7i")
+    guard.op("bag.restore_entry", stamps=True, player_id="aaron", club="7i")
+    guard.op("bag.set_entry", stamps=True, player_id="carol", entry=entry("driver"))
+    guard.op("bag.get", player_id="aaron")
+    guard.op("bag.set_entry", stamps=True, player_id="../aaron", entry=entry("driver"))
+    guard.op("bag.set_entry", stamps=True, player_id="Dave Smith", entry=entry("driver"))
+    record(
+        "bag-write-guard",
+        "a bag that exists and cannot be read, as JSON or as a `Bag`, is never written over: each "
+        "mutator raises the store's `ValueError` and the file is unchanged, while `get` still "
+        "reads it as None (`test_a_corrupt_bag_is_never_written_over`). A `player_id` that is not "
+        "a slug is refused by `Bag`'s validator before a path is made of it "
+        "(`test_a_player_id_that_is_not_a_slug_never_becomes_a_filename`)",
+        guard,
+        bag_source,
+    )
+
+    shared = _OpsCase({})
+    shared.op("golfer.get_or_create", stamps=True, name="Aaron", handedness="right")
+    shared.op("bag.set_entry", stamps=True, player_id="aaron", entry=entry("7i", loft_deg=34.0))
+    shared.op("golfer.list_all")
+    shared.op("golfer.get", player_id="aaron")
+    shared.op("bag.get", player_id="aaron")
+    record(
+        "bag-beside-golfer",
+        "the golfer and the bag share a directory without seeing each other: `list_all` globs "
+        "`*.golfer.json` and so never meets `aaron.bag.json` "
+        "(`test_bags_and_golfers_share_a_directory_without_seeing_each_other`)",
+        shared,
+        bag_source,
+    )
+
+    # ------------------------------------------------------------------------------ golfers
+
+    create = _OpsCase({})
+    for name, handedness in [
+        ("Aaron", "right"),
+        ("Aaron", "right"),
+        ("  aaron ", "right"),
+        ("aaron", "left"),
+        ("María", "right"),
+        ("Maria", "left"),
+        ("Björn Éamon O'Brien", "left"),
+        (" Zoë ", "left"),
+        ("\x1cBob\x1f", "right"),
+        ("!!!", "right"),
+        ("", "right"),
+        ("   ", "right"),
+        ("​", "right"),
+        ("'", "right"),
+    ]:
+        create.op("golfer.get_or_create", stamps=True, name=name, handedness=handedness)
+    create.op("golfer.list_all")
+    record(
+        "golfer-get-or-create",
+        "`get_or_create` is read-biased: a name that slugs to a known golfer returns the stored "
+        "record, its handedness and original display name untouched, so a retyped or accented "
+        "spelling is the same golfer (`test_a_retyped_name_resolves_to_the_existing_golfer`, "
+        "`test_handedness_of_a_known_golfer_is_never_overwritten`, "
+        "`test_accented_and_unaccented_spellings_are_the_same_golfer`). The display name is "
+        "`name.strip()`, which strips what `str.isspace` calls whitespace: NBSP and EM SPACE, and "
+        "the separators \\x1c and \\x1f, which Rust's `trim` keeps. A name that slugs to nothing "
+        "raises, its `repr` in the message (`'\\u200b'`, and `\"'\"` in double quotes)",
+        create,
+        golfer_source,
+    )
+
+    golfers = _OpsCase(
+        {
+            "alice.golfer.json": golfer_text("alice", "same"),
+            "bob.golfer.json": golfer_text("bob", "Same", "left"),
+            "carol.golfer.json": golfer_text("carol", "SAME"),
+            "zed.golfer.json": golfer_text("zed", "Émile"),
+            "inci.golfer.json": golfer_text("inci", "İnci"),
+            "inga.golfer.json": golfer_text("inga", "Inga"),
+            "mismatch.golfer.json": golfer_text("aaron", "Aaron"),
+            "corrupt.golfer.json": "{not json",
+            "badid.golfer.json": json.dumps(
+                {
+                    "player_id": "Bad Id",
+                    "display_name": "Bad",
+                    "handedness": "right",
+                    "created_at": "2026-08-12T09:00:00Z",
+                }
+            ),
+            "aaron.bag.json": bag_text("aaron", {}),
+            "notes.txt": "not a golfer",
+            "stale.golfer.tmp": "a write that never finished",
+        }
+    )
+    for player in ("alice", "mismatch", "corrupt", "badid", "nobody"):
+        golfers.op("golfer.get", player_id=player)
+    golfers.op("golfer.list_all")
+    golfers.op("golfer.get_or_create", stamps=True, name="Corrupt", handedness="left")
+    golfers.op("golfer.get", player_id="corrupt")
+    record(
+        "golfer-reads",
+        "`get` reads the record the file holds, so `mismatch.golfer.json` answers golfer `aaron`, "
+        "and an unreadable or invalid record is None (`test_unknown_and_corrupt_records_read_as_"
+        "absent`). `list_all` skips those, ignores what is not `*.golfer.json`, and sorts on "
+        "`display_name.lower()` by code point: a capital dotted I (U+0130) lowers to i + U+0307, "
+        "so `inci`'s name sorts after `Inga`, `Émile` after every ASCII name, and three names "
+        "equal once lowered keep the files' order (`test_list_all_is_sorted_by_display_name`). "
+        "`get_or_create` over a corrupt record creates a fresh golfer and writes over it",
+        golfers,
+        golfer_source,
+    )
+
+    nowhere = _OpsCase(None)
+    nowhere.op("golfer.list_all")
+    nowhere.op("golfer.get", player_id="aaron")
+    nowhere.op("golfer.get_or_create", stamps=True, name="Aaron", handedness="right")
+    record(
+        "golfer-missing-root",
+        "a golfer directory that does not exist lists nothing and reads None, and the first "
+        "golfer created makes it",
+        nowhere,
+        golfer_source,
+    )
+
+    # ------------------------------------------------------------------------------ shots
+
+    noon = datetime(2026, 8, 4, 12, 0, tzinfo=UTC)
+    first, second = _hash_text("photo"), _hash_text("a different photo")
+    shots = _OpsCase({})
+    shots.op("shot.put", shot=shot("s1", noon, digest=first))
+    shots.op("shot.has", key=first)
+    shots.op("shot.get", key=first)
+    shots.op("shot.has", key=second)
+    shots.op("shot.get", key=second)
+    shots.op(
+        "shot.put",
+        shot=shot("2026-08-04 12:00/swing#1", noon + timedelta(minutes=5), digest=None,
+                  provenance=None),
+    )
+    shots.op("shot.has", key="2026-08-04 12:00/swing#1")
+    shots.op("shot.put", shot=shot("s3", noon + timedelta(minutes=10), digest=None))
+    shots.op("shot.put", shot=shot("s4", noon + timedelta(minutes=15), digest=""))
+    shots.op("shot.put", shot=shot("naïve…", noon + timedelta(minutes=20), digest=None))
+    shots.op("shot.all")
+    shots.op("shot.put", shot=shot("s1", noon, digest=first, carry_distance=131.4))
+    shots.op("shot.get", key=first)
+    record(
+        "shot-store",
+        "the shot store is content-addressed: `put` keys a shot by its photo's sha256 and falls "
+        "back to `shot_id` when there is no provenance, no hash or an empty one, each "
+        "`[^A-Za-z0-9._-]+` run of the key becoming one `-`, non-ASCII included; it answers the "
+        "path written, and a second `put` of a key writes over the first "
+        "(`test_round_trip_through_the_store`, `test_reimporting_the_same_image_hits_the_cache`)",
+        shots,
+        shot_source,
+    )
+
+    def shot_text(shot_id: str, when: datetime) -> str:
+        return ShotData.model_validate(shot(shot_id, when, digest=None)).model_dump_json(indent=2)
+
+    india = timezone(timedelta(hours=5, minutes=30))
+    eastern = timezone(timedelta(hours=-5))
+    ordered = _OpsCase(
+        {
+            "a.shot.json": shot_text("a", noon),
+            "b.shot.json": shot_text("b", noon),
+            "c.shot.json": shot_text("c", datetime(2026, 8, 4, 17, 0, tzinfo=india)),
+            "d.shot.json": shot_text("d", datetime(2026, 8, 4, 8, 0, tzinfo=eastern)),
+            "e.shot.json": "{not json",
+            "f.shot.json": json.dumps({"shot_id": "f", "session_id": "range"}),
+            "g.json": shot_text("g", noon),
+        }
+    )
+    ordered.op("shot.all")
+    ordered.op("shot.get", key="e")
+    ordered.op("shot.get", key="f")
+    ordered.op("shot.get", key="g")
+    ordered.op("shot.has", key="e")
+    record(
+        "shot-all-order",
+        "`all` is newest first by instant, not by spelling: 08:00-05:00 is 13:00Z and leads, "
+        "17:00+05:30 is 11:30Z and trails. Two shots at one instant keep the files' sorted order "
+        "(a stable sort, reversed by `reverse=True` and not by reversing the list). Unreadable "
+        "files are skipped (`test_unreadable_files_are_skipped_not_fatal`), but `get` on one "
+        "raises, unlike every other reader here; `g.json` is not a `.shot.json` and is never seen",
+        ordered,
+        shot_source,
+    )
+
+    no_shots = _OpsCase(None)
+    no_shots.op("shot.all")
+    no_shots.op("shot.has", key=first)
+    no_shots.op("shot.get", key=first)
+    no_shots.op("shot.put", shot=shot("s1", noon, digest=first))
+    record(
+        "shot-missing-root",
+        "a shot directory that does not exist is empty, not an error "
+        "(`test_missing_store_directory_is_empty_not_an_error`), and the first `put` makes it",
+        no_shots,
+        shot_source,
+    )
+
+    # ------------------------------------------------------------------------------ slugify
+
+    table = _OpsCase(None)
+    for name in [
+        # `test_slugify_folds_names_to_a_stable_id`, in its order.
+        "Aaron", "  Aaron  ", "AARON", "Aaron Sierra", "Aaron  Sierra", "O'Brien", "Player 2",
+        "!!!", "", "María", "Maria", "Björn", "Éamon",
+        # The edges a port meets: hyphen runs and ends, a lowercase that leaves ASCII or lands in
+        # it (`İ`, the Kelvin sign), letters NFD cannot take apart (`ß`, `ø`, a ligature, a
+        # titlecase digraph, a roman numeral), full-width forms, an already-decomposed accent and
+        # a leading one, and two marks with combining class 0 that a general-category test would
+        # strip (U+0903, U+20DD) but `unicodedata.combining` keeps for `_NON_SLUG` to replace.
+        "Aaron ", "--aaron--", "a--b", "a.b_c", "José-María Ruiz", "Nguyễn", "123", "--",
+        "İnci", "Kelvin", "Straße", "Søren", "ﬁne", "ǅ", "Ⅻ",
+        "Player ２", "Ａaron", "é", "́abc", "aःb", "a⃝b",
+        "A\tB\nC", " Zoë ", "\x1cBob\x1f", "Ωmega",
+    ]:
+        table.op("slugify", name=name)
+    record(
+        "slugify",
+        "`contracts/golfer.py::slugify` over `test_slugify_folds_names_to_a_stable_id`'s table and "
+        "the Unicode edges a port meets: `strip`, `lower`, NFD, drop what "
+        "`unicodedata.combining` calls combining (canonical class non-zero), then every "
+        "`[^a-z0-9]+` run to one `-` and the ends stripped of `-`",
+        table,
+        "tests/storage/test_golfer_store.py::test_slugify_folds_names_to_a_stable_id",
+    )
+    return cases
+
+
+def _hash_text(text: str) -> str:
+    """`launch_monitor/screen/store.py::hash_image` of a text's UTF-8 bytes: a shot store key."""
+    from golf_coach.launch_monitor.screen.store import hash_image
+
+    return hash_image(text.encode("utf-8"))
+
+
+# ========================================================== career: the aggregates and the reports
+#
+# **The career family records what one golfer's history supports saying** (M36 P3, the M36 plan's
+# calls 2 and 3): `analysis/{baseline,dispersion,comparison,club_profile}.py` over a corpus, and the
+# text the five career scripts print from what those build. `regenerate --career-once` records it
+# once and refuses a second run, on the storage family's precedent. From there `crates/analysis`
+# (the aggregates) and `crates/core` (the reports) are the implementation, and `golf-core rerecord`
+# the only writer, under `CAREER_VERSION`, the key this family shares with the storage family (the
+# plan's decision 8).
+#
+# **A case's input is a corpus, not a tree.** `input.corpus` is a `CareerCorpus` as
+# `model_dump(mode="json")` writes it, so the aggregates are gated apart from the reader: a port can
+# be wrong about `read_corpus` and right about `build_baseline`, and the two families say which.
+# `input.bag` is a `Bag` or null, `input.display_name` the name a report's header prints, and
+# `input.versions` the storage family's pair, because the corpus report prints the installed engine
+# (`_run_career` refuses any pair but frozen Python's own, as `_run_corpus` does). `input.clubs` is
+# what `club_profile.py --club` is recorded for: every club in the profile, then the first `ClubId`
+# that is not, whose report is the "never hit and not in the bag" sentence. The plan's call 2 had a
+# single `club`, which could not say which clubs a case's reports cover.
+#
+# **Three kinds of case.** *Built* (`synthetic/<name>`, `_career_built`): `CorpusSwing`s
+# constructed directly, as `tests/analysis/` constructs them, chosen for the aggregates' rows, and
+# checked at build time to land where their note says. Each corpus goes through `narrowed_to()`
+# with no arguments, which fills `metric_counts` and the counters a reader would have.
+# *Adopted* (`synthetic/storage-<name>`, `_career_adopted`): every synthetic storage corpus case's
+# `expected.corpus`, read from the committed family, so every corpus a reader actually produces
+# (exclusions, re-uploads, an outdated engine, a stranger's swings) is rendered by every report.
+# *Real* (`real/aaron`, `_career_real`): the real storage vector's `expected.corpus`, which must
+# equal `read_corpus` over `data/` or the recorder raises (the plan's call 2), with the golfer's
+# own bag and name.
+#
+# **`expected` is `{baseline, dispersion, standing, bag_profile, properties, reports}`.** The four
+# aggregates as `model_dump(mode="json")` writes them; `properties`, what they derive that
+# `model_dump` drops and a report prints (P1's corpus `properties`, one family on); and the text.
+#
+# **The reports are each script's own function**, loaded by path and captured with
+# `redirect_stdout` (the plan's call 3), so the text stays gated after M29 deletes the scripts:
+# `<script>` and `<script>_verbose` for the four `_report`s, `club_profile_<club>` once per
+# `input.clubs`, and `flag_mishit_list`. `flag_mishit._list` reads stores, so it runs with
+# `read_corpus` answering the case's corpus and a registry holding the case's golfer alone, which
+# is the renderer over that corpus and nothing else; over the real case the recorder also runs it
+# over the real trees, materialised, and raises unless the two print the same. A script's `main`
+# adds the golfer loop and a trailing blank line around these, which a verb reproduces and P16's
+# parity run checks.
+
+#: The career family's root.
+_CAREER = VECTORS / "career"
+
+#: The golfer records and bags `data/` holds, beside the sessions they swung.
+GOLFERS = REPO / "data" / "processed" / "golfers"
+
+#: The scripts whose report text the family records, by file stem.
+_CAREER_SCRIPTS = (
+    "career_corpus",
+    "career_baseline",
+    "career_dispersion",
+    "club_profile",
+    "flag_mishit",
+)
+
+#: Each script as a module, loaded by path once per process (`_career_scripts`).
+_LOADED_SCRIPTS: dict[str, Any] = {}
+
+#: What every built case's measurements are, by name: unit and `Measurement.source`. The units are
+#: the engine's own, and three of them (`rpm`, `sd_units`, `furlongs`) are outside the scripts'
+#: precision table, so they print at its three-decimal default.
+_CAREER_KINDS: dict[str, tuple[str, str]] = {
+    "head_sway_norm": ("shoulder_widths", "pose:face_on"),
+    "hip_sway_norm": ("shoulder_widths", "pose:face_on"),
+    "hip_shift_at_top_norm": ("shoulder_widths", "pose:face_on"),
+    "finish_balance_norm": ("shoulder_widths", "pose:face_on"),
+    "head_hip_offset_impact_norm": ("shoulder_widths", "pose:face_on"),
+    "head_hip_gain_norm": ("shoulder_widths", "pose:face_on"),
+    "hand_height_norm": ("shoulder_widths", "pose:face_on"),
+    "pivot_hip_axis_drift_norm": ("shoulder_widths", "pose:face_on"),
+    "pivot_hip_axis_drift_norm_dtl": ("shoulder_widths", "pose:down_the_line"),
+    "tempo_ratio": ("ratio", "pose:face_on"),
+    "backswing_ms": ("ms", "pose:face_on"),
+    "downswing_ms": ("ms", "pose:face_on"),
+    "face_to_path_deg": ("degrees", "launch_monitor:hd_golf"),
+    "start_line_deg": ("degrees", "launch_monitor:hd_golf"),
+    "start_line_offline_yds": ("yards", "launch_monitor:hd_golf"),
+    "carry_distance_yds": ("yards", "launch_monitor:hd_golf"),
+    "total_distance_yds": ("yards", "launch_monitor:hd_golf"),
+    "ball_speed_mph": ("mph", "launch_monitor:hd_golf"),
+    "launch_angle_deg": ("degrees", "launch_monitor:hd_golf"),
+    "flight_carry_yds": ("yards", "model:flight_v1"),
+    "flight_spin_rpm": ("rpm", "model:flight_v1"),
+    "tour_joint_distance": ("sd_units", "population:golfdb"),
+    "mystery_reach_norm": ("furlongs", "mystery:sensor"),
+}
+
+
+def build_career(*, real: bool = True) -> list[tuple[Path, dict[str, Any]]]:
+    """The career family, as (path, payload) pairs, built in full before anything is returned.
+
+    Writes nothing. The adopted and real cases read the committed storage family, so
+    `--storage-once` has to have run first. `real=False` leaves out the case read from `data/`,
+    which is what lets the dry-run pin in `tests/test_conformance.py` run with no captures.
+    """
+    synthetic = _CAREER / "synthetic"
+    out = [(synthetic / f"{name}.json", v) for name, v in _career_built().items()]
+    out += [(synthetic / f"{name}.json", v) for name, v in _career_adopted().items()]
+    if real:
+        out.append((_CAREER / "real" / f"{_REAL_PLAYER}{_REAL_SUFFIX}", _career_real()))
+    return out
+
+
+def _run_career(given: dict[str, Any]) -> dict[str, Any]:
+    """One career case's input through frozen Python: the definition a port reproduces.
+
+    The four aggregates over `input.corpus` (the bag profile with `input.bag` beside it), the values
+    they derive, and the scripts' report text over them.
+    """
+    from golf_coach.analysis.baseline import build_baseline
+    from golf_coach.analysis.club_profile import build_bag_profile
+    from golf_coach.analysis.comparison import build_standing
+    from golf_coach.analysis.dispersion import build_dispersion
+    from golf_coach.contracts.bag import Bag
+    from golf_coach.contracts.career import CareerCorpus
+
+    frozen = {"installed": ANALYSIS_VERSION, "comparable_from": ANALYSIS_VERSION}
+    if given["versions"] != frozen:
+        raise ValueError(
+            f"frozen Python's corpus report prints its own engine as the installed one, so it "
+            f"answers only under {frozen}; {given['versions']} is a question for Rust's"
+        )
+    corpus = CareerCorpus.model_validate(given["corpus"])
+    bag = None if given["bag"] is None else Bag.model_validate(given["bag"])
+    baseline = build_baseline(corpus)
+    dispersion = build_dispersion(corpus)
+    standing = build_standing(corpus)
+    profile = build_bag_profile(corpus, bag)
+    return {
+        "baseline": baseline.model_dump(mode="json"),
+        "dispersion": dispersion.model_dump(mode="json"),
+        "standing": standing.model_dump(mode="json"),
+        "bag_profile": profile.model_dump(mode="json"),
+        "properties": {
+            "baseline": {
+                "claims_ready": baseline.claims_ready,
+                "nothing_sayable": baseline.nothing_sayable,
+            },
+            "dispersion": {
+                "patterns_established": dispersion.patterns_established,
+                "nothing_established": dispersion.nothing_established,
+            },
+            "standing": {
+                "placements": standing.placements,
+                "nothing_placed": standing.nothing_placed,
+            },
+            "bag_profile": {
+                "clubs_used": [one.club.value for one in profile.clubs_used],
+                "clubs_declared": [one.club.value for one in profile.clubs_declared],
+                "categories": {one.club.value: one.category.value for one in profile.clubs},
+            },
+        },
+        "reports": _career_reports(given, corpus, baseline, dispersion, standing, profile),
+    }
+
+
+def _career_reports(
+    given: dict[str, Any],
+    corpus: Any,
+    baseline: Any,
+    dispersion: Any,
+    standing: Any,
+    profile: Any,
+) -> dict[str, str]:
+    """Each script's report over one case, keyed as the section header says."""
+    from golf_coach.contracts.club import ClubId
+
+    scripts = _career_scripts()
+    name = given["display_name"]
+    reports: dict[str, str] = {}
+    for verbose in (False, True):
+        tail = "_verbose" if verbose else ""
+        reports[f"career_corpus{tail}"] = _printed(
+            scripts["career_corpus"]._report, corpus, name, verbose=verbose
+        )
+        reports[f"career_baseline{tail}"] = _printed(
+            scripts["career_baseline"]._report, baseline, standing, name, verbose=verbose
+        )
+        reports[f"career_dispersion{tail}"] = _printed(
+            scripts["career_dispersion"]._report, dispersion, name, verbose=verbose
+        )
+        reports[f"club_profile{tail}"] = _printed(
+            scripts["club_profile"]._report, profile, name, verbose=verbose, club=None
+        )
+    for club in given["clubs"]:
+        reports[f"club_profile_{club}"] = _printed(
+            scripts["club_profile"]._report, profile, name, verbose=False, club=ClubId(club)
+        )
+    reports["flag_mishit_list"] = _mishit_listing(scripts["flag_mishit"], corpus)
+    return reports
+
+
+def _career_scripts() -> dict[str, Any]:
+    """The five scripts as modules, loaded by path as `_load_conftest` loads a conftest: `scripts/`
+    is not a package, and an import by name would depend on whoever put it on `sys.path`."""
+    if not _LOADED_SCRIPTS:
+        for stem in _CAREER_SCRIPTS:
+            _LOADED_SCRIPTS[stem] = _load_conftest(
+                REPO / "scripts" / f"{stem}.py", f"_conformance_script_{stem}"
+            )
+    return _LOADED_SCRIPTS
+
+
+def _printed(fn: Callable[..., Any], *args: Any, **kwargs: Any) -> str:
+    """What `fn` prints, as one string. It must return as a report (`None`) or a listing (0) does,
+    so a refusal path a case did not mean to reach stops the build."""
+    import io
+
+    buffer = io.StringIO()
+    with contextlib.redirect_stdout(buffer):
+        returned = fn(*args, **kwargs)
+    assert returned in (None, 0), f"{fn.__name__} returned {returned!r}, not a report"
+    return buffer.getvalue()
+
+
+def _mishit_listing(module: Any, corpus: Any) -> str:
+    """`flag_mishit --list` for the case's golfer alone, `read_corpus` answering the case's corpus.
+
+    `_list` takes a golfer registry and reads each golfer's corpus from the settings' sessions
+    directory. Both are answered from the case here, so what it prints is the renderer over this
+    corpus; `_career_real` holds that to `_list` over the real trees.
+    """
+    from types import SimpleNamespace
+
+    golfer = SimpleNamespace(player_id=corpus.player_id)
+
+    def read_corpus(sessions_dir: Any, player_id: str) -> Any:
+        assert player_id == corpus.player_id, f"the listing asked for {player_id}"
+        return corpus
+
+    registry = SimpleNamespace(
+        get=lambda player_id: golfer if player_id == corpus.player_id else None,
+        list_all=lambda: [golfer],
+    )
+    with _patched(module, read_corpus=read_corpus):
+        return _printed(module._list, None, registry, None)
+
+
+@contextlib.contextmanager
+def _patched(module: Any, **names: Any) -> Iterator[None]:
+    """`module`'s `names` answered by the values given, for the block, and restored after it."""
+    saved = {name: getattr(module, name) for name in names}
+    for name, value in names.items():
+        setattr(module, name, value)
+    try:
+        yield
+    finally:
+        for name, value in saved.items():
+            setattr(module, name, value)
+
+
+def _career_vector(name: str, given: dict[str, Any], *, note: str, source: str) -> dict[str, Any]:
+    """Serialize the input, run it through `_run_career`, and pair the two (`_vector`'s rule).
+
+    `provenance.analysis_version` is the engine the corpus report names as installed; a career
+    vector does not age on it.
+    """
+    import pydantic
+
+    given_json = json.loads(json.dumps(given))
+    return {
+        "id": f"career/{name}",
+        "career_version": _FROZEN_CAREER,
+        "provenance": {
+            "kind": "career",
+            "oracle": "python",
+            "note": note,
+            "source": source,
+            "analysis_version": ANALYSIS_VERSION,
+            "python_version": _python_version(),
+            "pydantic_version": pydantic.VERSION,
+            "recorded_by": "scripts/conformance_vectors.py::_run_career",
+        },
+        "input": given_json,
+        "expected": _run_career(given_json),
+    }
+
+
+def _career_given(corpus: Any, *, bag: Any = None, display_name: str = "Aaron") -> dict[str, Any]:
+    """A case's input: the corpus and bag as dumped, and the clubs `--club` is recorded for."""
+    from golf_coach.contracts.club import ClubId
+
+    hit = {swing.club for swing in corpus.swings if swing.club is not None}
+    declared = set(bag.entries) if bag is not None else set()
+    profiled = [club for club in ClubId if club in hit or club in declared]
+    absent = next(club for club in ClubId if club not in profiled)
+    return {
+        "corpus": corpus.model_dump(mode="json"),
+        "bag": None if bag is None else bag.model_dump(mode="json"),
+        "display_name": display_name,
+        "versions": {"installed": ANALYSIS_VERSION, "comparable_from": ANALYSIS_VERSION},
+        "clubs": [club.value for club in (*profiled, absent)],
+    }
+
+
+def _digest(label: str) -> str:
+    """A sha256 standing in for a clip's or a photo's: the shape the reports print 12 of."""
+    return hashlib.sha256(label.encode("utf-8")).hexdigest()
+
+
+# ------------------------------------------------------------------------ career: the built cases
+
+
+def _career_built() -> dict[str, dict[str, Any]]:
+    """The cases built here, one or more per row of the M36 plan's P3 list.
+
+    Each is checked at build time to land where its note says (a floor shut or open, a pattern, a
+    standing, a caveat's form), so a change to a table under one stops the build rather than
+    recording a case that no longer pins what it is named for.
+    """
+    from datetime import UTC, datetime, timedelta, timezone
+
+    from golf_coach.analysis.baseline import build_baseline
+    from golf_coach.analysis.benchmarks import load_distribution
+    from golf_coach.analysis.club_profile import build_bag_profile
+    from golf_coach.analysis.comparison import build_standing
+    from golf_coach.analysis.dispersion import build_dispersion
+    from golf_coach.contracts.bag import Bag, BagEntry
+    from golf_coach.contracts.baseline import BaselineClaim, minimum_n
+    from golf_coach.contracts.career import CareerCorpus, CorpusSwing, ExcludedSwing
+    from golf_coach.contracts.career import ExclusionReason as Reason
+    from golf_coach.contracts.club import ClubId
+    from golf_coach.contracts.club_spec import SpecProvenance
+    from golf_coach.contracts.comparison import Standing
+    from golf_coach.contracts.dispersion import SCATTER_ONLY_READING, DispersionPattern, Finding
+    from golf_coach.contracts.mishit import MishitVerdict
+    from golf_coach.contracts.swing import Measurement
+
+    weeks = ("2026-08-03", "2026-08-10", "2026-08-17")
+    seven, driver, five, nine = (
+        ClubId.SEVEN_IRON,
+        ClubId.DRIVER,
+        ClubId.FIVE_IRON,
+        ClubId.NINE_IRON,
+    )
+
+    def on(session: str, minute: int = 0, *, hour: int = 12, tz: Any = UTC) -> datetime:
+        year, month, day = (int(part) for part in session.split("-"))
+        return datetime(year, month, day, hour, tzinfo=tz) + timedelta(minutes=minute)
+
+    def swing(
+        index: int,
+        values: dict[str, float] | None = None,
+        *,
+        session: str,
+        at: datetime | None = None,
+        club: ClubId | None = None,
+        clip: int | str | None = None,
+        photo: Any = True,
+        **fields: Any,
+    ) -> CorpusSwing:
+        """One distinct swing: its own clip and photo unless told to share one (or have none)."""
+        fields.setdefault("analyzed", True)
+        fields.setdefault("analysis_version", ANALYSIS_VERSION if fields["analyzed"] else 0)
+        return CorpusSwing(
+            player_id=_REAL_PLAYER,
+            session_id=session,
+            swing_id=str(index),
+            captured_at=at or on(session, index),
+            face_on_sha256=_digest(f"clip-{index if clip is None else clip}"),
+            shot_sha256=(
+                _digest(f"photo-{index}")
+                if photo is True
+                else None
+                if photo is None
+                else _digest(f"photo-{photo}")
+            ),
+            club=club,
+            measurements=[
+                Measurement(
+                    name=name,
+                    value=value,
+                    unit=_CAREER_KINDS[name][0],
+                    source=_CAREER_KINDS[name][1],
+                    detail="synthetic",
+                )
+                for name, value in (values or {}).items()
+            ],
+            **fields,
+        )
+
+    def corpus(*swings: CorpusSwing, **scan: Any) -> CareerCorpus:
+        """The swings in the reader's order, with the counts a reader would have filled."""
+        scan.setdefault("sessions_scanned", len({s.session_id for s in swings}))
+        scan.setdefault("swing_dirs_seen", len(swings) + sum(len(s.duplicates) for s in swings))
+        return CareerCorpus(
+            player_id=_REAL_PLAYER,
+            swings=sorted(swings, key=lambda s: (s.captured_at, s.session_id, s.swing_id)),
+            **scan,
+        ).narrowed_to()
+
+    def wave(center: float, spread: float, n: int, *, phase: float = 0.0) -> list[float]:
+        """`n` values around `center`: irregular, deterministic and full-precision, so a port's
+        sums and powers are exercised on more than the exact halves `tight` gives."""
+        return [center + spread * math.sin(2.39996 * i + phase) for i in range(n)]
+
+    def tight(center: float, half: float, n: int = 12) -> list[float]:
+        """`tests/analysis/test_comparison.py::_tight`: a mean at `center`, a narrow interval."""
+        return [center + (half if i % 2 == 0 else -half) for i in range(n)]
+
+    def struck(carry: float, speed: float, sway: float) -> dict[str, float]:
+        """A shot with a photo: the four launch-monitor readings a club profile pools, and a pose
+        one beside them so a mishit can be seen counting there."""
+        return {
+            "carry_distance_yds": carry,
+            "total_distance_yds": carry * 1.0625 + 0.3,
+            "ball_speed_mph": speed,
+            "launch_angle_deg": 31.0 - speed / 7.0,
+            "head_sway_norm": sway,
+        }
+
+    cases: dict[str, dict[str, Any]] = {}
+
+    def case(name: str, note: str, built: CareerCorpus, *, bag: Bag | None = None) -> None:
+        assert name not in cases, f"two career cases are named {name}"
+        cases[name] = _career_vector(
+            f"synthetic/{name}",
+            _career_given(built, bag=bag),
+            note=note,
+            source="CorpusSwing built by scripts/conformance_vectors.py, as tests/analysis/ does",
+        )
+
+    # ------------------------------------------------------------- the floors, at n - 1 and n
+
+    floored = ("head_sway_norm", "tempo_ratio", "hip_shift_at_top_norm")
+    floors = (
+        (BaselineClaim.CENTER, "below", (4, 7, 5)),
+        (BaselineClaim.CENTER, "at", (5, 8, 6)),
+        (BaselineClaim.SPREAD, "below", (9, 14, 11)),
+        (BaselineClaim.SPREAD, "at", (10, 15, 12)),
+        (BaselineClaim.TREND, "below", (11, 17, 13)),
+        (BaselineClaim.TREND, "at", (12, 18, 14)),
+    )
+    for claim, side, counts in floors:
+        series = {
+            "head_sway_norm": wave(0.21, 0.06, counts[0]),
+            "tempo_ratio": wave(3.2, 0.45, counts[1], phase=1.0),
+            "hip_shift_at_top_norm": wave(0.09, 0.035, counts[2], phase=2.0),
+        }
+        built = corpus(
+            *(
+                swing(
+                    i + 1,
+                    {name: values[i] for name, values in series.items() if i < len(values)},
+                    session=weeks[i % 3],
+                )
+                for i in range(max(counts))
+            )
+        )
+        metrics = build_baseline(built).metrics
+        for name, n in zip(floored, counts, strict=True):
+            assert metrics[name].n == n == minimum_n(name, claim) - (side == "below"), name
+            assert (claim in metrics[name].ready) is (side == "at"), (claim, name, side)
+        shy = "one sample short of" if side == "below" else "exactly at"
+        case(
+            f"floor-{claim.value}-{side}",
+            f"head_sway_norm at {counts[0]}, tempo_ratio at {counts[1]} and hip_shift_at_top_norm "
+            f"at {counts[2]} over three sessions: {shy} each one's {claim.value.upper()} floor "
+            "(the default, the tempo override, the hip-shift override)",
+            built,
+        )
+
+    for count in (1, 2, 3):
+        built = corpus(
+            *(
+                swing(i + 1, {"head_sway_norm": value}, session=weeks[i % count])
+                for i, value in enumerate(wave(0.24, 0.05, 12, phase=0.5))
+            )
+        )
+        metric = build_baseline(built).metrics["head_sway_norm"]
+        assert metric.n == 12 and metric.n_sessions == count
+        assert (BaselineClaim.TREND in metric.ready) is (count == 3)
+        case(
+            f"trend-sessions-{count}",
+            f"twelve samples, past every default floor, over {count} session(s): the TREND "
+            f"sessions gate {'opens at 3' if count == 3 else 'refuses on sessions alone'}"
+            + ("; one session has no within-session spread to pool" if count == 1 else ""),
+            built,
+        )
+
+    thin = corpus(
+        swing(
+            1,
+            {"head_sway_norm": 0.27, "face_to_path_deg": 10.9, "carry_distance_yds": 148.2},
+            session=weeks[0],
+            club=seven,
+        ),
+        swing(
+            2,
+            {"head_sway_norm": 0.31, "face_to_path_deg": 13.2, "carry_distance_yds": 151.7},
+            session=weeks[0],
+            club=seven,
+        ),
+    )
+    assert build_baseline(thin).nothing_sayable
+    case(
+        "thin",
+        "two swings in one session, the n on disk when career mode was built: every claim "
+        "refused, and the TREND refusal names both shortfalls",
+        thin,
+    )
+
+    # -------------------------------------------- pooling: mishits, flags and re-uploads
+
+    pool = ("2026-08-20", "2026-08-21")
+    carries = wave(152.0, 5.5, 7, phase=0.2)
+    speeds = wave(118.0, 2.5, 7, phase=1.3)
+    sways = wave(0.22, 0.05, 7, phase=2.1)
+    unseen = "2026-08-22"
+    pooled = corpus(
+        *(
+            swing(i + 1, struck(carries[i], speeds[i], sways[i]), session=pool[i % 2], club=seven)
+            for i in range(7)
+        ),
+        swing(8, struck(21.3, 64.2, 0.31), session=pool[1], club=seven, auto_mishit=True),
+        swing(
+            9,
+            struck(104.0, 97.5, 0.26),
+            session=pool[0],
+            club=seven,
+            manual_mishit=MishitVerdict.CONFIRMED,
+        ),
+        swing(
+            10,
+            struck(66.5, 101.0, 0.19),
+            session=pool[1],
+            club=seven,
+            auto_mishit=True,
+            manual_mishit=MishitVerdict.CLEARED,
+        ),
+        swing(11, struck(149.0, 117.0, 0.24), session=pool[0], club=seven, shot_needs_review=True),
+        swing(12, struck(150.4, 118.8, 0.21), session=pool[1], club=seven, photo=2),
+        swing(13, struck(153.3, 119.2, 0.23), session=pool[0], club=seven, clip=4),
+        swing(14, struck(151.1, 117.7, 0.2), session=pool[1], club=seven, photo=None),
+        swing(15, {"head_sway_norm": 0.28, "carry_distance_yds": 233.0}, session=pool[0]),
+        swing(16, struck(150.0, 118.0, 0.25), session=pool[1], club=seven, stale=True),
+        swing(
+            17,
+            struck(150.0, 118.0, 0.25),
+            session=pool[0],
+            club=seven,
+            outdated=True,
+            analysis_version=ANALYSIS_VERSION - 1,
+        ),
+        swing(18, None, session=pool[1], club=seven),
+        swing(
+            19,
+            struck(150.9, 118.4, 0.22),
+            session=pool[0],
+            club=seven,
+            duplicates=[f"{unseen}/1", f"{unseen}/2"],
+            conflicting_shots=[_digest("photo-19b"), _digest("photo-19c")],
+        ),
+        swing(
+            20,
+            {
+                "mystery_reach_norm": 0.5,
+                "pivot_hip_axis_drift_norm_dtl": 0.04,
+                "tour_joint_distance": 1.3,
+            },
+            session=pool[1],
+            club=seven,
+        ),
+        swing(21, None, session=pool[0], club=seven, analyzed=False),
+        sessions_scanned=3,
+        swing_dirs_seen=26,
+        unattributed_swings=1,
+        other_golfers=2,
+        excluded=[
+            ExcludedSwing(
+                session_id=unseen,
+                swing_id="3",
+                reason=Reason.UNATTRIBUTED,
+                detail="nobody had selected a golfer when this arrived — repair it on the upload "
+                "page or with scripts/backfill_golfer.py",
+            ),
+            *(
+                ExcludedSwing(
+                    session_id=unseen,
+                    swing_id=swing_id,
+                    reason=Reason.DUPLICATE,
+                    detail=f"face-on bytes {_digest('clip-19')[:12]} are already in "
+                    f"{pool[0]}/19 — the same swing uploaded again, not a second swing",
+                )
+                for swing_id in ("1", "2")
+            ),
+            ExcludedSwing(
+                session_id=pool[0],
+                swing_id="21",
+                reason=Reason.NOT_ANALYZED,
+                detail="no analysis.json — run scripts/analyze_bundle.py over it",
+            ),
+            ExcludedSwing(
+                session_id=pool[1],
+                swing_id="16",
+                reason=Reason.STALE,
+                detail="a clip was re-uploaded after this was analyzed, so the stored numbers "
+                "describe bytes that are no longer here — re-run the pipeline",
+            ),
+            ExcludedSwing(
+                session_id=pool[0],
+                swing_id="17",
+                reason=Reason.OUTDATED,
+                detail=f"analyzed by engine version {ANALYSIS_VERSION - 1}, and "
+                f"{ANALYSIS_VERSION} is installed — the numbers are not comparable with a swing "
+                "analyzed today, so they are reported rather than pooled. Re-run "
+                "scripts/reanalyze.py",
+            ),
+        ],
+    )
+    pooled_baseline = build_baseline(pooled).metrics
+    assert pooled.mishit_refs == [f"{pool[0]}/9", f"{pool[1]}/8"], pooled.mishit_refs
+    assert pooled_baseline["carry_distance_yds"].n == 11, pooled_baseline["carry_distance_yds"].n
+    assert pooled_baseline["ball_speed_mph"].n == 12, pooled_baseline["ball_speed_mph"].n
+    assert pooled_baseline["head_sway_norm"].n == 15, pooled_baseline["head_sway_norm"].n
+    for name, count in pooled.metric_counts.items():
+        assert pooled_baseline[name].n == count, f"{name}: pooling disagrees with counting"
+    case(
+        "pooling",
+        "one club's history with every pooling rule in it: an automatic and a confirmed mishit "
+        "held out of carry and total and counted for ball speed and pose, a cleared one counted, "
+        "a flagged parse, one photo under two clips, one clip under two swings, no photo, an "
+        "untagged swing, stale, outdated and unanalyzed swings, re-uploads, a shot conflict, and "
+        "unknown, down-the-line and population sources",
+        pooled,
+    )
+
+    # ------------------------------------------------- dispersion: patterns, targets, drift
+
+    def alternating(center: float, half: float, n: int = 12, *, jitter: float = 0.1) -> list[float]:
+        """`tests/analysis/test_dispersion.py::_spread`, with a small irregular jitter on top."""
+        return [
+            center + (half if i % 2 == 0 else -half) + jitter * half * math.sin(1.7 * i + 0.4)
+            for i in range(n)
+        ]
+
+    shapes: dict[str, tuple[list[float], Any]] = {
+        "face_to_path_deg": (alternating(-9.0, 0.5), DispersionPattern.BIASED),
+        "start_line_deg": (alternating(0.0, 10.0), DispersionPattern.SCATTERED),
+        "start_line_offline_yds": (
+            alternating(40.0, 25.0),
+            DispersionPattern.BIASED_AND_SCATTERED,
+        ),
+        "head_sway_norm": (alternating(0.03, 0.04), DispersionPattern.NOTHING_ESTABLISHED),
+        "finish_balance_norm": (alternating(0.2, 0.005), DispersionPattern.BIASED),
+        "carry_distance_yds": (alternating(150.0, 30.0), SCATTER_ONLY_READING),
+        "total_distance_yds": (alternating(160.0, 1.0), None),
+        "flight_carry_yds": (alternating(151.0, 3.0), None),
+        "pivot_hip_axis_drift_norm": (alternating(0.05, 0.01), None),
+    }
+    patterns = corpus(
+        *(
+            swing(
+                i + 1,
+                {name: values[i] for name, (values, _) in shapes.items()},
+                session=weeks[i % 3],
+            )
+            for i in range(12)
+        )
+    )
+    read = build_dispersion(patterns).metrics
+    for name, (_, meant) in shapes.items():
+        if isinstance(meant, DispersionPattern):
+            assert read[name].pattern is meant, (name, read[name].pattern)
+        elif meant == SCATTER_ONLY_READING:
+            assert read[name].pattern is None and read[name].points_at == meant, name
+            assert read[name].bias is Finding.WITHHELD, name
+        else:
+            assert read[name].pattern is None and read[name].points_at is None, name
+    assert read["face_to_path_deg"].offset is not None and read["face_to_path_deg"].offset < 0
+    assert any("not registered" in r for r in read["flight_carry_yds"].unavailable)
+    case(
+        "dispersion-patterns",
+        "twelve swings over three sessions, one metric per reading: biased (a closed face), "
+        "scattered, both, nothing established, a positive bias, scatter with no target (the "
+        "scatter-only reading), a target-less metric inside its tolerance, and two metrics "
+        "METRIC_TARGETS does not register (a model output and a pose metric)",
+        patterns,
+    )
+
+    # Two tight sessions apart from each other. With six samples a session and a within-session sd
+    # `w`, the pooled variance is (10 w^2 + 3 d^2) / 11 for a gap `d` between the session means, so
+    # the pooled-over-within ratio crosses SESSION_DRIFT_FACTOR's 1.25 at d / w = 1.548. 1.6 lands
+    # above it (1.268) and 1.5 below (1.234): one metric each side, in one corpus.
+    offsets = (-1.2, -0.7, -0.1, 0.3, 0.6, 1.1)
+    spread_of = math.sqrt(sum(o * o for o in offsets) / 5)
+
+    def drifting(center: float, scale: float, gap: float) -> list[float]:
+        step = gap * scale * spread_of
+        return [center + scale * o for o in offsets] + [center + step + scale * o for o in offsets]
+
+    drift = {
+        "head_sway_norm": drifting(0.2, 0.02, 1.6),
+        "hip_sway_norm": drifting(0.3, 0.03, 1.5),
+    }
+    drifted = corpus(
+        *(
+            swing(i + 1, {name: values[i] for name, values in drift.items()}, session=weeks[i // 6])
+            for i in range(12)
+        )
+    )
+    read = build_dispersion(drifted).metrics
+    assert read["head_sway_norm"].caveats and read["head_sway_norm"].within_session_sd
+    assert not read["hip_sway_norm"].caveats and read["hip_sway_norm"].within_session_sd
+    case(
+        "dispersion-drift",
+        "two sessions of six, each tight and the two apart: head_sway_norm's pooled spread is "
+        "1.268x its within-session spread (the drift caveat, past SESSION_DRIFT_FACTOR) and "
+        "hip_sway_norm's 1.234x (no caveat)",
+        drifted,
+    )
+
+    # ------------------------------------------------------- standing in the tour population
+
+    def band(name: str) -> Any:
+        found = load_distribution(name)
+        assert found is not None, f"{name} has no stored distribution"
+        return found
+
+    sway, gain, hip, finish, tempo, down, back = (
+        band(name)
+        for name in (
+            "head_sway_norm",
+            "head_hip_gain_norm",
+            "hip_sway_norm",
+            "finish_balance_norm",
+            "tempo_ratio",
+            "downswing_ms",
+            "backswing_ms",
+        )
+    )
+    placed = {
+        # 42.5th and 87.5th percentiles, which the baseline report prints `:.0f` — half to even,
+        # so 42 and 88, where half-up would print 43 and 88.
+        "head_sway_norm": tight(sway.p25 + 0.7 * (sway.p50 - sway.p25), 0.002),
+        "head_hip_gain_norm": tight(gain.p75 + (5 / 6) * (gain.p90 - gain.p75), 0.002),
+        "hip_sway_norm": tight(hip.p90 + 0.2, 0.002),
+        "finish_balance_norm": tight(finish.p10 / 2, 0.001),
+        "tempo_ratio": tight(tempo.p90, 0.3),
+        "downswing_ms": tight(down.p50, 4.0),
+        "backswing_ms": wave(back.p50, 60.0, 12, phase=0.7),
+        "hip_shift_at_top_norm": wave(0.08, 0.02, 3),
+        "head_hip_offset_impact_norm": tight(0.14, 0.01),
+        "face_to_path_deg": tight(8.6, 0.5),
+        "flight_carry_yds": wave(150.0, 4.0, 12, phase=1.1),
+        "hand_height_norm": wave(0.6, 0.05, 12, phase=2.2),
+        "flight_spin_rpm": wave(6100.0, 350.0, 12, phase=0.3),
+    }
+    standings = corpus(
+        *(
+            swing(
+                i + 1,
+                {name: values[i] for name, values in placed.items() if i < len(values)},
+                session=weeks[i % 3],
+            )
+            for i in range(12)
+        )
+    )
+    stood = build_standing(standings).metrics
+    expect = {
+        "head_sway_norm": Standing.INSIDE,
+        "head_hip_gain_norm": Standing.INSIDE,
+        "hip_sway_norm": Standing.OUTSIDE,
+        "finish_balance_norm": Standing.OUTSIDE,
+        "tempo_ratio": Standing.STRADDLES,
+        "downswing_ms": Standing.INSIDE,
+        "hip_shift_at_top_norm": Standing.WITHHELD,
+        "head_hip_offset_impact_norm": Standing.WITHHELD,
+        "face_to_path_deg": Standing.WITHHELD,
+        "flight_carry_yds": Standing.WITHHELD,
+        "hand_height_norm": Standing.WITHHELD,
+    }
+    for name, standing in expect.items():
+        assert stood[name].standing is standing, (name, stood[name].standing)
+    assert stood["head_sway_norm"].percentile == 42.5, stood["head_sway_norm"].percentile
+    assert stood["head_hip_gain_norm"].percentile == 87.5, stood["head_hip_gain_norm"].percentile
+    above, below = stood["hip_sway_norm"].outside_by, stood["finish_balance_norm"].outside_by
+    assert above is not None and below is not None and above > 0 > below, (above, below)
+    unplaced = stood["hip_shift_at_top_norm"]
+    assert unplaced.band_low is not None and unplaced.withheld, "a band, and no center for it"
+    case(
+        "standings",
+        "every Standing and every refusal beside one: inside (at the 42.5th and 87.5th "
+        "percentiles, half-even under `:.0f`), above and below the band, straddling, a center "
+        "the guard withheld, the blocked metric, and no population for a launch-monitor, a model "
+        "and a pose metric; the spread line wherever SPREAD is ready",
+        standings,
+    )
+
+    # ------------------------------------------------------------------- the bag profile
+
+    def entry(club: ClubId, recorded: datetime, **spec: Any) -> BagEntry:
+        return BagEntry(club=club, recorded_at=recorded, **spec)
+
+    def bag(*entries: BagEntry, retired: tuple[BagEntry, ...] = ()) -> Bag:
+        return Bag(
+            player_id=_REAL_PLAYER,
+            entries={one.club: one for one in entries},
+            retired=retired,
+            updated_at=on("2026-08-24"),
+        )
+
+    def hits(
+        club: ClubId, start: int, carry: float, sessions: tuple[str, ...], **kw: Any
+    ) -> list[CorpusSwing]:
+        """One swing of `club` per session given, numbered from `start`, carries rising by a yard
+        and a bit so no two are equal."""
+        return [
+            swing(
+                start + i,
+                struck(carry + 1.37 * i, carry / 1.32 + 0.4 * i, 0.2 + 0.011 * i),
+                session=session,
+                club=club,
+                **kw,
+            )
+            for i, session in enumerate(sessions)
+        ]
+
+    no_bag = corpus(
+        *hits(seven, 1, 151.0, weeks + weeks),
+        *hits(driver, 11, 246.0, weeks[:2]),
+        swing(21, {"head_sway_norm": 0.26}, session=weeks[0]),
+        swing(22, {"head_sway_norm": 0.23}, session=weeks[2]),
+    )
+    case(
+        "bag-none",
+        "two clubs hit and two swings untagged, and no bag declared: every statistic stands, "
+        "each club says what an undeclared entry costs, and the untagged swings are named last",
+        no_bag,
+    )
+
+    hybrid = ClubId.FOUR_HYBRID
+    declared_swings = corpus(
+        *hits(seven, 1, 151.0, weeks + weeks[:2]),
+        *hits(driver, 11, 246.0, weeks + weeks),
+        *hits(ClubId.THREE_WOOD, 21, 221.0, weeks[1:2]),
+        *hits(five, 31, 181.0, weeks),
+        swing(
+            41,
+            struck(129.0, 99.0, 0.21),
+            session=weeks[1],
+            club=nine,
+            at=datetime(2026, 8, 10, 12, 9, tzinfo=UTC),
+        ),
+        *hits(nine, 42, 128.0, weeks[2:]),
+        *hits(hybrid, 51, 196.0, weeks[:2]),
+        swing(61, {"head_sway_norm": 0.25}, session=weeks[2]),
+    )
+    early = on("2026-08-01")
+    declared_bag = bag(
+        entry(
+            seven,
+            early,
+            make="Titleist",
+            model="T250",
+            loft_deg=30.5,
+            shaft_model="KBS Tour",
+            length_in=37.0,
+            provenance=SpecProvenance(
+                source="typed",
+                retrieved_at=on("2026-08-01", 1),
+                notes="published figures for the T250 7 iron, typed from the spec table",
+            ),
+        ),
+        entry(driver, on("2026-08-09", hour=9)),
+        entry(ClubId.THREE_WOOD, on("2026-08-20"), make="TaylorMade", loft_deg=15.0),
+        # A late-evening entry five hours west of UTC: the caveat dates it in its own offset.
+        entry(
+            five,
+            on("2026-08-20", 30, hour=23, tz=timezone(timedelta(hours=-5))),
+            make="Mizuno Pro",
+            model="245",
+            loft_deg=24.0,
+            shaft_model="Nippon Modus 105",
+            length_in=38.25,
+        ),
+        # The same instant as the 9 iron's first swing, written in another offset: not earlier.
+        entry(
+            nine,
+            on("2026-08-10", 39, hour=17, tz=timezone(timedelta(hours=5, minutes=30))),
+            model="P790",
+        ),
+        entry(ClubId.PITCHING_WEDGE, early, loft_deg=46.0),
+        retired=(
+            entry(hybrid, early, make="Ping", model="G430", retired_at=on("2026-08-15")),
+        ),
+    )
+    profile = build_bag_profile(declared_swings, declared_bag)
+    caveats = {one.club: one.caveats for one in profile.clubs}
+    assert caveats[seven] == [] and caveats[nine] == [] and caveats[hybrid] == []
+    assert caveats[driver][0].startswith("2 of the 6 swings"), caveats[driver]
+    assert caveats[ClubId.THREE_WOOD][0].startswith("The single swing"), caveats
+    assert caveats[five][0].startswith("All 3 swings") and "2026-08-20" in caveats[five][0]
+    assert not next(one for one in profile.clubs if one.club is hybrid).in_bag
+    case(
+        "bag-declared",
+        "a declared bag against its history: an entry before every swing, one mid-history (the "
+        "mixed caveat), one after a single swing and one after three (both all-predate forms, "
+        "the second dated in its own -05:00 offset), one at the same instant as its first swing "
+        "(strict <, no caveat), one never hit, and a retired club that keeps its history",
+        declared_swings,
+        bag=declared_bag,
+    )
+
+    confirmed = MishitVerdict.CONFIRMED
+    flagged = {"club": seven, "auto_mishit": True}
+    mishits = corpus(
+        *hits(seven, 1, 151.0, weeks + weeks),
+        swing(7, struck(97.0, 96.0, 0.24), session=weeks[0], club=seven, manual_mishit=confirmed),
+        swing(8, struck(31.0, 70.0, 0.29), session=weeks[1], stale=True, **flagged),
+        swing(9, struck(28.0, 66.0, 0.3), session=weeks[2], photo=None, **flagged),
+        *hits(driver, 11, 246.0, weeks + weeks),
+        swing(17, struck(41.0, 80.0, 0.31), session=weeks[0], club=driver, auto_mishit=True),
+        swing(18, struck(55.0, 88.0, 0.27), session=weeks[2], club=driver, auto_mishit=True),
+        *hits(five, 21, 181.0, weeks + weeks[:2]),
+        swing(26, struck(62.0, 90.0, 0.22), session=weeks[1], club=five, auto_mishit=True),
+        swing(27, struck(80.0, 95.0, 0.23), session=weeks[2], club=five, manual_mishit=confirmed),
+        *hits(nine, 31, 128.0, weeks[:2]),
+    )
+    profile = build_bag_profile(mishits)
+    counted = {one.club: (one.mishits, one.mishits_unconfirmed) for one in profile.clubs}
+    assert counted == {driver: (2, 2), five: (2, 1), seven: (1, 0), nine: (0, 0)}, counted
+    case(
+        "bag-mishits",
+        "the mishit caveat in each form: one confirmed (singular), two automatic (plural, both "
+        "waiting), one of each (plural, one waiting); a stale and a photo-less flag that move no "
+        "number and so are not counted; a clean club",
+        mishits,
+        bag=bag(entry(seven, early), entry(driver, early)),
+    )
+
+    case(
+        "empty",
+        "no swings and no bag: every aggregate empty and every report's empty state",
+        corpus(),
+    )
+    case(
+        "untagged-only",
+        "three swings naming no club and no bag: no profile at all, and the empty bag report "
+        "names the untagged history instead",
+        corpus(
+            *(swing(i + 1, {"head_sway_norm": 0.2 + 0.03 * i}, session=weeks[i]) for i in range(3))
+        ),
+    )
+    case(
+        "declared-unhit",
+        "a declared bag and no swings: two profiles with nothing behind them",
+        corpus(),
+        bag=bag(
+            entry(ClubId.SAND_WEDGE, early, make="Vokey", model="SM10", loft_deg=56.0),
+            entry(ClubId.LOB_WEDGE, early, make="Vokey", loft_deg=60.0, length_in=35.125),
+        ),
+    )
+    case(
+        "unmeasured-club",
+        "one club whose swings carry nothing: two analyzed with no measurement and no photo, one "
+        "never analyzed, so the profile names the shot ceiling and why it has no history",
+        corpus(
+            swing(1, None, session=weeks[0], club=seven, photo=None),
+            swing(2, None, session=weeks[1], club=seven, photo=None),
+            swing(3, None, session=weeks[2], club=seven, photo=None, analyzed=False),
+        ),
+    )
+
+    # ---------------------------------------------- the statistics past their tables, and edges
+
+    # `analysis/stats.py` tabulates both critical values for df 1..30 and expands beyond them
+    # (Cornish-Fisher for t, Wilson-Hilferty for chi-square), so n = 31 is the tables' last row,
+    # 32 the expansions' first and 75 deep inside them: the float powers a port has to match.
+    lone = "2026-08-24"
+    sway_band = band("head_sway_norm")
+    edges = {
+        "head_sway_norm": wave(sway_band.p10 + 0.5 * (sway_band.p25 - sway_band.p10), 0.004, 31),
+        "hip_sway_norm": wave(0.3, 0.05, 32, phase=0.9),
+        "finish_balance_norm": wave(0.15, 0.03, 75, phase=1.7),
+        "launch_angle_deg": [12.5] * 12,
+        "face_to_path_deg": tight(-0.02, 0.5),
+    }
+    past = corpus(
+        *(
+            swing(
+                i + 1,
+                {name: values[i] for name, values in edges.items() if i < len(values)},
+                session=lone if i == 74 else weeks[i % 3],
+            )
+            for i in range(75)
+        )
+    )
+    metrics = build_baseline(past).metrics
+    assert [metrics[name].n for name in edges] == [31, 32, 75, 12, 12]
+    assert metrics["finish_balance_norm"].n_sessions == 4, "the lone session is the fourth"
+    assert metrics["launch_angle_deg"].sd == 0.0
+    placed_at = build_standing(past).metrics["head_sway_norm"].percentile
+    assert placed_at is not None and 10.0 < placed_at < 25.0, placed_at
+    case(
+        "past-the-tables",
+        "n = 31, 32 and 75: the critical-value tables' last row, the expansions' first and one "
+        "deep inside them; a fourth session holding one sample, which the within-session spread "
+        "leaves out; twelve identical values (sd 0); a center that prints -0.0; and a center "
+        "between the band's p10 and p25",
+        past,
+    )
+
+    # Two sessions whose first samples are one instant written in two offsets. `_sessions_of`
+    # sorts on (captured_at, session_id), so the tie falls to the id, and "2026-08-03" leads even
+    # though its lexeme, 14:01+02:00, sorts after the other's 12:01Z.
+    tie = ("2026-08-03", "2026-08-03-bay2", "2026-08-04")
+    days = ("2026-08-03", "2026-08-03", "2026-08-04")
+    firsts = (on(days[0], 1, hour=14, tz=timezone(timedelta(hours=2))), on(days[1], 1))
+    tied = corpus(
+        *(
+            swing(
+                i + 1,
+                {"head_sway_norm": value},
+                session=tie[i % 3],
+                at=firsts[i] if i < 2 else on(days[i % 3], i + 1),
+            )
+            for i, value in enumerate(wave(0.19, 0.04, 12, phase=0.4))
+        )
+    )
+    sessions = build_baseline(tied).metrics["head_sway_norm"].sessions
+    assert [session.session_id for session in sessions] == list(tie), sessions
+    case(
+        "session-tie",
+        "two sessions whose first samples are the same instant in two offsets: the per-session "
+        "order falls to the session id, not to the timestamps' text",
+        tied,
+    )
+    return cases
+
+
+# -------------------------------------------------------------- career: adopted, and the real one
+
+
+def _career_adopted() -> dict[str, dict[str, Any]]:
+    """Every synthetic storage corpus case's corpus, as the reader answered it, rendered.
+
+    Read from the committed family rather than rebuilt, so each corpus is the one its storage
+    vector certifies, and checked to come back unchanged through `model_validate` and `model_dump`.
+    A golfer other than the real one is named as the scripts name an unregistered id.
+    """
+    from golf_coach.contracts.career import CareerCorpus
+
+    directory = VECTORS / "storage" / "corpus"
+    paths = sorted(directory.glob("*.json"))
+    if not paths:
+        raise AssertionError(
+            f"nothing under {_rel(directory)} to adopt — `regenerate --storage-once` records it"
+        )
+    cases: dict[str, dict[str, Any]] = {}
+    for path in paths:
+        stored = json.loads(path.read_text(encoding="utf-8"))
+        dumped = stored["expected"]["corpus"]
+        corpus = CareerCorpus.model_validate(dumped)
+        assert corpus.model_dump(mode="json") == dumped, f"{path.name} does not round-trip"
+        name = f"storage-{path.stem}"
+        display = (
+            "Aaron" if corpus.player_id == _REAL_PLAYER else f"{corpus.player_id} (not registered)"
+        )
+        given = _career_given(corpus, display_name=display)
+        given["corpus"] = dumped
+        cases[name] = _career_vector(
+            f"synthetic/{name}",
+            given,
+            note=f"the corpus storage/corpus/{path.stem} reads, adopted whole and rendered",
+            source=f"{_rel(path)}, expected.corpus",
+        )
+    return cases
+
+
+def _career_real() -> dict[str, Any]:
+    """The golfer on disk: the real storage vector's corpus, their bag and their name.
+
+    The corpus is the one `spec/vectors/storage/corpus/real.json.gz` records, and it must equal
+    `read_corpus` over `data/` itself or this raises (the plan's call 2), so the two families start
+    from one corpus. The mishit listing is then run over the real trees as well, the storage
+    vector's sessions materialised beside a copy of the golfers directory, and must print what the
+    case recorded.
+    """
+    import gzip
+    import shutil
+    from types import SimpleNamespace
+
+    from golf_coach.contracts.career import CareerCorpus
+    from golf_coach.storage.bag_store import BagStore
+    from golf_coach.storage.corpus import read_corpus
+    from golf_coach.storage.golfer_store import GolferStore
+
+    for needed in (SESSIONS, GOLFERS):
+        if not needed.is_dir():
+            raise AssertionError(f"{_rel(needed)} is missing — the real career case reads it")
+    stored_path = VECTORS / "storage" / "corpus" / f"real{_REAL_SUFFIX}"
+    stored = json.loads(gzip.decompress(stored_path.read_bytes()))
+    dumped = stored["expected"]["corpus"]
+    if read_corpus(SESSIONS, _REAL_PLAYER).model_dump(mode="json") != dumped:
+        raise AssertionError(
+            f"{_rel(SESSIONS)} no longer reads as {_rel(stored_path)} recorded it, so the career "
+            "family would start from a different corpus than the storage family"
+        )
+    corpus = CareerCorpus.model_validate(dumped)
+    assert corpus.model_dump(mode="json") == dumped, "the real corpus does not round-trip"
+
+    with tempfile.TemporaryDirectory() as scratch:
+        golfers = Path(scratch) / "golfers"
+        shutil.copytree(GOLFERS, golfers)
+        golfer = GolferStore(golfers).get(_REAL_PLAYER)
+        assert golfer is not None, f"no golfer record for {_REAL_PLAYER}"
+        given = _career_given(
+            corpus, bag=BagStore(golfers).get(_REAL_PLAYER), display_name=golfer.display_name
+        )
+        given["corpus"] = dumped
+        vector = _career_vector(
+            f"real/{_REAL_PLAYER}",
+            given,
+            note=(
+                "the golfer on disk: the real storage vector's corpus, verified to equal "
+                "read_corpus over data/, with the declared bag and the registered name"
+            ),
+            source=f"{_rel(stored_path)} expected.corpus, and {_rel(GOLFERS)}",
+        )
+
+        sessions = Path(scratch) / "sessions"
+        _materialise(stored["input"]["files"], sessions)
+        module = _career_scripts()["flag_mishit"]
+        recorded = vector["expected"]["reports"]["flag_mishit_list"]
+        settings = SimpleNamespace(sessions_dir=sessions, golfers_dir=golfers)
+        with _patched(module, settings=settings):
+            for only in (None, _REAL_PLAYER):
+                over_trees = _printed(module._list, None, GolferStore(golfers), only)
+                if over_trees != recorded:
+                    raise AssertionError(
+                        f"`flag_mishit --list` over the real trees (only={only}) prints "
+                        f"{over_trees!r}, and over the corpus {recorded!r}"
+                    )
+    return vector

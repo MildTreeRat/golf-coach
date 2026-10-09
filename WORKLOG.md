@@ -5,6 +5,117 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-10-08 — M36 P18: the many-shot layer in Rust
+
+**Duration**: two days, nineteen phases (P0–P18). M36 goes ✅ **19/19** and the milestone is closed,
+in one commit onto `main`. It is the second milestone ported M34's way: recorded once from frozen
+Python, ported faithfully, changed in Rust, then re-recorded by Rust. It is also the first to add a
+crate that stores rather than computes.
+
+**To pick up where this left off, read the findings in `docs/plans/m36-many-shot-layer.md`**, not this
+entry. Then read [ADR-024's M36 addendum](docs/decisions/024-per-club-shot-history.md) for the one
+rule that changed, and [ADR-032's sixteenth](docs/decisions/032-the-rust-core.md) for what the port
+measured.
+
+**What was built.**
+- **Recorded once from frozen Python** (P1–P3). `conformance.py regenerate --storage-once` wrote
+  `spec/vectors/storage/`: the corpus cases as raw-text session trees, the real corpus slimmed to the
+  keys `read_corpus` reads, and the bundle and store operation cases. `--career-once` wrote
+  `spec/vectors/career/`: every aggregate, plus the five career scripts' stdout, over each corpus.
+  Both refuse a second run. P4 added three `format/` tables (`general_precision`, `lower`,
+  `timestamp`), recorded from CPython and pydantic.
+- **`crates/contracts`** (P4–P7). It gained `time::Timestamp`, hand-rolled to write pydantic's
+  spelling, and the many-shot shapes: `club`, `club_spec`, `bag`, `mishit`, `golfer` (now with
+  `Golfer` and `PLAYER_ID`), `catalogue` (`club_catalogue.json` by `include_str!`), `career`,
+  `baseline`, `dispersion`, `comparison` and `club_profile`. `contracts` now depends on `pyfmt`.
+- **`crates/storage`, the tenth crate** (P8–P10). Its modules are `manifest`, `state`
+  (`api/state.py`'s tolerant readers), `golfer_store`, `bag_store`, `shot_store`, `catalogue`,
+  `bundle_store` and `corpus` (`read_corpus` and `narrow_to`). The bundle store is ported whole,
+  writes included. It depends on `contracts` and `pyfmt` alone, and takes `sha2` and
+  `unicode-normalization`, with `tempfile` as a dev-dependency only.
+- **The career half of `crates/analysis`** (P11–P12). `stats` gained `mean_and_sd`, `mean_ci` and
+  `sd_ci`, and `baseline`, `dispersion`, `comparison` and `club_profile` are new.
+- **`golf-core rerecord` gained a third version key** (P13). `career_version` re-records the storage
+  and career families together under `CAREER_VERSION` (`crates/contracts/src/career.rs`). The
+  family gates are `crates/core/tests/{storage,career,reports}.rs`.
+- **The change** (P14). The corpus's `OUTDATED` now means older than `COMPARABLE_FROM`, which is 14
+  (`crates/contracts/src/swing.rs`), not older than the installed `ANALYSIS_VERSION`. `read_corpus`
+  takes `EngineVersions { installed, comparable_from }`. The change was worked by hand in
+  `spec/vectors/storage/hand/`, then re-recorded under `spec/declarations/career-v1.json`. Only the
+  exclusion's sentence and its adopted copies moved. `CAREER_VERSION` is 1.
+- **Five verbs** (P15–P16): `golf-core career-corpus`, `career-baseline`, `career-dispersion`,
+  `club-profile` and `flag-mishit`. They take the scripts' flags, the four read verbs take `--json`,
+  and the renderers are in `crates/core/src/reports/`. P16's parity run made 85 runs over `data/`,
+  and stdout was byte-identical to the scripts' on every one.
+- **Python changed in three files only**: `scripts/conformance.py`, `scripts/conformance_vectors.py`
+  and `tests/test_conformance.py`. `src/` is untouched, and nothing under `data/` changed.
+
+**What M35, M29 and M38 should know.**
+- **M35's `read_corpus` change is `career-v2`.** `career-v1` is spent: P14 wrote it, and P15 added
+  one report path to it. A career declaration may not carry `removed`.
+- **A declared path through a store's file key is refused by name (M35).** A path like
+  `…/manifest.json` cannot be told from a dotted walk. M35 is the first change that moves a store's
+  write, so it builds the escape (CONFORMANCE §4).
+- **Always pass the explicit target (M35, M38).** `bundle_store`'s `Upload::swing_id` is the target
+  `assign_from_path` has taken since 2026-08-07. The default, "the newest swing lacking this role",
+  misattaches in a mixed session.
+- **Two questions, two numbers (M29).** `storage::state::is_outdated` still asks whether there is a
+  newer engine to run, at the installed `ANALYSIS_VERSION`, which is 17 in Rust. That is the question
+  M29's re-analysis verb asks. The corpus asks about `COMPARABLE_FROM`, and must never call
+  `is_outdated`. A test holds `COMPARABLE_FROM` to the newest `disagrees` entry in Rust's version
+  ledger, so every future `ANALYSIS_VERSION` bump classifies itself as `shape`, `missing` or
+  `disagrees`.
+- **Frozen Python disagrees on purpose until M40.** It excludes an artifact at version 14 or 15,
+  which Rust pools. None exists on disk, so over `data/` both pool the same swings.
+- **The clock is an argument (M35, M38).** Every store operation that stamps a time takes
+  `now: Timestamp`. Only the `golf-core` binary reads `Timestamp::now_utc()`.
+- **Timestamps (M38).** `ShotData` and the other timestamped shapes now refuse, at deserialization,
+  a timestamp outside pydantic's grammar, a naive one included. Dart's `toIso8601String()` on a UTC
+  `DateTime` writes `….000Z`, which reads and re-spells. On a local `DateTime` it writes no offset,
+  which is refused.
+- **The bit pins are Windows/MSVC only (M38).** The career aggregates' bits, `stats::pow` and the
+  pooled spread are pinned to CPython's answers on this box. Another libm, the phone's included, may
+  answer a last bit differently (CONFORMANCE, "What this does not cover").
+- **The report text stays gated after M29 deletes the scripts.** The career family records their
+  stdout, and `tests/reports.rs` holds every rendered report to it, character for character.
+- **pydantic's lax coercions are a named divergence.** A numeric string for an int, or a naive or
+  Unix-number datetime, is something no writer here produces. Rust reads that file as `None`, where
+  pydantic accepts it (`crates/storage`'s crate doc).
+
+**Left open.**
+- **The engine's own `**` sites** (P17 finding 4). `measure.py`'s two distances, `phases.py`'s speed,
+  `benchmarks/trajectory.py` and `benchmarks/flight_model.py` square with `**`, and Rust writes
+  `powi(2)` and `sqrt`. P11 and P12 measured that neither matches CPython's `**` on every input.
+  Every engine and stage vector passes, but nobody has measured whether an engine float differs in
+  its last bit, or whether one could move a frame index. It is routed to the user or §M29, beside
+  M34's `sum()` question below.
+- **M34's `sum()` question**, still open as M34's entry describes it.
+- **Left as found** (P17 finding 5): `docs/README.md`'s CONFORMANCE row says five Rust-specific
+  edges where `CLAUDE.md` says six; ADR-026's Status still says "ahead of its code"; and
+  ARCHITECTURE's banner date and §2's interface table ("Career corpus … not yet consumed") are stale.
+- **The `.claude/` harness edits are not in this commit**: the `/orchestrate`, `/next-phase` and
+  `/plan-phases` skills, and the new `phase-runner` agent. They are the user's, and skills were
+  committed on their own last time (`0a992ee`). `CLAUDE.md`'s line naming `phase-runner` is in this
+  commit, because it sits in a file P17 edited.
+- M34's entry below says `pytest` passed **PYTEST_COUNT**, a placeholder that was never filled. It
+  is left as history.
+
+All verify commands are green. `cargo test` passed 1,042 tests (1 ignored, the existing
+`clip::Cutter` doc-test). `cargo clippy --all-targets` has 0 warnings and `cargo fmt --check` is
+clean. `pytest` passed 2,051, `ruff` is clean and `mypy` is clean over 118 files.
+`conformance.py check` passes: 21/21 engine vectors hold the freeze, and it defers the storage (64)
+and career (56) families to `cargo test`, beside the audio, stage, format and screen families.
+`golf-core rerecord --declare spec/declarations/career-v1.json
+--dry-run` reports 120 vectors run (64 storage, 56 career), 0 changed and 0 files written.
+`git diff -- src/` is empty, the engine, stage and screen families are untouched, the format family
+only gained its three tables, and the `data/` digest is still P1's (`bd384cc4…`).
+
+**Next**: M35 on this box, in Rust only, then M37, with M41 after M35 by the user's order. M29, the
+lab port, is unblocked and runs beside M37 and M38. M33, the Apple Vision spike, still runs early on
+purpose and needs a Mac, and so does M38's skeleton.
+
+---
+
 ## 2026-10-02 — M34 P12: the screen reader in Rust, and the label fix
 
 **Duration**: two days, thirteen phases (P0–P12). M34 goes ✅ **13/13** and the milestone is closed,

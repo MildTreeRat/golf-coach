@@ -65,6 +65,14 @@
 //! `spec/vectors/format/`, recorded from the interpreter that recorded everything else, and each
 //! doc says what the Rust call it replaces gets wrong. `difflib`'s `ratio` is the sixth of the
 //! parser's edges and lives in `crates/screen`, which is its only caller.
+//!
+//! # The many-shot layer's, from M36 P4
+//!
+//! Two more, before any caller exists, for the career aggregates, the stores and the report
+//! verbs: [`general`] is `:.Ng` at a precision other than `%g`'s six, and [`lower`] is
+//! `str.lower()`. Each is gated by a table of its own (`general_precision`, `lower`). The third
+//! edge that layer found is pydantic's `datetime`, which is `contracts::time::Timestamp`'s, because
+//! it is a value a contract carries rather than a string a sentence prints.
 
 /// Python's `round(x)` — the one-argument form, which is half-to-**even** where Rust's
 /// [`f64::round`] is half-away-from-zero.
@@ -170,7 +178,7 @@ pub fn percent(x: f64, precision: usize) -> String {
 
 /// CPython's default precision for `%g`: six significant digits, from C. Nothing derives it —
 /// every `:g` site in the engine writes a bare `{…:g}` and relies on this being what that means.
-const G_PRECISION: i32 = 6;
+const G_PRECISION: usize = 6;
 
 /// Python's `f"{x:g}"`, which Rust has no equivalent of at all.
 ///
@@ -190,14 +198,32 @@ const G_PRECISION: i32 = 6;
 /// One of the eighteen `:g` sites is not prose at all — `benchmarks/flight_model.py:205` formats an
 /// altitude into a **dict key** — so being wrong here is a lookup miss there rather than a wrong
 /// sentence. Same function either way.
+///
+/// [`general`] at six, and gated by `format/general` rather than by `general_precision`, which
+/// tables every other precision so the default is not tabled twice.
 pub fn g(x: f64) -> String {
+    general(x, G_PRECISION)
+}
+
+/// Python's `f"{x:.{precision}g}"` — [`g`] at a precision other than six. [M36 P4]
+///
+/// One caller so far, and it is prose: `analysis/dispersion.py`'s drift caveat prints a session's
+/// pooled and within-session spreads at `:.3g`. The rule is `%g`'s with `P` moved, so both
+/// thresholds move with it: exponent form when the rounded exponent is below -4 **or at least
+/// `P`**, which at three puts the boundary at 1000 rather than at a million. `999.5` is `1e+03`
+/// here where `:g` writes `999.5`, and a spread in rpm is a magnitude the caveat really prints.
+///
+/// CPython treats a precision of 0 as 1 (`format(1234.0, ".0g")` is `1e+03`), and so does this,
+/// rather than asking `{:.*e}` for a precision of minus one.
+pub fn general(x: f64, precision: usize) -> String {
     if x.is_nan() {
         return "nan".to_string();
     }
     if x.is_infinite() {
         return if x.is_sign_negative() { "-inf" } else { "inf" }.to_string();
     }
-    let scientific = format!("{:.*e}", (G_PRECISION - 1) as usize, x);
+    let precision = precision.max(1);
+    let scientific = format!("{:.*e}", precision - 1, x);
     let (mantissa, exponent) = scientific
         .split_once('e')
         .expect("LowerExp always writes an `e`");
@@ -205,8 +231,10 @@ pub fn g(x: f64) -> String {
         .parse()
         .expect("LowerExp writes a decimal exponent");
     // C's rule is written `X < -4 || X >= P`; this is that condition as the half-open window it
-    // describes, which is what clippy asks for and reads no worse.
-    if !(-4..G_PRECISION).contains(&exponent) {
+    // describes, which is what clippy asks for and reads no worse. A precision too large for an
+    // `i32` has no exponent it can reach, so saturating it keeps the window honest.
+    let top = i32::try_from(precision).unwrap_or(i32::MAX);
+    if !(-4..top).contains(&exponent) {
         // Python pads the exponent to two digits and always signs it, where Rust writes neither.
         let sign = if exponent < 0 { '-' } else { '+' };
         format!(
@@ -216,7 +244,8 @@ pub fn g(x: f64) -> String {
             exponent.abs()
         )
     } else {
-        let decimals = (G_PRECISION - 1 - exponent) as usize;
+        // Inside the window `exponent < precision`, so this cannot underflow.
+        let decimals = (top - 1 - exponent) as usize;
         strip_trailing_zeros(&format!("{x:.decimals$}"))
     }
 }
@@ -731,6 +760,29 @@ pub fn upper(text: &str) -> String {
     text.to_uppercase()
 }
 
+/// Python's `str.lower()`. [M36 P4]
+///
+/// The many-shot layer's case fold: `golfer.py::slugify` lowers a display name before it becomes
+/// an id, the golfer store sorts by `display_name.lower()`, and `club.py` and `club_spec.py` lower a
+/// club name before matching an alias. Rust's [`str::to_lowercase`] is the same full mapping —
+/// `İ` to `i` and a combining dot above, the Kelvin sign to an ASCII `k`, the ohm sign to `ω` —
+/// and, unlike [`upper`], it is the one case operation that reads a character's **neighbours**:
+/// both languages apply Unicode's `Final_Sigma` context, so `ΑΣ` lowers to `ας` and `ΑΣΑ` to
+/// `ασα`, skipping case-ignorable characters (an apostrophe, a combining mark, a soft hyphen) in
+/// both directions by the same rule (`handle_capital_sigma` in CPython, `map_uppercase_sigma` in
+/// `core`).
+///
+/// What differs is again only the Unicode version underneath, 16.0 against CPython 3.13's 15.1.
+/// `format/lower` records every code point CPython lowers to something else — 1,433 of them — and
+/// Rust agrees on every one, `Final_Sigma`'s string cases included. Measured the other way over
+/// every code point, Rust lowers 27 that CPython 3.13 leaves alone, each a capital 16.0 added:
+/// Cyrillic capital TJE (U+1C89), four Latin capitals in U+A7CB–U+A7DC (the new partners of `ɤ` and `ƛ`
+/// among them), and Garay's 22 (U+10D50–U+10D65). None is on a golfer's keyboard. As with
+/// `upper`, a function of its own so the operation has one address the day the two drift.
+pub fn lower(text: &str) -> String {
+    text.to_lowercase()
+}
+
 /// Python's `str.split()` with no argument: split on runs of [`is_space`], dropping empty pieces,
 /// so leading and trailing whitespace produce nothing. [M34 P2]
 ///
@@ -1075,6 +1127,33 @@ mod tests {
     fn g_ties_to_even_at_the_sixth_significant_digit() {
         assert_eq!(g(123456.5), "123456");
         assert_eq!(g(123457.5), "123458");
+    }
+
+    /// `:.3g` moves both thresholds with the precision, and that is the whole of the difference
+    /// from `:g`: the exponent form starts at 1000. Each answer is CPython's `format(x, ".3g")`.
+    #[test]
+    fn general_moves_the_exponent_threshold_with_the_precision() {
+        assert_eq!(general(999.5, 3), "1e+03");
+        assert_eq!(g(999.5), "999.5");
+        assert_eq!(general(1000.0, 3), "1e+03");
+        assert_eq!(general(100.0, 3), "100");
+        assert_eq!(general(9.996, 3), "10");
+        assert_eq!(general(9.996e-05, 3), "0.0001");
+        assert_eq!(general(12.25, 3), "12.2");
+        assert_eq!(general(12.75, 3), "12.8");
+        assert_eq!(general(-0.0, 3), "-0");
+    }
+
+    /// CPython reads a precision of 0 as 1, where `{:.*e}` would be asked for minus one. No caller
+    /// formats at `.0g`, which is why the table carries none; the rule is pinned here instead, from
+    /// CPython's answers.
+    #[test]
+    fn a_zero_precision_is_cpythons_one() {
+        assert_eq!(general(1234.0, 0), "1e+03");
+        assert_eq!(general(1234.0, 1), "1e+03");
+        assert_eq!(general(2.5, 0), "2");
+        assert_eq!(general(3.5, 0), "4");
+        assert_eq!(general(0.000123456, 0), "0.0001");
     }
 
     #[test]

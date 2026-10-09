@@ -1,0 +1,146 @@
+{
+  "career_version": 1,
+  "expected": {
+    "files": {
+      "aaron.bag.json": "{not json",
+      "carol.bag.json": "{\"player_id\": \"carol\", \"entries\": {\"7i\": {\"club\": \"pw\", \"make\": \"Titleist\", \"loft_deg\": 34.0, \"recorded_at\": \"2026-08-01T10:00:00Z\"}}, \"updated_at\": \"2026-08-01T10:00:00Z\"}"
+    },
+    "results": [
+      {
+        "raised": {
+          "message": "bag at <root>/aaron.bag.json exists but cannot be read; refusing to overwrite it",
+          "type": "ValueError"
+        }
+      },
+      {
+        "raised": {
+          "message": "bag at <root>/aaron.bag.json exists but cannot be read; refusing to overwrite it",
+          "type": "ValueError"
+        }
+      },
+      {
+        "raised": {
+          "message": "bag at <root>/aaron.bag.json exists but cannot be read; refusing to overwrite it",
+          "type": "ValueError"
+        }
+      },
+      {
+        "raised": {
+          "message": "bag at <root>/carol.bag.json exists but cannot be read; refusing to overwrite it",
+          "type": "ValueError"
+        }
+      },
+      {
+        "returned": null
+      },
+      {
+        "raised": {
+          "message": "player_id '../aaron' is not a slug (expected ^[a-z0-9]+(?:-[a-z0-9]+)*$)",
+          "type": "ValidationError"
+        }
+      },
+      {
+        "raised": {
+          "message": "player_id 'Dave Smith' is not a slug (expected ^[a-z0-9]+(?:-[a-z0-9]+)*$)",
+          "type": "ValidationError"
+        }
+      }
+    ]
+  },
+  "id": "storage/stores/bag-write-guard",
+  "input": {
+    "files": {
+      "aaron.bag.json": "{not json",
+      "carol.bag.json": "{\"player_id\": \"carol\", \"entries\": {\"7i\": {\"club\": \"pw\", \"make\": \"Titleist\", \"loft_deg\": 34.0, \"recorded_at\": \"2026-08-01T10:00:00Z\"}}, \"updated_at\": \"2026-08-01T10:00:00Z\"}"
+    },
+    "ops": [
+      {
+        "args": {
+          "entry": {
+            "club": "driver",
+            "recorded_at": "2020-01-01T00:00:00Z"
+          },
+          "player_id": "aaron"
+        },
+        "now": "2026-08-06T12:00:00Z",
+        "op": "bag.set_entry"
+      },
+      {
+        "args": {
+          "club": "7i",
+          "player_id": "aaron"
+        },
+        "now": "2026-08-06T12:01:00.120000Z",
+        "op": "bag.remove_entry"
+      },
+      {
+        "args": {
+          "club": "7i",
+          "player_id": "aaron"
+        },
+        "now": "2026-08-06T12:02:00.000001Z",
+        "op": "bag.restore_entry"
+      },
+      {
+        "args": {
+          "entry": {
+            "club": "driver",
+            "recorded_at": "2020-01-01T00:00:00Z"
+          },
+          "player_id": "carol"
+        },
+        "now": "2026-08-06T12:03:00.999999Z",
+        "op": "bag.set_entry"
+      },
+      {
+        "args": {
+          "player_id": "aaron"
+        },
+        "now": null,
+        "op": "bag.get"
+      },
+      {
+        "args": {
+          "entry": {
+            "club": "driver",
+            "recorded_at": "2020-01-01T00:00:00Z"
+          },
+          "player_id": "../aaron"
+        },
+        "now": "2026-08-06T12:04:00.500000Z",
+        "op": "bag.set_entry"
+      },
+      {
+        "args": {
+          "entry": {
+            "club": "driver",
+            "recorded_at": "2020-01-01T00:00:00Z"
+          },
+          "player_id": "Dave Smith"
+        },
+        "now": "2026-08-06T12:05:00.345678Z",
+        "op": "bag.set_entry"
+      }
+    ]
+  },
+  "provenance": {
+    "kind": "storage",
+    "note": "a bag that exists and cannot be read, as JSON or as a `Bag`, is never written over: each mutator raises the store's `ValueError` and the file is unchanged, while `get` still reads it as None (`test_a_corrupt_bag_is_never_written_over`). A `player_id` that is not a slug is refused by `Bag`'s validator before a path is made of it (`test_a_player_id_that_is_not_a_slug_never_becomes_a_filename`)",
+    "oracle": "python",
+    "pydantic_version": "2.13.4",
+    "python_version": "3.13.3",
+    "recorded_by": "scripts/conformance_vectors.py::_run_ops",
+    "rerecords": [
+      {
+        "added": [],
+        "by": "golf-core rerecord",
+        "career_version": 1,
+        "declaration": "spec/declarations/career-v1.json",
+        "moved": [
+          "career_version"
+        ]
+      }
+    ],
+    "source": "tests/storage/test_bag_store.py, as store calls"
+  }
+}

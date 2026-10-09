@@ -1,0 +1,350 @@
+{
+  "career_version": 1,
+  "expected": {
+    "bag_profile": {
+      "clubs": [],
+      "mishits_excluded": 0,
+      "player_id": "aaron",
+      "untagged_swings": 3
+    },
+    "baseline": {
+      "built_from_sessions": 3,
+      "built_from_swings": 3,
+      "metrics": {
+        "head_sway_norm": {
+          "maximum": null,
+          "mean": null,
+          "mean_ci": null,
+          "median": null,
+          "minimum": null,
+          "n": 3,
+          "n_sessions": 3,
+          "name": "head_sway_norm",
+          "ready": [],
+          "sd": null,
+          "sd_ci": null,
+          "sessions": [
+            {
+              "captured_at": "2026-08-10T12:00:00Z",
+              "mean": null,
+              "n": 1,
+              "session_id": "2026-08-10"
+            },
+            {
+              "captured_at": "2026-08-11T08:00:00-05:00",
+              "mean": null,
+              "n": 1,
+              "session_id": "2026-08-11"
+            },
+            {
+              "captured_at": "2026-08-12T12:00:00Z",
+              "mean": null,
+              "n": 1,
+              "session_id": "2026-08-12"
+            }
+          ],
+          "source": "pose:face_on",
+          "unit": "shoulder_widths",
+          "withheld": [
+            {
+              "claim": "center",
+              "have_n": 3,
+              "have_sessions": 3,
+              "need_n": 5,
+              "need_sessions": 1,
+              "reason": "a typical value for this golfer needs 5 samples (there are 3)"
+            },
+            {
+              "claim": "spread",
+              "have_n": 3,
+              "have_sessions": 3,
+              "need_n": 10,
+              "need_sessions": 1,
+              "reason": "a claim about how repeatable this is needs 10 samples (there are 3)"
+            },
+            {
+              "claim": "trend",
+              "have_n": 3,
+              "have_sessions": 3,
+              "need_n": 12,
+              "need_sessions": 3,
+              "reason": "a claim that this has moved needs 12 samples (there are 3)"
+            }
+          ]
+        }
+      },
+      "player_id": "aaron"
+    },
+    "dispersion": {
+      "built_from_sessions": 3,
+      "built_from_swings": 3,
+      "metrics": {
+        "head_sway_norm": {
+          "bias": "withheld",
+          "caveats": [],
+          "center": null,
+          "center_ci": null,
+          "n": 3,
+          "n_sessions": 3,
+          "name": "head_sway_norm",
+          "offset": null,
+          "pattern": null,
+          "points_at": null,
+          "scatter": "withheld",
+          "sd": null,
+          "sd_ci": null,
+          "source": "pose:face_on",
+          "target": 0.0,
+          "tolerance": 0.06,
+          "unavailable": [],
+          "unit": "shoulder_widths",
+          "withheld": [
+            {
+              "claim": "center",
+              "have_n": 3,
+              "have_sessions": 3,
+              "need_n": 5,
+              "need_sessions": 1,
+              "reason": "a typical value for this golfer needs 5 samples (there are 3)"
+            },
+            {
+              "claim": "spread",
+              "have_n": 3,
+              "have_sessions": 3,
+              "need_n": 10,
+              "need_sessions": 1,
+              "reason": "a claim about how repeatable this is needs 10 samples (there are 3)"
+            }
+          ],
+          "within_session_sd": null
+        }
+      },
+      "player_id": "aaron"
+    },
+    "properties": {
+      "bag_profile": {
+        "categories": {},
+        "clubs_declared": [],
+        "clubs_used": []
+      },
+      "baseline": {
+        "claims_ready": 0,
+        "nothing_sayable": true
+      },
+      "dispersion": {
+        "nothing_established": true,
+        "patterns_established": 0
+      },
+      "standing": {
+        "nothing_placed": true,
+        "placements": 0
+      }
+    },
+    "reports": {
+      "career_baseline": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  Built from 3 distinct swings across 3 sessions.\n\n  Nothing is sayable yet. Every claim below is refused, with what it needs.\n\n  head_sway_norm  (shoulder_widths)\n    n = 3 over 3 sessions\n    center   withheld — a typical value for this golfer needs 5 samples (there are 3)\n    spread   withheld — a claim about how repeatable this is needs 10 samples (there are 3)\n    trend    withheld — a claim that this has moved needs 12 samples (there are 3)\n    vs tour  withheld   tour 0.029 .. 0.431 (122 players)\n\n  The unblock is a bay session: 20-30 swings with shots attached.\n",
+      "career_baseline_verbose": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  Built from 3 distinct swings across 3 sessions.\n\n  Nothing is sayable yet. Every claim below is refused, with what it needs.\n\n  head_sway_norm  (shoulder_widths)\n    n = 3 over 3 sessions\n    center   withheld — a typical value for this golfer needs 5 samples (there are 3)\n    spread   withheld — a claim about how repeatable this is needs 10 samples (there are 3)\n    trend    withheld — a claim that this has moved needs 12 samples (there are 3)\n    vs tour  withheld   tour 0.029 .. 0.431 (122 players)\n             sessions so far:\n               2026-08-10  n=1\n               2026-08-11  n=1\n               2026-08-12  n=1\n\n  The unblock is a bay session: 20-30 swings with shots attached.\n",
+      "career_corpus": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  6 swing directories across 3 sessions  ->  3 distinct swings, 1 distinct shot\n\n  Collapsed 3 re-upload(s):\n    face_on clip-a  kept 2026-08-10/1  <- 2026-08-10/2\n    face_on clip-b  kept 2026-08-11/1  <- 2026-08-11/2\n    face_on clip-c  kept 2026-08-12/2  <- 2026-08-12/1\n\n  Honest n per metric:\n    head_sway_norm  n = 3\n\n  3 distinct swing(s) naming no club (of 3).\n    They still count toward every metric above and toward every whole-bag\n    number — the club was never an input to measuring head sway — and are\n    absent only from per-club views. Repair them one at a time on the upload\n    page: a session has many clubs, so there is no bulk backfill (ADR-024 §5).\n\n  Contributing no sample (3):\n    duplicate        3  2026-08-10/2, 2026-08-11/2, 2026-08-12/1\n",
+      "career_corpus_verbose": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  6 swing directories across 3 sessions  ->  3 distinct swings, 1 distinct shot\n\n  Collapsed 3 re-upload(s):\n    face_on clip-a  kept 2026-08-10/1  <- 2026-08-10/2\n    face_on clip-b  kept 2026-08-11/1  <- 2026-08-11/2\n    face_on clip-c  kept 2026-08-12/2  <- 2026-08-12/1\n\n  Honest n per metric:\n    head_sway_norm  n = 3\n\n  3 distinct swing(s) naming no club (of 3).\n    They still count toward every metric above and toward every whole-bag\n    number — the club was never an input to measuring head sway — and are\n    absent only from per-club views. Repair them one at a time on the upload\n    page: a session has many clubs, so there is no bulk backfill (ADR-024 §5).\n\n  Contributing no sample (3):\n    duplicate        3  2026-08-10/2, 2026-08-11/2, 2026-08-12/1\n\n    2026-08-10/2: duplicate — face-on bytes clip-a are already in 2026-08-10/1 — the same swing uploaded again, not a second swing\n    2026-08-11/2: duplicate — face-on bytes clip-b are already in 2026-08-11/1 — the same swing uploaded again, not a second swing\n    2026-08-12/1: duplicate — face-on bytes clip-c are already in 2026-08-12/2 — the same swing uploaded again, not a second swing\n",
+      "career_dispersion": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  Built from 3 distinct swings across 3 sessions.\n\n  No metric can be asked yet. A repeatable miss and a scattered one are the same\n  two numbers until there are enough of them to tell apart.\n\n  head_sway_norm  (shoulder_widths)\n    n = 3 over 3 sessions    target 0.000 +/- 0.060\n    bias      withheld\n    scatter   withheld\n    waiting   a typical value for this golfer needs 5 samples (there are 3)\n    waiting   a claim about how repeatable this is needs 10 samples (there are 3)\n\n  The unblock is a bay session: 20-30 swings with shots attached.\n",
+      "career_dispersion_verbose": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  Built from 3 distinct swings across 3 sessions.\n\n  No metric can be asked yet. A repeatable miss and a scattered one are the same\n  two numbers until there are enough of them to tell apart.\n\n  head_sway_norm  (shoulder_widths)\n    n = 3 over 3 sessions    target 0.000 +/- 0.060\n    bias      withheld\n    scatter   withheld\n    waiting   a typical value for this golfer needs 5 samples (there are 3)\n    waiting   a claim about how repeatable this is needs 10 samples (there are 3)\n    tolerance 0.06 — spread/error harness over 461 face-on GolfDB clips, 2026-08-12: `python\n              scripts/golfdb/tune_spatial_metric.py`, tolerance = noise + bound\n\n  The unblock is a bay session: 20-30 swings with shots attached.\n",
+      "club_profile": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  No club has been hit or declared — there is nothing to profile yet.\n  untagged  All 3 swings on record name no club. That is real history, and no per-club number\n            can be cut from it until each one is tagged.\n  next      New swings get a club at upload — `python scripts/run_server.py`, then the picker\n            on the upload page. A swing already stored is retagged one at a time, from the\n            change control on its row in that page's swing list or with POST\n            /api/sessions/<session>/swings/<swing>/club.\n",
+      "club_profile_driver": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  driver: never hit and not in the bag — there is no history to report.\n\n  untagged  3 swings on record name no club, so nothing above counts them. Retag one at a\n            time, from the change control on the swing's row in the upload page or with POST\n            /api/sessions/<session>/swings/<swing>/club.\n",
+      "club_profile_verbose": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  No club has been hit or declared — there is nothing to profile yet.\n  untagged  All 3 swings on record name no club. That is real history, and no per-club number\n            can be cut from it until each one is tagged.\n  next      New swings get a club at upload — `python scripts/run_server.py`, then the picker\n            on the upload page. A swing already stored is retagged one at a time, from the\n            change control on its row in that page's swing list or with POST\n            /api/sessions/<session>/swings/<swing>/club.\n",
+      "flag_mishit_list": "\naaron -- 0 shot(s) held out across the bag\n  (no tagged shots yet)\n"
+    },
+    "standing": {
+      "built_from_sessions": 3,
+      "built_from_swings": 3,
+      "metrics": {
+        "head_sway_norm": {
+          "band_high": 0.4311,
+          "band_low": 0.0294,
+          "center": null,
+          "center_ci": null,
+          "n": 3,
+          "n_sessions": 3,
+          "name": "head_sway_norm",
+          "outside_by": null,
+          "percentile": null,
+          "percentile_clamped": false,
+          "population_n": 458,
+          "population_players": 122,
+          "reading": null,
+          "source": "pose:face_on",
+          "standing": "withheld",
+          "unavailable": [],
+          "unit": "shoulder_widths",
+          "withheld": [
+            {
+              "claim": "center",
+              "have_n": 3,
+              "have_sessions": 3,
+              "need_n": 5,
+              "need_sessions": 1,
+              "reason": "a typical value for this golfer needs 5 samples (there are 3)"
+            }
+          ]
+        }
+      },
+      "player_id": "aaron"
+    }
+  },
+  "id": "career/synthetic/storage-duplicate-across-offsets",
+  "input": {
+    "bag": null,
+    "clubs": [
+      "driver"
+    ],
+    "corpus": {
+      "analyzed_without_measurements": 0,
+      "excluded": [
+        {
+          "detail": "face-on bytes clip-a are already in 2026-08-10/1 — the same swing uploaded again, not a second swing",
+          "reason": "duplicate",
+          "session_id": "2026-08-10",
+          "swing_id": "2"
+        },
+        {
+          "detail": "face-on bytes clip-b are already in 2026-08-11/1 — the same swing uploaded again, not a second swing",
+          "reason": "duplicate",
+          "session_id": "2026-08-11",
+          "swing_id": "2"
+        },
+        {
+          "detail": "face-on bytes clip-c are already in 2026-08-12/2 — the same swing uploaded again, not a second swing",
+          "reason": "duplicate",
+          "session_id": "2026-08-12",
+          "swing_id": "1"
+        }
+      ],
+      "metric_counts": {
+        "head_sway_norm": 3
+      },
+      "other_golfers": 0,
+      "outdated_swings": 0,
+      "player_id": "aaron",
+      "sessions_scanned": 3,
+      "swing_dirs_seen": 6,
+      "swings": [
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-10T12:00:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [
+            "2026-08-10/2"
+          ],
+          "face_on_sha256": "clip-a",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "test",
+              "name": "head_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.25
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-10",
+          "shot_needs_review": false,
+          "shot_sha256": "shot-hash",
+          "stale": false,
+          "swing_id": "1"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-11T08:00:00-05:00",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [
+            "2026-08-11/2"
+          ],
+          "face_on_sha256": "clip-b",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "test",
+              "name": "head_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.25
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-11",
+          "shot_needs_review": false,
+          "shot_sha256": "shot-hash",
+          "stale": false,
+          "swing_id": "1"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-12T12:00:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [
+            "2026-08-12/1"
+          ],
+          "face_on_sha256": "clip-c",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "test",
+              "name": "head_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.25
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-12",
+          "shot_needs_review": false,
+          "shot_sha256": "shot-hash",
+          "stale": false,
+          "swing_id": "2"
+        }
+      ],
+      "unattributed_swings": 0,
+      "unknown_sources": []
+    },
+    "display_name": "Aaron",
+    "versions": {
+      "comparable_from": 16,
+      "installed": 16
+    }
+  },
+  "provenance": {
+    "analysis_version": 16,
+    "kind": "career",
+    "note": "the corpus storage/corpus/duplicate-across-offsets reads, adopted whole and rendered",
+    "oracle": "python",
+    "pydantic_version": "2.13.4",
+    "python_version": "3.13.3",
+    "recorded_by": "scripts/conformance_vectors.py::_run_career",
+    "rerecords": [
+      {
+        "added": [],
+        "by": "golf-core rerecord",
+        "career_version": 1,
+        "declaration": "spec/declarations/career-v1.json",
+        "moved": [
+          "career_version"
+        ]
+      }
+    ],
+    "source": "spec/vectors/storage/corpus/duplicate-across-offsets.json, expected.corpus"
+  }
+}

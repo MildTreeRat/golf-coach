@@ -85,6 +85,20 @@
 //! and `Cargo.toml` records the second half of it, which is that `serde_json` needs
 //! `float_roundtrip` or the port's own oracle is read a ulp off.
 //!
+//! # M36 adds the career half, over a corpus it never reads
+//!
+//! [`baseline`] and the rest of [`stats`] (M36 P11) turn one golfer's [`contracts::career`] corpus
+//! into what it supports claiming. [`dispersion`], [`comparison`] and [`club_profile`] (P12) read
+//! that guarded baseline three ways: what the shape of a miss is evidence for, where a center sits
+//! in the tour population, and all of it per club. All four are gated by `spec/vectors/career/`'s
+//! aggregate keys in `crates/core/tests/career.rs`. The corpus arrives assembled: reading it off disk
+//! is `crates/storage`'s, and this crate does not depend on that one, which is ADR-008's rule as a
+//! cargo edge pointing the same way as `feedback`'s.
+//!
+//! Only [`comparison`] reaches [`benchmarks`], and that is the design rather than an accident of the
+//! port: a personal statistic that read tour data could quietly become a change to how a swing is
+//! scored (ADR-010 §2), so the join is one module out and its tests hold the other two to it.
+//!
 //! # What this crate may not reach for
 //!
 //! ADR-030 §1's stdlib-only invariant is inherited here as *no numeric library in the scoring
@@ -93,8 +107,12 @@
 //! this workspace, for the FFT the Python detector needed numpy for. Nothing in here gets one.
 
 pub mod alignment;
+pub mod baseline;
 pub mod benchmarks;
 pub mod checkpoints;
+pub mod club_profile;
+pub mod comparison;
+pub mod dispersion;
 pub mod engine;
 pub mod flight;
 pub mod flight_infer;

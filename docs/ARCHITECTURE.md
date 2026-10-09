@@ -124,6 +124,26 @@ python scripts/flag_mishit.py --list [--name NAME]
 #   (M16, ADR-028): one shot at a time, or --list for every club's mishit tally. A mishit
 #   is held out of the carry and total-distance averages only; --clear puts it back
 
+# Career mode in Rust (M36): the same five reports, through crates/storage and the career half
+# of crates/analysis. Each takes the script's flags plus --sessions-dir and --golfers-dir, which
+# default to GOLF_SESSIONS_DIR and GOLF_GOLFERS_DIR, else data/processed/{sessions,golfers}
+cargo run --bin golf-core -- career-corpus [--name NAME | --player-id ID] [--verbose] [--json]
+cargo run --bin golf-core -- career-baseline [--name NAME | --player-id ID] [--verbose] [--json]
+cargo run --bin golf-core -- career-dispersion [--name NAME | --player-id ID] [--verbose] [--json]
+cargo run --bin golf-core -- club-profile [--name NAME | --player-id ID] [--club CLUB] [--verbose] [--json]
+cargo run --bin golf-core -- flag-mishit <SESSION/SWING> (--confirm | --clear | --auto)
+cargo run --bin golf-core -- flag-mishit --list [--name NAME]
+#   each prints what its script prints: byte for byte over data/ in M36 P16's parity run, and
+#   character for character on every recorded report in crates/core/tests/reports.rs. --json
+#   prints, per golfer, the aggregate the report was rendered from instead: the corpus; the
+#   baseline and standing; the dispersion; the whole bag profile (--club narrows the text only).
+#   flag-mishit writes one manifest and takes no --json. Exit codes are the scripts': 0 for an
+#   answer, an empty registry included, and 2 for a refused flag, a --name that slugs to nothing,
+#   or a flag-mishit reference or --list golfer that is malformed or not there.
+#   One rule differs from the scripts on purpose: a swing is excluded as outdated only when it
+#   is older than COMPARABLE_FROM, not older than the installed engine (ADR-024's M36 addendum).
+#   Over data/ the two still pool the same swings, because nothing on disk sits between the two
+
 # Follow-up questions about a swing (needs the `llm` extra and a key — ADR-020)
 python scripts/ask_swing.py <SESSION/SWING> "<question>"
 python scripts/ask_swing.py --resume <CONVERSATION-ID> "<question>"
@@ -167,8 +187,11 @@ python scripts/conformance.py regenerate --schemas-only | --format-only
 python scripts/conformance.py regenerate --screen-once
 #   recorded the screen family from frozen Python and PaddleOCR, once (M34 P4: the `ocr` extra
 #   and data/). It refuses with exit 2 whenever any screen vector exists, naming the Rust verb
+python scripts/conformance.py regenerate --storage-once | --career-once
+#   recorded the many-shot layer's two families from frozen Python, once each (M36 P2, P3). Each
+#   refuses the same way whenever any of its family exists
 
-# The Rust half — nine crates, and only one of them has a Python caller. `crates/trigger` is
+# The Rust half — ten crates, and only one of them has a Python caller. `crates/trigger` is
 # ball-strike detection and the clip-cutting rules around it (M20), and it is the one:
 # `audio/trigger.py` pipes PCM to `golf-trigger`. `crates/capture` is the camera edge (M21).
 # `crates/{contracts,analysis,feedback,core}` are the engine port (M22) — a second
@@ -187,10 +210,17 @@ python scripts/conformance.py regenerate --screen-once
 # shots differently, which is declared. `screen::golfer_warnings` is what a Rust surface shows a
 # golfer: the warnings without `no tile found for`, which is about the layout, not the photo.
 # `crates/pyfmt` (M34) is CPython's formatting, rounding, `repr`, `//`, Unicode and `sum`,
-# solved once below `analysis`, `feedback` and `screen`. `cargo test` runs every vector family
-# `conformance.py check` defers: audio against `trigger`, the format table against `pyfmt` and
-# `screen`, all seven stages against `analysis`, the screen family against `screen`, every
-# vector's shapes against `contracts`, and all 21 engine vectors **end to end** against `core`.
+# solved once below `contracts`, `analysis`, `feedback`, `screen` and `storage`.
+# `crates/storage` (M36) is the flat-file stores and the corpus reader: the manifest, the
+# bundle, bag, golfer and shot stores, `read_corpus`, and `api/state.py`'s tolerant readers. With
+# it came the career half of `crates/analysis` (baseline, dispersion, comparison, bag profile)
+# and `golf-core`'s five career verbs above. It is wired to nothing else: the lab, the server and
+# `mcp/` still read through Python's `storage/`. `cargo test` runs every vector family
+# `conformance.py check` defers: audio against `trigger`, the format table against `pyfmt`,
+# `contracts` and `screen`, all seven stages against `analysis`, the screen family against
+# `screen`, the storage family against `storage`, the career family and its report text against
+# `analysis` and `core`, every vector's shapes against `contracts`, and all 21 engine vectors
+# **end to end** against `core`.
 # No MediaPipe in any of it: `crates/pose`'s tests drive a stub worker, and the real one is
 # behind `GOLF_POSE_REAL_WORKER`.
 cargo build --release          # api/pipeline.py needs this before it can detect a strike
@@ -207,6 +237,8 @@ cargo run --release --bin golf-core -- rerecord --declare spec/declarations/v17.
 cargo run --release --bin golf-core -- rerecord --declare spec/declarations/screen-v1.json [--dry-run]
 #   the same verb on the screen family (M34): the declaration's `screen_parser_version` picks it,
 #   and a screen declaration may also name the keys it removes
+cargo run --release --bin golf-core -- rerecord --declare spec/declarations/career-v1.json [--dry-run]
+#   the same verb on the storage and career families together (M36), picked by `career_version`
 cargo run --bin golf-core -- parse-screen < spec/vectors/screen/corpus/2026-08-23-2.json
 #   the screen reader's seam: a screen vector, or its `input`, in; the `ShotData` out, or `null`
 #   for a failed read (exit 0). An unknown device exits 1. No Python end to diff it against
@@ -372,8 +404,21 @@ the point: ADR-008's rule is **compile-time** on the Rust side, because `crates/
 list `crates/feedback` in its `Cargo.toml` and therefore cannot reach it, which is exactly the edge
 `analysis/` may not have. That is what forced a fourth crate: something has to make both calls, and
 `crates/core` is the counterpart of `api/pipeline.py`. Nothing in Python imports any of them. The
-port conforms on all 21 committed vectors and is wired to nothing until M24 — both implementations
-stand, and ADR-032 §7 says why the Python is not deleted the way M20's detector was.
+port conforms on all 21 committed vectors and is wired to nothing until its first callers, the phone
+(M38) and §M29's lab CLI — both implementations stand, and ADR-032 §7 says why the Python is not
+deleted the way M20's detector was.
+
+**`storage/` gained one in M36, and the cargo edges say what the diagram says.** `crates/storage`
+mirrors the stores and the corpus reader, and depends on `crates/contracts` and `crates/pyfmt`
+alone. It never reaches `crates/analysis`, and `analysis` never reaches it: the career half of
+`crates/analysis` reads `contracts`' corpus shapes and nothing else. So the one crate holding the
+stores, the aggregates and the report text together is `crates/core`, which depends on `storage`,
+`analysis`, `feedback`, `screen`, `contracts` and `pyfmt`, and that is where the five career verbs
+live. Two edges below the diagram moved with it. `crates/contracts` now depends on `crates/pyfmt`
+(for `str.lower()` and Python's `repr` in its validators' messages), which ADR-032's sixteenth
+addendum records against §1, and `pyfmt` depends on nothing of ours. And **the dotted edge upward
+has no Rust twin**: `api/state.py`'s tolerant readers are a module of `crates/storage` (`state`),
+beside the corpus reader that calls them.
 
 **`pose/` gained a fourth entry point, and it is a shell rather than a module** (M23, ADR-033).
 `pose/worker.py` is what `crates/pose` spawns — `python -m golf_coach.pose.worker`, a handshake
@@ -418,7 +463,8 @@ import `api.state` for `load_analysis` / `load_state`, the tolerant readers for 
 an analysis run leaves behind. The alternative was a second copy of a tolerant reader, and a second
 copy is one that drifts; the clean fix is moving those two functions down into
 `storage/analysis_io.py`. Recorded in ADR-008's addenda, and in `docs/REFACTOR_LEDGER.md` so it is
-not re-raised.
+not re-raised. The Rust port took the clean fix by construction (M36): the two readers sit inside
+`crates/storage`, so the edge is not carried over.
 
 Not drawn, because they are not runtime edges: `pose/` and `detection/` annotate with
 `capture.source.Frame` under `if TYPE_CHECKING:`. `Frame` holds a numpy image and so cannot live
@@ -908,6 +954,14 @@ the numbers were produced by an engine that has since changed what they mean. No
 the second axis before the stamp existed, because a re-analysis does not change the inputs — and
 mixing two engine generations in a per-golfer spread manufactures variance out of a code change,
 which is the duplicate-counting error in reverse. `scripts/reanalyze.py` repairs both.
+
+**The Rust port's corpus asks a narrower question about the code** (M36, ADR-024's M36 addendum).
+`crates/storage`'s `read_corpus` excludes a swing as outdated only when its version is older than
+`COMPARABLE_FROM`, the oldest engine generation whose numbers today's engine still agrees with. A
+bump that only adds measurements, or only changes a shape, no longer empties the corpus. Its
+`is_outdated`, the question `reanalyze.py` asks, still compares with the installed version, as
+Python's does. Frozen Python's corpus keeps the installed-version rule until M40, so the two part
+on an artifact between the two versions, and none exists on disk.
 
 The version field defaults to **0**, not to the current version, which is the whole reason it
 works on artifacts written before it existed: a default of "current" would make every legacy file

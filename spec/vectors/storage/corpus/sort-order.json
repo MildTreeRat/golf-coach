@@ -1,0 +1,319 @@
+{
+  "career_version": 1,
+  "expected": {
+    "corpus": {
+      "analyzed_without_measurements": 0,
+      "excluded": [
+        {
+          "detail": "nobody had selected a golfer when this arrived — repair it on the upload page or with scripts/backfill_golfer.py",
+          "reason": "unattributed",
+          "session_id": "2026-08-12",
+          "swing_id": "2"
+        },
+        {
+          "detail": "nobody had selected a golfer when this arrived — repair it on the upload page or with scripts/backfill_golfer.py",
+          "reason": "unattributed",
+          "session_id": "2026-08-12",
+          "swing_id": "9"
+        },
+        {
+          "detail": "nobody had selected a golfer when this arrived — repair it on the upload page or with scripts/backfill_golfer.py",
+          "reason": "unattributed",
+          "session_id": "2026-08-12",
+          "swing_id": "10"
+        },
+        {
+          "detail": "nobody had selected a golfer when this arrived — repair it on the upload page or with scripts/backfill_golfer.py",
+          "reason": "unattributed",
+          "session_id": "2026-08-12",
+          "swing_id": "x"
+        }
+      ],
+      "metric_counts": {
+        "head_sway_norm": 7
+      },
+      "other_golfers": 0,
+      "outdated_swings": 0,
+      "player_id": "aaron",
+      "sessions_scanned": 5,
+      "swing_dirs_seen": 11,
+      "swings": [
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-07T12:00:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "clip-7",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "test",
+              "name": "head_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.25
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-07",
+          "shot_needs_review": false,
+          "shot_sha256": "shot-hash",
+          "stale": false,
+          "swing_id": "1"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-09T00:30:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "clip-9-3",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "test",
+              "name": "head_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.25
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-09",
+          "shot_needs_review": false,
+          "shot_sha256": "shot-hash",
+          "stale": false,
+          "swing_id": "3"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-08T20:00:00-05:00",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "clip-8",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "test",
+              "name": "head_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.25
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-08",
+          "shot_needs_review": false,
+          "shot_sha256": "shot-hash",
+          "stale": false,
+          "swing_id": "1"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-09T12:00:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "clip-9-10",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "test",
+              "name": "head_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.25
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-09",
+          "shot_needs_review": false,
+          "shot_sha256": "shot-hash",
+          "stale": false,
+          "swing_id": "10"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-09T12:00:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "clip-9-2",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "test",
+              "name": "head_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.25
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-09",
+          "shot_needs_review": false,
+          "shot_sha256": "shot-hash",
+          "stale": false,
+          "swing_id": "2"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-09T12:00:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "clip-9-x",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "test",
+              "name": "head_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.25
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-09",
+          "shot_needs_review": false,
+          "shot_sha256": "shot-hash",
+          "stale": false,
+          "swing_id": "x"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-11T12:00:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "clip-11",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "test",
+              "name": "head_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.25
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-11",
+          "shot_needs_review": false,
+          "shot_sha256": "shot-hash",
+          "stale": false,
+          "swing_id": "1"
+        }
+      ],
+      "unattributed_swings": 4,
+      "unknown_sources": []
+    },
+    "narrowed": {},
+    "properties": {
+      "distinct_sessions": 4,
+      "distinct_shots": 1,
+      "distinct_swings": 7,
+      "duplicates_collapsed": 0,
+      "mishit_refs": [],
+      "mishit_shots": 0,
+      "mishit_shots_unconfirmed": 0,
+      "shot_conflicts": 0,
+      "untagged_swings": 7
+    }
+  },
+  "id": "storage/corpus/sort-order",
+  "input": {
+    "files": {
+      "2026-08-07/1/analysis.json": "{\"analysis_version\": 16, \"swing\": {\"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.35, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick.\"}], \"measurements\": [{\"name\": \"head_sway_norm\", \"value\": 0.25, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}], \"unscored\": [], \"overall_score\": 94.9, \"shot\": null}, \"notes\": []}",
+      "2026-08-07/1/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"down_the_line\": \"dtl-hash\",\n    \"face_on\": \"clip-7\",\n    \"shot_screen\": \"shot-hash\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 94.9,\n  \"headline\": null\n}",
+      "2026-08-07/1/manifest.json": "{\n  \"swing_id\": \"1\",\n  \"session_id\": \"2026-08-07\",\n  \"created_at\": \"2026-08-07T12:00:00Z\",\n  \"updated_at\": \"2026-08-07T12:00:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.clip-7.mov\",\n      \"content_sha256\": \"clip-7\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-07T12:00:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.dtl-hash.mov\",\n      \"content_sha256\": \"dtl-hash\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-07T12:00:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.shot-hash.mov\",\n      \"content_sha256\": \"shot-hash\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-07T12:00:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": null,\n  \"mishit\": null\n}",
+      "2026-08-08/1/analysis.json": "{\"analysis_version\": 16, \"swing\": {\"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.35, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick.\"}], \"measurements\": [{\"name\": \"head_sway_norm\", \"value\": 0.25, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}], \"unscored\": [], \"overall_score\": 94.9, \"shot\": null}, \"notes\": []}",
+      "2026-08-08/1/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"down_the_line\": \"dtl-hash\",\n    \"face_on\": \"clip-8\",\n    \"shot_screen\": \"shot-hash\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 94.9,\n  \"headline\": null\n}",
+      "2026-08-08/1/manifest.json": "{\n  \"swing_id\": \"1\",\n  \"session_id\": \"2026-08-08\",\n  \"created_at\": \"2026-08-08T20:00:00-05:00\",\n  \"updated_at\": \"2026-08-08T20:00:00-05:00\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.clip-8.mov\",\n      \"content_sha256\": \"clip-8\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-08T20:00:00-05:00\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.dtl-hash.mov\",\n      \"content_sha256\": \"dtl-hash\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-08T20:00:00-05:00\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.shot-hash.mov\",\n      \"content_sha256\": \"shot-hash\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-08T20:00:00-05:00\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": null,\n  \"mishit\": null\n}",
+      "2026-08-09/10/analysis.json": "{\"analysis_version\": 16, \"swing\": {\"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.35, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick.\"}], \"measurements\": [{\"name\": \"head_sway_norm\", \"value\": 0.25, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}], \"unscored\": [], \"overall_score\": 94.9, \"shot\": null}, \"notes\": []}",
+      "2026-08-09/10/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"down_the_line\": \"dtl-hash\",\n    \"face_on\": \"clip-9-10\",\n    \"shot_screen\": \"shot-hash\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 94.9,\n  \"headline\": null\n}",
+      "2026-08-09/10/manifest.json": "{\n  \"swing_id\": \"10\",\n  \"session_id\": \"2026-08-09\",\n  \"created_at\": \"2026-08-09T12:00:00Z\",\n  \"updated_at\": \"2026-08-09T12:00:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.clip-9-10.mov\",\n      \"content_sha256\": \"clip-9-10\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-09T12:00:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.dtl-hash.mov\",\n      \"content_sha256\": \"dtl-hash\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-09T12:00:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.shot-hash.mov\",\n      \"content_sha256\": \"shot-hash\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-09T12:00:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": null,\n  \"mishit\": null\n}",
+      "2026-08-09/2/analysis.json": "{\"analysis_version\": 16, \"swing\": {\"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.35, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick.\"}], \"measurements\": [{\"name\": \"head_sway_norm\", \"value\": 0.25, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}], \"unscored\": [], \"overall_score\": 94.9, \"shot\": null}, \"notes\": []}",
+      "2026-08-09/2/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"down_the_line\": \"dtl-hash\",\n    \"face_on\": \"clip-9-2\",\n    \"shot_screen\": \"shot-hash\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 94.9,\n  \"headline\": null\n}",
+      "2026-08-09/2/manifest.json": "{\n  \"swing_id\": \"2\",\n  \"session_id\": \"2026-08-09\",\n  \"created_at\": \"2026-08-09T12:00:00Z\",\n  \"updated_at\": \"2026-08-09T12:00:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.clip-9-2.mov\",\n      \"content_sha256\": \"clip-9-2\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-09T12:00:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.dtl-hash.mov\",\n      \"content_sha256\": \"dtl-hash\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-09T12:00:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.shot-hash.mov\",\n      \"content_sha256\": \"shot-hash\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-09T12:00:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": null,\n  \"mishit\": null\n}",
+      "2026-08-09/3/analysis.json": "{\"analysis_version\": 16, \"swing\": {\"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.35, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick.\"}], \"measurements\": [{\"name\": \"head_sway_norm\", \"value\": 0.25, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}], \"unscored\": [], \"overall_score\": 94.9, \"shot\": null}, \"notes\": []}",
+      "2026-08-09/3/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"down_the_line\": \"dtl-hash\",\n    \"face_on\": \"clip-9-3\",\n    \"shot_screen\": \"shot-hash\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 94.9,\n  \"headline\": null\n}",
+      "2026-08-09/3/manifest.json": "{\n  \"swing_id\": \"3\",\n  \"session_id\": \"2026-08-09\",\n  \"created_at\": \"2026-08-09T00:30:00Z\",\n  \"updated_at\": \"2026-08-09T00:30:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.clip-9-3.mov\",\n      \"content_sha256\": \"clip-9-3\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-09T00:30:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.dtl-hash.mov\",\n      \"content_sha256\": \"dtl-hash\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-09T00:30:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.shot-hash.mov\",\n      \"content_sha256\": \"shot-hash\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-09T00:30:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": null,\n  \"mishit\": null\n}",
+      "2026-08-09/x/analysis.json": "{\"analysis_version\": 16, \"swing\": {\"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.35, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick.\"}], \"measurements\": [{\"name\": \"head_sway_norm\", \"value\": 0.25, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}], \"unscored\": [], \"overall_score\": 94.9, \"shot\": null}, \"notes\": []}",
+      "2026-08-09/x/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"down_the_line\": \"dtl-hash\",\n    \"face_on\": \"clip-9-x\",\n    \"shot_screen\": \"shot-hash\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 94.9,\n  \"headline\": null\n}",
+      "2026-08-09/x/manifest.json": "{\n  \"swing_id\": \"x\",\n  \"session_id\": \"2026-08-09\",\n  \"created_at\": \"2026-08-09T12:00:00Z\",\n  \"updated_at\": \"2026-08-09T12:00:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.clip-9-x.mov\",\n      \"content_sha256\": \"clip-9-x\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-09T12:00:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.dtl-hash.mov\",\n      \"content_sha256\": \"dtl-hash\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-09T12:00:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.shot-hash.mov\",\n      \"content_sha256\": \"shot-hash\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-09T12:00:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": null,\n  \"mishit\": null\n}",
+      "2026-08-11/1/analysis.json": "{\"analysis_version\": 16, \"swing\": {\"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.35, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick.\"}], \"measurements\": [{\"name\": \"head_sway_norm\", \"value\": 0.25, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}], \"unscored\": [], \"overall_score\": 94.9, \"shot\": null}, \"notes\": []}",
+      "2026-08-11/1/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"down_the_line\": \"dtl-hash\",\n    \"face_on\": \"clip-11\",\n    \"shot_screen\": \"shot-hash\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 94.9,\n  \"headline\": null\n}",
+      "2026-08-11/1/manifest.json": "{\n  \"swing_id\": \"1\",\n  \"session_id\": \"2026-08-11\",\n  \"created_at\": \"2026-08-11T12:00:00Z\",\n  \"updated_at\": \"2026-08-11T12:00:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.clip-11.mov\",\n      \"content_sha256\": \"clip-11\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-11T12:00:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.dtl-hash.mov\",\n      \"content_sha256\": \"dtl-hash\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-11T12:00:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.shot-hash.mov\",\n      \"content_sha256\": \"shot-hash\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-11T12:00:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": null,\n  \"mishit\": null\n}",
+      "2026-08-12/10/analysis.json": "{\"analysis_version\": 16, \"swing\": {\"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.35, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick.\"}], \"measurements\": [{\"name\": \"head_sway_norm\", \"value\": 0.25, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}], \"unscored\": [], \"overall_score\": 94.9, \"shot\": null}, \"notes\": []}",
+      "2026-08-12/10/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"down_the_line\": \"dtl-hash\",\n    \"face_on\": \"clip-12-10\",\n    \"shot_screen\": \"shot-hash\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 94.9,\n  \"headline\": null\n}",
+      "2026-08-12/10/manifest.json": "{\n  \"swing_id\": \"10\",\n  \"session_id\": \"2026-08-12\",\n  \"created_at\": \"2026-08-10T01:39:00Z\",\n  \"updated_at\": \"2026-08-10T01:39:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.clip-12-10.mov\",\n      \"content_sha256\": \"clip-12-10\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.dtl-hash.mov\",\n      \"content_sha256\": \"dtl-hash\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.shot-hash.mov\",\n      \"content_sha256\": \"shot-hash\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": null,\n  \"club\": null,\n  \"mishit\": null\n}",
+      "2026-08-12/2/analysis.json": "{\"analysis_version\": 16, \"swing\": {\"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.35, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick.\"}], \"measurements\": [{\"name\": \"head_sway_norm\", \"value\": 0.25, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}], \"unscored\": [], \"overall_score\": 94.9, \"shot\": null}, \"notes\": []}",
+      "2026-08-12/2/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"down_the_line\": \"dtl-hash\",\n    \"face_on\": \"clip-12-2\",\n    \"shot_screen\": \"shot-hash\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 94.9,\n  \"headline\": null\n}",
+      "2026-08-12/2/manifest.json": "{\n  \"swing_id\": \"2\",\n  \"session_id\": \"2026-08-12\",\n  \"created_at\": \"2026-08-10T01:39:00Z\",\n  \"updated_at\": \"2026-08-10T01:39:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.clip-12-2.mov\",\n      \"content_sha256\": \"clip-12-2\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.dtl-hash.mov\",\n      \"content_sha256\": \"dtl-hash\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.shot-hash.mov\",\n      \"content_sha256\": \"shot-hash\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": null,\n  \"club\": null,\n  \"mishit\": null\n}",
+      "2026-08-12/9/analysis.json": "{\"analysis_version\": 16, \"swing\": {\"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.35, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick.\"}], \"measurements\": [{\"name\": \"head_sway_norm\", \"value\": 0.25, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}], \"unscored\": [], \"overall_score\": 94.9, \"shot\": null}, \"notes\": []}",
+      "2026-08-12/9/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"down_the_line\": \"dtl-hash\",\n    \"face_on\": \"clip-12-9\",\n    \"shot_screen\": \"shot-hash\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 94.9,\n  \"headline\": null\n}",
+      "2026-08-12/9/manifest.json": "{\n  \"swing_id\": \"9\",\n  \"session_id\": \"2026-08-12\",\n  \"created_at\": \"2026-08-10T01:39:00Z\",\n  \"updated_at\": \"2026-08-10T01:39:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.clip-12-9.mov\",\n      \"content_sha256\": \"clip-12-9\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.dtl-hash.mov\",\n      \"content_sha256\": \"dtl-hash\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.shot-hash.mov\",\n      \"content_sha256\": \"shot-hash\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": null,\n  \"club\": null,\n  \"mishit\": null\n}",
+      "2026-08-12/x/analysis.json": "{\"analysis_version\": 16, \"swing\": {\"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.35, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick.\"}], \"measurements\": [{\"name\": \"head_sway_norm\", \"value\": 0.25, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}], \"unscored\": [], \"overall_score\": 94.9, \"shot\": null}, \"notes\": []}",
+      "2026-08-12/x/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"down_the_line\": \"dtl-hash\",\n    \"face_on\": \"clip-12-x\",\n    \"shot_screen\": \"shot-hash\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 94.9,\n  \"headline\": null\n}",
+      "2026-08-12/x/manifest.json": "{\n  \"swing_id\": \"x\",\n  \"session_id\": \"2026-08-12\",\n  \"created_at\": \"2026-08-10T01:39:00Z\",\n  \"updated_at\": \"2026-08-10T01:39:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.clip-12-x.mov\",\n      \"content_sha256\": \"clip-12-x\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.dtl-hash.mov\",\n      \"content_sha256\": \"dtl-hash\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.shot-hash.mov\",\n      \"content_sha256\": \"shot-hash\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": null,\n  \"club\": null,\n  \"mishit\": null\n}"
+    },
+    "narrowings": {},
+    "player_id": "aaron",
+    "versions": {
+      "comparable_from": 16,
+      "installed": 16
+    }
+  },
+  "provenance": {
+    "analysis_version": 16,
+    "kind": "storage",
+    "note": "`swings` sorts by instant, then session id, then swing id as a string: swings `10`, `2` and `x` at one instant in one session sort in that order, and 20:00-05:00 on the 8th (01:00Z on the 9th) sorts after 00:30Z on the 9th, which a string sort would reverse. `excluded` keeps the scan order instead: `get_session`'s numeric sort, non-numeric names last, so session 2026-08-12's unattributed swings are 2, 9, 10, x (`test_swings_are_ordered_oldest_first`)",
+    "oracle": "python",
+    "pydantic_version": "2.13.4",
+    "python_version": "3.13.3",
+    "recorded_by": "scripts/conformance_vectors.py::_run_corpus",
+    "rerecords": [
+      {
+        "added": [],
+        "by": "golf-core rerecord",
+        "career_version": 1,
+        "declaration": "spec/declarations/career-v1.json",
+        "moved": [
+          "career_version"
+        ]
+      }
+    ],
+    "source": "tests/storage/conftest.py::write_swing, edited where the note says"
+  }
+}

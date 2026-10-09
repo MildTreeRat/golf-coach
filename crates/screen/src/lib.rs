@@ -122,7 +122,9 @@ pub struct ScreenInput {
     pub notes: Vec<String>,
     pub shot_id: String,
     pub session_id: String,
-    /// Carried to the record as given, `Timestamp`'s rule.
+    /// Read as pydantic reads a `datetime`, and written to the record in pydantic's spelling — what
+    /// `import_screen`'s `ShotData(timestamp=…)` does. A naive one is refused here where frozen
+    /// Python takes it (`contracts::time`'s named divergence), so the phone sends an offset.
     pub timestamp: Timestamp,
     #[serde(default)]
     pub image_sha256: Option<String>,
@@ -254,7 +256,9 @@ mod tests {
             notes: Vec::new(),
             shot_id: "a-shot".to_string(),
             session_id: "a-session".to_string(),
-            timestamp: Timestamp("2026-08-04T12:00:00Z".to_string()),
+            timestamp: "2026-08-04T12:00:00Z"
+                .parse()
+                .expect("a pydantic timestamp"),
             image_sha256: None,
             image_path: None,
             min_confidence: 0.6,

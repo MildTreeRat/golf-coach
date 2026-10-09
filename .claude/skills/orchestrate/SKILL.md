@@ -1,6 +1,6 @@
 ---
 name: orchestrate
-description: Run a milestone's remaining phases back to back — one fresh subagent per phase — and stop on a question, a failure, or a budget limit. Use when the user types /orchestrate.
+description: Run a milestone's remaining phases back to back — one fresh subagent per phase — and stop on a question, a failure, or the phase cap. Use when the user types /orchestrate.
 disable-model-invocation: true
 ---
 
@@ -39,21 +39,27 @@ That table is the whole state machine. **Do not read the plan body, the ADRs, th
 diff** — every one of those is the subagent's job, and reading them here is what makes this loop
 stop working after three phases instead of ten.
 
-Unchecked rows are the ones whose State is not ✅ (`⬜ Not started`, in progress, blocked). The
-first unchecked row is the next phase.
+Unchecked rows are the ones whose State is not ✅: `⬜` not started, `🔄 Started …` (a session
+began the phase and was cut off — the phase runner marks its row before it starts work), blocked.
+The first unchecked row is the next phase. A 🔄 row is a resume, not a fresh start, and the
+announcement says so.
 
 ## 2. Stop conditions, checked before every launch
 
 Check all of these each time round, and stop at the first that trips:
 
 - **Done** — no unchecked rows. The milestone is complete; report and stop.
-- **Budget** — the session token figure in your context (`<total_tokens ... left>`) has fallen below
-  20% of what it read on the first iteration, or below 200,000, whichever comes first. Stop *before*
-  launching, so the run ends on a clean phase boundary rather than mid-phase.
 - **Compaction** — your context was summarized during this run. One compaction is survivable; a
   second means the loop is costing more than it saves. Stop and say so.
 - **Cap** — `--max` phases have been run this session.
 - **No progress** — the previous phase reported done but the checklist row is still unchecked (§4).
+
+There is deliberately **no token-budget stop**. The figure in `<total_tokens … left>` counts only
+your own context, not your subagents': across five M36 phases it fell from 15.0M to 14.85M while
+the phases themselves spent tens of millions. The limit that actually ends a run is the plan's usage
+limit, and nothing in your context shows it coming. Both M36 runs were cut off by it mid-phase. The
+defense is the 🔄 marker: a cut-off phase resumes from its partial work on the next run instead of
+starting over.
 
 On any stop that is not *Done*, the report tells the user exactly how to resume: `/clear`, then
 `/orchestrate <milestone>`.
@@ -62,33 +68,24 @@ On any stop that is not *Done*, the report tells the user exactly how to resume:
 
 One at a time, sequentially, never in parallel — phase N+1 is planned against what phase N found, so
 two in flight would both work from stale findings. Use the Agent tool with `subagent_type:
-"general-purpose"` (a fresh context; **not** `fork`, which would inherit yours and defeat the point).
+"phase-runner"` (`.claude/agents/phase-runner.md`: a fresh context, the unattended contract, and a
+short tool list). **Not** `fork`, which would inherit your context and defeat the point.
 
 Prompt, filled in:
 
-> You are completing exactly one phase of a phased plan, in a fresh context.
+> Plan: `docs/plans/<plan>.md`. Phase: **<Pn>**.
 >
-> Plan: `docs/plans/<plan>.md`. Next unchecked phase: **<Pn>**.
->
-> Read `.claude/skills/next-phase/SKILL.md` and follow it exactly for that plan and that phase —
-> including reading only the context that phase needs, checking the phase off in the plan's status
-> checklist, and appending what the phase found to its section. Do the phase's own verification
-> commands; a phase is not done because you believe it is.
->
-> You are running unattended: **the user is not reachable from here.** Do not use AskUserQuestion,
-> and do not improvise past something the plan got wrong. If you need a decision from the user,
-> stop and report it as BLOCKED instead.
->
-> Your final report must be **at most 8 lines** and must begin with exactly one of these, on its
-> own first line:
->
-> - `PHASE_DONE: <Pn> — <one clause on what landed>`
-> - `BLOCKED: <the single question the user must answer>` — plus, on the following lines, the
->   options you see and what you would recommend, so the user can answer in one word.
-> - `FAILED: <Pn> — <what broke, and the exact failing command or error>`
->
-> Anything after the first line is for the user's eyes, not a summary of your work — the
-> orchestrator that launched you is deliberately staying out of the detail.
+> *(only when the row reads 🔄)* Its row reads `<the State cell, verbatim>` — a previous attempt
+> was cut off. Resume it as the next-phase skill's *Resuming* section says.
+
+The contract — follow the next-phase skill, never ask the user, end on a sentinel — lives in the
+agent file, not here, so the prompt stays two lines.
+
+**If the Agent tool rejects `phase-runner`** (an agent file added after the session started may not
+be registered until Claude Code restarts), launch `general-purpose` with the same prompt and this
+first line: *Read `.claude/agents/phase-runner.md` and follow its body as your instructions; it is
+your contract.* Say in your log that the run fell back, since that agent carries every tool's schema
+in every call.
 
 ## 4. Read the verdict, then verify it
 
@@ -102,6 +99,9 @@ for `<Pn>` is now ✅.
 | `BLOCKED` | either | **stop the whole run** and bring the question to the user (§5) |
 | `FAILED` | either | stop and report the failure verbatim, including the failing command |
 | no sentinel | either | treat as `FAILED` — an agent that ignored its contract is not one whose "done" you can trust |
+
+A `BLOCKED` or `FAILED` row stays 🔄, and that is correct: the next run resumes it with its partial
+work in view.
 
 Keep your own running log to **one line per phase**. Resist writing a paragraph about a phase you
 deliberately did not read.
@@ -135,3 +135,8 @@ says to, and a milestone-wide commit is the user's call.
 - **A question stops everything.** A phase that guesses at a decision the user owns produces work
   that looks done and has to be redone — and in a loop, the next phase is then planned against the
   guess. Stopping costs one `/clear`; guessing costs the milestone.
+- **The phases are the cost, not you.** Measured over M36's eleven phase runs: the orchestrator used
+  under 2% of the tokens. Each phase grew from 40k to 230k–400k context over 45–95 calls, and every
+  call re-sends the whole context. So the levers are in the phase runner and the next-phase skill —
+  a short tool list, reading the plan by its map, batched reads, resuming rather than restarting —
+  and in `/plan-phases`, which keeps phases short. None of them is here.

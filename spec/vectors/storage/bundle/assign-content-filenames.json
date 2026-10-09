@@ -1,0 +1,433 @@
+{
+  "career_version": 1,
+  "expected": {
+    "files": {
+      ".incoming/": "",
+      "2026-08-06/1/face_on.2d4bfca02200.MOV": "bytes-1",
+      "2026-08-06/1/manifest.json": "{\n  \"swing_id\": \"1\",\n  \"session_id\": \"2026-08-06\",\n  \"created_at\": \"2026-08-06T12:00:00Z\",\n  \"updated_at\": \"2026-08-06T12:00:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.2d4bfca02200.MOV\",\n      \"content_sha256\": \"2d4bfca022009cc8077571be69a39db647bbd31234a784b63de8e388c158aff7\",\n      \"original_filename\": \"IMG_0001.MOV\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 7,\n      \"received_at\": \"2026-08-06T12:00:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": null,\n  \"club\": null,\n  \"mishit\": null\n}",
+      "2026-08-06/2/face_on.eb5972366748.mov": "bytes-2",
+      "2026-08-06/2/manifest.json": "{\n  \"swing_id\": \"2\",\n  \"session_id\": \"2026-08-06\",\n  \"created_at\": \"2026-08-06T12:01:00.120000Z\",\n  \"updated_at\": \"2026-08-06T12:01:00.120000Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.eb5972366748.mov\",\n      \"content_sha256\": \"eb5972366748402264e74a0ac771f2a4c8c218b2f1ad6ee61b27c4add924d868\",\n      \"original_filename\": \"noext\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 7,\n      \"received_at\": \"2026-08-06T12:01:00.120000Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": null,\n  \"club\": null,\n  \"mishit\": null\n}",
+      "2026-08-06/3/down_the_line.c45447659af2.mov": "bytes-3",
+      "2026-08-06/3/manifest.json": "{\n  \"swing_id\": \"3\",\n  \"session_id\": \"2026-08-06\",\n  \"created_at\": \"2026-08-06T12:02:00.000001Z\",\n  \"updated_at\": \"2026-08-06T12:02:00.000001Z\",\n  \"roles\": {\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.c45447659af2.mov\",\n      \"content_sha256\": \"c45447659af238f083dafb7b3b85492e617541611860b37aa81e67c51cf15dc6\",\n      \"original_filename\": \"clip.\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 7,\n      \"received_at\": \"2026-08-06T12:02:00.000001Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": null,\n  \"club\": null,\n  \"mishit\": null\n}",
+      "2026-08-06/4/manifest.json": "{\n  \"swing_id\": \"4\",\n  \"session_id\": \"2026-08-06\",\n  \"created_at\": \"2026-08-06T12:03:00.999999Z\",\n  \"updated_at\": \"2026-08-06T12:03:00.999999Z\",\n  \"roles\": {\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.ab260822512c.jpg\",\n      \"content_sha256\": \"ab260822512c101d9662dc65e673eb24688cb143f4a1ea2963b419de999ce2d2\",\n      \"original_filename\": \".hidden\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 7,\n      \"received_at\": \"2026-08-06T12:03:00.999999Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": null,\n  \"club\": null,\n  \"mishit\": null\n}",
+      "2026-08-06/4/shot_screen.ab260822512c.jpg": "bytes-4",
+      "2026-08-06/5/manifest.json": "{\n  \"swing_id\": \"5\",\n  \"session_id\": \"2026-08-06\",\n  \"created_at\": \"2026-08-06T12:04:00.500000Z\",\n  \"updated_at\": \"2026-08-06T12:04:00.500000Z\",\n  \"roles\": {\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.80ee043c80cb.gz\",\n      \"content_sha256\": \"80ee043c80cbe0563bca837d7371bef7662b190334b9aa9da7d933150b72caac\",\n      \"original_filename\": \"photo.tar.gz\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 7,\n      \"received_at\": \"2026-08-06T12:04:00.500000Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": null,\n  \"club\": null,\n  \"mishit\": null\n}",
+      "2026-08-06/5/shot_screen.80ee043c80cb.gz": "bytes-5",
+      "2026-08-06/6/face_on.7cafa77769ae.MoV": "bytes-6",
+      "2026-08-06/6/manifest.json": "{\n  \"swing_id\": \"6\",\n  \"session_id\": \"2026-08-06\",\n  \"created_at\": \"2026-08-06T12:05:00.345678Z\",\n  \"updated_at\": \"2026-08-06T12:05:00.345678Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.7cafa77769ae.MoV\",\n      \"content_sha256\": \"7cafa77769ae7724aba29bd7b4df7ac87026dd8daba6fd32eaefc2384233f0aa\",\n      \"original_filename\": \"a b.MoV\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 7,\n      \"received_at\": \"2026-08-06T12:05:00.345678Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": null,\n  \"club\": null,\n  \"mishit\": null\n}",
+      "2026-08-06/7/manifest.json": "{\n  \"swing_id\": \"7\",\n  \"session_id\": \"2026-08-06\",\n  \"created_at\": \"2026-08-06T12:06:00Z\",\n  \"updated_at\": \"2026-08-06T12:06:00Z\",\n  \"roles\": {\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.28962fb27a99.HEIC\",\n      \"content_sha256\": \"28962fb27a994e0cf8fc698ede2e360f1a5375cc3577835846c1175814fbfd59\",\n      \"original_filename\": \"IMG_2.HEIC\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 7,\n      \"received_at\": \"2026-08-06T12:06:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": null,\n  \"club\": null,\n  \"mishit\": null\n}",
+      "2026-08-06/7/shot_screen.28962fb27a99.HEIC": "bytes-7"
+    },
+    "results": [
+      {
+        "returned": {
+          "club": null,
+          "deduped": false,
+          "missing_roles": [
+            "down_the_line",
+            "shot_screen"
+          ],
+          "player_id": null,
+          "role": "face_on",
+          "session_id": "2026-08-06",
+          "status": "collecting",
+          "swing_id": "1"
+        }
+      },
+      {
+        "returned": {
+          "club": null,
+          "deduped": false,
+          "missing_roles": [
+            "down_the_line",
+            "shot_screen"
+          ],
+          "player_id": null,
+          "role": "face_on",
+          "session_id": "2026-08-06",
+          "status": "collecting",
+          "swing_id": "2"
+        }
+      },
+      {
+        "returned": {
+          "club": null,
+          "deduped": false,
+          "missing_roles": [
+            "face_on",
+            "shot_screen"
+          ],
+          "player_id": null,
+          "role": "down_the_line",
+          "session_id": "2026-08-06",
+          "status": "collecting",
+          "swing_id": "3"
+        }
+      },
+      {
+        "returned": {
+          "club": null,
+          "deduped": false,
+          "missing_roles": [
+            "face_on",
+            "down_the_line"
+          ],
+          "player_id": null,
+          "role": "shot_screen",
+          "session_id": "2026-08-06",
+          "status": "collecting",
+          "swing_id": "4"
+        }
+      },
+      {
+        "returned": {
+          "club": null,
+          "deduped": false,
+          "missing_roles": [
+            "face_on",
+            "down_the_line"
+          ],
+          "player_id": null,
+          "role": "shot_screen",
+          "session_id": "2026-08-06",
+          "status": "collecting",
+          "swing_id": "5"
+        }
+      },
+      {
+        "returned": {
+          "club": null,
+          "deduped": false,
+          "missing_roles": [
+            "down_the_line",
+            "shot_screen"
+          ],
+          "player_id": null,
+          "role": "face_on",
+          "session_id": "2026-08-06",
+          "status": "collecting",
+          "swing_id": "6"
+        }
+      },
+      {
+        "returned": {
+          "club": null,
+          "deduped": false,
+          "missing_roles": [
+            "face_on",
+            "down_the_line"
+          ],
+          "player_id": null,
+          "role": "shot_screen",
+          "session_id": "2026-08-06",
+          "status": "collecting",
+          "swing_id": "7"
+        }
+      },
+      {
+        "returned": [
+          {
+            "club": null,
+            "created_at": "2026-08-06T12:00:00Z",
+            "mishit": null,
+            "player_id": null,
+            "roles": {
+              "face_on": {
+                "content_sha256": "2d4bfca022009cc8077571be69a39db647bbd31234a784b63de8e388c158aff7",
+                "content_type": "video/quicktime",
+                "filename": "face_on.2d4bfca02200.MOV",
+                "original_filename": "IMG_0001.MOV",
+                "received_at": "2026-08-06T12:00:00Z",
+                "role": "face_on",
+                "size_bytes": 7,
+                "warnings": []
+              }
+            },
+            "session_id": "2026-08-06",
+            "swing_id": "1",
+            "updated_at": "2026-08-06T12:00:00Z"
+          },
+          {
+            "club": null,
+            "created_at": "2026-08-06T12:01:00.120000Z",
+            "mishit": null,
+            "player_id": null,
+            "roles": {
+              "face_on": {
+                "content_sha256": "eb5972366748402264e74a0ac771f2a4c8c218b2f1ad6ee61b27c4add924d868",
+                "content_type": "video/quicktime",
+                "filename": "face_on.eb5972366748.mov",
+                "original_filename": "noext",
+                "received_at": "2026-08-06T12:01:00.120000Z",
+                "role": "face_on",
+                "size_bytes": 7,
+                "warnings": []
+              }
+            },
+            "session_id": "2026-08-06",
+            "swing_id": "2",
+            "updated_at": "2026-08-06T12:01:00.120000Z"
+          },
+          {
+            "club": null,
+            "created_at": "2026-08-06T12:02:00.000001Z",
+            "mishit": null,
+            "player_id": null,
+            "roles": {
+              "down_the_line": {
+                "content_sha256": "c45447659af238f083dafb7b3b85492e617541611860b37aa81e67c51cf15dc6",
+                "content_type": "video/quicktime",
+                "filename": "down_the_line.c45447659af2.mov",
+                "original_filename": "clip.",
+                "received_at": "2026-08-06T12:02:00.000001Z",
+                "role": "down_the_line",
+                "size_bytes": 7,
+                "warnings": []
+              }
+            },
+            "session_id": "2026-08-06",
+            "swing_id": "3",
+            "updated_at": "2026-08-06T12:02:00.000001Z"
+          },
+          {
+            "club": null,
+            "created_at": "2026-08-06T12:03:00.999999Z",
+            "mishit": null,
+            "player_id": null,
+            "roles": {
+              "shot_screen": {
+                "content_sha256": "ab260822512c101d9662dc65e673eb24688cb143f4a1ea2963b419de999ce2d2",
+                "content_type": "video/quicktime",
+                "filename": "shot_screen.ab260822512c.jpg",
+                "original_filename": ".hidden",
+                "received_at": "2026-08-06T12:03:00.999999Z",
+                "role": "shot_screen",
+                "size_bytes": 7,
+                "warnings": []
+              }
+            },
+            "session_id": "2026-08-06",
+            "swing_id": "4",
+            "updated_at": "2026-08-06T12:03:00.999999Z"
+          },
+          {
+            "club": null,
+            "created_at": "2026-08-06T12:04:00.500000Z",
+            "mishit": null,
+            "player_id": null,
+            "roles": {
+              "shot_screen": {
+                "content_sha256": "80ee043c80cbe0563bca837d7371bef7662b190334b9aa9da7d933150b72caac",
+                "content_type": "video/quicktime",
+                "filename": "shot_screen.80ee043c80cb.gz",
+                "original_filename": "photo.tar.gz",
+                "received_at": "2026-08-06T12:04:00.500000Z",
+                "role": "shot_screen",
+                "size_bytes": 7,
+                "warnings": []
+              }
+            },
+            "session_id": "2026-08-06",
+            "swing_id": "5",
+            "updated_at": "2026-08-06T12:04:00.500000Z"
+          },
+          {
+            "club": null,
+            "created_at": "2026-08-06T12:05:00.345678Z",
+            "mishit": null,
+            "player_id": null,
+            "roles": {
+              "face_on": {
+                "content_sha256": "7cafa77769ae7724aba29bd7b4df7ac87026dd8daba6fd32eaefc2384233f0aa",
+                "content_type": "video/quicktime",
+                "filename": "face_on.7cafa77769ae.MoV",
+                "original_filename": "a b.MoV",
+                "received_at": "2026-08-06T12:05:00.345678Z",
+                "role": "face_on",
+                "size_bytes": 7,
+                "warnings": []
+              }
+            },
+            "session_id": "2026-08-06",
+            "swing_id": "6",
+            "updated_at": "2026-08-06T12:05:00.345678Z"
+          },
+          {
+            "club": null,
+            "created_at": "2026-08-06T12:06:00Z",
+            "mishit": null,
+            "player_id": null,
+            "roles": {
+              "shot_screen": {
+                "content_sha256": "28962fb27a994e0cf8fc698ede2e360f1a5375cc3577835846c1175814fbfd59",
+                "content_type": "video/quicktime",
+                "filename": "shot_screen.28962fb27a99.HEIC",
+                "original_filename": "IMG_2.HEIC",
+                "received_at": "2026-08-06T12:06:00Z",
+                "role": "shot_screen",
+                "size_bytes": 7,
+                "warnings": []
+              }
+            },
+            "session_id": "2026-08-06",
+            "swing_id": "7",
+            "updated_at": "2026-08-06T12:06:00Z"
+          }
+        ]
+      }
+    ]
+  },
+  "id": "storage/bundle/assign-content-filenames",
+  "input": {
+    "files": {
+      ".incoming/1.part": "bytes-1",
+      ".incoming/2.part": "bytes-2",
+      ".incoming/3.part": "bytes-3",
+      ".incoming/4.part": "bytes-4",
+      ".incoming/5.part": "bytes-5",
+      ".incoming/6.part": "bytes-6",
+      ".incoming/7.part": "bytes-7"
+    },
+    "ops": [
+      {
+        "args": {
+          "club": null,
+          "content_type": "video/quicktime",
+          "digest": "2d4bfca022009cc8077571be69a39db647bbd31234a784b63de8e388c158aff7",
+          "original_filename": "IMG_0001.MOV",
+          "player_id": null,
+          "role": "face_on",
+          "session_id": "2026-08-06",
+          "size_bytes": 7,
+          "swing_id": "1",
+          "tmp_path": ".incoming/1.part"
+        },
+        "now": "2026-08-06T12:00:00Z",
+        "op": "bundle.assign_from_path"
+      },
+      {
+        "args": {
+          "club": null,
+          "content_type": "video/quicktime",
+          "digest": "eb5972366748402264e74a0ac771f2a4c8c218b2f1ad6ee61b27c4add924d868",
+          "original_filename": "noext",
+          "player_id": null,
+          "role": "face_on",
+          "session_id": "2026-08-06",
+          "size_bytes": 7,
+          "swing_id": "2",
+          "tmp_path": ".incoming/2.part"
+        },
+        "now": "2026-08-06T12:01:00.120000Z",
+        "op": "bundle.assign_from_path"
+      },
+      {
+        "args": {
+          "club": null,
+          "content_type": "video/quicktime",
+          "digest": "c45447659af238f083dafb7b3b85492e617541611860b37aa81e67c51cf15dc6",
+          "original_filename": "clip.",
+          "player_id": null,
+          "role": "down_the_line",
+          "session_id": "2026-08-06",
+          "size_bytes": 7,
+          "swing_id": "3",
+          "tmp_path": ".incoming/3.part"
+        },
+        "now": "2026-08-06T12:02:00.000001Z",
+        "op": "bundle.assign_from_path"
+      },
+      {
+        "args": {
+          "club": null,
+          "content_type": "video/quicktime",
+          "digest": "ab260822512c101d9662dc65e673eb24688cb143f4a1ea2963b419de999ce2d2",
+          "original_filename": ".hidden",
+          "player_id": null,
+          "role": "shot_screen",
+          "session_id": "2026-08-06",
+          "size_bytes": 7,
+          "swing_id": "4",
+          "tmp_path": ".incoming/4.part"
+        },
+        "now": "2026-08-06T12:03:00.999999Z",
+        "op": "bundle.assign_from_path"
+      },
+      {
+        "args": {
+          "club": null,
+          "content_type": "video/quicktime",
+          "digest": "80ee043c80cbe0563bca837d7371bef7662b190334b9aa9da7d933150b72caac",
+          "original_filename": "photo.tar.gz",
+          "player_id": null,
+          "role": "shot_screen",
+          "session_id": "2026-08-06",
+          "size_bytes": 7,
+          "swing_id": "5",
+          "tmp_path": ".incoming/5.part"
+        },
+        "now": "2026-08-06T12:04:00.500000Z",
+        "op": "bundle.assign_from_path"
+      },
+      {
+        "args": {
+          "club": null,
+          "content_type": "video/quicktime",
+          "digest": "7cafa77769ae7724aba29bd7b4df7ac87026dd8daba6fd32eaefc2384233f0aa",
+          "original_filename": "a b.MoV",
+          "player_id": null,
+          "role": "face_on",
+          "session_id": "2026-08-06",
+          "size_bytes": 7,
+          "swing_id": "6",
+          "tmp_path": ".incoming/6.part"
+        },
+        "now": "2026-08-06T12:05:00.345678Z",
+        "op": "bundle.assign_from_path"
+      },
+      {
+        "args": {
+          "club": null,
+          "content_type": "video/quicktime",
+          "digest": "28962fb27a994e0cf8fc698ede2e360f1a5375cc3577835846c1175814fbfd59",
+          "original_filename": "IMG_2.HEIC",
+          "player_id": null,
+          "role": "shot_screen",
+          "session_id": "2026-08-06",
+          "size_bytes": 7,
+          "swing_id": "7",
+          "tmp_path": ".incoming/7.part"
+        },
+        "now": "2026-08-06T12:06:00Z",
+        "op": "bundle.assign_from_path"
+      },
+      {
+        "args": {
+          "session_id": "2026-08-06"
+        },
+        "now": null,
+        "op": "bundle.get_session"
+      }
+    ]
+  },
+  "provenance": {
+    "kind": "storage",
+    "note": "`content_filename` is `<role>.<sha256[:12]><suffix>`, the suffix `Path.suffix` of the original name as typed, else the role's default (`.mov`, or `.jpg` for the shot screen). `clip.` and `.hidden` have no suffix to `Path` (Rust's `Path::extension` reads `clip.` as an empty extension and would write a bare dot), and `photo.tar.gz` keeps only `.gz`",
+    "oracle": "python",
+    "pydantic_version": "2.13.4",
+    "python_version": "3.13.3",
+    "recorded_by": "scripts/conformance_vectors.py::_run_ops",
+    "rerecords": [
+      {
+        "added": [],
+        "by": "golf-core rerecord",
+        "career_version": 1,
+        "declaration": "spec/declarations/career-v1.json",
+        "moved": [
+          "career_version"
+        ]
+      }
+    ],
+    "source": "tests/storage/test_bundle_store.py, as store calls"
+  }
+}

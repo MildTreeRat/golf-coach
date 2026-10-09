@@ -1,0 +1,354 @@
+{
+  "career_version": 1,
+  "expected": {
+    "files": {
+      "aaron.bag.json": "{\n  \"player_id\": \"aaron\",\n  \"entries\": {\n    \"pw\": {\n      \"club\": \"pw\",\n      \"make\": \"\",\n      \"model\": \"\",\n      \"model_year\": null,\n      \"head_type\": \"\",\n      \"set_composition\": \"\",\n      \"loft_deg\": 46.0,\n      \"lie_deg\": null,\n      \"bounce_deg\": null,\n      \"grind\": \"\",\n      \"offset_mm\": null,\n      \"face_angle_deg\": null,\n      \"head_weight_g\": null,\n      \"adjustable_hosel\": null,\n      \"loft_range_deg\": null,\n      \"shaft_model\": \"\",\n      \"shaft_material\": null,\n      \"shaft_flex\": null,\n      \"shaft_weight_g\": null,\n      \"shaft_torque_deg\": null,\n      \"shaft_kick_point\": \"\",\n      \"length_in\": null,\n      \"swing_weight\": \"\",\n      \"total_weight_g\": null,\n      \"grip\": \"\",\n      \"cor\": null,\n      \"moi_g_cm2\": null,\n      \"usga_conforming\": null,\n      \"recorded_at\": \"2020-01-01T00:00:00Z\",\n      \"retired_at\": null,\n      \"provenance\": null\n    }\n  },\n  \"retired\": [],\n  \"updated_at\": \"2020-01-01T00:00:00Z\"\n}",
+      "bob.bag.json": "{not json",
+      "carol.bag.json": "{\"player_id\": \"carol\", \"entries\": {\"7i\": {\"club\": \"pw\", \"make\": \"Titleist\", \"loft_deg\": 34.0, \"recorded_at\": \"2026-08-01T10:00:00Z\"}}, \"updated_at\": \"2026-08-01T10:00:00Z\"}",
+      "dave.bag.json": "{\"player_id\": \"dave\", \"entries\": {}}",
+      "erin.bag.json": "{\"player_id\": \"Erin\", \"entries\": {}, \"updated_at\": \"2026-08-01T10:00:00Z\"}",
+      "frank.bag.json": "{\"player_id\": \"frank\", \"entries\": {\"7i\": {\"club\": \"7i\", \"make\": \"Titleist\", \"loft_deg\": 34.0, \"recorded_at\": \"2026-08-01T10:00:00Z\", \"retired_at\": \"2026-08-02T10:00:00Z\"}}, \"updated_at\": \"2026-08-01T10:00:00Z\"}",
+      "gina.bag.json": "{\n  \"player_id\": \"gina\",\n  \"entries\": {\n    \"pw\": {\n      \"club\": \"pw\",\n      \"make\": \"\",\n      \"model\": \"\",\n      \"model_year\": null,\n      \"head_type\": \"\",\n      \"set_composition\": \"\",\n      \"loft_deg\": 46.0,\n      \"lie_deg\": null,\n      \"bounce_deg\": null,\n      \"grind\": \"\",\n      \"offset_mm\": null,\n      \"face_angle_deg\": null,\n      \"head_weight_g\": null,\n      \"adjustable_hosel\": null,\n      \"loft_range_deg\": null,\n      \"shaft_model\": \"\",\n      \"shaft_material\": null,\n      \"shaft_flex\": null,\n      \"shaft_weight_g\": null,\n      \"shaft_torque_deg\": null,\n      \"shaft_kick_point\": \"\",\n      \"length_in\": null,\n      \"swing_weight\": \"\",\n      \"total_weight_g\": null,\n      \"grip\": \"\",\n      \"cor\": null,\n      \"moi_g_cm2\": null,\n      \"usga_conforming\": null,\n      \"recorded_at\": \"2020-01-01T00:00:00Z\",\n      \"retired_at\": null,\n      \"provenance\": null\n    }\n  },\n  \"retired\": [],\n  \"updated_at\": \"2020-01-01T00:00:00Z\"\n}"
+    },
+    "results": [
+      {
+        "returned": {
+          "entries": {
+            "7i": {
+              "adjustable_hosel": null,
+              "bounce_deg": null,
+              "club": "7i",
+              "cor": null,
+              "face_angle_deg": null,
+              "grind": "",
+              "grip": "",
+              "head_type": "",
+              "head_weight_g": null,
+              "length_in": null,
+              "lie_deg": null,
+              "loft_deg": 34.0,
+              "loft_range_deg": null,
+              "make": "Titleist",
+              "model": "",
+              "model_year": null,
+              "moi_g_cm2": null,
+              "offset_mm": null,
+              "provenance": null,
+              "recorded_at": "2026-08-01T10:00:00Z",
+              "retired_at": null,
+              "set_composition": "",
+              "shaft_flex": null,
+              "shaft_kick_point": "",
+              "shaft_material": null,
+              "shaft_model": "",
+              "shaft_torque_deg": null,
+              "shaft_weight_g": null,
+              "swing_weight": "",
+              "total_weight_g": null,
+              "usga_conforming": null
+            }
+          },
+          "player_id": "aaron",
+          "retired": [],
+          "updated_at": "2020-01-01T00:00:00Z"
+        }
+      },
+      {
+        "returned": null
+      },
+      {
+        "returned": null
+      },
+      {
+        "returned": null
+      },
+      {
+        "returned": null
+      },
+      {
+        "returned": null
+      },
+      {
+        "returned": null
+      },
+      {
+        "returned": null
+      },
+      {
+        "returned": {
+          "entries": {
+            "pw": {
+              "adjustable_hosel": null,
+              "bounce_deg": null,
+              "club": "pw",
+              "cor": null,
+              "face_angle_deg": null,
+              "grind": "",
+              "grip": "",
+              "head_type": "",
+              "head_weight_g": null,
+              "length_in": null,
+              "lie_deg": null,
+              "loft_deg": 46.0,
+              "loft_range_deg": null,
+              "make": "",
+              "model": "",
+              "model_year": null,
+              "moi_g_cm2": null,
+              "offset_mm": null,
+              "provenance": null,
+              "recorded_at": "2020-01-01T00:00:00Z",
+              "retired_at": null,
+              "set_composition": "",
+              "shaft_flex": null,
+              "shaft_kick_point": "",
+              "shaft_material": null,
+              "shaft_model": "",
+              "shaft_torque_deg": null,
+              "shaft_weight_g": null,
+              "swing_weight": "",
+              "total_weight_g": null,
+              "usga_conforming": null
+            }
+          },
+          "player_id": "gina",
+          "retired": [],
+          "updated_at": "2020-01-01T00:00:00Z"
+        }
+      },
+      {
+        "returned": null
+      },
+      {
+        "returned": {
+          "entries": {
+            "pw": {
+              "adjustable_hosel": null,
+              "bounce_deg": null,
+              "club": "pw",
+              "cor": null,
+              "face_angle_deg": null,
+              "grind": "",
+              "grip": "",
+              "head_type": "",
+              "head_weight_g": null,
+              "length_in": null,
+              "lie_deg": null,
+              "loft_deg": 46.0,
+              "loft_range_deg": null,
+              "make": "",
+              "model": "",
+              "model_year": null,
+              "moi_g_cm2": null,
+              "offset_mm": null,
+              "provenance": null,
+              "recorded_at": "2020-01-01T00:00:00Z",
+              "retired_at": null,
+              "set_composition": "",
+              "shaft_flex": null,
+              "shaft_kick_point": "",
+              "shaft_material": null,
+              "shaft_model": "",
+              "shaft_torque_deg": null,
+              "shaft_weight_g": null,
+              "swing_weight": "",
+              "total_weight_g": null,
+              "usga_conforming": null
+            }
+          },
+          "player_id": "aaron",
+          "retired": [],
+          "updated_at": "2020-01-01T00:00:00Z"
+        }
+      }
+    ]
+  },
+  "id": "storage/stores/bag-reads",
+  "input": {
+    "files": {
+      "aaron.bag.json": "{\n  \"player_id\": \"aaron\",\n  \"entries\": {\n    \"7i\": {\n      \"club\": \"7i\",\n      \"make\": \"Titleist\",\n      \"model\": \"\",\n      \"model_year\": null,\n      \"head_type\": \"\",\n      \"set_composition\": \"\",\n      \"loft_deg\": 34.0,\n      \"lie_deg\": null,\n      \"bounce_deg\": null,\n      \"grind\": \"\",\n      \"offset_mm\": null,\n      \"face_angle_deg\": null,\n      \"head_weight_g\": null,\n      \"adjustable_hosel\": null,\n      \"loft_range_deg\": null,\n      \"shaft_model\": \"\",\n      \"shaft_material\": null,\n      \"shaft_flex\": null,\n      \"shaft_weight_g\": null,\n      \"shaft_torque_deg\": null,\n      \"shaft_kick_point\": \"\",\n      \"length_in\": null,\n      \"swing_weight\": \"\",\n      \"total_weight_g\": null,\n      \"grip\": \"\",\n      \"cor\": null,\n      \"moi_g_cm2\": null,\n      \"usga_conforming\": null,\n      \"recorded_at\": \"2026-08-01T10:00:00Z\",\n      \"retired_at\": null,\n      \"provenance\": null\n    }\n  },\n  \"retired\": [],\n  \"updated_at\": \"2020-01-01T00:00:00Z\"\n}",
+      "bob.bag.json": "{not json",
+      "carol.bag.json": "{\"player_id\": \"carol\", \"entries\": {\"7i\": {\"club\": \"pw\", \"make\": \"Titleist\", \"loft_deg\": 34.0, \"recorded_at\": \"2026-08-01T10:00:00Z\"}}, \"updated_at\": \"2026-08-01T10:00:00Z\"}",
+      "dave.bag.json": "{\"player_id\": \"dave\", \"entries\": {}}",
+      "erin.bag.json": "{\"player_id\": \"Erin\", \"entries\": {}, \"updated_at\": \"2026-08-01T10:00:00Z\"}",
+      "frank.bag.json": "{\"player_id\": \"frank\", \"entries\": {\"7i\": {\"club\": \"7i\", \"make\": \"Titleist\", \"loft_deg\": 34.0, \"recorded_at\": \"2026-08-01T10:00:00Z\", \"retired_at\": \"2026-08-02T10:00:00Z\"}}, \"updated_at\": \"2026-08-01T10:00:00Z\"}"
+    },
+    "ops": [
+      {
+        "args": {
+          "player_id": "aaron"
+        },
+        "now": null,
+        "op": "bag.get"
+      },
+      {
+        "args": {
+          "player_id": "bob"
+        },
+        "now": null,
+        "op": "bag.get"
+      },
+      {
+        "args": {
+          "player_id": "carol"
+        },
+        "now": null,
+        "op": "bag.get"
+      },
+      {
+        "args": {
+          "player_id": "dave"
+        },
+        "now": null,
+        "op": "bag.get"
+      },
+      {
+        "args": {
+          "player_id": "erin"
+        },
+        "now": null,
+        "op": "bag.get"
+      },
+      {
+        "args": {
+          "player_id": "frank"
+        },
+        "now": null,
+        "op": "bag.get"
+      },
+      {
+        "args": {
+          "player_id": "nobody"
+        },
+        "now": null,
+        "op": "bag.get"
+      },
+      {
+        "args": {
+          "bag": {
+            "entries": {
+              "pw": {
+                "adjustable_hosel": null,
+                "bounce_deg": null,
+                "club": "pw",
+                "cor": null,
+                "face_angle_deg": null,
+                "grind": "",
+                "grip": "",
+                "head_type": "",
+                "head_weight_g": null,
+                "length_in": null,
+                "lie_deg": null,
+                "loft_deg": 46.0,
+                "loft_range_deg": null,
+                "make": "",
+                "model": "",
+                "model_year": null,
+                "moi_g_cm2": null,
+                "offset_mm": null,
+                "provenance": null,
+                "recorded_at": "2020-01-01T00:00:00Z",
+                "retired_at": null,
+                "set_composition": "",
+                "shaft_flex": null,
+                "shaft_kick_point": "",
+                "shaft_material": null,
+                "shaft_model": "",
+                "shaft_torque_deg": null,
+                "shaft_weight_g": null,
+                "swing_weight": "",
+                "total_weight_g": null,
+                "usga_conforming": null
+              }
+            },
+            "player_id": "gina",
+            "retired": [],
+            "updated_at": "2020-01-01T00:00:00Z"
+          }
+        },
+        "now": null,
+        "op": "bag.save"
+      },
+      {
+        "args": {
+          "player_id": "gina"
+        },
+        "now": null,
+        "op": "bag.get"
+      },
+      {
+        "args": {
+          "bag": {
+            "entries": {
+              "pw": {
+                "adjustable_hosel": null,
+                "bounce_deg": null,
+                "club": "pw",
+                "cor": null,
+                "face_angle_deg": null,
+                "grind": "",
+                "grip": "",
+                "head_type": "",
+                "head_weight_g": null,
+                "length_in": null,
+                "lie_deg": null,
+                "loft_deg": 46.0,
+                "loft_range_deg": null,
+                "make": "",
+                "model": "",
+                "model_year": null,
+                "moi_g_cm2": null,
+                "offset_mm": null,
+                "provenance": null,
+                "recorded_at": "2020-01-01T00:00:00Z",
+                "retired_at": null,
+                "set_composition": "",
+                "shaft_flex": null,
+                "shaft_kick_point": "",
+                "shaft_material": null,
+                "shaft_model": "",
+                "shaft_torque_deg": null,
+                "shaft_weight_g": null,
+                "swing_weight": "",
+                "total_weight_g": null,
+                "usga_conforming": null
+              }
+            },
+            "player_id": "aaron",
+            "retired": [],
+            "updated_at": "2020-01-01T00:00:00Z"
+          }
+        },
+        "now": null,
+        "op": "bag.save"
+      },
+      {
+        "args": {
+          "player_id": "aaron"
+        },
+        "now": null,
+        "op": "bag.get"
+      }
+    ]
+  },
+  "provenance": {
+    "kind": "storage",
+    "note": "`get` is tolerant: no bag, bad JSON, a slot holding another club (`_keys_match_entries`), a missing `updated_at`, a `player_id` that is not a slug and a live entry carrying `retired_at` all read as None (`test_a_golfer_with_no_bag_reads_as_none`, `test_a_corrupt_bag_reads_as_none`). `save` writes the bag it was given, overwriting, and stamps nothing, so it reads no clock (`test_save_writes_the_bag_it_was_given`)",
+    "oracle": "python",
+    "pydantic_version": "2.13.4",
+    "python_version": "3.13.3",
+    "recorded_by": "scripts/conformance_vectors.py::_run_ops",
+    "rerecords": [
+      {
+        "added": [],
+        "by": "golf-core rerecord",
+        "career_version": 1,
+        "declaration": "spec/declarations/career-v1.json",
+        "moved": [
+          "career_version"
+        ]
+      }
+    ],
+    "source": "tests/storage/test_bag_store.py, as store calls"
+  }
+}

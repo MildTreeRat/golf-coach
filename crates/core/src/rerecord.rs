@@ -70,7 +70,11 @@
 //!   string.
 //! - **A key holding `.`, `[` or `]` cannot be named.** No committed engine or stage document has one
 //!   (scanned 2026-10-01); a document that grows one needs an escape, and this parser is where it
-//!   goes.
+//!   goes. The storage family's op cases are the first that do (M36 P13): every file a store wrote
+//!   is a key of `expected.files` named by its path, `…/manifest.json`. The gate matches a declared
+//!   path to a difference as a string, so such a path would match and then walk to another place;
+//!   the run refuses it by name instead (`a_declared_path_through_a_dotted_key_is_refused_by_name`).
+//!   Nothing in M36 moves a store's write, so the escape waits for the change that does.
 //!
 //! An entry that matches nothing *in one document* is not an error here: the synthetic vectors carry
 //! no shot and match none of M32's added keys. Whether an entry matched *anywhere* is the run's
@@ -85,34 +89,46 @@
 //! that has both kinds across its vectors names both spellings, and the typo guard holds each to
 //! having matched somewhere. `a_list_is_declared_whole_when_its_length_changes` pins all three.
 //!
-//! # Two families, one gate (M34 P7)
+//! # Three version keys, one gate (M34 P7, M36 P13)
 //!
 //! A declaration names the family it re-records by the version key it carries, and carries exactly
 //! one (the M34 plan's call 6). `analysis_version` is M32's: the engine and stage families, run
 //! through [`crate::run`] and [`run_stages`]. `screen_parser_version` is the screen family's, the
-//! documents under `vectors/screen/`, run through [`run_screen`]. A run never reads the other
-//! family's files, so a screen re-record cannot move an engine vector, and the reverse: the two age
-//! different records ([`SCREEN_PARSER_VERSION`]'s doc says why), and a declaration describes one
-//! version's change of one of them. Everything else — the gate, [`apply`], [`ledger`], the typo guard
-//! and the writer — is the same code for both, so the screen family is held to every rule M32's
-//! re-record was.
+//! documents under `vectors/screen/`, run through [`run_screen`]. `career_version` is the many-shot
+//! layer's (M36 P13, the M36 plan's decision 8): the storage and career families together, run
+//! through [`run_storage`] and [`run_career`], the runners their gates call. One key for two
+//! families, because the career family adopts the storage family's corpora, so a change to what the
+//! reader produces moves both ([`CAREER_VERSION`]'s doc). A run never reads another key's files, so
+//! a screen re-record cannot move an engine vector, nor a career one a screen vector: each key ages
+//! a different record, and a declaration describes one version's change of one of them. Everything
+//! else — the gate, [`apply`], [`ledger`], the typo guard and the writer — is the same code for all
+//! three, so the screen and career families are held to every rule M32's re-record was. A career
+//! declaration, like an engine one, may not carry `removed`: nothing either family holds has needed
+//! a key to go.
 //!
 //! # The run
 //!
 //! [`plan`] walks one family and does everything but write. For an engine declaration that is the
 //! engine family (`vectors/synthetic/`, `vectors/corpus/`) and then the stage family
 //! (`vectors/stages/{synthetic,corpus}/`); for a screen declaration, the [`SCREEN_DOCUMENTS`] under
-//! `vectors/screen/`.
+//! `vectors/screen/`; for a career declaration, the [`STORAGE_DOCUMENTS`] under `vectors/storage/`
+//! and then the [`CAREER_DOCUMENTS`] under `vectors/career/`.
 //!
 //! - **The version guard first** (call 6): a declaration not at its family's constant —
-//!   [`ANALYSIS_VERSION`] or [`SCREEN_PARSER_VERSION`] — is refused before a vector is read, so a
-//!   stale one cannot be re-run against a later engine or parser.
+//!   [`ANALYSIS_VERSION`], [`SCREEN_PARSER_VERSION`] or [`CAREER_VERSION`] — is refused before a
+//!   vector is read, so a stale one cannot be re-run against a later engine, parser or layer.
 //! - **Each engine vector** is run through [`crate::run`], gated, applied and ledgered. **Each stage
 //!   vector** is joined to its engine vector by `provenance.derived_from`, run through
 //!   [`run_stages`], gated, applied, ledgered — and then composed onto the engine document *as it
 //!   will be written* (call 9), so the family is held to the bundle answer it is about to sit beside.
 //!   **Each screen document** is run through [`run_screen`], gated, applied and ledgered; nothing
 //!   composes onto it, because nothing else holds a copy of a screen's answer.
+//! - **Each storage document** is run through [`run_storage`], gated, applied and ledgered. **Each
+//!   career document** is run through [`run_career`], with the report text of each script no
+//!   renderer runs yet carried as committed
+//!   ([`CARRIED`](crate::career_family::CARRIED)), and a career document that adopts a storage
+//!   corpus is run on that corpus *as it will be written*, its copy compared like any other value —
+//!   the storage family's counterpart of the compose check (`walk_career`'s doc).
 //! - **Every refusal across the run is collected**, and one anywhere means [`plan`] returns no
 //!   [`Run`] at all — so nothing can be written anywhere (call 7). A reviewer fixes a declaration
 //!   once, from one red report.
@@ -154,6 +170,7 @@ use std::fs;
 use std::io::{Read as _, Write as _};
 use std::path::{Component, Path, PathBuf};
 
+use contracts::career::CAREER_VERSION;
 use contracts::shot::SCREEN_PARSER_VERSION;
 use contracts::swing::ANALYSIS_VERSION;
 use flate2::read::GzDecoder;
@@ -165,8 +182,10 @@ use screen::ScreenInput;
 use serde::Deserialize;
 use serde_json::{json, Map, Value};
 
+use crate::career_family::{adopted_from, carry, run_career};
 use crate::compare::{compare, Difference, DifferenceKind};
 use crate::stages::{run_stages, verify_compose};
+use crate::storage_family::run_storage;
 use crate::VectorInput;
 
 /// Who wrote a `provenance.rerecords` entry — spelled as the command, so a reader of a vector knows
@@ -360,6 +379,9 @@ pub enum Version {
     Analysis(i64),
     /// `screen_parser_version`: the screen family alone (M34).
     ScreenParser(i64),
+    /// `career_version`: the storage and career families together (M36 P13, the M36 plan's
+    /// decision 8).
+    Career(i64),
 }
 
 impl Version {
@@ -368,12 +390,13 @@ impl Version {
         match self {
             Self::Analysis(_) => "analysis_version",
             Self::ScreenParser(_) => "screen_parser_version",
+            Self::Career(_) => "career_version",
         }
     }
 
     pub fn number(self) -> i64 {
         match self {
-            Self::Analysis(n) | Self::ScreenParser(n) => n,
+            Self::Analysis(n) | Self::ScreenParser(n) | Self::Career(n) => n,
         }
     }
 
@@ -383,6 +406,7 @@ impl Version {
         match self {
             Self::Analysis(_) => ANALYSIS_VERSION,
             Self::ScreenParser(_) => SCREEN_PARSER_VERSION,
+            Self::Career(_) => CAREER_VERSION,
         }
     }
 
@@ -391,7 +415,13 @@ impl Version {
         match self {
             Self::Analysis(_) => "engine",
             Self::ScreenParser(_) => "screen parser",
+            Self::Career(_) => "many-shot layer",
         }
+    }
+
+    /// Whether a declaration at this version may name removed keys: a screen one alone (M34 P10).
+    fn may_remove(self) -> bool {
+        matches!(self, Self::ScreenParser(_))
     }
 }
 
@@ -403,10 +433,10 @@ impl fmt::Display for Version {
 
 /// What a re-record may change, read from `spec/declarations/` (M32's decision 2).
 ///
-/// Every key is required but the version, of which there must be exactly one, and `removed`, which
-/// only a screen declaration may carry; no other key is allowed. A misspelled `"moves"` would
-/// otherwise declare nothing and still load, and a gate fed an empty declaration refuses everything
-/// — which fails safe, but names the wrong mistake.
+/// Every key is required but the version, of which there must be exactly one of three, and
+/// `removed`, which only a screen declaration may carry; no other key is allowed. A misspelled
+/// `"moves"` would otherwise declare nothing and still load, and a gate fed an empty declaration
+/// refuses everything — which fails safe, but names the wrong mistake.
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(try_from = "DeclarationFile")]
 pub struct Declaration {
@@ -421,17 +451,17 @@ pub struct Declaration {
     /// Values Rust's answer moves, each matched exactly.
     pub moved: Vec<LedgerPath>,
     /// Keys the recorded answer has and Rust's lacks, each matched exactly. Empty on every engine
-    /// declaration, which the load refuses to give one (the module doc, "What a declaration can
-    /// name"). [M34 P10]
+    /// and career declaration, which the load refuses to give one (the module doc, "What a
+    /// declaration can name"). [M34 P10]
     pub removed: Vec<LedgerPath>,
 }
 
 /// The file's shape before the checks that need more than one key at once.
 ///
-/// The two version keys are optional *here* so that the check that exactly one is present can name
-/// the mistake; `serde` alone would say "missing field" of whichever key it tried first. `removed`
-/// is optional for good: an engine declaration must not carry it, and `v17.json` predates it. A
-/// misspelling of it is still refused, by `deny_unknown_fields`.
+/// The three version keys are optional *here* so that the check that exactly one is present can
+/// name the mistake; `serde` alone would say "missing field" of whichever key it tried first.
+/// `removed` is optional for good: an engine or career declaration must not carry it, and
+/// `v17.json` predates it. A misspelling of it is still refused, by `deny_unknown_fields`.
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 struct DeclarationFile {
@@ -439,6 +469,8 @@ struct DeclarationFile {
     analysis_version: Option<i64>,
     #[serde(default)]
     screen_parser_version: Option<i64>,
+    #[serde(default)]
+    career_version: Option<i64>,
     note: String,
     added: Vec<LedgerPath>,
     moved: Vec<LedgerPath>,
@@ -450,36 +482,45 @@ impl TryFrom<DeclarationFile> for Declaration {
     type Error = String;
 
     fn try_from(file: DeclarationFile) -> Result<Self, String> {
-        // One key, because a run re-records one family: a declaration naming both would describe
+        // One key, because a run re-records one family: a declaration naming two would describe
         // two versions' changes in one review, and the ledger entry could only spell one of them.
-        let version = match (file.analysis_version, file.screen_parser_version) {
-            (Some(n), None) => Version::Analysis(n),
-            (None, Some(n)) => Version::ScreenParser(n),
-            (Some(_), Some(_)) => {
-                return Err("a declaration carries both `analysis_version` and \
-                            `screen_parser_version`; a run re-records one family, so it names \
-                            one (the M34 plan's call 6)"
-                    .to_string())
-            }
-            (None, None) => {
+        let carried: Vec<Version> = [
+            file.analysis_version.map(Version::Analysis),
+            file.screen_parser_version.map(Version::ScreenParser),
+            file.career_version.map(Version::Career),
+        ]
+        .into_iter()
+        .flatten()
+        .collect();
+        let version = match carried[..] {
+            [one] => one,
+            [] => {
                 return Err(
                     "a declaration carries no version: `analysis_version` re-records the \
-                            engine and stage families, `screen_parser_version` the screen family \
-                            (the M34 plan's call 6)"
+                     engine and stage families, `screen_parser_version` the screen family, and \
+                     `career_version` the storage and career families (the M34 plan's call 6)"
                         .to_string(),
                 )
             }
+            _ => {
+                let keys: Vec<&str> = carried.iter().map(|v| v.key()).collect();
+                return Err(format!(
+                    "a declaration carries more than one version ({}); a run re-records one \
+                     family, so it names one (the M34 plan's call 6)",
+                    keys.join(", ")
+                ));
+            }
         };
-        // Present at all, even empty, on an engine declaration: an empty list there would say a
-        // removal is something an engine re-record could declare, and it is not (M32's rule, kept
-        // by the user's answer to the M34 plan's P7 finding 3).
-        if matches!(version, Version::Analysis(_)) && file.removed.is_some() {
-            return Err(
-                "a declaration at `analysis_version` carries `removed`, and an engine \
-                        re-record never removes a key; only a screen declaration names its \
-                        removals (M34 P10)"
-                    .to_string(),
-            );
+        // Present at all, even empty, on an engine or career declaration: an empty list there
+        // would say a removal is something that re-record could declare, and it is not (M32's
+        // rule, kept by the user's answer to the M34 plan's P7 finding 3, and given to the career
+        // families at M36 P13 because nothing they hold needed one).
+        if !version.may_remove() && file.removed.is_some() {
+            return Err(format!(
+                "a declaration at `{}` carries `removed`, and an engine or career re-record \
+                 never removes a key; only a screen declaration names its removals (M34 P10)",
+                version.key()
+            ));
         }
         let removed = file.removed.unwrap_or_default();
         // A path in two lists says one place differs in two ways, which no one difference does;
@@ -555,8 +596,8 @@ impl fmt::Display for Undeclared {
             DifferenceKind::AddedKey => "and the declaration's `added` does not name it",
             DifferenceKind::Moved { .. } => "and the declaration's `moved` does not name it",
             DifferenceKind::RemovedKey => {
-                "and the declaration's `removed` does not name it — an engine re-record never \
-                 removes a key, and a screen one only where it is named"
+                "and the declaration's `removed` does not name it — an engine or career re-record \
+                 never removes a key, and a screen one only where it is named"
             }
         };
         write!(f, "{} — {why}", self.0)
@@ -623,26 +664,35 @@ pub fn gate(
 /// or as a key `committed` has under such a parent (a removal), so for the pair it came from every
 /// lookup below succeeds.
 pub fn apply(committed: &Value, ours: &Value, applied: &Applied) -> Value {
+    try_apply(committed, ours, applied)
+        .unwrap_or_else(|(path, why)| panic!("{path}: {why}, so `applied` is not gate's answer"))
+}
+
+/// [`apply`], answering the path it could not walk instead of panicking.
+///
+/// The one way [`gate`]'s answer can fail to walk is a key holding `.`, `[` or `]`: the gate matches
+/// a declared path to a difference as a string, and `a.json` under `files` and `json` under `a` are
+/// the same string. The run reaches such keys since M36 P13 (a store's written files), so [`one`]
+/// asks this rather than [`apply`] and refuses the path by name.
+fn try_apply(
+    committed: &Value,
+    ours: &Value,
+    applied: &Applied,
+) -> Result<Value, (LedgerPath, &'static str)> {
     let mut document = committed.clone();
     for path in applied.added.iter().chain(&applied.moved) {
         let value = path
             .get(ours)
-            .unwrap_or_else(|| {
-                panic!("{path}: not in `ours`, so `applied` is not gate's answer for this pair")
-            })
+            .ok_or((path.clone(), "not in `ours`"))?
             .clone();
-        path.put(&mut document, value).unwrap_or_else(|| {
-            panic!(
-                "{path}: no parent in `committed`, so `applied` is not gate's answer for this pair"
-            )
-        });
+        path.put(&mut document, value)
+            .ok_or((path.clone(), "no parent in `committed`"))?;
     }
     for path in &applied.removed {
-        path.remove(&mut document).unwrap_or_else(|| {
-            panic!("{path}: not in `committed`, so `applied` is not gate's answer for this pair")
-        });
+        path.remove(&mut document)
+            .ok_or((path.clone(), "not in `committed`"))?;
     }
-    document
+    Ok(document)
 }
 
 /// Write the re-record into `document`'s own `provenance`: `oracle` if absent, and one `rerecords`
@@ -692,8 +742,9 @@ pub fn ledger(
     entry.insert("added".to_string(), spelled(&applied.added));
     entry.insert("moved".to_string(), spelled(&applied.moved));
     // On every screen entry, empty or not, so the family's entries share one shape; on no engine
-    // entry, whose shape frozen Python's `frozen_view` reads and which M32 fixed. [M34 P10]
-    if let Version::ScreenParser(_) = declaration.version {
+    // entry, whose shape frozen Python's `frozen_view` reads and which M32 fixed, and on no career
+    // entry, whose declaration cannot remove. [M34 P10, M36 P13]
+    if declaration.version.may_remove() {
         entry.insert("removed".to_string(), spelled(&applied.removed));
     }
     let entry = Value::Object(entry);
@@ -743,6 +794,27 @@ pub const SCREEN_DOCUMENTS: [&str; 4] = ["corpus", "reference", "synthetic", "ha
 /// added later is placed in one list or the other on purpose, never left out by default.
 pub const SCREEN_UNREAD: [&str; 1] = ["units"];
 
+/// The storage family's directory under `spec/vectors/`, and the `provenance.kind` its files carry.
+/// [M36 P13]
+pub const STORAGE: &str = "storage";
+
+/// The career family's directory under `spec/vectors/`, and the `provenance.kind` its files carry.
+/// [M36 P13]
+pub const CAREER: &str = "career";
+
+/// The storage sub-families a career declaration re-records, in this order, each answered by
+/// [`run_storage`]. `corpus/` holds the corpus cases and `bundle/` and `stores/` the op cases, all
+/// recorded from frozen Python; `hand/` holds the corpus cases worked by hand at `career_version` 1,
+/// where `COMPARABLE_FROM` and the installed engine part (M36 P14). Which runner answers a vector is
+/// the runner its provenance names (`StorageCase::of`), not its directory. Every directory under
+/// `vectors/storage/` must be one of these, as under `vectors/screen/`, so a sub-family added later
+/// is placed here on purpose. [M36 P13]
+pub const STORAGE_DOCUMENTS: [&str; 4] = ["corpus", "bundle", "stores", "hand"];
+
+/// The career sub-families a career declaration re-records, in this order, each answered by
+/// [`run_career`] after the storage family, whose corpus cases some of them adopt. [M36 P13]
+pub const CAREER_DOCUMENTS: [&str; 2] = ["synthetic", "real"];
+
 /// Which of Rust's answers a vector is re-recorded from.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Family {
@@ -752,6 +824,12 @@ pub enum Family {
     Stage,
     /// `screen/`'s [`SCREEN_DOCUMENTS`]: `expected` is [`run_screen`]'s answer. [M34 P7]
     Screen,
+    /// `storage/`'s [`STORAGE_DOCUMENTS`]: `expected` is [`run_storage`]'s answer. [M36 P13]
+    Storage,
+    /// `career/`'s [`CAREER_DOCUMENTS`]: `expected` is [`run_career`]'s answer and the
+    /// [`CARRIED`](crate::career_family::CARRIED) reports as committed, and an adopted
+    /// `input.corpus` is its storage vector's answer as the run writes it. [M36 P13]
+    Career,
 }
 
 /// Why a run wrote nothing. Every variant is a refusal of the whole run (call 7).
@@ -841,7 +919,7 @@ impl Rerecorded {
 
 /// A gated, composed re-record that has not been written: [`plan`]'s answer. Holding one means every
 /// vector the declaration's family walks passed — both families for an engine declaration, the
-/// screen documents for a screen one.
+/// screen documents for a screen one, the storage and career families for a career one.
 #[derive(Debug)]
 pub struct Run {
     declaration: Declaration,
@@ -851,7 +929,8 @@ pub struct Run {
 impl Run {
     /// Every vector the run read. For an engine declaration, the engine family, then the stage
     /// family; within each, the [`ENGINE_HALVES`] in their order, and each half in path order. For a
-    /// screen declaration, the [`SCREEN_DOCUMENTS`] in their order, each in path order.
+    /// screen declaration, the [`SCREEN_DOCUMENTS`] in their order, each in path order. For a career
+    /// declaration, the [`STORAGE_DOCUMENTS`] and then the [`CAREER_DOCUMENTS`], each in path order.
     pub fn vectors(&self) -> &[Rerecorded] {
         &self.vectors
     }
@@ -912,7 +991,9 @@ impl Run {
     pub fn report(&self, dry_run: bool, files_written: usize) -> String {
         let d = &self.declaration;
         let declared = match d.version {
-            Version::Analysis(_) => format!("{} added and {} moved", d.added.len(), d.moved.len()),
+            Version::Analysis(_) | Version::Career(_) => {
+                format!("{} added and {} moved", d.added.len(), d.moved.len())
+            }
             Version::ScreenParser(_) => format!(
                 "{} added, {} moved and {} removed",
                 d.added.len(),
@@ -941,6 +1022,11 @@ impl Run {
                 count(Family::Stage)
             ),
             Version::ScreenParser(_) => format!("{} screen", count(Family::Screen)),
+            Version::Career(_) => format!(
+                "{} storage, {} career",
+                count(Family::Storage),
+                count(Family::Career)
+            ),
         };
         let changed = self.changed().count();
         if changed == 0 {
@@ -983,6 +1069,7 @@ pub fn plan(spec: &Path, declaration_file: &Path) -> Result<Run, Refused> {
     } = match version {
         Version::Analysis(_) => walk_engine(&vectors_dir, &declaration, spelling.as_deref())?,
         Version::ScreenParser(_) => walk_screen(&vectors_dir, &declaration, spelling.as_deref())?,
+        Version::Career(_) => walk_career(&vectors_dir, &declaration, spelling.as_deref())?,
     };
 
     if !refusals.is_empty() {
@@ -1152,21 +1239,12 @@ fn walk_screen(
     spelling: Option<&str>,
 ) -> Result<Walked, Refused> {
     let screen_dir = vectors_dir.join(SCREEN);
-    let listing =
-        |e: &dyn fmt::Display| Refused::Files(format!("listing {}: {e}", screen_dir.display()));
-    for entry in fs::read_dir(&screen_dir).map_err(|e| listing(&e))? {
-        let path = entry.map_err(|e| listing(&e))?.path();
-        let name = path.file_name().and_then(OsStr::to_str).unwrap_or_default();
-        let placed = SCREEN_DOCUMENTS.contains(&name) || SCREEN_UNREAD.contains(&name);
-        if !(placed && path.is_dir()) {
-            return Err(Refused::Files(format!(
-                "{} is not a screen sub-family the re-record knows. A directory of documents \
-                 belongs in `SCREEN_DOCUMENTS`, and one it must never read in `SCREEN_UNREAD` \
-                 (golf_core::rerecord), so that a new one is placed on purpose",
-                path.display()
-            )));
-        }
-    }
+    every_entry_is_placed(
+        &screen_dir,
+        SCREEN,
+        (&SCREEN_DOCUMENTS, "SCREEN_DOCUMENTS"),
+        Some((&SCREEN_UNREAD, "SCREEN_UNREAD")),
+    )?;
 
     let mut vectors: Vec<Rerecorded> = Vec::new();
     let mut refusals: Vec<String> = Vec::new();
@@ -1216,6 +1294,184 @@ fn walk_screen(
         return Err(Refused::Files(format!(
             "no screen document under {}",
             screen_dir.display()
+        )));
+    }
+    Ok(Walked {
+        vectors,
+        refusals,
+        ledgered,
+    })
+}
+
+/// Refuse any entry of `dir` that is not a directory named in `documents` or `unread`, before any
+/// vector under it is read, so a sub-family nobody placed stops the walk instead of going
+/// un-re-recorded while its tests go on reading the old answers. [M34 P7, shared at M36 P13]
+fn every_entry_is_placed(
+    dir: &Path,
+    family: &str,
+    (documents, documents_name): (&[&str], &str),
+    unread: Option<(&[&str], &str)>,
+) -> Result<(), Refused> {
+    let listing = |e: &dyn fmt::Display| Refused::Files(format!("listing {}: {e}", dir.display()));
+    for entry in fs::read_dir(dir).map_err(|e| listing(&e))? {
+        let path = entry.map_err(|e| listing(&e))?.path();
+        let name = path.file_name().and_then(OsStr::to_str).unwrap_or_default();
+        let placed =
+            documents.contains(&name) || unread.is_some_and(|(unread, _)| unread.contains(&name));
+        if !(placed && path.is_dir()) {
+            let or_unread = unread
+                .map(|(_, unread_name)| format!(", and one it must never read in `{unread_name}`"))
+                .unwrap_or_default();
+            return Err(Refused::Files(format!(
+                "{} is not a {family} sub-family the re-record knows. A directory of documents \
+                 belongs in `{documents_name}`{or_unread} (golf_core::rerecord), so that a new \
+                 one is placed on purpose",
+                path.display()
+            )));
+        }
+    }
+    Ok(())
+}
+
+/// The storage family's [`STORAGE_DOCUMENTS`] and then the career family's [`CAREER_DOCUMENTS`],
+/// each run, gated, applied and ledgered. [M36 P13]
+///
+/// - **Each storage vector** is answered by [`run_storage`], the gate's own runner, so the op cases'
+///   written files are already in the committed spelling wherever their values agree
+///   (`storage_family`'s module doc).
+/// - **Each career vector** is answered by [`run_career`], and its
+///   [`CARRIED`](crate::career_family::CARRIED) reports are copied from the committed document, so
+///   a report no renderer runs neither moves nor goes missing. None is carried since M36 P16
+///   rendered the last two scripts.
+/// - **An adopted corpus is derived, not read** (`career_family`'s module doc): a career vector whose
+///   corpus is a storage vector's answer is run on that answer *as this run will write it*, and the
+///   copy in its `input` is compared with it like any other value. A source whose answer moved, or a
+///   copy that drifted from its source, is a difference at `input.corpus…` that the declaration must
+///   name, in the same run. It is the one input a re-record can change, because it is the one input
+///   that is another vector's answer; the engine's stage vectors read their engine vector's input,
+///   which no re-record moves.
+///
+/// Neither family has an unread sub-family. A hand-worked storage case (`hand/`, M36 P14) is run,
+/// gated and ledgered like a recorded one, and keeps its `provenance.oracle` as the ledger finds it.
+fn walk_career(
+    vectors_dir: &Path,
+    declaration: &Declaration,
+    spelling: Option<&str>,
+) -> Result<Walked, Refused> {
+    let storage_dir = vectors_dir.join(STORAGE);
+    let career_dir = vectors_dir.join(CAREER);
+    every_entry_is_placed(
+        &storage_dir,
+        STORAGE,
+        (&STORAGE_DOCUMENTS, "STORAGE_DOCUMENTS"),
+        None,
+    )?;
+    every_entry_is_placed(
+        &career_dir,
+        CAREER,
+        (&CAREER_DOCUMENTS, "CAREER_DOCUMENTS"),
+        None,
+    )?;
+
+    let mut vectors: Vec<Rerecorded> = Vec::new();
+    let mut refusals: Vec<String> = Vec::new();
+    let mut ledgered = Ledgered::default();
+    // Every storage document as it will be written (as committed, if the gate refused it), for the
+    // career vectors that adopt one's corpus.
+    let mut storage: BTreeMap<String, Value> = BTreeMap::new();
+
+    for half in STORAGE_DOCUMENTS {
+        for path in vector_files(&storage_dir.join(half))? {
+            let (committed, crlf) = read_vector(&path)?;
+            let id = identify(&committed, &path, STORAGE)?;
+            ledgered.note(&committed, declaration);
+
+            let mut ours = committed.clone();
+            ours["expected"] = run_storage(&committed).map_err(Refused::Files)?;
+            ours["career_version"] = json!(CAREER_VERSION);
+
+            let as_written = match one(&id, &committed, &ours, declaration, spelling) {
+                Ok((applied, written, lines)) => {
+                    vectors.push(Rerecorded {
+                        id: id.clone(),
+                        path,
+                        family: Family::Storage,
+                        written: (!applied.is_empty()).then(|| written.clone()),
+                        applied,
+                        lines,
+                        crlf,
+                    });
+                    written
+                }
+                Err(refused) => {
+                    refusals.extend(refused);
+                    committed
+                }
+            };
+            if storage.insert(id.clone(), as_written).is_some() {
+                return Err(Refused::Files(format!(
+                    "{id} is the id of two storage vectors"
+                )));
+            }
+        }
+    }
+    if storage.is_empty() {
+        return Err(Refused::Files(format!(
+            "no storage vector under {}",
+            storage_dir.display()
+        )));
+    }
+
+    let mut career: BTreeSet<String> = BTreeSet::new();
+    for half in CAREER_DOCUMENTS {
+        for path in vector_files(&career_dir.join(half))? {
+            let (committed, crlf) = read_vector(&path)?;
+            let id = identify(&committed, &path, CAREER)?;
+            if !career.insert(id.clone()) {
+                return Err(Refused::Files(format!(
+                    "{id} is the id of two career vectors"
+                )));
+            }
+            ledgered.note(&committed, declaration);
+
+            let mut ours = committed.clone();
+            if let Some(source) = adopted_from(&committed).map_err(Refused::Files)? {
+                let corpus = storage
+                    .get(&source)
+                    .and_then(|document| document["expected"].get("corpus"))
+                    .ok_or_else(|| {
+                        Refused::Files(format!(
+                            "{id} adopts the corpus of {source}, which is not a storage corpus \
+                             case here"
+                        ))
+                    })?;
+                ours["input"]["corpus"] = corpus.clone();
+            }
+            let mut expected = run_career(&ours).map_err(Refused::Files)?;
+            carry(&mut expected, &committed["expected"]);
+            ours["expected"] = expected;
+            ours["career_version"] = json!(CAREER_VERSION);
+
+            match one(&id, &committed, &ours, declaration, spelling) {
+                Ok((applied, written, lines)) => {
+                    vectors.push(Rerecorded {
+                        id,
+                        path,
+                        family: Family::Career,
+                        written: (!applied.is_empty()).then_some(written),
+                        applied,
+                        lines,
+                        crlf,
+                    });
+                }
+                Err(refused) => refusals.extend(refused),
+            }
+        }
+    }
+    if career.is_empty() {
+        return Err(Refused::Files(format!(
+            "no career vector under {}",
+            career_dir.display()
         )));
     }
     Ok(Walked {
@@ -1287,7 +1543,30 @@ fn one(
             .map(|u| format!("{id}: {u}"))
             .collect::<Vec<_>>()
     })?;
-    let mut written = apply(committed, ours, &applied);
+    // A declared path the gate matched as a string and that walks to another place, or nowhere: a
+    // key on it holds `.`, `[` or `]` (`try_apply`'s doc). Refused by name rather than written to the
+    // wrong place or panicking. After a walk that succeeds, every difference the declaration
+    // matched must be gone, which is what catches the wrong place.
+    let unreachable = |path: &LedgerPath| {
+        vec![format!(
+            "{id}: {path} is declared and differs, but a key on that path holds `.`, `[` or `]`, \
+             which a ledger path cannot name yet (a store's written files are such keys; the \
+             module doc, \"What a declaration can name\")"
+        )]
+    };
+    let mut written =
+        try_apply(committed, ours, &applied).map_err(|(path, _)| unreachable(&path))?;
+    if !applied.is_empty() {
+        let still = compare(&written, ours);
+        let mut declared = applied
+            .added
+            .iter()
+            .chain(&applied.moved)
+            .chain(&applied.removed);
+        if let Some(path) = declared.find(|p| still.iter().any(|d| d.path == p.as_str())) {
+            return Err(unreachable(path));
+        }
+    }
     let mut lines: Vec<String> = applied
         .added
         .iter()
@@ -2010,16 +2289,38 @@ mod tests {
         assert_eq!(screen.version.to_string(), "screen_parser_version 1");
         assert_eq!(m32().version.key(), "analysis_version");
         assert_eq!(m32().version.current(), ANALYSIS_VERSION);
+        let career: Declaration = serde_json::from_value(json!({
+            "career_version": 1, "note": "", "added": [], "moved": [],
+        }))
+        .expect("a career declaration");
+        assert_eq!(career.version, Version::Career(1));
+        assert_eq!(career.version.key(), "career_version");
+        assert_eq!(career.version.current(), CAREER_VERSION);
+        assert_eq!(career.version.to_string(), "career_version 1");
 
         for (file, why) in [
             (
                 json!({"analysis_version": 17, "screen_parser_version": 1, "note": "",
                        "added": [], "moved": []}),
-                "carries both",
+                "more than one version (analysis_version, screen_parser_version)",
+            ),
+            (
+                json!({"screen_parser_version": 1, "career_version": 1, "note": "",
+                       "added": [], "moved": []}),
+                "more than one version (screen_parser_version, career_version)",
+            ),
+            (
+                json!({"analysis_version": 17, "screen_parser_version": 1,
+                       "career_version": 1, "note": "", "added": [], "moved": []}),
+                "more than one version",
             ),
             (
                 json!({"note": "", "added": [], "moved": []}),
                 "carries no version",
+            ),
+            (
+                json!({"careers_version": 1, "note": "", "added": [], "moved": []}),
+                "unknown field",
             ),
         ] {
             let refused =
@@ -2071,6 +2372,106 @@ mod tests {
             }])
         );
         assert_eq!(written["provenance"]["oracle"], json!("python"));
+    }
+
+    /// A storage or career vector's ledger entry says `career_version`, the version both families
+    /// age on, and has no `removed` list: a career declaration cannot remove, so its entries keep the
+    /// engine's shape. [M36 P13]
+    #[test]
+    fn a_career_ledger_entry_is_keyed_by_the_career_version_and_never_removes() {
+        let career: Declaration = serde_json::from_value(json!({
+            "career_version": 1,
+            "note": "",
+            "added": [],
+            "moved": ["career_version", "expected.corpus.excluded[0].detail"],
+        }))
+        .expect("a career declaration");
+        let committed = json!({
+            "id": "storage/corpus/outdated-versions",
+            "career_version": 0,
+            "provenance": {"kind": "storage", "oracle": "python"},
+            "expected": {"corpus": {"excluded": [{"detail": "older than installed"}]}},
+        });
+        let mut ours = committed.clone();
+        ours["career_version"] = json!(1);
+        ours["expected"]["corpus"]["excluded"][0]["detail"] = json!("older than comparable");
+
+        let applied = gate(&committed, &ours, &career).expect("declared");
+        let mut written = apply(&committed, &ours, &applied);
+        ledger(
+            &mut written,
+            &applied,
+            &career,
+            "spec/declarations/career-v1.json",
+        )
+        .expect("a ledger");
+        assert_eq!(
+            written["provenance"]["rerecords"],
+            json!([{
+                "career_version": 1,
+                "by": "golf-core rerecord",
+                "declaration": "spec/declarations/career-v1.json",
+                "added": [],
+                "moved": ["career_version", "expected.corpus.excluded[0].detail"],
+            }])
+        );
+
+        // And a removed key is refused there as on an engine vector, saying so.
+        let mut dropped = committed.clone();
+        dropped["expected"]
+            .as_object_mut()
+            .expect("an object")
+            .remove("corpus");
+        let refused = gate(&committed, &dropped, &career).expect_err("a removal");
+        assert_eq!(paths(&refused), ["expected.corpus"]);
+        assert!(
+            refused[0]
+                .to_string()
+                .contains("an engine or career re-record never removes a key"),
+            "{}",
+            refused[0]
+        );
+    }
+
+    /// A store's written file is a key holding `.`, so a declared path naming a move inside one
+    /// matches the gate as a string and walks to another place. [`one`] refuses it by name rather
+    /// than panicking or writing elsewhere — whether the walk finds nothing, or finds a decoy at
+    /// the place the dots spell. [M36 P13]
+    #[test]
+    fn a_declared_path_through_a_dotted_key_is_refused_by_name() {
+        let declaration: Declaration = serde_json::from_value(json!({
+            "career_version": 1,
+            "note": "",
+            "added": [],
+            "moved": ["expected.files.a.json"],
+        }))
+        .expect("a career declaration");
+        let committed = json!({
+            "id": "storage/bundle/x",
+            "provenance": {"kind": "storage"},
+            "expected": {"files": {"a.json": "{\"x\": 1}"}},
+        });
+        let mut ours = committed.clone();
+        ours["expected"]["files"]["a.json"] = json!("{\"x\": 2}");
+        let refused = one("storage/bundle/x", &committed, &ours, &declaration, None)
+            .expect_err("the walk finds no `a`");
+        assert_eq!(refused.len(), 1);
+        assert!(
+            refused[0].starts_with("storage/bundle/x: expected.files.a.json is declared")
+                && refused[0].contains("cannot name yet"),
+            "{}",
+            refused[0]
+        );
+
+        // A decoy at `files.a.json` spelled by the dots, which the walk would reach and copy.
+        let mut decoyed = committed.clone();
+        decoyed["expected"]["files"]["a"] = json!({"json": 1});
+        let mut ours = decoyed.clone();
+        ours["expected"]["files"]["a.json"] = json!("{\"x\": 2}");
+        ours["expected"]["files"]["a"]["json"] = json!(1);
+        let refused = one("storage/bundle/x", &decoyed, &ours, &declaration, None)
+            .expect_err("the walk reaches the decoy");
+        assert!(refused[0].contains("cannot name yet"), "{}", refused[0]);
     }
 
     /// The user's answer to the M34 plan's P7 finding 3, on the shape decision 3 makes: a tile the
@@ -2159,6 +2560,16 @@ mod tests {
             ),
             (
                 json!({"analysis_version": 17, "note": "", "added": [], "moved": [],
+                       "removed": []}),
+                "never removes a key",
+            ),
+            (
+                json!({"career_version": 1, "note": "", "added": [], "moved": [],
+                       "removed": ["expected.corpus.excluded"]}),
+                "a declaration at `career_version` carries `removed`",
+            ),
+            (
+                json!({"career_version": 1, "note": "", "added": [], "moved": [],
                        "removed": []}),
                 "never removes a key",
             ),

@@ -1,0 +1,202 @@
+{
+  "career_version": 1,
+  "expected": {
+    "files": {
+      "aaron.bag.json": "{\n  \"player_id\": \"aaron\",\n  \"entries\": {},\n  \"retired\": [],\n  \"updated_at\": \"2020-01-01T00:00:00Z\"\n}",
+      "alice.golfer.json": "{\n  \"player_id\": \"alice\",\n  \"display_name\": \"same\",\n  \"handedness\": \"right\",\n  \"created_at\": \"2026-08-12T09:00:00Z\"\n}",
+      "badid.golfer.json": "{\"player_id\": \"Bad Id\", \"display_name\": \"Bad\", \"handedness\": \"right\", \"created_at\": \"2026-08-12T09:00:00Z\"}",
+      "bob.golfer.json": "{\n  \"player_id\": \"bob\",\n  \"display_name\": \"Same\",\n  \"handedness\": \"left\",\n  \"created_at\": \"2026-08-12T09:00:00Z\"\n}",
+      "carol.golfer.json": "{\n  \"player_id\": \"carol\",\n  \"display_name\": \"SAME\",\n  \"handedness\": \"right\",\n  \"created_at\": \"2026-08-12T09:00:00Z\"\n}",
+      "corrupt.golfer.json": "{\n  \"player_id\": \"corrupt\",\n  \"display_name\": \"Corrupt\",\n  \"handedness\": \"left\",\n  \"created_at\": \"2026-08-06T12:00:00Z\"\n}",
+      "inci.golfer.json": "{\n  \"player_id\": \"inci\",\n  \"display_name\": \"İnci\",\n  \"handedness\": \"right\",\n  \"created_at\": \"2026-08-12T09:00:00Z\"\n}",
+      "inga.golfer.json": "{\n  \"player_id\": \"inga\",\n  \"display_name\": \"Inga\",\n  \"handedness\": \"right\",\n  \"created_at\": \"2026-08-12T09:00:00Z\"\n}",
+      "mismatch.golfer.json": "{\n  \"player_id\": \"aaron\",\n  \"display_name\": \"Aaron\",\n  \"handedness\": \"right\",\n  \"created_at\": \"2026-08-12T09:00:00Z\"\n}",
+      "notes.txt": "not a golfer",
+      "stale.golfer.tmp": "a write that never finished",
+      "zed.golfer.json": "{\n  \"player_id\": \"zed\",\n  \"display_name\": \"Émile\",\n  \"handedness\": \"right\",\n  \"created_at\": \"2026-08-12T09:00:00Z\"\n}"
+    },
+    "results": [
+      {
+        "returned": {
+          "created_at": "2026-08-12T09:00:00Z",
+          "display_name": "same",
+          "handedness": "right",
+          "player_id": "alice"
+        }
+      },
+      {
+        "returned": {
+          "created_at": "2026-08-12T09:00:00Z",
+          "display_name": "Aaron",
+          "handedness": "right",
+          "player_id": "aaron"
+        }
+      },
+      {
+        "returned": null
+      },
+      {
+        "returned": null
+      },
+      {
+        "returned": null
+      },
+      {
+        "returned": [
+          {
+            "created_at": "2026-08-12T09:00:00Z",
+            "display_name": "Aaron",
+            "handedness": "right",
+            "player_id": "aaron"
+          },
+          {
+            "created_at": "2026-08-12T09:00:00Z",
+            "display_name": "Inga",
+            "handedness": "right",
+            "player_id": "inga"
+          },
+          {
+            "created_at": "2026-08-12T09:00:00Z",
+            "display_name": "İnci",
+            "handedness": "right",
+            "player_id": "inci"
+          },
+          {
+            "created_at": "2026-08-12T09:00:00Z",
+            "display_name": "same",
+            "handedness": "right",
+            "player_id": "alice"
+          },
+          {
+            "created_at": "2026-08-12T09:00:00Z",
+            "display_name": "Same",
+            "handedness": "left",
+            "player_id": "bob"
+          },
+          {
+            "created_at": "2026-08-12T09:00:00Z",
+            "display_name": "SAME",
+            "handedness": "right",
+            "player_id": "carol"
+          },
+          {
+            "created_at": "2026-08-12T09:00:00Z",
+            "display_name": "Émile",
+            "handedness": "right",
+            "player_id": "zed"
+          }
+        ]
+      },
+      {
+        "returned": {
+          "created_at": "2026-08-06T12:00:00Z",
+          "display_name": "Corrupt",
+          "handedness": "left",
+          "player_id": "corrupt"
+        }
+      },
+      {
+        "returned": {
+          "created_at": "2026-08-06T12:00:00Z",
+          "display_name": "Corrupt",
+          "handedness": "left",
+          "player_id": "corrupt"
+        }
+      }
+    ]
+  },
+  "id": "storage/stores/golfer-reads",
+  "input": {
+    "files": {
+      "aaron.bag.json": "{\n  \"player_id\": \"aaron\",\n  \"entries\": {},\n  \"retired\": [],\n  \"updated_at\": \"2020-01-01T00:00:00Z\"\n}",
+      "alice.golfer.json": "{\n  \"player_id\": \"alice\",\n  \"display_name\": \"same\",\n  \"handedness\": \"right\",\n  \"created_at\": \"2026-08-12T09:00:00Z\"\n}",
+      "badid.golfer.json": "{\"player_id\": \"Bad Id\", \"display_name\": \"Bad\", \"handedness\": \"right\", \"created_at\": \"2026-08-12T09:00:00Z\"}",
+      "bob.golfer.json": "{\n  \"player_id\": \"bob\",\n  \"display_name\": \"Same\",\n  \"handedness\": \"left\",\n  \"created_at\": \"2026-08-12T09:00:00Z\"\n}",
+      "carol.golfer.json": "{\n  \"player_id\": \"carol\",\n  \"display_name\": \"SAME\",\n  \"handedness\": \"right\",\n  \"created_at\": \"2026-08-12T09:00:00Z\"\n}",
+      "corrupt.golfer.json": "{not json",
+      "inci.golfer.json": "{\n  \"player_id\": \"inci\",\n  \"display_name\": \"İnci\",\n  \"handedness\": \"right\",\n  \"created_at\": \"2026-08-12T09:00:00Z\"\n}",
+      "inga.golfer.json": "{\n  \"player_id\": \"inga\",\n  \"display_name\": \"Inga\",\n  \"handedness\": \"right\",\n  \"created_at\": \"2026-08-12T09:00:00Z\"\n}",
+      "mismatch.golfer.json": "{\n  \"player_id\": \"aaron\",\n  \"display_name\": \"Aaron\",\n  \"handedness\": \"right\",\n  \"created_at\": \"2026-08-12T09:00:00Z\"\n}",
+      "notes.txt": "not a golfer",
+      "stale.golfer.tmp": "a write that never finished",
+      "zed.golfer.json": "{\n  \"player_id\": \"zed\",\n  \"display_name\": \"Émile\",\n  \"handedness\": \"right\",\n  \"created_at\": \"2026-08-12T09:00:00Z\"\n}"
+    },
+    "ops": [
+      {
+        "args": {
+          "player_id": "alice"
+        },
+        "now": null,
+        "op": "golfer.get"
+      },
+      {
+        "args": {
+          "player_id": "mismatch"
+        },
+        "now": null,
+        "op": "golfer.get"
+      },
+      {
+        "args": {
+          "player_id": "corrupt"
+        },
+        "now": null,
+        "op": "golfer.get"
+      },
+      {
+        "args": {
+          "player_id": "badid"
+        },
+        "now": null,
+        "op": "golfer.get"
+      },
+      {
+        "args": {
+          "player_id": "nobody"
+        },
+        "now": null,
+        "op": "golfer.get"
+      },
+      {
+        "args": {},
+        "now": null,
+        "op": "golfer.list_all"
+      },
+      {
+        "args": {
+          "handedness": "left",
+          "name": "Corrupt"
+        },
+        "now": "2026-08-06T12:00:00Z",
+        "op": "golfer.get_or_create"
+      },
+      {
+        "args": {
+          "player_id": "corrupt"
+        },
+        "now": null,
+        "op": "golfer.get"
+      }
+    ]
+  },
+  "provenance": {
+    "kind": "storage",
+    "note": "`get` reads the record the file holds, so `mismatch.golfer.json` answers golfer `aaron`, and an unreadable or invalid record is None (`test_unknown_and_corrupt_records_read_as_absent`). `list_all` skips those, ignores what is not `*.golfer.json`, and sorts on `display_name.lower()` by code point: a capital dotted I (U+0130) lowers to i + U+0307, so `inci`'s name sorts after `Inga`, `Émile` after every ASCII name, and three names equal once lowered keep the files' order (`test_list_all_is_sorted_by_display_name`). `get_or_create` over a corrupt record creates a fresh golfer and writes over it",
+    "oracle": "python",
+    "pydantic_version": "2.13.4",
+    "python_version": "3.13.3",
+    "recorded_by": "scripts/conformance_vectors.py::_run_ops",
+    "rerecords": [
+      {
+        "added": [],
+        "by": "golf-core rerecord",
+        "career_version": 1,
+        "declaration": "spec/declarations/career-v1.json",
+        "moved": [
+          "career_version"
+        ]
+      }
+    ],
+    "source": "tests/storage/test_golfer_store.py, as store calls"
+  }
+}

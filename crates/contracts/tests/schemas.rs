@@ -17,8 +17,11 @@
 //! cannot do without, the `description` that carries the units, is pinned for the keys M32 added,
 //! because no generator wrote those.
 //!
-//! The pin extends shape by shape as later milestones take more roots over: M36 takes the storage
-//! roots, and is where §M32 says to weigh `schemars` again if hand edits prove the larger cost.
+//! The pin extends shape by shape as later milestones take more roots over. M36 takes none: it moves
+//! no shape, so the storage roots stay pydantic's, and `python_schemas.rs` holds the Rust structs to
+//! them from the other side. That also answered §M32's "weigh `schemars` again" with no, since no
+//! hand-maintained schema was added (the M36 plan's call 8). A root moves here when Rust first
+//! changes its shape.
 
 use std::collections::BTreeSet;
 use std::fs;

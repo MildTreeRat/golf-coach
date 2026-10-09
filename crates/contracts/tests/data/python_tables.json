@@ -1,0 +1,223 @@
+{
+  "provenance": {
+    "extracted_from": [
+      "src/golf_coach/contracts/dispersion.py",
+      "src/golf_coach/contracts/comparison.py"
+    ],
+    "extracted_by": "M36 P7, a throwaway script (deleted) that json.dumps the module-level tables below; frozen Python does not change (ADR-035 clause 4), so this is not regenerated",
+    "python_version": "3.13.3",
+    "date": "2026-10-08"
+  },
+  "dispersion": {
+    "Finding": [
+      "established",
+      "not_established",
+      "withheld"
+    ],
+    "DispersionPattern": [
+      "biased",
+      "scattered",
+      "biased_and_scattered",
+      "nothing_established"
+    ],
+    "PATTERN_READING": {
+      "biased": "A miss that repeats at about the same size every swing. Whatever produces it is the same every time, which points at something already set before the swing starts rather than at something that happens during it. None of that is visible here, so the test is empirical: change one thing at setup, hit another set, and see whether the center moves.",
+      "scattered": "The miss moves shot to shot, which is not what a setup error looks like — anything fixed before the swing would produce the same error each time. Points at timing and release rather than at something checkable at address.",
+      "biased_and_scattered": "Both a repeatable miss and real shot-to-shot movement. Work the repeatable half first: it is checkable before you swing, and removing it makes what is left easier to read.",
+      "nothing_established": "Neither a repeatable miss nor scatter beyond what this instrument's own error explains. That is not a clean bill — it is that nothing here can be distinguished from noise at this sample size."
+    },
+    "SCATTER_ONLY_READING": "This varies more shot to shot than measurement error explains, which points at timing rather than at anything fixed before the swing. Whether it is centered in the right place is a separate question, and this metric has no target to answer it against yet.",
+    "METRIC_TARGETS": [
+      {
+        "key": "face_to_path_deg",
+        "metric": "face_to_path_deg",
+        "target": 0.0,
+        "tolerance": 2.0,
+        "provenance": "judgment, 2026-08-12: no instrument-error evidence exists for the OCR path. 2 degrees is below the level a coaching action follows from. Revise from a real bay session's repeats",
+        "no_target_reason": ""
+      },
+      {
+        "key": "start_line_deg",
+        "metric": "start_line_deg",
+        "target": 0.0,
+        "tolerance": 2.0,
+        "provenance": "judgment, 2026-08-12: no instrument-error evidence exists for the OCR path. 2 degrees is below the level a coaching action follows from. Revise from a real bay session's repeats",
+        "no_target_reason": ""
+      },
+      {
+        "key": "start_line_offline_yds",
+        "metric": "start_line_offline_yds",
+        "target": 0.0,
+        "tolerance": 9.0,
+        "provenance": "judgment, 2026-08-21 (M9 P9): _JUDGED_DEGREES's 2 degrees carried through carry * sin(angle) at the widest club in the bag - 250 yd x sin(2 deg) = 8.7, rounded up. Offline error scales with carry, so one constant is the wrong shape and the wedge end is judged wide on purpose; per-club deferred until a per-club sample exists",
+        "no_target_reason": ""
+      },
+      {
+        "key": "carry_distance_yds",
+        "metric": "carry_distance_yds",
+        "target": null,
+        "tolerance": 5.0,
+        "provenance": "judgment, 2026-08-21 (M9 P8): no instrument-error evidence exists for the OCR path. 5 yards is below the level a coaching action follows from. The correct tolerance is per club and scales with carry; deferred until a per-club sample exists, and erring wide until then",
+        "no_target_reason": "how far a golfer should hit a given club is not a number this repo has. Every distribution here is cut from GolfDB, which contains no ball flight, and a tour carry band would judge an amateur against a population they are not in"
+      },
+      {
+        "key": "total_distance_yds",
+        "metric": "total_distance_yds",
+        "target": null,
+        "tolerance": 5.0,
+        "provenance": "judgment, 2026-08-21 (M9 P8): no instrument-error evidence exists for the OCR path. 5 yards is below the level a coaching action follows from. The correct tolerance is per club and scales with carry; deferred until a per-club sample exists, and erring wide until then",
+        "no_target_reason": "the same as carry, plus one more: the gap between them is roll, which is the ground rather than the swing - a target would judge a golfer for the mat they hit off"
+      },
+      {
+        "key": "ball_speed_mph",
+        "metric": "ball_speed_mph",
+        "target": null,
+        "tolerance": 4.0,
+        "provenance": "judgment, 2026-08-21 (M9 P10): no instrument-error evidence exists for the OCR path. Launch angle takes _JUDGED_DEGREES's 2 degrees, the claim the other two angle fields already make; ball speed takes _JUDGED_YARDS's 5 yards through the ~1.4 yd/mph the stored shots show - 5 / 1.4 = 3.6, rounded up. That ratio is club-specific; per-club deferred, erring wide",
+        "no_target_reason": "a 'right' ball speed is an output of club fitting rather than an input to coaching - the club's loft and the golfer's delivery decide it, and this repo has no model that reads either. Recorded so that model has data on the day it exists"
+      },
+      {
+        "key": "launch_angle_deg",
+        "metric": "launch_angle_deg",
+        "target": null,
+        "tolerance": 2.0,
+        "provenance": "judgment, 2026-08-21 (M9 P10): no instrument-error evidence exists for the OCR path. Launch angle takes _JUDGED_DEGREES's 2 degrees, the claim the other two angle fields already make; ball speed takes _JUDGED_YARDS's 5 yards through the ~1.4 yd/mph the stored shots show - 5 / 1.4 = 3.6, rounded up. That ratio is club-specific; per-club deferred, erring wide",
+        "no_target_reason": "optimal launch is per club, per ball speed and per spin rate, so a single number for it would be wrong for every club in the bag. Same missing model as ball speed and the same deferral"
+      },
+      {
+        "key": "head_sway_norm",
+        "metric": "head_sway_norm",
+        "target": 0.0,
+        "tolerance": 0.06,
+        "provenance": "spread/error harness over 461 face-on GolfDB clips, 2026-08-12: `python scripts/golfdb/tune_spatial_metric.py`, tolerance = noise + bound",
+        "no_target_reason": ""
+      },
+      {
+        "key": "finish_balance_norm",
+        "metric": "finish_balance_norm",
+        "target": 0.0,
+        "tolerance": 0.024,
+        "provenance": "spread/error harness over 461 face-on GolfDB clips, 2026-08-12: `python scripts/golfdb/tune_spatial_metric.py`, tolerance = noise + bound",
+        "no_target_reason": ""
+      },
+      {
+        "key": "hip_sway_norm",
+        "metric": "hip_sway_norm",
+        "target": null,
+        "tolerance": 0.05,
+        "provenance": "spread/error harness over 461 face-on GolfDB clips, 2026-08-12: `python scripts/golfdb/tune_spatial_metric.py`, tolerance = noise + bound",
+        "no_target_reason": "'less is better' is not established for it — some lateral hip travel is a weight shift rather than a fault, and nothing here knows how much. It has a two-sided band as of 2026-08-12, which is a range rather than a target: `analysis.comparison` asks whether the personal center sits inside it, so no point value has to be invented here"
+      },
+      {
+        "key": "hip_shift_at_top_norm",
+        "metric": "hip_shift_at_top_norm",
+        "target": null,
+        "tolerance": 0.053,
+        "provenance": "spread/error harness over 461 face-on GolfDB clips, 2026-08-12: `python scripts/golfdb/tune_spatial_metric.py`, tolerance = noise + bound",
+        "no_target_reason": "same as hip_sway_norm: it has a one-sided band as of 2026-08-12, but a band edge is not a target, and the right amount of hip travel going back is not a number this repo has. Its lower edge is omitted for being unmeasurable, not for being zero"
+      },
+      {
+        "key": "head_hip_offset_impact_norm",
+        "metric": "head_hip_offset_impact_norm",
+        "target": null,
+        "tolerance": 0.073,
+        "provenance": "spread/error harness over 461 face-on GolfDB clips, 2026-08-12: `python scripts/golfdb/tune_spatial_metric.py`, tolerance = noise + bound",
+        "no_target_reason": "career mode step 4 established that the sign is readable here — a personal corpus is single-handed by construction, so the camera-relative ambiguity that blocks a tour band does not apply. A readable sign is not a target: staying behind the ball is right, and how far behind is not established"
+      },
+      {
+        "key": "head_hip_gain_norm",
+        "metric": "head_hip_gain_norm",
+        "target": null,
+        "tolerance": 0.08,
+        "provenance": "spread/error harness over 461 face-on GolfDB clips, 2026-08-12: `python scripts/golfdb/tune_spatial_metric.py`, tolerance = noise + bound",
+        "no_target_reason": "it has a band (a two-sided tour range) rather than a value, and the band is the wrong shape to read a target off: too little head-hip separation is the head drifting forward with the hips, too much is hanging back through impact, and the right amount for one golfer is not a number this repo has. `analysis.comparison` asks the band's own question instead — whether the personal center's interval sits inside it — which needs no point target invented here. Note the sign convention: values live in a right-handed camera frame, so a personal center is only meaningful against a corpus folded the same way"
+      },
+      {
+        "key": "tempo_ratio",
+        "metric": "tempo_ratio",
+        "target": null,
+        "tolerance": 0.943,
+        "provenance": "spread/error harness over 461 face-on GolfDB clips, 2026-08-12: `python scripts/golfdb/tune_spatial_metric.py`, tolerance = noise + bound",
+        "no_target_reason": "its target is a band (2.72-4.71 from 1,399 tour swings), not a value. Reading it would import `benchmarks` into the personal-baseline path, which is the boundary `analysis.baseline` holds on purpose (ADR-010 §2). `analysis.comparison` answers the band's question directly instead — whether the center's interval sits inside it — so no point target has to be invented here (career mode step 6)"
+      },
+      {
+        "key": "hand_separation_norm",
+        "metric": "hand_separation_norm",
+        "target": null,
+        "tolerance": 0.074,
+        "provenance": "spread/error harness over 461 face-on GolfDB clips, 2026-09-03: `python scripts/golfdb/tune_spatial_metric.py`, tolerance = noise + bound. Same run reproduced the 2026-08-12 tolerances unchanged",
+        "no_target_reason": "how far apart a golfer's hands sit on the grip is not a fault, it is a grip - overlapping, interlocking and ten-finger are all played on tour and this repo has no position on which. What the scatter finding buys is the thing the metric was added for: a separation that moves between swings of one golfer is the wrists being mis-placed rather than the hands moving, so it reads as a warning about the other hand numbers rather than about the swing"
+      },
+      {
+        "key": "hand_height_norm",
+        "metric": "hand_height_norm",
+        "target": null,
+        "tolerance": 0.069,
+        "provenance": "spread/error harness over 461 face-on GolfDB clips, 2026-09-03: `python scripts/golfdb/tune_spatial_metric.py`, tolerance = noise + bound. Same run reproduced the 2026-08-12 tolerances unchanged",
+        "no_target_reason": "how far the hands hang below the shoulders at address is set by club length and the golfer's build before posture gets a say - a driver and a wedge are different numbers for the same golfer standing correctly to both. There is no band, and a single value across the bag would be wrong for every club in it. `narrow_to(club=)` (M9 P13) is what makes the per-club version askable"
+      },
+      {
+        "key": "hand_offset_from_hips_norm",
+        "metric": "hand_offset_from_hips_norm",
+        "target": null,
+        "tolerance": 0.05,
+        "provenance": "spread/error harness over 461 face-on GolfDB clips, 2026-09-03: `python scripts/golfdb/tune_spatial_metric.py`, tolerance = noise + bound. Same run reproduced the 2026-08-12 tolerances unchanged",
+        "no_target_reason": "the harness flagged this one **bimodal - 26% of 455 face-on clips negative** - which is the camera-relative sign meeting a mixed-handedness corpus, exactly as `measure.py` predicted and exactly what `head_hip_offset_impact_norm` was checked for and found clear of. A target cut across both modes would sit in the empty middle and read every left-handed golfer as a gross fault. Handedness has to be resolved before this has a target; the tolerance below is unaffected, because our error in measuring the number does not care which way the golfer stands"
+      },
+      {
+        "key": "trail_hand_roll_deg",
+        "metric": "trail_hand_roll_deg",
+        "target": null,
+        "tolerance": 7.4,
+        "provenance": "spread/error harness over 461 face-on GolfDB clips, 2026-09-03: `python scripts/golfdb/tune_spatial_metric.py`, tolerance = noise + bound. Same run reproduced the 2026-08-12 tolerances unchanged",
+        "no_target_reason": "it is a proxy and is labelled one in `POSE_MEASUREMENTS`: two image points on the back of one hand, standing in for rotation about the shaft, seen from the camera worst placed to see it. A target would assert that a particular face-on angle is the right grip, which is a claim about golf this repo has no evidence for and which MediaPipe Hands, not this, would be the instrument for. The scatter finding still works: whether one golfer sets the trail hand the same way twice is answerable without knowing where it should be"
+      },
+      {
+        "key": "backswing_ms",
+        "metric": "backswing_ms",
+        "target": null,
+        "tolerance": 300.0,
+        "provenance": "composed from M4-REF instant errors, 2026-08-20: a duration is a subtraction of two instants, so its error is theirs summed - address 7 frames, top 2, impact 1, at the corpus's 30 fps. tune_spatial_metric.py cannot measure these; see ADR-023",
+        "no_target_reason": "there is a tour median (about 901 ms) and it is deliberately not a target. Tempo is already scored once, as a ratio, and declaring a target for each half would put a second verdict on one fundamental and count it twice — ADR-023 is explicit that these ship as distributions and never as a band. The tour distribution is still readable where it belongs, in `analysis/tempo_trainer.py`, which builds a metronome from it rather than a judgment"
+      },
+      {
+        "key": "downswing_ms",
+        "metric": "downswing_ms",
+        "target": null,
+        "tolerance": 100.0,
+        "provenance": "composed from M4-REF instant errors, 2026-08-20: a duration is a subtraction of two instants, so its error is theirs summed - address 7 frames, top 2, impact 1, at the corpus's 30 fps. tune_spatial_metric.py cannot measure these; see ADR-023",
+        "no_target_reason": "the same reason as `backswing_ms` — one fundamental is scored once. Worth noting what the corpus says about this half in particular: tour downswing duration barely moves at all (p10 200 ms, p90 300 ms, and a between-club sd of 6.9 ms against 47.0 ms between golfers), so it looks more like a constant than any other quantity here. That is a reason it makes a good metronome, not a reason to score it"
+      }
+    ],
+    "SESSION_DRIFT_FACTOR": 1.25
+  },
+  "comparison": {
+    "Standing": [
+      "inside",
+      "outside",
+      "straddles",
+      "withheld"
+    ],
+    "STANDING_READING": {
+      "inside": "This golfer's typical value sits inside the range tour swings occupy. That is a statement about where the number falls in a population, not a pass — the band describes what tour players do, and being inside it is not evidence that nothing here is worth working on.",
+      "outside": "This golfer's typical value sits outside the middle 80% of tour swings. Read it as a distance from a population, not as a fault: the band describes what tour professionals do, and holding an amateur to it means failing everything forever. What makes it useful is direction — `outside_by` says which way this metric would move to look more like that population, and by how much. On a one-sided magnitude, below the band is the good side.",
+      "straddles": "The interval around this golfer's typical value crosses the edge of the tour range, so which side of it they sit on is not settled by this much data. Not 'borderline' — unresolved."
+    },
+    "TOUR_COMPARISON_BLOCKED": {
+      "head_hip_offset_impact_norm": "its sign is camera-relative, and the tour distribution is cut from GolfDB's mixed-handedness population — the reason M6.5 blocked this metric from becoming a checkpoint. A personal baseline reads the sign because one golfer swings from one side; averaging left- and right-handed swings puts the two signs in one number, so placing a personal center in that population would compare a real quantity against a meaningless one"
+    },
+    "NO_LAUNCH_MONITOR_POPULATION": "no tour population exists for it. Every distribution in this repo comes from GolfDB, which is pose estimated from broadcast video and contains no ball flight — a launch-monitor reference would have to be acquired, not derived",
+    "NO_MODEL_POPULATION": "it is a model output rather than a reading, and no population of model outputs is a population of swings — compare the measured quantity beside it instead",
+    "NO_POPULATION": "no reference distribution is stored for it",
+    "SPREAD_NOT_COMPARABLE": "the tour sd measures how much 122 players differ from each other, while a personal sd measures how much one golfer varies shot to shot. They are different quantities and comparing them would flatter every golfer alive",
+    "no_population_reason": {
+      "launch_monitor:hd_golf": "m: no tour population exists for it. Every distribution in this repo comes from GolfDB, which is pose estimated from broadcast video and contains no ball flight — a launch-monitor reference would have to be acquired, not derived",
+      "model:flight_v1": "m: it is a model output rather than a reading, and no population of model outputs is a population of swings — compare the measured quantity beside it instead",
+      "pose:face_on": "m: no reference distribution is stored for it",
+      "pose:down_the_line": "m: no reference distribution is stored for it",
+      "population:golfdb": "m: no reference distribution is stored for it",
+      "": "m: no reference distribution is stored for it",
+      "launch_monitor": "m: no reference distribution is stored for it"
+    }
+  }
+}

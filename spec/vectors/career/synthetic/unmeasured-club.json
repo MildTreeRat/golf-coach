@@ -1,0 +1,188 @@
+{
+  "career_version": 1,
+  "expected": {
+    "bag_profile": {
+      "clubs": [
+        {
+          "bag_entry": null,
+          "caveats": [],
+          "club": "7i",
+          "dispersion": {},
+          "in_bag": false,
+          "metrics": {},
+          "mishit_refs": [],
+          "mishits": 0,
+          "mishits_unconfirmed": 0,
+          "n_sessions": 3,
+          "n_shots": 0,
+          "n_swings": 3
+        }
+      ],
+      "mishits_excluded": 0,
+      "player_id": "aaron",
+      "untagged_swings": 0
+    },
+    "baseline": {
+      "built_from_sessions": 0,
+      "built_from_swings": 0,
+      "metrics": {},
+      "player_id": "aaron"
+    },
+    "dispersion": {
+      "built_from_sessions": 0,
+      "built_from_swings": 0,
+      "metrics": {},
+      "player_id": "aaron"
+    },
+    "properties": {
+      "bag_profile": {
+        "categories": {
+          "7i": "mid_iron"
+        },
+        "clubs_declared": [],
+        "clubs_used": [
+          "7i"
+        ]
+      },
+      "baseline": {
+        "claims_ready": 0,
+        "nothing_sayable": true
+      },
+      "dispersion": {
+        "nothing_established": true,
+        "patterns_established": 0
+      },
+      "standing": {
+        "nothing_placed": true,
+        "placements": 0
+      }
+    },
+    "reports": {
+      "career_baseline": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  No measurement on any swing yet — nothing to build a baseline from.\n  Check `python scripts/career_corpus.py` for why: the commonest causes are\n  swings that were never analyzed, and swings analyzed by an older engine.\n",
+      "career_baseline_verbose": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  No measurement on any swing yet — nothing to build a baseline from.\n  Check `python scripts/career_corpus.py` for why: the commonest causes are\n  swings that were never analyzed, and swings analyzed by an older engine.\n",
+      "career_corpus": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  3 swing directories across 3 sessions  ->  3 distinct swings, 0 distinct shots\n\n  Honest n per metric:\n    (none — no distinct swing carries a measurement yet)\n\n  2 current-engine swing(s) carrying no measurement at all.\n    Every metric returned None on them — a measurement failure, not an old\n    artifact. Their checkpoint `observed` values are deliberately not read as\n    measurements: it would mix two derivation paths under one metric name.\n",
+      "career_corpus_verbose": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  3 swing directories across 3 sessions  ->  3 distinct swings, 0 distinct shots\n\n  Honest n per metric:\n    (none — no distinct swing carries a measurement yet)\n\n  2 current-engine swing(s) carrying no measurement at all.\n    Every metric returned None on them — a measurement failure, not an old\n    artifact. Their checkpoint `observed` values are deliberately not read as\n    measurements: it would mix two derivation paths under one metric name.\n",
+      "career_dispersion": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  No measurement on any swing yet — nothing to read a miss-shape from.\n  Check `python scripts/career_corpus.py` for why.\n",
+      "career_dispersion_verbose": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  No measurement on any swing yet — nothing to read a miss-shape from.\n  Check `python scripts/career_corpus.py` for why.\n",
+      "club_profile": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  1 club with history or a declared bag entry: 1 hit, 0 in the bag.\n\n  7i  (mid iron)\n    club      No bag entry declared. Every statistic below is unaffected; a loft or fitting\n              question about this club has to refuse. Look the club up and confirm it to fill\n              this in (M12).\n    evidence  3 swings, 0 shot photos, 3 sessions — so every distance and launch number below\n              is capped at the shot count\n    history   These swings carry no measurement. Run `python scripts/career_corpus.py` for why\n              — the commonest causes are swings that were never analyzed, and swings analyzed\n              by an older engine.\n",
+      "club_profile_7i": "\nAaron  (aaron)\n------------------------------------------------------------------------\n\n  7i  (mid iron)\n    club      No bag entry declared. Every statistic below is unaffected; a loft or fitting\n              question about this club has to refuse. Look the club up and confirm it to fill\n              this in (M12).\n    evidence  3 swings, 0 shot photos, 3 sessions — so every distance and launch number below\n              is capped at the shot count\n    history   These swings carry no measurement. Run `python scripts/career_corpus.py` for why\n              — the commonest causes are swings that were never analyzed, and swings analyzed\n              by an older engine.\n",
+      "club_profile_driver": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  driver: never hit and not in the bag — there is no history to report.\n",
+      "club_profile_verbose": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  1 club with history or a declared bag entry: 1 hit, 0 in the bag.\n\n  7i  (mid iron)\n    club      No bag entry declared. Every statistic below is unaffected; a loft or fitting\n              question about this club has to refuse. Look the club up and confirm it to fill\n              this in (M12).\n    evidence  3 swings, 0 shot photos, 3 sessions — so every distance and launch number below\n              is capped at the shot count\n    history   These swings carry no measurement. Run `python scripts/career_corpus.py` for why\n              — the commonest causes are swings that were never analyzed, and swings analyzed\n              by an older engine.\n",
+      "flag_mishit_list": "\naaron -- 0 shot(s) held out across the bag\n  (no tagged shots yet)\n"
+    },
+    "standing": {
+      "built_from_sessions": 0,
+      "built_from_swings": 0,
+      "metrics": {},
+      "player_id": "aaron"
+    }
+  },
+  "id": "career/synthetic/unmeasured-club",
+  "input": {
+    "bag": null,
+    "clubs": [
+      "7i",
+      "driver"
+    ],
+    "corpus": {
+      "analyzed_without_measurements": 2,
+      "excluded": [],
+      "metric_counts": {},
+      "other_golfers": 0,
+      "outdated_swings": 0,
+      "player_id": "aaron",
+      "sessions_scanned": 3,
+      "swing_dirs_seen": 3,
+      "swings": [
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-03T12:01:00Z",
+          "club": "7i",
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "70a273391cb26be19e81a157e2614c6fe5955bc6ce9560f77e4170777dcc2154",
+          "manual_mishit": null,
+          "measurements": [],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-03",
+          "shot_needs_review": false,
+          "shot_sha256": null,
+          "stale": false,
+          "swing_id": "1"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-10T12:02:00Z",
+          "club": "7i",
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "2844a9782fc36af66e84277f36903e9ec4ae04ce042aefe0c0d35256add81a8b",
+          "manual_mishit": null,
+          "measurements": [],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-10",
+          "shot_needs_review": false,
+          "shot_sha256": null,
+          "stale": false,
+          "swing_id": "2"
+        },
+        {
+          "analysis_version": 0,
+          "analyzed": false,
+          "auto_mishit": false,
+          "captured_at": "2026-08-17T12:03:00Z",
+          "club": "7i",
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "0fc25f3e2d308eaffd3285e56a137cd2e1a1f856e0f664ad1d7eb50bf4a2ea0a",
+          "manual_mishit": null,
+          "measurements": [],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-17",
+          "shot_needs_review": false,
+          "shot_sha256": null,
+          "stale": false,
+          "swing_id": "3"
+        }
+      ],
+      "unattributed_swings": 0,
+      "unknown_sources": []
+    },
+    "display_name": "Aaron",
+    "versions": {
+      "comparable_from": 16,
+      "installed": 16
+    }
+  },
+  "provenance": {
+    "analysis_version": 16,
+    "kind": "career",
+    "note": "one club whose swings carry nothing: two analyzed with no measurement and no photo, one never analyzed, so the profile names the shot ceiling and why it has no history",
+    "oracle": "python",
+    "pydantic_version": "2.13.4",
+    "python_version": "3.13.3",
+    "recorded_by": "scripts/conformance_vectors.py::_run_career",
+    "rerecords": [
+      {
+        "added": [],
+        "by": "golf-core rerecord",
+        "career_version": 1,
+        "declaration": "spec/declarations/career-v1.json",
+        "moved": [
+          "career_version"
+        ]
+      }
+    ],
+    "source": "CorpusSwing built by scripts/conformance_vectors.py, as tests/analysis/ does"
+  }
+}

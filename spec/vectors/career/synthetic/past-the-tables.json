@@ -1,0 +1,3339 @@
+{
+  "career_version": 1,
+  "expected": {
+    "bag_profile": {
+      "clubs": [],
+      "mishits_excluded": 0,
+      "player_id": "aaron",
+      "untagged_swings": 75
+    },
+    "baseline": {
+      "built_from_sessions": 4,
+      "built_from_swings": 75,
+      "metrics": {
+        "face_to_path_deg": {
+          "maximum": 0.48,
+          "mean": -0.020000000000000018,
+          "mean_ci": {
+            "confidence": 0.95,
+            "high": 0.31181323470782885,
+            "low": -0.3518132347078289
+          },
+          "median": -0.020000000000000018,
+          "minimum": -0.52,
+          "n": 12,
+          "n_sessions": 3,
+          "name": "face_to_path_deg",
+          "ready": [
+            "center",
+            "spread",
+            "trend"
+          ],
+          "sd": 0.5222329678670935,
+          "sd_ci": {
+            "confidence": 0.95,
+            "high": 0.8866586276648858,
+            "low": 0.36994771775024254
+          },
+          "sessions": [
+            {
+              "captured_at": "2026-08-03T12:01:00Z",
+              "mean": -0.020000000000000018,
+              "n": 4,
+              "session_id": "2026-08-03"
+            },
+            {
+              "captured_at": "2026-08-10T12:02:00Z",
+              "mean": -0.020000000000000018,
+              "n": 4,
+              "session_id": "2026-08-10"
+            },
+            {
+              "captured_at": "2026-08-17T12:03:00Z",
+              "mean": -0.020000000000000018,
+              "n": 4,
+              "session_id": "2026-08-17"
+            }
+          ],
+          "source": "launch_monitor:hd_golf",
+          "unit": "degrees",
+          "withheld": []
+        },
+        "finish_balance_norm": {
+          "maximum": 0.1799801994434822,
+          "mean": 0.150219225904233,
+          "mean_ci": {
+            "confidence": 0.95,
+            "high": 0.15514600276023263,
+            "low": 0.14529244904823338
+          },
+          "median": 0.15123254318173035,
+          "minimum": 0.12000038256444269,
+          "n": 75,
+          "n_sessions": 4,
+          "name": "finish_balance_norm",
+          "ready": [
+            "center",
+            "spread",
+            "trend"
+          ],
+          "sd": 0.0214134723387029,
+          "sd_ci": {
+            "confidence": 0.95,
+            "high": 0.025521198396423344,
+            "low": 0.018449988773577716
+          },
+          "sessions": [
+            {
+              "captured_at": "2026-08-03T12:01:00Z",
+              "mean": 0.1496759169535121,
+              "n": 25,
+              "session_id": "2026-08-03"
+            },
+            {
+              "captured_at": "2026-08-10T12:02:00Z",
+              "mean": 0.14861463776804687,
+              "n": 25,
+              "session_id": "2026-08-10"
+            },
+            {
+              "captured_at": "2026-08-17T12:03:00Z",
+              "mean": 0.15274616961906948,
+              "n": 24,
+              "session_id": "2026-08-17"
+            },
+            {
+              "captured_at": "2026-08-24T13:15:00Z",
+              "mean": 0.14327000392083367,
+              "n": 1,
+              "session_id": "2026-08-24"
+            }
+          ],
+          "source": "pose:face_on",
+          "unit": "shoulder_widths",
+          "withheld": []
+        },
+        "head_sway_norm": {
+          "maximum": 0.06069574175258213,
+          "mean": 0.05676578950412713,
+          "mean_ci": {
+            "confidence": 0.95,
+            "high": 0.05779930044672073,
+            "low": 0.05573227856153354
+          },
+          "median": 0.056865490738543745,
+          "minimum": 0.052715313577732875,
+          "n": 31,
+          "n_sessions": 3,
+          "name": "head_sway_norm",
+          "ready": [
+            "center",
+            "spread",
+            "trend"
+          ],
+          "sd": 0.0028179948064483164,
+          "sd_ci": {
+            "confidence": 0.95,
+            "high": 0.003766713034524318,
+            "low": 0.0022518991224803487
+          },
+          "sessions": [
+            {
+              "captured_at": "2026-08-03T12:01:00Z",
+              "mean": 0.05747119274725477,
+              "n": 11,
+              "session_id": "2026-08-03"
+            },
+            {
+              "captured_at": "2026-08-10T12:02:00Z",
+              "mean": 0.05648523964786258,
+              "n": 10,
+              "session_id": "2026-08-10"
+            },
+            {
+              "captured_at": "2026-08-17T12:03:00Z",
+              "mean": 0.056270395792951275,
+              "n": 10,
+              "session_id": "2026-08-17"
+            }
+          ],
+          "source": "pose:face_on",
+          "unit": "shoulder_widths",
+          "withheld": []
+        },
+        "hip_sway_norm": {
+          "maximum": 0.34997831631000936,
+          "mean": 0.3004209607408903,
+          "mean_ci": {
+            "confidence": 0.95,
+            "high": 0.3131631657524358,
+            "low": 0.2876787557293448
+          },
+          "median": 0.2989686693785987,
+          "minimum": 0.2505291224470933,
+          "n": 32,
+          "n_sessions": 3,
+          "name": "hip_sway_norm",
+          "ready": [
+            "center",
+            "spread",
+            "trend"
+          ],
+          "sd": 0.03534366987394586,
+          "sd_ci": {
+            "confidence": 0.95,
+            "high": 0.04700475568471299,
+            "low": 0.02833431928554611
+          },
+          "sessions": [
+            {
+              "captured_at": "2026-08-03T12:01:00Z",
+              "mean": 0.306971159479065,
+              "n": 11,
+              "session_id": "2026-08-03"
+            },
+            {
+              "captured_at": "2026-08-10T12:02:00Z",
+              "mean": 0.2902836439090201,
+              "n": 11,
+              "session_id": "2026-08-10"
+            },
+            {
+              "captured_at": "2026-08-17T12:03:00Z",
+              "mean": 0.30436679064395544,
+              "n": 10,
+              "session_id": "2026-08-17"
+            }
+          ],
+          "source": "pose:face_on",
+          "unit": "shoulder_widths",
+          "withheld": []
+        },
+        "launch_angle_deg": {
+          "maximum": 12.5,
+          "mean": 12.5,
+          "mean_ci": {
+            "confidence": 0.95,
+            "high": 12.5,
+            "low": 12.5
+          },
+          "median": 12.5,
+          "minimum": 12.5,
+          "n": 12,
+          "n_sessions": 3,
+          "name": "launch_angle_deg",
+          "ready": [
+            "center",
+            "spread",
+            "trend"
+          ],
+          "sd": 0.0,
+          "sd_ci": {
+            "confidence": 0.95,
+            "high": 0.0,
+            "low": 0.0
+          },
+          "sessions": [
+            {
+              "captured_at": "2026-08-03T12:01:00Z",
+              "mean": 12.5,
+              "n": 4,
+              "session_id": "2026-08-03"
+            },
+            {
+              "captured_at": "2026-08-10T12:02:00Z",
+              "mean": 12.5,
+              "n": 4,
+              "session_id": "2026-08-10"
+            },
+            {
+              "captured_at": "2026-08-17T12:03:00Z",
+              "mean": 12.5,
+              "n": 4,
+              "session_id": "2026-08-17"
+            }
+          ],
+          "source": "launch_monitor:hd_golf",
+          "unit": "degrees",
+          "withheld": []
+        }
+      },
+      "player_id": "aaron"
+    },
+    "dispersion": {
+      "built_from_sessions": 4,
+      "built_from_swings": 75,
+      "metrics": {
+        "face_to_path_deg": {
+          "bias": "not_established",
+          "caveats": [],
+          "center": -0.020000000000000018,
+          "center_ci": {
+            "confidence": 0.95,
+            "high": 0.31181323470782885,
+            "low": -0.3518132347078289
+          },
+          "n": 12,
+          "n_sessions": 3,
+          "name": "face_to_path_deg",
+          "offset": -0.020000000000000018,
+          "pattern": "nothing_established",
+          "points_at": "Neither a repeatable miss nor scatter beyond what this instrument's own error explains. That is not a clean bill — it is that nothing here can be distinguished from noise at this sample size.",
+          "scatter": "not_established",
+          "sd": 0.5222329678670935,
+          "sd_ci": {
+            "confidence": 0.95,
+            "high": 0.8866586276648858,
+            "low": 0.36994771775024254
+          },
+          "source": "launch_monitor:hd_golf",
+          "target": 0.0,
+          "tolerance": 2.0,
+          "unavailable": [],
+          "unit": "degrees",
+          "withheld": [],
+          "within_session_sd": 0.5773502691896257
+        },
+        "finish_balance_norm": {
+          "bias": "established",
+          "caveats": [],
+          "center": 0.150219225904233,
+          "center_ci": {
+            "confidence": 0.95,
+            "high": 0.15514600276023263,
+            "low": 0.14529244904823338
+          },
+          "n": 75,
+          "n_sessions": 4,
+          "name": "finish_balance_norm",
+          "offset": 0.150219225904233,
+          "pattern": "biased",
+          "points_at": "A miss that repeats at about the same size every swing. Whatever produces it is the same every time, which points at something already set before the swing starts rather than at something that happens during it. None of that is visible here, so the test is empirical: change one thing at setup, hit another set, and see whether the center moves.",
+          "scatter": "not_established",
+          "sd": 0.0214134723387029,
+          "sd_ci": {
+            "confidence": 0.95,
+            "high": 0.025521198396423344,
+            "low": 0.018449988773577716
+          },
+          "source": "pose:face_on",
+          "target": 0.0,
+          "tolerance": 0.024,
+          "unavailable": [],
+          "unit": "shoulder_widths",
+          "withheld": [],
+          "within_session_sd": 0.02177297506788404
+        },
+        "head_sway_norm": {
+          "bias": "not_established",
+          "caveats": [],
+          "center": 0.05676578950412713,
+          "center_ci": {
+            "confidence": 0.95,
+            "high": 0.05779930044672073,
+            "low": 0.05573227856153354
+          },
+          "n": 31,
+          "n_sessions": 3,
+          "name": "head_sway_norm",
+          "offset": 0.05676578950412713,
+          "pattern": "nothing_established",
+          "points_at": "Neither a repeatable miss nor scatter beyond what this instrument's own error explains. That is not a clean bill — it is that nothing here can be distinguished from noise at this sample size.",
+          "scatter": "not_established",
+          "sd": 0.0028179948064483164,
+          "sd_ci": {
+            "confidence": 0.95,
+            "high": 0.003766713034524318,
+            "low": 0.0022518991224803487
+          },
+          "source": "pose:face_on",
+          "target": 0.0,
+          "tolerance": 0.06,
+          "unavailable": [],
+          "unit": "shoulder_widths",
+          "withheld": [],
+          "within_session_sd": 0.0028630533106925936
+        },
+        "hip_sway_norm": {
+          "bias": "withheld",
+          "caveats": [],
+          "center": null,
+          "center_ci": null,
+          "n": 32,
+          "n_sessions": 3,
+          "name": "hip_sway_norm",
+          "offset": null,
+          "pattern": null,
+          "points_at": null,
+          "scatter": "not_established",
+          "sd": 0.03534366987394586,
+          "sd_ci": {
+            "confidence": 0.95,
+            "high": 0.04700475568471299,
+            "low": 0.02833431928554611
+          },
+          "source": "pose:face_on",
+          "target": null,
+          "tolerance": 0.05,
+          "unavailable": [
+            "no target for hip_sway_norm: 'less is better' is not established for it — some lateral hip travel is a weight shift rather than a fault, and nothing here knows how much. It has a two-sided band as of 2026-08-12, which is a range rather than a target: `analysis.comparison` asks whether the personal center sits inside it, so no point value has to be invented here"
+          ],
+          "unit": "shoulder_widths",
+          "withheld": [],
+          "within_session_sd": 0.035702968104192656
+        },
+        "launch_angle_deg": {
+          "bias": "withheld",
+          "caveats": [],
+          "center": null,
+          "center_ci": null,
+          "n": 12,
+          "n_sessions": 3,
+          "name": "launch_angle_deg",
+          "offset": null,
+          "pattern": null,
+          "points_at": null,
+          "scatter": "not_established",
+          "sd": 0.0,
+          "sd_ci": {
+            "confidence": 0.95,
+            "high": 0.0,
+            "low": 0.0
+          },
+          "source": "launch_monitor:hd_golf",
+          "target": null,
+          "tolerance": 2.0,
+          "unavailable": [
+            "no target for launch_angle_deg: optimal launch is per club, per ball speed and per spin rate, so a single number for it would be wrong for every club in the bag. Same missing model as ball speed and the same deferral"
+          ],
+          "unit": "degrees",
+          "withheld": [],
+          "within_session_sd": 0.0
+        }
+      },
+      "player_id": "aaron"
+    },
+    "properties": {
+      "bag_profile": {
+        "categories": {},
+        "clubs_declared": [],
+        "clubs_used": []
+      },
+      "baseline": {
+        "claims_ready": 15,
+        "nothing_sayable": false
+      },
+      "dispersion": {
+        "nothing_established": false,
+        "patterns_established": 3
+      },
+      "standing": {
+        "nothing_placed": false,
+        "placements": 3
+      }
+    },
+    "reports": {
+      "career_baseline": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  Built from 75 distinct swings across 4 sessions.\n\n  face_to_path_deg  (degrees)\n    n = 12 over 3 sessions\n    center   -0.0   95% CI -0.4 .. 0.3   (median -0.0)\n    spread   sd 0.5   95% CI 0.4 .. 0.9   (range -0.5 .. 0.5)\n    trend    per session:\n               2026-08-03  n=4  mean -0.0\n               2026-08-10  n=4  mean -0.0\n               2026-08-17  n=4  mean -0.0\n    vs tour  withheld\n             blocked  — face_to_path_deg: no tour population exists for it. Every distribution in this repo comes from GolfDB, which is pose estimated from broadcast video and contains no ball flight — a launch-monitor reference would have to be acquired, not derived\n\n  finish_balance_norm  (shoulder_widths)\n    n = 75 over 4 sessions\n    center   0.150   95% CI 0.145 .. 0.155   (median 0.151)\n    spread   sd 0.021   95% CI 0.018 .. 0.026   (range 0.120 .. 0.180)\n    trend    per session:\n               2026-08-03  n=25  mean 0.150\n               2026-08-10  n=25  mean 0.149\n               2026-08-17  n=24  mean 0.153\n               2026-08-24  n=1  mean 0.143\n    vs tour  inside tour range   tour 0.085 .. 0.287 (122 players)   51th pct\n             blocked  — finish_balance_norm: the spread is not placed against the tour spread — the tour sd measures how much 122 players differ from each other, while a personal sd measures how much one golfer varies shot to shot. They are different quantities and comparing them would flatter every golfer alive\n\n  head_sway_norm  (shoulder_widths)\n    n = 31 over 3 sessions\n    center   0.057   95% CI 0.056 .. 0.058   (median 0.057)\n    spread   sd 0.003   95% CI 0.002 .. 0.004   (range 0.053 .. 0.061)\n    trend    per session:\n               2026-08-03  n=11  mean 0.057\n               2026-08-10  n=10  mean 0.056\n               2026-08-17  n=10  mean 0.056\n    vs tour  inside tour range   tour 0.029 .. 0.431 (122 players)   18th pct\n             blocked  — head_sway_norm: the spread is not placed against the tour spread — the tour sd measures how much 122 players differ from each other, while a personal sd measures how much one golfer varies shot to shot. They are different quantities and comparing them would flatter every golfer alive\n\n  hip_sway_norm  (shoulder_widths)\n    n = 32 over 3 sessions\n    center   0.300   95% CI 0.288 .. 0.313   (median 0.299)\n    spread   sd 0.035   95% CI 0.028 .. 0.047   (range 0.251 .. 0.350)\n    trend    per session:\n               2026-08-03  n=11  mean 0.307\n               2026-08-10  n=11  mean 0.290\n               2026-08-17  n=10  mean 0.304\n    vs tour  inside tour range   tour 0.141 .. 0.499 (122 players)   50th pct\n             blocked  — hip_sway_norm: the spread is not placed against the tour spread — the tour sd measures how much 122 players differ from each other, while a personal sd measures how much one golfer varies shot to shot. They are different quantities and comparing them would flatter every golfer alive\n\n  launch_angle_deg  (degrees)\n    n = 12 over 3 sessions\n    center   12.5   95% CI 12.5 .. 12.5   (median 12.5)\n    spread   sd 0.0   95% CI 0.0 .. 0.0   (range 12.5 .. 12.5)\n    trend    per session:\n               2026-08-03  n=4  mean 12.5\n               2026-08-10  n=4  mean 12.5\n               2026-08-17  n=4  mean 12.5\n    vs tour  withheld\n             blocked  — launch_angle_deg: no tour population exists for it. Every distribution in this repo comes from GolfDB, which is pose estimated from broadcast video and contains no ball flight — a launch-monitor reference would have to be acquired, not derived\n",
+      "career_baseline_verbose": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  Built from 75 distinct swings across 4 sessions.\n\n  face_to_path_deg  (degrees)\n    n = 12 over 3 sessions\n    center   -0.0   95% CI -0.4 .. 0.3   (median -0.0)\n    spread   sd 0.5   95% CI 0.4 .. 0.9   (range -0.5 .. 0.5)\n    trend    per session:\n               2026-08-03  n=4  mean -0.0\n               2026-08-10  n=4  mean -0.0\n               2026-08-17  n=4  mean -0.0\n    vs tour  withheld\n             blocked  — face_to_path_deg: no tour population exists for it. Every distribution in this repo comes from GolfDB, which is pose estimated from broadcast video and contains no ball flight — a launch-monitor reference would have to be acquired, not derived\n\n  finish_balance_norm  (shoulder_widths)\n    n = 75 over 4 sessions\n    center   0.150   95% CI 0.145 .. 0.155   (median 0.151)\n    spread   sd 0.021   95% CI 0.018 .. 0.026   (range 0.120 .. 0.180)\n    trend    per session:\n               2026-08-03  n=25  mean 0.150\n               2026-08-10  n=25  mean 0.149\n               2026-08-17  n=24  mean 0.153\n               2026-08-24  n=1  mean 0.143\n    vs tour  inside tour range   tour 0.085 .. 0.287 (122 players)   51th pct\n             blocked  — finish_balance_norm: the spread is not placed against the tour spread — the tour sd measures how much 122 players differ from each other, while a personal sd measures how much one golfer varies shot to shot. They are different quantities and comparing them would flatter every golfer alive\n\n  head_sway_norm  (shoulder_widths)\n    n = 31 over 3 sessions\n    center   0.057   95% CI 0.056 .. 0.058   (median 0.057)\n    spread   sd 0.003   95% CI 0.002 .. 0.004   (range 0.053 .. 0.061)\n    trend    per session:\n               2026-08-03  n=11  mean 0.057\n               2026-08-10  n=10  mean 0.056\n               2026-08-17  n=10  mean 0.056\n    vs tour  inside tour range   tour 0.029 .. 0.431 (122 players)   18th pct\n             blocked  — head_sway_norm: the spread is not placed against the tour spread — the tour sd measures how much 122 players differ from each other, while a personal sd measures how much one golfer varies shot to shot. They are different quantities and comparing them would flatter every golfer alive\n\n  hip_sway_norm  (shoulder_widths)\n    n = 32 over 3 sessions\n    center   0.300   95% CI 0.288 .. 0.313   (median 0.299)\n    spread   sd 0.035   95% CI 0.028 .. 0.047   (range 0.251 .. 0.350)\n    trend    per session:\n               2026-08-03  n=11  mean 0.307\n               2026-08-10  n=11  mean 0.290\n               2026-08-17  n=10  mean 0.304\n    vs tour  inside tour range   tour 0.141 .. 0.499 (122 players)   50th pct\n             blocked  — hip_sway_norm: the spread is not placed against the tour spread — the tour sd measures how much 122 players differ from each other, while a personal sd measures how much one golfer varies shot to shot. They are different quantities and comparing them would flatter every golfer alive\n\n  launch_angle_deg  (degrees)\n    n = 12 over 3 sessions\n    center   12.5   95% CI 12.5 .. 12.5   (median 12.5)\n    spread   sd 0.0   95% CI 0.0 .. 0.0   (range 12.5 .. 12.5)\n    trend    per session:\n               2026-08-03  n=4  mean 12.5\n               2026-08-10  n=4  mean 12.5\n               2026-08-17  n=4  mean 12.5\n    vs tour  withheld\n             blocked  — launch_angle_deg: no tour population exists for it. Every distribution in this repo comes from GolfDB, which is pose estimated from broadcast video and contains no ball flight — a launch-monitor reference would have to be acquired, not derived\n",
+      "career_corpus": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  75 swing directories across 4 sessions  ->  75 distinct swings, 75 distinct shots\n\n  Honest n per metric:\n    face_to_path_deg     n = 12\n    finish_balance_norm  n = 75\n    head_sway_norm       n = 31\n    hip_sway_norm        n = 32\n    launch_angle_deg     n = 12\n\n  75 distinct swing(s) naming no club (of 75).\n    They still count toward every metric above and toward every whole-bag\n    number — the club was never an input to measuring head sway — and are\n    absent only from per-club views. Repair them one at a time on the upload\n    page: a session has many clubs, so there is no bulk backfill (ADR-024 §5).\n",
+      "career_corpus_verbose": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  75 swing directories across 4 sessions  ->  75 distinct swings, 75 distinct shots\n\n  Honest n per metric:\n    face_to_path_deg     n = 12\n    finish_balance_norm  n = 75\n    head_sway_norm       n = 31\n    hip_sway_norm        n = 32\n    launch_angle_deg     n = 12\n\n  75 distinct swing(s) naming no club (of 75).\n    They still count toward every metric above and toward every whole-bag\n    number — the club was never an input to measuring head sway — and are\n    absent only from per-club views. Repair them one at a time on the upload\n    page: a session has many clubs, so there is no bulk backfill (ADR-024 §5).\n",
+      "career_dispersion": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  Built from 75 distinct swings across 4 sessions.\n\n  face_to_path_deg  (degrees)\n    n = 12 over 3 sessions    target 0.0 +/- 2.0\n    bias      cannot tell    center -0.0 (95% CI -0.4 .. 0.3)\n    scatter   cannot tell    sd 0.5 (95% CI 0.4 .. 0.9)    within-session 0.6\n    pattern   nothing established\n              Neither a repeatable miss nor scatter beyond what this instrument's own error\n              explains. That is not a clean bill — it is that nothing here can be\n              distinguished from noise at this sample size.\n\n  finish_balance_norm  (shoulder_widths)\n    n = 75 over 4 sessions    target 0.000 +/- 0.024\n    bias      yes    center 0.150 (95% CI 0.145 .. 0.155)\n    scatter   cannot tell    sd 0.021 (95% CI 0.018 .. 0.026)    within-session 0.022\n    pattern   biased\n              A miss that repeats at about the same size every swing. Whatever produces it\n              is the same every time, which points at something already set before the swing\n              starts rather than at something that happens during it. None of that is\n              visible here, so the test is empirical: change one thing at setup, hit another\n              set, and see whether the center moves.\n\n  head_sway_norm  (shoulder_widths)\n    n = 31 over 3 sessions    target 0.000 +/- 0.060\n    bias      cannot tell    center 0.057 (95% CI 0.056 .. 0.058)\n    scatter   cannot tell    sd 0.003 (95% CI 0.002 .. 0.004)    within-session 0.003\n    pattern   nothing established\n              Neither a repeatable miss nor scatter beyond what this instrument's own error\n              explains. That is not a clean bill — it is that nothing here can be\n              distinguished from noise at this sample size.\n\n  hip_sway_norm  (shoulder_widths)\n    n = 32 over 3 sessions\n    bias      withheld\n    scatter   cannot tell    sd 0.035 (95% CI 0.028 .. 0.047)    within-session 0.036\n    blocked   no target for hip_sway_norm: 'less is better' is not established for it — some\n              lateral hip travel is a weight shift rather than a fault, and nothing here\n              knows how much. It has a two-sided band as of 2026-08-12, which is a range\n              rather than a target: `analysis.comparison` asks whether the personal center\n              sits inside it, so no point value has to be invented here\n\n  launch_angle_deg  (degrees)\n    n = 12 over 3 sessions\n    bias      withheld\n    scatter   cannot tell    sd 0.0 (95% CI 0.0 .. 0.0)    within-session 0.0\n    blocked   no target for launch_angle_deg: optimal launch is per club, per ball speed and\n              per spin rate, so a single number for it would be wrong for every club in the\n              bag. Same missing model as ball speed and the same deferral\n",
+      "career_dispersion_verbose": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  Built from 75 distinct swings across 4 sessions.\n\n  face_to_path_deg  (degrees)\n    n = 12 over 3 sessions    target 0.0 +/- 2.0\n    bias      cannot tell    center -0.0 (95% CI -0.4 .. 0.3)\n    scatter   cannot tell    sd 0.5 (95% CI 0.4 .. 0.9)    within-session 0.6\n    pattern   nothing established\n              Neither a repeatable miss nor scatter beyond what this instrument's own error\n              explains. That is not a clean bill — it is that nothing here can be\n              distinguished from noise at this sample size.\n    tolerance 2 — judgment, 2026-08-12: no instrument-error evidence exists for the OCR\n              path. 2 degrees is below the level a coaching action follows from. Revise from\n              a real bay session's repeats\n\n  finish_balance_norm  (shoulder_widths)\n    n = 75 over 4 sessions    target 0.000 +/- 0.024\n    bias      yes    center 0.150 (95% CI 0.145 .. 0.155)\n    scatter   cannot tell    sd 0.021 (95% CI 0.018 .. 0.026)    within-session 0.022\n    pattern   biased\n              A miss that repeats at about the same size every swing. Whatever produces it\n              is the same every time, which points at something already set before the swing\n              starts rather than at something that happens during it. None of that is\n              visible here, so the test is empirical: change one thing at setup, hit another\n              set, and see whether the center moves.\n    tolerance 0.024 — spread/error harness over 461 face-on GolfDB clips, 2026-08-12:\n              `python scripts/golfdb/tune_spatial_metric.py`, tolerance = noise + bound\n\n  head_sway_norm  (shoulder_widths)\n    n = 31 over 3 sessions    target 0.000 +/- 0.060\n    bias      cannot tell    center 0.057 (95% CI 0.056 .. 0.058)\n    scatter   cannot tell    sd 0.003 (95% CI 0.002 .. 0.004)    within-session 0.003\n    pattern   nothing established\n              Neither a repeatable miss nor scatter beyond what this instrument's own error\n              explains. That is not a clean bill — it is that nothing here can be\n              distinguished from noise at this sample size.\n    tolerance 0.06 — spread/error harness over 461 face-on GolfDB clips, 2026-08-12: `python\n              scripts/golfdb/tune_spatial_metric.py`, tolerance = noise + bound\n\n  hip_sway_norm  (shoulder_widths)\n    n = 32 over 3 sessions\n    bias      withheld\n    scatter   cannot tell    sd 0.035 (95% CI 0.028 .. 0.047)    within-session 0.036\n    blocked   no target for hip_sway_norm: 'less is better' is not established for it — some\n              lateral hip travel is a weight shift rather than a fault, and nothing here\n              knows how much. It has a two-sided band as of 2026-08-12, which is a range\n              rather than a target: `analysis.comparison` asks whether the personal center\n              sits inside it, so no point value has to be invented here\n    tolerance 0.05 — spread/error harness over 461 face-on GolfDB clips, 2026-08-12: `python\n              scripts/golfdb/tune_spatial_metric.py`, tolerance = noise + bound\n\n  launch_angle_deg  (degrees)\n    n = 12 over 3 sessions\n    bias      withheld\n    scatter   cannot tell    sd 0.0 (95% CI 0.0 .. 0.0)    within-session 0.0\n    blocked   no target for launch_angle_deg: optimal launch is per club, per ball speed and\n              per spin rate, so a single number for it would be wrong for every club in the\n              bag. Same missing model as ball speed and the same deferral\n    tolerance 2 — judgment, 2026-08-21 (M9 P10): no instrument-error evidence exists for the\n              OCR path. Launch angle takes _JUDGED_DEGREES's 2 degrees, the claim the other\n              two angle fields already make; ball speed takes _JUDGED_YARDS's 5 yards\n              through the ~1.4 yd/mph the stored shots show - 5 / 1.4 = 3.6, rounded up.\n              That ratio is club-specific; per-club deferred, erring wide\n",
+      "club_profile": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  No club has been hit or declared — there is nothing to profile yet.\n  untagged  All 75 swings on record name no club. That is real history, and no per-club number\n            can be cut from it until each one is tagged.\n  next      New swings get a club at upload — `python scripts/run_server.py`, then the picker\n            on the upload page. A swing already stored is retagged one at a time, from the\n            change control on its row in that page's swing list or with POST\n            /api/sessions/<session>/swings/<swing>/club.\n",
+      "club_profile_driver": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  driver: never hit and not in the bag — there is no history to report.\n\n  untagged  75 swings on record name no club, so nothing above counts them. Retag one at a\n            time, from the change control on the swing's row in the upload page or with POST\n            /api/sessions/<session>/swings/<swing>/club.\n",
+      "club_profile_verbose": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  No club has been hit or declared — there is nothing to profile yet.\n  untagged  All 75 swings on record name no club. That is real history, and no per-club number\n            can be cut from it until each one is tagged.\n  next      New swings get a club at upload — `python scripts/run_server.py`, then the picker\n            on the upload page. A swing already stored is retagged one at a time, from the\n            change control on its row in that page's swing list or with POST\n            /api/sessions/<session>/swings/<swing>/club.\n",
+      "flag_mishit_list": "\naaron -- 0 shot(s) held out across the bag\n  (no tagged shots yet)\n"
+    },
+    "standing": {
+      "built_from_sessions": 4,
+      "built_from_swings": 75,
+      "metrics": {
+        "face_to_path_deg": {
+          "band_high": null,
+          "band_low": null,
+          "center": null,
+          "center_ci": null,
+          "n": 12,
+          "n_sessions": 3,
+          "name": "face_to_path_deg",
+          "outside_by": null,
+          "percentile": null,
+          "percentile_clamped": false,
+          "population_n": null,
+          "population_players": null,
+          "reading": null,
+          "source": "launch_monitor:hd_golf",
+          "standing": "withheld",
+          "unavailable": [
+            "face_to_path_deg: no tour population exists for it. Every distribution in this repo comes from GolfDB, which is pose estimated from broadcast video and contains no ball flight — a launch-monitor reference would have to be acquired, not derived"
+          ],
+          "unit": "degrees",
+          "withheld": []
+        },
+        "finish_balance_norm": {
+          "band_high": 0.2872,
+          "band_low": 0.0845,
+          "center": 0.150219225904233,
+          "center_ci": {
+            "confidence": 0.95,
+            "high": 0.15514600276023263,
+            "low": 0.14529244904823338
+          },
+          "n": 75,
+          "n_sessions": 4,
+          "name": "finish_balance_norm",
+          "outside_by": null,
+          "percentile": 50.6,
+          "percentile_clamped": false,
+          "population_n": 458,
+          "population_players": 122,
+          "reading": "This golfer's typical value sits inside the range tour swings occupy. That is a statement about where the number falls in a population, not a pass — the band describes what tour players do, and being inside it is not evidence that nothing here is worth working on.",
+          "source": "pose:face_on",
+          "standing": "inside",
+          "unavailable": [
+            "finish_balance_norm: the spread is not placed against the tour spread — the tour sd measures how much 122 players differ from each other, while a personal sd measures how much one golfer varies shot to shot. They are different quantities and comparing them would flatter every golfer alive"
+          ],
+          "unit": "shoulder_widths",
+          "withheld": []
+        },
+        "head_sway_norm": {
+          "band_high": 0.4311,
+          "band_low": 0.0294,
+          "center": 0.05676578950412713,
+          "center_ci": {
+            "confidence": 0.95,
+            "high": 0.05779930044672073,
+            "low": 0.05573227856153354
+          },
+          "n": 31,
+          "n_sessions": 3,
+          "name": "head_sway_norm",
+          "outside_by": null,
+          "percentile": 17.5,
+          "percentile_clamped": false,
+          "population_n": 458,
+          "population_players": 122,
+          "reading": "This golfer's typical value sits inside the range tour swings occupy. That is a statement about where the number falls in a population, not a pass — the band describes what tour players do, and being inside it is not evidence that nothing here is worth working on.",
+          "source": "pose:face_on",
+          "standing": "inside",
+          "unavailable": [
+            "head_sway_norm: the spread is not placed against the tour spread — the tour sd measures how much 122 players differ from each other, while a personal sd measures how much one golfer varies shot to shot. They are different quantities and comparing them would flatter every golfer alive"
+          ],
+          "unit": "shoulder_widths",
+          "withheld": []
+        },
+        "hip_sway_norm": {
+          "band_high": 0.4995,
+          "band_low": 0.1414,
+          "center": 0.3004209607408903,
+          "center_ci": {
+            "confidence": 0.95,
+            "high": 0.3131631657524358,
+            "low": 0.2876787557293448
+          },
+          "n": 32,
+          "n_sessions": 3,
+          "name": "hip_sway_norm",
+          "outside_by": null,
+          "percentile": 49.6,
+          "percentile_clamped": false,
+          "population_n": 458,
+          "population_players": 122,
+          "reading": "This golfer's typical value sits inside the range tour swings occupy. That is a statement about where the number falls in a population, not a pass — the band describes what tour players do, and being inside it is not evidence that nothing here is worth working on.",
+          "source": "pose:face_on",
+          "standing": "inside",
+          "unavailable": [
+            "hip_sway_norm: the spread is not placed against the tour spread — the tour sd measures how much 122 players differ from each other, while a personal sd measures how much one golfer varies shot to shot. They are different quantities and comparing them would flatter every golfer alive"
+          ],
+          "unit": "shoulder_widths",
+          "withheld": []
+        },
+        "launch_angle_deg": {
+          "band_high": null,
+          "band_low": null,
+          "center": null,
+          "center_ci": null,
+          "n": 12,
+          "n_sessions": 3,
+          "name": "launch_angle_deg",
+          "outside_by": null,
+          "percentile": null,
+          "percentile_clamped": false,
+          "population_n": null,
+          "population_players": null,
+          "reading": null,
+          "source": "launch_monitor:hd_golf",
+          "standing": "withheld",
+          "unavailable": [
+            "launch_angle_deg: no tour population exists for it. Every distribution in this repo comes from GolfDB, which is pose estimated from broadcast video and contains no ball flight — a launch-monitor reference would have to be acquired, not derived"
+          ],
+          "unit": "degrees",
+          "withheld": []
+        }
+      },
+      "player_id": "aaron"
+    }
+  },
+  "id": "career/synthetic/past-the-tables",
+  "input": {
+    "bag": null,
+    "clubs": [
+      "driver"
+    ],
+    "corpus": {
+      "analyzed_without_measurements": 0,
+      "excluded": [],
+      "metric_counts": {
+        "face_to_path_deg": 12,
+        "finish_balance_norm": 75,
+        "head_sway_norm": 31,
+        "hip_sway_norm": 32,
+        "launch_angle_deg": 12
+      },
+      "other_golfers": 0,
+      "outdated_swings": 0,
+      "player_id": "aaron",
+      "sessions_scanned": 4,
+      "swing_dirs_seen": 75,
+      "swings": [
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-03T12:01:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "70a273391cb26be19e81a157e2614c6fe5955bc6ce9560f77e4170777dcc2154",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "head_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.0567
+            },
+            {
+              "detail": "synthetic",
+              "name": "hip_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.33916634548137414
+            },
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.17974994431357405
+            },
+            {
+              "detail": "synthetic",
+              "name": "launch_angle_deg",
+              "source": "launch_monitor:hd_golf",
+              "unit": "degrees",
+              "value": 12.5
+            },
+            {
+              "detail": "synthetic",
+              "name": "face_to_path_deg",
+              "source": "launch_monitor:hd_golf",
+              "unit": "degrees",
+              "value": 0.48
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-03",
+          "shot_needs_review": false,
+          "shot_sha256": "9e6dbb065c29ce8052addfabf844817acd39577c4420f4fc9cfa9230e11b425d",
+          "stale": false,
+          "swing_id": "1"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-03T12:04:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "f97ffca87320fb8178101598ca9b11ee4cf7bf9737fbb07ffd632fa94626c8f1",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "head_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.059874379423908705
+            },
+            {
+              "detail": "synthetic",
+              "name": "hip_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.3484959514580129
+            },
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.16503374115226183
+            },
+            {
+              "detail": "synthetic",
+              "name": "launch_angle_deg",
+              "source": "launch_monitor:hd_golf",
+              "unit": "degrees",
+              "value": 12.5
+            },
+            {
+              "detail": "synthetic",
+              "name": "face_to_path_deg",
+              "source": "launch_monitor:hd_golf",
+              "unit": "degrees",
+              "value": -0.52
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-03",
+          "shot_needs_review": false,
+          "shot_sha256": "1169827c7d149b1b9cddcb26c89166a0a2032456f0f9d285bd01f3ff759a4937",
+          "stale": false,
+          "swing_id": "4"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-03T12:07:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "12bbf851e398cd97717c89a3c62f86f3640f3c89c81b77a2e9a93b4cf08acc19",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "head_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.060562880419612906
+            },
+            {
+              "detail": "synthetic",
+              "name": "hip_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.3198480432544834
+            },
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.13854451157068612
+            },
+            {
+              "detail": "synthetic",
+              "name": "launch_angle_deg",
+              "source": "launch_monitor:hd_golf",
+              "unit": "degrees",
+              "value": 12.5
+            },
+            {
+              "detail": "synthetic",
+              "name": "face_to_path_deg",
+              "source": "launch_monitor:hd_golf",
+              "unit": "degrees",
+              "value": 0.48
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-03",
+          "shot_needs_review": false,
+          "shot_sha256": "3fcd4678e0191af07b2fe0e15a2d5b3cdc1badaa5b93e85e1c06b125391e6e52",
+          "stale": false,
+          "swing_id": "7"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-03T12:10:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "1fb17e9e9c5fb07e3f5aab8bbb529df2a698b80e3b5fe3d4a61295ed6a7a0d26",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "head_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.05822633310712676
+            },
+            {
+              "detail": "synthetic",
+              "name": "hip_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.27565699543860206
+            },
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.12102615401420472
+            },
+            {
+              "detail": "synthetic",
+              "name": "launch_angle_deg",
+              "source": "launch_monitor:hd_golf",
+              "unit": "degrees",
+              "value": 12.5
+            },
+            {
+              "detail": "synthetic",
+              "name": "face_to_path_deg",
+              "source": "launch_monitor:hd_golf",
+              "unit": "degrees",
+              "value": -0.52
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-03",
+          "shot_needs_review": false,
+          "shot_sha256": "851f92dee0da7982e25b130bde4bc3406bde82d1dfe8e65c4608427354dd3ed0",
+          "stale": false,
+          "swing_id": "10"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-03T12:13:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "4c4b9bcaaf1ee9f5f14d375e620d6b9dd08a1a5ba35e8745b7f5b525b1f5f886",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "head_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.05469450380765345
+            },
+            {
+              "detail": "synthetic",
+              "name": "hip_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.2505291224470933
+            },
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.12619741515160998
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-03",
+          "shot_needs_review": false,
+          "shot_sha256": "9c27bba103e730679a91d36b21fefea69ea293542d20a5304f9319a6ca39d8aa",
+          "stale": false,
+          "swing_id": "13"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-03T12:16:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "ef66b24ecc8b886e6ef11281341de80107739d83c983eb6735cc22121525428d",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "head_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.05273319241314497
+            },
+            {
+              "detail": "synthetic",
+              "name": "hip_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.26414223498707784
+            },
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.15000864470755493
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-03",
+          "shot_needs_review": false,
+          "shot_sha256": "e317593f8ba140031ad57d854dad85d90308ab111d7012feb8eb831afe5fbf7a",
+          "stale": false,
+          "swing_id": "16"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-03T12:19:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "36ffb57b1988f65d9eb7bef92d781b2c5521e14bf0a93128dee1ca5f98a6771b",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "head_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.053878315408530164
+            },
+            {
+              "detail": "synthetic",
+              "name": "hip_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.30583581070606414
+            },
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.17381310453337015
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-03",
+          "shot_needs_review": false,
+          "shot_sha256": "d5da516b766a03ee5534915816c2c8471eb14cc0cff749f4aeee166ed60e83ae",
+          "stale": false,
+          "swing_id": "19"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-03T12:22:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "db27690d6e8fad65d49d5e90d47dbce2479a05b7a4a9687e5445a2d481619697",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "head_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.05723311907545113
+            },
+            {
+              "detail": "synthetic",
+              "name": "hip_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.3429593227974874
+            },
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.17896935790275825
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-03",
+          "shot_needs_review": false,
+          "shot_sha256": "05cfc8938adb582a831c801bdbb0e196f00e9f6578afd4d3ede4983f995d9e00",
+          "stale": false,
+          "swing_id": "22"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-03T12:25:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "2d8a5700861c59da819dc5b98c6cb3e8ac7e4eff24cda1efe8289101b5877097",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "head_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.06017043351617982
+            },
+            {
+              "detail": "synthetic",
+              "name": "hip_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.34644109281226493
+            },
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.1614395072270511
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-03",
+          "shot_needs_review": false,
+          "shot_sha256": "04e9f9be1ae5a99bed09cee58495debe0817094dbb69b665bfab6e627191c7ae",
+          "stale": false,
+          "swing_id": "25"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-03T12:28:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "e09eeb40a030b161c57c598091e50a9144efae62ffa071ad131ddfa66f1fd2eb",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "head_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.06039002752644826
+            },
+            {
+              "detail": "synthetic",
+              "name": "hip_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.3135545226296688
+            },
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.13495129951600227
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-03",
+          "shot_needs_review": false,
+          "shot_sha256": "27d9c20106fda99445d4626b9162460ddb6dd1c6aa689d0a9e6a5e7caae60769",
+          "stale": false,
+          "swing_id": "28"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-03T12:31:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "fe3baed28fbd467d5dbd4348bfff986dd1f3a1893de86f9e561d05b3354cfd52",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "head_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.05771993552174638
+            },
+            {
+              "detail": "synthetic",
+              "name": "hip_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.2700533122575857
+            },
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.12024783298111007
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-03",
+          "shot_needs_review": false,
+          "shot_sha256": "383a8e075da65d617ce06a6870a37ae9b8f9898010187b816a155864e8d27180",
+          "stale": false,
+          "swing_id": "31"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-03T12:34:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "09974204ec4ef460871cb94153f6d3b44620a20512e2859057c17e1759d5f38c",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.12884349371107567
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-03",
+          "shot_needs_review": false,
+          "shot_sha256": "029f8d0a4ba8ca84c517ab1e99c012dfba4e2c4c31cb418299b6d87c63f30f04",
+          "stale": false,
+          "swing_id": "34"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-03T12:37:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "9632dcf8ea5bb81fefaf86bcb5cc6e87ff99486b596b1fb5d4da7866daf0b4f9",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.15400696048328552
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-03",
+          "shot_needs_review": false,
+          "shot_sha256": "1659115d7ed5b920f9913cd9246b37199aef0ee295d7b8ef563f9c53f7edcf16",
+          "stale": false,
+          "swing_id": "37"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-03T12:40:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "b606ff3ec3d5cd81c72628214c5f0621a62254feb89f05b949c6377935104b5c",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.17603254885537567
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-03",
+          "shot_needs_review": false,
+          "shot_sha256": "448cf7945585e3a236ad8a3e8e011e4b6403e487885e7974ca80da86f1afe2f1",
+          "stale": false,
+          "swing_id": "40"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-03T12:43:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "1490c8fef709eb35c0363d4972099e1d11ebeac5a06288821375fec740c74937",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.17767186860962217
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-03",
+          "shot_needs_review": false,
+          "shot_sha256": "a0fcbfa01d955b9048b29e605611fc38e8062316cc643e6e12d984f54e8eb763",
+          "stale": false,
+          "swing_id": "43"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-03T12:46:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "28c856fddfb01822d4bec8f3c95beff7a179a251c058eabecf4c737079205e7f",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.15764115713613774
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-03",
+          "shot_needs_review": false,
+          "shot_sha256": "e9c5fda25565901fb6f90b8aa9ee0f5c0459fee3a52ce576b023920ed5b39210",
+          "stale": false,
+          "swing_id": "46"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-03T12:49:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "37bd7667c5798760b890f3cafbe935c08b26851633648a378aeccc98236241a0",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.13162660278987617
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-03",
+          "shot_needs_review": false,
+          "shot_sha256": "b5bcb1f9f557370d83d26c76a0f61eaff6bd68a7b231918a2fdc48252a066f42",
+          "stale": false,
+          "swing_id": "49"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-03T12:52:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "3107b380cb6bb6b8317e191bf28ebc746ae2a34657a5b16f18eb0e913d362e8f",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.12000038256444269
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-03",
+          "shot_needs_review": false,
+          "shot_sha256": "551f08716b34a95d23d5bc1eb70028af3c206f5fad95157afaacffaff005a752",
+          "stale": false,
+          "swing_id": "52"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-03T12:55:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "e72dddce92341a2242b07267d2e891c520f026d9f48192b44d59ebe1d318e7d3",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.13186706973242118
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-03",
+          "shot_needs_review": false,
+          "shot_sha256": "30c28b84739182f524495ea9abf24a24301839e8ba62242356a2a1ec2a013d76",
+          "stale": false,
+          "swing_id": "55"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-03T12:58:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "01d6a5f83a395b81855c17c53a1e2cab37bbafaf109a340a19c956ae6410744c",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.15793377969944017
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-03",
+          "shot_needs_review": false,
+          "shot_sha256": "6d1d2ba002eed80bdfac080e64f2024a42024ce6af0c857f262e757cb897e03a",
+          "stale": false,
+          "swing_id": "58"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-03T13:01:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "7d72a2fdfe1b75a923b38e77cf3e444c069426b169a8eaa61c42a7f2898e3ac3",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.17778749204543803
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-03",
+          "shot_needs_review": false,
+          "shot_sha256": "5ed1c8cea574d56fe14ca1e95ad37028168a250b4975c08e532b84d967488eb1",
+          "stale": false,
+          "swing_id": "61"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-03T13:04:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "7548e41af3e8931228c53e3a6fdcfc837d35e7b4d771e85dda812c07edc7023a",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.17588062765338358
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-03",
+          "shot_needs_review": false,
+          "shot_sha256": "986857ceca52fdda3117381ae826b44ec17822df620d75e21578832a55c34575",
+          "stale": false,
+          "swing_id": "64"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-03T13:07:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "5424766ebd2f476c994c470e9b3b53d9acc9609aa7f6e6a7970a159726adae1e",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.15370646518493267
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-03",
+          "shot_needs_review": false,
+          "shot_sha256": "3417bd9506b7ff4a81545ef80bded0a950c5e668584650eeb839b2daabe542e1",
+          "stale": false,
+          "swing_id": "67"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-03T13:10:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "db3a56d86e150ef655054605170a6fab9881b2370d1b8cea5c5dfbd9285aa3ef",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.12862974425774165
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-03",
+          "shot_needs_review": false,
+          "shot_sha256": "916681aa937a265252064d4378bda0ba8f2b4bdc8dfc3e2f7f3bcbf7ac7ae019",
+          "stale": false,
+          "swing_id": "70"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-03T13:13:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "309bdbc179192f1fbe51f4ed50c37a61b7b3e02a5c0a9e0ef412f2545d8bc7f5",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.12028821804444573
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-03",
+          "shot_needs_review": false,
+          "shot_sha256": "613361c1ab5aed6049a38a6b4fbee4c51eced612b8954da06726555fb1d7c5cd",
+          "stale": false,
+          "swing_id": "73"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-10T12:02:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "2844a9782fc36af66e84277f36903e9ec4ae04ce042aefe0c0d35256add81a8b",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "head_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.05940197070303758
+            },
+            {
+              "detail": "synthetic",
+              "name": "hip_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.2921146902586867
+            },
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.12545237647644197
+            },
+            {
+              "detail": "synthetic",
+              "name": "launch_angle_deg",
+              "source": "launch_monitor:hd_golf",
+              "unit": "degrees",
+              "value": 12.5
+            },
+            {
+              "detail": "synthetic",
+              "name": "face_to_path_deg",
+              "source": "launch_monitor:hd_golf",
+              "unit": "degrees",
+              "value": -0.52
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-10",
+          "shot_needs_review": false,
+          "shot_sha256": "15cd446c6ee5474de09b0f98868a32c7c6aa3d7e08202ca11fdb6b3bc6657021",
+          "stale": false,
+          "swing_id": "2"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-10T12:05:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "d3bb3f478f50cbfcf6891727d8b11cdc51f3bc3a09209711ef513c2f6acaca0a",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "head_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.05600332308425863
+            },
+            {
+              "detail": "synthetic",
+              "name": "hip_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.2560190168598295
+            },
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.12137798409163912
+            },
+            {
+              "detail": "synthetic",
+              "name": "launch_angle_deg",
+              "source": "launch_monitor:hd_golf",
+              "unit": "degrees",
+              "value": 12.5
+            },
+            {
+              "detail": "synthetic",
+              "name": "face_to_path_deg",
+              "source": "launch_monitor:hd_golf",
+              "unit": "degrees",
+              "value": 0.48
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-10",
+          "shot_needs_review": false,
+          "shot_sha256": "7ae26ed541448863c963482df087f0c84bc258d67a5ed876803b4ba78beaa0bb",
+          "stale": false,
+          "swing_id": "5"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-10T12:08:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "42ef1f401a94117aa8514c0692873bc0b94f3be0bf6d0f6f046961d19f44db01",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "head_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.05315024796485565
+            },
+            {
+              "detail": "synthetic",
+              "name": "hip_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.25436515480082555
+            },
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.13971768983966446
+            },
+            {
+              "detail": "synthetic",
+              "name": "launch_angle_deg",
+              "source": "launch_monitor:hd_golf",
+              "unit": "degrees",
+              "value": 12.5
+            },
+            {
+              "detail": "synthetic",
+              "name": "face_to_path_deg",
+              "source": "launch_monitor:hd_golf",
+              "unit": "degrees",
+              "value": -0.52
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-10",
+          "shot_needs_review": false,
+          "shot_sha256": "a66eb576a05a12ca917417e46d67f1f50a7e0daa7495a1b1c3ce50d61bd67c1d",
+          "stale": false,
+          "swing_id": "8"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-10T12:11:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "8d1759e51ab735ea8674a32ba7bb0d3ffc881dc840f06ac3e4d6991039c80b24",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "head_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.05307700815536494
+            },
+            {
+              "detail": "synthetic",
+              "name": "hip_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.28844825487075143
+            },
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.16610954361611063
+            },
+            {
+              "detail": "synthetic",
+              "name": "launch_angle_deg",
+              "source": "launch_monitor:hd_golf",
+              "unit": "degrees",
+              "value": 12.5
+            },
+            {
+              "detail": "synthetic",
+              "name": "face_to_path_deg",
+              "source": "launch_monitor:hd_golf",
+              "unit": "degrees",
+              "value": 0.48
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-10",
+          "shot_needs_review": false,
+          "shot_sha256": "8b6745214aa9fa38b652ec7161daf5314c2fa3529046c34095c9e6c23cd3a47a",
+          "stale": false,
+          "swing_id": "11"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-10T12:14:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "46ef50d98432eb893bd15272fab5ed842fd3f56103eb9dc3be0c50a432fdf463",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "head_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.05584095825591006
+            },
+            {
+              "detail": "synthetic",
+              "name": "hip_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.3315776062516048
+            },
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.17988590264045223
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-10",
+          "shot_needs_review": false,
+          "shot_sha256": "4ab6d6fcf8af3e13959dc8c482e61d7b936547c59c82a94eb251613662f0bf2b",
+          "stale": false,
+          "swing_id": "14"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-10T12:17:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "05229a71b37576787a613f17f7ffe423da73a5bd89162cf512ba15e2d49ec9a4",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "head_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.05927762987313225
+            },
+            {
+              "detail": "synthetic",
+              "name": "hip_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.34997831631000936
+            },
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.17025840511199344
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-10",
+          "shot_needs_review": false,
+          "shot_sha256": "6bef41c0d4dca0351a584d5ba8d9d2d3000bd8ffd81176857c63ca5f486f2de1",
+          "stale": false,
+          "swing_id": "17"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-10T12:20:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "8ada405d7a93da3e67941b61beb3bb9e8640406a2e4661d0d22a4f08e4b65ddf",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "head_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.06069574175258213
+            },
+            {
+              "detail": "synthetic",
+              "name": "hip_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.329240662045206
+            },
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.14476641076931238
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-10",
+          "shot_needs_review": false,
+          "shot_sha256": "5aa99fbc1f972697e8296c2fe46af65865dddcd2ecd9c1fb3ba2db6108ed00f9",
+          "stale": false,
+          "swing_id": "20"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-10T12:23:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "d8cb5ff13e3845c27e6b5bc00d47111d7c52cef3ed33e20ca8fad6a78e7266c7",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "head_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.0589847606973288
+            },
+            {
+              "detail": "synthetic",
+              "name": "hip_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.28560444358951836
+            },
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.12337287626185484
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-10",
+          "shot_needs_review": false,
+          "shot_sha256": "e297d7d288734c9fccd84b6472b8c53eb08c1eb261c07af3af9e8215c7d5cdc5",
+          "stale": false,
+          "swing_id": "23"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-10T12:26:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "0da384362d0ea4c06d24d89af981db6039d993f11de6c289e22841f1869e1c5f",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "head_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.05548456777649904
+            },
+            {
+              "detail": "synthetic",
+              "name": "hip_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.25324148467970864
+            },
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.12283122606515282
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-10",
+          "shot_needs_review": false,
+          "shot_sha256": "e2f45a5af3303b6ab59014b7456229f53523c8e644bc07e087bd7fce49219f32",
+          "stale": false,
+          "swing_id": "26"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-10T12:29:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "1a0d6bd71b8f5643912161aaa38af6b595a84fd846a824b72bfbb0b360e8b0f1",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "head_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.05293618821565675
+            },
+            {
+              "detail": "synthetic",
+              "name": "hip_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.2574954417233352
+            },
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.14356563018530985
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-10",
+          "shot_needs_review": false,
+          "shot_sha256": "46fbc2330272f50dbd3cf4e188dcedc5feec24f2425bc564cf4f65fb1bfe9672",
+          "stale": false,
+          "swing_id": "29"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-10T12:32:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "247077ac90179dd162282eb72dc669fae57898b7cd0646eecbc91b32876a3ab5",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "hip_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.29503501160974543
+            },
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.16933883370069916
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-10",
+          "shot_needs_review": false,
+          "shot_sha256": "bf5b06d24d82762368838ec524e0949babeadd380d25ab334c1feaece766d5de",
+          "stale": false,
+          "swing_id": "32"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-10T12:35:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "2e5ee9abbfc4f1125c7b8916837366343e2e4a0b0aa186e68761b75fb90c2e77",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.17996766311854973
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-10",
+          "shot_needs_review": false,
+          "shot_sha256": "1fe6280c651882d04f6540880ad193ff42032826d5557c93a7a24251cd8ab895",
+          "stale": false,
+          "swing_id": "35"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-10T12:38:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "dbee75178b36865714bac52fce7ad15cbb3d0d4e83b6cd410c09f80b7cdf293b",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.16712860878910318
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-10",
+          "shot_needs_review": false,
+          "shot_sha256": "25f92584d97a97e88cfcddfb460dea1da0635d8f6062f18a45b098a06a588934",
+          "stale": false,
+          "swing_id": "38"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-10T12:41:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "43d730c32e73897a7625eb757879433e7aa7f9a80e8c9927a8d5aaaa61016e25",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.1408760227396341
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-10",
+          "shot_needs_review": false,
+          "shot_sha256": "05cc042323dd232480042bf9901db404b2616891e1c60bfcb13eb02228c26c18",
+          "stale": false,
+          "swing_id": "41"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-10T12:44:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "1437538bb790d2a2812075a649382520d8d2057f3c874293ebec456b3815f77c",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.1217684862328074
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-10",
+          "shot_needs_review": false,
+          "shot_sha256": "a43669630860092797c1bc4dbeb8d7c924cd9f95cb83bae7ee3b4a232e8363f2",
+          "stale": false,
+          "swing_id": "44"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-10T12:47:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "6402261798caea61d51f0c22572749f9ea8f74da67b70c0606b6536f67643283",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.12476924293782618
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-10",
+          "shot_needs_review": false,
+          "shot_sha256": "fcc270bf3e2a08e979f689b3a45f2da89530e514d8cf8d519e6089981114d1c3",
+          "stale": false,
+          "swing_id": "47"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-10T12:50:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "59567d2a0c2de6e3b2b951c28c100cb9b8361f5fc9f0eb2c7362a11e0866a808",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.1475283795755424
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-10",
+          "shot_needs_review": false,
+          "shot_sha256": "2dcbb362fd38350139bb0e86276429d551aca911cd14dcdf1db6e7152cfeeadc",
+          "stale": false,
+          "swing_id": "50"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-10T12:53:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "44a5d46d9cb8dcba04ebc526823847b9a1d942787748d0c3c8da7962a141482a",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.17222305922037154
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-10",
+          "shot_needs_review": false,
+          "shot_sha256": "a4cd7a3019d167436f7fb487c4ada9d7eb636f9275821556f79a0738d8398321",
+          "stale": false,
+          "swing_id": "53"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-10T12:56:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "3d2ebb086fdf6930ccc1086546d35cc9b78afbb1bfbf11d1f38eac548a2302e1",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.17951470786375534
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-10",
+          "shot_needs_review": false,
+          "shot_sha256": "473b6af90e5924ea31e2a105b756a7552f6f08b01e612c82f1f4eaab49f431c0",
+          "stale": false,
+          "swing_id": "56"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-10T12:59:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "68e24a2f3486b4d84d4f5df9fb016c52bdb1cdc627160c08bf37c7a8dcb2546d",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.16369318514499542
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-10",
+          "shot_needs_review": false,
+          "shot_sha256": "3ccb419ca22da26bdc92a3099656b25036c70eb8c8efa5e6dafbc6ede20871ad",
+          "stale": false,
+          "swing_id": "59"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-10T13:02:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "48b8f1cab774b2b1851ee00d01474b67eef28934f6bee71738752644ee82d2bc",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.13714843466430604
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-10",
+          "shot_needs_review": false,
+          "shot_sha256": "0cce352f14a30e522362d1aed316d07c0d82526845fc011c5fb618480967cb23",
+          "stale": false,
+          "swing_id": "62"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-10T13:05:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "b34426aaceaa0e9bac5e2f0a2589fd9ae4084f973cb0042c1c16dd5c8e54c91e",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.12066783366620279
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-10",
+          "shot_needs_review": false,
+          "shot_sha256": "a8bf67ac2908bb1aba0fbf9ccff27bec0f96f9341597ca2d8ff01b35a96adea1",
+          "stale": false,
+          "swing_id": "65"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-10T13:08:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "329523a0fc09b5bc8fb4da0eb4bdb0cbcdf6a2008cc7f88b01f757e08172cf4e",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.1271574544987054
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-10",
+          "shot_needs_review": false,
+          "shot_sha256": "f00b911992807ac56dfc33fc4479b5fa6b237700ddd1e69a5bff9d264376daf9",
+          "stale": false,
+          "swing_id": "68"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-10T13:11:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "2ccdd8c84c0727cc1abb2e34940d6c4769a0b0b1d8b7fe060079b43989a52e3f",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.15153523031333346
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-10",
+          "shot_needs_review": false,
+          "shot_sha256": "c0e28ac72bdfe36fab7950b95cb07d56bb602db3854c27f01bbd9acf63bb2a8d",
+          "stale": false,
+          "swing_id": "71"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-10T13:14:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "8fd1c05d944b9a0b977292eaff77608d0c0b8b522da9194f577ce4e2fb41bfb1",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.17471075667740787
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-10",
+          "shot_needs_review": false,
+          "shot_sha256": "79011af9eed6dea976dd9687ba71df93055cbf17e48d1937f19cc6d02d4020f1",
+          "stale": false,
+          "swing_id": "74"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-17T12:03:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "0fc25f3e2d308eaffd3285e56a137cd2e1a1f856e0f664ad1d7eb50bf4a2ea0a",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "head_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.052715313577732875
+            },
+            {
+              "detail": "synthetic",
+              "name": "hip_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.272462384107092
+            },
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.1564512558116837
+            },
+            {
+              "detail": "synthetic",
+              "name": "launch_angle_deg",
+              "source": "launch_monitor:hd_golf",
+              "unit": "degrees",
+              "value": 12.5
+            },
+            {
+              "detail": "synthetic",
+              "name": "face_to_path_deg",
+              "source": "launch_monitor:hd_golf",
+              "unit": "degrees",
+              "value": 0.48
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-17",
+          "shot_needs_review": false,
+          "shot_sha256": "4b5ee33d9b185bd0b449a4d5a3b72b96749be33c4dd0f4555d21c598d03e16c3",
+          "stale": false,
+          "swing_id": "3"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-17T12:06:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "9900bf67fed3e5929d8bf39c0fe23e4cd400acce087c10f067ff38ec7342366c",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "head_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.05455303328776161
+            },
+            {
+              "detail": "synthetic",
+              "name": "hip_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.3163642730290916
+            },
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.17717610147843124
+            },
+            {
+              "detail": "synthetic",
+              "name": "launch_angle_deg",
+              "source": "launch_monitor:hd_golf",
+              "unit": "degrees",
+              "value": 12.5
+            },
+            {
+              "detail": "synthetic",
+              "name": "face_to_path_deg",
+              "source": "launch_monitor:hd_golf",
+              "unit": "degrees",
+              "value": -0.52
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-17",
+          "shot_needs_review": false,
+          "shot_sha256": "93aa51020543068e3e5f810a0ffcf022c547a86b07f73900cf471c2e28f6b680",
+          "stale": false,
+          "swing_id": "6"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-17T12:09:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "537282f1b4fdb2f46c3d919fb5d7f82892baec9e985d8d23f0dd4001a4a047bd",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "head_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.058072057442945434
+            },
+            {
+              "detail": "synthetic",
+              "name": "hip_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.34745118683819887
+            },
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.17661915457838334
+            },
+            {
+              "detail": "synthetic",
+              "name": "launch_angle_deg",
+              "source": "launch_monitor:hd_golf",
+              "unit": "degrees",
+              "value": 12.5
+            },
+            {
+              "detail": "synthetic",
+              "name": "face_to_path_deg",
+              "source": "launch_monitor:hd_golf",
+              "unit": "degrees",
+              "value": 0.48
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-17",
+          "shot_needs_review": false,
+          "shot_sha256": "87989b33a304fa8846d574b106dab8756547cf68b1d1e125a45568de035c0d58",
+          "stale": false,
+          "swing_id": "9"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-17T12:12:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "e75b8173164c6869297fa001a134a9429779ba36dc08ed578ccb99e402c0e941",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "head_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.060516613948173384
+            },
+            {
+              "detail": "synthetic",
+              "name": "hip_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.34137874884917263
+            },
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.15521656407157186
+            },
+            {
+              "detail": "synthetic",
+              "name": "launch_angle_deg",
+              "source": "launch_monitor:hd_golf",
+              "unit": "degrees",
+              "value": 12.5
+            },
+            {
+              "detail": "synthetic",
+              "name": "face_to_path_deg",
+              "source": "launch_monitor:hd_golf",
+              "unit": "degrees",
+              "value": -0.52
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-17",
+          "shot_needs_review": false,
+          "shot_sha256": "50cb4adbae607403d8ecde4ba7ecd029c100071c55e314fe1b4eb82f381fe139",
+          "stale": false,
+          "swing_id": "12"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-17T12:15:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "6a09b3967ecb2e358bcb6b81104ff3032918925a3a1db35b6868e293b49aed45",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "head_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.05997235373820657
+            },
+            {
+              "detail": "synthetic",
+              "name": "hip_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.3029023271474519
+            },
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.12972884624910389
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-17",
+          "shot_needs_review": false,
+          "shot_sha256": "289c00deea7c3a0e809e14256eacee51f7b0f3a017b1daf77e5174bbcc4de752",
+          "stale": false,
+          "swing_id": "15"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-17T12:18:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "ac25e0f32b2edb4a96986f98be4d30911aaaefe69603a90ed040786555a4e16d",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "head_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.056865490738543745
+            },
+            {
+              "detail": "synthetic",
+              "name": "hip_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.2621530730322199
+            },
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.12011560878794102
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-17",
+          "shot_needs_review": false,
+          "shot_sha256": "60be29a20cefd1b4f364b3b04e786450ae79f674f38ad4161184e8159b2b3d92",
+          "stale": false,
+          "swing_id": "18"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-17T12:21:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "109e2f1ad7e22108362bbd4d9b4859da7d13458a42b356d7ec0a51fd475499b9",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "head_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.05362903079973904
+            },
+            {
+              "detail": "synthetic",
+              "name": "hip_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.25104200854688064
+            },
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.13390504426957572
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-17",
+          "shot_needs_review": false,
+          "shot_sha256": "8618bcc32b1505aad489b58a39c8c6919836d845726355daeed2fab0a9202e84",
+          "stale": false,
+          "swing_id": "21"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-17T12:24:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "3835e288bf51af59d23cdd4ba1b50e6b94b96ce916e688ea11295e5832a9a35a",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "head_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.05279746802953087
+            },
+            {
+              "detail": "synthetic",
+              "name": "hip_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.27827028494968026
+            },
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.16029855062938622
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-17",
+          "shot_needs_review": false,
+          "shot_sha256": "4df4ee3046ec6859cfd5ae31b5944855ab10f043a40c59ac0b7df618709e852c",
+          "stale": false,
+          "swing_id": "24"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-17T12:27:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "d25ba471553c2c114906c59cd4821df3a7a230adf19a7eb3a84b9435b5c53bb9",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "head_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.055022004970560826
+            },
+            {
+              "detail": "synthetic",
+              "name": "hip_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.32251525113057433
+            },
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.17862719093741267
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-17",
+          "shot_needs_review": false,
+          "shot_sha256": "f12f7fbe323087577372ed045fc2928caca3a1e8bb9801e7a58a69bc23e85a21",
+          "stale": false,
+          "swing_id": "27"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-17T12:30:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "9845c3cb7e0519bf22b1bb845ef7101c1380825a2478976e3ef92748d59017d2",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "head_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.05856059139631838
+            },
+            {
+              "detail": "synthetic",
+              "name": "hip_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.34912836880919196
+            },
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.1745376805116559
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-17",
+          "shot_needs_review": false,
+          "shot_sha256": "212fe03ace3f66327ba0d021498c0357866db1483d02cb5df5f4e13a91ea8570",
+          "stale": false,
+          "swing_id": "30"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-17T12:33:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "c3d79acd3abecb978d5510faedcf7700c4c4f9216365fd2fe29130ed12622509",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.15123254318173035
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-17",
+          "shot_needs_review": false,
+          "shot_sha256": "449648467397842f45e56c91059df14d2a9dcf5dcb12ebe056bf6c26a4debf42",
+          "stale": false,
+          "swing_id": "33"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-17T12:36:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "b4c5d718bf0b4c1b0db362afac5d30a3db46fb2f5b2d335981dc692d3181ecaa",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.12696219278237236
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-17",
+          "shot_needs_review": false,
+          "shot_sha256": "f3648fcf649e4144254853fa307b61c12850c017bab9e30b9f40c672ef0c0637",
+          "stale": false,
+          "swing_id": "36"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-17T12:39:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "b79b5a2be72615ec659f04f0fcc2d72d54de0925aebd9475397f549542980947",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.12073290816239052
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-17",
+          "shot_needs_review": false,
+          "shot_sha256": "b3dc69b977699474cc8a5d9e4017a8ccc874a4f02f25cd2c72805ca8f2fa667d",
+          "stale": false,
+          "swing_id": "39"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-17T12:42:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "bbbd38c1e1cccd93e8699bc00d5a60470598d5c45d994baea340d0a507e5b079",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.13742288508607373
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-17",
+          "shot_needs_review": false,
+          "shot_sha256": "c5b042321494143090decf33fe6cd4e12ac00a83a5878713c969b94aa098f0f5",
+          "stale": false,
+          "swing_id": "42"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-17T12:45:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "c26c6dddc89350ec0ceb43023b112b6ba5a1316a1d4700e40299f2f31821bd5c",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.1639620874735112
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-17",
+          "shot_needs_review": false,
+          "shot_sha256": "e8555d109cba9318f1dd47988a6bd0cf37cec71f2d5764ef1b2789d26ec53141",
+          "stale": false,
+          "swing_id": "45"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-17T12:48:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "de27b96df79c6589af487d97eb5769a1e76bb880eee215928376da0c3b3885c4",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.17956748283029156
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-17",
+          "shot_needs_review": false,
+          "shot_sha256": "c88553c0a579d937d78590c818a565b09a9dbcb503a376c588e8b48038e8a2bd",
+          "stale": false,
+          "swing_id": "48"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-17T12:51:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "4527d77be1fa98435a041e58082349c1b59ec91c79298c33df0d1d7aab7d6a69",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.17201837838451683
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-17",
+          "shot_needs_review": false,
+          "shot_sha256": "250aa20b891020c17b4a991b42cdfefdd6d6f8f2fc14f880514b5e9fc1bfaa74",
+          "stale": false,
+          "swing_id": "51"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-17T12:54:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "94b8e39d804fba9084ef42883f45d6aa8dfda1954ebbae3c2a0700365c814196",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.14722652991203222
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-17",
+          "shot_needs_review": false,
+          "shot_sha256": "2a5043722f62e6f41fb5438e7f3478e9de60280ecdbad5d32f7fc1d26d93b5e4",
+          "stale": false,
+          "swing_id": "54"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-17T12:57:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "4005ebc8ef669801a06a0e01bd6379f94722210e96c58899ec6e92b87f246518",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.1246066050007388
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-17",
+          "shot_needs_review": false,
+          "shot_sha256": "978004c933aa4c3bd8cdaed63d2357182bdd8c1da234fcdc1a394f61e0deabe4",
+          "stale": false,
+          "swing_id": "57"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-17T13:00:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "a4418aee6b73cb7163f9f873990052915e6933e60e588a1f93895d05f39e7d65",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.12187242291278214
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-17",
+          "shot_needs_review": false,
+          "shot_sha256": "71d9841f0178b5f03dc542642430ad2aa3d759b91a75e43c0a0378a7ae92eec0",
+          "stale": false,
+          "swing_id": "60"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-17T13:03:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "9b02e5994d6c3d1352c5acdfc4956676641adced623947a70d47666fd424b4c0",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.14116514050548132
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-17",
+          "shot_needs_review": false,
+          "shot_sha256": "2782b1f897b63b5152d48708cc56ca80a13305a9c33d590f505a1d5ea1991f47",
+          "stale": false,
+          "swing_id": "63"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-17T13:06:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "fb1d4899561b226abd21b0e3601e4cc2dcab644d20d25ea4246f9a12afffad05",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.16737649752364556
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-17",
+          "shot_needs_review": false,
+          "shot_sha256": "ea835ba991174289f0be19ec2840f3f158902d9ea6ab47e9a1e2508affead6d6",
+          "stale": false,
+          "swing_id": "66"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-17T13:09:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "172ba2bf81035507c8f4ef7f3aee0ff21041b50829e50bcc770dd59e5753889a",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.1799801994434822
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-17",
+          "shot_needs_review": false,
+          "shot_sha256": "2b711c089e59b155ff7cad9dffe4e7eafb4efa87c99d737831ea0f26b4404c76",
+          "stale": false,
+          "swing_id": "69"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-17T13:12:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "08a6e2d73e7da11b614684edf73ea48ed02318752f078c110f6432cf11591a45",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.16910620033347323
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-17",
+          "shot_needs_review": false,
+          "shot_sha256": "230d94712c0dc7f7a5ad8a37f6d17076ab8d86fb716008873fa34a0b1d095976",
+          "stale": false,
+          "swing_id": "72"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-24T13:15:00Z",
+          "club": null,
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": "80c739b35a89259b47d9adf3dc78dd5665a354c269500b0f8d410e6ef3bcbf8a",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "synthetic",
+              "name": "finish_balance_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.14327000392083367
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-24",
+          "shot_needs_review": false,
+          "shot_sha256": "381009f7283629fcdb395c30cd74d05504b27a2aac1000288d525dc959231774",
+          "stale": false,
+          "swing_id": "75"
+        }
+      ],
+      "unattributed_swings": 0,
+      "unknown_sources": []
+    },
+    "display_name": "Aaron",
+    "versions": {
+      "comparable_from": 16,
+      "installed": 16
+    }
+  },
+  "provenance": {
+    "analysis_version": 16,
+    "kind": "career",
+    "note": "n = 31, 32 and 75: the critical-value tables' last row, the expansions' first and one deep inside them; a fourth session holding one sample, which the within-session spread leaves out; twelve identical values (sd 0); a center that prints -0.0; and a center between the band's p10 and p25",
+    "oracle": "python",
+    "pydantic_version": "2.13.4",
+    "python_version": "3.13.3",
+    "recorded_by": "scripts/conformance_vectors.py::_run_career",
+    "rerecords": [
+      {
+        "added": [],
+        "by": "golf-core rerecord",
+        "career_version": 1,
+        "declaration": "spec/declarations/career-v1.json",
+        "moved": [
+          "career_version"
+        ]
+      }
+    ],
+    "source": "CorpusSwing built by scripts/conformance_vectors.py, as tests/analysis/ does"
+  }
+}

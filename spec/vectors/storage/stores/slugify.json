@@ -1,0 +1,414 @@
+{
+  "career_version": 1,
+  "expected": {
+    "files": null,
+    "results": [
+      {
+        "returned": "aaron"
+      },
+      {
+        "returned": "aaron"
+      },
+      {
+        "returned": "aaron"
+      },
+      {
+        "returned": "aaron-sierra"
+      },
+      {
+        "returned": "aaron-sierra"
+      },
+      {
+        "returned": "o-brien"
+      },
+      {
+        "returned": "player-2"
+      },
+      {
+        "returned": ""
+      },
+      {
+        "returned": ""
+      },
+      {
+        "returned": "maria"
+      },
+      {
+        "returned": "maria"
+      },
+      {
+        "returned": "bjorn"
+      },
+      {
+        "returned": "eamon"
+      },
+      {
+        "returned": "aaron"
+      },
+      {
+        "returned": "aaron"
+      },
+      {
+        "returned": "a-b"
+      },
+      {
+        "returned": "a-b-c"
+      },
+      {
+        "returned": "jose-maria-ruiz"
+      },
+      {
+        "returned": "nguyen"
+      },
+      {
+        "returned": "123"
+      },
+      {
+        "returned": ""
+      },
+      {
+        "returned": "inci"
+      },
+      {
+        "returned": "kelvin"
+      },
+      {
+        "returned": "stra-e"
+      },
+      {
+        "returned": "s-ren"
+      },
+      {
+        "returned": "ne"
+      },
+      {
+        "returned": ""
+      },
+      {
+        "returned": ""
+      },
+      {
+        "returned": "player"
+      },
+      {
+        "returned": "aron"
+      },
+      {
+        "returned": "e"
+      },
+      {
+        "returned": "abc"
+      },
+      {
+        "returned": "a-b"
+      },
+      {
+        "returned": "a-b"
+      },
+      {
+        "returned": "a-b-c"
+      },
+      {
+        "returned": "zoe"
+      },
+      {
+        "returned": "bob"
+      },
+      {
+        "returned": "mega"
+      }
+    ]
+  },
+  "id": "storage/stores/slugify",
+  "input": {
+    "files": null,
+    "ops": [
+      {
+        "args": {
+          "name": "Aaron"
+        },
+        "now": null,
+        "op": "slugify"
+      },
+      {
+        "args": {
+          "name": "  Aaron  "
+        },
+        "now": null,
+        "op": "slugify"
+      },
+      {
+        "args": {
+          "name": "AARON"
+        },
+        "now": null,
+        "op": "slugify"
+      },
+      {
+        "args": {
+          "name": "Aaron Sierra"
+        },
+        "now": null,
+        "op": "slugify"
+      },
+      {
+        "args": {
+          "name": "Aaron  Sierra"
+        },
+        "now": null,
+        "op": "slugify"
+      },
+      {
+        "args": {
+          "name": "O'Brien"
+        },
+        "now": null,
+        "op": "slugify"
+      },
+      {
+        "args": {
+          "name": "Player 2"
+        },
+        "now": null,
+        "op": "slugify"
+      },
+      {
+        "args": {
+          "name": "!!!"
+        },
+        "now": null,
+        "op": "slugify"
+      },
+      {
+        "args": {
+          "name": ""
+        },
+        "now": null,
+        "op": "slugify"
+      },
+      {
+        "args": {
+          "name": "María"
+        },
+        "now": null,
+        "op": "slugify"
+      },
+      {
+        "args": {
+          "name": "Maria"
+        },
+        "now": null,
+        "op": "slugify"
+      },
+      {
+        "args": {
+          "name": "Björn"
+        },
+        "now": null,
+        "op": "slugify"
+      },
+      {
+        "args": {
+          "name": "Éamon"
+        },
+        "now": null,
+        "op": "slugify"
+      },
+      {
+        "args": {
+          "name": "Aaron "
+        },
+        "now": null,
+        "op": "slugify"
+      },
+      {
+        "args": {
+          "name": "--aaron--"
+        },
+        "now": null,
+        "op": "slugify"
+      },
+      {
+        "args": {
+          "name": "a--b"
+        },
+        "now": null,
+        "op": "slugify"
+      },
+      {
+        "args": {
+          "name": "a.b_c"
+        },
+        "now": null,
+        "op": "slugify"
+      },
+      {
+        "args": {
+          "name": "José-María Ruiz"
+        },
+        "now": null,
+        "op": "slugify"
+      },
+      {
+        "args": {
+          "name": "Nguyễn"
+        },
+        "now": null,
+        "op": "slugify"
+      },
+      {
+        "args": {
+          "name": "123"
+        },
+        "now": null,
+        "op": "slugify"
+      },
+      {
+        "args": {
+          "name": "--"
+        },
+        "now": null,
+        "op": "slugify"
+      },
+      {
+        "args": {
+          "name": "İnci"
+        },
+        "now": null,
+        "op": "slugify"
+      },
+      {
+        "args": {
+          "name": "Kelvin"
+        },
+        "now": null,
+        "op": "slugify"
+      },
+      {
+        "args": {
+          "name": "Straße"
+        },
+        "now": null,
+        "op": "slugify"
+      },
+      {
+        "args": {
+          "name": "Søren"
+        },
+        "now": null,
+        "op": "slugify"
+      },
+      {
+        "args": {
+          "name": "ﬁne"
+        },
+        "now": null,
+        "op": "slugify"
+      },
+      {
+        "args": {
+          "name": "ǅ"
+        },
+        "now": null,
+        "op": "slugify"
+      },
+      {
+        "args": {
+          "name": "Ⅻ"
+        },
+        "now": null,
+        "op": "slugify"
+      },
+      {
+        "args": {
+          "name": "Player ２"
+        },
+        "now": null,
+        "op": "slugify"
+      },
+      {
+        "args": {
+          "name": "Ａaron"
+        },
+        "now": null,
+        "op": "slugify"
+      },
+      {
+        "args": {
+          "name": "é"
+        },
+        "now": null,
+        "op": "slugify"
+      },
+      {
+        "args": {
+          "name": "́abc"
+        },
+        "now": null,
+        "op": "slugify"
+      },
+      {
+        "args": {
+          "name": "aःb"
+        },
+        "now": null,
+        "op": "slugify"
+      },
+      {
+        "args": {
+          "name": "a⃝b"
+        },
+        "now": null,
+        "op": "slugify"
+      },
+      {
+        "args": {
+          "name": "A\tB\nC"
+        },
+        "now": null,
+        "op": "slugify"
+      },
+      {
+        "args": {
+          "name": " Zoë "
+        },
+        "now": null,
+        "op": "slugify"
+      },
+      {
+        "args": {
+          "name": "\u001cBob\u001f"
+        },
+        "now": null,
+        "op": "slugify"
+      },
+      {
+        "args": {
+          "name": "Ωmega"
+        },
+        "now": null,
+        "op": "slugify"
+      }
+    ]
+  },
+  "provenance": {
+    "kind": "storage",
+    "note": "`contracts/golfer.py::slugify` over `test_slugify_folds_names_to_a_stable_id`'s table and the Unicode edges a port meets: `strip`, `lower`, NFD, drop what `unicodedata.combining` calls combining (canonical class non-zero), then every `[^a-z0-9]+` run to one `-` and the ends stripped of `-`",
+    "oracle": "python",
+    "pydantic_version": "2.13.4",
+    "python_version": "3.13.3",
+    "recorded_by": "scripts/conformance_vectors.py::_run_ops",
+    "rerecords": [
+      {
+        "added": [],
+        "by": "golf-core rerecord",
+        "career_version": 1,
+        "declaration": "spec/declarations/career-v1.json",
+        "moved": [
+          "career_version"
+        ]
+      }
+    ],
+    "source": "tests/storage/test_golfer_store.py::test_slugify_folds_names_to_a_stable_id"
+  }
+}

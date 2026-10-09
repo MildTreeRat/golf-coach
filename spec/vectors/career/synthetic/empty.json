@@ -1,0 +1,106 @@
+{
+  "career_version": 1,
+  "expected": {
+    "bag_profile": {
+      "clubs": [],
+      "mishits_excluded": 0,
+      "player_id": "aaron",
+      "untagged_swings": 0
+    },
+    "baseline": {
+      "built_from_sessions": 0,
+      "built_from_swings": 0,
+      "metrics": {},
+      "player_id": "aaron"
+    },
+    "dispersion": {
+      "built_from_sessions": 0,
+      "built_from_swings": 0,
+      "metrics": {},
+      "player_id": "aaron"
+    },
+    "properties": {
+      "bag_profile": {
+        "categories": {},
+        "clubs_declared": [],
+        "clubs_used": []
+      },
+      "baseline": {
+        "claims_ready": 0,
+        "nothing_sayable": true
+      },
+      "dispersion": {
+        "nothing_established": true,
+        "patterns_established": 0
+      },
+      "standing": {
+        "nothing_placed": true,
+        "placements": 0
+      }
+    },
+    "reports": {
+      "career_baseline": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  No measurement on any swing yet — nothing to build a baseline from.\n  Check `python scripts/career_corpus.py` for why: the commonest causes are\n  swings that were never analyzed, and swings analyzed by an older engine.\n",
+      "career_baseline_verbose": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  No measurement on any swing yet — nothing to build a baseline from.\n  Check `python scripts/career_corpus.py` for why: the commonest causes are\n  swings that were never analyzed, and swings analyzed by an older engine.\n",
+      "career_corpus": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  0 swing directories across 0 sessions  ->  0 distinct swings, 0 distinct shots\n\n  Honest n per metric:\n    (none — no distinct swing carries a measurement yet)\n",
+      "career_corpus_verbose": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  0 swing directories across 0 sessions  ->  0 distinct swings, 0 distinct shots\n\n  Honest n per metric:\n    (none — no distinct swing carries a measurement yet)\n",
+      "career_dispersion": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  No measurement on any swing yet — nothing to read a miss-shape from.\n  Check `python scripts/career_corpus.py` for why.\n",
+      "career_dispersion_verbose": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  No measurement on any swing yet — nothing to read a miss-shape from.\n  Check `python scripts/career_corpus.py` for why.\n",
+      "club_profile": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  No club has been hit or declared — there is nothing to profile yet.\n  No swings on record either.\n  next      New swings get a club at upload — `python scripts/run_server.py`, then the picker\n            on the upload page. A swing already stored is retagged one at a time, from the\n            change control on its row in that page's swing list or with POST\n            /api/sessions/<session>/swings/<swing>/club.\n",
+      "club_profile_driver": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  driver: never hit and not in the bag — there is no history to report.\n",
+      "club_profile_verbose": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  No club has been hit or declared — there is nothing to profile yet.\n  No swings on record either.\n  next      New swings get a club at upload — `python scripts/run_server.py`, then the picker\n            on the upload page. A swing already stored is retagged one at a time, from the\n            change control on its row in that page's swing list or with POST\n            /api/sessions/<session>/swings/<swing>/club.\n",
+      "flag_mishit_list": "\naaron -- 0 shot(s) held out across the bag\n  (no tagged shots yet)\n"
+    },
+    "standing": {
+      "built_from_sessions": 0,
+      "built_from_swings": 0,
+      "metrics": {},
+      "player_id": "aaron"
+    }
+  },
+  "id": "career/synthetic/empty",
+  "input": {
+    "bag": null,
+    "clubs": [
+      "driver"
+    ],
+    "corpus": {
+      "analyzed_without_measurements": 0,
+      "excluded": [],
+      "metric_counts": {},
+      "other_golfers": 0,
+      "outdated_swings": 0,
+      "player_id": "aaron",
+      "sessions_scanned": 0,
+      "swing_dirs_seen": 0,
+      "swings": [],
+      "unattributed_swings": 0,
+      "unknown_sources": []
+    },
+    "display_name": "Aaron",
+    "versions": {
+      "comparable_from": 16,
+      "installed": 16
+    }
+  },
+  "provenance": {
+    "analysis_version": 16,
+    "kind": "career",
+    "note": "no swings and no bag: every aggregate empty and every report's empty state",
+    "oracle": "python",
+    "pydantic_version": "2.13.4",
+    "python_version": "3.13.3",
+    "recorded_by": "scripts/conformance_vectors.py::_run_career",
+    "rerecords": [
+      {
+        "added": [],
+        "by": "golf-core rerecord",
+        "career_version": 1,
+        "declaration": "spec/declarations/career-v1.json",
+        "moved": [
+          "career_version"
+        ]
+      }
+    ],
+    "source": "CorpusSwing built by scripts/conformance_vectors.py, as tests/analysis/ does"
+  }
+}

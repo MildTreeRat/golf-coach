@@ -7,6 +7,13 @@ license.workspace = true
 description = "The shapes the analysis engine reads and writes, with pydantic's runtime bounds ported as runtime checks."
 
 [dependencies]
+# CPython's string edges, for the many-shot layer's validators and parsers (M36 P5): `str.lower()`
+# before a club or a shaft flex is matched, and `repr` inside the messages `Bag`, `Golfer` and
+# `ClubSpec` refuse with, which the storage vectors record verbatim. `pyfmt` depends on nothing of
+# ours and sits below every crate that has to say what Python said, so ADR-008's edge still runs one
+# way. The alternative was a second `str_repr` here, and one home per edge is the reason `pyfmt` is
+# a crate. No third-party dependency comes with it: `serde` is still the only one (decision 6).
+pyfmt = { path = "../pyfmt" }
 serde.workspace = true
 serde_json.workspace = true
 

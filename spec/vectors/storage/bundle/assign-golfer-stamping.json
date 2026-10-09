@@ -1,0 +1,297 @@
+{
+  "career_version": 1,
+  "expected": {
+    "files": {
+      ".incoming/": "",
+      "2026-08-06/1/down_the_line.18ac3e7343f0.mov": "d",
+      "2026-08-06/1/face_on.ca978112ca1b.mov": "a",
+      "2026-08-06/1/manifest.json": "{\n  \"swing_id\": \"1\",\n  \"session_id\": \"2026-08-06\",\n  \"created_at\": \"2026-08-06T12:00:00Z\",\n  \"updated_at\": \"2026-08-06T12:03:00.999999Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.ca978112ca1b.mov\",\n      \"content_sha256\": \"ca978112ca1bbdcafac231b39a23dc4da786eff8147c4e72b9807785afee48bb\",\n      \"original_filename\": \"clip.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1,\n      \"received_at\": \"2026-08-06T12:00:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.18ac3e7343f0.mov\",\n      \"content_sha256\": \"18ac3e7343f016890c510e93f935261169d9e3f565436429830faf0934f4f8e4\",\n      \"original_filename\": \"clip.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1,\n      \"received_at\": \"2026-08-06T12:03:00.999999Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": null,\n  \"mishit\": null\n}",
+      "2026-08-06/2/down_the_line.2e7d2c03a950.mov": "c",
+      "2026-08-06/2/face_on.3e23e8160039.mov": "b",
+      "2026-08-06/2/manifest.json": "{\n  \"swing_id\": \"2\",\n  \"session_id\": \"2026-08-06\",\n  \"created_at\": \"2026-08-06T12:01:00.120000Z\",\n  \"updated_at\": \"2026-08-06T12:02:00.000001Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.3e23e8160039.mov\",\n      \"content_sha256\": \"3e23e8160039594a33894f6564e1b1348bbd7a0088d42c4acb73eeaed59c009d\",\n      \"original_filename\": \"clip.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1,\n      \"received_at\": \"2026-08-06T12:01:00.120000Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.2e7d2c03a950.mov\",\n      \"content_sha256\": \"2e7d2c03a9507ae265ecf5b5356885a53393a2029d241394997265a1a25aefc6\",\n      \"original_filename\": \"clip.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1,\n      \"received_at\": \"2026-08-06T12:02:00.000001Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": null,\n  \"mishit\": null\n}",
+      "2026-08-06/3/face_on.3f79bb7b435b.mov": "e",
+      "2026-08-06/3/manifest.json": "{\n  \"swing_id\": \"3\",\n  \"session_id\": \"2026-08-06\",\n  \"created_at\": \"2026-08-06T12:04:00.500000Z\",\n  \"updated_at\": \"2026-08-06T12:04:00.500000Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.3f79bb7b435b.mov\",\n      \"content_sha256\": \"3f79bb7b435b05321651daefd374cdc681dc06faa65e374e38337b88ca046dea\",\n      \"original_filename\": \"clip.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1,\n      \"received_at\": \"2026-08-06T12:04:00.500000Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"dave\",\n  \"club\": null,\n  \"mishit\": null\n}"
+    },
+    "results": [
+      {
+        "returned": {
+          "club": null,
+          "deduped": false,
+          "missing_roles": [
+            "down_the_line",
+            "shot_screen"
+          ],
+          "player_id": "aaron",
+          "role": "face_on",
+          "session_id": "2026-08-06",
+          "status": "collecting",
+          "swing_id": "1"
+        }
+      },
+      {
+        "returned": {
+          "club": null,
+          "deduped": false,
+          "missing_roles": [
+            "down_the_line",
+            "shot_screen"
+          ],
+          "player_id": null,
+          "role": "face_on",
+          "session_id": "2026-08-06",
+          "status": "collecting",
+          "swing_id": "2"
+        }
+      },
+      {
+        "returned": {
+          "club": null,
+          "deduped": false,
+          "missing_roles": [
+            "shot_screen"
+          ],
+          "player_id": "aaron",
+          "role": "down_the_line",
+          "session_id": "2026-08-06",
+          "status": "collecting",
+          "swing_id": "2"
+        }
+      },
+      {
+        "returned": {
+          "club": null,
+          "deduped": false,
+          "missing_roles": [
+            "shot_screen"
+          ],
+          "player_id": "aaron",
+          "role": "down_the_line",
+          "session_id": "2026-08-06",
+          "status": "collecting",
+          "swing_id": "1"
+        }
+      },
+      {
+        "returned": {
+          "club": null,
+          "deduped": false,
+          "missing_roles": [
+            "down_the_line",
+            "shot_screen"
+          ],
+          "player_id": "dave",
+          "role": "face_on",
+          "session_id": "2026-08-06",
+          "status": "collecting",
+          "swing_id": "3"
+        }
+      },
+      {
+        "returned": [
+          {
+            "club": null,
+            "created_at": "2026-08-06T12:00:00Z",
+            "mishit": null,
+            "player_id": "aaron",
+            "roles": {
+              "down_the_line": {
+                "content_sha256": "18ac3e7343f016890c510e93f935261169d9e3f565436429830faf0934f4f8e4",
+                "content_type": "video/quicktime",
+                "filename": "down_the_line.18ac3e7343f0.mov",
+                "original_filename": "clip.mov",
+                "received_at": "2026-08-06T12:03:00.999999Z",
+                "role": "down_the_line",
+                "size_bytes": 1,
+                "warnings": []
+              },
+              "face_on": {
+                "content_sha256": "ca978112ca1bbdcafac231b39a23dc4da786eff8147c4e72b9807785afee48bb",
+                "content_type": "video/quicktime",
+                "filename": "face_on.ca978112ca1b.mov",
+                "original_filename": "clip.mov",
+                "received_at": "2026-08-06T12:00:00Z",
+                "role": "face_on",
+                "size_bytes": 1,
+                "warnings": []
+              }
+            },
+            "session_id": "2026-08-06",
+            "swing_id": "1",
+            "updated_at": "2026-08-06T12:03:00.999999Z"
+          },
+          {
+            "club": null,
+            "created_at": "2026-08-06T12:01:00.120000Z",
+            "mishit": null,
+            "player_id": "aaron",
+            "roles": {
+              "down_the_line": {
+                "content_sha256": "2e7d2c03a9507ae265ecf5b5356885a53393a2029d241394997265a1a25aefc6",
+                "content_type": "video/quicktime",
+                "filename": "down_the_line.2e7d2c03a950.mov",
+                "original_filename": "clip.mov",
+                "received_at": "2026-08-06T12:02:00.000001Z",
+                "role": "down_the_line",
+                "size_bytes": 1,
+                "warnings": []
+              },
+              "face_on": {
+                "content_sha256": "3e23e8160039594a33894f6564e1b1348bbd7a0088d42c4acb73eeaed59c009d",
+                "content_type": "video/quicktime",
+                "filename": "face_on.3e23e8160039.mov",
+                "original_filename": "clip.mov",
+                "received_at": "2026-08-06T12:01:00.120000Z",
+                "role": "face_on",
+                "size_bytes": 1,
+                "warnings": []
+              }
+            },
+            "session_id": "2026-08-06",
+            "swing_id": "2",
+            "updated_at": "2026-08-06T12:02:00.000001Z"
+          },
+          {
+            "club": null,
+            "created_at": "2026-08-06T12:04:00.500000Z",
+            "mishit": null,
+            "player_id": "dave",
+            "roles": {
+              "face_on": {
+                "content_sha256": "3f79bb7b435b05321651daefd374cdc681dc06faa65e374e38337b88ca046dea",
+                "content_type": "video/quicktime",
+                "filename": "face_on.3f79bb7b435b.mov",
+                "original_filename": "clip.mov",
+                "received_at": "2026-08-06T12:04:00.500000Z",
+                "role": "face_on",
+                "size_bytes": 1,
+                "warnings": []
+              }
+            },
+            "session_id": "2026-08-06",
+            "swing_id": "3",
+            "updated_at": "2026-08-06T12:04:00.500000Z"
+          }
+        ]
+      }
+    ]
+  },
+  "id": "storage/bundle/assign-golfer-stamping",
+  "input": {
+    "files": {
+      ".incoming/1.part": "a",
+      ".incoming/2.part": "b",
+      ".incoming/3.part": "c",
+      ".incoming/4.part": "d",
+      ".incoming/5.part": "e"
+    },
+    "ops": [
+      {
+        "args": {
+          "club": null,
+          "content_type": "video/quicktime",
+          "digest": "ca978112ca1bbdcafac231b39a23dc4da786eff8147c4e72b9807785afee48bb",
+          "original_filename": "clip.mov",
+          "player_id": "aaron",
+          "role": "face_on",
+          "session_id": "2026-08-06",
+          "size_bytes": 1,
+          "swing_id": null,
+          "tmp_path": ".incoming/1.part"
+        },
+        "now": "2026-08-06T12:00:00Z",
+        "op": "bundle.assign_from_path"
+      },
+      {
+        "args": {
+          "club": null,
+          "content_type": "video/quicktime",
+          "digest": "3e23e8160039594a33894f6564e1b1348bbd7a0088d42c4acb73eeaed59c009d",
+          "original_filename": "clip.mov",
+          "player_id": null,
+          "role": "face_on",
+          "session_id": "2026-08-06",
+          "size_bytes": 1,
+          "swing_id": null,
+          "tmp_path": ".incoming/2.part"
+        },
+        "now": "2026-08-06T12:01:00.120000Z",
+        "op": "bundle.assign_from_path"
+      },
+      {
+        "args": {
+          "club": null,
+          "content_type": "video/quicktime",
+          "digest": "2e7d2c03a9507ae265ecf5b5356885a53393a2029d241394997265a1a25aefc6",
+          "original_filename": "clip.mov",
+          "player_id": "aaron",
+          "role": "down_the_line",
+          "session_id": "2026-08-06",
+          "size_bytes": 1,
+          "swing_id": null,
+          "tmp_path": ".incoming/3.part"
+        },
+        "now": "2026-08-06T12:02:00.000001Z",
+        "op": "bundle.assign_from_path"
+      },
+      {
+        "args": {
+          "club": null,
+          "content_type": "video/quicktime",
+          "digest": "18ac3e7343f016890c510e93f935261169d9e3f565436429830faf0934f4f8e4",
+          "original_filename": "clip.mov",
+          "player_id": "dave",
+          "role": "down_the_line",
+          "session_id": "2026-08-06",
+          "size_bytes": 1,
+          "swing_id": null,
+          "tmp_path": ".incoming/4.part"
+        },
+        "now": "2026-08-06T12:03:00.999999Z",
+        "op": "bundle.assign_from_path"
+      },
+      {
+        "args": {
+          "club": null,
+          "content_type": "video/quicktime",
+          "digest": "3f79bb7b435b05321651daefd374cdc681dc06faa65e374e38337b88ca046dea",
+          "original_filename": "clip.mov",
+          "player_id": "dave",
+          "role": "face_on",
+          "session_id": "2026-08-06",
+          "size_bytes": 1,
+          "swing_id": null,
+          "tmp_path": ".incoming/5.part"
+        },
+        "now": "2026-08-06T12:04:00.500000Z",
+        "op": "bundle.assign_from_path"
+      },
+      {
+        "args": {
+          "session_id": "2026-08-06"
+        },
+        "now": null,
+        "op": "bundle.get_session"
+      }
+    ]
+  },
+  "provenance": {
+    "kind": "storage",
+    "note": "a new swing takes the call's golfer, an upload naming none leaves its swing anonymous, a later role labels that swing, an attributed swing is never restamped, and switching golfer stamps only what comes after (`test_a_new_swing_is_stamped_with_the_current_golfer` and the four tests after it)",
+    "oracle": "python",
+    "pydantic_version": "2.13.4",
+    "python_version": "3.13.3",
+    "recorded_by": "scripts/conformance_vectors.py::_run_ops",
+    "rerecords": [
+      {
+        "added": [],
+        "by": "golf-core rerecord",
+        "career_version": 1,
+        "declaration": "spec/declarations/career-v1.json",
+        "moved": [
+          "career_version"
+        ]
+      }
+    ],
+    "source": "tests/storage/test_bundle_store.py, as store calls"
+  }
+}

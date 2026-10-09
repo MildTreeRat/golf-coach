@@ -1,0 +1,186 @@
+{
+  "career_version": 1,
+  "expected": {
+    "files": {
+      "aaron.bag.json": "{\n  \"player_id\": \"aaron\",\n  \"entries\": {\n    \"7i\": {\n      \"club\": \"7i\",\n      \"make\": \"\",\n      \"model\": \"\",\n      \"model_year\": null,\n      \"head_type\": \"\",\n      \"set_composition\": \"\",\n      \"loft_deg\": 34.0,\n      \"lie_deg\": null,\n      \"bounce_deg\": null,\n      \"grind\": \"\",\n      \"offset_mm\": null,\n      \"face_angle_deg\": null,\n      \"head_weight_g\": null,\n      \"adjustable_hosel\": null,\n      \"loft_range_deg\": null,\n      \"shaft_model\": \"\",\n      \"shaft_material\": null,\n      \"shaft_flex\": null,\n      \"shaft_weight_g\": null,\n      \"shaft_torque_deg\": null,\n      \"shaft_kick_point\": \"\",\n      \"length_in\": null,\n      \"swing_weight\": \"\",\n      \"total_weight_g\": null,\n      \"grip\": \"\",\n      \"cor\": null,\n      \"moi_g_cm2\": null,\n      \"usga_conforming\": null,\n      \"recorded_at\": \"2026-08-06T12:01:00.120000Z\",\n      \"retired_at\": null,\n      \"provenance\": null\n    }\n  },\n  \"retired\": [],\n  \"updated_at\": \"2026-08-06T12:01:00.120000Z\"\n}",
+      "aaron.golfer.json": "{\n  \"player_id\": \"aaron\",\n  \"display_name\": \"Aaron\",\n  \"handedness\": \"right\",\n  \"created_at\": \"2026-08-06T12:00:00Z\"\n}"
+    },
+    "results": [
+      {
+        "returned": {
+          "created_at": "2026-08-06T12:00:00Z",
+          "display_name": "Aaron",
+          "handedness": "right",
+          "player_id": "aaron"
+        }
+      },
+      {
+        "returned": {
+          "entries": {
+            "7i": {
+              "adjustable_hosel": null,
+              "bounce_deg": null,
+              "club": "7i",
+              "cor": null,
+              "face_angle_deg": null,
+              "grind": "",
+              "grip": "",
+              "head_type": "",
+              "head_weight_g": null,
+              "length_in": null,
+              "lie_deg": null,
+              "loft_deg": 34.0,
+              "loft_range_deg": null,
+              "make": "",
+              "model": "",
+              "model_year": null,
+              "moi_g_cm2": null,
+              "offset_mm": null,
+              "provenance": null,
+              "recorded_at": "2026-08-06T12:01:00.120000Z",
+              "retired_at": null,
+              "set_composition": "",
+              "shaft_flex": null,
+              "shaft_kick_point": "",
+              "shaft_material": null,
+              "shaft_model": "",
+              "shaft_torque_deg": null,
+              "shaft_weight_g": null,
+              "swing_weight": "",
+              "total_weight_g": null,
+              "usga_conforming": null
+            }
+          },
+          "player_id": "aaron",
+          "retired": [],
+          "updated_at": "2026-08-06T12:01:00.120000Z"
+        }
+      },
+      {
+        "returned": [
+          {
+            "created_at": "2026-08-06T12:00:00Z",
+            "display_name": "Aaron",
+            "handedness": "right",
+            "player_id": "aaron"
+          }
+        ]
+      },
+      {
+        "returned": {
+          "created_at": "2026-08-06T12:00:00Z",
+          "display_name": "Aaron",
+          "handedness": "right",
+          "player_id": "aaron"
+        }
+      },
+      {
+        "returned": {
+          "entries": {
+            "7i": {
+              "adjustable_hosel": null,
+              "bounce_deg": null,
+              "club": "7i",
+              "cor": null,
+              "face_angle_deg": null,
+              "grind": "",
+              "grip": "",
+              "head_type": "",
+              "head_weight_g": null,
+              "length_in": null,
+              "lie_deg": null,
+              "loft_deg": 34.0,
+              "loft_range_deg": null,
+              "make": "",
+              "model": "",
+              "model_year": null,
+              "moi_g_cm2": null,
+              "offset_mm": null,
+              "provenance": null,
+              "recorded_at": "2026-08-06T12:01:00.120000Z",
+              "retired_at": null,
+              "set_composition": "",
+              "shaft_flex": null,
+              "shaft_kick_point": "",
+              "shaft_material": null,
+              "shaft_model": "",
+              "shaft_torque_deg": null,
+              "shaft_weight_g": null,
+              "swing_weight": "",
+              "total_weight_g": null,
+              "usga_conforming": null
+            }
+          },
+          "player_id": "aaron",
+          "retired": [],
+          "updated_at": "2026-08-06T12:01:00.120000Z"
+        }
+      }
+    ]
+  },
+  "id": "storage/stores/bag-beside-golfer",
+  "input": {
+    "files": {},
+    "ops": [
+      {
+        "args": {
+          "handedness": "right",
+          "name": "Aaron"
+        },
+        "now": "2026-08-06T12:00:00Z",
+        "op": "golfer.get_or_create"
+      },
+      {
+        "args": {
+          "entry": {
+            "club": "7i",
+            "loft_deg": 34.0,
+            "recorded_at": "2020-01-01T00:00:00Z"
+          },
+          "player_id": "aaron"
+        },
+        "now": "2026-08-06T12:01:00.120000Z",
+        "op": "bag.set_entry"
+      },
+      {
+        "args": {},
+        "now": null,
+        "op": "golfer.list_all"
+      },
+      {
+        "args": {
+          "player_id": "aaron"
+        },
+        "now": null,
+        "op": "golfer.get"
+      },
+      {
+        "args": {
+          "player_id": "aaron"
+        },
+        "now": null,
+        "op": "bag.get"
+      }
+    ]
+  },
+  "provenance": {
+    "kind": "storage",
+    "note": "the golfer and the bag share a directory without seeing each other: `list_all` globs `*.golfer.json` and so never meets `aaron.bag.json` (`test_bags_and_golfers_share_a_directory_without_seeing_each_other`)",
+    "oracle": "python",
+    "pydantic_version": "2.13.4",
+    "python_version": "3.13.3",
+    "recorded_by": "scripts/conformance_vectors.py::_run_ops",
+    "rerecords": [
+      {
+        "added": [],
+        "by": "golf-core rerecord",
+        "career_version": 1,
+        "declaration": "spec/declarations/career-v1.json",
+        "moved": [
+          "career_version"
+        ]
+      }
+    ],
+    "source": "tests/storage/test_bag_store.py, as store calls"
+  }
+}
