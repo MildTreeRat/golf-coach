@@ -24,6 +24,14 @@
 //! session because a session usually has one golfer, whereas a session has many clubs and the same
 //! reach would confidently mislabel every earlier swing. Both asymmetries are ADR-024 §5's.
 //!
+//! **The intent stamps as the club does** (M35 P7, the M35 plan's decision 2): from the session's
+//! intent cursor, stamp-if-empty, no backfill, and [`SwingBundleStore::set_intent`] the per-shot
+//! repair. It has no Python twin, and frozen Python drops it on any rewrite of the manifest
+//! (`crate::manifest`'s doc). Unlike the club it is never required: a swing with none is a
+//! `fundamentals` shot, which is what every swing frozen Python stored is. The answer an upload
+//! gets does not report it, because frozen Python's `AssignmentResult` does not, and the storage
+//! family records that shape.
+//!
 //! Flat files, one `manifest.json` per swing: no shared index, no read-modify-write across swings.
 //!
 //! # A manifest is trusted over its directory
@@ -65,6 +73,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Mutex, MutexGuard, PoisonError};
 
 use contracts::club::ClubId;
+use contracts::intent::PracticeGoal;
 use contracts::mishit::MishitVerdict;
 use contracts::Timestamp;
 use serde::Serialize;
@@ -109,6 +118,8 @@ pub struct Upload<'a> {
     pub player_id: Option<&'a str>,
     /// The session cursor's club, stamped only onto a swing that has none.
     pub club: Option<ClubId>,
+    /// The session cursor's intent, stamped only onto a swing that has none. [M35 P7]
+    pub intent: Option<&'a PracticeGoal>,
 }
 
 /// Sessions of swings, each swing a directory of role-tagged files and a manifest.
@@ -315,6 +326,26 @@ impl SwingBundleStore {
         })
     }
 
+    /// Record what this shot was practised as, overwriting whatever it said, or clear it with
+    /// `None` so it reads as `fundamentals` again. The intent's only repair, per swing, for
+    /// `set_club`'s reason: a session mixes drills and tracked shots, and only the golfer knows
+    /// which swing was which. `None` if there is no such swing. [M35 P7]
+    ///
+    /// Mechanical, as the other repairs are: what a goal may hold is the caller's to refuse. On a
+    /// session the frozen server still writes to, its next write to this swing drops what this
+    /// records (`crate::manifest`'s doc).
+    pub fn set_intent(
+        &self,
+        session_id: &str,
+        swing_id: &str,
+        intent: Option<PracticeGoal>,
+        now: Timestamp,
+    ) -> io::Result<Option<SwingManifest>> {
+        self.repair(session_id, swing_id, now, |manifest| {
+            manifest.intent = intent;
+        })
+    }
+
     /// Remove one swing and everything in its directory. `true` if there was one to remove.
     ///
     /// The counterpart to "swing identity is assigned by the store": a corrective re-upload of a
@@ -337,9 +368,9 @@ impl SwingBundleStore {
         self.root.join(session_id).join(swing_id)
     }
 
-    /// `set_player`, `set_club` and `set_mishit`'s one shape: read the manifest in this directory,
-    /// edit one field, stamp `updated_at`, save it back **to this directory**. A missing or corrupt
-    /// manifest is `None` and stays as it was.
+    /// `set_player`, `set_club`, `set_mishit` and `set_intent`'s one shape: read the manifest in
+    /// this directory, edit one field, stamp `updated_at`, save it back **to this directory**. A
+    /// missing or corrupt manifest is `None` and stays as it was.
     fn repair(
         &self,
         session_id: &str,
@@ -360,12 +391,14 @@ impl SwingBundleStore {
 
     /// `_place`: move the upload into `<session_dir>/<manifest.swing_id>` and record it.
     ///
-    /// The golfer and the club are **stamp-if-empty**. That covers the ordinary case (the swing was
-    /// opened by this very upload) and the one that only shows up with two phones: the face-on phone
-    /// uploads before anyone picked a golfer, the down-the-line phone after, and the swing is
-    /// attributed on the second file rather than staying anonymous because of which phone was
-    /// faster. For the club it covers a swing written before the field existed receiving a later
-    /// role, tagged from the cursor current *now*, when the swing is being completed.
+    /// The golfer, the club and the intent are **stamp-if-empty**. That covers the ordinary case
+    /// (the swing was opened by this very upload) and the one that only shows up with two phones:
+    /// the face-on phone uploads before anyone picked a golfer, the down-the-line phone after, and
+    /// the swing is attributed on the second file rather than staying anonymous because of which
+    /// phone was faster. For the club and the intent it covers a swing written before the field
+    /// existed receiving a later role, tagged from the cursor current *now*, when the swing is
+    /// being completed. For the intent that also means a swing opened with no goal chosen takes the
+    /// goal chosen before its next file lands, exactly as an untagged club would.
     ///
     /// A role already filled under another filename has that file unlinked, so a replaced clip is
     /// gone and not merely unreferenced; the same filename is simply written over by the rename.
@@ -385,6 +418,9 @@ impl SwingBundleStore {
         }
         if manifest.club.is_none() {
             manifest.club = upload.club;
+        }
+        if manifest.intent.is_none() {
+            manifest.intent = upload.intent.cloned();
         }
 
         if let Some(old) = manifest.roles.get(&upload.role) {
@@ -424,7 +460,8 @@ impl SwingBundleStore {
     }
 }
 
-/// `_new_manifest`: a swing opened by this upload, stamped with the cursor's golfer and club.
+/// `_new_manifest`: a swing opened by this upload, stamped with the cursor's golfer, club and
+/// intent.
 fn new_manifest(upload: &Upload<'_>, swing_id: &str, now: Timestamp) -> SwingManifest {
     SwingManifest {
         swing_id: swing_id.to_string(),
@@ -435,6 +472,7 @@ fn new_manifest(upload: &Upload<'_>, swing_id: &str, now: Timestamp) -> SwingMan
         player_id: upload.player_id.map(str::to_string),
         club: upload.club,
         mishit: None,
+        intent: upload.intent.cloned(),
     }
 }
 
@@ -532,6 +570,7 @@ pub(crate) fn swing_order(a: &str, b: &str) -> Ordering {
 mod tests {
     use super::*;
     use crate::manifest::hash_bytes;
+    use contracts::intent::{ClubCategory, PracticeMode, TargetShape};
 
     const SESSION: &str = "2026-08-06";
 
@@ -568,6 +607,7 @@ mod tests {
             swing_id: None,
             player_id: None,
             club: None,
+            intent: None,
         };
         edit(&mut given);
         store.assign_from_path(&given, now()).unwrap()
@@ -792,6 +832,117 @@ mod tests {
         assert!(!store.root().join(SESSION).join("99").exists());
     }
 
+    /// Goals an [`Upload`] can borrow for the `'static` its test helper's closure asks of a field,
+    /// as the golfer's string literals already are.
+    static DRILL: PracticeGoal = PracticeGoal {
+        mode: PracticeMode::Drill,
+        target_shape: None,
+        club: ClubCategory::All,
+        focus_checkpoint: None,
+    };
+    static PERFORMANCE: PracticeGoal = PracticeGoal {
+        mode: PracticeMode::Performance,
+        target_shape: None,
+        club: ClubCategory::All,
+        focus_checkpoint: None,
+    };
+
+    /// The intent stamps as the club does (M35 P7): onto the swing an upload opens, onto one that
+    /// has none when a later role lands, and never over one already recorded. A duplicate stamps
+    /// nothing.
+    #[test]
+    fn the_intent_stamps_once_and_is_never_restamped() {
+        let (_dir, store) = store();
+        let intent = |swing: &str| store.get_swing(SESSION, swing).unwrap().intent;
+
+        upload(&store, Role::ShotScreen, b"drill-photo", |u| {
+            u.intent = Some(&DRILL)
+        });
+        assert_eq!(intent("1"), Some(DRILL.clone()));
+        upload(&store, Role::FaceOn, b"drill-clip", |u| {
+            u.intent = Some(&PERFORMANCE)
+        });
+        assert_eq!(intent("1"), Some(DRILL.clone()), "a later role keeps it");
+        upload(&store, Role::ShotScreen, b"drill-photo", |u| {
+            u.intent = Some(&PERFORMANCE)
+        });
+        assert_eq!(
+            intent("1"),
+            Some(DRILL.clone()),
+            "a duplicate stamps nothing"
+        );
+
+        plain(&store, Role::ShotScreen, b"unlabelled-photo");
+        assert_eq!(
+            intent("2"),
+            None,
+            "no cursor, no intent: a fundamentals shot"
+        );
+        upload(&store, Role::FaceOn, b"unlabelled-clip", |u| {
+            u.intent = Some(&DRILL)
+        });
+        assert_eq!(
+            intent("2"),
+            Some(DRILL.clone()),
+            "an empty intent takes the cursor's"
+        );
+    }
+
+    /// `set_intent` overwrites one swing's intent and clears it, stamps `updated_at`, touches no
+    /// other field and no other swing, and answers `None` for a swing that is not there.
+    #[test]
+    fn set_intent_overrides_and_clears_one_swing() {
+        let (_dir, store) = store();
+        let later: Timestamp = "2026-08-06T13:00:00Z".parse().unwrap();
+        for data in [b"one", b"two"] {
+            upload(&store, Role::FaceOn, data, |u| {
+                u.player_id = Some("aaron");
+                u.club = Some(ClubId::SevenIron);
+                u.intent = Some(&DRILL);
+            });
+        }
+        let draw = PracticeGoal {
+            mode: PracticeMode::ShotShaping,
+            target_shape: Some(TargetShape::Draw),
+            ..PracticeGoal::default()
+        };
+
+        let set = store
+            .set_intent(SESSION, "1", Some(draw.clone()), later)
+            .unwrap()
+            .unwrap();
+        assert_eq!(set.intent, Some(draw.clone()));
+        assert_eq!(set.updated_at, later);
+        assert_eq!(
+            (set.player_id.as_deref(), set.club),
+            (Some("aaron"), Some(ClubId::SevenIron))
+        );
+        assert_eq!(store.get_swing(SESSION, "1").unwrap().intent, Some(draw));
+        assert_eq!(
+            store.get_swing(SESSION, "2").unwrap().intent,
+            Some(DRILL.clone()),
+            "the other swing is untouched"
+        );
+
+        let cleared = store
+            .set_intent(SESSION, "1", None, later)
+            .unwrap()
+            .unwrap();
+        assert_eq!(cleared.intent, None);
+        let on_disk =
+            fs::read_to_string(store.root().join(SESSION).join("1").join("manifest.json")).unwrap();
+        assert!(
+            !on_disk.contains("intent"),
+            "a cleared intent is not written"
+        );
+
+        assert!(store
+            .set_intent(SESSION, "99", None, later)
+            .unwrap()
+            .is_none());
+        assert!(!store.root().join(SESSION).join("99").exists());
+    }
+
     /// Why `delete_swing` exists, written as the failure it prevents, then the delete itself.
     #[test]
     fn deleting_a_phantom_stops_it_swallowing_the_next_swing() {
@@ -862,6 +1013,7 @@ mod tests {
                     swing_id: None,
                     player_id: None,
                     club: None,
+                    intent: None,
                 },
                 id,
                 now(),

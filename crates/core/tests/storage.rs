@@ -20,17 +20,31 @@
 //! # Every vector runs
 //!
 //! P8 ported the golfer store, the shot store and `slugify`, P9 the bag store and the bundle store,
-//! and P10 `read_corpus`, so nothing in the family waits on a later phase and nothing is skipped. A
-//! vector recorded by a runner this gate does not have fails it rather than being passed over.
+//! and P10 `read_corpus`, so nothing M36 recorded waits on a later phase. A vector recorded by a
+//! runner this gate does not have fails it rather than being passed over.
+//!
+//! M35 P9 worked twelve cases by hand ahead of the reader M35 P10 built, and they were skipped here
+//! by name until P10 bumped `CAREER_VERSION` to the version they were worked at. Nothing is skipped
+//! now.
+//!
+//! # A hand-worked case is held to the contract as well as to the reader
+//!
+//! A person's working can slip where a recorder's cannot: a count off by one, a property left at a
+//! value the swings above it do not give. So every hand-worked corpus case is also read back as the
+//! contract reads a corpus, and its counts recomputed from its own `swings`
+//! (`every_hand_corpus_case_counts_what_its_own_swings_hold`). That names a slip as the case's
+//! before any reader is asked, and it is what checked M35 P9's cases before P10's reader existed.
 
 use std::fs;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 
-use contracts::career::CAREER_VERSION;
+use contracts::career::{CareerCorpus, Narrowing, CAREER_VERSION};
 use flate2::read::GzDecoder;
 use golf_core::compare::compare;
-use golf_core::storage_family::{differences, run_storage, StorageCase};
+use golf_core::storage_family::{
+    corpus_answer, differences, run_storage, StorageCase, HAND_ORACLE,
+};
 use serde::Serialize;
 use serde_json::{Map, Value};
 use storage::manifest::SwingManifest;
@@ -153,6 +167,67 @@ fn every_storage_vector_conforms() {
             .cloned()
             .collect::<Vec<_>>()
             .join(", ")
+    );
+}
+
+/// **Every hand-worked corpus case counts what its own swings hold** (the module doc): its
+/// `expected.corpus` reads as a [`CareerCorpus`] and writes back as itself, and its derived counts
+/// and the nine properties are the contract's own over its `swings`, under every narrowing it
+/// names too. No reader is run, so this holds a case before the reader that follows it exists
+/// (M35 P9), and after, it tells a slip in the working from a reader that disagrees.
+///
+/// What it cannot check is the part a person decides: which swings, which exclusions, and each
+/// swing's own fields, `auto_mishit` among them. Those are the gate's, against the reader.
+#[test]
+fn every_hand_corpus_case_counts_what_its_own_swings_hold() {
+    let mut problems = Vec::new();
+    let mut checked = Vec::new();
+    for (id, vector) in storage_vectors() {
+        if vector["provenance"]["oracle"] != HAND_ORACLE
+            || StorageCase::of(&vector) != Ok(StorageCase::Corpus)
+        {
+            continue;
+        }
+        let expected = &vector["expected"];
+        let corpus: CareerCorpus = match serde_json::from_value(expected["corpus"].clone()) {
+            Ok(corpus) => corpus,
+            Err(e) => {
+                problems.push(format!("{id}: expected.corpus is no CareerCorpus: {e}"));
+                continue;
+            }
+        };
+        let mut recounted = corpus_answer(&corpus.narrowed_to(&Narrowing::default()));
+        recounted["narrowed"] = Value::Object(
+            vector["input"]["narrowings"]
+                .as_object()
+                .expect("narrowings")
+                .iter()
+                .map(|(name, args)| {
+                    let narrowing: Narrowing = serde_json::from_value(args.clone())
+                        .unwrap_or_else(|e| panic!("{id}: narrowings.{name}: {e}"));
+                    (name.clone(), corpus_answer(&corpus.narrowed_to(&narrowing)))
+                })
+                .collect(),
+        );
+        problems.extend(
+            compare(expected, &recounted)
+                .iter()
+                .map(|d| format!("{id}: {d}")),
+        );
+        checked.push(id);
+    }
+    assert!(!checked.is_empty(), "no hand-worked corpus case");
+    assert!(
+        problems.is_empty(),
+        "{} problem(s) over {} hand-worked corpus cases:\n{}",
+        problems.len(),
+        checked.len(),
+        problems.join("\n")
+    );
+    println!(
+        "{} hand-worked corpus cases count their own swings: {}",
+        checked.len(),
+        checked.join(", ")
     );
 }
 

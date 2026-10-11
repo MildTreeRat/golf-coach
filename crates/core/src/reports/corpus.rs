@@ -53,9 +53,17 @@ pub fn career_corpus(
     if collapsed > 0 {
         out.line(format!("\n  Collapsed {collapsed} re-upload(s):"));
         for swing in corpus.swings.iter().filter(|s| !s.duplicates.is_empty()) {
+            // The key the group was collapsed on. A photo entry (M35's call 6) has no clip and
+            // groups on its photo, so it names that; frozen Python's corpus has no photo entry,
+            // and every line it printed is a swing's `face_on` line, unchanged. [M35 P8]
+            let (key, sha) = match (&swing.face_on_sha256, &swing.shot_sha256) {
+                (Some(clip), _) => ("face_on", clip.as_str()),
+                (None, Some(photo)) => ("photo", photo.as_str()),
+                (None, None) => ("photo", ""),
+            };
             out.line(format!(
-                "    face_on {}  kept {}  <- {}",
-                prefix(&swing.face_on_sha256),
+                "    {key} {}  kept {}  <- {}",
+                prefix(sha),
                 swing.swing_ref(),
                 swing.duplicates.join(", ")
             ));

@@ -225,15 +225,25 @@ impl DataDirs {
         golfers: Option<PathBuf>,
         env: impl Fn(&str) -> Option<String>,
     ) -> Self {
-        let pick = |flag: Option<PathBuf>, var: &str, leaf: &str| {
-            flag.or_else(|| env(var).filter(|v| !v.is_empty()).map(PathBuf::from))
-                .unwrap_or_else(|| repo_root().join("data").join("processed").join(leaf))
-        };
         DataDirs {
-            sessions: pick(sessions, "GOLF_SESSIONS_DIR", "sessions"),
-            golfers: pick(golfers, "GOLF_GOLFERS_DIR", "golfers"),
+            sessions: data_dir(sessions, "GOLF_SESSIONS_DIR", "sessions", &env),
+            golfers: data_dir(golfers, "GOLF_GOLFERS_DIR", "golfers", &env),
         }
     }
+}
+
+/// One data directory by [`DataDirs::resolve`]'s rule: the flag, else the variable `var` (an empty
+/// one counts as unset), else `data/processed/<leaf>` under the repository. Shared since M35 P11, when
+/// `golf-core run-shot --session` needed a third directory, the shot store's (`GOLF_SHOTS_DIR`,
+/// `settings.shots_dir`), so the rule has one definition rather than one per verb.
+pub fn data_dir(
+    flag: Option<PathBuf>,
+    var: &str,
+    leaf: &str,
+    env: &impl Fn(&str) -> Option<String>,
+) -> PathBuf {
+    flag.or_else(|| env(var).filter(|v| !v.is_empty()).map(PathBuf::from))
+        .unwrap_or_else(|| repo_root().join("data").join("processed").join(leaf))
 }
 
 /// The repository root: two directories above this crate's manifest (`crates/core`).

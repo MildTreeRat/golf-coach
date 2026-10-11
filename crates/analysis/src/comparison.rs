@@ -222,7 +222,7 @@ mod tests {
                 swing_id: i.to_string(),
                 captured_at: Timestamp::parse(&format!("2026-09-{:02}T12:{i:02}:00Z", i % 3 + 1))
                     .expect("a valid timestamp"),
-                face_on_sha256: format!("clip-{i}"),
+                face_on_sha256: Some(format!("clip-{i}")),
                 shot_sha256: Some(format!("photo-{i}")),
                 club: None,
                 measurements: vec![measurement(metric, value)],
@@ -236,6 +236,7 @@ mod tests {
                 auto_mishit: false,
                 manual_mishit: None,
                 missing_roles: Vec::new(),
+                intent: None,
             })
             .collect();
         serde_json::from_value(serde_json::json!({"player_id": "aaron"}))

@@ -5,6 +5,9 @@
 //! golf-core run < vector.json                                      # vector in, result out
 //! golf-core rerecord --declare <file> [--dry-run] [--spec <dir>]   # re-record one family, gated
 //! golf-core parse-screen < screen-vector.json                      # OCR boxes in, ShotData out
+//! golf-core run-shot < shot-vector.json                            # a shot in, ShotResult out
+//! golf-core run-shot --session S [--swing N]                        # a session's photo entries
+//! golf-core set-intent --session S (--swing N | --default) (--mode M [--shape SHAPE] | --clear)
 //! golf-core career-corpus     [--name N | --player-id ID] [--verbose] [--json]  # the career reports
 //! golf-core career-baseline   [--name N | --player-id ID] [--verbose] [--json]
 //! golf-core career-dispersion [--name N | --player-id ID] [--verbose] [--json]
@@ -57,8 +60,9 @@
 //! `golf_core::rerecord`'s and are unit-tested there; this file parses arguments and prints.
 //!
 //! **Which vectors a run re-records is the declaration's to say, by its version key** (M34 P7, the
-//! M34 plan's call 6): `analysis_version` re-records the engine and stage families,
-//! `screen_parser_version` the screen family, and `career_version` the storage and career families
+//! M34 plan's call 6): `analysis_version` re-records the engine and stage families and, since M35
+//! P6, the shot family, whose numbers are the engine's; `screen_parser_version` the screen family;
+//! and `career_version` the storage and career families
 //! together (M36 P13), each held to its own constant. There is no flag for it, because a flag that
 //! disagreed with the declaration would be a second answer to one question.
 //!
@@ -76,6 +80,43 @@
 //! nothing on stdout. Nothing here is Python's: there is no `conformance.py` verb to diff it
 //! against, because the screen family is recorded once and then belongs to `golf-core rerecord`
 //! (the M34 plan's call 3). It is the way to see what the reader makes of a vector without a test.
+//!
+//! # `run-shot`
+//!
+//! The shot's seam (M35 P4), `parse-screen`'s shape for `golf_core::run_shot`: a shot vector, or its
+//! bare `input`, on stdin; the `ShotResult` on stdout, the screen's refusals and the engine's rows
+//! for one shot with no clip. Exit 0 on a result. A shot `devices.json` does not declare, or one no
+//! profile reads, is the caller's mistake and exits 1 with nothing on stdout, as `parse-screen`'s
+//! unknown device does. Like `parse-screen` there is no `conformance.py` verb to diff it against:
+//! the shot family has no Python twin and is worked by hand (the M35 plan's call 7). With no
+//! arguments **it writes nothing**, and it reads no session: the handedness, loft and club are the
+//! request's, as a shot vector carries them, and nothing resolves them from the golfer store or the
+//! bag.
+//!
+//! **`--session S [--swing N]` is the other mode** (M35 P11), and it writes: each photo entry in
+//! the session (no face-on clip, a shot photo), or the one named, analysed from the shot store's
+//! parse of its photo with its golfer's handedness, its bag's loft and its manifest's intent, and
+//! written as `shot_analysis.json` beside its manifest, one line printed per manifest. A swing with
+//! a face-on clip is skipped, its shot being analysed with it, and refused when named; so is a photo
+//! entry the corpus counts as a duplicate, and one whose photo the shot store holds no parse of,
+//! which is named with the frozen import that would parse it, since there is no Rust OCR before
+//! §M29. `--sessions-dir`, `--golfers-dir` and `--shots-dir` resolve as the career verbs' do, the
+//! third from `GOLF_SHOTS_DIR` else `data/processed/shots`. Exit 0 when every manifest was analysed
+//! or skipped for a named reason, 1 when an analysis was refused or a write failed, 2 on a session
+//! or a named swing that does not exist or is not a photo entry, and on flags it cannot read.
+//! `golf_core::session` is the verb, and its doc says what it does not do.
+//!
+//! # `set-intent`
+//!
+//! What a shot was practised as (M35 P11): `--swing N` records `--mode` (and `--shape`, for
+//! `shot_shaping` alone and always with it) on that swing's manifest, `--default` points the
+//! session's intent cursor at it so each swing that records none takes it at its next upload, and
+//! `--clear` takes either off. A drill is stored and analysed, and the corpus leaves it out of every
+//! stat. `--sessions-dir` as above. Exit 0 on a write; 2 on a swing or a session that does not exist
+//! and on flags it refuses; 1 if the file cannot be written. **Frozen Python drops the key on any
+//! rewrite** of that manifest or `session.json`, so a drill recorded here becomes a tracked shot
+//! the next time the frozen server writes to the swing: the verb is safe on a session that server no
+//! longer writes to (`golf_core::session`'s doc, the M35 plan's call 12).
 //!
 //! # `career-corpus`, `career-baseline`, `career-dispersion`, `club-profile`
 //!
@@ -127,6 +168,7 @@ use contracts::Timestamp;
 use golf_core::reports::flag_mishit::{self, MishitAction};
 use golf_core::reports::{self, Answer, DataDirs, Request, Verb};
 use golf_core::rerecord;
+use golf_core::session::{self, IntentAction, ShotDirs};
 use screen::ScreenInput;
 use serde::{Deserialize, Serialize};
 use storage::corpus::EngineVersions;
@@ -137,6 +179,11 @@ const USAGE: &str = "usage: golf-core run < vector.json\n       \
                      engine and stage vectors, screen_parser_version for the screen vectors, \
                      career_version for the storage and career vectors)\n       \
                      golf-core parse-screen < screen-vector.json\n       \
+                     golf-core run-shot < shot-vector.json\n       \
+                     golf-core run-shot --session S [--swing N] [--sessions-dir D] \
+                     [--golfers-dir D] [--shots-dir D]\n       \
+                     golf-core set-intent --session S (--swing N | --default) \
+                     (--mode M [--shape SHAPE] | --clear) [--sessions-dir D]\n       \
                      golf-core career-corpus|career-baseline|career-dispersion [--name N] \
                      [--player-id ID] [--verbose] [--json] [--sessions-dir D] [--golfers-dir D]\n       \
                      golf-core club-profile [--name N] [--player-id ID] [--club C] [--verbose] \
@@ -150,6 +197,40 @@ fn main() -> ExitCode {
     match args.next().as_deref() {
         Some("run") if args.next().is_none() => run(),
         Some("parse-screen") if args.next().is_none() => parse_screen(),
+        Some("run-shot") => {
+            let rest: Vec<String> = args.collect();
+            if rest.is_empty() {
+                return run_shot();
+            }
+            match parse_shot_session(rest.into_iter()) {
+                Ok(Some((session_id, swing_id, dirs))) => print_answer(
+                    "run-shot",
+                    &session::run_shot_session(&session_id, swing_id.as_deref(), &dirs, versions()),
+                ),
+                Ok(None) => {
+                    println!("{USAGE}");
+                    ExitCode::SUCCESS
+                }
+                Err(problem) => {
+                    usage(&problem);
+                    ExitCode::from(2)
+                }
+            }
+        }
+        Some("set-intent") => match parse_set_intent(args) {
+            Ok(Some((action, sessions_dir))) => print_answer(
+                "set-intent",
+                &session::set_intent(&action, &sessions_dir, Timestamp::now_utc()),
+            ),
+            Ok(None) => {
+                println!("{USAGE}");
+                ExitCode::SUCCESS
+            }
+            Err(problem) => {
+                usage(&problem);
+                ExitCode::from(2)
+            }
+        },
         Some("rerecord") => match RerecordArgs::parse(args) {
             Ok(parsed) => rerecord(&parsed),
             Err(problem) => usage(&problem),
@@ -223,6 +304,22 @@ fn parse_screen() -> ExitCode {
         Ok(shot) => write_stdout(&shot),
         Err(unknown) => {
             eprintln!("golf-core parse-screen: {unknown}");
+            ExitCode::FAILURE
+        }
+    }
+}
+
+/// Read one shot vector from stdin and write its `ShotResult`, or refuse it on stderr.
+fn run_shot() -> ExitCode {
+    let input =
+        match read_stdin::<golf_core::ShotVector, golf_core::ShotInput>(|vector| vector.input) {
+            Ok(input) => input,
+            Err(failed) => return failed,
+        };
+    match golf_core::run_shot(&input) {
+        Ok(result) => write_stdout(&result),
+        Err(refused) => {
+            eprintln!("golf-core run-shot: {refused}");
             ExitCode::FAILURE
         }
     }
@@ -444,6 +541,83 @@ fn parse_mishit(
     Ok(Some((action, dirs)))
 }
 
+/// `run-shot --session`'s flags, argparse's way as [`parse_career`] reads them: `--session` is
+/// required, `--swing` names one manifest, and the three data directories resolve against the
+/// process environment ([`ShotDirs::resolve`]). Reached only with at least one argument, since a bare
+/// `run-shot` reads stdin.
+fn parse_shot_session(
+    mut args: impl Iterator<Item = String>,
+) -> Result<Option<(String, Option<String>, ShotDirs)>, String> {
+    const VERB: &str = "run-shot";
+    let (mut session_id, mut swing_id) = (None, None);
+    let (mut sessions, mut golfers, mut shots) = (None, None, None);
+    while let Some(arg) = args.next() {
+        let (flag, inline) = split_flag(&arg);
+        let mut value = |flag: &str| {
+            inline
+                .clone()
+                .or_else(|| args.next())
+                .ok_or_else(|| format!("{VERB}: argument {flag}: expected one argument"))
+        };
+        match flag.as_str() {
+            "--session" => session_id = Some(value("--session")?),
+            "--swing" => swing_id = Some(value("--swing")?),
+            "--sessions-dir" => sessions = Some(PathBuf::from(value("--sessions-dir")?)),
+            "--golfers-dir" => golfers = Some(PathBuf::from(value("--golfers-dir")?)),
+            "--shots-dir" => shots = Some(PathBuf::from(value("--shots-dir")?)),
+            "-h" | "--help" if inline.is_none() => return Ok(None),
+            other => return Err(format!("{VERB}: unrecognized arguments: {other}")),
+        }
+    }
+    let session_id = session_id
+        .filter(|session| !session.is_empty())
+        .ok_or(format!("{VERB}: give the session with --session S"))?;
+    let swing_id = swing_id.filter(|swing| !swing.is_empty());
+    let dirs = ShotDirs::resolve(sessions, golfers, shots, |var| std::env::var(var).ok());
+    Ok(Some((session_id, swing_id, dirs)))
+}
+
+/// `set-intent`'s flags, argparse's way as [`parse_career`] reads them, then
+/// [`session::intent_action`]'s one decision and its shape rules, whose refusal exits 2 as any flag
+/// argparse refuses. `--sessions-dir` resolves as the career verbs' does.
+fn parse_set_intent(
+    mut args: impl Iterator<Item = String>,
+) -> Result<Option<(IntentAction, PathBuf)>, String> {
+    const VERB: &str = "set-intent";
+    let (mut session_id, mut swing_id, mut mode, mut shape) = (None, None, None, None);
+    let (mut default, mut clear, mut sessions) = (false, false, None);
+    while let Some(arg) = args.next() {
+        let (flag, inline) = split_flag(&arg);
+        let mut value = |flag: &str| {
+            inline
+                .clone()
+                .or_else(|| args.next())
+                .ok_or_else(|| format!("{VERB}: argument {flag}: expected one argument"))
+        };
+        match flag.as_str() {
+            "--session" => session_id = Some(value("--session")?),
+            "--swing" => swing_id = Some(value("--swing")?),
+            "--mode" => mode = Some(value("--mode")?),
+            "--shape" => shape = Some(value("--shape")?),
+            "--sessions-dir" => sessions = Some(PathBuf::from(value("--sessions-dir")?)),
+            "--default" | "--clear" | "-h" | "--help" if inline.is_some() => {
+                return Err(format!(
+                    "{VERB}: argument {flag}: ignored explicit argument {:?}",
+                    inline.unwrap_or_default()
+                ))
+            }
+            "--default" => default = true,
+            "--clear" => clear = true,
+            "-h" | "--help" => return Ok(None),
+            other => return Err(format!("{VERB}: unrecognized arguments: {other}")),
+        }
+    }
+    let action = session::intent_action(session_id, swing_id, default, mode, shape, clear)
+        .map_err(|problem| format!("{VERB}: error: {problem}"))?;
+    let sessions_dir = DataDirs::resolve(sessions, None, |var| std::env::var(var).ok()).sessions;
+    Ok(Some((action, sessions_dir)))
+}
+
 /// This build's engine generations, which every verb reads a corpus under: a swing is pooled when
 /// today's engine still agrees with its numbers (`career_version` 1).
 fn versions() -> EngineVersions {
@@ -458,8 +632,9 @@ fn career(verb: Verb, request: &Request) -> ExitCode {
     print_answer(verb.name(), &reports::answer(verb, request, versions()))
 }
 
-/// Run `flag-mishit` with the clock read now, the one place a verb reads it (the M36 plan's call 4:
-/// the store takes the time as an argument, so its tests can fix it).
+/// Run `flag-mishit` with the clock read now. The binary is the one place a verb reads it, here and
+/// for `set-intent` (the M36 plan's call 4: the store takes the time as an argument, so its tests
+/// can fix it).
 fn mishit(action: &MishitAction, dirs: &DataDirs) -> ExitCode {
     print_answer(
         "flag-mishit",

@@ -501,3 +501,78 @@ ADR-035's. This addendum names the sentences above that stop holding.
   - it puts M31.5 before M32;
   - it runs M36 before M35;
   - it moves §M29 from after M40 to before it.
+
+## Addendum (2026-10-10, M35): the Consequences' open questions answered, and the photo-side reasons first emitted
+
+**M35**, in Rust only, in [the M35 plan](../plans/m35-shot-first-sessions.md). The previous
+addendum left three Consequences with M35: a policy for a mode other than `FUNDAMENTALS`, photo-only
+corpus admission, and a handedness route for a photo-only shot. M35 answered all three, and wrote
+clause 2's photo-side refusals for the first time. **The Status's "Nothing here is built" stopped
+holding at M32**: M32 built clause 2's capability model, M34 the parser clause 7 needs, M36 the
+corpus clause 4 pools over, and M35 the pieces below. None is wired to a caller yet: the first are
+M38's phone and §M29's Rust lab CLI.
+
+### The three Consequences M35 owned
+
+- **"A mode other than `FUNDAMENTALS` cannot reach the engine today."** Every mode now reaches it and
+  scores mechanics as `FUNDAMENTALS` does, so clause 1's panel is there for a drill too. The mode
+  decides only which aggregates a shot feeds, which is clause 3. So neither answer the Consequence
+  offered was taken as written: there is no new policy per mode, and the mode does not travel
+  beside the swing. It goes into the swing (`SwingResult.intent`) and into the shot
+  (`ShotResult.intent`), and the corpus reads it. [ADR-009](009-swing-scoring-model.md)'s M35
+  addendum records the decision and its table.
+- **"The corpus becomes shot-keyed."** Rust's `read_corpus` admits a *photo entry* (a shot photo,
+  no face-on clip), dedupes photo entries by photo hash, makes a photo-only copy of a filmed shot
+  the filmed copy's `duplicate` (one ball flight, and the copy with video counts), and leaves a
+  `DRILL` out as `untracked`. Clause 3's "an untracked shot is still stored, shown in history and
+  analysed on its own" holds: a drill gets its own `ShotResult`, or its `analysis.json` when filmed,
+  and reaches no aggregate. [ADR-024](024-per-club-shot-history.md)'s M35 addendum is the decision.
+- **"Handedness has no route to a photo-only shot."** It has one, and it was there already. A photo
+  entry is a swing directory with a manifest, so its handedness comes from the manifest's golfer
+  through the golfer store, as a swing's does. What has no route is a photo in the shot store that
+  no session holds, and the corpus never reads one. §M29's import verb files a photo into a session
+  with its golfer and club. **A shot needs a handedness only when its screen printed a spin axis**,
+  because `+ = fade` is a right-handed reading. So the note naming a missing golfer is appended
+  only when the flight refused its landing offline for want of one, where a swing's is
+  unconditional, because `head_stays_back` always needs it.
+
+### Clause 2's refusals, first emitted
+
+`printed_blank` and `misread` existed since M32 and were written nowhere. M35 writes them, from
+`crates/screen::tile_refusals`, into `ShotResult.unscored` (written as `shot_analysis.json`) and
+**never into a `SwingResult`**, so frozen Python, which reads `analysis.json` with a closed enum,
+never meets them (ADR-035 clause 4). The rule (the plan's interview decision 3 and call 3), for a
+field the device printed and declares `analysed`, that holds no value:
+
+| what the parse recorded under the field's label | reason |
+|---|---|
+| no `raw_fields` key: located, and withheld by the tie rule | `misread` |
+| a blank marker such as `---` | `printed_blank` |
+| `""`: nothing under the label | `printed_blank` |
+| other text that gave no value, such as `Open` | `misread` |
+
+- **An empty cell is `printed_blank`, not a misread.** On every stored bay photo the blank is a
+  `---` that OCR does not see, under Spin, Spin Axis and Impact Position V, so telling the golfer
+  to retake would be wrong on most shots. Only `misread` says capturing again helps.
+- **A shown-only tile left blank is shown as blank and refused nothing**, and one holding a value
+  reaches no measurement. Both follow from clause 2's split, by construction: the engine measures a
+  view of the shot with every field outside "printed and `analysed`" set to `None`. So "not printed
+  produces nothing" holds with no per-row field list to drift. On every stored shot the view blanks
+  only HD Golf's club speed and smash factor, which no measurement reads.
+- **No refusal on an unstamped shot or a direct feed.** An unstamped shot's printed set is only the
+  fields that hold a value, so it names no blank. Every shot in `data/` is unstamped, so no blank is
+  named on a stored shot until §M29's reader re-reads them. A shot with no provenance was never a
+  photo, so neither photo-side reason can apply; a direct device's blanks wait for one (M40).
+- **The order is the device's declared tile order**, which `devices.json` lists in the profile's
+  tile order, and a pin now holds that.
+
+**Clause 1's promise is pinned.** "Adding video must never move a club grade" starts with the shot's
+numbers. `analyze_shot` makes the same calls on the same fields as a swing's shot half, and
+`crates/analysis/tests/shot.rs` holds its rows to every committed corpus vector's shot and flight
+rows.
+
+### What this does not change
+
+- clauses 1–10 as the previous addendum left them, including clause 5's grades, which are M37's,
+  and clause 3's "derived from the mode, never stored", which `PracticeMode::is_tracked` is;
+- the order the previous addendum set, with M37 after M35.

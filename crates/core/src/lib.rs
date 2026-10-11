@@ -49,8 +49,9 @@
 //! down in the vector's own `provenance`. Its run, [`rerecord::plan`] and [`rerecord::Run::write`],
 //! walks `spec/vectors/` with them — every vector gated and composed before any file is written.
 //! Since M34 P7 it re-records the screen family too, through [`rerecord::run_screen`], one family
-//! per run as the declaration's version key says, and since M36 P13 the storage and career
-//! families together, under `career_version`.
+//! per run as the declaration's version key says, since M36 P13 the storage and career families
+//! together, under `career_version`, and since M35 P6 the shot family, through [`run_shot`], with
+//! the engine's under `analysis_version`.
 //!
 //! # The many-shot layer's runners
 //!
@@ -69,6 +70,25 @@
 //! directories, and `flag-mishit`'s flag and listing) is there too; `bin/golf_core.rs` parses flags
 //! and prints.
 //!
+//! # The shot seam
+//!
+//! [`run_shot`] is `run`'s shape for a shot with no clip (M35 P4): one [`ShotInput`] in, the
+//! [`ShotResult`] out, and `golf-core run-shot` is its verb. **No Python twin**: frozen Python
+//! analyses a shot only inside a swing (ADR-035 clause 4). It is here for this crate's reason, two
+//! crates that may not see each other: `screen::tile_refusals` names the printed tiles that hold no
+//! value, `analysis::engine::analyze_shot` measures and flies the shot, and `analysis` may not depend
+//! on `screen` (ADR-008 as a cargo edge), so the shell reads the one and hands it to the other.
+//! `tests/shot.rs` holds it to every case in `spec/vectors/shot/`, and [`rerecord`] re-records
+//! those cases through it, with the engine family under `analysis_version` (M35 P6).
+//!
+//! # The verbs that write into a session
+//!
+//! [`session`] is `golf-core run-shot --session` and `golf-core set-intent` (M35 P11): the first
+//! resolves a photo entry's shot, golfer, loft and intent from the stores, runs it through
+//! [`run_shot`] and writes its `shot_analysis.json`; the second records a shot's intent on its
+//! manifest or the session's cursor. Both are here for the shell's reason, the stores and the engine
+//! in one hand, and `tests/verbs.rs` runs them on scratch copies of the storage family's trees.
+//!
 //! # `ANALYSIS_VERSION` is stamped here once, and only through the gate
 //!
 //! `analyze_swing_bundle` sets the answer's, because it is the thing that did the work. A vector's
@@ -82,16 +102,21 @@ pub mod career_family;
 pub mod compare;
 pub mod reports;
 pub mod rerecord;
+pub mod session;
 pub mod stages;
 pub mod storage_family;
 
 use serde::Deserialize;
 
-use analysis::engine::{analyze_swing_bundle, BundleRequest};
+use analysis::engine::{analyze_shot, analyze_swing_bundle, BundleRequest, ShotRequest};
+use contracts::club::{category_of, ClubId};
 use contracts::golfer::Handedness;
 use contracts::intent::PracticeGoal;
 use contracts::keypoints::KeypointsFile;
 use contracts::shot::ShotData;
+use contracts::shot_result::ShotResult;
+use contracts::unscored::UnscoredCheckpoint;
+use contracts::ContractError;
 use feedback::rules::build_feedback;
 
 /// One engine vector's `input` object: the thirteen arguments `analyze_swing_bundle` takes, as JSON.
@@ -205,6 +230,97 @@ fn serialize(result: &contracts::swing::SwingBundleResult) -> serde_json::Value 
             .expect("the excluded field was already absent, so the drop is not what it says");
     }
     value
+}
+
+/// One shot vector's `input`, and `golf-core run-shot`'s request: a shot with no clip, and what the
+/// shell resolved for it (the M35 plan's call 7). [M35 P4]
+///
+/// `handedness` and `loft_deg` mean what they mean on [`VectorInput`], and in a session they come
+/// from the golfer store and the bag ([`session`], M35 P11). `photo_sha256` is the photo the shot was read from,
+/// written onto the result as its staleness check. `intent` is the shot's recorded goal, which holds
+/// a mode and a shape and never a club (call 5), and **`club` is the swing manifest's**, the one
+/// key here call 7 does not list: call 5 has the shell fill the goal's club category from the
+/// manifest's club, and a request with no manifest behind it has to carry that club to be filled
+/// from. [`analysed_intent`] is the rule.
+///
+/// **Unknown keys are refused**, where [`VectorInput`] ignores them, because every shot vector is
+/// worked by hand: a misspelt `handedness` would otherwise read as no handedness and pass as a
+/// different case. An absent key and an explicit `null` both read as `None`, for
+/// [`VectorInput`]'s reason.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ShotInput {
+    pub swing_id: String,
+    pub session_id: String,
+    pub shot: ShotData,
+    #[serde(default)]
+    pub intent: Option<PracticeGoal>,
+    #[serde(default)]
+    pub club: Option<ClubId>,
+    #[serde(default)]
+    pub handedness: Option<Handedness>,
+    #[serde(default)]
+    pub loft_deg: Option<f64>,
+    #[serde(default)]
+    pub photo_sha256: Option<String>,
+}
+
+/// A whole shot vector, of which only `input` is read. [`Vector`]'s counterpart.
+#[derive(Debug, Clone, Deserialize)]
+pub struct ShotVector {
+    pub input: ShotInput,
+}
+
+/// Analyse one shot with no clip: the screen's refusals, then the engine. [M35 P4]
+///
+/// `tile_refusals` reads the shot **as stored**, not the analysed view, because the rule reads what
+/// the parse recorded (the M35 plan's P3 finding 2). Its answer and the analysed goal go to
+/// `analyze_shot` beside the request's own fields. Either call's refusal is this one's: a device
+/// `devices.json` does not declare or no profile reads, and a result that does not validate. No
+/// note is appended here: the handedness and loft gaps are worded where they are resolved, in the
+/// session verb ([`session::run_shot_session`]).
+pub fn run_shot(input: &ShotInput) -> Result<ShotResult, ContractError> {
+    let tiles = screen::tile_refusals(&input.shot)?;
+    let intent = analysed_intent(input.intent.as_ref(), input.club);
+    analyze_shot(&shot_request(input, &intent, &tiles))
+}
+
+/// The goal a shot is analysed under: the request's, or the default goal, with its club category
+/// the club's whenever the request names a club (the M35 plan's call 5).
+///
+/// **The club wins over a category the goal already carries**, rather than filling only an `All`:
+/// a recorded goal never holds a club (call 5), so the two disagree only in a request built by hand,
+/// and the club the shot was hit with is the fact the category is derived from. With no club, the
+/// goal's category stands, `All` by default.
+///
+/// Frozen Python does not do this. `api/pipeline.py:1251` builds `PracticeGoal(club=options.club)`
+/// from a CLI flag that defaults to `ALL`, so every `analysis.json` on disk says `all`. No number
+/// depends on the category, because a shot has no checkpoint to key a band on (decision 1).
+fn analysed_intent(intent: Option<&PracticeGoal>, club: Option<ClubId>) -> PracticeGoal {
+    let mut goal = intent.cloned().unwrap_or_default();
+    if let Some(club) = club {
+        goal.club = category_of(club);
+    }
+    goal
+}
+
+/// One shot input as the engine's argument struct, borrowed. [`bundle_request`]'s split, for its
+/// reason: `every_shot_input_field_reaches_the_engine` checks it field by field.
+fn shot_request<'a>(
+    input: &'a ShotInput,
+    intent: &'a PracticeGoal,
+    tiles: &'a [UnscoredCheckpoint],
+) -> ShotRequest<'a> {
+    ShotRequest {
+        swing_id: &input.swing_id,
+        session_id: &input.session_id,
+        shot: &input.shot,
+        intent: Some(intent),
+        handedness: input.handedness,
+        loft_deg: input.loft_deg,
+        tiles,
+        photo_sha256: input.photo_sha256.as_deref(),
+    }
 }
 
 #[cfg(test)]
@@ -415,5 +531,83 @@ mod tests {
         assert!(absent.loft_deg.is_none() && nulled.loft_deg.is_none());
         assert!(absent.shot.is_none() && nulled.shot.is_none());
         assert!(absent.handedness.is_none() && nulled.handedness.is_none());
+    }
+
+    fn a_shot_input() -> ShotInput {
+        serde_json::from_value(serde_json::json!({
+            "swing_id": "swing-7",
+            "session_id": "session-3",
+            "shot": {"shot_id": "7", "session_id": "session-3",
+                     "timestamp": "2026-10-09T00:00:00Z", "source": "mock", "ball_speed": 130.0},
+            "intent": {"mode": "drill"},
+            "club": "7i",
+            "handedness": "left",
+            "loft_deg": 30.5,
+            "photo_sha256": "ab12",
+        }))
+        .expect("a valid shot input")
+    }
+
+    /// **Every field of `ShotInput` reaches `analyze_shot`**, `every_input_field_reaches_the_engine`'s
+    /// check for the shot seam: a field added to the input and forgotten in [`shot_request`] fails
+    /// here rather than passing every case that happens not to carry it.
+    #[test]
+    fn every_shot_input_field_reaches_the_engine() {
+        let input = a_shot_input();
+        let intent = analysed_intent(input.intent.as_ref(), input.club);
+        let tiles = [UnscoredCheckpoint {
+            name: "spin_rate".to_string(),
+            reason: contracts::unscored::UnscoredReason::PrintedBlank,
+            detail: "Spin: nothing under the label".to_string(),
+        }];
+
+        let request = shot_request(&input, &intent, &tiles);
+        assert_eq!(request.swing_id, "swing-7");
+        assert_eq!(request.session_id, "session-3");
+        assert_eq!(request.shot, &input.shot);
+        assert_eq!(request.intent, Some(&intent));
+        assert_eq!(request.handedness, Some(Handedness::Left));
+        assert_eq!(request.loft_deg, Some(30.5));
+        assert_eq!(request.tiles, &tiles[..]);
+        assert_eq!(request.photo_sha256, Some("ab12"));
+
+        let result = run_shot(&input).expect("a mock shot analyses");
+        assert_eq!(result.intent.mode, contracts::intent::PracticeMode::Drill);
+        assert_eq!(result.photo_sha256.as_deref(), Some("ab12"));
+    }
+
+    /// The club decides the category, over the goal's own and over the default; with no club the
+    /// goal stands, and with no goal either it is the default goal.
+    #[test]
+    fn the_club_fills_the_goals_category() {
+        use contracts::intent::{ClubCategory, PracticeMode};
+        let drill = PracticeGoal {
+            mode: PracticeMode::Drill,
+            club: ClubCategory::Driver,
+            ..PracticeGoal::default()
+        };
+        let filled = analysed_intent(Some(&drill), Some(ClubId::SevenIron));
+        assert_eq!(filled.club, ClubCategory::MidIron);
+        assert_eq!(filled.mode, PracticeMode::Drill, "only the category moves");
+        assert_eq!(analysed_intent(Some(&drill), None), drill);
+        assert_eq!(
+            analysed_intent(None, Some(ClubId::Driver)).club,
+            ClubCategory::Driver
+        );
+        assert_eq!(analysed_intent(None, None), PracticeGoal::default());
+    }
+
+    /// A hand-worked case with a misspelt key is refused, not read as a different case.
+    #[test]
+    fn a_shot_input_refuses_a_key_it_does_not_have() {
+        let mut value = serde_json::json!({
+            "swing_id": "1", "session_id": "s",
+            "shot": {"shot_id": "7", "session_id": "s",
+                     "timestamp": "2026-10-09T00:00:00Z", "source": "mock"},
+        });
+        assert!(serde_json::from_value::<ShotInput>(value.clone()).is_ok());
+        value["handednes"] = serde_json::json!("left");
+        let refused = serde_json::from_value::<ShotInput>(value).expect_err("an unknown key");
+        assert!(refused.to_string().contains("handednes"), "{refused}");
     }
 }

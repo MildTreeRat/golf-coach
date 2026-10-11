@@ -1,0 +1,260 @@
+{
+  "career_version": 2,
+  "expected": {
+    "files": {
+      ".incoming/": "",
+      "2026-08-26/1/face_on.1f2148624ba3.mov": "drill-clip",
+      "2026-08-26/1/manifest.json": "{\n  \"swing_id\": \"1\",\n  \"session_id\": \"2026-08-26\",\n  \"created_at\": \"2026-08-26T12:00:00Z\",\n  \"updated_at\": \"2026-08-26T12:00:30Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.1f2148624ba3.mov\",\n      \"content_sha256\": \"1f2148624ba31187451fb04c07bf2e1bd76c753b9d68d0247bb167f808a16dff\",\n      \"original_filename\": \"clip.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 10,\n      \"received_at\": \"2026-08-26T12:00:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.46812b1153c7.jpg\",\n      \"content_sha256\": \"46812b1153c73846bedbbed47ba9f0f33a61a0a2b9ec4627134e6ad37227f634\",\n      \"original_filename\": \"screen.jpg\",\n      \"content_type\": \"image/jpeg\",\n      \"size_bytes\": 11,\n      \"received_at\": \"2026-08-26T12:00:30Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": \"7i\",\n  \"mishit\": null,\n  \"intent\": {\n    \"mode\": \"drill\",\n    \"target_shape\": null,\n    \"club\": \"all\",\n    \"focus_checkpoint\": null\n  }\n}",
+      "2026-08-26/1/shot_screen.46812b1153c7.jpg": "drill-photo",
+      "2026-08-26/2/face_on.b5a1ebff99e3.mov": "tracked-clip",
+      "2026-08-26/2/manifest.json": "{\n  \"swing_id\": \"2\",\n  \"session_id\": \"2026-08-26\",\n  \"created_at\": \"2026-08-26T12:01:00Z\",\n  \"updated_at\": \"2026-08-26T12:01:30Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.b5a1ebff99e3.mov\",\n      \"content_sha256\": \"b5a1ebff99e3d57d61222813fb6a8db0500d08a676e540fe26c0bb2d22e3c5d8\",\n      \"original_filename\": \"clip.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 12,\n      \"received_at\": \"2026-08-26T12:01:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.8f2c0ae51749.jpg\",\n      \"content_sha256\": \"8f2c0ae51749dc4424d06458569b0d651e401715efef0bb752c2ba4c7fdcd746\",\n      \"original_filename\": \"screen.jpg\",\n      \"content_type\": \"image/jpeg\",\n      \"size_bytes\": 12,\n      \"received_at\": \"2026-08-26T12:01:30Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": \"7i\",\n  \"mishit\": null,\n  \"intent\": {\n    \"mode\": \"shot_shaping\",\n    \"target_shape\": \"fade\",\n    \"club\": \"all\",\n    \"focus_checkpoint\": null\n  }\n}",
+      "2026-08-26/2/shot_screen.8f2c0ae51749.jpg": "shaped-photo"
+    },
+    "results": [
+      {
+        "returned": {
+          "club": "7i",
+          "deduped": false,
+          "missing_roles": [
+            "down_the_line",
+            "shot_screen"
+          ],
+          "player_id": "aaron",
+          "role": "face_on",
+          "session_id": "2026-08-26",
+          "status": "collecting",
+          "swing_id": "1"
+        }
+      },
+      {
+        "returned": {
+          "club": "7i",
+          "deduped": false,
+          "missing_roles": [
+            "down_the_line"
+          ],
+          "player_id": "aaron",
+          "role": "shot_screen",
+          "session_id": "2026-08-26",
+          "status": "collecting",
+          "swing_id": "1"
+        }
+      },
+      {
+        "returned": {
+          "club": "7i",
+          "deduped": false,
+          "missing_roles": [
+            "down_the_line",
+            "shot_screen"
+          ],
+          "player_id": "aaron",
+          "role": "face_on",
+          "session_id": "2026-08-26",
+          "status": "collecting",
+          "swing_id": "2"
+        }
+      },
+      {
+        "returned": {
+          "club": "7i",
+          "deduped": false,
+          "missing_roles": [
+            "down_the_line"
+          ],
+          "player_id": "aaron",
+          "role": "shot_screen",
+          "session_id": "2026-08-26",
+          "status": "collecting",
+          "swing_id": "2"
+        }
+      },
+      {
+        "returned": [
+          {
+            "club": "7i",
+            "created_at": "2026-08-26T12:00:00Z",
+            "intent": {
+              "club": "all",
+              "focus_checkpoint": null,
+              "mode": "drill",
+              "target_shape": null
+            },
+            "mishit": null,
+            "player_id": "aaron",
+            "roles": {
+              "face_on": {
+                "content_sha256": "1f2148624ba31187451fb04c07bf2e1bd76c753b9d68d0247bb167f808a16dff",
+                "content_type": "video/quicktime",
+                "filename": "face_on.1f2148624ba3.mov",
+                "original_filename": "clip.mov",
+                "received_at": "2026-08-26T12:00:00Z",
+                "role": "face_on",
+                "size_bytes": 10,
+                "warnings": []
+              },
+              "shot_screen": {
+                "content_sha256": "46812b1153c73846bedbbed47ba9f0f33a61a0a2b9ec4627134e6ad37227f634",
+                "content_type": "image/jpeg",
+                "filename": "shot_screen.46812b1153c7.jpg",
+                "original_filename": "screen.jpg",
+                "received_at": "2026-08-26T12:00:30Z",
+                "role": "shot_screen",
+                "size_bytes": 11,
+                "warnings": []
+              }
+            },
+            "session_id": "2026-08-26",
+            "swing_id": "1",
+            "updated_at": "2026-08-26T12:00:30Z"
+          },
+          {
+            "club": "7i",
+            "created_at": "2026-08-26T12:01:00Z",
+            "intent": {
+              "club": "all",
+              "focus_checkpoint": null,
+              "mode": "shot_shaping",
+              "target_shape": "fade"
+            },
+            "mishit": null,
+            "player_id": "aaron",
+            "roles": {
+              "face_on": {
+                "content_sha256": "b5a1ebff99e3d57d61222813fb6a8db0500d08a676e540fe26c0bb2d22e3c5d8",
+                "content_type": "video/quicktime",
+                "filename": "face_on.b5a1ebff99e3.mov",
+                "original_filename": "clip.mov",
+                "received_at": "2026-08-26T12:01:00Z",
+                "role": "face_on",
+                "size_bytes": 12,
+                "warnings": []
+              },
+              "shot_screen": {
+                "content_sha256": "8f2c0ae51749dc4424d06458569b0d651e401715efef0bb752c2ba4c7fdcd746",
+                "content_type": "image/jpeg",
+                "filename": "shot_screen.8f2c0ae51749.jpg",
+                "original_filename": "screen.jpg",
+                "received_at": "2026-08-26T12:01:30Z",
+                "role": "shot_screen",
+                "size_bytes": 12,
+                "warnings": []
+              }
+            },
+            "session_id": "2026-08-26",
+            "swing_id": "2",
+            "updated_at": "2026-08-26T12:01:30Z"
+          }
+        ]
+      }
+    ]
+  },
+  "id": "storage/hand/upload-stamps-intent",
+  "input": {
+    "files": {
+      ".incoming/1.part": "drill-clip",
+      ".incoming/2.part": "drill-photo",
+      ".incoming/3.part": "tracked-clip",
+      ".incoming/4.part": "shaped-photo"
+    },
+    "ops": [
+      {
+        "args": {
+          "club": "7i",
+          "content_type": "video/quicktime",
+          "digest": "1f2148624ba31187451fb04c07bf2e1bd76c753b9d68d0247bb167f808a16dff",
+          "intent": {
+            "club": "all",
+            "focus_checkpoint": null,
+            "mode": "drill",
+            "target_shape": null
+          },
+          "original_filename": "clip.mov",
+          "player_id": "aaron",
+          "role": "face_on",
+          "session_id": "2026-08-26",
+          "size_bytes": 10,
+          "swing_id": null,
+          "tmp_path": ".incoming/1.part"
+        },
+        "now": "2026-08-26T12:00:00Z",
+        "op": "bundle.assign_from_path"
+      },
+      {
+        "args": {
+          "club": "7i",
+          "content_type": "image/jpeg",
+          "digest": "46812b1153c73846bedbbed47ba9f0f33a61a0a2b9ec4627134e6ad37227f634",
+          "intent": {
+            "club": "all",
+            "focus_checkpoint": null,
+            "mode": "fundamentals",
+            "target_shape": null
+          },
+          "original_filename": "screen.jpg",
+          "player_id": "aaron",
+          "role": "shot_screen",
+          "session_id": "2026-08-26",
+          "size_bytes": 11,
+          "swing_id": null,
+          "tmp_path": ".incoming/2.part"
+        },
+        "now": "2026-08-26T12:00:30Z",
+        "op": "bundle.assign_from_path"
+      },
+      {
+        "args": {
+          "club": "7i",
+          "content_type": "video/quicktime",
+          "digest": "b5a1ebff99e3d57d61222813fb6a8db0500d08a676e540fe26c0bb2d22e3c5d8",
+          "intent": null,
+          "original_filename": "clip.mov",
+          "player_id": "aaron",
+          "role": "face_on",
+          "session_id": "2026-08-26",
+          "size_bytes": 12,
+          "swing_id": null,
+          "tmp_path": ".incoming/3.part"
+        },
+        "now": "2026-08-26T12:01:00Z",
+        "op": "bundle.assign_from_path"
+      },
+      {
+        "args": {
+          "club": "7i",
+          "content_type": "image/jpeg",
+          "digest": "8f2c0ae51749dc4424d06458569b0d651e401715efef0bb752c2ba4c7fdcd746",
+          "intent": {
+            "club": "all",
+            "focus_checkpoint": null,
+            "mode": "shot_shaping",
+            "target_shape": "fade"
+          },
+          "original_filename": "screen.jpg",
+          "player_id": "aaron",
+          "role": "shot_screen",
+          "session_id": "2026-08-26",
+          "size_bytes": 12,
+          "swing_id": null,
+          "tmp_path": ".incoming/4.part"
+        },
+        "now": "2026-08-26T12:01:30Z",
+        "op": "bundle.assign_from_path"
+      },
+      {
+        "args": {
+          "session_id": "2026-08-26"
+        },
+        "now": null,
+        "op": "bundle.get_session"
+      }
+    ]
+  },
+  "provenance": {
+    "kind": "storage",
+    "note": "Four uploads into 2026-08-26 by the automatic rule, each carrying the session's intent cursor as it stood when the file arrived, passed as args.intent as the club cursor is passed as args.club (the caller reads session.json; the store does not). 1, a face-on clip under a drill cursor, opens swing 1 and stamps drill on it. 2, a photo after the cursor moved to fundamentals, lands in swing 1 (the newest lacking a photo) and does not restamp it: the intent is write-once, as the club is (the M35 plan's call 5). 3, a face-on clip with the cursor cleared (null), opens swing 2 with no intent, so its manifest writes no intent key. 4, a photo under a shot_shaping/fade cursor, lands in swing 2, whose intent is empty, and stamps it: an empty intent takes the cursor's. Each answer is frozen Python's AssignmentResult shape, which does not report the intent (the M35 plan's P7 finding 3); get_session shows it on both manifests. Each goal is spelled whole, club all, as PracticeGoal serializes. Digests are the SHA-256 of each part's text.",
+    "oracle": "hand",
+    "source": "worked by hand in M35 P9, the M35 plan's call 8, against crates/storage's M35 P7 stamping and set_intent; bundle.set_intent and args.intent are the Rust runner's (crates/core/src/storage_family.rs) and have no twin in frozen Python's _op_table",
+    "worked_against": "scripts/conformance_vectors.py::_run_ops"
+  }
+}

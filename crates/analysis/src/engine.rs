@@ -10,6 +10,10 @@
 //! sevenths of the `measurements` stage, and what takes the fifteen corpus vectors into the
 //! whole-bundle gate.
 //!
+//! **M35 P2 added [`analyze_shot`]**, with no Python twin: a shot analysed on its own, from what its
+//! screen printed, by the same shot and flight calls a swing's analysis makes. It is ADR-034 §1's
+//! photo with no clip beside it, and `contracts::shot_result::ShotResult` is what it returns.
+//!
 //! That split is the phase boundary and not a convenience: `conformance.py::run_stages` records
 //! `measurements` as **seven groups of one flat list**, and each group is a phase's worth of work.
 //! Shipping a group with its gate is the rule ADR-032 §2 sets; the alternative — a gate test that
@@ -43,7 +47,7 @@
 //! `pyfmt`'s crate doc, which records the same shape at `mechanics.rs`'s call sites.
 
 use contracts::alignment::{ClipAlignment, SwingAlignment, SwingAnchors};
-use contracts::capability::device_of;
+use contracts::capability::{analysed_view, device_of};
 use contracts::career::POSE_DTL_SOURCE;
 use contracts::checkpoints::{checkpoint_names, CHECKPOINT_REGISTRY, CONTRADICTED_BY_A_LATE_TOP};
 use contracts::detections::FrameDetections;
@@ -53,11 +57,12 @@ use contracts::keypoints::{FrameKeypoints, KeypointsFile};
 use contracts::pivots::{FrameOfReference, PIVOT_MEASUREMENT_REGISTRY};
 use contracts::placements::{spec_for as placement_spec, DOWN_THE_LINE, FACE_ON};
 use contracts::shot::ShotData;
+use contracts::shot_result::ShotResult;
 use contracts::swing::{
     CheckpointScore, Measurement, PhaseSegment, SwingBundleResult, SwingResult, ANALYSIS_VERSION,
 };
 use contracts::unscored::{UnscoredCheckpoint, UnscoredReason};
-use contracts::Validate;
+use contracts::{ContractError, Validate};
 
 use crate::alignment::{
     align_swings, anchors_from_keypoints, anchors_from_phases, with_measured_impact,
@@ -544,8 +549,10 @@ pub struct SwingRequest<'a> {
 /// [`crate::flight_measure::flight_unscored`] — which is why the `FlownShot` is threaded through
 /// rather than each caller flying its own.
 ///
-/// `outcome` is an empty list and the Fundamentals policy ignores it — the pose-only boundary, which
-/// needs M2 detection and M3 shot bands to move.
+/// `outcome` is an empty list and the mechanics-only policy ignores it — the pose-only boundary,
+/// which ADR-034 §5 made permanent: a shot is graded over many shots per club, not here. **Every
+/// mode is scored that way** (M35 P2), and `SwingResult.intent` records the one the caller asked
+/// for; the mode decides which aggregates the swing feeds, which is the corpus's business.
 pub fn analyze_swing(request: &SwingRequest) -> SwingResult {
     let intent = request.intent.cloned().unwrap_or_default();
 
@@ -826,15 +833,7 @@ pub fn analyze_swing_bundle(request: &BundleRequest) -> SwingBundleResult {
     // ADR-014's disclosure, and the one note on this path a *shot* produces rather than a clip. No
     // synthetic vector carries a shot, so it is covered by the unit test below rather than by P6's
     // gate — `tests/engine.rs` pins that absence.
-    if let Some(provenance) = request.shot.and_then(|shot| shot.provenance.as_ref()) {
-        if provenance.needs_review {
-            notes.push(format!(
-                "shot data needs review (parse confidence {}) — the numbers below were read off a \
-                 photograph and at least one check on them failed (ADR-014)",
-                fixed(provenance.parse_confidence, 2),
-            ));
-        }
-    }
+    notes.extend(request.shot.and_then(needs_review_note));
 
     let bundle = SwingBundleResult {
         swing_id: request.swing_id.to_string(),
@@ -856,6 +855,110 @@ pub fn analyze_swing_bundle(request: &BundleRequest) -> SwingBundleResult {
         .validate()
         .unwrap_or_else(|e| panic!("the engine assembled an invalid SwingBundleResult: {e}"));
     bundle
+}
+
+/// ADR-014's needs-review note, or `None` when the parse passed its checks or the shot was never a
+/// photo.
+///
+/// One function for both callers, [`analyze_swing_bundle`] and [`analyze_shot`], so the sentence a
+/// golfer reads about a doubtful photo is the same whether or not a clip came with it. The dash is a
+/// U+2014 em dash, compared exactly, for [`NO_SECOND_VIEW_NOTE`]'s reason.
+fn needs_review_note(shot: &ShotData) -> Option<String> {
+    let provenance = shot.provenance.as_ref()?;
+    provenance.needs_review.then(|| {
+        format!(
+            "shot data needs review (parse confidence {}) — the numbers below were read off a \
+             photograph and at least one check on them failed (ADR-014)",
+            fixed(provenance.parse_confidence, 2),
+        )
+    })
+}
+
+/// One shot to analyse on its own, and what the shell resolved for it. [M35 P2]
+///
+/// [`SwingRequest`]'s shape for [`SwingRequest`]'s reason: named fields, because two of these are
+/// `Option`s a positional call could swap. **No Python twin**, like the function it feeds.
+///
+/// `handedness` and `loft_deg` mean exactly what they mean on [`SwingRequest`], and arrive the same
+/// way, from the golfer store and the bag, resolved by the shell (the M35 plan's call 10). `tiles` is
+/// the screen's refusals, `screen::tile_refusals`' answer (call 3), passed in because this crate may
+/// not depend on `screen` (ADR-008 as a cargo edge): the shell reads them and hands them over, and
+/// this function places them without judging them.
+#[derive(Debug, Clone)]
+pub struct ShotRequest<'a> {
+    pub swing_id: &'a str,
+    pub session_id: &'a str,
+    pub shot: &'a ShotData,
+    /// `None` is the default goal, `Fundamentals`, as on [`SwingRequest`].
+    pub intent: Option<&'a PracticeGoal>,
+    pub handedness: Option<Handedness>,
+    pub loft_deg: Option<f64>,
+    /// The photo-side refusals, in the device's declared tile order. Placed first in
+    /// `ShotResult.unscored`, in the order given.
+    pub tiles: &'a [UnscoredCheckpoint],
+    /// The photo this shot was read from, written as the result's staleness check.
+    pub photo_sha256: Option<&'a str>,
+}
+
+/// Analyse one shot from what its screen printed, with no clip. [M35 P2]
+///
+/// **No Python twin**: frozen Python analyses a shot only inside a swing (ADR-035 clause 4), and
+/// this is the entry ADR-034 §1 needs for a photo with no face-on clip beside it.
+///
+/// The shot is measured and flown through [`contracts::capability::analysed_view`], the shot with
+/// every reading outside what its device printed and analysis may use set to `None`. So a field the
+/// screen did not print produces nothing, and a shown-only one is displayed (it stays on
+/// `ShotResult.shot`) and never graded, both by construction rather than by a per-row list. Then
+/// the same three calls [`analyze_swing`] makes, [`shot_measurements`], `fly_shot` and
+/// [`flight_measurements`], in the same order, with the flight flown once and read twice for that
+/// function's reason. **Adding or removing video can never move a shot number**, because the shot
+/// half of a swing and this function are the same calls on the same fields; on every stored shot the
+/// view blanks only club speed and smash, which nothing reads (the M35 plan's finding 7), and
+/// `tests/shot.rs` holds this function to every committed corpus vector's shot and flight rows.
+///
+/// `unscored` is the screen's refusals in the order given, then the flight's, which is
+/// `analyze_swing`'s order, checkpoints then flight. `notes` is ADR-014's needs-review note in the
+/// sentence a swing's bundle uses; the shell appends its own after.
+///
+/// **A `Result`, where [`analyze_swing`] panics on an invalid result**, because two of the inputs are
+/// the shell's rather than this crate's: an undeclared device is refused as
+/// [`contracts::capability::printed_on`] refuses it, a refusal the shell reports rather than a wiring
+/// bug, and the assembled result is validated before it is returned, so a malformed `tiles` entry or
+/// shot is refused by the path to the bad value rather than written to `shot_analysis.json`.
+pub fn analyze_shot(request: &ShotRequest) -> Result<ShotResult, ContractError> {
+    let view = analysed_view(request.shot)?;
+
+    // Explicit model and step, for `analyze_swing`'s reason.
+    let flown = fly_shot(
+        &view,
+        request.loft_deg,
+        request.handedness,
+        load_flight_model(),
+        DEFAULT_STEP_S,
+    );
+
+    let mut measurements = shot_measurements(&view);
+    measurements.extend(flight_measurements(&flown));
+
+    let mut unscored = request.tiles.to_vec();
+    unscored.extend(flight_unscored(&flown));
+
+    let result = ShotResult {
+        swing_id: request.swing_id.to_string(),
+        session_id: request.session_id.to_string(),
+        // Set explicitly, for `SwingBundleResult.analysis_version`'s reason: the field defaults to
+        // 0 so a file without it reads as outdated, and this is the one place that did the work.
+        analysis_version: ANALYSIS_VERSION,
+        photo_sha256: request.photo_sha256.map(str::to_string),
+        intent: request.intent.cloned().unwrap_or_default(),
+        // As stored, not the view: the phone displays the shown-only tiles.
+        shot: request.shot.clone(),
+        measurements,
+        unscored,
+        notes: needs_review_note(request.shot).into_iter().collect(),
+    };
+    result.validate()?;
+    Ok(result)
 }
 
 /// `(offset, frames)` for a window, clamped into range. An empty window is ignored. `_windowed`.
@@ -2172,6 +2275,42 @@ mod tests {
             analyze_swing_bundle(&a_bundle(&clip)).swing.intent,
             Some(PracticeGoal::default())
         );
+    }
+
+    /// **Every mode scores what `Fundamentals` scores, and records the mode it was asked for** (M35
+    /// P2, the plan's decision 1). Until then `ShotShaping`, `Performance` and `Drill` panicked in
+    /// `policy_for`. No committed vector reaches them, since every recorded intent is
+    /// `fundamentals`, so this is their only coverage.
+    ///
+    /// Compared as the whole result with only `intent` put back, so a mode that moved a score, an
+    /// `unscored` entry or a measurement would fail here, not just one that moved the mean.
+    #[test]
+    fn every_mode_scores_what_fundamentals_scores_and_records_its_own_mode() {
+        use contracts::intent::{PracticeMode, TargetShape};
+
+        let clip = a_clip(a_swinging_body(50));
+        let fundamentals = analyze_swing_bundle(&a_bundle(&clip)).swing;
+        assert!(
+            !fundamentals.checkpoint_scores.is_empty(),
+            "the fixture scores something, so the comparison is not of two empty lists"
+        );
+        for (mode, target_shape) in [
+            (PracticeMode::ShotShaping, Some(TargetShape::Draw)),
+            (PracticeMode::Performance, None),
+            (PracticeMode::Drill, None),
+        ] {
+            let intent = PracticeGoal {
+                mode,
+                target_shape,
+                ..PracticeGoal::default()
+            };
+            let mut request = a_bundle(&clip);
+            request.intent = Some(&intent);
+            let mut swing = analyze_swing_bundle(&request).swing;
+            assert_eq!(swing.intent.as_ref(), Some(&intent), "{mode:?}");
+            swing.intent = fundamentals.intent.clone();
+            assert_eq!(swing, fundamentals, "{mode:?}");
+        }
     }
 
     /// The raw keypoints ride on the result as the data it was computed from — *not* the smoothed

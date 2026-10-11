@@ -1,0 +1,20 @@
+{
+  "career_version": 2,
+  "note": "M35 P10: read_corpus admits photo entries and leaves drills out (the M35 plan's call 6). A manifest with no face-on clip and a shot photo is a photo entry, read from shot_analysis.json alone and grouped on the photo's hash; a down-the-line clip beside the photo does not make it a swing. A manifest with neither is no_face_on, under a sentence rewritten to say so. A surviving photo entry whose photo a surviving swing also holds is a duplicate of the earliest such swing (decision 4: one ball flight, and the copy with video counts). A survivor whose manifest records an untracked intent, a drill, is excluded as untracked and is in no swing list. The photo groups are walked after every clip group, because the cross-kind dedupe needs every surviving swing first. No recorded manifest records an intent and no recorded tree holds a shot_analysis.json, so one recorded case moves: storage/corpus/no-face-on. Its swing 1 holds a down-the-line clip and a shot photo, so it is a photo entry, and swing 3 holds the same photo beside its face-on clip, so 1 is now a duplicate of 3 where it was no_face_on. Swing 2, a down-the-line clip alone, stays no_face_on under the new sentence, and comes first now that the photo groups are walked last, so excluded[0] and excluded[1] trade swing_id. Nothing pooled moves: the swings, the counts and the properties are what frozen Python recorded. The same paths move in that case's adopted copy, the input.corpus of career/synthetic/storage-no-face-on, and so do its career_corpus report and the report's --verbose form, which print the exclusions by reason and each one's sentence. That is this rule reaching the report, not a new rule. career_version moves 1 -> 2 on every Python-recorded storage and career vector and on M36's three hand cases. The cases that exercise the new rules were worked by hand at career_version 2 under spec/vectors/storage/hand/ (M35 P9), and this reader gives every one of their answers. Every value not listed here stays the one frozen Python recorded.",
+  "added": [],
+  "moved": [
+    "career_version",
+    "expected.corpus.excluded[0].detail",
+    "expected.corpus.excluded[0].swing_id",
+    "expected.corpus.excluded[1].detail",
+    "expected.corpus.excluded[1].reason",
+    "expected.corpus.excluded[1].swing_id",
+    "expected.reports.career_corpus",
+    "expected.reports.career_corpus_verbose",
+    "input.corpus.excluded[0].detail",
+    "input.corpus.excluded[0].swing_id",
+    "input.corpus.excluded[1].detail",
+    "input.corpus.excluded[1].reason",
+    "input.corpus.excluded[1].swing_id"
+  ]
+}

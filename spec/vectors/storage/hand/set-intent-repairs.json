@@ -1,0 +1,197 @@
+{
+  "career_version": 2,
+  "expected": {
+    "files": {
+      "2026-08-27/1/face_on.clip-27-1.mov": "clip",
+      "2026-08-27/1/manifest.json": "{\n  \"swing_id\": \"1\",\n  \"session_id\": \"2026-08-27\",\n  \"created_at\": \"2026-08-27T12:00:00Z\",\n  \"updated_at\": \"2026-08-27T13:02:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.clip-27-1.mov\",\n      \"content_sha256\": \"clip-27-1\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-27T12:00:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": \"7i\",\n  \"mishit\": null\n}",
+      "2026-08-27/2/face_on.clip-27-2.mov": "clip",
+      "2026-08-27/2/manifest.json": "{\n  \"swing_id\": \"2\",\n  \"session_id\": \"2026-08-27\",\n  \"created_at\": \"2026-08-27T12:01:00Z\",\n  \"updated_at\": \"2026-08-27T12:01:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.clip-27-2.mov\",\n      \"content_sha256\": \"clip-27-2\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-27T12:01:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": \"7i\",\n  \"mishit\": null,\n  \"intent\": {\n    \"mode\": \"drill\",\n    \"target_shape\": null,\n    \"club\": \"all\",\n    \"focus_checkpoint\": null\n  }\n}"
+    },
+    "results": [
+      {
+        "returned": {
+          "club": "7i",
+          "created_at": "2026-08-27T12:00:00Z",
+          "intent": {
+            "club": "all",
+            "focus_checkpoint": null,
+            "mode": "drill",
+            "target_shape": null
+          },
+          "mishit": null,
+          "player_id": "aaron",
+          "roles": {
+            "face_on": {
+              "content_sha256": "clip-27-1",
+              "content_type": "video/quicktime",
+              "filename": "face_on.clip-27-1.mov",
+              "original_filename": "face_on.mov",
+              "received_at": "2026-08-27T12:00:00Z",
+              "role": "face_on",
+              "size_bytes": 1234,
+              "warnings": []
+            }
+          },
+          "session_id": "2026-08-27",
+          "swing_id": "1",
+          "updated_at": "2026-08-27T13:00:00Z"
+        }
+      },
+      {
+        "returned": {
+          "club": "7i",
+          "created_at": "2026-08-27T12:00:00Z",
+          "intent": {
+            "club": "all",
+            "focus_checkpoint": null,
+            "mode": "shot_shaping",
+            "target_shape": "draw"
+          },
+          "mishit": null,
+          "player_id": "aaron",
+          "roles": {
+            "face_on": {
+              "content_sha256": "clip-27-1",
+              "content_type": "video/quicktime",
+              "filename": "face_on.clip-27-1.mov",
+              "original_filename": "face_on.mov",
+              "received_at": "2026-08-27T12:00:00Z",
+              "role": "face_on",
+              "size_bytes": 1234,
+              "warnings": []
+            }
+          },
+          "session_id": "2026-08-27",
+          "swing_id": "1",
+          "updated_at": "2026-08-27T13:01:00Z"
+        }
+      },
+      {
+        "returned": {
+          "club": "7i",
+          "created_at": "2026-08-27T12:00:00Z",
+          "mishit": null,
+          "player_id": "aaron",
+          "roles": {
+            "face_on": {
+              "content_sha256": "clip-27-1",
+              "content_type": "video/quicktime",
+              "filename": "face_on.clip-27-1.mov",
+              "original_filename": "face_on.mov",
+              "received_at": "2026-08-27T12:00:00Z",
+              "role": "face_on",
+              "size_bytes": 1234,
+              "warnings": []
+            }
+          },
+          "session_id": "2026-08-27",
+          "swing_id": "1",
+          "updated_at": "2026-08-27T13:02:00Z"
+        }
+      },
+      {
+        "returned": null
+      },
+      {
+        "returned": {
+          "club": "7i",
+          "created_at": "2026-08-27T12:00:00Z",
+          "mishit": null,
+          "player_id": "aaron",
+          "roles": {
+            "face_on": {
+              "content_sha256": "clip-27-1",
+              "content_type": "video/quicktime",
+              "filename": "face_on.clip-27-1.mov",
+              "original_filename": "face_on.mov",
+              "received_at": "2026-08-27T12:00:00Z",
+              "role": "face_on",
+              "size_bytes": 1234,
+              "warnings": []
+            }
+          },
+          "session_id": "2026-08-27",
+          "swing_id": "1",
+          "updated_at": "2026-08-27T13:02:00Z"
+        }
+      }
+    ]
+  },
+  "id": "storage/hand/set-intent-repairs",
+  "input": {
+    "files": {
+      "2026-08-27/1/face_on.clip-27-1.mov": "clip",
+      "2026-08-27/1/manifest.json": "{\n  \"swing_id\": \"1\",\n  \"session_id\": \"2026-08-27\",\n  \"created_at\": \"2026-08-27T12:00:00Z\",\n  \"updated_at\": \"2026-08-27T12:00:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.clip-27-1.mov\",\n      \"content_sha256\": \"clip-27-1\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-27T12:00:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": \"7i\",\n  \"mishit\": null\n}",
+      "2026-08-27/2/face_on.clip-27-2.mov": "clip",
+      "2026-08-27/2/manifest.json": "{\n  \"swing_id\": \"2\",\n  \"session_id\": \"2026-08-27\",\n  \"created_at\": \"2026-08-27T12:01:00Z\",\n  \"updated_at\": \"2026-08-27T12:01:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.clip-27-2.mov\",\n      \"content_sha256\": \"clip-27-2\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-27T12:01:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": \"7i\",\n  \"mishit\": null,\n  \"intent\": {\n    \"mode\": \"drill\",\n    \"target_shape\": null,\n    \"club\": \"all\",\n    \"focus_checkpoint\": null\n  }\n}"
+    },
+    "ops": [
+      {
+        "args": {
+          "intent": {
+            "club": "all",
+            "focus_checkpoint": null,
+            "mode": "drill",
+            "target_shape": null
+          },
+          "session_id": "2026-08-27",
+          "swing_id": "1"
+        },
+        "now": "2026-08-27T13:00:00Z",
+        "op": "bundle.set_intent"
+      },
+      {
+        "args": {
+          "intent": {
+            "club": "all",
+            "focus_checkpoint": null,
+            "mode": "shot_shaping",
+            "target_shape": "draw"
+          },
+          "session_id": "2026-08-27",
+          "swing_id": "1"
+        },
+        "now": "2026-08-27T13:01:00Z",
+        "op": "bundle.set_intent"
+      },
+      {
+        "args": {
+          "intent": null,
+          "session_id": "2026-08-27",
+          "swing_id": "1"
+        },
+        "now": "2026-08-27T13:02:00Z",
+        "op": "bundle.set_intent"
+      },
+      {
+        "args": {
+          "intent": {
+            "club": "all",
+            "focus_checkpoint": null,
+            "mode": "drill",
+            "target_shape": null
+          },
+          "session_id": "2026-08-27",
+          "swing_id": "99"
+        },
+        "now": "2026-08-27T13:03:00Z",
+        "op": "bundle.set_intent"
+      },
+      {
+        "args": {
+          "session_id": "2026-08-27",
+          "swing_id": "1"
+        },
+        "now": null,
+        "op": "bundle.get_swing"
+      }
+    ]
+  },
+  "provenance": {
+    "kind": "storage",
+    "note": "2026-08-27 holds swing 1, a manifest as frozen Python writes one (no intent key), and swing 2, recorded as a drill. bundle.set_intent on swing 1 sets drill at 13:00, then overrides it with shot_shaping/draw at 13:01 (a repair overwrites, as set_mishit does), then clears it with null at 13:02, after which its manifest writes no intent key and reads as fundamentals again (call 5). Each answer is the manifest as saved, updated_at stamped with the op's now and nothing else changed. On swing 99, which does not exist, it answers null and writes nothing. get_swing reads swing 1 back as the last repair left it. Swing 2 is never touched, so its file is the committed text. The store records the goal as given and refuses nothing: a shape with no shot_shaping is the verb's to refuse (P7 finding 8).",
+    "oracle": "hand",
+    "source": "worked by hand in M35 P9, the M35 plan's call 8, against crates/storage's M35 P7 stamping and set_intent; bundle.set_intent and args.intent are the Rust runner's (crates/core/src/storage_family.rs) and have no twin in frozen Python's _op_table",
+    "worked_against": "scripts/conformance_vectors.py::_run_ops"
+  }
+}

@@ -193,13 +193,74 @@ pub fn printed_fields<'a>(
     Ok(printed)
 }
 
+/// The fields analysis may use on this shot: [`printed_on`] ∩ [`FieldUse::Analysed`]. [M35 P2]
+///
+/// What `analysis::engine::analyze_shot` measures and flies from, and nothing else. A field outside
+/// it is either not printed, which produces nothing anywhere, or printed only to be shown, which the
+/// phone displays and nothing grades (ADR-034 §2).
+///
+/// Refuses a shot whose device is not declared, as [`printed_on`] does.
+pub fn analysed_on(shot: &ShotData) -> Result<BTreeSet<&'static str>, ContractError> {
+    let capability = capability_for(device_of(shot))?;
+    Ok(printed_on(shot)?
+        .into_iter()
+        .filter(|field| capability.use_of(field) == Some(FieldUse::Analysed))
+        .collect())
+}
+
+/// The `ShotData` keys that say which shot this is and how it was read, and never what it
+/// measured. [M35 P2]
+///
+/// [`analysed_view`] keeps these whatever the device declares. Every other key is a reading, and is
+/// kept only when [`analysed_on`] names it. `source` and `provenance` are here because the engine
+/// reads the device off them ([`device_of`]) to write each measurement's `source`. A list rather
+/// than a rule, because nothing in the struct marks a key as identity, and
+/// `the_keys_that_are_not_readings_are_the_ones_a_bare_shot_fills` holds it to the struct: a key
+/// added with a non-null default fails there until it is placed on one side or the other.
+pub const NOT_READINGS: [&str; 5] = ["shot_id", "session_id", "timestamp", "source", "provenance"];
+
+/// The shot as analysis sees it: every reading outside [`analysed_on`] set to `None`. [M35 P2]
+///
+/// So "not printed produces nothing, and shown-only is never graded" holds by construction for
+/// every reader of the view, the shot rows, the spin solve and the flight alike, with no per-row
+/// list of fields that could drift from `devices.json`. Built through `serde_json::Value`, as
+/// [`fields_holding_a_value`] reads one, for that function's reason: the struct stays the only list
+/// of its fields.
+///
+/// On an unstamped HD Golf shot (every stored one) this blanks `club_head_speed` and `smash_factor`
+/// and nothing any measurement reads, which is why analysing a stored shot through the view moves no
+/// recorded number (the M35 plan's finding 7, pinned by `crates/analysis/tests/shot.rs`).
+///
+/// Refuses a shot whose device is not declared, as [`printed_on`] does, and a shot that does not
+/// validate, which blanking a reading cannot cause.
+pub fn analysed_view(shot: &ShotData) -> Result<ShotData, ContractError> {
+    let analysed = analysed_on(shot)?;
+    let mut written =
+        serde_json::to_value(shot).expect("a ShotData serializes: every key it writes is a string");
+    if let Some(object) = written.as_object_mut() {
+        for (key, value) in object.iter_mut() {
+            if !NOT_READINGS.contains(&key.as_str()) && !analysed.contains(key.as_str()) {
+                *value = serde_json::Value::Null;
+            }
+        }
+    }
+    serde_json::from_value(written).map_err(|e| ContractError {
+        field: "ShotData".to_string(),
+        problem: e.to_string(),
+    })
+}
+
 /// The `ShotData` keys this shot holds a non-null value for.
 ///
 /// Read off the serialized shot rather than a hand-written match over field names, so the struct
 /// stays the only list of its fields and a key M34 adds is covered without an edit here. A NaN
 /// metric serializes as `null` and so reads as holding nothing, which is right: a value that is not
 /// a number was not printed as one.
-fn fields_holding_a_value(shot: &ShotData) -> BTreeSet<String> {
+///
+/// Public since M35 P3, for `screen::tile_refusals`, whose "holding no value" is the same question
+/// [`printed_on`] asks of an unstamped shot. One definition, so a printed tile and a blank one cannot
+/// be told apart by two different rules.
+pub fn fields_holding_a_value(shot: &ShotData) -> BTreeSet<String> {
     let written =
         serde_json::to_value(shot).expect("a ShotData serializes: every key it writes is a string");
     written

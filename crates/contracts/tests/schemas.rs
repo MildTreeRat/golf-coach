@@ -1,6 +1,6 @@
-//! The three Rust-owned schemas, against the Rust structs they describe. [M32 P9]
+//! The Rust-owned schemas, against the Rust structs they describe. [M32 P9, M35 P1]
 //!
-//! **Why these three are pinned here and not regenerated.** The rest of `spec/schemas/` is frozen
+//! **Why these are pinned here and not regenerated.** The rest of `spec/schemas/` is frozen
 //! Python's `export_schemas` output, and `tests/test_conformance.py` holds it to that. But
 //! `shot_data`, `swing_result` and `swing_bundle_result` describe the shapes M32's ten keys move,
 //! and frozen Python never gains those keys (ADR-035 clause 4), so its exporter would write them
@@ -20,22 +20,38 @@
 //! The pin extends shape by shape as later milestones take more roots over. M36 takes none: it moves
 //! no shape, so the storage roots stay pydantic's, and `python_schemas.rs` holds the Rust structs to
 //! them from the other side. That also answered §M32's "weigh `schemars` again" with no, since no
-//! hand-maintained schema was added (the M36 plan's call 8). A root moves here when Rust first
-//! changes its shape.
+//! hand-maintained schema was added (the M36 plan's call 8). A root becomes Rust's when Rust first
+//! changes its shape, and is pinned beside the struct it describes: M35 P7's `intent` made
+//! `swing_manifest` and `session_meta` Rust's, and their structs are `crates/storage`'s, which this
+//! crate's tests cannot see, so `crates/storage/tests/schemas.rs` pins them (M35 P1's finding 3).
+//!
+//! **M35 adds the first root with no Python model at all**, `shot_result` (`contracts::shot_result`).
+//! It holds the shot, so it is one more copy of the two shot shapes and joins the pins over them; and
+//! because nothing exports it, its own root is pinned harder than the others: the key set, which keys
+//! are `required`, and each written `default`, all against what serde does. `schemars` stays
+//! declined for the reason above, now with a fourth file behind it.
 
 use std::collections::BTreeSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use contracts::intent::PracticeMode;
 use contracts::shot::ShotData;
+use contracts::shot_result::ShotResult;
 use contracts::unscored::{UnscoredReason, UNSCORED_REASONS};
 use serde_json::{json, Value};
 
-/// The roots Rust owns, spelled as `conformance.py::RUST_OWNED_SCHEMAS` spells them. That constant
-/// is what makes the Python pin skip a file, and its own test refuses a name that is not a root; this
-/// list is what makes the Rust pin read one. A root added to one and not the other is either
-/// unpinned or pinned twice, and the second is the loud one.
-const RUST_OWNED: [&str; 3] = ["shot_data", "swing_result", "swing_bundle_result"];
+/// The roots whose structs are `crates/contracts`', spelled as `conformance.py::RUST_OWNED_SCHEMAS`
+/// spells them. That constant is what makes the Python pin skip a file; this list, joined with
+/// `crates/storage/tests/schemas.rs`' own, is what makes a Rust pin read one. A root in one and not
+/// the other is unpinned or skipped by nobody, so `tests/test_conformance.py` reads both lists out of
+/// the source and holds the constant to their union (M35 P7).
+const RUST_OWNED: [&str; 4] = [
+    "shot_data",
+    "swing_result",
+    "swing_bundle_result",
+    "shot_result",
+];
 
 /// The photo-side reasons (M32 P7). They never reach a `SwingResult`, so the swing schemas leave
 /// them out. Named as variants rather than strings so a rename is a compile error here rather than
@@ -119,7 +135,7 @@ fn wire_name(reason: UnscoredReason) -> String {
 }
 
 /// Every difference in every file, in one report, as `round_trip.rs` does: a hand edit that missed
-/// a key in all three files is one fix, and should read as one.
+/// a key in every file is one fix, and should read as one.
 #[test]
 fn each_rust_owned_schema_describes_exactly_the_shot_keys_rust_writes() {
     let (shot, provenance) = rust_keys();
@@ -150,11 +166,12 @@ fn each_rust_owned_schema_describes_exactly_the_shot_keys_rust_writes() {
     );
 }
 
-/// The hand edit is made once per file, where pydantic wrote one model into all three. So the
-/// copies are held equal to each other: a description corrected in one file and not the other two
-/// is exactly the drift a hand-maintained schema invites, and the key-set pin above cannot see it.
+/// The hand edit is made once per file, where pydantic wrote one model into all three it exported
+/// and `shot_result`'s was copied from theirs. So the copies are held equal to each other: a
+/// description corrected in one file and not the others is exactly the drift a hand-maintained
+/// schema invites, and the key-set pin above cannot see it.
 #[test]
-fn the_three_copies_of_each_shot_shape_are_identical() {
+fn every_copy_of_each_shot_shape_is_identical() {
     for title in ["ShotData", "ShotProvenance"] {
         let copies: Vec<(&str, Value)> = RUST_OWNED
             .iter()
@@ -285,4 +302,125 @@ fn every_key_m32_added_is_described_in_every_rust_owned_schema() {
         "these keys are missing from the schema or carry no description:\n  {}",
         undescribed.join("\n  ")
     );
+}
+
+/// A `ShotResult` with only its required keys, as `ShotResult` reads one, written back out: the
+/// whole set of keys Rust writes, since no field of it skips one at its default.
+fn minimal_shot_result() -> Value {
+    json!({
+        "swing_id": "1",
+        "session_id": "d",
+        "shot": {
+            "shot_id": "s",
+            "session_id": "d",
+            "timestamp": "2026-10-09T00:00:00Z",
+            "provenance": {"device": "hd_golf", "parse_confidence": 1.0},
+        },
+    })
+}
+
+/// **`shot_result`'s own root, against `ShotResult`** (M35 P1). Nothing exports this schema, so
+/// three things a generator would have got right by construction are pinned instead: the property
+/// set is the key set Rust writes; a property is in `required` exactly when serde refuses a file
+/// without it; and each `default` the schema spells is the value serde fills in. A key made
+/// optional in Rust and still listed as required would have M38's Dart side refuse a file Rust
+/// reads, and that is a disagreement no round trip in either language sees.
+#[test]
+fn the_shot_result_schema_is_the_struct_rust_writes() {
+    let document = schema("shot_result");
+    assert_eq!(document["title"], "ShotResult");
+    let written: Value = serde_json::to_value(
+        serde_json::from_value::<ShotResult>(minimal_shot_result()).expect("a minimal shot result"),
+    )
+    .expect("serialize");
+    let keys: BTreeSet<String> = written
+        .as_object()
+        .expect("an object")
+        .keys()
+        .cloned()
+        .collect();
+    assert_eq!(property_names(&document, "ShotResult"), keys);
+
+    let required: BTreeSet<String> = document["required"]
+        .as_array()
+        .expect("`required` is a list")
+        .iter()
+        .map(|key| key.as_str().expect("a key").to_owned())
+        .collect();
+    for key in &keys {
+        let mut without = written.clone();
+        without.as_object_mut().unwrap().remove(key);
+        let read = serde_json::from_value::<ShotResult>(without);
+        assert_eq!(
+            read.is_err(),
+            required.contains(key),
+            "`{key}`: the schema says {} and serde {} a file without it",
+            if required.contains(key) {
+                "required"
+            } else {
+                "optional"
+            },
+            if read.is_err() { "refuses" } else { "reads" },
+        );
+        // A list carries no `default`, as pydantic writes a `default_factory` field: only a
+        // spelled one is compared, and a spelled `null` is a default like any other.
+        if let (Ok(read), Some(declared)) = (read, document["properties"][key].get("default")) {
+            let filled = &serde_json::to_value(read).expect("serialize")[key];
+            assert_eq!(
+                filled, declared,
+                "`{key}`: the schema's default is not what serde fills in"
+            );
+        }
+    }
+}
+
+/// The schemas' `PracticeMode` is frozen Python's four, every member parses, and of them only
+/// `drill` is untracked — the M35 plan's decision 1 over a list the Rust enum did not write, which
+/// is the nearest this repo has to iterating an enum. [M35 P1]
+#[test]
+fn every_mode_the_schemas_name_is_tracked_but_drill() {
+    let members = |name: &str| -> Vec<String> {
+        schema(name)["$defs"]["PracticeMode"]["enum"]
+            .as_array()
+            .unwrap_or_else(|| panic!("{name} has no `PracticeMode` enum"))
+            .iter()
+            .map(|value| value.as_str().expect("a wire name").to_owned())
+            .collect()
+    };
+    let modes = members("shot_result");
+    assert_eq!(
+        modes,
+        members("swing_result"),
+        "shot_result's PracticeMode is not frozen Python's"
+    );
+    let untracked: Vec<&str> = modes
+        .iter()
+        .filter(|wire| {
+            let mode: PracticeMode = serde_json::from_value(Value::String((*wire).clone()))
+                .unwrap_or_else(|e| panic!("{wire}: {e}"));
+            !mode.is_tracked()
+        })
+        .map(String::as_str)
+        .collect();
+    assert_eq!(untracked, ["drill"]);
+}
+
+/// `shot_result`'s `UnscoredReason` is Rust's whole set, the photo-side two included: they are what
+/// the artifact exists to carry, where the swing schemas must leave them out (the test above).
+#[test]
+fn the_shot_result_schema_admits_every_reason() {
+    let rust: BTreeSet<String> = UNSCORED_REASONS
+        .iter()
+        .map(|(reason, _)| wire_name(*reason))
+        .collect();
+    let described: BTreeSet<String> = schema("shot_result")["$defs"]["UnscoredReason"]["enum"]
+        .as_array()
+        .expect("shot_result has an `UnscoredReason` enum")
+        .iter()
+        .map(|value| value.as_str().expect("a wire name").to_owned())
+        .collect();
+    assert_eq!(described, rust);
+    for reason in PHOTO_SIDE {
+        assert!(described.contains(&wire_name(reason)), "{reason:?}");
+    }
 }

@@ -8,6 +8,8 @@
 //!   hashes, and the tolerant read and atomic write of `manifest.json`;
 //! - [`state`] — `api/state.py`'s `AnalysisState` and its tolerant readers for `analysis.state.json`
 //!   and `analysis.json`: what a machine later derived from a swing, and whether it is still true;
+//!   and since M35 P8 the reader and writer of a photo entry's `shot_analysis.json`, which has no
+//!   Python twin;
 //! - [`golfer_store`] — `storage/golfer_store.py`, the golfer registry, with
 //!   `contracts/golfer.py::slugify`, which needs a Unicode normalization table `contracts` does not
 //!   carry;
@@ -19,9 +21,17 @@
 //!   guard that refuses to replace a bag it cannot read (M36 P9);
 //! - [`bundle_store`] — `storage/bundle_store.py`, which slots each upload into a swing by role and
 //!   holds the per-swing repairs (M36 P9);
+//! - [`session_meta`] — `storage/session_meta.py`, the session's cursors in `session.json`, which the
+//!   M36 port left out because no corpus read reaches them, ported at M35 P7 with the intent cursor
+//!   frozen Python does not have;
+//! - [`flight_inputs`] — `storage/flight_inputs.py`'s `loft_for_club` and `LoftGap`: a club tag's
+//!   declared loft in the golfer's bag, or which repair would give it one (M35 P8). The corpus-wide
+//!   `read_flight_inputs` join is not ported;
 //! - [`corpus`] — `storage/corpus.py`, one golfer's distinct swings across every session and the
 //!   honest sample size behind each metric, read over the bundle store and the state readers, with
-//!   the engine generations it judges a stored analysis against as a parameter (M36 P10).
+//!   the engine generations it judges a stored analysis against as a parameter (M36 P10). Since
+//!   M35 P10 it also admits a photo entry, a shot photo with no face-on clip, read from
+//!   `shot_analysis.json`, and leaves a drill out as `untracked`, which frozen Python's does not.
 //!
 //! # ADR-008's exception is not carried over
 //!
@@ -84,8 +94,10 @@ pub mod bag_store;
 pub mod bundle_store;
 pub mod catalogue;
 pub mod corpus;
+pub mod flight_inputs;
 pub mod golfer_store;
 pub mod manifest;
+pub mod session_meta;
 pub mod shot_store;
 pub mod state;
 
@@ -139,8 +151,8 @@ impl From<io::Error> for StoreError {
 /// `Path::with_extension` and Python's `with_suffix` disagree on a name ending in `.` or starting
 /// with one (`clip.` is `clip.tmp` here and `clip..tmp` there), and agree on every name ending in a
 /// suffix. Every caller's name ends in `.json` — `manifest.json`, `<id>.golfer.json`,
-/// `analysis.state.json` — so the stale `manifest.tmp` the storage family pins being consumed is the
-/// same file in both languages.
+/// `analysis.state.json`, `session.json`, `shot_analysis.json` — so the stale `manifest.tmp` the storage family pins
+/// being consumed is the same file in both languages.
 pub(crate) fn tmp_beside(path: &Path) -> PathBuf {
     path.with_extension("tmp")
 }

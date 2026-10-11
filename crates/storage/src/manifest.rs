@@ -9,6 +9,14 @@
 //! `player_id`, `club` and `mishit` were each added that way — optional, defaulted, read through the
 //! same tolerant loader — which is why no manifest written before any of them ever needed a
 //! migration: every one on disk still loads and answers `None`.
+//!
+//! **`intent` is the fourth, and the first frozen Python does not declare** (M35 P7). It is written
+//! only when set, so every manifest without one reads and re-saves to the value frozen Python wrote,
+//! and `swing_manifest.schema.json` is Rust's from here (`conformance.py::RUST_OWNED_SCHEMAS`). The
+//! cost is named rather than fixed: pydantic's `SwingManifest` reads a file holding `intent`, ignores
+//! the key, and **drops it on any rewrite** (the M35 plan's finding 3), so a frozen-server write to a
+//! swing — another role uploaded into it, `set_player`, `set_club`, `set_mishit`,
+//! `attribute_unlabeled` — turns a recorded drill back into a tracked shot. M29 replaces the server.
 
 use std::collections::BTreeMap;
 use std::fs;
@@ -16,6 +24,7 @@ use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 
 use contracts::club::ClubId;
+use contracts::intent::PracticeGoal;
 use contracts::mishit::MishitVerdict;
 use contracts::Timestamp;
 use serde::{Deserialize, Serialize};
@@ -105,6 +114,24 @@ pub struct SwingManifest {
     /// inferred. `None` is the common case: the automatic rule in `contracts::mishit` decides.
     #[serde(default)]
     pub mishit: Option<MishitVerdict>,
+    /// What the golfer was practising on this shot (ADR-009, ADR-034 §3), stamped from the
+    /// session's intent cursor (`crate::session_meta`) and **write-once** as `club` is, with
+    /// [`crate::bundle_store::SwingBundleStore::set_intent`] the per-shot repair. [M35 P7]
+    ///
+    /// `None` reads as the default goal, `fundamentals`, which is tracked: it is every manifest
+    /// frozen Python wrote, and they go on counting. Whether a shot is tracked is
+    /// [`contracts::intent::PracticeMode::is_tracked`] over this, derived and never stored. A
+    /// recorded goal holds the mode and, for `shot_shaping`, the shape; its `club` stays the
+    /// default, because this manifest's `club` is the club of record and the shell fills the
+    /// category from it when it analyses (the M35 plan's call 5).
+    ///
+    /// **Written only when set**, so a manifest without one writes the keys frozen Python's does,
+    /// and the storage family's recorded writes cannot move. Last, after pydantic's fields, so the
+    /// order those share is still theirs. An intent no enum names drops the whole manifest, as an
+    /// unknown `club` does, where frozen Python ignores the key and reads the swing as tracked:
+    /// a shot whose intent cannot be read is not counted on a guess.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub intent: Option<PracticeGoal>,
 }
 
 /// `Literal["collecting", "complete"]`.
@@ -252,6 +279,7 @@ mod tests {
             player_id: None,
             club: None,
             mishit: None,
+            intent: None,
         }
     }
 
@@ -300,15 +328,84 @@ mod tests {
         );
     }
 
-    /// The no-migration guarantee, for all three fields at once: the bytes on disk before any of
+    /// The no-migration guarantee, for all four fields at once: the bytes on disk before any of
     /// them existed still load, and each answers `None`.
     #[test]
-    fn a_manifest_written_before_the_three_optional_fields_still_loads() {
+    fn a_manifest_written_before_the_four_optional_fields_still_loads() {
         let parsed: SwingManifest = serde_json::from_str(PRE_M9).unwrap();
         assert_eq!(
-            (parsed.player_id, parsed.club, parsed.mishit),
-            (None, None, None)
+            (parsed.player_id, parsed.club, parsed.mishit, parsed.intent),
+            (None, None, None, None)
         );
+    }
+
+    /// A manifest as frozen Python's `model_dump_json` writes one, every optional key spelled
+    /// `null`, with the timestamps' microseconds a real one carries.
+    const FROZEN: &str = r#"{
+        "swing_id": "3", "session_id": "2026-08-23",
+        "created_at": "2026-08-23T04:50:01.120931Z", "updated_at": "2026-08-23T04:51:10.004211Z",
+        "roles": {"shot_screen": {"role": "shot_screen", "filename": "shot_screen.2e81ab05828e.png",
+            "content_sha256": "2e81ab05828e", "original_filename": "IMG_0042.png",
+            "content_type": "image/png", "size_bytes": 2226615,
+            "received_at": "2026-08-23T04:50:01.121400Z", "warnings": []}},
+        "player_id": "aaron", "club": "3w", "mishit": null}"#;
+
+    /// **Skip-if-`None` moves no write** (the M35 plan's call 5): a manifest frozen Python wrote
+    /// re-saves to the value it was read from, with no `intent` key, so the bytes frozen Python
+    /// reads back are its own. That is what keeps every recorded store write where it was.
+    #[test]
+    fn a_manifest_without_an_intent_re_saves_to_the_value_it_was_read_from() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = manifest_path(dir.path());
+        fs::write(&path, FROZEN).unwrap();
+        let read = load_manifest(&path).expect("frozen Python's manifest reads");
+        assert_eq!(read.intent, None);
+
+        save_manifest(&read, &path).unwrap();
+        let written: serde_json::Value = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+        let original: serde_json::Value = serde_json::from_str(FROZEN).unwrap();
+        assert_eq!(written, original);
+        assert!(
+            written.get("intent").is_none(),
+            "an unset intent is not written"
+        );
+    }
+
+    /// A set intent round-trips through disk; `null` and an absent key both read as unset, and `{}`
+    /// as the default goal, as `PracticeGoal` reads one. An intent no enum names drops the manifest,
+    /// which is where Rust departs from frozen Python on purpose (the field's doc says why).
+    #[test]
+    fn an_intent_round_trips_and_one_that_cannot_be_read_drops_the_manifest() {
+        use contracts::intent::{PracticeMode, TargetShape};
+
+        let dir = tempfile::tempdir().unwrap();
+        let path = manifest_path(dir.path());
+        let mut written = manifest(&[Role::ShotScreen]);
+        written.intent = Some(PracticeGoal {
+            mode: PracticeMode::ShotShaping,
+            target_shape: Some(TargetShape::Draw),
+            ..PracticeGoal::default()
+        });
+        save_manifest(&written, &path).unwrap();
+        assert_eq!(load_manifest(&path), Some(written));
+
+        let base: serde_json::Value = serde_json::from_str(PRE_M9).unwrap();
+        let with = |intent: serde_json::Value| {
+            let mut doc = base.clone();
+            doc["intent"] = intent;
+            serde_json::from_value::<SwingManifest>(doc).map(|m| m.intent)
+        };
+        assert_eq!(with(json!(null)).unwrap(), None);
+        assert_eq!(with(json!({})).unwrap(), Some(PracticeGoal::default()));
+        assert_eq!(
+            with(json!({"mode": "drill"}))
+                .unwrap()
+                .map(|goal| goal.mode),
+            Some(PracticeMode::Drill)
+        );
+        assert!(with(json!({"mode": "warm_up"})).is_err());
+        assert!(with(json!({"target_shape": "hook"})).is_err());
+        assert!(with(json!("drill")).is_err());
     }
 
     /// P1's finding 5: a club, role or verdict no enum names drops the whole manifest, a missing

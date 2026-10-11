@@ -424,7 +424,7 @@
       "type": "object"
     },
     "PracticeMode": {
-      "description": "What the golfer is practicing \u2014 selects a scoring policy (ADR-009).\n\nOnly ``FUNDAMENTALS`` is implemented in the PoC; the rest are named seams that\n``scoring.policy_for`` rejects with ``NotImplementedError`` until full M4.",
+      "description": "What the golfer is practicing (ADR-009), and whether the swing is tracked (ADR-034 \u00a73).\n\nEvery mode is scored by the one mechanics-only policy, so a score means the same under each, and the result records the mode it was analysed under. Only `drill` is not tracked: a drill never enters club or player stats, the mechanics baseline or a shape topic. Frozen Python's `scoring.policy_for` still refuses every mode but `fundamentals`, and its pipeline only ever records that one.",
       "enum": [
         "fundamentals",
         "shot_shaping",

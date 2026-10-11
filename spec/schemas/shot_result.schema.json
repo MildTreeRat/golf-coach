@@ -1,0 +1,679 @@
+{
+  "$defs": {
+    "ClubCategory": {
+      "description": "Club family used to key benchmark rows (ADR-010 \u00a73).\n\n``ALL`` is the club-independent fallback \u2014 tempo and posture key on it.",
+      "enum": [
+        "driver",
+        "wood",
+        "hybrid",
+        "long_iron",
+        "mid_iron",
+        "short_iron",
+        "wedge",
+        "putter",
+        "all"
+      ],
+      "title": "ClubCategory",
+      "type": "string"
+    },
+    "Measurement": {
+      "description": "A quantity measured off one swing, carrying no claim about whether it is good.\n\nDeliberately **not** a `CheckpointScore`: no band, no `passed`, no `score`. The distinction is\nthe point. A metric earns a verdict only once a population distribution exists to judge it\nagainst (ADR-010 \u00a72 \u2014 no score beats a wrong one), and until then it is data. Making that a\n*type* rather than a convention means a measurement is structurally incapable of being rendered\nas a fault, however it travels.\n\nRecording them before they can be judged is what breaks the chicken-and-egg that kept this\npanel at three checkpoints: bands are derived from a population of measurements\n(`scripts/golfdb/derive_pose_metrics.py` -> `derive_reference.py`), so a metric that cannot be\nmeasured without a band can never acquire one. It is also why a session's swings stay worth\nre-analyzing later \u2014 the measurement is on disk even though nothing yet knows what it means.",
+      "properties": {
+        "detail": {
+          "default": "",
+          "description": "How and where it was taken \u2014 'address window -> impact window', and any sign convention. A bare number cannot be re-derived or re-normalized later; this is what makes it auditable when a band is eventually cut from it.",
+          "title": "Detail",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "source": {
+          "description": "Where it came from: 'pose:face_on', 'launch_monitor:hd_golf'.",
+          "title": "Source",
+          "type": "string"
+        },
+        "unit": {
+          "description": "'shoulder_widths' | 'degrees' | 'ratio' | 'mph' | 'yards' | 'rpm'.",
+          "title": "Unit",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "number"
+        }
+      },
+      "required": [
+        "name",
+        "value",
+        "unit",
+        "source"
+      ],
+      "title": "Measurement",
+      "type": "object"
+    },
+    "PracticeGoal": {
+      "description": "The golfer's intent for a swing (ADR-009 \u00a7Concepts).\n\nSelected at session level, overridable per shot. Defaults describe the PoC case:\nFundamentals mode, no declared shape, club-agnostic.",
+      "properties": {
+        "club": {
+          "$ref": "#/$defs/ClubCategory",
+          "default": "all"
+        },
+        "focus_checkpoint": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Focus Checkpoint"
+        },
+        "mode": {
+          "$ref": "#/$defs/PracticeMode",
+          "default": "fundamentals"
+        },
+        "target_shape": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TargetShape"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "title": "PracticeGoal",
+      "type": "object"
+    },
+    "PracticeMode": {
+      "description": "What the golfer is practicing (ADR-009), and whether the shot is tracked (ADR-034 \u00a73).\n\nEvery mode is analysed on its own, mechanics and shot alike. Only `drill` is not tracked: a drill shot never enters club or player stats, the mechanics baseline or a shape topic. Tracked-ness is derived from the mode and stored nowhere.",
+      "enum": [
+        "fundamentals",
+        "shot_shaping",
+        "performance",
+        "drill"
+      ],
+      "title": "PracticeMode",
+      "type": "string"
+    },
+    "ShotData": {
+      "description": "Metrics for a single shot. Units in field descriptions (ADR-004).",
+      "properties": {
+        "apex_height": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "yards",
+          "title": "Apex Height"
+        },
+        "attack_angle": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "degrees, + = up (hitting up on the ball)",
+          "title": "Attack Angle"
+        },
+        "ball_speed": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "mph",
+          "title": "Ball Speed"
+        },
+        "bounce_and_roll": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "yards, total - carry",
+          "title": "Bounce And Roll"
+        },
+        "carry_distance": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "yards",
+          "title": "Carry Distance"
+        },
+        "carry_offline": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "yards, + = right \u2014 the ball's lateral distance off the target line at carry",
+          "title": "Carry Offline"
+        },
+        "club_face_angle": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "degrees, + = open",
+          "title": "Club Face Angle"
+        },
+        "club_head_speed": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "mph",
+          "title": "Club Head Speed"
+        },
+        "club_path": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "degrees, + = in-to-out",
+          "title": "Club Path"
+        },
+        "dynamic_loft": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "degrees",
+          "title": "Dynamic Loft"
+        },
+        "impact_offset_h": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "millimetres, + = toe",
+          "title": "Impact Offset H"
+        },
+        "impact_offset_v": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "millimetres, + = high",
+          "title": "Impact Offset V"
+        },
+        "impact_position": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "e.g. 'CENTER', 'TOE'",
+          "title": "Impact Position"
+        },
+        "impact_position_v": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "the vertical partner of impact_position, in the source's own words",
+          "title": "Impact Position V"
+        },
+        "launch_angle": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "degrees, vertical",
+          "title": "Launch Angle"
+        },
+        "launch_direction": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "degrees, + = right",
+          "title": "Launch Direction"
+        },
+        "low_point": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "inches, + = ahead of the ball",
+          "title": "Low Point"
+        },
+        "provenance": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ShotProvenance"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "session_id": {
+          "title": "Session Id",
+          "type": "string"
+        },
+        "shot_id": {
+          "title": "Shot Id",
+          "type": "string"
+        },
+        "shot_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "e.g. 'DRAW', 'SLIGHT FADE'",
+          "title": "Shot Type"
+        },
+        "smash_factor": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "ball_speed / club_head_speed",
+          "title": "Smash Factor"
+        },
+        "source": {
+          "$ref": "#/$defs/ShotSource",
+          "default": "mock"
+        },
+        "spin_axis": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "degrees, + = fade",
+          "title": "Spin Axis"
+        },
+        "spin_rate": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "rpm",
+          "title": "Spin Rate"
+        },
+        "timestamp": {
+          "format": "date-time",
+          "title": "Timestamp",
+          "type": "string"
+        },
+        "total_distance": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "yards",
+          "title": "Total Distance"
+        }
+      },
+      "required": [
+        "shot_id",
+        "session_id",
+        "timestamp"
+      ],
+      "title": "ShotData",
+      "type": "object"
+    },
+    "ShotProvenance": {
+      "description": "How a shot was obtained, for sources that *infer* rather than *receive* metrics.\n\nA shot read off a photograph is a measurement of a measurement: OCR can drop a digit\nand produce a number that is wrong but perfectly plausible. Carrying the confidence,\nthe physics-check warnings, and the raw on-screen text alongside the metrics is what\nmakes a bad parse auditable after the fact instead of silently poisoning a session's\nscores (ADR-014). Sources that receive metrics directly (R10, mock) leave this `None`.",
+      "properties": {
+        "corrections": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Field name -> text, for M38's review-and-edit of a parse. Empty until M38 writes one.",
+          "title": "Corrections",
+          "type": "object"
+        },
+        "device": {
+          "description": "Device profile that parsed this, e.g. 'hd_golf'.",
+          "title": "Device",
+          "type": "string"
+        },
+        "fields_present": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The ShotData field names whose tiles the parse located, blank or not. None means not recorded, not 'nothing located'.",
+          "title": "Fields Present"
+        },
+        "image_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Where the image was read from.",
+          "title": "Image Path"
+        },
+        "image_sha256": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Content hash of the source image.",
+          "title": "Image Sha256"
+        },
+        "needs_review": {
+          "default": false,
+          "description": "True when confidence fell below threshold or a physics check failed.",
+          "title": "Needs Review",
+          "type": "boolean"
+        },
+        "parse_confidence": {
+          "description": "0-1; 1 = fully trusted.",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Parse Confidence",
+          "type": "number"
+        },
+        "parser_version": {
+          "default": 0,
+          "description": "Which screen parser produced this record \u2014 an entry in SCREEN_PARSER_VERSION's ledger. 0 means unstamped, which is every shot frozen Python's parser wrote.",
+          "minimum": 0,
+          "title": "Parser Version",
+          "type": "integer"
+        },
+        "raw_fields": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "On-screen label -> raw recognized text, exactly as read.",
+          "title": "Raw Fields",
+          "type": "object"
+        },
+        "warnings": {
+          "description": "Human-readable reasons this parse is suspect.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "device",
+        "parse_confidence"
+      ],
+      "title": "ShotProvenance",
+      "type": "object"
+    },
+    "ShotSource": {
+      "description": "Where a ShotData record came from \u2014 for provenance and debugging.",
+      "enum": [
+        "mock",
+        "r10",
+        "import",
+        "screen"
+      ],
+      "title": "ShotSource",
+      "type": "string"
+    },
+    "TargetShape": {
+      "description": "Intended ball flight. With `shot_shaping` it chooses which shape topic grades the shot (ADR-034 \u00a75.3); a shape never declared is not graded.",
+      "enum": [
+        "straight",
+        "draw",
+        "fade"
+      ],
+      "title": "TargetShape",
+      "type": "string"
+    },
+    "UnscoredCheckpoint": {
+      "description": "One quantity that was attempted and not produced, with the reason.",
+      "properties": {
+        "detail": {
+          "default": "",
+          "description": "What was seen, in the words of the code that refused: for a photo-side reason, the tile's on-screen label and the text under it. The reason is what a consumer branches on; this is the part a human reads.",
+          "title": "Detail",
+          "type": "string"
+        },
+        "name": {
+          "description": "For a photo-side reason, the `ShotData` field the tile would have filled (`spin_rate`), the vocabulary `devices.json` and `fields_present` speak; for a flight refusal, the flight measurement's name (`flight_carry_yds`).",
+          "title": "Name",
+          "type": "string"
+        },
+        "reason": {
+          "$ref": "#/$defs/UnscoredReason"
+        }
+      },
+      "required": [
+        "name",
+        "reason"
+      ],
+      "title": "UnscoredCheckpoint",
+      "type": "object"
+    },
+    "UnscoredReason": {
+      "description": "Every way a quantity can fail to be produced. Closed, and reported rather than guessed (ADR-010 \u00a72).\n\nRust's whole enum, so a superset of the swing schemas' copy: `printed_blank` and `misread` are the photo-side reasons, about reading the screen, and are written into a `ShotResult` and never into a `SwingResult`, because frozen Python reads `analysis.json` with the closed set that lacks them (ADR-035 clause 4).",
+      "enum": [
+        "phase_not_segmented",
+        "boundary_estimated",
+        "timing_degenerate",
+        "landmarks_unconfident",
+        "too_few_frames",
+        "scale_unavailable",
+        "no_band",
+        "no_handedness",
+        "cross_view_contradicted",
+        "carry_unreachable",
+        "no_club_loft",
+        "spin_not_recoverable",
+        "spin_axis_unresolved",
+        "no_launch_conditions",
+        "unrecorded",
+        "printed_blank",
+        "misread"
+      ],
+      "title": "UnscoredReason",
+      "type": "string"
+    }
+  },
+  "description": "One shot, measured and flown from what its screen printed. Written as `shot_analysis.json`. [M35]\n\nRust's alone: frozen Python has no twin of it. Never carried in a `SwingResult`, so the photo-side `unscored` reasons never reach `analysis.json`.",
+  "properties": {
+    "analysis_version": {
+      "default": 0,
+      "description": "Which generation of the engine produced this (`ANALYSIS_VERSION`). Defaults to 0, not to the current version, for `SwingBundleResult.analysis_version`'s reason: a file lacking the key must read as older than every engine, so the corpus excludes it as outdated rather than pooling a number nobody can date.",
+      "title": "Analysis Version",
+      "type": "integer"
+    },
+    "intent": {
+      "$ref": "#/$defs/PracticeGoal",
+      "default": {
+        "club": "all",
+        "focus_checkpoint": null,
+        "mode": "fundamentals",
+        "target_shape": null
+      },
+      "description": "The goal the shot was analysed under. A record of the analysis: the shot's intent of record is its manifest's, which can change after this was written. No number here depends on it, because every mode measures a shot alike."
+    },
+    "measurements": {
+      "description": "The shot's rows, then the flight's, measured over the analysed view: the shot with every field outside what the device printed and analysis may use set to null (ADR-034 \u00a72). A field the screen did not print, or printed only to be shown, produces nothing here.",
+      "items": {
+        "$ref": "#/$defs/Measurement"
+      },
+      "title": "Measurements",
+      "type": "array"
+    },
+    "notes": {
+      "description": "Everything that degraded, in order of discovery: ADR-014's needs-review note, then what the shell appends, such as a handedness or loft gap.",
+      "items": {
+        "type": "string"
+      },
+      "title": "Notes",
+      "type": "array"
+    },
+    "photo_sha256": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Content hash of the photo this was computed from: the entry's staleness check, against the manifest's photo hash. Null reads as stale.",
+      "title": "Photo Sha256"
+    },
+    "session_id": {
+      "title": "Session Id",
+      "type": "string"
+    },
+    "shot": {
+      "$ref": "#/$defs/ShotData",
+      "description": "The shot as stored, `shown_only` fields included, because the phone displays them."
+    },
+    "swing_id": {
+      "title": "Swing Id",
+      "type": "string"
+    },
+    "unscored": {
+      "description": "What could not be produced, named and never guessed (ADR-010 \u00a72): the photo-side refusals in the device's declared tile order, then the flight's.",
+      "items": {
+        "$ref": "#/$defs/UnscoredCheckpoint"
+      },
+      "title": "Unscored",
+      "type": "array"
+    }
+  },
+  "required": [
+    "swing_id",
+    "session_id",
+    "shot"
+  ],
+  "title": "ShotResult",
+  "type": "object"
+}

@@ -369,7 +369,7 @@ mod tests {
                 swing_id: i.to_string(),
                 captured_at: Timestamp::parse(&format!("2026-08-{:02}T12:00:00Z", 1 + i % 28))
                     .expect("a valid timestamp"),
-                face_on_sha256: format!("clip-{i}"),
+                face_on_sha256: Some(format!("clip-{i}")),
                 shot_sha256: Some(format!("photo-{i}")),
                 club: None,
                 measurements: vec![measurement(metric, value)],
@@ -383,6 +383,7 @@ mod tests {
                 auto_mishit: false,
                 manual_mishit: None,
                 missing_roles: Vec::new(),
+                intent: None,
             })
             .collect();
         empty_corpus("aaron", swings)
@@ -946,7 +947,7 @@ mod tests {
     fn re_uploads_of_one_clip_cannot_manufacture_a_pattern() {
         let mut corpus = corpus("head_sway_norm", &spread(0.30, 0.02, 12));
         for swing in &mut corpus.swings {
-            swing.face_on_sha256 = "one-clip".into();
+            swing.face_on_sha256 = Some("one-clip".into());
         }
         let metric = &build_dispersion(&corpus).metrics["head_sway_norm"];
         assert_eq!(metric.n, 1);

@@ -450,3 +450,103 @@ fn every_adopted_corpus_is_its_storage_vectors_answer() {
     );
     println!("{} career vectors adopt a storage corpus", adopted.len());
 }
+
+/// **A drill reaches no aggregate and no report** (the M35 plan's call 11, the second half; the
+/// first is `crates/storage`'s corpus test): every aggregate, every derived count and every report
+/// built from a corpus holding a drill is the one built from the same tree with the drill's
+/// directory deleted from disk.
+///
+/// Two drills from M35 P9's hand cases, one of each kind, each in a session that holds tracked
+/// entries too, so deleting it leaves `sessions_scanned` alone:
+///
+/// - `drill-among-five-carries`' swing 5, the one where pooling the drill would move a number: its
+///   carry makes a fifth 7i photo and so a mishit floor, which flags swing 3's 70 and moves the
+///   carry baseline, the dispersion and the bag profile;
+/// - `drills-untracked`' photo entry 2, a drill with no swing beside it.
+///
+/// **The one report that may differ is `career_corpus`**, plain and verbose, because it is the
+/// counter of what was read: it prints the swing directories seen and the exclusions, and the drill
+/// is one of each. So that report is held tighter instead. Rendered from the drill's corpus with the
+/// one `untracked` exclusion and the one directory taken out, it is the deleted tree's, to the
+/// character. The corpus itself is held to the same: nothing else in it differs.
+#[test]
+fn a_drill_moves_no_aggregate_and_no_report_but_the_corpus_counter() {
+    use contracts::career::ExclusionReason;
+    use golf_core::storage_family::run_storage;
+
+    let storage: std::collections::BTreeMap<String, Value> =
+        family_vectors("storage").into_iter().collect();
+    let read = |vector: &Value| -> CareerCorpus {
+        let answer = run_storage(vector).unwrap_or_else(|why| panic!("{why}"));
+        serde_json::from_value(answer["corpus"].clone()).expect("the reader's corpus")
+    };
+    let career = |corpus: &CareerCorpus| -> Value {
+        let vector = serde_json::json!({
+            "id": "a drill deleted from disk",
+            "provenance": {"recorded_by": RUN_CAREER},
+            "input": {
+                "corpus": corpus,
+                "bag": null,
+                "display_name": "Aaron",
+                "versions": {"installed": contracts::swing::ANALYSIS_VERSION},
+                "clubs": ["7i"],
+            },
+        });
+        run_career(&vector).unwrap_or_else(|why| panic!("{why}"))
+    };
+
+    for (id, drill) in [
+        ("storage/hand/drill-among-five-carries", "2026-08-22/5"),
+        ("storage/hand/drills-untracked", "2026-08-21/2"),
+    ] {
+        let vector = &storage[id];
+        let with = read(vector);
+        let mut deleted = vector.clone();
+        let files = deleted["input"]["files"]
+            .as_object_mut()
+            .expect("a corpus case's files");
+        let before = files.len();
+        files.retain(|name, _| !name.starts_with(&format!("{drill}/")));
+        assert!(files.len() < before, "{id}: {drill} holds no file");
+        let without = read(&deleted);
+
+        let is_the_drill = |e: &&contracts::career::ExcludedSwing| e.swing_ref() == drill;
+        let named: Vec<_> = with.excluded.iter().filter(is_the_drill).collect();
+        assert!(
+            matches!(named.as_slice(), [e] if e.reason == ExclusionReason::Untracked),
+            "{id}: {drill} is named once, untracked: {named:?}"
+        );
+        let mut accounted = with.clone();
+        accounted.excluded.retain(|e| e.swing_ref() != drill);
+        accounted.swing_dirs_seen -= 1;
+        assert_eq!(accounted, without, "{id}: the drill moved the corpus");
+
+        let (built_with, built_without) = (career(&with), career(&without));
+        for key in AGGREGATES.into_iter().chain(["properties"]) {
+            assert_eq!(
+                built_with[key], built_without[key],
+                "{id}: the drill moved {key}"
+            );
+        }
+        let reports = built_with["reports"].as_object().expect("reports");
+        assert_eq!(
+            reports.len(),
+            built_without["reports"].as_object().expect("reports").len()
+        );
+        let counted = career(&accounted);
+        for (key, text) in reports {
+            if key.starts_with("career_corpus") {
+                assert_ne!(text, &built_without["reports"][key], "{id}: {key} names it");
+                assert_eq!(
+                    counted["reports"][key], built_without["reports"][key],
+                    "{id}: {key} differs by more than the drill's directory and exclusion"
+                );
+            } else {
+                assert_eq!(
+                    text, &built_without["reports"][key],
+                    "{id}: the drill moved {key}"
+                );
+            }
+        }
+    }
+}

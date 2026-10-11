@@ -188,3 +188,64 @@ against, not how a swing's mechanics are scored.
   photo-only shot as well as a swing;
 - `SwingResult`'s two sub-scores and its `intent`, and the Fundamentals policy that fills them;
 - the mechanics checkpoints and `ranges.json`.
+
+## Addendum (2026-10-10, M35): every mode scores mechanics, and the mode routes the stats
+
+The previous addendum left one question open for M35: a mode other than `FUNDAMENTALS` could not
+reach the engine, so a `DRILL` or `SHOT_SHAPING` shot with video needed either a policy for its
+mode or its mode carried beside the swing. M35 answered it in Rust, in
+[the M35 plan](../plans/m35-shot-first-sessions.md)'s interview decision 1 (2026-10-09) and its
+P2. **The mode goes into the swing, and every mode is scored as `FUNDAMENTALS` is.**
+
+**Per swing, every mode scores mechanics.**
+`crates/analysis/src/scoring.rs::policy_for` answers one blend, `mechanics_only` (renamed from
+`fundamentals` for what it does), for all four `PracticeMode`s, and `SwingResult.intent` records the
+mode the golfer chose. The `match` still spells every mode, so §Concepts' per-mode seam stays
+visible, and a fifth mode stops the build at the one table that must decide how it is scored. The
+user: "We want to analyze fundamentals as well, we just don't wish to add to the 'did the shot shape
+correctly when they tried it?'" So a drill swing gets the mechanics panel it was filmed for.
+
+**Per mode, the mode decides which aggregates a shot feeds**, which is
+[ADR-034](034-shot-first-phone-first.md)'s clause 3 as built:
+
+| mode | analysed on its own | club and player stats, the mechanics baseline | shape grade (M37) |
+|---|---|---|---|
+| `DRILL` | yes | **no** | no |
+| `SHOT_SHAPING` | yes | yes | yes, for its declared `target_shape` |
+| `FUNDAMENTALS`, `PERFORMANCE` | yes | yes | no |
+
+`PracticeMode::is_tracked()` (`crates/contracts/src/intent.rs`) is the one rule, false for `DRILL`
+alone, derived and never stored. The corpus applies it ([ADR-024](024-per-club-shot-history.md)'s
+M35 addendum).
+
+**The three single-swing policies are retired, not deferred.** §Concepts' shot-shaping, performance
+and drill policies were the seam's other occupants. ADR-034 §5 grades outcome over many shots, so
+none of them will be built. The previous addendum said they "stay unbuilt", and that is now the
+decision: the seam holds one blend under four names. Option C's per-swing weighting of mechanics
+against outcome is not built either, and `outcome_score` stays `None`.
+
+**No `ANALYSIS_VERSION` bump.** Every recorded input is `FUNDAMENTALS` or none, so no recorded answer
+moves, and a result under another mode could not be produced before. The engine declaration's dry
+run, `spec/declarations/v17.json`, reports nothing changed across the engine, stage and shot
+families, which is the pin.
+
+**The intent a shot records, and the intent it is analysed under.** A recorded goal (on the swing's
+manifest, or the session's cursor) holds the mode and, for `SHOT_SHAPING`, the shape, and its `club`
+stays the default `all`, as ADR-024's M31 addendum says. When the shell analyses a shot it fills the
+goal's club category from the manifest's club tag. So a Rust `ShotResult` for a tagged 7 iron says
+`mid_iron`, where every `analysis.json` frozen Python wrote says `all`: `api/pipeline.py` builds
+`PracticeGoal(club=options.club)` from a CLI flag that defaults to `ALL`, not from the manifest (the
+M35 plan's P4 finding 2). No number depends on the category.
+
+**Frozen Python keeps refusing**, by ADR-035 clause 4: `analysis/scoring.py::policy_for` still raises
+`NotImplementedError` for every mode but `FUNDAMENTALS`. Its pipeline only ever builds a
+`FUNDAMENTALS` goal, so it never reaches the case. The previous addendum's sentence that
+`crates/analysis`' mirror panics is no longer true.
+
+**Not changed**:
+
+- `PracticeGoal`'s shape and its enums. `focus_checkpoint` is still carried, and no scoring path in
+  either language reads it;
+- the mechanics checkpoints, their bands, and how a swing's `overall_score` is computed;
+- the previous addendum's outcome axis, graded over many shots, and its shape topics, which are
+  M37's.

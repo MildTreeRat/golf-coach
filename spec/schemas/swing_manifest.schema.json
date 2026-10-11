@@ -1,5 +1,21 @@
 {
   "$defs": {
+    "ClubCategory": {
+      "description": "Club family used to key benchmark rows (ADR-010 \u00a73).\n\n``ALL`` is the club-independent fallback \u2014 tempo and posture key on it.",
+      "enum": [
+        "driver",
+        "wood",
+        "hybrid",
+        "long_iron",
+        "mid_iron",
+        "short_iron",
+        "wedge",
+        "putter",
+        "all"
+      ],
+      "title": "ClubCategory",
+      "type": "string"
+    },
     "ClubId": {
       "description": "One slot in a bag. **Declaration order is canonical bag order** and is read, not decorative.\n\nP2's `Bag.club_ids` presents clubs in this order and the bag page lists them in it, so a golfer\nreads their bag the way it sits in the bag rather than alphabetically \u2014 where `3w` would land\nbetween `2h` and `5h`. Sorting anywhere downstream is the bug this ordering exists to prevent.\n\nMember *names* are spelled out because `3w` is not a valid Python identifier. That is not\nincidental bookkeeping: `parse_club` derives \"3 wood\" from the name and \"3wood\" from the value,\nso the two spellings of every club come from the declaration itself rather than a second list.",
       "enum": [
@@ -36,6 +52,55 @@
         "cleared"
       ],
       "title": "MishitVerdict",
+      "type": "string"
+    },
+    "PracticeGoal": {
+      "description": "The golfer's intent for a swing (ADR-009 \u00a7Concepts).\n\nSelected at session level, overridable per shot. Defaults describe the PoC case:\nFundamentals mode, no declared shape, club-agnostic.",
+      "properties": {
+        "club": {
+          "$ref": "#/$defs/ClubCategory",
+          "default": "all"
+        },
+        "focus_checkpoint": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Focus Checkpoint"
+        },
+        "mode": {
+          "$ref": "#/$defs/PracticeMode",
+          "default": "fundamentals"
+        },
+        "target_shape": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TargetShape"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "title": "PracticeGoal",
+      "type": "object"
+    },
+    "PracticeMode": {
+      "description": "What the golfer is practicing (ADR-009), and whether the shot is tracked (ADR-034 \u00a73).\n\nEvery mode is analysed on its own, mechanics and shot alike. Only `drill` is not tracked: a drill shot never enters club or player stats, the mechanics baseline or a shape topic. Tracked-ness is derived from the mode and stored nowhere.",
+      "enum": [
+        "fundamentals",
+        "shot_shaping",
+        "performance",
+        "drill"
+      ],
+      "title": "PracticeMode",
       "type": "string"
     },
     "Role": {
@@ -98,6 +163,16 @@
       ],
       "title": "RoleFile",
       "type": "object"
+    },
+    "TargetShape": {
+      "description": "Intended ball flight. With `shot_shaping` it chooses which shape topic grades the shot (ADR-034 \u00a75.3); a shape never declared is not graded.",
+      "enum": [
+        "straight",
+        "draw",
+        "fade"
+      ],
+      "title": "TargetShape",
+      "type": "string"
     }
   },
   "description": "Everything known about one swing: identity plus whichever roles have arrived.",
@@ -118,6 +193,18 @@
       "format": "date-time",
       "title": "Created At",
       "type": "string"
+    },
+    "intent": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/PracticeGoal"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "What the golfer was practising on this shot (ADR-009, ADR-034 \u00a73), stamped from the session's intent cursor (`session.json`) when the swing was created, **write-once** as `club` is, and overridden per shot by the bundle store's `set_intent`. Absent or null means the default goal, `fundamentals`, which is tracked: every manifest frozen Python wrote has none, and those go on counting. Whether the shot is tracked is derived from the mode, and only `drill` is not: a drill is stored and analysed and never enters club or player stats, the mechanics baseline or a shape topic. A recorded goal holds the mode and, for `shot_shaping`, the declared `target_shape`; its `club` stays the default, because this manifest's `club` is the club of record. Written by Rust alone and only when set (M35): frozen Python's model does not declare it, reads a manifest holding it, and drops the key on any rewrite."
     },
     "mishit": {
       "anyOf": [

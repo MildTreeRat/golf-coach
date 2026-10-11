@@ -1,0 +1,241 @@
+{
+    "analysis_version": 17,
+    "expected": {
+        "analysis_version": 17,
+        "intent": {
+            "club": "all",
+            "focus_checkpoint": null,
+            "mode": "fundamentals",
+            "target_shape": null
+        },
+        "measurements": [
+            {
+                "detail": "club face angle minus club path; + is face open to path (fade shape)",
+                "name": "face_to_path_deg",
+                "source": "launch_monitor:hd_golf",
+                "unit": "degrees",
+                "value": 0.5
+            },
+            {
+                "detail": "initial horizontal launch direction; + is right of target",
+                "name": "start_line_deg",
+                "source": "launch_monitor:hd_golf",
+                "unit": "degrees",
+                "value": -2.6
+            },
+            {
+                "detail": "carry as printed by the launch monitor; meaningful per club, not across a bag",
+                "name": "carry_distance_yds",
+                "source": "launch_monitor:hd_golf",
+                "unit": "yards",
+                "value": 128.1
+            },
+            {
+                "detail": "carry plus roll as printed; the gap to carry is the ground, not the swing",
+                "name": "total_distance_yds",
+                "source": "launch_monitor:hd_golf",
+                "unit": "yards",
+                "value": 151.5
+            },
+            {
+                "detail": "yards right (+) or left of target the ball started, projected to the carry; not where it finished - the curve is face_to_path_deg",
+                "name": "start_line_offline_yds",
+                "source": "launch_monitor:hd_golf",
+                "unit": "yards",
+                "value": -5.811
+            },
+            {
+                "detail": "ball speed off the face as printed by the launch monitor; a fitting input, judged by nothing",
+                "name": "ball_speed_mph",
+                "source": "launch_monitor:hd_golf",
+                "unit": "mph",
+                "value": 101.5
+            },
+            {
+                "detail": "vertical launch angle as printed; start_line_deg is the horizontal one",
+                "name": "launch_angle_deg",
+                "source": "launch_monitor:hd_golf",
+                "unit": "degrees",
+                "value": 10.2
+            }
+        ],
+        "notes": [
+            "shot data needs review (parse confidence 0.69) \u2014 the numbers below were read off a photograph and at least one check on them failed (ADR-014)"
+        ],
+        "photo_sha256": null,
+        "session_id": "synthetic",
+        "shot": {
+            "apex_height": null,
+            "attack_angle": null,
+            "ball_speed": 101.5,
+            "bounce_and_roll": 23.4,
+            "carry_distance": 128.1,
+            "carry_offline": null,
+            "club_face_angle": -1.1,
+            "club_head_speed": 88.6,
+            "club_path": -1.6,
+            "dynamic_loft": null,
+            "impact_offset_h": null,
+            "impact_offset_v": null,
+            "impact_position": "CENTER",
+            "impact_position_v": null,
+            "launch_angle": 10.2,
+            "launch_direction": -2.6,
+            "low_point": null,
+            "provenance": {
+                "corrections": {},
+                "device": "hd_golf",
+                "fields_present": [
+                    "total_distance",
+                    "carry_distance",
+                    "bounce_and_roll",
+                    "ball_speed",
+                    "launch_angle",
+                    "club_head_speed",
+                    "club_path",
+                    "club_face_angle",
+                    "spin_rate",
+                    "smash_factor",
+                    "impact_position",
+                    "shot_type",
+                    "launch_direction",
+                    "spin_axis"
+                ],
+                "image_path": null,
+                "image_sha256": null,
+                "needs_review": true,
+                "parse_confidence": 0.688,
+                "parser_version": 1,
+                "raw_fields": {
+                    "Ball Speed": "101.5 mph",
+                    "Bounce & Roll": "23.4 yds",
+                    "Carry": "128.1 yds",
+                    "Club Face Angle": "1.1 \u00b0 Closed",
+                    "Club Path": "1.6 \u00b0 O>I",
+                    "Club Speed": "88.6 mph",
+                    "Horizontal Angle": "2.6 \u00b0 L",
+                    "Impact Position": "CENTER",
+                    "Launch Angle": "10.2 \u00b0",
+                    "Shot Distance": "151.5 yds",
+                    "Shot Type": "FADE",
+                    "Smash Factor": "1.15",
+                    "Spin": "---",
+                    "Spin Axis": "9.3 \u00b0 L"
+                },
+                "warnings": [
+                    "no tile found for 'Impact Position V'",
+                    "spin axis -9.3 disagrees with shot type 'FADE' - a fade needs a positive axis (+ = fade), so the sign or the shape word was misread"
+                ]
+            },
+            "session_id": "synthetic",
+            "shot_id": "synthetic-spin-axis-disagrees",
+            "shot_type": "FADE",
+            "smash_factor": 1.15,
+            "source": "screen",
+            "spin_axis": -9.3,
+            "spin_rate": null,
+            "timestamp": "2026-08-04T12:00:00Z",
+            "total_distance": 151.5
+        },
+        "swing_id": "1",
+        "unscored": [
+            {
+                "detail": "Spin: '---', the screen's blank",
+                "name": "spin_rate",
+                "reason": "printed_blank"
+            },
+            {
+                "detail": "128.1 yd, case above_peak: 125.92 yd is the peak of what these launch conditions can fly - no flight, so none of the flight_* measurements recorded",
+                "name": "flight_carry_yds",
+                "reason": "carry_unreachable"
+            }
+        ]
+    },
+    "id": "shot/screen-synthetic-spin-axis-disagrees",
+    "input": {
+        "handedness": "right",
+        "loft_deg": 30.5,
+        "photo_sha256": null,
+        "session_id": "synthetic",
+        "shot": {
+            "apex_height": null,
+            "attack_angle": null,
+            "ball_speed": 101.5,
+            "bounce_and_roll": 23.4,
+            "carry_distance": 128.1,
+            "carry_offline": null,
+            "club_face_angle": -1.1,
+            "club_head_speed": 88.6,
+            "club_path": -1.6,
+            "dynamic_loft": null,
+            "impact_offset_h": null,
+            "impact_offset_v": null,
+            "impact_position": "CENTER",
+            "impact_position_v": null,
+            "launch_angle": 10.2,
+            "launch_direction": -2.6,
+            "low_point": null,
+            "provenance": {
+                "corrections": {},
+                "device": "hd_golf",
+                "fields_present": [
+                    "total_distance",
+                    "carry_distance",
+                    "bounce_and_roll",
+                    "ball_speed",
+                    "launch_angle",
+                    "club_head_speed",
+                    "club_path",
+                    "club_face_angle",
+                    "spin_rate",
+                    "smash_factor",
+                    "impact_position",
+                    "shot_type",
+                    "launch_direction",
+                    "spin_axis"
+                ],
+                "image_path": null,
+                "image_sha256": null,
+                "needs_review": true,
+                "parse_confidence": 0.688,
+                "parser_version": 1,
+                "raw_fields": {
+                    "Ball Speed": "101.5 mph",
+                    "Bounce & Roll": "23.4 yds",
+                    "Carry": "128.1 yds",
+                    "Club Face Angle": "1.1 \u00b0 Closed",
+                    "Club Path": "1.6 \u00b0 O>I",
+                    "Club Speed": "88.6 mph",
+                    "Horizontal Angle": "2.6 \u00b0 L",
+                    "Impact Position": "CENTER",
+                    "Launch Angle": "10.2 \u00b0",
+                    "Shot Distance": "151.5 yds",
+                    "Shot Type": "FADE",
+                    "Smash Factor": "1.15",
+                    "Spin": "---",
+                    "Spin Axis": "9.3 \u00b0 L"
+                },
+                "warnings": [
+                    "no tile found for 'Impact Position V'",
+                    "spin axis -9.3 disagrees with shot type 'FADE' - a fade needs a positive axis (+ = fade), so the sign or the shape word was misread"
+                ]
+            },
+            "session_id": "synthetic",
+            "shot_id": "synthetic-spin-axis-disagrees",
+            "shot_type": "FADE",
+            "smash_factor": 1.15,
+            "source": "screen",
+            "spin_axis": -9.3,
+            "spin_rate": null,
+            "timestamp": "2026-08-04T12:00:00Z",
+            "total_distance": 151.5
+        },
+        "swing_id": "1"
+    },
+    "provenance": {
+        "kind": "shot",
+        "note": "M34's Rust read of the spin-axis-disagrees synthetic screen (spec/vectors/screen/synthetic/spin-axis-disagrees.json, expected.shot, verbatim: the reference layout, FADE beside a left-tilted axis), which no corpus vector holds, so every number here is worked from the read and none is Python's. The default goal, right-handed, loft 30.5; swing_id 1 and the read's session_id; photo_sha256 null, the read having no image. The one case whose shot needs review: the validator caught the axis's sign against the shape word, so needs_review is true and notes holds ADR-014's needs-review sentence with the read's parse confidence to two places, which no corpus vector reaches (P2 finding 4). Spin holds '---' and is printed_blank; Spin Axis printed -9.3 and is refused nothing, the check flagging the shot and not the tile; Impact Position V is not on this layout, so it is not printed and refused nothing. measurements are the read's printed numbers in SHOT_MEASUREMENTS' order, each row's detail and unit the registry's: face_to_path_deg is -1.1 - (-1.6) = 0.5; start_line_offline_yds is 128.1 x sin(-2.6 deg), rounded to four places; the rest as printed. The flight refusal (flight_carry_yds, carry_unreachable) is Rust's sentence: 128.1 yd is past the 125.92 yd these launch conditions can fly, at every loft from 9 to 25 tried, so the loft moves nothing here. club_head_speed and smash_factor stay on the shot and reach no row (shown_only).",
+        "oracle": "hand",
+        "source": "worked by hand in M35 P5, the M35 plan's P5 list; the shot is the named screen vector's expected.shot, M34's Rust read, verbatim, and each number's source is in the note; Rust's answer (golf_core::run_shot) was checked equal to this expected within RTOL before the file was committed"
+    }
+}

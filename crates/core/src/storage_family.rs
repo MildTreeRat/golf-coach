@@ -47,8 +47,17 @@
 //! **A move inside a written file cannot be declared yet.** Its path is
 //! `expected.files.<session>/<swing>/manifest.json`, and a ledger path cannot name a key holding a
 //! `.` (`golf_core::rerecord`'s module doc, "What a declaration can name"), so a re-record that meets
-//! one refuses it. Nothing in M36 moves a store's write; the first change that does (M35's manifest
-//! key) is the one that builds the escape.
+//! one refuses it. Nothing in M36 moved a store's write, and M35's manifest key does not either,
+//! because it is written only when set (the M35 plan's P7 finding 5); the first change that does is
+//! the one that builds the escape.
+//!
+//! # What the runner has that the recorder does not [M35 P9]
+//!
+//! An upload's `args.intent` and the `bundle.set_intent` op are Rust's alone. Frozen Python's
+//! manifest has no intent, so its `_op_table` has no such op and no op it recorded carries the key.
+//! Only hand-worked op cases call them (`hand/upload-stamps-intent`, `hand/set-intent-repairs`),
+//! and they name [`RUN_OPS`] in `worked_against` because they are read the way its cases are, not
+//! because it could have recorded them. Every other op is `_op_table`'s, under its name.
 //!
 //! # What a refusal is, and what a panic is
 //!
@@ -83,6 +92,7 @@ use contracts::bag::{Bag, BagEntry};
 use contracts::career::{CareerCorpus, Narrowing};
 use contracts::club::ClubId;
 use contracts::golfer::Handedness;
+use contracts::intent::PracticeGoal;
 use contracts::mishit::MishitVerdict;
 use contracts::shot::ShotData;
 use contracts::{Timestamp, Validate};
@@ -279,6 +289,11 @@ fn run_op(stores: &Stores, root: &Path, op: &Value) -> Result<Value, Value> {
             let tmp_path = text("tmp_path")
                 .split('/')
                 .fold(root.to_path_buf(), |path, part| path.join(part));
+            // The session's intent cursor as it stood when the file arrived, passed in as `club`
+            // is: the caller reads `session.json`, the store does not (M35 P7). No op frozen Python
+            // recorded carries the key, and an absent key is `null`, so every recorded upload
+            // stamps nothing. `Upload` borrows it, so it is read into a binding first. [M35 P9]
+            let intent = arg::<Option<PracticeGoal>>(args, "intent");
             let upload = Upload {
                 session_id: text("session_id"),
                 role: arg::<Role>(args, "role"),
@@ -290,6 +305,7 @@ fn run_op(stores: &Stores, root: &Path, op: &Value) -> Result<Value, Value> {
                 swing_id: args["swing_id"].as_str(),
                 player_id: args["player_id"].as_str(),
                 club: arg::<Option<ClubId>>(args, "club"),
+                intent: intent.as_ref(),
             };
             Ok(dumped(
                 &bundle.assign_from_path(&upload, now()).expect(wrote),
@@ -324,6 +340,17 @@ fn run_op(stores: &Stores, root: &Path, op: &Value) -> Result<Value, Value> {
                     text("session_id"),
                     text("swing_id"),
                     arg::<Option<MishitVerdict>>(args, "verdict"),
+                    now(),
+                )
+                .expect(wrote),
+        )),
+        // Rust's alone (the module doc): only a hand-worked case calls it. [M35 P9]
+        "bundle.set_intent" => Ok(dumped(
+            &bundle
+                .set_intent(
+                    text("session_id"),
+                    text("swing_id"),
+                    arg::<Option<PracticeGoal>>(args, "intent"),
                     now(),
                 )
                 .expect(wrote),
@@ -372,7 +399,9 @@ fn run_op(stores: &Stores, root: &Path, op: &Value) -> Result<Value, Value> {
         "shot.has" => Ok(json!(stores.shots.has(text("key")))),
         "shot.all" => Ok(dumped(&stores.shots.all())),
         "slugify" => Ok(json!(slugify(text("name")))),
-        other => panic!("{other} is not an op the recorder's `_op_table` names"),
+        other => panic!(
+            "{other} is not an op the recorder's `_op_table` names, nor one of the runner's own"
+        ),
     }
 }
 
@@ -404,7 +433,12 @@ fn run_corpus(input: &Value) -> Value {
 
 /// `_corpus_answer`: the corpus as it serializes, and the counts it derives, which the dump
 /// leaves out.
-fn corpus_answer(corpus: &CareerCorpus) -> Value {
+///
+/// Public because the gate also holds every hand-worked corpus case to it with no reader in the
+/// way: a case's own `swings`, recounted by the contract and spelled by this, must be the case's
+/// answer (`tests/storage.rs`, M35 P9). One spelling for both, so that check cannot pass a case the
+/// runner would spell differently.
+pub fn corpus_answer(corpus: &CareerCorpus) -> Value {
     json!({
         "corpus": dumped(corpus),
         "properties": {

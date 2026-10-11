@@ -129,13 +129,33 @@ SCHEMA_ROOTS: dict[str, type] = {
 
 #: The roots whose committed schema Rust owns from M32, edited by hand rather than exported here.
 #:
-#: They are the three whose shape M32's wider `ShotData` moves. Frozen Python's models never gain
+#: M32 took the three whose shape its wider `ShotData` moves. Frozen Python's models never gain
 #: those keys (ADR-035 clause 4), so an export from them would write the old shape back over the
-#: new one. `crates/contracts/tests/schemas.rs` pins the three against the Rust structs instead.
-#: They stay in `SCHEMA_ROOTS`, because that dict is also the map
+#: new one. `crates/contracts/tests/schemas.rs` pins them against the Rust structs instead. They
+#: stay in `SCHEMA_ROOTS`, because that dict is also the map
 #: `test_every_on_disk_artifact_has_a_schema` checks every stored artifact against, and an
 #: artifact's schema does not stop existing when its owner changes.
-RUST_OWNED_SCHEMAS = frozenset({"shot_data", "swing_result", "swing_bundle_result"})
+#:
+#: **`shot_result` (M35) is the first with no Python model at all**, so it is here and *not* in
+#: `SCHEMA_ROOTS`: there is nothing to export, and no frozen module names `shot_analysis.json`. It
+#: is listed anyway, so the committed-files pin knows the file is Rust's rather than stale.
+#:
+#: **`swing_manifest` and `session_meta` (M35 P7) are the storage roots**, Rust's from the day
+#: `crates/storage` gave the manifest and the session file an `intent` frozen Python's models do
+#: not declare. Both keep their models, so both stay in `SCHEMA_ROOTS`, and their pin is
+#: `crates/storage/tests/schemas.rs`, because the structs live in `crates/storage`, where
+#: `crates/contracts`' tests cannot see them. So this set is the union of two Rust lists, and
+#: `tests/test_conformance.py` reads both to hold it to that.
+RUST_OWNED_SCHEMAS = frozenset(
+    {
+        "shot_data",
+        "swing_result",
+        "swing_bundle_result",
+        "shot_result",
+        "swing_manifest",
+        "session_meta",
+    }
+)
 
 
 def export_schemas() -> dict[str, str]:
@@ -305,6 +325,21 @@ def career_vector_paths() -> list[Path]:
     them once, through `regenerate --career-once`, and refuses to again.
     """
     return [p for p in vector_paths() if _kind(p) == "career"]
+
+
+def shot_vector_paths() -> list[Path]:
+    """Every committed case of `golf_core::run_shot`, a shot analysed with no clip (M35 P4–P6).
+
+    The seventh deferred family, and the first with no Python recorder at all: frozen Python
+    analyses a shot only inside a swing (ADR-035 clause 4), so every case was worked by hand
+    (`provenance.oracle: "hand"`). It ages on `ANALYSIS_VERSION`, as the stages do, and is
+    re-recorded with the engine family by `golf-core rerecord` — but at *Rust's* version, which
+    stands above frozen Python's on purpose, and with no `rerecords` ledger, because no value in it
+    was ever Python's to ledger against. `ledger_covers` would call every case stale, so `check`
+    runs no staleness test here: the shot gate (`crates/core/tests/shot.rs`) holds each case's
+    version to Rust's, and nothing here could say more.
+    """
+    return [p for p in vector_paths() if _kind(p) == "shot"]
 
 
 def run_vector(vector: dict[str, Any]) -> dict[str, Any]:
@@ -879,6 +914,7 @@ def cmd_check(args: argparse.Namespace) -> int:
     screens = [p for p in paths if p in set(screen_vector_paths())]
     storages = [p for p in paths if p in set(storage_vector_paths())]
     careers = [p for p in paths if p in set(career_vector_paths())]
+    shots = [p for p in paths if p in set(shot_vector_paths())]
     paths = [p for p in paths if p in set(engine_vector_paths())]
 
     failed = 0
@@ -969,6 +1005,14 @@ def cmd_check(args: argparse.Namespace) -> int:
         print(
             f"{len(careers)} career vectors are `crates/analysis`' and `crates/core`'s, and age "
             f"on CAREER_VERSION — run `cargo test`"
+        )
+    if shots:
+        # The one deferred family that ages on `ANALYSIS_VERSION` and still gets no freshness
+        # line: its cases sit at Rust's version, above frozen Python's, with no ledger, so the
+        # stages' rule would call every one stale (`shot_vector_paths`' docstring).
+        print(
+            f"{len(shots)} shot vectors are `crates/core`'s `run_shot`, worked by hand at Rust's "
+            f"ANALYSIS_VERSION — run `cargo test`"
         )
     return 1 if failed or stale_stages else 0
 
@@ -1066,7 +1110,7 @@ def main(argv: list[str] | None = None) -> int:
     regen.add_argument(
         "--schemas-only",
         action="store_true",
-        help="rewrite the Python-owned schema roots — not the three in RUST_OWNED_SCHEMAS",
+        help="rewrite the Python-owned schema roots — never one in RUST_OWNED_SCHEMAS",
     )
     regen.add_argument(
         "--stages-only",

@@ -1,5 +1,5 @@
 {
-  "career_version": 1,
+  "career_version": 2,
   "expected": {
     "files": {
       "aaron.golfer.json": "{\n  \"player_id\": \"aaron\",\n  \"display_name\": \"Aaron\",\n  \"handedness\": \"right\",\n  \"created_at\": \"2026-08-06T12:00:00Z\"\n}",
@@ -283,6 +283,15 @@
         "by": "golf-core rerecord",
         "career_version": 1,
         "declaration": "spec/declarations/career-v1.json",
+        "moved": [
+          "career_version"
+        ]
+      },
+      {
+        "added": [],
+        "by": "golf-core rerecord",
+        "career_version": 2,
+        "declaration": "spec/declarations/career-v2.json",
         "moved": [
           "career_version"
         ]

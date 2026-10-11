@@ -362,7 +362,7 @@ mod tests {
             session_id: format!("2026-08-{index:02}"),
             swing_id: index.to_string(),
             captured_at: at(index),
-            face_on_sha256: format!("clip-{index}"),
+            face_on_sha256: Some(format!("clip-{index}")),
             shot_sha256: Some(format!("photo-{index}")),
             club: None,
             measurements: values
@@ -379,6 +379,7 @@ mod tests {
             auto_mishit: false,
             manual_mishit: None,
             missing_roles: Vec::new(),
+            intent: None,
         }
     }
 
@@ -628,7 +629,7 @@ mod tests {
         let swings = (1..=5)
             .map(|i| {
                 let mut s = swing(i, &[("head_sway_norm", 0.25)], POSE);
-                s.face_on_sha256 = "same-clip".into();
+                s.face_on_sha256 = Some("same-clip".into());
                 s
             })
             .collect();
@@ -644,7 +645,7 @@ mod tests {
             .into_iter()
             .map(|(i, clip, value)| {
                 let mut s = swing(i, &[("head_sway_norm", value)], POSE);
-                s.face_on_sha256 = clip.into();
+                s.face_on_sha256 = Some(clip.into());
                 s.shot_sha256 = Some("one-photo".into());
                 s.measurements
                     .push(measurement("face_to_path_deg", 10.9, LM));

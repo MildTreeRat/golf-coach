@@ -15,6 +15,12 @@
 //! The two picked are the smallest of their halves, because every run here is a debug build running
 //! the engine on them.
 //!
+//! **Since M35 P6 the slice also holds the corpus vector's shot case**, `shot/corpus-2026-08-23-11`,
+//! because an engine declaration re-records the shot family too and a run over a `spec/` with no
+//! `vectors/shot/` is refused. Its real differences are made on the copy as the engine pair's are,
+//! and written back in the case's own layout (LF, an indent of 4), so the writer's rule that a file
+//! keeps its layout stays under test on the one family that is not `_write_json`'s.
+//!
 //! **The screen family's tests copy all of `spec/vectors/screen/`** [M34 P7], because reading a
 //! screen costs nothing next to running the engine, and a run over every document is the run M34
 //! P10 made. Their real difference is the shape-only declaration (the M34 plan's call 7): the ten
@@ -57,6 +63,14 @@ const SYNTHETIC: &str = "synthetic/tempo-too-quick.json";
 const CORPUS: &str = "corpus/2026-08-23-11.json.gz";
 const SYNTHETIC_ID: &str = "synthetic/tempo-too-quick";
 const CORPUS_ID: &str = "corpus/2026-08-23-11";
+
+/// The corpus vector's shot case, the shot family's one file in every slice. [M35 P6]
+const SHOT_CASE: &str = "shot/corpus-2026-08-23-11.json";
+const SHOT_ID: &str = "shot/corpus-2026-08-23-11";
+
+/// The shot case's first row, the path the shot tests move on the copy: its own spelling, which no
+/// engine or stage document has, so a declaration naming it can match in the shot family alone.
+const SHOT_ROW: &str = "expected.measurements[0].value";
 
 /// The key the tests remove from the corpus copy's answer. Nothing the compose check reads, so a
 /// declared re-add exercises the gate and the ledger without also moving a composed value.
@@ -106,8 +120,34 @@ impl Slice {
                     .unwrap_or_else(|e| panic!("copy {relative}: {e}"));
             }
         }
+        let shot = root
+            .join("repo")
+            .join("spec")
+            .join("vectors")
+            .join(SHOT_CASE);
+        fs::create_dir_all(shot.parent().expect("a parent")).expect("mkdir");
+        fs::copy(committed_spec().join("vectors").join(SHOT_CASE), &shot)
+            .unwrap_or_else(|e| panic!("copy {SHOT_CASE}: {e}"));
         fs::create_dir_all(root.join("repo").join("spec").join("declarations")).expect("mkdir");
         Self { root }
+    }
+
+    /// Edit the shot case's copy in place and write it back as the case was committed: LF, an
+    /// indent of 4, a trailing newline (the M35 plan's P4 finding 4). [M35 P6]
+    fn edit_the_shot_case(&self, change: impl FnOnce(&mut Value)) {
+        let path = self.vector(SHOT_CASE);
+        let mut document = read(&path);
+        change(&mut document);
+        fs::write(&path, format!("{}\n", hand_layout(&document))).expect("write");
+    }
+
+    /// The shot case recorded one engine version back, as [`Slice::age_the_synthetic_pair`] ages
+    /// the engine pair: the same two paths, which one declaration covers in both families.
+    fn age_the_shot_case(&self) {
+        self.edit_the_shot_case(|v| {
+            v["analysis_version"] = json!(ANALYSIS_VERSION - 1);
+            v["expected"]["analysis_version"] = json!(ANALYSIS_VERSION - 1);
+        });
     }
 
     /// [`Slice::new`], plus the whole committed screen family, every sub-family in it.
@@ -123,13 +163,18 @@ impl Slice {
     /// [`Slice::new`], plus the whole committed storage and career families. [M36 P13]
     fn with_career(name: &str) -> Self {
         let slice = Self::new(name);
+        slice.copy_the_career_families();
+        slice
+    }
+
+    /// Copy the committed storage and career families into the slice. [M35 P9]
+    fn copy_the_career_families(&self) {
         for family in [STORAGE, CAREER] {
             copy_tree(
                 &committed_spec().join("vectors").join(family),
-                &slice.vector(family),
+                &self.vector(family),
             );
         }
-        slice
     }
 
     /// A career declaration, `spec/declarations/{name}.json`: the career families' version key in
@@ -340,6 +385,32 @@ fn text(bytes: &[u8]) -> String {
     String::from_utf8_lossy(bytes).into_owned()
 }
 
+/// A document at an indent of 4, the shot family's, with no trailing newline.
+fn hand_layout(document: &Value) -> String {
+    let mut out = Vec::new();
+    let formatter = serde_json::ser::PrettyFormatter::with_indent(b"    ");
+    serde::Serialize::serialize(
+        document,
+        &mut serde_json::Serializer::with_formatter(&mut out, formatter),
+    )
+    .expect("serializes");
+    String::from_utf8(out).expect("utf-8")
+}
+
+/// The written shot case is in the layout it was committed in: LF throughout and an indent of 4.
+fn assert_in_the_hand_layout(path: &Path) {
+    let written = text(&fs::read(path).expect("read"));
+    assert!(!written.contains('\r'), "{path:?}: a CR in an LF file");
+    assert!(
+        written
+            .lines()
+            .nth(1)
+            .is_some_and(|line| line.starts_with("    \"") && !line.starts_with("     ")),
+        "{path:?}: not at an indent of 4:\n{}",
+        &written[..written.len().min(200)]
+    );
+}
+
 fn copy_tree(from: &Path, to: &Path) {
     fs::create_dir_all(to).expect("mkdir");
     for entry in fs::read_dir(from).unwrap_or_else(|e| panic!("list {from:?}: {e}")) {
@@ -414,7 +485,11 @@ fn a_declared_change_lands_reads_back_and_a_second_run_writes_nothing() {
         [SYNTHETIC_ID, CORPUS_ID, "stages/synthetic/tempo-too-quick"],
         "engine family first, synthetic half before corpus; the corpus stage vector is untouched"
     );
-    assert_eq!(run.vectors().len(), 4);
+    assert_eq!(
+        run.vectors().len(),
+        5,
+        "two engine, two stage and the shot case"
+    );
     assert_eq!(run.write().expect("writes"), 3);
 
     // Each file reads back as the document that was planned for it.
@@ -503,10 +578,15 @@ fn a_declared_change_lands_reads_back_and_a_second_run_writes_nothing() {
 
 /// `--dry-run` prints the review — every applied path, with its value before and after — and
 /// writes nothing.
+///
+/// **An engine declaration counts the shot family, and re-records it with the engine's** (M35
+/// P6): the shot case is aged beside the synthetic pair, and the one declaration of the two version
+/// paths lands on all three, the case written back in its own layout.
 #[test]
 fn a_dry_run_reports_and_writes_nothing() {
     let slice = Slice::new("dry-run");
     slice.age_the_synthetic_pair();
+    slice.age_the_shot_case();
     let declaration = slice.declare(
         "versions",
         ANALYSIS_VERSION,
@@ -526,8 +606,9 @@ fn a_dry_run_reports_and_writes_nothing() {
         "--dry-run: nothing is written",
         "\nsynthetic/tempo-too-quick\n",
         "\nstages/synthetic/tempo-too-quick\n",
+        "\nshot/corpus-2026-08-23-11\n",
         moved.as_str(),
-        "4 vectors run (2 engine, 2 stage); 2 changed; 0 files written",
+        "5 vectors run (2 engine, 2 stage, 1 shot); 3 changed; 0 files written",
     ] {
         assert!(
             stdout.contains(expected),
@@ -540,10 +621,101 @@ fn a_dry_run_reports_and_writes_nothing() {
     );
     assert_eq!(slice.snapshot(), before, "a dry run wrote something");
 
-    // And without the flag, the same declaration writes the two it reported.
+    // And without the flag, the same declaration writes the three it reported, the shot case in
+    // the layout it was committed in and at this build's version.
     let output = slice.verb(&declaration, &[]);
     assert!(output.status.success(), "{}", text(&output.stderr));
-    assert!(text(&output.stdout).contains("2 changed; 2 files written"));
+    assert!(text(&output.stdout).contains("3 changed; 3 files written"));
+    let shot = read(&slice.vector(SHOT_CASE));
+    assert_eq!(shot["analysis_version"], json!(ANALYSIS_VERSION));
+    assert_eq!(
+        shot["expected"]["analysis_version"],
+        json!(ANALYSIS_VERSION)
+    );
+    assert_eq!(
+        shot["provenance"]["oracle"],
+        json!("hand"),
+        "the ledger keeps the oracle"
+    );
+    assert_in_the_hand_layout(&slice.vector(SHOT_CASE));
+}
+
+/// **A declaration naming a shot path re-records that path and nothing else** (M35 P6). The shot
+/// copy's first row is moved away from what Rust computes: undeclared, the run is refused at that
+/// path and writes nothing; declared, it lands there alone, in the case's file alone, with a
+/// ledger naming it and the hand oracle kept — and a second run writes nothing.
+#[test]
+fn a_shot_path_declared_lands_there_alone_and_a_second_run_writes_nothing() {
+    let slice = Slice::new("shot-path");
+    slice.edit_the_shot_case(|v| {
+        v["expected"]["measurements"][0]["value"] = json!(99.0);
+    });
+    let edited = read(&slice.vector(SHOT_CASE));
+    let undeclared = slice.declare("nothing", ANALYSIS_VERSION, &[], &[]);
+    let declaration = slice.declare("shot-row", ANALYSIS_VERSION, &[], &[SHOT_ROW]);
+    let before = slice.snapshot();
+
+    match plan(&slice.spec(), &undeclared) {
+        Err(Refused::Gate(refusals)) => {
+            assert_eq!(refusals.len(), 1, "{refusals:?}");
+            assert!(
+                refusals[0].starts_with(&format!("{SHOT_ID}: {SHOT_ROW}"))
+                    && refusals[0].contains("`moved`"),
+                "{}",
+                refusals[0]
+            );
+        }
+        other => panic!("expected the gate to refuse the shot row, got {other:?}"),
+    }
+    assert_eq!(slice.snapshot(), before);
+
+    let run = plan(&slice.spec(), &declaration).expect("the shot row is declared");
+    let changed: Vec<(&str, Family)> = run.changed().map(|v| (v.id(), v.family())).collect();
+    assert_eq!(changed, [(SHOT_ID, Family::Shot)]);
+    assert_eq!(run.write().expect("writes"), 1);
+
+    let after = slice.snapshot();
+    let moved: Vec<&PathBuf> = before
+        .keys()
+        .filter(|path| before.get(*path) != after.get(*path))
+        .collect();
+    assert_eq!(
+        moved,
+        [&slice.vector(SHOT_CASE)],
+        "a file other than the shot case moved"
+    );
+    assert_eq!(after.len(), before.len(), "a file appeared or went");
+    assert_in_the_hand_layout(&slice.vector(SHOT_CASE));
+
+    let landed = read(&slice.vector(SHOT_CASE));
+    assert_eq!(landed["provenance"]["oracle"], json!("hand"));
+    assert_eq!(
+        landed["provenance"]["rerecords"],
+        json!([{
+            "analysis_version": ANALYSIS_VERSION,
+            "by": "golf-core rerecord",
+            "declaration": "spec/declarations/shot-row.json",
+            "added": [],
+            "moved": [SHOT_ROW],
+        }])
+    );
+    // Rust's value, inside the tolerance of the one the case was committed with.
+    let committed = read(&committed_spec().join("vectors").join(SHOT_CASE));
+    assert!(compare(
+        &committed["expected"]["measurements"][0]["value"],
+        &landed["expected"]["measurements"][0]["value"]
+    )
+    .is_empty());
+    // And every undeclared value is the copy's: undo the row and the ledger, and the copy is back.
+    let mut undone = landed.clone();
+    undone["expected"]["measurements"][0]["value"] = json!(99.0);
+    undone["provenance"] = edited["provenance"].clone();
+    assert_eq!(undone, edited, "an undeclared value moved");
+
+    let second = plan(&slice.spec(), &declaration).expect("a second run is a no-op, not a refusal");
+    assert_eq!(second.changed().count(), 0);
+    assert_eq!(second.write().expect("writes nothing"), 0);
+    assert_eq!(slice.snapshot(), after, "a second run wrote something");
 }
 
 /// Call 5: a declared path that matches nothing anywhere fails the run, so a misspelling cannot
@@ -1340,12 +1512,7 @@ fn a_career_run_reads_no_engine_or_screen_vector_and_neither_reads_a_career_one(
     let unreadable = b"not a vector";
 
     let slice = Slice::with_screen("career-only");
-    for family in [STORAGE, CAREER] {
-        copy_tree(
-            &committed_spec().join("vectors").join(family),
-            &slice.vector(family),
-        );
-    }
+    slice.copy_the_career_families();
     for path in slice.snapshot().into_keys() {
         let career = [STORAGE, CAREER]
             .iter()
@@ -1467,5 +1634,67 @@ fn a_career_sub_family_nobody_placed_or_a_runner_nobody_has_stops_the_walk() {
             );
         }
         other => panic!("expected the walk to stop, got {other:?}"),
+    }
+}
+
+// ------------------------------------------------------------------- the shot family [M35 P6]
+
+/// **A screen or career run never opens `shot/`, and an engine run always does** (M35 P6). With the
+/// shot case unreadable and a sub-family nobody placed beside it, a screen run and a career run
+/// pass and leave both as they were; an engine run over the same slice stops on the stray entry,
+/// and then on the unreadable case, so the setup is one that a run reading `shot/` could not miss.
+#[test]
+fn a_screen_or_career_run_never_opens_the_shot_family() {
+    let slice = Slice::with_screen("not-shot");
+    slice.copy_the_career_families();
+    fs::write(slice.vector(SHOT_CASE), b"not a vector").expect("write");
+    fs::create_dir_all(slice.vector("shot/unplaced")).expect("mkdir");
+    let shot_files = |slice: &Slice| -> BTreeMap<PathBuf, Vec<u8>> {
+        slice
+            .snapshot()
+            .into_iter()
+            .filter(|(path, _)| path.starts_with(slice.vector("shot")))
+            .collect()
+    };
+    let shot_before = shot_files(&slice);
+
+    let keys = m32_shot_keys();
+    slice.age_the_screen_documents(&keys);
+    let screen = declare_shape_only(&slice, "screen-shape", &keys);
+    let run = plan(&slice.spec(), &screen).expect("a screen run never opens shot/");
+    assert!(run.vectors().iter().all(|v| v.family() == Family::Screen));
+    run.write().expect("writes");
+    let career = slice.declare_career("career-empty", CAREER_VERSION, &[]);
+    let run = plan(&slice.spec(), &career).expect("a career run never opens shot/");
+    assert!(run
+        .vectors()
+        .iter()
+        .all(|v| matches!(v.family(), Family::Storage | Family::Career)));
+    assert_eq!(
+        shot_files(&slice),
+        shot_before,
+        "another family's run wrote a shot file"
+    );
+    assert!(slice.vector("shot/unplaced").is_dir());
+
+    let engine = slice.declare("nothing", ANALYSIS_VERSION, &[], &[]);
+    match plan(&slice.spec(), &engine) {
+        Err(Refused::Files(why)) => {
+            assert!(
+                why.contains("unplaced") && why.contains("is not a shot case"),
+                "{why}"
+            );
+        }
+        other => panic!("expected the shot walk to stop on the stray entry, got {other:?}"),
+    }
+    fs::remove_dir(slice.vector("shot/unplaced")).expect("rmdir");
+    match plan(&slice.spec(), &engine) {
+        Err(Refused::Files(why)) => {
+            assert!(
+                why.contains("corpus-2026-08-23-11.json") && why.starts_with("parsing"),
+                "{why}"
+            );
+        }
+        other => panic!("expected the shot walk to stop on the unreadable case, got {other:?}"),
     }
 }

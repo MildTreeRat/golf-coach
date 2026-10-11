@@ -140,9 +140,39 @@ cargo run --bin golf-core -- flag-mishit --list [--name NAME]
 #   flag-mishit writes one manifest and takes no --json. Exit codes are the scripts': 0 for an
 #   answer, an empty registry included, and 2 for a refused flag, a --name that slugs to nothing,
 #   or a flag-mishit reference or --list golfer that is malformed or not there.
-#   One rule differs from the scripts on purpose: a swing is excluded as outdated only when it
+#   Two rules differ from the scripts on purpose. A swing is excluded as outdated only when it
 #   is older than COMPARABLE_FROM, not older than the installed engine (ADR-024's M36 addendum).
-#   Over data/ the two still pool the same swings, because nothing on disk sits between the two
+#   And since M35 the corpus admits a photo entry (a shot photo with no face-on clip), dedupes it
+#   by photo with the copy that has video winning, and leaves a drill out, named `untracked`
+#   (ADR-024's M35 addendum). Over data/ the two still pool the same swings, because nothing on
+#   disk sits between the two versions, and data/ holds no photo entry and records no intent
+
+# Shot-first sessions in Rust (M35): two more verbs that write into a session, beside flag-mishit.
+# Neither has a script twin, both take --sessions-dir as the career verbs do, and neither has been
+# run on data/ — the frozen server still writes there, and drops the intent set-intent records
+cargo run --bin golf-core -- run-shot --session S [--swing N] [--sessions-dir D] [--golfers-dir D]
+                                      [--shots-dir D]
+#   each photo entry in the session, or the one named, analysed with no clip and written as
+#   shot_analysis.json beside its manifest: the shot from the shot store by the photo's sha256,
+#   the handedness from the manifest's golfer, the loft from the bag (loft_for_club), the intent
+#   off the manifest. --shots-dir defaults to GOLF_SHOTS_DIR, else data/processed/shots. A swing
+#   with a face-on clip is skipped (its shot is analysed with it, into analysis.json), and so is a
+#   photo entry the corpus counts as a duplicate, and one whose photo no frozen import has parsed:
+#   there is no Rust OCR before §M29, so that line names scripts/import_shot_screens.py.
+#   exit 0 analysed or skipped by name · 1 an analysis refused or a write failed · 2 no such
+#   session, or a --swing that is not a photo entry
+cargo run --bin golf-core -- set-intent --session S (--swing N | --default)
+                                        (--mode M [--shape SHAPE] | --clear) [--sessions-dir D]
+#   what a shot was practised as: --swing records it on one manifest, --default points the
+#   session.json cursor at it, stamped at its next upload onto each swing that records none, and
+#   --clear takes either off. --shape only
+#   with --mode shot_shaping, and shot_shaping only with a --shape. A drill is stored and analysed
+#   and counts toward no club or player stat. Frozen Python drops `intent` on its next rewrite of
+#   that manifest or session.json, so the verb is safe only on a session the frozen server no
+#   longer writes to. exit 0 written · 2 refused flags, or no such swing or session · 1 unwritable
+cargo run --bin golf-core -- run-shot < spec/vectors/shot/stamped-tiles.json
+#   the same analysis as a seam: a shot vector, or its input, on stdin; the ShotResult on stdout.
+#   It reads no session and writes nothing. An undeclared device exits 1
 
 # Follow-up questions about a swing (needs the `llm` extra and a key — ADR-020)
 python scripts/ask_swing.py <SESSION/SWING> "<question>"
@@ -215,12 +245,18 @@ python scripts/conformance.py regenerate --storage-once | --career-once
 # bundle, bag, golfer and shot stores, `read_corpus`, and `api/state.py`'s tolerant readers. With
 # it came the career half of `crates/analysis` (baseline, dispersion, comparison, bag profile)
 # and `golf-core`'s five career verbs above. It is wired to nothing else: the lab, the server and
-# `mcp/` still read through Python's `storage/`. `cargo test` runs every vector family
+# `mcp/` still read through Python's `storage/`. M35 added the shot-first half across five crates:
+# `contracts::shot_result` (`ShotResult`, no Python twin, written as `shot_analysis.json`),
+# `analysis::engine::analyze_shot` (a shot measured and flown with no clip),
+# `screen::tile_refusals` (a printed tile with no value, as `printed_blank` or `misread`),
+# `storage`'s `session_meta` (the session cursors, an `intent` one beside player and club) and
+# `flight_inputs` (`loft_for_club`), and `golf_core::run_shot`, which joins the screen's refusals
+# to the engine because only `core` holds both. `cargo test` runs every vector family
 # `conformance.py check` defers: audio against `trigger`, the format table against `pyfmt`,
 # `contracts` and `screen`, all seven stages against `analysis`, the screen family against
 # `screen`, the storage family against `storage`, the career family and its report text against
-# `analysis` and `core`, every vector's shapes against `contracts`, and all 21 engine vectors
-# **end to end** against `core`.
+# `analysis` and `core`, the shot family against `core`'s `run_shot`, every vector's shapes against
+# `contracts`, and all 21 engine vectors **end to end** against `core`.
 # No MediaPipe in any of it: `crates/pose`'s tests drive a stub worker, and the real one is
 # behind `GOLF_POSE_REAL_WORKER`.
 cargo build --release          # api/pipeline.py needs this before it can detect a strike
@@ -229,7 +265,8 @@ cargo run --bin golf-core -- run < vector.json   # the port's answer to one vect
 #   the cross-language seam, diffed against `conformance.py run` at zero differences on all 21
 #   until M32; since then the two differ by exactly the paths each vector's ledger declares
 cargo run --release --bin golf-core -- rerecord --declare spec/declarations/v17.json [--dry-run]
-#   re-record the engine and stage families from the Rust core (M32, ADR-035 §3). Rust's answer
+#   re-record the engine and stage families from the Rust core (M32, ADR-035 §3), and since M35
+#   the shot family with them, because a shot case's numbers are the engine's. Rust's answer
 #   is compared with each committed vector, and the whole run is refused on any difference the
 #   declaration does not name; what is written is the committed file with only the declared
 #   paths replaced, plus a `provenance.rerecords` entry saying which. A second run writes
@@ -237,8 +274,9 @@ cargo run --release --bin golf-core -- rerecord --declare spec/declarations/v17.
 cargo run --release --bin golf-core -- rerecord --declare spec/declarations/screen-v1.json [--dry-run]
 #   the same verb on the screen family (M34): the declaration's `screen_parser_version` picks it,
 #   and a screen declaration may also name the keys it removes
-cargo run --release --bin golf-core -- rerecord --declare spec/declarations/career-v1.json [--dry-run]
-#   the same verb on the storage and career families together (M36), picked by `career_version`
+cargo run --release --bin golf-core -- rerecord --declare spec/declarations/career-v2.json [--dry-run]
+#   the same verb on the storage and career families together (M36), picked by `career_version`.
+#   v2 is M35's (photo entries and drills); career-v1.json is refused now, at the older version
 cargo run --bin golf-core -- parse-screen < spec/vectors/screen/corpus/2026-08-23-2.json
 #   the screen reader's seam: a screen vector, or its `input`, in; the `ShotData` out, or `null`
 #   for a failed read (exit 0). An unknown device exits 1. No Python end to diff it against
@@ -494,6 +532,7 @@ on a `vision`-only install — pinned by `tests/api/test_pipeline_imports.py`.
 | Swing Result | Analysis → Feedback | `SwingResult` — phases, checkpoint scores with tour percentiles, mechanics/outcome/overall scores, `unscored` entries carrying a reason, judged `intent` | ✅ (`outcome_score` always `None`) |
 | Feedback | Feedback → UI | `FeedbackPayload` — overall score, ranked tips with severity, headline | ✅ produced and rendered by `api/static/results.html` |
 | Reference | Benchmarks → Analysis | `ranges.json` bands + `golfdb_v1.json` distributions, both with provenance | ✅ |
+| Shot result | Analysis → Storage (Rust only) | `ShotResult` — one shot analysed with no clip: the shot as stored, its shot and flight `measurements`, its `unscored` entries (the screen's `printed_blank` and `misread`, then the flight's), the `intent` it was analysed under, and the photo it was computed from (M35, `crates/contracts/src/shot_result.rs`). Never carried in a `SwingResult`, because frozen Python reads `analysis.json` with a closed `UnscoredReason` | ✅ produced by `golf-core run-shot` as `shot_analysis.json`, read by Rust's `read_corpus`; no Python twin |
 | Career corpus | Storage → Analysis | `CareerCorpus` — one golfer's distinct swings with their `Measurement`s, the honest per-metric `n`, and every excluded swing with its reason | ✅ produced, not yet consumed (career mode step 4) |
 | Bag profile | Storage → Analysis → UI/MCP | `BagProfile` / `ClubProfile` — the same corpus narrowed to one club, with `n_swings` and `n_shots` deliberately kept apart, because a clip filmed without a screen photo is history that carries no distance (M9 P14) | ✅ built and read by three surfaces: the CLI, the bag page and two MCP tools |
 | Club specification | Clubs → Storage → UI/MCP | `ClubSpec` — one slot of one manufacturer's model, as published: loft, lie, length, head, shaft and grip, keyed `(make, model, model_year, club)`. `BagEntry` **inherits** it, so a bag entry *is* a specification rather than five fields beside one (M12 P2). Every field is optional and a refusal stays `None` — blank renders blank and never zero, which is ADR-010 §2 at the lookup boundary (ADR-026 §6) | ✅ produced by `clubs/`, stored by `storage/bag_store.py`, rendered by the bag page |
@@ -502,7 +541,9 @@ on a `vision`-only install — pinned by `tests/api/test_pipeline_imports.py`.
 
 ## 3. Analysis internals — one `analyze_swing` call
 
-The part with the most engineering in it. Pure functions on contracts, no I/O.
+The part with the most engineering in it. Pure functions on contracts, no I/O. Since M35 the Rust
+engine has a second entry beside this one, `analyze_shot`, for a shot with no clip; it is the last
+subsection below.
 
 ```mermaid
 sequenceDiagram
@@ -821,6 +862,51 @@ and `AnalysisState.inputs` hashes the uploads, neither of which moved. The store
 every count reads; the live one is what the viewer draws. M15 P14 and ADR-027's 2026-09-06c
 addendum.
 
+### One `analyze_shot` call — a shot with no clip (M35, Rust only)
+
+ADR-034 makes the shot the unit and video optional, so a screen photo with no face-on clip has to
+be analysed on its own. **That entry exists in Rust alone**:
+`crates/analysis/src/engine.rs::analyze_shot`, beside `analyze_swing`. Frozen Python analyses a
+shot only inside a swing and has no twin (ADR-035 clause 4). Its caller is
+`golf_core::run_shot`, because the screen's half of the answer is `crates/screen`'s and `analysis`
+may not depend on `screen` (ADR-008 as a cargo edge):
+
+1. **`screen::tile_refusals`** reads the stored shot's parse record. A tile the device printed,
+   which analysis may use and which holds no value, is refused as `printed_blank` (a `---`, or
+   nothing under the label) or `misread` (a tile the tie rule withheld, or text that gave no
+   value). Only `misread` says a retake helps. An unstamped shot, which is every shot in `data/`,
+   and a direct feed name no refusal.
+2. **`analyze_shot`** measures and flies the **analysed view**: a copy of the shot with every reading
+   outside `capability::analysed_on` (printed on this device, and declared `analysed` in
+   `devices.json`) set to `None`. So a stat the screen does not print produces nothing, and a
+   shown-only one (HD Golf's club speed and smash) stays on the result for display and reaches no
+   row, both by construction. Then it makes the three calls `analyze_swing` makes for the shot,
+   `shot_measurements`, `fly_shot` and `flight_measurements`, in the same order. **Adding or
+   removing video cannot move a shot number**, and `crates/analysis/tests/shot.rs` holds that
+   against every committed corpus vector.
+3. **`unscored`** is the screen's refusals in the device's declared tile order, then the flight's,
+   which is `analyze_swing`'s order, checkpoints then flight. **`notes`** is ADR-014's needs-review
+   sentence, then the shell's gap notes: no handedness and no loft, worded for a shot, and appended
+   only when the engine reported that input missing. A shot needs a handedness only when its screen
+   printed a spin axis, so the handedness note is gated where the swing's is not.
+
+It returns a `ShotResult` rather than panicking, because the device and the refusals are the
+shell's: an undeclared device is refused, and the result is validated before it is returned.
+
+**The intent it records is filled, not stored.** A recorded goal (on the manifest, or the session
+cursor) holds the mode and, for `SHOT_SHAPING`, the shape. `run_shot` fills the goal's club
+category from the manifest's club when it analyses. So a `ShotResult` for a tagged shot says, say,
+`mid_iron`, where every `analysis.json` frozen Python wrote says `all`: the pipeline builds
+`PracticeGoal(club=options.club)` from a CLI flag that defaults to `ALL`, not from the manifest. No
+number depends on it.
+
+**Every mode reaches the Rust engine.** `scoring::policy_for` answers the one
+mechanics-only blend for every `PracticeMode` (M35 P2), so a `DRILL` or `SHOT_SHAPING` swing is
+scored as `FUNDAMENTALS` scores it, with its own mode recorded in `SwingResult.intent`. The mode
+decides which stats a shot feeds, which is the corpus's job (§4), and never how it is scored
+([ADR-009](decisions/009-swing-scoring-model.md)'s M35 addendum). Frozen Python's `policy_for` still
+raises for every other mode, and its pipeline never asks it.
+
 
 ---
 
@@ -835,13 +921,15 @@ gitignored and never created. Everything persists as files:
 | Keypoints | `data/processed/<clip>.keypoints.json` | ✅ written by `run_pose.py` |
 | ↳ *its format* | `{"clip": {fps, width, height, frame_count, source_sha256}, "frames": [...]}` | ✅ read/written via `storage/keypoints_io.py`, which also accepts the bare-array shape everything written before M7 Phase 1 uses |
 | Overlays | `data/processed/<clip>.overlay.mp4`, `.analysis.mp4` | ✅ |
-| Parsed shots | `data/processed/shots/` (content-addressed) | ✅ written by `import_shot_screens.py` and by `analyze_bundle.py` |
+| Parsed shots | `data/processed/shots/` (content-addressed) | ✅ written by `import_shot_screens.py` and by `analyze_bundle.py`. Read, never written, by `golf-core run-shot --session` (M35), which finds the directory through `--shots-dir`, else `GOLF_SHOTS_DIR`, else this path |
 | Swing bundles | `data/processed/sessions/<session>/<swing>/` + `manifest.json` | ✅ written by the upload route (M7 Phase 3/5) |
 | ↳ *who swung it, and with what* | `player_id` and `club` on `SwingManifest`, both stamped from the session cursor at swing creation | ✅ `player_id` is **write-once** (career mode step 1); `club` is required — an upload against a cursor naming no club is refused with a 409 (M9 P4–P6). Neither is sent by the uploading phone: two phones would have to type matching names, and a free-text club turns a typo into a tag |
 | ↳ *and whether it was topped* | `mishit: MishitVerdict \| None` on `SwingManifest` (M16 P1, ADR-028) | ✅ `None` by default and tolerantly loaded, the `club` field's pattern exactly. Set only by `POST …/mishit` or `scripts/flag_mishit.py` — `confirmed` / `cleared`, or `null` to reset to automatic — with **no bulk backfill**, because only the golfer who hit the swing knows they topped it. The automatic flag is *not* stored: `storage/corpus.py` recomputes it from the club's median on every `read_corpus`, so the 0.50 constant can move without a migration |
+| ↳ *and what it was practised as* | `intent: PracticeGoal \| None` on `SwingManifest` (M35, Rust only) | ✅ written by Rust alone, and only when set: stamped from the session's `intent` cursor onto a new swing that has none, as `club` is, and repaired per shot by `golf-core set-intent`. Absent reads as `fundamentals`, which is every swing on disk. Whether a shot is **tracked** is derived from the mode and never stored: a `drill` is stored and analysed and reaches no aggregate. **Frozen Python reads the key and drops it on any rewrite** (another role uploaded into the swing, `set_player`, `set_club`, `set_mishit`, `attribute_unlabeled`), and the drill silently becomes a tracked shot (ADR-024's M35 addendum) |
+| ↳ *a photo entry's analysis* | `shot_analysis.json` in the same directory (M35, Rust only) | ✅ written by `golf-core run-shot --session`, for a **photo entry** alone: a manifest with a shot photo and no face-on clip. A `ShotResult`, naming the photo it was computed from (`photo_sha256`, its staleness check, so Rust writes no `analysis.state.json`) and the engine version it was computed at. Rust's `read_corpus` reads it for a photo entry and never for a swing, and reads a swing's `analysis.json` never for a photo entry: one artifact per kind. The frozen lab never reads it, which is why `printed_blank` and `misread` may be written here and never into `analysis.json` |
 | ↳ *analysis artifacts* | `analysis.json`, `aligned.mp4`, `<role>.keypoints.json`, `<role>.audio.json` in the same directory | ✅ written by `api/pipeline.py`, from the worker or the CLI; `analysis.json` is a `SwingBundleResult` with the heavy streams excluded (the keypoints sit beside it). The two caches are keyed on the clip's sha256; `<role>.audio.json` also carries `detector_version` and is re-detected when `AUDIO_DETECTOR_VERSION` moves, because a changed detector is invisible to a content hash |
 | ↳ *analysis state* | `analysis.state.json` in the same directory | ✅ `AnalysisState` — queued/running/done/failed, the role→sha256 map the result was computed from (so a re-upload invalidates it), and a denormalised score/headline so the 5 s status poll never parses `analysis.json`. The terminal status is written by `pipeline.record_state` as part of writing `analysis.json`, because a denormalised copy must be written by whatever writes the original; the worker owns only `queued`/`running`/crash |
-| ↳ *session cursor* | `session.json` in the **session** directory | ✅ `storage/session_meta.py` — **two** cursors, `player_id` and `club` (M9 P4): who the *next* swing belongs to and what it will be hit with. Both are pointers, never records — what actually happened lives on each manifest, so a buddy taking a few swings mid-session rewrites nobody's history and changing clubs mid-bucket rewrites no swing's tag. The club moves far more often, which is why the upload page keeps its picker open and the per-swing repair collapses behind a control |
+| ↳ *session cursor* | `session.json` in the **session** directory | ✅ `storage/session_meta.py` — **two** cursors, `player_id` and `club` (M9 P4): who the *next* swing belongs to and what it will be hit with. Both are pointers, never records — what actually happened lives on each manifest, so a buddy taking a few swings mid-session rewrites nobody's history and changing clubs mid-bucket rewrites no swing's tag. The club moves far more often, which is why the upload page keeps its picker open and the per-swing repair collapses behind a control. **M35 added a third, `intent`, in Rust alone** (`crates/storage::session_meta`, written only when set, by `golf-core set-intent --default`): what each swing created after it was practised as. Frozen Python drops it on its next cursor update |
 | Golfer registry | `data/processed/golfers/<player_id>.golfer.json` | ✅ `storage/golfer_store.py` — one file per golfer, name + handedness. Beside `sessions/`, not inside: a golfer outlives any one session, and that outliving is the point |
 | ↳ *their bag* | `data/processed/golfers/<player_id>.bag.json` | ✅ `storage/bag_store.py` (M9 P3, ADR-024) — the declared bag: which physical club fills each slot, carrying the whole `ClubSpec` since M12 P2 — loft, lie, length, head, shaft and grip, not the five free-text fields M9 shipped. Shares the directory with the golfer record and is kept apart by the suffix, since `list_all` globs `*.golfer.json`. Declared rather than derived, because "clubs used" is derivable from shot history and "clubs owned" is not. **Nothing deletes a club**: a replaced or removed one moves to an append-only `retired` shelf, so a loft measured once is never measured twice |
 | Conversations | `data/processed/conversations/<conversation-id>.json` | ✅ `storage/transcript_store.py` (ADR-020) — one follow-up conversation per file, holding the model's own content blocks **verbatim**, thinking blocks included. Not a rendering: they are replayed to the API on the next turn, and thinking blocks are only legal replayed unchanged and only into the model that produced them, which is why `model` is recorded beside them. Beside `sessions/` for `golfers/`'s reason — a conversation seeded from one swing is asking about another by its second turn |
@@ -962,6 +1050,22 @@ bump that only adds measurements, or only changes a shape, no longer empties the
 `is_outdated`, the question `reanalyze.py` asks, still compares with the installed version, as
 Python's does. Frozen Python's corpus keeps the installed-version rule until M40, so the two part
 on an artifact between the two versions, and none exists on disk.
+
+**And since M35 the Rust corpus has two kinds of entry, and a drill counts nothing** (ADR-024's M35
+addendum, `CAREER_VERSION` 2). A *swing* has a face-on clip and is read exactly as above. A *photo
+entry* has a shot photo and no face-on clip (a down-the-line clip beside it does not make it a
+swing, because nothing is scored from that clip alone); it is grouped on the photo's sha256 and
+read from `shot_analysis.json` alone, with the same three repairs: `not_analyzed`, `stale` (the
+result names another photo, or none) and `outdated`. A manifest with neither is `no_face_on`. Two
+dedupes, in order: photo entries collapse on their photo, the earliest arrival kept, and a
+surviving photo entry whose photo a surviving swing also holds is that swing's `duplicate`, because
+it is one ball flight and the copy with video counts. Then a survivor whose manifest records a
+`drill` is excluded as **`untracked`**, before any artifact is read, and is in no swing list, so no
+count, aggregate, mishit median or report but the corpus's own exclusion list sees it.
+`crates/storage/src/corpus.rs`' module doc gives the order `excluded` lists them in. Frozen
+Python admits no photo entry and has no drill rule, so it pools fewer shots than Rust once a photo
+entry exists, and it pools a Rust-recorded drill that has a face-on clip. Neither exists on disk
+today.
 
 The version field defaults to **0**, not to the current version, which is the whole reason it
 works on artifacts written before it existed: a default of "current" would make every legacy file

@@ -1,5 +1,5 @@
 {
-  "career_version": 1,
+  "career_version": 2,
   "expected": {
     "bag_profile": {
       "clubs": [],
@@ -131,8 +131,8 @@
     "reports": {
       "career_baseline": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  Built from 1 distinct swing across 1 session.\n\n  Nothing is sayable yet. Every claim below is refused, with what it needs.\n\n  head_sway_norm  (shoulder_widths)\n    n = 1 over 1 session\n    center   withheld — a typical value for this golfer needs 5 samples (there are 1)\n    spread   withheld — a claim about how repeatable this is needs 10 samples (there are 1)\n    trend    withheld — a claim that this has moved needs 12 samples (there are 1) and 3 sessions (there are 1) — repeated swings in one bay hour are one occasion, not several\n    vs tour  withheld   tour 0.029 .. 0.431 (122 players)\n\n  The unblock is a bay session: 20-30 swings with shots attached.\n",
       "career_baseline_verbose": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  Built from 1 distinct swing across 1 session.\n\n  Nothing is sayable yet. Every claim below is refused, with what it needs.\n\n  head_sway_norm  (shoulder_widths)\n    n = 1 over 1 session\n    center   withheld — a typical value for this golfer needs 5 samples (there are 1)\n    spread   withheld — a claim about how repeatable this is needs 10 samples (there are 1)\n    trend    withheld — a claim that this has moved needs 12 samples (there are 1) and 3 sessions (there are 1) — repeated swings in one bay hour are one occasion, not several\n    vs tour  withheld   tour 0.029 .. 0.431 (122 players)\n             sessions so far:\n               2026-08-10  n=1\n\n  The unblock is a bay session: 20-30 swings with shots attached.\n",
-      "career_corpus": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  3 swing directories across 1 session  ->  1 distinct swing, 1 distinct shot\n\n  Honest n per metric:\n    head_sway_norm  n = 1\n\n  1 distinct swing(s) naming no club (of 1).\n    They still count toward every metric above and toward every whole-bag\n    number — the club was never an input to measuring head sway — and are\n    absent only from per-club views. Repair them one at a time on the upload\n    page: a session has many clubs, so there is no bulk backfill (ADR-024 §5).\n\n  Contributing no sample (2):\n    no_face_on       2  2026-08-10/1, 2026-08-10/2\n",
-      "career_corpus_verbose": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  3 swing directories across 1 session  ->  1 distinct swing, 1 distinct shot\n\n  Honest n per metric:\n    head_sway_norm  n = 1\n\n  1 distinct swing(s) naming no club (of 1).\n    They still count toward every metric above and toward every whole-bag\n    number — the club was never an input to measuring head sway — and are\n    absent only from per-club views. Repair them one at a time on the upload\n    page: a session has many clubs, so there is no bulk backfill (ADR-024 §5).\n\n  Contributing no sample (2):\n    no_face_on       2  2026-08-10/1, 2026-08-10/2\n\n    2026-08-10/1: no_face_on — no face-on clip, and that is the view every checkpoint is measured from\n    2026-08-10/2: no_face_on — no face-on clip, and that is the view every checkpoint is measured from\n",
+      "career_corpus": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  3 swing directories across 1 session  ->  1 distinct swing, 1 distinct shot\n\n  Honest n per metric:\n    head_sway_norm  n = 1\n\n  1 distinct swing(s) naming no club (of 1).\n    They still count toward every metric above and toward every whole-bag\n    number — the club was never an input to measuring head sway — and are\n    absent only from per-club views. Repair them one at a time on the upload\n    page: a session has many clubs, so there is no bulk backfill (ADR-024 §5).\n\n  Contributing no sample (2):\n    duplicate        1  2026-08-10/1\n    no_face_on       1  2026-08-10/2\n",
+      "career_corpus_verbose": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  3 swing directories across 1 session  ->  1 distinct swing, 1 distinct shot\n\n  Honest n per metric:\n    head_sway_norm  n = 1\n\n  1 distinct swing(s) naming no club (of 1).\n    They still count toward every metric above and toward every whole-bag\n    number — the club was never an input to measuring head sway — and are\n    absent only from per-club views. Repair them one at a time on the upload\n    page: a session has many clubs, so there is no bulk backfill (ADR-024 §5).\n\n  Contributing no sample (2):\n    duplicate        1  2026-08-10/1\n    no_face_on       1  2026-08-10/2\n\n    2026-08-10/2: no_face_on — neither a face-on clip nor a shot photo, and every checkpoint is measured from the one and every shot number read from the other\n    2026-08-10/1: duplicate — shot photo shot-hash is already in 2026-08-10/3, beside that swing's video — one ball flight, so the copy with the video is the one kept\n",
       "career_dispersion": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  Built from 1 distinct swing across 1 session.\n\n  No metric can be asked yet. A repeatable miss and a scattered one are the same\n  two numbers until there are enough of them to tell apart.\n\n  head_sway_norm  (shoulder_widths)\n    n = 1 over 1 session    target 0.000 +/- 0.060\n    bias      withheld\n    scatter   withheld\n    waiting   a typical value for this golfer needs 5 samples (there are 1)\n    waiting   a claim about how repeatable this is needs 10 samples (there are 1)\n\n  The unblock is a bay session: 20-30 swings with shots attached.\n",
       "career_dispersion_verbose": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  Built from 1 distinct swing across 1 session.\n\n  No metric can be asked yet. A repeatable miss and a scattered one are the same\n  two numbers until there are enough of them to tell apart.\n\n  head_sway_norm  (shoulder_widths)\n    n = 1 over 1 session    target 0.000 +/- 0.060\n    bias      withheld\n    scatter   withheld\n    waiting   a typical value for this golfer needs 5 samples (there are 1)\n    waiting   a claim about how repeatable this is needs 10 samples (there are 1)\n    tolerance 0.06 — spread/error harness over 461 face-on GolfDB clips, 2026-08-12: `python\n              scripts/golfdb/tune_spatial_metric.py`, tolerance = noise + bound\n\n  The unblock is a bay session: 20-30 swings with shots attached.\n",
       "club_profile": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  No club has been hit or declared — there is nothing to profile yet.\n  untagged  All 1 swing on record name no club. That is real history, and no per-club number\n            can be cut from it until each one is tagged.\n  next      New swings get a club at upload — `python scripts/run_server.py`, then the picker\n            on the upload page. A swing already stored is retagged one at a time, from the\n            change control on its row in that page's swing list or with POST\n            /api/sessions/<session>/swings/<swing>/club.\n",
@@ -187,16 +187,16 @@
       "analyzed_without_measurements": 0,
       "excluded": [
         {
-          "detail": "no face-on clip, and that is the view every checkpoint is measured from",
-          "reason": "no_face_on",
-          "session_id": "2026-08-10",
-          "swing_id": "1"
-        },
-        {
-          "detail": "no face-on clip, and that is the view every checkpoint is measured from",
+          "detail": "neither a face-on clip nor a shot photo, and every checkpoint is measured from the one and every shot number read from the other",
           "reason": "no_face_on",
           "session_id": "2026-08-10",
           "swing_id": "2"
+        },
+        {
+          "detail": "shot photo shot-hash is already in 2026-08-10/3, beside that swing's video — one ball flight, so the copy with the video is the one kept",
+          "reason": "duplicate",
+          "session_id": "2026-08-10",
+          "swing_id": "1"
         }
       ],
       "metric_counts": {
@@ -262,6 +262,22 @@
         "declaration": "spec/declarations/career-v1.json",
         "moved": [
           "career_version"
+        ]
+      },
+      {
+        "added": [],
+        "by": "golf-core rerecord",
+        "career_version": 2,
+        "declaration": "spec/declarations/career-v2.json",
+        "moved": [
+          "career_version",
+          "expected.reports.career_corpus",
+          "expected.reports.career_corpus_verbose",
+          "input.corpus.excluded[0].detail",
+          "input.corpus.excluded[0].swing_id",
+          "input.corpus.excluded[1].detail",
+          "input.corpus.excluded[1].reason",
+          "input.corpus.excluded[1].swing_id"
         ]
       }
     ],

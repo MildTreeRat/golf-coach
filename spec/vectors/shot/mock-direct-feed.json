@@ -1,0 +1,166 @@
+{
+    "analysis_version": 17,
+    "expected": {
+        "analysis_version": 17,
+        "intent": {
+            "club": "all",
+            "focus_checkpoint": null,
+            "mode": "fundamentals",
+            "target_shape": null
+        },
+        "measurements": [
+            {
+                "detail": "club face angle minus club path; + is face open to path (fade shape)",
+                "name": "face_to_path_deg",
+                "source": "launch_monitor:mock",
+                "unit": "degrees",
+                "value": 5.0
+            },
+            {
+                "detail": "initial horizontal launch direction; + is right of target",
+                "name": "start_line_deg",
+                "source": "launch_monitor:mock",
+                "unit": "degrees",
+                "value": 2.8
+            },
+            {
+                "detail": "carry as printed by the launch monitor; meaningful per club, not across a bag",
+                "name": "carry_distance_yds",
+                "source": "launch_monitor:mock",
+                "unit": "yards",
+                "value": 126.1
+            },
+            {
+                "detail": "carry plus roll as printed; the gap to carry is the ground, not the swing",
+                "name": "total_distance_yds",
+                "source": "launch_monitor:mock",
+                "unit": "yards",
+                "value": 131.5
+            },
+            {
+                "detail": "yards right (+) or left of target the ball started, projected to the carry; not where it finished - the curve is face_to_path_deg",
+                "name": "start_line_offline_yds",
+                "source": "launch_monitor:mock",
+                "unit": "yards",
+                "value": 6.16
+            },
+            {
+                "detail": "ball speed off the face as printed by the launch monitor; a fitting input, judged by nothing",
+                "name": "ball_speed_mph",
+                "source": "launch_monitor:mock",
+                "unit": "mph",
+                "value": 89.8
+            },
+            {
+                "detail": "vertical launch angle as printed; start_line_deg is the horizontal one",
+                "name": "launch_angle_deg",
+                "source": "launch_monitor:mock",
+                "unit": "degrees",
+                "value": 22.4
+            },
+            {
+                "detail": "SIMULATED carry from the printed launch conditions; not the launch monitor's own carry, which is carry_distance_yds",
+                "name": "flight_carry_yds",
+                "source": "model:flight_v1",
+                "unit": "yards",
+                "value": 126.1005
+            },
+            {
+                "detail": "SIMULATED peak height above the tee; the screen prints no apex tile at all",
+                "name": "flight_apex_yds",
+                "source": "model:flight_v1",
+                "unit": "yards",
+                "value": 19.1757
+            },
+            {
+                "detail": "SIMULATED angle below the horizontal at landing, read off the landing velocity",
+                "name": "flight_descent_angle_deg",
+                "source": "model:flight_v1",
+                "unit": "degrees",
+                "value": 36.7641
+            },
+            {
+                "detail": "SIMULATED hang time from launch to landing",
+                "name": "flight_time_s",
+                "source": "model:flight_v1",
+                "unit": "seconds",
+                "value": 4.5865
+            },
+            {
+                "detail": "SOLVED backspin - the spin this model needs to agree with the printed carry, capped and recorded only when the screen printed none; a printed spin is on the shot, not here",
+                "name": "flight_spin_rpm",
+                "source": "model:flight_v1",
+                "unit": "rpm",
+                "value": 2923.8568
+            }
+        ],
+        "notes": [],
+        "photo_sha256": null,
+        "session_id": "2026-10-09",
+        "shot": {
+            "apex_height": null,
+            "attack_angle": null,
+            "ball_speed": 89.8,
+            "bounce_and_roll": null,
+            "carry_distance": 126.1,
+            "carry_offline": null,
+            "club_face_angle": 3.9,
+            "club_head_speed": 103.6,
+            "club_path": -1.1,
+            "dynamic_loft": null,
+            "impact_offset_h": null,
+            "impact_offset_v": null,
+            "impact_position": null,
+            "impact_position_v": null,
+            "launch_angle": 22.4,
+            "launch_direction": 2.8,
+            "low_point": null,
+            "provenance": null,
+            "session_id": "2026-10-09",
+            "shot_id": "mock-1",
+            "shot_type": null,
+            "smash_factor": 0.87,
+            "source": "mock",
+            "spin_axis": null,
+            "spin_rate": null,
+            "timestamp": "2026-10-09T12:00:00Z",
+            "total_distance": 131.5
+        },
+        "swing_id": "1",
+        "unscored": [
+            {
+                "detail": "no spin axis printed; face-to-path +5.0 deg gives the direction and no magnitude",
+                "name": "flight_landing_offline_yds",
+                "reason": "spin_axis_unresolved"
+            }
+        ]
+    },
+    "id": "shot/mock-direct-feed",
+    "input": {
+        "handedness": "right",
+        "loft_deg": 30.5,
+        "session_id": "2026-10-09",
+        "shot": {
+            "ball_speed": 89.8,
+            "carry_distance": 126.1,
+            "club_face_angle": 3.9,
+            "club_head_speed": 103.6,
+            "club_path": -1.1,
+            "launch_angle": 22.4,
+            "launch_direction": 2.8,
+            "session_id": "2026-10-09",
+            "shot_id": "mock-1",
+            "smash_factor": 0.87,
+            "source": "mock",
+            "timestamp": "2026-10-09T12:00:00Z",
+            "total_distance": 131.5
+        },
+        "swing_id": "1"
+    },
+    "provenance": {
+        "kind": "shot",
+        "note": "A direct feed: source mock and no provenance, carrying 2026-08-23-4's printed numbers on the fields devices.json's mock entry declares (club speed, face, path, ball speed, launch, direction, smash, carry, total; no spin, spin axis or apex were printed, and mock declares no shot_type or impact_position). Right-handed, loft 30.5, no photo. tile_refusals gives nothing, because a shot with no provenance was never a photo. Every mock field is analysed, so the view keeps all of them, and no row reads club speed or smash (the M35 plan's finding 7). shot_type is read only to cross-check the curve's direction against the screen's word (InferredSpinAxis::sign_disagrees), which writes no row. So measurements are 2026-08-23-4's recorded shot and flight rows with Python's values, each shot row's source launch_monitor:mock (contracts::capability::device_of: the source's wire name where there is no provenance), and unscored is that vector's flight refusal. shot is the request's, every other key null as a ShotData writes it.",
+        "oracle": "hand",
+        "source": "worked by hand in M35 P4, the M35 plan's P4 list; each shot is the named corpus vector's input.shot, edited only as the note says, and Rust's answer (golf_core::run_shot) was checked equal to this expected within RTOL before the file was committed"
+    }
+}

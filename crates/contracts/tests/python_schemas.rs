@@ -1,9 +1,11 @@
 //! The many-shot layer's shapes against the schemas frozen Python exports. [M36 P5]
 //!
-//! `bag.schema.json`, `golfer.schema.json` and `swing_manifest.schema.json` stay **Python-owned**
-//! through M36 (the plan's call 8): no shape moves here, so `regenerate --schemas-only` keeps writing
-//! them from pydantic and `tests/test_conformance.py` holds them to it. This holds the Rust structs
-//! to them from the other side. It is `schemas.rs`'s pin pointed the other way: there Rust owns the
+//! `bag.schema.json` and `golfer.schema.json` stay **Python-owned** (the M36 plan's call 8): no shape
+//! moves here, so `regenerate --schemas-only` keeps writing them from pydantic and
+//! `tests/test_conformance.py` holds them to it. This holds the Rust structs to them from the other
+//! side. `swing_manifest` and `session_meta` became Rust's at M35 P7, when `crates/storage` gave
+//! them an `intent`; their structs are pinned in `crates/storage/tests/schemas.rs`, and only their
+//! copies of the enums below are read here. It is `schemas.rs`'s pin pointed the other way: there Rust owns the
 //! file and the file follows the struct; here pydantic owns the file and the struct follows it, so a
 //! failure here means the *struct* is wrong.
 //!
@@ -200,7 +202,8 @@ fn the_golfer_is_the_shape_pydantic_exported() {
 
 /// Each enum against the schema that carries it, member for member and in order. `ClubId` is in
 /// three schemas, and all three must agree, because the manifest, the session and the bag each name
-/// a club and none of them is the one place it is defined.
+/// a club and none of them is the one place it is defined. Two of the three are hand-edited since
+/// M35 P7, which makes the check matter more, not less.
 #[test]
 fn every_enum_is_pythons_members_in_pythons_order() {
     let clubs: Vec<String> = ClubId::ALL.into_iter().map(wire).collect();

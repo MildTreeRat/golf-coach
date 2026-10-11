@@ -70,7 +70,7 @@ are ADR-035's.
 | **M32** | Wider shot contract and device capability, in Rust; the first Rust re-record | this box | M31.5 | ✅ Done *(2026-10-01)*, 13/13 phases — [m32-shot-contract.md](m32-shot-contract.md). Re-detailed Rust-only below (M31.5 P6a) |
 | **M33** | Apple Vision spike: can the phone read the screen? | Mac | M31.5 | ⬜ Not started |
 | **M34** | The screen reader in Rust (`crates/screen`): the parser port, the V tile and tie rule, the 13-shot re-read | this box | M32 | ✅ Done *(2026-10-02)*, 13/13 phases — [m34-screen-reader.md](m34-screen-reader.md) |
-| **M35** | Shot-first sessions in Rust: photo-only shots, `ShotResult` and `analyze_shot` | this box | M36 | ⬜ Not started — unblocked by M36 *(2026-10-08)*, and next |
+| **M35** | Shot-first sessions in Rust: photo-only shots, `ShotResult` and `analyze_shot` | this box | M36 | ✅ Done *(2026-10-10)*, 14/14 phases — [m35-shot-first-sessions.md](m35-shot-first-sessions.md). Photo entries in Rust's corpus, `ShotResult` and `analyze_shot`, every mode scoring mechanics, a drill stored but `untracked`, and the storage and career families re-recorded as `career-v2` ([ADR-024's M35 addendum](../decisions/024-per-club-shot-history.md)) |
 | **M36** | The many-shot layer and its stores ported to Rust, recorded once from frozen Python | this box | M32 | ✅ Done *(2026-10-08)*, 19/19 phases — [m36-many-shot-layer.md](m36-many-shot-layer.md). The corpus's `OUTDATED` now means older than `COMPARABLE_FROM` (14), changed in Rust alone ([ADR-024's M36 addendum](../decisions/024-per-club-shot-history.md)) |
 | **M37** | Strike profile, topic grades and strengths/weaknesses (Rust first) | desk, then bay | M35 | ⬜ Not started |
 | **M41** | The course-play screen layout in `crates/screen`: aliases, lit L/R and D/F signs, backspin and sidespin | this box, after new photos | M35, by order only | ⬜ Not started — raised 2026-10-07, detailed in [ROADMAP §M41](../../ROADMAP.md#m41-the-course-play-screen-layout) rather than here |
@@ -1060,6 +1060,9 @@ parser's copy.
 
 ## M35 — Shot-first sessions in Rust
 
+**Built from [m35-shot-first-sessions.md](m35-shot-first-sessions.md)**, whose interview decisions,
+calls and phase findings are the as-built record. Where a line below was made false, it says so.
+
 **Rust only, and after M36**
 ([ADR-035 clause 6](../decisions/035-rust-everywhere-python-where-required.md#6-order-the-phone-path-first)).
 M31's plan had M35 write Python, as M36's oracle. Now M36 ports the many-shot layer first, faithfully,
@@ -1071,8 +1074,11 @@ the corpus it changes (the M31.5 plan's P1 finding 7). Frozen Python gains none 
   from M36's list, because it is new (the M31.5 plan's P2 finding 5).
 - `crates/analysis/src/engine.rs::analyze_shot`, built from `shot_measurements` and
   `flight_measurements`. The Rust engine already keeps those apart from the swing's measurements, so
-  the old §M35's extraction was Python's alone. The result is filtered by §M32's `printed_on`.
-- `golf-core run-shot`.
+  the old §M35's extraction was Python's alone. *As built*, the shot is not filtered after the fact:
+  it is measured as a view with every reading outside `capability::analysed_on` (§M32's
+  `printed_on`, narrowed to the fields declared `analysed`) set to `None` (P2 finding 2).
+- `golf-core run-shot`, on stdin, and with `--session` writing each photo entry's
+  `shot_analysis.json`; `golf-core set-intent` beside it (the M35 plan's decisions 6 and 7).
 - **The two photo-side reasons are first written here**, into `ShotResult.unscored`: `printed_blank`
   and `misread` (§M32). They go to `shot_analysis.json` and never to `analysis.json`, which frozen
   Python reads with a closed enum
@@ -1087,7 +1093,9 @@ the corpus it changes (the M31.5 plan's P1 finding 7). Frozen Python gains none 
 - **A mode other than `FUNDAMENTALS` cannot reach the engine today.**
   `crates/analysis/src/scoring.rs::policy_for` panics for every other mode, as Python's raises. M35
   decides whether a `DRILL` or `SHOT_SHAPING` intent gets a policy or travels beside the swing, and
-  ADR-009's addendum records it (ADR-034's Consequences).
+  ADR-009's addendum records it (ADR-034's Consequences). *Decided*: neither. Every mode scores
+  mechanics with the one mechanics-only blend, and the mode only decides which aggregates a shot
+  feeds (ADR-009's M35 addendum).
 - `read_corpus` and the aggregates built on it (`build_baseline`, `build_dispersion`,
   `build_bag_profile`, all M36's ports) leave untracked shots out, and a pin says so. An untracked
   shot is still stored, listed in history and given its own `ShotResult`.
@@ -1107,6 +1115,9 @@ the corpus it changes (the M31.5 plan's P1 finding 7). Frozen Python gains none 
 - **A route for handedness to reach a photo-only shot.** Today it arrives only through the swing
   manifest that holds the photo, then the player, then the golfer store, so a photo with no swing gets
   `None`, and every photo-only shot would withhold its on-line share (ADR-034's Consequences).
+  *As built*, no new route was needed: a photo-only entry is a swing directory with a manifest, so
+  that route reaches it. A photo no session holds is never read by the corpus (the M35 plan's
+  finding 9).
 
 **What the old §M35 gave Python goes elsewhere**
 ([clause 7](../decisions/035-rust-everywhere-python-where-required.md#7-what-this-supersedes-sentence-by-sentence)):
@@ -1124,6 +1135,9 @@ the corpus it changes (the M31.5 plan's P1 finding 7). Frozen Python gains none 
   records it.
 - Frozen Python never learns the `DRILL` rule either, so it pools a Rust-written `DRILL` swing that
   has a face-on clip.
+- *Found in building it*: frozen Python reads a Rust-written `intent` on the manifest or
+  `session.json` and **drops it on any rewrite**, so a recorded drill becomes a tracked shot the next
+  time the frozen server writes to that swing (ADR-024's M35 addendum, measured at M35 P11).
 
 **Vectors:**
 - `spec/vectors/shot/`: hand-worked (`provenance.oracle: "hand"`), since there is no Python to record.
@@ -1131,13 +1145,17 @@ the corpus it changes (the M31.5 plan's P1 finding 7). Frozen Python gains none 
   them, diff-gated, declaring each admitted photo-only entry. The new cases (the dedupe, mixed
   sessions, a `DRILL` shot) are hand-worked.
 - **The swing output is unchanged**: `golf-core rerecord` with an empty declaration over the engine
-  and stage families writes nothing.
+  and stage families writes nothing. *As built*, the committed `v17.json`'s dry run is the pin, and
+  it now reads the shot family too: 0 changed.
 
 **Tests:**
 - `crates/storage/tests/corpus.rs`: photo-only, the dedupe, mixed sessions, and a `DRILL` shot that is
-  stored but never reaches an aggregate.
+  stored but never reaches an aggregate. *As built*, these are hand-worked `storage/hand/` cases run
+  by `crates/core/tests/storage.rs`, plus two drill pins (`crates/storage/src/corpus.rs` and
+  `crates/core/tests/career.rs`); there is no `crates/storage/tests/corpus.rs`.
 - `crates/contracts`' intent tests: only `DRILL` fails to count, and a per-shot override beats the
-  session default.
+  session default. *As built*, the override is `crates/storage`'s (`set_intent`, and the
+  `set-intent-repairs` and `upload-stamps-intent` cases).
 - The unchanged-swing pin above.
 
 ## M36 — The many-shot layer in Rust

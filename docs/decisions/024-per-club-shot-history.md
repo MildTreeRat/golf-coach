@@ -537,3 +537,99 @@ M35's photo-only admission is still M35's, and it will be `career-v2`.
 - §1–§5, and the addenda above;
 - `is_outdated`, and what `scripts/reanalyze.py` re-runs;
 - the previous addendum's rule that the frozen lab never admits a photo-only entry.
+
+## Addendum (2026-10-10, M35): photo entries join the corpus, the copy with video counts, and a drill is `untracked`
+
+M35 built what the M31 and M31.5 addenda routed to it, in Rust only, in
+[the M35 plan](../plans/m35-shot-first-sessions.md)'s phases P7–P11: the corpus admits a shot
+photographed with no video, and a shot practised as a drill leaves every aggregate. It went in
+M36's order. The new rules were worked by hand first, as twelve cases under
+`spec/vectors/storage/hand/`, then `crates/storage::corpus` changed, then the recorded families
+were re-recorded under `spec/declarations/career-v2.json`, at `CAREER_VERSION` 2.
+
+**Two kinds of entry** (the plan's call 6).
+
+- A **swing** has a face-on clip and is read exactly as §4 and the M36 addendum read it, from
+  `analysis.json`.
+- A **photo entry** has a shot photo and no face-on clip. A down-the-line clip beside the photo
+  does not make it a swing, because nothing is scored from that clip alone. It is read from
+  `shot_analysis.json` alone, a `ShotResult` that `golf-core run-shot --session` writes, with the
+  same three repairs as a swing: `not_analyzed`, `stale` (the result names another photo, or none)
+  and `outdated` (below `COMPARABLE_FROM`, as the M36 addendum set it). One artifact per kind: a
+  swing's `analysis.json` is never read for a photo entry, nor a `shot_analysis.json` for a swing.
+- A manifest with neither is `no_face_on`, under a sentence rewritten to say there is neither a
+  face-on clip nor a shot photo.
+
+`CorpusSwing.face_on_sha256` is optional now, `null` on a photo entry. `artifact_key` already keyed
+launch-monitor and model rows on the photo, so a photo entry's samples pool beside a swing's with no
+new key; only its `pose:` rows have no key, and it holds none.
+
+**Two dedupes, and their order.** Photo entries collapse on their photo's sha256, the earliest
+arrival kept, as swings collapse on their clip's. Then **a surviving photo entry whose photo a
+surviving swing also holds is that swing's `duplicate`**, of the earliest such swing when one photo
+sits on two. The same ball flight saved twice, once with video and once without, is one shot, and
+the copy with video counts (the plan's interview decision 4). Two choices follow, each said in a
+hand case's note:
+
+- the cross-kind dedupe looks at every surviving swing, a drill included, so a drill's photo cannot
+  re-enter the stats through a photo-only copy;
+- a photo entry made a duplicate of a swing is in `excluded` alone, not in that swing's
+  `duplicates`, which lists re-uploads of its clip.
+
+The real data already holds the shape. One stored photo sits under three swing directories that
+`read_corpus` collapses as re-uploads of one clip, so a photo-only copy of it, if one existed,
+would be a duplicate of the earliest of them.
+
+**`untracked`, the third exclusion the M31 addendum's table named.** After both dedupes, a
+survivor whose manifest records a `DRILL` is excluded as `ExclusionReason::Untracked`. It is decided
+off the manifest before any artifact is read, so a drill is never also `not_analyzed`, `stale` or
+`outdated`: it is not work waiting on a run. It is in no swing list, so no count, aggregate, mishit
+median, `distinct_*` or report sees it, except the corpus's own exclusion list. Two pins hold that.
+In `crates/storage`, a corpus with a drill is the corpus without it, plus one `untracked` exclusion
+and one more directory seen. In `crates/core/tests/career.rs`, every aggregate and every report
+over a corpus holding a drill equals the one with the drill deleted from disk, except
+`career_corpus`, which prints the directory count and the exclusions.
+`crates/storage/src/corpus.rs`' module doc gives the order `excluded` lists the kinds in.
+
+**Where a shot's intent lives** (the plan's interview decision 2). `SwingManifest.intent` records
+the `PracticeGoal`, written only when set: stamped at creation from a new `intent` cursor in
+`session.json` (beside `player_id` and `club`, as §5 stamps the club), and overwritten per shot by
+`golf-core set-intent`. An absent intent is `FUNDAMENTALS`, which is tracked, and is every swing on
+disk. The recorded goal's `club` stays `ALL`, for the M31 addendum's reason.
+
+**The frozen-Python hazard, measured** (the plan's finding 3 and P11 finding 6). Frozen Python's
+`SwingManifest` and `SessionMeta` ignore an unknown key. So they read a Rust-written `intent`
+without complaint, and **drop it on any rewrite**: another role uploaded into the swing,
+`set_player`, `set_club`, `set_mishit`, `attribute_unlabeled`, or a cursor update. M35 P11 wrote a
+manifest and a `session.json` with `golf-core set-intent`, loaded both through frozen Python, and
+saved the manifest back with no `intent` key. A drill then silently becomes a tracked shot. That is
+ADR-035 clause 4's "a Python re-write loses keys without a word", and it is named, not fixed, because
+§M29 replaces the server. The verb is safe on a session the frozen server no longer writes to.
+
+**Frozen Python disagrees in two more ways now, by design.** It still excludes a photo-only manifest
+as `NO_FACE_ON` (the M31.5 addendum), and it has no drill rule, so it pools a Rust-recorded drill
+that has a face-on clip, until the hazard above erases the record. Over `data/` the two languages
+still pool the same 13 swings and 34 metrics, because no photo entry and no intent exists there
+(measured at M35 P10).
+
+**What the re-record moved.** One recorded case: `storage/corpus/no-face-on`'s swing holding a
+down-the-line clip and a shot photo is now a photo entry, and the swing beside it holds the same
+photo with a face-on clip, so it became that swing's `duplicate` where it was `no_face_on`. Its
+adopted career copy moved with it, and so did that copy's `career_corpus` report and its
+`--verbose` form. Nothing pooled moved. `docs/CONFORMANCE.md` §2 and §4 have the detail.
+
+**The handedness route [ADR-034](034-shot-first-phone-first.md#consequences)'s Consequences asked
+for exists.** A photo entry is a swing
+directory with a manifest, so it reaches handedness as a swing does: manifest `player_id`, then the
+golfer store. Its loft comes through `crates/storage::flight_inputs::loft_for_club`, a port of
+`storage/flight_inputs.py`'s, which reads §2's bag. A photo with no swing directory at all is a shot
+in `data/processed/shots/` that no session holds; the corpus never reads one, and §M29's import verb
+files it into a session.
+
+**Not changed**:
+
+- §1–§5, and the addenda above. §4's per-club path is still `narrowed_to` with a club, and §5's
+  club still comes from the session cursor;
+- ADR-028's mishit rule. A drill is out before the mishit median is taken, so the median sees only
+  tracked shots;
+- "No bulk backfill for club", and none for intent either: an unrecorded intent is a tracked shot.

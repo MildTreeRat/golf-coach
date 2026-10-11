@@ -1,0 +1,92 @@
+{
+  "career_version": 2,
+  "expected": {
+    "corpus": {
+      "analyzed_without_measurements": 0,
+      "excluded": [
+        {
+          "detail": "neither a face-on clip nor a shot photo, and every checkpoint is measured from the one and every shot number read from the other",
+          "reason": "no_face_on",
+          "session_id": "2026-08-25",
+          "swing_id": "1"
+        }
+      ],
+      "metric_counts": {
+        "carry_distance_yds": 1
+      },
+      "other_golfers": 0,
+      "outdated_swings": 0,
+      "player_id": "aaron",
+      "sessions_scanned": 1,
+      "swing_dirs_seen": 2,
+      "swings": [
+        {
+          "analysis_version": 17,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-25T12:02:00Z",
+          "club": "7i",
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": null,
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "hand",
+              "name": "carry_distance_yds",
+              "source": "launch_monitor:hd_golf",
+              "unit": "yards",
+              "value": 150.0
+            }
+          ],
+          "missing_roles": [
+            "face_on"
+          ],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-25",
+          "shot_needs_review": false,
+          "shot_sha256": "photo-25-2",
+          "stale": false,
+          "swing_id": "2"
+        }
+      ],
+      "unattributed_swings": 0,
+      "unknown_sources": []
+    },
+    "narrowed": {},
+    "properties": {
+      "distinct_sessions": 1,
+      "distinct_shots": 1,
+      "distinct_swings": 1,
+      "duplicates_collapsed": 0,
+      "mishit_refs": [],
+      "mishit_shots": 0,
+      "mishit_shots_unconfirmed": 0,
+      "shot_conflicts": 0,
+      "untagged_swings": 0
+    }
+  },
+  "id": "storage/hand/no-face-on-and-no-photo",
+  "input": {
+    "files": {
+      "2026-08-25/1/analysis.json": "{\"analysis_version\": 17, \"swing\": {\"measurements\": [{\"name\": \"spine_tilt_at_impact_deg\", \"value\": 30.0, \"unit\": \"degrees\", \"source\": \"pose:down_the_line\", \"detail\": \"hand\"}], \"shot\": null}}",
+      "2026-08-25/1/manifest.json": "{\n  \"swing_id\": \"1\",\n  \"session_id\": \"2026-08-25\",\n  \"created_at\": \"2026-08-25T12:01:00Z\",\n  \"updated_at\": \"2026-08-25T12:01:00Z\",\n  \"roles\": {\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.clip-25-1.mov\",\n      \"content_sha256\": \"clip-25-1\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-25T12:01:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": \"7i\",\n  \"mishit\": null\n}",
+      "2026-08-25/2/manifest.json": "{\n  \"swing_id\": \"2\",\n  \"session_id\": \"2026-08-25\",\n  \"created_at\": \"2026-08-25T12:02:00Z\",\n  \"updated_at\": \"2026-08-25T12:02:00Z\",\n  \"roles\": {\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.clip-25-2.mov\",\n      \"content_sha256\": \"clip-25-2\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-25T12:02:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.photo-25-2.jpg\",\n      \"content_sha256\": \"photo-25-2\",\n      \"original_filename\": \"screen.jpg\",\n      \"content_type\": \"image/jpeg\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-25T12:02:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": \"7i\",\n  \"mishit\": null\n}",
+      "2026-08-25/2/shot_analysis.json": "{\n  \"swing_id\": \"2\",\n  \"session_id\": \"2026-08-25\",\n  \"analysis_version\": 17,\n  \"photo_sha256\": \"photo-25-2\",\n  \"intent\": {\n    \"mode\": \"fundamentals\",\n    \"target_shape\": null,\n    \"club\": \"all\",\n    \"focus_checkpoint\": null\n  },\n  \"shot\": {\n    \"shot_id\": \"2026-08-25-2\",\n    \"session_id\": \"2026-08-25\",\n    \"timestamp\": \"2026-08-25T12:02:00Z\",\n    \"source\": \"screen\",\n    \"provenance\": {\n      \"device\": \"hd_golf\",\n      \"parse_confidence\": 0.95,\n      \"needs_review\": false,\n      \"warnings\": [],\n      \"image_sha256\": \"photo-25-2\"\n    },\n    \"carry_distance\": 150.0\n  },\n  \"measurements\": [\n    {\n      \"name\": \"carry_distance_yds\",\n      \"value\": 150.0,\n      \"unit\": \"yards\",\n      \"source\": \"launch_monitor:hd_golf\",\n      \"detail\": \"hand\"\n    }\n  ],\n  \"unscored\": [],\n  \"notes\": []\n}"
+    },
+    "narrowings": {},
+    "player_id": "aaron",
+    "versions": {
+      "comparable_from": 14,
+      "installed": 17
+    }
+  },
+  "provenance": {
+    "kind": "storage",
+    "note": "Versions {installed 17, comparable_from 14}: 2026-08-25, 7i, engine 17. 1 holds a down-the-line clip alone, with an analysis.json beside it (a pose:down_the_line row): no face-on clip and no shot photo, so it is no_face_on with call 6's rewritten sentence, and nothing of it is read. 2 holds a down-the-line clip and photo-25-2, with a shot_analysis.json (carry 150): a down-the-line clip does not make a swing, so it is a photo entry and pools, missing_roles [face_on]. That is the recorded storage/corpus/no-face-on's swing 1 under the new rule (the M35 plan's finding 5). carry_distance_yds n = 1.",
+    "oracle": "hand",
+    "source": "worked by hand in M35 P9, the M35 plan's call 8, against its call 6 and P9's findings, before M35 P10's read_corpus follows them; each tree spelled as M36 P14's hand cases spell theirs, and each shot_analysis.json a ShotResult as crates/storage::state::save_shot_analysis writes one",
+    "worked_against": "scripts/conformance_vectors.py::_run_corpus"
+  }
+}

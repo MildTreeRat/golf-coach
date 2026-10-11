@@ -273,9 +273,10 @@ mod tests {
             session_id: format!("2026-08-{index:02}"),
             swing_id: index.to_string(),
             captured_at: at(index),
-            face_on_sha256: over
-                .face_on
-                .map_or_else(|| format!("clip-{index}"), String::from),
+            face_on_sha256: Some(
+                over.face_on
+                    .map_or_else(|| format!("clip-{index}"), String::from),
+            ),
             shot_sha256: Some(
                 over.shot
                     .map_or_else(|| format!("photo-{index}"), String::from),
@@ -302,6 +303,7 @@ mod tests {
             auto_mishit: over.auto_mishit,
             manual_mishit: over.mishit,
             missing_roles: Vec::new(),
+            intent: None,
         }
     }
 

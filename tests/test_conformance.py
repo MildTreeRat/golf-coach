@@ -23,8 +23,9 @@ repo is built around and a lenient comparator is how a port would be allowed to 
 **From M32 the second pin is the freeze, not the oracle** (ADR-035 clauses 3 and 4). Rust
 re-records the engine and stage families and `cargo test` certifies them; what is pinned here is
 that frozen Python still reproduces every value it recorded, compared in
-`conformance.frozen_view` with the paths a Rust re-record owns taken out. The three schema roots
-Rust owns are pinned by `crates/contracts/tests/schemas.rs`, and skipped by the first pin.
+`conformance.frozen_view` with the paths a Rust re-record owns taken out. The schema roots Rust
+owns are pinned by `crates/contracts/tests/schemas.rs` and, for the two storage roots,
+`crates/storage/tests/schemas.rs`, and skipped by the first pin.
 """
 
 from __future__ import annotations
@@ -67,9 +68,10 @@ def test_every_committed_schema_is_what_contracts_exports_today() -> None:
     changes a bound — all of which are things a port has to be told about, and none of which any
     other test in this repo can see.
 
-    **Not for `RUST_OWNED_SCHEMAS`.** From M32 those three files are edited by hand to Rust's
-    wider shape, which frozen Python's models never gain, so this export is no longer what they
-    should hold. `crates/contracts/tests/schemas.rs` pins them against the Rust structs instead.
+    **Not for `RUST_OWNED_SCHEMAS`.** From M32 those files are edited by hand to Rust's wider
+    shape, which frozen Python's models never gain, so this export is no longer what they should
+    hold. `crates/contracts/tests/schemas.rs` and `crates/storage/tests/schemas.rs` pin them
+    against the Rust structs instead.
     """
     stale = []
     for name, expected in conformance.export_schemas().items():
@@ -159,13 +161,59 @@ def test_no_schema_is_committed_without_a_root_that_produces_it() -> None:
     """The other direction: a file left behind by a root that was renamed or dropped.
 
     A stale schema is worse than a missing one, because a port reads it and implements a shape
-    this repo no longer has.
+    this repo no longer has. A file Rust owns with no Python model behind it (M35's
+    `shot_result`) is not stale, and is admitted only by being named in `RUST_OWNED_SCHEMAS`.
     """
     committed = {p.name.removesuffix(".schema.json") for p in conformance.SCHEMAS.glob("*.json")}
-    assert committed == set(conformance.SCHEMA_ROOTS), (
-        f"spec/schemas holds {sorted(committed - set(conformance.SCHEMA_ROOTS))} that "
-        f"SCHEMA_ROOTS does not produce"
+    produced = set(conformance.SCHEMA_ROOTS) | conformance.RUST_OWNED_SCHEMAS
+    assert committed == produced, (
+        f"spec/schemas holds {sorted(committed - produced)} that SCHEMA_ROOTS does not produce "
+        f"and RUST_OWNED_SCHEMAS does not name, and lacks {sorted(produced - committed)}"
     )
+
+
+def test_shot_result_is_the_one_rust_owned_schema_with_no_python_model() -> None:
+    """`shot_result.schema.json` is Rust's alone (M35): `ShotResult` has no pydantic twin, so the
+    file is hand-written and `crates/contracts/tests/schemas.rs` holds it to the struct.
+
+    Pinned by name because the admission above is a door: a schema with no model is accepted only
+    when it is listed here, so the next one is a decision someone records rather than a file that
+    happens to pass.
+    """
+    assert conformance.RUST_OWNED_SCHEMAS - set(conformance.SCHEMA_ROOTS) == {"shot_result"}
+
+
+#: The two Rust lists `RUST_OWNED_SCHEMAS` is the union of: each pin reads its own, and a root
+#: named in one place only is either unpinned or skipped by nobody.
+_RUST_OWNED_PINS = (
+    REPO / "crates" / "contracts" / "tests" / "schemas.rs",
+    REPO / "crates" / "storage" / "tests" / "schemas.rs",
+)
+
+
+def _rust_owned_list(path: Path) -> set[str]:
+    """The names in a pin's `const RUST_OWNED: [&str; N] = [...]`, read from the source."""
+    match = re.search(
+        r"const RUST_OWNED: \[&str; \d+\] = \[(.*?)\];", path.read_text(encoding="utf-8"), re.S
+    )
+    assert match, f"{path} has no `const RUST_OWNED` list"
+    return set(re.findall(r'"([a-z_]+)"', match.group(1)))
+
+
+def test_the_rust_owned_roots_are_the_union_of_the_two_rust_pins() -> None:
+    """`RUST_OWNED_SCHEMAS` is exactly the roots the two Rust pins read, and the pins share none.
+
+    Until M35 P7 there was one Rust list and nothing checked it against this set (CONFORMANCE §1).
+    The storage roots made it two, because `SwingManifest` and `SessionMeta` are `crates/storage`'s
+    and a `crates/contracts` test cannot reach them, so the check is made here, from the source,
+    where both lists can be read. The set is spelled out as well, so a root taken over is a line
+    someone writes rather than a file that happens to pass.
+    """
+    contracts, storage = (_rust_owned_list(path) for path in _RUST_OWNED_PINS)
+    assert contracts == {"shot_data", "swing_result", "swing_bundle_result", "shot_result"}
+    assert storage == {"swing_manifest", "session_meta"}
+    assert not contracts & storage, f"pinned twice: {sorted(contracts & storage)}"
+    assert conformance.RUST_OWNED_SCHEMAS == contracts | storage
 
 
 def test_schemas_only_writes_the_python_owned_roots_and_none_of_rusts(
@@ -175,9 +223,11 @@ def test_schemas_only_writes_the_python_owned_roots_and_none_of_rusts(
 
     Written into a temporary directory, never `spec/`. The subset check is the typo guard: a
     misspelled name in `RUST_OWNED_SCHEMAS` would protect nothing and skip nothing, and the
-    freshness test above would still pass on it.
+    freshness test above would still pass on it. It is against the committed files rather than
+    `SCHEMA_ROOTS`, because from M35 one Rust-owned root has no Python model to be a root of.
     """
-    assert conformance.RUST_OWNED_SCHEMAS <= set(conformance.SCHEMA_ROOTS)
+    committed = {p.name.removesuffix(".schema.json") for p in conformance.SCHEMAS.glob("*.json")}
+    assert conformance.RUST_OWNED_SCHEMAS <= committed
     monkeypatch.setattr(conformance, "SCHEMAS", tmp_path)
     written = {p.name.removesuffix(".schema.json") for p in conformance.write_schemas()}
     assert written == set(conformance.SCHEMA_ROOTS) - conformance.RUST_OWNED_SCHEMAS
@@ -1933,3 +1983,45 @@ def test_career_once_records_an_empty_family_and_then_refuses(
     assert recorded.exists()
     assert conformance.main(["regenerate", "--career-once"]) == 2
     assert builds == ["build_career"], "the second run reached the recorder"
+
+
+# -------------------------------------------------------------------------- M35 P6: the shot family
+
+
+def test_check_defers_the_shot_family_and_judges_no_staleness(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Named and deferred, never run, and never STALE, though it ages on `ANALYSIS_VERSION`.
+
+    Every case sits at Rust's engine version, above frozen Python's, with no `rerecords` ledger,
+    so the stages' rule would call each one stale; `golf-core rerecord` re-records the family with
+    the engine's and the shot gate holds its version. A case at a version far above anything
+    recorded proves `check` does not try, and the committed cases are what make the pin bite: they
+    are above frozen Python's already.
+    """
+    import shutil
+
+    vectors = tmp_path / "spec" / "vectors"
+    shutil.copytree(conformance.VECTORS / "shot", vectors / "shot")
+    monkeypatch.setattr(conformance, "VECTORS", vectors)
+    committed = [conformance._read_json(path) for path in conformance.shot_vector_paths()]
+    assert committed, "no shot case is committed"
+    assert all(case["analysis_version"] > ANALYSIS_VERSION for case in committed), (
+        "a shot case at or below frozen Python's version: this pin no longer proves anything"
+    )
+    ahead = next(vectors.rglob("*.json"))
+    document = json.loads(ahead.read_text(encoding="utf-8"))
+    document["analysis_version"] = 99
+    document["id"] = "shot/ahead"
+    (ahead.parent / "ahead.json").write_text(json.dumps(document), encoding="utf-8")
+
+    def never(vector: dict[str, Any]) -> dict[str, Any]:
+        raise AssertionError(f"`check` ran shot vector {vector.get('id')} through the engine")
+
+    monkeypatch.setattr(conformance, "run_vector", never)
+    assert conformance.main(["check"]) == 0
+    out = capsys.readouterr().out
+    count = len(conformance.shot_vector_paths())
+    assert count == len(committed) + 1
+    assert f"{count} shot vectors are `crates/core`'s `run_shot`" in out
+    assert "STALE" not in out

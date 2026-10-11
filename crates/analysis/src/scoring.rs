@@ -5,8 +5,19 @@
 //! score. The engine hands the two lists in separately, so a policy never has to know which axis a
 //! [`CheckpointScore`] came from.
 //!
-//! Only `Fundamentals` is implemented, here as in Python: mechanics 100%, outcome ignored and left
-//! `None`. The other modes are named seams and [`policy_for`] refuses them.
+//! **One policy, and every mode reaches it** [M35 P2]: mechanics 100%, outcome ignored and left
+//! `None`. ADR-009 named a single-swing policy per mode and built only `Fundamentals`'s; Python
+//! still raises `NotImplementedError` for the other three, and this port copied that as a panic
+//! until M35. ADR-034 §5 then put every shot grade at the aggregate, per club over many shots, so
+//! the three were never going to be built — and a drill or a shape attempt still has mechanics worth
+//! scoring (the M35 plan's decision 1). So [`policy_for`] answers every mode with the one blend, and
+//! what a mode changes is which aggregates the swing feeds, which is
+//! `contracts::intent::PracticeMode::is_tracked` and not this module's business.
+//!
+//! No `ANALYSIS_VERSION` bump came with that: every recorded input is `Fundamentals` or carries no
+//! intent, so no recorded answer moved, and a result under another mode could not be produced
+//! before. `golf-core rerecord --declare spec/declarations/v17.json --dry-run` reporting nothing
+//! changed is the evidence (the M35 plan's call 4).
 //!
 //! [ADR-009]: ../../../docs/decisions/009-swing-scoring-model.md
 //!
@@ -69,10 +80,13 @@ fn mean_percent(scores: &[CheckpointScore]) -> f64 {
 
 /// Grade mechanics only; outcome is informational (ADR-009 §PoC boundary).
 ///
+/// Python's `FundamentalsPolicy`, renamed for what it does now that every mode uses it (M35 P2): a
+/// drill scored by a function called `fundamentals` would read as a drill misfiled.
+///
 /// `outcome` is taken and ignored rather than absent from the signature, because the argument is
-/// what makes this a policy: the outcome axis exists and this mode chooses not to weigh it, which is
-/// a different statement from the axis not being available.
-fn fundamentals(mechanics: &[CheckpointScore], _outcome: &[CheckpointScore]) -> AxisScores {
+/// what makes this a policy: the outcome axis exists and this policy chooses not to weigh it, which
+/// is a different statement from the axis not being available.
+fn mechanics_only(mechanics: &[CheckpointScore], _outcome: &[CheckpointScore]) -> AxisScores {
     let mechanics_score = mean_percent(mechanics);
     AxisScores {
         mechanics: Some(mechanics_score),
@@ -81,26 +95,25 @@ fn fundamentals(mechanics: &[CheckpointScore], _outcome: &[CheckpointScore]) -> 
     }
 }
 
-/// The policy for a practice mode.
+/// The policy for a practice mode: [`mechanics_only`], for every one of them (M35 P2).
 ///
-/// Panics for every mode but `Fundamentals`, which is Python's `NotImplementedError` — the same
-/// choice [`crate::checkpoints::evaluator_for`] and `contracts::checkpoints::spec_for` make, and for
-/// the same reason: a mode with no policy is a wiring bug, and a caller handed an `Option` here
-/// would have to invent a fallback score, which is the one thing ADR-010 §2 forbids.
+/// **Until M35 this panicked for every mode but `Fundamentals`**, Python's `NotImplementedError`
+/// copied, on the reasoning [`crate::checkpoints::evaluator_for`] still uses: a key with no entry is
+/// a wiring bug. That stopped being the right reading once ADR-034 §5 retired the single-swing
+/// policies it was waiting for. A drill swing is scored like any other and simply kept out of the
+/// aggregates, so a panic here would refuse the mechanics panel the golfer asked for. Python keeps
+/// refusing, frozen until M40 deletes it, and never reaches this case: its pipeline only ever builds
+/// a `Fundamentals` goal.
 ///
-/// The `match` is exhaustive rather than an `if` with a fall-through, so adding a `PracticeMode`
-/// stops the build here — at the table that has to grow — rather than compiling and failing at
-/// runtime on the first golfer who selects it.
-///
-/// The message no longer says "lands in full M4", as Python's still does (M32). ADR-034 §5 retired
-/// that wait — a shot is graded per club over many shots, never one swing at a time — and the
-/// frozen copy stays wrong until M40 deletes it, as `contracts/intent.py`'s docs do.
+/// The `match` stays, with every mode spelled, rather than collapsing to a constant, so the per-mode
+/// seam ADR-009 drew is still visible here and a fifth `PracticeMode` stops the build at the one
+/// table that has to decide how it is scored.
 pub fn policy_for(mode: PracticeMode) -> Combine {
     match mode {
-        PracticeMode::Fundamentals => fundamentals,
-        PracticeMode::ShotShaping | PracticeMode::Performance | PracticeMode::Drill => {
-            panic!("{mode:?} has no single-swing scoring policy (ADR-034 §5)")
-        }
+        PracticeMode::Fundamentals
+        | PracticeMode::ShotShaping
+        | PracticeMode::Performance
+        | PracticeMode::Drill => mechanics_only,
     }
 }
 
@@ -167,9 +180,29 @@ mod tests {
         assert_eq!(mean_percent(&scores), expected);
     }
 
+    /// Every mode blends exactly as `Fundamentals` does (M35 P2). This replaced a `#[should_panic]`
+    /// test named `an_unimplemented_mode_refuses_rather_than_grading_mechanics_anyway`: grading
+    /// mechanics anyway is now the decision, because a drill or a shape attempt still has mechanics
+    /// worth scoring and the mode's effect lives above the swing, in which aggregates it feeds.
+    ///
+    /// The fixture has an outcome score in it, so a policy that started weighing outcome for one
+    /// mode would fail here rather than agreeing on an empty axis.
     #[test]
-    #[should_panic(expected = "has no single-swing scoring policy")]
-    fn an_unimplemented_mode_refuses_rather_than_grading_mechanics_anyway() {
-        policy_for(PracticeMode::Performance);
+    fn every_mode_blends_mechanics_only() {
+        let mechanics = [scored("a", 1.0), scored("b", 0.5)];
+        let outcome = [scored("carry", 0.0)];
+        let fundamentals = policy_for(PracticeMode::Fundamentals)(&mechanics, &outcome);
+        for mode in [
+            PracticeMode::ShotShaping,
+            PracticeMode::Performance,
+            PracticeMode::Drill,
+        ] {
+            assert_eq!(
+                policy_for(mode)(&mechanics, &outcome),
+                fundamentals,
+                "{mode:?}"
+            );
+        }
+        assert_eq!(fundamentals.overall, 75.0);
     }
 }

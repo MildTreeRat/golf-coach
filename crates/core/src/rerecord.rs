@@ -93,7 +93,10 @@
 //!
 //! A declaration names the family it re-records by the version key it carries, and carries exactly
 //! one (the M34 plan's call 6). `analysis_version` is M32's: the engine and stage families, run
-//! through [`crate::run`] and [`run_stages`]. `screen_parser_version` is the screen family's, the
+//! through [`crate::run`] and [`run_stages`], and since M35 P6 the shot family, run through
+//! [`run_shot`] — under the engine's key because every number a shot case holds is the engine's
+//! (the M35 plan's call 7), so a bump that moves a swing's shot row moves its shot case's in the
+//! same run, or the gate refuses it. `screen_parser_version` is the screen family's, the
 //! documents under `vectors/screen/`, run through [`run_screen`]. `career_version` is the many-shot
 //! layer's (M36 P13, the M36 plan's decision 8): the storage and career families together, run
 //! through [`run_storage`] and [`run_career`], the runners their gates call. One key for two
@@ -109,8 +112,9 @@
 //! # The run
 //!
 //! [`plan`] walks one family and does everything but write. For an engine declaration that is the
-//! engine family (`vectors/synthetic/`, `vectors/corpus/`) and then the stage family
-//! (`vectors/stages/{synthetic,corpus}/`); for a screen declaration, the [`SCREEN_DOCUMENTS`] under
+//! engine family (`vectors/synthetic/`, `vectors/corpus/`), the stage family
+//! (`vectors/stages/{synthetic,corpus}/`) and then the shot family (`vectors/shot/`, flat, M35 P6);
+//! for a screen declaration, the [`SCREEN_DOCUMENTS`] under
 //! `vectors/screen/`; for a career declaration, the [`STORAGE_DOCUMENTS`] under `vectors/storage/`
 //! and then the [`CAREER_DOCUMENTS`] under `vectors/career/`.
 //!
@@ -123,6 +127,13 @@
 //!   will be written* (call 9), so the family is held to the bundle answer it is about to sit beside.
 //!   **Each screen document** is run through [`run_screen`], gated, applied and ledgered; nothing
 //!   composes onto it, because nothing else holds a copy of a screen's answer.
+//! - **Each shot case** is run through [`run_shot`], gated, applied and ledgered, and keeps
+//!   `provenance.oracle: "hand"` as [`ledger`] finds it. Nothing composes onto it either, though a
+//!   `corpus-*` case's rows are its corpus vector's at another path (`expected.measurements[i]`
+//!   against `expected.swing.measurements[j]`): the two are held together by the gates, not here —
+//!   `tests/shot.rs` holds the case to [`run_shot`] and `crates/analysis/tests/shot.rs`' Decision-12
+//!   pin holds [`run_shot`]'s engine to the corpus vector — so a declaration that moves the one row
+//!   and not the other is refused at the row it forgot (`walk_shot`'s doc).
 //! - **Each storage document** is run through [`run_storage`], gated, applied and ledgered. **Each
 //!   career document** is run through [`run_career`], with the report text of each script no
 //!   renderer runs yet carried as committed
@@ -145,10 +156,10 @@
 //! # How a file is written
 //!
 //! As `conformance.py::_write_json` wrote it, as far as `serde_json` can: keys sorted (the workspace
-//! does not enable `preserve_order`), an indent of 2, a trailing newline on plain `.json` and none
-//! inside a `.gz`, and gzip at level 9 with mtime 0 and the uncompressed name in the header, as
-//! Python's `GzipFile` stamps it. Two things are matched to the *committed file* rather than to
-//! `_write_json`'s source, because the source does not decide them:
+//! does not enable `preserve_order`), a trailing newline on plain `.json` and none inside a `.gz`,
+//! and gzip at level 9 with mtime 0 and the uncompressed name in the header, as Python's `GzipFile`
+//! stamps it. Three things are matched to the *committed file* rather than to `_write_json`'s
+//! source, because the source does not decide them:
 //!
 //! - **Line endings.** `_write_json`'s `write_text` translates `\n` to the platform's newline, and
 //!   `spec/** -text` stores the bytes as they were written — so every plain `.json` vector in `spec/`
@@ -156,6 +167,14 @@
 //!   plain files `i/crlf`), and every gzipped one is LF, because `GzipFile` is a binary stream. A
 //!   writer that picked one would rewrite every line of the other kind on the first re-record; one
 //!   that kept the file's own makes the same choice on every machine.
+//! - **The indent** (M35 P6). `_write_json` indents by 2, and so does every file it wrote. Two
+//!   families worked by hand were written at 4: the screen family's `hand/` (M34 P8) and the whole
+//!   shot family (M35 P4–P5), 32 files on 2026-10-09 against every other vector's 2 (the storage
+//!   family's `hand/` among them). The shot family is the first a routine engine bump is expected
+//!   to rewrite, so a writer
+//!   that indented by 2 would rewrite every line of each case it touched, and leave the family in
+//!   two layouts. The indent is the second line's, which is the first key's: every vector is an
+//!   object, and a file of one line keeps 2.
 //! - **The deflate stream.** `flate2`'s backend is not zlib, so a gzipped vector is not
 //!   byte-identical to Python's even when its text is. Nothing reads the compressed bytes; the gate
 //!   reads values.
@@ -179,14 +198,15 @@ use screen::orient::label_ratio;
 use screen::parser::parse_screen;
 use screen::profile::{load_profile, UnknownProfile};
 use screen::ScreenInput;
-use serde::Deserialize;
-use serde_json::{json, Map, Value};
+use serde::{Deserialize, Serialize as _};
+use serde_json::ser::PrettyFormatter;
+use serde_json::{json, Map, Serializer, Value};
 
 use crate::career_family::{adopted_from, carry, run_career};
 use crate::compare::{compare, Difference, DifferenceKind};
 use crate::stages::{run_stages, verify_compose};
 use crate::storage_family::run_storage;
-use crate::VectorInput;
+use crate::{run_shot, ShotInput, VectorInput};
 
 /// Who wrote a `provenance.rerecords` entry — spelled as the command, so a reader of a vector knows
 /// what to run.
@@ -769,6 +789,11 @@ pub const ENGINE_HALVES: [&str; 2] = ["synthetic", "corpus"];
 /// The stage family's directory under `spec/vectors/`, and the `provenance.kind` its files carry.
 pub const STAGES: &str = "stages";
 
+/// The shot family's directory under `spec/vectors/`, and the `provenance.kind` its files carry.
+/// Flat, one plain `.json` per case (the M35 plan's P4 finding 4), and re-recorded with the engine
+/// family under `analysis_version`. [M35 P6]
+pub const SHOT: &str = "shot";
+
 /// The screen family's directory under `spec/vectors/`, and the `provenance.kind` every one of its
 /// files carries, whichever sub-family it sits in. [M34 P7]
 pub const SCREEN: &str = "screen";
@@ -822,6 +847,8 @@ pub enum Family {
     Engine,
     /// `stages/`: `stages` is [`run_stages`]' answer, composed onto its engine vector.
     Stage,
+    /// [`SHOT`]: `expected` is [`run_shot`]'s answer. [M35 P6]
+    Shot,
     /// `screen/`'s [`SCREEN_DOCUMENTS`]: `expected` is [`run_screen`]'s answer. [M34 P7]
     Screen,
     /// `storage/`'s [`STORAGE_DOCUMENTS`]: `expected` is [`run_storage`]'s answer. [M36 P13]
@@ -888,8 +915,8 @@ pub struct Rerecorded {
     applied: Applied,
     /// One line per applied path, with the value before and after — what the reviewer reads.
     lines: Vec<String>,
-    /// The committed file's line ending, kept (module doc, "How a file is written").
-    crlf: bool,
+    /// The committed file's line ending and indent, kept (module doc, "How a file is written").
+    layout: Layout,
     /// The document as it will be written; `None` when nothing in it changed.
     written: Option<Value>,
 }
@@ -928,7 +955,8 @@ pub struct Run {
 
 impl Run {
     /// Every vector the run read. For an engine declaration, the engine family, then the stage
-    /// family; within each, the [`ENGINE_HALVES`] in their order, and each half in path order. For a
+    /// family, within each the [`ENGINE_HALVES`] in their order and each half in path order, and
+    /// then the shot family in path order. For a
     /// screen declaration, the [`SCREEN_DOCUMENTS`] in their order, each in path order. For a career
     /// declaration, the [`STORAGE_DOCUMENTS`] and then the [`CAREER_DOCUMENTS`], each in path order.
     pub fn vectors(&self) -> &[Rerecorded] {
@@ -953,7 +981,7 @@ impl Run {
                     .written
                     .as_ref()
                     .expect("changed() yields written vectors");
-                (v.path.as_path(), file_bytes(document, &v.path, v.crlf))
+                (v.path.as_path(), file_bytes(document, &v.path, v.layout))
             })
             .collect();
 
@@ -1017,9 +1045,10 @@ impl Run {
         let count = |family: Family| self.vectors.iter().filter(|v| v.family == family).count();
         let run = match d.version {
             Version::Analysis(_) => format!(
-                "{} engine, {} stage",
+                "{} engine, {} stage, {} shot",
                 count(Family::Engine),
-                count(Family::Stage)
+                count(Family::Stage),
+                count(Family::Shot)
             ),
             Version::ScreenParser(_) => format!("{} screen", count(Family::Screen)),
             Version::Career(_) => format!(
@@ -1042,7 +1071,7 @@ impl Run {
     }
 }
 
-/// Run, gate, apply and ledger every vector of the declaration's family under `spec` — composing
+/// Run, gate, apply and ledger every vector of the declaration's families under `spec` — composing
 /// each stage vector onto its engine vector on the way — and write nothing.
 ///
 /// `Ok` only if every vector the family walks passed and every declared path matched (calls 5–7);
@@ -1067,7 +1096,11 @@ pub fn plan(spec: &Path, declaration_file: &Path) -> Result<Run, Refused> {
         refusals,
         ledgered,
     } = match version {
-        Version::Analysis(_) => walk_engine(&vectors_dir, &declaration, spelling.as_deref())?,
+        Version::Analysis(_) => {
+            let mut walked = walk_engine(&vectors_dir, &declaration, spelling.as_deref())?;
+            walked.extend(walk_shot(&vectors_dir, &declaration, spelling.as_deref())?);
+            walked
+        }
         Version::ScreenParser(_) => walk_screen(&vectors_dir, &declaration, spelling.as_deref())?,
         Version::Career(_) => walk_career(&vectors_dir, &declaration, spelling.as_deref())?,
     };
@@ -1107,6 +1140,17 @@ struct Walked {
     ledgered: Ledgered,
 }
 
+impl Walked {
+    /// Another family's walk after this one's, for a declaration whose key re-records two walks:
+    /// the engine and stage families, then the shot family (M35 P6). The typo guard reads the
+    /// union, so a declared path may match in either.
+    fn extend(&mut self, later: Walked) {
+        self.vectors.extend(later.vectors);
+        self.refusals.extend(later.refusals);
+        self.ledgered.extend(later.ledgered);
+    }
+}
+
 /// The engine family and then the stage family, each stage document composed onto its engine
 /// vector as that vector will be written (call 9). M32's walk, unchanged but for being one of two.
 fn walk_engine(
@@ -1123,7 +1167,7 @@ fn walk_engine(
 
     for half in ENGINE_HALVES {
         for path in vector_files(&vectors_dir.join(half))? {
-            let (committed, crlf) = read_vector(&path)?;
+            let (committed, layout) = read_vector(&path)?;
             let id = identify(&committed, &path, half)?;
             ledgered.note(&committed, declaration);
             let input = parse_input(&committed, &id)?;
@@ -1140,7 +1184,7 @@ fn walk_engine(
                         family: Family::Engine,
                         applied,
                         lines,
-                        crlf,
+                        layout,
                         // Filled after the stage family, which composes onto it first.
                         written: None,
                     });
@@ -1167,7 +1211,7 @@ fn walk_engine(
 
     for half in ENGINE_HALVES {
         for path in vector_files(&vectors_dir.join(STAGES).join(half))? {
-            let (committed, crlf) = read_vector(&path)?;
+            let (committed, layout) = read_vector(&path)?;
             let id = identify(&committed, &path, STAGES)?;
             ledgered.note(&committed, declaration);
             let derived_from = committed["provenance"]["derived_from"]
@@ -1203,7 +1247,7 @@ fn walk_engine(
                         family: Family::Stage,
                         applied,
                         lines,
-                        crlf,
+                        layout,
                         written,
                     });
                 }
@@ -1218,6 +1262,98 @@ fn walk_engine(
                 vectors[index].written = Some(written);
             }
         }
+    }
+    Ok(Walked {
+        vectors,
+        refusals,
+        ledgered,
+    })
+}
+
+/// The shot family, every case run through [`run_shot`], gated, applied and ledgered. [M35 P6]
+///
+/// After the engine and stage families, under the same declaration, because the cases' numbers
+/// are the engine's (the M35 plan's call 7): an `ANALYSIS_VERSION` bump moves `analysis_version`
+/// and `expected.analysis_version` on a case as it does on an engine vector, and the one
+/// declaration covers both, since a declared path is matched by its spelling wherever it falls.
+/// A shot row has its own spelling, `expected.measurements[i].value` where the swing's is
+/// `expected.swing.measurements[j].value`, so a declaration that moves a corpus vector's shot row
+/// names the case's too, or the gate refuses the case at the path it left out. That is what keeps
+/// the two copies of one shot's rows in step without a compose check here.
+///
+/// **Inputs are never rewritten**, as `v17.json` says of the engine's: only `expected` and the
+/// top-level version are Rust's answer. A case `run_shot` refuses (an undeclared device, a profile
+/// that does not exist) is a broken `spec/`, since every committed case is an answer, and stops
+/// the walk. **The family is flat**: every entry under `vectors/shot/` must be a plain `.json`
+/// file, checked before any case is read, because `tests/shot.rs`' `cases()` reads every entry as
+/// a case, and a sub-family needs it and this walk extended together (the M35 plan's P4 finding
+/// 4), never one of the two.
+fn walk_shot(
+    vectors_dir: &Path,
+    declaration: &Declaration,
+    spelling: Option<&str>,
+) -> Result<Walked, Refused> {
+    let shot_dir = vectors_dir.join(SHOT);
+    let listing =
+        |e: &dyn fmt::Display| Refused::Files(format!("listing {}: {e}", shot_dir.display()));
+    for entry in fs::read_dir(&shot_dir).map_err(|e| listing(&e))? {
+        let path = entry.map_err(|e| listing(&e))?.path();
+        let name = path.file_name().and_then(OsStr::to_str).unwrap_or_default();
+        if !(path.is_file() && name.ends_with(".json")) {
+            return Err(Refused::Files(format!(
+                "{} is not a shot case. The shot family is flat, one plain `.json` per case, so \
+                 a sub-family or another kind of file needs this walk and `tests/shot.rs`' \
+                 `cases()` extended together (golf_core::rerecord::walk_shot)",
+                path.display()
+            )));
+        }
+    }
+
+    let mut vectors: Vec<Rerecorded> = Vec::new();
+    let mut refusals: Vec<String> = Vec::new();
+    let mut ledgered = Ledgered::default();
+    let mut ids: BTreeSet<String> = BTreeSet::new();
+    for path in vector_files(&shot_dir)? {
+        let (committed, layout) = read_vector(&path)?;
+        let id = identify(&committed, &path, SHOT)?;
+        if !ids.insert(id.clone()) {
+            return Err(Refused::Files(format!("{id} is the id of two shot cases")));
+        }
+        ledgered.note(&committed, declaration);
+        // The trait method, so `ShotInput`'s `deny_unknown_fields` and every contract type's
+        // `Validate` hold here as they do in `run-shot`.
+        let input = ShotInput::deserialize(&committed["input"]).map_err(|e| {
+            Refused::Files(format!(
+                "{id}: input does not parse into `golf_core::ShotInput`: {e}"
+            ))
+        })?;
+        let answer = run_shot(&input)
+            .map_err(|e| Refused::Files(format!("{id}: run_shot refused the case: {e}")))?;
+
+        let mut ours = committed.clone();
+        ours["expected"] = serde_json::to_value(answer).expect("a ShotResult serializes");
+        ours["analysis_version"] = json!(ANALYSIS_VERSION);
+
+        match one(&id, &committed, &ours, declaration, spelling) {
+            Ok((applied, written, lines)) => {
+                vectors.push(Rerecorded {
+                    id,
+                    path,
+                    family: Family::Shot,
+                    written: (!applied.is_empty()).then_some(written),
+                    applied,
+                    lines,
+                    layout,
+                });
+            }
+            Err(refused) => refusals.extend(refused),
+        }
+    }
+    if ids.is_empty() {
+        return Err(Refused::Files(format!(
+            "no shot case under {}",
+            shot_dir.display()
+        )));
     }
     Ok(Walked {
         vectors,
@@ -1252,7 +1388,7 @@ fn walk_screen(
     let mut ids: BTreeSet<String> = BTreeSet::new();
     for half in SCREEN_DOCUMENTS {
         for path in vector_files(&screen_dir.join(half))? {
-            let (committed, crlf) = read_vector(&path)?;
+            let (committed, layout) = read_vector(&path)?;
             let id = identify(&committed, &path, SCREEN)?;
             if !ids.insert(id.clone()) {
                 return Err(Refused::Files(format!(
@@ -1282,7 +1418,7 @@ fn walk_screen(
                         family: Family::Screen,
                         applied,
                         lines,
-                        crlf,
+                        layout,
                         written,
                     });
                 }
@@ -1382,7 +1518,7 @@ fn walk_career(
 
     for half in STORAGE_DOCUMENTS {
         for path in vector_files(&storage_dir.join(half))? {
-            let (committed, crlf) = read_vector(&path)?;
+            let (committed, layout) = read_vector(&path)?;
             let id = identify(&committed, &path, STORAGE)?;
             ledgered.note(&committed, declaration);
 
@@ -1399,7 +1535,7 @@ fn walk_career(
                         written: (!applied.is_empty()).then(|| written.clone()),
                         applied,
                         lines,
-                        crlf,
+                        layout,
                     });
                     written
                 }
@@ -1425,7 +1561,7 @@ fn walk_career(
     let mut career: BTreeSet<String> = BTreeSet::new();
     for half in CAREER_DOCUMENTS {
         for path in vector_files(&career_dir.join(half))? {
-            let (committed, crlf) = read_vector(&path)?;
+            let (committed, layout) = read_vector(&path)?;
             let id = identify(&committed, &path, CAREER)?;
             if !career.insert(id.clone()) {
                 return Err(Refused::Files(format!(
@@ -1461,7 +1597,7 @@ fn walk_career(
                         written: (!applied.is_empty()).then_some(written),
                         applied,
                         lines,
-                        crlf,
+                        layout,
                     });
                 }
                 Err(refused) => refusals.extend(refused),
@@ -1614,6 +1750,12 @@ struct Ledgered {
 }
 
 impl Ledgered {
+    fn extend(&mut self, later: Ledgered) {
+        self.added.extend(later.added);
+        self.moved.extend(later.moved);
+        self.removed.extend(later.removed);
+    }
+
     fn note(&mut self, committed: &Value, declaration: &Declaration) {
         let entries = committed["provenance"]["rerecords"].as_array();
         let version = declaration.version;
@@ -1737,8 +1879,40 @@ fn is_gzipped(path: &Path) -> bool {
     path.extension().is_some_and(|e| e == "gz")
 }
 
-/// A committed vector, and whether its text is CRLF. Gzipped or not by the suffix, as `_read_json`.
-fn read_vector(path: &Path) -> Result<(Value, bool), Refused> {
+/// How a committed file's text is laid out, which the writer keeps (module doc, "How a file is
+/// written").
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct Layout {
+    crlf: bool,
+    /// Spaces per level. [M35 P6]
+    indent: usize,
+}
+
+impl Layout {
+    /// `_write_json`'s, which every recorded file has and a file of one line is given.
+    const RECORDED: Self = Self {
+        crlf: false,
+        indent: 2,
+    };
+
+    /// The text's own: CRLF if it holds one, and the second line's leading spaces, which are the
+    /// first key's, since every vector is an object.
+    fn of(text: &str) -> Self {
+        let indent = text
+            .lines()
+            .nth(1)
+            .map(|line| line.len() - line.trim_start_matches(' ').len())
+            .filter(|&spaces| spaces > 0)
+            .unwrap_or(Self::RECORDED.indent);
+        Self {
+            crlf: text.contains("\r\n"),
+            indent,
+        }
+    }
+}
+
+/// A committed vector, and its text's [`Layout`]. Gzipped or not by the suffix, as `_read_json`.
+fn read_vector(path: &Path) -> Result<(Value, Layout), Refused> {
     let refused = |what: &str, e: &dyn fmt::Display| {
         Refused::Files(format!("{what} {}: {e}", path.display()))
     };
@@ -1753,7 +1927,7 @@ fn read_vector(path: &Path) -> Result<(Value, bool), Refused> {
         String::from_utf8(bytes).map_err(|e| refused("decoding", &e))?
     };
     let document = serde_json::from_str(&text).map_err(|e| refused("parsing", &e))?;
-    Ok((document, text.contains("\r\n")))
+    Ok((document, Layout::of(&text)))
 }
 
 /// The vector's `id`, after checking its `provenance.kind` is the one its directory holds — a
@@ -1783,13 +1957,21 @@ fn parse_input(engine_vector: &Value, id: &str) -> Result<VectorInput, Refused> 
 }
 
 /// The bytes of one vector file, as the module doc's "How a file is written" says.
-fn file_bytes(document: &Value, path: &Path, crlf: bool) -> Vec<u8> {
-    let mut text = serde_json::to_string_pretty(document).expect("a Value always serializes");
+fn file_bytes(document: &Value, path: &Path, layout: Layout) -> Vec<u8> {
+    let indent = " ".repeat(layout.indent);
+    let mut pretty = Vec::new();
+    document
+        .serialize(&mut Serializer::with_formatter(
+            &mut pretty,
+            PrettyFormatter::with_indent(indent.as_bytes()),
+        ))
+        .expect("a Value always serializes");
+    let mut text = String::from_utf8(pretty).expect("serde_json writes UTF-8");
     let gzipped = is_gzipped(path);
     if !gzipped {
         text.push('\n');
     }
-    if crlf {
+    if layout.crlf {
         // Safe as a blanket replace: `serde_json` escapes a newline inside a string as `\n`, so
         // every raw one is a line break of the pretty printer's.
         text = text.replace('\n', "\r\n");
@@ -2631,9 +2813,14 @@ mod tests {
     #[test]
     fn a_file_is_written_the_way_the_committed_ones_were() {
         let document = json!({"b": [1, 2.5], "a": {"x": null}, "c": "line\nbreak"});
+        let crlf = Layout {
+            crlf: true,
+            ..Layout::RECORDED
+        };
+        let lf = Layout::RECORDED;
 
         let plain =
-            String::from_utf8(file_bytes(&document, Path::new("v.json"), true)).expect("utf-8");
+            String::from_utf8(file_bytes(&document, Path::new("v.json"), crlf)).expect("utf-8");
         assert!(plain.starts_with("{\r\n  \"a\": {\r\n    \"x\": null\r\n  },\r\n"));
         assert!(plain.ends_with("}\r\n"));
         assert!(!plain.replace("\r\n", "").contains('\n'), "a bare LF");
@@ -2641,14 +2828,14 @@ mod tests {
             plain.contains(r#""line\nbreak""#),
             "the string's newline is still escaped"
         );
-        let lf = file_bytes(&document, Path::new("v.json"), false);
-        assert!(!lf.contains(&b'\r'));
+        let unix = file_bytes(&document, Path::new("v.json"), lf);
+        assert!(!unix.contains(&b'\r'));
         assert_eq!(
             serde_json::from_str::<Value>(&plain).expect("parses"),
             document
         );
 
-        let gz = file_bytes(&document, Path::new("2026-08-10-1.json.gz"), false);
+        let gz = file_bytes(&document, Path::new("2026-08-10-1.json.gz"), lf);
         assert_eq!(&gz[..4], b"\x1f\x8b\x08\x08", "magic, deflate, FNAME");
         assert_eq!(&gz[4..8], [0, 0, 0, 0], "mtime 0");
         assert_eq!(&gz[8..10], [2, 255], "XFL for level 9, OS unknown");
@@ -2662,6 +2849,46 @@ mod tests {
             serde_json::from_str::<Value>(&text).expect("parses"),
             document
         );
+    }
+
+    /// **A file keeps its own indent** (M35 P6): read from the second line, written back at it, so a
+    /// hand-worked case at 4 is rewritten at 4 and a recorded vector at 2 stays at 2 — and a file of
+    /// one line, which has no second line to read, is given `_write_json`'s 2.
+    #[test]
+    fn a_file_keeps_the_indent_it_was_committed_with() {
+        let document = json!({"a": {"x": [1]}, "b": "c"});
+        let hand = "{\n    \"a\": {\n        \"x\": [\n            1\n        ]\n    },\n    \"b\": \"c\"\n}\n";
+        assert_eq!(
+            Layout::of(hand),
+            Layout {
+                crlf: false,
+                indent: 4
+            }
+        );
+        assert_eq!(
+            String::from_utf8(file_bytes(&document, Path::new("v.json"), Layout::of(hand)))
+                .expect("utf-8"),
+            hand
+        );
+
+        let recorded = hand.replace("    ", "  ").replace('\n', "\r\n");
+        assert_eq!(
+            Layout::of(&recorded),
+            Layout {
+                crlf: true,
+                indent: 2
+            }
+        );
+        assert_eq!(
+            String::from_utf8(file_bytes(
+                &document,
+                Path::new("v.json"),
+                Layout::of(&recorded)
+            ))
+            .expect("utf-8"),
+            recorded
+        );
+        assert_eq!(Layout::of(&document.to_string()), Layout::RECORDED);
     }
 
     #[test]

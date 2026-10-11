@@ -60,7 +60,9 @@
 //! `devices.json`, sits beside this crate's `Cargo.toml` rather than under `src/golf_coach/`,
 //! because nothing Python reads it. **[`time`] is the second** (M36 P4): Python's contracts each
 //! hold a `datetime`, and this is what every one of those fields is here, gated by a format table
-//! recorded from pydantic.
+//! recorded from pydantic. **[`shot_result`] is the third** (M35 P1): one shot analysed from its
+//! photo, `shot_analysis.json`, the artifact the photo-side `unscored` reasons are written into
+//! because `analysis.json` is read by frozen Python with a closed enum.
 //!
 //! # Pydantic constraints are runtime checks, and so are these
 //!
@@ -124,6 +126,7 @@ pub mod mishit;
 pub mod pivots;
 pub mod placements;
 pub mod shot;
+pub mod shot_result;
 pub mod swing;
 pub mod time;
 pub mod unscored;

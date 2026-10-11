@@ -1,0 +1,240 @@
+{
+    "analysis_version": 17,
+    "expected": {
+        "analysis_version": 17,
+        "intent": {
+            "club": "all",
+            "focus_checkpoint": null,
+            "mode": "fundamentals",
+            "target_shape": null
+        },
+        "measurements": [
+            {
+                "detail": "club face angle minus club path; + is face open to path (fade shape)",
+                "name": "face_to_path_deg",
+                "source": "launch_monitor:hd_golf",
+                "unit": "degrees",
+                "value": 0.5
+            },
+            {
+                "detail": "initial horizontal launch direction; + is right of target",
+                "name": "start_line_deg",
+                "source": "launch_monitor:hd_golf",
+                "unit": "degrees",
+                "value": -2.6
+            },
+            {
+                "detail": "carry plus roll as printed; the gap to carry is the ground, not the swing",
+                "name": "total_distance_yds",
+                "source": "launch_monitor:hd_golf",
+                "unit": "yards",
+                "value": 151.5
+            },
+            {
+                "detail": "ball speed off the face as printed by the launch monitor; a fitting input, judged by nothing",
+                "name": "ball_speed_mph",
+                "source": "launch_monitor:hd_golf",
+                "unit": "mph",
+                "value": 101.5
+            },
+            {
+                "detail": "vertical launch angle as printed; start_line_deg is the horizontal one",
+                "name": "launch_angle_deg",
+                "source": "launch_monitor:hd_golf",
+                "unit": "degrees",
+                "value": 10.2
+            }
+        ],
+        "notes": [],
+        "photo_sha256": null,
+        "session_id": "hand",
+        "shot": {
+            "apex_height": null,
+            "attack_angle": null,
+            "ball_speed": 101.5,
+            "bounce_and_roll": null,
+            "carry_distance": null,
+            "carry_offline": null,
+            "club_face_angle": -1.1,
+            "club_head_speed": 88.6,
+            "club_path": -1.6,
+            "dynamic_loft": null,
+            "impact_offset_h": null,
+            "impact_offset_v": null,
+            "impact_position": "CENTER",
+            "impact_position_v": null,
+            "launch_angle": 10.2,
+            "launch_direction": -2.6,
+            "low_point": null,
+            "provenance": {
+                "corrections": {},
+                "device": "hd_golf",
+                "fields_present": [
+                    "total_distance",
+                    "carry_distance",
+                    "ball_speed",
+                    "launch_angle",
+                    "club_head_speed",
+                    "club_path",
+                    "club_face_angle",
+                    "spin_rate",
+                    "smash_factor",
+                    "impact_position",
+                    "shot_type",
+                    "launch_direction",
+                    "spin_axis",
+                    "impact_position_v"
+                ],
+                "image_path": null,
+                "image_sha256": null,
+                "needs_review": false,
+                "parse_confidence": 0.892,
+                "parser_version": 1,
+                "raw_fields": {
+                    "Ball Speed": "101.5 mph",
+                    "Club Face Angle": "1.1 \u00b0 Closed",
+                    "Club Path": "1.6 \u00b0 O>I",
+                    "Club Speed": "88.6 mph",
+                    "Horizontal Angle": "2.6 \u00b0 L",
+                    "Impact Position": "CENTER",
+                    "Impact Position V": "",
+                    "Launch Angle": "10.2 \u00b0",
+                    "Shot Distance": "151.5 yds",
+                    "Shot Type": "SLIGHT DRAW",
+                    "Smash Factor": "1.15",
+                    "Spin": "---",
+                    "Spin Axis": "---"
+                },
+                "warnings": [
+                    "Impact Position V: no value text under the label",
+                    "Carry: label tie between 'Carry' and 'Carry' - not read",
+                    "no tile found for 'Bounce & Roll'"
+                ]
+            },
+            "session_id": "hand",
+            "shot_id": "hand-carry-twice",
+            "shot_type": "SLIGHT DRAW",
+            "smash_factor": 1.15,
+            "source": "screen",
+            "spin_axis": null,
+            "spin_rate": null,
+            "timestamp": "2026-08-04T12:00:00Z",
+            "total_distance": 151.5
+        },
+        "swing_id": "1",
+        "unscored": [
+            {
+                "detail": "Carry: located, but its label tied with another tile's, so it was not read",
+                "name": "carry_distance",
+                "reason": "misread"
+            },
+            {
+                "detail": "Spin: '---', the screen's blank",
+                "name": "spin_rate",
+                "reason": "printed_blank"
+            },
+            {
+                "detail": "Spin Axis: '---', the screen's blank",
+                "name": "spin_axis",
+                "reason": "printed_blank"
+            },
+            {
+                "detail": "Impact Position V: nothing under the label",
+                "name": "impact_position_v",
+                "reason": "printed_blank"
+            },
+            {
+                "detail": "no spin printed, and no carry to solve one from either - no flight, so none of the flight_* measurements recorded",
+                "name": "flight_carry_yds",
+                "reason": "no_launch_conditions"
+            }
+        ]
+    },
+    "id": "shot/screen-hand-carry-twice",
+    "input": {
+        "handedness": "right",
+        "loft_deg": 30.5,
+        "photo_sha256": null,
+        "session_id": "hand",
+        "shot": {
+            "apex_height": null,
+            "attack_angle": null,
+            "ball_speed": 101.5,
+            "bounce_and_roll": null,
+            "carry_distance": null,
+            "carry_offline": null,
+            "club_face_angle": -1.1,
+            "club_head_speed": 88.6,
+            "club_path": -1.6,
+            "dynamic_loft": null,
+            "impact_offset_h": null,
+            "impact_offset_v": null,
+            "impact_position": "CENTER",
+            "impact_position_v": null,
+            "launch_angle": 10.2,
+            "launch_direction": -2.6,
+            "low_point": null,
+            "provenance": {
+                "corrections": {},
+                "device": "hd_golf",
+                "fields_present": [
+                    "total_distance",
+                    "carry_distance",
+                    "ball_speed",
+                    "launch_angle",
+                    "club_head_speed",
+                    "club_path",
+                    "club_face_angle",
+                    "spin_rate",
+                    "smash_factor",
+                    "impact_position",
+                    "shot_type",
+                    "launch_direction",
+                    "spin_axis",
+                    "impact_position_v"
+                ],
+                "image_path": null,
+                "image_sha256": null,
+                "needs_review": false,
+                "parse_confidence": 0.892,
+                "parser_version": 1,
+                "raw_fields": {
+                    "Ball Speed": "101.5 mph",
+                    "Club Face Angle": "1.1 \u00b0 Closed",
+                    "Club Path": "1.6 \u00b0 O>I",
+                    "Club Speed": "88.6 mph",
+                    "Horizontal Angle": "2.6 \u00b0 L",
+                    "Impact Position": "CENTER",
+                    "Impact Position V": "",
+                    "Launch Angle": "10.2 \u00b0",
+                    "Shot Distance": "151.5 yds",
+                    "Shot Type": "SLIGHT DRAW",
+                    "Smash Factor": "1.15",
+                    "Spin": "---",
+                    "Spin Axis": "---"
+                },
+                "warnings": [
+                    "Impact Position V: no value text under the label",
+                    "Carry: label tie between 'Carry' and 'Carry' - not read",
+                    "no tile found for 'Bounce & Roll'"
+                ]
+            },
+            "session_id": "hand",
+            "shot_id": "hand-carry-twice",
+            "shot_type": "SLIGHT DRAW",
+            "smash_factor": 1.15,
+            "source": "screen",
+            "spin_axis": null,
+            "spin_rate": null,
+            "timestamp": "2026-08-04T12:00:00Z",
+            "total_distance": 151.5
+        },
+        "swing_id": "1"
+    },
+    "provenance": {
+        "kind": "shot",
+        "note": "M34's Rust read of the hand-worked carry-twice screen (spec/vectors/screen/hand/carry-twice.json, expected.shot, verbatim: the bay layout with IMG_2738's numbers and a stray Carry label in the title band), which no corpus vector holds, so every number here is worked from the read and none is Python's. The default goal (no intent, no club), right-handed, loft 30.5 (a 7i's, as the bay's corpus vectors carry it), so that carry is the one gap; swing_id 1 and the read's session_id; photo_sha256 null, the read having no image. A flight outcome no corpus case reaches: the tie rule withheld Carry (no raw_fields key), so carry_distance is misread, and with no carry the spin cannot be solved, so flight_carry_yds is refused as no_launch_conditions, in Rust's sentence (analysis::flight_infer), and nothing flies. The other refusals, in hd_golf's declared order and P3's wording: Spin and Spin Axis hold '---', the screen's blank, and Impact Position V holds '', all printed_blank. measurements are the read's printed numbers in SHOT_MEASUREMENTS' order, each row's detail and unit the registry's: face_to_path_deg is face minus path, -1.1 - (-1.6) = 0.5; start_line_deg -2.6, total_distance_yds 151.5, ball_speed_mph 101.5 and launch_angle_deg 10.2 as printed. No carry_distance_yds and no start_line_offline_yds, which needs the carry. club_head_speed 88.6 and smash_factor 1.15 stay on the shot and reach no row (shown_only). No note: needs_review is false.",
+        "oracle": "hand",
+        "source": "worked by hand in M35 P5, the M35 plan's P5 list; the shot is the named screen vector's expected.shot, M34's Rust read, verbatim, and each number's source is in the note; Rust's answer (golf_core::run_shot) was checked equal to this expected within RTOL before the file was committed"
+    }
+}

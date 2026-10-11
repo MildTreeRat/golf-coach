@@ -1,5 +1,5 @@
 {
-  "career_version": 1,
+  "career_version": 2,
   "expected": {
     "files": {
       "55c64d0fcd6f9d5f7c828093857e3fdfda68478bb4e9bd24d481ef391c7804e8.shot.json": "{\n  \"shot_id\": \"s1\",\n  \"session_id\": \"range\",\n  \"timestamp\": \"2026-08-04T12:00:00Z\",\n  \"source\": \"screen\",\n  \"club_head_speed\": null,\n  \"club_face_angle\": null,\n  \"club_path\": null,\n  \"ball_speed\": null,\n  \"launch_angle\": null,\n  \"launch_direction\": null,\n  \"spin_rate\": null,\n  \"spin_axis\": null,\n  \"smash_factor\": null,\n  \"carry_distance\": 128.1,\n  \"total_distance\": null,\n  \"bounce_and_roll\": null,\n  \"apex_height\": null,\n  \"shot_type\": null,\n  \"impact_position\": null,\n  \"provenance\": {\n    \"device\": \"hd_golf\",\n    \"parse_confidence\": 0.95,\n    \"needs_review\": false,\n    \"warnings\": [],\n    \"image_sha256\": \"55c64d0fcd6f9d5f7c828093857e3fdfda68478bb4e9bd24d481ef391c7804e8\",\n    \"image_path\": null,\n    \"raw_fields\": {}\n  }\n}"
@@ -75,6 +75,15 @@
         "by": "golf-core rerecord",
         "career_version": 1,
         "declaration": "spec/declarations/career-v1.json",
+        "moved": [
+          "career_version"
+        ]
+      },
+      {
+        "added": [],
+        "by": "golf-core rerecord",
+        "career_version": 2,
+        "declaration": "spec/declarations/career-v2.json",
         "moved": [
           "career_version"
         ]

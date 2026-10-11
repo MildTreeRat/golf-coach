@@ -1,11 +1,11 @@
 {
-  "career_version": 1,
+  "career_version": 2,
   "expected": {
     "corpus": {
       "analyzed_without_measurements": 0,
       "excluded": [
         {
-          "detail": "analyzed by engine version 15, older than 16, the oldest engine whose numbers still agree with today's \u2014 they are not comparable with a swing analyzed today, so they are reported rather than pooled. Re-run scripts/reanalyze.py",
+          "detail": "analyzed by engine version 15, older than 16, the oldest engine whose numbers still agree with today's — they are not comparable with a swing analyzed today, so they are reported rather than pooled. Re-run scripts/reanalyze.py",
           "reason": "outdated",
           "session_id": "2026-08-10",
           "swing_id": "1"
@@ -92,7 +92,7 @@
           "analyzed_without_measurements": 0,
           "excluded": [
             {
-              "detail": "analyzed by engine version 15, older than 16, the oldest engine whose numbers still agree with today's \u2014 they are not comparable with a swing analyzed today, so they are reported rather than pooled. Re-run scripts/reanalyze.py",
+              "detail": "analyzed by engine version 15, older than 16, the oldest engine whose numbers still agree with today's — they are not comparable with a swing analyzed today, so they are reported rather than pooled. Re-run scripts/reanalyze.py",
               "reason": "outdated",
               "session_id": "2026-08-10",
               "swing_id": "1"
@@ -194,6 +194,17 @@
     "kind": "storage",
     "note": "Versions {installed 17, comparable_from 16}: the line is the caller's number, not the constant COMPARABLE_FROM (14) and not installed, so a reader comparing against either fails here. Session 2026-08-10 holds a swing stored by engine 15, one below the line: OUTDATED, its sentence naming 16. Session 2026-08-11 holds one stored by 16, exactly on the line: pooled, so head_sway_norm n = 1 and outdated_swings 1. The narrowing to 2026-08-11 keeps the pooled swing alone and recomputes outdated_swings to 0 and n to 1, while excluded and the scan counters (2 sessions, 2 directories) are carried unchanged, as narrowed_to documents. Face-on only and untagged, as in versions-either-side.",
     "oracle": "hand",
+    "rerecords": [
+      {
+        "added": [],
+        "by": "golf-core rerecord",
+        "career_version": 2,
+        "declaration": "spec/declarations/career-v2.json",
+        "moved": [
+          "career_version"
+        ]
+      }
+    ],
     "source": "worked by hand in M36 P14, the M36 plan's P14 list; each tree spelled as tests/storage/conftest.py::write_swing writes one, with no analysis.state.json",
     "worked_against": "scripts/conformance_vectors.py::_run_corpus"
   }

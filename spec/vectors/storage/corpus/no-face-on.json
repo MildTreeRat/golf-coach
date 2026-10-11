@@ -1,20 +1,20 @@
 {
-  "career_version": 1,
+  "career_version": 2,
   "expected": {
     "corpus": {
       "analyzed_without_measurements": 0,
       "excluded": [
         {
-          "detail": "no face-on clip, and that is the view every checkpoint is measured from",
-          "reason": "no_face_on",
-          "session_id": "2026-08-10",
-          "swing_id": "1"
-        },
-        {
-          "detail": "no face-on clip, and that is the view every checkpoint is measured from",
+          "detail": "neither a face-on clip nor a shot photo, and every checkpoint is measured from the one and every shot number read from the other",
           "reason": "no_face_on",
           "session_id": "2026-08-10",
           "swing_id": "2"
+        },
+        {
+          "detail": "shot photo shot-hash is already in 2026-08-10/3, beside that swing's video — one ball flight, so the copy with the video is the one kept",
+          "reason": "duplicate",
+          "session_id": "2026-08-10",
+          "swing_id": "1"
         }
       ],
       "metric_counts": {
@@ -107,6 +107,20 @@
         "declaration": "spec/declarations/career-v1.json",
         "moved": [
           "career_version"
+        ]
+      },
+      {
+        "added": [],
+        "by": "golf-core rerecord",
+        "career_version": 2,
+        "declaration": "spec/declarations/career-v2.json",
+        "moved": [
+          "career_version",
+          "expected.corpus.excluded[0].detail",
+          "expected.corpus.excluded[0].swing_id",
+          "expected.corpus.excluded[1].detail",
+          "expected.corpus.excluded[1].reason",
+          "expected.corpus.excluded[1].swing_id"
         ]
       }
     ],

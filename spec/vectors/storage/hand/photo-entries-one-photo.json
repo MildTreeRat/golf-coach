@@ -1,0 +1,95 @@
+{
+  "career_version": 2,
+  "expected": {
+    "corpus": {
+      "analyzed_without_measurements": 0,
+      "excluded": [
+        {
+          "detail": "shot photo c0e3cf4408d2 is already in 2026-08-15/1 \u2014 the same shot uploaded again, not a second shot",
+          "reason": "duplicate",
+          "session_id": "2026-08-15",
+          "swing_id": "2"
+        }
+      ],
+      "metric_counts": {
+        "carry_distance_yds": 1
+      },
+      "other_golfers": 0,
+      "outdated_swings": 0,
+      "player_id": "aaron",
+      "sessions_scanned": 1,
+      "swing_dirs_seen": 2,
+      "swings": [
+        {
+          "analysis_version": 17,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-15T12:01:00Z",
+          "club": "7i",
+          "conflicting_shots": [],
+          "duplicates": [
+            "2026-08-15/2"
+          ],
+          "face_on_sha256": null,
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "hand",
+              "name": "carry_distance_yds",
+              "source": "launch_monitor:hd_golf",
+              "unit": "yards",
+              "value": 150.0
+            }
+          ],
+          "missing_roles": [
+            "face_on",
+            "down_the_line"
+          ],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-15",
+          "shot_needs_review": false,
+          "shot_sha256": "c0e3cf4408d25c3430f231fdfe8c11740c1c652f11d560f9483dc98402cbef9f",
+          "stale": false,
+          "swing_id": "1"
+        }
+      ],
+      "unattributed_swings": 0,
+      "unknown_sources": []
+    },
+    "narrowed": {},
+    "properties": {
+      "distinct_sessions": 1,
+      "distinct_shots": 1,
+      "distinct_swings": 1,
+      "duplicates_collapsed": 1,
+      "mishit_refs": [],
+      "mishit_shots": 0,
+      "mishit_shots_unconfirmed": 0,
+      "shot_conflicts": 0,
+      "untagged_swings": 0
+    }
+  },
+  "id": "storage/hand/photo-entries-one-photo",
+  "input": {
+    "files": {
+      "2026-08-15/1/manifest.json": "{\n  \"swing_id\": \"1\",\n  \"session_id\": \"2026-08-15\",\n  \"created_at\": \"2026-08-15T12:01:00Z\",\n  \"updated_at\": \"2026-08-15T12:01:00Z\",\n  \"roles\": {\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.c0e3cf4408d2.jpg\",\n      \"content_sha256\": \"c0e3cf4408d25c3430f231fdfe8c11740c1c652f11d560f9483dc98402cbef9f\",\n      \"original_filename\": \"screen.jpg\",\n      \"content_type\": \"image/jpeg\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-15T12:01:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": \"7i\",\n  \"mishit\": null\n}",
+      "2026-08-15/1/shot_analysis.json": "{\n  \"swing_id\": \"1\",\n  \"session_id\": \"2026-08-15\",\n  \"analysis_version\": 17,\n  \"photo_sha256\": \"c0e3cf4408d25c3430f231fdfe8c11740c1c652f11d560f9483dc98402cbef9f\",\n  \"intent\": {\n    \"mode\": \"fundamentals\",\n    \"target_shape\": null,\n    \"club\": \"all\",\n    \"focus_checkpoint\": null\n  },\n  \"shot\": {\n    \"shot_id\": \"2026-08-15-1\",\n    \"session_id\": \"2026-08-15\",\n    \"timestamp\": \"2026-08-15T12:01:00Z\",\n    \"source\": \"screen\",\n    \"provenance\": {\n      \"device\": \"hd_golf\",\n      \"parse_confidence\": 0.95,\n      \"needs_review\": false,\n      \"warnings\": [],\n      \"image_sha256\": \"c0e3cf4408d25c3430f231fdfe8c11740c1c652f11d560f9483dc98402cbef9f\"\n    },\n    \"carry_distance\": 150.0\n  },\n  \"measurements\": [\n    {\n      \"name\": \"carry_distance_yds\",\n      \"value\": 150.0,\n      \"unit\": \"yards\",\n      \"source\": \"launch_monitor:hd_golf\",\n      \"detail\": \"hand\"\n    }\n  ],\n  \"unscored\": [],\n  \"notes\": []\n}",
+      "2026-08-15/2/manifest.json": "{\n  \"swing_id\": \"2\",\n  \"session_id\": \"2026-08-15\",\n  \"created_at\": \"2026-08-15T12:02:00Z\",\n  \"updated_at\": \"2026-08-15T12:02:00Z\",\n  \"roles\": {\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.c0e3cf4408d2.jpg\",\n      \"content_sha256\": \"c0e3cf4408d25c3430f231fdfe8c11740c1c652f11d560f9483dc98402cbef9f\",\n      \"original_filename\": \"screen.jpg\",\n      \"content_type\": \"image/jpeg\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-15T12:02:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": \"6i\",\n  \"mishit\": null\n}",
+      "2026-08-15/2/shot_analysis.json": "{\n  \"swing_id\": \"2\",\n  \"session_id\": \"2026-08-15\",\n  \"analysis_version\": 17,\n  \"photo_sha256\": \"c0e3cf4408d25c3430f231fdfe8c11740c1c652f11d560f9483dc98402cbef9f\",\n  \"intent\": {\n    \"mode\": \"fundamentals\",\n    \"target_shape\": null,\n    \"club\": \"all\",\n    \"focus_checkpoint\": null\n  },\n  \"shot\": {\n    \"shot_id\": \"2026-08-15-2\",\n    \"session_id\": \"2026-08-15\",\n    \"timestamp\": \"2026-08-15T12:02:00Z\",\n    \"source\": \"screen\",\n    \"provenance\": {\n      \"device\": \"hd_golf\",\n      \"parse_confidence\": 0.95,\n      \"needs_review\": false,\n      \"warnings\": [],\n      \"image_sha256\": \"c0e3cf4408d25c3430f231fdfe8c11740c1c652f11d560f9483dc98402cbef9f\"\n    },\n    \"carry_distance\": 999.0\n  },\n  \"measurements\": [\n    {\n      \"name\": \"carry_distance_yds\",\n      \"value\": 999.0,\n      \"unit\": \"yards\",\n      \"source\": \"launch_monitor:hd_golf\",\n      \"detail\": \"hand\"\n    }\n  ],\n  \"unscored\": [],\n  \"notes\": []\n}"
+    },
+    "narrowings": {},
+    "player_id": "aaron",
+    "versions": {
+      "comparable_from": 14,
+      "installed": 17
+    }
+  },
+  "provenance": {
+    "kind": "storage",
+    "note": "Versions {installed 17, comparable_from 14}: two photo entries in 2026-08-15 holding the same photo, spelled as a real SHA-256 (c0e3cf4408d2..., of the text photo-15-1) so that the sentence's cut is pinned: swing 1 (12:01, 7i, carry 150) and swing 2 (12:02, 6i, carry 999), each with its own shot_analysis.json at engine 17 naming the photo. Call 6: photo entries group on the photo hash and the earliest arrival survives (the arrival key, as swings do), so swing 1 is the entry and swing 2 a duplicate of it, named with the photo sentence, which prints the photo's first 12 characters as the face-on sentence prints the clip's, and listed in swing 1's duplicates (duplicates_collapsed 1), as a face-on re-upload is in its swing's. The survivor's club (7i) and its own shot_analysis.json are read and no duplicate's: carry 150, never 999, and carry_distance_yds n = 1. captured_at is the survivor's arrival. conflicting_shots is empty: a photo group shares its photo by definition.",
+    "oracle": "hand",
+    "source": "worked by hand in M35 P9, the M35 plan's call 8, against its call 6 and P9's findings, before M35 P10's read_corpus follows them; each tree spelled as M36 P14's hand cases spell theirs, and each shot_analysis.json a ShotResult as crates/storage::state::save_shot_analysis writes one",
+    "worked_against": "scripts/conformance_vectors.py::_run_corpus"
+  }
+}

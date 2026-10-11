@@ -5,6 +5,121 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-10-10 — M35 P13: shot-first sessions in Rust
+
+**Duration**: two days, fourteen phases (P0–P13). M35 goes ✅ **14/14** and the milestone is closed,
+in one commit onto `main`. It is the first milestone that changes what an earlier one ported with no
+Python to record from, so every new vector is worked by hand. It also builds the first Rust verbs
+that write into a session.
+
+**To pick up where this left off, read the findings in `docs/plans/m35-shot-first-sessions.md`**, not
+this entry. Then read [ADR-024's M35 addendum](docs/decisions/024-per-club-shot-history.md) for the
+corpus rules, [ADR-034's](docs/decisions/034-shot-first-phone-first.md) for the photo-side reasons and
+the two open questions it answered, and [ADR-009's](docs/decisions/009-swing-scoring-model.md) for the
+modes.
+
+**What was built.**
+- **Every mode reaches the engine** (P2). `crates/analysis/src/scoring.rs::policy_for` answers all
+  four `PracticeMode`s with `mechanics_only` where it panicked on three, and `SwingResult.intent`
+  records the real mode. The mode decides only which stats a shot feeds: `PracticeMode::is_tracked()`
+  is false for `Drill` alone, derived and never stored. No `ANALYSIS_VERSION` bump, because no
+  recorded answer moved.
+- **`ShotResult` and `analyze_shot`** (P1–P2, P4). `crates/contracts/src/shot_result.rs`, written as
+  `shot_analysis.json`, with a hand-maintained Rust-owned schema. `analyze_shot` in
+  `crates/analysis/src/engine.rs` measures and flies `capability::analysed_view`, the shot with every
+  field outside printed ∩ analysed blanked, so a tile that was not printed produces nothing by
+  construction. On every committed corpus vector with a shot, its rows equal the swing's.
+- **The photo-side reasons, first written** (P3). `crates/screen/src/tiles.rs::tile_refusals` names a
+  printed, analysed tile with no value `printed_blank` (a blank marker or `""`) or `misread` (a tile
+  the tie rule withheld, or text that gave no value). Both go into `ShotResult.unscored` only, never
+  into a `SwingResult`, which frozen Python reads with a closed enum.
+- **The shot family** (P4–P6). `golf_core::run_shot` and `golf-core run-shot` on stdin, gated by
+  `crates/core/tests/shot.rs` over `spec/vectors/shot/`: hand-worked (`oracle: "hand"`), each number's
+  source in its note, and re-recorded under `ANALYSIS_VERSION` beside the engine and stage families.
+- **Intent on disk** (P7). `SwingManifest.intent` and a third `session.json` cursor
+  (`crates/storage/src/session_meta.rs`, the first Rust twin of `SessionMeta`), both written only when
+  set. An upload stamps the cursor's intent onto a swing that has none, as it stamps `club`, and
+  `SwingBundleStore::set_intent` overrides one shot. `swing_manifest` and `session_meta` are
+  Rust-owned schemas now.
+- **The corpus, `career-v2`** (P8–P10). `read_corpus` admits a *photo entry*, a manifest with no
+  face-on clip and a shot photo, read from `shot_analysis.json` alone. Photo entries dedupe on the
+  photo hash, and a photo-only copy of a filmed shot is the filmed copy's `duplicate` (one ball
+  flight, and the copy with video counts). A `DRILL` is excluded as `untracked` and is in no swing
+  list. `CorpusSwing.face_on_sha256` is optional and `CorpusSwing.intent` carries the goal. Twelve
+  hand cases under `spec/vectors/storage/hand/`, then `spec/declarations/career-v2.json` moved 13
+  declared paths. One recorded case moved, `storage/corpus/no-face-on`, with its adopted copy and
+  that copy's `career_corpus` reports, and nothing pooled moved.
+- **Two verbs that write** (P11, `crates/core/src/session.rs`). `golf-core run-shot --session S
+  [--swing N]` analyses each photo entry from the shot store, the golfer store and
+  `crates/storage/src/flight_inputs.rs::loft_for_club`, and writes `shot_analysis.json` atomically.
+  It skips a swing with a face-on clip, a duplicate (asking `read_corpus` itself) and a photo the
+  store holds no parse for. `golf-core set-intent` sets one swing's intent or the session's default.
+  **Neither was run on `data/`.**
+- **Python changed in two files only**: `scripts/conformance.py` (`check`'s shot deferral,
+  `RUST_OWNED_SCHEMAS`) and `tests/test_conformance.py`. `src/` is untouched, and so is `data/`.
+
+**What M37, M29 and M38 should know.**
+- **The frozen-Python hazard (M29, M38).** Frozen Python reads a manifest or `session.json` holding
+  `intent` and drops the key on any rewrite. Measured at P11: `save_manifest` of a loaded manifest
+  wrote it back with no `intent`. So any frozen-server write to a swing (`set_player`, `set_club`,
+  `set_mishit`, another role uploaded into it) silently turns a recorded drill into a tracked shot.
+  `set-intent` is safe only on a session the frozen server no longer writes to. M29 replaces the
+  server; nothing fixes it before then.
+- **One artifact per kind (M37, M29).** A swing is read from `analysis.json`, a photo entry from
+  `shot_analysis.json`, and neither reader opens the other's file. `run-shot --session` refuses a
+  swing with a face-on clip, because that shot is analysed with its swing. So `printed_blank` and
+  `misread` reach the corpus only on photo entries. A filmed shot's tile refusals have no artifact
+  yet, and M37 decides whether it needs them.
+- **The corpus M37 reads.** Photo entries pool beside swings, drills are gone before any aggregate
+  (pinned twice, in `crates/storage/src/corpus.rs` and `crates/core/tests/career.rs`), and a
+  `SHOT_SHAPING` shot's `target_shape` is on its `CorpusSwing.intent`. A `None` intent is
+  `FUNDAMENTALS`, which is every swing on disk.
+- **No blank is named on a stored shot (M29).** Every stored shot is unstamped (`parser_version` 0,
+  no `fields_present`), so `printed_on` reads it conservatively and `tile_refusals` names nothing.
+  M29's re-read is how blanks get named on stored shots.
+- **`run-shot --session` needs a frozen parse until `ort` (M29).** There is no Rust OCR yet, so it
+  analyses only a photo frozen Python's import already parsed. Its skip line names
+  `scripts/import_shot_screens.py`, which §M29 deletes. When §M29's `ort` reader lands, that branch
+  becomes a Rust read and the sentence changes.
+- **An upload's answer does not report the intent (M38).** `AssignmentResult` matches frozen
+  Python's, so read the swing back with `get_swing` to show that a shot was stamped as a drill.
+- **An intent no enum names drops the whole manifest in Rust**, where frozen Python ignores it and
+  counts the swing. That is the conservative answer, as for an unknown `club` (P7 finding 4).
+- **A later engine bump that moves a shot row declares both spellings.** A `corpus-*` shot case
+  repeats its corpus vector's rows, and `rerecord` refuses a declaration naming one and not the
+  other (P6 finding 5).
+- **Handedness is needed only when the screen printed a spin axis.** `run-shot --session` appends its
+  handedness note only then, where Python's swing note is unconditional (P11 finding 3).
+
+**Left open.**
+- **Left as found** (P12 finding 6): `crates/core/src/bin/golf_core.rs`' career-verbs doc says a
+  corpus is read "(`career_version` 1)", the version that introduced the comparable-from rule, not the
+  current one. `crates/core/Cargo.toml`'s description still names only the `run` and `parse-screen`
+  seams. `docs/ARCHITECTURE.md`'s banner still says "reviewed 2026-09-27". ADR-034's Status body
+  still says nothing is built, and its M35 addendum names that.
+- **The file-key escape** (CONFORMANCE §4) is still unbuilt: neither M36 nor M35 moved a recorded
+  store write.
+- **Unreached, and not invented** (P5 finding 5): a solved spin flown on a printed axis. Every screen
+  read with a printed axis and a blank spin is past its launch conditions' peak carry.
+- **M36's two numeric questions** (the engine's `**` sites, and M34's `sum()`) are still open as
+  M36's entry describes them.
+
+All verify commands are green. `cargo test` passed 1,140 tests over 64 suites (1 ignored, the existing
+`clip::Cutter` doc-test). `cargo clippy --all-targets` has 0 warnings and `cargo fmt --check` is
+clean. `pytest` passed 2,054, `ruff` is clean and `mypy` is clean over 118 files.
+`conformance.py check` passes: 21/21 engine vectors hold the freeze, and it defers the storage (76),
+career (56) and shot (25) families to `cargo test`, beside the audio, stage, format and screen
+families. The v17 dry run reports 67 vectors run (21 engine, 21 stage, 25 shot), 0 changed, and the
+`career-v2` dry run 132 (76 storage, 56 career), 0 changed, each writing 0 files. `git diff -- src/`
+is empty, the engine, stage, screen, audio and format families are untouched, and the `data/` digest
+is still P1's (`bd384cc4…`, 192 files).
+
+**Next**: M37 on this box, Rust first, with M41 free to start by the user's order now that M35 is
+done. M29, the lab port, is unblocked and runs beside M37 and M38. M33, the Apple Vision spike, still
+runs early on purpose and needs a Mac, and so does M38's skeleton.
+
+---
+
 ## 2026-10-08 — M36 P18: the many-shot layer in Rust
 
 **Duration**: two days, nineteen phases (P0–P18). M36 goes ✅ **19/19** and the milestone is closed,

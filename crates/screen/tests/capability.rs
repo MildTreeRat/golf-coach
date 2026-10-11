@@ -8,8 +8,11 @@
 //! Neither fails anything when it happens: the stat just goes missing, with every check passing, so
 //! the two are held equal here.
 //!
-//! **A set, not an order.** The declaration lists its fields in the profile's tile order, which is
-//! a convenience for a reader, and nothing downstream reads the order.
+//! **A set first, and then an order.** The declaration lists its fields in the profile's tile
+//! order. That was only a convenience for a reader until M35 P3, when `screen::tile_refusals` began
+//! listing a shot's blank and misread tiles in the declared order, so that a golfer reads them in
+//! the order the screen shows them. The set pin says the two files describe one screen, and
+//! `the_declaration_lists_its_fields_in_the_profiles_tile_order` says they list it the same way.
 //!
 //! **Here and not in `contracts`**, because `contracts` cannot see `screen` (ADR-008 as a cargo edge)
 //! and `screen` can see `contracts` (§M34). It is the fork's profile that is pinned, since that is
@@ -55,6 +58,28 @@ fn hd_golf_declares_exactly_what_its_profile_reads() {
         declared.difference(&read).collect::<Vec<_>>(),
         read.difference(&declared).collect::<Vec<_>>()
     );
+}
+
+/// `tile_refusals` orders by the declaration, and the screen's order is the profile's, so the two
+/// lists have to agree field for field, not only as sets. `Custom` fills nothing and is on neither.
+#[test]
+fn the_declaration_lists_its_fields_in_the_profiles_tile_order() {
+    let declared: Vec<&str> = capability_for(DEVICE)
+        .unwrap_or_else(|e| panic!("{e}"))
+        .declared()
+        .collect();
+    let tiles: Vec<&str> = load_profile(DEVICE)
+        .unwrap_or_else(|e| panic!("{e}"))
+        .stored_fields()
+        .into_iter()
+        .map(|field| {
+            field
+                .target
+                .as_deref()
+                .expect("a stored field has a target")
+        })
+        .collect();
+    assert_eq!(declared, tiles);
 }
 
 /// The field M34 brought into the profile, which is what made the two sets equal. Until P8 it was

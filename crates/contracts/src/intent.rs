@@ -17,28 +17,59 @@ use crate::{ContractError, Validate};
 /// What the golfer is practicing — selects a scoring policy (ADR-009), and since ADR-034 whether a
 /// shot is tracked at all.
 ///
-/// **Only `Fundamentals` has a single-swing policy, and the other three stay without one.** That
-/// was once "until full M4"; ADR-034 §5 retired the wait. A shot is graded per club over many shots
-/// (M35, M37), never one swing at a time, so ADR-009's single-swing shot-shaping, performance and
-/// drill policies stay unbuilt, `analysis::scoring::policy_for` keeps refusing them, and the
-/// per-swing `outcome_score` stays `None`. What each mode means now is on its variant.
+/// **Every mode is scored by the one mechanics-only policy** (M35 P2). ADR-009 named a single-swing
+/// policy per mode and only `Fundamentals`'s was built, "until full M4"; ADR-034 §5 retired the
+/// wait, because a shot is graded per club over many shots (M35, M37), never one swing at a time.
+/// So ADR-009's shot-shaping, performance and drill policies stay unbuilt,
+/// `analysis::scoring::policy_for` answers every mode with the mechanics blend instead of refusing
+/// the other three as it did until M35, and the per-swing `outcome_score` stays `None`. Frozen
+/// Python still refuses them, and never asks. What each mode means now is on its variant.
+///
+/// **What a mode decides above the swing** is which aggregates a shot feeds, and
+/// [`PracticeMode::is_tracked`] is that rule (the M35 plan's decision 1). Every mode is analysed
+/// on its own, mechanics and shot alike; the variants below say what each feeds besides.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum PracticeMode {
-    /// Grade mechanics only; outcome informational.
+    /// Grade mechanics only; outcome informational. **Tracked**: feeds club and player stats and
+    /// the mechanics baseline, and declares no shape, so no shape topic grades it. A stored swing
+    /// with no recorded intent reads as this mode, which is every swing frozen Python wrote.
     Fundamentals,
     /// Trying to shape the ball. Judged in M37's shape topics — over the shots declared as one
     /// [`TargetShape`], each classified by its face-to-path — rather than per swing (ADR-034 §5.3).
-    /// Tracked, and challenge-mode shots are this mode.
+    /// **Tracked**: feeds club and player stats and the mechanics baseline like any tracked shot,
+    /// and is the one mode a shape topic grades, for its declared `target_shape` alone.
+    /// Challenge-mode shots are this mode.
     ShotShaping,
-    /// Tracked, and graded per club over many shots like any tracked shot (ADR-034 §5). Its
-    /// single-swing policy stays unbuilt, and no shot metric is banded against tour benchmarks
-    /// (§5.6).
+    /// **Tracked**, and graded per club over many shots like any tracked shot (ADR-034 §5): club
+    /// and player stats and the mechanics baseline, and no shape topic. Its single-swing policy
+    /// stays unbuilt, so its swings are scored as `Fundamentals`' are, and no shot metric is banded
+    /// against tour benchmarks (§5.6).
     Performance,
-    /// **Not tracked** (ADR-034 §3, M35): a drill shot is stored, shown and analysed on its own, and
-    /// never enters club or player stats. Tracked-ness is derived from this mode and never stored as
-    /// a second flag, so the two cannot disagree.
+    /// **Not tracked** (ADR-034 §3, M35): a drill shot is stored, shown and analysed on its own,
+    /// mechanics included, and never enters club or player stats, the mechanics baseline or a shape
+    /// topic. Tracked-ness is derived from this mode and never stored as a second flag, so the two
+    /// cannot disagree.
     Drill,
+}
+
+impl PracticeMode {
+    /// Whether a shot practised in this mode enters club and player stats, the mechanics baseline
+    /// and, for [`PracticeMode::ShotShaping`], a shape topic (ADR-034 §3, the M35 plan's decision 1).
+    /// Only a drill does not. [M35 P1]
+    ///
+    /// **Derived, never stored.** A manifest records the mode and nothing else, so no file can hold
+    /// a drill that claims to be tracked. And it is a `match` with an arm per mode rather than
+    /// `self != Drill`, so a fifth mode is a compile error here until someone decides whether it
+    /// counts, instead of counting by default.
+    pub fn is_tracked(self) -> bool {
+        match self {
+            PracticeMode::Fundamentals | PracticeMode::ShotShaping | PracticeMode::Performance => {
+                true
+            }
+            PracticeMode::Drill => false,
+        }
+    }
 }
 
 /// Intended ball flight. With [`PracticeMode::ShotShaping`] it chooses which of M37's shape topics
@@ -198,6 +229,43 @@ mod tests {
             let wire = serde_json::to_string(&club).expect("a club serializes");
             assert_eq!(wire, format!("\"{}\"", club.as_str()));
         }
+    }
+
+    /// Every mode, from its wire name, with whether it is tracked. Hand-listed because Rust has no
+    /// reflection over an enum, so the names are read through serde: a member renamed or removed
+    /// fails to parse here. A member *added* is what [`PracticeMode::is_tracked`]'s exhaustive
+    /// `match` catches, at compile time.
+    const EVERY_MODE: [(&str, bool); 4] = [
+        ("fundamentals", true),
+        ("shot_shaping", true),
+        ("performance", true),
+        ("drill", false),
+    ];
+
+    /// Decision 1's table, as the one bit it comes down to: of every mode, only a drill stays out
+    /// of the aggregates. [M35 P1]
+    #[test]
+    fn only_a_drill_is_untracked() {
+        for (wire, tracked) in EVERY_MODE {
+            let mode: PracticeMode =
+                serde_json::from_str(&format!("\"{wire}\"")).expect("a practice mode's wire name");
+            assert_eq!(mode.is_tracked(), tracked, "{wire}");
+        }
+        let untracked: Vec<&str> = EVERY_MODE
+            .iter()
+            .filter(|(_, tracked)| !tracked)
+            .map(|(wire, _)| *wire)
+            .collect();
+        assert_eq!(untracked, ["drill"]);
+    }
+
+    /// The default goal is tracked, and that is load-bearing: every manifest frozen Python wrote
+    /// has no intent, reads as the default, and must go on counting.
+    #[test]
+    fn the_default_goal_is_tracked() {
+        assert!(PracticeGoal::default().mode.is_tracked());
+        let parsed: PracticeGoal = serde_json::from_str("{}").expect("an empty goal parses");
+        assert!(parsed.mode.is_tracked());
     }
 
     #[test]

@@ -1,10 +1,12 @@
-//! The manifest and the analysis state against the schemas frozen Python exports. [M36 P8]
+//! The analysis state against the schema frozen Python exports. [M36 P8, M35 P7]
 //!
-//! `swing_manifest.schema.json` and `analysis_state.schema.json` stay **Python-owned** through M36
-//! (the plan's call 8): no shape moves here, so `regenerate --schemas-only` keeps writing them from
-//! pydantic, and this holds the Rust structs to them from the other side. A failure means the
-//! *struct* is wrong. M35's `face_on_sha256` is the first change that moves a manifest's shape, and
-//! that is when `swing_manifest` becomes Rust-owned.
+//! `analysis_state.schema.json` stays **Python-owned** (the M36 plan's call 8): no shape moves, so
+//! `regenerate --schemas-only` keeps writing it from pydantic, and this holds the Rust struct to it
+//! from the other side. A failure means the *struct* is wrong.
+//!
+//! The manifest was pinned here too until M35 P7 gave it `intent`, which frozen Python's model does
+//! not declare. That made `swing_manifest` Rust's, with `session_meta` beside it, and their pin is
+//! `schemas.rs` in this directory, where a failure means the *schema* is wrong.
 //!
 //! `crates/contracts/tests/python_schemas.rs` pins the bag and the golfer the same way, and its
 //! `pin` is copied here rather than shared: integration tests are separate binaries, and a crate
@@ -20,7 +22,6 @@ use std::path::Path;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use serde_json::{json, Value};
-use storage::manifest::{RoleFile, SwingManifest, EXPECTED_ROLES};
 use storage::state::{AnalysisState, Status};
 
 fn schema(name: &str) -> Value {
@@ -126,50 +127,6 @@ fn listed(values: &Value) -> Vec<String> {
         .iter()
         .map(|value| value.as_str().expect("a wire name").to_owned())
         .collect()
-}
-
-/// Every value differs from its default, and `warnings` is non-empty.
-fn full_role_file(role: &str) -> Value {
-    json!({
-        "role": role,
-        "filename": format!("{role}.0123456789ab.mov"),
-        "content_sha256": "0123456789abcdef",
-        "original_filename": "IMG_0001.MOV",
-        "content_type": "video/quicktime",
-        "size_bytes": 1024,
-        "received_at": "2026-08-06T12:00:00.120000Z",
-        "warnings": ["the clip is 30 fps"],
-    })
-}
-
-#[test]
-fn the_manifest_is_the_shape_pydantic_exported() {
-    let document = schema("swing_manifest");
-    pin::<RoleFile>(&document, "RoleFile", full_role_file("face_on"));
-    pin::<SwingManifest>(
-        &document,
-        "SwingManifest",
-        json!({
-            "swing_id": "1",
-            "session_id": "2026-08-06",
-            "created_at": "2026-08-06T12:00:00Z",
-            "updated_at": "2026-08-06T12:05:00-05:00",
-            "roles": {"face_on": full_role_file("face_on")},
-            "player_id": "aaron",
-            "club": "7i",
-            "mishit": "confirmed",
-        }),
-    );
-
-    let roles: Vec<String> = EXPECTED_ROLES.into_iter().map(wire).collect();
-    assert_eq!(listed(&shape(&document, "Role")["enum"]), roles, "Role");
-    for role in EXPECTED_ROLES {
-        assert_eq!(
-            wire(role),
-            role.as_str(),
-            "{role:?}: as_str is the wire name"
-        );
-    }
 }
 
 #[test]

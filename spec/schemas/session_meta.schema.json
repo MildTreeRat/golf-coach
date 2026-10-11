@@ -1,5 +1,21 @@
 {
   "$defs": {
+    "ClubCategory": {
+      "description": "Club family used to key benchmark rows (ADR-010 \u00a73).\n\n``ALL`` is the club-independent fallback \u2014 tempo and posture key on it.",
+      "enum": [
+        "driver",
+        "wood",
+        "hybrid",
+        "long_iron",
+        "mid_iron",
+        "short_iron",
+        "wedge",
+        "putter",
+        "all"
+      ],
+      "title": "ClubCategory",
+      "type": "string"
+    },
     "ClubId": {
       "description": "One slot in a bag. **Declaration order is canonical bag order** and is read, not decorative.\n\nP2's `Bag.club_ids` presents clubs in this order and the bag page lists them in it, so a golfer\nreads their bag the way it sits in the bag rather than alphabetically \u2014 where `3w` would land\nbetween `2h` and `5h`. Sorting anywhere downstream is the bug this ordering exists to prevent.\n\nMember *names* are spelled out because `3w` is not a valid Python identifier. That is not\nincidental bookkeeping: `parse_club` derives \"3 wood\" from the name and \"3wood\" from the value,\nso the two spellings of every club come from the declaration itself rather than a second list.",
       "enum": [
@@ -28,9 +44,68 @@
       ],
       "title": "ClubId",
       "type": "string"
+    },
+    "PracticeGoal": {
+      "description": "The golfer's intent for a swing (ADR-009 \u00a7Concepts).\n\nSelected at session level, overridable per shot. Defaults describe the PoC case:\nFundamentals mode, no declared shape, club-agnostic.",
+      "properties": {
+        "club": {
+          "$ref": "#/$defs/ClubCategory",
+          "default": "all"
+        },
+        "focus_checkpoint": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Focus Checkpoint"
+        },
+        "mode": {
+          "$ref": "#/$defs/PracticeMode",
+          "default": "fundamentals"
+        },
+        "target_shape": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TargetShape"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "title": "PracticeGoal",
+      "type": "object"
+    },
+    "PracticeMode": {
+      "description": "What the golfer is practicing (ADR-009), and whether the shot is tracked (ADR-034 \u00a73).\n\nEvery mode is analysed on its own, mechanics and shot alike. Only `drill` is not tracked: a drill shot never enters club or player stats, the mechanics baseline or a shape topic. Tracked-ness is derived from the mode and stored nowhere.",
+      "enum": [
+        "fundamentals",
+        "shot_shaping",
+        "performance",
+        "drill"
+      ],
+      "title": "PracticeMode",
+      "type": "string"
+    },
+    "TargetShape": {
+      "description": "Intended ball flight. With `shot_shaping` it chooses which shape topic grades the shot (ADR-034 \u00a75.3); a shape never declared is not graded.",
+      "enum": [
+        "straight",
+        "draw",
+        "fade"
+      ],
+      "title": "TargetShape",
+      "type": "string"
     }
   },
-  "description": "Session-scoped choices: the golfer cursor and the club cursor.\n\nThe two are independent \u2014 a golfer swings many clubs and a club is swung by many golfers \u2014 and\nkeeping them independent is what `_update_cursor` exists to guarantee.\n\n`updated_at` is **one timestamp for the whole record**, not one per cursor: it says when the\nsession's choices last changed, and nothing reads it today. It therefore cannot answer \"when\nwas the club chosen\", so a surface wanting that (P19) needs a field, not this one.",
+  "description": "Session-scoped choices: the golfer cursor, the club cursor and, written by Rust alone since M35, the intent cursor.\n\nThe three are independent \u2014 a golfer swings many clubs, a club is swung by many golfers, and either can be drilled \u2014 and keeping them independent is what the cursor update exists to guarantee.\n\n`updated_at` is **one timestamp for the whole record**, not one per cursor: it says when the session's choices last changed, and nothing reads it today. It therefore cannot answer \"when was the club chosen\", so a surface wanting that needs a field, not this one.",
   "properties": {
     "club": {
       "anyOf": [
@@ -42,6 +117,18 @@
         }
       ],
       "default": null
+    },
+    "intent": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/PracticeGoal"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "The intent cursor (M35): the goal the next swing created in this session is stamped with, independent of the golfer and club cursors. Absent or null means none was chosen, and a swing created then records none, which reads as `fundamentals`. Written by Rust alone and only when set: frozen Python's model does not declare it, so its cursor update writes the record back without it."
     },
     "player_id": {
       "anyOf": [

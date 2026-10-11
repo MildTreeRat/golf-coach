@@ -8,7 +8,8 @@ data/
 ├── raw/         # raw swing video files, e.g. raw/sessions/{session_id}/   (gitignored)
 ├── processed/   # extracted keypoints, labeled images, intermediate artifacts (gitignored)
 │   ├── sessions/      # one directory per swing bundle + its analysis artifacts, under a
-│   │                  #   session.json holding two cursors: golfer and club (ADR-024)
+│   │                  #   session.json holding two cursors, golfer and club (ADR-024), and a
+│   │                  #   third, intent, that only Rust writes (M35)
 │   ├── shots/         # parsed launch-monitor shots, content-addressed
 │   ├── golfers/       # per golfer: the registry record, and the declared bag beside it
 │   └── conversations/ # follow-up conversation transcripts, one per conversation (ADR-020)
@@ -16,6 +17,19 @@ data/
 ├── reference/   # third-party reference corpora — see below                 (gitignored)
 └── golf_trainer.db   # SQLite database                                      (gitignored)
 ```
+
+A swing directory under `sessions/` can hold two files only Rust writes (M35). Neither exists on
+disk yet, and every write test runs on a scratch copy:
+
+- **`intent` in `manifest.json`** (and the matching cursor in `session.json`): what the shot was
+  practised as, written only when set, by `golf-core set-intent` or stamped from the cursor at
+  upload. A `drill` is stored and analysed and counts toward no club or player stat. **Frozen
+  Python reads the key and drops it on any rewrite** of that file, so a recorded drill becomes a
+  tracked shot the next time the frozen server writes to the swing (ADR-024's M35 addendum).
+- **`shot_analysis.json`**: a photo entry's analysis (a shot photo with no face-on clip), a
+  `ShotResult` written by `golf-core run-shot --session` beside the manifest. That verb reads
+  `shots/`, found through `--shots-dir`, else `GOLF_SHOTS_DIR`, else `data/processed/shots`. A swing
+  with a clip never gets one: its shot is analysed with it, into `analysis.json`.
 
 `golfers/` holds two record kinds per player, kept apart by suffix: `<player_id>.golfer.json`
 (name and handedness) and `<player_id>.bag.json` (the declared bag — ADR-024). A bag is the one

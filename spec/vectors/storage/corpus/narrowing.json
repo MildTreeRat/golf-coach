@@ -1,5 +1,5 @@
 {
-  "career_version": 1,
+  "career_version": 2,
   "expected": {
     "corpus": {
       "analyzed_without_measurements": 1,
@@ -1442,6 +1442,15 @@
           "expected.narrowed.since-the-8th-7i.corpus.excluded[1].detail",
           "expected.narrowed.since-the-9th.corpus.excluded[1].detail",
           "expected.narrowed.since-the-9th-in-ist.corpus.excluded[1].detail"
+        ]
+      },
+      {
+        "added": [],
+        "by": "golf-core rerecord",
+        "career_version": 2,
+        "declaration": "spec/declarations/career-v2.json",
+        "moved": [
+          "career_version"
         ]
       }
     ],

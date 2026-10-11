@@ -36,9 +36,10 @@ use std::collections::{BTreeMap, BTreeSet};
 use serde::{Deserialize, Serialize};
 
 use crate::club::ClubId;
+use crate::intent::PracticeGoal;
 use crate::mishit::{MishitVerdict, MISHIT_EXCLUDED_METRICS};
 use crate::swing::Measurement;
-use crate::{each, ContractError, Timestamp, Validate};
+use crate::{each, nested, ContractError, Timestamp, Validate};
 
 /// The generation of the many-shot layer's rules, stamped as `career_version` at the top of every
 /// vector under `spec/vectors/storage/` and `spec/vectors/career/`. **Bump it whenever either family
@@ -72,7 +73,19 @@ use crate::{each, ContractError, Timestamp, Validate};
 ///   the four adopted copies: this rule reaching the report, not a new rule, so not a new number.
 ///   M36 P16 rendered `club_profile` and `flag_mishit`, and no report moved: neither prints an
 ///   exclusion's sentence.
-pub const CAREER_VERSION: i64 = 1;
+///
+/// 2 (M35 P10): **`read_corpus` admits photo entries and leaves drills out** (the M35 plan's call
+///   6). A manifest with no face-on clip and a shot photo is a *photo entry*, read from
+///   `shot_analysis.json` and grouped on the photo's hash ([`CorpusSwing::face_on_sha256`] `None`);
+///   one with neither is [`ExclusionReason::NoFaceOn`], under a rewritten sentence. A photo entry
+///   whose photo a surviving swing holds is that swing's [`ExclusionReason::Duplicate`] (the copy
+///   with video counts), and a survivor recorded as a drill is [`ExclusionReason::Untracked`] and in
+///   no swing list. No recorded tree holds an intent or a `shot_analysis.json`, so
+///   `spec/declarations/career-v2.json` moves one recorded case, `storage/corpus/no-face-on`, whose
+///   down-the-line-and-photo swing is now a duplicate of the swing holding the same photo, plus its
+///   adopted copy and that copy's two `career_corpus` reports; nothing pooled moved. The cases that
+///   exercise the new rules are hand-worked at 2 under `spec/vectors/storage/hand/` (M35 P9).
+pub const CAREER_VERSION: i64 = 2;
 
 /// `Measurement.source` for anything read off the pose stream: it keys on the face-on clip.
 pub const POSE_SOURCE_PREFIX: &str = "pose:";
@@ -136,14 +149,22 @@ pub enum ExclusionReason {
     /// link — so it is listed, not just counted.
     Unattributed,
     /// No face-on clip, the view every checkpoint is measured from, so this swing can never carry a
-    /// pose measurement however long it sits there.
+    /// pose measurement however long it sits there. **Since M35 P10, and no shot photo either**:
+    /// a manifest with a photo and no clip is a photo entry (the M35 plan's call 6), so this names
+    /// only a manifest that holds neither, a down-the-line clip alone being the case on disk.
+    /// Frozen Python names every manifest with no face-on clip, a photo beside it or not.
     NoFaceOn,
     /// The same face-on bytes already appear in an earlier swing. The re-upload, not the swing.
+    /// Since M35 P10 also the same shot photo in an earlier photo entry, and a photo entry whose
+    /// photo a surviving swing holds beside its video: one ball flight, and the copy with video is
+    /// the one kept, whichever arrived first (the M35 plan's decision 4).
     Duplicate,
-    /// Uploaded but never analyzed — no `analysis.json`. Fixable by running the pipeline.
+    /// Uploaded but never analyzed — no `analysis.json`, or for a photo entry no readable
+    /// `shot_analysis.json`. Fixable by running the pipeline, or `golf-core run-shot`.
     NotAnalyzed,
     /// Analyzed, but a clip has been re-uploaded since; the stored numbers describe bytes that are
-    /// no longer on disk. Fixable by re-running the pipeline.
+    /// no longer on disk. Fixable by re-running the pipeline. For a photo entry, its
+    /// `shot_analysis.json` names another photo than the manifest's, or none.
     Stale,
     /// Analyzed by an engine generation whose numbers today's does not agree with. The inputs are
     /// unchanged — this is the *other* axis of staleness. Kept out of the counts because a baseline
@@ -154,17 +175,29 @@ pub enum ExclusionReason {
     /// decision 1). Frozen Python's asks `analysis_version < ANALYSIS_VERSION`, and so would exclude a
     /// swing an engine bump only *added* a measurement to; it keeps that rule until M40 deletes it.
     Outdated,
+    /// Hit as a drill ([`crate::intent::PracticeMode::is_tracked`]), so it feeds no club or player
+    /// stat and no mechanics baseline (ADR-034 §3, the M35 plan's decision 1). **Not in
+    /// [`CareerCorpus::swings`]**, as a duplicate is not, where `NotAnalyzed`, `Stale` and
+    /// `Outdated` are in both: those are real swings waiting on a repair, and a drill is a swing the
+    /// golfer said not to count, so no count, aggregate or mishit median may see it. Its own
+    /// duplicates stay duplicates of it. Rust's alone, with no Python twin; appended last so every
+    /// earlier reason keeps its position. Decided off the survivor's manifest after the dedupes and
+    /// before any artifact is read, so a drill is named once, never also `NotAnalyzed`, `Stale` or
+    /// `Outdated`: it is not work waiting on a pipeline run. [M35 P8; `read_corpus` emits it from
+    /// M35 P10, `CAREER_VERSION` 2]
+    Untracked,
 }
 
 impl ExclusionReason {
     /// Every reason, in declaration order.
-    pub const ALL: [ExclusionReason; 6] = [
+    pub const ALL: [ExclusionReason; 7] = [
         ExclusionReason::Unattributed,
         ExclusionReason::NoFaceOn,
         ExclusionReason::Duplicate,
         ExclusionReason::NotAnalyzed,
         ExclusionReason::Stale,
         ExclusionReason::Outdated,
+        ExclusionReason::Untracked,
     ];
 
     /// The wire name, which the reports print.
@@ -176,6 +209,7 @@ impl ExclusionReason {
             ExclusionReason::NotAnalyzed => "not_analyzed",
             ExclusionReason::Stale => "stale",
             ExclusionReason::Outdated => "outdated",
+            ExclusionReason::Untracked => "untracked",
         }
     }
 }
@@ -231,7 +265,16 @@ pub struct CorpusSwing {
     pub captured_at: Timestamp,
 
     /// Swing identity. Two swings sharing it are one swing.
-    pub face_on_sha256: String,
+    ///
+    /// **`None` for a photo entry** (the M35 plan's call 6): a shot photo with no face-on clip
+    /// beside it, which is a whole entry since ADR-034 §1 and dedupes on `shot_sha256` instead. It
+    /// is written as `null` rather than skipped, as `shot_sha256` is, so a corpus always carries the
+    /// key and a reader never has to tell "no clip" from "an older shape". Frozen Python's field is
+    /// a required `str`, and nothing of Python's reads a corpus Rust wrote. Every swing with a clip
+    /// writes the string as before, which is why no recorded corpus moved when this became optional.
+    /// [M35 P8]
+    #[serde(default)]
+    pub face_on_sha256: Option<String>,
     /// The shot photo's hash — the identity launch-monitor measurements dedupe on, independently of
     /// the clip. `None` when no shot screen was uploaded.
     #[serde(default)]
@@ -251,7 +294,9 @@ pub struct CorpusSwing {
     #[serde(default)]
     pub measurements: Vec<Measurement>,
 
-    /// `session/swing` refs whose face-on bytes are identical to this one's.
+    /// `session/swing` refs whose face-on bytes are identical to this one's, or for a photo entry
+    /// whose shot photo is (M35 P10). A photo entry named a duplicate of a swing is not listed here:
+    /// it is no re-upload of this swing's clip, and is in `CareerCorpus::excluded` alone.
     #[serde(default)]
     pub duplicates: Vec<String>,
 
@@ -261,7 +306,7 @@ pub struct CorpusSwing {
     #[serde(default)]
     pub conflicting_shots: Vec<String>,
 
-    /// An `analysis.json` was found and read.
+    /// An `analysis.json` was found and read, or for a photo entry a `shot_analysis.json` (M35 P10).
     #[serde(default)]
     pub analyzed: bool,
     /// Analyzed, but an input has been re-uploaded since. Excluded from the counts.
@@ -292,13 +337,25 @@ pub struct CorpusSwing {
     pub manual_mishit: Option<MishitVerdict>,
     #[serde(default)]
     pub missing_roles: Vec<String>,
+
+    /// The goal this swing was hit under, read off the survivor's manifest as `club` is, so M37 can
+    /// grade a `shot_shaping` swing against its declared `target_shape`. `None` is the default goal,
+    /// `fundamentals`, and so tracked — every swing on disk before M35. A drill never reaches this
+    /// list ([`ExclusionReason::Untracked`]), so any value here is a tracked mode.
+    ///
+    /// **Written only when set**, and last, after frozen Python's fields, as
+    /// `SwingManifest.intent` is: every corpus recorded before M35 holds no intent, and so
+    /// serializes to the value it was recorded as. [M35 P8]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub intent: Option<PracticeGoal>,
 }
 
 crate::validated!(CorpusSwing);
 
 impl Validate for CorpusSwing {
     fn validate(&self) -> Result<(), ContractError> {
-        each("CorpusSwing.measurements", &self.measurements)
+        each("CorpusSwing.measurements", &self.measurements)?;
+        nested("CorpusSwing.intent", self.intent.as_ref())
     }
 }
 
@@ -338,10 +395,13 @@ impl CorpusSwing {
     ///
     /// Keys are namespaced (`pose:` / `shot:` / `swing:`) so a clip hash can never collide with a
     /// photo hash. The same key from two swings asserts they are one reading; `None` asserts there
-    /// is no reading here at all. Three `None`s, each a different assertion:
+    /// is no reading here at all. Four `None`s, each a different assertion:
     ///
     /// - [`POSE_DTL_SOURCE`]: a reading of a clip this shape cannot name. Tested first, or the
     ///   `pose:` prefix absorbs it into the face-on clip's count.
+    /// - A `pose:` row on an entry with no face-on clip (M35 P8): a reading of nothing. A photo
+    ///   entry's `shot_analysis.json` carries no pose row, so this is a row that should not exist,
+    ///   and keying it on the swing instead would count it once per directory.
     /// - A launch-monitor or model source on a flagged parse or with no photo: a suspect sample is
     ///   no sample, the rule `mcp.query.get_session_summary` applies before averaging.
     /// - **A mishit's carry and total distance** (ADR-028): a 20-yard 7 iron is a real reading of
@@ -357,7 +417,8 @@ impl CorpusSwing {
             return None;
         }
         if source.starts_with(POSE_SOURCE_PREFIX) {
-            return Some(format!("pose:{}", self.face_on_sha256));
+            let clip = self.face_on_sha256.as_deref()?;
+            return Some(format!("pose:{clip}"));
         }
         if source.starts_with(LAUNCH_MONITOR_SOURCE_PREFIX)
             || source.starts_with(MODEL_SOURCE_PREFIX)
@@ -673,7 +734,7 @@ mod tests {
             session_id: "2026-09-01".into(),
             swing_id: "1".into(),
             captured_at: now(),
-            face_on_sha256: "clip-a".into(),
+            face_on_sha256: Some("clip-a".into()),
             shot_sha256: Some("photo-1".into()),
             club: None,
             measurements: Vec::new(),
@@ -687,6 +748,7 @@ mod tests {
             auto_mishit: false,
             manual_mishit: None,
             missing_roles: Vec::new(),
+            intent: None,
         }
     }
 
@@ -850,7 +912,7 @@ mod tests {
         };
         let outdated = CorpusSwing {
             swing_id: "3".into(),
-            face_on_sha256: "clip-b".into(),
+            face_on_sha256: Some("clip-b".into()),
             outdated: true,
             measurements: vec![measurement("tempo_ratio", "mystery:source")],
             ..counted.clone()
@@ -920,6 +982,7 @@ mod tests {
                 "\"not_analyzed\"",
                 "\"stale\"",
                 "\"outdated\"",
+                "\"untracked\"",
             ]
         );
         for reason in ExclusionReason::ALL {
@@ -928,5 +991,77 @@ mod tests {
                 format!("\"{}\"", reason.as_str())
             );
         }
+    }
+
+    /// A photo entry has no clip, so a pose row on one keys on nothing rather than falling back to
+    /// the swing, while its shot rows key on the photo exactly as a swing's do.
+    #[test]
+    fn a_pose_row_on_an_entry_with_no_clip_is_a_reading_of_nothing() {
+        let photo_entry = CorpusSwing {
+            face_on_sha256: None,
+            ..swing()
+        };
+        let pose = measurement("head_sway_norm", "pose:face_on");
+        assert_eq!(photo_entry.artifact_key(&pose), None);
+        assert_eq!(
+            photo_entry.artifact_key(&lm("ball_speed_mph")).as_deref(),
+            Some("shot:photo-1")
+        );
+        assert_eq!(
+            photo_entry
+                .artifact_key(&measurement("flight_apex_yds", "model:flight_v1"))
+                .as_deref(),
+            Some("shot:photo-1")
+        );
+    }
+
+    /// Every corpus recorded before M35 has a clip on every swing and no intent anywhere, so the
+    /// optional clip must write the bare string and an absent intent no key at all: that is what
+    /// lets the storage and career families pass unchanged under the new shape.
+    #[test]
+    fn a_swing_with_a_clip_and_no_intent_writes_the_shape_python_recorded() {
+        let written = serde_json::to_value(swing()).unwrap();
+        assert_eq!(written["face_on_sha256"], serde_json::json!("clip-a"));
+        assert!(!written.as_object().unwrap().contains_key("intent"));
+        let read: CorpusSwing = serde_json::from_value(written).unwrap();
+        assert_eq!(read, swing());
+
+        let photo_entry = CorpusSwing {
+            face_on_sha256: None,
+            ..swing()
+        };
+        let written = serde_json::to_value(&photo_entry).unwrap();
+        assert_eq!(
+            written["face_on_sha256"],
+            serde_json::Value::Null,
+            "written as null, never skipped"
+        );
+        assert_eq!(
+            serde_json::from_value::<CorpusSwing>(written).unwrap(),
+            photo_entry
+        );
+    }
+
+    #[test]
+    fn an_intent_round_trips_and_one_that_cannot_be_read_refuses_the_swing() {
+        use crate::intent::{PracticeMode, TargetShape};
+        let shaped = CorpusSwing {
+            intent: Some(PracticeGoal {
+                mode: PracticeMode::ShotShaping,
+                target_shape: Some(TargetShape::Draw),
+                ..PracticeGoal::default()
+            }),
+            ..swing()
+        };
+        let written = serde_json::to_value(&shaped).unwrap();
+        assert_eq!(written["intent"]["mode"], serde_json::json!("shot_shaping"));
+        assert_eq!(
+            serde_json::from_value::<CorpusSwing>(written.clone()).unwrap(),
+            shaped
+        );
+
+        let mut unknown = written;
+        unknown["intent"]["mode"] = serde_json::json!("warm_up");
+        assert!(serde_json::from_value::<CorpusSwing>(unknown).is_err());
     }
 }

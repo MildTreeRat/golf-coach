@@ -1,5 +1,5 @@
 {
-  "career_version": 1,
+  "career_version": 2,
   "expected": {
     "bag_profile": {
       "clubs": [
@@ -1305,6 +1305,15 @@
         "declaration": "spec/declarations/career-v1.json",
         "moved": [
           "expected.reports.career_corpus_verbose"
+        ]
+      },
+      {
+        "added": [],
+        "by": "golf-core rerecord",
+        "career_version": 2,
+        "declaration": "spec/declarations/career-v2.json",
+        "moved": [
+          "career_version"
         ]
       }
     ],

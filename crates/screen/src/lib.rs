@@ -30,6 +30,10 @@
 //! - [`golfer_warnings`] — a record's warnings as a golfer is shown them, which every Rust surface
 //!   that shows them calls (M34 P9). It lives beside the one line that writes what it drops, and is
 //!   re-exported here because a surface showing a shot should not need to know the parser's layout.
+//! - [`tile_refusals`] — a printed tile a stamped shot holds no value for, named `printed_blank` or
+//!   `misread` (M35 P3). `analysis::engine::analyze_shot` puts them first in a `ShotResult`'s
+//!   `unscored`. It reads the record and never a parse, so a shot off the shot store is judged as
+//!   one fresh from [`read`] is, and it is re-exported for `golfer_warnings`' reason.
 //!
 //! The faithful rules the change replaced lived behind a `frozen` module from P8, so the
 //! Python-recorded vectors went on gating the code both readers shared, until P10 re-recorded those
@@ -49,9 +53,11 @@ pub mod difflib;
 pub mod orient;
 pub mod parser;
 pub mod profile;
+pub mod tiles;
 pub mod validate;
 
 pub use crate::parser::golfer_warnings;
+pub use crate::tiles::tile_refusals;
 
 use std::collections::BTreeMap;
 
