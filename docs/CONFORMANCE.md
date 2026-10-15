@@ -19,7 +19,11 @@
 > M35 added** is a ninth family with no Python twin at all, the shot family (§2): one shot analysed
 > with no clip, worked by hand and re-recorded with the engine's under `ANALYSIS_VERSION`. M35 also
 > changed the corpus a second time (`career-v2`: photo-only entries admitted, drills left out) and
-> took three more schemas into Rust's hands (§1).
+> took three more schemas into Rust's hands (§1). **What M37 added** is a tenth family, `profile`
+> (§2): a golfer's strike profile, topic grades, blends and strengths and weaknesses, worked by hand
+> and beside it the first vectors recorded by Rust with nothing behind them (`oracle: "rust"`). It
+> ages on `CAREER_VERSION`, which M37 moved a third time (`career-v3`: every corpus entry carries its
+> shot). M37 also added the pin that every family names its oracle (§2).
 
 [ADR-030](decisions/030-app-platform-rust-core-python-sidecar.md) commits this project to a second
 implementation of the swing loop. **Two cores that disagree silently is the failure mode that
@@ -177,9 +181,9 @@ and every value `contracts/club_spec.py` can write reads back
 
 ## 2. The vectors
 
-Nine families, covering different things. The first two are the **engine** families: `cargo test`
+Ten families, covering different things. The first two are the **engine** families: `cargo test`
 certifies them end to end against `crates/core`, `golf-core rerecord` records them from M32, and
-`conformance.py check` runs frozen Python against them to certify the freeze (§4). The other seven
+`conformance.py check` runs frozen Python against them to certify the freeze (§4). The other eight
 name a Rust crate as their implementation and are deferred to `cargo test`. `audio`, `stages` and
 `format` serve the engine port and its edges. **`screen`** (M34) is the screen reader's, a port of
 its own that `golf-core rerecord` also records, under its own version key. **`storage`** and
@@ -187,7 +191,8 @@ its own that `golf-core rerecord` also records, under its own version key. **`st
 and the five career reports over a corpus. The verb records the two together, under a third key.
 **`shot`** (M35) is the first family with no Python behind it at all: one shot analysed with no
 clip, worked by hand, and re-recorded with the engine families because its numbers are the
-engine's.
+engine's. **`profile`** (M37) is the second: a golfer's graded profile over a corpus, worked by hand
+and recorded by Rust, and re-recorded with the storage and career families under their key.
 
 **Synthetic** (`spec/vectors/synthetic/`) comes from `tests/analysis/conftest.py::make_swing`,
 which is deterministic, RNG-free and pure stdlib — so it re-implements in another language exactly
@@ -209,12 +214,27 @@ vector, and from the day it was recorded**, because M34 wrote `oracle` when it r
 It is `"python"` on everything frozen Python recorded and `"hand"` on `hand/`. The three document
 sub-families have carried a Rust ledger since M34's re-record. `units/` has none, because the
 re-record never reads it. **So does every storage and career vector** (M36): `"python"` on what
-frozen Python recorded, each with a `career-v1` ledger entry since M36 P14 and a `career-v2` one
-since M35 P10, and `"hand"` on `storage/hand/`. M36's three hand cases were written at version 1
-and carry one entry, `career-v2`'s version move; M35's twelve were written at version 2 and carry
-none. **So does every shot vector** (M35): `"hand"`, with no ledger yet. `audio` and `format` carry
-neither key yet. M37's pin, that every family names its oracle, extends `oracle` to them
-([ADR-032](decisions/032-the-rust-core.md)'s 2026-09-29 addendum).
+frozen Python recorded, each with a `career-v1` ledger entry since M36 P14, a `career-v2` one since
+M35 P10 and a `career-v3` one since M37 P4, and `"hand"` on `storage/hand/`. M36's three hand cases
+were written at version 1 and carry two entries, `career-v2`'s and `career-v3`'s; M35's twelve were
+written at version 2 and carry one, `career-v3`'s. **So does every shot vector** (M35): `"hand"`,
+with no ledger yet. **So does every profile vector** (M37): `"hand"` on `profile/hand/` and
+`"rust"` on `profile/corpus/`, the third kind
+[ADR-032](decisions/032-the-rust-core.md)'s 2026-09-29 addendum named, both born at version 3 with
+no ledger yet.
+
+**`audio` and `format` still carry neither key, and the pin names their oracle for them.** M37's
+pin (`crates/core/tests/rerecord.rs`,
+`every_committed_vector_names_its_oracle_and_every_ledger_entry_its_declaration`) reads every
+committed vector and requires an oracle in `{python, hand, rust}`. Writing the key into those 43
+files would have changed two families M37 promised not to touch, and `format`'s files are compared
+byte for byte with the frozen recorder's output (`build_format`), so the frozen tooling would have
+had to write it too. So the pin's own table, `ORACLE_BY_FAMILY`, names both as `"python"`: the
+deleted `audio/impact.py` recorded `audio` (M20), and `format` is CPython's own output. The table
+fails if either family's files ever start carrying the key, so the table and the files cannot both
+claim it, and it fails on a row naming a family with no committed vector. The pin's second half
+holds every `rerecords` entry to a committed declaration whose version key and value it carries,
+written `by` the verb ([ADR-032](decisions/032-the-rust-core.md)'s M37 addendum).
 
 - **`provenance.oracle` is `"python"`**, and stays so after a Rust re-record, because every value
   the re-record did not declare is still the one Python recorded, bit for bit. M32 P8 checked that
@@ -223,7 +243,7 @@ neither key yet. M37's pin, that every family names its oracle, extends `oracle`
 - **`provenance.rerecords` is a list with one entry appended per re-record**, and it is what says
   which values are Rust's. An entry holds the declaration's version key and value (the version the
   re-record moved the file to: `analysis_version` on an engine, stage or shot vector,
-  `screen_parser_version` on a screen one, `career_version` on a storage or career one), `by`
+  `screen_parser_version` on a screen one, `career_version` on a storage, career or profile one), `by`
   (`"golf-core rerecord"`), `declaration` (the
   declaration's repo-relative path, with `/`), and `added` and `moved`: the declared paths **that
   matched in that file**, in the declaration's order. A screen entry carries a third list,
@@ -245,11 +265,12 @@ neither key yet. M37's pin, that every family names its oracle, extends `oracle`
   path in that vector's own ledger, holding that value.
 
 **The declarations are committed, in `spec/declarations/`**, one file per re-record, named for the
-version it records (`v17.json` is M32's, `screen-v1.json` M34's, `career-v1.json` M36's and
-`career-v2.json` M35's). Each carries **exactly one version key**, and that key picks the families
-it re-records: `analysis_version` for the engine and stage families and, since M35, the shot
-family; `screen_parser_version` for the screen family; or `career_version` for the storage and
-career families together. Each also carries a `note`, `added`
+version it records (`v17.json` is M32's, `screen-v1.json` M34's, `career-v1.json` M36's,
+`career-v2.json` M35's and `career-v3.json` M37's). Each carries **exactly one version key**, and
+that key picks the families it re-records: `analysis_version` for the engine and stage families
+and, since M35, the shot family; `screen_parser_version` for the screen family; or `career_version`
+for the storage and career families together and, since M37, the profile family. Each also carries
+a `note`, `added`
 and `moved`, and a screen declaration may carry `removed` as well (§4). A declaration loads or is
 refused whole, before any vector is read. Refused are: an unknown key; more than one version key, or
 none; a path declared twice across the lists; an `added` or `removed` path ending in an index; and
@@ -260,14 +281,15 @@ load-bearing twice: the verb reads it, and `crates/contracts/tests/schemas.rs` r
 `added` to know which schema properties must carry a description (§1).
 
 **What reads the ledger.** On the Rust side, nothing but the round-trip allowance above and the
-re-record's own second-run rule (§4): the end-to-end gate, the stage tests, the screen tests, the
-shot gate and the storage, career and report gates compare the whole file, Rust's values and
-Python's alike, with the version equal to `ANALYSIS_VERSION`, `SCREEN_PARSER_VERSION` or
-`CAREER_VERSION`. On the Python side, `conformance.frozen_view` takes every ledgered path out of both
-`expected` and frozen Python's answer before comparing, and `ledger_covers` accepts a vector above
-frozen Python's version only when it carries an entry for every version in between (§4). Both read
-engine and stage ledgers only. `check` never reads a screen, storage, career or shot ledger,
-because it runs none of those families.
+re-record's own second-run rule (§4), and M37's oracle pin, which holds each entry to its
+declaration: the end-to-end gate, the stage tests, the screen tests, the shot gate and the storage,
+career, report and profile gates compare the whole file, Rust's values and Python's alike, with the
+version equal to `ANALYSIS_VERSION`, `SCREEN_PARSER_VERSION` or `CAREER_VERSION`. On the Python
+side, `conformance.frozen_view` takes every ledgered path out of both `expected` and frozen Python's
+answer before comparing, and `ledger_covers` accepts a vector above frozen Python's version only
+when it carries an entry for every version in between (§4). Both read engine and stage ledgers only.
+`check` never reads a screen, storage, career, shot or profile ledger, because it runs none of those
+families.
 
 ### Why the corpus vectors are a slice, and what that costs
 
@@ -667,10 +689,10 @@ store (`launch_monitor/screen/store.py`).
 
 | sub-family | what it is | oracle | version |
 |---|---|---|---|
-| `corpus/` | `read_corpus` and its narrowings over a sessions tree. Every `ExclusionReason` frozen Python has, both `MishitVerdict`s and the automatic flag, the sort and both duplicate tiebreaks, corrupt manifests, states and analyses. `real.json.gz` is `data/`'s swing directories, each `analysis.json` slimmed to the three keys `read_corpus` reads, and verified at record time to read exactly as `data/` itself does | `python`, with a Rust ledger | 2 |
-| `bundle/` | the bundle store: its reads; `assign_from_path` into an empty session, into the newest swing lacking the role, at an explicit `swing_id` (existing and new), and on a duplicate digest; `set_player`, `set_club`, `set_mishit`, `attribute_unlabeled` and `delete_swing` | `python`, with a Rust ledger | 2 |
-| `stores/` | the bag, golfer and shot stores, with the bag's validator refusals, and a `slugify` table | `python`, with a Rust ledger | 2 |
-| `hand/` | the two rule changes, each worked before the code that follows it. **M36's three**: where the corpus's `OUTDATED` rule moved (below), with stored versions either side of `comparable_from`, a line at the caller's number rather than the constant, and a mishit median that sees only comparable swings. **M35's twelve**: photo entries (pooled, two on one photo, a photo-only copy of a swing's photo, one photo on two swings and a copy, a mixed session, and the repairs: not analysed, stale, outdated, a flagged read), drills (`untracked`, of each kind, and one among five carries of a club), a manifest with neither a face-on clip nor a photo, the order `excluded` lists across both kinds, and two op cases, an upload stamping the session's intent and `set_intent` repairing one. Each `note` holds its working | `hand` | 2 |
+| `corpus/` | `read_corpus` and its narrowings over a sessions tree. Every `ExclusionReason` frozen Python has, both `MishitVerdict`s and the automatic flag, the sort and both duplicate tiebreaks, corrupt manifests, states and analyses. `real.json.gz` is `data/`'s swing directories, each `analysis.json` slimmed to the three keys `read_corpus` read when it was recorded (the version, `swing.measurements` and `swing.shot`), and verified at record time to read exactly as `data/` itself does | `python`, with a Rust ledger | 3 |
+| `bundle/` | the bundle store: its reads; `assign_from_path` into an empty session, into the newest swing lacking the role, at an explicit `swing_id` (existing and new), and on a duplicate digest; `set_player`, `set_club`, `set_mishit`, `attribute_unlabeled` and `delete_swing` | `python`, with a Rust ledger | 3 |
+| `stores/` | the bag, golfer and shot stores, with the bag's validator refusals, and a `slugify` table | `python`, with a Rust ledger | 3 |
+| `hand/` | the two rule changes, each worked before the code that follows it. **M36's three**: where the corpus's `OUTDATED` rule moved (below), with stored versions either side of `comparable_from`, a line at the caller's number rather than the constant, and a mishit median that sees only comparable swings. **M35's twelve**: photo entries (pooled, two on one photo, a photo-only copy of a swing's photo, one photo on two swings and a copy, a mixed session, and the repairs: not analysed, stale, outdated, a flagged read), drills (`untracked`, of each kind, and one among five carries of a club), a manifest with neither a face-on clip nor a photo, the order `excluded` lists across both kinds, and two op cases, an upload stamping the session's intent and `set_intent` repairing one. Each `note` holds its working | `hand` | 3 |
 
 **Two shapes.**
 
@@ -704,6 +726,17 @@ comparable_from}` from its caller, and each corpus case records the pair it was 
 `ANALYSIS_VERSION` bump moves neither this family nor the career family. Frozen Python recorded every
 case at `{16, 16}`, and the verbs pass `{ANALYSIS_VERSION, COMPARABLE_FROM}`.
 
+**Each corpus entry carries its shot since M37** (`CAREER_VERSION` 3, the M37 plan's decision 5 and
+call 3). `read_corpus` lifts the survivor's artifact's `shot` onto `CorpusSwing.shot`, and the
+artifact's `unscored` entries that are not mechanics checkpoints onto `CorpusSwing.shot_unscored`,
+both written only when set, so an entry with no photo serializes exactly as before. A duplicate's
+shot is never read, and a swing's shot that the contract refuses stays flagged and is not carried.
+**No committed vector holds a `shot_unscored`**: no recorded artifact's `unscored` holds a flight
+row or a photo-side key, and the real case's slimmed analyses keep no `unscored` at all, where Rust's
+`read_corpus` over `data/` itself lifts one onto 11 of its 13 entries (the M37 plan's P4 finding 4).
+`crates/storage/src/corpus.rs`' own tests are that lift's only pin, and two of the profile family's
+hand cases are the only vectors whose corpora carry one, written by hand.
+
 ### Career (`spec/vectors/career/`) — 56 vectors, run by `cargo test`
 
 Added by M36. It is the oracle for what a golfer's history may say: a corpus and a bag in, and the
@@ -733,9 +766,10 @@ each adopting career vector on its source's answer as that answer will be writte
 committed families equal.
 
 **Both families age on `CAREER_VERSION`** (`crates/contracts/src/career.rs`, whose ledger says what
-each version is), one key for both, carried at the top level as `career_version`. Version 0 is
-frozen Python's. Version 1 is M36's change to `OUTDATED`. Version 2 is M35's: `read_corpus` admits
-photo-only entries and leaves drills out.
+each version is), one key for both, carried at the top level as `career_version`, and since M37 the
+profile family ages on it with them. Version 0 is frozen Python's. Version 1 is M36's change to
+`OUTDATED`. Version 2 is M35's: `read_corpus` admits photo-only entries and leaves drills out.
+Version 3 is M37's: every corpus entry carries its shot (the storage section above).
 
 **How they came to be at version 1**, in M34's order:
 
@@ -776,6 +810,24 @@ Python has no photo entry and no drill:
   a corpus holding a drill equals the one over the corpus without it, except `career_corpus`, which
   prints the directory count and the exclusions.
 
+**How they came to be at version 3** (M37), with nothing recorded from Python, because frozen
+Python's `CareerCorpus` has no field for a shot:
+
+- **Changed first, then re-recorded.** M37 P4 made `read_corpus` lift each entry's shot, and
+  `golf-core rerecord --declare spec/declarations/career-v3.json` added the one key `shot`, at 37
+  declared paths, and moved `career_version` and no value. The key landed in the storage corpus
+  cases (their `expected.corpus` and the real case's narrowings), in five of M35's hand cases whose
+  photo entries hold a shot, and in each adopted copy's `input.corpus`. No aggregate, count or report
+  moved, because none of them reads the new fields (§4 has the run).
+- **Frozen Python's recorder strips the two keys before it compares.** Frozen Python still reads
+  every case, because pydantic ignores the extra keys, but it cannot write them back. So
+  `scripts/conformance_vectors.py`'s round trips over an adopted corpus, and its check that frozen
+  `read_corpus` over `data/` equals the real storage case, first remove `shot` and `shot_unscored`
+  from each swing (`_RUST_ONLY_SWING_KEYS`, `_as_frozen_python_writes`). That is ADR-035 clause 4's
+  rule, that frozen Python reads what Rust writes, applied to the recorder, by the user's answer to
+  the M37 plan's P5 finding 12. A later key frozen Python has no field for joins that tuple, and only
+  the full pytest reaches the five tests that fail otherwise.
+
 **The runners** are in `crates/core/tests/`, each calling the definition the re-record calls:
 
 - `storage.rs` runs every storage vector through `storage_family::run_storage`;
@@ -809,7 +861,9 @@ findings list them, with the mutation that found each.
 with every flag the scripts take: 85 runs, identical bytes, once Windows' `\r\n` and cp1252 console
 were taken off the Python side. That was a one-time check, not a gate. `reports.rs` is the gate.
 `career-v2` changed nothing over `data/`, which holds no photo entry and records no intent: M35 P10
-measured `golf-core career-corpus` pooling the same swings and metrics as before.
+measured `golf-core career-corpus` pooling the same swings and metrics as before. Nor did
+`career-v3`: M37 P4 measured the same 13 swings, 2 duplicates and 34 metrics, with every entry now
+carrying its shot.
 
 ### Shot (`spec/vectors/shot/`) — 25 vectors, run by `cargo test`
 
@@ -879,6 +933,87 @@ printed axis and a blank spin is a synthetic screen whose carry is past the peak
 conditions at every loft tried (the M35 plan's P5 finding 5). **No blank is ever named on a stored
 shot**: every shot in `data/` is unstamped, so `printed_on` reads it conservatively and
 `tile_refusals` names nothing, until §M29's reader re-reads them.
+
+### Profile (`spec/vectors/profile/`) — 15 vectors, run by `cargo test`
+
+Added by M37, and the second family with **no Python twin and no Python oracle**: the grades were
+designed after the pivot ([ADR-034 §5](decisions/034-shot-first-phone-first.md#5-grades-a-grade-and-a-list-per-topic))
+and written in Rust first. It is the oracle for a golfer's graded profile: each club's strike
+profile, its six topics' grades (a Wilson share of good shots, withheld below 10 judged shots), its
+blend and its strengths and weaknesses, then the same for the player. The implementation under
+test is `golf_core::profile::run_profile`, the shell that joins `analysis::strike::build_grades` to
+`feedback::profile_rules`' `rank_profile` and `rank_player`. ADR-008's cargo edges keep those two
+crates apart, so the gate runs at the seam, as the shot family's does.
+
+| sub-family | what it is | oracle | version |
+|---|---|---|---|
+| `hand/` | nine cases, each worked by hand from the M37 plan's decisions and calls before the code existed, its working in its `note`: the straight edge crossed from both sides with a printed landing, a left-handed fade and draw on projected landings, an on-line share withheld, consistency against mishits and outliers, strike location's radius and grid, low point on an iron and a driver, the player pooling two clubs and untagged shots, ungraded named and impossible absent, and the list beside a drill and pose rows | `hand` | 3 |
+| `corpus/` | six cases, one per career case whose corpus carries a shot: `real-aaron` (the real golfer and bag) and the five storage twins. Each `expected` was written once by `run_profile_case`, so nothing independent stands behind it: these pin **stability**, real and recorded corpora through every builder, and the `profile` report's text, which no hand case carries | `rust` | 3 |
+
+- **The file.** `{career_version, id, input, expected, provenance: {kind: "profile", note, oracle,
+  source}}`, at indent 2 with LF line endings. A hand case's `input` is `{bag, corpus}` and its
+  `expected` is `{profile}`, a whole `GradedProfile`. A corpus case's `input` adds `display_name`,
+  and its `expected` adds `report`, the `profile` verb's text for the whole profile less the verb's
+  trailing blank line. The runner answers `report` exactly when the input carries a name.
+- **Carried, not worked.** Three kinds of number in a hand case were taken from one run of the
+  career builders, because the career family already gates them: each club's ball-speed baseline and
+  dispersions (`build_bag_profile`'s), the player's dispersion and list input (`build_dispersion`
+  over the whole corpus), and heel/toe's mean offset and its interval (`stats`). Every grade, share,
+  median, grid cell, blend and list entry was worked by hand, op for op as the builders compute it.
+- **Adopted, three links deep.** A corpus case's `bag`, `corpus` and `display_name` are its career
+  case's (`profile_family::ADOPTED`), named first in `provenance.source`, as a career case's corpus
+  is its storage case's. So the chain is storage → career → profile, and `golf-core rerecord`
+  derives each copy from the link above as that link will be written (§4).
+  `crates/core/tests/profile.rs::every_adopted_input_is_its_career_cases` holds the committed
+  families equal, and `every_career_case_carrying_a_shot_has_its_corpus_case` is the census both
+  ways.
+
+**The gate is two comparisons**, mirroring the career family's split:
+
+- `every_profile_case_is_run_profiles_answer` runs every case through
+  `golf_core::profile_family::run_profile_case`, the runner the re-record shares, and compares under
+  §3's rules on every target, the report text included.
+- `every_profile_is_run_profiles_by_value` holds the typed `GradedProfile`s equal, every float to the
+  bit, and it runs only on Windows with MSVC, where the cases were worked. The carried dispersions
+  and the heel/toe interval go through `stats::pow`, which is the C library's, and another libm may
+  answer a last bit differently. **The second test is not redundant**: a weakness ratio nudged by
+  one ulp passes §3's `RTOL` and fails it (the M37 plan's P9 finding 3).
+
+Before either, every case reads through `GradedProfile`'s `Validate`, which holds a profile's parts
+to each other, and `every_case_counts_its_own_swings` holds every count a case claims to its own
+corpus, so a slip in the working fails by name before the builders are consulted.
+`the_hand_cases_reach_every_rule_the_plan_names` fails by name if a case drifts off its purpose.
+
+**Two arithmetic choices the hand cases were worked against.** Neither is a CPython edge, because
+no Python stands behind the family, and both are
+[ADR-032](decisions/032-the-rust-core.md)'s M37 addendum's:
+
+- **Wilson's z is full precision, and the interval is clamped.** `stats::wilson` uses
+  `WILSON_Z = 1.959963984540054`, kept apart from the career intervals' six-figure `Z_975`, which
+  must stay as it is for their bits. Its bounds are clamped into `[0, share]` and `[share, 1]`,
+  because 10 of 10's unclamped upper bound is `0.9999999999999999` and `RateEstimate` refuses an
+  interval that misses its share by one ulp.
+- **The typical shot's median is the interpolated one.** A club's typical carry and offline are
+  `stats::percentile(_, 0.5)`, `a + (b − a) × 0.5` on an even count, where the mishit floor's
+  median is `statistics.median`'s `(a + b) / 2` (§3's third list). The two can part in the last bit;
+  the hand cases use the first, and no judged value in them sits within 1e-9 of a consistency edge
+  except the exact edge values.
+
+**The family ages on `CAREER_VERSION`**, because its input is the corpus the storage family answers.
+A `career-v<N>` declaration re-records it after the storage and career families (§4), and no case
+carries a ledger yet: `career-v3`'s dry run found nothing to change. `check` counts it and defers it
+to `cargo test` (§4). **It has no schema** (the M37 plan's call 14): a profile is computed, never
+opened off disk, so §1's rule does not reach it. `crates/contracts/tests/strike.rs` pins its round
+trip, and the phone will read the Rust struct through the bridge.
+
+**What reaches no case on a real device**, and why the hand cases name a `synthetic` one. Strike
+location is graded only from a measured face-impact offset, and no device in use prints one until
+M42 reads it off Full Swing's impact video; low point and a printed landing offline are printed by
+no device in use either. `crates/contracts/devices.json`'s `synthetic` entry declares every reading
+so the hand cases can reach those topics, and
+`crates/contracts/tests/capability.rs::no_committed_storage_career_shot_or_screen_vector_names_synthetic`
+keeps it out of every family that describes a real bay. On the real corpus, strike location, low
+point and every shape are absent, and only the player's consistency reaches the floor.
 
 ## 3. The rules
 
@@ -1106,15 +1241,17 @@ have each measurement.
 ([ADR-035 §3](decisions/035-rust-everywhere-python-where-required.md#3-the-oracle-moves-to-rust)).
 `golf-core rerecord` records the engine and stage families, every re-record gated against the
 committed file, and `cargo test` is what certifies the vectors. Since M34 the verb also records the
-screen family, since M36 the storage and career families, and since M35 the shot family, beside the
-engine's. The declaration's version key chooses. `conformance.py` is the frozen half: `check` now
+screen family, since M36 the storage and career families, since M35 the shot family, beside the
+engine's, and since M37 the profile family, beside the storage and career families. The
+declaration's version key chooses. `conformance.py` is the frozen half: `check` now
 certifies **the freeze, not the vectors**, `regenerate` refuses both engine families and the screen,
 storage and career families, and `check` retires with `analysis/` in M40. Why each of those moved
 is [§M32](plans/m31-m40-shot-first-pivot.md#what-changes-in-python-and-why), and what building it
 found is [the M32 plan's findings](plans/m32-shot-contract.md#phase-findings),
 [the M34 plan's](plans/m34-screen-reader.md#phase-findings),
-[the M36 plan's](plans/m36-many-shot-layer.md#phase-findings) and
-[the M35 plan's](plans/m35-shot-first-sessions.md#phase-findings).
+[the M36 plan's](plans/m36-many-shot-layer.md#phase-findings),
+[the M35 plan's](plans/m35-shot-first-sessions.md#phase-findings) and
+[the M37 plan's](plans/m37-strike-profile-and-grades.md#phase-findings).
 
 ```bash
 cargo test                                          # certifies every family: audio against
@@ -1126,9 +1263,11 @@ cargo test                                          # certifies every family: au
                                                     # storage family against crates/storage, the
                                                     # career family and its report text against
                                                     # crates/analysis and crates/core, the shot
-                                                    # family through crates/core's run_shot, and
-                                                    # the engine vectors end to end and the stage
-                                                    # documents whole against crates/core
+                                                    # family through crates/core's run_shot, the
+                                                    # profile family through crates/core's
+                                                    # run_profile, and the engine vectors end to
+                                                    # end and the stage documents whole against
+                                                    # crates/core
 cargo run --release --bin golf-core -- rerecord --declare spec/declarations/v17.json --dry-run
 cargo run --release --bin golf-core -- rerecord --declare spec/declarations/v17.json
                                                     # re-record the engine, stage and shot
@@ -1137,9 +1276,10 @@ cargo run --release --bin golf-core -- rerecord --declare spec/declarations/v17.
 cargo run --release --bin golf-core -- rerecord --declare spec/declarations/screen-v1.json --dry-run
                                                     # the same verb on the screen family, picked
                                                     # by the declaration's screen_parser_version
-cargo run --release --bin golf-core -- rerecord --declare spec/declarations/career-v2.json --dry-run
-                                                    # the storage and career families together,
-                                                    # picked by career_version (M36; v2 is M35's)
+cargo run --release --bin golf-core -- rerecord --declare spec/declarations/career-v3.json --dry-run
+                                                    # the storage, career and profile families
+                                                    # together, picked by career_version (M36;
+                                                    # v3 is M37's, and v1 and v2 are refused now)
 cargo run --bin golf-core -- run < vector.json      # the port's own answer, for the diff below
 cargo run --bin golf-core -- parse-screen < spec/vectors/screen/corpus/2026-08-23-2.json
                                                     # the screen reader's answer: a screen vector
@@ -1186,9 +1326,10 @@ vectors say 0. The same verb re-records `spec/vectors/screen/` from a declaratio
 **A change that moves a storage or career answer does the same, under a third version.**
 `CAREER_VERSION` is `crates/contracts/src/career.rs`' constant, frozen Python's families say 0, and
 one key covers both families, because a corpus the reader answers is the corpus the aggregates read.
-The same verb re-records `spec/vectors/storage/` and `spec/vectors/career/` together from a
-declaration named `spec/declarations/career-v<N>.json`. M36's `career-v1.json` and M35's
-`career-v2.json` are the worked examples.
+**Since M37 it covers a third, the profile family**, for the same reason: a profile is graded from
+that corpus. The same verb re-records `spec/vectors/storage/`, `spec/vectors/career/` and
+`spec/vectors/profile/` together from a declaration named `spec/declarations/career-v<N>.json`.
+M36's `career-v1.json`, M35's `career-v2.json` and M37's `career-v3.json` are the worked examples.
 
 The steps:
 
@@ -1211,8 +1352,11 @@ The rules are `golf_core::rerecord`'s, unit-tested there and in `crates/core/tes
   documents: `corpus/`, `reference/`, `synthetic/` and `hand/`. `units/` is not read, because it
   holds case tables rather than documents (`SCREEN_UNREAD`). Any other entry under `vectors/screen/`
   is refused before a vector is read. A declaration at `career_version` walks `storage/` (`corpus/`,
-  `bundle/`, `stores/` and `hand/`) and then `career/` (`synthetic/` and `real/`), storage first
-  because the career family adopts its answers. A run never opens another family's files. There is no
+  `bundle/`, `stores/` and `hand/`), then `career/` (`synthetic/` and `real/`), then, since M37,
+  `profile/` (`hand/` and `corpus/`), each after the family it adopts from. Every entry under
+  `vectors/profile/` must sit in one of its two sub-families, and a `spec/` with no
+  `vectors/profile/` is refused. The report's count line reads `(N storage, N career, N profile)`.
+  A run never opens another family's files. There is no
   flag for the family, because a flag that disagreed with the declaration would be a second answer to
   one question.
 - **The gate.** Each engine vector's committed input goes through `golf_core::run`, and each stage
@@ -1227,7 +1371,9 @@ The rules are `golf_core::rerecord`'s, unit-tested there and in `crates/core/tes
   `storage_family::run_storage`, and each career vector through `career_family::run_career`, which
   builds the four aggregates and renders the five scripts' reports. A script listed in
   `career_family::CARRIED` has its reports copied from the committed vector rather than run. It held
-  all five until a renderer existed, and has been empty since M36 P16. Each shot case's input goes
+  all five until a renderer existed, and has been empty since M36 P16. Each profile case goes through
+  `profile_family::run_profile_case` (M37), which answers the profile and, on a corpus case, its
+  report text. Each shot case's input goes
   through `ShotInput` and `golf_core::run_shot` (M35). Nothing composes onto a shot case either: the
   copy it shares with a corpus vector is held in step by the declaration, as the paragraph above the
   steps says, and `walk_shot`'s doc says why that is enough.
@@ -1235,7 +1381,11 @@ The rules are `golf_core::rerecord`'s, unit-tested there and in `crates/core/tes
   `expected.corpus` is run on that case's answer as it will be written, so a storage answer that moved
   moves its copy, and a copy that drifted from an unchanged source is a difference. Either is a
   difference at `input.corpus…` that the declaration must name. That copy is the one `input` a
-  re-record can change.
+  re-record can change. **Since M37 the chain is one link longer**: a profile corpus case's `bag`,
+  `corpus` and `display_name` are derived from its career case as that case will be written. A
+  career case the gate refuses is passed on as committed, so its profile copy is not refused a
+  second time for the same missing path, and because the two copies are spelled at the same path
+  (`input.corpus…`), one declared path covers both.
 - **A store's written file keeps its committed text where its value agrees.** `run_storage` answers
   each written JSON file in the recorded spelling wherever its value matches under the rules above,
   as an in-tolerance float keeps Python's bits. Without that, files differ from Python's text in
@@ -1285,7 +1435,8 @@ The rules are `golf_core::rerecord`'s, unit-tested there and in `crates/core/tes
   targets and renamed over them.
 - **The file is written the way `conformance.py::_write_json` wrote it**: through
   `serde_json::Value` (so keys are sorted), in the committed file's own line endings (the plain
-  synthetic files are CRLF, and so is every screen, storage and career file; the shot cases are LF),
+  synthetic files are CRLF, and so is every screen, storage and career file; the shot and profile
+  cases are LF),
   in the committed file's own indent, and the gzipped files (`corpus/`, and the real storage and
   career cases) with `GzipFile`'s header and mtime 0. The deflate stream is not zlib's byte for byte,
   and nothing reads it. **The indent is matched since M35 P6**, read off the file's second line:
@@ -1294,8 +1445,7 @@ The rules are `golf_core::rerecord`'s, unit-tested there and in `crates/core/tes
 
 **The report is what gets reviewed, never `git diff`.** The text churns where nothing moved:
 `serde_json` writes a decimal where Python wrote one of the seventy-seven exponent-form floats, and
-writes `—` and `°` raw where Python (or a hand case's script) escaped them. There are four worked
-examples:
+writes `—` and `°` raw where Python (or a hand case's script) escaped them. The worked examples:
 
 - **M32's run** made 150 added keys and 63 moved values on the 42 files, every one of them
   declared, and a second run wrote nothing.
@@ -1320,15 +1470,26 @@ examples:
   An audit of every changed file against the committed one, with `career_version` and the ledger
   set aside, found only those two differing in value. A second run writes nothing. M36's three hand
   cases had their `—` escapes written as raw `—` in passing, which is the same value.
+- **M37's run** (`career-v3.json`) added the one key `shot`, at 37 declared paths, 69 added keys
+  across 17 vectors, and moved `career_version` and no value. It ran before the profile family
+  existed, and wrote all 132 storage and career files, M35's twelve hand cases gaining their first
+  ledger entry. An audit of every changed file against the committed one, with `career_version` and
+  the ledger set aside, found only added `shot` keys, no line-ending flip, and `real.json.gz` still
+  gzipped. A second run writes nothing, and since M37 P11 the dry run reads the profile family too:
+  `147 vectors run (76 storage, 56 career, 15 profile); 0 changed; 0 files written`.
 - **Every engine dry run since M35** reads the shot family too. `v17.json`'s reports `67 vectors
   run (21 engine, 21 stage, 25 shot); 0 changed; 0 files written`, which is the pin that M35 moved
   no swing number.
 
 **`rerecord` cannot create a vector.** It re-records the ones that exist; a new engine vector and
-its stages are §M29's Rust vector builder's. A new screen, storage, career or shot case is a
-hand-worked vector, written once with its working in its `note`, as M34's `screen/hand/`, M36's and
-M35's `storage/hand/`, and M35's `shot/` were. So a missing `spec/vectors/` is a broken checkout,
-and the Rust tests that find one say "restore it from git" rather than naming a command.
+its stages are §M29's Rust vector builder's. A new screen, storage, career, shot or profile case is
+a hand-worked vector, written once with its working in its `note`, as M34's `screen/hand/`, M36's
+and M35's `storage/hand/`, M35's `shot/` and M37's `profile/hand/` were. **The one other way in is
+M37's `profile/corpus/`** (`oracle: "rust"`): each case was written once by the family's own runner,
+through a throwaway test that was deleted, over a career case's committed corpus, and its `note`
+says it pins stability and that its correctness rests on `hand/`. So a missing `spec/vectors/` is a
+broken checkout, and the Rust tests that find one say "restore it from git" rather than naming a
+command.
 
 ### `check`: the freeze held, not the vectors are right
 
@@ -1382,6 +1543,13 @@ gate is what holds the version. The pin,
 every committed case sits above frozen Python's version, so the deferral keeps biting rather than
 passing on a family that happens to be at 16.
 
+**Nor the profile family** (M37), on the storage and career families' rule, since it ages on their
+key, and with the shot family's further reason: frozen Python has no grade to run a case through.
+`check` counts it through `profile_vector_paths()`, prints one line saying it is worked by hand or
+recorded by Rust and ages on `CAREER_VERSION`, and defers it. The pin,
+`tests/test_conformance.py::test_check_defers_the_profile_family_and_judges_no_staleness`, also holds
+each sub-family to its oracle, `hand` under `hand/` and `rust` under `corpus/`.
+
 ### `regenerate` refuses the engine, stage, screen, storage and career families
 
 **The full `regenerate` and `--stages-only` refuse with exit 2, before anything is imported or
@@ -1418,7 +1586,7 @@ script reports, through the one sanctioned recorder change (ADR-035 clause 4). E
 `_run_ops` and `_run_career` are the definitions the Rust runners reproduce.
 
 **It has no shot family to refuse** (M35): frozen Python never recorded one, and has no
-`analyze_shot` it could record one from.
+`analyze_shot` it could record one from. **Nor a profile family** (M37), for the same reason.
 
 `regenerate` still does two jobs. `--schemas-only` writes the Python-owned schema roots and never
 one in `RUST_OWNED_SCHEMAS` (§1), and `--format-only` rebuilds the format family from CPython
@@ -1526,10 +1694,12 @@ ten in the workspace. M20's `trigger`, M21's `capture` and M23's `pose` are edge
 ports. M34 added `pyfmt`, the CPython edges below every crate that needs them, and `screen`, the
 tier-2 port. M36 added `storage`, which depends on `contracts` and `pyfmt` and never on `analysis`,
 so `crates/core` is the one crate holding the stores, the aggregates and the reports together, and
-the career verbs live there.
+the career verbs live there. M37 added no crate: its grades are a module of `analysis`, its list a
+module of `feedback`, and `crates/core::profile` is where the two meet, for the reason below.
 The rule
-is enforced by cargo: `crates/feedback` holds `rules.rs` and depends on `contracts` alone, so it
-*cannot* reach `analysis` and `analysis` cannot reach it. Something above both has to make the two
+is enforced by cargo: `crates/feedback` holds `rules.rs` and, since M37, `profile_rules.rs`, and
+depends on `contracts` and `pyfmt` alone, so it *cannot* reach `analysis` and `analysis` cannot
+reach it. Something above both has to make the two
 calls, and `crates/core` is it — the counterpart of `api/pipeline.py`, whose job §M29's Rust lab
 CLI takes over rather than porting it (ADR-035 §5). See ADR-032's 2026-09-25 addendum for the three cheaper layouts
 that were declined, each of which bought a smaller crate count by spending that edge.
@@ -1601,6 +1771,11 @@ Named rather than left to be discovered:
   differently and CPython over it would too. The storage family takes the POSIX answer on case and
   line endings (`crates/storage`'s crate doc), so a case-insensitive filesystem's behaviour, which
   is this box's, is reached by no case.
+- **What the profile cannot reach on real data** (M37). Strike location, low point and a printed
+  landing offline are reached only through the `synthetic` device's hand cases (§2's
+  profile section), and every shape topic only through hand-declared intents, because `data/`
+  records none. Strike location becomes real when M42 reads the face-impact offset off Full Swing's
+  impact video, and `CENTERED_RADIUS_MM` is provisional until M42 measures that reader's error.
 - **The writing verbs over real data** (M35). `golf-core run-shot --session` and `set-intent` are
   tested on scratch trees only, and no vector reaches a write into a session. What frozen Python does
   to what they write was measured once by hand (M35 P11): it reads both files and **drops `intent` on

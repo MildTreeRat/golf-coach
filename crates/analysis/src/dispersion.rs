@@ -384,6 +384,8 @@ mod tests {
                 manual_mishit: None,
                 missing_roles: Vec::new(),
                 intent: None,
+                shot: None,
+                shot_unscored: Vec::new(),
             })
             .collect();
         empty_corpus("aaron", swings)

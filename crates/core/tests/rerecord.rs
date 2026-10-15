@@ -38,6 +38,9 @@
 //! Their real differences are made on the copies, by moving `career_version` back one (the shape
 //! of P14's re-record) or by giving a corpus case and its career twin an older sentence than the
 //! reader writes, which is how a re-record meets an adopted corpus that moved with its source.
+//! **Since M37 P11 they copy the profile family too**, because a career declaration re-records it
+//! after the career family, and a run over a `spec/` with no `vectors/profile/` is refused. Its
+//! corpus cases adopt career cases' inputs, so an older value is carried one link further.
 
 use std::collections::BTreeMap;
 use std::fs;
@@ -53,8 +56,8 @@ use flate2::write::GzEncoder;
 use flate2::Compression;
 use golf_core::compare::compare;
 use golf_core::rerecord::{
-    plan, run_screen, Family, Refused, CAREER, CAREER_DOCUMENTS, SCREEN_DOCUMENTS, STORAGE,
-    STORAGE_DOCUMENTS,
+    plan, run_screen, Family, Refused, CAREER, CAREER_DOCUMENTS, PROFILE, PROFILE_DOCUMENTS,
+    SCREEN_DOCUMENTS, STORAGE, STORAGE_DOCUMENTS,
 };
 use screen::ScreenInput;
 use serde_json::{json, Value};
@@ -160,16 +163,17 @@ impl Slice {
         slice
     }
 
-    /// [`Slice::new`], plus the whole committed storage and career families. [M36 P13]
+    /// [`Slice::new`], plus the whole committed storage, career and profile families. [M36 P13]
     fn with_career(name: &str) -> Self {
         let slice = Self::new(name);
         slice.copy_the_career_families();
         slice
     }
 
-    /// Copy the committed storage and career families into the slice. [M35 P9]
+    /// Copy the committed storage, career and profile families into the slice: every family a
+    /// career declaration re-records. [M35 P9, the profile family M37 P11]
     fn copy_the_career_families(&self) {
-        for family in [STORAGE, CAREER] {
+        for family in CAREER_FAMILIES {
             copy_tree(
                 &committed_spec().join("vectors").join(family),
                 &self.vector(family),
@@ -189,12 +193,14 @@ impl Slice {
         path
     }
 
-    /// Every storage and career document in the slice, by path: the files a career run reads.
+    /// Every storage, career and profile document in the slice, by path: the files a career run
+    /// reads.
     fn career_documents(&self) -> Vec<PathBuf> {
         let mut paths = Vec::new();
         for (family, halves) in [
             (STORAGE, &STORAGE_DOCUMENTS[..]),
             (CAREER, &CAREER_DOCUMENTS[..]),
+            (PROFILE, &PROFILE_DOCUMENTS[..]),
         ] {
             for half in halves {
                 for entry in fs::read_dir(self.vector(family).join(half)).expect("list") {
@@ -1219,6 +1225,9 @@ fn a_screen_sub_family_nobody_placed_stops_the_walk() {
 
 // --------------------------------------------------- the storage and career families [M36 P13]
 
+/// The families a career declaration re-records, in the order it walks them. [M37 P11]
+const CAREER_FAMILIES: [&str; 3] = [STORAGE, CAREER, PROFILE];
+
 const OUTDATED_CASE: &str = "storage/corpus/stale-and-outdated.json";
 const OUTDATED_TWIN: &str = "career/synthetic/storage-stale-and-outdated.json";
 const OUTDATED_TWIN_ID: &str = "career/synthetic/storage-stale-and-outdated";
@@ -1227,12 +1236,13 @@ const OUTDATED_DETAIL: &str = "expected.corpus.excluded[1].detail";
 const ADOPTED_DETAIL: &str = "input.corpus.excluded[1].detail";
 const OLDER_SENTENCE: &str = "an older sentence than the reader writes";
 
-/// How many storage and how many career documents the slice holds, for the report's count line.
-fn career_counts(slice: &Slice) -> (usize, usize) {
+/// How many storage, career and profile documents the slice holds, for the report's count line.
+fn career_counts(slice: &Slice) -> [usize; 3] {
     let documents = slice.career_documents();
-    let storage = slice.vector(STORAGE);
-    let in_storage = documents.iter().filter(|p| p.starts_with(&storage)).count();
-    (in_storage, documents.len() - in_storage)
+    CAREER_FAMILIES.map(|family| {
+        let dir = slice.vector(family);
+        documents.iter().filter(|p| p.starts_with(&dir)).count()
+    })
 }
 
 /// **An empty declaration at this build's career version finds nothing and writes nothing**, dry
@@ -1242,8 +1252,8 @@ fn career_counts(slice: &Slice) -> (usize, usize) {
 fn an_empty_career_declaration_finds_nothing_and_writes_nothing() {
     let slice = Slice::with_career("career-empty");
     let declaration = slice.declare_career("career-empty", CAREER_VERSION, &[]);
-    let (storage, career) = career_counts(&slice);
-    assert!(storage > 0 && career > 0);
+    let [storage, career, profile] = career_counts(&slice);
+    assert!(storage > 0 && career > 0 && profile > 0);
     let before = slice.snapshot();
 
     for extra in [&["--dry-run"][..], &[][..]] {
@@ -1251,8 +1261,9 @@ fn an_empty_career_declaration_finds_nothing_and_writes_nothing() {
         let stdout = text(&output.stdout);
         assert!(output.status.success(), "{}", text(&output.stderr));
         let count = format!(
-            "{} vectors run ({storage} storage, {career} career); 0 changed; 0 files written",
-            storage + career
+            "{} vectors run ({storage} storage, {career} career, {profile} profile); 0 changed; \
+             0 files written",
+            storage + career + profile
         );
         for expected in [
             format!("a declaration at career_version {CAREER_VERSION}, 0 added and 0 moved"),
@@ -1286,18 +1297,19 @@ fn a_career_declaration_at_another_version_is_refused_before_anything_is_read() 
     }
 }
 
-/// **A career re-record moves both families behind the gate**: with every copy recorded one
+/// **A career re-record moves its three families behind the gate**: with every copy recorded one
 /// version back, an empty declaration is refused on every document at once and writes nothing; the
-/// version declared, it lands on every storage and career document alone, each ledgered under
-/// `career_version` with no `removed` list, every other value and every other family's file left
-/// byte for byte, the committed line endings kept; and a second run writes nothing. P14's re-record
-/// is this move plus the sentences it declares.
+/// version declared, it lands on every storage, career and profile document alone, each ledgered
+/// under `career_version` with no `removed` list and its oracle kept (`"hand"` and `"rust"` on the
+/// profile family's two halves), every other value and every other family's file left byte for
+/// byte, the committed line endings kept; and a second run writes nothing. P14's re-record is this
+/// move plus the sentences it declares.
 ///
 /// Aging a copy also drops its ledger, as `age_the_screen_documents` does, so each file's entry is
 /// the only one: since `career-v1.json` ran (M36 P14) the committed vectors carry its entry, and a
 /// run appends to a ledger rather than replacing it.
 #[test]
-fn a_career_version_move_lands_on_both_families_and_a_second_run_writes_nothing() {
+fn a_career_version_move_lands_on_its_three_families_and_a_second_run_writes_nothing() {
     let slice = Slice::with_career("career-move");
     let documents = slice.career_documents();
     for path in &documents {
@@ -1329,12 +1341,12 @@ fn a_career_version_move_lands_on_both_families_and_a_second_run_writes_nothing(
     let declaration = slice.declare_career("career-move", CAREER_VERSION, &["career_version"]);
     let run = plan(&slice.spec(), &declaration).expect("the version move is declared");
     let families: Vec<Family> = run.vectors().iter().map(|v| v.family()).collect();
-    let storage = families.iter().filter(|f| **f == Family::Storage).count();
-    assert!(storage > 0 && storage < families.len());
-    assert!(
-        families[..storage].iter().all(|f| *f == Family::Storage)
-            && families[storage..].iter().all(|f| *f == Family::Career),
-        "the storage family first, then the career family"
+    let mut walked = families.clone();
+    walked.dedup();
+    assert_eq!(
+        walked,
+        [Family::Storage, Family::Career, Family::Profile],
+        "the storage family first, then the career family, then the profile family"
     );
     for vector in run.vectors() {
         let moved: Vec<&str> = vector
@@ -1348,6 +1360,18 @@ fn a_career_version_move_lands_on_both_families_and_a_second_run_writes_nothing(
     }
     let aged: BTreeMap<PathBuf, Value> = documents.iter().map(|p| (p.clone(), read(p))).collect();
     assert_eq!(run.write().expect("writes"), documents.len());
+    let oracle_of = |path: &Path| -> &'static str {
+        let profile = slice.vector(PROFILE);
+        if path.starts_with(profile.join("corpus")) {
+            "rust"
+        } else if path.starts_with(profile.join("hand"))
+            || path.starts_with(slice.vector("storage/hand"))
+        {
+            "hand"
+        } else {
+            "python"
+        }
+    };
 
     let after = slice.snapshot();
     for (path, bytes) in &before {
@@ -1382,6 +1406,11 @@ fn a_career_version_move_lands_on_both_families_and_a_second_run_writes_nothing(
                 "moved": ["career_version"],
             }]),
             "{path:?}"
+        );
+        assert_eq!(
+            written["provenance"]["oracle"],
+            json!(oracle_of(path)),
+            "{path:?}: the oracle"
         );
         let mut undone = written.clone();
         undone["provenance"] = aged[path]["provenance"].clone();
@@ -1514,7 +1543,7 @@ fn a_career_run_reads_no_engine_or_screen_vector_and_neither_reads_a_career_one(
     let slice = Slice::with_screen("career-only");
     slice.copy_the_career_families();
     for path in slice.snapshot().into_keys() {
-        let career = [STORAGE, CAREER]
+        let career = CAREER_FAMILIES
             .iter()
             .any(|family| path.starts_with(slice.vector(family)));
         if !career && path.starts_with(slice.spec().join("vectors")) {
@@ -1523,19 +1552,14 @@ fn a_career_run_reads_no_engine_or_screen_vector_and_neither_reads_a_career_one(
     }
     let declaration = slice.declare_career("career-empty", CAREER_VERSION, &[]);
     let run = plan(&slice.spec(), &declaration).expect("a career run never reads another family");
-    assert!(run
-        .vectors()
-        .iter()
-        .all(|v| matches!(v.family(), Family::Storage | Family::Career)));
+    assert!(run.vectors().iter().all(|v| matches!(
+        v.family(),
+        Family::Storage | Family::Career | Family::Profile
+    )));
     assert_eq!(run.vectors().len(), slice.career_documents().len());
 
     let slice = Slice::with_screen("not-career");
-    for family in [STORAGE, CAREER] {
-        copy_tree(
-            &committed_spec().join("vectors").join(family),
-            &slice.vector(family),
-        );
-    }
+    slice.copy_the_career_families();
     for path in slice.career_documents() {
         fs::write(&path, unreadable).expect("write");
     }
@@ -1547,7 +1571,7 @@ fn a_career_run_reads_no_engine_or_screen_vector_and_neither_reads_a_career_one(
         .snapshot()
         .into_iter()
         .filter(|(path, _)| {
-            [STORAGE, CAREER]
+            CAREER_FAMILIES
                 .iter()
                 .any(|family| path.starts_with(slice.vector(family)))
         })
@@ -1570,7 +1594,7 @@ fn a_career_run_reads_no_engine_or_screen_vector_and_neither_reads_a_career_one(
         .snapshot()
         .into_iter()
         .filter(|(path, _)| {
-            [STORAGE, CAREER]
+            CAREER_FAMILIES
                 .iter()
                 .any(|family| path.starts_with(slice.vector(family)))
         })
@@ -1596,6 +1620,11 @@ fn a_career_sub_family_nobody_placed_or_a_runner_nobody_has_stops_the_walk() {
             "career-unplaced-file",
             "career/README.json",
             "CAREER_DOCUMENTS",
+        ),
+        (
+            "profile-unplaced-dir",
+            "profile/unplaced/",
+            "PROFILE_DOCUMENTS",
         ),
     ] {
         let slice = Slice::with_career(name);
@@ -1637,6 +1666,132 @@ fn a_career_sub_family_nobody_placed_or_a_runner_nobody_has_stops_the_walk() {
     }
 }
 
+/// A storage corpus case, its career twin and the profile corpus case that adopts the twin: the
+/// three links of one adopted input. [M37 P11]
+const EVERY_SOURCE_CASE: &str = "storage/corpus/every-source.json";
+const EVERY_SOURCE_TWIN: &str = "career/synthetic/storage-every-source.json";
+const EVERY_SOURCE_PROFILE: &str = "profile/corpus/storage-every-source.json";
+const EVERY_SOURCE_TWIN_ID: &str = "career/synthetic/storage-every-source";
+const EVERY_SOURCE_PROFILE_ID: &str = "profile/corpus/storage-every-source";
+/// A value of the corpus that no aggregate, grade or report reads, so moving it moves a copy and
+/// nothing computed from one.
+const SHOT_ID_ANSWER: &str = "expected.corpus.swings[0].shot.shot_id";
+const SHOT_ID_ADOPTED: &str = "input.corpus.swings[0].shot.shot_id";
+const OLDER_SHOT_ID: &str = "an older shot id than the reader writes";
+
+/// **An adopted input moves along the whole chain, and only where the declaration says so** (M37
+/// P11). A storage corpus case, its career twin and the profile corpus case that adopts the twin
+/// are all given an older shot id than the reader writes, as three vectors recorded under an older
+/// rule would hold. Declaring the storage case's path alone is refused at the twin's copy, and only
+/// there: a refused career vector is passed on as committed, so the profile case, whose copy agrees
+/// with the committed twin, is not refused a second time for the same missing path. The chain stops
+/// at its first broken link. The twin and the profile case spell the copy at one path, so declaring
+/// it lands both, and all three move, with no answer moving. And a profile case whose copy drifted
+/// from an unchanged career case is refused by an empty declaration, at the key that drifted.
+#[test]
+fn an_adopted_profile_input_moves_with_its_career_case_and_only_where_declared() {
+    let slice = Slice::with_career("profile-adopted");
+    let (case, twin, profile) = (
+        slice.vector(EVERY_SOURCE_CASE),
+        slice.vector(EVERY_SOURCE_TWIN),
+        slice.vector(EVERY_SOURCE_PROFILE),
+    );
+    let reader_writes = read(&case)["expected"]["corpus"]["swings"][0]["shot"]["shot_id"].clone();
+    assert!(reader_writes.is_string(), "{reader_writes}");
+    slice.edit_like_committed(&case, |v| {
+        v["expected"]["corpus"]["swings"][0]["shot"]["shot_id"] = json!(OLDER_SHOT_ID);
+    });
+    for copy in [&twin, &profile] {
+        slice.edit_like_committed(copy, |v| {
+            v["input"]["corpus"]["swings"][0]["shot"]["shot_id"] = json!(OLDER_SHOT_ID);
+        });
+    }
+    let before = slice.snapshot();
+
+    let half = slice.declare_career("career-half", CAREER_VERSION, &[SHOT_ID_ANSWER]);
+    match plan(&slice.spec(), &half) {
+        Err(Refused::Gate(refusals)) => {
+            assert_eq!(refusals.len(), 1, "{refusals:#?}");
+            assert!(
+                refusals[0].starts_with(&format!("{EVERY_SOURCE_TWIN_ID}: {SHOT_ID_ADOPTED}: ")),
+                "{}",
+                refusals[0]
+            );
+        }
+        other => panic!("expected the twin's copy to be refused, got {other:?}"),
+    }
+    fs::remove_file(&half).expect("remove the half declaration");
+    assert_eq!(slice.snapshot(), before, "a refused run wrote something");
+
+    let both = slice.declare_career(
+        "career-both",
+        CAREER_VERSION,
+        &[SHOT_ID_ANSWER, SHOT_ID_ADOPTED],
+    );
+    let expected_before = [&twin, &profile].map(|path| read(path)["expected"].clone());
+    let run = plan(&slice.spec(), &both).expect("both are declared");
+    let changed: Vec<(&str, Vec<&str>)> = run
+        .changed()
+        .map(|v| {
+            let moved = v.applied().moved().iter().map(|p| p.as_str()).collect();
+            (v.id(), moved)
+        })
+        .collect();
+    assert_eq!(
+        changed,
+        [
+            ("storage/corpus/every-source", vec![SHOT_ID_ANSWER]),
+            (EVERY_SOURCE_TWIN_ID, vec![SHOT_ID_ADOPTED]),
+            (EVERY_SOURCE_PROFILE_ID, vec![SHOT_ID_ADOPTED]),
+        ]
+    );
+    assert_eq!(run.write().expect("writes"), 3);
+    let written_twin = read(&twin);
+    let written_profile = read(&profile);
+    assert_eq!(
+        written_twin["input"]["corpus"],
+        read(&case)["expected"]["corpus"],
+        "the twin's copy is its case's answer again"
+    );
+    assert_eq!(
+        written_profile["input"]["corpus"], written_twin["input"]["corpus"],
+        "the profile case's copy is its career case's again"
+    );
+    assert_eq!(
+        written_profile["input"]["corpus"]["swings"][0]["shot"]["shot_id"],
+        reader_writes
+    );
+    assert_eq!(
+        [&written_twin, &written_profile].map(|v| v["expected"].clone()),
+        expected_before,
+        "an answer moved"
+    );
+    assert_eq!(written_profile["provenance"]["oracle"], json!("rust"));
+
+    let after = slice.snapshot();
+    let second = plan(&slice.spec(), &both).expect("a second run is a no-op, not a refusal");
+    assert_eq!(second.changed().count(), 0);
+    assert_eq!(slice.snapshot(), after);
+
+    let slice = Slice::with_career("profile-drifted");
+    slice.edit_like_committed(&slice.vector(EVERY_SOURCE_PROFILE), |v| {
+        v["input"]["display_name"] = json!("someone else");
+    });
+    let empty = slice.declare_career("career-empty", CAREER_VERSION, &[]);
+    match plan(&slice.spec(), &empty) {
+        Err(Refused::Gate(refusals)) => {
+            assert_eq!(refusals.len(), 1, "{refusals:#?}");
+            assert!(
+                refusals[0]
+                    .starts_with(&format!("{EVERY_SOURCE_PROFILE_ID}: input.display_name: ")),
+                "{}",
+                refusals[0]
+            );
+        }
+        other => panic!("expected the drifted copy to be refused, got {other:?}"),
+    }
+}
+
 // ------------------------------------------------------------------- the shot family [M35 P6]
 
 /// **A screen or career run never opens `shot/`, and an engine run always does** (M35 P6). With the
@@ -1666,10 +1821,10 @@ fn a_screen_or_career_run_never_opens_the_shot_family() {
     run.write().expect("writes");
     let career = slice.declare_career("career-empty", CAREER_VERSION, &[]);
     let run = plan(&slice.spec(), &career).expect("a career run never opens shot/");
-    assert!(run
-        .vectors()
-        .iter()
-        .all(|v| matches!(v.family(), Family::Storage | Family::Career)));
+    assert!(run.vectors().iter().all(|v| matches!(
+        v.family(),
+        Family::Storage | Family::Career | Family::Profile
+    )));
     assert_eq!(
         shot_files(&slice),
         shot_before,
@@ -1697,4 +1852,179 @@ fn a_screen_or_career_run_never_opens_the_shot_family() {
         }
         other => panic!("expected the shot walk to stop on the unreadable case, got {other:?}"),
     }
+}
+
+// ------------------------------------------------------------------ the oracle pin [M37 P11]
+
+/// The oracles a committed vector may name (ADR-032's twelfth addendum's three kinds): frozen
+/// Python recorded it, a person worked it, or Rust's own run recorded it with nothing independent
+/// behind it (the M37 plan's call 18).
+const ORACLES: [&str; 3] = ["python", "hand", "rust"];
+
+/// The families whose oracle is named here rather than in their files: `audio` and `format`
+/// predate `provenance.oracle` (CONFORMANCE §2, "Who recorded each value"). Both are Python's.
+/// The deleted `audio/impact.py` recorded the audio family (M20), and the format family is
+/// CPython's own output, written by `conformance_vectors.build_format`.
+///
+/// The user's answer to the M37 plan's P11 finding 3 (option b). Writing the key into the 43 files
+/// would have changed two families M37's rules hold still. It would also have changed the frozen
+/// `_format_vector`, because `test_the_format_table_regenerates_byte_identically` compares every
+/// format file with that function's output. So the table names the oracle once, and the files keep
+/// their bytes. A family listed here whose files start carrying the key fails the pin, so the
+/// table and the files can never both claim it.
+const ORACLE_BY_FAMILY: [(&str, &str); 2] = [("audio", "python"), ("format", "python")];
+
+/// Just enough of a vector to read its provenance; every other key is skipped unparsed, which is
+/// what keeps this walk over every committed vector cheap.
+#[derive(serde::Deserialize)]
+struct Header {
+    id: Option<String>,
+    provenance: Option<Value>,
+}
+
+/// **Every committed vector names its oracle, and every ledger entry its declaration** (§M37's
+/// oracle pin, the M37 plan's P11). The first half is ADR-034 clause 9 and ADR-032's twelfth
+/// addendum: a family recorded by Python, worked by hand and recorded by Rust each mean something
+/// different under a re-record, so the kind is written down. The second is ADR-032's fourteenth
+/// addendum's option: a `provenance.rerecords` entry is what says which values are Rust's, so each
+/// names the declaration that licensed it, that declaration is committed, and the entry carries the
+/// declaration's own version key and value, with `by` naming the verb.
+///
+/// Read from the committed `spec/`, not a slice, because the claim is about what is committed.
+#[test]
+fn every_committed_vector_names_its_oracle_and_every_ledger_entry_its_declaration() {
+    fn collect(dir: &Path, out: &mut Vec<PathBuf>) {
+        for entry in fs::read_dir(dir).unwrap_or_else(|e| panic!("{}: {e}", dir.display())) {
+            let path = entry.expect("a directory entry").path();
+            let name = path.to_string_lossy();
+            if path.is_dir() {
+                collect(&path, out);
+            } else if name.ends_with(".json") || name.ends_with(".json.gz") {
+                out.push(path);
+            }
+        }
+    }
+    let spec = committed_spec();
+    let vectors = spec.join("vectors");
+    let mut paths = Vec::new();
+    collect(&vectors, &mut paths);
+    paths.sort();
+
+    let version_keys = [
+        "analysis_version",
+        "screen_parser_version",
+        "career_version",
+    ];
+    let mut declarations: BTreeMap<String, (String, Value)> = BTreeMap::new();
+    let mut found = Vec::new();
+    let mut by_family: BTreeMap<String, BTreeMap<String, usize>> = BTreeMap::new();
+    let mut entries = 0;
+    for path in &paths {
+        let relative = path
+            .strip_prefix(&vectors)
+            .expect("under spec/vectors")
+            .to_string_lossy()
+            .replace('\\', "/");
+        let family = relative.split('/').next().expect("a family").to_string();
+        let bytes = fs::read(path).unwrap_or_else(|e| panic!("{relative}: {e}"));
+        let text = if relative.ends_with(".gz") {
+            text(&decompressed(&bytes))
+        } else {
+            text(&bytes)
+        };
+        let header: Header =
+            serde_json::from_str(&text).unwrap_or_else(|e| panic!("{relative}: {e}"));
+        let id = header.id.unwrap_or_else(|| relative.clone());
+        let provenance = header.provenance.unwrap_or(Value::Null);
+        let oracle = provenance["oracle"].as_str();
+
+        if let Some(&(_, named)) = ORACLE_BY_FAMILY.iter().find(|(f, _)| *f == family) {
+            if oracle.is_some() {
+                found.push(format!(
+                    "{id}: provenance.oracle is {oracle:?}, and ORACLE_BY_FAMILY already names \
+                     `{family}`'s: one of the two must go"
+                ));
+            }
+            *by_family
+                .entry(family)
+                .or_default()
+                .entry(named.to_string())
+                .or_default() += 1;
+        } else {
+            match oracle {
+                Some(oracle) if ORACLES.contains(&oracle) => {
+                    *by_family
+                        .entry(family)
+                        .or_default()
+                        .entry(oracle.to_string())
+                        .or_default() += 1;
+                }
+                other => found.push(format!(
+                    "{id}: provenance.oracle is {other:?}, not one of {ORACLES:?}"
+                )),
+            }
+        }
+
+        for entry in provenance["rerecords"].as_array().into_iter().flatten() {
+            entries += 1;
+            let Some(declaration) = entry["declaration"].as_str() else {
+                found.push(format!(
+                    "{id}: a ledger entry names no declaration: {entry}"
+                ));
+                continue;
+            };
+            if entry["by"] != "golf-core rerecord" {
+                found.push(format!("{id}: a ledger entry is not the verb's: {entry}"));
+            }
+            let (key, value) = declarations
+                .entry(declaration.to_string())
+                .or_insert_with(|| {
+                    let file = spec.parent().expect("spec has a parent").join(declaration);
+                    let committed = read(&file);
+                    let keys: Vec<&str> = version_keys
+                        .iter()
+                        .copied()
+                        .filter(|key| committed.get(*key).is_some())
+                        .collect();
+                    assert_eq!(keys.len(), 1, "{declaration}: version keys {keys:?}");
+                    (keys[0].to_string(), committed[keys[0]].clone())
+                });
+            if &entry[key.as_str()] != value {
+                found.push(format!(
+                    "{id}: a ledger entry naming {declaration} records {key} {}, and the \
+                     declaration is at {value}",
+                    entry[key.as_str()]
+                ));
+            }
+        }
+    }
+    // The table is held to the same three kinds as the files, and to families that exist, so a
+    // stale row (a family renamed or retired) fails here rather than vouching for nothing.
+    for (family, named) in ORACLE_BY_FAMILY {
+        if !ORACLES.contains(&named) {
+            found.push(format!(
+                "ORACLE_BY_FAMILY names `{family}`'s oracle {named:?}, not one of {ORACLES:?}"
+            ));
+        }
+        if !by_family.contains_key(family) {
+            found.push(format!(
+                "ORACLE_BY_FAMILY names `{family}`, and no committed vector is in it"
+            ));
+        }
+    }
+    assert!(
+        found.is_empty(),
+        "{} vectors break the oracle pin:\n{}",
+        found.len(),
+        found.join("\n")
+    );
+    assert!(
+        entries > 0 && !declarations.is_empty(),
+        "no ledger entry was read"
+    );
+    println!(
+        "{} vectors, {entries} ledger entries naming {} declarations; by family: {by_family:?}",
+        paths.len(),
+        declarations.len()
+    );
 }

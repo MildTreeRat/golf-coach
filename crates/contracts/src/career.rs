@@ -27,26 +27,31 @@
 //! # What ages on [`CAREER_VERSION`]
 //!
 //! This module also holds the version key for the two vector families the many-shot layer is gated
-//! by, `spec/vectors/storage/` and `spec/vectors/career/`. It is here because the corpus is the one
-//! shape both families carry: the storage family's corpus cases end in one, and every career case
-//! starts from one.
+//! by, `spec/vectors/storage/` and `spec/vectors/career/`, and since M37 a third,
+//! `spec/vectors/profile/`. It is here because the corpus is the one shape all three carry: the
+//! storage family's corpus cases end in one, and every career and profile case starts from one.
 
 use std::collections::{BTreeMap, BTreeSet};
 
 use serde::{Deserialize, Serialize};
 
+use crate::checkpoints::CHECKPOINT_REGISTRY;
 use crate::club::ClubId;
 use crate::intent::PracticeGoal;
 use crate::mishit::{MishitVerdict, MISHIT_EXCLUDED_METRICS};
+use crate::shot::ShotData;
 use crate::swing::Measurement;
+use crate::unscored::UnscoredCheckpoint;
 use crate::{each, nested, ContractError, Timestamp, Validate};
 
 /// The generation of the many-shot layer's rules, stamped as `career_version` at the top of every
-/// vector under `spec/vectors/storage/` and `spec/vectors/career/`. **Bump it whenever either family
-/// would record something different** — a store that writes another file, a corpus that pools or
-/// excludes another swing, an aggregate that moves, a report that prints another sentence — and
-/// re-record both families through `golf-core rerecord` with a `career-v<N>.json` declaration, as
-/// [`crate::shot::SCREEN_PARSER_VERSION`] picks the screen family (the M36 plan's decision 8).
+/// vector under `spec/vectors/storage/` and `spec/vectors/career/`, and since M37 under
+/// `spec/vectors/profile/`. **Bump it whenever any of them would record something different** — a
+/// store that writes another file, a corpus that pools or excludes another swing, an aggregate that
+/// moves, a report that prints another sentence, a grade that judges another way — and re-record
+/// them together through `golf-core rerecord` with a `career-v<N>.json` declaration, as
+/// [`crate::shot::SCREEN_PARSER_VERSION`] picks the screen family (the M36 plan's decision 8; the
+/// profile family joined in the M37 plan's call 1).
 ///
 /// One key for both families, because the career family's real case starts from the storage
 /// family's real corpus (P3 asserts the two are equal when it records), so a change to what the
@@ -85,7 +90,20 @@ use crate::{each, nested, ContractError, Timestamp, Validate};
 ///   down-the-line-and-photo swing is now a duplicate of the swing holding the same photo, plus its
 ///   adopted copy and that copy's two `career_corpus` reports; nothing pooled moved. The cases that
 ///   exercise the new rules are hand-worked at 2 under `spec/vectors/storage/hand/` (M35 P9).
-pub const CAREER_VERSION: i64 = 2;
+///
+/// 3 (M37 P4): **each entry carries its shot, and the shot side of its refusals** (the M37 plan's
+///   decision 5 and call 3). `read_corpus` lifts the survivor's artifact's shot onto
+///   [`CorpusSwing::shot`], and its `unscored` entries that are not checkpoints onto
+///   [`CorpusSwing::shot_unscored`]: off `analysis.json` for a swing, off `shot_analysis.json` for a
+///   photo entry, never off a duplicate's. A swing's shot that the contract refuses stays flagged and
+///   is not carried. Both are written only when set, so `spec/declarations/career-v3.json` adds the
+///   one key `shot` on every recorded entry whose artifact holds a readable shot, the hand-worked
+///   photo entries included, and on each adopted copy's `input.corpus`, and moves no value. No
+///   recorded artifact's `unscored` holds a flight row or a photo-side key, so no vector gains
+///   `shot_unscored` (the reader's own tests hold that lift), and nothing pooled, no aggregate and
+///   no report moved: none of them reads either field. M37's profile family is born at 3 (the M37
+///   plan's call 1).
+pub const CAREER_VERSION: i64 = 3;
 
 /// `Measurement.source` for anything read off the pose stream: it keys on the face-on clip.
 pub const POSE_SOURCE_PREFIX: &str = "pose:";
@@ -348,6 +366,39 @@ pub struct CorpusSwing {
     /// serializes to the value it was recorded as. [M35 P8]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub intent: Option<PracticeGoal>,
+
+    /// The survivor's shot, whole, lifted off its artifact (`analysis.json`'s `shot`, or a photo
+    /// entry's `shot_analysis.json`'s) as `club` is lifted off its manifest: a duplicate's shot is
+    /// never consulted. M37's topic grades read it because `measurements` carries neither of the two
+    /// things they need. One is the tiles no shot row is derived from: the categorical read-outs and
+    /// M32's keys (the impact offsets, low point, `carry_offline`). The other is `provenance`, which
+    /// [`crate::capability::printed_on`] needs to tell a tile the screen left blank on this shot from
+    /// one the device never prints (ADR-034 §2). A topic graded off a blank as if it were a miss is
+    /// the wrong score ADR-010 §2 forbids.
+    ///
+    /// **Carried whole rather than as the few fields M37 reads**, so the next topic needs no new
+    /// field and no `CAREER_VERSION` of its own (the M37 plan's decision 5). It is not the swing's
+    /// numbers: a baseline still pools `measurements` and nothing else.
+    ///
+    /// **Written only when set**, after `intent` and for its reason: no corpus recorded before M37
+    /// holds a shot, so each serializes to the value it was recorded as. [M37 P3]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub shot: Option<ShotData>,
+
+    /// The survivor's artifact's `unscored` entries that are **not** mechanics checkpoints: the shot
+    /// and flight side, where a photo-side refusal is named for its `ShotData` field (`printed_blank`,
+    /// `misread`) and a flight row for itself (`spin_axis_unresolved`, `no_handedness`). It is what
+    /// lets a topic count a shot that holds no value for its input under the reason it holds none,
+    /// rather than as a miss (the M37 plan's calls 6 and 8).
+    ///
+    /// **A checkpoint's entry is refused here, not skipped by each reader** (the M37 plan's call 3).
+    /// The mechanics panel is `SwingResult`'s and no grade reads it (Decision 12), so a corpus
+    /// carrying one is a reader that lifted the wrong half, and it fails where it was written rather
+    /// than inside the first topic that trusts the list.
+    ///
+    /// **Written only when non-empty**, for `shot`'s reason. [M37 P3]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub shot_unscored: Vec<UnscoredCheckpoint>,
 }
 
 crate::validated!(CorpusSwing);
@@ -355,7 +406,24 @@ crate::validated!(CorpusSwing);
 impl Validate for CorpusSwing {
     fn validate(&self) -> Result<(), ContractError> {
         each("CorpusSwing.measurements", &self.measurements)?;
-        nested("CorpusSwing.intent", self.intent.as_ref())
+        nested("CorpusSwing.intent", self.intent.as_ref())?;
+        nested("CorpusSwing.shot", self.shot.as_ref())?;
+        each("CorpusSwing.shot_unscored", &self.shot_unscored)?;
+        for (i, entry) in self.shot_unscored.iter().enumerate() {
+            if CHECKPOINT_REGISTRY
+                .iter()
+                .any(|spec| spec.name == entry.name)
+            {
+                return Err(ContractError {
+                    field: format!("CorpusSwing.shot_unscored[{i}].name"),
+                    problem: format!(
+                        "{:?} is a mechanics checkpoint, and this list holds the shot side only",
+                        entry.name
+                    ),
+                });
+            }
+        }
+        Ok(())
     }
 }
 
@@ -534,6 +602,10 @@ impl CareerCorpus {
     /// **The scan counters are carried unchanged and still describe the whole read**
     /// (`swing_dirs_seen`, `sessions_scanned`, `unattributed_swings`, `other_golfers`, `excluded`):
     /// they are facts about what was on disk, and nothing downstream of a narrowed corpus reads them.
+    ///
+    /// **A kept swing is carried whole**, `shot` and `shot_unscored` included: M37's per-club topic
+    /// grades read the tiles and the refusals off the club's narrowed corpus, so a narrowing that
+    /// rebuilt each swing from its counted fields would hand them a club with no shots. [M37 P3]
     ///
     /// **A swing naming no club matches no club, so a club narrowing drops it** — and that asymmetry
     /// is the point. The reader does not exclude an untagged swing, because the club was never an
@@ -749,6 +821,8 @@ mod tests {
             manual_mishit: None,
             missing_roles: Vec::new(),
             intent: None,
+            shot: None,
+            shot_unscored: Vec::new(),
         }
     }
 
@@ -1063,5 +1137,163 @@ mod tests {
         let mut unknown = written;
         unknown["intent"]["mode"] = serde_json::json!("warm_up");
         assert!(serde_json::from_value::<CorpusSwing>(unknown).is_err());
+    }
+
+    // --- the shot and its shot-side refusals [M37 P3] ------------------------------------------
+
+    /// A photographed 7 iron as M37 reads one: provenance naming its device and the tiles the parse
+    /// located, and one of M32's keys holding a value.
+    fn shot() -> ShotData {
+        serde_json::from_value(serde_json::json!({
+            "shot_id": "shot-1",
+            "session_id": "2026-09-01",
+            "timestamp": "2026-09-01T12:00:00Z",
+            "source": "screen",
+            "carry_distance": 151.5,
+            "launch_direction": -1.25,
+            "impact_offset_h": 4.0,
+            "provenance": {
+                "device": "hd_golf",
+                "parse_confidence": 0.95,
+                "image_sha256": "photo-1",
+                "fields_present": ["carry_distance", "launch_direction", "spin_axis"],
+            },
+        }))
+        .expect("a valid shot")
+    }
+
+    fn refusal(name: &str, reason: crate::unscored::UnscoredReason) -> UnscoredCheckpoint {
+        UnscoredCheckpoint {
+            name: name.into(),
+            reason,
+            detail: String::new(),
+        }
+    }
+
+    fn photographed() -> CorpusSwing {
+        use crate::unscored::UnscoredReason::{PrintedBlank, SpinAxisUnresolved};
+        CorpusSwing {
+            club: Some(ClubId::SevenIron),
+            shot: Some(shot()),
+            shot_unscored: vec![
+                refusal("spin_axis", PrintedBlank),
+                refusal("flight_landing_offline_yds", SpinAxisUnresolved),
+            ],
+            ..swing()
+        }
+    }
+
+    /// Every corpus recorded before M37 holds neither field, so a swing without them must write
+    /// exactly the bytes it did — every key in its old order and no new one — or the storage and
+    /// career families move under a change that filled nothing. The vector walk in
+    /// `tests/career.rs` holds every recorded corpus to the same, by value.
+    #[test]
+    fn a_swing_with_no_shot_writes_the_bytes_it_was_recorded_as() {
+        assert_eq!(
+            serde_json::to_string(&swing()).unwrap(),
+            concat!(
+                r#"{"player_id":"aaron","session_id":"2026-09-01","swing_id":"1","#,
+                r#""captured_at":"2026-09-01T12:00:00Z","face_on_sha256":"clip-a","#,
+                r#""shot_sha256":"photo-1","club":null,"measurements":[],"duplicates":[],"#,
+                r#""conflicting_shots":[],"analyzed":false,"stale":false,"analysis_version":0,"#,
+                r#""outdated":false,"shot_needs_review":false,"auto_mishit":false,"#,
+                r#""manual_mishit":null,"missing_roles":[]}"#,
+            )
+        );
+    }
+
+    /// The two land last, after `intent`, and come back whole: the provenance `printed_on` reads, an
+    /// M32 key, and each refusal with its reason.
+    #[test]
+    fn a_shot_and_its_refusals_round_trip_after_every_older_field() {
+        let swing = photographed();
+        let text = serde_json::to_string(&swing).unwrap();
+        let after_missing_roles = text.find(r#""missing_roles""#).unwrap();
+        let shot_at = text.find(r#""shot":{"#).expect("the shot is written");
+        let unscored_at = text
+            .find(r#""shot_unscored":["#)
+            .expect("the refusals are written");
+        assert!(after_missing_roles < shot_at && shot_at < unscored_at);
+
+        let read: CorpusSwing = serde_json::from_str(&text).unwrap();
+        assert_eq!(read, swing);
+        let provenance = read.shot.as_ref().unwrap().provenance.as_ref().unwrap();
+        assert_eq!(provenance.device, "hd_golf");
+        assert_eq!(read.shot.as_ref().unwrap().impact_offset_h, Some(4.0));
+        let written = serde_json::to_value(&read).unwrap();
+        assert_eq!(
+            written["shot_unscored"][0]["reason"],
+            serde_json::json!("printed_blank")
+        );
+
+        let shot_only = CorpusSwing {
+            shot_unscored: Vec::new(),
+            ..photographed()
+        };
+        let written = serde_json::to_value(&shot_only).unwrap();
+        assert!(
+            !written.as_object().unwrap().contains_key("shot_unscored"),
+            "an empty list writes no key, as an absent shot does"
+        );
+    }
+
+    /// A per-club topic reads the club's narrowed corpus, so the narrowing must hand each swing on
+    /// whole, its shot and refusals with it.
+    #[test]
+    fn narrowing_keeps_each_swing_s_shot_and_refusals() {
+        let corpus = CareerCorpus {
+            swings: vec![
+                photographed(),
+                CorpusSwing {
+                    swing_id: "2".into(),
+                    ..swing()
+                },
+            ],
+            ..one_swing_corpus()
+        };
+        let sevens = corpus.narrowed_to(&Narrowing {
+            club: Some(ClubId::SevenIron),
+            ..Narrowing::default()
+        });
+        assert_eq!(sevens.swings, [photographed()]);
+        let window = corpus.narrowed_to(&Narrowing {
+            since: Some(now()),
+            ..Narrowing::default()
+        });
+        assert_eq!(window.swings[0], photographed());
+    }
+
+    /// A checkpoint's refusal is the mechanics panel's, so one in the shot-side list fails the read;
+    /// the same reason on a flight row is the shot side's and reads. A shot whose own bounds fail
+    /// refuses the swing as an intent that cannot be read does.
+    #[test]
+    fn a_checkpoint_in_the_shot_side_list_or_a_shot_out_of_bounds_refuses_the_swing() {
+        use crate::unscored::UnscoredReason::NoHandedness;
+        let flight = CorpusSwing {
+            shot_unscored: vec![refusal("flight_landing_offline_yds", NoHandedness)],
+            ..photographed()
+        };
+        let written = serde_json::to_value(&flight).unwrap();
+        assert_eq!(
+            serde_json::from_value::<CorpusSwing>(written).unwrap(),
+            flight
+        );
+
+        for checkpoint in crate::checkpoints::checkpoint_names() {
+            let mut written = serde_json::to_value(&flight).unwrap();
+            written["shot_unscored"][0]["name"] = serde_json::json!(checkpoint);
+            let error = serde_json::from_value::<CorpusSwing>(written)
+                .expect_err(checkpoint)
+                .to_string();
+            assert!(
+                error.contains("CorpusSwing.shot_unscored[0].name")
+                    && error.contains("mechanics checkpoint"),
+                "{checkpoint}: {error}"
+            );
+        }
+
+        let mut unbounded = serde_json::to_value(photographed()).unwrap();
+        unbounded["shot"]["provenance"]["parse_confidence"] = serde_json::json!(1.5);
+        assert!(serde_json::from_value::<CorpusSwing>(unbounded).is_err());
     }
 }

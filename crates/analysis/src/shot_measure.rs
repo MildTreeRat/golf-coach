@@ -284,6 +284,25 @@ mod tests {
         );
     }
 
+    /// Every shot and flight row says whether it scales with the club, so the profile's player-level
+    /// numbers can never pool one by default (`contracts::strike::STAT_SCOPES`, the M37 plan's call
+    /// 17). Here rather than in `contracts`, which cannot see these registries; its own test holds the
+    /// table to the rows the committed shot vectors record. [M37 P1]
+    #[test]
+    fn every_shot_and_flight_row_declares_a_stat_scope() {
+        let unscoped: Vec<&str> = SHOT_MEASUREMENTS
+            .iter()
+            .map(|(name, _)| *name)
+            .chain(
+                crate::flight_measure::FLIGHT_MEASUREMENTS
+                    .iter()
+                    .map(|(name, _)| *name),
+            )
+            .filter(|name| contracts::strike::scope_of(name).is_none())
+            .collect();
+        assert!(unscoped.is_empty(), "{unscoped:?}");
+    }
+
     /// Face-to-path is the one row that is arithmetic, and the sign is the whole of what it says.
     ///
     /// The three numbers are the recorded agreements the Python docstring quotes: +13.2 on a FADE,

@@ -576,3 +576,116 @@ rows.
 - clauses 1–10 as the previous addendum left them, including clause 5's grades, which are M37's,
   and clause 3's "derived from the mode, never stored", which `PracticeMode::is_tracked` is;
 - the order the previous addendum set, with M37 after M35.
+
+## Addendum (2026-10-15, M37): clause 5 built, strike location graded only from a measured offset, and the list written to §5.7
+
+**M37**, in Rust only, in [the M37 plan](../plans/m37-strike-profile-and-grades.md), whose interview
+decisions, calls and phase findings are the as-built record. Clause 5 is built: each club's strike
+profile, the six topics' grades, the club and player blends, and the strengths and weaknesses list,
+in `crates/contracts/src/strike.rs` (the shapes), `crates/analysis/src/strike.rs` (the judgments
+and the counting), `crates/feedback/src/profile_rules.rs` (the list) and
+`crates/core/src/profile.rs::run_profile` (the join), reached through `golf-core profile`. It is the
+first analysis written Rust first with no Python behind it at all, as §9 asked, and its oracle is
+nine hand-worked cases (`spec/vectors/profile/hand/`). It is wired to nothing yet: its callers are
+M38's profile screens and §M29's `rmcp` tool, `get_strike_profile`.
+
+### The criteria clause 5 left to M37, as the interview set them
+
+| Topic | A good shot | Exists for a club when |
+|---|---|---|
+| Strike location | `hypot(h, v) ≤ 10` mm from face centre, or `\|h\| ≤ 10` where only the horizontal offset is printed (`CENTERED_RADIUS_MM`, provisional) | `impact_offset_h` is printed |
+| Consistency | carry within ±10% of the club's median carry, **and** start-line offline within ±10% of that median carry of the club's median offline (`CONSISTENCY_FRACTION`); a mishit is a miss | carry and launch direction are printed |
+| Low point | ahead of the ball (`> 0` in) | low point is printed, and the club is an iron, wedge or hybrid |
+| Fade, draw, straight | hit the declared shape and finished within ±9 yd of the line | face angle and path are printed, and a tracked shot of the club was declared `shot_shaping` with that shape |
+
+- **Every grade is withheld below 10 judged shots** (`RATE_MINIMUM_N`), and every share is a Wilson
+  95% interval: about ±26 points at n = 10 and a 50% share. A withheld grade is named and left out
+  of the blend; an absent topic is not named at all (§5.5, as written).
+- **The typical shot is the median of the club's non-mishit judged shots**, carry and offline taken
+  apart. A median, not a mean, so the outliers the grade punishes do not also move the yardstick,
+  and a mishit stays in the judged count and fails, which is what the user asked for: an outlier
+  lowers the grade.
+- **A topic exists from what the device analyses, not what it shows.** Existence reads
+  `capability::analysed_on` over the club's shots. A shot whose input is printed but blank is
+  unscored for that topic, counted under its reason (`printed_blank` or `misread`, from the shot's
+  stored refusals), and never counted as a miss.
+- **Each statistic declares its scope** (`contracts::strike::STAT_SCOPES`). Carry, total, ball
+  speed, launch, spin and the start-line offline are club-only, because their yards scale with the
+  club. Face-to-path, start line and the impact offsets are club-independent, and only those get a
+  raw player-level number. §5.4's pooling is built as written: the player's grade judges every
+  tracked shot by its own club's criterion. Untagged shots count toward strike location and the
+  shapes, whose criteria need no club, and not toward consistency or low point. On `data/` that is
+  why the first grade real data shows is the player's consistency, where no single club reaches the
+  floor.
+
+### §5.2's strike location: picture only on HD Golf, and measured from M42
+
+§5.2 said strike location on HD Golf would be the centered rate and heel/toe, "horizontal only".
+**That is superseded: HD Golf's printed `CENTER`/`HEEL`/`TOE` word is not graded.** It is a
+three-way category with no magnitude, so a share built on it would grade the screen's binning, not
+the strike, and the user called it "picture only". Strike location is graded only from a measured
+face-impact offset, `ShotData.impact_offset_h` and `impact_offset_v` in millimetres (+ toe, + high,
+the fields M32 added). No device in use supplies one. The bay will also run Full Swing's software,
+whose impact video shows where the club met the ball, and the iPhone's Live Photo captures that
+video beside the still. Reading the offset from it is **M42**, which starts with a feasibility spike
+on real Live Photos, adds Full Swing's profile and `devices.json` entry, and revises
+`CENTERED_RADIUS_MM` from the reader's measured error. Until then strike location is **absent** on
+real data, the stored shots included.
+
+The impact grid is 3 × 3 with per-axis bins at ±10 mm (or one row when the vertical is not
+printed), while the centered rate uses the radius. The two differ at the corners of the centre
+cell on purpose: the grid is a picture of where, the rate is the judgment.
+
+### §5.3: the landing, the tolerance and the left-hander, as built
+
+- **The 9-yard on-line tolerance is confirmed for a landing** (`METRIC_TARGETS`'
+  `start_line_offline_yds` row, reused), knowing it is generous for a wedge and tight for a driver.
+- **The shape boundary is inclusive**: straight when `|face_to_path| ≤ 2.0°`, a fade above, a draw
+  below, for either hand.
+- **Each landing names its basis.** A printed `carry_offline` is used where the device analyses it.
+  Otherwise the flight model's `flight_landing_offline_yds` is used, **projected**, and named so in
+  the grade (the topic carries how many landings were printed and how many projected) and in the
+  report. Otherwise the shot has no landing: it leaves the on-line share's denominator and is
+  counted under its reason, read off the shot's stored refusals in order: a blank printed landing's
+  own (`printed_blank` or `misread`), then the flight's (`spin_axis_unresolved`, `no_handedness`,
+  or the carry's refusal), else `unrecorded`. "Hit the shape" still counts it. On HD Golf as stored, the projection reaches 2 of the 13 shots, as
+  §5.3 measured.
+- **The sign does not flip for a left-hander**, as §5.3 already said and the program plan's §M37
+  had backwards. The profile reads no handedness at all: a left-hander's fade finishes on the other
+  side of the line inside the projected landing's own sign. The hand case
+  `left-handed-fade-and-draw-projected` is the left-handed vector §5.3 asked for.
+
+### Clause 2's test device, and §5.7's list
+
+- **A `synthetic` device in `devices.json`** declares every `ShotData` reading as `analysed`, so the
+  hand cases can reach what no device in use prints: the impact offsets, low point and a printed
+  landing offline. `mock` set the precedent of a test device, and
+  `crates/contracts/tests/capability.rs` keeps `synthetic` out of every vector family that describes
+  a real bay.
+- **`rank_profile` is written to §5.7**, and it did not exist before in either language: "unchanged
+  in rule" in the program plan meant the rule. A **weakness** is the dispersion's own established
+  bias or scatter, ranked by its point estimate's ratio to tolerance (`|offset| / tolerance` for a
+  bias, `sd / tolerance` for a scatter), ties in `METRIC_TARGETS` order and a bias before a scatter.
+  A **strength** needs the mean's interval inside target ± tolerance (inclusive) **and** the SD's
+  upper bound below tolerance (strictly). Strengths follow the weaknesses, ranked smallest first by
+  `max(|CI end − target|, SD upper bound) / tolerance`, which is at most 1. "Nothing established"
+  lists nothing. Only launch-monitor readings with a stat scope list, so no pose metric
+  and no flight projection ever does. The player's list (`rank_player`) reads the whole-corpus
+  dispersion, club-independent metrics only. The grades do not feed the list, nor the list the
+  grades.
+
+### What real data shows
+
+`golf-core profile --name Aaron` over `data/` (the M37 plan's P10 finding 5): two clubs, each with
+consistency alone and withheld at 6 and 5 shots of 10. Strike location, low point and every shape
+are absent, because HD Golf prints none of their inputs and no session records a shape. The player
+pools 13 shots, 2 untagged, and its consistency is graded at 6 of 11, 95% CI 28% to 79%. The list
+names face-to-path's bias and scatter and start line's scatter.
+
+### What this does not change
+
+- clauses 1–4 and 6–10, and §5.1, §5.4, §5.5 and §5.6 as written; this addendum fills in what they
+  left to M37 and corrects §5.2's strike-location sentence alone;
+- mechanics as a separate panel: no pose measurement enters a grade, a blend or the list, which a
+  test in `crates/analysis` and one in `crates/feedback` pin;
+- `ranges.json`, which no grade reads.

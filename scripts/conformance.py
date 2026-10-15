@@ -342,6 +342,21 @@ def shot_vector_paths() -> list[Path]:
     return [p for p in vector_paths() if _kind(p) == "shot"]
 
 
+def profile_vector_paths() -> list[Path]:
+    """Every committed case of a golfer's graded profile, the strike profile and topic grades (M37).
+
+    The eighth deferred family, and the second with no Python recorder at all: M37's grades were
+    designed after the pivot and written in Rust first, so frozen Python never gains them (ADR-035
+    clause 4). Each `profile/hand/` case was worked by hand (`provenance.oracle: "hand"`), and each
+    `profile/corpus/` case was recorded once by Rust's own `run_profile` over a career case's corpus
+    (`provenance.oracle: "rust"`, M37 P11), so nothing in Python stands behind either. It ages on
+    `CAREER_VERSION`, the storage and career families' key and Rust's alone, so `check` runs no
+    staleness test over it, as it runs none over those two. `crates/core/tests/profile.rs` holds
+    each case's version and counts, and from M37 P9 compares it with `run_profile`.
+    """
+    return [p for p in vector_paths() if _kind(p) == "profile"]
+
+
 def run_vector(vector: dict[str, Any]) -> dict[str, Any]:
     """Run one vector's input through this build and return the serialized result.
 
@@ -915,6 +930,7 @@ def cmd_check(args: argparse.Namespace) -> int:
     storages = [p for p in paths if p in set(storage_vector_paths())]
     careers = [p for p in paths if p in set(career_vector_paths())]
     shots = [p for p in paths if p in set(shot_vector_paths())]
+    profiles = [p for p in paths if p in set(profile_vector_paths())]
     paths = [p for p in paths if p in set(engine_vector_paths())]
 
     failed = 0
@@ -1013,6 +1029,13 @@ def cmd_check(args: argparse.Namespace) -> int:
         print(
             f"{len(shots)} shot vectors are `crates/core`'s `run_shot`, worked by hand at Rust's "
             f"ANALYSIS_VERSION — run `cargo test`"
+        )
+    if profiles:
+        # The storage and career families' key, so their silence: `CAREER_VERSION` is Rust's, and
+        # no Python ever recorded a profile for a staleness test to measure against.
+        print(
+            f"{len(profiles)} profile vectors are `crates/core`'s, worked by hand or recorded by "
+            f"Rust, and age on CAREER_VERSION — run `cargo test`"
         )
     return 1 if failed or stale_stages else 0
 

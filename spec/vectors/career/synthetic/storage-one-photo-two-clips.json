@@ -1,5 +1,5 @@
 {
-  "career_version": 2,
+  "career_version": 3,
   "expected": {
     "bag_profile": {
       "clubs": [],
@@ -439,6 +439,46 @@
           "outdated": false,
           "player_id": "aaron",
           "session_id": "2026-08-10",
+          "shot": {
+            "apex_height": null,
+            "attack_angle": null,
+            "ball_speed": null,
+            "bounce_and_roll": null,
+            "carry_distance": null,
+            "carry_offline": null,
+            "club_face_angle": 8.6,
+            "club_head_speed": null,
+            "club_path": -4.6,
+            "dynamic_loft": null,
+            "impact_offset_h": null,
+            "impact_offset_v": null,
+            "impact_position": null,
+            "impact_position_v": null,
+            "launch_angle": null,
+            "launch_direction": null,
+            "low_point": null,
+            "provenance": {
+              "corrections": {},
+              "device": "hd_golf",
+              "fields_present": null,
+              "image_path": null,
+              "image_sha256": null,
+              "needs_review": false,
+              "parse_confidence": 0.95,
+              "parser_version": 0,
+              "raw_fields": {},
+              "warnings": []
+            },
+            "session_id": "2026-08-10",
+            "shot_id": "test-1",
+            "shot_type": null,
+            "smash_factor": null,
+            "source": "screen",
+            "spin_axis": null,
+            "spin_rate": null,
+            "timestamp": "2026-08-10T01:39:00Z",
+            "total_distance": null
+          },
           "shot_needs_review": false,
           "shot_sha256": "shot-a",
           "stale": false,
@@ -481,6 +521,46 @@
           "outdated": false,
           "player_id": "aaron",
           "session_id": "2026-08-10",
+          "shot": {
+            "apex_height": null,
+            "attack_angle": null,
+            "ball_speed": null,
+            "bounce_and_roll": null,
+            "carry_distance": null,
+            "carry_offline": null,
+            "club_face_angle": 8.6,
+            "club_head_speed": null,
+            "club_path": -4.6,
+            "dynamic_loft": null,
+            "impact_offset_h": null,
+            "impact_offset_v": null,
+            "impact_position": null,
+            "impact_position_v": null,
+            "launch_angle": null,
+            "launch_direction": null,
+            "low_point": null,
+            "provenance": {
+              "corrections": {},
+              "device": "hd_golf",
+              "fields_present": null,
+              "image_path": null,
+              "image_sha256": null,
+              "needs_review": false,
+              "parse_confidence": 0.95,
+              "parser_version": 0,
+              "raw_fields": {},
+              "warnings": []
+            },
+            "session_id": "2026-08-10",
+            "shot_id": "test-1",
+            "shot_type": null,
+            "smash_factor": null,
+            "source": "screen",
+            "spin_axis": null,
+            "spin_rate": null,
+            "timestamp": "2026-08-10T01:39:00Z",
+            "total_distance": null
+          },
           "shot_needs_review": false,
           "shot_sha256": "shot-a",
           "stale": false,
@@ -519,6 +599,18 @@
         "by": "golf-core rerecord",
         "career_version": 2,
         "declaration": "spec/declarations/career-v2.json",
+        "moved": [
+          "career_version"
+        ]
+      },
+      {
+        "added": [
+          "input.corpus.swings[0].shot",
+          "input.corpus.swings[1].shot"
+        ],
+        "by": "golf-core rerecord",
+        "career_version": 3,
+        "declaration": "spec/declarations/career-v3.json",
         "moved": [
           "career_version"
         ]

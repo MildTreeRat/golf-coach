@@ -1,5 +1,5 @@
 {
-  "career_version": 2,
+  "career_version": 3,
   "expected": {
     "files": {
       ".incoming/": "",
@@ -254,6 +254,17 @@
     "kind": "storage",
     "note": "Four uploads into 2026-08-26 by the automatic rule, each carrying the session's intent cursor as it stood when the file arrived, passed as args.intent as the club cursor is passed as args.club (the caller reads session.json; the store does not). 1, a face-on clip under a drill cursor, opens swing 1 and stamps drill on it. 2, a photo after the cursor moved to fundamentals, lands in swing 1 (the newest lacking a photo) and does not restamp it: the intent is write-once, as the club is (the M35 plan's call 5). 3, a face-on clip with the cursor cleared (null), opens swing 2 with no intent, so its manifest writes no intent key. 4, a photo under a shot_shaping/fade cursor, lands in swing 2, whose intent is empty, and stamps it: an empty intent takes the cursor's. Each answer is frozen Python's AssignmentResult shape, which does not report the intent (the M35 plan's P7 finding 3); get_session shows it on both manifests. Each goal is spelled whole, club all, as PracticeGoal serializes. Digests are the SHA-256 of each part's text.",
     "oracle": "hand",
+    "rerecords": [
+      {
+        "added": [],
+        "by": "golf-core rerecord",
+        "career_version": 3,
+        "declaration": "spec/declarations/career-v3.json",
+        "moved": [
+          "career_version"
+        ]
+      }
+    ],
     "source": "worked by hand in M35 P9, the M35 plan's call 8, against crates/storage's M35 P7 stamping and set_intent; bundle.set_intent and args.intent are the Rust runner's (crates/core/src/storage_family.rs) and have no twin in frozen Python's _op_table",
     "worked_against": "scripts/conformance_vectors.py::_run_ops"
   }

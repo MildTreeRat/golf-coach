@@ -1,11 +1,11 @@
 {
-  "career_version": 2,
+  "career_version": 3,
   "expected": {
     "corpus": {
       "analyzed_without_measurements": 0,
       "excluded": [
         {
-          "detail": "hit as a drill, which feeds no club or player stat and no mechanics baseline \u2014 clear its intent with golf-core set-intent if it should count",
+          "detail": "hit as a drill, which feeds no club or player stat and no mechanics baseline — clear its intent with golf-core set-intent if it should count",
           "reason": "untracked",
           "session_id": "2026-08-22",
           "swing_id": "5"
@@ -211,6 +211,17 @@
     "kind": "storage",
     "note": "Versions {installed 17, comparable_from 14}: five 7i swings in 2026-08-22 (12:01 to 12:05), each with a face-on clip and a photo of its own, at engine 17, head_sway 0.2 and carries 150, 152, 70, 155 and 158. Swing 5 (158) was hit as a drill. Call 6: an untracked survivor is in no swing list, so the mishit rule sees only the tracked four, too few for a floor (MISHIT_MIN_CLEAN_SHOTS is 5): nothing is flagged and swing 3's 70 counts. carry_distance_yds n = 4, head_sway_norm n = 4, mishit_shots 0, distinct_swings 4, distinct_shots 4, and swing 5 is named untracked. Had the drill been pooled, the median of five would be 152 and the floor 76, swing 3 an automatic mishit, head_sway_norm n = 5 and mishit_shots 1.",
     "oracle": "hand",
+    "rerecords": [
+      {
+        "added": [],
+        "by": "golf-core rerecord",
+        "career_version": 3,
+        "declaration": "spec/declarations/career-v3.json",
+        "moved": [
+          "career_version"
+        ]
+      }
+    ],
     "source": "worked by hand in M35 P9, the M35 plan's call 8, against its call 6 and P9's findings, before M35 P10's read_corpus follows them; each tree spelled as M36 P14's hand cases spell theirs, and each shot_analysis.json a ShotResult as crates/storage::state::save_shot_analysis writes one",
     "worked_against": "scripts/conformance_vectors.py::_run_corpus"
   }

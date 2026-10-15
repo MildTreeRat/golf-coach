@@ -633,3 +633,52 @@ files it into a session.
 - ADR-028's mishit rule. A drill is out before the mishit median is taken, so the median sees only
   tracked shots;
 - "No bulk backfill for club", and none for intent either: an unrecorded intent is a tracked shot.
+
+## Addendum (2026-10-15, M37): each corpus entry carries its shot, and `career-v3`
+
+M37 graded a golfer's shots per club and per player
+([ADR-034](034-shot-first-phone-first.md)'s M37 addendum), in Rust only, in
+[the M37 plan](../plans/m37-strike-profile-and-grades.md). Its topics ask what a device *printed*
+for each shot, and why a reading is missing, which §4's measurement rows cannot say: the
+categorical tiles, the impact offsets, low point and a printed landing offline live on `ShotData`,
+not in a row. So the corpus gained the shot (the plan's interview decision 5 and call 3), and
+`CAREER_VERSION` went to 3.
+
+- **`CorpusSwing.shot`** is the survivor's artifact's whole `ShotData`: off `analysis.json`'s
+  `swing.shot` for a swing, off `shot_analysis.json`'s `shot` for a photo entry (the M35 addendum's
+  two kinds). **`CorpusSwing.shot_unscored`** is that artifact's `unscored` entries whose name is
+  not a mechanics checkpoint: the flight's refusals, and the screen's `printed_blank` and `misread`.
+  `Validate` refuses a checkpoint name there, so the rule is held at the shape and not left to each
+  reader.
+- **Both are written only when set**, as `intent` is, so an entry with no photo serializes exactly
+  as before. Both are lifted whatever the entry's repair state, as `measurements` is.
+- **A duplicate's shot is never consulted**, as its club is not (§4). The survivor is the entry, so
+  a survivor with no shot does not borrow its re-upload's.
+- **A swing's shot that the contract refuses stays flagged and is not carried**, because
+  `CorpusSwing` could not validate holding it. A swing's `unscored` is read entry by entry, as its
+  measurements are, and a pre-2026-08-19 bare name is dropped rather than coerced: every bare name
+  predates the first non-checkpoint refusal (ADR-027's, 2026-09-04), so it is a checkpoint, which
+  the filter drops anyway.
+- **A new topic needs no new field.** With the whole shot on the entry, `capability::printed_on` and
+  `analysed_on` decide printed against blank per shot, as clause 2 of ADR-034 asks.
+
+**What the re-record moved.** `spec/declarations/career-v3.json` adds the one key `shot` on every
+recorded entry whose artifact holds a readable shot, the hand-worked photo entries included, and on
+each adopted career copy's `input.corpus`, and moves `career_version` and no value. No vector
+gained `shot_unscored`: no recorded artifact's `unscored` holds a non-checkpoint entry, so the
+reader's own tests pin that lift. No aggregate, count or report moved, because none reads either
+field. Over `data/` the corpus pools the same 13 swings and 34 metrics as before, and every entry
+now carries a shot whose `image_sha256` is its `shot_sha256`. `docs/CONFORMANCE.md` §2 and §4 have
+the run.
+
+**Frozen Python reads the new corpus and cannot write it back.** Its `CareerCorpus` has no field for
+either key, and pydantic ignores them on read. So the frozen career recorder strips the two keys
+from each swing before it compares an adopted corpus, or frozen `read_corpus` over `data/`, with the
+committed vector (ADR-035 clause 4, by the user's answer to the M37 plan's P5 finding 12).
+
+**The profile family ages on this key too.** `spec/vectors/profile/` grades the corpus the storage
+family answers, so a `career-v<N>` declaration now re-records three families: storage, then career,
+then profile, each copy derived from the link above it.
+
+**Not changed**: §1–§5, the addenda above, and every exclusion and dedupe rule. The corpus still
+decides which entries count; M37 only carries more of each one.

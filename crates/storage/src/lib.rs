@@ -32,6 +32,8 @@
 //!   the engine generations it judges a stored analysis against as a parameter (M36 P10). Since
 //!   M35 P10 it also admits a photo entry, a shot photo with no face-on clip, read from
 //!   `shot_analysis.json`, and leaves a drill out as `untracked`, which frozen Python's does not.
+//!   Since M37 P4 each entry carries its artifact's shot whole and the shot side of its `unscored`,
+//!   for M37's topic grades, which frozen Python's does not either.
 //!
 //! # ADR-008's exception is not carried over
 //!

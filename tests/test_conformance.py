@@ -2025,3 +2025,54 @@ def test_check_defers_the_shot_family_and_judges_no_staleness(
     assert count == len(committed) + 1
     assert f"{count} shot vectors are `crates/core`'s `run_shot`" in out
     assert "STALE" not in out
+
+
+# ---------------------------------------------------------------------- M37 P5: the profile family
+
+
+def test_check_defers_the_profile_family_and_judges_no_staleness(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Named and deferred, never run, and never STALE: the career family's pin, for the family
+    that shares its key (the M37 plan's call 1).
+
+    No Python stands behind a profile case at all, recorder or engine, so nothing in frozen Python
+    could answer one (ADR-035 clause 4): `profile/hand/` is worked by hand and `profile/corpus/`
+    (M37 P11) recorded by Rust's own run. `crates/core/tests/profile.rs` reads every case and, from
+    M37 P9, compares it with `run_profile`. A case at a `career_version` far above anything recorded
+    proves `check` does not try, and `list` still shows each case at its own version.
+    """
+    import shutil
+
+    vectors = tmp_path / "spec" / "vectors"
+    shutil.copytree(conformance.VECTORS / "profile", vectors / "profile")
+    monkeypatch.setattr(conformance, "VECTORS", vectors)
+    committed = [conformance._read_json(path) for path in conformance.profile_vector_paths()]
+    assert committed, "no profile case is committed"
+    oracles = {case["id"]: case["provenance"]["oracle"] for case in committed}
+    by_sub_family = {"profile/hand/": "hand", "profile/corpus/": "rust"}
+    for case_id, oracle in oracles.items():
+        expected = [o for prefix, o in by_sub_family.items() if case_id.startswith(prefix)]
+        assert expected == [oracle], f"{case_id}: oracle {oracle!r}"
+    assert set(oracles.values()) == set(by_sub_family.values()), oracles
+    ahead = next((vectors / "profile" / "hand").glob("*.json"))
+    document = json.loads(ahead.read_text(encoding="utf-8"))
+    document["career_version"] = 99
+    document["id"] = "profile/hand/ahead"
+    (ahead.parent / "ahead.json").write_text(json.dumps(document), encoding="utf-8")
+
+    def never(vector: dict[str, Any]) -> dict[str, Any]:
+        raise AssertionError(f"`check` ran profile vector {vector.get('id')} through the engine")
+
+    monkeypatch.setattr(conformance, "run_vector", never)
+    assert conformance.main(["check"]) == 0
+    out = capsys.readouterr().out
+    count = len(conformance.profile_vector_paths())
+    assert count == len(committed) + 1
+    assert f"{count} profile vectors are `crates/core`'s, worked by hand or recorded by Rust" in out
+    assert "STALE" not in out
+
+    assert conformance.main(["list"]) == 0
+    rows = [line for line in capsys.readouterr().out.splitlines() if line.startswith("profile/")]
+    assert len(rows) == count, rows[:3]
+    assert all(re.search(r"\s+v(3|99)\s+profile\s", row) for row in rows), rows[:3]

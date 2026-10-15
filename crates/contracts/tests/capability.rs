@@ -9,6 +9,12 @@
 //! An integration test rather than unit tests in `capability.rs`, because the corpus test has to read
 //! `spec/vectors/`, and `round_trip.rs` and `schemas.rs` beside this file are where this crate already
 //! does that.
+//!
+//! **`synthetic` (M37 P1) is held here too**, from both sides: to the struct, as a device that
+//! declares every reading and analyses all of them, and to the committed vectors, which describe real
+//! bays and must never name it.
+
+mod common;
 
 use std::collections::BTreeSet;
 use std::fs;
@@ -420,6 +426,100 @@ fn on_every_corpus_shot_the_view_blanks_club_speed_and_smash_alone() {
     assert!(
         shots.iter().any(|(_, shot)| shot.club_head_speed.is_some()),
         "no corpus shot holds a club speed, so this blanks nothing"
+    );
+}
+
+/// `synthetic` declares every `ShotData` reading, read off the struct, and analyses every one: a
+/// hand-worked shot is limited only by what it holds (the M37 plan's call 2). A reading added to the
+/// struct fails here until it is declared, so the test device cannot fall behind it. The file lists
+/// them in the struct's order, which a `Value`'s sorted keys cannot check, so this compares sets.
+/// [M37 P1]
+#[test]
+fn synthetic_declares_every_reading_and_analyses_every_one() {
+    let synthetic = capability_for("synthetic").expect("synthetic is declared");
+    let declared: BTreeSet<String> = synthetic.declared().map(str::to_string).collect();
+    let readings: BTreeSet<String> = shot_data_keys()
+        .into_iter()
+        .filter(|key| !NOT_READINGS.contains(&key.as_str()))
+        .collect();
+    assert_eq!(declared, readings);
+    for field in [
+        "impact_offset_h",
+        "impact_offset_v",
+        "low_point",
+        "carry_offline",
+    ] {
+        assert!(
+            declared.contains(field),
+            "{field}: what synthetic exists for"
+        );
+    }
+    let shown_only: Vec<&str> = synthetic
+        .fields
+        .iter()
+        .filter(|declared| declared.field_use != FieldUse::Analysed)
+        .map(|declared| declared.field.as_str())
+        .collect();
+    assert!(shown_only.is_empty(), "{shown_only:?}");
+
+    // A shot claims it through its provenance, there being no `ShotSource` for it.
+    let located = shot(json!({
+        "impact_offset_h": 4.0,
+        "low_point": 1.5,
+        "provenance": {"device": "synthetic", "parse_confidence": 1.0},
+    }));
+    assert_eq!(device_of(&located), "synthetic");
+    assert_eq!(
+        analysed_on(&located).unwrap(),
+        set(["impact_offset_h", "low_point"])
+    );
+}
+
+/// Every place a committed vector names a device: a `device` key, or the `launch_monitor:{device}`
+/// source every shot measurement carries.
+fn devices_named(value: &Value, out: &mut BTreeSet<String>) {
+    match value {
+        Value::Object(map) => {
+            for (key, item) in map {
+                if key == "device" {
+                    if let Some(device) = item.as_str() {
+                        out.insert(device.to_string());
+                    }
+                }
+                devices_named(item, out);
+            }
+        }
+        Value::Array(items) => items.iter().for_each(|item| devices_named(item, out)),
+        Value::String(text) => {
+            if let Some(device) = text.strip_prefix("launch_monitor:") {
+                out.insert(device.to_string());
+            }
+        }
+        _ => {}
+    }
+}
+
+/// The families that describe a real bay never name `synthetic`, so the test device cannot leak
+/// into what the corpus, the stores or the screen reader are held to (the M37 plan's call 2). Only
+/// `spec/vectors/profile/hand/` may use it, from M37 P5. [M37 P1]
+#[test]
+fn no_committed_storage_career_shot_or_screen_vector_names_synthetic() {
+    let mut named = BTreeSet::new();
+    for family in ["storage", "career", "shot", "screen"] {
+        for path in common::vector_files(family) {
+            let mut here = BTreeSet::new();
+            devices_named(&common::read_vector(&path), &mut here);
+            assert!(
+                !here.contains("synthetic"),
+                "{} names the synthetic device",
+                path.display()
+            );
+            named.extend(here);
+        }
+    }
+    assert!(
+        named.contains("hd_golf"),
+        "the walk found no device at all, so it proves nothing: {named:?}"
     );
 }
 

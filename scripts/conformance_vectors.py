@@ -6098,6 +6098,25 @@ def _career_built() -> dict[str, dict[str, Any]]:
 
 # -------------------------------------------------------------- career: adopted, and the real one
 
+# The keys Rust's `CorpusSwing` writes and frozen Python's has no field for. `career-v3` (M37 P4)
+# lifted the survivor's `shot` and its shot-side `unscored` onto each swing, and frozen Python
+# reads what Rust writes but gains nothing (ADR-035 §4): pydantic ignores the two keys on the way
+# in, so a round trip, or frozen `read_corpus` over `data/`, comes back without them. The
+# comparisons below drop exactly these before comparing, and nothing else; a difference of any
+# other kind still fails them. The case's own `input.corpus` keeps them, as Rust recorded it.
+_RUST_ONLY_SWING_KEYS = ("shot", "shot_unscored")
+
+
+def _as_frozen_python_writes(dumped: dict[str, Any]) -> dict[str, Any]:
+    """`dumped` without the swing keys frozen Python's `CorpusSwing` cannot write back."""
+    return {
+        **dumped,
+        "swings": [
+            {key: value for key, value in swing.items() if key not in _RUST_ONLY_SWING_KEYS}
+            for swing in dumped["swings"]
+        ],
+    }
+
 
 def _career_adopted() -> dict[str, dict[str, Any]]:
     """Every synthetic storage corpus case's corpus, as the reader answered it, rendered.
@@ -6119,7 +6138,9 @@ def _career_adopted() -> dict[str, dict[str, Any]]:
         stored = json.loads(path.read_text(encoding="utf-8"))
         dumped = stored["expected"]["corpus"]
         corpus = CareerCorpus.model_validate(dumped)
-        assert corpus.model_dump(mode="json") == dumped, f"{path.name} does not round-trip"
+        assert corpus.model_dump(mode="json") == _as_frozen_python_writes(dumped), (
+            f"{path.name} does not round-trip"
+        )
         name = f"storage-{path.stem}"
         display = (
             "Aaron" if corpus.player_id == _REAL_PLAYER else f"{corpus.player_id} (not registered)"
@@ -6159,13 +6180,14 @@ def _career_real() -> dict[str, Any]:
     stored_path = VECTORS / "storage" / "corpus" / f"real{_REAL_SUFFIX}"
     stored = json.loads(gzip.decompress(stored_path.read_bytes()))
     dumped = stored["expected"]["corpus"]
-    if read_corpus(SESSIONS, _REAL_PLAYER).model_dump(mode="json") != dumped:
+    frozen_view = _as_frozen_python_writes(dumped)
+    if read_corpus(SESSIONS, _REAL_PLAYER).model_dump(mode="json") != frozen_view:
         raise AssertionError(
             f"{_rel(SESSIONS)} no longer reads as {_rel(stored_path)} recorded it, so the career "
             "family would start from a different corpus than the storage family"
         )
     corpus = CareerCorpus.model_validate(dumped)
-    assert corpus.model_dump(mode="json") == dumped, "the real corpus does not round-trip"
+    assert corpus.model_dump(mode="json") == frozen_view, "the real corpus does not round-trip"
 
     with tempfile.TemporaryDirectory() as scratch:
         golfers = Path(scratch) / "golfers"

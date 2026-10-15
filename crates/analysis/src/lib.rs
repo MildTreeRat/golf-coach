@@ -99,6 +99,15 @@
 //! port: a personal statistic that read tour data could quietly become a change to how a swing is
 //! scored (ADR-010 §2), so the join is one module out and its tests hold the other two to it.
 //!
+//! # M37 judges shots, with no Python behind it
+//!
+//! [`strike`] and [`stats::wilson`] (M37 P2) are the first analysis here written Rust first: no
+//! Python twin to carry a name over from, and no oracle but a published table and the hand-worked
+//! profile vectors (`spec/vectors/profile/hand/`, P5). [`strike`] is the per-shot judgments a
+//! topic grade is the share of, each reading its shot only through `capability::analysed_view`;
+//! P6 and P7 add the builders that count them. No pose measurement reaches either, so mechanics
+//! enters no grade (Decision 12).
+//!
 //! # What this crate may not reach for
 //!
 //! ADR-030 §1's stdlib-only invariant is inherited here as *no numeric library in the scoring
@@ -125,6 +134,7 @@ pub mod shot_measure;
 pub mod smoothing;
 pub mod spin_solve;
 pub mod stats;
+pub mod strike;
 pub mod trajectory;
 
 #[cfg(test)]

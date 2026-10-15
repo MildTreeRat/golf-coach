@@ -72,8 +72,9 @@ are ADR-035's.
 | **M34** | The screen reader in Rust (`crates/screen`): the parser port, the V tile and tie rule, the 13-shot re-read | this box | M32 | ✅ Done *(2026-10-02)*, 13/13 phases — [m34-screen-reader.md](m34-screen-reader.md) |
 | **M35** | Shot-first sessions in Rust: photo-only shots, `ShotResult` and `analyze_shot` | this box | M36 | ✅ Done *(2026-10-10)*, 14/14 phases — [m35-shot-first-sessions.md](m35-shot-first-sessions.md). Photo entries in Rust's corpus, `ShotResult` and `analyze_shot`, every mode scoring mechanics, a drill stored but `untracked`, and the storage and career families re-recorded as `career-v2` ([ADR-024's M35 addendum](../decisions/024-per-club-shot-history.md)) |
 | **M36** | The many-shot layer and its stores ported to Rust, recorded once from frozen Python | this box | M32 | ✅ Done *(2026-10-08)*, 19/19 phases — [m36-many-shot-layer.md](m36-many-shot-layer.md). The corpus's `OUTDATED` now means older than `COMPARABLE_FROM` (14), changed in Rust alone ([ADR-024's M36 addendum](../decisions/024-per-club-shot-history.md)) |
-| **M37** | Strike profile, topic grades and strengths/weaknesses (Rust first) | desk, then bay | M35 | ⬜ Not started |
+| **M37** | Strike profile, topic grades and strengths/weaknesses (Rust first) | this box (desk only, the M37 plan's decision 10) | M35 | ✅ Done *(2026-10-15)*, 14/14 phases — [m37-strike-profile-and-grades.md](m37-strike-profile-and-grades.md), which wins where it differs from §M37 below. The strike profile, six topic grades, club and player blends and the strengths and weaknesses list, Rust only, through `golf-core profile`; the corpus carries each entry's shot, re-recorded as `career-v3`; a tenth vector family, `profile`, hand-worked and Rust-recorded; strike location graded only from a measured impact offset (M42), not the printed word ([ADR-034's M37 addendum](../decisions/034-shot-first-phone-first.md)) |
 | **M41** | The course-play screen layout in `crates/screen`: aliases, lit L/R and D/F signs, backspin and sidespin | this box, after new photos | M35, by order only | ⬜ Not started — raised 2026-10-07, detailed in [ROADMAP §M41](../../ROADMAP.md#m41-the-course-play-screen-layout) rather than here |
+| **M42** | Full Swing: the second device and its impact video — a Live Photo spike, the impact reader filling `impact_offset_h/v`, Full Swing's screen profile and capability entry | this box, after sample Live Photos | M37's strike topic, by order; sample Live Photos | ⬜ Not started — raised 2026-10-10 in M37's planning, detailed in [ROADMAP §M42](../../ROADMAP.md#m42-full-swing-the-second-device-and-its-impact-video) rather than here |
 | **M38** | The iPhone app | Mac, then bay | M34 (skeleton), M37 (profile screens), M29 (P4, the export import) | ⬜ Not started |
 | **M39** | Optional video on the phone | Mac, then bay | M38 | ⬜ Not started |
 | **M40** | The laptop client resumes (M21/M24/M25/M26 re-scoped, R10/API adapters); `api/` ported or dropped, and the frozen Python deleted | later | M38, M29 | ⬜ Not started |
@@ -1236,6 +1237,26 @@ records them, and only then ports. That recording is the port's one independent 
 
 ## M37 — Strike profile, topic grades and strengths/weaknesses (Rust first)
 
+**Built from [m37-strike-profile-and-grades.md](m37-strike-profile-and-grades.md)**, whose interview
+decisions, calls and phase findings are the as-built record, and which wins where this section
+differs. [ADR-034](../decisions/034-shot-first-phone-first.md)'s M37 addendum is the decision as
+built. **Two lines below were wrong, and say so where they stand:**
+
+- **Strike location is graded only from a measured face-impact offset** (`ShotData.impact_offset_h`
+  and `impact_offset_v`, millimetres), centred within a provisional 10 mm. HD Golf's printed
+  `CENTER`/`HEEL`/`TOE` word is not graded: it has no magnitude, and the user called it picture
+  only. No device in use supplies the offset, so on real data the topic is absent until **M42** reads
+  it off Full Swing's impact video in the iPhone's Live Photo.
+- **The face-to-path sign does not flip for a left-hander** (ADR-034 §5.3, which already said so).
+  Face, path and spin axis are golfer-relative. Handedness decides only which side of the line a
+  shape finishes on, and that is inside the projected landing's sign.
+
+Also as built, and different from what follows: `rank_profile` did not exist in either language and
+was written to ADR-034 §5.7; the Rust-recorded corpus vectors come from the career family's corpora,
+not from the engine vectors' `input.shot`; `CorpusSwing` carries the whole shot (`CAREER_VERSION` 3);
+and a `synthetic` device in `devices.json` is how the hand-worked vectors reach the readings no device
+in use prints.
+
 **Contract:** `crates/contracts/src/strike.rs`, holding `ImpactCell`, `StrikeProfile` and
 `RateEstimate`. `RateEstimate` is a Wilson interval using stdlib `sqrt` only. Beside
 `StrikeProfile`, the contract gains a **topic grade** (the topic, its `RateEstimate` or the reason it
@@ -1243,7 +1264,8 @@ is withheld, and for a shape topic both shares) and a **blend** (its mean, the t
 and the topics it excluded, named).
 
 **`crates/analysis/src/strike.rs`, per club:**
-- the impact grid and the centered-strike rate;
+- the impact grid and the centered-strike rate *(from a measured offset only, never the printed
+  word: see the corrections above)*;
 - heel/toe asymmetry;
 - ball-speed SD;
 - carry, start line and face-to-path, each through the existing `dispersion`;
@@ -1265,7 +1287,8 @@ rates). Only a club-independent stat gets a raw player-level average.
 - A shot declared `SHOT_SHAPING` with a `target_shape`, by the golfer or by challenge mode, is
   classified from its **face-to-path** against `METRIC_TARGETS["face_to_path_deg"]`'s tolerance:
   inside it is straight, outside it is a fade or a draw by the sign, and the sign flips for a
-  left-hander. The printed `Shot Type` word is not used. Missing face-to-path leaves the shot
+  left-hander *(wrong: it does not flip; see the corrections above)*. The printed `Shot Type` word
+  is not used. Missing face-to-path leaves the shot
   unscored for shape; missing handedness is `no_handedness`.
 - **Two shares per shape:** "hit the shape", and "hit the shape and finished on line". The second is
   the topic's grade; the first shows beside it.
@@ -1306,8 +1329,8 @@ its list, they do not feed it:
 - `golf-core profile`;
 - `get_strike_profile` is a tool of the `rmcp` server, not of Python `mcp/`, which is frozen
   ([clause 4](../decisions/035-rust-everywhere-python-where-required.md#4-the-frozen-python-lab)).
-  M37 adds it if M29 has landed, and otherwise M29 carries it. The docs-truth pin on the MCP tool
-  count is the one §M29 re-points.
+  M37 adds it if M29 has landed, and otherwise M29 carries it. *(M29 had not landed, so M29 carries
+  it: the M37 plan's call 16.)* The docs-truth pin on the MCP tool count is the one §M29 re-points.
 
 ## M38 — The iPhone app (Mac; P5 at the bay)
 

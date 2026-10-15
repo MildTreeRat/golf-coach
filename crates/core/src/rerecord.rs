@@ -99,9 +99,11 @@
 //! same run, or the gate refuses it. `screen_parser_version` is the screen family's, the
 //! documents under `vectors/screen/`, run through [`run_screen`]. `career_version` is the many-shot
 //! layer's (M36 P13, the M36 plan's decision 8): the storage and career families together, run
-//! through [`run_storage`] and [`run_career`], the runners their gates call. One key for two
-//! families, because the career family adopts the storage family's corpora, so a change to what the
-//! reader produces moves both ([`CAREER_VERSION`]'s doc). A run never reads another key's files, so
+//! through [`run_storage`] and [`run_career`], the runners their gates call, and since M37 P11 the
+//! profile family after them, run through [`run_profile_case`] (the M37 plan's call 1). One key for
+//! three families, because each adopts the one before it (a career twin's corpus is a storage
+//! case's answer, and a profile corpus case's input is a career case's), so a change to what the
+//! reader produces moves all three ([`CAREER_VERSION`]'s doc). A run never reads another key's files, so
 //! a screen re-record cannot move an engine vector, nor a career one a screen vector: each key ages
 //! a different record, and a declaration describes one version's change of one of them. Everything
 //! else — the gate, [`apply`], [`ledger`], the typo guard and the writer — is the same code for all
@@ -115,8 +117,9 @@
 //! engine family (`vectors/synthetic/`, `vectors/corpus/`), the stage family
 //! (`vectors/stages/{synthetic,corpus}/`) and then the shot family (`vectors/shot/`, flat, M35 P6);
 //! for a screen declaration, the [`SCREEN_DOCUMENTS`] under
-//! `vectors/screen/`; for a career declaration, the [`STORAGE_DOCUMENTS`] under `vectors/storage/`
-//! and then the [`CAREER_DOCUMENTS`] under `vectors/career/`.
+//! `vectors/screen/`; for a career declaration, the [`STORAGE_DOCUMENTS`] under `vectors/storage/`,
+//! the [`CAREER_DOCUMENTS`] under `vectors/career/` and then the [`PROFILE_DOCUMENTS`] under
+//! `vectors/profile/` (M37 P11).
 //!
 //! - **The version guard first** (call 6): a declaration not at its family's constant —
 //!   [`ANALYSIS_VERSION`], [`SCREEN_PARSER_VERSION`] or [`CAREER_VERSION`] — is refused before a
@@ -139,7 +142,9 @@
 //!   renderer runs yet carried as committed
 //!   ([`CARRIED`](crate::career_family::CARRIED)), and a career document that adopts a storage
 //!   corpus is run on that corpus *as it will be written*, its copy compared like any other value —
-//!   the storage family's counterpart of the compose check (`walk_career`'s doc).
+//!   the storage family's counterpart of the compose check (`walk_career`'s doc). **Each profile
+//!   case** is run through [`run_profile_case`], and a corpus case, whose input is a career case's,
+//!   is run on that career case's input *as it will be written*, one link further (M37 P11).
 //! - **Every refusal across the run is collected**, and one anywhere means [`plan`] returns no
 //!   [`Run`] at all — so nothing can be written anywhere (call 7). A reviewer fixes a declaration
 //!   once, from one red report.
@@ -204,6 +209,7 @@ use serde_json::{json, Map, Serializer, Value};
 
 use crate::career_family::{adopted_from, carry, run_career};
 use crate::compare::{compare, Difference, DifferenceKind};
+use crate::profile_family::{self, run_profile_case, ADOPTED};
 use crate::stages::{run_stages, verify_compose};
 use crate::storage_family::run_storage;
 use crate::{run_shot, ShotInput, VectorInput};
@@ -840,6 +846,16 @@ pub const STORAGE_DOCUMENTS: [&str; 4] = ["corpus", "bundle", "stores", "hand"];
 /// [`run_career`] after the storage family, whose corpus cases some of them adopt. [M36 P13]
 pub const CAREER_DOCUMENTS: [&str; 2] = ["synthetic", "real"];
 
+/// The profile family's directory under `spec/vectors/`, and the `provenance.kind` its files carry.
+/// [M37 P11]
+pub const PROFILE: &str = profile_family::KIND;
+
+/// The profile sub-families a career declaration re-records, in this order, each answered by
+/// [`run_profile_case`] after the career family, whose inputs the corpus cases adopt. `hand/` (M37
+/// P5) is worked by hand and keeps `provenance.oracle: "hand"`; `corpus/` (P11) was recorded by Rust
+/// and keeps `"rust"`, because [`ledger`] writes `"python"` only where no oracle is named. [M37 P11]
+pub const PROFILE_DOCUMENTS: [&str; 2] = ["hand", "corpus"];
+
 /// Which of Rust's answers a vector is re-recorded from.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Family {
@@ -857,6 +873,9 @@ pub enum Family {
     /// [`CARRIED`](crate::career_family::CARRIED) reports as committed, and an adopted
     /// `input.corpus` is its storage vector's answer as the run writes it. [M36 P13]
     Career,
+    /// `profile/`'s [`PROFILE_DOCUMENTS`]: `expected` is [`run_profile_case`]'s answer, and a corpus
+    /// case's [`ADOPTED`] inputs are its career vector's as the run writes it. [M37 P11]
+    Profile,
 }
 
 /// Why a run wrote nothing. Every variant is a refusal of the whole run (call 7).
@@ -946,7 +965,7 @@ impl Rerecorded {
 
 /// A gated, composed re-record that has not been written: [`plan`]'s answer. Holding one means every
 /// vector the declaration's family walks passed — both families for an engine declaration, the
-/// screen documents for a screen one, the storage and career families for a career one.
+/// screen documents for a screen one, the storage, career and profile families for a career one.
 #[derive(Debug)]
 pub struct Run {
     declaration: Declaration,
@@ -958,7 +977,8 @@ impl Run {
     /// family, within each the [`ENGINE_HALVES`] in their order and each half in path order, and
     /// then the shot family in path order. For a
     /// screen declaration, the [`SCREEN_DOCUMENTS`] in their order, each in path order. For a career
-    /// declaration, the [`STORAGE_DOCUMENTS`] and then the [`CAREER_DOCUMENTS`], each in path order.
+    /// declaration, the [`STORAGE_DOCUMENTS`], the [`CAREER_DOCUMENTS`] and then the
+    /// [`PROFILE_DOCUMENTS`], each in path order.
     pub fn vectors(&self) -> &[Rerecorded] {
         &self.vectors
     }
@@ -1052,9 +1072,10 @@ impl Run {
             ),
             Version::ScreenParser(_) => format!("{} screen", count(Family::Screen)),
             Version::Career(_) => format!(
-                "{} storage, {} career",
+                "{} storage, {} career, {} profile",
                 count(Family::Storage),
-                count(Family::Career)
+                count(Family::Career),
+                count(Family::Profile)
             ),
         };
         let changed = self.changed().count();
@@ -1469,8 +1490,9 @@ fn every_entry_is_placed(
     Ok(())
 }
 
-/// The storage family's [`STORAGE_DOCUMENTS`] and then the career family's [`CAREER_DOCUMENTS`],
-/// each run, gated, applied and ledgered. [M36 P13]
+/// The storage family's [`STORAGE_DOCUMENTS`], the career family's [`CAREER_DOCUMENTS`] and then
+/// the profile family's [`PROFILE_DOCUMENTS`], each run, gated, applied and ledgered. [M36 P13, the
+/// profile family M37 P11]
 ///
 /// - **Each storage vector** is answered by [`run_storage`], the gate's own runner, so the op cases'
 ///   written files are already in the committed spelling wherever their values agree
@@ -1487,8 +1509,14 @@ fn every_entry_is_placed(
 ///   that is another vector's answer; the engine's stage vectors read their engine vector's input,
 ///   which no re-record moves.
 ///
-/// Neither family has an unread sub-family. A hand-worked storage case (`hand/`, M36 P14) is run,
-/// gated and ledgered like a recorded one, and keeps its `provenance.oracle` as the ledger finds it.
+/// - **Each profile case** is answered by [`run_profile_case`], the profile gate's own runner. A
+///   corpus case's [`ADOPTED`] inputs are its career vector's *as this run will write it*, one link
+///   further along the same rule: a career input that moved moves the profile case's copy in the
+///   same run, and the declaration names both (M37 P11).
+///
+/// No family has an unread sub-family. A hand-worked case (`storage/hand/`, M36 P14;
+/// `profile/hand/`, M37 P5) is run, gated and ledgered like a recorded one, and keeps its
+/// `provenance.oracle` as the ledger finds it, as a profile corpus case keeps `"rust"`.
 fn walk_career(
     vectors_dir: &Path,
     declaration: &Declaration,
@@ -1496,6 +1524,7 @@ fn walk_career(
 ) -> Result<Walked, Refused> {
     let storage_dir = vectors_dir.join(STORAGE);
     let career_dir = vectors_dir.join(CAREER);
+    let profile_dir = vectors_dir.join(PROFILE);
     every_entry_is_placed(
         &storage_dir,
         STORAGE,
@@ -1506,6 +1535,12 @@ fn walk_career(
         &career_dir,
         CAREER,
         (&CAREER_DOCUMENTS, "CAREER_DOCUMENTS"),
+        None,
+    )?;
+    every_entry_is_placed(
+        &profile_dir,
+        PROFILE,
+        (&PROFILE_DOCUMENTS, "PROFILE_DOCUMENTS"),
         None,
     )?;
 
@@ -1558,12 +1593,14 @@ fn walk_career(
         )));
     }
 
-    let mut career: BTreeSet<String> = BTreeSet::new();
+    // Every career document as it will be written (as committed, if the gate refused it), for the
+    // profile cases that adopt one's input. [M37 P11]
+    let mut career: BTreeMap<String, Value> = BTreeMap::new();
     for half in CAREER_DOCUMENTS {
         for path in vector_files(&career_dir.join(half))? {
             let (committed, layout) = read_vector(&path)?;
             let id = identify(&committed, &path, CAREER)?;
-            if !career.insert(id.clone()) {
+            if career.contains_key(&id) {
                 return Err(Refused::Files(format!(
                     "{id} is the id of two career vectors"
                 )));
@@ -1588,12 +1625,68 @@ fn walk_career(
             ours["expected"] = expected;
             ours["career_version"] = json!(CAREER_VERSION);
 
+            let as_written = match one(&id, &committed, &ours, declaration, spelling) {
+                Ok((applied, written, lines)) => {
+                    vectors.push(Rerecorded {
+                        id: id.clone(),
+                        path,
+                        family: Family::Career,
+                        written: (!applied.is_empty()).then(|| written.clone()),
+                        applied,
+                        lines,
+                        layout,
+                    });
+                    written
+                }
+                Err(refused) => {
+                    refusals.extend(refused);
+                    committed
+                }
+            };
+            career.insert(id, as_written);
+        }
+    }
+    if career.is_empty() {
+        return Err(Refused::Files(format!(
+            "no career vector under {}",
+            career_dir.display()
+        )));
+    }
+
+    let mut profile: BTreeSet<String> = BTreeSet::new();
+    for half in PROFILE_DOCUMENTS {
+        for path in vector_files(&profile_dir.join(half))? {
+            let (committed, layout) = read_vector(&path)?;
+            let id = identify(&committed, &path, PROFILE)?;
+            if !profile.insert(id.clone()) {
+                return Err(Refused::Files(format!(
+                    "{id} is the id of two profile cases"
+                )));
+            }
+            ledgered.note(&committed, declaration);
+
+            let mut ours = committed.clone();
+            if let Some(source) =
+                profile_family::adopted_from(&committed).map_err(Refused::Files)?
+            {
+                let twin = career.get(&source).ok_or_else(|| {
+                    Refused::Files(format!(
+                        "{id} adopts the input of {source}, which is not a career vector here"
+                    ))
+                })?;
+                for key in ADOPTED {
+                    ours["input"][key] = twin["input"][key].clone();
+                }
+            }
+            ours["expected"] = run_profile_case(&ours).map_err(Refused::Files)?;
+            ours["career_version"] = json!(CAREER_VERSION);
+
             match one(&id, &committed, &ours, declaration, spelling) {
                 Ok((applied, written, lines)) => {
                     vectors.push(Rerecorded {
                         id,
                         path,
-                        family: Family::Career,
+                        family: Family::Profile,
                         written: (!applied.is_empty()).then_some(written),
                         applied,
                         lines,
@@ -1604,10 +1697,10 @@ fn walk_career(
             }
         }
     }
-    if career.is_empty() {
+    if profile.is_empty() {
         return Err(Refused::Files(format!(
-            "no career vector under {}",
-            career_dir.display()
+            "no profile case under {}",
+            profile_dir.display()
         )));
     }
     Ok(Walked {

@@ -12,6 +12,7 @@
 //! golf-core career-baseline   [--name N | --player-id ID] [--verbose] [--json]
 //! golf-core career-dispersion [--name N | --player-id ID] [--verbose] [--json]
 //! golf-core club-profile      [--name N | --player-id ID] [--club C] [--verbose] [--json]
+//! golf-core profile           [--name N | --player-id ID] [--club C] [--json]  # the graded profile
 //! golf-core flag-mishit SESSION/SWING --confirm|--clear|--auto     # a golfer's verdict on a shot
 //! golf-core flag-mishit --list [--name N]
 //! ```
@@ -63,7 +64,8 @@
 //! M34 plan's call 6): `analysis_version` re-records the engine and stage families and, since M35
 //! P6, the shot family, whose numbers are the engine's; `screen_parser_version` the screen family;
 //! and `career_version` the storage and career families
-//! together (M36 P13), each held to its own constant. There is no flag for it, because a flag that
+//! together (M36 P13), and since M37 P11 the profile family after them, each held to its own
+//! constant. There is no flag for it, because a flag that
 //! disagreed with the declaration would be a second answer to one question.
 //!
 //! `--dry-run` prints the report and writes nothing. `--spec` points the verb at another `spec/` —
@@ -140,6 +142,20 @@
 //! `--verbose`) and `-h` text generated from the script's docstring. `--flag value` and
 //! `--flag=value` both parse, and a repeated value flag takes the last value, as argparse does.
 //!
+//! # `profile`
+//!
+//! A golfer's graded profile (M37 P10, the M37 plan's decision 9): each club's strike profile, topic
+//! grades, blend and strengths and weaknesses, then the player's, from
+//! `golf_core::profile::run_profile` over the corpus and bag the career verbs read, rendered by
+//! `golf_core::reports::profile`. It is a career verb in everything but its script, which it has
+//! none of: it shares their `main`, so it finds a golfer, refuses a `--name` with no usable
+//! characters and lists the registry exactly as they do, and it takes their flags but `--verbose`.
+//! `--club` narrows the report to one club's block, and `--json` prints the `GradedProfile` under
+//! `profile`, whole, as `club-profile`'s `--json` prints the whole bag profile. **It writes
+//! nothing**: it reads the sessions and golfers directories as the career verbs do, and leaves
+//! every file under them as it found it. A profile that fails its own check is a builder bug, named
+//! on stderr, and exits 1.
+//!
 //! # `flag-mishit`
 //!
 //! `scripts/flag_mishit.py` (M36 P16): `SESSION/SWING` and exactly one of `--confirm` (a mishit, held
@@ -188,6 +204,8 @@ const USAGE: &str = "usage: golf-core run < vector.json\n       \
                      [--player-id ID] [--verbose] [--json] [--sessions-dir D] [--golfers-dir D]\n       \
                      golf-core club-profile [--name N] [--player-id ID] [--club C] [--verbose] \
                      [--json] [--sessions-dir D] [--golfers-dir D]\n       \
+                     golf-core profile [--name N] [--player-id ID] [--club C] [--json] \
+                     [--sessions-dir D] [--golfers-dir D]\n       \
                      golf-core flag-mishit SESSION/SWING --confirm|--clear|--auto \
                      [--sessions-dir D]\n       \
                      golf-core flag-mishit --list [--name N] [--sessions-dir D] [--golfers-dir D]";
@@ -457,8 +475,12 @@ fn parse_career(
         match flag.as_str() {
             "--name" => name = Some(value("--name")?),
             "--player-id" => player_id = Some(value("--player-id")?),
-            // `club_profile.py`'s flag alone: the other scripts' argparse refuses it, below.
-            "--club" if verb == Verb::ClubProfile => club = Some(value("--club")?),
+            // `club_profile.py`'s flag, and `profile`'s: the other scripts' argparse refuses it,
+            // below, and `profile` refuses `--verbose` the same way (`Verb::Profile` says why).
+            "--club" if verb.takes_club() => club = Some(value("--club")?),
+            "--verbose" if !verb.takes_verbose() => {
+                return Err(format!("{}: unrecognized arguments: {flag}", verb.name()))
+            }
             "--sessions-dir" => sessions = Some(PathBuf::from(value("--sessions-dir")?)),
             "--golfers-dir" => golfers = Some(PathBuf::from(value("--golfers-dir")?)),
             "--verbose" | "--json" | "-h" | "--help" if inline.is_some() => {

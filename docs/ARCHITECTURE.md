@@ -147,6 +147,24 @@ cargo run --bin golf-core -- flag-mishit --list [--name NAME]
 #   (ADR-024's M35 addendum). Over data/ the two still pool the same swings, because nothing on
 #   disk sits between the two versions, and data/ holds no photo entry and records no intent
 
+# The graded profile in Rust (M37): a sixth career verb with no script twin, beside the five
+cargo run --bin golf-core -- profile [--name NAME | --player-id ID] [--club CLUB] [--json]
+                                     [--sessions-dir D] [--golfers-dir D]
+#   each club's strike profile (the impact grid and heel/toe lean, ball-speed and strike spreads),
+#   its topic grades (strike location, consistency, low point, fade, draw, straight: each a share
+#   of good shots with a Wilson interval, withheld below 10 judged shots, and absent where the
+#   device prints no input or the shape was never declared), its blend and its strengths and
+#   weaknesses; then the player's, every tracked shot judged by its own club's criterion. A shape's
+#   landing is printed where the device prints one, else projected and named as projected.
+#   Mechanics enters none of it. It reads only, and finds a golfer as the career verbs do: an
+#   unregistered id prints "(not registered)" with nothing to grade and exits 0, and only a --name
+#   with no usable characters is refused (2). --club narrows the text, not the JSON, and text that
+#   is not a club exits 2. --verbose is refused, because the report already prints everything the
+#   profile carries. --json prints {display_name, profile} per golfer, the whole GradedProfile. A
+#   profile that fails its own check is a builder bug, named on stderr, exit 1. Over data/ (HD
+#   Golf, no intent recorded) strike location, low point and every shape are absent, and only the
+#   player's consistency reaches the floor (the M37 plan's P10 finding 5)
+
 # Shot-first sessions in Rust (M35): two more verbs that write into a session, beside flag-mishit.
 # Neither has a script twin, both take --sessions-dir as the career verbs do, and neither has been
 # run on data/ — the frozen server still writes there, and drops the intent set-intent records
@@ -245,7 +263,12 @@ python scripts/conformance.py regenerate --storage-once | --career-once
 # bundle, bag, golfer and shot stores, `read_corpus`, and `api/state.py`'s tolerant readers. With
 # it came the career half of `crates/analysis` (baseline, dispersion, comparison, bag profile)
 # and `golf-core`'s five career verbs above. It is wired to nothing else: the lab, the server and
-# `mcp/` still read through Python's `storage/`. M35 added the shot-first half across five crates:
+# `mcp/` still read through Python's `storage/`. M37 added the graded profile across four crates,
+# none of it with a Python twin: `contracts::strike` (the shapes and constants), `analysis::strike`
+# (the per-shot judgments, and the builders that count them into grades and blends),
+# `feedback::profile_rules` (`rank_profile` and `rank_player`, the strengths and weaknesses list)
+# and `golf_core::profile` (`run_profile`, which joins the two because only `core` holds both),
+# with `golf-core profile` above. M35 added the shot-first half across five crates:
 # `contracts::shot_result` (`ShotResult`, no Python twin, written as `shot_analysis.json`),
 # `analysis::engine::analyze_shot` (a shot measured and flown with no clip),
 # `screen::tile_refusals` (a printed tile with no value, as `printed_blank` or `misread`),
@@ -255,8 +278,9 @@ python scripts/conformance.py regenerate --storage-once | --career-once
 # `conformance.py check` defers: audio against `trigger`, the format table against `pyfmt`,
 # `contracts` and `screen`, all seven stages against `analysis`, the screen family against
 # `screen`, the storage family against `storage`, the career family and its report text against
-# `analysis` and `core`, the shot family against `core`'s `run_shot`, every vector's shapes against
-# `contracts`, and all 21 engine vectors **end to end** against `core`.
+# `analysis` and `core`, the shot family against `core`'s `run_shot`, the profile family against
+# `core`'s `run_profile`, every vector's shapes against `contracts`, and all 21 engine vectors
+# **end to end** against `core`.
 # No MediaPipe in any of it: `crates/pose`'s tests drive a stub worker, and the real one is
 # behind `GOLF_POSE_REAL_WORKER`.
 cargo build --release          # api/pipeline.py needs this before it can detect a strike
@@ -274,9 +298,10 @@ cargo run --release --bin golf-core -- rerecord --declare spec/declarations/v17.
 cargo run --release --bin golf-core -- rerecord --declare spec/declarations/screen-v1.json [--dry-run]
 #   the same verb on the screen family (M34): the declaration's `screen_parser_version` picks it,
 #   and a screen declaration may also name the keys it removes
-cargo run --release --bin golf-core -- rerecord --declare spec/declarations/career-v2.json [--dry-run]
-#   the same verb on the storage and career families together (M36), picked by `career_version`.
-#   v2 is M35's (photo entries and drills); career-v1.json is refused now, at the older version
+cargo run --release --bin golf-core -- rerecord --declare spec/declarations/career-v3.json [--dry-run]
+#   the same verb on the storage and career families together (M36), and since M37 the profile
+#   family after them, picked by `career_version`. v3 is M37's (every corpus entry carries its
+#   shot); career-v1.json and career-v2.json are refused now, at the older versions
 cargo run --bin golf-core -- parse-screen < spec/vectors/screen/corpus/2026-08-23-2.json
 #   the screen reader's seam: a screen vector, or its `input`, in; the `ShotData` out, or `null`
 #   for a failed read (exit 0). An unknown device exits 1. No Python end to diff it against
@@ -451,12 +476,25 @@ mirrors the stores and the corpus reader, and depends on `crates/contracts` and 
 alone. It never reaches `crates/analysis`, and `analysis` never reaches it: the career half of
 `crates/analysis` reads `contracts`' corpus shapes and nothing else. So the one crate holding the
 stores, the aggregates and the report text together is `crates/core`, which depends on `storage`,
-`analysis`, `feedback`, `screen`, `contracts` and `pyfmt`, and that is where the five career verbs
-live. Two edges below the diagram moved with it. `crates/contracts` now depends on `crates/pyfmt`
+`analysis`, `feedback`, `screen`, `contracts` and `pyfmt`, and that is where the career verbs
+live, `profile` among them since M37. Two edges below the diagram moved with it. `crates/contracts` now depends on `crates/pyfmt`
 (for `str.lower()` and Python's `repr` in its validators' messages), which ADR-032's sixteenth
 addendum records against §1, and `pyfmt` depends on nothing of ours. And **the dotted edge upward
 has no Rust twin**: `api/state.py`'s tolerant readers are a module of `crates/storage` (`state`),
 beside the corpus reader that calls them.
+
+**M37's graded profile added modules, not crates, and the same edge decided where each went.** The
+grades are `crates/analysis/src/strike.rs`: per-shot judgments that read a shot through
+`capability`'s analysed view, and the builders that count them into each club's strike profile,
+topic grades and blend, then pool them for the player. The strengths and weaknesses list is
+`crates/feedback/src/profile_rules.rs`, which reads the career layer's dispersion and never
+`analysis`, so `feedback` still depends on `contracts` and `pyfmt` alone (a test reads every
+workspace manifest to hold that). Their shapes are `crates/contracts/src/strike.rs`. The grades and
+the list do not feed each other (ADR-034 §5.7), and neither crate may reach the other, so
+`crates/core/src/profile.rs::run_profile` joins them, as `build_feedback` sits beside
+`analyze_swing_bundle`. None of the four has a Python twin, and each says so in its first lines.
+`analysis::strike` reads no pose measurement, which a test pins (Decision 12 of the program plan:
+mechanics is a separate panel).
 
 **`pose/` gained a fourth entry point, and it is a shell rather than a module** (M23, ADR-033).
 `pose/worker.py` is what `crates/pose` spawns — `python -m golf_coach.pose.worker`, a handshake
@@ -533,7 +571,8 @@ on a `vision`-only install — pinned by `tests/api/test_pipeline_imports.py`.
 | Feedback | Feedback → UI | `FeedbackPayload` — overall score, ranked tips with severity, headline | ✅ produced and rendered by `api/static/results.html` |
 | Reference | Benchmarks → Analysis | `ranges.json` bands + `golfdb_v1.json` distributions, both with provenance | ✅ |
 | Shot result | Analysis → Storage (Rust only) | `ShotResult` — one shot analysed with no clip: the shot as stored, its shot and flight `measurements`, its `unscored` entries (the screen's `printed_blank` and `misread`, then the flight's), the `intent` it was analysed under, and the photo it was computed from (M35, `crates/contracts/src/shot_result.rs`). Never carried in a `SwingResult`, because frozen Python reads `analysis.json` with a closed `UnscoredReason` | ✅ produced by `golf-core run-shot` as `shot_analysis.json`, read by Rust's `read_corpus`; no Python twin |
-| Career corpus | Storage → Analysis | `CareerCorpus` — one golfer's distinct swings with their `Measurement`s, the honest per-metric `n`, and every excluded swing with its reason | ✅ produced, not yet consumed (career mode step 4) |
+| Career corpus | Storage → Analysis | `CareerCorpus` — one golfer's distinct swings with their `Measurement`s, the honest per-metric `n`, and every excluded swing with its reason. In Rust since M37 each entry also carries its artifact's `shot` and the shot side of its `unscored` (`CorpusSwing.shot`, `.shot_unscored`, written only when set; `CAREER_VERSION` 3), so a topic grade can ask what the device printed per shot | ✅ produced, not yet consumed (career mode step 4) |
+| Graded profile | Analysis + Feedback → UI (Rust only) | `GradedProfile` — per club a `GradedClub { grades, list }` (the `StrikeProfile`, each topic's `TopicGrade` with its Wilson `Share` or the count it falls short by, the blend with what it averaged and excluded) and the same for the player, from `golf_core::profile::run_profile` (M37, `crates/contracts/src/strike.rs`). No schema: it is computed, never opened off disk | ✅ produced by `golf-core profile`, read by nothing yet (M38's phone, §M29's `rmcp` tool); no Python twin |
 | Bag profile | Storage → Analysis → UI/MCP | `BagProfile` / `ClubProfile` — the same corpus narrowed to one club, with `n_swings` and `n_shots` deliberately kept apart, because a clip filmed without a screen photo is history that carries no distance (M9 P14) | ✅ built and read by three surfaces: the CLI, the bag page and two MCP tools |
 | Club specification | Clubs → Storage → UI/MCP | `ClubSpec` — one slot of one manufacturer's model, as published: loft, lie, length, head, shaft and grip, keyed `(make, model, model_year, club)`. `BagEntry` **inherits** it, so a bag entry *is* a specification rather than five fields beside one (M12 P2). Every field is optional and a refusal stays `None` — blank renders blank and never zero, which is ADR-010 §2 at the lookup boundary (ADR-026 §6) | ✅ produced by `clubs/`, stored by `storage/bag_store.py`, rendered by the bag page |
 
@@ -1066,6 +1105,17 @@ count, aggregate, mishit median or report but the corpus's own exclusion list se
 Python admits no photo entry and has no drill rule, so it pools fewer shots than Rust once a photo
 entry exists, and it pools a Rust-recorded drill that has a face-on clip. Neither exists on disk
 today.
+
+**And since M37 each Rust corpus entry carries its shot** (ADR-024's M37 addendum, `CAREER_VERSION`
+3). `read_corpus` lifts the survivor's artifact's `ShotData` onto `CorpusSwing.shot`, off
+`analysis.json` for a swing and `shot_analysis.json` for a photo entry, and the artifact's
+`unscored` entries that are not mechanics checkpoints (the flight's refusals, and the screen's
+`printed_blank` and `misread`) onto `CorpusSwing.shot_unscored`. Both are written only when set, a
+duplicate's are never read, and a swing's shot that the contract refuses stays flagged and is not
+carried. This is what lets the graded profile ask, per shot, what the device printed and why a
+reading is missing, without a new field per topic. Nothing pooled moved: over `data/` the corpus
+still holds the same 13 swings and 34 metrics. Frozen Python's `CareerCorpus` has no field for either
+key, so it reads a Rust-written corpus and cannot write the two back.
 
 The version field defaults to **0**, not to the current version, which is the whole reason it
 works on artifacts written before it existed: a default of "current" would make every legacy file

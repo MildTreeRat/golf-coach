@@ -1,0 +1,2397 @@
+{
+  "career_version": 3,
+  "expected": {
+    "profile": {
+      "clubs": [
+        {
+          "grades": {
+            "blend": {
+              "averaged": [
+                "consistency"
+              ],
+              "excluded": [],
+              "mean": 0.9
+            },
+            "club": "driver",
+            "n_shots": 10,
+            "strike": {
+              "ball_speed": {
+                "maximum": 160.0,
+                "mean": 160.0,
+                "mean_ci": {
+                  "confidence": 0.95,
+                  "high": 160.0,
+                  "low": 160.0
+                },
+                "median": 160.0,
+                "minimum": 160.0,
+                "n": 10,
+                "n_sessions": 2,
+                "name": "ball_speed_mph",
+                "ready": [
+                  "center",
+                  "spread"
+                ],
+                "sd": 0.0,
+                "sd_ci": {
+                  "confidence": 0.95,
+                  "high": 0.0,
+                  "low": 0.0
+                },
+                "sessions": [
+                  {
+                    "captured_at": "2026-09-01T12:07:00Z",
+                    "mean": null,
+                    "n": 5,
+                    "session_id": "2026-09-01"
+                  },
+                  {
+                    "captured_at": "2026-09-02T12:06:00Z",
+                    "mean": null,
+                    "n": 5,
+                    "session_id": "2026-09-02"
+                  }
+                ],
+                "source": "launch_monitor:synthetic",
+                "unit": "mph",
+                "withheld": [
+                  {
+                    "claim": "trend",
+                    "have_n": 10,
+                    "have_sessions": 2,
+                    "need_n": 12,
+                    "need_sessions": 3,
+                    "reason": "a claim that this has moved needs 12 samples (there are 10) and 3 sessions (there are 2) \u2014 repeated swings in one bay hour are one occasion, not several"
+                  }
+                ]
+              },
+              "dispersion": {
+                "carry_distance_yds": {
+                  "bias": "withheld",
+                  "caveats": [],
+                  "center": null,
+                  "center_ci": null,
+                  "n": 10,
+                  "n_sessions": 2,
+                  "name": "carry_distance_yds",
+                  "offset": null,
+                  "pattern": null,
+                  "points_at": "This varies more shot to shot than measurement error explains, which points at timing rather than at anything fixed before the swing. Whether it is centered in the right place is a separate question, and this metric has no target to answer it against yet.",
+                  "scatter": "established",
+                  "sd": 9.371943946339698,
+                  "sd_ci": {
+                    "confidence": 0.95,
+                    "high": 17.11075035694746,
+                    "low": 6.446313658636444
+                  },
+                  "source": "launch_monitor:synthetic",
+                  "target": null,
+                  "tolerance": 5.0,
+                  "unavailable": [
+                    "no target for carry_distance_yds: how far a golfer should hit a given club is not a number this repo has. Every distribution here is cut from GolfDB, which contains no ball flight, and a tour carry band would judge an amateur against a population they are not in"
+                  ],
+                  "unit": "yards",
+                  "withheld": [],
+                  "within_session_sd": 9.539392014169456
+                },
+                "start_line_deg": {
+                  "bias": "not_established",
+                  "caveats": [],
+                  "center": 0.1,
+                  "center_ci": {
+                    "confidence": 0.95,
+                    "high": 0.5396537728713356,
+                    "low": -0.3396537728713357
+                  },
+                  "n": 10,
+                  "n_sessions": 2,
+                  "name": "start_line_deg",
+                  "offset": 0.1,
+                  "pattern": "nothing_established",
+                  "points_at": "Neither a repeatable miss nor scatter beyond what this instrument's own error explains. That is not a clean bill \u2014 it is that nothing here can be distinguished from noise at this sample size.",
+                  "scatter": "not_established",
+                  "sd": 0.6146362971528592,
+                  "sd_ci": {
+                    "confidence": 0.95,
+                    "high": 1.1221672153735642,
+                    "low": 0.4227659042900758
+                  },
+                  "source": "launch_monitor:synthetic",
+                  "target": 0.0,
+                  "tolerance": 2.0,
+                  "unavailable": [],
+                  "unit": "degrees",
+                  "withheld": [],
+                  "within_session_sd": 0.6519202405202649
+                }
+              }
+            },
+            "topics": [
+              {
+                "grade": {
+                  "graded": {
+                    "interval": {
+                      "confidence": 0.95,
+                      "high": 0.9821237869049271,
+                      "low": 0.5958499732047615
+                    },
+                    "n": 10,
+                    "share": 0.9,
+                    "successes": 9
+                  }
+                },
+                "judged": 10,
+                "topic": "consistency",
+                "unscored": []
+              }
+            ]
+          },
+          "list": [
+            {
+              "kind": "scatter",
+              "metric": "carry_distance_yds",
+              "ratio": 1.8743887892679396
+            },
+            {
+              "kind": "strength",
+              "metric": "start_line_offline_yds",
+              "ratio": 0.5451005726886023
+            },
+            {
+              "kind": "strength",
+              "metric": "start_line_deg",
+              "ratio": 0.5610836076867821
+            }
+          ]
+        },
+        {
+          "grades": {
+            "blend": {
+              "averaged": [
+                "consistency",
+                "low_point"
+              ],
+              "excluded": [],
+              "mean": 0.8636363636363636
+            },
+            "club": "7i",
+            "n_shots": 11,
+            "strike": {
+              "ball_speed": {
+                "maximum": 110.0,
+                "mean": 110.0,
+                "mean_ci": {
+                  "confidence": 0.95,
+                  "high": 110.0,
+                  "low": 110.0
+                },
+                "median": 110.0,
+                "minimum": 110.0,
+                "n": 11,
+                "n_sessions": 2,
+                "name": "ball_speed_mph",
+                "ready": [
+                  "center",
+                  "spread"
+                ],
+                "sd": 0.0,
+                "sd_ci": {
+                  "confidence": 0.95,
+                  "high": 0.0,
+                  "low": 0.0
+                },
+                "sessions": [
+                  {
+                    "captured_at": "2026-09-01T12:01:00Z",
+                    "mean": null,
+                    "n": 6,
+                    "session_id": "2026-09-01"
+                  },
+                  {
+                    "captured_at": "2026-09-02T12:01:00Z",
+                    "mean": null,
+                    "n": 5,
+                    "session_id": "2026-09-02"
+                  }
+                ],
+                "source": "launch_monitor:synthetic",
+                "unit": "mph",
+                "withheld": [
+                  {
+                    "claim": "trend",
+                    "have_n": 11,
+                    "have_sessions": 2,
+                    "need_n": 12,
+                    "need_sessions": 3,
+                    "reason": "a claim that this has moved needs 12 samples (there are 11) and 3 sessions (there are 2) \u2014 repeated swings in one bay hour are one occasion, not several"
+                  }
+                ]
+              },
+              "dispersion": {
+                "carry_distance_yds": {
+                  "bias": "withheld",
+                  "caveats": [],
+                  "center": null,
+                  "center_ci": null,
+                  "n": 11,
+                  "n_sessions": 2,
+                  "name": "carry_distance_yds",
+                  "offset": null,
+                  "pattern": null,
+                  "points_at": null,
+                  "scatter": "not_established",
+                  "sd": 1.4206272622267313,
+                  "sd_ci": {
+                    "confidence": 0.95,
+                    "high": 2.4930959909118795,
+                    "low": 0.9926207787663986
+                  },
+                  "source": "launch_monitor:synthetic",
+                  "target": null,
+                  "tolerance": 5.0,
+                  "unavailable": [
+                    "no target for carry_distance_yds: how far a golfer should hit a given club is not a number this repo has. Every distribution here is cut from GolfDB, which contains no ball flight, and a tour carry band would judge an amateur against a population they are not in"
+                  ],
+                  "unit": "yards",
+                  "withheld": [],
+                  "within_session_sd": 1.460593486680443
+                },
+                "start_line_deg": {
+                  "bias": "not_established",
+                  "caveats": [],
+                  "center": 0.045454545454545456,
+                  "center_ci": {
+                    "confidence": 0.95,
+                    "high": 0.3962735635694054,
+                    "low": -0.30536447266031447
+                  },
+                  "n": 11,
+                  "n_sessions": 2,
+                  "name": "start_line_deg",
+                  "offset": 0.045454545454545456,
+                  "pattern": "nothing_established",
+                  "points_at": "Neither a repeatable miss nor scatter beyond what this instrument's own error explains. That is not a clean bill \u2014 it is that nothing here can be distinguished from noise at this sample size.",
+                  "scatter": "not_established",
+                  "sd": 0.5222329678670935,
+                  "sd_ci": {
+                    "confidence": 0.95,
+                    "high": 0.9164803134009324,
+                    "low": 0.36489465537159943
+                  },
+                  "source": "launch_monitor:synthetic",
+                  "target": 0.0,
+                  "tolerance": 2.0,
+                  "unavailable": [],
+                  "unit": "degrees",
+                  "withheld": [],
+                  "within_session_sd": 0.5305482838361476
+                }
+              }
+            },
+            "topics": [
+              {
+                "grade": {
+                  "graded": {
+                    "interval": {
+                      "confidence": 0.95,
+                      "high": 1.0,
+                      "low": 0.7411670330319684
+                    },
+                    "n": 11,
+                    "share": 1.0,
+                    "successes": 11
+                  }
+                },
+                "judged": 11,
+                "topic": "consistency",
+                "unscored": []
+              },
+              {
+                "grade": {
+                  "graded": {
+                    "interval": {
+                      "confidence": 0.95,
+                      "high": 0.902539407099751,
+                      "low": 0.43435469882387084
+                    },
+                    "n": 11,
+                    "share": 0.7272727272727273,
+                    "successes": 8
+                  }
+                },
+                "judged": 11,
+                "topic": "low_point",
+                "unscored": []
+              }
+            ]
+          },
+          "list": [
+            {
+              "kind": "strength",
+              "metric": "start_line_offline_yds",
+              "ratio": 0.2654648781748052
+            },
+            {
+              "kind": "strength",
+              "metric": "start_line_deg",
+              "ratio": 0.4582401567004662
+            }
+          ]
+        }
+      ],
+      "player": {
+        "grades": {
+          "blend": {
+            "averaged": [
+              "consistency",
+              "low_point"
+            ],
+            "excluded": [],
+            "mean": 0.8398268398268398
+          },
+          "n_shots": 21,
+          "strike": {
+            "dispersion": {
+              "start_line_deg": {
+                "bias": "not_established",
+                "caveats": [],
+                "center": 0.07142857142857142,
+                "center_ci": {
+                  "confidence": 0.95,
+                  "high": 0.32370395006601727,
+                  "low": -0.1808468072088744
+                },
+                "n": 21,
+                "n_sessions": 2,
+                "name": "start_line_deg",
+                "offset": 0.07142857142857142,
+                "pattern": "nothing_established",
+                "points_at": "Neither a repeatable miss nor scatter beyond what this instrument's own error explains. That is not a clean bill \u2014 it is that nothing here can be distinguished from noise at this sample size.",
+                "scatter": "not_established",
+                "sd": 0.554204706893452,
+                "sd_ci": {
+                  "confidence": 0.95,
+                  "high": 0.8003008207523706,
+                  "low": 0.4239969361894878
+                },
+                "source": "launch_monitor:synthetic",
+                "target": 0.0,
+                "tolerance": 2.0,
+                "unavailable": [],
+                "unit": "degrees",
+                "withheld": [],
+                "within_session_sd": 0.5640760748177662
+              }
+            }
+          },
+          "topics": [
+            {
+              "grade": {
+                "graded": {
+                  "interval": {
+                    "confidence": 0.95,
+                    "high": 0.9915440121901737,
+                    "low": 0.7733063992587743
+                  },
+                  "n": 21,
+                  "share": 0.9523809523809523,
+                  "successes": 20
+                }
+              },
+              "judged": 21,
+              "topic": "consistency",
+              "unscored": []
+            },
+            {
+              "grade": {
+                "graded": {
+                  "interval": {
+                    "confidence": 0.95,
+                    "high": 0.902539407099751,
+                    "low": 0.43435469882387084
+                  },
+                  "n": 11,
+                  "share": 0.7272727272727273,
+                  "successes": 8
+                }
+              },
+              "judged": 11,
+              "topic": "low_point",
+              "unscored": []
+            }
+          ],
+          "untagged_shots": 0
+        },
+        "list": [
+          {
+            "kind": "strength",
+            "metric": "start_line_deg",
+            "ratio": 0.4001504103761853
+          }
+        ]
+      },
+      "player_id": "aaron"
+    }
+  },
+  "id": "profile/hand/low-point-iron-and-driver",
+  "input": {
+    "bag": null,
+    "corpus": {
+      "analyzed_without_measurements": 0,
+      "excluded": [],
+      "metric_counts": {
+        "ball_speed_mph": 21,
+        "carry_distance_yds": 21,
+        "start_line_deg": 21,
+        "start_line_offline_yds": 21
+      },
+      "other_golfers": 0,
+      "outdated_swings": 0,
+      "player_id": "aaron",
+      "sessions_scanned": 2,
+      "swing_dirs_seen": 21,
+      "swings": [
+        {
+          "analysis_version": 17,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-09-01T12:01:00Z",
+          "club": "7i",
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": null,
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "hand",
+              "name": "start_line_deg",
+              "source": "launch_monitor:synthetic",
+              "unit": "degrees",
+              "value": 0.0
+            },
+            {
+              "detail": "hand",
+              "name": "carry_distance_yds",
+              "source": "launch_monitor:synthetic",
+              "unit": "yards",
+              "value": 150.0
+            },
+            {
+              "detail": "hand",
+              "name": "start_line_offline_yds",
+              "source": "launch_monitor:synthetic",
+              "unit": "yards",
+              "value": 0.0
+            },
+            {
+              "detail": "hand",
+              "name": "ball_speed_mph",
+              "source": "launch_monitor:synthetic",
+              "unit": "mph",
+              "value": 110.0
+            }
+          ],
+          "missing_roles": [
+            "face_on",
+            "down_the_line"
+          ],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-09-01",
+          "shot": {
+            "apex_height": null,
+            "attack_angle": null,
+            "ball_speed": 110.0,
+            "bounce_and_roll": null,
+            "carry_distance": 150.0,
+            "carry_offline": null,
+            "club_face_angle": null,
+            "club_head_speed": null,
+            "club_path": null,
+            "dynamic_loft": null,
+            "impact_offset_h": null,
+            "impact_offset_v": null,
+            "impact_position": null,
+            "impact_position_v": null,
+            "launch_angle": null,
+            "launch_direction": 0.0,
+            "low_point": 0.0,
+            "provenance": {
+              "corrections": {},
+              "device": "synthetic",
+              "fields_present": null,
+              "image_path": null,
+              "image_sha256": "photo-lp-1",
+              "needs_review": false,
+              "parse_confidence": 0.95,
+              "parser_version": 0,
+              "raw_fields": {},
+              "warnings": []
+            },
+            "session_id": "2026-09-01",
+            "shot_id": "2026-09-01-1",
+            "shot_type": null,
+            "smash_factor": null,
+            "source": "screen",
+            "spin_axis": null,
+            "spin_rate": null,
+            "timestamp": "2026-09-01T12:01:00Z",
+            "total_distance": null
+          },
+          "shot_needs_review": false,
+          "shot_sha256": "photo-lp-1",
+          "stale": false,
+          "swing_id": "1"
+        },
+        {
+          "analysis_version": 17,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-09-01T12:02:00Z",
+          "club": "7i",
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": null,
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "hand",
+              "name": "start_line_deg",
+              "source": "launch_monitor:synthetic",
+              "unit": "degrees",
+              "value": 0.5
+            },
+            {
+              "detail": "hand",
+              "name": "carry_distance_yds",
+              "source": "launch_monitor:synthetic",
+              "unit": "yards",
+              "value": 151.0
+            },
+            {
+              "detail": "hand",
+              "name": "start_line_offline_yds",
+              "source": "launch_monitor:synthetic",
+              "unit": "yards",
+              "value": 1.3177068602544642
+            },
+            {
+              "detail": "hand",
+              "name": "ball_speed_mph",
+              "source": "launch_monitor:synthetic",
+              "unit": "mph",
+              "value": 110.0
+            }
+          ],
+          "missing_roles": [
+            "face_on",
+            "down_the_line"
+          ],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-09-01",
+          "shot": {
+            "apex_height": null,
+            "attack_angle": null,
+            "ball_speed": 110.0,
+            "bounce_and_roll": null,
+            "carry_distance": 151.0,
+            "carry_offline": null,
+            "club_face_angle": null,
+            "club_head_speed": null,
+            "club_path": null,
+            "dynamic_loft": null,
+            "impact_offset_h": null,
+            "impact_offset_v": null,
+            "impact_position": null,
+            "impact_position_v": null,
+            "launch_angle": null,
+            "launch_direction": 0.5,
+            "low_point": 0.1,
+            "provenance": {
+              "corrections": {},
+              "device": "synthetic",
+              "fields_present": null,
+              "image_path": null,
+              "image_sha256": "photo-lp-2",
+              "needs_review": false,
+              "parse_confidence": 0.95,
+              "parser_version": 0,
+              "raw_fields": {},
+              "warnings": []
+            },
+            "session_id": "2026-09-01",
+            "shot_id": "2026-09-01-2",
+            "shot_type": null,
+            "smash_factor": null,
+            "source": "screen",
+            "spin_axis": null,
+            "spin_rate": null,
+            "timestamp": "2026-09-01T12:02:00Z",
+            "total_distance": null
+          },
+          "shot_needs_review": false,
+          "shot_sha256": "photo-lp-2",
+          "stale": false,
+          "swing_id": "2"
+        },
+        {
+          "analysis_version": 17,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-09-01T12:03:00Z",
+          "club": "7i",
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": null,
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "hand",
+              "name": "start_line_deg",
+              "source": "launch_monitor:synthetic",
+              "unit": "degrees",
+              "value": -0.5
+            },
+            {
+              "detail": "hand",
+              "name": "carry_distance_yds",
+              "source": "launch_monitor:synthetic",
+              "unit": "yards",
+              "value": 149.0
+            },
+            {
+              "detail": "hand",
+              "name": "start_line_offline_yds",
+              "source": "launch_monitor:synthetic",
+              "unit": "yards",
+              "value": -1.3002537892577162
+            },
+            {
+              "detail": "hand",
+              "name": "ball_speed_mph",
+              "source": "launch_monitor:synthetic",
+              "unit": "mph",
+              "value": 110.0
+            }
+          ],
+          "missing_roles": [
+            "face_on",
+            "down_the_line"
+          ],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-09-01",
+          "shot": {
+            "apex_height": null,
+            "attack_angle": null,
+            "ball_speed": 110.0,
+            "bounce_and_roll": null,
+            "carry_distance": 149.0,
+            "carry_offline": null,
+            "club_face_angle": null,
+            "club_head_speed": null,
+            "club_path": null,
+            "dynamic_loft": null,
+            "impact_offset_h": null,
+            "impact_offset_v": null,
+            "impact_position": null,
+            "impact_position_v": null,
+            "launch_angle": null,
+            "launch_direction": -0.5,
+            "low_point": 1.5,
+            "provenance": {
+              "corrections": {},
+              "device": "synthetic",
+              "fields_present": null,
+              "image_path": null,
+              "image_sha256": "photo-lp-3",
+              "needs_review": false,
+              "parse_confidence": 0.95,
+              "parser_version": 0,
+              "raw_fields": {},
+              "warnings": []
+            },
+            "session_id": "2026-09-01",
+            "shot_id": "2026-09-01-3",
+            "shot_type": null,
+            "smash_factor": null,
+            "source": "screen",
+            "spin_axis": null,
+            "spin_rate": null,
+            "timestamp": "2026-09-01T12:03:00Z",
+            "total_distance": null
+          },
+          "shot_needs_review": false,
+          "shot_sha256": "photo-lp-3",
+          "stale": false,
+          "swing_id": "3"
+        },
+        {
+          "analysis_version": 17,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-09-01T12:04:00Z",
+          "club": "7i",
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": null,
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "hand",
+              "name": "start_line_deg",
+              "source": "launch_monitor:synthetic",
+              "unit": "degrees",
+              "value": 0.0
+            },
+            {
+              "detail": "hand",
+              "name": "carry_distance_yds",
+              "source": "launch_monitor:synthetic",
+              "unit": "yards",
+              "value": 150.0
+            },
+            {
+              "detail": "hand",
+              "name": "start_line_offline_yds",
+              "source": "launch_monitor:synthetic",
+              "unit": "yards",
+              "value": 0.0
+            },
+            {
+              "detail": "hand",
+              "name": "ball_speed_mph",
+              "source": "launch_monitor:synthetic",
+              "unit": "mph",
+              "value": 110.0
+            }
+          ],
+          "missing_roles": [
+            "face_on",
+            "down_the_line"
+          ],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-09-01",
+          "shot": {
+            "apex_height": null,
+            "attack_angle": null,
+            "ball_speed": 110.0,
+            "bounce_and_roll": null,
+            "carry_distance": 150.0,
+            "carry_offline": null,
+            "club_face_angle": null,
+            "club_head_speed": null,
+            "club_path": null,
+            "dynamic_loft": null,
+            "impact_offset_h": null,
+            "impact_offset_v": null,
+            "impact_position": null,
+            "impact_position_v": null,
+            "launch_angle": null,
+            "launch_direction": 0.0,
+            "low_point": 2.0,
+            "provenance": {
+              "corrections": {},
+              "device": "synthetic",
+              "fields_present": null,
+              "image_path": null,
+              "image_sha256": "photo-lp-4",
+              "needs_review": false,
+              "parse_confidence": 0.95,
+              "parser_version": 0,
+              "raw_fields": {},
+              "warnings": []
+            },
+            "session_id": "2026-09-01",
+            "shot_id": "2026-09-01-4",
+            "shot_type": null,
+            "smash_factor": null,
+            "source": "screen",
+            "spin_axis": null,
+            "spin_rate": null,
+            "timestamp": "2026-09-01T12:04:00Z",
+            "total_distance": null
+          },
+          "shot_needs_review": false,
+          "shot_sha256": "photo-lp-4",
+          "stale": false,
+          "swing_id": "4"
+        },
+        {
+          "analysis_version": 17,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-09-01T12:05:00Z",
+          "club": "7i",
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": null,
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "hand",
+              "name": "start_line_deg",
+              "source": "launch_monitor:synthetic",
+              "unit": "degrees",
+              "value": 1.0
+            },
+            {
+              "detail": "hand",
+              "name": "carry_distance_yds",
+              "source": "launch_monitor:synthetic",
+              "unit": "yards",
+              "value": 148.0
+            },
+            {
+              "detail": "hand",
+              "name": "start_line_offline_yds",
+              "source": "launch_monitor:synthetic",
+              "unit": "yards",
+              "value": 2.58295615271796
+            },
+            {
+              "detail": "hand",
+              "name": "ball_speed_mph",
+              "source": "launch_monitor:synthetic",
+              "unit": "mph",
+              "value": 110.0
+            }
+          ],
+          "missing_roles": [
+            "face_on",
+            "down_the_line"
+          ],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-09-01",
+          "shot": {
+            "apex_height": null,
+            "attack_angle": null,
+            "ball_speed": 110.0,
+            "bounce_and_roll": null,
+            "carry_distance": 148.0,
+            "carry_offline": null,
+            "club_face_angle": null,
+            "club_head_speed": null,
+            "club_path": null,
+            "dynamic_loft": null,
+            "impact_offset_h": null,
+            "impact_offset_v": null,
+            "impact_position": null,
+            "impact_position_v": null,
+            "launch_angle": null,
+            "launch_direction": 1.0,
+            "low_point": -0.5,
+            "provenance": {
+              "corrections": {},
+              "device": "synthetic",
+              "fields_present": null,
+              "image_path": null,
+              "image_sha256": "photo-lp-5",
+              "needs_review": false,
+              "parse_confidence": 0.95,
+              "parser_version": 0,
+              "raw_fields": {},
+              "warnings": []
+            },
+            "session_id": "2026-09-01",
+            "shot_id": "2026-09-01-5",
+            "shot_type": null,
+            "smash_factor": null,
+            "source": "screen",
+            "spin_axis": null,
+            "spin_rate": null,
+            "timestamp": "2026-09-01T12:05:00Z",
+            "total_distance": null
+          },
+          "shot_needs_review": false,
+          "shot_sha256": "photo-lp-5",
+          "stale": false,
+          "swing_id": "5"
+        },
+        {
+          "analysis_version": 17,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-09-01T12:06:00Z",
+          "club": "7i",
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": null,
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "hand",
+              "name": "start_line_deg",
+              "source": "launch_monitor:synthetic",
+              "unit": "degrees",
+              "value": 0.0
+            },
+            {
+              "detail": "hand",
+              "name": "carry_distance_yds",
+              "source": "launch_monitor:synthetic",
+              "unit": "yards",
+              "value": 152.0
+            },
+            {
+              "detail": "hand",
+              "name": "start_line_offline_yds",
+              "source": "launch_monitor:synthetic",
+              "unit": "yards",
+              "value": 0.0
+            },
+            {
+              "detail": "hand",
+              "name": "ball_speed_mph",
+              "source": "launch_monitor:synthetic",
+              "unit": "mph",
+              "value": 110.0
+            }
+          ],
+          "missing_roles": [
+            "face_on",
+            "down_the_line"
+          ],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-09-01",
+          "shot": {
+            "apex_height": null,
+            "attack_angle": null,
+            "ball_speed": 110.0,
+            "bounce_and_roll": null,
+            "carry_distance": 152.0,
+            "carry_offline": null,
+            "club_face_angle": null,
+            "club_head_speed": null,
+            "club_path": null,
+            "dynamic_loft": null,
+            "impact_offset_h": null,
+            "impact_offset_v": null,
+            "impact_position": null,
+            "impact_position_v": null,
+            "launch_angle": null,
+            "launch_direction": 0.0,
+            "low_point": 3.0,
+            "provenance": {
+              "corrections": {},
+              "device": "synthetic",
+              "fields_present": null,
+              "image_path": null,
+              "image_sha256": "photo-lp-6",
+              "needs_review": false,
+              "parse_confidence": 0.95,
+              "parser_version": 0,
+              "raw_fields": {},
+              "warnings": []
+            },
+            "session_id": "2026-09-01",
+            "shot_id": "2026-09-01-6",
+            "shot_type": null,
+            "smash_factor": null,
+            "source": "screen",
+            "spin_axis": null,
+            "spin_rate": null,
+            "timestamp": "2026-09-01T12:06:00Z",
+            "total_distance": null
+          },
+          "shot_needs_review": false,
+          "shot_sha256": "photo-lp-6",
+          "stale": false,
+          "swing_id": "6"
+        },
+        {
+          "analysis_version": 17,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-09-02T12:01:00Z",
+          "club": "7i",
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": null,
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "hand",
+              "name": "start_line_deg",
+              "source": "launch_monitor:synthetic",
+              "unit": "degrees",
+              "value": -1.0
+            },
+            {
+              "detail": "hand",
+              "name": "carry_distance_yds",
+              "source": "launch_monitor:synthetic",
+              "unit": "yards",
+              "value": 150.0
+            },
+            {
+              "detail": "hand",
+              "name": "start_line_offline_yds",
+              "source": "launch_monitor:synthetic",
+              "unit": "yards",
+              "value": -2.6178609655925267
+            },
+            {
+              "detail": "hand",
+              "name": "ball_speed_mph",
+              "source": "launch_monitor:synthetic",
+              "unit": "mph",
+              "value": 110.0
+            }
+          ],
+          "missing_roles": [
+            "face_on",
+            "down_the_line"
+          ],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-09-02",
+          "shot": {
+            "apex_height": null,
+            "attack_angle": null,
+            "ball_speed": 110.0,
+            "bounce_and_roll": null,
+            "carry_distance": 150.0,
+            "carry_offline": null,
+            "club_face_angle": null,
+            "club_head_speed": null,
+            "club_path": null,
+            "dynamic_loft": null,
+            "impact_offset_h": null,
+            "impact_offset_v": null,
+            "impact_position": null,
+            "impact_position_v": null,
+            "launch_angle": null,
+            "launch_direction": -1.0,
+            "low_point": 1.0,
+            "provenance": {
+              "corrections": {},
+              "device": "synthetic",
+              "fields_present": null,
+              "image_path": null,
+              "image_sha256": "photo-lp-7",
+              "needs_review": false,
+              "parse_confidence": 0.95,
+              "parser_version": 0,
+              "raw_fields": {},
+              "warnings": []
+            },
+            "session_id": "2026-09-02",
+            "shot_id": "2026-09-02-1",
+            "shot_type": null,
+            "smash_factor": null,
+            "source": "screen",
+            "spin_axis": null,
+            "spin_rate": null,
+            "timestamp": "2026-09-02T12:01:00Z",
+            "total_distance": null
+          },
+          "shot_needs_review": false,
+          "shot_sha256": "photo-lp-7",
+          "stale": false,
+          "swing_id": "1"
+        },
+        {
+          "analysis_version": 17,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-09-02T12:02:00Z",
+          "club": "7i",
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": null,
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "hand",
+              "name": "start_line_deg",
+              "source": "launch_monitor:synthetic",
+              "unit": "degrees",
+              "value": 0.0
+            },
+            {
+              "detail": "hand",
+              "name": "carry_distance_yds",
+              "source": "launch_monitor:synthetic",
+              "unit": "yards",
+              "value": 147.0
+            },
+            {
+              "detail": "hand",
+              "name": "start_line_offline_yds",
+              "source": "launch_monitor:synthetic",
+              "unit": "yards",
+              "value": 0.0
+            },
+            {
+              "detail": "hand",
+              "name": "ball_speed_mph",
+              "source": "launch_monitor:synthetic",
+              "unit": "mph",
+              "value": 110.0
+            }
+          ],
+          "missing_roles": [
+            "face_on",
+            "down_the_line"
+          ],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-09-02",
+          "shot": {
+            "apex_height": null,
+            "attack_angle": null,
+            "ball_speed": 110.0,
+            "bounce_and_roll": null,
+            "carry_distance": 147.0,
+            "carry_offline": null,
+            "club_face_angle": null,
+            "club_head_speed": null,
+            "club_path": null,
+            "dynamic_loft": null,
+            "impact_offset_h": null,
+            "impact_offset_v": null,
+            "impact_position": null,
+            "impact_position_v": null,
+            "launch_angle": null,
+            "launch_direction": 0.0,
+            "low_point": -1.2,
+            "provenance": {
+              "corrections": {},
+              "device": "synthetic",
+              "fields_present": null,
+              "image_path": null,
+              "image_sha256": "photo-lp-8",
+              "needs_review": false,
+              "parse_confidence": 0.95,
+              "parser_version": 0,
+              "raw_fields": {},
+              "warnings": []
+            },
+            "session_id": "2026-09-02",
+            "shot_id": "2026-09-02-2",
+            "shot_type": null,
+            "smash_factor": null,
+            "source": "screen",
+            "spin_axis": null,
+            "spin_rate": null,
+            "timestamp": "2026-09-02T12:02:00Z",
+            "total_distance": null
+          },
+          "shot_needs_review": false,
+          "shot_sha256": "photo-lp-8",
+          "stale": false,
+          "swing_id": "2"
+        },
+        {
+          "analysis_version": 17,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-09-02T12:03:00Z",
+          "club": "7i",
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": null,
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "hand",
+              "name": "start_line_deg",
+              "source": "launch_monitor:synthetic",
+              "unit": "degrees",
+              "value": 0.5
+            },
+            {
+              "detail": "hand",
+              "name": "carry_distance_yds",
+              "source": "launch_monitor:synthetic",
+              "unit": "yards",
+              "value": 151.0
+            },
+            {
+              "detail": "hand",
+              "name": "start_line_offline_yds",
+              "source": "launch_monitor:synthetic",
+              "unit": "yards",
+              "value": 1.3177068602544642
+            },
+            {
+              "detail": "hand",
+              "name": "ball_speed_mph",
+              "source": "launch_monitor:synthetic",
+              "unit": "mph",
+              "value": 110.0
+            }
+          ],
+          "missing_roles": [
+            "face_on",
+            "down_the_line"
+          ],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-09-02",
+          "shot": {
+            "apex_height": null,
+            "attack_angle": null,
+            "ball_speed": 110.0,
+            "bounce_and_roll": null,
+            "carry_distance": 151.0,
+            "carry_offline": null,
+            "club_face_angle": null,
+            "club_head_speed": null,
+            "club_path": null,
+            "dynamic_loft": null,
+            "impact_offset_h": null,
+            "impact_offset_v": null,
+            "impact_position": null,
+            "impact_position_v": null,
+            "launch_angle": null,
+            "launch_direction": 0.5,
+            "low_point": 2.5,
+            "provenance": {
+              "corrections": {},
+              "device": "synthetic",
+              "fields_present": null,
+              "image_path": null,
+              "image_sha256": "photo-lp-9",
+              "needs_review": false,
+              "parse_confidence": 0.95,
+              "parser_version": 0,
+              "raw_fields": {},
+              "warnings": []
+            },
+            "session_id": "2026-09-02",
+            "shot_id": "2026-09-02-3",
+            "shot_type": null,
+            "smash_factor": null,
+            "source": "screen",
+            "spin_axis": null,
+            "spin_rate": null,
+            "timestamp": "2026-09-02T12:03:00Z",
+            "total_distance": null
+          },
+          "shot_needs_review": false,
+          "shot_sha256": "photo-lp-9",
+          "stale": false,
+          "swing_id": "3"
+        },
+        {
+          "analysis_version": 17,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-09-02T12:04:00Z",
+          "club": "7i",
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": null,
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "hand",
+              "name": "start_line_deg",
+              "source": "launch_monitor:synthetic",
+              "unit": "degrees",
+              "value": 0.0
+            },
+            {
+              "detail": "hand",
+              "name": "carry_distance_yds",
+              "source": "launch_monitor:synthetic",
+              "unit": "yards",
+              "value": 150.0
+            },
+            {
+              "detail": "hand",
+              "name": "start_line_offline_yds",
+              "source": "launch_monitor:synthetic",
+              "unit": "yards",
+              "value": 0.0
+            },
+            {
+              "detail": "hand",
+              "name": "ball_speed_mph",
+              "source": "launch_monitor:synthetic",
+              "unit": "mph",
+              "value": 110.0
+            }
+          ],
+          "missing_roles": [
+            "face_on",
+            "down_the_line"
+          ],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-09-02",
+          "shot": {
+            "apex_height": null,
+            "attack_angle": null,
+            "ball_speed": 110.0,
+            "bounce_and_roll": null,
+            "carry_distance": 150.0,
+            "carry_offline": null,
+            "club_face_angle": null,
+            "club_head_speed": null,
+            "club_path": null,
+            "dynamic_loft": null,
+            "impact_offset_h": null,
+            "impact_offset_v": null,
+            "impact_position": null,
+            "impact_position_v": null,
+            "launch_angle": null,
+            "launch_direction": 0.0,
+            "low_point": 0.8,
+            "provenance": {
+              "corrections": {},
+              "device": "synthetic",
+              "fields_present": null,
+              "image_path": null,
+              "image_sha256": "photo-lp-10",
+              "needs_review": false,
+              "parse_confidence": 0.95,
+              "parser_version": 0,
+              "raw_fields": {},
+              "warnings": []
+            },
+            "session_id": "2026-09-02",
+            "shot_id": "2026-09-02-4",
+            "shot_type": null,
+            "smash_factor": null,
+            "source": "screen",
+            "spin_axis": null,
+            "spin_rate": null,
+            "timestamp": "2026-09-02T12:04:00Z",
+            "total_distance": null
+          },
+          "shot_needs_review": false,
+          "shot_sha256": "photo-lp-10",
+          "stale": false,
+          "swing_id": "4"
+        },
+        {
+          "analysis_version": 17,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-09-02T12:05:00Z",
+          "club": "7i",
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": null,
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "hand",
+              "name": "start_line_deg",
+              "source": "launch_monitor:synthetic",
+              "unit": "degrees",
+              "value": 0.0
+            },
+            {
+              "detail": "hand",
+              "name": "carry_distance_yds",
+              "source": "launch_monitor:synthetic",
+              "unit": "yards",
+              "value": 149.0
+            },
+            {
+              "detail": "hand",
+              "name": "start_line_offline_yds",
+              "source": "launch_monitor:synthetic",
+              "unit": "yards",
+              "value": 0.0
+            },
+            {
+              "detail": "hand",
+              "name": "ball_speed_mph",
+              "source": "launch_monitor:synthetic",
+              "unit": "mph",
+              "value": 110.0
+            }
+          ],
+          "missing_roles": [
+            "face_on",
+            "down_the_line"
+          ],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-09-02",
+          "shot": {
+            "apex_height": null,
+            "attack_angle": null,
+            "ball_speed": 110.0,
+            "bounce_and_roll": null,
+            "carry_distance": 149.0,
+            "carry_offline": null,
+            "club_face_angle": null,
+            "club_head_speed": null,
+            "club_path": null,
+            "dynamic_loft": null,
+            "impact_offset_h": null,
+            "impact_offset_v": null,
+            "impact_position": null,
+            "impact_position_v": null,
+            "launch_angle": null,
+            "launch_direction": 0.0,
+            "low_point": 1.1,
+            "provenance": {
+              "corrections": {},
+              "device": "synthetic",
+              "fields_present": null,
+              "image_path": null,
+              "image_sha256": "photo-lp-11",
+              "needs_review": false,
+              "parse_confidence": 0.95,
+              "parser_version": 0,
+              "raw_fields": {},
+              "warnings": []
+            },
+            "session_id": "2026-09-02",
+            "shot_id": "2026-09-02-5",
+            "shot_type": null,
+            "smash_factor": null,
+            "source": "screen",
+            "spin_axis": null,
+            "spin_rate": null,
+            "timestamp": "2026-09-02T12:05:00Z",
+            "total_distance": null
+          },
+          "shot_needs_review": false,
+          "shot_sha256": "photo-lp-11",
+          "stale": false,
+          "swing_id": "5"
+        },
+        {
+          "analysis_version": 17,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-09-01T12:07:00Z",
+          "club": "driver",
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": null,
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "hand",
+              "name": "start_line_deg",
+              "source": "launch_monitor:synthetic",
+              "unit": "degrees",
+              "value": 0.0
+            },
+            {
+              "detail": "hand",
+              "name": "carry_distance_yds",
+              "source": "launch_monitor:synthetic",
+              "unit": "yards",
+              "value": 250.0
+            },
+            {
+              "detail": "hand",
+              "name": "start_line_offline_yds",
+              "source": "launch_monitor:synthetic",
+              "unit": "yards",
+              "value": 0.0
+            },
+            {
+              "detail": "hand",
+              "name": "ball_speed_mph",
+              "source": "launch_monitor:synthetic",
+              "unit": "mph",
+              "value": 160.0
+            }
+          ],
+          "missing_roles": [
+            "face_on",
+            "down_the_line"
+          ],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-09-01",
+          "shot": {
+            "apex_height": null,
+            "attack_angle": null,
+            "ball_speed": 160.0,
+            "bounce_and_roll": null,
+            "carry_distance": 250.0,
+            "carry_offline": null,
+            "club_face_angle": null,
+            "club_head_speed": null,
+            "club_path": null,
+            "dynamic_loft": null,
+            "impact_offset_h": null,
+            "impact_offset_v": null,
+            "impact_position": null,
+            "impact_position_v": null,
+            "launch_angle": null,
+            "launch_direction": 0.0,
+            "low_point": -3.0,
+            "provenance": {
+              "corrections": {},
+              "device": "synthetic",
+              "fields_present": null,
+              "image_path": null,
+              "image_sha256": "photo-lp-12",
+              "needs_review": false,
+              "parse_confidence": 0.95,
+              "parser_version": 0,
+              "raw_fields": {},
+              "warnings": []
+            },
+            "session_id": "2026-09-01",
+            "shot_id": "2026-09-01-7",
+            "shot_type": null,
+            "smash_factor": null,
+            "source": "screen",
+            "spin_axis": null,
+            "spin_rate": null,
+            "timestamp": "2026-09-01T12:07:00Z",
+            "total_distance": null
+          },
+          "shot_needs_review": false,
+          "shot_sha256": "photo-lp-12",
+          "stale": false,
+          "swing_id": "7"
+        },
+        {
+          "analysis_version": 17,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-09-01T12:08:00Z",
+          "club": "driver",
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": null,
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "hand",
+              "name": "start_line_deg",
+              "source": "launch_monitor:synthetic",
+              "unit": "degrees",
+              "value": 1.0
+            },
+            {
+              "detail": "hand",
+              "name": "carry_distance_yds",
+              "source": "launch_monitor:synthetic",
+              "unit": "yards",
+              "value": 255.0
+            },
+            {
+              "detail": "hand",
+              "name": "start_line_offline_yds",
+              "source": "launch_monitor:synthetic",
+              "unit": "yards",
+              "value": 4.450363641507296
+            },
+            {
+              "detail": "hand",
+              "name": "ball_speed_mph",
+              "source": "launch_monitor:synthetic",
+              "unit": "mph",
+              "value": 160.0
+            }
+          ],
+          "missing_roles": [
+            "face_on",
+            "down_the_line"
+          ],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-09-01",
+          "shot": {
+            "apex_height": null,
+            "attack_angle": null,
+            "ball_speed": 160.0,
+            "bounce_and_roll": null,
+            "carry_distance": 255.0,
+            "carry_offline": null,
+            "club_face_angle": null,
+            "club_head_speed": null,
+            "club_path": null,
+            "dynamic_loft": null,
+            "impact_offset_h": null,
+            "impact_offset_v": null,
+            "impact_position": null,
+            "impact_position_v": null,
+            "launch_angle": null,
+            "launch_direction": 1.0,
+            "low_point": -4.0,
+            "provenance": {
+              "corrections": {},
+              "device": "synthetic",
+              "fields_present": null,
+              "image_path": null,
+              "image_sha256": "photo-lp-13",
+              "needs_review": false,
+              "parse_confidence": 0.95,
+              "parser_version": 0,
+              "raw_fields": {},
+              "warnings": []
+            },
+            "session_id": "2026-09-01",
+            "shot_id": "2026-09-01-8",
+            "shot_type": null,
+            "smash_factor": null,
+            "source": "screen",
+            "spin_axis": null,
+            "spin_rate": null,
+            "timestamp": "2026-09-01T12:08:00Z",
+            "total_distance": null
+          },
+          "shot_needs_review": false,
+          "shot_sha256": "photo-lp-13",
+          "stale": false,
+          "swing_id": "8"
+        },
+        {
+          "analysis_version": 17,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-09-01T12:09:00Z",
+          "club": "driver",
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": null,
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "hand",
+              "name": "start_line_deg",
+              "source": "launch_monitor:synthetic",
+              "unit": "degrees",
+              "value": -1.0
+            },
+            {
+              "detail": "hand",
+              "name": "carry_distance_yds",
+              "source": "launch_monitor:synthetic",
+              "unit": "yards",
+              "value": 245.0
+            },
+            {
+              "detail": "hand",
+              "name": "start_line_offline_yds",
+              "source": "launch_monitor:synthetic",
+              "unit": "yards",
+              "value": -4.275839577134461
+            },
+            {
+              "detail": "hand",
+              "name": "ball_speed_mph",
+              "source": "launch_monitor:synthetic",
+              "unit": "mph",
+              "value": 160.0
+            }
+          ],
+          "missing_roles": [
+            "face_on",
+            "down_the_line"
+          ],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-09-01",
+          "shot": {
+            "apex_height": null,
+            "attack_angle": null,
+            "ball_speed": 160.0,
+            "bounce_and_roll": null,
+            "carry_distance": 245.0,
+            "carry_offline": null,
+            "club_face_angle": null,
+            "club_head_speed": null,
+            "club_path": null,
+            "dynamic_loft": null,
+            "impact_offset_h": null,
+            "impact_offset_v": null,
+            "impact_position": null,
+            "impact_position_v": null,
+            "launch_angle": null,
+            "launch_direction": -1.0,
+            "low_point": -2.5,
+            "provenance": {
+              "corrections": {},
+              "device": "synthetic",
+              "fields_present": null,
+              "image_path": null,
+              "image_sha256": "photo-lp-14",
+              "needs_review": false,
+              "parse_confidence": 0.95,
+              "parser_version": 0,
+              "raw_fields": {},
+              "warnings": []
+            },
+            "session_id": "2026-09-01",
+            "shot_id": "2026-09-01-9",
+            "shot_type": null,
+            "smash_factor": null,
+            "source": "screen",
+            "spin_axis": null,
+            "spin_rate": null,
+            "timestamp": "2026-09-01T12:09:00Z",
+            "total_distance": null
+          },
+          "shot_needs_review": false,
+          "shot_sha256": "photo-lp-14",
+          "stale": false,
+          "swing_id": "9"
+        },
+        {
+          "analysis_version": 17,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-09-01T12:10:00Z",
+          "club": "driver",
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": null,
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "hand",
+              "name": "start_line_deg",
+              "source": "launch_monitor:synthetic",
+              "unit": "degrees",
+              "value": 0.0
+            },
+            {
+              "detail": "hand",
+              "name": "carry_distance_yds",
+              "source": "launch_monitor:synthetic",
+              "unit": "yards",
+              "value": 252.0
+            },
+            {
+              "detail": "hand",
+              "name": "start_line_offline_yds",
+              "source": "launch_monitor:synthetic",
+              "unit": "yards",
+              "value": 0.0
+            },
+            {
+              "detail": "hand",
+              "name": "ball_speed_mph",
+              "source": "launch_monitor:synthetic",
+              "unit": "mph",
+              "value": 160.0
+            }
+          ],
+          "missing_roles": [
+            "face_on",
+            "down_the_line"
+          ],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-09-01",
+          "shot": {
+            "apex_height": null,
+            "attack_angle": null,
+            "ball_speed": 160.0,
+            "bounce_and_roll": null,
+            "carry_distance": 252.0,
+            "carry_offline": null,
+            "club_face_angle": null,
+            "club_head_speed": null,
+            "club_path": null,
+            "dynamic_loft": null,
+            "impact_offset_h": null,
+            "impact_offset_v": null,
+            "impact_position": null,
+            "impact_position_v": null,
+            "launch_angle": null,
+            "launch_direction": 0.0,
+            "low_point": -3.5,
+            "provenance": {
+              "corrections": {},
+              "device": "synthetic",
+              "fields_present": null,
+              "image_path": null,
+              "image_sha256": "photo-lp-15",
+              "needs_review": false,
+              "parse_confidence": 0.95,
+              "parser_version": 0,
+              "raw_fields": {},
+              "warnings": []
+            },
+            "session_id": "2026-09-01",
+            "shot_id": "2026-09-01-10",
+            "shot_type": null,
+            "smash_factor": null,
+            "source": "screen",
+            "spin_axis": null,
+            "spin_rate": null,
+            "timestamp": "2026-09-01T12:10:00Z",
+            "total_distance": null
+          },
+          "shot_needs_review": false,
+          "shot_sha256": "photo-lp-15",
+          "stale": false,
+          "swing_id": "10"
+        },
+        {
+          "analysis_version": 17,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-09-01T12:11:00Z",
+          "club": "driver",
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": null,
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "hand",
+              "name": "start_line_deg",
+              "source": "launch_monitor:synthetic",
+              "unit": "degrees",
+              "value": 0.5
+            },
+            {
+              "detail": "hand",
+              "name": "carry_distance_yds",
+              "source": "launch_monitor:synthetic",
+              "unit": "yards",
+              "value": 248.0
+            },
+            {
+              "detail": "hand",
+              "name": "start_line_offline_yds",
+              "source": "launch_monitor:synthetic",
+              "unit": "yards",
+              "value": 2.164180803596736
+            },
+            {
+              "detail": "hand",
+              "name": "ball_speed_mph",
+              "source": "launch_monitor:synthetic",
+              "unit": "mph",
+              "value": 160.0
+            }
+          ],
+          "missing_roles": [
+            "face_on",
+            "down_the_line"
+          ],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-09-01",
+          "shot": {
+            "apex_height": null,
+            "attack_angle": null,
+            "ball_speed": 160.0,
+            "bounce_and_roll": null,
+            "carry_distance": 248.0,
+            "carry_offline": null,
+            "club_face_angle": null,
+            "club_head_speed": null,
+            "club_path": null,
+            "dynamic_loft": null,
+            "impact_offset_h": null,
+            "impact_offset_v": null,
+            "impact_position": null,
+            "impact_position_v": null,
+            "launch_angle": null,
+            "launch_direction": 0.5,
+            "low_point": -1.0,
+            "provenance": {
+              "corrections": {},
+              "device": "synthetic",
+              "fields_present": null,
+              "image_path": null,
+              "image_sha256": "photo-lp-16",
+              "needs_review": false,
+              "parse_confidence": 0.95,
+              "parser_version": 0,
+              "raw_fields": {},
+              "warnings": []
+            },
+            "session_id": "2026-09-01",
+            "shot_id": "2026-09-01-11",
+            "shot_type": null,
+            "smash_factor": null,
+            "source": "screen",
+            "spin_axis": null,
+            "spin_rate": null,
+            "timestamp": "2026-09-01T12:11:00Z",
+            "total_distance": null
+          },
+          "shot_needs_review": false,
+          "shot_sha256": "photo-lp-16",
+          "stale": false,
+          "swing_id": "11"
+        },
+        {
+          "analysis_version": 17,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-09-02T12:06:00Z",
+          "club": "driver",
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": null,
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "hand",
+              "name": "start_line_deg",
+              "source": "launch_monitor:synthetic",
+              "unit": "degrees",
+              "value": 0.0
+            },
+            {
+              "detail": "hand",
+              "name": "carry_distance_yds",
+              "source": "launch_monitor:synthetic",
+              "unit": "yards",
+              "value": 250.0
+            },
+            {
+              "detail": "hand",
+              "name": "start_line_offline_yds",
+              "source": "launch_monitor:synthetic",
+              "unit": "yards",
+              "value": 0.0
+            },
+            {
+              "detail": "hand",
+              "name": "ball_speed_mph",
+              "source": "launch_monitor:synthetic",
+              "unit": "mph",
+              "value": 160.0
+            }
+          ],
+          "missing_roles": [
+            "face_on",
+            "down_the_line"
+          ],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-09-02",
+          "shot": {
+            "apex_height": null,
+            "attack_angle": null,
+            "ball_speed": 160.0,
+            "bounce_and_roll": null,
+            "carry_distance": 250.0,
+            "carry_offline": null,
+            "club_face_angle": null,
+            "club_head_speed": null,
+            "club_path": null,
+            "dynamic_loft": null,
+            "impact_offset_h": null,
+            "impact_offset_v": null,
+            "impact_position": null,
+            "impact_position_v": null,
+            "launch_angle": null,
+            "launch_direction": 0.0,
+            "low_point": -2.0,
+            "provenance": {
+              "corrections": {},
+              "device": "synthetic",
+              "fields_present": null,
+              "image_path": null,
+              "image_sha256": "photo-lp-17",
+              "needs_review": false,
+              "parse_confidence": 0.95,
+              "parser_version": 0,
+              "raw_fields": {},
+              "warnings": []
+            },
+            "session_id": "2026-09-02",
+            "shot_id": "2026-09-02-6",
+            "shot_type": null,
+            "smash_factor": null,
+            "source": "screen",
+            "spin_axis": null,
+            "spin_rate": null,
+            "timestamp": "2026-09-02T12:06:00Z",
+            "total_distance": null
+          },
+          "shot_needs_review": false,
+          "shot_sha256": "photo-lp-17",
+          "stale": false,
+          "swing_id": "6"
+        },
+        {
+          "analysis_version": 17,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-09-02T12:07:00Z",
+          "club": "driver",
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": null,
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "hand",
+              "name": "start_line_deg",
+              "source": "launch_monitor:synthetic",
+              "unit": "degrees",
+              "value": 0.0
+            },
+            {
+              "detail": "hand",
+              "name": "carry_distance_yds",
+              "source": "launch_monitor:synthetic",
+              "unit": "yards",
+              "value": 222.0
+            },
+            {
+              "detail": "hand",
+              "name": "start_line_offline_yds",
+              "source": "launch_monitor:synthetic",
+              "unit": "yards",
+              "value": 0.0
+            },
+            {
+              "detail": "hand",
+              "name": "ball_speed_mph",
+              "source": "launch_monitor:synthetic",
+              "unit": "mph",
+              "value": 160.0
+            }
+          ],
+          "missing_roles": [
+            "face_on",
+            "down_the_line"
+          ],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-09-02",
+          "shot": {
+            "apex_height": null,
+            "attack_angle": null,
+            "ball_speed": 160.0,
+            "bounce_and_roll": null,
+            "carry_distance": 222.0,
+            "carry_offline": null,
+            "club_face_angle": null,
+            "club_head_speed": null,
+            "club_path": null,
+            "dynamic_loft": null,
+            "impact_offset_h": null,
+            "impact_offset_v": null,
+            "impact_position": null,
+            "impact_position_v": null,
+            "launch_angle": null,
+            "launch_direction": 0.0,
+            "low_point": -4.5,
+            "provenance": {
+              "corrections": {},
+              "device": "synthetic",
+              "fields_present": null,
+              "image_path": null,
+              "image_sha256": "photo-lp-18",
+              "needs_review": false,
+              "parse_confidence": 0.95,
+              "parser_version": 0,
+              "raw_fields": {},
+              "warnings": []
+            },
+            "session_id": "2026-09-02",
+            "shot_id": "2026-09-02-7",
+            "shot_type": null,
+            "smash_factor": null,
+            "source": "screen",
+            "spin_axis": null,
+            "spin_rate": null,
+            "timestamp": "2026-09-02T12:07:00Z",
+            "total_distance": null
+          },
+          "shot_needs_review": false,
+          "shot_sha256": "photo-lp-18",
+          "stale": false,
+          "swing_id": "7"
+        },
+        {
+          "analysis_version": 17,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-09-02T12:08:00Z",
+          "club": "driver",
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": null,
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "hand",
+              "name": "start_line_deg",
+              "source": "launch_monitor:synthetic",
+              "unit": "degrees",
+              "value": -0.5
+            },
+            {
+              "detail": "hand",
+              "name": "carry_distance_yds",
+              "source": "launch_monitor:synthetic",
+              "unit": "yards",
+              "value": 251.0
+            },
+            {
+              "detail": "hand",
+              "name": "start_line_offline_yds",
+              "source": "launch_monitor:synthetic",
+              "unit": "yards",
+              "value": -2.1903604100918574
+            },
+            {
+              "detail": "hand",
+              "name": "ball_speed_mph",
+              "source": "launch_monitor:synthetic",
+              "unit": "mph",
+              "value": 160.0
+            }
+          ],
+          "missing_roles": [
+            "face_on",
+            "down_the_line"
+          ],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-09-02",
+          "shot": {
+            "apex_height": null,
+            "attack_angle": null,
+            "ball_speed": 160.0,
+            "bounce_and_roll": null,
+            "carry_distance": 251.0,
+            "carry_offline": null,
+            "club_face_angle": null,
+            "club_head_speed": null,
+            "club_path": null,
+            "dynamic_loft": null,
+            "impact_offset_h": null,
+            "impact_offset_v": null,
+            "impact_position": null,
+            "impact_position_v": null,
+            "launch_angle": null,
+            "launch_direction": -0.5,
+            "low_point": -3.0,
+            "provenance": {
+              "corrections": {},
+              "device": "synthetic",
+              "fields_present": null,
+              "image_path": null,
+              "image_sha256": "photo-lp-19",
+              "needs_review": false,
+              "parse_confidence": 0.95,
+              "parser_version": 0,
+              "raw_fields": {},
+              "warnings": []
+            },
+            "session_id": "2026-09-02",
+            "shot_id": "2026-09-02-8",
+            "shot_type": null,
+            "smash_factor": null,
+            "source": "screen",
+            "spin_axis": null,
+            "spin_rate": null,
+            "timestamp": "2026-09-02T12:08:00Z",
+            "total_distance": null
+          },
+          "shot_needs_review": false,
+          "shot_sha256": "photo-lp-19",
+          "stale": false,
+          "swing_id": "8"
+        },
+        {
+          "analysis_version": 17,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-09-02T12:09:00Z",
+          "club": "driver",
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": null,
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "hand",
+              "name": "start_line_deg",
+              "source": "launch_monitor:synthetic",
+              "unit": "degrees",
+              "value": 0.0
+            },
+            {
+              "detail": "hand",
+              "name": "carry_distance_yds",
+              "source": "launch_monitor:synthetic",
+              "unit": "yards",
+              "value": 249.0
+            },
+            {
+              "detail": "hand",
+              "name": "start_line_offline_yds",
+              "source": "launch_monitor:synthetic",
+              "unit": "yards",
+              "value": 0.0
+            },
+            {
+              "detail": "hand",
+              "name": "ball_speed_mph",
+              "source": "launch_monitor:synthetic",
+              "unit": "mph",
+              "value": 160.0
+            }
+          ],
+          "missing_roles": [
+            "face_on",
+            "down_the_line"
+          ],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-09-02",
+          "shot": {
+            "apex_height": null,
+            "attack_angle": null,
+            "ball_speed": 160.0,
+            "bounce_and_roll": null,
+            "carry_distance": 249.0,
+            "carry_offline": null,
+            "club_face_angle": null,
+            "club_head_speed": null,
+            "club_path": null,
+            "dynamic_loft": null,
+            "impact_offset_h": null,
+            "impact_offset_v": null,
+            "impact_position": null,
+            "impact_position_v": null,
+            "launch_angle": null,
+            "launch_direction": 0.0,
+            "low_point": 0.5,
+            "provenance": {
+              "corrections": {},
+              "device": "synthetic",
+              "fields_present": null,
+              "image_path": null,
+              "image_sha256": "photo-lp-20",
+              "needs_review": false,
+              "parse_confidence": 0.95,
+              "parser_version": 0,
+              "raw_fields": {},
+              "warnings": []
+            },
+            "session_id": "2026-09-02",
+            "shot_id": "2026-09-02-9",
+            "shot_type": null,
+            "smash_factor": null,
+            "source": "screen",
+            "spin_axis": null,
+            "spin_rate": null,
+            "timestamp": "2026-09-02T12:09:00Z",
+            "total_distance": null
+          },
+          "shot_needs_review": false,
+          "shot_sha256": "photo-lp-20",
+          "stale": false,
+          "swing_id": "9"
+        },
+        {
+          "analysis_version": 17,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-09-02T12:10:00Z",
+          "club": "driver",
+          "conflicting_shots": [],
+          "duplicates": [],
+          "face_on_sha256": null,
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "hand",
+              "name": "start_line_deg",
+              "source": "launch_monitor:synthetic",
+              "unit": "degrees",
+              "value": 1.0
+            },
+            {
+              "detail": "hand",
+              "name": "carry_distance_yds",
+              "source": "launch_monitor:synthetic",
+              "unit": "yards",
+              "value": 253.0
+            },
+            {
+              "detail": "hand",
+              "name": "start_line_offline_yds",
+              "source": "launch_monitor:synthetic",
+              "unit": "yards",
+              "value": 4.415458828632729
+            },
+            {
+              "detail": "hand",
+              "name": "ball_speed_mph",
+              "source": "launch_monitor:synthetic",
+              "unit": "mph",
+              "value": 160.0
+            }
+          ],
+          "missing_roles": [
+            "face_on",
+            "down_the_line"
+          ],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-09-02",
+          "shot": {
+            "apex_height": null,
+            "attack_angle": null,
+            "ball_speed": 160.0,
+            "bounce_and_roll": null,
+            "carry_distance": 253.0,
+            "carry_offline": null,
+            "club_face_angle": null,
+            "club_head_speed": null,
+            "club_path": null,
+            "dynamic_loft": null,
+            "impact_offset_h": null,
+            "impact_offset_v": null,
+            "impact_position": null,
+            "impact_position_v": null,
+            "launch_angle": null,
+            "launch_direction": 1.0,
+            "low_point": -2.8,
+            "provenance": {
+              "corrections": {},
+              "device": "synthetic",
+              "fields_present": null,
+              "image_path": null,
+              "image_sha256": "photo-lp-21",
+              "needs_review": false,
+              "parse_confidence": 0.95,
+              "parser_version": 0,
+              "raw_fields": {},
+              "warnings": []
+            },
+            "session_id": "2026-09-02",
+            "shot_id": "2026-09-02-10",
+            "shot_type": null,
+            "smash_factor": null,
+            "source": "screen",
+            "spin_axis": null,
+            "spin_rate": null,
+            "timestamp": "2026-09-02T12:10:00Z",
+            "total_distance": null
+          },
+          "shot_needs_review": false,
+          "shot_sha256": "photo-lp-21",
+          "stale": false,
+          "swing_id": "10"
+        }
+      ],
+      "unattributed_swings": 0,
+      "unknown_sources": []
+    }
+  },
+  "provenance": {
+    "kind": "profile",
+    "note": "21 tracked shots on the synthetic device, fundamentals: 11 with a 7i and 10 with a driver, every one printing low point (inches, + ahead of the ball). Low point is graded for the iron and absent for the driver though the driver prints it, because hitting up is right there (decision 7). The 7i's 0.0 is at the ball and so not ahead (strictly > 0); 0.1 is ahead. The player's low point pools the 7i alone, and the player's consistency pools both clubs, each shot against its own club's median: the driver's is 250.0, its window 25.0 yd, and the 222 yd drive misses it. Working. driver consistency: 10 judged; typical carry 250.0 yd and start-line offline 0.0 yd, the medians of the 10 non-mishit judged shots; window 25.0 yd; consistent 9, missed 2026-09-02/7 (carry 222.0, offline 0.000). driver consistency grade 9/10 = 0.9, Wilson [0.5958, 0.9821]. driver blend 0.9, averaging ['consistency'] and excluding []. 7i consistency: 11 judged; typical carry 150.0 yd and start-line offline 0.0 yd, the medians of the 11 non-mishit judged shots; window 15.0 yd; consistent 11, missed none. 7i low_point: 11 judged; ahead 8, not ahead 2026-09-01/1 (0.0), 2026-09-01/5 (-0.5), 2026-09-02/2 (-1.2). 7i consistency grade 11/11 = 1.0, Wilson [0.7412, 1.0000]. 7i low_point grade 8/11 = 0.7272727272727273, Wilson [0.4344, 0.9025]. 7i blend 0.8636363636363636, averaging ['consistency', 'low_point'] and excluding []. player consistency: pooled over driver + 7i, 21 judged, grade 20/21 = 0.9523809523809523, Wilson [0.7733, 0.9915]. player low_point: pooled over 7i, 11 judged, grade 8/11 = 0.7272727272727273, Wilson [0.4344, 0.9025]. player blend 0.8398268398268398, averaging ['consistency', 'low_point'] and excluding []. driver list: scatter on carry_distance_yds at 1.8744; strength on start_line_offline_yds at 0.5451; strength on start_line_deg at 0.5611. 7i list: strength on start_line_offline_yds at 0.2655; strength on start_line_deg at 0.4582. player list: strength on start_line_deg at 0.4002.",
+    "oracle": "hand",
+    "source": "worked by hand in M37 P5, against the M37 plan's decisions 1-8 and calls 2-12 and its P1-P4 findings, before P6-P9 build the code that must meet it. The grades, shares, Wilson intervals (z = 1.959963984540054, each bound clamped to the share and to [0, 1]), the medians, the grid, heel/toe's counts, the blends and the list's kinds, order and ratios are the hand's. Three kinds of number are carried rather than worked, each from the Rust function the plan says P6-P9 read it from, and gated elsewhere: strike.ball_speed and strike.dispersion, and the dispersion each list is ranked from, are analysis::club_profile::build_bag_profile's per club and analysis::dispersion::build_dispersion's over the whole corpus for the player (the career family gates both); heel/toe's mean_offset_mm and its interval are analysis::stats' mean_and_sd and mean_ci over the listed offsets. The corpus is hand-built as crates/storage::read_corpus writes one: each shot a whole ShotData, each launch_monitor row shot_measure's over the analysed view, and each flight or pose row a hand stand-in (detail 'hand'). The rules as worked: a club's topic exists when its every input is printed on one of the club's shots (capability::printed_on), low point only for an iron, wedge or hybrid, and a shape only when one of the club's shots declared it (call 7); its judged shots count toward metrics, are not shot_needs_review, and hold the inputs in the analysed view, and one whose input is printed on it and blank is unscored under its shot_unscored reason, else printed_blank (call 8); the player pools each topic over the clubs it exists for, and over the untagged shots for strike location and the shapes (call 9); a blend is the left-to-right sum of its graded shares in topic order over their count (call 11). The list (call 12) reads each club's ClubProfile.dispersion, and for the player the whole corpus' kept to club-independent metrics, over launch_monitor rows only: a weakness is an established bias, ratio |offset| / tolerance, or scatter, ratio sd / tolerance, largest first, ties in METRIC_TARGETS order and bias before scatter; a strength is a metric with a target whose center_ci lies inside target +/- tolerance (inclusive) and whose sd_ci.high is below the tolerance (strict), ratio max(|center_ci end - target|, sd_ci.high) / tolerance, smallest first, after every weakness"
+  }
+}

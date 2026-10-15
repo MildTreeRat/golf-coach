@@ -1,12 +1,14 @@
-//! The career scripts' reports, rendered to a `String`, and the `main` the four read verbs share.
-//! [M36 P15–P16]
+//! The career scripts' reports, rendered to a `String`, and the `main` the read verbs share.
+//! [M36 P15–P16, M37 P10]
 //!
-//! Each submodule ports one script's `_report` and the helpers only it calls:
+//! Each submodule but one ports one script's `_report` and the helpers only it calls:
 //! [`corpus`] is `scripts/career_corpus.py`, [`baseline`] is `scripts/career_baseline.py`,
 //! [`dispersion`] is `scripts/career_dispersion.py` and [`club_profile`] is
 //! `scripts/club_profile.py`. [`flag_mishit`] is `scripts/flag_mishit.py`, its listing and its
-//! write, and holds its own `main` because it is the one verb that writes. A renderer returns what
-//! its script's `_report` prints,
+//! write, and holds its own `main` because it is the one verb that writes. **[`profile`] has no
+//! script** (M37 P10): `golf-core profile` renders the graded profile, which is Rust's alone, so its
+//! text is its own, and neither the gate below nor the parity run reaches it (its module doc says
+//! what does). A ported renderer returns what its script's `_report` prints,
 //! every `print` one line and its `"\n"`, which is exactly what the recorder captured with
 //! `redirect_stdout` into each career vector's `expected.reports` (the M36 plan's call 3). The
 //! script's `main` adds one trailing `print()` after the last golfer, and that is the verb's, not
@@ -45,6 +47,7 @@ pub mod club_profile;
 pub mod corpus;
 pub mod dispersion;
 pub mod flag_mishit;
+pub mod profile;
 
 use std::path::{Path, PathBuf};
 
@@ -58,6 +61,8 @@ use contracts::club::parse_club;
 use storage::bag_store::BagStore;
 use storage::corpus::{read_corpus, EngineVersions};
 use storage::golfer_store::{slugify, GolferStore};
+
+use crate::profile::run_profile;
 
 /// What a report prints, as Python's `print` writes it into a `StringIO`: one line per call, each
 /// with its `"\n"`.
@@ -255,8 +260,9 @@ pub fn repo_root() -> PathBuf {
         .to_path_buf()
 }
 
-/// The career verbs that read and report, one per script (the M36 plan's decision 3).
-/// `flag-mishit` is not one: it writes, and [`flag_mishit::flag_mishit`] is its `main`.
+/// The career verbs that read and report, one per script (the M36 plan's decision 3), and since M37
+/// `profile`, which has no script. `flag-mishit` is not one: it writes, and
+/// [`flag_mishit::flag_mishit`] is its `main`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Verb {
     /// `golf-core career-corpus`, `scripts/career_corpus.py`.
@@ -265,16 +271,23 @@ pub enum Verb {
     CareerBaseline,
     /// `golf-core career-dispersion`, `scripts/career_dispersion.py`.
     CareerDispersion,
-    /// `golf-core club-profile`, `scripts/club_profile.py`, the one verb that takes `--club`.
+    /// `golf-core club-profile`, `scripts/club_profile.py`, the first verb that takes `--club`.
     ClubProfile,
+    /// `golf-core profile` (M37 P10, the M37 plan's decision 9): the graded profile,
+    /// [`crate::profile::run_profile`]'s answer, rendered by [`profile::profile`]. No script stands
+    /// behind it, so it takes the flags decision 9 names and the ones every career verb shares, and
+    /// not `--verbose`, which would have nothing to add: the report already prints everything the
+    /// profile carries.
+    Profile,
 }
 
 impl Verb {
-    pub const ALL: [Verb; 4] = [
+    pub const ALL: [Verb; 5] = [
         Verb::CareerCorpus,
         Verb::CareerBaseline,
         Verb::CareerDispersion,
         Verb::ClubProfile,
+        Verb::Profile,
     ];
 
     /// The subcommand, the script's name with `-` for `_`.
@@ -284,11 +297,32 @@ impl Verb {
             Verb::CareerBaseline => "career-baseline",
             Verb::CareerDispersion => "career-dispersion",
             Verb::ClubProfile => "club-profile",
+            Verb::Profile => "profile",
         }
     }
 
     pub fn from_name(name: &str) -> Option<Verb> {
         Verb::ALL.into_iter().find(|verb| verb.name() == name)
+    }
+
+    /// Whether `--club` is one of this verb's flags: `club_profile.py`'s, and `profile`'s by
+    /// decision 9. The other scripts' argparse refuses it, and so do their verbs.
+    pub const fn takes_club(self) -> bool {
+        match self {
+            Verb::ClubProfile | Verb::Profile => true,
+            Verb::CareerCorpus | Verb::CareerBaseline | Verb::CareerDispersion => false,
+        }
+    }
+
+    /// Whether `--verbose` is: every script's, and not `profile`'s ([`Verb::Profile`] says why).
+    pub const fn takes_verbose(self) -> bool {
+        match self {
+            Verb::Profile => false,
+            Verb::CareerCorpus
+            | Verb::CareerBaseline
+            | Verb::CareerDispersion
+            | Verb::ClubProfile => true,
+        }
     }
 }
 
@@ -299,8 +333,8 @@ pub struct Request {
     pub name: Option<String>,
     pub player_id: Option<String>,
     pub verbose: bool,
-    /// `--club` as typed, in any spelling [`parse_club`] takes, and read by [`Verb::ClubProfile`]
-    /// alone. An empty string is absent, as the script's `if args.club` reads it.
+    /// `--club` as typed, in any spelling [`parse_club`] takes, and read by the verbs
+    /// [`Verb::takes_club`] names. An empty string is absent, as the script's `if args.club` reads it.
     pub club: Option<String>,
     /// Print the aggregate each report was rendered from, as JSON, instead of the report.
     pub json: bool,
@@ -322,19 +356,28 @@ pub struct Answer {
 /// the script prints it, and for `club-profile`'s `--club` text that is not a club, which the script
 /// checks first, before it looks for a golfer.
 ///
-/// `club-profile` reads each golfer's bag from the golfers directory, beside the golfer it belongs
-/// to, as `api/app.py` builds its store. An absent or unreadable bag is `None`, which costs the loft
-/// and nothing else.
+/// `club-profile` and `profile` read each golfer's bag from the golfers directory, beside the golfer
+/// it belongs to, as `api/app.py` builds its store. An absent or unreadable bag is `None`, which
+/// costs the loft and nothing else.
 ///
 /// **`--json`** prints one JSON array instead, an object per golfer the report would have covered:
 /// `display_name` and the aggregate the report was rendered from, under the name the career family
-/// gives it (`corpus`; `baseline` and `standing`; `dispersion`; `bag_profile`). `--club` narrows the
+/// gives it (`corpus`; `baseline` and `standing`; `dispersion`; `bag_profile`), or for `profile` the
+/// `GradedProfile` under `profile`, the key the profile family's cases give it. `--club` narrows the
 /// text and not the JSON, because one club's report is cut from the whole bag profile by
-/// `BagProfile::profile_for`. Nothing else goes on stdout in that mode, so a refusal's sentence moves
+/// `BagProfile::profile_for`, and one club's grades from the whole graded profile, whose player
+/// grades pool every club. Nothing else goes on stdout in that mode, so a refusal's sentence moves
 /// to stderr and an empty registry is `[]`.
+///
+/// **`profile` alone can fail after the golfer is found**: `run_profile` checks the assembled
+/// profile against its own contract and answers `Err` on a builder bug rather than panicking (the
+/// M37 plan's P9 finding 4). That golfer is then named on stderr with the field it broke, nothing of
+/// theirs is printed, and the verb exits 1 once every other golfer has printed. No corpus is known
+/// to reach it; an empty one answers an empty profile, which prints as nothing to grade.
 pub fn answer(verb: Verb, request: &Request, versions: EngineVersions) -> Answer {
     let golfers = GolferStore::new(&request.dirs.golfers);
     let (mut stdout, mut stderr) = (String::new(), String::new());
+    let mut code = 0;
     let refuse = |text: String| {
         let (stdout, stderr) = if request.json {
             (String::new(), text)
@@ -348,7 +391,7 @@ pub fn answer(verb: Verb, request: &Request, versions: EngineVersions) -> Answer
         }
     };
     let club = match request.club.as_deref().filter(|text| !text.is_empty()) {
-        Some(text) if verb == Verb::ClubProfile => match parse_club(text) {
+        Some(text) if verb.takes_club() => match parse_club(text) {
             Some(club) => Some(club),
             // Refused rather than nudged toward a nearest match, `parse_club`'s own posture: a retype
             // costs one line, and a wrong club pools a wedge's carries into a 7 iron's where nothing
@@ -432,6 +475,16 @@ pub fn answer(verb: Verb, request: &Request, versions: EngineVersions) -> Answer
                     stdout += &club_profile::club_profile(&built, display_name, verbose, club);
                 }
             }
+            Verb::Profile => match run_profile(&corpus, bags.get(player_id).as_ref()) {
+                Ok(built) if request.json => {
+                    documents.push(json!({"display_name": display_name, "profile": built}));
+                }
+                Ok(built) => stdout += &profile::profile(&built, display_name, club),
+                Err(refused) => {
+                    stderr += &refused_profile(display_name, player_id, &refused);
+                    code = 1;
+                }
+            },
         }
     }
     if request.json {
@@ -442,8 +495,20 @@ pub fn answer(verb: Verb, request: &Request, versions: EngineVersions) -> Answer
     Answer {
         stdout,
         stderr,
-        code: 0,
+        code,
     }
+}
+
+/// The line `profile` prints on stderr for a golfer whose assembled profile failed its own check.
+fn refused_profile(
+    display_name: &str,
+    player_id: &str,
+    refused: &contracts::ContractError,
+) -> String {
+    format!(
+        "golf-core profile: {display_name} ({player_id}): the graded profile failed its own \
+         check, {refused}. That is a bug in a builder, not a fact about the golfer.\n"
+    )
 }
 
 #[cfg(test)]
@@ -462,6 +527,21 @@ mod tests {
         assert_eq!(
             wrap(Some("a\u{2003}abcdefghijklm b"), 5),
             ["a", "abcdefghijklm", "b"]
+        );
+    }
+
+    /// The one line a refused profile prints, naming the golfer and the field it broke.
+    #[test]
+    fn a_refused_profile_names_the_golfer_and_the_field() {
+        let refused = contracts::ContractError {
+            field: "PlayerGrades.blend".into(),
+            problem: "absent while [Consistency] are graded".into(),
+        };
+        assert_eq!(
+            refused_profile("Aaron", "aaron", &refused),
+            "golf-core profile: Aaron (aaron): the graded profile failed its own check, \
+             PlayerGrades.blend: absent while [Consistency] are graded. That is a bug in a \
+             builder, not a fact about the golfer.\n"
         );
     }
 

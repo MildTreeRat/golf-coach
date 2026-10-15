@@ -15,6 +15,14 @@
 //! write, on a scratch copy of a vector's tree, never on `data/`: the manifest it writes reads back
 //! through the storage family's readers, and its verdict is one frozen Python's `MishitVerdict`
 //! accepts (ADR-035 clause 4: the frozen lab must keep reading what Rust writes).
+//!
+//! And since M37 P10 `golf-core profile`, the one read verb with no script: the report it prints over
+//! a tree is [`golf_core::reports::profile::profile`] of [`run_profile`]'s answer for that tree's
+//! corpus, `--json` round-trips into a `GradedProfile`, `--club` narrows, the refusals are the career
+//! verbs', and the verb leaves the tree as it found it. Its text has no recorded twin until P11's
+//! corpus cases, so the renderer is held here to what each hand case's profile carries: every topic
+//! present prints, every absent one does not, a withheld grade says so, and a projected landing is
+//! named as projected.
 
 use std::fs;
 use std::io::Read;
@@ -26,13 +34,16 @@ use analysis::club_profile::build_bag_profile;
 use contracts::career::CareerCorpus;
 use contracts::club::ClubId;
 use contracts::mishit::MishitVerdict;
+use contracts::strike::{GradedProfile, Share, Topic};
 use contracts::swing::{ANALYSIS_VERSION, COMPARABLE_FROM};
 use contracts::Timestamp;
 use flate2::read::GzDecoder;
 use golf_core::career_family::{run_career, script_of, CARRIED, RENDERED};
+use golf_core::profile::run_profile;
 use golf_core::reports::club_profile::club_profile;
 use golf_core::reports::corpus::career_corpus;
 use golf_core::reports::flag_mishit::{flag_mishit, flag_mishit_list, MishitAction};
+use golf_core::reports::profile::profile;
 use golf_core::reports::{answer, targets, DataDirs, Request, Targets, Verb};
 use serde_json::Value;
 use storage::corpus::{read_corpus, EngineVersions};
@@ -234,11 +245,18 @@ fn verbs_versions() -> EngineVersions {
 
 /// A scratch tree holding [`HAND_CASE`]'s sessions and one registered golfer, `aaron`.
 fn hand_tree() -> (Scratch, DataDirs, Value) {
-    let vector = read_vector(&vectors_dir().join(HAND_CASE));
+    tree_of(HAND_CASE)
+}
+
+/// A scratch tree holding one storage case's sessions and one registered golfer, `aaron`. The case
+/// must be read under the verbs' engine generations, so that its `expected.corpus` is what a verb
+/// reads over the tree.
+fn tree_of(case: &str) -> (Scratch, DataDirs, Value) {
+    let vector = read_vector(&vectors_dir().join(case));
     assert_eq!(
         vector["input"]["versions"],
         serde_json::json!({"installed": ANALYSIS_VERSION, "comparable_from": COMPARABLE_FROM}),
-        "{HAND_CASE} is no longer read under the verbs' versions; pick another case"
+        "{case} is no longer read under the verbs' versions; pick another case"
     );
     let scratch = Scratch::new();
     for (relative, text) in vector["input"]["files"].as_object().expect("input.files") {
@@ -386,6 +404,7 @@ fn json_prints_the_aggregates_each_report_was_rendered_from() {
         (Verb::CareerBaseline, &["baseline", "standing"][..]),
         (Verb::CareerDispersion, &["dispersion"][..]),
         (Verb::ClubProfile, &["bag_profile"][..]),
+        (Verb::Profile, &["profile"][..]),
     ] {
         let answered = answer(
             verb,
@@ -443,20 +462,18 @@ fn the_binary_runs_each_verb_over_its_flags() {
         let expected = answer(
             verb,
             &Request {
-                verbose: true,
+                verbose: verb.takes_verbose(),
                 ..request(&dirs, Some("Aaron"), None)
             },
             verbs_versions(),
         );
-        let output = run(&[
-            verb.name(),
-            "--name",
-            "Aaron",
-            "--verbose",
-            "--sessions-dir",
-            &sessions,
-            &format!("--golfers-dir={golfers}"),
-        ]);
+        let golfers_flag = format!("--golfers-dir={golfers}");
+        let mut args = vec![verb.name(), "--name", "Aaron"];
+        if verb.takes_verbose() {
+            args.push("--verbose");
+        }
+        args.extend(["--sessions-dir", &sessions, &golfers_flag]);
+        let output = run(&args);
         assert_eq!(output.status.code(), Some(0), "{verb:?}");
         assert_eq!(
             String::from_utf8_lossy(&output.stdout),
@@ -477,7 +494,17 @@ fn the_binary_runs_each_verb_over_its_flags() {
         assert_eq!(help.status.code(), Some(0), "{verb:?}");
         assert!(String::from_utf8_lossy(&help.stdout).contains(verb.name()));
 
-        // `--club` is `club_profile.py`'s flag alone; the other scripts' argparse refuses it.
+        // `profile` has no `--verbose`, and refuses it as argparse refuses a flag it never declared.
+        if !verb.takes_verbose() {
+            let verbose = run(&[verb.name(), "--verbose"]);
+            assert_eq!(verbose.status.code(), Some(2), "{verb:?} --verbose");
+            assert!(verbose.stdout.is_empty());
+            assert!(String::from_utf8_lossy(&verbose.stderr)
+                .contains("profile: unrecognized arguments: --verbose"));
+        }
+
+        // `--club` is `club_profile.py`'s flag and `profile`'s; the other scripts' argparse refuses
+        // it.
         let club = run(&[
             verb.name(),
             "--club",
@@ -487,11 +514,7 @@ fn the_binary_runs_each_verb_over_its_flags() {
             "--golfers-dir",
             &golfers,
         ]);
-        let expected = if verb == Verb::ClubProfile {
-            Some(0)
-        } else {
-            Some(2)
-        };
+        let expected = if verb.takes_club() { Some(0) } else { Some(2) };
         assert_eq!(club.status.code(), expected, "{verb:?} --club");
     }
 }
@@ -772,4 +795,252 @@ fn the_binary_flags_and_lists() {
         .expect("golf-core runs");
     assert_eq!(help.status.code(), Some(0));
     assert!(String::from_utf8_lossy(&help.stdout).contains("flag-mishit"));
+}
+
+// ----------------------------------------------------------------------------------- profile
+
+/// A storage case whose tree holds tracked shot photos of one club, read under the verbs' versions.
+const SHOT_CASE: &str = "storage/hand/photo-entry-repairs.json";
+
+/// Every file under a directory with its bytes, sorted by path: what the verb must leave unchanged.
+fn snapshot(root: &Path) -> Vec<(PathBuf, Vec<u8>)> {
+    fn collect(dir: &Path, out: &mut Vec<(PathBuf, Vec<u8>)>) {
+        for entry in fs::read_dir(dir).unwrap_or_else(|e| panic!("{}: {e}", dir.display())) {
+            let path = entry.expect("a directory entry").path();
+            if path.is_dir() {
+                collect(&path, out);
+            } else {
+                let bytes = fs::read(&path).expect("a file");
+                out.push((path, bytes));
+            }
+        }
+    }
+    let mut files = Vec::new();
+    collect(root, &mut files);
+    files.sort();
+    files
+}
+
+/// **`profile` over a tree** (the M37 plan's P10): the report is the renderer's for `run_profile`'s
+/// answer over the corpus the tree reads as, then one blank line; `--club` narrows it to that club's
+/// block, or says the club has no shot; `--json` prints the whole `GradedProfile` under `profile`,
+/// which reads back into the very struct (and through its `Validate`); a golfer with no record is
+/// read as `(not registered)` with nothing to grade; and nothing in the tree is written.
+#[test]
+fn profile_prints_the_graded_profile_its_tree_reads_as() {
+    let (scratch, dirs, vector) = tree_of(SHOT_CASE);
+    let before = snapshot(&scratch.0);
+    let corpus: CareerCorpus =
+        serde_json::from_value(vector["expected"]["corpus"].clone()).expect("a corpus");
+    let built = run_profile(&corpus, None).expect("the profile validates");
+    assert_eq!(built.clubs.len(), 1, "{SHOT_CASE} holds one club's shots");
+
+    let answered = answer(
+        Verb::Profile,
+        &request(&dirs, Some("Aaron"), None),
+        verbs_versions(),
+    );
+    assert_eq!(
+        answered.stdout,
+        format!("{}\n", profile(&built, "Aaron", None))
+    );
+    assert_eq!((answered.stderr.as_str(), answered.code), ("", 0));
+    assert!(
+        answered.stdout.contains("\n  7i  (mid iron)\n"),
+        "{}",
+        answered.stdout
+    );
+    assert!(answered.stdout.contains("all clubs"));
+    println!("{}", answered.stdout);
+
+    for (club, parsed) in [
+        (Some("seven iron"), Some(ClubId::SevenIron)),
+        (Some("driver"), Some(ClubId::Driver)),
+        (Some(""), None),
+    ] {
+        let narrowed = answer(
+            Verb::Profile,
+            &Request {
+                club: club.map(str::to_string),
+                ..request(&dirs, Some("Aaron"), None)
+            },
+            verbs_versions(),
+        );
+        assert_eq!(
+            narrowed.stdout,
+            format!("{}\n", profile(&built, "Aaron", parsed)),
+            "{club:?}"
+        );
+        assert_eq!(narrowed.code, 0);
+    }
+    let seven = profile(&built, "Aaron", Some(ClubId::SevenIron));
+    assert!(seven.contains("7i  (mid iron)") && !seven.contains("all clubs"));
+    let driver = profile(&built, "Aaron", Some(ClubId::Driver));
+    assert!(driver.contains("driver: no tracked shot photo of this club"));
+    let wedge = answer(
+        Verb::Profile,
+        &Request {
+            club: Some("wedge".into()),
+            ..request(&dirs, Some("Aaron"), None)
+        },
+        verbs_versions(),
+    );
+    assert_eq!(wedge.code, 2);
+    assert!(wedge.stdout.starts_with("'wedge' is not a club."));
+
+    for club in [None, Some("7i")] {
+        let json = answer(
+            Verb::Profile,
+            &Request {
+                json: true,
+                club: club.map(str::to_string),
+                ..request(&dirs, Some("Aaron"), None)
+            },
+            verbs_versions(),
+        );
+        assert_eq!((json.stderr.as_str(), json.code), ("", 0));
+        let printed: Value = serde_json::from_str(&json.stdout).expect("stdout is JSON");
+        let entries = printed.as_array().expect("an array");
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0]["display_name"], "Aaron");
+        let read: GradedProfile =
+            serde_json::from_value(entries[0]["profile"].clone()).expect("a GradedProfile");
+        assert_eq!(
+            read, built,
+            "--club {club:?} narrows the text, not the JSON"
+        );
+    }
+
+    let unregistered = answer(
+        Verb::Profile,
+        &request(&dirs, None, Some("nobody")),
+        verbs_versions(),
+    );
+    assert_eq!(unregistered.code, 0);
+    assert!(unregistered.stdout.contains("nobody (not registered)"));
+    assert!(unregistered
+        .stdout
+        .contains("No tracked shot photo on record, so there is nothing to grade yet."));
+
+    assert!(
+        snapshot(&scratch.0) == before,
+        "profile wrote into the tree"
+    );
+}
+
+/// The empty state over [`HAND_CASE`]'s tree, whose swings hold no shot photo: a golfer with nothing
+/// to grade is a report saying so, exit 0, never a refusal.
+#[test]
+fn profile_of_a_golfer_with_no_shot_photo_says_there_is_nothing_to_grade() {
+    let (_scratch, dirs, _) = hand_tree();
+    let answered = answer(
+        Verb::Profile,
+        &request(&dirs, Some("Aaron"), None),
+        verbs_versions(),
+    );
+    assert_eq!(answered.code, 0);
+    assert!(
+        answered.stdout.ends_with(
+            "\n  No tracked shot photo on record, so there is nothing to grade yet.\n\n"
+        ),
+        "{}",
+        answered.stdout
+    );
+}
+
+/// The key column of a report row: a topic, a metric or a grid row's name sits at column 14 (four
+/// of indent and the ten-wide label column) and is 24 wide.
+fn keys(section: &str) -> Vec<String> {
+    section
+        .lines()
+        .map(|line| line.chars().skip(14).take(24).collect::<String>())
+        .map(|key| key.trim().to_string())
+        .filter(|key| !key.is_empty())
+        .collect()
+}
+
+/// **The renderer against every hand case's profile**: each club's block (as `--club` cuts it) keys
+/// exactly the topics its grades carry and nothing for an absent one; a withheld grade's row says
+/// "withheld"; a shape topic with a projected landing names it as projected; a blend prints its
+/// mean or says why there is none; every list entry keys a row; and no pose metric prints anywhere,
+/// the drill-and-pose case included (Decision 12).
+#[test]
+fn the_profile_report_prints_what_each_hand_case_carries_and_nothing_absent() {
+    let mut cases = 0;
+    for (id, vector) in family_vectors("profile/hand") {
+        let built: GradedProfile = serde_json::from_value(vector["expected"]["profile"].clone())
+            .unwrap_or_else(|e| panic!("{id}: {e}"));
+        let whole = profile(&built, "Aaron", None);
+        println!("== {id}{whole}");
+        for pose in ["_norm", "tempo", "head_", "hip_", "finish_"] {
+            assert!(
+                !whole.contains(pose),
+                "{id}: a pose metric printed ({pose})"
+            );
+        }
+        assert!(whole.contains("all clubs"), "{id}: no player block");
+
+        for graded in &built.clubs {
+            let club = graded.grades.club;
+            let section = profile(&built, "Aaron", Some(club));
+            let printed = keys(&section);
+            for topic in Topic::ALL {
+                let name = topic.as_str().replace('_', " ");
+                let carried = graded.grades.topics.iter().find(|t| t.topic == topic);
+                assert_eq!(
+                    printed.contains(&name),
+                    carried.is_some(),
+                    "{id} {club}: {name} is carried {} and printed {}",
+                    carried.is_some(),
+                    printed.contains(&name)
+                );
+                let Some(grade) = carried else { continue };
+                let line = section
+                    .lines()
+                    .find(|line| line.chars().skip(14).take(24).collect::<String>().trim() == name)
+                    .expect("the topic's row");
+                let text: String = line.chars().skip(38).collect();
+                assert_eq!(
+                    text.starts_with("withheld"),
+                    matches!(grade.grade, Share::Withheld(_)),
+                    "{id} {club} {name}: {line}"
+                );
+                if grade
+                    .shape
+                    .as_ref()
+                    .is_some_and(|shape| shape.projected > 0)
+                {
+                    assert!(
+                        section.contains("projected by the flight model"),
+                        "{id} {club} {name}: a projected landing is not named"
+                    );
+                }
+            }
+            match &graded.grades.blend {
+                Some(blend) => {
+                    let percent = format!("{}%", pyfmt::fixed(blend.mean * 100.0, 0));
+                    assert!(
+                        section.contains(&format!("    blend     {percent}, the equal-weight")),
+                        "{id} {club}: {section}"
+                    );
+                }
+                None if !graded.grades.topics.is_empty() => {
+                    assert!(section.contains("blend     none: no topic is graded yet"));
+                }
+                None => assert!(!section.contains("    blend")),
+            }
+            for finding in &graded.list {
+                assert!(
+                    printed.contains(&finding.metric),
+                    "{id} {club}: {} is listed and not printed",
+                    finding.metric
+                );
+            }
+            if graded.list.is_empty() {
+                assert!(section.contains("list      nothing is established either way yet"));
+            }
+        }
+        cases += 1;
+    }
+    assert!(cases >= 9, "only {cases} hand cases rendered");
 }

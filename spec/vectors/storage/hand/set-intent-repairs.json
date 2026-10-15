@@ -1,5 +1,5 @@
 {
-  "career_version": 2,
+  "career_version": 3,
   "expected": {
     "files": {
       "2026-08-27/1/face_on.clip-27-1.mov": "clip",
@@ -191,6 +191,17 @@
     "kind": "storage",
     "note": "2026-08-27 holds swing 1, a manifest as frozen Python writes one (no intent key), and swing 2, recorded as a drill. bundle.set_intent on swing 1 sets drill at 13:00, then overrides it with shot_shaping/draw at 13:01 (a repair overwrites, as set_mishit does), then clears it with null at 13:02, after which its manifest writes no intent key and reads as fundamentals again (call 5). Each answer is the manifest as saved, updated_at stamped with the op's now and nothing else changed. On swing 99, which does not exist, it answers null and writes nothing. get_swing reads swing 1 back as the last repair left it. Swing 2 is never touched, so its file is the committed text. The store records the goal as given and refuses nothing: a shape with no shot_shaping is the verb's to refuse (P7 finding 8).",
     "oracle": "hand",
+    "rerecords": [
+      {
+        "added": [],
+        "by": "golf-core rerecord",
+        "career_version": 3,
+        "declaration": "spec/declarations/career-v3.json",
+        "moved": [
+          "career_version"
+        ]
+      }
+    ],
     "source": "worked by hand in M35 P9, the M35 plan's call 8, against crates/storage's M35 P7 stamping and set_intent; bundle.set_intent and args.intent are the Rust runner's (crates/core/src/storage_family.rs) and have no twin in frozen Python's _op_table",
     "worked_against": "scripts/conformance_vectors.py::_run_ops"
   }

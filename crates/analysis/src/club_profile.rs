@@ -304,6 +304,8 @@ mod tests {
             manual_mishit: over.mishit,
             missing_roles: Vec::new(),
             intent: None,
+            shot: None,
+            shot_unscored: Vec::new(),
         }
     }
 

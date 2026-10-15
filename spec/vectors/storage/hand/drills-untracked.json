@@ -1,29 +1,29 @@
 {
-  "career_version": 2,
+  "career_version": 3,
   "expected": {
     "corpus": {
       "analyzed_without_measurements": 0,
       "excluded": [
         {
-          "detail": "face-on bytes clip-21-1 are already in 2026-08-21/1 \u2014 the same swing uploaded again, not a second swing",
+          "detail": "face-on bytes clip-21-1 are already in 2026-08-21/1 — the same swing uploaded again, not a second swing",
           "reason": "duplicate",
           "session_id": "2026-08-21",
           "swing_id": "4"
         },
         {
-          "detail": "hit as a drill, which feeds no club or player stat and no mechanics baseline \u2014 clear its intent with golf-core set-intent if it should count",
+          "detail": "hit as a drill, which feeds no club or player stat and no mechanics baseline — clear its intent with golf-core set-intent if it should count",
           "reason": "untracked",
           "session_id": "2026-08-21",
           "swing_id": "1"
         },
         {
-          "detail": "hit as a drill, which feeds no club or player stat and no mechanics baseline \u2014 clear its intent with golf-core set-intent if it should count",
+          "detail": "hit as a drill, which feeds no club or player stat and no mechanics baseline — clear its intent with golf-core set-intent if it should count",
           "reason": "untracked",
           "session_id": "2026-08-21",
           "swing_id": "2"
         },
         {
-          "detail": "shot photo photo-21-1 is already in 2026-08-21/1, beside that swing's video \u2014 one ball flight, so the copy with the video is the one kept",
+          "detail": "shot photo photo-21-1 is already in 2026-08-21/1, beside that swing's video — one ball flight, so the copy with the video is the one kept",
           "reason": "duplicate",
           "session_id": "2026-08-21",
           "swing_id": "5"
@@ -124,6 +124,17 @@
     "kind": "storage",
     "note": "Versions {installed 17, comparable_from 14}: 2026-08-21, 7i, engine 17 throughout. 1 is a swing hit as a drill (clip-21-1 and photo-21-1, head_sway 0.2, carry 140); 2 a photo entry hit as a drill (photo-21-2, carry 145); 3 a tracked swing whose manifest records performance (clip-21-3 and photo-21-3, head_sway 0.3, carry 150); 4 a re-upload of swing 1's clip with no intent; 5 a photo-only copy of swing 1's photo with no intent, so tracked on its own. Call 6: the dedupes come first and untracked after, read off each survivor's manifest alone. Clip group clip-21-1 keeps 1 (earliest) and names 4 a duplicate of it; survivor 1 is a drill, so it is untracked and in no swing list. Photo entry 5's photo is survivor 1's shot_sha256, so it is a duplicate of 1 (the copy with video is kept, and that ball flight was a drill), whatever its own intent. Photo entry 2 is no swing's photo and a drill: untracked. Only 3 pools, carrying its intent: each metric n = 1. Order of excluded: the clip groups in first-scan order, each group's duplicates and then its survivor's own exclusion (4, then 1), then the photo groups the same way (2, then 5). duplicates_collapsed is 0, because 4 collapsed into a swing that is not in swings.",
     "oracle": "hand",
+    "rerecords": [
+      {
+        "added": [],
+        "by": "golf-core rerecord",
+        "career_version": 3,
+        "declaration": "spec/declarations/career-v3.json",
+        "moved": [
+          "career_version"
+        ]
+      }
+    ],
     "source": "worked by hand in M35 P9, the M35 plan's call 8, against its call 6 and P9's findings, before M35 P10's read_corpus follows them; each tree spelled as M36 P14's hand cases spell theirs, and each shot_analysis.json a ShotResult as crates/storage::state::save_shot_analysis writes one",
     "worked_against": "scripts/conformance_vectors.py::_run_corpus"
   }

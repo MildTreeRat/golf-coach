@@ -50,8 +50,8 @@
 //! walks `spec/vectors/` with them — every vector gated and composed before any file is written.
 //! Since M34 P7 it re-records the screen family too, through [`rerecord::run_screen`], one family
 //! per run as the declaration's version key says, since M36 P13 the storage and career families
-//! together, under `career_version`, and since M35 P6 the shot family, through [`run_shot`], with
-//! the engine's under `analysis_version`.
+//! together, under `career_version` (and since M37 P11 the profile family after them), and since
+//! M35 P6 the shot family, through [`run_shot`], with the engine's under `analysis_version`.
 //!
 //! # The many-shot layer's runners
 //!
@@ -81,6 +81,16 @@
 //! `tests/shot.rs` holds it to every case in `spec/vectors/shot/`, and [`rerecord`] re-records
 //! those cases through it, with the engine family under `analysis_version` (M35 P6).
 //!
+//! # The graded profile
+//!
+//! [`profile::run_profile`] is a golfer's strike profile, topic grades and strengths and weaknesses
+//! in one call (M37 P9), here for the shell's reason: the grades are `analysis::strike`'s and the
+//! list is `feedback::profile_rules`', and neither crate may reach the other. **No Python twin.**
+//! [`profile_family::run_profile_case`] answers one case of `spec/vectors/profile/` through it, with
+//! the report's text beside it for a case recorded from a career case's corpus (M37 P11).
+//! `tests/profile.rs` holds every case to it, and `golf-core rerecord` re-records the family with
+//! it under a career declaration.
+//!
 //! # The verbs that write into a session
 //!
 //! [`session`] is `golf-core run-shot --session` and `golf-core set-intent` (M35 P11): the first
@@ -100,6 +110,8 @@
 
 pub mod career_family;
 pub mod compare;
+pub mod profile;
+pub mod profile_family;
 pub mod reports;
 pub mod rerecord;
 pub mod session;

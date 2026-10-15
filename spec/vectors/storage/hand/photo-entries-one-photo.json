@@ -1,11 +1,11 @@
 {
-  "career_version": 2,
+  "career_version": 3,
   "expected": {
     "corpus": {
       "analyzed_without_measurements": 0,
       "excluded": [
         {
-          "detail": "shot photo c0e3cf4408d2 is already in 2026-08-15/1 \u2014 the same shot uploaded again, not a second shot",
+          "detail": "shot photo c0e3cf4408d2 is already in 2026-08-15/1 — the same shot uploaded again, not a second shot",
           "reason": "duplicate",
           "session_id": "2026-08-15",
           "swing_id": "2"
@@ -48,6 +48,46 @@
           "outdated": false,
           "player_id": "aaron",
           "session_id": "2026-08-15",
+          "shot": {
+            "apex_height": null,
+            "attack_angle": null,
+            "ball_speed": null,
+            "bounce_and_roll": null,
+            "carry_distance": 150.0,
+            "carry_offline": null,
+            "club_face_angle": null,
+            "club_head_speed": null,
+            "club_path": null,
+            "dynamic_loft": null,
+            "impact_offset_h": null,
+            "impact_offset_v": null,
+            "impact_position": null,
+            "impact_position_v": null,
+            "launch_angle": null,
+            "launch_direction": null,
+            "low_point": null,
+            "provenance": {
+              "corrections": {},
+              "device": "hd_golf",
+              "fields_present": null,
+              "image_path": null,
+              "image_sha256": "c0e3cf4408d25c3430f231fdfe8c11740c1c652f11d560f9483dc98402cbef9f",
+              "needs_review": false,
+              "parse_confidence": 0.95,
+              "parser_version": 0,
+              "raw_fields": {},
+              "warnings": []
+            },
+            "session_id": "2026-08-15",
+            "shot_id": "2026-08-15-1",
+            "shot_type": null,
+            "smash_factor": null,
+            "source": "screen",
+            "spin_axis": null,
+            "spin_rate": null,
+            "timestamp": "2026-08-15T12:01:00Z",
+            "total_distance": null
+          },
           "shot_needs_review": false,
           "shot_sha256": "c0e3cf4408d25c3430f231fdfe8c11740c1c652f11d560f9483dc98402cbef9f",
           "stale": false,
@@ -89,6 +129,19 @@
     "kind": "storage",
     "note": "Versions {installed 17, comparable_from 14}: two photo entries in 2026-08-15 holding the same photo, spelled as a real SHA-256 (c0e3cf4408d2..., of the text photo-15-1) so that the sentence's cut is pinned: swing 1 (12:01, 7i, carry 150) and swing 2 (12:02, 6i, carry 999), each with its own shot_analysis.json at engine 17 naming the photo. Call 6: photo entries group on the photo hash and the earliest arrival survives (the arrival key, as swings do), so swing 1 is the entry and swing 2 a duplicate of it, named with the photo sentence, which prints the photo's first 12 characters as the face-on sentence prints the clip's, and listed in swing 1's duplicates (duplicates_collapsed 1), as a face-on re-upload is in its swing's. The survivor's club (7i) and its own shot_analysis.json are read and no duplicate's: carry 150, never 999, and carry_distance_yds n = 1. captured_at is the survivor's arrival. conflicting_shots is empty: a photo group shares its photo by definition.",
     "oracle": "hand",
+    "rerecords": [
+      {
+        "added": [
+          "expected.corpus.swings[0].shot"
+        ],
+        "by": "golf-core rerecord",
+        "career_version": 3,
+        "declaration": "spec/declarations/career-v3.json",
+        "moved": [
+          "career_version"
+        ]
+      }
+    ],
     "source": "worked by hand in M35 P9, the M35 plan's call 8, against its call 6 and P9's findings, before M35 P10's read_corpus follows them; each tree spelled as M36 P14's hand cases spell theirs, and each shot_analysis.json a ShotResult as crates/storage::state::save_shot_analysis writes one",
     "worked_against": "scripts/conformance_vectors.py::_run_corpus"
   }

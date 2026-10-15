@@ -51,6 +51,24 @@
 //! duplicates stay duplicates of it. The goal is the survivor's manifest's, never
 //! `ShotResult.intent`'s, as the club is: the manifest is the intent of record.
 //!
+//! # The shot and its refusals, carried whole [M37 P4, `CAREER_VERSION` 3]
+//!
+//! Each entry carries its survivor's shot, whole, and its artifact's `unscored` entries that are not
+//! mechanics checkpoints ([`CorpusSwing::shot`], [`CorpusSwing::shot_unscored`]). M37's topic grades
+//! need the tiles no measurement row is derived from, and the provenance that tells a tile the
+//! screen left blank from one the device never prints (the M37 plan's decision 5 and call 3). Both
+//! come off the one artifact the entry's `measurements` come from — `analysis.json`'s `swing` for a
+//! swing, `shot_analysis.json` for a photo entry — so a row and the shot it was measured from cannot
+//! come from two files, and a duplicate's are never read, as its club is not. Both are lifted
+//! whatever the entry's repair state, as `measurements` is: whether a stale or outdated entry
+//! counts is [`CorpusSwing::counts_toward_metrics`]' question, asked by whoever reads the corpus.
+//!
+//! **The checkpoints are dropped here, not carried for each reader to skip**, because
+//! `CorpusSwing`'s `Validate` refuses one. No grade reads the mechanics panel (the M37 plan's
+//! Decision 12), and a corpus that carried it would fail to read in every career case adopting it.
+//! Every name an artifact's `unscored` holds that is not a checkpoint is a flight row or a
+//! photo-side `ShotData` key (the M37 plan's P3 finding 3), and those are what the list is for.
+//!
 //! # The engine generations are a parameter
 //!
 //! Frozen Python's reader reads `ANALYSIS_VERSION` for itself. This one takes [`EngineVersions`]
@@ -102,10 +120,12 @@ use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::path::{Path, PathBuf};
 
 use contracts::career::{CareerCorpus, CorpusSwing, ExcludedSwing, ExclusionReason, Narrowing};
+use contracts::checkpoints::CHECKPOINT_REGISTRY;
 use contracts::club::ClubId;
 use contracts::mishit::mishit_carry_floor;
 use contracts::shot::ShotData;
 use contracts::swing::Measurement;
+use contracts::unscored::UnscoredCheckpoint;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -380,6 +400,10 @@ fn entry(
         // the swing. No duplicate's is consulted. Carried since M35 P8; a survivor that reaches here
         // is tracked, so this is never a drill.
         intent: manifest.intent.clone(),
+        // Off the artifact, by whichever reader runs next (the module doc), so an entry with no
+        // readable artifact carries neither.
+        shot: None,
+        shot_unscored: Vec::new(),
     }
 }
 
@@ -438,7 +462,8 @@ fn read_swing_artifacts(
         return;
     };
     swing.measurements = measurements(raw_swing.get("measurements"));
-    swing.shot_needs_review = needs_review(raw_swing.get("shot"));
+    (swing.shot, swing.shot_needs_review) = shot(raw_swing.get("shot"));
+    swing.shot_unscored = shot_side(unscored(raw_swing.get("unscored")));
 }
 
 /// A photo entry's `shot_analysis.json`, onto its entry: the swing's three repairs, in the swing's
@@ -455,7 +480,9 @@ fn read_swing_artifacts(
 ///   is read off its raw map.
 ///
 /// `shot_needs_review` is the stored shot's own flag. A typed result has already validated its shot,
-/// so the swing path's "a shot that no longer validates reads as flagged" cannot arise here.
+/// so the swing path's "a shot that no longer validates reads as flagged" cannot arise here, and the
+/// shot is always carried. Its `unscored` needs no bare-name reading either: a `ShotResult` is M35's,
+/// and was never written in the pre-2026-08-19 form.
 fn read_photo_artifacts(
     sessions_dir: &Path,
     manifest: &SwingManifest,
@@ -499,6 +526,8 @@ fn read_photo_artifacts(
         .as_ref()
         .is_some_and(|provenance| provenance.needs_review);
     photo_entry.measurements = result.measurements;
+    photo_entry.shot = Some(result.shot);
+    photo_entry.shot_unscored = shot_side(result.unscored);
 }
 
 /// The `outdated` sentence, for either kind: what it was analyzed by, the line it fell under, and
@@ -584,7 +613,7 @@ fn conflicting_shots(kept: Option<&str>, duplicates: &[SwingManifest]) -> Vec<St
 ///
 /// Read through the `Deserialize` *trait*, which validates, and not the inherent `deserialize` that
 /// `#[serde(remote = "Self")]` generates beside it, which does not: `Measurement::deserialize` would
-/// name the second. [`needs_review`] reads a shot the same way. Today neither choice moves an answer
+/// name the second. [`shot`] reads a shot the same way. Today neither choice moves an answer
 /// (M36 P10 measured both): `Measurement`'s validator checks nothing, and `ShotData`'s only bound
 /// is its provenance's, which the nested field's own trait read already holds. The trait is used so
 /// that a validator added to either later is not silently skipped here.
@@ -658,21 +687,62 @@ fn carry_of(swing: &CorpusSwing) -> Option<f64> {
         .map(|measurement| measurement.value)
 }
 
-/// Was the attached shot's OCR parse flagged (ADR-014)?
+/// A swing's attached shot, and whether its OCR parse was flagged (ADR-014).
 ///
 /// Read through [`ShotData`] for the reason Python's is: the provenance rules live in the contract,
 /// and a shot that no longer validates should read as untrusted rather than as trusted-by-default.
-/// Anything but an object is no shot, and so not flagged.
-fn needs_review(raw: Option<&Value>) -> bool {
+/// Anything but an object is no shot, and so not flagged. The flag is frozen Python's
+/// `_needs_review`; the shot beside it is M37's (the module doc).
+///
+/// **A shot the contract refuses is flagged and not carried.** [`CorpusSwing`]'s `Validate` would
+/// refuse the corpus holding it, and nothing is lost: a flagged shot keys no launch-monitor row
+/// ([`CorpusSwing::artifact_key`]), so no grade could count it either.
+fn shot(raw: Option<&Value>) -> (Option<ShotData>, bool) {
     match raw {
         Some(shot @ Value::Object(_)) => match <ShotData as Deserialize>::deserialize(shot) {
-            Ok(shot) => shot
-                .provenance
-                .is_some_and(|provenance| provenance.needs_review),
-            Err(_) => true,
+            Ok(shot) => {
+                let flagged = shot
+                    .provenance
+                    .as_ref()
+                    .is_some_and(|provenance| provenance.needs_review);
+                (Some(shot), flagged)
+            }
+            Err(_) => (None, true),
         },
-        _ => false,
+        _ => (None, false),
     }
+}
+
+/// `SwingResult.unscored` back through its own contract, entry by entry, as [`measurements`] reads
+/// its rows: an entry the contract refuses is dropped and the rest kept, and anything but a list is
+/// none.
+///
+/// **A bare name is dropped, not read as `unrecorded`** as `SwingResult`'s own reader reads one.
+/// That form is every artifact's before 2026-08-19, when only a mechanics checkpoint could be
+/// unscored — the first flight refusal is ADR-027's, accepted 2026-09-04 — so every bare name is a
+/// checkpoint, and [`shot_side`] would drop it anyway. Reading it would be a second copy of that
+/// coercion for no entry that survives it.
+fn unscored(raw: Option<&Value>) -> Vec<UnscoredCheckpoint> {
+    let Some(Value::Array(entries)) = raw else {
+        return Vec::new();
+    };
+    entries
+        .iter()
+        .filter_map(|entry| <UnscoredCheckpoint as Deserialize>::deserialize(entry).ok())
+        .collect()
+}
+
+/// An artifact's `unscored`, less every mechanics checkpoint: the shot and flight side the topics
+/// read, in the artifact's own order (the module doc).
+fn shot_side(unscored: Vec<UnscoredCheckpoint>) -> Vec<UnscoredCheckpoint> {
+    unscored
+        .into_iter()
+        .filter(|entry| {
+            !CHECKPOINT_REGISTRY
+                .iter()
+                .any(|spec| spec.name == entry.name)
+        })
+        .collect()
 }
 
 fn exclude(manifest: &SwingManifest, reason: ExclusionReason, detail: &str) -> ExcludedSwing {
@@ -728,6 +798,7 @@ mod tests {
     use super::*;
     use crate::manifest::{hash_bytes, MANIFEST_NAME};
     use crate::state::ANALYSIS_NAME;
+    use contracts::unscored::UnscoredReason;
     use serde_json::json;
     use std::fs;
 
@@ -934,11 +1005,266 @@ mod tests {
         });
         let root = tempfile::tempdir().unwrap();
         write_swing(root.path(), ("2026-08-09", "1"), b"a", 16, shot.clone());
-        assert!(read(&root, 16, 16).swings[0].shot_needs_review);
+        let refused = read(&root, 16, 16);
+        assert!(refused.swings[0].shot_needs_review);
+        // M37 P4: refused, so flagged and not carried, which a corpus holding it could not be.
+        assert_eq!(refused.swings[0].shot, None);
 
         let mut trusted = shot;
         trusted["provenance"]["parse_confidence"] = json!(0.95);
-        write_swing(root.path(), ("2026-08-09", "1"), b"a", 16, trusted);
-        assert!(!read(&root, 16, 16).swings[0].shot_needs_review);
+        write_swing(root.path(), ("2026-08-09", "1"), b"a", 16, trusted.clone());
+        let read_back = read(&root, 16, 16);
+        assert!(!read_back.swings[0].shot_needs_review);
+        assert_eq!(read_back.swings[0].shot, Some(shot_data(&trusted)));
+    }
+
+    // ---------------------------------------------------- the shot and its refusals [M37 P4]
+
+    /// A stored HD Golf shot as an `analysis.json` or a `shot_analysis.json` holds one, read
+    /// `photo` and trusted.
+    fn hd_shot(shot_id: &str, photo: &[u8]) -> Value {
+        json!({
+            "shot_id": shot_id,
+            "session_id": "2026-08-09",
+            "source": "screen",
+            "timestamp": "2026-08-09T12:00:00+00:00",
+            "carry_distance": 161.0,
+            "impact_position": "TOE",
+            "provenance": {
+                "device": "hd_golf",
+                "parse_confidence": 0.95,
+                "needs_review": false,
+                "warnings": [],
+                "image_sha256": hash_bytes(photo),
+            },
+        })
+    }
+
+    fn shot_data(raw: &Value) -> ShotData {
+        serde_json::from_value(raw.clone()).expect("a valid shot")
+    }
+
+    fn refusal(name: &str, reason: &str) -> Value {
+        json!({"name": name, "reason": reason, "detail": "test"})
+    }
+
+    /// Rewrite the swing at `at`'s `analysis.json`, at engine generation 17, around `swing`.
+    fn write_analysis(root: &Path, at: (&str, &str), swing: Value) {
+        let analysis = json!({"analysis_version": 17, "swing": swing});
+        let path = root.join(at.0).join(at.1).join(ANALYSIS_NAME);
+        fs::write(path, analysis.to_string()).unwrap();
+    }
+
+    /// Give the swing at `at` a shot photo hashed from `photo`, beside whatever roles it holds.
+    fn with_photo(root: &Path, at: (&str, &str), photo: &[u8]) {
+        edit_manifest(root, at, |manifest| {
+            let mut file = manifest["roles"]["face_on"].clone();
+            file["role"] = json!("shot_screen");
+            file["filename"] = json!("shot_screen.png");
+            file["content_sha256"] = json!(hash_bytes(photo));
+            manifest["roles"]["shot_screen"] = file;
+        });
+    }
+
+    /// The photo entry at `at`'s `shot_analysis.json`, as `golf-core run-shot --session` writes one
+    /// for the photo hashed from `photo`.
+    fn write_shot_analysis(
+        root: &Path,
+        at: (&str, &str),
+        photo: &[u8],
+        shot: &Value,
+        unscored: Value,
+    ) {
+        let result = json!({
+            "swing_id": at.1,
+            "session_id": at.0,
+            "analysis_version": 17,
+            "photo_sha256": hash_bytes(photo),
+            "shot": shot,
+            "measurements": [{
+                "name": "carry_distance_yds",
+                "value": 161.0,
+                "unit": "yards",
+                "source": "launch_monitor:hd_golf",
+                "detail": "as printed"
+            }],
+            "unscored": unscored,
+            "notes": [],
+        });
+        let dir = root.join(at.0).join(at.1);
+        fs::write(crate::state::shot_analysis_path(&dir), result.to_string()).unwrap();
+    }
+
+    fn entry_at<'a>(corpus: &'a CareerCorpus, at: (&str, &str)) -> &'a CorpusSwing {
+        corpus
+            .swings
+            .iter()
+            .find(|swing| (swing.session_id.as_str(), swing.swing_id.as_str()) == at)
+            .unwrap_or_else(|| panic!("{at:?} is pooled: {:?}", corpus.excluded))
+    }
+
+    /// **Each kind carries its own artifact's shot, and the shot side of its `unscored`** (the M37
+    /// plan's decision 5 and call 3): a swing's off `analysis.json`, a photo entry's off
+    /// `shot_analysis.json`, each in the artifact's order. The corpus they land in validates, which
+    /// is what an adopting career case reads it through.
+    #[test]
+    fn a_swing_and_a_photo_entry_each_carry_their_artifacts_shot() {
+        const SWING: (&str, &str) = ("2026-08-09", "1");
+        const PHOTO_ENTRY: (&str, &str) = ("2026-08-09", "2");
+        let root = tempfile::tempdir().unwrap();
+        write_swing(root.path(), SWING, b"a", 17, Value::Null);
+        with_photo(root.path(), SWING, b"photo-1");
+        let swing_shot = hd_shot("s1", b"photo-1");
+        write_analysis(
+            root.path(),
+            SWING,
+            json!({
+                "measurements": [],
+                "shot": swing_shot,
+                "unscored": [
+                    refusal("flight_landing_offline_yds", "spin_axis_unresolved"),
+                    refusal("flight_carry_yds", "no_club_loft"),
+                ],
+            }),
+        );
+        write_swing(root.path(), PHOTO_ENTRY, b"b", 17, Value::Null);
+        as_photo_entry(root.path(), PHOTO_ENTRY, b"photo-2");
+        let photo_shot = hd_shot("s2", b"photo-2");
+        let photo_refusals = json!([
+            refusal("carry_offline", "printed_blank"),
+            refusal("flight_carry_yds", "no_club_loft"),
+        ]);
+        write_shot_analysis(
+            root.path(),
+            PHOTO_ENTRY,
+            b"photo-2",
+            &photo_shot,
+            photo_refusals.clone(),
+        );
+
+        let corpus = read(&root, 17, 14);
+        assert!(corpus.excluded.is_empty(), "{:?}", corpus.excluded);
+        contracts::Validate::validate(&corpus).expect("the corpus carrying both validates");
+
+        let swing = entry_at(&corpus, SWING);
+        assert_eq!(swing.shot, Some(shot_data(&swing_shot)));
+        let names: Vec<(&str, UnscoredReason)> = swing
+            .shot_unscored
+            .iter()
+            .map(|entry| (entry.name.as_str(), entry.reason))
+            .collect();
+        assert_eq!(
+            names,
+            [
+                (
+                    "flight_landing_offline_yds",
+                    UnscoredReason::SpinAxisUnresolved
+                ),
+                ("flight_carry_yds", UnscoredReason::NoClubLoft),
+            ]
+        );
+
+        let photo_entry = entry_at(&corpus, PHOTO_ENTRY);
+        assert_eq!(
+            photo_entry.face_on_sha256, None,
+            "a photo entry, not a swing"
+        );
+        assert_eq!(photo_entry.shot, Some(shot_data(&photo_shot)));
+        let expected: Vec<UnscoredCheckpoint> = serde_json::from_value(photo_refusals).unwrap();
+        assert_eq!(photo_entry.shot_unscored, expected);
+    }
+
+    /// **A duplicate's shot is never read**, as its club is not (`entry`'s doc): the survivor's
+    /// artifact holds no shot and the re-upload's does, and the survivor does not borrow it.
+    #[test]
+    fn a_duplicates_shot_is_never_read() {
+        const SURVIVOR: (&str, &str) = ("2026-08-09", "1");
+        const DUPLICATE: (&str, &str) = ("2026-08-09", "2");
+        let root = tempfile::tempdir().unwrap();
+        write_swing(root.path(), SURVIVOR, b"a", 17, Value::Null);
+        write_swing(root.path(), DUPLICATE, b"a", 17, Value::Null);
+        with_photo(root.path(), DUPLICATE, b"photo-2");
+        write_analysis(
+            root.path(),
+            DUPLICATE,
+            json!({
+                "measurements": [],
+                "shot": hd_shot("duplicate", b"photo-2"),
+                "unscored": [refusal("flight_carry_yds", "no_club_loft")],
+            }),
+        );
+
+        let corpus = read(&root, 17, 14);
+        let [survivor] = corpus.swings.as_slice() else {
+            panic!("one swing: {:?}", corpus.swings)
+        };
+        assert_eq!(survivor.swing_ref(), "2026-08-09/1");
+        assert_eq!(survivor.duplicates, ["2026-08-09/2"]);
+        assert_eq!(
+            survivor.shot, None,
+            "the survivor borrowed its duplicate's shot"
+        );
+        assert!(survivor.shot_unscored.is_empty());
+    }
+
+    /// **A swing with no photo carries no shot, and writes the bytes it wrote before M37**: neither
+    /// key, so every corpus recorded with no shot stays the value it was recorded as. A photo entry
+    /// with no `shot_analysis.json` carries none either, since nothing was read.
+    #[test]
+    fn an_entry_with_no_shot_carries_none_and_writes_neither_key() {
+        const PHOTO_ENTRY: (&str, &str) = ("2026-08-09", "2");
+        let root = one_swing(17);
+        write_swing(root.path(), PHOTO_ENTRY, b"b", 17, Value::Null);
+        as_photo_entry(root.path(), PHOTO_ENTRY, b"photo-2");
+
+        let corpus = read(&root, 17, 14);
+        assert_eq!(corpus.swings.len(), 2);
+        for entry in &corpus.swings {
+            assert_eq!(entry.shot, None, "{}", entry.swing_ref());
+            assert!(entry.shot_unscored.is_empty(), "{}", entry.swing_ref());
+            let written = serde_json::to_value(entry).unwrap();
+            let keys = written.as_object().unwrap();
+            assert!(
+                !keys.contains_key("shot") && !keys.contains_key("shot_unscored"),
+                "{}: {written}",
+                entry.swing_ref()
+            );
+        }
+        assert_eq!(
+            corpus.excluded[0].reason,
+            ExclusionReason::NotAnalyzed,
+            "the photo entry was not read"
+        );
+    }
+
+    /// **`shot_unscored` holds no checkpoint name** (the M37 plan's call 3, and P3's finding 4): every
+    /// registered checkpoint, the pre-2026-08-19 bare-name form and an entry no reason names are
+    /// dropped, and the flight row between them is kept. Left in, a checkpoint would make the corpus
+    /// fail its own `Validate`.
+    #[test]
+    fn shot_unscored_holds_no_checkpoint_name() {
+        let root = one_swing(17);
+        let mut unscored: Vec<Value> = CHECKPOINT_REGISTRY
+            .iter()
+            .map(|spec| refusal(spec.name, "no_band"))
+            .collect();
+        unscored.insert(1, refusal("flight_carry_yds", "carry_unreachable"));
+        unscored.push(json!("tempo"));
+        unscored.push(refusal("flight_apex_yds", "no_such_reason"));
+        assert!(unscored.len() > 4, "the registry is not empty");
+        write_analysis(
+            root.path(),
+            ("2026-08-09", "1"),
+            json!({"measurements": [], "shot": null, "unscored": unscored}),
+        );
+
+        let corpus = read(&root, 17, 14);
+        contracts::Validate::validate(&corpus).expect("no checkpoint reached the corpus");
+        let kept: Vec<&str> = corpus.swings[0]
+            .shot_unscored
+            .iter()
+            .map(|entry| entry.name.as_str())
+            .collect();
+        assert_eq!(kept, ["flight_carry_yds"]);
     }
 }

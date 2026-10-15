@@ -1,4 +1,4 @@
-//! `analysis/stats.py`, whole. [M22 P4, M36 P11]
+//! `analysis/stats.py`, whole, and the one interval it never had. [M22 P4, M36 P11, M37 P2]
 //!
 //! One definition of "percentile", shared by the checkpoint evaluators and by the GolfDB
 //! reference-aggregation script that cuts the bands they score against. Two drifting definitions
@@ -44,6 +44,18 @@
 //! would certify arithmetic the release verbs do not run. None of this can move a value past
 //! `docs/CONFORMANCE.md` §3's `RTOL`; it is a last bit, and it is here because a last bit is what a
 //! report's `-0.0` or a `.Nf` at a half is decided by.
+//!
+//! # [`wilson`] has no Python twin, and so none of the above binds it
+//!
+//! The interval on a share, which a strike-profile topic grade is shown with (M37 P2). Frozen Python
+//! never gains it (ADR-035 clause 4), so there is no recorded answer to reproduce to the bit: it
+//! takes its normal quantile at full precision rather than [`Z_975`]'s six figures, and squares with
+//! `*` rather than [`pow`]. Its gate is a published table and the hand-worked profile vectors
+//! (`spec/vectors/profile/hand/`, M37 P5). It is here rather than beside its caller for the reason
+//! the module's first paragraph gives: one place for the intervals.
+
+use contracts::baseline::Interval;
+use contracts::strike::RateEstimate;
 
 /// The `q`-quantile of `values` by linear interpolation between adjacent ranks.
 ///
@@ -229,6 +241,80 @@ pub fn sd_ci(values: &[f64]) -> Option<(f64, f64)> {
         (scaled / chi2_critical(df, true)).sqrt(),
         (scaled / chi2_critical(df, false)).sqrt(),
     ))
+}
+
+// ------------------------------------------------------------------------------------------------
+// The interval on a share [M37 P2] — no Python twin
+// ------------------------------------------------------------------------------------------------
+
+/// `Φ⁻¹(0.975)` to the double, for [`wilson`].
+///
+/// **Not [`Z_975`]**, which is the Python's six-figure value and must stay that for the expansions
+/// above to reproduce what the career family recorded. [`wilson`] has nothing recorded to reproduce,
+/// so it takes the quantile whole. The two differ by 1.5e-8, which moves no bound past a report's
+/// precision; they are kept apart and explained rather than merged, because merging either way
+/// would change a number one of them is held to.
+const WILSON_Z: f64 = 1.959963984540054;
+
+/// The Wilson score interval at 95% on `successes` of `n`, as the [`RateEstimate`] a topic grade is
+/// shown in, or `None` for `n = 0`, which has no share. [M37 P2]
+///
+/// With `p = successes / n` and `z` = [`WILSON_Z`]:
+///
+/// ```text
+/// center = (p + z²/2n) / (1 + z²/n)
+/// half   = z / (1 + z²/n) · √(p(1 − p)/n + z²/4n²)
+/// ```
+///
+/// **Wilson rather than the normal approximation** `p ± z√(p(1 − p)/n)`, because the grades live at
+/// the small `n` and the extreme shares where that one fails: at 0/10 or 10/10 its interval has no
+/// width, claiming certainty from ten shots, and at 1/10 its lower bound is −0.09. Wilson stays inside
+/// [0, 1] and always holds the share, and at 50% it runs ±26 points at n = 10 and ±20 at n = 20, the
+/// widths the M37 interview set [`contracts::strike::RATE_MINIMUM_N`] against (decision 2).
+///
+/// **Published reference**: Newcombe, "Two-sided confidence intervals for the single proportion:
+/// comparison of seven methods", *Statistics in Medicine* 17 (1998) 857–872, Table II, method 3:
+/// 81/263 → 0.2553–0.3662, 15/148 → 0.0624–0.1605, 0/20 → 0–0.1611 and 1/29 → 0.0061–0.1718. The
+/// tests hold this function to all four at the table's four places.
+///
+/// # Clamped at the ends, which is the only place it bites
+///
+/// At 0 successes the lower bound is 0 and at `n` the upper is 1, algebraically. In floating point
+/// 10/10's upper bound comes out 0.9999999999999999, and `RateEstimate` holds `share ≤ high` with no
+/// tolerance, so a perfect share would be refused by one ulp (the M37 plan's P1 finding 7). So each
+/// bound is clamped, into [0, share] and [share, 1]. Between the ends Wilson holds the share by far
+/// more than an ulp and the clamp moves nothing; the tests walk every count to n = 60 to say so.
+///
+/// # Panics
+///
+/// When `successes > n`. A share above one is the caller's counting gone wrong, not a fact about a
+/// golfer, and [`percentile`]'s `q` is the precedent for making that loud rather than a `None`.
+pub fn wilson(successes: usize, n: usize) -> Option<RateEstimate> {
+    assert!(
+        successes <= n,
+        "{successes} successes of {n} shots is not a share"
+    );
+    if n == 0 {
+        return None;
+    }
+    let (k, shots) = (successes as f64, n as f64);
+    // The quotient `RateEstimate` checks `share` against, computed the one way it computes it.
+    let share = k / shots;
+    let z_squared = WILSON_Z * WILSON_Z;
+    let denominator = 1.0 + z_squared / shots;
+    let center = (share + z_squared / (2.0 * shots)) / denominator;
+    let half = WILSON_Z / denominator
+        * (share * (1.0 - share) / shots + z_squared / (4.0 * shots * shots)).sqrt();
+    Some(RateEstimate {
+        successes: successes as i64,
+        n: n as i64,
+        share,
+        interval: Interval {
+            low: (center - half).clamp(0.0, share),
+            high: (center + half).clamp(share, 1.0),
+            confidence: Interval::DEFAULT_CONFIDENCE,
+        },
+    })
 }
 
 #[cfg(test)]
@@ -470,5 +556,104 @@ mod tests {
             );
             assert_eq!(pow(x, 2.0).to_bits(), cpython.to_bits(), "{x} ** 2");
         }
+    }
+
+    // --- the Wilson interval [M37 P2] ---------------------------------------------------------
+
+    fn bounds(successes: usize, n: usize) -> (f64, f64) {
+        let rate = wilson(successes, n).expect("n is not 0");
+        (rate.interval.low, rate.interval.high)
+    }
+
+    /// Newcombe (1998), Table II, method 3, at the table's four places: the published values the
+    /// doc on [`wilson`] cites, two of them at the ends where the clamp could bite.
+    #[test]
+    fn wilson_reproduces_newcombes_published_intervals() {
+        let published = [
+            (81, 263, 0.2553, 0.3662),
+            (15, 148, 0.0624, 0.1605),
+            (0, 20, 0.0, 0.1611),
+            (1, 29, 0.0061, 0.1718),
+        ];
+        for (successes, n, low, high) in published {
+            let (got_low, got_high) = bounds(successes, n);
+            close(got_low, low, 5e-5);
+            close(got_high, high, 5e-5);
+        }
+    }
+
+    /// The four counts the M37 plan names at the floor of ten shots. 0/10 and 10/10 are the
+    /// widely tabulated 0.2775 and 0.7225; 5/10 is symmetric about the share, ±26 points, which is
+    /// the width decision 2 set the floor against.
+    #[test]
+    fn wilson_at_ten_shots() {
+        assert_eq!(bounds(0, 10).0, 0.0);
+        close(bounds(0, 10).1, 0.2775, 5e-5);
+        close(bounds(10, 10).0, 0.7225, 5e-5);
+        assert_eq!(bounds(10, 10).1, 1.0);
+        let (low, high) = bounds(5, 10);
+        close(low, 0.2366, 5e-5);
+        close(high, 0.7634, 5e-5);
+        close(0.5 - low, high - 0.5, 1e-12);
+        close(high - 0.5, 0.2634, 5e-5);
+        let (low, high) = bounds(7, 10);
+        close(low, 0.3968, 5e-5);
+        close(high, 0.8922, 5e-5);
+        // ±20 points at n = 20, the other width decision 2 quotes.
+        close(bounds(10, 20).1 - 0.5, 0.2007, 5e-5);
+    }
+
+    /// Every count to 60 makes a `RateEstimate` its own check accepts: the share exactly
+    /// `successes / n`, the interval holding it inside [0, 1]. At the ends the bound is the end
+    /// itself, which 10/10 would miss by an ulp without the clamp.
+    #[test]
+    fn wilson_holds_its_share_inside_the_unit_interval_at_every_count() {
+        use contracts::Validate;
+        for n in 1..=60 {
+            for successes in 0..=n {
+                let rate = wilson(successes, n).expect("n is not 0");
+                rate.validate()
+                    .unwrap_or_else(|e| panic!("{successes}/{n}: {e:?}"));
+                assert_eq!(rate.interval.confidence, 0.95);
+                if successes == 0 {
+                    assert_eq!(rate.interval.low, 0.0, "0/{n}");
+                }
+                if successes == n {
+                    assert_eq!(rate.interval.high, 1.0, "{n}/{n}");
+                }
+                if 0 < successes && successes < n {
+                    assert!(rate.interval.low > 0.0 && rate.interval.high < 1.0);
+                    assert!(rate.interval.low < rate.share && rate.share < rate.interval.high);
+                }
+            }
+        }
+    }
+
+    /// The interval narrows as the shots grow, at a fixed share.
+    #[test]
+    fn wilson_narrows_as_n_grows() {
+        let widths: Vec<f64> = [10, 20, 40, 80]
+            .into_iter()
+            .map(|n| {
+                let (low, high) = bounds(n / 2, n);
+                high - low
+            })
+            .collect();
+        assert!(
+            widths.windows(2).all(|pair| pair[0] > pair[1]),
+            "{widths:?}"
+        );
+    }
+
+    /// No shots, no share: `None`, as an empty sample has no percentile.
+    #[test]
+    fn wilson_of_no_shots_is_none() {
+        assert_eq!(wilson(0, 0), None);
+    }
+
+    #[test]
+    #[should_panic(expected = "is not a share")]
+    fn wilson_refuses_more_successes_than_shots() {
+        wilson(11, 10);
     }
 }

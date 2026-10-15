@@ -1,11 +1,11 @@
 {
-  "career_version": 2,
+  "career_version": 3,
   "expected": {
     "corpus": {
       "analyzed_without_measurements": 0,
       "excluded": [
         {
-          "detail": "shot photo photo-18-1 is already in 2026-08-18/1, beside that swing's video \u2014 one ball flight, so the copy with the video is the one kept",
+          "detail": "shot photo photo-18-1 is already in 2026-08-18/1, beside that swing's video — one ball flight, so the copy with the video is the one kept",
           "reason": "duplicate",
           "session_id": "2026-08-19",
           "swing_id": "2"
@@ -133,6 +133,17 @@
     "kind": "storage",
     "note": "Versions {installed 17, comparable_from 14}: one photo, photo-18-1, on two swings with two different face-on clips (2026-08-18/1, clip-18-1, head_sway 0.2; 2026-08-19/1, clip-19-1, head_sway 0.3; each analysis.json at 17 with carry 150), the shape the real corpus holds three times over (the M35 plan's P5 finding 3), and a photo-only copy, 2026-08-19/2. Two clips are two swings and both pool; their shared photo is one launch-monitor sample, so carry_distance_yds n = 1 and head_sway_norm n = 2, and distinct_shots is 1. Call 6: the photo-only copy is a duplicate of the earliest swing holding its photo, by the arrival key: 2026-08-18/1. No re-upload of a clip, so duplicates_collapsed 0. One 7i photo is too few for a mishit floor.",
     "oracle": "hand",
+    "rerecords": [
+      {
+        "added": [],
+        "by": "golf-core rerecord",
+        "career_version": 3,
+        "declaration": "spec/declarations/career-v3.json",
+        "moved": [
+          "career_version"
+        ]
+      }
+    ],
     "source": "worked by hand in M35 P9, the M35 plan's call 8, against its call 6 and P9's findings, before M35 P10's read_corpus follows them; each tree spelled as M36 P14's hand cases spell theirs, and each shot_analysis.json a ShotResult as crates/storage::state::save_shot_analysis writes one",
     "worked_against": "scripts/conformance_vectors.py::_run_corpus"
   }

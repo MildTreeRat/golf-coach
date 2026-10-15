@@ -34,7 +34,7 @@ rather than after §M29. A re-recorded vector keeps `provenance.oracle: "python"
 `provenance.rerecords` ledger names the values that are Rust's.
 
 Read §3's edges — **six now, and three of them were found by building** — and §7 before starting
-a phase, and the **sixteen addenda** below for what building corrected: the first records seven stages, not the eight §2 names; the second corrects §4's
+a phase, and the **seventeen addenda** below for what building corrected: the first records seven stages, not the eight §2 names; the second corrects §4's
 counts and records what a round trip cannot be asked for; the third records that two of §3's three
 edges are Rust's own formatter, and which assurance the format table cannot give; the fourth adds a
 **fourth portability edge** §3 does not name, and measures how much of a green stage is actually
@@ -77,7 +77,12 @@ It also records the one rule the re-record changed: a screen declaration may nam
 `crates/storage` makes ten crates, and `contracts` now depends on `pyfmt`, which corrects §1. The
 storage and career families were recorded once from frozen Python and are re-recorded under a third
 version key, `CAREER_VERSION`. **Float `**` is C `pow`**, which no vector can see, and the engine's
-own `**` sites are noticed and unmeasured.
+own `**` sites are noticed and unmeasured. The seventeenth (M37) records the first family with no
+Python behind it that this ADR gates as analysis: `profile/hand/` worked by hand, and beside it the
+twelfth addendum's third kind, `profile/corpus/` at `oracle: "rust"`, pinning stability. It ages on
+`CAREER_VERSION` as a third family. The oracle pin is built, and names `audio`'s and `format`'s
+oracle in its own table rather than in their files. Wilson's z and clamp and the typical shot's
+interpolated median are recorded as choices a second port must share, not as §3's edges.
 
 ## Date
 2026-09-23
@@ -1836,3 +1841,105 @@ addendum's `sum()` question, to the user or to §M29, and not counted as §3's s
   [ADR-026's M36 addendum](026-club-specification-lookup.md) records the reversed pin.
 - **§7's rule.** The frozen many-shot layer, its stores and the five scripts still have callers, so
   they stay, frozen. §M29 deletes the scripts, and M40 the rest.
+
+## Addendum, 2026-10-15 — the profile family: the third kind of oracle, a third family on the career key, and every family names its oracle
+
+**M37**, built in [the M37 plan](../plans/m37-strike-profile-and-grades.md)'s phases P1–P11, whose
+findings carry the detail this summarises. M37 graded a golfer's shots
+([ADR-034](034-shot-first-phone-first.md)'s M37 addendum is the decision), and it is the first
+analysis this ADR has gated with no Python behind it at all: no port, no recording, and nothing for
+§3's edges to be measured against. So this addendum records how such a family is gated, not how a
+port conformed. No crate was added, and the workspace stays at ten: the grades are a module of
+`crates/analysis`, the list a module of `crates/feedback`, the shapes a module of
+`crates/contracts`, and `crates/core::profile` joins the grades and the list, because only `core`
+holds both. No engine, stage, shot, screen, audio or format vector moved. `ANALYSIS_VERSION` is still
+17 in Rust and 16 in frozen Python, and §3's list stays at six.
+
+### The twelfth addendum's three kinds, all standing
+
+The twelfth addendum named three kinds of oracle and said M37 would bring the third. It did.
+
+- **`profile/hand/`, `oracle: "hand"`.** Nine cases worked from the M37 plan's decisions before the
+  code that meets them existed, each showing its working in its `note`. The grades' correctness
+  rests on these. Three kinds of number in them are carried from one run of the career builders
+  rather than worked, because the career family already gates them: the club's ball-speed baseline
+  and dispersions, the player's dispersion, and heel/toe's mean and interval.
+- **`profile/corpus/`, `oracle: "rust"`.** Six cases, one per career case whose corpus carries a
+  shot, the real golfer's among them, each written once by the family's own runner through a
+  throwaway test that was then deleted. Nothing independent stands behind one, and each `note` says
+  so: they pin **stability**, and the `profile` report's text, which no hand case carries. The
+  program plan's §M37 expected them to come from the engine corpus vectors' `input.shot`. They come
+  from the career family's corpora instead, because a profile's input is a corpus and a bag, and
+  each copies its career case's `bag`, `corpus` and `display_name` whole.
+- **A re-record treats both sub-families as it treats every family.** It changes only declared
+  paths and writes a ledger naming them, so a hand case a later version moves says which of its
+  values are then Rust's, as `storage/hand/`'s cases have since `career-v3`. A `profile/corpus/` case
+  re-recorded proves only that nothing undeclared moved, which is all the twelfth addendum claimed
+  for the kind.
+
+### Every family names its oracle, and how `audio` and `format` do
+
+The twelfth addendum said M37's pin "covers the five that exist". It is
+`crates/core/tests/rerecord.rs::every_committed_vector_names_its_oracle_and_every_ledger_entry_its_declaration`,
+and it reads every committed vector. **Three of the five carry the key in their files** (`synthetic`,
+`corpus` and `stages`, written by M32's re-record). **`audio` and `format` do not, and M37 did not
+write it.** Writing `"oracle": "python"` into their 43 files would have changed two families the M37
+plan promised to leave alone, and `format`'s files are compared byte for byte with the frozen
+recorder's output, so `conformance_vectors.py` would have had to write it too. By the user's answer
+to the plan's P11 finding 3, the pin names both in its own table, `ORACLE_BY_FAMILY`, as `"python"`:
+the deleted `audio/impact.py` recorded `audio` (M20), and `format` is CPython's own output. The pin
+fails on any vector with no oracle or one outside `{python, hand, rust}`, on a file of a tabled
+family that starts carrying the key (so the table and the file cannot both claim it), and on a table
+row naming a family with no committed vector.
+
+**The second half is the fourteenth addendum's offer, taken.** Every `rerecords` entry must name a
+committed declaration, carry that declaration's own version key and value, and be `by` the verb. At
+M37 P11 that was 450 entries naming 5 declarations, and a negative control for each failure (an
+entry with no declaration, one at another version) failed the pin.
+
+### A third family on the career key
+
+`CAREER_VERSION` (the sixteenth addendum's third key) now picks three families. The profile family
+grades the corpus the storage family answers, so a change to the reader moves all three, and two keys
+would let one be re-recorded without the others. M37 P4 moved the key to 3, before the profile family
+existed, when every corpus entry gained its shot ([ADR-024](024-per-club-shot-history.md)'s M37
+addendum). `career-v3.json` added one key and moved no value, and the family was born at 3, so it
+needed no second bump. The re-record walks storage, then career, then profile, and derives each
+adopted copy from the link above it as that link will be written. A career case the gate refuses is
+passed on as committed, so the refusal does not cascade into its profile copy.
+
+### Two arithmetic choices, which are not §3's edges
+
+No CPython stands behind the profile, so nothing here is an edge in §3's sense, where a port
+disagrees with the language that recorded it. These are choices the hand cases were worked against,
+op for op, and a second port has to make the same way:
+
+- **Wilson's z is full precision, and its interval is clamped.** `stats::wilson` uses
+  `1.959963984540054`, not the career intervals' six-figure `Z_975`, which must stay as it is for
+  their bits. Its bounds are clamped into `[0, share]` and `[share, 1]`: unclamped, 10 of 10's upper
+  bound is `0.9999999999999999`, and `RateEstimate` refuses an interval that misses its own share by
+  one ulp. Newcombe (1998), Table II, method 3, is reproduced at four places.
+- **Two medians stand in Rust now, on purpose.** A club's typical shot takes
+  `stats::percentile(_, 0.5)`, `a + (b − a) × 0.5` on an even count. The mishit floor keeps
+  `statistics.median`'s `(a + b) / 2` (`docs/CONFORMANCE.md` §3's third list). The two can part in
+  the last bit, and the hand cases use the first. No judged value in them sits within 1e-9 of a
+  consistency edge except the exact edge values.
+
+**The gate holds the profile to the bit as well as to `RTOL`**, on Windows with MSVC only. The
+carried dispersions and heel/toe's interval go through `stats::pow`, the C library's `pow` (the
+sixteenth addendum), and another libm may answer a last bit differently. That second comparison is
+not redundant: a weakness ratio nudged by one ulp passes §3's `RTOL` and fails it (the plan's P9
+finding 3). **One choice is kept on reasoning, not measurement**: the player's heel/toe mean is taken
+over the whole corpus in corpus order, because the compensated `sum` can move a last bit with order,
+but no committed case shows a mean that changes with it (the plan's P7 finding 3).
+
+### What this does not change
+
+- **§1–§9**, §3's six edges, and the ten crates.
+- **ADR-008 as cargo edges.** `crates/feedback` still depends on `contracts` and `pyfmt` alone, and a
+  test now reads every workspace manifest to hold it there. `storage` still never reaches
+  `analysis`. `crates/core` is the one crate holding `analysis` and `feedback` together, as the
+  seventh addendum made it, now for the profile too.
+- **§7's rule.** Nothing Python was added or deleted. The frozen career recorder strips the two keys
+  Rust added to a corpus entry before it compares, so frozen Python still reads what Rust writes
+  ([ADR-035 clause 4](035-rust-everywhere-python-where-required.md#4-the-frozen-python-lab)).

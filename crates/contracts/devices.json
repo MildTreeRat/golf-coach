@@ -12,7 +12,12 @@
     "What one golfer's screen prints is narrower than what the device declares, because layouts",
     "vary per bay: declared ∩ the tiles the parse located (ShotProvenance.fields_present), over",
     "their own shots. capability.rs's printed_on and printed_fields are that rule.",
-    "Each entry says where its declaration came from (ADR-022: committed data carries its source)."
+    "Each entry says where its declaration came from (ADR-022: committed data carries its source).",
+    "'synthetic' is not a launch monitor (M37). It declares every ShotData reading, all analysed, so",
+    "hand-worked vectors can exercise fields no real device supplies yet: the face-impact offsets",
+    "strike location is graded from, low point, and a printed landing offline. 'mock' set the",
+    "precedent of a test device. crates/contracts/tests/capability.rs keeps it out of every vector",
+    "family that describes a real bay."
   ],
   "devices": [
     {
@@ -66,6 +71,35 @@
         { "field": "carry_distance", "use": "analysed" },
         { "field": "total_distance", "use": "analysed" },
         { "field": "apex_height", "use": "analysed" }
+      ]
+    },
+    {
+      "device": "synthetic",
+      "source": "No real device. Every ShotData reading in the struct's order (crates/contracts/src/shot.rs), all analysed, so a hand-worked shot is limited only by what it holds. Declared so the hand-worked profile vectors (spec/vectors/profile/hand/, M37 P5) can exercise what no launch monitor in use supplies yet: impact_offset_h and impact_offset_v, which strike location is graded from and which M42's full_swing entry is what makes real (docs/plans/m37-strike-profile-and-grades.md, decision 3 and call 2); low_point; and carry_offline, a printed landing. crates/contracts/tests/capability.rs holds this entry to the struct, and holds every committed storage, career, shot and screen vector to never naming it.",
+      "added": "2026-10-10, M37 P1",
+      "fields": [
+        { "field": "club_head_speed", "use": "analysed" },
+        { "field": "club_face_angle", "use": "analysed" },
+        { "field": "club_path", "use": "analysed" },
+        { "field": "ball_speed", "use": "analysed" },
+        { "field": "launch_angle", "use": "analysed" },
+        { "field": "launch_direction", "use": "analysed" },
+        { "field": "spin_rate", "use": "analysed" },
+        { "field": "spin_axis", "use": "analysed" },
+        { "field": "smash_factor", "use": "analysed" },
+        { "field": "carry_distance", "use": "analysed" },
+        { "field": "total_distance", "use": "analysed" },
+        { "field": "bounce_and_roll", "use": "analysed" },
+        { "field": "apex_height", "use": "analysed" },
+        { "field": "shot_type", "use": "analysed" },
+        { "field": "impact_position", "use": "analysed" },
+        { "field": "attack_angle", "use": "analysed" },
+        { "field": "dynamic_loft", "use": "analysed" },
+        { "field": "low_point", "use": "analysed" },
+        { "field": "impact_offset_h", "use": "analysed" },
+        { "field": "impact_offset_v", "use": "analysed" },
+        { "field": "impact_position_v", "use": "analysed" },
+        { "field": "carry_offline", "use": "analysed" }
       ]
     }
   ]

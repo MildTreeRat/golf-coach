@@ -1,0 +1,284 @@
+{
+  "career_version": 3,
+  "expected": {
+    "profile": {
+      "clubs": [],
+      "player": {
+        "grades": {
+          "n_shots": 1,
+          "strike": {
+            "dispersion": {
+              "face_to_path_deg": {
+                "bias": "withheld",
+                "caveats": [],
+                "center": null,
+                "center_ci": null,
+                "n": 1,
+                "n_sessions": 1,
+                "name": "face_to_path_deg",
+                "offset": null,
+                "pattern": null,
+                "points_at": null,
+                "scatter": "withheld",
+                "sd": null,
+                "sd_ci": null,
+                "source": "launch_monitor:hd_golf",
+                "target": 0.0,
+                "tolerance": 2.0,
+                "unavailable": [],
+                "unit": "degrees",
+                "withheld": [
+                  {
+                    "claim": "center",
+                    "have_n": 1,
+                    "have_sessions": 1,
+                    "need_n": 5,
+                    "need_sessions": 1,
+                    "reason": "a typical value for this golfer needs 5 samples (there are 1)"
+                  },
+                  {
+                    "claim": "spread",
+                    "have_n": 1,
+                    "have_sessions": 1,
+                    "need_n": 10,
+                    "need_sessions": 1,
+                    "reason": "a claim about how repeatable this is needs 10 samples (there are 1)"
+                  }
+                ],
+                "within_session_sd": null
+              }
+            }
+          },
+          "topics": [],
+          "untagged_shots": 1
+        },
+        "list": []
+      },
+      "player_id": "aaron"
+    },
+    "report": "\nAaron  (aaron)\n------------------------------------------------------------------------\n  Each grade is the share of tracked shots that met its topic, with a 95% interval, and is\n  withheld below 10 judged shots. Launch-monitor numbers only: mechanics is not graded here.\n\n  No tracked shot photo names a club, so only the player's grades follow.\n\n  all clubs  (each shot judged by its own club's criterion)\n    shots     1 tracked shot photo across the bag, 1 naming no club, which count toward strike\n              location and the shapes, whose criteria need no club, and toward nothing else\n    spread    face_to_path_deg        withheld: a claim about how repeatable this is needs 10\n                                      samples (there are 1)\n    topics    none: these shots print the inputs of no topic, so there is nothing to grade\n    list      nothing is established either way yet\n"
+  },
+  "id": "profile/corpus/storage-conflicting-shot-photos",
+  "input": {
+    "bag": null,
+    "corpus": {
+      "analyzed_without_measurements": 0,
+      "excluded": [
+        {
+          "detail": "face-on bytes clip-a are already in 2026-08-07/1 — the same swing uploaded again, not a second swing",
+          "reason": "duplicate",
+          "session_id": "2026-08-08",
+          "swing_id": "1"
+        },
+        {
+          "detail": "face-on bytes clip-a are already in 2026-08-07/1 — the same swing uploaded again, not a second swing",
+          "reason": "duplicate",
+          "session_id": "2026-08-09",
+          "swing_id": "1"
+        },
+        {
+          "detail": "face-on bytes clip-a are already in 2026-08-07/1 — the same swing uploaded again, not a second swing",
+          "reason": "duplicate",
+          "session_id": "2026-08-10",
+          "swing_id": "1"
+        },
+        {
+          "detail": "face-on bytes clip-a are already in 2026-08-07/1 — the same swing uploaded again, not a second swing",
+          "reason": "duplicate",
+          "session_id": "2026-08-11",
+          "swing_id": "1"
+        },
+        {
+          "detail": "face-on bytes clip-b are already in 2026-08-07/2 — the same swing uploaded again, not a second swing",
+          "reason": "duplicate",
+          "session_id": "2026-08-08",
+          "swing_id": "2"
+        }
+      ],
+      "metric_counts": {
+        "face_to_path_deg": 1,
+        "head_sway_norm": 2
+      },
+      "other_golfers": 0,
+      "outdated_swings": 0,
+      "player_id": "aaron",
+      "sessions_scanned": 5,
+      "swing_dirs_seen": 7,
+      "swings": [
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-07T12:00:00Z",
+          "club": null,
+          "conflicting_shots": [
+            "shot-b",
+            "shot-c"
+          ],
+          "duplicates": [
+            "2026-08-08/1",
+            "2026-08-09/1",
+            "2026-08-10/1",
+            "2026-08-11/1"
+          ],
+          "face_on_sha256": "clip-a",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "test",
+              "name": "head_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.25
+            },
+            {
+              "detail": "test",
+              "name": "face_to_path_deg",
+              "source": "launch_monitor:hd_golf",
+              "unit": "degrees",
+              "value": 13.2
+            }
+          ],
+          "missing_roles": [],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-07",
+          "shot": {
+            "apex_height": null,
+            "attack_angle": null,
+            "ball_speed": null,
+            "bounce_and_roll": null,
+            "carry_distance": null,
+            "carry_offline": null,
+            "club_face_angle": 8.6,
+            "club_head_speed": null,
+            "club_path": -4.6,
+            "dynamic_loft": null,
+            "impact_offset_h": null,
+            "impact_offset_v": null,
+            "impact_position": null,
+            "impact_position_v": null,
+            "launch_angle": null,
+            "launch_direction": null,
+            "low_point": null,
+            "provenance": {
+              "corrections": {},
+              "device": "hd_golf",
+              "fields_present": null,
+              "image_path": null,
+              "image_sha256": null,
+              "needs_review": false,
+              "parse_confidence": 0.95,
+              "parser_version": 0,
+              "raw_fields": {},
+              "warnings": []
+            },
+            "session_id": "2026-08-10",
+            "shot_id": "test-1",
+            "shot_type": null,
+            "smash_factor": null,
+            "source": "screen",
+            "spin_axis": null,
+            "spin_rate": null,
+            "timestamp": "2026-08-10T01:39:00Z",
+            "total_distance": null
+          },
+          "shot_needs_review": false,
+          "shot_sha256": "shot-a",
+          "stale": false,
+          "swing_id": "1"
+        },
+        {
+          "analysis_version": 16,
+          "analyzed": true,
+          "auto_mishit": false,
+          "captured_at": "2026-08-07T12:00:00Z",
+          "club": null,
+          "conflicting_shots": [
+            "shot-z"
+          ],
+          "duplicates": [
+            "2026-08-08/2"
+          ],
+          "face_on_sha256": "clip-b",
+          "manual_mishit": null,
+          "measurements": [
+            {
+              "detail": "test",
+              "name": "head_sway_norm",
+              "source": "pose:face_on",
+              "unit": "shoulder_widths",
+              "value": 0.25
+            },
+            {
+              "detail": "test",
+              "name": "face_to_path_deg",
+              "source": "launch_monitor:hd_golf",
+              "unit": "degrees",
+              "value": 13.2
+            }
+          ],
+          "missing_roles": [
+            "shot_screen"
+          ],
+          "outdated": false,
+          "player_id": "aaron",
+          "session_id": "2026-08-07",
+          "shot": {
+            "apex_height": null,
+            "attack_angle": null,
+            "ball_speed": null,
+            "bounce_and_roll": null,
+            "carry_distance": null,
+            "carry_offline": null,
+            "club_face_angle": 8.6,
+            "club_head_speed": null,
+            "club_path": -4.6,
+            "dynamic_loft": null,
+            "impact_offset_h": null,
+            "impact_offset_v": null,
+            "impact_position": null,
+            "impact_position_v": null,
+            "launch_angle": null,
+            "launch_direction": null,
+            "low_point": null,
+            "provenance": {
+              "corrections": {},
+              "device": "hd_golf",
+              "fields_present": null,
+              "image_path": null,
+              "image_sha256": null,
+              "needs_review": false,
+              "parse_confidence": 0.95,
+              "parser_version": 0,
+              "raw_fields": {},
+              "warnings": []
+            },
+            "session_id": "2026-08-10",
+            "shot_id": "test-1",
+            "shot_type": null,
+            "smash_factor": null,
+            "source": "screen",
+            "spin_axis": null,
+            "spin_rate": null,
+            "timestamp": "2026-08-10T01:39:00Z",
+            "total_distance": null
+          },
+          "shot_needs_review": false,
+          "shot_sha256": null,
+          "stale": false,
+          "swing_id": "2"
+        }
+      ],
+      "unattributed_swings": 0,
+      "unknown_sources": []
+    },
+    "display_name": "Aaron"
+  },
+  "provenance": {
+    "kind": "profile",
+    "note": "career/synthetic/storage-conflicting-shot-photos's corpus: two swings that each carry a shot printing nothing, one on photo shot-a and one with no photo hash. A shot is a photo, so the profile holds 1 shot, untagged, and the swing with no photo is none. Nothing is printed, so no topic exists for anyone, and the report is the nothing-graded branch over a non-empty corpus. Recorded by Rust, not worked: no hand and no Python stands behind this case (oracle rust, the M37 plan's call 18), so its correctness rests on the hand cases under profile/hand/, and what it pins is stability, a recorded corpus through every builder and the profile report's text, which no hand case carries.",
+    "oracle": "rust",
+    "source": "spec/vectors/career/synthetic/storage-conflicting-shot-photos.json, input.bag, input.corpus and input.display_name, adopted whole (golf-core rerecord derives them from that career case as it writes it). expected is golf_core::profile_family::run_profile_case's answer, written once by M37 P11."
+  }
+}

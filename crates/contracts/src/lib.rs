@@ -62,7 +62,10 @@
 //! hold a `datetime`, and this is what every one of those fields is here, gated by a format table
 //! recorded from pydantic. **[`shot_result`] is the third** (M35 P1): one shot analysed from its
 //! photo, `shot_analysis.json`, the artifact the photo-side `unscored` reasons are written into
-//! because `analysis.json` is read by frozen Python with a closed enum.
+//! because `analysis.json` is read by frozen Python with a closed enum. **[`strike`] is the fourth**
+//! (M37 P1): a golfer's shots graded per club and per player, ADR-034 §5, the first analysis
+//! designed after the pivot and so the first with no Python behind it at all, its vectors worked by
+//! hand rather than recorded.
 //!
 //! # Pydantic constraints are runtime checks, and so are these
 //!
@@ -127,6 +130,7 @@ pub mod pivots;
 pub mod placements;
 pub mod shot;
 pub mod shot_result;
+pub mod strike;
 pub mod swing;
 pub mod time;
 pub mod unscored;

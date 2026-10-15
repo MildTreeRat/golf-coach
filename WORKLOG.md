@@ -5,6 +5,114 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-10-15 — M37 P13: the graded profile in Rust
+
+**Duration**: 2026-10-10 to 2026-10-15, fourteen phases (P0–P13). M37 goes ✅ **14/14** and the
+milestone is closed, in one commit onto `main`. It is the first analysis written Rust first with no
+Python behind it at all, so its oracle is hand-worked cases, and the first vectors whose values were
+born from Rust's own run.
+
+**To pick up where this left off, read the findings in `docs/plans/m37-strike-profile-and-grades.md`**,
+not this entry. Then read [ADR-034's M37 addendum](docs/decisions/034-shot-first-phone-first.md) for
+the criteria as built, [ADR-024's](docs/decisions/024-per-club-shot-history.md) for the corpus
+carrying the shot, ADR-032's seventeenth for the third kind of oracle and the oracle pin, and
+`docs/CONFORMANCE.md` §2's Profile section for the family.
+
+**What was built.**
+- **The shapes and constants** (P1, `crates/contracts/src/strike.rs`, no Python twin): the strike
+  profile, the topic grades, `RateEstimate`, the blends and the list's entries, plus
+  `CENTERED_RADIUS_MM`, `CONSISTENCY_FRACTION`, `RATE_MINIMUM_N` and `STAT_SCOPES`, the table saying
+  which statistics are club-only and which are club-independent. A `synthetic` device in
+  `crates/contracts/devices.json` declares every reading analysed, so the hand cases reach what no
+  device in use prints; a pin keeps it out of every family that describes a real bay.
+- **The corpus carries the shot** (P3–P4). `CorpusSwing` gains `shot` and `shot_unscored` (the
+  artifact's refusals less every `CHECKPOINT_REGISTRY` name), lifted off the survivor's artifact and
+  written only when set. `CAREER_VERSION` 2 → 3, and `spec/declarations/career-v3.json` moved only
+  declared paths: `shot` added, `career_version` moved, nothing pooled moved.
+- **The grades** (P2, P6–P7, `crates/analysis/src/strike.rs`). The Wilson interval, the per-shot
+  judgments, each club's profile and six topics (strike location, consistency, low point, fade,
+  draw, straight), the player's pooled grades with each shot judged by its own club's criterion, and
+  the club and player blends. A topic exists only where its input is analysed on the device (and a
+  shape only where one was declared); it is graded from 10 judged shots, and a blend averages graded
+  topics only and is absent rather than zero when none is.
+- **The list** (P8, `crates/feedback/src/profile_rules.rs`). `rank_profile` and `rank_player`,
+  written to ADR-034 §5.7: established weaknesses ranked by ratio to tolerance, strengths only on an
+  equivalence claim. `feedback` still does not depend on `analysis`.
+- **The join and the verb** (P9–P10, `crates/core/src/profile.rs`, `profile_family.rs`,
+  `reports/profile.rs`). `run_profile(corpus, bag) -> GradedProfile` and the sixth career verb,
+  `golf-core profile --name <golfer> [--club <club>] [--json]`. `--verbose` is refused, `--club`
+  narrows the text and not the JSON, and an unregistered id exits 0 with "nothing to grade".
+- **A tenth vector family, `spec/vectors/profile/`** (P5, P11). Nine hand cases (`oracle: "hand"`),
+  crossing the straight edge from both sides with a left-handed shot, and six corpus cases
+  (`oracle: "rust"`) adopted from the career cases whose corpora carry a shot, the chain now storage
+  → career → profile. It ages on `CAREER_VERSION`, so a `career-v<N>` declaration re-records three
+  families. The pin that every family names its oracle holds: `audio` and `format` are named
+  `python` in `crates/core/tests/rerecord.rs`' `ORACLE_BY_FAMILY`, with their files untouched, as
+  the user answered P11 finding 3.
+- **Python changed in conformance tooling only**: `scripts/conformance.py` (`check` defers the
+  profile family), `scripts/conformance_vectors.py` (`_RUST_ONLY_SWING_KEYS`: the frozen recorder
+  compares corpora without the two keys its `CareerCorpus` has no field for, as the user answered
+  P5 finding 12) and `tests/test_conformance.py`. `src/` is untouched, and so is `data/`.
+
+**What real data shows** (`golf-core profile --name Aaron` over `data/`, P10, re-run at P13 and
+unchanged). Two clubs, 3w (6 shots) and 7i (5), each with consistency alone and withheld. Strike
+location, low point and every shape are absent. The player pools 13 shots (2 naming no club), and
+its consistency is **graded at 55% (6 of 11), 95% CI 28% .. 79%**, so the first grade real data
+shows is the player's: pooling reaches the floor where no club does, because each shot is judged by
+its own club's median. That is ADR-034 §5.4's design, not a defect. The list names face-to-path's
+bias (3.80× tolerance) and scatter (3.07×) and start line's scatter (2.01×).
+
+**What M42, M38 and M29 should know.**
+- **Strike location waits on M42.** It is graded only from `impact_offset_h/v`, never from HD
+  Golf's printed `CENTER`/`HEEL`/`TOE` word, and a topic exists only where its input is analysed on
+  the shot's device. So it appears on real data when M42's reader fills the offsets **and**
+  `devices.json` gains a `full_swing` entry declaring them; whether a value read off the impact
+  video counts as "printed" is M42's to settle (ADR-034 §2).
+- **`CENTERED_RADIUS_MM` is M42's to revise**, from its reader's measured error. It also sets the
+  impact grid's bins (call 10). It is a `contracts` constant the profile family's outputs depend on,
+  so moving it moves profile vectors under `CAREER_VERSION`.
+- **The shapes' on-line share is withheld on HD Golf** until a spin axis is printed: the projected
+  landing needs one, and it reaches 2 of the 13 stored shots. Only "hit the shape" shows meanwhile.
+  A printed landing offline from the `Custom` tile would replace the projection with no code change.
+  No stored shot was declared `shot_shaping`, so no shape topic exists on `data/` at all;
+  `set-intent` is what declares one.
+- **`get_strike_profile` is M29's**, a tool of its `rmcp` server (call 16). `golf-core profile
+  --json` is the shape it reads: an array of `display_name` and `profile`.
+- **The phone reads `GradedProfile` through the bridge (M38).** It has no schema, as no career
+  shape does (call 14); its round trip is pinned in `crates/contracts/tests/strike.rs`.
+- **A later `career-v<N>` that gives `CorpusSwing` a key frozen Python has no field for** belongs
+  in `_RUST_ONLY_SWING_KEYS`, and only the full pytest reaches the tests that fail otherwise (P5
+  finding 14).
+
+**Left open.**
+- **`storage/corpus/real.json.gz`'s slimmed analyses keep no `unscored`** (P12 finding 3), so the
+  real case and its adopted copies carry no `shot_unscored`, where Rust's `read_corpus` over `data/`
+  lifts it onto 11 of 13 entries. It moves no grade today, since no shape topic exists on real data.
+  Named in CONFORMANCE's storage section, not fixed.
+- **The strengths' tie-break is unpinnable today** (P8 finding 6): the three metrics that can be
+  strengths sort the same alphabetically and in `METRIC_TARGETS`, so the test pins the outcome.
+- **The `audio` and `format` files carry no `oracle` key.** The pin names them in its own table, and
+  fails if a file starts carrying the key.
+- `docs/ARCHITECTURE.md`'s banner still says "reviewed 2026-09-27", and M35's and M36's other open
+  items stand as their entries describe them.
+
+All verify commands are green. `cargo test` passed 1,254 tests over 68 suites (1 ignored, the
+existing `clip::Cutter` doc-test). `cargo clippy --all-targets` has 0 warnings and `cargo fmt
+--check` is clean. `pytest`, run alone, passed 2,055, `ruff` is clean and `mypy` is clean over 118
+files. `conformance.py check` passes and defers the storage (76), career (56), shot (25) and profile
+(15) families to `cargo test`, beside the audio, stage, format and screen families. The v17 dry run
+reports 67 vectors run (21 engine, 21 stage, 25 shot), 0 changed, and the `career-v3` dry run 147
+(76 storage, 56 career, 15 profile), 0 changed, each writing 0 files. `git diff -- src/` is empty,
+the engine, stage, shot, screen, audio and format families are untouched, and the `data/` digest is
+still P1's (`bd384cc4…`, 192 files).
+
+**Next**: the user's order. M29, the lab port, needs nothing more, and M38's export import and M40
+wait on it. M41 is free and starts with new photos of the course-play screen, and M42 with sample
+Live Photos of Full Swing shots. M33, the Apple Vision spike, still runs early on purpose and needs
+a Mac, and so does M38's skeleton.
+
+---
+
 ## 2026-10-10 — M35 P13: shot-first sessions in Rust
 
 **Duration**: two days, fourteen phases (P0–P13). M35 goes ✅ **14/14** and the milestone is closed,

@@ -1,23 +1,23 @@
 {
-  "career_version": 2,
+  "career_version": 3,
   "expected": {
     "corpus": {
       "analyzed_without_measurements": 0,
       "excluded": [
         {
-          "detail": "no analysis.json \u2014 run scripts/analyze_bundle.py over it",
+          "detail": "no analysis.json — run scripts/analyze_bundle.py over it",
           "reason": "not_analyzed",
           "session_id": "2026-08-28",
           "swing_id": "3"
         },
         {
-          "detail": "hit as a drill, which feeds no club or player stat and no mechanics baseline \u2014 clear its intent with golf-core set-intent if it should count",
+          "detail": "hit as a drill, which feeds no club or player stat and no mechanics baseline — clear its intent with golf-core set-intent if it should count",
           "reason": "untracked",
           "session_id": "2026-08-28",
           "swing_id": "1"
         },
         {
-          "detail": "no shot_analysis.json \u2014 run golf-core run-shot over its session",
+          "detail": "no shot_analysis.json — run golf-core run-shot over its session",
           "reason": "not_analyzed",
           "session_id": "2026-08-28",
           "swing_id": "2"
@@ -111,6 +111,17 @@
     "kind": "storage",
     "note": "Versions {installed 17, comparable_from 14}: three 7i entries in 2026-08-28, none analyzed, worked to pin two orders call 6 leaves to the reader. 1 is a photo entry (photo-28-1) hit as a drill, with no shot_analysis.json; 2 a photo entry (photo-28-2) with no intent and no shot_analysis.json; 3 a swing (clip-28-3) with no analysis.json. First, untracked is decided off the survivor's manifest before any artifact is read, so 1 is named once, untracked, and never not_analyzed: a drill is not work waiting on a pipeline run. Second, excluded holds the clip groups' exclusions before the photo groups', each kind in first-scan order, because a photo entry's cross-kind dedupe needs every surviving swing first: so 3, scanned last, comes first, then 1, then 2. Ordering both kinds together by first scan would give 1, 2, 3. The two not_analyzed sentences differ by kind: the swing's names analysis.json and scripts/analyze_bundle.py, the photo entry's shot_analysis.json and golf-core run-shot. swings is by instant: 2 (a photo entry, face_on_sha256 null, missing_roles [face_on, down_the_line]) then 3 (shot_sha256 null, missing_roles [down_the_line, shot_screen]), both at analysis_version 0. Nothing is measured, so metric_counts is empty and analyzed_without_measurements 0 (neither counts toward the metrics); distinct_shots is 1, photo-28-2, since the drill's photo is in no swing.",
     "oracle": "hand",
+    "rerecords": [
+      {
+        "added": [],
+        "by": "golf-core rerecord",
+        "career_version": 3,
+        "declaration": "spec/declarations/career-v3.json",
+        "moved": [
+          "career_version"
+        ]
+      }
+    ],
     "source": "worked by hand in M35 P9, the M35 plan's call 8, against its call 6 and P9's findings, before M35 P10's read_corpus follows them; each tree spelled as M36 P14's hand cases spell theirs, and each shot_analysis.json a ShotResult as crates/storage::state::save_shot_analysis writes one",
     "worked_against": "scripts/conformance_vectors.py::_run_corpus"
   }

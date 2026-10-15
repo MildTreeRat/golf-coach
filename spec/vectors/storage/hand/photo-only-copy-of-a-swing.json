@@ -1,11 +1,11 @@
 {
-  "career_version": 2,
+  "career_version": 3,
   "expected": {
     "corpus": {
       "analyzed_without_measurements": 0,
       "excluded": [
         {
-          "detail": "shot photo c6f43d876915 is already in 2026-08-17/2, beside that swing's video \u2014 one ball flight, so the copy with the video is the one kept",
+          "detail": "shot photo c6f43d876915 is already in 2026-08-17/2, beside that swing's video — one ball flight, so the copy with the video is the one kept",
           "reason": "duplicate",
           "session_id": "2026-08-17",
           "swing_id": "1"
@@ -102,6 +102,17 @@
     "kind": "storage",
     "note": "Versions {installed 17, comparable_from 14}: the same screen photo (c6f43d876915..., a real SHA-256 of the text photo-17-1, so that the sentence's 12-character cut is pinned) saved twice in 2026-08-17: first on its own as photo entry 1 (12:01, shot_analysis.json at 17, carry 150, ball_speed 110), then beside a face-on clip in swing 2 (12:02, clip-17-2, analysis.json at 17: head_sway_norm 0.2, carry 150, ball_speed 110). Decision 4: one ball flight, and the copy with video counts, though the photo-only copy arrived first. Call 6: a surviving photo entry whose photo is a surviving swing's shot_sha256 is a duplicate of that swing, named with its own sentence. It is not added to swing 2's duplicates, which lists re-uploads of its clip (the report prints those as face_on lines), so duplicates_collapsed is 0 and the copy is named in excluded alone. Swing 2 pools as any swing: each metric n = 1, missing_roles [down_the_line].",
     "oracle": "hand",
+    "rerecords": [
+      {
+        "added": [],
+        "by": "golf-core rerecord",
+        "career_version": 3,
+        "declaration": "spec/declarations/career-v3.json",
+        "moved": [
+          "career_version"
+        ]
+      }
+    ],
     "source": "worked by hand in M35 P9, the M35 plan's call 8, against its call 6 and P9's findings, before M35 P10's read_corpus follows them; each tree spelled as M36 P14's hand cases spell theirs, and each shot_analysis.json a ShotResult as crates/storage::state::save_shot_analysis writes one",
     "worked_against": "scripts/conformance_vectors.py::_run_corpus"
   }
