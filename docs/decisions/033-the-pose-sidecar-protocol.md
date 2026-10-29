@@ -16,7 +16,7 @@ whole corpus agrees**: P7 replayed all 30 stored clips and found **0 differing v
 The first *caller* was to be M24, then M40's, and is now M29's Rust lab CLI; the fifth and sixth
 addenda say why.
 
-**Six addenda at the foot, and the fourth is the closing one.** The first settles clause 4's open
+**Seven addenda at the foot, and the fourth is the closing one.** The first settles clause 4's open
 field and three things the worker had to decide; the second settles what clause 9 means by "answer"
 and fills in clause 6's numbers — **and corrects one sentence of clause 6**, so read it before
 trusting that clause's account of what each timeout catches; the third carries the corpus measurement
@@ -26,7 +26,9 @@ measured pool size, and the coverage this sidecar does *not* have. The fifth is
 [ADR-034](034-shot-first-phone-first.md)'s: the sidecar is **laptop-only**, because the phone has no
 Python, and nothing in the protocol changes. The sixth is
 [ADR-035](035-rust-everywhere-python-where-required.md)'s: M29's lab CLI is the first caller, the
-Python keypoints writer lasts until M40, and nothing in the protocol changes either.
+Python keypoints writer lasts until M40, and nothing in the protocol changes either. The
+seventh is M29's: the lab is that caller now, with five departures from the Python pipeline,
+and no `sidecar/` package until M40.
 [docs/plans/m23-pose-sidecar.md](../plans/m23-pose-sidecar.md) is the phase order and the per-phase
 findings.
 
@@ -550,8 +552,8 @@ the committed `face_on.keypoints.json`.
 ## Addendum, 2026-09-27 — the corpus agrees: 5,757,660 values, none of them different
 
 **M23 P7 replayed all 30 stored clips through `golf-pose` and diffed each against the keypoints file
-the Python pipeline left on disk.** The harness is `scripts/pose_replay.py`, the precedent is
-`scripts/trigger_replay.py`, and this is the measurement the "Consequences" section promised in place
+the Python pipeline left on disk.** The harness is `archive/pose_replay.py`, the precedent is
+`archive/trigger_replay.py`, and this is the measurement the "Consequences" section promised in place
 of a conformance vector family. Nothing in the protocol changed; one of P6's measurements is
 narrowed, and clause 6's default is confirmed conservative.
 
@@ -660,7 +662,7 @@ anything here noticing.
 pydantic's declaration order, so one flag would make the two files byte-identical. It is a
 workspace-wide change to every `Value`'s map type, made for a property this clause says the repo does
 not need, and it would buy agreement for a *second* reason a dependency owns. Left off, and
-`scripts/pose_replay.py` compares key *sets* rather than key order for the same reason.
+`archive/pose_replay.py` compares key *sets* rather than key order for the same reason.
 
 ### Clause 7 gained two pieces of API it does not name, and clause 5 was implemented literally
 
@@ -703,7 +705,7 @@ Per-clip throughput over the whole corpus ran **9.5–10.7 fps**, so the **9.2**
 below every one of the 30 clips and `MARGIN = 3` is untouched.
 
 `DEFAULT_POOL_SIZE` is **2**, measured on 2026-09-27 over the 6 shortest corpus clips — 2,899 frames
-of 4K portrait — through one pool at each width (`scripts/pose_replay.py --shortest 6 --sweep 1,2,4`,
+of 4K portrait — through one pool at each width (`archive/pose_replay.py --shortest 6 --sweep 1,2,4`,
 9.7 minutes of runs):
 
 | workers | pose | throughput | speedup | aggregate CPU | cores busy | peak RSS |
@@ -875,3 +877,36 @@ that could meet it, and whether M29 measures it is M29's plan.
 - **The fifth addendum**: the sidecar is laptop-only, and a failed M39 gate gives it a second source
   of clips rather than a new protocol.
 - **The fourth addendum's list of the coverage this sidecar does not have.** It is still owed by M40.
+
+## Addendum, 2026-10-29 — the lab is the first caller, five departures from the Python pipeline, and no `sidecar/` package
+
+M29 built the previous addendum's first caller. `golf_lab::pose::keypoints_for` (M29 P22) is
+`api/pipeline.py`'s pose step in Rust: the cache rule on the clip's sha256, every log line and every
+note the Python writes, over `crates/pose`'s pool. It writes `{role}.keypoints.json` through
+`storage::keypoints_io`, since the worker refuses to write. On the 30 stored views every one was a
+cache hit and nothing was spawned. One forced run on the smallest clip reproduced its 344 frames
+exactly. `Outcome::Done` gained the acceptance's count, for the lab's log line. **None of the nine
+clauses changed.**
+
+**Five departures from the Python pipeline**, each because the boundary can see what in-process
+Python could not (the M29 plan's P22 finding 2):
+
+- **"Cannot pose" is the pool failing to start**: no interpreter, the `vision` extra or the model
+  absent, a bad variant, or a protocol mismatch. That is Python's `ImportError` branch, and its reason
+  is `PoseError`'s text, so three sentences are new.
+- **A job failure is an error**, after clause 5's one retry where it allows one, except
+  `clip_empty`, which is Python's "no frames" note.
+- **The stamp is the manifest's**, and two checks are new: a worker hash that differs from the
+  manifest's is a note, and a worker estimator that differs is refused, because an artifact stamped
+  with an instrument that did not measure it is what the cache key exists to prevent.
+- **The variant is not validated in Rust.** `resolve_variant` owns the list (clause 2), so a typo
+  reaches the lab as the worker's `bad_variant`, and every view keeps its older pose with a note.
+- **`.env` is not read**, as `golf-core` reads none, and an empty variable counts as unset.
+
+**The pool runs at its defaults** (the plan's C3). The fourth addendum's named cost, a bad path
+spending a warm interpreter, was not measured: the lab poses stored clips offline, and the
+live-session measurements stay M40's.
+
+**No `sidecar/` package in M29** (the plan's D12, ADR-035's M29 addendum). M29 deletes only what the
+frozen server does not import, and a package would move files that server imports, so the question
+is M40's. `scripts/run_pose.py` is deleted, and `golf-pose run` poses one clip.

@@ -6,7 +6,7 @@ It is still measuring, not judging — nothing here reads a band, a basis or a q
 `benchmarks/trajectory.py` is what turns the vector into a placement.
 
 **This module is the single implementation, and that is deliberate.** The fitting script
-(`scripts/golfdb/derive_trajectory_model.py`) imports it rather than keeping a numpy copy, because
+(`archive/golfdb/derive_trajectory_model.py`) imports it rather than keeping a numpy copy, because
 a feature vector built two ways is a model scored against numbers that were never fitted to it —
 a failure that produces plausible output and no error. The script's only extra step is GolfDB's
 pixel-aspect correction, which belongs to that corpus rather than to this transform.

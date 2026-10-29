@@ -96,14 +96,19 @@
 //! through [`crate::run`] and [`run_stages`], and since M35 P6 the shot family, run through
 //! [`run_shot`] — under the engine's key because every number a shot case holds is the engine's
 //! (the M35 plan's call 7), so a bump that moves a swing's shot row moves its shot case's in the
-//! same run, or the gate refuses it. `screen_parser_version` is the screen family's, the
+//! same run, or the gate refuses it. Since M29 P19 it walks the selection family after the shot
+//! family, run through [`run_selection`], because which descent a clip is windowed on is the
+//! engine's rule, and then the mcp family, because `simulate_flight` answers from the engine's
+//! flight model ([`walk_mcp`]'s doc). `screen_parser_version` is the screen family's, the
 //! documents under `vectors/screen/`, run through [`run_screen`]. `career_version` is the many-shot
 //! layer's (M36 P13, the M36 plan's decision 8): the storage and career families together, run
-//! through [`run_storage`] and [`run_career`], the runners their gates call, and since M37 P11 the
-//! profile family after them, run through [`run_profile_case`] (the M37 plan's call 1). One key for
-//! three families, because each adopts the one before it (a career twin's corpus is a storage
-//! case's answer, and a profile corpus case's input is a career case's), so a change to what the
-//! reader produces moves all three ([`CAREER_VERSION`]'s doc). A run never reads another key's files, so
+//! through [`run_storage`] and [`run_career`], the runners their gates call, since M37 P11 the
+//! profile family after them, run through [`run_profile_case`] (the M37 plan's call 1), and since
+//! M29 P15 the mcp family last, answered by the `golf-mcp` binary ([`walk_mcp`], the M29 plan's
+//! call 1). One key for four families, because each of the first three adopts the one before it (a
+//! career twin's corpus is a storage case's answer, and a profile corpus case's input is a career
+//! case's), and the server's tools read the corpus, the bag and the aggregates the three hold, so a
+//! change to what the reader produces moves all four ([`CAREER_VERSION`]'s doc). A run never reads another key's files, so
 //! a screen re-record cannot move an engine vector, nor a career one a screen vector: each key ages
 //! a different record, and a declaration describes one version's change of one of them. Everything
 //! else — the gate, [`apply`], [`ledger`], the typo guard and the writer — is the same code for all
@@ -115,11 +120,12 @@
 //!
 //! [`plan`] walks one family and does everything but write. For an engine declaration that is the
 //! engine family (`vectors/synthetic/`, `vectors/corpus/`), the stage family
-//! (`vectors/stages/{synthetic,corpus}/`) and then the shot family (`vectors/shot/`, flat, M35 P6);
+//! (`vectors/stages/{synthetic,corpus}/`), the shot family (`vectors/shot/`, flat, M35 P6), the
+//! [`SELECTION_DOCUMENTS`] under `vectors/selection/` and then the [`MCP_DOCUMENTS`] (M29 P19);
 //! for a screen declaration, the [`SCREEN_DOCUMENTS`] under
 //! `vectors/screen/`; for a career declaration, the [`STORAGE_DOCUMENTS`] under `vectors/storage/`,
-//! the [`CAREER_DOCUMENTS`] under `vectors/career/` and then the [`PROFILE_DOCUMENTS`] under
-//! `vectors/profile/` (M37 P11).
+//! the [`CAREER_DOCUMENTS`] under `vectors/career/`, the [`PROFILE_DOCUMENTS`] under
+//! `vectors/profile/` (M37 P11) and then the [`MCP_DOCUMENTS`] under `vectors/mcp/` (M29 P15).
 //!
 //! - **The version guard first** (call 6): a declaration not at its family's constant —
 //!   [`ANALYSIS_VERSION`], [`SCREEN_PARSER_VERSION`] or [`CAREER_VERSION`] — is refused before a
@@ -137,6 +143,10 @@
 //!   `tests/shot.rs` holds the case to [`run_shot`] and `crates/analysis/tests/shot.rs`' Decision-12
 //!   pin holds [`run_shot`]'s engine to the corpus vector — so a declaration that moves the one row
 //!   and not the other is refused at the row it forgot (`walk_shot`'s doc).
+//! - **Each selection case** is run through [`run_selection`], gated, applied and ledgered. Since
+//!   M29 P25 every call is answered, `_auto_windows` included, so nothing is carried; a call the
+//!   runner does not answer would be carried as committed, and refused if a call it is built from
+//!   moved (`walk_selection`'s doc).
 //! - **Each storage document** is run through [`run_storage`], gated, applied and ledgered. **Each
 //!   career document** is run through [`run_career`], with the report text of each script no
 //!   renderer runs yet carried as committed
@@ -145,6 +155,10 @@
 //!   the storage family's counterpart of the compose check (`walk_career`'s doc). **Each profile
 //!   case** is run through [`run_profile_case`], and a corpus case, whose input is a career case's,
 //!   is run on that career case's input *as it will be written*, one link further (M37 P11).
+//! - **Each mcp case**, under a career declaration and under an engine one, is answered by
+//!   `golf-mcp answer-case`, a process, because nothing may depend on `golf-mcp`; it is gated against the committed answers as that server answers them
+//!   on purpose and written back onto the committed ones, so `golf_mcp::family::DECLARED`'s paths
+//!   keep frozen Python's values in the file (M29 P15, [`walk_mcp`]'s doc).
 //! - **Every refusal across the run is collected**, and one anywhere means [`plan`] returns no
 //!   [`Run`] at all — so nothing can be written anywhere (call 7). A reviewer fixes a declaration
 //!   once, from one red report.
@@ -193,6 +207,7 @@ use std::fmt::{self, Write as _};
 use std::fs;
 use std::io::{Read as _, Write as _};
 use std::path::{Component, Path, PathBuf};
+use std::process::{Command, Stdio};
 
 use contracts::career::CAREER_VERSION;
 use contracts::shot::SCREEN_PARSER_VERSION;
@@ -210,6 +225,7 @@ use serde_json::{json, Map, Serializer, Value};
 use crate::career_family::{adopted_from, carry, run_career};
 use crate::compare::{compare, Difference, DifferenceKind};
 use crate::profile_family::{self, run_profile_case, ADOPTED};
+use crate::selection_family::{self, run_selection};
 use crate::stages::{run_stages, verify_compose};
 use crate::storage_family::run_storage;
 use crate::{run_shot, ShotInput, VectorInput};
@@ -226,6 +242,12 @@ pub const RERECORDED_BY: &str = "golf-core rerecord";
 /// key before M32 (M32 P0), so the first re-record is what writes it — and never over a value
 /// already there, since a later family may name another oracle on purpose.
 pub const PYTHON_ORACLE: &str = "python";
+
+/// What `provenance.oracle` says on a vector Rust's own run recorded, with nothing independent
+/// behind it: ADR-032's twelfth addendum's third kind, as `profile/corpus/` and `mcp/rust/` carry
+/// it, and what `golf-lab build-vectors` writes into every vector it builds (M29 P30). The ledger
+/// keeps it, because [`ledger`] writes [`PYTHON_ORACLE`] only where no oracle is named.
+pub const RUST_ORACLE: &str = "rust";
 
 /// One step of a [`LedgerPath`]: into an object by key, or into a list by index.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -800,6 +822,17 @@ pub const STAGES: &str = "stages";
 /// family under `analysis_version`. [M35 P6]
 pub const SHOT: &str = "shot";
 
+/// The selection family's directory under `spec/vectors/`, and the `provenance.kind` its files
+/// carry. Re-recorded with the engine family under `analysis_version`, after the shot family
+/// (the M29 plan's call 1). [M29 P19]
+pub const SELECTION: &str = selection_family::KIND;
+
+/// The selection sub-families an engine declaration re-records, in this order, each answered by
+/// [`run_selection`]: `rules/` (the rules over the tests' clips), `windows/` (the pipeline's picks
+/// over its tests' bundles) and `corpus/` (the stored bundles), all recorded once from frozen
+/// Python (M29 P18). Every entry under `vectors/selection/` must be one of these. [M29 P19]
+pub const SELECTION_DOCUMENTS: [&str; 3] = ["rules", "windows", "corpus"];
+
 /// The screen family's directory under `spec/vectors/`, and the `provenance.kind` every one of its
 /// files carries, whichever sub-family it sits in. [M34 P7]
 pub const SCREEN: &str = "screen";
@@ -856,6 +889,26 @@ pub const PROFILE: &str = profile_family::KIND;
 /// and keeps `"rust"`, because [`ledger`] writes `"python"` only where no oracle is named. [M37 P11]
 pub const PROFILE_DOCUMENTS: [&str; 2] = ["hand", "corpus"];
 
+/// The MCP server's family under `spec/vectors/`, and the `provenance.kind` its files carry.
+/// [M29 P15]
+pub const MCP: &str = "mcp";
+
+/// The mcp sub-families a career declaration re-records, after the profile family, each answered
+/// by `golf-mcp answer-case` ([`walk_mcp`]'s doc): `tools/` and `real/` recorded once from frozen
+/// Python (M29 P8), `hand/` worked by hand (P11 on) and `rust/` recorded once by Rust (P15), each
+/// keeping the `provenance.oracle` it has. [M29 P15]
+pub const MCP_DOCUMENTS: [&str; 4] = ["tools", "real", "hand", "rust"];
+
+/// The one mcp sub-family the walk never reads: `surface/`, what a client sees on connect. Nothing
+/// `CAREER_VERSION` ages reaches it (the tool list, the descriptions and the briefing read no
+/// store, corpus or aggregate), and its five declared differences are `crates/mcp/tests/surface.rs`'
+/// to hold, so it keeps `career_version` 0 and no ledger. [M29 P15]
+pub const MCP_UNREAD: [&str; 1] = ["surface"];
+
+/// The environment variable that names the `golf-mcp` binary the mcp walk runs, ahead of the one
+/// beside this binary ([`golf_mcp_binary`]). [M29 P15]
+pub const GOLF_MCP_ENV: &str = "GOLF_MCP";
+
 /// Which of Rust's answers a vector is re-recorded from.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Family {
@@ -865,6 +918,9 @@ pub enum Family {
     Stage,
     /// [`SHOT`]: `expected` is [`run_shot`]'s answer. [M35 P6]
     Shot,
+    /// [`SELECTION`]'s [`SELECTION_DOCUMENTS`]: `expected.results` is [`run_selection`]'s answer
+    /// to each call, and the committed one to each call it does not answer yet. [M29 P19]
+    Selection,
     /// `screen/`'s [`SCREEN_DOCUMENTS`]: `expected` is [`run_screen`]'s answer. [M34 P7]
     Screen,
     /// `storage/`'s [`STORAGE_DOCUMENTS`]: `expected` is [`run_storage`]'s answer. [M36 P13]
@@ -876,6 +932,9 @@ pub enum Family {
     /// `profile/`'s [`PROFILE_DOCUMENTS`]: `expected` is [`run_profile_case`]'s answer, and a corpus
     /// case's [`ADOPTED`] inputs are its career vector's as the run writes it. [M37 P11]
     Profile,
+    /// `mcp/`'s [`MCP_DOCUMENTS`]: `expected.results` is `golf-mcp answer-case`'s answer to each
+    /// call, gated against the committed answers as that server answers them on purpose. [M29 P15]
+    Mcp,
 }
 
 /// Why a run wrote nothing. Every variant is a refusal of the whole run (call 7).
@@ -970,15 +1029,20 @@ impl Rerecorded {
 pub struct Run {
     declaration: Declaration,
     vectors: Vec<Rerecorded>,
+    /// The `golf-mcp` the mcp walk ran — an engine or a career run's — named in the report because
+    /// it is a second binary whose build the reviewer must trust to be this tree's. [M29 P15; the
+    /// engine run's P19]
+    mcp_answered_by: Option<PathBuf>,
 }
 
 impl Run {
     /// Every vector the run read. For an engine declaration, the engine family, then the stage
-    /// family, within each the [`ENGINE_HALVES`] in their order and each half in path order, and
-    /// then the shot family in path order. For a
-    /// screen declaration, the [`SCREEN_DOCUMENTS`] in their order, each in path order. For a career
-    /// declaration, the [`STORAGE_DOCUMENTS`], the [`CAREER_DOCUMENTS`] and then the
-    /// [`PROFILE_DOCUMENTS`], each in path order.
+    /// family, within each the [`ENGINE_HALVES`] in their order and each half in path order, then
+    /// the shot family in path order, then the [`SELECTION_DOCUMENTS`] and then the
+    /// [`MCP_DOCUMENTS`], each in their order and path order (M29 P19). For a screen declaration, the
+    /// [`SCREEN_DOCUMENTS`] in their order, each in path order. For a career declaration, the
+    /// [`STORAGE_DOCUMENTS`], the [`CAREER_DOCUMENTS`], the [`PROFILE_DOCUMENTS`] and then the
+    /// [`MCP_DOCUMENTS`], each in path order.
     pub fn vectors(&self) -> &[Rerecorded] {
         &self.vectors
     }
@@ -1065,19 +1129,26 @@ impl Run {
         let count = |family: Family| self.vectors.iter().filter(|v| v.family == family).count();
         let run = match d.version {
             Version::Analysis(_) => format!(
-                "{} engine, {} stage, {} shot",
+                "{} engine, {} stage, {} shot, {} selection, {} mcp",
                 count(Family::Engine),
                 count(Family::Stage),
-                count(Family::Shot)
+                count(Family::Shot),
+                count(Family::Selection),
+                count(Family::Mcp)
             ),
             Version::ScreenParser(_) => format!("{} screen", count(Family::Screen)),
             Version::Career(_) => format!(
-                "{} storage, {} career, {} profile",
+                "{} storage, {} career, {} profile, {} mcp",
                 count(Family::Storage),
                 count(Family::Career),
-                count(Family::Profile)
+                count(Family::Profile),
+                count(Family::Mcp)
             ),
         };
+        if let Some(binary) = &self.mcp_answered_by {
+            writeln!(out, "the mcp family was answered by {}", binary.display())
+                .expect("writing to a String does not fail");
+        }
         let changed = self.changed().count();
         if changed == 0 {
             out.push_str("nothing differs from the committed vectors\n");
@@ -1112,18 +1183,47 @@ pub fn plan(spec: &Path, declaration_file: &Path) -> Result<Run, Refused> {
     let spelling = ledger_spelling(spec, declaration_file)?;
     let vectors_dir = spec.join("vectors");
 
+    let mut mcp_answered_by = None;
     let Walked {
         vectors,
         refusals,
         ledgered,
     } = match version {
         Version::Analysis(_) => {
+            // The mcp family is the last an engine run walks too (M29 P19, `walk_mcp`'s doc), so
+            // its binary is found before any vector is read, as a career run finds it.
+            let binary = golf_mcp_binary().map_err(Refused::Files)?;
             let mut walked = walk_engine(&vectors_dir, &declaration, spelling.as_deref())?;
             walked.extend(walk_shot(&vectors_dir, &declaration, spelling.as_deref())?);
+            walked.extend(walk_selection(
+                &vectors_dir,
+                &declaration,
+                spelling.as_deref(),
+            )?);
+            walked.extend(walk_mcp(
+                &vectors_dir,
+                &declaration,
+                spelling.as_deref(),
+                &binary,
+            )?);
+            mcp_answered_by = Some(binary);
             walked
         }
         Version::ScreenParser(_) => walk_screen(&vectors_dir, &declaration, spelling.as_deref())?,
-        Version::Career(_) => walk_career(&vectors_dir, &declaration, spelling.as_deref())?,
+        Version::Career(_) => {
+            // Found before any vector is read, so a run that cannot reach the last family stops
+            // before it has walked the first three.
+            let binary = golf_mcp_binary().map_err(Refused::Files)?;
+            let mut walked = walk_career(&vectors_dir, &declaration, spelling.as_deref())?;
+            walked.extend(walk_mcp(
+                &vectors_dir,
+                &declaration,
+                spelling.as_deref(),
+                &binary,
+            )?);
+            mcp_answered_by = Some(binary);
+            walked
+        }
     };
 
     if !refusals.is_empty() {
@@ -1149,6 +1249,7 @@ pub fn plan(spec: &Path, declaration_file: &Path) -> Result<Run, Refused> {
     Ok(Run {
         declaration,
         vectors,
+        mcp_answered_by,
     })
 }
 
@@ -1162,9 +1263,10 @@ struct Walked {
 }
 
 impl Walked {
-    /// Another family's walk after this one's, for a declaration whose key re-records two walks:
-    /// the engine and stage families, then the shot family (M35 P6). The typo guard reads the
-    /// union, so a declared path may match in either.
+    /// Another family's walk after this one's, for a declaration whose key re-records several: the
+    /// engine and stage families, then the shot family (M35 P6), the selection family and the mcp
+    /// family (M29 P19); the storage, career and profile families, then the mcp family (M29 P15).
+    /// The typo guard reads the union, so a declared path may match in any of them.
     fn extend(&mut self, later: Walked) {
         self.vectors.extend(later.vectors);
         self.refusals.extend(later.refusals);
@@ -1374,6 +1476,146 @@ fn walk_shot(
         return Err(Refused::Files(format!(
             "no shot case under {}",
             shot_dir.display()
+        )));
+    }
+    Ok(Walked {
+        vectors,
+        refusals,
+        ledgered,
+    })
+}
+
+/// The selection family's [`SELECTION_DOCUMENTS`], every case answered by [`run_selection`], gated,
+/// applied and ledgered, after the shot family under an engine declaration. [M29 P19]
+///
+/// The family ages on `ANALYSIS_VERSION` (the M29 plan's call 1): its answers are the engine's
+/// clip-choosing rules, so a bump that moves which descent a clip is windowed on moves a case in the
+/// same run, or the gate refuses it here. Only `expected.results` and the top-level
+/// `analysis_version` are this build's answer — a case has no `expected.analysis_version`, which
+/// `v17.json` declares and the engine vectors' ledgers already hold — and inputs are never
+/// rewritten: each is clips and calls no other vector answers, so nothing is adopted and nothing
+/// composes.
+///
+/// **A call [`run_selection`] does not answer is carried as committed**
+/// (`selection_family::NOT_YET`), as the career walk carried a report no renderer ran. The carry is
+/// sound only while nothing it is built from moves, and an `_auto_windows` answer is built from the
+/// `_pick_swing` calls listed ahead of it. So **a case carrying an answer is refused if any answered
+/// call in it differs**, declared or not, naming the phase that ports the carried call: a
+/// declaration cannot move a pick and leave the windows chosen from it as they were. **Since M29
+/// P25 the table is empty and nothing is carried**: `_auto_windows` is answered by
+/// `golf_core::auto_windows`, so a pick that moves moves the answer built from it, and the gate
+/// refuses the move it was not told of (`tests/rerecord.rs`'
+/// `a_moved_pick_moves_the_windows_chosen_from_it`). The guard stays with the table, as
+/// `career_family::CARRIED`'s carry stayed once it was empty.
+fn walk_selection(
+    vectors_dir: &Path,
+    declaration: &Declaration,
+    spelling: Option<&str>,
+) -> Result<Walked, Refused> {
+    let selection_dir = vectors_dir.join(SELECTION);
+    every_entry_is_placed(
+        &selection_dir,
+        SELECTION,
+        (&SELECTION_DOCUMENTS, "SELECTION_DOCUMENTS"),
+        None,
+    )?;
+
+    let mut vectors: Vec<Rerecorded> = Vec::new();
+    let mut refusals: Vec<String> = Vec::new();
+    let mut ledgered = Ledgered::default();
+    let mut ids: BTreeSet<String> = BTreeSet::new();
+    for half in SELECTION_DOCUMENTS {
+        for path in vector_files(&selection_dir.join(half))? {
+            let (committed, layout) = read_vector(&path)?;
+            let id = identify(&committed, &path, SELECTION)?;
+            if !ids.insert(id.clone()) {
+                return Err(Refused::Files(format!(
+                    "{id} is the id of two selection cases"
+                )));
+            }
+            ledgered.note(&committed, declaration);
+
+            let answers = run_selection(&committed["input"]).map_err(|e| {
+                Refused::Files(format!("{id}: run_selection refused the case: {e}"))
+            })?;
+            let recorded = committed["expected"]["results"]
+                .as_array()
+                .ok_or_else(|| Refused::Files(format!("{id}: no expected.results list")))?;
+            if recorded.len() != answers.len() {
+                return Err(Refused::Files(format!(
+                    "{id}: {} calls and {} recorded results",
+                    answers.len(),
+                    recorded.len()
+                )));
+            }
+            let mut carried: Vec<usize> = Vec::new();
+            let mut moved: Vec<usize> = Vec::new();
+            let results: Vec<Value> = answers
+                .into_iter()
+                .zip(recorded)
+                .enumerate()
+                .map(|(index, (answer, recorded))| match answer {
+                    Some(answer) => {
+                        if !compare(recorded, &answer).is_empty() {
+                            moved.push(index);
+                        }
+                        answer
+                    }
+                    None => {
+                        carried.push(index);
+                        recorded.clone()
+                    }
+                })
+                .collect();
+            if !carried.is_empty() && !moved.is_empty() {
+                let calls = &committed["input"]["calls"];
+                let named = |indices: &[usize]| {
+                    indices
+                        .iter()
+                        .map(|&i| format!("{i} ({})", calls[i]["fn"].as_str().unwrap_or("?")))
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                };
+                let phases: BTreeSet<&str> = carried
+                    .iter()
+                    .filter_map(|&i| calls[i]["fn"].as_str())
+                    .filter_map(selection_family::not_yet)
+                    .collect();
+                refusals.push(format!(
+                    "{id}: call(s) {} moved, and call(s) {} are carried as committed until M29 {} \
+                     ports them, so they cannot move with the calls they are built from \
+                     (golf_core::rerecord::walk_selection)",
+                    named(&moved),
+                    named(&carried),
+                    phases.into_iter().collect::<Vec<_>>().join(", ")
+                ));
+                continue;
+            }
+
+            let mut ours = committed.clone();
+            ours["expected"]["results"] = Value::Array(results);
+            ours["analysis_version"] = json!(ANALYSIS_VERSION);
+
+            match one(&id, &committed, &ours, declaration, spelling) {
+                Ok((applied, written, lines)) => {
+                    vectors.push(Rerecorded {
+                        id,
+                        path,
+                        family: Family::Selection,
+                        written: (!applied.is_empty()).then_some(written),
+                        applied,
+                        lines,
+                        layout,
+                    });
+                }
+                Err(refused) => refusals.extend(refused),
+            }
+        }
+    }
+    if ids.is_empty() {
+        return Err(Refused::Files(format!(
+            "no selection case under {}",
+            selection_dir.display()
         )));
     }
     Ok(Walked {
@@ -1710,6 +1952,293 @@ fn walk_career(
     })
 }
 
+/// The `golf-mcp` binary the mcp walk runs: [`GOLF_MCP_ENV`] when it is set, else `golf-mcp`
+/// beside this binary, else one directory up when this binary sits in cargo's `deps/` (a test
+/// harness does). `Err` names every place tried and the build that puts it there. [M29 P15; an
+/// engine run needs it too since P19]
+///
+/// **Found, never assumed** (the M29 plan's rules): nothing may depend on `golf-mcp`, so this crate
+/// cannot link the family's runner and runs the binary instead (`golf_mcp::family`'s module doc),
+/// and a missing one refuses the run by name rather than skipping a family that ages on this key.
+/// The binary is a second build the run trusts, so [`Run::report`] names the one it ran.
+pub fn golf_mcp_binary() -> Result<PathBuf, String> {
+    if let Some(named) = std::env::var_os(GOLF_MCP_ENV) {
+        let named = PathBuf::from(named);
+        return if named.is_file() {
+            Ok(named)
+        } else {
+            Err(format!(
+                "{GOLF_MCP_ENV} names {}, which is not a file; the mcp family is answered by \
+                 golf-mcp (`cargo build --release -p golf-mcp`)",
+                named.display()
+            ))
+        };
+    }
+    let name = format!("golf-mcp{}", std::env::consts::EXE_SUFFIX);
+    let mut tried = Vec::new();
+    if let Ok(this) = std::env::current_exe() {
+        let mut dir = this.parent().map(Path::to_path_buf);
+        while let Some(here) = dir {
+            let candidate = here.join(&name);
+            if candidate.is_file() {
+                return Ok(candidate);
+            }
+            tried.push(candidate.display().to_string());
+            dir = if here.file_name() == Some(OsStr::new("deps")) {
+                here.parent().map(Path::to_path_buf)
+            } else {
+                None
+            };
+        }
+    }
+    Err(format!(
+        "an engine or a career declaration re-records the mcp family, which golf-mcp answers, and \
+         no golf-mcp was found (tried {}); build it beside this binary with `cargo build -p \
+         golf-mcp` (add `--release` for a release golf-core), or name one in {GOLF_MCP_ENV}",
+        if tried.is_empty() {
+            "nowhere: this binary's path is unknown".to_string()
+        } else {
+            tried.join(", ")
+        }
+    ))
+}
+
+/// One mcp case through `golf-mcp answer-case`: `(answers, recorded)`, the server's answer to each
+/// call and the committed answers as it answers them on purpose (`golf_mcp::family::answer_case`).
+fn answer_with(binary: &Path, id: &str, committed: &Value) -> Result<(Value, Value), Refused> {
+    let failed = |why: String| Refused::Files(format!("{id}: golf-mcp answer-case {why}"));
+    let mut child = Command::new(binary)
+        .arg("answer-case")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|e| failed(format!("did not start ({}): {e}", binary.display())))?;
+    let input = serde_json::to_vec(committed).expect("a Value always serializes");
+    let mut stdin = child.stdin.take().expect("stdin was piped");
+    // Written from a thread so a child that answers before it has read everything cannot block on
+    // a full stdout while this side blocks on a full stdin. `answer-case` reads all of stdin first,
+    // but the pipe's rule is the one to code against.
+    let writer = std::thread::spawn(move || stdin.write_all(&input));
+    let output = child
+        .wait_with_output()
+        .map_err(|e| failed(format!("did not finish: {e}")))?;
+    writer
+        .join()
+        .expect("the writer thread does not panic")
+        .map_err(|e| failed(format!("was not sent the case: {e}")))?;
+    if !output.status.success() {
+        return Err(failed(format!(
+            "exited {}: {}",
+            output.status,
+            String::from_utf8_lossy(&output.stderr).trim()
+        )));
+    }
+    let mut answered: Value = serde_json::from_slice(&output.stdout)
+        .map_err(|e| failed(format!("printed something that is not JSON: {e}")))?;
+    Ok((answered["answers"].take(), answered["recorded"].take()))
+}
+
+/// The document with every answer's text blocks parsed, so the gate compares a block as the mcp
+/// gate does (`crates/mcp/tests/tools.rs`: each block is one view's JSON) and a declaration names a
+/// path inside one: `expected.results[3].content[0].text.n_swings`. A block whose text is not JSON
+/// stays a string. [M29 P15]
+fn blocks_parsed(document: &Value) -> Value {
+    let mut parsed = document.clone();
+    for block in blocks_mut(&mut parsed) {
+        let text = block
+            .get("text")
+            .and_then(Value::as_str)
+            .map(str::to_string);
+        if let Some(value) = text.and_then(|text| serde_json::from_str::<Value>(&text).ok()) {
+            block["text"] = value;
+        }
+    }
+    parsed
+}
+
+/// Every text block of every answer in `document`, in order.
+fn blocks_mut(document: &mut Value) -> impl Iterator<Item = &mut Value> {
+    document["expected"]["results"]
+        .as_array_mut()
+        .into_iter()
+        .flatten()
+        .filter_map(|result| result.get_mut("content").and_then(Value::as_array_mut))
+        .flatten()
+}
+
+/// [`blocks_parsed`] undone on a document [`apply`] wrote: each block back to text, spelled as it
+/// was committed where its value did not move, as `golf-mcp` spelled it where it became that
+/// answer's block whole, and otherwise by `serde_json`'s pretty printer (keys sorted). That last is
+/// the one spelling no server wrote: a block holding both a declared move and a value
+/// `golf_mcp::family::DECLARED` keeps as Python recorded it. [M29 P15]
+fn blocks_as_text(written: Value, committed: &Value, ours: &Value) -> Value {
+    let texts = |document: &Value| -> Vec<Value> {
+        let mut document = document.clone();
+        blocks_mut(&mut document)
+            .map(|block| block["text"].take())
+            .collect()
+    };
+    let (committed, ours) = (texts(committed), texts(ours));
+    // `blocks_parsed`'s reading of one text: its JSON, or the string itself.
+    let read = |text: &Value| {
+        text.as_str()
+            .and_then(|text| serde_json::from_str::<Value>(text).ok())
+            .unwrap_or_else(|| text.clone())
+    };
+    let mut written = written;
+    for (i, block) in blocks_mut(&mut written).enumerate() {
+        let value = block["text"].take();
+        let spelled = [committed.get(i), ours.get(i)]
+            .into_iter()
+            .flatten()
+            .find(|text| read(text) == value);
+        block["text"] = match spelled {
+            Some(text) => text.clone(),
+            None if value.is_string() => value,
+            None => {
+                Value::String(serde_json::to_string_pretty(&value).expect("a Value serializes"))
+            }
+        };
+    }
+    written
+}
+
+/// The mcp family's [`MCP_DOCUMENTS`], each answered by `golf-mcp answer-case`, gated, applied and
+/// ledgered: after the profile family under a career declaration [M29 P15], and after the
+/// selection family under an engine declaration [M29 P19].
+///
+/// The family ages on `CAREER_VERSION` (the M29 plan's call 1): its tools read the corpus, the bag
+/// and the aggregates the storage, career and profile families hold, so a change to what those
+/// produce moves its answers in the same run, or the gate refuses them here.
+///
+/// **It holds the engine's numbers too, so an engine run walks it as well** (the M29 plan's call 1,
+/// and P8's and P15's findings for P19). `simulate_flight` answers from the flight model (29
+/// recorded calls, `provenance.flight_model_calls`), and the career and club tools join
+/// `ranges.json`'s bands, so a `v<N>` that moves either moves these answers, and a walk that
+/// skipped them would let the move land in the engine family and never here. Every case is walked
+/// rather than only those with flight calls, because the bands reach further than the flight does.
+/// Under an engine declaration the `career_version` this walk stamps is already current, so only an
+/// answer that moved differs, and the ledger names the engine declaration's key. Frozen Python's
+/// freeze pin (`test_the_committed_mcp_cases_are_what_frozen_python_answers`) cannot reach inside
+/// a text block, so the first declaration of either key that moves one also teaches it to.
+///
+/// - **Answered by the binary.** Nothing may depend on `golf-mcp`, so this crate runs it
+///   ([`golf_mcp_binary`], [`answer_with`]) rather than linking the family's runner. `answer-case`
+///   answers every call and hands back the committed answers as it answers them on purpose: a
+///   Python-recorded case through `golf_mcp::family::DECLARED`, a hand or Rust case as committed.
+///   That list stays in `golf-mcp`, the one place the mcp gate reads it too, so the gate and this
+///   walk cannot hold the family to two lists.
+/// - **Gated against that, written onto the committed document** ([`one_against`]): a file keeps
+///   frozen Python's value at every path no career declaration names, `DECLARED`'s paths included,
+///   and only `expected.results` and `career_version` are this build's answer. Inputs are trees no
+///   other vector answers, so nothing is adopted and nothing composes.
+/// - **Text blocks are compared parsed** ([`blocks_parsed`]), as the mcp gate compares them, so a
+///   declared path can name a value inside one, and the written file spells each block as it was
+///   committed wherever its value held ([`blocks_as_text`]). Frozen Python's `frozen_view` cannot
+///   reach inside a block, so the first career declaration that moves one also teaches the freeze
+///   pin (`tests/test_conformance.py`) to; none has yet.
+/// - **A protocol error is a refusal**, because nothing recorded one. `surface/` is
+///   [`MCP_UNREAD`], and any other entry under `vectors/mcp/` stops the walk.
+fn walk_mcp(
+    vectors_dir: &Path,
+    declaration: &Declaration,
+    spelling: Option<&str>,
+    binary: &Path,
+) -> Result<Walked, Refused> {
+    let mcp_dir = vectors_dir.join(MCP);
+    every_entry_is_placed(
+        &mcp_dir,
+        MCP,
+        (&MCP_DOCUMENTS, "MCP_DOCUMENTS"),
+        Some((&MCP_UNREAD, "MCP_UNREAD")),
+    )?;
+
+    let mut vectors: Vec<Rerecorded> = Vec::new();
+    let mut refusals: Vec<String> = Vec::new();
+    let mut ledgered = Ledgered::default();
+    let mut ids: BTreeSet<String> = BTreeSet::new();
+    for half in MCP_DOCUMENTS {
+        for path in vector_files(&mcp_dir.join(half))? {
+            let (committed, layout) = read_vector(&path)?;
+            let id = identify(&committed, &path, MCP)?;
+            if !ids.insert(id.clone()) {
+                return Err(Refused::Files(format!("{id} is the id of two mcp cases")));
+            }
+            ledgered.note(&committed, declaration);
+
+            let (answers, recorded) = answer_with(binary, &id, &committed)?;
+            let calls = committed["input"]["calls"].as_array().map_or(0, Vec::len);
+            let (Some(answered), Some(_)) = (answers.as_array(), recorded.as_array()) else {
+                return Err(Refused::Files(format!(
+                    "{id}: golf-mcp answered no `answers` or no `recorded` list, so the case has \
+                     no expected.results to hold it to"
+                )));
+            };
+            if answered.len() != calls {
+                return Err(Refused::Files(format!(
+                    "{id}: {calls} calls and {} answers",
+                    answered.len()
+                )));
+            }
+            let errors: Vec<String> = answered
+                .iter()
+                .enumerate()
+                .filter_map(|(i, answer)| {
+                    answer["protocol_error"]
+                        .as_str()
+                        .map(|error| format!("{id}: call {i} was a protocol error: {error}"))
+                })
+                .collect();
+            if !errors.is_empty() {
+                refusals.extend(errors);
+                continue;
+            }
+
+            let mut base = committed.clone();
+            base["expected"]["results"] = recorded;
+            let mut ours = committed.clone();
+            ours["expected"]["results"] = answers;
+            ours["career_version"] = json!(CAREER_VERSION);
+
+            match one_against(
+                &id,
+                &blocks_parsed(&base),
+                &blocks_parsed(&committed),
+                &blocks_parsed(&ours),
+                declaration,
+                spelling,
+            ) {
+                Ok((applied, written, lines)) => {
+                    let written =
+                        (!applied.is_empty()).then(|| blocks_as_text(written, &committed, &ours));
+                    vectors.push(Rerecorded {
+                        id,
+                        path,
+                        family: Family::Mcp,
+                        written,
+                        applied,
+                        lines,
+                        layout,
+                    });
+                }
+                Err(refused) => refusals.extend(refused),
+            }
+        }
+    }
+    if ids.is_empty() {
+        return Err(Refused::Files(format!(
+            "no mcp case under {}",
+            mcp_dir.display()
+        )));
+    }
+    Ok(Walked {
+        vectors,
+        refusals,
+        ledgered,
+    })
+}
+
 /// One screen document's `input` through `crates/screen`, as that document's whole `expected` —
 /// `conformance_vectors._run_screen`'s counterpart, the definition every screen vector records.
 /// [M34 P7]
@@ -1766,7 +2295,23 @@ fn one(
     declaration: &Declaration,
     spelling: Option<&str>,
 ) -> Result<(Applied, Value, Vec<String>), Vec<String>> {
-    let applied = gate(committed, ours, declaration).map_err(|refused| {
+    one_against(id, committed, committed, ours, declaration, spelling)
+}
+
+/// [`one`], gating `ours` against `base` rather than against the committed document, and applying
+/// what that lets through onto `committed`. The mcp walk's (M29 P15): its Python-recorded answers
+/// are gated as `golf-mcp` answers them on purpose (`golf_mcp::family::DECLARED` applied, `base`),
+/// and written back as Python recorded them but for the declared paths, so a file keeps every value
+/// no declaration names. Every other family's `base` is its committed document.
+fn one_against(
+    id: &str,
+    base: &Value,
+    committed: &Value,
+    ours: &Value,
+    declaration: &Declaration,
+    spelling: Option<&str>,
+) -> Result<(Applied, Value, Vec<String>), Vec<String>> {
+    let applied = gate(base, ours, declaration).map_err(|refused| {
         refused
             .iter()
             .map(|u| format!("{id}: {u}"))
@@ -2047,6 +2592,18 @@ fn parse_input(engine_vector: &Value, id: &str) -> Result<VectorInput, Refused> 
             "{id}: input does not parse into the ported shapes: {e}"
         ))
     })
+}
+
+/// The bytes of a vector with no committed file yet, laid out as `_write_json` laid out every file
+/// it wrote ([`Layout::RECORDED`]) and otherwise as the module doc's "How a file is written" says.
+/// [M29 P30]
+///
+/// `golf-lab build-vectors` writes a new vector through this, so a built file and a re-recorded one
+/// come out of one writer: keys sorted, indent 2, gzip by the `.gz` suffix with mtime 0 and the
+/// uncompressed name. A plain `.json` comes out LF, which is `_write_json`'s source; the CRLF a
+/// committed plain file carries is Windows', and a re-record keeps it only because it is there.
+pub fn new_vector_bytes(document: &Value, path: &Path) -> Vec<u8> {
+    file_bytes(document, path, Layout::RECORDED)
 }
 
 /// The bytes of one vector file, as the module doc's "How a file is written" says.
@@ -2984,6 +3541,26 @@ mod tests {
         assert_eq!(Layout::of(&document.to_string()), Layout::RECORDED);
     }
 
+    /// **A new vector is laid out as `_write_json` laid one out** (M29 P30): keys sorted, indent 2,
+    /// LF and a trailing newline on a plain file, and a gzip that holds the same text less the
+    /// newline, stamped with the uncompressed name.
+    #[test]
+    fn a_new_vector_is_written_as_write_json_wrote_one() {
+        let document = json!({"b": [1], "a": "é"});
+        let plain =
+            String::from_utf8(new_vector_bytes(&document, Path::new("x/v.json"))).expect("utf-8");
+        assert_eq!(plain, "{\n  \"a\": \"é\",\n  \"b\": [\n    1\n  ]\n}\n");
+
+        let gzipped = new_vector_bytes(&document, Path::new("x/v.json.gz"));
+        let mut decoder = GzDecoder::new(&gzipped[..]);
+        let mut text = String::new();
+        decoder.read_to_string(&mut text).expect("a gzip");
+        assert_eq!(text, plain.trim_end_matches('\n'));
+        let header = decoder.header().expect("a gzip header");
+        assert_eq!(header.filename(), Some(&b"v.json"[..]));
+        assert_eq!(header.mtime(), 0);
+    }
+
     #[test]
     fn a_report_value_is_cut_short_on_a_character_boundary() {
         assert_eq!(brief(None), "<absent>");
@@ -2991,5 +3568,133 @@ mod tests {
         let long = brief(Some(&json!("é".repeat(100))));
         assert!(long.ends_with('…'));
         assert_eq!(long.chars().count(), 73);
+    }
+
+    /// An mcp case with one answer of one text block, the block spelled as `spelling` writes its
+    /// item. [M29 P15]
+    fn mcp_case(item: &Value, spelling: fn(&Value) -> String, version: i64) -> Value {
+        json!({
+            "id": "mcp/tools/one",
+            "career_version": version,
+            "provenance": {"kind": "mcp", "oracle": "python"},
+            "input": {"calls": [{"tool": "get_bag_profile"}]},
+            "expected": {"results": [{
+                "content": [{"type": "text", "text": spelling(item)}],
+                "structuredContent": {"result": item},
+                "isError": false,
+            }]},
+        })
+    }
+
+    /// Python's `indent=2` with `ensure_ascii`, the committed spelling, as serde_json would not
+    /// write it: keys out of order and a `—` escaped.
+    fn pythons(item: &Value) -> String {
+        let n = &item["n"];
+        format!(
+            "{{\n  \"note\": {},\n  \"n\": {n}\n}}",
+            item["note"].to_string().replace('—', "\\u2014")
+        )
+    }
+
+    fn rusts(item: &Value) -> String {
+        serde_json::to_string_pretty(item).unwrap()
+    }
+
+    /// **A text block is gated as the value it spells and written back as it was spelled** (M29
+    /// P15): Python's and Rust's spellings of one item are no difference, a value moved inside a
+    /// block is one at a path inside its text, and a run that moves only the version leaves the
+    /// block's committed spelling byte for byte; a block whose value moved takes Rust's spelling.
+    #[test]
+    fn an_mcp_block_is_compared_parsed_and_written_in_its_committed_spelling() {
+        let item = json!({"note": "a — b", "n": 3});
+        let committed = mcp_case(&item, pythons, 0);
+        let ours = mcp_case(&item, rusts, CAREER_VERSION);
+        let career = |moved: &[&str]| -> Declaration {
+            serde_json::from_value(json!({
+                "career_version": CAREER_VERSION, "note": "a test", "added": [], "moved": moved,
+            }))
+            .unwrap()
+        };
+        let (c, o) = (blocks_parsed(&committed), blocks_parsed(&ours));
+        let applied = gate(&c, &o, &career(&["career_version"])).expect("only the version moved");
+        assert_eq!(
+            applied
+                .moved()
+                .iter()
+                .map(LedgerPath::as_str)
+                .collect::<Vec<_>>(),
+            ["career_version"]
+        );
+        let written = blocks_as_text(apply(&c, &o, &applied), &committed, &ours);
+        assert_eq!(
+            written["expected"]["results"][0]["content"][0]["text"],
+            committed["expected"]["results"][0]["content"][0]["text"],
+            "an unmoved block keeps Python's spelling"
+        );
+        assert_eq!(written["career_version"], CAREER_VERSION);
+
+        let moved = json!({"note": "a — b", "n": 4});
+        let ours = mcp_case(&moved, rusts, CAREER_VERSION);
+        let o = blocks_parsed(&ours);
+        let refused = gate(&c, &o, &career(&["career_version"])).expect_err("n moved");
+        let paths: Vec<&str> = refused.iter().map(|u| u.0.path.as_str()).collect();
+        assert_eq!(
+            paths,
+            [
+                "expected.results[0].content[0].text.n",
+                "expected.results[0].structuredContent.result.n",
+            ]
+        );
+        let both = career(&[
+            "career_version",
+            "expected.results[0].content[0].text.n",
+            "expected.results[0].structuredContent.result.n",
+        ]);
+        let applied = gate(&c, &o, &both).expect("declared");
+        let written = blocks_as_text(apply(&c, &o, &applied), &committed, &ours);
+        assert_eq!(
+            written["expected"]["results"][0]["content"][0]["text"],
+            rusts(&moved),
+            "a block that became Rust's answer takes Rust's spelling"
+        );
+    }
+
+    /// A block that is not JSON stays a string through both directions, and `one_against` gates
+    /// against its base while writing onto the committed document. [M29 P15]
+    #[test]
+    fn one_against_gates_on_its_base_and_writes_onto_the_committed_document() {
+        let mut committed = mcp_case(&json!({"note": "recorded", "n": 1}), rusts, 0);
+        committed["expected"]["results"][0]["content"][0]["text"] = json!("not json");
+        assert_eq!(blocks_parsed(&committed), committed);
+        // The base is the committed answer as the server answers it on purpose; ours agrees with
+        // the base and not with the committed document, at a path no declaration names.
+        let mut base = committed.clone();
+        base["expected"]["results"][0]["structuredContent"]["result"]["note"] = json!("ours");
+        let mut ours = base.clone();
+        ours["career_version"] = json!(CAREER_VERSION);
+        let declaration: Declaration = serde_json::from_value(json!({
+            "career_version": CAREER_VERSION, "note": "a test", "added": [],
+            "moved": ["career_version"],
+        }))
+        .unwrap();
+        let (applied, written, lines) = one_against(
+            "mcp/tools/one",
+            &base,
+            &committed,
+            &ours,
+            &declaration,
+            None,
+        )
+        .expect("the base agrees with ours but for the version");
+        assert_eq!(
+            lines,
+            [format!("moved  career_version: 0 -> {CAREER_VERSION}")]
+        );
+        assert!(!applied.is_empty());
+        assert_eq!(
+            written["expected"]["results"][0]["structuredContent"]["result"]["note"], "recorded",
+            "a value the base rewrote stays as committed in the file"
+        );
+        assert!(one("mcp/tools/one", &committed, &ours, &declaration, None).is_err());
     }
 }

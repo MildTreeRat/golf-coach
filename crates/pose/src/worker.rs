@@ -204,7 +204,19 @@ impl Config {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Outcome {
     /// The landmarks, exactly as the worker built them. The *caller* writes the file (clause 8).
-    Done(KeypointsFile),
+    Done {
+        keypoints: KeypointsFile,
+        /// The frame count clause 4's acceptance carried: the container's *claim*
+        /// (`CAP_PROP_FRAME_COUNT`), made before a frame was decoded. [M29 P22]
+        ///
+        /// Carried out of [`Worker::run`] rather than dropped once it has derived the deadline,
+        /// because it is the only half of a comparison the caller cannot make for itself: a
+        /// container that claims more frames than `keypoints.clip.frame_count` decoded is the
+        /// silent short decode `api/pipeline.py::keypoints_for` writes a note about, and the worker
+        /// is the only process that opened the container. `golf-lab`'s `keypoints_for` is the
+        /// first caller to read it.
+        claimed_frames: i64,
+    },
     /// Clause 5's table. `detail` is the worker's own sentence about this clip.
     Failed {
         reason: FailureReason,
@@ -769,7 +781,10 @@ impl Worker {
 
         let deadline = self.config.work_deadline(frames);
         match self.next_reply(deadline, Some(frames), &job.job_id)? {
-            Reply::Done { keypoints, .. } => Ok(Outcome::Done(keypoints)),
+            Reply::Done { keypoints, .. } => Ok(Outcome::Done {
+                keypoints,
+                claimed_frames: frames,
+            }),
             Reply::Failed { reason, detail, .. } => Ok(Outcome::Failed { reason, detail }),
             Reply::Accepted { .. } => Err(self.corrupt("a second acceptance arrived for one job")),
         }

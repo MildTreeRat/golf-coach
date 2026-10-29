@@ -1,0 +1,72 @@
+
+Ball flight — simulated, not measured
+------------------------------------------------------------------------
+
+  shot      2026-08-23-4, screen, 2026-08-23 04:30
+  swing     2026-08-23/4
+  golfer    aaron, right-handed
+  club      7i, loft 30.5 deg
+
+  - spin: 126.1 yd, case two_branches: the falling branch, because a
+    30.5 deg club spins above the 2402 rpm peak; 1848 rpm is the branch
+    not taken
+  - axis: no spin axis printed; face-to-path +5.0 deg gives the
+    direction and no magnitude
+
+  launch    89.8 mph, 22.4 deg up, 2924 rpm, start +2.8 deg, axis +0 deg
+  air       isa_sea_level, 1.2250 kg/m3, 288.15 K
+
+  carry                126.10 yd   along the launch line
+  offline               +6.16 yd   from the target line
+  curvature             -0.00 yd   from the launch line
+  apex                  19.18 yd
+  hang time               4.59 s
+  descent               36.8 deg
+  spin at landing       2434 rpm
+  spin ratio       0.163 - 0.260   0 of 919 points held
+
+     t s   down yd    up yd  right yd     mph       S  coeff
+    0.00      0.00     0.00      0.00    89.8   0.163  read
+    1.53     52.17    17.13      2.55    60.5   0.227  read
+    3.06     91.93    16.85      4.50    49.9   0.259  read
+    4.59    125.95    -0.00      6.16    54.5   0.223  read
+
+  Beside what the screen printed
+    measurement                 simulated   printed   apart
+    flight_carry_yds               126.10    126.10   +0.00
+
+    - flight_carry_yds: the printed carry is the *input* to the spin
+      solve, so the flown carry reproduces it by construction (+0.001
+      yd, which is the root search's own tolerance and not an
+      agreement). Nothing here checks the model; what the solve produced
+      is a spin, and its cap is what bounds that.
+
+  Read it with these:
+  - every point read a measured row of the table (0.085 to 0.284), which
+    one shot on disk manages and no other — and that shot is the one
+    whose spin was *solved* rather than printed. The two go together
+    rather than coinciding: a carry the solve can invert is a carry
+    still responding to spin, and spin still reaching the answer is
+    exactly a flight below the clamp.
+  - the model agrees with HD Golf to +/-2.59% on the two shots where a
+    full launch-condition set and an independent carry are both on disk
+    (`--gate`) — while ranking those two shots backwards. That
+    percentage is therefore the size of what this model cannot see, not
+    a calibration error, and a carry from here is not "accurate to
+    2.6%".
+  - this flight is drawn in the vertical plane, because nothing on the
+    screen fixes how far the spin axis was tilted (ADR-027 §Decision 5's
+    third branch). The curvature is then zero by construction and the
+    landing offline reduces to `carry * sin(start line)` — which is
+    `shot_measure`'s `start_line_offline_yds` reached by a much longer
+    route, and not a landing point. The curve is missing from it, and on
+    a shot the screen called a fade the curve is most of the lateral
+    miss.
+  - the spin on this flight was not measured. It is the spin this
+    integrator needs in order to fly the carry HD Golf printed, capped
+    at 5103 rpm where carry stops responding to spin at all, and chosen
+    between two candidates by the club's loft. Both shots whose real
+    spin is on disk sit above their own cap, and the one the solve
+    answers on comes back 47% low — so this is a path-drawing device and
+    not a spin rate the golfer produced.
+

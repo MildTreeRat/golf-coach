@@ -164,7 +164,9 @@ impl Validate for ClipMetadata {
 /// Files written before M7 Phase 1 are a bare JSON array of frames with no envelope. The tolerant
 /// reader for those is `storage/keypoints_io.py`, which is lab code — [ADR-032 §8](../../../docs/decisions/032-the-rust-core.md)
 /// keeps storage in Python for M22, so this type reads the enveloped form only. The vectors are all
-/// enveloped, which is what the round-trip gate checks.
+/// enveloped, which is what the round-trip gate checks. Since M29 P22 that reader has a Rust twin,
+/// `storage::keypoints_io::load_keypoints`, which wraps a bare array itself, so this type still
+/// reads only the envelope.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(remote = "Self")]
 pub struct KeypointsFile {

@@ -1,0 +1,825 @@
+{
+  "career_version": 3,
+  "expected": {
+    "results": [
+      {
+        "content": [
+          {
+            "text": "{\n  \"session_id\": \"2026-08-10\",\n  \"swing_count\": 2,\n  \"analyzed_count\": 2,\n  \"swings\": [\n    {\n      \"swing_id\": \"1\",\n      \"session_id\": \"2026-08-10\",\n      \"status\": \"done\",\n      \"score\": 94.9,\n      \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\",\n      \"roles\": [\n        \"down_the_line\",\n        \"face_on\",\n        \"shot_screen\"\n      ],\n      \"partial\": false\n    },\n    {\n      \"swing_id\": \"2\",\n      \"session_id\": \"2026-08-10\",\n      \"status\": \"done\",\n      \"score\": 93.8,\n      \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\",\n      \"roles\": [\n        \"down_the_line\",\n        \"face_on\",\n        \"shot_screen\"\n      ],\n      \"partial\": false\n    }\n  ]\n}",
+            "type": "text"
+          },
+          {
+            "text": "{\n  \"session_id\": \"2026-08-09\",\n  \"swing_count\": 1,\n  \"analyzed_count\": 1,\n  \"swings\": [\n    {\n      \"swing_id\": \"1\",\n      \"session_id\": \"2026-08-09\",\n      \"status\": \"done\",\n      \"score\": 86.1,\n      \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\",\n      \"roles\": [\n        \"down_the_line\",\n        \"face_on\",\n        \"shot_screen\"\n      ],\n      \"partial\": false\n    }\n  ]\n}",
+            "type": "text"
+          },
+          {
+            "text": "{\n  \"session_id\": \"2026-08-08\",\n  \"swing_count\": 1,\n  \"analyzed_count\": 0,\n  \"swings\": [\n    {\n      \"swing_id\": \"1\",\n      \"session_id\": \"2026-08-08\",\n      \"status\": \"not analyzed\",\n      \"score\": null,\n      \"headline\": null,\n      \"roles\": [\n        \"face_on\"\n      ],\n      \"partial\": false\n    }\n  ]\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": [
+            {
+              "analyzed_count": 2,
+              "session_id": "2026-08-10",
+              "swing_count": 2,
+              "swings": [
+                {
+                  "headline": "Work on tempo first. Tempo too quick - 2.4:1.",
+                  "partial": false,
+                  "roles": [
+                    "down_the_line",
+                    "face_on",
+                    "shot_screen"
+                  ],
+                  "score": 94.9,
+                  "session_id": "2026-08-10",
+                  "status": "done",
+                  "swing_id": "1"
+                },
+                {
+                  "headline": "Work on tempo first. Tempo too quick - 2.4:1.",
+                  "partial": false,
+                  "roles": [
+                    "down_the_line",
+                    "face_on",
+                    "shot_screen"
+                  ],
+                  "score": 93.8,
+                  "session_id": "2026-08-10",
+                  "status": "done",
+                  "swing_id": "2"
+                }
+              ]
+            },
+            {
+              "analyzed_count": 1,
+              "session_id": "2026-08-09",
+              "swing_count": 1,
+              "swings": [
+                {
+                  "headline": "Work on tempo first. Tempo too quick - 2.4:1.",
+                  "partial": false,
+                  "roles": [
+                    "down_the_line",
+                    "face_on",
+                    "shot_screen"
+                  ],
+                  "score": 86.1,
+                  "session_id": "2026-08-09",
+                  "status": "done",
+                  "swing_id": "1"
+                }
+              ]
+            },
+            {
+              "analyzed_count": 0,
+              "session_id": "2026-08-08",
+              "swing_count": 1,
+              "swings": [
+                {
+                  "headline": null,
+                  "partial": false,
+                  "roles": [
+                    "face_on"
+                  ],
+                  "score": null,
+                  "session_id": "2026-08-08",
+                  "status": "not analyzed",
+                  "swing_id": "1"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"session_id\": \"2026-08-10\",\n  \"swing_count\": 2,\n  \"analyzed_count\": 2,\n  \"swings\": [\n    {\n      \"swing_id\": \"1\",\n      \"session_id\": \"2026-08-10\",\n      \"status\": \"done\",\n      \"score\": 94.9,\n      \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\",\n      \"roles\": [\n        \"down_the_line\",\n        \"face_on\",\n        \"shot_screen\"\n      ],\n      \"partial\": false\n    },\n    {\n      \"swing_id\": \"2\",\n      \"session_id\": \"2026-08-10\",\n      \"status\": \"done\",\n      \"score\": 93.8,\n      \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\",\n      \"roles\": [\n        \"down_the_line\",\n        \"face_on\",\n        \"shot_screen\"\n      ],\n      \"partial\": false\n    }\n  ]\n}",
+            "type": "text"
+          },
+          {
+            "text": "{\n  \"session_id\": \"2026-08-09\",\n  \"swing_count\": 1,\n  \"analyzed_count\": 1,\n  \"swings\": [\n    {\n      \"swing_id\": \"1\",\n      \"session_id\": \"2026-08-09\",\n      \"status\": \"done\",\n      \"score\": 86.1,\n      \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\",\n      \"roles\": [\n        \"down_the_line\",\n        \"face_on\",\n        \"shot_screen\"\n      ],\n      \"partial\": false\n    }\n  ]\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": [
+            {
+              "analyzed_count": 2,
+              "session_id": "2026-08-10",
+              "swing_count": 2,
+              "swings": [
+                {
+                  "headline": "Work on tempo first. Tempo too quick - 2.4:1.",
+                  "partial": false,
+                  "roles": [
+                    "down_the_line",
+                    "face_on",
+                    "shot_screen"
+                  ],
+                  "score": 94.9,
+                  "session_id": "2026-08-10",
+                  "status": "done",
+                  "swing_id": "1"
+                },
+                {
+                  "headline": "Work on tempo first. Tempo too quick - 2.4:1.",
+                  "partial": false,
+                  "roles": [
+                    "down_the_line",
+                    "face_on",
+                    "shot_screen"
+                  ],
+                  "score": 93.8,
+                  "session_id": "2026-08-10",
+                  "status": "done",
+                  "swing_id": "2"
+                }
+              ]
+            },
+            {
+              "analyzed_count": 1,
+              "session_id": "2026-08-09",
+              "swing_count": 1,
+              "swings": [
+                {
+                  "headline": "Work on tempo first. Tempo too quick - 2.4:1.",
+                  "partial": false,
+                  "roles": [
+                    "down_the_line",
+                    "face_on",
+                    "shot_screen"
+                  ],
+                  "score": 86.1,
+                  "session_id": "2026-08-09",
+                  "status": "done",
+                  "swing_id": "1"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "content": [],
+        "isError": false,
+        "structuredContent": {
+          "result": []
+        }
+      },
+      {
+        "content": [],
+        "isError": false,
+        "structuredContent": {
+          "result": []
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"swing_id\": \"1\",\n  \"session_id\": \"2026-08-10\",\n  \"status\": \"done\",\n  \"club\": null,\n  \"mishit\": null,\n  \"overall_score\": 94.9,\n  \"mechanics_score\": 94.9,\n  \"outcome_score\": null,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\",\n  \"checkpoints\": [\n    {\n      \"name\": \"tempo\",\n      \"observed\": 2.42,\n      \"expected_low\": 2.72,\n      \"expected_high\": 4.71,\n      \"passed\": false,\n      \"score\": 0.85,\n      \"percentile\": 10.0,\n      \"population_n\": 1399,\n      \"message\": \"Tempo too quick - 2.4:1.\"\n    },\n    {\n      \"name\": \"head_sway\",\n      \"observed\": 0.12,\n      \"expected_low\": 0.0,\n      \"expected_high\": 0.43,\n      \"passed\": true,\n      \"score\": 1.0,\n      \"percentile\": 35.5,\n      \"population_n\": 458,\n      \"message\": \"Head stays steady.\"\n    }\n  ],\n  \"tips\": [\n    {\n      \"checkpoint\": \"tempo\",\n      \"text\": \"Tempo too quick - 2.4:1.\",\n      \"severity\": \"minor\"\n    }\n  ],\n  \"unscored\": [],\n  \"measurements\": {},\n  \"simulated\": [],\n  \"population\": [],\n  \"rotation\": [],\n  \"analysis_version\": null,\n  \"alignment_quality\": \"top_impact\",\n  \"alignment_caveat\": \"The two camera views were aligned on top and impact, not on every instant. Frame correspondence is exact at those anchors and interpolated between them, so do not describe the side-by-side video as synchronized throughout, and do not read fine timing differences off it.\",\n  \"shot\": null,\n  \"notes\": [\n    \"alignment degraded: aligned on top and impact\"\n  ]\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "alignment_caveat": "The two camera views were aligned on top and impact, not on every instant. Frame correspondence is exact at those anchors and interpolated between them, so do not describe the side-by-side video as synchronized throughout, and do not read fine timing differences off it.",
+            "alignment_quality": "top_impact",
+            "analysis_version": null,
+            "checkpoints": [
+              {
+                "expected_high": 4.71,
+                "expected_low": 2.72,
+                "message": "Tempo too quick - 2.4:1.",
+                "name": "tempo",
+                "observed": 2.42,
+                "passed": false,
+                "percentile": 10.0,
+                "population_n": 1399,
+                "score": 0.85
+              },
+              {
+                "expected_high": 0.43,
+                "expected_low": 0.0,
+                "message": "Head stays steady.",
+                "name": "head_sway",
+                "observed": 0.12,
+                "passed": true,
+                "percentile": 35.5,
+                "population_n": 458,
+                "score": 1.0
+              }
+            ],
+            "club": null,
+            "headline": "Work on tempo first. Tempo too quick - 2.4:1.",
+            "measurements": {},
+            "mechanics_score": 94.9,
+            "mishit": null,
+            "notes": [
+              "alignment degraded: aligned on top and impact"
+            ],
+            "outcome_score": null,
+            "overall_score": 94.9,
+            "population": [],
+            "rotation": [],
+            "session_id": "2026-08-10",
+            "shot": null,
+            "simulated": [],
+            "status": "done",
+            "swing_id": "1",
+            "tips": [
+              {
+                "checkpoint": "tempo",
+                "severity": "minor",
+                "text": "Tempo too quick - 2.4:1."
+              }
+            ],
+            "unscored": []
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"swing_id\": \"2\",\n  \"session_id\": \"2026-08-10\",\n  \"status\": \"done\",\n  \"club\": null,\n  \"mishit\": null,\n  \"overall_score\": 93.8,\n  \"mechanics_score\": 93.8,\n  \"outcome_score\": null,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\",\n  \"checkpoints\": [\n    {\n      \"name\": \"tempo\",\n      \"observed\": 2.42,\n      \"expected_low\": 2.72,\n      \"expected_high\": 4.71,\n      \"passed\": false,\n      \"score\": 0.85,\n      \"percentile\": 10.0,\n      \"population_n\": 1399,\n      \"message\": \"Tempo too quick - 2.4:1.\"\n    },\n    {\n      \"name\": \"head_sway\",\n      \"observed\": 0.12,\n      \"expected_low\": 0.0,\n      \"expected_high\": 0.43,\n      \"passed\": true,\n      \"score\": 1.0,\n      \"percentile\": 35.5,\n      \"population_n\": 458,\n      \"message\": \"Head stays steady.\"\n    }\n  ],\n  \"tips\": [\n    {\n      \"checkpoint\": \"tempo\",\n      \"text\": \"Tempo too quick - 2.4:1.\",\n      \"severity\": \"minor\"\n    }\n  ],\n  \"unscored\": [],\n  \"measurements\": {},\n  \"simulated\": [],\n  \"population\": [],\n  \"rotation\": [],\n  \"analysis_version\": null,\n  \"alignment_quality\": \"top_impact\",\n  \"alignment_caveat\": \"The two camera views were aligned on top and impact, not on every instant. Frame correspondence is exact at those anchors and interpolated between them, so do not describe the side-by-side video as synchronized throughout, and do not read fine timing differences off it.\",\n  \"shot\": null,\n  \"notes\": [\n    \"alignment degraded: aligned on top and impact\"\n  ]\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "alignment_caveat": "The two camera views were aligned on top and impact, not on every instant. Frame correspondence is exact at those anchors and interpolated between them, so do not describe the side-by-side video as synchronized throughout, and do not read fine timing differences off it.",
+            "alignment_quality": "top_impact",
+            "analysis_version": null,
+            "checkpoints": [
+              {
+                "expected_high": 4.71,
+                "expected_low": 2.72,
+                "message": "Tempo too quick - 2.4:1.",
+                "name": "tempo",
+                "observed": 2.42,
+                "passed": false,
+                "percentile": 10.0,
+                "population_n": 1399,
+                "score": 0.85
+              },
+              {
+                "expected_high": 0.43,
+                "expected_low": 0.0,
+                "message": "Head stays steady.",
+                "name": "head_sway",
+                "observed": 0.12,
+                "passed": true,
+                "percentile": 35.5,
+                "population_n": 458,
+                "score": 1.0
+              }
+            ],
+            "club": null,
+            "headline": "Work on tempo first. Tempo too quick - 2.4:1.",
+            "measurements": {},
+            "mechanics_score": 93.8,
+            "mishit": null,
+            "notes": [
+              "alignment degraded: aligned on top and impact"
+            ],
+            "outcome_score": null,
+            "overall_score": 93.8,
+            "population": [],
+            "rotation": [],
+            "session_id": "2026-08-10",
+            "shot": null,
+            "simulated": [],
+            "status": "done",
+            "swing_id": "2",
+            "tips": [
+              {
+                "checkpoint": "tempo",
+                "severity": "minor",
+                "text": "Tempo too quick - 2.4:1."
+              }
+            ],
+            "unscored": []
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"swing_id\": \"1\",\n  \"session_id\": \"2026-08-09\",\n  \"status\": \"done\",\n  \"club\": null,\n  \"mishit\": null,\n  \"overall_score\": 86.1,\n  \"mechanics_score\": 86.1,\n  \"outcome_score\": null,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\",\n  \"checkpoints\": [\n    {\n      \"name\": \"tempo\",\n      \"observed\": 2.42,\n      \"expected_low\": 2.72,\n      \"expected_high\": 4.71,\n      \"passed\": false,\n      \"score\": 0.85,\n      \"percentile\": 10.0,\n      \"population_n\": 1399,\n      \"message\": \"Tempo too quick - 2.4:1.\"\n    },\n    {\n      \"name\": \"head_sway\",\n      \"observed\": 0.12,\n      \"expected_low\": 0.0,\n      \"expected_high\": 0.43,\n      \"passed\": true,\n      \"score\": 1.0,\n      \"percentile\": 35.5,\n      \"population_n\": 458,\n      \"message\": \"Head stays steady.\"\n    }\n  ],\n  \"tips\": [\n    {\n      \"checkpoint\": \"tempo\",\n      \"text\": \"Tempo too quick - 2.4:1.\",\n      \"severity\": \"minor\"\n    }\n  ],\n  \"unscored\": [],\n  \"measurements\": {},\n  \"simulated\": [],\n  \"population\": [],\n  \"rotation\": [],\n  \"analysis_version\": null,\n  \"alignment_quality\": \"top_impact\",\n  \"alignment_caveat\": \"The two camera views were aligned on top and impact, not on every instant. Frame correspondence is exact at those anchors and interpolated between them, so do not describe the side-by-side video as synchronized throughout, and do not read fine timing differences off it.\",\n  \"shot\": null,\n  \"notes\": [\n    \"alignment degraded: aligned on top and impact\"\n  ]\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "alignment_caveat": "The two camera views were aligned on top and impact, not on every instant. Frame correspondence is exact at those anchors and interpolated between them, so do not describe the side-by-side video as synchronized throughout, and do not read fine timing differences off it.",
+            "alignment_quality": "top_impact",
+            "analysis_version": null,
+            "checkpoints": [
+              {
+                "expected_high": 4.71,
+                "expected_low": 2.72,
+                "message": "Tempo too quick - 2.4:1.",
+                "name": "tempo",
+                "observed": 2.42,
+                "passed": false,
+                "percentile": 10.0,
+                "population_n": 1399,
+                "score": 0.85
+              },
+              {
+                "expected_high": 0.43,
+                "expected_low": 0.0,
+                "message": "Head stays steady.",
+                "name": "head_sway",
+                "observed": 0.12,
+                "passed": true,
+                "percentile": 35.5,
+                "population_n": 458,
+                "score": 1.0
+              }
+            ],
+            "club": null,
+            "headline": "Work on tempo first. Tempo too quick - 2.4:1.",
+            "measurements": {},
+            "mechanics_score": 86.1,
+            "mishit": null,
+            "notes": [
+              "alignment degraded: aligned on top and impact"
+            ],
+            "outcome_score": null,
+            "overall_score": 86.1,
+            "population": [],
+            "rotation": [],
+            "session_id": "2026-08-09",
+            "shot": null,
+            "simulated": [],
+            "status": "done",
+            "swing_id": "1",
+            "tips": [
+              {
+                "checkpoint": "tempo",
+                "severity": "minor",
+                "text": "Tempo too quick - 2.4:1."
+              }
+            ],
+            "unscored": []
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"swing_id\": \"1\",\n  \"session_id\": \"2026-08-08\",\n  \"status\": \"not analyzed\",\n  \"club\": null,\n  \"mishit\": null,\n  \"overall_score\": null,\n  \"mechanics_score\": null,\n  \"outcome_score\": null,\n  \"headline\": null,\n  \"checkpoints\": [],\n  \"tips\": [],\n  \"unscored\": [],\n  \"measurements\": {},\n  \"simulated\": [],\n  \"population\": [],\n  \"rotation\": [],\n  \"analysis_version\": null,\n  \"alignment_quality\": null,\n  \"alignment_caveat\": null,\n  \"shot\": null,\n  \"notes\": []\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "alignment_caveat": null,
+            "alignment_quality": null,
+            "analysis_version": null,
+            "checkpoints": [],
+            "club": null,
+            "headline": null,
+            "measurements": {},
+            "mechanics_score": null,
+            "mishit": null,
+            "notes": [],
+            "outcome_score": null,
+            "overall_score": null,
+            "population": [],
+            "rotation": [],
+            "session_id": "2026-08-08",
+            "shot": null,
+            "simulated": [],
+            "status": "not analyzed",
+            "swing_id": "1",
+            "tips": [],
+            "unscored": []
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"found\": false,\n  \"message\": \"No swing '99' in session '2026-08-10'. Call list_sessions to see which sessions and swing ids exist.\"\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "found": false,
+            "message": "No swing '99' in session '2026-08-10'. Call list_sessions to see which sessions and swing ids exist."
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"found\": false,\n  \"message\": \"No swing 'nope' in session 'nope'. Call list_sessions to see which sessions and swing ids exist.\"\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "found": false,
+            "message": "No swing 'nope' in session 'nope'. Call list_sessions to see which sessions and swing ids exist."
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"session_id\": \"2026-08-10\",\n  \"swing_count\": 2,\n  \"analyzed_count\": 2,\n  \"mean_score\": 94.3,\n  \"best_score\": 94.9,\n  \"worst_score\": 93.8,\n  \"checkpoint_pass_rates\": {\n    \"head_sway\": \"2/2\",\n    \"tempo\": \"0/2\"\n  },\n  \"unscored_counts\": {},\n  \"shots_attached\": 0,\n  \"shots_needing_review\": 0,\n  \"mishits_excluded\": 0,\n  \"shot_averages\": {},\n  \"headlines\": [\n    \"Work on tempo first. Tempo too quick - 2.4:1.\",\n    \"Work on tempo first. Tempo too quick - 2.4:1.\"\n  ]\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "analyzed_count": 2,
+            "best_score": 94.9,
+            "checkpoint_pass_rates": {
+              "head_sway": "2/2",
+              "tempo": "0/2"
+            },
+            "headlines": [
+              "Work on tempo first. Tempo too quick - 2.4:1.",
+              "Work on tempo first. Tempo too quick - 2.4:1."
+            ],
+            "mean_score": 94.3,
+            "mishits_excluded": 0,
+            "session_id": "2026-08-10",
+            "shot_averages": {},
+            "shots_attached": 0,
+            "shots_needing_review": 0,
+            "swing_count": 2,
+            "unscored_counts": {},
+            "worst_score": 93.8
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"session_id\": \"2026-08-09\",\n  \"swing_count\": 1,\n  \"analyzed_count\": 1,\n  \"mean_score\": 86.1,\n  \"best_score\": 86.1,\n  \"worst_score\": 86.1,\n  \"checkpoint_pass_rates\": {\n    \"head_sway\": \"1/1\",\n    \"tempo\": \"0/1\"\n  },\n  \"unscored_counts\": {},\n  \"shots_attached\": 0,\n  \"shots_needing_review\": 0,\n  \"mishits_excluded\": 0,\n  \"shot_averages\": {},\n  \"headlines\": [\n    \"Work on tempo first. Tempo too quick - 2.4:1.\"\n  ]\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "analyzed_count": 1,
+            "best_score": 86.1,
+            "checkpoint_pass_rates": {
+              "head_sway": "1/1",
+              "tempo": "0/1"
+            },
+            "headlines": [
+              "Work on tempo first. Tempo too quick - 2.4:1."
+            ],
+            "mean_score": 86.1,
+            "mishits_excluded": 0,
+            "session_id": "2026-08-09",
+            "shot_averages": {},
+            "shots_attached": 0,
+            "shots_needing_review": 0,
+            "swing_count": 1,
+            "unscored_counts": {},
+            "worst_score": 86.1
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"session_id\": \"2026-08-08\",\n  \"swing_count\": 1,\n  \"analyzed_count\": 0,\n  \"mean_score\": null,\n  \"best_score\": null,\n  \"worst_score\": null,\n  \"checkpoint_pass_rates\": {},\n  \"unscored_counts\": {},\n  \"shots_attached\": 0,\n  \"shots_needing_review\": 0,\n  \"mishits_excluded\": 0,\n  \"shot_averages\": {},\n  \"headlines\": []\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "analyzed_count": 0,
+            "best_score": null,
+            "checkpoint_pass_rates": {},
+            "headlines": [],
+            "mean_score": null,
+            "mishits_excluded": 0,
+            "session_id": "2026-08-08",
+            "shot_averages": {},
+            "shots_attached": 0,
+            "shots_needing_review": 0,
+            "swing_count": 1,
+            "unscored_counts": {},
+            "worst_score": null
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"found\": false,\n  \"message\": \"No session '1999-01-01'. Call list_sessions to see which sessions exist.\"\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "found": false,
+            "message": "No session '1999-01-01'. Call list_sessions to see which sessions exist."
+          }
+        }
+      },
+      {
+        "content": [],
+        "isError": false,
+        "structuredContent": {
+          "result": []
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"found\": false,\n  \"message\": \"No shot with id 'nope'. Call get_recent_shots to see which shot ids exist.\"\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "found": false,
+            "message": "No shot with id 'nope'. Call get_recent_shots to see which shot ids exist."
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"session_id\": \"2026-08-10\",\n  \"swing_id\": \"1\",\n  \"shot_id\": null,\n  \"club\": null,\n  \"flew\": false,\n  \"source\": \"model:flight_v1\",\n  \"simulated\": [],\n  \"reason\": null,\n  \"detail\": \"This swing's shot screen has not been read yet, so its launch conditions are not on file. Analyzing the swing reads it, or it can be imported with scripts/import_shot_screens.py.\",\n  \"unscored\": [],\n  \"launch\": null,\n  \"spin\": null,\n  \"axis\": null,\n  \"comparison\": [],\n  \"caveats\": [],\n  \"differs_from_recorded\": [],\n  \"recorded_reading\": \"\"\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "axis": null,
+            "caveats": [],
+            "club": null,
+            "comparison": [],
+            "detail": "This swing's shot screen has not been read yet, so its launch conditions are not on file. Analyzing the swing reads it, or it can be imported with scripts/import_shot_screens.py.",
+            "differs_from_recorded": [],
+            "flew": false,
+            "launch": null,
+            "reason": null,
+            "recorded_reading": "",
+            "session_id": "2026-08-10",
+            "shot_id": null,
+            "simulated": [],
+            "source": "model:flight_v1",
+            "spin": null,
+            "swing_id": "1",
+            "unscored": []
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"session_id\": \"2026-08-08\",\n  \"swing_id\": \"1\",\n  \"shot_id\": null,\n  \"club\": null,\n  \"flew\": false,\n  \"source\": \"model:flight_v1\",\n  \"simulated\": [],\n  \"reason\": null,\n  \"detail\": \"This swing has no shot-screen photo, so there are no launch conditions to fly. Ball flight is simulated from what the launch monitor printed, never from the video.\",\n  \"unscored\": [],\n  \"launch\": null,\n  \"spin\": null,\n  \"axis\": null,\n  \"comparison\": [],\n  \"caveats\": [],\n  \"differs_from_recorded\": [],\n  \"recorded_reading\": \"\"\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "axis": null,
+            "caveats": [],
+            "club": null,
+            "comparison": [],
+            "detail": "This swing has no shot-screen photo, so there are no launch conditions to fly. Ball flight is simulated from what the launch monitor printed, never from the video.",
+            "differs_from_recorded": [],
+            "flew": false,
+            "launch": null,
+            "reason": null,
+            "recorded_reading": "",
+            "session_id": "2026-08-08",
+            "shot_id": null,
+            "simulated": [],
+            "source": "model:flight_v1",
+            "spin": null,
+            "swing_id": "1",
+            "unscored": []
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"found\": false,\n  \"message\": \"No swing '99' in session '2026-08-10'. Call list_sessions to see which sessions and swing ids exist.\"\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "found": false,
+            "message": "No swing '99' in session '2026-08-10'. Call list_sessions to see which sessions and swing ids exist."
+          }
+        }
+      }
+    ]
+  },
+  "id": "mcp/tools/sessions",
+  "input": {
+    "calls": [
+      {
+        "arguments": {},
+        "now": null,
+        "tool": "list_sessions"
+      },
+      {
+        "arguments": {
+          "limit": 2
+        },
+        "now": null,
+        "tool": "list_sessions"
+      },
+      {
+        "arguments": {
+          "limit": 0
+        },
+        "now": null,
+        "tool": "list_sessions"
+      },
+      {
+        "arguments": {
+          "limit": -1
+        },
+        "now": null,
+        "tool": "list_sessions"
+      },
+      {
+        "arguments": {
+          "session_id": "2026-08-10",
+          "swing_id": "1"
+        },
+        "now": null,
+        "tool": "get_swing"
+      },
+      {
+        "arguments": {
+          "session_id": "2026-08-10",
+          "swing_id": "2"
+        },
+        "now": null,
+        "tool": "get_swing"
+      },
+      {
+        "arguments": {
+          "session_id": "2026-08-09",
+          "swing_id": "1"
+        },
+        "now": null,
+        "tool": "get_swing"
+      },
+      {
+        "arguments": {
+          "session_id": "2026-08-08",
+          "swing_id": "1"
+        },
+        "now": null,
+        "tool": "get_swing"
+      },
+      {
+        "arguments": {
+          "session_id": "2026-08-10",
+          "swing_id": "99"
+        },
+        "now": null,
+        "tool": "get_swing"
+      },
+      {
+        "arguments": {
+          "session_id": "nope",
+          "swing_id": "nope"
+        },
+        "now": null,
+        "tool": "get_swing"
+      },
+      {
+        "arguments": {
+          "session_id": "2026-08-10"
+        },
+        "now": null,
+        "tool": "get_session_summary"
+      },
+      {
+        "arguments": {
+          "session_id": "2026-08-09"
+        },
+        "now": null,
+        "tool": "get_session_summary"
+      },
+      {
+        "arguments": {
+          "session_id": "2026-08-08"
+        },
+        "now": null,
+        "tool": "get_session_summary"
+      },
+      {
+        "arguments": {
+          "session_id": "1999-01-01"
+        },
+        "now": null,
+        "tool": "get_session_summary"
+      },
+      {
+        "arguments": {},
+        "now": null,
+        "tool": "get_recent_shots"
+      },
+      {
+        "arguments": {
+          "shot_id": "nope"
+        },
+        "now": null,
+        "tool": "get_shot_by_id"
+      },
+      {
+        "arguments": {
+          "session_id": "2026-08-10",
+          "swing_id": "1"
+        },
+        "now": null,
+        "tool": "simulate_flight"
+      },
+      {
+        "arguments": {
+          "session_id": "2026-08-08",
+          "swing_id": "1"
+        },
+        "now": null,
+        "tool": "simulate_flight"
+      },
+      {
+        "arguments": {
+          "session_id": "2026-08-10",
+          "swing_id": "99"
+        },
+        "now": null,
+        "tool": "simulate_flight"
+      }
+    ],
+    "files": {
+      "sessions/2026-08-08/1/manifest.json": "{\n  \"swing_id\": \"1\",\n  \"session_id\": \"2026-08-08\",\n  \"created_at\": \"2026-08-10T01:39:00Z\",\n  \"updated_at\": \"2026-08-10T01:39:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-08-1-face_on\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": null,\n  \"club\": null,\n  \"mishit\": null\n}",
+      "sessions/2026-08-09/1/analysis.json": "{\"swing_id\": \"1\", \"session_id\": \"2026-08-09\", \"swing\": {\"swing_id\": \"1\", \"session_id\": \"2026-08-09\", \"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.42, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick - 2.4:1.\", \"percentile\": 10.0, \"population_n\": 1399, \"one_sided\": false}, {\"name\": \"head_sway\", \"score\": 1.0, \"passed\": true, \"observed\": 0.12, \"expected_low\": 0.0, \"expected_high\": 0.43, \"message\": \"Head stays steady.\", \"percentile\": 35.5, \"population_n\": 458, \"one_sided\": true}], \"unscored\": [], \"measurements\": [], \"mechanics_score\": 86.1, \"outcome_score\": null, \"overall_score\": 86.1, \"shot\": null}, \"alignment\": {\"quality\": \"top_impact\"}, \"notes\": [\"alignment degraded: aligned on top and impact\"], \"feedback\": {\"swing_id\": \"1\", \"overall_score\": 86.1, \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\", \"tips\": [{\"checkpoint\": \"tempo\", \"text\": \"Tempo too quick - 2.4:1.\", \"severity\": \"minor\"}]}}",
+      "sessions/2026-08-09/1/manifest.json": "{\n  \"swing_id\": \"1\",\n  \"session_id\": \"2026-08-09\",\n  \"created_at\": \"2026-08-10T01:39:00Z\",\n  \"updated_at\": \"2026-08-10T01:39:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-09-1-face_on\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-09-1-down_the_line\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-09-1-shot_screen\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": null,\n  \"club\": null,\n  \"mishit\": null\n}",
+      "sessions/2026-08-10/1/analysis.json": "{\"swing_id\": \"1\", \"session_id\": \"2026-08-10\", \"swing\": {\"swing_id\": \"1\", \"session_id\": \"2026-08-10\", \"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.42, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick - 2.4:1.\", \"percentile\": 10.0, \"population_n\": 1399, \"one_sided\": false}, {\"name\": \"head_sway\", \"score\": 1.0, \"passed\": true, \"observed\": 0.12, \"expected_low\": 0.0, \"expected_high\": 0.43, \"message\": \"Head stays steady.\", \"percentile\": 35.5, \"population_n\": 458, \"one_sided\": true}], \"unscored\": [], \"measurements\": [], \"mechanics_score\": 94.9, \"outcome_score\": null, \"overall_score\": 94.9, \"shot\": null}, \"alignment\": {\"quality\": \"top_impact\"}, \"notes\": [\"alignment degraded: aligned on top and impact\"], \"feedback\": {\"swing_id\": \"1\", \"overall_score\": 94.9, \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\", \"tips\": [{\"checkpoint\": \"tempo\", \"text\": \"Tempo too quick - 2.4:1.\", \"severity\": \"minor\"}]}}",
+      "sessions/2026-08-10/1/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"down_the_line\": \"sha-2026-08-10-1-down_the_line\",\n    \"face_on\": \"sha-2026-08-10-1-face_on\",\n    \"shot_screen\": \"sha-2026-08-10-1-shot_screen\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 94.9,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\"\n}",
+      "sessions/2026-08-10/1/manifest.json": "{\n  \"swing_id\": \"1\",\n  \"session_id\": \"2026-08-10\",\n  \"created_at\": \"2026-08-10T01:39:00Z\",\n  \"updated_at\": \"2026-08-10T01:39:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-10-1-face_on\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-10-1-down_the_line\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-10-1-shot_screen\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": null,\n  \"club\": null,\n  \"mishit\": null\n}",
+      "sessions/2026-08-10/2/analysis.json": "{\"swing_id\": \"2\", \"session_id\": \"2026-08-10\", \"swing\": {\"swing_id\": \"2\", \"session_id\": \"2026-08-10\", \"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.42, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick - 2.4:1.\", \"percentile\": 10.0, \"population_n\": 1399, \"one_sided\": false}, {\"name\": \"head_sway\", \"score\": 1.0, \"passed\": true, \"observed\": 0.12, \"expected_low\": 0.0, \"expected_high\": 0.43, \"message\": \"Head stays steady.\", \"percentile\": 35.5, \"population_n\": 458, \"one_sided\": true}], \"unscored\": [], \"measurements\": [], \"mechanics_score\": 93.8, \"outcome_score\": null, \"overall_score\": 93.8, \"shot\": null}, \"alignment\": {\"quality\": \"top_impact\"}, \"notes\": [\"alignment degraded: aligned on top and impact\"], \"feedback\": {\"swing_id\": \"2\", \"overall_score\": 93.8, \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\", \"tips\": [{\"checkpoint\": \"tempo\", \"text\": \"Tempo too quick - 2.4:1.\", \"severity\": \"minor\"}]}}",
+      "sessions/2026-08-10/2/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"down_the_line\": \"sha-2026-08-10-2-down_the_line\",\n    \"face_on\": \"sha-2026-08-10-2-face_on\",\n    \"shot_screen\": \"sha-2026-08-10-2-shot_screen\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 93.8,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\"\n}",
+      "sessions/2026-08-10/2/manifest.json": "{\n  \"swing_id\": \"2\",\n  \"session_id\": \"2026-08-10\",\n  \"created_at\": \"2026-08-10T01:39:00Z\",\n  \"updated_at\": \"2026-08-10T01:39:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-10-2-face_on\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-10-2-down_the_line\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-10-2-shot_screen\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": null,\n  \"club\": null,\n  \"mishit\": null\n}"
+    },
+    "roots": {
+      "golfers": null,
+      "sessions": "sessions",
+      "shots": "shots"
+    }
+  },
+  "provenance": {
+    "analysis_version": 16,
+    "flight_model_calls": [],
+    "kind": "mcp",
+    "mcp_version": "2.0.0",
+    "note": "conftest's sessions_dir with no registry: the listing (order, limits, the analysis.json fallback, the unanalysed swing and its roles), get_swing and its misses, the summaries and the absent session, and a flight with its screen unread, with none, and a miss; test_query.py's listing tests and test_server.py's round trips and misses",
+    "oracle": "python",
+    "pydantic_version": "2.13.4",
+    "python_version": "3.13.3",
+    "recorded_by": "scripts/conformance_vectors.py::_run_mcp",
+    "rerecords": [
+      {
+        "added": [],
+        "by": "golf-core rerecord",
+        "career_version": 3,
+        "declaration": "spec/declarations/career-v3.json",
+        "moved": [
+          "career_version"
+        ]
+      }
+    ],
+    "source": "scripts/conformance_vectors.py::_mcp_sessions, after tests/mcp/"
+  }
+}

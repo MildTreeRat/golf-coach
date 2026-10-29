@@ -1,0 +1,1751 @@
+{
+  "career_version": 3,
+  "expected": {
+    "results": [
+      {
+        "content": [
+          {
+            "text": "{\n  \"player_id\": \"aaron\",\n  \"display_name\": \"Aaron\",\n  \"handedness\": \"right\",\n  \"distinct_swings\": 2,\n  \"swing_dirs_seen\": 2,\n  \"sessions\": 2,\n  \"built_from_swings\": 2,\n  \"mishits_excluded\": 0,\n  \"metrics\": [\n    {\n      \"name\": \"face_to_path_deg\",\n      \"unit\": \"degrees\",\n      \"source\": \"launch_monitor:hd_golf\",\n      \"n\": 2,\n      \"n_sessions\": 2,\n      \"center\": null,\n      \"center_ci_low\": null,\n      \"center_ci_high\": null,\n      \"median\": null,\n      \"sd\": null,\n      \"sd_ci_low\": null,\n      \"sd_ci_high\": null,\n      \"minimum\": null,\n      \"maximum\": null,\n      \"bias\": \"withheld\",\n      \"scatter\": \"withheld\",\n      \"pattern\": null,\n      \"points_at\": null,\n      \"target\": 0.0,\n      \"tolerance\": 2.0,\n      \"within_session_sd\": null,\n      \"tour_standing\": \"withheld\",\n      \"tour_reading\": null,\n      \"tour_percentile\": null,\n      \"tour_percentile_clamped\": false,\n      \"tour_band_low\": null,\n      \"tour_band_high\": null,\n      \"tour_population_n\": null,\n      \"tour_population_players\": null,\n      \"outside_by\": null,\n      \"sessions\": [\n        {\n          \"session_id\": \"2026-08-01\",\n          \"captured_at\": \"2026-08-01T12:00:00+00:00\",\n          \"n\": 1,\n          \"mean\": null\n        },\n        {\n          \"session_id\": \"2026-08-02\",\n          \"captured_at\": \"2026-08-02T12:00:00+00:00\",\n          \"n\": 1,\n          \"mean\": null\n        }\n      ],\n      \"caveats\": [],\n      \"withheld\": [\n        {\n          \"claim\": \"center\",\n          \"have_n\": 2,\n          \"need_n\": 5,\n          \"have_sessions\": 2,\n          \"need_sessions\": 1,\n          \"reason\": \"a typical value for this golfer needs 5 samples (there are 2)\"\n        },\n        {\n          \"claim\": \"spread\",\n          \"have_n\": 2,\n          \"need_n\": 10,\n          \"have_sessions\": 2,\n          \"need_sessions\": 1,\n          \"reason\": \"a claim about how repeatable this is needs 10 samples (there are 2)\"\n        },\n        {\n          \"claim\": \"trend\",\n          \"have_n\": 2,\n          \"need_n\": 12,\n          \"have_sessions\": 2,\n          \"need_sessions\": 3,\n          \"reason\": \"a claim that this has moved needs 12 samples (there are 2) and 3 sessions (there are 2) — repeated swings in one bay hour are one occasion, not several\"\n        }\n      ],\n      \"unavailable\": [\n        \"face_to_path_deg: no tour population exists for it. Every distribution in this repo comes from GolfDB, which is pose estimated from broadcast video and contains no ball flight — a launch-monitor reference would have to be acquired, not derived\"\n      ]\n    },\n    {\n      \"name\": \"finish_balance_norm\",\n      \"unit\": \"shoulder_widths\",\n      \"source\": \"pose:face_on\",\n      \"n\": 2,\n      \"n_sessions\": 2,\n      \"center\": null,\n      \"center_ci_low\": null,\n      \"center_ci_high\": null,\n      \"median\": null,\n      \"sd\": null,\n      \"sd_ci_low\": null,\n      \"sd_ci_high\": null,\n      \"minimum\": null,\n      \"maximum\": null,\n      \"bias\": \"withheld\",\n      \"scatter\": \"withheld\",\n      \"pattern\": null,\n      \"points_at\": null,\n      \"target\": 0.0,\n      \"tolerance\": 0.024,\n      \"within_session_sd\": null,\n      \"tour_standing\": \"withheld\",\n      \"tour_reading\": null,\n      \"tour_percentile\": null,\n      \"tour_percentile_clamped\": false,\n      \"tour_band_low\": 0.0845,\n      \"tour_band_high\": 0.2872,\n      \"tour_population_n\": 458,\n      \"tour_population_players\": 122,\n      \"outside_by\": null,\n      \"sessions\": [\n        {\n          \"session_id\": \"2026-08-01\",\n          \"captured_at\": \"2026-08-01T12:00:00+00:00\",\n          \"n\": 1,\n          \"mean\": null\n        },\n        {\n          \"session_id\": \"2026-08-02\",\n          \"captured_at\": \"2026-08-02T12:00:00+00:00\",\n          \"n\": 1,\n          \"mean\": null\n        }\n      ],\n      \"caveats\": [],\n      \"withheld\": [\n        {\n          \"claim\": \"center\",\n          \"have_n\": 2,\n          \"need_n\": 5,\n          \"have_sessions\": 2,\n          \"need_sessions\": 1,\n          \"reason\": \"a typical value for this golfer needs 5 samples (there are 2)\"\n        },\n        {\n          \"claim\": \"spread\",\n          \"have_n\": 2,\n          \"need_n\": 10,\n          \"have_sessions\": 2,\n          \"need_sessions\": 1,\n          \"reason\": \"a claim about how repeatable this is needs 10 samples (there are 2)\"\n        },\n        {\n          \"claim\": \"trend\",\n          \"have_n\": 2,\n          \"need_n\": 12,\n          \"have_sessions\": 2,\n          \"need_sessions\": 3,\n          \"reason\": \"a claim that this has moved needs 12 samples (there are 2) and 3 sessions (there are 2) — repeated swings in one bay hour are one occasion, not several\"\n        }\n      ],\n      \"unavailable\": []\n    },\n    {\n      \"name\": \"head_hip_offset_impact_norm\",\n      \"unit\": \"shoulder_widths\",\n      \"source\": \"pose:face_on\",\n      \"n\": 2,\n      \"n_sessions\": 2,\n      \"center\": null,\n      \"center_ci_low\": null,\n      \"center_ci_high\": null,\n      \"median\": null,\n      \"sd\": null,\n      \"sd_ci_low\": null,\n      \"sd_ci_high\": null,\n      \"minimum\": null,\n      \"maximum\": null,\n      \"bias\": \"withheld\",\n      \"scatter\": \"withheld\",\n      \"pattern\": null,\n      \"points_at\": null,\n      \"target\": null,\n      \"tolerance\": 0.073,\n      \"within_session_sd\": null,\n      \"tour_standing\": \"withheld\",\n      \"tour_reading\": null,\n      \"tour_percentile\": null,\n      \"tour_percentile_clamped\": false,\n      \"tour_band_low\": null,\n      \"tour_band_high\": null,\n      \"tour_population_n\": null,\n      \"tour_population_players\": null,\n      \"outside_by\": null,\n      \"sessions\": [\n        {\n          \"session_id\": \"2026-08-01\",\n          \"captured_at\": \"2026-08-01T12:00:00+00:00\",\n          \"n\": 1,\n          \"mean\": null\n        },\n        {\n          \"session_id\": \"2026-08-02\",\n          \"captured_at\": \"2026-08-02T12:00:00+00:00\",\n          \"n\": 1,\n          \"mean\": null\n        }\n      ],\n      \"caveats\": [],\n      \"withheld\": [\n        {\n          \"claim\": \"center\",\n          \"have_n\": 2,\n          \"need_n\": 5,\n          \"have_sessions\": 2,\n          \"need_sessions\": 1,\n          \"reason\": \"a typical value for this golfer needs 5 samples (there are 2)\"\n        },\n        {\n          \"claim\": \"spread\",\n          \"have_n\": 2,\n          \"need_n\": 10,\n          \"have_sessions\": 2,\n          \"need_sessions\": 1,\n          \"reason\": \"a claim about how repeatable this is needs 10 samples (there are 2)\"\n        },\n        {\n          \"claim\": \"trend\",\n          \"have_n\": 2,\n          \"need_n\": 12,\n          \"have_sessions\": 2,\n          \"need_sessions\": 3,\n          \"reason\": \"a claim that this has moved needs 12 samples (there are 2) and 3 sessions (there are 2) — repeated swings in one bay hour are one occasion, not several\"\n        }\n      ],\n      \"unavailable\": [\n        \"no target for head_hip_offset_impact_norm: career mode step 4 established that the sign is readable here — a personal corpus is single-handed by construction, so the camera-relative ambiguity that blocks a tour band does not apply. A readable sign is not a target: staying behind the ball is right, and how far behind is not established\",\n        \"head_hip_offset_impact_norm has a stored distribution and may not be placed in it: its sign is camera-relative, and the tour distribution is cut from GolfDB's mixed-handedness population — the reason M6.5 blocked this metric from becoming a checkpoint. A personal baseline reads the sign because one golfer swings from one side; averaging left- and right-handed swings puts the two signs in one number, so placing a personal center in that population would compare a real quantity against a meaningless one\"\n      ]\n    },\n    {\n      \"name\": \"head_sway_norm\",\n      \"unit\": \"shoulder_widths\",\n      \"source\": \"pose:face_on\",\n      \"n\": 2,\n      \"n_sessions\": 2,\n      \"center\": null,\n      \"center_ci_low\": null,\n      \"center_ci_high\": null,\n      \"median\": null,\n      \"sd\": null,\n      \"sd_ci_low\": null,\n      \"sd_ci_high\": null,\n      \"minimum\": null,\n      \"maximum\": null,\n      \"bias\": \"withheld\",\n      \"scatter\": \"withheld\",\n      \"pattern\": null,\n      \"points_at\": null,\n      \"target\": 0.0,\n      \"tolerance\": 0.06,\n      \"within_session_sd\": null,\n      \"tour_standing\": \"withheld\",\n      \"tour_reading\": null,\n      \"tour_percentile\": null,\n      \"tour_percentile_clamped\": false,\n      \"tour_band_low\": 0.0294,\n      \"tour_band_high\": 0.4311,\n      \"tour_population_n\": 458,\n      \"tour_population_players\": 122,\n      \"outside_by\": null,\n      \"sessions\": [\n        {\n          \"session_id\": \"2026-08-01\",\n          \"captured_at\": \"2026-08-01T12:00:00+00:00\",\n          \"n\": 1,\n          \"mean\": null\n        },\n        {\n          \"session_id\": \"2026-08-02\",\n          \"captured_at\": \"2026-08-02T12:00:00+00:00\",\n          \"n\": 1,\n          \"mean\": null\n        }\n      ],\n      \"caveats\": [],\n      \"withheld\": [\n        {\n          \"claim\": \"center\",\n          \"have_n\": 2,\n          \"need_n\": 5,\n          \"have_sessions\": 2,\n          \"need_sessions\": 1,\n          \"reason\": \"a typical value for this golfer needs 5 samples (there are 2)\"\n        },\n        {\n          \"claim\": \"spread\",\n          \"have_n\": 2,\n          \"need_n\": 10,\n          \"have_sessions\": 2,\n          \"need_sessions\": 1,\n          \"reason\": \"a claim about how repeatable this is needs 10 samples (there are 2)\"\n        },\n        {\n          \"claim\": \"trend\",\n          \"have_n\": 2,\n          \"need_n\": 12,\n          \"have_sessions\": 2,\n          \"need_sessions\": 3,\n          \"reason\": \"a claim that this has moved needs 12 samples (there are 2) and 3 sessions (there are 2) — repeated swings in one bay hour are one occasion, not several\"\n        }\n      ],\n      \"unavailable\": []\n    },\n    {\n      \"name\": \"hip_shift_at_top_norm\",\n      \"unit\": \"shoulder_widths\",\n      \"source\": \"pose:face_on\",\n      \"n\": 2,\n      \"n_sessions\": 2,\n      \"center\": null,\n      \"center_ci_low\": null,\n      \"center_ci_high\": null,\n      \"median\": null,\n      \"sd\": null,\n      \"sd_ci_low\": null,\n      \"sd_ci_high\": null,\n      \"minimum\": null,\n      \"maximum\": null,\n      \"bias\": \"withheld\",\n      \"scatter\": \"withheld\",\n      \"pattern\": null,\n      \"points_at\": null,\n      \"target\": null,\n      \"tolerance\": 0.053,\n      \"within_session_sd\": null,\n      \"tour_standing\": \"withheld\",\n      \"tour_reading\": null,\n      \"tour_percentile\": null,\n      \"tour_percentile_clamped\": false,\n      \"tour_band_low\": 0.015,\n      \"tour_band_high\": 0.2069,\n      \"tour_population_n\": 458,\n      \"tour_population_players\": 122,\n      \"outside_by\": null,\n      \"sessions\": [\n        {\n          \"session_id\": \"2026-08-01\",\n          \"captured_at\": \"2026-08-01T12:00:00+00:00\",\n          \"n\": 1,\n          \"mean\": null\n        },\n        {\n          \"session_id\": \"2026-08-02\",\n          \"captured_at\": \"2026-08-02T12:00:00+00:00\",\n          \"n\": 1,\n          \"mean\": null\n        }\n      ],\n      \"caveats\": [],\n      \"withheld\": [\n        {\n          \"claim\": \"center\",\n          \"have_n\": 2,\n          \"need_n\": 6,\n          \"have_sessions\": 2,\n          \"need_sessions\": 1,\n          \"reason\": \"a typical value for this golfer needs 6 samples (there are 2)\"\n        },\n        {\n          \"claim\": \"spread\",\n          \"have_n\": 2,\n          \"need_n\": 12,\n          \"have_sessions\": 2,\n          \"need_sessions\": 1,\n          \"reason\": \"a claim about how repeatable this is needs 12 samples (there are 2)\"\n        },\n        {\n          \"claim\": \"trend\",\n          \"have_n\": 2,\n          \"need_n\": 14,\n          \"have_sessions\": 2,\n          \"need_sessions\": 3,\n          \"reason\": \"a claim that this has moved needs 14 samples (there are 2) and 3 sessions (there are 2) — repeated swings in one bay hour are one occasion, not several\"\n        }\n      ],\n      \"unavailable\": [\n        \"no target for hip_shift_at_top_norm: same as hip_sway_norm: it has a one-sided band as of 2026-08-12, but a band edge is not a target, and the right amount of hip travel going back is not a number this repo has. Its lower edge is omitted for being unmeasurable, not for being zero\"\n      ]\n    },\n    {\n      \"name\": \"hip_sway_norm\",\n      \"unit\": \"shoulder_widths\",\n      \"source\": \"pose:face_on\",\n      \"n\": 2,\n      \"n_sessions\": 2,\n      \"center\": null,\n      \"center_ci_low\": null,\n      \"center_ci_high\": null,\n      \"median\": null,\n      \"sd\": null,\n      \"sd_ci_low\": null,\n      \"sd_ci_high\": null,\n      \"minimum\": null,\n      \"maximum\": null,\n      \"bias\": \"withheld\",\n      \"scatter\": \"withheld\",\n      \"pattern\": null,\n      \"points_at\": null,\n      \"target\": null,\n      \"tolerance\": 0.05,\n      \"within_session_sd\": null,\n      \"tour_standing\": \"withheld\",\n      \"tour_reading\": null,\n      \"tour_percentile\": null,\n      \"tour_percentile_clamped\": false,\n      \"tour_band_low\": 0.1414,\n      \"tour_band_high\": 0.4995,\n      \"tour_population_n\": 458,\n      \"tour_population_players\": 122,\n      \"outside_by\": null,\n      \"sessions\": [\n        {\n          \"session_id\": \"2026-08-01\",\n          \"captured_at\": \"2026-08-01T12:00:00+00:00\",\n          \"n\": 1,\n          \"mean\": null\n        },\n        {\n          \"session_id\": \"2026-08-02\",\n          \"captured_at\": \"2026-08-02T12:00:00+00:00\",\n          \"n\": 1,\n          \"mean\": null\n        }\n      ],\n      \"caveats\": [],\n      \"withheld\": [\n        {\n          \"claim\": \"center\",\n          \"have_n\": 2,\n          \"need_n\": 5,\n          \"have_sessions\": 2,\n          \"need_sessions\": 1,\n          \"reason\": \"a typical value for this golfer needs 5 samples (there are 2)\"\n        },\n        {\n          \"claim\": \"spread\",\n          \"have_n\": 2,\n          \"need_n\": 10,\n          \"have_sessions\": 2,\n          \"need_sessions\": 1,\n          \"reason\": \"a claim about how repeatable this is needs 10 samples (there are 2)\"\n        },\n        {\n          \"claim\": \"trend\",\n          \"have_n\": 2,\n          \"need_n\": 12,\n          \"have_sessions\": 2,\n          \"need_sessions\": 3,\n          \"reason\": \"a claim that this has moved needs 12 samples (there are 2) and 3 sessions (there are 2) — repeated swings in one bay hour are one occasion, not several\"\n        }\n      ],\n      \"unavailable\": [\n        \"no target for hip_sway_norm: 'less is better' is not established for it — some lateral hip travel is a weight shift rather than a fault, and nothing here knows how much. It has a two-sided band as of 2026-08-12, which is a range rather than a target: `analysis.comparison` asks whether the personal center sits inside it, so no point value has to be invented here\"\n      ]\n    },\n    {\n      \"name\": \"start_line_deg\",\n      \"unit\": \"degrees\",\n      \"source\": \"launch_monitor:hd_golf\",\n      \"n\": 2,\n      \"n_sessions\": 2,\n      \"center\": null,\n      \"center_ci_low\": null,\n      \"center_ci_high\": null,\n      \"median\": null,\n      \"sd\": null,\n      \"sd_ci_low\": null,\n      \"sd_ci_high\": null,\n      \"minimum\": null,\n      \"maximum\": null,\n      \"bias\": \"withheld\",\n      \"scatter\": \"withheld\",\n      \"pattern\": null,\n      \"points_at\": null,\n      \"target\": 0.0,\n      \"tolerance\": 2.0,\n      \"within_session_sd\": null,\n      \"tour_standing\": \"withheld\",\n      \"tour_reading\": null,\n      \"tour_percentile\": null,\n      \"tour_percentile_clamped\": false,\n      \"tour_band_low\": null,\n      \"tour_band_high\": null,\n      \"tour_population_n\": null,\n      \"tour_population_players\": null,\n      \"outside_by\": null,\n      \"sessions\": [\n        {\n          \"session_id\": \"2026-08-01\",\n          \"captured_at\": \"2026-08-01T12:00:00+00:00\",\n          \"n\": 1,\n          \"mean\": null\n        },\n        {\n          \"session_id\": \"2026-08-02\",\n          \"captured_at\": \"2026-08-02T12:00:00+00:00\",\n          \"n\": 1,\n          \"mean\": null\n        }\n      ],\n      \"caveats\": [],\n      \"withheld\": [\n        {\n          \"claim\": \"center\",\n          \"have_n\": 2,\n          \"need_n\": 5,\n          \"have_sessions\": 2,\n          \"need_sessions\": 1,\n          \"reason\": \"a typical value for this golfer needs 5 samples (there are 2)\"\n        },\n        {\n          \"claim\": \"spread\",\n          \"have_n\": 2,\n          \"need_n\": 10,\n          \"have_sessions\": 2,\n          \"need_sessions\": 1,\n          \"reason\": \"a claim about how repeatable this is needs 10 samples (there are 2)\"\n        },\n        {\n          \"claim\": \"trend\",\n          \"have_n\": 2,\n          \"need_n\": 12,\n          \"have_sessions\": 2,\n          \"need_sessions\": 3,\n          \"reason\": \"a claim that this has moved needs 12 samples (there are 2) and 3 sessions (there are 2) — repeated swings in one bay hour are one occasion, not several\"\n        }\n      ],\n      \"unavailable\": [\n        \"start_line_deg: no tour population exists for it. Every distribution in this repo comes from GolfDB, which is pose estimated from broadcast video and contains no ball flight — a launch-monitor reference would have to be acquired, not derived\"\n      ]\n    },\n    {\n      \"name\": \"tempo_ratio\",\n      \"unit\": \"ratio\",\n      \"source\": \"pose:face_on\",\n      \"n\": 2,\n      \"n_sessions\": 2,\n      \"center\": null,\n      \"center_ci_low\": null,\n      \"center_ci_high\": null,\n      \"median\": null,\n      \"sd\": null,\n      \"sd_ci_low\": null,\n      \"sd_ci_high\": null,\n      \"minimum\": null,\n      \"maximum\": null,\n      \"bias\": \"withheld\",\n      \"scatter\": \"withheld\",\n      \"pattern\": null,\n      \"points_at\": null,\n      \"target\": null,\n      \"tolerance\": 0.943,\n      \"within_session_sd\": null,\n      \"tour_standing\": \"withheld\",\n      \"tour_reading\": null,\n      \"tour_percentile\": null,\n      \"tour_percentile_clamped\": false,\n      \"tour_band_low\": 2.7179,\n      \"tour_band_high\": 4.7106,\n      \"tour_population_n\": 1399,\n      \"tour_population_players\": 246,\n      \"outside_by\": null,\n      \"sessions\": [\n        {\n          \"session_id\": \"2026-08-01\",\n          \"captured_at\": \"2026-08-01T12:00:00+00:00\",\n          \"n\": 1,\n          \"mean\": null\n        },\n        {\n          \"session_id\": \"2026-08-02\",\n          \"captured_at\": \"2026-08-02T12:00:00+00:00\",\n          \"n\": 1,\n          \"mean\": null\n        }\n      ],\n      \"caveats\": [],\n      \"withheld\": [\n        {\n          \"claim\": \"center\",\n          \"have_n\": 2,\n          \"need_n\": 8,\n          \"have_sessions\": 2,\n          \"need_sessions\": 1,\n          \"reason\": \"a typical value for this golfer needs 8 samples (there are 2)\"\n        },\n        {\n          \"claim\": \"spread\",\n          \"have_n\": 2,\n          \"need_n\": 15,\n          \"have_sessions\": 2,\n          \"need_sessions\": 1,\n          \"reason\": \"a claim about how repeatable this is needs 15 samples (there are 2)\"\n        },\n        {\n          \"claim\": \"trend\",\n          \"have_n\": 2,\n          \"need_n\": 18,\n          \"have_sessions\": 2,\n          \"need_sessions\": 3,\n          \"reason\": \"a claim that this has moved needs 18 samples (there are 2) and 3 sessions (there are 2) — repeated swings in one bay hour are one occasion, not several\"\n        }\n      ],\n      \"unavailable\": [\n        \"no target for tempo_ratio: its target is a band (2.72-4.71 from 1,399 tour swings), not a value. Reading it would import `benchmarks` into the personal-baseline path, which is the boundary `analysis.baseline` holds on purpose (ADR-010 §2). `analysis.comparison` answers the band's question directly instead — whether the center's interval sits inside it — so no point target has to be invented here (career mode step 6)\"\n      ]\n    }\n  ],\n  \"nothing_sayable\": true,\n  \"note\": \"The data does not exist yet — this needs a bay session of 20-30 swings with shots attached. Report the refusal. Do not estimate the withheld figure from the sample counts below it.\"\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "built_from_swings": 2,
+            "display_name": "Aaron",
+            "distinct_swings": 2,
+            "handedness": "right",
+            "metrics": [
+              {
+                "bias": "withheld",
+                "caveats": [],
+                "center": null,
+                "center_ci_high": null,
+                "center_ci_low": null,
+                "maximum": null,
+                "median": null,
+                "minimum": null,
+                "n": 2,
+                "n_sessions": 2,
+                "name": "face_to_path_deg",
+                "outside_by": null,
+                "pattern": null,
+                "points_at": null,
+                "scatter": "withheld",
+                "sd": null,
+                "sd_ci_high": null,
+                "sd_ci_low": null,
+                "sessions": [
+                  {
+                    "captured_at": "2026-08-01T12:00:00+00:00",
+                    "mean": null,
+                    "n": 1,
+                    "session_id": "2026-08-01"
+                  },
+                  {
+                    "captured_at": "2026-08-02T12:00:00+00:00",
+                    "mean": null,
+                    "n": 1,
+                    "session_id": "2026-08-02"
+                  }
+                ],
+                "source": "launch_monitor:hd_golf",
+                "target": 0.0,
+                "tolerance": 2.0,
+                "tour_band_high": null,
+                "tour_band_low": null,
+                "tour_percentile": null,
+                "tour_percentile_clamped": false,
+                "tour_population_n": null,
+                "tour_population_players": null,
+                "tour_reading": null,
+                "tour_standing": "withheld",
+                "unavailable": [
+                  "face_to_path_deg: no tour population exists for it. Every distribution in this repo comes from GolfDB, which is pose estimated from broadcast video and contains no ball flight — a launch-monitor reference would have to be acquired, not derived"
+                ],
+                "unit": "degrees",
+                "withheld": [
+                  {
+                    "claim": "center",
+                    "have_n": 2,
+                    "have_sessions": 2,
+                    "need_n": 5,
+                    "need_sessions": 1,
+                    "reason": "a typical value for this golfer needs 5 samples (there are 2)"
+                  },
+                  {
+                    "claim": "spread",
+                    "have_n": 2,
+                    "have_sessions": 2,
+                    "need_n": 10,
+                    "need_sessions": 1,
+                    "reason": "a claim about how repeatable this is needs 10 samples (there are 2)"
+                  },
+                  {
+                    "claim": "trend",
+                    "have_n": 2,
+                    "have_sessions": 2,
+                    "need_n": 12,
+                    "need_sessions": 3,
+                    "reason": "a claim that this has moved needs 12 samples (there are 2) and 3 sessions (there are 2) — repeated swings in one bay hour are one occasion, not several"
+                  }
+                ],
+                "within_session_sd": null
+              },
+              {
+                "bias": "withheld",
+                "caveats": [],
+                "center": null,
+                "center_ci_high": null,
+                "center_ci_low": null,
+                "maximum": null,
+                "median": null,
+                "minimum": null,
+                "n": 2,
+                "n_sessions": 2,
+                "name": "finish_balance_norm",
+                "outside_by": null,
+                "pattern": null,
+                "points_at": null,
+                "scatter": "withheld",
+                "sd": null,
+                "sd_ci_high": null,
+                "sd_ci_low": null,
+                "sessions": [
+                  {
+                    "captured_at": "2026-08-01T12:00:00+00:00",
+                    "mean": null,
+                    "n": 1,
+                    "session_id": "2026-08-01"
+                  },
+                  {
+                    "captured_at": "2026-08-02T12:00:00+00:00",
+                    "mean": null,
+                    "n": 1,
+                    "session_id": "2026-08-02"
+                  }
+                ],
+                "source": "pose:face_on",
+                "target": 0.0,
+                "tolerance": 0.024,
+                "tour_band_high": 0.2872,
+                "tour_band_low": 0.0845,
+                "tour_percentile": null,
+                "tour_percentile_clamped": false,
+                "tour_population_n": 458,
+                "tour_population_players": 122,
+                "tour_reading": null,
+                "tour_standing": "withheld",
+                "unavailable": [],
+                "unit": "shoulder_widths",
+                "withheld": [
+                  {
+                    "claim": "center",
+                    "have_n": 2,
+                    "have_sessions": 2,
+                    "need_n": 5,
+                    "need_sessions": 1,
+                    "reason": "a typical value for this golfer needs 5 samples (there are 2)"
+                  },
+                  {
+                    "claim": "spread",
+                    "have_n": 2,
+                    "have_sessions": 2,
+                    "need_n": 10,
+                    "need_sessions": 1,
+                    "reason": "a claim about how repeatable this is needs 10 samples (there are 2)"
+                  },
+                  {
+                    "claim": "trend",
+                    "have_n": 2,
+                    "have_sessions": 2,
+                    "need_n": 12,
+                    "need_sessions": 3,
+                    "reason": "a claim that this has moved needs 12 samples (there are 2) and 3 sessions (there are 2) — repeated swings in one bay hour are one occasion, not several"
+                  }
+                ],
+                "within_session_sd": null
+              },
+              {
+                "bias": "withheld",
+                "caveats": [],
+                "center": null,
+                "center_ci_high": null,
+                "center_ci_low": null,
+                "maximum": null,
+                "median": null,
+                "minimum": null,
+                "n": 2,
+                "n_sessions": 2,
+                "name": "head_hip_offset_impact_norm",
+                "outside_by": null,
+                "pattern": null,
+                "points_at": null,
+                "scatter": "withheld",
+                "sd": null,
+                "sd_ci_high": null,
+                "sd_ci_low": null,
+                "sessions": [
+                  {
+                    "captured_at": "2026-08-01T12:00:00+00:00",
+                    "mean": null,
+                    "n": 1,
+                    "session_id": "2026-08-01"
+                  },
+                  {
+                    "captured_at": "2026-08-02T12:00:00+00:00",
+                    "mean": null,
+                    "n": 1,
+                    "session_id": "2026-08-02"
+                  }
+                ],
+                "source": "pose:face_on",
+                "target": null,
+                "tolerance": 0.073,
+                "tour_band_high": null,
+                "tour_band_low": null,
+                "tour_percentile": null,
+                "tour_percentile_clamped": false,
+                "tour_population_n": null,
+                "tour_population_players": null,
+                "tour_reading": null,
+                "tour_standing": "withheld",
+                "unavailable": [
+                  "no target for head_hip_offset_impact_norm: career mode step 4 established that the sign is readable here — a personal corpus is single-handed by construction, so the camera-relative ambiguity that blocks a tour band does not apply. A readable sign is not a target: staying behind the ball is right, and how far behind is not established",
+                  "head_hip_offset_impact_norm has a stored distribution and may not be placed in it: its sign is camera-relative, and the tour distribution is cut from GolfDB's mixed-handedness population — the reason M6.5 blocked this metric from becoming a checkpoint. A personal baseline reads the sign because one golfer swings from one side; averaging left- and right-handed swings puts the two signs in one number, so placing a personal center in that population would compare a real quantity against a meaningless one"
+                ],
+                "unit": "shoulder_widths",
+                "withheld": [
+                  {
+                    "claim": "center",
+                    "have_n": 2,
+                    "have_sessions": 2,
+                    "need_n": 5,
+                    "need_sessions": 1,
+                    "reason": "a typical value for this golfer needs 5 samples (there are 2)"
+                  },
+                  {
+                    "claim": "spread",
+                    "have_n": 2,
+                    "have_sessions": 2,
+                    "need_n": 10,
+                    "need_sessions": 1,
+                    "reason": "a claim about how repeatable this is needs 10 samples (there are 2)"
+                  },
+                  {
+                    "claim": "trend",
+                    "have_n": 2,
+                    "have_sessions": 2,
+                    "need_n": 12,
+                    "need_sessions": 3,
+                    "reason": "a claim that this has moved needs 12 samples (there are 2) and 3 sessions (there are 2) — repeated swings in one bay hour are one occasion, not several"
+                  }
+                ],
+                "within_session_sd": null
+              },
+              {
+                "bias": "withheld",
+                "caveats": [],
+                "center": null,
+                "center_ci_high": null,
+                "center_ci_low": null,
+                "maximum": null,
+                "median": null,
+                "minimum": null,
+                "n": 2,
+                "n_sessions": 2,
+                "name": "head_sway_norm",
+                "outside_by": null,
+                "pattern": null,
+                "points_at": null,
+                "scatter": "withheld",
+                "sd": null,
+                "sd_ci_high": null,
+                "sd_ci_low": null,
+                "sessions": [
+                  {
+                    "captured_at": "2026-08-01T12:00:00+00:00",
+                    "mean": null,
+                    "n": 1,
+                    "session_id": "2026-08-01"
+                  },
+                  {
+                    "captured_at": "2026-08-02T12:00:00+00:00",
+                    "mean": null,
+                    "n": 1,
+                    "session_id": "2026-08-02"
+                  }
+                ],
+                "source": "pose:face_on",
+                "target": 0.0,
+                "tolerance": 0.06,
+                "tour_band_high": 0.4311,
+                "tour_band_low": 0.0294,
+                "tour_percentile": null,
+                "tour_percentile_clamped": false,
+                "tour_population_n": 458,
+                "tour_population_players": 122,
+                "tour_reading": null,
+                "tour_standing": "withheld",
+                "unavailable": [],
+                "unit": "shoulder_widths",
+                "withheld": [
+                  {
+                    "claim": "center",
+                    "have_n": 2,
+                    "have_sessions": 2,
+                    "need_n": 5,
+                    "need_sessions": 1,
+                    "reason": "a typical value for this golfer needs 5 samples (there are 2)"
+                  },
+                  {
+                    "claim": "spread",
+                    "have_n": 2,
+                    "have_sessions": 2,
+                    "need_n": 10,
+                    "need_sessions": 1,
+                    "reason": "a claim about how repeatable this is needs 10 samples (there are 2)"
+                  },
+                  {
+                    "claim": "trend",
+                    "have_n": 2,
+                    "have_sessions": 2,
+                    "need_n": 12,
+                    "need_sessions": 3,
+                    "reason": "a claim that this has moved needs 12 samples (there are 2) and 3 sessions (there are 2) — repeated swings in one bay hour are one occasion, not several"
+                  }
+                ],
+                "within_session_sd": null
+              },
+              {
+                "bias": "withheld",
+                "caveats": [],
+                "center": null,
+                "center_ci_high": null,
+                "center_ci_low": null,
+                "maximum": null,
+                "median": null,
+                "minimum": null,
+                "n": 2,
+                "n_sessions": 2,
+                "name": "hip_shift_at_top_norm",
+                "outside_by": null,
+                "pattern": null,
+                "points_at": null,
+                "scatter": "withheld",
+                "sd": null,
+                "sd_ci_high": null,
+                "sd_ci_low": null,
+                "sessions": [
+                  {
+                    "captured_at": "2026-08-01T12:00:00+00:00",
+                    "mean": null,
+                    "n": 1,
+                    "session_id": "2026-08-01"
+                  },
+                  {
+                    "captured_at": "2026-08-02T12:00:00+00:00",
+                    "mean": null,
+                    "n": 1,
+                    "session_id": "2026-08-02"
+                  }
+                ],
+                "source": "pose:face_on",
+                "target": null,
+                "tolerance": 0.053,
+                "tour_band_high": 0.2069,
+                "tour_band_low": 0.015,
+                "tour_percentile": null,
+                "tour_percentile_clamped": false,
+                "tour_population_n": 458,
+                "tour_population_players": 122,
+                "tour_reading": null,
+                "tour_standing": "withheld",
+                "unavailable": [
+                  "no target for hip_shift_at_top_norm: same as hip_sway_norm: it has a one-sided band as of 2026-08-12, but a band edge is not a target, and the right amount of hip travel going back is not a number this repo has. Its lower edge is omitted for being unmeasurable, not for being zero"
+                ],
+                "unit": "shoulder_widths",
+                "withheld": [
+                  {
+                    "claim": "center",
+                    "have_n": 2,
+                    "have_sessions": 2,
+                    "need_n": 6,
+                    "need_sessions": 1,
+                    "reason": "a typical value for this golfer needs 6 samples (there are 2)"
+                  },
+                  {
+                    "claim": "spread",
+                    "have_n": 2,
+                    "have_sessions": 2,
+                    "need_n": 12,
+                    "need_sessions": 1,
+                    "reason": "a claim about how repeatable this is needs 12 samples (there are 2)"
+                  },
+                  {
+                    "claim": "trend",
+                    "have_n": 2,
+                    "have_sessions": 2,
+                    "need_n": 14,
+                    "need_sessions": 3,
+                    "reason": "a claim that this has moved needs 14 samples (there are 2) and 3 sessions (there are 2) — repeated swings in one bay hour are one occasion, not several"
+                  }
+                ],
+                "within_session_sd": null
+              },
+              {
+                "bias": "withheld",
+                "caveats": [],
+                "center": null,
+                "center_ci_high": null,
+                "center_ci_low": null,
+                "maximum": null,
+                "median": null,
+                "minimum": null,
+                "n": 2,
+                "n_sessions": 2,
+                "name": "hip_sway_norm",
+                "outside_by": null,
+                "pattern": null,
+                "points_at": null,
+                "scatter": "withheld",
+                "sd": null,
+                "sd_ci_high": null,
+                "sd_ci_low": null,
+                "sessions": [
+                  {
+                    "captured_at": "2026-08-01T12:00:00+00:00",
+                    "mean": null,
+                    "n": 1,
+                    "session_id": "2026-08-01"
+                  },
+                  {
+                    "captured_at": "2026-08-02T12:00:00+00:00",
+                    "mean": null,
+                    "n": 1,
+                    "session_id": "2026-08-02"
+                  }
+                ],
+                "source": "pose:face_on",
+                "target": null,
+                "tolerance": 0.05,
+                "tour_band_high": 0.4995,
+                "tour_band_low": 0.1414,
+                "tour_percentile": null,
+                "tour_percentile_clamped": false,
+                "tour_population_n": 458,
+                "tour_population_players": 122,
+                "tour_reading": null,
+                "tour_standing": "withheld",
+                "unavailable": [
+                  "no target for hip_sway_norm: 'less is better' is not established for it — some lateral hip travel is a weight shift rather than a fault, and nothing here knows how much. It has a two-sided band as of 2026-08-12, which is a range rather than a target: `analysis.comparison` asks whether the personal center sits inside it, so no point value has to be invented here"
+                ],
+                "unit": "shoulder_widths",
+                "withheld": [
+                  {
+                    "claim": "center",
+                    "have_n": 2,
+                    "have_sessions": 2,
+                    "need_n": 5,
+                    "need_sessions": 1,
+                    "reason": "a typical value for this golfer needs 5 samples (there are 2)"
+                  },
+                  {
+                    "claim": "spread",
+                    "have_n": 2,
+                    "have_sessions": 2,
+                    "need_n": 10,
+                    "need_sessions": 1,
+                    "reason": "a claim about how repeatable this is needs 10 samples (there are 2)"
+                  },
+                  {
+                    "claim": "trend",
+                    "have_n": 2,
+                    "have_sessions": 2,
+                    "need_n": 12,
+                    "need_sessions": 3,
+                    "reason": "a claim that this has moved needs 12 samples (there are 2) and 3 sessions (there are 2) — repeated swings in one bay hour are one occasion, not several"
+                  }
+                ],
+                "within_session_sd": null
+              },
+              {
+                "bias": "withheld",
+                "caveats": [],
+                "center": null,
+                "center_ci_high": null,
+                "center_ci_low": null,
+                "maximum": null,
+                "median": null,
+                "minimum": null,
+                "n": 2,
+                "n_sessions": 2,
+                "name": "start_line_deg",
+                "outside_by": null,
+                "pattern": null,
+                "points_at": null,
+                "scatter": "withheld",
+                "sd": null,
+                "sd_ci_high": null,
+                "sd_ci_low": null,
+                "sessions": [
+                  {
+                    "captured_at": "2026-08-01T12:00:00+00:00",
+                    "mean": null,
+                    "n": 1,
+                    "session_id": "2026-08-01"
+                  },
+                  {
+                    "captured_at": "2026-08-02T12:00:00+00:00",
+                    "mean": null,
+                    "n": 1,
+                    "session_id": "2026-08-02"
+                  }
+                ],
+                "source": "launch_monitor:hd_golf",
+                "target": 0.0,
+                "tolerance": 2.0,
+                "tour_band_high": null,
+                "tour_band_low": null,
+                "tour_percentile": null,
+                "tour_percentile_clamped": false,
+                "tour_population_n": null,
+                "tour_population_players": null,
+                "tour_reading": null,
+                "tour_standing": "withheld",
+                "unavailable": [
+                  "start_line_deg: no tour population exists for it. Every distribution in this repo comes from GolfDB, which is pose estimated from broadcast video and contains no ball flight — a launch-monitor reference would have to be acquired, not derived"
+                ],
+                "unit": "degrees",
+                "withheld": [
+                  {
+                    "claim": "center",
+                    "have_n": 2,
+                    "have_sessions": 2,
+                    "need_n": 5,
+                    "need_sessions": 1,
+                    "reason": "a typical value for this golfer needs 5 samples (there are 2)"
+                  },
+                  {
+                    "claim": "spread",
+                    "have_n": 2,
+                    "have_sessions": 2,
+                    "need_n": 10,
+                    "need_sessions": 1,
+                    "reason": "a claim about how repeatable this is needs 10 samples (there are 2)"
+                  },
+                  {
+                    "claim": "trend",
+                    "have_n": 2,
+                    "have_sessions": 2,
+                    "need_n": 12,
+                    "need_sessions": 3,
+                    "reason": "a claim that this has moved needs 12 samples (there are 2) and 3 sessions (there are 2) — repeated swings in one bay hour are one occasion, not several"
+                  }
+                ],
+                "within_session_sd": null
+              },
+              {
+                "bias": "withheld",
+                "caveats": [],
+                "center": null,
+                "center_ci_high": null,
+                "center_ci_low": null,
+                "maximum": null,
+                "median": null,
+                "minimum": null,
+                "n": 2,
+                "n_sessions": 2,
+                "name": "tempo_ratio",
+                "outside_by": null,
+                "pattern": null,
+                "points_at": null,
+                "scatter": "withheld",
+                "sd": null,
+                "sd_ci_high": null,
+                "sd_ci_low": null,
+                "sessions": [
+                  {
+                    "captured_at": "2026-08-01T12:00:00+00:00",
+                    "mean": null,
+                    "n": 1,
+                    "session_id": "2026-08-01"
+                  },
+                  {
+                    "captured_at": "2026-08-02T12:00:00+00:00",
+                    "mean": null,
+                    "n": 1,
+                    "session_id": "2026-08-02"
+                  }
+                ],
+                "source": "pose:face_on",
+                "target": null,
+                "tolerance": 0.943,
+                "tour_band_high": 4.7106,
+                "tour_band_low": 2.7179,
+                "tour_percentile": null,
+                "tour_percentile_clamped": false,
+                "tour_population_n": 1399,
+                "tour_population_players": 246,
+                "tour_reading": null,
+                "tour_standing": "withheld",
+                "unavailable": [
+                  "no target for tempo_ratio: its target is a band (2.72-4.71 from 1,399 tour swings), not a value. Reading it would import `benchmarks` into the personal-baseline path, which is the boundary `analysis.baseline` holds on purpose (ADR-010 §2). `analysis.comparison` answers the band's question directly instead — whether the center's interval sits inside it — so no point target has to be invented here (career mode step 6)"
+                ],
+                "unit": "ratio",
+                "withheld": [
+                  {
+                    "claim": "center",
+                    "have_n": 2,
+                    "have_sessions": 2,
+                    "need_n": 8,
+                    "need_sessions": 1,
+                    "reason": "a typical value for this golfer needs 8 samples (there are 2)"
+                  },
+                  {
+                    "claim": "spread",
+                    "have_n": 2,
+                    "have_sessions": 2,
+                    "need_n": 15,
+                    "need_sessions": 1,
+                    "reason": "a claim about how repeatable this is needs 15 samples (there are 2)"
+                  },
+                  {
+                    "claim": "trend",
+                    "have_n": 2,
+                    "have_sessions": 2,
+                    "need_n": 18,
+                    "need_sessions": 3,
+                    "reason": "a claim that this has moved needs 18 samples (there are 2) and 3 sessions (there are 2) — repeated swings in one bay hour are one occasion, not several"
+                  }
+                ],
+                "within_session_sd": null
+              }
+            ],
+            "mishits_excluded": 0,
+            "note": "The data does not exist yet — this needs a bay session of 20-30 swings with shots attached. Report the refusal. Do not estimate the withheld figure from the sample counts below it.",
+            "nothing_sayable": true,
+            "player_id": "aaron",
+            "sessions": 2,
+            "swing_dirs_seen": 2
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"player_id\": \"aaron\",\n  \"display_name\": \"Aaron\",\n  \"handedness\": \"right\",\n  \"distinct_swings\": 2,\n  \"swing_dirs_seen\": 2,\n  \"sessions\": 2,\n  \"built_from_swings\": 2,\n  \"mishits_excluded\": 0,\n  \"metrics\": [\n    {\n      \"name\": \"face_to_path_deg\",\n      \"unit\": \"degrees\",\n      \"source\": \"launch_monitor:hd_golf\",\n      \"n\": 2,\n      \"n_sessions\": 2,\n      \"center\": null,\n      \"center_ci_low\": null,\n      \"center_ci_high\": null,\n      \"median\": null,\n      \"sd\": null,\n      \"sd_ci_low\": null,\n      \"sd_ci_high\": null,\n      \"minimum\": null,\n      \"maximum\": null,\n      \"bias\": \"withheld\",\n      \"scatter\": \"withheld\",\n      \"pattern\": null,\n      \"points_at\": null,\n      \"target\": 0.0,\n      \"tolerance\": 2.0,\n      \"within_session_sd\": null,\n      \"tour_standing\": \"withheld\",\n      \"tour_reading\": null,\n      \"tour_percentile\": null,\n      \"tour_percentile_clamped\": false,\n      \"tour_band_low\": null,\n      \"tour_band_high\": null,\n      \"tour_population_n\": null,\n      \"tour_population_players\": null,\n      \"outside_by\": null,\n      \"sessions\": [\n        {\n          \"session_id\": \"2026-08-01\",\n          \"captured_at\": \"2026-08-01T12:00:00+00:00\",\n          \"n\": 1,\n          \"mean\": null\n        },\n        {\n          \"session_id\": \"2026-08-02\",\n          \"captured_at\": \"2026-08-02T12:00:00+00:00\",\n          \"n\": 1,\n          \"mean\": null\n        }\n      ],\n      \"caveats\": [],\n      \"withheld\": [\n        {\n          \"claim\": \"center\",\n          \"have_n\": 2,\n          \"need_n\": 5,\n          \"have_sessions\": 2,\n          \"need_sessions\": 1,\n          \"reason\": \"a typical value for this golfer needs 5 samples (there are 2)\"\n        },\n        {\n          \"claim\": \"spread\",\n          \"have_n\": 2,\n          \"need_n\": 10,\n          \"have_sessions\": 2,\n          \"need_sessions\": 1,\n          \"reason\": \"a claim about how repeatable this is needs 10 samples (there are 2)\"\n        },\n        {\n          \"claim\": \"trend\",\n          \"have_n\": 2,\n          \"need_n\": 12,\n          \"have_sessions\": 2,\n          \"need_sessions\": 3,\n          \"reason\": \"a claim that this has moved needs 12 samples (there are 2) and 3 sessions (there are 2) — repeated swings in one bay hour are one occasion, not several\"\n        }\n      ],\n      \"unavailable\": [\n        \"face_to_path_deg: no tour population exists for it. Every distribution in this repo comes from GolfDB, which is pose estimated from broadcast video and contains no ball flight — a launch-monitor reference would have to be acquired, not derived\"\n      ]\n    },\n    {\n      \"name\": \"finish_balance_norm\",\n      \"unit\": \"shoulder_widths\",\n      \"source\": \"pose:face_on\",\n      \"n\": 2,\n      \"n_sessions\": 2,\n      \"center\": null,\n      \"center_ci_low\": null,\n      \"center_ci_high\": null,\n      \"median\": null,\n      \"sd\": null,\n      \"sd_ci_low\": null,\n      \"sd_ci_high\": null,\n      \"minimum\": null,\n      \"maximum\": null,\n      \"bias\": \"withheld\",\n      \"scatter\": \"withheld\",\n      \"pattern\": null,\n      \"points_at\": null,\n      \"target\": 0.0,\n      \"tolerance\": 0.024,\n      \"within_session_sd\": null,\n      \"tour_standing\": \"withheld\",\n      \"tour_reading\": null,\n      \"tour_percentile\": null,\n      \"tour_percentile_clamped\": false,\n      \"tour_band_low\": 0.0845,\n      \"tour_band_high\": 0.2872,\n      \"tour_population_n\": 458,\n      \"tour_population_players\": 122,\n      \"outside_by\": null,\n      \"sessions\": [\n        {\n          \"session_id\": \"2026-08-01\",\n          \"captured_at\": \"2026-08-01T12:00:00+00:00\",\n          \"n\": 1,\n          \"mean\": null\n        },\n        {\n          \"session_id\": \"2026-08-02\",\n          \"captured_at\": \"2026-08-02T12:00:00+00:00\",\n          \"n\": 1,\n          \"mean\": null\n        }\n      ],\n      \"caveats\": [],\n      \"withheld\": [\n        {\n          \"claim\": \"center\",\n          \"have_n\": 2,\n          \"need_n\": 5,\n          \"have_sessions\": 2,\n          \"need_sessions\": 1,\n          \"reason\": \"a typical value for this golfer needs 5 samples (there are 2)\"\n        },\n        {\n          \"claim\": \"spread\",\n          \"have_n\": 2,\n          \"need_n\": 10,\n          \"have_sessions\": 2,\n          \"need_sessions\": 1,\n          \"reason\": \"a claim about how repeatable this is needs 10 samples (there are 2)\"\n        },\n        {\n          \"claim\": \"trend\",\n          \"have_n\": 2,\n          \"need_n\": 12,\n          \"have_sessions\": 2,\n          \"need_sessions\": 3,\n          \"reason\": \"a claim that this has moved needs 12 samples (there are 2) and 3 sessions (there are 2) — repeated swings in one bay hour are one occasion, not several\"\n        }\n      ],\n      \"unavailable\": []\n    },\n    {\n      \"name\": \"head_hip_offset_impact_norm\",\n      \"unit\": \"shoulder_widths\",\n      \"source\": \"pose:face_on\",\n      \"n\": 2,\n      \"n_sessions\": 2,\n      \"center\": null,\n      \"center_ci_low\": null,\n      \"center_ci_high\": null,\n      \"median\": null,\n      \"sd\": null,\n      \"sd_ci_low\": null,\n      \"sd_ci_high\": null,\n      \"minimum\": null,\n      \"maximum\": null,\n      \"bias\": \"withheld\",\n      \"scatter\": \"withheld\",\n      \"pattern\": null,\n      \"points_at\": null,\n      \"target\": null,\n      \"tolerance\": 0.073,\n      \"within_session_sd\": null,\n      \"tour_standing\": \"withheld\",\n      \"tour_reading\": null,\n      \"tour_percentile\": null,\n      \"tour_percentile_clamped\": false,\n      \"tour_band_low\": null,\n      \"tour_band_high\": null,\n      \"tour_population_n\": null,\n      \"tour_population_players\": null,\n      \"outside_by\": null,\n      \"sessions\": [\n        {\n          \"session_id\": \"2026-08-01\",\n          \"captured_at\": \"2026-08-01T12:00:00+00:00\",\n          \"n\": 1,\n          \"mean\": null\n        },\n        {\n          \"session_id\": \"2026-08-02\",\n          \"captured_at\": \"2026-08-02T12:00:00+00:00\",\n          \"n\": 1,\n          \"mean\": null\n        }\n      ],\n      \"caveats\": [],\n      \"withheld\": [\n        {\n          \"claim\": \"center\",\n          \"have_n\": 2,\n          \"need_n\": 5,\n          \"have_sessions\": 2,\n          \"need_sessions\": 1,\n          \"reason\": \"a typical value for this golfer needs 5 samples (there are 2)\"\n        },\n        {\n          \"claim\": \"spread\",\n          \"have_n\": 2,\n          \"need_n\": 10,\n          \"have_sessions\": 2,\n          \"need_sessions\": 1,\n          \"reason\": \"a claim about how repeatable this is needs 10 samples (there are 2)\"\n        },\n        {\n          \"claim\": \"trend\",\n          \"have_n\": 2,\n          \"need_n\": 12,\n          \"have_sessions\": 2,\n          \"need_sessions\": 3,\n          \"reason\": \"a claim that this has moved needs 12 samples (there are 2) and 3 sessions (there are 2) — repeated swings in one bay hour are one occasion, not several\"\n        }\n      ],\n      \"unavailable\": [\n        \"no target for head_hip_offset_impact_norm: career mode step 4 established that the sign is readable here — a personal corpus is single-handed by construction, so the camera-relative ambiguity that blocks a tour band does not apply. A readable sign is not a target: staying behind the ball is right, and how far behind is not established\",\n        \"head_hip_offset_impact_norm has a stored distribution and may not be placed in it: its sign is camera-relative, and the tour distribution is cut from GolfDB's mixed-handedness population — the reason M6.5 blocked this metric from becoming a checkpoint. A personal baseline reads the sign because one golfer swings from one side; averaging left- and right-handed swings puts the two signs in one number, so placing a personal center in that population would compare a real quantity against a meaningless one\"\n      ]\n    },\n    {\n      \"name\": \"head_sway_norm\",\n      \"unit\": \"shoulder_widths\",\n      \"source\": \"pose:face_on\",\n      \"n\": 2,\n      \"n_sessions\": 2,\n      \"center\": null,\n      \"center_ci_low\": null,\n      \"center_ci_high\": null,\n      \"median\": null,\n      \"sd\": null,\n      \"sd_ci_low\": null,\n      \"sd_ci_high\": null,\n      \"minimum\": null,\n      \"maximum\": null,\n      \"bias\": \"withheld\",\n      \"scatter\": \"withheld\",\n      \"pattern\": null,\n      \"points_at\": null,\n      \"target\": 0.0,\n      \"tolerance\": 0.06,\n      \"within_session_sd\": null,\n      \"tour_standing\": \"withheld\",\n      \"tour_reading\": null,\n      \"tour_percentile\": null,\n      \"tour_percentile_clamped\": false,\n      \"tour_band_low\": 0.0294,\n      \"tour_band_high\": 0.4311,\n      \"tour_population_n\": 458,\n      \"tour_population_players\": 122,\n      \"outside_by\": null,\n      \"sessions\": [\n        {\n          \"session_id\": \"2026-08-01\",\n          \"captured_at\": \"2026-08-01T12:00:00+00:00\",\n          \"n\": 1,\n          \"mean\": null\n        },\n        {\n          \"session_id\": \"2026-08-02\",\n          \"captured_at\": \"2026-08-02T12:00:00+00:00\",\n          \"n\": 1,\n          \"mean\": null\n        }\n      ],\n      \"caveats\": [],\n      \"withheld\": [\n        {\n          \"claim\": \"center\",\n          \"have_n\": 2,\n          \"need_n\": 5,\n          \"have_sessions\": 2,\n          \"need_sessions\": 1,\n          \"reason\": \"a typical value for this golfer needs 5 samples (there are 2)\"\n        },\n        {\n          \"claim\": \"spread\",\n          \"have_n\": 2,\n          \"need_n\": 10,\n          \"have_sessions\": 2,\n          \"need_sessions\": 1,\n          \"reason\": \"a claim about how repeatable this is needs 10 samples (there are 2)\"\n        },\n        {\n          \"claim\": \"trend\",\n          \"have_n\": 2,\n          \"need_n\": 12,\n          \"have_sessions\": 2,\n          \"need_sessions\": 3,\n          \"reason\": \"a claim that this has moved needs 12 samples (there are 2) and 3 sessions (there are 2) — repeated swings in one bay hour are one occasion, not several\"\n        }\n      ],\n      \"unavailable\": []\n    },\n    {\n      \"name\": \"hip_shift_at_top_norm\",\n      \"unit\": \"shoulder_widths\",\n      \"source\": \"pose:face_on\",\n      \"n\": 2,\n      \"n_sessions\": 2,\n      \"center\": null,\n      \"center_ci_low\": null,\n      \"center_ci_high\": null,\n      \"median\": null,\n      \"sd\": null,\n      \"sd_ci_low\": null,\n      \"sd_ci_high\": null,\n      \"minimum\": null,\n      \"maximum\": null,\n      \"bias\": \"withheld\",\n      \"scatter\": \"withheld\",\n      \"pattern\": null,\n      \"points_at\": null,\n      \"target\": null,\n      \"tolerance\": 0.053,\n      \"within_session_sd\": null,\n      \"tour_standing\": \"withheld\",\n      \"tour_reading\": null,\n      \"tour_percentile\": null,\n      \"tour_percentile_clamped\": false,\n      \"tour_band_low\": 0.015,\n      \"tour_band_high\": 0.2069,\n      \"tour_population_n\": 458,\n      \"tour_population_players\": 122,\n      \"outside_by\": null,\n      \"sessions\": [\n        {\n          \"session_id\": \"2026-08-01\",\n          \"captured_at\": \"2026-08-01T12:00:00+00:00\",\n          \"n\": 1,\n          \"mean\": null\n        },\n        {\n          \"session_id\": \"2026-08-02\",\n          \"captured_at\": \"2026-08-02T12:00:00+00:00\",\n          \"n\": 1,\n          \"mean\": null\n        }\n      ],\n      \"caveats\": [],\n      \"withheld\": [\n        {\n          \"claim\": \"center\",\n          \"have_n\": 2,\n          \"need_n\": 6,\n          \"have_sessions\": 2,\n          \"need_sessions\": 1,\n          \"reason\": \"a typical value for this golfer needs 6 samples (there are 2)\"\n        },\n        {\n          \"claim\": \"spread\",\n          \"have_n\": 2,\n          \"need_n\": 12,\n          \"have_sessions\": 2,\n          \"need_sessions\": 1,\n          \"reason\": \"a claim about how repeatable this is needs 12 samples (there are 2)\"\n        },\n        {\n          \"claim\": \"trend\",\n          \"have_n\": 2,\n          \"need_n\": 14,\n          \"have_sessions\": 2,\n          \"need_sessions\": 3,\n          \"reason\": \"a claim that this has moved needs 14 samples (there are 2) and 3 sessions (there are 2) — repeated swings in one bay hour are one occasion, not several\"\n        }\n      ],\n      \"unavailable\": [\n        \"no target for hip_shift_at_top_norm: same as hip_sway_norm: it has a one-sided band as of 2026-08-12, but a band edge is not a target, and the right amount of hip travel going back is not a number this repo has. Its lower edge is omitted for being unmeasurable, not for being zero\"\n      ]\n    },\n    {\n      \"name\": \"hip_sway_norm\",\n      \"unit\": \"shoulder_widths\",\n      \"source\": \"pose:face_on\",\n      \"n\": 2,\n      \"n_sessions\": 2,\n      \"center\": null,\n      \"center_ci_low\": null,\n      \"center_ci_high\": null,\n      \"median\": null,\n      \"sd\": null,\n      \"sd_ci_low\": null,\n      \"sd_ci_high\": null,\n      \"minimum\": null,\n      \"maximum\": null,\n      \"bias\": \"withheld\",\n      \"scatter\": \"withheld\",\n      \"pattern\": null,\n      \"points_at\": null,\n      \"target\": null,\n      \"tolerance\": 0.05,\n      \"within_session_sd\": null,\n      \"tour_standing\": \"withheld\",\n      \"tour_reading\": null,\n      \"tour_percentile\": null,\n      \"tour_percentile_clamped\": false,\n      \"tour_band_low\": 0.1414,\n      \"tour_band_high\": 0.4995,\n      \"tour_population_n\": 458,\n      \"tour_population_players\": 122,\n      \"outside_by\": null,\n      \"sessions\": [\n        {\n          \"session_id\": \"2026-08-01\",\n          \"captured_at\": \"2026-08-01T12:00:00+00:00\",\n          \"n\": 1,\n          \"mean\": null\n        },\n        {\n          \"session_id\": \"2026-08-02\",\n          \"captured_at\": \"2026-08-02T12:00:00+00:00\",\n          \"n\": 1,\n          \"mean\": null\n        }\n      ],\n      \"caveats\": [],\n      \"withheld\": [\n        {\n          \"claim\": \"center\",\n          \"have_n\": 2,\n          \"need_n\": 5,\n          \"have_sessions\": 2,\n          \"need_sessions\": 1,\n          \"reason\": \"a typical value for this golfer needs 5 samples (there are 2)\"\n        },\n        {\n          \"claim\": \"spread\",\n          \"have_n\": 2,\n          \"need_n\": 10,\n          \"have_sessions\": 2,\n          \"need_sessions\": 1,\n          \"reason\": \"a claim about how repeatable this is needs 10 samples (there are 2)\"\n        },\n        {\n          \"claim\": \"trend\",\n          \"have_n\": 2,\n          \"need_n\": 12,\n          \"have_sessions\": 2,\n          \"need_sessions\": 3,\n          \"reason\": \"a claim that this has moved needs 12 samples (there are 2) and 3 sessions (there are 2) — repeated swings in one bay hour are one occasion, not several\"\n        }\n      ],\n      \"unavailable\": [\n        \"no target for hip_sway_norm: 'less is better' is not established for it — some lateral hip travel is a weight shift rather than a fault, and nothing here knows how much. It has a two-sided band as of 2026-08-12, which is a range rather than a target: `analysis.comparison` asks whether the personal center sits inside it, so no point value has to be invented here\"\n      ]\n    },\n    {\n      \"name\": \"start_line_deg\",\n      \"unit\": \"degrees\",\n      \"source\": \"launch_monitor:hd_golf\",\n      \"n\": 2,\n      \"n_sessions\": 2,\n      \"center\": null,\n      \"center_ci_low\": null,\n      \"center_ci_high\": null,\n      \"median\": null,\n      \"sd\": null,\n      \"sd_ci_low\": null,\n      \"sd_ci_high\": null,\n      \"minimum\": null,\n      \"maximum\": null,\n      \"bias\": \"withheld\",\n      \"scatter\": \"withheld\",\n      \"pattern\": null,\n      \"points_at\": null,\n      \"target\": 0.0,\n      \"tolerance\": 2.0,\n      \"within_session_sd\": null,\n      \"tour_standing\": \"withheld\",\n      \"tour_reading\": null,\n      \"tour_percentile\": null,\n      \"tour_percentile_clamped\": false,\n      \"tour_band_low\": null,\n      \"tour_band_high\": null,\n      \"tour_population_n\": null,\n      \"tour_population_players\": null,\n      \"outside_by\": null,\n      \"sessions\": [\n        {\n          \"session_id\": \"2026-08-01\",\n          \"captured_at\": \"2026-08-01T12:00:00+00:00\",\n          \"n\": 1,\n          \"mean\": null\n        },\n        {\n          \"session_id\": \"2026-08-02\",\n          \"captured_at\": \"2026-08-02T12:00:00+00:00\",\n          \"n\": 1,\n          \"mean\": null\n        }\n      ],\n      \"caveats\": [],\n      \"withheld\": [\n        {\n          \"claim\": \"center\",\n          \"have_n\": 2,\n          \"need_n\": 5,\n          \"have_sessions\": 2,\n          \"need_sessions\": 1,\n          \"reason\": \"a typical value for this golfer needs 5 samples (there are 2)\"\n        },\n        {\n          \"claim\": \"spread\",\n          \"have_n\": 2,\n          \"need_n\": 10,\n          \"have_sessions\": 2,\n          \"need_sessions\": 1,\n          \"reason\": \"a claim about how repeatable this is needs 10 samples (there are 2)\"\n        },\n        {\n          \"claim\": \"trend\",\n          \"have_n\": 2,\n          \"need_n\": 12,\n          \"have_sessions\": 2,\n          \"need_sessions\": 3,\n          \"reason\": \"a claim that this has moved needs 12 samples (there are 2) and 3 sessions (there are 2) — repeated swings in one bay hour are one occasion, not several\"\n        }\n      ],\n      \"unavailable\": [\n        \"start_line_deg: no tour population exists for it. Every distribution in this repo comes from GolfDB, which is pose estimated from broadcast video and contains no ball flight — a launch-monitor reference would have to be acquired, not derived\"\n      ]\n    },\n    {\n      \"name\": \"tempo_ratio\",\n      \"unit\": \"ratio\",\n      \"source\": \"pose:face_on\",\n      \"n\": 2,\n      \"n_sessions\": 2,\n      \"center\": null,\n      \"center_ci_low\": null,\n      \"center_ci_high\": null,\n      \"median\": null,\n      \"sd\": null,\n      \"sd_ci_low\": null,\n      \"sd_ci_high\": null,\n      \"minimum\": null,\n      \"maximum\": null,\n      \"bias\": \"withheld\",\n      \"scatter\": \"withheld\",\n      \"pattern\": null,\n      \"points_at\": null,\n      \"target\": null,\n      \"tolerance\": 0.943,\n      \"within_session_sd\": null,\n      \"tour_standing\": \"withheld\",\n      \"tour_reading\": null,\n      \"tour_percentile\": null,\n      \"tour_percentile_clamped\": false,\n      \"tour_band_low\": 2.7179,\n      \"tour_band_high\": 4.7106,\n      \"tour_population_n\": 1399,\n      \"tour_population_players\": 246,\n      \"outside_by\": null,\n      \"sessions\": [\n        {\n          \"session_id\": \"2026-08-01\",\n          \"captured_at\": \"2026-08-01T12:00:00+00:00\",\n          \"n\": 1,\n          \"mean\": null\n        },\n        {\n          \"session_id\": \"2026-08-02\",\n          \"captured_at\": \"2026-08-02T12:00:00+00:00\",\n          \"n\": 1,\n          \"mean\": null\n        }\n      ],\n      \"caveats\": [],\n      \"withheld\": [\n        {\n          \"claim\": \"center\",\n          \"have_n\": 2,\n          \"need_n\": 8,\n          \"have_sessions\": 2,\n          \"need_sessions\": 1,\n          \"reason\": \"a typical value for this golfer needs 8 samples (there are 2)\"\n        },\n        {\n          \"claim\": \"spread\",\n          \"have_n\": 2,\n          \"need_n\": 15,\n          \"have_sessions\": 2,\n          \"need_sessions\": 1,\n          \"reason\": \"a claim about how repeatable this is needs 15 samples (there are 2)\"\n        },\n        {\n          \"claim\": \"trend\",\n          \"have_n\": 2,\n          \"need_n\": 18,\n          \"have_sessions\": 2,\n          \"need_sessions\": 3,\n          \"reason\": \"a claim that this has moved needs 18 samples (there are 2) and 3 sessions (there are 2) — repeated swings in one bay hour are one occasion, not several\"\n        }\n      ],\n      \"unavailable\": [\n        \"no target for tempo_ratio: its target is a band (2.72-4.71 from 1,399 tour swings), not a value. Reading it would import `benchmarks` into the personal-baseline path, which is the boundary `analysis.baseline` holds on purpose (ADR-010 §2). `analysis.comparison` answers the band's question directly instead — whether the center's interval sits inside it — so no point target has to be invented here (career mode step 6)\"\n      ]\n    }\n  ],\n  \"nothing_sayable\": true,\n  \"note\": \"The data does not exist yet — this needs a bay session of 20-30 swings with shots attached. Report the refusal. Do not estimate the withheld figure from the sample counts below it.\"\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "built_from_swings": 2,
+            "display_name": "Aaron",
+            "distinct_swings": 2,
+            "handedness": "right",
+            "metrics": [
+              {
+                "bias": "withheld",
+                "caveats": [],
+                "center": null,
+                "center_ci_high": null,
+                "center_ci_low": null,
+                "maximum": null,
+                "median": null,
+                "minimum": null,
+                "n": 2,
+                "n_sessions": 2,
+                "name": "face_to_path_deg",
+                "outside_by": null,
+                "pattern": null,
+                "points_at": null,
+                "scatter": "withheld",
+                "sd": null,
+                "sd_ci_high": null,
+                "sd_ci_low": null,
+                "sessions": [
+                  {
+                    "captured_at": "2026-08-01T12:00:00+00:00",
+                    "mean": null,
+                    "n": 1,
+                    "session_id": "2026-08-01"
+                  },
+                  {
+                    "captured_at": "2026-08-02T12:00:00+00:00",
+                    "mean": null,
+                    "n": 1,
+                    "session_id": "2026-08-02"
+                  }
+                ],
+                "source": "launch_monitor:hd_golf",
+                "target": 0.0,
+                "tolerance": 2.0,
+                "tour_band_high": null,
+                "tour_band_low": null,
+                "tour_percentile": null,
+                "tour_percentile_clamped": false,
+                "tour_population_n": null,
+                "tour_population_players": null,
+                "tour_reading": null,
+                "tour_standing": "withheld",
+                "unavailable": [
+                  "face_to_path_deg: no tour population exists for it. Every distribution in this repo comes from GolfDB, which is pose estimated from broadcast video and contains no ball flight — a launch-monitor reference would have to be acquired, not derived"
+                ],
+                "unit": "degrees",
+                "withheld": [
+                  {
+                    "claim": "center",
+                    "have_n": 2,
+                    "have_sessions": 2,
+                    "need_n": 5,
+                    "need_sessions": 1,
+                    "reason": "a typical value for this golfer needs 5 samples (there are 2)"
+                  },
+                  {
+                    "claim": "spread",
+                    "have_n": 2,
+                    "have_sessions": 2,
+                    "need_n": 10,
+                    "need_sessions": 1,
+                    "reason": "a claim about how repeatable this is needs 10 samples (there are 2)"
+                  },
+                  {
+                    "claim": "trend",
+                    "have_n": 2,
+                    "have_sessions": 2,
+                    "need_n": 12,
+                    "need_sessions": 3,
+                    "reason": "a claim that this has moved needs 12 samples (there are 2) and 3 sessions (there are 2) — repeated swings in one bay hour are one occasion, not several"
+                  }
+                ],
+                "within_session_sd": null
+              },
+              {
+                "bias": "withheld",
+                "caveats": [],
+                "center": null,
+                "center_ci_high": null,
+                "center_ci_low": null,
+                "maximum": null,
+                "median": null,
+                "minimum": null,
+                "n": 2,
+                "n_sessions": 2,
+                "name": "finish_balance_norm",
+                "outside_by": null,
+                "pattern": null,
+                "points_at": null,
+                "scatter": "withheld",
+                "sd": null,
+                "sd_ci_high": null,
+                "sd_ci_low": null,
+                "sessions": [
+                  {
+                    "captured_at": "2026-08-01T12:00:00+00:00",
+                    "mean": null,
+                    "n": 1,
+                    "session_id": "2026-08-01"
+                  },
+                  {
+                    "captured_at": "2026-08-02T12:00:00+00:00",
+                    "mean": null,
+                    "n": 1,
+                    "session_id": "2026-08-02"
+                  }
+                ],
+                "source": "pose:face_on",
+                "target": 0.0,
+                "tolerance": 0.024,
+                "tour_band_high": 0.2872,
+                "tour_band_low": 0.0845,
+                "tour_percentile": null,
+                "tour_percentile_clamped": false,
+                "tour_population_n": 458,
+                "tour_population_players": 122,
+                "tour_reading": null,
+                "tour_standing": "withheld",
+                "unavailable": [],
+                "unit": "shoulder_widths",
+                "withheld": [
+                  {
+                    "claim": "center",
+                    "have_n": 2,
+                    "have_sessions": 2,
+                    "need_n": 5,
+                    "need_sessions": 1,
+                    "reason": "a typical value for this golfer needs 5 samples (there are 2)"
+                  },
+                  {
+                    "claim": "spread",
+                    "have_n": 2,
+                    "have_sessions": 2,
+                    "need_n": 10,
+                    "need_sessions": 1,
+                    "reason": "a claim about how repeatable this is needs 10 samples (there are 2)"
+                  },
+                  {
+                    "claim": "trend",
+                    "have_n": 2,
+                    "have_sessions": 2,
+                    "need_n": 12,
+                    "need_sessions": 3,
+                    "reason": "a claim that this has moved needs 12 samples (there are 2) and 3 sessions (there are 2) — repeated swings in one bay hour are one occasion, not several"
+                  }
+                ],
+                "within_session_sd": null
+              },
+              {
+                "bias": "withheld",
+                "caveats": [],
+                "center": null,
+                "center_ci_high": null,
+                "center_ci_low": null,
+                "maximum": null,
+                "median": null,
+                "minimum": null,
+                "n": 2,
+                "n_sessions": 2,
+                "name": "head_hip_offset_impact_norm",
+                "outside_by": null,
+                "pattern": null,
+                "points_at": null,
+                "scatter": "withheld",
+                "sd": null,
+                "sd_ci_high": null,
+                "sd_ci_low": null,
+                "sessions": [
+                  {
+                    "captured_at": "2026-08-01T12:00:00+00:00",
+                    "mean": null,
+                    "n": 1,
+                    "session_id": "2026-08-01"
+                  },
+                  {
+                    "captured_at": "2026-08-02T12:00:00+00:00",
+                    "mean": null,
+                    "n": 1,
+                    "session_id": "2026-08-02"
+                  }
+                ],
+                "source": "pose:face_on",
+                "target": null,
+                "tolerance": 0.073,
+                "tour_band_high": null,
+                "tour_band_low": null,
+                "tour_percentile": null,
+                "tour_percentile_clamped": false,
+                "tour_population_n": null,
+                "tour_population_players": null,
+                "tour_reading": null,
+                "tour_standing": "withheld",
+                "unavailable": [
+                  "no target for head_hip_offset_impact_norm: career mode step 4 established that the sign is readable here — a personal corpus is single-handed by construction, so the camera-relative ambiguity that blocks a tour band does not apply. A readable sign is not a target: staying behind the ball is right, and how far behind is not established",
+                  "head_hip_offset_impact_norm has a stored distribution and may not be placed in it: its sign is camera-relative, and the tour distribution is cut from GolfDB's mixed-handedness population — the reason M6.5 blocked this metric from becoming a checkpoint. A personal baseline reads the sign because one golfer swings from one side; averaging left- and right-handed swings puts the two signs in one number, so placing a personal center in that population would compare a real quantity against a meaningless one"
+                ],
+                "unit": "shoulder_widths",
+                "withheld": [
+                  {
+                    "claim": "center",
+                    "have_n": 2,
+                    "have_sessions": 2,
+                    "need_n": 5,
+                    "need_sessions": 1,
+                    "reason": "a typical value for this golfer needs 5 samples (there are 2)"
+                  },
+                  {
+                    "claim": "spread",
+                    "have_n": 2,
+                    "have_sessions": 2,
+                    "need_n": 10,
+                    "need_sessions": 1,
+                    "reason": "a claim about how repeatable this is needs 10 samples (there are 2)"
+                  },
+                  {
+                    "claim": "trend",
+                    "have_n": 2,
+                    "have_sessions": 2,
+                    "need_n": 12,
+                    "need_sessions": 3,
+                    "reason": "a claim that this has moved needs 12 samples (there are 2) and 3 sessions (there are 2) — repeated swings in one bay hour are one occasion, not several"
+                  }
+                ],
+                "within_session_sd": null
+              },
+              {
+                "bias": "withheld",
+                "caveats": [],
+                "center": null,
+                "center_ci_high": null,
+                "center_ci_low": null,
+                "maximum": null,
+                "median": null,
+                "minimum": null,
+                "n": 2,
+                "n_sessions": 2,
+                "name": "head_sway_norm",
+                "outside_by": null,
+                "pattern": null,
+                "points_at": null,
+                "scatter": "withheld",
+                "sd": null,
+                "sd_ci_high": null,
+                "sd_ci_low": null,
+                "sessions": [
+                  {
+                    "captured_at": "2026-08-01T12:00:00+00:00",
+                    "mean": null,
+                    "n": 1,
+                    "session_id": "2026-08-01"
+                  },
+                  {
+                    "captured_at": "2026-08-02T12:00:00+00:00",
+                    "mean": null,
+                    "n": 1,
+                    "session_id": "2026-08-02"
+                  }
+                ],
+                "source": "pose:face_on",
+                "target": 0.0,
+                "tolerance": 0.06,
+                "tour_band_high": 0.4311,
+                "tour_band_low": 0.0294,
+                "tour_percentile": null,
+                "tour_percentile_clamped": false,
+                "tour_population_n": 458,
+                "tour_population_players": 122,
+                "tour_reading": null,
+                "tour_standing": "withheld",
+                "unavailable": [],
+                "unit": "shoulder_widths",
+                "withheld": [
+                  {
+                    "claim": "center",
+                    "have_n": 2,
+                    "have_sessions": 2,
+                    "need_n": 5,
+                    "need_sessions": 1,
+                    "reason": "a typical value for this golfer needs 5 samples (there are 2)"
+                  },
+                  {
+                    "claim": "spread",
+                    "have_n": 2,
+                    "have_sessions": 2,
+                    "need_n": 10,
+                    "need_sessions": 1,
+                    "reason": "a claim about how repeatable this is needs 10 samples (there are 2)"
+                  },
+                  {
+                    "claim": "trend",
+                    "have_n": 2,
+                    "have_sessions": 2,
+                    "need_n": 12,
+                    "need_sessions": 3,
+                    "reason": "a claim that this has moved needs 12 samples (there are 2) and 3 sessions (there are 2) — repeated swings in one bay hour are one occasion, not several"
+                  }
+                ],
+                "within_session_sd": null
+              },
+              {
+                "bias": "withheld",
+                "caveats": [],
+                "center": null,
+                "center_ci_high": null,
+                "center_ci_low": null,
+                "maximum": null,
+                "median": null,
+                "minimum": null,
+                "n": 2,
+                "n_sessions": 2,
+                "name": "hip_shift_at_top_norm",
+                "outside_by": null,
+                "pattern": null,
+                "points_at": null,
+                "scatter": "withheld",
+                "sd": null,
+                "sd_ci_high": null,
+                "sd_ci_low": null,
+                "sessions": [
+                  {
+                    "captured_at": "2026-08-01T12:00:00+00:00",
+                    "mean": null,
+                    "n": 1,
+                    "session_id": "2026-08-01"
+                  },
+                  {
+                    "captured_at": "2026-08-02T12:00:00+00:00",
+                    "mean": null,
+                    "n": 1,
+                    "session_id": "2026-08-02"
+                  }
+                ],
+                "source": "pose:face_on",
+                "target": null,
+                "tolerance": 0.053,
+                "tour_band_high": 0.2069,
+                "tour_band_low": 0.015,
+                "tour_percentile": null,
+                "tour_percentile_clamped": false,
+                "tour_population_n": 458,
+                "tour_population_players": 122,
+                "tour_reading": null,
+                "tour_standing": "withheld",
+                "unavailable": [
+                  "no target for hip_shift_at_top_norm: same as hip_sway_norm: it has a one-sided band as of 2026-08-12, but a band edge is not a target, and the right amount of hip travel going back is not a number this repo has. Its lower edge is omitted for being unmeasurable, not for being zero"
+                ],
+                "unit": "shoulder_widths",
+                "withheld": [
+                  {
+                    "claim": "center",
+                    "have_n": 2,
+                    "have_sessions": 2,
+                    "need_n": 6,
+                    "need_sessions": 1,
+                    "reason": "a typical value for this golfer needs 6 samples (there are 2)"
+                  },
+                  {
+                    "claim": "spread",
+                    "have_n": 2,
+                    "have_sessions": 2,
+                    "need_n": 12,
+                    "need_sessions": 1,
+                    "reason": "a claim about how repeatable this is needs 12 samples (there are 2)"
+                  },
+                  {
+                    "claim": "trend",
+                    "have_n": 2,
+                    "have_sessions": 2,
+                    "need_n": 14,
+                    "need_sessions": 3,
+                    "reason": "a claim that this has moved needs 14 samples (there are 2) and 3 sessions (there are 2) — repeated swings in one bay hour are one occasion, not several"
+                  }
+                ],
+                "within_session_sd": null
+              },
+              {
+                "bias": "withheld",
+                "caveats": [],
+                "center": null,
+                "center_ci_high": null,
+                "center_ci_low": null,
+                "maximum": null,
+                "median": null,
+                "minimum": null,
+                "n": 2,
+                "n_sessions": 2,
+                "name": "hip_sway_norm",
+                "outside_by": null,
+                "pattern": null,
+                "points_at": null,
+                "scatter": "withheld",
+                "sd": null,
+                "sd_ci_high": null,
+                "sd_ci_low": null,
+                "sessions": [
+                  {
+                    "captured_at": "2026-08-01T12:00:00+00:00",
+                    "mean": null,
+                    "n": 1,
+                    "session_id": "2026-08-01"
+                  },
+                  {
+                    "captured_at": "2026-08-02T12:00:00+00:00",
+                    "mean": null,
+                    "n": 1,
+                    "session_id": "2026-08-02"
+                  }
+                ],
+                "source": "pose:face_on",
+                "target": null,
+                "tolerance": 0.05,
+                "tour_band_high": 0.4995,
+                "tour_band_low": 0.1414,
+                "tour_percentile": null,
+                "tour_percentile_clamped": false,
+                "tour_population_n": 458,
+                "tour_population_players": 122,
+                "tour_reading": null,
+                "tour_standing": "withheld",
+                "unavailable": [
+                  "no target for hip_sway_norm: 'less is better' is not established for it — some lateral hip travel is a weight shift rather than a fault, and nothing here knows how much. It has a two-sided band as of 2026-08-12, which is a range rather than a target: `analysis.comparison` asks whether the personal center sits inside it, so no point value has to be invented here"
+                ],
+                "unit": "shoulder_widths",
+                "withheld": [
+                  {
+                    "claim": "center",
+                    "have_n": 2,
+                    "have_sessions": 2,
+                    "need_n": 5,
+                    "need_sessions": 1,
+                    "reason": "a typical value for this golfer needs 5 samples (there are 2)"
+                  },
+                  {
+                    "claim": "spread",
+                    "have_n": 2,
+                    "have_sessions": 2,
+                    "need_n": 10,
+                    "need_sessions": 1,
+                    "reason": "a claim about how repeatable this is needs 10 samples (there are 2)"
+                  },
+                  {
+                    "claim": "trend",
+                    "have_n": 2,
+                    "have_sessions": 2,
+                    "need_n": 12,
+                    "need_sessions": 3,
+                    "reason": "a claim that this has moved needs 12 samples (there are 2) and 3 sessions (there are 2) — repeated swings in one bay hour are one occasion, not several"
+                  }
+                ],
+                "within_session_sd": null
+              },
+              {
+                "bias": "withheld",
+                "caveats": [],
+                "center": null,
+                "center_ci_high": null,
+                "center_ci_low": null,
+                "maximum": null,
+                "median": null,
+                "minimum": null,
+                "n": 2,
+                "n_sessions": 2,
+                "name": "start_line_deg",
+                "outside_by": null,
+                "pattern": null,
+                "points_at": null,
+                "scatter": "withheld",
+                "sd": null,
+                "sd_ci_high": null,
+                "sd_ci_low": null,
+                "sessions": [
+                  {
+                    "captured_at": "2026-08-01T12:00:00+00:00",
+                    "mean": null,
+                    "n": 1,
+                    "session_id": "2026-08-01"
+                  },
+                  {
+                    "captured_at": "2026-08-02T12:00:00+00:00",
+                    "mean": null,
+                    "n": 1,
+                    "session_id": "2026-08-02"
+                  }
+                ],
+                "source": "launch_monitor:hd_golf",
+                "target": 0.0,
+                "tolerance": 2.0,
+                "tour_band_high": null,
+                "tour_band_low": null,
+                "tour_percentile": null,
+                "tour_percentile_clamped": false,
+                "tour_population_n": null,
+                "tour_population_players": null,
+                "tour_reading": null,
+                "tour_standing": "withheld",
+                "unavailable": [
+                  "start_line_deg: no tour population exists for it. Every distribution in this repo comes from GolfDB, which is pose estimated from broadcast video and contains no ball flight — a launch-monitor reference would have to be acquired, not derived"
+                ],
+                "unit": "degrees",
+                "withheld": [
+                  {
+                    "claim": "center",
+                    "have_n": 2,
+                    "have_sessions": 2,
+                    "need_n": 5,
+                    "need_sessions": 1,
+                    "reason": "a typical value for this golfer needs 5 samples (there are 2)"
+                  },
+                  {
+                    "claim": "spread",
+                    "have_n": 2,
+                    "have_sessions": 2,
+                    "need_n": 10,
+                    "need_sessions": 1,
+                    "reason": "a claim about how repeatable this is needs 10 samples (there are 2)"
+                  },
+                  {
+                    "claim": "trend",
+                    "have_n": 2,
+                    "have_sessions": 2,
+                    "need_n": 12,
+                    "need_sessions": 3,
+                    "reason": "a claim that this has moved needs 12 samples (there are 2) and 3 sessions (there are 2) — repeated swings in one bay hour are one occasion, not several"
+                  }
+                ],
+                "within_session_sd": null
+              },
+              {
+                "bias": "withheld",
+                "caveats": [],
+                "center": null,
+                "center_ci_high": null,
+                "center_ci_low": null,
+                "maximum": null,
+                "median": null,
+                "minimum": null,
+                "n": 2,
+                "n_sessions": 2,
+                "name": "tempo_ratio",
+                "outside_by": null,
+                "pattern": null,
+                "points_at": null,
+                "scatter": "withheld",
+                "sd": null,
+                "sd_ci_high": null,
+                "sd_ci_low": null,
+                "sessions": [
+                  {
+                    "captured_at": "2026-08-01T12:00:00+00:00",
+                    "mean": null,
+                    "n": 1,
+                    "session_id": "2026-08-01"
+                  },
+                  {
+                    "captured_at": "2026-08-02T12:00:00+00:00",
+                    "mean": null,
+                    "n": 1,
+                    "session_id": "2026-08-02"
+                  }
+                ],
+                "source": "pose:face_on",
+                "target": null,
+                "tolerance": 0.943,
+                "tour_band_high": 4.7106,
+                "tour_band_low": 2.7179,
+                "tour_percentile": null,
+                "tour_percentile_clamped": false,
+                "tour_population_n": 1399,
+                "tour_population_players": 246,
+                "tour_reading": null,
+                "tour_standing": "withheld",
+                "unavailable": [
+                  "no target for tempo_ratio: its target is a band (2.72-4.71 from 1,399 tour swings), not a value. Reading it would import `benchmarks` into the personal-baseline path, which is the boundary `analysis.baseline` holds on purpose (ADR-010 §2). `analysis.comparison` answers the band's question directly instead — whether the center's interval sits inside it — so no point target has to be invented here (career mode step 6)"
+                ],
+                "unit": "ratio",
+                "withheld": [
+                  {
+                    "claim": "center",
+                    "have_n": 2,
+                    "have_sessions": 2,
+                    "need_n": 8,
+                    "need_sessions": 1,
+                    "reason": "a typical value for this golfer needs 8 samples (there are 2)"
+                  },
+                  {
+                    "claim": "spread",
+                    "have_n": 2,
+                    "have_sessions": 2,
+                    "need_n": 15,
+                    "need_sessions": 1,
+                    "reason": "a claim about how repeatable this is needs 15 samples (there are 2)"
+                  },
+                  {
+                    "claim": "trend",
+                    "have_n": 2,
+                    "have_sessions": 2,
+                    "need_n": 18,
+                    "need_sessions": 3,
+                    "reason": "a claim that this has moved needs 18 samples (there are 2) and 3 sessions (there are 2) — repeated swings in one bay hour are one occasion, not several"
+                  }
+                ],
+                "within_session_sd": null
+              }
+            ],
+            "mishits_excluded": 0,
+            "note": "The data does not exist yet — this needs a bay session of 20-30 swings with shots attached. Report the refusal. Do not estimate the withheld figure from the sample counts below it.",
+            "nothing_sayable": true,
+            "player_id": "aaron",
+            "sessions": 2,
+            "swing_dirs_seen": 2
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"found\": false,\n  \"message\": \"No golfer matching 'Nobody' is registered. Names are matched loosely (case and punctuation are folded), so this means nobody by that name has swings on file yet.\"\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "found": false,
+            "message": "No golfer matching 'Nobody' is registered. Names are matched loosely (case and punctuation are folded), so this means nobody by that name has swings on file yet."
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"player_id\": \"aaron\",\n  \"metric\": \"head_sway_norm\",\n  \"unit\": \"shoulder_widths\",\n  \"window_days\": null,\n  \"n\": 2,\n  \"n_sessions\": 2,\n  \"ready\": false,\n  \"sessions\": [\n    {\n      \"session_id\": \"2026-08-01\",\n      \"captured_at\": \"2026-08-01T12:00:00+00:00\",\n      \"n\": 1,\n      \"mean\": null\n    },\n    {\n      \"session_id\": \"2026-08-02\",\n      \"captured_at\": \"2026-08-02T12:00:00+00:00\",\n      \"n\": 1,\n      \"mean\": null\n    }\n  ],\n  \"withheld\": {\n    \"claim\": \"trend\",\n    \"have_n\": 2,\n    \"need_n\": 12,\n    \"have_sessions\": 2,\n    \"need_sessions\": 3,\n    \"reason\": \"a claim that this has moved needs 12 samples (there are 2) and 3 sessions (there are 2) — repeated swings in one bay hour are one occasion, not several\"\n  },\n  \"note\": \"No trend may be described. The per-session counts below are evidence for the refusal, not a series to read a direction off. The data does not exist yet — this needs a bay session of 20-30 swings with shots attached. Report the refusal. Do not estimate the withheld figure from the sample counts below it.\"\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "metric": "head_sway_norm",
+            "n": 2,
+            "n_sessions": 2,
+            "note": "No trend may be described. The per-session counts below are evidence for the refusal, not a series to read a direction off. The data does not exist yet — this needs a bay session of 20-30 swings with shots attached. Report the refusal. Do not estimate the withheld figure from the sample counts below it.",
+            "player_id": "aaron",
+            "ready": false,
+            "sessions": [
+              {
+                "captured_at": "2026-08-01T12:00:00+00:00",
+                "mean": null,
+                "n": 1,
+                "session_id": "2026-08-01"
+              },
+              {
+                "captured_at": "2026-08-02T12:00:00+00:00",
+                "mean": null,
+                "n": 1,
+                "session_id": "2026-08-02"
+              }
+            ],
+            "unit": "shoulder_widths",
+            "window_days": null,
+            "withheld": {
+              "claim": "trend",
+              "have_n": 2,
+              "have_sessions": 2,
+              "need_n": 12,
+              "need_sessions": 3,
+              "reason": "a claim that this has moved needs 12 samples (there are 2) and 3 sessions (there are 2) — repeated swings in one bay hour are one occasion, not several"
+            }
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"player_id\": \"aaron\",\n  \"metric\": \"invented_metric\",\n  \"unit\": null,\n  \"window_days\": null,\n  \"n\": 0,\n  \"n_sessions\": 0,\n  \"ready\": false,\n  \"sessions\": [],\n  \"withheld\": null,\n  \"note\": \"No sample of 'invented_metric' in this window. Either this golfer has never recorded it, or every swing carrying it is unanalyzed, stale, or was analyzed by an older engine. Call get_golfer_profile to see which metrics do have samples.\"\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "metric": "invented_metric",
+            "n": 0,
+            "n_sessions": 0,
+            "note": "No sample of 'invented_metric' in this window. Either this golfer has never recorded it, or every swing carrying it is unanalyzed, stale, or was analyzed by an older engine. Call get_golfer_profile to see which metrics do have samples.",
+            "player_id": "aaron",
+            "ready": false,
+            "sessions": [],
+            "unit": null,
+            "window_days": null,
+            "withheld": null
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"found\": false,\n  \"message\": \"No golfer matching 'Nobody' is registered. Call get_golfer_profile with the name to see whether they have any swings on file.\"\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "found": false,
+            "message": "No golfer matching 'Nobody' is registered. Call get_golfer_profile with the name to see whether they have any swings on file."
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"player_id\": \"aaron\",\n  \"session_a\": \"2026-08-01\",\n  \"session_b\": \"2026-08-02\",\n  \"mean_score_a\": 91.0,\n  \"mean_score_b\": 91.0,\n  \"swings_a\": 1,\n  \"swings_b\": 1,\n  \"metrics\": [\n    {\n      \"metric\": \"face_to_path_deg\",\n      \"unit\": \"degrees\",\n      \"n_a\": 1,\n      \"n_b\": 1,\n      \"mean_a\": null,\n      \"mean_b\": null,\n      \"delta\": null,\n      \"withheld\": [\n        {\n          \"claim\": \"center\",\n          \"have_n\": 1,\n          \"need_n\": 5,\n          \"have_sessions\": 1,\n          \"need_sessions\": 1,\n          \"reason\": \"a typical value for this golfer needs 5 samples (there are 1)\"\n        },\n        {\n          \"claim\": \"center\",\n          \"have_n\": 1,\n          \"need_n\": 5,\n          \"have_sessions\": 1,\n          \"need_sessions\": 1,\n          \"reason\": \"a typical value for this golfer needs 5 samples (there are 1)\"\n        }\n      ]\n    },\n    {\n      \"metric\": \"finish_balance_norm\",\n      \"unit\": \"shoulder_widths\",\n      \"n_a\": 1,\n      \"n_b\": 1,\n      \"mean_a\": null,\n      \"mean_b\": null,\n      \"delta\": null,\n      \"withheld\": [\n        {\n          \"claim\": \"center\",\n          \"have_n\": 1,\n          \"need_n\": 5,\n          \"have_sessions\": 1,\n          \"need_sessions\": 1,\n          \"reason\": \"a typical value for this golfer needs 5 samples (there are 1)\"\n        },\n        {\n          \"claim\": \"center\",\n          \"have_n\": 1,\n          \"need_n\": 5,\n          \"have_sessions\": 1,\n          \"need_sessions\": 1,\n          \"reason\": \"a typical value for this golfer needs 5 samples (there are 1)\"\n        }\n      ]\n    },\n    {\n      \"metric\": \"head_hip_offset_impact_norm\",\n      \"unit\": \"shoulder_widths\",\n      \"n_a\": 1,\n      \"n_b\": 1,\n      \"mean_a\": null,\n      \"mean_b\": null,\n      \"delta\": null,\n      \"withheld\": [\n        {\n          \"claim\": \"center\",\n          \"have_n\": 1,\n          \"need_n\": 5,\n          \"have_sessions\": 1,\n          \"need_sessions\": 1,\n          \"reason\": \"a typical value for this golfer needs 5 samples (there are 1)\"\n        },\n        {\n          \"claim\": \"center\",\n          \"have_n\": 1,\n          \"need_n\": 5,\n          \"have_sessions\": 1,\n          \"need_sessions\": 1,\n          \"reason\": \"a typical value for this golfer needs 5 samples (there are 1)\"\n        }\n      ]\n    },\n    {\n      \"metric\": \"head_sway_norm\",\n      \"unit\": \"shoulder_widths\",\n      \"n_a\": 1,\n      \"n_b\": 1,\n      \"mean_a\": null,\n      \"mean_b\": null,\n      \"delta\": null,\n      \"withheld\": [\n        {\n          \"claim\": \"center\",\n          \"have_n\": 1,\n          \"need_n\": 5,\n          \"have_sessions\": 1,\n          \"need_sessions\": 1,\n          \"reason\": \"a typical value for this golfer needs 5 samples (there are 1)\"\n        },\n        {\n          \"claim\": \"center\",\n          \"have_n\": 1,\n          \"need_n\": 5,\n          \"have_sessions\": 1,\n          \"need_sessions\": 1,\n          \"reason\": \"a typical value for this golfer needs 5 samples (there are 1)\"\n        }\n      ]\n    },\n    {\n      \"metric\": \"hip_shift_at_top_norm\",\n      \"unit\": \"shoulder_widths\",\n      \"n_a\": 1,\n      \"n_b\": 1,\n      \"mean_a\": null,\n      \"mean_b\": null,\n      \"delta\": null,\n      \"withheld\": [\n        {\n          \"claim\": \"center\",\n          \"have_n\": 1,\n          \"need_n\": 6,\n          \"have_sessions\": 1,\n          \"need_sessions\": 1,\n          \"reason\": \"a typical value for this golfer needs 6 samples (there are 1)\"\n        },\n        {\n          \"claim\": \"center\",\n          \"have_n\": 1,\n          \"need_n\": 6,\n          \"have_sessions\": 1,\n          \"need_sessions\": 1,\n          \"reason\": \"a typical value for this golfer needs 6 samples (there are 1)\"\n        }\n      ]\n    },\n    {\n      \"metric\": \"hip_sway_norm\",\n      \"unit\": \"shoulder_widths\",\n      \"n_a\": 1,\n      \"n_b\": 1,\n      \"mean_a\": null,\n      \"mean_b\": null,\n      \"delta\": null,\n      \"withheld\": [\n        {\n          \"claim\": \"center\",\n          \"have_n\": 1,\n          \"need_n\": 5,\n          \"have_sessions\": 1,\n          \"need_sessions\": 1,\n          \"reason\": \"a typical value for this golfer needs 5 samples (there are 1)\"\n        },\n        {\n          \"claim\": \"center\",\n          \"have_n\": 1,\n          \"need_n\": 5,\n          \"have_sessions\": 1,\n          \"need_sessions\": 1,\n          \"reason\": \"a typical value for this golfer needs 5 samples (there are 1)\"\n        }\n      ]\n    },\n    {\n      \"metric\": \"start_line_deg\",\n      \"unit\": \"degrees\",\n      \"n_a\": 1,\n      \"n_b\": 1,\n      \"mean_a\": null,\n      \"mean_b\": null,\n      \"delta\": null,\n      \"withheld\": [\n        {\n          \"claim\": \"center\",\n          \"have_n\": 1,\n          \"need_n\": 5,\n          \"have_sessions\": 1,\n          \"need_sessions\": 1,\n          \"reason\": \"a typical value for this golfer needs 5 samples (there are 1)\"\n        },\n        {\n          \"claim\": \"center\",\n          \"have_n\": 1,\n          \"need_n\": 5,\n          \"have_sessions\": 1,\n          \"need_sessions\": 1,\n          \"reason\": \"a typical value for this golfer needs 5 samples (there are 1)\"\n        }\n      ]\n    },\n    {\n      \"metric\": \"tempo_ratio\",\n      \"unit\": \"ratio\",\n      \"n_a\": 1,\n      \"n_b\": 1,\n      \"mean_a\": null,\n      \"mean_b\": null,\n      \"delta\": null,\n      \"withheld\": [\n        {\n          \"claim\": \"center\",\n          \"have_n\": 1,\n          \"need_n\": 8,\n          \"have_sessions\": 1,\n          \"need_sessions\": 1,\n          \"reason\": \"a typical value for this golfer needs 8 samples (there are 1)\"\n        },\n        {\n          \"claim\": \"center\",\n          \"have_n\": 1,\n          \"need_n\": 8,\n          \"have_sessions\": 1,\n          \"need_sessions\": 1,\n          \"reason\": \"a typical value for this golfer needs 8 samples (there are 1)\"\n        }\n      ]\n    }\n  ],\n  \"note\": \"A difference between two sessions is not by itself evidence that anything changed. Scores are means over the checkpoints that could be measured, so a session where one went unmeasured scores on fewer fundamentals than one where it did not, and no significance test is applied to any difference here. Per-metric means are absent unless each session on its own carried enough swings to support one.\"\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "mean_score_a": 91.0,
+            "mean_score_b": 91.0,
+            "metrics": [
+              {
+                "delta": null,
+                "mean_a": null,
+                "mean_b": null,
+                "metric": "face_to_path_deg",
+                "n_a": 1,
+                "n_b": 1,
+                "unit": "degrees",
+                "withheld": [
+                  {
+                    "claim": "center",
+                    "have_n": 1,
+                    "have_sessions": 1,
+                    "need_n": 5,
+                    "need_sessions": 1,
+                    "reason": "a typical value for this golfer needs 5 samples (there are 1)"
+                  },
+                  {
+                    "claim": "center",
+                    "have_n": 1,
+                    "have_sessions": 1,
+                    "need_n": 5,
+                    "need_sessions": 1,
+                    "reason": "a typical value for this golfer needs 5 samples (there are 1)"
+                  }
+                ]
+              },
+              {
+                "delta": null,
+                "mean_a": null,
+                "mean_b": null,
+                "metric": "finish_balance_norm",
+                "n_a": 1,
+                "n_b": 1,
+                "unit": "shoulder_widths",
+                "withheld": [
+                  {
+                    "claim": "center",
+                    "have_n": 1,
+                    "have_sessions": 1,
+                    "need_n": 5,
+                    "need_sessions": 1,
+                    "reason": "a typical value for this golfer needs 5 samples (there are 1)"
+                  },
+                  {
+                    "claim": "center",
+                    "have_n": 1,
+                    "have_sessions": 1,
+                    "need_n": 5,
+                    "need_sessions": 1,
+                    "reason": "a typical value for this golfer needs 5 samples (there are 1)"
+                  }
+                ]
+              },
+              {
+                "delta": null,
+                "mean_a": null,
+                "mean_b": null,
+                "metric": "head_hip_offset_impact_norm",
+                "n_a": 1,
+                "n_b": 1,
+                "unit": "shoulder_widths",
+                "withheld": [
+                  {
+                    "claim": "center",
+                    "have_n": 1,
+                    "have_sessions": 1,
+                    "need_n": 5,
+                    "need_sessions": 1,
+                    "reason": "a typical value for this golfer needs 5 samples (there are 1)"
+                  },
+                  {
+                    "claim": "center",
+                    "have_n": 1,
+                    "have_sessions": 1,
+                    "need_n": 5,
+                    "need_sessions": 1,
+                    "reason": "a typical value for this golfer needs 5 samples (there are 1)"
+                  }
+                ]
+              },
+              {
+                "delta": null,
+                "mean_a": null,
+                "mean_b": null,
+                "metric": "head_sway_norm",
+                "n_a": 1,
+                "n_b": 1,
+                "unit": "shoulder_widths",
+                "withheld": [
+                  {
+                    "claim": "center",
+                    "have_n": 1,
+                    "have_sessions": 1,
+                    "need_n": 5,
+                    "need_sessions": 1,
+                    "reason": "a typical value for this golfer needs 5 samples (there are 1)"
+                  },
+                  {
+                    "claim": "center",
+                    "have_n": 1,
+                    "have_sessions": 1,
+                    "need_n": 5,
+                    "need_sessions": 1,
+                    "reason": "a typical value for this golfer needs 5 samples (there are 1)"
+                  }
+                ]
+              },
+              {
+                "delta": null,
+                "mean_a": null,
+                "mean_b": null,
+                "metric": "hip_shift_at_top_norm",
+                "n_a": 1,
+                "n_b": 1,
+                "unit": "shoulder_widths",
+                "withheld": [
+                  {
+                    "claim": "center",
+                    "have_n": 1,
+                    "have_sessions": 1,
+                    "need_n": 6,
+                    "need_sessions": 1,
+                    "reason": "a typical value for this golfer needs 6 samples (there are 1)"
+                  },
+                  {
+                    "claim": "center",
+                    "have_n": 1,
+                    "have_sessions": 1,
+                    "need_n": 6,
+                    "need_sessions": 1,
+                    "reason": "a typical value for this golfer needs 6 samples (there are 1)"
+                  }
+                ]
+              },
+              {
+                "delta": null,
+                "mean_a": null,
+                "mean_b": null,
+                "metric": "hip_sway_norm",
+                "n_a": 1,
+                "n_b": 1,
+                "unit": "shoulder_widths",
+                "withheld": [
+                  {
+                    "claim": "center",
+                    "have_n": 1,
+                    "have_sessions": 1,
+                    "need_n": 5,
+                    "need_sessions": 1,
+                    "reason": "a typical value for this golfer needs 5 samples (there are 1)"
+                  },
+                  {
+                    "claim": "center",
+                    "have_n": 1,
+                    "have_sessions": 1,
+                    "need_n": 5,
+                    "need_sessions": 1,
+                    "reason": "a typical value for this golfer needs 5 samples (there are 1)"
+                  }
+                ]
+              },
+              {
+                "delta": null,
+                "mean_a": null,
+                "mean_b": null,
+                "metric": "start_line_deg",
+                "n_a": 1,
+                "n_b": 1,
+                "unit": "degrees",
+                "withheld": [
+                  {
+                    "claim": "center",
+                    "have_n": 1,
+                    "have_sessions": 1,
+                    "need_n": 5,
+                    "need_sessions": 1,
+                    "reason": "a typical value for this golfer needs 5 samples (there are 1)"
+                  },
+                  {
+                    "claim": "center",
+                    "have_n": 1,
+                    "have_sessions": 1,
+                    "need_n": 5,
+                    "need_sessions": 1,
+                    "reason": "a typical value for this golfer needs 5 samples (there are 1)"
+                  }
+                ]
+              },
+              {
+                "delta": null,
+                "mean_a": null,
+                "mean_b": null,
+                "metric": "tempo_ratio",
+                "n_a": 1,
+                "n_b": 1,
+                "unit": "ratio",
+                "withheld": [
+                  {
+                    "claim": "center",
+                    "have_n": 1,
+                    "have_sessions": 1,
+                    "need_n": 8,
+                    "need_sessions": 1,
+                    "reason": "a typical value for this golfer needs 8 samples (there are 1)"
+                  },
+                  {
+                    "claim": "center",
+                    "have_n": 1,
+                    "have_sessions": 1,
+                    "need_n": 8,
+                    "need_sessions": 1,
+                    "reason": "a typical value for this golfer needs 8 samples (there are 1)"
+                  }
+                ]
+              }
+            ],
+            "note": "A difference between two sessions is not by itself evidence that anything changed. Scores are means over the checkpoints that could be measured, so a session where one went unmeasured scores on fewer fundamentals than one where it did not, and no significance test is applied to any difference here. Per-metric means are absent unless each session on its own carried enough swings to support one.",
+            "player_id": "aaron",
+            "session_a": "2026-08-01",
+            "session_b": "2026-08-02",
+            "swings_a": 1,
+            "swings_b": 1
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"found\": false,\n  \"message\": \"No golfer matching 'Nobody' is registered. compare_sessions needs a golfer, because a session's swings can belong to more than one person. Call get_golfer_profile to see who is on file.\"\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "found": false,
+            "message": "No golfer matching 'Nobody' is registered. compare_sessions needs a golfer, because a session's swings can belong to more than one person. Call get_golfer_profile to see who is on file."
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"player_id\": \"aaron\",\n  \"display_name\": \"Aaron\",\n  \"clubs\": [],\n  \"clubs_used\": 0,\n  \"clubs_declared\": 0,\n  \"untagged_swings\": 2,\n  \"mishits_excluded\": 0,\n  \"nothing_tagged\": true,\n  \"note\": \"No swing on record names a club, so there is nothing to profile per club yet. This is NOT a sample-size refusal and a bay session does not fix it on its own — the club tag is newer than these swings, and they stay uncountable per club until each one is tagged. Do not answer this by telling the golfer to hit more balls. New swings get a club at upload; a swing already stored is retagged one at a time, from the change control on its row in the upload page's swing list or with POST /api/sessions/<session>/swings/<swing>/club.\"\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "clubs": [],
+            "clubs_declared": 0,
+            "clubs_used": 0,
+            "display_name": "Aaron",
+            "mishits_excluded": 0,
+            "note": "No swing on record names a club, so there is nothing to profile per club yet. This is NOT a sample-size refusal and a bay session does not fix it on its own — the club tag is newer than these swings, and they stay uncountable per club until each one is tagged. Do not answer this by telling the golfer to hit more balls. New swings get a club at upload; a swing already stored is retagged one at a time, from the change control on its row in the upload page's swing list or with POST /api/sessions/<session>/swings/<swing>/club.",
+            "nothing_tagged": true,
+            "player_id": "aaron",
+            "untagged_swings": 2
+          }
+        }
+      }
+    ]
+  },
+  "id": "mcp/tools/career-refusing",
+  "input": {
+    "calls": [
+      {
+        "arguments": {
+          "player": "Aaron"
+        },
+        "now": null,
+        "tool": "get_golfer_profile"
+      },
+      {
+        "arguments": {
+          "player": "aaron"
+        },
+        "now": null,
+        "tool": "get_golfer_profile"
+      },
+      {
+        "arguments": {
+          "player": "Nobody"
+        },
+        "now": null,
+        "tool": "get_golfer_profile"
+      },
+      {
+        "arguments": {
+          "metric": "head_sway_norm",
+          "player": "Aaron"
+        },
+        "now": null,
+        "tool": "get_shot_trends"
+      },
+      {
+        "arguments": {
+          "metric": "invented_metric",
+          "player": "Aaron"
+        },
+        "now": null,
+        "tool": "get_shot_trends"
+      },
+      {
+        "arguments": {
+          "metric": "head_sway_norm",
+          "player": "Nobody"
+        },
+        "now": null,
+        "tool": "get_shot_trends"
+      },
+      {
+        "arguments": {
+          "player": "Aaron",
+          "session_a": "2026-08-01",
+          "session_b": "2026-08-02"
+        },
+        "now": null,
+        "tool": "compare_sessions"
+      },
+      {
+        "arguments": {
+          "player": "Nobody",
+          "session_a": "2026-08-01",
+          "session_b": "2026-08-02"
+        },
+        "now": null,
+        "tool": "compare_sessions"
+      },
+      {
+        "arguments": {
+          "player": "Aaron"
+        },
+        "now": null,
+        "tool": "get_bag_profile"
+      }
+    ],
+    "files": {
+      "golfers/aaron.golfer.json": "{\n  \"player_id\": \"aaron\",\n  \"display_name\": \"Aaron\",\n  \"handedness\": \"right\",\n  \"created_at\": \"2026-10-01T12:00:00Z\"\n}",
+      "sessions/2026-08-01/1/analysis.json": "{\"swing_id\": \"1\", \"session_id\": \"s\", \"swing\": {\"swing_id\": \"1\", \"session_id\": \"s\", \"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.42, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick - 2.4:1.\", \"percentile\": 10.0, \"population_n\": 1399, \"one_sided\": false}, {\"name\": \"head_sway\", \"score\": 1.0, \"passed\": true, \"observed\": 0.12, \"expected_low\": 0.0, \"expected_high\": 0.43, \"message\": \"Head stays steady.\", \"percentile\": 35.5, \"population_n\": 458, \"one_sided\": true}], \"unscored\": [], \"measurements\": [{\"name\": \"head_sway_norm\", \"value\": 0.21500000000000002, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"hip_sway_norm\", \"value\": 0.44, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"hip_shift_at_top_norm\", \"value\": 0.13, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"head_hip_offset_impact_norm\", \"value\": 0.17, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"finish_balance_norm\", \"value\": 0.024, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"tempo_ratio\", \"value\": 5.7, \"unit\": \"ratio\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"face_to_path_deg\", \"value\": 9.6, \"unit\": \"degrees\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}, {\"name\": \"start_line_deg\", \"value\": 7.4, \"unit\": \"degrees\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}], \"mechanics_score\": 91.0, \"outcome_score\": null, \"overall_score\": 91.0, \"shot\": null}, \"alignment\": {\"quality\": \"top_impact\"}, \"notes\": [\"alignment degraded: aligned on top and impact\"], \"feedback\": {\"swing_id\": \"1\", \"overall_score\": 91.0, \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\", \"tips\": [{\"checkpoint\": \"tempo\", \"text\": \"Tempo too quick - 2.4:1.\", \"severity\": \"minor\"}]}, \"analysis_version\": 16}",
+      "sessions/2026-08-01/1/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"down_the_line\": \"sha-2026-08-01-1-down_the_line\",\n    \"face_on\": \"sha-2026-08-01-1-face_on\",\n    \"shot_screen\": \"sha-2026-08-01-1-shot_screen\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 91.0,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\"\n}",
+      "sessions/2026-08-01/1/manifest.json": "{\n  \"swing_id\": \"1\",\n  \"session_id\": \"2026-08-01\",\n  \"created_at\": \"2026-08-01T12:00:00Z\",\n  \"updated_at\": \"2026-08-01T12:00:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-01-1-face_on\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-01-1-down_the_line\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-01-1-shot_screen\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": null,\n  \"mishit\": null\n}",
+      "sessions/2026-08-02/1/analysis.json": "{\"swing_id\": \"1\", \"session_id\": \"s\", \"swing\": {\"swing_id\": \"1\", \"session_id\": \"s\", \"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.42, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick - 2.4:1.\", \"percentile\": 10.0, \"population_n\": 1399, \"one_sided\": false}, {\"name\": \"head_sway\", \"score\": 1.0, \"passed\": true, \"observed\": 0.12, \"expected_low\": 0.0, \"expected_high\": 0.43, \"message\": \"Head stays steady.\", \"percentile\": 35.5, \"population_n\": 458, \"one_sided\": true}], \"unscored\": [], \"measurements\": [{\"name\": \"head_sway_norm\", \"value\": 0.185, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"hip_sway_norm\", \"value\": 0.15999999999999998, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"hip_shift_at_top_norm\", \"value\": 0.09, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"head_hip_offset_impact_norm\", \"value\": 0.11000000000000001, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"finish_balance_norm\", \"value\": 0.016, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"tempo_ratio\", \"value\": 5.1000000000000005, \"unit\": \"ratio\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"face_to_path_deg\", \"value\": 7.6, \"unit\": \"degrees\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}, {\"name\": \"start_line_deg\", \"value\": -6.6, \"unit\": \"degrees\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}], \"mechanics_score\": 91.0, \"outcome_score\": null, \"overall_score\": 91.0, \"shot\": null}, \"alignment\": {\"quality\": \"top_impact\"}, \"notes\": [\"alignment degraded: aligned on top and impact\"], \"feedback\": {\"swing_id\": \"1\", \"overall_score\": 91.0, \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\", \"tips\": [{\"checkpoint\": \"tempo\", \"text\": \"Tempo too quick - 2.4:1.\", \"severity\": \"minor\"}]}, \"analysis_version\": 16}",
+      "sessions/2026-08-02/1/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"down_the_line\": \"sha-2026-08-02-1-down_the_line\",\n    \"face_on\": \"sha-2026-08-02-1-face_on\",\n    \"shot_screen\": \"sha-2026-08-02-1-shot_screen\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 91.0,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\"\n}",
+      "sessions/2026-08-02/1/manifest.json": "{\n  \"swing_id\": \"1\",\n  \"session_id\": \"2026-08-02\",\n  \"created_at\": \"2026-08-02T12:00:00Z\",\n  \"updated_at\": \"2026-08-02T12:00:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-02-1-face_on\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-02-1-down_the_line\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-02-1-shot_screen\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": null,\n  \"mishit\": null\n}"
+    },
+    "roots": {
+      "golfers": "golfers",
+      "sessions": "sessions",
+      "shots": "shots"
+    }
+  },
+  "provenance": {
+    "analysis_version": 16,
+    "flight_model_calls": [],
+    "kind": "mcp",
+    "mcp_version": "2.0.0",
+    "note": "test_career_tools.py's refusing_dir, two swings in two sessions: every claim withheld, both spellings of the name, the unknown golfer on all three tools, a metric never recorded, and the bag of that untagged corpus",
+    "oracle": "python",
+    "pydantic_version": "2.13.4",
+    "python_version": "3.13.3",
+    "recorded_by": "scripts/conformance_vectors.py::_run_mcp",
+    "rerecords": [
+      {
+        "added": [],
+        "by": "golf-core rerecord",
+        "career_version": 3,
+        "declaration": "spec/declarations/career-v3.json",
+        "moved": [
+          "career_version"
+        ]
+      }
+    ],
+    "source": "scripts/conformance_vectors.py::_mcp_career_refusing, after tests/mcp/"
+  }
+}

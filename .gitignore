@@ -17,6 +17,9 @@ data/models/*.pt
 data/models/*.pth
 data/models/*.onnx
 data/models/*.task
+# The OCR reader's converted Paddle models and their dictionary (M29). The `*.onnx` line above
+# does not reach a subdirectory; crates/ocr/models.json is what is committed in their place.
+data/models/ocr/
 
 # Third-party reference corpora (GolfDB and anything like it). Kept out of git for licensing
 # as much as size: the upstream annotations and per-clip rows keyed to named tour players are
@@ -34,8 +37,6 @@ spikes/*/frames/
 
 # Node
 node_modules/
-frontend/build/
-frontend/dist/
 
 # IDE
 .vscode/

@@ -72,7 +72,7 @@ class BaselineClaim(StrEnum):
 #: Default minimum samples per claim, and the criterion behind each.
 #:
 #: **These are judgment, and they are documented as judgment.** The obvious place to derive them
-#: from is M6.5's spread/error ratios (`scripts/golfdb/tune_spatial_metric.py`: finish_balance 8.2
+#: from is M6.5's spread/error ratios (`archive/golfdb/tune_spatial_metric.py`: finish_balance 8.2
 #: down to tempo 2.4), and that would be wrong. That ratio is *population* spread over *instrument*
 #: error, while what binds a personal baseline is the golfer's own shot-to-shot variability —
 #: unmeasured, and much larger than the instrument's. Deriving from tempo's r = 2.4 yields a

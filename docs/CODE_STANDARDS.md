@@ -70,10 +70,12 @@ bitten.
 *(Interface Segregation, applied to dependencies)*
 
 - **Violated when:** a module reachable from an offline CLI imports a package from an extra
-  (`fastapi`, `anthropic`, `paddle`, `ultralytics`) at module scope.
+  (`fastapi`, `anthropic`, `paddle`, `mediapipe`) at module scope. (`ultralytics` was the fourth
+  example until M29 dropped it from the `vision` extra with `detection/`.)
 - **Precedent:** `tests/api/test_pipeline_imports.py` pins exactly two of these —
   `api/pipeline.py` must not pull in fastapi, `feedback/coach.py` must not import anthropic at
-  module scope — because `scripts/analyze_bundle.py` runs on a `vision`-only install. Both are
+  module scope — because `scripts/analyze_bundle.py` ran on a `vision`-only install, until M29
+  deleted it for `golf-lab analyze`; the pins stand while `api/pipeline.py` does. Both are
   "easy to break by adding one convenient import", in the test's own words.
 - **NOT a finding:** `api/app.py` importing fastapi at module scope. It *is* the web app; the
   boundary is `pipeline.py`, not the whole package.
@@ -175,7 +177,7 @@ bitten.
 
 - **Violated when:** a losing candidate is deleted rather than kept as a named row, or a decision
   is reversed without an addendum recording why.
-- **Precedent:** `docs/README.md`'s Conventions section — `scripts/golfdb/tune_*.py` keep every
+- **Precedent:** `docs/README.md`'s Conventions section — `archive/golfdb/tune_*.py` keep every
   losing candidate, including deliberate no-pose baselines any future candidate must beat. The ADR
   addenda do the same for decisions. It is why the same idea does not get re-tried.
 - **NOT a finding:** deleting code that never represented an alternative — a dead helper, an unused

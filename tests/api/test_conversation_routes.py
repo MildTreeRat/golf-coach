@@ -107,15 +107,10 @@ def asked(monkeypatch):
     return calls
 
 
-def _seed(client, store, *, analysis: bool = True) -> str:
-    # M9 P6: an upload 409s without a club cursor; these tests are not about the club.
-    client.post("/api/sessions/current/club", json={"club": "7i"})
+def _seed(file_swing, store, *, analysis: bool = True) -> str:
     for role in _ROLES:
-        res = client.post(
-            "/api/uploads", params={"role": role, "filename": f"{role}.mov"},
-            content=role.encode(),
-        )
-    session_id = res.json()["session_id"]
+        filed = file_swing(store, role, role.encode())
+    session_id = filed.session_id
     swing_dir = store.root / session_id / "1"
     if analysis:
         (swing_dir / "analysis.json").write_text(json.dumps(_ANALYSIS), encoding="utf-8")
@@ -130,14 +125,14 @@ def _seed(client, store, *, analysis: bool = True) -> str:
 
 
 def test_a_first_question_seeds_from_the_stored_analysis(
-    client, store, asked, conversations_dir
+    client, store, asked, conversations_dir, file_swing
 ) -> None:
     """The brief is `build_brief` over this swing's own `analysis.json`.
 
     One rendering, shared with the coaching paragraph already on the page — so the conversation
     and the verdict above it cannot describe the same swing differently.
     """
-    session_id = _seed(client, store)
+    session_id = _seed(file_swing, store)
 
     body = client.post(
         f"/api/sessions/{session_id}/swings/1/ask", json={"question": "why?"}
@@ -152,8 +147,8 @@ def test_a_first_question_seeds_from_the_stored_analysis(
     assert list_transcripts(conversations_dir)[0].conversation_id == body["conversation_id"]
 
 
-def test_the_answer_is_persisted(client, store, asked, conversations_dir) -> None:
-    session_id = _seed(client, store)
+def test_the_answer_is_persisted(client, store, asked, conversations_dir, file_swing) -> None:
+    session_id = _seed(file_swing, store)
 
     body = client.post(
         f"/api/sessions/{session_id}/swings/1/ask", json={"question": "why?"}
@@ -167,9 +162,9 @@ def test_the_answer_is_persisted(client, store, asked, conversations_dir) -> Non
 
 
 def test_a_second_question_continues_the_same_conversation(
-    client, store, asked, conversations_dir
+    client, store, asked, conversations_dir, file_swing
 ) -> None:
-    session_id = _seed(client, store)
+    session_id = _seed(file_swing, store)
     first = client.post(
         f"/api/sessions/{session_id}/swings/1/ask", json={"question": "why?"}
     ).json()
@@ -187,8 +182,8 @@ def test_a_second_question_continues_the_same_conversation(
     assert asked[1]["brief"] is None
 
 
-def test_the_tools_offered_match_the_configured_stores(client, store, asked) -> None:
-    session_id = _seed(client, store)
+def test_the_tools_offered_match_the_configured_stores(client, store, asked, file_swing) -> None:
+    session_id = _seed(file_swing, store)
 
     client.post(f"/api/sessions/{session_id}/swings/1/ask", json={"question": "why?"})
 
@@ -196,9 +191,9 @@ def test_the_tools_offered_match_the_configured_stores(client, store, asked) -> 
     assert "list_sessions" in asked[0]["tool_names"]
 
 
-def test_a_swing_with_no_analysis_yet_still_answers(client, store, asked) -> None:
+def test_a_swing_with_no_analysis_yet_still_answers(client, store, asked, file_swing) -> None:
     """Nothing to seed from, so the model looks everything up through the tools instead."""
-    session_id = _seed(client, store, analysis=False)
+    session_id = _seed(file_swing, store, analysis=False)
 
     body = client.post(
         f"/api/sessions/{session_id}/swings/1/ask", json={"question": "why?"}
@@ -217,9 +212,11 @@ def test_an_unknown_swing_is_a_404(client, store, asked) -> None:
     assert res.status_code == 404
 
 
-def test_an_unknown_conversation_is_a_404_not_a_new_thread(client, store, asked) -> None:
+def test_an_unknown_conversation_is_a_404_not_a_new_thread(
+    client, store, asked, file_swing
+) -> None:
     """A typo must not silently start a fresh conversation the user thinks is their old one."""
-    session_id = _seed(client, store)
+    session_id = _seed(file_swing, store)
 
     res = client.post(
         f"/api/sessions/{session_id}/swings/1/ask",
@@ -229,8 +226,8 @@ def test_an_unknown_conversation_is_a_404_not_a_new_thread(client, store, asked)
     assert res.status_code == 404
 
 
-def test_a_traversing_conversation_id_is_a_404(client, store, asked) -> None:
-    session_id = _seed(client, store)
+def test_a_traversing_conversation_id_is_a_404(client, store, asked, file_swing) -> None:
+    session_id = _seed(file_swing, store)
 
     res = client.post(
         f"/api/sessions/{session_id}/swings/1/ask",
@@ -241,8 +238,8 @@ def test_a_traversing_conversation_id_is_a_404(client, store, asked) -> None:
 
 
 @pytest.mark.parametrize("question", ["", "   "])
-def test_an_empty_question_is_a_400(client, store, asked, question: str) -> None:
-    session_id = _seed(client, store)
+def test_an_empty_question_is_a_400(client, store, asked, question: str, file_swing) -> None:
+    session_id = _seed(file_swing, store)
 
     res = client.post(
         f"/api/sessions/{session_id}/swings/1/ask", json={"question": question}
@@ -251,13 +248,13 @@ def test_an_empty_question_is_a_400(client, store, asked, question: str) -> None
     assert res.status_code == 400
 
 
-def test_a_failed_ask_is_a_200_with_a_note(client, store, monkeypatch) -> None:
+def test_a_failed_ask_is_a_200_with_a_note(client, store, monkeypatch, file_swing) -> None:
     """Coaching must never be able to break the page a score is rendered on.
 
     A 500 here would take out the results view of a swing whose analysis is fine — so no key, no
     extra, a rate limit and a refusal all arrive as a note beside a null answer.
     """
-    session_id = _seed(client, store)
+    session_id = _seed(file_swing, store)
     monkeypatch.setattr(
         "golf_coach.feedback.conversation.ask",
         lambda *a, **k: AskOutcome(note="no answer: the coaching request was rate limited."),
@@ -270,8 +267,10 @@ def test_a_failed_ask_is_a_200_with_a_note(client, store, monkeypatch) -> None:
     assert "rate limited" in res.json()["note"]
 
 
-def test_a_failed_ask_stores_nothing(client, store, monkeypatch, conversations_dir) -> None:
-    session_id = _seed(client, store)
+def test_a_failed_ask_stores_nothing(
+    client, store, monkeypatch, conversations_dir, file_swing
+) -> None:
+    session_id = _seed(file_swing, store)
     monkeypatch.setattr(
         "golf_coach.feedback.conversation.ask",
         lambda *a, **k: AskOutcome(note="no answer: no Anthropic API key is configured."),

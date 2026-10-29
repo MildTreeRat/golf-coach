@@ -126,7 +126,7 @@ depend on it. `run_pose.py` is still run once, deliberately, on one clip, to rec
 
 Q1 does not only ask *whether* the lead wrist survives down-the-line — it asks what to use if it
 does not. Five named signals, each fed to the shipped `_top_and_impact` with only the signal
-swapped, following the `scripts/golfdb/tune_address.py` pattern of keeping the losers runnable so
+swapped, following the `archive/golfdb/tune_address.py` pattern of keeping the losers runnable so
 the evidence outlives the decision:
 
 | Variant | Signal |

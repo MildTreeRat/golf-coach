@@ -44,7 +44,7 @@ SpinAxis and spin components.
 
 ### 1. Take it, and keep it under the same gitignored root as GolfDB
 
-`data/reference/caddieset/`, fetched by `scripts/caddieset/fetch.py`, ignored by the existing
+`data/reference/caddieset/`, fetched by `archive/caddieset/fetch.py`, ignored by the existing
 `data/reference/` rule. The MIT licence would permit vendoring the CSV into git; we decline, so that
 the licensing boundary stays a **directory** rather than a per-file judgement someone has to
 remember for each corpus. The LICENSE is fetched alongside the data so its terms travel with it.
@@ -54,11 +54,11 @@ remember for each corpus. The LICENSE is fetched alongside the data so its terms
 ADR-012 §4 governs: a band is only comparable to a swing measured the same way, and these are not
 our `metric_definitions_version: 3` measurements. Because the CSV ships no keypoints, they cannot be
 re-derived into ours either. **What transfers is which features carry signal and in which
-direction — never a threshold.** No script in `scripts/caddieset/` writes to `ranges.json`.
+direction — never a threshold.** No script in `archive/caddieset/` writes to `ranges.json`.
 
 ### 3. Keep its row shape inside `scripts/`
 
-`contracts/reference.py::ReferenceSwing` has no slot for a shot outcome. Widening a shape in
+`archive/golfdb/reference.py::ReferenceSwing` has no slot for a shot outcome. Widening a shape in
 `contracts/` for a corpus whose value was unproven would have been a speculative L3 change; nothing
 in `src/` reads per-swing reference rows, only aggregates ship, so the shape stays local to the
 ingest script. Revisit only if a second paired corpus arrives.
@@ -74,7 +74,7 @@ lets a between-golfer difference in base rate masquerade as skill at ranking.
 
 ### The panel does not predict ball flight, and that is the finding
 
-`scripts/caddieset/study_panel.py`, over the 924 face-on shots:
+`archive/caddieset/study_panel.py`, over the 924 face-on shots:
 
 | target | mechanics (transfer) | club choice alone | verdict |
 |---|---|---|---|

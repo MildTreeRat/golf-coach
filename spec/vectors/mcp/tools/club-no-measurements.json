@@ -1,0 +1,85 @@
+{
+  "career_version": 3,
+  "expected": {
+    "results": [
+      {
+        "content": [
+          {
+            "text": "{\n  \"player_id\": \"aaron\",\n  \"club\": \"7i\",\n  \"category\": \"mid_iron\",\n  \"in_bag\": false,\n  \"bag_entry\": null,\n  \"n_swings\": 2,\n  \"n_shots\": 2,\n  \"n_sessions\": 1,\n  \"mishits\": 0,\n  \"mishit_refs\": [],\n  \"mishits_unconfirmed\": 0,\n  \"metrics\": [],\n  \"caveats\": [],\n  \"nothing_sayable\": true,\n  \"note\": \"These swings carry no measurement at all, so there is nothing here to refuse and nothing to report. That is not about the club: the commonest causes are swings that were never analyzed and swings analyzed by an older engine. Call get_golfer_profile to see which metrics have samples at all.\"\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "bag_entry": null,
+            "category": "mid_iron",
+            "caveats": [],
+            "club": "7i",
+            "in_bag": false,
+            "metrics": [],
+            "mishit_refs": [],
+            "mishits": 0,
+            "mishits_unconfirmed": 0,
+            "n_sessions": 1,
+            "n_shots": 2,
+            "n_swings": 2,
+            "note": "These swings carry no measurement at all, so there is nothing here to refuse and nothing to report. That is not about the club: the commonest causes are swings that were never analyzed and swings analyzed by an older engine. Call get_golfer_profile to see which metrics have samples at all.",
+            "nothing_sayable": true,
+            "player_id": "aaron"
+          }
+        }
+      }
+    ]
+  },
+  "id": "mcp/tools/club-no-measurements",
+  "input": {
+    "calls": [
+      {
+        "arguments": {
+          "club": "7i",
+          "player": "Aaron"
+        },
+        "now": null,
+        "tool": "get_club_profile"
+      }
+    ],
+    "files": {
+      "golfers/aaron.golfer.json": "{\n  \"player_id\": \"aaron\",\n  \"display_name\": \"Aaron\",\n  \"handedness\": \"right\",\n  \"created_at\": \"2026-10-01T12:00:00Z\"\n}",
+      "sessions/2026-09-01/0/analysis.json": "{\"swing_id\": \"1\", \"session_id\": \"s\", \"swing\": {\"swing_id\": \"1\", \"session_id\": \"s\", \"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.42, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick - 2.4:1.\", \"percentile\": 10.0, \"population_n\": 1399, \"one_sided\": false}, {\"name\": \"head_sway\", \"score\": 1.0, \"passed\": true, \"observed\": 0.12, \"expected_low\": 0.0, \"expected_high\": 0.43, \"message\": \"Head stays steady.\", \"percentile\": 35.5, \"population_n\": 458, \"one_sided\": true}], \"unscored\": [], \"measurements\": [], \"mechanics_score\": 91.0, \"outcome_score\": null, \"overall_score\": 91.0, \"shot\": null}, \"alignment\": {\"quality\": \"top_impact\"}, \"notes\": [\"alignment degraded: aligned on top and impact\"], \"feedback\": {\"swing_id\": \"1\", \"overall_score\": 91.0, \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\", \"tips\": [{\"checkpoint\": \"tempo\", \"text\": \"Tempo too quick - 2.4:1.\", \"severity\": \"minor\"}]}, \"analysis_version\": 16}",
+      "sessions/2026-09-01/0/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"down_the_line\": \"sha-2026-09-01-0-down_the_line\",\n    \"face_on\": \"sha-2026-09-01-0-face_on\",\n    \"shot_screen\": \"sha-2026-09-01-0-shot_screen\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 91.0,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\"\n}",
+      "sessions/2026-09-01/0/manifest.json": "{\n  \"swing_id\": \"0\",\n  \"session_id\": \"2026-09-01\",\n  \"created_at\": \"2026-09-01T12:00:00Z\",\n  \"updated_at\": \"2026-09-01T12:00:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.abc123.mov\",\n      \"content_sha256\": \"sha-2026-09-01-0-face_on\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.abc123.mov\",\n      \"content_sha256\": \"sha-2026-09-01-0-down_the_line\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.abc123.mov\",\n      \"content_sha256\": \"sha-2026-09-01-0-shot_screen\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": \"7i\",\n  \"mishit\": null\n}",
+      "sessions/2026-09-01/1/analysis.json": "{\"swing_id\": \"1\", \"session_id\": \"s\", \"swing\": {\"swing_id\": \"1\", \"session_id\": \"s\", \"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.42, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick - 2.4:1.\", \"percentile\": 10.0, \"population_n\": 1399, \"one_sided\": false}, {\"name\": \"head_sway\", \"score\": 1.0, \"passed\": true, \"observed\": 0.12, \"expected_low\": 0.0, \"expected_high\": 0.43, \"message\": \"Head stays steady.\", \"percentile\": 35.5, \"population_n\": 458, \"one_sided\": true}], \"unscored\": [], \"measurements\": [], \"mechanics_score\": 91.0, \"outcome_score\": null, \"overall_score\": 91.0, \"shot\": null}, \"alignment\": {\"quality\": \"top_impact\"}, \"notes\": [\"alignment degraded: aligned on top and impact\"], \"feedback\": {\"swing_id\": \"1\", \"overall_score\": 91.0, \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\", \"tips\": [{\"checkpoint\": \"tempo\", \"text\": \"Tempo too quick - 2.4:1.\", \"severity\": \"minor\"}]}, \"analysis_version\": 16}",
+      "sessions/2026-09-01/1/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"down_the_line\": \"sha-2026-09-01-1-down_the_line\",\n    \"face_on\": \"sha-2026-09-01-1-face_on\",\n    \"shot_screen\": \"sha-2026-09-01-1-shot_screen\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 91.0,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\"\n}",
+      "sessions/2026-09-01/1/manifest.json": "{\n  \"swing_id\": \"1\",\n  \"session_id\": \"2026-09-01\",\n  \"created_at\": \"2026-09-01T12:01:00Z\",\n  \"updated_at\": \"2026-09-01T12:01:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.abc123.mov\",\n      \"content_sha256\": \"sha-2026-09-01-1-face_on\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.abc123.mov\",\n      \"content_sha256\": \"sha-2026-09-01-1-down_the_line\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.abc123.mov\",\n      \"content_sha256\": \"sha-2026-09-01-1-shot_screen\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": \"7i\",\n  \"mishit\": null\n}"
+    },
+    "roots": {
+      "golfers": "golfers",
+      "sessions": "sessions",
+      "shots": "shots"
+    }
+  },
+  "provenance": {
+    "analysis_version": 16,
+    "flight_model_calls": [],
+    "kind": "mcp",
+    "mcp_version": "2.0.0",
+    "note": "test_swings_that_carry_no_measurement_say_so_rather_than_refusing: two empty artifacts",
+    "oracle": "python",
+    "pydantic_version": "2.13.4",
+    "python_version": "3.13.3",
+    "recorded_by": "scripts/conformance_vectors.py::_run_mcp",
+    "rerecords": [
+      {
+        "added": [],
+        "by": "golf-core rerecord",
+        "career_version": 3,
+        "declaration": "spec/declarations/career-v3.json",
+        "moved": [
+          "career_version"
+        ]
+      }
+    ],
+    "source": "scripts/conformance_vectors.py::_mcp_club_no_measurements, after tests/mcp/"
+  }
+}

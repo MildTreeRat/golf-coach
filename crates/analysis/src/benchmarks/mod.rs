@@ -24,6 +24,9 @@
 //! `conformance.py::run_vector`'s path reads them. Their Python callers are `comparison.py` and
 //! `tempo_trainer.py`, which are the lab, so no committed vector could gate a port of them — the
 //! same rule P2 set for the `contracts/` registries and P4 applied to `stats`' career-mode half.
+//! **M29 P22 brought one field of the block**, `pose_estimator`, as
+//! [`distributions::dataset_pose_estimators`], because the lab's `_band_estimator_note` reads it;
+//! the rest of the block stays unparsed, on the same rule.
 //! `Distribution.provenance` *is* here, because fourteen rows carry one and dropping a field that
 //! the file contains would make the struct lie about the data rather than about a function.
 //!

@@ -1,0 +1,99 @@
+# The lab CLI, in Rust. [M29 P20]
+#
+# A shell like `golf-core` (the M29 plan's D13): it may hold any library crate, and nothing depends
+# on it (`tests/edges.rs`). Its Python twins are the lab scripts in front of `api/pipeline.py`
+# (`analyze_bundle.py`, `reanalyze.py`, `import_shot_screens.py`, `simulate_flight.py` and their
+# siblings), each verb arriving with the phase that ports it. `golf-core` stays the engine and
+# recorder shell M38's phone can link; this one holds the lab's I/O edges (ffmpeg, the pose
+# sidecar, the OCR reader), which the phone never links.
+#
+# **`ort` only ever through `crates/ocr`**, never declared here: `crates/ocr/tests/ort_reach.rs`
+# fails if any crate but `ocr` declares it (the plan's P1 finding 14).
+[package]
+name = "golf-lab"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "The lab CLI: the bundle pipeline, strike audio, pose, the shot re-read and every lab verb frozen Python's scripts/ ran, over the Rust crates."
+
+[lib]
+name = "golf_lab"
+path = "src/lib.rs"
+
+[[bin]]
+name = "golf-lab"
+path = "src/bin/golf_lab.rs"
+
+# Each edge arrives with the first module that crosses it, as `crates/core/Cargo.toml` did for
+# `storage`: an edge nothing crosses is a claim cargo cannot check.
+[dependencies]
+# `AudioFile` and `AUDIO_DETECTOR_VERSION`, the strike cache's shape (`audio`, M29 P21).
+contracts = { path = "../contracts" }
+# `audio_io`, the cache's reader and writer, and the manifest whose clip sha keys it (P21). P28's
+# `flight` crosses it for the shot store and `flight_inputs::read_flight_inputs`, the join from a
+# stored shot to its swing, club, loft and golfer. P30's `build_vectors` crosses it for the keypoints
+# and strike readers, the state and session file names, and `corpus::read_corpus`, which picks the
+# real corpus case's narrowings.
+storage = { path = "../storage" }
+# `detect_strikes`, as a library: `golf-trigger detect`'s JSON is not an `AudioFile` (its
+# `sample_rate` and `sample_count` sit at the top level), and the lab has no reason to pipe a
+# waveform through a process when the detector links in (the plan's P20 finding 5).
+trigger = { path = "../trigger" }
+# `decode::find_ffmpeg`, the one ffmpeg finder (`GOLF_FFMPEG`, then `PATH`; the plan's D17 and P2
+# finding 9), reused rather than written twice. This is the edge that puts `ort` in `golf-lab`'s
+# closure, which the plan allows here and nowhere on the phone's path (`crates/ocr/tests/ort_reach.rs`);
+# the lab's shot re-read (P23) crosses it for the reader itself, `read_photo` and `screen_timestamp`.
+ocr = { path = "../ocr" }
+# `read`, the parser and validator that stamp a re-read shot, and `load_profile` (`shot`, P23). The
+# phone's own reader, so the lab and M38 stamp a photo's shot by one rule.
+screen = { path = "../screen" }
+# `repr` and `fixed`, for the floats `audio_for`'s log lines print as Python's f-strings do.
+pyfmt = { path = "../pyfmt" }
+# The pose sidecar: `Pool`, the job and its outcome, and `writer::write`, the keypoints file's one
+# writer (ADR-033 clause 8). `keypoints_for` (P22) is the crate's first caller.
+pose = { path = "../pose" }
+# `benchmarks::distributions::dataset_pose_estimators`, the estimator the bands were cut from, which
+# `_band_estimator_note` compares a swing's with (P22). P28's `flight` crosses it for the flight
+# model and its what-if, the integrator, the gate, the spin solve, the caveats and the comparison
+# with what the screen printed.
+analysis = { path = "../analysis" }
+# `session::run_shot_session`, `golf-core run-shot --session`'s own code, which analyses each photo
+# entry `import-photos --into-session` opens (P24), so the verb and the corpus agree on what an entry
+# needs. The engine shell M38's phone may link: it brings `feedback` into the lab's closure and
+# nothing with `ort`. P25's bundle pipeline crosses it again: `VectorInput`, the engine input it
+# assembles, and `auto_windows`, the swing selection's ordering, which is there so the selection
+# family's gate and re-record run the definition the lab runs. P26's `analyze` crosses it for the rest
+# of the pipeline: `run_bundle`, the engine and feedback typed, `serialize`, the drop `analysis.json`
+# shares with every vector, and `textwrap`, the report's wrapper for the coaching paragraph. P27's
+# `reanalyze` crosses it for `session::analyse_entry` and `Duplicates`, `run-shot --session`'s own
+# code for one photo entry and the corpus's duplicates, and `pyrepr`, the `repr()` its diff prints.
+# P28's `flight` crosses it for `textwrap` again, the script's 72-column wrap. P30's `build_vectors`
+# crosses it for the recorder's own pieces, so a built vector and a re-recorded one share them: `run`,
+# `stages`, `compare`, `storage_family`'s corpus runner, and `rerecord`'s writer and Rust oracle.
+golf-core = { path = "../core" }
+# `rules::build_feedback`, which `analyze-keypoints` runs over a single view's result as
+# `analyze_swing.py` does (P27). `golf-core`'s `run_bundle` builds a bundle's feedback, and nothing
+# there serves one view, so the lab reaches the crate itself, as `golf-core` does.
+feedback = { path = "../feedback" }
+# `ZipArchive`, for `import-export`'s zip form (P31): the phone's export arrives as a zip of its
+# stored layout or as that layout's directory (the M29 plan's D16), and the plan names zip support a
+# new dependency with a finding first (P31's finding 1). Pinned exactly at 7.3.0, the last release
+# whose `rust-version` (1.83) the workspace's 1.87 meets; 7.4 and later want 1.88. Default features
+# off, which drops AES, bzip2, deflate64, LZMA, PPMd, xz, zstd, zopfli and `time`: a phone export is
+# stored or deflated, and anything else is refused by name. `deflate-flate2` alone, so the inflate is
+# the workspace's own `flate2` with the backend it already has, rather than this crate choosing one
+# for every crate that shares the lock (the `.gz` vectors are written through it).
+zip = { version = "=7.3.0", default-features = false, features = ["deflate-flate2"] }
+
+# The engine input cut as a committed corpus vector holds it (`pipeline::corpus_input`, P25), which
+# the input gate compares and P30's builder writes. Already the workspace's, and a dev-dependency here
+# since P20, so the lock gains nothing.
+serde_json.workspace = true
+
+[dev-dependencies]
+# A scratch directory for the round trip's writes, as `crates/storage`'s tests use.
+tempfile = "3"
+# The committed corpus and selection vectors are gzipped, and the input gate reads both
+# (`tests/inputs.rs`, P25). The workspace's, so the lock gains nothing.
+flate2.workspace = true

@@ -232,7 +232,7 @@ fn run(options: &Options) -> ExitCode {
     let _ = pool.shutdown();
 
     let keypoints = match completed.result {
-        Ok(Outcome::Done(keypoints)) => keypoints,
+        Ok(Outcome::Done { keypoints, .. }) => keypoints,
         // A named fact about this clip, and never a partial file: ADR-010 §2 at the process boundary
         // means nothing is written when a clip could not be posed.
         // `{reason:?}` and not a `Display` added to `FailureReason` for this one caller: the variant
@@ -422,7 +422,7 @@ fn sweep(options: &Sweep) -> ExitCode {
         let at = posing.elapsed().as_secs_f64();
         let name = label(&completed.clip_path);
         match completed.result {
-            Ok(Outcome::Done(keypoints)) => {
+            Ok(Outcome::Done { keypoints, .. }) => {
                 frames += keypoints.frames.len();
                 println!(
                     "{name:<30} {:>6} {at:>7.1}s {:>8} {:>17}",

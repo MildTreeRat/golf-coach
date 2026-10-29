@@ -1,0 +1,269 @@
+{
+  "career_version": 3,
+  "expected": {
+    "results": [
+      {
+        "content": [],
+        "isError": false,
+        "structuredContent": {
+          "result": []
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"found\": false,\n  \"message\": \"No swing '1' in session '2026-08-10'. Call list_sessions to see which sessions and swing ids exist.\"\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "found": false,
+            "message": "No swing '1' in session '2026-08-10'. Call list_sessions to see which sessions and swing ids exist."
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"found\": false,\n  \"message\": \"No session '2026-08-10'. Call list_sessions to see which sessions exist.\"\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "found": false,
+            "message": "No session '2026-08-10'. Call list_sessions to see which sessions exist."
+          }
+        }
+      },
+      {
+        "content": [],
+        "isError": false,
+        "structuredContent": {
+          "result": []
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"found\": false,\n  \"message\": \"No shot with id 'a'. Call get_recent_shots to see which shot ids exist.\"\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "found": false,
+            "message": "No shot with id 'a'. Call get_recent_shots to see which shot ids exist."
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"found\": false,\n  \"message\": \"No swing '1' in session '2026-08-10'. Call list_sessions to see which sessions and swing ids exist.\"\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "found": false,
+            "message": "No swing '1' in session '2026-08-10'. Call list_sessions to see which sessions and swing ids exist."
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"found\": false,\n  \"message\": \"No golfer matching 'Aaron' is registered. Names are matched loosely (case and punctuation are folded), so this means nobody by that name has swings on file yet.\"\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "found": false,
+            "message": "No golfer matching 'Aaron' is registered. Names are matched loosely (case and punctuation are folded), so this means nobody by that name has swings on file yet."
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"found\": false,\n  \"message\": \"No golfer matching 'Aaron' is registered. Call get_golfer_profile with the name to see whether they have any swings on file.\"\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "found": false,
+            "message": "No golfer matching 'Aaron' is registered. Call get_golfer_profile with the name to see whether they have any swings on file."
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"found\": false,\n  \"message\": \"No golfer matching 'Aaron' is registered. compare_sessions needs a golfer, because a session's swings can belong to more than one person. Call get_golfer_profile to see who is on file.\"\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "found": false,
+            "message": "No golfer matching 'Aaron' is registered. compare_sessions needs a golfer, because a session's swings can belong to more than one person. Call get_golfer_profile to see who is on file."
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"found\": false,\n  \"message\": \"No golfer matching 'Aaron' is registered. Names are matched loosely (case and punctuation are folded), so this means nobody by that name has swings on file yet. Call get_golfer_profile to see who is.\"\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "found": false,
+            "message": "No golfer matching 'Aaron' is registered. Names are matched loosely (case and punctuation are folded), so this means nobody by that name has swings on file yet. Call get_golfer_profile to see who is."
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"found\": false,\n  \"message\": \"No golfer matching 'Aaron' is registered. Call get_bag_profile with the name to see whether they have a bag on file at all.\"\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "found": false,
+            "message": "No golfer matching 'Aaron' is registered. Call get_bag_profile with the name to see whether they have a bag on file at all."
+          }
+        }
+      }
+    ]
+  },
+  "id": "mcp/tools/no-directories",
+  "input": {
+    "calls": [
+      {
+        "arguments": {},
+        "now": null,
+        "tool": "list_sessions"
+      },
+      {
+        "arguments": {
+          "session_id": "2026-08-10",
+          "swing_id": "1"
+        },
+        "now": null,
+        "tool": "get_swing"
+      },
+      {
+        "arguments": {
+          "session_id": "2026-08-10"
+        },
+        "now": null,
+        "tool": "get_session_summary"
+      },
+      {
+        "arguments": {},
+        "now": null,
+        "tool": "get_recent_shots"
+      },
+      {
+        "arguments": {
+          "shot_id": "a"
+        },
+        "now": null,
+        "tool": "get_shot_by_id"
+      },
+      {
+        "arguments": {
+          "session_id": "2026-08-10",
+          "swing_id": "1"
+        },
+        "now": null,
+        "tool": "simulate_flight"
+      },
+      {
+        "arguments": {
+          "player": "Aaron"
+        },
+        "now": null,
+        "tool": "get_golfer_profile"
+      },
+      {
+        "arguments": {
+          "metric": "head_sway_norm",
+          "player": "Aaron"
+        },
+        "now": null,
+        "tool": "get_shot_trends"
+      },
+      {
+        "arguments": {
+          "player": "Aaron",
+          "session_a": "a",
+          "session_b": "b"
+        },
+        "now": null,
+        "tool": "compare_sessions"
+      },
+      {
+        "arguments": {
+          "player": "Aaron"
+        },
+        "now": null,
+        "tool": "get_bag_profile"
+      },
+      {
+        "arguments": {
+          "club": "7i",
+          "player": "Aaron"
+        },
+        "now": null,
+        "tool": "get_club_profile"
+      }
+    ],
+    "files": {},
+    "roots": {
+      "golfers": "golfers",
+      "sessions": "sessions",
+      "shots": "shots"
+    }
+  },
+  "provenance": {
+    "analysis_version": 16,
+    "flight_model_calls": [],
+    "kind": "mcp",
+    "mcp_version": "2.0.0",
+    "note": "every directory absent and a registry still configured, which is the launcher's 'directory does not exist' warning: an empty listing, and every other tool a miss (test_listing_a_missing_sessions_dir_is_empty_not_an_error, on all eleven)",
+    "oracle": "python",
+    "pydantic_version": "2.13.4",
+    "python_version": "3.13.3",
+    "recorded_by": "scripts/conformance_vectors.py::_run_mcp",
+    "rerecords": [
+      {
+        "added": [],
+        "by": "golf-core rerecord",
+        "career_version": 3,
+        "declaration": "spec/declarations/career-v3.json",
+        "moved": [
+          "career_version"
+        ]
+      }
+    ],
+    "source": "scripts/conformance_vectors.py::_mcp_no_directories, after tests/mcp/"
+  }
+}

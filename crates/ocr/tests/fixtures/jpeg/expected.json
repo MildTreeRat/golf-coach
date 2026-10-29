@@ -1,0 +1,167 @@
+{
+  "provenance": {
+    "what": "cv2.imread(path, IMREAD_COLOR) on each JPEG here, converted to RGB: the pixels crates/ocr's JPEG decoder must reproduce",
+    "recorded_by": "M29 P2, a scratch script; the photos written by cv2.imencode (libjpeg-turbo) and, for the EXIF orientations, Pillow",
+    "opencv": "4.10.0",
+    "rgb_sha256": "SHA-256 of the decoded pixels as 8-bit RGB, row-major",
+    "refused": "a kind of JPEG cv2 reads and crates/ocr refuses by name; its rgb_sha256 is cv2's, kept for the record"
+  },
+  "photos": [
+    {
+      "file": "cmyk.jpg",
+      "sha256": "90f8bfde7143329d8f4e33ed9a781ebe813d6c706d192edd578c151d9db5a3cb",
+      "width": 45,
+      "height": 29,
+      "refused": "four-component",
+      "rgb_sha256": "bd52e807bc549afbdd2f989688da404f33cceb6155deeca9ac224b900a3d9857"
+    },
+    {
+      "file": "gray.jpg",
+      "sha256": "6a055197e33ffd5b880d6062412f771713cf8c4c336a235e32c3411a76d26b53",
+      "width": 45,
+      "height": 29,
+      "rgb_sha256": "6629ba706eac731177e19e08d1cacc7379d038427541906049df2106776d0614"
+    },
+    {
+      "file": "noise420_q75.jpg",
+      "sha256": "fcdc9dc502fd1299acc32cd9f7563466b672fc987f9b0e8faadbb6a92ed0d69e",
+      "width": 97,
+      "height": 66,
+      "rgb_sha256": "f3095682fbe4247e346acb85fd19c2abe562157ac4be91be9be5b9ae22758e58"
+    },
+    {
+      "file": "orient1.jpg",
+      "sha256": "0ce2259d7d170b47f9822806e047d2b0fabb046f4248ede7f52c572752b3d471",
+      "width": 13,
+      "height": 7,
+      "rgb_sha256": "25710065192775895ea5bfdf0dc76602f51fd185237fe88532574adacbc54126"
+    },
+    {
+      "file": "orient2.jpg",
+      "sha256": "2d43991d1d6dc708c321c037978ae222c66fa2c704662f49b707f7dc2062883c",
+      "width": 13,
+      "height": 7,
+      "rgb_sha256": "3c0f9f8c7ed72baf2482f294f815710ce4f6337e50939486ccc371b378a8898e"
+    },
+    {
+      "file": "orient3.jpg",
+      "sha256": "58e7c3cc42fe9bb9a59043408e927cd98d05db5a51c3bfacd7ea0b615bc456dc",
+      "width": 13,
+      "height": 7,
+      "rgb_sha256": "b1fccd1a4805e684c72d5bf0a45aa3e9fa23205997d8a082d18b15e4b1cf4cf8"
+    },
+    {
+      "file": "orient4.jpg",
+      "sha256": "e62ce7881cb63087cdfdf61215c196aa0ac9731a2c49c2834786eaf41ee54e8d",
+      "width": 13,
+      "height": 7,
+      "rgb_sha256": "c251205ded3417cd99a3ee50d02ac21794f3ce33dffc1b5fc36429ebf5361dcd"
+    },
+    {
+      "file": "orient5.jpg",
+      "sha256": "005622261e2fe3786f38a966e88542e727241ec6474811a7fbda0961da259409",
+      "width": 7,
+      "height": 13,
+      "rgb_sha256": "aa63ee6e7d43ddbff538226c4f057416fa063ff91b79d1c726c0e0c216329e75"
+    },
+    {
+      "file": "orient6.jpg",
+      "sha256": "fae7703315a4195a5a1f4a39b9e892342aebc408c51ec8508759a5f1041acd56",
+      "width": 7,
+      "height": 13,
+      "rgb_sha256": "491eeb07e901f93b10fe02a3f6553810aca8eb35f4233dfb57d09ae45f99a8e4"
+    },
+    {
+      "file": "orient7.jpg",
+      "sha256": "a1ce724521f831280360f2024772f4312a4fa403751f9d3beee7a3b4c90aee67",
+      "width": 7,
+      "height": 13,
+      "rgb_sha256": "bf7e56fd4b7026989128ccb2d7107df9c9e5b3c714743e604ce5d4636daea412"
+    },
+    {
+      "file": "orient8.jpg",
+      "sha256": "8ca84b5225d9e28ae98b42562c4783f6dc1b1c4b31383cc88fc6d94eec262769",
+      "width": 7,
+      "height": 13,
+      "rgb_sha256": "b65911fcea0caf7ef4953386e91f042da61b67b0ab2b10e854b85094d5cdcfd1"
+    },
+    {
+      "file": "progressive.jpg",
+      "sha256": "7ebfebebb775a5ec0150ec2426c90a9ac5531f0c67b1b498ddb289c7ecb301c2",
+      "width": 45,
+      "height": 29,
+      "refused": "progressive",
+      "rgb_sha256": "fdeb4713d89bbeaca58b42c4cfc54a8cfb9604fbd98080d1b31d1d16aa5b6c3b"
+    },
+    {
+      "file": "rgb_ids.jpg",
+      "sha256": "90e75e6dc7d09d90b9e0cd5507aad280711ad4021a964e8eea194fbfcc1df098",
+      "width": 45,
+      "height": 29,
+      "rgb_sha256": "7a9a79276c73f9cadc781021e4405169791ffad9b3428a9f4af867712cf7c401"
+    },
+    {
+      "file": "s411.jpg",
+      "sha256": "72ff034d5435eb065c2fdf673af36521bed02b548a53de54e1b3cdff186f3eda",
+      "width": 45,
+      "height": 29,
+      "rgb_sha256": "22ba2e2f3783f61cd8fc321d54fefbca3d8c35b84a9c9c25104c1d9ce2ea3916"
+    },
+    {
+      "file": "s420.jpg",
+      "sha256": "6b7903ebe3a1586c9a0966fbe1f83503af088a81c6b696a9e02d24e627f9a5f4",
+      "width": 45,
+      "height": 29,
+      "rgb_sha256": "fdeb4713d89bbeaca58b42c4cfc54a8cfb9604fbd98080d1b31d1d16aa5b6c3b"
+    },
+    {
+      "file": "s420_narrow.jpg",
+      "sha256": "b8296fff64845495f6bf52350664533bfbde8f3d9b93847fbef5dcbd70b55fbe",
+      "width": 3,
+      "height": 21,
+      "rgb_sha256": "764aa07d1669c76b686659a3bd7b10f2eb3ce694a02422109401552fff5644e2"
+    },
+    {
+      "file": "s420_restart.jpg",
+      "sha256": "5d1b45f76d713f9b55ca0ff3a6d5c8f2c2ceed6824beb9c3cc9f8e30216bd530",
+      "width": 45,
+      "height": 29,
+      "rgb_sha256": "fdeb4713d89bbeaca58b42c4cfc54a8cfb9604fbd98080d1b31d1d16aa5b6c3b"
+    },
+    {
+      "file": "s422.jpg",
+      "sha256": "6397adb54a1a6adfb317018458137059d6692de4ed9f69e317e34ed31f00562e",
+      "width": 45,
+      "height": 29,
+      "rgb_sha256": "bf49ea1963a5043cf4942d905e3642381ec683e067a0c7b468723cf09c290881"
+    },
+    {
+      "file": "s422_narrow.jpg",
+      "sha256": "f852ecff704241a8f52afa1c111e0bc806535c04c105a0439b227185096b9c55",
+      "width": 4,
+      "height": 9,
+      "rgb_sha256": "a8fc42d144e8e6c3b11dff4d51076a60a9dab2b00f11f62e65326cdcabe7c6e7"
+    },
+    {
+      "file": "s440.jpg",
+      "sha256": "00b5ca1c2ae4e330b474c575ed6b24fc1c0168a78498528ba88f9a4540a0b79c",
+      "width": 45,
+      "height": 29,
+      "rgb_sha256": "a9b14c1f019b634f8a2216d8dffdbb98b7c1e354ae4dc9279c66c86802193a45"
+    },
+    {
+      "file": "s444.jpg",
+      "sha256": "c249584c2e3b9fc623cba60865511cdd04be30503dac676180d685a7d67d1882",
+      "width": 45,
+      "height": 29,
+      "rgb_sha256": "aa01382ab7d741e467194aba42c5bc9f4c896a3289836e85196bdeb64704a6a9"
+    },
+    {
+      "file": "s444_q100.jpg",
+      "sha256": "e75720d46a921f8eea1fd1cb52ba6b6ec3283335d41578c05b7f488a25889441",
+      "width": 33,
+      "height": 17,
+      "rgb_sha256": "06fe1eecd028bca8d62f1a4242c2f78cd1a6053be5f38fffd3b584212561ed78"
+    }
+  ]
+}

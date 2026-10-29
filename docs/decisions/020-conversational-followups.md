@@ -239,3 +239,31 @@ Deferred list).
 - verbatim blocks, the model-bound transcript and `brief_digest`;
 - Options A and D, still rejected on their own grounds;
 - the model parameters, and "every tool is a read".
+
+## Addendum (2026-10-29, M29): the stdio route is built, and the event loop is `anyio.run`
+
+The previous addendum's stdio route is built (M29 P16–P17), and `scripts/ask_swing.py` takes it.
+`feedback/conversation.py`'s `ask_through_golf_mcp` spawns `golf-mcp` (`--golf-mcp`, else
+`GOLF_MCP`, else the release build; not built is exit 2, naming the cargo build), reads its briefing
+and the caveat resource, and lets the model call its tools over stdio. The in-process route stays
+beside it, for the frozen server's chat panel, until M40.
+
+**The event loop, which that addendum left to M29's plan** (P16's finding 2). `anyio.run` holds the
+stdio client session, and `ask` runs on `anyio.to_thread.run_sync`. The SDK's sync runner calls each
+tool on the thread that iterates it, so `mcp_tool`'s `anyio.from_thread.run` finds its token in that
+worker thread with no wrapper. **Rejected: a `BlockingPortal`.** It leaves the runner on the main
+thread, which is not an anyio worker, so every tool would need a hand-written portal call instead of
+the SDK's helper. One session serves one question, so the spawn is paid once per run.
+
+**The conversation seeds from the same rendering as the coaching paragraph** (P17's finding 5).
+`ask_swing.py` builds its brief from `golf-mcp`'s `get_swing` view, as `coach.py`'s JSON entry does,
+not from a `SwingBundleResult`. Three reasons: the paragraph is written by that entry since M29, the
+pydantic shape does not survive M40, and the view quotes `golf-mcp`'s alignment caveat rather than
+the frozen copy. The view's brief is `build_brief`'s, line for line, except four renderings
+`brief_from_view`'s docstring lists, and a pin holds that. It costs one extra spawn when a
+conversation starts, and a stored transcript's `brief_digest` is unaffected, because `--resume`
+seeds nothing.
+
+**Not changed**: Option C's tool definitions are the server's own (the previous addendum), and the
+transcript, its verbatim thinking blocks and `transcript_store.py` stay Python with the LLM (ADR-035
+§1).

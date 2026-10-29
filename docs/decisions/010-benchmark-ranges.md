@@ -321,7 +321,7 @@ ROADMAP carried "per-club bands are now costed" as M8's last open box: `tune_joi
 had counted the strata that *could* be cut — face-on driver 341 clips, iron 69, fairway 32 clearing
 `derive_reference.MIN_SAMPLES`. **Costed is not gated.** That a stratum is big enough to cut a band
 from says nothing about whether the band that comes out differs from the one already shipped.
-`scripts/golfdb/tune_per_club_bands.py` asks the second question and the answer is no.
+`archive/golfdb/tune_per_club_bands.py` asks the second question and the answer is no.
 
 **The test is in two parts, and the first alone would have been wrong.** Part 1 screens each
 per-club p90 against the all-club p90 in units of that metric's own noise+boundary error, read from
@@ -372,7 +372,7 @@ the one real effect needs three things this repo does not have:
 1. **A corpus-to-`ClubCategory` mapping that is not a fiction.** `ClubCategory` distinguishes
    `long_iron` / `mid_iron` / `short_iron`; the corpus says only `iron`. Seeding three members from
    one undifferentiated stratum would be three rows claiming to be three strata while being one, and
-   `resolve_range` matches `club_category` exactly. `contracts/reference.py` has always said the
+   `resolve_range` matches `club_category` exactly. `archive/golfdb/reference.py` has always said the
    mapping is "the consumer's"; nothing has had to write it, and it is not writable from this corpus.
 2. **Something that records which club was swung.** The plumbing is complete —
    `analyze_bundle.py --club` reaches `resolve_range` through `PracticeGoal` — but it is a manual

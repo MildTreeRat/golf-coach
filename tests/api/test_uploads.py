@@ -1,4 +1,15 @@
-"""Upload API — role-based ingestion, session status, token auth, and the bind guard."""
+"""The upload server's front door: the closed write routes, session status, token auth, the picker
+and the bind guard.
+
+**Since M29 this server writes no swing** (the M29 plan's D11). The eight routes that wrote under
+`sessions/` or `shots/` answer 410 naming the Rust verb that does their work, and the tests that
+pinned what each route wrote became the refusal tests below. What those tests held is held where
+the work went: the store's rules (dedupe, "newest swing lacking that role", the `swing_id` override,
+write-once attribution, no club backfill) in `tests/storage/test_bundle_store.py` and the Rust
+storage family; the golfer, club and delete repairs in `crates/core/tests/verbs.rs`, as
+`golf-core set-golfer`, `set-club` and `delete-swing`. Disk state is filed through the frozen store
+(`conftest.py`'s `file_swing`), as the upload route filed it.
+"""
 
 from __future__ import annotations
 
@@ -11,10 +22,13 @@ from fastapi.testclient import TestClient
 
 from golf_coach.api.app import create_app
 from golf_coach.contracts.bag import BagEntry
-from golf_coach.contracts.club import ClubId
+from golf_coach.contracts.club import ClubId, parse_club
+from golf_coach.contracts.golfer import Handedness
 from golf_coach.storage.bag_store import BagStore
 from golf_coach.storage.bundle_store import SwingBundleStore
 from golf_coach.storage.golfer_store import GolferStore
+from golf_coach.storage.manifest import Role
+from golf_coach.storage.session_meta import set_current_player
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -23,59 +37,213 @@ _TOKEN = "s3cret-token"
 
 
 @pytest.fixture
-def client(tmp_path):
-    # token=None pins the unauthenticated case explicitly, so these tests keep passing
-    # whether or not the developer running them has GOLF_UPLOAD_TOKEN in their .env.
-    store = SwingBundleStore(tmp_path)
-    return TestClient(create_app(store=store, token=None))
+def store(tmp_path):
+    return SwingBundleStore(tmp_path)
 
 
 @pytest.fixture
-def auth_client(tmp_path):
-    store = SwingBundleStore(tmp_path)
-    return TestClient(create_app(store=store, token=_TOKEN))
+def client(store):
+    # token=None pins the unauthenticated case explicitly, so these tests keep passing
+    # whether or not the developer running them has GOLF_UPLOAD_TOKEN in their .env.
+    return TestClient(create_app(store=store, token=None, worker=None))
 
 
-def _pick_club(client, club: str = "7i", token: str | None = None) -> None:
-    """Select the session's club, which every successful upload now needs (M9 P6).
-
-    Called at the call site rather than folded into the fixtures on purpose: the tests below that
-    do *not* call it are the ones asserting the refusal, and that has to be visible in the test
-    rather than hidden in a fixture.
-    """
-    headers = {"X-Upload-Token": token} if token else {}
-    res = client.post("/api/sessions/current/club", json={"club": club}, headers=headers)
-    assert res.status_code == 200
+@pytest.fixture
+def auth_client(store):
+    return TestClient(create_app(store=store, token=_TOKEN, worker=None))
 
 
-def test_upload_returns_swing_and_status(client) -> None:
-    _pick_club(client)
+def _every_file(root: Path) -> dict[str, bytes]:
+    """Every file under `root`, by relative path: what a refusal must leave as it found it."""
+    if not root.exists():
+        return {}
+    return {
+        path.relative_to(root).as_posix(): path.read_bytes()
+        for path in sorted(root.rglob("*"))
+        if path.is_file()
+    }
 
-    res = client.post(
-        "/api/uploads", params={"role": "face_on", "filename": "clip.mov"}, content=b"face-on-bytes"
+
+# ------------------------------------------------------------- the closed write routes [M29 P32]
+#
+# Each route, a body it would once have accepted, and the Rust verb its refusal must name. The
+# swing routes echo the ids back into the command, so a golfer can run what the page shows.
+
+_SESSION = "2026-08-20"
+
+_CLOSED = [
+    pytest.param(
+        "post",
+        "/api/uploads",
+        {"params": {"role": "face_on", "filename": "x.mov"}, "content": b"face-on-bytes"},
+        ["golf-lab import-export", "golf-lab import-photos", "--into-session"],
+        id="upload",
+    ),
+    pytest.param(
+        "post",
+        "/api/sessions/current/golfer",
+        {"json": {"name": "Aaron", "handedness": "right"}},
+        ["golf-lab import-photos --into-session S --player P", "golf-core set-golfer"],
+        id="golfer-cursor",
+    ),
+    pytest.param(
+        "post",
+        "/api/sessions/current/club",
+        {"json": {"club": "7i"}},
+        ["golf-lab import-photos --into-session S --player P --club C", "golf-core set-club"],
+        id="club-cursor",
+    ),
+    pytest.param(
+        "post",
+        f"/api/sessions/{_SESSION}/swings/1/golfer",
+        {"json": {"name": "Aaron", "handedness": "right"}},
+        [f"golf-core set-golfer --session {_SESSION} --swing 1 --name N"],
+        id="swing-golfer",
+    ),
+    pytest.param(
+        "post",
+        f"/api/sessions/{_SESSION}/swings/1/club",
+        {"json": {"club": "sand wedge"}},
+        [f"golf-core set-club --session {_SESSION} --swing 1 --club C"],
+        id="swing-club",
+    ),
+    pytest.param(
+        "post",
+        f"/api/sessions/{_SESSION}/swings/1/mishit",
+        {"json": {"verdict": "confirmed"}},
+        [f"golf-core flag-mishit {_SESSION}/1 --confirm, --clear or --auto"],
+        id="mishit",
+    ),
+    pytest.param(
+        "post",
+        f"/api/sessions/{_SESSION}/swings/1/analyze",
+        {},
+        [f"golf-lab analyze {_SESSION}/1"],
+        id="analyze",
+    ),
+    pytest.param(
+        "delete",
+        f"/api/sessions/{_SESSION}/swings/1",
+        {},
+        [f"golf-core delete-swing --session {_SESSION} --swing 1"],
+        id="delete",
+    ),
+]
+
+
+def _seed_a_swing_in(tmp_path: Path) -> tuple[SwingBundleStore, GolferStore]:
+    """One filed swing in `_SESSION` with a golfer and a cursor beside it: something for each
+    closed route to have changed, had it still run."""
+    store = SwingBundleStore(tmp_path / "sessions")
+    golfers = GolferStore(tmp_path / "golfers")
+    golfers.get_or_create("Dave", Handedness.LEFT)
+    tmp = tmp_path / "upload.part"
+    tmp.write_bytes(b"face-on")
+    store.assign_from_path(
+        session_id=_SESSION,
+        role=Role.FACE_ON,
+        tmp_path=tmp,
+        digest=hashlib.sha256(b"face-on").hexdigest(),
+        original_filename="face_on.mov",
+        content_type="application/octet-stream",
+        size_bytes=7,
+        player_id="dave",
+        club=ClubId.SEVEN_IRON,
+    )
+    set_current_player(store.root / _SESSION, "dave")
+    return store, golfers
+
+
+@pytest.mark.parametrize(("method", "path", "request_kwargs", "names"), _CLOSED)
+def test_each_closed_route_refuses_naming_its_verb_and_writes_nothing(
+    tmp_path, method, path, request_kwargs, names
+) -> None:
+    store, golfers = _seed_a_swing_in(tmp_path)
+    client = TestClient(create_app(store=store, golfers=golfers, token=None, worker=None))
+    before = _every_file(tmp_path)
+
+    res = getattr(client, method)(path, **request_kwargs)
+
+    assert res.status_code == 410
+    detail = res.json()["detail"]
+    assert "moved to Rust at M29" in detail
+    for name in names:
+        assert name in detail, detail
+    assert _every_file(tmp_path) == before
+
+
+@pytest.mark.parametrize(("method", "path", "request_kwargs", "names"), _CLOSED)
+def test_a_closed_route_refuses_whatever_it_is_sent(client, method, path, request_kwargs, names):
+    """No body is read or parsed: what once was a 400 (a bogus role, an unparseable club), a 422
+    (an unknown verdict) or a 404 (no such swing) is the same 410, since none of it is this
+    server's to judge any more."""
+    del request_kwargs, names
+    junk = {} if method == "delete" else {"content": b"not json at all"}
+
+    res = getattr(client, method)(path, **junk)
+
+    assert res.status_code == 410
+
+
+@pytest.mark.parametrize(("method", "path", "request_kwargs", "names"), _CLOSED)
+def test_a_closed_route_is_still_behind_the_upload_token(
+    auth_client, method, path, request_kwargs, names
+) -> None:
+    """The guard resolves before the handler, so a closed route tells an anonymous caller nothing.
+    With the token it reaches the refusal, header or `?t=` alike."""
+    del names
+    assert getattr(auth_client, method)(path, **request_kwargs).status_code == 401
+    wrong = {"headers": {"X-Upload-Token": "not-the-token"}}
+    assert getattr(auth_client, method)(path, **request_kwargs, **wrong).status_code == 401
+
+    right = {"headers": {"X-Upload-Token": _TOKEN}}
+    assert getattr(auth_client, method)(path, **request_kwargs, **right).status_code == 410
+    params = {**request_kwargs.get("params", {}), "t": _TOKEN}
+    by_query = {key: value for key, value in request_kwargs.items() if key != "params"}
+    assert getattr(auth_client, method)(path, params=params, **by_query).status_code == 410
+
+
+def test_a_refused_upload_writes_nothing_to_disk(client, tmp_path) -> None:
+    """The load-bearing half of the closure for a 2 GiB clip: the body is never streamed, so
+    nothing lands in `.incoming` to be orphaned."""
+    client.post(
+        "/api/uploads",
+        params={"role": "face_on", "filename": "x.mov"},
+        content=b"x" * (2 * 1024 * 1024),
     )
 
-    assert res.status_code == 200
-    body = res.json()
-    assert body["swing_id"] == "1"
-    assert body["role"] == "face_on"
-    assert body["status"] == "collecting"
-    assert body["deduped"] is False
-    assert "waiting on" in body["message"]
+    incoming = tmp_path / ".incoming"
+    assert not incoming.exists() or not list(incoming.iterdir())
 
 
-def test_unknown_role_is_rejected(client) -> None:
-    res = client.post(
-        "/api/uploads", params={"role": "bogus", "filename": "x.mov"}, content=b"data"
+def test_an_unauthenticated_upload_writes_nothing_to_disk(auth_client, tmp_path) -> None:
+    # The guard is a route dependency precisely so it runs before the handler.
+    auth_client.post(
+        "/api/uploads",
+        params={"role": "face_on", "filename": "x.mov"},
+        content=b"x" * (2 * 1024 * 1024),
     )
 
-    assert res.status_code == 400
+    incoming = tmp_path / ".incoming"
+    assert not incoming.exists() or not list(incoming.iterdir())
 
 
-def test_session_current_and_detail_reflect_uploads(client) -> None:
-    _pick_club(client)
-    client.post("/api/uploads", params={"role": "face_on", "filename": "x.mov"}, content=b"a")
-    client.post("/api/uploads", params={"role": "down_the_line", "filename": "y.mov"}, content=b"b")
+@pytest.mark.parametrize("segment", ["..", ".hidden", "with space"])
+def test_the_closed_delete_still_refuses_a_traversing_id(client, segment) -> None:
+    """`_safe` still runs first at the swing routes, so the ids the refusal echoes into its command
+    are ones the store could have named. A bare `..` is normalised away by the client before it
+    reaches routing, which is why the accepted answers include the redirect/405 the router gives
+    it."""
+    res = client.delete(f"/api/sessions/2026-08-06/swings/{segment}")
+    assert res.status_code in (400, 404, 405, 307)
+
+
+# --------------------------------------------------------------------------- the read routes
+
+
+def test_session_current_and_detail_reflect_filed_swings(client, store, file_swing) -> None:
+    file_swing(store, "face_on", b"a")
+    file_swing(store, "down_the_line", b"b")
 
     current = client.get("/api/sessions/current").json()
     detail = client.get(f"/api/sessions/{current['session_id']}").json()
@@ -87,31 +255,13 @@ def test_session_current_and_detail_reflect_uploads(client) -> None:
     assert swing["roles"]["shot_screen"] is None
 
 
-def test_duplicate_upload_dedupes(client) -> None:
-    _pick_club(client)
-    data = b"same-bytes"
-    client.post("/api/uploads", params={"role": "face_on", "filename": "x.mov"}, content=data)
+def test_the_read_routes_report_a_stored_club(client, store, file_swing) -> None:
+    """Wherever they already report `player_id`, the session and swing views report the club."""
+    filed = file_swing(store, "face_on", b"data", club=ClubId.PITCHING_WEDGE)
 
-    res = client.post("/api/uploads", params={"role": "face_on", "filename": "x.mov"}, content=data)
-
-    assert res.json()["deduped"] is True
-
-
-def test_large_payload_round_trips_with_correct_hash(client, tmp_path) -> None:
-    _pick_club(client)
-    data = b"x" * (5 * 1024 * 1024)  # 5 MiB, exercises the chunked streaming path
-
-    res = client.post(
-        "/api/uploads", params={"role": "shot_screen", "filename": "big.jpg"}, content=data
-    )
-
-    assert res.status_code == 200
-    body = res.json()
-    swing_dir = tmp_path / body["session_id"] / body["swing_id"]
-    stored_files = [p for p in swing_dir.iterdir() if p.name != "manifest.json"]
-    assert len(stored_files) == 1
-    stored_digest = hashlib.sha256(stored_files[0].read_bytes()).hexdigest()
-    assert stored_digest == hashlib.sha256(data).hexdigest()
+    session_id = filed.session_id
+    assert client.get(f"/api/sessions/{session_id}").json()["swings"][0]["club"] == "pw"
+    assert client.get(f"/api/sessions/{session_id}/swings/1").json()["club"] == "pw"
 
 
 def test_server_binds_loopback_only_by_default() -> None:
@@ -123,53 +273,7 @@ def test_server_binds_loopback_only_by_default() -> None:
 
 # --- Token auth (ADR-016) -----------------------------------------------------------
 # Tailscale Funnel makes these routes publicly reachable, so the token is the only thing
-# between the open internet and a 2 GiB write to disk.
-
-
-def test_upload_rejected_without_token(auth_client) -> None:
-    res = auth_client.post(
-        "/api/uploads", params={"role": "face_on", "filename": "x.mov"}, content=b"data"
-    )
-
-    assert res.status_code == 401
-
-
-def test_upload_rejected_with_wrong_token(auth_client) -> None:
-    res = auth_client.post(
-        "/api/uploads",
-        params={"role": "face_on", "filename": "x.mov"},
-        content=b"data",
-        headers={"X-Upload-Token": "not-the-token"},
-    )
-
-    assert res.status_code == 401
-
-
-def test_upload_accepted_with_token_header(auth_client) -> None:
-    _pick_club(auth_client, token=_TOKEN)
-
-    res = auth_client.post(
-        "/api/uploads",
-        params={"role": "face_on", "filename": "x.mov"},
-        content=b"data",
-        headers={"X-Upload-Token": _TOKEN},
-    )
-
-    assert res.status_code == 200
-    assert res.json()["role"] == "face_on"
-
-
-def test_upload_accepted_with_token_query_param(auth_client) -> None:
-    # The `?t=` form is what makes the one-time setup link work on a phone.
-    _pick_club(auth_client, token=_TOKEN)
-
-    res = auth_client.post(
-        "/api/uploads",
-        params={"role": "face_on", "filename": "x.mov", "t": _TOKEN},
-        content=b"data",
-    )
-
-    assert res.status_code == 200
+# between the open internet and what the read routes serve.
 
 
 def test_session_routes_require_token(auth_client) -> None:
@@ -189,19 +293,10 @@ def test_static_page_stays_reachable_without_token(auth_client) -> None:
     assert "Swing Upload" in res.text
 
 
-def test_rejected_upload_writes_nothing_to_disk(auth_client, tmp_path) -> None:
-    # The guard is a route dependency precisely so it runs before `request.stream()`.
-    auth_client.post(
-        "/api/uploads",
-        params={"role": "face_on", "filename": "x.mov"},
-        content=b"x" * (2 * 1024 * 1024),
-    )
-
-    incoming = tmp_path / ".incoming"
-    assert not incoming.exists() or not list(incoming.iterdir())
-
-
-# --------------------------------------------------------------------------- golfer identity
+# --------------------------------------------------------------------------- the two cursors
+#
+# Nothing writes a cursor here any more, and an older session's `session.json` still holds one:
+# the read routes serve it, and the picker's bag follows its golfer.
 
 
 @pytest.fixture
@@ -212,9 +307,12 @@ def golfer_client(tmp_path):
     return TestClient(create_app(store=store, golfers=golfers, token=None, worker=None))
 
 
-def _session_swings(client):
-    session_id = client.get("/api/sessions/current").json()["session_id"]
-    return client.get(f"/api/sessions/{session_id}").json()["swings"]
+def _point_the_cursor_at(tmp_path: Path, name: str, handedness: Handedness) -> str:
+    """Register a golfer and point today's session at them, as the closed golfer route did."""
+    golfer = GolferStore(tmp_path / "golfers").get_or_create(name, handedness)
+    store = SwingBundleStore(tmp_path / "sessions")
+    set_current_player(store.root / store.current_session_id(), golfer.player_id)
+    return golfer.player_id
 
 
 def test_no_golfer_is_selected_until_someone_picks_one(golfer_client) -> None:
@@ -224,137 +322,17 @@ def test_no_golfer_is_selected_until_someone_picks_one(golfer_client) -> None:
     assert body["golfer"] is None
 
 
-def test_uploading_is_not_blocked_by_a_missing_golfer(golfer_client) -> None:
-    """The deliberate choice: a bay session must never stall on a form.
+def test_a_stored_golfer_cursor_is_served(golfer_client, tmp_path) -> None:
+    _point_the_cursor_at(tmp_path, "Aaron", Handedness.RIGHT)
 
-    Still true after M9 P6, and the club is not a counter-example: an untagged *golfer* is
-    repairable later and an untagged *club* is not, so only one of the two blocks. See the
-    club block below.
-    """
-    _pick_club(golfer_client)
+    body = golfer_client.get("/api/sessions/current/golfer").json()
 
-    res = golfer_client.post(
-        "/api/uploads", params={"role": "face_on", "filename": "a.mov"}, content=b"aaa"
-    )
-
-    assert res.status_code == 200
-    assert res.json()["player_id"] is None
-
-
-def test_a_new_golfer_needs_a_handedness(golfer_client) -> None:
-    """Never guessed: it is the frame of reference for every signed metric."""
-    res = golfer_client.post("/api/sessions/current/golfer", json={"name": "Aaron"})
-
-    assert res.status_code == 400
-    assert "right- or left-handed" in res.json()["detail"]
-
-
-def test_a_nameless_golfer_is_rejected(golfer_client) -> None:
-    res = golfer_client.post(
-        "/api/sessions/current/golfer", json={"name": "!!!", "handedness": "right"}
-    )
-
-    assert res.status_code == 400
-
-
-def test_setting_a_golfer_adopts_the_swings_already_uploaded(golfer_client) -> None:
-    _pick_club(golfer_client)
-    golfer_client.post(
-        "/api/uploads", params={"role": "face_on", "filename": "a.mov"}, content=b"aaa"
-    )
-
-    res = golfer_client.post(
-        "/api/sessions/current/golfer", json={"name": "Aaron", "handedness": "right"}
-    )
-
-    assert res.json()["attributed"] == ["1"]
-    assert [s["player_id"] for s in _session_swings(golfer_client)] == ["aaron"]
-
-
-def test_switching_golfer_leaves_earlier_swings_alone(golfer_client) -> None:
-    _pick_club(golfer_client)
-    golfer_client.post(
-        "/api/sessions/current/golfer", json={"name": "Aaron", "handedness": "right"}
-    )
-    golfer_client.post(
-        "/api/uploads", params={"role": "face_on", "filename": "a.mov"}, content=b"aaa"
-    )
-
-    golfer_client.post(
-        "/api/sessions/current/golfer", json={"name": "Dave", "handedness": "left"}
-    )
-    golfer_client.post(
-        "/api/uploads", params={"role": "face_on", "filename": "b.mov"}, content=b"bbb"
-    )
-
-    assert [s["player_id"] for s in _session_swings(golfer_client)] == ["aaron", "dave"]
-
-
-def test_a_retyped_name_does_not_create_a_second_golfer(golfer_client) -> None:
-    golfer_client.post(
-        "/api/sessions/current/golfer", json={"name": "Aaron", "handedness": "right"}
-    )
-
-    res = golfer_client.post(
-        "/api/sessions/current/golfer", json={"name": "  aaron ", "handedness": "left"}
-    )
-
-    # Same golfer, and the stored handedness survives being contradicted.
-    assert res.json()["golfer"] == {
-        "player_id": "aaron",
-        "display_name": "Aaron",
-        "handedness": "right",
-    }
-    assert len(golfer_client.get("/api/golfers").json()["golfers"]) == 1
-
-
-def test_the_repair_path_re_attributes_one_swing(golfer_client) -> None:
-    _pick_club(golfer_client)
-    golfer_client.post(
-        "/api/sessions/current/golfer", json={"name": "Dave", "handedness": "left"}
-    )
-    for name, data in (("a.mov", b"aaa"), ("b.mov", b"bbb")):
-        golfer_client.post(
-            "/api/uploads", params={"role": "face_on", "filename": name}, content=data
-        )
-    session_id = golfer_client.get("/api/sessions/current").json()["session_id"]
-
-    res = golfer_client.post(
-        f"/api/sessions/{session_id}/swings/1/golfer",
-        json={"name": "Aaron", "handedness": "right"},
-    )
-
-    assert res.status_code == 200
-    assert [s["player_id"] for s in _session_swings(golfer_client)] == ["aaron", "dave"]
-
-
-def test_the_repair_path_404s_on_an_unknown_swing(golfer_client) -> None:
-    golfer_client.post(
-        "/api/sessions/current/golfer", json={"name": "Aaron", "handedness": "right"}
-    )
-    session_id = golfer_client.get("/api/sessions/current").json()["session_id"]
-
-    res = golfer_client.post(
-        f"/api/sessions/{session_id}/swings/99/golfer", json={"name": "Aaron"}
-    )
-
-    assert res.status_code == 404
+    assert body["golfer"] == {"player_id": "aaron", "display_name": "Aaron", "handedness": "right"}
 
 
 def test_golfer_routes_are_behind_the_upload_token(auth_client) -> None:
     assert auth_client.get("/api/golfers").status_code == 401
     assert auth_client.get("/api/sessions/current/golfer").status_code == 401
-    assert auth_client.post(
-        "/api/sessions/current/golfer", json={"name": "Aaron", "handedness": "right"}
-    ).status_code == 401
-
-
-# --------------------------------------------------------------- club, required at the boundary
-#
-# Mirrors the golfer block above, and the asymmetries are the point of reading them side by side.
-# The club is required where the golfer is not, and it has no bulk backfill where the golfer does:
-# an untagged golfer is repairable later, and nothing but memory can say which club hit swing 3
-# (ADR-024 §5).
 
 
 def test_no_club_is_selected_until_someone_picks_one(client) -> None:
@@ -363,173 +341,15 @@ def test_no_club_is_selected_until_someone_picks_one(client) -> None:
     assert body["club"] is None
 
 
-def test_picking_a_club_sets_the_cursor(client) -> None:
-    res = client.post("/api/sessions/current/club", json={"club": "7i"})
-
-    assert res.status_code == 200
-    assert res.json()["club"] == "7i"
-    assert client.get("/api/sessions/current/club").json()["club"] == "7i"
-
-
-def test_the_cursor_accepts_the_spellings_a_golfer_types(client) -> None:
-    """`parse_club` reaches the route — the reason `ClubRequest.club` is a `str` and not a `ClubId`.
-
-    Typed as the enum, pydantic would 422 this before the tolerant parser ever ran.
-    """
-    res = client.post("/api/sessions/current/club", json={"club": "7 Iron"})
-
-    assert res.status_code == 200
-    assert res.json()["club"] == "7i"
-
-
-def test_an_unparseable_club_is_rejected_rather_than_guessed(client) -> None:
-    res = client.post("/api/sessions/current/club", json={"club": "banana"})
-
-    assert res.status_code == 400
-    assert "banana" in res.json()["detail"]
-
-
-def test_an_upload_with_no_club_is_refused(client) -> None:
-    res = client.post(
-        "/api/uploads", params={"role": "face_on", "filename": "x.mov"}, content=b"data"
-    )
-
-    assert res.status_code == 409
-    # The refusal has to name the fix; the phone shows this string verbatim.
-    assert "/api/sessions/current/club" in res.json()["detail"]
-
-
-def test_a_clubless_upload_writes_nothing_to_disk(client, tmp_path) -> None:
-    """The load-bearing half of the 409: it fires *before* `request.stream()`.
-
-    Same property `test_rejected_upload_writes_nothing_to_disk` pins for the token guard. Refusing
-    after the body had already landed would leave a 50 MB orphan in `.incoming` per refused shot.
-    """
-    client.post(
-        "/api/uploads",
-        params={"role": "face_on", "filename": "x.mov"},
-        content=b"x" * (2 * 1024 * 1024),
-    )
-
-    incoming = tmp_path / ".incoming"
-    assert not incoming.exists() or not list(incoming.iterdir())
-
-
-def test_a_bogus_role_is_still_a_400_and_not_a_409(client) -> None:
-    """Role parses first: a bad role is the client's bug, a missing club is the human's."""
-    res = client.post(
-        "/api/uploads", params={"role": "bogus", "filename": "x.mov"}, content=b"data"
-    )
-
-    assert res.status_code == 400
-
-
-def test_an_upload_carries_the_selected_club_to_the_manifest(client, tmp_path) -> None:
-    _pick_club(client, "pw")
-
-    res = client.post(
-        "/api/uploads", params={"role": "face_on", "filename": "x.mov"}, content=b"data"
-    )
-
-    assert res.json()["club"] == "pw"
-    manifest = SwingBundleStore(tmp_path).get_swing(res.json()["session_id"], "1")
-    assert manifest is not None
-    assert manifest.club == "pw"
-    # And the read routes report it wherever they already report `player_id`.
-    session_id = res.json()["session_id"]
-    assert client.get(f"/api/sessions/{session_id}").json()["swings"][0]["club"] == "pw"
-    assert client.get(f"/api/sessions/{session_id}/swings/1").json()["club"] == "pw"
-
-
-def test_reaching_for_the_next_club_does_not_retag_the_last_ones(client) -> None:
-    """The no-backfill asymmetry, at the route. The golfer route deliberately does the opposite."""
-    _pick_club(client, "7i")
-    client.post("/api/uploads", params={"role": "face_on", "filename": "a.mov"}, content=b"aaa")
-
-    _pick_club(client, "pw")
-    client.post("/api/uploads", params={"role": "face_on", "filename": "b.mov"}, content=b"bbb")
-
-    session_id = client.get("/api/sessions/current").json()["session_id"]
-    swings = client.get(f"/api/sessions/{session_id}").json()["swings"]
-    assert [s["club"] for s in swings] == ["7i", "pw"]
-
-
-def test_a_retry_after_the_cursor_moved_is_told_the_stored_club(client) -> None:
-    """The deduped path echoes what the swing *says*, not what the retry asked for (M9 P5)."""
-    _pick_club(client, "7i")
-    data = b"same-bytes"
-    client.post("/api/uploads", params={"role": "face_on", "filename": "a.mov"}, content=data)
-
-    _pick_club(client, "pw")
-    res = client.post(
-        "/api/uploads", params={"role": "face_on", "filename": "a.mov"}, content=data
-    )
-
-    assert res.json()["deduped"] is True
-    assert res.json()["club"] == "7i"
-
-
-def test_picking_a_club_leaves_the_golfer_alone(golfer_client) -> None:
-    """One direction of P4's `_update_cursor` pin, at the route. See the sibling test below."""
-    golfer_client.post(
-        "/api/sessions/current/golfer", json={"name": "Aaron", "handedness": "right"}
-    )
-
-    _pick_club(golfer_client, "7i")
-
-    assert golfer_client.get("/api/sessions/current/golfer").json()["player_id"] == "aaron"
-
-
-def test_picking_a_golfer_leaves_the_club_alone(golfer_client) -> None:
-    """The other direction. Two tests rather than one: each catches a different broken setter."""
-    _pick_club(golfer_client, "7i")
-
-    golfer_client.post(
-        "/api/sessions/current/golfer", json={"name": "Aaron", "handedness": "right"}
-    )
-
-    assert golfer_client.get("/api/sessions/current/club").json()["club"] == "7i"
-
-
-def test_the_club_repair_path_retags_one_swing(client) -> None:
-    _pick_club(client, "7i")
-    for name, data in (("a.mov", b"aaa"), ("b.mov", b"bbb")):
-        client.post("/api/uploads", params={"role": "face_on", "filename": name}, content=data)
-    session_id = client.get("/api/sessions/current").json()["session_id"]
-
-    res = client.post(f"/api/sessions/{session_id}/swings/1/club", json={"club": "sand wedge"})
-
-    assert res.status_code == 200
-    swings = client.get(f"/api/sessions/{session_id}").json()["swings"]
-    assert [s["club"] for s in swings] == ["sw", "7i"]
-
-
-def test_the_club_repair_path_404s_on_an_unknown_swing(client) -> None:
-    _pick_club(client)
-    session_id = client.get("/api/sessions/current").json()["session_id"]
-
-    res = client.post(f"/api/sessions/{session_id}/swings/99/club", json={"club": "7i"})
-
-    assert res.status_code == 404
-
-
-def test_the_club_repair_path_rejects_junk_before_it_touches_a_swing(client) -> None:
-    _pick_club(client)
-    client.post("/api/uploads", params={"role": "face_on", "filename": "a.mov"}, content=b"aaa")
-    session_id = client.get("/api/sessions/current").json()["session_id"]
-
-    res = client.post(f"/api/sessions/{session_id}/swings/1/club", json={"club": "banana"})
-
-    assert res.status_code == 400
-    assert client.get(f"/api/sessions/{session_id}/swings/1").json()["club"] == "7i"
-
-
 def test_club_routes_are_behind_the_upload_token(auth_client) -> None:
     assert auth_client.get("/api/sessions/current/club").status_code == 401
-    assert auth_client.post("/api/sessions/current/club", json={"club": "7i"}).status_code == 401
-    assert auth_client.post(
-        "/api/sessions/2026-08-21/swings/1/club", json={"club": "7i"}
-    ).status_code == 401
+
+
+def test_the_cursor_reads_never_write_a_session(client, tmp_path) -> None:
+    client.get("/api/sessions/current/golfer")
+    client.get("/api/sessions/current/club")
+
+    assert _every_file(tmp_path) == {}
 
 
 # ------------------------------------------------------------------ the picker's inputs (M9 P7)
@@ -546,24 +366,21 @@ def test_the_picker_is_offered_every_club_in_canonical_order(client) -> None:
     assert body["clubs"] == [club.value for club in ClubId]
 
 
-def test_every_club_the_picker_offers_is_one_the_cursor_accepts(client) -> None:
-    """The pin that makes the picker's list and the cursor's parser one vocabulary.
+def test_every_club_the_picker_offers_is_one_the_parser_accepts(client) -> None:
+    """The pin that makes the picker's list and `parse_club` one vocabulary.
 
-    Without it the two can drift in either direction — a club served but unparseable, or a rename
-    landing in `ClubId` and reaching the page as a tap that 400s at the bay.
+    It ran through the club cursor until M29 closed it; the bag routes parse the same way
+    (`_resolve_club`), and `golf-core set-club` through Rust's twin of the same parser. Without it
+    the two can drift in either direction — a club served but unparseable, or a rename landing in
+    `ClubId` and reaching the page as a tap that is refused.
     """
     for club in client.get("/api/clubs").json()["clubs"]:
-        res = client.post("/api/sessions/current/club", json={"club": club})
-
-        assert res.status_code == 200, club
-        assert res.json()["club"] == club
+        assert parse_club(club) == ClubId(club), club
 
 
-def test_a_golfer_with_no_bag_gets_the_taxonomy_and_nothing_else(golfer_client) -> None:
+def test_a_golfer_with_no_bag_gets_the_taxonomy_and_nothing_else(golfer_client, tmp_path) -> None:
     """`bag` is empty rather than absent: the page renders one section instead of two."""
-    golfer_client.post(
-        "/api/sessions/current/golfer", json={"name": "Aaron", "handedness": "right"}
-    )
+    _point_the_cursor_at(tmp_path, "Aaron", Handedness.RIGHT)
 
     assert golfer_client.get("/api/clubs").json()["bag"] == []
 
@@ -581,9 +398,7 @@ def test_a_declared_bag_comes_back_in_bag_order_not_the_order_it_was_declared(
 ) -> None:
     """Declared wedge-first on purpose. Serving `bag.entries.keys()` passes every other test here
     and fails this one, which is the whole reason the route goes through `Bag.club_ids`."""
-    golfer_client.post(
-        "/api/sessions/current/golfer", json={"name": "Aaron", "handedness": "right"}
-    )
+    _point_the_cursor_at(tmp_path, "Aaron", Handedness.RIGHT)
     bags = BagStore(tmp_path / "golfers")
     for club in (ClubId.PITCHING_WEDGE, ClubId.DRIVER, ClubId.SEVEN_IRON):
         bags.set_entry("aaron", BagEntry(club=club, recorded_at=datetime.now(tz=UTC)))
@@ -592,28 +407,21 @@ def test_a_declared_bag_comes_back_in_bag_order_not_the_order_it_was_declared(
 
 
 def test_one_golfers_bag_is_not_another_golfers(golfer_client, tmp_path) -> None:
-    """The bag follows the session's golfer cursor, so handing the phone over changes it."""
+    """The bag follows the session's golfer cursor, so a cursor pointed elsewhere changes it."""
     bags = BagStore(tmp_path / "golfers")
     bags.set_entry("aaron", BagEntry(club=ClubId.SEVEN_IRON, recorded_at=datetime.now(tz=UTC)))
 
-    golfer_client.post(
-        "/api/sessions/current/golfer", json={"name": "Aaron", "handedness": "right"}
-    )
+    _point_the_cursor_at(tmp_path, "Aaron", Handedness.RIGHT)
     assert golfer_client.get("/api/clubs").json()["bag"] == ["7i"]
 
-    golfer_client.post(
-        "/api/sessions/current/golfer", json={"name": "Rory", "handedness": "left"}
-    )
+    _point_the_cursor_at(tmp_path, "Rory", Handedness.LEFT)
     assert golfer_client.get("/api/clubs").json()["bag"] == []
 
 
 def test_an_unreadable_bag_costs_the_shortcut_and_not_the_picker(golfer_client, tmp_path) -> None:
     """`BagStore.get`'s tolerance, at the route. A corrupt bag must not 500 the page someone is
     holding between swings — it costs the "in the bag" section and nothing else."""
-    golfer_client.post(
-        "/api/sessions/current/golfer", json={"name": "Aaron", "handedness": "right"}
-    )
-    (tmp_path / "golfers").mkdir(parents=True, exist_ok=True)
+    _point_the_cursor_at(tmp_path, "Aaron", Handedness.RIGHT)
     (tmp_path / "golfers" / "aaron.bag.json").write_text("{ not json", encoding="utf-8")
 
     res = golfer_client.get("/api/clubs")
@@ -625,76 +433,3 @@ def test_an_unreadable_bag_costs_the_shortcut_and_not_the_picker(golfer_client, 
 
 def test_the_picker_route_is_behind_the_upload_token(auth_client) -> None:
     assert auth_client.get("/api/clubs").status_code == 401
-
-
-# ------------------------------------------------------------- the two repair paths [phantoms]
-
-
-def test_swing_id_override_replaces_instead_of_opening_a_new_swing(client) -> None:
-    """What the upload page's *replace* control sends. The route has taken `swing_id` since M7
-    and nothing sent it, so a corrected file could only ever land in a new swing."""
-    _pick_club(client)
-    client.post(
-        "/api/uploads", params={"role": "shot_screen", "filename": "bad.HEIC"}, content=b"bad"
-    )
-
-    res = client.post(
-        "/api/uploads",
-        params={"role": "shot_screen", "filename": "good.jpg", "swing_id": "1"},
-        content=b"good",
-    )
-
-    assert res.status_code == 200
-    assert res.json()["swing_id"] == "1"
-    assert len(client.get("/api/sessions/current").json()["session_id"]) == 10
-    session_id = client.get("/api/sessions/current").json()["session_id"]
-    swings = client.get(f"/api/sessions/{session_id}").json()["swings"]
-    assert [s["swing_id"] for s in swings] == ["1"]
-    assert swings[0]["roles"]["shot_screen"]["original_filename"] == "good.jpg"
-
-
-def test_delete_swing_removes_it(client) -> None:
-    _pick_club(client)
-    client.post("/api/uploads", params={"role": "face_on", "filename": "a.mov"}, content=b"a")
-    session_id = client.get("/api/sessions/current").json()["session_id"]
-
-    res = client.delete(f"/api/sessions/{session_id}/swings/1")
-
-    assert res.status_code == 200
-    assert res.json()["deleted"] is True
-    assert client.get(f"/api/sessions/{session_id}").json()["swings"] == []
-
-
-def test_delete_swing_404s_when_there_is_none(client) -> None:
-    session_id = client.get("/api/sessions/current").json()["session_id"]
-    assert client.delete(f"/api/sessions/{session_id}/swings/9").status_code == 404
-
-
-def test_delete_swing_is_refused_mid_analysis(client, tmp_path) -> None:
-    """Deleting underneath a running job loses the race: the worker's `save_state` re-creates the
-    directory to write its terminal state, leaving a swing with a state file and no files."""
-    _pick_club(client)
-    client.post("/api/uploads", params={"role": "face_on", "filename": "a.mov"}, content=b"a")
-    session_id = client.get("/api/sessions/current").json()["session_id"]
-    (tmp_path / session_id / "1" / "analysis.state.json").write_text(
-        '{"status": "running", "inputs": {}}', encoding="utf-8"
-    )
-
-    res = client.delete(f"/api/sessions/{session_id}/swings/1")
-
-    assert res.status_code == 409
-    assert "analyzed" in res.json()["detail"]
-    assert (tmp_path / session_id / "1").exists()
-
-
-def test_delete_swing_is_behind_the_upload_token(auth_client) -> None:
-    assert auth_client.delete("/api/sessions/2026-08-06/swings/1").status_code == 401
-
-
-@pytest.mark.parametrize("segment", ["..", ".hidden", "with space"])
-def test_delete_swing_refuses_a_traversing_id(client, segment) -> None:
-    """`_safe` at the one route here that removes a directory *tree*. Mirrors the sweep in
-    `test_results.py`; a bare `..` is normalised away by the client before it reaches routing,
-    which is why the accepted answers include the redirect/405 the router gives it."""
-    res = client.delete(f"/api/sessions/2026-08-06/swings/{segment}")
-    assert res.status_code in (400, 404, 405, 307)

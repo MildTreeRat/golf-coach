@@ -438,45 +438,10 @@ def test_architectures_checkpoint_table_has_a_row_per_checkpoint() -> None:
 # so, and no test could see any of them. "Run the doc-truth suite first and work from its failures"
 # is only a method where the suite covers the surface being changed — so P20 extended the cover
 # rather than just fixing the prose.
-
-
-def test_the_docs_state_the_real_mcp_tool_count() -> None:
-    """M9 P18 added two MCP tools and left six sentences saying eight.
-
-    Pinned on one phrase shape — "the same N tools" — rather than on every "N tools" in the repo,
-    because a subset count is a legitimate thing to write: `mcp/club.py` really does hold two. What
-    is not legitimate is a sentence claiming to describe the *whole* surface with a stale number,
-    and that sentence has one recognisable form in all three places it appears.
-
-    `WORKLOG.md` is deliberately not read. It is append-only history, and a dated record of what a
-    handshake advertised in August is not a claim about today — the same exemption the module
-    docstring gives every true past-tense sentence about the three-checkpoint panel.
-    """
-    from golf_coach.contracts.caveats import _count_word
-    from golf_coach.contracts.tool_descriptions import TOOL_DESCRIPTIONS
-
-    expected = _count_word(len(TOOL_DESCRIPTIONS))
-    sources = [
-        DOCS / "ARCHITECTURE.md",
-        REPO / "ROADMAP.md",
-        REPO / "scripts" / "ask_swing.py",
-        *sorted(DECISIONS.glob("*.md")),
-    ]
-
-    found: list[str] = []
-    for path in sources:
-        for word in re.findall(r"the same (\w+) tools", _flat(_read(path))):
-            found.append(f"{path.relative_to(REPO)}: 'the same {word} tools'")
-            assert word == expected, (
-                f"{path.relative_to(REPO)} says 'the same {word} tools'; "
-                f"{len(TOOL_DESCRIPTIONS)} are registered in TOOL_DESCRIPTIONS"
-            )
-
-    assert found, (
-        "no document states the MCP tool count in the pinned form any more — either the phrasing "
-        "moved, in which case reword this test with it, or the claim was dropped and this pin is "
-        "now guarding nothing"
-    )
+#
+# The first of the three, the MCP tool count, moved to Rust at M29 P15 (`crates/mcp/tests/docs.rs`,
+# the M29 plan's call 9): the server is `golf-mcp`, whose table holds a twelfth tool frozen Python's
+# `TOOL_DESCRIPTIONS` never gains, so the count is read off that table, and two pins remain here.
 
 
 def test_architecture_lists_every_api_route() -> None:

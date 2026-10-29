@@ -41,6 +41,22 @@
 //! **Since M37 P11 they copy the profile family too**, because a career declaration re-records it
 //! after the career family, and a run over a `spec/` with no `vectors/profile/` is refused. Its
 //! corpus cases adopt career cases' inputs, so an older value is carried one link further.
+//!
+//! **Since M29 P15 they copy the mcp family too**, the fourth a career declaration re-records, and
+//! its walk runs the `golf-mcp` binary (`golf_core::rerecord::golf_mcp_binary`): beside
+//! `golf-core`, or one up from cargo's `deps/` for the runs here that call [`plan`] in process. A
+//! workspace `cargo test` builds it before any test runs; `cargo test -p golf-core` alone does not,
+//! and these tests then fail on the walk's refusal naming the build, never pass without the family.
+//!
+//! **Since M29 P19 every slice also holds two selection cases and one mcp case**, because an engine
+//! declaration re-records the selection family after the shot family and then the mcp family, and a
+//! run over a `spec/` with either directory missing is refused. The two selection cases are a rules
+//! case and a windows case, whose `_auto_windows` answer is built from the pick ahead of it (until
+//! M29 P25 it was carried as committed); the mcp case is one with flight-model calls, the reason an
+//! engine run walks that family.
+//! The sub-families they leave empty are created empty, so the walks find every directory they
+//! name. So **every engine run here spawns `golf-mcp` too**, and `cargo test -p golf-core` alone
+//! fails them on the refusal, as it fails the career runs.
 
 use std::collections::BTreeMap;
 use std::fs;
@@ -56,8 +72,9 @@ use flate2::write::GzEncoder;
 use flate2::Compression;
 use golf_core::compare::compare;
 use golf_core::rerecord::{
-    plan, run_screen, Family, Refused, CAREER, CAREER_DOCUMENTS, PROFILE, PROFILE_DOCUMENTS,
-    SCREEN_DOCUMENTS, STORAGE, STORAGE_DOCUMENTS,
+    plan, run_screen, Family, Refused, CAREER, CAREER_DOCUMENTS, GOLF_MCP_ENV, MCP, MCP_DOCUMENTS,
+    PROFILE, PROFILE_DOCUMENTS, SCREEN_DOCUMENTS, SELECTION, SELECTION_DOCUMENTS, STORAGE,
+    STORAGE_DOCUMENTS,
 };
 use screen::ScreenInput;
 use serde_json::{json, Value};
@@ -74,6 +91,22 @@ const SHOT_ID: &str = "shot/corpus-2026-08-23-11";
 /// The shot case's first row, the path the shot tests move on the copy: its own spelling, which no
 /// engine or stage document has, so a declaration naming it can match in the shot family alone.
 const SHOT_ROW: &str = "expected.measurements[0].value";
+
+/// The selection cases in every slice: a rules case, and a windows case whose second call,
+/// `_auto_windows`, is built from its first, a `_pick_swing`. Every call in both is answered since
+/// M29 P25, which ported `_auto_windows`. [M29 P19]
+const RULES_CASE: &str = "selection/rules/fast-downswing.json.gz";
+const RULES_ID: &str = "selection/rules/fast-downswing";
+const WINDOWS_CASE: &str = "selection/windows/face-on-only.json.gz";
+const WINDOWS_ID: &str = "selection/windows/face-on-only";
+
+/// The first call's reason in either selection case: a `select_swing` answer in the rules case, a
+/// `_pick_swing` answer in the windows case, which that case's `_auto_windows` is built from.
+const FIRST_REASON: &str = "expected.results[0].reason";
+
+/// The mcp case in every slice: one whose calls reach the flight model, the reason an engine run
+/// walks the mcp family. [M29 P19]
+const MCP_CASE: &str = "mcp/tools/flight-registry.json";
 
 /// The key the tests remove from the corpus copy's answer. Nothing the compose check reads, so a
 /// declared re-add exercises the gate and the ledger without also moving a composed value.
@@ -132,7 +165,25 @@ impl Slice {
         fs::copy(committed_spec().join("vectors").join(SHOT_CASE), &shot)
             .unwrap_or_else(|e| panic!("copy {SHOT_CASE}: {e}"));
         fs::create_dir_all(root.join("repo").join("spec").join("declarations")).expect("mkdir");
-        Self { root }
+        let slice = Self { root };
+        // Every sub-family an engine run walks after the shot family, each present, two of them
+        // holding a case and the rest empty. [M29 P19]
+        for (family, halves) in [
+            (SELECTION, &SELECTION_DOCUMENTS[..]),
+            (MCP, &MCP_DOCUMENTS[..]),
+        ] {
+            for half in halves {
+                fs::create_dir_all(slice.vector(family).join(half)).expect("mkdir");
+            }
+        }
+        for relative in [RULES_CASE, WINDOWS_CASE, MCP_CASE] {
+            fs::copy(
+                committed_spec().join("vectors").join(relative),
+                slice.vector(relative),
+            )
+            .unwrap_or_else(|e| panic!("copy {relative}: {e}"));
+        }
+        slice
     }
 
     /// Edit the shot case's copy in place and write it back as the case was committed: LF, an
@@ -163,7 +214,8 @@ impl Slice {
         slice
     }
 
-    /// [`Slice::new`], plus the whole committed storage, career and profile families. [M36 P13]
+    /// [`Slice::new`], plus the whole committed storage, career, profile and mcp families. [M36 P13,
+    /// the mcp family M29 P15]
     fn with_career(name: &str) -> Self {
         let slice = Self::new(name);
         slice.copy_the_career_families();
@@ -193,14 +245,15 @@ impl Slice {
         path
     }
 
-    /// Every storage, career and profile document in the slice, by path: the files a career run
-    /// reads.
+    /// Every storage, career, profile and mcp document in the slice, by path: the files a career run
+    /// reads, which leaves out `mcp/surface/`.
     fn career_documents(&self) -> Vec<PathBuf> {
         let mut paths = Vec::new();
         for (family, halves) in [
             (STORAGE, &STORAGE_DOCUMENTS[..]),
             (CAREER, &CAREER_DOCUMENTS[..]),
             (PROFILE, &PROFILE_DOCUMENTS[..]),
+            (MCP, &MCP_DOCUMENTS[..]),
         ] {
             for half in halves {
                 for entry in fs::read_dir(self.vector(family).join(half)).expect("list") {
@@ -493,8 +546,8 @@ fn a_declared_change_lands_reads_back_and_a_second_run_writes_nothing() {
     );
     assert_eq!(
         run.vectors().len(),
-        5,
-        "two engine, two stage and the shot case"
+        8,
+        "two engine, two stage, the shot case, two selection cases and the mcp case"
     );
     assert_eq!(run.write().expect("writes"), 3);
 
@@ -614,7 +667,8 @@ fn a_dry_run_reports_and_writes_nothing() {
         "\nstages/synthetic/tempo-too-quick\n",
         "\nshot/corpus-2026-08-23-11\n",
         moved.as_str(),
-        "5 vectors run (2 engine, 2 stage, 1 shot); 3 changed; 0 files written",
+        "8 vectors run (2 engine, 2 stage, 1 shot, 2 selection, 1 mcp); 3 changed; 0 files written",
+        "the mcp family was answered by ",
     ] {
         assert!(
             stdout.contains(expected),
@@ -1137,6 +1191,9 @@ fn a_screen_run_reads_no_engine_vector_and_an_engine_run_reads_no_screen_vector(
             fs::write(slice.vector(&format!("{family}{relative}")), unreadable).expect("write");
         }
     }
+    for relative in [SHOT_CASE, RULES_CASE, WINDOWS_CASE, MCP_CASE] {
+        fs::write(slice.vector(relative), unreadable).expect("write");
+    }
     let keys = m32_shot_keys();
     slice.age_the_screen_documents(&keys);
     let declaration = declare_shape_only(&slice, "screen-shape", &keys);
@@ -1225,8 +1282,9 @@ fn a_screen_sub_family_nobody_placed_stops_the_walk() {
 
 // --------------------------------------------------- the storage and career families [M36 P13]
 
-/// The families a career declaration re-records, in the order it walks them. [M37 P11]
-const CAREER_FAMILIES: [&str; 3] = [STORAGE, CAREER, PROFILE];
+/// The families a career declaration re-records, in the order it walks them. [M37 P11, the mcp
+/// family M29 P15]
+const CAREER_FAMILIES: [&str; 4] = [STORAGE, CAREER, PROFILE, MCP];
 
 const OUTDATED_CASE: &str = "storage/corpus/stale-and-outdated.json";
 const OUTDATED_TWIN: &str = "career/synthetic/storage-stale-and-outdated.json";
@@ -1236,8 +1294,9 @@ const OUTDATED_DETAIL: &str = "expected.corpus.excluded[1].detail";
 const ADOPTED_DETAIL: &str = "input.corpus.excluded[1].detail";
 const OLDER_SENTENCE: &str = "an older sentence than the reader writes";
 
-/// How many storage, career and profile documents the slice holds, for the report's count line.
-fn career_counts(slice: &Slice) -> [usize; 3] {
+/// How many storage, career, profile and mcp documents the slice holds, for the report's count
+/// line.
+fn career_counts(slice: &Slice) -> [usize; 4] {
     let documents = slice.career_documents();
     CAREER_FAMILIES.map(|family| {
         let dir = slice.vector(family);
@@ -1252,8 +1311,8 @@ fn career_counts(slice: &Slice) -> [usize; 3] {
 fn an_empty_career_declaration_finds_nothing_and_writes_nothing() {
     let slice = Slice::with_career("career-empty");
     let declaration = slice.declare_career("career-empty", CAREER_VERSION, &[]);
-    let [storage, career, profile] = career_counts(&slice);
-    assert!(storage > 0 && career > 0 && profile > 0);
+    let [storage, career, profile, mcp] = career_counts(&slice);
+    assert!(storage > 0 && career > 0 && profile > 0 && mcp > 0);
     let before = slice.snapshot();
 
     for extra in [&["--dry-run"][..], &[][..]] {
@@ -1261,13 +1320,14 @@ fn an_empty_career_declaration_finds_nothing_and_writes_nothing() {
         let stdout = text(&output.stdout);
         assert!(output.status.success(), "{}", text(&output.stderr));
         let count = format!(
-            "{} vectors run ({storage} storage, {career} career, {profile} profile); 0 changed; \
-             0 files written",
-            storage + career + profile
+            "{} vectors run ({storage} storage, {career} career, {profile} profile, {mcp} mcp); 0 \
+             changed; 0 files written",
+            storage + career + profile + mcp
         );
         for expected in [
             format!("a declaration at career_version {CAREER_VERSION}, 0 added and 0 moved"),
             "nothing differs from the committed vectors".to_string(),
+            "the mcp family was answered by ".to_string(),
             count,
         ] {
             assert!(
@@ -1345,8 +1405,13 @@ fn a_career_version_move_lands_on_its_three_families_and_a_second_run_writes_not
     walked.dedup();
     assert_eq!(
         walked,
-        [Family::Storage, Family::Career, Family::Profile],
-        "the storage family first, then the career family, then the profile family"
+        [
+            Family::Storage,
+            Family::Career,
+            Family::Profile,
+            Family::Mcp
+        ],
+        "the storage family first, then the career family, then the profile family, then mcp"
     );
     for vector in run.vectors() {
         let moved: Vec<&str> = vector
@@ -1361,11 +1426,12 @@ fn a_career_version_move_lands_on_its_three_families_and_a_second_run_writes_not
     let aged: BTreeMap<PathBuf, Value> = documents.iter().map(|p| (p.clone(), read(p))).collect();
     assert_eq!(run.write().expect("writes"), documents.len());
     let oracle_of = |path: &Path| -> &'static str {
-        let profile = slice.vector(PROFILE);
-        if path.starts_with(profile.join("corpus")) {
+        let (profile, mcp) = (slice.vector(PROFILE), slice.vector(MCP));
+        if path.starts_with(profile.join("corpus")) || path.starts_with(mcp.join("rust")) {
             "rust"
         } else if path.starts_with(profile.join("hand"))
             || path.starts_with(slice.vector("storage/hand"))
+            || path.starts_with(mcp.join("hand"))
         {
             "hand"
         } else {
@@ -1422,6 +1488,37 @@ fn a_career_version_move_lands_on_its_three_families_and_a_second_run_writes_not
     assert_eq!(second.changed().count(), 0);
     assert_eq!(second.write().expect("writes nothing"), 0);
     assert_eq!(slice.snapshot(), after, "a second run wrote something");
+}
+
+/// **A career run with no `golf-mcp` to run refuses, by name, and writes nothing** (the M29 plan's
+/// rule that a tool is found, never assumed). Through the verb, so [`GOLF_MCP_ENV`] is set on the
+/// child alone and no test running beside this one sees it. [M29 P15]
+#[test]
+fn a_career_run_with_no_golf_mcp_refuses_naming_it_and_writes_nothing() {
+    let slice = Slice::with_career("career-no-mcp");
+    let declaration = slice.declare_career("career-empty", CAREER_VERSION, &[]);
+    let before = slice.snapshot();
+    let missing = slice.root.join("no-such-golf-mcp.exe");
+    let output = Command::new(env!("CARGO_BIN_EXE_golf-core"))
+        .arg("rerecord")
+        .arg("--declare")
+        .arg(&declaration)
+        .arg("--spec")
+        .arg(slice.spec())
+        .arg("--dry-run")
+        .env(GOLF_MCP_ENV, &missing)
+        .output()
+        .expect("the binary runs");
+    assert!(!output.status.success());
+    let stderr = text(&output.stderr);
+    assert!(
+        stderr.contains(GOLF_MCP_ENV)
+            && stderr.contains("no-such-golf-mcp.exe")
+            && stderr.contains("cargo build --release -p golf-mcp"),
+        "{stderr}"
+    );
+    assert!(text(&output.stdout).is_empty(), "{}", text(&output.stdout));
+    assert_eq!(slice.snapshot(), before);
 }
 
 fn decompressed(bytes: &[u8]) -> Vec<u8> {
@@ -1533,9 +1630,13 @@ fn an_adopted_corpus_moves_with_its_storage_vector_and_only_where_declared() {
 }
 
 /// **A career run reads its own families and nothing else**, and neither of the others reads one of
-/// its files. With every engine, stage and screen document unreadable, a career run still passes;
-/// with every storage and career document unreadable and a sub-family nobody placed beside them, an
-/// engine run and a screen run pass and write their own files alone.
+/// its files. With every engine, stage, shot, selection and screen document unreadable, a career
+/// run still passes; with every storage, career and profile document unreadable and a sub-family
+/// nobody placed beside them, an engine run and a screen run pass and write their own files alone.
+///
+/// **The mcp family is the one both keys walk** (M29 P19: an engine run walks it after the
+/// selection family, `walk_mcp`'s doc), so it is left readable for the engine run, which is held
+/// to writing none of it: the committed answers are this build's.
 #[test]
 fn a_career_run_reads_no_engine_or_screen_vector_and_neither_reads_a_career_one() {
     let unreadable = b"not a vector";
@@ -1554,14 +1655,16 @@ fn a_career_run_reads_no_engine_or_screen_vector_and_neither_reads_a_career_one(
     let run = plan(&slice.spec(), &declaration).expect("a career run never reads another family");
     assert!(run.vectors().iter().all(|v| matches!(
         v.family(),
-        Family::Storage | Family::Career | Family::Profile
+        Family::Storage | Family::Career | Family::Profile | Family::Mcp
     )));
     assert_eq!(run.vectors().len(), slice.career_documents().len());
 
     let slice = Slice::with_screen("not-career");
     slice.copy_the_career_families();
     for path in slice.career_documents() {
-        fs::write(&path, unreadable).expect("write");
+        if !path.starts_with(slice.vector(MCP)) {
+            fs::write(&path, unreadable).expect("write");
+        }
     }
     fs::create_dir_all(slice.vector("storage/unplaced")).expect("mkdir");
     slice.age_the_synthetic_pair();
@@ -1626,6 +1729,7 @@ fn a_career_sub_family_nobody_placed_or_a_runner_nobody_has_stops_the_walk() {
             "profile/unplaced/",
             "PROFILE_DOCUMENTS",
         ),
+        ("mcp-unplaced-dir", "mcp/unplaced/", "MCP_DOCUMENTS"),
     ] {
         let slice = Slice::with_career(name);
         let target = slice.vector(make.trim_end_matches('/'));
@@ -1823,7 +1927,7 @@ fn a_screen_or_career_run_never_opens_the_shot_family() {
     let run = plan(&slice.spec(), &career).expect("a career run never opens shot/");
     assert!(run.vectors().iter().all(|v| matches!(
         v.family(),
-        Family::Storage | Family::Career | Family::Profile
+        Family::Storage | Family::Career | Family::Profile | Family::Mcp
     )));
     assert_eq!(
         shot_files(&slice),
@@ -1854,6 +1958,254 @@ fn a_screen_or_career_run_never_opens_the_shot_family() {
     }
 }
 
+// ------------------------------------------- the selection family, and mcp under the engine [M29 P19]
+
+/// Edit a gzipped copy in place and write it back as the recorder and the re-record write it: LF,
+/// an indent of 2.
+fn edit_gzipped(path: &Path, change: impl FnOnce(&mut Value)) {
+    let mut document = read(path);
+    change(&mut document);
+    let text = serde_json::to_string_pretty(&document).expect("serializes");
+    let mut encoder = GzEncoder::new(Vec::new(), Compression::fast());
+    encoder.write_all(text.as_bytes()).expect("gzip");
+    fs::write(path, encoder.finish().expect("gzip")).expect("write");
+}
+
+/// **An engine run walks the selection family after the shot family, and the mcp family last**,
+/// and the report counts both and names the `golf-mcp` it ran.
+#[test]
+fn an_engine_run_walks_selection_and_then_mcp_after_the_shot_family() {
+    let slice = Slice::new("engine-order");
+    let declaration = slice.declare("nothing", ANALYSIS_VERSION, &[], &[]);
+    let run = plan(&slice.spec(), &declaration).expect("the slice is what this build answers");
+    let mut walked: Vec<Family> = run.vectors().iter().map(|v| v.family()).collect();
+    walked.dedup();
+    assert_eq!(
+        walked,
+        [
+            Family::Engine,
+            Family::Stage,
+            Family::Shot,
+            Family::Selection,
+            Family::Mcp
+        ]
+    );
+    let ids: Vec<&str> = run
+        .vectors()
+        .iter()
+        .filter(|v| v.family() == Family::Selection)
+        .map(|v| v.id())
+        .collect();
+    assert_eq!(ids, [RULES_ID, WINDOWS_ID], "SELECTION_DOCUMENTS' order");
+    let report = run.report(true, 0);
+    assert!(
+        report.contains("8 vectors run (2 engine, 2 stage, 1 shot, 2 selection, 1 mcp); 0 changed")
+            && report.contains("the mcp family was answered by "),
+        "{report}"
+    );
+}
+
+/// **A selection case moves behind the gate**: recorded one engine version back, an empty
+/// declaration is refused at its version alone; the version declared, it lands on that case alone,
+/// in its gzip's layout, ledgered with its oracle kept and every other value as it was — and a second
+/// run writes nothing. This is the move the committed family made under `v17.json` (the user's
+/// decision at the P18/P19 boundary).
+#[test]
+fn a_selection_version_move_lands_on_the_case_alone_and_a_second_run_writes_nothing() {
+    let slice = Slice::new("selection-move");
+    let path = slice.vector(RULES_CASE);
+    edit_gzipped(&path, |v| {
+        v["analysis_version"] = json!(ANALYSIS_VERSION - 1);
+        v["provenance"]
+            .as_object_mut()
+            .expect("a provenance")
+            .remove("rerecords");
+    });
+    let aged = read(&path);
+    let empty = slice.declare("nothing", ANALYSIS_VERSION, &[], &[]);
+    match plan(&slice.spec(), &empty) {
+        Err(Refused::Gate(refusals)) => {
+            assert_eq!(refusals.len(), 1, "{refusals:?}");
+            assert!(
+                refusals[0].starts_with(&format!("{RULES_ID}: analysis_version")),
+                "{}",
+                refusals[0]
+            );
+        }
+        other => panic!("expected the gate to refuse the aged case, got {other:?}"),
+    }
+
+    let declaration = slice.declare("version", ANALYSIS_VERSION, &[], &["analysis_version"]);
+    let before = slice.snapshot();
+    let run = plan(&slice.spec(), &declaration).expect("the version is declared");
+    let changed: Vec<(&str, Family)> = run.changed().map(|v| (v.id(), v.family())).collect();
+    assert_eq!(changed, [(RULES_ID, Family::Selection)]);
+    assert_eq!(run.write().expect("writes"), 1);
+    let after = slice.snapshot();
+    let moved: Vec<&PathBuf> = before
+        .keys()
+        .filter(|p| before.get(*p) != after.get(*p))
+        .collect();
+    assert_eq!(moved, [&path], "a file other than the selection case moved");
+    assert!(
+        !text(&decompressed(&after[&path])).contains('\r'),
+        "CRLF in a gzip"
+    );
+
+    let landed = read(&path);
+    assert_eq!(landed["analysis_version"], json!(ANALYSIS_VERSION));
+    assert_eq!(landed["provenance"]["oracle"], json!("python"));
+    assert_eq!(
+        landed["provenance"]["rerecords"],
+        json!([{
+            "analysis_version": ANALYSIS_VERSION,
+            "by": "golf-core rerecord",
+            "declaration": "spec/declarations/version.json",
+            "added": [],
+            "moved": ["analysis_version"],
+        }])
+    );
+    let mut undone = landed.clone();
+    undone["analysis_version"] = aged["analysis_version"].clone();
+    undone["provenance"] = aged["provenance"].clone();
+    assert_eq!(undone, aged, "an undeclared value moved");
+
+    let second = plan(&slice.spec(), &declaration).expect("a second run is a no-op");
+    assert_eq!(second.changed().count(), 0);
+    assert_eq!(second.write().expect("writes nothing"), 0);
+    assert_eq!(slice.snapshot(), after, "a second run wrote something");
+}
+
+/// **A moved pick moves the windows chosen from it, and the declaration must say so.** Both cases'
+/// first reason is given an older sentence than the rules write, as a rule change would leave them.
+/// In the rules case the declared path lands as any declared move does. In the windows case the
+/// `_auto_windows` answer logs that pick's reason, so the older sentence is in its log line too, and
+/// since M29 P25 Rust answers that call rather than carrying it: the same declaration is refused by
+/// the gate at the log line it did not name, nothing is written, and a declaration naming both
+/// lands both. Before P25 the carry's guard refused this case whatever was declared.
+#[test]
+fn a_moved_pick_moves_the_windows_chosen_from_it() {
+    const OLDER: &str = "an older sentence than the rules write";
+    const PICK_LOG: &str = "expected.results[1].log[0]";
+    let slice = Slice::new("selection-moved-pick");
+    let declaration = slice.declare("first-reason", ANALYSIS_VERSION, &[], &[FIRST_REASON]);
+
+    edit_gzipped(&slice.vector(RULES_CASE), |v| {
+        v["expected"]["results"][0]["reason"] = json!(OLDER);
+    });
+    let run = plan(&slice.spec(), &declaration).expect("the rules case's move is declared");
+    let changed: Vec<&str> = run.changed().map(|v| v.id()).collect();
+    assert_eq!(changed, [RULES_ID]);
+    assert_eq!(run.write().expect("writes"), 1);
+    let landed = read(&slice.vector(RULES_CASE));
+    assert_ne!(landed["expected"]["results"][0]["reason"], json!(OLDER));
+
+    edit_gzipped(&slice.vector(WINDOWS_CASE), |v| {
+        v["expected"]["results"][0]["reason"] = json!(OLDER);
+        v["expected"]["results"][1]["log"][0] = json!(format!("  face-on: {OLDER}"));
+    });
+    let before = slice.snapshot();
+    match plan(&slice.spec(), &declaration) {
+        Err(Refused::Gate(refusals)) => {
+            assert_eq!(refusals.len(), 1, "{refusals:?}");
+            assert!(
+                refusals[0].starts_with(&format!("{WINDOWS_ID}: {PICK_LOG}"))
+                    && refusals[0].contains("`moved`"),
+                "{}",
+                refusals[0]
+            );
+        }
+        other => panic!("expected the gate to refuse the undeclared log line, got {other:?}"),
+    }
+    assert_eq!(slice.snapshot(), before, "a refused run wrote something");
+
+    let both = slice.declare(
+        "first-reason-and-log",
+        ANALYSIS_VERSION,
+        &[],
+        &[FIRST_REASON, PICK_LOG],
+    );
+    let run = plan(&slice.spec(), &both).expect("both moves are declared");
+    let changed: Vec<&str> = run.changed().map(|v| v.id()).collect();
+    assert_eq!(changed, [WINDOWS_ID]);
+    assert_eq!(run.write().expect("writes"), 1);
+    let landed = read(&slice.vector(WINDOWS_CASE));
+    let reason = landed["expected"]["results"][0]["reason"]
+        .as_str()
+        .expect("a reason");
+    assert_ne!(reason, OLDER);
+    assert_eq!(
+        landed["expected"]["results"][1]["log"][0],
+        json!(format!("  face-on: {reason}")),
+        "the log line landed with the pick it narrates"
+    );
+}
+
+/// A directory under `vectors/selection/` the re-record does not place stops an engine run, and so
+/// does a loose file, as under `vectors/screen/`.
+#[test]
+fn a_selection_sub_family_nobody_placed_stops_the_walk() {
+    for (name, make) in [
+        ("selection-unplaced-dir", "selection/unplaced/"),
+        ("selection-unplaced-file", "selection/README.json"),
+    ] {
+        let slice = Slice::new(name);
+        let target = slice.vector(make.trim_end_matches('/'));
+        if make.ends_with('/') {
+            fs::create_dir_all(&target).expect("mkdir");
+        } else {
+            fs::write(&target, "{}").expect("write");
+        }
+        let declaration = slice.declare("nothing", ANALYSIS_VERSION, &[], &[]);
+        match plan(&slice.spec(), &declaration) {
+            Err(Refused::Files(why)) => {
+                let leaf = make
+                    .trim_end_matches('/')
+                    .rsplit('/')
+                    .next()
+                    .expect("a name");
+                assert!(
+                    why.contains(leaf) && why.contains("SELECTION_DOCUMENTS"),
+                    "{why}"
+                );
+            }
+            other => panic!("{make}: expected the walk to stop, got {other:?}"),
+        }
+    }
+}
+
+/// **An engine run with no `golf-mcp` to run refuses, by name, and writes nothing**, as a career
+/// run does: since M29 P19 an engine declaration walks the mcp family too.
+#[test]
+fn an_engine_run_with_no_golf_mcp_refuses_naming_it_and_writes_nothing() {
+    let slice = Slice::new("engine-no-mcp");
+    slice.age_the_synthetic_pair();
+    let declaration = slice.declare(
+        "versions",
+        ANALYSIS_VERSION,
+        &[],
+        &["analysis_version", "expected.analysis_version"],
+    );
+    let before = slice.snapshot();
+    let missing = slice.root.join("no-such-golf-mcp.exe");
+    let output = Command::new(env!("CARGO_BIN_EXE_golf-core"))
+        .arg("rerecord")
+        .arg("--declare")
+        .arg(&declaration)
+        .arg("--spec")
+        .arg(slice.spec())
+        .env(GOLF_MCP_ENV, &missing)
+        .output()
+        .expect("the binary runs");
+    assert!(!output.status.success());
+    let stderr = text(&output.stderr);
+    assert!(
+        stderr.contains(GOLF_MCP_ENV) && stderr.contains("no-such-golf-mcp.exe"),
+        "{stderr}"
+    );
+    assert_eq!(slice.snapshot(), before);
+}
+
 // ------------------------------------------------------------------ the oracle pin [M37 P11]
 
 /// The oracles a committed vector may name (ADR-032's twelfth addendum's three kinds): frozen
@@ -1872,6 +2224,11 @@ const ORACLES: [&str; 3] = ["python", "hand", "rust"];
 /// format file with that function's output. So the table names the oracle once, and the files keep
 /// their bytes. A family listed here whose files start carrying the key fails the pin, so the
 /// table and the files can never both claim it.
+///
+/// Every family after these two writes its oracle into each file, and so is not a row here: the
+/// `mcp` family (M29 P8) is one, recorded once from frozen Python with `provenance.oracle:
+/// "python"` in every case, beside the hand and Rust cases M29 P9–P15 add to it. The `selection`
+/// family (M29 P18) is another, recorded once from frozen Python in the same way.
 const ORACLE_BY_FAMILY: [(&str, &str); 2] = [("audio", "python"), ("format", "python")];
 
 /// Just enough of a vector to read its provenance; every other key is skipped unparsed, which is

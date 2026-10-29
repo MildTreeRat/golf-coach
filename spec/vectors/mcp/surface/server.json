@@ -1,0 +1,384 @@
+{
+  "career_version": 0,
+  "expected": {
+    "with_registry": {
+      "instructions": "Swing analysis and launch-monitor data from a home golf simulator.\n\nTwo independent axes, and they answer different questions. **Mechanics** come from pose\nanalysis of a face-on video: six checkpoints (tempo, head sway, finish balance, hip sway, hip\nshift at top, head stays back) scored against bands derived from hand-annotated tour swings,\nplus the percentile the swing sits at in that population. **Outcome** comes from the launch\nmonitor: club and ball speed, launch, spin, carry. A swing can score well on one and badly on\nthe other; say which you are talking about.\n\nReading this data honestly:\n\n- `unscored` lists checkpoints that could not be scored, not ones that failed. They are\n  excluded from `overall_score` rather than counted as zero, so a swing with an unscored\n  checkpoint was judged on fewer fundamentals than one without. Say so if it comes up.\n- Each entry in `unscored` carries a `reason`, and it decides what to say next. `no_band`,\n  `no_handedness`, `cross_view_contradicted`, `carry_unreachable`, `no_club_loft`,\n  `spin_not_recoverable`, `spin_axis_unresolved`, `no_launch_conditions` and `unrecorded` are\n  not capture problems \u2014 the footage is not what went wrong, so a better clip would not change\n  the answer and you must never respond to one of those by telling the golfer to re-film,\n  steady the camera or shoot the swing again. Every other reason is a clip worth taking again.\n  The `refilming_helps` flag says which is which; do not infer it from the checkpoint name.\n- `percentile` is informational and clamps at the band edges, so a failing checkpoint reports\n  about 90 (or about 10, when it missed on the low side of a two-sided metric) whether it missed\n  narrowly or hugely. A low percentile is therefore not by itself good news \u2014 read `passed` for\n  the verdict and rank severity by `score`, never by percentile.\n- **Less is not better on every checkpoint.** `tempo`, `hip_sway` and `head_stays_back` are\n  two-sided (`one_sided` is false): too little hip travel fails just as too much does, because\n  some lateral hip movement is the weight shift a swing needs, and a head that hangs back\n  through impact fails as a head that drifts forward with the hips does. On the one-sided\n  checkpoints \u2014 head sway, finish balance, hip shift at top \u2014 below the band is the good side.\n  Read `one_sided` before describing a low number as a strength.\n- `head_stays_back` is recorded as a **negative** number, and that is a frame of reference rather\n  than a fault: its band lives in a right-handed camera frame where more negative means more\n  head-behind-hips separation. Never read its sign as bad news, and never quote the raw value to a\n  golfer \u2014 the checkpoint's own `message` states the magnitude in the right direction. This is also\n  the one checkpoint that can be missing because nobody said who swung: when a swing has no golfer\n  attributed, it appears in `unscored` rather than being scored on a guess.\n- **The `population:golfdb` entries are placements, not scores.** `tour_joint_distance`,\n  `tour_trajectory_t2`, `tour_trajectory_q`, `tour_trajectory_t2_dtl` and\n  `tour_trajectory_q_dtl` say how far this swing sits from a population of tour professionals \u2014\n  as a combination of metrics, and as a motion. Every clip behind them is a tour swing, so\n  these models know the shape of swings that work and nothing whatever about swings that do\n  not: a large value means **unusual**, which is a reason to look and never a fault to report.\n  No band exists for any of them, none is part of `overall_score`, and their percentiles clamp\n  at 10 and 90 exactly as the checkpoint ones do. Naming what a swing does unusually is useful;\n  calling it wrong is not supported by anything behind these numbers.\n- `tour_trajectory_q` and `tour_trajectory_q_dtl` are **not calibrated**, and the others are. A\n  Q is the part of the motion the tour basis cannot represent at all, and it over-flags any\n  golfer that basis never saw \u2014 which is every golfer using this system. It also cannot tell an\n  unusual swing from a mis-detected one, so a large Q beside an ordinary T2 more often means\n  the swing was read badly than swung badly. Read each Q beside its own T2, never alone. And\n  the face-on and down-the-line numbers come from two bases fitted to two cameras: each is\n  compared against its own population and never against the other, so a difference between the\n  two is not a finding about the swing. A down-the-line placement is still not spine angle,\n  swing plane or club path: those live in the depth direction one camera cannot resolve, and\n  none of them is measured here.\n- **The `rotation` entries are an interim reading, not a score.** `pivot_hip_axis_drift_norm`,\n  `pivot_shoulder_axis_drift_norm`, `pivot_hip_path_jitter_norm`,\n  `pivot_shoulder_reversal_backswing_deg`, `pivot_shoulder_reversal_downswing_deg`,\n  `pivot_hip_axis_drift_norm_dtl`, `pivot_shoulder_axis_drift_norm_dtl`,\n  `pivot_hip_path_jitter_norm_dtl`, `pivot_shoulder_reversal_backswing_deg_dtl` and\n  `pivot_shoulder_reversal_downswing_deg_dtl` say how far the shoulder and hip centres\n  travelled off their address position and how the shoulder line turned, read off one\n  uncalibrated phone's image plane \u2014 a 2-D projection of a 3-D turn, foreshortened by wherever\n  the camera stood. The face-on and down-the-line numbers are two different instruments and\n  must never be blended or compared to each other. None has a band, none contributes to\n  `overall_score`, and career mode reports them unavailable rather than treating the camera's\n  own noise as a repeatability statistic. Fiducial calibration is what promotes one from\n  interim to judged; each row's own `detail` says what is still missing until then.\n- `needs_review` on a shot means its numbers were read off a photograph by OCR and the parse\n  was flagged. Do not quote a flagged shot's figures as fact; say the reading is uncertain.\n- `alignment_caveat`, when present, means the two camera views were anchored on some swing\n  instants and interpolated between them. Do not describe the side-by-side video as\n  synchronized throughout, and do not read fine timing differences off it.\n- Only six fundamentals are measured, all from the face-on view, and all of them are lateral\n  (side-to-side) or timing quantities. Spine angle, hip **rotation**, swing plane and club path\n  are NOT measured here \u2014 they need a second calibrated view or club detection, neither of\n  which exists yet. The hip checkpoints measure how far the hips travel sideways, never how far\n  they turn, and never in which direction. Do not infer them from what is available.\n\nOnly a handful of sessions and shots are recorded so far. Do not describe a trend or a pattern\nfrom the numbers in front of you \u2014 there is not enough of them for one, and any statement about\nchange over time has to come from something that counted the swings behind it.\n\nReading a simulated ball flight:\n\n- **Nothing in it was measured.** The flight is integrated from the launch conditions the\n  simulator printed, so the carry, apex, hang time, descent angle and landing offline are all a\n  model's output. Say \"simulated\" whenever you quote one, never average one with a printed\n  figure, and never present one as something the launch monitor recorded.\n- **The spin is often solved rather than read.** Where the screen printed no spin it is recovered\n  backwards from the printed carry \u2014 it is the spin this model needs in order to agree with that\n  number. Where that happened, the simulated carry matching the printed one is not a check of\n  anything: it is the input read back out. `spin.source` says which case you are in, and\n  `comparison` carries the sentence for it.\n- **A refused flight is a fact about the shot and never about the clip.** A carry no spin can\n  reach, a club whose loft nobody declared, a screen that printed neither a spin nor a carry to\n  solve from \u2014 those are the reasons, and re-filming the swing fixes none of them. Say what is\n  missing, and where it is a declared loft say that the repair is a bag entry rather than a range\n  session.\n- **The landing offline is not the printed one.** What the screen prints is where the ball\n  *started*, projected out to the carry; the simulated number is where the model has it finishing.\n  The difference between them is the curve, and it is an error in neither. Where the curve could\n  not be resolved the flight is drawn flat and that number is withheld rather than guessed.\n- **The apex, hang time and descent angle have no printed counterpart at all**, so nothing on file\n  can check them. Quote them as what the model says and never describe one as confirmed.\n- `caveats` is not a footnote. Read it before quoting any figure and pass on what it says \u2014 the\n  first of them is about the range the model's coefficients were published for, and it applies to\n  every shot on file.\n\nReading one golfer's own history:\n\n- A figure the sample size cannot support is **absent, not flagged**. `null` here means the guard\n  refused the claim, and `withheld` says what it is waiting for. Report the refusal in words. Do\n  NOT reconstruct the missing figure from the per-session counts sitting next to it \u2014 those counts\n  are the evidence for the refusal, not a series to average.\n- `not_established` is not \"no\" and not \"you are fine\". It means there is enough data to ask and\n  the data does not settle it. An interval straddling a threshold is consistent with a real effect\n  and with none.\n- `bias` and `scatter` are two separate findings and the contrast between them is the whole point:\n  a miss that repeats at the same size points at something set before the swing, a miss that moves\n  points at timing and release. Never collapse the pair into one verdict, and never name a specific\n  cause \u2014 grip, wrist angle, release and clubface are not measured here.\n- A tour band describes a population of professionals, and `population_players` says how large it\n  is for that metric \u2014 it is not the same for all of them. `outside` is a distance from that\n  population, NOT a fault: holding an amateur to a tour p10-p90 fails everyone forever, which is\n  why this system compares a golfer to themselves first. Read `outside_by` for the direction; on a\n  one-sided magnitude like head sway or finish balance, below the band is the good side.\n- `n` counts distinct swings, not swing directories. A session can score perfectly well and still\n  contribute no samples, because its clips were re-uploads of a swing already counted elsewhere.\n- A **mishit** \u2014 a shot carrying far below that club's own median, a top or a duff \u2014 is held\n  out of `carry_distance_yds` and `total_distance_yds` and no other metric: the same shot still\n  counts toward ball speed, launch, start line and every pose checkpoint, because the swing was\n  real and only its distance is meaningless. `mishits_excluded` counts them across the whole\n  history, and while it is above zero those two distance metrics carry a caveat that names the\n  count. This is not a sample-size refusal \u2014 the golfer confirmed the shot or the per-club rule\n  flagged it, and more swings do not change it.\n\nReading one golfer's bag, per club:\n\n- **An empty bag profile is not a refusal.** No clubs listed means no swing on record names a club\n  \u2014 the club tag is newer than the swings. Say that, and say the fix is tagging those swings; do\n  NOT answer it by telling the golfer to hit more balls. A club that *is* listed and withholds a\n  figure is the other case, and that one is fixed by shots on that club.\n- `n_swings` counts clips and `n_shots` counts photographs of the simulator screen, so `n_shots` is\n  the ceiling on every distance and launch figure \u2014 carry, total, offline, ball speed and launch\n  angle all come off that screen. A club filmed often and photographed rarely has plenty of swing\n  history and almost no distance history.\n- `start_line_offline_yds` is where the ball **started**, projected out to the carry \u2014 not where it\n  landed. The simulator prints no landing offset, so nothing here knows it. The curve is a separate\n  number, `face_to_path_deg`, in degrees.\n- Nothing says how far a golfer *should* hit a given club, so a distance never earns a bias\n  finding; only a repeatability one. `unavailable` carries that reason, and more swings never fix\n  it.\n- A club with no bag entry has no loft, make or model on record. That costs the loft and nothing\n  else \u2014 its distance statistics are perfectly readable \u2014 but a loft, gapping-by-loft or fitting\n  question about it must refuse rather than be answered from a specification nobody confirmed. A\n  loft that is on record is the manufacturer's published one unless the golfer measured it\n  (ADR-026 \u00a71), so it describes the model rather than a club that has since been bent. Where a bag\n  entry exists and a caveat says swings predate it, the numbers may pool two physical clubs under\n  one name.\n- A **mishit** \u2014 a shot carrying far below that club's own median, a top or a duff \u2014 is held\n  out of `carry_distance_yds` and `total_distance_yds` and no other metric: the same shot still\n  counts toward ball speed, launch, start line and every pose checkpoint, because the swing was\n  real and only its distance is meaningless. `mishits` counts them for the club, `mishit_refs`\n  names every held-out shot, `mishits_excluded` is the bag-wide total, and\n  `mishits_unconfirmed` is how many the automatic rule flagged that the golfer has not yet\n  confirmed or cleared. The verdict overrides the rule either way, so one `flag_mishit.py\n  --clear` on a borderline shot puts it back in the average.\n",
+      "protocolVersion": "2025-11-25",
+      "serverInfo": {
+        "name": "golf-coach",
+        "version": ""
+      },
+      "tools": [
+        {
+          "description": "List golf sessions, newest first, with each swing's score and lead coaching point. Call this first when the user asks about their golf generally, refers to a session by day ('yesterday', 'last time'), or asks what data exists \u2014 it is the cheapest way to find the session and swing ids every other tool needs. Returns one entry per session with its swings; a swing whose status is not 'done' has no score yet, and 'stale' means the video was re-uploaded after the result was computed.",
+          "inputSchema": {
+            "properties": {
+              "limit": {
+                "default": 20,
+                "title": "Limit",
+                "type": "integer"
+              }
+            },
+            "title": "list_sessionsArguments",
+            "type": "object"
+          },
+          "name": "list_sessions"
+        },
+        {
+          "description": "Get one swing's full analysis: every scored checkpoint with the tour band it was judged against and the percentile it sits at, the ranked coaching tips, any checkpoints that could not be measured, and the launch-monitor shot if one was attached. It also returns `population`: where the swing as a whole sits against a corpus of tour swings, which is context rather than a verdict \u2014 nothing in it has a band and unusual is not bad. Call this whenever the user asks how a specific swing went or what to work on \u2014 it is the only tool that returns mechanics. Needs a session_id and swing_id from list_sessions; if no such swing exists it says so rather than returning data.",
+          "inputSchema": {
+            "properties": {
+              "session_id": {
+                "title": "Session Id",
+                "type": "string"
+              },
+              "swing_id": {
+                "title": "Swing Id",
+                "type": "string"
+              }
+            },
+            "required": [
+              "session_id",
+              "swing_id"
+            ],
+            "title": "get_swingArguments",
+            "type": "object"
+          },
+          "name": "get_swing"
+        },
+        {
+          "description": "Aggregate one session across both axes: mean/best/worst score, how often each checkpoint passed, which checkpoints went unmeasured, and averages over the launch-monitor shots attached to that session's swings. Call this when the user asks how a whole session or day went, rather than fetching every swing individually. Shots flagged as uncertain are counted but excluded from the averages, and so are the carry and total distance of a swing the golfer confirmed was a mishit (only that manual verdict, not the automatic per-club rule get_bag_profile uses). A session with nothing analyzed yet returns zero counts, which is a real answer; only a session id that does not exist at all reports a miss.",
+          "inputSchema": {
+            "properties": {
+              "session_id": {
+                "title": "Session Id",
+                "type": "string"
+              }
+            },
+            "required": [
+              "session_id"
+            ],
+            "title": "get_session_summaryArguments",
+            "type": "object"
+          },
+          "name": "get_session_summary"
+        },
+        {
+          "description": "Get the most recent launch-monitor shots, newest first, across every configured source. Call this when the user asks about ball flight, distances, club speed or strike quality without naming a specific swing. Each shot carries needs_review and parse_confidence, because these numbers are read off a photograph of the simulator screen by OCR \u2014 treat a flagged shot's figures as uncertain rather than as fact.",
+          "inputSchema": {
+            "properties": {
+              "count": {
+                "default": 10,
+                "title": "Count",
+                "type": "integer"
+              }
+            },
+            "title": "get_recent_shotsArguments",
+            "type": "object"
+          },
+          "name": "get_recent_shots"
+        },
+        {
+          "description": "Get one launch-monitor shot by its id, with the full set of metrics and the confidence of the OCR parse that produced them. Call this to follow up on a specific shot surfaced by get_recent_shots or attached to a swing by get_swing. If no shot has that id it says so rather than returning data.",
+          "inputSchema": {
+            "properties": {
+              "shot_id": {
+                "title": "Shot Id",
+                "type": "string"
+              }
+            },
+            "required": [
+              "shot_id"
+            ],
+            "title": "get_shot_by_idArguments",
+            "type": "object"
+          },
+          "name": "get_shot_by_id"
+        },
+        {
+          "description": "Fly the ball for one swing's shot: the carry, apex, hang time, descent angle and how far offline it finishes, integrated from the launch conditions the simulator printed. Call this when the user asks what a shot did in the air \u2014 how high, how far it carried, whether it curved \u2014 rather than what the screen printed, which is get_shot_by_id. **Every number it returns is SIMULATED and none of them was measured**; say so, and never average one with a printed figure or present it as what the launch monitor recorded. Most shots cannot be flown: the screen prints no spin on them, and the spin is solved backwards from the printed carry where that is possible and refused where it is not. A refusal comes back with `flew: false` and the reason, which is a fact about the shot and not a fault \u2014 never answer one by telling the golfer to film the swing again, because the video is not an input to any of this. Read `caveats` before quoting any number: the model is run outside the range its coefficients were published for on every shot on file. Needs a session_id and swing_id from list_sessions; if no such swing exists it says so rather than returning data.",
+          "inputSchema": {
+            "properties": {
+              "session_id": {
+                "title": "Session Id",
+                "type": "string"
+              },
+              "swing_id": {
+                "title": "Swing Id",
+                "type": "string"
+              }
+            },
+            "required": [
+              "session_id",
+              "swing_id"
+            ],
+            "title": "simulate_flightArguments",
+            "type": "object"
+          },
+          "name": "simulate_flight"
+        },
+        {
+          "description": "Get one golfer's own baseline: their typical value and spread for each measured metric, whether their miss is repeatable or scattered, and where their typical value sits in the tour population. Call this whenever the user asks what they usually do, what their tendency is, whether something is improving, or why a fault keeps happening \u2014 it is the only tool that judges a golfer against themselves rather than against tour bands. Takes a name as typed ('Aaron') or a stored id ('aaron'). IMPORTANT: any figure the sample size cannot support is absent rather than flagged, and the `withheld` list says what it is waiting for. Report those refusals as refusals; do not compute the missing figure from the per-session counts beside it.",
+          "inputSchema": {
+            "properties": {
+              "player": {
+                "title": "Player",
+                "type": "string"
+              }
+            },
+            "required": [
+              "player"
+            ],
+            "title": "get_golfer_profileArguments",
+            "type": "object"
+          },
+          "name": "get_golfer_profile"
+        },
+        {
+          "description": "Get one metric's per-session history for one golfer, oldest first, to answer whether it has moved. Covers the pose metrics (tempo, head sway, hip sway, finish balance and the rest) as well as the launch-monitor ones, despite the name. Call this for 'is my tempo getting better', 'has my face angle changed since last month'. Optional `days` limits the window; omit it for the whole history. IMPORTANT: `ready` is false until there are enough swings AND enough separate sessions for a trend to mean anything, and while it is false every per-session mean is absent and no direction may be described \u2014 the session counts are the evidence for the refusal, not a series.",
+          "inputSchema": {
+            "properties": {
+              "days": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Days"
+              },
+              "metric": {
+                "title": "Metric",
+                "type": "string"
+              },
+              "player": {
+                "title": "Player",
+                "type": "string"
+              }
+            },
+            "required": [
+              "metric",
+              "player"
+            ],
+            "title": "get_shot_trendsArguments",
+            "type": "object"
+          },
+          "name": "get_shot_trends"
+        },
+        {
+          "description": "Hold two of one golfer's sessions against each other: each session's mean score, and each metric's sample count and mean in both. Call this for 'was today better than last time' or 'compare Tuesday to Thursday'. Needs two session ids from list_sessions. IMPORTANT: a per-metric mean is present only when that session on its own carried enough swings to support one, so at small sample sizes the honest answer is a pair of counts and no delta. No difference here is tested for significance, and a session can score well while contributing no samples at all \u2014 read the `note`.",
+          "inputSchema": {
+            "properties": {
+              "player": {
+                "title": "Player",
+                "type": "string"
+              },
+              "session_a": {
+                "title": "Session A",
+                "type": "string"
+              },
+              "session_b": {
+                "title": "Session B",
+                "type": "string"
+              }
+            },
+            "required": [
+              "session_a",
+              "session_b",
+              "player"
+            ],
+            "title": "compare_sessionsArguments",
+            "type": "object"
+          },
+          "name": "compare_sessions"
+        },
+        {
+          "description": "Get one golfer's whole bag: every club they have hit or declared, how far they hit it, how repeatable that is, and the physical club recorded in each slot. Call this when the user asks about their distances, their gapping, which club they hit how far, or what is in the bag. Takes a name as typed ('Aaron') or a stored id ('aaron'). IMPORTANT: two different silences live in this payload and they need opposite answers. An empty club list means no swing on record names a club at all \u2014 the fix is tagging swings, NOT hitting more balls, so do not answer it by telling the golfer to go and practise. A club that is listed but withholds a figure has too few shots for that claim; `withheld` says what it is waiting for, and that one does mean go and hit some. Report either as a refusal and never compute the missing figure from the counts sitting beside it.",
+          "inputSchema": {
+            "properties": {
+              "player": {
+                "title": "Player",
+                "type": "string"
+              }
+            },
+            "required": [
+              "player"
+            ],
+            "title": "get_bag_profileArguments",
+            "type": "object"
+          },
+          "name": "get_bag_profile"
+        },
+        {
+          "description": "Get one club of one golfer's: carry and total distance, start line, ball speed and launch angle, each with its own sample count and its own refusal, plus the make, model and loft declared for the club in that slot. Call this for 'how far do I hit my seven iron', 'what is my gap wedge carrying', or anything about one club rather than the whole bag. The club is free text \u2014 '7i', '7 iron', 'seven iron', 'driver', 'pw' all reach the same club; 'wedge' and 'iron' name a category rather than a club and are refused rather than guessed at. IMPORTANT: read these fields as they are named. `start_line_offline_yds` is where the ball STARTED, in yards, projected out to the carry \u2014 it is not where the ball landed and the curve is not in it; the curve is `face_to_path_deg`, in degrees. `n_shots` caps every distance and launch figure, because those are read off a photograph of the simulator screen while `n_swings` counts clips. Nothing here says how far a golfer should hit a club, so a distance never earns a bias finding \u2014 only a repeatability one. And a club with no bag entry has no loft on record: refuse loft and fitting questions about it rather than filling the gap yourself. A loft that IS on record is the manufacturer's published figure unless the golfer says they measured it, so it describes the model and not a club that has been bent.",
+          "inputSchema": {
+            "properties": {
+              "club": {
+                "title": "Club",
+                "type": "string"
+              },
+              "player": {
+                "title": "Player",
+                "type": "string"
+              }
+            },
+            "required": [
+              "player",
+              "club"
+            ],
+            "title": "get_club_profileArguments",
+            "type": "object"
+          },
+          "name": "get_club_profile"
+        }
+      ]
+    },
+    "without_registry": {
+      "instructions": "Swing analysis and launch-monitor data from a home golf simulator.\n\nTwo independent axes, and they answer different questions. **Mechanics** come from pose\nanalysis of a face-on video: six checkpoints (tempo, head sway, finish balance, hip sway, hip\nshift at top, head stays back) scored against bands derived from hand-annotated tour swings,\nplus the percentile the swing sits at in that population. **Outcome** comes from the launch\nmonitor: club and ball speed, launch, spin, carry. A swing can score well on one and badly on\nthe other; say which you are talking about.\n\nReading this data honestly:\n\n- `unscored` lists checkpoints that could not be scored, not ones that failed. They are\n  excluded from `overall_score` rather than counted as zero, so a swing with an unscored\n  checkpoint was judged on fewer fundamentals than one without. Say so if it comes up.\n- Each entry in `unscored` carries a `reason`, and it decides what to say next. `no_band`,\n  `no_handedness`, `cross_view_contradicted`, `carry_unreachable`, `no_club_loft`,\n  `spin_not_recoverable`, `spin_axis_unresolved`, `no_launch_conditions` and `unrecorded` are\n  not capture problems \u2014 the footage is not what went wrong, so a better clip would not change\n  the answer and you must never respond to one of those by telling the golfer to re-film,\n  steady the camera or shoot the swing again. Every other reason is a clip worth taking again.\n  The `refilming_helps` flag says which is which; do not infer it from the checkpoint name.\n- `percentile` is informational and clamps at the band edges, so a failing checkpoint reports\n  about 90 (or about 10, when it missed on the low side of a two-sided metric) whether it missed\n  narrowly or hugely. A low percentile is therefore not by itself good news \u2014 read `passed` for\n  the verdict and rank severity by `score`, never by percentile.\n- **Less is not better on every checkpoint.** `tempo`, `hip_sway` and `head_stays_back` are\n  two-sided (`one_sided` is false): too little hip travel fails just as too much does, because\n  some lateral hip movement is the weight shift a swing needs, and a head that hangs back\n  through impact fails as a head that drifts forward with the hips does. On the one-sided\n  checkpoints \u2014 head sway, finish balance, hip shift at top \u2014 below the band is the good side.\n  Read `one_sided` before describing a low number as a strength.\n- `head_stays_back` is recorded as a **negative** number, and that is a frame of reference rather\n  than a fault: its band lives in a right-handed camera frame where more negative means more\n  head-behind-hips separation. Never read its sign as bad news, and never quote the raw value to a\n  golfer \u2014 the checkpoint's own `message` states the magnitude in the right direction. This is also\n  the one checkpoint that can be missing because nobody said who swung: when a swing has no golfer\n  attributed, it appears in `unscored` rather than being scored on a guess.\n- **The `population:golfdb` entries are placements, not scores.** `tour_joint_distance`,\n  `tour_trajectory_t2`, `tour_trajectory_q`, `tour_trajectory_t2_dtl` and\n  `tour_trajectory_q_dtl` say how far this swing sits from a population of tour professionals \u2014\n  as a combination of metrics, and as a motion. Every clip behind them is a tour swing, so\n  these models know the shape of swings that work and nothing whatever about swings that do\n  not: a large value means **unusual**, which is a reason to look and never a fault to report.\n  No band exists for any of them, none is part of `overall_score`, and their percentiles clamp\n  at 10 and 90 exactly as the checkpoint ones do. Naming what a swing does unusually is useful;\n  calling it wrong is not supported by anything behind these numbers.\n- `tour_trajectory_q` and `tour_trajectory_q_dtl` are **not calibrated**, and the others are. A\n  Q is the part of the motion the tour basis cannot represent at all, and it over-flags any\n  golfer that basis never saw \u2014 which is every golfer using this system. It also cannot tell an\n  unusual swing from a mis-detected one, so a large Q beside an ordinary T2 more often means\n  the swing was read badly than swung badly. Read each Q beside its own T2, never alone. And\n  the face-on and down-the-line numbers come from two bases fitted to two cameras: each is\n  compared against its own population and never against the other, so a difference between the\n  two is not a finding about the swing. A down-the-line placement is still not spine angle,\n  swing plane or club path: those live in the depth direction one camera cannot resolve, and\n  none of them is measured here.\n- **The `rotation` entries are an interim reading, not a score.** `pivot_hip_axis_drift_norm`,\n  `pivot_shoulder_axis_drift_norm`, `pivot_hip_path_jitter_norm`,\n  `pivot_shoulder_reversal_backswing_deg`, `pivot_shoulder_reversal_downswing_deg`,\n  `pivot_hip_axis_drift_norm_dtl`, `pivot_shoulder_axis_drift_norm_dtl`,\n  `pivot_hip_path_jitter_norm_dtl`, `pivot_shoulder_reversal_backswing_deg_dtl` and\n  `pivot_shoulder_reversal_downswing_deg_dtl` say how far the shoulder and hip centres\n  travelled off their address position and how the shoulder line turned, read off one\n  uncalibrated phone's image plane \u2014 a 2-D projection of a 3-D turn, foreshortened by wherever\n  the camera stood. The face-on and down-the-line numbers are two different instruments and\n  must never be blended or compared to each other. None has a band, none contributes to\n  `overall_score`, and career mode reports them unavailable rather than treating the camera's\n  own noise as a repeatability statistic. Fiducial calibration is what promotes one from\n  interim to judged; each row's own `detail` says what is still missing until then.\n- `needs_review` on a shot means its numbers were read off a photograph by OCR and the parse\n  was flagged. Do not quote a flagged shot's figures as fact; say the reading is uncertain.\n- `alignment_caveat`, when present, means the two camera views were anchored on some swing\n  instants and interpolated between them. Do not describe the side-by-side video as\n  synchronized throughout, and do not read fine timing differences off it.\n- Only six fundamentals are measured, all from the face-on view, and all of them are lateral\n  (side-to-side) or timing quantities. Spine angle, hip **rotation**, swing plane and club path\n  are NOT measured here \u2014 they need a second calibrated view or club detection, neither of\n  which exists yet. The hip checkpoints measure how far the hips travel sideways, never how far\n  they turn, and never in which direction. Do not infer them from what is available.\n\nOnly a handful of sessions and shots are recorded so far. Do not describe a trend or a pattern\nfrom the numbers in front of you \u2014 there is not enough of them for one, and any statement about\nchange over time has to come from something that counted the swings behind it.\n\nReading a simulated ball flight:\n\n- **Nothing in it was measured.** The flight is integrated from the launch conditions the\n  simulator printed, so the carry, apex, hang time, descent angle and landing offline are all a\n  model's output. Say \"simulated\" whenever you quote one, never average one with a printed\n  figure, and never present one as something the launch monitor recorded.\n- **The spin is often solved rather than read.** Where the screen printed no spin it is recovered\n  backwards from the printed carry \u2014 it is the spin this model needs in order to agree with that\n  number. Where that happened, the simulated carry matching the printed one is not a check of\n  anything: it is the input read back out. `spin.source` says which case you are in, and\n  `comparison` carries the sentence for it.\n- **A refused flight is a fact about the shot and never about the clip.** A carry no spin can\n  reach, a club whose loft nobody declared, a screen that printed neither a spin nor a carry to\n  solve from \u2014 those are the reasons, and re-filming the swing fixes none of them. Say what is\n  missing, and where it is a declared loft say that the repair is a bag entry rather than a range\n  session.\n- **The landing offline is not the printed one.** What the screen prints is where the ball\n  *started*, projected out to the carry; the simulated number is where the model has it finishing.\n  The difference between them is the curve, and it is an error in neither. Where the curve could\n  not be resolved the flight is drawn flat and that number is withheld rather than guessed.\n- **The apex, hang time and descent angle have no printed counterpart at all**, so nothing on file\n  can check them. Quote them as what the model says and never describe one as confirmed.\n- `caveats` is not a footnote. Read it before quoting any figure and pass on what it says \u2014 the\n  first of them is about the range the model's coefficients were published for, and it applies to\n  every shot on file.\n",
+      "protocolVersion": "2025-11-25",
+      "serverInfo": {
+        "name": "golf-coach",
+        "version": ""
+      },
+      "tools": [
+        {
+          "description": "List golf sessions, newest first, with each swing's score and lead coaching point. Call this first when the user asks about their golf generally, refers to a session by day ('yesterday', 'last time'), or asks what data exists \u2014 it is the cheapest way to find the session and swing ids every other tool needs. Returns one entry per session with its swings; a swing whose status is not 'done' has no score yet, and 'stale' means the video was re-uploaded after the result was computed.",
+          "inputSchema": {
+            "properties": {
+              "limit": {
+                "default": 20,
+                "title": "Limit",
+                "type": "integer"
+              }
+            },
+            "title": "list_sessionsArguments",
+            "type": "object"
+          },
+          "name": "list_sessions"
+        },
+        {
+          "description": "Get one swing's full analysis: every scored checkpoint with the tour band it was judged against and the percentile it sits at, the ranked coaching tips, any checkpoints that could not be measured, and the launch-monitor shot if one was attached. It also returns `population`: where the swing as a whole sits against a corpus of tour swings, which is context rather than a verdict \u2014 nothing in it has a band and unusual is not bad. Call this whenever the user asks how a specific swing went or what to work on \u2014 it is the only tool that returns mechanics. Needs a session_id and swing_id from list_sessions; if no such swing exists it says so rather than returning data.",
+          "inputSchema": {
+            "properties": {
+              "session_id": {
+                "title": "Session Id",
+                "type": "string"
+              },
+              "swing_id": {
+                "title": "Swing Id",
+                "type": "string"
+              }
+            },
+            "required": [
+              "session_id",
+              "swing_id"
+            ],
+            "title": "get_swingArguments",
+            "type": "object"
+          },
+          "name": "get_swing"
+        },
+        {
+          "description": "Aggregate one session across both axes: mean/best/worst score, how often each checkpoint passed, which checkpoints went unmeasured, and averages over the launch-monitor shots attached to that session's swings. Call this when the user asks how a whole session or day went, rather than fetching every swing individually. Shots flagged as uncertain are counted but excluded from the averages, and so are the carry and total distance of a swing the golfer confirmed was a mishit (only that manual verdict, not the automatic per-club rule get_bag_profile uses). A session with nothing analyzed yet returns zero counts, which is a real answer; only a session id that does not exist at all reports a miss.",
+          "inputSchema": {
+            "properties": {
+              "session_id": {
+                "title": "Session Id",
+                "type": "string"
+              }
+            },
+            "required": [
+              "session_id"
+            ],
+            "title": "get_session_summaryArguments",
+            "type": "object"
+          },
+          "name": "get_session_summary"
+        },
+        {
+          "description": "Get the most recent launch-monitor shots, newest first, across every configured source. Call this when the user asks about ball flight, distances, club speed or strike quality without naming a specific swing. Each shot carries needs_review and parse_confidence, because these numbers are read off a photograph of the simulator screen by OCR \u2014 treat a flagged shot's figures as uncertain rather than as fact.",
+          "inputSchema": {
+            "properties": {
+              "count": {
+                "default": 10,
+                "title": "Count",
+                "type": "integer"
+              }
+            },
+            "title": "get_recent_shotsArguments",
+            "type": "object"
+          },
+          "name": "get_recent_shots"
+        },
+        {
+          "description": "Get one launch-monitor shot by its id, with the full set of metrics and the confidence of the OCR parse that produced them. Call this to follow up on a specific shot surfaced by get_recent_shots or attached to a swing by get_swing. If no shot has that id it says so rather than returning data.",
+          "inputSchema": {
+            "properties": {
+              "shot_id": {
+                "title": "Shot Id",
+                "type": "string"
+              }
+            },
+            "required": [
+              "shot_id"
+            ],
+            "title": "get_shot_by_idArguments",
+            "type": "object"
+          },
+          "name": "get_shot_by_id"
+        },
+        {
+          "description": "Fly the ball for one swing's shot: the carry, apex, hang time, descent angle and how far offline it finishes, integrated from the launch conditions the simulator printed. Call this when the user asks what a shot did in the air \u2014 how high, how far it carried, whether it curved \u2014 rather than what the screen printed, which is get_shot_by_id. **Every number it returns is SIMULATED and none of them was measured**; say so, and never average one with a printed figure or present it as what the launch monitor recorded. Most shots cannot be flown: the screen prints no spin on them, and the spin is solved backwards from the printed carry where that is possible and refused where it is not. A refusal comes back with `flew: false` and the reason, which is a fact about the shot and not a fault \u2014 never answer one by telling the golfer to film the swing again, because the video is not an input to any of this. Read `caveats` before quoting any number: the model is run outside the range its coefficients were published for on every shot on file. Needs a session_id and swing_id from list_sessions; if no such swing exists it says so rather than returning data.",
+          "inputSchema": {
+            "properties": {
+              "session_id": {
+                "title": "Session Id",
+                "type": "string"
+              },
+              "swing_id": {
+                "title": "Swing Id",
+                "type": "string"
+              }
+            },
+            "required": [
+              "session_id",
+              "swing_id"
+            ],
+            "title": "simulate_flightArguments",
+            "type": "object"
+          },
+          "name": "simulate_flight"
+        }
+      ]
+    }
+  },
+  "id": "mcp/surface/server",
+  "input": {
+    "servers": {
+      "with_registry": {
+        "golfers": "golfers",
+        "sessions": "sessions",
+        "shots": "shots"
+      },
+      "without_registry": {
+        "golfers": null,
+        "sessions": "sessions",
+        "shots": "shots"
+      }
+    }
+  },
+  "provenance": {
+    "analysis_version": 16,
+    "kind": "mcp",
+    "mcp_version": "2.0.0",
+    "note": "what a client sees on connect, with a golfer registry and without one: the protocol, serverInfo, the instructions, and each tool's name, description and input schema",
+    "oracle": "python",
+    "pydantic_version": "2.13.4",
+    "python_version": "3.13.3",
+    "recorded_by": "scripts/conformance_vectors.py::_run_surface",
+    "source": "src/golf_coach/mcp/server.py::build_server"
+  }
+}

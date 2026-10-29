@@ -179,7 +179,7 @@ _FALLBACK_TEMPO_RATIO = 3.5
 # and this does not fix that. It is intrinsically hard — GolfDB's own SwingNet reaches only 31.7%
 # PCE here — because the takeaway onset is a gradual departure from stillness rather than a
 # direction change like the top or a contact event like impact. Six alternative signal families
-# were tried and all lost to lead-wrist speed; `scripts/golfdb/tune_address.py` keeps them
+# were tried and all lost to lead-wrist speed; `archive/golfdb/tune_address.py` keeps them
 # runnable and docs/M4_POSE_BAKEOFF.md Phase B6 records why each fails. The honest ceiling marker:
 # a rule using *no pose signal at all* scores a median of 11 frames, so what the wrist contributes
 # here is real but small.

@@ -1,0 +1,305 @@
+{
+  "provenance": {
+    "what": "frozen Python's working image on the 13 stored bay photos: prepare_screen's steps before its rotation vote",
+    "recorded_by": "M29 P3, a scratch script calling golf_coach.launch_monitor.screen.preprocess: load_image, find_screen_quad, warp_to_rect, _resize and enhance",
+    "opencv": "4.10.0",
+    "pillow_heif": "1.5.0",
+    "quad": "each photo's quad is screen_quads.json's, which the script checked it reproduced",
+    "ipp": "recorded with cv2.ipp.setUseIPP on, OpenCV's default; with it off, every stage on every photo was the same",
+    "warped": "warp_to_rect's output, null when the photo is read uncropped",
+    "resized": "_resize's output, the 1600 px copy",
+    "enhanced": "enhance's output, the image the vote rotates and the recognizer sees",
+    "enhanced_mean_rgb": "the mean of each channel of the enhanced image, R, G, B",
+    "rgb_sha256": "SHA-256 of the image as 8-bit RGB, row-major"
+  },
+  "photos": [
+    {
+      "id": "2026-08-10-1",
+      "image_path": "data/processed/sessions/2026-08-10/1/shot_screen.2e81ab05828e.png",
+      "warped": null,
+      "resized": {
+        "width": 1600,
+        "height": 1200,
+        "rgb_sha256": "a89ab14e53fb8a5601ffaaafd36abec5f164be1d964a11a3e3a17c59a416ffdd"
+      },
+      "enhanced": {
+        "width": 1600,
+        "height": 1200,
+        "rgb_sha256": "f3ab3aa18c19650be5aaa6a235370897cab337d7da6cd27a39cf2eb039d175b3"
+      },
+      "enhanced_mean_rgb": [
+        107.1009,
+        112.38774427083334,
+        100.6765921875
+      ]
+    },
+    {
+      "id": "2026-08-10-2",
+      "image_path": "data/processed/sessions/2026-08-10/2/shot_screen.07ce15cc2b80.png",
+      "warped": {
+        "width": 1917,
+        "height": 1170,
+        "rgb_sha256": "cddd12be36be9222ea6a8bf1e3b4fea7cd5d57195fd1799882379bd4a5009acd"
+      },
+      "resized": {
+        "width": 1600,
+        "height": 976,
+        "rgb_sha256": "9846b0f9e3030fee33e6f42444b8cd0a9d59fa4e12b34db09d38bcc88cfb8a86"
+      },
+      "enhanced": {
+        "width": 1600,
+        "height": 976,
+        "rgb_sha256": "a1653c2e9994f6dfb9d30c11db8d386a23cafc5445f198ebaea859f2244b61ed"
+      },
+      "enhanced_mean_rgb": [
+        105.61076716188525,
+        112.27170978483606,
+        102.461796875
+      ]
+    },
+    {
+      "id": "2026-08-23-1",
+      "image_path": "data/processed/sessions/2026-08-23/1/shot_screen.1f3331853d6e.HEIC",
+      "warped": {
+        "width": 5706,
+        "height": 3901,
+        "rgb_sha256": "f320e76fd6c87ac8b190bd6f45b0291416a581d170456adcf9c467c891257293"
+      },
+      "resized": {
+        "width": 1600,
+        "height": 1093,
+        "rgb_sha256": "b04ce6735f7857d0d65fbe922e1953226453995ddde292f3010438aec3d733f8"
+      },
+      "enhanced": {
+        "width": 1600,
+        "height": 1093,
+        "rgb_sha256": "84cc0d8479fd4f0e9fa88304e30400522b92278102ce754e6d0b93fdd55d50e2"
+      },
+      "enhanced_mean_rgb": [
+        120.58014181152791,
+        126.47646786367795,
+        107.32961973924976
+      ]
+    },
+    {
+      "id": "2026-08-23-10",
+      "image_path": "data/processed/sessions/2026-08-23/10/shot_screen.279976fb535c.jpg",
+      "warped": {
+        "width": 5716,
+        "height": 4169,
+        "rgb_sha256": "9d9ce76a9ca4bef2793c6350384a09358fddb416d2ecd92edc04cb4786822ed3"
+      },
+      "resized": {
+        "width": 1600,
+        "height": 1166,
+        "rgb_sha256": "8dccccf717e65cd982023f9f690dcf4ebb219901b615678ad607a9d05e4088b4"
+      },
+      "enhanced": {
+        "width": 1600,
+        "height": 1166,
+        "rgb_sha256": "453415574e2916d8b5e611e524349e9a26312a5c133a5a24d71e1b25fd4abbe7"
+      },
+      "enhanced_mean_rgb": [
+        116.64704223842196,
+        118.35603666380788,
+        101.54716337907375
+      ]
+    },
+    {
+      "id": "2026-08-23-11",
+      "image_path": "data/processed/sessions/2026-08-23/11/shot_screen.c214d50f98b0.jpg",
+      "warped": {
+        "width": 5725,
+        "height": 4186,
+        "rgb_sha256": "2c095c88bd877e38b40fe440d69ff0f5fc8fd1f3a7db61ee14adfb898efccf30"
+      },
+      "resized": {
+        "width": 1600,
+        "height": 1169,
+        "rgb_sha256": "4884fac374aa86246480f2380b34c2f6262d3c55d462fcab3df3bd218149e3a1"
+      },
+      "enhanced": {
+        "width": 1600,
+        "height": 1169,
+        "rgb_sha256": "f33b2bff4bb28355397cea4e34774f9e1c5ddf7d14b34b2a2866d93ccfe4c505"
+      },
+      "enhanced_mean_rgb": [
+        117.80142964071857,
+        120.74991766467066,
+        102.63109762617621
+      ]
+    },
+    {
+      "id": "2026-08-23-2",
+      "image_path": "data/processed/sessions/2026-08-23/2/shot_screen.15cf1710a1a7.jpg",
+      "warped": {
+        "width": 5706,
+        "height": 3427,
+        "rgb_sha256": "3d54feb825a77746b3268b5923757f3075a672a23cfefe6fe2fb36d950c8c0cc"
+      },
+      "resized": {
+        "width": 1600,
+        "height": 960,
+        "rgb_sha256": "f5d0081327ac76565f4141552407555057f1f610d8f79a4f59765fea9e61f3e6"
+      },
+      "enhanced": {
+        "width": 1600,
+        "height": 960,
+        "rgb_sha256": "3ec5e6ca1d053581fc15fb96ac33379ff9ec5bbd6a974acf809d91619c51f462"
+      },
+      "enhanced_mean_rgb": [
+        113.92043684895833,
+        118.141650390625,
+        105.36753125
+      ]
+    },
+    {
+      "id": "2026-08-23-3",
+      "image_path": "data/processed/sessions/2026-08-23/3/shot_screen.af152765f918.jpg",
+      "warped": null,
+      "resized": {
+        "width": 1600,
+        "height": 1200,
+        "rgb_sha256": "8f77d28a4b439ddc6433c679fdb1e748a036c3cfa5c848ca286a92ecefbbec6d"
+      },
+      "enhanced": {
+        "width": 1600,
+        "height": 1200,
+        "rgb_sha256": "7b10460060ac3b2334db6a6c96e1a3447ea725ac2d79607861bd9ef6f9a2ff45"
+      },
+      "enhanced_mean_rgb": [
+        114.461834375,
+        116.7042046875,
+        106.201565625
+      ]
+    },
+    {
+      "id": "2026-08-23-4",
+      "image_path": "data/processed/sessions/2026-08-23/4/shot_screen.f09d9e348523.jpg",
+      "warped": null,
+      "resized": {
+        "width": 1600,
+        "height": 1200,
+        "rgb_sha256": "33793634bae743ef17da6386846ba6680e8fdff50ad7aaad81c5df6511e6f191"
+      },
+      "enhanced": {
+        "width": 1600,
+        "height": 1200,
+        "rgb_sha256": "f8167cd409a108520e44b9f79ab4521a44b0200ac8f5114a1f9fb421aaea61fb"
+      },
+      "enhanced_mean_rgb": [
+        116.65012083333333,
+        118.12040885416667,
+        101.3151796875
+      ]
+    },
+    {
+      "id": "2026-08-23-5",
+      "image_path": "data/processed/sessions/2026-08-23/5/shot_screen.838d12bf8425.jpg",
+      "warped": null,
+      "resized": {
+        "width": 1600,
+        "height": 1200,
+        "rgb_sha256": "f792ad42734931a16197fee9601fc0ad8511742662fc77c78299b43d45add8de"
+      },
+      "enhanced": {
+        "width": 1600,
+        "height": 1200,
+        "rgb_sha256": "ff7dd4cc4cc93e60239cefc6096f207d166670c44f0ce873dbfc28079d4c087e"
+      },
+      "enhanced_mean_rgb": [
+        114.1919,
+        117.035115625,
+        102.80225
+      ]
+    },
+    {
+      "id": "2026-08-23-6",
+      "image_path": "data/processed/sessions/2026-08-23/6/shot_screen.3daddb3c44b0.jpg",
+      "warped": {
+        "width": 5706,
+        "height": 3735,
+        "rgb_sha256": "eeea1ae635b900a531574b2fd8dc78143539e3e3cc2076c29601e350918dbfd8"
+      },
+      "resized": {
+        "width": 1600,
+        "height": 1047,
+        "rgb_sha256": "c113adabb7c9e4646c0d65e19e91761a75f729405a6e1fe2df487cd5c48194db"
+      },
+      "enhanced": {
+        "width": 1600,
+        "height": 1047,
+        "rgb_sha256": "1e488fc7ccc27532aa221ec790af743aae8bbc83a6adc8156abcfac86a6bf821"
+      },
+      "enhanced_mean_rgb": [
+        111.73399653772684,
+        118.52295845272207,
+        108.04095570678128
+      ]
+    },
+    {
+      "id": "2026-08-23-7",
+      "image_path": "data/processed/sessions/2026-08-23/7/shot_screen.e5061edf9ae6.jpg",
+      "warped": null,
+      "resized": {
+        "width": 1600,
+        "height": 1200,
+        "rgb_sha256": "15541f779c0ab43c6f7443dbae2765ba711f2c05f769746116e0af89e2c6dac1"
+      },
+      "enhanced": {
+        "width": 1600,
+        "height": 1200,
+        "rgb_sha256": "202647f5d73d71dfec25388be726b902f99b86f4a426d0825fca8dbae7c3f0f9"
+      },
+      "enhanced_mean_rgb": [
+        113.96946822916667,
+        119.11208333333333,
+        106.74039583333334
+      ]
+    },
+    {
+      "id": "2026-08-23-8",
+      "image_path": "data/processed/sessions/2026-08-23/8/shot_screen.892c9c3e0f80.jpg",
+      "warped": null,
+      "resized": {
+        "width": 1600,
+        "height": 1200,
+        "rgb_sha256": "af7b9c16a7b93535a7e188114f91abd19490591811e2028d36cc2f977cbb049e"
+      },
+      "enhanced": {
+        "width": 1600,
+        "height": 1200,
+        "rgb_sha256": "dd9abbcb81b70b3374811f5184f5a71525b2f19f529c0efcb63d77db0187d8c9"
+      },
+      "enhanced_mean_rgb": [
+        116.189003125,
+        122.14437447916667,
+        106.46809947916667
+      ]
+    },
+    {
+      "id": "2026-08-23-9",
+      "image_path": "data/processed/sessions/2026-08-23/9/shot_screen.5d95c6638e4b.jpg",
+      "warped": {
+        "width": 5580,
+        "height": 3958,
+        "rgb_sha256": "b867ea420ca5d9e833e7e5cecd35b08e09edf779ec9a07733419d9c259d87724"
+      },
+      "resized": {
+        "width": 1600,
+        "height": 1134,
+        "rgb_sha256": "6946417d33dab5f6659859c86acd03f478615bc50e8510c29c547c73a33c9ec7"
+      },
+      "enhanced": {
+        "width": 1600,
+        "height": 1134,
+        "rgb_sha256": "b46e89646c389c8b35e9bc68d29bff960c76e092d4bcc583896ecacbd270ab84"
+      },
+      "enhanced_mean_rgb": [
+        115.77592041446208,
+        117.01643022486772,
+        102.76494929453263
+      ]
+    }
+  ]
+}

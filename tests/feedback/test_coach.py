@@ -9,7 +9,13 @@ Runs on the base install: `build_brief` is pure, and `generate_coaching` takes a
 
 from __future__ import annotations
 
+import hashlib
+import json
+import subprocess
+import sys
 from datetime import UTC, datetime
+from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -19,7 +25,7 @@ from golf_coach.contracts.alignment import (
     SwingAlignment,
     SwingAnchors,
 )
-from golf_coach.contracts.feedback import FeedbackPayload, Severity, Tip
+from golf_coach.contracts.feedback import CoachingProvenance, FeedbackPayload, Severity, Tip
 from golf_coach.contracts.shot import ShotData, ShotProvenance, ShotSource
 from golf_coach.contracts.swing import (
     CheckpointScore,
@@ -27,10 +33,18 @@ from golf_coach.contracts.swing import (
     SwingBundleResult,
     SwingResult,
 )
+from golf_coach.contracts.unscored import UnscoredCheckpoint, UnscoredReason
 from golf_coach.feedback.coach import (
+    BUILD_GOLF_MCP,
     CoachingOutcome,
+    GolfMcpServer,
+    _spelled,
+    brief_from_view,
+    brief_through_golf_mcp,
     build_brief,
+    coach_through_golf_mcp,
     generate_coaching,
+    is_analyzed,
 )
 
 MODEL = "claude-opus-5"
@@ -601,3 +615,274 @@ def test_a_status_error_with_no_readable_body_still_names_the_status() -> None:
 def test_outcome_defaults_are_the_absent_case() -> None:
     assert CoachingOutcome().text is None
     assert CoachingOutcome().provenance is None
+
+
+# ------------------------------------------------------- the stdio route [M29 P17]
+#
+# `brief_from_view` over `golf-mcp`'s `get_swing`, and `python -m golf_coach.feedback.coach`. The
+# tests that need the server take `conftest.py`'s `golf_mcp`, which skips by name when none is
+# built; the renderer's own rules are pinned on hand-written views, with no server.
+
+
+def _full_bundle() -> SwingBundleResult:
+    """A result reaching every line of the brief, stored as the pipeline stores one.
+
+    Both families of `unscored`, both sidednesses, placements and pivots, a verdict, a flagged shot
+    carrying the screen-layout warning `golf-mcp` filters, and a partial alignment whose note the
+    swing's notes also carry as `alignment: …`, as both engines copy it.
+    """
+    alignment = _partial_alignment()
+    bundle = _bundle(
+        checkpoints=[_checkpoint(), _checkpoint("head_sway", passed=False, one_sided=True)],
+        measurements=[*_placements(), *_pivots()],
+        shot=_flagged_shot().model_copy(
+            update={
+                "provenance": ShotProvenance(
+                    device="hd_golf",
+                    parse_confidence=0.42,
+                    needs_review=True,
+                    warnings=[
+                        "no tile found for 'Bounce & Roll'",
+                        "smash factor 1.63 is above the physical maximum",
+                    ],
+                )
+            }
+        ),
+        alignment=alignment,
+        notes=[*(f"alignment: {note}" for note in alignment.notes), "pose ran on the heavy model"],
+        feedback=FeedbackPayload(
+            swing_id="2",
+            overall_score=94.9,
+            headline="Work on tempo.",
+            tips=[Tip(checkpoint="tempo", text="Slow the backswing.", severity=Severity.MAJOR)],
+        ),
+    )
+    bundle.swing.unscored = [
+        UnscoredCheckpoint(name="hip_sway", reason=UnscoredReason.NO_BAND),
+        UnscoredCheckpoint(name="flight_carry_yds", reason=UnscoredReason.CARRY_UNREACHABLE),
+    ]
+    return bundle
+
+
+def _as_the_view_renders_it(brief: str, bundle: SwingBundleResult) -> str:
+    """`build_brief`'s text with `brief_from_view`'s documented differences applied, and no other.
+
+    The four in its docstring that a stored result can reach: the device, the layout warning, the
+    alignment summary, and the alignment notes the swing's own notes already carry.
+    """
+    alignment = bundle.alignment
+    assert alignment is not None
+    renamed = brief.replace(
+        "photo of the hd_golf screen", "photo of the launch monitor's screen"
+    ).replace(f" ({alignment.quality_summary})", "")
+    dropped = {"  warning: no tile found for 'Bounce & Roll'"}
+    dropped |= {f"  note: {note}" for note in alignment.notes}
+    return "\n".join(line for line in renamed.splitlines() if line not in dropped)
+
+
+def _golf_mcp_over(binary: Path, root: Path) -> GolfMcpServer:
+    return GolfMcpServer(binary=binary, sessions_dir=root / "sessions", shots_dir=root / "shots")
+
+
+def test_the_view_brief_is_build_brief_line_for_line_but_the_four_named(
+    golf_mcp: Path, tmp_path: Path, store_swing: Any
+) -> None:
+    """The whole rendering, through the real server: every other line is `build_brief`'s exactly.
+
+    This is what makes `brief_from_view` a port rather than a second brief. It also holds the two
+    keys `golf-mcp` added for it: the sidedness on both percentiles, and the flight refusal under
+    its own heading rather than among the checkpoints excluded from `overall_score`.
+    """
+    bundle = _full_bundle()
+    store_swing(tmp_path / "sessions", bundle)
+    (tmp_path / "shots").mkdir()
+
+    brief = brief_through_golf_mcp(_golf_mcp_over(golf_mcp, tmp_path), "2026-08-10", "2")
+
+    assert brief.refusal is None and brief.text is not None
+    assert brief.text == _as_the_view_renders_it(build_brief(bundle), bundle)
+    assert "(lower is better)" in brief.text and "(both extremes are faults)" in brief.text
+    flight_heading = brief.text.index("simulated ball flight")
+    assert brief.text.index("- hip_sway: ") < flight_heading < brief.text.index("- flight_carry")
+
+
+def _view(**fields: Any) -> dict[str, Any]:
+    """A `get_swing` answer as `golf-mcp` gives one, with only what a test sets filled."""
+    return {"swing_id": "2", "session_id": "2026-08-10", "status": "done", **fields}
+
+
+@pytest.mark.parametrize(
+    ("one_sided", "said"),
+    [(True, " (lower is better)"), (False, " (both extremes are faults)"), (None, "")],
+)
+def test_a_percentile_says_its_direction_only_when_the_score_does(
+    one_sided: bool | None, said: str
+) -> None:
+    """`null` is a score that does not say, and a guessed direction is wrong half the time."""
+    checkpoint = {"name": "tempo", "score": 1.0, "passed": True, "percentile": 62.0}
+    brief = brief_from_view(
+        _view(overall_score=90.0, checkpoints=[{**checkpoint, "one_sided": one_sided}])
+    )
+
+    assert "  percentile 62 tour swings" + said + "\n" in brief
+
+
+def test_a_flight_refusal_is_never_called_a_checkpoint_excluded_from_the_score() -> None:
+    entry = {"name": "flight_carry_yds", "why": "no carry fits.", "family": "flight"}
+
+    brief = brief_from_view(_view(overall_score=90.0, unscored=[entry]))
+
+    assert "unscored: none - every checkpoint was scored on this swing" in brief
+    assert "never part of overall_score):\n- flight_carry_yds: no carry fits." in brief
+
+
+@pytest.mark.parametrize(
+    ("view", "key"),
+    [
+        (_view(checkpoints=[{"name": "tempo", "score": 1.0}]), "one_sided"),
+        (_view(unscored=[{"name": "tempo", "reason": "no_band", "why": "x"}]), "family"),
+    ],
+)
+def test_a_view_from_a_server_older_than_its_keys_is_refused(view: dict, key: str) -> None:
+    """A stale build would silently drop a direction or mislabel a refusal, so it is named."""
+    with pytest.raises(ValueError, match=f"no `{key}`.*{BUILD_GOLF_MCP}"):
+        brief_from_view(view)
+
+
+def test_a_view_with_only_its_identity_is_not_analyzed() -> None:
+    """`SwingView::bare`: what `golf-mcp` answers for a swing with no `analysis.json`."""
+    bare = _view(
+        club=None,
+        mishit=None,
+        checkpoints=[],
+        tips=[],
+        unscored=[],
+        measurements={},
+        simulated=[],
+        population=[],
+        rotation=[],
+        notes=[],
+    )
+
+    assert not is_analyzed(bare)
+    assert is_analyzed({**bare, "overall_score": 0.0})
+    assert is_analyzed({**bare, "unscored": [{"name": "tempo"}]})
+
+
+def test_the_entry_writes_the_paragraph_from_golf_mcps_view_and_caveats(
+    golf_mcp: Path, tmp_path: Path, store_swing: Any
+) -> None:
+    """The request is `generate_coaching`'s, with the brief from the view and the prompt from Rust.
+
+    Rust's briefing is the only one that says a misread photo is worth retaking (the M29 plan's
+    C13), so finding it is finding that the caveats came over the pipe and not from a Python copy.
+    The provenance is `CoachingProvenance` as `analysis.json` stores it, round trip and all.
+    """
+    store_swing(tmp_path / "sessions", _full_bundle())
+    (tmp_path / "shots").mkdir()
+    client = _FakeClient(_Response([_Block("Your tempo is quick.")]))
+    server = _golf_mcp_over(golf_mcp, tmp_path)
+
+    answer = coach_through_golf_mcp("2026-08-10", "2", server=server, model=MODEL, client=client)
+
+    brief = brief_through_golf_mcp(server, "2026-08-10", "2").text
+    assert brief is not None
+    assert answer["text"] == "Your tempo is quick."
+    provenance = answer["provenance"]
+    assert provenance["model"] == MODEL
+    assert provenance["input_digest"] == hashlib.sha256(brief.encode("utf-8")).hexdigest()
+    assert CoachingProvenance.model_validate(provenance).model_dump(mode="json") == provenance
+    kwargs = client.messages.kwargs
+    assert kwargs["messages"] == [{"role": "user", "content": brief}]
+    assert kwargs["thinking"] == {"type": "adaptive"}
+    assert kwargs["output_config"] == {"effort": "low"}
+    system = kwargs["system"][0]["text"]
+    assert "`misread` is a photo of the screen worth retaking" in " ".join(system.split())
+    assert system.startswith("You are a golf coach reading one swing")
+    assert system.endswith('Address the golfer as "you". Be direct and encouraging; do not pad.')
+
+
+def test_the_entry_turns_a_miss_and_a_missing_server_into_notes(
+    golf_mcp: Path, tmp_path: Path
+) -> None:
+    (tmp_path / "sessions").mkdir()
+    (tmp_path / "shots").mkdir()
+    client = _FakeClient(_Response([_Block("never asked")]))
+
+    miss = coach_through_golf_mcp(
+        "2026-08-10", "9", server=_golf_mcp_over(golf_mcp, tmp_path), model=MODEL, client=client
+    )
+    unbuilt = coach_through_golf_mcp(
+        "2026-08-10",
+        "9",
+        server=_golf_mcp_over(tmp_path / "golf-mcp", tmp_path),
+        model=MODEL,
+        client=client,
+    )
+
+    assert miss == {
+        "note": (
+            "no written coaching: No swing '9' in session '2026-08-10'. "
+            "Call list_sessions to see which sessions and swing ids exist."
+        )
+    }
+    assert set(unbuilt) == {"note"} and BUILD_GOLF_MCP in unbuilt["note"]
+    assert client.messages.kwargs == {}, "the model was asked with nothing to coach from"
+
+
+def test_a_missing_key_is_refused_before_golf_mcp_is_looked_for(tmp_path: Path) -> None:
+    pytest.importorskip("anthropic", reason="the missing-key note is only reached with the SDK")
+
+    answer = coach_through_golf_mcp(
+        "2026-08-10", "2", server=_golf_mcp_over(tmp_path / "golf-mcp", tmp_path), model=MODEL
+    )
+
+    assert "no Anthropic API key" in answer["note"]
+    assert BUILD_GOLF_MCP not in answer["note"]
+
+
+@pytest.mark.parametrize(
+    "instant",
+    [
+        datetime(2026, 10, 22, 8, 23, tzinfo=UTC),
+        datetime(2026, 10, 22, 8, 23, 0, 120, tzinfo=UTC),
+        datetime(2026, 10, 22, 8, 23, 5, 300000, tzinfo=UTC),
+    ],
+)
+def test_the_time_is_spelled_as_pydantic_spells_it(instant: datetime) -> None:
+    """The entry writes no pydantic shape, and `analysis.json` holds pydantic's spelling."""
+    stored = CoachingProvenance(model=MODEL, generated_at=instant).model_dump(mode="json")
+
+    assert _spelled(instant) == stored["generated_at"]
+
+
+def test_the_module_runs_and_prints_one_json_object(tmp_path: Path) -> None:
+    """`python -m golf_coach.feedback.coach`, as `golf-lab analyze` spawns it: exit 2 with a note.
+
+    With no server at the path given it cannot write, whatever key `.env` holds, so this makes no
+    API call. Stdout is the one JSON object and nothing else, for the caller to parse.
+    """
+    run = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "golf_coach.feedback.coach",
+            "--session",
+            "2026-08-10",
+            "--swing",
+            "2",
+            "--golf-mcp",
+            str(tmp_path / "golf-mcp"),
+            "--sessions-dir",
+            str(tmp_path),
+        ],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        check=False,
+    )
+
+    assert run.returncode == 2, run.stderr
+    answer = json.loads(run.stdout)
+    assert set(answer) == {"note"} and answer["note"].startswith("no written coaching: ")
+    assert run.stdout.isascii()

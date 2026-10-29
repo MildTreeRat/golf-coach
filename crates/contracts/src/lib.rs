@@ -67,6 +67,12 @@
 //! designed after the pivot and so the first with no Python behind it at all, its vectors worked by
 //! hand rather than recorded.
 //!
+//! **M29 P20 brought [`audio`]**, `contracts/audio.py`: the strike cache `{role}.audio.json`, which
+//! the lab writes once it stops being Python's (`crates/lab`). No vector family holds it, because no
+//! engine input carries more of it than the strike frames; its gate is the schema frozen Python
+//! exports (`tests/python_schemas.rs`) and every file stored under `data/` (`crates/lab`'s ignored
+//! round trip).
+//!
 //! # Pydantic constraints are runtime checks, and so are these
 //!
 //! ADR-032 §4: `Field(ge=…)` is a *validator*, not an annotation. A port that renders the bounds
@@ -85,7 +91,8 @@
 //! because the storage vectors record a refusal's text; from P6, [`baseline::Interval`]'s two
 //! bounds on `confidence`, the second of which needed [`lt`]; from P7,
 //! [`dispersion::MetricTarget`]'s bound on `tolerance` and its reason rule, and
-//! [`club_profile::BagProfile`]'s bag order.
+//! [`club_profile::BagProfile`]'s bag order. M29 P20 ports every bound on [`audio`]'s three shapes,
+//! which no Python validator joins.
 //!
 //! **Rust has no constructor hook, so the check runs at the two moments it can.** Deserialization
 //! is one — [`validated!`] wires [`Validate`] into every payload type's `Deserialize` impl, which
@@ -109,6 +116,7 @@
 use std::fmt;
 
 pub mod alignment;
+pub mod audio;
 pub mod bag;
 pub mod baseline;
 pub mod capability;

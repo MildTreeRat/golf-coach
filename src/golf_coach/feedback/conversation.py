@@ -12,6 +12,27 @@ uses — the caller (a CLI or an API route) owns the wiring. The payoff is that 
 assertions here — does the transcript mirror faithfully? does a refusal become a note? — run with
 a fake client and fake tools on a base install, with no key and no network.
 
+## Two routes to the tools [M29 P16, ADR-020's 2026-09-30 addendum]
+
+`ask` does not know which route built its tools, and that is what makes the second one a change of
+caller rather than of loop.
+
+  - **In process** (ADR-020's Option C): `mcp/runner_tools.build_tools` and
+    `mcp/server.instructions`, frozen Python's eleven tools and briefing. The frozen results
+    page's chat panel (`api/app.py`) keeps this route until M40 deletes Python `mcp/`.
+  - **Over stdio** (Option B): `ask_through_golf_mcp` starts the Rust server, `golf-mcp`, and
+    takes everything the model reads from it: the tools from its `tools/list` through the SDK's
+    `mcp_tool`, the briefing from its `initialize` answer, and `ONLY_CHECKPOINTS_ARE_JUDGED` from
+    its `golf-coach://caveats` resource. **No caveat sentence is copied on this route** (the M29
+    plan's D10): the only Python copy is `contracts/caveats.py`, which is frozen and feeds the
+    other route. `scripts/ask_swing.py` takes this route.
+
+`mcp_tool` is synchronous and reaches the async client session through `anyio.from_thread.run`, so
+the session lives on an event loop and `ask` runs on an anyio worker thread beside it, where the
+runner's tool calls can reach back into that loop. One session serves one question, so a question
+pays `golf-mcp`'s spawn once and each tool call pays a pipe round trip, which is what every
+external client of the server pays too.
+
 ## The loop
 
 `client.beta.messages.tool_runner` supplies the agentic loop, so there is no hand-written
@@ -36,16 +57,32 @@ its consequences are written down.
 from __future__ import annotations
 
 import hashlib
+import shutil
+import sys
 from dataclasses import dataclass, field
-from typing import Any
+from functools import partial
+from typing import Any, TextIO
 
+# The in-process route's copy only: `ask_through_golf_mcp` reads this sentence from `golf-mcp`.
 from golf_coach.contracts.caveats import ONLY_CHECKPOINTS_ARE_JUDGED
 from golf_coach.contracts.conversation import Transcript
 
 # Shared with `coach.py` on purpose: one seam onto the SDK, one vocabulary for an expected
 # failure. A second `_note_for` would drift the first time the SDK renamed an exception, and the
-# symptom would be a golfer reading "an error occurred" where the other path says which one.
-from golf_coach.feedback.coach import _note_for, _sdk, _text_from
+# symptom would be a golfer reading "an error occurred" where the other path says which one. The
+# stdio pieces live there too (M29 P17), because its JSON entry reads `golf-mcp` as this route does
+# and this module imports that one, never the reverse.
+from golf_coach.feedback.coach import (
+    BUILD_GOLF_MCP,
+    CAVEATS_URI,
+    READ_TIMEOUT_SECONDS,
+    GolfMcpServer,
+    _caveat,
+    _innermost,
+    _note_for,
+    _sdk,
+    _text_from,
+)
 
 #: The vocabulary this module puts in front of a shared failure sentence. `_note_for` defaults to
 #: coaching's wording, which is right for the results page and wrong under a question — every
@@ -75,7 +112,15 @@ Here is the swing this conversation is about. It has already been analyzed; thes
 results, not something you need to look up. Use the tools when the question needs anything beyond
 this swing — another session, this golfer's own history, or shot data not attached here."""
 
-ANSWERING_FOLLOWUPS = f"""\
+def answering_followups(only_checkpoints_are_judged: str) -> str:
+    """This module's own instructions, around the one caveat sentence they quote.
+
+    A function of that sentence rather than a constant over an import, because the two routes take
+    it from different places: the in-process route from frozen `contracts/caveats.py`, the stdio
+    route from `golf-mcp`'s caveats resource. Both sentences are the same to the character today
+    (the M29 plan's P9 finding 5 compared them), so both routes send the same instructions.
+    """
+    return f"""\
 You are a golf coach answering follow-up questions about swings this system has measured. The
 data above is what you may reason from; the tools fetch more of the same.
 
@@ -87,12 +132,16 @@ How to answer:
   you were not given, call a tool for it. If a tool reports a miss, say so and say what you would
   need — do not answer from what you would expect to be true.
 - Never state a measurement that is not in the data you were given or that a tool returned. If
-  something was not measured, say it was not measured. {ONLY_CHECKPOINTS_ARE_JUDGED}.
+  something was not measured, say it was not measured. {only_checkpoints_are_judged}.
 - When a figure is flagged as uncertain or was withheld, say so in the sentence that uses it. A
   withheld figure is a refusal to report, not an invitation to work it out from what is beside it.
 - Address the golfer as "you". Be direct and encouraging; do not pad.
 - If you cannot answer from what is measured here, say that plainly. That is a useful answer; an
   invented one is not."""
+
+
+#: The in-process route's instructions, from frozen Python's copy of the caveat.
+ANSWERING_FOLLOWUPS = answering_followups(ONLY_CHECKPOINTS_ARE_JUDGED)
 
 
 @dataclass(frozen=True)
@@ -111,18 +160,20 @@ class AskOutcome:
     note: str | None = None
 
 
-def system_prompt(briefing: str) -> list[dict[str, Any]]:
+def system_prompt(briefing: str, answering: str = ANSWERING_FOLLOWUPS) -> list[dict[str, Any]]:
     """The briefing plus this module's own instructions, as one cacheable system block.
 
     Identical for every turn of every conversation, which is the whole point: one `cache_control`
     breakpoint here and a session's second question reads the prefix from cache. Worth checking
     against `usage.cache_read_input_tokens` rather than trusting — Opus 5 will not cache a prefix
     under 512 tokens and writes nothing silently.
+
+    `answering` is `answering_followups` over the route's own caveat sentence.
     """
     return [
         {
             "type": "text",
-            "text": f"{briefing}\n\n{ANSWERING_FOLLOWUPS}",
+            "text": f"{briefing}\n\n{answering}",
             "cache_control": {"type": "ephemeral"},
         }
     ]
@@ -182,6 +233,7 @@ def ask(
     api_key: str | None = None,
     client: Any | None = None,
     max_iterations: int = MAX_ITERATIONS,
+    answering: str = ANSWERING_FOLLOWUPS,
 ) -> AskOutcome:
     """Ask one question and return the answer, with the transcript grown by this turn.
 
@@ -191,35 +243,13 @@ def ask(
 
     `transcript` is mutated only on success. A turn that could not happen leaves the stored
     conversation exactly as it was, so a failed ask is never a question recorded with no answer.
+
+    `tools`, `briefing` and `answering` are whichever route's (the module doc's *Two routes*).
     """
     sdk = _sdk()
-    if client is None:
-        # Extra before key, for the reason spelled out in `coach.py`'s matching guard: only one of
-        # the two can be reported, and a missing package is the one that makes the other moot.
-        if sdk is None:
-            return AskOutcome(
-                note=(
-                    "no answer: the `llm` extra is not installed (pip install -e '.[llm]'). "
-                    "The stored analysis is unaffected."
-                )
-            )
-        if not api_key:
-            return AskOutcome(
-                note=(
-                    "no answer: no Anthropic API key is configured, so the question was not sent "
-                    "(set GOLF_ANTHROPIC_API_KEY). The stored analysis is unaffected."
-                )
-            )
-        client = sdk.Anthropic(api_key=api_key)
-
-    if not transcript.replayable_by(model):
-        return AskOutcome(
-            note=(
-                f"no answer: this conversation was recorded against {transcript.model!r} and the "
-                f"configured model is now {model!r}. A model's own reasoning cannot be replayed "
-                "into a different one, so start a new conversation about this swing."
-            )
-        )
+    client, refused = _sendable(transcript, model, api_key, client)
+    if refused is not None:
+        return refused
 
     first_turn = not transcript.messages
     seeded = first_turn and brief is not None
@@ -239,7 +269,7 @@ def ask(
             # / top_p / top_k — none of them belong here.
             thinking={"type": "adaptive"},
             output_config={"effort": EFFORT},
-            system=system_prompt(briefing),
+            system=system_prompt(briefing, answering),
             tools=tools,
             messages=messages,
         )
@@ -272,6 +302,132 @@ def ask(
     if first_turn and brief is not None:
         transcript.brief_digest = brief_digest(brief)
     return AskOutcome(text=text, transcript=transcript, tools_called=tools_called)
+
+
+def _sendable(
+    transcript: Transcript, model: str, api_key: str | None, client: Any | None
+) -> tuple[Any, AskOutcome | None]:
+    """The client a question goes out on, or the note saying why it cannot go out at all.
+
+    One helper for both routes, so that the stdio route refuses before it starts anything: a
+    question with no extra, no key or a transcript bound to another model is not worth spawning
+    `golf-mcp` for, and the two routes say so in the same words.
+    """
+    if client is None:
+        sdk = _sdk()
+        # Extra before key, for the reason spelled out in `coach.py`'s matching guard: only one of
+        # the two can be reported, and a missing package is the one that makes the other moot.
+        if sdk is None:
+            return None, AskOutcome(
+                note=(
+                    "no answer: the `llm` extra is not installed (pip install -e '.[llm]'). "
+                    "The stored analysis is unaffected."
+                )
+            )
+        if not api_key:
+            return None, AskOutcome(
+                note=(
+                    "no answer: no Anthropic API key is configured, so the question was not sent "
+                    "(set GOLF_ANTHROPIC_API_KEY). The stored analysis is unaffected."
+                )
+            )
+        client = sdk.Anthropic(api_key=api_key)
+
+    if not transcript.replayable_by(model):
+        return None, AskOutcome(
+            note=(
+                f"no answer: this conversation was recorded against {transcript.model!r} and the "
+                f"configured model is now {model!r}. A model's own reasoning cannot be replayed "
+                "into a different one, so start a new conversation about this swing."
+            )
+        )
+    return client, None
+
+
+def ask_through_golf_mcp(
+    question: str,
+    *,
+    transcript: Transcript,
+    server: GolfMcpServer,
+    model: str,
+    brief: str | None = None,
+    api_key: str | None = None,
+    client: Any | None = None,
+    max_iterations: int = MAX_ITERATIONS,
+    errlog: TextIO | None = None,
+) -> AskOutcome:
+    """`ask`, with the tools, the briefing and the caveat all taken from `golf-mcp` over stdio.
+
+    ADR-020's Option B. Never raises for an expected failure: a server that is not built, will not
+    start, or answers the handshake with something unusable is a note, as a rate limit is, and
+    the transcript is then untouched. `errlog` is where the server's stderr goes (its one-line
+    banner naming the stores, and any warning), `sys.stderr` when not given.
+    """
+    client, refused = _sendable(transcript, model, api_key, client)
+    if refused is not None:
+        return refused
+
+    binary = shutil.which(str(server.binary))
+    if binary is None:
+        return AskOutcome(
+            note=f"no answer: golf-mcp is not built at {server.binary} (run `{BUILD_GOLF_MCP}`)."
+        )
+
+    try:
+        import anyio
+        import anyio.to_thread
+        from anthropic.lib.tools.mcp import mcp_tool
+        from mcp import ClientSession, StdioServerParameters
+        from mcp.client.stdio import stdio_client
+    except ImportError as exc:
+        return AskOutcome(
+            note=(
+                f"no answer: the MCP client is not installed ({exc}). It is part of the `llm` "
+                "extra (pip install -e '.[llm]'). The stored analysis is unaffected."
+            )
+        )
+
+    # A list rather than a return value, so that an answer survives a failure after it: once `ask`
+    # has answered, the transcript holds the turn, and a server that then fails to shut down
+    # cleanly has not made the answer any less given.
+    answered: list[AskOutcome] = []
+
+    async def converse() -> None:
+        parameters = StdioServerParameters(command=binary, args=server.args())
+        async with (
+            stdio_client(parameters, errlog=errlog or sys.stderr) as (read, write),
+            ClientSession(read, write, read_timeout_seconds=READ_TIMEOUT_SECONDS) as session,
+        ):
+            hello = await session.initialize()
+            if not hello.instructions:
+                raise ValueError("golf-mcp's initialize answer carries no briefing")
+            listed = await session.list_tools()
+            caveats = await session.read_resource(CAVEATS_URI)
+            caveat = _caveat(caveats, "ONLY_CHECKPOINTS_ARE_JUDGED")
+            tools = [mcp_tool(tool, session) for tool in listed.tools]
+            outcome = await anyio.to_thread.run_sync(
+                partial(
+                    ask,
+                    question,
+                    transcript=transcript,
+                    tools=tools,
+                    briefing=hello.instructions,
+                    model=model,
+                    brief=brief,
+                    client=client,
+                    max_iterations=max_iterations,
+                    answering=answering_followups(caveat),
+                )
+            )
+            answered.append(outcome)
+
+    try:
+        anyio.run(converse)
+    except Exception as exc:  # the spawn, the pipe and the handshake; `ask` itself never raises
+        if answered:
+            return answered[0]
+        return AskOutcome(note=f"no answer: golf-mcp could not be used ({_innermost(exc)}).")
+    return answered[0]
 
 
 def _mirror(runner: Any, messages: list[dict[str, Any]]) -> tuple[Any, list[str]]:

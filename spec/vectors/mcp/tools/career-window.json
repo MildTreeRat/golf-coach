@@ -1,0 +1,364 @@
+{
+  "career_version": 3,
+  "expected": {
+    "results": [
+      {
+        "content": [
+          {
+            "text": "{\n  \"player_id\": \"aaron\",\n  \"metric\": \"head_sway_norm\",\n  \"unit\": \"shoulder_widths\",\n  \"window_days\": null,\n  \"n\": 12,\n  \"n_sessions\": 12,\n  \"ready\": true,\n  \"sessions\": [\n    {\n      \"session_id\": \"old-5\",\n      \"captured_at\": \"2025-08-27T11:55:00+00:00\",\n      \"n\": 1,\n      \"mean\": 0.185\n    },\n    {\n      \"session_id\": \"old-4\",\n      \"captured_at\": \"2025-08-27T11:56:00+00:00\",\n      \"n\": 1,\n      \"mean\": 0.21500000000000002\n    },\n    {\n      \"session_id\": \"old-3\",\n      \"captured_at\": \"2025-08-27T11:57:00+00:00\",\n      \"n\": 1,\n      \"mean\": 0.185\n    },\n    {\n      \"session_id\": \"old-2\",\n      \"captured_at\": \"2025-08-27T11:58:00+00:00\",\n      \"n\": 1,\n      \"mean\": 0.21500000000000002\n    },\n    {\n      \"session_id\": \"old-1\",\n      \"captured_at\": \"2025-08-27T11:59:00+00:00\",\n      \"n\": 1,\n      \"mean\": 0.185\n    },\n    {\n      \"session_id\": \"old-0\",\n      \"captured_at\": \"2025-08-27T12:00:00+00:00\",\n      \"n\": 1,\n      \"mean\": 0.21500000000000002\n    },\n    {\n      \"session_id\": \"new-11\",\n      \"captured_at\": \"2026-09-28T11:49:00+00:00\",\n      \"n\": 1,\n      \"mean\": 0.185\n    },\n    {\n      \"session_id\": \"new-10\",\n      \"captured_at\": \"2026-09-28T11:50:00+00:00\",\n      \"n\": 1,\n      \"mean\": 0.21500000000000002\n    },\n    {\n      \"session_id\": \"new-9\",\n      \"captured_at\": \"2026-09-28T11:51:00+00:00\",\n      \"n\": 1,\n      \"mean\": 0.185\n    },\n    {\n      \"session_id\": \"new-8\",\n      \"captured_at\": \"2026-09-28T11:52:00+00:00\",\n      \"n\": 1,\n      \"mean\": 0.21500000000000002\n    },\n    {\n      \"session_id\": \"new-7\",\n      \"captured_at\": \"2026-09-28T11:53:00+00:00\",\n      \"n\": 1,\n      \"mean\": 0.185\n    },\n    {\n      \"session_id\": \"new-6\",\n      \"captured_at\": \"2026-09-28T11:54:00+00:00\",\n      \"n\": 1,\n      \"mean\": 0.21500000000000002\n    }\n  ],\n  \"withheld\": null,\n  \"note\": \"\"\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "metric": "head_sway_norm",
+            "n": 12,
+            "n_sessions": 12,
+            "note": "",
+            "player_id": "aaron",
+            "ready": true,
+            "sessions": [
+              {
+                "captured_at": "2025-08-27T11:55:00+00:00",
+                "mean": 0.185,
+                "n": 1,
+                "session_id": "old-5"
+              },
+              {
+                "captured_at": "2025-08-27T11:56:00+00:00",
+                "mean": 0.21500000000000002,
+                "n": 1,
+                "session_id": "old-4"
+              },
+              {
+                "captured_at": "2025-08-27T11:57:00+00:00",
+                "mean": 0.185,
+                "n": 1,
+                "session_id": "old-3"
+              },
+              {
+                "captured_at": "2025-08-27T11:58:00+00:00",
+                "mean": 0.21500000000000002,
+                "n": 1,
+                "session_id": "old-2"
+              },
+              {
+                "captured_at": "2025-08-27T11:59:00+00:00",
+                "mean": 0.185,
+                "n": 1,
+                "session_id": "old-1"
+              },
+              {
+                "captured_at": "2025-08-27T12:00:00+00:00",
+                "mean": 0.21500000000000002,
+                "n": 1,
+                "session_id": "old-0"
+              },
+              {
+                "captured_at": "2026-09-28T11:49:00+00:00",
+                "mean": 0.185,
+                "n": 1,
+                "session_id": "new-11"
+              },
+              {
+                "captured_at": "2026-09-28T11:50:00+00:00",
+                "mean": 0.21500000000000002,
+                "n": 1,
+                "session_id": "new-10"
+              },
+              {
+                "captured_at": "2026-09-28T11:51:00+00:00",
+                "mean": 0.185,
+                "n": 1,
+                "session_id": "new-9"
+              },
+              {
+                "captured_at": "2026-09-28T11:52:00+00:00",
+                "mean": 0.21500000000000002,
+                "n": 1,
+                "session_id": "new-8"
+              },
+              {
+                "captured_at": "2026-09-28T11:53:00+00:00",
+                "mean": 0.185,
+                "n": 1,
+                "session_id": "new-7"
+              },
+              {
+                "captured_at": "2026-09-28T11:54:00+00:00",
+                "mean": 0.21500000000000002,
+                "n": 1,
+                "session_id": "new-6"
+              }
+            ],
+            "unit": "shoulder_widths",
+            "window_days": null,
+            "withheld": null
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"player_id\": \"aaron\",\n  \"metric\": \"head_sway_norm\",\n  \"unit\": \"shoulder_widths\",\n  \"window_days\": 30,\n  \"n\": 6,\n  \"n_sessions\": 6,\n  \"ready\": false,\n  \"sessions\": [\n    {\n      \"session_id\": \"new-11\",\n      \"captured_at\": \"2026-09-28T11:49:00+00:00\",\n      \"n\": 1,\n      \"mean\": null\n    },\n    {\n      \"session_id\": \"new-10\",\n      \"captured_at\": \"2026-09-28T11:50:00+00:00\",\n      \"n\": 1,\n      \"mean\": null\n    },\n    {\n      \"session_id\": \"new-9\",\n      \"captured_at\": \"2026-09-28T11:51:00+00:00\",\n      \"n\": 1,\n      \"mean\": null\n    },\n    {\n      \"session_id\": \"new-8\",\n      \"captured_at\": \"2026-09-28T11:52:00+00:00\",\n      \"n\": 1,\n      \"mean\": null\n    },\n    {\n      \"session_id\": \"new-7\",\n      \"captured_at\": \"2026-09-28T11:53:00+00:00\",\n      \"n\": 1,\n      \"mean\": null\n    },\n    {\n      \"session_id\": \"new-6\",\n      \"captured_at\": \"2026-09-28T11:54:00+00:00\",\n      \"n\": 1,\n      \"mean\": null\n    }\n  ],\n  \"withheld\": {\n    \"claim\": \"trend\",\n    \"have_n\": 6,\n    \"need_n\": 12,\n    \"have_sessions\": 6,\n    \"need_sessions\": 3,\n    \"reason\": \"a claim that this has moved needs 12 samples (there are 6)\"\n  },\n  \"note\": \"No trend may be described. The per-session counts below are evidence for the refusal, not a series to read a direction off. The data does not exist yet — this needs a bay session of 20-30 swings with shots attached. Report the refusal. Do not estimate the withheld figure from the sample counts below it.\"\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "metric": "head_sway_norm",
+            "n": 6,
+            "n_sessions": 6,
+            "note": "No trend may be described. The per-session counts below are evidence for the refusal, not a series to read a direction off. The data does not exist yet — this needs a bay session of 20-30 swings with shots attached. Report the refusal. Do not estimate the withheld figure from the sample counts below it.",
+            "player_id": "aaron",
+            "ready": false,
+            "sessions": [
+              {
+                "captured_at": "2026-09-28T11:49:00+00:00",
+                "mean": null,
+                "n": 1,
+                "session_id": "new-11"
+              },
+              {
+                "captured_at": "2026-09-28T11:50:00+00:00",
+                "mean": null,
+                "n": 1,
+                "session_id": "new-10"
+              },
+              {
+                "captured_at": "2026-09-28T11:51:00+00:00",
+                "mean": null,
+                "n": 1,
+                "session_id": "new-9"
+              },
+              {
+                "captured_at": "2026-09-28T11:52:00+00:00",
+                "mean": null,
+                "n": 1,
+                "session_id": "new-8"
+              },
+              {
+                "captured_at": "2026-09-28T11:53:00+00:00",
+                "mean": null,
+                "n": 1,
+                "session_id": "new-7"
+              },
+              {
+                "captured_at": "2026-09-28T11:54:00+00:00",
+                "mean": null,
+                "n": 1,
+                "session_id": "new-6"
+              }
+            ],
+            "unit": "shoulder_widths",
+            "window_days": 30,
+            "withheld": {
+              "claim": "trend",
+              "have_n": 6,
+              "have_sessions": 6,
+              "need_n": 12,
+              "need_sessions": 3,
+              "reason": "a claim that this has moved needs 12 samples (there are 6)"
+            }
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"player_id\": \"aaron\",\n  \"metric\": \"head_sway_norm\",\n  \"unit\": \"shoulder_widths\",\n  \"window_days\": 1000,\n  \"n\": 12,\n  \"n_sessions\": 12,\n  \"ready\": true,\n  \"sessions\": [\n    {\n      \"session_id\": \"old-5\",\n      \"captured_at\": \"2025-08-27T11:55:00+00:00\",\n      \"n\": 1,\n      \"mean\": 0.185\n    },\n    {\n      \"session_id\": \"old-4\",\n      \"captured_at\": \"2025-08-27T11:56:00+00:00\",\n      \"n\": 1,\n      \"mean\": 0.21500000000000002\n    },\n    {\n      \"session_id\": \"old-3\",\n      \"captured_at\": \"2025-08-27T11:57:00+00:00\",\n      \"n\": 1,\n      \"mean\": 0.185\n    },\n    {\n      \"session_id\": \"old-2\",\n      \"captured_at\": \"2025-08-27T11:58:00+00:00\",\n      \"n\": 1,\n      \"mean\": 0.21500000000000002\n    },\n    {\n      \"session_id\": \"old-1\",\n      \"captured_at\": \"2025-08-27T11:59:00+00:00\",\n      \"n\": 1,\n      \"mean\": 0.185\n    },\n    {\n      \"session_id\": \"old-0\",\n      \"captured_at\": \"2025-08-27T12:00:00+00:00\",\n      \"n\": 1,\n      \"mean\": 0.21500000000000002\n    },\n    {\n      \"session_id\": \"new-11\",\n      \"captured_at\": \"2026-09-28T11:49:00+00:00\",\n      \"n\": 1,\n      \"mean\": 0.185\n    },\n    {\n      \"session_id\": \"new-10\",\n      \"captured_at\": \"2026-09-28T11:50:00+00:00\",\n      \"n\": 1,\n      \"mean\": 0.21500000000000002\n    },\n    {\n      \"session_id\": \"new-9\",\n      \"captured_at\": \"2026-09-28T11:51:00+00:00\",\n      \"n\": 1,\n      \"mean\": 0.185\n    },\n    {\n      \"session_id\": \"new-8\",\n      \"captured_at\": \"2026-09-28T11:52:00+00:00\",\n      \"n\": 1,\n      \"mean\": 0.21500000000000002\n    },\n    {\n      \"session_id\": \"new-7\",\n      \"captured_at\": \"2026-09-28T11:53:00+00:00\",\n      \"n\": 1,\n      \"mean\": 0.185\n    },\n    {\n      \"session_id\": \"new-6\",\n      \"captured_at\": \"2026-09-28T11:54:00+00:00\",\n      \"n\": 1,\n      \"mean\": 0.21500000000000002\n    }\n  ],\n  \"withheld\": null,\n  \"note\": \"\"\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "metric": "head_sway_norm",
+            "n": 12,
+            "n_sessions": 12,
+            "note": "",
+            "player_id": "aaron",
+            "ready": true,
+            "sessions": [
+              {
+                "captured_at": "2025-08-27T11:55:00+00:00",
+                "mean": 0.185,
+                "n": 1,
+                "session_id": "old-5"
+              },
+              {
+                "captured_at": "2025-08-27T11:56:00+00:00",
+                "mean": 0.21500000000000002,
+                "n": 1,
+                "session_id": "old-4"
+              },
+              {
+                "captured_at": "2025-08-27T11:57:00+00:00",
+                "mean": 0.185,
+                "n": 1,
+                "session_id": "old-3"
+              },
+              {
+                "captured_at": "2025-08-27T11:58:00+00:00",
+                "mean": 0.21500000000000002,
+                "n": 1,
+                "session_id": "old-2"
+              },
+              {
+                "captured_at": "2025-08-27T11:59:00+00:00",
+                "mean": 0.185,
+                "n": 1,
+                "session_id": "old-1"
+              },
+              {
+                "captured_at": "2025-08-27T12:00:00+00:00",
+                "mean": 0.21500000000000002,
+                "n": 1,
+                "session_id": "old-0"
+              },
+              {
+                "captured_at": "2026-09-28T11:49:00+00:00",
+                "mean": 0.185,
+                "n": 1,
+                "session_id": "new-11"
+              },
+              {
+                "captured_at": "2026-09-28T11:50:00+00:00",
+                "mean": 0.21500000000000002,
+                "n": 1,
+                "session_id": "new-10"
+              },
+              {
+                "captured_at": "2026-09-28T11:51:00+00:00",
+                "mean": 0.185,
+                "n": 1,
+                "session_id": "new-9"
+              },
+              {
+                "captured_at": "2026-09-28T11:52:00+00:00",
+                "mean": 0.21500000000000002,
+                "n": 1,
+                "session_id": "new-8"
+              },
+              {
+                "captured_at": "2026-09-28T11:53:00+00:00",
+                "mean": 0.185,
+                "n": 1,
+                "session_id": "new-7"
+              },
+              {
+                "captured_at": "2026-09-28T11:54:00+00:00",
+                "mean": 0.21500000000000002,
+                "n": 1,
+                "session_id": "new-6"
+              }
+            ],
+            "unit": "shoulder_widths",
+            "window_days": 1000,
+            "withheld": null
+          }
+        }
+      }
+    ]
+  },
+  "id": "mcp/tools/career-window",
+  "input": {
+    "calls": [
+      {
+        "arguments": {
+          "metric": "head_sway_norm",
+          "player": "Aaron"
+        },
+        "now": null,
+        "tool": "get_shot_trends"
+      },
+      {
+        "arguments": {
+          "days": 30,
+          "metric": "head_sway_norm",
+          "player": "Aaron"
+        },
+        "now": "2026-10-01T12:00:00Z",
+        "tool": "get_shot_trends"
+      },
+      {
+        "arguments": {
+          "days": 1000,
+          "metric": "head_sway_norm",
+          "player": "Aaron"
+        },
+        "now": "2026-10-01T12:00:00Z",
+        "tool": "get_shot_trends"
+      }
+    ],
+    "files": {
+      "golfers/aaron.golfer.json": "{\n  \"player_id\": \"aaron\",\n  \"display_name\": \"Aaron\",\n  \"handedness\": \"right\",\n  \"created_at\": \"2026-10-01T12:00:00Z\"\n}",
+      "sessions/new-10/1/analysis.json": "{\"swing_id\": \"1\", \"session_id\": \"s\", \"swing\": {\"swing_id\": \"1\", \"session_id\": \"s\", \"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.42, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick - 2.4:1.\", \"percentile\": 10.0, \"population_n\": 1399, \"one_sided\": false}, {\"name\": \"head_sway\", \"score\": 1.0, \"passed\": true, \"observed\": 0.12, \"expected_low\": 0.0, \"expected_high\": 0.43, \"message\": \"Head stays steady.\", \"percentile\": 35.5, \"population_n\": 458, \"one_sided\": true}], \"unscored\": [], \"measurements\": [{\"name\": \"head_sway_norm\", \"value\": 0.21500000000000002, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"hip_sway_norm\", \"value\": 0.44, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"hip_shift_at_top_norm\", \"value\": 0.13, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"head_hip_offset_impact_norm\", \"value\": 0.17, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"finish_balance_norm\", \"value\": 0.024, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"tempo_ratio\", \"value\": 5.7, \"unit\": \"ratio\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"face_to_path_deg\", \"value\": 9.6, \"unit\": \"degrees\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}, {\"name\": \"start_line_deg\", \"value\": 7.4, \"unit\": \"degrees\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}], \"mechanics_score\": 91.0, \"outcome_score\": null, \"overall_score\": 91.0, \"shot\": null}, \"alignment\": {\"quality\": \"top_impact\"}, \"notes\": [\"alignment degraded: aligned on top and impact\"], \"feedback\": {\"swing_id\": \"1\", \"overall_score\": 91.0, \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\", \"tips\": [{\"checkpoint\": \"tempo\", \"text\": \"Tempo too quick - 2.4:1.\", \"severity\": \"minor\"}]}, \"analysis_version\": 16}",
+      "sessions/new-10/1/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"down_the_line\": \"sha-new-10-1-down_the_line\",\n    \"face_on\": \"sha-new-10-1-face_on\",\n    \"shot_screen\": \"sha-new-10-1-shot_screen\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 91.0,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\"\n}",
+      "sessions/new-10/1/manifest.json": "{\n  \"swing_id\": \"1\",\n  \"session_id\": \"new-10\",\n  \"created_at\": \"2026-09-28T11:50:00Z\",\n  \"updated_at\": \"2026-09-28T11:50:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.abc123.mov\",\n      \"content_sha256\": \"sha-new-10-1-face_on\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.abc123.mov\",\n      \"content_sha256\": \"sha-new-10-1-down_the_line\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.abc123.mov\",\n      \"content_sha256\": \"sha-new-10-1-shot_screen\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": null,\n  \"mishit\": null\n}",
+      "sessions/new-11/1/analysis.json": "{\"swing_id\": \"1\", \"session_id\": \"s\", \"swing\": {\"swing_id\": \"1\", \"session_id\": \"s\", \"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.42, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick - 2.4:1.\", \"percentile\": 10.0, \"population_n\": 1399, \"one_sided\": false}, {\"name\": \"head_sway\", \"score\": 1.0, \"passed\": true, \"observed\": 0.12, \"expected_low\": 0.0, \"expected_high\": 0.43, \"message\": \"Head stays steady.\", \"percentile\": 35.5, \"population_n\": 458, \"one_sided\": true}], \"unscored\": [], \"measurements\": [{\"name\": \"head_sway_norm\", \"value\": 0.185, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"hip_sway_norm\", \"value\": 0.15999999999999998, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"hip_shift_at_top_norm\", \"value\": 0.09, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"head_hip_offset_impact_norm\", \"value\": 0.11000000000000001, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"finish_balance_norm\", \"value\": 0.016, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"tempo_ratio\", \"value\": 5.1000000000000005, \"unit\": \"ratio\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"face_to_path_deg\", \"value\": 7.6, \"unit\": \"degrees\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}, {\"name\": \"start_line_deg\", \"value\": -6.6, \"unit\": \"degrees\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}], \"mechanics_score\": 91.0, \"outcome_score\": null, \"overall_score\": 91.0, \"shot\": null}, \"alignment\": {\"quality\": \"top_impact\"}, \"notes\": [\"alignment degraded: aligned on top and impact\"], \"feedback\": {\"swing_id\": \"1\", \"overall_score\": 91.0, \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\", \"tips\": [{\"checkpoint\": \"tempo\", \"text\": \"Tempo too quick - 2.4:1.\", \"severity\": \"minor\"}]}, \"analysis_version\": 16}",
+      "sessions/new-11/1/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"down_the_line\": \"sha-new-11-1-down_the_line\",\n    \"face_on\": \"sha-new-11-1-face_on\",\n    \"shot_screen\": \"sha-new-11-1-shot_screen\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 91.0,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\"\n}",
+      "sessions/new-11/1/manifest.json": "{\n  \"swing_id\": \"1\",\n  \"session_id\": \"new-11\",\n  \"created_at\": \"2026-09-28T11:49:00Z\",\n  \"updated_at\": \"2026-09-28T11:49:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.abc123.mov\",\n      \"content_sha256\": \"sha-new-11-1-face_on\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.abc123.mov\",\n      \"content_sha256\": \"sha-new-11-1-down_the_line\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.abc123.mov\",\n      \"content_sha256\": \"sha-new-11-1-shot_screen\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": null,\n  \"mishit\": null\n}",
+      "sessions/new-6/1/analysis.json": "{\"swing_id\": \"1\", \"session_id\": \"s\", \"swing\": {\"swing_id\": \"1\", \"session_id\": \"s\", \"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.42, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick - 2.4:1.\", \"percentile\": 10.0, \"population_n\": 1399, \"one_sided\": false}, {\"name\": \"head_sway\", \"score\": 1.0, \"passed\": true, \"observed\": 0.12, \"expected_low\": 0.0, \"expected_high\": 0.43, \"message\": \"Head stays steady.\", \"percentile\": 35.5, \"population_n\": 458, \"one_sided\": true}], \"unscored\": [], \"measurements\": [{\"name\": \"head_sway_norm\", \"value\": 0.21500000000000002, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"hip_sway_norm\", \"value\": 0.44, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"hip_shift_at_top_norm\", \"value\": 0.13, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"head_hip_offset_impact_norm\", \"value\": 0.17, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"finish_balance_norm\", \"value\": 0.024, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"tempo_ratio\", \"value\": 5.7, \"unit\": \"ratio\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"face_to_path_deg\", \"value\": 9.6, \"unit\": \"degrees\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}, {\"name\": \"start_line_deg\", \"value\": 7.4, \"unit\": \"degrees\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}], \"mechanics_score\": 91.0, \"outcome_score\": null, \"overall_score\": 91.0, \"shot\": null}, \"alignment\": {\"quality\": \"top_impact\"}, \"notes\": [\"alignment degraded: aligned on top and impact\"], \"feedback\": {\"swing_id\": \"1\", \"overall_score\": 91.0, \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\", \"tips\": [{\"checkpoint\": \"tempo\", \"text\": \"Tempo too quick - 2.4:1.\", \"severity\": \"minor\"}]}, \"analysis_version\": 16}",
+      "sessions/new-6/1/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"down_the_line\": \"sha-new-6-1-down_the_line\",\n    \"face_on\": \"sha-new-6-1-face_on\",\n    \"shot_screen\": \"sha-new-6-1-shot_screen\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 91.0,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\"\n}",
+      "sessions/new-6/1/manifest.json": "{\n  \"swing_id\": \"1\",\n  \"session_id\": \"new-6\",\n  \"created_at\": \"2026-09-28T11:54:00Z\",\n  \"updated_at\": \"2026-09-28T11:54:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.abc123.mov\",\n      \"content_sha256\": \"sha-new-6-1-face_on\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.abc123.mov\",\n      \"content_sha256\": \"sha-new-6-1-down_the_line\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.abc123.mov\",\n      \"content_sha256\": \"sha-new-6-1-shot_screen\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": null,\n  \"mishit\": null\n}",
+      "sessions/new-7/1/analysis.json": "{\"swing_id\": \"1\", \"session_id\": \"s\", \"swing\": {\"swing_id\": \"1\", \"session_id\": \"s\", \"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.42, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick - 2.4:1.\", \"percentile\": 10.0, \"population_n\": 1399, \"one_sided\": false}, {\"name\": \"head_sway\", \"score\": 1.0, \"passed\": true, \"observed\": 0.12, \"expected_low\": 0.0, \"expected_high\": 0.43, \"message\": \"Head stays steady.\", \"percentile\": 35.5, \"population_n\": 458, \"one_sided\": true}], \"unscored\": [], \"measurements\": [{\"name\": \"head_sway_norm\", \"value\": 0.185, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"hip_sway_norm\", \"value\": 0.15999999999999998, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"hip_shift_at_top_norm\", \"value\": 0.09, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"head_hip_offset_impact_norm\", \"value\": 0.11000000000000001, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"finish_balance_norm\", \"value\": 0.016, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"tempo_ratio\", \"value\": 5.1000000000000005, \"unit\": \"ratio\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"face_to_path_deg\", \"value\": 7.6, \"unit\": \"degrees\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}, {\"name\": \"start_line_deg\", \"value\": -6.6, \"unit\": \"degrees\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}], \"mechanics_score\": 91.0, \"outcome_score\": null, \"overall_score\": 91.0, \"shot\": null}, \"alignment\": {\"quality\": \"top_impact\"}, \"notes\": [\"alignment degraded: aligned on top and impact\"], \"feedback\": {\"swing_id\": \"1\", \"overall_score\": 91.0, \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\", \"tips\": [{\"checkpoint\": \"tempo\", \"text\": \"Tempo too quick - 2.4:1.\", \"severity\": \"minor\"}]}, \"analysis_version\": 16}",
+      "sessions/new-7/1/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"down_the_line\": \"sha-new-7-1-down_the_line\",\n    \"face_on\": \"sha-new-7-1-face_on\",\n    \"shot_screen\": \"sha-new-7-1-shot_screen\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 91.0,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\"\n}",
+      "sessions/new-7/1/manifest.json": "{\n  \"swing_id\": \"1\",\n  \"session_id\": \"new-7\",\n  \"created_at\": \"2026-09-28T11:53:00Z\",\n  \"updated_at\": \"2026-09-28T11:53:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.abc123.mov\",\n      \"content_sha256\": \"sha-new-7-1-face_on\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.abc123.mov\",\n      \"content_sha256\": \"sha-new-7-1-down_the_line\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.abc123.mov\",\n      \"content_sha256\": \"sha-new-7-1-shot_screen\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": null,\n  \"mishit\": null\n}",
+      "sessions/new-8/1/analysis.json": "{\"swing_id\": \"1\", \"session_id\": \"s\", \"swing\": {\"swing_id\": \"1\", \"session_id\": \"s\", \"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.42, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick - 2.4:1.\", \"percentile\": 10.0, \"population_n\": 1399, \"one_sided\": false}, {\"name\": \"head_sway\", \"score\": 1.0, \"passed\": true, \"observed\": 0.12, \"expected_low\": 0.0, \"expected_high\": 0.43, \"message\": \"Head stays steady.\", \"percentile\": 35.5, \"population_n\": 458, \"one_sided\": true}], \"unscored\": [], \"measurements\": [{\"name\": \"head_sway_norm\", \"value\": 0.21500000000000002, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"hip_sway_norm\", \"value\": 0.44, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"hip_shift_at_top_norm\", \"value\": 0.13, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"head_hip_offset_impact_norm\", \"value\": 0.17, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"finish_balance_norm\", \"value\": 0.024, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"tempo_ratio\", \"value\": 5.7, \"unit\": \"ratio\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"face_to_path_deg\", \"value\": 9.6, \"unit\": \"degrees\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}, {\"name\": \"start_line_deg\", \"value\": 7.4, \"unit\": \"degrees\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}], \"mechanics_score\": 91.0, \"outcome_score\": null, \"overall_score\": 91.0, \"shot\": null}, \"alignment\": {\"quality\": \"top_impact\"}, \"notes\": [\"alignment degraded: aligned on top and impact\"], \"feedback\": {\"swing_id\": \"1\", \"overall_score\": 91.0, \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\", \"tips\": [{\"checkpoint\": \"tempo\", \"text\": \"Tempo too quick - 2.4:1.\", \"severity\": \"minor\"}]}, \"analysis_version\": 16}",
+      "sessions/new-8/1/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"down_the_line\": \"sha-new-8-1-down_the_line\",\n    \"face_on\": \"sha-new-8-1-face_on\",\n    \"shot_screen\": \"sha-new-8-1-shot_screen\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 91.0,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\"\n}",
+      "sessions/new-8/1/manifest.json": "{\n  \"swing_id\": \"1\",\n  \"session_id\": \"new-8\",\n  \"created_at\": \"2026-09-28T11:52:00Z\",\n  \"updated_at\": \"2026-09-28T11:52:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.abc123.mov\",\n      \"content_sha256\": \"sha-new-8-1-face_on\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.abc123.mov\",\n      \"content_sha256\": \"sha-new-8-1-down_the_line\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.abc123.mov\",\n      \"content_sha256\": \"sha-new-8-1-shot_screen\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": null,\n  \"mishit\": null\n}",
+      "sessions/new-9/1/analysis.json": "{\"swing_id\": \"1\", \"session_id\": \"s\", \"swing\": {\"swing_id\": \"1\", \"session_id\": \"s\", \"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.42, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick - 2.4:1.\", \"percentile\": 10.0, \"population_n\": 1399, \"one_sided\": false}, {\"name\": \"head_sway\", \"score\": 1.0, \"passed\": true, \"observed\": 0.12, \"expected_low\": 0.0, \"expected_high\": 0.43, \"message\": \"Head stays steady.\", \"percentile\": 35.5, \"population_n\": 458, \"one_sided\": true}], \"unscored\": [], \"measurements\": [{\"name\": \"head_sway_norm\", \"value\": 0.185, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"hip_sway_norm\", \"value\": 0.15999999999999998, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"hip_shift_at_top_norm\", \"value\": 0.09, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"head_hip_offset_impact_norm\", \"value\": 0.11000000000000001, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"finish_balance_norm\", \"value\": 0.016, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"tempo_ratio\", \"value\": 5.1000000000000005, \"unit\": \"ratio\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"face_to_path_deg\", \"value\": 7.6, \"unit\": \"degrees\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}, {\"name\": \"start_line_deg\", \"value\": -6.6, \"unit\": \"degrees\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}], \"mechanics_score\": 91.0, \"outcome_score\": null, \"overall_score\": 91.0, \"shot\": null}, \"alignment\": {\"quality\": \"top_impact\"}, \"notes\": [\"alignment degraded: aligned on top and impact\"], \"feedback\": {\"swing_id\": \"1\", \"overall_score\": 91.0, \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\", \"tips\": [{\"checkpoint\": \"tempo\", \"text\": \"Tempo too quick - 2.4:1.\", \"severity\": \"minor\"}]}, \"analysis_version\": 16}",
+      "sessions/new-9/1/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"down_the_line\": \"sha-new-9-1-down_the_line\",\n    \"face_on\": \"sha-new-9-1-face_on\",\n    \"shot_screen\": \"sha-new-9-1-shot_screen\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 91.0,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\"\n}",
+      "sessions/new-9/1/manifest.json": "{\n  \"swing_id\": \"1\",\n  \"session_id\": \"new-9\",\n  \"created_at\": \"2026-09-28T11:51:00Z\",\n  \"updated_at\": \"2026-09-28T11:51:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.abc123.mov\",\n      \"content_sha256\": \"sha-new-9-1-face_on\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.abc123.mov\",\n      \"content_sha256\": \"sha-new-9-1-down_the_line\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.abc123.mov\",\n      \"content_sha256\": \"sha-new-9-1-shot_screen\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": null,\n  \"mishit\": null\n}",
+      "sessions/old-0/1/analysis.json": "{\"swing_id\": \"1\", \"session_id\": \"s\", \"swing\": {\"swing_id\": \"1\", \"session_id\": \"s\", \"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.42, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick - 2.4:1.\", \"percentile\": 10.0, \"population_n\": 1399, \"one_sided\": false}, {\"name\": \"head_sway\", \"score\": 1.0, \"passed\": true, \"observed\": 0.12, \"expected_low\": 0.0, \"expected_high\": 0.43, \"message\": \"Head stays steady.\", \"percentile\": 35.5, \"population_n\": 458, \"one_sided\": true}], \"unscored\": [], \"measurements\": [{\"name\": \"head_sway_norm\", \"value\": 0.21500000000000002, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"hip_sway_norm\", \"value\": 0.44, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"hip_shift_at_top_norm\", \"value\": 0.13, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"head_hip_offset_impact_norm\", \"value\": 0.17, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"finish_balance_norm\", \"value\": 0.024, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"tempo_ratio\", \"value\": 5.7, \"unit\": \"ratio\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"face_to_path_deg\", \"value\": 9.6, \"unit\": \"degrees\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}, {\"name\": \"start_line_deg\", \"value\": 7.4, \"unit\": \"degrees\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}], \"mechanics_score\": 91.0, \"outcome_score\": null, \"overall_score\": 91.0, \"shot\": null}, \"alignment\": {\"quality\": \"top_impact\"}, \"notes\": [\"alignment degraded: aligned on top and impact\"], \"feedback\": {\"swing_id\": \"1\", \"overall_score\": 91.0, \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\", \"tips\": [{\"checkpoint\": \"tempo\", \"text\": \"Tempo too quick - 2.4:1.\", \"severity\": \"minor\"}]}, \"analysis_version\": 16}",
+      "sessions/old-0/1/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"down_the_line\": \"sha-old-0-1-down_the_line\",\n    \"face_on\": \"sha-old-0-1-face_on\",\n    \"shot_screen\": \"sha-old-0-1-shot_screen\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 91.0,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\"\n}",
+      "sessions/old-0/1/manifest.json": "{\n  \"swing_id\": \"1\",\n  \"session_id\": \"old-0\",\n  \"created_at\": \"2025-08-27T12:00:00Z\",\n  \"updated_at\": \"2025-08-27T12:00:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.abc123.mov\",\n      \"content_sha256\": \"sha-old-0-1-face_on\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.abc123.mov\",\n      \"content_sha256\": \"sha-old-0-1-down_the_line\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.abc123.mov\",\n      \"content_sha256\": \"sha-old-0-1-shot_screen\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": null,\n  \"mishit\": null\n}",
+      "sessions/old-1/1/analysis.json": "{\"swing_id\": \"1\", \"session_id\": \"s\", \"swing\": {\"swing_id\": \"1\", \"session_id\": \"s\", \"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.42, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick - 2.4:1.\", \"percentile\": 10.0, \"population_n\": 1399, \"one_sided\": false}, {\"name\": \"head_sway\", \"score\": 1.0, \"passed\": true, \"observed\": 0.12, \"expected_low\": 0.0, \"expected_high\": 0.43, \"message\": \"Head stays steady.\", \"percentile\": 35.5, \"population_n\": 458, \"one_sided\": true}], \"unscored\": [], \"measurements\": [{\"name\": \"head_sway_norm\", \"value\": 0.185, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"hip_sway_norm\", \"value\": 0.15999999999999998, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"hip_shift_at_top_norm\", \"value\": 0.09, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"head_hip_offset_impact_norm\", \"value\": 0.11000000000000001, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"finish_balance_norm\", \"value\": 0.016, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"tempo_ratio\", \"value\": 5.1000000000000005, \"unit\": \"ratio\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"face_to_path_deg\", \"value\": 7.6, \"unit\": \"degrees\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}, {\"name\": \"start_line_deg\", \"value\": -6.6, \"unit\": \"degrees\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}], \"mechanics_score\": 91.0, \"outcome_score\": null, \"overall_score\": 91.0, \"shot\": null}, \"alignment\": {\"quality\": \"top_impact\"}, \"notes\": [\"alignment degraded: aligned on top and impact\"], \"feedback\": {\"swing_id\": \"1\", \"overall_score\": 91.0, \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\", \"tips\": [{\"checkpoint\": \"tempo\", \"text\": \"Tempo too quick - 2.4:1.\", \"severity\": \"minor\"}]}, \"analysis_version\": 16}",
+      "sessions/old-1/1/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"down_the_line\": \"sha-old-1-1-down_the_line\",\n    \"face_on\": \"sha-old-1-1-face_on\",\n    \"shot_screen\": \"sha-old-1-1-shot_screen\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 91.0,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\"\n}",
+      "sessions/old-1/1/manifest.json": "{\n  \"swing_id\": \"1\",\n  \"session_id\": \"old-1\",\n  \"created_at\": \"2025-08-27T11:59:00Z\",\n  \"updated_at\": \"2025-08-27T11:59:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.abc123.mov\",\n      \"content_sha256\": \"sha-old-1-1-face_on\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.abc123.mov\",\n      \"content_sha256\": \"sha-old-1-1-down_the_line\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.abc123.mov\",\n      \"content_sha256\": \"sha-old-1-1-shot_screen\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": null,\n  \"mishit\": null\n}",
+      "sessions/old-2/1/analysis.json": "{\"swing_id\": \"1\", \"session_id\": \"s\", \"swing\": {\"swing_id\": \"1\", \"session_id\": \"s\", \"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.42, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick - 2.4:1.\", \"percentile\": 10.0, \"population_n\": 1399, \"one_sided\": false}, {\"name\": \"head_sway\", \"score\": 1.0, \"passed\": true, \"observed\": 0.12, \"expected_low\": 0.0, \"expected_high\": 0.43, \"message\": \"Head stays steady.\", \"percentile\": 35.5, \"population_n\": 458, \"one_sided\": true}], \"unscored\": [], \"measurements\": [{\"name\": \"head_sway_norm\", \"value\": 0.21500000000000002, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"hip_sway_norm\", \"value\": 0.44, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"hip_shift_at_top_norm\", \"value\": 0.13, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"head_hip_offset_impact_norm\", \"value\": 0.17, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"finish_balance_norm\", \"value\": 0.024, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"tempo_ratio\", \"value\": 5.7, \"unit\": \"ratio\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"face_to_path_deg\", \"value\": 9.6, \"unit\": \"degrees\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}, {\"name\": \"start_line_deg\", \"value\": 7.4, \"unit\": \"degrees\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}], \"mechanics_score\": 91.0, \"outcome_score\": null, \"overall_score\": 91.0, \"shot\": null}, \"alignment\": {\"quality\": \"top_impact\"}, \"notes\": [\"alignment degraded: aligned on top and impact\"], \"feedback\": {\"swing_id\": \"1\", \"overall_score\": 91.0, \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\", \"tips\": [{\"checkpoint\": \"tempo\", \"text\": \"Tempo too quick - 2.4:1.\", \"severity\": \"minor\"}]}, \"analysis_version\": 16}",
+      "sessions/old-2/1/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"down_the_line\": \"sha-old-2-1-down_the_line\",\n    \"face_on\": \"sha-old-2-1-face_on\",\n    \"shot_screen\": \"sha-old-2-1-shot_screen\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 91.0,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\"\n}",
+      "sessions/old-2/1/manifest.json": "{\n  \"swing_id\": \"1\",\n  \"session_id\": \"old-2\",\n  \"created_at\": \"2025-08-27T11:58:00Z\",\n  \"updated_at\": \"2025-08-27T11:58:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.abc123.mov\",\n      \"content_sha256\": \"sha-old-2-1-face_on\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.abc123.mov\",\n      \"content_sha256\": \"sha-old-2-1-down_the_line\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.abc123.mov\",\n      \"content_sha256\": \"sha-old-2-1-shot_screen\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": null,\n  \"mishit\": null\n}",
+      "sessions/old-3/1/analysis.json": "{\"swing_id\": \"1\", \"session_id\": \"s\", \"swing\": {\"swing_id\": \"1\", \"session_id\": \"s\", \"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.42, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick - 2.4:1.\", \"percentile\": 10.0, \"population_n\": 1399, \"one_sided\": false}, {\"name\": \"head_sway\", \"score\": 1.0, \"passed\": true, \"observed\": 0.12, \"expected_low\": 0.0, \"expected_high\": 0.43, \"message\": \"Head stays steady.\", \"percentile\": 35.5, \"population_n\": 458, \"one_sided\": true}], \"unscored\": [], \"measurements\": [{\"name\": \"head_sway_norm\", \"value\": 0.185, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"hip_sway_norm\", \"value\": 0.15999999999999998, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"hip_shift_at_top_norm\", \"value\": 0.09, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"head_hip_offset_impact_norm\", \"value\": 0.11000000000000001, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"finish_balance_norm\", \"value\": 0.016, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"tempo_ratio\", \"value\": 5.1000000000000005, \"unit\": \"ratio\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"face_to_path_deg\", \"value\": 7.6, \"unit\": \"degrees\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}, {\"name\": \"start_line_deg\", \"value\": -6.6, \"unit\": \"degrees\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}], \"mechanics_score\": 91.0, \"outcome_score\": null, \"overall_score\": 91.0, \"shot\": null}, \"alignment\": {\"quality\": \"top_impact\"}, \"notes\": [\"alignment degraded: aligned on top and impact\"], \"feedback\": {\"swing_id\": \"1\", \"overall_score\": 91.0, \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\", \"tips\": [{\"checkpoint\": \"tempo\", \"text\": \"Tempo too quick - 2.4:1.\", \"severity\": \"minor\"}]}, \"analysis_version\": 16}",
+      "sessions/old-3/1/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"down_the_line\": \"sha-old-3-1-down_the_line\",\n    \"face_on\": \"sha-old-3-1-face_on\",\n    \"shot_screen\": \"sha-old-3-1-shot_screen\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 91.0,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\"\n}",
+      "sessions/old-3/1/manifest.json": "{\n  \"swing_id\": \"1\",\n  \"session_id\": \"old-3\",\n  \"created_at\": \"2025-08-27T11:57:00Z\",\n  \"updated_at\": \"2025-08-27T11:57:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.abc123.mov\",\n      \"content_sha256\": \"sha-old-3-1-face_on\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.abc123.mov\",\n      \"content_sha256\": \"sha-old-3-1-down_the_line\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.abc123.mov\",\n      \"content_sha256\": \"sha-old-3-1-shot_screen\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": null,\n  \"mishit\": null\n}",
+      "sessions/old-4/1/analysis.json": "{\"swing_id\": \"1\", \"session_id\": \"s\", \"swing\": {\"swing_id\": \"1\", \"session_id\": \"s\", \"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.42, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick - 2.4:1.\", \"percentile\": 10.0, \"population_n\": 1399, \"one_sided\": false}, {\"name\": \"head_sway\", \"score\": 1.0, \"passed\": true, \"observed\": 0.12, \"expected_low\": 0.0, \"expected_high\": 0.43, \"message\": \"Head stays steady.\", \"percentile\": 35.5, \"population_n\": 458, \"one_sided\": true}], \"unscored\": [], \"measurements\": [{\"name\": \"head_sway_norm\", \"value\": 0.21500000000000002, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"hip_sway_norm\", \"value\": 0.44, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"hip_shift_at_top_norm\", \"value\": 0.13, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"head_hip_offset_impact_norm\", \"value\": 0.17, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"finish_balance_norm\", \"value\": 0.024, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"tempo_ratio\", \"value\": 5.7, \"unit\": \"ratio\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"face_to_path_deg\", \"value\": 9.6, \"unit\": \"degrees\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}, {\"name\": \"start_line_deg\", \"value\": 7.4, \"unit\": \"degrees\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}], \"mechanics_score\": 91.0, \"outcome_score\": null, \"overall_score\": 91.0, \"shot\": null}, \"alignment\": {\"quality\": \"top_impact\"}, \"notes\": [\"alignment degraded: aligned on top and impact\"], \"feedback\": {\"swing_id\": \"1\", \"overall_score\": 91.0, \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\", \"tips\": [{\"checkpoint\": \"tempo\", \"text\": \"Tempo too quick - 2.4:1.\", \"severity\": \"minor\"}]}, \"analysis_version\": 16}",
+      "sessions/old-4/1/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"down_the_line\": \"sha-old-4-1-down_the_line\",\n    \"face_on\": \"sha-old-4-1-face_on\",\n    \"shot_screen\": \"sha-old-4-1-shot_screen\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 91.0,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\"\n}",
+      "sessions/old-4/1/manifest.json": "{\n  \"swing_id\": \"1\",\n  \"session_id\": \"old-4\",\n  \"created_at\": \"2025-08-27T11:56:00Z\",\n  \"updated_at\": \"2025-08-27T11:56:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.abc123.mov\",\n      \"content_sha256\": \"sha-old-4-1-face_on\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.abc123.mov\",\n      \"content_sha256\": \"sha-old-4-1-down_the_line\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.abc123.mov\",\n      \"content_sha256\": \"sha-old-4-1-shot_screen\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": null,\n  \"mishit\": null\n}",
+      "sessions/old-5/1/analysis.json": "{\"swing_id\": \"1\", \"session_id\": \"s\", \"swing\": {\"swing_id\": \"1\", \"session_id\": \"s\", \"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.42, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick - 2.4:1.\", \"percentile\": 10.0, \"population_n\": 1399, \"one_sided\": false}, {\"name\": \"head_sway\", \"score\": 1.0, \"passed\": true, \"observed\": 0.12, \"expected_low\": 0.0, \"expected_high\": 0.43, \"message\": \"Head stays steady.\", \"percentile\": 35.5, \"population_n\": 458, \"one_sided\": true}], \"unscored\": [], \"measurements\": [{\"name\": \"head_sway_norm\", \"value\": 0.185, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"hip_sway_norm\", \"value\": 0.15999999999999998, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"hip_shift_at_top_norm\", \"value\": 0.09, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"head_hip_offset_impact_norm\", \"value\": 0.11000000000000001, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"finish_balance_norm\", \"value\": 0.016, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"tempo_ratio\", \"value\": 5.1000000000000005, \"unit\": \"ratio\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"face_to_path_deg\", \"value\": 7.6, \"unit\": \"degrees\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}, {\"name\": \"start_line_deg\", \"value\": -6.6, \"unit\": \"degrees\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}], \"mechanics_score\": 91.0, \"outcome_score\": null, \"overall_score\": 91.0, \"shot\": null}, \"alignment\": {\"quality\": \"top_impact\"}, \"notes\": [\"alignment degraded: aligned on top and impact\"], \"feedback\": {\"swing_id\": \"1\", \"overall_score\": 91.0, \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\", \"tips\": [{\"checkpoint\": \"tempo\", \"text\": \"Tempo too quick - 2.4:1.\", \"severity\": \"minor\"}]}, \"analysis_version\": 16}",
+      "sessions/old-5/1/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"down_the_line\": \"sha-old-5-1-down_the_line\",\n    \"face_on\": \"sha-old-5-1-face_on\",\n    \"shot_screen\": \"sha-old-5-1-shot_screen\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 91.0,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\"\n}",
+      "sessions/old-5/1/manifest.json": "{\n  \"swing_id\": \"1\",\n  \"session_id\": \"old-5\",\n  \"created_at\": \"2025-08-27T11:55:00Z\",\n  \"updated_at\": \"2025-08-27T11:55:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.abc123.mov\",\n      \"content_sha256\": \"sha-old-5-1-face_on\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.abc123.mov\",\n      \"content_sha256\": \"sha-old-5-1-down_the_line\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.abc123.mov\",\n      \"content_sha256\": \"sha-old-5-1-shot_screen\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": null,\n  \"mishit\": null\n}"
+    },
+    "roots": {
+      "golfers": "golfers",
+      "sessions": "sessions",
+      "shots": "shots"
+    }
+  },
+  "provenance": {
+    "analysis_version": 16,
+    "flight_model_calls": [],
+    "kind": "mcp",
+    "mcp_version": "2.0.0",
+    "note": "test_the_window_narrows_the_n_it_reports_on, dated from the case's `now`: six swings 400 days back and six from three days back, the whole history, a 30-day window that narrows the n, and one wide enough to hold everything",
+    "oracle": "python",
+    "pydantic_version": "2.13.4",
+    "python_version": "3.13.3",
+    "recorded_by": "scripts/conformance_vectors.py::_run_mcp",
+    "rerecords": [
+      {
+        "added": [],
+        "by": "golf-core rerecord",
+        "career_version": 3,
+        "declaration": "spec/declarations/career-v3.json",
+        "moved": [
+          "career_version"
+        ]
+      }
+    ],
+    "source": "scripts/conformance_vectors.py::_mcp_career_window, after tests/mcp/"
+  }
+}

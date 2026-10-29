@@ -1,0 +1,59 @@
+
+Ball flight — simulated, not measured
+------------------------------------------------------------------------
+
+  shot      2026-08-10-1, screen, 2026-08-10 01:38
+  swing     2026-08-07/1
+            the same photo is attached to 2026-08-10/1 as well; the
+            earliest arrival is the one read here, which is
+            `storage/corpus.py`'s rule for a re-uploaded bundle.
+  golfer    aaron, right-handed
+  club      -, loft none (no_club_tag)
+
+  - spin: 5991 rpm printed on the screen
+  - axis: +2.5 deg printed, read right-handed
+
+  launch    90.7 mph, 20.9 deg up, 5991 rpm, start -5.3 deg, axis +2.5 deg
+  air       isa_sea_level, 1.2250 kg/m3, 288.15 K
+
+  carry                122.36 yd   along the launch line
+  offline               -9.60 yd   from the target line
+  curvature             +1.71 yd   from the launch line
+  apex                  18.54 yd
+  hang time               4.52 s
+  descent               36.9 deg
+  spin at landing       5001 rpm
+  spin ratio       0.330 - 0.544   905 of 905 points held
+
+  Beside what the screen printed
+    measurement                 simulated   printed   apart
+    flight_carry_yds               122.36    125.60   -3.24
+    flight_landing_offline_yds      -9.60    -11.60   +2.01
+
+    - flight_carry_yds: the screen printed the spin this was flown on,
+      so the carry beside it is an independent measurement and this
+      difference is the model's error on this shot: -3.24 yd, -2.58%
+      against a gate measured at +/-2.59%.
+    - flight_landing_offline_yds: not an error and not a comparison: the
+      printed number is where the ball *started*, projected out to the
+      carry, and the simulated one is where this model has it finishing.
+      Most of the gap is the bend the screen never measured, +1.71 yd of
+      it; the remaining +0.30 yd is the carry row above leaning on a
+      start line -5.3 deg off target, and it is not a second finding.
+
+  Read it with these:
+  - every point of this flight sat above the published table, which
+    stops at a spin ratio of 0.284 and was measured on a *driver*. Its
+    end row was held rather than extended, so lift and drag were one
+    constant pair the whole way — and since spin reaches the flight only
+    through the spin ratio and the spin ratio only through those two
+    coefficients, the spin above the clamp does not reach this carry at
+    all. The same ball at 5,200 rpm and at 30,000 rpm flies exactly this
+    far.
+  - the model agrees with HD Golf to +/-2.59% on the two shots where a
+    full launch-condition set and an independent carry are both on disk
+    (`--gate`) — while ranking those two shots backwards. That
+    percentage is therefore the size of what this model cannot see, not
+    a calibration error, and a carry from here is not "accurate to
+    2.6%".
+

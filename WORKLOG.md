@@ -5,6 +5,127 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-10-29 — M29 P36: the lab port in Rust
+
+**Duration**: 2026-10-15 to 2026-10-29, thirty-seven phases (P0–P36). M29 goes ✅ **37/37** and the
+milestone is closed, in one commit onto `main`. It is the largest milestone this repo has run: three
+new crates, two vector families recorded once from frozen Python, the first rewrite of `data/` by
+Rust, the first Python edits since M32 outside conformance tooling, an archive move and a delete.
+Fifteen phases were cut off or stopped on a question and resumed from their markers; the user's six
+answers (P2, P7, P17, P21, P29 twice, P32) are in the findings where each was asked.
+
+**To pick up where this left off, read the findings in `docs/plans/m29-lab-port.md`** by its map
+(`grep -n '^## \|^### '`), not end to end, and not this entry. Then
+[ADR-035's M29 addendum](docs/decisions/035-rust-everywhere-python-where-required.md) for the four
+deferred questions answered and the four dependencies named, the program plan's §M29 "Built
+2026-10-29" block for what changed against the design, and `docs/CONFORMANCE.md` §2's Selection,
+MCP and OCR gate sections for the two new families and the gate.
+
+**What was built.**
+- **Part A, the reader** (P1–P7, `crates/ocr`, binary `golf-ocr read`). Photo decode: a hand port of
+  libjpeg-turbo for JPEG, because `image`'s codec moved the screen quad on two bay photos; `image`
+  for PNG; ffmpeg 9.0.2 for HEIC. Then the screen-quad finder, a hand-ported rectifier (warp, CLAHE,
+  area resize, the rotation vote) and three of PaddleOCR's five models through `ort` rc.10
+  (PP-OCRv6 medium detection and recognition, PP-LCNet textline orientation), sha-pinned in
+  `crates/ocr/models.json` and kept gitignored in `data/models/ocr/`. **The OCR gate** (D7,
+  `crates/ocr/tests/read.rs`): 12 of the 13 bay photos parse to the same shot as PaddleOCR's
+  committed boxes in every value, `fields_present` and `needs_review`. The thirteenth,
+  `2026-08-10-1`, reads `impact_position` `CENTER`, which the photo shows and Paddle's UVDoc-warped
+  boxes missed, and the user declared it rather than port UVDoc. `ort` is reachable from
+  `crates/ocr` and `crates/lab` alone (`crates/ocr/tests/ort_reach.rs`), which keeps it off M38's
+  `crates/app`.
+- **Part B, the MCP server** (P8–P15, `crates/mcp`, binary `golf-mcp`, `rmcp` 0.11.0). An `mcp`
+  family recorded once from frozen Python over the `tests/mcp` fixture trees and a `data/` snapshot,
+  plus hand-worked and Rust-recorded cases: 29 cases and 224 calls, every one compared. Every
+  deliberate difference is a declared path or a hand case. M37's `get_strike_profile` is held to
+  `golf-core profile`. The caveats are the server's `instructions` plus a read-only resource (D10).
+  The tool-count pin moved to Rust (`crates/mcp/tests/docs.rs`), and both re-record walks run
+  `golf-mcp answer-case`, because nothing may depend on a shell crate.
+- **Part C, the LLM's route** (P16–P17). `feedback/conversation.py` gained `ask_through_golf_mcp`,
+  and `scripts/ask_swing.py` answers through `golf-mcp` over stdio. `feedback/coach.py` gained a JSON
+  entry that reads `get_swing` over `golf-mcp` and prints `{text, provenance}` or `{note}`, and
+  became a sanctioned `SecretStr` unwrap site (ADR-019's addendum, the user's (a)).
+- **Part D, the lab CLI** (P18–P28, `crates/lab`, binary `golf-lab`). A `selection` family recorded
+  once from frozen Python (45 cases), because nothing committed gated which descent the engine is
+  handed, and the swing selection ported against it (`analysis::phases`, `golf_core::auto_windows`).
+  Then the audio contract and store, strike audio through ffmpeg, pose through `crates/pose` (the
+  lab is that crate's first caller), the shot lookup and re-read, `import-photos`, the bundle
+  pipeline behind D20's input gate, the writers and coaching (`analyze`, which spawns `coach.py`'s
+  entry), `reanalyze`, `analyze-keypoints` and `flight`. Each verb prints what its script printed,
+  measured against it, with every difference declared in its phase. No render: `golf-lab` writes no
+  `aligned.mp4` (C4).
+- **The `data/` write** (P29). `data/processed/` without its clips was backed up to
+  `%USERPROFILE%\golf-coach-backups\m29-pre-write\`, whose `SHA256SUMS` hashes to `a7a9436d533f…`.
+  Then the 13 stored shots were re-read and stamped, and the 15 bundles re-run at engine 17. Only the
+  declared shot values and last-bit scores moved, and every frozen reader still answers. The digest
+  is now `07f37373…` over 192 files.
+- **Part E** (P30–P31). `golf-lab build-vectors` rebuilds the 15 corpus and stage vectors from
+  `data/` and writes only where no file is, so `rerecord` stays the only re-writer.
+  `golf-lab import-export` merges a phone's export into `data/`, and one conflict refuses all.
+- **Part F, retire and close** (P32–P35). The frozen server's eight write routes answer 410 naming
+  their verbs, and `golf-core` gained `set-golfer`, `set-club` and `delete-swing` for the three that
+  had none. The research record moved to `archive/` with the `research` extra. Fourteen lab scripts,
+  `detection/` and `frontend/` were deleted; `vision` lost `ultralytics` and `hardware` went.
+  Claude Code's `golf-coach` server is now the release `golf-mcp`. P35 wrote nine ADR addenda (the
+  map counts 118), CONFORMANCE's two families and the gate, and ARCHITECTURE §1–§5 for the Rust lab.
+
+**What Python changed**, only where the plan named it: the conformance tooling, for the two recorder
+families, `check`'s deferrals and P29's three `data/` helpers; the LLM side (`conversation.py`,
+`coach.py`, `ask_swing.py`, `tests/feedback/` and `tests/test_config.py`'s sanctioned sites);
+`api/app.py` and `tests/api/` for the closure; the moves and deletes, with `pyproject.toml`'s
+extras; `tests/test_docs_truth.py`, which the tool-count pin left; and comments naming moved paths.
+No frozen behaviour changed but the closed routes. No engine, stage, shot, screen, audio, format,
+storage, career or profile vector moved, no version key moved, and no declaration was added.
+
+**What M38, M40 and the next re-record should know.**
+- **Every re-record needs `golf-mcp` built in the same profile**, because both walks run it, and
+  **Windows will not replace a running executable**. A Claude Code session started since P34 holds
+  `target/release/golf-mcp.exe`, so a release rebuild of it fails until that session ends.
+- **M38 P4's export is the stored layout** (D16), and what `import-export` asks of it is in the
+  program plan's §M38 P4.
+- **M40 inherits four things.**
+  - The frozen worker's startup recovery, the one write path left. At startup it re-runs, through
+    frozen Python at engine 16, an orphaned run or an unanalysed bundle dated today. Turning it off
+    is the user's call (ADR-035's addendum).
+  - No `sidecar/` package yet (D12).
+  - Rust sentences that the storage and career families record and that still name a deleted
+    script or a closed route (P34 item 6, P35 item 6). They change only under a `CAREER_VERSION`
+    bump.
+  - `crates/trigger/src/clip.rs`' copies of `_WINDOW_LEAD`, `_WINDOW_TRAIL` and the 0.80 bound. They
+    have twins in `analysis::phases` now, which `trigger` has no edge to reach (P19 item 7).
+- **A new golfer needs a swing or a phone's export.** `set-golfer` registers one only while
+  re-attributing a swing, and `import-photos --into-session` refuses an unregistered golfer.
+- **Reconverting the models** needs a Python 3.11 venv with `paddle2onnx` 2.1.0 and `paddlepaddle`
+  3.1.1 (`models.json`'s `conversion` block), and the pinned digests say whether it matched.
+
+**Left open.**
+- `contracts::career`'s `CAREER_VERSION` doc still says no recorded artifact's `unscored` holds a
+  flight row. That is true of the recorded trees and false of `data/` (P30 finding 5, CONFORMANCE
+  §4), and the rewording is the user's.
+- `SwingBundleStore::next_swing_id` (P24 item 12) is named in its crate doc and not in `CLAUDE.md`'s
+  map.
+- PaddleOCR and the `ocr` extra stay installed for the frozen pipeline until M40.
+
+All verify commands are green, the ignored gates included.
+- **Rust.** `cargo test` passed 1,645 over 112 suites, with 24 ignored: the gates that need `data/`,
+  ffmpeg or the models. `cargo test -p ocr -p golf-lab -- --include-ignored` passed all 296 (127
+  and 169) in about 20 minutes in a debug build; the OCR gate itself took 318 s. ONNX Runtime's
+  thread count and optimisation level (P1 item 13) are still untried. `cargo clippy --all-targets`
+  has 0 warnings, and `cargo fmt --check` is clean.
+- **The dry runs.** `v17` reports 140 vectors run (21 engine, 21 stage, 25 shot, 45 selection,
+  28 mcp), and `career-v3` reports 175 (76 storage, 56 career, 15 profile, 28 mcp). Both found
+  0 changed and wrote 0 files, with the release `golf-mcp` answering.
+- **Python.** `pytest`, run alone, passed 2,084, docs-truth included, against a map that now counts
+  84 documents. `ruff` is clean, and `mypy` is clean over 115 files. `conformance.py check` passes:
+  the 21 engine vectors hold the freeze, and every other family is deferred to `cargo test`.
+- **Data.** The `data/processed` digest is P29's `07f37373…` over 192 files.
+
+**Next**: the user's order. M41 (photos of the course-play screen) and M42 (sample Live Photos of
+Full Swing shots) are both free, and each starts with photos. M38's skeleton and M33 wait on a Mac,
+and M40 now waits on M38 alone.
+
+---
+
 ## 2026-10-15 — M37 P13: the graded profile in Rust
 
 **Duration**: 2026-10-10 to 2026-10-15, fourteen phases (P0–P13). M37 goes ✅ **14/14** and the

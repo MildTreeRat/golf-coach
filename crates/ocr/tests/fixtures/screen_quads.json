@@ -1,0 +1,290 @@
+{
+  "provenance": {
+    "what": "frozen Python's load_image and find_screen_quad on the 13 stored bay photos, the screen corpus's photos",
+    "recorded_by": "M29 P2, a scratch script calling golf_coach.launch_monitor.screen.preprocess",
+    "opencv": "4.10.0",
+    "pillow_heif": "1.5.0",
+    "rgb_sha256": "SHA-256 of the decoded pixels as 8-bit RGB, row-major",
+    "quad": "the four corners as float32 values, top-left, top-right, bottom-right, bottom-left; null when Python parses the photo uncropped",
+    "source": "which of find_screen_quad's two paths found it, and at which Canny low threshold and closing size (the Python does not return this; the scratch script traced it)"
+  },
+  "photos": [
+    {
+      "id": "2026-08-10-1",
+      "image_path": "data/processed/sessions/2026-08-10/1/shot_screen.2e81ab05828e.png",
+      "image_sha256": "2e81ab05828e1e2a3603a6a56b07d626591dea5a968043e83c22ee2e583bccf5",
+      "width": 1920,
+      "height": 1440,
+      "rgb_sha256": "64122efd55ca1f3044bd3abaa6c49f35d76c43d8e1dbde244906be4a99caa14e",
+      "quad": null,
+      "source": null
+    },
+    {
+      "id": "2026-08-10-2",
+      "image_path": "data/processed/sessions/2026-08-10/2/shot_screen.07ce15cc2b80.png",
+      "image_sha256": "07ce15cc2b80e7d63c15e8bf8544f8308b267124d5106cd5b2ffc2f0c1da2b3e",
+      "width": 1920,
+      "height": 1440,
+      "rgb_sha256": "f153b85e675d94d30777a947cd1bce9c24bc0ffb26ae473d6396703d1374158c",
+      "quad": [
+        [
+          -0.3368646502494812,
+          305.9881896972656
+        ],
+        [
+          1916.183349609375,
+          246.30410766601562
+        ],
+        [
+          1952.629150390625,
+          1416.614990234375
+        ],
+        [
+          36.10886764526367,
+          1476.2989501953125
+        ]
+      ],
+      "source": {
+        "path": "rotated_box",
+        "low": 30,
+        "close": 25
+      }
+    },
+    {
+      "id": "2026-08-23-1",
+      "image_path": "data/processed/sessions/2026-08-23/1/shot_screen.1f3331853d6e.HEIC",
+      "image_sha256": "1f3331853d6e891261f8391ebd34c68e5fdecb1798e6d8c34d43217e76828d23",
+      "width": 5712,
+      "height": 4284,
+      "rgb_sha256": "4da4cea1d7ad778c95c1c8600710a85af9f8de6acb9b62bbefc68aecaf0c487c",
+      "quad": [
+        [
+          -1.1944274508259717e-13,
+          376.99200439453125
+        ],
+        [
+          5706.2880859375,
+          376.99200439453125
+        ],
+        [
+          5706.2880859375,
+          4278.2880859375
+        ],
+        [
+          0.0,
+          4278.2880859375
+        ]
+      ],
+      "source": {
+        "path": "rotated_box",
+        "low": 10,
+        "close": 5
+      }
+    },
+    {
+      "id": "2026-08-23-10",
+      "image_path": "data/processed/sessions/2026-08-23/10/shot_screen.279976fb535c.jpg",
+      "image_sha256": "279976fb535cf4827d30b2cbe2792590d4c52dd9ae44517ec3d7ed4de8833174",
+      "width": 5712,
+      "height": 4284,
+      "rgb_sha256": "6e0d9e0a7db07885949d4cf1afc139f422de8dbd882fc52a4d9b632c4c139e85",
+      "quad": [
+        [
+          0.0,
+          108.52799987792969
+        ],
+        [
+          5197.919921875,
+          0.0
+        ],
+        [
+          5706.2880859375,
+          3929.85595703125
+        ],
+        [
+          0.0,
+          4278.2880859375
+        ]
+      ],
+      "source": {
+        "path": "corners",
+        "low": 10,
+        "close": 25
+      }
+    },
+    {
+      "id": "2026-08-23-11",
+      "image_path": "data/processed/sessions/2026-08-23/11/shot_screen.c214d50f98b0.jpg",
+      "image_sha256": "c214d50f98b0617a9da1a4e52f488d83c339ab33601c4d520ba016279aa5d636",
+      "width": 5712,
+      "height": 4284,
+      "rgb_sha256": "85ae2776f35d1c2be26e723006f0fbfa1f3588e3f89b683cf587f644ab468b12",
+      "quad": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          5706.2880859375,
+          468.3840026855469
+        ],
+        [
+          5706.2880859375,
+          3884.159912109375
+        ],
+        [
+          0.0,
+          4186.89599609375
+        ]
+      ],
+      "source": {
+        "path": "corners",
+        "low": 10,
+        "close": 25
+      }
+    },
+    {
+      "id": "2026-08-23-2",
+      "image_path": "data/processed/sessions/2026-08-23/2/shot_screen.15cf1710a1a7.jpg",
+      "image_sha256": "15cf1710a1a7033dfbdd2e59a88b2c4a1d245779d475879a02c7fd681e5c39d9",
+      "width": 5712,
+      "height": 4284,
+      "rgb_sha256": "c3ce8337a1121f6026a7e960f317e09cde9d37328460ff53849ae5e7cfa2e7f1",
+      "quad": [
+        [
+          0.0,
+          851.0879516601562
+        ],
+        [
+          5706.2880859375,
+          851.0879516601562
+        ],
+        [
+          5706.2880859375,
+          4278.2880859375
+        ],
+        [
+          0.0,
+          4278.2880859375
+        ]
+      ],
+      "source": {
+        "path": "rotated_box",
+        "low": 30,
+        "close": 15
+      }
+    },
+    {
+      "id": "2026-08-23-3",
+      "image_path": "data/processed/sessions/2026-08-23/3/shot_screen.af152765f918.jpg",
+      "image_sha256": "af152765f918a13f20c41d00d562ecf71ee3f706c959f97c49c2fa0b257c2c06",
+      "width": 5712,
+      "height": 4284,
+      "rgb_sha256": "c91aa6df9ba58c709491864735715379c567f7c1a75cd9a7fb1869c41eacac6e",
+      "quad": null,
+      "source": null
+    },
+    {
+      "id": "2026-08-23-4",
+      "image_path": "data/processed/sessions/2026-08-23/4/shot_screen.f09d9e348523.jpg",
+      "image_sha256": "f09d9e348523e92ece04617f6f8a90c93e323d4e244aec7ff55ccfda35df80a6",
+      "width": 5712,
+      "height": 4284,
+      "rgb_sha256": "364da3ec7dae1bc647d2f8fdbe9b90cf3d63f9b90c98502a6a72b69e8b1fe613",
+      "quad": null,
+      "source": null
+    },
+    {
+      "id": "2026-08-23-5",
+      "image_path": "data/processed/sessions/2026-08-23/5/shot_screen.838d12bf8425.jpg",
+      "image_sha256": "838d12bf84254b5787d2b379a96a9af804391128998a37ce56ba0a16cbe85dd5",
+      "width": 5712,
+      "height": 4284,
+      "rgb_sha256": "5e3cf1197188f2fa20f7cb9c9079be4231aa70a906aec181376ebbd5e5413cef",
+      "quad": null,
+      "source": null
+    },
+    {
+      "id": "2026-08-23-6",
+      "image_path": "data/processed/sessions/2026-08-23/6/shot_screen.3daddb3c44b0.jpg",
+      "image_sha256": "3daddb3c44b07ae156c0c2fa4afa350a22c15399bdaf391fdb67a38a54e348ef",
+      "width": 5712,
+      "height": 4284,
+      "rgb_sha256": "fc3c59d6d0893de077220b72734cce7e4c7de87ab62b333a7fe123ff300684ef",
+      "quad": [
+        [
+          -1.143712403429975e-13,
+          542.6400146484375
+        ],
+        [
+          5706.2880859375,
+          542.6400146484375
+        ],
+        [
+          5706.2880859375,
+          4278.2880859375
+        ],
+        [
+          0.0,
+          4278.2880859375
+        ]
+      ],
+      "source": {
+        "path": "rotated_box",
+        "low": 10,
+        "close": 5
+      }
+    },
+    {
+      "id": "2026-08-23-7",
+      "image_path": "data/processed/sessions/2026-08-23/7/shot_screen.e5061edf9ae6.jpg",
+      "image_sha256": "e5061edf9ae6ff5a6152ff4a0d161a7fe81a48592ff9e65c255fe790495f9d54",
+      "width": 5712,
+      "height": 4284,
+      "rgb_sha256": "917a3ec2eb6a0eea95fe62853a6c65fb16a835b999e57da5a916244b5dcde35e",
+      "quad": null,
+      "source": null
+    },
+    {
+      "id": "2026-08-23-8",
+      "image_path": "data/processed/sessions/2026-08-23/8/shot_screen.892c9c3e0f80.jpg",
+      "image_sha256": "892c9c3e0f801c9f0bf3b2fe18c5f334124e7c7d526493ab5b318441d4499982",
+      "width": 5712,
+      "height": 4284,
+      "rgb_sha256": "81cf69300aaa4de87214ce0ef9638468f6df6c19ac9314e0d5e101a4fec7c53d",
+      "quad": null,
+      "source": null
+    },
+    {
+      "id": "2026-08-23-9",
+      "image_path": "data/processed/sessions/2026-08-23/9/shot_screen.5d95c6638e4b.jpg",
+      "image_sha256": "5d95c6638e4bddeb3a189925f9f048e856824c8e4097accf305e53daf3bb30db",
+      "width": 5712,
+      "height": 4284,
+      "rgb_sha256": "eb02139e5d34c6a7254dab016aefecf31c91a3de6a2efcc92ac364f5a312c581",
+      "quad": [
+        [
+          -1.2119153608176197e-13,
+          319.8719787597656
+        ],
+        [
+          5580.6240234375,
+          319.8719787597656
+        ],
+        [
+          5580.6240234375,
+          4278.2880859375
+        ],
+        [
+          0.0,
+          4278.2880859375
+        ]
+      ],
+      "source": {
+        "path": "rotated_box",
+        "low": 30,
+        "close": 5
+      }
+    }
+  ]
+}

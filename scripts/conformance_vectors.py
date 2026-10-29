@@ -37,7 +37,9 @@ shape plus the test that would have to prove the reduction.
 **Later families have sections of their own at the foot of this file**: the stages (M22 P1), the
 format tables (M22 P3, M34 P2), the screen family (M34 P4), which is recorded once, by
 `regenerate --screen-once`, and never rebuilt from here, and the storage family (M36), the corpus
-reader and the stores, recorded once in the same way by `regenerate --storage-once`.
+reader and the stores, recorded once in the same way by `regenerate --storage-once`. The last is
+the MCP server's (M29 P8), its surface and every tool's answer through the SDK's own client,
+recorded once by `regenerate --mcp-once`.
 """
 
 from __future__ import annotations
@@ -1573,7 +1575,7 @@ _CAREER_EDGES = (
 
 #: The precisions `:.Ng` is interpolated with across M36's surface, measured with `grep -rnoE
 #: '\.[0-9]+g\}' src/golf_coach scripts` and not chosen: `analysis/dispersion.py:208-209`, the
-#: drift caveat's two spreads. (`scripts/pose_replay.py`'s `.3g` and `.6g` are a lab tool's and
+#: drift caveat's two spreads. (`archive/pose_replay.py`'s `.3g` and `.6g` are a lab tool's and
 #: port with it, not here.) `general.json` is `%g`'s default precision of 6 and stays the gate for
 #: that; this table is every other precision, so the default is not tabled twice.
 _G_PRECISIONS = (3,)
@@ -3749,12 +3751,18 @@ def _storage_corpus_real() -> dict[str, Any]:
     return vector
 
 
-def _real_sessions_tree(root: Path) -> dict[str, str]:
+def _real_sessions_tree(
+    root: Path, analysis: Callable[[str], str] | None = None
+) -> dict[str, str]:
     """`input.files` for the real sessions root: what `read_corpus` opens, nothing it skips.
 
     Dotted directories are left out because `list_session_ids` and `get_session` never enter
     them, and a directory left with nothing to carry keeps its `/` key so it is still listed.
+    `analysis` is what each `analysis.json` becomes on the way in: `_slim_analysis` unless the
+    caller says otherwise, as the MCP family's real case does (M29 P8), whose `get_swing` reads
+    most of the file.
     """
+    slim = _slim_analysis if analysis is None else analysis
     files: dict[str, str] = {}
     for session in sorted(p for p in root.iterdir() if p.is_dir() and not p.name.startswith(".")):
         carried = len(files)
@@ -3769,7 +3777,7 @@ def _real_sessions_tree(root: Path) -> dict[str, str]:
                 if (swing / name).is_file():
                     files[prefix + name] = _raw_text(swing / name)
             if (swing / "analysis.json").is_file():
-                files[prefix + "analysis.json"] = _slim_analysis(_raw_text(swing / "analysis.json"))
+                files[prefix + "analysis.json"] = slim(_raw_text(swing / "analysis.json"))
             if len(files) == before:
                 files[prefix] = ""
         if len(files) == carried:
@@ -6156,14 +6164,42 @@ def _career_adopted() -> dict[str, dict[str, Any]]:
     return cases
 
 
+def _excusing_newer_engine_versions(
+    read: dict[str, Any], recorded: dict[str, Any]
+) -> dict[str, Any]:
+    """`read` with each swing's `analysis_version` put back to `recorded`'s where it is newer.
+
+    M29 P29 re-ran every bundle under `data/` with `golf-lab reanalyze`, which stamps Rust's engine
+    version, so a swing the committed corpus recorded at frozen Python's version now reads one
+    later. Measured on a rehearsal of that write, `swings[].analysis_version` was the only
+    difference between the two corpora, every one of them 16 -> 17, and frozen Python reads a
+    newer artifact as current (`is_outdated` is a `<`). So exactly that is excused: a version
+    older than the recorded one, a swing paired with a different one, or any other key that moved
+    still fails the comparison it feeds.
+    """
+    swings, kept = read.get("swings"), recorded.get("swings")
+    if not (isinstance(swings, list) and isinstance(kept, list) and len(swings) == len(kept)):
+        return read
+    excused = []
+    for swing, was in zip(swings, kept, strict=True):
+        now, then = swing.get("analysis_version"), was.get("analysis_version")
+        same = all(swing.get(key) == was.get(key) for key in ("session_id", "swing_id"))
+        if same and isinstance(now, int) and isinstance(then, int) and now > then:
+            swing = {**swing, "analysis_version": then}
+        excused.append(swing)
+    return {**read, "swings": excused}
+
+
 def _career_real() -> dict[str, Any]:
     """The golfer on disk: the real storage vector's corpus, their bag and their name.
 
     The corpus is the one `spec/vectors/storage/corpus/real.json.gz` records, and it must equal
     `read_corpus` over `data/` itself or this raises (the plan's call 2), so the two families start
-    from one corpus. The mishit listing is then run over the real trees as well, the storage
-    vector's sessions materialised beside a copy of the golfers directory, and must print what the
-    case recorded.
+    from one corpus. Since M29 P29 `data/` is Rust's, re-run at a later engine than the one that
+    recorded it, so each swing's `analysis_version` is excused where it is newer
+    (`_excusing_newer_engine_versions`) and nothing else is. The mishit listing is then run over
+    the real trees as well, the storage vector's sessions materialised beside a copy of the golfers
+    directory, and must print what the case recorded.
     """
     import gzip
     import shutil
@@ -6181,7 +6217,8 @@ def _career_real() -> dict[str, Any]:
     stored = json.loads(gzip.decompress(stored_path.read_bytes()))
     dumped = stored["expected"]["corpus"]
     frozen_view = _as_frozen_python_writes(dumped)
-    if read_corpus(SESSIONS, _REAL_PLAYER).model_dump(mode="json") != frozen_view:
+    read = read_corpus(SESSIONS, _REAL_PLAYER).model_dump(mode="json")
+    if _excusing_newer_engine_versions(read, frozen_view) != frozen_view:
         raise AssertionError(
             f"{_rel(SESSIONS)} no longer reads as {_rel(stored_path)} recorded it, so the career "
             "family would start from a different corpus than the storage family"
@@ -6222,3 +6259,2014 @@ def _career_real() -> dict[str, Any]:
                         f"{over_trees!r}, and over the corpus {recorded!r}"
                     )
     return vector
+
+
+# ======================================================================== mcp: the server's answers
+#
+# **The MCP server, recorded once from frozen Python** (M29 P8, the plan's decision 9, ADR-035
+# clause 3). `crates/mcp`'s `golf-mcp` (M29 P9-P15) is the implementation from then on, and
+# `regenerate --mcp-once` refuses to run a second time. Every answer is taken from the built server
+# through the SDK's own in-memory client (`mcp.client.Client`, `mode="legacy"`: the handshake
+# protocol a stdio client speaks today), so what is recorded is what a client receives, after the
+# SDK has serialized it, and not what a tool function returned.
+#
+# **Two shapes.**
+#
+# - **The surface case** (`mcp/surface/server.json`): what a client sees on connect, for the server
+#   with a golfer registry and for the one without, as `input.servers` names them: the negotiated
+#   `protocolVersion`, `serverInfo`, the `instructions`, and each tool's `name`, `description` and
+#   `inputSchema` in the order `tools/list` answers. **A tool's `outputSchema` is left out**: it is
+#   the JSON Schema pydantic derives for the views, which no client routes on, and a port derives
+#   its own; what a tool returns is pinned by the tool cases instead.
+# - **A tool case** (`mcp/tools/*.json`, `mcp/real/data.json.gz`): a tree, then tool calls on it.
+#   `input.files` is a scratch root as raw text, laid out by `_materialise` as a storage case's root
+#   is, and `input.roots` names the directory under it that each of `build_server`'s three
+#   arguments is given. `sessions` and `shots` always name one, and a directory `files` does not
+#   hold is passed and absent. `golfers` names one or is `null`, which builds the server with no
+#   registry and so without its five per-golfer tools. The server is built as
+#   `scripts/run_mcp_server.py` builds it, the shots behind
+#   `CompositeShotDataSource([ScreenShotDataSource(shots)])`. `input.calls` is `[{tool, arguments,
+#   now}]`, made in order over one connection, and `expected.results` holds each call's answer as
+#   the client received it: `content`, `structuredContent` and `isError`, keyed as on the wire, with
+#   `null` where the wire leaves one out. The 2026 protocol's `resultType` and `_meta` are dropped.
+#
+# **The clock is an argument** (the storage family's call 4). One thing any tool measures from now:
+# `get_shot_trends`' `days` window (`mcp/career.py`). So each call carries its `now`, and `null`
+# where the clock must not be read: `_mcp_clock` replaces `career`'s `datetime` for one call, and a
+# `null` call that reads it fails the build. The trees are built under `_frozen_clock` at
+# `_MCP_EPOCH`, so a golfer record and a bag entry are stamped there, after every swing, and a
+# rebuild writes the same text.
+#
+# **The trees are the tests'.** `tests/mcp/conftest.py`'s writers lay them out, the test modules'
+# own constants and shot builders fill them (loaded by path, as the storage family loads its
+# conftest), and each case's note names the tests it mirrors. A tree several tests share is one case
+# with a call per test. Where tests each build one scenario under the same ids, a case gives each
+# its own session, and where they each file a shot under one `shot_id`, a case gives each its own:
+# the composite source drops a repeated id, so one tree cannot hold two shots under one.
+#
+# **No call in this family raises.** A tool that raises comes back as `isError` with the SDK's text
+# in it, and no port is asked to reproduce that, so the recorder refuses a case where one did.
+#
+# **Which answers carry the engine's numbers** (the plan's call 1). `simulate_flight` flies the
+# shot again when it is called, so a call that found a shot holds the frozen flight model's
+# numbers, and `provenance.flight_model_calls` lists those calls by index. `get_swing`'s
+# `simulated` block is the stored artifact read back, not the model run again. The career and club
+# tools join the tour bands in `ranges.json`, as the career family's reports do.
+
+#: Where the MCP family lives, and the shots `data/` holds beside its sessions and golfers.
+_MCP = VECTORS / "mcp"
+SHOTS = REPO / "data" / "processed" / "shots"
+PROCESSED = REPO / "data" / "processed"
+
+#: The instant every tree is built at, and the `now` of the one synthetic case that reads a clock.
+#: After every synthetic swing, so a bag entry stamped here is one recorded after the swings.
+_MCP_EPOCH = "2026-10-01T12:00:00Z"
+
+#: The three directories a tool case's server is handed, and the registry-less variant.
+_MCP_ROOTS: dict[str, str | None] = {"sessions": "sessions", "shots": "shots", "golfers": "golfers"}
+_MCP_NO_REGISTRY: dict[str, str | None] = {**_MCP_ROOTS, "golfers": None}
+
+#: What a tool case keeps of each `CallToolResult`, as the wire spells it.
+_MCP_RESULT_KEYS = ("content", "structuredContent", "isError")
+
+#: The surface case's two servers.
+_MCP_SERVERS = {"without_registry": _MCP_NO_REGISTRY, "with_registry": _MCP_ROOTS}
+
+
+def build_mcp(*, real: bool = True) -> list[tuple[Path, dict[str, Any]]]:
+    """The whole MCP family, built in full before anything is returned. Writes nothing.
+
+    `real=False` leaves out the case read from `data/`, which is what lets the dry-run pin in
+    `tests/test_conformance.py` run on a checkout with no captures. With it, a missing `data/` is
+    an error rather than a smaller family.
+    """
+    out = [(_MCP / "surface" / "server.json", _mcp_surface())]
+    out += [(_MCP / "tools" / f"{name}.json", v) for name, v in _mcp_tools().items()]
+    if real:
+        out.append((_MCP / "real" / f"data{_REAL_SUFFIX}", _mcp_real()))
+    return out
+
+
+def _run_surface(given: dict[str, Any]) -> dict[str, Any]:
+    """The surface case's definition: each server in `input.servers`, connected, and listed."""
+    import anyio
+    from mcp.client import Client
+
+    async def surface(server: Any) -> dict[str, Any]:
+        async with Client(server, mode="legacy", cache=None) as client:
+            listed = await client.list_tools()
+            assert listed.next_cursor is None, "tools/list paginated, and this reads one page"
+            tools = []
+            for tool in listed.tools:
+                dumped = tool.model_dump(mode="json", by_alias=True, exclude_none=True)
+                tools.append({key: dumped[key] for key in ("name", "description", "inputSchema")})
+            info = client.server_info
+            assert info is not None, "a handshake-era server always identifies itself"
+            return {
+                "protocolVersion": client.protocol_version,
+                "serverInfo": info.model_dump(mode="json", by_alias=True, exclude_none=True),
+                "instructions": client.instructions,
+                "tools": tools,
+            }
+
+    out = {}
+    for shape, roots in given["servers"].items():
+        with tempfile.TemporaryDirectory() as scratch:
+            server = _mcp_server(Path(scratch), roots)
+            out[shape] = anyio.run(surface, server)
+    return out
+
+
+def _run_mcp(given: dict[str, Any]) -> dict[str, Any]:
+    """One tool case's input through frozen Python: the definition a port reproduces.
+
+    `input.files` materialised into a scratch root, the server built over `input.roots` under it,
+    and `input.calls` made in order over one connection.
+    """
+    with tempfile.TemporaryDirectory() as scratch:
+        root = Path(scratch) / "root"
+        _materialise(given["files"], root)
+        return {"results": _mcp_answers(_mcp_server(root, given["roots"]), given["calls"])}
+
+
+def _mcp_server(root: Path, roots: dict[str, str | None]) -> Any:
+    """`build_server` over `roots` under `root`, wired as `scripts/run_mcp_server.py` wires it."""
+    from golf_coach.launch_monitor.composite import CompositeShotDataSource
+    from golf_coach.launch_monitor.screen.source import ScreenShotDataSource
+    from golf_coach.mcp.server import build_server
+
+    sessions, shots, golfers = roots["sessions"], roots["shots"], roots["golfers"]
+    assert sessions is not None and shots is not None, "only the registry may be left out"
+    return build_server(
+        root / sessions,
+        CompositeShotDataSource([ScreenShotDataSource(root / shots)]),
+        golfers_dir=None if golfers is None else root / golfers,
+    )
+
+
+def _mcp_answers(server: Any, calls: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Each call's `CallToolResult`, as the client received it, cut to `_MCP_RESULT_KEYS`."""
+    import anyio
+    from mcp.client import Client
+
+    async def answers() -> list[dict[str, Any]]:
+        out = []
+        async with Client(server, mode="legacy", cache=None) as client:
+            for call in calls:
+                with _mcp_clock(call["now"]) as misread:
+                    result = await client.call_tool(call["tool"], call["arguments"])
+                if misread:
+                    raise AssertionError(f"{call} is recorded with `now: null` and read the clock")
+                dumped = result.model_dump(mode="json", by_alias=True, exclude_none=True)
+                if dumped.get("isError"):
+                    raise AssertionError(f"{call} raised inside the tool: {dumped['content']}")
+                out.append({key: dumped.get(key) for key in _MCP_RESULT_KEYS})
+        return out
+
+    return anyio.run(answers)
+
+
+@contextlib.contextmanager
+def _mcp_clock(now: str | None) -> Iterator[list[bool]]:
+    """`datetime.now` answering `now` in `mcp/career.py`, the one tool module that reads a clock.
+
+    `_frozen_clock`'s subclass, for the same reason. A read under `now: null` cannot raise: the SDK
+    would catch it and answer `isError`, which is a recording of the recorder. So it answers the
+    epoch and says so through the yielded list, and `_mcp_answers` refuses the call.
+    """
+    from datetime import datetime, tzinfo
+
+    from golf_coach.mcp import career
+
+    instant = datetime.fromisoformat(_MCP_EPOCH if now is None else now)
+    misread: list[bool] = []
+
+    class Frozen(datetime):
+        @classmethod
+        def now(cls, tz: tzinfo | None = None) -> datetime:
+            if now is None:
+                misread.append(True)
+            if tz is None:
+                raise AssertionError("a tool read a naive clock, which none does today")
+            return instant.astimezone(tz)
+
+    saved = career.datetime
+    career.datetime = Frozen  # type: ignore[misc]
+    try:
+        yield misread
+    finally:
+        career.datetime = saved  # type: ignore[misc]
+
+
+def _mcp_vector(
+    vector_id: str,
+    given: dict[str, Any],
+    *,
+    note: str,
+    source: str,
+    run: Callable[[dict[str, Any]], dict[str, Any]] = _run_mcp,
+) -> dict[str, Any]:
+    """Serialize the input, run it through `run`, and pair the two (`_storage_vector`'s rule).
+
+    The case ages on `CAREER_VERSION`, at frozen Python's 0 (the plan's call 1).
+    `provenance.analysis_version` names the frozen engine whose answers are inside: the flight
+    model `simulate_flight` runs, the corpus reader's `is_outdated` and the tour bands.
+    """
+    import importlib.metadata
+
+    import pydantic
+
+    given_json = json.loads(json.dumps(given))
+    expected = run(given_json)
+    provenance: dict[str, Any] = {
+        "kind": "mcp",
+        "oracle": "python",
+        "note": note,
+        "source": source,
+        "analysis_version": ANALYSIS_VERSION,
+        "python_version": _python_version(),
+        "pydantic_version": pydantic.VERSION,
+        "mcp_version": importlib.metadata.version("mcp"),
+        "recorded_by": f"scripts/conformance_vectors.py::{run.__name__}",
+    }
+    if run is _run_mcp:
+        provenance["flight_model_calls"] = [
+            index
+            for index, (call, result) in enumerate(
+                zip(given_json["calls"], expected["results"], strict=True)
+            )
+            if call["tool"] == "simulate_flight"
+            and (result["structuredContent"] or {}).get("result", {}).get("shot_id") is not None
+        ]
+    return {
+        "id": vector_id,
+        "career_version": _FROZEN_CAREER,
+        "provenance": provenance,
+        "input": given_json,
+        "expected": expected,
+    }
+
+
+def _mcp_surface() -> dict[str, Any]:
+    return _mcp_vector(
+        "mcp/surface/server",
+        {"servers": _MCP_SERVERS},
+        note=(
+            "what a client sees on connect, with a golfer registry and without one: the protocol, "
+            "serverInfo, the instructions, and each tool's name, description and input schema"
+        ),
+        source="src/golf_coach/mcp/server.py::build_server",
+        run=_run_surface,
+    )
+
+
+def _call(tool: str, now: str | None = None, **arguments: Any) -> dict[str, Any]:
+    """One tool call for `input.calls`. `now` only where the call reads a clock."""
+    return {"tool": tool, "arguments": arguments, "now": now}
+
+
+def _mcp_tree(build: Callable[[Path], None]) -> dict[str, str]:
+    """`build` run over an empty scratch root under the frozen clock, then read back as text."""
+    with tempfile.TemporaryDirectory() as scratch:
+        root = Path(scratch) / "root"
+        root.mkdir()
+        with _frozen_clock(_MCP_EPOCH):
+            build(root)
+        return dict(sorted(_read_tree(root).items()))
+
+
+class _McpKit:
+    """`tests/mcp/`'s writers and constants, each module loaded by path once.
+
+    The conftest is the tree writer, and four test modules hold the values and the shots their
+    tests build from, so a case and its test cannot drift apart by a re-typed constant.
+    """
+
+    def __init__(self) -> None:
+        tests = REPO / "tests" / "mcp"
+        self.conftest = _load_conftest(tests / "conftest.py", "_conformance_mcp_conftest")
+        self.query = _load_conftest(tests / "test_query.py", "_conformance_mcp_query")
+        self.career = _load_conftest(tests / "test_career_tools.py", "_conformance_mcp_career")
+        self.club = _load_conftest(tests / "test_club_tools.py", "_conformance_mcp_club")
+        self.flight = _load_conftest(tests / "test_flight_tool.py", "_conformance_mcp_flight")
+
+    def swing(self, root: Path, session_id: str, swing_id: str, **fields: Any) -> Path:
+        return self.conftest.write_swing(root / "sessions", session_id, swing_id, **fields)
+
+    def analysis(self, session_id: str, swing_id: str, **fields: Any) -> dict[str, Any]:
+        return self.conftest.make_analysis(session_id, swing_id, **fields)
+
+    def sessions_fixture(self, root: Path) -> None:
+        """`conftest.sessions_dir`: two analysed swings, one with no state file, one unanalysed."""
+        from golf_coach.storage.manifest import Role
+
+        self.swing(root, "2026-08-10", "1", analysis=self.analysis("2026-08-10", "1", overall=94.9))
+        self.swing(root, "2026-08-10", "2", analysis=self.analysis("2026-08-10", "2", overall=93.8))
+        self.swing(
+            root,
+            "2026-08-09",
+            "1",
+            analysis=self.analysis("2026-08-09", "1", overall=86.1),
+            state=False,
+        )
+        self.swing(root, "2026-08-08", "1", roles=(Role.FACE_ON,), analysis=None)
+
+    @staticmethod
+    def golfer(root: Path) -> None:
+        """`conftest.golfers_dir`: Aaron, right-handed, created as the upload page creates one."""
+        from golf_coach.storage.golfer_store import GolferStore
+
+        GolferStore(root / "golfers").get_or_create("Aaron", Handedness.RIGHT)
+
+    @staticmethod
+    def shots(root: Path, *shots: Any) -> None:
+        from golf_coach.launch_monitor.screen.store import ShotStore
+
+        store = ShotStore(root / "shots")
+        for shot in shots:
+            store.put(shot)
+
+    @staticmethod
+    def source(root: Path) -> Any:
+        """The source `_mcp_server` builds, over a tree under construction."""
+        from golf_coach.launch_monitor.composite import CompositeShotDataSource
+        from golf_coach.launch_monitor.screen.source import ScreenShotDataSource
+
+        return CompositeShotDataSource([ScreenShotDataSource(root / "shots")])
+
+
+#: What each case builder returns: its name, roots, tree, calls and note.
+_McpCase = tuple[str, dict[str, str | None], dict[str, str], list[dict[str, Any]], str]
+
+
+def _mcp_tools() -> dict[str, dict[str, Any]]:
+    """Every synthetic tool case, by name. Each builder's note names the tests it mirrors."""
+    kit = _McpKit()
+    builders: tuple[Callable[[_McpKit], _McpCase], ...] = (
+        _mcp_sessions,
+        _mcp_swing_views,
+        _mcp_session_summaries,
+        _mcp_shots,
+        _mcp_no_directories,
+        _mcp_career_refusing,
+        _mcp_career_speaking,
+        _mcp_career_window,
+        _mcp_career_reuploads,
+        _mcp_mishit,
+        _mcp_club_untagged,
+        _mcp_club_refusing,
+        _mcp_club_speaking,
+        _mcp_club_photo_ceiling,
+        _mcp_club_mixed_bag,
+        _mcp_club_declared,
+        _mcp_club_bag_after_swings,
+        _mcp_club_no_measurements,
+        _mcp_flight,
+        _mcp_flight_registry,
+    )
+    cases: dict[str, dict[str, Any]] = {}
+    for builder in builders:
+        name, roots, files, calls, note = builder(kit)
+        assert name not in cases, f"two MCP cases are called {name}"
+        cases[name] = _mcp_vector(
+            f"mcp/tools/{name}",
+            {"roots": roots, "files": files, "calls": calls},
+            note=note,
+            source=f"scripts/conformance_vectors.py::{builder.__name__}, after tests/mcp/",
+        )
+    return cases
+
+
+def _mcp_sessions(kit: _McpKit) -> _McpCase:
+    files = _mcp_tree(kit.sessions_fixture)
+    swings = [("2026-08-10", "1"), ("2026-08-10", "2"), ("2026-08-09", "1"), ("2026-08-08", "1")]
+    calls = [
+        _call("list_sessions"),
+        _call("list_sessions", limit=2),
+        _call("list_sessions", limit=0),
+        _call("list_sessions", limit=-1),
+        *[_call("get_swing", session_id=s, swing_id=w) for s, w in swings],
+        _call("get_swing", session_id="2026-08-10", swing_id="99"),
+        _call("get_swing", session_id="nope", swing_id="nope"),
+        *[_call("get_session_summary", session_id=s) for s in ("2026-08-10", "2026-08-09")],
+        _call("get_session_summary", session_id="2026-08-08"),
+        _call("get_session_summary", session_id="1999-01-01"),
+        _call("get_recent_shots"),
+        _call("get_shot_by_id", shot_id="nope"),
+        _call("simulate_flight", session_id="2026-08-10", swing_id="1"),
+        _call("simulate_flight", session_id="2026-08-08", swing_id="1"),
+        _call("simulate_flight", session_id="2026-08-10", swing_id="99"),
+    ]
+    note = (
+        "conftest's sessions_dir with no registry: the listing (order, limits, the analysis.json "
+        "fallback, the unanalysed swing and its roles), get_swing and its misses, the summaries "
+        "and the absent session, and a flight with its screen unread, with none, and a miss; "
+        "test_query.py's listing tests and test_server.py's round trips and misses"
+    )
+    return "sessions", _MCP_NO_REGISTRY, files, calls, note
+
+
+def _mcp_swing_views(kit: _McpKit) -> _McpCase:
+    from golf_coach.contracts.club import ClubId
+    from golf_coach.contracts.mishit import MishitVerdict
+
+    q = kit.query
+    flagged = q._shot("2026-08-10-10", needs_review=True).model_dump(mode="json")
+    no_band = {"name": "tempo", "reason": "no_band", "detail": "no band for tempo_ratio"}
+    variants: list[tuple[str, dict[str, Any], dict[str, Any]]] = [
+        ("1", {"stale": True}, {}),
+        ("2", {}, {"unscored": [no_band]}),
+        ("3", {}, {"unscored": ["tempo"]}),
+        ("4", {}, {"unscored": [{"name": "tempo", "reason": "invented_later"}]}),
+        ("5", {}, {"measurements": q._MEASUREMENTS}),
+        ("6", {}, {"measurements": q._SIMULATED_MEASUREMENTS}),
+        ("7", {}, {"measurements": q._PIVOT_MEASUREMENTS}),
+        ("8", {}, {"quality": "full"}),
+        ("9", {}, {"quality": None}),
+        ("10", {}, {"shot": flagged}),
+        ("12", {"mishit": MishitVerdict.CONFIRMED}, {}),
+        ("13", {"mishit": MishitVerdict.CLEARED}, {}),
+    ]
+
+    def build(root: Path) -> None:
+        kit.swing(
+            root, "2026-09-01", "1", club=ClubId.SEVEN_IRON,
+            analysis=kit.analysis("2026-09-01", "1"),
+        )
+        kit.swing(root, "2026-09-01", "2", analysis=kit.analysis("2026-09-01", "2"))
+        for swing_id, fields, analysis in variants:
+            kit.swing(
+                root, "2026-08-10", swing_id, **fields,
+                analysis=kit.analysis("2026-08-10", swing_id, **analysis),
+            )
+        # `career_writer`'s stamped artifact, whose own ids are `s`/`1`, as the test writes it.
+        kit.swing(
+            root, "2026-08-10", "11",
+            analysis=kit.conftest.career_analysis({"tempo_ratio": 2.42}),
+        )
+
+    ids = sorted([swing_id for swing_id, _, _ in variants] + ["11"], key=int)
+    calls = [
+        _call("get_swing", session_id="2026-09-01", swing_id="1"),
+        _call("get_swing", session_id="2026-09-01", swing_id="2"),
+        *[_call("get_swing", session_id="2026-08-10", swing_id=w) for w in ids],
+        _call("list_sessions"),
+        _call("get_session_summary", session_id="2026-08-10"),
+        _call("get_session_summary", session_id="2026-09-01"),
+    ]
+    note = (
+        "one swing per get_swing test in test_query.py, each in its own directory: the club tag, "
+        "a stale result, the three unscored shapes (a reason, names only, an unknown reason), "
+        "placements, simulated and pivot rows, full and absent alignment, a flagged shot, a "
+        "stamped engine version and both mishit verdicts; then the listing and both summaries"
+    )
+    return "swing-views", _MCP_NO_REGISTRY, _mcp_tree(build), calls, note
+
+
+def _mcp_session_summaries(kit: _McpKit) -> _McpCase:
+    from golf_coach.contracts.mishit import MishitVerdict
+
+    q = kit.query
+
+    def build(root: Path) -> None:
+        for swing_id, score, carry in (("1", 94.9, 120.0), ("2", 93.8, 130.0)):
+            shot = q._shot(f"2026-08-10-{swing_id}", carry=carry).model_dump(mode="json")
+            kit.swing(
+                root, "2026-08-10", swing_id,
+                analysis=kit.analysis("2026-08-10", swing_id, overall=score, shot=shot),
+            )
+        good, bad = q._shot("good", carry=120.0), q._shot("bad", needs_review=True, carry=400.0)
+        for swing_id, shot in (("1", good), ("2", bad)):
+            kit.swing(
+                root, "2026-08-11", swing_id,
+                analysis=kit.analysis("2026-08-11", swing_id, shot=shot.model_dump(mode="json")),
+            )
+        real = q._shot_with_distances("real", carry=150.0, total=165.0)
+        top = q._shot_with_distances("top", carry=20.0, total=24.0)
+        for session_id, verdict in (
+            ("2026-08-12", MishitVerdict.CONFIRMED),
+            ("2026-08-13", MishitVerdict.CLEARED),
+        ):
+            kit.swing(
+                root, session_id, "1",
+                analysis=kit.analysis(session_id, "1", shot=real.model_dump(mode="json")),
+            )
+            kit.swing(
+                root, session_id, "2", mishit=verdict,
+                analysis=kit.analysis(session_id, "2", shot=top.model_dump(mode="json")),
+            )
+
+    sessions = ("2026-08-10", "2026-08-11", "2026-08-12", "2026-08-13")
+    calls = [
+        *[_call("get_session_summary", session_id=s) for s in sessions],
+        _call("list_sessions"),
+    ]
+    note = (
+        "test_query.py's four summary trees, a session each: both axes averaged (a half-even "
+        "mean), a flagged shot counted and kept out, a CONFIRMED mishit's distances held out and "
+        "its ball speed kept, and a CLEARED one counted"
+    )
+    return "session-summaries", _MCP_NO_REGISTRY, _mcp_tree(build), calls, note
+
+
+def _mcp_shots(kit: _McpKit) -> _McpCase:
+    q, ft = kit.query, kit.flight
+
+    def build(root: Path) -> None:
+        # `a` and `b` share one timestamp, so the store's newest-first sort keeps their file order.
+        kit.shots(root, q._shot("a"), q._shot("b", needs_review=True))
+        # Filed under a photo, at a later instant: the newest shot, keyed by its image.
+        kit.shots(root, ft._shot("photo-sha", shot_id="shot-1"))
+        # A second `a`, newer than the first, under another key. `recent` keeps the newer and
+        # `stream`, oldest first, the older, so `get_shot_by_id` and `get_recent_shots` disagree.
+        first = q._shot("a")
+        assert first.provenance is not None
+        kit.shots(
+            root,
+            q._shot("a", carry=150.0).model_copy(
+                update={
+                    "timestamp": first.timestamp.replace(hour=2),
+                    "provenance": first.provenance.model_copy(update={"image_sha256": "a-again"}),
+                }
+            ),
+        )
+        shots = root / "shots"
+        (shots / "broken.shot.json").write_bytes(b"{not json")
+        (shots / "notes.txt").write_bytes(b"not a shot")
+
+    calls = [
+        _call("get_recent_shots"),
+        *[_call("get_recent_shots", count=n) for n in (1, 2, 3, 0, -5)],
+        *[_call("get_shot_by_id", shot_id=i) for i in ("a", "b", "shot-1", "missing")],
+    ]
+    note = (
+        "a shot store with no sessions: test_query.py's two shots (one flagged, one timestamp), "
+        "a newer one filed under its photo, a second `a` newer than the first, an unreadable "
+        "file and a stray one; recent shots at every count, and each id found and missed"
+    )
+    return "shots", _MCP_NO_REGISTRY, _mcp_tree(build), calls, note
+
+
+def _mcp_no_directories(kit: _McpKit) -> _McpCase:
+    calls = [
+        _call("list_sessions"),
+        _call("get_swing", session_id="2026-08-10", swing_id="1"),
+        _call("get_session_summary", session_id="2026-08-10"),
+        _call("get_recent_shots"),
+        _call("get_shot_by_id", shot_id="a"),
+        _call("simulate_flight", session_id="2026-08-10", swing_id="1"),
+        _call("get_golfer_profile", player="Aaron"),
+        _call("get_shot_trends", metric="head_sway_norm", player="Aaron"),
+        _call("compare_sessions", session_a="a", session_b="b", player="Aaron"),
+        _call("get_bag_profile", player="Aaron"),
+        _call("get_club_profile", player="Aaron", club="7i"),
+    ]
+    note = (
+        "every directory absent and a registry still configured, which is the launcher's "
+        "'directory does not exist' warning: an empty listing, and every other tool a miss "
+        "(test_listing_a_missing_sessions_dir_is_empty_not_an_error, on all eleven)"
+    )
+    return "no-directories", _MCP_ROOTS, {}, calls, note
+
+
+def _career_tree(
+    kit: _McpKit,
+    values: Callable[[int], dict[str, float]],
+    swings: int,
+    sessions: int,
+    *,
+    month: int,
+    club: Any = None,
+) -> Callable[[Path], None]:
+    """The career and club tests' corpora: `refusing_dir` at two swings, `speaking_dir` at 18.
+
+    A swing a session when the counts are equal, as `refusing_dir` writes them, and otherwise
+    `speaking_dir`'s round robin, swing `i` in session `i % sessions` at minute `i`.
+    """
+    from datetime import UTC, datetime
+
+    def build(root: Path) -> None:
+        kit.golfer(root)
+        for i in range(swings):
+            if sessions == swings:
+                day, swing_id, minute = i + 1, "1", 0
+            else:
+                day, swing_id, minute = (i % sessions) + 1, str(i), i
+            kit.swing(
+                root, f"2026-{month:02d}-{day:02d}", swing_id, player_id="aaron", club=club,
+                created_at=datetime(2026, month, day, 12, minute, tzinfo=UTC),
+                analysis=kit.conftest.career_analysis(values(i)),
+            )
+
+    return build
+
+
+def _mcp_career_refusing(kit: _McpKit) -> _McpCase:
+    files = _mcp_tree(_career_tree(kit, kit.career._values, 2, 2, month=8))
+    calls = [
+        *[_call("get_golfer_profile", player=p) for p in ("Aaron", "aaron", "Nobody")],
+        _call("get_shot_trends", metric="head_sway_norm", player="Aaron"),
+        _call("get_shot_trends", metric="invented_metric", player="Aaron"),
+        _call("get_shot_trends", metric="head_sway_norm", player="Nobody"),
+        _call("compare_sessions", session_a="2026-08-01", session_b="2026-08-02", player="Aaron"),
+        _call("compare_sessions", session_a="2026-08-01", session_b="2026-08-02", player="Nobody"),
+        _call("get_bag_profile", player="Aaron"),
+    ]
+    note = (
+        "test_career_tools.py's refusing_dir, two swings in two sessions: every claim withheld, "
+        "both spellings of the name, the unknown golfer on all three tools, a metric never "
+        "recorded, and the bag of that untagged corpus"
+    )
+    return "career-refusing", _MCP_ROOTS, files, calls, note
+
+
+def _mcp_career_speaking(kit: _McpKit) -> _McpCase:
+    c = kit.career
+    files = _mcp_tree(_career_tree(kit, c._values, c._SWINGS, c._SESSIONS, month=9))
+    calls = [
+        _call("get_golfer_profile", player="Aaron"),
+        *[
+            _call("get_shot_trends", metric=m, player="Aaron")
+            for m in ("head_sway_norm", "tempo_ratio", "face_to_path_deg")
+        ],
+        _call("compare_sessions", session_a="2026-09-01", session_b="2026-09-02", player="Aaron"),
+        _call("get_bag_profile", player="Aaron"),
+    ]
+    note = (
+        "test_career_tools.py's speaking_dir, 18 swings in three sessions: every floor cleared, "
+        "the two findings, the tour join on both sides of a band and the metrics it may not "
+        "place, open trends, and a comparison with real deltas"
+    )
+    return "career-speaking", _MCP_ROOTS, files, calls, note
+
+
+def _mcp_career_window(kit: _McpKit) -> _McpCase:
+    from datetime import datetime, timedelta
+
+    now = datetime.fromisoformat(_MCP_EPOCH)
+
+    def build(root: Path) -> None:
+        kit.golfer(root)
+        for i in range(12):
+            long_ago = i < 6
+            kit.swing(
+                root, f"{'old' if long_ago else 'new'}-{i}", "1", player_id="aaron",
+                created_at=now - timedelta(days=400 if long_ago else 3, minutes=i),
+                analysis=kit.conftest.career_analysis(kit.career._values(i)),
+            )
+
+    calls = [
+        _call("get_shot_trends", metric="head_sway_norm", player="Aaron"),
+        *[
+            _call(
+                "get_shot_trends", now=_MCP_EPOCH, metric="head_sway_norm", player="Aaron",
+                days=days,
+            )
+            for days in (30, 1000)
+        ],
+    ]
+    note = (
+        "test_the_window_narrows_the_n_it_reports_on, dated from the case's `now`: six swings "
+        "400 days back and six from three days back, the whole history, a 30-day window that "
+        "narrows the n, and one wide enough to hold everything"
+    )
+    return "career-window", _MCP_ROOTS, _mcp_tree(build), calls, note
+
+
+def _mcp_career_reuploads(kit: _McpKit) -> _McpCase:
+    from datetime import UTC, datetime
+
+    from golf_coach.storage.manifest import load_manifest, manifest_path, save_manifest
+
+    def build(root: Path) -> None:
+        kit.golfer(root)
+        for day in (1, 2):
+            kit.swing(
+                root, f"2026-08-{day:02d}", "1", player_id="aaron",
+                created_at=datetime(2026, 8, day, 12, tzinfo=UTC),
+                analysis=kit.conftest.career_analysis(kit.career._values(0)),
+            )
+        sessions = root / "sessions"
+        original = load_manifest(manifest_path(sessions / "2026-08-01" / "1"))
+        later_path = manifest_path(sessions / "2026-08-02" / "1")
+        later = load_manifest(later_path)
+        assert original is not None and later is not None
+        later.roles = original.roles
+        save_manifest(later, later_path)
+
+    calls = [
+        _call("compare_sessions", session_a="2026-08-01", session_b="2026-08-02", player="Aaron"),
+        _call("get_golfer_profile", player="Aaron"),
+    ]
+    note = (
+        "test_a_session_that_scores_and_contributes_nothing_explains_itself: the second session's "
+        "clip the first's bytes, so it scores and adds no sample"
+    )
+    return "career-reuploads", _MCP_ROOTS, _mcp_tree(build), calls, note
+
+
+def _mcp_mishit(kit: _McpKit) -> _McpCase:
+    from datetime import UTC, datetime
+
+    from golf_coach.contracts.club import ClubId
+
+    def build(root: Path) -> None:
+        kit.golfer(root)
+        for i, carry in enumerate([150.0, 152.0, 148.0, 151.0, 149.0, 22.0]):
+            kit.swing(
+                root, f"2026-09-{i + 1:02d}", "1", player_id="aaron", club=ClubId.SEVEN_IRON,
+                created_at=datetime(2026, 9, i + 1, 12, tzinfo=UTC),
+                analysis=kit.conftest.career_analysis(
+                    {
+                        "carry_distance_yds": carry,
+                        "total_distance_yds": carry + 12.0,
+                        "ball_speed_mph": 118.0,
+                        "head_sway_norm": 0.200,
+                    }
+                ),
+            )
+
+    calls = [
+        _call("get_golfer_profile", player="Aaron"),
+        _call("get_club_profile", player="Aaron", club="7i"),
+        _call("get_bag_profile", player="Aaron"),
+    ]
+    note = (
+        "five 7 irons near 150 and a 22-yard top, the tree test_career_tools.py's and "
+        "test_club_tools.py's mishit tests both build: counted and caveated on the two distance "
+        "metrics only, and held out of the club's carry by the automatic rule"
+    )
+    return "mishit", _MCP_ROOTS, _mcp_tree(build), calls, note
+
+
+def _mcp_club_untagged(kit: _McpKit) -> _McpCase:
+    files = _mcp_tree(_career_tree(kit, kit.club._values, 2, 2, month=8))
+    calls = [
+        *[_call("get_bag_profile", player=p) for p in ("Aaron", "aaron", "Nobody")],
+        _call("get_club_profile", player="Aaron", club="7i"),
+        _call("get_club_profile", player="Nobody", club="7i"),
+    ]
+    note = (
+        "test_club_tools.py's untagged_dir: nothing tagged, which is not a refusal, both spellings "
+        "of the name, the unknown golfer on both tools, and a club never hit"
+    )
+    return "club-untagged", _MCP_ROOTS, files, calls, note
+
+
+def _mcp_club_refusing(kit: _McpKit) -> _McpCase:
+    from golf_coach.contracts.club import ClubId
+
+    files = _mcp_tree(
+        _career_tree(kit, kit.club._values, 2, 2, month=8, club=ClubId.SEVEN_IRON)
+    )
+    calls = [
+        _call("get_bag_profile", player="Aaron"),
+        *[_call("get_club_profile", player="Aaron", club=c) for c in ("7i", "driver", "wedge")],
+    ]
+    note = (
+        "test_club_tools.py's refusing_dir, two tagged 7 irons: a tagged club at the n on disk, a "
+        "club never hit and not in the bag, no loft without a bag entry, and text that is not a "
+        "club"
+    )
+    return "club-refusing", _MCP_ROOTS, files, calls, note
+
+
+def _mcp_club_speaking(kit: _McpKit) -> _McpCase:
+    from golf_coach.contracts.club import ClubId
+
+    c = kit.club
+    files = _mcp_tree(
+        _career_tree(kit, c._values, c._SWINGS, c._SESSIONS, month=9, club=ClubId.SEVEN_IRON)
+    )
+    calls = [
+        *[_call("get_club_profile", player="Aaron", club=t) for t in ("7i", "seven iron")],
+        _call("get_bag_profile", player="Aaron"),
+    ]
+    note = (
+        "test_club_tools.py's speaking_dir, 18 tagged 7 irons: one club that speaks, a distance's "
+        "repeatability finding and no bias one, no tour placement, and two spellings of the club"
+    )
+    return "club-speaking", _MCP_ROOTS, files, calls, note
+
+
+def _mcp_club_photo_ceiling(kit: _McpKit) -> _McpCase:
+    from datetime import UTC, datetime
+
+    from golf_coach.contracts.club import ClubId
+    from golf_coach.storage.manifest import Role
+
+    def build(root: Path) -> None:
+        kit.golfer(root)
+        for i in range(6):
+            photographed = i < 2
+            kit.swing(
+                root, "2026-09-01", str(i), player_id="aaron", club=ClubId.SEVEN_IRON,
+                created_at=datetime(2026, 9, 1, 12, i, tzinfo=UTC),
+                roles=(Role.FACE_ON, Role.SHOT_SCREEN) if photographed else (Role.FACE_ON,),
+                analysis=kit.conftest.career_analysis(kit.club._values(i)),
+            )
+
+    calls = [_call("get_club_profile", player="Aaron", club="7i")]
+    note = "test_the_shot_photo_is_the_ceiling_on_a_distance: six clips, two with a screen photo"
+    return "club-photo-ceiling", _MCP_ROOTS, _mcp_tree(build), calls, note
+
+
+def _mcp_club_mixed_bag(kit: _McpKit) -> _McpCase:
+    from datetime import UTC, datetime
+
+    from golf_coach.contracts.club import ClubId
+
+    def build(root: Path) -> None:
+        kit.golfer(root)
+        for i in range(12):
+            kit.swing(
+                root, "2026-09-01", str(i), player_id="aaron",
+                club=ClubId.SEVEN_IRON if i % 2 == 0 else ClubId.DRIVER,
+                created_at=datetime(2026, 9, 1, 12, i, tzinfo=UTC),
+                analysis=kit.conftest.career_analysis(kit.club._values(i)),
+            )
+
+    calls = [
+        _call("get_bag_profile", player="Aaron"),
+        _call("get_club_profile", player="Aaron", club="driver"),
+    ]
+    note = "test_one_club_is_narrowed_out_of_a_mixed_bag: twelve swings alternating 7i and driver"
+    return "club-mixed-bag", _MCP_ROOTS, _mcp_tree(build), calls, note
+
+
+def _bag_entry(root: Path, club: Any, **spec: Any) -> None:
+    """One `BagStore.set_entry`, stamped by the frozen clock; `recorded_at` here never lands."""
+    from datetime import UTC, datetime
+
+    from golf_coach.contracts.bag import BagEntry
+    from golf_coach.storage.bag_store import BagStore
+
+    unused = datetime(2020, 1, 1, tzinfo=UTC)
+    BagStore(root / "golfers").set_entry("aaron", BagEntry(club=club, recorded_at=unused, **spec))
+
+
+def _mcp_club_declared(kit: _McpKit) -> _McpCase:
+    from golf_coach.contracts.club import ClubId
+
+    untagged = _career_tree(kit, kit.club._values, 2, 2, month=8)
+
+    def build(root: Path) -> None:
+        untagged(root)
+        _bag_entry(root, ClubId.SEVEN_IRON, make="Titleist", loft_deg=34.0)
+
+    calls = [
+        _call("get_bag_profile", player="Aaron"),
+        _call("get_club_profile", player="Aaron", club="7i"),
+    ]
+    note = (
+        "test_a_declared_club_appears_with_its_loft_and_no_history: the untagged corpus and a "
+        "declared Titleist 7 iron at 34 degrees"
+    )
+    return "club-declared", _MCP_ROOTS, _mcp_tree(build), calls, note
+
+
+def _mcp_club_bag_after_swings(kit: _McpKit) -> _McpCase:
+    from golf_coach.contracts.club import ClubId
+
+    tagged = _career_tree(kit, kit.club._values, 2, 2, month=8, club=ClubId.SEVEN_IRON)
+
+    def build(root: Path) -> None:
+        tagged(root)
+        _bag_entry(root, ClubId.SEVEN_IRON, loft_deg=34.0)
+
+    calls = [
+        _call("get_club_profile", player="Aaron", club="7i"),
+        _call("get_bag_profile", player="Aaron"),
+    ]
+    note = (
+        "test_a_bag_entry_recorded_after_the_swings_carries_its_caveat: the tagged corpus, and a "
+        "7 iron declared at the epoch, after both swings"
+    )
+    return "club-bag-after-swings", _MCP_ROOTS, _mcp_tree(build), calls, note
+
+
+def _mcp_club_no_measurements(kit: _McpKit) -> _McpCase:
+    from datetime import UTC, datetime
+
+    from golf_coach.contracts.club import ClubId
+
+    def build(root: Path) -> None:
+        kit.golfer(root)
+        for i in range(2):
+            kit.swing(
+                root, "2026-09-01", str(i), player_id="aaron", club=ClubId.SEVEN_IRON,
+                created_at=datetime(2026, 9, 1, 12, i, tzinfo=UTC),
+                analysis=kit.conftest.career_analysis({}),
+            )
+
+    calls = [_call("get_club_profile", player="Aaron", club="7i")]
+    note = "test_swings_that_carry_no_measurement_say_so_rather_than_refusing: two empty artifacts"
+    return "club-no-measurements", _MCP_ROOTS, _mcp_tree(build), calls, note
+
+
+def _mcp_flight(kit: _McpKit) -> _McpCase:
+    from golf_coach.contracts.club import ClubId
+    from golf_coach.mcp.flight import flight_for_swing
+    from golf_coach.storage.manifest import Role
+
+    ft = kit.flight
+    reference = ft.VALIDATION_SHOTS[0]
+
+    def printed(session_id: str) -> Any:
+        """`flown_source`'s shot, filed under one swing's photo with an id of its own."""
+        return ft._shot(
+            ft._photo(session_id, "1"),
+            shot_id=f"{session_id}-1",
+            spin_rate=reference.launch.spin_rpm,
+            carry_distance=reference.simulator_carry_yds,
+        )
+
+    def unreachable(session_id: str) -> Any:
+        """A printed carry no spin reaches, the commonest refusal on the real corpus."""
+        return ft._shot(ft._photo(session_id, "1"), shot_id=f"{session_id}-1", carry_distance=400.0)
+
+    def build(root: Path) -> None:
+        sessions = root / "sessions"
+        kit.sessions_fixture(root)
+        kit.shots(root, printed("2026-08-10"))
+        photo = ft._photo("2026-08-10", "1")
+        for session_id in ("2026-08-11", "2026-08-12"):
+            kit.swing(root, session_id, "1", analysis=kit.analysis(session_id, "1"))
+            path = sessions / session_id / "1" / "manifest.json"
+            manifest = json.loads(path.read_text(encoding="utf-8"))
+            manifest["roles"][Role.SHOT_SCREEN.value]["content_sha256"] = photo
+            path.write_text(json.dumps(manifest), encoding="utf-8")
+        kit.swing(
+            root, "2026-08-13", "1", roles=(Role.FACE_ON,),
+            analysis=kit.analysis("2026-08-13", "1"),
+        )
+        # The P14 seam: an artifact holding the flight it was analysed with, agreeing, edited
+        # after on the current engine, and on an older one.
+        for session_id, club, tweak, version in (
+            ("2026-08-14", None, {}, ANALYSIS_VERSION),
+            ("2026-08-15", ClubId.SEVEN_IRON, {"flight_carry_yds": 99.0}, ANALYSIS_VERSION),
+            ("2026-08-16", None, {"flight_carry_yds": 99.0}, ANALYSIS_VERSION - 1),
+        ):
+            kit.shots(root, printed(session_id))
+            kit.swing(root, session_id, "1", club=club, analysis=kit.analysis(session_id, "1"))
+            view = flight_for_swing(sessions, kit.source(root), session_id, "1")
+            assert view is not None and view.flew, session_id
+            flown = {row.name: row.value for row in view.simulated}
+            kit.swing(
+                root, session_id, "1", club=club,
+                analysis=ft._with_recorded_flight(
+                    kit.analysis(session_id, "1"), flown | tweak, version=version
+                ),
+            )
+        kit.swing(
+            root, "2026-08-17", "1",
+            analysis=ft._with_recorded_flight(
+                kit.analysis("2026-08-17", "1"), {"flight_carry_yds": 122.0},
+                version=ANALYSIS_VERSION,
+            ),
+        )
+        kit.swing(root, "2026-08-18", "1", analysis=kit.analysis("2026-08-18", "1"))
+        kit.shots(root, unreachable("2026-08-17"), unreachable("2026-08-18"))
+
+    flown = [f"2026-08-{day}" for day in range(10, 19)]
+    calls = [
+        *[_call("simulate_flight", session_id=s, swing_id="1") for s in flown],
+        _call("simulate_flight", session_id="2026-08-10", swing_id="2"),
+        _call("simulate_flight", session_id="2026-08-09", swing_id="1"),
+        _call("simulate_flight", session_id="2026-08-08", swing_id="1"),
+        _call("simulate_flight", session_id="2026-08-10", swing_id="99"),
+        _call("get_swing", session_id="2026-08-14", swing_id="1"),
+        _call("get_swing", session_id="2026-08-15", swing_id="1"),
+        _call("get_recent_shots", count=20),
+    ]
+    note = (
+        "test_flight_tool.py's scenarios in one tree with no registry, a session each: a printed "
+        "spin that flies, one photo on three swings, no shot screen, the recorded flight agreeing, "
+        "edited on the current engine and on an older one, a refused flight over a recorded one "
+        "and a refused one alone, an unread screen and the miss"
+    )
+    return "flight", _MCP_NO_REGISTRY, _mcp_tree(build), calls, note
+
+
+def _mcp_flight_registry(kit: _McpKit) -> _McpCase:
+    from datetime import UTC, datetime
+
+    from golf_coach.contracts.club import ClubId
+
+    ft = kit.flight
+    reference = ft.VALIDATION_SHOTS[0]
+    no_axis = {
+        "spin_rate": reference.launch.spin_rpm,
+        "spin_axis": None,
+        "club_face_angle": 2.0,
+        "club_path": -1.0,
+    }
+    swings: list[tuple[str, str | None, Any, dict[str, Any]]] = [
+        ("1", "aaron", ClubId.SEVEN_IRON, {}),
+        ("2", "aaron", ClubId.DRIVER, {}),
+        ("3", "aaron", ClubId.PITCHING_WEDGE, {}),
+        ("4", "aaron", None, {}),
+        ("5", None, ClubId.SEVEN_IRON, {}),
+        ("6", "aaron", ClubId.SEVEN_IRON, no_axis),
+    ]
+
+    def build(root: Path) -> None:
+        kit.golfer(root)
+        _bag_entry(root, ClubId.SEVEN_IRON, loft_deg=34.0)
+        _bag_entry(root, ClubId.DRIVER, make="Ping")
+        for swing_id, player, club, fields in swings:
+            kit.swing(
+                root, "2026-09-01", swing_id, player_id=player, club=club,
+                created_at=datetime(2026, 9, 1, 12, int(swing_id), tzinfo=UTC),
+                analysis=kit.analysis("2026-09-01", swing_id),
+            )
+            kit.shots(
+                root,
+                ft._shot(
+                    ft._photo("2026-09-01", swing_id),
+                    shot_id=f"2026-09-01-{swing_id}",
+                    carry_distance=reference.simulator_carry_yds,
+                    **fields,
+                ),
+            )
+
+    calls = [
+        *[_call("simulate_flight", session_id="2026-09-01", swing_id=w) for w, *_ in swings],
+        _call("get_swing", session_id="2026-09-01", swing_id="1"),
+        _call("get_bag_profile", player="Aaron"),
+    ]
+    note = (
+        "simulate_flight with a registry, which no test in tests/mcp/ builds: a printed carry "
+        "with no spin on a 7 iron declared at 34 degrees, a driver in the bag with no loft, a "
+        "club not in the bag, no club, no golfer, and a printed spin with no axis on a "
+        "right-handed golfer's 7 iron"
+    )
+    return "flight-registry", _MCP_ROOTS, _mcp_tree(build), calls, note
+
+
+def _mcp_real() -> dict[str, Any]:
+    """The captures on disk, as one case, verified to answer exactly as `data/` itself does.
+
+    Slim by file, not by key: the clips, keypoints, audio, photos and `.incoming/` stay behind,
+    since no tool opens them, and every JSON file a tool does open travels whole, because
+    `get_swing` reads most of `analysis.json` and cutting keys would be a second shape to prove.
+    The verify is what holds the claim: every call over the tree must equal the same call over
+    `data/processed/`, or this raises and nothing is built.
+    """
+    from golf_coach.contracts.club import ClubId
+    from golf_coach.launch_monitor.screen.store import ShotStore
+    from golf_coach.storage.bag_store import BagStore
+    from golf_coach.storage.bundle_store import SwingBundleStore
+
+    for needed in (SESSIONS, SHOTS, GOLFERS):
+        if not needed.is_dir():
+            raise AssertionError(f"{_rel(needed)} is missing, and the real MCP case reads it")
+    files = {
+        f"sessions/{rel}": text
+        for rel, text in _real_sessions_tree(SESSIONS, analysis=lambda text: text).items()
+    }
+    files |= {f"shots/{p.name}": _raw_text(p) for p in sorted(SHOTS.glob("*.shot.json"))}
+    files |= {f"golfers/{p.name}": _raw_text(p) for p in sorted(GOLFERS.iterdir()) if p.is_file()}
+
+    store = SwingBundleStore(SESSIONS)
+    sessions = sorted(store.list_session_ids())
+    manifests = [manifest for s in sessions for manifest in store.get_session(s)]
+    bag = BagStore(GOLFERS).get(_REAL_PLAYER)
+    hit = {manifest.club for manifest in manifests}
+    declared = set(bag.entries) if bag is not None else set()
+    clubs = [club.value for club in ClubId if club in hit | declared]
+    shot_ids = [shot.shot_id for shot in ShotStore(SHOTS).all()]
+    swings = [(m.session_id, m.swing_id) for m in manifests]
+    # Most session directories hold only a `session.json` cursor, so the comparison is between the
+    # last two that hold a swing.
+    played = sorted({session_id for session_id, _ in swings})
+    metrics = ("head_sway_norm", "tempo_ratio", "carry_distance_yds", "ball_speed_mph")
+    calls = [
+        _call("list_sessions"),
+        *[_call("get_session_summary", session_id=s) for s in sessions],
+        *[_call("get_swing", session_id=s, swing_id=w) for s, w in swings],
+        *[_call("simulate_flight", session_id=s, swing_id=w) for s, w in swings],
+        _call("get_recent_shots", count=20),
+        *[_call("get_shot_by_id", shot_id=i) for i in shot_ids],
+        _call("get_golfer_profile", player="Aaron"),
+        *[_call("get_shot_trends", metric=m, player="Aaron") for m in metrics],
+        _call(
+            "get_shot_trends", now="2026-09-15T00:00:00Z", metric="carry_distance_yds",
+            player="Aaron", days=30,
+        ),
+        _call("compare_sessions", session_a=played[-2], session_b=played[-1], player="Aaron"),
+        _call("get_bag_profile", player="Aaron"),
+        *[_call("get_club_profile", player="Aaron", club=c) for c in clubs],
+    ]
+    vector = _mcp_vector(
+        "mcp/real/data",
+        {"roots": _MCP_ROOTS, "files": files, "calls": calls},
+        note=(
+            "every session, shot and golfer file on disk, media left behind: each tool over "
+            "every session, swing and shot, and the career and club tools for the golfer, "
+            "verified to answer exactly as data/processed/ does"
+        ),
+        source=f"{_rel(SESSIONS)}, {_rel(SHOTS)} and {_rel(GOLFERS)}",
+    )
+    direct = _mcp_answers(_mcp_server(PROCESSED, _MCP_ROOTS), vector["input"]["calls"])
+    recorded = vector["expected"]["results"]
+    if direct != recorded:
+        differing = [
+            call for call, a, b in zip(calls, direct, recorded, strict=True) if a != b
+        ]
+        raise AssertionError(
+            f"the snapshot does not answer as data/ does, on {len(differing)} calls, first "
+            f"{differing[0]}"
+        )
+    return vector
+
+
+# ================================================================= selection: which swing is scored
+#
+# **The swing selection, recorded once from frozen Python** (M29 P18, the plan's decision 14,
+# ADR-035 clause 3): `analysis/phases.py`'s `select_swing`, `select_matching_swing` and
+# `window_around`, and `api/pipeline.py`'s `_pick_swing` and `_auto_windows`. Nothing committed
+# gated any of it before (the plan's finding 6): the corpus vectors take their windows from the
+# stored `analysis.json`, so they say what was scored and not how it was chosen. M29 P19 ports the
+# rules to `crates/analysis`, P25 the pipeline's ordering to `crates/lab`, and
+# `regenerate --selection-once` refuses to run a second time. The family ages on `ANALYSIS_VERSION`
+# (the plan's call 1), recorded at frozen Python's, as the stages were.
+#
+# **What selection reads, measured.** One landmark per call, the wrist it is told to read, and of
+# that only `y` and `visibility`, over every frame. `_lead_wrist_xy` carries `x` and
+# `candidate_downswings` drops it; `smooth_keypoints` averages each landmark on its own, weighted by
+# its own visibility, so a smoothed wrist `y` needs nothing from any other landmark; and
+# `_rising_runs`' floor is a fraction of the whole clip's tracked range, so no frame can be cut.
+# `frame_index` and `timestamp_ms` are never read. **The recorder proves it per case**: every call
+# is answered over the whole clip as well as over what the case keeps of it, and a case whose two
+# answers differ is refused (`_selection_vector`).
+#
+# **A case is clips, then calls on them.** `input.clips` maps a name to `{fps, frames, tracks}`:
+# `frames` is the clip's length, `fps` its container rate or `null`, and `tracks` maps a
+# `PoseLandmark` name to `{y, visibility}`, one value per frame, for each wrist some call reads.
+# `_selection_file` is the rebuild: `frames` frames whose tracked landmarks carry those two values
+# and `x` 0, every other landmark all zeros, `frame_index` the position and `timestamp_ms` 0.
+# `input.calls` are answered in order, one `expected.results` entry each:
+#
+# - `{fn: "select_swing", clip, fps, wrist, strike_frames}` and `{fn: "select_matching_swing", …,
+#   reference_downswing_s}`: the rule over the clip's frames **as given**, with `fps` an argument as
+#   it is in Python. A choice, or `null`: `{window: [start, end], downswing: {top, impact, rise},
+#   candidates: [{top, impact, rise}], reason}`.
+# - `{fn: "window_around", downswing, fps}`: `[start, end]`. Every rule call passes an fps, so this
+#   is what reaches the window's no-fps arithmetic.
+# - `{fn: "_pick_swing", clip, wrist, reference_downswing_s, strike_frames}`: the clip as a
+#   keypoints file, so **smoothed first**, with the fps its `clip` block holds. A choice or `null`.
+# - `{fn: "_auto_windows", views: {face_on, down_the_line}, window_face_on, window_dtl, strikes:
+#   {face_on, down_the_line}}`: both views' windows, the confident view first. `down_the_line` is a
+#   clip name or `null` for a bundle without the view, and a `null` strike list is a view nobody
+#   listened to. The answer is `{windows: {face_on, down_the_line}, notes, log, picks}`: the notes
+#   it appended, the lines it logged, and `picks`, the `_pick_swing` calls it made, in order, as
+#   `{clip, wrist, reference_downswing_s, strike_frames}`. **The case lists each pick as a
+#   `_pick_swing` call immediately ahead of it**, so the picks are gated alone (P19) and the
+#   ordering around them on its own (P25).
+#
+# **Three sub-families.** `rules/` is `tests/analysis/test_select_swing.py`'s clips, each smoothed
+# as the test smooths it before calling the rule, one case per clip and a call per assertion that
+# reaches a rule. `windows/` is `tests/api/test_pipeline_auto_window.py`'s bundles, raw, plus the
+# branches of `_auto_windows` no test reaches. `corpus/` is the stored bundles: both views' clips,
+# raw and whole, the strikes stored beside them, and the picks and `_auto_windows` call the
+# pipeline made, verified to choose each stored `analysis.json`'s windows. The tests' helpers and
+# constants are loaded from the test modules by path, as the MCP family loads its trees, and each
+# case's note names the tests it mirrors.
+
+#: Where the selection family lives. Every case is gzipped (the plan's P18): a stored clip's track
+#: is thousands of floats, and the synthetic bundles run to a thousand frames a view.
+_SELECTION = VECTORS / "selection"
+_SELECTION_SUFFIX = ".json.gz"
+
+
+def build_selection(*, real: bool = True) -> list[tuple[Path, dict[str, Any]]]:
+    """The whole selection family, built in full before anything is returned. Writes nothing.
+
+    `real=False` leaves out the corpus, which is read from `data/`, so the dry-run pin in
+    `tests/test_conformance.py` runs on a checkout with no captures. With it, a missing `data/` is
+    an error rather than a smaller family.
+    """
+    out = [
+        (_SELECTION / "rules" / f"{name}{_SELECTION_SUFFIX}", vector)
+        for name, vector in _selection_rules().items()
+    ]
+    out += [
+        (_SELECTION / "windows" / f"{name}{_SELECTION_SUFFIX}", vector)
+        for name, vector in _selection_windows().items()
+    ]
+    if real:
+        corpus = _selection_corpus()
+        if not corpus:
+            raise AssertionError(f"no stored bundle under {_rel(SESSIONS)}")
+        out += [
+            (_SELECTION / "corpus" / f"{name}{_SELECTION_SUFFIX}", vector)
+            for name, vector in corpus.items()
+        ]
+    return out
+
+
+def _run_selection(given: dict[str, Any]) -> dict[str, Any]:
+    """One case's input through frozen Python: the definition a port reproduces."""
+    clips = {name: _selection_file(clip) for name, clip in given["clips"].items()}
+    return {"results": _selection_answers(clips, given["calls"])}
+
+
+def _selection_file(clip: dict[str, Any]) -> KeypointsFile:
+    """A case's clip rebuilt as a keypoints file: its tracks, and zeros wherever none is kept."""
+    from golf_coach.contracts.keypoints import NUM_POSE_LANDMARKS, Landmark, PoseLandmark
+
+    count = clip["frames"]
+    tracks = {PoseLandmark[name]: track for name, track in clip["tracks"].items()}
+    for landmark, track in tracks.items():
+        lengths = {len(track["y"]), len(track["visibility"])}
+        if lengths != {count}:
+            raise AssertionError(f"{landmark.name}'s track is {lengths} frames, not {count}")
+    # One instance shared by every untracked slot: nothing on the selection path mutates a
+    # landmark, and `smooth_keypoints` copies the one it keeps.
+    blank = Landmark(x=0.0, y=0.0)
+    frames = []
+    for index in range(count):
+        landmarks = [blank] * NUM_POSE_LANDMARKS
+        for landmark, track in tracks.items():
+            landmarks[landmark] = Landmark(
+                x=0.0, y=track["y"][index], visibility=track["visibility"][index]
+            )
+        frames.append(FrameKeypoints(frame_index=index, timestamp_ms=0.0, landmarks=landmarks))
+    fps = clip["fps"]
+    return KeypointsFile(clip=None if fps is None else ClipMetadata(fps=fps), frames=frames)
+
+
+def _selection_answers(clips: dict[str, KeypointsFile], calls: list[dict[str, Any]]) -> list[Any]:
+    """Each call answered over `clips`, in order. Shared by the rebuild and the whole-clip check."""
+    from golf_coach.analysis import phases
+    from golf_coach.api import pipeline
+    from golf_coach.contracts.keypoints import PoseLandmark
+
+    out: list[Any] = []
+    for call in calls:
+        fn = call["fn"]
+        if fn == "select_swing":
+            choice = phases.select_swing(
+                clips[call["clip"]].frames,
+                fps=call["fps"],
+                wrist=PoseLandmark[call["wrist"]],
+                strike_frames=call["strike_frames"],
+            )
+            out.append(_choice(choice))
+        elif fn == "select_matching_swing":
+            choice = phases.select_matching_swing(
+                clips[call["clip"]].frames,
+                fps=call["fps"],
+                reference_downswing_s=call["reference_downswing_s"],
+                wrist=PoseLandmark[call["wrist"]],
+                strike_frames=call["strike_frames"],
+            )
+            out.append(_choice(choice))
+        elif fn == "window_around":
+            downswing = phases.Downswing(**call["downswing"])
+            out.append(list(phases.window_around(downswing, fps=call["fps"])))
+        elif fn == "_pick_swing":
+            choice = pipeline._pick_swing(
+                clips[call["clip"]],
+                wrist=PoseLandmark[call["wrist"]],
+                reference_downswing_s=call["reference_downswing_s"],
+                strike_frames=call["strike_frames"],
+            )
+            out.append(_choice(choice))
+        elif fn == "_auto_windows":
+            out.append(_auto_windows_answer(clips, call))
+        else:
+            raise AssertionError(f"no selection call is named {fn!r}")
+    return out
+
+
+def _choice(choice: Any) -> dict[str, Any] | None:
+    """A `SwingChoice` as the family writes it, or `None` for a decline."""
+    if choice is None:
+        return None
+    return {
+        "window": list(choice.window),
+        "downswing": choice.downswing._asdict(),
+        "candidates": [candidate._asdict() for candidate in choice.candidates],
+        "reason": choice.reason,
+    }
+
+
+def _auto_windows_answer(clips: dict[str, KeypointsFile], call: dict[str, Any]) -> dict[str, Any]:
+    """`_auto_windows` over the call's views, with each `_pick_swing` it makes written down.
+
+    The picks are seen through a stand-in for the module's `_pick_swing`, which `_auto_windows`
+    looks up at call time, and the stand-in hands every call on to the real one unchanged.
+    """
+    from golf_coach.api import pipeline
+    from golf_coach.storage.manifest import Role
+
+    named = call["views"]
+    views = {Role.FACE_ON: clips[named["face_on"]]}
+    if named["down_the_line"] is not None:
+        views[Role.DOWN_THE_LINE] = clips[named["down_the_line"]]
+    names = {id(clips[name]): name for name in named.values() if name is not None}
+    strikes = {
+        Role(role): frames for role, frames in call["strikes"].items() if frames is not None
+    }
+
+    picks: list[dict[str, Any]] = []
+    real = pipeline._pick_swing
+
+    def pick(keypoints: Any, *, wrist: Any, **rest: Any) -> Any:
+        picks.append(
+            {
+                "clip": names[id(keypoints)],
+                "wrist": wrist.name,
+                "reference_downswing_s": rest.get("reference_downswing_s"),
+                "strike_frames": rest.get("strike_frames"),
+            }
+        )
+        return real(keypoints, wrist=wrist, **rest)
+
+    log: list[str] = []
+    notes: list[str] = []
+    given_face_on, given_dtl = call["window_face_on"], call["window_dtl"]
+    pipeline._pick_swing = pick  # type: ignore[assignment]
+    try:
+        face_on, dtl = pipeline._auto_windows(
+            views,
+            window_face_on=None if given_face_on is None else tuple(given_face_on),
+            window_dtl=None if given_dtl is None else tuple(given_dtl),
+            strikes=strikes,
+            log=log.append,
+            notes=notes,
+        )
+    finally:
+        pipeline._pick_swing = real  # type: ignore[assignment]
+    return {
+        "windows": {
+            "face_on": None if face_on is None else list(face_on),
+            "down_the_line": None if dtl is None else list(dtl),
+        },
+        "notes": notes,
+        "log": log,
+        "picks": picks,
+    }
+
+
+def _wrists_read(
+    clips: dict[str, KeypointsFile], calls: list[dict[str, Any]]
+) -> dict[str, set[str]]:
+    """Which wrist each call reads on which clip: what a case has to keep of each.
+
+    `_auto_windows` reads face-on on the lead wrist and down the line on the trail one, its own two
+    constants. The whole-clip check is what would catch this being wrong: a clip kept on the wrong
+    wrist reads as a clip with no descent in it.
+    """
+    from golf_coach.analysis.phases import LEAD_WRIST, TRAIL_WRIST
+
+    read: dict[str, set[str]] = {name: set() for name in clips}
+    for call in calls:
+        if call["fn"] in {"select_swing", "select_matching_swing", "_pick_swing"}:
+            read[call["clip"]].add(call["wrist"])
+        elif call["fn"] == "_auto_windows":
+            read[call["views"]["face_on"]].add(LEAD_WRIST.name)
+            if call["views"]["down_the_line"] is not None:
+                read[call["views"]["down_the_line"]].add(TRAIL_WRIST.name)
+    unread = sorted(name for name, wrists in read.items() if not wrists)
+    if unread:
+        raise AssertionError(f"no call reads clip {unread}, so the case should not carry it")
+    return read
+
+
+def _selection_clip(clip: KeypointsFile, wrists: set[str]) -> dict[str, Any]:
+    """What a case keeps of one clip: its rate, its length, and each read wrist's two series."""
+    from golf_coach.contracts.keypoints import PoseLandmark
+
+    tracks = {}
+    for name in sorted(wrists, key=lambda wrist: PoseLandmark[wrist]):
+        landmark = PoseLandmark[name]
+        tracks[name] = {
+            "y": [frame.landmarks[landmark].y for frame in clip.frames],
+            "visibility": [frame.landmarks[landmark].visibility for frame in clip.frames],
+        }
+    return {
+        "fps": clip.clip.fps if clip.clip else None,
+        "frames": len(clip.frames),
+        "tracks": tracks,
+    }
+
+
+def _selection_vector(
+    vector_id: str,
+    clips: dict[str, KeypointsFile],
+    calls: list[dict[str, Any]],
+    *,
+    note: str,
+    source: str,
+) -> dict[str, Any]:
+    """Cut the clips to what the calls read, answer the cut, and refuse it unless the whole agrees.
+
+    The input is serialized before it is run, `_vector`'s rule, so what is recorded is what a
+    reader parses back.
+    """
+    import pydantic
+
+    reads = _wrists_read(clips, calls)
+    given = {
+        "clips": {name: _selection_clip(clip, reads[name]) for name, clip in clips.items()},
+        "calls": calls,
+    }
+    given_json = json.loads(json.dumps(given))
+    expected = _run_selection(given_json)
+    whole = json.loads(json.dumps(_selection_answers(clips, given_json["calls"])))
+    for index, (cut, full) in enumerate(zip(expected["results"], whole, strict=True)):
+        if cut != full:
+            raise AssertionError(
+                f"{vector_id}: call {index} ({calls[index]['fn']}) answers differently over the "
+                f"whole clip than over the tracks the case keeps, so selection reads more than "
+                f"they hold: {full!r} against {cut!r}"
+            )
+    _verify_picks_lead(vector_id, given_json["calls"], expected["results"])
+    return {
+        "id": vector_id,
+        "analysis_version": ANALYSIS_VERSION,
+        "provenance": {
+            "kind": "selection",
+            "oracle": "python",
+            "note": note,
+            "source": source,
+            "python_version": _python_version(),
+            "pydantic_version": pydantic.VERSION,
+            "recorded_by": "scripts/conformance_vectors.py::_run_selection",
+        },
+        "input": given_json,
+        "expected": expected,
+    }
+
+
+def _verify_picks_lead(
+    vector_id: str, calls: list[dict[str, Any]], results: list[Any]
+) -> None:
+    """Every `_auto_windows` call has its picks listed, as `_pick_swing` calls, right before it."""
+    for index, (call, result) in enumerate(zip(calls, results, strict=True)):
+        if call["fn"] != "_auto_windows":
+            continue
+        picks = result["picks"]
+        listed = calls[max(0, index - len(picks)) : index]
+        if listed != [{"fn": "_pick_swing", **pick} for pick in picks]:
+            raise AssertionError(
+                f"{vector_id}: call {index}'s picks {picks} are not the calls listed before it"
+            )
+
+
+def _auto_call(
+    *,
+    down_the_line: str | None = "down_the_line",
+    strikes: dict[str, list[int] | None] | None = None,
+    window_face_on: tuple[int, int] | None = None,
+    window_dtl: tuple[int, int] | None = None,
+) -> dict[str, Any]:
+    """One `_auto_windows` call over the clips named `face_on` and, unless `None`, down the line."""
+    heard = strikes or {}
+    return {
+        "fn": "_auto_windows",
+        "views": {"face_on": "face_on", "down_the_line": down_the_line},
+        "window_face_on": None if window_face_on is None else list(window_face_on),
+        "window_dtl": None if window_dtl is None else list(window_dtl),
+        "strikes": {role: heard.get(role) for role in ("face_on", "down_the_line")},
+    }
+
+
+def _with_picks(clips: dict[str, KeypointsFile], auto: dict[str, Any]) -> list[dict[str, Any]]:
+    """`auto`, with the `_pick_swing` calls it makes listed ahead of it (the encoding's rule)."""
+    picks = _auto_windows_answer(clips, auto)["picks"]
+    return [{"fn": "_pick_swing", **pick} for pick in picks] + [auto]
+
+
+def _select_call(
+    clip: str,
+    *,
+    fps: float | None,
+    wrist: str = "LEFT_WRIST",
+    strike_frames: list[int] | None = None,
+) -> dict[str, Any]:
+    return {
+        "fn": "select_swing",
+        "clip": clip,
+        "fps": fps,
+        "wrist": wrist,
+        "strike_frames": strike_frames,
+    }
+
+
+def _match_call(
+    clip: str,
+    *,
+    fps: float | None,
+    reference: float,
+    wrist: str = "LEFT_WRIST",
+    strike_frames: list[int] | None = None,
+) -> dict[str, Any]:
+    return {
+        "fn": "select_matching_swing",
+        "clip": clip,
+        "fps": fps,
+        "reference_downswing_s": reference,
+        "wrist": wrist,
+        "strike_frames": strike_frames,
+    }
+
+
+def _window_call(downswing: Any, *, fps: float | None) -> dict[str, Any]:
+    return {"fn": "window_around", "downswing": downswing._asdict(), "fps": fps}
+
+
+def _select_swing_tests() -> Any:
+    """`tests/analysis/test_select_swing.py`, loaded by path beside its conftest.
+
+    The module imports `make_swing` with `from conftest import …`, which resolves against
+    `sys.modules`; so the conftest `_make_swing_module` loads is put there for the one import and
+    whatever held the name before is put back.
+    """
+    conftest = _make_swing_module()
+    saved = sys.modules.get("conftest")
+    sys.modules["conftest"] = conftest
+    try:
+        return _load_conftest(
+            REPO / "tests" / "analysis" / "test_select_swing.py", "_conformance_select_swing"
+        )
+    finally:
+        if saved is None:
+            sys.modules.pop("conftest", None)
+        else:
+            sys.modules["conftest"] = saved
+
+
+def _selection_rules() -> dict[str, dict[str, Any]]:
+    """One case per clip `test_select_swing.py` hands a rule, smoothed as the test smooths it."""
+    from golf_coach.analysis.phases import candidate_downswings, select_swing
+
+    t = _select_swing_tests()
+    make, fps = t.make_swing, t._FPS
+
+    def file(frames: list[FrameKeypoints]) -> KeypointsFile:
+        # No `clip` block: the rules take their fps as an argument, and the tests' clips are bare
+        # frame lists.
+        return KeypointsFile(frames=frames)
+
+    def case(
+        name: str, frames: list[FrameKeypoints], calls: list[dict[str, Any]], tests: str
+    ) -> tuple[str, dict[str, Any]]:
+        return name, _selection_vector(
+            f"selection/rules/{name}",
+            {"clip": file(frames)},
+            calls,
+            note=f"tests/analysis/test_select_swing.py: {tests}",
+            source="src/golf_coach/analysis/phases.py",
+        )
+
+    def chosen(frames: list[FrameKeypoints]) -> Any:
+        choice = select_swing(frames, fps=fps)
+        assert choice is not None, "the fixture's own test says this clip picks a swing"
+        return choice.downswing
+
+    cases = []
+    cases.append(
+        case(
+            "one-swing",
+            t._smoothed(make()),
+            [_select_call("clip", fps=None), _select_call("clip", fps=0.0)],
+            "test_no_fps_declines_rather_than_guessing",
+        )
+    )
+    cases.append(
+        case(
+            "rehearsal-then-swing",
+            t._smoothed(
+                t._concat(
+                    make(backswing_frames=80, downswing_frames=t._SLOW),
+                    make(backswing_frames=70, downswing_frames=t._REAL),
+                )
+            ),
+            [_select_call("clip", fps=fps)],
+            "test_picks_the_real_swing_over_an_earlier_rehearsal",
+        )
+    )
+    cases.append(
+        case(
+            "two-real-swings",
+            t._smoothed(
+                t._concat(
+                    make(backswing_frames=70, downswing_frames=t._REAL),
+                    make(backswing_frames=70, downswing_frames=t._REAL),
+                )
+            ),
+            [_select_call("clip", fps=fps)],
+            "test_takes_the_last_plausible_swing_not_the_first",
+        )
+    )
+    cases.append(
+        case(
+            "one-slow-swing",
+            t._smoothed(make(backswing_frames=80, downswing_frames=t._SLOW)),
+            [
+                _select_call("clip", fps=fps),
+                _match_call("clip", fps=fps, reference=0.20),
+            ],
+            "test_a_lone_candidate_wins_however_long_its_downswing_is and "
+            "test_a_lone_candidate_still_wins_when_it_matches_nothing",
+        )
+    )
+    cases.append(
+        case(
+            "two-rehearsals",
+            t._smoothed(
+                t._concat(
+                    make(backswing_frames=80, downswing_frames=t._SLOW),
+                    make(backswing_frames=80, downswing_frames=t._SLOW),
+                )
+            ),
+            [_select_call("clip", fps=fps)],
+            "test_declines_when_several_candidates_and_none_are_plausible",
+        )
+    )
+    padded = t._smoothed(t._prepend_still(make(backswing_frames=70, downswing_frames=t._REAL), 200))
+    cases.append(
+        case(
+            "padded-swing",
+            padded,
+            [_select_call("clip", fps=fps), _window_call(chosen(padded), fps=fps)],
+            "test_window_contains_the_swing_with_room_for_takeaway_and_finish",
+        )
+    )
+    cases.append(
+        case(
+            "lead-wrist-dimmed",
+            t._smoothed(t._dim_lead_wrist(t._prepend_still(make(downswing_frames=t._REAL), 40))),
+            [
+                _select_call("clip", fps=fps),
+                _select_call("clip", fps=fps, wrist="RIGHT_WRIST"),
+            ],
+            "test_the_trail_wrist_finds_a_swing_the_lead_wrist_cannot_see",
+        )
+    )
+    cases.append(
+        case(
+            "lightly-padded-swing",
+            t._smoothed(t._prepend_still(make(downswing_frames=t._REAL), 40)),
+            [_select_call("clip", fps=fps)],
+            "test_the_default_landmark_is_the_lead_wrist",
+        )
+    )
+    fast = t._smoothed(t._prepend_still(make(backswing_frames=110, downswing_frames=20), 250))
+    first = candidate_downswings(fast, min_fraction=0.45)[0]
+    cases.append(
+        case(
+            "fast-downswing",
+            fast,
+            [
+                _select_call("clip", fps=fps),
+                _window_call(chosen(fast), fps=None),
+                _window_call(first, fps=None),
+                _window_call(first, fps=fps),
+            ],
+            "test_a_fast_downswing_still_leaves_a_quiet_address_in_the_window and "
+            "test_without_fps_the_lead_is_the_old_arithmetic_exactly",
+        )
+    )
+    slow = t._smoothed(t._prepend_still(make(backswing_frames=95, downswing_frames=38), 250))
+    cases.append(
+        case(
+            "slow-downswing",
+            slow,
+            [_select_call("clip", fps=fps), _window_call(chosen(slow), fps=None)],
+            "test_the_address_floor_binds_only_where_the_lead_is_short",
+        )
+    )
+    cases.append(
+        case(
+            "swing-then-decoy",
+            t._two_swings(t._REAL, t._LATE),
+            [
+                _select_call("clip", fps=fps),
+                _match_call("clip", fps=fps, reference=t._REFERENCE),
+                _match_call("clip", fps=None, reference=t._REFERENCE),
+                _match_call("clip", fps=0.0, reference=t._REFERENCE),
+                _match_call("clip", fps=fps, reference=0.0),
+            ],
+            "test_the_reference_picks_the_nearest_candidate_not_the_last and "
+            "test_no_fps_and_no_reference_both_decline",
+        )
+    )
+    past_band = t._two_swings(t._PAST_BAND, t._SLOW)
+    cases.append(
+        case(
+            "past-band-then-rehearsal",
+            past_band,
+            [
+                _select_call("clip", fps=fps),
+                _match_call("clip", fps=fps, reference=t._durations(past_band)[0] - 0.04),
+            ],
+            "test_a_descent_just_outside_the_band_is_admitted_when_it_matches_the_reference",
+        )
+    )
+    cases.append(
+        case(
+            "two-rehearsals-butted",
+            t._two_swings(t._SLOW, t._SLOW),
+            [_match_call("clip", fps=fps, reference=t._REFERENCE)],
+            "test_declines_when_nothing_is_plausible_or_near_the_reference",
+        )
+    )
+    held = t._held_apart(t._PAST_BAND, t._LATE)
+    real, _seam, _decoy = t._impacts(held)
+    cases.append(
+        case(
+            "held-apart-past-band-and-decoy",
+            held,
+            [
+                _select_call("clip", fps=fps),
+                _select_call("clip", fps=fps, strike_frames=[real]),
+                _select_call("clip", fps=fps, strike_frames=[]),
+                _select_call("clip", fps=fps, strike_frames=[real + t._STRAY]),
+                _select_call("clip", fps=fps, strike_frames=[real + t._SCREEN_GAP]),
+                _match_call("clip", fps=fps, reference=t._REFERENCE),
+                _match_call("clip", fps=fps, reference=t._REFERENCE, strike_frames=[]),
+                _match_call("clip", fps=fps, reference=t._LATE / fps),
+                _match_call("clip", fps=fps, reference=t._LATE / fps, strike_frames=[real]),
+            ],
+            "test_a_strike_beats_the_duration_band_it_disagrees_with, "
+            "test_the_listing_still_holds_every_descent_a_strike_filtered_out, "
+            "test_no_strikes_and_no_audio_at_all_are_the_rules_exactly_as_they_were, "
+            "test_a_transient_belonging_to_no_descent_leaves_the_field_whole, "
+            "test_the_screen_strike_still_counts_as_a_ball_having_been_struck and "
+            "test_a_strike_outranks_the_other_views_reference",
+        )
+    )
+    both = t._held_apart(t._REAL, t._LATE)
+    real, _seam, decoy = t._impacts(both)
+    cases.append(
+        case(
+            "held-apart-swing-and-decoy",
+            both,
+            [
+                _select_call("clip", fps=fps, strike_frames=[real, decoy]),
+                _select_call("clip", fps=fps),
+            ],
+            "test_two_struck_descents_hand_the_choice_back_to_the_band",
+        )
+    )
+    by_order = t._two_swings(25, 55)
+    cases.append(
+        case(
+            "two-real-swings-by-order",
+            by_order,
+            [
+                _select_call(
+                    "clip",
+                    fps=fps,
+                    strike_frames=[swing.impact for swing in candidate_downswings(by_order)],
+                )
+            ],
+            "test_two_ball_struck_swings_are_told_apart_by_order_not_by_length",
+        )
+    )
+    impossible = t._two_swings(t._REAL, t._SLOW)
+    cases.append(
+        case(
+            "swing-then-impossible-descent",
+            impossible,
+            [
+                _select_call(
+                    "clip",
+                    fps=fps,
+                    strike_frames=[swing.impact for swing in candidate_downswings(impossible)],
+                )
+            ],
+            "test_the_bound_still_refuses_a_descent_no_swing_could_make",
+        )
+    )
+    return dict(cases)
+
+
+def _selection_windows() -> dict[str, dict[str, Any]]:
+    """`test_pipeline_auto_window.py`'s bundles through `_auto_windows`, and the branches no test
+    reaches: a window given for either view, a bundle with no second view, a clip with no frame
+    rate, and the down-the-line view read on the wrong wrist."""
+    from golf_coach.contracts.keypoints import PoseLandmark
+
+    w = _load_conftest(
+        REPO / "tests" / "api" / "test_pipeline_auto_window.py", "_conformance_auto_window"
+    )
+
+    def view(
+        swings: Any, *, visible: PoseLandmark, camera: str, fps: float | None = w._FPS
+    ) -> KeypointsFile:
+        return KeypointsFile(
+            clip=None if fps is None else ClipMetadata(fps=fps),
+            frames=w._clip(swings, visible=visible, camera_id=camera),
+        )
+
+    def case(
+        name: str,
+        *,
+        face_on: Any = (w._SWING,),
+        down_the_line: Any = (w._SWING,),
+        dtl_visible: PoseLandmark = PoseLandmark.RIGHT_WRIST,
+        face_on_fps: float | None = w._FPS,
+        tests: str,
+        **auto: Any,
+    ) -> tuple[str, dict[str, Any]]:
+        clips = {
+            "face_on": view(
+                face_on, visible=PoseLandmark.LEFT_WRIST, camera="face_on", fps=face_on_fps
+            )
+        }
+        if down_the_line is not None:
+            clips["down_the_line"] = view(down_the_line, visible=dtl_visible, camera="dtl")
+        else:
+            auto["down_the_line"] = None
+        return name, _selection_vector(
+            f"selection/windows/{name}",
+            clips,
+            _with_picks(clips, _auto_call(**auto)),
+            note=f"tests/api/test_pipeline_auto_window.py: {tests}",
+            source="src/golf_coach/api/pipeline.py::_auto_windows",
+        )
+
+    decoy = (30, 18)
+    out_of_band = (w._OUT_OF_BAND, w._IN_BAND_DECOY)
+    (_, impact), _ = w._descents(out_of_band)
+    dtl_pair = ((120, 90), w._IN_BAND_DECOY)
+    (_, dtl_impact), _ = w._descents(dtl_pair)
+    (_, swing_impact) = w._descents((w._SWING,))[0]
+    cases = [
+        case(
+            "both-views",
+            tests="test_the_down_the_line_view_is_windowed_on_the_trail_wrist, "
+            "test_the_face_on_view_keeps_the_lead_wrist and "
+            "test_a_view_that_was_never_listened_to_hands_over_nothing",
+        ),
+        case(
+            "down-the-line-decoy",
+            down_the_line=(w._SWING, decoy),
+            tests="test_the_down_the_line_view_matches_face_on_rather_than_taking_the_last",
+        ),
+        case(
+            "face-on-matched-back",
+            face_on=((70, 7), (60, 130)),
+            down_the_line=((70, 18),),
+            tests="test_face_on_is_matched_back_when_it_is_the_view_that_declined",
+        ),
+        case(
+            "no-face-on-reference",
+            face_on=((60, 120), (60, 130)),
+            tests="test_with_no_face_on_reference_the_other_view_is_picked_alone_and_says_so",
+        ),
+        case(
+            "strike-wins",
+            face_on=out_of_band,
+            strikes={"face_on": [impact]},
+            tests="test_a_ball_strike_wins_the_window_the_duration_band_would_have_lost",
+        ),
+        case(
+            "no-strike-takes-the-decoy",
+            face_on=out_of_band,
+            tests="test_without_the_strike_that_same_clip_is_windowed_on_the_decoy",
+        ),
+        case(
+            "strikes-per-view",
+            face_on=out_of_band,
+            down_the_line=dtl_pair,
+            strikes={"face_on": [impact], "down_the_line": [dtl_impact]},
+            tests="test_each_view_is_judged_on_the_strikes_heard_in_its_own_clip",
+        ),
+        case(
+            "silent-face-on",
+            strikes={"face_on": []},
+            tests="test_a_clip_that_made_no_crack_keeps_its_window_and_says_so (its note is "
+            "analyze_swing_dir's, not this function's)",
+        ),
+        case(
+            "face-on-window-given",
+            window_face_on=(0, swing_impact + 30),
+            tests="none: test_a_hand_picked_window_still_gets_listened_to skips _auto_windows, "
+            "and this is the window it gives, here with the other view still picked",
+        ),
+        case(
+            "down-the-line-window-given",
+            window_dtl=(0, swing_impact + 30),
+            tests="none: a hand-picked down-the-line window, which is passed through unpicked",
+        ),
+        case(
+            "face-on-only",
+            down_the_line=None,
+            tests="none: a bundle with no down-the-line view",
+        ),
+        case(
+            "no-frame-rate",
+            face_on_fps=None,
+            tests="none: a face-on clip whose keypoints file records no fps, so it declines, "
+            "and the reverse match cannot rescue it",
+        ),
+        case(
+            "down-the-line-on-the-wrong-wrist",
+            dtl_visible=PoseLandmark.LEFT_WRIST,
+            tests="none: a down-the-line clip readable only on the lead wrist, so the trail "
+            "wrist finds nothing and the view declines",
+        ),
+    ]
+    return dict(cases)
+
+
+def _selection_corpus() -> dict[str, dict[str, Any]]:
+    """Each stored bundle's two clips, raw and whole, through the picks the pipeline made.
+
+    The strikes are the stored `{role}.audio.json`'s frames (`_strikes`), and `null` for a view
+    with no artifact, as `analyze_swing_dir` hands `_auto_windows` none. Each case is verified to
+    choose the stored `analysis.json`'s windows, which is what makes the family say what the
+    stored corpus was built from.
+    """
+    from golf_coach.storage.manifest import Role
+
+    built = {}
+    for analysis_path in sorted(SESSIONS.glob("*/*/analysis.json")):
+        stored = json.loads(analysis_path.read_text(encoding="utf-8"))
+        name = f"{stored['session_id']}-{stored['swing_id']}"
+        version = stored.get("analysis_version")
+        if not isinstance(version, int) or version < ANALYSIS_VERSION:
+            # Not `_corpus`' skip: a stale artifact's windows were chosen by an older engine, and
+            # the verify below would hold this recording to them. A *newer* one is Rust's: M29 P29
+            # re-ran `data/` with `golf-lab reanalyze`, whose selection is the port this family
+            # gates (P19), and frozen Python reads it as current (`is_outdated` is a `<`). So it is
+            # compared, not refused; on a rehearsal of that write every bundle chose the windows
+            # Rust stored.
+            raise AssertionError(
+                f"{name} is stored at v{stored.get('analysis_version')}, and frozen Python is "
+                f"v{ANALYSIS_VERSION}"
+            )
+        swing_dir = analysis_path.parent
+        clips: dict[str, KeypointsFile] = {}
+        strikes: dict[str, list[int] | None] = {}
+        for role in (Role.FACE_ON, Role.DOWN_THE_LINE):
+            path = swing_dir / f"{role.value}.keypoints.json"
+            if not path.exists():
+                continue
+            clips[role.value] = KeypointsFile.model_validate_json(path.read_text(encoding="utf-8"))
+            strikes[role.value] = _stored_strikes(swing_dir, role.value, clips[role.value])
+        if "face_on" not in clips:
+            raise AssertionError(f"{name} has an analysis and no face-on keypoints")
+        auto = _auto_call(
+            down_the_line="down_the_line" if "down_the_line" in clips else None,
+            strikes=strikes,
+        )
+        vector = _selection_vector(
+            f"selection/corpus/{name}",
+            clips,
+            _with_picks(clips, auto),
+            note=(
+                f"real capture, {_rel(swing_dir)}: each view's clip whole, the strikes stored "
+                "beside it, and the picks the pipeline made, verified to choose the stored "
+                "analysis.json's windows"
+            ),
+            source=f"{_rel(swing_dir)}/{{face_on,down_the_line}}.{{keypoints,audio}}.json",
+        )
+        _verify_selection_against_stored(vector, stored, name)
+        built[name] = vector
+    return built
+
+
+def _stored_strikes(swing_dir: Path, role: str, clip: KeypointsFile) -> list[int] | None:
+    """The strikes `analyze_swing_dir` hands selection for one view, or `None` with no artifact.
+
+    `_strikes` reads the stored frames as they are, which is what the pipeline reads only while the
+    artifact was framed at this clip's own fps; otherwise `audio_for` re-derives them. Refused
+    rather than re-derived here, since no stored bundle needs it.
+    """
+    path = swing_dir / f"{role}.audio.json"
+    if not path.exists():
+        return None
+    framed_at = (json.loads(path.read_text(encoding="utf-8")).get("clip") or {}).get("fps")
+    fps = clip.clip.fps if clip.clip else None
+    if framed_at != fps:
+        raise AssertionError(
+            f"{_rel(path)} is framed at {framed_at} fps and its clip is {fps}: the pipeline would "
+            "re-derive these frames, and this recorder does not"
+        )
+    return _strikes(swing_dir, role)
+
+
+def _verify_selection_against_stored(
+    vector: dict[str, Any], stored: dict[str, Any], name: str
+) -> None:
+    """The recorded `_auto_windows` chooses the stored windows, and stored every note it wrote."""
+    answer = vector["expected"]["results"][-1]
+    want = {
+        "face_on": stored.get("face_on_window"),
+        "down_the_line": stored.get("down_the_line_window"),
+    }
+    if answer["windows"] != want:
+        raise AssertionError(
+            f"{name}: _auto_windows chooses {answer['windows']}, and analysis.json holds {want}"
+        )
+    missing = [note for note in answer["notes"] if note not in stored.get("notes", [])]
+    if missing:
+        raise AssertionError(f"{name}: analysis.json lacks the selection notes {missing}")

@@ -1,0 +1,176 @@
+{
+  "provenance": {
+    "what": "OpenCV's answers for the rectification stages, on inputs small enough to commit",
+    "recorded_by": "M29 P3, a scratch script calling cv2 and golf_coach.launch_monitor.screen.preprocess (warp_to_rect, enhance, _rotate)",
+    "opencv": "4.10.0",
+    "ipp": "every case recorded with cv2.ipp.setUseIPP on and off, and the two agreed",
+    "scene": "rectify/scene.png, a seeded synthetic screen (ramps, dark tiles, bright bars, noise) written by cv2.imwrite",
+    "rgb_sha256": "SHA-256 of the output as 8-bit RGB, row-major",
+    "every_input": "i in 0..2^24 as the triple (i >> 16, (i >> 8) & 255, i & 255), row-major; rgb_to_lab reads it as R, G, B and lab_to_rgb as L*, a*, b*; each digest is over the three output bytes per input"
+  },
+  "scene": {
+    "path": "rectify/scene.png",
+    "width": 167,
+    "height": 109,
+    "rgb_sha256": "619c83e9bd158680600dce9f355091d5bf994cffba6e7858da73129eb58f8f6f"
+  },
+  "every_input": {
+    "rgb_to_lab_sha256": "b3067516fa862bb008af4ffb4da5555722524a70776bf7ffd523a90f4331480c",
+    "lab_to_rgb_sha256": "fe94a44a1fb178c1b5041a43095c4d99f4d37fb7b32258da356d8bd63bba9b0d"
+  },
+  "cases": [
+    {
+      "name": "enhance, neither axis divides by 8",
+      "op": "enhance",
+      "crop": [
+        0,
+        0,
+        167,
+        109
+      ],
+      "why": "both axes padded by reflection before the tiles are cut",
+      "expected": {
+        "width": 167,
+        "height": 109,
+        "rgb_sha256": "6520c4284a9737694948ae8499172f4608206bfdbecd1bca38689ab874ac5e6f"
+      }
+    },
+    {
+      "name": "enhance, both axes divide by 8",
+      "op": "enhance",
+      "crop": [
+        3,
+        5,
+        152,
+        96
+      ],
+      "why": "no padding, tiles 19x12",
+      "expected": {
+        "width": 152,
+        "height": 96,
+        "rgb_sha256": "ad16684a30ad57943c911c0645878a8cc30df4e589b92d80abd9155a0a8f088e"
+      }
+    },
+    {
+      "name": "enhance, only the width divides by 8",
+      "op": "enhance",
+      "crop": [
+        0,
+        0,
+        160,
+        100
+      ],
+      "why": "OpenCV pads both axes, so the width gains a whole extra 8 and the tiles are 21 wide, not 20",
+      "expected": {
+        "width": 160,
+        "height": 100,
+        "rgb_sha256": "98702edca678faef88e2ea68d9db43991dda2d55c1815f38d421aedf8acd5035"
+      }
+    },
+    {
+      "name": "enhance, smaller than the grid",
+      "op": "enhance",
+      "crop": [
+        50,
+        40,
+        7,
+        5
+      ],
+      "why": "tiles one pixel square, every one padded",
+      "expected": {
+        "width": 7,
+        "height": 5,
+        "rgb_sha256": "7a506e42d7866efe1061cb335161af6521366a3252f583a1fd03a01c81cfc943"
+      }
+    },
+    {
+      "name": "warp, a trapezoid inside the scene",
+      "op": "warp_to_rect",
+      "quad": [
+        [
+          20.25,
+          10.5
+        ],
+        [
+          140.75,
+          18.0
+        ],
+        [
+          150.5,
+          95.25
+        ],
+        [
+          12.0,
+          88.75
+        ]
+      ],
+      "why": "perspective, fractional corners",
+      "expected": {
+        "width": 138,
+        "height": 78,
+        "rgb_sha256": "09c99418c681b57db76954f364a836d212974fd055a48e26e02380cfd88ea1d8"
+      }
+    },
+    {
+      "name": "warp, a rotated box reaching past the scene",
+      "op": "warp_to_rect",
+      "quad": [
+        [
+          -6.5,
+          12.25
+        ],
+        [
+          158.0,
+          -3.75
+        ],
+        [
+          172.5,
+          96.0
+        ],
+        [
+          8.25,
+          112.5
+        ]
+      ],
+      "why": "samples outside take black per neighbour",
+      "expected": {
+        "width": 165,
+        "height": 101,
+        "rgb_sha256": "e7359e50668982bf09c6194e47ce07f4998bfbad2452d5975276dc2af60750de"
+      }
+    },
+    {
+      "name": "rotate 90",
+      "op": "rotate",
+      "degrees": 90,
+      "why": "cv2.rotate's direction",
+      "expected": {
+        "width": 109,
+        "height": 167,
+        "rgb_sha256": "de28327c467c9313a20704337ab829e893e08b98715012007e5836c737d9b194"
+      }
+    },
+    {
+      "name": "rotate 180",
+      "op": "rotate",
+      "degrees": 180,
+      "why": "cv2.rotate's direction",
+      "expected": {
+        "width": 167,
+        "height": 109,
+        "rgb_sha256": "8b9fbf0d420b26aa802b6c176e98c275ddee55b2f3e9394ff1225f1ff4b8485a"
+      }
+    },
+    {
+      "name": "rotate 270",
+      "op": "rotate",
+      "degrees": 270,
+      "why": "cv2.rotate's direction",
+      "expected": {
+        "width": 109,
+        "height": 167,
+        "rgb_sha256": "d1721e63c30411ba0be4cd9786f40d9c524283262e57599bff983b2b022743a6"
+      }
+    }
+  ]
+}

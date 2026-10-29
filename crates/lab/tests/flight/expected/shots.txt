@@ -1,0 +1,73 @@
+
+Ball flight — simulated, not measured
+------------------------------------------------------------------------
+
+  5 stored shots, each joined to the swing it arrived with: 2 flown on a
+  spin the screen printed, 1 on a spin solved from the printed carry, 2
+  not flown.
+
+  Spin measured off the screen
+    shot          club     mph   deg    rpm  printed   flown   error
+    2026-08-10-2  -       90.5  23.5   8100    121.0  124.07  +2.54%
+    2026-08-10-1  -       90.7  20.9   5991    125.6  122.36  -2.58%
+
+  Spin solved from the printed carry
+    shot          club     mph   deg    rpm  printed   flown     cap
+    2026-08-23-4  7i      89.8  22.4   2924    126.1  126.10    5103
+
+    - there is no error column here and there cannot be one: the printed
+      carry is the *input* to the spin solve, so the flown carry
+      reproduces it by construction, and a column of zeros would read as
+      a validation of the thing that was assumed.
+    - `cap` is the spin above which carry stops responding to spin at
+      all — an answer near it is a floor, not a reading.
+
+  Not flown (2)
+    2026-08-24-1  -     no_launch_conditions
+        the screen printed no ball speed
+    2026-08-23-11 3w    carry_unreachable
+        178.2 yd, case above_peak: 176.37 yd is the peak of what these
+        launch conditions can fly
+
+    - carry_unreachable: no spin flies the ball the distance the launch
+      monitor printed
+    - no_launch_conditions: the screen did not print enough of the
+      launch for a flight to be simulated
+
+  Read it with these:
+  - 2 of 5 shots reach a club tag through the swing they arrived with,
+    and 1 of those reach a declared loft. The club is on the *swing* and
+    never on the shot, so nothing reading `ShotData` alone can see it —
+    which is what ADR-027's 2026-09-05g addendum was measuring when it
+    reported none.
+  - 1 shots name a club with no bag entry (3w), so the loft that would
+    pick the branch has never been declared. That is the bag page and
+    not a bay session: 0 of them are otherwise solvable and would name a
+    spin the moment the club is looked up.
+  - 2 of these flights are drawn in the vertical plane, because nothing
+    on the screen fixes how far the spin axis was tilted (ADR-027
+    §Decision 5's third branch). The curvature is then zero by
+    construction and the landing offline reduces to `carry * sin(start
+    line)` — which is `shot_measure`'s `start_line_offline_yds` reached
+    by a much longer route, and not a landing point. The curve is
+    missing from it, and on a shot the screen called a fade the curve is
+    most of the lateral miss.
+  - 2026-08-23-11 disagrees with itself about which way it curved: the
+    screen printed `SLIGHT FADE` and the face-to-path behind it is draw.
+    Flagged rather than resolved — quietly picking one is how ADR-014's
+    sign inversion survived a milestone.
+  - the gate's typed launch conditions do not match what the OCR stored
+    for the same screens: 2026-08-10-2 (typed
+    LaunchConditions(ball_speed_mph=90.5, launch_angle_deg=23.5,
+    spin_rpm=8100.0, launch_direction_deg=4.0, spin_axis_deg=9.3),
+    stored LaunchConditions(ball_speed_mph=90.5, launch_angle_deg=23.5,
+    spin_rpm=8100.0, launch_direction_deg=4.0, spin_axis_deg=0.0)). One
+    of the two readings is wrong, and every number the gate has ever
+    printed rests on the typed pair.
+  - the model agrees with HD Golf to +/-2.59% on the two shots where a
+    full launch-condition set and an independent carry are both on disk
+    (`--gate`) — while ranking those two shots backwards. That
+    percentage is therefore the size of what this model cannot see, not
+    a calibration error, and a carry from here is not "accurate to
+    2.6%".
+

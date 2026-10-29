@@ -1,7 +1,7 @@
 """Small statistical helpers for the analysis core — pure, stdlib only. [M4-REF, career mode]
 
 One definition of "percentile", shared by the checkpoint evaluators and by the GolfDB
-reference-aggregation script (`scripts/golfdb/derive_reference.py`). Two drifting definitions of
+reference-aggregation script (`archive/golfdb/derive_reference.py`). Two drifting definitions of
 `p90` — one cutting a benchmark band, the other measuring the swing scored against it — would
 produce a systematic bias that is almost impossible to spot after the fact, so they share this.
 

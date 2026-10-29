@@ -106,7 +106,7 @@ fn in_flight(pool: &Pool) {
 /// The `camera_id` the worker echoed, which is the job id these tests submit.
 fn echoed(completed: &Completed) -> String {
     match &completed.result {
-        Ok(Outcome::Done(keypoints)) => keypoints
+        Ok(Outcome::Done { keypoints, .. }) => keypoints
             .frames
             .first()
             .and_then(|frame| frame.camera_id.clone())

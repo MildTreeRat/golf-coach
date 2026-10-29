@@ -178,7 +178,7 @@ optional:
   the two sides diverge. They now diverge. `api.pipeline._band_estimator_note` says so on every
   affected result rather than leaving it to be inferred from two provenance fields in different
   files. **The honest fix is to re-derive the corpus under the running variant**
-  (`scripts/golfdb/derive_pose_metrics.py --estimator mediapipe:heavy`, then
+  (`archive/golfdb/derive_pose_metrics.py --estimator mediapipe:heavy`, then
   `derive_reference.py`) — roughly 1400 s per 120 clips at heavy's rate, and until it is run the
   scores are approximate in a way the note names.
 

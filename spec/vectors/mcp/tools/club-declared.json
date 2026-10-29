@@ -1,0 +1,197 @@
+{
+  "career_version": 3,
+  "expected": {
+    "results": [
+      {
+        "content": [
+          {
+            "text": "{\n  \"player_id\": \"aaron\",\n  \"display_name\": \"Aaron\",\n  \"clubs\": [\n    {\n      \"player_id\": \"aaron\",\n      \"club\": \"7i\",\n      \"category\": \"mid_iron\",\n      \"in_bag\": true,\n      \"bag_entry\": {\n        \"club\": \"7i\",\n        \"make\": \"Titleist\",\n        \"model\": \"\",\n        \"model_year\": null,\n        \"head_type\": \"\",\n        \"set_composition\": \"\",\n        \"loft_deg\": 34.0,\n        \"lie_deg\": null,\n        \"bounce_deg\": null,\n        \"grind\": \"\",\n        \"offset_mm\": null,\n        \"face_angle_deg\": null,\n        \"head_weight_g\": null,\n        \"adjustable_hosel\": null,\n        \"loft_range_deg\": null,\n        \"shaft_model\": \"\",\n        \"shaft_material\": null,\n        \"shaft_flex\": null,\n        \"shaft_weight_g\": null,\n        \"shaft_torque_deg\": null,\n        \"shaft_kick_point\": \"\",\n        \"length_in\": null,\n        \"swing_weight\": \"\",\n        \"total_weight_g\": null,\n        \"grip\": \"\",\n        \"cor\": null,\n        \"moi_g_cm2\": null,\n        \"usga_conforming\": null,\n        \"recorded_at\": \"2026-10-01T12:00:00Z\",\n        \"retired_at\": null,\n        \"provenance\": null\n      },\n      \"n_swings\": 0,\n      \"n_shots\": 0,\n      \"n_sessions\": 0,\n      \"mishits\": 0,\n      \"mishit_refs\": [],\n      \"mishits_unconfirmed\": 0,\n      \"metrics\": [],\n      \"caveats\": [],\n      \"nothing_sayable\": true,\n      \"note\": \"This club is in the bag and nothing has been hit with it yet, so there are no statistics and nothing has been refused. That is the state every club is in the day it is declared, and the profile exists so the club is visible before it has any history.\"\n    }\n  ],\n  \"clubs_used\": 0,\n  \"clubs_declared\": 1,\n  \"untagged_swings\": 2,\n  \"mishits_excluded\": 0,\n  \"nothing_tagged\": false,\n  \"note\": \"The data does not exist yet — this needs a bay session of 20-30 swings with shots attached. Report the refusal. Do not estimate the withheld figure from the sample counts below it. Some swings on record name no club (see `untagged_swings`), so nothing above counts them. They are not lost — every whole-bag figure get_golfer_profile reports still includes them — but no per-club number can be cut from them until each one is tagged.\"\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "clubs": [
+              {
+                "bag_entry": {
+                  "adjustable_hosel": null,
+                  "bounce_deg": null,
+                  "club": "7i",
+                  "cor": null,
+                  "face_angle_deg": null,
+                  "grind": "",
+                  "grip": "",
+                  "head_type": "",
+                  "head_weight_g": null,
+                  "length_in": null,
+                  "lie_deg": null,
+                  "loft_deg": 34.0,
+                  "loft_range_deg": null,
+                  "make": "Titleist",
+                  "model": "",
+                  "model_year": null,
+                  "moi_g_cm2": null,
+                  "offset_mm": null,
+                  "provenance": null,
+                  "recorded_at": "2026-10-01T12:00:00Z",
+                  "retired_at": null,
+                  "set_composition": "",
+                  "shaft_flex": null,
+                  "shaft_kick_point": "",
+                  "shaft_material": null,
+                  "shaft_model": "",
+                  "shaft_torque_deg": null,
+                  "shaft_weight_g": null,
+                  "swing_weight": "",
+                  "total_weight_g": null,
+                  "usga_conforming": null
+                },
+                "category": "mid_iron",
+                "caveats": [],
+                "club": "7i",
+                "in_bag": true,
+                "metrics": [],
+                "mishit_refs": [],
+                "mishits": 0,
+                "mishits_unconfirmed": 0,
+                "n_sessions": 0,
+                "n_shots": 0,
+                "n_swings": 0,
+                "note": "This club is in the bag and nothing has been hit with it yet, so there are no statistics and nothing has been refused. That is the state every club is in the day it is declared, and the profile exists so the club is visible before it has any history.",
+                "nothing_sayable": true,
+                "player_id": "aaron"
+              }
+            ],
+            "clubs_declared": 1,
+            "clubs_used": 0,
+            "display_name": "Aaron",
+            "mishits_excluded": 0,
+            "note": "The data does not exist yet — this needs a bay session of 20-30 swings with shots attached. Report the refusal. Do not estimate the withheld figure from the sample counts below it. Some swings on record name no club (see `untagged_swings`), so nothing above counts them. They are not lost — every whole-bag figure get_golfer_profile reports still includes them — but no per-club number can be cut from them until each one is tagged.",
+            "nothing_tagged": false,
+            "player_id": "aaron",
+            "untagged_swings": 2
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"player_id\": \"aaron\",\n  \"club\": \"7i\",\n  \"category\": \"mid_iron\",\n  \"in_bag\": true,\n  \"bag_entry\": {\n    \"club\": \"7i\",\n    \"make\": \"Titleist\",\n    \"model\": \"\",\n    \"model_year\": null,\n    \"head_type\": \"\",\n    \"set_composition\": \"\",\n    \"loft_deg\": 34.0,\n    \"lie_deg\": null,\n    \"bounce_deg\": null,\n    \"grind\": \"\",\n    \"offset_mm\": null,\n    \"face_angle_deg\": null,\n    \"head_weight_g\": null,\n    \"adjustable_hosel\": null,\n    \"loft_range_deg\": null,\n    \"shaft_model\": \"\",\n    \"shaft_material\": null,\n    \"shaft_flex\": null,\n    \"shaft_weight_g\": null,\n    \"shaft_torque_deg\": null,\n    \"shaft_kick_point\": \"\",\n    \"length_in\": null,\n    \"swing_weight\": \"\",\n    \"total_weight_g\": null,\n    \"grip\": \"\",\n    \"cor\": null,\n    \"moi_g_cm2\": null,\n    \"usga_conforming\": null,\n    \"recorded_at\": \"2026-10-01T12:00:00Z\",\n    \"retired_at\": null,\n    \"provenance\": null\n  },\n  \"n_swings\": 0,\n  \"n_shots\": 0,\n  \"n_sessions\": 0,\n  \"mishits\": 0,\n  \"mishit_refs\": [],\n  \"mishits_unconfirmed\": 0,\n  \"metrics\": [],\n  \"caveats\": [],\n  \"nothing_sayable\": true,\n  \"note\": \"This club is in the bag and nothing has been hit with it yet, so there are no statistics and nothing has been refused. That is the state every club is in the day it is declared, and the profile exists so the club is visible before it has any history.\"\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "bag_entry": {
+              "adjustable_hosel": null,
+              "bounce_deg": null,
+              "club": "7i",
+              "cor": null,
+              "face_angle_deg": null,
+              "grind": "",
+              "grip": "",
+              "head_type": "",
+              "head_weight_g": null,
+              "length_in": null,
+              "lie_deg": null,
+              "loft_deg": 34.0,
+              "loft_range_deg": null,
+              "make": "Titleist",
+              "model": "",
+              "model_year": null,
+              "moi_g_cm2": null,
+              "offset_mm": null,
+              "provenance": null,
+              "recorded_at": "2026-10-01T12:00:00Z",
+              "retired_at": null,
+              "set_composition": "",
+              "shaft_flex": null,
+              "shaft_kick_point": "",
+              "shaft_material": null,
+              "shaft_model": "",
+              "shaft_torque_deg": null,
+              "shaft_weight_g": null,
+              "swing_weight": "",
+              "total_weight_g": null,
+              "usga_conforming": null
+            },
+            "category": "mid_iron",
+            "caveats": [],
+            "club": "7i",
+            "in_bag": true,
+            "metrics": [],
+            "mishit_refs": [],
+            "mishits": 0,
+            "mishits_unconfirmed": 0,
+            "n_sessions": 0,
+            "n_shots": 0,
+            "n_swings": 0,
+            "note": "This club is in the bag and nothing has been hit with it yet, so there are no statistics and nothing has been refused. That is the state every club is in the day it is declared, and the profile exists so the club is visible before it has any history.",
+            "nothing_sayable": true,
+            "player_id": "aaron"
+          }
+        }
+      }
+    ]
+  },
+  "id": "mcp/tools/club-declared",
+  "input": {
+    "calls": [
+      {
+        "arguments": {
+          "player": "Aaron"
+        },
+        "now": null,
+        "tool": "get_bag_profile"
+      },
+      {
+        "arguments": {
+          "club": "7i",
+          "player": "Aaron"
+        },
+        "now": null,
+        "tool": "get_club_profile"
+      }
+    ],
+    "files": {
+      "golfers/aaron.bag.json": "{\n  \"player_id\": \"aaron\",\n  \"entries\": {\n    \"7i\": {\n      \"club\": \"7i\",\n      \"make\": \"Titleist\",\n      \"model\": \"\",\n      \"model_year\": null,\n      \"head_type\": \"\",\n      \"set_composition\": \"\",\n      \"loft_deg\": 34.0,\n      \"lie_deg\": null,\n      \"bounce_deg\": null,\n      \"grind\": \"\",\n      \"offset_mm\": null,\n      \"face_angle_deg\": null,\n      \"head_weight_g\": null,\n      \"adjustable_hosel\": null,\n      \"loft_range_deg\": null,\n      \"shaft_model\": \"\",\n      \"shaft_material\": null,\n      \"shaft_flex\": null,\n      \"shaft_weight_g\": null,\n      \"shaft_torque_deg\": null,\n      \"shaft_kick_point\": \"\",\n      \"length_in\": null,\n      \"swing_weight\": \"\",\n      \"total_weight_g\": null,\n      \"grip\": \"\",\n      \"cor\": null,\n      \"moi_g_cm2\": null,\n      \"usga_conforming\": null,\n      \"recorded_at\": \"2026-10-01T12:00:00Z\",\n      \"retired_at\": null,\n      \"provenance\": null\n    }\n  },\n  \"retired\": [],\n  \"updated_at\": \"2026-10-01T12:00:00Z\"\n}",
+      "golfers/aaron.golfer.json": "{\n  \"player_id\": \"aaron\",\n  \"display_name\": \"Aaron\",\n  \"handedness\": \"right\",\n  \"created_at\": \"2026-10-01T12:00:00Z\"\n}",
+      "sessions/2026-08-01/1/analysis.json": "{\"swing_id\": \"1\", \"session_id\": \"s\", \"swing\": {\"swing_id\": \"1\", \"session_id\": \"s\", \"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.42, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick - 2.4:1.\", \"percentile\": 10.0, \"population_n\": 1399, \"one_sided\": false}, {\"name\": \"head_sway\", \"score\": 1.0, \"passed\": true, \"observed\": 0.12, \"expected_low\": 0.0, \"expected_high\": 0.43, \"message\": \"Head stays steady.\", \"percentile\": 35.5, \"population_n\": 458, \"one_sided\": true}], \"unscored\": [], \"measurements\": [{\"name\": \"head_sway_norm\", \"value\": 0.21500000000000002, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"tempo_ratio\", \"value\": 3.1, \"unit\": \"ratio\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"carry_distance_yds\", \"value\": 157.0, \"unit\": \"yards\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}, {\"name\": \"total_distance_yds\", \"value\": 172.0, \"unit\": \"yards\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}, {\"name\": \"start_line_offline_yds\", \"value\": 3.5, \"unit\": \"yards\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}, {\"name\": \"ball_speed_mph\", \"value\": 120.0, \"unit\": \"mph\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}, {\"name\": \"launch_angle_deg\", \"value\": 19.0, \"unit\": \"degrees\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}], \"mechanics_score\": 91.0, \"outcome_score\": null, \"overall_score\": 91.0, \"shot\": null}, \"alignment\": {\"quality\": \"top_impact\"}, \"notes\": [\"alignment degraded: aligned on top and impact\"], \"feedback\": {\"swing_id\": \"1\", \"overall_score\": 91.0, \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\", \"tips\": [{\"checkpoint\": \"tempo\", \"text\": \"Tempo too quick - 2.4:1.\", \"severity\": \"minor\"}]}, \"analysis_version\": 16}",
+      "sessions/2026-08-01/1/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"down_the_line\": \"sha-2026-08-01-1-down_the_line\",\n    \"face_on\": \"sha-2026-08-01-1-face_on\",\n    \"shot_screen\": \"sha-2026-08-01-1-shot_screen\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 91.0,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\"\n}",
+      "sessions/2026-08-01/1/manifest.json": "{\n  \"swing_id\": \"1\",\n  \"session_id\": \"2026-08-01\",\n  \"created_at\": \"2026-08-01T12:00:00Z\",\n  \"updated_at\": \"2026-08-01T12:00:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-01-1-face_on\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-01-1-down_the_line\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-01-1-shot_screen\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": null,\n  \"mishit\": null\n}",
+      "sessions/2026-08-02/1/analysis.json": "{\"swing_id\": \"1\", \"session_id\": \"s\", \"swing\": {\"swing_id\": \"1\", \"session_id\": \"s\", \"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.42, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick - 2.4:1.\", \"percentile\": 10.0, \"population_n\": 1399, \"one_sided\": false}, {\"name\": \"head_sway\", \"score\": 1.0, \"passed\": true, \"observed\": 0.12, \"expected_low\": 0.0, \"expected_high\": 0.43, \"message\": \"Head stays steady.\", \"percentile\": 35.5, \"population_n\": 458, \"one_sided\": true}], \"unscored\": [], \"measurements\": [{\"name\": \"head_sway_norm\", \"value\": 0.185, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"tempo_ratio\", \"value\": 2.9, \"unit\": \"ratio\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"carry_distance_yds\", \"value\": 151.0, \"unit\": \"yards\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}, {\"name\": \"total_distance_yds\", \"value\": 164.0, \"unit\": \"yards\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}, {\"name\": \"start_line_offline_yds\", \"value\": 0.5, \"unit\": \"yards\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}, {\"name\": \"ball_speed_mph\", \"value\": 116.0, \"unit\": \"mph\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}, {\"name\": \"launch_angle_deg\", \"value\": 17.0, \"unit\": \"degrees\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}], \"mechanics_score\": 91.0, \"outcome_score\": null, \"overall_score\": 91.0, \"shot\": null}, \"alignment\": {\"quality\": \"top_impact\"}, \"notes\": [\"alignment degraded: aligned on top and impact\"], \"feedback\": {\"swing_id\": \"1\", \"overall_score\": 91.0, \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\", \"tips\": [{\"checkpoint\": \"tempo\", \"text\": \"Tempo too quick - 2.4:1.\", \"severity\": \"minor\"}]}, \"analysis_version\": 16}",
+      "sessions/2026-08-02/1/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"down_the_line\": \"sha-2026-08-02-1-down_the_line\",\n    \"face_on\": \"sha-2026-08-02-1-face_on\",\n    \"shot_screen\": \"sha-2026-08-02-1-shot_screen\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 91.0,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\"\n}",
+      "sessions/2026-08-02/1/manifest.json": "{\n  \"swing_id\": \"1\",\n  \"session_id\": \"2026-08-02\",\n  \"created_at\": \"2026-08-02T12:00:00Z\",\n  \"updated_at\": \"2026-08-02T12:00:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-02-1-face_on\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-02-1-down_the_line\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-02-1-shot_screen\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": null,\n  \"mishit\": null\n}"
+    },
+    "roots": {
+      "golfers": "golfers",
+      "sessions": "sessions",
+      "shots": "shots"
+    }
+  },
+  "provenance": {
+    "analysis_version": 16,
+    "flight_model_calls": [],
+    "kind": "mcp",
+    "mcp_version": "2.0.0",
+    "note": "test_a_declared_club_appears_with_its_loft_and_no_history: the untagged corpus and a declared Titleist 7 iron at 34 degrees",
+    "oracle": "python",
+    "pydantic_version": "2.13.4",
+    "python_version": "3.13.3",
+    "recorded_by": "scripts/conformance_vectors.py::_run_mcp",
+    "rerecords": [
+      {
+        "added": [],
+        "by": "golf-core rerecord",
+        "career_version": 3,
+        "declaration": "spec/declarations/career-v3.json",
+        "moved": [
+          "career_version"
+        ]
+      }
+    ],
+    "source": "scripts/conformance_vectors.py::_mcp_club_declared, after tests/mcp/"
+  }
+}

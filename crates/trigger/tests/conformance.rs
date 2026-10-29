@@ -45,7 +45,7 @@ const ATOL: f64 = 1e-12;
 #[derive(Deserialize)]
 struct Vector {
     id: String,
-    detector_version: u32,
+    detector_version: i64,
     provenance: Provenance,
     input: Input,
     expected: Expected,
@@ -95,7 +95,12 @@ struct ExpectedOffset {
 /// `contracts/audio.py::AUDIO_DETECTOR_VERSION`. A vector recorded by a different generation of
 /// the detector is not a conformance failure — it is a different question — so it is reported as
 /// stale rather than diffed, the same way `conformance.py check` treats a stale engine version.
-const AUDIO_DETECTOR_VERSION: u32 = 2;
+///
+/// Read from `contracts::audio`, the number `golf-lab` stamps on every `{role}.audio.json` it
+/// writes (M29 P21), through a test-only edge; this file held its own copy until then, which is
+/// one more place a bump could miss. `contracts`' `python_schemas.rs` holds that number to frozen
+/// Python's.
+const AUDIO_DETECTOR_VERSION: i64 = contracts::audio::AUDIO_DETECTOR_VERSION;
 
 fn spec_dir() -> PathBuf {
     // `CARGO_MANIFEST_DIR` is `crates/trigger`; the spec is two levels up, beside `pyproject.toml`.

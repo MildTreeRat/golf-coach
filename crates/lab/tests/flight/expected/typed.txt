@@ -1,0 +1,46 @@
+
+Ball flight — simulated, not measured
+------------------------------------------------------------------------
+
+  launch    90.7 mph, 20.9 deg up, 5991 rpm, start -5.3 deg, axis +2.5 deg
+  air       isa_sea_level, 1.2250 kg/m3, 288.15 K
+
+  carry                122.36 yd   along the launch line
+  offline               -9.60 yd   from the target line
+  curvature             +1.71 yd   from the launch line
+  apex                  18.54 yd
+  hang time               4.52 s
+  descent               36.9 deg
+  spin at landing       5001 rpm
+  spin ratio       0.330 - 0.544   905 of 905 points held
+
+     t s   down yd    up yd  right yd     mph       S  coeff
+    0.00      0.00     0.00      0.00    90.7   0.330  held
+    0.41     15.89     6.00     -1.44    79.8   0.369  held
+    0.82     30.07    10.92     -2.67    70.8   0.409  held
+    1.23     43.06    14.70     -3.76    63.4   0.450  held
+    1.64     54.86    17.18     -4.71    57.6   0.487  held
+    2.05     65.85    18.40     -5.56    53.3   0.517  held
+    2.46     76.20    18.36     -6.35    50.5   0.537  held
+    2.87     86.04    17.05     -7.07    49.0   0.544  held
+    3.28     95.46    14.51     -7.75    48.8   0.538  held
+    3.70    104.66    10.73     -8.40    49.6   0.520  held
+    4.11    113.48     5.86     -9.01    51.3   0.496  held
+    4.52    121.99     0.00     -9.60    53.4   0.468  held
+
+  Read it with these:
+  - every point of this flight sat above the published table, which
+    stops at a spin ratio of 0.284 and was measured on a *driver*. Its
+    end row was held rather than extended, so lift and drag were one
+    constant pair the whole way — and since spin reaches the flight only
+    through the spin ratio and the spin ratio only through those two
+    coefficients, the spin above the clamp does not reach this carry at
+    all. The same ball at 5,200 rpm and at 30,000 rpm flies exactly this
+    far.
+  - the model agrees with HD Golf to +/-2.59% on the two shots where a
+    full launch-condition set and an independent carry are both on disk
+    (`--gate`) — while ranking those two shots backwards. That
+    percentage is therefore the size of what this model cannot see, not
+    a calibration error, and a carry from here is not "accurate to
+    2.6%".
+

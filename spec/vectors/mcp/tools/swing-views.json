@@ -1,0 +1,1580 @@
+{
+  "career_version": 3,
+  "expected": {
+    "results": [
+      {
+        "content": [
+          {
+            "text": "{\n  \"swing_id\": \"1\",\n  \"session_id\": \"2026-09-01\",\n  \"status\": \"done\",\n  \"club\": \"7i\",\n  \"mishit\": null,\n  \"overall_score\": 94.9,\n  \"mechanics_score\": 94.9,\n  \"outcome_score\": null,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\",\n  \"checkpoints\": [\n    {\n      \"name\": \"tempo\",\n      \"observed\": 2.42,\n      \"expected_low\": 2.72,\n      \"expected_high\": 4.71,\n      \"passed\": false,\n      \"score\": 0.85,\n      \"percentile\": 10.0,\n      \"population_n\": 1399,\n      \"message\": \"Tempo too quick - 2.4:1.\"\n    },\n    {\n      \"name\": \"head_sway\",\n      \"observed\": 0.12,\n      \"expected_low\": 0.0,\n      \"expected_high\": 0.43,\n      \"passed\": true,\n      \"score\": 1.0,\n      \"percentile\": 35.5,\n      \"population_n\": 458,\n      \"message\": \"Head stays steady.\"\n    }\n  ],\n  \"tips\": [\n    {\n      \"checkpoint\": \"tempo\",\n      \"text\": \"Tempo too quick - 2.4:1.\",\n      \"severity\": \"minor\"\n    }\n  ],\n  \"unscored\": [],\n  \"measurements\": {},\n  \"simulated\": [],\n  \"population\": [],\n  \"rotation\": [],\n  \"analysis_version\": null,\n  \"alignment_quality\": \"top_impact\",\n  \"alignment_caveat\": \"The two camera views were aligned on top and impact, not on every instant. Frame correspondence is exact at those anchors and interpolated between them, so do not describe the side-by-side video as synchronized throughout, and do not read fine timing differences off it.\",\n  \"shot\": null,\n  \"notes\": [\n    \"alignment degraded: aligned on top and impact\"\n  ]\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "alignment_caveat": "The two camera views were aligned on top and impact, not on every instant. Frame correspondence is exact at those anchors and interpolated between them, so do not describe the side-by-side video as synchronized throughout, and do not read fine timing differences off it.",
+            "alignment_quality": "top_impact",
+            "analysis_version": null,
+            "checkpoints": [
+              {
+                "expected_high": 4.71,
+                "expected_low": 2.72,
+                "message": "Tempo too quick - 2.4:1.",
+                "name": "tempo",
+                "observed": 2.42,
+                "passed": false,
+                "percentile": 10.0,
+                "population_n": 1399,
+                "score": 0.85
+              },
+              {
+                "expected_high": 0.43,
+                "expected_low": 0.0,
+                "message": "Head stays steady.",
+                "name": "head_sway",
+                "observed": 0.12,
+                "passed": true,
+                "percentile": 35.5,
+                "population_n": 458,
+                "score": 1.0
+              }
+            ],
+            "club": "7i",
+            "headline": "Work on tempo first. Tempo too quick - 2.4:1.",
+            "measurements": {},
+            "mechanics_score": 94.9,
+            "mishit": null,
+            "notes": [
+              "alignment degraded: aligned on top and impact"
+            ],
+            "outcome_score": null,
+            "overall_score": 94.9,
+            "population": [],
+            "rotation": [],
+            "session_id": "2026-09-01",
+            "shot": null,
+            "simulated": [],
+            "status": "done",
+            "swing_id": "1",
+            "tips": [
+              {
+                "checkpoint": "tempo",
+                "severity": "minor",
+                "text": "Tempo too quick - 2.4:1."
+              }
+            ],
+            "unscored": []
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"swing_id\": \"2\",\n  \"session_id\": \"2026-09-01\",\n  \"status\": \"done\",\n  \"club\": null,\n  \"mishit\": null,\n  \"overall_score\": 94.9,\n  \"mechanics_score\": 94.9,\n  \"outcome_score\": null,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\",\n  \"checkpoints\": [\n    {\n      \"name\": \"tempo\",\n      \"observed\": 2.42,\n      \"expected_low\": 2.72,\n      \"expected_high\": 4.71,\n      \"passed\": false,\n      \"score\": 0.85,\n      \"percentile\": 10.0,\n      \"population_n\": 1399,\n      \"message\": \"Tempo too quick - 2.4:1.\"\n    },\n    {\n      \"name\": \"head_sway\",\n      \"observed\": 0.12,\n      \"expected_low\": 0.0,\n      \"expected_high\": 0.43,\n      \"passed\": true,\n      \"score\": 1.0,\n      \"percentile\": 35.5,\n      \"population_n\": 458,\n      \"message\": \"Head stays steady.\"\n    }\n  ],\n  \"tips\": [\n    {\n      \"checkpoint\": \"tempo\",\n      \"text\": \"Tempo too quick - 2.4:1.\",\n      \"severity\": \"minor\"\n    }\n  ],\n  \"unscored\": [],\n  \"measurements\": {},\n  \"simulated\": [],\n  \"population\": [],\n  \"rotation\": [],\n  \"analysis_version\": null,\n  \"alignment_quality\": \"top_impact\",\n  \"alignment_caveat\": \"The two camera views were aligned on top and impact, not on every instant. Frame correspondence is exact at those anchors and interpolated between them, so do not describe the side-by-side video as synchronized throughout, and do not read fine timing differences off it.\",\n  \"shot\": null,\n  \"notes\": [\n    \"alignment degraded: aligned on top and impact\"\n  ]\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "alignment_caveat": "The two camera views were aligned on top and impact, not on every instant. Frame correspondence is exact at those anchors and interpolated between them, so do not describe the side-by-side video as synchronized throughout, and do not read fine timing differences off it.",
+            "alignment_quality": "top_impact",
+            "analysis_version": null,
+            "checkpoints": [
+              {
+                "expected_high": 4.71,
+                "expected_low": 2.72,
+                "message": "Tempo too quick - 2.4:1.",
+                "name": "tempo",
+                "observed": 2.42,
+                "passed": false,
+                "percentile": 10.0,
+                "population_n": 1399,
+                "score": 0.85
+              },
+              {
+                "expected_high": 0.43,
+                "expected_low": 0.0,
+                "message": "Head stays steady.",
+                "name": "head_sway",
+                "observed": 0.12,
+                "passed": true,
+                "percentile": 35.5,
+                "population_n": 458,
+                "score": 1.0
+              }
+            ],
+            "club": null,
+            "headline": "Work on tempo first. Tempo too quick - 2.4:1.",
+            "measurements": {},
+            "mechanics_score": 94.9,
+            "mishit": null,
+            "notes": [
+              "alignment degraded: aligned on top and impact"
+            ],
+            "outcome_score": null,
+            "overall_score": 94.9,
+            "population": [],
+            "rotation": [],
+            "session_id": "2026-09-01",
+            "shot": null,
+            "simulated": [],
+            "status": "done",
+            "swing_id": "2",
+            "tips": [
+              {
+                "checkpoint": "tempo",
+                "severity": "minor",
+                "text": "Tempo too quick - 2.4:1."
+              }
+            ],
+            "unscored": []
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"swing_id\": \"1\",\n  \"session_id\": \"2026-08-10\",\n  \"status\": \"stale — inputs changed since this was analyzed\",\n  \"club\": null,\n  \"mishit\": null,\n  \"overall_score\": 94.9,\n  \"mechanics_score\": 94.9,\n  \"outcome_score\": null,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\",\n  \"checkpoints\": [\n    {\n      \"name\": \"tempo\",\n      \"observed\": 2.42,\n      \"expected_low\": 2.72,\n      \"expected_high\": 4.71,\n      \"passed\": false,\n      \"score\": 0.85,\n      \"percentile\": 10.0,\n      \"population_n\": 1399,\n      \"message\": \"Tempo too quick - 2.4:1.\"\n    },\n    {\n      \"name\": \"head_sway\",\n      \"observed\": 0.12,\n      \"expected_low\": 0.0,\n      \"expected_high\": 0.43,\n      \"passed\": true,\n      \"score\": 1.0,\n      \"percentile\": 35.5,\n      \"population_n\": 458,\n      \"message\": \"Head stays steady.\"\n    }\n  ],\n  \"tips\": [\n    {\n      \"checkpoint\": \"tempo\",\n      \"text\": \"Tempo too quick - 2.4:1.\",\n      \"severity\": \"minor\"\n    }\n  ],\n  \"unscored\": [],\n  \"measurements\": {},\n  \"simulated\": [],\n  \"population\": [],\n  \"rotation\": [],\n  \"analysis_version\": null,\n  \"alignment_quality\": \"top_impact\",\n  \"alignment_caveat\": \"The two camera views were aligned on top and impact, not on every instant. Frame correspondence is exact at those anchors and interpolated between them, so do not describe the side-by-side video as synchronized throughout, and do not read fine timing differences off it.\",\n  \"shot\": null,\n  \"notes\": [\n    \"alignment degraded: aligned on top and impact\"\n  ]\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "alignment_caveat": "The two camera views were aligned on top and impact, not on every instant. Frame correspondence is exact at those anchors and interpolated between them, so do not describe the side-by-side video as synchronized throughout, and do not read fine timing differences off it.",
+            "alignment_quality": "top_impact",
+            "analysis_version": null,
+            "checkpoints": [
+              {
+                "expected_high": 4.71,
+                "expected_low": 2.72,
+                "message": "Tempo too quick - 2.4:1.",
+                "name": "tempo",
+                "observed": 2.42,
+                "passed": false,
+                "percentile": 10.0,
+                "population_n": 1399,
+                "score": 0.85
+              },
+              {
+                "expected_high": 0.43,
+                "expected_low": 0.0,
+                "message": "Head stays steady.",
+                "name": "head_sway",
+                "observed": 0.12,
+                "passed": true,
+                "percentile": 35.5,
+                "population_n": 458,
+                "score": 1.0
+              }
+            ],
+            "club": null,
+            "headline": "Work on tempo first. Tempo too quick - 2.4:1.",
+            "measurements": {},
+            "mechanics_score": 94.9,
+            "mishit": null,
+            "notes": [
+              "alignment degraded: aligned on top and impact"
+            ],
+            "outcome_score": null,
+            "overall_score": 94.9,
+            "population": [],
+            "rotation": [],
+            "session_id": "2026-08-10",
+            "shot": null,
+            "simulated": [],
+            "status": "stale — inputs changed since this was analyzed",
+            "swing_id": "1",
+            "tips": [
+              {
+                "checkpoint": "tempo",
+                "severity": "minor",
+                "text": "Tempo too quick - 2.4:1."
+              }
+            ],
+            "unscored": []
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"swing_id\": \"2\",\n  \"session_id\": \"2026-08-10\",\n  \"status\": \"done\",\n  \"club\": null,\n  \"mishit\": null,\n  \"overall_score\": 94.9,\n  \"mechanics_score\": 94.9,\n  \"outcome_score\": null,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\",\n  \"checkpoints\": [\n    {\n      \"name\": \"tempo\",\n      \"observed\": 2.42,\n      \"expected_low\": 2.72,\n      \"expected_high\": 4.71,\n      \"passed\": false,\n      \"score\": 0.85,\n      \"percentile\": 10.0,\n      \"population_n\": 1399,\n      \"message\": \"Tempo too quick - 2.4:1.\"\n    },\n    {\n      \"name\": \"head_sway\",\n      \"observed\": 0.12,\n      \"expected_low\": 0.0,\n      \"expected_high\": 0.43,\n      \"passed\": true,\n      \"score\": 1.0,\n      \"percentile\": 35.5,\n      \"population_n\": 458,\n      \"message\": \"Head stays steady.\"\n    }\n  ],\n  \"tips\": [\n    {\n      \"checkpoint\": \"tempo\",\n      \"text\": \"Tempo too quick - 2.4:1.\",\n      \"severity\": \"minor\"\n    }\n  ],\n  \"unscored\": [\n    {\n      \"name\": \"tempo\",\n      \"reason\": \"no_band\",\n      \"why\": \"no benchmark band exists for it yet\",\n      \"refilming_helps\": false\n    }\n  ],\n  \"measurements\": {},\n  \"simulated\": [],\n  \"population\": [],\n  \"rotation\": [],\n  \"analysis_version\": null,\n  \"alignment_quality\": \"top_impact\",\n  \"alignment_caveat\": \"The two camera views were aligned on top and impact, not on every instant. Frame correspondence is exact at those anchors and interpolated between them, so do not describe the side-by-side video as synchronized throughout, and do not read fine timing differences off it.\",\n  \"shot\": null,\n  \"notes\": [\n    \"alignment degraded: aligned on top and impact\"\n  ]\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "alignment_caveat": "The two camera views were aligned on top and impact, not on every instant. Frame correspondence is exact at those anchors and interpolated between them, so do not describe the side-by-side video as synchronized throughout, and do not read fine timing differences off it.",
+            "alignment_quality": "top_impact",
+            "analysis_version": null,
+            "checkpoints": [
+              {
+                "expected_high": 4.71,
+                "expected_low": 2.72,
+                "message": "Tempo too quick - 2.4:1.",
+                "name": "tempo",
+                "observed": 2.42,
+                "passed": false,
+                "percentile": 10.0,
+                "population_n": 1399,
+                "score": 0.85
+              },
+              {
+                "expected_high": 0.43,
+                "expected_low": 0.0,
+                "message": "Head stays steady.",
+                "name": "head_sway",
+                "observed": 0.12,
+                "passed": true,
+                "percentile": 35.5,
+                "population_n": 458,
+                "score": 1.0
+              }
+            ],
+            "club": null,
+            "headline": "Work on tempo first. Tempo too quick - 2.4:1.",
+            "measurements": {},
+            "mechanics_score": 94.9,
+            "mishit": null,
+            "notes": [
+              "alignment degraded: aligned on top and impact"
+            ],
+            "outcome_score": null,
+            "overall_score": 94.9,
+            "population": [],
+            "rotation": [],
+            "session_id": "2026-08-10",
+            "shot": null,
+            "simulated": [],
+            "status": "done",
+            "swing_id": "2",
+            "tips": [
+              {
+                "checkpoint": "tempo",
+                "severity": "minor",
+                "text": "Tempo too quick - 2.4:1."
+              }
+            ],
+            "unscored": [
+              {
+                "name": "tempo",
+                "reason": "no_band",
+                "refilming_helps": false,
+                "why": "no benchmark band exists for it yet"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"swing_id\": \"3\",\n  \"session_id\": \"2026-08-10\",\n  \"status\": \"done\",\n  \"club\": null,\n  \"mishit\": null,\n  \"overall_score\": 94.9,\n  \"mechanics_score\": 94.9,\n  \"outcome_score\": null,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\",\n  \"checkpoints\": [\n    {\n      \"name\": \"tempo\",\n      \"observed\": 2.42,\n      \"expected_low\": 2.72,\n      \"expected_high\": 4.71,\n      \"passed\": false,\n      \"score\": 0.85,\n      \"percentile\": 10.0,\n      \"population_n\": 1399,\n      \"message\": \"Tempo too quick - 2.4:1.\"\n    },\n    {\n      \"name\": \"head_sway\",\n      \"observed\": 0.12,\n      \"expected_low\": 0.0,\n      \"expected_high\": 0.43,\n      \"passed\": true,\n      \"score\": 1.0,\n      \"percentile\": 35.5,\n      \"population_n\": 458,\n      \"message\": \"Head stays steady.\"\n    }\n  ],\n  \"tips\": [\n    {\n      \"checkpoint\": \"tempo\",\n      \"text\": \"Tempo too quick - 2.4:1.\",\n      \"severity\": \"minor\"\n    }\n  ],\n  \"unscored\": [\n    {\n      \"name\": \"tempo\",\n      \"reason\": \"unrecorded\",\n      \"why\": \"this result was produced before the reason was recorded\",\n      \"refilming_helps\": false\n    }\n  ],\n  \"measurements\": {},\n  \"simulated\": [],\n  \"population\": [],\n  \"rotation\": [],\n  \"analysis_version\": null,\n  \"alignment_quality\": \"top_impact\",\n  \"alignment_caveat\": \"The two camera views were aligned on top and impact, not on every instant. Frame correspondence is exact at those anchors and interpolated between them, so do not describe the side-by-side video as synchronized throughout, and do not read fine timing differences off it.\",\n  \"shot\": null,\n  \"notes\": [\n    \"alignment degraded: aligned on top and impact\"\n  ]\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "alignment_caveat": "The two camera views were aligned on top and impact, not on every instant. Frame correspondence is exact at those anchors and interpolated between them, so do not describe the side-by-side video as synchronized throughout, and do not read fine timing differences off it.",
+            "alignment_quality": "top_impact",
+            "analysis_version": null,
+            "checkpoints": [
+              {
+                "expected_high": 4.71,
+                "expected_low": 2.72,
+                "message": "Tempo too quick - 2.4:1.",
+                "name": "tempo",
+                "observed": 2.42,
+                "passed": false,
+                "percentile": 10.0,
+                "population_n": 1399,
+                "score": 0.85
+              },
+              {
+                "expected_high": 0.43,
+                "expected_low": 0.0,
+                "message": "Head stays steady.",
+                "name": "head_sway",
+                "observed": 0.12,
+                "passed": true,
+                "percentile": 35.5,
+                "population_n": 458,
+                "score": 1.0
+              }
+            ],
+            "club": null,
+            "headline": "Work on tempo first. Tempo too quick - 2.4:1.",
+            "measurements": {},
+            "mechanics_score": 94.9,
+            "mishit": null,
+            "notes": [
+              "alignment degraded: aligned on top and impact"
+            ],
+            "outcome_score": null,
+            "overall_score": 94.9,
+            "population": [],
+            "rotation": [],
+            "session_id": "2026-08-10",
+            "shot": null,
+            "simulated": [],
+            "status": "done",
+            "swing_id": "3",
+            "tips": [
+              {
+                "checkpoint": "tempo",
+                "severity": "minor",
+                "text": "Tempo too quick - 2.4:1."
+              }
+            ],
+            "unscored": [
+              {
+                "name": "tempo",
+                "reason": "unrecorded",
+                "refilming_helps": false,
+                "why": "this result was produced before the reason was recorded"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"swing_id\": \"4\",\n  \"session_id\": \"2026-08-10\",\n  \"status\": \"done\",\n  \"club\": null,\n  \"mishit\": null,\n  \"overall_score\": 94.9,\n  \"mechanics_score\": 94.9,\n  \"outcome_score\": null,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\",\n  \"checkpoints\": [\n    {\n      \"name\": \"tempo\",\n      \"observed\": 2.42,\n      \"expected_low\": 2.72,\n      \"expected_high\": 4.71,\n      \"passed\": false,\n      \"score\": 0.85,\n      \"percentile\": 10.0,\n      \"population_n\": 1399,\n      \"message\": \"Tempo too quick - 2.4:1.\"\n    },\n    {\n      \"name\": \"head_sway\",\n      \"observed\": 0.12,\n      \"expected_low\": 0.0,\n      \"expected_high\": 0.43,\n      \"passed\": true,\n      \"score\": 1.0,\n      \"percentile\": 35.5,\n      \"population_n\": 458,\n      \"message\": \"Head stays steady.\"\n    }\n  ],\n  \"tips\": [\n    {\n      \"checkpoint\": \"tempo\",\n      \"text\": \"Tempo too quick - 2.4:1.\",\n      \"severity\": \"minor\"\n    }\n  ],\n  \"unscored\": [\n    {\n      \"name\": \"tempo\",\n      \"reason\": \"unrecorded\",\n      \"why\": \"this result was produced before the reason was recorded\",\n      \"refilming_helps\": false\n    }\n  ],\n  \"measurements\": {},\n  \"simulated\": [],\n  \"population\": [],\n  \"rotation\": [],\n  \"analysis_version\": null,\n  \"alignment_quality\": \"top_impact\",\n  \"alignment_caveat\": \"The two camera views were aligned on top and impact, not on every instant. Frame correspondence is exact at those anchors and interpolated between them, so do not describe the side-by-side video as synchronized throughout, and do not read fine timing differences off it.\",\n  \"shot\": null,\n  \"notes\": [\n    \"alignment degraded: aligned on top and impact\"\n  ]\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "alignment_caveat": "The two camera views were aligned on top and impact, not on every instant. Frame correspondence is exact at those anchors and interpolated between them, so do not describe the side-by-side video as synchronized throughout, and do not read fine timing differences off it.",
+            "alignment_quality": "top_impact",
+            "analysis_version": null,
+            "checkpoints": [
+              {
+                "expected_high": 4.71,
+                "expected_low": 2.72,
+                "message": "Tempo too quick - 2.4:1.",
+                "name": "tempo",
+                "observed": 2.42,
+                "passed": false,
+                "percentile": 10.0,
+                "population_n": 1399,
+                "score": 0.85
+              },
+              {
+                "expected_high": 0.43,
+                "expected_low": 0.0,
+                "message": "Head stays steady.",
+                "name": "head_sway",
+                "observed": 0.12,
+                "passed": true,
+                "percentile": 35.5,
+                "population_n": 458,
+                "score": 1.0
+              }
+            ],
+            "club": null,
+            "headline": "Work on tempo first. Tempo too quick - 2.4:1.",
+            "measurements": {},
+            "mechanics_score": 94.9,
+            "mishit": null,
+            "notes": [
+              "alignment degraded: aligned on top and impact"
+            ],
+            "outcome_score": null,
+            "overall_score": 94.9,
+            "population": [],
+            "rotation": [],
+            "session_id": "2026-08-10",
+            "shot": null,
+            "simulated": [],
+            "status": "done",
+            "swing_id": "4",
+            "tips": [
+              {
+                "checkpoint": "tempo",
+                "severity": "minor",
+                "text": "Tempo too quick - 2.4:1."
+              }
+            ],
+            "unscored": [
+              {
+                "name": "tempo",
+                "reason": "unrecorded",
+                "refilming_helps": false,
+                "why": "this result was produced before the reason was recorded"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"swing_id\": \"5\",\n  \"session_id\": \"2026-08-10\",\n  \"status\": \"done\",\n  \"club\": null,\n  \"mishit\": null,\n  \"overall_score\": 94.9,\n  \"mechanics_score\": 94.9,\n  \"outcome_score\": null,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\",\n  \"checkpoints\": [\n    {\n      \"name\": \"tempo\",\n      \"observed\": 2.42,\n      \"expected_low\": 2.72,\n      \"expected_high\": 4.71,\n      \"passed\": false,\n      \"score\": 0.85,\n      \"percentile\": 10.0,\n      \"population_n\": 1399,\n      \"message\": \"Tempo too quick - 2.4:1.\"\n    },\n    {\n      \"name\": \"head_sway\",\n      \"observed\": 0.12,\n      \"expected_low\": 0.0,\n      \"expected_high\": 0.43,\n      \"passed\": true,\n      \"score\": 1.0,\n      \"percentile\": 35.5,\n      \"population_n\": 458,\n      \"message\": \"Head stays steady.\"\n    }\n  ],\n  \"tips\": [\n    {\n      \"checkpoint\": \"tempo\",\n      \"text\": \"Tempo too quick - 2.4:1.\",\n      \"severity\": \"minor\"\n    }\n  ],\n  \"unscored\": [],\n  \"measurements\": {\n    \"head_sway_norm\": 0.1234\n  },\n  \"simulated\": [],\n  \"population\": [\n    {\n      \"name\": \"tour_trajectory_q_dtl\",\n      \"value\": 11.055,\n      \"unit\": \"shoulder_widths\",\n      \"view\": \"down-the-line\",\n      \"calibrated\": false,\n      \"detail\": \"down-the-line: residual off that basis; NOT calibrated\"\n    }\n  ],\n  \"rotation\": [],\n  \"analysis_version\": null,\n  \"alignment_quality\": \"top_impact\",\n  \"alignment_caveat\": \"The two camera views were aligned on top and impact, not on every instant. Frame correspondence is exact at those anchors and interpolated between them, so do not describe the side-by-side video as synchronized throughout, and do not read fine timing differences off it.\",\n  \"shot\": null,\n  \"notes\": [\n    \"alignment degraded: aligned on top and impact\"\n  ]\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "alignment_caveat": "The two camera views were aligned on top and impact, not on every instant. Frame correspondence is exact at those anchors and interpolated between them, so do not describe the side-by-side video as synchronized throughout, and do not read fine timing differences off it.",
+            "alignment_quality": "top_impact",
+            "analysis_version": null,
+            "checkpoints": [
+              {
+                "expected_high": 4.71,
+                "expected_low": 2.72,
+                "message": "Tempo too quick - 2.4:1.",
+                "name": "tempo",
+                "observed": 2.42,
+                "passed": false,
+                "percentile": 10.0,
+                "population_n": 1399,
+                "score": 0.85
+              },
+              {
+                "expected_high": 0.43,
+                "expected_low": 0.0,
+                "message": "Head stays steady.",
+                "name": "head_sway",
+                "observed": 0.12,
+                "passed": true,
+                "percentile": 35.5,
+                "population_n": 458,
+                "score": 1.0
+              }
+            ],
+            "club": null,
+            "headline": "Work on tempo first. Tempo too quick - 2.4:1.",
+            "measurements": {
+              "head_sway_norm": 0.1234
+            },
+            "mechanics_score": 94.9,
+            "mishit": null,
+            "notes": [
+              "alignment degraded: aligned on top and impact"
+            ],
+            "outcome_score": null,
+            "overall_score": 94.9,
+            "population": [
+              {
+                "calibrated": false,
+                "detail": "down-the-line: residual off that basis; NOT calibrated",
+                "name": "tour_trajectory_q_dtl",
+                "unit": "shoulder_widths",
+                "value": 11.055,
+                "view": "down-the-line"
+              }
+            ],
+            "rotation": [],
+            "session_id": "2026-08-10",
+            "shot": null,
+            "simulated": [],
+            "status": "done",
+            "swing_id": "5",
+            "tips": [
+              {
+                "checkpoint": "tempo",
+                "severity": "minor",
+                "text": "Tempo too quick - 2.4:1."
+              }
+            ],
+            "unscored": []
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"swing_id\": \"6\",\n  \"session_id\": \"2026-08-10\",\n  \"status\": \"done\",\n  \"club\": null,\n  \"mishit\": null,\n  \"overall_score\": 94.9,\n  \"mechanics_score\": 94.9,\n  \"outcome_score\": null,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\",\n  \"checkpoints\": [\n    {\n      \"name\": \"tempo\",\n      \"observed\": 2.42,\n      \"expected_low\": 2.72,\n      \"expected_high\": 4.71,\n      \"passed\": false,\n      \"score\": 0.85,\n      \"percentile\": 10.0,\n      \"population_n\": 1399,\n      \"message\": \"Tempo too quick - 2.4:1.\"\n    },\n    {\n      \"name\": \"head_sway\",\n      \"observed\": 0.12,\n      \"expected_low\": 0.0,\n      \"expected_high\": 0.43,\n      \"passed\": true,\n      \"score\": 1.0,\n      \"percentile\": 35.5,\n      \"population_n\": 458,\n      \"message\": \"Head stays steady.\"\n    }\n  ],\n  \"tips\": [\n    {\n      \"checkpoint\": \"tempo\",\n      \"text\": \"Tempo too quick - 2.4:1.\",\n      \"severity\": \"minor\"\n    }\n  ],\n  \"unscored\": [],\n  \"measurements\": {\n    \"head_sway_norm\": 0.1234,\n    \"tempo_ratio\": 2.42\n  },\n  \"simulated\": [\n    {\n      \"name\": \"flight_carry_yds\",\n      \"value\": 122.3567,\n      \"unit\": \"yards\",\n      \"source\": \"model:flight_v1\",\n      \"detail\": \"SIMULATED carry from the printed launch conditions; not the printed carry\"\n    },\n    {\n      \"name\": \"flight_spin_rpm\",\n      \"value\": 2923.8568,\n      \"unit\": \"rpm\",\n      \"source\": \"model:flight_v1\",\n      \"detail\": \"SOLVED backspin - the spin this model needs to agree with the printed carry\"\n    }\n  ],\n  \"population\": [],\n  \"rotation\": [],\n  \"analysis_version\": null,\n  \"alignment_quality\": \"top_impact\",\n  \"alignment_caveat\": \"The two camera views were aligned on top and impact, not on every instant. Frame correspondence is exact at those anchors and interpolated between them, so do not describe the side-by-side video as synchronized throughout, and do not read fine timing differences off it.\",\n  \"shot\": null,\n  \"notes\": [\n    \"alignment degraded: aligned on top and impact\"\n  ]\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "alignment_caveat": "The two camera views were aligned on top and impact, not on every instant. Frame correspondence is exact at those anchors and interpolated between them, so do not describe the side-by-side video as synchronized throughout, and do not read fine timing differences off it.",
+            "alignment_quality": "top_impact",
+            "analysis_version": null,
+            "checkpoints": [
+              {
+                "expected_high": 4.71,
+                "expected_low": 2.72,
+                "message": "Tempo too quick - 2.4:1.",
+                "name": "tempo",
+                "observed": 2.42,
+                "passed": false,
+                "percentile": 10.0,
+                "population_n": 1399,
+                "score": 0.85
+              },
+              {
+                "expected_high": 0.43,
+                "expected_low": 0.0,
+                "message": "Head stays steady.",
+                "name": "head_sway",
+                "observed": 0.12,
+                "passed": true,
+                "percentile": 35.5,
+                "population_n": 458,
+                "score": 1.0
+              }
+            ],
+            "club": null,
+            "headline": "Work on tempo first. Tempo too quick - 2.4:1.",
+            "measurements": {
+              "head_sway_norm": 0.1234,
+              "tempo_ratio": 2.42
+            },
+            "mechanics_score": 94.9,
+            "mishit": null,
+            "notes": [
+              "alignment degraded: aligned on top and impact"
+            ],
+            "outcome_score": null,
+            "overall_score": 94.9,
+            "population": [],
+            "rotation": [],
+            "session_id": "2026-08-10",
+            "shot": null,
+            "simulated": [
+              {
+                "detail": "SIMULATED carry from the printed launch conditions; not the printed carry",
+                "name": "flight_carry_yds",
+                "source": "model:flight_v1",
+                "unit": "yards",
+                "value": 122.3567
+              },
+              {
+                "detail": "SOLVED backspin - the spin this model needs to agree with the printed carry",
+                "name": "flight_spin_rpm",
+                "source": "model:flight_v1",
+                "unit": "rpm",
+                "value": 2923.8568
+              }
+            ],
+            "status": "done",
+            "swing_id": "6",
+            "tips": [
+              {
+                "checkpoint": "tempo",
+                "severity": "minor",
+                "text": "Tempo too quick - 2.4:1."
+              }
+            ],
+            "unscored": []
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"swing_id\": \"7\",\n  \"session_id\": \"2026-08-10\",\n  \"status\": \"done\",\n  \"club\": null,\n  \"mishit\": null,\n  \"overall_score\": 94.9,\n  \"mechanics_score\": 94.9,\n  \"outcome_score\": null,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\",\n  \"checkpoints\": [\n    {\n      \"name\": \"tempo\",\n      \"observed\": 2.42,\n      \"expected_low\": 2.72,\n      \"expected_high\": 4.71,\n      \"passed\": false,\n      \"score\": 0.85,\n      \"percentile\": 10.0,\n      \"population_n\": 1399,\n      \"message\": \"Tempo too quick - 2.4:1.\"\n    },\n    {\n      \"name\": \"head_sway\",\n      \"observed\": 0.12,\n      \"expected_low\": 0.0,\n      \"expected_high\": 0.43,\n      \"passed\": true,\n      \"score\": 1.0,\n      \"percentile\": 35.5,\n      \"population_n\": 458,\n      \"message\": \"Head stays steady.\"\n    }\n  ],\n  \"tips\": [\n    {\n      \"checkpoint\": \"tempo\",\n      \"text\": \"Tempo too quick - 2.4:1.\",\n      \"severity\": \"minor\"\n    }\n  ],\n  \"unscored\": [],\n  \"measurements\": {\n    \"head_sway_norm\": 0.1234\n  },\n  \"simulated\": [],\n  \"population\": [],\n  \"rotation\": [\n    {\n      \"name\": \"pivot_hip_axis_drift_norm\",\n      \"value\": 0.42,\n      \"unit\": \"shoulder_widths\",\n      \"view\": \"face-on\",\n      \"interim_reason\": \"measured in one uncalibrated phone's image plane: the ratio cancels the pixel aspect but not the foreshortening, which changes with where the camera stood, so it compares within a camera position and not across sessions or views. Fiducial calibration clears it.\",\n      \"detail\": \"peak lateral excursion of the hip centre from its address x\"\n    }\n  ],\n  \"analysis_version\": null,\n  \"alignment_quality\": \"top_impact\",\n  \"alignment_caveat\": \"The two camera views were aligned on top and impact, not on every instant. Frame correspondence is exact at those anchors and interpolated between them, so do not describe the side-by-side video as synchronized throughout, and do not read fine timing differences off it.\",\n  \"shot\": null,\n  \"notes\": [\n    \"alignment degraded: aligned on top and impact\"\n  ]\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "alignment_caveat": "The two camera views were aligned on top and impact, not on every instant. Frame correspondence is exact at those anchors and interpolated between them, so do not describe the side-by-side video as synchronized throughout, and do not read fine timing differences off it.",
+            "alignment_quality": "top_impact",
+            "analysis_version": null,
+            "checkpoints": [
+              {
+                "expected_high": 4.71,
+                "expected_low": 2.72,
+                "message": "Tempo too quick - 2.4:1.",
+                "name": "tempo",
+                "observed": 2.42,
+                "passed": false,
+                "percentile": 10.0,
+                "population_n": 1399,
+                "score": 0.85
+              },
+              {
+                "expected_high": 0.43,
+                "expected_low": 0.0,
+                "message": "Head stays steady.",
+                "name": "head_sway",
+                "observed": 0.12,
+                "passed": true,
+                "percentile": 35.5,
+                "population_n": 458,
+                "score": 1.0
+              }
+            ],
+            "club": null,
+            "headline": "Work on tempo first. Tempo too quick - 2.4:1.",
+            "measurements": {
+              "head_sway_norm": 0.1234
+            },
+            "mechanics_score": 94.9,
+            "mishit": null,
+            "notes": [
+              "alignment degraded: aligned on top and impact"
+            ],
+            "outcome_score": null,
+            "overall_score": 94.9,
+            "population": [],
+            "rotation": [
+              {
+                "detail": "peak lateral excursion of the hip centre from its address x",
+                "interim_reason": "measured in one uncalibrated phone's image plane: the ratio cancels the pixel aspect but not the foreshortening, which changes with where the camera stood, so it compares within a camera position and not across sessions or views. Fiducial calibration clears it.",
+                "name": "pivot_hip_axis_drift_norm",
+                "unit": "shoulder_widths",
+                "value": 0.42,
+                "view": "face-on"
+              }
+            ],
+            "session_id": "2026-08-10",
+            "shot": null,
+            "simulated": [],
+            "status": "done",
+            "swing_id": "7",
+            "tips": [
+              {
+                "checkpoint": "tempo",
+                "severity": "minor",
+                "text": "Tempo too quick - 2.4:1."
+              }
+            ],
+            "unscored": []
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"swing_id\": \"8\",\n  \"session_id\": \"2026-08-10\",\n  \"status\": \"done\",\n  \"club\": null,\n  \"mishit\": null,\n  \"overall_score\": 94.9,\n  \"mechanics_score\": 94.9,\n  \"outcome_score\": null,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\",\n  \"checkpoints\": [\n    {\n      \"name\": \"tempo\",\n      \"observed\": 2.42,\n      \"expected_low\": 2.72,\n      \"expected_high\": 4.71,\n      \"passed\": false,\n      \"score\": 0.85,\n      \"percentile\": 10.0,\n      \"population_n\": 1399,\n      \"message\": \"Tempo too quick - 2.4:1.\"\n    },\n    {\n      \"name\": \"head_sway\",\n      \"observed\": 0.12,\n      \"expected_low\": 0.0,\n      \"expected_high\": 0.43,\n      \"passed\": true,\n      \"score\": 1.0,\n      \"percentile\": 35.5,\n      \"population_n\": 458,\n      \"message\": \"Head stays steady.\"\n    }\n  ],\n  \"tips\": [\n    {\n      \"checkpoint\": \"tempo\",\n      \"text\": \"Tempo too quick - 2.4:1.\",\n      \"severity\": \"minor\"\n    }\n  ],\n  \"unscored\": [],\n  \"measurements\": {},\n  \"simulated\": [],\n  \"population\": [],\n  \"rotation\": [],\n  \"analysis_version\": null,\n  \"alignment_quality\": \"full\",\n  \"alignment_caveat\": null,\n  \"shot\": null,\n  \"notes\": [\n    \"alignment degraded: aligned on top and impact\"\n  ]\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "alignment_caveat": null,
+            "alignment_quality": "full",
+            "analysis_version": null,
+            "checkpoints": [
+              {
+                "expected_high": 4.71,
+                "expected_low": 2.72,
+                "message": "Tempo too quick - 2.4:1.",
+                "name": "tempo",
+                "observed": 2.42,
+                "passed": false,
+                "percentile": 10.0,
+                "population_n": 1399,
+                "score": 0.85
+              },
+              {
+                "expected_high": 0.43,
+                "expected_low": 0.0,
+                "message": "Head stays steady.",
+                "name": "head_sway",
+                "observed": 0.12,
+                "passed": true,
+                "percentile": 35.5,
+                "population_n": 458,
+                "score": 1.0
+              }
+            ],
+            "club": null,
+            "headline": "Work on tempo first. Tempo too quick - 2.4:1.",
+            "measurements": {},
+            "mechanics_score": 94.9,
+            "mishit": null,
+            "notes": [
+              "alignment degraded: aligned on top and impact"
+            ],
+            "outcome_score": null,
+            "overall_score": 94.9,
+            "population": [],
+            "rotation": [],
+            "session_id": "2026-08-10",
+            "shot": null,
+            "simulated": [],
+            "status": "done",
+            "swing_id": "8",
+            "tips": [
+              {
+                "checkpoint": "tempo",
+                "severity": "minor",
+                "text": "Tempo too quick - 2.4:1."
+              }
+            ],
+            "unscored": []
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"swing_id\": \"9\",\n  \"session_id\": \"2026-08-10\",\n  \"status\": \"done\",\n  \"club\": null,\n  \"mishit\": null,\n  \"overall_score\": 94.9,\n  \"mechanics_score\": 94.9,\n  \"outcome_score\": null,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\",\n  \"checkpoints\": [\n    {\n      \"name\": \"tempo\",\n      \"observed\": 2.42,\n      \"expected_low\": 2.72,\n      \"expected_high\": 4.71,\n      \"passed\": false,\n      \"score\": 0.85,\n      \"percentile\": 10.0,\n      \"population_n\": 1399,\n      \"message\": \"Tempo too quick - 2.4:1.\"\n    },\n    {\n      \"name\": \"head_sway\",\n      \"observed\": 0.12,\n      \"expected_low\": 0.0,\n      \"expected_high\": 0.43,\n      \"passed\": true,\n      \"score\": 1.0,\n      \"percentile\": 35.5,\n      \"population_n\": 458,\n      \"message\": \"Head stays steady.\"\n    }\n  ],\n  \"tips\": [\n    {\n      \"checkpoint\": \"tempo\",\n      \"text\": \"Tempo too quick - 2.4:1.\",\n      \"severity\": \"minor\"\n    }\n  ],\n  \"unscored\": [],\n  \"measurements\": {},\n  \"simulated\": [],\n  \"population\": [],\n  \"rotation\": [],\n  \"analysis_version\": null,\n  \"alignment_quality\": null,\n  \"alignment_caveat\": null,\n  \"shot\": null,\n  \"notes\": []\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "alignment_caveat": null,
+            "alignment_quality": null,
+            "analysis_version": null,
+            "checkpoints": [
+              {
+                "expected_high": 4.71,
+                "expected_low": 2.72,
+                "message": "Tempo too quick - 2.4:1.",
+                "name": "tempo",
+                "observed": 2.42,
+                "passed": false,
+                "percentile": 10.0,
+                "population_n": 1399,
+                "score": 0.85
+              },
+              {
+                "expected_high": 0.43,
+                "expected_low": 0.0,
+                "message": "Head stays steady.",
+                "name": "head_sway",
+                "observed": 0.12,
+                "passed": true,
+                "percentile": 35.5,
+                "population_n": 458,
+                "score": 1.0
+              }
+            ],
+            "club": null,
+            "headline": "Work on tempo first. Tempo too quick - 2.4:1.",
+            "measurements": {},
+            "mechanics_score": 94.9,
+            "mishit": null,
+            "notes": [],
+            "outcome_score": null,
+            "overall_score": 94.9,
+            "population": [],
+            "rotation": [],
+            "session_id": "2026-08-10",
+            "shot": null,
+            "simulated": [],
+            "status": "done",
+            "swing_id": "9",
+            "tips": [
+              {
+                "checkpoint": "tempo",
+                "severity": "minor",
+                "text": "Tempo too quick - 2.4:1."
+              }
+            ],
+            "unscored": []
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"swing_id\": \"10\",\n  \"session_id\": \"2026-08-10\",\n  \"status\": \"done\",\n  \"club\": null,\n  \"mishit\": null,\n  \"overall_score\": 94.9,\n  \"mechanics_score\": 94.9,\n  \"outcome_score\": null,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\",\n  \"checkpoints\": [\n    {\n      \"name\": \"tempo\",\n      \"observed\": 2.42,\n      \"expected_low\": 2.72,\n      \"expected_high\": 4.71,\n      \"passed\": false,\n      \"score\": 0.85,\n      \"percentile\": 10.0,\n      \"population_n\": 1399,\n      \"message\": \"Tempo too quick - 2.4:1.\"\n    },\n    {\n      \"name\": \"head_sway\",\n      \"observed\": 0.12,\n      \"expected_low\": 0.0,\n      \"expected_high\": 0.43,\n      \"passed\": true,\n      \"score\": 1.0,\n      \"percentile\": 35.5,\n      \"population_n\": 458,\n      \"message\": \"Head stays steady.\"\n    }\n  ],\n  \"tips\": [\n    {\n      \"checkpoint\": \"tempo\",\n      \"text\": \"Tempo too quick - 2.4:1.\",\n      \"severity\": \"minor\"\n    }\n  ],\n  \"unscored\": [],\n  \"measurements\": {},\n  \"simulated\": [],\n  \"population\": [],\n  \"rotation\": [],\n  \"analysis_version\": null,\n  \"alignment_quality\": \"top_impact\",\n  \"alignment_caveat\": \"The two camera views were aligned on top and impact, not on every instant. Frame correspondence is exact at those anchors and interpolated between them, so do not describe the side-by-side video as synchronized throughout, and do not read fine timing differences off it.\",\n  \"shot\": {\n    \"shot_id\": \"2026-08-10-10\",\n    \"session_id\": \"2026-08-10\",\n    \"source\": \"screen\",\n    \"needs_review\": true,\n    \"warnings\": [\n      \"smash factor failed the physics cross-check\"\n    ],\n    \"parse_confidence\": 0.5,\n    \"metrics\": {\n      \"club_head_speed\": 98.3,\n      \"ball_speed\": 90.5,\n      \"carry_distance\": 121.0,\n      \"shot_type\": \"DRAW\"\n    }\n  },\n  \"notes\": [\n    \"alignment degraded: aligned on top and impact\"\n  ]\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "alignment_caveat": "The two camera views were aligned on top and impact, not on every instant. Frame correspondence is exact at those anchors and interpolated between them, so do not describe the side-by-side video as synchronized throughout, and do not read fine timing differences off it.",
+            "alignment_quality": "top_impact",
+            "analysis_version": null,
+            "checkpoints": [
+              {
+                "expected_high": 4.71,
+                "expected_low": 2.72,
+                "message": "Tempo too quick - 2.4:1.",
+                "name": "tempo",
+                "observed": 2.42,
+                "passed": false,
+                "percentile": 10.0,
+                "population_n": 1399,
+                "score": 0.85
+              },
+              {
+                "expected_high": 0.43,
+                "expected_low": 0.0,
+                "message": "Head stays steady.",
+                "name": "head_sway",
+                "observed": 0.12,
+                "passed": true,
+                "percentile": 35.5,
+                "population_n": 458,
+                "score": 1.0
+              }
+            ],
+            "club": null,
+            "headline": "Work on tempo first. Tempo too quick - 2.4:1.",
+            "measurements": {},
+            "mechanics_score": 94.9,
+            "mishit": null,
+            "notes": [
+              "alignment degraded: aligned on top and impact"
+            ],
+            "outcome_score": null,
+            "overall_score": 94.9,
+            "population": [],
+            "rotation": [],
+            "session_id": "2026-08-10",
+            "shot": {
+              "metrics": {
+                "ball_speed": 90.5,
+                "carry_distance": 121.0,
+                "club_head_speed": 98.3,
+                "shot_type": "DRAW"
+              },
+              "needs_review": true,
+              "parse_confidence": 0.5,
+              "session_id": "2026-08-10",
+              "shot_id": "2026-08-10-10",
+              "source": "screen",
+              "warnings": [
+                "smash factor failed the physics cross-check"
+              ]
+            },
+            "simulated": [],
+            "status": "done",
+            "swing_id": "10",
+            "tips": [
+              {
+                "checkpoint": "tempo",
+                "severity": "minor",
+                "text": "Tempo too quick - 2.4:1."
+              }
+            ],
+            "unscored": []
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"swing_id\": \"11\",\n  \"session_id\": \"2026-08-10\",\n  \"status\": \"done\",\n  \"club\": null,\n  \"mishit\": null,\n  \"overall_score\": 91.0,\n  \"mechanics_score\": 91.0,\n  \"outcome_score\": null,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\",\n  \"checkpoints\": [\n    {\n      \"name\": \"tempo\",\n      \"observed\": 2.42,\n      \"expected_low\": 2.72,\n      \"expected_high\": 4.71,\n      \"passed\": false,\n      \"score\": 0.85,\n      \"percentile\": 10.0,\n      \"population_n\": 1399,\n      \"message\": \"Tempo too quick - 2.4:1.\"\n    },\n    {\n      \"name\": \"head_sway\",\n      \"observed\": 0.12,\n      \"expected_low\": 0.0,\n      \"expected_high\": 0.43,\n      \"passed\": true,\n      \"score\": 1.0,\n      \"percentile\": 35.5,\n      \"population_n\": 458,\n      \"message\": \"Head stays steady.\"\n    }\n  ],\n  \"tips\": [\n    {\n      \"checkpoint\": \"tempo\",\n      \"text\": \"Tempo too quick - 2.4:1.\",\n      \"severity\": \"minor\"\n    }\n  ],\n  \"unscored\": [],\n  \"measurements\": {\n    \"tempo_ratio\": 2.42\n  },\n  \"simulated\": [],\n  \"population\": [],\n  \"rotation\": [],\n  \"analysis_version\": 16,\n  \"alignment_quality\": \"top_impact\",\n  \"alignment_caveat\": \"The two camera views were aligned on top and impact, not on every instant. Frame correspondence is exact at those anchors and interpolated between them, so do not describe the side-by-side video as synchronized throughout, and do not read fine timing differences off it.\",\n  \"shot\": null,\n  \"notes\": [\n    \"alignment degraded: aligned on top and impact\"\n  ]\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "alignment_caveat": "The two camera views were aligned on top and impact, not on every instant. Frame correspondence is exact at those anchors and interpolated between them, so do not describe the side-by-side video as synchronized throughout, and do not read fine timing differences off it.",
+            "alignment_quality": "top_impact",
+            "analysis_version": 16,
+            "checkpoints": [
+              {
+                "expected_high": 4.71,
+                "expected_low": 2.72,
+                "message": "Tempo too quick - 2.4:1.",
+                "name": "tempo",
+                "observed": 2.42,
+                "passed": false,
+                "percentile": 10.0,
+                "population_n": 1399,
+                "score": 0.85
+              },
+              {
+                "expected_high": 0.43,
+                "expected_low": 0.0,
+                "message": "Head stays steady.",
+                "name": "head_sway",
+                "observed": 0.12,
+                "passed": true,
+                "percentile": 35.5,
+                "population_n": 458,
+                "score": 1.0
+              }
+            ],
+            "club": null,
+            "headline": "Work on tempo first. Tempo too quick - 2.4:1.",
+            "measurements": {
+              "tempo_ratio": 2.42
+            },
+            "mechanics_score": 91.0,
+            "mishit": null,
+            "notes": [
+              "alignment degraded: aligned on top and impact"
+            ],
+            "outcome_score": null,
+            "overall_score": 91.0,
+            "population": [],
+            "rotation": [],
+            "session_id": "2026-08-10",
+            "shot": null,
+            "simulated": [],
+            "status": "done",
+            "swing_id": "11",
+            "tips": [
+              {
+                "checkpoint": "tempo",
+                "severity": "minor",
+                "text": "Tempo too quick - 2.4:1."
+              }
+            ],
+            "unscored": []
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"swing_id\": \"12\",\n  \"session_id\": \"2026-08-10\",\n  \"status\": \"done\",\n  \"club\": null,\n  \"mishit\": \"confirmed\",\n  \"overall_score\": 94.9,\n  \"mechanics_score\": 94.9,\n  \"outcome_score\": null,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\",\n  \"checkpoints\": [\n    {\n      \"name\": \"tempo\",\n      \"observed\": 2.42,\n      \"expected_low\": 2.72,\n      \"expected_high\": 4.71,\n      \"passed\": false,\n      \"score\": 0.85,\n      \"percentile\": 10.0,\n      \"population_n\": 1399,\n      \"message\": \"Tempo too quick - 2.4:1.\"\n    },\n    {\n      \"name\": \"head_sway\",\n      \"observed\": 0.12,\n      \"expected_low\": 0.0,\n      \"expected_high\": 0.43,\n      \"passed\": true,\n      \"score\": 1.0,\n      \"percentile\": 35.5,\n      \"population_n\": 458,\n      \"message\": \"Head stays steady.\"\n    }\n  ],\n  \"tips\": [\n    {\n      \"checkpoint\": \"tempo\",\n      \"text\": \"Tempo too quick - 2.4:1.\",\n      \"severity\": \"minor\"\n    }\n  ],\n  \"unscored\": [],\n  \"measurements\": {},\n  \"simulated\": [],\n  \"population\": [],\n  \"rotation\": [],\n  \"analysis_version\": null,\n  \"alignment_quality\": \"top_impact\",\n  \"alignment_caveat\": \"The two camera views were aligned on top and impact, not on every instant. Frame correspondence is exact at those anchors and interpolated between them, so do not describe the side-by-side video as synchronized throughout, and do not read fine timing differences off it.\",\n  \"shot\": null,\n  \"notes\": [\n    \"alignment degraded: aligned on top and impact\"\n  ]\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "alignment_caveat": "The two camera views were aligned on top and impact, not on every instant. Frame correspondence is exact at those anchors and interpolated between them, so do not describe the side-by-side video as synchronized throughout, and do not read fine timing differences off it.",
+            "alignment_quality": "top_impact",
+            "analysis_version": null,
+            "checkpoints": [
+              {
+                "expected_high": 4.71,
+                "expected_low": 2.72,
+                "message": "Tempo too quick - 2.4:1.",
+                "name": "tempo",
+                "observed": 2.42,
+                "passed": false,
+                "percentile": 10.0,
+                "population_n": 1399,
+                "score": 0.85
+              },
+              {
+                "expected_high": 0.43,
+                "expected_low": 0.0,
+                "message": "Head stays steady.",
+                "name": "head_sway",
+                "observed": 0.12,
+                "passed": true,
+                "percentile": 35.5,
+                "population_n": 458,
+                "score": 1.0
+              }
+            ],
+            "club": null,
+            "headline": "Work on tempo first. Tempo too quick - 2.4:1.",
+            "measurements": {},
+            "mechanics_score": 94.9,
+            "mishit": "confirmed",
+            "notes": [
+              "alignment degraded: aligned on top and impact"
+            ],
+            "outcome_score": null,
+            "overall_score": 94.9,
+            "population": [],
+            "rotation": [],
+            "session_id": "2026-08-10",
+            "shot": null,
+            "simulated": [],
+            "status": "done",
+            "swing_id": "12",
+            "tips": [
+              {
+                "checkpoint": "tempo",
+                "severity": "minor",
+                "text": "Tempo too quick - 2.4:1."
+              }
+            ],
+            "unscored": []
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"swing_id\": \"13\",\n  \"session_id\": \"2026-08-10\",\n  \"status\": \"done\",\n  \"club\": null,\n  \"mishit\": \"cleared\",\n  \"overall_score\": 94.9,\n  \"mechanics_score\": 94.9,\n  \"outcome_score\": null,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\",\n  \"checkpoints\": [\n    {\n      \"name\": \"tempo\",\n      \"observed\": 2.42,\n      \"expected_low\": 2.72,\n      \"expected_high\": 4.71,\n      \"passed\": false,\n      \"score\": 0.85,\n      \"percentile\": 10.0,\n      \"population_n\": 1399,\n      \"message\": \"Tempo too quick - 2.4:1.\"\n    },\n    {\n      \"name\": \"head_sway\",\n      \"observed\": 0.12,\n      \"expected_low\": 0.0,\n      \"expected_high\": 0.43,\n      \"passed\": true,\n      \"score\": 1.0,\n      \"percentile\": 35.5,\n      \"population_n\": 458,\n      \"message\": \"Head stays steady.\"\n    }\n  ],\n  \"tips\": [\n    {\n      \"checkpoint\": \"tempo\",\n      \"text\": \"Tempo too quick - 2.4:1.\",\n      \"severity\": \"minor\"\n    }\n  ],\n  \"unscored\": [],\n  \"measurements\": {},\n  \"simulated\": [],\n  \"population\": [],\n  \"rotation\": [],\n  \"analysis_version\": null,\n  \"alignment_quality\": \"top_impact\",\n  \"alignment_caveat\": \"The two camera views were aligned on top and impact, not on every instant. Frame correspondence is exact at those anchors and interpolated between them, so do not describe the side-by-side video as synchronized throughout, and do not read fine timing differences off it.\",\n  \"shot\": null,\n  \"notes\": [\n    \"alignment degraded: aligned on top and impact\"\n  ]\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "alignment_caveat": "The two camera views were aligned on top and impact, not on every instant. Frame correspondence is exact at those anchors and interpolated between them, so do not describe the side-by-side video as synchronized throughout, and do not read fine timing differences off it.",
+            "alignment_quality": "top_impact",
+            "analysis_version": null,
+            "checkpoints": [
+              {
+                "expected_high": 4.71,
+                "expected_low": 2.72,
+                "message": "Tempo too quick - 2.4:1.",
+                "name": "tempo",
+                "observed": 2.42,
+                "passed": false,
+                "percentile": 10.0,
+                "population_n": 1399,
+                "score": 0.85
+              },
+              {
+                "expected_high": 0.43,
+                "expected_low": 0.0,
+                "message": "Head stays steady.",
+                "name": "head_sway",
+                "observed": 0.12,
+                "passed": true,
+                "percentile": 35.5,
+                "population_n": 458,
+                "score": 1.0
+              }
+            ],
+            "club": null,
+            "headline": "Work on tempo first. Tempo too quick - 2.4:1.",
+            "measurements": {},
+            "mechanics_score": 94.9,
+            "mishit": "cleared",
+            "notes": [
+              "alignment degraded: aligned on top and impact"
+            ],
+            "outcome_score": null,
+            "overall_score": 94.9,
+            "population": [],
+            "rotation": [],
+            "session_id": "2026-08-10",
+            "shot": null,
+            "simulated": [],
+            "status": "done",
+            "swing_id": "13",
+            "tips": [
+              {
+                "checkpoint": "tempo",
+                "severity": "minor",
+                "text": "Tempo too quick - 2.4:1."
+              }
+            ],
+            "unscored": []
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"session_id\": \"2026-09-01\",\n  \"swing_count\": 2,\n  \"analyzed_count\": 2,\n  \"swings\": [\n    {\n      \"swing_id\": \"1\",\n      \"session_id\": \"2026-09-01\",\n      \"status\": \"done\",\n      \"score\": 94.9,\n      \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\",\n      \"roles\": [\n        \"down_the_line\",\n        \"face_on\",\n        \"shot_screen\"\n      ],\n      \"partial\": false\n    },\n    {\n      \"swing_id\": \"2\",\n      \"session_id\": \"2026-09-01\",\n      \"status\": \"done\",\n      \"score\": 94.9,\n      \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\",\n      \"roles\": [\n        \"down_the_line\",\n        \"face_on\",\n        \"shot_screen\"\n      ],\n      \"partial\": false\n    }\n  ]\n}",
+            "type": "text"
+          },
+          {
+            "text": "{\n  \"session_id\": \"2026-08-10\",\n  \"swing_count\": 13,\n  \"analyzed_count\": 13,\n  \"swings\": [\n    {\n      \"swing_id\": \"1\",\n      \"session_id\": \"2026-08-10\",\n      \"status\": \"stale — inputs changed since this was analyzed\",\n      \"score\": 94.9,\n      \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\",\n      \"roles\": [\n        \"down_the_line\",\n        \"face_on\",\n        \"shot_screen\"\n      ],\n      \"partial\": false\n    },\n    {\n      \"swing_id\": \"2\",\n      \"session_id\": \"2026-08-10\",\n      \"status\": \"done\",\n      \"score\": 94.9,\n      \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\",\n      \"roles\": [\n        \"down_the_line\",\n        \"face_on\",\n        \"shot_screen\"\n      ],\n      \"partial\": false\n    },\n    {\n      \"swing_id\": \"3\",\n      \"session_id\": \"2026-08-10\",\n      \"status\": \"done\",\n      \"score\": 94.9,\n      \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\",\n      \"roles\": [\n        \"down_the_line\",\n        \"face_on\",\n        \"shot_screen\"\n      ],\n      \"partial\": false\n    },\n    {\n      \"swing_id\": \"4\",\n      \"session_id\": \"2026-08-10\",\n      \"status\": \"done\",\n      \"score\": 94.9,\n      \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\",\n      \"roles\": [\n        \"down_the_line\",\n        \"face_on\",\n        \"shot_screen\"\n      ],\n      \"partial\": false\n    },\n    {\n      \"swing_id\": \"5\",\n      \"session_id\": \"2026-08-10\",\n      \"status\": \"done\",\n      \"score\": 94.9,\n      \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\",\n      \"roles\": [\n        \"down_the_line\",\n        \"face_on\",\n        \"shot_screen\"\n      ],\n      \"partial\": false\n    },\n    {\n      \"swing_id\": \"6\",\n      \"session_id\": \"2026-08-10\",\n      \"status\": \"done\",\n      \"score\": 94.9,\n      \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\",\n      \"roles\": [\n        \"down_the_line\",\n        \"face_on\",\n        \"shot_screen\"\n      ],\n      \"partial\": false\n    },\n    {\n      \"swing_id\": \"7\",\n      \"session_id\": \"2026-08-10\",\n      \"status\": \"done\",\n      \"score\": 94.9,\n      \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\",\n      \"roles\": [\n        \"down_the_line\",\n        \"face_on\",\n        \"shot_screen\"\n      ],\n      \"partial\": false\n    },\n    {\n      \"swing_id\": \"8\",\n      \"session_id\": \"2026-08-10\",\n      \"status\": \"done\",\n      \"score\": 94.9,\n      \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\",\n      \"roles\": [\n        \"down_the_line\",\n        \"face_on\",\n        \"shot_screen\"\n      ],\n      \"partial\": false\n    },\n    {\n      \"swing_id\": \"9\",\n      \"session_id\": \"2026-08-10\",\n      \"status\": \"done\",\n      \"score\": 94.9,\n      \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\",\n      \"roles\": [\n        \"down_the_line\",\n        \"face_on\",\n        \"shot_screen\"\n      ],\n      \"partial\": false\n    },\n    {\n      \"swing_id\": \"10\",\n      \"session_id\": \"2026-08-10\",\n      \"status\": \"done\",\n      \"score\": 94.9,\n      \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\",\n      \"roles\": [\n        \"down_the_line\",\n        \"face_on\",\n        \"shot_screen\"\n      ],\n      \"partial\": false\n    },\n    {\n      \"swing_id\": \"11\",\n      \"session_id\": \"2026-08-10\",\n      \"status\": \"done\",\n      \"score\": 91.0,\n      \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\",\n      \"roles\": [\n        \"down_the_line\",\n        \"face_on\",\n        \"shot_screen\"\n      ],\n      \"partial\": false\n    },\n    {\n      \"swing_id\": \"12\",\n      \"session_id\": \"2026-08-10\",\n      \"status\": \"done\",\n      \"score\": 94.9,\n      \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\",\n      \"roles\": [\n        \"down_the_line\",\n        \"face_on\",\n        \"shot_screen\"\n      ],\n      \"partial\": false\n    },\n    {\n      \"swing_id\": \"13\",\n      \"session_id\": \"2026-08-10\",\n      \"status\": \"done\",\n      \"score\": 94.9,\n      \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\",\n      \"roles\": [\n        \"down_the_line\",\n        \"face_on\",\n        \"shot_screen\"\n      ],\n      \"partial\": false\n    }\n  ]\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": [
+            {
+              "analyzed_count": 2,
+              "session_id": "2026-09-01",
+              "swing_count": 2,
+              "swings": [
+                {
+                  "headline": "Work on tempo first. Tempo too quick - 2.4:1.",
+                  "partial": false,
+                  "roles": [
+                    "down_the_line",
+                    "face_on",
+                    "shot_screen"
+                  ],
+                  "score": 94.9,
+                  "session_id": "2026-09-01",
+                  "status": "done",
+                  "swing_id": "1"
+                },
+                {
+                  "headline": "Work on tempo first. Tempo too quick - 2.4:1.",
+                  "partial": false,
+                  "roles": [
+                    "down_the_line",
+                    "face_on",
+                    "shot_screen"
+                  ],
+                  "score": 94.9,
+                  "session_id": "2026-09-01",
+                  "status": "done",
+                  "swing_id": "2"
+                }
+              ]
+            },
+            {
+              "analyzed_count": 13,
+              "session_id": "2026-08-10",
+              "swing_count": 13,
+              "swings": [
+                {
+                  "headline": "Work on tempo first. Tempo too quick - 2.4:1.",
+                  "partial": false,
+                  "roles": [
+                    "down_the_line",
+                    "face_on",
+                    "shot_screen"
+                  ],
+                  "score": 94.9,
+                  "session_id": "2026-08-10",
+                  "status": "stale — inputs changed since this was analyzed",
+                  "swing_id": "1"
+                },
+                {
+                  "headline": "Work on tempo first. Tempo too quick - 2.4:1.",
+                  "partial": false,
+                  "roles": [
+                    "down_the_line",
+                    "face_on",
+                    "shot_screen"
+                  ],
+                  "score": 94.9,
+                  "session_id": "2026-08-10",
+                  "status": "done",
+                  "swing_id": "2"
+                },
+                {
+                  "headline": "Work on tempo first. Tempo too quick - 2.4:1.",
+                  "partial": false,
+                  "roles": [
+                    "down_the_line",
+                    "face_on",
+                    "shot_screen"
+                  ],
+                  "score": 94.9,
+                  "session_id": "2026-08-10",
+                  "status": "done",
+                  "swing_id": "3"
+                },
+                {
+                  "headline": "Work on tempo first. Tempo too quick - 2.4:1.",
+                  "partial": false,
+                  "roles": [
+                    "down_the_line",
+                    "face_on",
+                    "shot_screen"
+                  ],
+                  "score": 94.9,
+                  "session_id": "2026-08-10",
+                  "status": "done",
+                  "swing_id": "4"
+                },
+                {
+                  "headline": "Work on tempo first. Tempo too quick - 2.4:1.",
+                  "partial": false,
+                  "roles": [
+                    "down_the_line",
+                    "face_on",
+                    "shot_screen"
+                  ],
+                  "score": 94.9,
+                  "session_id": "2026-08-10",
+                  "status": "done",
+                  "swing_id": "5"
+                },
+                {
+                  "headline": "Work on tempo first. Tempo too quick - 2.4:1.",
+                  "partial": false,
+                  "roles": [
+                    "down_the_line",
+                    "face_on",
+                    "shot_screen"
+                  ],
+                  "score": 94.9,
+                  "session_id": "2026-08-10",
+                  "status": "done",
+                  "swing_id": "6"
+                },
+                {
+                  "headline": "Work on tempo first. Tempo too quick - 2.4:1.",
+                  "partial": false,
+                  "roles": [
+                    "down_the_line",
+                    "face_on",
+                    "shot_screen"
+                  ],
+                  "score": 94.9,
+                  "session_id": "2026-08-10",
+                  "status": "done",
+                  "swing_id": "7"
+                },
+                {
+                  "headline": "Work on tempo first. Tempo too quick - 2.4:1.",
+                  "partial": false,
+                  "roles": [
+                    "down_the_line",
+                    "face_on",
+                    "shot_screen"
+                  ],
+                  "score": 94.9,
+                  "session_id": "2026-08-10",
+                  "status": "done",
+                  "swing_id": "8"
+                },
+                {
+                  "headline": "Work on tempo first. Tempo too quick - 2.4:1.",
+                  "partial": false,
+                  "roles": [
+                    "down_the_line",
+                    "face_on",
+                    "shot_screen"
+                  ],
+                  "score": 94.9,
+                  "session_id": "2026-08-10",
+                  "status": "done",
+                  "swing_id": "9"
+                },
+                {
+                  "headline": "Work on tempo first. Tempo too quick - 2.4:1.",
+                  "partial": false,
+                  "roles": [
+                    "down_the_line",
+                    "face_on",
+                    "shot_screen"
+                  ],
+                  "score": 94.9,
+                  "session_id": "2026-08-10",
+                  "status": "done",
+                  "swing_id": "10"
+                },
+                {
+                  "headline": "Work on tempo first. Tempo too quick - 2.4:1.",
+                  "partial": false,
+                  "roles": [
+                    "down_the_line",
+                    "face_on",
+                    "shot_screen"
+                  ],
+                  "score": 91.0,
+                  "session_id": "2026-08-10",
+                  "status": "done",
+                  "swing_id": "11"
+                },
+                {
+                  "headline": "Work on tempo first. Tempo too quick - 2.4:1.",
+                  "partial": false,
+                  "roles": [
+                    "down_the_line",
+                    "face_on",
+                    "shot_screen"
+                  ],
+                  "score": 94.9,
+                  "session_id": "2026-08-10",
+                  "status": "done",
+                  "swing_id": "12"
+                },
+                {
+                  "headline": "Work on tempo first. Tempo too quick - 2.4:1.",
+                  "partial": false,
+                  "roles": [
+                    "down_the_line",
+                    "face_on",
+                    "shot_screen"
+                  ],
+                  "score": 94.9,
+                  "session_id": "2026-08-10",
+                  "status": "done",
+                  "swing_id": "13"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"session_id\": \"2026-08-10\",\n  \"swing_count\": 13,\n  \"analyzed_count\": 13,\n  \"mean_score\": 94.6,\n  \"best_score\": 94.9,\n  \"worst_score\": 91.0,\n  \"checkpoint_pass_rates\": {\n    \"head_sway\": \"13/13\",\n    \"tempo\": \"0/13\"\n  },\n  \"unscored_counts\": {\n    \"tempo\": 3\n  },\n  \"shots_attached\": 1,\n  \"shots_needing_review\": 1,\n  \"mishits_excluded\": 0,\n  \"shot_averages\": {},\n  \"headlines\": [\n    \"Work on tempo first. Tempo too quick - 2.4:1.\",\n    \"Work on tempo first. Tempo too quick - 2.4:1.\",\n    \"Work on tempo first. Tempo too quick - 2.4:1.\",\n    \"Work on tempo first. Tempo too quick - 2.4:1.\",\n    \"Work on tempo first. Tempo too quick - 2.4:1.\",\n    \"Work on tempo first. Tempo too quick - 2.4:1.\",\n    \"Work on tempo first. Tempo too quick - 2.4:1.\",\n    \"Work on tempo first. Tempo too quick - 2.4:1.\",\n    \"Work on tempo first. Tempo too quick - 2.4:1.\",\n    \"Work on tempo first. Tempo too quick - 2.4:1.\",\n    \"Work on tempo first. Tempo too quick - 2.4:1.\",\n    \"Work on tempo first. Tempo too quick - 2.4:1.\",\n    \"Work on tempo first. Tempo too quick - 2.4:1.\"\n  ]\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "analyzed_count": 13,
+            "best_score": 94.9,
+            "checkpoint_pass_rates": {
+              "head_sway": "13/13",
+              "tempo": "0/13"
+            },
+            "headlines": [
+              "Work on tempo first. Tempo too quick - 2.4:1.",
+              "Work on tempo first. Tempo too quick - 2.4:1.",
+              "Work on tempo first. Tempo too quick - 2.4:1.",
+              "Work on tempo first. Tempo too quick - 2.4:1.",
+              "Work on tempo first. Tempo too quick - 2.4:1.",
+              "Work on tempo first. Tempo too quick - 2.4:1.",
+              "Work on tempo first. Tempo too quick - 2.4:1.",
+              "Work on tempo first. Tempo too quick - 2.4:1.",
+              "Work on tempo first. Tempo too quick - 2.4:1.",
+              "Work on tempo first. Tempo too quick - 2.4:1.",
+              "Work on tempo first. Tempo too quick - 2.4:1.",
+              "Work on tempo first. Tempo too quick - 2.4:1.",
+              "Work on tempo first. Tempo too quick - 2.4:1."
+            ],
+            "mean_score": 94.6,
+            "mishits_excluded": 0,
+            "session_id": "2026-08-10",
+            "shot_averages": {},
+            "shots_attached": 1,
+            "shots_needing_review": 1,
+            "swing_count": 13,
+            "unscored_counts": {
+              "tempo": 3
+            },
+            "worst_score": 91.0
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"session_id\": \"2026-09-01\",\n  \"swing_count\": 2,\n  \"analyzed_count\": 2,\n  \"mean_score\": 94.9,\n  \"best_score\": 94.9,\n  \"worst_score\": 94.9,\n  \"checkpoint_pass_rates\": {\n    \"head_sway\": \"2/2\",\n    \"tempo\": \"0/2\"\n  },\n  \"unscored_counts\": {},\n  \"shots_attached\": 0,\n  \"shots_needing_review\": 0,\n  \"mishits_excluded\": 0,\n  \"shot_averages\": {},\n  \"headlines\": [\n    \"Work on tempo first. Tempo too quick - 2.4:1.\",\n    \"Work on tempo first. Tempo too quick - 2.4:1.\"\n  ]\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "analyzed_count": 2,
+            "best_score": 94.9,
+            "checkpoint_pass_rates": {
+              "head_sway": "2/2",
+              "tempo": "0/2"
+            },
+            "headlines": [
+              "Work on tempo first. Tempo too quick - 2.4:1.",
+              "Work on tempo first. Tempo too quick - 2.4:1."
+            ],
+            "mean_score": 94.9,
+            "mishits_excluded": 0,
+            "session_id": "2026-09-01",
+            "shot_averages": {},
+            "shots_attached": 0,
+            "shots_needing_review": 0,
+            "swing_count": 2,
+            "unscored_counts": {},
+            "worst_score": 94.9
+          }
+        }
+      }
+    ]
+  },
+  "id": "mcp/tools/swing-views",
+  "input": {
+    "calls": [
+      {
+        "arguments": {
+          "session_id": "2026-09-01",
+          "swing_id": "1"
+        },
+        "now": null,
+        "tool": "get_swing"
+      },
+      {
+        "arguments": {
+          "session_id": "2026-09-01",
+          "swing_id": "2"
+        },
+        "now": null,
+        "tool": "get_swing"
+      },
+      {
+        "arguments": {
+          "session_id": "2026-08-10",
+          "swing_id": "1"
+        },
+        "now": null,
+        "tool": "get_swing"
+      },
+      {
+        "arguments": {
+          "session_id": "2026-08-10",
+          "swing_id": "2"
+        },
+        "now": null,
+        "tool": "get_swing"
+      },
+      {
+        "arguments": {
+          "session_id": "2026-08-10",
+          "swing_id": "3"
+        },
+        "now": null,
+        "tool": "get_swing"
+      },
+      {
+        "arguments": {
+          "session_id": "2026-08-10",
+          "swing_id": "4"
+        },
+        "now": null,
+        "tool": "get_swing"
+      },
+      {
+        "arguments": {
+          "session_id": "2026-08-10",
+          "swing_id": "5"
+        },
+        "now": null,
+        "tool": "get_swing"
+      },
+      {
+        "arguments": {
+          "session_id": "2026-08-10",
+          "swing_id": "6"
+        },
+        "now": null,
+        "tool": "get_swing"
+      },
+      {
+        "arguments": {
+          "session_id": "2026-08-10",
+          "swing_id": "7"
+        },
+        "now": null,
+        "tool": "get_swing"
+      },
+      {
+        "arguments": {
+          "session_id": "2026-08-10",
+          "swing_id": "8"
+        },
+        "now": null,
+        "tool": "get_swing"
+      },
+      {
+        "arguments": {
+          "session_id": "2026-08-10",
+          "swing_id": "9"
+        },
+        "now": null,
+        "tool": "get_swing"
+      },
+      {
+        "arguments": {
+          "session_id": "2026-08-10",
+          "swing_id": "10"
+        },
+        "now": null,
+        "tool": "get_swing"
+      },
+      {
+        "arguments": {
+          "session_id": "2026-08-10",
+          "swing_id": "11"
+        },
+        "now": null,
+        "tool": "get_swing"
+      },
+      {
+        "arguments": {
+          "session_id": "2026-08-10",
+          "swing_id": "12"
+        },
+        "now": null,
+        "tool": "get_swing"
+      },
+      {
+        "arguments": {
+          "session_id": "2026-08-10",
+          "swing_id": "13"
+        },
+        "now": null,
+        "tool": "get_swing"
+      },
+      {
+        "arguments": {},
+        "now": null,
+        "tool": "list_sessions"
+      },
+      {
+        "arguments": {
+          "session_id": "2026-08-10"
+        },
+        "now": null,
+        "tool": "get_session_summary"
+      },
+      {
+        "arguments": {
+          "session_id": "2026-09-01"
+        },
+        "now": null,
+        "tool": "get_session_summary"
+      }
+    ],
+    "files": {
+      "sessions/2026-08-10/1/analysis.json": "{\"swing_id\": \"1\", \"session_id\": \"2026-08-10\", \"swing\": {\"swing_id\": \"1\", \"session_id\": \"2026-08-10\", \"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.42, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick - 2.4:1.\", \"percentile\": 10.0, \"population_n\": 1399, \"one_sided\": false}, {\"name\": \"head_sway\", \"score\": 1.0, \"passed\": true, \"observed\": 0.12, \"expected_low\": 0.0, \"expected_high\": 0.43, \"message\": \"Head stays steady.\", \"percentile\": 35.5, \"population_n\": 458, \"one_sided\": true}], \"unscored\": [], \"measurements\": [], \"mechanics_score\": 94.9, \"outcome_score\": null, \"overall_score\": 94.9, \"shot\": null}, \"alignment\": {\"quality\": \"top_impact\"}, \"notes\": [\"alignment degraded: aligned on top and impact\"], \"feedback\": {\"swing_id\": \"1\", \"overall_score\": 94.9, \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\", \"tips\": [{\"checkpoint\": \"tempo\", \"text\": \"Tempo too quick - 2.4:1.\", \"severity\": \"minor\"}]}}",
+      "sessions/2026-08-10/1/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"down_the_line\": \"sha-2026-08-10-1-down_the_line-changed\",\n    \"face_on\": \"sha-2026-08-10-1-face_on-changed\",\n    \"shot_screen\": \"sha-2026-08-10-1-shot_screen-changed\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 94.9,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\"\n}",
+      "sessions/2026-08-10/1/manifest.json": "{\n  \"swing_id\": \"1\",\n  \"session_id\": \"2026-08-10\",\n  \"created_at\": \"2026-08-10T01:39:00Z\",\n  \"updated_at\": \"2026-08-10T01:39:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-10-1-face_on\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-10-1-down_the_line\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-10-1-shot_screen\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": null,\n  \"club\": null,\n  \"mishit\": null\n}",
+      "sessions/2026-08-10/10/analysis.json": "{\"swing_id\": \"10\", \"session_id\": \"2026-08-10\", \"swing\": {\"swing_id\": \"10\", \"session_id\": \"2026-08-10\", \"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.42, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick - 2.4:1.\", \"percentile\": 10.0, \"population_n\": 1399, \"one_sided\": false}, {\"name\": \"head_sway\", \"score\": 1.0, \"passed\": true, \"observed\": 0.12, \"expected_low\": 0.0, \"expected_high\": 0.43, \"message\": \"Head stays steady.\", \"percentile\": 35.5, \"population_n\": 458, \"one_sided\": true}], \"unscored\": [], \"measurements\": [], \"mechanics_score\": 94.9, \"outcome_score\": null, \"overall_score\": 94.9, \"shot\": {\"shot_id\": \"2026-08-10-10\", \"session_id\": \"2026-08-10\", \"timestamp\": \"2026-08-10T01:39:00Z\", \"source\": \"screen\", \"club_head_speed\": 98.3, \"club_face_angle\": null, \"club_path\": null, \"ball_speed\": 90.5, \"launch_angle\": null, \"launch_direction\": null, \"spin_rate\": null, \"spin_axis\": null, \"smash_factor\": null, \"carry_distance\": 121.0, \"total_distance\": null, \"bounce_and_roll\": null, \"apex_height\": null, \"shot_type\": \"DRAW\", \"impact_position\": null, \"provenance\": {\"device\": \"hd_golf\", \"parse_confidence\": 0.5, \"needs_review\": true, \"warnings\": [\"smash factor failed the physics cross-check\"], \"image_sha256\": null, \"image_path\": null, \"raw_fields\": {}}}}, \"alignment\": {\"quality\": \"top_impact\"}, \"notes\": [\"alignment degraded: aligned on top and impact\"], \"feedback\": {\"swing_id\": \"10\", \"overall_score\": 94.9, \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\", \"tips\": [{\"checkpoint\": \"tempo\", \"text\": \"Tempo too quick - 2.4:1.\", \"severity\": \"minor\"}]}}",
+      "sessions/2026-08-10/10/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"down_the_line\": \"sha-2026-08-10-10-down_the_line\",\n    \"face_on\": \"sha-2026-08-10-10-face_on\",\n    \"shot_screen\": \"sha-2026-08-10-10-shot_screen\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 94.9,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\"\n}",
+      "sessions/2026-08-10/10/manifest.json": "{\n  \"swing_id\": \"10\",\n  \"session_id\": \"2026-08-10\",\n  \"created_at\": \"2026-08-10T01:39:00Z\",\n  \"updated_at\": \"2026-08-10T01:39:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-10-10-face_on\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-10-10-down_the_line\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-10-10-shot_screen\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": null,\n  \"club\": null,\n  \"mishit\": null\n}",
+      "sessions/2026-08-10/11/analysis.json": "{\"swing_id\": \"1\", \"session_id\": \"s\", \"swing\": {\"swing_id\": \"1\", \"session_id\": \"s\", \"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.42, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick - 2.4:1.\", \"percentile\": 10.0, \"population_n\": 1399, \"one_sided\": false}, {\"name\": \"head_sway\", \"score\": 1.0, \"passed\": true, \"observed\": 0.12, \"expected_low\": 0.0, \"expected_high\": 0.43, \"message\": \"Head stays steady.\", \"percentile\": 35.5, \"population_n\": 458, \"one_sided\": true}], \"unscored\": [], \"measurements\": [{\"name\": \"tempo_ratio\", \"value\": 2.42, \"unit\": \"ratio\", \"source\": \"pose:face_on\", \"detail\": \"test\"}], \"mechanics_score\": 91.0, \"outcome_score\": null, \"overall_score\": 91.0, \"shot\": null}, \"alignment\": {\"quality\": \"top_impact\"}, \"notes\": [\"alignment degraded: aligned on top and impact\"], \"feedback\": {\"swing_id\": \"1\", \"overall_score\": 91.0, \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\", \"tips\": [{\"checkpoint\": \"tempo\", \"text\": \"Tempo too quick - 2.4:1.\", \"severity\": \"minor\"}]}, \"analysis_version\": 16}",
+      "sessions/2026-08-10/11/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"down_the_line\": \"sha-2026-08-10-11-down_the_line\",\n    \"face_on\": \"sha-2026-08-10-11-face_on\",\n    \"shot_screen\": \"sha-2026-08-10-11-shot_screen\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 91.0,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\"\n}",
+      "sessions/2026-08-10/11/manifest.json": "{\n  \"swing_id\": \"11\",\n  \"session_id\": \"2026-08-10\",\n  \"created_at\": \"2026-08-10T01:39:00Z\",\n  \"updated_at\": \"2026-08-10T01:39:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-10-11-face_on\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-10-11-down_the_line\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-10-11-shot_screen\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": null,\n  \"club\": null,\n  \"mishit\": null\n}",
+      "sessions/2026-08-10/12/analysis.json": "{\"swing_id\": \"12\", \"session_id\": \"2026-08-10\", \"swing\": {\"swing_id\": \"12\", \"session_id\": \"2026-08-10\", \"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.42, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick - 2.4:1.\", \"percentile\": 10.0, \"population_n\": 1399, \"one_sided\": false}, {\"name\": \"head_sway\", \"score\": 1.0, \"passed\": true, \"observed\": 0.12, \"expected_low\": 0.0, \"expected_high\": 0.43, \"message\": \"Head stays steady.\", \"percentile\": 35.5, \"population_n\": 458, \"one_sided\": true}], \"unscored\": [], \"measurements\": [], \"mechanics_score\": 94.9, \"outcome_score\": null, \"overall_score\": 94.9, \"shot\": null}, \"alignment\": {\"quality\": \"top_impact\"}, \"notes\": [\"alignment degraded: aligned on top and impact\"], \"feedback\": {\"swing_id\": \"12\", \"overall_score\": 94.9, \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\", \"tips\": [{\"checkpoint\": \"tempo\", \"text\": \"Tempo too quick - 2.4:1.\", \"severity\": \"minor\"}]}}",
+      "sessions/2026-08-10/12/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"down_the_line\": \"sha-2026-08-10-12-down_the_line\",\n    \"face_on\": \"sha-2026-08-10-12-face_on\",\n    \"shot_screen\": \"sha-2026-08-10-12-shot_screen\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 94.9,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\"\n}",
+      "sessions/2026-08-10/12/manifest.json": "{\n  \"swing_id\": \"12\",\n  \"session_id\": \"2026-08-10\",\n  \"created_at\": \"2026-08-10T01:39:00Z\",\n  \"updated_at\": \"2026-08-10T01:39:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-10-12-face_on\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-10-12-down_the_line\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-10-12-shot_screen\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": null,\n  \"club\": null,\n  \"mishit\": \"confirmed\"\n}",
+      "sessions/2026-08-10/13/analysis.json": "{\"swing_id\": \"13\", \"session_id\": \"2026-08-10\", \"swing\": {\"swing_id\": \"13\", \"session_id\": \"2026-08-10\", \"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.42, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick - 2.4:1.\", \"percentile\": 10.0, \"population_n\": 1399, \"one_sided\": false}, {\"name\": \"head_sway\", \"score\": 1.0, \"passed\": true, \"observed\": 0.12, \"expected_low\": 0.0, \"expected_high\": 0.43, \"message\": \"Head stays steady.\", \"percentile\": 35.5, \"population_n\": 458, \"one_sided\": true}], \"unscored\": [], \"measurements\": [], \"mechanics_score\": 94.9, \"outcome_score\": null, \"overall_score\": 94.9, \"shot\": null}, \"alignment\": {\"quality\": \"top_impact\"}, \"notes\": [\"alignment degraded: aligned on top and impact\"], \"feedback\": {\"swing_id\": \"13\", \"overall_score\": 94.9, \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\", \"tips\": [{\"checkpoint\": \"tempo\", \"text\": \"Tempo too quick - 2.4:1.\", \"severity\": \"minor\"}]}}",
+      "sessions/2026-08-10/13/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"down_the_line\": \"sha-2026-08-10-13-down_the_line\",\n    \"face_on\": \"sha-2026-08-10-13-face_on\",\n    \"shot_screen\": \"sha-2026-08-10-13-shot_screen\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 94.9,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\"\n}",
+      "sessions/2026-08-10/13/manifest.json": "{\n  \"swing_id\": \"13\",\n  \"session_id\": \"2026-08-10\",\n  \"created_at\": \"2026-08-10T01:39:00Z\",\n  \"updated_at\": \"2026-08-10T01:39:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-10-13-face_on\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-10-13-down_the_line\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-10-13-shot_screen\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": null,\n  \"club\": null,\n  \"mishit\": \"cleared\"\n}",
+      "sessions/2026-08-10/2/analysis.json": "{\"swing_id\": \"2\", \"session_id\": \"2026-08-10\", \"swing\": {\"swing_id\": \"2\", \"session_id\": \"2026-08-10\", \"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.42, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick - 2.4:1.\", \"percentile\": 10.0, \"population_n\": 1399, \"one_sided\": false}, {\"name\": \"head_sway\", \"score\": 1.0, \"passed\": true, \"observed\": 0.12, \"expected_low\": 0.0, \"expected_high\": 0.43, \"message\": \"Head stays steady.\", \"percentile\": 35.5, \"population_n\": 458, \"one_sided\": true}], \"unscored\": [{\"name\": \"tempo\", \"reason\": \"no_band\", \"detail\": \"no band for tempo_ratio\"}], \"measurements\": [], \"mechanics_score\": 94.9, \"outcome_score\": null, \"overall_score\": 94.9, \"shot\": null}, \"alignment\": {\"quality\": \"top_impact\"}, \"notes\": [\"alignment degraded: aligned on top and impact\"], \"feedback\": {\"swing_id\": \"2\", \"overall_score\": 94.9, \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\", \"tips\": [{\"checkpoint\": \"tempo\", \"text\": \"Tempo too quick - 2.4:1.\", \"severity\": \"minor\"}]}}",
+      "sessions/2026-08-10/2/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"down_the_line\": \"sha-2026-08-10-2-down_the_line\",\n    \"face_on\": \"sha-2026-08-10-2-face_on\",\n    \"shot_screen\": \"sha-2026-08-10-2-shot_screen\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 94.9,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\"\n}",
+      "sessions/2026-08-10/2/manifest.json": "{\n  \"swing_id\": \"2\",\n  \"session_id\": \"2026-08-10\",\n  \"created_at\": \"2026-08-10T01:39:00Z\",\n  \"updated_at\": \"2026-08-10T01:39:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-10-2-face_on\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-10-2-down_the_line\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-10-2-shot_screen\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": null,\n  \"club\": null,\n  \"mishit\": null\n}",
+      "sessions/2026-08-10/3/analysis.json": "{\"swing_id\": \"3\", \"session_id\": \"2026-08-10\", \"swing\": {\"swing_id\": \"3\", \"session_id\": \"2026-08-10\", \"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.42, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick - 2.4:1.\", \"percentile\": 10.0, \"population_n\": 1399, \"one_sided\": false}, {\"name\": \"head_sway\", \"score\": 1.0, \"passed\": true, \"observed\": 0.12, \"expected_low\": 0.0, \"expected_high\": 0.43, \"message\": \"Head stays steady.\", \"percentile\": 35.5, \"population_n\": 458, \"one_sided\": true}], \"unscored\": [\"tempo\"], \"measurements\": [], \"mechanics_score\": 94.9, \"outcome_score\": null, \"overall_score\": 94.9, \"shot\": null}, \"alignment\": {\"quality\": \"top_impact\"}, \"notes\": [\"alignment degraded: aligned on top and impact\"], \"feedback\": {\"swing_id\": \"3\", \"overall_score\": 94.9, \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\", \"tips\": [{\"checkpoint\": \"tempo\", \"text\": \"Tempo too quick - 2.4:1.\", \"severity\": \"minor\"}]}}",
+      "sessions/2026-08-10/3/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"down_the_line\": \"sha-2026-08-10-3-down_the_line\",\n    \"face_on\": \"sha-2026-08-10-3-face_on\",\n    \"shot_screen\": \"sha-2026-08-10-3-shot_screen\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 94.9,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\"\n}",
+      "sessions/2026-08-10/3/manifest.json": "{\n  \"swing_id\": \"3\",\n  \"session_id\": \"2026-08-10\",\n  \"created_at\": \"2026-08-10T01:39:00Z\",\n  \"updated_at\": \"2026-08-10T01:39:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-10-3-face_on\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-10-3-down_the_line\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-10-3-shot_screen\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": null,\n  \"club\": null,\n  \"mishit\": null\n}",
+      "sessions/2026-08-10/4/analysis.json": "{\"swing_id\": \"4\", \"session_id\": \"2026-08-10\", \"swing\": {\"swing_id\": \"4\", \"session_id\": \"2026-08-10\", \"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.42, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick - 2.4:1.\", \"percentile\": 10.0, \"population_n\": 1399, \"one_sided\": false}, {\"name\": \"head_sway\", \"score\": 1.0, \"passed\": true, \"observed\": 0.12, \"expected_low\": 0.0, \"expected_high\": 0.43, \"message\": \"Head stays steady.\", \"percentile\": 35.5, \"population_n\": 458, \"one_sided\": true}], \"unscored\": [{\"name\": \"tempo\", \"reason\": \"invented_later\"}], \"measurements\": [], \"mechanics_score\": 94.9, \"outcome_score\": null, \"overall_score\": 94.9, \"shot\": null}, \"alignment\": {\"quality\": \"top_impact\"}, \"notes\": [\"alignment degraded: aligned on top and impact\"], \"feedback\": {\"swing_id\": \"4\", \"overall_score\": 94.9, \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\", \"tips\": [{\"checkpoint\": \"tempo\", \"text\": \"Tempo too quick - 2.4:1.\", \"severity\": \"minor\"}]}}",
+      "sessions/2026-08-10/4/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"down_the_line\": \"sha-2026-08-10-4-down_the_line\",\n    \"face_on\": \"sha-2026-08-10-4-face_on\",\n    \"shot_screen\": \"sha-2026-08-10-4-shot_screen\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 94.9,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\"\n}",
+      "sessions/2026-08-10/4/manifest.json": "{\n  \"swing_id\": \"4\",\n  \"session_id\": \"2026-08-10\",\n  \"created_at\": \"2026-08-10T01:39:00Z\",\n  \"updated_at\": \"2026-08-10T01:39:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-10-4-face_on\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-10-4-down_the_line\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-10-4-shot_screen\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": null,\n  \"club\": null,\n  \"mishit\": null\n}",
+      "sessions/2026-08-10/5/analysis.json": "{\"swing_id\": \"5\", \"session_id\": \"2026-08-10\", \"swing\": {\"swing_id\": \"5\", \"session_id\": \"2026-08-10\", \"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.42, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick - 2.4:1.\", \"percentile\": 10.0, \"population_n\": 1399, \"one_sided\": false}, {\"name\": \"head_sway\", \"score\": 1.0, \"passed\": true, \"observed\": 0.12, \"expected_low\": 0.0, \"expected_high\": 0.43, \"message\": \"Head stays steady.\", \"percentile\": 35.5, \"population_n\": 458, \"one_sided\": true}], \"unscored\": [], \"measurements\": [{\"name\": \"tour_trajectory_q_dtl\", \"value\": 11.055, \"unit\": \"shoulder_widths\", \"source\": \"population:golfdb\", \"detail\": \"down-the-line: residual off that basis; NOT calibrated\"}, {\"name\": \"head_sway_norm\", \"value\": 0.1234, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"address window -> impact window\"}], \"mechanics_score\": 94.9, \"outcome_score\": null, \"overall_score\": 94.9, \"shot\": null}, \"alignment\": {\"quality\": \"top_impact\"}, \"notes\": [\"alignment degraded: aligned on top and impact\"], \"feedback\": {\"swing_id\": \"5\", \"overall_score\": 94.9, \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\", \"tips\": [{\"checkpoint\": \"tempo\", \"text\": \"Tempo too quick - 2.4:1.\", \"severity\": \"minor\"}]}}",
+      "sessions/2026-08-10/5/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"down_the_line\": \"sha-2026-08-10-5-down_the_line\",\n    \"face_on\": \"sha-2026-08-10-5-face_on\",\n    \"shot_screen\": \"sha-2026-08-10-5-shot_screen\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 94.9,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\"\n}",
+      "sessions/2026-08-10/5/manifest.json": "{\n  \"swing_id\": \"5\",\n  \"session_id\": \"2026-08-10\",\n  \"created_at\": \"2026-08-10T01:39:00Z\",\n  \"updated_at\": \"2026-08-10T01:39:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-10-5-face_on\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-10-5-down_the_line\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-10-5-shot_screen\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": null,\n  \"club\": null,\n  \"mishit\": null\n}",
+      "sessions/2026-08-10/6/analysis.json": "{\"swing_id\": \"6\", \"session_id\": \"2026-08-10\", \"swing\": {\"swing_id\": \"6\", \"session_id\": \"2026-08-10\", \"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.42, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick - 2.4:1.\", \"percentile\": 10.0, \"population_n\": 1399, \"one_sided\": false}, {\"name\": \"head_sway\", \"score\": 1.0, \"passed\": true, \"observed\": 0.12, \"expected_low\": 0.0, \"expected_high\": 0.43, \"message\": \"Head stays steady.\", \"percentile\": 35.5, \"population_n\": 458, \"one_sided\": true}], \"unscored\": [], \"measurements\": [{\"name\": \"flight_carry_yds\", \"value\": 122.3567, \"unit\": \"yards\", \"source\": \"model:flight_v1\", \"detail\": \"SIMULATED carry from the printed launch conditions; not the printed carry\"}, {\"name\": \"flight_spin_rpm\", \"value\": 2923.8568, \"unit\": \"rpm\", \"source\": \"model:flight_v1\", \"detail\": \"SOLVED backspin - the spin this model needs to agree with the printed carry\"}, {\"name\": \"head_sway_norm\", \"value\": 0.1234, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"address window -> impact window\"}, {\"name\": \"tempo_ratio\", \"value\": 2.42, \"unit\": \"ratio\"}], \"mechanics_score\": 94.9, \"outcome_score\": null, \"overall_score\": 94.9, \"shot\": null}, \"alignment\": {\"quality\": \"top_impact\"}, \"notes\": [\"alignment degraded: aligned on top and impact\"], \"feedback\": {\"swing_id\": \"6\", \"overall_score\": 94.9, \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\", \"tips\": [{\"checkpoint\": \"tempo\", \"text\": \"Tempo too quick - 2.4:1.\", \"severity\": \"minor\"}]}}",
+      "sessions/2026-08-10/6/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"down_the_line\": \"sha-2026-08-10-6-down_the_line\",\n    \"face_on\": \"sha-2026-08-10-6-face_on\",\n    \"shot_screen\": \"sha-2026-08-10-6-shot_screen\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 94.9,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\"\n}",
+      "sessions/2026-08-10/6/manifest.json": "{\n  \"swing_id\": \"6\",\n  \"session_id\": \"2026-08-10\",\n  \"created_at\": \"2026-08-10T01:39:00Z\",\n  \"updated_at\": \"2026-08-10T01:39:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-10-6-face_on\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-10-6-down_the_line\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-10-6-shot_screen\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": null,\n  \"club\": null,\n  \"mishit\": null\n}",
+      "sessions/2026-08-10/7/analysis.json": "{\"swing_id\": \"7\", \"session_id\": \"2026-08-10\", \"swing\": {\"swing_id\": \"7\", \"session_id\": \"2026-08-10\", \"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.42, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick - 2.4:1.\", \"percentile\": 10.0, \"population_n\": 1399, \"one_sided\": false}, {\"name\": \"head_sway\", \"score\": 1.0, \"passed\": true, \"observed\": 0.12, \"expected_low\": 0.0, \"expected_high\": 0.43, \"message\": \"Head stays steady.\", \"percentile\": 35.5, \"population_n\": 458, \"one_sided\": true}], \"unscored\": [], \"measurements\": [{\"name\": \"pivot_hip_axis_drift_norm\", \"value\": 0.42, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"peak lateral excursion of the hip centre from its address x\"}, {\"name\": \"head_sway_norm\", \"value\": 0.1234, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"address window -> impact window\"}], \"mechanics_score\": 94.9, \"outcome_score\": null, \"overall_score\": 94.9, \"shot\": null}, \"alignment\": {\"quality\": \"top_impact\"}, \"notes\": [\"alignment degraded: aligned on top and impact\"], \"feedback\": {\"swing_id\": \"7\", \"overall_score\": 94.9, \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\", \"tips\": [{\"checkpoint\": \"tempo\", \"text\": \"Tempo too quick - 2.4:1.\", \"severity\": \"minor\"}]}}",
+      "sessions/2026-08-10/7/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"down_the_line\": \"sha-2026-08-10-7-down_the_line\",\n    \"face_on\": \"sha-2026-08-10-7-face_on\",\n    \"shot_screen\": \"sha-2026-08-10-7-shot_screen\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 94.9,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\"\n}",
+      "sessions/2026-08-10/7/manifest.json": "{\n  \"swing_id\": \"7\",\n  \"session_id\": \"2026-08-10\",\n  \"created_at\": \"2026-08-10T01:39:00Z\",\n  \"updated_at\": \"2026-08-10T01:39:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-10-7-face_on\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-10-7-down_the_line\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-10-7-shot_screen\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": null,\n  \"club\": null,\n  \"mishit\": null\n}",
+      "sessions/2026-08-10/8/analysis.json": "{\"swing_id\": \"8\", \"session_id\": \"2026-08-10\", \"swing\": {\"swing_id\": \"8\", \"session_id\": \"2026-08-10\", \"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.42, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick - 2.4:1.\", \"percentile\": 10.0, \"population_n\": 1399, \"one_sided\": false}, {\"name\": \"head_sway\", \"score\": 1.0, \"passed\": true, \"observed\": 0.12, \"expected_low\": 0.0, \"expected_high\": 0.43, \"message\": \"Head stays steady.\", \"percentile\": 35.5, \"population_n\": 458, \"one_sided\": true}], \"unscored\": [], \"measurements\": [], \"mechanics_score\": 94.9, \"outcome_score\": null, \"overall_score\": 94.9, \"shot\": null}, \"alignment\": {\"quality\": \"full\"}, \"notes\": [\"alignment degraded: aligned on top and impact\"], \"feedback\": {\"swing_id\": \"8\", \"overall_score\": 94.9, \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\", \"tips\": [{\"checkpoint\": \"tempo\", \"text\": \"Tempo too quick - 2.4:1.\", \"severity\": \"minor\"}]}}",
+      "sessions/2026-08-10/8/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"down_the_line\": \"sha-2026-08-10-8-down_the_line\",\n    \"face_on\": \"sha-2026-08-10-8-face_on\",\n    \"shot_screen\": \"sha-2026-08-10-8-shot_screen\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 94.9,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\"\n}",
+      "sessions/2026-08-10/8/manifest.json": "{\n  \"swing_id\": \"8\",\n  \"session_id\": \"2026-08-10\",\n  \"created_at\": \"2026-08-10T01:39:00Z\",\n  \"updated_at\": \"2026-08-10T01:39:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-10-8-face_on\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-10-8-down_the_line\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-10-8-shot_screen\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": null,\n  \"club\": null,\n  \"mishit\": null\n}",
+      "sessions/2026-08-10/9/analysis.json": "{\"swing_id\": \"9\", \"session_id\": \"2026-08-10\", \"swing\": {\"swing_id\": \"9\", \"session_id\": \"2026-08-10\", \"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.42, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick - 2.4:1.\", \"percentile\": 10.0, \"population_n\": 1399, \"one_sided\": false}, {\"name\": \"head_sway\", \"score\": 1.0, \"passed\": true, \"observed\": 0.12, \"expected_low\": 0.0, \"expected_high\": 0.43, \"message\": \"Head stays steady.\", \"percentile\": 35.5, \"population_n\": 458, \"one_sided\": true}], \"unscored\": [], \"measurements\": [], \"mechanics_score\": 94.9, \"outcome_score\": null, \"overall_score\": 94.9, \"shot\": null}, \"alignment\": null, \"notes\": [], \"feedback\": {\"swing_id\": \"9\", \"overall_score\": 94.9, \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\", \"tips\": [{\"checkpoint\": \"tempo\", \"text\": \"Tempo too quick - 2.4:1.\", \"severity\": \"minor\"}]}}",
+      "sessions/2026-08-10/9/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"down_the_line\": \"sha-2026-08-10-9-down_the_line\",\n    \"face_on\": \"sha-2026-08-10-9-face_on\",\n    \"shot_screen\": \"sha-2026-08-10-9-shot_screen\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 94.9,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\"\n}",
+      "sessions/2026-08-10/9/manifest.json": "{\n  \"swing_id\": \"9\",\n  \"session_id\": \"2026-08-10\",\n  \"created_at\": \"2026-08-10T01:39:00Z\",\n  \"updated_at\": \"2026-08-10T01:39:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-10-9-face_on\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-10-9-down_the_line\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-10-9-shot_screen\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": null,\n  \"club\": null,\n  \"mishit\": null\n}",
+      "sessions/2026-09-01/1/analysis.json": "{\"swing_id\": \"1\", \"session_id\": \"2026-09-01\", \"swing\": {\"swing_id\": \"1\", \"session_id\": \"2026-09-01\", \"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.42, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick - 2.4:1.\", \"percentile\": 10.0, \"population_n\": 1399, \"one_sided\": false}, {\"name\": \"head_sway\", \"score\": 1.0, \"passed\": true, \"observed\": 0.12, \"expected_low\": 0.0, \"expected_high\": 0.43, \"message\": \"Head stays steady.\", \"percentile\": 35.5, \"population_n\": 458, \"one_sided\": true}], \"unscored\": [], \"measurements\": [], \"mechanics_score\": 94.9, \"outcome_score\": null, \"overall_score\": 94.9, \"shot\": null}, \"alignment\": {\"quality\": \"top_impact\"}, \"notes\": [\"alignment degraded: aligned on top and impact\"], \"feedback\": {\"swing_id\": \"1\", \"overall_score\": 94.9, \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\", \"tips\": [{\"checkpoint\": \"tempo\", \"text\": \"Tempo too quick - 2.4:1.\", \"severity\": \"minor\"}]}}",
+      "sessions/2026-09-01/1/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"down_the_line\": \"sha-2026-09-01-1-down_the_line\",\n    \"face_on\": \"sha-2026-09-01-1-face_on\",\n    \"shot_screen\": \"sha-2026-09-01-1-shot_screen\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 94.9,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\"\n}",
+      "sessions/2026-09-01/1/manifest.json": "{\n  \"swing_id\": \"1\",\n  \"session_id\": \"2026-09-01\",\n  \"created_at\": \"2026-08-10T01:39:00Z\",\n  \"updated_at\": \"2026-08-10T01:39:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.abc123.mov\",\n      \"content_sha256\": \"sha-2026-09-01-1-face_on\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.abc123.mov\",\n      \"content_sha256\": \"sha-2026-09-01-1-down_the_line\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.abc123.mov\",\n      \"content_sha256\": \"sha-2026-09-01-1-shot_screen\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": null,\n  \"club\": \"7i\",\n  \"mishit\": null\n}",
+      "sessions/2026-09-01/2/analysis.json": "{\"swing_id\": \"2\", \"session_id\": \"2026-09-01\", \"swing\": {\"swing_id\": \"2\", \"session_id\": \"2026-09-01\", \"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.42, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick - 2.4:1.\", \"percentile\": 10.0, \"population_n\": 1399, \"one_sided\": false}, {\"name\": \"head_sway\", \"score\": 1.0, \"passed\": true, \"observed\": 0.12, \"expected_low\": 0.0, \"expected_high\": 0.43, \"message\": \"Head stays steady.\", \"percentile\": 35.5, \"population_n\": 458, \"one_sided\": true}], \"unscored\": [], \"measurements\": [], \"mechanics_score\": 94.9, \"outcome_score\": null, \"overall_score\": 94.9, \"shot\": null}, \"alignment\": {\"quality\": \"top_impact\"}, \"notes\": [\"alignment degraded: aligned on top and impact\"], \"feedback\": {\"swing_id\": \"2\", \"overall_score\": 94.9, \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\", \"tips\": [{\"checkpoint\": \"tempo\", \"text\": \"Tempo too quick - 2.4:1.\", \"severity\": \"minor\"}]}}",
+      "sessions/2026-09-01/2/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"down_the_line\": \"sha-2026-09-01-2-down_the_line\",\n    \"face_on\": \"sha-2026-09-01-2-face_on\",\n    \"shot_screen\": \"sha-2026-09-01-2-shot_screen\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 94.9,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\"\n}",
+      "sessions/2026-09-01/2/manifest.json": "{\n  \"swing_id\": \"2\",\n  \"session_id\": \"2026-09-01\",\n  \"created_at\": \"2026-08-10T01:39:00Z\",\n  \"updated_at\": \"2026-08-10T01:39:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.abc123.mov\",\n      \"content_sha256\": \"sha-2026-09-01-2-face_on\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.abc123.mov\",\n      \"content_sha256\": \"sha-2026-09-01-2-down_the_line\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.abc123.mov\",\n      \"content_sha256\": \"sha-2026-09-01-2-shot_screen\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": null,\n  \"club\": null,\n  \"mishit\": null\n}"
+    },
+    "roots": {
+      "golfers": null,
+      "sessions": "sessions",
+      "shots": "shots"
+    }
+  },
+  "provenance": {
+    "analysis_version": 16,
+    "flight_model_calls": [],
+    "kind": "mcp",
+    "mcp_version": "2.0.0",
+    "note": "one swing per get_swing test in test_query.py, each in its own directory: the club tag, a stale result, the three unscored shapes (a reason, names only, an unknown reason), placements, simulated and pivot rows, full and absent alignment, a flagged shot, a stamped engine version and both mishit verdicts; then the listing and both summaries",
+    "oracle": "python",
+    "pydantic_version": "2.13.4",
+    "python_version": "3.13.3",
+    "recorded_by": "scripts/conformance_vectors.py::_run_mcp",
+    "rerecords": [
+      {
+        "added": [],
+        "by": "golf-core rerecord",
+        "career_version": 3,
+        "declaration": "spec/declarations/career-v3.json",
+        "moved": [
+          "career_version"
+        ]
+      }
+    ],
+    "source": "scripts/conformance_vectors.py::_mcp_swing_views, after tests/mcp/"
+  }
+}

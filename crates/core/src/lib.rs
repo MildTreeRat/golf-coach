@@ -91,6 +91,16 @@
 //! `tests/profile.rs` holds every case to it, and `golf-core rerecord` re-records the family with
 //! it under a career declaration.
 //!
+//! # The swing selection
+//!
+//! [`selection_family::run_selection`] answers one case of `spec/vectors/selection/` (M29 P19):
+//! `analysis::phases`' clip-choosing rules, which frozen Python recorded the family over once (M29
+//! P18), and the pipeline's `_pick_swing`, the rules after smoothing. `tests/selection.rs` holds
+//! every case to it, and `golf-core rerecord` re-records the family with it under an engine
+//! declaration, after the shot family. The pipeline's ordering around the picks, `_auto_windows`,
+//! is [`auto_windows`] (M29 P25): here rather than in `crates/lab`, which calls it from its bundle
+//! assembly, so the family's gate and its re-record answer every call and carry none.
+//!
 //! # The verbs that write into a session
 //!
 //! [`session`] is `golf-core run-shot --session` and `golf-core set-intent` (M35 P11): the first
@@ -98,6 +108,20 @@
 //! [`run_shot`] and writes its `shot_analysis.json`; the second records a shot's intent on its
 //! manifest or the session's cursor. Both are here for the shell's reason, the stores and the engine
 //! in one hand, and `tests/verbs.rs` runs them on scratch copies of the storage family's trees.
+//!
+//! # The bundle seam, and a shared wrapper [M29 P26]
+//!
+//! [`run_bundle`] is [`run`] before serialization: the typed [`SwingBundleResult`] with its
+//! feedback, which `golf-lab analyze` extends with the pipeline's notes and the coaching paragraph
+//! before writing it through [`serialize`], the drop `analysis.json` and every vector share. Typed,
+//! because the lab reads the result (the loft note waits on `unscored`, the state on the score) and
+//! re-parsing its own JSON would be a second shape to keep in step.
+//!
+//! [`textwrap`] is CPython's `textwrap.wrap` and `fill`, written for `golf-mcp`'s caveats (M29 P9)
+//! and moved here at P26 when `golf-lab analyze`'s report needed it for the coaching paragraph: the
+//! two shells cannot depend on each other, and both depend on this one. [`pyrepr`] is CPython's
+//! `repr()` of a parsed JSON value, `golf-mcp`'s since P10, moved here at P27 for the same reason,
+//! when `golf-lab reanalyze`'s one-line diff needed it.
 //!
 //! # `ANALYSIS_VERSION` is stamped here once, and only through the gate
 //!
@@ -108,15 +132,19 @@
 //! recorded by another version than this build's — belongs to the gates, `tests/engine.rs` and
 //! `tests/stages.rs`.
 
+pub mod auto_windows;
 pub mod career_family;
 pub mod compare;
 pub mod profile;
 pub mod profile_family;
+pub mod pyrepr;
 pub mod reports;
 pub mod rerecord;
+pub mod selection_family;
 pub mod session;
 pub mod stages;
 pub mod storage_family;
+pub mod textwrap;
 
 use serde::Deserialize;
 
@@ -127,6 +155,7 @@ use contracts::intent::PracticeGoal;
 use contracts::keypoints::KeypointsFile;
 use contracts::shot::ShotData;
 use contracts::shot_result::ShotResult;
+use contracts::swing::SwingBundleResult;
 use contracts::unscored::UnscoredCheckpoint;
 use contracts::ContractError;
 use feedback::rules::build_feedback;
@@ -195,9 +224,17 @@ const EXCLUDED_FROM_SWING: &[&str] = &["keypoints", "detections"];
 /// Everything else in this crate is plumbing around these four lines, which is the shape
 /// `conformance.py`'s own docstring claims for its version.
 pub fn run(input: &VectorInput) -> serde_json::Value {
+    serialize(&run_bundle(input))
+}
+
+/// The engine and the feedback over one input: [`run`] before serialization. [M29 P26]
+///
+/// `api/pipeline.py::analyze_swing_dir` calls `build_feedback` after it extends the notes, and
+/// calling it first here moves nothing, because the feedback reads `swing` and never `notes`.
+pub fn run_bundle(input: &VectorInput) -> SwingBundleResult {
     let mut result = analyze_swing_bundle(&bundle_request(input));
     result.feedback = Some(build_feedback(&result.swing));
-    serialize(&result)
+    result
 }
 
 /// One vector's input as the engine's argument struct — thirteen fields, borrowed.
@@ -230,7 +267,10 @@ fn bundle_request<'a>(input: &'a VectorInput) -> BundleRequest<'a> {
 /// switched on per call — `skip_serializing_if` is a property of the *type*, and this shape is also
 /// written whole by `storage/`, which keeps both fields. So the drop happens on the `Value`, after
 /// the fact, which is what `model_dump_json(exclude=…)` is doing anyway.
-fn serialize(result: &contracts::swing::SwingBundleResult) -> serde_json::Value {
+///
+/// **Also what `analysis.json` holds** (M29 P26): the pipeline writes the result with the same
+/// drop, so `golf-lab analyze` writes through this rather than through a second copy of the list.
+pub fn serialize(result: &SwingBundleResult) -> serde_json::Value {
     let mut value = serde_json::to_value(result).expect("a SwingBundleResult serializes");
     let swing = value
         .get_mut("swing")

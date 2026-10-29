@@ -25,15 +25,23 @@
 //!   M36 port left out because no corpus read reaches them, ported at M35 P7 with the intent cursor
 //!   frozen Python does not have;
 //! - [`flight_inputs`] — `storage/flight_inputs.py`'s `loft_for_club` and `LoftGap`: a club tag's
-//!   declared loft in the golfer's bag, or which repair would give it one (M35 P8). The corpus-wide
-//!   `read_flight_inputs` join is not ported;
+//!   declared loft in the golfer's bag, or which repair would give it one (M35 P8), and since M29
+//!   P28 the corpus-wide `read_flight_inputs` join, every stored shot filed under the swing holding
+//!   its photo, for `golf-lab flight --shots`;
 //! - [`corpus`] — `storage/corpus.py`, one golfer's distinct swings across every session and the
 //!   honest sample size behind each metric, read over the bundle store and the state readers, with
 //!   the engine generations it judges a stored analysis against as a parameter (M36 P10). Since
 //!   M35 P10 it also admits a photo entry, a shot photo with no face-on clip, read from
 //!   `shot_analysis.json`, and leaves a drill out as `untracked`, which frozen Python's does not.
 //!   Since M37 P4 each entry carries its artifact's shot whole and the shot side of its `unscored`,
-//!   for M37's topic grades, which frozen Python's does not either.
+//!   for M37's topic grades, which frozen Python's does not either;
+//! - [`audio_io`] — `storage/audio_io.py`, a clip's strikes in `{role}.audio.json`, read strictly
+//!   as Python's raises and written atomically where Python's is not (M29 P20). Its caller is the
+//!   lab's strike cache, not the corpus;
+//! - [`keypoints_io`] — `storage/keypoints_io.py`'s reader, a view's pose in `{role}.keypoints.json`
+//!   in either of its two shapes, strict as [`audio_io`] is (M29 P22). The writer is
+//!   `pose::writer`, the sidecar caller's half of ADR-033 clause 8, so there is one spelling of the
+//!   artifact. Its caller is the lab's pose cache.
 //!
 //! # ADR-008's exception is not carried over
 //!
@@ -92,12 +100,14 @@ use std::path::{Path, PathBuf};
 use contracts::ContractError;
 use serde::Serialize;
 
+pub mod audio_io;
 pub mod bag_store;
 pub mod bundle_store;
 pub mod catalogue;
 pub mod corpus;
 pub mod flight_inputs;
 pub mod golfer_store;
+pub mod keypoints_io;
 pub mod manifest;
 pub mod session_meta;
 pub mod shot_store;
@@ -169,6 +179,22 @@ pub(crate) fn write_atomically<T: Serialize>(value: &T, path: &Path) -> io::Resu
     let tmp = tmp_beside(path);
     fs::write(&tmp, to_pretty_json(value))?;
     fs::rename(&tmp, path)
+}
+
+/// `type(payload).__name__` for what `json.loads` returns, for the strict readers' refusals
+/// ([`audio_io`], and [`keypoints_io`] since M29 P22). An integer past `u64` is `int` there and a
+/// float to `serde_json`, so it would be named `float` here; no file either reads holds one.
+pub(crate) fn python_type_name(value: &serde_json::Value) -> &'static str {
+    use serde_json::Value;
+    match value {
+        Value::Null => "NoneType",
+        Value::Bool(_) => "bool",
+        Value::Number(n) if n.is_f64() => "float",
+        Value::Number(_) => "int",
+        Value::String(_) => "str",
+        Value::Array(_) => "list",
+        Value::Object(_) => "dict",
+    }
 }
 
 /// `model_dump_json(indent=2)`'s layout: two spaces, non-ASCII written as itself.

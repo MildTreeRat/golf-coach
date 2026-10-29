@@ -183,7 +183,7 @@ def test_motion_start_is_frame_rate_invariant() -> None:
     Note what this can and cannot show: the fixture's setup is *perfectly* still, so both the old
     and new rules find the dwell here. The failure this guards against needs a noisy setup and a
     gradual takeaway, which is measured on the 461-clip GolfDB corpus by
-    `scripts/golfdb/tune_address.py`, not in a unit test. What it does lock down is that the
+    `archive/golfdb/tune_address.py`, not in a unit test. What it does lock down is that the
     boundary tracks the swing rather than the frame count.
     """
     fast = make_swing(20, 8, takeaway_frames=6)

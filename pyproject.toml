@@ -15,12 +15,13 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# Pose + detection + video. Needed for M1 (pose) and M2 (YOLOv8).
+# Pose + video: MediaPipe, which is what `crates/pose` spawns `golf_coach.pose.worker` for, and one
+# of the two things Python stays for (ADR-035 §1). No `ultralytics` since M29: it was for M2's
+# YOLOv8 club detector, which never got past a stub, and `detection/` was deleted with it (§5).
 vision = [
     "numpy>=1.26",
     "opencv-python>=4.9",
     "mediapipe>=0.10",
-    "ultralytics>=8.1",
 ]
 # FastAPI orchestrator (the imperative shell).
 api = [
@@ -36,10 +37,8 @@ llm = [
     # ImportError on 1.x, so the floor has to say so.
     "mcp>=2.0",
 ]
-# Launch-monitor hardware (Garmin R10 over BLE). Not needed for the mock source.
-hardware = [
-    "bleak>=0.21",
-]
+# No `hardware` extra since M29. Its `bleak` was for a Garmin R10 read over BLE, which nothing in
+# the package ever imported: shots arrive as photos of the screen (ADR-014, ADR-034).
 # Local OCR for reading shot data off photos of the simulator screen (ADR-014). Needed
 # only to *import* screenshots; `ScreenShotDataSource` reads the parsed results with no
 # extras at all. Includes opencv/numpy so it installs standalone without `vision`.
@@ -74,22 +73,10 @@ audio = [
     "imageio-ffmpeg>=0.4",
     "numpy>=1.26",
 ]
-# Offline research / reference-data derivation (M4-REF, M8-PAIR). Used ONLY by scripts/golfdb/*
-# and scripts/caddieset/*, never by the package: pandas appears at exactly one boundary (reading
-# GolfDB's pickled DataFrame), after which everything downstream is stdlib. Keeping it out of
-# `vision` keeps the invariant that the analysis core installs and tests with no extras at all
-# (ADR-008).
-#
-# numpy and scikit-learn are here for the same reason and under the same rule: model *fitting*
-# happens offline in scripts, and what ships is the fitted artifact as committed JSON that stdlib
-# code evaluates — the pattern `ranges.json` and `golfdb_v1.json` already are (ADR-022). If a
-# `golf_coach.*` module ever imports either of these, that invariant has been broken, and
-# tests/api/test_pipeline_imports.py is what says so.
-research = [
-    "pandas>=2.0",
-    "numpy>=1.26",
-    "scikit-learn>=1.4",
-]
+# No `research` extra since M29. Its pandas, numpy and scikit-learn served only the reference-data
+# scripts, which moved to `archive/` (ADR-035 §5); `archive/README.md` says how to install them by
+# hand. Fitting stays out of the package either way (ADR-022): if a `golf_coach.*` module ever
+# imports one of them, tests/api/test_pipeline_imports.py is what says so.
 dev = [
     "pytest>=8.0",
     "ruff>=0.4",
@@ -98,7 +85,7 @@ dev = [
 ]
 # Convenience: everything at once.
 all = [
-    "golf-coach[vision,api,llm,hardware,ocr,audio,research,dev]",
+    "golf-coach[vision,api,llm,ocr,audio,dev]",
 ]
 
 [tool.hatch.build.targets.wheel]

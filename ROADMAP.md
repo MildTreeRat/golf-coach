@@ -1,6 +1,6 @@
 # Roadmap: AI Golf Swing Trainer
 
-## Last Updated: 2026-10-10
+## Last Updated: 2026-10-29
 
 Grouped by **state**, not by number, because the numbers no longer run in order: the pose-only
 slices (M4-PoC, M4-PoC+, M4-REF, M5-FB) delivered the mechanics half of M4 and the ranking half
@@ -56,10 +56,10 @@ wording; only the grouping and the M4 checklist have been corrected.
 | **M37** Strike profile, topic grades and strengths/weaknesses | ✅ Done *(2026-10-15)*, **14/14 phases** — the phases and what each found are in [m37-strike-profile-and-grades.md](docs/plans/m37-strike-profile-and-grades.md). The first analysis written Rust first with no Python behind it at all: per club a strike profile and six topics' grades, each a share of good shots with a Wilson 95% interval and withheld below 10 judged shots, a club and a player blend, and the strengths and weaknesses list, reached through `golf-core profile` and wired to nothing else yet. Mechanics enters none of it. The corpus carries each entry's shot, re-recorded as `career-v3`, and a tenth vector family, `profile/`, is hand-worked and Rust-recorded. **Strike location is graded only from a measured impact offset**, which [M42](#m42-full-swing-the-second-device-and-its-impact-video) will read, so on real data it is absent; a `synthetic` device proves it. Over `data/`, the first grade is the player's consistency. No engine, stage, shot or screen vector moved, and nothing under `src/` or `data/` changed | — (desk work; done) | [§M37](#m37-strike-profile-topic-grades-and-strengthsweaknesses-rust-first) |
 | **M41** The course-play screen layout | ⬜ Not started, and free to start by its order since M35 landed on 2026-10-10. **Raised 2026-10-07** from one photo of a second screen layout, and ordered after M36 and M35 by the user's choice, not by a dependency: `crates/screen` matches 4 of its 12 stat labels today. Not data-only, because its left/right signs are lit letters rather than printed words | M35, by order — this box, plus a handful of new photos | [§M41](#m41-the-course-play-screen-layout) |
 | **M42** Full Swing: the second device and its impact video | ⬜ Not started. **Raised 2026-10-10** in M37's planning. A Live Photo spike first, then the impact reader that fills `impact_offset_h/v` for M37's strike-location topic, plus Full Swing's screen profile and capability entry. HD Golf stays in use beside it. M37's strike topic landed on 2026-10-15, so only the photos are missing | Sample Live Photos — this box, the bay for photos | [§M42](#m42-full-swing-the-second-device-and-its-impact-video) |
-| **M38** The iPhone app | 🔒 Blocked | A Mac for the skeleton (M34 landed 2026-10-02), M29 for P4's export import; then the bay. M37, for the profile screens, landed 2026-10-15 | [§M38](#m38-the-iphone-app) |
+| **M38** The iPhone app | 🔒 Blocked | A Mac for the skeleton (M34 landed 2026-10-02); then the bay. M37, for the profile screens, landed 2026-10-15, and M29, for P4's export import (`golf-lab import-export`), on 2026-10-29 | [§M38](#m38-the-iphone-app) |
 | **M39** Optional video on the phone | 🔒 Blocked | M38; a Mac, then the bay | [§M39](#m39-optional-video-on-the-phone) |
-| **M40** The laptop client resumes | 🔒 Blocked. M21, M24, M25 and M26 re-scoped under it, as the desktop target of the same app. It also decides `api/` (`axum` or dropped) and deletes the frozen Python | M38 and M29 | [§M40](#m40-the-laptop-client-resumes) |
-| **M29** The lab port | ⬜ Not started, and unblocked: M34 landed on 2026-10-02 and M36 on 2026-10-08. **Re-scoped 2026-09-30 by [ADR-035](docs/decisions/035-rust-everywhere-python-where-required.md#5-the-lab-port-is-m29-re-scoped), number kept.** It was "the last Python", blocked on M40. It is now the port of the lab: a Rust lab CLI, the `rmcp` server, OCR through `ort`, and the archive move. It deletes only what the frozen FastAPI server does not import, and M40 deletes the rest. Its old opening question, how ADR-022's fitting reaches a measurement, is dissolved: the fitting is archived | M34 and M36 — this box, beside M38. It carries M37's `get_strike_profile` | [§M29](#m29-the-lab-port--a-rust-lab-cli-the-rmcp-server-and-the-archive-move) |
+| **M40** The laptop client resumes | 🔒 Blocked. M21, M24, M25 and M26 re-scoped under it, as the desktop target of the same app. It also decides `api/` (`axum` or dropped) and deletes the frozen Python | M38. M29 landed on 2026-10-29 | [§M40](#m40-the-laptop-client-resumes) |
+| **M29** The lab port | ✅ Done *(2026-10-29)*, **37/37 phases** — the phases and what each found are in [m29-lab-port.md](docs/plans/m29-lab-port.md). The lab is Rust, in three new crates: `crates/ocr` (the screen's recognizer through `ort`, the only crate that reaches it), `crates/mcp` (`golf-mcp`, the `rmcp` server, carrying M37's `get_strike_profile`) and `crates/lab` (`golf-lab`, the lab CLI over `crates/trigger`, ffmpeg, `crates/pose`, the reader and the engine). The OCR gate passed 12 of the 13 bay photos exactly, and the thirteenth's one value is declared. Two families, `mcp/` and `selection/`, were recorded once from frozen Python and pass. `data/` was backed up and rewritten once: the 13 shots stamped, the 15 bundles re-run at engine 17, and the frozen server reads every artifact. The LLM reaches its tools through `golf-mcp` over stdio, the frozen server's eight write routes answer 410 naming their verbs, the research record is in `archive/`, and the lab scripts, `detection/` and `frontend/` are deleted. [ADR-035's M29 addendum](docs/decisions/035-rust-everywhere-python-where-required.md) answers its four deferred questions. No engine, stage, shot, screen, audio, format, storage, career or profile vector moved, and no version key | — (desk work; done) | [§M29](#m29-the-lab-port--a-rust-lab-cli-the-rmcp-server-and-the-archive-move) |
 | **M5** Feedback UI | ⬜ Not started, **superseded in shape by [M38](#m38-the-iphone-app)** (no web UI). It was M25 until 2026-09-29, when [ADR-034](docs/decisions/034-shot-first-phone-first.md#consequences) made the phone app the first shell | — (its screens are M38's, in the app's shape) | [§M5](#milestone-5-feedback-ui) |
 | **M2** Club & ball detection | 🔒 Gated, **and M1.5 said no-go** | Bay lighting for a ~1/2000 s exposure — *not* a global-shutter camera | [§M2](#milestone-2-club--ball-detection) |
 | Hardware re-validation | 🔒 Gated | Cameras / launch monitor arriving | [§Gate](#hardware-re-validation-gate-revisit-when-cameras--launch-monitor-arrive) |
@@ -80,7 +80,7 @@ served live `call_tool` requests including the not-found path. It is registered 
 (`claude mcp add`, per the README) and reports `✔ Connected`, which is a second client completing
 the same handshake independently.
 
-**NEXT ACTION — M29 or M41, by the user's order; photos for M42 *(2026-10-15)*.**
+**NEXT ACTION — M41 or M42, by the user's order, each starting with photos; M38 waits on a Mac *(2026-10-29)*.**
 [ADR-034](docs/decisions/034-shot-first-phone-first.md) moved the product to the shot and the phone.
 The user then redirected M32's planning, and
 [ADR-035](docs/decisions/035-rust-everywhere-python-where-required.md) makes the project Rust
@@ -101,12 +101,16 @@ practice mode scores mechanics, and a drill is stored and analysed but reaches n
 **[M37](#m37-strike-profile-topic-grades-and-strengthsweaknesses-rust-first)** closed on 2026-10-15:
 the graded profile is Rust, the first analysis with no Python behind it at all, reached through
 `golf-core profile`, and strike location waits on a measured impact offset that
-[M42](#m42-full-swing-the-second-device-and-its-impact-video) will read. The next desk work on this
-box is the user's to order. [M29](#m29-the-lab-port--a-rust-lab-cli-the-rmcp-server-and-the-archive-move)
-ports the lab and needs nothing more: it is what M38's export import and M40 wait on, and it carries
-M37's `get_strike_profile`. [M41](#m41-the-course-play-screen-layout) is free to start, and starts
-with a handful of new photos of the course-play screen. M42 starts with sample Live Photos of Full
-Swing shots from the bay. [M38](#m38-the-iphone-app)'s skeleton waits only on a Mac. **[M33](#m33-apple-vision-spike--can-the-phone-read-the-screen)
+[M42](#m42-full-swing-the-second-device-and-its-impact-video) will read.
+**[M29](#m29-the-lab-port--a-rust-lab-cli-the-rmcp-server-and-the-archive-move)** closed on
+2026-10-29: the lab is Rust (`golf-lab`, `golf-mcp` and `crates/ocr`'s reader), `data/` was
+rewritten by it once, the frozen server's write routes are closed, and the Python that still runs is
+clause 1's two exceptions plus the frozen server and conformance tooling M40 deletes. The next desk work on this box is the user's to
+order, and none of it needs more code first. [M41](#m41-the-course-play-screen-layout) is free to
+start, and starts with a handful of new photos of the course-play screen. M42 starts with sample
+Live Photos of Full Swing shots from the bay. [M38](#m38-the-iphone-app)'s skeleton waits only on a
+Mac, and its P4 export import is built (`golf-lab import-export`).
+[M40](#m40-the-laptop-client-resumes) now waits on M38 alone. **[M33](#m33-apple-vision-spike--can-the-phone-read-the-screen)
 runs early on purpose.** Whether Apple Vision reads the HD Golf screen is the product's biggest
 unknown, it needs a Mac and no Rust, and if it fails the plan changes before any app work starts.
 The next bay trip serves the pivot too. It should enumerate what the screen's `Custom` tile can be
@@ -588,7 +592,7 @@ first*, grounded in how far off the tour population a swing actually sits. Desig
       now carries the names. The score is *not* penalised; the fix is disclosure, not arithmetic
 - [x] **Tried to widen the panel 3 → 5, and the gate said no.** GolfDB's mid-backswing/mid-downswing
       are *lead arm parallel to the ground*, a real body pose (unlike `toe_up`, a club event gated on
-      M2). New `scripts/golfdb/tune_arm_parallel.py` scored three candidate rules over the 461-clip
+      M2). New `archive/golfdb/tune_arm_parallel.py` scored three candidate rules over the 461-clip
       face-on corpus **before** either checkpoint was written: `prior_frac`, which reads no pose
       signal at all, beats every pose rule on every column — frac_err 0.043 vs 0.059 (mid_backswing)
       and 0.038 vs 0.100 (mid_downswing). A checkpoint built on our detection would be worse than a
@@ -927,7 +931,7 @@ of any metric, is why the panel sat at three checkpoints for two milestones.
       every shot on disk reads smash 0.89-1.00, i.e. ball speed *below* club speed, and the OCR is
       faithful, so the simulator itself is printing a physically impossible number. `spin_axis` too
       — its sign contradicts the contract and the parser warns it stored an uninterpreted magnitude
-- [x] **`scripts/golfdb/tune_spatial_metric.py`** — the gate the repo did not have. It had three
+- [x] **`archive/golfdb/tune_spatial_metric.py`** — the gate the repo did not have. It had three
       harnesses for *temporal* rules and none for spatial quantities, so "should we add this
       checkpoint?" was answerable only by argument. Scores population spread against measurement
       error, where error is estimator disagreement (`lite` vs `full`, both already cached for all
@@ -956,7 +960,7 @@ of any metric, is why the panel sat at three checkpoints for two milestones.
       fault, which is the failure that blocked this metric for two milestones
 - [x] **`head_hip_offset_impact_norm` was rejected, and its *delta* promoted instead**
       *(2026-08-13)* — the panel is 3 → 5 → **6**. The absolute offset failed a transfer check that
-      had never been run: `scripts/golfdb/check_metric_transfer.py` measures the same quantity **at
+      had never been run: `archive/golfdb/check_metric_transfer.py` measures the same quantity **at
       address**, where the body is square and no swing has happened, and found our bay clips sit
       **0.32 shoulder-widths** from the corpus there — 55% of the whole gap at impact and ~4x the
       metric's own error. Scoring it would have made "not staying behind the ball" the top tip on
@@ -1031,7 +1035,7 @@ club. It is also the first empirical support [ADR-009](docs/decisions/009-swing-
 two-axis split has had.
 
 **Gate 2 — is there joint structure the bands are missing? Yes.**
-`scripts/golfdb/tune_joint_structure.py` over the 458 face-on clips: `head_sway_norm` ×
+`archive/golfdb/tune_joint_structure.py` over the 458 face-on clips: `head_sway_norm` ×
 `hip_shift_at_top_norm` at **+0.441**, × `head_hip_gain_norm` at **-0.385**, two more past 0.2,
 correlation-matrix condition number 4.8.
 
@@ -1042,9 +1046,9 @@ Leave-one-*player*-out exceedance 11.1% against a 10% target, so the shape trans
 fit never saw. On `2026-08-10/2` it places a swing scoring **96.9** at the **73rd percentile** of
 unusualness, with `head_hip_gain_norm` contributing 38.6% of the departure *while passing its band*.
 
-- [x] `scripts/caddieset/{fetch,ingest,study_panel}.py` and the corpus decision
-- [x] `scripts/golfdb/tune_joint_structure.py` — the gate, plus player-clustered band intervals
-- [x] `scripts/golfdb/derive_joint_model.py` → `analysis/benchmarks/joint_model_v1.json`
+- [x] `archive/caddieset/{fetch,ingest,study_panel}.py` and the corpus decision
+- [x] `archive/golfdb/tune_joint_structure.py` — the gate, plus player-clustered band intervals
+- [x] `archive/golfdb/derive_joint_model.py` → `analysis/benchmarks/joint_model_v1.json`
 - [x] `analysis/benchmarks/joint.py` + 12 pins in `tests/analysis/test_joint.py`
 - [x] **Surface it.** Landed in two halves, and the gap between them is the lesson. M8.1 did the
       data half — registered as a `Measurement`, `ANALYSIS_VERSION` 3 → 4, `reanalyze.py` re-run —
@@ -1065,7 +1069,7 @@ unusualness, with `head_hip_gain_norm` contributing 38.6% of the departure *whil
       2026-08-18](docs/decisions/010-benchmark-ranges.md)
 - [x] **Per-club bands gated, and none is cut — 2026-08-18.** Costed was not gated: the counts
       below say a stratum is big enough to cut a band from, not that the band differs from the one
-      shipped. `scripts/golfdb/tune_per_club_bands.py` screens each per-club p90 against the
+      shipped. `archive/golfdb/tune_per_club_bands.py` screens each per-club p90 against the
       all-club p90 in units of the metric's own error, then puts a player-clustered bootstrap on
       whatever clears. **Two of nineteen strata survive** (`head_sway_norm` x iron, 2.85x;
       `finish_balance_norm` x fairway, 2.56x) and they do not make a panel. **Driver never differs
@@ -1090,7 +1094,7 @@ saying **when** in the swing the departure happens, which is the sentence a coac
 Steps, and **the ordering matters — step 1 gates step 3**:
 
 1. - [x] **Gate the `z` channel — PASSED with a caveat, 2026-08-16.**
-        `scripts/golfdb/tune_z_channel.py`, screening every axis on `tune_spatial_metric.py`'s bar
+        `archive/golfdb/tune_z_channel.py`, screening every axis on `tune_spatial_metric.py`'s bar
         (spread ÷ noise ≥ 2.0) over the 461 face-on clips that have both estimators cached.
         Median ratio **`x` 9.86, `y` 18.09, `z` 2.69**, all 12 landmarks clearing 2.0 at n = 3,521.
         So `z` is not pure noise — but it carries only ~22% of the planar signal-to-noise, **and the
@@ -1105,7 +1109,7 @@ Steps, and **the ordering matters — step 1 gates step 3**:
         down-the-line — where before it held only the face-on half. (GolfDB's remaining 354 clips
         are view `other` and are not worth extracting: they are neither of our camera positions.)
         Nothing consumes the DTL half yet; it is the raw material for the item below.
-3. - [x] **Fitted and validated, 2026-08-16** — `scripts/golfdb/derive_trajectory_model.py` →
+3. - [x] **Fitted and validated, 2026-08-16** — `archive/golfdb/derive_trajectory_model.py` →
         `analysis/benchmarks/trajectory_model_v1.json` (98 KB). 12 landmarks, **x/y**, 40 timesteps
         on **3 detected anchors**, PCA to **10 components**, 73.6% variance, over 415 clips from
         116 golfers. Leave-one-player-out exceedance **T² 8.9%** against a 10% target.
@@ -1168,7 +1172,7 @@ What it needs, and none of it is a rerun of M8.1:
   [M7 Spike](docs/M7_TWO_PHONE_SPIKE.md) Q1, the biggest unmeasured risk under the two-phone
   ladder, and reverses M4_POSE_BAKEOFF §Phase B7's "no view-aware landmark selection is warranted"
   — that was one bay swing; this is 1,045 labelled clips.
-- [x] **Its own landmark list — measured 2026-08-17.** `scripts/golfdb/tune_landmarks.py` over all
+- [x] **Its own landmark list — measured 2026-08-17.** `archive/golfdb/tune_landmarks.py` over all
   584 DTL clips: **the whole lead arm is gone**, not just the wrist. Lead elbow 0.46, wrist 0.47,
   thumb/index/pinky 0.37-0.40 tracked, against 0.84-0.87 on the trail side. Shoulders, hips, knees
   and ankles are fine on both sides — it is specifically the arm that swings across the body and
@@ -1711,7 +1715,10 @@ fades stored as draws). M12 lands the inputs, which are the half that cannot be 
 - [x] **Ask follow-up questions about a swing** *(2026-08-15, [ADR-020](docs/decisions/020-conversational-followups.md))* —
       the SDK tool runner over `mcp/query.py`'s functions directly, exactly as this line predicted;
       the stdio round trip stays for *external* clients. A conversation seeds from the swing's
-      stored brief and looks everything else up through the same eleven tools. Transcripts live in
+      stored brief and looks everything else up through the MCP tools: from M29 P16, for
+      `scripts/ask_swing.py`, the same twelve tools `golf-mcp` serves every client, over stdio,
+      while the frozen results page's chat panel keeps Python's eleven, in process, until M40.
+      Transcripts live in
       `data/processed/conversations/`, holding the model's own content blocks **verbatim** —
       thinking blocks are only replayable unchanged, and only into the model that produced them.
       Two entry points: `scripts/ask_swing.py` and a chat panel on the results page.
@@ -2106,9 +2113,10 @@ need to be able to calculate it from the picture."
 
 ## M38: The iPhone app
 
-**Status**: 🔒 Blocked on a Mac for its skeleton and M29 for P4's export import. M34 landed on
-2026-10-02, so the skeleton can start on a Mac, in parallel with M29. M37 landed on 2026-10-15, so
-the profile screens have their `GradedProfile` to read (`golf_core::profile::run_profile`).
+**Status**: 🔒 Blocked on a Mac for its skeleton. M34 landed on 2026-10-02, so the skeleton can
+start on a Mac. M37 landed on 2026-10-15, so the profile screens have their `GradedProfile` to read
+(`golf_core::profile::run_profile`). M29 landed on 2026-10-29, so P4's export has its import,
+`golf-lab import-export`, and what that verb asks of the export is in the program plan's §M38 P4.
 
 **The ask.** A standalone Flutter app over the Rust core (ADR-034 §6). Pick the golfer, club and
 the session's intent, photograph the screen, read it with Vision and parse it in Rust, review it,
@@ -2150,7 +2158,11 @@ untouched either way.
 
 ## M40: The laptop client resumes
 
-**Status**: 🔒 Blocked on M38 and M29.
+**Status**: 🔒 Blocked on M38. M29 landed on 2026-10-29. What it leaves for M40 is named in
+[ADR-035's M29 addendum](docs/decisions/035-rust-everywhere-python-where-required.md) (the frozen
+worker's startup recovery, the `sidecar/` package) and in item 6 of
+[its plan's](docs/plans/m29-lab-port.md) P34 and P35 findings (the recorded Rust sentences that
+still name a deleted script or a closed route, and `crates/trigger`'s copied window constants).
 
 **The ask.** The same Flutter app as a desktop target. M21, M24 and M25 are re-scoped here, and M26
 moves here whole: CI, packaging, signing and distribution. It adds what only a laptop has: an R10
@@ -2426,7 +2438,7 @@ instead of a video stream. Getting it wrong is a bandwidth decision as well as a
   the loudest transient in a clip is unknown until the clip is over. It does not need them: the
   precursor problem they exist to solve is an *alignment* problem, answered afterwards by running
   the cut clip through the offline detector.
-- **P3 — the replay harness** (`scripts/trigger_replay.py`), and the phase that produced the real
+- **P3 — the replay harness** (`archive/trigger_replay.py`), and the phase that produced the real
   numbers. At the shipped bar: **recall 30/30, precision 0.909, latency +0 ms on every clip.**
   Three findings, and two of them corrected the *measurement* rather than the code:
   1. **`detect_strikes` is ground truth for transients, not for shots.** The first harness
@@ -3157,7 +3169,7 @@ workers behind a bounded queue, one retry on a *fresh* worker, a shutdown bounde
 N), `writer` (the `{camera_id}.keypoints.json` the worker refuses to decide) and the `golf-pose`
 binary with its `run` and `sweep` subcommands. In Python: `src/golf_coach/pose/worker.py`, which
 reuses `estimate_pose`, `FileVideoSource` and `_to_frame_keypoints` unchanged and adds no entry
-point anyone in Python calls, and `scripts/pose_replay.py`, the corpus harness. `cargo test` drives
+point anyone in Python calls, and `archive/pose_replay.py`, the corpus harness. `cargo test` drives
 a stub worker with 17 modes, so **no test in either language needs MediaPipe**; the real worker runs
 behind `GOLF_POSE_REAL_WORKER`.
 
@@ -3191,8 +3203,8 @@ get there took **69.8 minutes**: 42,648 frames at 10.2 fps overall.
 
 **And it agreed, measured by P7 on 2026-09-27: 30/30 clips, 42,648 frames, 5,757,660 values compared,
 0 differing, worst absolute delta 0.0**, with 16 key paths on each side of every clip and no set
-difference — so an absent key never passed for a null. `scripts/pose_replay.py` is the harness, on
-`scripts/trigger_replay.py`'s model, and the census is reported instead of a verdict for M22 P8's
+difference — so an absent key never passed for a null. `archive/pose_replay.py` is the harness, on
+`archive/trigger_replay.py`'s model, and the census is reported instead of a verdict for M22 P8's
 reason in reverse: *"0 of 5,757,660"* is a stronger claim than *"passed"* at the same price. Per-clip
 throughput ran **9.5–10.7 fps**, so the 9.2 the derived deadline assumes is below every clip measured.
 Two caveats on the word *corpus*: it is 30 comparisons over **26 distinct containers**, two of them
@@ -3207,7 +3219,7 @@ exercised a `frame_range`**, so that field is still validated and unused.
 
 **The default pool size is two, and the measurement that chose it contradicted the hypothesis it was
 written against.** P8 ran the 6 shortest corpus clips — 2,899 frames of 4K portrait — through one
-pool at each width on 2026-09-27 (`scripts/pose_replay.py --shortest 6 --sweep 1,2,4`):
+pool at each width on 2026-09-27 (`archive/pose_replay.py --shortest 6 --sweep 1,2,4`):
 
 | workers | pose | throughput | speedup | aggregate CPU | cores busy | peak RSS |
 |---|---|---|---|---|---|---|
@@ -3381,8 +3393,16 @@ one a USB camera produced.
 > milestones it used to wait on. The old body is in git history, and the list at the foot of this
 > section says where each part of it went.
 
-**Status**: ⬜ Not started, and unblocked: M34 landed on 2026-10-02 and M36 on 2026-10-08. It is no
-longer blocked on M40.
+**Status**: ✅ Done *(2026-10-29)*, 37/37 phases. The phase list, the interview's decisions and
+what each phase found are in [docs/plans/m29-lab-port.md](docs/plans/m29-lab-port.md), and where
+that plan and this section disagree, the plan wins. Every exit item in that plan was checked at the
+close. What was built against this section, and what changed, is the program plan's
+[§M29 "Built 2026-10-29" block](docs/plans/m31-m40-shot-first-pivot.md#m29--the-lab-port-a-rust-lab-cli-the-rmcp-server-and-the-archive-move),
+and the four open questions below are answered in
+[ADR-035's M29 addendum](docs/decisions/035-rust-everywhere-python-where-required.md): the OCR gate
+holds the shot and declares one value (D7), the caveats reach Python through `golf-mcp` (D10), the
+upload path and every other write route closed (D11), and no `sidecar/` package until M40 (D12).
+The body below is the section as planned, kept as the ask it was built to.
 
 **The ask.** Python is reduced to the two exceptions
 [ADR-035 clause 1](docs/decisions/035-rust-everywhere-python-where-required.md#1-the-rule-and-the-two-exceptions-it-names)
@@ -3410,7 +3430,7 @@ rest, `analysis/` included, once it has decided `api/`. Until then the frozen se
 Rust lab writes
 ([clause 4](docs/decisions/035-rust-everywhere-python-where-required.md#4-the-frozen-python-lab)).
 
-**Open, and M29's to decide**
+**Open, and M29's to decide**, each answered at the close (Status, above)
 ([ADR-035's Deferred list](docs/decisions/035-rust-everywhere-python-where-required.md#deferred-by-choice)):
 - what the OCR gate allows to differ;
 - whether the frozen server's upload path stays open until M40;
@@ -3427,7 +3447,8 @@ carries M37's `get_strike_profile`, a tool of its `rmcp` server (the M37 plan's 
 - `scripts/ask_swing.py` answers through the `rmcp` server.
 - The archive move and the deletions are done, with the doc paths rewritten in the same change.
 
-**Detail**: the program plan's
+**Detail**: [docs/plans/m29-lab-port.md](docs/plans/m29-lab-port.md), which refines the program
+plan's
 [§M29](docs/plans/m31-m40-shot-first-pivot.md#m29--the-lab-port-a-rust-lab-cli-the-rmcp-server-and-the-archive-move).
 
 **What the old section said, and where each part went.**

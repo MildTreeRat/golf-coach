@@ -28,6 +28,7 @@ from golf_coach.analysis.flight_infer import flight_for_shot
 from golf_coach.analysis.flight_measure import FLIGHT_MEASUREMENTS
 from golf_coach.api.app import create_app
 from golf_coach.config import settings
+from golf_coach.contracts.club import ClubId
 from golf_coach.contracts.golfer import Handedness
 from golf_coach.contracts.shot import ShotData, ShotProvenance, ShotSource
 from golf_coach.launch_monitor.screen.store import ShotStore
@@ -100,23 +101,19 @@ def client(store, golfers, shots):
     return TestClient(create_app(store=store, golfers=golfers, token=None, worker=None))
 
 
-def _seed(client, store, shots, *, fields, club="7i", tag="a", with_shot=True, parsed=True):
-    """One uploaded swing, with its shot screen parsed into the store under the photo's own hash.
+def _seed(file_swing, store, shots, *, fields, club="7i", tag="a", with_shot=True, parsed=True):
+    """One filed swing, with its shot screen parsed into the store under the photo's own hash.
 
     The digest is read back off the manifest rather than hashed here: the join the route performs
     is `SwingManifest.roles[SHOT_SCREEN].content_sha256` against `ShotProvenance.image_sha256`, and
     a test that computed its own sha256 would agree with itself while the two sides drifted.
     """
-    client.post("/api/sessions/current/golfer", json={"name": "Aaron", "handedness": "right"})
-    client.post("/api/sessions/current/club", json={"club": club})
     roles = _ROLES if with_shot else _ROLES[:2]
     for role in roles:
-        res = client.post(
-            "/api/uploads",
-            params={"role": role, "filename": f"{role}.mov"},
-            content=f"{role}-{tag}".encode(),
+        filed = file_swing(
+            store, role, f"{role}-{tag}".encode(), player_id="aaron", club=ClubId(club)
         )
-    session_id, swing_id = res.json()["session_id"], res.json()["swing_id"]
+    session_id, swing_id = filed.session_id, filed.swing_id
 
     manifest = store.get_swing(session_id, swing_id)
     assert manifest is not None
@@ -160,8 +157,10 @@ def _reflown(store, shots, session_id, swing_id, *, loft_deg=30.5):
 # ------------------------------------------------------------------- a flight that flew
 
 
-def test_a_printed_spin_flies_and_the_carry_is_the_integrator_s_own(client, store, shots) -> None:
-    session_id, swing_id = _seed(client, store, shots, fields=_PRINTED)
+def test_a_printed_spin_flies_and_the_carry_is_the_integrator_s_own(
+    client, store, shots, file_swing
+) -> None:
+    session_id, swing_id = _seed(file_swing, store, shots, fields=_PRINTED)
 
     body = _flight(client, session_id, swing_id).json()
 
@@ -176,7 +175,7 @@ def test_a_printed_spin_flies_and_the_carry_is_the_integrator_s_own(client, stor
 
 
 def test_a_flown_shot_serves_every_simulated_name_the_artifact_would_have(
-    client, store, shots
+    client, store, shots, file_swing
 ) -> None:
     """The registry is the definition, so the route and `analysis.json` cannot drift apart.
 
@@ -185,7 +184,7 @@ def test_a_flown_shot_serves_every_simulated_name_the_artifact_would_have(
     spin was printed, so `flight_spin_rpm` is *not* recorded. Five of the six, and the sixth is
     the one that says a solved spin is not a measured one.
     """
-    session_id, swing_id = _seed(client, store, shots, fields=_PRINTED)
+    session_id, swing_id = _seed(file_swing, store, shots, fields=_PRINTED)
 
     body = _flight(client, session_id, swing_id).json()
     names = {m["name"] for m in body["measurements"]}
@@ -196,9 +195,11 @@ def test_a_flown_shot_serves_every_simulated_name_the_artifact_would_have(
     assert body["unscored"] == []
 
 
-def test_the_measured_numbers_travel_beside_the_simulated_ones(client, store, shots) -> None:
+def test_the_measured_numbers_travel_beside_the_simulated_ones(
+    client, store, shots, file_swing
+) -> None:
     """M15 P16 draws the measured landing point beside the simulated one; this is that point."""
-    session_id, swing_id = _seed(client, store, shots, fields=_PRINTED)
+    session_id, swing_id = _seed(file_swing, store, shots, fields=_PRINTED)
 
     body = _flight(client, session_id, swing_id).json()
     measured = {m["name"]: m["value"] for m in body["measured"]}
@@ -212,7 +213,7 @@ def test_the_measured_numbers_travel_beside_the_simulated_ones(client, store, sh
 
 
 def test_the_comparison_pairs_each_number_with_the_printed_one_and_says_what_the_gap_is(
-    client, store, shots
+    client, store, shots, file_swing
 ) -> None:
     """M15 P16 renders this; it does not derive it (`flight_measure.compare_to_printed`).
 
@@ -221,7 +222,7 @@ def test_the_comparison_pairs_each_number_with_the_printed_one_and_says_what_the
     offline is not a check at all: the two numbers are where the ball started and where it
     finished, and only one of them was measured.
     """
-    session_id, swing_id = _seed(client, store, shots, fields=_PRINTED)
+    session_id, swing_id = _seed(file_swing, store, shots, fields=_PRINTED)
 
     served = _flight(client, session_id, swing_id).json()["comparison"]
     rows = {row["quantity"]: row for row in served}
@@ -233,14 +234,16 @@ def test_the_comparison_pairs_each_number_with_the_printed_one_and_says_what_the
     assert all(row["reading"] for row in rows.values()), "a row without its sentence is two numbers"
 
 
-def test_a_solved_spin_makes_its_own_carry_row_not_a_check(client, store, shots) -> None:
+def test_a_solved_spin_makes_its_own_carry_row_not_a_check(
+    client, store, shots, file_swing
+) -> None:
     """⚠️ The row this phase refuses to serve as a validation.
 
     One bag edit turns the refusal above into a flight, and that flight's carry is the printed one
     reproduced — because the printed one is what the solve inverted. Two numbers agreeing to a
     thousandth of a yard is the most convincing thing on the page and evidence of nothing.
     """
-    session_id, swing_id = _seed(client, store, shots, fields=_TWO_BRANCH, club="3w")
+    session_id, swing_id = _seed(file_swing, store, shots, fields=_TWO_BRANCH, club="3w")
     client.post("/api/golfers/aaron/bag/3w", json={"loft_deg": 15.0})
 
     body = _flight(client, session_id, swing_id).json()
@@ -253,10 +256,10 @@ def test_a_solved_spin_makes_its_own_carry_row_not_a_check(client, store, shots)
 
 
 def test_a_refused_flight_has_nothing_to_set_beside_the_printed_numbers(
-    client, store, shots
+    client, store, shots, file_swing
 ) -> None:
     """`measured` still travels — the screen printed those — but there is no simulated half."""
-    session_id, swing_id = _seed(client, store, shots, fields=_UNREACHABLE)
+    session_id, swing_id = _seed(file_swing, store, shots, fields=_UNREACHABLE)
 
     body = _flight(client, session_id, swing_id).json()
 
@@ -265,9 +268,9 @@ def test_a_refused_flight_has_nothing_to_set_beside_the_printed_numbers(
     assert {m["name"] for m in body["measured"]} >= {"carry_distance_yds"}
 
 
-def test_the_caveats_are_the_ones_the_flight_owes(client, store, shots) -> None:
+def test_the_caveats_are_the_ones_the_flight_owes(client, store, shots, file_swing) -> None:
     """Composed by `analysis/flight_caveats.caveats_for`, which is also what the CLI prints."""
-    session_id, swing_id = _seed(client, store, shots, fields=_PRINTED)
+    session_id, swing_id = _seed(file_swing, store, shots, fields=_PRINTED)
 
     said = _flight(client, session_id, swing_id).json()["caveats"]
 
@@ -280,9 +283,9 @@ def test_the_caveats_are_the_ones_the_flight_owes(client, store, shots) -> None:
 # ------------------------------------------------------------------- the path itself
 
 
-def test_the_path_is_sampled_and_keeps_the_solved_landing(client, store, shots) -> None:
+def test_the_path_is_sampled_and_keeps_the_solved_landing(client, store, shots, file_swing) -> None:
     """The landing is the one point the integrator solved for, so it is never the one dropped."""
-    session_id, swing_id = _seed(client, store, shots, fields=_PRINTED)
+    session_id, swing_id = _seed(file_swing, store, shots, fields=_PRINTED)
 
     body = _flight(client, session_id, swing_id, points=5).json()
     path = body["path"]
@@ -301,11 +304,11 @@ def test_the_path_is_sampled_and_keeps_the_solved_landing(client, store, shots) 
     assert path["points"][-1]["z_yds"] == pytest.approx(landing.z_yds)
 
 
-def test_the_path_carries_the_clamp_flag_per_point(client, store, shots) -> None:
+def test_the_path_carries_the_clamp_flag_per_point(client, store, shots, file_swing) -> None:
     """Every iron on this corpus flies its whole path on a held end row, and the page has to say
     which part was extrapolated — which is per point, because the spin ratio climbs as the ball
     slows."""
-    session_id, swing_id = _seed(client, store, shots, fields=_PRINTED)
+    session_id, swing_id = _seed(file_swing, store, shots, fields=_PRINTED)
 
     path = _flight(client, session_id, swing_id).json()["path"]
 
@@ -315,9 +318,9 @@ def test_the_path_carries_the_clamp_flag_per_point(client, store, shots) -> None
 
 
 def test_a_points_count_below_two_is_refused_rather_than_silently_widened(
-    client, store, shots
+    client, store, shots, file_swing
 ) -> None:
-    session_id, swing_id = _seed(client, store, shots, fields=_PRINTED)
+    session_id, swing_id = _seed(file_swing, store, shots, fields=_PRINTED)
 
     assert _flight(client, session_id, swing_id, points=1).status_code == 422
 
@@ -325,9 +328,11 @@ def test_a_points_count_below_two_is_refused_rather_than_silently_widened(
 # ------------------------------------------------------------------- refusals are 200s
 
 
-def test_a_carry_this_model_cannot_fly_is_a_200_with_a_reason(client, store, shots) -> None:
+def test_a_carry_this_model_cannot_fly_is_a_200_with_a_reason(
+    client, store, shots, file_swing
+) -> None:
     """The commonest state on disk. A 500 here would report the corpus as a server fault."""
-    session_id, swing_id = _seed(client, store, shots, fields=_UNREACHABLE)
+    session_id, swing_id = _seed(file_swing, store, shots, fields=_UNREACHABLE)
 
     res = _flight(client, session_id, swing_id)
     body = res.json()
@@ -343,9 +348,9 @@ def test_a_carry_this_model_cannot_fly_is_a_200_with_a_reason(client, store, sho
     assert body["unscored"][0]["refilming_helps"] is False
 
 
-def test_a_refusal_keeps_the_solve_it_ran(client, store, shots) -> None:
+def test_a_refusal_keeps_the_solve_it_ran(client, store, shots, file_swing) -> None:
     """Which of the seven cases the carry landed on is most of the answer when there is none."""
-    session_id, swing_id = _seed(client, store, shots, fields=_UNREACHABLE)
+    session_id, swing_id = _seed(file_swing, store, shots, fields=_UNREACHABLE)
 
     body = _flight(client, session_id, swing_id).json()
 
@@ -355,9 +360,11 @@ def test_a_refusal_keeps_the_solve_it_ran(client, store, shots) -> None:
     assert body["caveats"] == []
 
 
-def test_an_undeclared_loft_refuses_and_names_the_bag_page(client, store, shots) -> None:
+def test_an_undeclared_loft_refuses_and_names_the_bag_page(
+    client, store, shots, file_swing
+) -> None:
     """P10's finding, served: two of the ten refusals are the bag page and not a bay session."""
-    session_id, swing_id = _seed(client, store, shots, fields=_TWO_BRANCH, club="3w")
+    session_id, swing_id = _seed(file_swing, store, shots, fields=_TWO_BRANCH, club="3w")
 
     body = _flight(client, session_id, swing_id).json()
 
@@ -367,13 +374,15 @@ def test_an_undeclared_loft_refuses_and_names_the_bag_page(client, store, shots)
     assert "bag page" in body["shot"]["loft_remedy"]
 
 
-def test_declaring_the_loft_turns_that_refusal_into_a_flight(client, store, shots) -> None:
+def test_declaring_the_loft_turns_that_refusal_into_a_flight(
+    client, store, shots, file_swing
+) -> None:
     """The same shot, the same route, one bag edit apart — and no re-analysis in between.
 
     This is why the route re-flies rather than serving `analysis.json`'s stored numbers: the bag
     is editable, and a stored refusal would go on being drawn until someone re-ran the engine.
     """
-    session_id, swing_id = _seed(client, store, shots, fields=_TWO_BRANCH, club="3w")
+    session_id, swing_id = _seed(file_swing, store, shots, fields=_TWO_BRANCH, club="3w")
     assert _flight(client, session_id, swing_id).json()["flew"] is False
 
     client.post("/api/golfers/aaron/bag/3w", json={"loft_deg": 15.0})
@@ -387,11 +396,11 @@ def test_declaring_the_loft_turns_that_refusal_into_a_flight(client, store, shot
 
 
 def test_a_remedy_is_not_offered_to_a_flight_that_never_wanted_a_loft(
-    client, store, shots
+    client, store, shots, file_swing
 ) -> None:
     """A printed spin never reaches for a loft, so "add the club on the bag page" would be a
     repair for a problem this golfer does not have."""
-    session_id, swing_id = _seed(client, store, shots, fields=_PRINTED, club="9i")
+    session_id, swing_id = _seed(file_swing, store, shots, fields=_PRINTED, club="9i")
 
     body = _flight(client, session_id, swing_id).json()
 
@@ -401,7 +410,7 @@ def test_a_remedy_is_not_offered_to_a_flight_that_never_wanted_a_loft(
 
 
 def test_an_unresolved_axis_draws_the_flight_planar_and_withholds_the_landing_offline(
-    client, store, shots
+    client, store, shots, file_swing
 ) -> None:
     """A refused axis does not refuse the flight (ADR-027 §Decision 5's third branch).
 
@@ -409,7 +418,7 @@ def test_an_unresolved_axis_draws_the_flight_planar_and_withholds_the_landing_of
     flight's landing offline is `carry * sin(start line)`, which the repo already records as
     `start_line_offline_yds`.
     """
-    session_id, swing_id = _seed(client, store, shots, fields=_TWO_BRANCH, club="3w")
+    session_id, swing_id = _seed(file_swing, store, shots, fields=_TWO_BRANCH, club="3w")
     client.post("/api/golfers/aaron/bag/3w", json={"loft_deg": 15.0})
 
     body = _flight(client, session_id, swing_id).json()
@@ -423,10 +432,10 @@ def test_an_unresolved_axis_draws_the_flight_planar_and_withholds_the_landing_of
 
 
 def test_the_screen_s_own_word_is_carried_beside_the_derived_direction(
-    client, store, shots
+    client, store, shots, file_swing
 ) -> None:
     """Flagged, never overwritten: quietly picking one is how ADR-014's sign inversion survived."""
-    session_id, swing_id = _seed(client, store, shots, fields=_PRINTED)
+    session_id, swing_id = _seed(file_swing, store, shots, fields=_PRINTED)
 
     axis = _flight(client, session_id, swing_id).json()["axis"]
 
@@ -438,8 +447,10 @@ def test_the_screen_s_own_word_is_carried_beside_the_derived_direction(
 # ------------------------------------------------------------------- and 404s are not refusals
 
 
-def test_a_swing_with_no_shot_screen_has_no_flight_resource(client, store, shots) -> None:
-    session_id, swing_id = _seed(client, store, shots, fields=_PRINTED, with_shot=False)
+def test_a_swing_with_no_shot_screen_has_no_flight_resource(
+    client, store, shots, file_swing
+) -> None:
+    session_id, swing_id = _seed(file_swing, store, shots, fields=_PRINTED, with_shot=False)
 
     res = _flight(client, session_id, swing_id)
 
@@ -447,9 +458,11 @@ def test_a_swing_with_no_shot_screen_has_no_flight_resource(client, store, shots
     assert "no shot-screen photo" in res.json()["detail"]
 
 
-def test_an_unread_shot_screen_names_the_two_things_that_read_it(client, store, shots) -> None:
+def test_an_unread_shot_screen_names_the_two_things_that_read_it(
+    client, store, shots, file_swing
+) -> None:
     """No OCR in a request handler — the route reads the store and says so when it is empty."""
-    session_id, swing_id = _seed(client, store, shots, fields=_PRINTED, parsed=False)
+    session_id, swing_id = _seed(file_swing, store, shots, fields=_PRINTED, parsed=False)
 
     res = _flight(client, session_id, swing_id)
 

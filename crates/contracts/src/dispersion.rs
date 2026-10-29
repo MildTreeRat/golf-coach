@@ -233,7 +233,7 @@ impl Validate for MetricTarget {
 
 /// Provenance shared by the six pose tolerances, which are **measured rather than judged**.
 ///
-/// `scripts/golfdb/tune_spatial_metric.py` computes `noise` (median |lite − full| at identical
+/// `archive/golfdb/tune_spatial_metric.py` computes `noise` (median |lite − full| at identical
 /// labelled instants — two estimators on the same frames, so their disagreement floors how well the
 /// quantity can be known) plus `bound` (median |labelled − detected| under one estimator — the cost
 /// of our own segmentation). Each tolerance is the two summed, in the metric's own units.

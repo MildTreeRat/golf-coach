@@ -47,7 +47,7 @@ from golf_coach.contracts.swing import ANALYSIS_VERSION
 REPO = Path(__file__).resolve().parent.parent
 SPEC = REPO / "spec"
 
-# `scripts/` is not a package and not installed — the same convention `scripts/golfdb/common.py`
+# `scripts/` is not a package and not installed — the same convention `archive/golfdb/common.py`
 # documents, which is why this insert is here rather than in `pyproject.toml`.
 sys.path.insert(0, str(REPO / "scripts"))
 
@@ -557,6 +557,8 @@ def _refuse_to_build(monkeypatch: pytest.MonkeyPatch) -> list[str]:
         "build_screen",
         "build_storage",
         "build_career",
+        "build_mcp",
+        "build_selection",
     ):
         setattr(fake, name, recorder(name))
     monkeypatch.setitem(sys.modules, "conformance_vectors", fake)
@@ -1623,12 +1625,14 @@ def test_storage_once_records_an_empty_family_and_then_refuses(
 
 # ------------------------------------------------ M36 P3: the career aggregates and the reports
 
-#: Where the real career case reads the golfer's record and bag. Spelled here for the skip, as
-#: `_SESSIONS` is.
-_GOLFERS = REPO / "data" / "processed" / "golfers"
-
-#: The reports every career case records plain and `--verbose`, by script.
-_CAREER_REPORTS = ("career_corpus", "career_baseline", "career_dispersion", "club_profile")
+#: The four pins that built the career cases in memory went with the five scripts at M29 P34. Each
+#: loaded `scripts/{career_corpus,career_baseline,career_dispersion,club_profile,flag_mishit}.py`
+#: through `conformance_vectors._career_scripts`, to print what the script printed, and those
+#: scripts are deleted (ADR-035 §5): `golf-core`'s five verbs replace them, and
+#: `crates/core/tests/reports.rs` holds every recorded report to the committed family. The family
+#: stays, re-recorded by Rust under `CAREER_VERSION`, and `build_career` stays as the record of
+#: how it was made, no longer runnable. The pins below read only what is committed, the branch
+#: pin included: it read the in-memory build until P34, and its question is the family's.
 
 #: A sentence each branch of the five reports prints, by the report key it appears under
 #: (`club_profile_*` is every per-club key). Reached by at least one case, or a renderer branch
@@ -1693,14 +1697,6 @@ _CAREER_BRANCHES: dict[str, tuple[str, ...]] = {
 }
 
 
-@functools.cache
-def _career_built() -> tuple[tuple[Path, dict[str, Any]], ...]:
-    """The synthetic career cases, built once per run: each pin below reads the same build."""
-    from conformance_vectors import build_career
-
-    return tuple(build_career(real=False))
-
-
 def _copy_career_family(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """The committed career family under a temporary `spec/vectors/`, `_copy_storage_family`'s
     way, so a pin can add to it or try to write over it without touching `spec/`."""
@@ -1712,123 +1708,19 @@ def _copy_career_family(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path
     return vectors
 
 
-def test_the_career_cases_build_in_memory_and_write_nothing() -> None:
-    """The plan's call 2, as P3 made it concrete: a corpus, a bag and a name in; the four
-    aggregates, what they derive, and every report out. Built in memory, so whatever is under
-    `spec/vectors/career/` is byte-identical afterwards."""
-    career = conformance.VECTORS / "career"
-    before = _snapshot(career) if career.exists() else {}
-    built = _career_built()
-    assert (_snapshot(career) if career.exists() else {}) == before
-
-    ids = [vector["id"] for _, vector in built]
-    assert len(ids) == len(set(ids)), "two career cases share an id"
-    for path, vector in built:
-        name = vector["id"]
-        assert path.is_relative_to(conformance.VECTORS / "career" / "synthetic"), name
-        assert name == f"career/synthetic/{path.name.removesuffix('.json')}", name
-        assert vector["career_version"] == 0, name
-        assert "analysis_version" not in vector, f"{name} would age on the engine version"
-        assert vector["provenance"]["kind"] == "career", name
-        assert vector["provenance"]["oracle"] == "python", name
-        assert vector["provenance"]["recorded_by"].endswith("::_run_career"), name
-        given, expected = vector["input"], vector["expected"]
-        assert set(given) == {"corpus", "bag", "display_name", "versions", "clubs"}, name
-        assert set(expected) == {
-            "baseline",
-            "dispersion",
-            "standing",
-            "bag_profile",
-            "properties",
-            "reports",
-        }, name
-        keys = {f"{script}{tail}" for script in _CAREER_REPORTS for tail in ("", "_verbose")}
-        keys |= {f"club_profile_{club}" for club in given["clubs"]}
-        assert set(expected["reports"]) == keys | {"flag_mishit_list"}, name
-        # Every club the profile holds, in its order, then one it does not.
-        profiled = [one["club"] for one in expected["bag_profile"]["clubs"]]
-        assert given["clubs"][:-1] == profiled, name
-        assert given["clubs"][-1] not in profiled, name
-
-
-def test_the_career_cases_cross_every_floor_and_reach_every_reading() -> None:
-    """The rows a port is likeliest to answer differently, each reached at least once.
-
-    Every floor of the M36 plan's finding 4 shut at n - 1 and open at n, and the TREND sessions
-    gate shut at 2 and open at 3; every `Standing`, both sides of the band and every
-    `DispersionPattern`, the scatter-only reading and the drift caveat on both sides of its factor;
-    every caveat form a club profile writes; an interval each side of the critical-value tables'
-    edge. `check` defers this family to `cargo test`, so nothing else on the Python side would
-    notice a case list that quietly lost one.
-    """
-    from golf_coach.contracts.baseline import BaselineClaim, minimum_n, minimum_sessions
-    from golf_coach.contracts.comparison import Standing
-    from golf_coach.contracts.dispersion import SCATTER_ONLY_READING, DispersionPattern
-
-    floored = ("head_sway_norm", "tempo_ratio", "hip_shift_at_top_norm")
-    crossed: set[tuple[str, str, int]] = set()
-    sessions_gate: set[tuple[int, bool]] = set()
-    standings: set[str] = set()
-    sides: set[bool] = set()
-    patterns: set[str] = set()
-    readings: set[str] = set()
-    drift: set[bool] = set()
-    caveats: list[str] = []
-    intervals: set[int] = set()
-    for _, vector in _career_built():
-        expected = vector["expected"]
-        for name, metric in expected["baseline"]["metrics"].items():
-            if metric["sd_ci"] is not None:
-                intervals.add(metric["n"])
-            for claim in BaselineClaim:
-                ready = claim.value in metric["ready"]
-                need = minimum_n(name, claim)
-                enough_sessions = metric["n_sessions"] >= minimum_sessions(claim)
-                if enough_sessions and metric["n"] in (need - 1, need):
-                    assert ready is (metric["n"] == need), (vector["id"], name, claim)
-                    crossed.add((name, claim.value, metric["n"] - need))
-                if claim is BaselineClaim.TREND and metric["n"] >= need:
-                    sessions_gate.add((metric["n_sessions"], ready))
-        for metric in expected["standing"]["metrics"].values():
-            standings.add(metric["standing"])
-            if metric["outside_by"] is not None:
-                sides.add(metric["outside_by"] > 0)
-        for metric in expected["dispersion"]["metrics"].values():
-            if metric["pattern"] is not None:
-                patterns.add(metric["pattern"])
-            elif metric["points_at"] is not None:
-                readings.add(metric["points_at"])
-            if metric["within_session_sd"] is not None:
-                drift.add(bool(metric["caveats"]))
-        caveats += [c for club in expected["bag_profile"]["clubs"] for c in club["caveats"]]
-
-    every = {(name, claim.value) for name in floored for claim in BaselineClaim}
-    assert crossed >= {(*row, offset) for row in every for offset in (-1, 0)}, "a floor uncrossed"
-    assert {(2, False), (3, True)} <= sessions_gate, sessions_gate
-    # `analysis/stats.py`'s tables end at df 30 and its expansions start at 31.
-    assert 31 in intervals and max(intervals) > 32, "no interval past the critical-value tables"
-    assert standings == {standing.value for standing in Standing}
-    assert sides == {True, False}, "an OUTSIDE standing on only one side of the band"
-    assert patterns == {pattern.value for pattern in DispersionPattern}
-    assert SCATTER_ONLY_READING in readings
-    assert drift == {True, False}, "the drift caveat on only one side of SESSION_DRIFT_FACTOR"
-    for opening in ("The single swing", "All 3 swings", "2 of the 6 swings"):
-        assert any(c.startswith(opening) for c in caveats), opening
-    for phrase in (
-        "shots on this club was set aside",
-        "shots on this club were set aside",
-        " 1 was flagged automatically",
-        " 2 were flagged automatically",
-    ):
-        assert any(phrase in c for c in caveats), phrase
-
-
 def test_every_report_branch_has_recorded_text() -> None:
     """Each branch of the five reports, found by a sentence it prints, in at least one case: the
     recorded text is what gates `crates/core`'s renderers, and a branch no case reaches is a
-    renderer nothing checks."""
+    renderer nothing checks.
+
+    Read from the committed synthetic cases since M29 P34, which deleted the scripts the build
+    loaded. The question is the family's, not the recorder's, so it outlived them.
+    """
     printed: dict[str, list[str]] = {key: [] for key in _CAREER_BRANCHES}
-    for _, vector in _career_built():
+    for path in conformance.career_vector_paths():
+        if path.relative_to(conformance.VECTORS / "career").parts[0] != "synthetic":
+            continue
+        vector = conformance._read_json(path)
         for key, text in vector["expected"]["reports"].items():
             group = key if key in printed else "club_profile_*"
             assert group != "club_profile_*" or key.startswith("club_profile_"), key
@@ -1837,35 +1729,6 @@ def test_every_report_branch_has_recorded_text() -> None:
         joined = "\n".join(printed[key])
         for phrase in phrases:
             assert phrase in joined, f"no case's {key} prints {phrase!r}"
-
-
-def test_frozen_python_answers_a_career_case_only_under_its_own_engine() -> None:
-    """The corpus report prints frozen Python's engine as the installed one, so a case asking
-    under any other pair is a question for Rust's renderer, and the recorder says so."""
-    from conformance_vectors import _run_career
-
-    given = dict(_career_built()[0][1]["input"])
-    given["versions"] = {"installed": ANALYSIS_VERSION + 1, "comparable_from": ANALYSIS_VERSION - 2}
-    with pytest.raises(ValueError, match="answers only under"):
-        _run_career(given)
-
-
-@pytest.mark.skipif(
-    not (_SESSIONS.is_dir() and _GOLFERS.is_dir()),
-    reason="no data/processed/{sessions,golfers}/: the real career case is read from the captures",
-)
-def test_the_real_career_case_starts_from_the_real_storage_corpus() -> None:
-    """The plan's call 2: the real case's corpus is the real storage vector's, copied, and
-    `_career_real` raises unless that still equals `read_corpus` over `data/` and the mishit
-    listing prints the same over the real trees as over the corpus."""
-    from conformance_vectors import _career_real
-
-    vector = _career_real()
-    stored = conformance._read_json(conformance.VECTORS / "storage" / "corpus" / "real.json.gz")
-    assert vector["id"] == "career/real/aaron"
-    assert vector["input"]["corpus"] == stored["expected"]["corpus"]
-    assert vector["input"]["bag"] is not None, "the real case carries the declared bag"
-    assert vector["expected"]["bag_profile"]["clubs"], "the real golfer profiles no club"
 
 
 def test_the_career_family_is_committed_in_the_sub_families_python_recorded() -> None:
@@ -2076,3 +1939,571 @@ def test_check_defers_the_profile_family_and_judges_no_staleness(
     rows = [line for line in capsys.readouterr().out.splitlines() if line.startswith("profile/")]
     assert len(rows) == count, rows[:3]
     assert all(re.search(r"\s+v(3|99)\s+profile\s", row) for row in rows), rows[:3]
+
+
+# ------------------------------------------------------------------------ M29 P8: the MCP family
+
+#: The sub-families frozen Python recorded through `regenerate --mcp-once`. M29 P9-P15 add hand
+#: cases and Rust-recorded `get_strike_profile` cases beside them, and declare their differences
+#: through `golf-core rerecord`, which keeps `provenance.oracle` as it found it.
+_PYTHON_RECORDED_MCP = ("surface", "tools", "real")
+
+#: What a tool case keeps of each answer: the wire's three keys, and nothing of 2026's bookkeeping.
+_MCP_RESULT_KEYS = {"content", "structuredContent", "isError"}
+
+#: Where the real MCP case reads its three directories. Spelled here for the skip, as `_SESSIONS`
+#: is.
+_PROCESSED = REPO / "data" / "processed"
+
+
+@functools.cache
+def _mcp_built() -> tuple[tuple[Path, dict[str, Any]], ...]:
+    """The surface and synthetic tool cases, built once per run: each pin below reads the same
+    build. Needs the MCP SDK, the `llm` extra, which every pin reading this skips without."""
+    from conformance_vectors import build_mcp
+
+    return tuple(build_mcp(real=False))
+
+
+def _copy_mcp_family(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """The committed MCP family under a temporary `spec/vectors/`, `_copy_storage_family`'s way."""
+    import shutil
+
+    vectors = tmp_path / "spec" / "vectors"
+    shutil.copytree(conformance.VECTORS / "mcp", vectors / "mcp")
+    monkeypatch.setattr(conformance, "VECTORS", vectors)
+    return vectors
+
+
+def _surface_tools(vector: dict[str, Any], shape: str) -> list[str]:
+    return [tool["name"] for tool in vector["expected"][shape]["tools"]]
+
+
+def test_the_mcp_cases_build_in_memory_and_write_nothing() -> None:
+    """Every case builds, carries one answer per call, and has a name of its own.
+
+    In memory only: `regenerate --mcp-once` is the one writer, so whatever is under
+    `spec/vectors/mcp/` is byte-identical afterwards. No call raised inside a tool, which the
+    recorder refuses, so every answer is one a port is asked for.
+    """
+    pytest.importorskip("mcp", reason="needs the `llm` extra")
+    family = conformance.VECTORS / "mcp"
+    before = _snapshot(family) if family.exists() else {}
+    built = _mcp_built()
+    assert (_snapshot(family) if family.exists() else {}) == before
+
+    ids = [vector["id"] for _, vector in built]
+    assert len(ids) == len(set(ids)), "two MCP cases share an id"
+    surfaces = [vector for _, vector in built if vector["id"].startswith("mcp/surface/")]
+    assert len(surfaces) == 1, ids
+    for path, vector in built:
+        name = vector["id"]
+        assert path.is_relative_to(conformance.VECTORS / "mcp"), name
+        assert name == conformance._vector_id(path), name
+        assert vector["career_version"] == 0, name
+        assert "analysis_version" not in vector, f"{name} would age on the engine version"
+        provenance = vector["provenance"]
+        assert provenance["kind"] == "mcp", name
+        assert provenance["oracle"] == "python", name
+        assert provenance["mcp_version"], name
+        if name.startswith("mcp/surface/"):
+            assert provenance["recorded_by"].endswith("::_run_surface"), name
+            continue
+        assert provenance["recorded_by"].endswith("::_run_mcp"), name
+        given = vector["input"]
+        assert set(given) == {"roots", "files", "calls"}, name
+        assert set(given["roots"]) == {"sessions", "shots", "golfers"}, name
+        results = vector["expected"]["results"]
+        assert len(results) == len(given["calls"]), name
+        for call, result in zip(given["calls"], results, strict=True):
+            assert set(call) == {"tool", "arguments", "now"}, name
+            assert set(result) == _MCP_RESULT_KEYS, name
+            assert result["isError"] is False, f"{name}: {call} raised"
+
+
+def test_the_mcp_cases_reach_every_tool_on_both_servers_and_every_miss() -> None:
+    """The family is the gate `golf-mcp` is held to, so a tool no case calls is one it is not held
+    to. Every tool the registry server lists is called, the registry-less server lists only the six
+    that need no golfer, each tool that can miss misses somewhere, a call carries a clock, and the
+    flight model answers some of them (the plan's call 1)."""
+    pytest.importorskip("mcp", reason="needs the `llm` extra")
+    built = [vector for _, vector in _mcp_built()]
+    surface = next(v for v in built if v["id"] == "mcp/surface/server")
+    with_registry = _surface_tools(surface, "with_registry")
+    without = _surface_tools(surface, "without_registry")
+    assert set(without) < set(with_registry)
+    assert len(with_registry) - len(without) == 5, (with_registry, without)
+
+    cases = [v for v in built if v["id"].startswith("mcp/tools/")]
+    called: set[str] = set()
+    missed: set[str] = set()
+    clocked = 0
+    for case in cases:
+        offered = with_registry if case["input"]["roots"]["golfers"] else without
+        for call, result in zip(case["input"]["calls"], case["expected"]["results"], strict=True):
+            assert call["tool"] in offered, f"{case['id']} calls {call['tool']}, not offered there"
+            called.add(call["tool"])
+            clocked += call["now"] is not None
+            answer = (result["structuredContent"] or {}).get("result")
+            if isinstance(answer, dict) and answer.get("found") is False:
+                missed.add(call["tool"])
+    assert called == set(with_registry), sorted(set(with_registry) - called)
+    listing = {"list_sessions", "get_recent_shots"}
+    assert missed == set(with_registry) - listing, sorted(set(with_registry) - listing - missed)
+    assert clocked, "no call carries a `now`, so the clock rule is never exercised"
+    assert {False, True} == {bool(c["input"]["roots"]["golfers"]) for c in cases}
+    assert any(c["provenance"]["flight_model_calls"] for c in cases), "no flight ever flew"
+
+
+def test_the_committed_mcp_cases_are_what_frozen_python_answers() -> None:
+    """The freeze, for this family: the committed surface and synthetic cases are what the frozen
+    server answers today, input and answer alike, outside any path a Rust re-record has declared
+    (`frozen_view`). `check` defers the family, so this is the one Python-side pin that notices
+    frozen Python's MCP layer moving."""
+    pytest.importorskip("mcp", reason="needs the `llm` extra")
+    for path, built in _mcp_built():
+        committed = conformance._read_json(path)
+        name = committed["id"]
+        assert committed["input"] == built["input"], f"{name}: the builder's input moved"
+        expected, actual = conformance.frozen_view(committed, built["expected"])
+        diffs = conformance.compare_results(expected, actual)
+        assert not diffs, "\n".join([f"{name} moved:"] + [f"  {d}" for d in diffs[:10]])
+
+
+@pytest.mark.skipif(
+    not all((_PROCESSED / sub).is_dir() for sub in ("sessions", "shots", "golfers")),
+    reason="no data/processed/{sessions,shots,golfers}/: the real MCP case is read from them",
+)
+def test_the_real_mcp_case_answers_exactly_as_data_does() -> None:
+    """The snapshot leaves the media behind, and `_mcp_real` raises unless every call over it
+    answers exactly as the same call over `data/processed/` does.
+
+    Held to `data/` and not to the committed case, as the storage family's real case is: M29 P29
+    rewrites `data/`, after which the committed snapshot is a record of the captures as they were,
+    which is all a port needs of it, and the build here is today's.
+    """
+    pytest.importorskip("mcp", reason="needs the `llm` extra")
+    from conformance_vectors import _REAL_SUFFIX, _mcp_real
+
+    vector = _mcp_real()
+    assert vector["id"] == "mcp/real/data"
+    for rel in vector["input"]["files"]:
+        assert rel.split("/")[0] in {"sessions", "shots", "golfers"}, rel
+        assert rel.endswith(("/", ".json")), f"{rel}: not a file any tool reads"
+    assert _REAL_SUFFIX == ".json.gz"
+    assert vector["provenance"]["flight_model_calls"], "no real shot reached the flight model"
+
+
+def test_the_mcp_family_is_committed_in_the_sub_families_python_recorded() -> None:
+    """Recorded once, by `regenerate --mcp-once`, at `career_version` 0 unless a Rust re-record has
+    ledgered it since, with the real case gzipped beside the plain synthetic ones."""
+    by_family: dict[str, list[Path]] = {}
+    for path in conformance.mcp_vector_paths():
+        family = path.relative_to(conformance.VECTORS / "mcp").parts[0]
+        by_family.setdefault(family, []).append(path)
+    for family in _PYTHON_RECORDED_MCP:
+        assert by_family.get(family), f"spec/vectors/mcp/{family}/ is empty"
+        for path in by_family[family]:
+            vector = conformance._read_json(path)
+            name = vector["id"]
+            assert name == conformance._vector_id(path), f"{path.name} names itself {name}"
+            assert vector["provenance"]["kind"] == "mcp", name
+            assert vector["provenance"]["oracle"] == "python", name
+            assert vector["provenance"]["python_version"].startswith("3."), name
+            assert "analysis_version" not in vector, f"{name} claims an engine version"
+            assert isinstance(vector.get("career_version"), int), name
+            # `list` prints every note, and a Windows console encodes as cp1252 (M36 P2).
+            vector["provenance"]["note"].encode("cp1252")
+            if not vector["provenance"].get("rerecords"):
+                assert vector["career_version"] == 0, name
+    assert (conformance.VECTORS / "mcp" / "real" / "data.json.gz").is_file()
+
+
+def test_check_defers_the_mcp_family_and_judges_no_staleness(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Named and deferred, never run, and never STALE, even at a `career_version` frozen Python
+    lacks: the storage family's pin, for the family that shares its key. `list` shows each case at
+    its own version."""
+    vectors = _copy_mcp_family(tmp_path, monkeypatch)
+    ahead = vectors / "mcp" / "tools" / "no-directories.json"
+    document = json.loads(ahead.read_text(encoding="utf-8"))
+    document["career_version"] = 99
+    document["id"] = "mcp/tools/ahead"
+    (ahead.parent / "ahead.json").write_text(json.dumps(document), encoding="utf-8")
+
+    def never(vector: dict[str, Any]) -> dict[str, Any]:
+        raise AssertionError(f"`check` ran MCP vector {vector.get('id')} through the engine")
+
+    monkeypatch.setattr(conformance, "run_vector", never)
+    assert conformance.main(["check"]) == 0
+    out = capsys.readouterr().out
+    count = len(conformance.mcp_vector_paths())
+    assert f"{count} mcp vectors are `crates/mcp`'s" in out
+    assert "STALE" not in out
+
+    versions = {
+        conformance._vector_id(path): conformance._read_json(path)["career_version"]
+        for path in conformance.mcp_vector_paths()
+    }
+    assert conformance.main(["list"]) == 0
+    rows = [line for line in capsys.readouterr().out.splitlines() if line.startswith("mcp/")]
+    assert len(rows) == len(versions) == count, rows[:3]
+    for row in rows:
+        assert re.search(rf"\s+v{versions[row.split()[0]]}\s+mcp\s", row), row
+
+
+@pytest.mark.parametrize("what", ["a committed vector", "any file at all"])
+def test_mcp_once_refuses_while_the_family_has_anything_in_it(
+    what: str,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Once means once, `--career-once`'s rule: refused on any file under `mcp/`, before the
+    recorder is imported, so a refusal cannot reach `data/` or the SDK, and it writes nothing."""
+    if what == "a committed vector":
+        vectors = _copy_mcp_family(tmp_path, monkeypatch)
+    else:
+        vectors = tmp_path / "spec" / "vectors"
+        (vectors / "mcp").mkdir(parents=True)
+        (vectors / "mcp" / "README").write_text("not a vector", encoding="utf-8")
+        monkeypatch.setattr(conformance, "VECTORS", vectors)
+    before = _snapshot(vectors)
+    calls = _refuse_to_build(monkeypatch)
+
+    assert conformance.main(["regenerate", "--mcp-once"]) == 2
+    assert not calls, f"a refused `--mcp-once` still reached {calls}"
+    assert _snapshot(vectors) == before
+    message = capsys.readouterr().err
+    assert "golf-core rerecord" in message
+    assert "career-v<N>.json" in message
+
+
+def test_mcp_once_records_an_empty_family_and_then_refuses(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The one run writes what `build_mcp` returned, and the next run is refused by it."""
+    vectors = tmp_path / "spec" / "vectors"
+    vectors.mkdir(parents=True)
+    monkeypatch.setattr(conformance, "VECTORS", vectors)
+    recorded = vectors / "mcp" / "tools" / "only.json"
+    builds: list[str] = []
+
+    def build_mcp() -> list[tuple[Path, dict[str, Any]]]:
+        builds.append("build_mcp")
+        return [(recorded, {"id": "mcp/tools/only", "provenance": {"kind": "mcp"}})]
+
+    fake = types.ModuleType("conformance_vectors")
+    fake.build_mcp = build_mcp  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "conformance_vectors", fake)
+
+    assert conformance.main(["regenerate", "--mcp-once"]) == 0
+    assert recorded.exists()
+    assert conformance.main(["regenerate", "--mcp-once"]) == 2
+    assert builds == ["build_mcp"], "the second run reached the recorder"
+
+
+# ------------------------------------------------------------- M29 P18: the selection family
+
+#: The sub-families frozen Python recorded through `regenerate --selection-once`: the rules'
+#: clips, the pipeline's synthetic bundles, and the stored bundles.
+_PYTHON_RECORDED_SELECTION = ("rules", "windows", "corpus")
+
+#: Every call a selection case may make, each answered by `conformance_vectors._run_selection`.
+_SELECTION_CALLS = {
+    "select_swing",
+    "select_matching_swing",
+    "window_around",
+    "_pick_swing",
+    "_auto_windows",
+}
+
+#: The calls that read a clip on one wrist, and so name both.
+_SELECTION_CLIP_CALLS = {"select_swing", "select_matching_swing", "_pick_swing"}
+
+
+@functools.cache
+def _selection_built() -> tuple[tuple[Path, dict[str, Any]], ...]:
+    """The rules and windows cases, built once per run: each pin below reads the same build."""
+    from conformance_vectors import build_selection
+
+    return tuple(build_selection(real=False))
+
+
+def _copy_selection_family(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """The committed selection family under a temporary `spec/vectors/`, as the MCP pins copy."""
+    import shutil
+
+    vectors = tmp_path / "spec" / "vectors"
+    shutil.copytree(conformance.VECTORS / "selection", vectors / "selection")
+    monkeypatch.setattr(conformance, "VECTORS", vectors)
+    return vectors
+
+
+def test_the_selection_cases_build_in_memory_and_write_nothing() -> None:
+    """Every case builds, answers each call once, keeps every track at its clip's length, and has a
+    name of its own.
+
+    In memory only: `regenerate --selection-once` is the one writer, so whatever is under
+    `spec/vectors/selection/` is byte-identical afterwards. Each case built is also one whose kept
+    tracks answer as the whole clips do, which `_selection_vector` refuses to build otherwise.
+    """
+    family = conformance.VECTORS / "selection"
+    before = _snapshot(family) if family.exists() else {}
+    built = _selection_built()
+    assert (_snapshot(family) if family.exists() else {}) == before
+
+    ids = [vector["id"] for _, vector in built]
+    assert len(ids) == len(set(ids)), "two selection cases share an id"
+    for path, vector in built:
+        name = vector["id"]
+        assert path.is_relative_to(conformance.VECTORS / "selection"), name
+        assert path.name.endswith(".json.gz"), f"{name} is not gzipped"
+        assert name == conformance._vector_id(path), name
+        assert vector["analysis_version"] == ANALYSIS_VERSION, name
+        assert "career_version" not in vector, f"{name} would age on the career key"
+        provenance = vector["provenance"]
+        assert provenance["kind"] == "selection", name
+        assert provenance["oracle"] == "python", name
+        assert provenance["recorded_by"].endswith("::_run_selection"), name
+        given = vector["input"]
+        assert set(given) == {"clips", "calls"}, name
+        for clip in given["clips"].values():
+            assert set(clip) == {"fps", "frames", "tracks"}, name
+            assert clip["tracks"], f"{name}: a clip with no track is read by nothing"
+            for track in clip["tracks"].values():
+                assert len(track["y"]) == len(track["visibility"]) == clip["frames"], name
+        results = vector["expected"]["results"]
+        assert len(results) == len(given["calls"]), name
+        for call in given["calls"]:
+            assert call["fn"] in _SELECTION_CALLS, f"{name}: {call['fn']}"
+            if call["fn"] in _SELECTION_CLIP_CALLS:
+                assert call["wrist"] in given["clips"][call["clip"]]["tracks"], name
+
+
+def test_the_selection_cases_reach_every_rule_and_every_branch() -> None:
+    """The family is the gate the Rust selection is held to, so a branch no case reaches is one it
+    is not held to. Every call is made; every reason `select_swing` and `select_matching_swing` can
+    give is given, and so is a decline; `window_around` runs with and without a frame rate; and
+    every note and narration `_auto_windows` can write is written, with each view's window given,
+    picked and declined somewhere."""
+    built = [vector for _, vector in _selection_built()]
+    calls = [
+        (call, result)
+        for vector in built
+        for call, result in zip(
+            vector["input"]["calls"], vector["expected"]["results"], strict=True
+        )
+    ]
+    assert {call["fn"] for call, _ in calls} == _SELECTION_CALLS
+
+    rules = [(c, r) for c, r in calls if c["fn"] in {"select_swing", "select_matching_swing"}]
+    assert any(r is None for _, r in rules) and any(r is not None for _, r in rules)
+    reasons = [r["reason"] for _, r in rules if r is not None]
+    for phrase in (
+        "1 with a plausible downswing",
+        "took the last",
+        "since there is nothing to choose between",
+        "since a ball was struck there",
+        "ending at a ball strike",
+        "matching the",
+        "in band",
+        "outside the usual",
+    ):
+        assert any(phrase in reason for reason in reasons), f"no rule says {phrase!r}"
+    assert {None, 0.0} <= {c["fps"] for c, _ in rules}, "a rule never declines on its fps"
+    assert any(c.get("reference_downswing_s") == 0.0 for c, _ in rules)
+    strikes = [c["strike_frames"] for c, _ in rules]
+    assert None in strikes and [] in strikes and any(strikes), "a strike list goes untested"
+    assert {c["wrist"] for c, _ in rules} == {"LEFT_WRIST", "RIGHT_WRIST"}
+
+    windows = [c for c, _ in calls if c["fn"] == "window_around"]
+    assert {None, 100.0} <= {c["fps"] for c in windows}
+
+    autos = [(c, r) for c, r in calls if c["fn"] == "_auto_windows"]
+    notes = [note for _, r in autos for note in r["notes"]]
+    for phrase in (
+        "could not pick a swing in the face-on view",
+        "could not pick a swing in the down-the-line view",
+        "chosen by matching the down-the-line view",
+        "(the face-on window was given rather than measured)",
+        "(the face-on view has no measured downswing to match against)",
+    ):
+        assert any(phrase in note for note in notes), f"no note says {phrase!r}"
+    log = [line for _, r in autos for line in r["log"]]
+    for phrase in ("the keypoints file records no fps", "on the lead wrist", "on the trail wrist"):
+        assert any(phrase in line for line in log), f"no line says {phrase!r}"
+    for side, given in (("face_on", "window_face_on"), ("down_the_line", "window_dtl")):
+        assert any(c[given] is not None for c, _ in autos), f"no {side} window is given"
+        assert any(r["windows"][side] is None for _, r in autos), f"no {side} view declines"
+    assert any(c["views"]["down_the_line"] is None for c, _ in autos)
+    assert any(len(r["picks"]) == 3 for _, r in autos), "face-on is never picked a second time"
+
+
+def test_the_committed_selection_cases_are_what_frozen_python_answers() -> None:
+    """The freeze, for this family: frozen Python answers each committed case's own input with its
+    committed answer, outside any path a Rust re-record has declared (`frozen_view`), exactly.
+
+    The corpus cases included, which need no `data/`: a case holds the tracks it reads. `check`
+    defers the family, so this is the one Python-side pin that notices frozen Python's selection
+    moving. The synthetic cases' input is also what the builder builds today.
+    """
+    from conformance_vectors import _run_selection
+
+    built = {vector["id"]: vector for _, vector in _selection_built()}
+    committed_ids = set()
+    for path in conformance.selection_vector_paths():
+        committed = conformance._read_json(path)
+        name = committed["id"]
+        committed_ids.add(name)
+        if name in built:
+            assert committed["input"] == built[name]["input"], f"{name}: the builder's input moved"
+        expected, actual = conformance.frozen_view(committed, _run_selection(committed["input"]))
+        diffs = conformance.compare_results(expected, actual)
+        assert not diffs and actual == expected, "\n".join(
+            [f"{name} moved:"] + [f"  {d}" for d in diffs[:10]]
+        )
+    assert set(built) <= committed_ids, sorted(set(built) - committed_ids)
+
+
+@pytest.mark.skipif(
+    not _SESSIONS.is_dir(),
+    reason="no data/processed/sessions/: the corpus selection cases are read from it",
+)
+def test_the_corpus_selection_cases_choose_the_stored_windows() -> None:
+    """`_selection_corpus` raises unless each stored bundle's `_auto_windows` chooses the windows
+    its `analysis.json` holds, stored every note it writes, and answers over the whole clips as
+    over the kept tracks.
+
+    Held to `data/` and not to the committed cases, as the MCP family's real case is: M29 P29
+    rewrites `data/`, after which the committed corpus is a record of the captures before it. The
+    windows it holds to are then the ones Rust chose, at Rust's engine version, which the recorder
+    compares rather than refuses: only an artifact older than frozen Python's engine is refused.
+    """
+    from conformance_vectors import _selection_corpus
+
+    corpus = _selection_corpus()
+    assert len(corpus) == len(list(_SESSIONS.glob("*/*/analysis.json")))
+    for vector in corpus.values():
+        assert [call["fn"] for call in vector["input"]["calls"]][-1] == "_auto_windows"
+
+
+def test_the_selection_family_is_committed_in_the_sub_families_python_recorded() -> None:
+    """Recorded once, by `regenerate --selection-once`, gzipped, at frozen Python's engine version
+    unless a Rust re-record has ledgered it since, which the stages' rule (`ledger_covers`) says."""
+    by_family: dict[str, list[Path]] = {}
+    for path in conformance.selection_vector_paths():
+        family = path.relative_to(conformance.VECTORS / "selection").parts[0]
+        by_family.setdefault(family, []).append(path)
+    assert set(by_family) == set(_PYTHON_RECORDED_SELECTION), sorted(by_family)
+    for family in _PYTHON_RECORDED_SELECTION:
+        for path in by_family[family]:
+            assert path.name.endswith(".json.gz"), path.name
+            vector = conformance._read_json(path)
+            name = vector["id"]
+            assert name == conformance._vector_id(path), f"{path.name} names itself {name}"
+            assert vector["provenance"]["kind"] == "selection", name
+            assert vector["provenance"]["oracle"] == "python", name
+            assert vector["provenance"]["python_version"].startswith("3."), name
+            assert "career_version" not in vector, f"{name} claims the career key"
+            assert conformance.ledger_covers(vector, ANALYSIS_VERSION), (
+                f"{name}: {conformance._staleness(vector)}"
+            )
+            # `list` prints every note, and a Windows console encodes as cp1252 (M36 P2).
+            vector["provenance"]["note"].encode("cp1252")
+            if not vector["provenance"].get("rerecords"):
+                assert vector["analysis_version"] == ANALYSIS_VERSION, name
+
+
+def test_check_defers_the_selection_family_and_judges_its_staleness(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Named and deferred, never run, and judged by the stages' rule: a case below frozen Python's
+    version is STALE and fails `check`, as a stale stage vector does. `list` shows each case at its
+    own engine version."""
+    vectors = _copy_selection_family(tmp_path, monkeypatch)
+
+    def never(vector: dict[str, Any]) -> dict[str, Any]:
+        raise AssertionError(f"`check` ran selection vector {vector.get('id')} through the engine")
+
+    monkeypatch.setattr(conformance, "run_vector", never)
+    count = len(conformance.selection_vector_paths())
+    assert count
+    assert conformance.main(["check"]) == 0
+    out = capsys.readouterr().out
+    assert f"{count}/{count} selection vectors are at frozen v{ANALYSIS_VERSION}" in out
+    assert "STALE" not in out
+
+    versions = {
+        conformance._vector_id(path): conformance._read_json(path)["analysis_version"]
+        for path in conformance.selection_vector_paths()
+    }
+    assert conformance.main(["list"]) == 0
+    rows = [line for line in capsys.readouterr().out.splitlines() if line.startswith("selection/")]
+    assert len(rows) == count, rows[:3]
+    for row in rows:
+        assert re.search(rf"\s+v{versions[row.split()[0]]}\s+selection\s", row), row
+
+    source = conformance.selection_vector_paths()[0]
+    behind = conformance._read_json(source)
+    behind["analysis_version"] = ANALYSIS_VERSION - 1
+    behind["id"] = "selection/rules/behind"
+    (vectors / "selection" / "rules" / "behind.json").write_text(
+        json.dumps(behind), encoding="utf-8"
+    )
+    assert conformance.main(["check"]) == 1
+    out = capsys.readouterr().out
+    assert "STALE selection/rules/behind:" in out
+    assert f"{count}/{count + 1} selection vectors" in out
+
+
+@pytest.mark.parametrize("what", ["a committed vector", "any file at all"])
+def test_selection_once_refuses_while_the_family_has_anything_in_it(
+    what: str,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Once means once, `--mcp-once`'s rule: refused on any file under `selection/`, before the
+    recorder is imported, so a refusal cannot reach `data/`, and it writes nothing."""
+    if what == "a committed vector":
+        vectors = _copy_selection_family(tmp_path, monkeypatch)
+    else:
+        vectors = tmp_path / "spec" / "vectors"
+        (vectors / "selection").mkdir(parents=True)
+        (vectors / "selection" / "README").write_text("not a vector", encoding="utf-8")
+        monkeypatch.setattr(conformance, "VECTORS", vectors)
+    before = _snapshot(vectors)
+    calls = _refuse_to_build(monkeypatch)
+
+    assert conformance.main(["regenerate", "--selection-once"]) == 2
+    assert not calls, f"a refused `--selection-once` still reached {calls}"
+    assert _snapshot(vectors) == before
+    message = capsys.readouterr().err
+    assert "golf-core rerecord" in message
+    assert "spec/declarations/v<N>.json" in message
+
+
+def test_selection_once_records_an_empty_family_and_then_refuses(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The one run writes what `build_selection` returned, and the next run is refused by it."""
+    vectors = tmp_path / "spec" / "vectors"
+    vectors.mkdir(parents=True)
+    monkeypatch.setattr(conformance, "VECTORS", vectors)
+    recorded = vectors / "selection" / "rules" / "only.json.gz"
+    builds: list[str] = []
+
+    def build_selection() -> list[tuple[Path, dict[str, Any]]]:
+        builds.append("build_selection")
+        return [(recorded, {"id": "selection/rules/only", "provenance": {"kind": "selection"}})]
+
+    fake = types.ModuleType("conformance_vectors")
+    fake.build_selection = build_selection  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "conformance_vectors", fake)
+
+    assert conformance.main(["regenerate", "--selection-once"]) == 0
+    assert recorded.exists()
+    assert conformance.main(["regenerate", "--selection-once"]) == 2
+    assert builds == ["build_selection"], "the second run reached the recorder"

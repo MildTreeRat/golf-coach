@@ -20,13 +20,13 @@ coaching feedback.
 pipeline extracts pose, segments the swing, scores six checkpoints against tour-derived
 benchmark bands, and prints ranked coaching tips with an annotated verification overlay.
 Shot data is read off photographs of the HD Golf simulator screen by local OCR. Point
-`analyze_bundle.py` at a swing uploaded from two phones and it does the lot in one command,
-leaving a JSON result and an aligned side-by-side video beside the clips.
+`golf-lab analyze` at a swing uploaded from two phones and it does the lot in one command,
+leaving a JSON result beside the clips (the lab CLI is Rust since M29, and renders no video).
 
-**From a phone, it needs no command at all:** upload a face-on clip, a down-the-line clip and a
-photo of the shot screen from two phone browsers, and the third file triggers the same pipeline
-in the background — the results page has the score, the bands, the tips and the aligned video by
-the time you have walked back from the bay.
+**From a phone, the upload route is closed since M29** (ADR-035's M29 addendum): the frozen
+server's routes that wrote a swing answer 410, each naming the Rust verb that does the job now. A
+phone's sessions reach the lab as an export, merged in by `golf-lab import-export`, and the server
+still serves the library, results, career and flight pages over what the Rust lab writes.
 
 Where each milestone stands is [ROADMAP.md's *Status at a glance*](ROADMAP.md#status-at-a-glance),
 and nowhere else. This file kept a second copy of that table, and by the time it was removed it
@@ -44,70 +44,75 @@ pip install -e '.[dev]'          # base + dev tools — the whole analysis core 
 pytest                           # analysis, contracts, feedback and launch-monitor suites
 ```
 
-The five working CLIs:
+The working CLIs are Rust since M29 (ADR-035): `golf-lab` for a swing and its shot, `golf-core`
+for one golfer across every session, `golf-pose` for one clip's pose. Python stays for MediaPipe
+pose, which `golf-lab` and `golf-pose` spawn in `.venv`, and for the LLM. Build them once; each
+finds `data/processed/` under the repository unless a `--*-dir` flag or a `GOLF_*_DIR` says
+otherwise. `docs/ARCHITECTURE.md` §1 has every verb with its flags and exit codes.
 
 ```bash
-# 1. Pose: video -> keypoints JSON + skeleton overlay          (needs the `vision` extra)
-pip install -e '.[vision,dev]'
-python scripts/run_pose.py data/raw/my_swing.mov --camera-id face_on
+cargo build --release          # target/release/golf-lab, golf-core, golf-mcp, golf-pose, golf-ocr
+export PATH="$PWD/target/release:$PATH"   # or call each by that path
+pip install -e '.[vision,dev]' # MediaPipe, for the pose worker the Rust side spawns
+
+# 1. Pose: one clip -> keypoints JSON
+golf-pose run data/raw/my_swing.mov --out data/processed --camera-id face_on
 #    -> data/processed/my_swing.keypoints.json   (+ fps/size/hash, and which camera)
-#    -> data/processed/my_swing.overlay.mp4
 #    --camera-id is optional; it matters once two angles of one swing are in play (ADR-011)
 
-# 2. Analysis: keypoints -> scores, ranked tips, detected instants     (base install)
-python scripts/analyze_swing.py data/processed/my_swing.keypoints.json
-#    add --overlay to render ADDRESS/TOP/IMPACT markers + a score HUD (needs `vision`)
-python scripts/analyze_swing.py data/processed/my_swing.keypoints.json \
-    --overlay data/raw/my_swing.mov
+# 2. Analysis: keypoints -> scores, ranked tips, detected instants
+golf-lab analyze-keypoints data/processed/my_swing.keypoints.json
 
-# 3. Alignment: two angles of ONE swing -> a side-by-side video, synced      (base install;
-#    `vision` only to render)
-python scripts/align_swings.py face_on.keypoints.json down_the_line.keypoints.json \
-    --video-a face_on.MOV --video-b down_the_line.MOV --out aligned.mp4
-#    the two clips are aligned on the swing's own instants, never on a clock, so mismatched
-#    frame rates / clip lengths / start moments and iPhone slo-mo all cancel (ADR-015)
-#    --list-swings first if a clip contains practice swings; --window-b 1800:2400 to pick one
+# 3. Shot data: photos of the simulator SHOT DATA screen -> parsed shots
+golf-lab import-photos data/raw/shot_screens --dry-run
+#    the ONNX models under data/models/ocr/ are converted once and sha-pinned in
+#    crates/ocr/models.json; HEIC photos decode through ffmpeg (GOLF_FFMPEG, else PATH)
 
-# 4. Shot data: photos of the simulator SHOT DATA screen -> parsed shots  (needs `ocr`)
-pip install -e '.[ocr]'
-python scripts/import_shot_screens.py data/raw/shot_screens --dry-run
-
-# 5. The whole thing: an assembled swing bundle -> the complete result       (`vision`; `ocr`
-#    only for a shot photo that isn't in the store yet)
-python scripts/analyze_bundle.py 2026-08-07/1        # SESSION/SWING, or a swing directory
+# 4. The whole thing: an assembled swing bundle -> the complete result
+golf-lab analyze 2026-08-07/1        # SESSION/SWING, or a swing directory
 #    -> analysis.json   score, checkpoints, ranked tips, the HD Golf numbers, alignment quality
-#    -> aligned.mp4     the two views side by side, banners landing together
 #    -> <role>.keypoints.json   pose per view, cached by the clip's hash so a re-run is free
 #    picks the real swing out of a clip full of practice swings by downswing duration;
-#    --list-swings to see the candidates, --window-face-on / --window-dtl to override
+#    --list-swings to see the candidates, --window-face-on / --window-dtl to override.
+#    It renders no aligned.mp4 (an existing one is left standing)
+golf-lab reanalyze --dry-run        # which stored results are out of date
+#    a swing is out of date when it was never analyzed, when a clip was re-uploaded since, when
+#    it was analyzed by an older engine (`analysis_version`), or when an older screen parser read
+#    its shot. Drop --dry-run to repair; pose and shots are cached, so an unchanged bundle
+#    re-runs in seconds
 
-# 6. One golfer across every session: the honest sample size            (base install)
-python scripts/career_corpus.py --name Aaron
+# 5. One golfer across every session: the honest sample size
+golf-core career-corpus --name Aaron
 #    -> distinct swings after collapsing re-uploads, and n per metric
 #    swings are deduped on the face-on clip's hash, launch-monitor metrics on the shot
 #    photo's, so a clip uploaded three times counts once — see "Career mode" in ROADMAP.md
-python scripts/backfill_golfer.py --name Aaron --handedness right   # label older swings
-python scripts/reanalyze.py --dry-run                # which stored results are out of date
-#    a swing is out of date when it was never analyzed, when a clip was re-uploaded since, or
-#    when it was analyzed by an older engine (`analysis_version`). Drop --dry-run to repair;
-#    pose and shots are cached, so an unchanged bundle re-runs in seconds
 
-# 7. What that sample size buys — which today is nothing, on purpose      (base install)
-python scripts/career_baseline.py --name Aaron
+# 6. What that sample size buys — which today is nothing, on purpose
+golf-core career-baseline --name Aaron
 #    -> per metric: center, spread, trend, and where the center sits against the tour band
-python scripts/career_dispersion.py --name Aaron
+golf-core career-dispersion --name Aaron
 #    -> is the miss repeatable (look at what is fixed before the swing) or scattered (timing)?
 #    Both refuse every claim at n = 2, and each refusal names what it waits for — so the output
 #    doubles as a worklist. A baseline printed over two swings is the failure this exists to
-#    avoid. Same data on a page at /career.html?player=aaron, and over MCP as
-#    get_golfer_profile / get_shot_trends / compare_sessions.
-#    Windows: prefix with PYTHONIOENCODING=utf-8, or the console garbles the em-dashes
+#    avoid. Same data over MCP as get_golfer_profile / get_shot_trends / compare_sessions.
+golf-core club-profile --name Aaron   # the same, per club
+golf-core profile --name Aaron        # each club's strike profile, grades and blend (M37)
 ```
+
+The two-view render (`align_swings.py`) and the one-off golfer backfill (`backfill_golfer.py`)
+were deleted at M29 with no Rust twin: the render is retired (ADR-035 §2) and the backfill had
+already run.
 
 Reading the parsed shots back needs no extras at all — `ScreenShotDataSource` serves them
 from the store on the base install.
 
 ### Uploading swings from a phone
+
+**Closed since M29.** `POST /api/uploads` and every other route that wrote under `sessions/` or
+`shots/` answers 410, naming `golf-lab import-export`, `golf-lab import-photos --into-session`,
+`golf-lab analyze` or one of `golf-core`'s repairs (`set-golfer`, `set-club`, `delete-swing`,
+`flag-mishit`). What follows is how the route worked, kept because the server, its token and its
+Tailscale reach still serve the read pages.
 
 The upload server always binds `127.0.0.1`. Phones reach it through Tailscale, which
 terminates TLS and proxies inward — the bind never widens (ADR-016).
@@ -134,8 +139,8 @@ upload after that is two taps. Verify it properly with WiFi *off* — on cellula
 is the preflight checklist, the phone camera settings (1080p60, not 4K, and why), the measured
 timings, and what to check when it doesn't work.
 
-**The third file starts the analysis.** When a swing has all three roles, a background worker
-runs the same pipeline `analyze_bundle.py` does — pose per view, the shot screen, scoring,
+**The third file started the analysis, until M29 closed the route.** When a swing had all three roles, a background worker
+runs frozen Python's pipeline, the one `golf-lab analyze` ports — pose per view, the shot screen, scoring,
 alignment — and the swing gets a **View results** link on the upload page. Nothing auto-runs on
 a partial bundle: no timeout guesses right about whether the second phone is still walking back
 from the bay. Shot the swing from one angle on purpose? **Analyze anyway** on that swing runs it
@@ -196,39 +201,49 @@ of load-bearing prose is one copy going stale.
 
 ### Asking Claude about your swings (MCP)
 
-`scripts/run_mcp_server.py` speaks stdio, which is what Claude Desktop and Claude Code both use.
-Register it once and you can ask about sessions in plain language.
+`golf-mcp` is the server, in Rust since M29 (`crates/mcp`, on the `rmcp` SDK). It speaks stdio,
+which is what Claude Desktop and Claude Code both use, and reads `data/processed/` under the
+repository unless `--sessions-dir`, `--shots-dir` or `--golfers-dir` (or their `GOLF_*_DIR`
+variables) say otherwise. Build it, register the binary once, and you can ask about sessions in
+plain language.
 
 ```bash
 # Claude Code, from the repo root
-claude mcp add golf-coach -- "$(pwd)/.venv/Scripts/python.exe" "$(pwd)/scripts/run_mcp_server.py"
+cargo build --release -p golf-mcp
+claude mcp add golf-coach -- "$(pwd)/target/release/golf-mcp.exe"
+claude mcp list                  # golf-coach: …/golf-mcp.exe - ✔ Connected
 ```
 
-For **Claude Desktop**, add this to `%APPDATA%\Claude\claude_desktop_config.json` (absolute paths,
-doubled backslashes) and restart it:
+For **Claude Desktop**, add this to `%APPDATA%\Claude\claude_desktop_config.json` (an absolute
+path, doubled backslashes) and restart it:
 
 ```json
 { "mcpServers": { "golf-coach": {
-    "command": "C:\\path\\to\\golf-coach\\.venv\\Scripts\\python.exe",
-    "args": ["C:\\path\\to\\golf-coach\\scripts\\run_mcp_server.py"] } } }
+    "command": "C:\\path\\to\\golf-coach\\target\\release\\golf-mcp.exe" } } }
 ```
 
-Then ask *"how did my swing on 2026-08-10 go?"* — five tools cover sessions, one swing's full
-analysis, a session summary, and recent shots.
+Windows will not let `cargo build --release` replace `golf-mcp.exe` while a client is running it,
+so close the client (or end its session) before rebuilding the server.
 
-Offline research tooling for the reference corpus lives in `scripts/golfdb/` and needs the
-`research` extra; see [data/README.md](data/README.md) for how to rebuild it.
+Then ask *"how did my swing on 2026-08-10 go?"* — the tools cover sessions, one swing's full
+analysis, a session summary, recent shots, one golfer's history and bag, a simulated ball flight,
+and the graded strike profile. The connect-time briefing carries the caveats every answer is to be
+read with.
+
+The offline research tooling for the reference corpus is archived in `archive/` (ADR-035 §5) and
+needs pandas, numpy and scikit-learn installed by hand: [archive/README.md](archive/README.md)
+says what is there, and [data/README.md](data/README.md) how to rebuild the corpus with it.
 
 ## Architecture
 
-Nine packages under `src/golf_coach/`, with a shared `contracts/` package as the seam every
+The Python packages under `src/golf_coach/` (frozen since M32, and ported to `crates/` piece by
+piece — ADR-035), with a shared `contracts/` package as the seam every
 module depends on — modules never import each other.
 
 - **contracts** — shared Pydantic data shapes; the decoupling seam (ADR-008)
 - **capture** — `VideoSource` port; `FileVideoSource` adapter over OpenCV
 - **pose** — MediaPipe Tasks API → `FrameKeypoints` (33 landmarks/frame), plus overlay and
   side-by-side rendering
-- **detection** — YOLOv8 club head + ball *(stub — M2; the M1.5 spike ran and returned no-go, see ADR-017)*
 - **launch_monitor** — `ShotDataSource` port with mock / screen-OCR / composite adapters
 - **analysis** — pure functional core, with **measuring split from judging** (M6.5): `measure.py`
   and `shot_measure.py` produce numbers with no band in sight, `checkpoints/` turns three of them
@@ -259,15 +274,13 @@ module depends on — modules never import each other.
 | Video processing | OpenCV | In use |
 | Reference data | GolfDB — 1,399 hand-annotated tour swings (ADR-012) | In use, aggregates only |
 | Shot data OCR | PaddleOCR, reading the HD Golf screen (ADR-014) | In use |
-| Object detection | YOLOv8 (Ultralytics) | M2, not started |
 | Backend API | FastAPI | In use — phone upload server, loopback + Tailscale (ADR-016) |
-| MCP server | Python (MCP SDK) | In use — swings + shots over stdio (`scripts/run_mcp_server.py`) |
+| MCP server | Rust (`rmcp`), `golf-mcp` | In use — swings, shots, career and bag over stdio (M29) |
 | Database | SQLite | Reserved, unused — storage is flat-file (see `storage/`) |
 | LLM | Claude API (Anthropic), `claude-opus-5` | In use — per-swing coaching (M6) |
-| Frontend | React | M5, not started |
 
 Heavy dependencies are optional extras, so the analysis core installs and tests with none of
-them: `vision`, `api`, `llm`, `hardware`, `ocr`, `research`, `dev`, and `all`. See
+them: `vision`, `api`, `llm`, `ocr`, `audio`, `dev`, and `all`. See
 `pyproject.toml`.
 
 ## Project Structure
@@ -281,20 +294,20 @@ on simulated data before any hardware exists.
 ```
 golf-coach/
 ├── README.md  ROADMAP.md  WORKLOG.md
-├── pyproject.toml           # deps (base + 7 extras) + tooling
+├── pyproject.toml           # deps (base + optional extras) + tooling
+├── Cargo.toml               # the Rust workspace: crates/
 ├── docs/
 │   ├── README.md            # ⭐ documentation map — start here
 │   ├── ARCHITECTURE.md      # the system as built
 │   ├── FLOW.md              # the target design + build order
 │   ├── PROJECT_CHARTER.md
-│   ├── decisions/           # ADRs 000–016
+│   ├── decisions/           # the ADRs, indexed in docs/README.md
 │   └── archive/             # superseded milestone docs, kept as record
 ├── src/
 │   └── golf_coach/
 │       ├── contracts/       # ⭐ shared data shapes (Pydantic) — the decoupling seam
 │       ├── capture/         # VideoSource port + file adapter
 │       ├── pose/            # MediaPipe → FrameKeypoints + overlays
-│       ├── detection/       # YOLOv8 → FrameDetections (stub, M2)
 │       ├── launch_monitor/  # ShotDataSource port + mock/screen/composite adapters
 │       ├── analysis/        # ⭐ pure functional core: smooth→phases→checkpoints→score,
 │       │                    #   plus career mode: baseline → dispersion → tour comparison
@@ -305,16 +318,17 @@ golf-coach/
 │       ├── mcp/             # MCP tools over swings, shots, one golfer's career and
 │       │                    #   their bag (ADR-006)
 │       └── config.py        # settings (the only env reader)
-├── frontend/                # React UI (M5) — separate toolchain, talks to api/ over HTTP
+├── crates/                  # the Rust: the engine port, the stores, golf-lab, golf-mcp, the OCR
 ├── tests/                   # mirrors the package; the core suite runs on the base install
 ├── spikes/                  # throwaway exploration (e.g. the M1.5 detectability spike)
-├── scripts/                 # dev CLIs + scripts/golfdb/ reference-data tooling
+├── scripts/                 # what Python CLIs remain: ask_swing.py, run_server.py, conformance
+├── archive/                 # the research record: reference-data tooling, replay harnesses
 └── data/                    # gitignored: raw/ processed/ (incl. sessions/) models/ reference/
 ```
 
 ## Decision Log
 
-All architectural and technology decisions are documented as ADRs in `docs/decisions/` —
-16 of them, several carrying dated addenda where reality corrected the original call.
+All architectural and technology decisions are documented as ADRs in `docs/decisions/`, several
+carrying dated addenda where reality corrected the original call.
 [docs/README.md](docs/README.md) indexes them with statuses; see
 [000-template.md](docs/decisions/000-template.md) for the format.

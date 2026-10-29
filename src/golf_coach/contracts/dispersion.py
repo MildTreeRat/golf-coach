@@ -157,7 +157,7 @@ class MetricTarget(BaseModel):
 
 #: Provenance shared by the six pose tolerances, which are **measured rather than judged**.
 #:
-#: `scripts/golfdb/tune_spatial_metric.py` already computes exactly the quantity a tolerance needs:
+#: `archive/golfdb/tune_spatial_metric.py` already computes exactly the quantity a tolerance needs:
 #: `noise` (median |lite - full| at identical labelled instants — two estimators looking at the same
 #: frames, so whatever they disagree by is a floor on how well the quantity can be known) plus
 #: `bound` (median |labelled - detected| under one estimator — the cost of our own segmentation).

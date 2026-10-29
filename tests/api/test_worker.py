@@ -4,23 +4,29 @@ Every test here runs on the **base install**. The worker takes its `runner` by i
 precisely so this file can drive the whole lifecycle — queue, threading, state transitions,
 idempotence — without cv2, mediapipe or paddleocr being importable at all.
 
-Note the `with TestClient(...)` form throughout: without it Starlette never runs lifespan, the
-consumer task is never spawned, and `submit()` is inert. `tests/api/test_uploads.py` relies on
-exactly that to stay a pure ingestion test.
+**Since M29 no route submits to it.** Its two callers were the upload route, on the third role
+landing, and "Analyze anyway"; the M29 plan's D11 closed both. The app still starts it, and its
+startup recovery is what still reaches it there, so these tests drive it the way it can still be
+reached: `start()` on an event loop of their own, `submit()` called from that loop as its docstring
+requires, and the recovery pass `start()` runs. Swings are filed through the frozen store
+(`conftest.py`'s `file_swing`), as the upload route filed them. The last two tests are the app's
+half: its lifespan starts the worker it was given, and starts none when given none.
 """
 
 from __future__ import annotations
 
+import asyncio
 import threading
 import time
+from collections.abc import Awaitable, Callable
 
 import pytest
 from fastapi.testclient import TestClient
 
 from golf_coach.api.app import create_app
 from golf_coach.api.pipeline import PipelineOutcome, record_state
-from golf_coach.api.state import load_state, now
-from golf_coach.api.worker import AnalysisWorker
+from golf_coach.api.state import AnalysisState, input_hashes, load_state, now, save_state
+from golf_coach.api.worker import AnalysisWorker, should_analyze
 from golf_coach.contracts.feedback import FeedbackPayload
 from golf_coach.contracts.swing import SwingBundleResult, SwingResult
 from golf_coach.storage.bundle_store import SwingBundleStore
@@ -73,225 +79,253 @@ def store(tmp_path):
     return SwingBundleStore(tmp_path)
 
 
-def _client(store, runner, **kwargs):
-    worker = AnalysisWorker(store, runner=runner, **kwargs)
-    client = TestClient(create_app(store=store, token=None, worker=worker))
-    # M9 P6: an upload 409s without a club cursor; these tests are not about the club.
-    client.post("/api/sessions/current/club", json={"club": "7i"})
-    return client, worker
+def _run(worker: AnalysisWorker, body: Callable[[], Awaitable[None]]) -> None:
+    """Start `worker` on a loop of its own, run `body` on that loop, then stop it.
+
+    One loop for all three, so every `submit` in `body` is made from the event-loop thread, as
+    `AnalysisWorker.submit` requires; the runner itself runs in a thread off it, as in production.
+    """
+
+    async def main() -> None:
+        await worker.start()
+        try:
+            await body()
+        finally:
+            await worker.stop()
+
+    asyncio.run(main())
 
 
-def _upload(client, role: str, content: bytes = b"bytes", swing_id: str | None = None):
-    params = {"role": role, "filename": f"{role}.mov"}
-    if swing_id is not None:
-        params["swing_id"] = swing_id
-    return client.post("/api/uploads", params=params, content=content)
+async def _wait_for(swing_dir, statuses, timeout: float = 5.0):
+    """Poll the state sidecar until it reaches one of `statuses`, yielding to the loop between.
 
-
-def _wait_for(swing_dir, statuses, timeout: float = 5.0):
-    """Poll the state sidecar until it reaches a terminal status.
-
-    The worker runs on TestClient's event loop in another thread, so a plain sleep-poll from
-    the test thread is the honest way to observe it.
+    The runner works in another thread, so a sleep-poll is the honest way to observe it, and an
+    `asyncio.sleep` rather than a blocking one is what lets the consumer pick the job up at all.
     """
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         state = load_state(swing_dir)
         if state is not None and state.status in statuses:
             return state
-        time.sleep(0.02)
+        await asyncio.sleep(0.02)
     state = load_state(swing_dir)
     raise AssertionError(f"never reached {statuses}; last state was {state!r}")
 
 
-def test_complete_bundle_triggers_analysis(store, tmp_path) -> None:
-    runner = RecordingRunner()
-    client, _ = _client(store, runner)
+def _file_bundle(file_swing, store, roles=_ROLES) -> str:
+    for i, role in enumerate(roles):
+        filed = file_swing(store, role, f"clip-{i}-{role}".encode())
+    return filed.session_id
 
-    with client:
-        for i, role in enumerate(_ROLES):
-            res = _upload(client, role, content=f"clip-{i}".encode())
-        assert res.json()["queued"] is True
-        state = _wait_for(tmp_path / res.json()["session_id"] / "1", {"done"})
+
+def test_a_complete_bundle_is_the_automatic_trigger(store, tmp_path, file_swing) -> None:
+    """`should_analyze` is the rule, and recovery at start is what still applies it: a complete
+    bundle with no result is queued and analysed without anyone asking."""
+    runner = RecordingRunner()
+    session_id = _file_bundle(file_swing, store)
+    assert should_analyze(store.get_swing(session_id, "1"))
+
+    async def body() -> None:
+        state = await _wait_for(tmp_path / session_id / "1", {"done"})
+        assert state.score == 84.0
+        assert state.headline == "Work on tempo first."
+        assert state.partial is False
+
+    _run(AnalysisWorker(store, runner=runner), body)
 
     assert len(runner.calls) == 1
-    assert state.status == "done"
-    assert state.score == 84.0
-    assert state.headline == "Work on tempo first."
-    assert state.partial is False
 
 
-def test_incomplete_bundle_does_not_trigger_analysis(store) -> None:
+def test_an_incomplete_bundle_does_not_trigger_analysis(store, file_swing) -> None:
     # The whole trigger policy in one test: two of three roles starts nothing at all.
     runner = RecordingRunner()
-    client, _ = _client(store, runner)
+    session_id = _file_bundle(file_swing, store, roles=_ROLES[:2])
+    assert not should_analyze(store.get_swing(session_id, "1"))
 
-    with client:
-        _upload(client, "face_on")
-        res = _upload(client, "down_the_line")
-        assert res.json()["status"] == "collecting"
-        assert res.json()["queued"] is False
-        time.sleep(0.2)
+    async def body() -> None:
+        await asyncio.sleep(0.2)
+
+    _run(AnalysisWorker(store, runner=runner), body)
 
     assert runner.calls == []
 
 
-def test_analyze_anyway_runs_a_partial_bundle(store, tmp_path) -> None:
+def test_force_runs_a_partial_bundle(store, tmp_path, file_swing) -> None:
+    """What "Analyze anyway" reached: `submit(force=True)` over a bundle that will never be
+    complete, recorded as partial with the roles it lacked."""
     runner = RecordingRunner()
-    client, _ = _client(store, runner)
+    worker = AnalysisWorker(store, runner=runner)
+    session_id = _file_bundle(file_swing, store, roles=("face_on",))
 
-    with client:
-        session_id = _upload(client, "face_on").json()["session_id"]
+    async def body() -> None:
         assert runner.calls == []
+        assert worker.submit(session_id, "1", force=True) is True
+        state = await _wait_for(tmp_path / session_id / "1", {"done"})
+        assert state.partial is True
+        assert sorted(state.missing_roles) == ["down_the_line", "shot_screen"]
 
-        res = client.post(f"/api/sessions/{session_id}/swings/1/analyze")
-        assert res.status_code == 200
-        assert sorted(res.json()["missing_roles"]) == ["down_the_line", "shot_screen"]
-        state = _wait_for(tmp_path / session_id / "1", {"done"})
+    _run(worker, body)
 
     assert len(runner.calls) == 1
-    assert state.partial is True
-    assert sorted(state.missing_roles) == ["down_the_line", "shot_screen"]
 
 
-def test_analyze_anyway_rejects_a_bundle_with_no_face_on(store) -> None:
-    # Every checkpoint is measured from the face-on view, so this cannot produce a score.
-    runner = RecordingRunner()
-    client, _ = _client(store, runner)
+def test_an_unknown_swing_is_not_queued(store, file_swing) -> None:
+    worker = AnalysisWorker(store, runner=RecordingRunner())
+    _file_bundle(file_swing, store, roles=("face_on",))
 
-    with client:
-        session_id = _upload(client, "down_the_line").json()["session_id"]
-        res = client.post(f"/api/sessions/{session_id}/swings/1/analyze")
+    async def body() -> None:
+        assert worker.submit("2026-01-01", "99", force=True) is False
 
-    assert res.status_code == 400
-    assert "face-on" in res.json()["detail"]
-    assert runner.calls == []
+    _run(worker, body)
 
 
-def test_analyze_anyway_404s_for_an_unknown_swing(store) -> None:
-    client, _ = _client(store, RecordingRunner())
-
-    with client:
-        _upload(client, "face_on")
-        res = client.post("/api/sessions/2026-01-01/swings/99/analyze")
-
-    assert res.status_code == 404
-
-
-def test_failure_is_recorded_and_the_consumer_survives(store, tmp_path) -> None:
+def test_failure_is_recorded_and_the_consumer_survives(store, tmp_path, file_swing) -> None:
     runner = RecordingRunner(error=RuntimeError("mediapipe exploded"))
-    client, _ = _client(store, runner)
+    worker = AnalysisWorker(store, runner=runner)
+    session_id = _file_bundle(file_swing, store, roles=("face_on",))
 
-    with client:
-        session_id = _upload(client, "face_on").json()["session_id"]
-        client.post(f"/api/sessions/{session_id}/swings/1/analyze")
-        state = _wait_for(tmp_path / session_id / "1", {"failed"})
+    async def body() -> None:
+        worker.submit(session_id, "1", force=True)
+        state = await _wait_for(tmp_path / session_id / "1", {"failed"})
         assert state.error == "RuntimeError: mediapipe exploded"
 
-        # The queue must still be alive: a second job has to be picked up. Submitted over HTTP
-        # rather than by calling `worker.submit` directly, because that is the only way it is
-        # ever reached in production — see the note on `AnalysisWorker.submit`.
+        # The queue must still be alive: a second job has to be picked up.
         runner.error = None
-        _upload(client, "face_on", content=b"different", swing_id="2")
-        client.post(f"/api/sessions/{session_id}/swings/2/analyze")
-        second = _wait_for(tmp_path / session_id / "2", {"done"})
+        file_swing(store, "face_on", b"different", swing_id="2")
+        worker.submit(session_id, "2", force=True)
+        second = await _wait_for(tmp_path / session_id / "2", {"done"})
+        assert second.status == "done"
 
-    assert second.status == "done"
+    _run(worker, body)
+
     assert len(runner.calls) == 2
 
 
-def test_pipeline_returning_no_result_is_a_failure_not_a_crash(store, tmp_path) -> None:
+def test_pipeline_returning_no_result_is_a_failure_not_a_crash(
+    store, tmp_path, file_swing
+) -> None:
     runner = RecordingRunner(outcome=PipelineOutcome(error="no usable face-on view"))
-    client, _ = _client(store, runner)
+    worker = AnalysisWorker(store, runner=runner)
+    session_id = _file_bundle(file_swing, store, roles=("face_on",))
 
-    with client:
-        session_id = _upload(client, "face_on").json()["session_id"]
-        client.post(f"/api/sessions/{session_id}/swings/1/analyze")
-        state = _wait_for(tmp_path / session_id / "1", {"failed"})
+    async def body() -> None:
+        worker.submit(session_id, "1", force=True)
+        state = await _wait_for(tmp_path / session_id / "1", {"failed"})
+        assert state.error == "no usable face-on view"
 
-    assert state.error == "no usable face-on view"
+    _run(worker, body)
 
 
-def test_unchanged_bundle_is_not_reanalyzed(store, tmp_path) -> None:
+def test_unchanged_bundle_is_not_reanalyzed(store, tmp_path, file_swing) -> None:
     runner = RecordingRunner()
-    client, worker = _client(store, runner)
+    worker = AnalysisWorker(store, runner=runner)
+    session_id = _file_bundle(file_swing, store)
 
-    with client:
-        for role in _ROLES:
-            res = _upload(client, role, content=role.encode())
-        session_id = res.json()["session_id"]
-        _wait_for(tmp_path / session_id / "1", {"done"})
-
+    async def body() -> None:
+        await _wait_for(tmp_path / session_id / "1", {"done"})
         # Same bytes, same hashes: the stored result still describes them.
         assert worker.submit(session_id, "1") is False
-        time.sleep(0.1)
+        await asyncio.sleep(0.1)
+
+    _run(worker, body)
 
     assert len(runner.calls) == 1
 
 
-def test_a_rerecorded_clip_invalidates_the_result(store, tmp_path) -> None:
+def test_a_rerecorded_clip_invalidates_the_result(store, tmp_path, file_swing) -> None:
     runner = RecordingRunner()
-    client, _ = _client(store, runner)
+    worker = AnalysisWorker(store, runner=runner)
+    session_id = _file_bundle(file_swing, store)
 
-    with client:
-        for role in _ROLES:
-            res = _upload(client, role, content=role.encode())
-        session_id = res.json()["session_id"]
-        _wait_for(tmp_path / session_id / "1", {"done"})
-
-        # Re-upload face_on with different bytes into the same swing. The hash moves, so the
+    async def body() -> None:
+        first = await _wait_for(tmp_path / session_id / "1", {"done"})
+        # Re-file face_on with different bytes into the same swing. The hash moves, so the
         # recorded inputs no longer match and the result is stale by construction.
-        _upload(client, "face_on", content=b"a better take", swing_id="1")
-        state = _wait_for(tmp_path / session_id / "1", {"done"}, timeout=5.0)
-        assert state.status == "done"
+        file_swing(store, "face_on", b"a better take", swing_id="1")
+        assert not first.matches(store.get_swing(session_id, "1"))
+        assert worker.submit(session_id, "1") is True
+        await _wait_for(tmp_path / session_id / "1", {"queued", "running"})
+        state = await _wait_for(tmp_path / session_id / "1", {"done"})
+        assert state.matches(store.get_swing(session_id, "1"))
+
+    _run(worker, body)
 
     assert len(runner.calls) == 2
 
 
-def test_uploads_do_not_block_on_analysis(store, tmp_path) -> None:
-    """The reason the pipeline runs in a thread: a 4-minute pose must not stall ingestion."""
+def test_the_loop_is_not_blocked_while_a_run_is_parked(store, tmp_path, file_swing) -> None:
+    """The reason the pipeline runs in a thread: a 4-minute pose must not stall the server's loop,
+    which the read routes answer on."""
     runner = RecordingRunner()
     runner.gate = threading.Event()
-    client, _ = _client(store, runner)
+    worker = AnalysisWorker(store, runner=runner)
+    session_id = _file_bundle(file_swing, store)
 
-    with client:
-        for role in _ROLES:
-            res = _upload(client, role, content=role.encode())
-        session_id = res.json()["session_id"]
-        _wait_for(tmp_path / session_id / "1", {"running"})
-
-        # Analysis is now parked inside the runner. Ingestion must still answer immediately.
+    async def body() -> None:
+        await _wait_for(tmp_path / session_id / "1", {"running"})
+        # Analysis is now parked inside the runner. The loop must still answer immediately.
         started = time.monotonic()
-        second = _upload(client, "face_on", content=b"next swing", swing_id="2")
-        elapsed = time.monotonic() - started
-
-        assert second.status_code == 200
-        assert elapsed < 2.0
-        assert client.get("/api/sessions/current").status_code == 200
+        await asyncio.sleep(0.01)
+        file_swing(store, "face_on", b"next swing", swing_id="2")
+        assert worker.submit(session_id, "2", force=True) is True
+        assert time.monotonic() - started < 2.0
         runner.gate.set()
-        _wait_for(tmp_path / session_id / "1", {"done"})
+        await _wait_for(tmp_path / session_id / "1", {"done"})
+        await _wait_for(tmp_path / session_id / "2", {"done"})
+
+    _run(worker, body)
 
 
-def test_worker_disabled_leaves_ingestion_working(store) -> None:
-    client = TestClient(create_app(store=store, token=None, worker=None))
-    # M9 P6: an upload 409s without a club cursor; this test is not about the club.
-    client.post("/api/sessions/current/club", json={"club": "7i"})
+@pytest.mark.parametrize("status", ["queued", "running"])
+def test_recovery_reruns_what_a_previous_process_left_unfinished(
+    store, tmp_path, file_swing, status
+) -> None:
+    """No consumer survives a restart, so a `queued` or `running` state at start is orphaned, and
+    recovery runs it again, forced, even for a bundle that is not complete."""
+    runner = RecordingRunner()
+    session_id = _file_bundle(file_swing, store, roles=("face_on",))
+    manifest = store.get_swing(session_id, "1")
+    save_state(
+        AnalysisState(status=status, inputs=input_hashes(manifest), queued_at=now()),
+        tmp_path / session_id / "1",
+    )
 
-    with client:
-        for role in _ROLES:
-            res = _upload(client, role, content=role.encode())
+    async def body() -> None:
+        state = await _wait_for(tmp_path / session_id / "1", {"done"})
+        assert state.partial is True
 
-    assert res.status_code == 200
-    assert res.json()["queued"] is False
+    _run(AnalysisWorker(store, runner=runner), body)
+
+    assert len(runner.calls) == 1
 
 
-def test_analyze_route_503s_when_the_worker_is_disabled(store) -> None:
-    client = TestClient(create_app(store=store, token=None, worker=None))
-    # M9 P6: an upload 409s without a club cursor; this test is not about the club.
-    client.post("/api/sessions/current/club", json={"club": "7i"})
+def test_the_app_starts_the_worker_it_is_given(store, tmp_path, file_swing) -> None:
+    """The lifespan is the one place the closed server still reaches the worker: a complete bundle
+    with no result, on disk when the server starts, is analysed by recovery."""
+    runner = RecordingRunner()
+    session_id = _file_bundle(file_swing, store)
 
-    with client:
-        session_id = _upload(client, "face_on").json()["session_id"]
-        res = client.post(f"/api/sessions/{session_id}/swings/1/analyze")
+    worker = AnalysisWorker(store, runner=runner)
 
-    assert res.status_code == 503
+    with TestClient(create_app(store=store, token=None, worker=worker)):
+        deadline = time.monotonic() + 5.0
+        while time.monotonic() < deadline and not runner.calls:
+            time.sleep(0.02)
+        while time.monotonic() < deadline:
+            state = load_state(tmp_path / session_id / "1")
+            if state is not None and state.status == "done":
+                break
+            time.sleep(0.02)
+
+    assert len(runner.calls) == 1
+    assert load_state(tmp_path / session_id / "1").status == "done"
+
+
+def test_an_app_with_no_worker_analyses_nothing(store, tmp_path, file_swing) -> None:
+    session_id = _file_bundle(file_swing, store)
+
+    with TestClient(create_app(store=store, token=None, worker=None)) as client:
+        assert client.get(f"/api/sessions/{session_id}").status_code == 200
+        time.sleep(0.2)
+
+    assert load_state(tmp_path / session_id / "1") is None

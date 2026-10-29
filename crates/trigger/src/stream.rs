@@ -60,7 +60,7 @@ pub const WARMUP_S: f64 = 1.0;
 /// How far above the rolling floor a hop must stand to trigger, in robust z.
 ///
 /// **Measured by M20 P3** over all 30 stored clips — 11.9 minutes of bay audio — with
-/// `scripts/trigger_replay.py`. Against the impact the pipeline actually anchored on, the two
+/// `archive/trigger_replay.py`. Against the impact the pipeline actually anchored on, the two
 /// populations are:
 ///
 /// | | z |

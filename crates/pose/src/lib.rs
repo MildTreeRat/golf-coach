@@ -15,8 +15,12 @@
 //! [`writer`] is clause 8's other half — the caller writing `{camera_id}.keypoints.json`, since the
 //! worker decides no path — and the `golf-pose` binary drives one clip through all four (M23 P6).
 //!
-//! **Nothing calls any of it**: M22 built a whole analysis engine wired to nothing and this is the
-//! other half of what M24 needs, so M24 is the milestone that gives both a caller at once.
+//! **Its first caller is `golf-lab`** (M29 P22): `golf_lab::pose::keypoints_for`, the lab's port of
+//! `api/pipeline.py::keypoints_for`, starts a [`Pool`] when a view's cached landmarks are not
+//! current and writes the reply through [`writer`]. M23 built this wired to nothing as the other
+//! half of what M24 needed; ADR-034 paused M24, and ADR-035 made the lab the first to need it.
+//! That caller is also why [`worker::Outcome::Done`] carries the acceptance's frame count: the
+//! short-decode note compares it with the frames that came back.
 //!
 //! [`PoseError`] is here already, ahead of the code that raises most of it, because clause 5's retry
 //! table spans both halves: the reasons a *worker* reports are

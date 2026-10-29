@@ -140,7 +140,7 @@ by it. Nothing else in the sequence changed — `engine.py` is untouched.
 ```mermaid
 sequenceDiagram
     actor Dev
-    participant Tune as scripts/golfdb/tune_address.py
+    participant Tune as archive/golfdb/tune_address.py
     participant Truth as swings.jsonl (Tier 2)
     participant Cache as keypoints cache (Tier 1)
     participant Rule as candidate rules
@@ -188,7 +188,7 @@ signal families affordable at all.
 ## Files
 
 **New**
-- `scripts/golfdb/tune_address.py` — the address sweep, and the record of what was tried. Carries
+- `archive/golfdb/tune_address.py` — the address sweep, and the record of what was tried. Carries
   all six rejected families as named rules plus two permanent reference rows: the pre-B6 rule and
   `prior_tempo`, the no-pose baseline that any future candidate must beat.
 - `docs/decisions/013-clip-relative-detection.md` — the decision, as three principles.
@@ -204,8 +204,8 @@ signal families affordable at all.
   undetected boundary.
 - `src/golf_coach/analysis/benchmarks/ranges.json` + `golfdb_v1.json` — bands re-derived under
   metric definitions **v3** (`head_sway_norm` 0.42 → 0.43, `finish_balance_norm` 0.28 → 0.29).
-- `scripts/golfdb/ingest_labels.py` — `METRIC_DEFINITIONS_VERSION` 2 → 3.
-- `scripts/golfdb/bakeoff.py` — reports `med_err_frames_by_speed`.
+- `archive/golfdb/ingest_labels.py` — `METRIC_DEFINITIONS_VERSION` 2 → 3.
+- `archive/golfdb/bakeoff.py` — reports `med_err_frames_by_speed`.
 
 ## Confirmed decisions
 
@@ -238,12 +238,12 @@ Full tables in [M4_POSE_BAKEOFF.md](M4_POSE_BAKEOFF.md) Phase B6. The three that
 ## Verification
 
 1. `pytest` — 75 pass (67 before this change).
-2. `python scripts/golfdb/tune_address.py` — `clip_relative bounded` at median 7.0 / mean 22.9 /
+2. `python archive/golfdb/tune_address.py` — `clip_relative bounded` at median 7.0 / mean 22.9 /
    40% over 10 / med_norm 0.122 / PCE 15.8%, against the `current (fixed stall)` row at
    9.0 / 27.2 / 46% / 0.133 / 14.3%.
-3. `python scripts/golfdb/bakeoff.py --merge` — top and impact unchanged at 2 and 1 frames.
-4. `python scripts/golfdb/ingest_labels.py && python scripts/golfdb/derive_pose_metrics.py
-   --estimator mediapipe:lite && python scripts/golfdb/derive_reference.py` — re-derives the bands
+3. `python archive/golfdb/bakeoff.py --merge` — top and impact unchanged at 2 and 1 frames.
+4. `python archive/golfdb/ingest_labels.py && python archive/golfdb/derive_pose_metrics.py
+   --estimator mediapipe:lite && python archive/golfdb/derive_reference.py` — re-derives the bands
    under v3; `ranges.json` must match the recommended output.
 5. `python scripts/analyze_swing.py data/processed/<clip>.keypoints.json` on both own clips —
    `aaron-swing-2` ADDRESS @ 319, tempo 3.52; `golf_swing-aaron-1` ADDRESS @ 458, tempo 2.92.

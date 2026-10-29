@@ -1,0 +1,404 @@
+{
+  "career_version": 3,
+  "expected": {
+    "results": [
+      {
+        "content": [
+          {
+            "text": "{\n  \"shot_id\": \"shot-1\",\n  \"session_id\": \"2026-08-10\",\n  \"source\": \"screen\",\n  \"needs_review\": false,\n  \"warnings\": [],\n  \"parse_confidence\": 0.9,\n  \"metrics\": {\n    \"ball_speed\": 90.7,\n    \"launch_angle\": 20.9,\n    \"launch_direction\": -5.3,\n    \"spin_axis\": 2.5\n  }\n}",
+            "type": "text"
+          },
+          {
+            "text": "{\n  \"shot_id\": \"a\",\n  \"session_id\": \"2026-08-10\",\n  \"source\": \"screen\",\n  \"needs_review\": false,\n  \"warnings\": [],\n  \"parse_confidence\": 0.95,\n  \"metrics\": {\n    \"club_head_speed\": 98.3,\n    \"ball_speed\": 90.5,\n    \"carry_distance\": 150.0,\n    \"shot_type\": \"DRAW\"\n  }\n}",
+            "type": "text"
+          },
+          {
+            "text": "{\n  \"shot_id\": \"b\",\n  \"session_id\": \"2026-08-10\",\n  \"source\": \"screen\",\n  \"needs_review\": true,\n  \"warnings\": [\n    \"smash factor failed the physics cross-check\"\n  ],\n  \"parse_confidence\": 0.5,\n  \"metrics\": {\n    \"club_head_speed\": 98.3,\n    \"ball_speed\": 90.5,\n    \"carry_distance\": 121.0,\n    \"shot_type\": \"DRAW\"\n  }\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": [
+            {
+              "metrics": {
+                "ball_speed": 90.7,
+                "launch_angle": 20.9,
+                "launch_direction": -5.3,
+                "spin_axis": 2.5
+              },
+              "needs_review": false,
+              "parse_confidence": 0.9,
+              "session_id": "2026-08-10",
+              "shot_id": "shot-1",
+              "source": "screen",
+              "warnings": []
+            },
+            {
+              "metrics": {
+                "ball_speed": 90.5,
+                "carry_distance": 150.0,
+                "club_head_speed": 98.3,
+                "shot_type": "DRAW"
+              },
+              "needs_review": false,
+              "parse_confidence": 0.95,
+              "session_id": "2026-08-10",
+              "shot_id": "a",
+              "source": "screen",
+              "warnings": []
+            },
+            {
+              "metrics": {
+                "ball_speed": 90.5,
+                "carry_distance": 121.0,
+                "club_head_speed": 98.3,
+                "shot_type": "DRAW"
+              },
+              "needs_review": true,
+              "parse_confidence": 0.5,
+              "session_id": "2026-08-10",
+              "shot_id": "b",
+              "source": "screen",
+              "warnings": [
+                "smash factor failed the physics cross-check"
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"shot_id\": \"shot-1\",\n  \"session_id\": \"2026-08-10\",\n  \"source\": \"screen\",\n  \"needs_review\": false,\n  \"warnings\": [],\n  \"parse_confidence\": 0.9,\n  \"metrics\": {\n    \"ball_speed\": 90.7,\n    \"launch_angle\": 20.9,\n    \"launch_direction\": -5.3,\n    \"spin_axis\": 2.5\n  }\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": [
+            {
+              "metrics": {
+                "ball_speed": 90.7,
+                "launch_angle": 20.9,
+                "launch_direction": -5.3,
+                "spin_axis": 2.5
+              },
+              "needs_review": false,
+              "parse_confidence": 0.9,
+              "session_id": "2026-08-10",
+              "shot_id": "shot-1",
+              "source": "screen",
+              "warnings": []
+            }
+          ]
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"shot_id\": \"shot-1\",\n  \"session_id\": \"2026-08-10\",\n  \"source\": \"screen\",\n  \"needs_review\": false,\n  \"warnings\": [],\n  \"parse_confidence\": 0.9,\n  \"metrics\": {\n    \"ball_speed\": 90.7,\n    \"launch_angle\": 20.9,\n    \"launch_direction\": -5.3,\n    \"spin_axis\": 2.5\n  }\n}",
+            "type": "text"
+          },
+          {
+            "text": "{\n  \"shot_id\": \"a\",\n  \"session_id\": \"2026-08-10\",\n  \"source\": \"screen\",\n  \"needs_review\": false,\n  \"warnings\": [],\n  \"parse_confidence\": 0.95,\n  \"metrics\": {\n    \"club_head_speed\": 98.3,\n    \"ball_speed\": 90.5,\n    \"carry_distance\": 150.0,\n    \"shot_type\": \"DRAW\"\n  }\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": [
+            {
+              "metrics": {
+                "ball_speed": 90.7,
+                "launch_angle": 20.9,
+                "launch_direction": -5.3,
+                "spin_axis": 2.5
+              },
+              "needs_review": false,
+              "parse_confidence": 0.9,
+              "session_id": "2026-08-10",
+              "shot_id": "shot-1",
+              "source": "screen",
+              "warnings": []
+            },
+            {
+              "metrics": {
+                "ball_speed": 90.5,
+                "carry_distance": 150.0,
+                "club_head_speed": 98.3,
+                "shot_type": "DRAW"
+              },
+              "needs_review": false,
+              "parse_confidence": 0.95,
+              "session_id": "2026-08-10",
+              "shot_id": "a",
+              "source": "screen",
+              "warnings": []
+            }
+          ]
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"shot_id\": \"shot-1\",\n  \"session_id\": \"2026-08-10\",\n  \"source\": \"screen\",\n  \"needs_review\": false,\n  \"warnings\": [],\n  \"parse_confidence\": 0.9,\n  \"metrics\": {\n    \"ball_speed\": 90.7,\n    \"launch_angle\": 20.9,\n    \"launch_direction\": -5.3,\n    \"spin_axis\": 2.5\n  }\n}",
+            "type": "text"
+          },
+          {
+            "text": "{\n  \"shot_id\": \"a\",\n  \"session_id\": \"2026-08-10\",\n  \"source\": \"screen\",\n  \"needs_review\": false,\n  \"warnings\": [],\n  \"parse_confidence\": 0.95,\n  \"metrics\": {\n    \"club_head_speed\": 98.3,\n    \"ball_speed\": 90.5,\n    \"carry_distance\": 150.0,\n    \"shot_type\": \"DRAW\"\n  }\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": [
+            {
+              "metrics": {
+                "ball_speed": 90.7,
+                "launch_angle": 20.9,
+                "launch_direction": -5.3,
+                "spin_axis": 2.5
+              },
+              "needs_review": false,
+              "parse_confidence": 0.9,
+              "session_id": "2026-08-10",
+              "shot_id": "shot-1",
+              "source": "screen",
+              "warnings": []
+            },
+            {
+              "metrics": {
+                "ball_speed": 90.5,
+                "carry_distance": 150.0,
+                "club_head_speed": 98.3,
+                "shot_type": "DRAW"
+              },
+              "needs_review": false,
+              "parse_confidence": 0.95,
+              "session_id": "2026-08-10",
+              "shot_id": "a",
+              "source": "screen",
+              "warnings": []
+            }
+          ]
+        }
+      },
+      {
+        "content": [],
+        "isError": false,
+        "structuredContent": {
+          "result": []
+        }
+      },
+      {
+        "content": [],
+        "isError": false,
+        "structuredContent": {
+          "result": []
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"shot_id\": \"a\",\n  \"session_id\": \"2026-08-10\",\n  \"source\": \"screen\",\n  \"needs_review\": false,\n  \"warnings\": [],\n  \"parse_confidence\": 0.95,\n  \"metrics\": {\n    \"club_head_speed\": 98.3,\n    \"ball_speed\": 90.5,\n    \"carry_distance\": 121.0,\n    \"shot_type\": \"DRAW\"\n  }\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "metrics": {
+              "ball_speed": 90.5,
+              "carry_distance": 121.0,
+              "club_head_speed": 98.3,
+              "shot_type": "DRAW"
+            },
+            "needs_review": false,
+            "parse_confidence": 0.95,
+            "session_id": "2026-08-10",
+            "shot_id": "a",
+            "source": "screen",
+            "warnings": []
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"shot_id\": \"b\",\n  \"session_id\": \"2026-08-10\",\n  \"source\": \"screen\",\n  \"needs_review\": true,\n  \"warnings\": [\n    \"smash factor failed the physics cross-check\"\n  ],\n  \"parse_confidence\": 0.5,\n  \"metrics\": {\n    \"club_head_speed\": 98.3,\n    \"ball_speed\": 90.5,\n    \"carry_distance\": 121.0,\n    \"shot_type\": \"DRAW\"\n  }\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "metrics": {
+              "ball_speed": 90.5,
+              "carry_distance": 121.0,
+              "club_head_speed": 98.3,
+              "shot_type": "DRAW"
+            },
+            "needs_review": true,
+            "parse_confidence": 0.5,
+            "session_id": "2026-08-10",
+            "shot_id": "b",
+            "source": "screen",
+            "warnings": [
+              "smash factor failed the physics cross-check"
+            ]
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"shot_id\": \"shot-1\",\n  \"session_id\": \"2026-08-10\",\n  \"source\": \"screen\",\n  \"needs_review\": false,\n  \"warnings\": [],\n  \"parse_confidence\": 0.9,\n  \"metrics\": {\n    \"ball_speed\": 90.7,\n    \"launch_angle\": 20.9,\n    \"launch_direction\": -5.3,\n    \"spin_axis\": 2.5\n  }\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "metrics": {
+              "ball_speed": 90.7,
+              "launch_angle": 20.9,
+              "launch_direction": -5.3,
+              "spin_axis": 2.5
+            },
+            "needs_review": false,
+            "parse_confidence": 0.9,
+            "session_id": "2026-08-10",
+            "shot_id": "shot-1",
+            "source": "screen",
+            "warnings": []
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"found\": false,\n  \"message\": \"No shot with id 'missing'. Call get_recent_shots to see which shot ids exist.\"\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "found": false,
+            "message": "No shot with id 'missing'. Call get_recent_shots to see which shot ids exist."
+          }
+        }
+      }
+    ]
+  },
+  "id": "mcp/tools/shots",
+  "input": {
+    "calls": [
+      {
+        "arguments": {},
+        "now": null,
+        "tool": "get_recent_shots"
+      },
+      {
+        "arguments": {
+          "count": 1
+        },
+        "now": null,
+        "tool": "get_recent_shots"
+      },
+      {
+        "arguments": {
+          "count": 2
+        },
+        "now": null,
+        "tool": "get_recent_shots"
+      },
+      {
+        "arguments": {
+          "count": 3
+        },
+        "now": null,
+        "tool": "get_recent_shots"
+      },
+      {
+        "arguments": {
+          "count": 0
+        },
+        "now": null,
+        "tool": "get_recent_shots"
+      },
+      {
+        "arguments": {
+          "count": -5
+        },
+        "now": null,
+        "tool": "get_recent_shots"
+      },
+      {
+        "arguments": {
+          "shot_id": "a"
+        },
+        "now": null,
+        "tool": "get_shot_by_id"
+      },
+      {
+        "arguments": {
+          "shot_id": "b"
+        },
+        "now": null,
+        "tool": "get_shot_by_id"
+      },
+      {
+        "arguments": {
+          "shot_id": "shot-1"
+        },
+        "now": null,
+        "tool": "get_shot_by_id"
+      },
+      {
+        "arguments": {
+          "shot_id": "missing"
+        },
+        "now": null,
+        "tool": "get_shot_by_id"
+      }
+    ],
+    "files": {
+      "shots/a-again.shot.json": "{\n  \"shot_id\": \"a\",\n  \"session_id\": \"2026-08-10\",\n  \"timestamp\": \"2026-08-10T02:39:00Z\",\n  \"source\": \"screen\",\n  \"club_head_speed\": 98.3,\n  \"club_face_angle\": null,\n  \"club_path\": null,\n  \"ball_speed\": 90.5,\n  \"launch_angle\": null,\n  \"launch_direction\": null,\n  \"spin_rate\": null,\n  \"spin_axis\": null,\n  \"smash_factor\": null,\n  \"carry_distance\": 150.0,\n  \"total_distance\": null,\n  \"bounce_and_roll\": null,\n  \"apex_height\": null,\n  \"shot_type\": \"DRAW\",\n  \"impact_position\": null,\n  \"provenance\": {\n    \"device\": \"hd_golf\",\n    \"parse_confidence\": 0.95,\n    \"needs_review\": false,\n    \"warnings\": [],\n    \"image_sha256\": \"a-again\",\n    \"image_path\": null,\n    \"raw_fields\": {}\n  }\n}",
+      "shots/a.shot.json": "{\n  \"shot_id\": \"a\",\n  \"session_id\": \"2026-08-10\",\n  \"timestamp\": \"2026-08-10T01:39:00Z\",\n  \"source\": \"screen\",\n  \"club_head_speed\": 98.3,\n  \"club_face_angle\": null,\n  \"club_path\": null,\n  \"ball_speed\": 90.5,\n  \"launch_angle\": null,\n  \"launch_direction\": null,\n  \"spin_rate\": null,\n  \"spin_axis\": null,\n  \"smash_factor\": null,\n  \"carry_distance\": 121.0,\n  \"total_distance\": null,\n  \"bounce_and_roll\": null,\n  \"apex_height\": null,\n  \"shot_type\": \"DRAW\",\n  \"impact_position\": null,\n  \"provenance\": {\n    \"device\": \"hd_golf\",\n    \"parse_confidence\": 0.95,\n    \"needs_review\": false,\n    \"warnings\": [],\n    \"image_sha256\": null,\n    \"image_path\": null,\n    \"raw_fields\": {}\n  }\n}",
+      "shots/b.shot.json": "{\n  \"shot_id\": \"b\",\n  \"session_id\": \"2026-08-10\",\n  \"timestamp\": \"2026-08-10T01:39:00Z\",\n  \"source\": \"screen\",\n  \"club_head_speed\": 98.3,\n  \"club_face_angle\": null,\n  \"club_path\": null,\n  \"ball_speed\": 90.5,\n  \"launch_angle\": null,\n  \"launch_direction\": null,\n  \"spin_rate\": null,\n  \"spin_axis\": null,\n  \"smash_factor\": null,\n  \"carry_distance\": 121.0,\n  \"total_distance\": null,\n  \"bounce_and_roll\": null,\n  \"apex_height\": null,\n  \"shot_type\": \"DRAW\",\n  \"impact_position\": null,\n  \"provenance\": {\n    \"device\": \"hd_golf\",\n    \"parse_confidence\": 0.5,\n    \"needs_review\": true,\n    \"warnings\": [\n      \"smash factor failed the physics cross-check\"\n    ],\n    \"image_sha256\": null,\n    \"image_path\": null,\n    \"raw_fields\": {}\n  }\n}",
+      "shots/broken.shot.json": "{not json",
+      "shots/notes.txt": "not a shot",
+      "shots/photo-sha.shot.json": "{\n  \"shot_id\": \"shot-1\",\n  \"session_id\": \"2026-08-10\",\n  \"timestamp\": \"2026-08-10T12:00:00Z\",\n  \"source\": \"screen\",\n  \"club_head_speed\": null,\n  \"club_face_angle\": null,\n  \"club_path\": null,\n  \"ball_speed\": 90.7,\n  \"launch_angle\": 20.9,\n  \"launch_direction\": -5.3,\n  \"spin_rate\": null,\n  \"spin_axis\": 2.5,\n  \"smash_factor\": null,\n  \"carry_distance\": null,\n  \"total_distance\": null,\n  \"bounce_and_roll\": null,\n  \"apex_height\": null,\n  \"shot_type\": null,\n  \"impact_position\": null,\n  \"provenance\": {\n    \"device\": \"hd_golf\",\n    \"parse_confidence\": 0.9,\n    \"needs_review\": false,\n    \"warnings\": [],\n    \"image_sha256\": \"photo-sha\",\n    \"image_path\": null,\n    \"raw_fields\": {}\n  }\n}"
+    },
+    "roots": {
+      "golfers": null,
+      "sessions": "sessions",
+      "shots": "shots"
+    }
+  },
+  "provenance": {
+    "analysis_version": 16,
+    "flight_model_calls": [],
+    "kind": "mcp",
+    "mcp_version": "2.0.0",
+    "note": "a shot store with no sessions: test_query.py's two shots (one flagged, one timestamp), a newer one filed under its photo, a second `a` newer than the first, an unreadable file and a stray one; recent shots at every count, and each id found and missed",
+    "oracle": "python",
+    "pydantic_version": "2.13.4",
+    "python_version": "3.13.3",
+    "recorded_by": "scripts/conformance_vectors.py::_run_mcp",
+    "rerecords": [
+      {
+        "added": [],
+        "by": "golf-core rerecord",
+        "career_version": 3,
+        "declaration": "spec/declarations/career-v3.json",
+        "moved": [
+          "career_version"
+        ]
+      }
+    ],
+    "source": "scripts/conformance_vectors.py::_mcp_shots, after tests/mcp/"
+  }
+}

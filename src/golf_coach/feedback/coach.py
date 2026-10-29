@@ -35,14 +35,42 @@ Two halves, split on the `llm` extra, the same seam `mcp/query.py` holds against
     the reason, and the pipeline appends it to `notes` and finishes the swing. Coaching is the
     last thing that happens to a result and the least important; it must never be able to cost a
     golfer their score.
+
+## Two routes to the brief [M29 P17]
+
+  - **In process**: `build_brief` over frozen Python's `SwingBundleResult`, with the system prompt
+    over frozen `contracts/caveats.py`. `api/pipeline.py` keeps this route until M40 deletes it.
+  - **Over stdio**: `python -m golf_coach.feedback.coach --session S --swing W` reads the swing
+    through the Rust server, `golf-mcp`, and prints one JSON object, `{text, provenance}` or
+    `{note}`, which is what `golf-lab analyze` folds into `analysis.json` (the M29 plan's D15).
+    `brief_from_view` renders `get_swing`'s answer as `build_brief` renders the result, and the two
+    caveat blocks the prompt quotes come from `golf-mcp`'s caveats resource, so **this route keeps
+    no copy of a caveat sentence and reads no pydantic shape** (ADR-035 clause 1 names
+    `contracts/keypoints.py` as the only one of the mirrored contract to survive M40).
+    `scripts/ask_swing.py` seeds its conversations from the same rendering.
+
+`brief_from_view`'s docstring lists every line the view renders differently, and why none of them
+is a loss. Two lines needed keys no view carried, and `golf-mcp` gained them: a checkpoint's
+`one_sided` and an unscored entry's `family` (`crates/mcp/src/query.rs`'s module doc).
+
+The stdio pieces `conversation.py`'s route shares (`GolfMcpServer`, the caveats resource, the read
+timeout) live here, beside `_sdk` and `_note_for`, for the reason those already do:
+`conversation.py` imports this module, and the reverse would be a cycle.
 """
 
 from __future__ import annotations
 
+import argparse
 import hashlib
-from dataclasses import dataclass
+import json
+import os
+import shutil
+import sys
+from collections.abc import Mapping
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Any
+from pathlib import Path
+from typing import Any, TextIO
 
 from golf_coach.contracts.alignment import AlignmentQuality
 from golf_coach.contracts.caveats import (
@@ -66,13 +94,22 @@ MAX_TOKENS = 4096
 #: multi-step reasoning. `low` is the right rung and keeps the per-swing cost near nothing.
 EFFORT = "low"
 
-SYSTEM_PROMPT = f"""\
+
+def coaching_system_prompt(two_axes: str, reading_this_data_honestly: str) -> str:
+    """The coaching instructions, around the two caveat blocks they quote. [M29 P17]
+
+    A function of the two blocks rather than a constant over an import, for the reason
+    `conversation.answering_followups` is one: the two routes take them from different places, the
+    in-process route from frozen `contracts/caveats.py` and the stdio route from `golf-mcp`'s
+    caveats resource.
+    """
+    return f"""\
 You are a golf coach reading one swing that has already been measured. Write the short spoken
 verdict a coach gives walking back from the bay.
 
-{TWO_AXES}
+{two_axes}
 
-{READING_THIS_DATA_HONESTLY}
+{reading_this_data_honestly}
 
 How to write it:
 
@@ -91,6 +128,28 @@ How to write it:
 - When the brief flags a number as uncertain, say so in the sentence that uses it rather than
   quoting it flat.
 - Address the golfer as "you". Be direct and encouraging; do not pad."""
+
+
+#: The in-process route's prompt, over frozen Python's copies of the two blocks.
+SYSTEM_PROMPT = coaching_system_prompt(TWO_AXES, READING_THIS_DATA_HONESTLY)
+
+#: What to run when `golf-mcp` is not there. Release, because that is the build `default_golf_mcp`
+#: looks for: a debug server answers the same, only slower.
+BUILD_GOLF_MCP = "cargo build --release -p golf-mcp"
+
+#: `golf-mcp`'s caveats resource (`crates/mcp/src/server.rs`'s `CAVEATS_URI`): one JSON object of
+#: every named caveat sentence, keyed by the Python constant's name.
+CAVEATS_URI = "golf-coach://caveats"
+
+#: How long one request to `golf-mcp` may take before it is given up on. A hung server must become
+#: a note rather than a hung terminal; sixty seconds is the Rust stdio test's own bound
+#: (`crates/mcp/tests/stdio.rs`). Measured over the real `data/` with the release build
+#: (2026-10-22): spawn and handshake 18 ms, and the slowest of the twelve, `get_golfer_profile`,
+#: 74 ms. So the bound is for a server that has stopped answering, never for a slow one.
+READ_TIMEOUT_SECONDS = 60.0
+
+#: The two caveat blocks the coaching prompt quotes, by their name in the caveats resource.
+PROMPT_CAVEATS = ("TWO_AXES", "READING_THIS_DATA_HONESTLY")
 
 
 @dataclass(frozen=True)
@@ -406,29 +465,66 @@ def generate_coaching(
     """
     brief = build_brief(result)
 
-    sdk = _sdk()
-    if client is None:
-        # The extra is checked before the key, because it is the more fundamental blocker and
-        # only one of the two can be reported. With no `anthropic` package there is nothing to
-        # authenticate against, so answering that install with "no API key is configured" sends
-        # the reader to `.env` — where they find a perfectly good key — instead of to pip.
-        if sdk is None:
-            return CoachingOutcome(
-                note=(
-                    "no written coaching: the `llm` extra is not installed "
-                    "(pip install -e '.[llm]'). The scores and ranked tips above are unaffected."
-                )
-            )
-        if not api_key:
-            return CoachingOutcome(
-                note=(
-                    "no written coaching: no Anthropic API key is configured, so the coaching "
-                    "call was skipped (set GOLF_ANTHROPIC_API_KEY). The scores and ranked tips "
-                    "above are unaffected."
-                )
-            )
-        client = sdk.Anthropic(api_key=api_key)
+    client, refused = _coaching_client(api_key, client)
+    if refused is not None:
+        return CoachingOutcome(note=refused)
 
+    written = _write(client, brief, SYSTEM_PROMPT, model)
+    if written.text is None:
+        return CoachingOutcome(note=written.note)
+    return CoachingOutcome(
+        text=written.text,
+        provenance=CoachingProvenance(
+            model=written.model,
+            generated_at=datetime.now(UTC),
+            input_digest=_digest(brief),
+        ),
+    )
+
+
+def _coaching_client(api_key: str | None, client: Any | None) -> tuple[Any, str | None]:
+    """The client the coaching request goes out on, or the note saying why it cannot go out.
+
+    Shared by both routes, so the stdio route refuses before it starts `golf-mcp`: a paragraph with
+    no extra or no key is not worth spawning a server for, and both routes say so in one wording.
+    """
+    if client is not None:
+        return client, None
+    sdk = _sdk()
+    # The extra is checked before the key, because it is the more fundamental blocker and only one
+    # of the two can be reported. With no `anthropic` package there is nothing to authenticate
+    # against, so answering that install with "no API key is configured" sends the reader to
+    # `.env` — where they find a perfectly good key — instead of to pip.
+    if sdk is None:
+        return None, (
+            "no written coaching: the `llm` extra is not installed "
+            "(pip install -e '.[llm]'). The scores and ranked tips above are unaffected."
+        )
+    if not api_key:
+        return None, (
+            "no written coaching: no Anthropic API key is configured, so the coaching "
+            "call was skipped (set GOLF_ANTHROPIC_API_KEY). The scores and ranked tips "
+            "above are unaffected."
+        )
+    return sdk.Anthropic(api_key=api_key), None
+
+
+@dataclass(frozen=True)
+class _Written:
+    """What one coaching request answered: the text and the model that wrote it, or the note."""
+
+    text: str | None = None
+    model: str = ""
+    note: str | None = None
+
+
+def _write(client: Any, brief: str, system: str, model: str) -> _Written:
+    """One coaching request, from a brief and a system prompt. Never raises for an expected failure.
+
+    Both routes end here, so the request shape the tests pin and the notes a failure becomes are
+    spelled once, whichever route built the brief.
+    """
+    sdk = _sdk()
     try:
         response = client.messages.create(
             model=model,
@@ -441,7 +537,7 @@ def generate_coaching(
             system=[
                 {
                     "type": "text",
-                    "text": SYSTEM_PROMPT,
+                    "text": system,
                     # The prompt is identical for every swing, so a session's second swing reads
                     # it from cache. Worth a check against `usage.cache_read_input_tokens` — Opus
                     # 5 will not cache a prefix under 512 tokens, and silently writes nothing.
@@ -451,31 +547,19 @@ def generate_coaching(
             messages=[{"role": "user", "content": brief}],
         )
     except Exception as exc:  # narrowed in `_note_for`; the SDK may be absent entirely
-        return CoachingOutcome(note=_note_for(exc, sdk))
+        return _Written(note=_note_for(exc, sdk))
 
     stop_reason = getattr(response, "stop_reason", None)
     if stop_reason == "refusal":
-        return CoachingOutcome(
-            note="no written coaching: the model declined to answer for this swing."
-        )
+        return _Written(note="no written coaching: the model declined to answer for this swing.")
 
     text = _text_from(response)
     if not text:
-        return CoachingOutcome(
-            note="no written coaching: the model returned no text for this swing."
-        )
+        return _Written(note="no written coaching: the model returned no text for this swing.")
     if stop_reason == "max_tokens":
         # Say it rather than silently serving a paragraph that stops mid-sentence.
         text += "\n\n(This note was cut off before it finished.)"
-
-    return CoachingOutcome(
-        text=text,
-        provenance=CoachingProvenance(
-            model=getattr(response, "model", None) or model,
-            generated_at=datetime.now(UTC),
-            input_digest=_digest(brief),
-        ),
-    )
+    return _Written(text=text, model=getattr(response, "model", None) or model)
 
 
 #: Long enough for the API's own sentence, short enough that a note stays a note. What this clips
@@ -548,3 +632,587 @@ def _note_for(
         if isinstance(exc, anthropic.APIConnectionError):  # type: ignore[attr-defined]
             return f"{prefix}could not reach the API. The scores above are unaffected."
     return f"{prefix}the request failed ({type(exc).__name__}: {exc})."
+
+
+# --------------------------------------------------------------------------------------------------
+# The stdio route [M29 P17]: the brief from `golf-mcp`'s view, and the JSON entry
+# --------------------------------------------------------------------------------------------------
+
+#: `UnscoredView.family`'s value for a ball-flight number the simulation could not produce
+#: (`crates/mcp/src/query.rs`'s `FLIGHT_FAMILY`). Everything else is a checkpoint.
+FLIGHT_FAMILY = "flight"
+
+#: The numeric shot metrics the brief prints, in `_shot_lines`' order and with its labels, keyed by
+#: the name `ShotView.metrics` answers them under.
+_VIEW_SHOT_FIELDS = (
+    ("carry", "carry_distance", "yards"),
+    ("total", "total_distance", "yards"),
+    ("ball speed", "ball_speed", "mph"),
+    ("club head speed", "club_head_speed", "mph"),
+    ("smash factor", "smash_factor", ""),
+    ("club path", "club_path", "degrees, + = in-to-out"),
+    ("club face angle", "club_face_angle", "degrees, + = open"),
+    ("launch angle", "launch_angle", "degrees"),
+    ("spin rate", "spin_rate", "rpm"),
+)
+
+#: The keys of `get_swing`'s view an analysis fills. A view with none of them is the bare one
+#: `golf-mcp` answers for a swing with no `analysis.json` (`SwingView::bare`): its identity, its
+#: status and what the manifest stamps, which is nothing to coach from.
+_ANALYSIS_KEYS = (
+    "overall_score",
+    "mechanics_score",
+    "outcome_score",
+    "headline",
+    "checkpoints",
+    "tips",
+    "unscored",
+    "measurements",
+    "simulated",
+    "population",
+    "rotation",
+    "analysis_version",
+    "alignment_quality",
+    "alignment_caveat",
+    "shot",
+    "notes",
+)
+
+
+def is_analyzed(view: Mapping[str, Any]) -> bool:
+    """Whether `get_swing`'s view holds an analysis, rather than only the swing's identity."""
+    return any(view.get(key) not in (None, [], {}) for key in _ANALYSIS_KEYS)
+
+
+def _items(value: Any) -> list[Mapping[str, Any]]:
+    """The objects in a list the view answers, and nothing else."""
+    return [item for item in value if isinstance(item, Mapping)] if isinstance(value, list) else []
+
+
+def _number(value: Any) -> float | None:
+    if isinstance(value, bool) or not isinstance(value, int | float):
+        return None
+    return float(value)
+
+
+def _view_band(checkpoint: Mapping[str, Any]) -> str:
+    low, high = _number(checkpoint.get("expected_low")), _number(checkpoint.get("expected_high"))
+    if low is None and high is None:
+        return "no band"
+    return f"{_fmt(low)} to {_fmt(high)}"
+
+
+def _view_checkpoint_line(checkpoint: Mapping[str, Any]) -> str:
+    """`_checkpoint_line` over a `CheckpointView`."""
+    verdict = "PASS" if checkpoint.get("passed") else "MISS"
+    score = _number(checkpoint.get("score"))
+    parts = [
+        f"- {checkpoint.get('name')}: observed {_fmt(_number(checkpoint.get('observed')))}, "
+        f"tour band {_view_band(checkpoint)}, {verdict}, "
+        f"score {'-' if score is None else f'{score:.2f}'}"
+    ]
+    percentile = _number(checkpoint.get("percentile"))
+    if percentile is not None:
+        one_sided = checkpoint.get("one_sided")
+        sided = (
+            ""
+            if not isinstance(one_sided, bool)
+            else " (lower is better)"
+            if one_sided
+            else " (both extremes are faults)"
+        )
+        population_n = checkpoint.get("population_n")
+        population = f" of {population_n}" if population_n else ""
+        parts.append(f"  percentile {_fmt(percentile, 0)}{population} tour swings{sided}")
+    if checkpoint.get("message"):
+        parts.append(f"  rule-based reading: {checkpoint['message']}")
+    return "\n".join(parts)
+
+
+def _view_shot_lines(shot: Mapping[str, Any]) -> list[str]:
+    """`_shot_lines` over a `ShotView`: the OCR flag first, so it is read before the numbers.
+
+    `parse_confidence` stands for the provenance block: it is required on one, and the view answers
+    `None` exactly when the shot has none.
+    """
+    lines: list[str] = []
+    confidence = _number(shot.get("parse_confidence"))
+    if confidence is not None:
+        flag = "yes" if shot.get("needs_review") else "no"
+        lines.append(
+            f"needs_review: {flag} (read off a photo of the launch monitor's screen by OCR,"
+            f" parse confidence {confidence:.2f})"
+        )
+        warnings = shot.get("warnings")
+        for warning in warnings if isinstance(warnings, list) else []:
+            lines.append(f"  warning: {warning}")
+
+    metrics = shot.get("metrics")
+    metrics = metrics if isinstance(metrics, Mapping) else {}
+    for label, key, unit in _VIEW_SHOT_FIELDS:
+        value = _number(metrics.get(key))
+        if value is not None:
+            lines.append(f"{label}: {_fmt(value)}{f' {unit}' if unit else ''}")
+    for label, key in (("shape", "shot_type"), ("strike", "impact_position")):
+        text = metrics.get(key)
+        if isinstance(text, str) and text:
+            lines.append(f"{label}: {text}")
+    return lines
+
+
+def _require_p17_keys(view: Mapping[str, Any]) -> None:
+    """Refuse a view from a `golf-mcp` built before it answered `one_sided` and `family`.
+
+    A missing key is not a missing value: the server answers `one_sided: null` for a score that
+    does not say, and `family` on every unscored entry. Without them the brief would lose the
+    percentile's direction and call every flight refusal a checkpoint excluded from
+    `overall_score`, silently, so a stale release build is a refusal naming the rebuild instead.
+    """
+    for key, items in (("one_sided", "checkpoints"), ("family", "unscored")):
+        if any(key not in item for item in _items(view.get(items))):
+            raise ValueError(
+                f"golf-mcp's get_swing answer has no `{key}` in its `{items}`, so the server "
+                f"predates the coaching brief's keys: rebuild it (`{BUILD_GOLF_MCP}`)"
+            )
+
+
+def brief_from_view(view: Mapping[str, Any]) -> str:
+    """`build_brief`, over `get_swing`'s answer from `golf-mcp` rather than frozen Python's result.
+
+    Line for line `build_brief`'s rendering, so its docstring's calls hold here too: the heavy
+    streams are absent because the view never had them, and of the measurements only the
+    placements and the rotation rows are rendered, which the view already carries apart as
+    `population` and `rotation`. Raises `ValueError` for a view from a server that predates the two
+    keys this needs (`_require_p17_keys`).
+
+    **Where it renders differently, and why nothing is lost** (the M29 plan's P17 measured each over
+    the 15 stored swings):
+
+      - **The shot's device is not named**: the line says "the launch monitor's screen". The view
+        carries the shot's `source`, not its provenance's `device`, whose value (`hd_golf`) is a
+        storage key rather than anything a coach says.
+      - **The shot's warnings are the golfer-facing ones**: `golf-mcp` drops M34's `no tile found
+        for` layout line (the plan's P11), which is about the screen's layout and not the photo.
+      - **The alignment's summary and notes are not repeated** under TWO-VIEW ALIGNMENT. The
+        summary is inside `alignment_caveat` on every tier below `full`, and both engines copy every
+        alignment note into the swing's notes as `alignment: …`, so NOTES carries each one once.
+      - **The verdict section appears when there is a headline or a tip.** The view cannot tell a
+        result with no feedback from one with an empty one, and the pipeline writes feedback on
+        every swing it analyses.
+      - **A percentile whose score does not say which side is the fault** is printed without the
+        direction rather than with a guessed one. No engine writes a score like that.
+      - **An unscored reason the server does not know** reads as `unrecorded`, as `golf-mcp`'s
+        tolerant reader answers it, where `build_brief` could not have read the artifact at all.
+    """
+    _require_p17_keys(view)
+    overall = _number(view.get("overall_score"))
+    out: list[str] = [
+        f"SWING {view.get('swing_id')} (session {view.get('session_id')})",
+        "",
+        f"overall_score: {_fmt(overall, 1)} out of 100",
+    ]
+    mechanics = _number(view.get("mechanics_score"))
+    if mechanics is not None:
+        out.append(f"mechanics_score: {_fmt(mechanics, 1)} out of 100")
+    if view.get("outcome_score") is None:
+        out.append(
+            "outcome_score: not computed - the launch-monitor numbers are attached and displayed"
+            " but not yet scored, so overall_score reflects mechanics only"
+        )
+
+    out += ["", "CHECKPOINTS MEASURED (face-on view only)"]
+    out += [_view_checkpoint_line(c) for c in _items(view.get("checkpoints"))] or ["- none scored"]
+
+    out.append("")
+    # Split by family, for `build_brief`'s reason, with the family read off the view rather than
+    # off a copy of the reason table: `golf-mcp` answers it from `is_inference_reason`.
+    entries = _items(view.get("unscored"))
+    unscored = [entry for entry in entries if entry.get("family") != FLIGHT_FAMILY]
+    flight = [entry for entry in entries if entry.get("family") == FLIGHT_FAMILY]
+    if unscored:
+        out.append(
+            "unscored (attempted but could not be scored, and excluded from overall_score"
+            " rather than counted as zero):"
+        )
+        out += [f"- {entry.get('name')}: {entry.get('why')}" for entry in unscored]
+    else:
+        out.append("unscored: none - every checkpoint was scored on this swing")
+
+    if flight:
+        out.append("")
+        out.append(
+            "simulated ball flight (a model over the printed launch conditions, in no score at"
+            " all - not a checkpoint and never part of overall_score):"
+        )
+        out += [f"- {entry.get('name')}: {entry.get('why')}" for entry in flight]
+
+    out += ["", "POPULATION PLACEMENT (recorded, never scored - nothing here has a band)"]
+    placements = _items(view.get("population"))
+    for row in placements:
+        calibration = (
+            "calibrated"
+            if row.get("calibrated")
+            else "NOT calibrated - read beside its T2, never alone"
+        )
+        out.append(
+            f"- {row.get('name')} ({row.get('view')} view, {calibration}): "
+            f"{_fmt(_number(row.get('value')))} {row.get('unit')}"
+        )
+        out.append(f"  {row.get('detail')}")
+    if not placements:
+        out.append(
+            "none - this swing did not produce a placement, which happens when a metric or a "
+            "phase anchor the model needs was missing. Say nothing about where it sits."
+        )
+
+    out += [
+        "",
+        "ROTATION (interim - a 2-D-per-view reading, no reference population, never a band, "
+        "never part of overall_score, never blended across views)",
+    ]
+    pivots = _items(view.get("rotation"))
+    for row in pivots:
+        out.append(
+            f"- {row.get('name')} ({row.get('view')} view, interim): "
+            f"{_fmt(_number(row.get('value')))} {row.get('unit')}"
+        )
+        out.append(f"  {row.get('interim_reason')}")
+    if not pivots:
+        out.append(
+            "none - this swing did not produce a rotation reading, which happens when the "
+            "tracking a check needs was missing. Say nothing about the golfer's turn."
+        )
+
+    headline, tips = view.get("headline"), _items(view.get("tips"))
+    if headline or tips:
+        out += ["", "THIS SYSTEM'S OWN RANKED VERDICT (rule-based, most actionable first)"]
+        if headline:
+            out.append(f"headline: {headline}")
+        for index, tip in enumerate(tips, start=1):
+            out.append(
+                f"{index}. [{tip.get('severity')}] {tip.get('checkpoint')}: {tip.get('text')}"
+            )
+
+    out += ["", "LAUNCH MONITOR SHOT"]
+    shot = view.get("shot")
+    if isinstance(shot, Mapping):
+        out += _view_shot_lines(shot)
+    else:
+        out.append("none attached to this swing")
+
+    out += ["", "TWO-VIEW ALIGNMENT"]
+    quality = view.get("alignment_quality")
+    if quality is None:
+        out.append("no down-the-line view - nothing to align, and nothing scored from it anyway")
+    else:
+        out.append(f"quality: {quality}")
+        if view.get("alignment_caveat"):
+            out.append(f"alignment_caveat: {view['alignment_caveat']}")
+
+    out += ["", "NOTES RECORDED WHILE ANALYZING THIS SWING"]
+    notes = view.get("notes")
+    out += [f"- {note}" for note in (notes if isinstance(notes, list) else [])] or ["none"]
+
+    return "\n".join(out)
+
+
+@dataclass(frozen=True)
+class GolfMcpServer:
+    """How to start `golf-mcp`: the binary, and the stores it serves.
+
+    The three directories are `golf-mcp`'s own flags (the M29 plan's C10), passed always rather
+    than left to its defaults, so the server reads exactly the stores the caller names.
+    `golfers_dir=None` is `--no-registry`: the server then offers no per-golfer tool and its
+    briefing drops their reading rules, which is `build_tools(golfers_dir=None)`'s contract on the
+    in-process route.
+    """
+
+    binary: Path
+    sessions_dir: Path
+    shots_dir: Path
+    golfers_dir: Path | None = None
+
+    def args(self) -> list[str]:
+        registry = (
+            ["--golfers-dir", str(self.golfers_dir)]
+            if self.golfers_dir is not None
+            else ["--no-registry"]
+        )
+        return [
+            "--sessions-dir",
+            str(self.sessions_dir),
+            "--shots-dir",
+            str(self.shots_dir),
+            *registry,
+        ]
+
+
+def default_golf_mcp() -> Path:
+    """`GOLF_MCP`, else the release build: the order `golf-core rerecord` finds the binary in.
+
+    Release, because it is the build Claude Code's registration points at from the M29 plan's
+    P34 (D21). A debug build answers the same, only slower.
+    """
+    from golf_coach.config import REPO_ROOT
+
+    named = os.environ.get("GOLF_MCP")
+    if named:
+        return Path(named)
+    exe = "golf-mcp.exe" if os.name == "nt" else "golf-mcp"
+    return REPO_ROOT / "target" / "release" / exe
+
+
+@dataclass(frozen=True)
+class SwingRead:
+    """What `golf-mcp` answered about one swing: its view, or the miss sentence; and the caveats."""
+
+    view: dict[str, Any] | None
+    miss: str | None
+    caveats: dict[str, str]
+
+
+def read_swing(
+    server: GolfMcpServer,
+    session_id: str,
+    swing_id: str,
+    *,
+    caveats: tuple[str, ...] = (),
+    errlog: TextIO | None = None,
+) -> SwingRead:
+    """`get_swing`, and the caveat sentences named, over one stdio session to `golf-mcp`.
+
+    Raises when the server cannot be used: the MCP client not installed (`ImportError`), the binary
+    not found, a spawn or handshake that fails, or an answer that is no view. Each caller turns
+    that into a note in its own vocabulary. A miss is an answer, not a failure: `view` is `None`
+    and `miss` is the server's own sentence saying what to do. `errlog` takes the server's stderr,
+    `sys.stderr` when not given.
+    """
+    import anyio
+    from mcp import ClientSession, StdioServerParameters
+    from mcp.client.stdio import stdio_client
+
+    binary = shutil.which(str(server.binary))
+    if binary is None:
+        raise FileNotFoundError(f"golf-mcp is not built at {server.binary}")
+    read: list[SwingRead] = []
+
+    async def converse() -> None:
+        parameters = StdioServerParameters(command=binary, args=server.args())
+        async with (
+            stdio_client(parameters, errlog=errlog or sys.stderr) as (stream_in, stream_out),
+            ClientSession(
+                stream_in, stream_out, read_timeout_seconds=READ_TIMEOUT_SECONDS
+            ) as session,
+        ):
+            await session.initialize()
+            sentences: dict[str, str] = {}
+            if caveats:
+                resource = await session.read_resource(CAVEATS_URI)
+                sentences = {name: _caveat(resource, name) for name in caveats}
+            answer = await session.call_tool(
+                "get_swing", {"session_id": session_id, "swing_id": swing_id}
+            )
+            read.append(_swing_read(answer, sentences))
+
+    anyio.run(converse)
+    return read[0]
+
+
+def _swing_read(answer: Any, caveats: dict[str, str]) -> SwingRead:
+    """`get_swing`'s `CallToolResult` as a view or a miss; anything else is a failure."""
+    structured = getattr(answer, "structured_content", None)
+    result = structured.get("result") if isinstance(structured, dict) else None
+    if getattr(answer, "is_error", False) or not isinstance(result, dict):
+        blocks = getattr(answer, "content", None) or []
+        said = getattr(blocks[0], "text", "") if blocks else ""
+        raise ValueError(f"golf-mcp answered get_swing with no view: {said or 'nothing'}")
+    if result.get("found") is False:
+        return SwingRead(view=None, miss=str(result.get("message", "")), caveats=caveats)
+    return SwingRead(view=result, miss=None, caveats=caveats)
+
+
+def _caveat(result: Any, name: str) -> str:
+    """One named sentence from `golf-mcp`'s caveats resource (`resources/read`'s answer).
+
+    Indexed by name, as the resource is keyed (the M29 plan's P9 finding 6), so a sentence added
+    to the resource changes nothing here and a sentence removed from it is a refusal by name.
+    """
+    contents = getattr(result, "contents", None) or []
+    text = getattr(contents[0], "text", None) if contents else None
+    if not isinstance(text, str):
+        raise ValueError(f"golf-mcp's {CAVEATS_URI} is not text")
+    caveats = json.loads(text)
+    sentence = caveats.get(name) if isinstance(caveats, dict) else None
+    if not isinstance(sentence, str):
+        raise ValueError(f"golf-mcp's {CAVEATS_URI} has no {name}")
+    return sentence
+
+
+def _innermost(exc: BaseException) -> str:
+    """The failure worth printing, out of the exception groups anyio's task groups wrap it in.
+
+    A server that exits during the handshake surfaces as an `ExceptionGroup` around the one error
+    that says why, and "unhandled errors in a TaskGroup" is not a sentence anybody can act on.
+    """
+    while isinstance(exc, BaseExceptionGroup) and exc.exceptions:
+        exc = exc.exceptions[0]
+    return f"{type(exc).__name__}: {exc}"
+
+
+def _spelled(instant: datetime) -> str:
+    """An aware UTC instant as pydantic writes it into `analysis.json`, with no pydantic.
+
+    `2026-10-22T08:23:05.300000Z`, and no fraction at all on a whole second, which is what
+    `CoachingProvenance.model_dump(mode="json")` writes and `crates/contracts`' `Timestamp` reads
+    (measured, pydantic 2.13.4, and pinned in `tests/feedback/test_coach.py`).
+    """
+    return instant.astimezone(UTC).isoformat().replace("+00:00", "Z")
+
+
+@dataclass(frozen=True)
+class Brief:
+    """One stored swing's brief as `golf-mcp` serves it, or the sentence saying why not."""
+
+    text: str | None = None
+    #: The caveat sentences asked for, by name, when there is a brief.
+    caveats: dict[str, str] = field(default_factory=dict)
+    #: Why there is no brief, as a sentence.
+    refusal: str | None = None
+    #: The server answered, and the swing has nothing to coach from: a miss, or no analysis. False
+    #: for a server that could not be used at all, which a caller words differently.
+    unanalyzed: bool = False
+
+
+def brief_through_golf_mcp(
+    server: GolfMcpServer,
+    session_id: str,
+    swing_id: str,
+    *,
+    caveats: tuple[str, ...] = (),
+    errlog: TextIO | None = None,
+) -> Brief:
+    """`brief_from_view` over `get_swing`, and the caveats named, read through `golf-mcp`.
+
+    The one place both stdio callers start from (the coaching entry here, and `ask_swing.py`'s
+    seed), so the conversation and the paragraph open from one rendering of the swing. Never raises
+    for an expected failure: a server that is not built, will not start, or predates the brief's
+    keys is a refusal, as a swing with no analysis is.
+    """
+    if shutil.which(str(server.binary)) is None:
+        return Brief(refusal=f"golf-mcp is not built at {server.binary} (run `{BUILD_GOLF_MCP}`).")
+    try:
+        read = read_swing(server, session_id, swing_id, caveats=caveats, errlog=errlog)
+    except ImportError as exc:
+        return Brief(
+            refusal=(
+                f"the MCP client is not installed ({exc}). It is part of the `llm` extra "
+                "(pip install -e '.[llm]')."
+            )
+        )
+    except Exception as exc:  # the spawn, the pipe, the handshake and the answer's shape
+        return Brief(refusal=f"golf-mcp could not be used ({_innermost(exc)}).")
+    if read.view is None:
+        return Brief(refusal=read.miss, unanalyzed=True)
+    if not is_analyzed(read.view):
+        return Brief(
+            refusal=f"swing {swing_id!r} in session {session_id!r} has no analysis on file.",
+            unanalyzed=True,
+        )
+    try:
+        return Brief(text=brief_from_view(read.view), caveats=read.caveats)
+    except ValueError as exc:
+        return Brief(refusal=f"{exc}.")
+
+
+def coach_through_golf_mcp(
+    session_id: str,
+    swing_id: str,
+    *,
+    server: GolfMcpServer,
+    model: str,
+    api_key: str | None = None,
+    client: Any | None = None,
+    errlog: TextIO | None = None,
+) -> dict[str, Any]:
+    """The coaching paragraph for one stored swing, read through `golf-mcp`: the entry's answer.
+
+    `{"text", "provenance"}` when a paragraph was written, `provenance` being `CoachingProvenance`
+    as `analysis.json` stores it beside `coaching_text`, or `{"note"}` when it was not, in the
+    results page's vocabulary, for the caller to append to the swing's notes as `api/pipeline.py`
+    does. Never raises for an expected failure: no extra or no key is refused before `golf-mcp`
+    is started, and every refusal `brief_through_golf_mcp` can give is a note, as a rate limit is.
+    """
+    client, refused = _coaching_client(api_key, client)
+    if refused is not None:
+        return {"note": refused}
+    brief = brief_through_golf_mcp(
+        server, session_id, swing_id, caveats=PROMPT_CAVEATS, errlog=errlog
+    )
+    if brief.text is None:
+        return {"note": f"no written coaching: {brief.refusal}"}
+
+    system = coaching_system_prompt(*(brief.caveats[name] for name in PROMPT_CAVEATS))
+    written = _write(client, brief.text, system, model)
+    if written.text is None:
+        return {"note": written.note}
+    return {
+        "text": written.text,
+        "provenance": {
+            "model": written.model,
+            "generated_at": _spelled(datetime.now(UTC)),
+            "input_digest": _digest(brief.text),
+        },
+    }
+
+
+def main(argv: list[str] | None = None) -> int:
+    """`python -m golf_coach.feedback.coach --session S --swing W`: one JSON object on stdout.
+
+    `coach_through_golf_mcp`'s answer, exit 0 with a paragraph and 2 with a note, which is what
+    `golf-lab analyze` spawns and folds into `analysis.json` (the M29 plan's D15): Rust stays the
+    only writer of the artifact and Python the only caller of the LLM. The JSON is ASCII, with every
+    other character escaped, so no console code page can mangle it on its way to the reader.
+
+    `golf-mcp` is found at `--golf-mcp`, else `GOLF_MCP`, else the release build, and is started
+    with no registry: `get_swing` and the caveats resource read none. Whether to coach at all
+    (`GOLF_COACHING_ENABLED`) is the caller's switch, as `--no-coaching` is `analyze_bundle.py`'s.
+    """
+    from golf_coach.config import settings
+
+    parser = argparse.ArgumentParser(
+        prog="python -m golf_coach.feedback.coach",
+        description="Write one stored swing's coaching paragraph, read through golf-mcp.",
+    )
+    parser.add_argument("--session", required=True, help="The session id, e.g. 2026-08-10")
+    parser.add_argument("--swing", required=True, help="The swing id within it, e.g. 2")
+    parser.add_argument("--sessions-dir", type=Path, default=settings.sessions_dir)
+    parser.add_argument("--shots-dir", type=Path, default=settings.shots_dir)
+    parser.add_argument("--model", default=settings.coaching_model)
+    parser.add_argument(
+        "--golf-mcp",
+        type=Path,
+        default=default_golf_mcp(),
+        help="The golf-mcp binary (default: GOLF_MCP, else target/release)",
+    )
+    args = parser.parse_args(argv)
+
+    server = GolfMcpServer(
+        binary=args.golf_mcp, sessions_dir=args.sessions_dir, shots_dir=args.shots_dir
+    )
+    # One of the sanctioned `get_secret_value` sites (tests/test_config.py pins the set): the
+    # Anthropic SDK needs a plain `str`, and this entry is that boundary for the one-shot paragraph,
+    # as `api/pipeline.py`'s is on the in-process route until M40.
+    key = settings.anthropic_api_key
+    answer = coach_through_golf_mcp(
+        args.session,
+        args.swing,
+        server=server,
+        model=args.model,
+        api_key=key.get_secret_value() if key else None,
+    )
+    print(json.dumps(answer))
+    return 0 if "text" in answer else 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

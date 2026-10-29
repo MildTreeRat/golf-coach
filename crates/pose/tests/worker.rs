@@ -70,12 +70,34 @@ fn a_worker_handshakes_and_then_answers_one_job() {
     assert!(worker.model().to_string_lossy().ends_with(".task"));
 
     match worker.run(&job("j-1")).expect("the job ran") {
-        Outcome::Done(keypoints) => {
+        Outcome::Done { keypoints, .. } => {
             assert_eq!(keypoints.frames.len(), 2);
             assert_eq!(keypoints.pose_estimator.as_deref(), Some("mediapipe:heavy"));
             // Clause 8: the worker returned landmarks and decided no path. Nothing was written.
             assert_eq!(keypoints.clip.and_then(|clip| clip.frame_count), Some(2));
         }
+        other => panic!("expected landmarks, got {other:?}"),
+    }
+}
+
+#[test]
+fn the_acceptances_claim_comes_out_beside_the_landmarks() {
+    // M29 P22: the container's claim is the half of the short-decode check only the worker can
+    // see, so `Outcome::Done` carries it rather than `run` dropping it once the deadline is derived.
+    let mut worker = spawn("ready");
+    match worker.run(&job("j-1")).expect("the job ran") {
+        Outcome::Done {
+            keypoints,
+            claimed_frames,
+        } => assert_eq!((claimed_frames, keypoints.frames.len()), (2, 2)),
+        other => panic!("expected landmarks, got {other:?}"),
+    }
+    let mut short = spawn("short_decode");
+    match short.run(&job("j-1")).expect("the job ran") {
+        Outcome::Done {
+            keypoints,
+            claimed_frames,
+        } => assert_eq!((claimed_frames, keypoints.frames.len()), (3, 2)),
         other => panic!("expected landmarks, got {other:?}"),
     }
 }
@@ -87,7 +109,7 @@ fn the_process_is_warm_across_jobs_and_each_reply_is_attributed_to_its_own() {
     let mut worker = spawn("ready");
     for id in ["j-1", "j-2", "j-3"] {
         match worker.run(&job(id)).expect("the job ran") {
-            Outcome::Done(keypoints) => assert_eq!(keypoints.frames.len(), 2),
+            Outcome::Done { keypoints, .. } => assert_eq!(keypoints.frames.len(), 2),
             other => panic!("{id}: expected landmarks, got {other:?}"),
         }
     }
@@ -336,7 +358,7 @@ fn an_interpreter_that_cannot_be_started_is_skipped_for_the_next_candidate() {
         ..stub("ready")
     };
     let mut worker = Worker::spawn(&config).expect("the search moved on to a real interpreter");
-    assert!(matches!(worker.run(&job("j-1")), Ok(Outcome::Done(_))));
+    assert!(matches!(worker.run(&job("j-1")), Ok(Outcome::Done { .. })));
 }
 
 #[test]
@@ -426,7 +448,7 @@ fn the_real_worker_poses_a_real_clip() {
     let mut real = job("real-1");
     real.clip_path = clip;
     match worker.run(&real).expect("the clip posed") {
-        Outcome::Done(keypoints) => {
+        Outcome::Done { keypoints, .. } => {
             assert_eq!(keypoints.frames.len(), 344);
             assert_eq!(keypoints.pose_estimator.as_deref(), Some("mediapipe:heavy"));
             let clip_metadata = keypoints.clip.expect("the reply carries clip metadata");

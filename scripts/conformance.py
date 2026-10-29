@@ -9,6 +9,8 @@
     python scripts/conformance.py regenerate --screen-once    # the screen family, once (M34 P4)
     python scripts/conformance.py regenerate --storage-once   # the storage family, once (M36 P2)
     python scripts/conformance.py regenerate --career-once    # the career family, once (M36 P3)
+    python scripts/conformance.py regenerate --mcp-once       # the MCP family, once (M29 P8)
+    python scripts/conformance.py regenerate --selection-once # the selection family, once (M29 P18)
 
 **From M32 this is the frozen half, not the oracle** (ADR-035 clauses 3 and 4). `golf-core
 rerecord` records the engine and stage families, and `cargo test` certifies them. Each Rust
@@ -355,6 +357,35 @@ def profile_vector_paths() -> list[Path]:
     each case's version and counts, and from M37 P9 compares it with `run_profile`.
     """
     return [p for p in vector_paths() if _kind(p) == "profile"]
+
+
+def mcp_vector_paths() -> list[Path]:
+    """Every committed case of the MCP server, its surface and its tools' answers (M29 P8).
+
+    The ninth deferred family, recorded once from frozen Python through `regenerate --mcp-once`
+    (the M29 plan's decision 9) and refused a second run. Each case is the built server answered
+    through the SDK's own client, so what it holds is what a client receives. It ages on
+    `CAREER_VERSION`, Rust's alone (the M29 plan's call 1), and since M29 P19 an engine
+    declaration walks it too, because its flight and band answers are the engine's. Neither key is
+    one frozen Python has, so `check` runs no staleness test over it, as it runs none over the
+    storage and career families. `crates/mcp`'s `golf-mcp` is the implementation it is held to,
+    from M29 P9.
+    """
+    return [p for p in vector_paths() if _kind(p) == "mcp"]
+
+
+def selection_vector_paths() -> list[Path]:
+    """Every committed case of the swing selection, the rules and the pipeline's pick (M29 P18).
+
+    The tenth deferred family, recorded once from frozen Python through `regenerate
+    --selection-once` (the M29 plan's decision 14) and refused a second run. `crates/analysis` is
+    the implementation of its rules from M29 P19, and `crates/lab` of `_auto_windows`' ordering
+    from P25, so `check` runs none of it. It ages on `ANALYSIS_VERSION`, as the stages do and
+    unlike the families before it, and it was recorded at frozen Python's: so `check` judges its
+    freshness by the stages' rule, `ledger_covers`, which a Rust re-record keeps true by writing
+    the ledger entry that moves it.
+    """
+    return [p for p in vector_paths() if _kind(p) == "selection"]
 
 
 def run_vector(vector: dict[str, Any]) -> dict[str, Any]:
@@ -931,6 +962,8 @@ def cmd_check(args: argparse.Namespace) -> int:
     careers = [p for p in paths if p in set(career_vector_paths())]
     shots = [p for p in paths if p in set(shot_vector_paths())]
     profiles = [p for p in paths if p in set(profile_vector_paths())]
+    mcps = [p for p in paths if p in set(mcp_vector_paths())]
+    selections = [p for p in paths if p in set(selection_vector_paths())]
     paths = [p for p in paths if p in set(engine_vector_paths())]
 
     failed = 0
@@ -947,6 +980,15 @@ def cmd_check(args: argparse.Namespace) -> int:
         if reason:
             print(f"STALE {_vector_id(path)}: {reason}")
             stale_stages += 1
+    # The selection family's freshness, by the same rule and for the same reason: it ages on
+    # `ANALYSIS_VERSION` and was recorded by frozen Python (M29 P18), so a case below frozen
+    # Python's version, or above it with no ledger, certifies a port against retracted answers.
+    stale_selections = 0
+    for path in selections:
+        reason = _staleness(_read_json(path))
+        if reason:
+            print(f"STALE {_vector_id(path)}: {reason}")
+            stale_selections += 1
     for path in paths:
         vector = _read_json(path)
         name = _vector_id(path)
@@ -1037,7 +1079,24 @@ def cmd_check(args: argparse.Namespace) -> int:
             f"{len(profiles)} profile vectors are `crates/core`'s, worked by hand or recorded by "
             f"Rust, and age on CAREER_VERSION — run `cargo test`"
         )
-    return 1 if failed or stale_stages else 0
+    if mcps:
+        # The storage and career families' key again. Frozen Python recorded most of these once,
+        # M29 P11-P15 added hand-worked and Rust-recorded cases beside them, and what they are all
+        # held to now is the Rust server (M29 P9 on), which this program cannot run.
+        print(
+            f"{len(mcps)} mcp vectors are `crates/mcp`'s, recorded once from frozen Python, worked "
+            f"by hand or recorded by Rust, and are re-recorded under CAREER_VERSION and "
+            f"ANALYSIS_VERSION alike — run `cargo test`"
+        )
+    if selections:
+        # The stages' line, because it is the stages' rule: these are frozen Python's answers at
+        # frozen Python's version, held to Rust (M29 P19 on), which this program cannot run.
+        fresh = len(selections) - stale_selections
+        print(
+            f"{fresh}/{len(selections)} selection vectors are at frozen v{ANALYSIS_VERSION} or "
+            f"ledgered above it, recorded once from frozen Python — `cargo test` runs them"
+        )
+    return 1 if failed or stale_stages or stale_selections else 0
 
 
 def cmd_run(args: argparse.Namespace) -> int:
@@ -1164,6 +1223,19 @@ def main(argv: list[str] | None = None) -> int:
         "reports, once: needs data/ and the storage family, and refuses once anything is under "
         "spec/vectors/career/ (M36 P3)",
     )
+    regen.add_argument(
+        "--mcp-once",
+        action="store_true",
+        help="record spec/vectors/mcp/ from the frozen MCP server through the SDK's client, once: "
+        "needs the `llm` extra and data/, and refuses once anything is under spec/vectors/mcp/ "
+        "(M29 P8)",
+    )
+    regen.add_argument(
+        "--selection-once",
+        action="store_true",
+        help="record spec/vectors/selection/ from the frozen swing selection, once: needs data/, "
+        "and refuses once anything is under spec/vectors/selection/ (M29 P18)",
+    )
     regen.set_defaults(func=cmd_regenerate)
 
     args = parser.parse_args(argv)
@@ -1182,9 +1254,9 @@ through the verb's gate instead, from the repo root:
     cargo run --release --bin golf-core -- rerecord --declare spec/declarations/v<N>.json
 
 `regenerate` still does two jobs: --schemas-only (the Python-owned schema roots) and
---format-only (the format family, which records CPython rather than this engine). Three more,
---screen-once, --storage-once and --career-once, recorded the screen, storage and career families
-and refuse to run again."""
+--format-only (the format family, which records CPython rather than this engine). Five more,
+--screen-once, --storage-once, --career-once, --mcp-once and --selection-once, recorded the
+screen, storage, career, MCP and selection families and refuse to run again."""
 
 
 #: Why `--screen-once` will not run a second time, printed when it is asked to.
@@ -1232,6 +1304,36 @@ A second run from frozen Python would write its answers over Rust's, and drop th
 `provenance.rerecords` ledger that says which of them are Rust's."""
 
 
+#: Why `--mcp-once` will not run a second time, printed when it is asked to.
+_MCP_RECORDED = """\
+refused: the MCP family is already recorded ({count} file{plural} under {where}).
+
+`--mcp-once` is the one run of frozen Python's MCP server through the SDK's client (M29 P8,
+ADR-035 clause 3: record once from frozen Python). From there `crates/mcp` is the implementation,
+and `golf-core rerecord` is the only thing that writes these files, behind a declaration that names
+every value it moves:
+
+    cargo run --release --bin golf-core -- rerecord --declare spec/declarations/career-v<N>.json
+
+A second run from frozen Python would write its answers over Rust's, and drop the
+`provenance.rerecords` ledger that says which of them are Rust's."""
+
+
+#: Why `--selection-once` will not run a second time, printed when it is asked to.
+_SELECTION_RECORDED = """\
+refused: the selection family is already recorded ({count} file{plural} under {where}).
+
+`--selection-once` is the one run of frozen Python's swing selection, the rules and the pipeline's
+pick (M29 P18, ADR-035 clause 3: record once from frozen Python). From there `crates/analysis` and
+`crates/lab` are the implementation, and `golf-core rerecord` is the only thing that writes these
+files, behind a declaration that names every value it moves. The family ages on the engine's key:
+
+    cargo run --release --bin golf-core -- rerecord --declare spec/declarations/v<N>.json
+
+A second run from frozen Python would write its answers over Rust's, and drop the
+`provenance.rerecords` ledger that says which of them are Rust's."""
+
+
 def cmd_regenerate(args: argparse.Namespace) -> int:
     # **The full rebuild and `--stages-only` are refused from M32**, on the precedent of
     # `conformance_vectors._audio`: a family whose recorder has moved is rebuilt by the new
@@ -1246,10 +1348,60 @@ def cmd_regenerate(args: argparse.Namespace) -> int:
         args.screen_once,
         args.storage_once,
         args.career_once,
+        args.mcp_once,
+        args.selection_once,
     )
     if args.stages_only or not any(jobs):
         print(_REFUSED.format(version=ANALYSIS_VERSION), file=sys.stderr)
         return 2
+
+    # **The selection family is recorded once** (M29 P18), on `--mcp-once`'s rule: refused on any
+    # file under `spec/vectors/selection/`, before `conformance_vectors` is imported, so a refused
+    # run cannot reach `data/`. A run on an empty family writes nothing until `build_selection`
+    # has built every case, which holds each corpus case to its stored `analysis.json` first.
+    if args.selection_once:
+        recorded = sorted({*selection_vector_paths(), *_files_under(VECTORS / "selection")})
+        if recorded:
+            print(
+                _SELECTION_RECORDED.format(
+                    count=len(recorded),
+                    plural="" if len(recorded) == 1 else "s",
+                    where=_shown(VECTORS / "selection"),
+                ),
+                file=sys.stderr,
+            )
+            return 2
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        from conformance_vectors import build_selection
+
+        for path, payload in build_selection():
+            _write_json(path, payload)
+            print(f"selection {_shown(path)}")
+        return 0
+
+    # **The MCP family is recorded once** (M29 P8), on `--career-once`'s rule: refused on any file
+    # under `spec/vectors/mcp/`, before `conformance_vectors` is imported, so a refused run cannot
+    # reach `data/` or the SDK. A run on an empty family writes nothing until `build_mcp` has built
+    # every case, which holds the real case's answers to `data/` itself before it returns.
+    if args.mcp_once:
+        recorded = sorted({*mcp_vector_paths(), *_files_under(VECTORS / "mcp")})
+        if recorded:
+            print(
+                _MCP_RECORDED.format(
+                    count=len(recorded),
+                    plural="" if len(recorded) == 1 else "s",
+                    where=_shown(VECTORS / "mcp"),
+                ),
+                file=sys.stderr,
+            )
+            return 2
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        from conformance_vectors import build_mcp
+
+        for path, payload in build_mcp():
+            _write_json(path, payload)
+            print(f"mcp      {_shown(path)}")
+        return 0
 
     # **The career family is recorded once** (M36 P3), on `--storage-once`'s rule: refused on any
     # file under `spec/vectors/career/`, before `conformance_vectors` is imported. A run on an
@@ -1335,7 +1487,7 @@ def cmd_regenerate(args: argparse.Namespace) -> int:
     # The format table derives from CPython itself and runs anywhere, so this branch is taken
     # *before* the schemas are written — it is not a partial `regenerate`, it is a different job
     # (ADR-032 §2). Imported here, not at module scope: the bare name relies on this directory
-    # being on `sys.path`, which is the convention `scripts/golfdb/common.py` already documents —
+    # being on `sys.path`, which is the convention `archive/golfdb/common.py` already documents —
     # inserted explicitly because this module is also imported by `tests/test_conformance.py`,
     # where it is not.
     if args.format_only:

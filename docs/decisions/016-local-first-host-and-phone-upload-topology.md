@@ -290,3 +290,25 @@ route is the lab's path exactly as the previous addendum describes it.
 - the previous addendum's phone, which is the host, listens on nothing and exports. ADR-035 changes
   which language imports the export, and not what the phone does;
 - no cloud, and no open router port.
+
+## Addendum (2026-10-29, M29): the upload route is closed, and the phone's data arrives by export import
+
+The previous addendum left M29 to decide whether the upload route stays open between M29 and M40.
+**It is closed** (the M29 plan's D11, built in P32). `POST /api/uploads` answers 410, naming
+`golf-lab import-export` and `golf-lab import-photos --into-session`, and so does every other route
+that wrote under `sessions/` or `shots/`: the two session cursors, a swing's golfer, club, mishit and
+analyze, and the swing delete. So frozen Python no longer writes a swing by any route. The one write
+left is the server's own startup recovery of an orphaned run
+([ADR-035's M29 addendum](035-rust-everywhere-python-where-required.md)).
+
+**The phone's data reaches the lab as an export, imported by `golf-lab import-export`** (M29 P31).
+The export is the stored layout itself (the plan's D16): a zip or a directory of the phone's
+`sessions/`, `shots/` and `golfers/` as `crates/storage` writes them, so there is no new contract.
+New files are copied and identical ones skipped. A shot or photo entry whose photo the lab already
+stores is left as stored. One file that differs refuses the whole import, naming each (the plan's
+C11). What that asks of the phone is in the program plan's §M38 P4: golfers and bags must arrive
+byte-identical or absent, and a phone session id must not collide with the lab's.
+
+**Not changed**: the bind, the token (ADR-019), and the read routes, which keep serving the library,
+results, career and flight pages over what the Rust lab writes until M40 decides `api/`. How the
+export travels from the phone to the laptop is still M38 P4's.

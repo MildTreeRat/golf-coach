@@ -26,14 +26,17 @@ from golf_coach.config import Settings
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 #: The only files allowed to turn a `SecretStr` back into a `str`. Each is a boundary where an
-#: outside caller needs a plain string and cannot be handed a wrapper: the Anthropic SDK (twice —
-#: the one-shot coaching call and the follow-up conversation), the constant-time token comparison,
-#: and the operator-facing setup link.
+#: outside caller needs a plain string and cannot be handed a wrapper: the Anthropic SDK (three
+#: times — the one-shot coaching paragraph in process and over `golf-mcp`, and the follow-up
+#: conversation), the constant-time token comparison, and the operator-facing setup link.
+#: `feedback/coach.py` is the paragraph's entry over `golf-mcp` (M29 P17); `api/pipeline.py`'s
+#: site goes at M40 with that file, and this one replaces it (ADR-019's 2026-10-22 addendum).
 SANCTIONED_UNWRAP_SITES = {
     "scripts/ask_swing.py",
     "scripts/run_server.py",
     "src/golf_coach/api/app.py",
     "src/golf_coach/api/pipeline.py",
+    "src/golf_coach/feedback/coach.py",
 }
 
 
@@ -95,7 +98,7 @@ def test_the_secret_survives_the_masking() -> None:
 
 
 def test_only_the_sanctioned_sites_unwrap_a_secret() -> None:
-    """A fourth `get_secret_value` should be a decision, not a convenience.
+    """A new `get_secret_value` site should be a decision, not a convenience.
 
     This is the half that keeps the masking meaningful. Masking a value nobody unwraps is easy;
     the live risk is `.get_secret_value()` becoming the reflexive way to make a type error go

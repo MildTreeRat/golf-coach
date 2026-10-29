@@ -186,3 +186,20 @@ it. `scripts/reanalyze.py` has nothing to redo.
 - **`impact_position` as a detection input.** The HD Golf `Impact Position` tile is parsed and
   stored and currently read by nothing. Using "THIN" / "FAT" / "TOE" as a mishit signal is real and
   deferred: it wants a bay session to see what the tile actually prints and how often.
+
+## Addendum (2026-10-29, M29): the override is `golf-core flag-mishit`, and its route is closed
+
+§2's manual override had two doors: `POST …/mishit` on the frozen server, and
+`scripts/flag_mishit.py`. **Both are gone.** M29 deleted the script (P34), since `golf-core
+flag-mishit` (M36) was already its twin, and closed the route with every other route that wrote a
+swing (the M29 plan's D11, P32). It answers 410 naming the verb. So the override is one verb:
+`golf-core flag-mishit SESSION/SWING --confirm|--clear|--auto`, or `--list` for every club's tally.
+It is still per swing, still with no bulk backfill, and still the golfer's word over the automatic
+rule.
+
+The golfer-facing sentences that named the script now name the verb. `golf-mcp`'s bag briefing tells a
+model to suggest `golf-core flag-mishit --clear`, declared against the recorded surface
+([CONFORMANCE §2's mcp section](../CONFORMANCE.md)).
+
+**Not changed**: §1 to §5. The exclusion is still carry and total distance only, still applied at one
+chokepoint, and every excluded shot is still counted and named.

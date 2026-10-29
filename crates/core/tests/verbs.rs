@@ -1,5 +1,5 @@
-//! `golf-core run-shot --session` and `golf-core set-intent`, the verbs that write into a session.
-//! [M35 P11]
+//! `golf-core run-shot --session` and `golf-core set-intent`, the verbs that write into a session
+//! [M35 P11], and `set-golfer`, `set-club` and `delete-swing`, the frozen server's repairs [M29 P32].
 //!
 //! **Never on `data/`.** Each test builds a scratch tree from a hand-worked storage case
 //! (`spec/vectors/storage/hand/`, M35 P9), with its `shot_analysis.json` files taken out so that the
@@ -30,14 +30,17 @@ use contracts::shot_result::ShotResult;
 use contracts::swing::{ANALYSIS_VERSION, COMPARABLE_FROM};
 use contracts::unscored::UnscoredReason;
 use contracts::Timestamp;
+use golf_core::reports::DataDirs;
 use golf_core::session::{
-    intent_action, run_shot_session, set_intent, IntentAction, IntentTarget, ShotDirs,
+    intent_action, repair, repair_action, run_shot_session, set_intent, IntentAction, IntentTarget,
+    Repair, RepairAction, RepairVerb, ShotDirs,
 };
 use golf_core::{run_shot, ShotInput};
 use serde_json::Value;
 use storage::bag_store::BagStore;
 use storage::corpus::{read_corpus, EngineVersions};
 use storage::flight_inputs::{loft_for_club, LoftGap};
+use storage::golfer_store::GolferStore;
 use storage::manifest::{load_manifest, manifest_path};
 use storage::session_meta::load_session_meta;
 use storage::shot_store::ShotStore;
@@ -201,7 +204,7 @@ fn reasons(result: &ShotResult) -> Vec<UnscoredReason> {
 
 /// **`run-shot --session` over `mixed-session`**: every photo entry with a stored parse is analysed
 /// and written, every swing is skipped and gets no file, a photo with no parse is named with the
-/// frozen import and skipped, and each written result is exactly the seam's answer for what the
+/// `golf-lab import-photos` line and skipped, and each written result is exactly the seam's answer for what the
 /// stores resolve, with the gap notes the engine asked for and no others. A second run writes the
 /// same bytes and prints the same lines, and the corpus then pools the written entries.
 #[test]
@@ -296,8 +299,8 @@ fn run_shot_writes_each_photo_entry_and_no_swing_and_a_rerun_writes_the_same_byt
         lines[5],
         format!(
             "{SESSION}/6: skipped: the shot store at {} holds no parse of shot photo photo-20-6; \
-             frozen Python reads it with python scripts/import_shot_screens.py {} --session \
-             {SESSION} --out {}, and then this verb analyses it",
+             golf-lab reads it with golf-lab import-photos {} --session {SESSION} --out {}, and \
+             then this verb analyses it",
             dirs.shots.display(),
             photo_6.display(),
             dirs.shots.display()
@@ -819,5 +822,503 @@ fn the_binary_refuses_what_argparse_would() {
         let help = golf_core(&[verb, "--help"], &dirs);
         assert_eq!(help.status.code(), Some(0));
         assert!(String::from_utf8_lossy(&help.stdout).contains("golf-core set-intent --session"));
+    }
+}
+
+// ------------------------------------------------- set-golfer, set-club, delete-swing [M29 P32]
+
+fn data_dirs(dirs: &ShotDirs) -> DataDirs {
+    DataDirs {
+        sessions: dirs.sessions.clone(),
+        golfers: dirs.golfers.clone(),
+    }
+}
+
+fn repair_of(swing: &str, repair: Repair) -> RepairAction {
+    RepairAction {
+        session_id: SESSION.to_string(),
+        swing_id: swing.to_string(),
+        repair,
+    }
+}
+
+fn golfer(name: &str, handedness: Option<Handedness>) -> Repair {
+    Repair::Golfer {
+        name: name.to_string(),
+        handedness,
+    }
+}
+
+fn manifest_of(dirs: &ShotDirs, swing: &str) -> storage::manifest::SwingManifest {
+    load_manifest(&manifest_path(&swing_dir(dirs, swing)))
+        .unwrap_or_else(|| panic!("{SESSION}/{swing}: no manifest that reads"))
+}
+
+/// Every file under the sessions directory, with its text, so a refusal can be shown to have
+/// written nothing.
+fn every_file(root: &Path) -> Vec<(PathBuf, String)> {
+    let mut found = Vec::new();
+    let mut stack = vec![root.to_path_buf()];
+    while let Some(dir) = stack.pop() {
+        for entry in fs::read_dir(&dir).into_iter().flatten().flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                stack.push(path);
+            } else {
+                let text = fs::read_to_string(&path).unwrap_or_default();
+                found.push((path, text));
+            }
+        }
+    }
+    found.sort();
+    found
+}
+
+/// **`set-golfer`**: a new golfer registered with the handedness given and the swing re-attributed,
+/// with the swing's intent kept (the frozen-Python hazard, retired); a known golfer's stored
+/// handedness winning over a contradicting `--handedness`, and saying so; a re-attribution over a
+/// stored analysis saying to re-run it; and the two refusals writing nothing, the golfer registry
+/// included, since the swing is checked first.
+#[test]
+fn set_golfer_registers_once_reattributes_and_keeps_the_intent() {
+    let (_scratch, dirs, _) = tree("mixed-session.json");
+    let data = data_dirs(&dirs);
+    let drill = goal(PracticeMode::Drill, None);
+    let set = set_intent(
+        &action(IntentTarget::Swing("7".into()), Some(drill.clone())),
+        &dirs.sessions,
+        now(),
+    );
+    assert_eq!(set.code, 0, "{}", set.stderr);
+
+    let new = repair(
+        &repair_of("7", golfer("  Dave Smith ", Some(Handedness::Left))),
+        &data,
+        now(),
+    );
+    assert_eq!(
+        (new.stdout.as_str(), new.stderr.as_str(), new.code),
+        (
+            "2026-08-20/7: golfer = dave-smith, was none (registered now: Dave Smith, \
+             left-handed)\n",
+            "",
+            0
+        )
+    );
+    let seven = manifest_of(&dirs, "7");
+    assert_eq!(seven.player_id.as_deref(), Some("dave-smith"));
+    assert_eq!(seven.intent, Some(drill), "a repair keeps the intent");
+    assert_eq!(seven.updated_at.to_string(), now().to_string());
+    let registered = GolferStore::new(&dirs.golfers)
+        .get("dave-smith")
+        .expect("registered");
+    assert_eq!(
+        (registered.display_name.as_str(), registered.handedness),
+        ("Dave Smith", Handedness::Left)
+    );
+
+    let known = repair(
+        &repair_of("8", golfer("aaron", Some(Handedness::Left))),
+        &data,
+        now(),
+    );
+    assert_eq!(
+        known.stdout,
+        "2026-08-20/8: golfer = aaron, was brian (aaron is on file as right-handed, so \
+         --handedness left changed nothing)\n"
+    );
+    assert_eq!(
+        GolferStore::new(&dirs.golfers)
+            .get("aaron")
+            .expect("aaron")
+            .handedness,
+        Handedness::Right
+    );
+
+    // Swing 1 holds an `analysis.json`, which was read with aaron's handedness and bag.
+    let analysed = repair(&repair_of("1", golfer("Dave Smith", None)), &data, now());
+    assert_eq!(
+        analysed.stdout,
+        "2026-08-20/1: golfer = dave-smith, was aaron; its stored analysis was read with the old \
+         golfer's handedness and bag, so re-run golf-lab reanalyze 2026-08-20/1 to bring it up to \
+         date\n"
+    );
+    let again = repair(&repair_of("1", golfer("Dave Smith", None)), &data, now());
+    assert_eq!(
+        again.stdout,
+        "2026-08-20/1: golfer = dave-smith, was dave-smith\n"
+    );
+
+    let before = every_file(&dirs.sessions);
+    let unhanded = repair(&repair_of("3", golfer("Rory", None)), &data, now());
+    assert_eq!(
+        (unhanded.stderr.as_str(), unhanded.code),
+        (
+            "golf-core set-golfer: 'Rory' is new here — say whether they swing right- or \
+             left-handed, with --handedness right or --handedness left\n",
+            2
+        )
+    );
+    let missing = repair(
+        &repair_of("99", golfer("Rory", Some(Handedness::Right))),
+        &data,
+        now(),
+    );
+    assert_eq!(
+        (missing.stderr.as_str(), missing.code),
+        ("golf-core set-golfer: no swing 2026-08-20/99\n", 2)
+    );
+    assert!(
+        GolferStore::new(&dirs.golfers).get("rory").is_none(),
+        "a refused run registered a golfer"
+    );
+    assert_eq!(every_file(&dirs.sessions), before);
+}
+
+/// **`set-club`**: any spelling `parse_club` takes, the old club named, the stored analysis's loft
+/// called out once the club changes and not when it does not, and a missing swing refused.
+#[test]
+fn set_club_retags_one_swing_and_names_the_loft_its_analysis_used() {
+    let (_scratch, dirs, _) = tree("mixed-session.json");
+    let data = data_dirs(&dirs);
+    let parsed = repair_action(
+        RepairVerb::SetClub,
+        Some(SESSION.into()),
+        Some("1".into()),
+        None,
+        None,
+        Some("Pitching Wedge".into()),
+    )
+    .expect("a spelling parse_club takes");
+    assert_eq!(parsed.repair, Repair::Club(ClubId::PitchingWedge));
+
+    let retag = repair(&parsed, &data, now());
+    assert_eq!(
+        (retag.stdout.as_str(), retag.code),
+        (
+            "2026-08-20/1: club = pw, was 7i; its stored analysis flew it with the old club's \
+             loft, so re-run golf-lab reanalyze 2026-08-20/1 to bring it up to date\n",
+            0
+        )
+    );
+    assert_eq!(manifest_of(&dirs, "1").club, Some(ClubId::PitchingWedge));
+    let others: Vec<Option<ClubId>> = ["2", "3", "4"]
+        .into_iter()
+        .map(|swing| manifest_of(&dirs, swing).club)
+        .collect();
+    assert_eq!(others, vec![Some(ClubId::SevenIron); 3], "no backfill");
+
+    let same = repair(&parsed, &data, now());
+    assert_eq!(same.stdout, "2026-08-20/1: club = pw, was pw\n");
+    // Swing 4 holds no `analysis.json`, and the tree carries no `shot_analysis.json`.
+    let photo = repair(&repair_of("4", Repair::Club(ClubId::Driver)), &data, now());
+    assert_eq!(photo.stdout, "2026-08-20/4: club = driver, was 7i\n");
+
+    let missing = repair(&repair_of("99", Repair::Club(ClubId::Driver)), &data, now());
+    assert_eq!(
+        (missing.stderr.as_str(), missing.code),
+        ("golf-core set-club: no swing 2026-08-20/99\n", 2)
+    );
+    assert!(!swing_dir(&dirs, "99").exists());
+}
+
+/// **`delete-swing`**: the swing's directory removed whole and every other file left, a queued or
+/// running analysis refused with the directory kept, and a swing that is not there refused.
+#[test]
+fn delete_swing_removes_one_swing_unless_it_is_being_analysed() {
+    let (_scratch, dirs, _) = tree("mixed-session.json");
+    let data = data_dirs(&dirs);
+    let keep: Vec<(PathBuf, String)> = every_file(&dirs.sessions)
+        .into_iter()
+        .filter(|(path, _)| !path.starts_with(swing_dir(&dirs, "3")))
+        .collect();
+
+    let deleted = repair(&repair_of("3", Repair::Delete), &data, now());
+    assert_eq!(
+        (deleted.stdout.as_str(), deleted.code),
+        (
+            "2026-08-20/3: deleted, with every file in its directory (it held face_on)\n",
+            0
+        )
+    );
+    assert!(!swing_dir(&dirs, "3").exists());
+    assert_eq!(every_file(&dirs.sessions), keep);
+
+    for status in ["queued", "running"] {
+        fs::write(
+            swing_dir(&dirs, "5").join("analysis.state.json"),
+            format!(r#"{{"status": "{status}", "inputs": {{}}}}"#),
+        )
+        .expect("a state");
+        let busy = repair(&repair_of("5", Repair::Delete), &data, now());
+        assert_eq!(
+            (busy.stderr, busy.code),
+            (
+                format!(
+                    "golf-core delete-swing: 2026-08-20/5 is being analyzed ({status}) — wait for \
+                     it to finish, then delete it\n"
+                ),
+                2
+            )
+        );
+        assert!(manifest_path(&swing_dir(&dirs, "5")).exists());
+    }
+    fs::write(
+        swing_dir(&dirs, "5").join("analysis.state.json"),
+        r#"{"status": "done", "inputs": {}}"#,
+    )
+    .expect("a state");
+    let done = repair(&repair_of("5", Repair::Delete), &data, now());
+    assert_eq!(done.code, 0, "{}", done.stderr);
+    assert!(!swing_dir(&dirs, "5").exists());
+
+    let missing = repair(&repair_of("3", Repair::Delete), &data, now());
+    assert_eq!(
+        (missing.stderr.as_str(), missing.code),
+        ("golf-core delete-swing: no swing 2026-08-20/3\n", 2)
+    );
+    // A directory with no manifest that reads is no swing either.
+    fs::create_dir_all(swing_dir(&dirs, "9")).expect("a bare directory");
+    let bare = repair(&repair_of("9", Repair::Delete), &data, now());
+    assert_eq!(bare.code, 2);
+    assert!(swing_dir(&dirs, "9").is_dir());
+}
+
+/// The flags' decision: every refusal each verb's flags can earn, and the ids a path would be
+/// built from held to the routes' `_safe` rule.
+#[test]
+fn the_repair_flags_refuse_what_the_routes_refused() {
+    let act = |verb, session: Option<&str>, swing: Option<&str>, value: Option<&str>| {
+        let value = value.map(str::to_string);
+        let (name, club) = match verb {
+            RepairVerb::SetGolfer => (value, None),
+            _ => (None, value),
+        };
+        repair_action(
+            verb,
+            session.map(str::to_string),
+            swing.map(str::to_string),
+            name,
+            None,
+            club,
+        )
+    };
+    for (verb, session, swing, value, says) in [
+        (
+            RepairVerb::DeleteSwing,
+            None,
+            Some("3"),
+            None,
+            "--session S",
+        ),
+        (
+            RepairVerb::DeleteSwing,
+            Some(SESSION),
+            Some(""),
+            None,
+            "--swing W",
+        ),
+        (
+            RepairVerb::DeleteSwing,
+            Some(SESSION),
+            Some(".."),
+            None,
+            "swing id '..'",
+        ),
+        (
+            RepairVerb::DeleteSwing,
+            Some(SESSION),
+            Some(".hidden"),
+            None,
+            "not one the store",
+        ),
+        (
+            RepairVerb::DeleteSwing,
+            Some("a/b"),
+            Some("3"),
+            None,
+            "session id 'a/b'",
+        ),
+        (
+            RepairVerb::DeleteSwing,
+            Some(SESSION),
+            Some("with space"),
+            None,
+            "letters, digits",
+        ),
+        (
+            RepairVerb::SetGolfer,
+            Some(SESSION),
+            Some("3"),
+            None,
+            "--name N",
+        ),
+        (
+            RepairVerb::SetGolfer,
+            Some(SESSION),
+            Some("3"),
+            Some("!!!"),
+            "no usable characters",
+        ),
+        (
+            RepairVerb::SetClub,
+            Some(SESSION),
+            Some("3"),
+            None,
+            "--club C",
+        ),
+        (
+            RepairVerb::SetClub,
+            Some(SESSION),
+            Some("3"),
+            Some("banana"),
+            "'banana' is not a club in the bag — try '7i', '7 iron' or 'pw'",
+        ),
+    ] {
+        let refused = act(verb, session, swing, value).expect_err(says);
+        assert!(refused.contains(says), "{refused}");
+    }
+    let lefty = repair_action(
+        RepairVerb::SetGolfer,
+        Some(SESSION.into()),
+        Some("3".into()),
+        Some("Dave".into()),
+        Some("left".into()),
+        None,
+    )
+    .expect("a handedness");
+    assert_eq!(lefty.repair, golfer("Dave", Some(Handedness::Left)));
+    let sideways = repair_action(
+        RepairVerb::SetGolfer,
+        Some(SESSION.into()),
+        Some("3".into()),
+        Some("Dave".into()),
+        Some("Left".into()),
+        None,
+    );
+    assert!(sideways.is_err_and(|e| e.contains("'Left' is not a handedness")));
+    assert!(act(
+        RepairVerb::DeleteSwing,
+        Some("2026-08-20"),
+        Some("v1.2_b-3"),
+        None
+    )
+    .is_ok());
+}
+
+/// **Through the binary**: each verb run by name with its directory flags, a flag another verb takes
+/// refused as unrecognised, `--swing ..` refused before anything is removed, and `--help`.
+#[test]
+fn the_binary_runs_the_repairs_and_refuses_their_flags() {
+    let (_scratch, dirs, _) = tree("mixed-session.json");
+    let sessions = format!("--sessions-dir={}", dirs.sessions.display());
+    let golfers = format!("--golfers-dir={}", dirs.golfers.display());
+    let run = |args: &[&str]| {
+        let out = golf_core(args, &dirs);
+        (
+            out.status.code(),
+            String::from_utf8_lossy(&out.stdout).into_owned(),
+            String::from_utf8_lossy(&out.stderr).into_owned(),
+        )
+    };
+
+    let (code, stdout, stderr) = run(&[
+        "set-golfer",
+        "--session",
+        SESSION,
+        "--swing",
+        "7",
+        "--name",
+        "Aaron",
+        &sessions,
+        &golfers,
+    ]);
+    assert_eq!(code, Some(0), "{stderr}");
+    assert_eq!(stdout, "2026-08-20/7: golfer = aaron, was none\n");
+    let (code, stdout, stderr) = run(&[
+        "set-club",
+        "--session",
+        SESSION,
+        "--swing",
+        "7",
+        "--club=9 iron",
+        &sessions,
+    ]);
+    assert_eq!(code, Some(0), "{stderr}");
+    assert_eq!(stdout, "2026-08-20/7: club = 9i, was 7i\n");
+    let (code, stdout, stderr) = run(&[
+        "delete-swing",
+        "--session",
+        SESSION,
+        "--swing",
+        "8",
+        &sessions,
+    ]);
+    assert_eq!(code, Some(0), "{stderr}");
+    assert!(stdout.starts_with("2026-08-20/8: deleted"), "{stdout}");
+    assert!(!swing_dir(&dirs, "8").exists());
+
+    let before = every_file(&dirs.sessions);
+    for args in [
+        &[
+            "set-club",
+            "--session",
+            SESSION,
+            "--swing",
+            "1",
+            "--name",
+            "Aaron",
+        ][..],
+        &[
+            "delete-swing",
+            "--session",
+            SESSION,
+            "--swing",
+            "1",
+            "--club",
+            "7i",
+        ][..],
+        &[
+            "set-golfer",
+            "--session",
+            SESSION,
+            "--swing",
+            "1",
+            "--club",
+            "7i",
+        ][..],
+        &["delete-swing", "--session", SESSION, "--swing", ".."][..],
+        &["delete-swing", "--session", SESSION][..],
+        &[
+            "set-club",
+            "--session",
+            SESSION,
+            "--swing",
+            "1",
+            "--club",
+            "banana",
+        ][..],
+        &[
+            "set-golfer",
+            "--session",
+            SESSION,
+            "--swing",
+            "1",
+            "--handedness",
+        ][..],
+    ] {
+        let mut with_dir = vec![args[0], sessions.as_str()];
+        with_dir.extend_from_slice(&args[1..]);
+        let (code, stdout, stderr) = run(&with_dir);
+        assert_eq!(code, Some(2), "{args:?}: {stderr}");
+        assert!(stdout.is_empty(), "{args:?}");
+        assert!(stderr.contains("usage:"), "{args:?}: {stderr}");
+    }
+    assert_eq!(every_file(&dirs.sessions), before);
+    assert!(dirs.sessions.join(SESSION).is_dir());
+    for verb in RepairVerb::ALL {
+        let (code, stdout, _) = run(&[verb.name(), "--help"]);
+        assert_eq!(code, Some(0), "{}", verb.name());
+        assert!(stdout.contains("golf-core delete-swing --session S --swing W"));
     }
 }

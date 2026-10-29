@@ -75,7 +75,7 @@ Tier 1 is a **cache, not a source of truth** — expensive to produce, fully rep
 so that a future checkpoint can be measured across a thousand tour swings without touching a video.
 Tier 2 is the layer bands are re-cut from. Tier 3 is the only thing that ships.
 
-`ReferenceSwing` ([contracts/reference.py](../../src/golf_coach/contracts/reference.py)) is
+`ReferenceSwing` ([archive/golfdb/reference.py](../../archive/golfdb/reference.py)) is
 deliberately shaped like the `swings` table ROADMAP M4 will add, so persisting it later is a loader
 change rather than a redesign. `events` and `metrics` are open dicts because every corpus names its
 own instants and the metric vocabulary grows with every checkpoint.

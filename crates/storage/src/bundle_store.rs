@@ -201,6 +201,19 @@ impl SwingBundleStore {
         load_manifest(&manifest_path(&self.swing_dir(session_id, swing_id)))
     }
 
+    /// The id the automatic rule would open a new swing under: one past the highest numeric
+    /// manifest id in the session, or `1`. [M29 P24]
+    ///
+    /// No Python twin as a method: Python's `_next_swing_id` is private, as the function behind this
+    /// is. It is exposed for a caller that must open a swing **by name** ([`Upload::swing_id`], the
+    /// module doc's advice), which `golf-lab import-photos --into-session` is: each photo becomes a
+    /// new photo entry, and the automatic rule would slot it into the newest swing lacking a photo
+    /// instead, a filmed one among them. Not taken under the lock, which serializes callers sharing
+    /// one store and never two processes; a caller holding the only writer is the one this is for.
+    pub fn next_swing_id(&self, session_id: &str) -> String {
+        next_swing_id(&self.get_session(session_id))
+    }
+
     /// Slot an already-streamed-to-disk file into a swing, under the store's lock.
     ///
     /// In order: an explicit [`Upload::swing_id`] names the swing (its manifest, or a new one) and
@@ -652,6 +665,24 @@ mod tests {
             ("1", BundleStatus::Complete)
         );
         assert_eq!(plain(&store, Role::FaceOn, b"swing2-face").swing_id, "2");
+    }
+
+    /// The method answers the id the automatic rule opens next, and a swing opened by that name
+    /// takes it, where the automatic rule would have slotted the photo into swing 1. [M29 P24]
+    #[test]
+    fn next_swing_id_is_what_a_new_swing_would_open_under() {
+        let (_dir, store) = store();
+        assert_eq!(store.next_swing_id(SESSION), "1");
+        plain(&store, Role::FaceOn, b"swing1-face");
+        assert_eq!(store.next_swing_id(SESSION), "2");
+        let photo = upload(&store, Role::ShotScreen, b"photo", |u| {
+            u.swing_id = Some("2")
+        });
+        assert_eq!(photo.swing_id, "2");
+        let filmed = store.get_swing(SESSION, "1").unwrap();
+        assert!(!filmed.roles.contains_key(&Role::ShotScreen));
+        assert_eq!(store.next_swing_id(SESSION), "3");
+        assert_eq!(store.next_swing_id("2026-01-01"), "1", "no such session");
     }
 
     #[test]

@@ -20,11 +20,17 @@
 //!   pydantic refuses `"make": null`, because `make: str = ""` is not optional, and so must this.
 //! - **Every enum's members, in order.** `ClubId`'s order is bag order (the plan's call 12) and
 //!   `ShaftFlex`'s is softest to stiffest; both are read, never sorted, so the order is the contract.
+//!
+//! **M29 P20 adds `audio_file`**, the strike cache's three shapes, Python-owned for the same reason:
+//! the port moves no key. With it, the one constant a stored file is judged current by,
+//! `AUDIO_DETECTOR_VERSION`, read out of frozen Python's source, because a Rust number that moved
+//! alone would make the frozen lab re-detect every file Rust wrote.
 
 use std::collections::BTreeSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use contracts::audio::{AudioClipMetadata, AudioFile, AudioStrike, AUDIO_DETECTOR_VERSION};
 use contracts::bag::{Bag, BagEntry};
 use contracts::club::ClubId;
 use contracts::club_spec::{ShaftFlex, ShaftMaterial, SpecProvenance};
@@ -198,6 +204,50 @@ fn the_golfer_is_the_shape_pydantic_exported() {
             "created_at": "2026-08-06T12:00:00.120000Z",
         }),
     );
+}
+
+fn full_audio_clip() -> Value {
+    json!({
+        "sample_rate": 48000, "duration_s": 41.236, "source_sha256": "e19f864d",
+        "stream_index": 1, "fps": 59.958766220641145, "video_start_s": 0.105,
+    })
+}
+
+fn full_audio_strike() -> Value {
+    json!({"sample": 1260000, "confidence": 0.94, "prominence": 19836910.03, "frame": 1573})
+}
+
+#[test]
+fn the_audio_shapes_are_the_ones_pydantic_exported() {
+    let document = schema("audio_file");
+    pin::<AudioStrike>(&document, "AudioStrike", full_audio_strike());
+    pin::<AudioClipMetadata>(&document, "AudioClipMetadata", full_audio_clip());
+    pin::<AudioFile>(
+        &document,
+        "AudioFile",
+        json!({"clip": full_audio_clip(), "strikes": [full_audio_strike()], "detector_version": 2}),
+    );
+    // `exclude_none` is `save_audio`'s, not the schema's, so the pin above cannot see it: a key
+    // nulled on the way in must be absent on the way out, not written back as `null`.
+    let mut quiet = full_audio_strike();
+    quiet["frame"] = Value::Null;
+    let written = serde_json::to_value(serde_json::from_value::<AudioStrike>(quiet).unwrap());
+    assert_eq!(written.unwrap().get("frame"), None);
+}
+
+/// Until M40 deletes `contracts/audio.py`, at which point this pin goes with it and the constant is
+/// Rust's alone.
+#[test]
+fn the_detector_version_is_frozen_pythons() {
+    let path =
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../src/golf_coach/contracts/audio.py");
+    let source = fs::read_to_string(&path).unwrap_or_else(|e| panic!("{}: {e}", path.display()));
+    let assigned: Vec<i64> = source
+        .lines()
+        .filter_map(|line| line.strip_prefix("AUDIO_DETECTOR_VERSION = "))
+        .map(|value| value.trim().parse().expect("an integer literal"))
+        .collect();
+    assert_eq!(assigned, [AUDIO_DETECTOR_VERSION], "{}", path.display());
 }
 
 /// Each enum against the schema that carries it, member for member and in order. `ClubId` is in

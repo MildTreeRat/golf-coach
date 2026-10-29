@@ -3,7 +3,7 @@
 One place that knows the on-disk shape of pose output, because there are now two of them.
 
 **The old shape** is a bare JSON array of frames, written by `scripts/run_pose.py` and by
-`scripts/golfdb/extract_pose.py`. Hundreds of those files exist: `data/processed/*.keypoints.json`
+`archive/golfdb/extract_pose.py`. Hundreds of those files exist: `data/processed/*.keypoints.json`
 and the 461-clip GolfDB reference cache under `data/reference/golfdb/keypoints/`, which cost hours
 of estimator time to build and is not going to be regenerated.
 
@@ -13,7 +13,7 @@ though the alignment work downstream needs it.
 
 `load_keypoints` accepts either and reports `clip=None` for the old one, so nothing has to be
 migrated and no reader has to care which it got. Every consumer goes through here rather than
-parsing the JSON itself — that is the whole point, and it is why `scripts/golfdb/bakeoff.py` and
+parsing the JSON itself — that is the whole point, and it is why `archive/golfdb/bakeoff.py` and
 friends dropped their local `TypeAdapter`s.
 
 Pydantic and stdlib only, so the base install can read pose output (ADR-008).

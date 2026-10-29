@@ -1359,6 +1359,27 @@ its list, they do not feed it:
   lab CLI (the M31.5 plan's Q8), so P4 waits on M29. The frozen server reads what that verb writes, so
   [ADR-035 clause 4](../decisions/035-rust-everywhere-python-where-required.md#4-the-frozen-python-lab)
   binds it.
+  **That verb is built: `golf-lab import-export`** (M29 P31). The export is the stored layout itself,
+  a zip or a directory of `sessions/`, `shots/` and `golfers/` as `crates/storage` writes them, and the
+  import merges it file by file, refusing the whole import on any file that would change. What it
+  asks of the phone ([the M29 plan's P31 finding 6](m29-lab-port.md#phase-findings)):
+  - **Golfers and bags arrive byte-identical or absent.** A golfer the phone created for itself
+    differs from the lab's in `created_at`, and an edited bag differs too, and either refuses the
+    whole import. So the phone wants seeding with the lab's `golfers/`, or a decision on which side
+    owns a golfer. That is the user's, and a value-level golfer rule would be a new row in the M29
+    plan's C11, not a quiet change.
+  - **A session id must not collide with the lab's.** Two devices writing one date's session conflict
+    on `session.json`, so the phone's ids must be its own, or each session recorded on one device.
+  - **A cumulative export re-imports clean** while the lab has not rewritten a phone file. A photo
+    entry the lab re-analyses afterwards reads as a duplicate and is kept as the lab's; a rewritten
+    `session.json`, golfer or bag conflicts.
+  - **An imported shot's `provenance.image_path` names the phone's path.** Nothing opens a photo by
+    it, and nothing rewrites it, since that would change the phone's bytes.
+  - **A zip keeps each photo's time only with an extended-timestamp or NTFS field**; without one the
+    copy's time is the import's. If the phone zips in Rust, the same `zip` pin (`=7.3.0`) keeps one
+    implementation in the lock.
+  - **Exit:** P4's comparison is against Rust's `read_corpus`, and P31 showed the imported corpus
+    equal to the phone's.
 - **P5 — bay session:** ≥30 photos across ≥2 clubs. Record the success rate, the review rate and
   latency.
 
@@ -1441,8 +1462,29 @@ rest, and wait on M40 to do it. The ask stands, and the job is now to **port** t
 M34 and M36, runs on this box (where `data/` lives) beside M37 and M38, and is no longer blocked on
 M40 (Q3). M38 P4 waits on it, and M40 depends on it.
 
-It gets its own `docs/plans/m29-*.md` when it starts. This section is its scope, and the questions it
-inherits, each with where it was found.
+Its own plan is [m29-lab-port.md](m29-lab-port.md) (2026-10-15), and where the two disagree that
+plan wins. This section is its scope, and the questions it inherits, each with where it was found.
+
+**Built 2026-10-29, and what changed against this section** (the plan's decisions and findings say
+why each):
+- **Three crates, not one CLI**: `crates/ocr` (the reader, the only crate with `ort`), `crates/mcp`
+  (`golf-mcp`) and `crates/lab` (`golf-lab`), with `golf-core` staying the engine and recorder shell
+  M38's `crates/app` can depend on (D13).
+- **The OCR gate held on the shot, not the boxes**: 12 of 13 bay photos exact, and the thirteenth's
+  `impact_position` (`CENTER`, which the photo shows) declared rather than UVDoc ported (D7, P7).
+  Three of Paddle's five models run (D5), JPEG is a hand port of libjpeg-turbo rather than `image`'s
+  codec (P2), and `imageproc` never entered.
+- **Two families recorded once from frozen Python**, `mcp` and `selection` (D9, D14), the second
+  because nothing committed gated which descent the engine is handed.
+- **The four deferred questions** are ADR-035's M29 addendum: the caveats reach Python through
+  `golf-mcp` (D10), the frozen server's write routes are closed and answer 410 naming their verbs
+  (D11, with three new `golf-core` repairs), and no `sidecar/` package (D12).
+- **No render** (C4): `golf-lab` writes no `aligned.mp4`, and `scripts/align_swings.py` went with the
+  scripts.
+- **`data/` was rewritten once** (P29), after a backup outside the repo: 13 shots stamped, 15 bundles
+  re-run at engine 17.
+- **The phone export's import** is `golf-lab import-export`, and what it asks of the phone is in §M38
+  P4.
 
 ### The Rust lab CLI
 

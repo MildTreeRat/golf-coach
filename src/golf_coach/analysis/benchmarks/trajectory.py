@@ -22,8 +22,8 @@ Everything ADR-012 says about the bands applies here: the population is tour pro
 this is "how far from tour", never "how wrong". Off the scoring path, like every other placement
 (ADR-010 §2).
 
-Stdlib + pydantic. Fitting is `scripts/golfdb/derive_trajectory_model.py` under the `research`
-extra; what ships is the basis and the arithmetic to project onto it (ADR-022).
+Stdlib + pydantic. Fitting is `archive/golfdb/derive_trajectory_model.py`, numpy and all (ADR-035
+§5); what ships is the basis and the arithmetic to project onto it (ADR-022).
 """
 
 from __future__ import annotations

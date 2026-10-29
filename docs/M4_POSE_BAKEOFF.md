@@ -2,7 +2,7 @@
 
 > **Tier: REFERENCE — a change ledger, so it records superseded numbers by design.** This is the
 > provenance target cited by `ranges.json`'s committed `source` strings and by nine code comments
-> across `analysis/phases.py`, `analysis/checkpoints/mechanics.py` and `scripts/golfdb/*` — it is
+> across `analysis/phases.py`, `analysis/checkpoints/mechanics.py` and `archive/golfdb/*` — it is
 > a live reference, not an archived doc.
 >
 > **Read it as history, not as current values.** Its whole purpose is recording what each number
@@ -23,7 +23,7 @@ This is a **findings log**, not a design doc. The decision lives in
 [ADR-012](decisions/012-golfdb-reference-data.md); the plan lives in the M4-REF plan.
 
 Machine-readable companion: [`pose_bakeoff_v1.json`](pose_bakeoff_v1.json), written by
-`scripts/golfdb/bakeoff.py` (which hard-codes that path — do not move it).
+`archive/golfdb/bakeoff.py` (which hard-codes that path — do not move it).
 
 ---
 
@@ -271,7 +271,7 @@ bound a descent — worth ~1.5 frames of mean top error on its own.
 
 The constant was first set to **0.50** on a 97-clip sample. At 250 clips the optimum had already
 moved to 0.80, which is the signature of fitting to sample size. Re-run over the **complete 461-clip
-face-on corpus** (`scripts/golfdb/tune_phases.py`, MediaPipe lite, ground truth = GolfDB event
+face-on corpus** (`archive/golfdb/tune_phases.py`, MediaPipe lite, ground truth = GolfDB event
 labels):
 
 | rule | top med | top mean | top >10fr | imp med | imp mean | imp >10fr |
@@ -585,7 +585,7 @@ test now pins the short-window limit so it is recorded rather than rediscovered.
 
 Every other check in this milestone is a statistic. All of them can look healthy while the pose
 underneath is wrong in a way that happens not to move an event index, and `videos_160` is the
-lowest-quality input anywhere in this project. `scripts/golfdb/spot_check.py` renders a contact
+lowest-quality input anywhere in this project. `archive/golfdb/spot_check.py` renders a contact
 sheet — 5 clips x 4 ground-truth instants, skeletons drawn by the production `draw_skeleton` — to
 `data/reference/golfdb/spot_check_<estimator>.png` (gitignored).
 
@@ -707,7 +707,7 @@ median (9) and its mean (27.2).
 
 ### Six alternative signals, all worse
 
-Each is a named rule in `scripts/golfdb/tune_address.py` and re-runs in about a second. Median
+Each is a named rule in `archive/golfdb/tune_address.py` and re-runs in about a second. Median
 absolute error over all 461 clips:
 
 | rule | median | mean | > 10 | med_norm | why it fails |
@@ -901,7 +901,7 @@ GolfDB and the full argument is [ADR-021](decisions/021-caddieset-paired-referen
 flight on one row, which GolfDB has never had. **CaddieSet** does — 924 face-on shots, eight golfers
 of mixed skill, launch-monitor ball data.
 
-**Result: no.** Leave-one-golfer-out, `scripts/caddieset/study_panel.py`:
+**Result: no.** Leave-one-golfer-out, `archive/caddieset/study_panel.py`:
 
 | target | mechanics | club choice alone | best over |
 |---|---|---|---|
@@ -943,7 +943,7 @@ one checkpoint currently failing on this golfer's swings.
 **The question**: the trajectory model (ROADMAP §M8.1) needs to know whether its features are
 `x/y` or `x/y/z`. MediaPipe emits a `z` per landmark and nothing here had ever screened it.
 
-**Method**: `scripts/golfdb/tune_z_channel.py`. Twelve landmarks, at GolfDB's eight hand-labelled
+**Method**: `archive/golfdb/tune_z_channel.py`. Twelve landmarks, at GolfDB's eight hand-labelled
 event frames, over the **461 face-on clips that have both `mediapipe-lite` and `mediapipe-full`
 cached**. Everything hip-relative and shoulder-width-normalised, so the three axes sit in one frame
 of reference — MediaPipe defines `z` as depth relative to the hips, so leaving `x`/`y` in image
@@ -992,7 +992,7 @@ this gate says `z` is not pure noise; it does not say it is geometry.
 
 ## Phase E — the trajectory model's parameters, swept (2026-08-16)
 
-`scripts/golfdb/derive_trajectory_model.py`. Every default it ships with was measured, not chosen.
+`archive/golfdb/derive_trajectory_model.py`. Every default it ships with was measured, not chosen.
 Read `T2` as distance inside the fitted subspace and `Q` as the reconstruction residual off it;
 both are scored by **leave-one-player-out exceedance of the refitted model's own p90, where 10% is
 calibrated**.
@@ -1145,7 +1145,7 @@ That is the honest state: a strong corpus measurement, an unproven transfer, and
 
 ## Phase G — the down-the-line landmark list: the whole lead arm is gone (2026-08-17)
 
-`scripts/golfdb/tune_landmarks.py`, over all 584 down-the-line clips at the eight labelled
+`archive/golfdb/tune_landmarks.py`, over all 584 down-the-line clips at the eight labelled
 instants. §Phase F found the lead *wrist* is barely tracked from behind. It is not just the wrist.
 
 **Tracked-frame fraction, down-the-line, lead side against trail side:**

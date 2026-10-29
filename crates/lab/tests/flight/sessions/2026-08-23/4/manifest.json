@@ -1,0 +1,20 @@
+{
+  "swing_id": "4",
+  "session_id": "2026-08-23",
+  "created_at": "2026-08-23T04:30:18.560132Z",
+  "updated_at": "2026-08-23T04:30:18.560132Z",
+  "roles": {
+    "shot_screen": {
+      "role": "shot_screen",
+      "filename": "shot_screen.f09d9e348523.jpg",
+      "content_sha256": "f09d9e348523e92ece04617f6f8a90c93e323d4e244aec7ff55ccfda35df80a6",
+      "original_filename": "shot.jpg",
+      "content_type": "image/jpeg",
+      "size_bytes": 1,
+      "received_at": "2026-08-23T04:30:18.560132Z",
+      "warnings": []
+    }
+  },
+  "player_id": "aaron",
+  "club": "7i"
+}

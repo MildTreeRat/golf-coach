@@ -1,0 +1,151 @@
+{
+  "career_version": 3,
+  "expected": {
+    "results": [
+      {
+        "content": [
+          {
+            "text": "{\n  \"found\": false,\n  \"message\": \"No golfer matching 'Nobody' is registered. Names are matched loosely (case and punctuation are folded), so this means nobody by that name has swings on file yet.\"\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "found": false,
+            "message": "No golfer matching 'Nobody' is registered. Names are matched loosely (case and punctuation are folded), so this means nobody by that name has swings on file yet."
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"found\": false,\n  \"message\": \"No golfer matching '!!!' is registered. Names are matched loosely (case and punctuation are folded), so this means nobody by that name has swings on file yet.\"\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "found": false,
+            "message": "No golfer matching '!!!' is registered. Names are matched loosely (case and punctuation are folded), so this means nobody by that name has swings on file yet."
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"display_name\": \"Ben\",\n  \"profile\": {\n    \"player_id\": \"ben\",\n    \"clubs\": [],\n    \"player\": {\n      \"grades\": {\n        \"n_shots\": 0,\n        \"untagged_shots\": 0,\n        \"strike\": {\n          \"dispersion\": {}\n        },\n        \"topics\": []\n      },\n      \"list\": []\n    }\n  }\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "display_name": "Ben",
+            "profile": {
+              "clubs": [],
+              "player": {
+                "grades": {
+                  "n_shots": 0,
+                  "strike": {
+                    "dispersion": {}
+                  },
+                  "topics": [],
+                  "untagged_shots": 0
+                },
+                "list": []
+              },
+              "player_id": "ben"
+            }
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"display_name\": \"Aaron\",\n  \"profile\": {\n    \"player_id\": \"aaron\",\n    \"clubs\": [],\n    \"player\": {\n      \"grades\": {\n        \"n_shots\": 1,\n        \"untagged_shots\": 1,\n        \"strike\": {\n          \"dispersion\": {}\n        },\n        \"topics\": []\n      },\n      \"list\": []\n    }\n  }\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "display_name": "Aaron",
+            "profile": {
+              "clubs": [],
+              "player": {
+                "grades": {
+                  "n_shots": 1,
+                  "strike": {
+                    "dispersion": {}
+                  },
+                  "topics": [],
+                  "untagged_shots": 1
+                },
+                "list": []
+              },
+              "player_id": "aaron"
+            }
+          }
+        }
+      }
+    ]
+  },
+  "id": "mcp/hand/strike-profile",
+  "input": {
+    "calls": [
+      {
+        "arguments": {
+          "player": "Nobody"
+        },
+        "now": null,
+        "tool": "get_strike_profile"
+      },
+      {
+        "arguments": {
+          "player": "!!!"
+        },
+        "now": null,
+        "tool": "get_strike_profile"
+      },
+      {
+        "arguments": {
+          "player": "ben"
+        },
+        "now": null,
+        "tool": "get_strike_profile"
+      },
+      {
+        "arguments": {
+          "player": "AARON"
+        },
+        "now": null,
+        "tool": "get_strike_profile"
+      }
+    ],
+    "files": {
+      "golfers/aaron.bag.json": "{\n  \"player_id\": \"aaron\",\n  \"entries\": {\n    \"7i\": {\n      \"club\": \"7i\",\n      \"make\": \"Titleist\",\n      \"model\": \"\",\n      \"model_year\": null,\n      \"head_type\": \"\",\n      \"set_composition\": \"\",\n      \"loft_deg\": 34.0,\n      \"lie_deg\": null,\n      \"bounce_deg\": null,\n      \"grind\": \"\",\n      \"offset_mm\": null,\n      \"face_angle_deg\": null,\n      \"head_weight_g\": null,\n      \"adjustable_hosel\": null,\n      \"loft_range_deg\": null,\n      \"shaft_model\": \"\",\n      \"shaft_material\": null,\n      \"shaft_flex\": null,\n      \"shaft_weight_g\": null,\n      \"shaft_torque_deg\": null,\n      \"shaft_kick_point\": \"\",\n      \"length_in\": null,\n      \"swing_weight\": \"\",\n      \"total_weight_g\": null,\n      \"grip\": \"\",\n      \"cor\": null,\n      \"moi_g_cm2\": null,\n      \"usga_conforming\": null,\n      \"recorded_at\": \"2026-10-01T12:00:00Z\",\n      \"retired_at\": null,\n      \"provenance\": null\n    }\n  },\n  \"retired\": [],\n  \"updated_at\": \"2026-10-01T12:00:00Z\"\n}",
+      "golfers/aaron.golfer.json": "{\n  \"player_id\": \"aaron\",\n  \"display_name\": \"Aaron\",\n  \"handedness\": \"right\",\n  \"created_at\": \"2026-10-01T12:00:00Z\"\n}\n",
+      "golfers/ben.golfer.json": "{\n  \"player_id\": \"ben\",\n  \"display_name\": \"Ben\",\n  \"handedness\": \"right\",\n  \"created_at\": \"2026-10-01T12:00:00Z\"\n}\n",
+      "sessions/2026-09-10/1/manifest.json": "{\n  \"swing_id\": \"1\",\n  \"session_id\": \"2026-09-10\",\n  \"created_at\": \"2026-09-10T12:01:00Z\",\n  \"updated_at\": \"2026-09-10T12:01:00Z\",\n  \"roles\": {\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.photo-10-1.jpg\",\n      \"content_sha256\": \"photo-10-1\",\n      \"original_filename\": \"screen.jpg\",\n      \"content_type\": \"image/jpeg\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-09-10T12:01:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": null,\n  \"mishit\": null\n}\n",
+      "sessions/2026-09-10/1/shot_analysis.json": "{\n  \"swing_id\": \"1\",\n  \"session_id\": \"2026-09-10\",\n  \"analysis_version\": 17,\n  \"photo_sha256\": \"photo-10-1\",\n  \"shot\": {\n    \"shot_id\": \"2026-09-10-1\",\n    \"session_id\": \"2026-09-10\",\n    \"timestamp\": \"2026-09-10T12:01:00Z\",\n    \"source\": \"screen\",\n    \"provenance\": {\n      \"device\": \"hd_golf\",\n      \"parse_confidence\": 0.95,\n      \"needs_review\": false,\n      \"warnings\": [],\n      \"image_sha256\": \"photo-10-1\"\n    },\n    \"carry_distance\": 150.0\n  },\n  \"measurements\": [\n    {\n      \"name\": \"carry_distance_yds\",\n      \"value\": 150.0,\n      \"unit\": \"yards\",\n      \"source\": \"launch_monitor:hd_golf\",\n      \"detail\": \"hand\"\n    }\n  ],\n  \"unscored\": [],\n  \"notes\": []\n}\n",
+      "sessions/2026-09-10/2/manifest.json": "{\n  \"swing_id\": \"2\",\n  \"session_id\": \"2026-09-10\",\n  \"created_at\": \"2026-09-10T12:02:00Z\",\n  \"updated_at\": \"2026-09-10T12:02:00Z\",\n  \"roles\": {\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.photo-10-2.jpg\",\n      \"content_sha256\": \"photo-10-2\",\n      \"original_filename\": \"screen.jpg\",\n      \"content_type\": \"image/jpeg\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-09-10T12:02:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": null,\n  \"mishit\": null,\n  \"intent\": {\n    \"mode\": \"drill\",\n    \"target_shape\": null,\n    \"club\": \"all\",\n    \"focus_checkpoint\": null\n  }\n}\n",
+      "sessions/2026-09-10/2/shot_analysis.json": "{\n  \"swing_id\": \"2\",\n  \"session_id\": \"2026-09-10\",\n  \"analysis_version\": 17,\n  \"photo_sha256\": \"photo-10-2\",\n  \"shot\": {\n    \"shot_id\": \"2026-09-10-2\",\n    \"session_id\": \"2026-09-10\",\n    \"timestamp\": \"2026-09-10T12:02:00Z\",\n    \"source\": \"screen\",\n    \"provenance\": {\n      \"device\": \"hd_golf\",\n      \"parse_confidence\": 0.95,\n      \"needs_review\": false,\n      \"warnings\": [],\n      \"image_sha256\": \"photo-10-2\"\n    },\n    \"carry_distance\": 140.0\n  },\n  \"measurements\": [\n    {\n      \"name\": \"carry_distance_yds\",\n      \"value\": 140.0,\n      \"unit\": \"yards\",\n      \"source\": \"launch_monitor:hd_golf\",\n      \"detail\": \"hand\"\n    }\n  ],\n  \"unscored\": [],\n  \"notes\": []\n}\n",
+      "sessions/2026-09-11/1/analysis.json": "{\n  \"analysis_version\": 17,\n  \"swing_id\": \"1\",\n  \"session_id\": \"2026-09-11\",\n  \"swing\": {\n    \"swing_id\": \"1\",\n    \"session_id\": \"2026-09-11\",\n    \"checkpoint_scores\": [],\n    \"unscored\": [],\n    \"measurements\": [\n      {\n        \"name\": \"head_sway_norm\",\n        \"value\": 0.3,\n        \"unit\": \"shoulder_widths\",\n        \"source\": \"pose:face_on\",\n        \"detail\": \"hand\"\n      }\n    ],\n    \"mechanics_score\": 80.0,\n    \"outcome_score\": null,\n    \"overall_score\": 80.0,\n    \"shot\": null\n  }\n}\n",
+      "sessions/2026-09-11/1/manifest.json": "{\n  \"swing_id\": \"1\",\n  \"session_id\": \"2026-09-11\",\n  \"created_at\": \"2026-09-11T12:01:00Z\",\n  \"updated_at\": \"2026-09-11T12:01:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.clip-11-1.mov\",\n      \"content_sha256\": \"clip-11-1\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-09-11T12:01:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": \"7i\",\n  \"mishit\": null\n}\n",
+      "shots/": ""
+    },
+    "roots": {
+      "golfers": "golfers",
+      "sessions": "sessions",
+      "shots": "shots"
+    }
+  },
+  "provenance": {
+    "kind": "mcp",
+    "note": "get_strike_profile's misses and its silences, worked by hand from the M37 rules (contracts::strike, analysis::strike's builders) and ADR-024's M35 addendum before golf-mcp answered them. Read under this build's engine pair {installed 17, comparable_from 14}. Golfers aaron (Aaron, with a bag declaring a 7i) and ben (Ben, nothing on file). Nobody slugs to nobody, who is not registered, and !!! slugs to nothing, so no golfer: both answer the miss, with career::missing_golfer_profile's sentence and the name as typed, quoted as Python's repr quotes it. ben has no swing: the profile is empty, not refused, with n_shots 0, no club, no topic, no blend key, an empty dispersion and an empty list. AARON folds to aaron. Aaron's corpus: 2026-09-10/1, a photo entry (photo-10-1, carry 150, HD Golf, no club) that is admitted; 2026-09-10/2, a photo entry practised as a drill (photo-10-2, carry 140), untracked and in no count; 2026-09-11/1, a clip tagged 7i (engine 17, head_sway_norm 0.3) with no shot photo. So n_shots is 1 and untagged_shots 1 (the drill's photo is not a shot of the corpus). No club is graded: the 7i is declared and hit only on a clip with no photo, so its n_shots is 0 and it is no club of the profile. No topic exists for the player: consistency and low point need a club, and the untagged owner has none, while the 7i owner has no shot to see either; strike location needs an impact offset HD Golf does not print; and no shot was declared a shape. No topic is graded, so there is no blend key. The player's strike carries no ball speed (club-only) and no impact map (no strike location), and its dispersion is empty, since neither club-independent metric (start_line_deg, face_to_path_deg) is held by any entry. The list is empty: carry and head sway have one sample each, which establishes nothing. The view is golf-core profile --json's element, display_name then the GradedProfile.",
+    "oracle": "hand",
+    "source": "worked by hand in M29 P15, against contracts::strike's three states, analysis::strike's build_grades and build_player_grades, and ADR-024's M35 addendum (photo-only admission, drills untracked). The tree's files follow mcp/hand/career-corpus's spellings; every count and every key here is the hand's, and none was produced by golf-mcp or golf-core"
+  }
+}

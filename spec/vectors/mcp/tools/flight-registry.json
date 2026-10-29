@@ -1,0 +1,841 @@
+{
+  "career_version": 3,
+  "expected": {
+    "results": [
+      {
+        "content": [
+          {
+            "text": "{\n  \"session_id\": \"2026-09-01\",\n  \"swing_id\": \"1\",\n  \"shot_id\": \"2026-09-01-1\",\n  \"club\": \"7i\",\n  \"flew\": true,\n  \"source\": \"model:flight_v1\",\n  \"simulated\": [\n    {\n      \"name\": \"flight_carry_yds\",\n      \"value\": 125.59986241471707,\n      \"unit\": \"yards\",\n      \"source\": \"model:flight_v1\",\n      \"detail\": \"SIMULATED carry from the printed launch conditions; not the launch monitor's own carry, which is carry_distance_yds\"\n    },\n    {\n      \"name\": \"flight_apex_yds\",\n      \"value\": 18.11031229652529,\n      \"unit\": \"yards\",\n      \"source\": \"model:flight_v1\",\n      \"detail\": \"SIMULATED peak height above the tee; the screen prints no apex tile at all\"\n    },\n    {\n      \"name\": \"flight_descent_angle_deg\",\n      \"value\": 35.71471744844861,\n      \"unit\": \"degrees\",\n      \"source\": \"model:flight_v1\",\n      \"detail\": \"SIMULATED angle below the horizontal at landing, read off the landing velocity\"\n    },\n    {\n      \"name\": \"flight_time_s\",\n      \"value\": 4.50550949006097,\n      \"unit\": \"seconds\",\n      \"source\": \"model:flight_v1\",\n      \"detail\": \"SIMULATED hang time from launch to landing\"\n    },\n    {\n      \"name\": \"flight_landing_offline_yds\",\n      \"value\": -9.952702807505498,\n      \"unit\": \"yards\",\n      \"source\": \"model:flight_v1\",\n      \"detail\": \"SIMULATED yards right (+) or left of target the ball FINISHED; recorded only when the spin axis resolved, so unlike start_line_offline_yds this is a landing point\"\n    },\n    {\n      \"name\": \"flight_spin_rpm\",\n      \"value\": 3184.982446231804,\n      \"unit\": \"rpm\",\n      \"source\": \"model:flight_v1\",\n      \"detail\": \"SOLVED backspin - the spin this model needs to agree with the printed carry, capped and recorded only when the screen printed none; a printed spin is on the shot, not here\"\n    }\n  ],\n  \"reason\": null,\n  \"detail\": \"125.6 yd, case two_branches: the falling branch, because a 34.0 deg club spins above the 2546 rpm peak; 1905 rpm is the branch not taken\",\n  \"unscored\": [],\n  \"launch\": {\n    \"ball_speed_mph\": 90.7,\n    \"launch_angle_deg\": 20.9,\n    \"spin_rpm\": 3184.982446231804,\n    \"launch_direction_deg\": -5.3,\n    \"spin_axis_deg\": 2.5\n  },\n  \"spin\": {\n    \"rpm\": 3184.982446231804,\n    \"source\": \"inferred\",\n    \"case\": \"two_branches\",\n    \"cap_rpm\": 5154.075147564731,\n    \"at_cap\": false,\n    \"detail\": \"125.6 yd, case two_branches: the falling branch, because a 34.0 deg club spins above the 2546 rpm peak; 1905 rpm is the branch not taken\"\n  },\n  \"axis\": {\n    \"spin_axis_deg\": 2.5,\n    \"source\": \"measured\",\n    \"curve_direction\": \"fade\",\n    \"screen_shape\": null,\n    \"sign_disagrees\": false,\n    \"curve_is_drawn\": true,\n    \"why\": \"\"\n  },\n  \"comparison\": [\n    {\n      \"simulated_name\": \"flight_carry_yds\",\n      \"measured_name\": \"carry_distance_yds\",\n      \"quantity\": \"down_range\",\n      \"simulated\": 125.59986241471707,\n      \"measured\": 125.6,\n      \"difference\": -0.00013758528292839856,\n      \"comparable\": false,\n      \"reading\": \"the printed carry is the *input* to the spin solve, so the flown carry reproduces it by construction (-0.000 yd, which is the root search's own tolerance and not an agreement). Nothing here checks the model; what the solve produced is a spin, and its cap is what bounds that.\"\n    },\n    {\n      \"simulated_name\": \"flight_landing_offline_yds\",\n      \"measured_name\": \"start_line_offline_yds\",\n      \"quantity\": \"offline\",\n      \"simulated\": -9.952702807505498,\n      \"measured\": -11.601745783288134,\n      \"difference\": 1.6490429757826366,\n      \"comparable\": false,\n      \"reading\": \"not an error and not a comparison: the printed number is where the ball *started*, projected out to the carry, and the simulated one is where this model has it finishing. Most of the gap is the bend the screen never measured, +1.65 yd of it; the remaining +0.00 yd is the carry row above leaning on a start line -5.3 deg off target, and it is not a second finding.\"\n    }\n  ],\n  \"caveats\": [\n    \"every point read a measured row of the table (0.085 to 0.284), which one shot on disk manages and no other — and that shot is the one whose spin was *solved* rather than printed. The two go together rather than coinciding: a carry the solve can invert is a carry still responding to spin, and spin still reaching the answer is exactly a flight below the clamp.\",\n    \"the model agrees with HD Golf to +/-2.59% on the two shots where a full launch-condition set and an independent carry are both on disk (`--gate`) — while ranking those two shots backwards. That percentage is therefore the size of what this model cannot see, not a calibration error, and a carry from here is not \\\"accurate to 2.6%\\\".\",\n    \"the spin on this flight was not measured. It is the spin this integrator needs in order to fly the carry HD Golf printed, capped at 5154 rpm where carry stops responding to spin at all, and chosen between two candidates by the club's loft. Both shots whose real spin is on disk sit above their own cap, and the one the solve answers on comes back 47% low — so this is a path-drawing device and not a spin rate the golfer produced.\"\n  ],\n  \"differs_from_recorded\": [\n    {\n      \"name\": \"flight_carry_yds\",\n      \"recorded\": null,\n      \"flown\": 125.59986241471707,\n      \"difference\": null\n    },\n    {\n      \"name\": \"flight_apex_yds\",\n      \"recorded\": null,\n      \"flown\": 18.11031229652529,\n      \"difference\": null\n    },\n    {\n      \"name\": \"flight_descent_angle_deg\",\n      \"recorded\": null,\n      \"flown\": 35.71471744844861,\n      \"difference\": null\n    },\n    {\n      \"name\": \"flight_time_s\",\n      \"recorded\": null,\n      \"flown\": 4.50550949006097,\n      \"difference\": null\n    },\n    {\n      \"name\": \"flight_landing_offline_yds\",\n      \"recorded\": null,\n      \"flown\": -9.952702807505498,\n      \"difference\": null\n    },\n    {\n      \"name\": \"flight_spin_rpm\",\n      \"recorded\": null,\n      \"flown\": 3184.982446231804,\n      \"difference\": null\n    }\n  ],\n  \"recorded_reading\": \"This artifact was written by an older engine, so the difference is the engine and not the shot. Re-analyze the swing to bring the recorded flight up to date.\"\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "axis": {
+              "curve_direction": "fade",
+              "curve_is_drawn": true,
+              "screen_shape": null,
+              "sign_disagrees": false,
+              "source": "measured",
+              "spin_axis_deg": 2.5,
+              "why": ""
+            },
+            "caveats": [
+              "every point read a measured row of the table (0.085 to 0.284), which one shot on disk manages and no other — and that shot is the one whose spin was *solved* rather than printed. The two go together rather than coinciding: a carry the solve can invert is a carry still responding to spin, and spin still reaching the answer is exactly a flight below the clamp.",
+              "the model agrees with HD Golf to +/-2.59% on the two shots where a full launch-condition set and an independent carry are both on disk (`--gate`) — while ranking those two shots backwards. That percentage is therefore the size of what this model cannot see, not a calibration error, and a carry from here is not \"accurate to 2.6%\".",
+              "the spin on this flight was not measured. It is the spin this integrator needs in order to fly the carry HD Golf printed, capped at 5154 rpm where carry stops responding to spin at all, and chosen between two candidates by the club's loft. Both shots whose real spin is on disk sit above their own cap, and the one the solve answers on comes back 47% low — so this is a path-drawing device and not a spin rate the golfer produced."
+            ],
+            "club": "7i",
+            "comparison": [
+              {
+                "comparable": false,
+                "difference": -0.00013758528292839856,
+                "measured": 125.6,
+                "measured_name": "carry_distance_yds",
+                "quantity": "down_range",
+                "reading": "the printed carry is the *input* to the spin solve, so the flown carry reproduces it by construction (-0.000 yd, which is the root search's own tolerance and not an agreement). Nothing here checks the model; what the solve produced is a spin, and its cap is what bounds that.",
+                "simulated": 125.59986241471707,
+                "simulated_name": "flight_carry_yds"
+              },
+              {
+                "comparable": false,
+                "difference": 1.6490429757826366,
+                "measured": -11.601745783288134,
+                "measured_name": "start_line_offline_yds",
+                "quantity": "offline",
+                "reading": "not an error and not a comparison: the printed number is where the ball *started*, projected out to the carry, and the simulated one is where this model has it finishing. Most of the gap is the bend the screen never measured, +1.65 yd of it; the remaining +0.00 yd is the carry row above leaning on a start line -5.3 deg off target, and it is not a second finding.",
+                "simulated": -9.952702807505498,
+                "simulated_name": "flight_landing_offline_yds"
+              }
+            ],
+            "detail": "125.6 yd, case two_branches: the falling branch, because a 34.0 deg club spins above the 2546 rpm peak; 1905 rpm is the branch not taken",
+            "differs_from_recorded": [
+              {
+                "difference": null,
+                "flown": 125.59986241471707,
+                "name": "flight_carry_yds",
+                "recorded": null
+              },
+              {
+                "difference": null,
+                "flown": 18.11031229652529,
+                "name": "flight_apex_yds",
+                "recorded": null
+              },
+              {
+                "difference": null,
+                "flown": 35.71471744844861,
+                "name": "flight_descent_angle_deg",
+                "recorded": null
+              },
+              {
+                "difference": null,
+                "flown": 4.50550949006097,
+                "name": "flight_time_s",
+                "recorded": null
+              },
+              {
+                "difference": null,
+                "flown": -9.952702807505498,
+                "name": "flight_landing_offline_yds",
+                "recorded": null
+              },
+              {
+                "difference": null,
+                "flown": 3184.982446231804,
+                "name": "flight_spin_rpm",
+                "recorded": null
+              }
+            ],
+            "flew": true,
+            "launch": {
+              "ball_speed_mph": 90.7,
+              "launch_angle_deg": 20.9,
+              "launch_direction_deg": -5.3,
+              "spin_axis_deg": 2.5,
+              "spin_rpm": 3184.982446231804
+            },
+            "reason": null,
+            "recorded_reading": "This artifact was written by an older engine, so the difference is the engine and not the shot. Re-analyze the swing to bring the recorded flight up to date.",
+            "session_id": "2026-09-01",
+            "shot_id": "2026-09-01-1",
+            "simulated": [
+              {
+                "detail": "SIMULATED carry from the printed launch conditions; not the launch monitor's own carry, which is carry_distance_yds",
+                "name": "flight_carry_yds",
+                "source": "model:flight_v1",
+                "unit": "yards",
+                "value": 125.59986241471707
+              },
+              {
+                "detail": "SIMULATED peak height above the tee; the screen prints no apex tile at all",
+                "name": "flight_apex_yds",
+                "source": "model:flight_v1",
+                "unit": "yards",
+                "value": 18.11031229652529
+              },
+              {
+                "detail": "SIMULATED angle below the horizontal at landing, read off the landing velocity",
+                "name": "flight_descent_angle_deg",
+                "source": "model:flight_v1",
+                "unit": "degrees",
+                "value": 35.71471744844861
+              },
+              {
+                "detail": "SIMULATED hang time from launch to landing",
+                "name": "flight_time_s",
+                "source": "model:flight_v1",
+                "unit": "seconds",
+                "value": 4.50550949006097
+              },
+              {
+                "detail": "SIMULATED yards right (+) or left of target the ball FINISHED; recorded only when the spin axis resolved, so unlike start_line_offline_yds this is a landing point",
+                "name": "flight_landing_offline_yds",
+                "source": "model:flight_v1",
+                "unit": "yards",
+                "value": -9.952702807505498
+              },
+              {
+                "detail": "SOLVED backspin - the spin this model needs to agree with the printed carry, capped and recorded only when the screen printed none; a printed spin is on the shot, not here",
+                "name": "flight_spin_rpm",
+                "source": "model:flight_v1",
+                "unit": "rpm",
+                "value": 3184.982446231804
+              }
+            ],
+            "source": "model:flight_v1",
+            "spin": {
+              "at_cap": false,
+              "cap_rpm": 5154.075147564731,
+              "case": "two_branches",
+              "detail": "125.6 yd, case two_branches: the falling branch, because a 34.0 deg club spins above the 2546 rpm peak; 1905 rpm is the branch not taken",
+              "rpm": 3184.982446231804,
+              "source": "inferred"
+            },
+            "swing_id": "1",
+            "unscored": []
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"session_id\": \"2026-09-01\",\n  \"swing_id\": \"2\",\n  \"shot_id\": \"2026-09-01-2\",\n  \"club\": \"driver\",\n  \"flew\": false,\n  \"source\": \"model:flight_v1\",\n  \"simulated\": [],\n  \"reason\": \"no_club_loft\",\n  \"detail\": \"125.6 yd, case two_branches: 1905 and 3185 rpm both fly this carry and no loft is on record to choose between them\",\n  \"unscored\": [\n    {\n      \"name\": \"flight_carry_yds\",\n      \"reason\": \"no_club_loft\",\n      \"why\": \"two spins fly that carry and no club loft is on record to choose between them\",\n      \"detail\": \"125.6 yd, case two_branches: 1905 and 3185 rpm both fly this carry and no loft is on record to choose between them - no flight, so none of the flight_* measurements recorded\",\n      \"refilming_helps\": false\n    }\n  ],\n  \"launch\": null,\n  \"spin\": {\n    \"rpm\": null,\n    \"source\": null,\n    \"case\": \"two_branches\",\n    \"cap_rpm\": 5154.075147564731,\n    \"at_cap\": false,\n    \"detail\": \"125.6 yd, case two_branches: 1905 and 3185 rpm both fly this carry and no loft is on record to choose between them\"\n  },\n  \"axis\": {\n    \"spin_axis_deg\": 2.5,\n    \"source\": \"measured\",\n    \"curve_direction\": \"fade\",\n    \"screen_shape\": null,\n    \"sign_disagrees\": false,\n    \"curve_is_drawn\": true,\n    \"why\": \"\"\n  },\n  \"comparison\": [],\n  \"caveats\": [],\n  \"differs_from_recorded\": [],\n  \"recorded_reading\": \"\"\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "axis": {
+              "curve_direction": "fade",
+              "curve_is_drawn": true,
+              "screen_shape": null,
+              "sign_disagrees": false,
+              "source": "measured",
+              "spin_axis_deg": 2.5,
+              "why": ""
+            },
+            "caveats": [],
+            "club": "driver",
+            "comparison": [],
+            "detail": "125.6 yd, case two_branches: 1905 and 3185 rpm both fly this carry and no loft is on record to choose between them",
+            "differs_from_recorded": [],
+            "flew": false,
+            "launch": null,
+            "reason": "no_club_loft",
+            "recorded_reading": "",
+            "session_id": "2026-09-01",
+            "shot_id": "2026-09-01-2",
+            "simulated": [],
+            "source": "model:flight_v1",
+            "spin": {
+              "at_cap": false,
+              "cap_rpm": 5154.075147564731,
+              "case": "two_branches",
+              "detail": "125.6 yd, case two_branches: 1905 and 3185 rpm both fly this carry and no loft is on record to choose between them",
+              "rpm": null,
+              "source": null
+            },
+            "swing_id": "2",
+            "unscored": [
+              {
+                "detail": "125.6 yd, case two_branches: 1905 and 3185 rpm both fly this carry and no loft is on record to choose between them - no flight, so none of the flight_* measurements recorded",
+                "name": "flight_carry_yds",
+                "reason": "no_club_loft",
+                "refilming_helps": false,
+                "why": "two spins fly that carry and no club loft is on record to choose between them"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"session_id\": \"2026-09-01\",\n  \"swing_id\": \"3\",\n  \"shot_id\": \"2026-09-01-3\",\n  \"club\": \"pw\",\n  \"flew\": false,\n  \"source\": \"model:flight_v1\",\n  \"simulated\": [],\n  \"reason\": \"no_club_loft\",\n  \"detail\": \"125.6 yd, case two_branches: 1905 and 3185 rpm both fly this carry and no loft is on record to choose between them\",\n  \"unscored\": [\n    {\n      \"name\": \"flight_carry_yds\",\n      \"reason\": \"no_club_loft\",\n      \"why\": \"two spins fly that carry and no club loft is on record to choose between them\",\n      \"detail\": \"125.6 yd, case two_branches: 1905 and 3185 rpm both fly this carry and no loft is on record to choose between them - no flight, so none of the flight_* measurements recorded\",\n      \"refilming_helps\": false\n    }\n  ],\n  \"launch\": null,\n  \"spin\": {\n    \"rpm\": null,\n    \"source\": null,\n    \"case\": \"two_branches\",\n    \"cap_rpm\": 5154.075147564731,\n    \"at_cap\": false,\n    \"detail\": \"125.6 yd, case two_branches: 1905 and 3185 rpm both fly this carry and no loft is on record to choose between them\"\n  },\n  \"axis\": {\n    \"spin_axis_deg\": 2.5,\n    \"source\": \"measured\",\n    \"curve_direction\": \"fade\",\n    \"screen_shape\": null,\n    \"sign_disagrees\": false,\n    \"curve_is_drawn\": true,\n    \"why\": \"\"\n  },\n  \"comparison\": [],\n  \"caveats\": [],\n  \"differs_from_recorded\": [],\n  \"recorded_reading\": \"\"\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "axis": {
+              "curve_direction": "fade",
+              "curve_is_drawn": true,
+              "screen_shape": null,
+              "sign_disagrees": false,
+              "source": "measured",
+              "spin_axis_deg": 2.5,
+              "why": ""
+            },
+            "caveats": [],
+            "club": "pw",
+            "comparison": [],
+            "detail": "125.6 yd, case two_branches: 1905 and 3185 rpm both fly this carry and no loft is on record to choose between them",
+            "differs_from_recorded": [],
+            "flew": false,
+            "launch": null,
+            "reason": "no_club_loft",
+            "recorded_reading": "",
+            "session_id": "2026-09-01",
+            "shot_id": "2026-09-01-3",
+            "simulated": [],
+            "source": "model:flight_v1",
+            "spin": {
+              "at_cap": false,
+              "cap_rpm": 5154.075147564731,
+              "case": "two_branches",
+              "detail": "125.6 yd, case two_branches: 1905 and 3185 rpm both fly this carry and no loft is on record to choose between them",
+              "rpm": null,
+              "source": null
+            },
+            "swing_id": "3",
+            "unscored": [
+              {
+                "detail": "125.6 yd, case two_branches: 1905 and 3185 rpm both fly this carry and no loft is on record to choose between them - no flight, so none of the flight_* measurements recorded",
+                "name": "flight_carry_yds",
+                "reason": "no_club_loft",
+                "refilming_helps": false,
+                "why": "two spins fly that carry and no club loft is on record to choose between them"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"session_id\": \"2026-09-01\",\n  \"swing_id\": \"4\",\n  \"shot_id\": \"2026-09-01-4\",\n  \"club\": null,\n  \"flew\": false,\n  \"source\": \"model:flight_v1\",\n  \"simulated\": [],\n  \"reason\": \"no_club_loft\",\n  \"detail\": \"125.6 yd, case two_branches: 1905 and 3185 rpm both fly this carry and no loft is on record to choose between them\",\n  \"unscored\": [\n    {\n      \"name\": \"flight_carry_yds\",\n      \"reason\": \"no_club_loft\",\n      \"why\": \"two spins fly that carry and no club loft is on record to choose between them\",\n      \"detail\": \"125.6 yd, case two_branches: 1905 and 3185 rpm both fly this carry and no loft is on record to choose between them - no flight, so none of the flight_* measurements recorded\",\n      \"refilming_helps\": false\n    }\n  ],\n  \"launch\": null,\n  \"spin\": {\n    \"rpm\": null,\n    \"source\": null,\n    \"case\": \"two_branches\",\n    \"cap_rpm\": 5154.075147564731,\n    \"at_cap\": false,\n    \"detail\": \"125.6 yd, case two_branches: 1905 and 3185 rpm both fly this carry and no loft is on record to choose between them\"\n  },\n  \"axis\": {\n    \"spin_axis_deg\": 2.5,\n    \"source\": \"measured\",\n    \"curve_direction\": \"fade\",\n    \"screen_shape\": null,\n    \"sign_disagrees\": false,\n    \"curve_is_drawn\": true,\n    \"why\": \"\"\n  },\n  \"comparison\": [],\n  \"caveats\": [],\n  \"differs_from_recorded\": [],\n  \"recorded_reading\": \"\"\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "axis": {
+              "curve_direction": "fade",
+              "curve_is_drawn": true,
+              "screen_shape": null,
+              "sign_disagrees": false,
+              "source": "measured",
+              "spin_axis_deg": 2.5,
+              "why": ""
+            },
+            "caveats": [],
+            "club": null,
+            "comparison": [],
+            "detail": "125.6 yd, case two_branches: 1905 and 3185 rpm both fly this carry and no loft is on record to choose between them",
+            "differs_from_recorded": [],
+            "flew": false,
+            "launch": null,
+            "reason": "no_club_loft",
+            "recorded_reading": "",
+            "session_id": "2026-09-01",
+            "shot_id": "2026-09-01-4",
+            "simulated": [],
+            "source": "model:flight_v1",
+            "spin": {
+              "at_cap": false,
+              "cap_rpm": 5154.075147564731,
+              "case": "two_branches",
+              "detail": "125.6 yd, case two_branches: 1905 and 3185 rpm both fly this carry and no loft is on record to choose between them",
+              "rpm": null,
+              "source": null
+            },
+            "swing_id": "4",
+            "unscored": [
+              {
+                "detail": "125.6 yd, case two_branches: 1905 and 3185 rpm both fly this carry and no loft is on record to choose between them - no flight, so none of the flight_* measurements recorded",
+                "name": "flight_carry_yds",
+                "reason": "no_club_loft",
+                "refilming_helps": false,
+                "why": "two spins fly that carry and no club loft is on record to choose between them"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"session_id\": \"2026-09-01\",\n  \"swing_id\": \"5\",\n  \"shot_id\": \"2026-09-01-5\",\n  \"club\": \"7i\",\n  \"flew\": false,\n  \"source\": \"model:flight_v1\",\n  \"simulated\": [],\n  \"reason\": \"no_club_loft\",\n  \"detail\": \"125.6 yd, case two_branches: 1897 and 3201 rpm both fly this carry and no loft is on record to choose between them\",\n  \"unscored\": [\n    {\n      \"name\": \"flight_carry_yds\",\n      \"reason\": \"no_club_loft\",\n      \"why\": \"two spins fly that carry and no club loft is on record to choose between them\",\n      \"detail\": \"125.6 yd, case two_branches: 1897 and 3201 rpm both fly this carry and no loft is on record to choose between them - no flight, so none of the flight_* measurements recorded\",\n      \"refilming_helps\": false\n    }\n  ],\n  \"launch\": null,\n  \"spin\": {\n    \"rpm\": null,\n    \"source\": null,\n    \"case\": \"two_branches\",\n    \"cap_rpm\": 5154.075147564731,\n    \"at_cap\": false,\n    \"detail\": \"125.6 yd, case two_branches: 1897 and 3201 rpm both fly this carry and no loft is on record to choose between them\"\n  },\n  \"axis\": {\n    \"spin_axis_deg\": null,\n    \"source\": null,\n    \"curve_direction\": \"fade\",\n    \"screen_shape\": null,\n    \"sign_disagrees\": false,\n    \"curve_is_drawn\": false,\n    \"why\": \"a +2.5 deg axis was printed, but '+ = fade' is a right-handed reading and no golfer is attributed to this shot\"\n  },\n  \"comparison\": [],\n  \"caveats\": [],\n  \"differs_from_recorded\": [],\n  \"recorded_reading\": \"\"\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "axis": {
+              "curve_direction": "fade",
+              "curve_is_drawn": false,
+              "screen_shape": null,
+              "sign_disagrees": false,
+              "source": null,
+              "spin_axis_deg": null,
+              "why": "a +2.5 deg axis was printed, but '+ = fade' is a right-handed reading and no golfer is attributed to this shot"
+            },
+            "caveats": [],
+            "club": "7i",
+            "comparison": [],
+            "detail": "125.6 yd, case two_branches: 1897 and 3201 rpm both fly this carry and no loft is on record to choose between them",
+            "differs_from_recorded": [],
+            "flew": false,
+            "launch": null,
+            "reason": "no_club_loft",
+            "recorded_reading": "",
+            "session_id": "2026-09-01",
+            "shot_id": "2026-09-01-5",
+            "simulated": [],
+            "source": "model:flight_v1",
+            "spin": {
+              "at_cap": false,
+              "cap_rpm": 5154.075147564731,
+              "case": "two_branches",
+              "detail": "125.6 yd, case two_branches: 1897 and 3201 rpm both fly this carry and no loft is on record to choose between them",
+              "rpm": null,
+              "source": null
+            },
+            "swing_id": "5",
+            "unscored": [
+              {
+                "detail": "125.6 yd, case two_branches: 1897 and 3201 rpm both fly this carry and no loft is on record to choose between them - no flight, so none of the flight_* measurements recorded",
+                "name": "flight_carry_yds",
+                "reason": "no_club_loft",
+                "refilming_helps": false,
+                "why": "two spins fly that carry and no club loft is on record to choose between them"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"session_id\": \"2026-09-01\",\n  \"swing_id\": \"6\",\n  \"shot_id\": \"2026-09-01-6\",\n  \"club\": \"7i\",\n  \"flew\": true,\n  \"source\": \"model:flight_v1\",\n  \"simulated\": [\n    {\n      \"name\": \"flight_carry_yds\",\n      \"value\": 122.41102544850641,\n      \"unit\": \"yards\",\n      \"source\": \"model:flight_v1\",\n      \"detail\": \"SIMULATED carry from the printed launch conditions; not the launch monitor's own carry, which is carry_distance_yds\"\n    },\n    {\n      \"name\": \"flight_apex_yds\",\n      \"value\": 18.5531791898014,\n      \"unit\": \"yards\",\n      \"source\": \"model:flight_v1\",\n      \"detail\": \"SIMULATED peak height above the tee; the screen prints no apex tile at all\"\n    },\n    {\n      \"name\": \"flight_descent_angle_deg\",\n      \"value\": 36.91848018024314,\n      \"unit\": \"degrees\",\n      \"source\": \"model:flight_v1\",\n      \"detail\": \"SIMULATED angle below the horizontal at landing, read off the landing velocity\"\n    },\n    {\n      \"name\": \"flight_time_s\",\n      \"value\": 4.517525291310862,\n      \"unit\": \"seconds\",\n      \"source\": \"model:flight_v1\",\n      \"detail\": \"SIMULATED hang time from launch to landing\"\n    }\n  ],\n  \"reason\": null,\n  \"detail\": \"5991 rpm printed on the screen\",\n  \"unscored\": [\n    {\n      \"name\": \"flight_landing_offline_yds\",\n      \"reason\": \"spin_axis_unresolved\",\n      \"why\": \"the screen printed which way the ball curved but not how far the axis is tilted\",\n      \"detail\": \"no spin axis printed; face-to-path +3.0 deg gives the direction and no magnitude\",\n      \"refilming_helps\": false\n    }\n  ],\n  \"launch\": {\n    \"ball_speed_mph\": 90.7,\n    \"launch_angle_deg\": 20.9,\n    \"spin_rpm\": 5991.0,\n    \"launch_direction_deg\": -5.3,\n    \"spin_axis_deg\": 0.0\n  },\n  \"spin\": {\n    \"rpm\": 5991.0,\n    \"source\": \"measured\",\n    \"case\": null,\n    \"cap_rpm\": null,\n    \"at_cap\": null,\n    \"detail\": \"5991 rpm printed on the screen\"\n  },\n  \"axis\": {\n    \"spin_axis_deg\": null,\n    \"source\": null,\n    \"curve_direction\": \"fade\",\n    \"screen_shape\": null,\n    \"sign_disagrees\": false,\n    \"curve_is_drawn\": false,\n    \"why\": \"no spin axis printed; face-to-path +3.0 deg gives the direction and no magnitude\"\n  },\n  \"comparison\": [\n    {\n      \"simulated_name\": \"flight_carry_yds\",\n      \"measured_name\": \"carry_distance_yds\",\n      \"quantity\": \"down_range\",\n      \"simulated\": 122.41102544850641,\n      \"measured\": 125.6,\n      \"difference\": -3.1889745514935868,\n      \"comparable\": true,\n      \"reading\": \"the screen printed the spin this was flown on, so the carry beside it is an independent measurement and this difference is the model's error on this shot: -3.19 yd, -2.54% against a gate measured at +/-2.59%.\"\n    }\n  ],\n  \"caveats\": [\n    \"every point of this flight sat above the published table, which stops at a spin ratio of 0.284 and was measured on a *driver*. Its end row was held rather than extended, so lift and drag were one constant pair the whole way — and since spin reaches the flight only through the spin ratio and the spin ratio only through those two coefficients, the spin above the clamp does not reach this carry at all. The same ball at 5,200 rpm and at 30,000 rpm flies exactly this far.\",\n    \"the model agrees with HD Golf to +/-2.59% on the two shots where a full launch-condition set and an independent carry are both on disk (`--gate`) — while ranking those two shots backwards. That percentage is therefore the size of what this model cannot see, not a calibration error, and a carry from here is not \\\"accurate to 2.6%\\\".\",\n    \"this flight is drawn in the vertical plane, because nothing on the screen fixes how far the spin axis was tilted (ADR-027 §Decision 5's third branch). The curvature is then zero by construction and the landing offline reduces to `carry * sin(start line)` — which is `shot_measure`'s `start_line_offline_yds` reached by a much longer route, and not a landing point. The curve is missing from it, and on a shot the screen called a fade the curve is most of the lateral miss.\"\n  ],\n  \"differs_from_recorded\": [\n    {\n      \"name\": \"flight_carry_yds\",\n      \"recorded\": null,\n      \"flown\": 122.41102544850641,\n      \"difference\": null\n    },\n    {\n      \"name\": \"flight_apex_yds\",\n      \"recorded\": null,\n      \"flown\": 18.5531791898014,\n      \"difference\": null\n    },\n    {\n      \"name\": \"flight_descent_angle_deg\",\n      \"recorded\": null,\n      \"flown\": 36.91848018024314,\n      \"difference\": null\n    },\n    {\n      \"name\": \"flight_time_s\",\n      \"recorded\": null,\n      \"flown\": 4.517525291310862,\n      \"difference\": null\n    }\n  ],\n  \"recorded_reading\": \"This artifact was written by an older engine, so the difference is the engine and not the shot. Re-analyze the swing to bring the recorded flight up to date.\"\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "axis": {
+              "curve_direction": "fade",
+              "curve_is_drawn": false,
+              "screen_shape": null,
+              "sign_disagrees": false,
+              "source": null,
+              "spin_axis_deg": null,
+              "why": "no spin axis printed; face-to-path +3.0 deg gives the direction and no magnitude"
+            },
+            "caveats": [
+              "every point of this flight sat above the published table, which stops at a spin ratio of 0.284 and was measured on a *driver*. Its end row was held rather than extended, so lift and drag were one constant pair the whole way — and since spin reaches the flight only through the spin ratio and the spin ratio only through those two coefficients, the spin above the clamp does not reach this carry at all. The same ball at 5,200 rpm and at 30,000 rpm flies exactly this far.",
+              "the model agrees with HD Golf to +/-2.59% on the two shots where a full launch-condition set and an independent carry are both on disk (`--gate`) — while ranking those two shots backwards. That percentage is therefore the size of what this model cannot see, not a calibration error, and a carry from here is not \"accurate to 2.6%\".",
+              "this flight is drawn in the vertical plane, because nothing on the screen fixes how far the spin axis was tilted (ADR-027 §Decision 5's third branch). The curvature is then zero by construction and the landing offline reduces to `carry * sin(start line)` — which is `shot_measure`'s `start_line_offline_yds` reached by a much longer route, and not a landing point. The curve is missing from it, and on a shot the screen called a fade the curve is most of the lateral miss."
+            ],
+            "club": "7i",
+            "comparison": [
+              {
+                "comparable": true,
+                "difference": -3.1889745514935868,
+                "measured": 125.6,
+                "measured_name": "carry_distance_yds",
+                "quantity": "down_range",
+                "reading": "the screen printed the spin this was flown on, so the carry beside it is an independent measurement and this difference is the model's error on this shot: -3.19 yd, -2.54% against a gate measured at +/-2.59%.",
+                "simulated": 122.41102544850641,
+                "simulated_name": "flight_carry_yds"
+              }
+            ],
+            "detail": "5991 rpm printed on the screen",
+            "differs_from_recorded": [
+              {
+                "difference": null,
+                "flown": 122.41102544850641,
+                "name": "flight_carry_yds",
+                "recorded": null
+              },
+              {
+                "difference": null,
+                "flown": 18.5531791898014,
+                "name": "flight_apex_yds",
+                "recorded": null
+              },
+              {
+                "difference": null,
+                "flown": 36.91848018024314,
+                "name": "flight_descent_angle_deg",
+                "recorded": null
+              },
+              {
+                "difference": null,
+                "flown": 4.517525291310862,
+                "name": "flight_time_s",
+                "recorded": null
+              }
+            ],
+            "flew": true,
+            "launch": {
+              "ball_speed_mph": 90.7,
+              "launch_angle_deg": 20.9,
+              "launch_direction_deg": -5.3,
+              "spin_axis_deg": 0.0,
+              "spin_rpm": 5991.0
+            },
+            "reason": null,
+            "recorded_reading": "This artifact was written by an older engine, so the difference is the engine and not the shot. Re-analyze the swing to bring the recorded flight up to date.",
+            "session_id": "2026-09-01",
+            "shot_id": "2026-09-01-6",
+            "simulated": [
+              {
+                "detail": "SIMULATED carry from the printed launch conditions; not the launch monitor's own carry, which is carry_distance_yds",
+                "name": "flight_carry_yds",
+                "source": "model:flight_v1",
+                "unit": "yards",
+                "value": 122.41102544850641
+              },
+              {
+                "detail": "SIMULATED peak height above the tee; the screen prints no apex tile at all",
+                "name": "flight_apex_yds",
+                "source": "model:flight_v1",
+                "unit": "yards",
+                "value": 18.5531791898014
+              },
+              {
+                "detail": "SIMULATED angle below the horizontal at landing, read off the landing velocity",
+                "name": "flight_descent_angle_deg",
+                "source": "model:flight_v1",
+                "unit": "degrees",
+                "value": 36.91848018024314
+              },
+              {
+                "detail": "SIMULATED hang time from launch to landing",
+                "name": "flight_time_s",
+                "source": "model:flight_v1",
+                "unit": "seconds",
+                "value": 4.517525291310862
+              }
+            ],
+            "source": "model:flight_v1",
+            "spin": {
+              "at_cap": null,
+              "cap_rpm": null,
+              "case": null,
+              "detail": "5991 rpm printed on the screen",
+              "rpm": 5991.0,
+              "source": "measured"
+            },
+            "swing_id": "6",
+            "unscored": [
+              {
+                "detail": "no spin axis printed; face-to-path +3.0 deg gives the direction and no magnitude",
+                "name": "flight_landing_offline_yds",
+                "reason": "spin_axis_unresolved",
+                "refilming_helps": false,
+                "why": "the screen printed which way the ball curved but not how far the axis is tilted"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"swing_id\": \"1\",\n  \"session_id\": \"2026-09-01\",\n  \"status\": \"done\",\n  \"club\": \"7i\",\n  \"mishit\": null,\n  \"overall_score\": 94.9,\n  \"mechanics_score\": 94.9,\n  \"outcome_score\": null,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\",\n  \"checkpoints\": [\n    {\n      \"name\": \"tempo\",\n      \"observed\": 2.42,\n      \"expected_low\": 2.72,\n      \"expected_high\": 4.71,\n      \"passed\": false,\n      \"score\": 0.85,\n      \"percentile\": 10.0,\n      \"population_n\": 1399,\n      \"message\": \"Tempo too quick - 2.4:1.\"\n    },\n    {\n      \"name\": \"head_sway\",\n      \"observed\": 0.12,\n      \"expected_low\": 0.0,\n      \"expected_high\": 0.43,\n      \"passed\": true,\n      \"score\": 1.0,\n      \"percentile\": 35.5,\n      \"population_n\": 458,\n      \"message\": \"Head stays steady.\"\n    }\n  ],\n  \"tips\": [\n    {\n      \"checkpoint\": \"tempo\",\n      \"text\": \"Tempo too quick - 2.4:1.\",\n      \"severity\": \"minor\"\n    }\n  ],\n  \"unscored\": [],\n  \"measurements\": {},\n  \"simulated\": [],\n  \"population\": [],\n  \"rotation\": [],\n  \"analysis_version\": null,\n  \"alignment_quality\": \"top_impact\",\n  \"alignment_caveat\": \"The two camera views were aligned on top and impact, not on every instant. Frame correspondence is exact at those anchors and interpolated between them, so do not describe the side-by-side video as synchronized throughout, and do not read fine timing differences off it.\",\n  \"shot\": null,\n  \"notes\": [\n    \"alignment degraded: aligned on top and impact\"\n  ]\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "alignment_caveat": "The two camera views were aligned on top and impact, not on every instant. Frame correspondence is exact at those anchors and interpolated between them, so do not describe the side-by-side video as synchronized throughout, and do not read fine timing differences off it.",
+            "alignment_quality": "top_impact",
+            "analysis_version": null,
+            "checkpoints": [
+              {
+                "expected_high": 4.71,
+                "expected_low": 2.72,
+                "message": "Tempo too quick - 2.4:1.",
+                "name": "tempo",
+                "observed": 2.42,
+                "passed": false,
+                "percentile": 10.0,
+                "population_n": 1399,
+                "score": 0.85
+              },
+              {
+                "expected_high": 0.43,
+                "expected_low": 0.0,
+                "message": "Head stays steady.",
+                "name": "head_sway",
+                "observed": 0.12,
+                "passed": true,
+                "percentile": 35.5,
+                "population_n": 458,
+                "score": 1.0
+              }
+            ],
+            "club": "7i",
+            "headline": "Work on tempo first. Tempo too quick - 2.4:1.",
+            "measurements": {},
+            "mechanics_score": 94.9,
+            "mishit": null,
+            "notes": [
+              "alignment degraded: aligned on top and impact"
+            ],
+            "outcome_score": null,
+            "overall_score": 94.9,
+            "population": [],
+            "rotation": [],
+            "session_id": "2026-09-01",
+            "shot": null,
+            "simulated": [],
+            "status": "done",
+            "swing_id": "1",
+            "tips": [
+              {
+                "checkpoint": "tempo",
+                "severity": "minor",
+                "text": "Tempo too quick - 2.4:1."
+              }
+            ],
+            "unscored": []
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"player_id\": \"aaron\",\n  \"display_name\": \"Aaron\",\n  \"clubs\": [\n    {\n      \"player_id\": \"aaron\",\n      \"club\": \"driver\",\n      \"category\": \"driver\",\n      \"in_bag\": true,\n      \"bag_entry\": {\n        \"club\": \"driver\",\n        \"make\": \"Ping\",\n        \"model\": \"\",\n        \"model_year\": null,\n        \"head_type\": \"\",\n        \"set_composition\": \"\",\n        \"loft_deg\": null,\n        \"lie_deg\": null,\n        \"bounce_deg\": null,\n        \"grind\": \"\",\n        \"offset_mm\": null,\n        \"face_angle_deg\": null,\n        \"head_weight_g\": null,\n        \"adjustable_hosel\": null,\n        \"loft_range_deg\": null,\n        \"shaft_model\": \"\",\n        \"shaft_material\": null,\n        \"shaft_flex\": null,\n        \"shaft_weight_g\": null,\n        \"shaft_torque_deg\": null,\n        \"shaft_kick_point\": \"\",\n        \"length_in\": null,\n        \"swing_weight\": \"\",\n        \"total_weight_g\": null,\n        \"grip\": \"\",\n        \"cor\": null,\n        \"moi_g_cm2\": null,\n        \"usga_conforming\": null,\n        \"recorded_at\": \"2026-10-01T12:00:00Z\",\n        \"retired_at\": null,\n        \"provenance\": null\n      },\n      \"n_swings\": 1,\n      \"n_shots\": 1,\n      \"n_sessions\": 1,\n      \"mishits\": 0,\n      \"mishit_refs\": [],\n      \"mishits_unconfirmed\": 0,\n      \"metrics\": [],\n      \"caveats\": [\n        \"The single swing behind these numbers predates the bag entry recorded on 2026-10-01, so the make, model and loft recorded there may describe a different club.\"\n      ],\n      \"nothing_sayable\": true,\n      \"note\": \"These swings carry no measurement at all, so there is nothing here to refuse and nothing to report. That is not about the club: the commonest causes are swings that were never analyzed and swings analyzed by an older engine. Call get_golfer_profile to see which metrics have samples at all.\"\n    },\n    {\n      \"player_id\": \"aaron\",\n      \"club\": \"7i\",\n      \"category\": \"mid_iron\",\n      \"in_bag\": true,\n      \"bag_entry\": {\n        \"club\": \"7i\",\n        \"make\": \"\",\n        \"model\": \"\",\n        \"model_year\": null,\n        \"head_type\": \"\",\n        \"set_composition\": \"\",\n        \"loft_deg\": 34.0,\n        \"lie_deg\": null,\n        \"bounce_deg\": null,\n        \"grind\": \"\",\n        \"offset_mm\": null,\n        \"face_angle_deg\": null,\n        \"head_weight_g\": null,\n        \"adjustable_hosel\": null,\n        \"loft_range_deg\": null,\n        \"shaft_model\": \"\",\n        \"shaft_material\": null,\n        \"shaft_flex\": null,\n        \"shaft_weight_g\": null,\n        \"shaft_torque_deg\": null,\n        \"shaft_kick_point\": \"\",\n        \"length_in\": null,\n        \"swing_weight\": \"\",\n        \"total_weight_g\": null,\n        \"grip\": \"\",\n        \"cor\": null,\n        \"moi_g_cm2\": null,\n        \"usga_conforming\": null,\n        \"recorded_at\": \"2026-10-01T12:00:00Z\",\n        \"retired_at\": null,\n        \"provenance\": null\n      },\n      \"n_swings\": 2,\n      \"n_shots\": 2,\n      \"n_sessions\": 1,\n      \"mishits\": 0,\n      \"mishit_refs\": [],\n      \"mishits_unconfirmed\": 0,\n      \"metrics\": [],\n      \"caveats\": [\n        \"All 2 swings behind these numbers predate the bag entry recorded on 2026-10-01, so the make, model and loft recorded there may describe a different club.\"\n      ],\n      \"nothing_sayable\": true,\n      \"note\": \"These swings carry no measurement at all, so there is nothing here to refuse and nothing to report. That is not about the club: the commonest causes are swings that were never analyzed and swings analyzed by an older engine. Call get_golfer_profile to see which metrics have samples at all.\"\n    },\n    {\n      \"player_id\": \"aaron\",\n      \"club\": \"pw\",\n      \"category\": \"wedge\",\n      \"in_bag\": false,\n      \"bag_entry\": null,\n      \"n_swings\": 1,\n      \"n_shots\": 1,\n      \"n_sessions\": 1,\n      \"mishits\": 0,\n      \"mishit_refs\": [],\n      \"mishits_unconfirmed\": 0,\n      \"metrics\": [],\n      \"caveats\": [],\n      \"nothing_sayable\": true,\n      \"note\": \"These swings carry no measurement at all, so there is nothing here to refuse and nothing to report. That is not about the club: the commonest causes are swings that were never analyzed and swings analyzed by an older engine. Call get_golfer_profile to see which metrics have samples at all.\"\n    }\n  ],\n  \"clubs_used\": 3,\n  \"clubs_declared\": 2,\n  \"untagged_swings\": 1,\n  \"mishits_excluded\": 0,\n  \"nothing_tagged\": false,\n  \"note\": \"The data does not exist yet — this needs a bay session of 20-30 swings with shots attached. Report the refusal. Do not estimate the withheld figure from the sample counts below it. Some swings on record name no club (see `untagged_swings`), so nothing above counts them. They are not lost — every whole-bag figure get_golfer_profile reports still includes them — but no per-club number can be cut from them until each one is tagged.\"\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "clubs": [
+              {
+                "bag_entry": {
+                  "adjustable_hosel": null,
+                  "bounce_deg": null,
+                  "club": "driver",
+                  "cor": null,
+                  "face_angle_deg": null,
+                  "grind": "",
+                  "grip": "",
+                  "head_type": "",
+                  "head_weight_g": null,
+                  "length_in": null,
+                  "lie_deg": null,
+                  "loft_deg": null,
+                  "loft_range_deg": null,
+                  "make": "Ping",
+                  "model": "",
+                  "model_year": null,
+                  "moi_g_cm2": null,
+                  "offset_mm": null,
+                  "provenance": null,
+                  "recorded_at": "2026-10-01T12:00:00Z",
+                  "retired_at": null,
+                  "set_composition": "",
+                  "shaft_flex": null,
+                  "shaft_kick_point": "",
+                  "shaft_material": null,
+                  "shaft_model": "",
+                  "shaft_torque_deg": null,
+                  "shaft_weight_g": null,
+                  "swing_weight": "",
+                  "total_weight_g": null,
+                  "usga_conforming": null
+                },
+                "category": "driver",
+                "caveats": [
+                  "The single swing behind these numbers predates the bag entry recorded on 2026-10-01, so the make, model and loft recorded there may describe a different club."
+                ],
+                "club": "driver",
+                "in_bag": true,
+                "metrics": [],
+                "mishit_refs": [],
+                "mishits": 0,
+                "mishits_unconfirmed": 0,
+                "n_sessions": 1,
+                "n_shots": 1,
+                "n_swings": 1,
+                "note": "These swings carry no measurement at all, so there is nothing here to refuse and nothing to report. That is not about the club: the commonest causes are swings that were never analyzed and swings analyzed by an older engine. Call get_golfer_profile to see which metrics have samples at all.",
+                "nothing_sayable": true,
+                "player_id": "aaron"
+              },
+              {
+                "bag_entry": {
+                  "adjustable_hosel": null,
+                  "bounce_deg": null,
+                  "club": "7i",
+                  "cor": null,
+                  "face_angle_deg": null,
+                  "grind": "",
+                  "grip": "",
+                  "head_type": "",
+                  "head_weight_g": null,
+                  "length_in": null,
+                  "lie_deg": null,
+                  "loft_deg": 34.0,
+                  "loft_range_deg": null,
+                  "make": "",
+                  "model": "",
+                  "model_year": null,
+                  "moi_g_cm2": null,
+                  "offset_mm": null,
+                  "provenance": null,
+                  "recorded_at": "2026-10-01T12:00:00Z",
+                  "retired_at": null,
+                  "set_composition": "",
+                  "shaft_flex": null,
+                  "shaft_kick_point": "",
+                  "shaft_material": null,
+                  "shaft_model": "",
+                  "shaft_torque_deg": null,
+                  "shaft_weight_g": null,
+                  "swing_weight": "",
+                  "total_weight_g": null,
+                  "usga_conforming": null
+                },
+                "category": "mid_iron",
+                "caveats": [
+                  "All 2 swings behind these numbers predate the bag entry recorded on 2026-10-01, so the make, model and loft recorded there may describe a different club."
+                ],
+                "club": "7i",
+                "in_bag": true,
+                "metrics": [],
+                "mishit_refs": [],
+                "mishits": 0,
+                "mishits_unconfirmed": 0,
+                "n_sessions": 1,
+                "n_shots": 2,
+                "n_swings": 2,
+                "note": "These swings carry no measurement at all, so there is nothing here to refuse and nothing to report. That is not about the club: the commonest causes are swings that were never analyzed and swings analyzed by an older engine. Call get_golfer_profile to see which metrics have samples at all.",
+                "nothing_sayable": true,
+                "player_id": "aaron"
+              },
+              {
+                "bag_entry": null,
+                "category": "wedge",
+                "caveats": [],
+                "club": "pw",
+                "in_bag": false,
+                "metrics": [],
+                "mishit_refs": [],
+                "mishits": 0,
+                "mishits_unconfirmed": 0,
+                "n_sessions": 1,
+                "n_shots": 1,
+                "n_swings": 1,
+                "note": "These swings carry no measurement at all, so there is nothing here to refuse and nothing to report. That is not about the club: the commonest causes are swings that were never analyzed and swings analyzed by an older engine. Call get_golfer_profile to see which metrics have samples at all.",
+                "nothing_sayable": true,
+                "player_id": "aaron"
+              }
+            ],
+            "clubs_declared": 2,
+            "clubs_used": 3,
+            "display_name": "Aaron",
+            "mishits_excluded": 0,
+            "note": "The data does not exist yet — this needs a bay session of 20-30 swings with shots attached. Report the refusal. Do not estimate the withheld figure from the sample counts below it. Some swings on record name no club (see `untagged_swings`), so nothing above counts them. They are not lost — every whole-bag figure get_golfer_profile reports still includes them — but no per-club number can be cut from them until each one is tagged.",
+            "nothing_tagged": false,
+            "player_id": "aaron",
+            "untagged_swings": 1
+          }
+        }
+      }
+    ]
+  },
+  "id": "mcp/tools/flight-registry",
+  "input": {
+    "calls": [
+      {
+        "arguments": {
+          "session_id": "2026-09-01",
+          "swing_id": "1"
+        },
+        "now": null,
+        "tool": "simulate_flight"
+      },
+      {
+        "arguments": {
+          "session_id": "2026-09-01",
+          "swing_id": "2"
+        },
+        "now": null,
+        "tool": "simulate_flight"
+      },
+      {
+        "arguments": {
+          "session_id": "2026-09-01",
+          "swing_id": "3"
+        },
+        "now": null,
+        "tool": "simulate_flight"
+      },
+      {
+        "arguments": {
+          "session_id": "2026-09-01",
+          "swing_id": "4"
+        },
+        "now": null,
+        "tool": "simulate_flight"
+      },
+      {
+        "arguments": {
+          "session_id": "2026-09-01",
+          "swing_id": "5"
+        },
+        "now": null,
+        "tool": "simulate_flight"
+      },
+      {
+        "arguments": {
+          "session_id": "2026-09-01",
+          "swing_id": "6"
+        },
+        "now": null,
+        "tool": "simulate_flight"
+      },
+      {
+        "arguments": {
+          "session_id": "2026-09-01",
+          "swing_id": "1"
+        },
+        "now": null,
+        "tool": "get_swing"
+      },
+      {
+        "arguments": {
+          "player": "Aaron"
+        },
+        "now": null,
+        "tool": "get_bag_profile"
+      }
+    ],
+    "files": {
+      "golfers/aaron.bag.json": "{\n  \"player_id\": \"aaron\",\n  \"entries\": {\n    \"7i\": {\n      \"club\": \"7i\",\n      \"make\": \"\",\n      \"model\": \"\",\n      \"model_year\": null,\n      \"head_type\": \"\",\n      \"set_composition\": \"\",\n      \"loft_deg\": 34.0,\n      \"lie_deg\": null,\n      \"bounce_deg\": null,\n      \"grind\": \"\",\n      \"offset_mm\": null,\n      \"face_angle_deg\": null,\n      \"head_weight_g\": null,\n      \"adjustable_hosel\": null,\n      \"loft_range_deg\": null,\n      \"shaft_model\": \"\",\n      \"shaft_material\": null,\n      \"shaft_flex\": null,\n      \"shaft_weight_g\": null,\n      \"shaft_torque_deg\": null,\n      \"shaft_kick_point\": \"\",\n      \"length_in\": null,\n      \"swing_weight\": \"\",\n      \"total_weight_g\": null,\n      \"grip\": \"\",\n      \"cor\": null,\n      \"moi_g_cm2\": null,\n      \"usga_conforming\": null,\n      \"recorded_at\": \"2026-10-01T12:00:00Z\",\n      \"retired_at\": null,\n      \"provenance\": null\n    },\n    \"driver\": {\n      \"club\": \"driver\",\n      \"make\": \"Ping\",\n      \"model\": \"\",\n      \"model_year\": null,\n      \"head_type\": \"\",\n      \"set_composition\": \"\",\n      \"loft_deg\": null,\n      \"lie_deg\": null,\n      \"bounce_deg\": null,\n      \"grind\": \"\",\n      \"offset_mm\": null,\n      \"face_angle_deg\": null,\n      \"head_weight_g\": null,\n      \"adjustable_hosel\": null,\n      \"loft_range_deg\": null,\n      \"shaft_model\": \"\",\n      \"shaft_material\": null,\n      \"shaft_flex\": null,\n      \"shaft_weight_g\": null,\n      \"shaft_torque_deg\": null,\n      \"shaft_kick_point\": \"\",\n      \"length_in\": null,\n      \"swing_weight\": \"\",\n      \"total_weight_g\": null,\n      \"grip\": \"\",\n      \"cor\": null,\n      \"moi_g_cm2\": null,\n      \"usga_conforming\": null,\n      \"recorded_at\": \"2026-10-01T12:00:00Z\",\n      \"retired_at\": null,\n      \"provenance\": null\n    }\n  },\n  \"retired\": [],\n  \"updated_at\": \"2026-10-01T12:00:00Z\"\n}",
+      "golfers/aaron.golfer.json": "{\n  \"player_id\": \"aaron\",\n  \"display_name\": \"Aaron\",\n  \"handedness\": \"right\",\n  \"created_at\": \"2026-10-01T12:00:00Z\"\n}",
+      "sessions/2026-09-01/1/analysis.json": "{\"swing_id\": \"1\", \"session_id\": \"2026-09-01\", \"swing\": {\"swing_id\": \"1\", \"session_id\": \"2026-09-01\", \"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.42, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick - 2.4:1.\", \"percentile\": 10.0, \"population_n\": 1399, \"one_sided\": false}, {\"name\": \"head_sway\", \"score\": 1.0, \"passed\": true, \"observed\": 0.12, \"expected_low\": 0.0, \"expected_high\": 0.43, \"message\": \"Head stays steady.\", \"percentile\": 35.5, \"population_n\": 458, \"one_sided\": true}], \"unscored\": [], \"measurements\": [], \"mechanics_score\": 94.9, \"outcome_score\": null, \"overall_score\": 94.9, \"shot\": null}, \"alignment\": {\"quality\": \"top_impact\"}, \"notes\": [\"alignment degraded: aligned on top and impact\"], \"feedback\": {\"swing_id\": \"1\", \"overall_score\": 94.9, \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\", \"tips\": [{\"checkpoint\": \"tempo\", \"text\": \"Tempo too quick - 2.4:1.\", \"severity\": \"minor\"}]}}",
+      "sessions/2026-09-01/1/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"down_the_line\": \"sha-2026-09-01-1-down_the_line\",\n    \"face_on\": \"sha-2026-09-01-1-face_on\",\n    \"shot_screen\": \"sha-2026-09-01-1-shot_screen\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 94.9,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\"\n}",
+      "sessions/2026-09-01/1/manifest.json": "{\n  \"swing_id\": \"1\",\n  \"session_id\": \"2026-09-01\",\n  \"created_at\": \"2026-09-01T12:01:00Z\",\n  \"updated_at\": \"2026-09-01T12:01:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.abc123.mov\",\n      \"content_sha256\": \"sha-2026-09-01-1-face_on\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.abc123.mov\",\n      \"content_sha256\": \"sha-2026-09-01-1-down_the_line\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.abc123.mov\",\n      \"content_sha256\": \"sha-2026-09-01-1-shot_screen\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": \"7i\",\n  \"mishit\": null\n}",
+      "sessions/2026-09-01/2/analysis.json": "{\"swing_id\": \"2\", \"session_id\": \"2026-09-01\", \"swing\": {\"swing_id\": \"2\", \"session_id\": \"2026-09-01\", \"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.42, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick - 2.4:1.\", \"percentile\": 10.0, \"population_n\": 1399, \"one_sided\": false}, {\"name\": \"head_sway\", \"score\": 1.0, \"passed\": true, \"observed\": 0.12, \"expected_low\": 0.0, \"expected_high\": 0.43, \"message\": \"Head stays steady.\", \"percentile\": 35.5, \"population_n\": 458, \"one_sided\": true}], \"unscored\": [], \"measurements\": [], \"mechanics_score\": 94.9, \"outcome_score\": null, \"overall_score\": 94.9, \"shot\": null}, \"alignment\": {\"quality\": \"top_impact\"}, \"notes\": [\"alignment degraded: aligned on top and impact\"], \"feedback\": {\"swing_id\": \"2\", \"overall_score\": 94.9, \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\", \"tips\": [{\"checkpoint\": \"tempo\", \"text\": \"Tempo too quick - 2.4:1.\", \"severity\": \"minor\"}]}}",
+      "sessions/2026-09-01/2/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"down_the_line\": \"sha-2026-09-01-2-down_the_line\",\n    \"face_on\": \"sha-2026-09-01-2-face_on\",\n    \"shot_screen\": \"sha-2026-09-01-2-shot_screen\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 94.9,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\"\n}",
+      "sessions/2026-09-01/2/manifest.json": "{\n  \"swing_id\": \"2\",\n  \"session_id\": \"2026-09-01\",\n  \"created_at\": \"2026-09-01T12:02:00Z\",\n  \"updated_at\": \"2026-09-01T12:02:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.abc123.mov\",\n      \"content_sha256\": \"sha-2026-09-01-2-face_on\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.abc123.mov\",\n      \"content_sha256\": \"sha-2026-09-01-2-down_the_line\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.abc123.mov\",\n      \"content_sha256\": \"sha-2026-09-01-2-shot_screen\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": \"driver\",\n  \"mishit\": null\n}",
+      "sessions/2026-09-01/3/analysis.json": "{\"swing_id\": \"3\", \"session_id\": \"2026-09-01\", \"swing\": {\"swing_id\": \"3\", \"session_id\": \"2026-09-01\", \"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.42, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick - 2.4:1.\", \"percentile\": 10.0, \"population_n\": 1399, \"one_sided\": false}, {\"name\": \"head_sway\", \"score\": 1.0, \"passed\": true, \"observed\": 0.12, \"expected_low\": 0.0, \"expected_high\": 0.43, \"message\": \"Head stays steady.\", \"percentile\": 35.5, \"population_n\": 458, \"one_sided\": true}], \"unscored\": [], \"measurements\": [], \"mechanics_score\": 94.9, \"outcome_score\": null, \"overall_score\": 94.9, \"shot\": null}, \"alignment\": {\"quality\": \"top_impact\"}, \"notes\": [\"alignment degraded: aligned on top and impact\"], \"feedback\": {\"swing_id\": \"3\", \"overall_score\": 94.9, \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\", \"tips\": [{\"checkpoint\": \"tempo\", \"text\": \"Tempo too quick - 2.4:1.\", \"severity\": \"minor\"}]}}",
+      "sessions/2026-09-01/3/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"down_the_line\": \"sha-2026-09-01-3-down_the_line\",\n    \"face_on\": \"sha-2026-09-01-3-face_on\",\n    \"shot_screen\": \"sha-2026-09-01-3-shot_screen\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 94.9,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\"\n}",
+      "sessions/2026-09-01/3/manifest.json": "{\n  \"swing_id\": \"3\",\n  \"session_id\": \"2026-09-01\",\n  \"created_at\": \"2026-09-01T12:03:00Z\",\n  \"updated_at\": \"2026-09-01T12:03:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.abc123.mov\",\n      \"content_sha256\": \"sha-2026-09-01-3-face_on\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.abc123.mov\",\n      \"content_sha256\": \"sha-2026-09-01-3-down_the_line\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.abc123.mov\",\n      \"content_sha256\": \"sha-2026-09-01-3-shot_screen\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": \"pw\",\n  \"mishit\": null\n}",
+      "sessions/2026-09-01/4/analysis.json": "{\"swing_id\": \"4\", \"session_id\": \"2026-09-01\", \"swing\": {\"swing_id\": \"4\", \"session_id\": \"2026-09-01\", \"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.42, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick - 2.4:1.\", \"percentile\": 10.0, \"population_n\": 1399, \"one_sided\": false}, {\"name\": \"head_sway\", \"score\": 1.0, \"passed\": true, \"observed\": 0.12, \"expected_low\": 0.0, \"expected_high\": 0.43, \"message\": \"Head stays steady.\", \"percentile\": 35.5, \"population_n\": 458, \"one_sided\": true}], \"unscored\": [], \"measurements\": [], \"mechanics_score\": 94.9, \"outcome_score\": null, \"overall_score\": 94.9, \"shot\": null}, \"alignment\": {\"quality\": \"top_impact\"}, \"notes\": [\"alignment degraded: aligned on top and impact\"], \"feedback\": {\"swing_id\": \"4\", \"overall_score\": 94.9, \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\", \"tips\": [{\"checkpoint\": \"tempo\", \"text\": \"Tempo too quick - 2.4:1.\", \"severity\": \"minor\"}]}}",
+      "sessions/2026-09-01/4/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"down_the_line\": \"sha-2026-09-01-4-down_the_line\",\n    \"face_on\": \"sha-2026-09-01-4-face_on\",\n    \"shot_screen\": \"sha-2026-09-01-4-shot_screen\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 94.9,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\"\n}",
+      "sessions/2026-09-01/4/manifest.json": "{\n  \"swing_id\": \"4\",\n  \"session_id\": \"2026-09-01\",\n  \"created_at\": \"2026-09-01T12:04:00Z\",\n  \"updated_at\": \"2026-09-01T12:04:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.abc123.mov\",\n      \"content_sha256\": \"sha-2026-09-01-4-face_on\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.abc123.mov\",\n      \"content_sha256\": \"sha-2026-09-01-4-down_the_line\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.abc123.mov\",\n      \"content_sha256\": \"sha-2026-09-01-4-shot_screen\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": null,\n  \"mishit\": null\n}",
+      "sessions/2026-09-01/5/analysis.json": "{\"swing_id\": \"5\", \"session_id\": \"2026-09-01\", \"swing\": {\"swing_id\": \"5\", \"session_id\": \"2026-09-01\", \"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.42, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick - 2.4:1.\", \"percentile\": 10.0, \"population_n\": 1399, \"one_sided\": false}, {\"name\": \"head_sway\", \"score\": 1.0, \"passed\": true, \"observed\": 0.12, \"expected_low\": 0.0, \"expected_high\": 0.43, \"message\": \"Head stays steady.\", \"percentile\": 35.5, \"population_n\": 458, \"one_sided\": true}], \"unscored\": [], \"measurements\": [], \"mechanics_score\": 94.9, \"outcome_score\": null, \"overall_score\": 94.9, \"shot\": null}, \"alignment\": {\"quality\": \"top_impact\"}, \"notes\": [\"alignment degraded: aligned on top and impact\"], \"feedback\": {\"swing_id\": \"5\", \"overall_score\": 94.9, \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\", \"tips\": [{\"checkpoint\": \"tempo\", \"text\": \"Tempo too quick - 2.4:1.\", \"severity\": \"minor\"}]}}",
+      "sessions/2026-09-01/5/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"down_the_line\": \"sha-2026-09-01-5-down_the_line\",\n    \"face_on\": \"sha-2026-09-01-5-face_on\",\n    \"shot_screen\": \"sha-2026-09-01-5-shot_screen\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 94.9,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\"\n}",
+      "sessions/2026-09-01/5/manifest.json": "{\n  \"swing_id\": \"5\",\n  \"session_id\": \"2026-09-01\",\n  \"created_at\": \"2026-09-01T12:05:00Z\",\n  \"updated_at\": \"2026-09-01T12:05:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.abc123.mov\",\n      \"content_sha256\": \"sha-2026-09-01-5-face_on\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.abc123.mov\",\n      \"content_sha256\": \"sha-2026-09-01-5-down_the_line\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.abc123.mov\",\n      \"content_sha256\": \"sha-2026-09-01-5-shot_screen\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": null,\n  \"club\": \"7i\",\n  \"mishit\": null\n}",
+      "sessions/2026-09-01/6/analysis.json": "{\"swing_id\": \"6\", \"session_id\": \"2026-09-01\", \"swing\": {\"swing_id\": \"6\", \"session_id\": \"2026-09-01\", \"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.42, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick - 2.4:1.\", \"percentile\": 10.0, \"population_n\": 1399, \"one_sided\": false}, {\"name\": \"head_sway\", \"score\": 1.0, \"passed\": true, \"observed\": 0.12, \"expected_low\": 0.0, \"expected_high\": 0.43, \"message\": \"Head stays steady.\", \"percentile\": 35.5, \"population_n\": 458, \"one_sided\": true}], \"unscored\": [], \"measurements\": [], \"mechanics_score\": 94.9, \"outcome_score\": null, \"overall_score\": 94.9, \"shot\": null}, \"alignment\": {\"quality\": \"top_impact\"}, \"notes\": [\"alignment degraded: aligned on top and impact\"], \"feedback\": {\"swing_id\": \"6\", \"overall_score\": 94.9, \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\", \"tips\": [{\"checkpoint\": \"tempo\", \"text\": \"Tempo too quick - 2.4:1.\", \"severity\": \"minor\"}]}}",
+      "sessions/2026-09-01/6/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"down_the_line\": \"sha-2026-09-01-6-down_the_line\",\n    \"face_on\": \"sha-2026-09-01-6-face_on\",\n    \"shot_screen\": \"sha-2026-09-01-6-shot_screen\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 94.9,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\"\n}",
+      "sessions/2026-09-01/6/manifest.json": "{\n  \"swing_id\": \"6\",\n  \"session_id\": \"2026-09-01\",\n  \"created_at\": \"2026-09-01T12:06:00Z\",\n  \"updated_at\": \"2026-09-01T12:06:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.abc123.mov\",\n      \"content_sha256\": \"sha-2026-09-01-6-face_on\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.abc123.mov\",\n      \"content_sha256\": \"sha-2026-09-01-6-down_the_line\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.abc123.mov\",\n      \"content_sha256\": \"sha-2026-09-01-6-shot_screen\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": \"7i\",\n  \"mishit\": null\n}",
+      "shots/sha-2026-09-01-1-shot_screen.shot.json": "{\n  \"shot_id\": \"2026-09-01-1\",\n  \"session_id\": \"2026-08-10\",\n  \"timestamp\": \"2026-08-10T12:00:00Z\",\n  \"source\": \"screen\",\n  \"club_head_speed\": null,\n  \"club_face_angle\": null,\n  \"club_path\": null,\n  \"ball_speed\": 90.7,\n  \"launch_angle\": 20.9,\n  \"launch_direction\": -5.3,\n  \"spin_rate\": null,\n  \"spin_axis\": 2.5,\n  \"smash_factor\": null,\n  \"carry_distance\": 125.6,\n  \"total_distance\": null,\n  \"bounce_and_roll\": null,\n  \"apex_height\": null,\n  \"shot_type\": null,\n  \"impact_position\": null,\n  \"provenance\": {\n    \"device\": \"hd_golf\",\n    \"parse_confidence\": 0.9,\n    \"needs_review\": false,\n    \"warnings\": [],\n    \"image_sha256\": \"sha-2026-09-01-1-shot_screen\",\n    \"image_path\": null,\n    \"raw_fields\": {}\n  }\n}",
+      "shots/sha-2026-09-01-2-shot_screen.shot.json": "{\n  \"shot_id\": \"2026-09-01-2\",\n  \"session_id\": \"2026-08-10\",\n  \"timestamp\": \"2026-08-10T12:00:00Z\",\n  \"source\": \"screen\",\n  \"club_head_speed\": null,\n  \"club_face_angle\": null,\n  \"club_path\": null,\n  \"ball_speed\": 90.7,\n  \"launch_angle\": 20.9,\n  \"launch_direction\": -5.3,\n  \"spin_rate\": null,\n  \"spin_axis\": 2.5,\n  \"smash_factor\": null,\n  \"carry_distance\": 125.6,\n  \"total_distance\": null,\n  \"bounce_and_roll\": null,\n  \"apex_height\": null,\n  \"shot_type\": null,\n  \"impact_position\": null,\n  \"provenance\": {\n    \"device\": \"hd_golf\",\n    \"parse_confidence\": 0.9,\n    \"needs_review\": false,\n    \"warnings\": [],\n    \"image_sha256\": \"sha-2026-09-01-2-shot_screen\",\n    \"image_path\": null,\n    \"raw_fields\": {}\n  }\n}",
+      "shots/sha-2026-09-01-3-shot_screen.shot.json": "{\n  \"shot_id\": \"2026-09-01-3\",\n  \"session_id\": \"2026-08-10\",\n  \"timestamp\": \"2026-08-10T12:00:00Z\",\n  \"source\": \"screen\",\n  \"club_head_speed\": null,\n  \"club_face_angle\": null,\n  \"club_path\": null,\n  \"ball_speed\": 90.7,\n  \"launch_angle\": 20.9,\n  \"launch_direction\": -5.3,\n  \"spin_rate\": null,\n  \"spin_axis\": 2.5,\n  \"smash_factor\": null,\n  \"carry_distance\": 125.6,\n  \"total_distance\": null,\n  \"bounce_and_roll\": null,\n  \"apex_height\": null,\n  \"shot_type\": null,\n  \"impact_position\": null,\n  \"provenance\": {\n    \"device\": \"hd_golf\",\n    \"parse_confidence\": 0.9,\n    \"needs_review\": false,\n    \"warnings\": [],\n    \"image_sha256\": \"sha-2026-09-01-3-shot_screen\",\n    \"image_path\": null,\n    \"raw_fields\": {}\n  }\n}",
+      "shots/sha-2026-09-01-4-shot_screen.shot.json": "{\n  \"shot_id\": \"2026-09-01-4\",\n  \"session_id\": \"2026-08-10\",\n  \"timestamp\": \"2026-08-10T12:00:00Z\",\n  \"source\": \"screen\",\n  \"club_head_speed\": null,\n  \"club_face_angle\": null,\n  \"club_path\": null,\n  \"ball_speed\": 90.7,\n  \"launch_angle\": 20.9,\n  \"launch_direction\": -5.3,\n  \"spin_rate\": null,\n  \"spin_axis\": 2.5,\n  \"smash_factor\": null,\n  \"carry_distance\": 125.6,\n  \"total_distance\": null,\n  \"bounce_and_roll\": null,\n  \"apex_height\": null,\n  \"shot_type\": null,\n  \"impact_position\": null,\n  \"provenance\": {\n    \"device\": \"hd_golf\",\n    \"parse_confidence\": 0.9,\n    \"needs_review\": false,\n    \"warnings\": [],\n    \"image_sha256\": \"sha-2026-09-01-4-shot_screen\",\n    \"image_path\": null,\n    \"raw_fields\": {}\n  }\n}",
+      "shots/sha-2026-09-01-5-shot_screen.shot.json": "{\n  \"shot_id\": \"2026-09-01-5\",\n  \"session_id\": \"2026-08-10\",\n  \"timestamp\": \"2026-08-10T12:00:00Z\",\n  \"source\": \"screen\",\n  \"club_head_speed\": null,\n  \"club_face_angle\": null,\n  \"club_path\": null,\n  \"ball_speed\": 90.7,\n  \"launch_angle\": 20.9,\n  \"launch_direction\": -5.3,\n  \"spin_rate\": null,\n  \"spin_axis\": 2.5,\n  \"smash_factor\": null,\n  \"carry_distance\": 125.6,\n  \"total_distance\": null,\n  \"bounce_and_roll\": null,\n  \"apex_height\": null,\n  \"shot_type\": null,\n  \"impact_position\": null,\n  \"provenance\": {\n    \"device\": \"hd_golf\",\n    \"parse_confidence\": 0.9,\n    \"needs_review\": false,\n    \"warnings\": [],\n    \"image_sha256\": \"sha-2026-09-01-5-shot_screen\",\n    \"image_path\": null,\n    \"raw_fields\": {}\n  }\n}",
+      "shots/sha-2026-09-01-6-shot_screen.shot.json": "{\n  \"shot_id\": \"2026-09-01-6\",\n  \"session_id\": \"2026-08-10\",\n  \"timestamp\": \"2026-08-10T12:00:00Z\",\n  \"source\": \"screen\",\n  \"club_head_speed\": null,\n  \"club_face_angle\": 2.0,\n  \"club_path\": -1.0,\n  \"ball_speed\": 90.7,\n  \"launch_angle\": 20.9,\n  \"launch_direction\": -5.3,\n  \"spin_rate\": 5991.0,\n  \"spin_axis\": null,\n  \"smash_factor\": null,\n  \"carry_distance\": 125.6,\n  \"total_distance\": null,\n  \"bounce_and_roll\": null,\n  \"apex_height\": null,\n  \"shot_type\": null,\n  \"impact_position\": null,\n  \"provenance\": {\n    \"device\": \"hd_golf\",\n    \"parse_confidence\": 0.9,\n    \"needs_review\": false,\n    \"warnings\": [],\n    \"image_sha256\": \"sha-2026-09-01-6-shot_screen\",\n    \"image_path\": null,\n    \"raw_fields\": {}\n  }\n}"
+    },
+    "roots": {
+      "golfers": "golfers",
+      "sessions": "sessions",
+      "shots": "shots"
+    }
+  },
+  "provenance": {
+    "analysis_version": 16,
+    "flight_model_calls": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "kind": "mcp",
+    "mcp_version": "2.0.0",
+    "note": "simulate_flight with a registry, which no test in tests/mcp/ builds: a printed carry with no spin on a 7 iron declared at 34 degrees, a driver in the bag with no loft, a club not in the bag, no club, no golfer, and a printed spin with no axis on a right-handed golfer's 7 iron",
+    "oracle": "python",
+    "pydantic_version": "2.13.4",
+    "python_version": "3.13.3",
+    "recorded_by": "scripts/conformance_vectors.py::_run_mcp",
+    "rerecords": [
+      {
+        "added": [],
+        "by": "golf-core rerecord",
+        "career_version": 3,
+        "declaration": "spec/declarations/career-v3.json",
+        "moved": [
+          "career_version"
+        ]
+      }
+    ],
+    "source": "scripts/conformance_vectors.py::_mcp_flight_registry, after tests/mcp/"
+  }
+}

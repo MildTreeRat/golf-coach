@@ -193,3 +193,44 @@ is not the bar
   flight tools added since in `mcp/club.py` and `mcp/flight.py`;
 - the 2026-08-05 correction that parsing lives behind a port and not in the server. In Rust the parse
   is `crates/screen` (M34), not the server.
+
+## Addendum (2026-10-29, M29): `golf-mcp` is the server, registered as a binary, and the Python script is gone
+
+The previous addendum's port is built. **`golf-mcp`** (`crates/mcp`, on `rmcp` 0.11.0) serves the
+tool surface over stdio, and `scripts/run_mcp_server.py` is deleted (M29 P34). Claude Code's
+`golf-coach` entry was re-registered at the release binary (`claude mcp add golf-coach --
+<repo>/target/release/golf-mcp.exe`) and reports Connected (the M29 plan's D21; README's MCP
+section has the commands). The flags are the script's (`--sessions-dir`, `--shots-dir`,
+`--golfers-dir`), resolved as `golf-core`'s career verbs resolve theirs, plus `--no-registry`.
+
+**Held to the Python server's answers, not re-imagined.** Frozen Python's every answer was recorded
+once, before any Rust tool existed, as `spec/vectors/mcp/` (M29 P8), and `golf-mcp` answers every
+recorded call through `cargo test`. Where it answers differently it does so on purpose, and each
+difference is declared by path, with its reason ([CONFORMANCE §2's mcp
+section](../CONFORMANCE.md)). Three kinds stand out:
+
+- **What a golfer reads changed in Rust first.** A shot's warnings go through M34's golfer-facing
+  filter, and `get_shot_trends`' note names the drill Rust's corpus leaves out.
+- **What the frozen lab could not say.** `get_swing`'s view gained two keys for the coaching brief:
+  each checkpoint's sidedness and each `unscored` entry's family. And a briefing bullet is reworded
+  for a photo worth retaking (the plan's C13).
+- **Sentences that named something M29 deleted or closed** now name the Rust verb.
+
+**The tool surface is the 2026-08-10 table's successors plus one.** `get_strike_profile`, M37's graded
+profile, has no Python twin. Its cases are worked by hand or recorded once by Rust, and every answer
+is held to `golf-core profile --json` over the same tree. The list itself lives in
+`crates/mcp/src/tools.rs`, and the pin on the documents' "the same N tools" moved to Rust
+(`crates/mcp/tests/docs.rs`).
+
+**Protocol revision 2025-06-18, not 2025-11-25.** That is the newest revision `rmcp` 0.11.0 models,
+and the newer `rmcp` releases need a newer toolchain than the workspace's. It is the revision that
+brought `structuredContent`, which every recorded answer carries, so nothing a tool returns needs the
+later one. The surface gate declares it.
+
+**The caveat prose now reaches Python through this server** (ADR-035's M29 addendum). The standing
+caveats are the briefing, and the other named sentences a read-only resource the Python LLM side
+reads at session start. So this server is the one place they reach a model from.
+
+**Not changed:** Python `mcp/` stays until M40, because the frozen FastAPI server's chat panel calls
+its tools in process. The 2026-08-05 correction, that parsing lives behind a port and not in the
+server, holds in Rust as `crates/screen`.

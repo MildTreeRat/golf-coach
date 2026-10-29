@@ -1,0 +1,513 @@
+{
+  "career_version": 3,
+  "expected": {
+    "results": [
+      {
+        "content": [
+          {
+            "text": "{\n  \"player_id\": \"aaron\",\n  \"club\": \"7i\",\n  \"category\": \"mid_iron\",\n  \"in_bag\": false,\n  \"bag_entry\": null,\n  \"n_swings\": 6,\n  \"n_shots\": 2,\n  \"n_sessions\": 1,\n  \"mishits\": 0,\n  \"mishit_refs\": [],\n  \"mishits_unconfirmed\": 0,\n  \"metrics\": [\n    {\n      \"name\": \"ball_speed_mph\",\n      \"unit\": \"mph\",\n      \"source\": \"launch_monitor:hd_golf\",\n      \"n\": 2,\n      \"n_sessions\": 1,\n      \"center\": null,\n      \"center_ci_low\": null,\n      \"center_ci_high\": null,\n      \"median\": null,\n      \"sd\": null,\n      \"sd_ci_low\": null,\n      \"sd_ci_high\": null,\n      \"minimum\": null,\n      \"maximum\": null,\n      \"bias\": \"withheld\",\n      \"scatter\": \"withheld\",\n      \"pattern\": null,\n      \"points_at\": null,\n      \"target\": null,\n      \"tolerance\": 4.0,\n      \"within_session_sd\": null,\n      \"sessions\": [\n        {\n          \"session_id\": \"2026-09-01\",\n          \"captured_at\": \"2026-09-01T12:00:00+00:00\",\n          \"n\": 2,\n          \"mean\": null\n        }\n      ],\n      \"caveats\": [],\n      \"withheld\": [\n        {\n          \"claim\": \"center\",\n          \"have_n\": 2,\n          \"need_n\": 5,\n          \"have_sessions\": 1,\n          \"need_sessions\": 1,\n          \"reason\": \"a typical value for this golfer needs 5 samples (there are 2)\"\n        },\n        {\n          \"claim\": \"spread\",\n          \"have_n\": 2,\n          \"need_n\": 10,\n          \"have_sessions\": 1,\n          \"need_sessions\": 1,\n          \"reason\": \"a claim about how repeatable this is needs 10 samples (there are 2)\"\n        },\n        {\n          \"claim\": \"trend\",\n          \"have_n\": 2,\n          \"need_n\": 12,\n          \"have_sessions\": 1,\n          \"need_sessions\": 3,\n          \"reason\": \"a claim that this has moved needs 12 samples (there are 2) and 3 sessions (there are 1) — repeated swings in one bay hour are one occasion, not several\"\n        }\n      ],\n      \"unavailable\": [\n        \"no target for ball_speed_mph: a 'right' ball speed is an output of club fitting rather than an input to coaching - the club's loft and the golfer's delivery decide it, and this repo has no model that reads either. Recorded so that model has data on the day it exists\"\n      ]\n    },\n    {\n      \"name\": \"carry_distance_yds\",\n      \"unit\": \"yards\",\n      \"source\": \"launch_monitor:hd_golf\",\n      \"n\": 2,\n      \"n_sessions\": 1,\n      \"center\": null,\n      \"center_ci_low\": null,\n      \"center_ci_high\": null,\n      \"median\": null,\n      \"sd\": null,\n      \"sd_ci_low\": null,\n      \"sd_ci_high\": null,\n      \"minimum\": null,\n      \"maximum\": null,\n      \"bias\": \"withheld\",\n      \"scatter\": \"withheld\",\n      \"pattern\": null,\n      \"points_at\": null,\n      \"target\": null,\n      \"tolerance\": 5.0,\n      \"within_session_sd\": null,\n      \"sessions\": [\n        {\n          \"session_id\": \"2026-09-01\",\n          \"captured_at\": \"2026-09-01T12:00:00+00:00\",\n          \"n\": 2,\n          \"mean\": null\n        }\n      ],\n      \"caveats\": [],\n      \"withheld\": [\n        {\n          \"claim\": \"center\",\n          \"have_n\": 2,\n          \"need_n\": 5,\n          \"have_sessions\": 1,\n          \"need_sessions\": 1,\n          \"reason\": \"a typical value for this golfer needs 5 samples (there are 2)\"\n        },\n        {\n          \"claim\": \"spread\",\n          \"have_n\": 2,\n          \"need_n\": 10,\n          \"have_sessions\": 1,\n          \"need_sessions\": 1,\n          \"reason\": \"a claim about how repeatable this is needs 10 samples (there are 2)\"\n        },\n        {\n          \"claim\": \"trend\",\n          \"have_n\": 2,\n          \"need_n\": 12,\n          \"have_sessions\": 1,\n          \"need_sessions\": 3,\n          \"reason\": \"a claim that this has moved needs 12 samples (there are 2) and 3 sessions (there are 1) — repeated swings in one bay hour are one occasion, not several\"\n        }\n      ],\n      \"unavailable\": [\n        \"no target for carry_distance_yds: how far a golfer should hit a given club is not a number this repo has. Every distribution here is cut from GolfDB, which contains no ball flight, and a tour carry band would judge an amateur against a population they are not in\"\n      ]\n    },\n    {\n      \"name\": \"head_sway_norm\",\n      \"unit\": \"shoulder_widths\",\n      \"source\": \"pose:face_on\",\n      \"n\": 6,\n      \"n_sessions\": 1,\n      \"center\": 0.20000000000000004,\n      \"center_ci_low\": 0.18275320768954414,\n      \"center_ci_high\": 0.21724679231045593,\n      \"median\": 0.2,\n      \"sd\": null,\n      \"sd_ci_low\": null,\n      \"sd_ci_high\": null,\n      \"minimum\": null,\n      \"maximum\": null,\n      \"bias\": \"established\",\n      \"scatter\": \"withheld\",\n      \"pattern\": null,\n      \"points_at\": null,\n      \"target\": 0.0,\n      \"tolerance\": 0.06,\n      \"within_session_sd\": null,\n      \"sessions\": [\n        {\n          \"session_id\": \"2026-09-01\",\n          \"captured_at\": \"2026-09-01T12:00:00+00:00\",\n          \"n\": 6,\n          \"mean\": null\n        }\n      ],\n      \"caveats\": [],\n      \"withheld\": [\n        {\n          \"claim\": \"spread\",\n          \"have_n\": 6,\n          \"need_n\": 10,\n          \"have_sessions\": 1,\n          \"need_sessions\": 1,\n          \"reason\": \"a claim about how repeatable this is needs 10 samples (there are 6)\"\n        },\n        {\n          \"claim\": \"trend\",\n          \"have_n\": 6,\n          \"need_n\": 12,\n          \"have_sessions\": 1,\n          \"need_sessions\": 3,\n          \"reason\": \"a claim that this has moved needs 12 samples (there are 6) and 3 sessions (there are 1) — repeated swings in one bay hour are one occasion, not several\"\n        }\n      ],\n      \"unavailable\": []\n    },\n    {\n      \"name\": \"launch_angle_deg\",\n      \"unit\": \"degrees\",\n      \"source\": \"launch_monitor:hd_golf\",\n      \"n\": 2,\n      \"n_sessions\": 1,\n      \"center\": null,\n      \"center_ci_low\": null,\n      \"center_ci_high\": null,\n      \"median\": null,\n      \"sd\": null,\n      \"sd_ci_low\": null,\n      \"sd_ci_high\": null,\n      \"minimum\": null,\n      \"maximum\": null,\n      \"bias\": \"withheld\",\n      \"scatter\": \"withheld\",\n      \"pattern\": null,\n      \"points_at\": null,\n      \"target\": null,\n      \"tolerance\": 2.0,\n      \"within_session_sd\": null,\n      \"sessions\": [\n        {\n          \"session_id\": \"2026-09-01\",\n          \"captured_at\": \"2026-09-01T12:00:00+00:00\",\n          \"n\": 2,\n          \"mean\": null\n        }\n      ],\n      \"caveats\": [],\n      \"withheld\": [\n        {\n          \"claim\": \"center\",\n          \"have_n\": 2,\n          \"need_n\": 5,\n          \"have_sessions\": 1,\n          \"need_sessions\": 1,\n          \"reason\": \"a typical value for this golfer needs 5 samples (there are 2)\"\n        },\n        {\n          \"claim\": \"spread\",\n          \"have_n\": 2,\n          \"need_n\": 10,\n          \"have_sessions\": 1,\n          \"need_sessions\": 1,\n          \"reason\": \"a claim about how repeatable this is needs 10 samples (there are 2)\"\n        },\n        {\n          \"claim\": \"trend\",\n          \"have_n\": 2,\n          \"need_n\": 12,\n          \"have_sessions\": 1,\n          \"need_sessions\": 3,\n          \"reason\": \"a claim that this has moved needs 12 samples (there are 2) and 3 sessions (there are 1) — repeated swings in one bay hour are one occasion, not several\"\n        }\n      ],\n      \"unavailable\": [\n        \"no target for launch_angle_deg: optimal launch is per club, per ball speed and per spin rate, so a single number for it would be wrong for every club in the bag. Same missing model as ball speed and the same deferral\"\n      ]\n    },\n    {\n      \"name\": \"start_line_offline_yds\",\n      \"unit\": \"yards\",\n      \"source\": \"launch_monitor:hd_golf\",\n      \"n\": 2,\n      \"n_sessions\": 1,\n      \"center\": null,\n      \"center_ci_low\": null,\n      \"center_ci_high\": null,\n      \"median\": null,\n      \"sd\": null,\n      \"sd_ci_low\": null,\n      \"sd_ci_high\": null,\n      \"minimum\": null,\n      \"maximum\": null,\n      \"bias\": \"withheld\",\n      \"scatter\": \"withheld\",\n      \"pattern\": null,\n      \"points_at\": null,\n      \"target\": 0.0,\n      \"tolerance\": 9.0,\n      \"within_session_sd\": null,\n      \"sessions\": [\n        {\n          \"session_id\": \"2026-09-01\",\n          \"captured_at\": \"2026-09-01T12:00:00+00:00\",\n          \"n\": 2,\n          \"mean\": null\n        }\n      ],\n      \"caveats\": [],\n      \"withheld\": [\n        {\n          \"claim\": \"center\",\n          \"have_n\": 2,\n          \"need_n\": 5,\n          \"have_sessions\": 1,\n          \"need_sessions\": 1,\n          \"reason\": \"a typical value for this golfer needs 5 samples (there are 2)\"\n        },\n        {\n          \"claim\": \"spread\",\n          \"have_n\": 2,\n          \"need_n\": 10,\n          \"have_sessions\": 1,\n          \"need_sessions\": 1,\n          \"reason\": \"a claim about how repeatable this is needs 10 samples (there are 2)\"\n        },\n        {\n          \"claim\": \"trend\",\n          \"have_n\": 2,\n          \"need_n\": 12,\n          \"have_sessions\": 1,\n          \"need_sessions\": 3,\n          \"reason\": \"a claim that this has moved needs 12 samples (there are 2) and 3 sessions (there are 1) — repeated swings in one bay hour are one occasion, not several\"\n        }\n      ],\n      \"unavailable\": []\n    },\n    {\n      \"name\": \"tempo_ratio\",\n      \"unit\": \"ratio\",\n      \"source\": \"pose:face_on\",\n      \"n\": 6,\n      \"n_sessions\": 1,\n      \"center\": null,\n      \"center_ci_low\": null,\n      \"center_ci_high\": null,\n      \"median\": null,\n      \"sd\": null,\n      \"sd_ci_low\": null,\n      \"sd_ci_high\": null,\n      \"minimum\": null,\n      \"maximum\": null,\n      \"bias\": \"withheld\",\n      \"scatter\": \"withheld\",\n      \"pattern\": null,\n      \"points_at\": null,\n      \"target\": null,\n      \"tolerance\": 0.943,\n      \"within_session_sd\": null,\n      \"sessions\": [\n        {\n          \"session_id\": \"2026-09-01\",\n          \"captured_at\": \"2026-09-01T12:00:00+00:00\",\n          \"n\": 6,\n          \"mean\": null\n        }\n      ],\n      \"caveats\": [],\n      \"withheld\": [\n        {\n          \"claim\": \"center\",\n          \"have_n\": 6,\n          \"need_n\": 8,\n          \"have_sessions\": 1,\n          \"need_sessions\": 1,\n          \"reason\": \"a typical value for this golfer needs 8 samples (there are 6)\"\n        },\n        {\n          \"claim\": \"spread\",\n          \"have_n\": 6,\n          \"need_n\": 15,\n          \"have_sessions\": 1,\n          \"need_sessions\": 1,\n          \"reason\": \"a claim about how repeatable this is needs 15 samples (there are 6)\"\n        },\n        {\n          \"claim\": \"trend\",\n          \"have_n\": 6,\n          \"need_n\": 18,\n          \"have_sessions\": 1,\n          \"need_sessions\": 3,\n          \"reason\": \"a claim that this has moved needs 18 samples (there are 6) and 3 sessions (there are 1) — repeated swings in one bay hour are one occasion, not several\"\n        }\n      ],\n      \"unavailable\": [\n        \"no target for tempo_ratio: its target is a band (2.72-4.71 from 1,399 tour swings), not a value. Reading it would import `benchmarks` into the personal-baseline path, which is the boundary `analysis.baseline` holds on purpose (ADR-010 §2). `analysis.comparison` answers the band's question directly instead — whether the center's interval sits inside it — so no point target has to be invented here (career mode step 6)\"\n      ]\n    },\n    {\n      \"name\": \"total_distance_yds\",\n      \"unit\": \"yards\",\n      \"source\": \"launch_monitor:hd_golf\",\n      \"n\": 2,\n      \"n_sessions\": 1,\n      \"center\": null,\n      \"center_ci_low\": null,\n      \"center_ci_high\": null,\n      \"median\": null,\n      \"sd\": null,\n      \"sd_ci_low\": null,\n      \"sd_ci_high\": null,\n      \"minimum\": null,\n      \"maximum\": null,\n      \"bias\": \"withheld\",\n      \"scatter\": \"withheld\",\n      \"pattern\": null,\n      \"points_at\": null,\n      \"target\": null,\n      \"tolerance\": 5.0,\n      \"within_session_sd\": null,\n      \"sessions\": [\n        {\n          \"session_id\": \"2026-09-01\",\n          \"captured_at\": \"2026-09-01T12:00:00+00:00\",\n          \"n\": 2,\n          \"mean\": null\n        }\n      ],\n      \"caveats\": [],\n      \"withheld\": [\n        {\n          \"claim\": \"center\",\n          \"have_n\": 2,\n          \"need_n\": 5,\n          \"have_sessions\": 1,\n          \"need_sessions\": 1,\n          \"reason\": \"a typical value for this golfer needs 5 samples (there are 2)\"\n        },\n        {\n          \"claim\": \"spread\",\n          \"have_n\": 2,\n          \"need_n\": 10,\n          \"have_sessions\": 1,\n          \"need_sessions\": 1,\n          \"reason\": \"a claim about how repeatable this is needs 10 samples (there are 2)\"\n        },\n        {\n          \"claim\": \"trend\",\n          \"have_n\": 2,\n          \"need_n\": 12,\n          \"have_sessions\": 1,\n          \"need_sessions\": 3,\n          \"reason\": \"a claim that this has moved needs 12 samples (there are 2) and 3 sessions (there are 1) — repeated swings in one bay hour are one occasion, not several\"\n        }\n      ],\n      \"unavailable\": [\n        \"no target for total_distance_yds: the same as carry, plus one more: the gap between them is roll, which is the ground rather than the swing - a target would judge a golfer for the mat they hit off\"\n      ]\n    }\n  ],\n  \"caveats\": [],\n  \"nothing_sayable\": false,\n  \"note\": \"\"\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "bag_entry": null,
+            "category": "mid_iron",
+            "caveats": [],
+            "club": "7i",
+            "in_bag": false,
+            "metrics": [
+              {
+                "bias": "withheld",
+                "caveats": [],
+                "center": null,
+                "center_ci_high": null,
+                "center_ci_low": null,
+                "maximum": null,
+                "median": null,
+                "minimum": null,
+                "n": 2,
+                "n_sessions": 1,
+                "name": "ball_speed_mph",
+                "pattern": null,
+                "points_at": null,
+                "scatter": "withheld",
+                "sd": null,
+                "sd_ci_high": null,
+                "sd_ci_low": null,
+                "sessions": [
+                  {
+                    "captured_at": "2026-09-01T12:00:00+00:00",
+                    "mean": null,
+                    "n": 2,
+                    "session_id": "2026-09-01"
+                  }
+                ],
+                "source": "launch_monitor:hd_golf",
+                "target": null,
+                "tolerance": 4.0,
+                "unavailable": [
+                  "no target for ball_speed_mph: a 'right' ball speed is an output of club fitting rather than an input to coaching - the club's loft and the golfer's delivery decide it, and this repo has no model that reads either. Recorded so that model has data on the day it exists"
+                ],
+                "unit": "mph",
+                "withheld": [
+                  {
+                    "claim": "center",
+                    "have_n": 2,
+                    "have_sessions": 1,
+                    "need_n": 5,
+                    "need_sessions": 1,
+                    "reason": "a typical value for this golfer needs 5 samples (there are 2)"
+                  },
+                  {
+                    "claim": "spread",
+                    "have_n": 2,
+                    "have_sessions": 1,
+                    "need_n": 10,
+                    "need_sessions": 1,
+                    "reason": "a claim about how repeatable this is needs 10 samples (there are 2)"
+                  },
+                  {
+                    "claim": "trend",
+                    "have_n": 2,
+                    "have_sessions": 1,
+                    "need_n": 12,
+                    "need_sessions": 3,
+                    "reason": "a claim that this has moved needs 12 samples (there are 2) and 3 sessions (there are 1) — repeated swings in one bay hour are one occasion, not several"
+                  }
+                ],
+                "within_session_sd": null
+              },
+              {
+                "bias": "withheld",
+                "caveats": [],
+                "center": null,
+                "center_ci_high": null,
+                "center_ci_low": null,
+                "maximum": null,
+                "median": null,
+                "minimum": null,
+                "n": 2,
+                "n_sessions": 1,
+                "name": "carry_distance_yds",
+                "pattern": null,
+                "points_at": null,
+                "scatter": "withheld",
+                "sd": null,
+                "sd_ci_high": null,
+                "sd_ci_low": null,
+                "sessions": [
+                  {
+                    "captured_at": "2026-09-01T12:00:00+00:00",
+                    "mean": null,
+                    "n": 2,
+                    "session_id": "2026-09-01"
+                  }
+                ],
+                "source": "launch_monitor:hd_golf",
+                "target": null,
+                "tolerance": 5.0,
+                "unavailable": [
+                  "no target for carry_distance_yds: how far a golfer should hit a given club is not a number this repo has. Every distribution here is cut from GolfDB, which contains no ball flight, and a tour carry band would judge an amateur against a population they are not in"
+                ],
+                "unit": "yards",
+                "withheld": [
+                  {
+                    "claim": "center",
+                    "have_n": 2,
+                    "have_sessions": 1,
+                    "need_n": 5,
+                    "need_sessions": 1,
+                    "reason": "a typical value for this golfer needs 5 samples (there are 2)"
+                  },
+                  {
+                    "claim": "spread",
+                    "have_n": 2,
+                    "have_sessions": 1,
+                    "need_n": 10,
+                    "need_sessions": 1,
+                    "reason": "a claim about how repeatable this is needs 10 samples (there are 2)"
+                  },
+                  {
+                    "claim": "trend",
+                    "have_n": 2,
+                    "have_sessions": 1,
+                    "need_n": 12,
+                    "need_sessions": 3,
+                    "reason": "a claim that this has moved needs 12 samples (there are 2) and 3 sessions (there are 1) — repeated swings in one bay hour are one occasion, not several"
+                  }
+                ],
+                "within_session_sd": null
+              },
+              {
+                "bias": "established",
+                "caveats": [],
+                "center": 0.20000000000000004,
+                "center_ci_high": 0.21724679231045593,
+                "center_ci_low": 0.18275320768954414,
+                "maximum": null,
+                "median": 0.2,
+                "minimum": null,
+                "n": 6,
+                "n_sessions": 1,
+                "name": "head_sway_norm",
+                "pattern": null,
+                "points_at": null,
+                "scatter": "withheld",
+                "sd": null,
+                "sd_ci_high": null,
+                "sd_ci_low": null,
+                "sessions": [
+                  {
+                    "captured_at": "2026-09-01T12:00:00+00:00",
+                    "mean": null,
+                    "n": 6,
+                    "session_id": "2026-09-01"
+                  }
+                ],
+                "source": "pose:face_on",
+                "target": 0.0,
+                "tolerance": 0.06,
+                "unavailable": [],
+                "unit": "shoulder_widths",
+                "withheld": [
+                  {
+                    "claim": "spread",
+                    "have_n": 6,
+                    "have_sessions": 1,
+                    "need_n": 10,
+                    "need_sessions": 1,
+                    "reason": "a claim about how repeatable this is needs 10 samples (there are 6)"
+                  },
+                  {
+                    "claim": "trend",
+                    "have_n": 6,
+                    "have_sessions": 1,
+                    "need_n": 12,
+                    "need_sessions": 3,
+                    "reason": "a claim that this has moved needs 12 samples (there are 6) and 3 sessions (there are 1) — repeated swings in one bay hour are one occasion, not several"
+                  }
+                ],
+                "within_session_sd": null
+              },
+              {
+                "bias": "withheld",
+                "caveats": [],
+                "center": null,
+                "center_ci_high": null,
+                "center_ci_low": null,
+                "maximum": null,
+                "median": null,
+                "minimum": null,
+                "n": 2,
+                "n_sessions": 1,
+                "name": "launch_angle_deg",
+                "pattern": null,
+                "points_at": null,
+                "scatter": "withheld",
+                "sd": null,
+                "sd_ci_high": null,
+                "sd_ci_low": null,
+                "sessions": [
+                  {
+                    "captured_at": "2026-09-01T12:00:00+00:00",
+                    "mean": null,
+                    "n": 2,
+                    "session_id": "2026-09-01"
+                  }
+                ],
+                "source": "launch_monitor:hd_golf",
+                "target": null,
+                "tolerance": 2.0,
+                "unavailable": [
+                  "no target for launch_angle_deg: optimal launch is per club, per ball speed and per spin rate, so a single number for it would be wrong for every club in the bag. Same missing model as ball speed and the same deferral"
+                ],
+                "unit": "degrees",
+                "withheld": [
+                  {
+                    "claim": "center",
+                    "have_n": 2,
+                    "have_sessions": 1,
+                    "need_n": 5,
+                    "need_sessions": 1,
+                    "reason": "a typical value for this golfer needs 5 samples (there are 2)"
+                  },
+                  {
+                    "claim": "spread",
+                    "have_n": 2,
+                    "have_sessions": 1,
+                    "need_n": 10,
+                    "need_sessions": 1,
+                    "reason": "a claim about how repeatable this is needs 10 samples (there are 2)"
+                  },
+                  {
+                    "claim": "trend",
+                    "have_n": 2,
+                    "have_sessions": 1,
+                    "need_n": 12,
+                    "need_sessions": 3,
+                    "reason": "a claim that this has moved needs 12 samples (there are 2) and 3 sessions (there are 1) — repeated swings in one bay hour are one occasion, not several"
+                  }
+                ],
+                "within_session_sd": null
+              },
+              {
+                "bias": "withheld",
+                "caveats": [],
+                "center": null,
+                "center_ci_high": null,
+                "center_ci_low": null,
+                "maximum": null,
+                "median": null,
+                "minimum": null,
+                "n": 2,
+                "n_sessions": 1,
+                "name": "start_line_offline_yds",
+                "pattern": null,
+                "points_at": null,
+                "scatter": "withheld",
+                "sd": null,
+                "sd_ci_high": null,
+                "sd_ci_low": null,
+                "sessions": [
+                  {
+                    "captured_at": "2026-09-01T12:00:00+00:00",
+                    "mean": null,
+                    "n": 2,
+                    "session_id": "2026-09-01"
+                  }
+                ],
+                "source": "launch_monitor:hd_golf",
+                "target": 0.0,
+                "tolerance": 9.0,
+                "unavailable": [],
+                "unit": "yards",
+                "withheld": [
+                  {
+                    "claim": "center",
+                    "have_n": 2,
+                    "have_sessions": 1,
+                    "need_n": 5,
+                    "need_sessions": 1,
+                    "reason": "a typical value for this golfer needs 5 samples (there are 2)"
+                  },
+                  {
+                    "claim": "spread",
+                    "have_n": 2,
+                    "have_sessions": 1,
+                    "need_n": 10,
+                    "need_sessions": 1,
+                    "reason": "a claim about how repeatable this is needs 10 samples (there are 2)"
+                  },
+                  {
+                    "claim": "trend",
+                    "have_n": 2,
+                    "have_sessions": 1,
+                    "need_n": 12,
+                    "need_sessions": 3,
+                    "reason": "a claim that this has moved needs 12 samples (there are 2) and 3 sessions (there are 1) — repeated swings in one bay hour are one occasion, not several"
+                  }
+                ],
+                "within_session_sd": null
+              },
+              {
+                "bias": "withheld",
+                "caveats": [],
+                "center": null,
+                "center_ci_high": null,
+                "center_ci_low": null,
+                "maximum": null,
+                "median": null,
+                "minimum": null,
+                "n": 6,
+                "n_sessions": 1,
+                "name": "tempo_ratio",
+                "pattern": null,
+                "points_at": null,
+                "scatter": "withheld",
+                "sd": null,
+                "sd_ci_high": null,
+                "sd_ci_low": null,
+                "sessions": [
+                  {
+                    "captured_at": "2026-09-01T12:00:00+00:00",
+                    "mean": null,
+                    "n": 6,
+                    "session_id": "2026-09-01"
+                  }
+                ],
+                "source": "pose:face_on",
+                "target": null,
+                "tolerance": 0.943,
+                "unavailable": [
+                  "no target for tempo_ratio: its target is a band (2.72-4.71 from 1,399 tour swings), not a value. Reading it would import `benchmarks` into the personal-baseline path, which is the boundary `analysis.baseline` holds on purpose (ADR-010 §2). `analysis.comparison` answers the band's question directly instead — whether the center's interval sits inside it — so no point target has to be invented here (career mode step 6)"
+                ],
+                "unit": "ratio",
+                "withheld": [
+                  {
+                    "claim": "center",
+                    "have_n": 6,
+                    "have_sessions": 1,
+                    "need_n": 8,
+                    "need_sessions": 1,
+                    "reason": "a typical value for this golfer needs 8 samples (there are 6)"
+                  },
+                  {
+                    "claim": "spread",
+                    "have_n": 6,
+                    "have_sessions": 1,
+                    "need_n": 15,
+                    "need_sessions": 1,
+                    "reason": "a claim about how repeatable this is needs 15 samples (there are 6)"
+                  },
+                  {
+                    "claim": "trend",
+                    "have_n": 6,
+                    "have_sessions": 1,
+                    "need_n": 18,
+                    "need_sessions": 3,
+                    "reason": "a claim that this has moved needs 18 samples (there are 6) and 3 sessions (there are 1) — repeated swings in one bay hour are one occasion, not several"
+                  }
+                ],
+                "within_session_sd": null
+              },
+              {
+                "bias": "withheld",
+                "caveats": [],
+                "center": null,
+                "center_ci_high": null,
+                "center_ci_low": null,
+                "maximum": null,
+                "median": null,
+                "minimum": null,
+                "n": 2,
+                "n_sessions": 1,
+                "name": "total_distance_yds",
+                "pattern": null,
+                "points_at": null,
+                "scatter": "withheld",
+                "sd": null,
+                "sd_ci_high": null,
+                "sd_ci_low": null,
+                "sessions": [
+                  {
+                    "captured_at": "2026-09-01T12:00:00+00:00",
+                    "mean": null,
+                    "n": 2,
+                    "session_id": "2026-09-01"
+                  }
+                ],
+                "source": "launch_monitor:hd_golf",
+                "target": null,
+                "tolerance": 5.0,
+                "unavailable": [
+                  "no target for total_distance_yds: the same as carry, plus one more: the gap between them is roll, which is the ground rather than the swing - a target would judge a golfer for the mat they hit off"
+                ],
+                "unit": "yards",
+                "withheld": [
+                  {
+                    "claim": "center",
+                    "have_n": 2,
+                    "have_sessions": 1,
+                    "need_n": 5,
+                    "need_sessions": 1,
+                    "reason": "a typical value for this golfer needs 5 samples (there are 2)"
+                  },
+                  {
+                    "claim": "spread",
+                    "have_n": 2,
+                    "have_sessions": 1,
+                    "need_n": 10,
+                    "need_sessions": 1,
+                    "reason": "a claim about how repeatable this is needs 10 samples (there are 2)"
+                  },
+                  {
+                    "claim": "trend",
+                    "have_n": 2,
+                    "have_sessions": 1,
+                    "need_n": 12,
+                    "need_sessions": 3,
+                    "reason": "a claim that this has moved needs 12 samples (there are 2) and 3 sessions (there are 1) — repeated swings in one bay hour are one occasion, not several"
+                  }
+                ],
+                "within_session_sd": null
+              }
+            ],
+            "mishit_refs": [],
+            "mishits": 0,
+            "mishits_unconfirmed": 0,
+            "n_sessions": 1,
+            "n_shots": 2,
+            "n_swings": 6,
+            "note": "",
+            "nothing_sayable": false,
+            "player_id": "aaron"
+          }
+        }
+      }
+    ]
+  },
+  "id": "mcp/tools/club-photo-ceiling",
+  "input": {
+    "calls": [
+      {
+        "arguments": {
+          "club": "7i",
+          "player": "Aaron"
+        },
+        "now": null,
+        "tool": "get_club_profile"
+      }
+    ],
+    "files": {
+      "golfers/aaron.golfer.json": "{\n  \"player_id\": \"aaron\",\n  \"display_name\": \"Aaron\",\n  \"handedness\": \"right\",\n  \"created_at\": \"2026-10-01T12:00:00Z\"\n}",
+      "sessions/2026-09-01/0/analysis.json": "{\"swing_id\": \"1\", \"session_id\": \"s\", \"swing\": {\"swing_id\": \"1\", \"session_id\": \"s\", \"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.42, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick - 2.4:1.\", \"percentile\": 10.0, \"population_n\": 1399, \"one_sided\": false}, {\"name\": \"head_sway\", \"score\": 1.0, \"passed\": true, \"observed\": 0.12, \"expected_low\": 0.0, \"expected_high\": 0.43, \"message\": \"Head stays steady.\", \"percentile\": 35.5, \"population_n\": 458, \"one_sided\": true}], \"unscored\": [], \"measurements\": [{\"name\": \"head_sway_norm\", \"value\": 0.21500000000000002, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"tempo_ratio\", \"value\": 3.1, \"unit\": \"ratio\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"carry_distance_yds\", \"value\": 157.0, \"unit\": \"yards\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}, {\"name\": \"total_distance_yds\", \"value\": 172.0, \"unit\": \"yards\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}, {\"name\": \"start_line_offline_yds\", \"value\": 3.5, \"unit\": \"yards\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}, {\"name\": \"ball_speed_mph\", \"value\": 120.0, \"unit\": \"mph\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}, {\"name\": \"launch_angle_deg\", \"value\": 19.0, \"unit\": \"degrees\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}], \"mechanics_score\": 91.0, \"outcome_score\": null, \"overall_score\": 91.0, \"shot\": null}, \"alignment\": {\"quality\": \"top_impact\"}, \"notes\": [\"alignment degraded: aligned on top and impact\"], \"feedback\": {\"swing_id\": \"1\", \"overall_score\": 91.0, \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\", \"tips\": [{\"checkpoint\": \"tempo\", \"text\": \"Tempo too quick - 2.4:1.\", \"severity\": \"minor\"}]}, \"analysis_version\": 16}",
+      "sessions/2026-09-01/0/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"face_on\": \"sha-2026-09-01-0-face_on\",\n    \"shot_screen\": \"sha-2026-09-01-0-shot_screen\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 91.0,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\"\n}",
+      "sessions/2026-09-01/0/manifest.json": "{\n  \"swing_id\": \"0\",\n  \"session_id\": \"2026-09-01\",\n  \"created_at\": \"2026-09-01T12:00:00Z\",\n  \"updated_at\": \"2026-09-01T12:00:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.abc123.mov\",\n      \"content_sha256\": \"sha-2026-09-01-0-face_on\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.abc123.mov\",\n      \"content_sha256\": \"sha-2026-09-01-0-shot_screen\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": \"7i\",\n  \"mishit\": null\n}",
+      "sessions/2026-09-01/1/analysis.json": "{\"swing_id\": \"1\", \"session_id\": \"s\", \"swing\": {\"swing_id\": \"1\", \"session_id\": \"s\", \"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.42, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick - 2.4:1.\", \"percentile\": 10.0, \"population_n\": 1399, \"one_sided\": false}, {\"name\": \"head_sway\", \"score\": 1.0, \"passed\": true, \"observed\": 0.12, \"expected_low\": 0.0, \"expected_high\": 0.43, \"message\": \"Head stays steady.\", \"percentile\": 35.5, \"population_n\": 458, \"one_sided\": true}], \"unscored\": [], \"measurements\": [{\"name\": \"head_sway_norm\", \"value\": 0.185, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"tempo_ratio\", \"value\": 2.9, \"unit\": \"ratio\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"carry_distance_yds\", \"value\": 151.0, \"unit\": \"yards\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}, {\"name\": \"total_distance_yds\", \"value\": 164.0, \"unit\": \"yards\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}, {\"name\": \"start_line_offline_yds\", \"value\": 0.5, \"unit\": \"yards\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}, {\"name\": \"ball_speed_mph\", \"value\": 116.0, \"unit\": \"mph\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}, {\"name\": \"launch_angle_deg\", \"value\": 17.0, \"unit\": \"degrees\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}], \"mechanics_score\": 91.0, \"outcome_score\": null, \"overall_score\": 91.0, \"shot\": null}, \"alignment\": {\"quality\": \"top_impact\"}, \"notes\": [\"alignment degraded: aligned on top and impact\"], \"feedback\": {\"swing_id\": \"1\", \"overall_score\": 91.0, \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\", \"tips\": [{\"checkpoint\": \"tempo\", \"text\": \"Tempo too quick - 2.4:1.\", \"severity\": \"minor\"}]}, \"analysis_version\": 16}",
+      "sessions/2026-09-01/1/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"face_on\": \"sha-2026-09-01-1-face_on\",\n    \"shot_screen\": \"sha-2026-09-01-1-shot_screen\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 91.0,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\"\n}",
+      "sessions/2026-09-01/1/manifest.json": "{\n  \"swing_id\": \"1\",\n  \"session_id\": \"2026-09-01\",\n  \"created_at\": \"2026-09-01T12:01:00Z\",\n  \"updated_at\": \"2026-09-01T12:01:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.abc123.mov\",\n      \"content_sha256\": \"sha-2026-09-01-1-face_on\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.abc123.mov\",\n      \"content_sha256\": \"sha-2026-09-01-1-shot_screen\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": \"7i\",\n  \"mishit\": null\n}",
+      "sessions/2026-09-01/2/analysis.json": "{\"swing_id\": \"1\", \"session_id\": \"s\", \"swing\": {\"swing_id\": \"1\", \"session_id\": \"s\", \"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.42, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick - 2.4:1.\", \"percentile\": 10.0, \"population_n\": 1399, \"one_sided\": false}, {\"name\": \"head_sway\", \"score\": 1.0, \"passed\": true, \"observed\": 0.12, \"expected_low\": 0.0, \"expected_high\": 0.43, \"message\": \"Head stays steady.\", \"percentile\": 35.5, \"population_n\": 458, \"one_sided\": true}], \"unscored\": [], \"measurements\": [{\"name\": \"head_sway_norm\", \"value\": 0.21500000000000002, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"tempo_ratio\", \"value\": 3.1, \"unit\": \"ratio\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"carry_distance_yds\", \"value\": 157.0, \"unit\": \"yards\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}, {\"name\": \"total_distance_yds\", \"value\": 172.0, \"unit\": \"yards\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}, {\"name\": \"start_line_offline_yds\", \"value\": 3.5, \"unit\": \"yards\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}, {\"name\": \"ball_speed_mph\", \"value\": 120.0, \"unit\": \"mph\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}, {\"name\": \"launch_angle_deg\", \"value\": 19.0, \"unit\": \"degrees\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}], \"mechanics_score\": 91.0, \"outcome_score\": null, \"overall_score\": 91.0, \"shot\": null}, \"alignment\": {\"quality\": \"top_impact\"}, \"notes\": [\"alignment degraded: aligned on top and impact\"], \"feedback\": {\"swing_id\": \"1\", \"overall_score\": 91.0, \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\", \"tips\": [{\"checkpoint\": \"tempo\", \"text\": \"Tempo too quick - 2.4:1.\", \"severity\": \"minor\"}]}, \"analysis_version\": 16}",
+      "sessions/2026-09-01/2/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"face_on\": \"sha-2026-09-01-2-face_on\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 91.0,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\"\n}",
+      "sessions/2026-09-01/2/manifest.json": "{\n  \"swing_id\": \"2\",\n  \"session_id\": \"2026-09-01\",\n  \"created_at\": \"2026-09-01T12:02:00Z\",\n  \"updated_at\": \"2026-09-01T12:02:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.abc123.mov\",\n      \"content_sha256\": \"sha-2026-09-01-2-face_on\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": \"7i\",\n  \"mishit\": null\n}",
+      "sessions/2026-09-01/3/analysis.json": "{\"swing_id\": \"1\", \"session_id\": \"s\", \"swing\": {\"swing_id\": \"1\", \"session_id\": \"s\", \"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.42, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick - 2.4:1.\", \"percentile\": 10.0, \"population_n\": 1399, \"one_sided\": false}, {\"name\": \"head_sway\", \"score\": 1.0, \"passed\": true, \"observed\": 0.12, \"expected_low\": 0.0, \"expected_high\": 0.43, \"message\": \"Head stays steady.\", \"percentile\": 35.5, \"population_n\": 458, \"one_sided\": true}], \"unscored\": [], \"measurements\": [{\"name\": \"head_sway_norm\", \"value\": 0.185, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"tempo_ratio\", \"value\": 2.9, \"unit\": \"ratio\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"carry_distance_yds\", \"value\": 151.0, \"unit\": \"yards\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}, {\"name\": \"total_distance_yds\", \"value\": 164.0, \"unit\": \"yards\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}, {\"name\": \"start_line_offline_yds\", \"value\": 0.5, \"unit\": \"yards\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}, {\"name\": \"ball_speed_mph\", \"value\": 116.0, \"unit\": \"mph\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}, {\"name\": \"launch_angle_deg\", \"value\": 17.0, \"unit\": \"degrees\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}], \"mechanics_score\": 91.0, \"outcome_score\": null, \"overall_score\": 91.0, \"shot\": null}, \"alignment\": {\"quality\": \"top_impact\"}, \"notes\": [\"alignment degraded: aligned on top and impact\"], \"feedback\": {\"swing_id\": \"1\", \"overall_score\": 91.0, \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\", \"tips\": [{\"checkpoint\": \"tempo\", \"text\": \"Tempo too quick - 2.4:1.\", \"severity\": \"minor\"}]}, \"analysis_version\": 16}",
+      "sessions/2026-09-01/3/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"face_on\": \"sha-2026-09-01-3-face_on\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 91.0,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\"\n}",
+      "sessions/2026-09-01/3/manifest.json": "{\n  \"swing_id\": \"3\",\n  \"session_id\": \"2026-09-01\",\n  \"created_at\": \"2026-09-01T12:03:00Z\",\n  \"updated_at\": \"2026-09-01T12:03:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.abc123.mov\",\n      \"content_sha256\": \"sha-2026-09-01-3-face_on\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": \"7i\",\n  \"mishit\": null\n}",
+      "sessions/2026-09-01/4/analysis.json": "{\"swing_id\": \"1\", \"session_id\": \"s\", \"swing\": {\"swing_id\": \"1\", \"session_id\": \"s\", \"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.42, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick - 2.4:1.\", \"percentile\": 10.0, \"population_n\": 1399, \"one_sided\": false}, {\"name\": \"head_sway\", \"score\": 1.0, \"passed\": true, \"observed\": 0.12, \"expected_low\": 0.0, \"expected_high\": 0.43, \"message\": \"Head stays steady.\", \"percentile\": 35.5, \"population_n\": 458, \"one_sided\": true}], \"unscored\": [], \"measurements\": [{\"name\": \"head_sway_norm\", \"value\": 0.21500000000000002, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"tempo_ratio\", \"value\": 3.1, \"unit\": \"ratio\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"carry_distance_yds\", \"value\": 157.0, \"unit\": \"yards\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}, {\"name\": \"total_distance_yds\", \"value\": 172.0, \"unit\": \"yards\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}, {\"name\": \"start_line_offline_yds\", \"value\": 3.5, \"unit\": \"yards\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}, {\"name\": \"ball_speed_mph\", \"value\": 120.0, \"unit\": \"mph\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}, {\"name\": \"launch_angle_deg\", \"value\": 19.0, \"unit\": \"degrees\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}], \"mechanics_score\": 91.0, \"outcome_score\": null, \"overall_score\": 91.0, \"shot\": null}, \"alignment\": {\"quality\": \"top_impact\"}, \"notes\": [\"alignment degraded: aligned on top and impact\"], \"feedback\": {\"swing_id\": \"1\", \"overall_score\": 91.0, \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\", \"tips\": [{\"checkpoint\": \"tempo\", \"text\": \"Tempo too quick - 2.4:1.\", \"severity\": \"minor\"}]}, \"analysis_version\": 16}",
+      "sessions/2026-09-01/4/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"face_on\": \"sha-2026-09-01-4-face_on\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 91.0,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\"\n}",
+      "sessions/2026-09-01/4/manifest.json": "{\n  \"swing_id\": \"4\",\n  \"session_id\": \"2026-09-01\",\n  \"created_at\": \"2026-09-01T12:04:00Z\",\n  \"updated_at\": \"2026-09-01T12:04:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.abc123.mov\",\n      \"content_sha256\": \"sha-2026-09-01-4-face_on\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": \"7i\",\n  \"mishit\": null\n}",
+      "sessions/2026-09-01/5/analysis.json": "{\"swing_id\": \"1\", \"session_id\": \"s\", \"swing\": {\"swing_id\": \"1\", \"session_id\": \"s\", \"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.42, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick - 2.4:1.\", \"percentile\": 10.0, \"population_n\": 1399, \"one_sided\": false}, {\"name\": \"head_sway\", \"score\": 1.0, \"passed\": true, \"observed\": 0.12, \"expected_low\": 0.0, \"expected_high\": 0.43, \"message\": \"Head stays steady.\", \"percentile\": 35.5, \"population_n\": 458, \"one_sided\": true}], \"unscored\": [], \"measurements\": [{\"name\": \"head_sway_norm\", \"value\": 0.185, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"tempo_ratio\", \"value\": 2.9, \"unit\": \"ratio\", \"source\": \"pose:face_on\", \"detail\": \"test\"}, {\"name\": \"carry_distance_yds\", \"value\": 151.0, \"unit\": \"yards\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}, {\"name\": \"total_distance_yds\", \"value\": 164.0, \"unit\": \"yards\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}, {\"name\": \"start_line_offline_yds\", \"value\": 0.5, \"unit\": \"yards\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}, {\"name\": \"ball_speed_mph\", \"value\": 116.0, \"unit\": \"mph\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}, {\"name\": \"launch_angle_deg\", \"value\": 17.0, \"unit\": \"degrees\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}], \"mechanics_score\": 91.0, \"outcome_score\": null, \"overall_score\": 91.0, \"shot\": null}, \"alignment\": {\"quality\": \"top_impact\"}, \"notes\": [\"alignment degraded: aligned on top and impact\"], \"feedback\": {\"swing_id\": \"1\", \"overall_score\": 91.0, \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\", \"tips\": [{\"checkpoint\": \"tempo\", \"text\": \"Tempo too quick - 2.4:1.\", \"severity\": \"minor\"}]}, \"analysis_version\": 16}",
+      "sessions/2026-09-01/5/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"face_on\": \"sha-2026-09-01-5-face_on\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 91.0,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\"\n}",
+      "sessions/2026-09-01/5/manifest.json": "{\n  \"swing_id\": \"5\",\n  \"session_id\": \"2026-09-01\",\n  \"created_at\": \"2026-09-01T12:05:00Z\",\n  \"updated_at\": \"2026-09-01T12:05:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.abc123.mov\",\n      \"content_sha256\": \"sha-2026-09-01-5-face_on\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": \"7i\",\n  \"mishit\": null\n}"
+    },
+    "roots": {
+      "golfers": "golfers",
+      "sessions": "sessions",
+      "shots": "shots"
+    }
+  },
+  "provenance": {
+    "analysis_version": 16,
+    "flight_model_calls": [],
+    "kind": "mcp",
+    "mcp_version": "2.0.0",
+    "note": "test_the_shot_photo_is_the_ceiling_on_a_distance: six clips, two with a screen photo",
+    "oracle": "python",
+    "pydantic_version": "2.13.4",
+    "python_version": "3.13.3",
+    "recorded_by": "scripts/conformance_vectors.py::_run_mcp",
+    "rerecords": [
+      {
+        "added": [],
+        "by": "golf-core rerecord",
+        "career_version": 3,
+        "declaration": "spec/declarations/career-v3.json",
+        "moved": [
+          "career_version"
+        ]
+      }
+    ],
+    "source": "scripts/conformance_vectors.py::_mcp_club_photo_ceiling, after tests/mcp/"
+  }
+}

@@ -400,7 +400,7 @@ Four changes:
 Hard constraints:
 - Both new fields must be optional with defaults. The existing data/processed/*.keypoints.json AND
   the 461-clip GolfDB reference cache under data/reference/golfdb/keypoints/ must still load. This
-  is the main regression risk — check how contracts/reference.py and the benchmark path read them.
+  is the main regression risk — check how archive/golfdb/reference.py and the benchmark path read them.
 - `.venv/Scripts/python.exe -m pytest -q` must stay green.
 - Match the existing code style: pure functional core, ports/adapters, heavy deps behind extras.
 ```

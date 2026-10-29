@@ -79,6 +79,15 @@
 //! `flight_unscored` entries onto `SwingResult::unscored`, which is what takes the fifteen corpus
 //! vectors into `crates/core`'s whole-bundle gate. **All 21 now run end to end.**
 //!
+//! [`flight_caveats`] and `flight_measure`'s printed comparison came later (M29 P14), with their
+//! first Rust caller, `golf-mcp`'s `simulate_flight`: the sentences a flight may not be quoted
+//! without, and the printed number set beside the simulated one. No engine vector reaches either,
+//! so the recorded `mcp` answers and the unit tests are what hold them to Python. M29 P28 brought
+//! the rest of what `scripts/simulate_flight.py` printed, for `golf-lab flight`: `flight`'s gate
+//! (`VALIDATION_SHOTS`, `gate_comparisons`) and `FlightResult::sample`, and `flight_model`'s
+//! per-block provenance and altitude what-if (`AtmosphereProfile`, `FlightModel::at_altitude`).
+//! That verb's text against the frozen script's, and unit tests to frozen Python's `repr`, hold them.
+//!
 //! P8 also found the first portability edge that is not a string. [`pyfmt::hypot`] is CPython's
 //! `math.hypot`, ported because one ulp of the three-argument norm flips
 //! [`benchmarks::flight_model::AeroCoefficients::clamped`] at the shoulder `spin_solve` constructs;
@@ -124,6 +133,7 @@ pub mod comparison;
 pub mod dispersion;
 pub mod engine;
 pub mod flight;
+pub mod flight_caveats;
 pub mod flight_infer;
 pub mod flight_measure;
 pub mod measure;

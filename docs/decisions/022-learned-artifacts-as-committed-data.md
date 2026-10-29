@@ -31,7 +31,7 @@ professional, so the population is entirely positive examples and needs no label
 ### The gate that had to pass first
 
 If the six metrics were near-independent, a joint model would collapse to a sum of squared z-scores
-and say nothing the bands already say. `scripts/golfdb/tune_joint_structure.py` measured it over the
+and say nothing the bands already say. `archive/golfdb/tune_joint_structure.py` measured it over the
 458 clips, after applying `derive_reference`'s own screening and handedness folding so the
 population matches the one the bands were cut from:
 
@@ -55,7 +55,7 @@ ships is numbers plus stdlib arithmetic to read them.
 
 | stage | where | may import |
 |---|---|---|
-| fit | `scripts/golfdb/derive_joint_model.py` | the `research` extra — numpy, scikit-learn |
+| fit | `archive/golfdb/derive_joint_model.py` | the `research` extra — numpy, scikit-learn |
 | ship | `analysis/benchmarks/joint_model_v1.json` | — it is data |
 | evaluate | `analysis/benchmarks/joint.py` | stdlib + pydantic |
 
@@ -131,8 +131,8 @@ re-analysis of every stored swing — and M6.5's "measure now, judge later" orde
 should be inspectable before it is spoken. It is inspectable now:
 
 ```
-python scripts/golfdb/tune_joint_structure.py     # the gate
-python scripts/golfdb/derive_joint_model.py       # dry run; --write to update the artifact
+python archive/golfdb/tune_joint_structure.py     # the gate
+python archive/golfdb/derive_joint_model.py       # dry run; --write to update the artifact
 ```
 
 ### Limits
@@ -152,7 +152,7 @@ python scripts/golfdb/derive_joint_model.py       # dry run; --write to update t
   beats a wrong one"
 - [ADR-012](012-golfdb-reference-data.md) — the corpus, and §2's aggregates-only licensing rule
 - [ADR-021](021-caddieset-paired-reference-data.md) — why the outcome-prediction route was closed
-- `scripts/golfdb/tune_joint_structure.py` — the gate, including player-clustered band intervals
+- `archive/golfdb/tune_joint_structure.py` — the gate, including player-clustered band intervals
 
 ---
 
@@ -531,3 +531,22 @@ here" and the References name `scripts/golfdb/`. The archive move rewrites them 
 - the artifacts themselves, including the trajectory models of the first two addenda above, which
   ship and are evaluated the same way;
 - what the four addenda above decided, including the deferral in the last of them.
+
+## Addendum (2026-10-29, M29): the archive move happened, the paths are rewritten, and the `research` extra is gone
+
+The previous addendum's move is done (M29 P33). `scripts/golfdb/`, `scripts/caddieset/`,
+`scripts/hand_landmark_reliability.py`, `scripts/{trigger_replay,pose_replay}.py` and
+`contracts/reference.py` are under `archive/`, and every doc path naming them was rewritten in the same
+change. So **"the paths above are left as they are" is retired**: §1's table and the References name
+`archive/golfdb/` now. The rewrite left one kind of path alone on purpose: provenance recorded inside a
+committed artifact, which says where a number came from when it was made.
+
+**The `research` extra is gone with them.** §1's table and the first addenda still say "the `research`
+extra — numpy, scikit-learn". Read that as the libraries, not a declaration: `archive/README.md` says
+how to install them by hand to run the archive. Fitting still never enters the package, and
+`tests/api/test_pipeline_imports.py` still fails if a `golf_coach.*` module reaches for either
+library.
+
+**Not changed**: the artifacts, which ship and are evaluated as before (by Rust, through
+`include_str!`), and the previous addendum's rule that the first change needing a re-derive also needs
+a decision.

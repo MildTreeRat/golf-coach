@@ -136,7 +136,7 @@ P1 and P2 are independent of each other and of P3. P4 requires both P2 and P3.
 |---|---|---|---|
 | P1 | The overlay draws what is measured ✅ | `pose/overlay.py` | — |
 | P2 | The fixture places the hand landmarks ✅ | `tests/analysis/conftest.py` | — |
-| P3 | Reliability screen at address, face-on ✅ **passed** | `scripts/hand_landmark_reliability.py`, this doc | **the gate** |
+| P3 | Reliability screen at address, face-on ✅ **passed** | `archive/hand_landmark_reliability.py`, this doc | **the gate** |
 | P4 | Two position metrics ✅ | `analysis/measure.py`, `contracts/dispersion.py` | P2 + P3 |
 | P5 | Signed offset and the rotation proxy ✅ | `analysis/measure.py`, `contracts/dispersion.py` | P4 |
 | P6 | Docs reconciled against P3's numbers ✅ | `ROADMAP.md`, `docs/ARCHITECTURE.md`, this doc, `WORKLOG.md` | — |
@@ -158,7 +158,7 @@ membership, never restate it.
 Comment *why* the ear bone is there, or the next reader will tidy it away as redundant.
 
 Every caller (`pose/side_by_side.py`, `api/pipeline.py`, `scripts/run_pose.py`,
-`scripts/analyze_swing.py`, `scripts/golfdb/spot_check.py`) goes through this renderer and needs no
+`scripts/analyze_swing.py`, `archive/golfdb/spot_check.py`) goes through this renderer and needs no
 edit — but **previously rendered `aligned` clips become stale.**
 
 *Verify by looking at it:* run `scripts/run_pose.py` on one face-on clip. Two ear dots joined by a
@@ -208,7 +208,7 @@ one.
 
 ### [x] P3 — Reliability screen at address, face-on (the gate)
 
-A new script, modelled on `scripts/golfdb/tune_landmarks.py` — the same question that produced
+A new script, modelled on `archive/golfdb/tune_landmarks.py` — the same question that produced
 §Phase G's table, asked of the other camera and a different window. Report in §Phase G's shape so
 the two are directly comparable.
 
@@ -234,7 +234,7 @@ Note what a pass does *and does not* license. §Phase G is explicit that this sc
 floor, not a relevance ranking: it answers "is this landmark measurable from this camera", never
 "does this landmark help". The second question is settled by fitting, and it is out of scope here.
 
-**Ran 2026-09-03. It passed, and it was not close.** `scripts/hand_landmark_reliability.py` over
+**Ran 2026-09-03. It passed, and it was not close.** `archive/hand_landmark_reliability.py` over
 all **15 stored face-on swings** — every analyzed swing in the corpus, one right-handed golfer.
 Tracked-frame fraction at `measure.MIN_VISIBILITY` (0.50), pooled over `address_sample_bounds`
 (median 11 frames per clip), in §Phase G's shape. `clips ≥ floor` counts swings individually.

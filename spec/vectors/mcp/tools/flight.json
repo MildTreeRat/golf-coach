@@ -1,0 +1,1487 @@
+{
+  "career_version": 3,
+  "expected": {
+    "results": [
+      {
+        "content": [
+          {
+            "text": "{\n  \"session_id\": \"2026-08-10\",\n  \"swing_id\": \"1\",\n  \"shot_id\": \"2026-08-10-1\",\n  \"club\": null,\n  \"flew\": true,\n  \"source\": \"model:flight_v1\",\n  \"simulated\": [\n    {\n      \"name\": \"flight_carry_yds\",\n      \"value\": 122.41102544850641,\n      \"unit\": \"yards\",\n      \"source\": \"model:flight_v1\",\n      \"detail\": \"SIMULATED carry from the printed launch conditions; not the launch monitor's own carry, which is carry_distance_yds\"\n    },\n    {\n      \"name\": \"flight_apex_yds\",\n      \"value\": 18.5531791898014,\n      \"unit\": \"yards\",\n      \"source\": \"model:flight_v1\",\n      \"detail\": \"SIMULATED peak height above the tee; the screen prints no apex tile at all\"\n    },\n    {\n      \"name\": \"flight_descent_angle_deg\",\n      \"value\": 36.91848018024314,\n      \"unit\": \"degrees\",\n      \"source\": \"model:flight_v1\",\n      \"detail\": \"SIMULATED angle below the horizontal at landing, read off the landing velocity\"\n    },\n    {\n      \"name\": \"flight_time_s\",\n      \"value\": 4.517525291310862,\n      \"unit\": \"seconds\",\n      \"source\": \"model:flight_v1\",\n      \"detail\": \"SIMULATED hang time from launch to landing\"\n    }\n  ],\n  \"reason\": null,\n  \"detail\": \"5991 rpm printed on the screen\",\n  \"unscored\": [\n    {\n      \"name\": \"flight_landing_offline_yds\",\n      \"reason\": \"no_handedness\",\n      \"why\": \"no golfer is attributed, and this checkpoint's sign depends on which side you swing from\",\n      \"detail\": \"a +2.5 deg axis was printed, but '+ = fade' is a right-handed reading and no golfer is attributed to this shot\",\n      \"refilming_helps\": false\n    }\n  ],\n  \"launch\": {\n    \"ball_speed_mph\": 90.7,\n    \"launch_angle_deg\": 20.9,\n    \"spin_rpm\": 5991.0,\n    \"launch_direction_deg\": -5.3,\n    \"spin_axis_deg\": 0.0\n  },\n  \"spin\": {\n    \"rpm\": 5991.0,\n    \"source\": \"measured\",\n    \"case\": null,\n    \"cap_rpm\": null,\n    \"at_cap\": null,\n    \"detail\": \"5991 rpm printed on the screen\"\n  },\n  \"axis\": {\n    \"spin_axis_deg\": null,\n    \"source\": null,\n    \"curve_direction\": \"fade\",\n    \"screen_shape\": null,\n    \"sign_disagrees\": false,\n    \"curve_is_drawn\": false,\n    \"why\": \"a +2.5 deg axis was printed, but '+ = fade' is a right-handed reading and no golfer is attributed to this shot\"\n  },\n  \"comparison\": [\n    {\n      \"simulated_name\": \"flight_carry_yds\",\n      \"measured_name\": \"carry_distance_yds\",\n      \"quantity\": \"down_range\",\n      \"simulated\": 122.41102544850641,\n      \"measured\": 125.6,\n      \"difference\": -3.1889745514935868,\n      \"comparable\": true,\n      \"reading\": \"the screen printed the spin this was flown on, so the carry beside it is an independent measurement and this difference is the model's error on this shot: -3.19 yd, -2.54% against a gate measured at +/-2.59%.\"\n    }\n  ],\n  \"caveats\": [\n    \"every point of this flight sat above the published table, which stops at a spin ratio of 0.284 and was measured on a *driver*. Its end row was held rather than extended, so lift and drag were one constant pair the whole way — and since spin reaches the flight only through the spin ratio and the spin ratio only through those two coefficients, the spin above the clamp does not reach this carry at all. The same ball at 5,200 rpm and at 30,000 rpm flies exactly this far.\",\n    \"the model agrees with HD Golf to +/-2.59% on the two shots where a full launch-condition set and an independent carry are both on disk (`--gate`) — while ranking those two shots backwards. That percentage is therefore the size of what this model cannot see, not a calibration error, and a carry from here is not \\\"accurate to 2.6%\\\".\",\n    \"this flight is drawn in the vertical plane, because nothing on the screen fixes how far the spin axis was tilted (ADR-027 §Decision 5's third branch). The curvature is then zero by construction and the landing offline reduces to `carry * sin(start line)` — which is `shot_measure`'s `start_line_offline_yds` reached by a much longer route, and not a landing point. The curve is missing from it, and on a shot the screen called a fade the curve is most of the lateral miss.\"\n  ],\n  \"differs_from_recorded\": [\n    {\n      \"name\": \"flight_carry_yds\",\n      \"recorded\": null,\n      \"flown\": 122.41102544850641,\n      \"difference\": null\n    },\n    {\n      \"name\": \"flight_apex_yds\",\n      \"recorded\": null,\n      \"flown\": 18.5531791898014,\n      \"difference\": null\n    },\n    {\n      \"name\": \"flight_descent_angle_deg\",\n      \"recorded\": null,\n      \"flown\": 36.91848018024314,\n      \"difference\": null\n    },\n    {\n      \"name\": \"flight_time_s\",\n      \"recorded\": null,\n      \"flown\": 4.517525291310862,\n      \"difference\": null\n    }\n  ],\n  \"recorded_reading\": \"This artifact was written by an older engine, so the difference is the engine and not the shot. Re-analyze the swing to bring the recorded flight up to date.\"\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "axis": {
+              "curve_direction": "fade",
+              "curve_is_drawn": false,
+              "screen_shape": null,
+              "sign_disagrees": false,
+              "source": null,
+              "spin_axis_deg": null,
+              "why": "a +2.5 deg axis was printed, but '+ = fade' is a right-handed reading and no golfer is attributed to this shot"
+            },
+            "caveats": [
+              "every point of this flight sat above the published table, which stops at a spin ratio of 0.284 and was measured on a *driver*. Its end row was held rather than extended, so lift and drag were one constant pair the whole way — and since spin reaches the flight only through the spin ratio and the spin ratio only through those two coefficients, the spin above the clamp does not reach this carry at all. The same ball at 5,200 rpm and at 30,000 rpm flies exactly this far.",
+              "the model agrees with HD Golf to +/-2.59% on the two shots where a full launch-condition set and an independent carry are both on disk (`--gate`) — while ranking those two shots backwards. That percentage is therefore the size of what this model cannot see, not a calibration error, and a carry from here is not \"accurate to 2.6%\".",
+              "this flight is drawn in the vertical plane, because nothing on the screen fixes how far the spin axis was tilted (ADR-027 §Decision 5's third branch). The curvature is then zero by construction and the landing offline reduces to `carry * sin(start line)` — which is `shot_measure`'s `start_line_offline_yds` reached by a much longer route, and not a landing point. The curve is missing from it, and on a shot the screen called a fade the curve is most of the lateral miss."
+            ],
+            "club": null,
+            "comparison": [
+              {
+                "comparable": true,
+                "difference": -3.1889745514935868,
+                "measured": 125.6,
+                "measured_name": "carry_distance_yds",
+                "quantity": "down_range",
+                "reading": "the screen printed the spin this was flown on, so the carry beside it is an independent measurement and this difference is the model's error on this shot: -3.19 yd, -2.54% against a gate measured at +/-2.59%.",
+                "simulated": 122.41102544850641,
+                "simulated_name": "flight_carry_yds"
+              }
+            ],
+            "detail": "5991 rpm printed on the screen",
+            "differs_from_recorded": [
+              {
+                "difference": null,
+                "flown": 122.41102544850641,
+                "name": "flight_carry_yds",
+                "recorded": null
+              },
+              {
+                "difference": null,
+                "flown": 18.5531791898014,
+                "name": "flight_apex_yds",
+                "recorded": null
+              },
+              {
+                "difference": null,
+                "flown": 36.91848018024314,
+                "name": "flight_descent_angle_deg",
+                "recorded": null
+              },
+              {
+                "difference": null,
+                "flown": 4.517525291310862,
+                "name": "flight_time_s",
+                "recorded": null
+              }
+            ],
+            "flew": true,
+            "launch": {
+              "ball_speed_mph": 90.7,
+              "launch_angle_deg": 20.9,
+              "launch_direction_deg": -5.3,
+              "spin_axis_deg": 0.0,
+              "spin_rpm": 5991.0
+            },
+            "reason": null,
+            "recorded_reading": "This artifact was written by an older engine, so the difference is the engine and not the shot. Re-analyze the swing to bring the recorded flight up to date.",
+            "session_id": "2026-08-10",
+            "shot_id": "2026-08-10-1",
+            "simulated": [
+              {
+                "detail": "SIMULATED carry from the printed launch conditions; not the launch monitor's own carry, which is carry_distance_yds",
+                "name": "flight_carry_yds",
+                "source": "model:flight_v1",
+                "unit": "yards",
+                "value": 122.41102544850641
+              },
+              {
+                "detail": "SIMULATED peak height above the tee; the screen prints no apex tile at all",
+                "name": "flight_apex_yds",
+                "source": "model:flight_v1",
+                "unit": "yards",
+                "value": 18.5531791898014
+              },
+              {
+                "detail": "SIMULATED angle below the horizontal at landing, read off the landing velocity",
+                "name": "flight_descent_angle_deg",
+                "source": "model:flight_v1",
+                "unit": "degrees",
+                "value": 36.91848018024314
+              },
+              {
+                "detail": "SIMULATED hang time from launch to landing",
+                "name": "flight_time_s",
+                "source": "model:flight_v1",
+                "unit": "seconds",
+                "value": 4.517525291310862
+              }
+            ],
+            "source": "model:flight_v1",
+            "spin": {
+              "at_cap": null,
+              "cap_rpm": null,
+              "case": null,
+              "detail": "5991 rpm printed on the screen",
+              "rpm": 5991.0,
+              "source": "measured"
+            },
+            "swing_id": "1",
+            "unscored": [
+              {
+                "detail": "a +2.5 deg axis was printed, but '+ = fade' is a right-handed reading and no golfer is attributed to this shot",
+                "name": "flight_landing_offline_yds",
+                "reason": "no_handedness",
+                "refilming_helps": false,
+                "why": "no golfer is attributed, and this checkpoint's sign depends on which side you swing from"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"session_id\": \"2026-08-11\",\n  \"swing_id\": \"1\",\n  \"shot_id\": \"2026-08-10-1\",\n  \"club\": null,\n  \"flew\": true,\n  \"source\": \"model:flight_v1\",\n  \"simulated\": [\n    {\n      \"name\": \"flight_carry_yds\",\n      \"value\": 122.41102544850641,\n      \"unit\": \"yards\",\n      \"source\": \"model:flight_v1\",\n      \"detail\": \"SIMULATED carry from the printed launch conditions; not the launch monitor's own carry, which is carry_distance_yds\"\n    },\n    {\n      \"name\": \"flight_apex_yds\",\n      \"value\": 18.5531791898014,\n      \"unit\": \"yards\",\n      \"source\": \"model:flight_v1\",\n      \"detail\": \"SIMULATED peak height above the tee; the screen prints no apex tile at all\"\n    },\n    {\n      \"name\": \"flight_descent_angle_deg\",\n      \"value\": 36.91848018024314,\n      \"unit\": \"degrees\",\n      \"source\": \"model:flight_v1\",\n      \"detail\": \"SIMULATED angle below the horizontal at landing, read off the landing velocity\"\n    },\n    {\n      \"name\": \"flight_time_s\",\n      \"value\": 4.517525291310862,\n      \"unit\": \"seconds\",\n      \"source\": \"model:flight_v1\",\n      \"detail\": \"SIMULATED hang time from launch to landing\"\n    }\n  ],\n  \"reason\": null,\n  \"detail\": \"5991 rpm printed on the screen\",\n  \"unscored\": [\n    {\n      \"name\": \"flight_landing_offline_yds\",\n      \"reason\": \"no_handedness\",\n      \"why\": \"no golfer is attributed, and this checkpoint's sign depends on which side you swing from\",\n      \"detail\": \"a +2.5 deg axis was printed, but '+ = fade' is a right-handed reading and no golfer is attributed to this shot\",\n      \"refilming_helps\": false\n    }\n  ],\n  \"launch\": {\n    \"ball_speed_mph\": 90.7,\n    \"launch_angle_deg\": 20.9,\n    \"spin_rpm\": 5991.0,\n    \"launch_direction_deg\": -5.3,\n    \"spin_axis_deg\": 0.0\n  },\n  \"spin\": {\n    \"rpm\": 5991.0,\n    \"source\": \"measured\",\n    \"case\": null,\n    \"cap_rpm\": null,\n    \"at_cap\": null,\n    \"detail\": \"5991 rpm printed on the screen\"\n  },\n  \"axis\": {\n    \"spin_axis_deg\": null,\n    \"source\": null,\n    \"curve_direction\": \"fade\",\n    \"screen_shape\": null,\n    \"sign_disagrees\": false,\n    \"curve_is_drawn\": false,\n    \"why\": \"a +2.5 deg axis was printed, but '+ = fade' is a right-handed reading and no golfer is attributed to this shot\"\n  },\n  \"comparison\": [\n    {\n      \"simulated_name\": \"flight_carry_yds\",\n      \"measured_name\": \"carry_distance_yds\",\n      \"quantity\": \"down_range\",\n      \"simulated\": 122.41102544850641,\n      \"measured\": 125.6,\n      \"difference\": -3.1889745514935868,\n      \"comparable\": true,\n      \"reading\": \"the screen printed the spin this was flown on, so the carry beside it is an independent measurement and this difference is the model's error on this shot: -3.19 yd, -2.54% against a gate measured at +/-2.59%.\"\n    }\n  ],\n  \"caveats\": [\n    \"every point of this flight sat above the published table, which stops at a spin ratio of 0.284 and was measured on a *driver*. Its end row was held rather than extended, so lift and drag were one constant pair the whole way — and since spin reaches the flight only through the spin ratio and the spin ratio only through those two coefficients, the spin above the clamp does not reach this carry at all. The same ball at 5,200 rpm and at 30,000 rpm flies exactly this far.\",\n    \"the model agrees with HD Golf to +/-2.59% on the two shots where a full launch-condition set and an independent carry are both on disk (`--gate`) — while ranking those two shots backwards. That percentage is therefore the size of what this model cannot see, not a calibration error, and a carry from here is not \\\"accurate to 2.6%\\\".\",\n    \"this flight is drawn in the vertical plane, because nothing on the screen fixes how far the spin axis was tilted (ADR-027 §Decision 5's third branch). The curvature is then zero by construction and the landing offline reduces to `carry * sin(start line)` — which is `shot_measure`'s `start_line_offline_yds` reached by a much longer route, and not a landing point. The curve is missing from it, and on a shot the screen called a fade the curve is most of the lateral miss.\"\n  ],\n  \"differs_from_recorded\": [\n    {\n      \"name\": \"flight_carry_yds\",\n      \"recorded\": null,\n      \"flown\": 122.41102544850641,\n      \"difference\": null\n    },\n    {\n      \"name\": \"flight_apex_yds\",\n      \"recorded\": null,\n      \"flown\": 18.5531791898014,\n      \"difference\": null\n    },\n    {\n      \"name\": \"flight_descent_angle_deg\",\n      \"recorded\": null,\n      \"flown\": 36.91848018024314,\n      \"difference\": null\n    },\n    {\n      \"name\": \"flight_time_s\",\n      \"recorded\": null,\n      \"flown\": 4.517525291310862,\n      \"difference\": null\n    }\n  ],\n  \"recorded_reading\": \"This artifact was written by an older engine, so the difference is the engine and not the shot. Re-analyze the swing to bring the recorded flight up to date.\"\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "axis": {
+              "curve_direction": "fade",
+              "curve_is_drawn": false,
+              "screen_shape": null,
+              "sign_disagrees": false,
+              "source": null,
+              "spin_axis_deg": null,
+              "why": "a +2.5 deg axis was printed, but '+ = fade' is a right-handed reading and no golfer is attributed to this shot"
+            },
+            "caveats": [
+              "every point of this flight sat above the published table, which stops at a spin ratio of 0.284 and was measured on a *driver*. Its end row was held rather than extended, so lift and drag were one constant pair the whole way — and since spin reaches the flight only through the spin ratio and the spin ratio only through those two coefficients, the spin above the clamp does not reach this carry at all. The same ball at 5,200 rpm and at 30,000 rpm flies exactly this far.",
+              "the model agrees with HD Golf to +/-2.59% on the two shots where a full launch-condition set and an independent carry are both on disk (`--gate`) — while ranking those two shots backwards. That percentage is therefore the size of what this model cannot see, not a calibration error, and a carry from here is not \"accurate to 2.6%\".",
+              "this flight is drawn in the vertical plane, because nothing on the screen fixes how far the spin axis was tilted (ADR-027 §Decision 5's third branch). The curvature is then zero by construction and the landing offline reduces to `carry * sin(start line)` — which is `shot_measure`'s `start_line_offline_yds` reached by a much longer route, and not a landing point. The curve is missing from it, and on a shot the screen called a fade the curve is most of the lateral miss."
+            ],
+            "club": null,
+            "comparison": [
+              {
+                "comparable": true,
+                "difference": -3.1889745514935868,
+                "measured": 125.6,
+                "measured_name": "carry_distance_yds",
+                "quantity": "down_range",
+                "reading": "the screen printed the spin this was flown on, so the carry beside it is an independent measurement and this difference is the model's error on this shot: -3.19 yd, -2.54% against a gate measured at +/-2.59%.",
+                "simulated": 122.41102544850641,
+                "simulated_name": "flight_carry_yds"
+              }
+            ],
+            "detail": "5991 rpm printed on the screen",
+            "differs_from_recorded": [
+              {
+                "difference": null,
+                "flown": 122.41102544850641,
+                "name": "flight_carry_yds",
+                "recorded": null
+              },
+              {
+                "difference": null,
+                "flown": 18.5531791898014,
+                "name": "flight_apex_yds",
+                "recorded": null
+              },
+              {
+                "difference": null,
+                "flown": 36.91848018024314,
+                "name": "flight_descent_angle_deg",
+                "recorded": null
+              },
+              {
+                "difference": null,
+                "flown": 4.517525291310862,
+                "name": "flight_time_s",
+                "recorded": null
+              }
+            ],
+            "flew": true,
+            "launch": {
+              "ball_speed_mph": 90.7,
+              "launch_angle_deg": 20.9,
+              "launch_direction_deg": -5.3,
+              "spin_axis_deg": 0.0,
+              "spin_rpm": 5991.0
+            },
+            "reason": null,
+            "recorded_reading": "This artifact was written by an older engine, so the difference is the engine and not the shot. Re-analyze the swing to bring the recorded flight up to date.",
+            "session_id": "2026-08-11",
+            "shot_id": "2026-08-10-1",
+            "simulated": [
+              {
+                "detail": "SIMULATED carry from the printed launch conditions; not the launch monitor's own carry, which is carry_distance_yds",
+                "name": "flight_carry_yds",
+                "source": "model:flight_v1",
+                "unit": "yards",
+                "value": 122.41102544850641
+              },
+              {
+                "detail": "SIMULATED peak height above the tee; the screen prints no apex tile at all",
+                "name": "flight_apex_yds",
+                "source": "model:flight_v1",
+                "unit": "yards",
+                "value": 18.5531791898014
+              },
+              {
+                "detail": "SIMULATED angle below the horizontal at landing, read off the landing velocity",
+                "name": "flight_descent_angle_deg",
+                "source": "model:flight_v1",
+                "unit": "degrees",
+                "value": 36.91848018024314
+              },
+              {
+                "detail": "SIMULATED hang time from launch to landing",
+                "name": "flight_time_s",
+                "source": "model:flight_v1",
+                "unit": "seconds",
+                "value": 4.517525291310862
+              }
+            ],
+            "source": "model:flight_v1",
+            "spin": {
+              "at_cap": null,
+              "cap_rpm": null,
+              "case": null,
+              "detail": "5991 rpm printed on the screen",
+              "rpm": 5991.0,
+              "source": "measured"
+            },
+            "swing_id": "1",
+            "unscored": [
+              {
+                "detail": "a +2.5 deg axis was printed, but '+ = fade' is a right-handed reading and no golfer is attributed to this shot",
+                "name": "flight_landing_offline_yds",
+                "reason": "no_handedness",
+                "refilming_helps": false,
+                "why": "no golfer is attributed, and this checkpoint's sign depends on which side you swing from"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"session_id\": \"2026-08-12\",\n  \"swing_id\": \"1\",\n  \"shot_id\": \"2026-08-10-1\",\n  \"club\": null,\n  \"flew\": true,\n  \"source\": \"model:flight_v1\",\n  \"simulated\": [\n    {\n      \"name\": \"flight_carry_yds\",\n      \"value\": 122.41102544850641,\n      \"unit\": \"yards\",\n      \"source\": \"model:flight_v1\",\n      \"detail\": \"SIMULATED carry from the printed launch conditions; not the launch monitor's own carry, which is carry_distance_yds\"\n    },\n    {\n      \"name\": \"flight_apex_yds\",\n      \"value\": 18.5531791898014,\n      \"unit\": \"yards\",\n      \"source\": \"model:flight_v1\",\n      \"detail\": \"SIMULATED peak height above the tee; the screen prints no apex tile at all\"\n    },\n    {\n      \"name\": \"flight_descent_angle_deg\",\n      \"value\": 36.91848018024314,\n      \"unit\": \"degrees\",\n      \"source\": \"model:flight_v1\",\n      \"detail\": \"SIMULATED angle below the horizontal at landing, read off the landing velocity\"\n    },\n    {\n      \"name\": \"flight_time_s\",\n      \"value\": 4.517525291310862,\n      \"unit\": \"seconds\",\n      \"source\": \"model:flight_v1\",\n      \"detail\": \"SIMULATED hang time from launch to landing\"\n    }\n  ],\n  \"reason\": null,\n  \"detail\": \"5991 rpm printed on the screen\",\n  \"unscored\": [\n    {\n      \"name\": \"flight_landing_offline_yds\",\n      \"reason\": \"no_handedness\",\n      \"why\": \"no golfer is attributed, and this checkpoint's sign depends on which side you swing from\",\n      \"detail\": \"a +2.5 deg axis was printed, but '+ = fade' is a right-handed reading and no golfer is attributed to this shot\",\n      \"refilming_helps\": false\n    }\n  ],\n  \"launch\": {\n    \"ball_speed_mph\": 90.7,\n    \"launch_angle_deg\": 20.9,\n    \"spin_rpm\": 5991.0,\n    \"launch_direction_deg\": -5.3,\n    \"spin_axis_deg\": 0.0\n  },\n  \"spin\": {\n    \"rpm\": 5991.0,\n    \"source\": \"measured\",\n    \"case\": null,\n    \"cap_rpm\": null,\n    \"at_cap\": null,\n    \"detail\": \"5991 rpm printed on the screen\"\n  },\n  \"axis\": {\n    \"spin_axis_deg\": null,\n    \"source\": null,\n    \"curve_direction\": \"fade\",\n    \"screen_shape\": null,\n    \"sign_disagrees\": false,\n    \"curve_is_drawn\": false,\n    \"why\": \"a +2.5 deg axis was printed, but '+ = fade' is a right-handed reading and no golfer is attributed to this shot\"\n  },\n  \"comparison\": [\n    {\n      \"simulated_name\": \"flight_carry_yds\",\n      \"measured_name\": \"carry_distance_yds\",\n      \"quantity\": \"down_range\",\n      \"simulated\": 122.41102544850641,\n      \"measured\": 125.6,\n      \"difference\": -3.1889745514935868,\n      \"comparable\": true,\n      \"reading\": \"the screen printed the spin this was flown on, so the carry beside it is an independent measurement and this difference is the model's error on this shot: -3.19 yd, -2.54% against a gate measured at +/-2.59%.\"\n    }\n  ],\n  \"caveats\": [\n    \"every point of this flight sat above the published table, which stops at a spin ratio of 0.284 and was measured on a *driver*. Its end row was held rather than extended, so lift and drag were one constant pair the whole way — and since spin reaches the flight only through the spin ratio and the spin ratio only through those two coefficients, the spin above the clamp does not reach this carry at all. The same ball at 5,200 rpm and at 30,000 rpm flies exactly this far.\",\n    \"the model agrees with HD Golf to +/-2.59% on the two shots where a full launch-condition set and an independent carry are both on disk (`--gate`) — while ranking those two shots backwards. That percentage is therefore the size of what this model cannot see, not a calibration error, and a carry from here is not \\\"accurate to 2.6%\\\".\",\n    \"this flight is drawn in the vertical plane, because nothing on the screen fixes how far the spin axis was tilted (ADR-027 §Decision 5's third branch). The curvature is then zero by construction and the landing offline reduces to `carry * sin(start line)` — which is `shot_measure`'s `start_line_offline_yds` reached by a much longer route, and not a landing point. The curve is missing from it, and on a shot the screen called a fade the curve is most of the lateral miss.\"\n  ],\n  \"differs_from_recorded\": [\n    {\n      \"name\": \"flight_carry_yds\",\n      \"recorded\": null,\n      \"flown\": 122.41102544850641,\n      \"difference\": null\n    },\n    {\n      \"name\": \"flight_apex_yds\",\n      \"recorded\": null,\n      \"flown\": 18.5531791898014,\n      \"difference\": null\n    },\n    {\n      \"name\": \"flight_descent_angle_deg\",\n      \"recorded\": null,\n      \"flown\": 36.91848018024314,\n      \"difference\": null\n    },\n    {\n      \"name\": \"flight_time_s\",\n      \"recorded\": null,\n      \"flown\": 4.517525291310862,\n      \"difference\": null\n    }\n  ],\n  \"recorded_reading\": \"This artifact was written by an older engine, so the difference is the engine and not the shot. Re-analyze the swing to bring the recorded flight up to date.\"\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "axis": {
+              "curve_direction": "fade",
+              "curve_is_drawn": false,
+              "screen_shape": null,
+              "sign_disagrees": false,
+              "source": null,
+              "spin_axis_deg": null,
+              "why": "a +2.5 deg axis was printed, but '+ = fade' is a right-handed reading and no golfer is attributed to this shot"
+            },
+            "caveats": [
+              "every point of this flight sat above the published table, which stops at a spin ratio of 0.284 and was measured on a *driver*. Its end row was held rather than extended, so lift and drag were one constant pair the whole way — and since spin reaches the flight only through the spin ratio and the spin ratio only through those two coefficients, the spin above the clamp does not reach this carry at all. The same ball at 5,200 rpm and at 30,000 rpm flies exactly this far.",
+              "the model agrees with HD Golf to +/-2.59% on the two shots where a full launch-condition set and an independent carry are both on disk (`--gate`) — while ranking those two shots backwards. That percentage is therefore the size of what this model cannot see, not a calibration error, and a carry from here is not \"accurate to 2.6%\".",
+              "this flight is drawn in the vertical plane, because nothing on the screen fixes how far the spin axis was tilted (ADR-027 §Decision 5's third branch). The curvature is then zero by construction and the landing offline reduces to `carry * sin(start line)` — which is `shot_measure`'s `start_line_offline_yds` reached by a much longer route, and not a landing point. The curve is missing from it, and on a shot the screen called a fade the curve is most of the lateral miss."
+            ],
+            "club": null,
+            "comparison": [
+              {
+                "comparable": true,
+                "difference": -3.1889745514935868,
+                "measured": 125.6,
+                "measured_name": "carry_distance_yds",
+                "quantity": "down_range",
+                "reading": "the screen printed the spin this was flown on, so the carry beside it is an independent measurement and this difference is the model's error on this shot: -3.19 yd, -2.54% against a gate measured at +/-2.59%.",
+                "simulated": 122.41102544850641,
+                "simulated_name": "flight_carry_yds"
+              }
+            ],
+            "detail": "5991 rpm printed on the screen",
+            "differs_from_recorded": [
+              {
+                "difference": null,
+                "flown": 122.41102544850641,
+                "name": "flight_carry_yds",
+                "recorded": null
+              },
+              {
+                "difference": null,
+                "flown": 18.5531791898014,
+                "name": "flight_apex_yds",
+                "recorded": null
+              },
+              {
+                "difference": null,
+                "flown": 36.91848018024314,
+                "name": "flight_descent_angle_deg",
+                "recorded": null
+              },
+              {
+                "difference": null,
+                "flown": 4.517525291310862,
+                "name": "flight_time_s",
+                "recorded": null
+              }
+            ],
+            "flew": true,
+            "launch": {
+              "ball_speed_mph": 90.7,
+              "launch_angle_deg": 20.9,
+              "launch_direction_deg": -5.3,
+              "spin_axis_deg": 0.0,
+              "spin_rpm": 5991.0
+            },
+            "reason": null,
+            "recorded_reading": "This artifact was written by an older engine, so the difference is the engine and not the shot. Re-analyze the swing to bring the recorded flight up to date.",
+            "session_id": "2026-08-12",
+            "shot_id": "2026-08-10-1",
+            "simulated": [
+              {
+                "detail": "SIMULATED carry from the printed launch conditions; not the launch monitor's own carry, which is carry_distance_yds",
+                "name": "flight_carry_yds",
+                "source": "model:flight_v1",
+                "unit": "yards",
+                "value": 122.41102544850641
+              },
+              {
+                "detail": "SIMULATED peak height above the tee; the screen prints no apex tile at all",
+                "name": "flight_apex_yds",
+                "source": "model:flight_v1",
+                "unit": "yards",
+                "value": 18.5531791898014
+              },
+              {
+                "detail": "SIMULATED angle below the horizontal at landing, read off the landing velocity",
+                "name": "flight_descent_angle_deg",
+                "source": "model:flight_v1",
+                "unit": "degrees",
+                "value": 36.91848018024314
+              },
+              {
+                "detail": "SIMULATED hang time from launch to landing",
+                "name": "flight_time_s",
+                "source": "model:flight_v1",
+                "unit": "seconds",
+                "value": 4.517525291310862
+              }
+            ],
+            "source": "model:flight_v1",
+            "spin": {
+              "at_cap": null,
+              "cap_rpm": null,
+              "case": null,
+              "detail": "5991 rpm printed on the screen",
+              "rpm": 5991.0,
+              "source": "measured"
+            },
+            "swing_id": "1",
+            "unscored": [
+              {
+                "detail": "a +2.5 deg axis was printed, but '+ = fade' is a right-handed reading and no golfer is attributed to this shot",
+                "name": "flight_landing_offline_yds",
+                "reason": "no_handedness",
+                "refilming_helps": false,
+                "why": "no golfer is attributed, and this checkpoint's sign depends on which side you swing from"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"session_id\": \"2026-08-13\",\n  \"swing_id\": \"1\",\n  \"shot_id\": null,\n  \"club\": null,\n  \"flew\": false,\n  \"source\": \"model:flight_v1\",\n  \"simulated\": [],\n  \"reason\": null,\n  \"detail\": \"This swing has no shot-screen photo, so there are no launch conditions to fly. Ball flight is simulated from what the launch monitor printed, never from the video.\",\n  \"unscored\": [],\n  \"launch\": null,\n  \"spin\": null,\n  \"axis\": null,\n  \"comparison\": [],\n  \"caveats\": [],\n  \"differs_from_recorded\": [],\n  \"recorded_reading\": \"\"\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "axis": null,
+            "caveats": [],
+            "club": null,
+            "comparison": [],
+            "detail": "This swing has no shot-screen photo, so there are no launch conditions to fly. Ball flight is simulated from what the launch monitor printed, never from the video.",
+            "differs_from_recorded": [],
+            "flew": false,
+            "launch": null,
+            "reason": null,
+            "recorded_reading": "",
+            "session_id": "2026-08-13",
+            "shot_id": null,
+            "simulated": [],
+            "source": "model:flight_v1",
+            "spin": null,
+            "swing_id": "1",
+            "unscored": []
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"session_id\": \"2026-08-14\",\n  \"swing_id\": \"1\",\n  \"shot_id\": \"2026-08-14-1\",\n  \"club\": null,\n  \"flew\": true,\n  \"source\": \"model:flight_v1\",\n  \"simulated\": [\n    {\n      \"name\": \"flight_carry_yds\",\n      \"value\": 122.41102544850641,\n      \"unit\": \"yards\",\n      \"source\": \"model:flight_v1\",\n      \"detail\": \"SIMULATED carry from the printed launch conditions; not the launch monitor's own carry, which is carry_distance_yds\"\n    },\n    {\n      \"name\": \"flight_apex_yds\",\n      \"value\": 18.5531791898014,\n      \"unit\": \"yards\",\n      \"source\": \"model:flight_v1\",\n      \"detail\": \"SIMULATED peak height above the tee; the screen prints no apex tile at all\"\n    },\n    {\n      \"name\": \"flight_descent_angle_deg\",\n      \"value\": 36.91848018024314,\n      \"unit\": \"degrees\",\n      \"source\": \"model:flight_v1\",\n      \"detail\": \"SIMULATED angle below the horizontal at landing, read off the landing velocity\"\n    },\n    {\n      \"name\": \"flight_time_s\",\n      \"value\": 4.517525291310862,\n      \"unit\": \"seconds\",\n      \"source\": \"model:flight_v1\",\n      \"detail\": \"SIMULATED hang time from launch to landing\"\n    }\n  ],\n  \"reason\": null,\n  \"detail\": \"5991 rpm printed on the screen\",\n  \"unscored\": [\n    {\n      \"name\": \"flight_landing_offline_yds\",\n      \"reason\": \"no_handedness\",\n      \"why\": \"no golfer is attributed, and this checkpoint's sign depends on which side you swing from\",\n      \"detail\": \"a +2.5 deg axis was printed, but '+ = fade' is a right-handed reading and no golfer is attributed to this shot\",\n      \"refilming_helps\": false\n    }\n  ],\n  \"launch\": {\n    \"ball_speed_mph\": 90.7,\n    \"launch_angle_deg\": 20.9,\n    \"spin_rpm\": 5991.0,\n    \"launch_direction_deg\": -5.3,\n    \"spin_axis_deg\": 0.0\n  },\n  \"spin\": {\n    \"rpm\": 5991.0,\n    \"source\": \"measured\",\n    \"case\": null,\n    \"cap_rpm\": null,\n    \"at_cap\": null,\n    \"detail\": \"5991 rpm printed on the screen\"\n  },\n  \"axis\": {\n    \"spin_axis_deg\": null,\n    \"source\": null,\n    \"curve_direction\": \"fade\",\n    \"screen_shape\": null,\n    \"sign_disagrees\": false,\n    \"curve_is_drawn\": false,\n    \"why\": \"a +2.5 deg axis was printed, but '+ = fade' is a right-handed reading and no golfer is attributed to this shot\"\n  },\n  \"comparison\": [\n    {\n      \"simulated_name\": \"flight_carry_yds\",\n      \"measured_name\": \"carry_distance_yds\",\n      \"quantity\": \"down_range\",\n      \"simulated\": 122.41102544850641,\n      \"measured\": 125.6,\n      \"difference\": -3.1889745514935868,\n      \"comparable\": true,\n      \"reading\": \"the screen printed the spin this was flown on, so the carry beside it is an independent measurement and this difference is the model's error on this shot: -3.19 yd, -2.54% against a gate measured at +/-2.59%.\"\n    }\n  ],\n  \"caveats\": [\n    \"every point of this flight sat above the published table, which stops at a spin ratio of 0.284 and was measured on a *driver*. Its end row was held rather than extended, so lift and drag were one constant pair the whole way — and since spin reaches the flight only through the spin ratio and the spin ratio only through those two coefficients, the spin above the clamp does not reach this carry at all. The same ball at 5,200 rpm and at 30,000 rpm flies exactly this far.\",\n    \"the model agrees with HD Golf to +/-2.59% on the two shots where a full launch-condition set and an independent carry are both on disk (`--gate`) — while ranking those two shots backwards. That percentage is therefore the size of what this model cannot see, not a calibration error, and a carry from here is not \\\"accurate to 2.6%\\\".\",\n    \"this flight is drawn in the vertical plane, because nothing on the screen fixes how far the spin axis was tilted (ADR-027 §Decision 5's third branch). The curvature is then zero by construction and the landing offline reduces to `carry * sin(start line)` — which is `shot_measure`'s `start_line_offline_yds` reached by a much longer route, and not a landing point. The curve is missing from it, and on a shot the screen called a fade the curve is most of the lateral miss.\"\n  ],\n  \"differs_from_recorded\": [],\n  \"recorded_reading\": \"\"\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "axis": {
+              "curve_direction": "fade",
+              "curve_is_drawn": false,
+              "screen_shape": null,
+              "sign_disagrees": false,
+              "source": null,
+              "spin_axis_deg": null,
+              "why": "a +2.5 deg axis was printed, but '+ = fade' is a right-handed reading and no golfer is attributed to this shot"
+            },
+            "caveats": [
+              "every point of this flight sat above the published table, which stops at a spin ratio of 0.284 and was measured on a *driver*. Its end row was held rather than extended, so lift and drag were one constant pair the whole way — and since spin reaches the flight only through the spin ratio and the spin ratio only through those two coefficients, the spin above the clamp does not reach this carry at all. The same ball at 5,200 rpm and at 30,000 rpm flies exactly this far.",
+              "the model agrees with HD Golf to +/-2.59% on the two shots where a full launch-condition set and an independent carry are both on disk (`--gate`) — while ranking those two shots backwards. That percentage is therefore the size of what this model cannot see, not a calibration error, and a carry from here is not \"accurate to 2.6%\".",
+              "this flight is drawn in the vertical plane, because nothing on the screen fixes how far the spin axis was tilted (ADR-027 §Decision 5's third branch). The curvature is then zero by construction and the landing offline reduces to `carry * sin(start line)` — which is `shot_measure`'s `start_line_offline_yds` reached by a much longer route, and not a landing point. The curve is missing from it, and on a shot the screen called a fade the curve is most of the lateral miss."
+            ],
+            "club": null,
+            "comparison": [
+              {
+                "comparable": true,
+                "difference": -3.1889745514935868,
+                "measured": 125.6,
+                "measured_name": "carry_distance_yds",
+                "quantity": "down_range",
+                "reading": "the screen printed the spin this was flown on, so the carry beside it is an independent measurement and this difference is the model's error on this shot: -3.19 yd, -2.54% against a gate measured at +/-2.59%.",
+                "simulated": 122.41102544850641,
+                "simulated_name": "flight_carry_yds"
+              }
+            ],
+            "detail": "5991 rpm printed on the screen",
+            "differs_from_recorded": [],
+            "flew": true,
+            "launch": {
+              "ball_speed_mph": 90.7,
+              "launch_angle_deg": 20.9,
+              "launch_direction_deg": -5.3,
+              "spin_axis_deg": 0.0,
+              "spin_rpm": 5991.0
+            },
+            "reason": null,
+            "recorded_reading": "",
+            "session_id": "2026-08-14",
+            "shot_id": "2026-08-14-1",
+            "simulated": [
+              {
+                "detail": "SIMULATED carry from the printed launch conditions; not the launch monitor's own carry, which is carry_distance_yds",
+                "name": "flight_carry_yds",
+                "source": "model:flight_v1",
+                "unit": "yards",
+                "value": 122.41102544850641
+              },
+              {
+                "detail": "SIMULATED peak height above the tee; the screen prints no apex tile at all",
+                "name": "flight_apex_yds",
+                "source": "model:flight_v1",
+                "unit": "yards",
+                "value": 18.5531791898014
+              },
+              {
+                "detail": "SIMULATED angle below the horizontal at landing, read off the landing velocity",
+                "name": "flight_descent_angle_deg",
+                "source": "model:flight_v1",
+                "unit": "degrees",
+                "value": 36.91848018024314
+              },
+              {
+                "detail": "SIMULATED hang time from launch to landing",
+                "name": "flight_time_s",
+                "source": "model:flight_v1",
+                "unit": "seconds",
+                "value": 4.517525291310862
+              }
+            ],
+            "source": "model:flight_v1",
+            "spin": {
+              "at_cap": null,
+              "cap_rpm": null,
+              "case": null,
+              "detail": "5991 rpm printed on the screen",
+              "rpm": 5991.0,
+              "source": "measured"
+            },
+            "swing_id": "1",
+            "unscored": [
+              {
+                "detail": "a +2.5 deg axis was printed, but '+ = fade' is a right-handed reading and no golfer is attributed to this shot",
+                "name": "flight_landing_offline_yds",
+                "reason": "no_handedness",
+                "refilming_helps": false,
+                "why": "no golfer is attributed, and this checkpoint's sign depends on which side you swing from"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"session_id\": \"2026-08-15\",\n  \"swing_id\": \"1\",\n  \"shot_id\": \"2026-08-15-1\",\n  \"club\": \"7i\",\n  \"flew\": true,\n  \"source\": \"model:flight_v1\",\n  \"simulated\": [\n    {\n      \"name\": \"flight_carry_yds\",\n      \"value\": 122.41102544850641,\n      \"unit\": \"yards\",\n      \"source\": \"model:flight_v1\",\n      \"detail\": \"SIMULATED carry from the printed launch conditions; not the launch monitor's own carry, which is carry_distance_yds\"\n    },\n    {\n      \"name\": \"flight_apex_yds\",\n      \"value\": 18.5531791898014,\n      \"unit\": \"yards\",\n      \"source\": \"model:flight_v1\",\n      \"detail\": \"SIMULATED peak height above the tee; the screen prints no apex tile at all\"\n    },\n    {\n      \"name\": \"flight_descent_angle_deg\",\n      \"value\": 36.91848018024314,\n      \"unit\": \"degrees\",\n      \"source\": \"model:flight_v1\",\n      \"detail\": \"SIMULATED angle below the horizontal at landing, read off the landing velocity\"\n    },\n    {\n      \"name\": \"flight_time_s\",\n      \"value\": 4.517525291310862,\n      \"unit\": \"seconds\",\n      \"source\": \"model:flight_v1\",\n      \"detail\": \"SIMULATED hang time from launch to landing\"\n    }\n  ],\n  \"reason\": null,\n  \"detail\": \"5991 rpm printed on the screen\",\n  \"unscored\": [\n    {\n      \"name\": \"flight_landing_offline_yds\",\n      \"reason\": \"no_handedness\",\n      \"why\": \"no golfer is attributed, and this checkpoint's sign depends on which side you swing from\",\n      \"detail\": \"a +2.5 deg axis was printed, but '+ = fade' is a right-handed reading and no golfer is attributed to this shot\",\n      \"refilming_helps\": false\n    }\n  ],\n  \"launch\": {\n    \"ball_speed_mph\": 90.7,\n    \"launch_angle_deg\": 20.9,\n    \"spin_rpm\": 5991.0,\n    \"launch_direction_deg\": -5.3,\n    \"spin_axis_deg\": 0.0\n  },\n  \"spin\": {\n    \"rpm\": 5991.0,\n    \"source\": \"measured\",\n    \"case\": null,\n    \"cap_rpm\": null,\n    \"at_cap\": null,\n    \"detail\": \"5991 rpm printed on the screen\"\n  },\n  \"axis\": {\n    \"spin_axis_deg\": null,\n    \"source\": null,\n    \"curve_direction\": \"fade\",\n    \"screen_shape\": null,\n    \"sign_disagrees\": false,\n    \"curve_is_drawn\": false,\n    \"why\": \"a +2.5 deg axis was printed, but '+ = fade' is a right-handed reading and no golfer is attributed to this shot\"\n  },\n  \"comparison\": [\n    {\n      \"simulated_name\": \"flight_carry_yds\",\n      \"measured_name\": \"carry_distance_yds\",\n      \"quantity\": \"down_range\",\n      \"simulated\": 122.41102544850641,\n      \"measured\": 125.6,\n      \"difference\": -3.1889745514935868,\n      \"comparable\": true,\n      \"reading\": \"the screen printed the spin this was flown on, so the carry beside it is an independent measurement and this difference is the model's error on this shot: -3.19 yd, -2.54% against a gate measured at +/-2.59%.\"\n    }\n  ],\n  \"caveats\": [\n    \"every point of this flight sat above the published table, which stops at a spin ratio of 0.284 and was measured on a *driver*. Its end row was held rather than extended, so lift and drag were one constant pair the whole way — and since spin reaches the flight only through the spin ratio and the spin ratio only through those two coefficients, the spin above the clamp does not reach this carry at all. The same ball at 5,200 rpm and at 30,000 rpm flies exactly this far.\",\n    \"the model agrees with HD Golf to +/-2.59% on the two shots where a full launch-condition set and an independent carry are both on disk (`--gate`) — while ranking those two shots backwards. That percentage is therefore the size of what this model cannot see, not a calibration error, and a carry from here is not \\\"accurate to 2.6%\\\".\",\n    \"this flight is drawn in the vertical plane, because nothing on the screen fixes how far the spin axis was tilted (ADR-027 §Decision 5's third branch). The curvature is then zero by construction and the landing offline reduces to `carry * sin(start line)` — which is `shot_measure`'s `start_line_offline_yds` reached by a much longer route, and not a landing point. The curve is missing from it, and on a shot the screen called a fade the curve is most of the lateral miss.\"\n  ],\n  \"differs_from_recorded\": [\n    {\n      \"name\": \"flight_carry_yds\",\n      \"recorded\": 99.0,\n      \"flown\": 122.41102544850641,\n      \"difference\": 23.411\n    }\n  ],\n  \"recorded_reading\": \"This artifact is current, so the difference is an input that lives outside it: the club's declared loft or the golfer's handedness was edited after the swing was analyzed. Nothing about the swing changed, and re-analyzing it is what makes the stored numbers agree again.\"\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "axis": {
+              "curve_direction": "fade",
+              "curve_is_drawn": false,
+              "screen_shape": null,
+              "sign_disagrees": false,
+              "source": null,
+              "spin_axis_deg": null,
+              "why": "a +2.5 deg axis was printed, but '+ = fade' is a right-handed reading and no golfer is attributed to this shot"
+            },
+            "caveats": [
+              "every point of this flight sat above the published table, which stops at a spin ratio of 0.284 and was measured on a *driver*. Its end row was held rather than extended, so lift and drag were one constant pair the whole way — and since spin reaches the flight only through the spin ratio and the spin ratio only through those two coefficients, the spin above the clamp does not reach this carry at all. The same ball at 5,200 rpm and at 30,000 rpm flies exactly this far.",
+              "the model agrees with HD Golf to +/-2.59% on the two shots where a full launch-condition set and an independent carry are both on disk (`--gate`) — while ranking those two shots backwards. That percentage is therefore the size of what this model cannot see, not a calibration error, and a carry from here is not \"accurate to 2.6%\".",
+              "this flight is drawn in the vertical plane, because nothing on the screen fixes how far the spin axis was tilted (ADR-027 §Decision 5's third branch). The curvature is then zero by construction and the landing offline reduces to `carry * sin(start line)` — which is `shot_measure`'s `start_line_offline_yds` reached by a much longer route, and not a landing point. The curve is missing from it, and on a shot the screen called a fade the curve is most of the lateral miss."
+            ],
+            "club": "7i",
+            "comparison": [
+              {
+                "comparable": true,
+                "difference": -3.1889745514935868,
+                "measured": 125.6,
+                "measured_name": "carry_distance_yds",
+                "quantity": "down_range",
+                "reading": "the screen printed the spin this was flown on, so the carry beside it is an independent measurement and this difference is the model's error on this shot: -3.19 yd, -2.54% against a gate measured at +/-2.59%.",
+                "simulated": 122.41102544850641,
+                "simulated_name": "flight_carry_yds"
+              }
+            ],
+            "detail": "5991 rpm printed on the screen",
+            "differs_from_recorded": [
+              {
+                "difference": 23.411,
+                "flown": 122.41102544850641,
+                "name": "flight_carry_yds",
+                "recorded": 99.0
+              }
+            ],
+            "flew": true,
+            "launch": {
+              "ball_speed_mph": 90.7,
+              "launch_angle_deg": 20.9,
+              "launch_direction_deg": -5.3,
+              "spin_axis_deg": 0.0,
+              "spin_rpm": 5991.0
+            },
+            "reason": null,
+            "recorded_reading": "This artifact is current, so the difference is an input that lives outside it: the club's declared loft or the golfer's handedness was edited after the swing was analyzed. Nothing about the swing changed, and re-analyzing it is what makes the stored numbers agree again.",
+            "session_id": "2026-08-15",
+            "shot_id": "2026-08-15-1",
+            "simulated": [
+              {
+                "detail": "SIMULATED carry from the printed launch conditions; not the launch monitor's own carry, which is carry_distance_yds",
+                "name": "flight_carry_yds",
+                "source": "model:flight_v1",
+                "unit": "yards",
+                "value": 122.41102544850641
+              },
+              {
+                "detail": "SIMULATED peak height above the tee; the screen prints no apex tile at all",
+                "name": "flight_apex_yds",
+                "source": "model:flight_v1",
+                "unit": "yards",
+                "value": 18.5531791898014
+              },
+              {
+                "detail": "SIMULATED angle below the horizontal at landing, read off the landing velocity",
+                "name": "flight_descent_angle_deg",
+                "source": "model:flight_v1",
+                "unit": "degrees",
+                "value": 36.91848018024314
+              },
+              {
+                "detail": "SIMULATED hang time from launch to landing",
+                "name": "flight_time_s",
+                "source": "model:flight_v1",
+                "unit": "seconds",
+                "value": 4.517525291310862
+              }
+            ],
+            "source": "model:flight_v1",
+            "spin": {
+              "at_cap": null,
+              "cap_rpm": null,
+              "case": null,
+              "detail": "5991 rpm printed on the screen",
+              "rpm": 5991.0,
+              "source": "measured"
+            },
+            "swing_id": "1",
+            "unscored": [
+              {
+                "detail": "a +2.5 deg axis was printed, but '+ = fade' is a right-handed reading and no golfer is attributed to this shot",
+                "name": "flight_landing_offline_yds",
+                "reason": "no_handedness",
+                "refilming_helps": false,
+                "why": "no golfer is attributed, and this checkpoint's sign depends on which side you swing from"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"session_id\": \"2026-08-16\",\n  \"swing_id\": \"1\",\n  \"shot_id\": \"2026-08-16-1\",\n  \"club\": null,\n  \"flew\": true,\n  \"source\": \"model:flight_v1\",\n  \"simulated\": [\n    {\n      \"name\": \"flight_carry_yds\",\n      \"value\": 122.41102544850641,\n      \"unit\": \"yards\",\n      \"source\": \"model:flight_v1\",\n      \"detail\": \"SIMULATED carry from the printed launch conditions; not the launch monitor's own carry, which is carry_distance_yds\"\n    },\n    {\n      \"name\": \"flight_apex_yds\",\n      \"value\": 18.5531791898014,\n      \"unit\": \"yards\",\n      \"source\": \"model:flight_v1\",\n      \"detail\": \"SIMULATED peak height above the tee; the screen prints no apex tile at all\"\n    },\n    {\n      \"name\": \"flight_descent_angle_deg\",\n      \"value\": 36.91848018024314,\n      \"unit\": \"degrees\",\n      \"source\": \"model:flight_v1\",\n      \"detail\": \"SIMULATED angle below the horizontal at landing, read off the landing velocity\"\n    },\n    {\n      \"name\": \"flight_time_s\",\n      \"value\": 4.517525291310862,\n      \"unit\": \"seconds\",\n      \"source\": \"model:flight_v1\",\n      \"detail\": \"SIMULATED hang time from launch to landing\"\n    }\n  ],\n  \"reason\": null,\n  \"detail\": \"5991 rpm printed on the screen\",\n  \"unscored\": [\n    {\n      \"name\": \"flight_landing_offline_yds\",\n      \"reason\": \"no_handedness\",\n      \"why\": \"no golfer is attributed, and this checkpoint's sign depends on which side you swing from\",\n      \"detail\": \"a +2.5 deg axis was printed, but '+ = fade' is a right-handed reading and no golfer is attributed to this shot\",\n      \"refilming_helps\": false\n    }\n  ],\n  \"launch\": {\n    \"ball_speed_mph\": 90.7,\n    \"launch_angle_deg\": 20.9,\n    \"spin_rpm\": 5991.0,\n    \"launch_direction_deg\": -5.3,\n    \"spin_axis_deg\": 0.0\n  },\n  \"spin\": {\n    \"rpm\": 5991.0,\n    \"source\": \"measured\",\n    \"case\": null,\n    \"cap_rpm\": null,\n    \"at_cap\": null,\n    \"detail\": \"5991 rpm printed on the screen\"\n  },\n  \"axis\": {\n    \"spin_axis_deg\": null,\n    \"source\": null,\n    \"curve_direction\": \"fade\",\n    \"screen_shape\": null,\n    \"sign_disagrees\": false,\n    \"curve_is_drawn\": false,\n    \"why\": \"a +2.5 deg axis was printed, but '+ = fade' is a right-handed reading and no golfer is attributed to this shot\"\n  },\n  \"comparison\": [\n    {\n      \"simulated_name\": \"flight_carry_yds\",\n      \"measured_name\": \"carry_distance_yds\",\n      \"quantity\": \"down_range\",\n      \"simulated\": 122.41102544850641,\n      \"measured\": 125.6,\n      \"difference\": -3.1889745514935868,\n      \"comparable\": true,\n      \"reading\": \"the screen printed the spin this was flown on, so the carry beside it is an independent measurement and this difference is the model's error on this shot: -3.19 yd, -2.54% against a gate measured at +/-2.59%.\"\n    }\n  ],\n  \"caveats\": [\n    \"every point of this flight sat above the published table, which stops at a spin ratio of 0.284 and was measured on a *driver*. Its end row was held rather than extended, so lift and drag were one constant pair the whole way — and since spin reaches the flight only through the spin ratio and the spin ratio only through those two coefficients, the spin above the clamp does not reach this carry at all. The same ball at 5,200 rpm and at 30,000 rpm flies exactly this far.\",\n    \"the model agrees with HD Golf to +/-2.59% on the two shots where a full launch-condition set and an independent carry are both on disk (`--gate`) — while ranking those two shots backwards. That percentage is therefore the size of what this model cannot see, not a calibration error, and a carry from here is not \\\"accurate to 2.6%\\\".\",\n    \"this flight is drawn in the vertical plane, because nothing on the screen fixes how far the spin axis was tilted (ADR-027 §Decision 5's third branch). The curvature is then zero by construction and the landing offline reduces to `carry * sin(start line)` — which is `shot_measure`'s `start_line_offline_yds` reached by a much longer route, and not a landing point. The curve is missing from it, and on a shot the screen called a fade the curve is most of the lateral miss.\"\n  ],\n  \"differs_from_recorded\": [\n    {\n      \"name\": \"flight_carry_yds\",\n      \"recorded\": 99.0,\n      \"flown\": 122.41102544850641,\n      \"difference\": 23.411\n    }\n  ],\n  \"recorded_reading\": \"This artifact was written by an older engine, so the difference is the engine and not the shot. Re-analyze the swing to bring the recorded flight up to date.\"\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "axis": {
+              "curve_direction": "fade",
+              "curve_is_drawn": false,
+              "screen_shape": null,
+              "sign_disagrees": false,
+              "source": null,
+              "spin_axis_deg": null,
+              "why": "a +2.5 deg axis was printed, but '+ = fade' is a right-handed reading and no golfer is attributed to this shot"
+            },
+            "caveats": [
+              "every point of this flight sat above the published table, which stops at a spin ratio of 0.284 and was measured on a *driver*. Its end row was held rather than extended, so lift and drag were one constant pair the whole way — and since spin reaches the flight only through the spin ratio and the spin ratio only through those two coefficients, the spin above the clamp does not reach this carry at all. The same ball at 5,200 rpm and at 30,000 rpm flies exactly this far.",
+              "the model agrees with HD Golf to +/-2.59% on the two shots where a full launch-condition set and an independent carry are both on disk (`--gate`) — while ranking those two shots backwards. That percentage is therefore the size of what this model cannot see, not a calibration error, and a carry from here is not \"accurate to 2.6%\".",
+              "this flight is drawn in the vertical plane, because nothing on the screen fixes how far the spin axis was tilted (ADR-027 §Decision 5's third branch). The curvature is then zero by construction and the landing offline reduces to `carry * sin(start line)` — which is `shot_measure`'s `start_line_offline_yds` reached by a much longer route, and not a landing point. The curve is missing from it, and on a shot the screen called a fade the curve is most of the lateral miss."
+            ],
+            "club": null,
+            "comparison": [
+              {
+                "comparable": true,
+                "difference": -3.1889745514935868,
+                "measured": 125.6,
+                "measured_name": "carry_distance_yds",
+                "quantity": "down_range",
+                "reading": "the screen printed the spin this was flown on, so the carry beside it is an independent measurement and this difference is the model's error on this shot: -3.19 yd, -2.54% against a gate measured at +/-2.59%.",
+                "simulated": 122.41102544850641,
+                "simulated_name": "flight_carry_yds"
+              }
+            ],
+            "detail": "5991 rpm printed on the screen",
+            "differs_from_recorded": [
+              {
+                "difference": 23.411,
+                "flown": 122.41102544850641,
+                "name": "flight_carry_yds",
+                "recorded": 99.0
+              }
+            ],
+            "flew": true,
+            "launch": {
+              "ball_speed_mph": 90.7,
+              "launch_angle_deg": 20.9,
+              "launch_direction_deg": -5.3,
+              "spin_axis_deg": 0.0,
+              "spin_rpm": 5991.0
+            },
+            "reason": null,
+            "recorded_reading": "This artifact was written by an older engine, so the difference is the engine and not the shot. Re-analyze the swing to bring the recorded flight up to date.",
+            "session_id": "2026-08-16",
+            "shot_id": "2026-08-16-1",
+            "simulated": [
+              {
+                "detail": "SIMULATED carry from the printed launch conditions; not the launch monitor's own carry, which is carry_distance_yds",
+                "name": "flight_carry_yds",
+                "source": "model:flight_v1",
+                "unit": "yards",
+                "value": 122.41102544850641
+              },
+              {
+                "detail": "SIMULATED peak height above the tee; the screen prints no apex tile at all",
+                "name": "flight_apex_yds",
+                "source": "model:flight_v1",
+                "unit": "yards",
+                "value": 18.5531791898014
+              },
+              {
+                "detail": "SIMULATED angle below the horizontal at landing, read off the landing velocity",
+                "name": "flight_descent_angle_deg",
+                "source": "model:flight_v1",
+                "unit": "degrees",
+                "value": 36.91848018024314
+              },
+              {
+                "detail": "SIMULATED hang time from launch to landing",
+                "name": "flight_time_s",
+                "source": "model:flight_v1",
+                "unit": "seconds",
+                "value": 4.517525291310862
+              }
+            ],
+            "source": "model:flight_v1",
+            "spin": {
+              "at_cap": null,
+              "cap_rpm": null,
+              "case": null,
+              "detail": "5991 rpm printed on the screen",
+              "rpm": 5991.0,
+              "source": "measured"
+            },
+            "swing_id": "1",
+            "unscored": [
+              {
+                "detail": "a +2.5 deg axis was printed, but '+ = fade' is a right-handed reading and no golfer is attributed to this shot",
+                "name": "flight_landing_offline_yds",
+                "reason": "no_handedness",
+                "refilming_helps": false,
+                "why": "no golfer is attributed, and this checkpoint's sign depends on which side you swing from"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"session_id\": \"2026-08-17\",\n  \"swing_id\": \"1\",\n  \"shot_id\": \"2026-08-17-1\",\n  \"club\": null,\n  \"flew\": false,\n  \"source\": \"model:flight_v1\",\n  \"simulated\": [],\n  \"reason\": \"carry_unreachable\",\n  \"detail\": \"400.0 yd, case above_peak: 127.45 yd is the peak of what these launch conditions can fly\",\n  \"unscored\": [\n    {\n      \"name\": \"flight_carry_yds\",\n      \"reason\": \"carry_unreachable\",\n      \"why\": \"no spin flies the ball the distance the launch monitor printed\",\n      \"detail\": \"400.0 yd, case above_peak: 127.45 yd is the peak of what these launch conditions can fly - no flight, so none of the flight_* measurements recorded\",\n      \"refilming_helps\": false\n    }\n  ],\n  \"launch\": null,\n  \"spin\": {\n    \"rpm\": null,\n    \"source\": null,\n    \"case\": \"above_peak\",\n    \"cap_rpm\": 5154.075147564731,\n    \"at_cap\": false,\n    \"detail\": \"400.0 yd, case above_peak: 127.45 yd is the peak of what these launch conditions can fly\"\n  },\n  \"axis\": {\n    \"spin_axis_deg\": null,\n    \"source\": null,\n    \"curve_direction\": \"fade\",\n    \"screen_shape\": null,\n    \"sign_disagrees\": false,\n    \"curve_is_drawn\": false,\n    \"why\": \"a +2.5 deg axis was printed, but '+ = fade' is a right-handed reading and no golfer is attributed to this shot\"\n  },\n  \"comparison\": [],\n  \"caveats\": [],\n  \"differs_from_recorded\": [\n    {\n      \"name\": \"flight_carry_yds\",\n      \"recorded\": 122.0,\n      \"flown\": null,\n      \"difference\": null\n    }\n  ],\n  \"recorded_reading\": \"This artifact is current, so the difference is an input that lives outside it: the club's declared loft or the golfer's handedness was edited after the swing was analyzed. Nothing about the swing changed, and re-analyzing it is what makes the stored numbers agree again.\"\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "axis": {
+              "curve_direction": "fade",
+              "curve_is_drawn": false,
+              "screen_shape": null,
+              "sign_disagrees": false,
+              "source": null,
+              "spin_axis_deg": null,
+              "why": "a +2.5 deg axis was printed, but '+ = fade' is a right-handed reading and no golfer is attributed to this shot"
+            },
+            "caveats": [],
+            "club": null,
+            "comparison": [],
+            "detail": "400.0 yd, case above_peak: 127.45 yd is the peak of what these launch conditions can fly",
+            "differs_from_recorded": [
+              {
+                "difference": null,
+                "flown": null,
+                "name": "flight_carry_yds",
+                "recorded": 122.0
+              }
+            ],
+            "flew": false,
+            "launch": null,
+            "reason": "carry_unreachable",
+            "recorded_reading": "This artifact is current, so the difference is an input that lives outside it: the club's declared loft or the golfer's handedness was edited after the swing was analyzed. Nothing about the swing changed, and re-analyzing it is what makes the stored numbers agree again.",
+            "session_id": "2026-08-17",
+            "shot_id": "2026-08-17-1",
+            "simulated": [],
+            "source": "model:flight_v1",
+            "spin": {
+              "at_cap": false,
+              "cap_rpm": 5154.075147564731,
+              "case": "above_peak",
+              "detail": "400.0 yd, case above_peak: 127.45 yd is the peak of what these launch conditions can fly",
+              "rpm": null,
+              "source": null
+            },
+            "swing_id": "1",
+            "unscored": [
+              {
+                "detail": "400.0 yd, case above_peak: 127.45 yd is the peak of what these launch conditions can fly - no flight, so none of the flight_* measurements recorded",
+                "name": "flight_carry_yds",
+                "reason": "carry_unreachable",
+                "refilming_helps": false,
+                "why": "no spin flies the ball the distance the launch monitor printed"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"session_id\": \"2026-08-18\",\n  \"swing_id\": \"1\",\n  \"shot_id\": \"2026-08-18-1\",\n  \"club\": null,\n  \"flew\": false,\n  \"source\": \"model:flight_v1\",\n  \"simulated\": [],\n  \"reason\": \"carry_unreachable\",\n  \"detail\": \"400.0 yd, case above_peak: 127.45 yd is the peak of what these launch conditions can fly\",\n  \"unscored\": [\n    {\n      \"name\": \"flight_carry_yds\",\n      \"reason\": \"carry_unreachable\",\n      \"why\": \"no spin flies the ball the distance the launch monitor printed\",\n      \"detail\": \"400.0 yd, case above_peak: 127.45 yd is the peak of what these launch conditions can fly - no flight, so none of the flight_* measurements recorded\",\n      \"refilming_helps\": false\n    }\n  ],\n  \"launch\": null,\n  \"spin\": {\n    \"rpm\": null,\n    \"source\": null,\n    \"case\": \"above_peak\",\n    \"cap_rpm\": 5154.075147564731,\n    \"at_cap\": false,\n    \"detail\": \"400.0 yd, case above_peak: 127.45 yd is the peak of what these launch conditions can fly\"\n  },\n  \"axis\": {\n    \"spin_axis_deg\": null,\n    \"source\": null,\n    \"curve_direction\": \"fade\",\n    \"screen_shape\": null,\n    \"sign_disagrees\": false,\n    \"curve_is_drawn\": false,\n    \"why\": \"a +2.5 deg axis was printed, but '+ = fade' is a right-handed reading and no golfer is attributed to this shot\"\n  },\n  \"comparison\": [],\n  \"caveats\": [],\n  \"differs_from_recorded\": [],\n  \"recorded_reading\": \"\"\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "axis": {
+              "curve_direction": "fade",
+              "curve_is_drawn": false,
+              "screen_shape": null,
+              "sign_disagrees": false,
+              "source": null,
+              "spin_axis_deg": null,
+              "why": "a +2.5 deg axis was printed, but '+ = fade' is a right-handed reading and no golfer is attributed to this shot"
+            },
+            "caveats": [],
+            "club": null,
+            "comparison": [],
+            "detail": "400.0 yd, case above_peak: 127.45 yd is the peak of what these launch conditions can fly",
+            "differs_from_recorded": [],
+            "flew": false,
+            "launch": null,
+            "reason": "carry_unreachable",
+            "recorded_reading": "",
+            "session_id": "2026-08-18",
+            "shot_id": "2026-08-18-1",
+            "simulated": [],
+            "source": "model:flight_v1",
+            "spin": {
+              "at_cap": false,
+              "cap_rpm": 5154.075147564731,
+              "case": "above_peak",
+              "detail": "400.0 yd, case above_peak: 127.45 yd is the peak of what these launch conditions can fly",
+              "rpm": null,
+              "source": null
+            },
+            "swing_id": "1",
+            "unscored": [
+              {
+                "detail": "400.0 yd, case above_peak: 127.45 yd is the peak of what these launch conditions can fly - no flight, so none of the flight_* measurements recorded",
+                "name": "flight_carry_yds",
+                "reason": "carry_unreachable",
+                "refilming_helps": false,
+                "why": "no spin flies the ball the distance the launch monitor printed"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"session_id\": \"2026-08-10\",\n  \"swing_id\": \"2\",\n  \"shot_id\": null,\n  \"club\": null,\n  \"flew\": false,\n  \"source\": \"model:flight_v1\",\n  \"simulated\": [],\n  \"reason\": null,\n  \"detail\": \"This swing's shot screen has not been read yet, so its launch conditions are not on file. Analyzing the swing reads it, or it can be imported with scripts/import_shot_screens.py.\",\n  \"unscored\": [],\n  \"launch\": null,\n  \"spin\": null,\n  \"axis\": null,\n  \"comparison\": [],\n  \"caveats\": [],\n  \"differs_from_recorded\": [],\n  \"recorded_reading\": \"\"\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "axis": null,
+            "caveats": [],
+            "club": null,
+            "comparison": [],
+            "detail": "This swing's shot screen has not been read yet, so its launch conditions are not on file. Analyzing the swing reads it, or it can be imported with scripts/import_shot_screens.py.",
+            "differs_from_recorded": [],
+            "flew": false,
+            "launch": null,
+            "reason": null,
+            "recorded_reading": "",
+            "session_id": "2026-08-10",
+            "shot_id": null,
+            "simulated": [],
+            "source": "model:flight_v1",
+            "spin": null,
+            "swing_id": "2",
+            "unscored": []
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"session_id\": \"2026-08-09\",\n  \"swing_id\": \"1\",\n  \"shot_id\": null,\n  \"club\": null,\n  \"flew\": false,\n  \"source\": \"model:flight_v1\",\n  \"simulated\": [],\n  \"reason\": null,\n  \"detail\": \"This swing's shot screen has not been read yet, so its launch conditions are not on file. Analyzing the swing reads it, or it can be imported with scripts/import_shot_screens.py.\",\n  \"unscored\": [],\n  \"launch\": null,\n  \"spin\": null,\n  \"axis\": null,\n  \"comparison\": [],\n  \"caveats\": [],\n  \"differs_from_recorded\": [],\n  \"recorded_reading\": \"\"\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "axis": null,
+            "caveats": [],
+            "club": null,
+            "comparison": [],
+            "detail": "This swing's shot screen has not been read yet, so its launch conditions are not on file. Analyzing the swing reads it, or it can be imported with scripts/import_shot_screens.py.",
+            "differs_from_recorded": [],
+            "flew": false,
+            "launch": null,
+            "reason": null,
+            "recorded_reading": "",
+            "session_id": "2026-08-09",
+            "shot_id": null,
+            "simulated": [],
+            "source": "model:flight_v1",
+            "spin": null,
+            "swing_id": "1",
+            "unscored": []
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"session_id\": \"2026-08-08\",\n  \"swing_id\": \"1\",\n  \"shot_id\": null,\n  \"club\": null,\n  \"flew\": false,\n  \"source\": \"model:flight_v1\",\n  \"simulated\": [],\n  \"reason\": null,\n  \"detail\": \"This swing has no shot-screen photo, so there are no launch conditions to fly. Ball flight is simulated from what the launch monitor printed, never from the video.\",\n  \"unscored\": [],\n  \"launch\": null,\n  \"spin\": null,\n  \"axis\": null,\n  \"comparison\": [],\n  \"caveats\": [],\n  \"differs_from_recorded\": [],\n  \"recorded_reading\": \"\"\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "axis": null,
+            "caveats": [],
+            "club": null,
+            "comparison": [],
+            "detail": "This swing has no shot-screen photo, so there are no launch conditions to fly. Ball flight is simulated from what the launch monitor printed, never from the video.",
+            "differs_from_recorded": [],
+            "flew": false,
+            "launch": null,
+            "reason": null,
+            "recorded_reading": "",
+            "session_id": "2026-08-08",
+            "shot_id": null,
+            "simulated": [],
+            "source": "model:flight_v1",
+            "spin": null,
+            "swing_id": "1",
+            "unscored": []
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"found\": false,\n  \"message\": \"No swing '99' in session '2026-08-10'. Call list_sessions to see which sessions and swing ids exist.\"\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "found": false,
+            "message": "No swing '99' in session '2026-08-10'. Call list_sessions to see which sessions and swing ids exist."
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"swing_id\": \"1\",\n  \"session_id\": \"2026-08-14\",\n  \"status\": \"done\",\n  \"club\": null,\n  \"mishit\": null,\n  \"overall_score\": 94.9,\n  \"mechanics_score\": 94.9,\n  \"outcome_score\": null,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\",\n  \"checkpoints\": [\n    {\n      \"name\": \"tempo\",\n      \"observed\": 2.42,\n      \"expected_low\": 2.72,\n      \"expected_high\": 4.71,\n      \"passed\": false,\n      \"score\": 0.85,\n      \"percentile\": 10.0,\n      \"population_n\": 1399,\n      \"message\": \"Tempo too quick - 2.4:1.\"\n    },\n    {\n      \"name\": \"head_sway\",\n      \"observed\": 0.12,\n      \"expected_low\": 0.0,\n      \"expected_high\": 0.43,\n      \"passed\": true,\n      \"score\": 1.0,\n      \"percentile\": 35.5,\n      \"population_n\": 458,\n      \"message\": \"Head stays steady.\"\n    }\n  ],\n  \"tips\": [\n    {\n      \"checkpoint\": \"tempo\",\n      \"text\": \"Tempo too quick - 2.4:1.\",\n      \"severity\": \"minor\"\n    }\n  ],\n  \"unscored\": [],\n  \"measurements\": {},\n  \"simulated\": [\n    {\n      \"name\": \"flight_carry_yds\",\n      \"value\": 122.411,\n      \"unit\": \"yards\",\n      \"source\": \"model:flight_v1\",\n      \"detail\": \"SIMULATED carry from the printed launch conditions; not the launch monitor's own carry, which is carry_distance_yds\"\n    },\n    {\n      \"name\": \"flight_apex_yds\",\n      \"value\": 18.5532,\n      \"unit\": \"yards\",\n      \"source\": \"model:flight_v1\",\n      \"detail\": \"SIMULATED peak height above the tee; the screen prints no apex tile at all\"\n    },\n    {\n      \"name\": \"flight_descent_angle_deg\",\n      \"value\": 36.9185,\n      \"unit\": \"degrees\",\n      \"source\": \"model:flight_v1\",\n      \"detail\": \"SIMULATED angle below the horizontal at landing, read off the landing velocity\"\n    },\n    {\n      \"name\": \"flight_time_s\",\n      \"value\": 4.5175,\n      \"unit\": \"seconds\",\n      \"source\": \"model:flight_v1\",\n      \"detail\": \"SIMULATED hang time from launch to landing\"\n    }\n  ],\n  \"population\": [],\n  \"rotation\": [],\n  \"analysis_version\": 16,\n  \"alignment_quality\": \"top_impact\",\n  \"alignment_caveat\": \"The two camera views were aligned on top and impact, not on every instant. Frame correspondence is exact at those anchors and interpolated between them, so do not describe the side-by-side video as synchronized throughout, and do not read fine timing differences off it.\",\n  \"shot\": null,\n  \"notes\": [\n    \"alignment degraded: aligned on top and impact\"\n  ]\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "alignment_caveat": "The two camera views were aligned on top and impact, not on every instant. Frame correspondence is exact at those anchors and interpolated between them, so do not describe the side-by-side video as synchronized throughout, and do not read fine timing differences off it.",
+            "alignment_quality": "top_impact",
+            "analysis_version": 16,
+            "checkpoints": [
+              {
+                "expected_high": 4.71,
+                "expected_low": 2.72,
+                "message": "Tempo too quick - 2.4:1.",
+                "name": "tempo",
+                "observed": 2.42,
+                "passed": false,
+                "percentile": 10.0,
+                "population_n": 1399,
+                "score": 0.85
+              },
+              {
+                "expected_high": 0.43,
+                "expected_low": 0.0,
+                "message": "Head stays steady.",
+                "name": "head_sway",
+                "observed": 0.12,
+                "passed": true,
+                "percentile": 35.5,
+                "population_n": 458,
+                "score": 1.0
+              }
+            ],
+            "club": null,
+            "headline": "Work on tempo first. Tempo too quick - 2.4:1.",
+            "measurements": {},
+            "mechanics_score": 94.9,
+            "mishit": null,
+            "notes": [
+              "alignment degraded: aligned on top and impact"
+            ],
+            "outcome_score": null,
+            "overall_score": 94.9,
+            "population": [],
+            "rotation": [],
+            "session_id": "2026-08-14",
+            "shot": null,
+            "simulated": [
+              {
+                "detail": "SIMULATED carry from the printed launch conditions; not the launch monitor's own carry, which is carry_distance_yds",
+                "name": "flight_carry_yds",
+                "source": "model:flight_v1",
+                "unit": "yards",
+                "value": 122.411
+              },
+              {
+                "detail": "SIMULATED peak height above the tee; the screen prints no apex tile at all",
+                "name": "flight_apex_yds",
+                "source": "model:flight_v1",
+                "unit": "yards",
+                "value": 18.5532
+              },
+              {
+                "detail": "SIMULATED angle below the horizontal at landing, read off the landing velocity",
+                "name": "flight_descent_angle_deg",
+                "source": "model:flight_v1",
+                "unit": "degrees",
+                "value": 36.9185
+              },
+              {
+                "detail": "SIMULATED hang time from launch to landing",
+                "name": "flight_time_s",
+                "source": "model:flight_v1",
+                "unit": "seconds",
+                "value": 4.5175
+              }
+            ],
+            "status": "done",
+            "swing_id": "1",
+            "tips": [
+              {
+                "checkpoint": "tempo",
+                "severity": "minor",
+                "text": "Tempo too quick - 2.4:1."
+              }
+            ],
+            "unscored": []
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"swing_id\": \"1\",\n  \"session_id\": \"2026-08-15\",\n  \"status\": \"done\",\n  \"club\": \"7i\",\n  \"mishit\": null,\n  \"overall_score\": 94.9,\n  \"mechanics_score\": 94.9,\n  \"outcome_score\": null,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\",\n  \"checkpoints\": [\n    {\n      \"name\": \"tempo\",\n      \"observed\": 2.42,\n      \"expected_low\": 2.72,\n      \"expected_high\": 4.71,\n      \"passed\": false,\n      \"score\": 0.85,\n      \"percentile\": 10.0,\n      \"population_n\": 1399,\n      \"message\": \"Tempo too quick - 2.4:1.\"\n    },\n    {\n      \"name\": \"head_sway\",\n      \"observed\": 0.12,\n      \"expected_low\": 0.0,\n      \"expected_high\": 0.43,\n      \"passed\": true,\n      \"score\": 1.0,\n      \"percentile\": 35.5,\n      \"population_n\": 458,\n      \"message\": \"Head stays steady.\"\n    }\n  ],\n  \"tips\": [\n    {\n      \"checkpoint\": \"tempo\",\n      \"text\": \"Tempo too quick - 2.4:1.\",\n      \"severity\": \"minor\"\n    }\n  ],\n  \"unscored\": [],\n  \"measurements\": {},\n  \"simulated\": [\n    {\n      \"name\": \"flight_carry_yds\",\n      \"value\": 99.0,\n      \"unit\": \"yards\",\n      \"source\": \"model:flight_v1\",\n      \"detail\": \"SIMULATED carry from the printed launch conditions; not the launch monitor's own carry, which is carry_distance_yds\"\n    },\n    {\n      \"name\": \"flight_apex_yds\",\n      \"value\": 18.5532,\n      \"unit\": \"yards\",\n      \"source\": \"model:flight_v1\",\n      \"detail\": \"SIMULATED peak height above the tee; the screen prints no apex tile at all\"\n    },\n    {\n      \"name\": \"flight_descent_angle_deg\",\n      \"value\": 36.9185,\n      \"unit\": \"degrees\",\n      \"source\": \"model:flight_v1\",\n      \"detail\": \"SIMULATED angle below the horizontal at landing, read off the landing velocity\"\n    },\n    {\n      \"name\": \"flight_time_s\",\n      \"value\": 4.5175,\n      \"unit\": \"seconds\",\n      \"source\": \"model:flight_v1\",\n      \"detail\": \"SIMULATED hang time from launch to landing\"\n    }\n  ],\n  \"population\": [],\n  \"rotation\": [],\n  \"analysis_version\": 16,\n  \"alignment_quality\": \"top_impact\",\n  \"alignment_caveat\": \"The two camera views were aligned on top and impact, not on every instant. Frame correspondence is exact at those anchors and interpolated between them, so do not describe the side-by-side video as synchronized throughout, and do not read fine timing differences off it.\",\n  \"shot\": null,\n  \"notes\": [\n    \"alignment degraded: aligned on top and impact\"\n  ]\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "alignment_caveat": "The two camera views were aligned on top and impact, not on every instant. Frame correspondence is exact at those anchors and interpolated between them, so do not describe the side-by-side video as synchronized throughout, and do not read fine timing differences off it.",
+            "alignment_quality": "top_impact",
+            "analysis_version": 16,
+            "checkpoints": [
+              {
+                "expected_high": 4.71,
+                "expected_low": 2.72,
+                "message": "Tempo too quick - 2.4:1.",
+                "name": "tempo",
+                "observed": 2.42,
+                "passed": false,
+                "percentile": 10.0,
+                "population_n": 1399,
+                "score": 0.85
+              },
+              {
+                "expected_high": 0.43,
+                "expected_low": 0.0,
+                "message": "Head stays steady.",
+                "name": "head_sway",
+                "observed": 0.12,
+                "passed": true,
+                "percentile": 35.5,
+                "population_n": 458,
+                "score": 1.0
+              }
+            ],
+            "club": "7i",
+            "headline": "Work on tempo first. Tempo too quick - 2.4:1.",
+            "measurements": {},
+            "mechanics_score": 94.9,
+            "mishit": null,
+            "notes": [
+              "alignment degraded: aligned on top and impact"
+            ],
+            "outcome_score": null,
+            "overall_score": 94.9,
+            "population": [],
+            "rotation": [],
+            "session_id": "2026-08-15",
+            "shot": null,
+            "simulated": [
+              {
+                "detail": "SIMULATED carry from the printed launch conditions; not the launch monitor's own carry, which is carry_distance_yds",
+                "name": "flight_carry_yds",
+                "source": "model:flight_v1",
+                "unit": "yards",
+                "value": 99.0
+              },
+              {
+                "detail": "SIMULATED peak height above the tee; the screen prints no apex tile at all",
+                "name": "flight_apex_yds",
+                "source": "model:flight_v1",
+                "unit": "yards",
+                "value": 18.5532
+              },
+              {
+                "detail": "SIMULATED angle below the horizontal at landing, read off the landing velocity",
+                "name": "flight_descent_angle_deg",
+                "source": "model:flight_v1",
+                "unit": "degrees",
+                "value": 36.9185
+              },
+              {
+                "detail": "SIMULATED hang time from launch to landing",
+                "name": "flight_time_s",
+                "source": "model:flight_v1",
+                "unit": "seconds",
+                "value": 4.5175
+              }
+            ],
+            "status": "done",
+            "swing_id": "1",
+            "tips": [
+              {
+                "checkpoint": "tempo",
+                "severity": "minor",
+                "text": "Tempo too quick - 2.4:1."
+              }
+            ],
+            "unscored": []
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"shot_id\": \"2026-08-10-1\",\n  \"session_id\": \"2026-08-10\",\n  \"source\": \"screen\",\n  \"needs_review\": false,\n  \"warnings\": [],\n  \"parse_confidence\": 0.9,\n  \"metrics\": {\n    \"ball_speed\": 90.7,\n    \"launch_angle\": 20.9,\n    \"launch_direction\": -5.3,\n    \"spin_rate\": 5991.0,\n    \"spin_axis\": 2.5,\n    \"carry_distance\": 125.6\n  }\n}",
+            "type": "text"
+          },
+          {
+            "text": "{\n  \"shot_id\": \"2026-08-14-1\",\n  \"session_id\": \"2026-08-10\",\n  \"source\": \"screen\",\n  \"needs_review\": false,\n  \"warnings\": [],\n  \"parse_confidence\": 0.9,\n  \"metrics\": {\n    \"ball_speed\": 90.7,\n    \"launch_angle\": 20.9,\n    \"launch_direction\": -5.3,\n    \"spin_rate\": 5991.0,\n    \"spin_axis\": 2.5,\n    \"carry_distance\": 125.6\n  }\n}",
+            "type": "text"
+          },
+          {
+            "text": "{\n  \"shot_id\": \"2026-08-15-1\",\n  \"session_id\": \"2026-08-10\",\n  \"source\": \"screen\",\n  \"needs_review\": false,\n  \"warnings\": [],\n  \"parse_confidence\": 0.9,\n  \"metrics\": {\n    \"ball_speed\": 90.7,\n    \"launch_angle\": 20.9,\n    \"launch_direction\": -5.3,\n    \"spin_rate\": 5991.0,\n    \"spin_axis\": 2.5,\n    \"carry_distance\": 125.6\n  }\n}",
+            "type": "text"
+          },
+          {
+            "text": "{\n  \"shot_id\": \"2026-08-16-1\",\n  \"session_id\": \"2026-08-10\",\n  \"source\": \"screen\",\n  \"needs_review\": false,\n  \"warnings\": [],\n  \"parse_confidence\": 0.9,\n  \"metrics\": {\n    \"ball_speed\": 90.7,\n    \"launch_angle\": 20.9,\n    \"launch_direction\": -5.3,\n    \"spin_rate\": 5991.0,\n    \"spin_axis\": 2.5,\n    \"carry_distance\": 125.6\n  }\n}",
+            "type": "text"
+          },
+          {
+            "text": "{\n  \"shot_id\": \"2026-08-17-1\",\n  \"session_id\": \"2026-08-10\",\n  \"source\": \"screen\",\n  \"needs_review\": false,\n  \"warnings\": [],\n  \"parse_confidence\": 0.9,\n  \"metrics\": {\n    \"ball_speed\": 90.7,\n    \"launch_angle\": 20.9,\n    \"launch_direction\": -5.3,\n    \"spin_axis\": 2.5,\n    \"carry_distance\": 400.0\n  }\n}",
+            "type": "text"
+          },
+          {
+            "text": "{\n  \"shot_id\": \"2026-08-18-1\",\n  \"session_id\": \"2026-08-10\",\n  \"source\": \"screen\",\n  \"needs_review\": false,\n  \"warnings\": [],\n  \"parse_confidence\": 0.9,\n  \"metrics\": {\n    \"ball_speed\": 90.7,\n    \"launch_angle\": 20.9,\n    \"launch_direction\": -5.3,\n    \"spin_axis\": 2.5,\n    \"carry_distance\": 400.0\n  }\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": [
+            {
+              "metrics": {
+                "ball_speed": 90.7,
+                "carry_distance": 125.6,
+                "launch_angle": 20.9,
+                "launch_direction": -5.3,
+                "spin_axis": 2.5,
+                "spin_rate": 5991.0
+              },
+              "needs_review": false,
+              "parse_confidence": 0.9,
+              "session_id": "2026-08-10",
+              "shot_id": "2026-08-10-1",
+              "source": "screen",
+              "warnings": []
+            },
+            {
+              "metrics": {
+                "ball_speed": 90.7,
+                "carry_distance": 125.6,
+                "launch_angle": 20.9,
+                "launch_direction": -5.3,
+                "spin_axis": 2.5,
+                "spin_rate": 5991.0
+              },
+              "needs_review": false,
+              "parse_confidence": 0.9,
+              "session_id": "2026-08-10",
+              "shot_id": "2026-08-14-1",
+              "source": "screen",
+              "warnings": []
+            },
+            {
+              "metrics": {
+                "ball_speed": 90.7,
+                "carry_distance": 125.6,
+                "launch_angle": 20.9,
+                "launch_direction": -5.3,
+                "spin_axis": 2.5,
+                "spin_rate": 5991.0
+              },
+              "needs_review": false,
+              "parse_confidence": 0.9,
+              "session_id": "2026-08-10",
+              "shot_id": "2026-08-15-1",
+              "source": "screen",
+              "warnings": []
+            },
+            {
+              "metrics": {
+                "ball_speed": 90.7,
+                "carry_distance": 125.6,
+                "launch_angle": 20.9,
+                "launch_direction": -5.3,
+                "spin_axis": 2.5,
+                "spin_rate": 5991.0
+              },
+              "needs_review": false,
+              "parse_confidence": 0.9,
+              "session_id": "2026-08-10",
+              "shot_id": "2026-08-16-1",
+              "source": "screen",
+              "warnings": []
+            },
+            {
+              "metrics": {
+                "ball_speed": 90.7,
+                "carry_distance": 400.0,
+                "launch_angle": 20.9,
+                "launch_direction": -5.3,
+                "spin_axis": 2.5
+              },
+              "needs_review": false,
+              "parse_confidence": 0.9,
+              "session_id": "2026-08-10",
+              "shot_id": "2026-08-17-1",
+              "source": "screen",
+              "warnings": []
+            },
+            {
+              "metrics": {
+                "ball_speed": 90.7,
+                "carry_distance": 400.0,
+                "launch_angle": 20.9,
+                "launch_direction": -5.3,
+                "spin_axis": 2.5
+              },
+              "needs_review": false,
+              "parse_confidence": 0.9,
+              "session_id": "2026-08-10",
+              "shot_id": "2026-08-18-1",
+              "source": "screen",
+              "warnings": []
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "id": "mcp/tools/flight",
+  "input": {
+    "calls": [
+      {
+        "arguments": {
+          "session_id": "2026-08-10",
+          "swing_id": "1"
+        },
+        "now": null,
+        "tool": "simulate_flight"
+      },
+      {
+        "arguments": {
+          "session_id": "2026-08-11",
+          "swing_id": "1"
+        },
+        "now": null,
+        "tool": "simulate_flight"
+      },
+      {
+        "arguments": {
+          "session_id": "2026-08-12",
+          "swing_id": "1"
+        },
+        "now": null,
+        "tool": "simulate_flight"
+      },
+      {
+        "arguments": {
+          "session_id": "2026-08-13",
+          "swing_id": "1"
+        },
+        "now": null,
+        "tool": "simulate_flight"
+      },
+      {
+        "arguments": {
+          "session_id": "2026-08-14",
+          "swing_id": "1"
+        },
+        "now": null,
+        "tool": "simulate_flight"
+      },
+      {
+        "arguments": {
+          "session_id": "2026-08-15",
+          "swing_id": "1"
+        },
+        "now": null,
+        "tool": "simulate_flight"
+      },
+      {
+        "arguments": {
+          "session_id": "2026-08-16",
+          "swing_id": "1"
+        },
+        "now": null,
+        "tool": "simulate_flight"
+      },
+      {
+        "arguments": {
+          "session_id": "2026-08-17",
+          "swing_id": "1"
+        },
+        "now": null,
+        "tool": "simulate_flight"
+      },
+      {
+        "arguments": {
+          "session_id": "2026-08-18",
+          "swing_id": "1"
+        },
+        "now": null,
+        "tool": "simulate_flight"
+      },
+      {
+        "arguments": {
+          "session_id": "2026-08-10",
+          "swing_id": "2"
+        },
+        "now": null,
+        "tool": "simulate_flight"
+      },
+      {
+        "arguments": {
+          "session_id": "2026-08-09",
+          "swing_id": "1"
+        },
+        "now": null,
+        "tool": "simulate_flight"
+      },
+      {
+        "arguments": {
+          "session_id": "2026-08-08",
+          "swing_id": "1"
+        },
+        "now": null,
+        "tool": "simulate_flight"
+      },
+      {
+        "arguments": {
+          "session_id": "2026-08-10",
+          "swing_id": "99"
+        },
+        "now": null,
+        "tool": "simulate_flight"
+      },
+      {
+        "arguments": {
+          "session_id": "2026-08-14",
+          "swing_id": "1"
+        },
+        "now": null,
+        "tool": "get_swing"
+      },
+      {
+        "arguments": {
+          "session_id": "2026-08-15",
+          "swing_id": "1"
+        },
+        "now": null,
+        "tool": "get_swing"
+      },
+      {
+        "arguments": {
+          "count": 20
+        },
+        "now": null,
+        "tool": "get_recent_shots"
+      }
+    ],
+    "files": {
+      "sessions/2026-08-08/1/manifest.json": "{\n  \"swing_id\": \"1\",\n  \"session_id\": \"2026-08-08\",\n  \"created_at\": \"2026-08-10T01:39:00Z\",\n  \"updated_at\": \"2026-08-10T01:39:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-08-1-face_on\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": null,\n  \"club\": null,\n  \"mishit\": null\n}",
+      "sessions/2026-08-09/1/analysis.json": "{\"swing_id\": \"1\", \"session_id\": \"2026-08-09\", \"swing\": {\"swing_id\": \"1\", \"session_id\": \"2026-08-09\", \"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.42, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick - 2.4:1.\", \"percentile\": 10.0, \"population_n\": 1399, \"one_sided\": false}, {\"name\": \"head_sway\", \"score\": 1.0, \"passed\": true, \"observed\": 0.12, \"expected_low\": 0.0, \"expected_high\": 0.43, \"message\": \"Head stays steady.\", \"percentile\": 35.5, \"population_n\": 458, \"one_sided\": true}], \"unscored\": [], \"measurements\": [], \"mechanics_score\": 86.1, \"outcome_score\": null, \"overall_score\": 86.1, \"shot\": null}, \"alignment\": {\"quality\": \"top_impact\"}, \"notes\": [\"alignment degraded: aligned on top and impact\"], \"feedback\": {\"swing_id\": \"1\", \"overall_score\": 86.1, \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\", \"tips\": [{\"checkpoint\": \"tempo\", \"text\": \"Tempo too quick - 2.4:1.\", \"severity\": \"minor\"}]}}",
+      "sessions/2026-08-09/1/manifest.json": "{\n  \"swing_id\": \"1\",\n  \"session_id\": \"2026-08-09\",\n  \"created_at\": \"2026-08-10T01:39:00Z\",\n  \"updated_at\": \"2026-08-10T01:39:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-09-1-face_on\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-09-1-down_the_line\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-09-1-shot_screen\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": null,\n  \"club\": null,\n  \"mishit\": null\n}",
+      "sessions/2026-08-10/1/analysis.json": "{\"swing_id\": \"1\", \"session_id\": \"2026-08-10\", \"swing\": {\"swing_id\": \"1\", \"session_id\": \"2026-08-10\", \"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.42, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick - 2.4:1.\", \"percentile\": 10.0, \"population_n\": 1399, \"one_sided\": false}, {\"name\": \"head_sway\", \"score\": 1.0, \"passed\": true, \"observed\": 0.12, \"expected_low\": 0.0, \"expected_high\": 0.43, \"message\": \"Head stays steady.\", \"percentile\": 35.5, \"population_n\": 458, \"one_sided\": true}], \"unscored\": [], \"measurements\": [], \"mechanics_score\": 94.9, \"outcome_score\": null, \"overall_score\": 94.9, \"shot\": null}, \"alignment\": {\"quality\": \"top_impact\"}, \"notes\": [\"alignment degraded: aligned on top and impact\"], \"feedback\": {\"swing_id\": \"1\", \"overall_score\": 94.9, \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\", \"tips\": [{\"checkpoint\": \"tempo\", \"text\": \"Tempo too quick - 2.4:1.\", \"severity\": \"minor\"}]}}",
+      "sessions/2026-08-10/1/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"down_the_line\": \"sha-2026-08-10-1-down_the_line\",\n    \"face_on\": \"sha-2026-08-10-1-face_on\",\n    \"shot_screen\": \"sha-2026-08-10-1-shot_screen\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 94.9,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\"\n}",
+      "sessions/2026-08-10/1/manifest.json": "{\n  \"swing_id\": \"1\",\n  \"session_id\": \"2026-08-10\",\n  \"created_at\": \"2026-08-10T01:39:00Z\",\n  \"updated_at\": \"2026-08-10T01:39:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-10-1-face_on\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-10-1-down_the_line\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-10-1-shot_screen\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": null,\n  \"club\": null,\n  \"mishit\": null\n}",
+      "sessions/2026-08-10/2/analysis.json": "{\"swing_id\": \"2\", \"session_id\": \"2026-08-10\", \"swing\": {\"swing_id\": \"2\", \"session_id\": \"2026-08-10\", \"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.42, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick - 2.4:1.\", \"percentile\": 10.0, \"population_n\": 1399, \"one_sided\": false}, {\"name\": \"head_sway\", \"score\": 1.0, \"passed\": true, \"observed\": 0.12, \"expected_low\": 0.0, \"expected_high\": 0.43, \"message\": \"Head stays steady.\", \"percentile\": 35.5, \"population_n\": 458, \"one_sided\": true}], \"unscored\": [], \"measurements\": [], \"mechanics_score\": 93.8, \"outcome_score\": null, \"overall_score\": 93.8, \"shot\": null}, \"alignment\": {\"quality\": \"top_impact\"}, \"notes\": [\"alignment degraded: aligned on top and impact\"], \"feedback\": {\"swing_id\": \"2\", \"overall_score\": 93.8, \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\", \"tips\": [{\"checkpoint\": \"tempo\", \"text\": \"Tempo too quick - 2.4:1.\", \"severity\": \"minor\"}]}}",
+      "sessions/2026-08-10/2/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"down_the_line\": \"sha-2026-08-10-2-down_the_line\",\n    \"face_on\": \"sha-2026-08-10-2-face_on\",\n    \"shot_screen\": \"sha-2026-08-10-2-shot_screen\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 93.8,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\"\n}",
+      "sessions/2026-08-10/2/manifest.json": "{\n  \"swing_id\": \"2\",\n  \"session_id\": \"2026-08-10\",\n  \"created_at\": \"2026-08-10T01:39:00Z\",\n  \"updated_at\": \"2026-08-10T01:39:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-10-2-face_on\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-10-2-down_the_line\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-10-2-shot_screen\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": null,\n  \"club\": null,\n  \"mishit\": null\n}",
+      "sessions/2026-08-11/1/analysis.json": "{\"swing_id\": \"1\", \"session_id\": \"2026-08-11\", \"swing\": {\"swing_id\": \"1\", \"session_id\": \"2026-08-11\", \"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.42, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick - 2.4:1.\", \"percentile\": 10.0, \"population_n\": 1399, \"one_sided\": false}, {\"name\": \"head_sway\", \"score\": 1.0, \"passed\": true, \"observed\": 0.12, \"expected_low\": 0.0, \"expected_high\": 0.43, \"message\": \"Head stays steady.\", \"percentile\": 35.5, \"population_n\": 458, \"one_sided\": true}], \"unscored\": [], \"measurements\": [], \"mechanics_score\": 94.9, \"outcome_score\": null, \"overall_score\": 94.9, \"shot\": null}, \"alignment\": {\"quality\": \"top_impact\"}, \"notes\": [\"alignment degraded: aligned on top and impact\"], \"feedback\": {\"swing_id\": \"1\", \"overall_score\": 94.9, \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\", \"tips\": [{\"checkpoint\": \"tempo\", \"text\": \"Tempo too quick - 2.4:1.\", \"severity\": \"minor\"}]}}",
+      "sessions/2026-08-11/1/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"down_the_line\": \"sha-2026-08-11-1-down_the_line\",\n    \"face_on\": \"sha-2026-08-11-1-face_on\",\n    \"shot_screen\": \"sha-2026-08-11-1-shot_screen\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 94.9,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\"\n}",
+      "sessions/2026-08-11/1/manifest.json": "{\"swing_id\": \"1\", \"session_id\": \"2026-08-11\", \"created_at\": \"2026-08-10T01:39:00Z\", \"updated_at\": \"2026-08-10T01:39:00Z\", \"roles\": {\"face_on\": {\"role\": \"face_on\", \"filename\": \"face_on.abc123.mov\", \"content_sha256\": \"sha-2026-08-11-1-face_on\", \"original_filename\": \"face_on.mov\", \"content_type\": \"video/quicktime\", \"size_bytes\": 1234, \"received_at\": \"2026-08-10T01:39:00Z\", \"warnings\": []}, \"down_the_line\": {\"role\": \"down_the_line\", \"filename\": \"down_the_line.abc123.mov\", \"content_sha256\": \"sha-2026-08-11-1-down_the_line\", \"original_filename\": \"down_the_line.mov\", \"content_type\": \"video/quicktime\", \"size_bytes\": 1234, \"received_at\": \"2026-08-10T01:39:00Z\", \"warnings\": []}, \"shot_screen\": {\"role\": \"shot_screen\", \"filename\": \"shot_screen.abc123.mov\", \"content_sha256\": \"sha-2026-08-10-1-shot_screen\", \"original_filename\": \"shot_screen.mov\", \"content_type\": \"video/quicktime\", \"size_bytes\": 1234, \"received_at\": \"2026-08-10T01:39:00Z\", \"warnings\": []}}, \"player_id\": null, \"club\": null, \"mishit\": null}",
+      "sessions/2026-08-12/1/analysis.json": "{\"swing_id\": \"1\", \"session_id\": \"2026-08-12\", \"swing\": {\"swing_id\": \"1\", \"session_id\": \"2026-08-12\", \"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.42, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick - 2.4:1.\", \"percentile\": 10.0, \"population_n\": 1399, \"one_sided\": false}, {\"name\": \"head_sway\", \"score\": 1.0, \"passed\": true, \"observed\": 0.12, \"expected_low\": 0.0, \"expected_high\": 0.43, \"message\": \"Head stays steady.\", \"percentile\": 35.5, \"population_n\": 458, \"one_sided\": true}], \"unscored\": [], \"measurements\": [], \"mechanics_score\": 94.9, \"outcome_score\": null, \"overall_score\": 94.9, \"shot\": null}, \"alignment\": {\"quality\": \"top_impact\"}, \"notes\": [\"alignment degraded: aligned on top and impact\"], \"feedback\": {\"swing_id\": \"1\", \"overall_score\": 94.9, \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\", \"tips\": [{\"checkpoint\": \"tempo\", \"text\": \"Tempo too quick - 2.4:1.\", \"severity\": \"minor\"}]}}",
+      "sessions/2026-08-12/1/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"down_the_line\": \"sha-2026-08-12-1-down_the_line\",\n    \"face_on\": \"sha-2026-08-12-1-face_on\",\n    \"shot_screen\": \"sha-2026-08-12-1-shot_screen\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 94.9,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\"\n}",
+      "sessions/2026-08-12/1/manifest.json": "{\"swing_id\": \"1\", \"session_id\": \"2026-08-12\", \"created_at\": \"2026-08-10T01:39:00Z\", \"updated_at\": \"2026-08-10T01:39:00Z\", \"roles\": {\"face_on\": {\"role\": \"face_on\", \"filename\": \"face_on.abc123.mov\", \"content_sha256\": \"sha-2026-08-12-1-face_on\", \"original_filename\": \"face_on.mov\", \"content_type\": \"video/quicktime\", \"size_bytes\": 1234, \"received_at\": \"2026-08-10T01:39:00Z\", \"warnings\": []}, \"down_the_line\": {\"role\": \"down_the_line\", \"filename\": \"down_the_line.abc123.mov\", \"content_sha256\": \"sha-2026-08-12-1-down_the_line\", \"original_filename\": \"down_the_line.mov\", \"content_type\": \"video/quicktime\", \"size_bytes\": 1234, \"received_at\": \"2026-08-10T01:39:00Z\", \"warnings\": []}, \"shot_screen\": {\"role\": \"shot_screen\", \"filename\": \"shot_screen.abc123.mov\", \"content_sha256\": \"sha-2026-08-10-1-shot_screen\", \"original_filename\": \"shot_screen.mov\", \"content_type\": \"video/quicktime\", \"size_bytes\": 1234, \"received_at\": \"2026-08-10T01:39:00Z\", \"warnings\": []}}, \"player_id\": null, \"club\": null, \"mishit\": null}",
+      "sessions/2026-08-13/1/analysis.json": "{\"swing_id\": \"1\", \"session_id\": \"2026-08-13\", \"swing\": {\"swing_id\": \"1\", \"session_id\": \"2026-08-13\", \"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.42, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick - 2.4:1.\", \"percentile\": 10.0, \"population_n\": 1399, \"one_sided\": false}, {\"name\": \"head_sway\", \"score\": 1.0, \"passed\": true, \"observed\": 0.12, \"expected_low\": 0.0, \"expected_high\": 0.43, \"message\": \"Head stays steady.\", \"percentile\": 35.5, \"population_n\": 458, \"one_sided\": true}], \"unscored\": [], \"measurements\": [], \"mechanics_score\": 94.9, \"outcome_score\": null, \"overall_score\": 94.9, \"shot\": null}, \"alignment\": {\"quality\": \"top_impact\"}, \"notes\": [\"alignment degraded: aligned on top and impact\"], \"feedback\": {\"swing_id\": \"1\", \"overall_score\": 94.9, \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\", \"tips\": [{\"checkpoint\": \"tempo\", \"text\": \"Tempo too quick - 2.4:1.\", \"severity\": \"minor\"}]}}",
+      "sessions/2026-08-13/1/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"face_on\": \"sha-2026-08-13-1-face_on\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 94.9,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\"\n}",
+      "sessions/2026-08-13/1/manifest.json": "{\n  \"swing_id\": \"1\",\n  \"session_id\": \"2026-08-13\",\n  \"created_at\": \"2026-08-10T01:39:00Z\",\n  \"updated_at\": \"2026-08-10T01:39:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-13-1-face_on\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": null,\n  \"club\": null,\n  \"mishit\": null\n}",
+      "sessions/2026-08-14/1/analysis.json": "{\"swing_id\": \"1\", \"session_id\": \"2026-08-14\", \"swing\": {\"swing_id\": \"1\", \"session_id\": \"2026-08-14\", \"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.42, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick - 2.4:1.\", \"percentile\": 10.0, \"population_n\": 1399, \"one_sided\": false}, {\"name\": \"head_sway\", \"score\": 1.0, \"passed\": true, \"observed\": 0.12, \"expected_low\": 0.0, \"expected_high\": 0.43, \"message\": \"Head stays steady.\", \"percentile\": 35.5, \"population_n\": 458, \"one_sided\": true}], \"unscored\": [], \"measurements\": [{\"name\": \"flight_carry_yds\", \"value\": 122.411, \"unit\": \"yards\", \"source\": \"model:flight_v1\", \"detail\": \"SIMULATED carry from the printed launch conditions; not the launch monitor's own carry, which is carry_distance_yds\"}, {\"name\": \"flight_apex_yds\", \"value\": 18.5532, \"unit\": \"yards\", \"source\": \"model:flight_v1\", \"detail\": \"SIMULATED peak height above the tee; the screen prints no apex tile at all\"}, {\"name\": \"flight_descent_angle_deg\", \"value\": 36.9185, \"unit\": \"degrees\", \"source\": \"model:flight_v1\", \"detail\": \"SIMULATED angle below the horizontal at landing, read off the landing velocity\"}, {\"name\": \"flight_time_s\", \"value\": 4.5175, \"unit\": \"seconds\", \"source\": \"model:flight_v1\", \"detail\": \"SIMULATED hang time from launch to landing\"}], \"mechanics_score\": 94.9, \"outcome_score\": null, \"overall_score\": 94.9, \"shot\": null}, \"alignment\": {\"quality\": \"top_impact\"}, \"notes\": [\"alignment degraded: aligned on top and impact\"], \"feedback\": {\"swing_id\": \"1\", \"overall_score\": 94.9, \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\", \"tips\": [{\"checkpoint\": \"tempo\", \"text\": \"Tempo too quick - 2.4:1.\", \"severity\": \"minor\"}]}, \"analysis_version\": 16}",
+      "sessions/2026-08-14/1/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"down_the_line\": \"sha-2026-08-14-1-down_the_line\",\n    \"face_on\": \"sha-2026-08-14-1-face_on\",\n    \"shot_screen\": \"sha-2026-08-14-1-shot_screen\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 94.9,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\"\n}",
+      "sessions/2026-08-14/1/manifest.json": "{\n  \"swing_id\": \"1\",\n  \"session_id\": \"2026-08-14\",\n  \"created_at\": \"2026-08-10T01:39:00Z\",\n  \"updated_at\": \"2026-08-10T01:39:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-14-1-face_on\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-14-1-down_the_line\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-14-1-shot_screen\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": null,\n  \"club\": null,\n  \"mishit\": null\n}",
+      "sessions/2026-08-15/1/analysis.json": "{\"swing_id\": \"1\", \"session_id\": \"2026-08-15\", \"swing\": {\"swing_id\": \"1\", \"session_id\": \"2026-08-15\", \"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.42, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick - 2.4:1.\", \"percentile\": 10.0, \"population_n\": 1399, \"one_sided\": false}, {\"name\": \"head_sway\", \"score\": 1.0, \"passed\": true, \"observed\": 0.12, \"expected_low\": 0.0, \"expected_high\": 0.43, \"message\": \"Head stays steady.\", \"percentile\": 35.5, \"population_n\": 458, \"one_sided\": true}], \"unscored\": [], \"measurements\": [{\"name\": \"flight_carry_yds\", \"value\": 99.0, \"unit\": \"yards\", \"source\": \"model:flight_v1\", \"detail\": \"SIMULATED carry from the printed launch conditions; not the launch monitor's own carry, which is carry_distance_yds\"}, {\"name\": \"flight_apex_yds\", \"value\": 18.5532, \"unit\": \"yards\", \"source\": \"model:flight_v1\", \"detail\": \"SIMULATED peak height above the tee; the screen prints no apex tile at all\"}, {\"name\": \"flight_descent_angle_deg\", \"value\": 36.9185, \"unit\": \"degrees\", \"source\": \"model:flight_v1\", \"detail\": \"SIMULATED angle below the horizontal at landing, read off the landing velocity\"}, {\"name\": \"flight_time_s\", \"value\": 4.5175, \"unit\": \"seconds\", \"source\": \"model:flight_v1\", \"detail\": \"SIMULATED hang time from launch to landing\"}], \"mechanics_score\": 94.9, \"outcome_score\": null, \"overall_score\": 94.9, \"shot\": null}, \"alignment\": {\"quality\": \"top_impact\"}, \"notes\": [\"alignment degraded: aligned on top and impact\"], \"feedback\": {\"swing_id\": \"1\", \"overall_score\": 94.9, \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\", \"tips\": [{\"checkpoint\": \"tempo\", \"text\": \"Tempo too quick - 2.4:1.\", \"severity\": \"minor\"}]}, \"analysis_version\": 16}",
+      "sessions/2026-08-15/1/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"down_the_line\": \"sha-2026-08-15-1-down_the_line\",\n    \"face_on\": \"sha-2026-08-15-1-face_on\",\n    \"shot_screen\": \"sha-2026-08-15-1-shot_screen\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 94.9,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\"\n}",
+      "sessions/2026-08-15/1/manifest.json": "{\n  \"swing_id\": \"1\",\n  \"session_id\": \"2026-08-15\",\n  \"created_at\": \"2026-08-10T01:39:00Z\",\n  \"updated_at\": \"2026-08-10T01:39:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-15-1-face_on\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-15-1-down_the_line\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-15-1-shot_screen\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": null,\n  \"club\": \"7i\",\n  \"mishit\": null\n}",
+      "sessions/2026-08-16/1/analysis.json": "{\"swing_id\": \"1\", \"session_id\": \"2026-08-16\", \"swing\": {\"swing_id\": \"1\", \"session_id\": \"2026-08-16\", \"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.42, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick - 2.4:1.\", \"percentile\": 10.0, \"population_n\": 1399, \"one_sided\": false}, {\"name\": \"head_sway\", \"score\": 1.0, \"passed\": true, \"observed\": 0.12, \"expected_low\": 0.0, \"expected_high\": 0.43, \"message\": \"Head stays steady.\", \"percentile\": 35.5, \"population_n\": 458, \"one_sided\": true}], \"unscored\": [], \"measurements\": [{\"name\": \"flight_carry_yds\", \"value\": 99.0, \"unit\": \"yards\", \"source\": \"model:flight_v1\", \"detail\": \"SIMULATED carry from the printed launch conditions; not the launch monitor's own carry, which is carry_distance_yds\"}, {\"name\": \"flight_apex_yds\", \"value\": 18.5532, \"unit\": \"yards\", \"source\": \"model:flight_v1\", \"detail\": \"SIMULATED peak height above the tee; the screen prints no apex tile at all\"}, {\"name\": \"flight_descent_angle_deg\", \"value\": 36.9185, \"unit\": \"degrees\", \"source\": \"model:flight_v1\", \"detail\": \"SIMULATED angle below the horizontal at landing, read off the landing velocity\"}, {\"name\": \"flight_time_s\", \"value\": 4.5175, \"unit\": \"seconds\", \"source\": \"model:flight_v1\", \"detail\": \"SIMULATED hang time from launch to landing\"}], \"mechanics_score\": 94.9, \"outcome_score\": null, \"overall_score\": 94.9, \"shot\": null}, \"alignment\": {\"quality\": \"top_impact\"}, \"notes\": [\"alignment degraded: aligned on top and impact\"], \"feedback\": {\"swing_id\": \"1\", \"overall_score\": 94.9, \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\", \"tips\": [{\"checkpoint\": \"tempo\", \"text\": \"Tempo too quick - 2.4:1.\", \"severity\": \"minor\"}]}, \"analysis_version\": 15}",
+      "sessions/2026-08-16/1/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"down_the_line\": \"sha-2026-08-16-1-down_the_line\",\n    \"face_on\": \"sha-2026-08-16-1-face_on\",\n    \"shot_screen\": \"sha-2026-08-16-1-shot_screen\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 94.9,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\"\n}",
+      "sessions/2026-08-16/1/manifest.json": "{\n  \"swing_id\": \"1\",\n  \"session_id\": \"2026-08-16\",\n  \"created_at\": \"2026-08-10T01:39:00Z\",\n  \"updated_at\": \"2026-08-10T01:39:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-16-1-face_on\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-16-1-down_the_line\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-16-1-shot_screen\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": null,\n  \"club\": null,\n  \"mishit\": null\n}",
+      "sessions/2026-08-17/1/analysis.json": "{\"swing_id\": \"1\", \"session_id\": \"2026-08-17\", \"swing\": {\"swing_id\": \"1\", \"session_id\": \"2026-08-17\", \"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.42, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick - 2.4:1.\", \"percentile\": 10.0, \"population_n\": 1399, \"one_sided\": false}, {\"name\": \"head_sway\", \"score\": 1.0, \"passed\": true, \"observed\": 0.12, \"expected_low\": 0.0, \"expected_high\": 0.43, \"message\": \"Head stays steady.\", \"percentile\": 35.5, \"population_n\": 458, \"one_sided\": true}], \"unscored\": [], \"measurements\": [{\"name\": \"flight_carry_yds\", \"value\": 122.0, \"unit\": \"yards\", \"source\": \"model:flight_v1\", \"detail\": \"SIMULATED carry from the printed launch conditions; not the launch monitor's own carry, which is carry_distance_yds\"}], \"mechanics_score\": 94.9, \"outcome_score\": null, \"overall_score\": 94.9, \"shot\": null}, \"alignment\": {\"quality\": \"top_impact\"}, \"notes\": [\"alignment degraded: aligned on top and impact\"], \"feedback\": {\"swing_id\": \"1\", \"overall_score\": 94.9, \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\", \"tips\": [{\"checkpoint\": \"tempo\", \"text\": \"Tempo too quick - 2.4:1.\", \"severity\": \"minor\"}]}, \"analysis_version\": 16}",
+      "sessions/2026-08-17/1/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"down_the_line\": \"sha-2026-08-17-1-down_the_line\",\n    \"face_on\": \"sha-2026-08-17-1-face_on\",\n    \"shot_screen\": \"sha-2026-08-17-1-shot_screen\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 94.9,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\"\n}",
+      "sessions/2026-08-17/1/manifest.json": "{\n  \"swing_id\": \"1\",\n  \"session_id\": \"2026-08-17\",\n  \"created_at\": \"2026-08-10T01:39:00Z\",\n  \"updated_at\": \"2026-08-10T01:39:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-17-1-face_on\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-17-1-down_the_line\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-17-1-shot_screen\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": null,\n  \"club\": null,\n  \"mishit\": null\n}",
+      "sessions/2026-08-18/1/analysis.json": "{\"swing_id\": \"1\", \"session_id\": \"2026-08-18\", \"swing\": {\"swing_id\": \"1\", \"session_id\": \"2026-08-18\", \"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.42, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick - 2.4:1.\", \"percentile\": 10.0, \"population_n\": 1399, \"one_sided\": false}, {\"name\": \"head_sway\", \"score\": 1.0, \"passed\": true, \"observed\": 0.12, \"expected_low\": 0.0, \"expected_high\": 0.43, \"message\": \"Head stays steady.\", \"percentile\": 35.5, \"population_n\": 458, \"one_sided\": true}], \"unscored\": [], \"measurements\": [], \"mechanics_score\": 94.9, \"outcome_score\": null, \"overall_score\": 94.9, \"shot\": null}, \"alignment\": {\"quality\": \"top_impact\"}, \"notes\": [\"alignment degraded: aligned on top and impact\"], \"feedback\": {\"swing_id\": \"1\", \"overall_score\": 94.9, \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\", \"tips\": [{\"checkpoint\": \"tempo\", \"text\": \"Tempo too quick - 2.4:1.\", \"severity\": \"minor\"}]}}",
+      "sessions/2026-08-18/1/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"down_the_line\": \"sha-2026-08-18-1-down_the_line\",\n    \"face_on\": \"sha-2026-08-18-1-face_on\",\n    \"shot_screen\": \"sha-2026-08-18-1-shot_screen\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 94.9,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\"\n}",
+      "sessions/2026-08-18/1/manifest.json": "{\n  \"swing_id\": \"1\",\n  \"session_id\": \"2026-08-18\",\n  \"created_at\": \"2026-08-10T01:39:00Z\",\n  \"updated_at\": \"2026-08-10T01:39:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-18-1-face_on\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-18-1-down_the_line\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.abc123.mov\",\n      \"content_sha256\": \"sha-2026-08-18-1-shot_screen\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": null,\n  \"club\": null,\n  \"mishit\": null\n}",
+      "shots/sha-2026-08-10-1-shot_screen.shot.json": "{\n  \"shot_id\": \"2026-08-10-1\",\n  \"session_id\": \"2026-08-10\",\n  \"timestamp\": \"2026-08-10T12:00:00Z\",\n  \"source\": \"screen\",\n  \"club_head_speed\": null,\n  \"club_face_angle\": null,\n  \"club_path\": null,\n  \"ball_speed\": 90.7,\n  \"launch_angle\": 20.9,\n  \"launch_direction\": -5.3,\n  \"spin_rate\": 5991.0,\n  \"spin_axis\": 2.5,\n  \"smash_factor\": null,\n  \"carry_distance\": 125.6,\n  \"total_distance\": null,\n  \"bounce_and_roll\": null,\n  \"apex_height\": null,\n  \"shot_type\": null,\n  \"impact_position\": null,\n  \"provenance\": {\n    \"device\": \"hd_golf\",\n    \"parse_confidence\": 0.9,\n    \"needs_review\": false,\n    \"warnings\": [],\n    \"image_sha256\": \"sha-2026-08-10-1-shot_screen\",\n    \"image_path\": null,\n    \"raw_fields\": {}\n  }\n}",
+      "shots/sha-2026-08-14-1-shot_screen.shot.json": "{\n  \"shot_id\": \"2026-08-14-1\",\n  \"session_id\": \"2026-08-10\",\n  \"timestamp\": \"2026-08-10T12:00:00Z\",\n  \"source\": \"screen\",\n  \"club_head_speed\": null,\n  \"club_face_angle\": null,\n  \"club_path\": null,\n  \"ball_speed\": 90.7,\n  \"launch_angle\": 20.9,\n  \"launch_direction\": -5.3,\n  \"spin_rate\": 5991.0,\n  \"spin_axis\": 2.5,\n  \"smash_factor\": null,\n  \"carry_distance\": 125.6,\n  \"total_distance\": null,\n  \"bounce_and_roll\": null,\n  \"apex_height\": null,\n  \"shot_type\": null,\n  \"impact_position\": null,\n  \"provenance\": {\n    \"device\": \"hd_golf\",\n    \"parse_confidence\": 0.9,\n    \"needs_review\": false,\n    \"warnings\": [],\n    \"image_sha256\": \"sha-2026-08-14-1-shot_screen\",\n    \"image_path\": null,\n    \"raw_fields\": {}\n  }\n}",
+      "shots/sha-2026-08-15-1-shot_screen.shot.json": "{\n  \"shot_id\": \"2026-08-15-1\",\n  \"session_id\": \"2026-08-10\",\n  \"timestamp\": \"2026-08-10T12:00:00Z\",\n  \"source\": \"screen\",\n  \"club_head_speed\": null,\n  \"club_face_angle\": null,\n  \"club_path\": null,\n  \"ball_speed\": 90.7,\n  \"launch_angle\": 20.9,\n  \"launch_direction\": -5.3,\n  \"spin_rate\": 5991.0,\n  \"spin_axis\": 2.5,\n  \"smash_factor\": null,\n  \"carry_distance\": 125.6,\n  \"total_distance\": null,\n  \"bounce_and_roll\": null,\n  \"apex_height\": null,\n  \"shot_type\": null,\n  \"impact_position\": null,\n  \"provenance\": {\n    \"device\": \"hd_golf\",\n    \"parse_confidence\": 0.9,\n    \"needs_review\": false,\n    \"warnings\": [],\n    \"image_sha256\": \"sha-2026-08-15-1-shot_screen\",\n    \"image_path\": null,\n    \"raw_fields\": {}\n  }\n}",
+      "shots/sha-2026-08-16-1-shot_screen.shot.json": "{\n  \"shot_id\": \"2026-08-16-1\",\n  \"session_id\": \"2026-08-10\",\n  \"timestamp\": \"2026-08-10T12:00:00Z\",\n  \"source\": \"screen\",\n  \"club_head_speed\": null,\n  \"club_face_angle\": null,\n  \"club_path\": null,\n  \"ball_speed\": 90.7,\n  \"launch_angle\": 20.9,\n  \"launch_direction\": -5.3,\n  \"spin_rate\": 5991.0,\n  \"spin_axis\": 2.5,\n  \"smash_factor\": null,\n  \"carry_distance\": 125.6,\n  \"total_distance\": null,\n  \"bounce_and_roll\": null,\n  \"apex_height\": null,\n  \"shot_type\": null,\n  \"impact_position\": null,\n  \"provenance\": {\n    \"device\": \"hd_golf\",\n    \"parse_confidence\": 0.9,\n    \"needs_review\": false,\n    \"warnings\": [],\n    \"image_sha256\": \"sha-2026-08-16-1-shot_screen\",\n    \"image_path\": null,\n    \"raw_fields\": {}\n  }\n}",
+      "shots/sha-2026-08-17-1-shot_screen.shot.json": "{\n  \"shot_id\": \"2026-08-17-1\",\n  \"session_id\": \"2026-08-10\",\n  \"timestamp\": \"2026-08-10T12:00:00Z\",\n  \"source\": \"screen\",\n  \"club_head_speed\": null,\n  \"club_face_angle\": null,\n  \"club_path\": null,\n  \"ball_speed\": 90.7,\n  \"launch_angle\": 20.9,\n  \"launch_direction\": -5.3,\n  \"spin_rate\": null,\n  \"spin_axis\": 2.5,\n  \"smash_factor\": null,\n  \"carry_distance\": 400.0,\n  \"total_distance\": null,\n  \"bounce_and_roll\": null,\n  \"apex_height\": null,\n  \"shot_type\": null,\n  \"impact_position\": null,\n  \"provenance\": {\n    \"device\": \"hd_golf\",\n    \"parse_confidence\": 0.9,\n    \"needs_review\": false,\n    \"warnings\": [],\n    \"image_sha256\": \"sha-2026-08-17-1-shot_screen\",\n    \"image_path\": null,\n    \"raw_fields\": {}\n  }\n}",
+      "shots/sha-2026-08-18-1-shot_screen.shot.json": "{\n  \"shot_id\": \"2026-08-18-1\",\n  \"session_id\": \"2026-08-10\",\n  \"timestamp\": \"2026-08-10T12:00:00Z\",\n  \"source\": \"screen\",\n  \"club_head_speed\": null,\n  \"club_face_angle\": null,\n  \"club_path\": null,\n  \"ball_speed\": 90.7,\n  \"launch_angle\": 20.9,\n  \"launch_direction\": -5.3,\n  \"spin_rate\": null,\n  \"spin_axis\": 2.5,\n  \"smash_factor\": null,\n  \"carry_distance\": 400.0,\n  \"total_distance\": null,\n  \"bounce_and_roll\": null,\n  \"apex_height\": null,\n  \"shot_type\": null,\n  \"impact_position\": null,\n  \"provenance\": {\n    \"device\": \"hd_golf\",\n    \"parse_confidence\": 0.9,\n    \"needs_review\": false,\n    \"warnings\": [],\n    \"image_sha256\": \"sha-2026-08-18-1-shot_screen\",\n    \"image_path\": null,\n    \"raw_fields\": {}\n  }\n}"
+    },
+    "roots": {
+      "golfers": null,
+      "sessions": "sessions",
+      "shots": "shots"
+    }
+  },
+  "provenance": {
+    "analysis_version": 16,
+    "flight_model_calls": [
+      0,
+      1,
+      2,
+      4,
+      5,
+      6,
+      7,
+      8
+    ],
+    "kind": "mcp",
+    "mcp_version": "2.0.0",
+    "note": "test_flight_tool.py's scenarios in one tree with no registry, a session each: a printed spin that flies, one photo on three swings, no shot screen, the recorded flight agreeing, edited on the current engine and on an older one, a refused flight over a recorded one and a refused one alone, an unread screen and the miss",
+    "oracle": "python",
+    "pydantic_version": "2.13.4",
+    "python_version": "3.13.3",
+    "recorded_by": "scripts/conformance_vectors.py::_run_mcp",
+    "rerecords": [
+      {
+        "added": [],
+        "by": "golf-core rerecord",
+        "career_version": 3,
+        "declaration": "spec/declarations/career-v3.json",
+        "moved": [
+          "career_version"
+        ]
+      }
+    ],
+    "source": "scripts/conformance_vectors.py::_mcp_flight, after tests/mcp/"
+  }
+}

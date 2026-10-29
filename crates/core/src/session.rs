@@ -1,10 +1,12 @@
-//! The two verbs that write into a session: `golf-core run-shot --session` and
-//! `golf-core set-intent`. [M35 P11]
+//! The verbs that write into a session: `golf-core run-shot --session` and `golf-core set-intent`
+//! [M35 P11], and the three repairs the frozen server's routes were, `golf-core set-golfer`,
+//! `set-club` and `delete-swing` [M29 P32].
 //!
-//! **No Python twin.** Frozen Python analyses a shot only inside a swing, through
-//! `api/pipeline.py::analyze_swing_dir`, and it has no intent to set (ADR-035 clause 4). These are the
-//! first Rust verbs that write into `data/` beside `flag-mishit`, while the frozen server still
-//! writes there too (the M35 plan's decision 6). Every test runs them on a scratch copy.
+//! **No Python twin** for the first two. Frozen Python analyses a shot only inside a swing, through
+//! `api/pipeline.py::analyze_swing_dir`, and it has no intent to set (ADR-035 clause 4). These were
+//! the first Rust verbs that write into `data/` beside `flag-mishit`, while the frozen server still
+//! wrote there too (the M35 plan's decision 6). The three repairs are routes' twins, in `api/app.py`
+//! (their section below). Every test runs them on a scratch copy.
 //!
 //! # `run-shot --session`: a photo entry's `shot_analysis.json`
 //!
@@ -16,9 +18,11 @@
 //! `api/pipeline.py`'s, read through the ported stores:
 //!
 //! - **the shot**: the shot store, keyed by the manifest's photo hash, as `_shot_for` looks it up
-//!   before any OCR. There is no Rust OCR until §M29's `ort`, so this verb analyses only a photo
-//!   frozen Python already parsed. One the store holds no parse for is named, with the frozen import
-//!   that would parse it, and skipped (the M35 plan's finding 8);
+//!   before any OCR. `golf-core` holds no OCR (the reader is `crates/ocr`'s, which only `golf-ocr`
+//!   and `golf-lab` reach, so `ort` stays off M38's app), so this verb analyses only a photo something already
+//!   parsed. One the store holds no parse for is named, with the `golf-lab import-photos` line that
+//!   would parse it, and skipped (the M35 plan's finding 8; the import named frozen Python's script
+//!   until M29 P34 deleted it);
 //! - **the handedness**: the manifest's golfer in the golfer store, `_handedness_for`;
 //! - **the loft**: [`loft_for_club`] over the manifest's golfer and club, `_loft_for`;
 //! - **the intent**: the manifest's, with the manifest's club as [`crate::ShotInput::club`], so the
@@ -80,13 +84,42 @@
 //! `set_player`, `set_club`, `set_mishit`, `attribute_unlabeled`, or a cursor update. A drill
 //! recorded here and then rewritten by the frozen server silently becomes a tracked shot. So
 //! `set-intent` is safe on a session the frozen server no longer writes to, and §M29, which
-//! replaces that server, is what retires the hazard.
+//! replaces that server, is what retires the hazard. **M29 P32 retired it**: the routes that made
+//! those rewrites answer 410 naming the verb that replaces each (the M29 plan's D11), and the
+//! repairs below are Rust's, whose manifest keeps `intent` through every one of them.
+//!
+//! # `set-golfer`, `set-club`, `delete-swing`: the frozen server's repairs [M29 P32]
+//!
+//! `POST /api/sessions/{s}/swings/{w}/golfer`, `…/club` and `DELETE /api/sessions/{s}/swings/{w}`
+//! as verbs, over the store functions that already held their halves:
+//! `SwingBundleStore::{set_player, set_club, delete_swing}` and `GolferStore::get_or_create`, each
+//! gated by the storage family (`bundle.set_player`, `bundle.set_club`, `bundle.delete_swing`,
+//! `golfer.get_or_create`). They exist so that every route D11 closes refuses naming a verb, and
+//! so that ADR-024 §5's one repair path for a club outlives the route it was. Each keeps its
+//! route's rule, with three differences, each because a CLI is not a page:
+//!
+//! - **The swing is checked before anything is written.** The golfer route registered a new
+//!   golfer and only then learned the swing did not exist; here a refused run writes nothing.
+//! - **The ids are path segments the routes' `_safe` admitted**, and the delete also wants a
+//!   manifest that reads. `--swing ..` would otherwise name the session's parent, which
+//!   `delete_swing` would remove whole; and a directory no store can see is not a swing any page
+//!   could have offered to delete.
+//! - **A retag says when the stored analysis predates it.** The club picks the loft a flight is
+//!   solved with, and the golfer the handedness `head_stays_back` is read in and the bag a loft
+//!   comes from. Neither is among the inputs `analysis.state.json` hashes, so nothing else would
+//!   mark the stored result as computed under the old one.
+//!
+//! `set-golfer` registers through `get_or_create`, as the route's `_resolve_golfer` did: a known
+//! golfer's stored handedness wins over `--handedness`, and a new golfer needs one, since a guessed
+//! handedness reads a normal impact position as a fault forever after. The two cursor routes get
+//! no verb: once uploads close nothing reads a cursor, and `golf-lab import-photos --into-session`
+//! takes `--player` and `--club` itself.
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 use contracts::career::{ExcludedSwing, ExclusionReason};
-use contracts::club::ClubId;
+use contracts::club::{parse_club, ClubId};
 use contracts::golfer::Handedness;
 use contracts::intent::{PracticeGoal, PracticeMode, TargetShape};
 use contracts::shot_result::ShotResult;
@@ -96,13 +129,14 @@ use serde::Serialize;
 use storage::bundle_store::SwingBundleStore;
 use storage::corpus::{read_corpus, EngineVersions};
 use storage::flight_inputs::{loft_for_club, LoftGap};
-use storage::golfer_store::GolferStore;
+use storage::golfer_store::{slugify, GolferStore};
 use storage::manifest::{Role, SwingManifest};
 use storage::session_meta::set_current_intent;
 use storage::shot_store::ShotStore;
-use storage::state::save_shot_analysis;
+use storage::state::{load_state, save_shot_analysis, Status, ANALYSIS_NAME, SHOT_ANALYSIS_NAME};
+use storage::StoreError;
 
-use crate::reports::{data_dir, plural, Answer};
+use crate::reports::{data_dir, plural, Answer, DataDirs};
 use crate::{run_shot, ShotInput};
 
 /// The three directories `run-shot --session` reads: the sessions, the golfer registry (and the bags
@@ -132,7 +166,11 @@ impl ShotDirs {
 }
 
 /// What became of one manifest in a `run-shot --session` walk.
-enum Outcome {
+///
+/// Public, with [`analyse_entry`] and [`Duplicates`], since M29 P27: `golf-lab reanalyze` re-runs a
+/// photo entry through this verb's own code (the M29 plan's C7) and reports each answer in its own
+/// words, so it takes the typed answer rather than parsing this verb's line.
+pub enum Outcome {
     /// A photo entry analysed, and its `shot_analysis.json` written.
     Written(Box<ShotResult>),
     /// A manifest with a face-on clip, whose shot is analysed with its swing.
@@ -255,7 +293,7 @@ fn written(result: &ShotResult) -> String {
 }
 
 /// One manifest of the walk, start to finish.
-fn analyse_entry(
+pub fn analyse_entry(
     manifest: &SwingManifest,
     dirs: &ShotDirs,
     duplicates: &mut Duplicates,
@@ -278,9 +316,8 @@ fn analyse_entry(
                 .join(&manifest.swing_id)
                 .join(&photo.filename);
             return Outcome::NoParse(format!(
-                "the shot store at {} holds no parse of shot photo {}; frozen Python reads it with \
-                 python scripts/import_shot_screens.py {} --session {} --out {}, and then this \
-                 verb analyses it",
+                "the shot store at {} holds no parse of shot photo {}; golf-lab reads it with \
+                 golf-lab import-photos {} --session {} --out {}, and then this verb analyses it",
                 dirs.shots.display(),
                 cut(&photo.content_sha256),
                 photo_path.display(),
@@ -335,16 +372,19 @@ fn analyse_entry(
 }
 
 /// Which photo entries the corpus counts as duplicates, read once per golfer.
-struct Duplicates<'a> {
-    sessions: &'a Path,
+///
+/// It owns the sessions directory it reads, so a caller walking entries under more than one (`golf-lab
+/// reanalyze`, given swing directories by path) can hold one per directory.
+pub struct Duplicates {
+    sessions: PathBuf,
     versions: EngineVersions,
     by_golfer: BTreeMap<String, Vec<ExcludedSwing>>,
 }
 
-impl<'a> Duplicates<'a> {
-    fn new(sessions: &'a Path, versions: EngineVersions) -> Self {
+impl Duplicates {
+    pub fn new(sessions: &Path, versions: EngineVersions) -> Self {
         Duplicates {
-            sessions,
+            sessions: sessions.to_path_buf(),
             versions,
             by_golfer: BTreeMap::new(),
         }
@@ -353,9 +393,9 @@ impl<'a> Duplicates<'a> {
     /// The corpus's sentence when it excludes this manifest as a duplicate, else `None`. Decided off
     /// the manifests alone, before any artifact is read, so this verb's own writes cannot move it
     /// mid-walk and one read per golfer serves the whole walk.
-    fn of(&mut self, manifest: &SwingManifest) -> Option<String> {
+    pub fn of(&mut self, manifest: &SwingManifest) -> Option<String> {
         let player_id = manifest.player_id.as_deref()?;
-        let (sessions, versions) = (self.sessions, self.versions);
+        let (sessions, versions) = (&self.sessions, self.versions);
         let excluded = self
             .by_golfer
             .entry(player_id.to_string())
@@ -575,6 +615,268 @@ fn describe(goal: &PracticeGoal) -> String {
         ", which no club or player stat counts"
     };
     format!("= {}{shape}{drill}", wire(&goal.mode))
+}
+
+// ------------------------------------------------------ set-golfer, set-club, delete-swing
+
+/// The three repair verbs, by the name each is run under.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RepairVerb {
+    SetGolfer,
+    SetClub,
+    DeleteSwing,
+}
+
+impl RepairVerb {
+    pub const ALL: [RepairVerb; 3] = [
+        RepairVerb::SetGolfer,
+        RepairVerb::SetClub,
+        RepairVerb::DeleteSwing,
+    ];
+
+    pub fn name(self) -> &'static str {
+        match self {
+            RepairVerb::SetGolfer => "set-golfer",
+            RepairVerb::SetClub => "set-club",
+            RepairVerb::DeleteSwing => "delete-swing",
+        }
+    }
+
+    pub fn from_name(name: &str) -> Option<Self> {
+        Self::ALL.into_iter().find(|verb| verb.name() == name)
+    }
+}
+
+/// What a repair does to its swing, once its flags are read.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Repair {
+    /// The golfer `name` slugs to, registered with `handedness` if the registry has no such golfer.
+    Golfer {
+        name: String,
+        handedness: Option<Handedness>,
+    },
+    Club(ClubId),
+    Delete,
+}
+
+/// One repair run: the swing, and what is done to it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RepairAction {
+    pub session_id: String,
+    pub swing_id: String,
+    pub repair: Repair,
+}
+
+impl RepairAction {
+    pub fn verb(&self) -> RepairVerb {
+        match self.repair {
+            Repair::Golfer { .. } => RepairVerb::SetGolfer,
+            Repair::Club(_) => RepairVerb::SetClub,
+            Repair::Delete => RepairVerb::DeleteSwing,
+        }
+    }
+}
+
+/// `api/app.py::_SAFE_SEGMENT`, `^[A-Za-z0-9][A-Za-z0-9._-]*$`: what the routes' `_safe` let into a
+/// path, and so what these verbs join to one. By hand, as `contracts::golfer::is_player_id` is,
+/// since Rust carries no regex engine. `..` and `.hidden` fail on their first character and `a/b`
+/// on the slash. Python's `$` also matched before one trailing newline, which only ever let a
+/// newline into a path, so that is not ported.
+fn is_safe_segment(text: &str) -> bool {
+    let mut chars = text.chars();
+    chars
+        .next()
+        .is_some_and(|first| first.is_ascii_alphanumeric())
+        && chars.all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '.' | '_' | '-'))
+}
+
+/// The flags' one decision for `verb`: the swing, as two safe segments, and the value its verb
+/// needs, parsed. `Err` is the refusal, which the binary prints under its usage and exits 2 on, as
+/// [`intent_action`]'s is. The binary has already refused a flag `verb` does not take, so a value
+/// given here for another verb is not looked at.
+pub fn repair_action(
+    verb: RepairVerb,
+    session: Option<String>,
+    swing: Option<String>,
+    name: Option<String>,
+    handedness: Option<String>,
+    club: Option<String>,
+) -> Result<RepairAction, String> {
+    let session_id = session
+        .filter(|session| !session.is_empty())
+        .ok_or("give the session with --session S")?;
+    let swing_id = swing
+        .filter(|swing| !swing.is_empty())
+        .ok_or("give the swing with --swing W")?;
+    for (kind, id) in [("session", &session_id), ("swing", &swing_id)] {
+        if !is_safe_segment(id) {
+            return Err(format!(
+                "{kind} id {} is not one the store names: letters, digits, '.', '_' and '-', \
+                 starting with a letter or a digit",
+                pyfmt::str_repr(id)
+            ));
+        }
+    }
+    let repair = match verb {
+        RepairVerb::SetGolfer => {
+            let name = name
+                .filter(|name| !name.is_empty())
+                .ok_or("give the golfer with --name N")?;
+            // `get_or_create`'s own refusal, worded as the store words it, since a slug of nothing
+            // is refused before the registry is read.
+            if slugify(&name).is_empty() {
+                return Err(format!(
+                    "name {} has no usable characters for an id",
+                    pyfmt::str_repr(&name)
+                ));
+            }
+            let handedness = match handedness {
+                None => None,
+                Some(text) => Some(
+                    serde_json::from_value::<Handedness>(serde_json::Value::from(text.as_str()))
+                        .map_err(|_| format!("'{text}' is not a handedness: give right or left"))?,
+                ),
+            };
+            Repair::Golfer { name, handedness }
+        }
+        RepairVerb::SetClub => {
+            let text = club.ok_or("give the club with --club C")?;
+            // `_resolve_club`'s refusal, word for word: never nudged toward a nearest match.
+            Repair::Club(parse_club(&text).ok_or_else(|| {
+                format!(
+                    "{} is not a club in the bag — try '7i', '7 iron' or 'pw'",
+                    pyfmt::str_repr(&text)
+                )
+            })?)
+        }
+        RepairVerb::DeleteSwing => Repair::Delete,
+    };
+    Ok(RepairAction {
+        session_id,
+        swing_id,
+        repair,
+    })
+}
+
+/// `golf-core set-golfer`, `set-club` or `delete-swing`, after its flags: one line on stdout naming
+/// what was written, with `updated_at` stamped `now` on a retag and on a golfer registered. Exit 0
+/// on a write; 2 on a swing that does not exist (or is being analysed, for a delete) and on a new
+/// golfer given no handedness, each with nothing written; 1 if a file cannot be written.
+pub fn repair(action: &RepairAction, dirs: &DataDirs, now: Timestamp) -> Answer {
+    let verb = action.verb().name();
+    let (session_id, swing_id) = (&action.session_id, &action.swing_id);
+    let reference = format!("{session_id}/{swing_id}");
+    let refused = |text: String| Answer {
+        stdout: String::new(),
+        stderr: format!("golf-core {verb}: {text}\n"),
+        code: 2,
+    };
+    let failed = |what: &str, e: &dyn std::fmt::Display| Answer {
+        stdout: String::new(),
+        stderr: format!("golf-core {verb}: writing {what}: {e}\n"),
+        code: 1,
+    };
+    let store = SwingBundleStore::new(&dirs.sessions);
+    let Some(before) = store.get_swing(session_id, swing_id) else {
+        return refused(format!("no swing {reference}"));
+    };
+    let swing_dir = dirs.sessions.join(session_id).join(swing_id);
+    // The sentence a changed value earns when an analysis is on disk (the module doc's third
+    // difference): `golf-lab reanalyze` re-runs a swing and a photo entry alike (the M29 plan's C7).
+    let predates = |used: &str| {
+        if swing_dir.join(ANALYSIS_NAME).is_file() || swing_dir.join(SHOT_ANALYSIS_NAME).is_file() {
+            format!(
+                "; its stored analysis {used}, so re-run golf-lab reanalyze {reference} to bring \
+                 it up to date"
+            )
+        } else {
+            String::new()
+        }
+    };
+
+    let line = match &action.repair {
+        Repair::Golfer { name, handedness } => {
+            let golfers = GolferStore::new(&dirs.golfers);
+            let player_id = slugify(name);
+            let (golfer, registered) = match golfers.get(&player_id) {
+                Some(known) => (known, false),
+                None => {
+                    let Some(handedness) = *handedness else {
+                        return refused(format!(
+                            "{} is new here — say whether they swing right- or left-handed, \
+                             with --handedness right or --handedness left",
+                            pyfmt::str_repr(pyfmt::strip(name))
+                        ));
+                    };
+                    match golfers.get_or_create(name, handedness, now) {
+                        Ok(golfer) => (golfer, true),
+                        Err(StoreError::Refused(text)) => return refused(text),
+                        Err(e) => return failed(&format!("golfer {player_id}"), &e),
+                    }
+                }
+            };
+            if let Err(e) = store.set_player(session_id, swing_id, &golfer.player_id, now) {
+                return failed(&reference, &e);
+            }
+            let was = before.player_id.as_deref().unwrap_or("none");
+            let mut line = format!("{reference}: golfer = {}, was {was}", golfer.player_id);
+            let hand = golfer.handedness.as_str();
+            if registered {
+                line += &format!(" (registered now: {}, {hand}-handed)", golfer.display_name);
+            } else if let Some(given) = handedness.filter(|given| *given != golfer.handedness) {
+                line += &format!(
+                    " ({} is on file as {hand}-handed, so --handedness {} changed nothing)",
+                    golfer.player_id,
+                    given.as_str()
+                );
+            }
+            if before.player_id.as_deref() != Some(golfer.player_id.as_str()) {
+                line += &predates("was read with the old golfer's handedness and bag");
+            }
+            line
+        }
+        Repair::Club(club) => {
+            if let Err(e) = store.set_club(session_id, swing_id, *club, now) {
+                return failed(&reference, &e);
+            }
+            let was = before.club.map_or("none", ClubId::as_str);
+            let mut line = format!("{reference}: club = {}, was {was}", club.as_str());
+            if before.club != Some(*club) {
+                line += &predates("flew it with the old club's loft");
+            }
+            line
+        }
+        Repair::Delete => {
+            // The route's 409: deleting under a running job loses the race, since the worker's
+            // `save_state` re-creates the directory for its terminal state and leaves a swing with
+            // a state file and no files. The frozen worker still runs while the frozen server does.
+            if let Some(state) = load_state(&swing_dir)
+                .filter(|state| matches!(state.status, Status::Queued | Status::Running))
+            {
+                return refused(format!(
+                    "{reference} is being analyzed ({}) — wait for it to finish, then delete it",
+                    wire(&state.status)
+                ));
+            }
+            match store.delete_swing(session_id, swing_id) {
+                Ok(true) => {}
+                Ok(false) => return refused(format!("no swing {reference}")),
+                Err(e) => return failed(&reference, &e),
+            }
+            let roles: Vec<String> = before.roles.keys().map(wire).collect();
+            let held = if roles.is_empty() {
+                "no file".to_string()
+            } else {
+                roles.join(", ")
+            };
+            format!("{reference}: deleted, with every file in its directory (it held {held})")
+        }
+    };
+    Answer {
+        stdout: format!("{line}\n"),
+        stderr: String::new(),
+        code: 0,
+    }
 }
 
 #[cfg(test)]

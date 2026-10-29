@@ -1,0 +1,203 @@
+{
+  "career_version": 3,
+  "expected": {
+    "results": [
+      {
+        "content": [
+          {
+            "text": "{\n  \"display_name\": \"Aaron\",\n  \"profile\": {\n    \"player_id\": \"aaron\",\n    \"clubs\": [\n      {\n        \"grades\": {\n          \"club\": \"7i\",\n          \"n_shots\": 6,\n          \"strike\": {\n            \"ball_speed\": {\n              \"name\": \"ball_speed_mph\",\n              \"unit\": \"mph\",\n              \"source\": \"launch_monitor:hd_golf\",\n              \"n\": 6,\n              \"n_sessions\": 6,\n              \"mean\": 118.0,\n              \"mean_ci\": {\n                \"low\": 118.0,\n                \"high\": 118.0,\n                \"confidence\": 0.95\n              },\n              \"median\": 118.0,\n              \"sd\": null,\n              \"sd_ci\": null,\n              \"minimum\": null,\n              \"maximum\": null,\n              \"sessions\": [\n                {\n                  \"session_id\": \"2026-09-01\",\n                  \"captured_at\": \"2026-09-01T12:00:00Z\",\n                  \"n\": 1,\n                  \"mean\": null\n                },\n                {\n                  \"session_id\": \"2026-09-02\",\n                  \"captured_at\": \"2026-09-02T12:00:00Z\",\n                  \"n\": 1,\n                  \"mean\": null\n                },\n                {\n                  \"session_id\": \"2026-09-03\",\n                  \"captured_at\": \"2026-09-03T12:00:00Z\",\n                  \"n\": 1,\n                  \"mean\": null\n                },\n                {\n                  \"session_id\": \"2026-09-04\",\n                  \"captured_at\": \"2026-09-04T12:00:00Z\",\n                  \"n\": 1,\n                  \"mean\": null\n                },\n                {\n                  \"session_id\": \"2026-09-05\",\n                  \"captured_at\": \"2026-09-05T12:00:00Z\",\n                  \"n\": 1,\n                  \"mean\": null\n                },\n                {\n                  \"session_id\": \"2026-09-06\",\n                  \"captured_at\": \"2026-09-06T12:00:00Z\",\n                  \"n\": 1,\n                  \"mean\": null\n                }\n              ],\n              \"ready\": [\n                \"center\"\n              ],\n              \"withheld\": [\n                {\n                  \"claim\": \"spread\",\n                  \"have_n\": 6,\n                  \"need_n\": 10,\n                  \"have_sessions\": 6,\n                  \"need_sessions\": 1,\n                  \"reason\": \"a claim about how repeatable this is needs 10 samples (there are 6)\"\n                },\n                {\n                  \"claim\": \"trend\",\n                  \"have_n\": 6,\n                  \"need_n\": 12,\n                  \"have_sessions\": 6,\n                  \"need_sessions\": 3,\n                  \"reason\": \"a claim that this has moved needs 12 samples (there are 6)\"\n                }\n              ]\n            },\n            \"dispersion\": {\n              \"carry_distance_yds\": {\n                \"name\": \"carry_distance_yds\",\n                \"unit\": \"yards\",\n                \"source\": \"launch_monitor:hd_golf\",\n                \"n\": 5,\n                \"n_sessions\": 5,\n                \"target\": null,\n                \"tolerance\": 5.0,\n                \"bias\": \"withheld\",\n                \"center\": null,\n                \"center_ci\": null,\n                \"offset\": null,\n                \"scatter\": \"withheld\",\n                \"sd\": null,\n                \"sd_ci\": null,\n                \"within_session_sd\": null,\n                \"pattern\": null,\n                \"points_at\": null,\n                \"caveats\": [],\n                \"withheld\": [\n                  {\n                    \"claim\": \"spread\",\n                    \"have_n\": 5,\n                    \"need_n\": 10,\n                    \"have_sessions\": 5,\n                    \"need_sessions\": 1,\n                    \"reason\": \"a claim about how repeatable this is needs 10 samples (there are 5)\"\n                  }\n                ],\n                \"unavailable\": [\n                  \"no target for carry_distance_yds: how far a golfer should hit a given club is not a number this repo has. Every distribution here is cut from GolfDB, which contains no ball flight, and a tour carry band would judge an amateur against a population they are not in\"\n                ]\n              }\n            }\n          },\n          \"topics\": []\n        },\n        \"list\": []\n      }\n    ],\n    \"player\": {\n      \"grades\": {\n        \"n_shots\": 6,\n        \"untagged_shots\": 0,\n        \"strike\": {\n          \"dispersion\": {}\n        },\n        \"topics\": []\n      },\n      \"list\": []\n    }\n  }\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "display_name": "Aaron",
+            "profile": {
+              "clubs": [
+                {
+                  "grades": {
+                    "club": "7i",
+                    "n_shots": 6,
+                    "strike": {
+                      "ball_speed": {
+                        "maximum": null,
+                        "mean": 118.0,
+                        "mean_ci": {
+                          "confidence": 0.95,
+                          "high": 118.0,
+                          "low": 118.0
+                        },
+                        "median": 118.0,
+                        "minimum": null,
+                        "n": 6,
+                        "n_sessions": 6,
+                        "name": "ball_speed_mph",
+                        "ready": [
+                          "center"
+                        ],
+                        "sd": null,
+                        "sd_ci": null,
+                        "sessions": [
+                          {
+                            "captured_at": "2026-09-01T12:00:00Z",
+                            "mean": null,
+                            "n": 1,
+                            "session_id": "2026-09-01"
+                          },
+                          {
+                            "captured_at": "2026-09-02T12:00:00Z",
+                            "mean": null,
+                            "n": 1,
+                            "session_id": "2026-09-02"
+                          },
+                          {
+                            "captured_at": "2026-09-03T12:00:00Z",
+                            "mean": null,
+                            "n": 1,
+                            "session_id": "2026-09-03"
+                          },
+                          {
+                            "captured_at": "2026-09-04T12:00:00Z",
+                            "mean": null,
+                            "n": 1,
+                            "session_id": "2026-09-04"
+                          },
+                          {
+                            "captured_at": "2026-09-05T12:00:00Z",
+                            "mean": null,
+                            "n": 1,
+                            "session_id": "2026-09-05"
+                          },
+                          {
+                            "captured_at": "2026-09-06T12:00:00Z",
+                            "mean": null,
+                            "n": 1,
+                            "session_id": "2026-09-06"
+                          }
+                        ],
+                        "source": "launch_monitor:hd_golf",
+                        "unit": "mph",
+                        "withheld": [
+                          {
+                            "claim": "spread",
+                            "have_n": 6,
+                            "have_sessions": 6,
+                            "need_n": 10,
+                            "need_sessions": 1,
+                            "reason": "a claim about how repeatable this is needs 10 samples (there are 6)"
+                          },
+                          {
+                            "claim": "trend",
+                            "have_n": 6,
+                            "have_sessions": 6,
+                            "need_n": 12,
+                            "need_sessions": 3,
+                            "reason": "a claim that this has moved needs 12 samples (there are 6)"
+                          }
+                        ]
+                      },
+                      "dispersion": {
+                        "carry_distance_yds": {
+                          "bias": "withheld",
+                          "caveats": [],
+                          "center": null,
+                          "center_ci": null,
+                          "n": 5,
+                          "n_sessions": 5,
+                          "name": "carry_distance_yds",
+                          "offset": null,
+                          "pattern": null,
+                          "points_at": null,
+                          "scatter": "withheld",
+                          "sd": null,
+                          "sd_ci": null,
+                          "source": "launch_monitor:hd_golf",
+                          "target": null,
+                          "tolerance": 5.0,
+                          "unavailable": [
+                            "no target for carry_distance_yds: how far a golfer should hit a given club is not a number this repo has. Every distribution here is cut from GolfDB, which contains no ball flight, and a tour carry band would judge an amateur against a population they are not in"
+                          ],
+                          "unit": "yards",
+                          "withheld": [
+                            {
+                              "claim": "spread",
+                              "have_n": 5,
+                              "have_sessions": 5,
+                              "need_n": 10,
+                              "need_sessions": 1,
+                              "reason": "a claim about how repeatable this is needs 10 samples (there are 5)"
+                            }
+                          ],
+                          "within_session_sd": null
+                        }
+                      }
+                    },
+                    "topics": []
+                  },
+                  "list": []
+                }
+              ],
+              "player": {
+                "grades": {
+                  "n_shots": 6,
+                  "strike": {
+                    "dispersion": {}
+                  },
+                  "topics": [],
+                  "untagged_shots": 0
+                },
+                "list": []
+              },
+              "player_id": "aaron"
+            }
+          }
+        }
+      }
+    ]
+  },
+  "id": "mcp/rust/mishit",
+  "input": {
+    "calls": [
+      {
+        "arguments": {
+          "player": "Aaron"
+        },
+        "now": null,
+        "tool": "get_strike_profile"
+      }
+    ],
+    "files": {
+      "golfers/aaron.golfer.json": "{\n  \"player_id\": \"aaron\",\n  \"display_name\": \"Aaron\",\n  \"handedness\": \"right\",\n  \"created_at\": \"2026-10-01T12:00:00Z\"\n}",
+      "sessions/2026-09-01/1/analysis.json": "{\"swing_id\": \"1\", \"session_id\": \"s\", \"swing\": {\"swing_id\": \"1\", \"session_id\": \"s\", \"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.42, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick - 2.4:1.\", \"percentile\": 10.0, \"population_n\": 1399, \"one_sided\": false}, {\"name\": \"head_sway\", \"score\": 1.0, \"passed\": true, \"observed\": 0.12, \"expected_low\": 0.0, \"expected_high\": 0.43, \"message\": \"Head stays steady.\", \"percentile\": 35.5, \"population_n\": 458, \"one_sided\": true}], \"unscored\": [], \"measurements\": [{\"name\": \"carry_distance_yds\", \"value\": 150.0, \"unit\": \"yards\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}, {\"name\": \"total_distance_yds\", \"value\": 162.0, \"unit\": \"yards\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}, {\"name\": \"ball_speed_mph\", \"value\": 118.0, \"unit\": \"mph\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}, {\"name\": \"head_sway_norm\", \"value\": 0.2, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}], \"mechanics_score\": 91.0, \"outcome_score\": null, \"overall_score\": 91.0, \"shot\": null}, \"alignment\": {\"quality\": \"top_impact\"}, \"notes\": [\"alignment degraded: aligned on top and impact\"], \"feedback\": {\"swing_id\": \"1\", \"overall_score\": 91.0, \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\", \"tips\": [{\"checkpoint\": \"tempo\", \"text\": \"Tempo too quick - 2.4:1.\", \"severity\": \"minor\"}]}, \"analysis_version\": 16}",
+      "sessions/2026-09-01/1/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"down_the_line\": \"sha-2026-09-01-1-down_the_line\",\n    \"face_on\": \"sha-2026-09-01-1-face_on\",\n    \"shot_screen\": \"sha-2026-09-01-1-shot_screen\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 91.0,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\"\n}",
+      "sessions/2026-09-01/1/manifest.json": "{\n  \"swing_id\": \"1\",\n  \"session_id\": \"2026-09-01\",\n  \"created_at\": \"2026-09-01T12:00:00Z\",\n  \"updated_at\": \"2026-09-01T12:00:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.abc123.mov\",\n      \"content_sha256\": \"sha-2026-09-01-1-face_on\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.abc123.mov\",\n      \"content_sha256\": \"sha-2026-09-01-1-down_the_line\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.abc123.mov\",\n      \"content_sha256\": \"sha-2026-09-01-1-shot_screen\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": \"7i\",\n  \"mishit\": null\n}",
+      "sessions/2026-09-02/1/analysis.json": "{\"swing_id\": \"1\", \"session_id\": \"s\", \"swing\": {\"swing_id\": \"1\", \"session_id\": \"s\", \"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.42, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick - 2.4:1.\", \"percentile\": 10.0, \"population_n\": 1399, \"one_sided\": false}, {\"name\": \"head_sway\", \"score\": 1.0, \"passed\": true, \"observed\": 0.12, \"expected_low\": 0.0, \"expected_high\": 0.43, \"message\": \"Head stays steady.\", \"percentile\": 35.5, \"population_n\": 458, \"one_sided\": true}], \"unscored\": [], \"measurements\": [{\"name\": \"carry_distance_yds\", \"value\": 152.0, \"unit\": \"yards\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}, {\"name\": \"total_distance_yds\", \"value\": 164.0, \"unit\": \"yards\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}, {\"name\": \"ball_speed_mph\", \"value\": 118.0, \"unit\": \"mph\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}, {\"name\": \"head_sway_norm\", \"value\": 0.2, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}], \"mechanics_score\": 91.0, \"outcome_score\": null, \"overall_score\": 91.0, \"shot\": null}, \"alignment\": {\"quality\": \"top_impact\"}, \"notes\": [\"alignment degraded: aligned on top and impact\"], \"feedback\": {\"swing_id\": \"1\", \"overall_score\": 91.0, \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\", \"tips\": [{\"checkpoint\": \"tempo\", \"text\": \"Tempo too quick - 2.4:1.\", \"severity\": \"minor\"}]}, \"analysis_version\": 16}",
+      "sessions/2026-09-02/1/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"down_the_line\": \"sha-2026-09-02-1-down_the_line\",\n    \"face_on\": \"sha-2026-09-02-1-face_on\",\n    \"shot_screen\": \"sha-2026-09-02-1-shot_screen\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 91.0,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\"\n}",
+      "sessions/2026-09-02/1/manifest.json": "{\n  \"swing_id\": \"1\",\n  \"session_id\": \"2026-09-02\",\n  \"created_at\": \"2026-09-02T12:00:00Z\",\n  \"updated_at\": \"2026-09-02T12:00:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.abc123.mov\",\n      \"content_sha256\": \"sha-2026-09-02-1-face_on\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.abc123.mov\",\n      \"content_sha256\": \"sha-2026-09-02-1-down_the_line\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.abc123.mov\",\n      \"content_sha256\": \"sha-2026-09-02-1-shot_screen\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": \"7i\",\n  \"mishit\": null\n}",
+      "sessions/2026-09-03/1/analysis.json": "{\"swing_id\": \"1\", \"session_id\": \"s\", \"swing\": {\"swing_id\": \"1\", \"session_id\": \"s\", \"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.42, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick - 2.4:1.\", \"percentile\": 10.0, \"population_n\": 1399, \"one_sided\": false}, {\"name\": \"head_sway\", \"score\": 1.0, \"passed\": true, \"observed\": 0.12, \"expected_low\": 0.0, \"expected_high\": 0.43, \"message\": \"Head stays steady.\", \"percentile\": 35.5, \"population_n\": 458, \"one_sided\": true}], \"unscored\": [], \"measurements\": [{\"name\": \"carry_distance_yds\", \"value\": 148.0, \"unit\": \"yards\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}, {\"name\": \"total_distance_yds\", \"value\": 160.0, \"unit\": \"yards\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}, {\"name\": \"ball_speed_mph\", \"value\": 118.0, \"unit\": \"mph\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}, {\"name\": \"head_sway_norm\", \"value\": 0.2, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}], \"mechanics_score\": 91.0, \"outcome_score\": null, \"overall_score\": 91.0, \"shot\": null}, \"alignment\": {\"quality\": \"top_impact\"}, \"notes\": [\"alignment degraded: aligned on top and impact\"], \"feedback\": {\"swing_id\": \"1\", \"overall_score\": 91.0, \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\", \"tips\": [{\"checkpoint\": \"tempo\", \"text\": \"Tempo too quick - 2.4:1.\", \"severity\": \"minor\"}]}, \"analysis_version\": 16}",
+      "sessions/2026-09-03/1/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"down_the_line\": \"sha-2026-09-03-1-down_the_line\",\n    \"face_on\": \"sha-2026-09-03-1-face_on\",\n    \"shot_screen\": \"sha-2026-09-03-1-shot_screen\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 91.0,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\"\n}",
+      "sessions/2026-09-03/1/manifest.json": "{\n  \"swing_id\": \"1\",\n  \"session_id\": \"2026-09-03\",\n  \"created_at\": \"2026-09-03T12:00:00Z\",\n  \"updated_at\": \"2026-09-03T12:00:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.abc123.mov\",\n      \"content_sha256\": \"sha-2026-09-03-1-face_on\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.abc123.mov\",\n      \"content_sha256\": \"sha-2026-09-03-1-down_the_line\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.abc123.mov\",\n      \"content_sha256\": \"sha-2026-09-03-1-shot_screen\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": \"7i\",\n  \"mishit\": null\n}",
+      "sessions/2026-09-04/1/analysis.json": "{\"swing_id\": \"1\", \"session_id\": \"s\", \"swing\": {\"swing_id\": \"1\", \"session_id\": \"s\", \"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.42, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick - 2.4:1.\", \"percentile\": 10.0, \"population_n\": 1399, \"one_sided\": false}, {\"name\": \"head_sway\", \"score\": 1.0, \"passed\": true, \"observed\": 0.12, \"expected_low\": 0.0, \"expected_high\": 0.43, \"message\": \"Head stays steady.\", \"percentile\": 35.5, \"population_n\": 458, \"one_sided\": true}], \"unscored\": [], \"measurements\": [{\"name\": \"carry_distance_yds\", \"value\": 151.0, \"unit\": \"yards\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}, {\"name\": \"total_distance_yds\", \"value\": 163.0, \"unit\": \"yards\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}, {\"name\": \"ball_speed_mph\", \"value\": 118.0, \"unit\": \"mph\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}, {\"name\": \"head_sway_norm\", \"value\": 0.2, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}], \"mechanics_score\": 91.0, \"outcome_score\": null, \"overall_score\": 91.0, \"shot\": null}, \"alignment\": {\"quality\": \"top_impact\"}, \"notes\": [\"alignment degraded: aligned on top and impact\"], \"feedback\": {\"swing_id\": \"1\", \"overall_score\": 91.0, \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\", \"tips\": [{\"checkpoint\": \"tempo\", \"text\": \"Tempo too quick - 2.4:1.\", \"severity\": \"minor\"}]}, \"analysis_version\": 16}",
+      "sessions/2026-09-04/1/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"down_the_line\": \"sha-2026-09-04-1-down_the_line\",\n    \"face_on\": \"sha-2026-09-04-1-face_on\",\n    \"shot_screen\": \"sha-2026-09-04-1-shot_screen\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 91.0,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\"\n}",
+      "sessions/2026-09-04/1/manifest.json": "{\n  \"swing_id\": \"1\",\n  \"session_id\": \"2026-09-04\",\n  \"created_at\": \"2026-09-04T12:00:00Z\",\n  \"updated_at\": \"2026-09-04T12:00:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.abc123.mov\",\n      \"content_sha256\": \"sha-2026-09-04-1-face_on\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.abc123.mov\",\n      \"content_sha256\": \"sha-2026-09-04-1-down_the_line\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.abc123.mov\",\n      \"content_sha256\": \"sha-2026-09-04-1-shot_screen\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": \"7i\",\n  \"mishit\": null\n}",
+      "sessions/2026-09-05/1/analysis.json": "{\"swing_id\": \"1\", \"session_id\": \"s\", \"swing\": {\"swing_id\": \"1\", \"session_id\": \"s\", \"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.42, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick - 2.4:1.\", \"percentile\": 10.0, \"population_n\": 1399, \"one_sided\": false}, {\"name\": \"head_sway\", \"score\": 1.0, \"passed\": true, \"observed\": 0.12, \"expected_low\": 0.0, \"expected_high\": 0.43, \"message\": \"Head stays steady.\", \"percentile\": 35.5, \"population_n\": 458, \"one_sided\": true}], \"unscored\": [], \"measurements\": [{\"name\": \"carry_distance_yds\", \"value\": 149.0, \"unit\": \"yards\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}, {\"name\": \"total_distance_yds\", \"value\": 161.0, \"unit\": \"yards\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}, {\"name\": \"ball_speed_mph\", \"value\": 118.0, \"unit\": \"mph\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}, {\"name\": \"head_sway_norm\", \"value\": 0.2, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}], \"mechanics_score\": 91.0, \"outcome_score\": null, \"overall_score\": 91.0, \"shot\": null}, \"alignment\": {\"quality\": \"top_impact\"}, \"notes\": [\"alignment degraded: aligned on top and impact\"], \"feedback\": {\"swing_id\": \"1\", \"overall_score\": 91.0, \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\", \"tips\": [{\"checkpoint\": \"tempo\", \"text\": \"Tempo too quick - 2.4:1.\", \"severity\": \"minor\"}]}, \"analysis_version\": 16}",
+      "sessions/2026-09-05/1/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"down_the_line\": \"sha-2026-09-05-1-down_the_line\",\n    \"face_on\": \"sha-2026-09-05-1-face_on\",\n    \"shot_screen\": \"sha-2026-09-05-1-shot_screen\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 91.0,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\"\n}",
+      "sessions/2026-09-05/1/manifest.json": "{\n  \"swing_id\": \"1\",\n  \"session_id\": \"2026-09-05\",\n  \"created_at\": \"2026-09-05T12:00:00Z\",\n  \"updated_at\": \"2026-09-05T12:00:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.abc123.mov\",\n      \"content_sha256\": \"sha-2026-09-05-1-face_on\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.abc123.mov\",\n      \"content_sha256\": \"sha-2026-09-05-1-down_the_line\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.abc123.mov\",\n      \"content_sha256\": \"sha-2026-09-05-1-shot_screen\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": \"7i\",\n  \"mishit\": null\n}",
+      "sessions/2026-09-06/1/analysis.json": "{\"swing_id\": \"1\", \"session_id\": \"s\", \"swing\": {\"swing_id\": \"1\", \"session_id\": \"s\", \"checkpoint_scores\": [{\"name\": \"tempo\", \"score\": 0.85, \"passed\": false, \"observed\": 2.42, \"expected_low\": 2.72, \"expected_high\": 4.71, \"message\": \"Tempo too quick - 2.4:1.\", \"percentile\": 10.0, \"population_n\": 1399, \"one_sided\": false}, {\"name\": \"head_sway\", \"score\": 1.0, \"passed\": true, \"observed\": 0.12, \"expected_low\": 0.0, \"expected_high\": 0.43, \"message\": \"Head stays steady.\", \"percentile\": 35.5, \"population_n\": 458, \"one_sided\": true}], \"unscored\": [], \"measurements\": [{\"name\": \"carry_distance_yds\", \"value\": 22.0, \"unit\": \"yards\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}, {\"name\": \"total_distance_yds\", \"value\": 34.0, \"unit\": \"yards\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}, {\"name\": \"ball_speed_mph\", \"value\": 118.0, \"unit\": \"mph\", \"source\": \"launch_monitor:hd_golf\", \"detail\": \"test\"}, {\"name\": \"head_sway_norm\", \"value\": 0.2, \"unit\": \"shoulder_widths\", \"source\": \"pose:face_on\", \"detail\": \"test\"}], \"mechanics_score\": 91.0, \"outcome_score\": null, \"overall_score\": 91.0, \"shot\": null}, \"alignment\": {\"quality\": \"top_impact\"}, \"notes\": [\"alignment degraded: aligned on top and impact\"], \"feedback\": {\"swing_id\": \"1\", \"overall_score\": 91.0, \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\", \"tips\": [{\"checkpoint\": \"tempo\", \"text\": \"Tempo too quick - 2.4:1.\", \"severity\": \"minor\"}]}, \"analysis_version\": 16}",
+      "sessions/2026-09-06/1/analysis.state.json": "{\n  \"status\": \"done\",\n  \"inputs\": {\n    \"down_the_line\": \"sha-2026-09-06-1-down_the_line\",\n    \"face_on\": \"sha-2026-09-06-1-face_on\",\n    \"shot_screen\": \"sha-2026-09-06-1-shot_screen\"\n  },\n  \"queued_at\": null,\n  \"started_at\": null,\n  \"completed_at\": null,\n  \"duration_seconds\": null,\n  \"error\": null,\n  \"partial\": false,\n  \"missing_roles\": [],\n  \"video\": null,\n  \"video_codec\": null,\n  \"score\": 91.0,\n  \"headline\": \"Work on tempo first. Tempo too quick - 2.4:1.\"\n}",
+      "sessions/2026-09-06/1/manifest.json": "{\n  \"swing_id\": \"1\",\n  \"session_id\": \"2026-09-06\",\n  \"created_at\": \"2026-09-06T12:00:00Z\",\n  \"updated_at\": \"2026-09-06T12:00:00Z\",\n  \"roles\": {\n    \"face_on\": {\n      \"role\": \"face_on\",\n      \"filename\": \"face_on.abc123.mov\",\n      \"content_sha256\": \"sha-2026-09-06-1-face_on\",\n      \"original_filename\": \"face_on.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"down_the_line\": {\n      \"role\": \"down_the_line\",\n      \"filename\": \"down_the_line.abc123.mov\",\n      \"content_sha256\": \"sha-2026-09-06-1-down_the_line\",\n      \"original_filename\": \"down_the_line.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    },\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.abc123.mov\",\n      \"content_sha256\": \"sha-2026-09-06-1-shot_screen\",\n      \"original_filename\": \"shot_screen.mov\",\n      \"content_type\": \"video/quicktime\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-08-10T01:39:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": \"aaron\",\n  \"club\": \"7i\",\n  \"mishit\": null\n}"
+    },
+    "roots": {
+      "golfers": "golfers",
+      "sessions": "sessions",
+      "shots": "shots"
+    }
+  },
+  "provenance": {
+    "kind": "mcp",
+    "note": "One 7 iron: five shots near 150 and a 22-yard top, which the automatic mishit rule holds out of the carry, so the club's carry dispersion counts 5 of its 6 shots while its ball-speed baseline counts all 6. No topic exists, for club-mixed-bag's reason. Recorded by Rust, not worked: no hand and no Python stands behind this case (oracle rust, the M29 plan's D9), so what it pins is stability, the tool's answer over a tree frozen Python answered every other tool over.",
+    "oracle": "rust",
+    "source": "spec/vectors/mcp/tools/mishit.json, input.roots and input.files, copied whole (tests/tools.rs holds them equal). expected is `golf-mcp answer-case`'s answer, written once by M29 P15."
+  }
+}

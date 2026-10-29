@@ -1,0 +1,15 @@
+
+Ball flight — simulated, not measured
+------------------------------------------------------------------------
+
+  shot      2026-08-24-1, screen, 2026-08-24 09:15
+  swing     no swing on disk carries this photo
+  golfer    -, --handed
+  club      -, loft none (no_swing)
+
+  - spin: the screen printed no ball speed
+  - axis: no spin axis printed, and no face angle to take a direction
+    from either
+
+  No flight, for the reason above.
+

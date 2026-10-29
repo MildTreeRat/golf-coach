@@ -21,12 +21,20 @@
 //! `AtmosphereProfile` and `FlightModel.at_altitude`, whose only caller is
 //! `scripts/simulate_flight.py --altitude`.
 //!
-//! So none of it is here, on the rule [`super`] set for `dataset_info()` and
+//! So none of it came across at M22, on the rule [`super`] set for `dataset_info()` and
 //! [`super::store`] for `source_date`: a port of a function no committed vector can gate is a
-//! second implementation with no oracle. The same goes for `Atmosphere.reynolds_for`,
-//! `AeroRow.reynolds`, `AeroTable`'s three prose fields and `SpinDecay.kind` — all on disk, all
-//! read by nothing the engine calls. serde ignores unknown keys, so leaving them out of the structs
-//! costs nothing and states the reach honestly.
+//! second implementation with no oracle.
+//!
+//! **M29 P28 brought the provenance and the what-if**, because `golf-lab flight` is
+//! `simulate_flight.py`'s twin and prints both: [`SourceNote`] on every block and
+//! [`FlightDatasetInfo`] for `--verbose`, the atmosphere's name, temperature and pressure for the
+//! report's `air` line, and [`AtmosphereProfile`] with [`FlightModel::at_altitude`] for
+//! `--altitude`. Their oracle is that verb's text against the frozen script's (the M29 plan's C8),
+//! and the unit tests below hold the four numbers at four altitudes to frozen Python's `repr`, to
+//! the bit. Still not here: `Atmosphere.reynolds_for`, `AeroRow.reynolds`, `AeroTable`'s three
+//! prose fields and `SpinDecay.kind`, which are on disk and read by nothing either verb calls. serde
+//! ignores unknown keys, so leaving them out of the structs costs nothing and states the reach
+//! honestly.
 //!
 //! **The Reynolds column staying unparsed is worth one extra sentence**, because it is not dead
 //! weight in the artifact: `coefficients.rows` is Table 3 of US 7,156,757 B2, eight points along a
@@ -53,11 +61,28 @@ use serde::Deserialize;
 const FLIGHT_MODEL_JSON: &str =
     include_str!("../../../../src/golf_coach/analysis/benchmarks/flight_model_v1.json");
 
+/// Where one block of the artifact came from. `SourceNote`. [M29 P28]
+///
+/// Required on every block, for Python's reason: a block only exists because something published
+/// it, and a constant that cannot say what would make the file's whole claim (that none of this was
+/// fitted here) unverifiable one block at a time.
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+pub struct SourceNote {
+    pub citation: String,
+    pub url: String,
+    pub note: String,
+    /// Only the coefficient block and the profile carry one: what a stored, unevaluated column is
+    /// for.
+    #[serde(default)]
+    pub reynolds_note: Option<String>,
+}
+
 /// The ball the integrator flies: conforming mass and diameter.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize)]
 pub struct BallSpec {
     pub mass_kg: f64,
     pub diameter_m: f64,
+    pub source: SourceNote,
 }
 
 impl BallSpec {
@@ -78,19 +103,129 @@ impl BallSpec {
 
 /// The air the ball flies through — one air state, not a law for generating them.
 ///
-/// The committed instance is ISO 2533 at sea level, which is where every shot on disk was hit. The
-/// law that moves it somewhere else is `AtmosphereProfile` and is not ported — see the module doc.
-/// Only the density reaches the flight; the other three fields are on disk for the Reynolds helper
-/// nothing calls.
-#[derive(Debug, Clone, Deserialize)]
+/// The committed instance is ISO 2533 at sea level, which is where every shot on disk was hit.
+/// [`AtmosphereProfile`] is what moves it somewhere else. Only the density reaches the flight; the
+/// name and temperature reach `golf-lab flight`'s `air` line, and the viscosity and pressure are
+/// carried so an atmosphere generated at altitude is the whole air state Python's is.
+#[derive(Debug, Clone, PartialEq, Deserialize)]
 pub struct Atmosphere {
+    pub name: String,
     pub density_kg_m3: f64,
+    pub kinematic_viscosity_m2_s: f64,
+    pub temperature_k: f64,
+    pub pressure_pa: f64,
+    pub source: SourceNote,
+}
+
+/// An altitude outside the layer [`AtmosphereProfile`] transcribes: Python's `ValueError`.
+/// [M29 P28]
+///
+/// R8's raising side rather than a golfer-facing refusal, for `simulate_flight`'s reason: a caller
+/// asking for 30 km has a units bug, not a golf course. A value rather than a panic because
+/// `golf-lab flight --altitude` takes the number from a person, and the script prints it as
+/// `No flight: <message>` with exit 2.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AltitudeOutsideLayer {
+    /// `str(exc)`, exactly as Python's would read.
+    pub message: String,
+}
+
+impl std::fmt::Display for AltitudeOutsideLayer {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.message)
+    }
+}
+
+impl std::error::Error for AltitudeOutsideLayer {}
+
+/// How the air changes with altitude: ISO 2533's lowest layer, written as ratios.
+/// `AtmosphereProfile`. [M29 P28]
+///
+/// **Ratios against the committed sea-level block rather than the standard's three absolute
+/// formulas**, which is Python's one design decision in the class: the committed row is
+/// self-consistent in density and rounded to five figures in viscosity, so an absolute evaluation at
+/// zero altitude would hand back an air state subtly unlike the default. Ratios return all four
+/// numbers **to the bit** at zero, by construction, which a test below pins. Only `name` and
+/// `source` differ there, on purpose: an air state that was generated says which law generated it.
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+pub struct AtmosphereProfile {
+    pub name: String,
+    pub lapse_rate_k_per_m: f64,
+    pub gas_constant_j_kg_k: f64,
+    /// Stored and evaluated by nothing, here as in Python: the ratios need only `sutherland_s_k`.
+    pub sutherland_beta_kg_m_s_sqrt_k: f64,
+    pub sutherland_s_k: f64,
+    /// The layer's own domain, not a judgement about golf.
+    pub altitude_min_m: f64,
+    pub altitude_max_m: f64,
+    pub source: SourceNote,
+}
+
+impl AtmosphereProfile {
+    /// `g/(L*R)`, about 5.2559. Derived rather than stored, because it is derived.
+    pub fn pressure_exponent(&self, gravity_m_s2: f64) -> f64 {
+        gravity_m_s2 / (self.lapse_rate_k_per_m * self.gas_constant_j_kg_k)
+    }
+
+    /// Sutherland's law as a ratio, `(T/T0)**1.5 * (T0+S)/(T+S)`, for dynamic viscosity.
+    ///
+    /// `powf` where Python writes `**`: both are the platform's C `pow` on a positive base, which is
+    /// what the `repr`s in the tests confirm to the bit. The products and the division keep Python's
+    /// left-to-right order.
+    pub fn viscosity_ratio(&self, temperature_k: f64, base_temperature_k: f64) -> f64 {
+        let s = self.sutherland_s_k;
+        (temperature_k / base_temperature_k).powf(1.5) * (base_temperature_k + s)
+            / (temperature_k + s)
+    }
+
+    /// The air at `altitude_m`, anchored on `base` as the standard's zero row. `at_altitude`.
+    ///
+    /// Refuses outside the layer this profile transcribes, a NaN included, as Python's chained
+    /// comparison does. The generated air state cites the profile that generated it, so a flight
+    /// can always say where its atmosphere came from.
+    pub fn at_altitude(
+        &self,
+        base: &Atmosphere,
+        altitude_m: f64,
+        gravity_m_s2: f64,
+    ) -> Result<Atmosphere, AltitudeOutsideLayer> {
+        if !(self.altitude_min_m <= altitude_m && altitude_m <= self.altitude_max_m) {
+            return Err(AltitudeOutsideLayer {
+                message: format!(
+                    "altitude {} m is outside {} ({} to {} m), where the lapse rate this profile \
+                     carries is not the standard's",
+                    pyfmt::repr(altitude_m),
+                    self.name,
+                    pyfmt::repr(self.altitude_min_m),
+                    pyfmt::repr(self.altitude_max_m)
+                ),
+            });
+        }
+
+        let temperature_ratio = 1.0 - self.lapse_rate_k_per_m * altitude_m / base.temperature_k;
+        let temperature_k = base.temperature_k * temperature_ratio;
+        let exponent = self.pressure_exponent(gravity_m_s2);
+        // Density carries `exponent - 1` because `rho = p/(R*T)` and the `T` in the denominator is
+        // itself the ratio: the pressure drop divided by the temperature drop.
+        let density_ratio = temperature_ratio.powf(exponent - 1.0);
+        Ok(Atmosphere {
+            name: format!("{}_{}m", self.name, pyfmt::g(altitude_m)),
+            density_kg_m3: base.density_kg_m3 * density_ratio,
+            kinematic_viscosity_m2_s: base.kinematic_viscosity_m2_s
+                * self.viscosity_ratio(temperature_k, base.temperature_k)
+                / density_ratio,
+            temperature_k,
+            pressure_pa: base.pressure_pa * temperature_ratio.powf(exponent),
+            source: self.source.clone(),
+        })
+    }
 }
 
 /// Exponential spin-down at a fixed fractional rate.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize)]
 pub struct SpinDecay {
     pub rate_per_s: f64,
+    pub source: SourceNote,
 }
 
 impl SpinDecay {
@@ -110,7 +245,7 @@ impl SpinDecay {
 /// `pp` and `ph` are kept apart rather than pre-averaged so the artifact stays a faithful
 /// transcription of the published table — a stored average is a number no source can be checked
 /// against. `reynolds` is on disk and not here; the module doc says why.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize)]
 pub struct AeroRow {
     pub spin_ratio: f64,
     pub cl_pp: f64,
@@ -142,8 +277,9 @@ pub struct AeroCoefficients {
 }
 
 /// The measured coefficient rows, ascending in spin ratio, with the rule for reading them.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize)]
 pub struct AeroTable {
+    pub source: SourceNote,
     pub rows: Vec<AeroRow>,
 }
 
@@ -208,16 +344,35 @@ impl AeroTable {
 }
 
 /// Everything [`crate::flight`] needs and cannot derive.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize)]
 pub struct FlightModel {
     pub gravity_m_s2: f64,
     pub ball: BallSpec,
     pub atmosphere: Atmosphere,
+    pub atmosphere_profile: AtmosphereProfile,
     pub spin_decay: SpinDecay,
     pub coefficients: AeroTable,
 }
 
 impl FlightModel {
+    /// This model with its air swapped for the air at `altitude_m`: the what-if. `at_altitude`.
+    /// [M29 P28]
+    ///
+    /// A whole model rather than a loose atmosphere, because [`crate::flight::simulate_flight`]
+    /// already takes a model and an altitude beside it would be a second way to say one thing. The
+    /// committed model is never touched: this clones it and swaps one block, as `model_copy` does.
+    /// At zero altitude the returned model flies a bit-identical flight, which is the profile's
+    /// construction and not luck.
+    pub fn at_altitude(&self, altitude_m: f64) -> Result<FlightModel, AltitudeOutsideLayer> {
+        let atmosphere =
+            self.atmosphere_profile
+                .at_altitude(&self.atmosphere, altitude_m, self.gravity_m_s2)?;
+        Ok(FlightModel {
+            atmosphere,
+            ..self.clone()
+        })
+    }
+
     /// `S = wR/v`, or `None` at a standstill.
     ///
     /// `None` rather than infinity: a ball with no speed has no aerodynamic coefficient to look up,
@@ -237,8 +392,23 @@ impl FlightModel {
     }
 }
 
+/// Provenance for the artifact as a whole; the per-block citations live on the blocks.
+/// `FlightDatasetInfo`. [M29 P28]
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+pub struct FlightDatasetInfo {
+    pub name: String,
+    pub kind: String,
+    pub assembled_on: String,
+    pub assembled_by: String,
+    /// Pinned false. The day something here *is* fitted, ADR-022's fitting-stage rules apply.
+    pub fitted: bool,
+    pub license_note: String,
+    pub note: String,
+}
+
 #[derive(Deserialize)]
 struct ModelFile {
+    dataset: FlightDatasetInfo,
     model: FlightModel,
 }
 
@@ -249,9 +419,9 @@ struct ModelFile {
 /// flight, through the fall-through [`AeroTable::coefficients_for`] keeps for exactly that reason.
 /// A panic rather than Python's `ValueError` because the bytes are in the binary: there is no
 /// runtime input that could make this fail, so it is a build-time fact stated at first use.
-pub fn load_flight_model() -> &'static FlightModel {
-    static MODEL: OnceLock<FlightModel> = OnceLock::new();
-    MODEL.get_or_init(|| {
+fn loaded() -> &'static ModelFile {
+    static FILE: OnceLock<ModelFile> = OnceLock::new();
+    FILE.get_or_init(|| {
         let parsed: ModelFile = serde_json::from_str(FLIGHT_MODEL_JSON)
             .expect("flight_model_v1.json ships in this crate and parses");
         let ratios: Vec<f64> = parsed
@@ -269,8 +439,19 @@ pub fn load_flight_model() -> &'static FlightModel {
             ratios.windows(2).all(|pair| pair[0] < pair[1]),
             "flight_model_v1.json: coefficient rows must ascend in spin_ratio"
         );
-        parsed.model
+        parsed
     })
+}
+
+/// Provenance of the published constants this model is assembled from. `flight_dataset_info`.
+/// [M29 P28]
+pub fn flight_dataset_info() -> &'static FlightDatasetInfo {
+    &loaded().dataset
+}
+
+/// The ball, the air, the spin decay and the coefficient table. `load_flight_model`.
+pub fn load_flight_model() -> &'static FlightModel {
+    &loaded().model
 }
 
 #[cfg(test)]
@@ -353,6 +534,134 @@ mod tests {
             ball.frontal_area_m2(),
             std::f64::consts::PI * (0.04267 / 2.0f64).powi(2)
         );
+    }
+
+    /// The four numbers at four altitudes, each to frozen Python's `repr` (printed at M29 P28 off
+    /// `load_flight_model().at_altitude(a).atmosphere`): Denver, the Dead Sea's half metre, and both
+    /// edges of the layer. To the bit, so `powf` is CPython's `**` here.
+    // Every literal here is CPython's `repr` and is the answer being compared, so clippy's
+    // truncation advice would rewrite the test's subject, as `pyfmt`'s `hypot` test says.
+    #[allow(clippy::excessive_precision)]
+    #[test]
+    fn the_profile_reproduces_frozen_python_at_every_altitude_it_was_asked() {
+        let model = load_flight_model();
+        let cases: [(f64, &str, [f64; 4]); 4] = [
+            (
+                1609.0,
+                "isa_troposphere_1609m",
+                [
+                    1.0466549285466333,
+                    1.6609563581519225e-05,
+                    277.69149999999996,
+                    83431.10757561972,
+                ],
+            ),
+            (
+                -390.5,
+                "isa_troposphere_-390.5m",
+                [
+                    1.271587093556052,
+                    1.4167954746052686e-05,
+                    290.68825,
+                    106104.91172907004,
+                ],
+            ),
+            (
+                11000.0,
+                "isa_troposphere_11000m",
+                [
+                    0.36391764271731925,
+                    3.906364562252669e-05,
+                    216.64999999999998,
+                    22632.040095007793,
+                ],
+            ),
+            (
+                -2000.0,
+                "isa_troposphere_-2000m",
+                [
+                    1.4780761390172505,
+                    1.252584071453698e-05,
+                    301.15,
+                    127773.73012293251,
+                ],
+            ),
+        ];
+        for (altitude, name, [density, viscosity, temperature, pressure]) in cases {
+            let air = model.at_altitude(altitude).unwrap().atmosphere;
+            assert_eq!(air.name, name);
+            assert_eq!(air.density_kg_m3, density, "{name}");
+            assert_eq!(air.kinematic_viscosity_m2_s, viscosity, "{name}");
+            assert_eq!(air.temperature_k, temperature, "{name}");
+            assert_eq!(air.pressure_pa, pressure, "{name}");
+            assert_eq!(air.source, model.atmosphere_profile.source);
+        }
+        assert_eq!(
+            model
+                .atmosphere_profile
+                .pressure_exponent(model.gravity_m_s2),
+            5.255879812716677
+        );
+    }
+
+    /// `test_the_profile_at_zero_altitude_returns_the_committed_air_to_the_bit`: the ratios' whole
+    /// point. Only the name and the source say the air was generated.
+    #[test]
+    fn the_profile_at_zero_altitude_returns_the_committed_air_to_the_bit() {
+        let model = load_flight_model();
+        let at_zero = model.at_altitude(0.0).unwrap();
+        let (sea, zero) = (&model.atmosphere, &at_zero.atmosphere);
+        assert_eq!(zero.density_kg_m3, sea.density_kg_m3);
+        assert_eq!(zero.kinematic_viscosity_m2_s, sea.kinematic_viscosity_m2_s);
+        assert_eq!(zero.temperature_k, sea.temperature_k);
+        assert_eq!(zero.pressure_pa, sea.pressure_pa);
+        assert_eq!(zero.name, "isa_troposphere_0m");
+        assert_ne!(zero.source, sea.source);
+        // Every other block is the committed one, and the committed model is untouched.
+        assert_eq!(at_zero.ball, model.ball);
+        assert_eq!(at_zero.coefficients, model.coefficients);
+        assert_eq!(at_zero.spin_decay, model.spin_decay);
+        assert_eq!(at_zero.atmosphere_profile, model.atmosphere_profile);
+        assert_eq!(load_flight_model().atmosphere.name, "isa_sea_level");
+    }
+
+    /// `test_an_altitude_outside_the_layer_raises_rather_than_extrapolating`, in Python's words
+    /// (printed off the frozen module), a NaN included: the chained comparison is false for it.
+    #[test]
+    fn an_altitude_outside_the_layer_is_refused_in_python_s_words() {
+        let model = load_flight_model();
+        let words = |altitude: f64| model.at_altitude(altitude).unwrap_err().message;
+        assert_eq!(
+            words(20000.0),
+            "altitude 20000.0 m is outside isa_troposphere (-2000.0 to 11000.0 m), where the \
+             lapse rate this profile carries is not the standard's"
+        );
+        assert_eq!(
+            words(f64::NAN),
+            "altitude nan m is outside isa_troposphere (-2000.0 to 11000.0 m), where the lapse \
+             rate this profile carries is not the standard's"
+        );
+        assert!(model.at_altitude(-2000.1).is_err());
+    }
+
+    /// The dataset block `--verbose` prints, and the one claim the artifact makes about itself.
+    #[test]
+    fn the_dataset_says_nothing_was_fitted_and_every_block_cites_a_source() {
+        let info = flight_dataset_info();
+        assert_eq!(info.name, "flight_model_v1");
+        assert_eq!(info.assembled_on, "2026-09-05");
+        assert_eq!(info.assembled_by, "M15 P2");
+        assert!(!info.fitted);
+        let model = load_flight_model();
+        for source in [
+            &model.ball.source,
+            &model.atmosphere.source,
+            &model.atmosphere_profile.source,
+            &model.spin_decay.source,
+            &model.coefficients.source,
+        ] {
+            assert!(!source.citation.is_empty() && source.url.starts_with("https://"));
+        }
     }
 
     /// 4%/s, compounding — and against `exp` rather than a series, because the Python's is `exp`.

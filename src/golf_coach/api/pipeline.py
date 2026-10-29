@@ -1347,7 +1347,7 @@ def _band_estimator_note(estimator: str) -> str | None:
     a swing scored against them is worth more than no swing scored at all — but it is the kind of
     thing a reader has to be told rather than left to infer from two provenance fields in
     different files. It disappears on its own when the two agree again, either by moving the
-    setting back or by re-deriving the corpus (`scripts/golfdb/derive_pose_metrics.py
+    setting back or by re-deriving the corpus (`archive/golfdb/derive_pose_metrics.py
     --estimator`, then `derive_reference.py`).
     """
     corpus = dataset_info().pose_estimator

@@ -15,6 +15,9 @@
 //! golf-core profile           [--name N | --player-id ID] [--club C] [--json]  # the graded profile
 //! golf-core flag-mishit SESSION/SWING --confirm|--clear|--auto     # a golfer's verdict on a shot
 //! golf-core flag-mishit --list [--name N]
+//! golf-core set-golfer --session S --swing W --name N [--handedness right|left]  # the repairs
+//! golf-core set-club --session S --swing W --club C
+//! golf-core delete-swing --session S --swing W
 //! ```
 //!
 //! # `run`
@@ -62,7 +65,9 @@
 //!
 //! **Which vectors a run re-records is the declaration's to say, by its version key** (M34 P7, the
 //! M34 plan's call 6): `analysis_version` re-records the engine and stage families and, since M35
-//! P6, the shot family, whose numbers are the engine's; `screen_parser_version` the screen family;
+//! P6, the shot family, whose numbers are the engine's, and since M29 P19 the selection family and
+//! then the mcp family, which the engine's rules and flight model answer; `screen_parser_version`
+//! the screen family;
 //! and `career_version` the storage and career families
 //! together (M36 P13), and since M37 P11 the profile family after them, each held to its own
 //! constant. There is no flag for it, because a flag that
@@ -101,8 +106,8 @@
 //! written as `shot_analysis.json` beside its manifest, one line printed per manifest. A swing with
 //! a face-on clip is skipped, its shot being analysed with it, and refused when named; so is a photo
 //! entry the corpus counts as a duplicate, and one whose photo the shot store holds no parse of,
-//! which is named with the frozen import that would parse it, since there is no Rust OCR before
-//! §M29. `--sessions-dir`, `--golfers-dir` and `--shots-dir` resolve as the career verbs' do, the
+//! which is named with the `golf-lab import-photos` line that would parse it, since `golf-core`
+//! holds no OCR (the reader is `crates/ocr`'s, M29). `--sessions-dir`, `--golfers-dir` and `--shots-dir` resolve as the career verbs' do, the
 //! third from `GOLF_SHOTS_DIR` else `data/processed/shots`. Exit 0 when every manifest was analysed
 //! or skipped for a named reason, 1 when an analysis was refused or a write failed, 2 on a session
 //! or a named swing that does not exist or is not a photo entry, and on flags it cannot read.
@@ -168,6 +173,19 @@
 //! or flags argparse would refuse (no reference, or not exactly one verdict); 1 if the manifest
 //! cannot be written.
 //!
+//! # `set-golfer`, `set-club`, `delete-swing`
+//!
+//! The frozen server's three repairs (M29 P32), each one of the routes the M29 plan's D11 closes,
+//! whose refusal names it: `set-golfer` re-attributes `--swing W` in `--session S` to the golfer
+//! `--name N` slugs to, registering one with `--handedness` if the registry has none (a known
+//! golfer's stored handedness wins); `set-club` retags it with any spelling `parse_club` takes;
+//! `delete-swing` removes it and every file in its directory, unless it is queued or running. One
+//! line says what was written, and a retag over a stored analysis says to re-run
+//! `golf-lab reanalyze` on it. `--sessions-dir`, and `set-golfer`'s `--golfers-dir`, as the career
+//! verbs take them. Exit 0 on a write; 2 on a swing that does not exist or ids the store would not
+//! name, a new golfer with no handedness, a club `parse_club` refuses, and flags it cannot read; 1
+//! if a file cannot be written. `golf_core::session`'s doc says how each differs from its route.
+//!
 //! # Why subcommands
 //!
 //! Because `conformance.py` has five and a port is asked to match one of them, and spelling `run`
@@ -184,7 +202,7 @@ use contracts::Timestamp;
 use golf_core::reports::flag_mishit::{self, MishitAction};
 use golf_core::reports::{self, Answer, DataDirs, Request, Verb};
 use golf_core::rerecord;
-use golf_core::session::{self, IntentAction, ShotDirs};
+use golf_core::session::{self, IntentAction, RepairAction, RepairVerb, ShotDirs};
 use screen::ScreenInput;
 use serde::{Deserialize, Serialize};
 use storage::corpus::EngineVersions;
@@ -208,7 +226,11 @@ const USAGE: &str = "usage: golf-core run < vector.json\n       \
                      [--sessions-dir D] [--golfers-dir D]\n       \
                      golf-core flag-mishit SESSION/SWING --confirm|--clear|--auto \
                      [--sessions-dir D]\n       \
-                     golf-core flag-mishit --list [--name N] [--sessions-dir D] [--golfers-dir D]";
+                     golf-core flag-mishit --list [--name N] [--sessions-dir D] [--golfers-dir D]\n       \
+                     golf-core set-golfer --session S --swing W --name N \
+                     [--handedness right|left] [--sessions-dir D] [--golfers-dir D]\n       \
+                     golf-core set-club --session S --swing W --club C [--sessions-dir D]\n       \
+                     golf-core delete-swing --session S --swing W [--sessions-dir D]";
 
 fn main() -> ExitCode {
     let mut args = std::env::args().skip(1);
@@ -280,6 +302,24 @@ fn main() -> ExitCode {
                 ExitCode::from(2)
             }
         },
+        Some(name) if RepairVerb::from_name(name).is_some() => {
+            let verb = RepairVerb::from_name(name).expect("matched by the guard");
+            match parse_repair(verb, args) {
+                // The clock is read here, as for `set-intent` and `flag-mishit`.
+                Ok(Some((action, dirs))) => print_answer(
+                    verb.name(),
+                    &session::repair(&action, &dirs, Timestamp::now_utc()),
+                ),
+                Ok(None) => {
+                    println!("{USAGE}");
+                    ExitCode::SUCCESS
+                }
+                Err(problem) => {
+                    usage(&problem);
+                    ExitCode::from(2)
+                }
+            }
+        }
         Some(other) => usage(&format!("unknown command {other:?}")),
         None => usage("no command given"),
     }
@@ -638,6 +678,45 @@ fn parse_set_intent(
         .map_err(|problem| format!("{VERB}: error: {problem}"))?;
     let sessions_dir = DataDirs::resolve(sessions, None, |var| std::env::var(var).ok()).sessions;
     Ok(Some((action, sessions_dir)))
+}
+
+/// A repair verb's flags, argparse's way as [`parse_career`] reads them: `--session` and `--swing`
+/// for all three, `--name`, `--handedness` and `--golfers-dir` for `set-golfer` alone, `--club` for
+/// `set-club` alone, and `--sessions-dir`; any other flag is one the verb does not recognise. Then
+/// [`session::repair_action`]'s decision, whose refusal exits 2 as any flag argparse refuses.
+fn parse_repair(
+    verb: RepairVerb,
+    mut args: impl Iterator<Item = String>,
+) -> Result<Option<(RepairAction, DataDirs)>, String> {
+    let name_of = verb.name();
+    let (mut session_id, mut swing_id) = (None, None);
+    let (mut name, mut handedness, mut club) = (None, None, None);
+    let (mut sessions, mut golfers) = (None, None);
+    let golfer = verb == RepairVerb::SetGolfer;
+    while let Some(arg) = args.next() {
+        let (flag, inline) = split_flag(&arg);
+        let mut value = |flag: &str| {
+            inline
+                .clone()
+                .or_else(|| args.next())
+                .ok_or_else(|| format!("{name_of}: argument {flag}: expected one argument"))
+        };
+        match flag.as_str() {
+            "--session" => session_id = Some(value("--session")?),
+            "--swing" => swing_id = Some(value("--swing")?),
+            "--sessions-dir" => sessions = Some(PathBuf::from(value("--sessions-dir")?)),
+            "--name" if golfer => name = Some(value("--name")?),
+            "--handedness" if golfer => handedness = Some(value("--handedness")?),
+            "--golfers-dir" if golfer => golfers = Some(PathBuf::from(value("--golfers-dir")?)),
+            "--club" if verb == RepairVerb::SetClub => club = Some(value("--club")?),
+            "-h" | "--help" if inline.is_none() => return Ok(None),
+            other => return Err(format!("{name_of}: unrecognized arguments: {other}")),
+        }
+    }
+    let action = session::repair_action(verb, session_id, swing_id, name, handedness, club)
+        .map_err(|problem| format!("{name_of}: error: {problem}"))?;
+    let dirs = DataDirs::resolve(sessions, golfers, |var| std::env::var(var).ok());
+    Ok(Some((action, dirs)))
 }
 
 /// This build's engine generations, which every verb reads a corpus under: a swing is pooled when

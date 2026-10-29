@@ -5,8 +5,9 @@
 //! and either a sequence of store calls on it (`bundle/`, `stores/`, recorded by
 //! `conformance_vectors.py::_run_ops`) or one `read_corpus` over it (`corpus/`, by `_run_corpus`).
 //! [`run_storage`] runs each kind the way its recorder did, picked by the vector's
-//! `provenance.recorded_by` — or, on a hand-worked case under `hand/` (M36 P14), by the
-//! `provenance.worked_against` that names the same definition ([`StorageCase::of`]):
+//! `provenance.recorded_by` — or, on a hand-worked case under `hand/` (M36 P14) and on a case
+//! `golf-lab build-vectors` recorded (M29 P30), by the `provenance.worked_against` that names the
+//! same definition ([`StorageCase::of`]):
 //!
 //! - an **op case**: `input.files` laid out as a scratch root, every store opened on it, each op in
 //!   order, the root read back after the last;
@@ -108,6 +109,7 @@ use storage::shot_store::{ShotStore, SUFFIX as SHOT_SUFFIX};
 use storage::StoreError;
 
 use crate::compare::{compare, DifferenceKind};
+use crate::rerecord::RUST_ORACLE;
 
 /// `provenance.recorded_by` on an op case (`bundle/`, `stores/`).
 pub const RUN_OPS: &str = "scripts/conformance_vectors.py::_run_ops";
@@ -140,9 +142,14 @@ impl StorageCase {
     /// have, and a reader of `recorded_by` — frozen Python's pins, `conformance.py list` — would
     /// count a hand case among the Python-recorded ones. The key a vector is read by follows its
     /// `oracle`, so neither kind can borrow the other's.
+    ///
+    /// **A case Rust recorded is read the same way** (M29 P30): `golf-lab build-vectors` writes
+    /// `storage/corpus/real` with `oracle: "rust"`, its `recorded_by` naming the verb and its
+    /// `worked_against` naming [`RUN_CORPUS`], the definition its answer is held to. Its
+    /// `recorded_by` cannot name `_run_corpus`, because no Python ran.
     pub fn of(vector: &Value) -> Result<Self, String> {
         let provenance = &vector["provenance"];
-        let key = if provenance["oracle"] == HAND_ORACLE {
+        let key = if provenance["oracle"] == HAND_ORACLE || provenance["oracle"] == RUST_ORACLE {
             "worked_against"
         } else {
             "recorded_by"
@@ -414,8 +421,15 @@ fn run_corpus(input: &Value) -> Value {
     let scratch = Scratch::new();
     let root = scratch.path().join("sessions");
     materialise(&input["files"], &root);
+    read_and_narrow(&root, input)
+}
+
+/// `_read_and_narrow`: [`run_corpus`] from the directory read on, over any sessions root, which is
+/// how `golf-lab build-vectors` holds the real case's tree to `data/` itself (M29 P30, as
+/// `_storage_corpus_real` does). `input.files` is not read; `root` stands in for it.
+pub fn read_and_narrow(root: &Path, input: &Value) -> Value {
     let player_id = input["player_id"].as_str().expect("a player id");
-    let corpus = read_corpus(&root, player_id, arg::<EngineVersions>(input, "versions"));
+    let corpus = read_corpus(root, player_id, arg::<EngineVersions>(input, "versions"));
     let narrowed: Map<String, Value> = input["narrowings"]
         .as_object()
         .expect("narrowings")
@@ -782,5 +796,19 @@ mod tests {
         let recorded_naming_neither = json!({"id": "storage/corpus/z", "provenance": {
             "oracle": "python", "worked_against": RUN_CORPUS}});
         assert!(StorageCase::of(&recorded_naming_neither).is_err());
+    }
+
+    /// A case Rust recorded (`golf-lab build-vectors`, M29 P30) is read as a hand case is: by the
+    /// definition it names in `worked_against`, never by its `recorded_by`, which names the verb.
+    #[test]
+    fn a_case_rust_recorded_names_the_runner_it_is_held_to() {
+        let built = json!({"id": "storage/corpus/real", "provenance": {
+            "oracle": RUST_ORACLE, "recorded_by": "golf-lab build-vectors",
+            "worked_against": RUN_CORPUS}});
+        assert_eq!(StorageCase::of(&built), Ok(StorageCase::Corpus));
+
+        let claims_python_s_recorder = json!({"id": "storage/corpus/real", "provenance": {
+            "oracle": RUST_ORACLE, "recorded_by": RUN_CORPUS}});
+        assert!(StorageCase::of(&claims_python_s_recorder).is_err());
     }
 }

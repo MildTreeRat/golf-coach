@@ -8,7 +8,7 @@ only if that is also true".
 
 There is something to express. Over the 458 face-on clips the bands were cut from,
 `head_sway_norm` and `hip_shift_at_top_norm` correlate at +0.44 and `head_sway_norm` and
-`head_hip_gain_norm` at -0.39 (`scripts/golfdb/tune_joint_structure.py`, the gate that had to pass
+`head_hip_gain_norm` at -0.39 (`archive/golfdb/tune_joint_structure.py`, the gate that had to pass
 before this file was written).
 
 **Unusual is not bad.** Every clip behind the model is a tour professional, so it knows the shape
@@ -16,8 +16,8 @@ of swings that work and nothing at all about swings that don't — the same limi
 for the bands. The output is therefore a percentile within the tour population, never a score, and
 `placement_for` is not on the scoring path any more than `percentile_of` is (ADR-010 §2).
 
-Stdlib + pydantic. The fitting lives in `scripts/golfdb/derive_joint_model.py` under the `research`
-extra; what ships is the fitted artifact as committed JSON and the arithmetic to evaluate it, which
+Stdlib + pydantic. The fitting is `archive/golfdb/derive_joint_model.py`, numpy and all (ADR-035
+§5); what ships is the fitted artifact as committed JSON and the arithmetic to evaluate it, which
 is the same division `ranges.json` and `golfdb_v1.json` already follow (ADR-022).
 """
 

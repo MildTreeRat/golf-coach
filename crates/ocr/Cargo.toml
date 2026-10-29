@@ -1,0 +1,63 @@
+[package]
+name = "ocr"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "The lab's OCR reader: a photo of the launch-monitor screen in, located text out, through the Paddle models frozen Python runs, on ONNX Runtime. The only crate with `ort` (M29)."
+
+# `golf-ocr read <photo>`: one photo through the reader and `screen::read`, the shot it parses as
+# printed (M29 P7). The lab's verbs are `golf-lab`'s (P20 on); this is the reader's own seam, as
+# `golf-core parse-screen` is the parser's.
+[[bin]]
+name = "golf-ocr"
+path = "src/bin/golf_ocr.rs"
+
+[dependencies]
+# ONNX Runtime, through `ort`, and the second numeric library outside the scoring path after
+# `crates/trigger`'s `rustfft` (CLAUDE.md's invariants, ADR-035's Consequences). It runs the same
+# three Paddle models frozen Python's PaddleOCR runs (the M29 plan's D5), converted once to ONNX
+# (D6), so the reader's answers can be held to the boxes PaddleOCR committed (D7).
+#
+# Pinned exactly, as D18 asks. `2.0.0-rc.10` (ONNX Runtime 1.22) is the newest `ort` this
+# workspace's `rust-version = "1.87"` can build: rc.11 and rc.12 declare 1.88 and rc.14 declares
+# 1.92 (`cargo info`, M29 P1), and moving the toolchain for a crate wired to nothing but the lab was
+# not worth it. `download-binaries` fetches pyke's prebuilt runtime at the first build, which is the
+# one build that needs the network; `copy-dylibs` puts any runtime library beside the binary.
+# Default features off because `tracing` is a logging dependency nothing here reads.
+#
+# **This crate is the only one that declares it**, and nothing on M38's phone path reaches it:
+# `tests/ort_reach.rs` walks every crate's manifest and fails if `contracts`, `pyfmt`, `analysis`,
+# `feedback`, `screen`, `storage` or `core` can reach `ort`.
+ort = { version = "=2.0.0-rc.10", default-features = false, features = [
+    "std",
+    "download-binaries",
+    "copy-dylibs",
+] }
+# Photo decode for PNG (the M29 plan's D3 and D4), in-process, and the EXIF orientation
+# transforms; HEIC goes through ffmpeg, and JPEG through `src/decode/jpeg.rs`, a hand port of
+# libjpeg-turbo, because `image`'s JPEG codec (`zune-jpeg`) does not decode to OpenCV's pixels and
+# that moved the screen quad on two bay photos (the plan's P2 finding, answered by the user
+# 2026-10-16). Pinned exactly as the plan asks. `0.25.9` is the newest `image` this workspace's
+# `rust-version = "1.87"` builds (`0.25.10` declares 1.88). Default features off, so only the PNG
+# codec is compiled, not the dozen others.
+image = { version = "=0.25.9", default-features = false, features = ["png"] }
+# For `TextBox`, the seam `recognize` hands the screen parser (M29 P6), declared in the phase that
+# first crosses it. `screen` depends on `pyfmt` and `contracts` and on nothing with `ort`, so the
+# edge cannot carry `ort` back onto the phone's path; `tests/ort_reach.rs` holds that.
+screen = { path = "../screen" }
+# For `Timestamp`, which a shot read from a photo is stamped with (`screen_timestamp`, M29 P7).
+# `screen` already depends on it, so the edge adds nothing to the lock.
+contracts = { path = "../contracts" }
+# For `percent`, `{ratio:.0%}` in the vote's legibility note, and `round_half_even`, the photo's
+# timestamp (M29 P7). Another of `screen`'s own edges, so nothing new either.
+pyfmt = { path = "../pyfmt" }
+serde.workspace = true
+serde_json.workspace = true
+# Every model file is refused unless its SHA-256 matches `models.json` (D6). The same RustCrypto
+# crate `crates/storage` already hashes photos with, so no new dependency enters the lock.
+sha2 = "0.10"
+
+[dev-dependencies]
+# A scratch directory per refusal test, as `crates/storage`'s tests use.
+tempfile = "3"

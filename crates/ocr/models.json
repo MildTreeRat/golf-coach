@@ -1,0 +1,122 @@
+{
+  "_comment": [
+    "The three Paddle models the lab's OCR reader runs, as ONNX, each pinned by SHA-256 (the M29",
+    "plan's D5 and D6). Read by crates/ocr/src/models.rs through include_str!, so this is the one",
+    "copy. The model files themselves are not committed: they are ~145 MB of third-party weights,",
+    "converted once into data/models/ocr/ (gitignored), and models.rs refuses a missing file or a",
+    "digest that disagrees with this one, by name.",
+    "Three of the five models frozen PaddleOCR runs: document orientation is skipped because the",
+    "rectifier's rotation vote does that job, and UVDoc unwarping because the rectifier's",
+    "perspective warp does (D5).",
+    "Each 'from' says where a constant came from (ADR-022: committed data carries its source).",
+    "inference.yml is the model directory's own file; OCR.yaml is",
+    ".venv/Lib/site-packages/paddlex/configs/pipelines/OCR.yaml, whose SubModules settings override",
+    "inference.yml's when PaddleOCR builds the pipeline, because paddleocr 3.7.0 passes only the",
+    "arguments it was given and frozen paddle.py gives none of these.",
+    "'input' and 'output' are what ONNX Runtime reports for the graph, -1 for a dynamic dimension;",
+    "models.rs refuses a session whose graph disagrees."
+  ],
+  "frozen": {
+    "paddleocr": "3.7.0",
+    "paddlex": "3.7.2",
+    "paddlepaddle": "3.3.1",
+    "constructed_by": "src/golf_coach/launch_monitor/screen/paddle.py: PaddleOCR(lang='en', use_textline_orientation=True, enable_mkldnn=False)"
+  },
+  "conversion": {
+    "date": "2026-10-16",
+    "converter": "paddle2onnx 2.1.0",
+    "loader": "paddlepaddle 3.1.1",
+    "onnx": "1.17.0",
+    "python": "3.11.0, in a scratch venv",
+    "command": "paddle2onnx --model_dir <source.dir> --model_filename inference.json --params_filename inference.pdiparams --save_file <file> --opset_version 7",
+    "from": "The command PaddleX's paddle2onnx plugin builds (paddlex/paddlex_cli.py::paddle_to_onnx), run directly. The plugin pins paddle2onnx 2.0.2rc3, which has no wheel for .venv's Python 3.13. Under 3.11 its extension fails to load against paddlepaddle 3.3.1, and 2.1.0's against 3.3.1 and 3.2.2, because it links libpaddle's PIR symbols and those releases do not export them; 3.1.1 does, and 2.1.0 loads against it. paddle2onnx raises opset 7 to what a graph needs. Reconverting reproduces every digest below. Measured against frozen paddlepaddle 3.3.1 on seeded random inputs, the largest output difference is 2.3e-07 (det), 3.0e-07 (textline) and 1.1e-04 (rec), and every argmax agrees (M29 P1)."
+  },
+  "models": {
+    "det": {
+      "name": "PP-OCRv6_medium_det",
+      "file": "PP-OCRv6_medium_det/model.onnx",
+      "sha256": "86f551c870b7278dcb151708079abdd135b0d936c3b40323f9f70892c3e9379e",
+      "opset": 11,
+      "source": {
+        "dir": "~/.paddlex/official_models/PP-OCRv6_medium_det",
+        "pdiparams_sha256": "85218d2e3d98f5a21c58b4220627be923a97aee5db3cc71f39536ab31ac53960"
+      },
+      "input": { "name": "x", "shape": [-1, 3, -1, -1] },
+      "output": { "name": "fetch_name_0", "shape": [-1, 1, -1, -1] },
+      "normalize": {
+        "scale": 0.00392156862745098,
+        "mean": [0.485, 0.456, 0.406],
+        "std": [0.229, 0.224, 0.225],
+        "order": "hwc",
+        "img_mode": "BGR",
+        "from": "inference.yml PreProcess: NormalizeImage (scale written '1./255.'), and DecodeImage's img_mode, which PaddleX's text_detection predictor turns into ReadImage(format=img_mode). Confirmed in M29 P4: ReadImage passes an array through untouched in BGR (common/reader/image_reader.py), so channel 0 is blue, and det.rs's input tensor is PaddleX's bit for bit."
+      },
+      "resize": {
+        "limit_side_len": 64,
+        "limit_type": "min",
+        "max_side_limit": 4000,
+        "from": "OCR.yaml SubModules.TextDetection; inference.yml's DetResizeForTest is null, so the predictor's own default (736, 'min') never applies. Confirmed in M29 P4 against the live pipeline's get_text_det_params(), which also gives thresh, box_thresh and unclip_ratio as postprocess records them."
+      },
+      "postprocess": {
+        "name": "DBPostProcess",
+        "thresh": 0.3,
+        "box_thresh": 0.6,
+        "unclip_ratio": 1.5,
+        "max_candidates": 3000,
+        "from": "OCR.yaml SubModules.TextDetection for the three thresholds, overriding inference.yml's 0.2, 0.45 and 1.4; inference.yml for max_candidates and the name."
+      }
+    },
+    "textline": {
+      "name": "PP-LCNet_x1_0_textline_ori",
+      "file": "PP-LCNet_x1_0_textline_ori/model.onnx",
+      "sha256": "38aa97cd4be591e0ad304e659f07ba30d946f27a63315433f6659c69c8778345",
+      "opset": 7,
+      "source": {
+        "dir": "~/.paddlex/official_models/PP-LCNet_x1_0_textline_ori",
+        "pdiparams_sha256": "0de2bcf996cf553e2b848dd7b1769dafffc6917b1ccdf55c1d8efe7909fbf743"
+      },
+      "input": { "name": "x", "shape": [-1, 3, 80, 160] },
+      "output": { "name": "fetch_name_0", "shape": [-1, 2] },
+      "normalize": {
+        "scale": 0.00392156862745098,
+        "mean": [0.485, 0.456, 0.406],
+        "std": [0.229, 0.224, 0.225],
+        "order": "",
+        "img_mode": "RGB",
+        "from": "inference.yml PreProcess NormalizeImage. inference.yml names no image mode; RGB is PaddleX's image_classification predictor's ReadImage(format='RGB'), which turns the pipeline's BGR crops to RGB. Confirmed in M29 P6 against the live pipeline: its textline_orientation_model is a ClasRunnerPredictor running ReadImage(format='RGB'), Resize (cv2.INTER_LINEAR, skipped at 160x80), Normalize, ToCHWImage, ToBatch and Topk(topk=1) in batches of 6, and cls.rs's input tensors are PaddleX's bit for bit."
+      },
+      "resize": {
+        "width": 160,
+        "height": 80,
+        "from": "inference.yml PreProcess ResizeImage size [160, 80], width first."
+      },
+      "labels": ["0_degree", "180_degree"],
+      "batch_size": 6,
+      "batch_from": "OCR.yaml SubModules.TextLineOrientation.batch_size. Confirmed in M29 P6: the live pipeline's textline_orientation_model's batch_sampler takes 6."
+    },
+    "rec": {
+      "name": "PP-OCRv6_medium_rec",
+      "file": "PP-OCRv6_medium_rec/model.onnx",
+      "sha256": "656f8af8f433f91c8441115fdf32a704ea49b243170ac76dafb6af9d4d5173f5",
+      "opset": 11,
+      "source": {
+        "dir": "~/.paddlex/official_models/PP-OCRv6_medium_rec",
+        "pdiparams_sha256": "1b01c79a914587933f615569e75de54f2e638ebb5d3f3b3c1b38c24ede8c7319"
+      },
+      "input": { "name": "x", "shape": [-1, 3, 48, -1] },
+      "output": { "name": "fetch_name_0", "shape": [-1, -1, 18710] },
+      "image_shape": [3, 48, 320],
+      "img_mode": "BGR",
+      "image_from": "inference.yml PreProcess RecResizeImg and DecodeImage. RecResizeImg normalises inside the resize, so there is no NormalizeImage step to copy. Confirmed in M29 P5 against the live pipeline: its text_rec_model runs ReadImage(format='BGR'), OCRReisizeNormImg (rec_image_shape [3, 48, 320], max_imgW 3200) and ToBatch, and rec.rs's input tensors are PaddleX's bit for bit.",
+      "dict": {
+        "file": "PP-OCRv6_medium_rec/dict.txt",
+        "sha256": "b5f2bfe2bdd9448429e3e82b51c789775d9b42f2403d082b00662eb77e401c5d",
+        "entries": 18708,
+        "from": "inference.yml PostProcess.character_dict, written one entry per line, UTF-8, LF. PaddleX's CTCLabelDecode puts 'blank' before it and ' ' after it (use_space_char), so the model's classes are entries + 2, and models.rs refuses a graph where they are not."
+      },
+      "score_thresh": 0.0,
+      "batch_size": 6,
+      "batch_from": "OCR.yaml SubModules.TextRecognition: score_thresh and batch_size. Confirmed in M29 P5: the live pipeline's text_rec_score_thresh is 0.0 and its text_rec_model's batch_sampler takes 6."
+    }
+  }
+}

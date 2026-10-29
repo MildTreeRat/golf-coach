@@ -1,0 +1,276 @@
+{
+  "career_version": 3,
+  "expected": {
+    "results": [
+      {
+        "content": [
+          {
+            "text": "{\n  \"shot_id\": \"hand-1\",\n  \"session_id\": \"2026-10-01\",\n  \"source\": \"screen\",\n  \"needs_review\": false,\n  \"warnings\": [\n    \"Club Path: label tie between 'Club Path' and 'Club Speed' - not read\",\n    \"Launch Direction: no value text under the label\"\n  ],\n  \"parse_confidence\": 0.93,\n  \"metrics\": {\n    \"club_head_speed\": 90.0,\n    \"ball_speed\": 126.0,\n    \"launch_angle\": 16.0,\n    \"spin_rate\": 6500.0,\n    \"smash_factor\": 1.4,\n    \"carry_distance\": 150.0,\n    \"total_distance\": 158.0,\n    \"apex_height\": 28.0,\n    \"attack_angle\": -4.0,\n    \"dynamic_loft\": 25.0,\n    \"low_point\": 3.0,\n    \"impact_offset_h\": 6.0,\n    \"impact_offset_v\": -2.0,\n    \"carry_offline\": -8.0,\n    \"shot_type\": \"SLIGHT DRAW\",\n    \"impact_position\": \"TOE\",\n    \"impact_position_v\": \"LOW\"\n  }\n}",
+            "type": "text"
+          },
+          {
+            "text": "{\n  \"shot_id\": \"hand-2\",\n  \"session_id\": \"2026-10-01\",\n  \"source\": \"screen\",\n  \"needs_review\": false,\n  \"warnings\": [],\n  \"parse_confidence\": 0.9,\n  \"metrics\": {\n    \"club_head_speed\": 88.0,\n    \"ball_speed\": 122.0,\n    \"carry_distance\": 146.0,\n    \"attack_angle\": -3.0,\n    \"dynamic_loft\": 24.0,\n    \"carry_offline\": -4.0,\n    \"shot_type\": \"DRAW\"\n  }\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": [
+            {
+              "metrics": {
+                "apex_height": 28.0,
+                "attack_angle": -4.0,
+                "ball_speed": 126.0,
+                "carry_distance": 150.0,
+                "carry_offline": -8.0,
+                "club_head_speed": 90.0,
+                "dynamic_loft": 25.0,
+                "impact_offset_h": 6.0,
+                "impact_offset_v": -2.0,
+                "impact_position": "TOE",
+                "impact_position_v": "LOW",
+                "launch_angle": 16.0,
+                "low_point": 3.0,
+                "shot_type": "SLIGHT DRAW",
+                "smash_factor": 1.4,
+                "spin_rate": 6500.0,
+                "total_distance": 158.0
+              },
+              "needs_review": false,
+              "parse_confidence": 0.93,
+              "session_id": "2026-10-01",
+              "shot_id": "hand-1",
+              "source": "screen",
+              "warnings": [
+                "Club Path: label tie between 'Club Path' and 'Club Speed' - not read",
+                "Launch Direction: no value text under the label"
+              ]
+            },
+            {
+              "metrics": {
+                "attack_angle": -3.0,
+                "ball_speed": 122.0,
+                "carry_distance": 146.0,
+                "carry_offline": -4.0,
+                "club_head_speed": 88.0,
+                "dynamic_loft": 24.0,
+                "shot_type": "DRAW"
+              },
+              "needs_review": false,
+              "parse_confidence": 0.9,
+              "session_id": "2026-10-01",
+              "shot_id": "hand-2",
+              "source": "screen",
+              "warnings": []
+            }
+          ]
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"shot_id\": \"hand-2\",\n  \"session_id\": \"2026-10-01\",\n  \"source\": \"screen\",\n  \"needs_review\": false,\n  \"warnings\": [],\n  \"parse_confidence\": 0.9,\n  \"metrics\": {\n    \"club_head_speed\": 88.0,\n    \"ball_speed\": 122.0,\n    \"carry_distance\": 146.0,\n    \"attack_angle\": -3.0,\n    \"dynamic_loft\": 24.0,\n    \"carry_offline\": -4.0,\n    \"shot_type\": \"DRAW\"\n  }\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "metrics": {
+              "attack_angle": -3.0,
+              "ball_speed": 122.0,
+              "carry_distance": 146.0,
+              "carry_offline": -4.0,
+              "club_head_speed": 88.0,
+              "dynamic_loft": 24.0,
+              "shot_type": "DRAW"
+            },
+            "needs_review": false,
+            "parse_confidence": 0.9,
+            "session_id": "2026-10-01",
+            "shot_id": "hand-2",
+            "source": "screen",
+            "warnings": []
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"found\": false,\n  \"message\": \"No shot with id 'photo-1'. Call get_recent_shots to see which shot ids exist.\"\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "found": false,
+            "message": "No shot with id 'photo-1'. Call get_recent_shots to see which shot ids exist."
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"swing_id\": \"2\",\n  \"session_id\": \"2026-10-01\",\n  \"status\": \"done\",\n  \"club\": null,\n  \"mishit\": null,\n  \"overall_score\": 82.0,\n  \"mechanics_score\": 82.0,\n  \"outcome_score\": null,\n  \"headline\": null,\n  \"checkpoints\": [],\n  \"tips\": [],\n  \"unscored\": [],\n  \"measurements\": {},\n  \"simulated\": [],\n  \"population\": [],\n  \"rotation\": [],\n  \"analysis_version\": null,\n  \"alignment_quality\": null,\n  \"alignment_caveat\": null,\n  \"shot\": {\n    \"shot_id\": \"hand-1\",\n    \"session_id\": \"2026-10-01\",\n    \"source\": \"screen\",\n    \"needs_review\": false,\n    \"warnings\": [\n      \"Club Path: label tie between 'Club Path' and 'Club Speed' - not read\",\n      \"Launch Direction: no value text under the label\"\n    ],\n    \"parse_confidence\": 0.93,\n    \"metrics\": {\n      \"club_head_speed\": 90.0,\n      \"ball_speed\": 126.0,\n      \"launch_angle\": 16.0,\n      \"spin_rate\": 6500.0,\n      \"smash_factor\": 1.4,\n      \"carry_distance\": 150.0,\n      \"total_distance\": 158.0,\n      \"apex_height\": 28.0,\n      \"attack_angle\": -4.0,\n      \"dynamic_loft\": 25.0,\n      \"low_point\": 3.0,\n      \"impact_offset_h\": 6.0,\n      \"impact_offset_v\": -2.0,\n      \"carry_offline\": -8.0,\n      \"shot_type\": \"SLIGHT DRAW\",\n      \"impact_position\": \"TOE\",\n      \"impact_position_v\": \"LOW\"\n    }\n  },\n  \"notes\": []\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "alignment_caveat": null,
+            "alignment_quality": null,
+            "analysis_version": null,
+            "checkpoints": [],
+            "club": null,
+            "headline": null,
+            "measurements": {},
+            "mechanics_score": 82.0,
+            "mishit": null,
+            "notes": [],
+            "outcome_score": null,
+            "overall_score": 82.0,
+            "population": [],
+            "rotation": [],
+            "session_id": "2026-10-01",
+            "shot": {
+              "metrics": {
+                "apex_height": 28.0,
+                "attack_angle": -4.0,
+                "ball_speed": 126.0,
+                "carry_distance": 150.0,
+                "carry_offline": -8.0,
+                "club_head_speed": 90.0,
+                "dynamic_loft": 25.0,
+                "impact_offset_h": 6.0,
+                "impact_offset_v": -2.0,
+                "impact_position": "TOE",
+                "impact_position_v": "LOW",
+                "launch_angle": 16.0,
+                "low_point": 3.0,
+                "shot_type": "SLIGHT DRAW",
+                "smash_factor": 1.4,
+                "spin_rate": 6500.0,
+                "total_distance": 158.0
+              },
+              "needs_review": false,
+              "parse_confidence": 0.93,
+              "session_id": "2026-10-01",
+              "shot_id": "hand-1",
+              "source": "screen",
+              "warnings": [
+                "Club Path: label tie between 'Club Path' and 'Club Speed' - not read",
+                "Launch Direction: no value text under the label"
+              ]
+            },
+            "simulated": [],
+            "status": "done",
+            "swing_id": "2",
+            "tips": [],
+            "unscored": []
+          }
+        }
+      },
+      {
+        "content": [
+          {
+            "text": "{\n  \"session_id\": \"2026-10-01\",\n  \"swing_count\": 2,\n  \"analyzed_count\": 2,\n  \"mean_score\": 80.0,\n  \"best_score\": 82.0,\n  \"worst_score\": 78.0,\n  \"checkpoint_pass_rates\": {},\n  \"unscored_counts\": {},\n  \"shots_attached\": 2,\n  \"shots_needing_review\": 0,\n  \"mishits_excluded\": 0,\n  \"shot_averages\": {\n    \"apex_height\": 28.0,\n    \"attack_angle\": -3.5,\n    \"ball_speed\": 124.0,\n    \"carry_distance\": 148.0,\n    \"carry_offline\": -6.0,\n    \"club_head_speed\": 89.0,\n    \"dynamic_loft\": 24.5,\n    \"impact_offset_h\": 6.0,\n    \"impact_offset_v\": -2.0,\n    \"launch_angle\": 16.0,\n    \"low_point\": 3.0,\n    \"smash_factor\": 1.4,\n    \"spin_rate\": 6500.0,\n    \"total_distance\": 158.0\n  },\n  \"headlines\": []\n}",
+            "type": "text"
+          }
+        ],
+        "isError": false,
+        "structuredContent": {
+          "result": {
+            "analyzed_count": 2,
+            "best_score": 82.0,
+            "checkpoint_pass_rates": {},
+            "headlines": [],
+            "mean_score": 80.0,
+            "mishits_excluded": 0,
+            "session_id": "2026-10-01",
+            "shot_averages": {
+              "apex_height": 28.0,
+              "attack_angle": -3.5,
+              "ball_speed": 124.0,
+              "carry_distance": 148.0,
+              "carry_offline": -6.0,
+              "club_head_speed": 89.0,
+              "dynamic_loft": 24.5,
+              "impact_offset_h": 6.0,
+              "impact_offset_v": -2.0,
+              "launch_angle": 16.0,
+              "low_point": 3.0,
+              "smash_factor": 1.4,
+              "spin_rate": 6500.0,
+              "total_distance": 158.0
+            },
+            "shots_attached": 2,
+            "shots_needing_review": 0,
+            "swing_count": 2,
+            "unscored_counts": {},
+            "worst_score": 78.0
+          }
+        }
+      }
+    ]
+  },
+  "id": "mcp/hand/shot-view",
+  "input": {
+    "calls": [
+      {
+        "arguments": {},
+        "now": null,
+        "tool": "get_recent_shots"
+      },
+      {
+        "arguments": {
+          "shot_id": "hand-2"
+        },
+        "now": null,
+        "tool": "get_shot_by_id"
+      },
+      {
+        "arguments": {
+          "shot_id": "photo-1"
+        },
+        "now": null,
+        "tool": "get_shot_by_id"
+      },
+      {
+        "arguments": {
+          "session_id": "2026-10-01",
+          "swing_id": "2"
+        },
+        "now": null,
+        "tool": "get_swing"
+      },
+      {
+        "arguments": {
+          "session_id": "2026-10-01"
+        },
+        "now": null,
+        "tool": "get_session_summary"
+      }
+    ],
+    "files": {
+      "sessions/2026-10-01/1/analysis.json": "{\"swing_id\": \"1\", \"session_id\": \"2026-10-01\", \"swing\": {\"swing_id\": \"1\", \"session_id\": \"2026-10-01\", \"checkpoint_scores\": [], \"unscored\": [], \"measurements\": [], \"mechanics_score\": 78.0, \"outcome_score\": null, \"overall_score\": 78.0, \"shot\": {\"shot_id\": \"hand-2\", \"session_id\": \"2026-10-01\", \"timestamp\": \"2026-10-01T12:00:00Z\", \"source\": \"screen\", \"club_head_speed\": 88.0, \"club_face_angle\": null, \"club_path\": null, \"ball_speed\": 122.0, \"launch_angle\": null, \"launch_direction\": null, \"spin_rate\": null, \"spin_axis\": null, \"smash_factor\": null, \"carry_distance\": 146.0, \"total_distance\": null, \"bounce_and_roll\": null, \"apex_height\": null, \"shot_type\": \"DRAW\", \"impact_position\": null, \"attack_angle\": -3.0, \"dynamic_loft\": 24.0, \"low_point\": null, \"impact_offset_h\": null, \"impact_offset_v\": null, \"impact_position_v\": null, \"carry_offline\": -4.0, \"provenance\": {\"device\": \"synthetic\", \"parse_confidence\": 0.9, \"needs_review\": false, \"warnings\": [\"no tile found for 'Bounce & Roll'\"], \"image_sha256\": \"photo-2\", \"image_path\": null, \"raw_fields\": {}}}}}",
+      "sessions/2026-10-01/1/manifest.json": "{\n  \"swing_id\": \"1\",\n  \"session_id\": \"2026-10-01\",\n  \"created_at\": \"2026-10-01T12:00:00Z\",\n  \"updated_at\": \"2026-10-01T12:00:00Z\",\n  \"roles\": {\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.photo-2.jpg\",\n      \"content_sha256\": \"photo-2\",\n      \"original_filename\": \"shot.jpg\",\n      \"content_type\": \"image/jpeg\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-10-01T12:00:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": null,\n  \"club\": null,\n  \"mishit\": null\n}",
+      "sessions/2026-10-01/2/analysis.json": "{\"swing_id\": \"2\", \"session_id\": \"2026-10-01\", \"swing\": {\"swing_id\": \"2\", \"session_id\": \"2026-10-01\", \"checkpoint_scores\": [], \"unscored\": [], \"measurements\": [], \"mechanics_score\": 82.0, \"outcome_score\": null, \"overall_score\": 82.0, \"shot\": {\"shot_id\": \"hand-1\", \"session_id\": \"2026-10-01\", \"timestamp\": \"2026-10-01T12:05:00Z\", \"source\": \"screen\", \"club_head_speed\": 90.0, \"club_face_angle\": null, \"club_path\": null, \"ball_speed\": 126.0, \"launch_angle\": 16.0, \"launch_direction\": null, \"spin_rate\": 6500.0, \"spin_axis\": null, \"smash_factor\": 1.4, \"carry_distance\": 150.0, \"total_distance\": 158.0, \"bounce_and_roll\": null, \"apex_height\": 28.0, \"shot_type\": \"SLIGHT DRAW\", \"impact_position\": \"TOE\", \"attack_angle\": -4.0, \"dynamic_loft\": 25.0, \"low_point\": 3.0, \"impact_offset_h\": 6.0, \"impact_offset_v\": -2.0, \"impact_position_v\": \"LOW\", \"carry_offline\": -8.0, \"provenance\": {\"device\": \"synthetic\", \"parse_confidence\": 0.93, \"needs_review\": false, \"warnings\": [\"no tile found for 'Bounce & Roll'\", \"Club Path: label tie between 'Club Path' and 'Club Speed' - not read\", \"Launch Direction: no value text under the label\"], \"image_sha256\": \"photo-1\", \"image_path\": null, \"raw_fields\": {}}}}}",
+      "sessions/2026-10-01/2/manifest.json": "{\n  \"swing_id\": \"2\",\n  \"session_id\": \"2026-10-01\",\n  \"created_at\": \"2026-10-01T12:00:00Z\",\n  \"updated_at\": \"2026-10-01T12:00:00Z\",\n  \"roles\": {\n    \"shot_screen\": {\n      \"role\": \"shot_screen\",\n      \"filename\": \"shot_screen.photo-1.jpg\",\n      \"content_sha256\": \"photo-1\",\n      \"original_filename\": \"shot.jpg\",\n      \"content_type\": \"image/jpeg\",\n      \"size_bytes\": 1234,\n      \"received_at\": \"2026-10-01T12:00:00Z\",\n      \"warnings\": []\n    }\n  },\n  \"player_id\": null,\n  \"club\": null,\n  \"mishit\": null\n}",
+      "shots/photo-1.shot.json": "{\n  \"shot_id\": \"hand-1\",\n  \"session_id\": \"2026-10-01\",\n  \"timestamp\": \"2026-10-01T12:05:00Z\",\n  \"source\": \"screen\",\n  \"club_head_speed\": 90.0,\n  \"club_face_angle\": null,\n  \"club_path\": null,\n  \"ball_speed\": 126.0,\n  \"launch_angle\": 16.0,\n  \"launch_direction\": null,\n  \"spin_rate\": 6500.0,\n  \"spin_axis\": null,\n  \"smash_factor\": 1.4,\n  \"carry_distance\": 150.0,\n  \"total_distance\": 158.0,\n  \"bounce_and_roll\": null,\n  \"apex_height\": 28.0,\n  \"shot_type\": \"SLIGHT DRAW\",\n  \"impact_position\": \"TOE\",\n  \"attack_angle\": -4.0,\n  \"dynamic_loft\": 25.0,\n  \"low_point\": 3.0,\n  \"impact_offset_h\": 6.0,\n  \"impact_offset_v\": -2.0,\n  \"impact_position_v\": \"LOW\",\n  \"carry_offline\": -8.0,\n  \"provenance\": {\n    \"device\": \"synthetic\",\n    \"parse_confidence\": 0.93,\n    \"needs_review\": false,\n    \"warnings\": [\n      \"no tile found for 'Bounce & Roll'\",\n      \"Club Path: label tie between 'Club Path' and 'Club Speed' - not read\",\n      \"Launch Direction: no value text under the label\"\n    ],\n    \"image_sha256\": \"photo-1\",\n    \"image_path\": null,\n    \"raw_fields\": {}\n  }\n}",
+      "shots/photo-2.shot.json": "{\n  \"shot_id\": \"hand-2\",\n  \"session_id\": \"2026-10-01\",\n  \"timestamp\": \"2026-10-01T12:00:00Z\",\n  \"source\": \"screen\",\n  \"club_head_speed\": 88.0,\n  \"club_face_angle\": null,\n  \"club_path\": null,\n  \"ball_speed\": 122.0,\n  \"launch_angle\": null,\n  \"launch_direction\": null,\n  \"spin_rate\": null,\n  \"spin_axis\": null,\n  \"smash_factor\": null,\n  \"carry_distance\": 146.0,\n  \"total_distance\": null,\n  \"bounce_and_roll\": null,\n  \"apex_height\": null,\n  \"shot_type\": \"DRAW\",\n  \"impact_position\": null,\n  \"attack_angle\": -3.0,\n  \"dynamic_loft\": 24.0,\n  \"low_point\": null,\n  \"impact_offset_h\": null,\n  \"impact_offset_v\": null,\n  \"impact_position_v\": null,\n  \"carry_offline\": -4.0,\n  \"provenance\": {\n    \"device\": \"synthetic\",\n    \"parse_confidence\": 0.9,\n    \"needs_review\": false,\n    \"warnings\": [\n      \"no tile found for 'Bounce & Roll'\"\n    ],\n    \"image_sha256\": \"photo-2\",\n    \"image_path\": null,\n    \"raw_fields\": {}\n  }\n}"
+    },
+    "roots": {
+      "golfers": null,
+      "sessions": "sessions",
+      "shots": "shots"
+    }
+  },
+  "provenance": {
+    "kind": "mcp",
+    "note": "Two shots no recorded case reaches, each carrying M32's fields, and the session whose two swings embed them. hand-1 (12:05) holds all seven of M32's fields and three warnings: the layout line no tile found for 'Bounce & Roll', a tie line and a blank-tile line. hand-2 (12:00) holds three of M32's fields and only the layout line. Worked: get_recent_shots is hand-1 then hand-2, newest first; each view's metrics are the shot's readings that are not null, frozen Python's fifteen in its order with M32's six numbers after apex_height and impact_position_v after impact_position; the layout line is dropped and the other two kept in order, so hand-2's warnings are empty; get_shot_by_id finds hand-2, and misses photo-1, which is a photo hash and not a shot id; get_swing 2 embeds hand-1's view, status done because an analysis is stored and no state file is; get_session_summary averages each numeric metric over the shots that carry it (mean of 78 and 82 is 80.0; attack_angle (-4 + -3) / 2 = -3.5, dynamic_loft 24.5, carry_offline -6.0, ball_speed 124.0, carry 148.0, club_head_speed 89.0, and hand-1's alone for the rest), each exact before rounding to 1 place. No shot needs review and neither swing is a mishit, so both are averaged.",
+    "oracle": "hand",
+    "source": "worked by hand in M29 P11, against the program plan's M29 items 'the new ShotData fields join a metric list here' and 'the shot view goes through M34's golfer-facing filter'. The views' shapes and the summary's rules are frozen Python's, which the recorded cases hold golf-mcp to (M29 P10); every value here is the hand's, and none was produced by frozen Python, which never sees M32's fields, or by golf-mcp"
+  }
+}

@@ -171,4 +171,4 @@ invalidating every comparison.
 - [ADR-012](012-golfdb-reference-data.md) — GolfDB tiers, ground truth, §4 metric-definition versioning
 - [docs/M4_ADDRESS_DETECTION.md](../M4_ADDRESS_DETECTION.md) — the feature flow
 - [docs/M4_POSE_BAKEOFF.md](../M4_POSE_BAKEOFF.md) — Phase B6, the measurement ledger
-- `scripts/golfdb/tune_address.py` — every rule above, still runnable
+- `archive/golfdb/tune_address.py` — every rule above, still runnable

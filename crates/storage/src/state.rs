@@ -15,9 +15,18 @@
 //! question from two sides: is what we recorded about this swing still true? They read the raw JSON
 //! rather than a typed result, so an artifact whose shape has moved on stays readable.
 //!
-//! What stays behind in `api/state.py`, because only the API calls it: `resolve_tempo_plan`,
-//! `resolve_placements`, `resolve_pivots` and `_measurement_entries` (the results page's), and
-//! `now()` (the clock is an argument here, as the crate doc says).
+//! What stays behind in `api/state.py`, because only the API calls it: `resolve_tempo_plan` (the
+//! results page's) and `now()` (the clock is an argument here, as the crate doc says).
+//!
+//! # The placement and pivot resolvers [M29 P10]
+//!
+//! [`resolve_placements`] and [`resolve_pivots`] stayed behind at M36 for the same reason, and
+//! came across when `golf-mcp`'s `get_swing` needed them: a stored placement or pivot row turned
+//! into one that carries what makes it readable. They sit here, beside [`load_analysis`], for
+//! Python's reason (the tolerant readers for `analysis.json` sit together) and so that one
+//! definition serves every Rust reader of a stored swing, as Python's serves the MCP view, the
+//! results page and the coaching brief. Each returns a typed row where Python returns a dict; the
+//! MCP view wraps it in its own field order, as `PlacementView(**row)` does.
 //!
 //! # `shot_analysis.json`, which has no Python twin [M35 P8]
 //!
@@ -192,6 +201,28 @@ pub fn load_analysis(swing_dir: &Path) -> Option<Map<String, Value>> {
     }
 }
 
+/// Write a swing's `analysis.json`: the serialized result, as `golf_core::serialize` drops it, in
+/// `model_dump_json(indent=2)`'s layout. [M29 P26]
+///
+/// **Atomically, where `analyze_swing_dir`'s `write_text` is not**: the results page and `golf-mcp`
+/// read this file while a re-run rewrites it, and a reader that met half a file would serve a swing
+/// as unanalyzed. The `.tmp` beside it is the stores' (`write_atomically`), and a rename is all a
+/// reader ever sees. It does not create `swing_dir`, for [`save_shot_analysis`]'s reason: a result
+/// is about a directory that already holds a manifest.
+///
+/// It takes the JSON rather than the typed result because the drop is the shell's, not this crate's
+/// (`golf_core::serialize`), and what frozen Python can read is the caller's to check before it
+/// writes (`golf_lab::analyze`'s guard on the reasons, the M29 plan's C6).
+pub fn save_analysis(analysis: &Value, swing_dir: &Path) -> io::Result<()> {
+    if !swing_dir.is_dir() {
+        return Err(io::Error::new(
+            io::ErrorKind::NotFound,
+            format!("no swing directory at {}", swing_dir.display()),
+        ));
+    }
+    crate::write_atomically(analysis, &swing_dir.join(ANALYSIS_NAME))
+}
+
 /// Which generation of the engine wrote this artifact; 0 for anything before versioning.
 ///
 /// Read off the raw JSON, for [`load_analysis`]'s reason. Anything but a non-negative integer is 0
@@ -226,6 +257,118 @@ pub fn is_older_than(analysis: Option<&Map<String, Value>>, version: i64) -> boo
 /// [`ANALYSIS_VERSION`], this build's engine.
 pub fn is_outdated(analysis: Option<&Map<String, Value>>) -> bool {
     is_older_than(analysis, ANALYSIS_VERSION)
+}
+
+/// `_measurement_entries`: `swing.measurements` off a stored artifact, its object entries only, or
+/// nothing for anything that is not that shape.
+fn measurement_entries(
+    analysis: Option<&Map<String, Value>>,
+) -> impl Iterator<Item = &Map<String, Value>> {
+    analysis
+        .and_then(|analysis| analysis.get("swing"))
+        .and_then(Value::as_object)
+        .and_then(|swing| swing.get("measurements"))
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(Value::as_object)
+}
+
+/// A stored entry's `name` and `value` when the name is a string and the value a number, as the two
+/// resolvers both require. `isinstance(value, int | float)` excluding `bool`: JSON's `true` is a
+/// bool to `serde_json` before it could be a number, so the exclusion is the type itself here.
+fn named_value(entry: &Map<String, Value>) -> Option<(&str, f64)> {
+    let name = entry.get("name")?.as_str()?;
+    let value = entry.get("value")?.as_f64()?;
+    Some((name, value))
+}
+
+/// The stored entry's unit when it names one, else the registry's, so a row from an artifact that
+/// omitted it still renders. Python's `unit if isinstance(unit, str) and unit else spec.unit`.
+fn unit_or(entry: &Map<String, Value>, registered: &str) -> String {
+    match entry.get("unit").and_then(Value::as_str) {
+        Some(unit) if !unit.is_empty() => unit.to_string(),
+        _ => registered.to_string(),
+    }
+}
+
+/// The stored entry's detail when it is a string, else empty.
+fn detail_of(entry: &Map<String, Value>) -> String {
+    entry
+        .get("detail")
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .to_string()
+}
+
+/// One population placement on a stored swing, with the two registry facts that decide how it may
+/// be read. [M29 P10]
+///
+/// **Unit and detail come off the stored entry, view and calibrated off the registry.** An artifact
+/// an older engine wrote is read back here, and the two halves differ in what they are: the first
+/// pair is what that engine recorded, the second is what this repository knows about the model.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ResolvedPlacement {
+    pub name: String,
+    pub value: f64,
+    pub unit: String,
+    pub detail: String,
+    pub view: &'static str,
+    pub calibrated: bool,
+}
+
+/// `resolve_placements`: the population placements on a stored swing, in the artifact's order.
+///
+/// Membership is [`contracts::placements::placement_by_name`] and never a `tour_` prefix test: a
+/// prefix would silently reclassify a future name in the direction that loses the caveat. An entry
+/// with no string name or no numeric value is skipped, as Python skips it.
+pub fn resolve_placements(analysis: Option<&Map<String, Value>>) -> Vec<ResolvedPlacement> {
+    measurement_entries(analysis)
+        .filter_map(|entry| {
+            let (name, value) = named_value(entry)?;
+            let spec = contracts::placements::placement_by_name(name)?;
+            Some(ResolvedPlacement {
+                name: name.to_string(),
+                value,
+                unit: unit_or(entry, spec.unit),
+                detail: detail_of(entry),
+                view: spec.view,
+                calibrated: spec.calibrated,
+            })
+        })
+        .collect()
+}
+
+/// One rotation measurement on a stored swing, with the sentence that says it is interim.
+/// [`ResolvedPlacement`]'s sibling, split the same way between entry and registry. [M29 P10]
+#[derive(Debug, Clone, PartialEq)]
+pub struct ResolvedPivot {
+    pub name: String,
+    pub value: f64,
+    pub unit: String,
+    pub detail: String,
+    pub view: &'static str,
+    pub interim_reason: &'static str,
+}
+
+/// `resolve_pivots`: the pivot rows on a stored swing, in the artifact's order. Membership is
+/// [`contracts::pivots::pivot_by_name`], never a `pivot_` prefix, for [`resolve_placements`]'
+/// reason.
+pub fn resolve_pivots(analysis: Option<&Map<String, Value>>) -> Vec<ResolvedPivot> {
+    measurement_entries(analysis)
+        .filter_map(|entry| {
+            let (name, value) = named_value(entry)?;
+            let spec = contracts::pivots::pivot_by_name(name)?;
+            Some(ResolvedPivot {
+                name: name.to_string(),
+                value,
+                unit: unit_or(entry, spec.unit),
+                detail: detail_of(entry),
+                view: spec.view,
+                interim_reason: spec.interim_reason,
+            })
+        })
+        .collect()
 }
 
 pub fn shot_analysis_path(swing_dir: &Path) -> PathBuf {
@@ -575,5 +718,70 @@ mod tests {
         let err = save_shot_analysis(&valid, &missing).unwrap_err();
         assert!(matches!(err, StoreError::Io(_)), "{err}");
         assert!(!missing.exists(), "no swing directory is made for a result");
+    }
+
+    /// The writer [`load_analysis`] reads back, replacing what was there, with no `.tmp` left beside
+    /// it; and no directory made for a swing that has none. [M29 P26]
+    #[test]
+    fn an_analysis_round_trips_and_needs_its_swing_directory() {
+        let dir = tempfile::tempdir().unwrap();
+        fs::write(dir.path().join(ANALYSIS_NAME), "{\"analysis_version\": 3}").unwrap();
+        let written = json!({"swing_id": "2", "analysis_version": 17, "notes": ["a — b"]});
+        save_analysis(&written, dir.path()).unwrap();
+        let read = load_analysis(dir.path()).expect("the written file reads back");
+        assert_eq!(Value::Object(read), written);
+        let names: Vec<_> = fs::read_dir(dir.path())
+            .unwrap()
+            .map(|entry| entry.unwrap().file_name())
+            .collect();
+        assert_eq!(names, [ANALYSIS_NAME], "only the artifact is left");
+
+        let missing = dir.path().join("2026-10-09").join("9");
+        let err = save_analysis(&written, &missing).unwrap_err();
+        assert_eq!(err.kind(), io::ErrorKind::NotFound);
+        assert!(!missing.exists(), "no swing directory is made for a result");
+    }
+
+    /// The resolvers' tolerance, as `api/state.py`'s reads it: membership by registry, a bool or
+    /// a missing value skipped, the stored unit when it names one and the registry's when it does
+    /// not, a non-string detail read as empty, and a non-object entry or swing ignored. The
+    /// `mcp` family's `swing-views` holds one well-formed row of each; these are the rest.
+    #[test]
+    fn the_resolvers_keep_registered_rows_and_read_the_rest_tolerantly() {
+        let Value::Object(analysis) = json!({"swing": {"measurements": [
+            {"name": "tour_joint_distance", "value": 3, "unit": "", "detail": 7},
+            {"name": "tour_trajectory_q", "value": true},
+            {"name": "tour_trajectory_t2", "unit": "sigma"},
+            "tour_joint_distance",
+            {"name": "head_sway_norm", "value": 0.12},
+            {"name": "pivot_hip_axis_drift_norm", "value": 0.42, "unit": "widths", "detail": "d"},
+        ]}}) else {
+            unreachable!()
+        };
+        let placements = resolve_placements(Some(&analysis));
+        assert_eq!(placements.len(), 1, "{placements:?}");
+        let placement = &placements[0];
+        assert_eq!(placement.value, 3.0);
+        assert_eq!(
+            placement.unit,
+            contracts::placements::spec_for("tour_joint_distance").unit
+        );
+        assert_eq!(placement.detail, "");
+        let pivots = resolve_pivots(Some(&analysis));
+        assert_eq!(pivots.len(), 1, "{pivots:?}");
+        assert_eq!(
+            (pivots[0].unit.as_str(), pivots[0].detail.as_str()),
+            ("widths", "d")
+        );
+        assert_eq!(
+            pivots[0].interim_reason,
+            contracts::pivots::spec_for("pivot_hip_axis_drift_norm").interim_reason
+        );
+
+        let Value::Object(odd) = json!({"swing": {"measurements": {"name": "x"}}}) else {
+            unreachable!()
+        };
+        assert!(resolve_placements(Some(&odd)).is_empty());
+        assert!(resolve_pivots(None).is_empty());
     }
 }

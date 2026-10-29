@@ -8,10 +8,18 @@ The load-bearing test is `test_a_tool_calling_turn_is_mirrored_verbatim`. A tran
 a thinking block or splits a `tool_use`/`tool_result` pair cannot be replayed, and the way that
 failure presents is a 400 on the *third* turn of a conversation that worked twice — long after the
 code that caused it.
+
+The stdio route's tests (M29 P16) are the exception to "no extra": they start the real `golf-mcp`
+and need the `llm` extra's `mcp` client. Each is skipped by name when either is missing, and the
+build that fixes it is in the reason.
 """
 
 from __future__ import annotations
 
+import importlib.util
+import json
+from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -19,10 +27,14 @@ import pytest
 from golf_coach.contracts.conversation import Transcript
 from golf_coach.feedback.conversation import (
     ANSWERING_FOLLOWUPS,
+    BUILD_GOLF_MCP,
     MAX_ITERATIONS,
     SEED_PREAMBLE,
     AskOutcome,
+    GolfMcpServer,
+    answering_followups,
     ask,
+    ask_through_golf_mcp,
     brief_digest,
     system_prompt,
 )
@@ -30,6 +42,7 @@ from golf_coach.storage.transcript_store import new_transcript, visible_turns
 
 MODEL = "claude-opus-5"
 BRIEFING = "Swing analysis and launch-monitor data from a home golf simulator."
+REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 # --------------------------------------------------------------------------- fakes
@@ -112,6 +125,48 @@ class _Client:
         if isinstance(self._turns, Exception):
             raise self._turns
         return _Runner(self._turns)
+
+
+class _CallingRunner(_Runner):
+    """`_Runner`, except that it runs the tools it was handed, on the thread that iterates it.
+
+    That thread is the point. On the stdio route each tool is the SDK's `mcp_tool`, which reaches
+    the client session on the event loop through `anyio.from_thread.run`, and that works only
+    from an anyio worker thread. The real runner calls its tools on its own thread as well
+    (`_generate_tool_call_response` in the SDK's `_beta_runner.py`).
+    """
+
+    def __init__(self, turns: list[_Message], tools: list[Any]) -> None:
+        super().__init__(turns)
+        self._tools = {tool.name: tool for tool in tools}
+        self._answered: dict[int, dict[str, Any]] = {}
+
+    def generate_tool_call_response(self) -> dict[str, Any] | None:
+        assert self._current is not None
+        calls = [block for block in self._current.content if block.type == "tool_use"]
+        if not calls:
+            return None
+        turn = id(self._current)
+        if turn not in self._answered:
+            self._answered[turn] = {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "tool_result",
+                        "tool_use_id": block._data["id"],
+                        "content": self._tools[block.name].call(block._data["input"]),
+                    }
+                    for block in calls
+                ],
+            }
+        return self._answered[turn]
+
+
+class _CallingClient(_Client):
+    def tool_runner(self, **kwargs: Any) -> _Runner:
+        super().tool_runner(**kwargs)
+        assert isinstance(self._turns, list)
+        return _CallingRunner(self._turns, kwargs["tools"])
 
 
 def answer(text: str = "Your tempo sits outside the band.") -> list[_Message]:
@@ -445,3 +500,255 @@ def test_an_answer_with_no_text_is_a_note(stop_reason: str) -> None:
 
     assert outcome.text is None
     assert "no text" in (outcome.note or "")
+
+
+# --------------------------------------------------------------------------- the stdio route
+
+
+# `golf_mcp`, the built server or a skip naming the build, is `conftest.py`'s, shared with
+# `test_coach.py`'s JSON-entry tests (M29 P17).
+
+
+def _stores(root: Path, *, registry: bool) -> dict[str, Path | None]:
+    """Empty stores: every answer the tests need is one a store with nothing in it gives."""
+    names = ("sessions", "shots", "golfers") if registry else ("sessions", "shots")
+    for name in names:
+        (root / name).mkdir()
+    return {
+        "sessions_dir": root / "sessions",
+        "shots_dir": root / "shots",
+        "golfers_dir": root / "golfers" if registry else None,
+    }
+
+
+def _server(binary: Path, stores: dict[str, Path | None]) -> GolfMcpServer:
+    sessions_dir, shots_dir = stores["sessions_dir"], stores["shots_dir"]
+    assert sessions_dir is not None and shots_dir is not None
+    return GolfMcpServer(
+        binary=binary,
+        sessions_dir=sessions_dir,
+        shots_dir=shots_dir,
+        golfers_dir=stores["golfers_dir"],
+    )
+
+
+def _in_process_tool_names(stores: dict[str, Path | None]) -> list[str]:
+    """What frozen Python's route offers over the same stores, for the stdio route to match."""
+    from golf_coach.launch_monitor.composite import CompositeShotDataSource
+    from golf_coach.mcp.runner_tools import build_tools
+
+    sessions_dir = stores["sessions_dir"]
+    assert sessions_dir is not None
+    tools = build_tools(
+        sessions_dir, CompositeShotDataSource([]), golfers_dir=stores["golfers_dir"]
+    )
+    return [tool.name for tool in tools]
+
+
+def test_the_stdio_route_asks_with_golf_mcps_tools_briefing_and_caveat(
+    golf_mcp: Path, tmp_path: Path
+) -> None:
+    """The route end to end over the real server, with only the model faked.
+
+    The tool call is made, not canned: `get_swing` crosses from the runner's thread into the
+    event loop and over the pipe, and the miss it answers is the server's own sentence. The
+    briefing is Rust's (only Rust's says a misread photo is worth retaking, the M29 plan's C13),
+    and the instructions around the server's `ONLY_CHECKPOINTS_ARE_JUDGED` come out exactly as
+    the in-process route's, which is what keeping no copy of that sentence has to preserve.
+    """
+    stores = _stores(tmp_path, registry=True)
+    turns = [
+        _Message(
+            [
+                {
+                    "type": "tool_use",
+                    "id": "toolu_01",
+                    "name": "get_swing",
+                    "input": {"session_id": "2026-08-10", "swing_id": "2"},
+                }
+            ],
+            stop_reason="tool_use",
+        ),
+        _Message([{"type": "text", "text": "That swing is not on file."}]),
+    ]
+    client = _CallingClient(turns)
+    stored = transcript()
+
+    outcome = ask_through_golf_mcp(
+        "why is my tempo quick?",
+        transcript=stored,
+        server=_server(golf_mcp, stores),
+        model=MODEL,
+        client=client,
+    )
+
+    assert outcome.text == "That swing is not on file."
+    assert outcome.tools_called == ["get_swing"]
+    names = [tool.name for tool in client.captured["tools"]]
+    assert names == [*_in_process_tool_names(stores), "get_strike_profile"]
+    system = client.captured["system"][0]["text"]
+    assert system.endswith(f"\n\n{ANSWERING_FOLLOWUPS}")
+    # Whitespace collapsed, because the server fills its briefing to a width and may break here.
+    assert "`misread` is a photo of the screen worth retaking" in " ".join(system.split())
+    result = stored.messages[2]["content"][0]
+    assert result["tool_use_id"] == "toolu_01"
+    assert json.loads(result["content"][0]["text"]) == {
+        "found": False,
+        "message": (
+            "No swing '2' in session '2026-08-10'. "
+            "Call list_sessions to see which sessions and swing ids exist."
+        ),
+    }
+
+
+def test_the_stdio_route_without_a_registry_offers_what_the_in_process_route_does(
+    golf_mcp: Path, tmp_path: Path
+) -> None:
+    """`--no-registry` drops every per-golfer tool, `get_strike_profile` with the other five."""
+    stores = _stores(tmp_path, registry=False)
+    client = _CallingClient(answer())
+
+    outcome = ask_through_golf_mcp(
+        "q",
+        transcript=transcript(),
+        server=_server(golf_mcp, stores),
+        model=MODEL,
+        client=client,
+    )
+
+    assert outcome.text is not None
+    assert [tool.name for tool in client.captured["tools"]] == _in_process_tool_names(stores)
+
+
+@dataclass(frozen=True)
+class _Refused(GolfMcpServer):
+    """A server started with a flag it refuses, so it exits before the handshake."""
+
+    def args(self) -> list[str]:
+        return ["--not-a-flag"]
+
+
+def test_a_server_that_exits_before_the_handshake_is_a_note(
+    golf_mcp: Path, tmp_path: Path
+) -> None:
+    stored = transcript()
+    client = _CallingClient(answer())
+
+    with (tmp_path / "golf-mcp.log").open("w", encoding="utf-8") as errlog:
+        outcome = ask_through_golf_mcp(
+            "q",
+            transcript=stored,
+            server=_Refused(binary=golf_mcp, sessions_dir=tmp_path, shots_dir=tmp_path),
+            model=MODEL,
+            client=client,
+            errlog=errlog,
+        )
+
+    assert (outcome.note or "").startswith("no answer: golf-mcp could not be used (")
+    assert outcome.transcript is None
+    assert stored.messages == []
+    assert client.captured == {}, "the question was sent with no tools behind it"
+    assert "unknown argument: --not-a-flag" in (tmp_path / "golf-mcp.log").read_text("utf-8")
+
+
+def test_a_golf_mcp_that_is_not_built_is_a_note_naming_the_build(tmp_path: Path) -> None:
+    client = _Client(answer())
+
+    outcome = ask_through_golf_mcp(
+        "q",
+        transcript=transcript(),
+        server=GolfMcpServer(
+            binary=tmp_path / "golf-mcp", sessions_dir=tmp_path, shots_dir=tmp_path
+        ),
+        model=MODEL,
+        client=client,
+    )
+
+    assert outcome.text is None
+    assert BUILD_GOLF_MCP in (outcome.note or "")
+    assert client.captured == {}
+
+
+def test_a_missing_key_is_refused_before_golf_mcp_is_looked_for(tmp_path: Path) -> None:
+    """Nothing is started for a question that could not be sent, and the note says the real why."""
+    pytest.importorskip("anthropic", reason="the missing-key note is only reached with the SDK")
+
+    outcome = ask_through_golf_mcp(
+        "q",
+        transcript=transcript(),
+        server=GolfMcpServer(
+            binary=tmp_path / "golf-mcp", sessions_dir=tmp_path, shots_dir=tmp_path
+        ),
+        model=MODEL,
+    )
+
+    assert "no Anthropic API key" in (outcome.note or "")
+    assert BUILD_GOLF_MCP not in (outcome.note or "")
+
+
+def test_the_instructions_quote_the_routes_own_caveat() -> None:
+    blocks = system_prompt(BRIEFING, answering_followups("Only the measured is judged"))
+
+    assert "say it was not measured. Only the measured is judged." in blocks[0]["text"]
+
+
+def test_ask_swing_exits_2_naming_the_build_when_golf_mcp_is_missing(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Before reading anything: the commonest setup slip answers with the command that fixes it."""
+    script = _ask_swing_script()
+
+    code = script.main(
+        [
+            "2026-08-10/2",
+            "why?",
+            "--golf-mcp",
+            str(tmp_path / "golf-mcp"),
+            "--conversations-dir",
+            str(tmp_path / "conversations"),
+        ]
+    )
+
+    assert code == 2
+    assert BUILD_GOLF_MCP in capsys.readouterr().err
+    assert not (tmp_path / "conversations").exists()
+
+
+def _ask_swing_script() -> Any:
+    spec = importlib.util.spec_from_file_location(
+        "ask_swing", REPO_ROOT / "scripts" / "ask_swing.py"
+    )
+    assert spec is not None and spec.loader is not None
+    script = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(script)
+    return script
+
+
+def test_ask_swing_seeds_from_the_brief_the_paragraph_is_written_from(
+    golf_mcp: Path, tmp_path: Path, store_swing: Any
+) -> None:
+    """M29 P17: one rendering of the swing opens both the conversation and the coaching paragraph.
+
+    `coach.brief_through_golf_mcp` is what `python -m golf_coach.feedback.coach` writes from, and
+    a swing with no analysis on file is the old sentence, naming the command that makes one.
+    """
+    from golf_coach.contracts.swing import SwingBundleResult, SwingResult
+    from golf_coach.feedback.coach import brief_through_golf_mcp
+
+    stores = _stores(tmp_path, registry=False)
+    sessions_dir = stores["sessions_dir"]
+    assert sessions_dir is not None
+    swing = SwingResult(swing_id="2", session_id="2026-08-10", overall_score=90.0)
+    store_swing(
+        sessions_dir, SwingBundleResult(swing_id="2", session_id="2026-08-10", swing=swing)
+    )
+    server = _server(golf_mcp, stores)
+    script = _ask_swing_script()
+
+    loaded = script._load_brief(server, "2026-08-10/2")
+
+    assert loaded == (brief_through_golf_mcp(server, "2026-08-10", "2").text, "2026-08-10", "2")
+    assert loaded[0].startswith("SWING 2 (session 2026-08-10)\n\noverall_score: 90 out of 100")
+    missing = script._load_brief(server, "2026-08-10/9")
+    assert missing.startswith("no analyzed swing at '2026-08-10/9' under ")
+    assert missing.endswith("Run golf-lab analyze on it first.")

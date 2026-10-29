@@ -1,0 +1,67 @@
+# The MCP server, in Rust. [M29 P9]
+#
+# A shell like `golf-core` (the M29 plan's D13): it may hold any library crate, and nothing depends
+# on it. Its Python twin is `src/golf_coach/mcp/server.py` with `scripts/run_mcp_server.py` in front,
+# and it is held to what that server answers by `spec/vectors/mcp/`, recorded once from it (M29 P8,
+# the plan's D9).
+[package]
+name = "golf-mcp"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "The MCP server over stdio: the tools, the connect-time briefing and the caveats resource frozen Python's mcp/server.py serves, held to spec/vectors/mcp/."
+
+[lib]
+name = "golf_mcp"
+path = "src/lib.rs"
+
+[[bin]]
+name = "golf-mcp"
+path = "src/bin/golf_mcp.rs"
+
+[dependencies]
+# The registries the caveat prose is derived from (`checkpoints`, `unscored`, `placements`,
+# `pivots`, `mishit`), as `contracts/caveats.py` derives Python's from its own.
+contracts = { path = "../contracts" }
+# `reports::data_dir`, so `--sessions-dir`, `--shots-dir` and `--golfers-dir` resolve as the career
+# verbs' do (the plan's C10), and from P10 on the readers and reports each tool answers through.
+golf-core = { path = "../core" }
+# The bundle store and the tolerant readers (`state`, `manifest`) the swing and session views read
+# through, as `mcp/query.py` reads through `storage/` and `api/state.py`. [M29 P10]
+storage = { path = "../storage" }
+# `golfer_warnings`, M34's golfer-facing filter, which every Rust surface that shows a shot's
+# warnings calls (the program plan's §M34 and §M29), so the shot view drops the layout line through
+# the parser's own spelling of it rather than a copy. `screen` holds no `ort` (`crates/ocr` does),
+# so this edge keeps `ort` out of `golf-mcp`'s closure. [M29 P11]
+screen = { path = "../screen" }
+# The three career layers the golfer tools join over one corpus — `baseline`, `dispersion` and
+# `comparison` — as `mcp/career.py` imports `analysis.{baseline,dispersion,comparison}`. The same
+# builders `golf-core`'s career verbs print, reached directly rather than through a report, because
+# a tool answers the shapes and a report renders them. [M29 P12]
+analysis = { path = "../analysis" }
+# CPython's edges the views reach: `!r` quoting in a miss's sentence, a float's `repr` where a name
+# is `str()`'d, and the compensated `sum` and `round(x, 1)` of a session's averages. [M29 P10]
+pyfmt = { path = "../pyfmt" }
+# The MCP SDK (the plan's rules name it, with `tokio` and the schema crate it brings). Pinned
+# exactly, and **0.11.0 is the newest this workspace's `rust-version = "1.87"` builds**, measured
+# at M29 P9: 0.13.0 and every later release (1.x, 2.x) use `if let … &&` chains, stable only from
+# 1.88, without declaring it; 0.12.0's `rmcp-macros` needs `darling` 0.23, which declares 1.88, and
+# 0.12.0 does not compile with `macros` off (`model/capabilities.rs` imports `pastey`
+# unconditionally); 3.x declares 1.88 outright. `ocr`'s `ort` pin made the same call for the same
+# toolchain. The cost is the protocol: 0.11.0 models the 2025-06-18 revision at newest, where frozen
+# Python's SDK negotiated 2025-11-25, and `tests/surface.rs` declares that difference.
+# Default features (`server`, `macros`, `base64`) are kept because 0.11.0 does not build without
+# `base64` and `schemars`; `transport-io` is stdio.
+rmcp = { version = "=0.11.0", features = ["transport-io"] }
+# The runtime `rmcp` is written against. One thread: a stdio server answers one client.
+tokio = { version = "=1.54.0", default-features = false, features = ["rt", "macros", "io-std"] }
+serde.workspace = true
+serde_json.workspace = true
+
+[dev-dependencies]
+# The client half, for the handshake in `tests/surface.rs`: what a client sees on connect is what
+# the surface case recorded, so the gate connects as one rather than reading the handler's fields.
+rmcp = { version = "=0.11.0", features = ["client", "transport-io"] }
+# `spec/vectors/mcp/real/data.json.gz` is committed gzipped, as the corpus vectors are.
+flate2.workspace = true

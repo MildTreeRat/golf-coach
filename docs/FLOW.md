@@ -244,8 +244,8 @@ bands (ADR-009).
 
 **That gap is now closed** (M7 Phase 5). The third role landing marks a swing complete, and
 `api/worker.py` runs the pipeline on it off the event loop; `api/static/results.html` renders
-the result. `analyze_bundle.py` still exists and still works — it is now a CLI over the same
-`api/pipeline.py` the worker calls, not a second implementation.
+the result. `analyze_bundle.py` stayed a CLI over the same `api/pipeline.py` the worker calls, not
+a second implementation, until M29 ported it as `golf-lab analyze` and deleted it.
 
 **The gap that mattered most here — the tempo checkpoint reading 0.43:1 on real footage and the
 ranked tips leading with a confident, wrong "work on tempo first" — was fixed on 2026-08-09.** The
@@ -424,7 +424,7 @@ is left** ([ADR-035 §4–§5](decisions/035-rust-everywhere-python-where-requir
 Ports are configured in
 `src/golf_coach/config.py`: `api_port` **3000** (8080 is unusable on this machine, see the note in
 `config.py`) and `mcp_port` 8081, which binds nothing, because the MCP server speaks stdio
-(`scripts/run_mcp_server.py`). The startup sequence is one command, `python scripts/run_server.py`.
+(`golf-mcp`, in Rust since M29). The startup sequence is one command, `python scripts/run_server.py`.
 The phone-browser upload over Tailscale stays the lab's path until M40 says otherwise, and whether
 it stays open once §M29 has landed is §M29's to decide. See
 [ARCHITECTURE.md](ARCHITECTURE.md) §1 for the CLI commands.

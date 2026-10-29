@@ -75,18 +75,13 @@ def client(store, golfers):
     return TestClient(create_app(store=store, golfers=golfers, token=None, worker=None))
 
 
-def _seed(client, store, *, player: str | None = "aaron") -> str:
+def _seed(file_swing, store, *, player: str | None = "aaron") -> str:
     """One analyzed swing carrying measurements, attributed to a golfer."""
-    if player:
-        client.post("/api/sessions/current/golfer", json={"name": "Aaron", "handedness": "right"})
-    # M9 P6: an upload 409s without a club cursor; these tests are not about the club.
-    client.post("/api/sessions/current/club", json={"club": "7i"})
     for role in _ROLES:
-        res = client.post(
-            "/api/uploads", params={"role": role, "filename": f"{role}.mov"},
-            content=f"{role}-bytes".encode(),
+        filed = file_swing(
+            store, role, f"{role}-bytes".encode(), player_id="aaron" if player else None
         )
-    session_id = res.json()["session_id"]
+    session_id = filed.session_id
     swing_dir = store.root / session_id / "1"
     (swing_dir / "analysis.json").write_text(json.dumps(_analysis()), encoding="utf-8")
 
@@ -101,8 +96,8 @@ def _seed(client, store, *, player: str | None = "aaron") -> str:
 # ------------------------------------------------------------------------ the envelope
 
 
-def test_the_route_serves_all_three_layers_over_one_corpus(client, store) -> None:
-    _seed(client, store)
+def test_the_route_serves_all_three_layers_over_one_corpus(client, store, file_swing) -> None:
+    _seed(file_swing, store)
 
     body = client.get("/api/golfers/aaron/career").json()
 
@@ -117,14 +112,14 @@ def test_the_route_serves_all_three_layers_over_one_corpus(client, store) -> Non
         assert sorted(body[layer]["metrics"]) == sorted(m["name"] for m in _MEASUREMENTS)
 
 
-def test_the_corpus_block_carries_the_evidence_behind_every_n(client, store) -> None:
+def test_the_corpus_block_carries_the_evidence_behind_every_n(client, store, file_swing) -> None:
     """A refusal is only actionable beside the reason the `n` is what it is.
 
     For the corpus on disk that reason is almost never "you have not swung enough" — it is
     re-uploads collapsing, or a swing nobody attributed — so the counts and the itemised
     exclusions travel with it.
     """
-    _seed(client, store)
+    _seed(file_swing, store)
 
     corpus = client.get("/api/golfers/aaron/career").json()["corpus"]
 
@@ -134,14 +129,14 @@ def test_the_corpus_block_carries_the_evidence_behind_every_n(client, store) -> 
     assert "excluded" in corpus
 
 
-def test_withheld_arrives_as_absent_over_the_wire(client, store) -> None:
+def test_withheld_arrives_as_absent_over_the_wire(client, store, file_swing) -> None:
     """The property the whole milestone rests on, surviving JSON.
 
     A statistic shipped beside a `ready: false` is one forgotten conditional away from being
     rendered. `null` is what makes the page structurally unable to print a baseline over one swing,
     and `withheld` is what makes the refusal say when it will lift.
     """
-    _seed(client, store)
+    _seed(file_swing, store)
 
     body = client.get("/api/golfers/aaron/career").json()
     metric = body["baseline"]["metrics"]["head_sway_norm"]
@@ -156,9 +151,9 @@ def test_withheld_arrives_as_absent_over_the_wire(client, store) -> None:
 
 
 def test_a_metric_with_no_tour_population_says_so_rather_than_being_silent(
-    client, store
+    client, store, file_swing
 ) -> None:
-    _seed(client, store)
+    _seed(file_swing, store)
 
     standing = client.get("/api/golfers/aaron/career").json()["standing"]["metrics"]
 
@@ -206,7 +201,9 @@ def test_the_route_is_behind_the_token(store, golfers) -> None:
 # ---------------------------------------------------------------- tempo [ADR-023 addendum]
 
 
-def test_the_tempo_block_rides_on_the_same_corpus_as_the_other_layers(client, store) -> None:
+def test_the_tempo_block_rides_on_the_same_corpus_as_the_other_layers(
+    client, store, file_swing
+) -> None:
     """A fourth contract on this route, and the reason it is not its own.
 
     The tempo the page prints and the `tempo_ratio` card under it describe the same golfer's same
@@ -214,7 +211,7 @@ def test_the_tempo_block_rides_on_the_same_corpus_as_the_other_layers(client, st
     two fetches is all it would take — and the disagreement would be invisible, because both
     numbers would look right.
     """
-    _seed(client, store)
+    _seed(file_swing, store)
 
     body = client.get("/api/golfers/aaron/career").json()
 
@@ -223,14 +220,14 @@ def test_the_tempo_block_rides_on_the_same_corpus_as_the_other_layers(client, st
     assert [s["ratio"] for s in body["tempo"]["swings"]] == [2.42]
 
 
-def test_a_reading_survives_json_while_the_mean_over_it_does_not(client, store) -> None:
+def test_a_reading_survives_json_while_the_mean_over_it_does_not(client, store, file_swing) -> None:
     """The layering the career tempo view rests on, asserted over the wire.
 
     The seeded swing carries a `tempo_ratio` and nothing else, so this is the shape a golfer with
     one analyzed swing actually gets: the reading printed, the typical value `null`, and the floor
     it is waiting for beside it. A page cannot print a tendency it was never sent.
     """
-    _seed(client, store)
+    _seed(file_swing, store)
 
     tempo = client.get("/api/golfers/aaron/career").json()["tempo"]
 

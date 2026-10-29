@@ -64,7 +64,7 @@ def resolve_variant(variant: str | None = None) -> str:
 def pose_estimator_name(variant: str | None = None) -> str:
     """`"mediapipe:heavy"` — the name a stored artifact records the measuring instrument by.
 
-    Deliberately the same vocabulary as `scripts/golfdb/estimators.py`'s registry keys and
+    Deliberately the same vocabulary as `archive/golfdb/estimators.py`'s registry keys and
     `benchmarks/golfdb_v1.json`'s `dataset.pose_estimator`, so a cached pose run, a bake-off row
     and a band's provenance can be compared as strings without a translation table between them.
     """
@@ -161,7 +161,7 @@ def estimate_pose(
 
     `model_path` defaults to the bundle for `variant` under `settings.models_dir` (downloaded on
     first use); pass an explicit path to override. `variant` defaults to
-    `settings.pose_model_variant` — the bake-off (`scripts/golfdb/estimators.py`) is the caller
+    `settings.pose_model_variant` — the bake-off (`archive/golfdb/estimators.py`) is the caller
     that names one, because comparing variants is the whole point of it.
     """
     import cv2

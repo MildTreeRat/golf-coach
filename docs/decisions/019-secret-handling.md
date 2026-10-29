@@ -128,3 +128,35 @@ model ignorant of how the key is held.
 **Worth noting how this surfaced**: the pin failed the first time the full suite ran after the
 work, naming the added file and pointing at this document. That is the friction the original
 decision described as the feature, working on its first real test.
+
+## Addendum (2026-10-22): `feedback/coach.py`, the paragraph's entry over `golf-mcp`
+
+`SANCTIONED_UNWRAP_SITES` gained **`src/golf_coach/feedback/coach.py`** (M29 P17,
+[the lab-port plan](../plans/m29-lab-port.md)). Its new entry,
+`python -m golf_coach.feedback.coach --session S --swing W`, reads the swing through the Rust
+`golf-mcp` server, asks Claude for the one-shot coaching paragraph, and prints it as one JSON
+object. `golf-lab analyze` spawns it from M29 P26, because Python stays the only caller of the LLM
+([ADR-035](035-rust-everywhere-python-where-required.md) clause 1). The entry's `main()` unwraps the
+key at that call.
+
+**Why it is the right shape.** It is the same boundary as `scripts/ask_swing.py` in the addendum
+above. The Anthropic SDK takes a plain `str` and cannot be handed a wrapper, and an entry point
+unwraps at the call site rather than passing a `SecretStr` down. `coach_through_golf_mcp` takes
+`api_key: str | None`, as `generate_coaching` and `feedback/conversation.py` do, so the code that
+talks to the model still does not know how the key is held. The SDK now has three unwrap sites:
+the paragraph in process (`api/pipeline.py`), the paragraph over `golf-mcp` (this one), and the
+conversation (`ask_swing.py`).
+
+**It replaces a site rather than widening the surface for good.** `api/pipeline.py`'s site goes when
+M40 deletes that file, and from then on this entry is the paragraph's only boundary. The set is one
+larger only for M29 to M40, while both routes to the paragraph exist.
+
+**Two alternatives were rejected.**
+
+- *Reading the key as `getattr(key, "get_secret_value")()`* would get past the `ast` pin, and
+  getting past it is exactly what the pin exists to stop.
+- *Having `golf-lab` pass the key in the child's environment* would bring the secret into Rust.
+  Rust reads no `.env`, and this decision keeps the key in one process that already holds it.
+
+**How it surfaced**: the same way as the 2026-08-15 addendum. The full suite failed on the pin,
+naming the added file, and the phase stopped to ask rather than add the line itself.

@@ -10,20 +10,23 @@ terminates TLS and proxies to that loopback port (ADR-016) — so the bind addre
 whether the phone is on the tailnet (`tailscale serve`) or off it (`tailscale funnel`). Funnel
 makes these routes publicly reachable, so every `/api/` route is gated on a shared token whenever
 `GOLF_UPLOAD_TOKEN` is set.
+
+**Since M29 it no longer writes swings** (the M29 plan's D11). Every route that wrote under
+`sessions/` or `shots/` answers 410 naming the Rust verb that does its work now, and the block
+that declares them says why; the results pages, the career and flight views, the bag and the
+follow-up questions are served as before, over whatever Rust wrote.
 """
 
 from __future__ import annotations
 
-import hashlib
 import re
 import secrets
-import uuid
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from pathlib import Path
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
+from fastapi import Depends, FastAPI, Header, HTTPException, Query
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -43,7 +46,7 @@ from golf_coach.api.state import (
     resolve_placements,
     resolve_tempo_plan,
 )
-from golf_coach.api.worker import AnalysisWorker, should_analyze
+from golf_coach.api.worker import AnalysisWorker
 from golf_coach.clubs import catalogue
 from golf_coach.clubs.lookup import ClubLookupOutcome, look_up_club, look_up_set
 from golf_coach.config import settings
@@ -58,8 +61,7 @@ from golf_coach.contracts.club_spec import (
     parse_shaft_material,
 )
 from golf_coach.contracts.conversation import Transcript
-from golf_coach.contracts.golfer import Golfer, Handedness, slugify
-from golf_coach.contracts.mishit import MishitVerdict
+from golf_coach.contracts.golfer import Golfer, slugify
 from golf_coach.launch_monitor.screen.store import ShotStore
 from golf_coach.storage.bag_store import BagStore
 from golf_coach.storage.bundle_store import SwingBundleStore
@@ -67,11 +69,7 @@ from golf_coach.storage.corpus import read_corpus
 from golf_coach.storage.flight_inputs import loft_for_club
 from golf_coach.storage.golfer_store import GolferStore
 from golf_coach.storage.manifest import EXPECTED_ROLES, Role, SwingManifest
-from golf_coach.storage.session_meta import (
-    load_session_meta,
-    set_current_club,
-    set_current_player,
-)
+from golf_coach.storage.session_meta import load_session_meta
 from golf_coach.storage.transcript_store import (
     latest_for_swing,
     load_transcript,
@@ -105,20 +103,13 @@ class _FromSettings:
 _FROM_SETTINGS = _FromSettings()
 
 
-class GolferRequest(BaseModel):
-    """Naming a golfer, from the upload page's form.
-
-    `handedness` is optional because the page only asks for it when the typed name is new — a
-    returning golfer's is already on file, and re-asking is an opportunity to contradict it.
-    Required when the name *is* new: see `_resolve_golfer`.
-    """
-
-    name: str
-    handedness: Handedness | None = None
-
-
 class ClubRequest(BaseModel):
-    """Naming a club — from the session cursor picker or the per-swing repair control.
+    """Naming a club, as the bag routes and the lookup take one off the path or out of a body.
+
+    It was the session cursor picker's and the per-swing repair control's body too, until M29
+    closed both routes; `GolferRequest` and `MishitRequest` went with theirs, and `_resolve_golfer`
+    with the golfer routes, since nothing else here registers a golfer. Their rules live on in
+    `golf-core set-golfer`, `set-club` and `flag-mishit` (`golf_core::session`).
 
     `club` is a plain `str` and not a `ClubId` deliberately. Typing it as the enum would have
     pydantic reject "7 iron" with a 422 before `parse_club` ever ran, and those tolerant spellings
@@ -128,18 +119,6 @@ class ClubRequest(BaseModel):
     """
 
     club: str
-
-
-class MishitRequest(BaseModel):
-    """The golfer's verdict on a shot, from the per-swing repair control (ADR-028).
-
-    `verdict` is `null` (or absent) to **clear** a verdict back to "no verdict", so the automatic
-    rule decides again — `"confirmed"` and `"cleared"` are the only other values. Typed as the enum
-    directly, unlike `ClubRequest`: this is a closed three-value vocabulary with no tolerant
-    spellings to preserve, so a 422 on anything else is the right boundary.
-    """
-
-    verdict: MishitVerdict | None = None
 
 
 class BagEntryRequest(BaseModel):
@@ -173,7 +152,7 @@ class BagEntryRequest(BaseModel):
     need three exceptions and would still not be readable at the boundary a 422 comes from.
 
     **`shaft_material` and `shaft_flex` are `str` here and enums on `ClubSpec`**, for the reason
-    `ClubRequest` states two classes up: typing them as the enum makes pydantic reject `"S"` and
+    `ClubRequest` states above: typing them as the enum makes pydantic reject `"S"` and
     `"Stiff Flex"` with a 422 before `parse_shaft_flex` ever runs, and those tolerant spellings are
     the entire reason that parser exists — a shaft band says `"S"` and nothing else. They are parsed
     in `_resolve_shaft_vocabularies`, which keeps `contracts/club_spec.py` the only place text
@@ -263,29 +242,6 @@ class AskRequest(BaseModel):
 
     question: str
     conversation_id: str | None = None
-
-
-def _resolve_golfer(golfers: GolferStore, payload: GolferRequest) -> Golfer:
-    """A typed name to a stored golfer, creating one only when the slug is new.
-
-    Refuses to invent a handedness for a golfer nobody stated one for. Defaulting it to
-    right-handed would be wrong for one golfer in ten and *silently* wrong: nothing downstream
-    can detect it, and the metric it corrupts (`head_hip_offset_impact_norm`, the only signed
-    one) would simply read a normal impact position as a gross fault forever after.
-    """
-    player_id = slugify(payload.name)
-    if not player_id:
-        raise HTTPException(status_code=400, detail="a golfer needs a name with letters or digits")
-
-    existing = golfers.get(player_id)
-    if existing is not None:
-        return existing
-    if payload.handedness is None:
-        raise HTTPException(
-            status_code=400,
-            detail=f"{payload.name!r} is new here — say whether they swing right- or left-handed",
-        )
-    return golfers.get_or_create(payload.name, payload.handedness)
 
 
 def _resolve_shaft_vocabularies(payload: BagEntryRequest) -> dict[str, object]:
@@ -416,11 +372,17 @@ def _club_value(club: ClubId | None) -> str | None:
     return club.value if club is not None else None
 
 
-def _status_message(swing_id: str, status: str, missing: list[Role]) -> str:
-    if status == "complete":
-        return f"Swing {swing_id}: complete"
-    names = ", ".join(role.value.replace("_", "-") for role in missing)
-    return f"Swing {swing_id}: waiting on {names}"
+def _closed(what: str, instead: str) -> HTTPException:
+    """The answer a route M29 closed gives: what it did, and how that is done now. [M29 P32]
+
+    410 rather than 404 or 405, because the route is known and was right once, and what it did has
+    moved off this server for good, which is what Gone says. One builder for all eight, so the
+    page reads one shape of sentence whichever control it came from.
+    """
+    return HTTPException(
+        status_code=410,
+        detail=f"{what} moved to Rust at M29, and this server no longer writes swings. {instead}",
+    )
 
 
 def _token_guard(expected: str | None) -> Callable:
@@ -587,7 +549,6 @@ def create_app(
     # are what keep them apart. Deriving the root means the pair cannot be pointed at different
     # directories by a caller, and no test fixture has to learn about a store it does not exercise.
     bag_store = BagStore(golfer_store.root)
-    incoming_dir = bundle_store.root / ".incoming"
     # Unwrapped here and nowhere deeper: `_token_guard` needs a plain `str` for
     # `compare_digest`, and keeping it ignorant of `SecretStr` is what lets a test pass a
     # literal token. One of the three sanctioned `get_secret_value` sites.
@@ -613,7 +574,8 @@ def create_app(
 
     app = FastAPI(title="golf-coach upload", lifespan=lifespan)
     # Declared as a route dependency rather than middleware so it resolves *before* the
-    # handler touches `request.stream()` — an unauthenticated body never reaches disk.
+    # handler runs. It was what kept an unauthenticated upload's body off disk, and since M29
+    # it is what keeps a closed route from answering an anonymous caller at all.
     guard = [Depends(_token_guard(expected))]
 
     def swing_dir_of(session_id: str, swing_id: str) -> Path:
@@ -622,93 +584,99 @@ def create_app(
     def session_dir_of(session_id: str) -> Path:
         return bundle_store.root / session_id
 
+    # --- The write routes M29 closed [M29 P32] --------------------------------------------------
+    #
+    # This server is frozen (ADR-035 clause 4): it gains nothing and is fixed only when it breaks,
+    # and this is the break the M29 plan's D11 fixes. Frozen Python's `SwingManifest` and
+    # `SessionMeta` ignore the `intent` key Rust writes and drop it on every rewrite, so a drill
+    # uploaded into, re-attributed, retagged or flagged through a route here silently became a
+    # tracked shot (`golf_core::session`'s "The frozen-Python hazard"). So every route that wrote
+    # under `sessions/` or `shots/` answers **410 Gone**, the route having been right once and its
+    # work having moved, with the Rust verb that does that work now, in the `detail` the upload
+    # page shows verbatim. The token guard still resolves first, so a closed route tells an
+    # anonymous caller nothing, and no body is read or parsed. Each handler's old body is gone
+    # rather than left unreachable; the store halves it called are still `bundle_store.py`'s, and
+    # the read routes, the bag routes, `/api/clubs/lookup` and `/ask` are unchanged.
+    #
+    # The analysis worker still starts with the app, and nothing here submits to it any more: its
+    # startup recovery (`AnalysisWorker._recover`) is the one path left on which this server writes
+    # a swing (the M29 plan's P32 findings).
+
     @app.post("/api/uploads", dependencies=guard)
-    async def upload(
-        request: Request,
-        role: str,
-        filename: str = "upload",
-        swing_id: str | None = None,
-    ) -> dict:
-        try:
-            parsed_role = Role(role)
-        except ValueError:
-            raise HTTPException(status_code=400, detail=f"unknown role {role!r}") from None
-
-        # Both cursors, read once and before a byte is streamed. Never from the request: both
-        # phones post into the same swing, and only one of them is being held by someone who
-        # knows whose swing it is and what they hit. The club is *required* where the golfer is
-        # not — an untagged golfer is repairable later by `attribute_unlabeled`, whereas nothing
-        # but memory can say which club hit swing 3, and a mistagged one silently pools a wedge
-        # into a 7 iron's carry average (ADR-024 §5). So this refuses rather than accepting a
-        # shot it can never file.
-        #
-        # `session_id` is computed here and threaded down rather than read again after the
-        # stream: a 2 GiB upload spanning midnight would otherwise check one session's cursor
-        # and write the swing into the next day's, which is a mistag nothing downstream shows.
-        session_id = bundle_store.current_session_id()
-        meta = load_session_meta(session_dir_of(session_id))
-        if meta.club is None:
-            raise HTTPException(
-                status_code=409,
-                detail=(
-                    "no club selected for this session — POST /api/sessions/current/club "
-                    "(e.g. {\"club\": \"7i\"}) before uploading"
-                ),
-            )
-
-        incoming_dir.mkdir(parents=True, exist_ok=True)
-        tmp_path = incoming_dir / f"{uuid.uuid4().hex}.part"
-        digest = hashlib.sha256()
-        size = 0
-        try:
-            with tmp_path.open("wb") as handle:
-                async for chunk in request.stream():
-                    size += len(chunk)
-                    if size > settings.max_upload_bytes:
-                        raise HTTPException(status_code=413, detail="upload too large")
-                    digest.update(chunk)
-                    handle.write(chunk)
-        except Exception:
-            tmp_path.unlink(missing_ok=True)
-            raise
-
-        result = bundle_store.assign_from_path(
-            session_id=session_id,
-            role=parsed_role,
-            tmp_path=tmp_path,
-            digest=digest.hexdigest(),
-            original_filename=filename,
-            content_type=request.headers.get("content-type", "application/octet-stream"),
-            size_bytes=size,
-            swing_id=swing_id,
-            player_id=meta.player_id,
-            club=meta.club,
+    async def upload() -> dict:
+        raise _closed(
+            "Uploading",
+            "Import a phone's export with golf-lab import-export EXPORT, or photos with "
+            "golf-lab import-photos PATHS --into-session S --player P --club C.",
         )
 
-        # The whole point of Phase 5: the third file landing is what starts the analysis. A
-        # partial bundle waits for someone to ask for it explicitly (`/analyze`), because no
-        # timeout guesses right about whether a second phone is still walking back.
-        queued = False
-        if result.status == "complete":
-            manifest = bundle_store.get_swing(result.session_id, result.swing_id)
-            if analysis is not None and manifest is not None and should_analyze(manifest):
-                queued = analysis.submit(result.session_id, result.swing_id)
+    @app.post("/api/sessions/current/golfer", dependencies=guard)
+    async def set_current_golfer() -> dict:
+        # Nothing reads the cursor once uploads close: the import names its golfer itself.
+        raise _closed(
+            "Choosing the session's golfer",
+            "Name the golfer as you import, with golf-lab import-photos --into-session S "
+            "--player P --club C, or re-attribute a stored swing with golf-core set-golfer "
+            "--session S --swing W --name N [--handedness right|left].",
+        )
 
-        return {
-            "session_id": result.session_id,
-            "swing_id": result.swing_id,
-            "role": result.role.value,
-            "status": result.status,
-            "missing_roles": [role.value for role in result.missing_roles],
-            "deduped": result.deduped,
-            "queued": queued,
-            "player_id": result.player_id,
-            # The club the swing *says*, which on the deduped path is not the club the retry
-            # asked for — a phone re-sending after the cursor moved on must not be told its
-            # stale club won. `AssignmentResult.club` carries that distinction (M9 P5).
-            "club": _club_value(result.club),
-            "message": _status_message(result.swing_id, result.status, result.missing_roles),
-        }
+    @app.post("/api/sessions/current/club", dependencies=guard)
+    async def set_club_cursor() -> dict:
+        # As above, for the club cursor.
+        raise _closed(
+            "Choosing the session's club",
+            "Name the club as you import, with golf-lab import-photos --into-session S "
+            "--player P --club C, or retag a stored swing with golf-core set-club --session S "
+            "--swing W --club C.",
+        )
+
+    @app.delete("/api/sessions/{session_id}/swings/{swing_id}", dependencies=guard)
+    async def delete_swing(session_id: str, swing_id: str) -> dict:
+        # `_safe` first, as every swing route here checks it, so the ids the sentence echoes back
+        # are ones the store could have named.
+        _safe(session_id, "session id")
+        _safe(swing_id, "swing id")
+        raise _closed(
+            "Deleting a swing",
+            f"Run golf-core delete-swing --session {session_id} --swing {swing_id}.",
+        )
+
+    @app.post("/api/sessions/{session_id}/swings/{swing_id}/golfer", dependencies=guard)
+    async def set_swing_golfer(session_id: str, swing_id: str) -> dict:
+        _safe(session_id, "session id")
+        _safe(swing_id, "swing id")
+        raise _closed(
+            "Re-attributing a swing",
+            f"Run golf-core set-golfer --session {session_id} --swing {swing_id} --name N "
+            "[--handedness right|left].",
+        )
+
+    @app.post("/api/sessions/{session_id}/swings/{swing_id}/club", dependencies=guard)
+    async def set_swing_club(session_id: str, swing_id: str) -> dict:
+        _safe(session_id, "session id")
+        _safe(swing_id, "swing id")
+        raise _closed(
+            "Retagging a swing's club",
+            f"Run golf-core set-club --session {session_id} --swing {swing_id} --club C.",
+        )
+
+    @app.post("/api/sessions/{session_id}/swings/{swing_id}/mishit", dependencies=guard)
+    async def set_swing_mishit(session_id: str, swing_id: str) -> dict:
+        _safe(session_id, "session id")
+        _safe(swing_id, "swing id")
+        raise _closed(
+            "Flagging a mishit",
+            f"Run golf-core flag-mishit {session_id}/{swing_id} --confirm, --clear or --auto.",
+        )
+
+    @app.post("/api/sessions/{session_id}/swings/{swing_id}/analyze", dependencies=guard)
+    async def analyze_swing(session_id: str, swing_id: str) -> dict:
+        _safe(session_id, "session id")
+        _safe(swing_id, "swing id")
+        raise _closed(
+            "Analyzing a swing",
+            f"Run golf-lab analyze {session_id}/{swing_id}.",
+        )
 
     @app.get("/api/sessions/current", dependencies=guard)
     async def session_current() -> dict:
@@ -851,26 +819,6 @@ def create_app(
             "golfer": _golfer_payload(golfer_store.get(player_id) if player_id else None),
         }
 
-    @app.post("/api/sessions/current/golfer", dependencies=guard)
-    async def set_current_golfer(payload: GolferRequest) -> dict:
-        """Point the session at a golfer, and adopt whatever arrived before anyone said so.
-
-        The backfill is why uploads are never blocked on this. Files land at the pace of a bay
-        session; selecting a golfer reaches back over the ones that are still unlabeled, so
-        forgetting until the third swing costs nothing. Already-attributed swings are left alone
-        — that is what makes handing the club to someone else a safe thing to do.
-        """
-        golfer = _resolve_golfer(golfer_store, payload)
-        session_id = bundle_store.current_session_id()
-        set_current_player(session_dir_of(session_id), golfer.player_id)
-        attributed = bundle_store.attribute_unlabeled(session_id, golfer.player_id)
-        return {
-            "session_id": session_id,
-            "player_id": golfer.player_id,
-            "golfer": _golfer_payload(golfer),
-            "attributed": attributed,
-        }
-
     @app.get("/api/sessions/current/club", dependencies=guard)
     async def get_current_club() -> dict:
         session_id = bundle_store.current_session_id()
@@ -878,23 +826,6 @@ def create_app(
             "session_id": session_id,
             "club": _club_value(load_session_meta(session_dir_of(session_id)).club),
         }
-
-    @app.post("/api/sessions/current/club", dependencies=guard)
-    async def set_club_cursor(payload: ClubRequest) -> dict:
-        """Point the session at a club. Every swing uploaded from now on is tagged with it.
-
-        **No backfill, and that is the whole asymmetry with the golfer route above.** Picking a
-        golfer reaches back over the session's unlabeled swings because a session usually has one
-        golfer, so the reach is almost always right. A session has many clubs — reaching back from
-        the wedge you just pulled would confidently retag the seven 7-iron shots before it, and
-        nothing downstream could tell (ADR-024 §5). Reaching for the next club must therefore
-        change what happens *next* and nothing that already happened; a swing tagged wrong is
-        repaired one swing at a time, through the route below.
-        """
-        club = _resolve_club(payload)
-        session_id = bundle_store.current_session_id()
-        set_current_club(session_dir_of(session_id), club)
-        return {"session_id": session_id, "club": club.value}
 
     def _registered(player_id: str) -> Golfer:
         """The four golfer-scoped routes' shared front door: validate the id, then know the golfer.
@@ -1105,37 +1036,6 @@ def create_app(
             ],
         }
 
-    @app.delete("/api/sessions/{session_id}/swings/{swing_id}", dependencies=guard)
-    async def delete_swing(session_id: str, swing_id: str) -> dict:
-        """Remove one swing entirely. The undo for a phantom the assignment rule created.
-
-        Uploading a *corrected* file for a role a swing already has does not replace it — the
-        store opens a new swing, because "newest swing lacking that role" cannot tell a repair
-        from the next shot (`bundle_store.assign_from_path`). The repair is `?swing_id=`, which
-        the upload page now sends; this route is what clears up the phantoms made before it did,
-        and it is the reason a stray one-file swing is no longer permanent.
-
-        Refused mid-analysis rather than racing it. The worker writes `analysis.state.json` when
-        its run ends and `save_state` re-creates the directory to do it, so deleting underneath a
-        running job leaves a state file for a swing that no longer exists — a swing the status
-        page then renders forever with no files in it. Waiting is the golfer's call, so this says
-        so instead of blocking.
-        """
-        _safe(session_id, "session id")
-        _safe(swing_id, "swing id")
-        state = load_state(swing_dir_of(session_id, swing_id))
-        if state is not None and state.status in ("queued", "running"):
-            raise HTTPException(
-                status_code=409,
-                detail=(
-                    f"swing {swing_id} is being analyzed ({state.status}) — "
-                    "wait for it to finish, then delete it"
-                ),
-            )
-        if not bundle_store.delete_swing(session_id, swing_id):
-            raise HTTPException(status_code=404, detail="no such swing")
-        return {"session_id": session_id, "swing_id": swing_id, "deleted": True}
-
     @app.get("/api/sessions/{session_id}/swings/{swing_id}", dependencies=guard)
     async def swing_detail(session_id: str, swing_id: str) -> dict:
         _safe(session_id, "session id")
@@ -1258,97 +1158,6 @@ def create_app(
                 handedness=golfer.handedness if golfer is not None else None,
                 points=points,
             ),
-        }
-
-    @app.post("/api/sessions/{session_id}/swings/{swing_id}/golfer", dependencies=guard)
-    async def set_swing_golfer(session_id: str, swing_id: str, payload: GolferRequest) -> dict:
-        """Re-attribute one swing. The repair path for a misfiled golfer.
-
-        Unlike the session cursor, this **overwrites** — it is the explicit human-driven override,
-        and the only way to correct a swing that got stamped with the wrong name. It exists
-        because uploads are deliberately never blocked on identity, and any rule that attributes
-        automatically needs a way to be told it was wrong.
-        """
-        _safe(session_id, "session id")
-        _safe(swing_id, "swing id")
-        golfer = _resolve_golfer(golfer_store, payload)
-        manifest = bundle_store.set_player(session_id, swing_id, golfer.player_id)
-        if manifest is None:
-            raise HTTPException(status_code=404, detail="no such swing")
-        return {
-            "session_id": session_id,
-            "swing_id": swing_id,
-            "player_id": golfer.player_id,
-            "golfer": _golfer_payload(golfer),
-        }
-
-    @app.post("/api/sessions/{session_id}/swings/{swing_id}/club", dependencies=guard)
-    async def set_swing_club(session_id: str, swing_id: str, payload: ClubRequest) -> dict:
-        """Retag one swing. The club's **only** repair path, and deliberately the only one.
-
-        Same shape as the golfer's repair route, and it overwrites for the same reason: it is the
-        explicit human-driven override. What it has no counterpart to is `attribute_unlabeled` —
-        there is no bulk fix for the club and there is not meant to be one, because only the person
-        who hit swing 3 knows what they hit it with (ADR-024 §5).
-        """
-        _safe(session_id, "session id")
-        _safe(swing_id, "swing id")
-        club = _resolve_club(payload)
-        manifest = bundle_store.set_club(session_id, swing_id, club)
-        if manifest is None:
-            raise HTTPException(status_code=404, detail="no such swing")
-        return {"session_id": session_id, "swing_id": swing_id, "club": club.value}
-
-    @app.post("/api/sessions/{session_id}/swings/{swing_id}/mishit", dependencies=guard)
-    async def set_swing_mishit(session_id: str, swing_id: str, payload: MishitRequest) -> dict:
-        """Confirm, clear, or reset the mishit verdict on one swing's shot (ADR-028).
-
-        The explicit human override, `set_swing_club`'s shape exactly — and, like it, with no bulk
-        counterpart, because only the golfer who hit the swing knows whether they topped it. A
-        `null` verdict resets to automatic. 409 rather than 404 when the swing has no shot screen:
-        the manifest exists, but a mishit verdict on a swing with no ball flight has nothing to act
-        on.
-        """
-        _safe(session_id, "session id")
-        _safe(swing_id, "swing id")
-        existing = bundle_store.get_swing(session_id, swing_id)
-        if existing is None:
-            raise HTTPException(status_code=404, detail="no such swing")
-        if Role.SHOT_SCREEN not in existing.roles:
-            raise HTTPException(
-                status_code=409,
-                detail="this swing has no shot screen, so there is no shot to flag as a mishit",
-            )
-        bundle_store.set_mishit(session_id, swing_id, payload.verdict)
-        return {
-            "session_id": session_id,
-            "swing_id": swing_id,
-            "mishit": payload.verdict.value if payload.verdict else None,
-        }
-
-    @app.post("/api/sessions/{session_id}/swings/{swing_id}/analyze", dependencies=guard)
-    async def analyze_swing(session_id: str, swing_id: str) -> dict:
-        """The "Analyze anyway" override, for a bundle that will never be complete."""
-        _safe(session_id, "session id")
-        _safe(swing_id, "swing id")
-        manifest = bundle_store.get_swing(session_id, swing_id)
-        if manifest is None:
-            raise HTTPException(status_code=404, detail="no such swing")
-        if analysis is None:
-            raise HTTPException(status_code=503, detail="analysis worker is disabled")
-        if Role.FACE_ON not in manifest.roles:
-            # Every checkpoint is measured from the face-on view, so there is nothing to score
-            # without it — better a clear 400 than a result with no checkpoints in it.
-            raise HTTPException(
-                status_code=400,
-                detail="a face-on clip is required — every checkpoint is measured from it",
-            )
-        analysis.submit(session_id, swing_id, force=True)
-        return {
-            "session_id": session_id,
-            "swing_id": swing_id,
-            "queued": True,
-            "missing_roles": [role.value for role in manifest.missing_roles()],
         }
 
     @app.post("/api/sessions/{session_id}/swings/{swing_id}/ask", dependencies=guard)

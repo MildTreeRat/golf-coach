@@ -203,6 +203,20 @@ impl Timestamp {
         }
     }
 
+    /// An instant in UTC, from microseconds since 1970-01-01T00:00:00Z: `datetime.fromtimestamp(t,
+    /// tz=UTC)` once the caller has made `t`'s microseconds as CPython makes them.
+    ///
+    /// Its first caller is M29 P7's photo reader, whose shots are stamped with the photo's
+    /// modification time as `importer.py::screen_timestamp` stamps them. That rounding is a float's
+    /// and belongs to the caller (`ocr::screen_timestamp`), so this takes the microseconds already
+    /// made rather than a `SystemTime` it would have to round one way or the other.
+    pub fn from_utc_micros(utc_micros: i64) -> Self {
+        Self {
+            utc_micros,
+            offset_minutes: 0,
+        }
+    }
+
     /// The instant, in microseconds since 1970-01-01T00:00:00Z — the whole of the order.
     pub fn utc_micros(&self) -> i64 {
         self.utc_micros

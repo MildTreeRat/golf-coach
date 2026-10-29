@@ -1,0 +1,53 @@
+
+Ball flight — simulated, not measured
+------------------------------------------------------------------------
+
+  Flown at 1609 m. The gate is a sea-level gate, so what follows is a
+  what-if and not a validation: HD Golf printed these carries for a ball
+  hit indoors near sea level, and an altitude chosen because the
+  agreement improved would be fitting the atmosphere to the residual of
+  a held coefficient (ADR-027's 2026-09-05e addendum).
+
+  shot             HD Golf     model  error yd    error
+  2026-08-10-1       125.6    125.99     +0.39   +0.31%  ok
+  2026-08-10-2       121.0    127.95     +6.95   +5.75%  OUT
+
+  HD Golf has 2026-08-10-1 — the lower spin of the two — flying 4.6 yd
+  further than 2026-08-10-2; this model has it 1.97 yd shorter. Each
+  shot passes on its own, and the ordering between them is inverted —
+  which no per-shot tolerance can see. Read GATE_AGREEMENT_FRACTION
+  (2.59%) as the size of that, not as an accuracy.
+
+  Both flights are clamped end to end, so this is the agreement between
+  HD Golf and a held constant pair — not evidence about the published
+  table, which neither flight read a single row of.
+
+  flight_model_v1, assembled 2026-09-05 by M15 P2
+  fitted: false
+
+  ball
+    R&A and USGA, Equipment Rules, Part 4 (The Ball), Rules 2 and 3
+    https://www.randa.org/en/equipment-standards
+
+  atmosphere
+    ISO 2533:1975, International Standard Atmosphere, clauses 4.4-4.7
+    and 5 - the lowest layer (-2000 m to 11000 m geopotential, constant
+    lapse rate) and the Sutherland viscosity relation
+    https://www.iso.org/standard/7472.html
+
+  atmosphere_profile
+    ISO 2533:1975, International Standard Atmosphere, clauses 4.4-4.7
+    and 5 - the lowest layer (-2000 m to 11000 m geopotential, constant
+    lapse rate) and the Sutherland viscosity relation
+    https://www.iso.org/standard/7472.html
+
+  spin_decay
+    Lyu, Kensrud, Smith and Tosaya, Aerodynamics of Golf Balls in Still
+    Air, Proceedings 2018, 2, 238, section 3.3
+    https://doi.org/10.3390/proceedings2060238
+
+  coefficients
+    US 7,156,757 B2 (Acushnet Company, 'Golf ball with improved flight
+    performance', published 2007-01-02), Table 3
+    https://patents.google.com/patent/US7156757B2/en
+

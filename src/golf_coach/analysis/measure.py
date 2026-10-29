@@ -16,13 +16,13 @@ subset, which is this module's split with `checkpoints/mechanics.py` made checka
 band, score against it, and return `None` if *any* of the three failed. That fused the two, and
 the fusion had a consequence nobody set out to design — **a metric with no band could not be
 measured at all**. Bands are derived from a population of measurements over the reference corpus
-(`scripts/golfdb/derive_pose_metrics.py` -> `derive_reference.py`), so a new metric needed a band
+(`archive/golfdb/derive_pose_metrics.py` -> `derive_reference.py`), so a new metric needed a band
 to produce the measurements the band is derived from. That circle, not the difficulty of any
 particular metric, is why the panel sat at three checkpoints.
 
 Splitting them breaks it. `derive_pose_metrics.py` can now measure a brand-new quantity across all
 461 cached face-on clips, `derive_reference.py` can cut a distribution from that, and only then —
-if `scripts/golfdb/tune_spatial_metric.py` says the metric is signal rather than jitter — does
+if `archive/golfdb/tune_spatial_metric.py` says the metric is signal rather than jitter — does
 anyone write a band and a checkpoint.
 
 ## What is safe to measure face-on, and what is not
@@ -683,7 +683,7 @@ def measure_head_hip_gain(
     horizontal offset, and at impact the hips have rotated open while the head has not, so the two
     sit at genuinely different depths exactly where the absolute is read.
 
-    `scripts/golfdb/check_metric_transfer.py` measured that directly and it is not small. Against
+    `archive/golfdb/check_metric_transfer.py` measured that directly and it is not small. Against
     the GolfDB corpus our own bay clips carry a **0.32 shoulder-width** disagreement *at address*,
     where the body is square and there is no swing yet to disagree about — 55% of the total gap at
     impact, and about 4x this metric's own measurement error. Subtracting the address reading

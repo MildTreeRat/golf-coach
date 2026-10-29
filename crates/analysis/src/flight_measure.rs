@@ -63,18 +63,24 @@
 //! they are turned into a stated refusal here. Nothing about a launch monitor's tile justifies losing
 //! the swing.
 //!
-//! # What is not ported
+//! # The printed comparison, ported with its first Rust caller [M29 P14]
 //!
-//! `compare_to_printed`, `PrintedComparison`, `_reading` and `circular_carry_note` — M15 P16's
-//! viewer-honesty layer, whose callers are `scripts/simulate_flight.py` and the flight page.
-//! `conformance.py::run_vector` reaches none of them, so ADR-032 §8 leaves them with their callers
-//! (§7). They are the largest single cut in this phase: 130 of `flight_measure.py`'s 475 lines.
+//! [`compare_to_printed`], [`PrintedComparison`], `_reading` and [`circular_carry_note`] are M15
+//! P16's viewer-honesty layer: a simulated number set beside the printed one it is about, with the
+//! sentence saying whether the gap is a check. `conformance.py::run_vector` reaches none of them, so
+//! M22 P8b left them with their callers (ADR-032 §7), then `scripts/simulate_flight.py`, the flight
+//! page and, unnoted there, `mcp/flight.py`, whose `comparison` block is built from them.
+//! `golf-mcp`'s `simulate_flight` is that third caller ported, so they are here now, held to the
+//! recorded answers in `spec/vectors/mcp/`; `golf-lab flight` (the M29 plan's P28) is the second.
+//! The program plan's inventory (R5) still counts them among the 130 lines that are not ported.
+//! That row predates the MCP port.
 
 use contracts::unscored::{UnscoredCheckpoint, UnscoredReason};
 
 use crate::benchmarks::flight_model::FlightModel;
-use crate::flight::{simulate_flight, FlightResult};
+use crate::flight::{simulate_flight, FlightResult, GATE_AGREEMENT_FRACTION};
 use crate::flight_infer::{flight_for_shot, ShotFlight, SpinSource};
+use crate::shot_measure::SHOT_MEASUREMENTS;
 use contracts::golfer::Handedness;
 use contracts::shot::ShotData;
 
@@ -327,6 +333,177 @@ pub fn flight_unscored(flown: &FlownShot) -> Vec<UnscoredCheckpoint> {
     Vec::new()
 }
 
+/// Which simulated name may be set beside which printed one, and on which drawing axis the quantity
+/// lives. `_COMPARISON_PAIRS`. [M29 P14]
+///
+/// **Two pairs and no third, and the four missing are a fact about the screen**: `flight_apex_yds`
+/// has `apex_height` opposite it and no stored shot carries one, `flight_descent_angle_deg` and
+/// `flight_time_s` have no tile at all, and `flight_spin_rpm` records only a solved spin, so a shot
+/// with a printed spin to check it against is exactly a shot where it is not recorded ([`spin`]).
+/// The quantity is here rather than on a page because down range and offline are facts about the
+/// numbers, and a surface deciding them from a name would be pattern-matching on `_yds`.
+pub const COMPARISON_PAIRS: [(&str, &str, &str); 2] = [
+    ("flight_carry_yds", "carry_distance_yds", "down_range"),
+    (
+        "flight_landing_offline_yds",
+        "start_line_offline_yds",
+        "offline",
+    ),
+];
+
+/// One simulated number beside the printed one it is about, and whether that is a check.
+/// `PrintedComparison`, field for field.
+#[derive(Debug, Clone, PartialEq)]
+pub struct PrintedComparison {
+    pub simulated_name: &'static str,
+    pub measured_name: &'static str,
+    /// `"down_range"` or `"offline"` ([`COMPARISON_PAIRS`]).
+    pub quantity: &'static str,
+    pub simulated: f64,
+    /// What the launch monitor printed, read through [`SHOT_MEASUREMENTS`], so "measured" means what
+    /// it means everywhere else.
+    pub measured: f64,
+    /// `simulated - measured`. A number; [`Self::comparable`] says whether it is an *error*.
+    pub difference: f64,
+    /// False when the difference cannot be read as agreement or disagreement: the printed number
+    /// was the simulation's input, or the two are not one quantity.
+    pub comparable: bool,
+    /// The sentence a surface must print beside the row, with its numbers derived here.
+    pub reading: String,
+}
+
+/// Every simulated number this shot printed a counterpart for, with what the gap means.
+/// `compare_to_printed`. [M29 P14]
+///
+/// **The carry is a check on exactly half the flights the corpus can produce**: on a printed spin
+/// the printed carry is independent, and on a solved one it was the solve's input, which the flight
+/// reproduces to the root search's tolerance ([`circular_carry_note`]). **The offline pair is never
+/// a check**: the printed side is the start line projected out, and the gap is the curve. Empty for
+/// a refused flight, which owes its `reason` instead.
+pub fn compare_to_printed(flown: &FlownShot, shot: &ShotData) -> Vec<PrintedComparison> {
+    let Some(flight) = flown.flight.as_ref() else {
+        return Vec::new();
+    };
+    let mut rows = Vec::new();
+    for (simulated_name, measured_name, quantity) in COMPARISON_PAIRS {
+        let read_simulated = registry_row(FLIGHT_MEASUREMENTS, simulated_name).measure;
+        let read_measured = registry_row(SHOT_MEASUREMENTS, measured_name).measure;
+        let (Some(simulated), Some(measured)) = (read_simulated(flown), read_measured(shot)) else {
+            continue;
+        };
+        let (comparable, reading) = reading(simulated_name, flown, flight, simulated, measured);
+        rows.push(PrintedComparison {
+            simulated_name,
+            measured_name,
+            quantity,
+            simulated,
+            measured,
+            difference: simulated - measured,
+            comparable,
+            reading,
+        });
+    }
+    rows
+}
+
+/// A registry row by its name. The pairs name rows both registries hold, which the unit test pins,
+/// so a miss is a renamed row, and a panic naming it is the answer a renamer needs.
+fn registry_row<'a, T>(registry: &'a [(&str, T)], name: &str) -> &'a T {
+    registry
+        .iter()
+        .find(|(row, _)| *row == name)
+        .map(|(_, row)| row)
+        .unwrap_or_else(|| panic!("{name} is a comparison pair's name and no registry row"))
+}
+
+/// The sentence for one pair, and whether the difference in it is an error at all. `_reading`.
+///
+/// Python's `{:+.2f}` is [`pyfmt::signed_fixed`], `{:g}` is [`pyfmt::g`], `{:.2%}` is
+/// [`pyfmt::percent`], and `{:+.2%}` is the last with the sign, by [`signed_percent`].
+fn reading(
+    simulated_name: &str,
+    flown: &FlownShot,
+    flight: &FlightResult,
+    simulated: f64,
+    measured: f64,
+) -> (bool, String) {
+    let difference = simulated - measured;
+    if simulated_name == "flight_landing_offline_yds" {
+        // Split rather than attributed whole to the curve: the two numbers are read off different
+        // carries, so the start line leans the carry row's own disagreement into this one.
+        // `landing_offline_m` is `carry * sin(direction) + curvature * cos(direction)`, and the
+        // second term is what is left once the first is taken out, so the split is exact.
+        // `to_radians` is CPython's `math.radians`, one multiply by `pi / 180`.
+        let direction = flight.launch.launch_direction_deg;
+        let bend = flight.curvature_yds() * direction.to_radians().cos();
+        return (
+            false,
+            format!(
+                "not an error and not a comparison: the printed number is where the ball \
+                 *started*, projected out to the carry, and the simulated one is where this model \
+                 has it finishing. Most of the gap is the bend the screen never measured, {} yd of \
+                 it; the remaining {} yd is the carry row above leaning on a start line {} deg off \
+                 target, and it is not a second finding.",
+                pyfmt::signed_fixed(bend, 2),
+                pyfmt::signed_fixed(difference - bend, 2),
+                pyfmt::g(direction)
+            ),
+        );
+    }
+    let printed_spin = flown
+        .resolved
+        .as_ref()
+        .is_some_and(|resolved| resolved.spin_source == Some(SpinSource::Measured));
+    if !printed_spin {
+        return (false, circular_carry_note(Some(difference)));
+    }
+    (
+        true,
+        format!(
+            "the screen printed the spin this was flown on, so the carry beside it is an \
+             independent measurement and this difference is the model's error on this shot: {} \
+             yd, {} against a gate measured at +/-{}.",
+            pyfmt::signed_fixed(difference, 2),
+            signed_percent(difference / measured, 2),
+            pyfmt::percent(GATE_AGREEMENT_FRACTION, 2)
+        ),
+    )
+}
+
+/// Python's `f"{x:+.N%}"`: [`pyfmt::percent`] with the sign always written, composed from
+/// [`pyfmt::signed_fixed`] as `percent` is from `fixed`, which is CPython's own order (multiply by
+/// 100, render `+.Nf`, append `%`). Composed here rather than added to `pyfmt`, because every
+/// `pyfmt` function is gated by a `format/` table and that family does not change in M29; the
+/// digits are `signed_fixed`'s, which `fixed.json` already gates. Public since M29 P28, because
+/// `golf-lab flight` prints the same `+.2%` in its gate and stored-shot tables, and a second copy
+/// of the composition is a second place the order could slip.
+pub fn signed_percent(x: f64, precision: usize) -> String {
+    format!("{}%", pyfmt::signed_fixed(x * 100.0, precision))
+}
+
+/// Why a solved flight's carry is not a check, for one row or for a whole column.
+/// `circular_carry_note`. [M29 P14]
+///
+/// `Some(difference)` is one flight's row, and quotes the residual, because a reader looking at
+/// `+0.001 yd` deserves to be told what it is before deciding it is agreement. `None` is a column
+/// of them, `golf-lab flight --shots`' footer.
+pub fn circular_carry_note(difference: Option<f64>) -> String {
+    const CLAIM: &str = "the printed carry is the *input* to the spin solve, so the flown carry \
+                         reproduces it by construction";
+    match difference {
+        None => format!(
+            "there is no error column here and there cannot be one: {CLAIM}, and a column of \
+             zeros would read as a validation of the thing that was assumed."
+        ),
+        Some(difference) => format!(
+            "{CLAIM} ({} yd, which is the root search's own tolerance and not an agreement). \
+             Nothing here checks the model; what the solve produced is a spin, and its cap is what \
+             bounds that.",
+            pyfmt::signed_fixed(difference, 3)
+        ),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -494,6 +671,111 @@ mod tests {
         let unscored = flight_unscored(&flown);
         assert_eq!(unscored.len(), 1);
         assert_eq!(unscored[0].name, "flight_carry_yds");
+    }
+
+    // --- the printed comparison [M29 P14] ------------------------------------------------------
+    //
+    // Each expected row is frozen Python's `compare_to_printed` on the same shot, read off
+    // `golf_coach.analysis.flight_measure` (M29 P14): the floats exactly, and the sentences to the
+    // character.
+
+    /// Both pairs name a row their registry holds, so `registry_row` cannot miss.
+    #[test]
+    fn every_comparison_pair_names_a_row_of_both_registries() {
+        for (simulated, measured, quantity) in COMPARISON_PAIRS {
+            assert!(FLIGHT_MEASUREMENTS
+                .iter()
+                .any(|(name, _)| *name == simulated));
+            assert!(SHOT_MEASUREMENTS.iter().any(|(name, _)| *name == measured));
+            assert!(matches!(quantity, "down_range" | "offline"));
+        }
+    }
+
+    /// A printed spin and axis: the carry is a check, signed in yards and in percent, and the
+    /// offline row is split into the bend and the start line's lean.
+    #[test]
+    fn a_printed_flight_is_checked_on_the_carry_and_never_on_the_offline() {
+        let mut shot = a_flyable_shot();
+        shot.spin_rate = Some(5991.0);
+        shot.spin_axis = Some(2.5);
+        let rows = compare_to_printed(&flown(&shot, None, Some(Handedness::Right)), &shot);
+        assert_eq!(rows.len(), 2);
+        let carry = &rows[0];
+        assert_eq!(
+            (carry.simulated_name, carry.measured_name, carry.quantity),
+            ("flight_carry_yds", "carry_distance_yds", "down_range")
+        );
+        assert_eq!(carry.simulated, 121.82030959863656);
+        assert_eq!(carry.measured, 126.1);
+        assert_eq!(carry.difference, -4.279690401363439);
+        assert!(carry.comparable);
+        assert_eq!(
+            carry.reading,
+            "the screen printed the spin this was flown on, so the carry beside it is an \
+             independent measurement and this difference is the model's error on this shot: \
+             -4.28 yd, -3.39% against a gate measured at +/-2.59%."
+        );
+        let offline = &rows[1];
+        assert_eq!(
+            (
+                offline.simulated_name,
+                offline.measured_name,
+                offline.quantity
+            ),
+            (
+                "flight_landing_offline_yds",
+                "start_line_offline_yds",
+                "offline"
+            )
+        );
+        assert_eq!(offline.simulated, 7.662057811979329);
+        assert_eq!(offline.measured, 6.1599559712268315);
+        assert_eq!(offline.difference, 1.5021018407524975);
+        assert!(!offline.comparable);
+        assert_eq!(
+            offline.reading,
+            "not an error and not a comparison: the printed number is where the ball *started*, \
+             projected out to the carry, and the simulated one is where this model has it \
+             finishing. Most of the gap is the bend the screen never measured, +1.71 yd of it; \
+             the remaining -0.21 yd is the carry row above leaning on a start line 2.8 deg off \
+             target, and it is not a second finding."
+        );
+    }
+
+    /// A solved spin: the carry row is the circular note with its residual, and there is no
+    /// offline row, because a planar flight records no landing offline to pair.
+    #[test]
+    fn a_solved_flight_says_its_carry_is_its_input() {
+        let shot = a_flyable_shot();
+        let rows = compare_to_printed(&flown(&shot, Some(30.5), None), &shot);
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].difference, 0.0005416737286481066);
+        assert!(!rows[0].comparable);
+        assert_eq!(
+            rows[0].reading,
+            circular_carry_note(Some(rows[0].difference))
+        );
+        assert_eq!(
+            rows[0].reading,
+            "the printed carry is the *input* to the spin solve, so the flown carry reproduces it \
+             by construction (+0.001 yd, which is the root search's own tolerance and not an \
+             agreement). Nothing here checks the model; what the solve produced is a spin, and its \
+             cap is what bounds that."
+        );
+        assert_eq!(
+            circular_carry_note(None),
+            "there is no error column here and there cannot be one: the printed carry is the \
+             *input* to the spin solve, so the flown carry reproduces it by construction, and a \
+             column of zeros would read as a validation of the thing that was assumed."
+        );
+    }
+
+    /// A refused flight has nothing to set beside the screen.
+    #[test]
+    fn a_refused_flight_compares_nothing() {
+        let mut shot = a_flyable_shot();
+        shot.carry_distance = Some(400.0);
+        assert!(compare_to_printed(&flown(&shot, None, None), &shot).is_empty());
     }
 
     /// The same guard reached with a printed spin, where there is no solve in front of it: the

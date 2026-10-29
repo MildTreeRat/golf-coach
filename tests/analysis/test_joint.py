@@ -5,8 +5,8 @@ rather than a fixture. The artifact ships inside the wheel, so the failure worth
 someone re-deriving it into a shape the loader cannot read — which a fixture would hide.
 
 They also run on a base install with no extras, which is the point of the split these tests
-defend: the model is *fitted* by `scripts/golfdb/derive_joint_model.py` under the `research`
-extra, and *evaluated* here by stdlib arithmetic over committed numbers (ADR-022).
+defend: the model is *fitted* offline with numpy by `archive/golfdb/derive_joint_model.py`, and
+*evaluated* here by stdlib arithmetic over committed numbers (ADR-022).
 """
 
 from __future__ import annotations

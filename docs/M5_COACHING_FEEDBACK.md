@@ -95,7 +95,7 @@ event and gated on M2. But **mid-backswing** and **mid-downswing** are defined a
 parallel to the ground*, which is a body pose a face-on camera can see: the lead wrist passes through
 the height of the lead shoulder. Two extra checkpoints, from data already committed, looked free.
 
-They are not. `scripts/golfdb/tune_arm_parallel.py` measured three candidate rules against the 461
+They are not. `archive/golfdb/tune_arm_parallel.py` measured three candidate rules against the 461
 hand-annotated face-on clips before either checkpoint was written:
 
 | event | rule | med err (frames) | PCE | **frac_err** | vs tour spread |
@@ -134,7 +134,7 @@ down-the-line view (ADR-011) sees arm-parallel far more cleanly than a 160×160 
 
 - `pytest` → **96 passed** (was 75); `ruff` clean; `mypy` clean on `analysis` + `feedback`
 - `scripts/analyze_swing.py` re-run on both local clips (output above)
-- `scripts/golfdb/tune_arm_parallel.py` → 461 face-on clips, table above
+- `archive/golfdb/tune_arm_parallel.py` → 461 face-on clips, table above
 
 ## Known gaps
 

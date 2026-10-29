@@ -1,0 +1,14 @@
+{
+  "shot_id": "2026-08-24-1",
+  "session_id": "2026-08-24",
+  "timestamp": "2026-08-24T09:15:00-05:00",
+  "source": "screen",
+  "launch_angle": 18.0,
+  "carry_distance": 140.0,
+  "provenance": {
+    "device": "hd_golf",
+    "parse_confidence": 0.5,
+    "image_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+  },
+  "raw_text": null
+}

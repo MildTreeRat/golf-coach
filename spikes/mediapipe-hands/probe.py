@@ -15,7 +15,7 @@ Subcommands::
 
 ### Three implementation choices, all made before any number was seen
 
-**The address window comes from `scripts/hand_landmark_reliability.py`, imported.** That script is
+**The address window comes from `archive/hand_landmark_reliability.py`, imported.** That script is
 M14 P3's screen and it already resolves the stored trim, the smoothing and
 `measure.address_sample_bounds` in the order the pipeline does. Re-implementing those fifteen lines
 here would let this spike's window drift from the window whose hand-visibility numbers it is meant
@@ -47,9 +47,10 @@ from typing import NamedTuple
 REPO = Path(__file__).resolve().parents[2]
 OUT_ROOT = Path(__file__).resolve().parent / "frames"
 
-# `scripts/` is not a package, so the M14 screen is reached by path. Deliberate — see the module
-# docstring on why its `load_clip` is imported rather than copied.
-sys.path.insert(0, str(REPO / "scripts"))
+# `archive/` is not a package, so the M14 screen is reached by path. Deliberate — see the module
+# docstring on why its `load_clip` is imported rather than copied. It moved there from
+# `scripts/` at M29 (ADR-035 §5), and this line moved with it.
+sys.path.insert(0, str(REPO / "archive"))
 
 from hand_landmark_reliability import _VIEWS, load_clip  # noqa: E402
 

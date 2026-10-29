@@ -5,7 +5,7 @@ Like `test_joint.py` and `test_distributions.py`, these run against the **real**
 catching is someone re-deriving it into a shape the loader cannot read.
 
 They also run on a base install with no extras, which is the whole point of the split: the basis is
-*fitted* by `scripts/golfdb/derive_trajectory_model.py` under the `research` extra and *evaluated*
+*fitted* offline with numpy by `archive/golfdb/derive_trajectory_model.py` and *evaluated*
 here by stdlib arithmetic (ADR-022).
 """
 

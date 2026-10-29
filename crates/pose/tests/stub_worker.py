@@ -13,8 +13,13 @@ it drives in the test that drives it. A second, optional argument is a marker *f
 how `crash_once` behaves differently in the retry's fresh process than it did in the one that died —
 a mode cannot remember anything across a respawn any other way, and clause 5's retry is by
 definition a different process (M23 P5).
+
+Three modes are `golf-lab`'s, the sidecar's first caller (M29 P22): `short_decode`, `empty_clip`
+and `hashing`, driven by `crates/lab/tests/sidecar.rs`. They are here rather than in a second stub
+because a second copy of the protocol's message shapes is a second thing to fall out of step.
 """
 
+import hashlib
 import json
 import os
 import sys
@@ -173,8 +178,41 @@ def main(mode, marker=None):
             continue
         if mode == "hang_accept":
             forever()
+        if mode == "short_decode":
+            # A container that claims more frames than it yields: the acceptance says three and the
+            # landmarks hold two. `golf-lab`'s `keypoints_for` notes exactly this, from the
+            # `claimed_frames` an `Outcome::Done` carries (M29 P22).
+            accepted(job_id, frames=3)
+            send({"job_id": job_id, "pose": "done", "keypoints": keypoints_for(job)})
+            continue
 
         accepted(job_id)
+
+        if mode == "empty_clip":
+            # Clause 5's `clip_empty`: the container opened and decoded nothing (M29 P22).
+            send(
+                {
+                    "job_id": job_id,
+                    "pose": "failed",
+                    "reason": "clip_empty",
+                    "detail": "the clip opened but decoded no frames",
+                }
+            )
+            continue
+        if mode == "hashing":
+            # The real worker's `source_sha256`: the digest of the bytes at `clip_path`, which is
+            # what `golf-lab` holds against the manifest's (M29 P22).
+            with open(job["clip_path"], "rb") as handle:
+                digest = hashlib.sha256(handle.read()).hexdigest()
+            posed = keypoints_for(job)
+            send(
+                {
+                    "job_id": job_id,
+                    "pose": "done",
+                    "keypoints": dict(posed, clip=dict(posed["clip"], source_sha256=digest)),
+                }
+            )
+            continue
 
         if mode == "crash_once":
             # Clause 5's one retryable case, made observable: the first process to see a job dies

@@ -1,0 +1,28 @@
+{
+  "shot_id": "2026-08-23-11",
+  "session_id": "2026-08-23",
+  "timestamp": "2026-08-23T04:51:04.419926Z",
+  "source": "screen",
+  "club_head_speed": 109.5,
+  "club_face_angle": 0.8,
+  "club_path": 2.1,
+  "ball_speed": 114.8,
+  "launch_angle": 15.3,
+  "launch_direction": 2.9,
+  "spin_rate": null,
+  "spin_axis": null,
+  "smash_factor": 1.05,
+  "carry_distance": 178.2,
+  "total_distance": 188.0,
+  "bounce_and_roll": null,
+  "apex_height": null,
+  "shot_type": "SLIGHT FADE",
+  "impact_position": "HEEL",
+  "provenance": {
+    "device": "hd_golf",
+    "parse_confidence": 0.899,
+    "needs_review": false,
+    "image_sha256": "c214d50f98b0617a9da1a4e52f488d83c339ab33601c4d520ba016279aa5d636"
+  },
+  "raw_text": null
+}

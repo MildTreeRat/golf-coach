@@ -682,3 +682,29 @@ then profile, each copy derived from the link above it.
 
 **Not changed**: §1–§5, the addenda above, and every exclusion and dedupe rule. The corpus still
 decides which entries count; M37 only carries more of each one.
+
+## Addendum (2026-10-29, M29): the club's one repair path is `golf-core set-club`, and the MCP tools read Rust's corpus
+
+**§5's repair path moved** (M29 P32). The per-swing retag route, which §5 made "the club's **only**
+repair path", answers 410 since the M29 plan's D11 closed every route that wrote a swing. Its job is
+`golf-core set-club --session S --swing W --club C`, still per swing and still with no bulk backfill,
+and still taking any spelling `parse_club` takes. A retag over a stored analysis says to re-run
+`golf-lab reanalyze` on that swing. The current-session club cursor's write is closed the same way,
+and a photo entry names its club as it is imported (`golf-lab import-photos --club`).
+
+**`golf-mcp`'s career and club tools read Rust's corpus** (M29 P12–P14), so the M35 and M36 addenda
+reach a model:
+
+- **A drill is left out, and two sentences now say so.** `get_shot_trends`' "no sample" note and
+  `compare_sessions`' sentence for a session with no sample each list every reason a sample can be
+  missing, so leaving the drill out of them would have made the list false. The second would have
+  called a session of drills re-uploads.
+- **The club sentences were not reworded** (P13's finding 4). Under Rust's corpus a club hit only in
+  drills has no row, so "never hit" can deny a swing that exists as a drill. That is the M35
+  addendum's rule, a drill as if deleted, and `golf-core club-profile` already prints such a club that
+  way. A club tool that said "hit only as drills" would need the club of an excluded swing, which
+  `ExcludedSwing` does not carry, and adding it is a `career-v4` contract change, not a sentence edit.
+- **`simulate_flight` reads a stored flight as current from `COMPARABLE_FROM`**, the M36 addendum's
+  line, not from the installed engine (P14).
+
+**Not changed**: the bag, the shelf, the per-swing tag and "loft is the manufacturer's number".

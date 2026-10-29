@@ -97,7 +97,7 @@ def client(store, golfers):
 
 
 def _seed_swing(
-    client, store, *, club: str, tag: str, with_shot: bool = True
+    file_swing, store, *, club: str, tag: str, with_shot: bool = True
 ) -> tuple[str, str]:
     """One analyzed swing, attributed to Aaron and tagged with `club`.
 
@@ -110,17 +110,12 @@ def _seed_swing(
     two swings cannot *share* one photo here, because `assign_from_path` dedupes an identical
     upload back onto the swing that already holds it rather than filing the same bytes twice.
     """
-    client.post("/api/sessions/current/golfer", json={"name": "Aaron", "handedness": "right"})
-    client.post("/api/sessions/current/club", json={"club": club})
     roles = _ROLES if with_shot else _ROLES[:2]
     for role in roles:
-        res = client.post(
-            "/api/uploads",
-            params={"role": role, "filename": f"{role}.mov"},
-            content=f"{role}-{tag}".encode(),
+        filed = file_swing(
+            store, role, f"{role}-{tag}".encode(), player_id="aaron", club=ClubId(club)
         )
-    payload = res.json()
-    session_id, swing_id = payload["session_id"], payload["swing_id"]
+    session_id, swing_id = filed.session_id, filed.swing_id
     swing_dir = store.root / session_id / swing_id
     (swing_dir / "analysis.json").write_text(
         json.dumps(_analysis(with_shot=with_shot)), encoding="utf-8"
@@ -139,16 +134,16 @@ def _clubs(body: dict) -> list[str]:
 # ------------------------------------------------------------------------ the envelope
 
 
-def test_the_route_lists_every_club_hit_or_declared_in_bag_order(client, store) -> None:
+def test_the_route_lists_every_club_hit_or_declared_in_bag_order(client, store, file_swing) -> None:
     """Canonical bag order, which is `ClubId`'s declaration order and never alphabetical.
 
     The set is P14's and `test_bag.py`'s, chosen because insertion order (`pw 7i driver 3w`),
     alphabetical order (`3w 7i driver pw`) and bag order all differ — an assertion over a set where
     two of the three agree would pass on a sorted list.
     """
-    _seed_swing(client, store, club="pw", tag="a")
-    _seed_swing(client, store, club="7i", tag="b")
-    _seed_swing(client, store, club="driver", tag="c")
+    _seed_swing(file_swing, store, club="pw", tag="a")
+    _seed_swing(file_swing, store, club="7i", tag="b")
+    _seed_swing(file_swing, store, club="driver", tag="c")
     client.post("/api/golfers/aaron/bag/3w", json={"loft_deg": 15.0})
 
     body = client.get("/api/golfers/aaron/bag").json()
@@ -158,15 +153,15 @@ def test_the_route_lists_every_club_hit_or_declared_in_bag_order(client, store) 
     assert body["clubs_declared"] == 1
 
 
-def test_the_category_travels_and_is_derived_not_stored(client, store) -> None:
+def test_the_category_travels_and_is_derived_not_stored(client, store, file_swing) -> None:
     """`ClubProfile.category` is a plain property, so the route projects it (M9 P14).
 
     Asserted against `category_of` rather than a written-out mapping: a literal here would be the
     second copy of `CLUB_CATEGORY` that projecting it server-side exists to prevent, and it would
     pass on the day a club's family changes in one place and not the other.
     """
-    _seed_swing(client, store, club="7i", tag="a")
-    _seed_swing(client, store, club="driver", tag="b")
+    _seed_swing(file_swing, store, club="7i", tag="a")
+    _seed_swing(file_swing, store, club="driver", tag="b")
 
     body = client.get("/api/golfers/aaron/bag").json()
 
@@ -175,7 +170,7 @@ def test_the_category_travels_and_is_derived_not_stored(client, store) -> None:
         assert club["category"] == category_of(ClubId(club["club"])).value
 
 
-def test_a_withheld_claim_arrives_as_absent_with_its_reason(client, store) -> None:
+def test_a_withheld_claim_arrives_as_absent_with_its_reason(client, store, file_swing) -> None:
     """The property the milestone rests on, one cut further in than the career route pins it.
 
     A statistic shipped beside a `ready: false` is one forgotten conditional away from being
@@ -183,7 +178,7 @@ def test_a_withheld_claim_arrives_as_absent_with_its_reason(client, store) -> No
     shot. Per club these refusals are the normal case rather than the edge — five 7-iron shots is a
     much higher bar than five shots.
     """
-    _seed_swing(client, store, club="7i", tag="a")
+    _seed_swing(file_swing, store, club="7i", tag="a")
 
     body = client.get("/api/golfers/aaron/bag").json()
     carry = body["clubs"][0]["metrics"]["carry_distance_yds"]
@@ -194,16 +189,16 @@ def test_a_withheld_claim_arrives_as_absent_with_its_reason(client, store) -> No
     assert all(r["reason"] for r in carry["withheld"]), "a refusal with no sentence is a blank cell"
 
 
-def test_untagged_swings_travel_and_reach_no_club(client, store) -> None:
+def test_untagged_swings_travel_and_reach_no_club(client, store, file_swing) -> None:
     """The history no club row can see, and the number the empty state is built from.
 
     Every swing on disk today is in here, because they all predate the club tag. Leaving it out
     would make a bag look complete when most of a golfer's swings are simply missing from it.
     """
-    _seed_swing(client, store, club="7i", tag="a")
-    session_id, swing_id = _seed_swing(client, store, club="pw", tag="b")
+    _seed_swing(file_swing, store, club="7i", tag="a")
+    session_id, swing_id = _seed_swing(file_swing, store, club="pw", tag="b")
     # Strip the club back off the second manifest, which is the only way to make a swing that
-    # predates M9 — the upload route refuses an untagged one (P6).
+    # predates M9 — the upload route refused an untagged one (P6).
     manifest_path = store.root / session_id / swing_id / "manifest.json"
     raw = json.loads(manifest_path.read_text(encoding="utf-8"))
     raw["club"] = None
@@ -215,15 +210,17 @@ def test_untagged_swings_travel_and_reach_no_club(client, store) -> None:
     assert body["untagged_swings"] == 1
 
 
-def test_the_two_evidence_counters_diverge_when_a_clip_has_no_shot_photo(client, store) -> None:
+def test_the_two_evidence_counters_diverge_when_a_clip_has_no_shot_photo(
+    client, store, file_swing
+) -> None:
     """Two swings with one photo is two swings of history and a carry ceiling of one.
 
     This gap is the whole reason `ClubProfile` carries `n_swings` *and* `n_shots` (M9 P14): one
     counter would either undercount the history or overstate what a distance statistic can be built
     from, and a carry average is the number nobody audits.
     """
-    _seed_swing(client, store, club="7i", tag="a")
-    _seed_swing(client, store, club="7i", tag="b", with_shot=False)
+    _seed_swing(file_swing, store, club="7i", tag="a")
+    _seed_swing(file_swing, store, club="7i", tag="b", with_shot=False)
 
     profile = client.get("/api/golfers/aaron/bag").json()["clubs"][0]
 
@@ -364,7 +361,9 @@ def test_saving_an_unedited_row_does_not_move_the_declared_date(client) -> None:
     )
 
 
-def test_replacing_a_club_retires_the_old_one_and_caveats_the_history(client, store, bags) -> None:
+def test_replacing_a_club_retires_the_old_one_and_caveats_the_history(
+    client, store, bags, file_swing
+) -> None:
     """Where the write path and P16's caveat meet, which is the pair nothing else exercises.
 
     The swing is hit first and the entry declared after, so all of the history predates it — the
@@ -372,7 +371,7 @@ def test_replacing_a_club_retires_the_old_one_and_caveats_the_history(client, st
     untouched, which is the half that would be easy to get wrong by cutting the history back to
     post-entry swings.
     """
-    _seed_swing(client, store, club="7i", tag="a")
+    _seed_swing(file_swing, store, club="7i", tag="a")
     client.post("/api/golfers/aaron/bag/7i", json={"loft_deg": 34.0, "make": "Titleist"})
     body = client.post("/api/golfers/aaron/bag/7i", json={"loft_deg": 30.5, "make": "Mizuno"})
 
@@ -386,14 +385,14 @@ def test_replacing_a_club_retires_the_old_one_and_caveats_the_history(client, st
     assert shelf[0].retired_at is not None
 
 
-def test_removing_a_club_keeps_every_shot_it_ever_hit(client, store, bags) -> None:
+def test_removing_a_club_keeps_every_shot_it_ever_hit(client, store, bags, file_swing) -> None:
     """`in_bag` and `n_swings > 0` are different questions, and this is where that pays.
 
     A club sold last year still answers "how far did I hit it". Removing it takes it out of the
     *current* bag and destroys nothing — the entry goes to `Bag.retired`, so the measured loft
     survives, which is the loss ADR-024 called unrecoverable after the fact.
     """
-    _seed_swing(client, store, club="7i", tag="a")
+    _seed_swing(file_swing, store, club="7i", tag="a")
     client.post("/api/golfers/aaron/bag/7i", json={"loft_deg": 34.0, "make": "Titleist"})
 
     body = client.delete("/api/golfers/aaron/bag/7i").json()

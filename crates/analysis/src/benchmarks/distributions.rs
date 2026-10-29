@@ -104,6 +104,42 @@ fn distributions() -> &'static [Distribution] {
     })
 }
 
+/// `dataset_info().pose_estimator`: which pose estimators measured the pose-derived rows. [M29 P22]
+///
+/// The one field of the file's `dataset` block anything in Rust reads, and its reader is the lab:
+/// `api/pipeline.py::_band_estimator_note`, ported as `golf_lab::pose::band_estimator_note`, says
+/// so when a swing was measured by another instrument than the bands were cut from (ADR-012 §4).
+/// Python types it `str | list[str] | None`; here it is a list, one entry for a string and empty for
+/// `None` or an absent key, which is every answer that note branches on. Not on `run_vector`'s path,
+/// so no vector gates it, and the test below reads the block independently of this parse.
+pub fn dataset_pose_estimators() -> &'static [String] {
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum OneOrMany {
+        One(String),
+        Many(Vec<String>),
+    }
+    #[derive(Deserialize)]
+    struct Dataset {
+        #[serde(default)]
+        pose_estimator: Option<OneOrMany>,
+    }
+    #[derive(Deserialize)]
+    struct DatasetFile {
+        dataset: Dataset,
+    }
+    static ESTIMATORS: OnceLock<Vec<String>> = OnceLock::new();
+    ESTIMATORS.get_or_init(|| {
+        let parsed: DatasetFile = serde_json::from_str(GOLFDB_JSON)
+            .expect("golfdb_v1.json ships in this crate and parses");
+        match parsed.dataset.pose_estimator {
+            None => Vec::new(),
+            Some(OneOrMany::One(estimator)) => vec![estimator],
+            Some(OneOrMany::Many(estimators)) => estimators,
+        }
+    })
+}
+
 /// The distribution for `metric`, most-specific stratum first, or `None` if we have none.
 ///
 /// Falls back one axis at a time — `(club, sex, view)`, then each single axis, then the overall
@@ -178,6 +214,26 @@ mod tests {
 
     fn tempo() -> &'static Distribution {
         load_distribution_any("tempo_ratio").expect("tempo_ratio ships")
+    }
+
+    #[test]
+    fn the_pose_estimators_are_the_dataset_blocks_own() {
+        // Read the block a second way, so the untagged parse cannot agree with itself: a string is
+        // one estimator, a list is several, and an absent key or a null is none.
+        let raw: serde_json::Value = serde_json::from_str(GOLFDB_JSON).unwrap();
+        let expected: Vec<String> = match &raw["dataset"]["pose_estimator"] {
+            serde_json::Value::String(one) => vec![one.clone()],
+            serde_json::Value::Array(many) => many
+                .iter()
+                .map(|estimator| estimator.as_str().unwrap().to_string())
+                .collect(),
+            _ => Vec::new(),
+        };
+        assert_eq!(dataset_pose_estimators(), expected.as_slice());
+        // The vocabulary `pose_estimator_name` writes, which is what the note compares it with.
+        assert!(dataset_pose_estimators()
+            .iter()
+            .all(|estimator| estimator.starts_with("mediapipe:")));
     }
 
     #[test]

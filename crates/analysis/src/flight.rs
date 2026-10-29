@@ -72,15 +72,17 @@
 //! (`tests/flight.rs`), which is a stronger statement than this phase set out to make and is the one
 //! that would notice a fifth edge.
 //!
-//! # What is not here
+//! # The gate, and the CLI's sample, arrived with their caller
 //!
-//! `VALIDATION_SHOTS`, `GATE_AGREEMENT_FRACTION` and `gate_comparisons()` — M15 P4's gate, the two
-//! shots this model can be checked against and how far off it was. They are read by
-//! `scripts/simulate_flight.py`, by `flight_infer`'s own gate helper and by the Python tests, none
-//! of which is on `conformance.py::run_vector`'s path, so no committed vector holds an answer for
-//! one. `FlightResult.sample` goes with them: its callers are the CLI and `api/flight_view.py`,
-//! which [ADR-032](../../../docs/decisions/032-the-rust-core.md) §7 retires rather than ports. Same
-//! rule as `benchmarks::store`'s `source_date` and `flight_model`'s altitude what-if.
+//! [`VALIDATION_SHOTS`] and [`gate_comparisons`] are M15 P4's gate, the two shots this model can be
+//! checked against and how far off it was. No committed vector holds an answer for either, since
+//! neither is on `conformance.py::run_vector`'s path, so M22 left them in Python. The gate's
+//! *result*, [`GATE_AGREEMENT_FRACTION`], came at M29 P14, because the flight caveats quote it to
+//! every reader of a flight. The shots that measure it came at M29 P28 with `golf-lab flight
+//! --gate`, `simulate_flight.py`'s twin, whose text is held to the frozen script's (the plan's C8).
+//! [`FlightResult::sample`] and the points' yard readings came with them for `--points`. Python's
+//! other `sample` caller, `api/flight_view.py`, is retired rather than ported
+//! ([ADR-032](../../../docs/decisions/032-the-rust-core.md) §7).
 //!
 //! Roll-out and wind are out of scope for the milestone entirely (ADR-027 §Deferred) — worth
 //! remembering when reading [`FlightResult::landing_offline_m`], because a golfer's ball finishes
@@ -103,6 +105,18 @@ const RPM_TO_RAD_S: f64 = 2.0 * std::f64::consts::PI / 60.0;
 /// flight. **The step is not where this model's error lives**; the ~2.5% disagreement with HD Golf
 /// is three orders larger and comes from the coefficient clamp.
 pub const DEFAULT_STEP_S: f64 = 0.005;
+
+/// How far this model lands from HD Golf's carry on the two shots that carry full launch conditions
+/// *and* an independent carry: the worst case, 2.58224%, rounded up in the fourth decimal so no
+/// slack is left for a regression to hide in. `GATE_AGREEMENT_FRACTION`. [M29 P14]
+///
+/// **Measured, then pinned, never chosen** (Python's comment, at length), and **never quoted without
+/// `FlightResult::fully_clamped`**: neither gate flight read one measured coefficient row, so this is
+/// the agreement between HD Golf and a held end row. Ported alone, ahead of the gate that measured
+/// it, because [`crate::flight_caveats`] and [`crate::flight_measure::compare_to_printed`] state it
+/// beside every flight a reader is shown and are the first Rust callers; the two shots and
+/// `gate_comparisons()` that re-measure it are `golf-lab flight --gate`'s (the M29 plan's P28).
+pub const GATE_AGREEMENT_FRACTION: f64 = 0.0259;
 
 /// Newton on `y(theta)` from a linear seed converges in two or three passes on a descending ball.
 /// The budget is generous because exhausting it returns the last iterate rather than raising, and a
@@ -199,6 +213,18 @@ impl FlightPoint {
     pub fn speed_m_s(&self) -> f64 {
         hypot3(self.vx_m_s, self.vy_m_s, self.vz_m_s)
     }
+
+    pub fn x_yds(&self) -> f64 {
+        self.x_m * M_TO_YARDS
+    }
+
+    pub fn y_yds(&self) -> f64 {
+        self.y_m * M_TO_YARDS
+    }
+
+    pub fn z_yds(&self) -> f64 {
+        self.z_m * M_TO_YARDS
+    }
 }
 
 /// The path and the six numbers read off it, with the extrapolation stated beside them.
@@ -267,6 +293,33 @@ impl FlightResult {
 
     pub fn landing(&self) -> &FlightPoint {
         &self.points[self.points.len() - 1]
+    }
+
+    /// At most `count` points along the path, launch and landing always among them. `sample`.
+    /// [M29 P28]
+    ///
+    /// **By index rather than by time, so the landing is always the last row**: it is the one point
+    /// the integrator *solved* for rather than stepped to, and a sampler that rounded it away would
+    /// show the flight ending in the air. Fewer than `count` come back where two indices round
+    /// together, as in Python.
+    ///
+    /// `count` is signed because Python's is an `int` from argparse: anything below two, a negative
+    /// count included, is the landing alone. The index is Python's `round(i * (n - 1) / (count - 1))`,
+    /// a true division of two integers both below 2^53, so the `f64` quotient is the correctly
+    /// rounded one Python's `int / int` gives, and [`pyfmt::round_index`] is `round`'s ties-to-even.
+    pub fn sample(&self, count: i64) -> Vec<&FlightPoint> {
+        let n = self.points.len();
+        let count = count.min(n as i64);
+        if count < 2 {
+            return vec![self.landing()];
+        }
+        let indices: std::collections::BTreeSet<i64> = (0..count)
+            .map(|i| pyfmt::round_index((i * (n as i64 - 1)) as f64 / (count - 1) as f64))
+            .collect();
+        indices
+            .into_iter()
+            .map(|index| &self.points[index as usize])
+            .collect()
     }
 }
 
@@ -613,6 +666,97 @@ fn refuse(message: String) -> UnflyableLaunch {
     UnflyableLaunch { message }
 }
 
+// ---------------------------------------------------------------------------------------------
+// The gate [M15 P4, ported at M29 P28]: the two shots this model can be checked against
+// ---------------------------------------------------------------------------------------------
+
+/// A shot where the launch conditions *and* an independent carry were both recorded.
+/// `ValidationShot`.
+///
+/// `simulator_carry_yds` is HD Golf's own number, read off the same screen as the launch conditions
+/// beside it: independent of everything in this crate and *dependent on HD Golf's flight model*. It
+/// is not a tape measure, and ADR-027 §Decision 3 turns on the difference.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ValidationShot {
+    pub shot_id: &'static str,
+    pub launch: LaunchConditions,
+    pub simulator_carry_yds: f64,
+}
+
+/// ADR-027 §Context 2's table, as data: the copy anything executable reads. `VALIDATION_SHOTS`.
+///
+/// Typed by hand off the two 2026-08-10 screens, with the launch direction and the spin axis M15 P5
+/// completed them with. Carry is even in the spin axis, so the axis's handedness does not matter to
+/// this gate; `golf-lab flight --shots` checks these rows against what the OCR stored for the same
+/// screens, which is the only check this constant has.
+pub const VALIDATION_SHOTS: [ValidationShot; 2] = [
+    ValidationShot {
+        shot_id: "2026-08-10-1",
+        launch: LaunchConditions {
+            ball_speed_mph: 90.7,
+            launch_angle_deg: 20.9,
+            spin_rpm: 5991.0,
+            launch_direction_deg: -5.3,
+            spin_axis_deg: 2.5,
+        },
+        simulator_carry_yds: 125.6,
+    },
+    ValidationShot {
+        shot_id: "2026-08-10-2",
+        launch: LaunchConditions {
+            ball_speed_mph: 90.5,
+            launch_angle_deg: 23.5,
+            spin_rpm: 8100.0,
+            launch_direction_deg: 4.0,
+            spin_axis_deg: 9.3,
+        },
+        simulator_carry_yds: 121.0,
+    },
+];
+
+/// One validation shot flown, beside the carry the simulator printed for it. `GateComparison`.
+#[derive(Debug, Clone, PartialEq)]
+pub struct GateComparison {
+    pub shot: ValidationShot,
+    pub flight: FlightResult,
+}
+
+impl GateComparison {
+    /// Signed: positive where this model flies the ball further than HD Golf did.
+    pub fn error_yds(&self) -> f64 {
+        self.flight.carry_yds() - self.shot.simulator_carry_yds
+    }
+
+    pub fn error_fraction(&self) -> f64 {
+        self.error_yds() / self.shot.simulator_carry_yds
+    }
+
+    pub fn agrees(&self) -> bool {
+        self.error_fraction().abs() <= GATE_AGREEMENT_FRACTION
+    }
+}
+
+/// Fly both validation shots and report the disagreement with the simulator. `gate_comparisons`.
+///
+/// A function rather than a stored table of results, so the gate is re-run rather than remembered:
+/// a re-sourced coefficient table moves these numbers, and nothing that merely quoted them would
+/// notice. The model is a parameter so `--gate --altitude` can fly the what-if. A refusal is the
+/// integrator's, on a step that is not positive: both shots fly on any model.
+pub fn gate_comparisons(
+    model: &FlightModel,
+    step_s: f64,
+) -> Result<Vec<GateComparison>, UnflyableLaunch> {
+    VALIDATION_SHOTS
+        .iter()
+        .map(|shot| {
+            Ok(GateComparison {
+                shot: *shot,
+                flight: simulate_flight(&shot.launch, model, step_s)?,
+            })
+        })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -840,65 +984,128 @@ mod tests {
         assert!(flown.spin_ratio_max > flown.spin_ratio_min);
     }
 
-    /// M15 P4's gate, re-derived here rather than ported: the two shots, the carry HD Golf printed
-    /// beside them, and the **±2.59% spread** that ADR-027's 2026-09-05d addendum pins.
-    ///
-    /// `gate_comparisons` itself is not ported (see the module doc), but the numbers it reports are
-    /// this port's own answers and they are worth one assertion: they are how a re-sourced
-    /// coefficient table announces itself.
+    /// M15 P4's gate: the two shots, the carry HD Golf printed beside them, and the **±2.59%
+    /// spread** that ADR-027's 2026-09-05d addendum pins, through [`gate_comparisons`] (hoisted
+    /// out of this test at M29 P28). The numbers are how a re-sourced coefficient table announces
+    /// itself.
     #[test]
     fn both_validation_shots_agree_with_hd_golf_to_within_the_pinned_spread() {
-        let shots = [
-            (
-                LaunchConditions {
-                    ball_speed_mph: 90.7,
-                    launch_angle_deg: 20.9,
-                    spin_rpm: 5991.0,
-                    launch_direction_deg: -5.3,
-                    spin_axis_deg: 2.5,
-                },
-                125.6,
-            ),
-            (
-                LaunchConditions {
-                    ball_speed_mph: 90.5,
-                    launch_angle_deg: 23.5,
-                    spin_rpm: 8100.0,
-                    launch_direction_deg: 4.0,
-                    spin_axis_deg: 9.3,
-                },
-                121.0,
-            ),
-        ];
+        let gate = gate_comparisons(load_flight_model(), DEFAULT_STEP_S).unwrap();
         let mut errors = Vec::new();
-        for (launch, printed) in shots {
-            let flown = fly(&launch);
-            assert!(flown.fully_clamped(), "quote the agreement with the clamp");
-            errors.push((flown.carry_yds() - printed) / printed);
+        for comparison in &gate {
+            assert!(
+                comparison.flight.fully_clamped(),
+                "quote the agreement with the clamp"
+            );
+            assert!(comparison.agrees());
+            errors.push(comparison.error_fraction());
         }
         assert!(
             errors[0] < 0.0 && errors[1] > 0.0,
             "a spread, not an offset"
         );
-        assert!(errors.iter().all(|e| e.abs() <= 0.0259), "{errors:?}");
+        assert!(
+            errors.iter().all(|e| e.abs() <= GATE_AGREEMENT_FRACTION),
+            "{errors:?}"
+        );
+        // And the pin is tight, as Python's test holds it: the worst case sits within the fourth
+        // decimal the constant was rounded up in, so a regression has no slack to hide in.
+        let worst = errors.iter().fold(0.0_f64, |worst, e| worst.max(e.abs()));
+        assert!(worst > GATE_AGREEMENT_FRACTION - 1e-4, "{worst}");
         // **And the model ranks the two shots the wrong way round**, which the percentage hides:
         // HD Golf has the lower-spin shot flying 4.6 yd further and this model has it flying
         // shorter. Above the clamp spin has no route into the answer at all.
-        let low_spin = fly(&shots[0].0).carry_yds();
-        let high_spin = fly(&shots[1].0).carry_yds();
+        let low_spin = gate[0].flight.carry_yds();
+        let high_spin = gate[1].flight.carry_yds();
         assert!(low_spin < high_spin, "{low_spin} against {high_spin}");
     }
 
+    /// The gate's numbers to frozen Python's `repr`, printed at M29 P28 off `gate_comparisons()`:
+    /// both carries and both errors exact, which is what lets `golf-lab flight --gate` print the
+    /// script's table digit for digit.
+    #[test]
+    fn the_gate_reproduces_frozen_python_to_the_bit() {
+        let gate = gate_comparisons(load_flight_model(), DEFAULT_STEP_S).unwrap();
+        let expected = [
+            (
+                "2026-08-10-1",
+                111.8829735598836,
+                -3.2432922573451464,
+                -0.025822390583958174,
+            ),
+            (
+                "2026-08-10-2",
+                112.8249179644686,
+                2.3868306698037998,
+                0.019725873304163633,
+            ),
+        ];
+        for (comparison, (shot_id, carry_m, error_yds, error_fraction)) in gate.iter().zip(expected)
+        {
+            assert_eq!(comparison.shot.shot_id, shot_id);
+            assert_eq!(comparison.flight.carry_m, carry_m);
+            assert_eq!(comparison.error_yds(), error_yds);
+            assert_eq!(comparison.error_fraction(), error_fraction);
+        }
+        // A step the integrator refuses is a refusal of the whole gate, not half of one.
+        assert!(gate_comparisons(load_flight_model(), 0.0).is_err());
+    }
+
+    /// `sample`'s indices, each to frozen Python's on the reference shot's 905 points (printed at
+    /// M29 P28): the landing alone below two, the ends always kept, banker's rounding between, and a
+    /// count past the path's length capped at it.
+    #[test]
+    fn the_sample_keeps_python_s_indices_and_always_the_landing() {
+        let flown = fly(&LaunchConditions::planar(90.7, 20.9, 5991.0));
+        assert_eq!(flown.points.len(), 905);
+        let indices = |count: i64| -> Vec<usize> {
+            flown
+                .sample(count)
+                .into_iter()
+                .map(|point| {
+                    flown
+                        .points
+                        .iter()
+                        .position(|p| std::ptr::eq(p, point))
+                        .unwrap()
+                })
+                .collect()
+        };
+        assert_eq!(indices(-3), [904]);
+        assert_eq!(indices(0), [904]);
+        assert_eq!(indices(1), [904]);
+        assert_eq!(indices(2), [0, 904]);
+        assert_eq!(indices(3), [0, 452, 904]);
+        assert_eq!(indices(7), [0, 151, 301, 452, 603, 753, 904]);
+        assert_eq!(
+            indices(12),
+            [0, 82, 164, 247, 329, 411, 493, 575, 657, 740, 822, 904]
+        );
+        assert_eq!(indices(905).len(), 905);
+        assert_eq!(indices(100_000), (0..905).collect::<Vec<_>>());
+    }
+
     /// Thin air is not simply longer: it cuts drag and lift by the same density, so the ball flies
-    /// further and arrives **flatter**. The altitude what-if is not ported, so this drives the one
-    /// input it would have changed by hand.
+    /// further and arrives **flatter**. Through the altitude what-if since M29 P28, which flies the
+    /// planar reference shot 115.2516720823771 m at Denver in frozen Python, over 879 points.
     #[test]
     fn thinner_air_flies_further_and_flatter() {
         let model = load_flight_model();
-        let mut denver = model.clone();
-        // ISO 2533 at 1609 m, the figure `scripts/simulate_flight.py --altitude` reaches through
-        // `AtmosphereProfile`. Driven directly because that profile stayed in Python.
-        denver.atmosphere.density_kg_m3 = 1.0468;
+        let denver = model.at_altitude(1609.0).unwrap();
+        let planar = simulate_flight(
+            &LaunchConditions::planar(90.7, 20.9, 5991.0),
+            &denver,
+            DEFAULT_STEP_S,
+        )
+        .unwrap();
+        assert_eq!(planar.carry_m, 115.2516720823771);
+        assert_eq!(planar.points.len(), 879);
+        // At zero altitude the what-if is the committed flight, point for point.
+        let at_zero = model.at_altitude(0.0).unwrap();
+        assert_eq!(
+            simulate_flight(&reference(), &at_zero, DEFAULT_STEP_S).unwrap(),
+            fly(&reference())
+        );
         let sea = fly(&reference());
         let high = simulate_flight(&reference(), &denver, DEFAULT_STEP_S).unwrap();
         assert!(high.carry_yds() > sea.carry_yds());

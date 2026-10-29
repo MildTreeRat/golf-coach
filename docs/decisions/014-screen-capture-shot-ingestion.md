@@ -520,3 +520,29 @@ of those fields yet.
   messages included;
 - §Sign conventions and the sign table, which port as profile data;
 - the M31.5 addendum's lab column. The Rust recognizer is still M29's, through `ort`.
+
+## Addendum (2026-10-29, M29): the lab reads photos in Rust, through `ort`, and the gate held on all 13 but one declared value
+
+ADR-035 ported the lab's reader, and M29 built it. `crates/ocr` decodes the photo (PNG through
+`image`, JPEG through a hand port of libjpeg-turbo, HEIC through ffmpeg), finds and rectifies the
+screen with hand ports of `preprocess.py`'s OpenCV steps, and runs three of PaddleOCR's models
+through `ort`: PP-OCRv6 medium detection and recognition and PP-LCNet textline orientation, converted
+once to ONNX and sha-pinned by `crates/ocr/models.json`. The rotation vote is the Python's, early
+stop and tie rule included. Its boxes go to `crates/screen`'s `read`, the parser the phone calls with
+Vision's boxes. So **one parser now serves both recognizers**, as the M31 addendum required.
+`golf-lab import-photos` is the bulk import and `golf-ocr read` reads one photo and stores nothing.
+
+**The gate was the shot, not the boxes** (the M29 plan's D7). On each of the 13 stored bay photos the
+shot parsed from the Rust reader's boxes was held to the one parsed from PaddleOCR's committed boxes:
+every value, `fields_present` and `needs_review`. Twelve matched. On `2026-08-10-1` the Rust reader
+reads `impact_position` `CENTER`, which the photo shows, and PaddleOCR's UVDoc-warped boxes read
+nothing. The user chose to declare that one value rather than port UVDoc (P7). The gate fails if it
+goes or another joins it ([CONFORMANCE §2](../CONFORMANCE.md)). Two of the five Paddle models are
+skipped on purpose: document orientation, because the rotation vote does that job, and UVDoc, because
+the rectifier does.
+
+**The 13 stored shots were re-read and stamped** (M29 P29), so the lab now reads them as the phone
+would. Three values moved, all declared: the M34 addendum's two label fixes and the one above.
+
+**Not changed**: the parser, the forked `profiles.json` and the tie rule are M34's, and the frozen
+Python reader stays for the frozen server until M40.

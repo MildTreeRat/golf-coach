@@ -70,7 +70,7 @@ _BLACK_THRESHOLD = 1.0
 #
 # Each returns `(ys, confident)` in exactly the shape `_top_and_impact` consumes, so every
 # variant is judged by the shipped rule with only the *signal* swapped. The pattern is
-# scripts/golfdb/tune_address.py's: keep the losers runnable so the evidence outlives the
+# archive/golfdb/tune_address.py's: keep the losers runnable so the evidence outlives the
 # decision.
 # --------------------------------------------------------------------------------------
 

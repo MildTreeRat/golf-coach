@@ -26,19 +26,27 @@
 //! **`round` is half-to-even.** Two sites here round a frame count — the stall length and the tempo
 //! fallback — and both go through [`pyfmt::round_index`].
 //!
-//! # What is not ported yet, and why
+//! # The clip-*choosing* half, and what gates it [M29 P19]
 //!
-//! `candidate_downswings`, `select_swing`, `select_matching_swing` and `window_around` are the
-//! clip-*choosing* half of the Python module, and nothing `scripts/conformance.py::run_vector`
-//! reaches calls them: `api/pipeline.py` does, which ADR-032 §8 leaves in Python for M22, and
-//! `alignment.py` reaches only [`segment_phases`] and three constants. They have no committed gate
-//! in `spec/vectors/stages/`, so under the rule M22 P2 set for the `contracts/` registries they land
-//! with a phase that can prove them — P7 for the constants alignment reads, and §M29 for the lab's.
+//! [`candidate_downswings`], [`select_swing`], [`select_matching_swing`] and [`window_around`] are
+//! the half of the Python module that decides *which* descent in a clip is the swing, before the
+//! engine sees a frame. Nothing `scripts/conformance.py::run_vector` reaches calls them —
+//! `api/pipeline.py` does, and `alignment.py` reaches only [`segment_phases`] and three constants —
+//! so M22 left them out under the rule M22 P2 set for the `contracts/` registries: a port lands with
+//! the gate that proves it. That gate is the `selection` family (`spec/vectors/selection/`), recorded
+//! once from frozen Python by M29 P18 and answered here through `golf_core::selection_family`. Its
+//! `_pick_swing` calls are this module's rules after [`crate::smoothing::smooth_keypoints`], as the
+//! pipeline calls them; its `_auto_windows` calls are the pipeline's ordering around those picks,
+//! which is `crates/lab`'s to port (M29 P25), not this module's.
+//!
+//! **Every reason is a sentence a golfer reads** (the pipeline logs it and writes it into
+//! `analysis.json`'s notes), so its numbers go through `pyfmt`: `.2f` as [`pyfmt::fixed`], and the
+//! band through [`pyfmt::g`], which writes `0.8` where `{:.2}` would write `0.80`.
 
 use contracts::keypoints::{FrameKeypoints, PoseLandmark};
 use contracts::swing::{PhaseSegment, SwingPhase};
 
-use pyfmt::round_index;
+use pyfmt::{fixed, g, round_index};
 
 /// The wrist to track from a face-on camera. Measured, not assumed: over 1,045 labelled GolfDB
 /// clips the rule does better on the lead wrist face-on (9%/7% failure against 17%/10%) even though
@@ -106,11 +114,11 @@ pub const FALLBACK_TEMPO_RATIO: f64 = 3.5;
 /// landing ~0.1 s after the audio, and an asymmetric rule would refuse exactly the ones M11 exists to
 /// repair.
 ///
-/// `pub(crate)` and here rather than in [`crate::alignment`] because this is its Python home, and
-/// module names carry over one for one (ADR-032 §1). It has **two** Python readers and only one of
-/// them is ported: `alignment::with_measured_impact`, and `phases._struck`, which belongs to the
-/// clip-*choosing* half P4 left in Python because only `api/pipeline.py` and `scripts/` reach it.
-pub(crate) const STRIKE_TOLERANCE_S: f64 = 0.20;
+/// Here rather than in [`crate::alignment`] because this is its Python home, and module names carry
+/// over one for one (ADR-032 §1). It has **two** Python readers, both ported: `alignment`'s
+/// `with_measured_impact` (M22 P6), and `phases._struck` ([`select_swing`]'s rule 0, M29 P19), where
+/// it decides which descents ended at a ball strike.
+pub const STRIKE_TOLERANCE_S: f64 = 0.20;
 
 /// The band a real downswing lasts, in seconds — `(low, high)`. [M22 P7]
 ///
@@ -118,12 +126,54 @@ pub(crate) const STRIKE_TOLERANCE_S: f64 = 0.20;
 /// same time for every golfer at every frame rate, which is what makes an absolute bound meaningful
 /// here where the rest of the module works in the clip's own time base.
 ///
-/// **Its one ported reader decides nothing with it.** `alignment::shared_tops` reads it to *warn*
-/// that the shared top it is about to impose is outside anything a golfer does — it used to veto the
-/// correction, and that veto is what left four bundles replaying a panel at up to 3.11x
-/// (M11 P7). Python's other two readers are the clip-*choosing* half P4 left behind
-/// (`candidate_downswings`, `select_swing`) and the tempo trainer, neither of which is ported.
-pub(crate) const POSSIBLE_DOWNSWING_S: (f64, f64) = (0.12, 0.80);
+/// **A sanity bound and nothing else** (the Python's comment carries the corpus sweep behind both
+/// edges): it rejects descents that are not swing-shaped at all, and it must never be what decides
+/// which of two real swings a clip is windowed on — the strike, then ordering, then the other camera
+/// do that ([`select_swing`], [`select_matching_swing`]). Its readers here are those two rules (M29
+/// P19) and `alignment::shared_tops`, which reads it only to *warn* that the shared top it is about
+/// to impose is outside anything a golfer does — it used to veto the correction, and that veto is
+/// what left four bundles replaying a panel at up to 3.11x (M11 P7). Python's last reader, the tempo
+/// trainer, is not ported. Public, as in Python, for that reader's reason.
+pub const POSSIBLE_DOWNSWING_S: (f64, f64) = (0.12, 0.80);
+
+/// How far a descent may sit from the swing another camera already found, in seconds: the tolerance
+/// [`select_matching_swing`] matches on. [M29 P19]
+///
+/// Two jobs: it admits a descent [`POSSIBLE_DOWNSWING_S`] rejects when the *other view* vouches for
+/// it, and it is the distance "nearest the reference" is measured with. 0.12 sits inside the plateau
+/// the 15 stored bundles give (0.085–0.25 all pick the same swing), about two frames at 60 fps above
+/// the binding case. **Rejected: a tolerance relative to the reference**, because what it absorbs is
+/// `top_and_impact` bracketing one descent a few frames early or late — a frame count, not a share
+/// of the swing.
+const MATCH_TOLERANCE_S: f64 = 0.12;
+
+/// How much clip to keep around the chosen swing, in downswing-lengths before the top and after
+/// impact — the clip's own time base (ADR-013). [M29 P19]
+///
+/// The lead is sized from [`FALLBACK_TEMPO_RATIO`]: a tour backswing runs about 3.5 downswings, and
+/// motion start then needs a stretch of quiet address before that to walk back to. 5 is the smallest
+/// lead that detected motion start on all six real clips it was measured on.
+const WINDOW_LEAD: i64 = 5;
+const WINDOW_TRAIL: i64 = 3;
+
+/// A floor under [`WINDOW_LEAD`]'s lead, in seconds, because a short measured downswing shrinks the
+/// lead exactly when it must not: the address goes, motion start goes with it, and the alignment
+/// falls back to an estimate that multiplies that same short downswing by 3.5 (M10 §A4). [M29 P19]
+///
+/// **In seconds where the lead is in downswings, and that is the finding**: over the 14 stored
+/// face-on clips, the lead `motion_start` needs is 0.92–1.27 s — near-constant in real time, and 3x
+/// to 7x in downswing-lengths, because it tracks the *backswing*. 1.5 s clears the worst requirement
+/// by 0.23 s. **Rejected: raising [`WINDOW_LEAD`] to 7**, which fixes the same three clips but gives
+/// them the thinnest margins and widens every working clip for nothing.
+const MIN_ADDRESS_LEAD_S: f64 = 1.5;
+
+/// How far a descent must fall, as a share of the clip's largest, to be a candidate swing at all.
+/// [M29 P19]
+///
+/// Deliberately looser than [`MAJOR_RISE_FRACTION`]: on `aaron-1-back` the largest descent is a
+/// *bystander* at 0.417, so 0.80 would cut at 0.334 and drop the real swing (0.257) before duration
+/// got to look. Public, as in Python, because `scripts/align_swings.py --list-swings` shares it.
+pub const CANDIDATE_MIN_RISE: f64 = 0.45;
 
 /// Half-widths (in frames) of the transition window straddling the top and of the impact window
 /// straddling the return to address height. Small, symmetric, heuristic.
@@ -286,6 +336,333 @@ fn top_and_impact(ys: &[f64], confident: &[bool], n: usize) -> (usize, usize) {
         .copied()
         .expect("the largest run always clears its own fraction");
     (top, impact)
+}
+
+// ------------------------------------------------- the clip-choosing half [M29 P19]
+
+/// One candidate downswing: the hands descending from `top` to `impact`. [M29 P19]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Downswing {
+    pub top: usize,
+    pub impact: usize,
+    /// How far the tracked wrist fell, in normalized image units.
+    pub rise: f64,
+}
+
+impl Downswing {
+    /// `impact - top`, as Python's int subtraction: never negative for a descent [`rising_runs`]
+    /// found, but [`window_around`] takes any downswing it is handed.
+    fn frames(&self) -> i64 {
+        self.impact as i64 - self.top as i64
+    }
+
+    /// The descent's length in seconds, `(impact - top) / fps`: an int difference made a float by
+    /// true division, which is what `as f64` and `/` are here.
+    pub fn seconds(&self, fps: f64) -> f64 {
+        self.frames() as f64 / fps
+    }
+}
+
+/// Every descent of the hands in the clip, earliest first. [M29 P19]
+///
+/// [`segment_phases`] locates *one* swing and is right to: it was validated against 461 GolfDB
+/// clips, each holding exactly one. A phone clip does not — someone takes two practice swings and
+/// then hits — and `top_and_impact`'s "earliest major run" rule, which exists to stop a *finish*
+/// being read as the top, will return the first practice swing. This does not change that rule. It
+/// exposes the runs [`rising_runs`] already finds, so a caller can see how many swings the clip
+/// holds and choose one.
+///
+/// `min_fraction` is the share of the largest descent a run must reach to be listed; at
+/// [`MAJOR_RISE_FRACTION`], Python's default, the first entry is the swing [`segment_phases`] would
+/// choose. Python's keyword default is not carried over, because every caller ported passes
+/// [`CANDIDATE_MIN_RISE`]. `wrist` is the camera's question, as in [`segment_phases`]: the window
+/// this listing feeds decides which frames get scored, and one chosen on the other wrist describes
+/// a different swing (M10 §A1).
+pub fn candidate_downswings(
+    keypoints: &[FrameKeypoints],
+    min_fraction: f64,
+    wrist: PoseLandmark,
+) -> Vec<Downswing> {
+    if keypoints.len() < MIN_FRAMES {
+        return Vec::new();
+    }
+    let ys: Vec<f64> = wrist_xy(keypoints, wrist)
+        .into_iter()
+        .map(|(_, y)| y)
+        .collect();
+    let runs = rising_runs(&ys, &wrist_confident(keypoints, wrist));
+    // `max(rise for …)`: a value, so which of two equal rises Python's `max` keeps is moot.
+    let largest = runs
+        .iter()
+        .map(|&(rise, _, _)| rise)
+        .fold(f64::NEG_INFINITY, f64::max);
+    let threshold = min_fraction * largest;
+    runs.into_iter()
+        .filter(|&(rise, _, _)| rise >= threshold)
+        .map(|(rise, top, impact)| Downswing { top, impact, rise })
+        .collect()
+}
+
+/// Which descent in a multi-swing clip is the actual swing, and why. [M29 P19]
+#[derive(Debug, Clone, PartialEq)]
+pub struct SwingChoice {
+    /// `[start, end)` in the clip's frames: [`window_around`] the chosen descent.
+    pub window: (usize, usize),
+    pub downswing: Downswing,
+    /// **Every** descent found, not only the ones the choice was made among: once a ball strike has
+    /// narrowed the field the choice is made among the struck descents, and this listing exists for
+    /// a person checking whether the right one was taken, which a filtered listing cannot answer.
+    pub candidates: Vec<Downswing>,
+    /// The sentence the pipeline logs and writes into `analysis.json`'s notes.
+    pub reason: String,
+}
+
+/// The `[start, end)` window holding one swing plus its takeaway, address and finish. [M29 P19]
+///
+/// With `fps`, the lead is floored at [`MIN_ADDRESS_LEAD_S`], so a fast downswing cannot squeeze
+/// the address out of the window and take motion start with it. Without it, the lead is
+/// [`WINDOW_LEAD`] downswings: a clip whose frame rate was never recorded degrades to that
+/// arithmetic rather than refusing (ADR-013), as `alignment`'s `TOP_IMPACT` fallback keeps its
+/// no-fps path. The floor's seconds become frames through Python's `round`, half-to-even
+/// ([`round_index`]).
+pub fn window_around(downswing: &Downswing, fps: Option<f64>) -> (usize, usize) {
+    let frames = downswing.frames().max(1);
+    let mut lead = WINDOW_LEAD * frames;
+    if let Some(fps) = fps.filter(|&fps| fps > 0.0) {
+        lead = lead.max(round_index(MIN_ADDRESS_LEAD_S * fps));
+    }
+    let start = (downswing.top as i64 - lead).max(0);
+    let end = downswing.impact as i64 + WINDOW_TRAIL * frames;
+    (start as usize, end as usize)
+}
+
+/// The candidates whose impact lands on a transient heard in that same clip. [M29 P19]
+///
+/// Evidence of a different kind from every other rule here: those read the pose stream and ask
+/// whether a motion *looks* like a swing, and this asks whether a ball was hit. Frames in this
+/// clip's own numbering, so no clip-to-clip offset appears.
+///
+/// **Empty means "audio has nothing to say", never "no swing".** `None` (nobody listened) and an
+/// empty list (the detector heard nothing) both come back empty, and both leave the remaining rules
+/// to judge the clip as they did before audio existed.
+fn struck(candidates: &[Downswing], strike_frames: Option<&[i64]>, fps: f64) -> Vec<Downswing> {
+    let Some(strikes) = strike_frames.filter(|strikes| !strikes.is_empty()) else {
+        return Vec::new();
+    };
+    let tolerance = round_index(STRIKE_TOLERANCE_S * fps).max(1);
+    candidates
+        .iter()
+        .copied()
+        .filter(|swing| {
+            strikes
+                .iter()
+                .any(|&frame| (swing.impact as i64 - frame).abs() <= tolerance)
+        })
+        .collect()
+}
+
+/// The "one candidate wins on its own" escape both selection rules share. [M29 P19]
+///
+/// `None` unless exactly one descent survived. Both rules arrive here having filtered everything
+/// away, and both then owe the same answer: with nothing to choose between, a bound that only
+/// exists to reject non-swings has no job. `pool` is what survived and `candidates` every descent
+/// found ([`SwingChoice::candidates`]' doc). Python's `candidates` defaults to `pool`, and both of
+/// its callers pass it, so the default is not carried over.
+///
+/// The reason says which justification applies — the band as a tie-break with no tie, or the band
+/// *overruled* by a ball strike — and says "rather than the usual" rather than "outside the
+/// possible", which stays true when a coarse frame rate brackets a real swing loosely.
+fn lone_candidate_choice(
+    pool: &[Downswing],
+    fps: f64,
+    candidates: &[Downswing],
+    struck: bool,
+) -> Option<SwingChoice> {
+    let [only] = pool else {
+        return None;
+    };
+    let (low, high) = POSSIBLE_DOWNSWING_S;
+    let (lead, why) = if struck {
+        (
+            "1 descent ends at a ball strike, and its",
+            "since a ball was struck there",
+        )
+    } else {
+        (
+            "1 descent, and its",
+            "since there is nothing to choose between",
+        )
+    };
+    Some(SwingChoice {
+        window: window_around(only, Some(fps)),
+        downswing: *only,
+        candidates: candidates.to_vec(),
+        reason: format!(
+            "{lead} downswing measures {}s rather than the usual {}-{}s — taking it anyway, {why} \
+             (top {}, impact {})",
+            fixed(only.seconds(fps), 2),
+            g(low),
+            g(high),
+            only.top,
+            only.impact
+        ),
+    })
+}
+
+/// Pick the real swing out of a clip that holds several. [M29 P19]
+///
+/// [`segment_phases`] takes the **earliest** major descent, which is right for GolfDB and wrong for
+/// a bay clip: on all four real clips it measured it picks a setup move, and the window decides
+/// which frames get scored. Four rules, in order:
+///
+/// 0. **A ball was struck here** ([`struck`]): when a transient lands where a descent ends, the rules
+///    below judge those descents and no others. With no strikes, or none near any descent, the
+///    rules judge the whole field: a stray transient is not evidence against every candidate.
+/// 1. **Swing-shaped at all** ([`POSSIBLE_DOWNSWING_S`]) — a sanity bound, never a discriminator.
+/// 2. **Last, not first**: nobody takes a practice swing *after* hitting the ball.
+/// 3. **One candidate wins on its own** ([`lone_candidate_choice`]).
+///
+/// `None` — never a guess — with no frame rate to read durations with, no descent at all, or several
+/// and none plausible; a caller then falls back to [`segment_phases`]' own choice. `wrist` is the
+/// camera's question, as everywhere in this module: on session 10 the lead wrist measures a 9.7 s
+/// "downswing" from down-the-line, while the trail wrist finds the swing at 0.40 s (M10 §A1).
+///
+/// Python declines `fps <= 0.0` and would carry on with a NaN; this declines anything not above
+/// zero, NaN included. No caller can hand it one: JSON has no NaN and `ClipMetadata` bounds its fps.
+pub fn select_swing(
+    keypoints: &[FrameKeypoints],
+    fps: Option<f64>,
+    wrist: PoseLandmark,
+    strike_frames: Option<&[i64]>,
+) -> Option<SwingChoice> {
+    let fps = fps.filter(|&fps| fps > 0.0)?;
+    let candidates = candidate_downswings(keypoints, CANDIDATE_MIN_RISE, wrist);
+    let struck = struck(&candidates, strike_frames, fps);
+    // `struck or candidates`: a strike list that lands near no descent leaves the duration rules
+    // judging the whole field, rather than declining a clip over a stray noise.
+    let pool = if struck.is_empty() {
+        &candidates
+    } else {
+        &struck
+    };
+    let (low, high) = POSSIBLE_DOWNSWING_S;
+    let plausible: Vec<Downswing> = pool
+        .iter()
+        .copied()
+        .filter(|swing| {
+            let seconds = swing.seconds(fps);
+            low <= seconds && seconds <= high
+        })
+        .collect();
+    let Some(&chosen) = plausible.last() else {
+        return lone_candidate_choice(pool, fps, &candidates, !struck.is_empty());
+    };
+
+    let duration = fixed(chosen.seconds(fps), 2);
+    let mut found = format!("{} descent(s)", candidates.len());
+    if !struck.is_empty() {
+        found.push_str(&format!(", {} ending at a ball strike", struck.len()));
+    }
+    let reason = if plausible.len() == 1 {
+        format!(
+            "{found}, 1 with a plausible downswing ({duration}s) — top {}, impact {}",
+            chosen.top, chosen.impact
+        )
+    } else {
+        format!(
+            "{found}, {} with a plausible downswing; took the last ({duration}s, top {}, impact \
+             {}). The clip holds more than one real-looking swing — confirm with --list-swings",
+            plausible.len(),
+            chosen.top,
+            chosen.impact
+        )
+    };
+    Some(SwingChoice {
+        window: window_around(&chosen, Some(fps)),
+        downswing: chosen,
+        candidates,
+        reason,
+    })
+}
+
+/// Pick the descent that matches a swing already chosen in the *other* view. [M29 P19]
+///
+/// [`select_swing`] judges a clip alone, and on a down-the-line clip that is not enough: that phone
+/// keeps rolling 15–24 s past impact, so "the last plausible descent" is routinely something that
+/// happened after the ball was gone (M10 §A2). Once face-on's swing is chosen, the other view's is
+/// no longer a free choice. Four rules, rule 0 [`select_swing`]'s:
+///
+/// 1. **Swing-shaped, or vouched for**: in [`POSSIBLE_DOWNSWING_S`], **or** within
+///    [`MATCH_TOLERANCE_S`] of the reference — another camera looking at the same swing.
+/// 2. **Nearest the reference, not last**, with "last" surviving only as the tie-break: Python's
+///    `min` over the reversed list keeps the first of equals, which is the *later* candidate.
+/// 3. **Decline rather than guess**, except that a lone candidate still wins.
+///
+/// `None` without a positive frame rate (NaN as in [`select_swing`]) or a positive reference: a
+/// reference nobody measured is not one to match against.
+pub fn select_matching_swing(
+    keypoints: &[FrameKeypoints],
+    fps: Option<f64>,
+    reference_downswing_s: f64,
+    wrist: PoseLandmark,
+    strike_frames: Option<&[i64]>,
+) -> Option<SwingChoice> {
+    let fps = fps.filter(|&fps| fps > 0.0)?;
+    if reference_downswing_s <= 0.0 {
+        return None;
+    }
+    let candidates = candidate_downswings(keypoints, CANDIDATE_MIN_RISE, wrist);
+    let struck = struck(&candidates, strike_frames, fps);
+    let pool = if struck.is_empty() {
+        &candidates
+    } else {
+        &struck
+    };
+    let (low, high) = POSSIBLE_DOWNSWING_S;
+    let off = |seconds: f64| (seconds - reference_downswing_s).abs();
+    let matched: Vec<(Downswing, f64)> = pool
+        .iter()
+        .map(|&swing| (swing, swing.seconds(fps)))
+        .filter(|&(_, seconds)| {
+            (low <= seconds && seconds <= high) || off(seconds) <= MATCH_TOLERANCE_S
+        })
+        .collect();
+    // `min(reversed(matched), key=…)`: a later candidate replaces the best only when strictly
+    // nearer, so a tie goes to the last one in clip order.
+    let mut nearest: Option<(Downswing, f64)> = None;
+    for &(swing, seconds) in matched.iter().rev() {
+        if nearest.is_none_or(|(_, best)| off(seconds) < off(best)) {
+            nearest = Some((swing, seconds));
+        }
+    }
+    let Some((chosen, duration)) = nearest else {
+        return lone_candidate_choice(pool, fps, &candidates, !struck.is_empty());
+    };
+
+    let admitted = if low <= duration && duration <= high {
+        "in band".to_string()
+    } else {
+        format!("outside the usual {}-{}s band", g(low), g(high))
+    };
+    let mut found = format!("{} descent(s)", candidates.len());
+    if !struck.is_empty() {
+        found.push_str(&format!(", {} ending at a ball strike", struck.len()));
+    }
+    Some(SwingChoice {
+        window: window_around(&chosen, Some(fps)),
+        downswing: chosen,
+        reason: format!(
+            "{found}, {} matching the {}s reference from the other view; took the nearest ({}s, \
+             {admitted}, off by {}s — top {}, impact {})",
+            matched.len(),
+            fixed(reference_downswing_s, 2),
+            fixed(duration, 2),
+            fixed(off(duration), 2),
+            chosen.top,
+            chosen.impact
+        ),
+        candidates,
+    })
 }
 
 /// Per-frame 2D wrist speed (frame-to-frame displacement); `0.0` at the first frame.
@@ -629,6 +1006,161 @@ mod tests {
             "a 2-frame stall stops at the quiet patch just below the top; a 3-frame one \
              (half-away-from-zero) walks past it to frame 3"
         );
+    }
+
+    // ------------------------------------------------- the clip-choosing half [M29 P19]
+    //
+    // The `selection` family is the gate (`golf_core::selection_family`); these pin the edges it
+    // may not reach on purpose: the two rounding sites' ties, the tie-break, and `%g`'s band.
+
+    /// Frames for a wrist `y` trace, every frame confident.
+    fn trace(ys: &[f64]) -> Vec<FrameKeypoints> {
+        ys.iter()
+            .enumerate()
+            .map(|(i, &y)| frame(i as i64, 0.5, y, 1.0))
+            .collect()
+    }
+
+    /// Two identical swings back to back: up 10 frames, down 30, twice, then a drawdown that
+    /// closes the second run. Both descents rise the same and last the same, so every rule that
+    /// reads duration ties them.
+    fn two_identical_swings() -> Vec<FrameKeypoints> {
+        // The second backswing starts below the first impact, not level with it: a frame back at
+        // the same height would extend the first run by one (`y >= peak` moves the peak).
+        let back: Vec<f64> = (1..=10).map(|i| 0.8 - 0.05 * i as f64).collect();
+        let down: Vec<f64> = (1..=30).map(|i| 0.3 + 0.5 * i as f64 / 30.0).collect();
+        let mut ys = vec![0.8];
+        for _ in 0..2 {
+            ys.extend(&back);
+            ys.extend(&down);
+        }
+        ys.extend([0.7, 0.6, 0.5]);
+        trace(&ys)
+    }
+
+    #[test]
+    fn two_identical_swings_are_two_candidates_of_equal_length() {
+        let candidates =
+            candidate_downswings(&two_identical_swings(), CANDIDATE_MIN_RISE, LEAD_WRIST);
+        assert_eq!(candidates.len(), 2, "{candidates:?}");
+        assert_eq!(candidates[0].frames(), 30);
+        assert_eq!(candidates[1].frames(), 30);
+        assert_eq!(candidates[0].rise, candidates[1].rise);
+    }
+
+    /// `min` over the reversed list keeps the first of equals, which is the **later** candidate.
+    /// Rust's `min_by` over the list in order would take the earlier one: a different swing, and a
+    /// window 41 frames away.
+    #[test]
+    fn a_tie_against_the_reference_goes_to_the_later_candidate() {
+        let frames = two_identical_swings();
+        let choice = select_matching_swing(&frames, Some(100.0), 0.30, LEAD_WRIST, None)
+            .expect("two matching candidates");
+        assert_eq!(choice.downswing, choice.candidates[1]);
+        assert_eq!(
+            choice.reason,
+            format!(
+                "2 descent(s), 2 matching the 0.30s reference from the other view; took the \
+                 nearest (0.30s, in band, off by 0.00s — top {}, impact {})",
+                choice.downswing.top, choice.downswing.impact
+            )
+        );
+        // ...and judged alone, "last" is the rule rather than the tie-break, with the same answer.
+        let alone = select_swing(&frames, Some(100.0), LEAD_WRIST, None).expect("two plausible");
+        assert_eq!(alone.downswing, choice.downswing);
+        assert!(alone
+            .reason
+            .contains("2 with a plausible downswing; took the last (0.30s"));
+    }
+
+    /// The band prints through `%g`: `0.12-0.8s`, where `{:.2}` would write `0.80`.
+    #[test]
+    fn a_lone_descent_outside_the_band_is_taken_and_says_so_in_g() {
+        let back: Vec<f64> = (0..=10).map(|i| 0.8 - 0.05 * i as f64).collect();
+        let down: Vec<f64> = (1..=100).map(|i| 0.3 + 0.5 * i as f64 / 100.0).collect();
+        let mut ys = back;
+        ys.extend(down);
+        let frames = trace(&ys);
+        let choice = select_swing(&frames, Some(100.0), LEAD_WRIST, None).expect("the lone one");
+        assert_eq!(
+            choice.reason,
+            "1 descent, and its downswing measures 1.00s rather than the usual 0.12-0.8s — \
+             taking it anyway, since there is nothing to choose between (top 10, impact 110)"
+        );
+        assert_eq!(
+            select_swing(&frames, None, LEAD_WRIST, None),
+            None,
+            "no fps"
+        );
+        assert_eq!(
+            select_swing(&frames, Some(0.0), LEAD_WRIST, None),
+            None,
+            "a zero fps"
+        );
+        assert_eq!(
+            select_matching_swing(&frames, Some(100.0), 0.0, LEAD_WRIST, None),
+            None,
+            "no reference"
+        );
+    }
+
+    /// `window_around`'s floor is `round(1.5 * fps)`, one of the rounding sites ADR-032 §3 names: at
+    /// 7 fps it is `round(10.5)`, which Python answers 10 and `f64::round` 11.
+    #[test]
+    fn the_address_floor_rounds_half_to_even() {
+        let swing = Downswing {
+            top: 20,
+            impact: 21,
+            rise: 0.5,
+        };
+        assert_eq!(
+            window_around(&swing, None),
+            (15, 24),
+            "five downswings of lead"
+        );
+        assert_eq!(
+            window_around(&swing, Some(7.0)),
+            (10, 24),
+            "round(10.5) is 10"
+        );
+        assert_eq!(
+            window_around(&swing, Some(0.0)),
+            (15, 24),
+            "a zero fps is no fps"
+        );
+        let backwards = Downswing {
+            top: 21,
+            impact: 20,
+            rise: 0.5,
+        };
+        assert_eq!(
+            window_around(&backwards, None),
+            (16, 23),
+            "a downswing of no frames counts as one"
+        );
+    }
+
+    /// The strike tolerance is `max(1, round(0.20 * fps))`: at 12.5 fps that is `round(2.5)`, 2,
+    /// so a strike three frames from impact is not this descent's — 3 under half-away-from-zero.
+    #[test]
+    fn the_strike_tolerance_rounds_half_to_even() {
+        let swing = Downswing {
+            top: 0,
+            impact: 10,
+            rise: 0.5,
+        };
+        assert!(struck(&[swing], Some(&[13]), 12.5).is_empty());
+        assert_eq!(struck(&[swing], Some(&[12]), 12.5), [swing]);
+        assert_eq!(
+            struck(&[swing], Some(&[11]), 1.0),
+            [swing],
+            "never under a frame"
+        );
+        assert!(
+            struck(&[swing], Some(&[]), 60.0).is_empty(),
+            "heard nothing"
+        );
+        assert!(struck(&[swing], None, 60.0).is_empty(), "nobody listened");
     }
 
     #[test]

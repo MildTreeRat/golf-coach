@@ -102,16 +102,11 @@ def client(store):
     return TestClient(create_app(store=store, token=None, worker=None))
 
 
-def _seed(client, store, *, roles=_ROLES, analysis=True, video=False, state_kwargs=None):
-    """Upload `roles`, then drop analysis artifacts beside them as a worker would have."""
-    # M9 P6: an upload 409s without a club cursor; these tests are not about the club.
-    client.post("/api/sessions/current/club", json={"club": "7i"})
+def _seed(file_swing, store, *, roles=_ROLES, analysis=True, video=False, state_kwargs=None):
+    """File `roles`, then drop analysis artifacts beside them as a worker would have."""
     for role in roles:
-        res = client.post(
-            "/api/uploads", params={"role": role, "filename": f"{role}.mov"},
-            content=role.encode(),
-        )
-    session_id = res.json()["session_id"]
+        filed = file_swing(store, role, role.encode())
+    session_id = filed.session_id
     swing_dir = store.root / session_id / "1"
 
     if analysis:
@@ -131,8 +126,8 @@ def _seed(client, store, *, roles=_ROLES, analysis=True, video=False, state_kwar
     return session_id
 
 
-def test_swing_detail_returns_the_stored_result(client, store) -> None:
-    session_id = _seed(client, store)
+def test_swing_detail_returns_the_stored_result(client, store, file_swing) -> None:
+    session_id = _seed(file_swing, store)
 
     body = client.get(f"/api/sessions/{session_id}/swings/1").json()
 
@@ -144,9 +139,9 @@ def test_swing_detail_returns_the_stored_result(client, store) -> None:
     assert body["result"]["notes"][0].startswith("the face_on clip claims")
 
 
-def test_session_detail_carries_the_analysis_block(client, store) -> None:
+def test_session_detail_carries_the_analysis_block(client, store, file_swing) -> None:
     # This is what the upload page polls to decide whether to show a results link at all.
-    session_id = _seed(client, store)
+    session_id = _seed(file_swing, store)
 
     swing = client.get(f"/api/sessions/{session_id}").json()["swings"][0]
 
@@ -155,10 +150,8 @@ def test_session_detail_carries_the_analysis_block(client, store) -> None:
     assert swing["analysis"]["headline"] == "Work on tempo first."
 
 
-def test_analysis_block_reads_none_before_any_run(client, store) -> None:
-    # M9 P6: an upload 409s without a club cursor; these tests are not about the club.
-    client.post("/api/sessions/current/club", json={"club": "7i"})
-    client.post("/api/uploads", params={"role": "face_on", "filename": "x.mov"}, content=b"a")
+def test_analysis_block_reads_none_before_any_run(client, store, file_swing) -> None:
+    file_swing(store, "face_on", b"a")
     session_id = client.get("/api/sessions/current").json()["session_id"]
 
     swing = client.get(f"/api/sessions/{session_id}").json()["swings"][0]
@@ -167,8 +160,10 @@ def test_analysis_block_reads_none_before_any_run(client, store) -> None:
     assert swing["analysis"]["has_video"] is False
 
 
-def test_swing_detail_serves_a_waiting_state_before_the_result_exists(client, store) -> None:
-    session_id = _seed(client, store, roles=("face_on",), analysis=False,
+def test_swing_detail_serves_a_waiting_state_before_the_result_exists(
+    client, store, file_swing
+) -> None:
+    session_id = _seed(file_swing, store, roles=("face_on",), analysis=False,
                        state_kwargs={"status": "running"})
 
     body = client.get(f"/api/sessions/{session_id}/swings/1").json()
@@ -190,8 +185,8 @@ def test_path_traversal_and_junk_segments_are_rejected(client, segment) -> None:
     assert client.get(f"/api/sessions/{segment}/swings/1").status_code in (400, 404)
 
 
-def test_video_is_served_and_supports_range(client, store) -> None:
-    session_id = _seed(client, store, video=True)
+def test_video_is_served_and_supports_range(client, store, file_swing) -> None:
+    session_id = _seed(file_swing, store, video=True)
 
     whole = client.get(f"/api/sessions/{session_id}/swings/1/video/aligned")
     assert whole.status_code == 200
@@ -207,17 +202,17 @@ def test_video_is_served_and_supports_range(client, store) -> None:
     assert len(part.content) == 100
 
 
-def test_video_404s_when_there_is_no_aligned_render(client, store) -> None:
-    session_id = _seed(client, store, video=False)
+def test_video_404s_when_there_is_no_aligned_render(client, store, file_swing) -> None:
+    session_id = _seed(file_swing, store, video=False)
 
     res = client.get(f"/api/sessions/{session_id}/swings/1/video/aligned")
 
     assert res.status_code == 404
 
 
-def test_raw_view_is_served_as_the_fallback(client, store) -> None:
+def test_raw_view_is_served_as_the_fallback(client, store, file_swing) -> None:
     # A face-on-only bundle produces no aligned render, so the page falls back to the clip.
-    session_id = _seed(client, store, roles=("face_on",), analysis=False)
+    session_id = _seed(file_swing, store, roles=("face_on",), analysis=False)
 
     res = client.get(f"/api/sessions/{session_id}/swings/1/video/face_on")
 
@@ -226,27 +221,20 @@ def test_raw_view_is_served_as_the_fallback(client, store) -> None:
     assert res.content == b"face_on"
 
 
-def test_unknown_artifact_names_are_not_served(client, store) -> None:
-    session_id = _seed(client, store)
+def test_unknown_artifact_names_are_not_served(client, store, file_swing) -> None:
+    session_id = _seed(file_swing, store)
 
     for name in ("manifest.json", "analysis.json", "face_on.keypoints.json", "..%2Fmanifest"):
         res = client.get(f"/api/sessions/{session_id}/swings/1/video/{name}")
         assert res.status_code == 404, name
 
 
-def test_video_route_accepts_the_token_as_a_query_param(store) -> None:
+def test_video_route_accepts_the_token_as_a_query_param(store, file_swing) -> None:
     # A <video> element sends no custom headers, so `?t=` is the only way it can authenticate.
     client = TestClient(create_app(store=store, token=_TOKEN, worker=None))
-    # M9 P6: an upload 409s without a club cursor; this test is not about the club.
-    client.post(
-        "/api/sessions/current/club", json={"club": "7i"}, headers={"X-Upload-Token": _TOKEN}
-    )
     for role in _ROLES:
-        res = client.post(
-            "/api/uploads", params={"role": role, "filename": f"{role}.mov", "t": _TOKEN},
-            content=role.encode(),
-        )
-    session_id = res.json()["session_id"]
+        filed = file_swing(store, role, role.encode())
+    session_id = filed.session_id
     (store.root / session_id / "1" / "aligned.mp4").write_bytes(b"\x00" * 128)
 
     url = f"/api/sessions/{session_id}/swings/1/video/aligned"
@@ -261,14 +249,14 @@ def test_results_page_is_reachable(client) -> None:
     assert "Aligned views" in res.text
 
 
-def test_swing_detail_resolves_every_population_placement(client, store) -> None:
+def test_swing_detail_resolves_every_population_placement(client, store, file_swing) -> None:
     """The browser half of M8.3, and it shipped two milestones after the numbers did.
 
     The MCP channel got `SwingView.population`; this page got nothing, so every placement arrived
     as a `name / value / unit` row with its `detail` dropped — under a caption promising there was
     no percentile, when the percentile was *in* the string being dropped.
     """
-    session_id = _seed(client, store)
+    session_id = _seed(file_swing, store)
 
     body = client.get(f"/api/sessions/{session_id}/swings/1").json()
 
@@ -284,14 +272,14 @@ def test_swing_detail_resolves_every_population_placement(client, store) -> None
         assert row["unit"] == spec.unit
 
 
-def test_a_placement_never_reaches_the_page_as_a_bare_number(client, store) -> None:
+def test_a_placement_never_reaches_the_page_as_a_bare_number(client, store, file_swing) -> None:
     """The detail string is the whole fix, so it is pinned on its own.
 
     Without it `tour_trajectory_q_dtl: 11.06` is this swing's largest number with nothing attached
     to say it is a distance from a tour population rather than a score — and on three of the four
     stored swings, that it is a mis-detected anchor rather than anything about the golfer.
     """
-    session_id = _seed(client, store)
+    session_id = _seed(file_swing, store)
 
     body = client.get(f"/api/sessions/{session_id}/swings/1").json()
 
@@ -302,14 +290,16 @@ def test_a_placement_never_reaches_the_page_as_a_bare_number(client, store) -> N
         )
 
 
-def test_the_measurements_the_page_still_calls_unjudged_are_unjudged(client, store) -> None:
+def test_the_measurements_the_page_still_calls_unjudged_are_unjudged(
+    client, store, file_swing
+) -> None:
     """`judged_metrics` is what keeps that block's caption true.
 
     `measurements` carries the metrics behind the checkpoint table as well, so rendering it whole
     under "measured, not yet judged" said something false about the six that *are* judged, in the
     table directly above it.
     """
-    session_id = _seed(client, store)
+    session_id = _seed(file_swing, store)
 
     body = client.get(f"/api/sessions/{session_id}/swings/1").json()
 
@@ -353,14 +343,16 @@ def test_the_results_page_hard_codes_no_placement_name() -> None:
         )
 
 
-def test_swing_detail_carries_a_tempo_plan_built_from_the_stored_phases(client, store) -> None:
+def test_swing_detail_carries_a_tempo_plan_built_from_the_stored_phases(
+    client, store, file_swing
+) -> None:
     """ADR-023. The trainer is derived at read time, so a stored swing needs no re-analysis.
 
     Built from `phases` rather than from `measurements` deliberately: the fixture carries no
     `backswing_ms` at all, exactly like every artifact written before `ANALYSIS_VERSION` 7, and it
     still gets a metronome.
     """
-    session_id = _seed(client, store)
+    session_id = _seed(file_swing, store)
 
     plan = client.get(f"/api/sessions/{session_id}/swings/1").json()["tempo_plan"]
 
@@ -379,10 +371,10 @@ def test_swing_detail_carries_a_tempo_plan_built_from_the_stored_phases(client, 
 
 
 def test_a_swing_with_no_stored_phases_gets_no_plan_rather_than_an_invented_one(
-    client, store
+    client, store, file_swing
 ) -> None:
     """Refuse, never guess — and here the stakes are a golfer rehearsing to the invented number."""
-    session_id = _seed(client, store)
+    session_id = _seed(file_swing, store)
     swing_dir = store.root / session_id / "1"
     stripped = json.loads((swing_dir / "analysis.json").read_text(encoding="utf-8"))
     del stripped["swing"]["phases"]

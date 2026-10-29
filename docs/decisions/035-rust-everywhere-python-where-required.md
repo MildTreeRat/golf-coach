@@ -25,6 +25,9 @@ on 2026-09-30, and their commands are in
 [P2's](../plans/m31-5-rust-first-replan.md#p2--found-2026-09-30). "Rn" below is a row of P1's
 inventory, and "Qn" is one of P2's answers.
 
+**M29 built clauses 2 and 5** (2026-10-29). The addendum at the foot answers the four
+questions this ADR left to M29 and names the dependencies the build brought in.
+
 ## Date
 2026-09-30
 
@@ -379,10 +382,117 @@ FastAPI server's import closure.
 - **`api/`: port to `axum`, or drop.** M40 decides (interview decision 2), and with it the caller of
   `clubs/lookup.py` (Q13) and the fate of `tempo_trainer.py` (Q12).
 - **Who generates `spec/schemas/`.** M32 decides, from P1 finding 2's candidates.
-- **How the caveat prose reaches Python.** M29 decides (clause 1).
+- **How the caveat prose reaches Python.** M29 decides (clause 1). *Answered by the M29
+  addendum: through the server, with no kept copy.*
 - **Whether the frozen server's upload path stays open between M29 and M40.** `api/worker.py` →
   `api/pipeline.py` still writes `data/` with Python, and M29 decides (P2 finding 2).
+  *Answered by the M29 addendum: closed.*
 - **A standalone `sidecar/` package for the surviving Python.** ADR-033 left it to §M29, and this ADR
-  does not move it.
+  does not move it. *Answered by the M29 addendum: not in M29, and M40's.*
 - **An LLM in Rust.** It is revisited only by a decision, if an official Anthropic Rust SDK changes
   the cost the user weighed in Q9.
+
+## Addendum (2026-10-29, M29): the lab is ported, the four questions left to M29 are answered, and four dependencies are named
+
+[M29](../plans/m29-lab-port.md) built clauses 2 and 5. The lab's verbs are `golf-lab`'s, the MCP
+server is `golf-mcp`, the screen's recognizer is `crates/ocr`, and the lab scripts, `detection/` and
+`frontend/` are deleted, with the research record in `archive/`. This addendum answers what the
+Deferred list left to M29 and names what the build brought in. The plan's findings hold the
+measurements, and each item points at the one that carries its numbers.
+
+### The four questions, answered
+
+- **The OCR gate (clause 5: "M29's plan sets what may differ").** The plan's D7: on each of the 13
+  stored bay photos, the shot parsed from the Rust reader's boxes must equal the one parsed from
+  PaddleOCR's committed boxes in every value, `fields_present` and `needs_review`. Confidences, box
+  geometry and warning text may differ. **12 of 13 passed outright. The thirteenth, `2026-08-10-1`,
+  differs at one value**: the Rust reader reads `impact_position` `CENTER`, which the photo shows,
+  where PaddleOCR's UVDoc-warped boxes read nothing. The user chose to declare it rather than port
+  UVDoc (P7, answer (a)), and `crates/ocr/tests/read.rs`' `DECLARED_DIFFERENCES` fails if it goes,
+  changes or gains a second ([CONFORMANCE §2's OCR gate](../CONFORMANCE.md)). PaddleOCR is no longer
+  the lab's reader. The `ocr` extra stays for the frozen server's pipeline until M40, and with its
+  upload route closed, only that server's startup recovery (below) could still reach it.
+- **How the caveat prose reaches Python (clause 1; the plan's D10).** **Through the server, with no
+  kept copy.** `golf-mcp`'s `instructions` carry the standing caveats, and a read-only MCP resource
+  serves the other named sentences (`golf_mcp::caveats`). `feedback/coach.py`'s JSON entry and
+  `feedback/conversation.py`'s stdio route read both at session start. So no fourth surviving shape
+  joins clause 1's list. The frozen copies in `contracts/caveats.py` still feed the in-process route
+  the frozen server uses, and go with it in M40.
+- **Whether the frozen server's upload path stays open (the plan's D11).** **Closed.** Every route
+  that wrote under `sessions/` or `shots/`, eight of them, answers 410 naming the Rust verb that does
+  its job now (`api/app.py`'s `_closed`; P32). `golf-core` gained `set-golfer`, `set-club` and
+  `delete-swing` for the three repairs that had no verb. A phone's data reaches the lab as an export
+  (`golf-lab import-export`). Two consequences are left as found (P32's findings 12 and 13):
+  - **One write path is left.** The server's worker still starts, and at startup it re-runs, through
+    frozen Python at engine 16, an orphaned run or a complete bundle with no result in today's
+    session. After the closure only an imported filmed bundle dated today could be one. Turning the
+    worker off is a one-line default outside D11's list, so it is the user's call, not a fix.
+  - **A new golfer needs a swing or a phone's export.** `set-golfer` registers a golfer only while
+    re-attributing a swing, and `import-photos --into-session` refuses an unregistered one. If that
+    bites, the fix is a registration verb.
+- **A standalone `sidecar/` package (the plan's D12).** **Not in M29.** M29 deletes only what the
+  frozen server does not import, and repackaging would move files that server imports. It is M40's,
+  for that reason, and [ADR-033](033-the-pose-sidecar-protocol.md)'s addendum says so beside the
+  protocol.
+
+### The dependencies, named as the Consequences said they would be
+
+Each is pinned to an exact version, and each crate's `Cargo.toml` says why that version.
+
+- **`ort` `=2.0.0-rc.10`, ONNX Runtime 1.22**, in `crates/ocr` alone, with `download-binaries` and
+  `copy-dylibs`: the first build fetches the runtime, and `Cargo.lock` records it. rc.10 is the
+  newest `ort` the workspace's `rust-version = "1.87"` builds. `crates/ocr/tests/ort_reach.rs` fails
+  if `contracts`, `pyfmt`, `analysis`, `feedback`, `screen`, `storage` or `core` can reach it, which
+  keeps it off M38's `crates/app`. It is a second numeric library outside the scoring path, beside
+  `rustfft`.
+- **The models are converted once, gitignored and sha-pinned** (the plan's D6). Three of PaddleOCR's
+  five run: PP-OCRv6 medium detection and recognition and PP-LCNet textline orientation; document
+  orientation and UVDoc are skipped (D5). `crates/ocr/models.json` pins each file's sha256 and its
+  preprocessing constants, and its `conversion` block records the toolchain. `paddle2onnx` 2.1.0
+  against `paddlepaddle` 3.1.1, the one pairing whose extension loads, in a Python 3.11 scratch venv,
+  because the plugin's pin has no wheel for `.venv`'s 3.13 (P1's finding 2). `.gitignore` gained
+  `data/models/ocr/`, because the plan's `data/models/*.onnx` does not reach a subdirectory.
+- **`image` `=0.25.9`, PNG only.** JPEG is decoded by a hand port of libjpeg-turbo, because `image`'s
+  JPEG codec does not decode to OpenCV's pixels and that moved the screen quad on two bay photos (the
+  user's answer at P2). HEIC is decoded by ffmpeg (D3). `imageproc`, which the plan allowed, never
+  entered: the rectifier is a hand port of OpenCV's steps.
+- **`rmcp` `=0.11.0` with `tokio` `=1.54.0`**, in `crates/mcp` alone. It negotiates protocol revision
+  2025-06-18, where Python's SDK negotiated 2025-11-25. That revision brought `structuredContent`, so
+  nothing a tool returns needs the later one, and the surface declares the difference (ADR-006's
+  addendum).
+- **`zip` `=7.3.0`**, in `crates/lab` alone, for the phone's export (P31).
+- **ffmpeg is found, not bundled.** `golf-lab` reads `GOLF_FFMPEG`, else `PATH` (ffmpeg 9.0.2 on
+  this box, the plan's D17), and never falls back to `.venv`'s `imageio-ffmpeg` 7.1. **9.0.2 ends each
+  audio track where its edit list ends**, and 7.1 decoded the trailing priming frame whole, so 26 of
+  the 30 stored clips decode 16 to 976 samples shorter (P21's finding 4). The user chose to gate the
+  decoder the lab runs (P21, answer (a)): strikes, frames and ranks exact, and the three fields that
+  feed nothing (`duration_s`, `confidence`, `prominence`) to a relative 2e-3.
+
+### What else the build settled, for a reader of clause 3 or clause 4
+
+- **A recorder runs a shell's binary.** Nothing may depend on `crates/mcp` or `crates/lab`, which are
+  shells like `core`, so `golf-core rerecord` walks the mcp family by running `golf-mcp answer-case`
+  rather than linking the runner (P15). Both version keys walk that family now: a career declaration
+  because its tools read the corpus, and an engine one because its flight and band answers are the
+  engine's (P19). Every re-record therefore needs `golf-mcp` built in the same profile.
+- **Clause 3's one-time recording ran twice more**, for `mcp` (P8) and `selection` (P18), each through
+  the sanctioned recorder change, each refusing a second run
+  ([CONFORMANCE §2](../CONFORMANCE.md)). And **"new vectors from `data/` are M29's"** is
+  `golf-lab build-vectors` (P30), which writes only where no file is and stamps `oracle: "rust"`, so
+  `golf-core rerecord` stays the only re-writer.
+- **`data/` is Rust's.** P29 backed up `data/processed/` without the clips (the plan's D8), re-read and
+  stamped the 13 stored shots and re-ran the 15 bundles at engine 17. Only the declared shot values
+  and last-bit scores moved, and every frozen reader still answers (P29's finding 16).
+- **`golf-lab reanalyze` asks a fourth question** `reanalyze.py` never could: whether an older screen
+  parser read the shot. Frozen Python had one parser, so its artifacts could not go stale that way.
+  Without the question, a `SCREEN_PARSER_VERSION` bump would leave every stored shot stale while the
+  verb reported nothing to do (P27).
+- **Clause 4 held in both directions.** The frozen server reads every artifact the Rust lab wrote
+  (P29), and the one value it cannot, a photo-side `unscored` reason, stays in `shot_analysis.json`,
+  which it never opens (the plan's C6).
+
+### What this does not change
+
+Clauses 1–7 stand. The survivors are clause 1's list, the scoring path has no numeric library, the
+oracle is Rust's, and M40 still deletes the frozen server's closure: `analysis/`, `storage/` but
+`transcript_store.py`, `launch_monitor/`, `audio/`, Python `mcp/` and `api/` unless M40 ports it.

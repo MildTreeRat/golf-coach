@@ -39,7 +39,7 @@ use crate::PoseError;
 /// How many workers a pool starts with.
 ///
 /// **2, measured by M23 P8 on 2026-09-27** — the 6 shortest corpus clips (2,899 frames of 4K
-/// portrait) through one pool at each width, `scripts/pose_replay.py --shortest 6 --sweep 1,2,4`:
+/// portrait) through one pool at each width, `archive/pose_replay.py --shortest 6 --sweep 1,2,4`:
 ///
 /// | workers | pose | throughput | speedup | aggregate CPU | cores busy | peak RSS |
 /// |---|---|---|---|---|---|---|
@@ -415,11 +415,11 @@ fn drive(
             // that worker, because `RunningMode.VIDEO`'s tracking state and MediaPipe's C++ graph are
             // not things a Python `except` can vouch for. So anything but landmarks retires it, and
             // whether the *job* is tried again is the separate question `retried()` answers.
-            if !matches!(outcome, Ok(Outcome::Done(_))) {
+            if !matches!(outcome, Ok(Outcome::Done { .. })) {
                 retire(&mut held, slot, shared);
             }
             let again = match &outcome {
-                Ok(Outcome::Done(_)) => false,
+                Ok(Outcome::Done { .. }) => false,
                 Ok(Outcome::Failed { reason, .. }) => reason.retried(),
                 Err(err) => err.retried(),
             };
