@@ -23,6 +23,27 @@
 //! rotated box on 2026-08-23-4, where Python finds none, and moved one corner of 2026-08-23-11 by
 //! 114 px. The search is that sensitive to its pixels, which is why the decoder is a hand port of
 //! libjpeg-turbo's rather than any JPEG decoder (the M29 plan's P2 finding).
+//!
+//! # Where it departs from its twin: a quad that orders with a corner repeated (M42 P3)
+//!
+//! [`order_quad`] gives each role to the corner with the extreme `x + y` or `y - x`, and nothing
+//! stops one corner winning two roles. A four-gon with one corner far enough out to a side wins
+//! both of that side's roles there, and the "ordered" quad then names one point twice and loses
+//! another. On two of Full Swing's photos the finder returned `Corners` (Canny 30, closing 5,
+//! tolerance 0.04) with top-right and bottom-right the same point, (5706.3, 2638.9) on
+//! `IMG_2893.HEIC` and (5706.3, 2707.5) on `IMG_2894.HEIC`, so the warp cut a 1600 px sliver
+//! from each and the recognizer found no text on it at all (the M42 plan's finding 5). Such a
+//! four-gon is convex and plausibly sized, so `as_quad` passed it. Frozen Python's
+//! `_order_quad` and `find_screen_quad` have the same defect and keep it (ADR-035 clause 4).
+//!
+//! Here a four-gon whose ordering repeats a corner is refused as `as_quad` refuses one: the search
+//! goes on to the next contour and setting, and the contour's rotated box may still stand in. A
+//! rotated box whose ordering repeats a corner is not kept as the stand-in either. Both photos now
+//! stand in with that contour's rotated box and read every tile label (the plan's P3 finding).
+//! Both checks read only the ordered corners, and a refusal only ever narrows what was accepted,
+//! so a photo whose quad ordered cleanly before (or that had none) is answered exactly as before,
+//! by the same path. The 13 bay photos are (`tests/quad.rs`, unchanged), which is why the change
+//! moves no stored shot and `SCREEN_PARSER_VERSION` stays where it is (the M42 plan's call 3).
 
 use image::RgbImage;
 
@@ -104,7 +125,7 @@ pub fn find_screen_quad(image: &RgbImage) -> Option<ScreenQuad> {
     let smoothed = bilateral_filter(&gray, sw, sh, BILATERAL_D, BILATERAL_SIGMA, BILATERAL_SIGMA);
     let frame_area = (sh * sw) as f64;
 
-    let mut fallback: Option<([[f32; 2]; 4], QuadSource)> = None;
+    let mut fallback: Option<ScreenQuad> = None;
     for (low, high) in CANNY_PRESETS {
         let edges = canny(&smoothed, sw, sh, low, high);
         for close in CLOSE_SIZES {
@@ -113,27 +134,34 @@ pub fn find_screen_quad(image: &RgbImage) -> Option<ScreenQuad> {
                 if area < frame_area * MIN_QUAD_AREA_RATIO {
                     break; // sorted, so every remaining contour is smaller still
                 }
+                // A four-gon `order_quad` gives one corner two roles is refused as `as_quad`
+                // refuses one, and the search goes on (the module doc's M42 section).
                 if let Some((quad, epsilon)) = as_quad(&contour, area, frame_area) {
-                    return Some(ScreenQuad {
-                        corners: order_quad(divide(quad, scale)),
-                        source: QuadSource::Corners {
-                            low,
-                            close,
-                            epsilon,
-                        },
-                    });
+                    let corners = order_quad(divide(quad, scale));
+                    if !repeats_a_corner(&corners) {
+                        return Some(ScreenQuad {
+                            corners,
+                            source: QuadSource::Corners {
+                                low,
+                                close,
+                                epsilon,
+                            },
+                        });
+                    }
                 }
                 if fallback.is_none() {
                     fallback = as_rotated_rect(&contour, frame_area)
-                        .map(|corners| (corners, QuadSource::RotatedBox { low, close }));
+                        .map(|corners| order_quad(divide(corners, scale)))
+                        .filter(|corners| !repeats_a_corner(corners))
+                        .map(|corners| ScreenQuad {
+                            corners,
+                            source: QuadSource::RotatedBox { low, close },
+                        });
                 }
             }
         }
     }
-    fallback.map(|(corners, source)| ScreenQuad {
-        corners: order_quad(divide(corners, scale)),
-        source,
-    })
+    fallback
 }
 
 /// The five largest outer contours with their areas, largest first, equal areas in OpenCV's
@@ -232,6 +260,12 @@ pub fn order_quad(points: [[f32; 2]; 4]) -> Quad {
     ]
 }
 
+/// Whether two of an ordered quad's corners are the same point: [`order_quad`] gave one corner
+/// two roles, so the four-gon was not a screen it could order (the module doc's M42 section).
+fn repeats_a_corner(quad: &Quad) -> bool {
+    (0..4).any(|i| (i + 1..4).any(|j| quad[i] == quad[j]))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -277,6 +311,40 @@ mod tests {
                 (got[0] - want[0]).abs() <= 2.0 && (got[1] - want[1]).abs() <= 2.0,
                 "{found:?}"
             );
+        }
+    }
+
+    #[test]
+    fn a_diamond_orders_with_a_corner_repeated() {
+        // The defect (the M42 plan's finding 5), pinned: on a square turned 45 degrees the top
+        // and left corners tie on x + y, the top and right on y - x, and the first-on-a-tie rule
+        // gives the top corner both the top-left and the top-right role. The left one is lost.
+        let quad = order_quad([[200.0, 20.0], [330.0, 150.0], [200.0, 280.0], [70.0, 150.0]]);
+        assert_eq!(
+            quad,
+            [[200.0, 20.0], [200.0, 20.0], [330.0, 150.0], [200.0, 280.0]]
+        );
+        assert!(repeats_a_corner(&quad));
+    }
+
+    #[test]
+    fn a_diamond_screen_is_never_found_with_a_corner_repeated() {
+        // A 400x300 photo of a dark diamond on a light wall, its diagonals 360 and 180 px, 27% of
+        // the frame: plausibly sized, convex and four-cornered. Before M42 P3 it came back as
+        // `Corners` [[20, 149], [380, 151], [380, 151], [20, 149]], the left and right corners
+        // each given two roles. A square turned 45 degrees does not show it here: its corners
+        // reduce a pixel off their ties, (199, 20) (330, 149) (201, 280) (70, 151), and order
+        // cleanly (measured at M42 P3), so the diamond is twice as wide as it is tall and ties
+        // nothing. Since, the contour's rotated box stands in, its four corners distinct.
+        let image = RgbImage::from_fn(400, 300, |x, y| {
+            if (x as i32 - 200).abs() + 2 * (y as i32 - 150).abs() <= 180 {
+                image::Rgb([20, 25, 30])
+            } else {
+                image::Rgb([200, 200, 190])
+            }
+        });
+        if let Some(found) = find_screen_quad(&image) {
+            assert!(!repeats_a_corner(&found.corners), "{found:?}");
         }
     }
 

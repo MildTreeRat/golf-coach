@@ -6,6 +6,11 @@
 //! golf-lab import-photos [PATHS...] --into-session S --player P --club C
 //!                        [--sessions-dir D] [--golfers-dir D] [--out DIR] [--device D]
 //!                        [--min-confidence X] [--force] [--dry-run] [--models DIR]
+//! golf-lab import-video CLIP... [--session S] [--out DIR] [--device D] [--min-confidence X]
+//!                       [--force] [--dry-run] [--models DIR]
+//! golf-lab import-video CLIP... --into-session S --player P --club C
+//!                       [--sessions-dir D] [--golfers-dir D] [--out DIR] [--device D]
+//!                       [--min-confidence X] [--force] [--dry-run] [--models DIR]
 //! golf-lab analyze SWING [--sessions-dir D] [--shots-dir D] [--golfers-dir D]
 //!                  [--window-face-on S:E] [--window-dtl S:E] [--no-auto-window] [--list-swings]
 //!                  [--no-video] [--no-coaching] [--force-pose] [--force-ocr] [--skip-ocr]
@@ -19,6 +24,7 @@
 //!                 [--verbose] [--shots-dir D] [--sessions-dir D] [--golfers-dir D]
 //! golf-lab build-vectors [--sessions-dir D] [--golfers-dir D] [--out DIR] [--dry-run]
 //! golf-lab import-export EXPORT [--sessions-dir D] [--shots-dir D] [--golfers-dir D] [--dry-run]
+//! golf-lab read-impact CLIP... [--json] [--review DIR]
 //! golf-lab --help
 //! ```
 //!
@@ -113,6 +119,25 @@
 //! from what is stored refuses the whole import, naming each (C11). `--dry-run` judges every file
 //! and writes nothing. Exit codes: 0 imported (or importable), 1 refused on a conflict, 2 the export
 //! is not a stored layout this reads, or a write failed part way.
+//!
+//! # `read-impact` (M42 P13)
+//!
+//! No script: the impact offset off Full Swing's overhead replay, read from each `CLIP` (a Live
+//! Photo's motion part, `.mov` in any case; a still is refused, naming `import-photos`) and printed
+//! one line a clip, or with `--json` one object a line (`golf_lab::read_impact`'s module doc).
+//! `--review DIR` writes the frames each reading came from as PNGs under `DIR/<stem>/`. Nothing is
+//! stored. Exit codes: 0 every clip read, 1 any refused or not decoded (or no ffmpeg), 2 usage.
+//!
+//! # `import-video` (M42 P14b)
+//!
+//! No script: a Live Photo's motion part imported as a shot of its own, the second import method
+//! (`golf_lab::import`'s module doc). Each `CLIP`, or each `.mov` one level inside a directory, gives
+//! a shot holding the grid's numbers off one frame and the impact offset or its named refusal off
+//! the replay. It keeps `import-photos`' flags and exit codes, but takes no default directory: the
+//! M42 plan's call 14 names its clips, and the default directory holds `IMG_2888.MOV`, the club-view
+//! layout no profile reads. A device that declares nothing from the replay exits 2 before anything
+//! is read (`--device full_swing`, or `GOLF_LAUNCH_MONITOR_PROFILE`; the default is `hd_golf`). No
+//! ffmpeg is a clip that cannot be decoded, for every clip, as with `read-impact`.
 
 use std::io::{self, Write};
 use std::path::PathBuf;
@@ -128,10 +153,13 @@ use golf_lab::build_vectors::{build_vectors, Request as BuildRequest};
 use golf_lab::coach::{coaching_enabled, Entry};
 use golf_lab::ffmpeg::Ffmpeg;
 use golf_lab::flight::{flight, Ended, Mode, Request as FlightRequest};
-use golf_lab::import::{import_photos, shot_screens_dir, spelled, IntoSession, Request};
+use golf_lab::import::{
+    import_photos, import_video, shot_screens_dir, spelled, IntoSession, Request,
+};
 use golf_lab::import_export::{import_export, Request as ExportRequest};
 use golf_lab::pipeline::{PipelineOptions, Tools, VIEWS};
 use golf_lab::pose::{keypoints_for, Sidecar};
+use golf_lab::read_impact::{is_clip, read_impact_clips, Request as ImpactRequest};
 use golf_lab::reanalyze::{reanalyze, Request as ReanalyzeRequest};
 use golf_lab::report::{print_report, print_swings};
 use golf_lab::shot::{OcrReader, ShotOptions};
@@ -140,6 +168,11 @@ use storage::manifest::{load_manifest, manifest_path, Role};
 const USAGE: &str = "usage: golf-lab import-photos [PATHS...] [--session S] [--out DIR] \
                      [--device D] [--min-confidence X] [--force] [--dry-run] [--models DIR]\n       \
                      golf-lab import-photos [PATHS...] --into-session S --player P --club C \
+                     [--sessions-dir D] [--golfers-dir D] [--out DIR] [--device D] \
+                     [--min-confidence X] [--force] [--dry-run] [--models DIR]\n       \
+                     golf-lab import-video CLIP... [--session S] [--out DIR] [--device D] \
+                     [--min-confidence X] [--force] [--dry-run] [--models DIR]\n       \
+                     golf-lab import-video CLIP... --into-session S --player P --club C \
                      [--sessions-dir D] [--golfers-dir D] [--out DIR] [--device D] \
                      [--min-confidence X] [--force] [--dry-run] [--models DIR]\n       \
                      golf-lab analyze SWING [--sessions-dir D] [--shots-dir D] [--golfers-dir D] \
@@ -159,7 +192,8 @@ const USAGE: &str = "usage: golf-lab import-photos [PATHS...] [--session S] [--o
                      golf-lab build-vectors [--sessions-dir D] [--golfers-dir D] [--out DIR] \
                      [--dry-run]\n       \
                      golf-lab import-export EXPORT [--sessions-dir D] [--shots-dir D] \
-                     [--golfers-dir D] [--dry-run]";
+                     [--golfers-dir D] [--dry-run]\n       \
+                     golf-lab read-impact CLIP... [--json] [--review DIR]";
 
 fn main() -> ExitCode {
     let mut args = std::env::args().skip(1);
@@ -168,8 +202,19 @@ fn main() -> ExitCode {
             println!("{USAGE}");
             ExitCode::SUCCESS
         }
-        Some("import-photos") => match parse_import(args) {
+        Some("import-photos") => match parse_import("import-photos", args) {
             Ok(Some((request, models))) => import(&request, models),
+            Ok(None) => {
+                println!("{USAGE}");
+                ExitCode::SUCCESS
+            }
+            Err(problem) => {
+                usage(&problem);
+                ExitCode::from(2)
+            }
+        },
+        Some("import-video") => match parse_import("import-video", args) {
+            Ok(Some((request, models))) => run_import_video(&request, models),
             Ok(None) => {
                 println!("{USAGE}");
                 ExitCode::SUCCESS
@@ -245,6 +290,17 @@ fn main() -> ExitCode {
                 ExitCode::from(2)
             }
         },
+        Some("read-impact") => match parse_read_impact(args) {
+            Ok(Some(request)) => run_read_impact(&request),
+            Ok(None) => {
+                println!("{USAGE}");
+                ExitCode::SUCCESS
+            }
+            Err(problem) => {
+                usage(&problem);
+                ExitCode::from(2)
+            }
+        },
         Some(other) => usage(&format!("unknown command {other:?}")),
         None => usage("no command given"),
     }
@@ -267,11 +323,12 @@ fn split_flag(arg: &str) -> (String, Option<String>) {
 }
 
 /// `import-photos`' flags, argparse's way as `golf-core`'s verbs read theirs, then the defaults
-/// resolved against the process environment. `Ok(None)` is `--help`.
+/// resolved against the process environment, for it or for `import-video`, which keeps them.
+/// `Ok(None)` is `--help`.
 fn parse_import(
+    verb: &str,
     mut args: impl Iterator<Item = String>,
 ) -> Result<Option<(Request, Option<PathBuf>)>, String> {
-    const VERB: &str = "import-photos";
     let mut paths = Vec::new();
     let (mut session, mut device, mut out, mut min_confidence) = (None, None, None, None);
     let (mut into, mut player, mut club) = (None, None, None);
@@ -283,7 +340,7 @@ fn parse_import(
             inline
                 .clone()
                 .or_else(|| args.next())
-                .ok_or_else(|| format!("{VERB}: argument {flag}: expected one argument"))
+                .ok_or_else(|| format!("{verb}: argument {flag}: expected one argument"))
         };
         match flag.as_str() {
             "--session" => session = Some(value("--session")?),
@@ -292,7 +349,7 @@ fn parse_import(
             "--min-confidence" => {
                 let text = value("--min-confidence")?;
                 min_confidence = Some(text.trim().parse::<f64>().map_err(|_| {
-                    format!("{VERB}: argument --min-confidence: invalid float value: '{text}'")
+                    format!("{verb}: argument --min-confidence: invalid float value: '{text}'")
                 })?);
             }
             "--into-session" => into = Some(value("--into-session")?),
@@ -303,7 +360,7 @@ fn parse_import(
             "--models" => models = Some(PathBuf::from(value("--models")?)),
             "--force" | "--dry-run" | "-h" | "--help" if inline.is_some() => {
                 return Err(format!(
-                    "{VERB}: argument {flag}: ignored explicit argument {:?}",
+                    "{verb}: argument {flag}: ignored explicit argument {:?}",
                     inline.unwrap_or_default()
                 ))
             }
@@ -311,7 +368,7 @@ fn parse_import(
             "--dry-run" => dry_run = true,
             "-h" | "--help" => return Ok(None),
             other if other.starts_with('-') && other != "-" => {
-                return Err(format!("{VERB}: unrecognized arguments: {other}"))
+                return Err(format!("{verb}: unrecognized arguments: {other}"))
             }
             _ => paths.push(PathBuf::from(arg)),
         }
@@ -322,14 +379,14 @@ fn parse_import(
         (None, None, None) => {
             if sessions.is_some() || golfers.is_some() {
                 return Err(format!(
-                    "{VERB}: error: --sessions-dir and --golfers-dir go with --into-session"
+                    "{verb}: error: --sessions-dir and --golfers-dir go with --into-session"
                 ));
             }
             None
         }
         (Some(_), _, _) if session.is_some() => {
             return Err(format!(
-                "{VERB}: error: argument --session: not allowed with argument --into-session, \
+                "{verb}: error: argument --session: not allowed with argument --into-session, \
                  which names the session the photos are filed into"
             ))
         }
@@ -342,12 +399,12 @@ fn parse_import(
         }),
         _ => {
             return Err(format!(
-                "{VERB}: error: --into-session S, --player P and --club C go together"
+                "{verb}: error: --into-session S, --player P and --club C go together"
             ))
         }
     };
     let mut options = ShotOptions::configured(data_dir(out, "GOLF_SHOTS_DIR", "shots", &env), env)
-        .map_err(|problem| format!("{VERB}: error: {problem}"))?;
+        .map_err(|problem| format!("{verb}: error: {problem}"))?;
     if let Some(device) = device {
         options.device = device;
     }
@@ -357,6 +414,11 @@ fn parse_import(
     options.force_ocr = force;
     options.dry_run = dry_run;
     if paths.is_empty() {
+        if verb == "import-video" {
+            return Err(format!(
+                "{verb}: the following arguments are required: CLIP"
+            ));
+        }
         paths.push(shot_screens_dir(env));
     }
     Ok(Some((
@@ -384,6 +446,33 @@ fn import(request: &Request, models: Option<PathBuf>) -> ExitCode {
         Ok(code) => ExitCode::from(code),
         Err(error) => {
             eprintln!("golf-lab import-photos: writing the report: {error}");
+            ExitCode::FAILURE
+        }
+    }
+}
+
+/// Run `import-video`, as [`import`] runs `import-photos`, with ffmpeg found once. Its absence is
+/// each clip's failure rather than the verb's, so a device refused for its declaration exits 2 on a
+/// machine with no ffmpeg too.
+fn run_import_video(request: &Request, models: Option<PathBuf>) -> ExitCode {
+    let mut reader = models.map_or_else(OcrReader::configured, OcrReader::new);
+    let (mut out, mut err) = (io::stdout(), io::stderr());
+    let ffmpeg = Ffmpeg::find();
+    let mut motion = |clip: &std::path::Path, width: Option<u32>| match &ffmpeg {
+        Ok(ffmpeg) => ffmpeg.decode_frames(clip, width),
+        Err(missing) => Err(missing.to_string()),
+    };
+    match import_video(
+        request,
+        &mut motion,
+        &mut reader,
+        Timestamp::now_utc(),
+        &mut out,
+        &mut err,
+    ) {
+        Ok(code) => ExitCode::from(code),
+        Err(error) => {
+            eprintln!("golf-lab import-video: writing the report: {error}");
             ExitCode::FAILURE
         }
     }
@@ -1019,6 +1108,75 @@ fn run_import_export(request: &ExportRequest) -> ExitCode {
         Ok(code) => ExitCode::from(code),
         Err(error) => {
             eprintln!("golf-lab import-export: writing the report: {error}");
+            ExitCode::FAILURE
+        }
+    }
+}
+
+/// `read-impact`'s clips and flags, argparse's way. A still among the clips is refused here, naming
+/// the verb that reads one, so nothing is decoded before the usage error. `Ok(None)` is `--help`.
+fn parse_read_impact(
+    mut args: impl Iterator<Item = String>,
+) -> Result<Option<ImpactRequest>, String> {
+    const VERB: &str = "read-impact";
+    let (mut clips, mut json, mut review) = (Vec::new(), false, None);
+    while let Some(arg) = args.next() {
+        let (flag, inline) = split_flag(&arg);
+        match flag.as_str() {
+            "--review" => {
+                review = Some(PathBuf::from(inline.or_else(|| args.next()).ok_or_else(
+                    || format!("{VERB}: argument --review: expected one argument"),
+                )?))
+            }
+            "--json" | "-h" | "--help" if inline.is_some() => {
+                return Err(format!(
+                    "{VERB}: argument {flag}: ignored explicit argument {:?}",
+                    inline.unwrap_or_default()
+                ))
+            }
+            "--json" => json = true,
+            "-h" | "--help" => return Ok(None),
+            other if other.starts_with('-') && other != "-" => {
+                return Err(format!("{VERB}: unrecognized arguments: {other}"))
+            }
+            _ => {
+                let clip = PathBuf::from(&arg);
+                if !is_clip(&clip) {
+                    return Err(format!(
+                        "{VERB}: {arg} is not a Live Photo clip (.mov): a photo of the screen is \
+                         read by golf-lab import-photos"
+                    ));
+                }
+                clips.push(clip);
+            }
+        }
+    }
+    if clips.is_empty() {
+        return Err(format!(
+            "{VERB}: the following arguments are required: CLIP"
+        ));
+    }
+    Ok(Some(ImpactRequest {
+        clips,
+        json,
+        review,
+    }))
+}
+
+/// Run `read-impact`: ffmpeg found once, then one line a clip on stdout. No ffmpeg is a clip that
+/// cannot be decoded, for every clip, so it exits 1 rather than 2.
+fn run_read_impact(request: &ImpactRequest) -> ExitCode {
+    let mut ffmpeg = match Ffmpeg::find() {
+        Ok(ffmpeg) => ffmpeg,
+        Err(missing) => {
+            eprintln!("golf-lab read-impact: {missing}");
+            return ExitCode::FAILURE;
+        }
+    };
+    match read_impact_clips(request, &mut ffmpeg, &mut io::stdout().lock()) {
+        Ok(code) => ExitCode::from(code),
+        Err(error) => {
+            eprintln!("golf-lab read-impact: writing the report or the review: {error}");
             ExitCode::FAILURE
         }
     }

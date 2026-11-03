@@ -36,7 +36,8 @@ spec/
       corpus/      PaddleOCR's boxes for the 13 stored bay photos
       reference/   the 2 reference photos, the other layout
       synthetic/   build_screen's screens, one per parser or validator path
-      hand/        the tie rule and the Impact Position V tile, worked by hand
+      hand/        the tie rule, the Impact Position V tile and Full Swing's four
+                   opt-in rules (M42), worked by hand
       units/       case tables over the frozen parser's private functions
     storage/     a tree of files in, what each store answers and leaves out    [M36]
       corpus/      read_corpus and its narrowings, and data/'s corpus, slimmed

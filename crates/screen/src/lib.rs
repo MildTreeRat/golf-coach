@@ -57,13 +57,13 @@ pub mod tiles;
 pub mod validate;
 
 pub use crate::parser::golfer_warnings;
-pub use crate::tiles::tile_refusals;
+pub use crate::tiles::{tile_refusals, IMPACT_VIDEO_MISREAD};
 
 use std::collections::BTreeMap;
 
 use contracts::shot::{ShotData, ShotProvenance, ShotSource, SCREEN_PARSER_VERSION};
 use contracts::Timestamp;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
 
 use crate::parser::{parse_screen, ParsedShot};
@@ -74,7 +74,10 @@ use crate::validate::validate_parse;
 ///
 /// Pixels in the rectified screen image, origin top-left. The parser only ever compares boxes with
 /// each other, so the absolute scale is irrelevant: a 900 px crop and a 4,000 px one parse the same.
-#[derive(Debug, Clone, PartialEq, Deserialize)]
+///
+/// `Serialize` so a reader's boxes can be printed as a screen vector's `input` holds them
+/// (`golf-ocr read --boxes`, M42 P2).
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct TextBox {
     pub text: String,
     pub x: f64,
@@ -84,6 +87,21 @@ pub struct TextBox {
     /// The dataclass's default of `1.0`, for a recognizer that reports none.
     #[serde(default = "full_confidence")]
     pub confidence: f64,
+    /// The glyph colour, which the dataclass does not have (M42, the plan's call 4): **the mean
+    /// red, green and blue (0–255) of the brightest quarter of the box's pixels**, in the image the
+    /// box's coordinates are in. The pixels are the box's clipped to the image (`x0 = floor(max(x,
+    /// 0))`, `x1 = min(ceil(x + width), W)`, likewise y), ranked by `r + g + b` ascending with a
+    /// stable sort over row-major order; the brightest quarter is the ranks from `n * 3 / 4`
+    /// (integer division) to the end. `None` when the box holds no pixel, and for a recognizer
+    /// that measures none.
+    ///
+    /// Full Swing prints both letters of a sign pair (`L` `R`, `D` `F`) and lights one yellow, so
+    /// which letter is lit is a colour, and the text alone cannot say it. The brightest quarter is
+    /// the strokes rather than the dark ground between them, so a thin yellow letter reads yellow.
+    /// `crates/ocr` fills it (`ocr::recognizer::glyph_rgb`); the phone's VisionKit boxes must fill
+    /// it by the same definition (M38). A box written before M42, or by frozen Python, reads `None`.
+    #[serde(default)]
+    pub rgb: Option<[f64; 3]>,
 }
 
 fn full_confidence() -> f64 {
@@ -253,6 +271,29 @@ mod tests {
         assert_eq!(text_box.bottom(), 23.0);
         assert_eq!(text_box.center_x(), 13.5);
         assert_eq!(text_box.center_y(), 21.5);
+        // A box written before M42, as every committed screen vector's is, has no colour.
+        assert_eq!(text_box.rgb, None);
+    }
+
+    /// `golf-ocr read --boxes` prints boxes for a screen vector's `input`, so what it writes must
+    /// read back as the same box, colour and all.
+    #[test]
+    fn a_box_with_its_colour_round_trips() {
+        let text_box = TextBox {
+            text: "R".into(),
+            x: 812.0,
+            y: 344.0,
+            width: 19.0,
+            height: 23.0,
+            confidence: 0.93,
+            rgb: Some([239.25, 222.5, 90.0]),
+        };
+        let written = serde_json::to_value(&text_box).unwrap();
+        assert_eq!(written["rgb"], json!([239.25, 222.5, 90.0]));
+        assert_eq!(
+            serde_json::from_value::<TextBox>(written).unwrap(),
+            text_box
+        );
     }
 
     fn an_input(device: &str) -> ScreenInput {

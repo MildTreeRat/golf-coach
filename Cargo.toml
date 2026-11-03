@@ -15,6 +15,7 @@ members = [
     "crates/contracts",
     "crates/core",
     "crates/feedback",
+    "crates/impact",
     "crates/lab",
     "crates/mcp",
     "crates/ocr",

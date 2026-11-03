@@ -480,6 +480,8 @@ dependencies = [
  "feedback",
  "flate2",
  "golf-core",
+ "image",
+ "impact",
  "ocr",
  "pose",
  "pyfmt",
@@ -572,6 +574,10 @@ dependencies = [
  "num-traits",
  "png",
 ]
+
+[[package]]
+name = "impact"
+version = "0.1.0"
 
 [[package]]
 name = "indexmap"

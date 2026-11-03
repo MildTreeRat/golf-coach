@@ -27,6 +27,7 @@ fn a_malformed_command_line_exits_two_with_the_usage() {
         &["read", "a.png", "--device"][..],
         &["read", "a.png", "--min-confidence", "high"][..],
         &["read", "a.png", "--verbose"][..],
+        &["read", "a.png", "--boxes", "--json"][..],
     ] {
         let output = golf_ocr(args);
         assert_eq!(output.status.code(), Some(2), "{args:?}");

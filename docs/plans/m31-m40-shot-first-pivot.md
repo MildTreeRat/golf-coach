@@ -1350,6 +1350,20 @@ its list, they do not feed it:
   6. history.
   - **Challenge mode:** the app calls fade, draw or straight before each shot and records the call
     as that shot's `target_shape` (Decision 17 §1). Challenge shots count fully.
+  - **Vision's boxes must carry `rgb` (M42).** `TextBox.rgb` is the mean red, green and blue (0–255)
+    of the brightest quarter of the box's pixels, in the image the box's coordinates are in
+    ([the M42 plan's call 4](m42-full-swing.md#calls-this-plan-makes) has the clipping and the
+    ranking), and the Swift plugin must fill it by that definition. `screen::parser::is_lit` decides
+    from it, so without it Full Swing's ball direction and sidespin are **withheld on every shot**,
+    never stored unsigned. `hd_golf` reads no colour. Hold the plugin's boxes to `crates/ocr`'s on the
+    same photo before trusting a threshold set from the lab's reader (`LIT_BLUE_RATIO`).
+  - **A Live Photo is two import methods (M42's decision 7), and neither needs the other.** The still
+    imports a shot with the grid's numbers and no impact offset. The clip imports a shot on its own,
+    with the grid's numbers read off one of its frames by the same parse and the offset or its named
+    refusal off the replay: the phone decodes the frames and reaches `crates/impact`'s
+    `sharpest_frame` and `read_impact` through `crates/app`, which gives `crates/app` that dependency
+    (std only, and `crates/ocr/tests/ort_reach.rs` already guards it). Nothing pairs the two, so
+    importing both makes two shots of one swing, and the phone should ask for one per Live Photo.
 - **P3 — profile screens:**
   - the per-club profile, strengths and weaknesses;
   - per topic, the grade beside the list, with both shares for each shape topic;

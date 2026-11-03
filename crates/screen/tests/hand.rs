@@ -13,8 +13,16 @@
 //! included, so every key Rust writes is compared, under `docs/CONFORMANCE.md` §3's rules through
 //! [`golf_core::compare`].
 //!
-//! Each case is one item of the M34 plan's P8 list, and [`the_seven_cases_are_the_plans`] holds the
-//! set: a case that went missing would take its rule's only vector with it.
+//! Each case is one item of the M34 plan's P8 list, or of the M42 plan's P10 list, and
+//! [`the_cases_are_the_plans`] holds the set: a case that went missing would take its rule's only
+//! vector with it.
+//!
+//! **The M42 cases are Full Swing's** (`device: "full_swing"`), and the first hand vectors whose
+//! boxes a recognizer printed rather than a person laid out: `golf-ocr read --device full_swing
+//! --boxes` of two of the grid photos, one of them edited three ways. They pin the four rules a
+//! profile opts into (a merged label split, a tile printed twice, a sign read from a lit letter, a
+//! number printed in feet) where `cargo test` runs, without the OCR models the photo gate needs
+//! (`crates/ocr/tests/full_swing.rs`). No Python twin: frozen Python has none of the four.
 
 mod common;
 
@@ -29,8 +37,8 @@ use screen::parser::parse_screen;
 use screen::profile::load_profile;
 use screen::{read, ScreenInput};
 
-/// The plan's P8 list, in its order, by file stem.
-const CASES: [&str; 7] = [
+/// The M34 plan's P8 list, then the M42 plan's P10 list, each in its order, by file stem.
+const CASES: [&str; 10] = [
     "impact-pair-exact",
     "impact-pair-v-read-as-y",
     "impact-pair-v-dropped",
@@ -38,6 +46,9 @@ const CASES: [&str; 7] = [
     "impact-pair-real-joined",
     "carry-twice",
     "reference-layout",
+    "full-swing-grid",
+    "full-swing-merged-unlit",
+    "full-swing-withheld",
 ];
 
 /// Every hand vector, checked to be one: a person's answer, at this parser's version.
@@ -69,7 +80,7 @@ fn answer(stem: &str, vector: &Value) -> Value {
 }
 
 #[test]
-fn the_seven_cases_are_the_plans() {
+fn the_cases_are_the_plans() {
     let mut want = CASES.to_vec();
     want.sort_unstable();
     let stems: Vec<String> = hand_vectors().into_iter().map(|(stem, _)| stem).collect();
@@ -103,11 +114,15 @@ fn every_hand_worked_answer_is_the_shipping_readers() {
 /// is `null`, and a warning says so; every label with a `raw_fields` entry is in `fields_present`.
 /// Read off the vectors, so the rule is checked on the cases that need it and not only on the one
 /// that wrote it down.
+///
+/// Each vector is read against its own device's profile (M42 P10). A Full Swing value withheld by
+/// its own rule, a printed-twice disagreement or a sign no letter decides, keeps its `raw_fields`
+/// entry, so it is *read* in this sense, and its warning is the rule's (`full-swing-withheld`).
 #[test]
 fn a_withheld_tile_is_located_and_unread_and_nothing_else_is() {
-    let profile = load_profile("hd_golf").expect("the shipped profile");
     let mut withheld_anywhere = 0;
     for (stem, vector) in hand_vectors() {
+        let profile = load_profile(&input(&stem, &vector).device).expect("a shipped profile");
         let shot = &vector["expected"]["shot"];
         let provenance = &shot["provenance"];
         let present: BTreeSet<&str> = provenance["fields_present"]
@@ -155,6 +170,9 @@ fn a_withheld_tile_is_located_and_unread_and_nothing_else_is() {
 /// `fields_present` tells the two layouts apart (ADR-014's M31 addendum, §M34's exit): the bay
 /// layout carries `impact_position_v` and not `bounce_and_roll`, the reference layout the reverse,
 /// whether or not anything under those tiles was read.
+///
+/// Both are HD Golf's layouts. Full Swing's grid (M42 P10) prints neither tile, and its profile has
+/// neither, so its vectors locate neither.
 #[test]
 fn what_was_located_tells_the_layouts_apart() {
     for (stem, vector) in hand_vectors() {
@@ -164,6 +182,13 @@ fn what_was_located_tells_the_layouts_apart() {
                 .as_array()
                 .is_some_and(|p| p.iter().any(|k| k == key))
         };
+        if input(&stem, &vector).device != "hd_golf" {
+            assert!(
+                !has("bounce_and_roll") && !has("impact_position_v"),
+                "{stem}"
+            );
+            continue;
+        }
         let reference = stem == "reference-layout";
         assert_eq!(has("bounce_and_roll"), reference, "{stem}");
         assert_eq!(has("impact_position_v"), !reference, "{stem}");

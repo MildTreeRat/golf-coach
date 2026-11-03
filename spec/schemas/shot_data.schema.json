@@ -142,6 +142,19 @@
       "description": "degrees, + = up (hitting up on the ball)",
       "title": "Attack Angle"
     },
+    "backspin": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "rpm, as printed (Full Swing's BACKSPIN RPM). Written only when set.",
+      "title": "Backspin"
+    },
     "ball_speed": {
       "anyOf": [
         {
@@ -368,6 +381,19 @@
       "default": null,
       "description": "e.g. 'DRAW', 'SLIGHT FADE'",
       "title": "Shot Type"
+    },
+    "sidespin": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "rpm, + = fade, \u2212 = draw: Full Swing's SIDESPIN RPM, signed by which of its D and F is lit. Written only when set.",
+      "title": "Sidespin"
     },
     "smash_factor": {
       "anyOf": [

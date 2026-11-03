@@ -13,6 +13,13 @@
     "vary per bay: declared ∩ the tiles the parse located (ShotProvenance.fields_present), over",
     "their own shots. capability.rs's printed_on and printed_fields are that rule.",
     "Each entry says where its declaration came from (ADR-022: committed data carries its source).",
+    "'full_swing' (M42) is Full Swing's grid screen: it analyses the club speed and smash HD Golf",
+    "shows only, because that device measures the club itself, and shows its two spin tiles only",
+    "(the M42 plan's decisions 4 and 5).",
+    "'from' says which reader delivers a field: 'screen', the default, is a tile on the stat screen,",
+    "and 'impact_video' is the device's impact replay in a Live Photo's clip, which counts as printed",
+    "because it is the device's own output, photographed (the M42 plan's call 13). Such a field has",
+    "no tile in the profile, and a shot lists it only when a clip's replay was read for it.",
     "'synthetic' is not a launch monitor (M37). It declares every ShotData reading, all analysed, so",
     "hand-worked vectors can exercise fields no real device supplies yet: the face-impact offsets",
     "strike location is graded from, low point, and a printed landing offline. 'mock' set the",
@@ -55,6 +62,39 @@
       ]
     },
     {
+      "device": "full_swing",
+      "source": "The non-null targets of the full_swing profile in crates/screen/profiles.json, in its tile order, written at M42 P8 from six photos of Full Swing's grid screen (the M42 plan's truth table). crates/screen/tests/capability.rs holds the screen-read fields equal to the profile's targets.",
+      "added": "2026-10-30, M42 P8",
+      "fields": [
+        { "field": "total_distance", "use": "analysed" },
+        { "field": "carry_distance", "use": "analysed" },
+        { "field": "club_head_speed", "use": "analysed" },
+        { "field": "ball_speed", "use": "analysed" },
+        { "field": "club_path", "use": "analysed" },
+        { "field": "club_face_angle", "use": "analysed" },
+        { "field": "launch_direction", "use": "analysed" },
+        { "field": "launch_angle", "use": "analysed" },
+        { "field": "apex_height", "use": "analysed" },
+        { "field": "smash_factor", "use": "analysed" },
+        {
+          "field": "backspin",
+          "use": "shown_only",
+          "note": "Printed by Full Swing's grid screen and stored as printed. No analysis reads it: whether a spin rate and axis computed from backspin and sidespin are worth having is the user's to decide later (the M42 plan's decision 4)."
+        },
+        {
+          "field": "sidespin",
+          "use": "shown_only",
+          "note": "Printed by Full Swing's grid screen and stored as printed. No analysis reads it: whether a spin rate and axis computed from backspin and sidespin are worth having is the user's to decide later (the M42 plan's decision 4)."
+        },
+        {
+          "field": "impact_offset_h",
+          "use": "analysed",
+          "from": "impact_video",
+          "note": "Read from Full Swing's overhead impact replay in a Live Photo's clip, imported by golf-lab import-video, by crates/impact (the M42 plan's call 12): the ball's centre against the club head's heel-to-toe axis, scaled by the ball's diameter. Never validated against a mark on the face (decision 3); heel-toe only, high-low being invisible from above."
+        }
+      ]
+    },
+    {
       "device": "mock",
       "source": "What src/golf_coach/launch_monitor/mock.py fills in, in its argument order. All analysed: a test device whose numbers are self-consistent by construction (ball speed is club speed times a smash drawn around 1.38), so nothing on it is untrustworthy the way HD Golf's club speed is (docs/plans/m32-shot-contract.md, decision 4).",
       "added": "2026-10-01, M32 P10",
@@ -75,7 +115,7 @@
     },
     {
       "device": "synthetic",
-      "source": "No real device. Every ShotData reading in the struct's order (crates/contracts/src/shot.rs), all analysed, so a hand-worked shot is limited only by what it holds. Declared so the hand-worked profile vectors (spec/vectors/profile/hand/, M37 P5) can exercise what no launch monitor in use supplies yet: impact_offset_h and impact_offset_v, which strike location is graded from and which M42's full_swing entry is what makes real (docs/plans/m37-strike-profile-and-grades.md, decision 3 and call 2); low_point; and carry_offline, a printed landing. crates/contracts/tests/capability.rs holds this entry to the struct, and holds every committed storage, career, shot and screen vector to never naming it.",
+      "source": "No real device. Every ShotData reading in the struct's order (crates/contracts/src/shot.rs), all analysed, so a hand-worked shot is limited only by what it holds. Declared so the hand-worked profile vectors (spec/vectors/profile/hand/, M37 P5) can exercise what no launch monitor in use supplies yet: impact_offset_h and impact_offset_v, which strike location is graded from and which M42's full_swing entry is what makes real (docs/plans/m37-strike-profile-and-grades.md, decision 3 and call 2); low_point; carry_offline, a printed landing; and M42's two spin readings, backspin and sidespin. crates/contracts/tests/capability.rs holds this entry to the struct, and holds every committed storage, career, shot and screen vector to never naming it.",
       "added": "2026-10-10, M37 P1",
       "fields": [
         { "field": "club_head_speed", "use": "analysed" },
@@ -99,7 +139,9 @@
         { "field": "impact_offset_h", "use": "analysed" },
         { "field": "impact_offset_v", "use": "analysed" },
         { "field": "impact_position_v", "use": "analysed" },
-        { "field": "carry_offline", "use": "analysed" }
+        { "field": "carry_offline", "use": "analysed" },
+        { "field": "backspin", "use": "analysed" },
+        { "field": "sidespin", "use": "analysed" }
       ]
     }
   ]

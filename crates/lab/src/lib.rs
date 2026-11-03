@@ -30,11 +30,18 @@
 //!   `crates/screen`'s. `tests/shot_lookup.rs` drives every branch with a reader that replays a
 //!   committed screen vector's boxes, and `tests/reread.rs` holds every stored bundle's shot to the
 //!   store as P29 wrote it: stamped by this parser and served with no photo read. Until P29 it
-//!   re-read each photo in a dry run and held the re-read to frozen Python's stored shot.
+//!   re-read each photo in a dry run and held the re-read to frozen Python's stored shot. Since M42
+//!   P14 it also reads a Live Photo clip's grid ([`shot::read_clip_grid`], no Python twin): one
+//!   frame written as a PNG and read as a still is, which `tests/full_swing_clips.rs` holds to the
+//!   five grid clips' screens with the models.
 //! - [`import`] (P24): `golf-lab import-photos`, `import_shot_screens.py`'s bulk import into the
 //!   shot store through [`shot::import_photo`], and `--into-session`'s photo entries, each analysed
 //!   by `golf-core run-shot --session`'s own code. `tests/import_photos.rs` drives both against a
 //!   replaying reader, and `tests/import_real.rs` runs the binary over a stored photo with the models.
+//!   Since M42 P14b it also holds `golf-lab import-video` ([`import::import_video`], no Python twin):
+//!   a Live Photo's clip imported on its own, its grid frame as the photo and its replay read for the
+//!   impact offset ([`shot::read_impact_video`]), which `tests/import_video.rs` drives with a fake
+//!   decoder.
 //! - [`pipeline`] (P25): `analyze_swing_dir` up to the engine call, pose, strikes, the swing
 //!   selection (`golf_core::auto_windows`, which the selection family gates), the shot, the golfer's
 //!   handedness and the club's loft assembled into `golf_core::VectorInput` with every note in
@@ -73,6 +80,10 @@
 //!   photo-only session with the real writers and imports it, again, conflicting and zipped, ending
 //!   on a corpus `read_corpus` reads as the phone's.
 //!
+//! - [`read_impact`] (M42 P13): `golf-lab read-impact`, no Python twin: the impact offset off a
+//!   Live Photo clip's replay of Full Swing's screen, through [`ffmpeg`]'s frames and
+//!   `crates/impact`'s reader, one line a clip, with review images of what each reading came from.
+//!
 //! **No render** (the plan's C4): no verb here writes `aligned.mp4`.
 
 use std::path::{Path, PathBuf};
@@ -88,6 +99,7 @@ pub mod import;
 pub mod import_export;
 pub mod pipeline;
 pub mod pose;
+pub mod read_impact;
 pub mod reanalyze;
 pub mod report;
 pub mod shot;

@@ -689,3 +689,157 @@ names face-to-path's bias and scatter and start line's scatter.
 - mechanics as a separate panel: no pose measurement enters a grade, a blend or the list, which a
   test in `crates/analysis` and one in `crates/feedback` pin;
 - `ranges.json`, which no grade reads.
+
+## Addendum (2026-11-02, M42): Full Swing is the second device, a value off its impact video counts as printed, and the reader has read none of its clips yet
+
+**M42**, in Rust only, in [the M42 plan](../plans/m42-full-swing.md), whose interview decisions, calls
+and phase findings are the as-built record. **M41 is folded into it** (decision 2): M41's
+"course-play layout" photo, `2026-10-07-1`, is the same Full Swing grid screen as five of the six Live
+Photos M42 was planned from, so M41's open questions (the lit L/R and D/F signs, the spin tiles with
+no `ShotData` key, the doubled `TOTAL YD`) were answered here, and M41 closes as merged. The screen
+reader's half is [ADR-014's M42 addendum](014-screen-capture-shot-ingestion.md#addendum-2026-11-02-m42-the-second-profile-four-opt-in-parser-rules-the-glyphs-colour-and-no-version-bump),
+and this one is what clause 2 and §5.2 are told.
+
+### Clause 2, with a second real device
+
+`crates/contracts/devices.json` declares `full_swing` beside `hd_golf`, in its profile's tile order.
+`crates/screen/tests/capability.rs` holds every device with a profile equal to that profile's targets
+now, not `hd_golf` alone.
+
+- **Club speed and smash factor are `analysed` on Full Swing, and stay `shown_only` on HD Golf**
+  (decision 5). HD Golf's club speed does not agree with its own ball speed: the smash the two imply
+  sits below 1.0 on most stored shots, which a real strike cannot produce, and the simulator prints
+  the smash from those two, so it carries the fault (`crates/analysis/src/shot_measure.rs`, M31 P2's
+  finding 1). Full Swing measures the club itself, and the low smashes on its photos (0.85, 1.07,
+  1.08) look like real off-centre strikes rather than a broken club speed. The same field is
+  analysed on one device and shown on another, which is what a per-device declaration is for.
+- **`backspin` and `sidespin` are stored as printed, and no analysis reads them** (decision 4). `ShotData`
+  gains both: rpm, `backspin` never negative, `sidespin` + = fade and − = draw, read from which of
+  the screen's `D`/`F` is lit, the same polarity as `spin_axis` and never converted by handedness.
+  Both are `shown_only`, and `spin_rate` and `spin_axis` stay unset on every Full Swing shot: whether
+  a rate and an axis computed from them are worth having is the user's to decide later. There is no
+  cross-check of the sidespin's sign against face-to-path, because five of the six photos show `D`
+  with the face open to the path, which a toe strike's gear effect produces. Each key is written
+  only when set (`shot::WRITTEN_WHEN_SET`, the precedent M37 set for `CorpusSwing`'s two keys), so
+  **no committed vector moved and no version key moved**, and every reader of an older shot reads
+  `None`. `golf-mcp`'s `NUMERIC_METRICS` lists both.
+- **The device stays the caller's choice** (call 10): `--device full_swing` or
+  `GOLF_LAUNCH_MONITOR_PROFILE=full_swing`, with `hd_golf` still the default and nothing
+  auto-detected. The phone's per-session choice is M38's.
+
+### The question clause 2 left to M42: a value off the impact video counts as printed
+
+**The replay is the device's own output, photographed, so a value read from it counts as printed**
+(call 13). A `devices.json` field entry gains an optional `from`, `screen` by default or
+`impact_video` (`capability::FieldSource`), and `full_swing` declares `impact_offset_h` `analysed`,
+`from: impact_video`, last. **`impact_offset_v` is never declared and never comes from this replay**:
+it is shot from overhead, where heel to toe is visible and high to low is not. Read "printed" here
+per capture. A still's shot never lists the field, so a still's offset is not printed and nothing
+downstream names it, as clause 2 has it for anything not printed. A clip's shot goes one of three
+ways, all in `golf_lab::shot::record_impact_outcome`:
+
+| The reader on the clip's frames | `impact_offset_h` | `fields_present` | What else |
+|---|---|---|---|
+| read | the value | listed | nothing |
+| refused | `None` | listed | the warning `impact video: {the refusal's sentence}`, and `tile_refusals` names it `misread`, because retaking the Live Photo during the replay can help, with the detail `screen::IMPACT_VIDEO_MISREAD` |
+| could not decode the frames | `None` | not listed | the warning `impact video: could not be decoded: {error}`: a machine's problem, and nothing about the shot |
+
+A clip ffmpeg cannot decode at all fails that clip alone, as an unreadable photo does, and no shot is
+made. **A refused replay moves neither `needs_review` nor the exit code**: the flag sets a shot's
+numbers aside (the corpus's `shot_needs_review`), and the grid's numbers are as good as they were.
+A line under the import's row says what the replay gave, and its last line counts the shots with no
+offset. On an entry in a session, strike location then exists for the club and such a shot is
+unscored under `misread`, never a miss (§5.5, and the M37 addendum's rule for a tile printed and
+holding no value), so a club whose every offset was refused has its grade withheld rather than low.
+
+### A Live Photo is two import methods, neither needing the other
+
+The user's call (decisions 7 and 8), replacing the plan's first design, where a still found its motion
+part beside it. "Don't make the video a requirement, just treat the two different pictures we have as
+two different methods to import data."
+
+- **The still**, through `golf-lab import-photos`: the grid's numbers and no impact offset.
+- **The clip**, through `golf-lab import-video`: the grid's numbers, read off one of its frames by the
+  still's own reader (ADR-014's M42 addendum has the frame rule and the clip gate), **and** the impact
+  offset or its named refusal off the replay. Why the clip matters, in the user's words: "The graphic
+  doesn't accurately show where the ball was hit. The video is the best indicator we can get."
+
+**Nothing pairs a still with its clip, so importing both halves of one Live Photo makes two shots of
+one swing**, by their two digests, and both count. The user avoids it by choosing one method per Live
+Photo. `import-photos` never looks beside a still and its scan never picks up a `.mov`; `import-video`
+never picks up a still. M42 means a Live Photo's 1 to 2 s motion part and nothing else: an ordinary
+phone video of the replay is outside it, because none exists to tune on, though nothing inspects a
+`.mov` to refuse one. A device declaring no `impact_video` field refuses `import-video`, naming those
+that do. How an entry from a clip is stored
+is [ARCHITECTURE §4](../ARCHITECTURE.md#4-storage--what-is-actually-persisted).
+
+### The reader is wired in, and has read none of the five clips
+
+`crates/impact` is the reader, and M38's phone will call it too: std only, no Python twin, frames in as
+RGB bytes and no video decoded. Per clip it finds the ball, the club head, the frame of contact and the
+shaft that tells heel from toe, then projects the ball's centre on the heel-to-toe axis, scaled by the
+ball's Rules of Golf diameter, with the head bar's midpoint standing for the face centre. Those two
+are stated approximations, and the crate doc says so. **Whether its readings are accurate was not
+judged in M42** (decision 3): no face-tape or foot-spray test stands behind any number, in the user's
+words "I can take a look at it after."
+
+**It read 0 of the 5 grid clips, at its starting values and at every tuning the plan's brackets allow,
+so no constant moved** (the plan's P13 finding has the runs). `IMG_2889`, `IMG_2891` and `IMG_2892`
+refuse with `NoShaft`, `IMG_2893` and `IMG_2894` with `NoContact`, and each refusal follows a wrong
+ball. The replay's ball is an ellipse wider than tall, 1.35 to 1.47 by its bounding box, which fails
+the ball stage's fixed `ASPECT`, and the longest chain of still white discs is always a mark of the
+screen's own, a letter of the name banner or a digit of the grid. **It is wired in regardless, with no
+go or no-go** (decision 9), so today every clip's shot holds the grid's numbers with its offset
+`misread`. A forced-ball diagnostic got no further (0 read, and one five-constant combination reading
+one clip at a −47.5 mm nothing should trust): the club head merges with the ball over the contact
+frames. A reader that works needs a ball stage that accepts the ellipse and either confines itself to
+the replay panel or prefers a chain that ends, and a head stage that survives the merge. Those are new
+stages, which M42 recorded and did not build, and `read-impact --review` wrote what the reader saw to
+`data/raw/impact-review/` for the user's later look.
+
+**The reader has no version key.** A current stored shot is `cached` on its parser version alone, so
+when `crates/impact` is tuned later a shot already stored keeps its old answer until `golf-lab
+import-video --force` reads the clip again. Conversely, a re-read after a `SCREEN_PARSER_VERSION` bump
+reads the PNG, which holds no replay, so it carries what the older read's replay gave
+(`shot::carry_impact_video`) rather than turning a clip's shot into a still's.
+
+What the plan left open, as the crate decided it (each is in the module it names):
+
+- **`frame` and `component`.** Coordinates are continuous, pixel `(i, j)`'s centre at `(i + 0.5, j +
+  0.5)`. A component's `length` and `width` are the spread of its pixel centres' projections plus one
+  pixel, so a straight run of n pixels measures n. A median of an even count is the mean of the middle
+  two. Call 12's fixed numbers are private constants in `ball` (`ASPECT`, `FILL`, `CHAIN_STEP`,
+  `SEARCH_SIDE`), and only its tunables are `pub const`s in `lib.rs`.
+- **`ball`.** A chain's step is measured against the diameter of the candidate joining it, and of two
+  predecessors on equally long chains the nearer continues. `find_ball` and `Ball` are public where
+  call 12 said crate-private, because `tests/ball.rs` is an integration test and `read-impact` rings
+  what it chose on a refused clip's review image.
+- **`shaft`.** Shafts at both head ends are no shaft: taking the nearer join would be a guessed sign,
+  so a guessed toe is refused as a guessed letter is. The nearest earlier frame with a head, and only
+  that one, is asked when the contact frame has no shaft, and it lends its heel and not its geometry:
+  the heel is carried by the sign of the two heads' axis dot product, and axes at right angles carry
+  nothing.
+- **The rest.** Of two head candidates at one distance, the first a row-major scan meets. The disc
+  taken out of the light mask is the pixels whose centres lie within 0.55·D. A distance exactly at
+  `CONTACT_MAX_DISTANCE`·D is contact. A rounded −0.0 is written 0.0, an offset of exactly ±60.0 is a
+  reading, and `OutOfRange` carries the rounded offset. The refusals' sentences are lower case and unpunctuated, for the warning above and `read-impact`'s
+  `<name>: not read - <sentence>`. A frame whose buffer is the wrong size panics, as the caller's bug.
+
+### §5.2 and `CENTERED_RADIUS_MM`
+
+The M37 addendum said M42 "starts with a feasibility spike on real Live Photos" and "revises
+`CENTERED_RADIUS_MM` from the reader's measured error". **Neither happened.** No spike ran, since the
+user chose to build and try the reader instead. With no ground truth there is no measured error to
+revise from (decision 3), so **`CENTERED_RADIUS_MM` stays 10 mm and provisional** (call 16), and its doc
+says so. Strike location is still graded only from a measured offset, and with no stored shot holding
+one and nothing imported into `data/processed/` by M42 (call 17), it is still absent on real data, as
+that addendum's *What real data shows* has it.
+
+### What this does not change
+
+- `hd_golf`'s declaration, its profile and every shot read under it;
+- clauses 1 and 3–10, and §5's criteria: a clip's offset, once read, is graded by the M37 rule as it
+  stands;
+- the 13 stored shots, and `data/processed/`, which M42 wrote nothing into;
+- `ANALYSIS_VERSION`, `SCREEN_PARSER_VERSION` and `CAREER_VERSION`, and every committed vector, with
+  three hand-worked screen vectors added beside them.

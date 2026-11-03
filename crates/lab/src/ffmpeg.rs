@@ -31,6 +31,12 @@
 //!
 //! **No `camera_id` on [`AudioClip`]**, where Python's carries one: `audio_for` passes the role in
 //! and never reads it back, and nothing else here decodes audio.
+//!
+//! **And one clip's frames, with no twin** (M42 P13): [`Ffmpeg::decode_frames`] hands
+//! `crates/impact` a Live Photo clip's frames as RGB, through the same finder, for `golf-lab
+//! read-impact` and, from P14, the grid read off a clip. No Python ever decoded a frame for the
+//! replay, so its arguments are measured on the five grid clips rather than copied, and its doc
+//! says which two flags that measurement added.
 
 use std::fmt;
 use std::path::{Path, PathBuf};
@@ -264,6 +270,60 @@ impl Ffmpeg {
         Ok(first_pts_time(&output.stderr))
     }
 
+    /// Every frame of a clip's first video stream, as RGB, in decode order: what `crates/impact`
+    /// reads (the M42 plan's P13, no Python twin). `width` scales each frame to that many columns,
+    /// the height following to keep the aspect (`scale=W:-2`, so an even height); `None` keeps the
+    /// clip's own size, for P14's grid frame. The clip's rotation is applied, as ffmpeg applies it
+    /// by default, so a portrait Live Photo's frames come out portrait.
+    ///
+    /// **Two flags past the plan's argument list, and why.** `-fps_mode passthrough` hands back each
+    /// decoded frame once: without it ffmpeg resamples to a constant rate, and on the two clips
+    /// whose stream claims 600 fps it duplicated two frames each (38 for `IMG_2889`'s 36, 33 for
+    /// `IMG_2893`'s 31; the plan's P13 findings), which would shift every frame index after the
+    /// first copy and give the ball chain a frame that is not one. `-enc_time_base demux` keeps the
+    /// stream's 1/600 time base: passthrough alone rounds two frames of those clips onto one
+    /// timestamp and says so on stderr at error level, though every frame still arrives. With both,
+    /// all five grid clips decode to their container's frame count with nothing on stderr.
+    pub fn decode_frames(
+        &self,
+        clip: &Path,
+        width: Option<u32>,
+    ) -> Result<Vec<impact::Frame>, String> {
+        if !clip.exists() {
+            return Err(format!("Video file not found: {}", clip.display()));
+        }
+        let mut command = Command::new(&self.path);
+        command
+            .args(["-hide_banner", "-nostdin", "-loglevel", "error", "-i"])
+            .arg(clip)
+            .args([
+                "-map",
+                "0:v:0",
+                "-fps_mode",
+                "passthrough",
+                "-enc_time_base",
+                "demux",
+            ]);
+        if let Some(width) = width {
+            command.args(["-vf", &format!("scale={width}:-2")]);
+        }
+        command.args(["-f", "image2pipe", "-vcodec", "ppm", "-"]);
+        let output = self.run(&mut command).map_err(|error| error.to_string())?;
+        if !output.status.success() {
+            return Err(format!(
+                "ffmpeg could not decode the video of {}: {}",
+                clip.display(),
+                stderr_text(&output)
+            ));
+        }
+        parse_ppm_stream(&output.stdout).map_err(|problem| {
+            format!(
+                "ffmpeg's frames of {} would not parse: {problem}",
+                clip.display()
+            )
+        })
+    }
+
     /// Run one ffmpeg command to completion, both streams captured, as `subprocess.run` with
     /// `capture_output=True` does. A binary that cannot be started is an `OSError` in Python too.
     fn run(&self, command: &mut Command) -> Result<Output, AudioError> {
@@ -271,6 +331,81 @@ impl Ffmpeg {
             AudioError::Failed(format!("could not run {}: {error}", self.path.display()))
         })
     }
+}
+
+/// A stream of binary PPM (`P6`) images, one after another, as `-f image2pipe -vcodec ppm` writes
+/// them: each a header (`P6`, width, height and the largest sample, separated by whitespace, with
+/// `#` comments allowed between them as the format allows) then one whitespace byte and `width ×
+/// height × 3` bytes of red, green and blue. Each header is read for its own size rather than the
+/// first one trusted. Only a largest sample of 255 is accepted: anything else is two bytes a sample
+/// or a scale the reader's thresholds were not set on, and ffmpeg's `ppm` encoder writes 255 for
+/// every frame it hands back here.
+pub(crate) fn parse_ppm_stream(mut bytes: &[u8]) -> Result<Vec<impact::Frame>, String> {
+    let mut frames = Vec::new();
+    while !bytes.is_empty() {
+        let index = frames.len();
+        let at = |problem: &str| format!("frame {index}: {problem}");
+        let Some(rest) = bytes.strip_prefix(b"P6") else {
+            return Err(at("no P6 magic where a frame should start"));
+        };
+        bytes = rest;
+        let mut fields = [0_usize; 3];
+        for (slot, name) in fields.iter_mut().zip(["width", "height", "largest sample"]) {
+            let (value, rest) =
+                header_number(bytes).ok_or_else(|| at(&format!("no {name} in the header")))?;
+            *slot = value;
+            bytes = rest;
+        }
+        let [width, height, largest] = fields;
+        if largest != 255 {
+            return Err(at(&format!(
+                "largest sample {largest}, where 255 was expected"
+            )));
+        }
+        // Exactly one whitespace byte ends the header; the raster may begin with any byte at all.
+        match bytes.split_first() {
+            Some((byte, rest)) if byte.is_ascii_whitespace() => bytes = rest,
+            _ => return Err(at("no whitespace after the header")),
+        }
+        let size = width
+            .checked_mul(height)
+            .and_then(|n| n.checked_mul(3))
+            .ok_or_else(|| at(&format!("{width} × {height} pixels overflow")))?;
+        if bytes.len() < size {
+            return Err(at(&format!(
+                "{} bytes of raster for {width} × {height} pixels, which need {size}",
+                bytes.len()
+            )));
+        }
+        let (raster, rest) = bytes.split_at(size);
+        frames.push(impact::Frame {
+            width,
+            height,
+            rgb: raster.to_vec(),
+        });
+        bytes = rest;
+    }
+    Ok(frames)
+}
+
+/// One decimal header field after any whitespace and `#` comments, and what follows it.
+fn header_number(mut bytes: &[u8]) -> Option<(usize, &[u8])> {
+    loop {
+        match bytes.first()? {
+            byte if byte.is_ascii_whitespace() => bytes = &bytes[1..],
+            b'#' => {
+                let end = bytes.iter().position(|&b| b == b'\n' || b == b'\r')?;
+                bytes = &bytes[end..];
+            }
+            _ => break,
+        }
+    }
+    let digits = bytes.iter().take_while(|b| b.is_ascii_digit()).count();
+    if digits == 0 {
+        return None;
+    }
+    let value = std::str::from_utf8(&bytes[..digits]).ok()?.parse().ok()?;
+    Some((value, &bytes[digits..]))
 }
 
 /// `stderr.decode("utf-8", errors="replace").strip()`.
@@ -402,6 +537,87 @@ mod tests {
             assert!(message.starts_with("could not run "), "{message}");
             assert!(message.contains("no-ffmpeg-here.exe"), "{message}");
         }
+    }
+
+    /// One `P6` image as ffmpeg writes it: `P6\n<w> <h>\n255\n` and the raster.
+    fn ppm(width: usize, height: usize, rgb: &[u8]) -> Vec<u8> {
+        let mut bytes = format!("P6\n{width} {height}\n255\n").into_bytes();
+        bytes.extend_from_slice(rgb);
+        bytes
+    }
+
+    #[test]
+    fn a_ppm_stream_is_split_into_its_frames_each_by_its_own_header() {
+        // Two frames of different sizes, so the second's header is read and not the first's
+        // reused. The rasters open with bytes that look like header text (whitespace, `#`, a
+        // digit), which a parser skipping whitespace after the header would eat.
+        let first = [b'\n', b'#', b'7', 0, 255, 9];
+        let second: Vec<u8> = (0..36).collect();
+        let mut stream = ppm(2, 1, &first);
+        stream.extend(ppm(3, 4, &second));
+        let frames = parse_ppm_stream(&stream).unwrap();
+        assert_eq!(
+            frames,
+            vec![
+                impact::Frame {
+                    width: 2,
+                    height: 1,
+                    rgb: first.to_vec(),
+                },
+                impact::Frame {
+                    width: 3,
+                    height: 4,
+                    rgb: second,
+                },
+            ]
+        );
+        assert!(frames.iter().all(impact::Frame::is_well_formed));
+        assert_eq!(
+            parse_ppm_stream(b"").unwrap(),
+            vec![],
+            "no output, no frames"
+        );
+    }
+
+    #[test]
+    fn a_ppm_header_may_carry_comments_and_any_whitespace() {
+        let mut stream = b"P6 # ffmpeg writes none, the format allows them\n1\t1\r\n255 ".to_vec();
+        stream.extend([1, 2, 3]);
+        let frames = parse_ppm_stream(&stream).unwrap();
+        assert_eq!(frames.len(), 1);
+        assert_eq!(frames[0].rgb, [1, 2, 3]);
+    }
+
+    #[test]
+    fn a_broken_ppm_stream_is_refused_naming_the_frame() {
+        let whole = ppm(1, 1, &[1, 2, 3]);
+        let mut short = whole.clone();
+        short.extend(ppm(2, 2, &[0; 11]));
+        let cases: [(&[u8], &str); 5] = [
+            (b"P5\n1 1\n255\n\0", "frame 0: no P6 magic"),
+            (b"P6\n1 x\n255\n", "frame 0: no height"),
+            (
+                b"P6\n1 1\n65535\n\0\0\0\0\0\0",
+                "frame 0: largest sample 65535",
+            ),
+            (b"P6\n1 1\n255", "frame 0: no whitespace after the header"),
+            (
+                &short,
+                "frame 1: 11 bytes of raster for 2 × 2 pixels, which need 12",
+            ),
+        ];
+        for (stream, expected) in cases {
+            let problem = parse_ppm_stream(stream).unwrap_err();
+            assert!(problem.starts_with(expected), "{problem}");
+        }
+    }
+
+    #[test]
+    fn a_clip_that_is_not_there_is_refused_before_ffmpeg_is_run() {
+        let problem = Ffmpeg::at("no-such-ffmpeg")
+            .decode_frames(Path::new("no-such-clip.MOV"), Some(960))
+            .unwrap_err();
+        assert_eq!(problem, "Video file not found: no-such-clip.MOV");
     }
 
     #[test]

@@ -36,7 +36,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use contracts::intent::PracticeMode;
-use contracts::shot::ShotData;
+use contracts::shot::{ShotData, WRITTEN_WHEN_SET};
 use contracts::shot_result::ShotResult;
 use contracts::unscored::{UnscoredReason, UNSCORED_REASONS};
 use serde_json::{json, Value};
@@ -100,12 +100,16 @@ fn property_names(document: &Value, title: &str) -> BTreeSet<String> {
 }
 
 /// The keys `ShotData` and `ShotProvenance` write, read off a serialized instance rather than
-/// listed, so the struct is the only list.
+/// listed, so the struct is the only list — joined with [`WRITTEN_WHEN_SET`].
 ///
-/// A minimal shot is enough because neither struct skips a key at its default: every `Option` is
-/// written as `null` and every map as `{}`, which is why each committed corpus answer carries all
-/// ten of M32's keys. Were a field ever to gain a `skip_serializing_if`, this would see a schema
-/// property Rust does not write, and that is the right question to be asked then.
+/// A minimal shot writes every key but two: every other `Option` is written as `null` and every map
+/// as `{}`, which is why each committed corpus answer carries all ten of M32's keys. The two are
+/// M42's spin readings, the first fields to gain a `skip_serializing_if` — the question this
+/// paragraph used to say would be "the right question to be asked then". The M42 plan's call 1 is
+/// the answer: skipped at `None` so that no committed vector gains a key, and **described in the
+/// schema all the same**, because a schema says which keys a shot may carry, and a Full Swing shot
+/// carries both. So the set Rust writes is the default serialization's keys ∪ `WRITTEN_WHEN_SET`,
+/// and that constant's own test holds it to exactly the skipped fields. [M42 P1]
 fn rust_keys() -> (BTreeSet<String>, BTreeSet<String>) {
     let shot: ShotData = serde_json::from_value(json!({
         "shot_id": "s",
@@ -123,7 +127,9 @@ fn rust_keys() -> (BTreeSet<String>, BTreeSet<String>) {
             .cloned()
             .collect()
     };
-    (keys(&written), keys(&written["provenance"]))
+    let mut shot_keys = keys(&written);
+    shot_keys.extend(WRITTEN_WHEN_SET.iter().map(|key| key.to_string()));
+    (shot_keys, keys(&written["provenance"]))
 }
 
 fn wire_name(reason: UnscoredReason) -> String {

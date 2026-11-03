@@ -546,3 +546,152 @@ would. Three values moved, all declared: the M34 addendum's two label fixes and 
 
 **Not changed**: the parser, the forked `profiles.json` and the tie rule are M34's, and the frozen
 Python reader stays for the frozen server until M40.
+
+## Addendum (2026-11-02, M42): the second profile, four opt-in parser rules, the glyph's colour, and no version bump
+
+**M42**, in Rust only, in [the M42 plan](../plans/m42-full-swing.md). Full Swing's grid screen is
+the second layout `crates/screen` reads, and it needed more than a profile. Read as `hd_golf`, a photo
+of it came back wrong rather than blank, `launch_angle` holding the ball direction and `smash_factor`
+holding the apex. What the device declares, why its club speed counts here, and the impact replay are
+[ADR-034's M42 addendum](034-shot-first-phone-first.md#addendum-2026-11-02-m42-full-swing-is-the-second-device-a-value-off-its-impact-video-counts-as-printed-and-the-reader-has-read-none-of-its-clips-yet).
+Frozen Python gains none of this (ADR-035 clause 4), and its copy of `profiles.json` keeps `hd_golf`
+alone.
+
+### The `full_swing` profile
+
+`crates/screen/profiles.json`'s second entry, whose `_comment` says why it is what it is, and which
+**reads the grid layout and no other**: the club-view layout (`IMG_2888`) is kept under `data/raw/` and
+read by nothing. Its labels carry their units (`Carry Yd`, `Path Deg`), and aliases without the unit cover the
+reads that drop it. `value_span_ratio` is 6.0 where `hd_golf`'s default is 3.5, because three of its
+labels are 17 px tall and their values centre 3.62 to 3.85 label heights below them. Path and face
+print their own sign, a minus being left, which for a right-handed golfer is `ShotData`'s convention,
+so neither tile has a sign rule. `crates/screen/src/parser.rs`'s `full_swing_uses_every_rule` holds
+each rule below to the tile it belongs on, because a profile's load is tolerant of an unknown key and
+a misspelt one would otherwise read as absent. `validate` gained the ranges the profile first reaches:
+`backspin` 0 to 15000, `sidespin` −6000 to 6000, and `apex_height` 0 to 80 yards, which it sees after
+the conversion below.
+
+`crates/screen/tests/profile_fork.rs` now declares **a whole device as well as a field**: `full_swing`
+is in `DECLARED_DEVICES`, taken out of the comparison with the frozen copy, and must be absent from
+that copy. Rust's refusal of an unknown profile now lists `full_swing, hd_golf`. Frozen Python's still
+lists `hd_golf`, and no vector records either.
+
+### `TextBox.rgb`, and the lit rule (`lit_sign`)
+
+Each tile prints both of a pair's letters (`L` and `R` over ball direction, `D` and `F` over sidespin)
+and lights one yellow, so the sign is a colour. `TextBox` gains an optional `rgb`: **the mean red, green
+and blue (0–255) of the brightest quarter of the box's pixels**, in the image the box's coordinates are
+in. `crates/ocr` fills it for each box, and Vision's boxes must fill it by the same definition (M38).
+`screen::parser::is_lit` decides from it, in `screen` so both hosts share one rule: true when `min(r,
+g)` is at least `LIT_MIN_BRIGHTNESS` (120.0) and blue is at most `LIT_BLUE_RATIO` (0.7) of it. On the
+six photos lit letters measure 0.32 to 0.48 and unlit ones 0.89 to 0.98, on the clips' frames 0.26 to
+0.39 and 0.86 to 0.96, and white digits sit with the unlit. A letter box is a value box of the tile's cell whose text, stripped and upper-cased, is exactly
+one of the pair's tokens.
+
+| The pair's letter boxes in the cell | The sign |
+|---|---|
+| one letter, lit | that letter's |
+| one letter, unlit | the other letter's |
+| both letters, exactly one lit | the lit one's |
+| two boxes of one letter | one letter if they agree; if not, unknown, and the sign is withheld |
+| both lit, both unlit, neither detected, or a letter box with no `rgb` | **no value**, and the warning `{label}: neither {A} nor {B} could be read as lit - sign unknown, not stored` |
+
+**A sign that cannot be decided is withheld, never stored unsigned**: a magnitude stored without its
+sign on a signed field is a wrong number half the time (ADR-010 §2). So the `sign_tokens` branch's
+"storing the magnitude as printed" is not used here. A magnitude of exactly 0 needs no sign and is
+stored as `0.0` before any letter is looked at. The magnitude discards a printed `-` or `+`, the tile
+stays in `fields_present`, and `raw_fields` keeps the cell's text with its letters. The rule's key is
+`lit_sign` (a list of two `LitToken`s), and `DeviceProfile::check` refuses at load a tile that sets it
+without being a stored number, beside `sign_tokens` or `printed_sign`, or without two different tokens,
+stripped and upper-case, signed 1 and −1.
+
+### The three other rules, each opt-in
+
+- **A box holding two merged labels is split** (`"split_merged_labels": true`, on the profile). The
+  OCR sometimes returns two adjacent labels as one box (`CLUBSPEEDMPHBALLSPEEDMPH`). Before labels are
+  assigned, a box scoring below `LABEL_MATCH_THRESHOLD` against every field is tried at every cut of
+  its despaced text. A cut qualifies when both halves reach the threshold and name different fields,
+  and the highest `min(left, right)` wins, ties to the smallest cut. The widths are proportional, which
+  is close enough because the cut is the boundary between two columns and a value is placed by its
+  centre. A half's best field is `field_for`'s, later-wins tie included, so a half tied between two
+  fields names the later one, as a whole box does. Two-way splits only. It costs about 10 ms against a
+  2 to 3 minute read. **The orientation vote does not split**: it scores the boxes as returned, so each
+  merged box hides two labels from it, and `IMG_2891`'s two merges score it 0.667, above
+  `GOOD_ENOUGH_LABEL_RATIO` (0.6). A third merge would make the vote try all four turns.
+- **A tile printed twice must agree with itself** (`"printed_twice": true`, on `Total Yd`). The field
+  takes up to two label boxes, two assignments differing only in which box is which are one assignment,
+  and both cells are read. Two equal numbers store the value; two different numbers store nothing, with
+  the warning `{label}: printed twice as {a!r} and {b!r} - not stored`; one number alone is stored. On
+  agreement the top cell's warnings are kept, on one number that cell's, and when neither gives a number
+  each cell's in turn with a repeated line dropped. `raw_fields` holds the two cells' texts joined with
+  `" | "`, top first, even where one is empty. `score`'s value coverage now counts **fields** with text,
+  not cells, so a doubled tile counts once and every other tile as it did. `DeviceProfile::check`
+  refuses the key at load on anything but a stored number tile, and `profiles()` panics on that refusal.
+- **A value printed in feet is stored in yards** (`"printed_unit": "feet"`, on `Apex Ft`).
+  `PrintedUnit` has that one variant, and `to_yards` stores `printed / 3.0`, unrounded, with
+  `raw_fields` keeping the printed text. **It divides**, and any oracle must too: `85.2 / 3.0` is
+  `28.400000000000002`, where `85.2 * (1.0 / 3.0)` is `28.4`. The check allows it only on a number tile
+  whose target `ShotData` holds in yards, and `STORED_IN_YARDS` is pinned to the schema's `yards`
+  descriptions, so a yard field added later fails a test rather than being refused silently. An unknown
+  unit fails the profile's parse, where an unknown key does not, because a unit read as none would
+  store feet as yards.
+
+### The quad finder's fix, and where it departs from its twin
+
+`crates/ocr/src/quad.rs::find_screen_quad` refuses a candidate whose ordered corners repeat one. On
+`IMG_2893` and `IMG_2894` a convex, plausibly sized four-gon had `order_quad`'s sum and difference rule
+assign one corner to two roles, the "rectified" image was a sliver, and no text at all was recognized.
+The contour's rotated box stands in, with all the labels read. **The reader now departs from frozen
+Python's `find_screen_quad`**, which keeps the defect (ADR-035 clause 4), and the module doc is the
+record. A refusal only narrows what was accepted, so a photo whose quad ordered cleanly cannot move,
+and the OCR gate on the 13 bay photos says none did.
+
+### No `SCREEN_PARSER_VERSION` bump
+
+The key's rule is "bump whenever a re-read of the same photo could produce a different shot", and none
+can (call 3). Each rule is opt-in and only the new profile opts in, `hd_golf`'s entry in `profiles.json`
+is byte-unchanged, the quad fix touches only a quad that repeats a corner, and no stored shot names
+`full_swing`. So it stays at 1, `crates/contracts/src/shot.rs`'s ledger says why under its first entry,
+and **no committed screen vector moved**. Three hand-worked ones were added
+([CONFORMANCE §2](../CONFORMANCE.md)).
+
+### What it reads: no wrong value, on the stills and on the clips
+
+The rule is ADR-010 §2's, and [two gates beside the OCR gate](../CONFORMANCE.md#the-full-swing-gates-photo-and-clip--no-family-of-their-own)
+hold it.
+
+- **The six stills read 71 of 72 values, with none wrong and no tuning.** The one withheld is the
+  printed-twice rule working: on `IMG_2892` the OCR returned a stray `85TAS` box over the header's
+  `82`, so its first number was 85, the two copies disagree, and without the rule a wrong 85 would be
+  stored.
+- **The grid read off a clip's frame is read by the still's reader.** A clip imports a shot of its own
+  (ADR-034's addendum, decision 7), so one frame, written as a PNG, goes through the same `PhotoReader`
+  and `screen::read` a still does, with the profile, the rules and the validator unchanged. The PNG is
+  the shot's photo, with its path and digest, and its mtime is set to the clip's, which makes the clip's
+  time the shot's. The decode and the encoding are deterministic, so a clip imported twice lands on one
+  entry. Every frame is held in memory while the rule runs.
+- **The frame rule kept is the sharpest**: `impact::sharpest_frame`, the largest sum of squared
+  luminance differences to the right and lower neighbours, ties to the earliest
+  (`golf_lab::shot::GRID_FRAME`). Measured on the five grid clips it reads **60 of 60 with none wrong**,
+  where the middle frame reads 59, its one gap being a sidespin sign withheld because that frame returned
+  no `D` or `F`. `GridFrame::Middle` stays runnable. No frame either rule chose showed the previous shot's
+  numbers, which was the worry, and no profile key was tuned. On those five clips the grid reads one value
+  their stills withhold, because `IMG_2892`'s stray box is in neither of its frames.
+
+### Left as later choices, each measured and none reaching a wrong value
+
+- **Where a rule withholds, `needs_review` stays false and the confidence does not notice.**
+  `validate.rs` sets the flag only on a failed check or low confidence, as for a tie. `score`
+  counts a stored field as read when its cell holds text, so `full-swing-withheld` withholds two values
+  and blanks a third at 0.999. The record's only signals are the warnings and `tile_refusals`.
+- **`tiles::judged` reads a joined or a signed cell as text.** Two blank cells of a printed-twice tile
+  (`" | "`, `"--- | ---"`) are judged `misread` where one cell would be `printed_blank`, and a withheld
+  sign's detail says no value could be read when only its sign could not. Full Swing printed a total on
+  every photo, so the first gap is reached by no photo, and neither detail is in a vector, so changing
+  them re-records nothing.
+- **`SHOT DATA` lands in the apex cell on three photos**, because `APEX FT` is the bottom-left tile and
+  no next row bounds it. The value is unharmed, since the first number wins, but a blank apex over the
+  title would read `--- SHOT DATA`, which is no blank marker: `misread` where `printed_blank` is right. A
+  `value_span_ratio` in [4.0, 4.8] would leave the title out on all six photos.
+- **A wording edge in the word rule**: its `sign unknown, storing the magnitude as printed` would say "as
+  printed" on a tile that also converts its unit. No shipped tile has both rules.

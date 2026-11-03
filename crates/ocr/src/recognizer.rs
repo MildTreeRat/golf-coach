@@ -15,7 +15,10 @@
 //! 4. [`crate::rec::recognize`], which sorts and batches the crops itself;
 //! 5. a reading kept when its score is at least the manifest's `score_thresh`, and its box turned
 //!    into a [`TextBox`] as `paddle.py`'s `_to_text_box` does: the polygon's bounding rectangle in
-//!    `f64`, the score as the confidence, and a reading with no text dropped.
+//!    `f64`, the score as the confidence, and a reading with no text dropped;
+//! 6. each kept box's glyph colour measured on the image it was found in ([`glyph_rgb`]), which
+//!    no step of frozen Python's has (M42 P2): Full Swing lights one letter of a sign pair, and
+//!    only the colour says which.
 //!
 //! # What it does not do: D5's two skipped models
 //!
@@ -89,11 +92,17 @@ pub fn recognize(models: &mut Models, image: &RgbImage) -> Result<Vec<TextBox>, 
         .zip(readings)
         .filter(|(_, reading)| reading.score >= threshold)
         .filter_map(|(found, reading)| text_box(found, reading))
+        .map(|mut found| {
+            found.rgb = glyph_rgb(image, found.x, found.y, found.width, found.height);
+            found
+        })
         .collect())
 }
 
 /// `paddle.py`'s `_to_text_box`: the polygon's bounding rectangle, and the reading's score as the
-/// confidence; `None` for a reading with no text, which the adapter drops.
+/// confidence; `None` for a reading with no text, which the adapter drops. The adapter measures no
+/// colour, so `rgb` is left `None` here and [`recognize`] fills it from the image, which
+/// `_to_text_box`'s arguments do not include.
 pub fn text_box(found: &DetBox, reading: Recognized) -> Option<TextBox> {
     if reading.text.is_empty() {
         return None;
@@ -109,7 +118,57 @@ pub fn text_box(found: &DetBox, reading: Recognized) -> Option<TextBox> {
         width: right - left,
         height: bottom - top,
         confidence: reading.score,
+        rgb: None,
     })
+}
+
+/// A box's glyph colour, [`TextBox::rgb`]'s definition exactly (the M42 plan's call 4): the mean
+/// red, green and blue of the brightest quarter of the box's pixels in `image`. No Python twin:
+/// frozen Python's boxes carry no colour. [M42 P2]
+///
+/// The box is clipped to the image first (`x0 = floor(max(x, 0))`, `x1 = min(ceil(x + width),
+/// W)`, likewise y), so a box the detector let run off an edge is measured on what is inside it,
+/// and one wholly outside, or with no width or height, holds no pixel and is `None`. The pixels are
+/// ranked by `r + g + b` ascending with a stable sort over row-major order (top row first, left to
+/// right), so two pixels equally bright keep that order and the answer is fixed; the brightest
+/// quarter is the ranks from `n * 3 / 4` (integer division) to the end, never empty once `n` is at
+/// least one.
+///
+/// Why the brightest quarter and not the mean: a letter's strokes cover a fraction of its box and
+/// the dark ground the rest, so a box's mean is mostly the ground's. On Full Swing's grid photos
+/// the strokes filled at least a quarter of every sign letter's box, and the brightest quarter
+/// measured a lit letter at blue ÷ min(red, green) 0.32–0.47 and an unlit one at 0.94–0.98 (the
+/// M42 plan's finding 4). The sums are of integers below 2^53, so they are exact in `f64` and the
+/// order they are added in cannot move a bit.
+pub fn glyph_rgb(image: &RgbImage, x: f64, y: f64, width: f64, height: f64) -> Option<[f64; 3]> {
+    let (x0, x1) = clipped(x, width, image.width())?;
+    let (y0, y1) = clipped(y, height, image.height())?;
+    let mut pixels: Vec<[u8; 3]> = (y0..y1)
+        .flat_map(|row| (x0..x1).map(move |column| image.get_pixel(column, row).0))
+        .collect();
+    // `sort_by_key` is stable, which is the tie rule.
+    pixels.sort_by_key(|[r, g, b]| u32::from(*r) + u32::from(*g) + u32::from(*b));
+    let brightest = &pixels[pixels.len() * 3 / 4..];
+    let mut sum = [0.0f64; 3];
+    for pixel in brightest {
+        for (total, channel) in sum.iter_mut().zip(pixel) {
+            *total += f64::from(*channel);
+        }
+    }
+    let n = brightest.len() as f64;
+    Some(sum.map(|total| total / n))
+}
+
+/// One axis of a box clipped to an image `extent` pixels long, as `[start, end)` pixel indices:
+/// `floor(max(start, 0))` to `min(ceil(start + length), extent)`, or `None` when that is empty.
+fn clipped(start: f64, length: f64, extent: u32) -> Option<(u32, u32)> {
+    let low = start.max(0.0).floor();
+    let high = (start + length).ceil().min(f64::from(extent));
+    if low >= high {
+        return None;
+    }
+    // Both are whole numbers in `[0, extent]` here, so the casts are exact.
+    Some((low as u32, high as u32))
 }
 
 fn min(values: &[f64; 4]) -> f64 {
@@ -144,8 +203,108 @@ mod tests {
                 width: 80.0,
                 height: 24.0,
                 confidence: 0.75,
+                rgb: None,
             }
         );
         assert_eq!(super::text_box(&found, reading("")), None);
+    }
+
+    use image::Rgb;
+
+    fn filled(width: u32, height: u32, colour: [u8; 3]) -> RgbImage {
+        RgbImage::from_pixel(width, height, Rgb(colour))
+    }
+
+    /// A lit letter as Full Swing prints one: thin yellow strokes on a dark tile, a darker
+    /// antialiased fringe, and white text just past the box's right edge. The strokes fill 252 of
+    /// the box's 800 pixels, more than its brightest quarter, so the quarter is all stroke; the
+    /// box's plain mean would be mostly the ground's.
+    #[test]
+    fn a_dark_box_holding_yellow_strokes_reads_yellow() {
+        let yellow = [241, 223, 91];
+        let mut image = filled(60, 30, [30, 30, 35]);
+        for y in 6..24 {
+            for x in 14..20 {
+                image.put_pixel(x, y, Rgb(yellow));
+            }
+            image.put_pixel(20, y, Rgb([120, 110, 45]));
+        }
+        for y in 6..12 {
+            for x in 20..44 {
+                image.put_pixel(x, y, Rgb(yellow));
+            }
+        }
+        // Column 50 is `ceil(10 + 40)`, the first one past the box.
+        for y in 0..30 {
+            image.put_pixel(50, y, Rgb([255, 255, 255]));
+        }
+        let [r, g, b] = glyph_rgb(&image, 10.0, 5.0, 40.0, 20.0).unwrap();
+        for (got, want) in [r, g, b].iter().zip(yellow) {
+            assert!((got - f64::from(want)).abs() <= 1.0, "{:?}", [r, g, b]);
+        }
+        // What the lit rule (call 4) will read it as: blue well under the smaller of red and green.
+        assert!(b / r.min(g) < 0.47);
+    }
+
+    #[test]
+    fn a_box_with_no_pixel_in_the_image_has_no_colour() {
+        let image = filled(10, 10, [200, 200, 200]);
+        for (x, y, width, height) in [
+            (10.0, 0.0, 5.0, 5.0), // right of the image
+            (-8.0, 0.0, 5.0, 5.0), // left of it, ending at -3
+            (0.0, 12.0, 5.0, 5.0), // below it
+            (0.0, -6.0, 5.0, 6.0), // above it, ending at row 0 exclusive
+            (3.0, 3.0, 0.0, 4.0),  // no width
+            (3.0, 3.0, 4.0, -1.0), // a negative height
+        ] {
+            assert_eq!(
+                glyph_rgb(&image, x, y, width, height),
+                None,
+                "{:?}",
+                (x, y, width, height)
+            );
+        }
+        // One pixel is a quarter of itself.
+        assert_eq!(glyph_rgb(&image, 9.0, 9.0, 1.0, 1.0), Some([200.0; 3]));
+    }
+
+    /// A box run off the top-left corner: `floor(max(-3.5, 0)) = 0` to `min(ceil(3.5), 10) = 4`
+    /// across and `floor(6.5) = 6` to `min(ceil(16.5), 10) = 10` down, sixteen pixels graded 0 to
+    /// 150 by 10. Everything outside them is brighter than all sixteen, so a clip one pixel wider
+    /// in any direction would move the answer off the brightest four's mean, 135.
+    #[test]
+    fn a_box_straddling_the_edge_is_clipped_to_it() {
+        let mut image = filled(10, 10, [250, 250, 250]);
+        for y in 6..10 {
+            for x in 0..4 {
+                let level = u8::try_from(((y - 6) * 4 + x) * 10).unwrap();
+                image.put_pixel(x, y, Rgb([level; 3]));
+            }
+        }
+        assert_eq!(
+            glyph_rgb(&image, -3.5, 6.5, 7.0, 10.0),
+            Some([135.0, 135.0, 135.0])
+        );
+    }
+
+    /// Eight pixels all summing to 300: the brightest quarter is ranks 6 and 7, and a stable sort
+    /// over row-major order makes those the bottom row's last two, whose mean is pinned. Any other
+    /// order of equals answers something else.
+    #[test]
+    fn equally_bright_pixels_keep_their_row_major_order() {
+        let rows = [
+            [[100, 100, 100], [200, 50, 50], [50, 200, 50], [50, 50, 200]],
+            [[0, 150, 150], [150, 0, 150], [150, 150, 0], [30, 60, 210]],
+        ];
+        let mut image = filled(4, 2, [0, 0, 0]);
+        for (y, row) in (0u32..).zip(rows) {
+            for (x, pixel) in (0u32..).zip(row) {
+                image.put_pixel(x, y, Rgb(pixel));
+            }
+        }
+        assert_eq!(
+            glyph_rgb(&image, 0.0, 0.0, 4.0, 2.0),
+            Some([90.0, 105.0, 105.0])
+        );
     }
 }

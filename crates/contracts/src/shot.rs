@@ -152,7 +152,9 @@ impl Validate for ShotProvenance {
 ///   entry**: it never stamped a shot, it existed only to hold the shared code to the
 ///   Python-recorded vectors, and it went when M34 P10 re-recorded them
 ///   (`spec/declarations/screen-v1.json`). One version, not two, because nothing ever shipped
-///   between them.
+///   between them. M42 added the `full_swing` profile and four opt-in parser rules, none of which
+///   changes a read with `hd_golf`'s profile, so no entry: every stored shot's parse is as current
+///   as it was.
 pub const SCREEN_PARSER_VERSION: i64 = 1;
 
 /// Whether `shot`'s parse is as new as this build's screen parser — `false` means re-reading its
@@ -268,6 +270,24 @@ pub struct ShotData {
     #[serde(default)]
     pub carry_offline: Option<f64>,
 
+    // Added in M42, in Rust only, and written only when set: the M42 plan's call 1. M32's seven
+    // above are written as `null` on every shot, so every committed vector that serializes a shot
+    // carries them; a key added the same way would move the engine, shot, screen, storage and mcp
+    // families at once, and force three version bumps and three re-records for a shape change with
+    // no number in it. Skipped at `None`, no committed artifact gains a key, and every reader of an
+    // older shot (frozen Python's included, ADR-035 clause 4) reads `None` as it does for M32's.
+    // [`WRITTEN_WHEN_SET`] names them, for the tests that read the key set off a default shot. The
+    // precedent is M37 P3's `CorpusSwing::shot` and `shot_unscored`. Spin rate and axis are **not**
+    // computed from them: whether that is worth having is the user's to decide (the plan's
+    // decision 4), so a Full Swing shot holds these two and leaves `spin_rate` and `spin_axis` unset.
+    /// rpm, as printed (Full Swing's `BACKSPIN RPM`)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub backspin: Option<f64>,
+    /// rpm, + = fade, − = draw: Full Swing's `SIDESPIN RPM`, signed by which of its `D` and `F` is
+    /// lit
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sidespin: Option<f64>,
+
     /// Set only by sources that infer metrics (screen capture); `None` for direct feeds.
     #[serde(default)]
     pub provenance: Option<ShotProvenance>,
@@ -286,6 +306,18 @@ impl Validate for ShotData {
         nested("ShotData.provenance", self.provenance.as_ref())
     }
 }
+
+/// The `ShotData` keys written only when set, in the struct's order: M42's two spin readings
+/// (the M42 plan's call 1).
+///
+/// **A default serialization omits them**, where every other `Option` is written as `null`. So a
+/// test that reads `ShotData`'s key set off a serialized default shot (the struct as the only list,
+/// as `crates/contracts/tests/capability.rs` and `schemas.rs` and `golf-mcp`'s metric split do)
+/// must take the union with this, or it would find a declared field, a schema property or a metric
+/// that "is not a ShotData key". Skipping them is what keeps every committed vector unmoved and
+/// no version key bumped by a shape change that carries no number;
+/// `written_when_set_names_exactly_the_skipped_keys` holds this to the struct.
+pub const WRITTEN_WHEN_SET: [&str; 2] = ["backspin", "sidespin"];
 
 #[cfg(test)]
 mod tests {
@@ -389,6 +421,73 @@ mod tests {
                 "provenance.{key}"
             );
         }
+    }
+
+    /// A frozen-Python shot, and every Rust shot written before M42, reads with both spin readings
+    /// unset. [M42 P1]
+    #[test]
+    fn a_python_shaped_shot_reads_with_neither_spin_reading() {
+        let shot: ShotData = serde_json::from_str(PYTHON_SHAPED).expect("a frozen-Python shot");
+        assert_eq!((shot.backspin, shot.sidespin), (None, None));
+    }
+
+    /// Both set: read, written with both keys under their own names and signs, read back equal.
+    #[test]
+    fn a_shot_with_both_spin_readings_round_trips_with_both_written() {
+        let mut shot: ShotData = serde_json::from_str(ALL_TEN).unwrap();
+        shot.backspin = Some(9899.0);
+        shot.sidespin = Some(-4199.0);
+        let written = serde_json::to_value(&shot).expect("serialize");
+        assert_eq!(written["backspin"], serde_json::json!(9899.0));
+        assert_eq!(written["sidespin"], serde_json::json!(-4199.0));
+        let read_back: ShotData = serde_json::from_value(written).expect("read back");
+        assert_eq!(read_back, shot);
+    }
+
+    /// Neither set: neither key is written, not even as `null` — which is what keeps every committed
+    /// vector that serializes a shot byte-identical (the plan's call 1).
+    #[test]
+    fn a_shot_with_neither_spin_reading_writes_neither_key() {
+        let shot: ShotData = serde_json::from_str(ALL_TEN).unwrap();
+        let written = serde_json::to_value(&shot).expect("serialize");
+        let object = written.as_object().expect("an object");
+        for key in WRITTEN_WHEN_SET {
+            assert!(!object.contains_key(key), "{key} written while unset");
+        }
+        assert!(
+            object.contains_key("carry_offline"),
+            "M32's keys are still written as null"
+        );
+    }
+
+    /// [`WRITTEN_WHEN_SET`] is exactly the keys a shot writes with them set and omits with them
+    /// unset, read off two serializations rather than listed, so a third skipped field cannot join
+    /// the struct without joining the constant (and the tests that take the union with it).
+    #[test]
+    fn written_when_set_names_exactly_the_skipped_keys() {
+        let keys = |shot: &ShotData| -> Vec<String> {
+            serde_json::to_value(shot)
+                .expect("serialize")
+                .as_object()
+                .expect("an object")
+                .keys()
+                .cloned()
+                .collect()
+        };
+        let unset: ShotData = serde_json::from_str(PYTHON_SHAPED).unwrap();
+        let mut set = unset.clone();
+        set.backspin = Some(4236.0);
+        set.sidespin = Some(464.0);
+        let (with, without) = (keys(&set), keys(&unset));
+        let skipped: Vec<&str> = with
+            .iter()
+            .filter(|key| !without.contains(key))
+            .map(String::as_str)
+            .collect();
+        // `serde_json`'s map is sorted (no `preserve_order` in the workspace), and the two names
+        // sort in the struct's order, so the constant compares as it stands.
+        assert_eq!(skipped, WRITTEN_WHEN_SET);
+        assert!(without.iter().all(|key| with.contains(key)));
     }
 
     #[test]

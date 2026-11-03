@@ -18,8 +18,10 @@ use contracts::unscored::{UnscoredCheckpoint, UnscoredReason};
 use serde_json::Value;
 
 use screen::profile::load_profile;
-use screen::tile_refusals;
+use screen::{tile_refusals, IMPACT_VIDEO_MISREAD};
 
+/// The device of every shot a test below names by `id`. The two tests that walk every shot read
+/// each one's own device instead, because `hand/` holds Full Swing's too (M42 P10).
 const DEVICE: &str = "hd_golf";
 
 /// Every document and hand vector, by vector `id` (`sub_family` keys by stem, so the `id` is read
@@ -60,10 +62,10 @@ fn refusals(id: &str, shot: &ShotData) -> Vec<UnscoredCheckpoint> {
     tile_refusals(shot).unwrap_or_else(|e| panic!("{id}: {e}"))
 }
 
-/// `ShotData` field → the label of the tile that fills it.
-fn labels() -> BTreeMap<String, String> {
-    load_profile(DEVICE)
-        .expect("the shipped profile")
+/// `ShotData` field → the label of the tile that fills it, on `device`'s screen.
+fn labels(device: &str) -> BTreeMap<String, String> {
+    load_profile(device)
+        .expect("a shipped profile")
         .stored_fields()
         .into_iter()
         .map(|tile| {
@@ -91,6 +93,15 @@ fn raw<'a>(shot: &'a ShotData, label: &str) -> Option<&'a str> {
         .as_ref()
         .expect("a read shot has provenance");
     provenance.raw_fields.get(label).map(String::as_str)
+}
+
+/// The device a read shot names, whose profile and declaration its tiles are judged by.
+fn device(shot: &ShotData) -> &str {
+    &shot
+        .provenance
+        .as_ref()
+        .expect("a read shot has provenance")
+        .device
 }
 
 /// One real photo, whole: two empty cells and the withheld `Impact Position` pair (`2026-08-23-1`,
@@ -138,9 +149,9 @@ fn one_bay_photo_refuses_exactly_its_two_blanks_and_its_tied_pair() {
 /// two bay photos with that tie, and `carry-twice`'s Carry.
 #[test]
 fn a_tile_the_tie_rule_withheld_is_misread() {
-    let labels = labels();
     let mut withheld = Vec::new();
     for (id, shot) in read_shots() {
+        let labels = labels(device(&shot));
         let refused = refusals(&id, &shot);
         for field in located(&shot) {
             if raw(&shot, &labels[&field]).is_some() {
@@ -219,9 +230,9 @@ fn a_word_with_no_number_in_it_is_misread() {
 /// named.
 #[test]
 fn exactly_the_printed_analysed_tiles_with_no_value_are_refused_in_declared_order() {
-    let capability = capability_for(DEVICE).expect("declared");
     let mut refused_anywhere = 0;
     for (id, shot) in read_shots() {
+        let capability = capability_for(device(&shot)).expect("declared");
         let present = located(&shot);
         let want: Vec<&str> = capability
             .declared()
@@ -267,6 +278,46 @@ fn a_blank_shown_only_tile_refuses_nothing() {
         );
     }
     assert_eq!(refusals(id, &blanked), before);
+}
+
+/// A field read from the impact video has no tile, so no tile is asked for (the M42 plan's call 13).
+/// Listed and empty is the reader's refusal, `misread`, last in the device's declared order, with
+/// the one sentence every refusal shares; not listed, as on a still's read, it was not printed and
+/// is named nowhere; and holding a value it is not refused. [M42 P14b]
+#[test]
+fn a_field_from_the_impact_video_is_misread_only_when_the_reader_ran_and_gave_nothing() {
+    let id = "screen/hand/full-swing-grid";
+    let mut shot = shot(id);
+    assert_eq!(device(&shot), "full_swing");
+    assert!(
+        !located(&shot)
+            .iter()
+            .any(|field| field == "impact_offset_h"),
+        "a read of the screen never lists it"
+    );
+    let before = refusals(id, &shot);
+    assert!(before.iter().all(|entry| entry.name != "impact_offset_h"));
+
+    shot.provenance
+        .as_mut()
+        .expect("provenance")
+        .fields_present
+        .as_mut()
+        .expect("stamped")
+        .push("impact_offset_h".to_string());
+    let mut refused = refusals(id, &shot);
+    assert_eq!(
+        refused.pop(),
+        Some(UnscoredCheckpoint {
+            name: "impact_offset_h".to_string(),
+            reason: UnscoredReason::Misread,
+            detail: IMPACT_VIDEO_MISREAD.to_string(),
+        })
+    );
+    assert_eq!(refused, before);
+
+    shot.impact_offset_h = Some(4.2);
+    assert_eq!(refusals(id, &shot), before);
 }
 
 /// Neither shot can say which tile was blank, so neither names one: an unstamped record (every

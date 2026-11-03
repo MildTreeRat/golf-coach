@@ -1,7 +1,8 @@
 //! `golf-ocr` — one photo of the launch-monitor screen through the Rust reader. [M29 P7]
 //!
 //! ```text
-//! golf-ocr read <photo> [--json] [--device D] [--session S] [--min-confidence X] [--models DIR]
+//! golf-ocr read <photo> [--json | --boxes] [--device D] [--session S] [--min-confidence X]
+//!               [--models DIR]
 //! ```
 //!
 //! The photo is read by [`ocr::read_photo`] (decode, the screen found and rectified, the rotation
@@ -24,6 +25,14 @@
 //! as `parse-screen` answers a failed read); without it, a short report. A photo that cannot be
 //! decoded, a missing or mismatched model and an unknown device each exit 1 with the cause's own
 //! message; a malformed command line exits 2.
+//!
+//! `--boxes` prints what the parser would have been given instead of what it made: `{"device",
+//! "boxes", "notes"}` as pretty JSON, the prepared screen's boxes (each with its glyph colour,
+//! `rgb`) and notes, in the shape a screen vector's `input` holds them, so a read can be pasted
+//! into a hand-worked vector and its boxes looked at by eye (M42 P2). The device still matters
+//! there: the rotation vote scores each turn by the device's labels. No shot is parsed, so
+//! `--session` and `--min-confidence` change nothing, and `--json` with it is refused, as two
+//! answers to what is printed.
 
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
@@ -33,10 +42,11 @@ use contracts::Timestamp;
 use ocr::models::Models;
 use ocr::PreparedScreen;
 use screen::profile::load_profile;
-use screen::ScreenInput;
+use screen::{ScreenInput, TextBox};
+use serde::Serialize;
 use sha2::{Digest, Sha256};
 
-const USAGE: &str = "usage: golf-ocr read <photo> [--json] [--device D] [--session S] \
+const USAGE: &str = "usage: golf-ocr read <photo> [--json | --boxes] [--device D] [--session S] \
                      [--min-confidence X] [--models DIR]";
 
 /// `config.py`'s `launch_monitor_profile` default.
@@ -48,6 +58,7 @@ const DEFAULT_MIN_CONFIDENCE: f64 = 0.6;
 struct Request {
     photo: PathBuf,
     json: bool,
+    boxes: bool,
     device: String,
     session: Option<String>,
     min_confidence: f64,
@@ -87,6 +98,7 @@ fn parse(args: &[String]) -> Result<Request, String> {
     let mut request = Request {
         photo: PathBuf::new(),
         json: false,
+        boxes: false,
         device: DEFAULT_DEVICE.to_string(),
         session: None,
         min_confidence: DEFAULT_MIN_CONFIDENCE,
@@ -101,6 +113,7 @@ fn parse(args: &[String]) -> Result<Request, String> {
         };
         match arg.as_str() {
             "--json" => request.json = true,
+            "--boxes" => request.boxes = true,
             "--device" => request.device = value("--device")?,
             "--session" => request.session = Some(value("--session")?),
             "--min-confidence" => {
@@ -116,6 +129,9 @@ fn parse(args: &[String]) -> Result<Request, String> {
         }
     }
     request.photo = photo.ok_or("read needs a photo")?;
+    if request.json && request.boxes {
+        return Err("--json prints the shot and --boxes what it was read from; give one".into());
+    }
     Ok(request)
 }
 
@@ -129,18 +145,38 @@ fn repo_root() -> PathBuf {
         .to_path_buf()
 }
 
+/// What `--boxes` prints: a screen vector's `input` up to its identity keys, in that order. A
+/// struct rather than `json!`, whose map (no `preserve_order` in this workspace) sorts the keys.
+#[derive(Serialize)]
+struct ReadFrom<'a> {
+    device: &'a str,
+    boxes: &'a [TextBox],
+    notes: &'a [String],
+}
+
 fn read(request: &Request) -> Result<(), String> {
     let profile = load_profile(&request.device).map_err(|unknown| unknown.to_string())?;
     let bytes = std::fs::read(&request.photo)
         .map_err(|e| format!("could not read image {}: {e}", request.photo.display()))?;
+    let mut models = Models::open(&request.models).map_err(|e| e.to_string())?;
+    let prepared =
+        ocr::read_photo(&mut models, &request.photo, profile).map_err(|e| e.to_string())?;
+    if request.boxes {
+        let read_from = ReadFrom {
+            device: &profile.device,
+            boxes: &prepared.boxes,
+            notes: &prepared.notes,
+        };
+        let text = serde_json::to_string_pretty(&read_from).map_err(|e| e.to_string())?;
+        println!("{text}");
+        return Ok(());
+    }
+
     // `hash_image`, the shot store's key (`crates/storage`'s `shot_store::hash_image`): SHA-256 in
     // lowercase hex. Computed here rather than through `storage`, an edge this crate does not need.
     let digest = format!("{:x}", Sha256::digest(&bytes));
     let timestamp = ocr::screen_timestamp(&request.photo)
         .map_err(|e| format!("{}: {e}", request.photo.display()))?;
-    let mut models = Models::open(&request.models).map_err(|e| e.to_string())?;
-    let prepared =
-        ocr::read_photo(&mut models, &request.photo, profile).map_err(|e| e.to_string())?;
 
     let session_id = request
         .session

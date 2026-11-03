@@ -1,5 +1,6 @@
 //! Located OCR text in, a [`ParsedShot`] out: `parser.py::parse_screen`, ported faithfully and then
-//! changed in one place, which box is which label. [M34 P5, P8]
+//! changed in one place, which box is which label [M34 P5, P8]; and since M42, given rules a
+//! profile opts into, which frozen Python does not have.
 //!
 //! The screen is a grid of tiles, each a label with its value stacked underneath (`Carry` over
 //! `128.1` over `yds`). Nothing here knows where a tile sits. The parser *finds* the labels, groups
@@ -29,6 +30,61 @@
 //! confidence — was one copy shared by both readers while both existed, so the Python-recorded
 //! vectors gated it the whole way.
 //!
+//! # Rules a profile opts into [M42]
+//!
+//! Full Swing's screen needs rules HD Golf's does not. Each is off unless a profile turns it on, so
+//! a profile that does not name it, `hd_golf` included, reads exactly as before and no committed
+//! vector moves (the M42 plan's call 3). None has a Python twin: the frozen parser has none of them
+//! and gains none (ADR-035 clause 4).
+//!
+//! **Merged labels are split** (`split_merged_labels`, the M42 plan's call 6). PP-OCR sometimes
+//! returns two adjacent tile labels as one box: `CLUBSPEEDMPHBALLSPEEDMPH` on `IMG_2891`, and
+//! `BALLDIRECTIONDEGLAUNCHANGLE` on `IMG_2891` and `2026-10-07-1` (the plan's finding 3). Such a box
+//! scores below the threshold against both labels, so neither tile is located and neither value is
+//! read, on a photo where both are printed plainly. [`split_merged`] runs before anything else, and
+//! tries each box that matches no label as two, cut between two letters of its text with the spaces
+//! taken out. A cut counts only when each half matches a label on its own and the two are different
+//! labels, so a value, a stray glyph or one label read twice is left whole. Two-way only: every
+//! merge measured was two labels.
+//!
+//! **The box's width is shared in proportion to the letters, and that is an approximation.** The font
+//! is proportional, and the gap the OCR closed between the two labels is counted as neither's. It is
+//! good enough because of where the cut lands: a label's column runs halfway to its neighbour's
+//! edge, so the cut *is* the boundary between the two columns, and a value is placed by its centre,
+//! which sits under its own label, about half a label's width from that boundary. An error of a
+//! letter or two in the cut leaves it in its own column. The Full Swing photo gate (M42 P9) is what
+//! holds that on real photos.
+//!
+//! **A tile printed twice must agree with itself** (`printed_twice` on a field, the M42 plan's call
+//! 7). Full Swing prints `TOTAL YD` in its header row and again in its data row, the same number on
+//! every photo the plan read (its finding 6). Without the rule the two boxes fit one label equally,
+//! the tie rule withholds it as it must (the M34 plan's decision 6, the `carry-twice` vector), and
+//! the total is lost on every photo. With it, that field may take two boxes ([`assign_labels`]),
+//! and [`read_pair`] reads both cells and treats the second copy as a check on the first, not a
+//! rival: equal, the value is stored; different, nothing is, because one is a misread and nothing
+//! says which; only one readable, it is stored, since one copy is all any other tile ever has. A
+//! third box fitting the label is still a tie, and is withheld as any other.
+//!
+//! **A sign is read from a lit letter** (`lit_sign` on a field, the M42 plan's calls 4 and 5). Full
+//! Swing prints ball direction and sidespin unsigned, with both letters of a pair beside the number
+//! (`L` `R`, `D` `F`), and lights the one that applies yellow. Nothing in the text says which, so
+//! HD Golf's word rule (`sign_tokens`) cannot read it: both letters are always there. The OCR does
+//! not return every letter (0, 1 or 2 of a pair on the photos the plan read, its finding 4), so
+//! [`lit_sign`] decides from what it did return, by colour ([`is_lit`] on `TextBox::rgb`), and
+//! **withholds** the value where the letters cannot decide, rather than storing the magnitude
+//! unsigned as the word rule does: on a signed field that is a wrong number half the time
+//! (ADR-010 §2). The colour is measured by the host that ran the OCR (`crates/ocr`, the phone's
+//! Vision in M38), and the rule that reads it is here so both hosts share it.
+//!
+//! **A number printed in feet is stored in yards** (`printed_unit` on a field, the M42 plan's call
+//! 8). Full Swing prints its apex as `APEX FT`, and `ShotData::apex_height` is yards (the plan's
+//! finding 7). Stored as printed, the height would be three times too great, and the validator's
+//! 80-yard ceiling would not catch it on three of the six photos the plan read (`39.9`, `71.4` and
+//! `15.5` feet all pass as yards). [`read_text`] divides the number by 3.0 once its sign is applied
+//! (`PrintedUnit::to_yards`, which says why it divides and does not round), and `raw_fields` keeps
+//! the text as printed, so a record still says what the screen showed. A tile printed twice
+//! compares its two copies after the conversion, each converted alike.
+//!
 //! # Where CPython is reproduced rather than approximated
 //!
 //! Every warning is compared exactly, and every value a golfer sees came through one of these, so
@@ -53,6 +109,7 @@
 //! `spec/vectors/screen/units/` gates each on a table of its own, and `tests/units.rs` is outside
 //! the crate. Nothing outside this crate's tests has a reason to call them.
 
+use std::borrow::Cow;
 use std::cmp::Ordering;
 use std::collections::BTreeSet;
 
@@ -60,7 +117,7 @@ use pyfmt::OrderedMap;
 use serde::Serialize;
 
 use crate::profile::{
-    normalize_label, DeviceProfile, FieldKind, ProfileField, LABEL_MATCH_THRESHOLD,
+    normalize_label, DeviceProfile, FieldKind, LitToken, ProfileField, LABEL_MATCH_THRESHOLD,
 };
 use crate::TextBox;
 
@@ -82,7 +139,9 @@ pub const TIE_MARGIN: f64 = 0.02;
 ///
 /// The rule enumerates every one-to-one assignment within a tie, and a tie of `b` boxes that all
 /// fit `f` labels has `Σₖ C(b,k)·C(f,k)·k!` of them: 7 at 2×2, which is every tie a stored photo
-/// has, 1,441,729 at 8×8, and 17,572,114 at 9×9, walked twice. The 8×8 case takes about 0.1 s in
+/// has, 1,441,729 at 8×8, and 17,572,114 at 9×9, walked twice. (A field printed twice, M42, may
+/// take a second box, which adds assignments the sum leaves out; the cap bounds the boxes and the
+/// labels either way.) The 8×8 case takes about 0.1 s in
 /// an unoptimised test build on the dev box, and each size past it multiplies that by ten or more,
 /// on a phone. A screen
 /// with more than eight boxes competing for one set of labels is not a screen this parser can read
@@ -90,6 +149,40 @@ pub const TIE_MARGIN: f64 = 0.02;
 /// (`only_the_impact_position_pair_overlaps`), so a tie that size is a photo of something else, and
 /// withholding it costs nothing a golfer could have had.
 pub const TIE_CAP: usize = 8;
+
+/// A lit letter's red and green must both reach this (0–255), so a dim, yellowish glyph is never
+/// read as lit on its blue alone. No Python twin. [M42 P6]
+///
+/// On the photos it was set from, it separates nothing: the dimmest letter or text box measured
+/// min(r, g) 161, and the unlit `F` on `IMG_2889` 183, so [`LIT_BLUE_RATIO`] decides every one of
+/// them (M42 P2's finding). It is a floor under the ratio for a photo the plan did not have, a dark
+/// one where noise could make a grey box's blue fall below 0.7 of a red and green near zero.
+pub const LIT_MIN_BRIGHTNESS: f64 = 120.0;
+
+/// A letter is lit when its blue is at most this fraction of the lesser of its red and green:
+/// Full Swing lights a sign letter yellow, and prints the other one, and every number, white or
+/// grey. No Python twin. [M42 P6]
+///
+/// Measured as the mean colour of the brightest quarter of each letter box's pixels (`TextBox::rgb`),
+/// and set between the two groups it separates (the M42 plan's finding 4 and call 4):
+///
+/// | photo | letter | rgb | lit, by eye | b ÷ min(r, g) |
+/// |---|---|---|---|---|
+/// | `IMG_2889` | R | (239, 222, 90) | yes | 0.41 |
+/// | `IMG_2889` | D | (227, 207, 72) | yes | 0.35 |
+/// | `IMG_2889` | F | (187, 183, 176) | no | 0.96 |
+/// | `IMG_2891` | R | (200, 206, 197) | no | 0.98 |
+/// | `IMG_2891` | F | (215, 214, 206) | no | 0.96 |
+/// | `IMG_2892` | R | (243, 225, 73) | yes | 0.32 |
+/// | `IMG_2892` | D | (241, 223, 91) | yes | 0.41 |
+/// | `2026-10-07-1` | R | (249, 220, 96) | yes | 0.44 |
+/// | `2026-10-07-1` | F | (254, 238, 113) | yes | 0.47 |
+///
+/// Lit letters measure 0.32–0.47 and unlit ones 0.96–0.98; the white value digits on the same
+/// photos 0.95–1.0, and through the shipping reader every label and value box 0.99–1.02 (M42 P2,
+/// on `IMG_2889`). 0.7 sits in the gap, 0.23 above the highest lit letter and 0.26 below the
+/// lowest unlit one. A grey or white glyph would have to lose a third of its blue to cross it.
+pub const LIT_BLUE_RATIO: f64 = 0.7;
 
 /// Two labels share a row when their centers sit within this fraction of the taller one's height.
 /// Generous enough for OCR jitter, tight enough that the HD Golf grid's two label rows never merge.
@@ -199,8 +292,89 @@ impl Cell<'_> {
 
 /// Extract shot metrics from one screen's recognized text: the labels located by the tie rule
 /// ([`TIE_MARGIN`]), then everything under them read as the frozen parser reads it.
+///
+/// When the profile opts in, boxes holding two merged labels are split first ([`split_merged`]),
+/// and every step after, the title check included, sees the split list.
 pub fn parse_screen(boxes: &[TextBox], profile: &DeviceProfile) -> ParsedShot {
-    read_labels(boxes, profile, assign_labels(boxes, profile))
+    let boxes: Cow<[TextBox]> = if profile.split_merged_labels {
+        Cow::Owned(split_merged(boxes, profile))
+    } else {
+        Cow::Borrowed(boxes)
+    };
+    read_labels(&boxes, profile, assign_labels(&boxes, profile))
+}
+
+/// The boxes with each one that holds two merged labels replaced, where it stood, by the two. The M42
+/// plan's call 6, with no Python twin. [M42 P4]
+///
+/// 1. **Only a box that matches no label is tried**: one [`DeviceProfile::field_for`] places is a
+///    label already, and splitting it would make two labels of one.
+/// 2. **Each cut `k` in `1..n`** of its text normalized with the spaces taken out (`despace`, `n`
+///    letters) scores each half against every field, label and aliases, by `field_for`, so a half
+///    is "a label" on exactly the terms a whole box is, and a half scoring the same against two
+///    fields names the later one, as a box does.
+/// 3. **A cut qualifies when both halves reach [`LABEL_MATCH_THRESHOLD`] and name different
+///    fields.** One label twice (`CARRYCARRY`) is not two tiles.
+/// 4. **The qualifying cut with the highest `min(left, right)` wins**, the weaker half deciding
+///    because a split is only as good as its worse label; **ties go to the smallest `k`**.
+/// 5. **The two boxes share the box's width in proportion to their letters** (the module doc says
+///    why that is close enough): the left keeps `x` and takes `width * k / n`, the right starts
+///    where it ends and takes the rest. Both keep `y`, `height`, `confidence` and `rgb`, and their
+///    texts are the two halves.
+///
+/// What a split box became is not reported: its halves are labels, located or tied like any other,
+/// and a box no cut qualifies for is left as it came.
+fn split_merged(boxes: &[TextBox], profile: &DeviceProfile) -> Vec<TextBox> {
+    let mut split = Vec::with_capacity(boxes.len());
+    for text_box in boxes {
+        if profile.field_for(&text_box.text).is_some() {
+            split.push(text_box.clone());
+            continue;
+        }
+        // `normalize_label` keeps ASCII letters and digits alone, so every `k` is a char boundary.
+        let letters = despace(&text_box.text);
+        let Some(k) = merged_cut(&letters, profile) else {
+            split.push(text_box.clone());
+            continue;
+        };
+        let (left, right) = letters.split_at(k);
+        let left_width = text_box.width * k as f64 / letters.len() as f64;
+        split.push(TextBox {
+            text: left.to_string(),
+            width: left_width,
+            ..text_box.clone()
+        });
+        split.push(TextBox {
+            text: right.to_string(),
+            x: text_box.x + left_width,
+            width: text_box.width - left_width,
+            ..text_box.clone()
+        });
+    }
+    split
+}
+
+/// Where `letters` reads as two different labels, by [`split_merged`]'s steps 2 to 4, or `None`.
+fn merged_cut(letters: &str, profile: &DeviceProfile) -> Option<usize> {
+    let mut best: Option<(usize, f64)> = None;
+    for k in 1..letters.len() {
+        let (left, right) = letters.split_at(k);
+        let (Some(left_field), Some(right_field)) =
+            (profile.field_for(left), profile.field_for(right))
+        else {
+            continue;
+        };
+        if std::ptr::eq(left_field, right_field) {
+            continue;
+        }
+        let weaker = left_field.matches(left).min(right_field.matches(right));
+        // Strictly greater, so an equal later cut leaves the earlier one standing.
+        match best {
+            Some((_, standing)) if weaker <= standing => {}
+            _ => best = Some((k, weaker)),
+        }
+    }
+    best.map(|(k, _)| k)
 }
 
 /// Everything after the labels are located. A function of its own because, from M34 P8 to P10, the
@@ -227,10 +401,23 @@ fn read_labels(boxes: &[TextBox], profile: &DeviceProfile, labels: Labels) -> Pa
     let cells = build_cells(&labels.tiles, boxes, profile);
 
     let mut used: Vec<&TextBox> = Vec::new();
-    for cell in &cells {
+    for (at, cell) in cells.iter().enumerate() {
         used.push(cell.label_box);
         used.extend(cell.value_boxes.iter().copied());
-        read_cell(cell, profile, &mut parsed);
+        // A tile printed twice is read once, from both its cells, where the first of them stands.
+        // Cells come top row first, so the first is the top one.
+        let Some(field) = cell.stored().filter(|field| field.printed_twice) else {
+            read_cell(cell, profile, &mut parsed);
+            continue;
+        };
+        let same = |other: &&Cell| other.field.is_some_and(|f| std::ptr::eq(f, field));
+        if cells[..at].iter().any(|earlier| same(&earlier)) {
+            continue;
+        }
+        match cells[at + 1..].iter().find(same) {
+            Some(second) => read_pair([cell, second], field, profile, &mut parsed),
+            None => read_cell(cell, profile, &mut parsed),
+        }
     }
 
     // One walk over the stored fields in tile order, so a located-and-withheld field and a missing
@@ -361,6 +548,13 @@ fn title_band_was_captured(boxes: &[TextBox], labels: &[Located<'_>]) -> bool {
 /// as two labels that fit two boxes crosswise, and need no rule of their own: the two assignments
 /// tie, and the label is withheld. A tie bigger than [`TIE_CAP`] is withheld whole.
 ///
+/// **Except a field `printed_twice`, which takes up to two boxes** (the M42 plan's call 7), so two
+/// boxes that fit it are one assignment giving it both, not two rivals. An assignment is each box's
+/// field, so two that differ only in which of the field's boxes is which are the same assignment,
+/// and cannot tie with each other. Step 4 then compares the *set* of boxes each near-best
+/// assignment gives a field; a third box that fits it makes three sets of two, and the field is
+/// withheld as any tied one is. Every other field takes one, and its set is the one box or none.
+///
 /// The tiles come out in box order. Row grouping sorts them by position and keeps equal positions
 /// in the order given, which is the only thing that order reaches.
 fn assign_labels<'a>(boxes: &[TextBox], profile: &'a DeviceProfile) -> Labels<'a> {
@@ -401,15 +595,18 @@ fn assign_labels<'a>(boxes: &[TextBox], profile: &'a DeviceProfile) -> Labels<'a
             continue;
         }
 
-        let decided = decide(&tie, &candidates);
+        let capacity: Vec<u8> = fields.iter().copied().map(boxes_taken).collect();
+        let decided = decide(&tie, &candidates, &capacity);
         let mut resolved: BTreeSet<usize> = BTreeSet::new();
         for (field, outcomes) in fields.iter().copied().zip(&decided.outcomes) {
             let mut each = outcomes.iter();
             match (each.next(), each.next()) {
-                (Some(None), None) => {}
-                (Some(&Some(index)), None) => {
-                    labels.tiles.push((Some(field), index));
-                    resolved.insert(index);
+                // One set of boxes, the empty set included: decided.
+                (Some(given), None) => {
+                    labels
+                        .tiles
+                        .extend(given.iter().map(|&index| (Some(field), index)));
+                    resolved.extend(given);
                 }
                 _ => {
                     let warning = format!(
@@ -430,6 +627,15 @@ fn assign_labels<'a>(boxes: &[TextBox], profile: &'a DeviceProfile) -> Labels<'a
     }
     labels.tiles.sort_by_key(|&(_, index)| index);
     labels
+}
+
+/// How many label boxes `field` may take: two for a tile printed twice, one for any other.
+fn boxes_taken(field: &ProfileField) -> u8 {
+    if field.printed_twice {
+        2
+    } else {
+        1
+    }
 }
 
 /// One connected component of the candidate graph: boxes and the fields they compete for, each by
@@ -477,17 +683,19 @@ fn ties(candidates: &[Vec<(usize, f64)>]) -> Vec<Tie> {
 
 /// What the assignments within [`TIE_MARGIN`] of the best say, for one tie.
 struct Decided {
-    /// Per field of the tie, in its order: every box some near-best assignment gives it, and `None`
-    /// where one gives it none.
-    outcomes: Vec<BTreeSet<Option<usize>>>,
+    /// Per field of the tie, in its order: every set of boxes some near-best assignment gives it,
+    /// each ascending, and the empty one where one gives it none. A set holds one box at most
+    /// unless the field is printed twice.
+    outcomes: Vec<BTreeSet<Vec<usize>>>,
     /// Every box some near-best assignment gives a field.
     label_boxes: BTreeSet<usize>,
 }
 
-/// Enumerate the tie's one-to-one assignments twice: once for the best total, once to collect what
-/// every assignment within [`TIE_MARGIN`] of it gives each field. Two walks rather than one walk
-/// that keeps every assignment, because the cap allows over a million of them.
-fn decide(tie: &Tie, candidates: &[Vec<(usize, f64)>]) -> Decided {
+/// Enumerate the tie's assignments twice: once for the best total, once to collect what every
+/// assignment within [`TIE_MARGIN`] of it gives each field. Two walks rather than one walk that
+/// keeps every assignment, because the cap allows over a million of them. `capacity` is how many
+/// boxes each of the tie's fields may take, in its order ([`boxes_taken`]).
+fn decide(tie: &Tie, candidates: &[Vec<(usize, f64)>], capacity: &[u8]) -> Decided {
     // Each box's candidates as (position in `tie.fields`, score).
     let local: Vec<Vec<(usize, f64)>> = tie
         .boxes
@@ -507,7 +715,7 @@ fn decide(tie: &Tie, candidates: &[Vec<(usize, f64)>]) -> Decided {
         .collect();
 
     let mut best = f64::NEG_INFINITY;
-    assignments(&local, &mut |_, total| {
+    assignments(&local, capacity, &mut |_, total| {
         if total > best {
             best = total;
         }
@@ -517,32 +725,41 @@ fn decide(tie: &Tie, candidates: &[Vec<(usize, f64)>]) -> Decided {
         outcomes: vec![BTreeSet::new(); tie.fields.len()],
         label_boxes: BTreeSet::new(),
     };
-    assignments(&local, &mut |assignment, total| {
+    assignments(&local, capacity, &mut |assignment, total| {
         if best - total > TIE_MARGIN {
             return;
         }
-        let mut given = vec![None; tie.fields.len()];
+        // Boxes are visited in ascending order, so each field's set is built sorted, and one
+        // assignment has one spelling of it.
+        let mut given = vec![Vec::new(); tie.fields.len()];
         for (at, field) in assignment.iter().enumerate() {
             if let Some(field) = *field {
-                given[field] = Some(tie.boxes[at]);
+                given[field].push(tie.boxes[at]);
                 decided.label_boxes.insert(tie.boxes[at]);
             }
         }
-        for (outcomes, box_index) in decided.outcomes.iter_mut().zip(given) {
-            outcomes.insert(box_index);
+        for (outcomes, boxes) in decided.outcomes.iter_mut().zip(given) {
+            outcomes.insert(boxes);
         }
     });
     decided
 }
 
-/// Visit every one-to-one assignment of boxes to fields, as each box's field (or `None`) and the
-/// total of the scores taken, summed in box order. Fields are positions below [`TIE_CAP`], so a
-/// bit mask holds which are taken.
-fn assignments(local: &[Vec<(usize, f64)>], visit: &mut impl FnMut(&[Option<usize>], f64)) {
+/// Visit every assignment of boxes to fields, as each box's field (or `None`) and the total of the
+/// scores taken, summed in box order. A box takes one field at most, and field `f` takes
+/// `capacity[f]` boxes at most: one, or two for a tile printed twice, which is what makes every
+/// other assignment one-to-one. Fields are positions below [`TIE_CAP`], so an array that long
+/// counts what each has taken.
+fn assignments(
+    local: &[Vec<(usize, f64)>],
+    capacity: &[u8],
+    visit: &mut impl FnMut(&[Option<usize>], f64),
+) {
     fn walk(
         local: &[Vec<(usize, f64)>],
+        capacity: &[u8],
         at: usize,
-        taken: u32,
+        taken: [u8; TIE_CAP],
         assignment: &mut Vec<Option<usize>>,
         total: f64,
         visit: &mut impl FnMut(&[Option<usize>], f64),
@@ -552,15 +769,18 @@ fn assignments(local: &[Vec<(usize, f64)>], visit: &mut impl FnMut(&[Option<usiz
             return;
         }
         assignment.push(None);
-        walk(local, at + 1, taken, assignment, total, visit);
+        walk(local, capacity, at + 1, taken, assignment, total, visit);
         assignment.pop();
         for &(field, score) in &local[at] {
-            if taken & (1 << field) == 0 {
+            if taken[field] < capacity[field] {
+                let mut now = taken;
+                now[field] += 1;
                 assignment.push(Some(field));
                 walk(
                     local,
+                    capacity,
                     at + 1,
-                    taken | (1 << field),
+                    now,
                     assignment,
                     total + score,
                     visit,
@@ -571,8 +791,9 @@ fn assignments(local: &[Vec<(usize, f64)>], visit: &mut impl FnMut(&[Option<usiz
     }
     walk(
         local,
+        capacity,
         0,
-        0,
+        [0; TIE_CAP],
         &mut Vec::with_capacity(local.len()),
         0.0,
         visit,
@@ -581,13 +802,13 @@ fn assignments(local: &[Vec<(usize, f64)>], visit: &mut impl FnMut(&[Option<usiz
 
 /// `'Impact Position' and 'ImpactPosition'`: the texts of the boxes a withheld field could have
 /// been, in box order, and `no box` last where a near-best assignment gives it none.
-fn tied_boxes(outcomes: &BTreeSet<Option<usize>>, boxes: &[TextBox]) -> String {
-    let mut named: Vec<String> = outcomes
+fn tied_boxes(outcomes: &BTreeSet<Vec<usize>>, boxes: &[TextBox]) -> String {
+    let given: BTreeSet<usize> = outcomes.iter().flatten().copied().collect();
+    let mut named: Vec<String> = given
         .iter()
-        .flatten()
         .map(|&index| pyfmt::str_repr(&boxes[index].text))
         .collect();
-    if outcomes.contains(&None) {
+    if outcomes.iter().any(Vec::is_empty) {
         named.push("no box".to_string());
     }
     match named.split_last() {
@@ -691,40 +912,154 @@ fn read_cell(cell: &Cell, profile: &DeviceProfile, parsed: &mut ParsedShot) {
     let Some(field) = cell.stored() else {
         return;
     };
-    let target = field.target.as_ref().expect("a stored field has a target");
-
     let text = cell.text();
     parsed.raw_fields.insert(field.label.clone(), text.clone());
+    let reading = read_text(&text, &cell.value_boxes, field, profile);
+    reading.write(field, parsed);
+}
 
+/// A tile printed twice, read from its two cells, top first: the M42 plan's call 7, with no Python
+/// twin. [M42 P5]
+///
+/// Each cell is read as [`read_cell`] reads a tile, and the two are then combined:
+///
+/// - **both give a number, and it is the same number**: it is stored, with the top cell's
+///   warnings (a cell's own warnings are only ever about its sign);
+/// - **both give a number, and they differ**: nothing is stored, and the warning says what each
+///   cell held. One copy is a misread and nothing says which, so a value would be a coin-flip from
+///   a wrong one (ADR-010 §2);
+/// - **one gives a number** (the other empty, blank or unreadable): it is stored, with its own
+///   cell's warnings. The other's are dropped, because a line saying a number is missing under a
+///   tile that holds one would tell the golfer something false;
+/// - **neither does**: each cell's warnings in turn, a line the top cell already raised not
+///   repeated (two empty cells are one `no value text under the label`).
+///
+/// `raw_fields` holds the two texts joined by `" | "`, top first, so a record says what both
+/// copies held and a disagreement can be audited from it.
+fn read_pair(
+    cells: [&Cell; 2],
+    field: &ProfileField,
+    profile: &DeviceProfile,
+    parsed: &mut ParsedShot,
+) {
+    let texts = cells.map(Cell::text);
+    parsed
+        .raw_fields
+        .insert(field.label.clone(), format!("{} | {}", texts[0], texts[1]));
+    let [top, bottom] =
+        [0, 1].map(|at| read_text(&texts[at], &cells[at].value_boxes, field, profile));
+    match (top.number(), bottom.number()) {
+        (Some(a), Some(b)) if a == b => top.write(field, parsed),
+        (Some(_), Some(_)) => parsed.warnings.push(format!(
+            "{}: printed twice as {} and {} - not stored",
+            field.label,
+            pyfmt::str_repr(&texts[0]),
+            pyfmt::str_repr(&texts[1])
+        )),
+        (Some(_), None) => top.write(field, parsed),
+        (None, Some(_)) => bottom.write(field, parsed),
+        (None, None) => {
+            let raised = top.warnings.clone();
+            top.write(field, parsed);
+            parsed.warnings.extend(
+                bottom
+                    .warnings
+                    .into_iter()
+                    .filter(|warning| !raised.contains(warning)),
+            );
+        }
+    }
+}
+
+/// What one cell's text gives a stored tile, before any of it is written: the value, if one was
+/// read, and the warnings reading it raised.
+///
+/// A value of its own, rather than writes into the [`ParsedShot`] as `parser.py`'s `_read_cell`
+/// makes them, because a tile printed twice decides what to keep only once both its cells are read
+/// ([`read_pair`]). [`read_cell`] writes it straight back, so a tile read once is read as before.
+struct Reading {
+    value: Option<FieldValue>,
+    warnings: Vec<String>,
+}
+
+impl Reading {
+    fn number(&self) -> Option<f64> {
+        match self.value {
+            Some(FieldValue::Number(number)) => Some(number),
+            _ => None,
+        }
+    }
+
+    /// The warnings, then the value under `field`'s target.
+    fn write(self, field: &ProfileField, parsed: &mut ParsedShot) {
+        parsed.warnings.extend(self.warnings);
+        if let Some(value) = self.value {
+            let target = field.target.as_ref().expect("a stored field has a target");
+            parsed.values.insert(target.clone(), value);
+        }
+    }
+}
+
+/// `_read_cell` from its text on: empty, blank, words, or a number with its sign.
+///
+/// `value_boxes` are the boxes `text` was built from, which only a `lit_sign` tile reads (for the
+/// colour of its letters, [`lit_sign`]); every other tile is read from its text alone, as before.
+fn read_text(
+    text: &str,
+    value_boxes: &[&TextBox],
+    field: &ProfileField,
+    profile: &DeviceProfile,
+) -> Reading {
+    let mut reading = Reading {
+        value: None,
+        warnings: Vec::new(),
+    };
     if text.is_empty() {
-        parsed
+        reading
             .warnings
             .push(format!("{}: no value text under the label", field.label));
-        return;
+        return reading;
     }
-    if is_blank(&text, &profile.blank_markers) {
-        return; // the device measured nothing here: a correct read of an absent metric
+    if is_blank(text, &profile.blank_markers) {
+        return reading; // the device measured nothing here: a correct read of an absent metric
     }
 
     if field.kind == FieldKind::Text {
-        let upper = pyfmt::upper(&text);
+        let upper = pyfmt::upper(text);
         let words: Vec<&str> = pyfmt::split(&upper).collect();
-        parsed
-            .values
-            .insert(target.clone(), FieldValue::Text(words.join(" ")));
-        return;
+        reading.value = Some(FieldValue::Text(words.join(" ")));
+        return reading;
     }
 
-    let Some((mut magnitude, matched)) = first_number(&text) else {
-        parsed.warnings.push(format!(
+    let Some((mut magnitude, matched)) = first_number(text) else {
+        reading.warnings.push(format!(
             "{}: could not read a number from {}",
             field.label,
-            pyfmt::str_repr(&text)
+            pyfmt::str_repr(text)
         ));
-        return;
+        return reading;
     };
 
-    if !field.sign_tokens.is_empty() || field.printed_sign.is_some() {
+    if !field.lit_sign.is_empty() {
+        // The digits' own sign is discarded: a tile that signs by its letters prints the number
+        // unsigned, so a `-` there is a stray mark, not a convention (the M42 plan's call 5).
+        magnitude = magnitude.abs();
+        // Zero needs no sign, and `abs` has already made a printed `-0` the `0.0` stored.
+        if magnitude != 0.0 {
+            let Some(sign) = lit_sign(&field.lit_sign, value_boxes) else {
+                // Withheld, never stored unsigned: an unsigned number on a signed field is a
+                // wrong one half the time (ADR-010 §2).
+                let tokens: Vec<&str> = field.lit_sign.iter().map(|t| t.token.as_str()).collect();
+                reading.warnings.push(format!(
+                    "{}: neither {} could be read as lit - sign unknown, not stored",
+                    field.label,
+                    tokens.join(" nor ")
+                ));
+                return reading;
+            };
+            magnitude *= sign as f64;
+        }
+    } else if !field.sign_tokens.is_empty() || field.printed_sign.is_some() {
         // Python's `str.replace(old, new, 1)`: the first occurrence, which is the match itself,
         // since any earlier occurrence would have been the leftmost match.
         let sign = sign_from(&text.replacen(matched, " ", 1), field);
@@ -738,16 +1073,20 @@ fn read_cell(cell: &Cell, profile: &DeviceProfile, parsed: &mut ParsedShot) {
             // The tile printed its own sign and the profile records how that polarity relates to
             // the contract, so nothing is unknown and nothing is warned.
             (None, Some(printed)) => magnitude *= printed as f64,
-            (None, None) => parsed.warnings.push(format!(
+            (None, None) => reading.warnings.push(format!(
                 "{}: no direction word in {} - sign unknown, storing the magnitude as printed",
                 field.label,
-                pyfmt::str_repr(&text)
+                pyfmt::str_repr(text)
             )),
         }
     }
-    parsed
-        .values
-        .insert(target.clone(), FieldValue::Number(magnitude));
+    // After the sign, so the conversion sees the signed number and a zero the sign rule made `+0.0`
+    // stays `+0.0`; `raw_fields` already holds the text as printed (the M42 plan's call 8).
+    if let Some(unit) = field.printed_unit {
+        magnitude = unit.to_yards(magnitude);
+    }
+    reading.value = Some(FieldValue::Number(magnitude));
+    reading
 }
 
 /// `_Cell.text`: a tile's value text, read line by line, left to right.
@@ -898,6 +1237,85 @@ fn sign_text(text: &str) -> String {
         .collect()
 }
 
+/// Whether a glyph of colour `rgb` (`TextBox::rgb`) is a lit sign letter: bright in red and green
+/// ([`LIT_MIN_BRIGHTNESS`]) and short of blue ([`LIT_BLUE_RATIO`]), which is yellow. The M42 plan's
+/// call 4, with no Python twin. [M42 P6]
+///
+/// Here, in `screen`, rather than in `ocr` where the colour is measured, so the phone (M38), whose
+/// boxes come from Vision and not from `ocr`, decides lit by the same rule from the same number.
+pub fn is_lit(rgb: [f64; 3]) -> bool {
+    let [red, green, blue] = rgb;
+    let floor = first_min(red, green);
+    floor >= LIT_MIN_BRIGHTNESS && blue <= LIT_BLUE_RATIO * floor
+}
+
+/// What a sign letter's boxes in one cell say of it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Letter {
+    /// No box in the cell holds it.
+    Absent,
+    Lit,
+    Unlit,
+    /// A box of it has no colour, or two boxes of it disagree.
+    Unknown,
+}
+
+/// The sign a `lit_sign` tile's letters give, or `None` when they cannot decide it: the M42 plan's
+/// call 5, with no Python twin. [M42 P6]
+///
+/// A **letter box** is a value box of the tile's cell whose text, stripped and upper-cased, is one
+/// of the pair's tokens exactly, so `DD` (read on `IMG_2893`, M42 P3's finding) is no letter. Then:
+///
+/// | the two letters | sign |
+/// |---|---|
+/// | one lit, the other absent or unlit | the lit one's |
+/// | one unlit, the other absent | the other one's |
+/// | both lit, both unlit, or both absent | none |
+/// | either with a box that has no colour | none |
+///
+/// The device lights exactly one, so one unlit letter alone still says which: the other. Two lit,
+/// or two unlit, is a photo that contradicts the screen, and nothing says which letter to believe.
+///
+/// **Two boxes of one letter** are not a case the plan names, and the one this reads least into:
+/// they count as one letter when they agree, lit or unlit, and as [`Letter::Unknown`] when they
+/// do not, since one of them is then a misreading and nothing says which.
+fn lit_sign(pair: &[LitToken], value_boxes: &[&TextBox]) -> Option<i64> {
+    let [a, b] = pair else {
+        return None; // `DeviceProfile::check` holds every shipped profile to two
+    };
+    let letter = |token: &LitToken| {
+        let mut seen = Letter::Absent;
+        for text_box in value_boxes {
+            if pyfmt::upper(pyfmt::strip(&text_box.text)) != token.token {
+                continue;
+            }
+            let this = match text_box.rgb {
+                Some(rgb) if is_lit(rgb) => Letter::Lit,
+                Some(_) => Letter::Unlit,
+                None => Letter::Unknown,
+            };
+            seen = match seen {
+                Letter::Absent => this,
+                _ if seen == this => this,
+                _ => Letter::Unknown,
+            };
+        }
+        seen
+    };
+    match (letter(a), letter(b)) {
+        (Letter::Unknown, _) | (_, Letter::Unknown) => None,
+        (Letter::Lit, Letter::Absent | Letter::Unlit) | (Letter::Absent, Letter::Unlit) => {
+            Some(a.sign)
+        }
+        (Letter::Absent | Letter::Unlit, Letter::Lit) | (Letter::Unlit, Letter::Absent) => {
+            Some(b.sign)
+        }
+        (Letter::Lit, Letter::Lit)
+        | (Letter::Unlit, Letter::Unlit)
+        | (Letter::Absent, Letter::Absent) => None,
+    }
+}
+
 // --- confidence ----------------------------------------------------------------------------------
 
 /// Blend the three failure modes into one `0.0`-`1.0` trust score.
@@ -929,10 +1347,16 @@ fn score(
         .filter(|field| field.target.is_some())
         .map(|field| field.label.as_str())
         .collect();
+    // Counted by field, not by cell: a tile printed twice is one value however many of its cells
+    // hold text (M42 P5). Every other field has one cell at most, so this is the count of cells it
+    // always was.
     let read_values = cells
         .iter()
-        .filter(|cell| cell.stored().is_some() && !cell.text().is_empty())
-        .count();
+        .filter(|cell| !cell.text().is_empty())
+        .filter_map(Cell::stored)
+        .map(std::ptr::from_ref)
+        .collect::<BTreeSet<*const ProfileField>>()
+        .len();
     let ocr: Vec<f64> = used.iter().map(|text_box| text_box.confidence).collect();
 
     let label_coverage = found_labels.len() as f64 / expected as f64;
@@ -1019,6 +1443,7 @@ mod tests {
             width,
             height,
             confidence,
+            rgb: None,
         }
     }
 
@@ -1062,8 +1487,14 @@ mod tests {
 
     /// A one-device profile from its `fields` alone.
     fn profile(fields: &str) -> DeviceProfile {
+        profile_with("", fields)
+    }
+
+    /// A one-device profile from its `fields` and profile-level `keys`, each key followed by a
+    /// comma, through the same parse the shipped file takes.
+    fn profile_with(keys: &str, fields: &str) -> DeviceProfile {
         parse_profiles(&format!(
-            r#"{{"profiles": [{{"device": "t", "title": "T", "fields": {fields}}}]}}"#
+            r#"{{"profiles": [{{"device": "t", "title": "T", {keys}"fields": {fields}}}]}}"#
         ))
         .unwrap()
         .remove("t")
@@ -1321,7 +1752,7 @@ mod tests {
             let local: Vec<Vec<(usize, f64)>> =
                 (0..n).map(|_| (0..n).map(|f| (f, 1.0)).collect()).collect();
             let mut count = 0_u64;
-            assignments(&local, &mut |_, _| count += 1);
+            assignments(&local, &[1; TIE_CAP], &mut |_, _| count += 1);
             assert_eq!(count, want, "{n}×{n}");
         }
     }
@@ -1355,6 +1786,644 @@ mod tests {
         );
     }
 
+    // --- merged labels [M42 P4] ------------------------------------------------------------------
+
+    /// The two merges the M42 plan's finding 3 measured, as unit-bearing labels, the way Full
+    /// Swing prints them.
+    const MERGED_FIELDS: &str = r#"[
+        {"label": "Club Speed Mph", "target": "club_head_speed"},
+        {"label": "Ball Speed Mph", "target": "ball_speed"},
+        {"label": "Ball Direction Deg", "target": "launch_direction"},
+        {"label": "Launch Angle", "target": "launch_angle"}]"#;
+
+    fn splitting(fields: &str) -> DeviceProfile {
+        profile_with(r#""split_merged_labels": true, "#, fields)
+    }
+
+    fn texts(boxes: &[TextBox]) -> Vec<&str> {
+        boxes
+            .iter()
+            .map(|text_box| text_box.text.as_str())
+            .collect()
+    }
+
+    /// Each merge is cut where its two labels meet, and the halves share the box's width by their
+    /// letters: 12 and 12 of 24, then 16 and 11 of 27. Everything else is the box's own, and a value
+    /// box beside it is left alone.
+    #[test]
+    fn a_merged_pair_is_split_where_its_labels_meet() {
+        let profile = splitting(MERGED_FIELDS);
+        for (merged, width, halves, left_width) in [
+            (
+                "CLUBSPEEDMPHBALLSPEEDMPH",
+                240.0,
+                ["CLUBSPEEDMPH", "BALLSPEEDMPH"],
+                120.0,
+            ),
+            (
+                "BALLDIRECTIONDEGLAUNCHANGLE",
+                270.0,
+                ["BALLDIRECTIONDEG", "LAUNCHANGLE"],
+                160.0,
+            ),
+        ] {
+            let whole = TextBox {
+                rgb: Some([238.0, 236.0, 229.0]),
+                ..text_box(merged, 100.0, 40.0, width, 20.0, 0.93)
+            };
+            let value = text_box("95", 100.0, 70.0, 30.0, 20.0, 0.99);
+            let split = split_merged(&[whole.clone(), value.clone()], &profile);
+            assert_eq!(
+                split,
+                [
+                    TextBox {
+                        text: halves[0].to_string(),
+                        width: left_width,
+                        ..whole.clone()
+                    },
+                    TextBox {
+                        text: halves[1].to_string(),
+                        x: 100.0 + left_width,
+                        width: width - left_width,
+                        ..whole.clone()
+                    },
+                    value,
+                ],
+                "{merged}"
+            );
+        }
+    }
+
+    /// The split list is what every later step sees: both halves are located labels, and each reads
+    /// the value under its own half. Without the flag the same boxes locate nothing, as before M42.
+    #[test]
+    fn a_split_pair_is_located_and_read_and_only_where_the_profile_opts_in() {
+        let fields = r#"[{"label": "Club Speed Mph", "target": "club_head_speed"},
+                         {"label": "Ball Speed Mph", "target": "ball_speed"}]"#;
+        let boxes = [
+            text_box("CLUBSPEEDMPHBALLSPEEDMPH", 0.0, 0.0, 240.0, 20.0, 1.0),
+            text_box("95", 45.0, 30.0, 30.0, 20.0, 1.0),
+            text_box("102.5", 155.0, 30.0, 50.0, 20.0, 1.0),
+        ];
+
+        let parsed = parse_screen(&boxes, &splitting(fields));
+        assert_eq!(
+            read(&parsed),
+            [("Club Speed Mph", "95"), ("Ball Speed Mph", "102.5")]
+        );
+        assert_eq!(
+            parsed.values.get("club_head_speed"),
+            Some(&FieldValue::Number(95.0))
+        );
+        assert_eq!(
+            parsed.values.get("ball_speed"),
+            Some(&FieldValue::Number(102.5))
+        );
+        assert_eq!(parsed.fields_present, ["club_head_speed", "ball_speed"]);
+        assert!(parsed.warnings.is_empty(), "{:?}", parsed.warnings);
+
+        let unsplit = parse_screen(&boxes, &profile(fields));
+        assert!(unsplit.is_empty() && unsplit.fields_present.is_empty());
+        assert_eq!(
+            unsplit.warnings,
+            ["no t tile labels recognized - wrong screen, or the crop failed"]
+        );
+        // The cut is there to be found without the flag: it is `parse_screen` that does not look.
+        assert_eq!(split_merged(&boxes, &profile(fields)).len(), 4);
+    }
+
+    /// `Ball Speed` is a label of its own, so a box reading it is never cut, though `BALL` and
+    /// `SPEED` would each match a label exactly.
+    #[test]
+    fn a_box_that_already_matches_a_label_is_never_split() {
+        let profile = splitting(
+            r#"[{"label": "Ball", "target": "a"}, {"label": "Speed", "target": "b"},
+                {"label": "Ball Speed", "target": "ball_speed"}]"#,
+        );
+        assert_eq!(profile.fields[0].matches("BALL"), 1.0);
+        assert_eq!(profile.fields[1].matches("SPEED"), 1.0);
+        for text in ["Ball Speed", "BALLSPEED"] {
+            let boxes = [text_box(text, 0.0, 0.0, 90.0, 20.0, 1.0)];
+            assert_eq!(split_merged(&boxes, &profile), boxes, "{text:?}");
+        }
+    }
+
+    /// `CARRYCARRY` cut in the middle is `Carry` twice at 1.0, and that is one tile read twice, not
+    /// two tiles: no cut qualifies and the box is left whole.
+    #[test]
+    fn a_cut_whose_halves_name_one_label_does_not_qualify() {
+        let profile = splitting(
+            r#"[{"label": "Carry", "target": "carry_distance"},
+                {"label": "Total", "target": "total_distance"}]"#,
+        );
+        assert_eq!(
+            profile.field_for("CARRY").map(|field| field.label.as_str()),
+            Some("Carry")
+        );
+        let boxes = [text_box("CARRYCARRY", 0.0, 0.0, 100.0, 20.0, 1.0)];
+        assert_eq!(split_merged(&boxes, &profile), boxes);
+    }
+
+    /// `CARRY | XTOTAL` and `CARRYX | TOTAL` each have a weaker half of 10/11, so the earlier cut
+    /// wins. Five of eleven letters is five elevenths of the width.
+    #[test]
+    fn a_tie_on_the_weaker_half_goes_to_the_earlier_cut() {
+        let profile = splitting(
+            r#"[{"label": "Carry", "target": "carry_distance"},
+                {"label": "Total", "target": "total_distance"}]"#,
+        );
+        let (carry, total) = (&profile.fields[0], &profile.fields[1]);
+        let early = carry.matches("CARRY").min(total.matches("XTOTAL"));
+        let late = carry.matches("CARRYX").min(total.matches("TOTAL"));
+        assert_eq!((early, late), (10.0 / 11.0, 10.0 / 11.0));
+
+        let split = split_merged(
+            &[text_box("CARRYXTOTAL", 0.0, 0.0, 110.0, 20.0, 1.0)],
+            &profile,
+        );
+        assert_eq!(texts(&split), ["CARRY", "XTOTAL"]);
+        assert_eq!(
+            split.iter().map(|b| (b.x, b.width)).collect::<Vec<_>>(),
+            [(0.0, 50.0), (50.0, 60.0)]
+        );
+    }
+
+    // --- a tile printed twice [M42 P5] ------------------------------------------------------------
+
+    /// `Total Yd` printed twice, as Full Swing prints it, beside a `Carry Yd` that is printed once.
+    const TOTAL_TWICE: &str = r#"[{"label": "Carry Yd", "target": "carry_distance"},
+        {"label": "Total Yd", "target": "total_distance", "printed_twice": true}]"#;
+
+    /// The same tiles with no rule: what `hd_golf` and every profile before M42 is.
+    const TOTAL_ONCE: &str = r#"[{"label": "Carry Yd", "target": "carry_distance"},
+        {"label": "Total Yd", "target": "total_distance"}]"#;
+
+    /// Full Swing's arrangement, cut down: `Total Yd` alone in a header row over `top`, then a data
+    /// row of `Carry Yd` over `131` and `Total Yd` again over `bottom`. `None` leaves that cell with
+    /// no box under its label.
+    fn total_twice(top: Option<&str>, bottom: Option<&str>) -> Vec<TextBox> {
+        let mut boxes = vec![text_box("Total Yd", 0.0, 0.0, 100.0, 20.0, 1.0)];
+        boxes.extend(top.map(|text| text_box(text, 20.0, 30.0, 40.0, 20.0, 1.0)));
+        boxes.push(text_box("Carry Yd", 0.0, 100.0, 100.0, 20.0, 1.0));
+        boxes.push(text_box("131", 20.0, 130.0, 40.0, 20.0, 1.0));
+        boxes.push(text_box("Total Yd", 200.0, 100.0, 100.0, 20.0, 1.0));
+        boxes.extend(bottom.map(|text| text_box(text, 220.0, 130.0, 40.0, 20.0, 1.0)));
+        boxes
+    }
+
+    fn total(parsed: &ParsedShot) -> Option<&FieldValue> {
+        parsed.values.get("total_distance")
+    }
+
+    /// Two cells that agree store the value once, where the top one stands, and `raw_fields` keeps
+    /// both texts top first. `134.0` and `134` are one number. Both cells hold text and count as
+    /// one value read: with `Carry Yd` empty the value coverage is a half, as it would be with the
+    /// total printed once, where two would have counted it whole.
+    #[test]
+    fn two_cells_that_agree_store_the_value() {
+        let profile = profile(TOTAL_TWICE);
+        for (top, bottom) in [("134", "134"), ("134", "134.0")] {
+            let parsed = parse_screen(&total_twice(Some(top), Some(bottom)), &profile);
+            let joined = format!("{top} | {bottom}");
+            assert_eq!(
+                read(&parsed),
+                [("Total Yd", joined.as_str()), ("Carry Yd", "131")]
+            );
+            assert_eq!(total(&parsed), Some(&FieldValue::Number(134.0)));
+            assert_eq!(parsed.fields_present, ["carry_distance", "total_distance"]);
+            assert!(parsed.warnings.is_empty(), "{:?}", parsed.warnings);
+            assert_eq!(parsed.confidence, 1.0);
+        }
+
+        let mut boxes = total_twice(Some("134"), Some("134"));
+        boxes.retain(|text_box| text_box.text != "131");
+        let parsed = parse_screen(&boxes, &profile);
+        assert_eq!(total(&parsed), Some(&FieldValue::Number(134.0)));
+        assert_eq!(parsed.confidence, 0.825);
+    }
+
+    /// Two cells that disagree store nothing, and say what each held, top first. The tile was
+    /// located and read, so it is in `fields_present` and `raw_fields` both.
+    #[test]
+    fn two_cells_that_disagree_store_nothing() {
+        let parsed = parse_screen(
+            &total_twice(Some("134"), Some("137")),
+            &profile(TOTAL_TWICE),
+        );
+        assert_eq!(total(&parsed), None);
+        assert_eq!(
+            parsed.warnings,
+            ["Total Yd: printed twice as '134' and '137' - not stored"]
+        );
+        assert_eq!(read(&parsed)[0], ("Total Yd", "134 | 137"));
+        assert_eq!(parsed.fields_present, ["carry_distance", "total_distance"]);
+        assert_eq!(
+            parsed.values.get("carry_distance"),
+            Some(&FieldValue::Number(131.0))
+        );
+    }
+
+    /// One copy giving a number is enough, whichever it is and whatever the other held, and the
+    /// other's own warning is not raised over a tile that holds a value. One box located is read as
+    /// any tile is. Neither giving one raises each cell's warning, a repeated line once.
+    #[test]
+    fn one_cell_with_a_number_stores_it() {
+        let profile = profile(TOTAL_TWICE);
+        for (top, bottom, raw) in [
+            (Some("134"), None, "134 | "),
+            (None, Some("134"), " | 134"),
+            (Some("---"), Some("134"), "--- | 134"),
+            (Some("134"), Some("yds"), "134 | yds"),
+        ] {
+            let parsed = parse_screen(&total_twice(top, bottom), &profile);
+            assert_eq!(total(&parsed), Some(&FieldValue::Number(134.0)), "{raw:?}");
+            assert_eq!(read(&parsed)[0], ("Total Yd", raw));
+            assert!(parsed.warnings.is_empty(), "{raw:?}: {:?}", parsed.warnings);
+        }
+
+        let mut boxes = total_twice(None, Some("134"));
+        boxes.remove(0);
+        let parsed = parse_screen(&boxes, &profile);
+        assert_eq!(total(&parsed), Some(&FieldValue::Number(134.0)));
+        assert_eq!(read(&parsed), [("Carry Yd", "131"), ("Total Yd", "134")]);
+
+        for (top, bottom, warnings) in [
+            (None, None, &["Total Yd: no value text under the label"][..]),
+            (
+                Some("yds"),
+                None,
+                &[
+                    "Total Yd: could not read a number from 'yds'",
+                    "Total Yd: no value text under the label",
+                ][..],
+            ),
+            (Some("---"), Some("---"), &[][..]),
+        ] {
+            let parsed = parse_screen(&total_twice(top, bottom), &profile);
+            assert_eq!(total(&parsed), None, "{top:?} {bottom:?}");
+            assert_eq!(parsed.warnings, warnings, "{top:?} {bottom:?}");
+        }
+    }
+
+    /// The field's two boxes are one assignment giving it both, not two rivals: both are resolved
+    /// to it and nothing is withheld, a damaged copy included. Capacity two adds exactly the
+    /// assignment giving the field both boxes to the three one-to-one ones.
+    #[test]
+    fn the_fields_two_boxes_never_tie_with_each_other() {
+        let profile = profile(TOTAL_TWICE);
+        for second in ["Total Yd", "TOTALYD"] {
+            let boxes = in_a_row(&["Total Yd", second]);
+            let (tiles, withheld) = locate(&profile, &boxes);
+            assert_eq!(
+                tiles,
+                [
+                    ("Total Yd".into(), Some("Total Yd".into())),
+                    (second.into(), Some("Total Yd".into())),
+                ]
+            );
+            assert!(withheld.is_empty(), "{second:?}: {withheld:?}");
+        }
+
+        let local = vec![vec![(0, 1.0)], vec![(0, 1.0)]];
+        for (capacity, want) in [(1, 3), (2, 4)] {
+            let mut count = 0;
+            assignments(&local, &[capacity], &mut |_, _| count += 1);
+            assert_eq!(count, want, "capacity {capacity}");
+        }
+    }
+
+    /// A third box that fits the label is a real tie: three pairs total the same, and the field is
+    /// withheld with all three named and all three still labels.
+    #[test]
+    fn a_third_box_for_the_label_withholds_it() {
+        let profile = profile(TOTAL_TWICE);
+        let boxes = in_a_row(&["Total Yd", "Total Yd", "Total Yd"]);
+        let (tiles, withheld) = locate(&profile, &boxes);
+        assert_eq!(tiles, vec![("Total Yd".to_string(), None::<String>); 3]);
+        assert_eq!(withheld, ["Total Yd"]);
+        let labels = assign_labels(&boxes, &profile);
+        assert_eq!(
+            labels.withheld[0].1,
+            "Total Yd: label tie between 'Total Yd', 'Total Yd' and 'Total Yd' - not read"
+        );
+    }
+
+    /// Without the rule, the same photo is the committed `carry-twice` vector's case: two boxes fit
+    /// one label equally, and it is located, withheld, and never read.
+    #[test]
+    fn without_the_rule_two_boxes_withhold_the_label_as_before() {
+        let parsed = parse_screen(&total_twice(Some("134"), Some("134")), &profile(TOTAL_ONCE));
+        assert_eq!(total(&parsed), None);
+        assert_eq!(
+            parsed.warnings,
+            ["Total Yd: label tie between 'Total Yd' and 'Total Yd' - not read"]
+        );
+        assert_eq!(read(&parsed), [("Carry Yd", "131")]);
+        assert_eq!(parsed.fields_present, ["carry_distance", "total_distance"]);
+    }
+
+    // --- the sign from a lit letter (M42 P6) --------------------------------------------------
+
+    const BALL_DIRECTION: &str = r#"[{"label": "Ball Direction Deg", "target": "launch_direction",
+        "lit_sign": [{"token": "L", "sign": -1}, {"token": "R", "sign": 1}]}]"#;
+
+    /// `IMG_2889`'s lit `R` and unlit `F`, as the M42 plan's finding 4 measured them.
+    const LIT: Option<[f64; 3]> = Some([239.0, 222.0, 90.0]);
+    const UNLIT: Option<[f64; 3]> = Some([187.0, 183.0, 176.0]);
+
+    /// Ball direction as `IMG_2889` lays it out, cut down: the label, then each of `letters` with
+    /// its colour on a line of their own, left to right, then `value` under them, all in the
+    /// label's cell. So the cell's text is the letters, then the value.
+    fn direction(value: &str, letters: &[(&str, Option<[f64; 3]>)]) -> Vec<TextBox> {
+        let mut boxes = vec![text_box("Ball Direction Deg", 0.0, 0.0, 200.0, 20.0, 1.0)];
+        for (at, &(text, rgb)) in letters.iter().enumerate() {
+            let x = 20.0 + 140.0 * at as f64;
+            boxes.push(TextBox {
+                rgb,
+                ..text_box(text, x, 25.0, 20.0, 20.0, 1.0)
+            });
+        }
+        boxes.push(text_box(value, 60.0, 50.0, 80.0, 40.0, 1.0));
+        boxes
+    }
+
+    fn launch_direction(parsed: &ParsedShot) -> Option<&FieldValue> {
+        parsed.values.get("launch_direction")
+    }
+
+    const UNDECIDED: &str =
+        "Ball Direction Deg: neither L nor R could be read as lit - sign unknown, not stored";
+
+    /// Every row of the M42 plan's finding 4 is lit exactly where it was lit by eye, and so are
+    /// M42 P2's three letters through the shipping reader; white digits and labels from the same
+    /// photos are not. Then each edge on its own: the brightness floor is inclusive and decides a
+    /// dim yellow, and the ratio decides a bright one.
+    #[test]
+    fn the_measured_letters_are_lit_where_they_were_lit_by_eye() {
+        for (rgb, lit) in [
+            ([239.0, 222.0, 90.0], true),
+            ([227.0, 207.0, 72.0], true),
+            ([187.0, 183.0, 176.0], false),
+            ([200.0, 206.0, 197.0], false),
+            ([215.0, 214.0, 206.0], false),
+            ([243.0, 225.0, 73.0], true),
+            ([241.0, 223.0, 91.0], true),
+            ([249.0, 220.0, 96.0], true),
+            ([254.0, 238.0, 113.0], true),
+            ([238.93, 222.16, 90.45], true),
+            ([226.9, 207.04, 71.97], true),
+            ([186.55, 183.21, 175.62], false),
+            ([233.0, 235.0, 233.0], false),
+            ([246.0, 245.0, 246.0], false),
+            ([230.0, 233.0, 228.0], false),
+        ] {
+            assert_eq!(is_lit(rgb), lit, "{rgb:?}");
+        }
+        for (rgb, lit) in [
+            ([120.0, 130.0, 10.0], true),
+            ([130.0, 120.0, 10.0], true),
+            ([119.0, 130.0, 10.0], false),
+            ([130.0, 119.0, 10.0], false),
+            ([200.0, 220.0, 139.0], true),
+            ([200.0, 220.0, 141.0], false),
+            ([220.0, 200.0, 141.0], false),
+        ] {
+            assert_eq!(is_lit(rgb), lit, "{rgb:?}");
+        }
+    }
+
+    /// Each way call 5 says the pair can fall, read through `parse_screen`. One letter is enough
+    /// either way, lit or unlit; two decide when exactly one is lit; anything else, or a letter
+    /// with no colour, withholds the value with call 5's warning, the tile still located and its
+    /// text still recorded.
+    #[test]
+    fn each_way_the_letters_can_fall_decides_or_withholds_the_sign() {
+        let profile = profile(BALL_DIRECTION);
+        for (letters, want) in [
+            (&[("R", LIT)][..], Some(10.1)),
+            (&[("L", LIT)][..], Some(-10.1)),
+            (&[("R", UNLIT)][..], Some(-10.1)),
+            (&[("L", UNLIT)][..], Some(10.1)),
+            (&[("L", UNLIT), ("R", LIT)][..], Some(10.1)),
+            (&[("L", LIT), ("R", UNLIT)][..], Some(-10.1)),
+            (&[("R", LIT), ("L", UNLIT)][..], Some(10.1)),
+            (&[("L", LIT), ("R", LIT)][..], None),
+            (&[("L", UNLIT), ("R", UNLIT)][..], None),
+            (&[][..], None),
+            (&[("L", None), ("R", LIT)][..], None),
+            (&[("L", UNLIT), ("R", None)][..], None),
+            (&[("R", None)][..], None),
+        ] {
+            let parsed = parse_screen(&direction("10.1", letters), &profile);
+            assert_eq!(
+                launch_direction(&parsed),
+                want.map(FieldValue::Number).as_ref(),
+                "{letters:?}"
+            );
+            let warnings: &[&str] = if want.is_some() { &[] } else { &[UNDECIDED] };
+            assert_eq!(parsed.warnings, warnings, "{letters:?}");
+            assert_eq!(parsed.fields_present, ["launch_direction"]);
+            let texts: Vec<&str> = letters.iter().map(|&(text, _)| text).collect();
+            let raw = [texts.as_slice(), &["10.1"]].concat().join(" ");
+            assert_eq!(read(&parsed), [("Ball Direction Deg", raw.as_str())]);
+        }
+    }
+
+    /// The digits give the magnitude and never the sign, so a stray `-` or `+` is dropped and the
+    /// letters decide. A zero needs no sign, so it is stored with no letter read at all, as `0.0`
+    /// whichever sign was printed. A cell with no number says so, as any tile's does.
+    #[test]
+    fn the_digits_give_the_magnitude_and_a_zero_needs_no_sign() {
+        let profile = profile(BALL_DIRECTION);
+        for (value, letters, want) in [
+            ("-10.1", &[("R", LIT)][..], 10.1),
+            ("+10.1", &[("L", LIT)][..], -10.1),
+            ("10.1\u{b0}", &[("L", UNLIT)][..], 10.1),
+            ("0.0", &[][..], 0.0),
+            ("-0.0", &[][..], 0.0),
+            ("0", &[("L", LIT), ("R", LIT)][..], 0.0),
+        ] {
+            let parsed = parse_screen(&direction(value, letters), &profile);
+            assert!(
+                parsed.warnings.is_empty(),
+                "{value:?}: {:?}",
+                parsed.warnings
+            );
+            let Some(&FieldValue::Number(number)) = launch_direction(&parsed) else {
+                panic!("{value:?} stored no number");
+            };
+            assert_eq!(number, want, "{value:?}");
+            assert!(number.is_sign_positive() || want < 0.0, "{value:?}");
+        }
+
+        let parsed = parse_screen(&direction("--", &[("R", LIT)]), &profile);
+        assert_eq!(launch_direction(&parsed), None);
+        assert_eq!(
+            parsed.warnings,
+            ["Ball Direction Deg: could not read a number from 'R --'"]
+        );
+    }
+
+    /// A letter box is a box holding one token and nothing else, once stripped and upper-cased:
+    /// ` r ` is `R`, and `RR` (`IMG_2893` read `DD`, M42 P3's finding) or `R.` is no letter. Two
+    /// boxes of one letter count once when they agree and decide nothing when they do not.
+    #[test]
+    fn a_letter_box_holds_one_token_and_nothing_else() {
+        let profile = profile(BALL_DIRECTION);
+        for (letters, want) in [
+            (&[(" r ", LIT)][..], Some(10.1)),
+            (&[("RR", LIT)][..], None),
+            (&[("R.", LIT)][..], None),
+            (&[("RR", LIT), ("L", UNLIT)][..], Some(10.1)),
+            (&[("R", LIT), ("R", LIT)][..], Some(10.1)),
+            (&[("R", UNLIT), ("R", UNLIT)][..], Some(-10.1)),
+            (&[("R", LIT), ("R", UNLIT)][..], None),
+            (&[("R", LIT), ("R", None)][..], None),
+        ] {
+            let parsed = parse_screen(&direction("10.1", letters), &profile);
+            assert_eq!(
+                launch_direction(&parsed),
+                want.map(FieldValue::Number).as_ref(),
+                "{letters:?}"
+            );
+        }
+    }
+
+    /// A tile without `lit_sign` reads its letters as text, exactly as before: with no sign rule
+    /// the number is stored as printed and the colours are never looked at, and with HD Golf's word
+    /// rule the residual `L R` is no direction word, so the magnitude is stored with the word
+    /// rule's own warning. That second case is why the word rule cannot read this screen.
+    #[test]
+    fn a_tile_without_the_rule_reads_its_letters_as_text() {
+        let boxes = direction("-10.1", &[("L", UNLIT), ("R", LIT)]);
+        let plain = parse_screen(
+            &boxes,
+            &profile(r#"[{"label": "Ball Direction Deg", "target": "launch_direction"}]"#),
+        );
+        assert_eq!(launch_direction(&plain), Some(&FieldValue::Number(-10.1)));
+        assert!(plain.warnings.is_empty(), "{:?}", plain.warnings);
+        assert_eq!(read(&plain), [("Ball Direction Deg", "L R -10.1")]);
+
+        let boxes = direction("10.1", &[("L", UNLIT), ("R", LIT)]);
+        let worded = parse_screen(
+            &boxes,
+            &profile(
+                r#"[{"label": "Ball Direction Deg", "target": "launch_direction",
+                     "sign_tokens": [{"tokens": ["R"], "sign": 1},
+                                     {"tokens": ["L"], "sign": -1}]}]"#,
+            ),
+        );
+        assert_eq!(launch_direction(&worded), Some(&FieldValue::Number(10.1)));
+        assert_eq!(
+            worded.warnings,
+            [
+                "Ball Direction Deg: no direction word in 'L R 10.1' - sign unknown, storing the \
+                 magnitude as printed"
+            ]
+        );
+    }
+
+    // --- a number printed in feet, stored in yards (M42 P7) --------------------------------------
+
+    /// One tile: `label` over `value`, each in a box of its own.
+    fn tile(label: &str, value: &str) -> [TextBox; 2] {
+        [
+            text_box(label, 0.0, 0.0, 100.0, 20.0, 1.0),
+            text_box(value, 20.0, 30.0, 40.0, 20.0, 1.0),
+        ]
+    }
+
+    fn number(parsed: &ParsedShot, target: &str) -> Option<f64> {
+        match parsed.values.get(target) {
+            Some(&FieldValue::Number(number)) => Some(number),
+            _ => None,
+        }
+    }
+
+    /// Every apex the M42 plan's truth table holds, in feet, is stored as the printed number divided
+    /// by 3.0, to the bit, with `raw_fields` keeping the text as printed and nothing warned. With no
+    /// `printed_unit` the same tile stores the number as printed, as every profile before M42 does.
+    #[test]
+    fn a_number_printed_in_feet_is_stored_in_yards() {
+        let feet =
+            profile(r#"[{"label": "Apex Ft", "target": "apex_height", "printed_unit": "feet"}]"#);
+        let plain = profile(r#"[{"label": "Apex Ft", "target": "apex_height"}]"#);
+        for (printed, printed_feet) in [
+            ("85.2", 85.2_f64),
+            ("39.9", 39.9),
+            ("71.4", 71.4),
+            ("15.5", 15.5),
+            ("80.6", 80.6),
+            ("142.2", 142.2),
+        ] {
+            let parsed = parse_screen(&tile("Apex Ft", printed), &feet);
+            assert_eq!(
+                number(&parsed, "apex_height").map(f64::to_bits),
+                Some((printed_feet / 3.0).to_bits()),
+                "{printed}"
+            );
+            assert_eq!(read(&parsed), [("Apex Ft", printed)]);
+            assert!(
+                parsed.warnings.is_empty(),
+                "{printed}: {:?}",
+                parsed.warnings
+            );
+
+            let parsed = parse_screen(&tile("Apex Ft", printed), &plain);
+            assert_eq!(number(&parsed, "apex_height"), Some(printed_feet));
+            assert_eq!(read(&parsed), [("Apex Ft", printed)]);
+        }
+    }
+
+    /// The number is converted whichever rule gave its sign: a printed `-30` feet is `-10` yards, a
+    /// lit `L` over `30` is `-10`, and a zero the letters never sign stays `+0.0`. (A sign is a
+    /// multiplication by one, exact, so before or after the division gives the same float; the
+    /// division comes last so it is written once.) A tile printed twice compares its copies in
+    /// yards and still quotes them as printed.
+    #[test]
+    fn every_sign_rule_is_converted_and_the_copies_agree_in_yards() {
+        let printed_sign = profile(
+            r#"[{"label": "Offline Ft", "target": "carry_offline", "printed_sign": 1,
+                 "printed_unit": "feet"}]"#,
+        );
+        let parsed = parse_screen(&tile("Offline Ft", "-30"), &printed_sign);
+        assert_eq!(number(&parsed, "carry_offline"), Some(-10.0));
+
+        let lit = profile(
+            r#"[{"label": "Offline Ft", "target": "carry_offline", "printed_unit": "feet",
+                 "lit_sign": [{"token": "L", "sign": -1}, {"token": "R", "sign": 1}]}]"#,
+        );
+        for (value, want) in [("30", -10.0), ("0", 0.0)] {
+            let boxes = [
+                text_box("Offline Ft", 0.0, 0.0, 200.0, 20.0, 1.0),
+                TextBox {
+                    rgb: LIT,
+                    ..text_box("L", 20.0, 25.0, 20.0, 20.0, 1.0)
+                },
+                text_box(value, 60.0, 50.0, 80.0, 40.0, 1.0),
+            ];
+            let parsed = parse_screen(&boxes, &lit);
+            let stored = number(&parsed, "carry_offline").expect("a number");
+            assert_eq!(stored, want, "{value}");
+            assert_eq!(stored.is_sign_negative(), want < 0.0, "{value}");
+        }
+
+        let twice = profile(
+            r#"[{"label": "Carry Yd", "target": "carry_distance"},
+                {"label": "Total Yd", "target": "total_distance", "printed_twice": true,
+                 "printed_unit": "feet"}]"#,
+        );
+        let parsed = parse_screen(&total_twice(Some("402"), Some("402.0")), &twice);
+        assert_eq!(total(&parsed), Some(&FieldValue::Number(134.0)));
+        assert_eq!(number(&parsed, "carry_distance"), Some(131.0));
+        let parsed = parse_screen(&total_twice(Some("402"), Some("405")), &twice);
+        assert_eq!(total(&parsed), None);
+        assert_eq!(
+            parsed.warnings,
+            ["Total Yd: printed twice as '402' and '405' - not stored"]
+        );
+    }
+
     /// What [`TIE_CAP`]'s argument and `raw_fields`' keying rest on, held of the shipped profiles:
     /// every label is distinct, and no label or alias reaches the match threshold against another
     /// field but within the `Impact Position` pair.
@@ -1377,5 +2446,104 @@ mod tests {
                 }
             }
         }
+    }
+
+    // --- the full_swing profile [M42 P8] ----------------------------------------------------------
+
+    fn full_swing() -> &'static DeviceProfile {
+        crate::profile::load_profile("full_swing").expect("the shipped profile")
+    }
+
+    /// Full Swing's labels and the unit-less aliases beside them stay apart: no name of one field
+    /// reaches the threshold against another field. `only_the_impact_position_pair_overlaps` walks
+    /// every profile and would catch it too; this one names the profile, so an alias P9's tuning
+    /// adds fails here by name, and it records the margin.
+    ///
+    /// The closest pair is `Club Speed Mph` and `Ball Speed Mph`, 0.786 either way (CPython's
+    /// `difflib`, measured at M42 P8), with `Club Speed` against `Ball Speed Mph` at 0.70 and `Total
+    /// Yd` against `To Hole Yd`, and `Backspin Rpm` against `Sidespin Rpm`, at 0.667. So the speed
+    /// pair sits 0.014 under the threshold, and an alias closer to the other speed than its own
+    /// label is would make the two tie.
+    #[test]
+    fn full_swing_labels_do_not_overlap() {
+        let profile = full_swing();
+        let mut closest = (0.0, String::new());
+        for field in &profile.fields {
+            for other in &profile.fields {
+                if std::ptr::eq(field, other) {
+                    continue;
+                }
+                for name in std::iter::once(&other.label).chain(&other.aliases) {
+                    let score = field.matches(name);
+                    assert!(
+                        score < LABEL_MATCH_THRESHOLD,
+                        "{} scores {score} against {name:?}, another tile's name",
+                        field.label
+                    );
+                    if score > closest.0 {
+                        closest = (score, format!("{} against {name}", field.label));
+                    }
+                }
+            }
+        }
+        assert_eq!(closest.1, "Club Speed Mph against Ball Speed Mph");
+        assert_eq!(closest.0, 11.0 / 14.0);
+    }
+
+    /// The shipped `full_swing` profile turns on each of M42's four rules where the M42 plan says
+    /// (call 9), and on no other tile: a key the load ignores in silence, or one on the wrong tile,
+    /// would otherwise read this screen wrong with every test of the rule itself passing.
+    #[test]
+    fn full_swing_uses_every_rule() {
+        let profile = full_swing();
+        let on = |rule: fn(&ProfileField) -> bool| -> Vec<&str> {
+            profile
+                .fields
+                .iter()
+                .filter(|field| rule(field))
+                .map(|field| field.label.as_str())
+                .collect()
+        };
+
+        // Rule 1 (P4), the profile's own key: the OCR runs adjacent labels together on this screen.
+        assert!(profile.split_merged_labels);
+        // Rule 2 (P5): `TOTAL YD` stands in the header row and the data row.
+        assert_eq!(on(|field| field.printed_twice), ["Total Yd"]);
+        // Rule 3 (P6): ball direction lights `L` or `R`, sidespin `D` or `F`, + being right and
+        // fade (call 2).
+        assert_eq!(
+            on(|field| !field.lit_sign.is_empty()),
+            ["Ball Direction Deg", "Sidespin Rpm"]
+        );
+        let letters = |label: &str| -> Vec<(&str, i64)> {
+            profile
+                .fields
+                .iter()
+                .find(|field| field.label == label)
+                .expect("the tile")
+                .lit_sign
+                .iter()
+                .map(|lit| (lit.token.as_str(), lit.sign))
+                .collect()
+        };
+        assert_eq!(letters("Ball Direction Deg"), [("L", -1), ("R", 1)]);
+        assert_eq!(letters("Sidespin Rpm"), [("D", -1), ("F", 1)]);
+        // Rule 4 (P7): the apex is printed in feet.
+        assert_eq!(
+            on(|field| field.printed_unit == Some(crate::profile::PrintedUnit::Feet)),
+            ["Apex Ft"]
+        );
+        assert_eq!(on(|field| field.printed_unit.is_some()), ["Apex Ft"]);
+
+        // No word or printed-sign rule anywhere: path and face print their own sign in ShotData's
+        // convention (the plan's finding 8), and the lit tiles may not have one beside the letters.
+        assert_eq!(
+            on(|field| !field.sign_tokens.is_empty() || field.printed_sign.is_some()),
+            Vec::<&str>::new()
+        );
+        // Three 17 px labels on `IMG_2889` have their value 3.62–3.85 label heights below them, past
+        // the 3.5 default, which would lose all three (M42 P6's finding). P9 may tune it within
+        // [4.0, 8.0].
+        assert!((4.0..=8.0).contains(&profile.value_span_ratio));
     }
 }

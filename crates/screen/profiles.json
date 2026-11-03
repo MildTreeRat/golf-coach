@@ -146,6 +146,32 @@
           "kind": "text"
         }
       ]
+    },
+    {
+      "_comment": ["Full Swing's grid screen (M42). Labels carry their units; aliases without the unit cover the reads that drop it (the M42 plan's finding 2). Path and face print their own sign, a minus being left, which for a right-handed golfer is ShotData's convention, so neither has a sign rule (finding 8). Total Yd is printed twice (call 7), Apex in feet (call 8), and ball direction and sidespin are signed by a lit letter (calls 4, 5)."],
+      "device": "full_swing",
+      "title": "SHOT DATA",
+      "value_span_ratio": 6.0,
+      "split_merged_labels": true,
+      "blank_markers": ["---", "--", "—", "- - -"],
+      "fields": [
+        { "label": "Shot Result", "target": null, "kind": "text" },
+        { "label": "Total Yd", "aliases": ["Total"], "target": "total_distance", "kind": "number", "unit": "yards", "printed_twice": true },
+        { "label": "To Hole Yd", "aliases": ["To Hole Ft", "To Hole"], "target": null, "kind": "text" },
+        { "label": "Carry Yd", "aliases": ["Carry"], "target": "carry_distance", "kind": "number", "unit": "yards" },
+        { "label": "Club Speed Mph", "aliases": ["Club Speed"], "target": "club_head_speed", "kind": "number", "unit": "mph" },
+        { "label": "Ball Speed Mph", "aliases": ["Ball Speed"], "target": "ball_speed", "kind": "number", "unit": "mph" },
+        { "label": "Path Deg", "aliases": ["Path"], "target": "club_path", "kind": "number", "unit": "degrees" },
+        { "label": "Face Deg", "aliases": ["Face"], "target": "club_face_angle", "kind": "number", "unit": "degrees" },
+        { "label": "Ball Direction Deg", "aliases": ["Ball Direction"], "target": "launch_direction", "kind": "number", "unit": "degrees",
+          "lit_sign": [ { "token": "L", "sign": -1 }, { "token": "R", "sign": 1 } ] },
+        { "label": "Launch Angle", "target": "launch_angle", "kind": "number", "unit": "degrees" },
+        { "label": "Apex Ft", "aliases": ["Apex"], "target": "apex_height", "kind": "number", "unit": "yards", "printed_unit": "feet" },
+        { "label": "Smash Factor", "target": "smash_factor", "kind": "number", "unit": "ratio" },
+        { "label": "Backspin Rpm", "aliases": ["Backspin"], "target": "backspin", "kind": "number", "unit": "rpm" },
+        { "label": "Sidespin Rpm", "aliases": ["Sidespin"], "target": "sidespin", "kind": "number", "unit": "rpm",
+          "lit_sign": [ { "token": "D", "sign": -1 }, { "token": "F", "sign": 1 } ] }
+      ]
     }
   ]
 }

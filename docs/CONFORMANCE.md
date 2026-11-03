@@ -108,6 +108,13 @@ models, so both stay in `SCHEMA_ROOTS`. `shot_result` is the first schema with *
 all**: `ShotResult` exists only in `crates/contracts`, so there is nothing to export, and it is
 not in `SCHEMA_ROOTS`.
 
+**M42 added two more keys to `ShotData`, in the same four files**: `backspin` and `sidespin`. They
+are the first of its keys written only when set, so that no committed vector moves, which means a
+default shot's serialization no longer carries the whole key set. `shot::WRITTEN_WHEN_SET` names the
+two, and the three tests that read the key set off a default shot take the union with it:
+`crates/contracts/tests/capability.rs::shot_data_keys`, `crates/contracts/tests/schemas.rs::rust_keys`
+and `golf_mcp::query`'s `the_metric_list_and_the_view_s_own_fields_split_every_shot_field`.
+
 All six are listed in `conformance.py::RUST_OWNED_SCHEMAS`. `regenerate --schemas-only` writes the
 five Python-owned roots (`analysis_state`, `audio_file`, `bag`, `golfer` and `keypoints_file`) and
 never these, and the freshness pin skips them. `SCHEMA_ROOTS` keeps all ten of its roots, so
@@ -602,7 +609,7 @@ engine's oracle to Rust left it where it was. The screen tables need no `data/` 
 texts they run over are transcribed into `conformance_vectors._OCR_TEXTS` rather than read from the
 photos.
 
-### Screen (`spec/vectors/screen/`) — 48 vectors, run by `cargo test`
+### Screen (`spec/vectors/screen/`) — 51 vectors, run by `cargo test`
 
 Added by M34, and the screen reader's oracle: OCR boxes in, `ShotData` out. The implementation under
 test is `crates/screen`. **It gates the parser, never the recognizer.** The phone reads the screen
@@ -615,13 +622,17 @@ is §M29's.
 | `corpus/` | PaddleOCR's boxes for each stored bay photo, deduplicated by content sha256 and named by the stored shot's `shot_id`. Each was verified at record time against the stored shot, on every key but `provenance.image_path` | `python`, with a Rust ledger | 1 |
 | `reference/` | `IMG_2738` and `IMG_2739`, the other layout, read directly and written to no store | `python`, with a Rust ledger | 1 |
 | `synthetic/` | `tests/launch_monitor/conftest.py::build_screen`'s screens, one per parser or validator path, each `note` naming its path | `python`, with a Rust ledger | 1 |
-| `hand/` | the tie rule and the `Impact Position V` tile. Each `note` works the scores, the sums and the confidence by hand from the stated rule | `hand` | 1 |
+| `hand/` | the tie rule and the `Impact Position V` tile, and since M42 three Full Swing cases (`full-swing-*`, `device: "full_swing"`): the four opt-in rules of [ADR-014's M42 addendum](decisions/014-screen-capture-shot-ingestion.md#addendum-2026-11-02-m42-the-second-profile-four-opt-in-parser-rules-the-glyphs-colour-and-no-version-bump) on boxes a recognizer printed. Each `note` works the scores, the sums and the confidence by hand from the stated rule | `hand` | 1 |
 | `units/` | case tables over the frozen parser's private functions (`normalize_label`, `field_for`, `_first_number`, `_sign_from`, `_is_blank`, `_Cell.text`), each case carrying the profile it ran against | `python`, with no ledger | 0 |
 
 **Two shapes.** A *document* (every sub-family but `units/`) carries the following:
 
 - **`input`**: the device, the boxes with their geometry, the preprocessing `notes`, the identity
-  fields, and `min_confidence`. That is `screen::ScreenInput`, and it refuses an unknown key.
+  fields, and `min_confidence`. That is `screen::ScreenInput`, and it refuses an unknown key. A box
+  may also hold `rgb` (M42, `TextBox.rgb`): the mean red, green and blue of the brightest quarter of
+  its pixels, which is how `lit_sign` tells a lit letter. It is optional. Frozen Python's boxes have
+  none, so only the three `full-swing-*` cases carry it, and a box without it reads as it always did
+  unless it is a `lit_sign` letter, whose sign is then withheld.
 - **`expected`**: `label_ratio`, `parsed`, and `shot`.
   - `parsed` is the parse *before* validation, with its confidence unrounded and its warnings
     without the notes.
@@ -661,6 +672,24 @@ What moved:
   [the M34 plan's P10 findings](plans/m34-screen-reader.md#p10--the-13-shot-re-read-2026-10-02), and
   what the parser now decides is
   [ADR-014's M34 addendum](decisions/014-screen-capture-shot-ingestion.md#addendum-2026-10-02-m34-the-parser-is-rusts-the-profile-is-forked-and-a-tie-is-withheld).
+
+**M42 moved no document, and no version.** `full_swing` and the four rules only it opts into reach no
+`hd_golf` read, so version 1 still describes every recorded document, and the three `full-swing-*`
+cases were added beside them under a screen dry run reporting 0 changed.
+
+- **What the three reach.** `full-swing-grid` signs from a lit `R` with `L` absent and from a lit `D`
+  beside an unlit `F`, `full-swing-merged-unlit` from an unlit letter alone, and `full-swing-withheld`
+  is the first committed record of a printed-twice disagreement and of a sign no letter decides.
+- **How far they were checked.** `hand.rs` compares under `RTOL` and the bit tests in `parse.rs` and
+  `read.rs` walk only the recorded sub-families, so a throwaway test held the shipping answers to the
+  three files exactly, unrounded confidences included. They agreed on the first run.
+- **Four tests read the vector's own device now**, because they assumed every hand vector was
+  `hd_golf`: `hand.rs`'s `a_withheld_tile_is_located_and_unread_and_nothing_else_is` and
+  `what_was_located_tells_the_layouts_apart`, and `tiles.rs`'s
+  `a_tile_the_tie_rule_withheld_is_misread` and
+  `exactly_the_printed_analysed_tiles_with_no_value_are_refused_in_declared_order`.
+- **`crates/screen/tests/profile_fork.rs` declares a whole device** as well as a field:
+  `DECLARED_DEVICES` holds `full_swing`, which the frozen copy must not have.
 
 **Every screen document now answers to the shipping reader**, `screen::read` and the parser under
 it, and every `units` table to the function it records. The runners are in `crates/screen/tests/`:
@@ -1172,6 +1201,31 @@ is unchanged. The gate needs the photos in gitignored `data/`, ffmpeg for the on
 (the M29 plan's D3), and the models in `data/models/ocr/`, so it is ignored by default and runs with `cargo test -p ocr --
 --include-ignored` (the M29 plan's call C2); without them it fails rather than passing vacuously.
 
+### The Full Swing gates, photo and clip — no family of their own
+
+M42's two, beside the OCR gate and ignored by default for its reason: the captures in gitignored
+`data/raw/shot_screens/`, ffmpeg and the models. **Neither has a vector or a Python twin behind it.**
+Frozen Python has no `full_swing`, so the oracle is the M42 plan's truth table: what each photo
+prints, read by eye with each lit letter confirmed on a crop, written in each test in the table's own
+spelling (a magnitude and its letter, an apex in feet) and turned into `ShotData`'s conventions in
+one place. Every capture is held to its digest first, so the table only meets what it was read from.
+
+Each stored field is *read* (the truth, by `to_bits`), *withheld* (`None`, with the parser's warning)
+or *wrong* (anything else), and **a wrong value fails the gate**, which is ADR-010 §2's rule.
+
+| Gate | Captures | Read through | Holds, past no wrong value | Measured |
+|---|---|---|---|---|
+| **Photo**, `crates/ocr/tests/full_swing.rs` (M42 P9) | the six grid stills | `ocr::read_photo`, then `screen::read` | nothing: coverage is printed, and the plan's target of 66 of 72 was recorded rather than failed | 71 of 72 read, `IMG_2892`'s `total_distance` withheld by the printed-twice rule |
+| **Clip**, `crates/lab/tests/full_swing_clips.rs` (M42 P14) | the five grid clips (`2026-10-07-1` has none) | `golf_lab::shot::read_clip_grid`, on the frame `GRID_FRAME` picks | `READ_AT_LEAST`, a floor at what P14 measured, so a reader that starts withholding is seen | 60 of 60 read |
+
+`cargo test --release -p ocr --test full_swing -- --include-ignored` and `cargo test --release -p
+golf-lab --test full_swing_clips -- --include-ignored` run them, in minutes. The first is also run by
+the OCR gate's command, which takes the whole `ocr` package.
+
+**The clip gate runs the impact replay too, and judges nothing of it.** It prints what the replay gave
+(today five refusals, ADR-034's M42 addendum), because `read_clip_grid` is what the importer runs and
+the M42 plan's decision 3 set accuracy aside. `crates/impact` is gated on frames its own tests draw.
+
 ## 3. The rules
 
 Implemented twice, once per side of the freeze, and each is unit-tested against the differences it
@@ -1432,6 +1486,9 @@ cargo test                                          # certifies every family: au
                                                     # whole against crates/core
 cargo test -p ocr -- --include-ignored              # the OCR gate on the 13 bay photos (M29):
                                                     # data/, ffmpeg and the models, this box only
+                                                    # and M42's Full Swing photo gate with it
+cargo test --release -p golf-lab --test full_swing_clips -- --include-ignored
+                                                    # M42's Full Swing clip gate, the same needs
 cargo build --release -p golf-mcp                   # before any rerecord: both keys walk the mcp
                                                     # family by running this binary (GOLF_MCP
                                                     # names another)
@@ -1928,7 +1985,7 @@ to ship a results page with no coaching on it. They now carry the real payload, 
 `_verify_against_stored` checks it against the archive like everything else.
 
 **That two-call shape is why the port has four crates and not ADR-032 §1's two** (M22 P6). There are
-thirteen in the workspace. M20's `trigger`, M21's `capture` and M23's `pose` are edges rather than
+fourteen in the workspace. M20's `trigger`, M21's `capture` and M23's `pose` are edges rather than
 ports. M34 added `pyfmt`, the CPython edges below every crate that needs them, and `screen`, the
 tier-2 port. M36 added `storage`, which depends on `contracts` and `pyfmt` and never on `analysis`,
 so `crates/core` is the one crate holding the stores, the aggregates and the reports together, and
@@ -1936,7 +1993,9 @@ the career verbs live there. M37 added no crate: its grades are a module of `ana
 module of `feedback`, and `crates/core::profile` is where the two meet, for the reason below. M29
 added three: `ocr`, the screen's recognizer, depending on `screen` and `contracts` and the only
 crate with `ort`; and `mcp` and `lab`, two shells like `core` that nothing depends on, so a
-recorder that needs `golf-mcp`'s answers runs the binary.
+recorder that needs `golf-mcp`'s answers runs the binary. M42 added `impact`, std only and reached
+by `lab` alone until M38's `crates/app`, an edge rather than a port, since nothing Python ever read
+the replay.
 The rule
 is enforced by cargo: `crates/feedback` holds `rules.rs` and, since M37, `profile_rules.rs`, and
 depends on `contracts` and `pyfmt` alone, so it *cannot* reach `analysis` and `analysis` cannot

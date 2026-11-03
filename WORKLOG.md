@@ -5,6 +5,114 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-11-03 — M42 P16: Full Swing in Rust
+
+**Duration**: 2026-10-30 to 2026-11-03, eighteen phases (P0–P16, with P14b added after P9). M42 goes
+✅ **18/18** with M41 folded into it, and the milestone is closed in one commit onto `main`. It is
+Rust only, with one line of frozen Python, below. P16 itself stopped once on a red pin and was resumed
+on the user's answer.
+
+**To pick up where this left off, read the findings in `docs/plans/m42-full-swing.md`** by its map
+(`grep -n '^## \|^### '`), not end to end, and not this entry. Then
+[ADR-034's M42 addendum](docs/decisions/034-shot-first-phone-first.md) for the device, what counts as
+printed and the reader's state, [ADR-014's](docs/decisions/014-screen-capture-shot-ingestion.md) for
+the screen reader's half, and `docs/CONFORMANCE.md` §2's "The Full Swing gates, photo and clip".
+
+**What was built.**
+- **The record** (P1). `ShotData` gains `backspin` and `sidespin`, rpm as printed, `sidespin` + = fade
+  from which of `D`/`F` is lit. Each is written only when set (`shot::WRITTEN_WHEN_SET`), so no
+  committed vector moved. No analysis reads them, `spin_rate` and `spin_axis` stay unset on every Full
+  Swing shot, and `golf-mcp`'s `NUMERIC_METRICS` lists both.
+- **The glyph's colour and the quad** (P2–P3). `TextBox.rgb` is the mean colour of a box's brightest
+  quarter, measured by `crates/ocr`, and `golf-ocr read --boxes` prints it. The screen-quad finder
+  refuses a quad whose ordering repeats a corner, which two of these photos produced.
+- **Four opt-in parser rules** (P4–P7). A box holding two merged labels is split, a tile printed twice
+  must agree with itself, a sign is read from a lit letter and withheld if it cannot be decided, and a
+  value printed in feet is stored in yards. Only `full_swing` opts in, and `hd_golf`'s profile entry is
+  byte-unchanged.
+- **The second device** (P8–P10). `full_swing` is in `crates/screen/profiles.json` and
+  `crates/contracts/devices.json`, chosen by `--device` or `GOLF_LAUNCH_MONITOR_PROFILE`, and never
+  detected. Its club speed and smash are `analysed`, where HD Golf's are `shown_only`. **The photo gate**
+  reads 71 of the 72 values on the six grid photos with none wrong, and no profile tuning was needed.
+  `IMG_2892`'s `total_distance` is the one withheld. Three hand-worked screen vectors joined
+  `spec/vectors/screen/hand/`.
+- **The impact reader** (P11–P13). `crates/impact` is the fourteenth crate, std only, with no Python
+  twin: frames in as RGB bytes, then the ball, the club head, the contact frame, the shaft and the
+  offset. `golf-lab read-impact` runs it on clips and writes review images. **It read 0 of the 5 grid
+  clips, at its starting values and at every tuning the plan's brackets allow**, and no constant moved.
+- **A Live Photo is two import methods** (P14–P14b, decisions 7–10). `golf-lab import-photos` takes the
+  still, with the grid's numbers and no offset. `golf-lab import-video` takes the clip, with the grid
+  read off its sharpest frame and the replay's offset or its named refusal. **The clip gate** reads 60 of
+  60 values with none wrong and no profile key tuned. A refused replay stores the shot with
+  `impact_offset_h` `misread`, and moves neither `needs_review` nor the exit code.
+- **Docs** (P15). ADR-034's and ADR-014's M42 addenda, CONFORMANCE, ARCHITECTURE, `data/README.md`,
+  `CLAUDE.md` and the program plan's §M38.
+
+**What changed against the plan.**
+- **The user's decisions 7–10, taken after P9, replaced calls 14 and 15.** The first design found a clip
+  beside its still and ran P14 only if P13 read something. Now nothing pairs the two, so importing both
+  halves of one Live Photo makes two shots of one swing, and the reader is wired in with no go or no-go.
+- **No feasibility spike ran and `CENTERED_RADIUS_MM` was not revised**, against ROADMAP's first ask. It
+  stays 10 mm and provisional, because with accuracy not judged there is no measured error (call 16).
+- **Past the plan, and small**: a stale shot's re-read carries what its replay gave
+  (`shot::carry_impact_video`), because a re-read reads the PNG, which holds no replay.
+- **One line of frozen Python, on the user's answer (a).** `tests/test_conformance.py`'s
+  `test_a_screen_document_carries_what_a_port_reads` held a box to exactly six keys, and P10's vectors
+  carry `rgb` on theirs. So the pin now reads `set(box) - {"rgb"} == box_keys`. The plan's two rules
+  collided there, and no phase saw it because the full `pytest` was listed at P1 and P16 only. It is the
+  second exception to the plan's "Frozen Python is not edited", under ADR-035 §4's fix when it breaks.
+
+**What M38 should know** (the program plan's §M38 has both).
+- **Vision's boxes must carry `rgb`, by `TextBox.rgb`'s definition.** Without it Full Swing's ball
+  direction and sidespin are withheld on every shot, never stored unsigned. Hold the plugin's boxes to
+  `crates/ocr`'s on the same photo before trusting `LIT_BLUE_RATIO`, which was set from the lab's reader.
+- **The clip's import is the phone's too.** It decodes the frames and reaches `crates/impact`'s
+  `sharpest_frame` and `read_impact` through `crates/app`, and it should ask for one method per Live
+  Photo.
+
+**What the impact review should know.**
+- `read-impact --review` wrote what the reader saw to `data/raw/impact-review/`, gitignored. **Accuracy
+  was not judged**: no face-tape or foot-spray test stands behind any number, and today there is no
+  number to judge.
+- **Every refusal follows a wrong ball.** `IMG_2889`, `IMG_2891` and `IMG_2892` refuse with `NoShaft`,
+  `IMG_2893` and `IMG_2894` with `NoContact`. The replay's ball is an ellipse wider than tall, 1.35 to
+  1.47 by its bounding box, which fails the ball stage's fixed `ASPECT`, and the longest chain of still
+  white discs is always a mark of the screen's own, a letter of the banner or a digit of the grid.
+- **A reader that works needs new stages**: a ball stage that accepts the ellipse and either confines
+  itself to the replay panel or prefers a chain that ends, and a head stage that survives the merge
+  with the ball over the contact frames. A forced-ball diagnostic got no further.
+- **The reader has no version key.** A stored shot keeps its old answer after `crates/impact` is tuned
+  until `golf-lab import-video --force`.
+
+**Left open.**
+- **Nothing was imported into `data/processed/`** (call 17). The user runs one method per Live Photo,
+  store-only, since the clubs are unknown: `golf-lab import-photos --device full_swing <the six>`, or
+  `golf-lab import-video --device full_swing <the five .MOV>`. `IMG_2888`, the club-view layout, is
+  copied and read by nothing (decision 1).
+- **Strike location is still absent on real data**, and on an entry from a clip it would be named, with
+  the shot unscored under `misread` and the grade withheld rather than low. No stored shot reaches that
+  and no vector does, so it is read from the code and not run.
+- Whether a spin rate and axis computed from `backspin` and `sidespin` are worth having is the user's
+  (decision 4).
+- Why the gates ran far faster from P14b on is unknown: the 13-photo OCR gate took 2066 s at P9 and
+  139 s at P16, on the same reader. P9's and P14's budgets stay ceilings.
+
+All verify commands are green, the ignored gates included.
+- **Rust.** `cargo test` passed 1,773 with 26 ignored: the gates that need `data/`, ffmpeg or the models.
+  `cargo clippy --all-targets` has 0 warnings, and `cargo fmt --check` is clean.
+- **The gates.** The 13-photo OCR gate passed unchanged in 139 s. The Full Swing photo gate passed in
+  64 s, 71 of 72 read and 0 wrong, and the clip gate in 65 s, 60 of 60 read and 0 wrong.
+- **The dry runs**, each 0 changed and 0 files written: `v17` 140 vectors, `screen-v1` 45, `career-v3`
+  175.
+- **Python.** `pytest`, run alone, passed 2,084, and `tests/test_docs_truth.py` passed again against a
+  map that now counts 85 documents. `ruff` is clean, `mypy` is clean over 115 files, and
+  `conformance.py check` exits 0.
+- **Data.** The `data/processed` digest is still `07f37373…` over 192 files. `ANALYSIS_VERSION` 17,
+  `SCREEN_PARSER_VERSION` 1 and `CAREER_VERSION` 3 did not move, and the only change under
+  `spec/vectors/` is P10's three new files.
+
+---
+
 ## 2026-10-29 — M29 P36: the lab port in Rust
 
 **Duration**: 2026-10-15 to 2026-10-29, thirty-seven phases (P0–P36). M29 goes ✅ **37/37** and the

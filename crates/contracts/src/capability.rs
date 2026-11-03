@@ -28,8 +28,9 @@
 //! ADR-032 §5's one copy on disk. It is not beside `profiles.json` because nothing Python reads it.
 //! Its field names are `ShotData` keys, never screen labels: turning a label into a key is the
 //! parser's business (`crates/screen/profiles.json`, the Rust fork of the frozen lab's copy, M34).
-//! `hd_golf`'s entry is held equal to that profile's targets by `crates/screen/tests/capability.rs`,
-//! on that crate's side because this one cannot see it.
+//! The entry of every device with a profile (`hd_golf`, and `full_swing` since M42) is held equal
+//! to that profile's targets by `crates/screen/tests/capability.rs`, on that crate's side because
+//! this one cannot see it.
 
 use std::collections::BTreeSet;
 use std::sync::OnceLock;
@@ -57,6 +58,27 @@ pub enum FieldUse {
     ShownOnly,
 }
 
+/// Where on the device's output a declared field is read from. [M42 P8]
+///
+/// ADR-034 §2 counts a field as printed when the device puts it in front of the golfer, and left
+/// open whether a reading taken from anything but the stat screen counts. The M42 plan's call 13
+/// answers it: Full Swing's impact replay is the device's own output, photographed in the Live
+/// Photo's motion part, so a value read from it counts as printed by the device. This says which
+/// reader delivers the field, so the pin that holds a declaration to its profile
+/// (`crates/screen/tests/capability.rs`) compares only the fields a profile's tile can fill.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum FieldSource {
+    /// A tile on the stat screen, located and read by `crates/screen`. The default, and every
+    /// field before M42.
+    #[default]
+    Screen,
+    /// The impact replay in the Live Photo's motion part (the M42 plan's call 13). `full_swing`'s
+    /// `impact_offset_h` since M42 P14b, whatever the reader made of the five grid clips (decision
+    /// 9). Such a field has no tile, so `screen::tile_refusals` has a rule of its own for it.
+    ImpactVideo,
+}
+
 /// One field a device declares.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 pub struct DeclaredField {
@@ -70,6 +92,10 @@ pub struct DeclaredField {
     /// (`impact_position_v`, which the Rust parser locates from M34 and the frozen lab's never does).
     #[serde(default)]
     pub note: Option<String>,
+    /// Which reader delivers it. Absent on disk is [`FieldSource::Screen`], so every entry written
+    /// before M42 means what it meant. [M42 P8]
+    #[serde(default)]
+    pub from: FieldSource,
 }
 
 /// Every field one launch monitor can print.
@@ -83,7 +109,8 @@ pub struct DeviceCapability {
     pub device: String,
     /// Where this declaration came from.
     pub source: String,
-    /// In the order the file lists them, which for `hd_golf` is its profile's tile order.
+    /// In the order the file lists them, which for a device with a profile (`hd_golf`, and
+    /// `full_swing` since M42) is its profile's tile order.
     pub fields: Vec<DeclaredField>,
 }
 
@@ -99,6 +126,15 @@ impl DeviceCapability {
             .iter()
             .find(|declared| declared.field == field)
             .map(|declared| declared.field_use)
+    }
+
+    /// Whether this device delivers any field through its impact replay: what `golf-lab
+    /// import-video` asks of a device before it decodes a clip, and what decides that a clip's
+    /// replay is read at all (the M42 plan's call 13). [M42 P14b]
+    pub fn reads_impact_video(&self) -> bool {
+        self.fields
+            .iter()
+            .any(|declared| declared.from == FieldSource::ImpactVideo)
     }
 }
 

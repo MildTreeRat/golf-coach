@@ -78,10 +78,13 @@ pub const RATE_MINIMUM_N: i64 = 10;
 /// `hypot(h, v) ≤ 10` where both offsets hold values, `|h| ≤ 10` where only the horizontal does.
 /// **The user's, and provisional** (decision 4).
 ///
-/// Judgment with no measurement behind it, because no device supplies an offset yet. M42's impact
-/// reader, which reads the offset off Full Swing's impact video in the iPhone's Live Photo, will
-/// have an error of its own, and that measured error is what revises this. The impact grid bins at
-/// the same number on each axis (the M37 plan's call 10).
+/// Judgment with no measurement behind it, and **M42 did not revise it** (the M42 plan's call 16).
+/// M42 was to revise this from its impact reader's measured error, and that reader, which reads the
+/// offset off Full Swing's impact replay in a Live Photo's clip (`crates/impact`), has no ground
+/// truth to measure an error against: the user set accuracy aside (the plan's decision 3), and the
+/// reader has yet to deliver an offset (ADR-034's M42 addendum). So no stored shot holds one. Once
+/// it reads and has been checked against a mark on the face, that measured error is what revises
+/// this. The impact grid bins at the same number on each axis (the M37 plan's call 10).
 pub const CENTERED_RADIUS_MM: f64 = 10.0;
 
 /// A shot is consistent when its carry is within this fraction of its club's median carry, *and* its
@@ -943,7 +946,8 @@ impl Validate for ImpactMap {
 #[serde(remote = "Self")]
 pub struct StrikeProfile {
     /// Present exactly when the strike-location topic is, so never on a device that does not print
-    /// an impact offset, which is every real device until M42.
+    /// an impact offset. Since M42 `full_swing` declares one, read off a clip's replay and never a
+    /// still's, and the reader has yet to deliver one, so no stored shot holds a value here.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub impacts: Option<ImpactMap>,
     /// The [`BALL_SPEED_METRIC`] baseline, whose `sd` is the ball-speed spread. Absent at player

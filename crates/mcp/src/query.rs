@@ -636,11 +636,13 @@ pub type ReadOut = fn(&ShotData) -> Option<&str>;
 /// `impact_position_v` after `impact_position`, its horizontal partner. So the numbers still come
 /// first and the read-outs last, and Python's fifteen keep their relative order in the text a model
 /// reads. None of the seven is on any stored shot yet, so the list's growth moves no recorded
-/// answer (the module doc).
+/// answer (the module doc). M42's two after M32's, for the same reason: no stored shot holds
+/// either, so no recorded answer moves. `backspin` and `sidespin` are Full Swing's printed spin,
+/// shown as printed, and the list grows by them so a client sees what the screen said.
 ///
 /// Typed reads rather than Python's `getattr` by name, so a field renamed in `ShotData` fails to
 /// compile here; the unit test below is the other direction, a field added there and missing here.
-pub const NUMERIC_METRICS: [(&str, Reading); 19] = [
+pub const NUMERIC_METRICS: [(&str, Reading); 21] = [
     ("club_head_speed", |s| s.club_head_speed),
     ("club_face_angle", |s| s.club_face_angle),
     ("club_path", |s| s.club_path),
@@ -660,6 +662,8 @@ pub const NUMERIC_METRICS: [(&str, Reading); 19] = [
     ("impact_offset_h", |s| s.impact_offset_h),
     ("impact_offset_v", |s| s.impact_offset_v),
     ("carry_offline", |s| s.carry_offline),
+    ("backspin", |s| s.backspin),
+    ("sidespin", |s| s.sidespin),
 ];
 
 /// The categorical read-outs at the end of the list, in the source's own words: Python's two, then
@@ -1063,6 +1067,10 @@ mod tests {
     /// Python's: every metric is a key a stored shot carries, and the keys left over are exactly the
     /// five that reach a client through the view's own fields. A field added to `ShotData` and not
     /// here fails this, which is the direction that breaks silently. [M29 P11: M32's seven joined]
+    ///
+    /// The shot's keys are its default serialization's ∪ `WRITTEN_WHEN_SET`: M42's two spin
+    /// readings are omitted while unset (the M42 plan's call 1), and are fields all the same.
+    /// [M42 P1]
     #[test]
     fn the_metric_list_and_the_view_s_own_fields_split_every_shot_field() {
         let shot: ShotData = serde_json::from_value(json!({
@@ -1072,7 +1080,11 @@ mod tests {
         let Value::Object(keys) = serde_json::to_value(&shot).unwrap() else {
             unreachable!()
         };
-        let mut rest: Vec<&str> = keys.keys().map(String::as_str).collect();
+        let mut rest: Vec<&str> = keys
+            .keys()
+            .map(String::as_str)
+            .chain(contracts::shot::WRITTEN_WHEN_SET)
+            .collect();
         for name in NUMERIC_METRICS
             .iter()
             .map(|(n, _)| *n)

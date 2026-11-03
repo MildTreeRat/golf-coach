@@ -1142,7 +1142,7 @@ def test_a_screen_document_carries_what_a_port_reads() -> None:
         for path, vector in vectors:
             name = f"{family}/{path.name}"
             assert set(vector["input"]) == given_keys, name
-            assert all(set(box) == box_keys for box in vector["input"]["boxes"]), name
+            assert all(set(box) - {"rgb"} == box_keys for box in vector["input"]["boxes"]), name
             assert {"label_ratio", "parsed", "shot"} <= set(vector["expected"]), name
             assert {"values", "raw_fields", "confidence", "warnings"} <= set(
                 vector["expected"]["parsed"]

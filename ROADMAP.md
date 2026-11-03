@@ -1,6 +1,6 @@
 # Roadmap: AI Golf Swing Trainer
 
-## Last Updated: 2026-10-29
+## Last Updated: 2026-11-03
 
 Grouped by **state**, not by number, because the numbers no longer run in order: the pose-only
 slices (M4-PoC, M4-PoC+, M4-REF, M5-FB) delivered the mechanics half of M4 and the ranking half
@@ -54,8 +54,8 @@ wording; only the grouping and the M4 checklist have been corrected.
 | **M35** Shot-first sessions, in Rust | ✅ Done *(2026-10-10)*, **14/14 phases** — the phases and what each found are in [m35-shot-first-sessions.md](docs/plans/m35-shot-first-sessions.md). A shot photographed with no video is first-class in Rust. `analyze_shot` writes a `ShotResult` (`shot_analysis.json`) over the fields the device printed and analysis may use, and names a blank or misread tile as `printed_blank` or `misread`, the first time either is written. Every practice mode now reaches the engine and scores mechanics; the mode decides only which stats a shot feeds. A shot's intent is recorded on its manifest, stamped from a `session.json` cursor. Rust's `read_corpus` admits photo entries, makes a photo-only copy of a filmed shot the filmed copy's `duplicate`, and leaves a `DRILL` out as `untracked`. `golf-core run-shot --session` and `golf-core set-intent` are the first Rust verbs that write into a session, and neither was run on `data/`. A new hand-worked `shot/` family, and the storage and career families re-recorded as `career-v2`. No engine, stage or screen vector moved, `ANALYSIS_VERSION` did not, and nothing under `src/` or `data/` changed | — (desk work; done) | [§M35](#m35-shot-first-sessions-in-rust) |
 | **M36** The many-shot layer in Rust | ✅ Done *(2026-10-08)*, **19/19 phases** — the phases and what each found are in [m36-many-shot-layer.md](docs/plans/m36-many-shot-layer.md). The stores, the corpus reader, the career aggregates and the five career scripts are ported: a tenth crate, `crates/storage`, the many-shot shapes in `crates/contracts`, the career half of `crates/analysis`, and five `golf-core` verbs that print what the scripts print over `data/`, byte for byte. Two vector families, `storage/` and `career/`, were recorded once from frozen Python and passed by the faithful port. Then **one rule changed in Rust**: the corpus's `OUTDATED` now means older than `COMPARABLE_FROM` (14), not older than the installed engine, so a Rust `read_corpus` over `data/` pools what frozen Python pools. Rust re-recorded both families under a third version key, `CAREER_VERSION`. No engine, stage or screen vector moved, and nothing under `src/` or `data/` changed | — (desk work; done) | [§M36](#m36-the-many-shot-layer-in-rust) |
 | **M37** Strike profile, topic grades and strengths/weaknesses | ✅ Done *(2026-10-15)*, **14/14 phases** — the phases and what each found are in [m37-strike-profile-and-grades.md](docs/plans/m37-strike-profile-and-grades.md). The first analysis written Rust first with no Python behind it at all: per club a strike profile and six topics' grades, each a share of good shots with a Wilson 95% interval and withheld below 10 judged shots, a club and a player blend, and the strengths and weaknesses list, reached through `golf-core profile` and wired to nothing else yet. Mechanics enters none of it. The corpus carries each entry's shot, re-recorded as `career-v3`, and a tenth vector family, `profile/`, is hand-worked and Rust-recorded. **Strike location is graded only from a measured impact offset**, which [M42](#m42-full-swing-the-second-device-and-its-impact-video) will read, so on real data it is absent; a `synthetic` device proves it. Over `data/`, the first grade is the player's consistency. No engine, stage, shot or screen vector moved, and nothing under `src/` or `data/` changed | — (desk work; done) | [§M37](#m37-strike-profile-topic-grades-and-strengthsweaknesses-rust-first) |
-| **M41** The course-play screen layout | ⬜ Not started, and free to start by its order since M35 landed on 2026-10-10. **Raised 2026-10-07** from one photo of a second screen layout, and ordered after M36 and M35 by the user's choice, not by a dependency: `crates/screen` matches 4 of its 12 stat labels today. Not data-only, because its left/right signs are lit letters rather than printed words | M35, by order — this box, plus a handful of new photos | [§M41](#m41-the-course-play-screen-layout) |
-| **M42** Full Swing: the second device and its impact video | ⬜ Not started. **Raised 2026-10-10** in M37's planning. A Live Photo spike first, then the impact reader that fills `impact_offset_h/v` for M37's strike-location topic, plus Full Swing's screen profile and capability entry. HD Golf stays in use beside it. M37's strike topic landed on 2026-10-15, so only the photos are missing | Sample Live Photos — this box, the bay for photos | [§M42](#m42-full-swing-the-second-device-and-its-impact-video) |
+| **M41** The course-play screen layout | ➡️ **Merged into [M42](#m42-full-swing-the-second-device-and-its-impact-video)**, and closed with it *(2026-11-03)*: its photo is Full Swing's grid screen and one of that milestone's six gate photos, so every question it asked was answered in [m42-full-swing.md](docs/plans/m42-full-swing.md). Before the fold: **Raised 2026-10-07** from one photo of a second screen layout, and ordered after M36 and M35 by the user's choice, not by a dependency | — (merged; done) | [§M41](#m41-the-course-play-screen-layout) |
+| **M42** Full Swing: the second device and its impact video | ✅ Done *(2026-11-03)*, **18/18 phases**, with M41 folded in — the phases and what each found are in [m42-full-swing.md](docs/plans/m42-full-swing.md). Full Swing's grid screen reads through the lab's reader with no wrong value: a second real device in `devices.json` and `profiles.json`, four opt-in parser rules, `TextBox.rgb`, and `backspin` and `sidespin` on `ShotData`, stored as printed and read by no analysis. HD Golf reads as before and stays in use beside it. A Live Photo imports by either half: the still through `golf-lab import-photos`, or the clip through `golf-lab import-video`, whose shot holds the grid read off one of its frames and the impact offset off the replay. **The impact reader, `crates/impact`, is wired in and has read none of the five clips**, so a clip's offset is a named `misread` and strike location is still absent on real data. Its accuracy was not judged, and the review images wait for the user. No committed vector moved and no version key moved, three hand-worked screen vectors were added, and nothing under `data/processed/` changed | — (desk work; done) | [§M42](#m42-full-swing-the-second-device-and-its-impact-video) |
 | **M38** The iPhone app | 🔒 Blocked | A Mac for the skeleton (M34 landed 2026-10-02); then the bay. M37, for the profile screens, landed 2026-10-15, and M29, for P4's export import (`golf-lab import-export`), on 2026-10-29 | [§M38](#m38-the-iphone-app) |
 | **M39** Optional video on the phone | 🔒 Blocked | M38; a Mac, then the bay | [§M39](#m39-optional-video-on-the-phone) |
 | **M40** The laptop client resumes | 🔒 Blocked. M21, M24, M25 and M26 re-scoped under it, as the desktop target of the same app. It also decides `api/` (`axum` or dropped) and deletes the frozen Python | M38. M29 landed on 2026-10-29 | [§M40](#m40-the-laptop-client-resumes) |
@@ -80,7 +80,7 @@ served live `call_tool` requests including the not-found path. It is registered 
 (`claude mcp add`, per the README) and reports `✔ Connected`, which is a second client completing
 the same handshake independently.
 
-**NEXT ACTION — M41 or M42, by the user's order, each starting with photos; M38 waits on a Mac *(2026-10-29)*.**
+**NEXT ACTION — M38, on a Mac, and the user's review of the impact readings (`data/raw/impact-review/`) *(2026-11-03)*.**
 [ADR-034](docs/decisions/034-shot-first-phone-first.md) moved the product to the shot and the phone.
 The user then redirected M32's planning, and
 [ADR-035](docs/decisions/035-rust-everywhere-python-where-required.md) makes the project Rust
@@ -105,11 +105,16 @@ the graded profile is Rust, the first analysis with no Python behind it at all, 
 **[M29](#m29-the-lab-port--a-rust-lab-cli-the-rmcp-server-and-the-archive-move)** closed on
 2026-10-29: the lab is Rust (`golf-lab`, `golf-mcp` and `crates/ocr`'s reader), `data/` was
 rewritten by it once, the frozen server's write routes are closed, and the Python that still runs is
-clause 1's two exceptions plus the frozen server and conformance tooling M40 deletes. The next desk work on this box is the user's to
-order, and none of it needs more code first. [M41](#m41-the-course-play-screen-layout) is free to
-start, and starts with a handful of new photos of the course-play screen. M42 starts with sample
-Live Photos of Full Swing shots from the bay. [M38](#m38-the-iphone-app)'s skeleton waits only on a
-Mac, and its P4 export import is built (`golf-lab import-export`).
+clause 1's two exceptions plus the frozen server and conformance tooling M40 deletes.
+**[M42](#m42-full-swing-the-second-device-and-its-impact-video)** closed on 2026-11-03, with
+[M41](#m41-the-course-play-screen-layout) folded in: Full Swing's grid screen reads with no wrong
+value, a Live Photo imports by its still or by its clip, and the impact reader is wired in and has
+read none of the five clips. Two things are next, and neither needs more code first. [M38](#m38-the-iphone-app)'s
+skeleton waits only on a Mac, and its P4 export import is built (`golf-lab import-export`). And the
+user reviews what the reader saw, in `data/raw/impact-review/` on this box. A reader that works needs
+new stages, which ADR-034's M42 addendum names and M42 did not build, and whether they are worth building is
+that review's to say. The Full Swing captures are not imported, which is also the user's to run: [the plan's
+call 17](docs/plans/m42-full-swing.md#calls-this-plan-makes) has the two commands.
 [M40](#m40-the-laptop-client-resumes) now waits on M38 alone. **[M33](#m33-apple-vision-spike--can-the-phone-read-the-screen)
 runs early on purpose.** Whether Apple Vision reads the HD Golf screen is the product's biggest
 unknown, it needs a Mac and no Rust, and if it fails the plan changes before any app work starts.
@@ -2038,7 +2043,13 @@ every vector family names its oracle. M37's plan sets the exit.
 
 ## M41: The course-play screen layout
 
-**Status**: ⬜ Not started. **Raised 2026-10-07** from one photo of the simulator's shot screen during
+**Status**: ➡️ **Merged into [M42](#m42-full-swing-the-second-device-and-its-impact-video)**,
+and closed with it *(2026-11-03)*. This photo is Full Swing's grid screen, the layout M42 reads, so every question
+below was answered in [m42-full-swing.md](docs/plans/m42-full-swing.md), and where the two disagree the plan
+wins. The layout is a device of its own, `full_swing`. The lit signs are read from `TextBox.rgb`, and a sign
+that cannot be decided is withheld. The contract widened by `backspin` and `sidespin`, with no conversion to rate and axis.
+A tile printed twice must agree with itself. And against the Exit below, **no version key moved**: every rule
+is opt-in, so no re-read of a stored shot's photo can change. The section stands as the record of what was asked. **Raised 2026-10-07** from one photo of the simulator's shot screen during
 course play (`TEAM 1`, `TO HOLE YD`, a `SHOT RESULT` of `NATURAL AREA`), a layout the `hd_golf`
 profile was not written from. The photo is `data/raw/shot_screens/2026-10-07-1.jpg` (sha256
 `96241978…`, gitignored like every pixel here), tagged `aaron` and `driver` in the JSON beside it. **Runs after M36 and M35**, by the user's choice: nothing in it
@@ -2083,7 +2094,20 @@ declaration, as M34 did, and the new layout gets hand-worked vectors.
 
 ## M42: Full Swing: the second device and its impact video
 
-**Status**: ⬜ Not started. **Raised 2026-10-10** in M37's planning interview. The bay will run
+**Status**: ✅ Done *(2026-11-03)*, 18/18 phases, with M41 folded in. The phases, the interview's
+decisions, the calls and what each phase found are in [m42-full-swing.md](docs/plans/m42-full-swing.md),
+and where it and this section disagree, the plan wins.
+[ADR-034's M42 addendum](docs/decisions/034-shot-first-phone-first.md) records the device, what counts as printed and the
+reader's state, and [ADR-014's](docs/decisions/014-screen-capture-shot-ingestion.md) the screen reader's half.
+The screen came first: through the shipping reader, the six grid photos read 71 of 72 values and the five clips' frames
+60 of 60, with none wrong. The impact reader was built and tried, and **it read 0 of the 5 clips**. It is wired in
+regardless, by the user's decision, so a clip's shot stores its numbers with its offset a named `misread`.
+**Two things in the ask below did not happen.** No feasibility spike ran, because the user chose to build and try the
+reader instead. And `CENTERED_RADIUS_MM` was not revised, because with accuracy not judged there is no measured error to
+revise it from, so it stays 10 mm and provisional. The question the ask left open is settled: a value read from the
+impact video counts as printed. **What is left is the user's**: the review of `data/raw/impact-review/`, and running the
+import ([the plan's call 17](docs/plans/m42-full-swing.md#calls-this-plan-makes)).
+**Raised 2026-10-10** in M37's planning interview. The bay will run
 **Full Swing's** simulator software beside HD Golf, and both devices stay in use. Full Swing plays
 an impact video that shows where the club met the ball. The shot photos are taken on an iPhone, so
 a **Live Photo** captures that video in its motion part beside the still. The user: "It is going to
@@ -2117,6 +2141,8 @@ need to be able to calculate it from the picture."
 start on a Mac. M37 landed on 2026-10-15, so the profile screens have their `GradedProfile` to read
 (`golf_core::profile::run_profile`). M29 landed on 2026-10-29, so P4's export has its import,
 `golf-lab import-export`, and what that verb asks of the export is in the program plan's §M38 P4.
+M42 landed on 2026-11-03, which asks two things of the phone, both in that §M38: Vision's boxes must carry `rgb`, or
+Full Swing's ball direction and sidespin are withheld on every shot, and a Live Photo is two import methods.
 
 **The ask.** A standalone Flutter app over the Rust core (ADR-034 §6). Pick the golfer, club and
 the session's intent, photograph the screen, read it with Vision and parse it in Rust, review it,

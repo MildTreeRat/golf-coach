@@ -29,6 +29,7 @@
 //! | `""`: nothing under the label | `printed_blank` |
 //! | a match for the profile's `blank_markers` (`---`) | `printed_blank` |
 //! | any other text, which gave no value | `misread` |
+//! | not asked: a field its device declares `from: impact_video` | `misread` |
 //!
 //! - **No key is `misread`**, by the M34 plan's P8 finding 3. Every label the parser *read* has a
 //!   `raw_fields` key, `""` included, so a field in `fields_present` without one was located and
@@ -43,6 +44,12 @@
 //!   committed photos that is a number tile whose text holds no number (`2026-08-23-3`'s `Open`
 //!   under Club Face Angle). Validation never drops a value it doubts, it flags the shot, so this is
 //!   the parser's refusal and nothing else.
+//! - **A field read from the impact video is `misread`, and no tile is looked for** (the M42 plan's
+//!   call 13). It has no tile: [`FieldSource::ImpactVideo`] is delivered by the reader over a Live
+//!   Photo's replay, and a shot lists it only when that reader ran on a clip, so listed and empty
+//!   means the reader refused. Retaking the Live Photo during the replay can help. A still, or a clip
+//!   that could not be decoded, does not list it, so it is not printed and is named nowhere. [M42
+//!   P14b]
 //!
 //! # None, where a shot cannot say
 //!
@@ -58,13 +65,19 @@
 //! declare, or one no profile here reads, is refused rather than answered with nothing, as
 //! `printed_on` refuses one.
 
-use contracts::capability::{analysed_on, capability_for, fields_holding_a_value};
+use contracts::capability::{analysed_on, capability_for, fields_holding_a_value, FieldSource};
 use contracts::shot::ShotData;
 use contracts::unscored::{UnscoredCheckpoint, UnscoredReason};
 use contracts::ContractError;
 
 use crate::parser::is_blank;
 use crate::profile::{load_profile, DeviceProfile, ProfileField};
+
+/// What a field read from the impact video says when the reader ran and gave no value (the M42
+/// plan's call 13). The refusal's own sentence is in `provenance.warnings`; this one is the same for
+/// every refusal, because which stage of the reader gave up changes nothing a golfer can do.
+pub const IMPACT_VIDEO_MISREAD: &str =
+    "Impact video: the Live Photo's motion was read, and no impact offset came of it";
 
 /// Every printed, analysed tile this shot holds no value for, as an `unscored` entry, in the order
 /// its device declares its fields (the profile's tile order, which `tests/capability.rs` pins).
@@ -75,9 +88,10 @@ use crate::profile::{load_profile, DeviceProfile, ProfileField};
 ///
 /// Empty for a direct feed and for an unstamped shot (the module doc says why). Refuses a device
 /// `devices.json` does not declare and one no profile reads. It also refuses a `fields_present`
-/// naming a declared field the device's profile has no tile for, which no read writes: the parser
-/// lists only its own profile's targets, and `tests/capability.rs` holds `hd_golf`'s targets equal
-/// to its declaration.
+/// naming a field declared off the screen that the device's profile has no tile for, which no read
+/// writes: the parser lists only its own profile's targets, and `tests/capability.rs` holds every
+/// profile's targets equal to its device's screen fields (`hd_golf`'s since M34, `full_swing`'s
+/// since M42). A field read from the impact video has no tile to find (the module doc).
 pub fn tile_refusals(shot: &ShotData) -> Result<Vec<UnscoredCheckpoint>, ContractError> {
     let Some(provenance) = shot.provenance.as_ref() else {
         return Ok(Vec::new());
@@ -94,8 +108,17 @@ pub fn tile_refusals(shot: &ShotData) -> Result<Vec<UnscoredCheckpoint>, Contrac
     let analysed = analysed_on(shot)?;
     let held = fields_holding_a_value(shot);
     let mut refusals = Vec::new();
-    for field in capability.declared() {
+    for declared in &capability.fields {
+        let field = declared.field.as_str();
         if !analysed.contains(field) || held.contains(field) {
+            continue;
+        }
+        if declared.from == FieldSource::ImpactVideo {
+            refusals.push(UnscoredCheckpoint {
+                name: field.to_string(),
+                reason: UnscoredReason::Misread,
+                detail: IMPACT_VIDEO_MISREAD.to_string(),
+            });
             continue;
         }
         let tile = tile_for(profile, field).ok_or_else(|| ContractError {
@@ -228,15 +251,29 @@ mod tests {
     }
 
     /// The label is how `raw_fields` is keyed, so each stored field has to find exactly its own
-    /// tile; `Custom`, which fills nothing, is no field's.
+    /// tile; a layout-only tile (`Custom`, Full Swing's `Shot Result`), which fills nothing, is no
+    /// field's. Every device with a profile, over the fields it declares read off the screen: a
+    /// field another reader delivers (`FieldSource`, the M42 plan's call 13) has no tile, and
+    /// `tile_refusals` has a rule of its own for it (M42 P14b). [every device since M42 P8]
     #[test]
     fn every_declared_field_has_its_tile() {
-        let profile = load_profile("hd_golf").expect("the shipped profile");
-        let capability = capability_for("hd_golf").expect("declared");
-        for field in capability.declared() {
-            let tile = tile_for(profile, field).unwrap_or_else(|| panic!("{field}"));
-            assert_eq!(tile.target.as_deref(), Some(field));
+        use contracts::capability::FieldSource;
+        let shipped = crate::profile::profiles();
+        assert!(shipped.contains_key("hd_golf") && shipped.contains_key("full_swing"));
+        for (device, profile) in shipped {
+            let capability = capability_for(device).expect("declared");
+            let on_screen = capability
+                .fields
+                .iter()
+                .filter(|declared| declared.from == FieldSource::Screen);
+            for declared in on_screen {
+                let field = declared.field.as_str();
+                let tile = tile_for(profile, field).unwrap_or_else(|| panic!("{device}: {field}"));
+                assert_eq!(tile.target.as_deref(), Some(field), "{device}");
+            }
         }
-        assert!(tile_for(profile, "apex_height").is_none());
+        let hd_golf = load_profile("hd_golf").unwrap();
+        assert!(tile_for(hd_golf, "apex_height").is_none());
+        assert!(tile_for(load_profile("full_swing").unwrap(), "spin_rate").is_none());
     }
 }

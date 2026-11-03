@@ -1,0 +1,14 @@
+[package]
+name = "impact"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Where on the face the ball was struck, heel to toe, read off Full Swing's overhead impact replay as a Live Photo's motion part caught it."
+
+# **No dependencies at all, std only** (the M42 plan's rule for this crate). It decodes no video:
+# frames arrive as RGB bytes, from `golf-lab`'s ffmpeg on the laptop (M42 P13) and from the phone's
+# own decoder once M38's `crates/app` calls it. A pixel library would buy a colour test and a
+# flood fill, both a few lines here, at the price of an edge on the phone's path, which
+# `crates/ocr/tests/ort_reach.rs` guards this crate on.
+[dependencies]

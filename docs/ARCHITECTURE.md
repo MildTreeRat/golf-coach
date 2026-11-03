@@ -1,7 +1,7 @@
 # Architecture — the system AS BUILT
 
 > **Tier: AS-BUILT.** This document describes what actually exists and runs, reviewed
-> **2026-10-29** (§1, §2 and §4, for M29's lab port). Everything here has been executed. For the *target* design — the full
+> **2026-11-02** (§1, §2 and §4, for M42's Full Swing). Everything here has been executed. For the *target* design — the full
 > component/deployment picture, the build order, and the parts not yet written — see
 > [FLOW.md](FLOW.md).
 >
@@ -117,12 +117,46 @@ cargo run --release --bin golf-lab -- import-photos [PATHS...] --into-session S 
                      [--min-confidence X] [--force] [--dry-run] [--models DIR]
 #   the models are data/models/ocr/'s, refused by name if one is missing or its sha256
 #   disagrees with crates/ocr/models.json. A photo entry it files is analysed by
-#   golf_core::session's code, as run-shot --session analyses one
+#   golf_core::session's code, as run-shot --session analyses one. --device is the caller's
+#   choice and nothing detects it: hd_golf by default (GOLF_LAUNCH_MONITOR_PROFILE), or
+#   full_swing, Full Swing's grid screen (M42). A still gives no impact offset
+
+# A Live Photo's clip as a shot of its own, the second import method (M42 P14b, no script twin).
+# Each CLIP, or each .mov one level inside a directory, gives a shot holding the grid's numbers
+# off its sharpest frame, read by the reader above, and the impact offset or its named refusal
+# off the replay. It keeps import-photos' flags and exit codes, with no default directory
+cargo run --release --bin golf-lab -- import-video CLIP... --device full_swing [--session S]
+                     [--out DIR] [--min-confidence X] [--force] [--dry-run] [--models DIR]
+cargo run --release --bin golf-lab -- import-video CLIP... --device full_swing --into-session S
+                     --player P --club C [--sessions-dir D] [--golfers-dir D] [--out DIR]
+                     [--min-confidence X] [--force] [--dry-run] [--models DIR]
+#   a device declaring nothing from the replay exits 2 before anything is read, and hd_golf, the
+#   default, is one. No ffmpeg fails each clip, not the verb. A still named here is warned about
+#   and skipped. A refused replay moves neither needs_review nor the exit code: a line under the
+#   row says what it gave and the last line counts the shots with no offset. A store-only shot's
+#   image_path names the clip, its PNG being scratch; an entry's storage is §4's. Re-reading an
+#   offset after crates/impact is tuned takes --force, because the reader has no version key. A
+#   Live Photo imported by both verbs is two shots of one swing (ADR-034's M42 addendum)
+
+# The impact reader alone, on Live Photo clips, nothing stored (M42 P13, no script twin)
+cargo run --release --bin golf-lab -- read-impact CLIP... [--json] [--review DIR]
+#   one line a clip: `<name>: impact offset +1.2 mm (toe), contact frame 19 of 36, ball 20.5 px`,
+#   with the side toe (+), heel (-) or middle, or `<name>: not read - <sentence>`; --json one
+#   object a line. --review DIR writes PNGs under DIR/<stem>/: a reading's contact frame and two
+#   either side, a refusal's every fifth frame, the ball ringed in magenta (on a refusal whatever
+#   find_ball chose) and the heel-to-toe segment in green on the contact frame; a previous run's
+#   frame-NNN.png files go first. exit 0 every clip read · 1 any refused or not decoded, or no
+#   ffmpeg · 2 usage, a still among the clips included. Frames come from golf_lab::ffmpeg's
+#   decode_frames at 960 wide, with -fps_mode passthrough and -enc_time_base demux so two clips
+#   claiming 600 fps decode to their own frame count, with no duplicates and a clean stderr
 
 # One photo through the same reader, nothing stored: the shot, or null (M29 P7)
-cargo run --release --bin golf-ocr -- read <photo> [--json] [--device D] [--session S]
+cargo run --release --bin golf-ocr -- read <photo> [--json | --boxes] [--device D] [--session S]
                      [--min-confidence X] [--models DIR]
 #   exit 0 a read, null included · 1 an undecodable photo, a bad model, an unknown device
+#   --boxes (M42 P2) prints what the parser would be given instead of what it made, {device,
+#   boxes, notes} in a screen vector's input shape, each box with its glyph colour, rgb. It
+#   cannot be combined with --json. The device still decides the rotation vote's labels
 
 # The phone's export merged into the stores, no script twin (M29 P31): a zip or a directory of
 # sessions/, shots/ and golfers/ exactly as crates/storage writes them (the M29 plan's D16)
@@ -300,7 +334,7 @@ python scripts/conformance.py regenerate --storage-once | --career-once
 #   recorded the many-shot layer's two families from frozen Python, once each (M36 P2, P3). Each
 #   refuses the same way whenever any of its family exists
 
-# The Rust half — thirteen crates, and only one of them has a Python caller. `crates/trigger` is
+# The Rust half — fourteen crates, and only one of them has a Python caller. `crates/trigger` is
 # ball-strike detection and the clip-cutting rules around it (M20), and it is the one:
 # `audio/trigger.py` pipes PCM to `golf-trigger`, for the frozen server; `golf-lab` calls it in
 # process. `crates/capture` is the camera edge (M21).
@@ -345,7 +379,7 @@ python scripts/conformance.py regenerate --storage-once | --career-once
 # `core`'s `run_profile`, the selection family against `core`'s `run_selection`, the mcp family
 # against `golf-mcp`, every vector's shapes against `contracts`, and all 21 engine vectors
 # **end to end** against `core`.
-# M29 added the last three crates. `crates/ocr` is the lab's screen reader: a photo decoded
+# M29 added three crates. `crates/ocr` is the lab's screen reader: a photo decoded
 # (PNG through `image`, JPEG through a hand port of libjpeg-turbo, HEIC through ffmpeg), the
 # screen found and rectified by hand ports of OpenCV's steps, and three of PaddleOCR's models
 # (detection, textline orientation, recognition) run through `ort`, ONNX Runtime, into
@@ -361,6 +395,12 @@ python scripts/conformance.py regenerate --storage-once | --career-once
 # `sample` and the flight model's altitude (`AtmosphereProfile`, `at_altitude`) for `golf-lab
 # flight`. Each crate's `src/lib.rs` is the map of its modules, every one naming its twin, and
 # `crates/lab/src/lib.rs` is the lab's.
+# M42 added the fourteenth, `crates/impact`: where on the face the ball was struck, heel to toe,
+# read off Full Swing's overhead impact replay in a Live Photo's clip, std only with no Python
+# twin. `sharpest_frame` picks the frame a clip's grid is read from. `golf-lab` gained
+# `read_impact` and `import-video` over it. `crates/screen` gained the `full_swing` profile and
+# four opt-in parser rules (ADR-014's M42 addendum), and `contracts` `FieldSource` and two
+# `ShotData` keys written only when set, `backspin` and `sidespin`, which no analysis reads.
 # No MediaPipe in any of it: `crates/pose`'s tests drive a stub worker, and the real one is
 # behind `GOLF_POSE_REAL_WORKER`.
 cargo build --release          # api/pipeline.py needs this before it can detect a strike
@@ -394,7 +434,12 @@ cargo run --release --bin golf-lab -- build-vectors [--sessions-dir D] [--golfer
 #   (or writable) · 1 some refused and the rest written · 2 nothing written
 cargo test -p ocr -- --include-ignored
 #   the OCR gate (M29 P7): the 13 stored bay photos read by crates/ocr, each shot held to the
-#   screen vector parsed from PaddleOCR's boxes. This box only: data/, ffmpeg and the models
+#   screen vector parsed from PaddleOCR's boxes. This box only: data/, ffmpeg and the models.
+#   The same command runs M42's Full Swing photo gate (crates/ocr/tests/full_swing.rs): the
+#   six grid stills held to what each prints, read by eye, with no wrong value
+cargo test --release -p golf-lab --test full_swing_clips -- --include-ignored
+#   the Full Swing clip gate (M42 P14): the five grid clips' numbers, read off each one's
+#   sharpest frame and held to the same table. CONFORMANCE §2 has both gates
 python archive/trigger_replay.py [--sweep] [--concat] [--id SESSION/SWING]
 golf-capture list [--formats]  # the cameras this host can see, with their identities
 #   `no cameras` is a successful answer and exits 0 — it is also the only one this repo has
@@ -608,6 +653,17 @@ rather than linking it. Over the `golf-lab → golf-core` edge come the seams th
 the gates rather than copy: `VectorInput`, `run_bundle`, `auto_windows` (the swing selection the
 selection family gates), `session`'s `analyse_entry` for photo entries, and `textwrap` and `pyrepr`
 for the reports.
+
+**M42 added a fourteenth crate, with one edge.** `crates/impact` depends on nothing, std only, and
+decodes no video: frames arrive as RGB bytes, from `golf_lab::ffmpeg` on this box and from the
+phone's own decoder once M38's `crates/app` calls it. **`golf-lab → impact` is its one edge**, and no
+other crate depends on it. `crates/ocr/tests/ort_reach.rs` guards it anyway, although it has no
+dependency to guard, because of that later caller. `crates/lab` also took `image` (PNG only, already
+in the lock through `ocr`) for a clip's grid frame and `read-impact`'s review images. The edge M42
+did not add is as deliberate: **`is_lit` lives in `screen`**, where both hosts' boxes reach it, and
+`crates/ocr` only measures the `TextBox.rgb` it reads. What a device reads from its replay rather
+than its screen is a declaration in `contracts` (`capability::FieldSource`), and `screen::tile_refusals`
+names such a field `misread` without looking for a tile, so `screen` holds no reference to `impact`.
 
 **`pose/` gained a fourth entry point, and it is a shell rather than a module** (M23, ADR-033).
 `pose/worker.py` is what `crates/pose` spawns — `python -m golf_coach.pose.worker`, a handshake
@@ -1075,12 +1131,13 @@ gitignored and never created. Everything persists as files:
 | Keypoints | beside the clip, as `<role>.keypoints.json` in a swing bundle | ✅ written by `golf-lab analyze` through `golf_lab::pose` (M29), or by `golf-pose run --out` for one clip |
 | ↳ *its format* | `{"clip": {fps, width, height, frame_count, source_sha256}, "frames": [...]}` | ✅ read/written via `storage::keypoints_io` (M29 P22) and its Python twin `storage/keypoints_io.py`, both accepting the bare-array shape everything written before M7 Phase 1 uses |
 | Overlays | `data/processed/<clip>.overlay.mp4`, `.analysis.mp4` | retired: nothing writes one since M29, which deleted the render (ADR-035 §2); old files are left standing |
-| Parsed shots | `data/processed/shots/` (content-addressed) | ✅ written by `golf-lab import-photos` and `golf-lab analyze` (M29; a stored shot an older parser read is re-read and stamped), and by `golf-lab import-export` with the phone's own bytes. Read, never written, by `golf-core run-shot --session` (M35), which finds the directory through `--shots-dir`, else `GOLF_SHOTS_DIR`, else this path |
-| Swing bundles | `data/processed/sessions/<session>/<swing>/` + `manifest.json` | ✅ written by the upload route until M29 closed it (M7 Phase 3/5); since then by `golf-lab import-export` (a phone's export, file by file) and `golf-lab import-photos --into-session` (a photo entry) |
+| Parsed shots | `data/processed/shots/` (content-addressed) | ✅ written by `golf-lab import-photos`, `golf-lab import-video` (M42) and `golf-lab analyze` (M29; a stored shot an older parser read is re-read and stamped), and by `golf-lab import-export` with the phone's own bytes. Read, never written, by `golf-core run-shot --session` (M35), which finds the directory through `--shots-dir`, else `GOLF_SHOTS_DIR`, else this path |
+| Swing bundles | `data/processed/sessions/<session>/<swing>/` + `manifest.json` | ✅ written by the upload route until M29 closed it (M7 Phase 3/5); since then by `golf-lab import-export` (a phone's export, file by file) and `golf-lab import-photos --into-session` and `import-video --into-session` (a photo entry) |
 | ↳ *who swung it, and with what* | `player_id` and `club` on `SwingManifest`, both stamped from the session cursor at swing creation | ✅ `player_id` is **write-once** (career mode step 1); `club` is required — an upload against a cursor naming no club is refused with a 409 (M9 P4–P6). Neither is sent by the uploading phone: two phones would have to type matching names, and a free-text club turns a typo into a tag |
 | ↳ *and whether it was topped* | `mishit: MishitVerdict \| None` on `SwingManifest` (M16 P1, ADR-028) | ✅ `None` by default and tolerantly loaded, the `club` field's pattern exactly. Set only by `golf-core flag-mishit` (the route and the script that also did were closed and deleted at M29) — `confirmed` / `cleared`, or `null` to reset to automatic — with **no bulk backfill**, because only the golfer who hit the swing knows they topped it. The automatic flag is *not* stored: `storage/corpus.py` recomputes it from the club's median on every `read_corpus`, so the 0.50 constant can move without a migration |
 | ↳ *and what it was practised as* | `intent: PracticeGoal \| None` on `SwingManifest` (M35, Rust only) | ✅ written by Rust alone, and only when set: stamped from the session's `intent` cursor onto a new swing that has none, as `club` is, and repaired per shot by `golf-core set-intent`. Absent reads as `fundamentals`, which is every swing on disk. Whether a shot is **tracked** is derived from the mode and never stored: a `drill` is stored and analysed and reaches no aggregate. **Frozen Python reads the key and drops it on any rewrite** (another role uploaded into the swing, `set_player`, `set_club`, `set_mishit`, `attribute_unlabeled`), and the drill silently becomes a tracked shot (ADR-024's M35 addendum) |
 | ↳ *a photo entry's analysis* | `shot_analysis.json` in the same directory (M35, Rust only) | ✅ written by `golf-core run-shot --session`, and since M29 by `golf-lab import-photos --into-session` and `golf-lab reanalyze`, for a **photo entry** alone: a manifest with a shot photo and no face-on clip. A `ShotResult`, naming the photo it was computed from (`photo_sha256`, its staleness check, so Rust writes no `analysis.state.json`) and the engine version it was computed at. Rust's `read_corpus` reads it for a photo entry and never for a swing, and reads a swing's `analysis.json` never for a photo entry: one artifact per kind. The frozen lab never reads it, which is why `printed_blank` and `misread` may be written here and never into `analysis.json` |
+| ↳ *a photo entry imported from a clip* | `shot_screen.<digest12>.png` and `shot_screen.<digest12>.mov` in the same directory (M42, Rust only) | ✅ written by `golf-lab import-video --into-session`. **The clip's grid frame is the entry's photo**: its sharpest frame as a PNG, with the digest taken as for any photo, so a clip imported twice lands on one entry, and with the clip's mtime, which is the shot's timestamp. The manifest calls it a photo like any other (`original_filename: IMG_2889.png`, `content_type: image/png`), and from there it is a photo entry as above. **The clip is copied beside it with its mtime and is not in the manifest**, because a new `Role` would make frozen Python refuse the manifest (ADR-035 clause 4). Nothing enumerates a swing directory's files, and `delete_swing` removes the directory, so a deleted entry takes the clip with it. It is copied once the shot is read, so a read of nothing leaves no clip to clean up; a failed copy is said on stderr and the shot stands, and `--force` copies it again. A store-only import has no entry, so its PNG is scratch and goes with the run |
 | ↳ *analysis artifacts* | `analysis.json`, `aligned.mp4`, `<role>.keypoints.json`, `<role>.audio.json` in the same directory | ✅ written by `golf-lab analyze` and `reanalyze` since M29, through `storage::state::save_analysis` and `storage::audio_io`, and before that by `api/pipeline.py`; no `aligned.mp4` since M29. `analysis.json` is a `SwingBundleResult` with the heavy streams excluded (the keypoints sit beside it). The two caches are keyed on the clip's sha256; `<role>.audio.json` also carries `detector_version` and is re-detected when `AUDIO_DETECTOR_VERSION` moves, because a changed detector is invisible to a content hash |
 | ↳ *analysis state* | `analysis.state.json` in the same directory | ✅ `AnalysisState` — queued/running/done/failed, the role→sha256 map the result was computed from (so a re-upload invalidates it), and a denormalised score/headline so the 5 s status poll never parses `analysis.json`. The terminal status is written by `pipeline.record_state` as part of writing `analysis.json`, because a denormalised copy must be written by whatever writes the original; the worker owns only `queued`/`running`/crash |
 | ↳ *session cursor* | `session.json` in the **session** directory | ✅ `storage/session_meta.py` — **two** cursors, `player_id` and `club` (M9 P4): who the *next* swing belongs to and what it will be hit with. Both are pointers, never records — what actually happened lives on each manifest, so a buddy taking a few swings mid-session rewrites nobody's history and changing clubs mid-bucket rewrites no swing's tag. The club moves far more often, which is why the upload page keeps its picker open and the per-swing repair collapses behind a control. **M35 added a third, `intent`, in Rust alone** (`crates/storage::session_meta`, written only when set, by `golf-core set-intent --default`): what each swing created after it was practised as. Frozen Python drops it on its next cursor update |

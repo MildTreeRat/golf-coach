@@ -60,17 +60,48 @@
 //! module's cache rule (a stale stored shot is re-read keeping its identity) and its one stamp,
 //! [`NewImport`], which is the identity a new import takes: `{session}-{swing}` from [`shot_for`],
 //! `{session}-{digest[:12]}` from a store-only import.
+//!
+//! # The clip's half (M42 P14), with no Python twin
+//!
+//! A Live Photo of Full Swing's grid screen carries the grid in its motion part too, beside the
+//! replay panel, so a clip imports a shot with no still (the M42 plan's decision 7). No Python
+//! ever read a clip, so this half is new. [`read_clip_grid`] decodes the clip, picks one frame by
+//! [`GRID_FRAME`] ([`write_grid_frame`]), writes it as a PNG and reads that PNG through the path a
+//! still takes, so the numbers half of a clip's shot is held to the still's rule: no wrong value
+//! (decision 10), which `tests/full_swing_clips.rs` holds on the five grid clips.
+//!
+//! The other half (M42 P14b) is [`read_impact_video`]: the impact offset off the same clip's
+//! replay, read once the grid has given a shot, on a device that declares a field `from:
+//! impact_video`. Call 13's three outcomes are its table: read sets `impact_offset_h` and lists it,
+//! refused lists it and leaves it `None` with the refusal's sentence as a warning, which
+//! `screen::tile_refusals` names `misread`, and a clip that will not decode lists nothing and warns.
+//! **A still never reaches it.** [`import_photo`] takes no frames, so a still's shot never lists the
+//! field, which is ADR-034 §2's "not printed": nothing downstream, not even a blank. Neither
+//! refusal flags the shot for review, because a flag sets a shot's numbers aside (the corpus's
+//! `shot_needs_review`) and the grid's numbers are as good as they were.
+//!
+//! **A re-read of a stale shot keeps its offset.** The re-read reads the entry's PNG, which holds no
+//! replay, so the offset is the older read's to carry ([`carry_impact_video`]), and otherwise a
+//! `SCREEN_PARSER_VERSION` bump would quietly make every clip's shot a still's. `import-video` on the
+//! clip itself reads the replay again and replaces what was carried.
 
 use std::path::{Path, PathBuf};
 
+use contracts::capability::capability_for;
 use contracts::shot::{parse_is_current, ShotData, SCREEN_PARSER_VERSION};
 use contracts::Timestamp;
+use image::codecs::png::PngEncoder;
+use image::{ExtendedColorType, ImageEncoder};
+use impact::Frame;
 use ocr::models::Models;
 use screen::profile::{load_profile, DeviceProfile};
 use screen::{ScreenInput, TextBox};
 use storage::manifest::{Role, SwingManifest};
 use storage::shot_store::{hash_image, ShotStore};
 use storage::StoreError;
+
+use crate::ffmpeg::Ffmpeg;
+use crate::read_impact::{read_frames, Outcome, DECODE_WIDTH};
 
 /// `settings.launch_monitor_profile`'s environment variable, by pydantic-settings' `GOLF_` prefix.
 pub const DEVICE_ENV: &str = "GOLF_LAUNCH_MONITOR_PROFILE";
@@ -513,6 +544,17 @@ impl Imported {
     }
 }
 
+/// One photo into the shot store: [`import_photo_with`], with nothing to add to the shot.
+pub fn import_photo(
+    image_path: &Path,
+    new: NewImport<'_>,
+    profile: &DeviceProfile,
+    options: &ShotOptions,
+    reader: &mut dyn PhotoReader,
+) -> Result<Imported, String> {
+    import_photo_with(image_path, new, profile, options, reader, &mut |_| {})
+}
+
 /// One photo into the shot store: `importer.py::import_screen`, with [`shot_for`]'s cache rule.
 /// [M29 P24]
 ///
@@ -528,12 +570,17 @@ impl Imported {
 /// be read, a stored shot that is not a shot, a decode or model error (the reader's own message,
 /// unwrapped, so `UnsupportedJpeg`'s repair reaches the user: the plan's P2 finding 19), or a write
 /// that failed. The caller decides what one costs the run.
-pub fn import_photo(
+///
+/// `finish` gets the shot between the read and the store, and is not called for a cached shot or a
+/// read of nothing: it is how `import-video` adds the replay's reading (no Python twin, M42 P14b), so
+/// one write stores the whole shot and a cached one costs no decode.
+pub fn import_photo_with(
     image_path: &Path,
     new: NewImport<'_>,
     profile: &DeviceProfile,
     options: &ShotOptions,
     reader: &mut dyn PhotoReader,
+    finish: &mut dyn FnMut(&mut ShotData),
 ) -> Result<Imported, String> {
     let bytes = std::fs::read(image_path)
         .map_err(|error| format!("could not read image {}: {error}", image_path.display()))?;
@@ -549,7 +596,7 @@ pub fn import_photo(
             None => {}
         }
     }
-    let Some(shot) = read_screen(
+    let Some(mut shot) = read_screen(
         image_path,
         digest,
         profile,
@@ -561,6 +608,7 @@ pub fn import_photo(
     else {
         return Ok(Imported::Nothing);
     };
+    finish(&mut shot);
     let written = if options.dry_run {
         None
     } else {
@@ -621,8 +669,274 @@ fn read_screen(
         image_path: Some(path),
         min_confidence: options.min_confidence,
     };
-    let shot = screen::read(&input).map_err(|unknown| unknown.to_string())?;
+    let mut shot = screen::read(&input).map_err(|unknown| unknown.to_string())?;
+    if let (Some(shot), Some(older)) = (shot.as_mut(), stale) {
+        carry_impact_video(older, shot);
+    }
     Ok(shot)
+}
+
+/// Where a Live Photo clip's frames come from: [`Ffmpeg`] in the binary, a fake in the tests.
+/// [M42 P14b]
+///
+/// `width` is what to scale to, `None` for the clip's own size: the grid is read at its own
+/// (`write_grid_frame`) and the replay at [`DECODE_WIDTH`] ([`read_impact_video`]), as
+/// [`Ffmpeg::decode_frames`] takes them. Any closure of that shape is one, so a test can answer in a
+/// line.
+pub trait MotionFrames {
+    fn frames(&mut self, clip: &Path, width: Option<u32>) -> Result<Vec<Frame>, String>;
+}
+
+impl MotionFrames for Ffmpeg {
+    fn frames(&mut self, clip: &Path, width: Option<u32>) -> Result<Vec<Frame>, String> {
+        self.decode_frames(clip, width)
+    }
+}
+
+impl<F> MotionFrames for F
+where
+    F: FnMut(&Path, Option<u32>) -> Result<Vec<Frame>, String>,
+{
+    fn frames(&mut self, clip: &Path, width: Option<u32>) -> Result<Vec<Frame>, String> {
+        self(clip, width)
+    }
+}
+
+/// The field the impact reader delivers: heel to toe only, high-low being invisible from above (the
+/// M42 plan's finding 9).
+const IMPACT_FIELD: &str = "impact_offset_h";
+
+/// What every warning an impact read leaves starts with (call 13), so the importer can say which
+/// line of a shot's warnings is the replay's, and a re-read can carry it. `ImpactRefusal::sentence`
+/// is written to follow it.
+pub const IMPACT_VIDEO_WARNING: &str = "impact video: ";
+
+/// The impact offset off `clip`'s replay, into `shot`: [`record_impact_outcome`] over the reader at
+/// [`DECODE_WIDTH`]. A device that declares no field `from: impact_video` is left as it is, and asks
+/// for no frames. [M42 P14b]
+pub fn read_impact_video(shot: &mut ShotData, clip: &Path, motion: &mut dyn MotionFrames) {
+    let reads_the_replay = shot
+        .provenance
+        .as_ref()
+        .and_then(|provenance| capability_for(&provenance.device).ok())
+        .is_some_and(|capability| capability.reads_impact_video());
+    if !reads_the_replay {
+        return;
+    }
+    let outcome = match motion.frames(clip, Some(DECODE_WIDTH)) {
+        Ok(frames) => read_frames(&frames),
+        Err(error) => Outcome::Undecodable(error),
+    };
+    record_impact_outcome(shot, &outcome);
+}
+
+/// Call 13's three outcomes on a shot. Whatever an earlier read left is replaced, so this is the one
+/// place the field, its listing and its warning are written. [M42 P14b]
+pub fn record_impact_outcome(shot: &mut ShotData, outcome: &Outcome) {
+    let Some(provenance) = shot.provenance.as_mut() else {
+        return;
+    };
+    provenance
+        .warnings
+        .retain(|warning| !warning.starts_with(IMPACT_VIDEO_WARNING));
+    if let Some(present) = provenance.fields_present.as_mut() {
+        present.retain(|field| field != IMPACT_FIELD);
+        if !matches!(outcome, Outcome::Undecodable(_)) {
+            present.push(IMPACT_FIELD.to_string());
+        }
+    }
+    shot.impact_offset_h = None;
+    match outcome {
+        Outcome::Read(reading) => shot.impact_offset_h = Some(reading.offset_h_mm),
+        Outcome::Refused(refusal) => provenance
+            .warnings
+            .push(format!("{IMPACT_VIDEO_WARNING}{}", refusal.sentence())),
+        Outcome::Undecodable(error) => provenance.warnings.push(format!(
+            "{IMPACT_VIDEO_WARNING}could not be decoded: {error}"
+        )),
+    }
+}
+
+/// What a stale shot's read of its replay left, onto the re-read of its grid (the module doc).
+fn carry_impact_video(older: &ShotData, shot: &mut ShotData) {
+    let (Some(from), Some(onto)) = (older.provenance.as_ref(), shot.provenance.as_mut()) else {
+        return;
+    };
+    let listed = from
+        .fields_present
+        .as_ref()
+        .is_some_and(|present| present.iter().any(|field| field == IMPACT_FIELD));
+    if listed {
+        shot.impact_offset_h = older.impact_offset_h;
+        if let Some(present) = onto.fields_present.as_mut() {
+            present.push(IMPACT_FIELD.to_string());
+        }
+    }
+    onto.warnings.extend(
+        from.warnings
+            .iter()
+            .filter(|warning| warning.starts_with(IMPACT_VIDEO_WARNING))
+            .cloned(),
+    );
+}
+
+/// Which frame of a Live Photo clip the grid of numbers is read from (the M42 plan's call 14).
+/// [M42 P14]
+///
+/// Both rules stay runnable, by the house's convention for a rejected alternative: P14 measured
+/// each on the five grid clips through the clip gate (`tests/full_swing_clips.rs`), and the plan's
+/// P14 findings hold both counts. [`GRID_FRAME`] is the one kept.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum GridFrame {
+    /// [`impact::sharpest_frame`]: the frame with the most gradient energy, ties to the earliest.
+    Sharpest,
+    /// The middle frame, `len / 2`, which is where the still sits in a Live Photo's motion part.
+    Middle,
+}
+
+impl GridFrame {
+    /// The frame this rule chooses, by index, or `None` for a clip with no frame to choose.
+    pub fn choose(self, frames: &[Frame]) -> Option<usize> {
+        match self {
+            GridFrame::Sharpest => impact::sharpest_frame(frames),
+            GridFrame::Middle => (!frames.is_empty()).then_some(frames.len() / 2),
+        }
+    }
+}
+
+/// The rule a clip's grid is read by: call 14's default, kept by P14's measurement.
+///
+/// Through the clip gate on the five grid clips, neither rule read a wrong value. The sharpest
+/// frame read all 60 values (frames 31 of 36, 17 of 61, 21 of 55, 29 of 31 and 41 of 59), and the
+/// middle frame 59. The one value the middle frame missed was `IMG_2893`'s sidespin: no `D` or `F`
+/// box came back from its frame 15, so the sign was withheld (call 5). Both read `IMG_2892`'s total,
+/// which its still withholds (P9: a stray box over the header copy).
+pub const GRID_FRAME: GridFrame = GridFrame::Sharpest;
+
+/// The grid frame [`write_grid_frame`] wrote: its index among the clip's frames, how many there
+/// were, and the sha256 of the PNG's bytes, which is the photo's digest as any photo's is taken.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GridWritten {
+    pub frame: usize,
+    pub frames: usize,
+    pub digest: String,
+}
+
+/// One clip's grid frame, as the PNG a still's reader reads. [M42 P14]
+///
+/// The clip is decoded at its own size (`decode(clip, None)`, rotation applied: 1744 × 1308 on the
+/// five grid clips, which ffmpeg crops from the 1920 × 1440 stored, P13's finding), `rule` chooses
+/// one frame, and that frame is written to `png`, a path the caller gives, losslessly, so the
+/// reader sees the decoder's pixels and nothing a second codec did to them. **The PNG takes the
+/// clip's modification time**, because the photo's is the shot's timestamp
+/// (`ocr::screen_timestamp`) and the clip is when the shot was hit; the time is set on a second
+/// handle after the bytes are written and closed, because Windows may move a file's write time
+/// when a handle it wrote through closes.
+///
+/// Every frame is held while the rule runs: 6.8 MB each at that size, so 417 MB for `IMG_2891`'s
+/// 61 (P13's finding). That was kept rather than streamed because a clip is at most a couple of
+/// seconds and the laptop is the only host that decodes this way; the phone hands its own frames.
+///
+/// `Err` names the clip: ffmpeg's failure, a clip with no frame, or a PNG that could not be
+/// written or stamped.
+pub fn write_grid_frame(
+    clip: &Path,
+    png: &Path,
+    rule: GridFrame,
+    motion: &mut dyn MotionFrames,
+) -> Result<GridWritten, String> {
+    let frames = motion.frames(clip, None)?;
+    let frame = rule
+        .choose(&frames)
+        .ok_or_else(|| format!("{} has no frame to read the grid from", clip.display()))?;
+    let bytes = encode_png(&frames[frame])
+        .map_err(|why| format!("frame {frame} of {}: {why}", clip.display()))?;
+    let modified = std::fs::metadata(clip)
+        .and_then(|metadata| metadata.modified())
+        .map_err(|error| format!("could not read the time of {}: {error}", clip.display()))?;
+    std::fs::write(png, &bytes)
+        .and_then(|()| std::fs::File::options().write(true).open(png))
+        .and_then(|file| file.set_modified(modified))
+        .map_err(|error| format!("could not write {}: {error}", png.display()))?;
+    Ok(GridWritten {
+        frame,
+        frames: frames.len(),
+        digest: hash_image(&bytes),
+    })
+}
+
+/// A frame as PNG bytes, RGB at eight bits a channel, with the encoder's defaults. Deterministic
+/// (no time or text chunk is written), which is what lets one clip imported twice hash to one
+/// photo and so land on one store entry (call 14); `tests::a_frame_encodes_to_the_same_png_twice`
+/// pins it.
+pub fn encode_png(frame: &Frame) -> Result<Vec<u8>, String> {
+    let size = |n: usize| u32::try_from(n).map_err(|_| format!("{n} pixels is too large a side"));
+    if !frame.is_well_formed() {
+        return Err(format!(
+            "{} bytes is not {} × {} pixels of RGB",
+            frame.rgb.len(),
+            frame.width,
+            frame.height
+        ));
+    }
+    let mut bytes = Vec::new();
+    PngEncoder::new(&mut bytes)
+        .write_image(
+            &frame.rgb,
+            size(frame.width)?,
+            size(frame.height)?,
+            ExtendedColorType::Rgb8,
+        )
+        .map_err(|error| error.to_string())?;
+    Ok(bytes)
+}
+
+/// What [`read_clip_grid`] read off one clip: the shot (`None` for a read of nothing, as a still's
+/// `failed`), its impact outcome included, and which frame it came from.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ClipGrid {
+    pub shot: Option<ShotData>,
+    /// The grid frame's index among the clip's frames, counted from 0.
+    pub frame: usize,
+    /// How many frames the clip decoded to.
+    pub frames: usize,
+}
+
+/// A Live Photo clip read with no store around it (the M42 plan's decision 7): its grid frame
+/// written to `png` by [`write_grid_frame`], then read through [`read_screen`], the path a still
+/// takes, so the profile, the parser's rules and the validator are the still's, unchanged, and then
+/// its replay read by [`read_impact_video`]. [M42 P14, the replay since P14b]
+///
+/// A new import every time: no store is consulted and nothing is written but `png`. The shot's
+/// photo is the PNG (its digest, its path, its modification time, which is the clip's), and its
+/// identity is `new`'s, as a still's is. It is what the clip gate runs. `golf-lab import-video` takes
+/// the same three steps with the store's cache rule between them (`crate::import`), over
+/// [`write_grid_frame`], [`import_photo_with`] and [`read_impact_video`].
+///
+/// Eight arguments where clippy's limit is seven, as `import_export`'s `swing` has: each is one the
+/// still's own [`import_photo`] takes or one the clip adds (the clip, where its frame goes, the
+/// rule, the decoder), and bundling them would be a struct with no meaning but the lint's.
+#[allow(clippy::too_many_arguments)]
+pub fn read_clip_grid(
+    clip: &Path,
+    png: &Path,
+    rule: GridFrame,
+    new: NewImport<'_>,
+    profile: &DeviceProfile,
+    options: &ShotOptions,
+    motion: &mut dyn MotionFrames,
+    reader: &mut dyn PhotoReader,
+) -> Result<ClipGrid, String> {
+    let written = write_grid_frame(clip, png, rule, motion)?;
+    let mut shot = read_screen(png, written.digest, profile, None, new, options, reader)?;
+    if let Some(shot) = shot.as_mut() {
+        read_impact_video(shot, clip, motion);
+    }
+    Ok(ClipGrid {
+        shot,
+        frame: written.frame,
+        frames: written.frames,
+    })
 }
 
 /// The log line for a stored shot an older parser read, which this run re-reads.
@@ -674,6 +988,333 @@ pub fn older_shot_note(older: &ShotData, because: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A frame whose every pixel is `shade`, with one brighter column at `x` so frames differ.
+    fn frame(shade: u8, x: usize) -> Frame {
+        let (width, height) = (6, 4);
+        let mut rgb = vec![shade; width * height * 3];
+        for y in 0..height {
+            let at = (y * width + x) * 3;
+            rgb[at..at + 3].copy_from_slice(&[250, 240, 230]);
+        }
+        Frame { width, height, rgb }
+    }
+
+    #[test]
+    fn the_middle_rule_takes_half_the_length_and_the_sharpest_is_impacts() {
+        let frames: Vec<Frame> = (0..5).map(|i| frame(10 * i as u8, i)).collect();
+        assert_eq!(GridFrame::Middle.choose(&frames), Some(2));
+        assert_eq!(GridFrame::Middle.choose(&frames[..4]), Some(2));
+        assert_eq!(GridFrame::Middle.choose(&frames[..1]), Some(0));
+        assert_eq!(GridFrame::Middle.choose(&[]), None);
+        assert_eq!(
+            GridFrame::Sharpest.choose(&frames),
+            impact::sharpest_frame(&frames)
+        );
+        assert_eq!(GridFrame::Sharpest.choose(&[]), None);
+    }
+
+    #[test]
+    fn a_frame_encodes_to_the_same_png_twice_and_decodes_to_its_pixels() {
+        let original = frame(30, 2);
+        let first = encode_png(&original).unwrap();
+        assert_eq!(encode_png(&original).unwrap(), first, "deterministic");
+        let decoded = image::load_from_memory(&first).unwrap().to_rgb8();
+        assert_eq!(
+            (decoded.width(), decoded.height()),
+            (original.width as u32, original.height as u32)
+        );
+        assert_eq!(decoded.into_raw(), original.rgb, "lossless");
+        let broken = Frame {
+            rgb: vec![0; 5],
+            ..original
+        };
+        assert_eq!(
+            encode_png(&broken),
+            Err("5 bytes is not 6 × 4 pixels of RGB".to_string())
+        );
+    }
+
+    /// A reader answering with P10's hand-worked `full-swing-grid` boxes, the ones `IMG_2889`'s
+    /// still printed, and recording which photo it was asked to read.
+    struct Replay {
+        prepared: Prepared,
+        asked: Vec<PathBuf>,
+    }
+
+    impl PhotoReader for Replay {
+        fn ready(&mut self) -> Result<(), String> {
+            Ok(())
+        }
+
+        fn prepare(&mut self, photo: &Path, profile: &DeviceProfile) -> Result<Prepared, String> {
+            assert_eq!(profile.device, "full_swing");
+            self.asked.push(photo.to_path_buf());
+            Ok(self.prepared.clone())
+        }
+    }
+
+    fn replay() -> Replay {
+        let path = crate::repo_root().join("spec/vectors/screen/hand/full-swing-grid.json");
+        let document: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(path).unwrap()).unwrap();
+        let input: ScreenInput = serde_json::from_value(document["input"].clone()).unwrap();
+        Replay {
+            prepared: Prepared {
+                boxes: input.boxes,
+                notes: input.notes,
+            },
+            asked: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn a_clips_grid_frame_is_read_as_a_photo_stamped_with_the_clips_time() {
+        let scratch = tempfile::tempdir().unwrap();
+        let clip = scratch.path().join("IMG_0001.MOV");
+        std::fs::write(&clip, b"not a video: the decoder is the test's").unwrap();
+        // A time the PNG could not have by accident: a day before now.
+        let then = std::time::SystemTime::now() - std::time::Duration::from_secs(86_400);
+        std::fs::File::options()
+            .write(true)
+            .open(&clip)
+            .unwrap()
+            .set_modified(then)
+            .unwrap();
+        let png = scratch.path().join("grid.png");
+        let frames: Vec<Frame> = (0..3).map(|i| frame(20, i)).collect();
+        let mut asked = Vec::new();
+        let mut decode = |path: &Path, width: Option<u32>| {
+            asked.push((path.to_path_buf(), width));
+            Ok(frames.clone())
+        };
+        let mut reader = replay();
+        let profile = load_profile("full_swing").unwrap();
+        let mut options = ShotOptions::new(scratch.path().join("shots"));
+        options.device = "full_swing".to_string();
+
+        let grid = read_clip_grid(
+            &clip,
+            &png,
+            GridFrame::Middle,
+            NewImport {
+                session_id: "clips",
+                shot_id: None,
+            },
+            profile,
+            &options,
+            &mut decode,
+            &mut reader,
+        )
+        .unwrap();
+
+        assert_eq!(
+            asked,
+            vec![(clip.clone(), None), (clip.clone(), Some(DECODE_WIDTH))],
+            "the grid at its own size, then the replay at the reader's"
+        );
+        assert_eq!((grid.frame, grid.frames), (1, 3));
+        assert_eq!(reader.asked, vec![png.clone()], "the PNG is what is read");
+        let bytes = std::fs::read(&png).unwrap();
+        assert_eq!(bytes, encode_png(&frames[1]).unwrap());
+        let digest = hash_image(&bytes);
+        let shot = grid.shot.expect("the hand vector's boxes read as a shot");
+        let provenance = shot.provenance.as_ref().unwrap();
+        assert_eq!(provenance.image_sha256.as_deref(), Some(digest.as_str()));
+        assert_eq!(
+            provenance.image_path.as_deref(),
+            Some(png.display().to_string().as_str())
+        );
+        assert_eq!(shot.shot_id, format!("clips-{}", &digest[..12]));
+        assert_eq!(shot.timestamp, ocr::screen_timestamp(&clip).unwrap());
+        assert_eq!(shot.carry_distance, Some(131.0));
+        assert!(
+            !scratch.path().join("shots").exists(),
+            "nothing is stored: the store is the importer's"
+        );
+    }
+
+    /// A shot as `IMG_2889`'s still reads: no offset, and the field not listed.
+    fn read_shot() -> ShotData {
+        let scratch = tempfile::tempdir().unwrap();
+        let photo = scratch.path().join("still.png");
+        std::fs::write(&photo, b"a stand-in only the reader would open").unwrap();
+        let mut options = ShotOptions::new(scratch.path().join("shots"));
+        options.dry_run = true;
+        let imported = import_photo(
+            &photo,
+            NewImport {
+                session_id: "clips",
+                shot_id: None,
+            },
+            load_profile("full_swing").unwrap(),
+            &options,
+            &mut replay(),
+        )
+        .unwrap();
+        imported.shot().unwrap().clone()
+    }
+
+    fn listed(shot: &ShotData) -> bool {
+        let present = shot.provenance.as_ref().unwrap().fields_present.as_ref();
+        present.unwrap().iter().any(|field| field == IMPACT_FIELD)
+    }
+
+    fn warnings(shot: &ShotData) -> Vec<&str> {
+        let warnings = &shot.provenance.as_ref().unwrap().warnings;
+        warnings
+            .iter()
+            .map(String::as_str)
+            .filter(|warning| warning.starts_with(IMPACT_VIDEO_WARNING))
+            .collect()
+    }
+
+    fn reading(offset_h_mm: f64) -> Outcome {
+        Outcome::Read(impact::ImpactReading {
+            offset_h_mm,
+            contact_frame: 6,
+            frames: 9,
+            ball_center: [480.0, 360.0],
+            ball_diameter_px: 24.0,
+            heel: [430.0, 330.0],
+            toe: [480.0, 360.0],
+        })
+    }
+
+    /// A still's shot lists nothing, so `tile_refusals` names nothing: not printed (call 13).
+    #[test]
+    fn a_stills_shot_does_not_list_the_field_and_refuses_nothing_for_it() {
+        let still = read_shot();
+        assert!(!listed(&still));
+        assert_eq!(still.impact_offset_h, None);
+        let refused = screen::tile_refusals(&still).unwrap();
+        assert!(refused.iter().all(|entry| entry.name != IMPACT_FIELD));
+    }
+
+    /// Call 13's three outcomes, each replacing the one before it, as a second read must.
+    #[test]
+    fn each_outcome_is_calls_and_replaces_the_last() {
+        let mut shot = read_shot();
+
+        record_impact_outcome(&mut shot, &reading(4.2));
+        assert_eq!(shot.impact_offset_h, Some(4.2));
+        assert!(listed(&shot));
+        assert!(warnings(&shot).is_empty());
+        let refused = screen::tile_refusals(&shot).unwrap();
+        assert!(refused.iter().all(|entry| entry.name != IMPACT_FIELD));
+
+        let refusal = Outcome::Refused(impact::ImpactRefusal::NoShaft);
+        record_impact_outcome(&mut shot, &refusal);
+        assert_eq!(shot.impact_offset_h, None);
+        assert!(listed(&shot));
+        assert_eq!(
+            warnings(&shot),
+            [format!(
+                "impact video: {}",
+                impact::ImpactRefusal::NoShaft.sentence()
+            )]
+        );
+        let entry = screen::tile_refusals(&shot)
+            .unwrap()
+            .into_iter()
+            .find(|entry| entry.name == IMPACT_FIELD)
+            .expect("a refusal is named");
+        assert_eq!(entry.reason, contracts::unscored::UnscoredReason::Misread);
+        assert_eq!(entry.detail, screen::IMPACT_VIDEO_MISREAD);
+
+        let undecodable = Outcome::Undecodable("boom".to_string());
+        record_impact_outcome(&mut shot, &undecodable);
+        assert_eq!(shot.impact_offset_h, None);
+        assert!(!listed(&shot), "a machine problem: not printed");
+        assert_eq!(
+            warnings(&shot),
+            ["impact video: could not be decoded: boom"]
+        );
+        let refused = screen::tile_refusals(&shot).unwrap();
+        assert!(refused.iter().all(|entry| entry.name != IMPACT_FIELD));
+
+        assert!(
+            !shot.provenance.as_ref().unwrap().needs_review,
+            "the grid's numbers are as good as they were"
+        );
+    }
+
+    /// A device that declares nothing from the replay is left alone and asks for no frames.
+    #[test]
+    fn a_device_with_no_impact_video_field_asks_for_no_frames() {
+        let mut shot = read_shot();
+        shot.provenance.as_mut().unwrap().device = "hd_golf".to_string();
+        let before = shot.clone();
+        let mut asked = 0;
+        let mut motion = |_: &Path, _: Option<u32>| {
+            asked += 1;
+            Err("not asked".to_string())
+        };
+        read_impact_video(&mut shot, Path::new("a.mov"), &mut motion);
+        assert_eq!(asked, 0);
+        assert_eq!(shot, before);
+    }
+
+    /// A stale shot's re-read reads the PNG and no replay, so its offset is carried, as a
+    /// `SCREEN_PARSER_VERSION` bump must not quietly drop it; a current shot is served as it was.
+    #[test]
+    fn a_re_read_of_a_stale_clips_shot_keeps_what_its_replay_gave() {
+        let scratch = tempfile::tempdir().unwrap();
+        let photo = scratch.path().join("grid.png");
+        std::fs::write(&photo, b"a stand-in only the reader would open").unwrap();
+        let options = ShotOptions::new(scratch.path().join("shots"));
+        let store = ShotStore::new(&options.shots_dir);
+        let new = NewImport {
+            session_id: "clips",
+            shot_id: None,
+        };
+        let profile = load_profile("full_swing").unwrap();
+
+        for outcome in [
+            reading(4.2),
+            Outcome::Refused(impact::ImpactRefusal::NoBall),
+        ] {
+            let mut stored = read_shot();
+            record_impact_outcome(&mut stored, &outcome);
+            let provenance = stored.provenance.as_mut().unwrap();
+            provenance.parser_version = 0;
+            provenance.image_sha256 = Some(hash_image(&std::fs::read(&photo).unwrap()));
+            store.put(&stored).unwrap();
+
+            let reread = import_photo(&photo, new, profile, &options, &mut replay()).unwrap();
+            assert_eq!(reread.status(), "re-read");
+            let shot = reread.shot().unwrap();
+            assert_eq!(shot.impact_offset_h, stored.impact_offset_h);
+            assert_eq!(
+                shot.provenance.as_ref().unwrap().parser_version,
+                SCREEN_PARSER_VERSION
+            );
+            assert!(listed(shot));
+            assert_eq!(warnings(shot), warnings(&stored));
+        }
+    }
+
+    #[test]
+    fn a_clip_with_no_frame_or_no_decode_is_refused_naming_it() {
+        let scratch = tempfile::tempdir().unwrap();
+        let clip = scratch.path().join("IMG_0002.MOV");
+        std::fs::write(&clip, b"").unwrap();
+        let png = scratch.path().join("grid.png");
+        let mut empty = |_: &Path, _: Option<u32>| Ok(Vec::new());
+        assert_eq!(
+            write_grid_frame(&clip, &png, GRID_FRAME, &mut empty),
+            Err(format!(
+                "{} has no frame to read the grid from",
+                clip.display()
+            ))
+        );
+        let mut broken = |_: &Path, _: Option<u32>| Err("ffmpeg could not decode".to_string());
+        assert_eq!(
+            write_grid_frame(&clip, &png, GRID_FRAME, &mut broken),
+            Err("ffmpeg could not decode".to_string())
+        );
+        assert!(!png.exists(), "nothing written for a clip with no frame");
+    }
 
     #[test]
     fn the_defaults_are_config_pys() {

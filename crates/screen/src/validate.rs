@@ -35,9 +35,10 @@
 //!
 //! The synthetic screen vectors (M34 P4's finding 7) carry every path `test_screen_validate.py`
 //! covers, and `tests/read.rs` holds each to its `expected.shot`. No photo trips a check: every stored
-//! shot is a consistent read. The six ranges frozen Python never had are reached by no vector, since
-//! no shipped profile reads their fields, so a unit test below reads them through a profile made up
-//! for it.
+//! shot is a consistent read. The nine ranges frozen Python never had are reached by no committed
+//! vector. M32's six are read by no shipped profile, so a unit test below reads them through a
+//! profile made up for it. M42's three are read by `full_swing` (M42 P8), whose screen vectors are
+//! M42 P10's.
 
 use crate::parser::{first_max, first_min, FieldValue, ParsedShot};
 
@@ -63,7 +64,14 @@ const DISTANCE_TOLERANCE_RATIO: f64 = 0.015;
 /// flags the shot, and a bound a real shot can cross would flag the golfer for being unusual; and
 /// near enough that a value ten times a typical one (a lost decimal point, an inserted digit) lands
 /// outside. `the_new_fields_are_checked_once_a_profile_reads_them` holds each one to its example.
-const PLAUSIBLE_RANGES: [(&str, f64, f64); 18] = [
+///
+/// **The last three are M42's** (the M42 plan's call 2), for what Full Swing's grid screen prints
+/// and no earlier profile read: its two spin tiles and its apex. Appended after M32's six rather
+/// than placed in field order, so a shot `hd_golf` reads lists its warnings exactly as before.
+/// Unlike M32's, they gate reads: the `full_swing` profile targets all three (M42 P8), so every
+/// Full Swing photo is checked against them. Their bounds follow the same rule, and the photos it
+/// was planned from print well inside each (the comments below).
+const PLAUSIBLE_RANGES: [(&str, f64, f64); 21] = [
     ("club_head_speed", 20.0, 200.0),
     ("ball_speed", 20.0, 250.0),
     ("smash_factor", 0.4, 1.7),
@@ -96,6 +104,15 @@ const PLAUSIBLE_RANGES: [(&str, f64, f64); 18] = [
     // as 125) is not, the blind spot `carry_distance`'s range has for 128.1 read as 28.1: a
     // tighter bound would flag a real slice to close it.
     ("carry_offline", -150.0, 150.0),
+    // Rpm, as printed: `spin_rate`'s range, since a backspin is most of a spin rate. The six
+    // photos M42 was planned from print 2284 to 9985.
+    ("backspin", 0.0, 15000.0),
+    // Rpm, + = fade. Those photos print 336 to 4199, the 4199 under a 9899 backspin (an axis near
+    // 23 degrees); 6000 is half as much again, and a 4199 read as 41990 is outside.
+    ("sidespin", -6000.0, 6000.0),
+    // Yards, where Full Swing prints feet (M42 P7 stores feet / 3). 80 yards is 240 feet, past any
+    // real apex; the highest of the six photos is 142.2 feet, 47.4 yards.
+    ("apex_height", 0.0, 80.0),
 ];
 
 /// The curvature words HD Golf prints in the Shot Type tile (`SLIGHT FADE`, `DRAW`, `PUSH SLICE`),
@@ -256,6 +273,8 @@ fn number(parsed: &ParsedShot, name: &str) -> Option<f64> {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::BTreeSet;
+
     use super::*;
     use crate::parser::parse_screen;
     use crate::TextBox;
@@ -430,10 +449,12 @@ mod tests {
         assert!(!validated.needs_review);
     }
 
-    /// The six ranges M34 P9 added, reached the way a photo would reach them: a profile whose tiles
-    /// target M32's fields, laid out as one row of labels with a value under each, parsed, then
-    /// validated. No shipped profile targets any of them (`no_shipped_profile_reads_the_new_fields`),
-    /// so this made-up one is the only way in.
+    /// The ranges M34 P9 and M42 P1 added, reached the way a photo would reach them: a profile whose
+    /// tiles target M32's fields and M42's three, laid out as one row of labels with a value under
+    /// each, parsed, then validated. No shipped profile targets M32's six
+    /// (`no_shipped_profile_reads_m32s_fields`), so this made-up one is their only way in. M42's
+    /// three are `full_swing`'s since M42 P8, and are kept here so all nine slips are held in one
+    /// table.
     ///
     /// Each value is its range comment's example, read once as printed and once with the slip the
     /// comment names. Every slip is caught, in the table's order, and nothing else is; the clean read
@@ -443,13 +464,16 @@ mod tests {
         // (label, target, as printed, with the slip). The labels are chosen to sit well below the
         // matcher's 0.8 against each other, so no tie rule is involved: `Impact Offset H` and
         // `Impact Offset V` would score 0.93 and resolve only on the margin.
-        const READS: [(&str, &str, &str, &str); 6] = [
+        const READS: [(&str, &str, &str, &str); 9] = [
             ("Attack Angle", "attack_angle", "-4.5", "-45"),
             ("Dynamic Loft", "dynamic_loft", "15.2", "152"),
             ("Low Point", "low_point", "3.5", "35"),
             ("Toe Heel", "impact_offset_h", "12", "120"),
             ("High Low", "impact_offset_v", "-8.1", "-81"),
             ("Offline", "carry_offline", "45.2", "452"),
+            ("Backspin", "backspin", "9899", "98990"),
+            ("Sidespin", "sidespin", "-4199", "-41990"),
+            ("Apex", "apex_height", "47.4", "474"),
         ];
         let fields: Vec<String> = READS
             .iter()
@@ -477,6 +501,7 @@ mod tests {
                             width: 100.0,
                             height: 10.0,
                             confidence: 1.0,
+                            rgb: None,
                         },
                         TextBox {
                             text: value.to_string(),
@@ -485,6 +510,7 @@ mod tests {
                             width: 60.0,
                             height: 10.0,
                             confidence: 1.0,
+                            rgb: None,
                         },
                     ]
                 })
@@ -509,6 +535,9 @@ mod tests {
                 ("impact_offset_h", 12.0),
                 ("impact_offset_v", -8.1),
                 ("carry_offline", 45.2),
+                ("backspin", 9899.0),
+                ("sidespin", -4199.0),
+                ("apex_height", 47.4),
             ]
         );
         assert!(clean.warnings.is_empty(), "{:?}", clean.warnings);
@@ -530,23 +559,47 @@ mod tests {
                  extra digit",
                 "carry_offline 452 is outside the plausible range -150-150 - likely a dropped or \
                  extra digit",
+                "backspin 98990 is outside the plausible range 0-15000 - likely a dropped or \
+                 extra digit",
+                "sidespin -41990 is outside the plausible range -6000-6000 - likely a dropped or \
+                 extra digit",
+                "apex_height 474 is outside the plausible range 0-80 - likely a dropped or extra \
+                 digit",
             ]
         );
-        // Six range failures cost 0.15 each, and nothing else differs between the two reads.
+        // One range failure per read, 0.15 each, and nothing else differs between the two reads.
+        // Since M42's three joined, the sum passes the clean read's confidence and the clamp at
+        // zero takes over, so the warnings above are what pin the count.
         assert!(slipped.needs_review);
-        assert!((clean.confidence - slipped.confidence - 6.0 * RANGE_PENALTY).abs() < 1e-9);
+        let failures = READS.len() as f64;
+        let expected = (clean.confidence - failures * RANGE_PENALTY).max(0.0);
+        assert!((slipped.confidence - expected).abs() < 1e-9);
     }
 
-    /// The other half of the claim the ranges' doc makes: no shipped profile targets any of the
-    /// fields they were added for, so no photo, and no committed vector, can reach them yet. When a
-    /// profile first does, this fails, and the ranges stop being a precaution and start gating reads.
+    /// The other half of the claim the ranges' doc makes of M32's six: no shipped profile targets
+    /// any of them, so no photo, and no committed vector, can reach them yet. When a profile first
+    /// does, this fails, and those ranges stop being a precaution and start gating reads.
+    ///
+    /// M42's three were held here too until M42 P8 gave `full_swing` all of them, which is the
+    /// moment this test was written to mark; it now asserts that instead, so the doc's "unlike
+    /// M32's, they gate reads" has a pin as well.
     #[test]
-    fn no_shipped_profile_reads_the_new_fields() {
-        let added = &PLAUSIBLE_RANGES[12..];
+    fn no_shipped_profile_reads_m32s_fields() {
+        let m32 = &PLAUSIBLE_RANGES[12..18];
+        let m32_names: Vec<&str> = m32.iter().map(|&(name, _, _)| name).collect();
         assert_eq!(
-            added[0].0, "attack_angle",
-            "the twelve Python has come first"
+            m32_names,
+            [
+                "attack_angle",
+                "dynamic_loft",
+                "low_point",
+                "impact_offset_h",
+                "impact_offset_v",
+                "carry_offline"
+            ],
+            "the twelve Python has come first, then M32's six"
         );
+        let mut targeted = BTreeSet::new();
         for profile in crate::profile::profiles().values() {
             for field in profile.stored_fields() {
                 let target = field
@@ -554,12 +607,19 @@ mod tests {
                     .as_deref()
                     .expect("a stored field has a target");
                 assert!(
-                    added.iter().all(|&(name, _, _)| name != target),
+                    !m32_names.contains(&target),
                     "{} reads {target}, so its range is no longer unreachable: say so in \
                      PLAUSIBLE_RANGES' doc",
                     profile.device
                 );
+                targeted.insert((profile.device.as_str(), target));
             }
+        }
+        for &(name, _, _) in &PLAUSIBLE_RANGES[18..] {
+            assert!(
+                targeted.contains(&("full_swing", name)),
+                "full_swing no longer reads {name}: PLAUSIBLE_RANGES' doc says it does"
+            );
         }
     }
 

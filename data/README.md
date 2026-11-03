@@ -6,6 +6,10 @@ keeps the directory in git and documents the layout.
 ```
 data/
 ├── raw/         # raw swing video files, e.g. raw/sessions/{session_id}/   (gitignored)
+│   ├── shot_screens/  # photos of the launch-monitor screen, import-photos' default
+│   │                  #   directory; since M42 also Live Photo pairs, IMG_n.HEIC and
+│   │                  #   IMG_n.MOV, each with an IMG_n.json sidecar
+│   └── impact-review/ # per clip, the frames golf-lab read-impact --review wrote (M42)
 ├── processed/   # extracted keypoints, labeled images, intermediate artifacts (gitignored)
 │   ├── sessions/      # one directory per swing bundle + its analysis artifacts, under a
 │   │                  #   session.json holding two cursors, golfer and club (ADR-024), and a
@@ -42,6 +46,24 @@ the stored bundles yet, and every write test runs on a scratch copy:
   `ShotResult` written by `golf-core run-shot --session` beside the manifest. That verb reads
   `shots/`, found through `--shots-dir`, else `GOLF_SHOTS_DIR`, else `data/processed/shots`. A swing
   with a clip never gets one: its shot is analysed with it, into `analysis.json`.
+
+**An entry imported from a clip** (M42, `golf-lab import-video --into-session`) is a photo entry whose
+photo is the clip's grid frame, `shot_screen.<digest>.png`, with the clip copied beside it as
+`shot_screen.<digest>.mov`. The clip is not in the manifest, and a deleted entry takes it with it.
+None exists under `sessions/` yet: M42 imported nothing into `processed/`.
+
+`raw/shot_screens/` is `golf-lab import-photos`' default directory. It scans one level deep for
+photos, so a `.MOV` or a sidecar beside one is never imported as a photo. `golf-lab import-video` has
+no default and is named its clips, because this directory holds `IMG_2888.MOV`, the club-view layout
+no profile reads. A Live Photo's still and clip are two ways to import one shot, and importing both
+makes two shots of one swing (ADR-034's M42 addendum), so choose one per Live Photo. A sidecar
+`IMG_n.json` records what the photo cannot say: who, which device and layout, when, and the club,
+`null` where it was not recorded.
+
+`raw/impact-review/<stem>/frame-NNN.png` is what `golf-lab read-impact --review data/raw/impact-review`
+wrote for each clip, for the user's own look at the impact reader, whose accuracy M42 did not judge:
+a reading's contact frame and two either side, or a refusal's every fifth frame, with the ball it
+chose ringed in magenta. A re-run replaces a clip's `frame-NNN.png` files and nothing reads them.
 
 `golfers/` holds two record kinds per player, kept apart by suffix: `<player_id>.golfer.json`
 (name and handedness) and `<player_id>.bag.json` (the declared bag — ADR-024). A bag is the one

@@ -5,7 +5,9 @@
 //! one run over `tests/bundle/mod.rs`' scratch bundle, served from caches, with coaching off. Since
 //! P27, `reanalyze`'s and `analyze-keypoints`' refusals, a dry run, and one report over the scratch
 //! bundle's keypoints. Since P30, `build-vectors`' refusals and a dry run over an empty store, whose
-//! default root is the committed `spec/vectors/` and so must refuse the real corpus by name.
+//! default root is the committed `spec/vectors/` and so must refuse the real corpus by name. Since
+//! M42 P13, `read-impact`'s refusals, and a clip that is not there named on stdout with exit 1. Since
+//! M42 P14b, `import-video`'s refusals, a device that declares nothing from the replay first.
 
 mod bundle;
 
@@ -355,4 +357,127 @@ fn build_vectors_refuses_what_it_cannot_run_and_a_committed_vector_by_name() {
     assert!(String::from_utf8(out.stdout)
         .unwrap()
         .contains("golf-lab build-vectors [--sessions-dir D]"));
+}
+
+/// `import-video`'s refusals, each exit 2 before a model or a clip is touched. `--device hd_golf`
+/// answers on a machine with no ffmpeg and no models too, naming the device that has a replay to
+/// read, and so does the default device, which is `hd_golf`. `tests/import_video.rs` drives the rest
+/// against a fake decoder (M42 P14b).
+#[test]
+fn import_video_refuses_a_device_with_nothing_from_the_replay_and_wants_a_clip() {
+    let empty = tempfile::tempdir().unwrap();
+    let absent = empty.path().join("IMG_0000.MOV");
+    let absent = absent.to_string_lossy();
+    let refused = "error: device 'hd_golf' declares no field read from an impact video, so a clip \
+                   of it cannot be imported; full_swing does\n";
+    for args in [
+        &["import-video", "--device", "hd_golf", &absent][..],
+        &["import-video", &absent][..],
+    ] {
+        let out = golf_lab_with(args, &[("GOLF_LAUNCH_MONITOR_PROFILE", "")]);
+        assert_eq!(out.status.code(), Some(2), "{args:?}");
+        assert!(out.stdout.is_empty(), "{args:?}");
+        assert_eq!(String::from_utf8(out.stderr).unwrap(), refused, "{args:?}");
+    }
+
+    for (args, problem) in [
+        (
+            &["import-video", "--device", "full_swing"][..],
+            "import-video: the following arguments are required: CLIP",
+        ),
+        (
+            &["import-video", "a.mov", "--club", "7i"][..],
+            "import-video: error: --into-session S, --player P and --club C go together",
+        ),
+        (
+            &["import-video", "a.mov", "--width", "960"][..],
+            "import-video: unrecognized arguments: --width",
+        ),
+    ] {
+        let out = golf_lab(args);
+        assert_eq!(out.status.code(), Some(2), "{args:?}");
+        assert!(out.stdout.is_empty(), "{args:?}");
+        let stderr = String::from_utf8(out.stderr).unwrap();
+        assert!(
+            stderr.starts_with(&format!("golf-lab: {problem}\n")),
+            "{args:?}: {stderr}"
+        );
+    }
+
+    let out = golf_lab(&["import-video", "--help"]);
+    assert_eq!(out.status.code(), Some(0));
+    assert!(String::from_utf8(out.stdout)
+        .unwrap()
+        .contains("golf-lab import-video CLIP..."));
+
+    // A models directory with no models is the reader's refusal, exit 1, before any clip is decoded,
+    // as `import-photos` answers it.
+    let out = golf_lab(&[
+        "import-video",
+        "--device",
+        "full_swing",
+        "--models",
+        &empty.path().to_string_lossy(),
+        &absent,
+    ]);
+    assert_eq!(out.status.code(), Some(1));
+    assert!(out.stdout.is_empty());
+}
+
+/// `read-impact`'s refusals, each exit 2 before anything is decoded, a still among them naming the
+/// verb that reads one; then a clip that is not there, which is that clip's line on stdout and exit
+/// 1, as a clip ffmpeg cannot decode is (M42 P13). The real clips are not run here: they are
+/// `data/`'s, and the plan's P13 findings hold what the reader made of them.
+#[test]
+fn read_impact_refuses_a_still_and_names_a_clip_it_could_not_decode() {
+    for (args, problem) in [
+        (
+            &["read-impact"][..],
+            "read-impact: the following arguments are required: CLIP",
+        ),
+        (
+            &["read-impact", "IMG_2889.MOV", "IMG_2889.HEIC"][..],
+            "read-impact: IMG_2889.HEIC is not a Live Photo clip (.mov): a photo of the screen is \
+             read by golf-lab import-photos",
+        ),
+        (
+            &["read-impact", "a.mov", "--review"][..],
+            "read-impact: argument --review: expected one argument",
+        ),
+        (
+            &["read-impact", "a.mov", "--json=yes"][..],
+            "read-impact: argument --json: ignored explicit argument \"yes\"",
+        ),
+        (
+            &["read-impact", "a.mov", "--width", "960"][..],
+            "read-impact: unrecognized arguments: --width",
+        ),
+    ] {
+        let out = golf_lab(args);
+        assert_eq!(out.status.code(), Some(2), "{args:?}");
+        assert!(out.stdout.is_empty(), "{args:?}");
+        let stderr = String::from_utf8(out.stderr).unwrap();
+        assert!(
+            stderr.starts_with(&format!("golf-lab: {problem}\n")),
+            "{args:?}: {stderr}"
+        );
+    }
+
+    // `GOLF_FFMPEG` names a file that is there and is no ffmpeg, so the case is the same on a box
+    // with none: the clip's absence is found before anything is run.
+    let empty = tempfile::tempdir().unwrap();
+    let absent = empty.path().join("IMG_0000.MOV");
+    let out = golf_lab_with(
+        &["read-impact", "--json", &absent.to_string_lossy()],
+        &[("GOLF_FFMPEG", env!("CARGO_BIN_EXE_golf-lab"))],
+    );
+    let stdout = String::from_utf8(out.stdout).unwrap();
+    assert_eq!(out.status.code(), Some(1), "{stdout}");
+    assert!(
+        stdout.starts_with(
+            "{\"clip\":\"IMG_0000.MOV\",\"error\":\"could not be decoded: Video file not found: "
+        ),
+        "{stdout}"
+    );
+    assert_eq!(stdout.lines().count(), 1, "{stdout}");
 }

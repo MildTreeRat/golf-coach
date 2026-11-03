@@ -23,9 +23,9 @@ use std::path::{Path, PathBuf};
 
 use contracts::capability::{
     analysed_on, analysed_view, capability_for, device_of, devices, printed_fields, printed_on,
-    FieldUse, NOT_READINGS,
+    DeclaredField, FieldSource, FieldUse, NOT_READINGS,
 };
-use contracts::shot::ShotData;
+use contracts::shot::{ShotData, WRITTEN_WHEN_SET};
 use flate2::read::GzDecoder;
 use serde_json::{json, Value};
 
@@ -65,7 +65,11 @@ fn set<'a>(fields: impl IntoIterator<Item = &'a str>) -> BTreeSet<&'a str> {
 }
 
 /// The keys a serialized `ShotData` writes, read off an instance so the struct is the only list.
-/// Every `Option` is written as `null`, so a minimal shot writes them all.
+///
+/// Every `Option` but two is written as `null`, so a minimal shot writes all of those. The two are
+/// [`WRITTEN_WHEN_SET`], M42's spin readings, which a default shot omits so that no committed vector
+/// gains a key (the M42 plan's call 1); they are keys a device may declare all the same, so the set
+/// is the union. [M42 P1]
 fn shot_data_keys() -> BTreeSet<String> {
     serde_json::to_value(shot(json!({})))
         .expect("serialize")
@@ -73,6 +77,7 @@ fn shot_data_keys() -> BTreeSet<String> {
         .expect("an object")
         .keys()
         .cloned()
+        .chain(WRITTEN_WHEN_SET.iter().map(|key| key.to_string()))
         .collect()
 }
 
@@ -153,6 +158,87 @@ fn hd_golf_shows_club_speed_and_smash_and_analyses_the_rest() {
         .map(|declared| declared.field.as_str())
         .collect();
     assert_eq!(shown_only, set(["club_head_speed", "smash_factor"]));
+}
+
+/// Full Swing's grid screen, as the M42 plan's call 11 declares it: in its profile's tile order, the
+/// club speed and smash analysed where HD Golf's are shown only (decision 5), and the two spin
+/// tiles shown only because nothing yet computes from them (decision 4), and the impact offset last,
+/// read from the replay rather than off a tile (call 13). [M42 P8, the offset since P14b]
+#[test]
+fn full_swing_declares_its_grid_in_tile_order_with_the_spins_shown_only() {
+    use FieldUse::{Analysed, ShownOnly};
+    let full_swing = capability_for("full_swing").expect("full_swing is declared");
+    let declared: Vec<(&str, FieldUse)> = full_swing
+        .fields
+        .iter()
+        .map(|declared| (declared.field.as_str(), declared.field_use))
+        .collect();
+    assert_eq!(
+        declared,
+        [
+            ("total_distance", Analysed),
+            ("carry_distance", Analysed),
+            ("club_head_speed", Analysed),
+            ("ball_speed", Analysed),
+            ("club_path", Analysed),
+            ("club_face_angle", Analysed),
+            ("launch_direction", Analysed),
+            ("launch_angle", Analysed),
+            ("apex_height", Analysed),
+            ("smash_factor", Analysed),
+            ("backspin", ShownOnly),
+            ("sidespin", ShownOnly),
+            ("impact_offset_h", Analysed),
+        ]
+    );
+    // High-low is invisible from above (the plan's finding 9), so neither offset is a screen tile,
+    // and `impact_offset_v` is never declared at all (call 13).
+    assert_eq!(full_swing.use_of("impact_offset_v"), None);
+    assert_eq!(full_swing.use_of("spin_rate"), None);
+}
+
+/// `from` defaults to the screen, so every entry written before M42 means what it meant, and the
+/// impact video's spelling parses to its variant. The one shipped field that says otherwise is
+/// `full_swing`'s `impact_offset_h`, and that is the one device that reads a clip's replay (call
+/// 13). [M42 P8, the shipped field since P14b]
+#[test]
+fn a_declared_field_is_read_from_the_screen_unless_it_says_otherwise() {
+    let bare: DeclaredField =
+        serde_json::from_value(json!({"field": "carry_distance", "use": "analysed"})).unwrap();
+    assert_eq!(bare.from, FieldSource::Screen);
+    let video: DeclaredField = serde_json::from_value(json!({
+        "field": "impact_offset_h", "use": "analysed", "from": "impact_video"
+    }))
+    .unwrap();
+    assert_eq!(video.from, FieldSource::ImpactVideo);
+    let screen: DeclaredField = serde_json::from_value(json!({
+        "field": "carry_distance", "use": "analysed", "from": "screen"
+    }))
+    .unwrap();
+    assert_eq!(screen.from, FieldSource::Screen);
+    // An unknown source is refused, not read as the default: a field declared from a reader that
+    // does not exist would otherwise be held to a profile tile it never had.
+    assert!(serde_json::from_value::<DeclaredField>(json!({
+        "field": "carry_distance", "use": "analysed", "from": "radar"
+    }))
+    .is_err());
+    let mut from_the_replay = Vec::new();
+    for capability in devices() {
+        for declared in &capability.fields {
+            if declared.from != FieldSource::Screen {
+                assert_eq!(declared.from, FieldSource::ImpactVideo);
+                assert!(declared.note.is_some(), "{}", declared.field);
+                from_the_replay.push((capability.device.as_str(), declared.field.as_str()));
+            }
+        }
+        assert_eq!(
+            capability.reads_impact_video(),
+            capability.device == "full_swing",
+            "{}",
+            capability.device
+        );
+    }
+    assert_eq!(from_the_replay, [("full_swing", "impact_offset_h")]);
 }
 
 #[test]

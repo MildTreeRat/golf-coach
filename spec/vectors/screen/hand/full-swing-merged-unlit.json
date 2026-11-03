@@ -1,0 +1,580 @@
+{
+    "expected": {
+        "label_ratio": 0.6666666666666666,
+        "parsed": {
+            "confidence": 0.9993849196217277,
+            "raw_fields": {
+                "Apex Ft": "39.9 SHOT DATA",
+                "Backspin Rpm": "4236",
+                "Ball Direction Deg": "R 0.8",
+                "Ball Speed Mph": "112.8",
+                "Carry Yd": "162",
+                "Club Speed Mph": "86.9",
+                "Face Deg": "-0.6\u00b0",
+                "Launch Angle": "12.1\u00b0",
+                "Path Deg": "-1.7\u00b0",
+                "Sidespin Rpm": "F 464",
+                "Smash Factor": "1.30",
+                "Total Yd": "203 | 203"
+            },
+            "values": {
+                "apex_height": 13.299999999999999,
+                "backspin": 4236.0,
+                "ball_speed": 112.8,
+                "carry_distance": 162.0,
+                "club_face_angle": -0.6,
+                "club_head_speed": 86.9,
+                "club_path": -1.7,
+                "launch_angle": 12.1,
+                "launch_direction": -0.8,
+                "sidespin": -464.0,
+                "smash_factor": 1.3,
+                "total_distance": 203.0
+            },
+            "warnings": []
+        },
+        "shot": {
+            "apex_height": 13.299999999999999,
+            "attack_angle": null,
+            "backspin": 4236.0,
+            "ball_speed": 112.8,
+            "bounce_and_roll": null,
+            "carry_distance": 162.0,
+            "carry_offline": null,
+            "club_face_angle": -0.6,
+            "club_head_speed": 86.9,
+            "club_path": -1.7,
+            "dynamic_loft": null,
+            "impact_offset_h": null,
+            "impact_offset_v": null,
+            "impact_position": null,
+            "impact_position_v": null,
+            "launch_angle": 12.1,
+            "launch_direction": -0.8,
+            "low_point": null,
+            "provenance": {
+                "corrections": {},
+                "device": "full_swing",
+                "fields_present": [
+                    "total_distance",
+                    "carry_distance",
+                    "club_head_speed",
+                    "ball_speed",
+                    "club_path",
+                    "club_face_angle",
+                    "launch_direction",
+                    "launch_angle",
+                    "apex_height",
+                    "smash_factor",
+                    "backspin",
+                    "sidespin"
+                ],
+                "image_path": null,
+                "image_sha256": null,
+                "needs_review": false,
+                "parse_confidence": 0.999,
+                "parser_version": 1,
+                "raw_fields": {
+                    "Apex Ft": "39.9 SHOT DATA",
+                    "Backspin Rpm": "4236",
+                    "Ball Direction Deg": "R 0.8",
+                    "Ball Speed Mph": "112.8",
+                    "Carry Yd": "162",
+                    "Club Speed Mph": "86.9",
+                    "Face Deg": "-0.6\u00b0",
+                    "Launch Angle": "12.1\u00b0",
+                    "Path Deg": "-1.7\u00b0",
+                    "Sidespin Rpm": "F 464",
+                    "Smash Factor": "1.30",
+                    "Total Yd": "203 | 203"
+                },
+                "warnings": []
+            },
+            "session_id": "hand",
+            "shot_id": "hand-full-swing-merged-unlit",
+            "shot_type": null,
+            "sidespin": -464.0,
+            "smash_factor": 1.3,
+            "source": "screen",
+            "spin_axis": null,
+            "spin_rate": null,
+            "timestamp": "2026-10-10T20:03:46Z",
+            "total_distance": 203.0
+        }
+    },
+    "id": "screen/hand/full-swing-merged-unlit",
+    "input": {
+        "boxes": [
+            {
+                "confidence": 0.9999343156814575,
+                "height": 24.0,
+                "rgb": [
+                    211.84126984126985,
+                    212.04960317460316,
+                    218.35714285714286
+                ],
+                "text": "TEAM1",
+                "width": 84.0,
+                "x": 85.0,
+                "y": 7.0
+            },
+            {
+                "confidence": 0.9999806880950928,
+                "height": 35.0,
+                "rgb": [
+                    234.23287671232876,
+                    225.2054794520548,
+                    228.10502283105023
+                ],
+                "text": "1",
+                "width": 25.0,
+                "x": 975.0,
+                "y": 2.0
+            },
+            {
+                "confidence": 0.9922025799751282,
+                "height": 43.0,
+                "rgb": [
+                    238.92957746478874,
+                    235.93521126760564,
+                    244.55774647887324
+                ],
+                "text": "+2",
+                "width": 66.0,
+                "x": 868.0,
+                "y": 23.0
+            },
+            {
+                "confidence": 0.9999825358390808,
+                "height": 46.0,
+                "rgb": [
+                    246.88981173864894,
+                    244.61960132890366,
+                    246.6157253599114
+                ],
+                "text": "AARON",
+                "width": 157.0,
+                "x": 114.0,
+                "y": 34.0
+            },
+            {
+                "confidence": 0.9999839663505554,
+                "height": 24.0,
+                "rgb": [
+                    238.34504504504505,
+                    236.89729729729729,
+                    238.13693693693693
+                ],
+                "text": "SHOTRESULT",
+                "width": 185.0,
+                "x": 243.0,
+                "y": 94.0
+            },
+            {
+                "confidence": 0.999993622303009,
+                "height": 24.0,
+                "rgb": [
+                    232.14734299516908,
+                    230.1268115942029,
+                    229.17391304347825
+                ],
+                "text": "TOTALYD",
+                "width": 138.0,
+                "x": 645.0,
+                "y": 97.0
+            },
+            {
+                "confidence": 0.9999880790710449,
+                "height": 24.0,
+                "rgb": [
+                    225.48303393213573,
+                    224.6007984031936,
+                    226.6447105788423
+                ],
+                "text": "TOHOLEYD",
+                "width": 167.0,
+                "x": 885.0,
+                "y": 95.0
+            },
+            {
+                "confidence": 0.9999421834945679,
+                "height": 63.0,
+                "rgb": [
+                    249.1958085062667,
+                    246.5056502979248,
+                    248.0076022190261
+                ],
+                "text": "FAIRWAY",
+                "width": 309.0,
+                "x": 190.0,
+                "y": 178.0
+            },
+            {
+                "confidence": 0.9999990463256836,
+                "height": 65.0,
+                "rgb": [
+                    244.71983805668017,
+                    241.67854251012145,
+                    241.01538461538462
+                ],
+                "text": "203",
+                "width": 152.0,
+                "x": 642.0,
+                "y": 178.0
+            },
+            {
+                "confidence": 0.9999979138374329,
+                "height": 63.0,
+                "rgb": [
+                    243.3318358790057,
+                    242.1548367774783,
+                    243.3372267145852
+                ],
+                "text": "142.0",
+                "width": 212.0,
+                "x": 866.0,
+                "y": 183.0
+            },
+            {
+                "confidence": 0.9999923706054688,
+                "height": 21.0,
+                "rgb": [
+                    244.16502115655854,
+                    241.25669957686884,
+                    242.36248236953455
+                ],
+                "text": "CARRYYD",
+                "width": 135.0,
+                "x": 157.0,
+                "y": 311.0
+            },
+            {
+                "confidence": 0.9675440788269043,
+                "height": 24.0,
+                "rgb": [
+                    234.97407407407408,
+                    233.12222222222223,
+                    233.00246913580247
+                ],
+                "text": "TOTAL YD",
+                "width": 135.0,
+                "x": 404.0,
+                "y": 310.0
+            },
+            {
+                "confidence": 0.9998859763145447,
+                "height": 24.0,
+                "rgb": [
+                    234.03495762711864,
+                    233.44103107344634,
+                    231.33262711864407
+                ],
+                "text": "CLUBSPEEDMPHBALLSPEEDMPH",
+                "width": 472.0,
+                "x": 607.0,
+                "y": 310.0
+            },
+            {
+                "confidence": 0.9999992251396179,
+                "height": 55.0,
+                "rgb": [
+                    251.08333333333334,
+                    247.89775413711584,
+                    249.47990543735224
+                ],
+                "text": "162",
+                "width": 123.0,
+                "x": 173.0,
+                "y": 375.0
+            },
+            {
+                "confidence": 0.9999992251396179,
+                "height": 55.0,
+                "rgb": [
+                    247.4859759587865,
+                    246.1751574127075,
+                    247.10188895249
+                ],
+                "text": "203",
+                "width": 127.0,
+                "x": 413.0,
+                "y": 375.0
+            },
+            {
+                "confidence": 0.999997615814209,
+                "height": 54.0,
+                "rgb": [
+                    243.81064162754305,
+                    241.697965571205,
+                    239.88419405320815
+                ],
+                "text": "86.9",
+                "width": 142.0,
+                "x": 649.0,
+                "y": 376.0
+            },
+            {
+                "confidence": 0.9999977350234985,
+                "height": 56.0,
+                "rgb": [
+                    243.2207792207792,
+                    246.03571428571428,
+                    242.90949675324674
+                ],
+                "text": "112.8",
+                "width": 176.0,
+                "x": 878.0,
+                "y": 376.0
+            },
+            {
+                "confidence": 0.9999937415122986,
+                "height": 21.0,
+                "rgb": [
+                    242.9033189033189,
+                    238.9018759018759,
+                    240.03318903318905
+                ],
+                "text": "PATHDEG",
+                "width": 132.0,
+                "x": 171.0,
+                "y": 482.0
+            },
+            {
+                "confidence": 0.9999817609786987,
+                "height": 24.0,
+                "rgb": [
+                    238.56794871794872,
+                    237.0025641025641,
+                    235.41410256410256
+                ],
+                "text": "FACEDEG",
+                "width": 130.0,
+                "x": 414.0,
+                "y": 480.0
+            },
+            {
+                "confidence": 0.9999686479568481,
+                "height": 27.0,
+                "rgb": [
+                    237.68939152596369,
+                    237.61293405543168,
+                    234.36476584899648
+                ],
+                "text": "BALLDIRECTIONDEGLAUNCHANGLE",
+                "width": 465.0,
+                "x": 598.0,
+                "y": 479.0
+            },
+            {
+                "confidence": 0.9999840259552002,
+                "height": 23.0,
+                "rgb": [
+                    199.86805555555554,
+                    206.17361111111111,
+                    196.85416666666666
+                ],
+                "text": "R",
+                "width": 25.0,
+                "x": 804.0,
+                "y": 514.0
+            },
+            {
+                "confidence": 0.9978129267692566,
+                "height": 54.0,
+                "rgb": [
+                    225.96120906801008,
+                    225.28060453400505,
+                    221.76423173803528
+                ],
+                "text": "-1.7\u00b0",
+                "width": 147.0,
+                "x": 168.0,
+                "y": 544.0
+            },
+            {
+                "confidence": 0.9946910738945007,
+                "height": 54.0,
+                "rgb": [
+                    238.3277524099442,
+                    237.7427701674277,
+                    236.117199391172
+                ],
+                "text": "-0.6\u00b0",
+                "width": 146.0,
+                "x": 408.0,
+                "y": 543.0
+            },
+            {
+                "confidence": 0.9999960064888,
+                "height": 53.0,
+                "rgb": [
+                    239.792673992674,
+                    239.0058608058608,
+                    237.79780219780218
+                ],
+                "text": "0.8",
+                "width": 103.0,
+                "x": 670.0,
+                "y": 544.0
+            },
+            {
+                "confidence": 0.9994214773178101,
+                "height": 60.0,
+                "rgb": [
+                    233.63791666666665,
+                    234.98916666666668,
+                    228.99
+                ],
+                "text": "12.1\u00b0",
+                "width": 160.0,
+                "x": 883.0,
+                "y": 542.0
+            },
+            {
+                "confidence": 0.9999873042106628,
+                "height": 28.0,
+                "rgb": [
+                    234.26034712950602,
+                    231.3991989319092,
+                    229.9826435246996
+                ],
+                "text": "APEXFT",
+                "width": 107.0,
+                "x": 194.0,
+                "y": 641.0
+            },
+            {
+                "confidence": 0.9999942779541016,
+                "height": 21.0,
+                "rgb": [
+                    240.16521739130434,
+                    239.03961352657004,
+                    236.71884057971013
+                ],
+                "text": "SMASHFACTOR",
+                "width": 197.0,
+                "x": 386.0,
+                "y": 645.0
+            },
+            {
+                "confidence": 0.9999597072601318,
+                "height": 21.0,
+                "rgb": [
+                    235.83418628454453,
+                    234.18014329580348,
+                    232.04196519959058
+                ],
+                "text": "BACKSPINRPM",
+                "width": 186.0,
+                "x": 628.0,
+                "y": 646.0
+            },
+            {
+                "confidence": 0.9999846816062927,
+                "height": 25.0,
+                "rgb": [
+                    238.67295597484278,
+                    235.35579514824798,
+                    233.31805929919136
+                ],
+                "text": "SIDESPINRPM",
+                "width": 178.0,
+                "x": 869.0,
+                "y": 646.0
+            },
+            {
+                "confidence": 0.9998279809951782,
+                "height": 20.0,
+                "rgb": [
+                    214.8,
+                    213.7157894736842,
+                    206.4842105263158
+                ],
+                "text": "F",
+                "width": 19.0,
+                "x": 1047.0,
+                "y": 683.0
+            },
+            {
+                "confidence": 0.9999983906745911,
+                "height": 57.0,
+                "rgb": [
+                    244.53685815963397,
+                    241.6807320793086,
+                    240.46212506354854
+                ],
+                "text": "39.9",
+                "width": 138.0,
+                "x": 186.0,
+                "y": 701.0
+            },
+            {
+                "confidence": 0.9999897480010986,
+                "height": 55.0,
+                "rgb": [
+                    239.8034464189553,
+                    238.29886914378028,
+                    235.50888529886913
+                ],
+                "text": "1.30",
+                "width": 135.0,
+                "x": 424.0,
+                "y": 704.0
+            },
+            {
+                "confidence": 0.9999985694885254,
+                "height": 53.0,
+                "rgb": [
+                    242.9330802088277,
+                    240.56478405315616,
+                    239.01139060275273
+                ],
+                "text": "4236",
+                "width": 159.0,
+                "x": 643.0,
+                "y": 705.0
+            },
+            {
+                "confidence": 0.9999987483024597,
+                "height": 58.0,
+                "rgb": [
+                    245.857220412595,
+                    243.83604777415852,
+                    242.2198697068404
+                ],
+                "text": "464",
+                "width": 127.0,
+                "x": 895.0,
+                "y": 706.0
+            },
+            {
+                "confidence": 0.9735764265060425,
+                "height": 30.0,
+                "rgb": [
+                    207.8019578313253,
+                    210.58885542168676,
+                    244.35617469879517
+                ],
+                "text": "SHOT DATA",
+                "width": 177.0,
+                "x": 154.0,
+                "y": 797.0
+            }
+        ],
+        "device": "full_swing",
+        "image_path": null,
+        "image_sha256": null,
+        "min_confidence": 0.6,
+        "notes": [],
+        "session_id": "hand",
+        "shot_id": "hand-full-swing-merged-unlit",
+        "timestamp": "2026-10-10T20:03:46Z"
+    },
+    "provenance": {
+        "kind": "screen",
+        "note": "IMG_2891's 35 boxes as the Full Swing reader printed them, unedited: two merged label boxes split (call 6), and both signs read from an unlit letter (call 5). Two boxes match no label. 'CLUBSPEEDMPHBALLSPEEDMPH' (607, 310, 472 wide) scores at best 0.6316, against Club Speed Mph. 'BALLDIRECTIONDEGLAUNCHANGLE' (598, 479, 465 wide) scores at best 0.7111, against Ball Direction Deg. Both are below 0.8, so split_merged tries each as two. The first box's 24 letters qualify at cuts 8 to 14, with Club Speed Mph on the left and Ball Speed Mph on the right. The weaker half at each cut scores 0.8, 0.8276, 0.8571, 0.88, 0.9231, 0.88 and 0.8333, so k = 12 wins: 'CLUBSPEEDMPH' and 'BALLSPEEDMPH', 24/26 = 0.9231 each, 236.0 wide apiece, the right one starting at 843.0. The second box's 27 letters qualify at cuts 12 to 19, with Ball Direction Deg on the left and Launch Angle on the right. The weaker halves score 0.8148, 0.8462, 0.88, 0.9091, 0.9412, 0.9091, 0.8571 and 0.8, so k = 16 wins: 'BALLDIRECTIONDEG' (32/34 = 0.9412), 465 x 16 / 27 = 275.55555555555554 wide, and 'LAUNCHANGLE' (22/23 = 0.9565), starting at 873.5555555555555 and 189.44444444444446 wide. Each half keeps its box's y, height, confidence and rgb. The other labels score as in full-swing-grid (2m/(2m+s)), except the data row's 'TOTAL YD', read with its space, which scores 1.0. Total Yd takes both its boxes (call 7): 0.9333 + 1.0 = 1.9333, a margin of 0.9333 over the data-row box alone. The cells: (a) Total Yd reads '203' in the header cell (645, 97) and '203' in the data-row cell (404, 310). Equal, so 203 is stored, raw '203 | 203'. (b) Club Speed Mph's column runs from (539 + 607) / 2 = 573 to (843 + 843) / 2 = 843, and holds '86.9'. Ball Speed Mph is its row's last column, so it runs one label width past its label, from 843 to 1315, and holds '112.8'. (c) Ball Direction Deg's column runs from 571 to 873.56. It holds 'R' (804, 514) above '0.8', so it reads 'R 0.8'. R's rgb (199.87, 206.17, 196.85) is unlit: 196.85 > 0.7 x 199.87 = 139.91. No L box was returned, and an unlit R alone gives L's sign: -0.8. Launch Angle's column runs from 873.56 to 1252.44, and holds '12.1\u00b0'. (d) Sidespin Rpm holds 'F' (1047, 683) above '464', so it reads 'F 464'. F's rgb (214.8, 213.72, 206.48) is unlit: 206.48 > 149.60. No D box was returned, and an unlit F alone gives D's sign: -464, a draw. (e) Apex Ft is the bottom-left tile, with no row below to bound it. Its cell runs value_span_ratio 6.0 x 28 = 168 below the label's bottom (669), to 837, and takes the SHOT DATA title (centre 812) under '39.9'. So raw is '39.9 SHOT DATA', and its first number, 39.9 feet, is stored as 39.9 / 3.0 = 13.299999999999999 yards. Path '-1.7\u00b0' and Face '-0.6\u00b0' sign themselves: -1.7 and -0.6. Carry '162', Smash '1.30' (1.3) and Backspin '4236' are read as printed. TEAM1, 1, +2 and AARON are in no cell. The title is present, and every stored label is located, so there is no warning. Confidence: 0.35 x 12/12 + 0.35 x 12/12 + 0.30 x 0.9979497320724257. The last term is 33 boxes in cells, summing 32.932341158390045. They are 15 label boxes, four of them the halves of the two merged boxes, so each merged box's confidence counts twice, and 18 values. That is 0.35 + 0.35 + 0.2993849196217277 = 0.9993849196217277, stored as 0.999. No check fails. Smash 1.30 against 112.8 / 86.9 = 1.2980 is inside 3%, and apex 13.3 yards, sidespin -464 and launch direction -0.8 are inside their ranges. label_ratio 8/12 = 0.6667: it counts the boxes as read, before any split, so the four labels inside the two merged boxes match nothing (the M42 plan's P9 finding that a merged box costs the vote two labels).",
+        "oracle": "hand",
+        "source": "worked by hand in M42 P10, the M42 plan's P10 list item 2, from `golf-ocr read --device full_swing --boxes` of data/raw/shot_screens/IMG_2891.HEIC (sha256 73be98e34cee2eafa22ad8d693c9c1c4c4efac585616f452d6cd5ceda58a15c0), edited only as the note says; Rust's answer (`screen::read`) was checked equal to this expected before the file was committed"
+    },
+    "screen_parser_version": 1
+}

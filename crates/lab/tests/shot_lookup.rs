@@ -478,7 +478,7 @@ fn a_store_miss_is_pythons_every_branch() {
         answer.note.as_deref(),
         Some(
             "the shot screen could not be read — no numbers attached: Unknown launch-monitor \
-             profile 'nope'. Known profiles: hd_golf"
+             profile 'nope'. Known profiles: full_swing, hd_golf"
         )
     );
     // `if not image_path.exists(): …`

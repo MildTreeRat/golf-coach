@@ -1,9 +1,11 @@
 //! `ort` stays in `crates/ocr` (M29 P1; the M29 plan's D13 and its rule on cargo edges).
 //!
 //! ONNX Runtime is a native library whose build downloads it, and M38's phone links `contracts`,
-//! `pyfmt`, `analysis`, `feedback`, `screen` and `storage` through `core`. So none of those seven
-//! may reach `ort`, by any path of shipped dependencies: normal and build, never dev, because a
-//! dev-dependency is never linked into what ships (`screen`'s on `golf-core` is one).
+//! `pyfmt`, `analysis`, `feedback`, `screen` and `storage` through `core`, and `impact` (M42 P11),
+//! the impact-replay reader, beside it. So none of those eight may reach `ort`, by any path of
+//! shipped dependencies: normal and build, never dev, because a dev-dependency is never linked into
+//! what ships (`screen`'s on `golf-core` is one). `impact` depends on nothing today; it is guarded
+//! so that an edge added to it later is held to the phone's rule from the day it lands.
 //!
 //! The walk reads every `crates/*/Cargo.toml` by hand rather than asking `cargo metadata`: the
 //! manifests here are simple, a TOML crate would be a dependency for one test, and spawning cargo
@@ -17,7 +19,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 /// The crates on the phone's path, by directory under `crates/`.
-const GUARDED: [&str; 7] = [
+const GUARDED: [&str; 8] = [
     "contracts",
     "pyfmt",
     "analysis",
@@ -25,6 +27,7 @@ const GUARDED: [&str; 7] = [
     "screen",
     "storage",
     "core",
+    "impact",
 ];
 
 /// What may not be reached. `ort-sys` too, in case anything ever takes the raw bindings.
