@@ -41,7 +41,7 @@ the app plan changes before any app work starts (ADR-034).
 | Phase | What | State |
 |---|---|---|
 | **P0** | This plan, `thresholds.md`, the pointers, and the pre-registration commit | ✅ Done *(2026-11-04)* — approved by the user |
-| **P1** | The photo manifest and the truth table as data; every digest checked | ⬜ |
+| **P1** | The photo manifest and the truth table as data; every digest checked | 🔄 Started 2026-11-04 10:08 |
 | **P2** | `vision-ocr`: `decode`, `read` at C0, and a geometry self-test | ⬜ |
 | **P3** | `TextBox.rgb` in Swift, held exactly to Rust's `glyph_rgb` | ⬜ |
 | **P4** | Grid frames off the five clips, with the lab's rule | ⬜ |
@@ -63,6 +63,67 @@ the app plan changes before any app work starts (ADR-034).
 
 P12–P15 are conditional. A phase whose condition is not met still runs: it reads the results, proves
 the condition is not met, ticks its row with "not needed", and records that as its finding.
+
+---
+
+## The user's decision of 2026-11-04: pasted copies, stills only
+
+**Where this section and anything below it disagree, this section wins. It does not touch
+`thresholds.md`, whose bars stand (rule 2).**
+
+P1 stopped because none of the captures or models had reached this Mac, and the Windows box is out of
+the user's reach. Asked how to proceed, and told that pasted images are not the original files, the
+user answered: "I pasted them into this chat. Please save them on the Mac, commit them to the repo, and
+then proceed", and "Here are the full swing pictures. Omit HD golf for now."
+
+**The captures are now seven JPEGs in `spikes/vision-ocr/captures/`**, tracked in git and outside
+`data/`, so rule 4 holds. Each is the file Claude Code saved from the chat paste: 2576×1932 or 1932×2576,
+tagged Display P3, with no camera metadata. They are **copies, not the files the truth table's digests
+name**: five of the six stills were HEICs, so they are re-encoded, and the originals' size is not known
+here, so they may be scaled down too. Rule 9 still applies, against these digests:
+
+| id | file | sha256 |
+|---|---|---|
+| `IMG_2889` | `IMG_2889.jpg` | `6f22661840a5e698d0b1c72a10fd7214b0b37fa0301f4af4129223f87cff951b` |
+| `IMG_2891` | `IMG_2891.jpg` | `c13f58c6bb5297daf61a1a489f1e73398f2700b97115c847fad66b1631e35ead` |
+| `IMG_2892` | `IMG_2892.jpg` | `798395eddca63606a882bb9861b872e81a231a341b4918b5e6a7605d279bce3a` |
+| `IMG_2893` | `IMG_2893.jpg` | `240a6cd2caf98e42e90626070f925e6b8bc6ac5d49d1093807d0fb6a22c87d17` |
+| `IMG_2894` | `IMG_2894.jpg` | `4f1e91006ad356fb5d7eb1fd7ef68731216ea9e905756cac0f7ba441453d0a5e` |
+| `2026-10-07-1` | `2026-10-07-1.jpg` | `f1547903c770c29d9e00548c61b86a5b5fdea2e9ad3b04501b2afbaac072b25d` |
+| `IMG_2888` | `IMG_2888.jpg` | `fc583423dbf80bb17ef594909138c337aea2a784ae521f7fcd900f8debe21691` |
+
+Each id was assigned by matching the picture to the truth table by eye, and all twelve values and the
+lit letters agree on all six stills. That was checked once, at display resolution, by the orchestrating
+session. `IMG_2888` is named by its layout alone (the club view). It has no row in the truth table, and
+M33 still does not read it, so it is not a capture in `photos.json`.
+
+**Still absent**: the five MOV clips, HD Golf's fifteen photos and `data/models/ocr/`. The clips and models
+were not part of the user's answer, so their absence is this section's reading of "proceed", not the
+user's stated choice. The orchestrator tells the user so.
+
+**What each phase does.** A phase that cannot run proves its input is absent, records that as its finding,
+and ticks its row `✅ Not run: <reason> (decision of 2026-11-04)`.
+
+| phase | under this decision |
+|---|---|
+| P1 | `build-manifest` writes the six `fs-still` entries only, with the paths and digests above. `probe.py check` holds them to those digests, and a mismatch is still a stop. It prints the clips, HD Golf and the models as absent, which is **not** a stop. Done when six match and the throwaway comparison against `PHOTOS` finds no difference in **values**; `PHOTOS`' digests are the originals' and are expected to differ |
+| P2 | `captures/IMG_2889.jpg` in place of `IMG_2889.HEIC` |
+| P3, P6, P7 | As written, on the six stills. P7's controls use committed vector boxes and need no photo |
+| P4, P10 | Not run: no clips. The clips' verdict is **not measured** |
+| P5 | The six stills only, each through `working` directly, since they are JPEGs. The HD Golf clause of "Done when" falls away |
+| P8 | Not run: no models. This overrides its "stop (`BLOCKED`)". There is no lab baseline, so finding 10's 71 of 72 may be quoted only as measured on the originals |
+| P9 | As written on the six copies, with no lab column |
+| P11 | Not run: omitted by the user |
+| P12 | The target for this run is stills alone: stills pass on `raw` or `vision`. The ladder runs on `fs-still` only |
+| P13–P15 | Steps 1 and 2 run, and "not needed" ticks as written. If a cell is parser-fixable, list the cells as the finding and tick `✅ Not run`: check 6 of a rule's acceptance needs P8's baseline, so no rule can be accepted in this run, and none is fitted to these copies. `crates/`, `spec/` and `SCREEN_PARSER_VERSION` stay untouched |
+| P16 | `fs-still` only, with no lab comparison. The recommended value is provisional |
+| P17 | The verdict by call 9's table, labelled **provisional: pasted copies**, with the clips **not measured**. `probe.py verdict` prints the same label. "What this does not show" adds the original files, the clips, HD Golf and the lab baseline. Whichever way it reads, it says this is not yet the answer on the photos as captured |
+| P18 | Every doc carries the label and the list of what is unmeasured |
+| P19 | M33's ROADMAP row is **open, not ✅**, naming the provisional verdict and what is outstanding. M38's row names the verdict and leaves unblocking to the user. Memory says the Mac holds pasted copies and no originals or models. The commit title carries "provisional". Step 7's report lists what is outstanding |
+
+**This run does not meet "Exit".** M33 closes when P9 is re-measured on the original files and the clips,
+HD Golf and the lab baseline have run. Those get new rows here when the files reach this Mac. The captures
+commit is a third commit, beside the two "Exit" names.
 
 ---
 
@@ -858,3 +919,24 @@ Exactly P14. This is the cap: whatever is still missing after it is the measured
   program plan's checklist row.
 - **For P1**: when this was written, `data/` held only its README. The user is copying the photos and
   `data/models/ocr/` from the Windows box, and P1 stops as `BLOCKED` until both are here.
+
+### P1 (2026-11-04) — stopped at its precondition, nothing built
+
+- **Stopped by rule 3 and P1's own "If".** None of the 26 captures is on this Mac, and neither are the
+  models. Checked path by path: 0 of the 11 Full Swing captures, 0 of the 15 HD Golf photos, and no
+  `data/models/`. `data/` still holds only its README, last changed at 08:32, so the copy P0's finding
+  names has not reached it. No digest could be checked, and the truth table was not compared with `PHOTOS`.
+- **The copy has to reach further than `data/raw/shot_screens/`.** By each vector's `input.image_path`,
+  13 of HD Golf's 15 are under `data/processed/sessions/` (`2026-08-10/{1,2}` and `2026-08-23/{1..11}`,
+  each a `shot_screen.<digest>.*`). The other two are `data/raw/shot_screens/IMG_2738.jpeg` and
+  `IMG_2739.jpeg`. The models are `data/models/ocr/`, holding `PP-OCRv6_medium_det/`,
+  `PP-LCNet_x1_0_textline_ori/` and `PP-OCRv6_medium_rec/`, each with a `model.onnx`
+  (`crates/ocr/models.json`).
+- **No copy turned up elsewhere, though that is not proof.** A search of `$HOME` for `IMG_2889.*`,
+  `2026-10-07-1.jpg`, `IMG_2738.jpeg` and `shot_screen.*` found nothing. It skipped `Library`, `.cargo`,
+  `.rustup` and `target/`, and was refused the Photos library and the Trash. `/Volumes` lists only
+  `Macintosh HD`.
+- **The tools are present**, by path only, with no version checked: `swiftc`, `cargo` and rule 6's ffmpeg.
+- **For P1, on resuming**: the row stays 🔄, and there is no partial work to keep. `probe.py`, `photos.json`
+  and `truth_full_swing.json` were not written, because rule 3 stops the phase before them, and this finding
+  is the only change in the tree. Start from "Do", once the copy has landed.
