@@ -30,7 +30,8 @@ every coaching call a false fact for a milestone.
 
 ```bash
 .venv/Scripts/python.exe -m pytest          # `-q` is already in pyproject addopts; a second -q
-                                            # silences the summary line
+                                            # silences the summary line; on a Mac each Python
+                                            # command in this block is .venv/bin/python instead
 .venv/Scripts/python.exe -m ruff check src tests scripts
 .venv/Scripts/python.exe -m mypy src
 .venv/Scripts/python.exe scripts/conformance.py check   # certifies the freeze, not the vectors:

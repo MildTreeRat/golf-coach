@@ -695,3 +695,87 @@ hold it.
   `value_span_ratio` in [4.0, 4.8] would leave the title out on all six photos.
 - **A wording edge in the word rule**: its `sign unknown, storing the magnitude as printed` would say "as
   printed" on a tile that also converts its unit. No shipped tile has both rules.
+
+## Addendum (2026-11-04, M33): Vision behind the seam, its confidences in effect a constant, and no parser rule
+
+**M33**, on a Mac, in [the M33 plan](../plans/m33-vision-spike.md), with the measurements in
+[the spike's log](../../spikes/vision-ocr/log.md). The verdict is **GO, provisional: pasted copies. Clips:
+not measured.** M33 is open, and what that verdict decides is
+[ADR-034's M33 addendum](034-shot-first-phone-first.md#addendum-2026-11-04-m33-go-provisional-pasted-copies-and-the-biggest-unknown-is-smaller-and-not-closed).
+This one is what the reader is told. **Every number below carries that label and is at C0**: six JPEGs saved
+from a chat paste rather than the files M42 read, the first settings, and language correction off.
+
+### Vision as the phone's recognizer
+
+The M31 addendum put Vision behind this ADR's seam on paper. M33 is the first time it has stood there on real
+photos: a Swift CLI (`spikes/vision-ocr/vision_ocr.swift`) writes one box per observation, and `golf-core
+parse-screen`, the parser the phone will call, takes them as it takes the lab's.
+
+- **The settings.** `VNRecognizeTextRequest`, `.accurate`, revision 3, `usesLanguageCorrection = false`,
+  `en-US`, no custom words. They are the only ones measured, so they are not shown to be the best.
+- **No wrong value.** The photo as imported read 71 of 72 values. The one left out is `IMG_2893`'s `sidespin`:
+  Vision returned `638` and neither letter, so M42's rule withheld it rather than store it unsigned, which is
+  that rule doing its job on a recognizer it was not written against.
+- **`TextBox.rgb` holds across the two languages.** Swift's `rgb` equals Rust's `glyph_rgb` by `==` after the
+  JSON trip: 0 boxes differing on all six decoded stills and a PNG written by Rust's encoder, and 0 of 3,054
+  boxes given by hand through both. Ties moved 30–38 boxes a still, so the ranking has to be
+  `(sum, rowMajorIndex)`, and "the brightest quarter" with any other tie rule does not reproduce it.
+- **The lit rule held on the phone's colour handling, and neither lit constant moved.** The lab's decode
+  ignores these copies' Display P3 tag and the phone's converts to sRGB, which moves the lit letters down. On
+  `raw`: lit 0.096–0.363, unlit 0.833–0.994, smallest margins against `LIT_BLUE_RATIO` +0.337 and −0.133, and
+  every sign stored equals the truth's. iPhone HEICs through this path are not measured.
+- **Vision loses sign letters.** Of the 24 printed, `raw` returned 15, and its twelve signs came 7 from a lit
+  letter seen, 4 from an unlit letter alone and 1 withheld. That is what holds the passing arm at
+  `thresholds.md`'s T3 limit, `sidespin` on 5 of 6.
+
+### The OCR term and the review threshold
+
+The M31 addendum said Vision's confidences are coarse, "so M33 re-checks that term's weight and the review
+threshold for this recognizer". On these six:
+
+- **The term is in effect a constant.** The phone's modes hold two distinct values: on `raw`, 248 boxes at 1.00
+  and 3 at 0.30. So the OCR term is 0.300 on 9 of the 11 parsed phone-mode shots and 0.294 on the other two,
+  which are one photo read twice, and that 0.006 is a tenth of what one lost label costs. On the phone,
+  `parse_confidence` is the coverage terms plus a flat +0.30.
+- **A low confidence is not what marks a misread.** The three at 0.30 are strays (`DALI`, `AII`, `*ТАМАНA`), and
+  the box behind the run's one differing cell, `APEX RI`, is at 1.00.
+- **The threshold changes nothing.** At every `min_confidence` from 0.5 to 0.9, on every mode, the same shots
+  flag. There are two, a failed read (`vision`'s `IMG_2894`, whose image is the replay panel) and physics checks
+  (`lab`'s `2026-10-07-1`), and confidence alone flagged neither. By `score`'s weights and not by any photo, at
+  0.6 or 0.7 no confidence Vision can report flags a shot with every label and value, since every box at 0
+  still scores 0.70.
+- **The recommended `min_confidence` is 0.6, provisional and vacuous.** It is the floor of the plan's rule on an
+  empty set: no phone-mode cell differs from the truth at any threshold, so "0.6 is enough" is not a finding,
+  and on these six a higher value would cost nothing and catch nothing. `ScreenInput.min_confidence` is the
+  caller's, so this changes no code and no vector.
+- **The weight is left for M38.** `W_OCR` (`crates/screen/src/parser.rs`) does not move here, because that would
+  move every screen vector. M38 either leaves a flat +0.30 in the score or changes the weight and re-records
+  the screen family. C3, which turns language correction on, is unmeasured on photos, and the 0.3, 0.5 and 1.0
+  planning saw with it on were on synthetic images.
+- **`needs_review` has not been tested.** No arm has a **wrong** cell, so six stills gave it nothing to catch.
+  Two routes to one exist on mutations of the committed grid vector, and on no photo. With `SMASHFACTOR` garbled,
+  `backspin` stores `1.08`, wrong and unflagged at every threshold up to 0.9, and `no tile found` raises no flag
+  by itself, so on that route the flag rests on a physics check happening to fail. And a lit `R` box read as `L`
+  is wrong and unflagged, because `validate.rs` holds `launch_direction` to a range and no identity.
+- **A withheld sign does not reach review**, as the M42 addendum says of a rule that withholds: `IMG_2893` stays
+  at 1.000 and unflagged on `raw`, with only its warning to say so.
+
+### No parser rule, so no `SCREEN_PARSER_VERSION` question
+
+The plan allowed up to three opt-in Full Swing rules, and none fired. None of the 14 cells not read on the phone's
+modes is parser-fixable: `IMG_2893`'s `sidespin` has `638` and neither letter, and nothing but the lit letters may
+sign it, and `vision`'s twelve on `IMG_2894` have no boxes. On `lab`, not a target arm, 2 of 4 are (`APEX RI`), and
+nothing was fitted to them. Under the decision of 2026-11-04 none could have been accepted in this run anyway,
+because a rule's acceptance needs the lab baseline, which did not run. So there is no bump to explain: the key stays
+at 1, `crates/` and `spec/` are untouched, and no screen vector moved.
+
+### What this does not show
+
+- **Whether Vision's boxes parse "as well as PaddleOCR's"**, the M31 addendum's question. The lab's reader has not
+  run beside them, and the original files, the clips and HD Golf have not been measured at all.
+- **That the phone's net for the recognizer exists yet.** The M31 addendum called M33's measurement that net. So far
+  it is `probe.py verdict` over committed boxes in a spike, which no `cargo test` runs. The boxes in
+  `spikes/vision-ocr/boxes/C0/` can seed vectors, and a vector made from one should say it holds a copy's boxes.
+- **VisionKit's rectification**, the table's "VisionKit's document camera rectifies". The path that passed has no
+  rectifier, the stand-in found the wrong rectangle or none, and neither says anything about the scanner.
+- **iOS's Vision**, since all of this is macOS's, and M38's plugin is what tests it.

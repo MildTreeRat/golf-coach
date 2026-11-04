@@ -843,3 +843,93 @@ that addendum's *What real data shows* has it.
 - the 13 stored shots, and `data/processed/`, which M42 wrote nothing into;
 - `ANALYSIS_VERSION`, `SCREEN_PARSER_VERSION` and `CAREER_VERSION`, and every committed vector, with
   three hand-worked screen vectors added beside them.
+
+## Addendum (2026-11-04, M33): GO, provisional: pasted copies, and the biggest unknown is smaller and not closed
+
+**M33**, on a Mac, in [the M33 plan](../plans/m33-vision-spike.md), whose decisions and phase findings
+are the as-built record. The measurements are [the spike's log](../../spikes/vision-ocr/log.md), and
+`probe.py verdict` works its verdict and tables again from the committed boxes and results. Nothing
+under `crates/`, `src/`, `scripts/`, `tests/` or `spec/` moved. What Vision's boxes and confidences
+mean to the reader is
+[ADR-014's M33 addendum](014-screen-capture-shot-ingestion.md#addendum-2026-11-04-m33-vision-behind-the-seam-its-confidences-in-effect-a-constant-and-no-parser-rule),
+and this one is what the sub-decision and clause 7 are told.
+
+### The verdict
+
+**GO, provisional: pasted copies. Clips: not measured.** This is not yet the answer on the photos as
+captured. M33 is **open**, and whether M38 is unblocked on this evidence is the user's call, which this
+addendum does not make.
+
+By the table in [`thresholds.md`](../../spikes/vision-ocr/thresholds.md), committed before Vision read
+one real photo and edited by no phase since, stills that pass on a phone path read GO. They passed on one
+path, at C0, the first settings, so the verdict carries neither **tuned** nor **tuned, parser**:
+
+| mode | wrong (at most 0) | read, of 72 (at least 66) | lowest field, of 6 (at least 5) | flagged, of 6 (at most 1) | arm |
+|---|---|---|---|---|---|
+| `raw`, the photo as imported | 0 | 71 | 5: `sidespin` | 0 | **PASS** |
+| `vision`, a stand-in for VisionKit's scanner | 0 | **59, miss** | **4: `sidespin`, miss** | 1 | **MISS** |
+| `lab`, the lab's rectifier in front of Vision (a diagnostic, and not the lab's reader) | 0 | 68 | 5: four fields | 1 | **PASS** |
+
+- **`raw` has no room on one bar.** It is at T3's limit, so one more lost sign on any photo misses it.
+- **On this input `vision` is not an independent arm.** `VNDetectRectanglesRequest` found a rectangle on one
+  photo of six, and that one is the replay panel, which holds none of the tiles. The other five fell back
+  to `raw`'s exact bytes. So "`raw` or `vision`" is `raw` alone here.
+
+### Full Swing decides, HD Golf is diagnostic, and the parser is Rust's
+
+The plan's interview overturned three things in the program plan's §M33, which was written before M34
+existed and asked its question of HD Golf:
+
+- **Full Swing decides the verdict.** In the user's words: "Full swing matters most."
+- **HD Golf is diagnostic**: measured and logged, with no bar and no verdict of its own, which the user
+  chose over a verdict that could not block. In this run it did not run at all (below).
+- **The parser is Rust's**, `golf-core parse-screen`, the code the phone will call, and not frozen
+  Python's. So the Consequences' "whether Vision's boxes parse as well" is asked of `crates/screen`.
+
+The gate also gained a coverage floor (T2 and T3) and a review ceiling (T4), because "no unflagged wrong
+value" alone passes a recognizer that always loses one field, or one that flags everything.
+
+### Where the sub-decision's "biggest unknown" now stands
+
+**Smaller, and not closed.** Before M33 no real photo had met Vision. Now macOS's Vision, untuned and with
+no parser change, has read six copies of the screen that matters most, with no wrong value on any arm, and
+on one path it passes the bars set before it ran. That is evidence on "whether it reads *this* screen well enough",
+and it is provisional for the reasons below.
+
+**"As well" is not answered.** The lab's reader did not run beside it. M42's 71 of 72 for that reader was
+measured on the original files, so it does not stand beside this run's 71, whatever the two counts look
+like.
+
+**Clause 7's "with VisionKit's document camera doing rectification" is the part left least settled.** The
+arm that passed has no rectifier at all, and the stand-in found the wrong rectangle or none. The likely
+reason, by eye and not by test, is that neither side edge of the monitor is in any of the six frames.
+`vision`'s miss says nothing about VisionKit's scanner, which needs a device, so M38 measures it. Clause 7
+is not amended here.
+
+### What is still unmeasured
+
+- **The original files.** The six stills are JPEGs saved from a chat paste, by the user's decision of
+  2026-11-04, when the originals could not reach this Mac. Five of the six were HEICs, so those are
+  re-encoded and scaled, and none carries camera metadata.
+- **The five clips.** They are not on this Mac, and that absence is this run's reading of the user's
+  "proceed", not the user's stated choice. So the clips have no verdict, and nothing here tells M38 to ship
+  the still import first.
+- **HD Golf's fifteen photos**, by the user's omission ("Omit HD golf for now"). The `hd_golf` path has no
+  Vision evidence behind it, and the `Impact Position V` hazard in the Consequences is unanswered for
+  Vision.
+- **The lab baseline.** The reader's models are not on this Mac, the same reading of "proceed", so there is
+  no lab column.
+- **C1 to C4.** The ladder never ran, because stills are this run's target by that decision and `raw`
+  passed. C0 is the only config measured, so it is not shown to be the best one.
+
+M33 closes when the stills are measured again on the original files and the clips, HD Golf and the lab
+baseline have run. Beyond those, what M38 P5's bay session and the plugin test: six stills from one setup
+are not a new session, macOS's Vision is not iOS's, a stand-in is not VisionKit, and with no **wrong** cell
+on any arm `needs_review` had nothing to catch.
+
+### What this does not change
+
+- Apple Vision stays the chosen recognizer, the sub-decision's other options stay as they were set aside,
+  and clauses 1–10 stand;
+- every crate and committed vector, and `ANALYSIS_VERSION`, `SCREEN_PARSER_VERSION` and `CAREER_VERSION`;
+- `data/`, which M33 only read, and the stored shots.

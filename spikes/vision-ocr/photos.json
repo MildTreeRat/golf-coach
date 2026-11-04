@@ -1,0 +1,77 @@
+{
+  "_note": "Pasted copies, not the photos as captured: re-encoded and possibly scaled (docs/plans/m33-vision-spike.md, the user's decision of 2026-11-04). Written by probe.py build-manifest; do not edit by hand.",
+  "captures": [
+    {
+      "id": "IMG_2889",
+      "set": "fs-still",
+      "path": "spikes/vision-ocr/captures/IMG_2889.jpg",
+      "sha256": "6f22661840a5e698d0b1c72a10fd7214b0b37fa0301f4af4129223f87cff951b",
+      "device": "full_swing",
+      "truth": "IMG_2889",
+      "copy_of": {
+        "path": "data/raw/shot_screens/IMG_2889.HEIC",
+        "sha256": "d47e3e9607211a1350c09416d96f2f7e64a3d237a29d6f5a9ba57890f5257d8e"
+      }
+    },
+    {
+      "id": "IMG_2891",
+      "set": "fs-still",
+      "path": "spikes/vision-ocr/captures/IMG_2891.jpg",
+      "sha256": "c13f58c6bb5297daf61a1a489f1e73398f2700b97115c847fad66b1631e35ead",
+      "device": "full_swing",
+      "truth": "IMG_2891",
+      "copy_of": {
+        "path": "data/raw/shot_screens/IMG_2891.HEIC",
+        "sha256": "73be98e34cee2eafa22ad8d693c9c1c4c4efac585616f452d6cd5ceda58a15c0"
+      }
+    },
+    {
+      "id": "IMG_2892",
+      "set": "fs-still",
+      "path": "spikes/vision-ocr/captures/IMG_2892.jpg",
+      "sha256": "798395eddca63606a882bb9861b872e81a231a341b4918b5e6a7605d279bce3a",
+      "device": "full_swing",
+      "truth": "IMG_2892",
+      "copy_of": {
+        "path": "data/raw/shot_screens/IMG_2892.HEIC",
+        "sha256": "1c4b731de2871303b6387a843e65d893a0c37d059b7ff0cca321eea2f1fc6d04"
+      }
+    },
+    {
+      "id": "IMG_2893",
+      "set": "fs-still",
+      "path": "spikes/vision-ocr/captures/IMG_2893.jpg",
+      "sha256": "240a6cd2caf98e42e90626070f925e6b8bc6ac5d49d1093807d0fb6a22c87d17",
+      "device": "full_swing",
+      "truth": "IMG_2893",
+      "copy_of": {
+        "path": "data/raw/shot_screens/IMG_2893.HEIC",
+        "sha256": "204872ef4b6ccd2c7c2730ca14283b43e4a3c5f4e57164373d52c19fb72d9ca8"
+      }
+    },
+    {
+      "id": "IMG_2894",
+      "set": "fs-still",
+      "path": "spikes/vision-ocr/captures/IMG_2894.jpg",
+      "sha256": "4f1e91006ad356fb5d7eb1fd7ef68731216ea9e905756cac0f7ba441453d0a5e",
+      "device": "full_swing",
+      "truth": "IMG_2894",
+      "copy_of": {
+        "path": "data/raw/shot_screens/IMG_2894.HEIC",
+        "sha256": "227d9985b337a70248f0e268eea4e73fc3e5860bc0b2418afe6082a4b19c399b"
+      }
+    },
+    {
+      "id": "2026-10-07-1",
+      "set": "fs-still",
+      "path": "spikes/vision-ocr/captures/2026-10-07-1.jpg",
+      "sha256": "f1547903c770c29d9e00548c61b86a5b5fdea2e9ad3b04501b2afbaac072b25d",
+      "device": "full_swing",
+      "truth": "2026-10-07-1",
+      "copy_of": {
+        "path": "data/raw/shot_screens/2026-10-07-1.jpg",
+        "sha256": "96241978f183d70cfbd633802b395362a68ea0b3905324fbbc9a40e18c51b0e1"
+      }
+    }
+  ]
+}

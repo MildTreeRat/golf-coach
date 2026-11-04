@@ -5,6 +5,114 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-11-04 — M33 P19: Apple Vision on Full Swing's screen, provisional
+
+**Duration**: 2026-11-04, one day, twenty phases (P0–P19), the first milestone run on the arm64 Mac.
+**M33 stays open.** Every row in the plan is ticked, and this run does not meet the plan's "Exit", by the
+user's decision of 2026-11-04 to proceed on pasted copies and stills only. Three commits onto `main`,
+none pushed: P0's pre-registration, P1's captures and this close.
+
+**To pick up where this left off, read `spikes/vision-ocr/log.md`**, then the section "The user's
+decision of 2026-11-04" in `docs/plans/m33-vision-spike.md` and its findings by the map
+(`grep -n '^## \|^### '`), not end to end, and not this entry. Then ADR-034's and ADR-014's M33 addenda.
+
+**The verdict: GO, provisional: pasted copies. Clips: not measured.** It is not yet the answer on the
+photos as captured. On six JPEGs saved from a chat paste, at C0, the first settings, with no parser
+rule, so neither **tuned** label:
+- **`raw`, the photo as imported: PASS.** 71 of 72 read, 0 wrong, 0 of 6 flagged, and `sidespin` on 5 of
+  6, which is `thresholds.md`'s limit on that bar. The one miss is `IMG_2893`'s `sidespin`: Vision read
+  `638` and returned neither letter.
+- **`vision`, the stand-in for VisionKit's scanner: MISS.** 59 read, `sidespin` on 4 of 6. It found a
+  rectangle on one photo of six, the replay panel on `IMG_2894`, and fell back to `raw` on the other five, so
+  it is not an independent arm, and "`raw` or `vision`" is `raw` alone here. It says nothing about VisionKit.
+- **`lab`, the lab's rectifier in front of Vision: PASS, as a diagnostic.** 68 read, 0 wrong, 1 flagged.
+  It shrinks to 1600 wide where `raw` keeps these copies' 2576, so `raw` reading more is not a like-for-like.
+
+**What was built.** All of it in `spikes/vision-ocr/`, spike code. Nothing moved under `crates/`, `src/`,
+`scripts/`, `tests/` or `spec/`.
+- **The bars first** (P0). `thresholds.md` was committed before Vision read one real photo, and no phase
+  has edited it.
+- **The inputs** (P1, P5). `photos.json` and `truth_full_swing.json` hold the six stills and M42's truth
+  table as data, `probe.py check` holds each copy to its digest before it is read, and each entry's
+  `copy_of` keeps a copy from being taken for its original. `lab-images/` is a small crate outside the
+  workspace, over `crates/ocr`'s working image.
+- **`vision_ocr.swift`** (P2, P3, P6). `decode` through ImageIO to sRGB, `read` at C0, `glyph`, `rectify` and
+  `selftest`. Swift's `TextBox.rgb` equals Rust's `glyph_rgb` by `==` on every box of the six decoded stills,
+  and on 3,054 boxes given by hand to both.
+- **`probe.py`** (P1, P7, P9, P13, P16, P17). `build-manifest`, `check`, `prepare`, `control`, `measure`,
+  `failures`, `calibrate` and `verdict`. `verdict` works both tables again from `results/C0.json`, each
+  cell from its value and the truth table, and exits 1 if `log.md` says otherwise.
+- **The measurement** (P9). `boxes/C0/` and `results/C0.json`. Two runs matched byte for byte.
+- **The calibration** (P16). No `min_confidence` from 0.5 to 0.9 changes a flag, on any mode. The
+  recommended 0.6 is provisional and vacuous, because no phone-mode cell was wrong for it to catch.
+- **Docs** (P18). An M33 addendum each in ADR-034 and ADR-014, CONFORMANCE's two sentences, the program
+  plan's row and §M33 note, §M38 from the log's list, `spikes/README.md` and one comment in `CLAUDE.md`.
+
+**What changed against the plan.**
+- **The user's decision of 2026-11-04 replaced the inputs.** No capture or model had reached this Mac and
+  the Windows box was out of reach, so the user pasted the photos into the chat and said to commit them
+  and proceed, and to "Omit HD golf for now". Five of the six stills were HEICs, so these are re-encoded, and
+  they are scaled too. **P4, P8 and P10 did not run**, for want of the clips and models, which is the
+  plan's reading of "proceed" and not the user's stated choice. **P11 did not run**, which is the user's.
+- **P12–P15 ticked "not needed" on this run's target, stills alone.** That rests on the decision, and
+  `thresholds.md`'s own target, stills and clips, is unanswered. C1 to C4 are unmeasured and no rule was
+  written, so C0's standing as final is as provisional as the verdict. None of the 14 cells not read on the
+  phone modes is parser-fixable.
+- **Three commits, not two**, and "Exit" is not met on purpose. M33 closes when P9 is measured again on the
+  originals and the clips, HD Golf and the lab baseline have run, each on a new row.
+- **Past the plan, and small**, each named in the log's last section: `glyph`, `failures`, `calibrate` and
+  `control`'s additions beyond the plan's list, and `verdict` classifying each cell again where §P17 asks only
+  for the table.
+
+**What M38 should know.** [The log's "For M38"](spikes/vision-ocr/log.md#for-m38) has the whole list, and the
+program plan's §M38 carries it marked *(M33)*. All of it is provisional, on the copies, at C0.
+- **The path that passed is the photo as imported, with no rectifier.** Neither side edge of the monitor is
+  in any of the six frames, by eye, so a corner finder has nothing to find. Whether to tell the golfer to
+  frame the whole monitor, at a cost in pixels, or not to depend on a rectifier, is a question for M38.
+- **Decode through ImageIO to 8-bit sRGB and read `rgb` off those bytes**, ranking on `(sum, rowMajorIndex)`
+  as `glyphRGB` does, or it does not reproduce `glyph_rgb` to the bit. These copies are Display P3 and the
+  conversion moves the lit letters, and neither lit constant needed to move. iPhone HEICs through this path are
+  not measured.
+- **`W_OCR` is its open question.** Vision's confidences are almost all 1.00, so on the phone modes the OCR
+  term is in effect a flat +0.30. Leave it, or change the weight and re-record the screen family.
+- **Vision losing sign letters is what holds `raw` at the limit**: 15 of the 24 letters returned, and a
+  withheld sign stays an unflagged shot at 1.000 with a warning, so review does not surface it.
+- **`needs_review` has not been tested on Vision.** No measured arm has a **wrong** cell. Two mutations are
+  wrong and unflagged: a garbled `SMASHFACTOR` tile spilling `1.08` into `backspin`, and a lit `R` read as `L`.
+- **Its P0**: five macOS failures to clear, 28 clippy lines of newer lints, `.venv` here without the extras,
+  and `/opt/homebrew` belonging to another account.
+
+**Left open.**
+- **Whether M38 is unblocked on this evidence is the user's.** ROADMAP's M38 row stays 🔒 and names the verdict.
+- **What M33 still needs, all absent from this Mac**: the six original stills, the five clips, HD Golf's
+  fifteen photos and the three OCR models. `probe.py check` lists each path on every run. The models have a
+  second route besides copying them from the Windows box, `crates/ocr/models.json`'s `conversion` recipe,
+  which needs Python 3.11, `paddlepaddle` and `paddle2onnx` and is unproven on this Mac.
+- **What those later rows will meet.** `measure` overwrites `results/C0.json`, and `verdict` exits 1 until
+  `log.md` is rewritten, on purpose. `probe.py` has no `lab` or `lab-regress`. `frames/runs/` and `boxes/` key
+  by id alone, so a clip frame and its still collide until a row separates them.
+- **Left stale on purpose, because §P18 and §P19 each name their lines.** ROADMAP's NEXT ACTION still says
+  whether Vision reads the HD Golf screen is the unknown, and §M38's status is as it was. `docs/FLOW.md`'s map
+  still shows M32 as ⬜ and M33 as 🔒. The program plan's "M33 is unchanged" paragraph still says HD Golf and the
+  frozen parser. `CLAUDE.md` says `.venv` is 3.13, and this Mac's is 3.14.3.
+- **No rule fired**, so call 15's Windows gates have nothing new to certify. M42's open items, the user's
+  impact review and the store-only import, are untouched.
+
+All verify commands that list P19 are as the plan's rules say.
+- **Rust.** `cargo test --workspace --no-fail-fast` passed 1,761 with 26 ignored and failed exactly the five
+  named in finding 1: `capture --lib`'s three, `golf-lab --test flight`'s one and `golf-lab --test import_photos`'
+  one. `cargo clippy --all-targets` prints 28 `warning` lines, the baseline, and `cargo fmt --check` is clean.
+- **The dry run**: `screen-v1` 45 vectors, 0 changed and 0 files written. `v17`, `career-v3`,
+  `tests/test_conformance.py` and `conformance.py check` run only if a rule fired, and none did.
+- **The spike.** `probe.py check` matches 6 of 6, `control` holds, and `verdict` exits 0. `measure` was not
+  run again, since no line lists it for this phase and a re-read would rewrite `results/C0.json`.
+- **Python.** `tests/test_docs_truth.py` passed 91, against a map that now counts 88 documents.
+- **The tree.** `git diff --stat -- crates src scripts tests spec` is empty, and `thresholds.md` has no diff.
+  `data/` holds only its README, as it did. The sorted digest of the 56 files of `results/`, `boxes/`,
+  `frames/runs/` and `thresholds.md` is still `4396a7eb…ee32`.
+
+---
+
 ## 2026-11-03 — M42 P16: Full Swing in Rust
 
 **Duration**: 2026-10-30 to 2026-11-03, eighteen phases (P0–P16, with P14b added after P9). M42 goes

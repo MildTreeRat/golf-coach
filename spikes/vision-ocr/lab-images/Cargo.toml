@@ -1,0 +1,16 @@
+# M33's helper over the crates that already do the work (the plan's call 6). Spike code: nothing
+# ships from here, and `Cargo.lock` is the root's, copied before the first build so that it resolves
+# what the workspace resolves.
+[package]
+name = "vision-spike-lab-images"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[workspace] # Empty on purpose: not a member of the root workspace, which the crate count pins.
+
+[dependencies]
+ocr = { path = "../../../crates/ocr" }
+golf-lab = { path = "../../../crates/lab" }
+image = { version = "=0.25.9", default-features = false, features = ["png"] }
+serde_json = { version = "1.0", features = ["float_roundtrip"] }

@@ -1,0 +1,15 @@
+{
+  "_note": [
+    "The M42 plan's truth table, in the table's own spelling: a signed tile as its magnitude and its lit letter, an apex in feet. Read by eye there, each lit letter confirmed on a crop. The same table is PHOTOS in crates/ocr/tests/full_swing.rs, which P1 of docs/plans/m33-vision-spike.md compared this file against.",
+    "Typed, not generated: this is the oracle, and nothing the spike runs may write it. probe.py's truth() is the one place it becomes ShotData's conventions.",
+    "A clip frame answers to the row of the still with the same id."
+  ],
+  "photos": {
+    "IMG_2889":     {"carry": 131, "total": 134, "club": 95,    "ball": 102.5, "path": -2.0, "face": 13.2, "ball_dir": [10.1, "R"], "launch": 24.5, "apex_ft": 85.2,  "smash": 1.08, "backspin": 9899, "sidespin": [4199, "D"]},
+    "IMG_2891":     {"carry": 162, "total": 203, "club": 86.9,  "ball": 112.8, "path": -1.7, "face": -0.6, "ball_dir": [0.8, "L"],  "launch": 12.1, "apex_ft": 39.9,  "smash": 1.30, "backspin": 4236, "sidespin": [464, "D"]},
+    "IMG_2892":     {"carry": 80,  "total": 82,  "club": 91.6,  "ball": 77.4,  "path": -4.5, "face": 6.9,  "ball_dir": [4.6, "R"],  "launch": 34.6, "apex_ft": 71.4,  "smash": 0.85, "backspin": 8855, "sidespin": [2032, "D"]},
+    "IMG_2893":     {"carry": 184, "total": 224, "club": 107.6, "ball": 134,   "path": -1.7, "face": 3.2,  "ball_dir": [2.2, "R"],  "launch": 5.5,  "apex_ft": 15.5,  "smash": 1.25, "backspin": 2284, "sidespin": [638, "D"]},
+    "IMG_2894":     {"carry": 105, "total": 107, "club": 81.3,  "ball": 87.2,  "path": -1.7, "face": 7.5,  "ball_dir": [5.7, "R"],  "launch": 31.4, "apex_ft": 80.6,  "smash": 1.07, "backspin": 9985, "sidespin": [2209, "D"]},
+    "2026-10-07-1": {"carry": 279, "total": 289, "club": 111.3, "ball": 158.6, "path": 1.6,  "face": 4.0,  "ball_dir": [3.5, "R"],  "launch": 19,   "apex_ft": 142.2, "smash": 1.43, "backspin": 2521, "sidespin": [336, "F"]}
+  }
+}

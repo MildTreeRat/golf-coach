@@ -32,3 +32,16 @@ Each spike gets its own dated folder.
   15% of them, because a golf grip reads as one hand. The one it keeps is the **trail** hand, and
   grip strength is read on the lead. Findings: [log.md](mediapipe-hands/log.md). `frames/` is
   git-ignored and regenerates from `probe.py frames`.
+- `vision-ocr/` — **M33**, **run 2026-11-04 on pasted copies, and still open**. Does Apple Vision produce boxes
+  that `golf-core parse-screen`, the parser the phone will call, turns into correct shots of Full Swing's grid
+  screen? Contains `thresholds.md` (committed before Vision read one real photo), `vision_ocr.swift` (the
+  recognizer and the rectifier stand-in), `probe.py` (`build-manifest`, `check`, `prepare`, `control`,
+  `measure`, `failures`, `calibrate` and `verdict`), `lab-images/` (the lab's working images, a Rust crate of
+  its own), `photos.json`, `truth_full_swing.json`, `captures/` (the JPEGs saved from a chat paste), `boxes/`,
+  `results/` and `log.md`. **GO, provisional: pasted copies. Clips: not measured.** At the first settings, with
+  no parser rule, the photo as imported read 71 of 72 values with none wrong, and it is at one bar's limit; the
+  VisionKit stand-in found the wrong rectangle or none, which says nothing about VisionKit. **This is not yet
+  the answer on the photos as captured**: the original files, the five clips, HD Golf (the user's omission) and
+  the lab's reader have not run, and whether M38 is unblocked is the user's. Findings:
+  [log.md](vision-ocr/log.md), which `probe.py verdict` holds to `results/`. `frames/` is git-ignored and
+  regenerates from `probe.py prepare` and `measure`.

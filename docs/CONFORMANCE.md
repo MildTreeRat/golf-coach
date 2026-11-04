@@ -614,8 +614,12 @@ photos.
 Added by M34, and the screen reader's oracle: OCR boxes in, `ShotData` out. The implementation under
 test is `crates/screen`. **It gates the parser, never the recognizer.** The phone reads the screen
 with Apple Vision and the lab with PaddleOCR, and nothing makes their boxes identical. Whether
-Vision's boxes parse as well is M33's question, and whether §M29's Rust reader matches PaddleOCR's
-is §M29's.
+Vision's boxes parse as well was M33's question, and what it measured is **GO, provisional: pasted
+copies, with the clips not measured** ([its log](../spikes/vision-ocr/log.md)): on six chat-pasted
+copies of Full Swing's stills, at the first settings and with no parser change, the photo as imported
+read 71 of 72 values, none wrong. The original files, the clips, HD Golf and the lab's reader beside it
+have not run, so "as well" is not yet answered. Whether §M29's Rust reader matches PaddleOCR's is
+§M29's.
 
 | sub-family | what it is | oracle | version |
 |---|---|---|---|
@@ -2065,7 +2069,10 @@ Named rather than left to be discovered:
   against a `FADE` on the screen.
 - **The screen's recognizer and its preprocessing.** A screen vector begins at boxes. So
   PaddleOCR, the OpenCV rectification, and the rotation and legibility notes they write are judged by
-  nothing here, and neither is Apple Vision. M33 measures Vision against the stored shots. §M29's
+  nothing here, and neither is Apple Vision. M33 measured Vision outside every gate in this document,
+  against the M42 plan's truth table for Full Swing's stills rather than the stored shots: **provisional,
+  on pasted copies**, with the original files, the clips, HD Golf and the lab baseline unmeasured, and no
+  vector recorded from it, though its committed boxes can seed one. §M29's
   Rust reader is gated on the 13 bay photos against PaddleOCR's parse (§2's OCR gate), but on this
   box only, because the photos are in gitignored `data/`, and against the shot, not the boxes. The
   notes reach a vector only as recorded input, and on the stored photos that is just the

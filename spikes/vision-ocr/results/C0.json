@@ -1,0 +1,2360 @@
+{
+  "config": "C0",
+  "min_confidence": 0.6,
+  "sets": {
+    "fs-still": {
+      "arms": {
+        "raw": {
+          "os": "26.2 (25C56)",
+          "revision": 3,
+          "summary": {
+            "read": 71,
+            "withheld": 1,
+            "wrong": 0,
+            "caught": 0,
+            "flagged": 0,
+            "per_field": {
+              "carry_distance": 6,
+              "total_distance": 6,
+              "club_head_speed": 6,
+              "ball_speed": 6,
+              "club_path": 6,
+              "club_face_angle": 6,
+              "launch_direction": 6,
+              "launch_angle": 6,
+              "apex_height": 6,
+              "smash_factor": 6,
+              "backspin": 6,
+              "sidespin": 5
+            }
+          },
+          "bars": {
+            "T1": true,
+            "T2": true,
+            "T3": true,
+            "T4": true
+          },
+          "pass": true,
+          "shots": {
+            "IMG_2889": {
+              "flagged": false,
+              "cells": {
+                "carry_distance": {
+                  "cell": "read",
+                  "value": 131.0,
+                  "truth": 131.0
+                },
+                "total_distance": {
+                  "cell": "read",
+                  "value": 134.0,
+                  "truth": 134.0
+                },
+                "club_head_speed": {
+                  "cell": "read",
+                  "value": 95.0,
+                  "truth": 95.0
+                },
+                "ball_speed": {
+                  "cell": "read",
+                  "value": 102.5,
+                  "truth": 102.5
+                },
+                "club_path": {
+                  "cell": "read",
+                  "value": -2.0,
+                  "truth": -2.0
+                },
+                "club_face_angle": {
+                  "cell": "read",
+                  "value": 13.2,
+                  "truth": 13.2
+                },
+                "launch_direction": {
+                  "cell": "read",
+                  "value": 10.1,
+                  "truth": 10.1
+                },
+                "launch_angle": {
+                  "cell": "read",
+                  "value": 24.5,
+                  "truth": 24.5
+                },
+                "apex_height": {
+                  "cell": "read",
+                  "value": 28.400000000000002,
+                  "truth": 28.400000000000002
+                },
+                "smash_factor": {
+                  "cell": "read",
+                  "value": 1.08,
+                  "truth": 1.08
+                },
+                "backspin": {
+                  "cell": "read",
+                  "value": 9899.0,
+                  "truth": 9899.0
+                },
+                "sidespin": {
+                  "cell": "read",
+                  "value": -4199.0,
+                  "truth": -4199.0
+                }
+              },
+              "image": "spikes/vision-ocr/frames/decoded/IMG_2889.png",
+              "image_sha256": "50f348c0a97aae9c1a64c67a1a7f44d907e800b63f4fc2004e2f77113c07a004",
+              "notes": [],
+              "boxes": 42,
+              "boxes_sha256": "161ac0a244c8292acabad52a12601fe18da8a717adfd86b4adb1989ec773149d",
+              "repeat": "same",
+              "failed_read": false,
+              "parse_confidence": 1.0,
+              "parser_version": 1,
+              "warnings": [],
+              "raw_fields": {
+                "Apex Ft": "85.2",
+                "Backspin Rpm": "9899",
+                "Ball Direction Deg": "L 10.1",
+                "Ball Speed Mph": "102.5",
+                "Carry Yd": "131",
+                "Club Speed Mph": "95",
+                "Face Deg": "13.2\u00b0",
+                "Launch Angle": "24.5\u00b0",
+                "Path Deg": "-2.0\u00b0",
+                "Sidespin Rpm": "D F 4199",
+                "Smash Factor": "1.08",
+                "Total Yd": "134 | 134"
+              },
+              "lit": [
+                {
+                  "letter": "L",
+                  "x": 939.79069786281,
+                  "y": 1104.5348844335078,
+                  "rgb": [
+                    167.11203319502076,
+                    172.72614107883817,
+                    163.07883817427387
+                  ],
+                  "ratio": 0.9758653225405969,
+                  "margin": -0.2758653225405969,
+                  "lit": false,
+                  "field": "launch_direction",
+                  "decided": 1.0
+                },
+                {
+                  "letter": "D",
+                  "x": 1284.2558144004315,
+                  "y": 1359.1395357050828,
+                  "rgb": [
+                    248.03825136612022,
+                    217.5136612021858,
+                    41.15300546448088
+                  ],
+                  "ratio": 0.18919733701796257,
+                  "margin": 0.5108026629820374,
+                  "lit": true,
+                  "field": "sidespin",
+                  "decided": -1.0
+                },
+                {
+                  "letter": "F",
+                  "x": 1561.3255818734938,
+                  "y": 1366.6279071651356,
+                  "rgb": [
+                    165.4142857142857,
+                    161.10476190476192,
+                    151.88571428571427
+                  ],
+                  "ratio": 0.942776069992906,
+                  "margin": -0.24277606999290602,
+                  "lit": false,
+                  "field": "sidespin",
+                  "decided": -1.0
+                }
+              ]
+            },
+            "IMG_2891": {
+              "flagged": false,
+              "cells": {
+                "carry_distance": {
+                  "cell": "read",
+                  "value": 162.0,
+                  "truth": 162.0
+                },
+                "total_distance": {
+                  "cell": "read",
+                  "value": 203.0,
+                  "truth": 203.0
+                },
+                "club_head_speed": {
+                  "cell": "read",
+                  "value": 86.9,
+                  "truth": 86.9
+                },
+                "ball_speed": {
+                  "cell": "read",
+                  "value": 112.8,
+                  "truth": 112.8
+                },
+                "club_path": {
+                  "cell": "read",
+                  "value": -1.7,
+                  "truth": -1.7
+                },
+                "club_face_angle": {
+                  "cell": "read",
+                  "value": -0.6,
+                  "truth": -0.6
+                },
+                "launch_direction": {
+                  "cell": "read",
+                  "value": -0.8,
+                  "truth": -0.8
+                },
+                "launch_angle": {
+                  "cell": "read",
+                  "value": 12.1,
+                  "truth": 12.1
+                },
+                "apex_height": {
+                  "cell": "read",
+                  "value": 13.299999999999999,
+                  "truth": 13.299999999999999
+                },
+                "smash_factor": {
+                  "cell": "read",
+                  "value": 1.3,
+                  "truth": 1.3
+                },
+                "backspin": {
+                  "cell": "read",
+                  "value": 4236.0,
+                  "truth": 4236.0
+                },
+                "sidespin": {
+                  "cell": "read",
+                  "value": -464.0,
+                  "truth": -464.0
+                }
+              },
+              "image": "spikes/vision-ocr/frames/decoded/IMG_2891.png",
+              "image_sha256": "a88cc2a56b704de3c5ca7d5882d3042460418798eab665eba01428197a53b2d3",
+              "notes": [],
+              "boxes": 41,
+              "boxes_sha256": "5a98ea99f1e5a99dded57ae400e97b82b5e196bf8773f16ed9f95653094f1289",
+              "repeat": "same",
+              "failed_read": false,
+              "parse_confidence": 0.994,
+              "parser_version": 1,
+              "warnings": [],
+              "raw_fields": {
+                "Apex Ft": "39.9 SHOT DATA",
+                "Backspin Rpm": "4236",
+                "Ball Direction Deg": "R 0.8",
+                "Ball Speed Mph": "AII 112.8",
+                "Carry Yd": "162",
+                "Club Speed Mph": "86.9",
+                "Face Deg": "-0.6\u00b0",
+                "Launch Angle": "12.1\u00b0",
+                "Path Deg": "-1.7\u00b0",
+                "Sidespin Rpm": "F 464",
+                "Smash Factor": "1.30",
+                "Total Yd": "203 | 203"
+              },
+              "lit": [
+                {
+                  "letter": "R",
+                  "x": 977.2325582530427,
+                  "y": 1516.395349736575,
+                  "rgb": [
+                    201.52857142857144,
+                    210.55714285714285,
+                    195.1095238095238
+                  ],
+                  "ratio": 0.9681482006568842,
+                  "margin": -0.2681482006568843,
+                  "lit": false,
+                  "field": "launch_direction",
+                  "decided": -1.0
+                },
+                {
+                  "letter": "F",
+                  "x": 1280.5116277863028,
+                  "y": 1711.0930237241773,
+                  "rgb": [
+                    204.2086956521739,
+                    203.62608695652173,
+                    193.56521739130434
+                  ],
+                  "ratio": 0.9505914506555067,
+                  "margin": -0.2505914506555067,
+                  "lit": false,
+                  "field": "sidespin",
+                  "decided": -1.0
+                }
+              ]
+            },
+            "IMG_2892": {
+              "flagged": false,
+              "cells": {
+                "carry_distance": {
+                  "cell": "read",
+                  "value": 80.0,
+                  "truth": 80.0
+                },
+                "total_distance": {
+                  "cell": "read",
+                  "value": 82.0,
+                  "truth": 82.0
+                },
+                "club_head_speed": {
+                  "cell": "read",
+                  "value": 91.6,
+                  "truth": 91.6
+                },
+                "ball_speed": {
+                  "cell": "read",
+                  "value": 77.4,
+                  "truth": 77.4
+                },
+                "club_path": {
+                  "cell": "read",
+                  "value": -4.5,
+                  "truth": -4.5
+                },
+                "club_face_angle": {
+                  "cell": "read",
+                  "value": 6.9,
+                  "truth": 6.9
+                },
+                "launch_direction": {
+                  "cell": "read",
+                  "value": 4.6,
+                  "truth": 4.6
+                },
+                "launch_angle": {
+                  "cell": "read",
+                  "value": 34.6,
+                  "truth": 34.6
+                },
+                "apex_height": {
+                  "cell": "read",
+                  "value": 23.8,
+                  "truth": 23.8
+                },
+                "smash_factor": {
+                  "cell": "read",
+                  "value": 0.85,
+                  "truth": 0.85
+                },
+                "backspin": {
+                  "cell": "read",
+                  "value": 8855.0,
+                  "truth": 8855.0
+                },
+                "sidespin": {
+                  "cell": "read",
+                  "value": -2032.0,
+                  "truth": -2032.0
+                }
+              },
+              "image": "spikes/vision-ocr/frames/decoded/IMG_2892.png",
+              "image_sha256": "0a8c00c7a12cc844f6af55bac365589e7de347a6b57cbeab4045597de8593172",
+              "notes": [],
+              "boxes": 43,
+              "boxes_sha256": "ebbea50868ccfe7ed001f6bc5a105e2e01fe109c08a1184a941588088ab837bf",
+              "repeat": "same",
+              "failed_read": false,
+              "parse_confidence": 1.0,
+              "parser_version": 1,
+              "warnings": [],
+              "raw_fields": {
+                "Apex Ft": "71.4",
+                "Backspin Rpm": "8855",
+                "Ball Direction Deg": "R 4.6",
+                "Ball Speed Mph": "77.4",
+                "Carry Yd": "80",
+                "Club Speed Mph": "91.6",
+                "Face Deg": "6.9\u00b0",
+                "Launch Angle": "34.6\u00b0",
+                "Path Deg": "-4.5\u00b0",
+                "Sidespin Rpm": "D F 2032",
+                "Smash Factor": "0.85",
+                "Total Yd": "82 | 82"
+              },
+              "lit": [
+                {
+                  "letter": "R",
+                  "x": 1025.9069775967496,
+                  "y": 1243.0697682293217,
+                  "rgb": [
+                    251.05990783410138,
+                    227.3179723502304,
+                    21.829493087557605
+                  ],
+                  "ratio": 0.09603065196237431,
+                  "margin": 0.6039693480376256,
+                  "lit": true,
+                  "field": "launch_direction",
+                  "decided": 1.0
+                },
+                {
+                  "letter": "D",
+                  "x": 1085.813953789089,
+                  "y": 1452.7441861600196,
+                  "rgb": [
+                    246.78838174273858,
+                    221.6265560165975,
+                    38.12033195020747
+                  ],
+                  "ratio": 0.17200254624428968,
+                  "margin": 0.5279974537557103,
+                  "lit": true,
+                  "field": "sidespin",
+                  "decided": -1.0
+                },
+                {
+                  "letter": "F",
+                  "x": 1340.4186049049076,
+                  "y": 1456.488373195199,
+                  "rgb": [
+                    199.95555555555555,
+                    210.17777777777778,
+                    180.76296296296297
+                  ],
+                  "ratio": 0.9040157071941913,
+                  "margin": -0.20401570719419138,
+                  "lit": false,
+                  "field": "sidespin",
+                  "decided": -1.0
+                }
+              ]
+            },
+            "IMG_2893": {
+              "flagged": false,
+              "cells": {
+                "carry_distance": {
+                  "cell": "read",
+                  "value": 184.0,
+                  "truth": 184.0
+                },
+                "total_distance": {
+                  "cell": "read",
+                  "value": 224.0,
+                  "truth": 224.0
+                },
+                "club_head_speed": {
+                  "cell": "read",
+                  "value": 107.6,
+                  "truth": 107.6
+                },
+                "ball_speed": {
+                  "cell": "read",
+                  "value": 134.0,
+                  "truth": 134.0
+                },
+                "club_path": {
+                  "cell": "read",
+                  "value": -1.7,
+                  "truth": -1.7
+                },
+                "club_face_angle": {
+                  "cell": "read",
+                  "value": 3.2,
+                  "truth": 3.2
+                },
+                "launch_direction": {
+                  "cell": "read",
+                  "value": 2.2,
+                  "truth": 2.2
+                },
+                "launch_angle": {
+                  "cell": "read",
+                  "value": 5.5,
+                  "truth": 5.5
+                },
+                "apex_height": {
+                  "cell": "read",
+                  "value": 5.166666666666667,
+                  "truth": 5.166666666666667
+                },
+                "smash_factor": {
+                  "cell": "read",
+                  "value": 1.25,
+                  "truth": 1.25
+                },
+                "backspin": {
+                  "cell": "read",
+                  "value": 2284.0,
+                  "truth": 2284.0
+                },
+                "sidespin": {
+                  "cell": "withheld",
+                  "value": null,
+                  "truth": -638.0
+                }
+              },
+              "image": "spikes/vision-ocr/frames/decoded/IMG_2893.png",
+              "image_sha256": "8fb57060924b5793bafdc4afe695cf13d9a096a8281d5f4ba88639e4b92bd0fd",
+              "notes": [],
+              "boxes": 39,
+              "boxes_sha256": "d602c8a31d88cd48041f5290bd398123e17026788030318b8acd3cf1650e0ba9",
+              "repeat": "same",
+              "failed_read": false,
+              "parse_confidence": 1.0,
+              "parser_version": 1,
+              "warnings": [
+                "Sidespin Rpm: neither D nor F could be read as lit - sign unknown, not stored"
+              ],
+              "raw_fields": {
+                "Apex Ft": "15.5 SHOT DATA",
+                "Backspin Rpm": "2284",
+                "Ball Direction Deg": "R 2.2",
+                "Ball Speed Mph": "134 14",
+                "Carry Yd": "184",
+                "Club Speed Mph": "107.6",
+                "Face Deg": "3.2\u00b0",
+                "Launch Angle": "5.5\u00b0",
+                "Path Deg": "-1.7\u00b0",
+                "Sidespin Rpm": "638",
+                "Smash Factor": "1.25",
+                "Total Yd": "224 | 224"
+              },
+              "lit": [
+                {
+                  "letter": "R",
+                  "x": 1175.6744190359937,
+                  "y": 1291.7441861600194,
+                  "rgb": [
+                    248.92857142857142,
+                    212.21428571428572,
+                    38.476190476190474
+                  ],
+                  "ratio": 0.18130820150342195,
+                  "margin": 0.518691798496578,
+                  "lit": true,
+                  "field": "launch_direction",
+                  "decided": 1.0
+                }
+              ]
+            },
+            "IMG_2894": {
+              "flagged": false,
+              "cells": {
+                "carry_distance": {
+                  "cell": "read",
+                  "value": 105.0,
+                  "truth": 105.0
+                },
+                "total_distance": {
+                  "cell": "read",
+                  "value": 107.0,
+                  "truth": 107.0
+                },
+                "club_head_speed": {
+                  "cell": "read",
+                  "value": 81.3,
+                  "truth": 81.3
+                },
+                "ball_speed": {
+                  "cell": "read",
+                  "value": 87.2,
+                  "truth": 87.2
+                },
+                "club_path": {
+                  "cell": "read",
+                  "value": -1.7,
+                  "truth": -1.7
+                },
+                "club_face_angle": {
+                  "cell": "read",
+                  "value": 7.5,
+                  "truth": 7.5
+                },
+                "launch_direction": {
+                  "cell": "read",
+                  "value": 5.7,
+                  "truth": 5.7
+                },
+                "launch_angle": {
+                  "cell": "read",
+                  "value": 31.4,
+                  "truth": 31.4
+                },
+                "apex_height": {
+                  "cell": "read",
+                  "value": 26.866666666666664,
+                  "truth": 26.866666666666664
+                },
+                "smash_factor": {
+                  "cell": "read",
+                  "value": 1.07,
+                  "truth": 1.07
+                },
+                "backspin": {
+                  "cell": "read",
+                  "value": 9985.0,
+                  "truth": 9985.0
+                },
+                "sidespin": {
+                  "cell": "read",
+                  "value": -2209.0,
+                  "truth": -2209.0
+                }
+              },
+              "image": "spikes/vision-ocr/frames/decoded/IMG_2894.png",
+              "image_sha256": "55514b1e3e0a490da21246f12716c414ee4bc0a6c8d5fec925a047cca8480208",
+              "notes": [],
+              "boxes": 43,
+              "boxes_sha256": "6460376eae46b491c488bd58a82f1a7887b11586ecb1cc76cfea806ae4c736d3",
+              "repeat": "same",
+              "failed_read": false,
+              "parse_confidence": 1.0,
+              "parser_version": 1,
+              "warnings": [],
+              "raw_fields": {
+                "Apex Ft": "80.6 SHOT DATA",
+                "Backspin Rpm": "9985",
+                "Ball Direction Deg": "L R 5.7",
+                "Ball Speed Mph": "87.2",
+                "Carry Yd": "105",
+                "Club Speed Mph": "81.3",
+                "Face Deg": "7.5\u00b0",
+                "Launch Angle": "31.4\u00b0",
+                "Path Deg": "-1.7\u00b0",
+                "Sidespin Rpm": "D F 2209",
+                "Smash Factor": "1.07",
+                "Total Yd": "107 | 107"
+              },
+              "lit": [
+                {
+                  "letter": "L",
+                  "x": 913.5813948733078,
+                  "y": 1194.3953483616797,
+                  "rgb": [
+                    177.21857923497268,
+                    170.86885245901638,
+                    156.24043715846994
+                  ],
+                  "ratio": 0.9143880520643449,
+                  "margin": -0.21438805206434497,
+                  "lit": false,
+                  "field": "launch_direction",
+                  "decided": 1.0
+                },
+                {
+                  "letter": "R",
+                  "x": 1186.9069778365804,
+                  "y": 1201.883722147433,
+                  "rgb": [
+                    250.38888888888889,
+                    211.99305555555554,
+                    35.798611111111114
+                  ],
+                  "ratio": 0.1688669047073083,
+                  "margin": 0.5311330952926916,
+                  "lit": true,
+                  "field": "launch_direction",
+                  "decided": 1.0
+                },
+                {
+                  "letter": "D",
+                  "x": 1243.0697682293217,
+                  "y": 1422.7906981525634,
+                  "rgb": [
+                    248.78571428571428,
+                    211.01904761904763,
+                    26.785714285714285
+                  ],
+                  "ratio": 0.12693505438461886,
+                  "margin": 0.5730649456153811,
+                  "lit": true,
+                  "field": "sidespin",
+                  "decided": -1.0
+                },
+                {
+                  "letter": "F",
+                  "x": 1505.1627913728105,
+                  "y": 1422.7906982755126,
+                  "rgb": [
+                    144.8019801980198,
+                    143.63036303630363,
+                    119.67656765676567
+                  ],
+                  "ratio": 0.8332261029411764,
+                  "margin": -0.13322610294117643,
+                  "lit": false,
+                  "field": "sidespin",
+                  "decided": -1.0
+                }
+              ]
+            },
+            "2026-10-07-1": {
+              "flagged": false,
+              "cells": {
+                "carry_distance": {
+                  "cell": "read",
+                  "value": 279.0,
+                  "truth": 279.0
+                },
+                "total_distance": {
+                  "cell": "read",
+                  "value": 289.0,
+                  "truth": 289.0
+                },
+                "club_head_speed": {
+                  "cell": "read",
+                  "value": 111.3,
+                  "truth": 111.3
+                },
+                "ball_speed": {
+                  "cell": "read",
+                  "value": 158.6,
+                  "truth": 158.6
+                },
+                "club_path": {
+                  "cell": "read",
+                  "value": 1.6,
+                  "truth": 1.6
+                },
+                "club_face_angle": {
+                  "cell": "read",
+                  "value": 4.0,
+                  "truth": 4.0
+                },
+                "launch_direction": {
+                  "cell": "read",
+                  "value": 3.5,
+                  "truth": 3.5
+                },
+                "launch_angle": {
+                  "cell": "read",
+                  "value": 19.0,
+                  "truth": 19.0
+                },
+                "apex_height": {
+                  "cell": "read",
+                  "value": 47.4,
+                  "truth": 47.4
+                },
+                "smash_factor": {
+                  "cell": "read",
+                  "value": 1.43,
+                  "truth": 1.43
+                },
+                "backspin": {
+                  "cell": "read",
+                  "value": 2521.0,
+                  "truth": 2521.0
+                },
+                "sidespin": {
+                  "cell": "read",
+                  "value": 336.0,
+                  "truth": 336.0
+                }
+              },
+              "image": "spikes/vision-ocr/frames/decoded/2026-10-07-1.png",
+              "image_sha256": "43538b1b307dfd836d951b83ebc9dce113d5230a016dd69a9efc8a2984c05dca",
+              "notes": [],
+              "boxes": 43,
+              "boxes_sha256": "4b4da383d019e70e64ba85591591b95ace910887a8e69123799063a4d39756de",
+              "repeat": "same",
+              "failed_read": false,
+              "parse_confidence": 1.0,
+              "parser_version": 1,
+              "warnings": [],
+              "raw_fields": {
+                "Apex Ft": "142.2 SHOT DATA",
+                "Backspin Rpm": "2521",
+                "Ball Direction Deg": "R 3.5",
+                "Ball Speed Mph": "158.6",
+                "Carry Yd": "279",
+                "Club Speed Mph": "111.3",
+                "Face Deg": "4.0\u00b0",
+                "Launch Angle": "19\u00b0",
+                "Path Deg": "1.6\u00b0",
+                "Sidespin Rpm": "D 336",
+                "Smash Factor": "1.43",
+                "Total Yd": "289 | 289"
+              },
+              "lit": [
+                {
+                  "letter": "R",
+                  "x": 939.7906978443402,
+                  "y": 1325.4418601670147,
+                  "rgb": [
+                    249.33333333333334,
+                    216.57971014492753,
+                    78.6086956521739
+                  ],
+                  "ratio": 0.3629550321199143,
+                  "margin": 0.33704496788008564,
+                  "lit": true,
+                  "field": "launch_direction",
+                  "decided": 1.0
+                },
+                {
+                  "letter": "D",
+                  "x": 988.4651165797868,
+                  "y": 1520.139534997229,
+                  "rgb": [
+                    216.74273858921163,
+                    200.03734439834025,
+                    198.91701244813277
+                  ],
+                  "ratio": 0.9943993860067621,
+                  "margin": -0.2943993860067622,
+                  "lit": false,
+                  "field": "sidespin",
+                  "decided": 1.0
+                }
+              ]
+            }
+          }
+        },
+        "vision": {
+          "os": "26.2 (25C56)",
+          "revision": 3,
+          "summary": {
+            "read": 59,
+            "withheld": 13,
+            "wrong": 0,
+            "caught": 0,
+            "flagged": 1,
+            "per_field": {
+              "carry_distance": 5,
+              "total_distance": 5,
+              "club_head_speed": 5,
+              "ball_speed": 5,
+              "club_path": 5,
+              "club_face_angle": 5,
+              "launch_direction": 5,
+              "launch_angle": 5,
+              "apex_height": 5,
+              "smash_factor": 5,
+              "backspin": 5,
+              "sidespin": 4
+            }
+          },
+          "bars": {
+            "T1": true,
+            "T2": false,
+            "T3": false,
+            "T4": true
+          },
+          "pass": false,
+          "shots": {
+            "IMG_2889": {
+              "flagged": false,
+              "cells": {
+                "carry_distance": {
+                  "cell": "read",
+                  "value": 131.0,
+                  "truth": 131.0
+                },
+                "total_distance": {
+                  "cell": "read",
+                  "value": 134.0,
+                  "truth": 134.0
+                },
+                "club_head_speed": {
+                  "cell": "read",
+                  "value": 95.0,
+                  "truth": 95.0
+                },
+                "ball_speed": {
+                  "cell": "read",
+                  "value": 102.5,
+                  "truth": 102.5
+                },
+                "club_path": {
+                  "cell": "read",
+                  "value": -2.0,
+                  "truth": -2.0
+                },
+                "club_face_angle": {
+                  "cell": "read",
+                  "value": 13.2,
+                  "truth": 13.2
+                },
+                "launch_direction": {
+                  "cell": "read",
+                  "value": 10.1,
+                  "truth": 10.1
+                },
+                "launch_angle": {
+                  "cell": "read",
+                  "value": 24.5,
+                  "truth": 24.5
+                },
+                "apex_height": {
+                  "cell": "read",
+                  "value": 28.400000000000002,
+                  "truth": 28.400000000000002
+                },
+                "smash_factor": {
+                  "cell": "read",
+                  "value": 1.08,
+                  "truth": 1.08
+                },
+                "backspin": {
+                  "cell": "read",
+                  "value": 9899.0,
+                  "truth": 9899.0
+                },
+                "sidespin": {
+                  "cell": "read",
+                  "value": -4199.0,
+                  "truth": -4199.0
+                }
+              },
+              "image": "spikes/vision-ocr/frames/vision/IMG_2889.png",
+              "image_sha256": "50f348c0a97aae9c1a64c67a1a7f44d907e800b63f4fc2004e2f77113c07a004",
+              "notes": [
+                "screen outline not found - parsing the photo uncropped"
+              ],
+              "boxes": 42,
+              "boxes_sha256": "6432b472e05f792c65b2ff7a64720a44e3bfe9b46af3677e5b6ab4f484399a5e",
+              "repeat": "same",
+              "failed_read": false,
+              "parse_confidence": 1.0,
+              "parser_version": 1,
+              "warnings": [
+                "screen outline not found - parsing the photo uncropped"
+              ],
+              "raw_fields": {
+                "Apex Ft": "85.2",
+                "Backspin Rpm": "9899",
+                "Ball Direction Deg": "L 10.1",
+                "Ball Speed Mph": "102.5",
+                "Carry Yd": "131",
+                "Club Speed Mph": "95",
+                "Face Deg": "13.2\u00b0",
+                "Launch Angle": "24.5\u00b0",
+                "Path Deg": "-2.0\u00b0",
+                "Sidespin Rpm": "D F 4199",
+                "Smash Factor": "1.08",
+                "Total Yd": "134 | 134"
+              },
+              "lit": [
+                {
+                  "letter": "L",
+                  "x": 939.79069786281,
+                  "y": 1104.5348844335078,
+                  "rgb": [
+                    167.11203319502076,
+                    172.72614107883817,
+                    163.07883817427387
+                  ],
+                  "ratio": 0.9758653225405969,
+                  "margin": -0.2758653225405969,
+                  "lit": false,
+                  "field": "launch_direction",
+                  "decided": 1.0
+                },
+                {
+                  "letter": "D",
+                  "x": 1284.2558144004315,
+                  "y": 1359.1395357050828,
+                  "rgb": [
+                    248.03825136612022,
+                    217.5136612021858,
+                    41.15300546448088
+                  ],
+                  "ratio": 0.18919733701796257,
+                  "margin": 0.5108026629820374,
+                  "lit": true,
+                  "field": "sidespin",
+                  "decided": -1.0
+                },
+                {
+                  "letter": "F",
+                  "x": 1561.3255818734938,
+                  "y": 1366.6279071651356,
+                  "rgb": [
+                    165.4142857142857,
+                    161.10476190476192,
+                    151.88571428571427
+                  ],
+                  "ratio": 0.942776069992906,
+                  "margin": -0.24277606999290602,
+                  "lit": false,
+                  "field": "sidespin",
+                  "decided": -1.0
+                }
+              ]
+            },
+            "IMG_2891": {
+              "flagged": false,
+              "cells": {
+                "carry_distance": {
+                  "cell": "read",
+                  "value": 162.0,
+                  "truth": 162.0
+                },
+                "total_distance": {
+                  "cell": "read",
+                  "value": 203.0,
+                  "truth": 203.0
+                },
+                "club_head_speed": {
+                  "cell": "read",
+                  "value": 86.9,
+                  "truth": 86.9
+                },
+                "ball_speed": {
+                  "cell": "read",
+                  "value": 112.8,
+                  "truth": 112.8
+                },
+                "club_path": {
+                  "cell": "read",
+                  "value": -1.7,
+                  "truth": -1.7
+                },
+                "club_face_angle": {
+                  "cell": "read",
+                  "value": -0.6,
+                  "truth": -0.6
+                },
+                "launch_direction": {
+                  "cell": "read",
+                  "value": -0.8,
+                  "truth": -0.8
+                },
+                "launch_angle": {
+                  "cell": "read",
+                  "value": 12.1,
+                  "truth": 12.1
+                },
+                "apex_height": {
+                  "cell": "read",
+                  "value": 13.299999999999999,
+                  "truth": 13.299999999999999
+                },
+                "smash_factor": {
+                  "cell": "read",
+                  "value": 1.3,
+                  "truth": 1.3
+                },
+                "backspin": {
+                  "cell": "read",
+                  "value": 4236.0,
+                  "truth": 4236.0
+                },
+                "sidespin": {
+                  "cell": "read",
+                  "value": -464.0,
+                  "truth": -464.0
+                }
+              },
+              "image": "spikes/vision-ocr/frames/vision/IMG_2891.png",
+              "image_sha256": "a88cc2a56b704de3c5ca7d5882d3042460418798eab665eba01428197a53b2d3",
+              "notes": [
+                "screen outline not found - parsing the photo uncropped"
+              ],
+              "boxes": 41,
+              "boxes_sha256": "1d3846dd59d88864cf97e5eef042999f3f6aa9a56e703013ed9d0b9095fd35ee",
+              "repeat": "same",
+              "failed_read": false,
+              "parse_confidence": 0.994,
+              "parser_version": 1,
+              "warnings": [
+                "screen outline not found - parsing the photo uncropped"
+              ],
+              "raw_fields": {
+                "Apex Ft": "39.9 SHOT DATA",
+                "Backspin Rpm": "4236",
+                "Ball Direction Deg": "R 0.8",
+                "Ball Speed Mph": "AII 112.8",
+                "Carry Yd": "162",
+                "Club Speed Mph": "86.9",
+                "Face Deg": "-0.6\u00b0",
+                "Launch Angle": "12.1\u00b0",
+                "Path Deg": "-1.7\u00b0",
+                "Sidespin Rpm": "F 464",
+                "Smash Factor": "1.30",
+                "Total Yd": "203 | 203"
+              },
+              "lit": [
+                {
+                  "letter": "R",
+                  "x": 977.2325582530427,
+                  "y": 1516.395349736575,
+                  "rgb": [
+                    201.52857142857144,
+                    210.55714285714285,
+                    195.1095238095238
+                  ],
+                  "ratio": 0.9681482006568842,
+                  "margin": -0.2681482006568843,
+                  "lit": false,
+                  "field": "launch_direction",
+                  "decided": -1.0
+                },
+                {
+                  "letter": "F",
+                  "x": 1280.5116277863028,
+                  "y": 1711.0930237241773,
+                  "rgb": [
+                    204.2086956521739,
+                    203.62608695652173,
+                    193.56521739130434
+                  ],
+                  "ratio": 0.9505914506555067,
+                  "margin": -0.2505914506555067,
+                  "lit": false,
+                  "field": "sidespin",
+                  "decided": -1.0
+                }
+              ]
+            },
+            "IMG_2892": {
+              "flagged": false,
+              "cells": {
+                "carry_distance": {
+                  "cell": "read",
+                  "value": 80.0,
+                  "truth": 80.0
+                },
+                "total_distance": {
+                  "cell": "read",
+                  "value": 82.0,
+                  "truth": 82.0
+                },
+                "club_head_speed": {
+                  "cell": "read",
+                  "value": 91.6,
+                  "truth": 91.6
+                },
+                "ball_speed": {
+                  "cell": "read",
+                  "value": 77.4,
+                  "truth": 77.4
+                },
+                "club_path": {
+                  "cell": "read",
+                  "value": -4.5,
+                  "truth": -4.5
+                },
+                "club_face_angle": {
+                  "cell": "read",
+                  "value": 6.9,
+                  "truth": 6.9
+                },
+                "launch_direction": {
+                  "cell": "read",
+                  "value": 4.6,
+                  "truth": 4.6
+                },
+                "launch_angle": {
+                  "cell": "read",
+                  "value": 34.6,
+                  "truth": 34.6
+                },
+                "apex_height": {
+                  "cell": "read",
+                  "value": 23.8,
+                  "truth": 23.8
+                },
+                "smash_factor": {
+                  "cell": "read",
+                  "value": 0.85,
+                  "truth": 0.85
+                },
+                "backspin": {
+                  "cell": "read",
+                  "value": 8855.0,
+                  "truth": 8855.0
+                },
+                "sidespin": {
+                  "cell": "read",
+                  "value": -2032.0,
+                  "truth": -2032.0
+                }
+              },
+              "image": "spikes/vision-ocr/frames/vision/IMG_2892.png",
+              "image_sha256": "0a8c00c7a12cc844f6af55bac365589e7de347a6b57cbeab4045597de8593172",
+              "notes": [
+                "screen outline not found - parsing the photo uncropped"
+              ],
+              "boxes": 43,
+              "boxes_sha256": "55b0ba6b6d417d953f93eb8eae10fda9668786680ea6e96423a8ac3f89b3b312",
+              "repeat": "same",
+              "failed_read": false,
+              "parse_confidence": 1.0,
+              "parser_version": 1,
+              "warnings": [
+                "screen outline not found - parsing the photo uncropped"
+              ],
+              "raw_fields": {
+                "Apex Ft": "71.4",
+                "Backspin Rpm": "8855",
+                "Ball Direction Deg": "R 4.6",
+                "Ball Speed Mph": "77.4",
+                "Carry Yd": "80",
+                "Club Speed Mph": "91.6",
+                "Face Deg": "6.9\u00b0",
+                "Launch Angle": "34.6\u00b0",
+                "Path Deg": "-4.5\u00b0",
+                "Sidespin Rpm": "D F 2032",
+                "Smash Factor": "0.85",
+                "Total Yd": "82 | 82"
+              },
+              "lit": [
+                {
+                  "letter": "R",
+                  "x": 1025.9069775967496,
+                  "y": 1243.0697682293217,
+                  "rgb": [
+                    251.05990783410138,
+                    227.3179723502304,
+                    21.829493087557605
+                  ],
+                  "ratio": 0.09603065196237431,
+                  "margin": 0.6039693480376256,
+                  "lit": true,
+                  "field": "launch_direction",
+                  "decided": 1.0
+                },
+                {
+                  "letter": "D",
+                  "x": 1085.813953789089,
+                  "y": 1452.7441861600196,
+                  "rgb": [
+                    246.78838174273858,
+                    221.6265560165975,
+                    38.12033195020747
+                  ],
+                  "ratio": 0.17200254624428968,
+                  "margin": 0.5279974537557103,
+                  "lit": true,
+                  "field": "sidespin",
+                  "decided": -1.0
+                },
+                {
+                  "letter": "F",
+                  "x": 1340.4186049049076,
+                  "y": 1456.488373195199,
+                  "rgb": [
+                    199.95555555555555,
+                    210.17777777777778,
+                    180.76296296296297
+                  ],
+                  "ratio": 0.9040157071941913,
+                  "margin": -0.20401570719419138,
+                  "lit": false,
+                  "field": "sidespin",
+                  "decided": -1.0
+                }
+              ]
+            },
+            "IMG_2893": {
+              "flagged": false,
+              "cells": {
+                "carry_distance": {
+                  "cell": "read",
+                  "value": 184.0,
+                  "truth": 184.0
+                },
+                "total_distance": {
+                  "cell": "read",
+                  "value": 224.0,
+                  "truth": 224.0
+                },
+                "club_head_speed": {
+                  "cell": "read",
+                  "value": 107.6,
+                  "truth": 107.6
+                },
+                "ball_speed": {
+                  "cell": "read",
+                  "value": 134.0,
+                  "truth": 134.0
+                },
+                "club_path": {
+                  "cell": "read",
+                  "value": -1.7,
+                  "truth": -1.7
+                },
+                "club_face_angle": {
+                  "cell": "read",
+                  "value": 3.2,
+                  "truth": 3.2
+                },
+                "launch_direction": {
+                  "cell": "read",
+                  "value": 2.2,
+                  "truth": 2.2
+                },
+                "launch_angle": {
+                  "cell": "read",
+                  "value": 5.5,
+                  "truth": 5.5
+                },
+                "apex_height": {
+                  "cell": "read",
+                  "value": 5.166666666666667,
+                  "truth": 5.166666666666667
+                },
+                "smash_factor": {
+                  "cell": "read",
+                  "value": 1.25,
+                  "truth": 1.25
+                },
+                "backspin": {
+                  "cell": "read",
+                  "value": 2284.0,
+                  "truth": 2284.0
+                },
+                "sidespin": {
+                  "cell": "withheld",
+                  "value": null,
+                  "truth": -638.0
+                }
+              },
+              "image": "spikes/vision-ocr/frames/vision/IMG_2893.png",
+              "image_sha256": "8fb57060924b5793bafdc4afe695cf13d9a096a8281d5f4ba88639e4b92bd0fd",
+              "notes": [
+                "screen outline not found - parsing the photo uncropped"
+              ],
+              "boxes": 39,
+              "boxes_sha256": "39965c1add8cb40b8ad6340a397cdf237a5d77201f4be3388c4c5484b05da7eb",
+              "repeat": "same",
+              "failed_read": false,
+              "parse_confidence": 1.0,
+              "parser_version": 1,
+              "warnings": [
+                "screen outline not found - parsing the photo uncropped",
+                "Sidespin Rpm: neither D nor F could be read as lit - sign unknown, not stored"
+              ],
+              "raw_fields": {
+                "Apex Ft": "15.5 SHOT DATA",
+                "Backspin Rpm": "2284",
+                "Ball Direction Deg": "R 2.2",
+                "Ball Speed Mph": "134 14",
+                "Carry Yd": "184",
+                "Club Speed Mph": "107.6",
+                "Face Deg": "3.2\u00b0",
+                "Launch Angle": "5.5\u00b0",
+                "Path Deg": "-1.7\u00b0",
+                "Sidespin Rpm": "638",
+                "Smash Factor": "1.25",
+                "Total Yd": "224 | 224"
+              },
+              "lit": [
+                {
+                  "letter": "R",
+                  "x": 1175.6744190359937,
+                  "y": 1291.7441861600194,
+                  "rgb": [
+                    248.92857142857142,
+                    212.21428571428572,
+                    38.476190476190474
+                  ],
+                  "ratio": 0.18130820150342195,
+                  "margin": 0.518691798496578,
+                  "lit": true,
+                  "field": "launch_direction",
+                  "decided": 1.0
+                }
+              ]
+            },
+            "IMG_2894": {
+              "flagged": true,
+              "cells": {
+                "carry_distance": {
+                  "cell": "withheld",
+                  "value": null,
+                  "truth": 105.0
+                },
+                "total_distance": {
+                  "cell": "withheld",
+                  "value": null,
+                  "truth": 107.0
+                },
+                "club_head_speed": {
+                  "cell": "withheld",
+                  "value": null,
+                  "truth": 81.3
+                },
+                "ball_speed": {
+                  "cell": "withheld",
+                  "value": null,
+                  "truth": 87.2
+                },
+                "club_path": {
+                  "cell": "withheld",
+                  "value": null,
+                  "truth": -1.7
+                },
+                "club_face_angle": {
+                  "cell": "withheld",
+                  "value": null,
+                  "truth": 7.5
+                },
+                "launch_direction": {
+                  "cell": "withheld",
+                  "value": null,
+                  "truth": 5.7
+                },
+                "launch_angle": {
+                  "cell": "withheld",
+                  "value": null,
+                  "truth": 31.4
+                },
+                "apex_height": {
+                  "cell": "withheld",
+                  "value": null,
+                  "truth": 26.866666666666664
+                },
+                "smash_factor": {
+                  "cell": "withheld",
+                  "value": null,
+                  "truth": 1.07
+                },
+                "backspin": {
+                  "cell": "withheld",
+                  "value": null,
+                  "truth": 9985.0
+                },
+                "sidespin": {
+                  "cell": "withheld",
+                  "value": null,
+                  "truth": -2209.0
+                }
+              },
+              "image": "spikes/vision-ocr/frames/vision/IMG_2894.png",
+              "image_sha256": "d4d2f3e6f1dbe78d892393827a9d49c2adf1bcc5ca9e11f70b4c4dafcdf53fbd",
+              "notes": [],
+              "boxes": 0,
+              "boxes_sha256": "d2a1f514e54a8f07f04d76f7ab489a0d2d061aa6026538d71db7a94135105576",
+              "repeat": "same",
+              "failed_read": true,
+              "parse_confidence": null,
+              "parser_version": null,
+              "warnings": [],
+              "raw_fields": {},
+              "lit": []
+            },
+            "2026-10-07-1": {
+              "flagged": false,
+              "cells": {
+                "carry_distance": {
+                  "cell": "read",
+                  "value": 279.0,
+                  "truth": 279.0
+                },
+                "total_distance": {
+                  "cell": "read",
+                  "value": 289.0,
+                  "truth": 289.0
+                },
+                "club_head_speed": {
+                  "cell": "read",
+                  "value": 111.3,
+                  "truth": 111.3
+                },
+                "ball_speed": {
+                  "cell": "read",
+                  "value": 158.6,
+                  "truth": 158.6
+                },
+                "club_path": {
+                  "cell": "read",
+                  "value": 1.6,
+                  "truth": 1.6
+                },
+                "club_face_angle": {
+                  "cell": "read",
+                  "value": 4.0,
+                  "truth": 4.0
+                },
+                "launch_direction": {
+                  "cell": "read",
+                  "value": 3.5,
+                  "truth": 3.5
+                },
+                "launch_angle": {
+                  "cell": "read",
+                  "value": 19.0,
+                  "truth": 19.0
+                },
+                "apex_height": {
+                  "cell": "read",
+                  "value": 47.4,
+                  "truth": 47.4
+                },
+                "smash_factor": {
+                  "cell": "read",
+                  "value": 1.43,
+                  "truth": 1.43
+                },
+                "backspin": {
+                  "cell": "read",
+                  "value": 2521.0,
+                  "truth": 2521.0
+                },
+                "sidespin": {
+                  "cell": "read",
+                  "value": 336.0,
+                  "truth": 336.0
+                }
+              },
+              "image": "spikes/vision-ocr/frames/vision/2026-10-07-1.png",
+              "image_sha256": "43538b1b307dfd836d951b83ebc9dce113d5230a016dd69a9efc8a2984c05dca",
+              "notes": [
+                "screen outline not found - parsing the photo uncropped"
+              ],
+              "boxes": 43,
+              "boxes_sha256": "9658bd6a7aa4c45380256be7b35efb56d90df37b6313ff8c74a761cb03fd3073",
+              "repeat": "same",
+              "failed_read": false,
+              "parse_confidence": 1.0,
+              "parser_version": 1,
+              "warnings": [
+                "screen outline not found - parsing the photo uncropped"
+              ],
+              "raw_fields": {
+                "Apex Ft": "142.2 SHOT DATA",
+                "Backspin Rpm": "2521",
+                "Ball Direction Deg": "R 3.5",
+                "Ball Speed Mph": "158.6",
+                "Carry Yd": "279",
+                "Club Speed Mph": "111.3",
+                "Face Deg": "4.0\u00b0",
+                "Launch Angle": "19\u00b0",
+                "Path Deg": "1.6\u00b0",
+                "Sidespin Rpm": "D 336",
+                "Smash Factor": "1.43",
+                "Total Yd": "289 | 289"
+              },
+              "lit": [
+                {
+                  "letter": "R",
+                  "x": 939.7906978443402,
+                  "y": 1325.4418601670147,
+                  "rgb": [
+                    249.33333333333334,
+                    216.57971014492753,
+                    78.6086956521739
+                  ],
+                  "ratio": 0.3629550321199143,
+                  "margin": 0.33704496788008564,
+                  "lit": true,
+                  "field": "launch_direction",
+                  "decided": 1.0
+                },
+                {
+                  "letter": "D",
+                  "x": 988.4651165797868,
+                  "y": 1520.139534997229,
+                  "rgb": [
+                    216.74273858921163,
+                    200.03734439834025,
+                    198.91701244813277
+                  ],
+                  "ratio": 0.9943993860067621,
+                  "margin": -0.2943993860067622,
+                  "lit": false,
+                  "field": "sidespin",
+                  "decided": 1.0
+                }
+              ]
+            }
+          }
+        },
+        "lab": {
+          "os": "26.2 (25C56)",
+          "revision": 3,
+          "summary": {
+            "read": 68,
+            "withheld": 3,
+            "wrong": 0,
+            "caught": 1,
+            "flagged": 1,
+            "per_field": {
+              "carry_distance": 6,
+              "total_distance": 6,
+              "club_head_speed": 6,
+              "ball_speed": 6,
+              "club_path": 6,
+              "club_face_angle": 6,
+              "launch_direction": 5,
+              "launch_angle": 6,
+              "apex_height": 5,
+              "smash_factor": 5,
+              "backspin": 6,
+              "sidespin": 5
+            }
+          },
+          "bars": {
+            "T1": true,
+            "T2": true,
+            "T3": true,
+            "T4": true
+          },
+          "pass": true,
+          "shots": {
+            "IMG_2889": {
+              "flagged": false,
+              "cells": {
+                "carry_distance": {
+                  "cell": "read",
+                  "value": 131.0,
+                  "truth": 131.0
+                },
+                "total_distance": {
+                  "cell": "read",
+                  "value": 134.0,
+                  "truth": 134.0
+                },
+                "club_head_speed": {
+                  "cell": "read",
+                  "value": 95.0,
+                  "truth": 95.0
+                },
+                "ball_speed": {
+                  "cell": "read",
+                  "value": 102.5,
+                  "truth": 102.5
+                },
+                "club_path": {
+                  "cell": "read",
+                  "value": -2.0,
+                  "truth": -2.0
+                },
+                "club_face_angle": {
+                  "cell": "read",
+                  "value": 13.2,
+                  "truth": 13.2
+                },
+                "launch_direction": {
+                  "cell": "read",
+                  "value": 10.1,
+                  "truth": 10.1
+                },
+                "launch_angle": {
+                  "cell": "read",
+                  "value": 24.5,
+                  "truth": 24.5
+                },
+                "apex_height": {
+                  "cell": "read",
+                  "value": 28.400000000000002,
+                  "truth": 28.400000000000002
+                },
+                "smash_factor": {
+                  "cell": "read",
+                  "value": 1.08,
+                  "truth": 1.08
+                },
+                "backspin": {
+                  "cell": "read",
+                  "value": 9899.0,
+                  "truth": 9899.0
+                },
+                "sidespin": {
+                  "cell": "read",
+                  "value": -4199.0,
+                  "truth": -4199.0
+                }
+              },
+              "image": "spikes/vision-ocr/frames/lab/IMG_2889.png",
+              "image_sha256": "a0780b84bfac5bcaf77b736116584fb8e2bada76348283794946ad7d76acbee4",
+              "notes": [],
+              "boxes": 42,
+              "boxes_sha256": "23a88bee948d01b9236349d336163bac63a61526acfe8e90def30767fcc7b898",
+              "repeat": "same",
+              "failed_read": false,
+              "parse_confidence": 1.0,
+              "parser_version": 1,
+              "warnings": [],
+              "raw_fields": {
+                "Apex Ft": "85.2",
+                "Backspin Rpm": "9899",
+                "Ball Direction Deg": "L R 10.1",
+                "Ball Speed Mph": "102.5",
+                "Carry Yd": "131",
+                "Club Speed Mph": "95",
+                "Face Deg": "13.2\u00b0",
+                "Launch Angle": "24.5\u00b0",
+                "Path Deg": "-2.0\u00b0",
+                "Sidespin Rpm": "D F 4199",
+                "Smash Factor": "1.08",
+                "Total Yd": "134 | 134"
+              },
+              "lit": [
+                {
+                  "letter": "L",
+                  "x": 581.3953490536073,
+                  "y": 469.12846301376084,
+                  "rgb": [
+                    183.67032967032966,
+                    188.0989010989011,
+                    179.30769230769232
+                  ],
+                  "ratio": 0.9762474572214911,
+                  "margin": -0.27624745722149113,
+                  "lit": false,
+                  "field": "launch_direction",
+                  "decided": 1.0
+                },
+                {
+                  "letter": "R",
+                  "x": 755.8139536815144,
+                  "y": 469.12846393646953,
+                  "rgb": [
+                    243.41052631578947,
+                    223.26315789473685,
+                    88.58947368421053
+                  ],
+                  "ratio": 0.3967939651107968,
+                  "margin": 0.30320603488920317,
+                  "lit": true,
+                  "field": "launch_direction",
+                  "decided": 1.0
+                },
+                {
+                  "letter": "D",
+                  "x": 797.6744187977934,
+                  "y": 615.4408064440796,
+                  "rgb": [
+                    230.9909090909091,
+                    206.1090909090909,
+                    72.68181818181819
+                  ],
+                  "ratio": 0.35263761467889915,
+                  "margin": 0.3473623853211008,
+                  "lit": true,
+                  "field": "sidespin",
+                  "decided": -1.0
+                },
+                {
+                  "letter": "F",
+                  "x": 967.4418603016816,
+                  "y": 617.7632237190504,
+                  "rgb": [
+                    184.3294117647059,
+                    180.6235294117647,
+                    171.61176470588236
+                  ],
+                  "ratio": 0.9501074708526022,
+                  "margin": -0.2501074708526022,
+                  "lit": false,
+                  "field": "sidespin",
+                  "decided": -1.0
+                }
+              ]
+            },
+            "IMG_2891": {
+              "flagged": false,
+              "cells": {
+                "carry_distance": {
+                  "cell": "read",
+                  "value": 162.0,
+                  "truth": 162.0
+                },
+                "total_distance": {
+                  "cell": "read",
+                  "value": 203.0,
+                  "truth": 203.0
+                },
+                "club_head_speed": {
+                  "cell": "read",
+                  "value": 86.9,
+                  "truth": 86.9
+                },
+                "ball_speed": {
+                  "cell": "read",
+                  "value": 112.8,
+                  "truth": 112.8
+                },
+                "club_path": {
+                  "cell": "read",
+                  "value": -1.7,
+                  "truth": -1.7
+                },
+                "club_face_angle": {
+                  "cell": "read",
+                  "value": -0.6,
+                  "truth": -0.6
+                },
+                "launch_direction": {
+                  "cell": "read",
+                  "value": -0.8,
+                  "truth": -0.8
+                },
+                "launch_angle": {
+                  "cell": "read",
+                  "value": 12.1,
+                  "truth": 12.1
+                },
+                "apex_height": {
+                  "cell": "read",
+                  "value": 13.299999999999999,
+                  "truth": 13.299999999999999
+                },
+                "smash_factor": {
+                  "cell": "read",
+                  "value": 1.3,
+                  "truth": 1.3
+                },
+                "backspin": {
+                  "cell": "read",
+                  "value": 4236.0,
+                  "truth": 4236.0
+                },
+                "sidespin": {
+                  "cell": "read",
+                  "value": -464.0,
+                  "truth": -464.0
+                }
+              },
+              "image": "spikes/vision-ocr/frames/lab/IMG_2891.png",
+              "image_sha256": "5945f1c8410327f2b6e2ce4ec005f9ca938eddbbe8ddc803717da361f45c0434",
+              "notes": [],
+              "boxes": 39,
+              "boxes_sha256": "c60772adf18091970df7627a97b8e2df369b35fd9c3d37d2316a8b5354e00726",
+              "repeat": "same",
+              "failed_read": false,
+              "parse_confidence": 1.0,
+              "parser_version": 1,
+              "warnings": [],
+              "raw_fields": {
+                "Apex Ft": "39.9",
+                "Backspin Rpm": "4236",
+                "Ball Direction Deg": "R 0.8",
+                "Ball Speed Mph": "112.8",
+                "Carry Yd": "162",
+                "Club Speed Mph": "86.9",
+                "Face Deg": "-0.6\u00b0",
+                "Launch Angle": "12.1\u00b0",
+                "Path Deg": "-1.7\u00b0",
+                "Sidespin Rpm": "D 464",
+                "Smash Factor": "1.30",
+                "Total Yd": "203 | 203"
+              },
+              "lit": [
+                {
+                  "letter": "R",
+                  "x": 806.976744173564,
+                  "y": 516.1344536332099,
+                  "rgb": [
+                    202.32231404958677,
+                    210.02479338842974,
+                    194.2479338842975
+                  ],
+                  "ratio": 0.960091499530248,
+                  "margin": -0.260091499530248,
+                  "lit": false,
+                  "field": "launch_direction",
+                  "decided": -1.0
+                },
+                {
+                  "letter": "D",
+                  "x": 853.4883729702617,
+                  "y": 681.2044820222154,
+                  "rgb": [
+                    248.51239669421489,
+                    234.099173553719,
+                    78.68595041322314
+                  ],
+                  "ratio": 0.33612229047518183,
+                  "margin": 0.3638777095248181,
+                  "lit": true,
+                  "field": "sidespin",
+                  "decided": -1.0
+                }
+              ]
+            },
+            "IMG_2892": {
+              "flagged": false,
+              "cells": {
+                "carry_distance": {
+                  "cell": "read",
+                  "value": 80.0,
+                  "truth": 80.0
+                },
+                "total_distance": {
+                  "cell": "read",
+                  "value": 82.0,
+                  "truth": 82.0
+                },
+                "club_head_speed": {
+                  "cell": "read",
+                  "value": 91.6,
+                  "truth": 91.6
+                },
+                "ball_speed": {
+                  "cell": "read",
+                  "value": 77.4,
+                  "truth": 77.4
+                },
+                "club_path": {
+                  "cell": "read",
+                  "value": -4.5,
+                  "truth": -4.5
+                },
+                "club_face_angle": {
+                  "cell": "read",
+                  "value": 6.9,
+                  "truth": 6.9
+                },
+                "launch_direction": {
+                  "cell": "read",
+                  "value": 4.6,
+                  "truth": 4.6
+                },
+                "launch_angle": {
+                  "cell": "read",
+                  "value": 34.6,
+                  "truth": 34.6
+                },
+                "apex_height": {
+                  "cell": "read",
+                  "value": 23.8,
+                  "truth": 23.8
+                },
+                "smash_factor": {
+                  "cell": "read",
+                  "value": 0.85,
+                  "truth": 0.85
+                },
+                "backspin": {
+                  "cell": "read",
+                  "value": 8855.0,
+                  "truth": 8855.0
+                },
+                "sidespin": {
+                  "cell": "withheld",
+                  "value": null,
+                  "truth": -2032.0
+                }
+              },
+              "image": "spikes/vision-ocr/frames/lab/IMG_2892.png",
+              "image_sha256": "b4ac6ee9ef89655fcbc029d0c70bef2a2734acf0c9b2466eabf30d00f3e0a301",
+              "notes": [],
+              "boxes": 39,
+              "boxes_sha256": "5edeacb81f0a6c79da165c0191e91accd29d8dc30d9ccdffd57bfece5cbcc365",
+              "repeat": "same",
+              "failed_read": false,
+              "parse_confidence": 1.0,
+              "parser_version": 1,
+              "warnings": [
+                "Sidespin Rpm: neither D nor F could be read as lit - sign unknown, not stored"
+              ],
+              "raw_fields": {
+                "Apex Ft": "71.4",
+                "Backspin Rpm": "8855",
+                "Ball Direction Deg": "R 4.6",
+                "Ball Speed Mph": "77.4",
+                "Carry Yd": "80",
+                "Club Speed Mph": "91.6",
+                "Face Deg": "6.9\u00b0",
+                "Launch Angle": "34.6*",
+                "Path Deg": "-4.5%",
+                "Sidespin Rpm": "2032",
+                "Smash Factor": "0.85",
+                "Total Yd": "82 | 82"
+              },
+              "lit": [
+                {
+                  "letter": "R",
+                  "x": 841.8604656653542,
+                  "y": 567.2999998256249,
+                  "rgb": [
+                    213.2051282051282,
+                    198.97150997150996,
+                    72.71509971509971
+                  ],
+                  "ratio": 0.36545483182748895,
+                  "margin": 0.334545168172511,
+                  "lit": true,
+                  "field": "launch_direction",
+                  "decided": 1.0
+                }
+              ]
+            },
+            "IMG_2893": {
+              "flagged": false,
+              "cells": {
+                "carry_distance": {
+                  "cell": "read",
+                  "value": 184.0,
+                  "truth": 184.0
+                },
+                "total_distance": {
+                  "cell": "read",
+                  "value": 224.0,
+                  "truth": 224.0
+                },
+                "club_head_speed": {
+                  "cell": "read",
+                  "value": 107.6,
+                  "truth": 107.6
+                },
+                "ball_speed": {
+                  "cell": "read",
+                  "value": 134.0,
+                  "truth": 134.0
+                },
+                "club_path": {
+                  "cell": "read",
+                  "value": -1.7,
+                  "truth": -1.7
+                },
+                "club_face_angle": {
+                  "cell": "read",
+                  "value": 3.2,
+                  "truth": 3.2
+                },
+                "launch_direction": {
+                  "cell": "withheld",
+                  "value": null,
+                  "truth": 2.2
+                },
+                "launch_angle": {
+                  "cell": "read",
+                  "value": 5.5,
+                  "truth": 5.5
+                },
+                "apex_height": {
+                  "cell": "read",
+                  "value": 5.166666666666667,
+                  "truth": 5.166666666666667
+                },
+                "smash_factor": {
+                  "cell": "read",
+                  "value": 1.25,
+                  "truth": 1.25
+                },
+                "backspin": {
+                  "cell": "read",
+                  "value": 2284.0,
+                  "truth": 2284.0
+                },
+                "sidespin": {
+                  "cell": "read",
+                  "value": -638.0,
+                  "truth": -638.0
+                }
+              },
+              "image": "spikes/vision-ocr/frames/lab/IMG_2893.png",
+              "image_sha256": "432541c5ed7f3bf90de883453c85ddd589db80e71b3849c5482e1fbdc7a9ae08",
+              "notes": [],
+              "boxes": 37,
+              "boxes_sha256": "942b96bd769082f554274e10043d95dd7e6dd0e9cdcfb868416fbd2fd3e63917",
+              "repeat": "same",
+              "failed_read": false,
+              "parse_confidence": 1.0,
+              "parser_version": 1,
+              "warnings": [
+                "Ball Direction Deg: neither L nor R could be read as lit - sign unknown, not stored"
+              ],
+              "raw_fields": {
+                "Apex Ft": "15.5 SHOT DATA",
+                "Backspin Rpm": "2284",
+                "Ball Direction Deg": "2.2",
+                "Ball Speed Mph": "134",
+                "Carry Yd": "184",
+                "Club Speed Mph": "107.6",
+                "Face Deg": "3.2\u00b0",
+                "Launch Angle": "5.5\u00b0",
+                "Path Deg": "-1.7\u00b0",
+                "Sidespin Rpm": "F 638",
+                "Smash Factor": "1.25",
+                "Total Yd": "224 | 224"
+              },
+              "lit": [
+                {
+                  "letter": "F",
+                  "x": 906.9767438479827,
+                  "y": 717.8440113101999,
+                  "rgb": [
+                    174.11570247933884,
+                    172.2479338842975,
+                    153.89256198347107
+                  ],
+                  "ratio": 0.8934363304865176,
+                  "margin": -0.19343633048651765,
+                  "lit": false,
+                  "field": "sidespin",
+                  "decided": -1.0
+                }
+              ]
+            },
+            "IMG_2894": {
+              "flagged": false,
+              "cells": {
+                "carry_distance": {
+                  "cell": "read",
+                  "value": 105.0,
+                  "truth": 105.0
+                },
+                "total_distance": {
+                  "cell": "read",
+                  "value": 107.0,
+                  "truth": 107.0
+                },
+                "club_head_speed": {
+                  "cell": "read",
+                  "value": 81.3,
+                  "truth": 81.3
+                },
+                "ball_speed": {
+                  "cell": "read",
+                  "value": 87.2,
+                  "truth": 87.2
+                },
+                "club_path": {
+                  "cell": "read",
+                  "value": -1.7,
+                  "truth": -1.7
+                },
+                "club_face_angle": {
+                  "cell": "read",
+                  "value": 7.5,
+                  "truth": 7.5
+                },
+                "launch_direction": {
+                  "cell": "read",
+                  "value": 5.7,
+                  "truth": 5.7
+                },
+                "launch_angle": {
+                  "cell": "read",
+                  "value": 31.4,
+                  "truth": 31.4
+                },
+                "apex_height": {
+                  "cell": "read",
+                  "value": 26.866666666666664,
+                  "truth": 26.866666666666664
+                },
+                "smash_factor": {
+                  "cell": "read",
+                  "value": 1.07,
+                  "truth": 1.07
+                },
+                "backspin": {
+                  "cell": "read",
+                  "value": 9985.0,
+                  "truth": 9985.0
+                },
+                "sidespin": {
+                  "cell": "read",
+                  "value": -2209.0,
+                  "truth": -2209.0
+                }
+              },
+              "image": "spikes/vision-ocr/frames/lab/IMG_2894.png",
+              "image_sha256": "1ccfb59f7e8d3253923deee311e1315519a9151dd13394b35737f047c474d7ef",
+              "notes": [],
+              "boxes": 39,
+              "boxes_sha256": "e8a46342cf330bd21951a1f3f91408941a89f2a2f980b54e026db384b608c3e4",
+              "repeat": "same",
+              "failed_read": false,
+              "parse_confidence": 1.0,
+              "parser_version": 1,
+              "warnings": [],
+              "raw_fields": {
+                "Apex Ft": "80.6",
+                "Backspin Rpm": "9985",
+                "Ball Direction Deg": "R 5.7",
+                "Ball Speed Mph": "87.2",
+                "Carry Yd": "105",
+                "Club Speed Mph": "81.3",
+                "Face Deg": "7.5\u00b0",
+                "Launch Angle": "31.4\u00b0",
+                "Path Deg": "-1.7\u00b0",
+                "Sidespin Rpm": "F 2209",
+                "Smash Factor": "1.07",
+                "Total Yd": "107 | 107"
+              },
+              "lit": [
+                {
+                  "letter": "R",
+                  "x": 739.5348835187358,
+                  "y": 457.141025908886,
+                  "rgb": [
+                    244.41095890410958,
+                    211.2054794520548,
+                    78.24657534246575
+                  ],
+                  "ratio": 0.37047606693475155,
+                  "margin": 0.3295239330652484,
+                  "lit": true,
+                  "field": "launch_direction",
+                  "decided": 1.0
+                },
+                {
+                  "letter": "F",
+                  "x": 944.186046406438,
+                  "y": 591.7307691988967,
+                  "rgb": [
+                    191.453125,
+                    189.125,
+                    169.640625
+                  ],
+                  "ratio": 0.8969762062128223,
+                  "margin": -0.1969762062128223,
+                  "lit": false,
+                  "field": "sidespin",
+                  "decided": -1.0
+                }
+              ]
+            },
+            "2026-10-07-1": {
+              "flagged": true,
+              "cells": {
+                "carry_distance": {
+                  "cell": "read",
+                  "value": 279.0,
+                  "truth": 279.0
+                },
+                "total_distance": {
+                  "cell": "read",
+                  "value": 289.0,
+                  "truth": 289.0
+                },
+                "club_head_speed": {
+                  "cell": "read",
+                  "value": 111.3,
+                  "truth": 111.3
+                },
+                "ball_speed": {
+                  "cell": "read",
+                  "value": 158.6,
+                  "truth": 158.6
+                },
+                "club_path": {
+                  "cell": "read",
+                  "value": 1.6,
+                  "truth": 1.6
+                },
+                "club_face_angle": {
+                  "cell": "read",
+                  "value": 4.0,
+                  "truth": 4.0
+                },
+                "launch_direction": {
+                  "cell": "read",
+                  "value": 3.5,
+                  "truth": 3.5
+                },
+                "launch_angle": {
+                  "cell": "read",
+                  "value": 19.0,
+                  "truth": 19.0
+                },
+                "apex_height": {
+                  "cell": "withheld",
+                  "value": null,
+                  "truth": 47.4
+                },
+                "smash_factor": {
+                  "cell": "caught",
+                  "value": 142.2,
+                  "truth": 1.43
+                },
+                "backspin": {
+                  "cell": "read",
+                  "value": 2521.0,
+                  "truth": 2521.0
+                },
+                "sidespin": {
+                  "cell": "read",
+                  "value": 336.0,
+                  "truth": 336.0
+                }
+              },
+              "image": "spikes/vision-ocr/frames/lab/2026-10-07-1.png",
+              "image_sha256": "f5000e4d15d11beb39fc0516726066825d3081b6510d693d68970d406f6b3a89",
+              "notes": [],
+              "boxes": 41,
+              "boxes_sha256": "ed839c75b1d39fee3736466922a9e35b95ec3d405d276aa9d88189d629c7d6f0",
+              "repeat": "same",
+              "failed_read": false,
+              "parse_confidence": 0.542,
+              "parser_version": 1,
+              "warnings": [
+                "no tile found for 'Apex Ft'",
+                "smash factor 142.2 does not match ball speed / club speed (158.6 / 111.3 = 1.425) - one of the three was misread",
+                "smash_factor 142.2 is outside the plausible range 0.4-1.7 - likely a dropped or extra digit"
+              ],
+              "raw_fields": {
+                "Backspin Rpm": "2521",
+                "Ball Direction Deg": "R 3.5",
+                "Ball Speed Mph": "158.6",
+                "Carry Yd": "279",
+                "Club Speed Mph": "111.3",
+                "Face Deg": "4.0\u00b0",
+                "Launch Angle": "19\u00b0",
+                "Path Deg": "1.6\u00b0",
+                "Sidespin Rpm": "D F 336",
+                "Smash Factor": "142.2 1.43",
+                "Total Yd": "289 | \u00b7289"
+              },
+              "lit": [
+                {
+                  "letter": "R",
+                  "x": 820.9302322700299,
+                  "y": 818.2936092042348,
+                  "rgb": [
+                    222.0,
+                    192.8181818181818,
+                    82.04545454545455
+                  ],
+                  "ratio": 0.4255068363979255,
+                  "margin": 0.27449316360207443,
+                  "lit": true,
+                  "field": "launch_direction",
+                  "decided": 1.0
+                },
+                {
+                  "letter": "D",
+                  "x": 872.0930229177501,
+                  "y": 994.9706391007883,
+                  "rgb": [
+                    235.37190082644628,
+                    220.48760330578511,
+                    221.94214876033058
+                  ],
+                  "ratio": 1.0065969489111286,
+                  "margin": -0.30659694891112865,
+                  "lit": false,
+                  "field": "sidespin",
+                  "decided": 1.0
+                },
+                {
+                  "letter": "F",
+                  "x": 1053.48837253767,
+                  "y": 990.3212445634301,
+                  "rgb": [
+                    205.3278008298755,
+                    185.45228215767634,
+                    89.33195020746888
+                  ],
+                  "ratio": 0.4816977670380812,
+                  "margin": 0.21830223296191875,
+                  "lit": true,
+                  "field": "sidespin",
+                  "decided": 1.0
+                }
+              ]
+            }
+          }
+        }
+      },
+      "label": "provisional: pasted copies",
+      "limits": {
+        "T1": 0,
+        "T2": 66,
+        "T3": 5,
+        "T4": 1,
+        "photos": 6
+      }
+    }
+  },
+  "thresholds_sha256": "6d7b092924bf49adc5b65a8180b4d1550f80d140c684e60d8732772aa546750d"
+}

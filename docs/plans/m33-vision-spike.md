@@ -41,25 +41,25 @@ the app plan changes before any app work starts (ADR-034).
 | Phase | What | State |
 |---|---|---|
 | **P0** | This plan, `thresholds.md`, the pointers, and the pre-registration commit | ✅ Done *(2026-11-04)* — approved by the user |
-| **P1** | The photo manifest and the truth table as data; every digest checked | 🔄 Started 2026-11-04 10:08 |
-| **P2** | `vision-ocr`: `decode`, `read` at C0, and a geometry self-test | ⬜ |
-| **P3** | `TextBox.rgb` in Swift, held exactly to Rust's `glyph_rgb` | ⬜ |
-| **P4** | Grid frames off the five clips, with the lab's rule | ⬜ |
-| **P5** | The lab's working images | ⬜ |
-| **P6** | `vision-ocr rectify`: the phone's rectifier stand-in | ⬜ |
-| **P7** | `probe.py measure`: the comparator, proven on controls | ⬜ |
-| **P8** | The lab's reader on the same inputs: the baseline rules must not move | ⬜ |
-| **P9** | The first measurement: C0 on Full Swing's stills | ⬜ |
-| **P10** | C0 on the clip frames | ⬜ |
-| **P11** | C0 on HD Golf, diagnostic | ⬜ |
-| **P12** | The Swift ladder, if C0 missed | ⬜ |
-| **P13** | Parser rule 1, if still missing | ⬜ |
-| **P14** | Parser rule 2, if still missing | ⬜ |
-| **P15** | Parser rule 3, if still missing | ⬜ |
-| **P16** | The confidence calibration | ⬜ |
-| **P17** | The verdict: `log.md`, and what M38 is told | ⬜ |
-| **P18** | Docs | ⬜ |
-| **P19** | Close: verify, WORKLOG, ROADMAP, memory, and the commit | ⬜ |
+| **P1** | The photo manifest and the truth table as data; every digest checked | ✅ Done *(2026-11-04)* — on the six pasted copies, by the decision of 2026-11-04 |
+| **P2** | `vision-ocr`: `decode`, `read` at C0, and a geometry self-test | ✅ Done *(2026-11-04)* — on `captures/IMG_2889.jpg`, by the decision of 2026-11-04 |
+| **P3** | `TextBox.rgb` in Swift, held exactly to Rust's `glyph_rgb` | ✅ Done *(2026-11-04)* — on the six pasted copies, by the decision of 2026-11-04 |
+| **P4** | Grid frames off the five clips, with the lab's rule | ✅ Not run: the five MOV clips are not on this Mac (decision of 2026-11-04) |
+| **P5** | The lab's working images | ✅ Done *(2026-11-04)* — on the six pasted copies, by the decision of 2026-11-04 |
+| **P6** | `vision-ocr rectify`: the phone's rectifier stand-in | ✅ Done *(2026-11-04)* — on the six pasted copies, by the decision of 2026-11-04 |
+| **P7** | `probe.py measure`: the comparator, proven on controls | ✅ Done *(2026-11-04)* — on committed vector boxes, with no capture measured, by the decision of 2026-11-04 |
+| **P8** | The lab's reader on the same inputs: the baseline rules must not move | ✅ Not run: the OCR models are not on this Mac (decision of 2026-11-04) |
+| **P9** | The first measurement: C0 on Full Swing's stills | ✅ Done *(2026-11-04)* — on the six pasted copies, by the decision of 2026-11-04: `raw` and `lab` pass, `vision` misses |
+| **P10** | C0 on the clip frames | ✅ Not run: the five MOV clips are not on this Mac (decision of 2026-11-04) |
+| **P11** | C0 on HD Golf, diagnostic | ✅ Not run: omitted by the user, and HD Golf's photos are not on this Mac (decision of 2026-11-04) |
+| **P12** | The Swift ladder, if C0 missed | ✅ Not needed; the final config is C0 *(2026-11-04)* — stills pass on `raw`, this run's target by the decision of 2026-11-04, and clips are not measured |
+| **P13** | Parser rule 1, if still missing | ✅ Not needed *(2026-11-04)*: what is missing is the recognizer's (`IMG_2893` `sidespin` on `raw` and `vision`, and `vision`'s twelve on `IMG_2894`) |
+| **P14** | Parser rule 2, if still missing | ✅ Not needed *(2026-11-04)*: what is missing is the recognizer's (P13's same cells: `IMG_2893` `sidespin` on `raw` and `vision`, and `vision`'s twelve on `IMG_2894`) |
+| **P15** | Parser rule 3, if still missing | ✅ Not needed *(2026-11-04)*: what is missing is the recognizer's (P13's same cells: `IMG_2893` `sidespin` on `raw` and `vision`, and `vision`'s twelve on `IMG_2894`), and at the cap that is the measured result |
+| **P16** | The confidence calibration | ✅ Done *(2026-11-04)* — `fs-still` only, by the decision of 2026-11-04: no threshold from 0.5 to 0.9 changes a flag, and the recommended 0.6 is provisional, with no **wrong** cell to test it on |
+| **P17** | The verdict: `log.md`, and what M38 is told | ✅ Done *(2026-11-04)* — **GO, provisional: pasted copies**, clips **not measured**, by the decision of 2026-11-04. `probe.py verdict` reproduces it from `results/C0.json` and holds `log.md` to it |
+| **P18** | Docs | ✅ Done *(2026-11-04)* — every touched doc carries **GO, provisional: pasted copies**, clips **not measured**, and the list of what is unmeasured. No rule fired, so CONFORMANCE §2's count, its `hand/` row and `crates/screen/`'s docs did not move |
+| **P19** | Close: verify, WORKLOG, ROADMAP, memory, and the commit | ✅ Done *(2026-11-04)* — one commit onto `main`, not pushed. **GO, provisional: pasted copies. Clips: not measured**, and M33 stays open: this run does not meet "Exit", by the decision of 2026-11-04 |
 
 P12–P15 are conditional. A phase whose condition is not met still runs: it reads the results, proves
 the condition is not met, ticks its row with "not needed", and records that as its finding.
@@ -940,3 +940,783 @@ Exactly P14. This is the cap: whatever is still missing after it is the measured
 - **For P1, on resuming**: the row stays 🔄, and there is no partial work to keep. `probe.py`, `photos.json`
   and `truth_full_swing.json` were not written, because rule 3 stops the phase before them, and this finding
   is the only change in the tree. Start from "Do", once the copy has landed.
+
+### P1, resumed (2026-11-04) — the six pasted copies held to their digests
+
+- **Resumed from the row's 🔄, with nothing to keep.** The marker-time `find` listed only this plan, and
+  `spikes/vision-ocr/` held only `thresholds.md` and `captures/`. The entry above stands as that attempt's
+  record. This run is on the decision of 2026-11-04, so `photos.json` holds six entries, not 26.
+- **`probe.py check`: 6 of 6 captures match their digests**, and `IMG_2888` matches its own as "not a
+  capture". It prints as outstanding, all absent: the 6 original stills, the 5 clips, HD Golf's 15 and the 3
+  models. Tools by version: Swift 6.2.3, cargo 1.99.1, ffmpeg 7.1, macOS 26.2 (25C56).
+- **The throwaway comparison found no difference in values.** `truth_full_swing.json`'s 72 cells equal
+  `PHOTOS`' and the plan's table's, and `truth()` equals `Photo::truth` reworked from `PHOTOS`' numbers, all
+  by `==`. `PHOTOS`' six digests equal each entry's `copy_of` and differ from every copy, as the decision
+  expected. `probe.py`'s typed digests equal the plan's two tables. The scripts are deleted (rule 14).
+- **`check`'s stops were proven on scratch manifests**: a wrong digest, a missing capture, a hand-edited
+  manifest, no manifest, and a present file with a wrong digest in an outstanding group each exit 1. The
+  last one's first try proved nothing, because its path ran through a directory that does not exist and read
+  as absent, so it was redone on a file that is there.
+- **For P2**: the copies carry no orientation tag, so `applyOrientationProperty` does nothing on them, and
+  all are Display P3, so call 2's decode still converts colour. `IMG_2889`, `IMG_2893` and `IMG_2894` are
+  2576×1932, and `IMG_2891`, `IMG_2892` and `2026-10-07-1` are 1932×2576. Nobody looked at whether each is
+  upright in this phase, and finding 9's "no rotation vote needed" was measured on the originals, so a
+  sideways copy would show up only as a miss.
+- **For P3**: `cargo` is not on `PATH` in this shell. Run `. "$HOME/.cargo/env"` first (rule 3). `check` finds it
+  at `~/.cargo/bin/cargo` and says so.
+- **For P7**: `photos.json` is `{"_note", "captures": [{id, set, path, sha256, device, truth, copy_of: {path,
+  sha256}}]}`. `probe.truth(id)` gives the twelve fields as floats in the table's order. `main()` adds a
+  subcommand in one line, and each returns its exit code.
+- **For P17**: choices this plan did not spell out, each taken under rule 1. Every manifest entry has a
+  `copy_of`, beyond call 1's keys, so that a copy cannot be read as the original and the "provisional: pasted
+  copies" label rests on data. `check` stops on a capture missing or differing, on any file present with the
+  wrong digest (an outstanding group's too), on a manifest that is not what `build-manifest` writes, and on no
+  `swiftc` or `cargo`. A missing ffmpeg is printed and is not a stop, because only P4 and P8 would call it and
+  neither runs. `IMG_2888` is held to its digest though it is not a capture. `check` prints what is outstanding
+  on every run, so the list "What this does not show" needs is one command away.
+
+### P2 (2026-11-04) — Vision's boxes are in the right place, and they are not the ink's
+
+- **What landed**: `spikes/vision-ocr/vision_ocr.swift`, with `decode`, `read` at C0 (`"rgb": null`) and
+  `selftest [DIR]`, built by the plan's `swiftc` line to `target/m33/vision-ocr`. `selftest` exits 0, and
+  three runs print byte-identical tables. `probe.py check` ran first (rule 9).
+- **The photo**: `captures/IMG_2889.jpg` decodes to 2576×1932, profile `sRGB IEC61966-2.1` by `sips`, upright
+  by eye. `read` returns 42 boxes in 0.25 s, among them `CARRY YD`, and a second read is byte-identical. Crops
+  cut at the printed coordinates of `CARRY YD` and `SHOT DATA` landed on those words, so the top-left origin
+  is checked on a real photo as well as on the drawn image.
+- **The plan's 5% does not hold as written on every word, because `boundingBox` is not the ink's rectangle.**
+  Nearly every edge sits outside the ink, typically by 2–7 px and by up to 45 on a 1600×1000 frame, in steps of
+  about 2.33 px. The box also runs long below the ink: its centre sits low by 8–16% of the ink's height on a word
+  with a point (`182.4`, `102.5`, at 23–117 px), and usually under 7% on a four-digit integer, though not
+  reliably: `9899` at 96 pt gave 0.80 px at (300, 200), 4.75 at (1040, 110) and 8.08 at (1040, 200). A box also
+  depends on the rest of the image, since moving `9899` changed `182.4`'s box, about 500 px away, from a bottom
+  overhang of 33.26 px to 26.59.
+- **The self-test tries each injected bug and fails on all six**, each in a throwaway build: y flipped (28
+  failures, `CARRY` 812 px off), `minY` for `maxY` (28, 57 px), W and H swapped (28), orientation not applied
+  (16), the drawing's own flip wrong (35, caught by scanning the file's rows before Vision is asked anything,
+  so a drawing bug cannot cancel a mapping bug), and output in P3 rather than sRGB (3).
+- **Decode beyond the plan's ask**, because the originals will need it and no HEIC is here to try it on. An
+  sRGB PNG comes through with no channel of any pixel changed. A Display P3 yellow (235, 200, 70) comes out (242,
+  198, 17) against (242.0, 198.3, 16.8) worked by hand from the primaries. Orientation 6 is applied exactly
+  once for a JPEG and a HEIC, with no tag left in the PNG. That HEIC was written by ImageIO, so a phone's own
+  HEIC is still untried.
+- **For P3**: `Pixels` (the file's bytes, no colour matching, as call 5 asks) and `loadCGImage` are already there,
+  `Box` needs the field, and `readJSON`'s row prints the `null`. The PNGs `decode` writes are RGBA with alpha 255,
+  and all six are in `frames/decoded/`. **Padding reaches `rgb`**: a padded box holds more ground than the lab's
+  boxes did, and the brightest quarter of a thin letter's box may no longer be all strokes. So Rust's `glyph_rgb`
+  over Vision's box is the definition, but M42's measured margins were on the lab's boxes. P9's lit table is where
+  this shows. Do not hand `CGContext(data: &bytes, …)` a Swift array: the pointer is good only for that call, and
+  this file's first colour patches read back right on one build and as zeros on the next.
+- **For P6**: `decode` renders through `ciContext.createCGImage` and `writeImage`, and `writeImage` makes the
+  directory. `CIContext.writePNGRepresentation` would not have carried a stale Orientation either: tried on the
+  tagged file, Core Image had already dropped the tag.
+- **For P9**: all six decoded stills are upright by eye, at 700 px (P1 asked), so a miss will not be rotation. On
+  `IMG_2889`, which is a look at one photo and not a measurement, `CLUBSPEED MPHBALLSPEED MPH` comes back as one
+  box, `L`, `D` and `F` come back alone with no `R`, and the playback controls and the monitor's logo add `11`,
+  `DD` and `DALI`. Values in one row have unequal boxes (`134` is 82 px tall and `127.1` is 101), so if a miss
+  looks geometric, the padding above is the first suspect.
+- **For P12**: `read --config` refuses all but `C0`, so a rung cannot print C0's boxes under its own label.
+- **For P16**: on that one photo, 41 of 42 confidences are 1.00 and `DALI` is 0.30, so finding 7's constant is
+  nearly but not quite so with correction off.
+- **For P17**: choices under rule 1, none touching `thresholds.md`. The 5% stands as the plan's number but is
+  held on the box's **centre**, and on five words of the seven drawn (`CARRY`, `BACKSPIN`, `4199`, `R`, `TOTAL`).
+  `9899` and `182.4` missed it on the fixture's first run, so they stay as printed rows under a weaker check (right
+  text, the ink's centre inside the box), which a flip still fails. That split was read off the result, and moving
+  `9899` once made it worse, so the five pass on Vision's behaviour here rather than on a margin that is promised:
+  a later macOS could shift a box past the limit with nothing wrong in the mapping. Its worth is the six injected
+  bugs above, not the number. `selftest` writes to a temporary directory and removes it, unless given `DIR`.
+
+### P3 (2026-11-04) — Swift's `rgb` equals Rust's `glyph_rgb` as doubles on every box
+
+- **What landed**: `vision_ocr.swift` has `clipped` and `glyphRGB`, and `read` fills `rgb`. `lab-images/` holds
+  call 6's `Cargo.toml`, the copied `Cargo.lock` and `src/main.rs` with `glyph`. `probe.py check` ran first (rule
+  9), and re-running `decode` on all six captures gave PNGs byte-identical to `frames/decoded/`, so the chain from
+  digest to pixels held.
+- **The comparison, by `==` after the JSON trip, 0 boxes differing anywhere**: all six decoded stills (42, 41, 43,
+  39, 43 and 43 boxes, 753 channels) and one PNG written by `image`'s encoder (`frames/rust-written/IMG_2889.png`,
+  42 boxes). `read` is still byte-identical on a second run, and `selftest` still passes.
+- **Vision's boxes cannot try the whole definition, so this phase added a fourth subcommand.** No box on these
+  stills reaches an image edge, and none is empty. `vision-ocr glyph IMAGE BOXES.json` mirrors `lab-images glyph`,
+  and both took 3,054 boxes given by hand, in quarter-pixel steps: off each edge, wholly outside, no width, negative
+  width, every small `n`, and 3,000 seeded at random. On `decoded/IMG_2889`, `rust-written/IMG_2889` and a built
+  `rust-written/ties.png` (64×48, every pixel from a palette of equal sums and different colours), 0 differ, with
+  15, 15 and 123 of them `null`. A box with no width at a fractional x holds one column in both, which `glyph_rgb`'s
+  doc comment does not say and its code does.
+- **The comparison sees what it must.** Each fault was put in a throwaway build and run on all of the above, with
+  boxes differing per still in the range shown: ties reversed 30–38 of each still's boxes; the cut rounded up 15–28;
+  the whole box's mean, the far edge floored, BGR and a truncated mean all of them; the near edge rounded 26–33. A
+  clip one pixel short moved no box on the stills and 180 to 1,984 through `glyph`, which is why that seam exists.
+  Two faults moved nothing, and both are explained. Sorting on the sum alone: Swift's `sort` is stable here, though
+  not documented to be, so the key's index is a guarantee that cannot be seen failing. Colour matching through a
+  `CGContext` into sRGB: every input is already sRGB to ImageIO, so it does nothing, and on a copy of `IMG_2889`
+  tagged Display P3 with no pixel changed it moved 489 of 500 boxes while the real build moved 0.
+- **Call 5's worry about untagged PNGs does not bite on this Mac**: ImageIO reports Rust's RGB8 PNG and `decode`'s
+  PNG alike as 32 bits a pixel, `noneSkipLast`, default byte order, colour space sRGB. `Pixels` now refuses a
+  little-endian image too, since that would put blue first with nothing else looking wrong.
+- **For P5**: the binary is `target/m33/release/vision-spike-lab-images`, from call 6's package name, not
+  `lab-images`. The first build took 21 s with `ort`'s runtime already cached. The lock holds 113 registry packages,
+  all of them in the root's lock at the same version, and `cargo metadata` at the root does not list the helper.
+  `glyph`'s pattern is the one to extend, and `frames/rust-written/` is left there but nothing depends on it.
+- **For P9**: a look at one photo, not a measurement. On `IMG_2889`, `D` is (248.0, 217.5, 41.1), a ratio of about
+  0.19, and `L` and `F` are about 0.98 and 0.94, each deciding the table's sign. So the padding P2 warned of did not
+  reach the sign letters here, and the lit letter sits below M42's 0.32–0.48, which is what converting P3 to sRGB
+  should do to a yellow's blue. Whether that holds is P9's lit table.
+- **For P12**: `glyphRGB` takes a `Pixels` and a rectangle, and `readJSON` is where it is called, outside `recognize`
+  on purpose. C2 and C4 pass the image call 10 names for each. Nothing in the ladder needs to touch `glyphRGB`.
+- **For P17**: a choice under rule 1. `vision-ocr glyph` is beyond call 5, for the reason above. The comparison and
+  fault scripts were throwaway and are deleted (rule 14), so this entry is their record. **For M38's plugin**: ties
+  moved 30–38 boxes a still, so "the brightest quarter" with any other tie rule does not reproduce `TextBox.rgb` to
+  the bit on a real photo. It needs `glyphRGB`'s key, or a sort it can prove stable.
+
+### P4 (2026-11-04) — not run: the five clips are not on this Mac
+
+Run under the decision of 2026-11-04, whose table gives P4 "Not run: no clips", so nothing was built or decoded.
+
+- **The proof.** `probe.py check` exits 0 with 6 of 6 captures matching, prints all five
+  `data/raw/shot_screens/IMG_n.MOV` as absent, and ends "the clips 0 of 5". `data/` holds only its `README.md`, so
+  `data/raw/` does not exist, and `git ls-files` tracks no `.MOV`. A wider search of the home directory did not
+  finish, sat for three minutes and was killed, so it is not evidence either way. The clips may sit elsewhere on this
+  Mac, and the manifest's paths are the only place rule 9 would accept them from anyway.
+- **What is not the obstacle.** ffmpeg 7.1 is at rule 6's path and prints its version, which is all that was asked
+  of it. Whether it decodes these clips is unmeasured, and so is whether it picks M42 P14's frames (31 of 36, 17 of
+  61, 21 of 55, 29 of 31, 41 of 59, under ffmpeg 9.0.2).
+- **`grid-frame` is not written.** `lab-images/src/main.rs` still dispatches only `glyph`. A subcommand with nothing
+  to run it on would be untested code left in the record. `golf-lab` is already in `lab-images/Cargo.toml`, so the
+  row that runs this later adds only the subcommand. `frames/grid/` does not exist.
+- **For P5**: its `frames/grid/` clause does not apply. The decision's table has it read the six stills, and no grid
+  frame exists to feed `working`.
+- **For P10**: the same absence stands unless the clips have arrived, so re-run `probe.py check` for its proof. Do
+  not look for grid frames first: with no `grid-frame` subcommand, none can exist.
+- **For P17**: the clips' verdict is **not measured**, and P4 contributes no number to it. When the clips reach this
+  Mac, the new row needs this phase as written, including its comparison against M42 P14's frames and its
+  `AVAssetImageGenerator` fallback.
+
+### P5 (2026-11-04) — six lab images, a quad on all six, and the copies are now known to be scaled
+
+- **What landed**: `lab-images working IMAGE OUT.png`, and `probe.py prepare`, which holds all six to their digests
+  (rule 9), then writes `frames/decoded/<id>.png` and `frames/lab/<id>.{png,json}`. `probe.py check` ran first. The
+  decoded PNGs came out byte-identical to P2's, and a second `prepare` rebuilt all 18 files byte-identical. The
+  rule 5 diff is empty.
+- **The quad, on the copies**: found on 6 of 6, so every sidecar's `notes` is `[]` and none is uncropped. Five are
+  `rotated_box` (Canny 30, closing 5) and `2026-10-07-1` is `corners` (Canny 10, closing 5, ε 0.04). The images are
+  1600 wide and 922, 830, 1116, 834, 724 and 1346 tall, in the manifest's order. `load_image`'s hand-ported JPEG
+  decoder took all six, the first time it has run on this Mac.
+- **By eye**: all six looked at, where the plan asks two. Every one of the twelve tiles is inside its image, with all
+  twelve values agreeing with the truth table and the lit letters still yellow, at 900 px wide. The finder cuts the
+  monitor, not the panel, so the video replay, the course art and `CONTINUE` are all in the image. A `rotated_box`
+  corrects a turn and no perspective: `IMG_2893` is still visibly skewed, with black wedges at its edges where the
+  corners overrun the photo. `IMG_2894`'s lower edge cuts through `CONTINUE` and takes no tile.
+- **"Possibly scaled" is settled for the five HEICs: scaled, by 2576/5712 per side, about a fifth of the pixels.** The
+  M42 plan records the originals as 5712×4284 and 4284×5712. M42 P3 also recorded the fixed finder's corners on
+  `IMG_2893` and `IMG_2894`, and these copies' corners, multiplied by 5712/2576, land within 1.3 px of them at full size
+  (0.2 px on `IMG_2894`), through the same path, `RotatedBox` (30, 5). So the finder is indifferent to the re-encoding
+  on those two. `2026-10-07-1`'s original size is not recorded anywhere this phase read.
+- **`lab` keeps the Display P3 numbers and `raw` does not.** All six copies are tagged Display P3 (`sips`). `load_image`
+  ignores the tag and Rust's PNG is untagged, which ImageIO then calls sRGB (P3), while `vision-ocr decode` converts. One
+  look, not a measurement: Vision's raw boxes over each decode, as `b ÷ min(r, g)`, before CLAHE, on the 15 letter boxes
+  returned. On the `load_image` decode, lit 0.34–0.45 and unlit 0.85–0.99. On `decode`'s sRGB, lit 0.10–0.36 and unlit
+  0.83–0.99. So the lab decode of a copy lands on M42's lit 0.32–0.48, and the conversion is what moves it. Every letter
+  stays on its own side of `LIT_BLUE_RATIO`'s 0.7 either way, and the lowest unlit (`F` on `IMG_2894`) is under M42's
+  0.89.
+- **For P6**: each `frames/lab/<id>.json` has `quad.corners` in photo pixels, the lab's answer to set beside Vision's
+  rectangle. Note what they are, though: on five of six a rotated box around the whole monitor, some corners off the
+  photo, so disagreeing with them is not by itself a fault in Vision's. Black wedges in a `lab` image are the warp's
+  border, not the scene.
+- **For P9**: `lab` mode's image is `frames/lab/<id>.png` and its `notes` the sidecar's, so neither needs working out.
+  Box coordinates in that mode are in the 1600-wide image, and `rgb` in it has been through CLAHE on L\*. That and the
+  P3 numbers above mean the lit table's `lab` and `raw` columns differ for two reasons, so a gap between them is not all
+  colour conversion. A look at `raw` only: letter boxes are sparse, and `IMG_2893` returned `R` and nothing else, so no
+  letter is there to decide its sidespin.
+- **For later rows, when the originals and clips reach this Mac**: `prepare` refuses a capture that is not a JPEG or
+  PNG, and `working` refuses a HEIC outright (tried on a HEIC written by `sips`: exit 1, no image), because `load_image`
+  would pass it to rule 6's ffmpeg, which decodes one tile and reports success. The HEIC-from-`frames/decoded/` and
+  clip-from-`frames/grid/` routes are not written, as P4 left `grid-frame`. Those rows add them to `lab_input`, and
+  they are where the plan's HD Golf clause (quad against each vector's `input.notes`) finally runs.
+- **For P17**: call 2's "`lab` is not the lab's exact pixels on a HEIC" reads differently in this run. All six go through
+  the lab's own decode, but of a re-encoded copy, so `lab` is not the pixels M42 measured on any photo. Say so beside the
+  scale above, which also weighs unevenly: `raw` gives Vision 2576 where the phone holds 5712, while `lab` shrinks to
+  1600 either way. Choices under rule 1: `working` prints `quad`, `photo`, `image` and `notes` beyond call 6's "whether a
+  quad was found", and `prepare` adds the digests and the macOS build, because `frames/` is gitignored and would
+  otherwise carry no link to its capture (rule 8).
+
+### P6 (2026-11-04) — a rectangle on one photo of six, and that one is the replay panel
+
+- **What landed**: `vision-ocr rectify IN.png OUT.png`, with call 7's values untouched and `VNDetectRectanglesRequestRevision1`
+  pinned (the SDK header's only one), and `probe.py prepare`, which now also writes `frames/vision/<id>.{png,json}` from
+  `frames/decoded/`. `probe.py check` ran first. All six sidecars are there. A second `prepare`, and a third after a rebuild,
+  left all 30 files under `frames/` byte-identical, so Core Image's render is repeatable here. The rule 5 diff is empty.
+- **The result, each looked at by eye at 900 px on the long side, with both quads drawn over the decoded photo.** "Turned"
+  is the lab's top edge from `frames/lab/<id>.json`, for scale.
+
+  | id | found | whole screen? | upright? |
+  |---|---|---|---|
+  | `IMG_2889` | no, 0 rectangles | fell back: the whole photo, all twelve tiles in it | yes, turned about 1.8° |
+  | `IMG_2891` | no, 0 rectangles | fell back, the same | yes, about 1.4° |
+  | `IMG_2892` | no, 0 rectangles | fell back, the same | yes, about 0.3° |
+  | `IMG_2893` | no, 0 rectangles | fell back, the same | yes, about 6.6°, and visibly skewed |
+  | `IMG_2894` | **yes, the wrong one**: confidence 1.0, 0.115 of the photo | **no**: 767×902, the replay panel and the fairway showing through below it, and **none of the twelve tiles** | yes |
+  | `2026-10-07-1` | no, 0 rectangles | fell back, the same | yes, about 2.6° |
+
+  Each of the five fallbacks is the decoded PNG's own bytes (`cmp`), with the uncropped note in its sidecar.
+- **Why, by eye and not by test**: neither side edge of the monitor is in any of the six frames. The golfer filled the frame
+  with the tiles, so the screen runs off the photo left and right, and it has no four corners inside the picture to find.
+  The lab's finder copes because it fits a box to the edges it can see, and on five photos its corners go off the picture for
+  the same reason.
+- **A look, not a measurement, and nothing was moved** (a throwaway request, deleted). With every limit opened (aspect 0–1,
+  size 0.05, tolerance 45, confidence 0), Vision returns 30–39 rectangles a photo. On five photos the largest is 0.046–0.097 of
+  the image and, by its coordinates, a sub-panel, or on `2026-10-07-1` the bezel below the screen. `IMG_2894`'s largest is 0.342, x 198–2462, y 419–1615, about the tile block
+  and the replay panel together, and call 7's values did not return it. Nothing tried why. So looser values would not have
+  found the monitor on five of six, and call 7's are not the obstacle there.
+- **The self-test gained the rectifier**, where call 7 did not ask, for what the photos cannot show. It draws a skewed panel with
+  a colour in three corners and a dark panel inside it, and a blank frame. It keeps the larger of the 2 offered, with its worst
+  corner 2.62 px from the drawing. Six faults were each put in a throwaway build and each failed it: Core Image's corners
+  flipped, the sidecar's y unflipped (722 px), top right swapped with bottom left in the filter (came out 730×1006), the smaller
+  panel kept (203 px), the fallback re-encoded, and the note on the wrong branch. Two runs print byte-identical tables.
+  The sidecar's corners are also right on a real photo: drawn on `IMG_2894`, they sit on the replay panel's edge.
+- **A correction to P5's finding**: its "a rotated box around the whole monitor" overstates it. Drawn on the photos, the lab's
+  quad is the monitor's outline only on `2026-10-07-1`. On the other five its top edge runs through the displayed sky, and on
+  `IMG_2891` its lower edge meets `CONTINUE`, as P5 saw on `IMG_2894`. All twelve tiles are inside it on all six, which is what P5
+  checked and what matters.
+- **For P7**: `vision` mode's image is `frames/vision/<id>.png` and its `notes` the sidecar's. The sidecar holds call 7's `found`,
+  `confidence` and `corners` (TL, TR, BR, BL, photo pixels from the top left, as the lab's `quad.corners`), plus `area_fraction`,
+  `photo`, `image`, `notes`, `revision`, `os`, `candidates` (every rectangle returned, largest first), `id`, `input`,
+  `input_sha256` (the decoded PNG's), `capture_sha256` and `image_sha256`.
+- **For P9**: `vision` is not an independent arm here, and neither result below is a fault.
+  - On five photos its input is `raw`'s exact bytes plus the note. By reading `crates/screen/src/lib.rs::record` and
+    `validate.rs`'s `needs_review`, the note lands in `warnings` only, so those five should differ from `raw` by that line and no
+    cell. A cell that differs is the harness's fault, since P2 found a second read byte-identical.
+  - On `IMG_2894` it reads the replay panel, so no value of that shot can be read. **`vision` can therefore read at most 60 of 72,
+    and T2's 66 is out of its reach**, on this input at any config. Stills can pass only on `raw`.
+  - The rectified image holds 1,668 edge pixels of partial alpha (of 691,834, none at alpha 0), because the render is not
+    flattened. `glyphRGB` reads the stored bytes and no box here is likely to reach that edge, but a later rectified screen could.
+- **For P12**: no rung touches the input image, so the rectifier is not re-run per config and `vision`'s ceiling of 60 stands on
+  every rung. "Better phone mode" in call 10's "best" will be `raw` throughout.
+- **For P17**: say all of this. The stand-in found a rectangle on 1 of 6 and the wrong one, these values were not tuned (call 7),
+  and `vision` falls back on five and reads a panel of no tiles on the sixth, as call 3's table says it should. So on this run
+  the verdict's "`raw` or `vision`" is `raw` alone, and a miss on `vision` **says nothing about VisionKit's scanner**, which needs a
+  device, and M38 measures it. What M38 may take from it, as a question and not a result: photos framed like these give a corner-finding
+  rectifier nothing to find, so either the golfer is told to get the whole monitor in frame, which costs the tiles pixels, or the
+  app does not depend on a rectifier. These are copies at 2576 on the long side. The same framing holds on the originals, but
+  rectangle detection at full size is not measured. Choices under rule 1: `rectify` prints beyond call 7's three keys so that "the wrong one" can be checked
+  against what was passed over; the fallback is the input's bytes rather than a second encoding; the self-test section above; and
+  `prepare` runs the rectifier on every run, with the digests added as for `lab`.
+- **For later rows, when the originals reach this Mac**: `prepare` rectifies from `frames/decoded/`, so a HEIC's route is already
+  the one that runs, and only `lab_input` refuses it (P5). A clip's grid frame needs `frames/grid/`, which P4 did not write.
+
+### P7 (2026-11-04) — the comparator sees what it must, and it has measured nothing
+
+- **What landed**: `probe.py control` and `probe.py measure`, with `classify`, `classify_vector`, `summarize`, `judge`, `read_bars`,
+  `lit_rows` and `parse_screen`. `probe.py check` ran first. **No capture went through `measure`**, so `results/` and `frames/runs/` do
+  not exist yet, on purpose: P9 is the first measurement. The rule 5 diff is empty, `thresholds.md` is unchanged, and a `prepare` after
+  this phase's change to `run_tool` left all 30 files under `frames/` byte-identical (it now runs with the repo root as its directory).
+- **`probe.py control` exits 0**, needing no Vision and no photo, on `target/m33/release/golf-core`:
+
+  | control | result |
+  |---|---|
+  | 1, the HD Golf vectors' committed boxes against their own `expected` | all 15, 168 read, and no withheld, wrong, caught or extra |
+  | 2, `full-swing-grid.json` against `IMG_2889`'s truth | 12 read, unflagged |
+  | 3, `9899` to `9099` | `backspin` wrong, unflagged |
+  | 3, `1.08` to `1.88` | `smash_factor` caught, flagged |
+  | 3, the `R` box removed | `launch_direction` withheld, unflagged |
+  | 3, `rgb` dropped from the `R` box | `launch_direction` withheld, unflagged |
+  | 3, an empty box list | a `null` shot, 12 withheld, 1 flagged |
+  | 4, T1–T4 either side, on both sets | at the limit every bar passes, and one past it that bar alone misses |
+
+  Each mutation's expected map names every non-read cell, so one that disturbed a second cell would fail.
+- **Beyond the plan's list, each for something the list could not catch**: **1b** tells call 14's cells apart, because control 1 alone
+  passes a classifier that says "read" for everything. A cell **one unit in the last place** off is wrong (rule 10), because every
+  listed mutation moves a printed digit. A **caught** cell misses neither T1 nor any bar but is not read (call 9). **Control 5** holds
+  the lit table's `is_lit` to the binary's sign at each limit, exactly and one step past, so that the table cannot explain a rule the
+  binary does not apply.
+- **One measured on this binary that P9 should have in mind**: the `R` box reading `L`, still lit, gives `launch_direction` **wrong on
+  an unflagged shot**. `validate.rs` holds `launch_direction` to a range and no identity, so a sign read wrong by colour is a T1 failure
+  and not a review.
+- **The controls were themselves tested**: 29 faults, each put into the comparator in a throwaway build, each made `control` exit 1. A
+  tolerance on `==`, caught and wrong swapped (both classifiers), a `null` shot unflagged, `needs_review` ignored, apex rounded, either
+  sign flipped, `<` for `<=` and a limit forgiven by one on each of T1–T4, T1 counting caught, T3 on the highest field, a still's limit
+  read as a clip's, `is_lit` on the greater channel, with `<`, with `>` and with no floor, HD's cells collapsed, the declared difference
+  on any photo and gone, and a mutation that changes nothing.
+- **`measure` was driven only with a stand-in for `vision-ocr read`**, from a throwaway script with outputs in the scratchpad, since
+  the real thing is P9's. Committed grid boxes on all six gave `IMG_2889` 12 read, a flagged shot's cells caught, the others wrong, all
+  three modes with their own images and notes, `--mode` merging into the file, and `repeat` printing `first`, `same` and `DIFFERS`. No
+  boxes gave `FAILED`, flagged. The real binary's output on the self-test's **drawing** goes through `parse-screen` as a `null` shot (7
+  boxes), so its keys are accepted. **A non-null parse of real Vision boxes has not happened here, and P9's is the first.**
+- **Its stops, each proven on scratch inputs, each exit 1**: a set with no captures, a wrong capture digest, five captures against bars
+  for six, a missing sidecar, a sidecar from another capture, a decoded or lab PNG not matching its sidecar, and a `thresholds.md` row
+  that no longer parses. `read --config C1` still refuses in the binary. A miss exits 0.
+- **For P9**: `measure --config C0 --set fs-still` runs all three modes, and prints every table this phase's Do names. Things it leaves to you:
+  - The second run **overwrites** `frames/runs/C0/` and `results/C0.json`. So copy `frames/runs/C0/` to `boxes/C0/` and set `results/C0.json`
+    aside **after the first run**, or "use the first" has nothing to use. `repeat` and each shot's `boxes_sha256` say whether they matched.
+  - The `tile` column of "not read" is `provenance.raw_fields`, the text the parser kept. It is `None` where the parser kept none, as on a
+    withheld tie, and then "Vision's text for that tile" comes from the boxes file. **Crops are yours** (call 16); `measure` writes none.
+  - The lit table lists every box that is one letter, the tile's or a stray's, so `x,y` tell them apart, and `margin` is
+    `LIT_BLUE_RATIO − ratio`, positive on the lit side. `sign decided` is the stored value's, beside the truth's.
+  - `results/<config>.json` is `{config, min_confidence, thresholds_sha256, sets: {<set>: {label, limits, arms: {<mode>: {os, revision,
+    summary, bars, pass, shots: {<id>: {flagged, cells: {<field>: {cell, value, truth}}, image, image_sha256, notes, boxes, boxes_sha256,
+    repeat, failed_read, parse_confidence, parser_version, warnings, raw_fields, lit}}}}}}}`. Each boxes file's `image` is repo-relative.
+- **For P12**: `measure` already passes `--config`, and stops if the binary prints a different config. So a rung needs only the Swift and
+  `ladder`. `judge` and `summarize` are what call 10's "best" should read.
+- **For P13**: `failures` is not written. `frames/runs/<config>/<mode>/<id>.boxes.json` and the same `.shot.json` are its inputs.
+- **For P16**: each shot's `parse_confidence` and `warnings` are in `results/`, and box confidences in the boxes files. A flag from confidence
+  alone adds no warning (`validate_parse`), and notes and the parser's own warnings sit on unflagged shots too, so `warnings` alone does
+  not say why a shot flagged.
+- **For P17**: `verdict` should read `sets.<set>.label`, which `measure` sets from data: a capture whose digest is not its `copy_of`'s.
+  Choices under rule 1, none touching `thresholds.md`:
+  - **Call 14's "non-provenance keys" is read as four fewer.** `shot_id`, `session_id`, `timestamp` and `source` come from the input or
+    are stamped, so counting them would add four **read** to every shot that no screen printed. A difference in one is refused as the
+    harness's fault. A key null on both sides is no cell.
+  - The bars are **parsed from `thresholds.md`** and the lit constants **from `parser.rs`** at run time, where call 9 and call 12 say
+    copied, so neither has a second copy, and a row that stops parsing is a stop. Control 4's change counts are typed by hand, so a
+    misparsed limit fails there.
+  - `measure` holds each frame back to its capture through the sidecars, beyond rule 9's capture digest, since `frames/` is gitignored.
+  - An input's `image_path` and `image_sha256` are the capture's and not the mode's image, `shot_id` the capture's id, and `session_id`
+    `m33`. Neither reaches a cell.
+- **For later rows, when the files reach this Mac**: `measure --set fs-clip` and `--set hd` stop on "no capture", because the manifest holds
+  neither and `mode_image` knows only the stills' paths, as with P5's `lab_input`. `fs-clip`'s limits are parsed and control 4 proves them.
+  `classify_vector` and `DECLARED` are proven by controls 1 and 1b, and **no `measure` path calls them yet**: P11's row wires them.
+
+### P8 (2026-11-04) — not run: the OCR models are not on this Mac, so there is no lab baseline
+
+Run under the decision of 2026-11-04, whose table gives P8 "Not run: no models" and overrides the section's
+`BLOCKED`. Nothing was read, built or written under `spikes/vision-ocr/`.
+
+- **The proof.** `probe.py check` exits 0 with 6 of 6 captures matching and ends "the OCR models 0 of 3". The reader
+  itself refuses: `target/m33/release/golf-ocr read spikes/vision-ocr/frames/decoded/IMG_2889.png --device full_swing
+  --boxes` exits 1 with `PP-OCRv6_medium_det: …/data/models/ocr/PP-OCRv6_medium_det/model.onnx is missing`, before it
+  reads a box. `git ls-files` tracks no `.onnx`, and neither `data/models/` nor `~/.paddlex/official_models/` exists.
+  Spotlight (`mdfind`, indexing on) finds no `model.onnx` and nothing named `PP-OCRv6`, which is weak evidence since it
+  skips hidden directories. A `find /` did not finish in two minutes and was killed, so it is not evidence either way.
+- **Unlike the clips, the models need not be copied from the Windows box.** `crates/ocr/models.json`'s `conversion`
+  records the recipe, and says reconverting reproduces every digest, which was not measured on this Mac. It needs
+  Python 3.11, `paddlepaddle` 3.1.1, `paddle2onnx` 2.1.0 and PaddleX's downloaded sources. None of those is here (no
+  `python3.11` on `PATH`, none of the three in `.venv`), and whether their wheels exist for arm64 macOS, or reproduce
+  the digests here, is unmeasured. Nothing was tried: the decision's table says not run, and installing a toolchain is
+  the user's choice.
+- **The clip gate did not run.** It needs the clips as well as the models, and P4 proved those absent. Its test target
+  was not built, so the gate's outcome on macOS is unmeasured, including whether ffmpeg 7.1 serves.
+- **Not written**: `lab-boxes/` and `lab-boxes/parses.sha256` do not exist, and `probe.py` has no `lab` or `lab-regress`
+  (it answers `invalid choice`, among `build-manifest`, `check`, `prepare`, `control` and `measure`). As with P4's
+  `grid-frame`, a subcommand with no input to run on would be untested code left in the record, and a digest file
+  with no parse behind it would be a baseline in name only.
+- **So this changes nothing already measured, and it removes a comparison.** P3 built `ort`, and none of the reader's
+  models has run through it on this Mac. Finding 10's numbers (71 of 72, 60 of 60, 0 of 6 flagged, the lit ranges)
+  remain the lab's on the **originals**, measured off this Mac, and whether this Mac would reproduce any of them is
+  unknown.
+- **For P9**: no lab column, as the decision's table says. Do not fill it from finding 10, whose 71 of 72 is on the
+  originals and these are copies, so it cannot sit beside a C0 number as like for like. It may be quoted only with that
+  stated. No bar `thresholds.md` holds P9 to is measured against a lab read, so none is affected.
+- **For P13, P14 and P15**: there is no baseline for call 11's check 6, and the Verify block's `probe.py lab-regress`
+  and clip gate cannot run. The decision's table already covers this: no rule can be accepted in this run, so list any
+  parser-fixable cells and tick `✅ Not run`. Do not write `lab-regress` for them.
+- **For P17**: "What this does not show" lists the lab baseline, as the decision's table says, and adds that the
+  reader's models have not run on this Mac. The verdict's CONDITIONAL arm still means what decision 8 says: `lab` mode
+  in P9 is the lab's **rectifier** in front of Vision, which needs no model, so it is measured even with the lab's
+  reader unmeasured.
+- **For P19**: its report's list of what is outstanding can name reconverting as a second way to P8's row besides
+  copying the models from the Windows box, unproven on this Mac as above.
+- **For later rows, when the models reach this Mac**: this section as written, on whichever captures the row then holds.
+  A baseline taken on the pasted copies is the copies' and would have to be re-taken on the originals, because
+  `lab-regress` holds parses byte for byte and P5 found the copies scaled. The models belong at `data/models/ocr/`,
+  which is where rule 3, `probe.py check` and the clip gate's `OcrReader::new(root.join(ocr::DEFAULT_DIR))` look, so
+  `golf-ocr --models DIR` alone would not serve. Someone puts them there by hand, as rule 4 keeps a phase from writing
+  under `data/`.
+
+### P9 (2026-11-04) — C0 on the six copies: `raw` and `lab` pass, `vision` misses
+
+Measured under the decision of 2026-11-04, so **provisional: pasted copies**, and with no lab column (P8). `probe.py check`
+and `control` ran first. `thresholds.md` is unchanged, and `results/C0.json`'s `thresholds_sha256` is the committed file's.
+The rule 5 diff is empty. macOS 26.2 (25C56), Vision revision 3, `min_confidence` 0.6.
+
+- **The bars**, `measure --config C0 --set fs-still`, each limit parsed from `thresholds.md`:
+
+  | mode | T1 wrong (0) | T2 read (at least 66) | T3 lowest field (at least 5 of 6) | T4 flagged (at most 1) | arm |
+  |---|---|---|---|---|---|
+  | `raw` | 0 | 71 | 5: `sidespin` | 0 | **PASS** |
+  | `vision` | 0 | **59, miss** | **4: `sidespin`, miss** | 1 | **MISS** |
+  | `lab` | 0 | 68 | 5: `launch_direction`, `apex_height`, `smash_factor`, `sidespin` | 1 | **PASS** |
+
+  Read per photo, `raw` / `vision` / `lab`: `IMG_2889` 12/12/12, `IMG_2891` 12/12/12, `IMG_2892` 12/12/11, `IMG_2893` 11/11/11,
+  `IMG_2894` 12/0/12, `2026-10-07-1` 12/12/10. A throwaway recount, with the plan's table typed afresh and neither `truth()` nor
+  `classify()` in the path, gave the same 71, 59 and 68. **Two runs matched**: all 36 boxes and shot files byte for byte, and
+  `results/C0.json` is the same apart from `repeat`.
+
+- **Every cell not read, with Vision's text for that tile.** Each withheld cell is on an unflagged shot, except `vision`'s null shot and `lab`'s `2026-10-07-1`.
+
+  | mode | id | field | cell | value / truth | Vision's boxes for the tile |
+  |---|---|---|---|---|---|
+  | `raw`, `vision` | `IMG_2893` | `sidespin` | withheld | none / -638 | `SIDESPIN RPM`, `638`, and no letter. By eye `D` (lit) and `F` are both printed, and Vision returned neither |
+  | `vision` | `IMG_2894` | all twelve | withheld, FAILED | none | 0 boxes: its image is the replay panel (P6), so the shot is null and the one flag |
+  | `lab` | `IMG_2892` | `sidespin` | withheld | none / -2032 | `S DESPIN R`, `2032`, and no letter |
+  | `lab` | `IMG_2893` | `launch_direction` | withheld | none / 2.2 | `BALL DIRECTION DEG`, `2.2`, and no letter |
+  | `lab` | `2026-10-07-1` | `apex_height` | withheld | none / 47.4 | `APEX RI`, so `no tile found for 'Apex Ft'`, and `142.2` went to the next tile |
+  | `lab` | `2026-10-07-1` | `smash_factor` | **caught** | 142.2 / 1.43 | tile text `142.2 1.43`; flagged at confidence 0.542 by the speed cross-check and the range check |
+
+  **Call 16's crop** (`frames/crops/C0-lab-2026-10-07-1-smash_factor.png`, the run's only **wrong** or **caught** cell) shows `142.2`
+  under `APEX FT` and `1.43` under `SMASH FACTOR`. It agrees with the truth table. No arm has a **wrong** cell.
+
+- **The lit table**: `b ÷ min(r, g)`, and in brackets the margin, `LIT_BLUE_RATIO` (0.7) less the ratio, positive on the lit side, for
+  each letter box returned. `is_lit` agrees with the truth's letter on every row, and every sign stored equals the truth's. `vision`'s
+  rows are `raw`'s, less `IMG_2894`'s. No box here sits near `LIT_MIN_BRIGHTNESS`' 120: the lowest `min(r, g)` is 143.63.
+
+  | id | letter (per the truth) | `raw` | `lab` |
+  |---|---|---|---|
+  | `IMG_2889` | `L` unlit | 0.976 (−0.276) | 0.976 (−0.276) |
+  | | `R` lit | not returned | 0.397 (+0.303) |
+  | | `D` lit | 0.189 (+0.511) | 0.353 (+0.347) |
+  | | `F` unlit | 0.943 (−0.243) | 0.950 (−0.250) |
+  | `IMG_2891` | `R` unlit | 0.968 (−0.268) | 0.960 (−0.260) |
+  | | `D` lit | not returned | 0.336 (+0.364) |
+  | | `F` unlit | 0.951 (−0.251) | not returned |
+  | `IMG_2892` | `R` lit | 0.096 (+0.604) | 0.365 (+0.335) |
+  | | `D` lit | 0.172 (+0.528) | not returned |
+  | | `F` unlit | 0.904 (−0.204) | not returned |
+  | `IMG_2893` | `R` lit | 0.181 (+0.519) | not returned |
+  | | `F` unlit | not returned | 0.893 (−0.193) |
+  | `IMG_2894` | `L` unlit | 0.914 (−0.214) | not returned |
+  | | `R` lit | 0.169 (+0.531) | 0.370 (+0.330) |
+  | | `D` lit | 0.127 (+0.573) | not returned |
+  | | `F` unlit | 0.833 (−0.133) | 0.897 (−0.197) |
+  | `2026-10-07-1` | `R` lit | 0.363 (+0.337) | 0.426 (+0.274) |
+  | | `D` unlit | 0.994 (−0.294) | 1.007 (−0.307) |
+  | | `F` lit | not returned | 0.482 (+0.218) |
+
+  The ranges: `raw` lit 0.096–0.363 and unlit 0.833–0.994, `lab` lit 0.336–0.482 and unlit 0.893–1.007. So the smallest margins are
+  `raw`'s +0.337 and −0.133, and `lab`'s +0.218 and −0.193. **Letters returned**, of the 24 printed: 15 on `raw`, 13 on `lab`. **Signs**,
+  of 12: on `raw`, 7 from a lit letter seen, 4 from an unlit letter alone, 1 withheld; on `lab`, 7, 3 and 2.
+
+- **What earlier phases asked this one to look at.** P6's prediction held: on the five fallbacks `vision`'s boxes and shot equal `raw`'s
+  and the only difference is the uncropped note in `warnings`. Its ceiling of 60 is 59 here, since `IMG_2893`'s `sidespin` is lost on
+  both. P3's look held on `raw`: six of its seven lit letters are under M42's 0.32, and the seventh, on the JPEG original
+  `2026-10-07-1`, is 0.363. P7's lit `R` read as `L` did not occur. P2's padding: no miss on `raw` is geometric.
+- **A fault in the harness, found by the first read, and fixed before any table printed.** The first `measure` stopped with `KeyError:
+  'sidespin'` on `raw`'s `IMG_2893`. `ShotData` omits `backspin` and `sidespin` when `None` (`skip_serializing_if`,
+  `crates/contracts/src/shot.rs`), and `classify` and `lit_rows` indexed them. P7's controls never withheld either. An absent key is
+  call 8's **withheld**, so `probe.py` gained `stored`, which allows absence on those two keys alone, and `control` gained `D` and `F`
+  removed, the `9899` box removed, and the lit table on a shot with no `sidespin` key. Removing either key from the allowance, or the
+  allowance itself, makes `control` raise, and any other absent key still raises. No bar, value or classification changed. The stopped
+  attempt's 8 files were byte-identical to the first full run's, and `frames/runs/C0/` was cleared so that `repeat` could say `first`
+  honestly.
+- **For P12**: **stills pass at C0, on `raw`.** They do not pass on `vision`. The target for this run is stills alone (the decision's
+  table), so `results/C0.json` is what its "not needed" reads.
+- **For P13, P14 and P15**: the phone path passing is `raw`, with one cell not read, and that value's letters are not in Vision's boxes,
+  so call 11's check 1 would rule it the recognizer's. P12 names the final config and these read their condition from it.
+- **For P16**: on `raw`, 248 of 251 boxes are at 1.00, and the other three are 0.30, all strays: `DALI` (`IMG_2889`), and `AII` and
+  `*ТАМАНA` (`IMG_2891`). `AII` landed in `Ball Speed Mph`'s tile, and `IMG_2891`'s 0.994 is the only `parse_confidence` under 1.0 on `raw`.
+  On `lab`, all 237 are at 1.00, and the one `parse_confidence` under 1.0 is the caught shot's 0.542. Finding 7's near-constant holds here.
+- **For P17**: facts the verdict's text needs, with no reading put on them here.
+  - `raw` is **at** T3's limit: `sidespin` read on 5 of 6, so one more lost sign on any photo misses that bar. T2 has 5 to spare.
+  - `raw` reads more than `lab` on these copies (71 to 68), and P5's caveat applies: `raw` gives Vision 2576 where the phone holds 5712,
+    while `lab` shrinks to 1600 either way.
+  - `vision`'s miss is P6's: five fallbacks and one replay panel. It says nothing about VisionKit's scanner.
+  - Stray boxes reached stored tiles on `raw` and each still gave the right value: `SHOT DATA` under `Apex Ft` on four photos, `AII`
+    and `14` under `Ball Speed Mph`. Boxes are in `boxes/C0/`.
+  - Choices under rule 1, none touching `thresholds.md`: `stored` and its three controls, above. `boxes/C0/<mode>/<id>.json` holds the boxes
+    files only, by call 1's layout, where P7's finding says to copy the directory, since `parse-screen` regenerates each shot from them.
+    `results/C0.json` is the second run's, since its `repeat: same` is the record that they matched. One look beyond call 16, `IMG_2893`'s
+    sidespin tile on `raw`, because it is the passing arm's one miss, and its crop was scratch and is deleted.
+- **For P19**: `boxes/C0/` (18 files) and `results/C0.json` are in the tree and not ignored, for its commit (rule 13).
+- **For later rows, when the originals reach this Mac**: another `measure --config C0 --set fs-still` overwrites `results/C0.json`'s arms
+  and `frames/runs/C0/`, and these copies' `boxes/C0/` only if copied over. P19's commit is what keeps this measurement.
+
+### P10 (2026-11-04) — not run: the five clips are still not on this Mac
+
+Run under the decision of 2026-11-04, whose table gives P10 "Not run: no clips", so nothing was decoded, read or measured, and
+there is no table to set beside the lab's 60.
+
+- **The proof.** `probe.py check` exits 0 with 6 of 6 captures matching, prints all five `data/raw/shot_screens/IMG_n.MOV` as
+  absent, and ends "the clips 0 of 5". `data/` holds only its `README.md`, `data/raw/` does not exist, and `git ls-files` tracks no
+  `.MOV`. `measure --config C0 --set fs-clip` exits 1 before reading anything: `STOP: photos.json holds no capture of set 'fs-clip'
+  (the decision of 2026-11-04)`.
+- **A search of `/` for `IMG_2889.MOV` is not evidence either way.** It ran for about three and a half minutes, printed nothing and
+  was killed unfinished, as P4's wider search was. The manifest's paths are the only place rule 9 would accept the clips from, so
+  a later phase has no reason to run it again.
+- **Nothing moved.** `results/C0.json` is as P9 left it: its `sets` holds `fs-still` alone, and it was last written before this
+  phase started. `thresholds.md`'s digest still equals the one it records, `frames/grid/` does not exist, and the rule 5 diff is
+  empty.
+- **For P12**: whether clips pass is **not measured**. `results/C0.json` has no `fs-clip` key, and that is not a miss: the decision's
+  table makes this run's target stills alone, so P9's "stills pass at C0, on `raw`" is all its condition reads.
+- **For P17**: the clips' verdict is **not measured**, and P10 contributes no number to it. Finding 10's 60 of 60 stays the lab's, on
+  the originals, with nothing here beside it. `probe.py` has no `verdict` yet, and call 9's clip column ends "**MISS** otherwise",
+  which tells M38 to ship the still import first. So `verdict` must print **not measured** on an absent `fs-clip` key, and not fall
+  through to **MISS**, which would state a result nobody measured.
+- **For later rows, when the clips reach this Mac**: `measure` stops until all of these exist, so this phase as written follows them.
+  P4's row (`grid-frame`, `frames/grid/`, and its comparison against M42 P14's frames), `fs-clip` entries in `photos.json`, and the
+  clip's modes in `probe.py` (P5's `lab_input`, and `measure`'s comment on the same gap). The lab's column also needs P8's models.
+
+### P11 (2026-11-04) — not run: the user omitted HD Golf, and its photos are not on this Mac
+
+Run under the decision of 2026-11-04, whose table gives P11 "Not run: omitted by the user", so nothing was decoded, read or
+measured. There are no totals, no flagged count and no differences by photo or field to report, in any mode.
+
+- **Whose call.** P4, P8 and P10 rest on that section's reading of "proceed". This one rests on the user's words, "Omit HD golf
+  for now". The absence below is a second reason beside it, and the section's closing paragraph still owes HD Golf a new row
+  when the files arrive.
+- **The proof.** `probe.py check` exits 0 with 6 of 6 captures matching, and prints "HD Golf: 0 of 15 present" with each path
+  absent. A separate walk of `input.image_path` over `spec/vectors/screen/corpus/` and `reference/` gives the same 0 of 15. `data/`
+  holds only its `README.md`, neither `data/raw/` nor `data/processed/` exists, and `git ls-files data` tracks that README alone.
+  `photos.json` holds `fs-still` entries alone. `measure --config C0 --set hd` exits 1 before reading anything: `STOP: photos.json
+  holds no capture of set 'hd' (the decision of 2026-11-04)`.
+- **Nothing moved.** The 55 files under `results/`, `boxes/` and `frames/runs/` hash the same before and after this phase.
+  `results/C0.json`'s `sets` holds `fs-still` alone, `thresholds.md`'s digest equals the one it records, the rule 5 diff is empty,
+  and `probe.py control` exits 0.
+- **For P17**: HD Golf is **not measured**, so this phase's "open item for M38" has no differences to list, and the item is all of
+  it: what Vision makes of that screen, in every mode, is unknown. It has no bar and no verdict (decision 3, call 9), so it moves
+  the verdict neither way. `verdict` must not look for a `sets.hd` key, and "What this does not show" names HD Golf, as the
+  decision's table says. Say it as the user's omission, since the clips and models are absences the user did not choose. Two
+  things read like evidence here and are not, so quote neither as Vision on HD Golf:
+  - P7's control 1, "all 15, 168 read", is the committed vectors' own boxes, and it proves the comparator. Vision is not in it.
+  - Finding 7's "42 boxes in, 42 out" on the HD Golf layout was a synthetic render, as that finding says.
+
+  ADR-034's `Impact Position V` hazard on `2026-08-10-1` and `2026-08-23-1` is therefore **unanswered for Vision**, and `DECLARED`'s
+  one entry has not met a Vision read.
+- **For later rows, when the photos reach this Mac**: this section as written. Read against `probe.py`, `measure --set hd`
+  needs all of these, beyond P7's note that no `measure` path calls `classify_vector`:
+  - **`hd` entries in `photos.json`.** `manifest` writes `fs-still` alone. Path and digest come from each vector, and each
+    `input.image_sha256` is the whole 64 hex, so rule 9 holds as it stands (the 12 in the file names are only a prefix).
+  - **A way past the second stop.** `read_bars` knows only `fs-still` and `fs-clip`, and a set not in it stops `measure` right after the
+    manifest. `hd` has no bars, so the fix is a path that skips `judge`, **never** a row in `thresholds.md` (rule 2).
+  - **The vector's echoes in the input.** `screen_input` stamps `session_id` `m33` and the fixed `TIMESTAMP`, and `classify_vector`
+    refuses a difference in `ECHOED` as the harness's fault, so the first read would stop there. Call 8 already says HD Golf's
+    timestamp is the vector's, and `shot_id` and `session_id` need the same.
+  - **The images.** `mode_image` and `prepare` know the stills only. `2026-08-23-1`, one of ADR-034's two, is the set's one HEIC, so
+    it decodes through ImageIO (rule 6) and needs `lab_input`'s unwritten route from `frames/decoded/`, which makes its `lab` image
+    not the lab's exact pixels (call 2). P5's HD Golf clause, the quad against each vector's `input.notes`, runs there too.
+
+### P12 (2026-11-04) — not needed: C0 meets this run's target, so the final config is C0
+
+Read under the decision of 2026-11-04, so **provisional: pasted copies**. Its table makes this run's target stills alone, stills passing
+on `raw` or `vision`, and `results/C0.json` has them passing on `raw`. So the condition is not met, no rung ran, and no code was written.
+
+- **One line per config measured**, of call 10's bound of eight, each cell read / wrong / flagged and the arm:
+
+  | config | set | `raw` | `vision` | `lab` |
+  |---|---|---|---|---|
+  | **C0** | `fs-still` | 71 / 0 / 0 **PASS** | 59 / 0 / 1 **MISS** | 68 / 0 / 1 **PASS** |
+  | **C0** | `fs-clip` | not measured | not measured | not measured |
+
+- **The final config is C0**, by call 10's "the first that meets the target". It was measured first, so there was no best to compare.
+- **The proof, beyond reading P9's table.** `probe.py check` exits 0 with 6 of 6 matching, and `control` holds. A throwaway run over all 18
+  arm-and-photo pairs, with the plan's table typed afresh, and neither `truth()` nor `classify()` in the path, recounted what `results/C0.json`
+  records in every total, the lowest field and all four bars. Limits typed from call 9 agree with the ones parsed into the file. On the same 18:
+  a fresh `vision-ocr read` is byte-identical to `boxes/C0/`, so this is a third matching read; `boxes/C0/` equals `frames/runs/C0/`
+  and each digest in the results; and `parse-screen` on the committed boxes equals each stored shot. **Nothing moved**: the 56 files
+  of `results/`, `boxes/`, `frames/runs/` and `thresholds.md` hash the same before and after, `thresholds.md`'s digest equals the
+  one recorded and `HEAD`'s, and the rule 5 diff is empty. `measure` was not re-run, since it would rewrite `repeat`, P9's record that
+  two runs matched. The script is gone, and so is the `__pycache__` its import left (rule 14).
+- **`boxes/C0/` is already the final config's boxes**, so "copy" had nothing to do.
+- **For P13**: the final config is **C0**. On stills, call 11's condition does not hold, since `raw` passes. On clips it needs a miss on
+  both phone modes, and they are not measured, which P10 says is not a miss. `raw`'s one unread cell is P9's `IMG_2893` `sidespin`, and
+  in `boxes/C0/raw/IMG_2893.json` the tile has `SIDESPIN RPM` and `638`, and no box on the photo is `D` or `F`.
+- **For P16**: "the final config's results" are `results/C0.json`, `fs-still` only.
+- **For P17**: three things the verdict's text needs.
+  - The verdict is reached at C0, so it carries neither **tuned** label, and **provisional: pasted copies** is what it carries.
+  - **"Not needed" rests on the decision, not on `thresholds.md`.** That file's target is stills **and** clips, so with clips unmeasured,
+    its own test of whether the ladder runs has not been answered. It is C0's standing as final on this run that is provisional, for the
+    same reason the verdict is. Say so rather than letting "the ladder was not needed" read as a result on clips.
+  - **C1 to C4 are unmeasured**, so nothing here says whether any would return `IMG_2893`'s letters, or lift `raw` off T3's limit, or
+    whether any would add a **wrong** cell. Neither "the ladder would not help" nor "C0 is the best setting" is a finding of this run.
+- **For later rows, when the clips reach this Mac**: the target goes back to stills and clips, and if C0 misses on clips this phase runs as
+  written, on what P10 lists first. **None of the ladder exists**: `vision-ocr read --config C1` still exits with `config C1 is not built
+  yet`, `+` is not parsed, and `probe.py` has no `ladder`. P3's and P7's notes for this phase still hold for whoever builds it: `glyphRGB`
+  needs no change, and `measure` already passes `--config`. On the originals, P9's own re-measure may change the stills' answer, so read it first.
+
+### P13 (2026-11-04) — not needed: what is missing is the recognizer's
+
+Read under the decision of 2026-11-04, so **provisional: pasted copies**, and its table's steps 1 and 2 are what ran. No rule was written, so
+the read counts stand at P9's (`raw` 71, `vision` 59). Nothing under `crates/` or `spec/` moved, the rule 5 diff is empty, and `SCREEN_PARSER_VERSION`
+and `thresholds.md` are untouched. `probe.py` gained `failures` and a control 6, and that is all this phase changed.
+
+- **The condition does not hold.** `probe.py failures --config C0` judges each arm again from its cells against the bars parsed out of
+  `thresholds.md`, rather than taking `pass` from the file: on `fs-still`, `raw` PASS, `vision` MISS, `lab` PASS. So there is no miss on both phone
+  modes. `fs-clip` prints "not measured, which is not a miss".
+- **Steps 1 and 2: parser-fixable on `raw` and `vision`, 0 of the 14 cells not read.**
+
+  | mode | id | field | cell | printed | in Vision's boxes | what that makes it |
+  |---|---|---|---|---|---|---|
+  | `raw`, `vision` | `IMG_2893` | `sidespin` | withheld | `638 D` | `638` in its tile, and neither `D` nor `F` on the photo | recognizer's: call 11's check 3 lets nothing but the lit letters sign it |
+  | `vision` | `IMG_2894` | all twelve | withheld, FAILED | the row | 0 boxes | recognizer's by call 11's wording, "a value Vision never returned". The cause is the image: it is the replay panel (P6), and `raw` reads all twelve on this photo |
+
+  `IMG_2893` is counted twice because `vision` falls back to `raw` there (P6). The one box near a letter is `DD` at 2048,1168, far outside the
+  tile and no sign letter, and `whose` does not count it.
+- **How item 1 was read, in `whose`.** A number anywhere on the photo counts, not only under its label, because a garbled label leaves no tile to look in.
+  So it errs towards "fixable", and each row prints `in_tile` and where the box sits, to be read rather than trusted. A signed cell also needs a
+  letter of its pair, as a token of its own (`D`, `638 D`, `638D`, not `DD`), with an `rgb`, since a letter decides by its colour and the host measures that.
+- **`lab`, not a target arm, has two that are fixable** (`failures --config C0 --mode lab`, 2 of 4): `2026-10-07-1`'s `apex_height` and `smash_factor`, one cause.
+  Vision's `APEX RI` matches no label, so `142.2` falls into the next tile as P9 recorded, with `1.43` beside it. Call 10's target and call 11's condition name
+  only the phone modes, `lab` passes anyway, and nothing was fitted to it. `lab`'s other two, `IMG_2892` `sidespin` and `IMG_2893` `launch_direction`,
+  have their number and no letter of the pair, as `IMG_2893` does on `raw`.
+- **The proof.** `check` exits 0 with 6 of 6 matching. `control` holds, with control 6 new: seven mutations of known cause on the grid's boxes, each landing
+  on the side named, and four on the helpers. A throwaway harness put 12 faults into `whose` and its helpers, and each made `control` fail. It proved six
+  stops on scratch copies, each exiting non-zero: no results file, a different `thresholds.md`, a boxes file or a shot file not matching `results/`, a `pass`
+  flipped, a run file gone. It drove three paths no real cell reaches: a `D` handed to `IMG_2893` turning that cell PARSER-FIXABLE through the whole listing, the
+  condition reading "holds" with both phone modes missing, and a synthetic `fs-clip` set reading through. Harness and scratch are gone (rule 14).
+- **`failures` writes nothing and runs no Vision**, since a re-read would rewrite `repeat`. A sorted digest of the 56 files of `results/`, `boxes/`, `frames/runs/` and
+  `thresholds.md` is the same before and after a last `check`, `control` and both `failures`. All 36 boxes files equal `results/C0.json`'s digests, and none of the
+  56 has an mtime or ctime after this phase's marker. (An unsorted digest of the same 56 differed between runs with no file touched, so only the sorted one is evidence.)
+- **The rule-side steps did not run.** No failing vector, `lab-regress`, or the Verify block's whole-workspace lines: they guard a rule, and with the rule 5 diff empty
+  they have nothing to say. P19 runs its own. This phase's other **Read first** files are a rule's reading, and were not read.
+- **For P14 and P15**: tick the same way, by P13's step 2. No rule fired, so `results/C0.json` has not moved, and `failures --config C0` is the one command each needs. There is no
+  group to take next.
+- **For P16**: nothing here changes its inputs.
+- **For P17**: facts the verdict's text needs, with no reading put on them here.
+  - No parser rule fired, so the verdict does not carry **tuned, parser**.
+  - **"Not needed" rests on the decision, as P12's did.** It answers on stills. Call 11's condition on clips is unanswered, so no rule's being needed there is not a result of this run.
+  - `raw`'s T3 limit (`sidespin` on 5 of 6, P9) rests on Vision returning a letter. The one cell it loses is not one a parser may recover.
+  - **Measured on a mutation, not a photo**: with `SMASHFACTOR` garbled on the grid's boxes, `1.08` falls into `Backspin Rpm`'s tile, `backspin` stores `1.08`, and that is **wrong on an unflagged
+    shot**, with the warning `no tile found for 'Smash Factor'` and no flag. It is P9's `APEX RI` spill on another tile, which was caught there only because `142.2` fails the speed cross-check and the range check (P9). It sits beside
+    P7's lit `R` read as `L`, as a route to a **wrong** cell that no arm here measured. No arm measured has a **wrong** cell.
+  - Choices under rule 1, none touching `thresholds.md`: `failures` reads `frames/runs/` as P7 said, holding each file to `results/`. Its default arms are the phone modes, with `--mode lab` the diagnostic.
+    It prints, and adds no results file, so call 1's layout is unchanged. Its output says `not fixable` where the plan says "the recognizer's", because of `IMG_2894`'s twelve. Control 6 is beyond the plan's list.
+- **For P18**: no rule, so nothing from this phase goes to ADR-014 or CONFORMANCE. It may name `probe.py failures` with the spike's other subcommands.
+- **For P19**: no rule fired in this phase. Unless P14 or P15 says otherwise, the Verify block's "if a rule fired" lines (`v17` and `career-v3`, `tests/test_conformance.py`, `conformance.py check`) and
+  call 15's Windows gate do not apply. `probe.py`'s change is in the tree for its commit (rule 13).
+- **For later rows, when the files reach this Mac**: P9's re-measure may move this answer, so run `failures` again, and if the condition then holds this phase runs as written. Three things will be in its way. `lab-regress`
+  is still not written (P8). `failures` reads `frames/runs/<config>/<mode>/<id>`, which `run_arm` keys by id alone, so a clip frame and the still of the same id would overwrite each other until that row separates them. And the
+  plan's "failures" lists on `fs-clip` only through the synthetic set above, so no real clip has been through it.
+
+### P14 (2026-11-04) — not needed: there is no second group, because nothing on the phone modes is parser-fixable
+
+Read under the decision of 2026-11-04, so **provisional: pasted copies**, and its table's steps 1 and 2 are what ran. No rule was written, so the read counts stand at P9's
+(`raw` 71, `vision` 59). P13 wrote and withdrew nothing, so there was no group to pass over. Nothing under `crates/` or `spec/` moved, and `SCREEN_PARSER_VERSION`, `thresholds.md` and `probe.py`
+are untouched. This row and this entry are all the phase changed.
+
+- **The condition does not hold.** `probe.py failures --config C0`, on `fs-still`: `raw` PASS, `vision` MISS, `lab` PASS. So there is no miss on both phone modes. `fs-clip` prints "not measured, which is not a miss".
+- **Steps 1 and 2: parser-fixable on `raw` and `vision`, 0 of the 14 cells not read**, and they are P13's cells: `IMG_2893` `sidespin` on both modes, and `vision`'s twelve on `IMG_2894`.
+- **Those two causes, checked on the boxes files rather than through `whose`**, with a one-off pattern for a lone `D` or `F`. `IMG_2893` on `raw` and on `vision` holds 39 boxes each, with `638` present and `DD` at 2048,1168
+  the only match, which `whose` rightly refuses as a letter. `IMG_2894` on `vision` holds 0 boxes. The same pattern finds `D` at 1243,1423 and `F` at 1505,1423 on `IMG_2894`'s `raw`, so a pair that is there does show up.
+- **Nothing moved.** A sorted digest of the 56 files of `results/`, `boxes/`, `frames/runs/` and `thresholds.md` is the same before and after `check`, `control` and both `failures`. None of them, nor `probe.py`, has an mtime after this
+  phase's marker. The rule 5 diff is empty, and `thresholds.md` has no diff against `HEAD`. `check` matches 6 of 6, and `control` prints all held.
+- **The rule-side steps did not run**, as at P13: they guard a rule, and there is none. `failures --config C0 --mode lab` still names `2026-10-07-1`'s `apex_height` and `smash_factor` as fixable, and `lab` is still not a target arm, so that is P13's diagnostic and not a group.
+- **For P15**: tick the same way, by P13's step 2. `results/C0.json` has not moved, and `failures --config C0` is the one command it needs. There is no group to take next.
+- **For P16**: nothing here changes its inputs.
+- **For P17**: no new fact. P13's list stands as written, and no parser rule fired here, so the verdict still does not carry **tuned, parser**.
+- **For P18**: no rule, so nothing from this phase goes to ADR-014 or CONFORMANCE.
+- **For P19**: no rule fired in this phase, so P13's line on the "if a rule fired" commands and call 15's Windows gate still stands, unless P15 says otherwise.
+
+### P15 (2026-11-04) — not needed: the cap, reached with no rule written, so what is missing is the measured result
+
+Read under the decision of 2026-11-04, so **provisional: pasted copies**, and its table's steps 1 and 2 are what ran. No rule was written in P13, P14 or here, so the read counts stand at P9's (`raw` 71, `vision` 59). Nothing under
+`crates/` or `spec/` moved, and `SCREEN_PARSER_VERSION` is still 1. `thresholds.md` and `probe.py` are untouched. This row and this entry are all the phase changed. The models are absent (`check`: 0 of 3), which rule 3 would stop on, and the decision's table is why it does not: steps 1 and 2 need neither models nor ffmpeg.
+
+- **The condition does not hold.** `probe.py failures --config C0`, exit 0, on `fs-still`: `raw` PASS, `vision` MISS, `lab` PASS. So there is no miss on both phone modes. `fs-clip` prints "not measured, which is not a miss".
+- **Steps 1 and 2: parser-fixable on `raw` and `vision`, 0 of the 14 cells not read**, the same cells as P13 and P14.
+- **This is the cap, so these are the measured result on this run's stills:**
+
+  | mode | read | not read | why, by call 11's check 1 |
+  |---|---|---|---|
+  | `raw` | 71 | `IMG_2893` `sidespin` | `638` is in its tile, and no box holds `D` or `F` |
+  | `vision` | 59 | the same cell, and all twelve on `IMG_2894` | the same, and that image gave 0 boxes |
+
+- **Those two causes, read straight off the boxes files rather than through `whose`.** `IMG_2893` holds 39 boxes on each of `raw` and `vision`, with `638` present and `DD` the only all-`D`-or-`F` box, which is no sign letter. `IMG_2894` on `vision` holds 0 boxes. The same read finds `D` and `F` on `IMG_2894`'s `raw`, so a pair that is there does show up.
+- **Nothing moved.** The sorted digest of the 56 files of `results/`, `boxes/`, `frames/runs/` and `thresholds.md` is `2c18796f…82c5` before and after `check`, `control` and both `failures`, each of which exits 0, and none of the 56 has an mtime after this phase's marker. The only file under `crates`, `src`, `tests`, `scripts`, `spec`, `docs` or `spikes` newer than the marker is this plan. The rule 5 diff is empty, and `thresholds.md` has no diff against `HEAD`. `check` matches 6 of 6, and `control` prints all held.
+- **The rule-side steps did not run**, as at P13 and P14: they guard a rule, and there is none. `failures --config C0 --mode lab` still names `2026-10-07-1`'s `apex_height` and `smash_factor` as fixable, 2 of `lab`'s 4 cells not read. `lab` is not a target arm, so that remains P13's diagnostic and not a group.
+- **For P16**: nothing here changes its inputs. `results/C0.json` and the boxes are as P9 left them, and the digest above is there to hold them to.
+- **For P17**: no new fact on top of P13's list, and two that close it. None of the three phases fired a rule, so the verdict does not carry **tuned, parser**. The table above is what §P15's "the measured result" means here, and it answers on stills only: it says nothing about the original files, the clips or HD Golf.
+- **For P18**: no rule across P13-P15, so nothing from them goes to ADR-014 or CONFORMANCE, and §P18's "why no `SCREEN_PARSER_VERSION` bump" has no rule to explain.
+- **For P19**: no rule fired in P13, P14 or P15, and this is the "unless" P13 and P14 left open, closed. The Verify block's "if a rule fired" lines (`v17` and `career-v3`, `tests/test_conformance.py`, `conformance.py check`) and call 15's Windows gate do not apply. `probe.py`'s change from P13 is still in the tree for its commit (rule 13).
+- **For later rows, when the files reach this Mac**: P13's paragraph stands. No rule was written, so none of call 11's three is spent, and a re-measure that makes the condition hold would have all three to use.
+
+### P16 (2026-11-04) — Vision's confidences change no flag, and the recommended `min_confidence` is 0.6 with nothing to catch
+
+Measured under the decision of 2026-11-04, so **provisional: pasted copies**, and on `fs-still` only: `fs-clip` and `hd` are not measured, and there is no lab reader to compare with (P8), so item 2's "against the lab's" did not run. `lab` below is Vision on the lab's image, a diagnostic. The final config is C0 (P12). `probe.py calibrate --config C0` prints everything here and writes nothing. It reads the committed `boxes/C0/`, each held to `boxes_sha256`, and each parse at 0.6 is held to `results/C0.json`, so its 0.6 row is the bars' own.
+
+**ADR-014's question, answered on these six: no.** At every threshold from 0.5 to 0.9, on every mode, the same shots flag, and neither flag comes from a confidence.
+
+- **1. The histogram.** Two distinct values on the phone modes, and one on `lab`:
+
+  | mode | boxes | distinct | at 0.30 | at 1.00 |
+  |---|---|---|---|---|
+  | `raw` | 251 | 2 | 3 | 248 |
+  | `vision` | 208 | 2 | 3 | 205 |
+  | `lab` | 237 | 1 | 0 | 237 |
+
+  `vision`'s are `raw`'s less `IMG_2894`'s, because five of its images are fallbacks (P6). The 0.30 is Vision's `Float` as JSON, `0.30000001192092896`. The three boxes at 0.30 are `DALI` (`IMG_2889`), and `AII` and `*ТАМАНA` (`IMG_2891`), all strays and none a tile's label or value. **A low confidence is not what marks a misread, on this evidence**: the box behind the run's one differing cell, `APEX RI`, is at 1.00, as are `S DESPIN R`, `PYAMAHA` and `→YAMAHA`.
+
+- **2. Each `parse_confidence` and what it averaged.** "coverage" is the same parse with every box at 0, so the two coverage terms less any penalty, and "OCR" is what that takes off the shot's own. "Averaged" is every box in a tile's cell, the tile's label and values and any stray that falls in the cell, so the table lists what was left out. `used` is printed nowhere, so `averaged_boxes` moves one box's confidence and watches `parse_confidence`, and `confidence_terms` stops unless `W_OCR` times the mean equals the term to the record's three decimals.
+
+  | mode | id | boxes | averaged | conf | coverage | OCR | mean | not averaged |
+  |---|---|---|---|---|---|---|---|---|
+  | `raw` | `IMG_2889` | 42 | 33 | 1.000 | 0.700 | 0.300 | 1.0000 | `TEAM 1`, `AARON`, `SHOT DATA`, `Ev`, `1`, `11`, `DD`, `CONTINUE`, `DALI` |
+  | `raw` | `IMG_2891` | 41 | 34 | **0.994** | 0.700 | **0.294** | 0.9794 | `TEAM 1`, `AARON`, `+2`, `1`, `CONTINUE`, `DELL`, `*ТАМАНA` |
+  | `raw` | `IMG_2892` | 43 | 33 | 1.000 | 0.700 | 0.300 | 1.0000 | `TEAM 1`, `AARON`, `SHOT DATA`, `1`, `+2`, `44`, `DI`, `CONTINUE`, `DELL`, `PYAMAHA` |
+  | `raw` | `IMG_2893` | 39 | 33 | 1.000 | 0.700 | 0.300 | 1.0000 | `TEAM 1`, `AARON`, `1`, `+3`, `DD`, `CONTINUE` |
+  | `raw` | `IMG_2894` | 43 | 35 | 1.000 | 0.700 | 0.300 | 1.0000 | `TEAM 1`, `AARON`, `1`, `+2`, `DELL`, `14`, `CONTINUE`, `DD` |
+  | `raw` | `2026-10-07-1` | 43 | 34 | 1.000 | 0.700 | 0.300 | 1.0000 | `TEAM 1`, `AARON`, `DELL`, `14`, `DD`, `CONTINUE`, `→YAMAHA`, `1`, `+9` |
+  | `vision` | the five fallbacks | | | as `raw` | | | | as `raw` |
+  | `vision` | `IMG_2894` | 0 | none | failed read | | | | |
+  | `lab` | the other five | 37–42 | 31–34 | 1.000 | 0.700 | 0.300 | 1.0000 | `calibrate` prints each |
+  | `lab` | `2026-10-07-1` | 41 | 32 | **0.542** | **0.242** | 0.300 | 1.0000 | `TEAM 1`, `AARON`, `APEX RI`, `SHOT DATA`, `1`, `+9`, `14`, `→`, `CONTINUE` |
+
+  `AII` is the only box under 1.00 that was averaged: 33 at 1.00 and one at 0.30, of 34, is the 0.9794. **The OCR term is not strictly a constant, and is in effect one**: 0.300 on 9 of the 11 parsed phone-mode shots and 0.294 on the other two, which are one photo read twice. That 0.006 is a tenth of what one lost label costs (0.058). So on the phone `parse_confidence` is the coverage terms plus a flat +0.30, as finding 7 predicted on synthetic images. Setting every box to 0 and to 1 moved no value and no physics flag on any of the 17 parsed shots, so a confidence reaches the score and nothing else.
+
+- **3. Why each flagged shot is flagged**, at 0.6. **From confidence alone: 0 of 2.** Physics is told apart by re-parsing at a threshold of 0, where only a failed check can flag, since a confidence is clamped at 0.
+
+  | mode | shot | cause |
+  |---|---|---|
+  | `raw` | none | |
+  | `vision` | `IMG_2894` | failed read: 0 boxes, the replay panel (P6), so no check ran |
+  | `lab` | `2026-10-07-1` | physics: the speed cross-check (−0.25) and the range check (−0.15) |
+
+  That shot is 0.35·11/12 + 0.35·11/12 + 0.30 − 0.40 = 0.542, so it is also under 0.6, and only because of the penalties. Before them it is 0.942, over every threshold here (arithmetic). `IMG_2893`'s withheld `sidespin` stays 1.000 and unflagged on `raw`, as ADR-014's M42 addendum says of a rule that withholds.
+
+- **4. The what-if**, each threshold re-parsed through `golf-core` and every cell classified again. **All five rows are the same**, so they are one row here:
+
+  | `min_confidence` | `raw`: read, flagged | `vision`: read, flagged | `lab`: read, flagged | **wrong**, any mode | **caught** |
+  |---|---|---|---|---|---|
+  | 0.5, 0.6, 0.7, 0.8, 0.9 | 71, none | 59, `IMG_2894` (failed read) | 68, `2026-10-07-1` (physics) | **0** | 1: `lab`'s `2026-10-07-1` `smash_factor` |
+
+  **There is no wrong cell, so none could be caught or missed.** The one cell that differs is on `lab`, and physics catches it at every threshold, 0.5 included. A throwaway recount, with none of `probe.py` in its path, gave the same histogram and the same flagged shots at all five and at 0, and is deleted (rule 14).
+
+- **Beside it, a mutation and not a photo: P13's route to a wrong cell**, on the committed grid vector's boxes. With `SMASHFACTOR` garbled, `backspin` stores `1.08` at `parse_confidence` 0.941 (0.942 with every box at 1.00). It is **wrong and unflagged at every threshold up to 0.9**, and caught at 0.95, which is not among §P16's four. **By arithmetic, not measured on photos** (`score`'s weights, every box at 1.00): the labels of twelve a shot must lose to flag are 9 at 0.5, 7 at 0.6, 6 at 0.7, 4 at 0.8 and 2 at 0.9. A shot with every label and value is 0.70 with every box at 0, so at 0.6 or 0.7 no confidence Vision can report flags it.
+
+- **The recommendation: `min_confidence` 0.6, provisional.** By §P16's rule, all four of 0.6, 0.7, 0.8 and 0.9 hold on both phone modes, and 0.6 is the lowest. **It holds vacuously.** No phone-mode cell differs from the truth at any threshold, so this does not show that 0.6 catches anything, and it does not rank the four. On these six a higher value would cost nothing and catch nothing. `ScreenInput.min_confidence` is the caller's, so this changes no code and no vector. **`W_OCR` is named for M38 and not changed here**: moving it would move every screen vector, and on this evidence its 0.30 is a flat credit rather than a signal.
+- **A control's own fault, found on its first run and fixed.** Control 7's arithmetic clause asked at the rounded 0.942, which is already over the unrounded 0.94167, so it failed. It now asks just either side of the sum, through the binary too. No result depended on it. `calibrate`'s tables after the fix agree with its first run, compared by eye because that run's output was not kept, and the fix added two printed lines and a stop. Two later runs were `diff`ed and are identical.
+- **Nothing moved.** The sorted digest of the 56 files of `results/`, `boxes/`, `frames/runs/` and `thresholds.md` (`shasum -a 256` of each, sorted, then digested: `4396a7eb…ee32`) is the same before and after every run here, and none of the 56 has an mtime after this phase's marker: the newest is 11:54:08, and the marker is 12:16. **This does not reproduce P15's `2c18796f…82c5`.** P15 did not record its spelling and five tried here gave other digests, so that digest holds nothing here, and the mtimes and each boxes file's `boxes_sha256` are what tie these inputs to P9's. The rule 5 diff is empty, and `thresholds.md` has no diff against `HEAD`. `check` matches 6 of 6, and `control` prints all held.
+- **Resumed once.** The session was cut off after this entry and the tick were written, before it reported. The resumption checked the tree against this entry, corrected the two statements above, and measured nothing new.
+- **For P17**: the four items and the value above are its input, and **the verdict stays as measured at 0.6** (call 9). Facts its text needs, with no reading put on them here:
+  - Say 0.6 is **provisional and vacuous**. It is the rule's floor on an empty set, and six stills gave no **wrong** cell to test it on. "0.6 is enough" is not a finding of this run.
+  - On these six, what flagged a shot was a failed read or a physics check. Confidence alone flagged nothing, and at 0.6 or 0.7 it cannot flag a shot with every label and value.
+  - No threshold offered catches P13's mutation, and `no tile found` raises no flag by itself, so for that route `needs_review` rests on a physics check happening to fail. It is a mutation, so it stays labelled as one.
+  - For M38's list: `W_OCR` is the open question, with the two options being to leave a flat +0.30 in the score or to change the weight and re-record the screen family, and the choice is M38's. Boxes in a hand vector carry Vision's confidence as `0.30000001192092896`. **All of this is C0 only**: `usesLanguageCorrection` is off, and C3, which turns it on, is unmeasured on photos (finding 7's 0.3, 0.5 and 1.0 were synthetic).
+  - Choices under rule 1, none touching `thresholds.md`. `calibrate` prints and adds no results file, as `failures` does, so call 1's layout is unchanged. It prints `lab` as a diagnostic, and the rule reads only the phone modes. "Without taking stills past T4's ceiling" is read per phone mode, each on its own, and it does not bind here. The 0.95 row and the two arithmetic lines are beyond §P16's list, each labelled, as is control 7.
+- **For P18**: ADR-014's clause "M33 re-checks that term's weight and the review threshold" now has its answer here: the term is in effect a constant, the threshold changes nothing on these six, the recommended value is 0.6 and provisional, and the weight is left for M38. All of it on pasted copies at C0.
+- **For P19**: `probe.py`'s `calibrate` and control 7 are in the tree for its commit (rule 13). P16 changed nothing else outside this plan.
+- **For later rows, when the files reach this Mac**: run `calibrate` again after P9's re-measure, since the originals are the images that matter and a new read may hold other confidences. It stops on purpose if `results/` holds `fs-clip` or `hd`: a clip's id is its still's, so `boxes/<config>/<mode>/<id>.json` must tell them apart first, as P13 said of `frames/runs/`. Item 2's lab column needs P8's `lab-boxes/`, and a **wrong** cell on the originals would be the first real test of §P16's rule.
+
+### P17 (2026-11-04) — GO, provisional: pasted copies; clips not measured, and `verdict` holds the log to it
+
+- **The verdict line, as `probe.py verdict` prints it and `log.md` states it**: `**Verdict: GO, provisional: pasted copies. Clips: not measured.**`. Reached at C0 with no rule, so neither **tuned** label. It rests on `raw` alone (P6), which is at T3's limit (P9), and `log.md` says at once that this is not yet the answer on the photos as captured, and that M33 stays open.
+- **What landed**: `spikes/vision-ocr/log.md`, and in `probe.py` the subcommand `verdict` and a control 8. Nothing else in the tree moved: the rule 5 diff is empty, `thresholds.md` has no diff against `HEAD`, and the sorted digest of the 56 files of `results/`, `boxes/`, `frames/runs/` and `thresholds.md` is P16's `4396a7eb…ee32`, by P16's spelling, with none of them newer than this phase's marker. No Vision ran, because a re-read would rewrite `repeat`.
+- **`verdict` works the answer again rather than reading it.** For each arm it rebuilds each cell through `classify` from the cell's value, the flag and `truth()`, then `summarize` and `judge` against the bars parsed from `thresholds.md`, and it stops if a `cell`, `truth`, `flagged`, `summary`, `bars`, `pass` or limit in the file disagrees. An absent `fs-clip` prints **not measured** (P10), `sets.hd` is never opened (P11), and the label is the file's own, as P7 asked. It then checks the log: the one `**Verdict:` line and all 13 table lines must be whole lines of `log.md`, or it exits 1. A NO-GO would exit 0.
+- **The proof.** `check` matches 6 of 6, and `control` holds, with control 8 new: all eight rows of call 9's table on both sets, the two labels, a wrong and a caught cell, 14 edits that must stop it, and six logs. A throwaway harness put 32 faults into the verdict's code and `judge`, and all 32 made control 8 fail. Its first run had one survivor, the shot-count stop, because deleting a shot is already caught by the summary, and that is now tried on a record true to itself with six shots against five. 15 cases on a scratch tree each gave the exit and the message named: no results, a second config, a file not named for its config, a different `thresholds.md`, another `min_confidence`, a boxes file changed or gone, a `pass` flipped, no `fs-still`, the label removed, a `vision-*.json` on disk reading **tuned, parser**, the log gone, and the log saying otherwise. A separate recount, with the plan's table typed afresh and none of `probe.py` in its path, gave the same bars and GO. The same throwaway checked all 28 lit values in `log.md`'s table, and each "not returned", against `results/C0.json`, with 0 differing. Two `verdict` runs print the same bytes. `tests/test_docs_truth.py`: 91 passed, with `log.md` untracked. The scripts are deleted (rule 14).
+- **A control's own fault, found on its first run and fixed.** `edit_failed` turned a failed read into a parse, which is the same cells by call 8's own words and moves no bar, so nothing stopped and nothing should. The control now asks the other direction, a parsed shot called a failed read, which does change the cells.
+- **Nothing addressed to this phase contradicted the plan, and no bar looked wrong** (rule 2). `vision`'s T2 being out of reach is its input (P6), not the bar. Call 16's one crop agrees with the truth table, so the log says nothing against the table.
+- **Choices under rule 1**, none touching `thresholds.md`, and all in `log.md`'s last section beside the earlier phases': `verdict` goes back to values where §P17 asks only for a recomputed table; it holds `boxes/C0/` to `results/`; it stops on a missing arm, because "passes on none" with one unmeasured would be a NO-GO nobody measured; it stops on a second config, because call 10's choice among configs is not written (the ladder never ran); and it reads `spec/vectors/screen/hand/vision-*.json` as "a rule fired", since call 11's item 4 is what brings one. Control 8 is beyond the plan's list. `log.md` has two sections §P17 does not list, on the rectifier and on the confidences, because P6 and P16 each told it to say those things.
+- **For P18**: every doc carries the verdict with its label and the list of what is unmeasured: the original files, the clips, HD Golf (the user's omission) and the lab baseline (the clips and models are absences the user did not choose). `log.md`'s "What this does not show" is that list, and its "For M38" (twelve numbered items) is what §M38's bullets are changed from. Do not edit `log.md`'s verdict line or its two tables by hand, because `verdict` exits 1 if they differ. Do not write that M38 is unblocked: that is the user's.
+- **For P19**: `log.md` and `probe.py` are in the tree for its commit (rule 13). Add `probe.py verdict` to its checks, exit 0 expected. Its report and the commit title use this spelling of the verdict, and the title carries "provisional".
+- **For later rows, when the files reach this Mac**: re-measuring on the originals makes `measure` set `label` to `None`, so `verdict`'s line changes and it exits 1 until `log.md` is rewritten, which is on purpose. A second config in `results/` stops it until call 10's choice is written. `fs-clip`'s arms already reckon, and their boxes are not held, since `boxes/` cannot yet tell a clip from its still (P16).
+
+### P18 (2026-11-04) — the docs say the verdict with its label, and none says M38 is unblocked
+
+- **What landed.** An M33 addendum each in `docs/decisions/034-shot-first-phone-first.md` (the verdict and its table; Full Swing decides, HD Golf is diagnostic, the parser is Rust's; the "biggest unknown"; what is unmeasured) and `docs/decisions/014-screen-capture-shot-ingestion.md` (Vision as the recognizer; the answer P16 addressed here, that the term is in effect a constant, the threshold changes nothing, the recommended 0.6 is provisional and vacuous, and the weight is M38's; no rule). `docs/README.md`: those two rows, and the addenda total, which docs-truth owns, from 120 to 122. `docs/CONFORMANCE.md`: the two sentences. `docs/plans/m31-m40-shot-first-pivot.md`: the checklist row, a note heading §M33, and §M38 from `log.md`'s twelve items, each marked *(M33)* under a note saying that label and C0 apply and that unblocking is the user's. `spikes/README.md`: the entry. `CLAUDE.md`: one comment in the Commands block.
+- **Verified.** `tests/test_docs_truth.py`: 91 passed. `probe.py verdict` exits 0, and `log.md` was not edited. `git diff --stat -- crates src scripts tests spec` is empty, and `thresholds.md` has no diff. Each new cross-link's target exists, with the anchors worked by GitHub's slug rule by a throwaway, deleted (rule 14).
+- **What §P18 made conditional, and did not fire.** No rule (P13-P15), so CONFORMANCE §2's screen count and `hand/` row, CLAUDE.md's `crates/screen` row and `crates/screen/`'s module docs are untouched, and ADR-014's section on `SCREEN_PARSER_VERSION` says there is no bump to explain. **CLAUDE.md gets no clause on M33**: §P18 asks for one only "if the verdict changes" ADR-034's route, and a GO does not, and the file holds no status.
+- **Choices under rule 1**, none touching `thresholds.md`, each the smaller edit:
+  - **§P18's Files line is the list, so the other docs naming M33 had those lines read and were left.** `docs/FLOW.md` is TARGET and last reviewed 2026-09-30, and its map still shows M32 as ⬜ and M33 as 🔒, so it is stale on more than this. `docs/PROJECT_CHARTER.md:40`, ADR-032 at its "M33's question" sentence and ADR-035's "M33's spike" sentence look forward, and an ADR's body is corrected by addendum. The program plan's line "**M33 is unchanged**" and its "M33 runs early on purpose" paragraph still say HD Golf and the frozen parser: the row and the new note both say the M33 plan wins.
+  - **§M38's flow step 2 now leads with the photo as imported** and leaves VisionKit as what the milestone measures, rather than deleting it or choosing for M38. It states item 2's question as a question.
+  - **CLAUDE.md's line 7 still says `.venv` is 3.13**, where this Mac's is 3.14.3, because §P18 says "Nothing else".
+- **For P19**: `git add` these beside `log.md` and the rest of the spike: `CLAUDE.md`, `docs/CONFORMANCE.md`, `docs/README.md`, both ADRs, `docs/plans/m31-m40-shot-first-pivot.md`, `docs/plans/m33-vision-spike.md` and `spikes/README.md`. `docs/README.md`'s document count is untouched at 87, and P19 moves it to 88 with `log.md` staged. The program plan's M33 row reads open and its M38 row was not touched, which is what P19's rows should agree with in `ROADMAP.md`. The WORKLOG entry can name FLOW.md's staleness as left open.
+
+### P19 (2026-11-04) — closed as far as this run can: one commit, verified, and M33 still open
+
+- **What landed.** The top `WORKLOG.md` entry. `ROADMAP.md`: the `Last Updated` date, the M33 row and §M33's status (🔄 open, not ✅, with **GO, provisional: pasted copies. Clips: not measured**, and what is outstanding), and the M38 row's "Needs" naming the verdict and leaving unblocking to the user, under the decision's table. `docs/README.md`: 88 documents, 15 outside `docs/`, eight in `spikes/`. Memory: `golf-coach-status` and its `MEMORY.md` line say the Mac holds pasted copies and no originals, clips, HD Golf photos or models, with the verdict as a pointer to `log.md`. One commit onto `main`, not pushed.
+- **Verified**, each as the rules say:
+  - `cargo test --workspace --no-fail-fast`: **1,761 passed, 5 failed, 26 ignored**, the five exactly finding 1's (rule 7). `cargo fmt --check` exits 0. `cargo clippy --all-targets 2>&1 | grep -c '^warning'` prints 28, the baseline (finding 2). `golf-core rerecord --declare spec/declarations/screen-v1.json --dry-run`: 45 vectors, 0 changed, 0 files written.
+  - `probe.py check`: 6 of 6 match, and it prints the original stills 0 of 6, the clips 0 of 5, HD Golf 0 of 15 and the OCR models 0 of 3 as outstanding. `control`: all held. `verdict`: exit 0, as P17 asked. `tests/test_docs_truth.py`: 91 passed, with `log.md` staged.
+  - `git diff --stat -- crates src scripts tests spec` is empty, and `thresholds.md` has no diff. `data/` holds only its README, with nothing ignored or changed under it. The sorted digest of the 56 files of `results/`, `boxes/`, `frames/runs/` and `thresholds.md`, by P16's spelling, is still `4396a7eb…ee32`, and none is newer than this phase's marker.
+- **The "if a rule fired" lines did not run**: `v17`, `career-v3`, `tests/test_conformance.py` and `conformance.py check`, as P15 closed. So call 15's Windows gates are not in the report.
+- **Choices under rule 1**, each the smaller edit:
+  - **`probe.py measure` did not run.** No Verify line lists it for this phase, the block's "each from P7 on" notwithstanding, and a re-read would rewrite `results/C0.json`'s `repeat`, which is the record P9 kept. `check`, `control` and `verdict` ran, since the last two hold what is committed.
+  - **§P19's "Nothing else" is read as written for `ROADMAP.md`.** The NEXT ACTION paragraph still says whether Vision reads the HD Golf screen is the biggest unknown, §M38's status is as it was, and the M38 row's "A Mac for the skeleton" stands with the verdict added after it. The WORKLOG entry lists these as left stale, with FLOW.md's map, the program plan's "M33 is unchanged" paragraph and `CLAUDE.md`'s `.venv` 3.13, which P18 left.
+  - **The commit title uses `log.md`'s spelling** with its colon and full stop, as P17 asked, which makes it longer than the repo's other titles.
+- **For later rows, when the files reach this Mac**: this commit is what keeps the copies' measurement, as P9 said. A new row reopens the status table here, and `ROADMAP.md`'s M33 row and §M33, the program plan's row, `log.md` and the two addenda each carry the label and move together.

@@ -68,7 +68,7 @@ are ADR-035's.
 | **M31** | The pivot decided (ADR-034, docs only) | desk | – | ✅ Done *(2026-09-30)*, 13/13 phases — [m31-shot-first-adr.md](m31-shot-first-adr.md) |
 | **M31.5** | The Rust re-plan: Python only where required ([ADR-035](../decisions/035-rust-everywhere-python-where-required.md), docs only) | desk | M31 | ✅ Done *(2026-09-30)*, 12/12 phases — [m31-5-rust-first-replan.md](m31-5-rust-first-replan.md) |
 | **M32** | Wider shot contract and device capability, in Rust; the first Rust re-record | this box | M31.5 | ✅ Done *(2026-10-01)*, 13/13 phases — [m32-shot-contract.md](m32-shot-contract.md). Re-detailed Rust-only below (M31.5 P6a) |
-| **M33** | Apple Vision spike: can the phone read the screen? | Mac | M31.5 | 🔄 Planned 2026-11-04 — [m33-vision-spike.md](m33-vision-spike.md), which wins where it differs from §M33 below |
+| **M33** | Apple Vision spike: can the phone read the screen? | Mac | M31.5 | 🔄 Open, measured 2026-11-04 — **GO, provisional: pasted copies; clips not measured** ([log](../../spikes/vision-ocr/log.md)). [m33-vision-spike.md](m33-vision-spike.md) wins where it differs from §M33 below. Still to run: the original files, the clips, HD Golf and the lab baseline |
 | **M34** | The screen reader in Rust (`crates/screen`): the parser port, the V tile and tie rule, the 13-shot re-read | this box | M32 | ✅ Done *(2026-10-02)*, 13/13 phases — [m34-screen-reader.md](m34-screen-reader.md) |
 | **M35** | Shot-first sessions in Rust: photo-only shots, `ShotResult` and `analyze_shot` | this box | M36 | ✅ Done *(2026-10-10)*, 14/14 phases — [m35-shot-first-sessions.md](m35-shot-first-sessions.md). Photo entries in Rust's corpus, `ShotResult` and `analyze_shot`, every mode scoring mechanics, a drill stored but `untracked`, and the storage and career families re-recorded as `career-v2` ([ADR-024's M35 addendum](../decisions/024-per-club-shot-history.md)) |
 | **M36** | The many-shot layer and its stores ported to Rust, recorded once from frozen Python | this box | M32 | ✅ Done *(2026-10-08)*, 19/19 phases — [m36-many-shot-layer.md](m36-many-shot-layer.md). The corpus's `OUTDATED` now means older than `COMPARABLE_FROM` (14), changed in Rust alone ([ADR-024's M36 addendum](../decisions/024-per-club-shot-history.md)) |
@@ -875,6 +875,15 @@ Run this on this box. It reads only committed vectors, so, unlike the old sequen
 
 ## M33 — Apple Vision spike (Mac)
 
+**Replaced by [the M33 plan](m33-vision-spike.md) (2026-11-04), and kept as what was planned.** That plan
+overturned three things here: the parser is Rust's rather than frozen Python's, Full Swing rather than HD
+Golf decides the verdict, and the gate gains a coverage floor and a review ceiling. The spike is in
+`spikes/vision-ocr/`, not `tools/vision-ocr/`. **Its verdict so far is GO, provisional: pasted copies, with
+the clips not measured**: on six chat-pasted copies of Full Swing's stills, at the first settings, with no
+parser rule, the photo as imported read 71 of 72 values with none wrong. It stays open until the stills are
+measured again on the original files and the clips, HD Golf and the lab baseline have run
+([the log](../../spikes/vision-ocr/log.md)).
+
 **Unchanged in substance by M31.5.** The spike feeds Vision's boxes to the frozen Python parser, which
 is using the lab, not changing it
 ([ADR-035 clause 4](../decisions/035-rust-everywhere-python-where-required.md#4-the-frozen-python-lab)).
@@ -1334,19 +1343,48 @@ its list, they do not feed it:
 
 ## M38 — The iPhone app (Mac; P5 at the bay)
 
+**What M33 tells this section (2026-11-04).** Its verdict is **GO, provisional: pasted copies, with the
+clips not measured**, and M33 is open: the original files, the clips, HD Golf and the lab baseline have not
+run. Whether M38 is unblocked on that is the user's call, and this section does not make it. Everything
+marked *(M33)* below carries that label and is at C0, the only settings measured. The whole list is
+[the log's "For M38"](../../spikes/vision-ocr/log.md#for-m38).
+
 - **P0 — toolchain.** Install the `aarch64-apple-ios` and `-sim` targets, Flutter and FRB. Get
-  `cargo test` green on macOS; it has never run on anything but Windows.
+  `cargo test` green on macOS. *(M33)* It first ran there in M33's planning, and what is left is five named
+  failures, none on the phone's path: `capture --lib`'s three, `golf-lab --test flight`'s one and
+  `golf-lab --test import_photos`' one. Also as found on that Mac:
+  - `/opt/homebrew` belongs to another account, so Flutter and CocoaPods need a route that does not use it;
+  - clippy prints 28 `warning` lines on Rust 1.99.1, where the Windows box's toolchain reported 0: newer
+    lints, not new code;
+  - `.venv` is `.venv/bin/python` with the base and dev dependencies only, so the frozen suite needs the
+    extras if this milestone wants it there;
+  - the two HEIC gates in `crates/ocr/tests/` cannot run, because that ffmpeg decodes one tile of a HEIC.
 - **P1 — facade crate `crates/app`.** It exposes `parse_screen`, the session cursor,
   `record_shot`, `correct_shot`, `bag_profile`, `strike_profiles`, the topic grades and blends,
   `profile_feedback` and `export_sessions`. It does not depend on `capture` or `pose`, nor on M29's
   `ort` reader, because the phone reads the screen with Vision.
 - **P2 — the Flutter `app/` skeleton.** The flow:
   1. pick golfer and bag, then club, then the session's intent (mode and target shape, Decision 7);
-  2. VisionKit document camera;
-  3. Vision OCR (a Swift plugin);
-  4. Rust parse;
+  2. the photo. *(M33)* **The path that passed is the photo as imported (`raw`), with no rectifier.**
+     VisionKit's document camera is unanswered rather than failed: the spike's stand-in found a rectangle
+     on one photo of six, and that was the replay panel, so this milestone measures the scanner. A question
+     for it, not a result: photos framed like those give a corner-finding rectifier nothing to find, so
+     either the golfer is told to get the whole monitor in frame, which costs the tiles pixels, or the app
+     does not depend on a rectifier;
+  3. Vision OCR (a Swift plugin). *(M33)* At C0: `.accurate`, `VNRecognizeTextRequestRevision3`,
+     `usesLanguageCorrection = false`, `en-US` with language detection off, no custom words, one box per
+     observation from `topCandidates(1)[0]`, flipped to top-left pixels and unrounded. "Won" would overstate
+     it, since nothing else was measured. `spikes/vision-ocr/vision_ocr.swift` is spike code, so take what
+     it learned and not necessarily it;
+  4. Rust parse. *(M33)* Pass `min_confidence` 0.6, provisional and vacuous: no phone-mode cell differed
+     from the truth at any threshold, so it had nothing to catch. **`W_OCR` is this milestone's open
+     question**, because with correction off the OCR term is in effect a flat +0.30: leave it in the score,
+     or change the weight and re-record the screen family. No parser rule landed, so `crates/screen` is as
+     M42 left it;
   5. review/edit when the shot `needs_review`, including a per-shot override of the intent. Its
-     warnings go through M34's golfer-facing filter;
+     warnings go through M34's golfer-facing filter. *(M33)* A withheld sign stays an unflagged shot at
+     1.000 with a warning, so review does not surface it, and Vision losing sign letters is what held the
+     passing arm at a bar's limit (15 of the 24 printed were returned);
   6. history.
   - **Challenge mode:** the app calls fade, draw or straight before each shot and records the call
     as that shot's `target_shape` (Decision 17 §1). Challenge shots count fully.
@@ -1357,6 +1395,11 @@ its list, they do not feed it:
     from it, so without it Full Swing's ball direction and sidespin are **withheld on every shot**,
     never stored unsigned. `hd_golf` reads no colour. Hold the plugin's boxes to `crates/ocr`'s on the
     same photo before trusting a threshold set from the lab's reader (`LIT_BLUE_RATIO`).
+    *(M33)* That comparison still has no lab reader behind it, but the Swift half of it is done: decode through
+    ImageIO to 8-bit sRGB, then read `rgb` from those bytes with no colour matching, ranking on
+    `(sum, rowMajorIndex)` as `glyphRGB` does, and it equals Rust's `glyph_rgb` as doubles. On that, the smallest
+    margins against `LIT_BLUE_RATIO` were +0.337 and −0.133, and neither lit constant moved. iPhone HEICs through
+    this path are not measured.
   - **A Live Photo is two import methods (M42's decision 7), and neither needs the other.** The still
     imports a shot with the grid's numbers and no impact offset. The clip imports a shot on its own,
     with the grid's numbers read off one of its frames by the same parse and the offset or its named
@@ -1364,6 +1407,13 @@ its list, they do not feed it:
     `sharpest_frame` and `read_impact` through `crates/app`, which gives `crates/app` that dependency
     (std only, and `crates/ocr/tests/ort_reach.rs` already guards it). Nothing pairs the two, so
     importing both makes two shots of one swing, and the phone should ask for one per Live Photo.
+    *(M33)* No clip has met Vision, so neither "ship the still import first" nor "clips read" follows from
+    its verdict, and which import ships first stays open until the clips run.
+  - **`hd_golf` has no Vision evidence behind it (M33).** Whether HD Golf reads is unknown, by the user's
+    omission, and it has no bar and no verdict when it does run.
+  - **M33's boxes can seed vectors.** `spikes/vision-ocr/boxes/C0/<mode>/<id>.json`, with each file's digest
+    in `results/C0.json`. They are the pasted copies' boxes, so a vector made from one should say so, and a
+    box in one carries Vision's confidence as `0.30000001192092896`.
 - **P3 — profile screens:**
   - the per-club profile, strengths and weaknesses;
   - per topic, the grade beside the list, with both shares for each shape topic;
@@ -1395,7 +1445,9 @@ its list, they do not feed it:
   - **Exit:** P4's comparison is against Rust's `read_corpus`, and P31 showed the imported corpus
     equal to the phone's.
 - **P5 — bay session:** ≥30 photos across ≥2 clubs. Record the success rate, the review rate and
-  latency.
+  latency. *(M33)* This is the real test of its verdict, which rests on six stills from one setup, macOS's
+  Vision rather than iOS's, and a stand-in rather than VisionKit, and it never tested `needs_review`, because
+  no arm had a **wrong** cell.
 
 **Exit:**
 - At the bay, with no laptop, photos become stored, validated shots and the per-club profile
