@@ -75,7 +75,7 @@ are ADR-035's.
 | **M37** | Strike profile, topic grades and strengths/weaknesses (Rust first) | this box (desk only, the M37 plan's decision 10) | M35 | ✅ Done *(2026-10-15)*, 14/14 phases — [m37-strike-profile-and-grades.md](m37-strike-profile-and-grades.md), which wins where it differs from §M37 below. The strike profile, six topic grades, club and player blends and the strengths and weaknesses list, Rust only, through `golf-core profile`; the corpus carries each entry's shot, re-recorded as `career-v3`; a tenth vector family, `profile`, hand-worked and Rust-recorded; strike location graded only from a measured impact offset (M42), not the printed word ([ADR-034's M37 addendum](../decisions/034-shot-first-phone-first.md)) |
 | **M41** | The course-play screen layout in `crates/screen`: aliases, lit L/R and D/F signs, backspin and sidespin | this box, after new photos | M35, by order only | ⬜ Not started — raised 2026-10-07, detailed in [ROADMAP §M41](../../ROADMAP.md#m41-the-course-play-screen-layout) rather than here |
 | **M42** | Full Swing: the second device and its impact video — a Live Photo spike, the impact reader filling `impact_offset_h/v`, Full Swing's screen profile and capability entry | this box, after sample Live Photos | M37's strike topic, by order; sample Live Photos | ⬜ Not started — raised 2026-10-10 in M37's planning, detailed in [ROADMAP §M42](../../ROADMAP.md#m42-full-swing-the-second-device-and-its-impact-video) rather than here |
-| **M38** | The iPhone app | Mac, then bay | M34 (skeleton), M37 (profile screens), M29 (P4, the export import) | ⬜ Not started |
+| **M38** | The iPhone app | Mac, then bay | M34 (skeleton), M37 (profile screens), M29 (P4, the export import) | 🔄 In progress: [its plan](m38-iphone-app.md) |
 | **M39** | Optional video on the phone | Mac, then bay | M38 | ⬜ Not started |
 | **M40** | The laptop client resumes (M21/M24/M25/M26 re-scoped, R10/API adapters); `api/` ported or dropped, and the frozen Python deleted | later | M38, M29 | ⬜ Not started |
 | **M29** | The lab port: a Rust lab CLI, the `rmcp` server, OCR through `ort`, and the archive move | this box | M34, M36 | ⬜ Not started — re-scoped by ADR-035, number kept (Q2); unblocked by M36 *(2026-10-08)* |
@@ -1345,7 +1345,10 @@ its list, they do not feed it:
 
 **What M33 tells this section (2026-11-04).** Its verdict is **GO, provisional: pasted copies, with the
 clips not measured**, and M33 is open: the original files, the clips, HD Golf and the lab baseline have not
-run. Whether M38 is unblocked on that is the user's call, and this section does not make it. Everything
+run. Whether M38 is unblocked on that was the user's call, and **on 2026-11-04 the user started M38 on it.
+[The M38 plan](m38-iphone-app.md) is the phase list now, and it decides what this section leaves open**: Full
+Swing only, stills only, VisionKit conditional on the bay's result, `W_OCR` left until after the bay, and who
+owns a golfer. Where the two differ, the plan wins. Everything
 marked *(M33)* below carries that label and is at C0, the only settings measured. The whole list is
 [the log's "For M38"](../../spikes/vision-ocr/log.md#for-m38).
 
