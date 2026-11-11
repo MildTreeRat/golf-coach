@@ -68,3 +68,8 @@ Thumbs.db
 # Rust build output. `Cargo.lock` is committed on purpose: this workspace ships a binary, not
 # a library, so a reproducible build matters more than dependency-range flexibility.
 target/
+
+# The Apple team of whoever signs the app (the M38 plan's C19). This repo is public and a personal
+# team id is nobody else's business, so it lives here, and `app/ios/Flutter/{Debug,Release}.xcconfig`
+# include it with `#include?`, which lets a clone without one still build for the Simulator.
+app/ios/Flutter/Signing.xcconfig

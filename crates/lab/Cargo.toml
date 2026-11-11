@@ -1,7 +1,7 @@
 # The lab CLI, in Rust. [M29 P20]
 #
-# A shell like `golf-core` (the M29 plan's D13): it may hold any library crate, and nothing depends
-# on it (`tests/edges.rs`). Its Python twins are the lab scripts in front of `api/pipeline.py`
+# A shell like `golf-core` (the M29 plan's D13): it may hold any library crate, and nothing that
+# ships depends on it (`tests/edges.rs`). Its Python twins are the lab scripts in front of `api/pipeline.py`
 # (`analyze_bundle.py`, `reanalyze.py`, `import_shot_screens.py`, `simulate_flight.py` and their
 # siblings), each verb arriving with the phase that ports it. `golf-core` stays the engine and
 # recorder shell M38's phone can link; this one holds the lab's I/O edges (ffmpeg, the pose

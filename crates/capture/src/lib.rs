@@ -134,6 +134,7 @@ pub fn find(id: &DeviceId) -> Result<Device, Error> {
 mod tests {
     use super::*;
 
+    #[cfg(windows)]
     #[test]
     fn a_host_with_no_cameras_is_an_empty_list_and_not_an_error() {
         // Passes either way on purpose: this pins the *shape* of the answer, which is the thing
@@ -146,6 +147,7 @@ mod tests {
         }
     }
 
+    #[cfg(windows)]
     #[test]
     fn an_unknown_id_is_gone_and_says_which() {
         let id = DeviceId::new(r"\\?\USB#VID_0000&PID_0000#nothing-is-plugged-in-here");
@@ -160,10 +162,26 @@ mod tests {
         }
     }
 
+    #[cfg(windows)]
     #[test]
     fn listing_twice_gives_the_same_order() {
         let first: Vec<_> = list().unwrap().into_iter().map(|d| d.id).collect();
         let second: Vec<_> = list().unwrap().into_iter().map(|d| d.id).collect();
         assert_eq!(first, second);
+    }
+
+    /// The three above need a backend, and only Windows has one. So everywhere else the crate
+    /// says it has none, naming the OS, and never answers an empty list: that would read as
+    /// "nothing is plugged in" on a machine that could not have looked. Its answer until M40.
+    #[cfg(not(windows))]
+    #[test]
+    fn with_no_backend_listing_is_unsupported_and_names_the_os() {
+        match list() {
+            Err(Error::Unsupported(os)) => {
+                assert_eq!(os, std::env::consts::OS);
+                assert!(Error::Unsupported(os).to_string().contains(os));
+            }
+            other => panic!("expected Unsupported, got {other:?}"),
+        }
     }
 }

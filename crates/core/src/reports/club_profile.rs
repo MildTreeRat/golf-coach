@@ -70,6 +70,27 @@ fn print_block(out: &mut Printed, name: &str, text: &str, indent: usize) {
 
 // ----------------------------------------------------------------------------------- one metric
 
+/// What a metric's `center` row prints after its label: the mean, its 95% interval when it has
+/// one, and the median. `None` when the baseline withheld its mean, which prints no row.
+///
+/// Its own function since M38 P26, so the phone's Profile tab shows a club's mean carry in this
+/// report's words rather than its own: `app`'s `NumberRow::center` is this, and `crates/app`'s
+/// tests hold it to the line printed here.
+///
+/// Not a call to `supports()`: a withheld claim leaves no number behind, so "is there a number" and
+/// "may it be shown" are the same question.
+pub fn center_text(baseline: &MetricBaseline) -> Option<String> {
+    let (Some(mean), Some(median)) = (baseline.mean, baseline.median) else {
+        return None;
+    };
+    let unit = baseline.unit.as_str();
+    let mut text = fmt(mean, unit);
+    if let Some(ci) = &baseline.mean_ci {
+        text += &format!("   95% CI {} .. {}", fmt(ci.low, unit), fmt(ci.high, unit));
+    }
+    Some(format!("{text}   (median {})", fmt(median, unit)))
+}
+
 /// One metric for one club: what it says, what it will not say, and what it is evidence for
 /// (`_report_metric`).
 fn report_metric(
@@ -86,14 +107,8 @@ fn report_metric(
         counted(baseline.n_sessions, "session")
     ));
 
-    // Not calls to `supports()`: a withheld claim leaves no number behind, so "is there a number"
-    // and "may it be shown" are the same question.
-    if let (Some(mean), Some(median)) = (baseline.mean, baseline.median) {
-        let mut line = label("center", METRIC_INDENT) + &fmt(mean, unit);
-        if let Some(ci) = &baseline.mean_ci {
-            line += &format!("   95% CI {} .. {}", fmt(ci.low, unit), fmt(ci.high, unit));
-        }
-        out.line(format!("{line}   (median {})", fmt(median, unit)));
+    if let Some(center) = center_text(baseline) {
+        out.line(label("center", METRIC_INDENT) + &center);
     }
 
     if let (Some(sd), Some(minimum), Some(maximum)) =

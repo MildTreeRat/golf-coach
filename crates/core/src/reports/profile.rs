@@ -34,14 +34,24 @@
 //! one; a constant (the 10 mm radius, the 9-yard tolerance) is [`pyfmt::g`], so `9.0` reads `9`.
 //! There is no Python text to match, so these are choices, and they are the other reports' choices
 //! so that one golfer's reports read alike.
+//!
+//! # The second reader of these sentences [M38 P11]
+//!
+//! The phone's Profile tab shows what this prints, and Dart may not spell a sentence about a grade
+//! (the M38 plan's rule 8). So everything a screen needs is a `pub` helper here, the one [`profile`]
+//! itself prints through, rather than a second spelling in `crates/app`: `crates/app/tests/profile.rs`
+//! holds every string the phone's view carries to this report's text, case by case. **Moving a helper
+//! here is free, and moving what one says is a re-record**, since `spec/vectors/profile/corpus/` holds
+//! the text.
 
 use contracts::baseline::{minimum_n, BaselineClaim, Interval, MetricBaseline, WithheldClaim};
 use contracts::club::{category_of, ClubId};
 use contracts::dispersion::{target_for, MetricDispersion};
 use contracts::strike::{
     Blend, FaceColumn, FaceRow, FindingKind, GradedClub, GradedProfile, ImpactMap, OfflineBasis,
-    ProfileFinding, Share, StrikeProfile, Topic, TopicGrade, UnscoredCount, CENTERED_RADIUS_MM,
-    CONSISTENCY_FRACTION, ON_LINE_TOLERANCE_ROW, RATE_MINIMUM_N, STRAIGHT_TOLERANCE_ROW,
+    PlayerGrades, ProfileFinding, ShapeShares, Share, StrikeProfile, Topic, TopicGrade,
+    UnscoredCount, CENTERED_RADIUS_MM, CONSISTENCY_FRACTION, ON_LINE_TOLERANCE_ROW, RATE_MINIMUM_N,
+    STRAIGHT_TOLERANCE_ROW,
 };
 use contracts::unscored::spec_for;
 
@@ -100,7 +110,7 @@ fn paragraph(out: &mut Printed, text: &str) {
 
 /// A share as a whole percentage. `+ 0.0` turns a `-0.0` into `0.0`, so a Wilson bound computed as
 /// a negative zero cannot print as `-0%`.
-fn percent(share: f64) -> String {
+pub fn percent(share: f64) -> String {
     format!("{}%", pyfmt::fixed(share * 100.0 + 0.0, 0))
 }
 
@@ -114,7 +124,7 @@ fn listed(names: &[&str]) -> String {
 }
 
 /// A topic's name as a reader says it.
-fn topic_name(topic: Topic) -> String {
+pub fn topic_name(topic: Topic) -> String {
     topic.as_str().replace('_', " ")
 }
 
@@ -128,7 +138,7 @@ fn tolerance_of(row: &str) -> f64 {
 // ------------------------------------------------------------------------------------ the topics
 
 /// What a topic's grade is a share of, as a clause after the percentage.
-fn criterion(topic: Topic) -> String {
+pub fn criterion(topic: Topic) -> String {
     match topic {
         Topic::StrikeLocation => {
             format!(
@@ -159,7 +169,7 @@ fn hit(topic: Topic) -> String {
 
 /// What the "hit the shape" share counts, face to path against the straight tolerance, for either
 /// hand: the sign is the golfer's, not the camera's (the M37 plan's finding 5).
-fn shape_rule(topic: Topic) -> String {
+pub fn shape_rule(topic: Topic) -> String {
     let tolerance = pyfmt::g(tolerance_of(STRAIGHT_TOLERANCE_ROW));
     match topic {
         Topic::Fade => format!("{}, face to path beyond +{tolerance} deg", hit(topic)),
@@ -168,8 +178,9 @@ fn shape_rule(topic: Topic) -> String {
     }
 }
 
-/// One share in words: graded with its interval, or withheld with what it waits for.
-fn share_text(share: &Share, what: &str) -> String {
+/// One share in words: graded with its interval, or withheld with what it waits for. `what` is
+/// [`criterion`] for a topic's grade and [`shape_rule`] for a shape's other share.
+pub fn share_text(share: &Share, what: &str) -> String {
     match share {
         Share::Graded(rate) => format!(
             "{} {what} ({} of {}), 95% CI {} .. {}",
@@ -186,20 +197,45 @@ fn share_text(share: &Share, what: &str) -> String {
     }
 }
 
-/// Shots a topic could not judge, each reason in its own clause.
-fn unscored_rows(out: &mut Printed, counts: &[UnscoredCount], what: &str) {
-    for count in counts {
-        row(
-            out,
-            "",
-            "",
-            &format!(
+/// Shots left out for each reason, in the reason's own clause.
+fn unscored_clauses(counts: &[UnscoredCount], what: &str) -> Vec<String> {
+    counts
+        .iter()
+        .map(|count| {
+            format!(
                 "{} {what}: {}",
                 counted(count.n, "shot"),
                 spec_for(count.reason).summary
-            ),
+            )
+        })
+        .collect()
+}
+
+/// Shots a topic was printed for and could not judge ([`TopicGrade::unscored`]), a clause a reason.
+pub fn not_judged(counts: &[UnscoredCount]) -> Vec<String> {
+    unscored_clauses(counts, "not judged")
+}
+
+/// A shape's judged shots with no landing ([`ShapeShares::landing_unscored`]), a clause a reason.
+pub fn no_landing(counts: &[UnscoredCount]) -> Vec<String> {
+    unscored_clauses(counts, "with no landing, so out of the on-line share")
+}
+
+/// Where a shape's landings came from, **naming a projected one as projected** (ADR-034 §5.3), or
+/// `None` when the grade rests on none.
+pub fn landings_text(shape: &ShapeShares) -> Option<String> {
+    if shape.printed + shape.projected == 0 {
+        return None;
+    }
+    let mut text = format!("landings: {} printed", shape.printed);
+    if shape.projected > 0 {
+        text += &format!(
+            ", {} {} by the flight model and not printed",
+            shape.projected,
+            OfflineBasis::Projected.as_str()
         );
     }
+    Some(text)
 }
 
 /// One topic's lines: its grade, and for a shape the other share and where the landings came from.
@@ -220,35 +256,26 @@ fn report_topic(out: &mut Printed, label: &str, grade: &TopicGrade) {
             "",
             &share_text(&shape.hit_shape, &shape_rule(grade.topic)),
         );
-        let landed = shape.printed + shape.projected;
-        if landed > 0 {
-            let mut text = format!("landings: {} printed", shape.printed);
-            if shape.projected > 0 {
-                text += &format!(
-                    ", {} {} by the flight model and not printed",
-                    shape.projected,
-                    OfflineBasis::Projected.as_str()
-                );
-            }
+        if let Some(text) = landings_text(shape) {
             row(out, "", "", &text);
         }
-        unscored_rows(
-            out,
-            &shape.landing_unscored,
-            "with no landing, so out of the on-line share",
-        );
+        for clause in no_landing(&shape.landing_unscored) {
+            row(out, "", "", &clause);
+        }
     }
-    unscored_rows(out, &grade.unscored, "not judged");
+    for clause in not_judged(&grade.unscored) {
+        row(out, "", "", &clause);
+    }
 }
+
+/// What a club with no topic says in their place, because a header over a blank would read as a bug.
+pub const NO_TOPICS: &str =
+    "none: these shots print the inputs of no topic, so there is nothing to grade";
 
 /// The topics block, or the one line a club with none of them gets.
 fn report_topics(out: &mut Printed, topics: &[TopicGrade]) {
     if topics.is_empty() {
-        labelled(
-            out,
-            "topics",
-            "none: these shots print the inputs of no topic, so there is nothing to grade",
-        );
+        labelled(out, "topics", NO_TOPICS);
         return;
     }
     for (i, grade) in topics.iter().enumerate() {
@@ -256,25 +283,28 @@ fn report_topics(out: &mut Printed, topics: &[TopicGrade]) {
     }
 }
 
-/// The blend, or why there is none. Nothing at all when there are no topics, which the topics block
-/// has already said.
-fn report_blend(out: &mut Printed, topics: &[TopicGrade], blend: Option<&Blend>) {
+/// A blend in words: its mean, what it averaged, and each topic it left out by name.
+pub fn blend_text(blend: &Blend) -> String {
     let names = |list: &[Topic]| -> String {
         let names: Vec<String> = list.iter().map(|topic| topic_name(*topic)).collect();
         listed(&names.iter().map(String::as_str).collect::<Vec<_>>())
     };
+    let mut text = format!(
+        "{}, the equal-weight mean of {}",
+        percent(blend.mean),
+        names(&blend.averaged)
+    );
+    if !blend.excluded.is_empty() {
+        text += &format!("; left out while withheld: {}", names(&blend.excluded));
+    }
+    text
+}
+
+/// The blend, or why there is none. Nothing at all when there are no topics, which the topics block
+/// has already said.
+fn report_blend(out: &mut Printed, topics: &[TopicGrade], blend: Option<&Blend>) {
     match blend {
-        Some(blend) => {
-            let mut text = format!(
-                "{}, the equal-weight mean of {}",
-                percent(blend.mean),
-                names(&blend.averaged)
-            );
-            if !blend.excluded.is_empty() {
-                text += &format!("; left out while withheld: {}", names(&blend.excluded));
-            }
-            labelled(out, "blend", &text);
-        }
+        Some(blend) => labelled(out, "blend", &blend_text(blend)),
         None if !topics.is_empty() => labelled(
             out,
             "blend",
@@ -401,19 +431,51 @@ fn spread_text(
     }
 }
 
+/// One raw number beside the grades.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SpreadRow {
+    /// The metric's own name, `carry_distance_yds`.
+    pub name: String,
+    /// The samples behind it, which a refusal's sentence need not state.
+    pub n: i64,
+    /// The SD with its interval and `n`, or `withheld: ` and the refusal standing in for it.
+    pub text: String,
+    /// True when `text` is the refusal, so no SD is shown.
+    pub withheld: bool,
+}
+
 /// The raw numbers beside the grades: the ball-speed spread and the strike dispersions' spreads,
 /// each carried from the club's profile and never recomputed. Their bias and scatter verdicts are
 /// the list's to print, so they are not repeated here.
-fn report_spread(out: &mut Printed, strike: &StrikeProfile) {
-    let mut rows: Vec<(&str, String)> = Vec::new();
+pub fn spread_rows(strike: &StrikeProfile) -> Vec<SpreadRow> {
+    let mut rows = Vec::new();
     if let Some(baseline) = &strike.ball_speed {
-        rows.push((baseline.name.as_str(), baseline_spread(baseline)));
+        rows.push(SpreadRow {
+            name: baseline.name.clone(),
+            n: baseline.n,
+            text: baseline_spread(baseline),
+            withheld: baseline.sd.is_none(),
+        });
     }
     for (name, dispersion) in &strike.dispersion {
-        rows.push((name.as_str(), dispersion_spread(dispersion)));
+        rows.push(SpreadRow {
+            name: name.clone(),
+            n: dispersion.n,
+            text: dispersion_spread(dispersion),
+            withheld: dispersion.sd.is_none(),
+        });
     }
-    for (i, (key, text)) in rows.iter().enumerate() {
-        row(out, if i == 0 { "spread" } else { "" }, key, text);
+    rows
+}
+
+fn report_spread(out: &mut Printed, strike: &StrikeProfile) {
+    for (i, spread) in spread_rows(strike).iter().enumerate() {
+        row(
+            out,
+            if i == 0 { "spread" } else { "" },
+            &spread.name,
+            &spread.text,
+        );
     }
 }
 
@@ -443,7 +505,7 @@ fn dispersion_spread(dispersion: &MetricDispersion) -> String {
 
 /// One entry, with its ratio in words: how many tolerances a weakness misses by, or how close to
 /// failing a strength's nearer bound sits.
-fn finding_text(finding: &ProfileFinding) -> String {
+pub fn finding_text(finding: &ProfileFinding) -> String {
     let row = target_for(&finding.metric);
     let tolerance = row.map_or_else(String::new, |row| pyfmt::g(row.tolerance));
     let ratio = pyfmt::fixed(finding.ratio, 2);
@@ -466,9 +528,12 @@ fn finding_text(finding: &ProfileFinding) -> String {
     }
 }
 
+/// What an empty list says, because "nothing established" is never a strength (ADR-034 §5.7).
+pub const NOTHING_LISTED: &str = "nothing is established either way yet";
+
 fn report_list(out: &mut Printed, list: &[ProfileFinding]) {
     if list.is_empty() {
-        labelled(out, "list", "nothing is established either way yet");
+        labelled(out, "list", NOTHING_LISTED);
         return;
     }
     for (i, finding) in list.iter().enumerate() {
@@ -500,6 +565,25 @@ fn report_body(
     report_list(out, list);
 }
 
+/// How much a club's grades rest on.
+pub fn club_shots(n_shots: i64) -> String {
+    counted(n_shots, "tracked shot photo")
+}
+
+/// How much the player's grades rest on, naming the shots that name no club, since those count
+/// toward some topics and not others.
+pub fn player_shots(grades: &PlayerGrades) -> String {
+    let mut text = format!("{} across the bag", club_shots(grades.n_shots));
+    if grades.untagged_shots > 0 {
+        text += &format!(
+            ", {} naming no club, which count toward strike location and the shapes, whose \
+             criteria need no club, and toward nothing else",
+            grades.untagged_shots
+        );
+    }
+    text
+}
+
 fn report_club(out: &mut Printed, club: &GradedClub) {
     let grades = &club.grades;
     out.line(format!(
@@ -507,7 +591,7 @@ fn report_club(out: &mut Printed, club: &GradedClub) {
         grades.club.as_str(),
         category_of(grades.club).as_str().replace('_', " ")
     ));
-    labelled(out, "shots", &counted(grades.n_shots, "tracked shot photo"));
+    labelled(out, "shots", &club_shots(grades.n_shots));
     report_body(
         out,
         &grades.strike,
@@ -517,21 +601,13 @@ fn report_club(out: &mut Printed, club: &GradedClub) {
     );
 }
 
+/// What the player's grades pool, which is not what a club's do (ADR-034 §5.4).
+pub const PLAYER_BASIS: &str = "each shot judged by its own club's criterion";
+
 fn report_player(out: &mut Printed, profile: &GradedProfile) {
     let grades = &profile.player.grades;
-    out.line("\n  all clubs  (each shot judged by its own club's criterion)");
-    let mut text = format!(
-        "{} across the bag",
-        counted(grades.n_shots, "tracked shot photo")
-    );
-    if grades.untagged_shots > 0 {
-        text += &format!(
-            ", {} naming no club, which count toward strike location and the shapes, whose \
-             criteria need no club, and toward nothing else",
-            grades.untagged_shots
-        );
-    }
-    labelled(out, "shots", &text);
+    out.line(format!("\n  all clubs  ({PLAYER_BASIS})"));
+    labelled(out, "shots", &player_shots(grades));
     report_body(
         out,
         &grades.strike,
@@ -543,20 +619,36 @@ fn report_player(out: &mut Printed, profile: &GradedProfile) {
 
 // ---------------------------------------------------------------------------------- one golfer
 
+/// What a grade is, and what it leaves out, ahead of any club.
+pub fn preamble() -> String {
+    format!(
+        "Each grade is the share of tracked shots that met its topic, with a 95% interval, \
+         and is withheld below {RATE_MINIMUM_N} judged shots. Launch-monitor numbers only: \
+         mechanics is not graded here."
+    )
+}
+
+/// What a profile with no club to show says, or `None` if it has a club: nothing on record at all,
+/// or shots none of which name a club. The two need different words, because the second is followed
+/// by the player's grades.
+pub fn no_clubs_note(profile: &GradedProfile) -> Option<&'static str> {
+    if !profile.clubs.is_empty() {
+        return None;
+    }
+    Some(if profile.player.grades.n_shots == 0 {
+        "No tracked shot photo on record, so there is nothing to grade yet."
+    } else {
+        "No tracked shot photo names a club, so only the player's grades follow."
+    })
+}
+
 /// The report `golf-core profile` prints for one golfer: every graded club in bag order, then the
 /// player's grades, or with `club` that club's block alone. The verb's trailing blank line is the
 /// verb's, as for the other reports.
 pub fn profile(profile: &GradedProfile, display_name: &str, club: Option<ClubId>) -> String {
     let mut out = Printed::default();
     header(&mut out, display_name, &profile.player_id);
-    paragraph(
-        &mut out,
-        &format!(
-            "Each grade is the share of tracked shots that met its topic, with a 95% interval, \
-             and is withheld below {RATE_MINIMUM_N} judged shots. Launch-monitor numbers only: \
-             mechanics is not graded here."
-        ),
-    );
+    paragraph(&mut out, &preamble());
 
     if let Some(club) = club {
         match profile
@@ -573,13 +665,11 @@ pub fn profile(profile: &GradedProfile, display_name: &str, club: Option<ClubId>
         return out.into_string();
     }
 
-    let player = &profile.player.grades;
-    if profile.clubs.is_empty() && player.n_shots == 0 {
-        out.line("\n  No tracked shot photo on record, so there is nothing to grade yet.");
-        return out.into_string();
-    }
-    if profile.clubs.is_empty() {
-        out.line("\n  No tracked shot photo names a club, so only the player's grades follow.");
+    if let Some(note) = no_clubs_note(profile) {
+        out.line(format!("\n  {note}"));
+        if profile.player.grades.n_shots == 0 {
+            return out.into_string();
+        }
     }
     for graded in &profile.clubs {
         report_club(&mut out, graded);

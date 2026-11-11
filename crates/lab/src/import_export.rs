@@ -23,8 +23,27 @@
 //! - **a conflict**: other bytes are stored there. **One conflict refuses the whole import**: every
 //!   such path is named and nothing is written, because a merge that wrote the rest would leave the
 //!   stores holding part of an export that someone has to reconcile by hand anyway. Bytes, not
-//!   values: a golfer or a session cursor the phone wrote for itself differs from the lab's in its
-//!   timestamps, and which of two `created_at`s is the golfer's is not this verb's to guess.
+//!   values, for every file but the two below: a session cursor the phone wrote for itself differs
+//!   from the lab's in its timestamps, and which of the two is the session's is not this verb's to
+//!   guess.
+//!
+//! **A golfer and a bag are the two with a value rule** (M38's D6, a dated addition to C11), because
+//! the phone creates its own golfer, and by bytes its first export would refuse at any lab that knew
+//! him. Each applies only where a file differs by bytes, and only to a file the store lists, directly
+//! under `golfers/`; below that it goes by bytes:
+//!
+//! - **A golfer** (`*.golfer.json`) is read on both sides, the stored one by the store's own reader.
+//!   The same `player_id` and handedness is one person, and is **kept** as the lab's, with a line
+//!   naming each field that differs and both its values, so what the phone said is seen rather than
+//!   lost. A different `player_id` or handedness, or a file that does not read as a golfer on either
+//!   side, stays a conflict: handedness is the frame of every signed metric, so which of two is true
+//!   is not this verb's to guess.
+//! - **A bag** (`*.bag.json`) is **kept** as the lab's, with a line saying the phone's was not
+//!   applied, and is parsed on neither side, since nothing here would use what it said. Something
+//!   other than a file stored at its name holds no bag to keep, and is a conflict.
+//!
+//! Either's archive entry is still read through, so a checksum that fails is exit 2 as it is for any
+//! file, though a kept file's bytes land nowhere.
 //!
 //! **Two dedupes by photo**, each where the stores already have a rule for one photo held twice:
 //!
@@ -78,14 +97,18 @@ use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+use contracts::golfer::Golfer;
 use contracts::shot::ShotData;
+use golf_core::session::session_holding;
+use storage::bag_store;
 use storage::bundle_store::SwingBundleStore;
+use storage::golfer_store::{self, GolferStore};
 use storage::manifest::{Role, SwingManifest, MANIFEST_NAME};
 use storage::shot_store::{self, ShotStore};
 use zip::extra_fields::ExtraField;
 use zip::{CompressionMethod, ZipArchive};
 
-use crate::import::{session_holding, spelled};
+use crate::import::spelled;
 
 /// The three trees an export holds, the stores' directory names under `data/processed`.
 pub const TREES: [&str; 3] = ["sessions", "shots", "golfers"];
@@ -482,7 +505,7 @@ struct Plan {
     conflicts: Vec<String>,
     problems: Vec<String>,
     identical: usize,
-    /// Files a dedupe left as stored: a kept shot, a duplicate entry's files.
+    /// Files a rule left as stored: a kept shot, golfer or bag, a duplicate entry's files.
     left: usize,
     ignored: usize,
 }
@@ -518,9 +541,9 @@ impl Plan {
             return plan;
         }
 
+        let registry = GolferStore::new(&request.golfers_dir);
         for index in golfers {
-            let dest = below(&request.golfers_dir, &export.items[index].parts[1..]);
-            plan.file(export, index, dest);
+            plan.golfers_file(export, index, &registry);
         }
         let store = ShotStore::new(&request.shots_dir);
         let mut placed = BTreeMap::new();
@@ -533,18 +556,78 @@ impl Plan {
 
     /// The plain rule: new, identical, or a conflict.
     fn file(&mut self, export: &mut Export, index: usize, dest: PathBuf) {
+        if self.differs(export, index, &dest) {
+            let rel = export.items[index].rel();
+            self.conflicts.push(conflict(&rel, &dest));
+        }
+    }
+
+    /// A file new or identical is settled here. `true` is one stored with other bytes, which is the
+    /// caller's rule to judge.
+    fn differs(&mut self, export: &mut Export, index: usize, dest: &Path) -> bool {
         let rel = export.items[index].rel();
-        match stored(export, index, &dest) {
+        match stored(export, index, dest) {
             Ok(Stored::Absent) => {
                 self.lines.push(format!("new       {rel}"));
-                self.writes.push((index, dest));
+                self.writes.push((index, dest.to_path_buf()));
+                false
             }
             Ok(Stored::Same) => {
                 self.lines.push(format!("identical {rel}"));
                 self.identical += 1;
+                false
             }
-            Ok(Stored::Different) => self.conflicts.push(conflict(&rel, &dest)),
-            Err(why) => self.problems.push(format!("{rel}: {why}")),
+            Ok(Stored::Different) => true,
+            Err(why) => {
+                self.problems.push(format!("{rel}: {why}"));
+                false
+            }
+        }
+    }
+
+    /// A file of `golfers/`: a difference goes by the module doc's value rule (M38's D6) when the
+    /// file is one the stores list, and by bytes otherwise.
+    fn golfers_file(&mut self, export: &mut Export, index: usize, registry: &GolferStore) {
+        let dest = below(registry.root(), &export.items[index].parts[1..]);
+        if !self.differs(export, index, &dest) {
+            return;
+        }
+        let rel = export.items[index].rel();
+        let name = match export.items[index].parts.as_slice() {
+            [_, name] => name.clone(),
+            _ => String::new(),
+        };
+        let golfer_id = name.strip_suffix(golfer_store::SUFFIX);
+        if golfer_id.is_none() && !(name.ends_with(bag_store::SUFFIX) && dest.is_file()) {
+            return self.conflicts.push(conflict(&rel, &dest));
+        }
+        // `stored` learns a difference from the size alone and reads no further, and a `kept` file
+        // is never written, so nothing else would notice a torn entry. The module doc refuses one
+        // before anything is compared, and that is exit 2 here too.
+        let bytes = match export.bytes(index) {
+            Ok(bytes) => bytes,
+            Err(why) => return self.problems.push(format!("{rel}: {why}")),
+        };
+        let kept = match golfer_id {
+            Some(id) => registry
+                .get(id)
+                .zip(serde_json::from_slice::<Golfer>(&bytes).ok())
+                .and_then(|(ours, theirs)| golfer_difference(&ours, &theirs))
+                .map(|difference| {
+                    format!("the store holds this golfer already, and it stays; {difference}")
+                }),
+            None => Some(
+                "the store holds this golfer's bag already, which differs, and it stays; the \
+                 phone's bag was not applied"
+                    .to_string(),
+            ),
+        };
+        match kept {
+            Some(why) => {
+                self.lines.push(format!("kept      {rel}: {why}"));
+                self.left += 1;
+            }
+            None => self.conflicts.push(conflict(&rel, &dest)),
         }
     }
 
@@ -783,6 +866,42 @@ impl Plan {
             format!("added     {rel} ({new} new file(s), {same} identical)")
         });
     }
+}
+
+/// What the report says of two records D6 calls one person, or `None` when they are not.
+///
+/// Destructured whole, with no `..`, so a field [`Golfer`] gains stops this compiling until someone
+/// says whether it is identity or a difference. A file can differ by bytes with no field differing:
+/// its spacing, a key the contract does not read, or one instant in two spellings, which
+/// `Timestamp`'s equality calls equal.
+fn golfer_difference(stored: &Golfer, theirs: &Golfer) -> Option<String> {
+    let Golfer {
+        player_id,
+        display_name,
+        handedness,
+        created_at,
+    } = stored;
+    if *player_id != theirs.player_id || *handedness != theirs.handedness {
+        return None;
+    }
+    let mut differing = Vec::new();
+    if *display_name != theirs.display_name {
+        differing.push(format!(
+            "display_name ({:?}, stored {display_name:?})",
+            theirs.display_name
+        ));
+    }
+    if *created_at != theirs.created_at {
+        differing.push(format!(
+            "created_at ({}, stored {created_at})",
+            theirs.created_at
+        ));
+    }
+    Some(if differing.is_empty() {
+        "no field it reads differs, only the file's bytes".to_string()
+    } else {
+        format!("the export differs in {}", differing.join(", "))
+    })
 }
 
 /// A swing id in the order the bundle store numbers them: `2` before `10`, and a name after

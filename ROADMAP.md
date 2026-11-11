@@ -80,7 +80,7 @@ served live `call_tool` requests including the not-found path. It is registered 
 (`claude mcp add`, per the README) and reports `✔ Connected`, which is a second client completing
 the same handshake independently.
 
-**NEXT ACTION — M38 is planned and running: [`docs/plans/m38-iphone-app.md`](docs/plans/m38-iphone-app.md), from P1 *(2026-11-04)*. The user's review of the impact readings (`data/raw/impact-review/`) still stands, and clip import waits on it.** What follows is as of 2026-11-03.
+**NEXT ACTION — M38 is desk-complete *(2026-11-06)*, waiting on the iPhone: P1 to P28 of [`docs/plans/m38-iphone-app.md`](docs/plans/m38-iphone-app.md) ran on this Mac and its Simulator, the whole flow end to end with its export held on the host (P28), and P29 is next, attended, with the iPhone at this Mac. The user's review of the impact readings (`data/raw/impact-review/`) still stands, and clip import waits on it.** What follows is as of 2026-11-03.
 [ADR-034](docs/decisions/034-shot-first-phone-first.md) moved the product to the shot and the phone.
 The user then redirected M32's planning, and
 [ADR-035](docs/decisions/035-rust-everywhere-python-where-required.md) makes the project Rust

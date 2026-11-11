@@ -457,7 +457,8 @@ fn the_default_session_is_todays_and_a_dry_run_names_no_store() {
 }
 
 /// A path given with `/` and a `.` (Git Bash passes `C:/...`) is spelled as Python's `str(Path)`
-/// spells it, in the table's store line and in the `image_path` the shot is stamped with.
+/// spells it, in the table's store line and in the `image_path` the shot is stamped with. The store
+/// does not exist yet, which is the half only a Mac caught: `ShotOptions::store`'s doc says why.
 #[test]
 fn a_path_is_spelled_as_pythons_str_path() {
     let scratch = Scratch::new();
@@ -466,8 +467,8 @@ fn a_path_is_spelled_as_pythons_str_path() {
     let request = scratch.request(&[given], |request| {
         request.options.shots_dir = PathBuf::from(format!("{root}/shots/."));
     });
-    let (code, out, _) = run(&request, &mut Replay::vector());
-    assert_eq!(code, 0, "{out}");
+    let (code, out, err) = run(&request, &mut Replay::vector());
+    assert_eq!(code, 0, "{out}\n{err}");
     assert!(
         out.contains(&format!("\nStore: {}\n", scratch.path("shots").display())),
         "{out}"

@@ -1,6 +1,7 @@
 //! `golf-lab import-export` over a phone's export built by the real writers: a photo-only session
 //! with its `shot_analysis.json`, a shot, a golfer and a bag, imported, imported again, refused on a
-//! conflict, deduped by photo and read from a zip. [M29 P31]
+//! conflict, deduped by photo and read from a zip. [M29 P31] A golfer and a bag that differ from the
+//! lab's go by M38's D6. [M38 P12]
 //!
 //! No Python twin, and no committed vector: the phone does not exist yet (M38). So the export is
 //! what M38's phone will write, a `data/processed` subtree as `crates/storage` writes it (the M29
@@ -15,6 +16,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+use contracts::bag::Bag;
 use contracts::club::parse_club;
 use contracts::shot::ShotData;
 use contracts::swing::{ANALYSIS_VERSION, COMPARABLE_FROM};
@@ -643,6 +645,331 @@ fn a_write_that_fails_part_way_is_named_and_a_re_run_finishes_it() {
         "{out}"
     );
     assert_eq!(files(lab.path()), files(phone.path()));
+}
+
+// ----------------------------------------------------------------------------------- M38's D6
+
+/// A golfer record as both sides write one, spaced as `golfers` spaces the phone's.
+fn golfer_file(player_id: &str, display_name: &str, handedness: &str, created_at: &str) -> String {
+    format!(
+        r#"{{"player_id": "{player_id}", "display_name": "{display_name}", "handedness": "{handedness}",
+            "created_at": "{created_at}"}}"#
+    )
+}
+
+/// The phone's `created_at`, from `golfers`.
+const PHONES_CREATED_AT: &str = "2026-08-07T15:04:05.123456Z";
+
+/// `text` stored in the lab's `golfers/` at `name`.
+fn store_golfers_file(lab: &Path, name: &str, text: &str) {
+    let path = lab.join("golfers").join(name);
+    fs::create_dir_all(path.parent().unwrap()).unwrap();
+    fs::write(path, text).unwrap();
+}
+
+/// The whole import refused on these `golfers/` files alone, exit 1, and nothing written.
+fn refused_on(phone: &Phone, lab: &Path, names: &[&str]) {
+    let before = files(lab);
+    let (code, out, err) = run(&request(phone.path(), lab));
+    assert_eq!(code, 1, "{names:?}: {out}{err}");
+    let conflicts: String = names
+        .iter()
+        .map(|name| {
+            format!(
+                "\n  golfers/{name} -> {}",
+                lab.join("golfers").join(name).display()
+            )
+        })
+        .collect();
+    assert!(err.ends_with(&format!(":{conflicts}\n")), "{err}");
+    assert!(!out.contains("  kept "), "{out}");
+    assert_eq!(files(lab), before, "nothing written");
+    assert!(!lab.join("shots").exists());
+    assert!(!lab.join("sessions").exists());
+}
+
+/// D6's first case, the one a phone meets on its first export: the lab knows the golfer, here under
+/// another name and creation time. The lab's file stays byte for byte, the line names both fields
+/// with both values, the rest of the export lands, and the corpus is still the phone's.
+#[test]
+fn a_golfer_of_the_same_id_and_handedness_is_kept_as_the_labs_and_says_what_differs() {
+    let phone = Phone::new();
+    let lab = tempfile::tempdir().unwrap();
+    let labs = golfer_file("aaron", "Aaron B", "right", "2026-11-02T10:05:00Z");
+    store_golfers_file(lab.path(), "aaron.golfer.json", &labs);
+    let want = line(
+        "kept",
+        &format!(
+            "golfers/aaron.golfer.json: the store holds this golfer already, and it stays; the \
+             export differs in display_name (\"Aaron\", stored \"Aaron B\"), created_at \
+             ({PHONES_CREATED_AT}, stored 2026-11-02T10:05:00Z)"
+        ),
+    );
+
+    let mut dry = request(phone.path(), lab.path());
+    dry.dry_run = true;
+    let (code, out, err) = run(&dry);
+    assert_eq!((code, err.as_str()), (0, ""), "{out}");
+    assert!(out.contains(&want), "a dry run says so too: {out}");
+    assert!(
+        out.ends_with(
+            "\n\nDry run: 6 file(s) would be copied; 0 identical, 1 left as stored, 0 ignored. \
+             Nothing was written.\n"
+        ),
+        "{out}"
+    );
+
+    let (code, out, err) = run(&request(phone.path(), lab.path()));
+    assert_eq!((code, err.as_str()), (0, ""), "{out}");
+    assert!(out.contains(&want), "{want:?}: {out}");
+    assert!(
+        out.ends_with("\n\n6 file(s) copied; 0 identical, 1 left as stored, 0 ignored.\n"),
+        "{out}"
+    );
+    let mut expected = files(phone.path());
+    expected.insert("golfers/aaron.golfer.json".to_string(), labs.into_bytes());
+    assert_eq!(
+        files(lab.path()),
+        expected,
+        "the phone's, but for the golfer"
+    );
+    assert_eq!(
+        read_corpus(&lab.path().join("sessions"), "aaron", versions()),
+        read_corpus(&phone.path().join("sessions"), "aaron", versions())
+    );
+
+    // A cumulative export meets the same file every time, and copies nothing for it.
+    let (code, out, err) = run(&request(phone.path(), lab.path()));
+    assert_eq!((code, err.as_str()), (0, ""), "{out}");
+    assert!(out.contains(&want), "{out}");
+    assert!(
+        out.ends_with("\n\n0 file(s) copied; 6 identical, 1 left as stored, 0 ignored.\n"),
+        "{out}"
+    );
+}
+
+/// Only the fields that differ are named, and a file can differ with none of them differing: its
+/// spacing, a key the contract does not read, or one instant spelled in another offset.
+#[test]
+fn a_golfers_line_names_only_the_fields_that_differ_and_may_name_none() {
+    let cases = [
+        (
+            golfer_file("aaron", "Aaron", "right", "2026-11-02T10:05:00Z"),
+            format!(
+                "the export differs in created_at ({PHONES_CREATED_AT}, stored \
+                 2026-11-02T10:05:00Z)"
+            ),
+        ),
+        (
+            golfer_file("aaron", "Aaron B", "right", PHONES_CREATED_AT),
+            "the export differs in display_name (\"Aaron\", stored \"Aaron B\")".to_string(),
+        ),
+        (
+            golfer_file("aaron", "Aaron", "right", PHONES_CREATED_AT).replace(",\n   ", ","),
+            "no field it reads differs, only the file's bytes".to_string(),
+        ),
+        (
+            golfer_file(
+                "aaron",
+                "Aaron",
+                "right",
+                "2026-08-07T20:04:05.123456+05:00",
+            ),
+            "no field it reads differs, only the file's bytes".to_string(),
+        ),
+        (
+            golfer_file("aaron", "Aaron", "right", PHONES_CREATED_AT)
+                .replace('}', r#", "nickname": "Ace"}"#),
+            "no field it reads differs, only the file's bytes".to_string(),
+        ),
+    ];
+    for (labs, difference) in cases {
+        let phone = Phone::new();
+        let lab = tempfile::tempdir().unwrap();
+        store_golfers_file(lab.path(), "aaron.golfer.json", &labs);
+        let (code, out, err) = run(&request(phone.path(), lab.path()));
+        assert_eq!((code, err.as_str()), (0, ""), "{labs}: {out}");
+        let want = line(
+            "kept",
+            &format!(
+                "golfers/aaron.golfer.json: the store holds this golfer already, and it stays; \
+                 {difference}\n"
+            ),
+        );
+        assert!(out.contains(&want), "{want:?}: {out}");
+    }
+}
+
+/// D6's refusal: a different handedness is two people, or one of them recorded wrong, and so is
+/// another id in the same file. Every other field agreeing does not rescue either.
+#[test]
+fn a_golfer_of_another_handedness_or_id_stays_a_conflict() {
+    for labs in [
+        golfer_file("aaron", "Aaron", "left", PHONES_CREATED_AT),
+        golfer_file("dave", "Aaron", "right", PHONES_CREATED_AT),
+    ] {
+        let phone = Phone::new();
+        let lab = tempfile::tempdir().unwrap();
+        store_golfers_file(lab.path(), "aaron.golfer.json", &labs);
+        refused_on(&phone, lab.path(), &["aaron.golfer.json"]);
+    }
+}
+
+/// A golfer that does not read, on either side, cannot be called the same person. Unreadable is what
+/// the store's reader says: torn, an older schema, an id that is no slug, a handedness that is no
+/// handedness, or a directory at its name.
+#[test]
+fn a_golfer_unreadable_on_either_side_stays_a_conflict() {
+    let good = golfer_file("aaron", "Aaron B", "right", PHONES_CREATED_AT);
+    let unreadable = [
+        "{\"player_id\": ".to_string(),
+        r#"{"player_id": "aaron", "display_name": "Aaron", "handedness": "right"}"#.to_string(),
+        golfer_file("Not A Slug", "Aaron", "right", PHONES_CREATED_AT),
+        golfer_file("aaron", "Aaron", "sideways", PHONES_CREATED_AT),
+    ];
+    for bad in &unreadable {
+        let phone = Phone::new();
+        let lab = tempfile::tempdir().unwrap();
+        store_golfers_file(lab.path(), "aaron.golfer.json", bad);
+        refused_on(&phone, lab.path(), &["aaron.golfer.json"]);
+
+        let phone = Phone::new();
+        let lab = tempfile::tempdir().unwrap();
+        store_golfers_file(lab.path(), "aaron.golfer.json", &good);
+        fs::write(phone.path().join("golfers").join("aaron.golfer.json"), bad).unwrap();
+        refused_on(&phone, lab.path(), &["aaron.golfer.json"]);
+    }
+
+    let phone = Phone::new();
+    let lab = tempfile::tempdir().unwrap();
+    fs::create_dir_all(lab.path().join("golfers").join("aaron.golfer.json")).unwrap();
+    refused_on(&phone, lab.path(), &["aaron.golfer.json"]);
+}
+
+/// D6's bag: the lab's stays byte for byte and the line says the phone's did not land, whatever
+/// either side holds, since neither is read. Something that is not a file holds no bag to keep.
+#[test]
+fn a_bag_that_differs_is_kept_as_the_labs_and_says_the_phones_was_not_applied() {
+    let want = line(
+        "kept",
+        "golfers/aaron.bag.json: the store holds this golfer's bag already, which differs, and it \
+         stays; the phone's bag was not applied\n",
+    );
+    let phones_bag = read_json("spec/vectors/storage/stores/bag-reads.json")["input"]["files"]
+        ["aaron.bag.json"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    let mut retimed: Value = serde_json::from_str(&phones_bag).unwrap();
+    retimed["updated_at"] = "2026-11-02T10:05:00Z".into();
+    // A bag the contract reads, so this case is a bag that differs and not only a torn one.
+    serde_json::from_value::<Bag>(retimed.clone()).unwrap();
+    for labs in [retimed.to_string(), "{\"torn\": ".to_string()] {
+        let phone = Phone::new();
+        let lab = tempfile::tempdir().unwrap();
+        store_golfers_file(lab.path(), "aaron.bag.json", &labs);
+        let (code, out, err) = run(&request(phone.path(), lab.path()));
+        assert_eq!((code, err.as_str()), (0, ""), "{out}");
+        assert!(out.contains(&want), "{want:?}: {out}");
+        assert!(
+            out.ends_with("\n\n6 file(s) copied; 0 identical, 1 left as stored, 0 ignored.\n"),
+            "{out}"
+        );
+        let mut expected = files(phone.path());
+        expected.insert("golfers/aaron.bag.json".to_string(), labs.into_bytes());
+        assert_eq!(files(lab.path()), expected, "the phone's, but for the bag");
+        assert_eq!(
+            read_corpus(&lab.path().join("sessions"), "aaron", versions()),
+            read_corpus(&phone.path().join("sessions"), "aaron", versions())
+        );
+    }
+
+    // A phone's bag that does not read costs nothing, because it is not applied.
+    let phone = Phone::new();
+    let lab = tempfile::tempdir().unwrap();
+    store_golfers_file(lab.path(), "aaron.bag.json", &phones_bag);
+    fs::write(
+        phone.path().join("golfers").join("aaron.bag.json"),
+        "{\"torn\": ",
+    )
+    .unwrap();
+    let (code, out, err) = run(&request(phone.path(), lab.path()));
+    assert_eq!((code, err.as_str()), (0, ""), "{out}");
+    assert!(out.contains(&want), "{want:?}: {out}");
+
+    let phone = Phone::new();
+    let lab = tempfile::tempdir().unwrap();
+    fs::create_dir_all(lab.path().join("golfers").join("aaron.bag.json")).unwrap();
+    refused_on(&phone, lab.path(), &["aaron.bag.json"]);
+}
+
+/// The value rule reaches only what a store lists: a name directly under `golfers/` with a store's
+/// suffix. Anything else in the tree goes by bytes, as it did before D6.
+#[test]
+fn a_file_no_golfers_store_lists_still_goes_by_bytes() {
+    let names = ["notes.txt", "old/aaron.bag.json", "old/aaron.golfer.json"];
+    let phone = Phone::new();
+    let lab = tempfile::tempdir().unwrap();
+    let golfer = golfer_file("aaron", "Aaron", "right", PHONES_CREATED_AT);
+    for name in names {
+        let at = phone.path().join("golfers").join(name);
+        fs::create_dir_all(at.parent().unwrap()).unwrap();
+        fs::write(&at, &golfer).unwrap();
+        store_golfers_file(lab.path(), name, &format!("{golfer}\n"));
+    }
+    refused_on(&phone, lab.path(), &names);
+}
+
+/// A golfer's or a bag's entry whose checksum fails is the torn export the module doc refuses, exit
+/// 2, though the size alone already told `stored` it differs and neither rule would copy its bytes.
+#[test]
+fn a_torn_golfer_or_bag_entry_is_refused_though_neither_would_be_copied() {
+    let golfer = golfer_file("aaron", "Aaron", "right", PHONES_CREATED_AT);
+    let bag = r#"{"Aaron's": "bag"}"#.to_string();
+    for (name, text) in [("aaron.golfer.json", golfer), ("aaron.bag.json", bag)] {
+        let scratch = tempfile::tempdir().unwrap();
+        let lab = tempfile::tempdir().unwrap();
+        store_golfers_file(
+            lab.path(),
+            name,
+            &golfer_file("aaron", "Aaron B", "right", PHONES_CREATED_AT),
+        );
+        let before = files(lab.path());
+        let archive = scratch.path().join("export.zip");
+        let mut zip = ZipWriter::new(fs::File::create(&archive).unwrap());
+        zip.start_file(
+            format!("golfers/{name}"),
+            FullFileOptions::default().compression_method(CompressionMethod::Stored),
+        )
+        .unwrap();
+        zip.write_all(text.as_bytes()).unwrap();
+        zip.finish().unwrap();
+
+        // The archive whole is kept, so what refuses below is the one byte and nothing else.
+        let mut dry = request(&archive, lab.path());
+        dry.dry_run = true;
+        let (code, out, err) = run(&dry);
+        assert_eq!((code, err.as_str()), (0, ""), "{name}: {out}");
+        assert!(
+            out.contains(&format!("\n  kept      golfers/{name}: ")),
+            "{out}"
+        );
+
+        let mut bytes = fs::read(&archive).unwrap();
+        let held = bytes.windows(5).position(|five| five == b"Aaron").unwrap();
+        bytes[held] = b'B';
+        fs::write(&archive, bytes).unwrap();
+        let (code, out, err) = run(&request(&archive, lab.path()));
+        assert_eq!(code, 2, "{name}: {out}{err}");
+        assert!(
+            err.starts_with(&format!(
+                "error: nothing was imported, because the export cannot be read as a stored \
+                 layout:\n  golfers/{name}: "
+            )),
+            "{err}"
+        );
+        assert_eq!(files(lab.path()), before, "nothing written");
+    }
 }
 
 // ----------------------------------------------------------------------------------- the zip

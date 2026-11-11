@@ -1,11 +1,14 @@
 //! `ort` stays in `crates/ocr` (M29 P1; the M29 plan's D13 and its rule on cargo edges).
 //!
-//! ONNX Runtime is a native library whose build downloads it, and M38's phone links `contracts`,
-//! `pyfmt`, `analysis`, `feedback`, `screen` and `storage` through `core`, and `impact` (M42 P11),
-//! the impact-replay reader, beside it. So none of those eight may reach `ort`, by any path of
-//! shipped dependencies: normal and build, never dev, because a dev-dependency is never linked into
-//! what ships (`screen`'s on `golf-core` is one). `impact` depends on nothing today; it is guarded
-//! so that an edge added to it later is held to the phone's rule from the day it lands.
+//! ONNX Runtime is a native library whose build downloads it, and M38's phone links `app` (M38 P4),
+//! the facade, with `contracts`, `pyfmt`, `analysis`, `feedback`, `screen` and `storage` below it
+//! through `core`. So none of those may reach `ort`, by any path of shipped dependencies: normal and
+//! build, never dev, because a dev-dependency is never linked into what ships (`screen`'s on
+//! `golf-core` is one). `app` is guarded from the phase that made it, before it takes most of those
+//! edges, so that each is held to the rule as it lands, and the edge it could most easily take by
+//! mistake, `golf-lab` for its session code, has a control of its own at the bottom. `impact` (M42
+//! P11), the impact-replay reader, is guarded too although the M38 plan's D4 leaves it off the phone
+//! for now: it depends on nothing today, and its later caller is the phone.
 //!
 //! The walk reads every `crates/*/Cargo.toml` by hand rather than asking `cargo metadata`: the
 //! manifests here are simple, a TOML crate would be a dependency for one test, and spawning cargo
@@ -19,7 +22,8 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 /// The crates on the phone's path, by directory under `crates/`.
-const GUARDED: [&str; 8] = [
+const GUARDED: [&str; 9] = [
+    "app",
     "contracts",
     "pyfmt",
     "analysis",
@@ -212,16 +216,15 @@ fn reach(crates: &BTreeMap<String, Declared>, start: &str) -> BTreeMap<String, V
     seen
 }
 
-#[test]
-fn no_crate_on_the_phone_path_reaches_ort() {
-    let crates = workspace();
+/// Every chain from a guarded crate to a forbidden package.
+fn violations(crates: &BTreeMap<String, Declared>) -> Vec<String> {
     let mut violations = Vec::new();
     for guarded in GUARDED {
         assert!(
             crates.contains_key(guarded),
             "crates/{guarded} is gone; update GUARDED"
         );
-        for (name, chain) in reach(&crates, guarded) {
+        for (name, chain) in reach(crates, guarded) {
             for forbidden in FORBIDDEN {
                 if crates[&name].packages.contains(forbidden) {
                     violations.push(format!("{} -> {forbidden}", chain.join(" -> ")));
@@ -229,6 +232,12 @@ fn no_crate_on_the_phone_path_reaches_ort() {
             }
         }
     }
+    violations
+}
+
+#[test]
+fn no_crate_on_the_phone_path_reaches_ort() {
+    let violations = violations(&workspace());
     assert!(
         violations.is_empty(),
         "ort is reachable from the phone's path:\n{}",
@@ -273,5 +282,29 @@ fn the_walk_sees_the_edges_it_is_meant_to() {
     assert!(
         !reach(&crates, "screen").contains_key("core"),
         "a dev-dependency was followed"
+    );
+    assert!(
+        reach(&crates, "app").contains_key("contracts"),
+        "the facade's edges are not seen"
+    );
+}
+
+#[test]
+fn the_facade_taking_an_edge_to_the_lab_is_a_violation() {
+    // The edge M38 P3 moved code to avoid: `golf-lab` holds the photo entry's opener and the rest of
+    // the session code a facade wants, and it reaches `ort` through `ocr`. Made on the real graph
+    // rather than a toy one, so this also fails if the lab ever stops being what the guard fears.
+    let mut crates = workspace();
+    crates
+        .get_mut("app")
+        .expect("crates/app is in the walk")
+        .paths
+        .insert("lab".to_owned());
+    let found = violations(&crates);
+    assert!(
+        found
+            .iter()
+            .any(|chain| chain == "app -> lab -> ocr -> ort"),
+        "{found:?}"
     );
 }

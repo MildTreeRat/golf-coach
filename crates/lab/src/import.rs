@@ -34,12 +34,10 @@
 //!    is opened once per photo, and the corpus would count a second one as a duplicate anyway.
 //!    `--force` reads a photo entry's photo again and re-analyses it; a swing's photo is never
 //!    touched, since its shot is read and analysed with its clips.
-//! 2. **Open the entry by name**, `S/N` with `N` the store's next swing id, through
-//!    [`SwingBundleStore::assign_from_path`] as the upload route places a file: the photo is copied
-//!    to `.incoming/` with its modification time (the shot's timestamp is the photo's), then moved
-//!    in. By name because the store's automatic rule would slot the photo into the newest swing
-//!    lacking one, a filmed swing among them (the store's module doc). The golfer and club are the
-//!    flags', and the intent is the session's cursor, as an upload stamps it.
+//! 2. **Open the entry by name**, through [`open_photo_entry`], whose home `golf_core::session` says
+//!    how and why by name, since M38's phone opens an entry with it too. The photo's modification
+//!    time and file name are read here, the golfer and club are the flags', and the intent is the
+//!    session's cursor, as an upload stamps it.
 //! 3. **Read the entry's own copy** with the swing's identity, `{S}-{N}`, as `_shot_for` stamps a
 //!    bundle's shot, so the store's shot names the copy that stays rather than the file imported.
 //! 4. **Analyse it** through `run_shot_session`, whose line is printed under the photo's row.
@@ -93,9 +91,11 @@ use contracts::intent::PracticeGoal;
 use contracts::shot::ShotData;
 use contracts::swing::{ANALYSIS_VERSION, COMPARABLE_FROM};
 use contracts::Timestamp;
-use golf_core::session::{run_shot_session, ShotDirs};
+use golf_core::session::{
+    open_photo_entry, run_shot_session, session_holding, NewPhotoEntry, ShotDirs,
+};
 use screen::profile::{load_profile, DeviceProfile};
-use storage::bundle_store::{SwingBundleStore, Upload};
+use storage::bundle_store::SwingBundleStore;
 use storage::corpus::EngineVersions;
 use storage::golfer_store::{slugify, GolferStore};
 use storage::manifest::{Role, SwingManifest};
@@ -936,8 +936,8 @@ impl Entries {
         self.session_dir().join(&manifest.swing_id).join(filename)
     }
 
-    /// Open a photo entry for `image` under the next swing id: copied into `.incoming/` with the
-    /// photo's modification time, then placed by the store as the upload route places a file.
+    /// Open a photo entry for `image` under the next swing id, with the file's own modification
+    /// time and name, which [`open_photo_entry`] is handed rather than reading.
     fn open(
         &self,
         image: &Path,
@@ -945,48 +945,24 @@ impl Entries {
         bytes: &[u8],
         now: Timestamp,
     ) -> io::Result<SwingManifest> {
-        let incoming = self.sessions_dir.join(".incoming");
-        fs::create_dir_all(&incoming)?;
-        let tmp = incoming.join(format!("{digest}.{}.part", std::process::id()));
-        fs::write(&tmp, bytes)?;
-        let placed = fs::metadata(image)
-            .and_then(|meta| meta.modified())
-            .and_then(|modified| {
-                fs::File::options()
-                    .write(true)
-                    .open(&tmp)?
-                    .set_modified(modified)
-            })
-            .and_then(|()| {
-                let swing_id = self.store.next_swing_id(&self.session_id);
-                let original = crate::file_name(image);
-                self.store.assign_from_path(
-                    &Upload {
-                        session_id: &self.session_id,
-                        role: Role::ShotScreen,
-                        tmp_path: &tmp,
-                        digest,
-                        original_filename: &original,
-                        content_type: content_type(image),
-                        size_bytes: i64::try_from(bytes.len()).unwrap_or(i64::MAX),
-                        swing_id: Some(&swing_id),
-                        player_id: Some(&self.player_id),
-                        club: Some(self.club),
-                        intent: self.intent.as_ref(),
-                    },
-                    now,
-                )
-            });
-        let placed = match placed {
-            Ok(placed) => placed,
-            Err(error) => {
-                let _ = fs::remove_file(&tmp);
-                return Err(error);
-            }
-        };
-        self.store
-            .get_swing(&placed.session_id, &placed.swing_id)
-            .ok_or_else(|| io::Error::other("the entry's manifest could not be read back"))
+        let modified = fs::metadata(image)?.modified()?;
+        let original = crate::file_name(image);
+        open_photo_entry(
+            &self.store,
+            &NewPhotoEntry {
+                session_id: &self.session_id,
+                digest,
+                bytes,
+                original_filename: &original,
+                modified,
+                player_id: &self.player_id,
+                club: self.club,
+                intent: self.intent.as_ref(),
+                // No export leaves the lab, so a number it frees hurts nobody (`NewPhotoEntry::floor`).
+                floor: 0,
+            },
+            now,
+        )
     }
 
     /// Remove the session directory if this run made it and left it empty.
@@ -1012,39 +988,6 @@ fn copy_with_time(from: &Path, to: &Path) -> io::Result<()> {
         .write(true)
         .open(to)?
         .set_modified(modified)
-}
-
-/// The swing in `session_id` already holding these bytes as its photo, if one does: the dedupe the
-/// store's automatic rule makes, which opening an entry by name skips. `import-photos
-/// --into-session` opens an entry once per photo by it, and `import-export` (P31) skips an exported
-/// photo entry by it, so the two cannot disagree about which photo a session holds.
-pub(crate) fn session_holding(
-    store: &SwingBundleStore,
-    session_id: &str,
-    digest: &str,
-) -> Option<SwingManifest> {
-    store.get_session(session_id).into_iter().find(|manifest| {
-        manifest
-            .roles
-            .get(&Role::ShotScreen)
-            .is_some_and(|photo| photo.content_sha256 == digest)
-    })
-}
-
-/// What the upload route records as the content type, from the suffix: the phone sent `image/jpeg`
-/// and `image/png` for the stored photos, and `application/octet-stream` for the one HEIC.
-fn content_type(image: &Path) -> &'static str {
-    let suffix = image
-        .extension()
-        .and_then(|suffix| suffix.to_str())
-        .map(str::to_lowercase);
-    match suffix.as_deref() {
-        Some("jpg" | "jpeg") => "image/jpeg",
-        Some("png") => "image/png",
-        Some("heic") => "image/heic",
-        Some("heif") => "image/heif",
-        _ => "application/octet-stream",
-    }
 }
 
 #[cfg(test)]

@@ -11,6 +11,7 @@
 [workspace]
 members = [
     "crates/analysis",
+    "crates/app",
     "crates/capture",
     "crates/contracts",
     "crates/core",

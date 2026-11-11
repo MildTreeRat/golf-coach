@@ -1,0 +1,24 @@
+# The bridge's shell (the M38 plan's C1): the one crate that holds `flutter_rust_bridge`, and the
+# one the build hook compiles. `crates/app` is the facade, plain Rust and tested by `cargo test` on
+# any OS, and this binds its `api` module and holds nothing else of its own.
+[package]
+name = "golf_bridge"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "staticlib"]
+
+# Empty on purpose: it detaches this crate from the root workspace, so this crate has its own lock
+# and its own toolchain pin, and the root lock, the root's Rust version and the Windows box's
+# `cargo test` never meet the bridge. FRB's lock resolves `tokio 1.34.0`, where `crates/mcp` pins
+# `=1.54.0`, which is one measured reason they cannot share. What the split gives up is held by
+# `crates/app/tests/lock_agreement.rs`: the crates that decide bytes are one version in both locks.
+[workspace]
+
+[dependencies]
+flutter_rust_bridge = "=2.13.0"
+app = { path = "../../crates/app" }
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(frb_expand)'] }

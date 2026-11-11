@@ -95,11 +95,15 @@ pub struct ShotProvenance {
     /// a `None` metric cannot say on its own: ADR-034 §2's printed set is the device's declared
     /// fields ∩ this. **`None` means not recorded**, not "nothing located" — every stored shot reads
     /// `None` until M29's Rust lab re-reads it, and M34's re-read over the committed boxes writes no
-    /// `data/` (§M34). A `Vec` rather than a set because it is the parser's own list, kept as read.
+    /// `data/` (§M34). A `Vec` rather than a set because it is the parser's own list, kept as read,
+    /// with one addition since M38: a tile a person typed a value for, which says the layout has it.
     #[serde(default)]
     pub fields_present: Option<Vec<String>>,
-    /// Field name -> text, for M38's review-and-edit of a parse. Empty until M38 writes one, and
-    /// what an entry's value records is M38's to settle.
+    /// Field name -> **the value as read before a person changed it** (the M38 plan's C11):
+    /// `pyfmt::repr` of the number this shot held, in `ShotData`'s units and with its sign, or `""`
+    /// if nothing was read. Written on the first edit only and removed when a later edit restores
+    /// that value, so the field itself holds the truth, this is the audit, and an empty map says
+    /// every value is the reader's. `golf_core::session::correct_shot` writes it.
     ///
     /// Added in M32 rather than in M38 so that M38 does not force a second re-record of every
     /// committed vector for a key that is empty on all of them. A `BTreeMap` for `raw_fields`'

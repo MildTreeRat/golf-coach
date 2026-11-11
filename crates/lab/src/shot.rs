@@ -18,7 +18,8 @@
 //! role, OCR skipped by request, the photo missing, a machine that cannot read (Python's
 //! `build_recognizer` refusing, here the models missing or not the ones pinned), the broad
 //! `except` around the read, and a read of nothing. `force_ocr` is Python's too: the store is not
-//! consulted, and the photo is read and stamped as a new import.
+//! consulted for a shot to serve, and the photo is read and stamped as a new import. (It is asked
+//! one thing, what a person corrected: the section below, which Python has no twin of.)
 //!
 //! # A re-read keeps the shot's identity
 //!
@@ -84,6 +85,35 @@
 //! replay, so the offset is the older read's to carry ([`carry_impact_video`]), and otherwise a
 //! `SCREEN_PARSER_VERSION` bump would quietly make every clip's shot a still's. `import-video` on the
 //! clip itself reads the replay again and replaces what was carried.
+//!
+//! # A re-read keeps a person's correction (the M38 plan's C12), with no Python twin
+//!
+//! A phone's review writes a number a person read off the photo, and records what the reader said in
+//! `corrections` (`golf_core::session::correct_shot`). Without this a re-read would silently put the
+//! misread back, and a parser bump would do that to every shot anyone had reviewed. So a read that
+//! replaces a stored shot, stale or by `--force`, takes three things per entry in its map from
+//! [`carry_corrections`]:
+//!
+//! - **the field's value**, and a cleared field (no value, an entry holding the old number) is a
+//!   correction too, so it stays cleared;
+//! - **the entry**, unrewritten, since it says what was read before a person changed it and the new
+//!   read is not that;
+//! - **the field's place in `fields_present`**, because `analysed_view` blanks a reading outside that
+//!   list, so a value kept for a tile this read did not locate would be stored and then ignored. A
+//!   value always has its place, as `correct_shot` gives it one. A cleared field has the place it had:
+//!   clearing says nothing about whether a tile is there.
+//!
+//! **Every other field is the new read's, and so are its flag and its warnings**: the review answered
+//! the old read's question, and a new flag is a new question to ask. A shot with an empty map is not
+//! touched at all, so its bytes are what they were before this existed (`tests/reread.rs` holds both
+//! writers to that).
+//!
+//! `--force` is the one read that looks at the store for no shot to serve, and looks under the bytes'
+//! digest, since a correction was made on those bytes and the manifest's digest may be another
+//! photo's. A stored file that is not a shot holds no correction to keep and `--force` has always
+//! replaced one, so it is not an error there, as it is on the lookup. The cost is that `--force` can
+//! no longer undo a correction: typing the first read back on the phone does, and at the lab deleting
+//! the store's file does.
 
 use std::path::{Path, PathBuf};
 
@@ -101,6 +131,7 @@ use storage::shot_store::{hash_image, ShotStore};
 use storage::StoreError;
 
 use crate::ffmpeg::Ffmpeg;
+use crate::import::spelled;
 use crate::read_impact::{read_frames, Outcome, DECODE_WIDTH};
 
 /// `settings.launch_monitor_profile`'s environment variable, by pydantic-settings' `GOLF_` prefix.
@@ -123,7 +154,8 @@ pub struct ShotOptions {
     /// The launch-monitor profile the photo is read with, by device name.
     pub device: String,
     pub min_confidence: f64,
-    /// Read the photo even when the store holds a current shot for it, as a new import.
+    /// Read the photo even when the store holds a current shot for it, as a new import, keeping
+    /// only what a person corrected (the module doc).
     pub force_ocr: bool,
     /// Never read a photo: attach only what the store holds.
     pub skip_ocr: bool,
@@ -142,6 +174,18 @@ impl ShotOptions {
             skip_ocr: false,
             dry_run: false,
         }
+    }
+
+    /// The store a run writes shots to, at the directory as Python's `Path` would have spelled it.
+    ///
+    /// `ShotStore::put` makes its root, and `--shots-dir new/.` is a root that `create_dir_all`
+    /// cannot make off Windows: `mkdir("new/.")` answers `ENOENT` while `new` does not exist, and
+    /// `Path::parent` treats the `.` as absent, so the retry goes to `new`'s parent and `new` is
+    /// never made. Windows drops the `.` before the filesystem sees it, and Python's `Path` drops it
+    /// on construction, so neither ever met this; a Mac found it (M38 P2). Nothing prints this path
+    /// (the table's store line is spelled where it prints), so no spelling on Windows moves.
+    fn store(&self) -> ShotStore {
+        ShotStore::new(spelled(&self.shots_dir))
     }
 
     /// [`Self::new`] with the two settings read from `env` by name, so a test can answer for the
@@ -309,7 +353,7 @@ pub fn shot_for(
         ));
     };
 
-    let store = ShotStore::new(&options.shots_dir);
+    let store = options.store();
     // The stored shot this run re-reads, when the store's is an older parser's.
     let mut stale: Option<ShotData> = None;
     if !options.force_ocr {
@@ -563,8 +607,9 @@ pub fn import_photo(
 /// `--force`) skips the lookup, and the photo is read and stamped as a new import (`new`). **A stale
 /// stored shot is re-read and keeps its identity**, which is [`shot_for`]'s rule and not Python's,
 /// for the module doc's reasons: Python serves it as `cached`, and every shot frozen Python stored
-/// is stale. `options.dry_run` reads and writes nothing; `options.skip_ocr` is not read, because a
-/// bulk import that may not read a photo has nothing to do.
+/// is stale. **Both keep what a person corrected** ([`carry_corrections`]). `options.dry_run` reads
+/// and writes nothing; `options.skip_ocr` is not read, because a bulk import that may not read a
+/// photo has nothing to do.
 ///
 /// `Err` is what Python's `import_screen` raises, which ends the script there: a file that cannot
 /// be read, a stored shot that is not a shot, a decode or model error (the reader's own message,
@@ -585,7 +630,7 @@ pub fn import_photo_with(
     let bytes = std::fs::read(image_path)
         .map_err(|error| format!("could not read image {}: {error}", image_path.display()))?;
     let digest = hash_image(&bytes);
-    let store = ShotStore::new(&options.shots_dir);
+    let store = options.store();
     let mut stale = None;
     if !options.force_ocr {
         match store.get(&digest).map_err(|error| error.to_string())? {
@@ -638,6 +683,11 @@ fn read_screen(
     reader: &mut dyn PhotoReader,
 ) -> Result<Option<ShotData>, String> {
     let prepared = reader.prepare(image_path, profile)?;
+    // What `--force` replaces, asked only what a person corrected (the module doc).
+    let forced_over = options
+        .force_ocr
+        .then(|| options.store().get(&digest).ok().flatten())
+        .flatten();
 
     // The stale shot's identity, which is this photo's; `import_screen`'s stamp for a new import.
     let (shot_id, session_id, timestamp, path) = match stale {
@@ -673,7 +723,48 @@ fn read_screen(
     if let (Some(shot), Some(older)) = (shot.as_mut(), stale) {
         carry_impact_video(older, shot);
     }
+    if let (Some(shot), Some(older)) = (shot.as_mut(), stale.or(forced_over.as_ref())) {
+        carry_corrections(older, shot)?;
+    }
     Ok(shot)
+}
+
+/// What a person corrected on the shot this read replaces, onto the read: each entry in its map, with
+/// the field's value and its place in `fields_present` (the module doc). An empty map returns before
+/// anything is touched.
+///
+/// Through `serde_json::Value`, as `correct_shot`'s `with_edits` is, so the struct stays the only list
+/// of its fields, and because the two keys `ShotData` skips at `None` read as null and write as absent
+/// that way. A value crosses as the `f64` it is, with no unit or sign to work: it is `ShotData`'s on
+/// both sides.
+fn carry_corrections(older: &ShotData, shot: &mut ShotData) -> Result<(), String> {
+    let (Some(from), Some(onto)) = (older.provenance.as_ref(), shot.provenance.as_mut()) else {
+        return Ok(());
+    };
+    if from.corrections.is_empty() {
+        return Ok(());
+    }
+    let carried = serde_json::to_value(older).map_err(|failed| failed.to_string())?;
+    let had_a_place = |field: &str| {
+        let present = from.fields_present.as_deref().unwrap_or_default();
+        present.iter().any(|located| located == field)
+    };
+    for (field, as_read) in &from.corrections {
+        onto.corrections.insert(field.clone(), as_read.clone());
+        if !carried[field.as_str()].is_null() || had_a_place(field) {
+            if let Some(present) = onto.fields_present.as_mut() {
+                if !present.contains(field) {
+                    present.push(field.clone());
+                }
+            }
+        }
+    }
+    let mut written = serde_json::to_value(&*shot).map_err(|failed| failed.to_string())?;
+    for field in from.corrections.keys() {
+        written[field.as_str()] = carried[field.as_str()].clone();
+    }
+    *shot = serde_json::from_value(written).map_err(|refused| refused.to_string())?;
+    Ok(())
 }
 
 /// Where a Live Photo clip's frames come from: [`Ffmpeg`] in the binary, a fake in the tests.
@@ -1253,6 +1344,17 @@ mod tests {
         read_impact_video(&mut shot, Path::new("a.mov"), &mut motion);
         assert_eq!(asked, 0);
         assert_eq!(shot, before);
+    }
+
+    /// Both of a run's shot writers open the store through `ShotOptions::store`, so `analyze` and
+    /// `reanalyze` are held here to what `a_path_is_spelled_as_pythons_str_path` holds the imports.
+    #[test]
+    fn a_shots_dir_ending_in_a_dot_is_made_though_it_does_not_exist_yet() {
+        let scratch = tempfile::tempdir().unwrap();
+        let options = ShotOptions::new(scratch.path().join("shots").join("."));
+        let written = options.store().put(&read_shot()).unwrap();
+        assert!(scratch.path().join("shots").is_dir());
+        assert!(written.is_file(), "{}", written.display());
     }
 
     /// A stale shot's re-read reads the PNG and no replay, so its offset is carried, as a

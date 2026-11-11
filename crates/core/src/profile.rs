@@ -18,7 +18,8 @@
 //!
 //! 1. `build_bag_profile(corpus, bag)`: each club's baseline and dispersion, which the grades copy
 //!    (ball speed, and the three strike dispersions) and the club's list ranks. One build serves
-//!    both, so a club's grades and its list cannot read two different spreads.
+//!    both, so a club's grades and its list cannot read two different spreads. Since M38 P26
+//!    [`run_profile_and_bag_profile`] hands the same build to the phone, for the means it shows.
 //! 2. `build_grades(corpus, &bag_profile)`: every club with a shot photo, in bag order, then the
 //!    player's grades, which judge the whole corpus once (the plan's P7 finding 2). A club the bag
 //!    declares and the golfer never photographed is profiled by step 1 and is no club of this
@@ -46,6 +47,7 @@ use analysis::dispersion::build_dispersion;
 use analysis::strike::build_grades;
 use contracts::bag::Bag;
 use contracts::career::CareerCorpus;
+use contracts::club_profile::BagProfile;
 use contracts::strike::{GradedClub, GradedPlayer, GradedProfile};
 use contracts::{ContractError, Validate};
 use feedback::profile_rules::{rank_player, rank_profile};
@@ -59,6 +61,23 @@ pub fn run_profile(
     corpus: &CareerCorpus,
     bag: Option<&Bag>,
 ) -> Result<GradedProfile, ContractError> {
+    run_profile_and_bag_profile(corpus, bag).map(|(profile, _)| profile)
+}
+
+/// [`run_profile`], and the `BagProfile` its step 1 built, for a caller that shows a number that
+/// profile holds and the graded one does not. [M38 P26]
+///
+/// The phone's Profile tab is that caller: it shows each club's mean carry as `golf-core
+/// club-profile` prints it, from the club's baseline, and the graded profile carries a dispersion
+/// for carry whose `center` stays empty, since carry has no target to be biased from
+/// (`contracts::dispersion::METRIC_TARGETS`). Handing out the one build, rather than the phone
+/// calling `build_bag_profile` again, keeps the number beside a grade from the same build the grade
+/// read, and keeps `analysis` off the phone's crate's edges. The `BagProfile` is not validated
+/// here: it is the career builder's answer, which `golf-core club-profile` prints as it stands.
+pub fn run_profile_and_bag_profile(
+    corpus: &CareerCorpus,
+    bag: Option<&Bag>,
+) -> Result<(GradedProfile, BagProfile), ContractError> {
     let bag_profile = build_bag_profile(corpus, bag);
     let grades = build_grades(corpus, &bag_profile);
     let clubs = grades
@@ -84,7 +103,7 @@ pub fn run_profile(
         },
     };
     profile.validate()?;
-    Ok(profile)
+    Ok((profile, bag_profile))
 }
 
 #[cfg(test)]

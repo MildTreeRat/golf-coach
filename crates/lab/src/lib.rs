@@ -6,9 +6,9 @@
 //! ADR-035 clause 5 makes this M29's port of the lab: the bundle pipeline (strike audio, pose, the
 //! shot lookup and re-read, swing selection, the engine, the writers, coaching) and every lab verb,
 //! over the Rust crates that already hold each piece. A shell like `golf-core` (the M29 plan's D13):
-//! it may hold any library crate, and nothing depends on it (`tests/edges.rs`). It differs from
-//! `golf-core` in what it may reach: the lab's I/O edges, ffmpeg (D17), `crates/pose`'s sidecar and
-//! `crates/ocr`'s reader with its `ort`, which M38's phone never links and so `golf-core` must not.
+//! it may hold any library crate, and nothing that ships depends on it (`tests/edges.rs`). It differs
+//! from `golf-core` in what it may reach: the lab's I/O edges, ffmpeg (D17), `crates/pose`'s sidecar
+//! and `crates/ocr`'s reader with its `ort`, which M38's phone never links and so `golf-core` must not.
 //!
 //! **Built a phase at a time, and empty at the first.** P20 made the crate, the binary and the
 //! strike cache's shape and store (`contracts::audio`, `storage::audio_io`), held by

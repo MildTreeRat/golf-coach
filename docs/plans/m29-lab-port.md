@@ -350,6 +350,12 @@ Each is a snapshot; the phase that leans on it re-measures.
   directories, with the same defaults `golf-core`'s career verbs use).
 - **C11 — An import conflict refuses the whole import.** `golf-lab import-export` writes nothing if
   any path would change content; identical files are skipped, shots dedupe by photo sha.
+  *Added 2026-11-05 by M38's D6 ([the M38 plan](m38-iphone-app.md), its P12):* a golfer file differing
+  by bytes is read on both sides. The same `player_id` and handedness is kept as the lab's, with a line
+  naming the fields that differ, and a different handedness or an unreadable side stays a conflict. A
+  bag differing by bytes is kept as the lab's, with a line saying the phone's was not applied. This is
+  the value-level row P31's finding said a golfer rule would need. `session.json`, shots and manifests
+  keep their rules.
 - **C12 — The backup goes to `%USERPROFILE%\golf-coach-backups\m29-pre-write\`**, outside the repo,
   with a `SHA256SUMS` file and the digest in P29's finding.
 - **C13 — The `misread` rewording.** The "not capture problems … the footage is not what went wrong"

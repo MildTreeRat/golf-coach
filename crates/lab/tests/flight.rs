@@ -270,8 +270,19 @@ fn an_empty_store_says_how_shots_arrive() {
     let out = golf_lab(&["--shots", "--verbose", "--shots-dir", store], &[]);
     assert_eq!(out.status.code(), Some(0), "{}", stderr(&out));
     let text = stdout(&out);
-    assert!(text.starts_with(&format!("{HEADER}\n  No parsed shots in ")));
+    // The block's layout up to `in` cannot depend on the store's path, so it stays exact. What
+    // follows wraps by that path's length: a long temp path (macOS's) goes to the next line whole,
+    // which ends this one on `in` with no space after it, so the next word is asked of the flat text.
+    assert!(
+        text.starts_with(&format!("{HEADER}\n  No parsed shots in")),
+        "{text:?}"
+    );
     let flat = text.split_whitespace().collect::<Vec<_>>().join(" ");
+    let flat_header = HEADER.split_whitespace().collect::<Vec<_>>().join(" ");
+    assert!(
+        flat.starts_with(&format!("{flat_header} No parsed shots in ")),
+        "{flat}"
+    );
     assert!(flat.contains(
         "Shots arrive by `golf-lab import-photos` or with an uploaded bundle, and the store is \
          keyed by the photo's sha256 — an empty one is a repo nobody has imported a screen into \

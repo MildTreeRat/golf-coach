@@ -1,0 +1,5 @@
+# `native_toolchain_rust`, which the build hook runs through, refuses anything but an exact channel.
+# The iPhone, the Simulator, and this Mac for `flutter test`, whose hook builds for the host.
+[toolchain]
+channel = "1.99.1"
+targets = ["aarch64-apple-ios", "aarch64-apple-ios-sim", "aarch64-apple-darwin"]

@@ -1,0 +1,59 @@
+# The phone's facade. [M38 P4]
+#
+# Plain Rust and a member of this workspace, so `cargo test -p app` runs it on any OS with no
+# Simulator, no Flutter and no bridge. The bridge is `app/rust` (package `golf_bridge`), a shell
+# outside this workspace with its own lock and its own toolchain pin, which takes this crate as a
+# path dependency and binds `app::api` (the M38 plan's C1). `src/lib.rs` says why that split exists.
+#
+# **The lab's shell and `ocr` are never edges that ship from here**, since `ocr` holds `ort` and the
+# shell reaches it, and `crates/ocr/tests/ort_reach.rs` fails if this crate reaches it by any path of
+# normal or build dependencies. The lab is one dev-dependency, below, for one test. **Nor is `impact`
+# an edge, for a different reason**: the plan's D4 keeps clips off the phone until the reader works.
+[package]
+name = "app"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "The facade the iPhone app calls: free functions and plain views over the stores, the screen reader and the engine, with no bridge in it."
+
+# The bay session's report (C21, P14). A shell over `app::bay`, and a bridge build compiles the lib alone.
+[[bin]]
+name = "golf-bay-report"
+path = "src/bin/golf_bay_report.rs"
+
+# Each edge arrives with the first module that crosses it, as `crates/core/Cargo.toml` did for
+# `storage`: an edge nothing crosses is a claim cargo cannot check.
+[dependencies]
+# The three version keys `about()` answers, the device table `DEVICE` is held to, and `Timestamp`,
+# which `parse_now` hands back. Since P5, the golfer, bag and club shapes setup declares.
+contracts = { path = "../contracts" }
+# The golfer and bag stores setup is a thin call to (P5), the same files the lab reads, so an export
+# needs no translating. Since P6, the bundle and shot stores a photo lands in, and the corpus reader.
+storage = { path = "../storage" }
+# The shell, for what `record_photo` shares with the lab rather than copies: the entry's opener, the
+# session's dedupe, the analysis, and the intent's rule (P6, C23). `golf-core` holds no OCR, and
+# `crates/ocr/tests/ort_reach.rs` is what fails if that ever changes.
+golf-core = { path = "../core" }
+# The screen reader, the phone's whole reason to hold boxes (P6), and the device profile a card's
+# labels and letters come from.
+screen = { path = "../screen" }
+# A card's numbers as text (P6), since Dart formats nothing (rule 8).
+pyfmt = { path = "../pyfmt" }
+# `state.json`, the app's own settings (C7). The workspace's, so the lock gains nothing, and C1's lock
+# pin holds the bridge's copy to the same versions.
+serde.workspace = true
+serde_json.workspace = true
+# The export (P13, C16), a zip of the stored layout. The lab's exact pin and features, since the two
+# ends of one archive format should not be free to differ and a lock holding two copies would be a
+# reason for them to. Its comment says what the features leave out and why.
+zip = { version = "=7.3.0", default-features = false, features = ["deflate-flate2"] }
+
+[dev-dependencies]
+# A scratch data root per test, as `crates/storage`'s tests use. Test-only, and so off the phone.
+tempfile = "3"
+# The other end of the export, for `tests/export_roundtrip.rs` alone (P13): half of the milestone's exit
+# is what the real `import-export` makes of what this crate writes. A dev-dependency is never linked
+# into what ships, so `ort_reach` does not count it, and `crates/lab/tests/edges.rs` names this as the
+# one dev edge it allows.
+golf-lab = { path = "../lab" }

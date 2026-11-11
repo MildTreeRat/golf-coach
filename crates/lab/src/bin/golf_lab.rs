@@ -115,8 +115,9 @@
 //! (`sessions/`, `shots/`, `golfers/`; the M29 plan's D16), merged into the stores
 //! (`golf_lab::import_export`'s module doc). `--sessions-dir`, `--shots-dir` and `--golfers-dir` are
 //! resolved as the other verbs resolve them. New files are copied, identical ones skipped, a shot
-//! and a photo entry whose photo is stored already are left as stored, and one file that differs
-//! from what is stored refuses the whole import, naming each (C11). `--dry-run` judges every file
+//! and a photo entry whose photo is stored already are left as stored, as are a bag and a golfer of
+//! the same id and handedness (M38's D6), and any other file that differs from what is stored
+//! refuses the whole import, naming each (C11). `--dry-run` judges every file
 //! and writes nothing. Exit codes: 0 imported (or importable), 1 refused on a conflict, 2 the export
 //! is not a stored layout this reads, or a write failed part way.
 //!

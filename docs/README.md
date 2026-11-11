@@ -1,7 +1,7 @@
 # Documentation map
 
-88 markdown documents: 73 in `docs/` — 21 here at the top level (including this map), 36 ADRs,
-3 archived, 1 in `proposals/`, 12 in `plans/` — plus 15 outside it (the four at the repo root, and
+90 markdown documents: 75 in `docs/` — 21 here at the top level (including this map), 36 ADRs,
+3 archived, 1 in `proposals/`, 14 in `plans/` — plus 15 outside it (the four at the repo root, and
 one each in `archive/`, `data/` and `spec/`, eight in `spikes/`). This page says which one to read,
 and — just as importantly — which ones are records of the past rather than descriptions of the
 present.

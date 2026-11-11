@@ -1,0 +1,29 @@
+name: golf_app
+description: "The iPhone app: shots read off a launch monitor's screen, graded per club on the phone."
+# Never published: this is the app, not a package.
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.13.7
+
+# The M38 plan's rule 10: the Flutter SDK and the bridge alone at run time, each version exact, and
+# `pubspec.lock` committed. Native work goes through this repo's Swift channel and not a plugin. The
+# template's `cupertino_icons` is gone for that reason, since nothing here draws one. `_hooks` is the
+# build hook's own, in `dependencies` because the template runs it from there and it ships nothing.
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_rust_bridge: 2.13.0
+  flutter_rust_bridge_hooks: 2.13.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: 6.0.0
+  integration_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
