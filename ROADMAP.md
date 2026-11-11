@@ -1,6 +1,6 @@
 # Roadmap: AI Golf Swing Trainer
 
-## Last Updated: 2026-11-04
+## Last Updated: 2026-11-09
 
 Grouped by **state**, not by number, because the numbers no longer run in order: the pose-only
 slices (M4-PoC, M4-PoC+, M4-REF, M5-FB) delivered the mechanics half of M4 and the ranking half
@@ -59,6 +59,9 @@ wording; only the grouping and the M4 checklist have been corrected.
 | **M38** The iPhone app | 🔄 In progress *(from 2026-11-04)*, on M33's provisional evidence by the user's decision: **GO, provisional: pasted copies, with the clips not measured** ([the log's "For M38"](spikes/vision-ocr/log.md#for-m38)), with the bay session as its real test. [The plan](docs/plans/m38-iphone-app.md) holds the phases and their state, and [the bay bars](docs/plans/m38-bay-thresholds.md) are committed before any measurement | Nothing, for P1–P28 on this Mac and its Simulator. Then the iPhone at this Mac (P29–P31), then the bay (before P32) | [§M38](#m38-the-iphone-app) |
 | **M39** Optional video on the phone | 🔒 Blocked | M38; a Mac, then the bay | [§M39](#m39-optional-video-on-the-phone) |
 | **M40** The laptop client resumes | 🔒 Blocked. M21, M24, M25 and M26 re-scoped under it, as the desktop target of the same app. It also decides `api/` (`axum` or dropped) and deletes the frozen Python | M38. M29 landed on 2026-10-29 | [§M40](#m40-the-laptop-client-resumes) |
+| **M43** Impact drill — impact tape first | ⬜ Not started, a TODO. **Raised 2026-11-09** by the user. A drill that records where on the face each ball was struck, read off a photo of impact tape, and tracks it per club so progress shows (a heat map later). Tape is the first **method** behind an impact-location interface, so later ways of measuring the strike plug in beside it | M38; then a session with tape, and no launch monitor needed. Planned later with plan-phases | [§M43](#m43-impact-drill--impact-tape-first) |
+| **M44** Low-point and angle-of-attack drill — foot powder first | ⬜ Not started, a TODO. **Raised 2026-11-09** by the user. A drill that records whether the club bottomed out before or after the ball, read off a photo of the mark in foot powder, and tracks it over time. Powder is the first **method** behind a low-point interface, so later drills and devices plug in beside it | M38, and the drill framework whichever of M43 and M44 runs first builds. Planned later with plan-phases | [§M44](#m44-low-point-and-angle-of-attack-drill--foot-powder-first) |
+| **M45** The player's gear — find each club, and keep everything about it | ⬜ Not started, a TODO. **Raised 2026-11-09** by the user. On the phone a bag holds club slots and an optional loft, so the app knows nothing about the clubs themselves. This finds the real ones (make, model and the full specification) and **keeps every fact any source gives**, whether anything reads it yet or not. That is the user's theme, *we can never have too much data*. It brings M12's spec, catalogue and lookup to the app | M38. The desk and a Mac, with no bay needed. Planned later with plan-phases | [§M45](#m45-the-players-gear--find-each-club-and-keep-everything-about-it) |
 | **M29** The lab port | ✅ Done *(2026-10-29)*, **37/37 phases** — the phases and what each found are in [m29-lab-port.md](docs/plans/m29-lab-port.md). The lab is Rust, in three new crates: `crates/ocr` (the screen's recognizer through `ort`, the only crate that reaches it), `crates/mcp` (`golf-mcp`, the `rmcp` server, carrying M37's `get_strike_profile`) and `crates/lab` (`golf-lab`, the lab CLI over `crates/trigger`, ffmpeg, `crates/pose`, the reader and the engine). The OCR gate passed 12 of the 13 bay photos exactly, and the thirteenth's one value is declared. Two families, `mcp/` and `selection/`, were recorded once from frozen Python and pass. `data/` was backed up and rewritten once: the 13 shots stamped, the 15 bundles re-run at engine 17, and the frozen server reads every artifact. The LLM reaches its tools through `golf-mcp` over stdio, the frozen server's eight write routes answer 410 naming their verbs, the research record is in `archive/`, and the lab scripts, `detection/` and `frontend/` are deleted. [ADR-035's M29 addendum](docs/decisions/035-rust-everywhere-python-where-required.md) answers its four deferred questions. No engine, stage, shot, screen, audio, format, storage, career or profile vector moved, and no version key | — (desk work; done) | [§M29](#m29-the-lab-port--a-rust-lab-cli-the-rmcp-server-and-the-archive-move) |
 | **M5** Feedback UI | ⬜ Not started, **superseded in shape by [M38](#m38-the-iphone-app)** (no web UI). It was M25 until 2026-09-29, when [ADR-034](docs/decisions/034-shot-first-phone-first.md#consequences) made the phone app the first shell | — (its screens are M38's, in the app's shape) | [§M5](#milestone-5-feedback-ui) |
 | **M2** Club & ball detection | 🔒 Gated, **and M1.5 said no-go** | Bay lighting for a ~1/2000 s exposure — *not* a global-shutter camera | [§M2](#milestone-2-club--ball-detection) |
@@ -2218,6 +2221,135 @@ on.
 
 **Detail**: the program plan's
 [§M40](docs/plans/m31-m40-shot-first-pivot.md#m40--the-laptop-client-resumes).
+
+---
+
+## M43: Impact drill — impact tape first
+
+**Status**: ⬜ Not started, a TODO raised by the user on 2026-11-09. Not planned yet: plan-phases
+writes its plan, and that plan sets the exit.
+
+**The ask.** The user selects a drill, selects **impact**, and selects an interpretation method,
+**impact tape** for now. The app tells them to put the tape on the face, choose the club and hit.
+Afterwards they photograph the tape on the club, and the app records where on the face the ball was
+struck. Those strikes are tracked per club, so progress shows over time, and a heat map of where
+they land comes later.
+
+**The pattern (the user's call, 2026-11-09).** One interface for the question *where on the face*,
+and one implementation per **method**. Impact tape is the first, and the user wants many more,
+because there are many ways to measure a strike. Each method turns its own evidence into the same
+answer in `ShotData`'s units (`crates/contracts/src/shot.rs`): `impact_offset_h` in millimetres
+with + toe, and `impact_offset_v` in millimetres with + high. That way a taped strike and a printed
+one are the same field and can be compared. A method declares which axes it can see. Tape sees both,
+while M42's overhead replay reader (`crates/impact`) sees heel to toe only, which is why it never
+writes `impact_offset_v`. Other candidates are foot spray or a dry-erase marker, which need the same
+photo with a different mark, and a launch monitor's printed offsets. The plan's P0 writes the
+pattern down as an ADR, so M44 inherits it rather than arguing it again.
+
+**Things the plan has to decide, named now so it does not rediscover them:**
+- **A drill is untracked today.** `PracticeMode::Drill` (`crates/contracts/src/intent.rs`; ADR-034 §3,
+  M35) keeps a drill shot out of club and player stats on purpose. So the drill's own progress is a
+  new kind of history, kept beside the shot corpus rather than inside it. M37's strike-location
+  grade still waits on a measured impact offset. Whether a taped drill strike may feed it is a call
+  for this plan.
+- **How a photo becomes millimetres.** That needs a scale on the face, and how the mark is
+  placed: the user tapping it, or the photo being read.
+- **One mark per photo, or several per strip.** One strip of tape holds several strikes.
+- **No score beats a wrong one** (ADR-010 §2). A mark the method cannot place is *not read*,
+  never the centre of the face.
+
+**Depends on**: M38 (the app, its photo source, the Drill mode). The drill framework (drill →
+topic → method, the store, the progress view) is shared with M44, and whichever runs first builds
+it. **Where it runs**: the desk for the interface and the store, a Mac for the app, then a
+session with tape. No launch monitor is needed.
+
+**Exit**: none yet. Its plan sets one.
+
+---
+
+## M44: Low-point and angle-of-attack drill — foot powder first
+
+**Status**: ⬜ Not started, a TODO raised by the user on 2026-11-09. Not planned yet: plan-phases
+writes its plan, and that plan sets the exit.
+
+**The ask.** The user selects a drill, selects **low point**, and selects a method, **foot
+powder** for now. They spray foot powder on the mat or turf, place the ball, swing, and photograph
+the mark. The app records whether the club bottomed out before or after the ball, and tracks that
+over time.
+
+**The pattern.** The same as [M43](#m43-impact-drill--impact-tape-first)'s: one interface for the
+question *where did the club bottom out*, and one implementation per method. Foot powder is the
+first. Candidates for later are a line drill (a chalk or tape line), a towel behind the ball, and a
+launch monitor's printed `low_point` and `attack_angle`. The answer is in `ShotData`'s units:
+`low_point` in inches with + ahead of the ball.
+
+**Things the plan has to decide, named now:**
+- **Powder measures the low point, not the angle of attack.** It shows where the club met the
+  ground relative to the ball, so it can answer *before or after*, and maybe *by how much*. An
+  angle in degrees (`attack_angle`, + up) comes only from a method that measures it. Inferring one
+  from a powder mark would be a guessed score (ADR-010 §2).
+- **Where the ball sat, in the photo.** The ball leaves a clean spot in the powder, and that may be
+  the reference. The plan should say whether *before or after* is enough at first, or whether it
+  needs a distance.
+- **A drill is untracked today**, as M43 says, so this is the same new drill history.
+
+**Depends on**: M38, and the drill framework shared with M43, built by whichever runs first.
+**Where it runs**: the desk, a Mac for the app, then a mat or turf with foot powder.
+
+**Exit**: none yet. Its plan sets one.
+
+---
+
+## M45: The player's gear — find each club, and keep everything about it
+
+**Status**: ⬜ Not started, a TODO raised by the user on 2026-11-09. Not planned yet: plan-phases
+writes its plan, and that plan sets the exit.
+
+**The ask.** The app has clubs but knows nothing about them. On the phone a bag is club slots and an
+optional loft (M38's D7, `crates/app/src/api/setup.rs`), so every other field of the club's
+specification stays blank. This milestone finds the clubs the player actually uses, make, model and
+the rest, and keeps them. **And it keeps all of it**: every fact any source gives about a club is
+stored, whether or not anything reads it yet. What to do with it is decided later.
+
+**The theme (the user's, 2026-11-09): we can never have too much data.** For gear this is M6.5's
+*measure now, judge later*. Store everything and judge nothing from it until a later milestone
+decides to. ADR-010 §2 still governs what does get judged.
+
+**What exists already, to reuse rather than copy.** M12 ([ADR-026](docs/decisions/026-club-specification-lookup.md))
+built this once, for the frozen web page:
+- `ClubSpec` and `SpecProvenance` (`crates/contracts/src/club_spec.rs`), the club's full
+  specification and where it came from, and `BagEntry` inheriting it (`crates/contracts/src/bag.rs`).
+- The committed catalogue, keyed so that "T150", "T-150" and "t 150" are one club. Its rows are
+  `src/golf_coach/clubs/club_catalogue.json`, which Rust reads through `contracts::catalogue`
+  (by `include_str!`) and `storage::catalogue`.
+- The lookup itself, `src/golf_coach/clubs/lookup.py`. It is a model call, so it is frozen Python
+  and one of the LLM's surviving files (ADR-035 §1).
+- ADR-026's rules stand. Looking up and saving are two acts, because a lookup is a proposal and
+  confirming it makes it a declaration. A lookup that refuses is worth more than one that guesses.
+  The bag already shelves a club that leaves it rather than losing it (`Bag.retired`).
+
+**Things the plan has to decide, named now:**
+- **Where "everything" goes.** `ClubSpec` is a fixed field list, so a fact outside it has nowhere to
+  live today. The theme says to keep each source's raw answer beside the typed spec, with its
+  provenance: the lookup's whole response, a photo of the head or the shaft band, a spec sheet.
+  A later milestone can then lift a new field out of it without asking again. The typed fields stay
+  what analysis reads.
+- **How a club is found. This is another method interface**, the pattern M43 and M44 set: typed by
+  hand, the committed catalogue offline, a model's lookup, or a photo of the club read through the
+  app's Vision path. Each method proposes a spec with its provenance, and the golfer confirms it.
+- **The phone has no network** (M38's rule 10), and the lookup lives in Python on the laptop.
+  The phone could call a model, ask the laptop, or work from the catalogue and photos alone, and
+  choosing among those is this milestone's decision. ADR-026 also deferred scraping manufacturer
+  sites and shipping a pre-filled catalogue, and this theme may re-open both.
+- **Which club hit which shot, over time.** Bag-entry versioning (crediting a shot to the club
+  that was in the slot when it was hit) has been deferred by ADR-024 and again by ADR-026.
+  Keeping everything about the gear argues for doing it now.
+- **Whether the ball is gear too.** The ball model changes spin, and the user's word was *gear*.
+
+**Depends on**: M38 (the app's bag and setup). **Where it runs**: the desk and a Mac, with the
+clubs to hand for a photo method. No bay is needed.
+
+**Exit**: none yet. Its plan sets one.
 
 ---
 
