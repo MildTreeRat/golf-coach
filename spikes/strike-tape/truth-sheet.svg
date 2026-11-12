@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  The strike-tape truth sheet (M46 P2, the plan's D7). One SVG unit is one millimetre, so printed at
+  100% the sheet is 180 mm by 250 mm, which fits A4 and US Letter inside half-inch margins.
+
+  Peeled STRIKEPRO labels are stuck into the six slots in the order they were hit, and the sheet is
+  photographed straight on. That photo is the truth the on-club readings are measured against (P13),
+  which finds the four corner squares and rectifies the photo to these coordinates. So every position
+  here is load-bearing: the geometry, the rule for how a peeled label sits in its slot, and why the
+  grid is blue are in README.md beside this file, and a change here is a change there.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+     width="180mm" height="250mm" viewBox="0 0 180 250">
+  <title>Strike tape truth sheet (golf-coach M46)</title>
+  <defs>
+    <!-- Each grid line is a filled strip of its own width, and each pattern's origin is moved back by
+         half that width, so a line is centred on its whole millimetre rather than starting at it. Three
+         patterns layered rather than nested, because nested userSpaceOnUse patterns resolve their
+         coordinates differently between renderers. -->
+    <pattern id="grid-1mm" patternUnits="userSpaceOnUse" x="-0.05" y="-0.05" width="1" height="1">
+      <rect width="0.1" height="1" fill="#a8cbff"/>
+      <rect width="1" height="0.1" fill="#a8cbff"/>
+    </pattern>
+    <pattern id="grid-5mm" patternUnits="userSpaceOnUse" x="-0.1" y="-0.1" width="5" height="5">
+      <rect width="0.2" height="5" fill="#74a9ff"/>
+      <rect width="5" height="0.2" fill="#74a9ff"/>
+    </pattern>
+    <pattern id="grid-10mm" patternUnits="userSpaceOnUse" x="-0.15" y="-0.15" width="10" height="10">
+      <rect width="0.3" height="10" fill="#3f88ff"/>
+      <rect width="10" height="0.3" fill="#3f88ff"/>
+    </pattern>
+
+    <!-- One slot in its own frame: the origin is the slot's top-left corner, and the slot is 70 wide
+         and 60 tall. The write-in band sits 1 mm above it. The corner brackets and the midpoint ticks
+         are drawn instead of an outline, so nothing dark runs under a label that overhangs its slot. -->
+    <g id="slot-frame">
+      <rect x="0" y="-10" width="70" height="9" fill="#ffffff"/>
+      <path d="M0 6V0H6 M64 0H70V6 M70 54V60H64 M6 60H0V54 M35 0V3 M35 60V57 M0 30H3 M70 30H67"
+            fill="none" stroke="#2a6cff" stroke-width="0.4"/>
+      <g font-family="Helvetica, Arial, sans-serif" font-size="2.5" font-weight="normal" fill="#000000">
+        <text x="10" y="-6">Club</text>
+        <text x="51" y="-6">Hand R / L</text>
+        <text x="10" y="-2.2">Label L</text>
+        <text x="37" y="-2.2">Strikes</text>
+      </g>
+      <path d="M17 -5.6H48 M21 -1.8H34 M48 -1.8H68" fill="none" stroke="#000000" stroke-width="0.15"/>
+    </g>
+  </defs>
+
+  <rect width="180" height="250" fill="#ffffff"/>
+
+  <!-- The grid: x 0 to 180, y 13 to 237, leaving 3 mm of white between it and every corner square. -->
+  <g id="grid">
+    <rect x="0" y="13" width="180" height="224" fill="url(#grid-1mm)"/>
+    <rect x="0" y="13" width="180" height="224" fill="url(#grid-5mm)"/>
+    <rect x="0" y="13" width="180" height="224" fill="url(#grid-10mm)"/>
+    <rect x="0" y="13" width="180" height="224" fill="none" stroke="#3f88ff" stroke-width="0.3"/>
+  </g>
+
+  <!-- Six slots, numbered across then down. Centres at x 40 and 140, y 55, 130 and 205. -->
+  <g id="slots">
+    <g id="slot-1" transform="translate(5 25)">
+      <use xlink:href="#slot-frame"/>
+      <text x="2" y="-2.4" font-family="Helvetica, Arial, sans-serif" font-size="6.5" font-weight="bold">1</text>
+    </g>
+    <g id="slot-2" transform="translate(105 25)">
+      <use xlink:href="#slot-frame"/>
+      <text x="2" y="-2.4" font-family="Helvetica, Arial, sans-serif" font-size="6.5" font-weight="bold">2</text>
+    </g>
+    <g id="slot-3" transform="translate(5 100)">
+      <use xlink:href="#slot-frame"/>
+      <text x="2" y="-2.4" font-family="Helvetica, Arial, sans-serif" font-size="6.5" font-weight="bold">3</text>
+    </g>
+    <g id="slot-4" transform="translate(105 100)">
+      <use xlink:href="#slot-frame"/>
+      <text x="2" y="-2.4" font-family="Helvetica, Arial, sans-serif" font-size="6.5" font-weight="bold">4</text>
+    </g>
+    <g id="slot-5" transform="translate(5 175)">
+      <use xlink:href="#slot-frame"/>
+      <text x="2" y="-2.4" font-family="Helvetica, Arial, sans-serif" font-size="6.5" font-weight="bold">5</text>
+    </g>
+    <g id="slot-6" transform="translate(105 175)">
+      <use xlink:href="#slot-frame"/>
+      <text x="2" y="-2.4" font-family="Helvetica, Arial, sans-serif" font-size="6.5" font-weight="bold">6</text>
+    </g>
+  </g>
+
+  <!-- The fiducials P13 reads: solid black, 10 mm on a side, centres 170 mm apart across and 240 mm
+       apart down. The smaller key beside the top-left one is what tells a sheet photographed upside
+       down from one the right way up, which four identical squares cannot. -->
+  <g id="fiducials" fill="#000000">
+    <rect id="fiducial-tl" x="0" y="0" width="10" height="10"/>
+    <rect id="fiducial-tr" x="170" y="0" width="10" height="10"/>
+    <rect id="fiducial-bl" x="0" y="240" width="10" height="10"/>
+    <rect id="fiducial-br" x="170" y="240" width="10" height="10"/>
+  </g>
+  <rect id="orientation-key" x="15" y="2.5" width="5" height="5" fill="#000000"/>
+
+  <g font-family="Helvetica, Arial, sans-serif" fill="#000000">
+    <text x="25" y="5.2" font-size="3.2" font-weight="bold">Strike tape truth sheet</text>
+    <text x="165" y="5.2" font-size="2.2" text-anchor="end">golf-coach M46, spikes/strike-tape</text>
+    <text x="25" y="10.6" font-size="2.4">Sheet ______   Date ____________   Top line toward the number, toe where it was in the photos</text>
+  </g>
+
+  <!-- The scale bar: 100 mm from end tick to end tick, the print's check (the run sheet's step 1). -->
+  <g id="scale-bar" fill="none" stroke="#000000">
+    <path d="M40 241.5H140" stroke-width="0.3"/>
+    <path d="M40 239.5V243.5 M140 239.5V243.5" stroke-width="0.25"/>
+    <path d="M50 240.5V242.5 M60 240.5V242.5 M70 240.5V242.5 M80 240.5V242.5 M90 240.5V242.5 M100 240.5V242.5 M110 240.5V242.5 M120 240.5V242.5 M130 240.5V242.5" stroke-width="0.15"/>
+  </g>
+  <g font-family="Helvetica, Arial, sans-serif" font-size="2.2" fill="#000000" text-anchor="middle">
+    <text x="40" y="246.5">0</text>
+    <text x="140" y="246.5">100 mm</text>
+    <text x="90" y="246.5">Print at 100%. End tick to end tick: 99.5 to 100.5 mm</text>
+    <text x="90" y="249.5">Outer edges of the two left squares: 249 to 251 mm</text>
+  </g>
+</svg>

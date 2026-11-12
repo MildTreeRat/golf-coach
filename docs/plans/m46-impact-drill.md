@@ -43,7 +43,7 @@ machine, pull on the new" as its precondition.
 |---|---|---|
 | **P0** | 🪟 This plan, the ROADMAP pointer, and the plan's commit | ✅ Done *(2026-11-12)* — approved by the user |
 | **P1** | 🪟 ADR-037: where on the face, by method, and the drill framework | ✅ Done *(2026-11-12)* |
-| **P2** | 🪟 The truth sheet and the tape session's run sheet | ⬜ |
+| **P2** | 🪟 The truth sheet and the tape session's run sheet | ✅ Done *(2026-11-12)* |
 | **P3** | 🧍 The tape session: labels measured, strikes photographed, truth sheets photographed | ⬜ |
 | **P4** | 🪟 The session's inventory and the label geometry as data | ⬜ |
 | **P5** | 🪟 `contracts::face_impact`: the method interface and `TAPE_READER_VERSION` | ⬜ |
@@ -1022,3 +1022,58 @@ named as skipped where they are not), then write the three records, and commit `
    some axis, the 95% interval excludes 0 and that axis's mean is more than a third of the radius from 0.
 7. **For P30**: nothing routes to ADR-037 yet outside the map. CLAUDE.md's *Where the answer is* table and
    `docs/ARCHITECTURE.md` (with C22's credit) are P30's to add.
+
+### P2 (2026-11-12)
+
+1. **The sheet, its geometry and the run sheet are written**: `spikes/strike-tape/truth-sheet.svg`,
+   `spikes/strike-tape/README.md` (the geometry, by the SVG's `id`s), and `docs/plans/m46-tape-run-sheet.md`
+   (steps 1 to 9 as this section lists them, a `labels.txt` template, and a table of which phase reads each
+   item). **The size was checked twice**: from the file (`width="180mm" height="250mm"` over a
+   `viewBox` of 180 × 250, so one unit is one millimetre, and the scale bar's end ticks at x 40 and 140),
+   and from an `rsvg` render at 10 px/mm (ImageMagick, 1800 × 2500 px), where the end ticks sit 1000 px
+   apart and each fiducial is 100 px square. Nothing has been printed here, so a browser's print at 100%
+   is unverified until the user's step 1, which is the check. `rsvg` fell back to its own sans font, and
+   no position depends on the font.
+2. **What the sheet adds to the plan's letter**, each for a reason the README states:
+   - **An orientation key**: a fifth black square, 5 mm, at (15, 2.5) beside the top-left fiducial, because
+     four identical squares cannot tell a sheet read upside down, which would move slot 1's label to slot
+     6 and turn every mark through 180°. **For P13**: the key is not a fiducial (a quarter of one's area),
+     and a photo with the key nearest the bottom-right square is upside down.
+   - **The print is checked in both directions**: the 100 mm bar across, and the left squares' outer
+     edges, 250 mm, down. Both measured numbers go into `labels.txt`'s `print:` line.
+   - **The grid is blue**, every colour with a full blue channel, so it should nearly vanish in a photo's
+     blue channel while the black stays. That is unmeasured. **For P13**: try the blue channel first if a
+     label is see-through and the grid shows through it as structure.
+   - **Slots are corner brackets and midpoint ticks, not outlines**, and the columns are 30 mm apart, so a
+     label up to 90 mm wide still fits its slot, centred, overhanging. Wider than 90 mm, labels go in slots
+     1, 3 and 5 only. Nobody knows the labels' size yet (P0 finding 2).
+3. **The run sheet's choices**, made where the plan's steps left it open:
+   - **Every irregular photo is noted by name**: a **miss** (a strike with no new mark, photographed
+     anyway), a **retake** (a second photo of the same strike), **two new** (the skipped photo), and an
+     **extra** (step 6's off-square photo, taken *after* the strike's square photo, so each label's run
+     stays one photo per strike). **For P4**: these are what the inventory's "index on the label" and
+     "skipped before" come from. A retake and an extra share their strike's index, a miss takes an index
+     and has no mark, and a two-new photo spans two indices. An inventory field for the strikes since the
+     last photo (0 for a retake or extra, 2 for two new) would make P13's matching mechanical.
+   - **The skipped photo is never a label's first.** **For P12**: by P11's rule a fresh label with two marks
+     is `NeedsPick`, so a skip there could never come out as two new marks, which is P12's done-when.
+   - **No photo of the clean label on the club** (D4: the drill never has one), so a label's first photo
+     follows its first strike.
+   - **The flat photos are a `FRESH` sheet**: one unused label of each type stuck in slots 1 (driver),
+     2 (iron) and 3 (hybrid). **For P4**: those slots are the cross-check, and P13's truth reader does not
+     exist yet, so P4 reads them against the grid by eye or by rectifying through the four fiducials
+     (README's table).
+   - **Only the plan's two questions are asked** (fairway wood, putter), and the rest is stated as assumed
+     (driver on the driver, hybrid on hybrids, iron on every iron and wedge), with a line to correct it.
+   - **All three label types must be hit**, as an invariant rather than through the club list alone, since
+     the error is per type. A second driver and hybrid label is suggested, not required, because the iron
+     label gets two clubs and the others one.
+4. **For P13**: how a peeled label sits is the README's last section. It goes in its slot unturned, top line
+   toward the number (−y), and the toe left (−x) for a right-handed club and right (+x) for a left-handed
+   one. Its table converts sheet millimetres to C4's frame, and the centre is the label's own (D2), not the
+   slot's. The slot's band holds club, hand, label number and strike count.
+5. **Two files outside the Touch line**: `docs/README.md`'s counts (98 documents, 80 in `docs/`, 17 plans,
+   18 outside, nine in `spikes/`), as P1 finding 2 asked, and an entry in `spikes/README.md`, whose list
+   names every spike folder.
+6. **For P3**: the session checks the folder against the run sheet's last table, *What each item is for*,
+   and `labels.txt` against its template.

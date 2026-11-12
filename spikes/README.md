@@ -45,3 +45,10 @@ Each spike gets its own dated folder.
   the lab's reader have not run, and whether M38 is unblocked is the user's. Findings:
   [log.md](vision-ocr/log.md), which `probe.py verdict` holds to `results/`. `frames/` is git-ignored and
   regenerates from `probe.py prepare` and `measure`.
+- `strike-tape/` — **M46**, **drawn 2026-11-12, and open until the tape session (the plan's P3) runs**.
+  Not a probe: `truth-sheet.svg` is the printed millimetre grid that peeled STRIKEPRO labels are stuck on
+  and photographed, as the truth the drill's tape reader is measured against
+  ([the plan](../docs/plans/m46-impact-drill.md)'s D7). `README.md` holds the sheet's geometry, which
+  P13's truth reader rectifies to, and the session is
+  [the run sheet](../docs/plans/m46-tape-run-sheet.md). The photos stay in git-ignored
+  `data/raw/strike_tape/`.
