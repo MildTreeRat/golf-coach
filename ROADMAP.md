@@ -60,7 +60,7 @@ wording; only the grouping and the M4 checklist have been corrected.
 | **M38** The iPhone app | 🔄 In progress *(from 2026-11-04)*, on M33's provisional evidence by the user's decision: **GO, provisional: pasted copies, with the clips not measured** ([the log's "For M38"](spikes/vision-ocr/log.md#for-m38)), with the bay session as its real test. [The plan](docs/plans/m38-iphone-app.md) holds the phases and their state, and [the bay bars](docs/plans/m38-bay-thresholds.md) are committed before any measurement | Nothing, for P1–P28 on this Mac and its Simulator. Then the iPhone at this Mac (P29–P31), then the bay (before P32) | [§M38](#m38-the-iphone-app) |
 | **M39** Optional video on the phone | 🔒 Blocked | M38; a Mac, then the bay | [§M39](#m39-optional-video-on-the-phone) |
 | **M40** The laptop client resumes | 🔒 Blocked. M21, M24, M25 and M26 re-scoped under it, as the desktop target of the same app. It also decides `api/` (`axum` or dropped) and deletes the frozen Python | M38. M29 landed on 2026-10-29 | [§M40](#m40-the-laptop-client-resumes) |
-| **M46** Impact drill — impact tape first | ⬜ Not started, a TODO. **Raised 2026-11-09** by the user. A drill that records where on the face each ball was struck, read off a photo of impact tape, and tracks it per club so progress shows (a heat map later). Tape is the first **method** behind an impact-location interface, so later ways of measuring the strike plug in beside it | M38; then a session with tape, and no launch monitor needed. Planned later with plan-phases | [§M46](#m46-impact-drill--impact-tape-first) |
+| **M46** Impact drill — impact tape first | 🔄 Planned *(2026-11-12)*, **0/32 phases** — [the plan](docs/plans/m46-impact-drill.md) holds the phases and their state. **Raised 2026-11-09** by the user. A drill that records where on the face each ball was struck, read off a photo of a STRIKEPRO label after every strike (the newest mark), measured from the label's centre, with a baseline and a 7-up/3-down ladder per club, suggestions to recentre or try differential practice, dots and a heat map per club and category, and the golf-ball navigation replacing the tabs. Tape is the first **method** behind an impact-location interface (ADR-037, its P1), so later ways of measuring the strike plug in beside it. Drill strikes stay untracked and are all kept | The desk for the reader and the Rust; a tape session (P3) with no launch monitor; the Mac for the app; then the iPhone (P29). Interleaves with M38, whose bay is set aside | [§M46](#m46-impact-drill--impact-tape-first) |
 | **M44** Low-point and angle-of-attack drill — foot powder first | ⬜ Not started, a TODO. **Raised 2026-11-09** by the user. A drill that records whether the club bottomed out before or after the ball, read off a photo of the mark in foot powder, and tracks it over time. Powder is the first **method** behind a low-point interface, so later drills and devices plug in beside it | M38, and the drill framework whichever of M46 and M44 runs first builds. Planned later with plan-phases | [§M44](#m44-low-point-and-angle-of-attack-drill--foot-powder-first) |
 | **M45** The player's gear — find each club, and keep everything about it | ⬜ Not started, a TODO. **Raised 2026-11-09** by the user. On the phone a bag holds club slots and an optional loft, so the app knows nothing about the clubs themselves. This finds the real ones (make, model and the full specification) and **keeps every fact any source gives**, whether anything reads it yet or not. That is the user's theme, *we can never have too much data*. It brings M12's spec, catalogue and lookup to the app | M38. The desk and a Mac, with no bay needed. Planned later with plan-phases | [§M45](#m45-the-players-gear--find-each-club-and-keep-everything-about-it) |
 | **M29** The lab port | ✅ Done *(2026-10-29)*, **37/37 phases** — the phases and what each found are in [m29-lab-port.md](docs/plans/m29-lab-port.md). The lab is Rust, in three new crates: `crates/ocr` (the screen's recognizer through `ort`, the only crate that reaches it), `crates/mcp` (`golf-mcp`, the `rmcp` server, carrying M37's `get_strike_profile`) and `crates/lab` (`golf-lab`, the lab CLI over `crates/trigger`, ffmpeg, `crates/pose`, the reader and the engine). The OCR gate passed 12 of the 13 bay photos exactly, and the thirteenth's one value is declared. Two families, `mcp/` and `selection/`, were recorded once from frozen Python and pass. `data/` was backed up and rewritten once: the 13 shots stamped, the 15 bundles re-run at engine 17, and the frozen server reads every artifact. The LLM reaches its tools through `golf-mcp` over stdio, the frozen server's eight write routes answer 410 naming their verbs, the research record is in `archive/`, and the lab scripts, `detection/` and `frontend/` are deleted. [ADR-035's M29 addendum](docs/decisions/035-rust-everywhere-python-where-required.md) answers its four deferred questions. No engine, stage, shot, screen, audio, format, storage, career or profile vector moved, and no version key | — (desk work; done) | [§M29](#m29-the-lab-port--a-rust-lab-cli-the-rmcp-server-and-the-archive-move) |
@@ -2264,9 +2264,14 @@ on.
 
 ## M46: Impact drill — impact tape first
 
-**Status**: ⬜ Not started, a TODO raised by the user on 2026-11-09. Not planned yet: plan-phases
-writes its plan, and that plan sets the exit. **Raised as M43 and renumbered on 2026-11-12**, when
-the two machines' histories met and M43 was already the LLM evals.
+**Status**: 🔄 Planned on 2026-11-12, 0/32 phases. **[The plan](docs/plans/m46-impact-drill.md) holds
+the phases, the decisions and the exit**, and where it and this section disagree, the plan wins. It
+answers the four questions below: a drill strike stays untracked and every one is kept (D5); a mark
+becomes millimetres from the STRIKEPRO label's own centre and size (D2, C3); one photo per strike,
+the newest mark found by a diff (D4); and a mark the reader cannot place is not read, or placed by
+the user as a declaration (rule 6, C6). A TODO raised by the user on 2026-11-09. **Raised as M43
+and renumbered on 2026-11-12**, when the two machines' histories met and M43 was already the LLM
+evals.
 
 **The ask.** The user selects a drill, selects **impact**, and selects an interpretation method,
 **impact tape** for now. The app tells them to put the tape on the face, choose the club and hit.
@@ -2302,7 +2307,7 @@ topic → method, the store, the progress view) is shared with M44, and whicheve
 it. **Where it runs**: the desk for the interface and the store, a Mac for the app, then a
 session with tape. No launch monitor is needed.
 
-**Exit**: none yet. Its plan sets one.
+**Exit**: [the plan's Exit](docs/plans/m46-impact-drill.md#exit).
 
 ---
 
