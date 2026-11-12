@@ -1,6 +1,6 @@
 # Roadmap: AI Golf Swing Trainer
 
-## Last Updated: 2026-11-09
+## Last Updated: 2026-11-12
 
 Grouped by **state**, not by number, because the numbers no longer run in order: the pose-only
 slices (M4-PoC, M4-PoC+, M4-REF, M5-FB) delivered the mechanics half of M4 and the ranking half
@@ -56,11 +56,12 @@ wording; only the grouping and the M4 checklist have been corrected.
 | **M37** Strike profile, topic grades and strengths/weaknesses | ✅ Done *(2026-10-15)*, **14/14 phases** — the phases and what each found are in [m37-strike-profile-and-grades.md](docs/plans/m37-strike-profile-and-grades.md). The first analysis written Rust first with no Python behind it at all: per club a strike profile and six topics' grades, each a share of good shots with a Wilson 95% interval and withheld below 10 judged shots, a club and a player blend, and the strengths and weaknesses list, reached through `golf-core profile` and wired to nothing else yet. Mechanics enters none of it. The corpus carries each entry's shot, re-recorded as `career-v3`, and a tenth vector family, `profile/`, is hand-worked and Rust-recorded. **Strike location is graded only from a measured impact offset**, which [M42](#m42-full-swing-the-second-device-and-its-impact-video) will read, so on real data it is absent; a `synthetic` device proves it. Over `data/`, the first grade is the player's consistency. No engine, stage, shot or screen vector moved, and nothing under `src/` or `data/` changed | — (desk work; done) | [§M37](#m37-strike-profile-topic-grades-and-strengthsweaknesses-rust-first) |
 | **M41** The course-play screen layout | ➡️ **Merged into [M42](#m42-full-swing-the-second-device-and-its-impact-video)**, and closed with it *(2026-11-03)*: its photo is Full Swing's grid screen and one of that milestone's six gate photos, so every question it asked was answered in [m42-full-swing.md](docs/plans/m42-full-swing.md). Before the fold: **Raised 2026-10-07** from one photo of a second screen layout, and ordered after M36 and M35 by the user's choice, not by a dependency | — (merged; done) | [§M41](#m41-the-course-play-screen-layout) |
 | **M42** Full Swing: the second device and its impact video | ✅ Done *(2026-11-03)*, **18/18 phases**, with M41 folded in — the phases and what each found are in [m42-full-swing.md](docs/plans/m42-full-swing.md). Full Swing's grid screen reads through the lab's reader with no wrong value: a second real device in `devices.json` and `profiles.json`, four opt-in parser rules, `TextBox.rgb`, and `backspin` and `sidespin` on `ShotData`, stored as printed and read by no analysis. HD Golf reads as before and stays in use beside it. A Live Photo imports by either half: the still through `golf-lab import-photos`, or the clip through `golf-lab import-video`, whose shot holds the grid read off one of its frames and the impact offset off the replay. **The impact reader, `crates/impact`, is wired in and has read none of the five clips**, so a clip's offset is a named `misread` and strike location is still absent on real data. Its accuracy was not judged, and the review images wait for the user. No committed vector moved and no version key moved, three hand-worked screen vectors were added, and nothing under `data/processed/` changed | — (desk work; done) | [§M42](#m42-full-swing-the-second-device-and-its-impact-video) |
+| **M43** LLM evaluation and observability | ✅ Done *(2026-11-12)*, **24/24 phases** — the phases and what each found are in [m43-llm-evals.md](docs/plans/m43-llm-evals.md). Every request the three Claude routes make (the club lookup, the coach, the follow-up conversation) writes one line to a git-ignored call log, with its model, tokens, cost, latency, stop reason and outcome, tagged `app` or `eval:<flow>/<variant>`, and `python -m golf_coach.llm_log summary` reads it. A new `golf_coach.evals` package runs two evals on the `claude-api` skill's contract, with a Python runner: the club lookup, graded by code against an answer key of published specs that the user verified value by value, and the coaching paragraph on synthetic swings, graded by code checks and a blind `claude-opus-5-5` judge. The user signed off both graders, and each eval ran on `claude-opus-5` and the three 5.5 models. **What they measured, and the recommendation on `coaching_model`, are [ADR-036's results addendum](docs/decisions/036-llm-evaluation-and-observability.md)**, and the decision is the user's. `coaching_model` did not change, no route changed what it returns, and no Rust, vector or version key moved | — (desk work; done) | [§M43](#m43-llm-evaluation-and-observability) |
 | **M38** The iPhone app | 🔄 In progress *(from 2026-11-04)*, on M33's provisional evidence by the user's decision: **GO, provisional: pasted copies, with the clips not measured** ([the log's "For M38"](spikes/vision-ocr/log.md#for-m38)), with the bay session as its real test. [The plan](docs/plans/m38-iphone-app.md) holds the phases and their state, and [the bay bars](docs/plans/m38-bay-thresholds.md) are committed before any measurement | Nothing, for P1–P28 on this Mac and its Simulator. Then the iPhone at this Mac (P29–P31), then the bay (before P32) | [§M38](#m38-the-iphone-app) |
 | **M39** Optional video on the phone | 🔒 Blocked | M38; a Mac, then the bay | [§M39](#m39-optional-video-on-the-phone) |
 | **M40** The laptop client resumes | 🔒 Blocked. M21, M24, M25 and M26 re-scoped under it, as the desktop target of the same app. It also decides `api/` (`axum` or dropped) and deletes the frozen Python | M38. M29 landed on 2026-10-29 | [§M40](#m40-the-laptop-client-resumes) |
-| **M43** Impact drill — impact tape first | ⬜ Not started, a TODO. **Raised 2026-11-09** by the user. A drill that records where on the face each ball was struck, read off a photo of impact tape, and tracks it per club so progress shows (a heat map later). Tape is the first **method** behind an impact-location interface, so later ways of measuring the strike plug in beside it | M38; then a session with tape, and no launch monitor needed. Planned later with plan-phases | [§M43](#m43-impact-drill--impact-tape-first) |
-| **M44** Low-point and angle-of-attack drill — foot powder first | ⬜ Not started, a TODO. **Raised 2026-11-09** by the user. A drill that records whether the club bottomed out before or after the ball, read off a photo of the mark in foot powder, and tracks it over time. Powder is the first **method** behind a low-point interface, so later drills and devices plug in beside it | M38, and the drill framework whichever of M43 and M44 runs first builds. Planned later with plan-phases | [§M44](#m44-low-point-and-angle-of-attack-drill--foot-powder-first) |
+| **M46** Impact drill — impact tape first | ⬜ Not started, a TODO. **Raised 2026-11-09** by the user. A drill that records where on the face each ball was struck, read off a photo of impact tape, and tracks it per club so progress shows (a heat map later). Tape is the first **method** behind an impact-location interface, so later ways of measuring the strike plug in beside it | M38; then a session with tape, and no launch monitor needed. Planned later with plan-phases | [§M46](#m46-impact-drill--impact-tape-first) |
+| **M44** Low-point and angle-of-attack drill — foot powder first | ⬜ Not started, a TODO. **Raised 2026-11-09** by the user. A drill that records whether the club bottomed out before or after the ball, read off a photo of the mark in foot powder, and tracks it over time. Powder is the first **method** behind a low-point interface, so later drills and devices plug in beside it | M38, and the drill framework whichever of M46 and M44 runs first builds. Planned later with plan-phases | [§M44](#m44-low-point-and-angle-of-attack-drill--foot-powder-first) |
 | **M45** The player's gear — find each club, and keep everything about it | ⬜ Not started, a TODO. **Raised 2026-11-09** by the user. On the phone a bag holds club slots and an optional loft, so the app knows nothing about the clubs themselves. This finds the real ones (make, model and the full specification) and **keeps every fact any source gives**, whether anything reads it yet or not. That is the user's theme, *we can never have too much data*. It brings M12's spec, catalogue and lookup to the app | M38. The desk and a Mac, with no bay needed. Planned later with plan-phases | [§M45](#m45-the-players-gear--find-each-club-and-keep-everything-about-it) |
 | **M29** The lab port | ✅ Done *(2026-10-29)*, **37/37 phases** — the phases and what each found are in [m29-lab-port.md](docs/plans/m29-lab-port.md). The lab is Rust, in three new crates: `crates/ocr` (the screen's recognizer through `ort`, the only crate that reaches it), `crates/mcp` (`golf-mcp`, the `rmcp` server, carrying M37's `get_strike_profile`) and `crates/lab` (`golf-lab`, the lab CLI over `crates/trigger`, ffmpeg, `crates/pose`, the reader and the engine). The OCR gate passed 12 of the 13 bay photos exactly, and the thirteenth's one value is declared. Two families, `mcp/` and `selection/`, were recorded once from frozen Python and pass. `data/` was backed up and rewritten once: the 13 shots stamped, the 15 bundles re-run at engine 17, and the frozen server reads every artifact. The LLM reaches its tools through `golf-mcp` over stdio, the frozen server's eight write routes answer 410 naming their verbs, the research record is in `archive/`, and the lab scripts, `detection/` and `frontend/` are deleted. [ADR-035's M29 addendum](docs/decisions/035-rust-everywhere-python-where-required.md) answers its four deferred questions. No engine, stage, shot, screen, audio, format, storage, career or profile vector moved, and no version key | — (desk work; done) | [§M29](#m29-the-lab-port--a-rust-lab-cli-the-rmcp-server-and-the-archive-move) |
 | **M5** Feedback UI | ⬜ Not started, **superseded in shape by [M38](#m38-the-iphone-app)** (no web UI). It was M25 until 2026-09-29, when [ADR-034](docs/decisions/034-shot-first-phone-first.md#consequences) made the phone app the first shell | — (its screens are M38's, in the app's shape) | [§M5](#milestone-5-feedback-ui) |
@@ -2147,6 +2148,43 @@ need to be able to calculate it from the picture."
 
 ---
 
+## M43: LLM evaluation and observability
+
+**Status**: ✅ Done *(2026-11-12)*, 24/24 phases (P0–P23). The phases, the interview's decisions
+and what each phase found are in [m43-llm-evals.md](docs/plans/m43-llm-evals.md), and where it and
+this section disagree, the plan wins. [ADR-036](docs/decisions/036-llm-evaluation-and-observability.md)
+is the decision, and **its 2026-11-11 addendum holds what the two evals measured and the
+recommendation on `coaching_model`**, which is the user's to take. This section points there rather
+than copying the numbers. Every request the three routes make writes a line to the call log, and
+both evals have a baseline and three model variants on disk, with both graders signed off by the
+user. **Three things in the ask below came out differently.** The club-spec headline, how often a
+model invents a spec, did not separate the four models, so the addendum compares them on coverage
+and accuracy. "Every Claude request" is the three routes': the coach eval's judge writes no log
+line, and its spend is on the eval's own rows (the addendum's fourth refinement). And the judge has
+no human calibration: the user accepted its pilot verdicts as graded, which is a sign-off and not
+an agreement rate. `coaching_model` did not change, no route changed what it returns, and no Rust,
+vector or version key moved.
+
+**Raised 2026-11-09.** Every test of the three Claude routes (the coaching paragraph, the follow-up
+conversation, the club-spec lookup) runs on canned responses, so nothing measures whether the
+model's answers are good, or what they cost.
+
+**The ask.**
+- Log every Claude request: model, tokens, cost, latency, stop reason and outcome, with a summary.
+- A club-spec eval graded by code against published specs, a source URL per value, verified by the
+  user. Its headline is how often the model invents a spec.
+- A coaching-paragraph eval on synthetic swings: code checks (numbers match the brief, caveats are
+  carried, nothing unmeasured is claimed) plus an LLM judge (`claude-opus-5-5`) on a rubric the
+  user signs off.
+- Both evals compare `claude-opus-5` (today's `coaching_model`) with Opus 5.5, Sonnet 5.5 and Haiku 5.5.
+
+**Depends on**: nothing to start. An API credential, and the user's yes before each paid run.
+**Where it runs**: this box.
+
+**Exit**: set by M43's own plan.
+
+---
+
 ## M38: The iPhone app
 
 **Status**: 🔄 In progress *(from 2026-11-04)*, by [the plan](docs/plans/m38-iphone-app.md), which decides what this section and the program plan's §M38 left open: the user started it on M33's provisional evidence, Full Swing only and stills only, with VisionKit conditional on the bay's result. As it stood before: M34 landed on 2026-10-02, so the skeleton could
@@ -2224,10 +2262,11 @@ on.
 
 ---
 
-## M43: Impact drill — impact tape first
+## M46: Impact drill — impact tape first
 
 **Status**: ⬜ Not started, a TODO raised by the user on 2026-11-09. Not planned yet: plan-phases
-writes its plan, and that plan sets the exit.
+writes its plan, and that plan sets the exit. **Raised as M43 and renumbered on 2026-11-12**, when
+the two machines' histories met and M43 was already the LLM evals.
 
 **The ask.** The user selects a drill, selects **impact**, and selects an interpretation method,
 **impact tape** for now. The app tells them to put the tape on the face, choose the club and hit.
@@ -2277,7 +2316,7 @@ powder** for now. They spray foot powder on the mat or turf, place the ball, swi
 the mark. The app records whether the club bottomed out before or after the ball, and tracks that
 over time.
 
-**The pattern.** The same as [M43](#m43-impact-drill--impact-tape-first)'s: one interface for the
+**The pattern.** The same as [M46](#m46-impact-drill--impact-tape-first)'s: one interface for the
 question *where did the club bottom out*, and one implementation per method. Foot powder is the
 first. Candidates for later are a line drill (a chalk or tape line), a towel behind the ball, and a
 launch monitor's printed `low_point` and `attack_angle`. The answer is in `ShotData`'s units:
@@ -2291,9 +2330,9 @@ launch monitor's printed `low_point` and `attack_angle`. The answer is in `ShotD
 - **Where the ball sat, in the photo.** The ball leaves a clean spot in the powder, and that may be
   the reference. The plan should say whether *before or after* is enough at first, or whether it
   needs a distance.
-- **A drill is untracked today**, as M43 says, so this is the same new drill history.
+- **A drill is untracked today**, as M46 says, so this is the same new drill history.
 
-**Depends on**: M38, and the drill framework shared with M43, built by whichever runs first.
+**Depends on**: M38, and the drill framework shared with M46, built by whichever runs first.
 **Where it runs**: the desk, a Mac for the app, then a mat or turf with foot powder.
 
 **Exit**: none yet. Its plan sets one.
@@ -2334,7 +2373,7 @@ built this once, for the frozen web page:
   provenance: the lookup's whole response, a photo of the head or the shaft band, a spec sheet.
   A later milestone can then lift a new field out of it without asking again. The typed fields stay
   what analysis reads.
-- **How a club is found. This is another method interface**, the pattern M43 and M44 set: typed by
+- **How a club is found. This is another method interface**, the pattern M46 and M44 set: typed by
   hand, the committed catalogue offline, a model's lookup, or a photo of the club read through the
   app's Vision path. Each method proposes a spec with its provenance, and the golfer confirms it.
 - **The phone has no network** (M38's rule 10), and the lookup lives in Python on the laptop.

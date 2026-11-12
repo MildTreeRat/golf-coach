@@ -95,6 +95,29 @@ cargo run --bin golf-core -- set-club --session S --swing W --club C
                                             # one of three repairs (set-golfer, set-club,
                                             # delete-swing) for the frozen server's write
                                             # routes, which answer 410 since M29
+.venv/Scripts/python.exe -m golf_coach.llm_log summary [--since DATE] [--origin app|eval|all]
+                                            # what the Claude requests cost and did, read from
+                                            # the git-ignored call log the three routes write,
+                                            # one line per request (M43, ADR-036 §2–§4). `app`
+                                            # unless asked; what each number counts is the
+                                            # module's docstring. The coach eval's judge writes
+                                            # no line: its spend is on the eval's rows
+.venv/Scripts/python.exe -m golf_coach.evals.runner --flow club_spec --model claude-opus-5 [--variant v<N>] [--reps 2]
+                                            # one eval flow (club_spec or coach_feedback) on one
+                                            # model, into .claude/hillclimb/<flow>/<variant>/.
+                                            # Every case is a paid call: a run is a command the
+                                            # user approves, never a test, and --approve-harness
+                                            # is the user's flag, never an agent's (ADR-036
+                                            # §5–§6). Flags, rows and exit codes are the module's
+                                            # docstring. `evals.judge_sanity` re-checks the coach
+                                            # judge after any change to it, and
+                                            # `evals.coach_cases` rewrites the coach cases
+node "<claude-api skill base>/shared/evals/report/build-report-lite.mjs" .claude/hillclimb/<flow>/
+                                            # every variant's runs as report.html. The builder
+                                            # ships with the claude-api skill, not this repo,
+                                            # and the skill prints its base path per session.
+                                            # It draws the headline metric alone, so read
+                                            # ADR-036's results addendum beside it
 ```
 
 **There is Rust here now** (M20), a workspace at the repo root beside `pyproject.toml`. Fourteen
@@ -168,9 +191,10 @@ Break one of these and something breaks a long way from your edit.
   the FFT the Python detector needed numpy for, and since M29 `ort`, for the lab's OCR reader and
   reachable from no other crate (ADR-035's Consequences and its M29 addendum).
 - **Python stays only where it is required** (ADR-035 §1, replacing ADR-030's 2026-09-22
-  addendum): MediaPipe pose, as the worker behind `crates/pose`, and the LLM. §1 names every file
-  that survives with them; everything else ports, and a third exception needs a decision of its
-  own. So **new work is Rust**, and the rest of the Python lab is **frozen from M32 to M40** — it
+  addendum): MediaPipe pose, as the worker behind `crates/pose`, and the LLM. §1 and its M43
+  addendum name every file that survives with them (the second adds M43's call log and evals, by
+  ADR-036); everything else ports, and a third exception needs a decision of its own. So **new
+  work is Rust**, and the rest of the Python lab is **frozen from M32 to M40** — it
   gains nothing, is fixed only when it breaks, and must keep reading what Rust writes (§4). §M29
   ported it and deleted the lab scripts, and M40 deletes the rest, the frozen server's closure (§5). What stands from the old rule: the vectors are the oracle, not
   the code that recorded them, which is why M20 could **delete** the numpy strike detector and why
@@ -238,6 +262,7 @@ of its five sections costs a fraction of reading the file.
 | Why does a module leave Python, and when? | ADR-035 (`docs/decisions/035-rust-everywhere-python-where-required.md`) — §1 is the rule (only what is required stays), §5 the schedule (§M29 ports the lab and deletes what the frozen FastAPI server does not import; M40 deletes the rest, `analysis/` included), and §7 the sentences it replaced: ADR-030's **2026-09-22 addendum**, where M20 was the first module to leave, and ADR-032 §7's schedule, whose third clause — *and nothing that stays Python calls it* — still stands as the rule |
 | What rules is code held to? | `docs/CODE_STANDARDS.md` — each rule with its precedent *and* a known non-violation |
 | Has this refactor already been declined? | `docs/REFACTOR_LEDGER.md` — read it before proposing a structural change |
+| How good are Claude's answers here, and what does each call cost? | ADR-036 (`docs/decisions/036-llm-evaluation-and-observability.md`) — the call log, the two evals (the club-spec lookup against a user-verified answer key, the coaching paragraph against code checks and a blind judge) and the rules they keep. **Its results addendum (2026-11-11) holds what the runs measured and the `coaching_model` recommendation**, which is the user's to take. Then the module docstrings of `src/golf_coach/llm_log.py` and `src/golf_coach/evals/runner.py` for what each number counts, and `docs/ARCHITECTURE.md` §1 for the commands |
 
 **Trust tiers** are declared at the top of every doc and tell you how hard to read: **AS-BUILT**
 means trust it, **TARGET** means it is a plan so verify against code, **REFERENCE** means read the

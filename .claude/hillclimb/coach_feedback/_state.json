@@ -1,0 +1,70 @@
+{
+  "metrics": [
+    {
+      "id": "all_checks",
+      "kind": "binary",
+      "label": "All checks",
+      "better": "higher"
+    },
+    {
+      "id": "numbers_in_brief",
+      "kind": "binary",
+      "label": "Numbers",
+      "better": "higher"
+    },
+    {
+      "id": "caveats_carried",
+      "kind": "binary",
+      "label": "Caveats",
+      "better": "higher"
+    },
+    {
+      "id": "nothing_unmeasured",
+      "kind": "binary",
+      "label": "No unmeasured",
+      "better": "higher"
+    },
+    {
+      "id": "verdict_kept",
+      "kind": "binary",
+      "label": "Verdict kept",
+      "better": "higher"
+    },
+    {
+      "id": "judge_all",
+      "kind": "binary",
+      "label": "Judge: all",
+      "better": "higher"
+    },
+    {
+      "id": "judge_accurate",
+      "kind": "binary",
+      "label": "J: accurate",
+      "better": "higher"
+    },
+    {
+      "id": "judge_actionable",
+      "kind": "binary",
+      "label": "J: actionable",
+      "better": "higher"
+    },
+    {
+      "id": "judge_top_fault",
+      "kind": "binary",
+      "label": "J: top fault",
+      "better": "higher"
+    },
+    {
+      "id": "judge_no_invented_claims",
+      "kind": "binary",
+      "label": "J: no invented",
+      "better": "higher"
+    }
+  ],
+  "harness_paths": [
+    "evals/coach_feedback/cases.json",
+    "evals/coach_feedback/cases.md",
+    "src/golf_coach/evals/coach_judge.py"
+  ],
+  "harness_sha": "df41c54a485ac8c5f842b591475f34f0d89168adcbb64c8b0ae7473153383301"
+}

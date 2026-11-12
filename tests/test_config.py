@@ -36,6 +36,7 @@ SANCTIONED_UNWRAP_SITES = {
     "scripts/run_server.py",
     "src/golf_coach/api/app.py",
     "src/golf_coach/api/pipeline.py",
+    "src/golf_coach/evals/runner.py",
     "src/golf_coach/feedback/coach.py",
 }
 

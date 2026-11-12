@@ -52,6 +52,20 @@ their score, or take down the page their score is rendered on.
 must be replayed **unchanged** on the same model. So `_mirror` serialises the model's own content
 blocks and stores them verbatim — see `contracts/conversation.py`, which is where that rule and
 its consequences are written down.
+
+## The call log [M43 P5]
+
+Each message the tool runner yields answers one API request, so every one of them is a line in the
+call log (ADR-036 §2, §4), and a question that calls two tools is three lines under one turn id.
+`_mirror` hands each message to the question's `_Turn` as it takes it, which is where the lines are
+timed and written. A request's latency runs from the loop asking the runner for its next message to
+the message arriving, so the tools that run in between are not in it. A line waits until it is
+known whether its message was the last: when the next one arrives the loop went on, so it is `ok`;
+the last one carries the turn's kind once `ask` has read the answer, which is how the last line of a
+loop that ran out of iterations says `exhausted`. A request that raised is a line of its own, with
+its error class. The refusals before a request (no extra, no key, a transcript from another model)
+write nothing, because nothing was sent. The log is observation only: `llm_log.record` never
+raises, so no answer comes back different for it.
 """
 
 from __future__ import annotations
@@ -59,9 +73,13 @@ from __future__ import annotations
 import hashlib
 import shutil
 import sys
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from functools import partial
+from time import perf_counter
 from typing import Any, TextIO
+from uuid import uuid4
+
+from golf_coach import llm_log
 
 # The in-process route's copy only: `ask_through_golf_mcp` reads this sentence from `golf-mcp`.
 from golf_coach.contracts.caveats import ONLY_CHECKPOINTS_ARE_JUDGED
@@ -79,6 +97,7 @@ from golf_coach.feedback.coach import (
     GolfMcpServer,
     _caveat,
     _innermost,
+    _kind_for,
     _note_for,
     _sdk,
     _text_from,
@@ -259,6 +278,7 @@ def ask(
         {"role": "user", "content": opening},
     ]
 
+    turn = _Turn(model)
     try:
         runner = client.beta.messages.tool_runner(
             model=model,
@@ -273,16 +293,40 @@ def ask(
             tools=tools,
             messages=messages,
         )
-        last, tools_called = _mirror(runner, messages)
+        last, tools_called = _mirror(runner, messages, turn)
     except Exception as exc:  # narrowed in `_note_for`; the SDK may be absent entirely
+        turn.failed(exc, _kind_for(exc, sdk))
         return AskOutcome(note=_note_for(exc, sdk, prefix=_NOTE_PREFIX))
 
     if last is None:
+        # The runner yielded nothing, so it sent no request and there is no line to write.
         return AskOutcome(note="no answer: the model returned nothing for this question.")
 
+    answered, kind = _answered_from(last, tools_called, max_iterations)
+    turn.finished(kind)
+    if answered.note is not None:
+        return answered
+
+    transcript.messages = messages
+    if first_turn and brief is not None:
+        transcript.brief_digest = brief_digest(brief)
+    return replace(answered, transcript=transcript)
+
+
+def _answered_from(
+    last: Any, tools_called: list[str], max_iterations: int
+) -> tuple[AskOutcome, str]:
+    """The loop's last message as what the golfer is shown, and the kind its log line records.
+
+    The kind is `ok` for an answer and otherwise names the note in snake_case, the vocabulary
+    `clubs/lookup.py::_read` set and `coach.py::_written_from` shares. It is returned beside the
+    answer rather than worked out from the note's wording, so rewording a note cannot silently
+    move a logged outcome. An answer comes back without its transcript, which `ask` attaches only
+    to an answer with no note.
+    """
     stop_reason = getattr(last, "stop_reason", None)
     if stop_reason == "refusal":
-        return AskOutcome(note="no answer: the model declined to answer this question.")
+        return AskOutcome(note="no answer: the model declined to answer this question."), "refusal"
 
     text = _text_from(last)
     if stop_reason == "tool_use":
@@ -292,16 +336,16 @@ def ask(
             "the answer stopped early — it was still looking things up after "
             f"{max_iterations} steps. Ask a narrower question, or ask again."
         )
-        return AskOutcome(text=text or None, tools_called=tools_called, note=note)
+        return AskOutcome(text=text or None, tools_called=tools_called, note=note), "exhausted"
     if not text:
-        return AskOutcome(note="no answer: the model returned no text for this question.")
+        no_text = "no answer: the model returned no text for this question."
+        return AskOutcome(note=no_text), "no_text"
     if stop_reason == "max_tokens":
+        # Served with its admission, as `coach.py`'s `truncated` is, where the lookup's serves
+        # nothing. The line's `route` tells the two apart.
         text += "\n\n(This answer was cut off before it finished.)"
-
-    transcript.messages = messages
-    if first_turn and brief is not None:
-        transcript.brief_digest = brief_digest(brief)
-    return AskOutcome(text=text, transcript=transcript, tools_called=tools_called)
+        return AskOutcome(text=text, tools_called=tools_called), "truncated"
+    return AskOutcome(text=text, tools_called=tools_called), "ok"
 
 
 def _sendable(
@@ -430,20 +474,26 @@ def ask_through_golf_mcp(
     return answered[0]
 
 
-def _mirror(runner: Any, messages: list[dict[str, Any]]) -> tuple[Any, list[str]]:
-    """Run the loop, appending every turn to `messages` as it goes.
+def _mirror(runner: Any, messages: list[dict[str, Any]], turn: _Turn) -> tuple[Any, list[str]]:
+    """Run the loop, appending every turn to `messages` and handing every message to `turn`.
 
     The runner keeps its own copy of the history and does not expose it, so the only way to end up
     with a replayable transcript is to rebuild it here. `generate_tool_call_response` is cached by
     the runner — calling it does not run the tools a second time — and returns `None` on a turn
     that called no tools, which is how the last turn is recognised.
 
+    The runner sends a request each time the loop asks it for a message, so `turn.asking` marks
+    each ask and `turn.received` each answer: one log line per message (ADR-036 §4). The next ask
+    is marked after the tools have answered, so a request's latency holds no tool's time.
+
     Returns the final message and the tools called along the way, in order.
     """
     last: Any = None
     tools_called: list[str] = []
 
+    turn.asking()
     for message in runner:
+        turn.received(message)
         last = message
         messages.append({"role": "assistant", "content": _plain(message.content)})
         tools_called += [
@@ -452,5 +502,92 @@ def _mirror(runner: Any, messages: list[dict[str, Any]]) -> tuple[Any, list[str]
         response = runner.generate_tool_call_response()
         if response is not None:
             messages.append(_plain(response))
+        turn.asking()
 
     return last, tools_called
+
+
+class _Turn:
+    """One question's lines in the call log, one per request the tool runner sends. [M43 P5]
+
+    `_mirror` marks when the loop asks the runner for a message (`asking`), which is when the
+    runner sends its request, and when the message arrives (`received`). A line is held until it
+    is known whether its message was the last. When the next one arrives the loop went on, so the
+    held line is `ok`. When the loop ends, `ask` reads the answer and `finished` writes the last
+    line with the turn's kind. When the loop raises, `failed` writes what is held and then a line
+    for the request that raised.
+
+    Iterations count from 1, as the runner's `max_iterations` does, so a loop that ran out of
+    iterations ends on the line whose `iteration` is that bound. Nothing here raises, because
+    `llm_log.record` never does: the log cannot change an answer (ADR-036 §4).
+    """
+
+    def __init__(self, model: str) -> None:
+        #: One per question, shared by every request the question's loop sends.
+        self.turn_id = uuid4().hex
+        self._model = model
+        self._iteration = 0
+        self._asked_at = 0.0
+        #: True from an ask until its message arrives: a request is out and unanswered.
+        self._in_flight = False
+        #: The newest message, its latency and its iteration, until its outcome is known.
+        self._held: tuple[Any, float, int] | None = None
+
+    def asking(self) -> None:
+        """The loop is asking the runner for its next message, so the next request goes out."""
+        self._asked_at = perf_counter()
+        self._in_flight = True
+
+    def received(self, message: Any) -> None:
+        """A message arrived. The one held before it was not the last, so the loop went on."""
+        latency_s = perf_counter() - self._asked_at
+        self._in_flight = False
+        self._release("ok")
+        self._iteration += 1
+        self._held = (message, latency_s, self._iteration)
+
+    def failed(self, exc: Exception, kind: str) -> None:
+        """The loop raised `exc`, which the golfer is told about as a note of this kind.
+
+        A request that was out when it raised is a line of its own, with no response. One that had
+        been answered was not the request that raised, so its own line carries the error. With
+        neither, no request was sent (the runner could not be built), and nothing is written.
+        """
+        if self._in_flight:
+            latency_s = perf_counter() - self._asked_at
+            self._in_flight = False
+            self._release("ok")
+            self._iteration += 1
+            self._write(None, latency_s, self._iteration, kind, exc)
+        else:
+            self._release(kind, exc)
+
+    def finished(self, kind: str) -> None:
+        """`ask` has read the last message as this kind, so the last line can be written."""
+        self._release(kind)
+
+    def _release(self, outcome: str, error: Exception | None = None) -> None:
+        if self._held is None:
+            return
+        message, latency_s, iteration = self._held
+        self._held = None
+        self._write(message, latency_s, iteration, outcome, error)
+
+    def _write(
+        self,
+        response: Any,
+        latency_s: float,
+        iteration: int,
+        outcome: str,
+        error: Exception | None,
+    ) -> None:
+        llm_log.record(
+            route="conversation",
+            requested_model=self._model,
+            latency_s=latency_s,
+            response=response,
+            outcome=outcome,
+            error=error,
+            turn_id=self.turn_id,
+            iteration=iteration,
+        )

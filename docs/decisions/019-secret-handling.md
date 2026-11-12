@@ -160,3 +160,41 @@ larger only for M29 to M40, while both routes to the paragraph exist.
 
 **How it surfaced**: the same way as the 2026-08-15 addendum. The full suite failed on the pin,
 naming the added file, and the phase stopped to ask rather than add the line itself.
+
+## Addendum (2026-11-09): `evals/runner.py`, the eval runner's entry
+
+`SANCTIONED_UNWRAP_SITES` gained **`src/golf_coach/evals/runner.py`** (M43 P7,
+[the plan](../plans/m43-llm-evals.md)), as
+[ADR-036](036-llm-evaluation-and-observability.md) §5 said it would. Its entry,
+`python -m golf_coach.evals.runner --flow F --model M`, runs an eval's cases through the real
+routes, and builds its own `anthropic.Anthropic(max_retries=0)` so that every retry is the
+runner's and shows in its rows. That client resolves `ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN` or
+an `ant auth` profile, as the SDK does. Only when the SDK finds none of them does `_build_client`
+unwrap `settings.anthropic_api_key` (`GOLF_ANTHROPIC_API_KEY`), at the entry point.
+
+**Why it is the right shape.** It is the same boundary as the entries above. The Anthropic SDK
+takes a plain `str` and cannot be handed a wrapper, and an entry point unwraps at the call. The
+runner hands the client it built to each route through `client=`, so `look_up_set` and
+`coach_through_golf_mcp` never see the key in any form, and their own key gates never run. The
+SDK now has four unwrap sites: the paragraph in process (`api/pipeline.py`), the paragraph over
+`golf-mcp` (`feedback/coach.py`), the conversation (`scripts/ask_swing.py`) and the eval runner
+(this one).
+
+**It widens the surface, where the 2026-10-22 entry replaced a site.** It is kept narrow three
+ways. A run is a command the user approves, never a test (ADR-036 §5 and §6). The tests hand the
+runner a fake client and a fake SDK, so `pytest` never unwraps the key there. And the key is read
+only when the SDK resolved nothing of its own.
+
+**Two alternatives were rejected.**
+
+- *Resolving only `ANTHROPIC_API_KEY` or an `ant auth` profile* needs no unwrap. But the key the app
+  already keeps in `.env` would not run an eval, and M43 P13's precondition would lose
+  `GOLF_ANTHROPIC_API_KEY`. ADR-036 §5 chose the fallback, and the user approved that clause on
+  2026-11-09.
+- *Copying the settings key into `ANTHROPIC_API_KEY` in the process environment* would let the SDK
+  find it with no unwrap the pin can see. That is the `getattr` evasion above by another name, and
+  every child process, the `golf-mcp` server the coach flow starts included, would inherit the key.
+
+**How it surfaced**: planned rather than caught. ADR-036 §5 named the site before the code existed,
+and the full suite still failed on the pin when the runner landed, naming the added file. The line
+and this addendum went in with the runner.

@@ -102,6 +102,7 @@ _PACKAGE_DATA = {
     "joint_model_v1.json",  # ADR-022: the first learned artifact
     "flight_model_v1.json",  # ADR-027: the drag/lift coefficient table
     "club_catalogue.json",  # ADR-026: the committed specification dictionary
+    "llm_prices.json",  # ADR-036 §2: the call log's price table, with its source and date
     # ADR-014: the frozen screen parser's device profiles. `crates/screen` forks it rather than
     # reading it (M34), so this copy lacks the `Impact Position V` tile, and M40 deletes it.
     "profiles.json",
@@ -121,6 +122,14 @@ _ARTIFACT_SCHEMAS = {
     "{role}.audio.json": "audio_file",
 }
 
+#: Files whose shape another tool owns and documents, so this repo writes them to that tool's spec
+#: and has no schema root for them. Nothing in the app reads them, and no Rust core will. [M43 P8]
+_FOREIGN_FORMATS = {
+    # ADR-036 §5: the hillclimb loop's state beside an eval's runs, in the `claude-api` skill's
+    # format (its eval-hillclimb.md). The eval runner reads it and records its harness sha there.
+    "_state.json",
+}
+
 
 def test_every_on_disk_artifact_has_a_schema() -> None:
     """The rule `SCHEMA_ROOTS` applies, checked rather than trusted.
@@ -133,7 +142,8 @@ def test_every_on_disk_artifact_has_a_schema() -> None:
     `analysis` is forbidden to fetch for itself.
 
     Discovery over a listing, so a *new* artifact fails here: the constants are scraped out of the
-    source, and each one must be either exempt package data or mapped to a schema root.
+    source, and each one must be either exempt package data or mapped to a schema root. A file in
+    another tool's format, written to that tool's spec, is the third and named exception.
     """
     constants = set()
     for path in (REPO / "src" / "golf_coach").rglob("*.py"):
@@ -142,11 +152,12 @@ def test_every_on_disk_artifact_has_a_schema() -> None:
         ):
             constants.add(match.group(1))
 
-    unclassified = constants - _PACKAGE_DATA - set(_ARTIFACT_SCHEMAS)
+    unclassified = constants - _PACKAGE_DATA - set(_ARTIFACT_SCHEMAS) - _FOREIGN_FORMATS
     assert not unclassified, (
         f"{sorted(unclassified)} is a JSON artifact nothing here has classified. Either it ships "
-        "inside the wheel as data (add it to _PACKAGE_DATA with its ADR) or a non-Python "
-        "implementation has to parse it (give it a SCHEMA_ROOTS entry and map it here)."
+        "inside the wheel as data (add it to _PACKAGE_DATA with its ADR), or a non-Python "
+        "implementation has to parse it (give it a SCHEMA_ROOTS entry and map it here), or "
+        "another tool owns its format (add it to _FOREIGN_FORMATS, naming that tool's spec)."
     )
 
     missing = {

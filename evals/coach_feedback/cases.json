@@ -1,0 +1,337 @@
+{
+  "about": "The coach-feedback eval's cases (M43, ADR-036). Each is a synthetic swing: face_on and down_the_line are golf_coach.evals.synthetic_swing.make_swing's arguments for each view (null for no down-the-line clip); shot is what the screen printed (ShotData's field names) and what the reader made of the photo, put through the frozen screen validator, which decides whether it is flagged; handedness and loft_deg are the engine's arguments; population and rotation name the placement and rotation rows the case keeps. tags are checked against the result, never trusted. python -m golf_coach.evals.coach_cases writes sessions/ and cases.md from this file.",
+  "cases": [
+    {
+      "id": "clean-swing",
+      "tags": ["clean"],
+      "session_id": "2026-07-01",
+      "swing_id": "1",
+      "club": "7i",
+      "about": "Everything measured and nothing degraded: two views aligned in full, a clean shot, and two checkpoints missed, so there is something to coach and no caveat beyond the standing ones.",
+      "inputs": {
+        "handedness": "right",
+        "face_on": {"backswing_frames": 40, "downswing_frames": 12, "head_sway": 0.02, "hip_sway": 0.06, "finish_drift": 0.01, "followthrough_frames": 60},
+        "down_the_line": {"backswing_frames": 40, "downswing_frames": 12, "followthrough_frames": 60},
+        "shot": {
+          "printed": {"club_head_speed": 82.0, "ball_speed": 112.0, "smash_factor": 1.37, "launch_angle": 18.4, "launch_direction": 1.1, "spin_rate": 6400.0, "spin_axis": 3.2, "carry_distance": 151.0, "bounce_and_roll": 7.0, "total_distance": 158.0, "club_path": -1.5, "club_face_angle": 0.8, "shot_type": "SLIGHT FADE", "impact_position": "CENTER"},
+          "read_confidence": 0.97,
+          "read_warnings": []
+        },
+        "loft_deg": 34.0,
+        "population": ["tour_joint_distance"],
+        "rotation": []
+      }
+    },
+    {
+      "id": "unscored-finish",
+      "tags": ["unscored"],
+      "session_id": "2026-07-01",
+      "swing_id": "2",
+      "club": "8i",
+      "about": "The clip ends a frame after impact, so finish balance is unscored for too few frames: a capture problem worth filming again, and a checkpoint left out of overall_score rather than counted as zero. With one metric missing there is no placement either.",
+      "inputs": {
+        "handedness": "right",
+        "face_on": {"backswing_frames": 44, "downswing_frames": 12, "head_sway": 0.01, "hip_sway": 0.04, "followthrough_frames": 1},
+        "down_the_line": null,
+        "shot": {
+          "printed": {"club_head_speed": 80.0, "ball_speed": 106.0, "smash_factor": 1.33, "launch_angle": 20.1, "launch_direction": -0.6, "spin_rate": 7200.0, "spin_axis": -2.0, "carry_distance": 140.0, "bounce_and_roll": 6.0, "total_distance": 146.0, "club_path": 1.8, "club_face_angle": -0.4, "shot_type": "SLIGHT DRAW", "impact_position": "TOE"},
+          "read_confidence": 0.96,
+          "read_warnings": []
+        },
+        "loft_deg": 38.0,
+        "population": [],
+        "rotation": []
+      }
+    },
+    {
+      "id": "uncalibrated-placement",
+      "tags": ["uncalibrated-placement"],
+      "session_id": "2026-07-01",
+      "swing_id": "3",
+      "club": "6i",
+      "about": "The face-on trajectory placements kept: a calibrated T2 and the uncalibrated Q beside it, both far out, and no shot attached. Large means unusual, never wrong, and Q is never read alone.",
+      "inputs": {
+        "handedness": "right",
+        "face_on": {"backswing_frames": 36, "downswing_frames": 12, "head_sway": 0.03, "hip_sway": 0.05, "finish_drift": 0.02, "followthrough_frames": 60},
+        "down_the_line": null,
+        "shot": null,
+        "loft_deg": null,
+        "population": ["tour_joint_distance", "tour_trajectory_t2", "tour_trajectory_q"],
+        "rotation": []
+      }
+    },
+    {
+      "id": "interim-pivot",
+      "tags": ["interim-pivot"],
+      "session_id": "2026-07-01",
+      "swing_id": "4",
+      "club": "9i",
+      "about": "The face-on rotation rows kept: interim 2-D readings with no reference population. make_swing's shoulders never move, so four of the five read zero, which is no turn measured and not a turn that did not happen.",
+      "inputs": {
+        "handedness": "right",
+        "face_on": {"backswing_frames": 46, "downswing_frames": 13, "head_sway": 0.01, "hip_sway": 0.05, "finish_drift": 0.01, "followthrough_frames": 60},
+        "down_the_line": {"backswing_frames": 46, "downswing_frames": 13, "followthrough_frames": 60},
+        "shot": {
+          "printed": {"club_head_speed": 78.0, "ball_speed": 99.0, "smash_factor": 1.27, "launch_angle": 23.0, "launch_direction": 0.4, "spin_rate": 8100.0, "spin_axis": 0.5, "carry_distance": 128.0, "bounce_and_roll": 5.0, "total_distance": 133.0, "club_path": 0.2, "club_face_angle": 0.3, "shot_type": "STRAIGHT", "impact_position": "CENTER"},
+          "read_confidence": 0.98,
+          "read_warnings": []
+        },
+        "loft_deg": 42.0,
+        "population": ["tour_joint_distance"],
+        "rotation": ["pivot_hip_axis_drift_norm", "pivot_shoulder_axis_drift_norm", "pivot_hip_path_jitter_norm", "pivot_shoulder_reversal_backswing_deg", "pivot_shoulder_reversal_downswing_deg"]
+      }
+    },
+    {
+      "id": "flagged-shot",
+      "tags": ["flagged-shot"],
+      "session_id": "2026-07-01",
+      "swing_id": "5",
+      "club": "7i",
+      "about": "The screen photo misread: a smash factor of 1.87 that does not divide out and is past what is possible, and a tile with no value under its label. The validator flags the shot for review, so its numbers are not to be coached from as fact.",
+      "inputs": {
+        "handedness": "right",
+        "face_on": {"backswing_frames": 42, "downswing_frames": 12, "head_sway": 0.02, "hip_sway": 0.05, "finish_drift": 0.01, "followthrough_frames": 60},
+        "down_the_line": null,
+        "shot": {
+          "printed": {"club_head_speed": 83.0, "ball_speed": 113.0, "smash_factor": 1.87, "launch_angle": 17.9, "launch_direction": 2.4, "spin_rate": 6100.0, "spin_axis": 5.6, "carry_distance": 153.0, "bounce_and_roll": 8.0, "total_distance": 161.0, "club_path": -2.6, "club_face_angle": 1.9, "shot_type": "FADE", "impact_position": "HEEL"},
+          "read_confidence": 0.93,
+          "read_warnings": ["Impact Position V: no value text under the label"]
+        },
+        "loft_deg": 34.0,
+        "population": ["tour_joint_distance"],
+        "rotation": []
+      }
+    },
+    {
+      "id": "partial-alignment",
+      "tags": ["partial-alignment"],
+      "session_id": "2026-07-01",
+      "swing_id": "6",
+      "club": "5i",
+      "about": "The down-the-line clip pauses at the top, so its motion start is estimated and the two views align on top and impact only. Nothing is scored from that view, and the side-by-side replay is not to be trusted at every instant.",
+      "inputs": {
+        "handedness": "right",
+        "face_on": {"backswing_frames": 40, "downswing_frames": 12, "head_sway": 0.015, "hip_sway": 0.05, "finish_drift": 0.01, "followthrough_frames": 60},
+        "down_the_line": {"backswing_frames": 40, "downswing_frames": 12, "hover_frames": 12, "followthrough_frames": 60},
+        "shot": {
+          "printed": {"club_head_speed": 86.0, "ball_speed": 120.0, "smash_factor": 1.4, "launch_angle": 14.6, "launch_direction": -1.8, "spin_rate": 5200.0, "spin_axis": -4.5, "carry_distance": 170.0, "bounce_and_roll": 10.0, "total_distance": 180.0, "club_path": 3.1, "club_face_angle": 0.6, "shot_type": "DRAW", "impact_position": "CENTER"},
+          "read_confidence": 0.97,
+          "read_warnings": []
+        },
+        "loft_deg": 27.0,
+        "population": ["tour_joint_distance"],
+        "rotation": []
+      }
+    },
+    {
+      "id": "no-handedness",
+      "tags": ["no-handedness"],
+      "session_id": "2026-07-01",
+      "swing_id": "7",
+      "club": "pw",
+      "about": "Nobody said who swung, so head stays back, the one signed checkpoint, is unscored for want of a handedness. Not a capture problem: filming again would not change it.",
+      "inputs": {
+        "handedness": null,
+        "face_on": {"backswing_frames": 44, "downswing_frames": 12, "head_sway": 0.01, "hip_sway": 0.045, "finish_drift": 0.01, "followthrough_frames": 60},
+        "down_the_line": null,
+        "shot": {
+          "printed": {"club_head_speed": 76.0, "ball_speed": 92.0, "smash_factor": 1.21, "launch_angle": 27.5, "launch_direction": 0.9, "spin_rate": 9100.0, "spin_axis": 1.5, "carry_distance": 112.0, "bounce_and_roll": 3.0, "total_distance": 115.0, "club_path": -0.8, "club_face_angle": 0.5, "shot_type": "SLIGHT FADE", "impact_position": "CENTER"},
+          "read_confidence": 0.95,
+          "read_warnings": []
+        },
+        "loft_deg": 46.0,
+        "population": ["tour_joint_distance"],
+        "rotation": []
+      }
+    },
+    {
+      "id": "nothing-to-fix",
+      "tags": ["nothing-to-fix"],
+      "session_id": "2026-07-01",
+      "swing_id": "8",
+      "club": "7i",
+      "about": "Every checkpoint scored and inside its band, two views aligned in full and a clean shot. There is nothing to fix, and a coach that invents a fault is wrong.",
+      "inputs": {
+        "handedness": "right",
+        "face_on": {"backswing_frames": 48, "downswing_frames": 14, "head_sway": 0.01, "hip_sway": 0.035, "finish_drift": 0.01, "followthrough_frames": 60},
+        "down_the_line": {"backswing_frames": 48, "downswing_frames": 14, "followthrough_frames": 60},
+        "shot": {
+          "printed": {"club_head_speed": 84.0, "ball_speed": 116.0, "smash_factor": 1.38, "launch_angle": 17.2, "launch_direction": 0.3, "spin_rate": 6200.0, "spin_axis": 0.8, "carry_distance": 158.0, "bounce_and_roll": 8.0, "total_distance": 166.0, "club_path": 0.4, "club_face_angle": 0.2, "shot_type": "STRAIGHT", "impact_position": "CENTER"},
+          "read_confidence": 0.98,
+          "read_warnings": []
+        },
+        "loft_deg": 34.0,
+        "population": ["tour_joint_distance"],
+        "rotation": []
+      }
+    },
+    {
+      "id": "clean-left-driver",
+      "tags": ["clean"],
+      "session_id": "2026-07-01",
+      "swing_id": "9",
+      "club": "driver",
+      "about": "A left-hander's driver, face-on only, with a clean shot and nothing degraded. The head drifts too far toward the target, so there is something to coach, and every drift is mirrored, which is what a left-hander's swing looks like from the same camera.",
+      "inputs": {
+        "handedness": "left",
+        "face_on": {"backswing_frames": 50, "downswing_frames": 14, "head_sway": -0.08, "hip_sway": -0.04, "finish_drift": -0.01, "followthrough_frames": 60},
+        "down_the_line": null,
+        "shot": {
+          "printed": {"club_head_speed": 98.0, "ball_speed": 143.0, "smash_factor": 1.46, "launch_angle": 12.5, "launch_direction": -1.2, "spin_rate": 2900.0, "spin_axis": 2.4, "carry_distance": 228.0, "bounce_and_roll": 18.0, "total_distance": 246.0, "club_path": -2.2, "club_face_angle": 0.4, "shot_type": "SLIGHT FADE", "impact_position": "TOE"},
+          "read_confidence": 0.97,
+          "read_warnings": []
+        },
+        "loft_deg": 10.5,
+        "population": ["tour_joint_distance"],
+        "rotation": []
+      }
+    },
+    {
+      "id": "unscored-no-loft",
+      "tags": ["unscored"],
+      "session_id": "2026-07-01",
+      "swing_id": "10",
+      "club": "4h",
+      "about": "The screen printed no spin, so the simulated flight infers it from the carry, and two spins fly that carry with no loft on record for the hybrid to choose between them: the flight's carry is refused. Every mechanics checkpoint is scored. The refusal is for want of a loft, not a capture problem, so a better clip or photo would not change it.",
+      "inputs": {
+        "handedness": "right",
+        "face_on": {"backswing_frames": 42, "downswing_frames": 13, "head_sway": 0.015, "hip_sway": 0.05, "finish_drift": 0.01, "followthrough_frames": 60},
+        "down_the_line": {"backswing_frames": 42, "downswing_frames": 13, "followthrough_frames": 60},
+        "shot": {
+          "printed": {"club_head_speed": 85.0, "ball_speed": 121.0, "smash_factor": 1.42, "launch_angle": 15.8, "launch_direction": 0.7, "spin_axis": 1.8, "carry_distance": 182.0, "bounce_and_roll": 11.0, "total_distance": 193.0, "club_path": -0.9, "club_face_angle": 0.9, "shot_type": "SLIGHT FADE", "impact_position": "CENTER"},
+          "read_confidence": 0.96,
+          "read_warnings": ["Spin: no value text under the label"]
+        },
+        "loft_deg": null,
+        "population": ["tour_joint_distance"],
+        "rotation": []
+      }
+    },
+    {
+      "id": "uncalibrated-placement-dtl",
+      "tags": ["uncalibrated-placement"],
+      "session_id": "2026-07-01",
+      "swing_id": "11",
+      "club": "3w",
+      "about": "The down-the-line trajectory placements kept: a calibrated T2 and the uncalibrated Q from the second view, beside the face-on joint placement, with a clean shot. Large means unusual, never wrong, and Q is never read alone.",
+      "inputs": {
+        "handedness": "right",
+        "face_on": {"backswing_frames": 42, "downswing_frames": 13, "head_sway": 0.02, "hip_sway": 0.05, "finish_drift": 0.015, "followthrough_frames": 60},
+        "down_the_line": {"backswing_frames": 42, "downswing_frames": 13, "followthrough_frames": 60},
+        "shot": {
+          "printed": {"club_head_speed": 92.0, "ball_speed": 133.0, "smash_factor": 1.45, "launch_angle": 11.8, "launch_direction": -0.8, "spin_rate": 3700.0, "spin_axis": -2.6, "carry_distance": 208.0, "bounce_and_roll": 14.0, "total_distance": 222.0, "club_path": 2.4, "club_face_angle": -0.3, "shot_type": "SLIGHT DRAW", "impact_position": "CENTER"},
+          "read_confidence": 0.97,
+          "read_warnings": []
+        },
+        "loft_deg": 15.0,
+        "population": ["tour_joint_distance", "tour_trajectory_t2_dtl", "tour_trajectory_q_dtl"],
+        "rotation": []
+      }
+    },
+    {
+      "id": "interim-pivot-dtl",
+      "tags": ["interim-pivot"],
+      "session_id": "2026-07-01",
+      "swing_id": "12",
+      "club": "gw",
+      "about": "A left-hander's gap wedge with the down-the-line rotation rows kept: interim 2-D readings from the second view, with no reference population and no band, never scored and never blended with the face-on view. make_swing's shoulders never move, so the three shoulder rows read zero, which is no turn measured and not a turn that did not happen. The hips barely travel toward the target, which misses a two-sided checkpoint on its low side: less is not better there.",
+      "inputs": {
+        "handedness": "left",
+        "face_on": {"backswing_frames": 46, "downswing_frames": 13, "head_sway": 0.01, "hip_sway": -0.018, "finish_drift": -0.01, "followthrough_frames": 60},
+        "down_the_line": {"backswing_frames": 46, "downswing_frames": 13, "hip_sway": 0.02, "followthrough_frames": 60},
+        "shot": {
+          "printed": {"club_head_speed": 72.0, "ball_speed": 86.0, "smash_factor": 1.19, "launch_angle": 29.5, "launch_direction": 1.4, "spin_rate": 9600.0, "spin_axis": 2.1, "carry_distance": 101.0, "bounce_and_roll": 2.0, "total_distance": 103.0, "club_path": -1.1, "club_face_angle": 1.0, "shot_type": "SLIGHT FADE", "impact_position": "HEEL"},
+          "read_confidence": 0.96,
+          "read_warnings": []
+        },
+        "loft_deg": 50.0,
+        "population": ["tour_joint_distance"],
+        "rotation": ["pivot_hip_axis_drift_norm_dtl", "pivot_shoulder_axis_drift_norm_dtl", "pivot_hip_path_jitter_norm_dtl", "pivot_shoulder_reversal_backswing_deg_dtl", "pivot_shoulder_reversal_downswing_deg_dtl"]
+      }
+    },
+    {
+      "id": "flagged-shot-distance",
+      "tags": ["flagged-shot"],
+      "session_id": "2026-07-01",
+      "swing_id": "13",
+      "club": "6i",
+      "about": "The screen photo misread the total: carry and roll add to 175 and the total reads 135, so one of the three is wrong. The validator flags the shot for review, so its distances are not to be coached from as fact.",
+      "inputs": {
+        "handedness": "right",
+        "face_on": {"backswing_frames": 44, "downswing_frames": 12, "head_sway": 0.02, "hip_sway": 0.055, "finish_drift": 0.01, "followthrough_frames": 60},
+        "down_the_line": null,
+        "shot": {
+          "printed": {"club_head_speed": 84.0, "ball_speed": 119.0, "smash_factor": 1.42, "launch_angle": 15.2, "launch_direction": -0.5, "spin_rate": 5600.0, "spin_axis": -1.4, "carry_distance": 166.0, "bounce_and_roll": 9.0, "total_distance": 135.0, "club_path": 1.6, "club_face_angle": -0.2, "shot_type": "SLIGHT DRAW", "impact_position": "CENTER"},
+          "read_confidence": 0.91,
+          "read_warnings": []
+        },
+        "loft_deg": 30.0,
+        "population": ["tour_joint_distance"],
+        "rotation": []
+      }
+    },
+    {
+      "id": "partial-alignment-tempo",
+      "tags": ["partial-alignment"],
+      "session_id": "2026-07-01",
+      "swing_id": "14",
+      "club": "sw",
+      "about": "The two clips disagree on tempo, so they may be two different swings, and they align on top and impact only. Nothing is scored from the down-the-line view, and the side-by-side replay is not to be trusted at every instant.",
+      "inputs": {
+        "handedness": "right",
+        "face_on": {"backswing_frames": 40, "downswing_frames": 12, "head_sway": 0.01, "hip_sway": 0.04, "finish_drift": 0.01, "followthrough_frames": 60},
+        "down_the_line": {"backswing_frames": 72, "downswing_frames": 12, "followthrough_frames": 60},
+        "shot": {
+          "printed": {"club_head_speed": 68.0, "ball_speed": 78.0, "smash_factor": 1.15, "launch_angle": 32.0, "launch_direction": 0.6, "spin_rate": 10200.0, "spin_axis": 0.6, "carry_distance": 88.0, "bounce_and_roll": 2.0, "total_distance": 90.0, "club_path": 0.3, "club_face_angle": 0.1, "shot_type": "STRAIGHT", "impact_position": "CENTER"},
+          "read_confidence": 0.97,
+          "read_warnings": []
+        },
+        "loft_deg": 56.0,
+        "population": ["tour_joint_distance"],
+        "rotation": []
+      }
+    },
+    {
+      "id": "no-handedness-driver",
+      "tags": ["no-handedness"],
+      "session_id": "2026-07-01",
+      "swing_id": "15",
+      "club": "driver",
+      "about": "A driver with two views and nobody named as the golfer, so head stays back is unscored for want of a handedness, as is the simulated landing's offline distance. The backswing is slow, so there is something to coach beside it. Not a capture problem: filming again would not change it.",
+      "inputs": {
+        "handedness": null,
+        "face_on": {"backswing_frames": 80, "downswing_frames": 12, "head_sway": 0.02, "hip_sway": 0.035, "finish_drift": 0.01, "followthrough_frames": 60},
+        "down_the_line": {"backswing_frames": 80, "downswing_frames": 12, "followthrough_frames": 60},
+        "shot": {
+          "printed": {"club_head_speed": 102.0, "ball_speed": 150.0, "smash_factor": 1.47, "launch_angle": 11.2, "launch_direction": 2.3, "spin_rate": 2500.0, "spin_axis": 4.1, "carry_distance": 241.0, "bounce_and_roll": 21.0, "total_distance": 262.0, "club_path": -3.0, "club_face_angle": 1.2, "shot_type": "FADE", "impact_position": "HEEL"},
+          "read_confidence": 0.96,
+          "read_warnings": []
+        },
+        "loft_deg": 9.0,
+        "population": ["tour_joint_distance"],
+        "rotation": []
+      }
+    },
+    {
+      "id": "nothing-to-fix-left",
+      "tags": ["nothing-to-fix"],
+      "session_id": "2026-07-01",
+      "swing_id": "16",
+      "club": "9i",
+      "about": "A left-hander, face-on only: every checkpoint scored and inside its band, and a clean shot. There is nothing to fix, and a coach that invents a fault, or reads the mirrored drifts as one, is wrong.",
+      "inputs": {
+        "handedness": "left",
+        "face_on": {"backswing_frames": 48, "downswing_frames": 14, "head_sway": -0.01, "hip_sway": -0.035, "finish_drift": -0.01, "followthrough_frames": 60},
+        "down_the_line": null,
+        "shot": {
+          "printed": {"club_head_speed": 76.0, "ball_speed": 98.0, "smash_factor": 1.29, "launch_angle": 22.4, "launch_direction": -0.4, "spin_rate": 7900.0, "spin_axis": -0.6, "carry_distance": 126.0, "bounce_and_roll": 5.0, "total_distance": 131.0, "club_path": 0.6, "club_face_angle": -0.1, "shot_type": "STRAIGHT", "impact_position": "CENTER"},
+          "read_confidence": 0.98,
+          "read_warnings": []
+        },
+        "loft_deg": 42.0,
+        "population": ["tour_joint_distance"],
+        "rotation": []
+      }
+    }
+  ]
+}

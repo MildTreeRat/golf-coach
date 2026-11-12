@@ -73,3 +73,11 @@ target/
 # team id is nobody else's business, so it lives here, and `app/ios/Flutter/{Debug,Release}.xcconfig`
 # include it with `#include?`, which lets a clone without one still build for the Simulator.
 app/ios/Flutter/Signing.xcconfig
+
+# Eval runs (M43, ADR-036 §9). `results.jsonl`, `change.md`, `errors.jsonl` and `_state.json`
+# are committed, and the tests read `_state.json`. The traces are the full messages with
+# thinking, most of the bytes, and stay on the machine that ran them. The lite report builder
+# regenerates `report.html` and `trajectory/` from `results.jsonl`, so neither is a record.
+.claude/hillclimb/**/traces/
+.claude/hillclimb/**/report.html
+.claude/hillclimb/**/trajectory/

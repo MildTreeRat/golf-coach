@@ -1,0 +1,36 @@
+{
+  "metrics": [
+    {
+      "id": "invented",
+      "kind": "float",
+      "label": "Invented",
+      "better": "lower",
+      "scale": 1.0
+    },
+    {
+      "id": "accuracy",
+      "kind": "float",
+      "label": "Accuracy",
+      "better": "higher",
+      "scale": 1.0
+    },
+    {
+      "id": "coverage",
+      "kind": "float",
+      "label": "Coverage",
+      "better": "higher",
+      "scale": 1.0
+    },
+    {
+      "id": "abstention",
+      "kind": "float",
+      "label": "Made-up blank",
+      "better": "higher",
+      "scale": 1.0
+    }
+  ],
+  "harness_paths": [
+    "evals/club_spec/cases.json"
+  ],
+  "harness_sha": "9b23640d87f9e64b637d86cd51bb64d5a1c0859cca85ae96a0847538cf5a6e92"
+}

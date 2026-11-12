@@ -5,6 +5,105 @@ This is your "pick up where I left off" document.
 
 ---
 
+## 2026-11-12 — M43 P23: LLM evaluation and observability
+
+**Duration**: 2026-11-09 to 2026-11-12, twenty-four phases (P0–P23). M43 goes ✅ **24/24** and is
+closed in one commit onto `main`. It is Python only, inside ADR-035 §1's LLM exception, as
+[ADR-036](docs/decisions/036-llm-evaluation-and-observability.md) decided: no Rust, no vector and no
+version key moved, and the frozen lab gained nothing. Every paid phase (P13, P14, P19, P20, P21)
+stopped for the user's yes before its first call, and the review phases stopped for the user's
+answer.
+
+**To pick up where this left off, read ADR-036's 2026-11-11 addendum** for what the two evals
+measured and what that says about `coaching_model`. This entry points there and does not copy the
+numbers. Then read the findings in `docs/plans/m43-llm-evals.md` by its map
+(`grep -n '^## \|^### '`), not end to end.
+
+**What was built.**
+- **The call log** (P2–P6). `src/golf_coach/llm_log.py` writes one line per API request to
+  `llm_calls.jsonl` under `settings.processed_dir`, which is git-ignored. Each line holds the model,
+  the `usage`, the cost from `src/golf_coach/llm_prices.json` (which carries its source and the date
+  it was checked), the latency, the stop reason, the outcome (a note's kind on a failure), the route
+  and an `origin` tag, `app` or `eval:<flow>/<variant>`. The club lookup (P3), the coach (P4) and the
+  follow-up conversation (P5, one line per request its tool runner sends) write it, and a failed
+  write is one line to stderr and changes no outcome. `python -m golf_coach.llm_log summary` reads
+  it (P6), `app` unless asked. `llm_log` imports nothing from `anthropic`.
+- **The runner** (P7–P8). `golf_coach.evals.runner` is Python, on the `claude-api` skill's
+  build-eval.md contract (Decision 5). It builds its own client with `max_retries=0` and passes it
+  through each route's `client=` seam, backs off on the exception behind a route's note, keeps to a
+  spend ceiling, and refuses a harness whose sha the user has not approved (`--approve-harness` is
+  the user's flag). It writes under `.claude/hillclimb/<flow>/`. ADR-019 gained a 2026-11-09
+  addendum for the runner's unwrap of the settings key (`tests/test_config.py`), and
+  `tests/test_conformance.py` names `llm_prices.json` as package data and `_state.json` as a
+  foreign format.
+- **The club-spec eval** (P9–P14). `evals/club_spec/` is the answer key, 14 sets of published
+  specs, each value with the URL it was read from and the date. **The user verified it entry by
+  entry in P11**, and no value came from a model (ADR-036 §7). `golf_coach.evals.club_spec` grades
+  the lookup against it, and a metric with no denominator is absent from a grade rather than held
+  at a stand-in (P12, the user's call). Piloted and signed off in P13, and run on the four models
+  in P14.
+- **The coach eval** (P15–P21). `golf_coach.evals.coach_cases` writes 16 synthetic swings to
+  `evals/coach_feedback/sessions/`, built by `golf_coach.evals.synthetic_swing.make_swing`, which
+  moved verbatim from `tests/analysis/conftest.py` (that file re-exports it). **The user approved
+  the briefs as `cases.md` renders them** (P16). `golf_coach.evals.coach_feedback` runs the coach
+  through `golf-mcp` and grades it by four code checks (P17), and `golf_coach.evals.coach_judge`
+  asks a blind `claude-opus-5-5` judge with no `fallbacks` (P18). `golf_coach.evals.judge_sanity`
+  holds the judge to three paragraphs that must fail (P19). Piloted and signed off as graded in
+  P20, and run on the four models in P21. `tests/conftest.py` now holds the `golf_mcp` fixture, so
+  that `tests/evals/` reaches the server the stdio routes' tests do.
+- **Docs** (P1, P22). ADR-036, ADR-035's M43 addendum naming the new files under §1, ADR-036's
+  results addendum, `CLAUDE.md`'s commands and a routing row, `docs/ARCHITECTURE.md` §1, §2, §4
+  and §5, and `docs/README.md`.
+
+**What changed against the plan.**
+- **Four places where the build is more exact than ADR-036's clauses**, each in its addendum's
+  first section: a constant metric warns rather than fails (P7), the backoff keys on the exception
+  rather than the note (P8), a metric can be absent from a grade (P12), and the judge writes no
+  call-log line, so "every Claude request writes a log line" holds for the three routes and the
+  judge's spend is on the eval's own rows (P18).
+- **The answer key is 14 sets, not about 15.** P11 deleted the two Titleist sets on the user's
+  word.
+- **The user's bag was rewritten in P11, outside git**, so no diff shows it. The bag is Takomo 201
+  MKII irons and a TaylorMade R9 460 driver at 10.5°, not the Titleist set M12 and M15 recorded.
+  `data/processed/golfers/aaron.bag.json` was brought up to date through frozen Python's
+  `BagStore.set_entry`: the Titleist T150 and T250 slots were retired onto the bag's shelf, not
+  deleted, and no Takomo 6i was added. A swing re-analysed from now on is flown with the Takomo
+  lofts. The docs that name the Titleist clubs are all records of M12 and M15, so none was changed.
+- **P21 stopped mid-run when the account's credit ran out**, and resumed on the user's "add credit
+  and resume". `.claude/hillclimb/coach_feedback/v1/errors.jsonl` is the record of the stop.
+- **P23 found a stale pin.** `tests/evals/test_coach_feedback.py` held `harness_sha` absent from
+  the coach's `_state.json`, which stopped being true when the user approved the harness in P20.
+  No later phase ran the full suite, so it was red from P20 to P23. The assertion is gone, with a
+  comment saying why, as the club-spec twin never had one.
+- **What of `.claude/hillclimb/` is committed**: everything but the traces, the user's answer to
+  P23's question (2026-11-12, ADR-036 §9's recommendation). That is each flow's `_state.json`,
+  every variant's `results.jsonl` and `change.md`, `coach_feedback/v1/errors.jsonl` and
+  `_judge_sanity/results.jsonl`. `.gitignore` gained `**/traces/`, `**/report.html` and
+  `**/trajectory/` under `.claude/hillclimb/`, since the lite builder regenerates the last two.
+
+**Left open, and the user's.**
+- **`coaching_model`**, which is still `claude-opus-5`. ADR-036's addendum recommends a change for
+  the coach and says what it costs the club lookup, since one setting serves all three routes.
+- **A second look at the TaylorMade P790's 5i and 6i lofts** in the answer key, where Opus 5 and
+  Opus 5.5 agree on the same difference from the published value (the addendum's club-spec
+  section).
+- Out of M43 by Decision 10: a tool-use eval of the follow-up conversation, a red-team set, live
+  feedback from the phone, and a prompt hill-climb against these baselines (`/claude-api
+  hillclimb`).
+
+All verify commands are green.
+- **Rust.** `cargo test` passed 1,773 with 26 ignored, as at M42's close. `cargo clippy
+  --all-targets` has 0 warnings, and `cargo fmt --check` is clean. Nothing in Rust changed.
+- **Python.** `pytest` passed 2,467 after the stale pin's fix, with the one warning paddle's.
+  `tests/test_docs_truth.py` passed against a map that counts 89 documents once M43's four new
+  markdown files are staged. `ruff` is clean, `mypy` is clean over
+  124 files, and `conformance.py check` exits 0.
+- **The release `golf-mcp` is still the 2026-10-29 build**, because Claude Code's own server holds
+  the file, so the suite ran on a copy of the current debug build through `GOLF_MCP`. Rebuild
+  release while no session holds it.
+
+---
+
 ## 2026-11-04 — M33 P19: Apple Vision on Full Swing's screen, provisional
 
 **Duration**: 2026-11-04, one day, twenty phases (P0–P19), the first milestone run on the arm64 Mac.

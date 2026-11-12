@@ -56,6 +56,19 @@ is a loss. Two lines needed keys no view carried, and `golf-mcp` gained them: a 
 The stdio pieces `conversation.py`'s route shares (`GolfMcpServer`, the caveats resource, the read
 timeout) live here, beside `_sdk` and `_note_for`, for the reason those already do:
 `conversation.py` imports this module, and the reverse would be a cycle.
+
+## The call log [M43 P4]
+
+`_write` logs every coaching request as one line, through `llm_log.record`, and it is the only
+place that does: both routes reach it, so neither logs on its own (ADR-036 §4). Every path past the
+request writes its line: a paragraph, a refusal, an empty answer, a truncation and an SDK error.
+The line's `outcome` is `ok` or the note's kind, named in `_written_from` and `_kind_for`. A
+truncation is `truncated`, though here the paragraph is still served with its admission, where the
+lookup serves nothing; the line's `route` tells the two apart. The refusals that come before a
+request (no extra, no key, no `golf-mcp`, no analysis) write nothing, because nothing was sent.
+`llm_log` imports no `anthropic`, so importing it at module scope keeps the extras boundary
+`tests/api/test_pipeline_imports.py` pins. The log is observation only: `record` never raises, so
+no paragraph comes back different for it.
 """
 
 from __future__ import annotations
@@ -70,8 +83,10 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
+from time import perf_counter
 from typing import Any, TextIO
 
+from golf_coach import llm_log
 from golf_coach.contracts.alignment import AlignmentQuality
 from golf_coach.contracts.caveats import (
     ALIGNMENT_CAVEAT,
@@ -525,6 +540,9 @@ def _write(client: Any, brief: str, system: str, model: str) -> _Written:
     spelled once, whichever route built the brief.
     """
     sdk = _sdk()
+    # Every request is logged once, on every path past this point (ADR-036 §4). The clock brackets
+    # the `messages.create` call and stops before the reading below, which is ours, not the API's.
+    started = perf_counter()
     try:
         response = client.messages.create(
             model=model,
@@ -547,19 +565,53 @@ def _write(client: Any, brief: str, system: str, model: str) -> _Written:
             messages=[{"role": "user", "content": brief}],
         )
     except Exception as exc:  # narrowed in `_note_for`; the SDK may be absent entirely
+        llm_log.record(
+            route="coach",
+            requested_model=model,
+            latency_s=perf_counter() - started,
+            outcome=_kind_for(exc, sdk),
+            error=exc,
+        )
         return _Written(note=_note_for(exc, sdk))
+    latency_s = perf_counter() - started
 
+    written, kind = _written_from(response, model)
+    llm_log.record(
+        route="coach",
+        requested_model=model,
+        latency_s=latency_s,
+        response=response,
+        outcome=kind,
+    )
+    return written
+
+
+def _written_from(response: object, model: str) -> tuple[_Written, str]:
+    """One response to what the golfer is served, and the kind the call log records for it.
+
+    The kind is `ok` for a whole paragraph and otherwise names the note in snake_case, the
+    vocabulary `clubs/lookup.py::_read` set. It is returned beside the answer rather than worked
+    out from the note's wording, so rewording a note cannot silently move a logged outcome.
+    """
     stop_reason = getattr(response, "stop_reason", None)
     if stop_reason == "refusal":
-        return _Written(note="no written coaching: the model declined to answer for this swing.")
+        return _Written(
+            note="no written coaching: the model declined to answer for this swing."
+        ), "refusal"
 
     text = _text_from(response)
     if not text:
-        return _Written(note="no written coaching: the model returned no text for this swing.")
+        # Thinking can spend the whole of `max_tokens` before any text, so a truncation with
+        # nothing to serve lands here too, and the line's `stop_reason` says which it was.
+        return _Written(
+            note="no written coaching: the model returned no text for this swing."
+        ), "no_text"
     if stop_reason == "max_tokens":
-        # Say it rather than silently serving a paragraph that stops mid-sentence.
+        # Say it rather than silently serving a paragraph that stops mid-sentence. Still served,
+        # unlike the lookup's `truncated`, which serves nothing; the line's `route` says which.
         text += "\n\n(This note was cut off before it finished.)"
-    return _Written(text=text, model=getattr(response, "model", None) or model)
+        return _Written(text=text, model=getattr(response, "model", None) or model), "truncated"
+    return _Written(text=text, model=getattr(response, "model", None) or model), "ok"
 
 
 #: Long enough for the API's own sentence, short enough that a note stays a note. What this clips
@@ -632,6 +684,38 @@ def _note_for(
         if isinstance(exc, anthropic.APIConnectionError):  # type: ignore[attr-defined]
             return f"{prefix}could not reach the API. The scores above are unaffected."
     return f"{prefix}the request failed ({type(exc).__name__}: {exc})."
+
+
+def _kind_for(exc: Exception, anthropic: Any | None) -> str:
+    """The call log's name for the note `_note_for` writes about `exc`, branch for branch.
+
+    Its own function rather than a second return from `_note_for`, because the note is for the
+    golfer and the kind is for the log and the eval runner: the runner's backoff waits on
+    `rate_limited` and `overloaded` (M43 P8), so those two must never fold into `api_error`, which
+    their classes inherit from. The exception's class is logged beside the kind, so `api_error`
+    and `request_failed` still say which error it was.
+
+    `clubs/lookup.py` holds a copy over its own `_note_for`, because `clubs/` may not import
+    `feedback/` (ADR-008). `conversation.py` shares `_note_for` from here, and can share this too.
+    """
+    if anthropic is not None:
+        for name, kind in _ERROR_KINDS:
+            error = getattr(anthropic, name, None)
+            if isinstance(error, type) and isinstance(exc, error):
+                return kind
+    return "request_failed"
+
+
+#: `_note_for`'s branches in its order, most specific first, so a subclass meets its own branch
+#: before its parent's.
+_ERROR_KINDS = (
+    ("NotFoundError", "model_not_found"),
+    ("AuthenticationError", "auth_failed"),
+    ("RateLimitError", "rate_limited"),
+    ("OverloadedError", "overloaded"),
+    ("APIStatusError", "api_error"),
+    ("APIConnectionError", "connection_failed"),
+)
 
 
 # --------------------------------------------------------------------------------------------------

@@ -20,10 +20,12 @@ import importlib.util
 import json
 from dataclasses import dataclass
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
 
+from golf_coach import llm_log
 from golf_coach.contracts.conversation import Transcript
 from golf_coach.feedback.conversation import (
     ANSWERING_FOLLOWUPS,
@@ -752,3 +754,355 @@ def test_ask_swing_seeds_from_the_brief_the_paragraph_is_written_from(
     missing = script._load_brief(server, "2026-08-10/9")
     assert missing.startswith("no analyzed swing at '2026-08-10/9' under ")
     assert missing.endswith("Run golf-lab analyze on it first.")
+
+
+# --------------------------------------------------------------------------- the call log [M43 P5]
+#
+# One line per request the tool runner sends, which is one per message it yields, all under one
+# turn id per question (ADR-036 §2, §4). The log is `tests/conftest.py::_throwaway_llm_log`'s
+# file, so nothing here reaches the real `llm_calls.jsonl`.
+
+
+def _logged() -> list[dict[str, Any]]:
+    path = llm_log._log_path()
+    if not path.exists():
+        return []
+    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
+
+
+def _tool_turn(name: str, call_id: str) -> _Message:
+    return _Message(
+        [{"type": "tool_use", "id": call_id, "name": name, "input": {}}], stop_reason="tool_use"
+    )
+
+
+class _ScriptedRunner(_Runner):
+    """`_Runner`, with a request after the canned turns that raises, and a clock that moves.
+
+    The real runner sends each request when the loop asks it for its next message, so a 429
+    halfway through a turn raises out of the iteration, which is where this raises `raises`. The
+    clock is the test's `perf_counter`: each request spends `REQUEST_S` on it (`FAILED_S` for the
+    one that raises) and each round of tools `TOOLS_S`, so a latency that took in the tools
+    would show it.
+    """
+
+    REQUEST_S = 2.5
+    FAILED_S = 4.0
+    TOOLS_S = 7.0
+
+    def __init__(
+        self,
+        turns: list[_Message],
+        *,
+        raises: Exception | None = None,
+        clock: SimpleNamespace | None = None,
+    ) -> None:
+        super().__init__(turns)
+        self._raises = raises
+        self._clock = clock if clock is not None else SimpleNamespace(now=0.0)
+
+    def __iter__(self):
+        for turn in self._turns:
+            self._clock.now += self.REQUEST_S
+            self._current = turn
+            yield turn
+        if self._raises is not None:
+            self._clock.now += self.FAILED_S
+            raise self._raises
+
+    def generate_tool_call_response(self) -> dict[str, Any] | None:
+        response = super().generate_tool_call_response()
+        if response is not None:
+            self._clock.now += self.TOOLS_S
+        return response
+
+
+class _ClientFor(_Client):
+    """A client whose tool runner is the one it was given."""
+
+    def __init__(self, runner: _Runner) -> None:
+        super().__init__([])
+        self._runner = runner
+
+    def tool_runner(self, **kwargs: Any) -> _Runner:
+        super().tool_runner(**kwargs)
+        return self._runner
+
+
+def _ask(client: Any, **kwargs: Any) -> AskOutcome:
+    kwargs.setdefault("transcript", transcript())
+    return ask("q", tools=[], briefing=BRIEFING, model=MODEL, client=client, **kwargs)
+
+
+def test_a_turn_that_calls_two_tools_logs_three_lines_under_one_turn_id() -> None:
+    """ADR-036 §2's own example: one line per request, not one per question."""
+    turns = [
+        _tool_turn("list_sessions", "toolu_1"),
+        _tool_turn("compare_sessions", "toolu_2"),
+        *answer("Slower than Tuesday."),
+    ]
+
+    outcome = _ask(_Client(turns))
+
+    assert outcome.text == "Slower than Tuesday."
+    lines = _logged()
+    assert [line["iteration"] for line in lines] == [1, 2, 3]
+    assert [line["outcome"] for line in lines] == ["ok", "ok", "ok"]
+    assert [line["stop_reason"] for line in lines] == ["tool_use", "tool_use", "end_turn"]
+    assert [line["tool_calls"] for line in lines] == [1, 1, 0]
+    [turn_id] = {line["turn_id"] for line in lines}
+    assert isinstance(turn_id, str) and turn_id
+    for line in lines:
+        assert line["route"] == "conversation"
+        assert line["requested_model"] == MODEL
+        assert line["origin"] == llm_log.DEFAULT_ORIGIN
+        assert line["error_class"] is None
+
+
+def test_each_question_is_a_turn_of_its_own() -> None:
+    stored = transcript()
+    _ask(_Client(answer("One.")), transcript=stored)
+    _ask(_Client([_tool_turn("list_sessions", "toolu_1"), *answer("Two.")]), transcript=stored)
+
+    first, *second = _logged()
+    assert [line["iteration"] for line in [first, *second]] == [1, 1, 2]
+    assert len({line["turn_id"] for line in second}) == 1
+    assert first["turn_id"] != second[0]["turn_id"]
+
+
+def test_an_exhausted_loop_says_so_on_its_last_line() -> None:
+    """The bound counts requests, so the last line's iteration is the bound itself."""
+    turns = [_tool_turn("list_sessions", "toolu_1"), _tool_turn("get_session", "toolu_2")]
+
+    outcome = _ask(_Client(turns), max_iterations=2)
+
+    assert "stopped early" in (outcome.note or "")
+    assert [(line["iteration"], line["outcome"]) for line in _logged()] == [
+        (1, "ok"),
+        (2, "exhausted"),
+    ]
+
+
+@pytest.mark.parametrize(
+    ("last", "kind", "served"),
+    [
+        (_Message([{"type": "text", "text": ""}], stop_reason="refusal"), "refusal", False),
+        (_Message([{"type": "thinking", "thinking": "", "signature": "s"}]), "no_text", False),
+        # Thinking can spend the whole budget, which is a truncation with nothing to serve.
+        (
+            _Message([{"type": "thinking", "thinking": "", "signature": "s"}], "max_tokens"),
+            "no_text",
+            False,
+        ),
+        # Served with its admission, as the coach's `truncated` is.
+        (_Message([{"type": "text", "text": "Your tempo"}], "max_tokens"), "truncated", True),
+    ],
+)
+def test_the_last_line_carries_the_kind_of_answer_it_became(
+    last: _Message, kind: str, served: bool
+) -> None:
+    """After a tool call, so the line before it shows the loop went on."""
+    outcome = _ask(_Client([_tool_turn("get_swing", "toolu_1"), last]))
+
+    assert (outcome.text is not None) is served
+    lines = _logged()
+    assert [line["outcome"] for line in lines] == ["ok", kind]
+    assert lines[-1]["stop_reason"] == last.stop_reason
+    assert lines[-1]["error_class"] is None
+
+
+def test_a_request_that_raises_mid_loop_logs_a_line_with_its_error_class() -> None:
+    stored = transcript()
+
+    outcome = _ask(
+        _ClientFor(
+            _ScriptedRunner(
+                [_tool_turn("list_sessions", "toolu_1")], raises=RuntimeError("connection reset")
+            )
+        ),
+        transcript=stored,
+    )
+
+    assert "connection reset" in (outcome.note or "")
+    assert stored.messages == []
+    answered, failed = _logged()
+    assert (answered["iteration"], answered["outcome"], answered["error_class"]) == (1, "ok", None)
+    assert failed["turn_id"] == answered["turn_id"]
+    assert failed["iteration"] == 2
+    assert failed["outcome"] == "request_failed"
+    assert failed["error_class"] == "RuntimeError"
+    assert failed["served_model"] is None
+    assert failed["stop_reason"] is None
+    assert failed["usage"] is None
+    assert failed["cost_usd"] is None
+
+
+@pytest.mark.parametrize(
+    ("error_name", "kind"),
+    [
+        ("RateLimitError", "rate_limited"),
+        ("OverloadedError", "overloaded"),
+        ("BadRequestError", "api_error"),
+        ("APIConnectionError", "connection_failed"),
+    ],
+)
+def test_sdk_errors_log_the_kind_of_note_they_became(error_name: str, kind: str) -> None:
+    """`_kind_for` is `coach.py`'s, as `_note_for` is, so the routes log one vocabulary (M43 P8)."""
+    anthropic = pytest.importorskip("anthropic", reason="needs the `llm` extra to be meaningful")
+    exc = getattr(anthropic, error_name).__new__(getattr(anthropic, error_name))
+    Exception.__init__(exc, "boom")
+
+    outcome = _ask(_ClientFor(_ScriptedRunner([], raises=exc)))
+
+    assert (outcome.note or "").startswith("no answer: ")
+    [line] = _logged()
+    assert (line["iteration"], line["outcome"], line["error_class"]) == (1, kind, error_name)
+
+
+def test_a_question_that_was_never_sent_logs_nothing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """No request, no line (ADR-036 §4).
+
+    The real runner sends its first request when the loop first asks it for a message, so a
+    runner that raised while being built (this fake's way of failing) sent nothing. Nor did a
+    question refused for its transcript, for an unbuilt `golf-mcp` or for a missing extra.
+    """
+    _ask(_Client(RuntimeError("the tools would not build")))
+    _ask(_Client(answer()), transcript=new_transcript(model="claude-opus-4-8"))
+    ask_through_golf_mcp(
+        "q",
+        transcript=transcript(),
+        server=GolfMcpServer(
+            binary=tmp_path / "golf-mcp", sessions_dir=tmp_path, shots_dir=tmp_path
+        ),
+        model=MODEL,
+        client=_Client(answer()),
+    )
+    monkeypatch.setattr("golf_coach.feedback.conversation._sdk", lambda: None)
+    ask("q", transcript=transcript(), tools=[], briefing=BRIEFING, model=MODEL)
+
+    assert _logged() == []
+
+
+def test_no_key_logs_nothing_because_nothing_was_sent() -> None:
+    pytest.importorskip("anthropic", reason="the missing-key note is only reached with the SDK")
+
+    ask("q", transcript=transcript(), tools=[], briefing=BRIEFING, model=MODEL)
+
+    assert _logged() == []
+
+
+@pytest.mark.parametrize("fails", [False, True])
+def test_latency_is_each_request_and_not_the_tools_between(
+    fails: bool, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Timed from each ask to its message, so the seven seconds of tools appear in no line."""
+    clock = SimpleNamespace(now=100.0)
+    monkeypatch.setattr("golf_coach.feedback.conversation.perf_counter", lambda: clock.now)
+    turns = [_tool_turn("list_sessions", "toolu_1")]
+    if not fails:
+        turns += answer()
+
+    _ask(
+        _ClientFor(
+            _ScriptedRunner(turns, raises=RuntimeError("boom") if fails else None, clock=clock)
+        )
+    )
+
+    second = _ScriptedRunner.FAILED_S if fails else _ScriptedRunner.REQUEST_S
+    assert [line["latency_s"] for line in _logged()] == pytest.approx(
+        [_ScriptedRunner.REQUEST_S, second]
+    )
+
+
+def test_each_message_is_handed_to_the_log_whole() -> None:
+    """Usage, the served model and the request id come off each message, so each line is priced.
+
+    The first request writes the cached system prompt and the second reads it back. Claude Opus 5
+    at $5 in, $25 out, $0.50 a cache read and $6.25 a 5-minute cache write per million tokens, the
+    pricing page as read on 2026-11-09: 300 in, 100 out and 1,500 written is $0.0015 + $0.0025 +
+    $0.009375; 50 in, 200 out and 1,500 read is $0.00025 + $0.005 + $0.00075.
+    """
+    turns = [_tool_turn("get_swing", "toolu_1"), *answer()]
+    for turn, (fresh, out, read, written, request_id) in zip(
+        turns, [(300, 100, 0, 1500, "req_1"), (50, 200, 1500, 0, "req_2")], strict=True
+    ):
+        turn.model = MODEL  # type: ignore[attr-defined]
+        turn.usage = SimpleNamespace(  # type: ignore[attr-defined]
+            input_tokens=fresh,
+            output_tokens=out,
+            cache_read_input_tokens=read,
+            cache_creation_input_tokens=written,
+            cache_creation=None,
+        )
+        turn._request_id = request_id  # type: ignore[attr-defined]
+
+    _ask(_Client(turns))
+
+    lines = _logged()
+    assert [line["served_model"] for line in lines] == [MODEL, MODEL]
+    assert [line["request_id"] for line in lines] == ["req_1", "req_2"]
+    assert [line["cost_usd"] for line in lines] == pytest.approx([0.013375, 0.006])
+    assert lines[1]["usage"] == {
+        "input_tokens": 50,
+        "output_tokens": 200,
+        "cache_read_input_tokens": 1500,
+        "cache_creation_input_tokens": 0,
+    }
+
+
+def test_a_log_that_cannot_be_written_changes_nothing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """§4: the golfer gets the same answer, and the same transcript, whether or not it is logged."""
+    blocker = tmp_path / "not-a-directory"
+    blocker.write_text("", encoding="utf-8")
+    monkeypatch.setattr(llm_log, "_log_path", lambda: blocker / "llm_calls.jsonl")
+    stored = transcript()
+
+    outcome = _ask(
+        _Client([_tool_turn("get_swing", "toolu_1"), *answer("Your tempo is quick.")]),
+        transcript=stored,
+    )
+
+    assert outcome.text == "Your tempo is quick."
+    assert outcome.note is None
+    assert outcome.tools_called == ["get_swing"]
+    assert len(stored.messages) == 4
+    warnings = capsys.readouterr().err.splitlines()
+    assert len(warnings) == 2
+    assert all(warning.startswith("llm_log: ") for warning in warnings)
+
+
+def test_the_stdio_route_logs_each_request(golf_mcp: Path, tmp_path: Path) -> None:
+    """`ask` runs on a worker thread beside the event loop there, and logs the same lines."""
+    stores = _stores(tmp_path, registry=False)
+    turns = [
+        _Message(
+            [
+                {
+                    "type": "tool_use",
+                    "id": "toolu_01",
+                    "name": "get_swing",
+                    "input": {"session_id": "2026-08-10", "swing_id": "2"},
+                }
+            ],
+            stop_reason="tool_use",
+        ),
+        *answer("That swing is not on file."),
+    ]
+
+    outcome = ask_through_golf_mcp(
+        "q",
+        transcript=transcript(),
+        server=_server(golf_mcp, stores),
+        model=MODEL,
+        client=_CallingClient(turns),
+    )
+
+    assert outcome.text == "That swing is not on file."
+    lines = _logged()
+    assert [(line["iteration"], line["outcome"]) for line in lines] == [(1, "ok"), (2, "ok")]
+    assert {line["route"] for line in lines} == {"conversation"}
+    assert len({line["turn_id"] for line in lines}) == 1

@@ -46,8 +46,17 @@ why nothing ever fills it in.
 An annotation `_KINDS` has no entry for raises at import. That is R8's wiring-bug half — a new
 field *type* is a decision to make once, not a club silently missing a number.
 
-Stdlib + pydantic, `contracts` only (ADR-008). The `llm` extra, `settings.anthropic_api_key` and
+Stdlib + pydantic, `contracts` only (ADR-008), plus `llm_log`, which every Claude route writes to
+(ADR-036 §4) and which imports no `anthropic`. The `llm` extra, `settings.anthropic_api_key` and
 `settings.coaching_model` are reused; this milestone adds no configuration.
+
+## The call log [M43 P3]
+
+`_look_up` logs every request it makes as one line, through `llm_log.record`: the happy path and
+every note a request can end in, a refusal, a truncation, an unreadable answer and an SDK error.
+The line's `outcome` is `ok` or the note's kind, named in `_read` and `_kind_for`. The notes that
+come before a request (no extra, no key, no slots) write nothing, because nothing was sent. The
+log is observation only: `record` never raises, so no lookup comes back different for it.
 """
 
 from __future__ import annotations
@@ -57,10 +66,12 @@ import math
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from time import perf_counter
 from typing import Any
 
 from pydantic import ValidationError
 
+from golf_coach import llm_log
 from golf_coach.contracts.club import ClubId, parse_club
 from golf_coach.contracts.club_spec import (
     ClubSpec,
@@ -392,6 +403,10 @@ def _look_up(
             )
         client = sdk.Anthropic(api_key=api_key)
 
+    # Every request is logged once, on every path past this point (ADR-036 §4). The paths above
+    # made no request, so they write nothing. The clock brackets the `messages.create` call and
+    # stops before the parse below, which is ours and not the API's.
+    started = perf_counter()
     try:
         response = client.messages.create(
             model=llm_model,
@@ -414,13 +429,46 @@ def _look_up(
             messages=[{"role": "user", "content": _brief(make, model, model_year, slots)}],
         )
     except Exception as exc:  # narrowed in `_note_for`; the SDK may be absent entirely
+        llm_log.record(
+            route="club_lookup",
+            requested_model=llm_model,
+            latency_s=perf_counter() - started,
+            outcome=_kind_for(exc, sdk),
+            error=exc,
+        )
         return ClubLookupOutcome(note=_note_for(exc, sdk))
+    latency_s = perf_counter() - started
 
+    outcome, kind = _read(response, make, model, model_year, slots, llm_model)
+    llm_log.record(
+        route="club_lookup",
+        requested_model=llm_model,
+        latency_s=latency_s,
+        response=response,
+        outcome=kind,
+    )
+    return outcome
+
+
+def _read(
+    response: object,
+    make: str,
+    model: str,
+    model_year: int | None,
+    slots: tuple[ClubId, ...],
+    llm_model: str,
+) -> tuple[ClubLookupOutcome, str]:
+    """One response to the outcome the golfer sees, and the kind the call log records for it.
+
+    The kind is `ok` when there are specs, however many of their fields came back blank, and
+    otherwise names the note in snake_case. It is returned beside the outcome rather than worked
+    out from the note's wording, so rewording a note cannot silently move a logged outcome.
+    """
     stop_reason = getattr(response, "stop_reason", None)
     if stop_reason == "refusal":
         return ClubLookupOutcome(
             note="no specifications looked up: the model declined to answer for this club."
-        )
+        ), "refusal"
     if stop_reason == "max_tokens":
         # Nothing to salvage and nothing to serve half of: a JSON object cut off mid-key is not
         # JSON. So this is a refusal with a reason, where `coach.py` can admit truncation and still
@@ -430,7 +478,7 @@ def _look_up(
                 "no specifications looked up: the answer was cut off before it finished. "
                 "Try fewer clubs at once."
             )
-        )
+        ), "truncated"
 
     try:
         payload = json.loads(_text_from(response))
@@ -439,13 +487,13 @@ def _look_up(
         # everything else, which is exactly when it must not raise.
         return ClubLookupOutcome(
             note="no specifications looked up: the model's answer was not readable."
-        )
+        ), "unreadable"
 
     rows = payload.get("clubs") if isinstance(payload, dict) else None
     if not isinstance(rows, list):
         return ClubLookupOutcome(
             note="no specifications looked up: the model's answer named no clubs."
-        )
+        ), "no_clubs"
 
     matched, notes = _by_slot(rows, slots)
     specs: list[ClubSpec] = []
@@ -466,7 +514,7 @@ def _look_up(
             retrieved_at=datetime.now(UTC),
             notes=" ".join(notes),
         ),
-    )
+    ), "ok"
 
 
 def _brief(make: str, model: str, model_year: int | None, slots: tuple[ClubId, ...]) -> str:
@@ -667,6 +715,35 @@ def _note_for(exc: Exception, anthropic: Any | None, *, prefix: str = "no club l
         if isinstance(exc, anthropic.APIConnectionError):  # type: ignore[attr-defined]
             return f"{prefix}could not reach the API. You can still type the club in by hand."
     return f"{prefix}the request failed ({type(exc).__name__}: {exc})."
+
+
+def _kind_for(exc: Exception, anthropic: Any | None) -> str:
+    """The call log's name for the note `_note_for` writes about `exc`, branch for branch.
+
+    Its own function rather than a second return from `_note_for`, because the note is for the
+    golfer and the kind is for the log and the eval runner: the runner's backoff waits on
+    `rate_limited` and `overloaded` (M43 P8), so those two must never fold into `api_error`, which
+    their classes inherit from. The exception's class is logged beside the kind, so `api_error`
+    and `request_failed` still say which error it was.
+    """
+    if anthropic is not None:
+        for name, kind in _ERROR_KINDS:
+            error = getattr(anthropic, name, None)
+            if isinstance(error, type) and isinstance(exc, error):
+                return kind
+    return "request_failed"
+
+
+#: `_note_for`'s branches in its order, most specific first, so a subclass meets its own branch
+#: before its parent's.
+_ERROR_KINDS = (
+    ("NotFoundError", "model_not_found"),
+    ("AuthenticationError", "auth_failed"),
+    ("RateLimitError", "rate_limited"),
+    ("OverloadedError", "overloaded"),
+    ("APIStatusError", "api_error"),
+    ("APIConnectionError", "connection_failed"),
+)
 
 
 def _api_detail(exc: Exception) -> str:

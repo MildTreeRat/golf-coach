@@ -192,7 +192,7 @@ Each is the user's, from M38's planning interview. **None is re-opened by a phas
   P36's close commit holding everything else. Nothing is pushed. The user chose this knowing the tree stays
   uncommitted across the device and bay gaps.
   **Amended 2026-11-10 by the user: a checkpoint commit, pushed.** P1–P30c went onto `main` as one
-  checkpoint commit before the bay, and `main` was pushed with it. The reason is that M43 can then start
+  checkpoint commit before the bay, and `main` was pushed with it. The reason is that M46 (raised as M43, the impact drill) can then start
   on top of a known build without mixing into M38's diff, and the app taken to the bay is that build. So
   three commits now, not two: P0, the checkpoint, and P36's close holding P31 onward. Rule 2's ban on
   `checkout`, `restore`, `clean`, `stash` and `reset` stands.

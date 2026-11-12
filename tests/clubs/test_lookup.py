@@ -21,10 +21,13 @@ from __future__ import annotations
 
 import json
 import math
+from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
 
+from golf_coach import llm_log
 from golf_coach.clubs.lookup import _GIVEN_FIELDS as GIVEN_FIELDS
 from golf_coach.clubs.lookup import (
     MAX_TOKENS,
@@ -644,3 +647,194 @@ def test_outcome_defaults_are_the_absent_case() -> None:
     assert outcome.specs == ()
     assert outcome.provenance is None
     assert outcome.note is None
+
+
+# --------------------------------------------------------------------------- the call log [M43 P3]
+#
+# One line per request, on every path that made one, and none on a path that did not (ADR-036
+# §4). The log is `tests/conftest.py::_throwaway_llm_log`'s file, so nothing here reaches the real
+# `llm_calls.jsonl`.
+
+
+def _logged() -> list[dict[str, Any]]:
+    path = llm_log._log_path()
+    if not path.exists():
+        return []
+    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
+
+
+def test_the_happy_path_logs_one_line() -> None:
+    _t150(_answering(_row(loft_deg=30.5)))
+
+    [line] = _logged()
+    assert line["route"] == "club_lookup"
+    assert line["requested_model"] == LLM_MODEL
+    assert line["served_model"] == LLM_MODEL
+    assert line["stop_reason"] == "end_turn"
+    assert line["outcome"] == "ok"
+    assert line["error_class"] is None
+    assert line["origin"] == llm_log.DEFAULT_ORIGIN
+
+
+def test_a_set_is_one_line_because_it_is_one_request() -> None:
+    look_up_set(
+        "Titleist", "T150", 2023, [ClubId.SEVEN_IRON, ClubId.EIGHT_IRON, ClubId.PITCHING_WEDGE],
+        llm_model=LLM_MODEL, client=_answering(_row(club="7i"), _row(club="8i")),
+    )
+
+    assert [line["outcome"] for line in _logged()] == ["ok"]
+
+
+def test_a_partial_answer_is_still_ok_because_it_served_specs() -> None:
+    """Blank fields and a skipped slot are the honest shape of an answer, not a failed call."""
+    look_up_set(
+        "Titleist", "T150", 2023, [ClubId.SEVEN_IRON, ClubId.EIGHT_IRON],
+        llm_model=LLM_MODEL, client=_answering(_row(club="7i")),
+    )
+
+    assert [line["outcome"] for line in _logged()] == ["ok"]
+
+
+@pytest.mark.parametrize(
+    ("response", "kind"),
+    [
+        (_Response(json.dumps({"clubs": [_row()]}), stop_reason="refusal"), "refusal"),
+        (_Response('{"clubs": [{"club": "7i", "lo', stop_reason="max_tokens"), "truncated"),
+        (_Response("I could not find that club."), "unreadable"),
+        (_Response('{"clubs": null}'), "no_clubs"),
+    ],
+)
+def test_each_note_a_response_ends_in_logs_one_line_with_its_kind(
+    response: _Response, kind: str
+) -> None:
+    outcome = _t150(_FakeClient(response))
+
+    assert outcome.note is not None
+    [line] = _logged()
+    assert line["outcome"] == kind
+    assert line["stop_reason"] == response.stop_reason
+    assert line["error_class"] is None
+
+
+def test_a_failed_request_logs_one_line_with_its_error_and_no_usage() -> None:
+    outcome = _t150(_FakeClient(RuntimeError("boom")))
+
+    assert outcome.note is not None
+    [line] = _logged()
+    assert line["outcome"] == "request_failed"
+    assert line["error_class"] == "RuntimeError"
+    assert line["served_model"] is None
+    assert line["usage"] is None
+    assert line["cost_usd"] is None
+
+
+@pytest.mark.parametrize(
+    ("error_name", "kind"),
+    [
+        ("NotFoundError", "model_not_found"),
+        ("AuthenticationError", "auth_failed"),
+        ("RateLimitError", "rate_limited"),
+        ("OverloadedError", "overloaded"),
+        ("InternalServerError", "api_error"),
+        ("APIStatusError", "api_error"),
+        ("APIConnectionError", "connection_failed"),
+        ("APITimeoutError", "connection_failed"),
+    ],
+)
+def test_sdk_errors_log_the_kind_of_note_they_became(error_name: str, kind: str) -> None:
+    """A 429 and a 529 are subclasses of `APIStatusError`, and must not log as one (M43 P8)."""
+    anthropic = pytest.importorskip("anthropic", reason="needs the `llm` extra to be meaningful")
+
+    exc = getattr(anthropic, error_name).__new__(getattr(anthropic, error_name))
+    _t150(_FakeClient(exc))
+
+    [line] = _logged()
+    assert line["outcome"] == kind
+    assert line["error_class"] == error_name
+
+
+def test_no_key_logs_nothing_because_nothing_was_sent() -> None:
+    pytest.importorskip("anthropic", reason="the missing-key note is only reached with the SDK")
+
+    look_up_club("Titleist", "T150", 2023, ClubId.SEVEN_IRON, llm_model=LLM_MODEL, api_key=None)
+
+    assert _logged() == []
+
+
+def test_a_missing_extra_logs_nothing(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("golf_coach.clubs.lookup._sdk", lambda: None)
+
+    look_up_club("Titleist", "T150", 2023, ClubId.SEVEN_IRON, llm_model=LLM_MODEL, api_key=None)
+
+    assert _logged() == []
+
+
+def test_an_empty_set_logs_nothing() -> None:
+    look_up_set("Titleist", "T150", 2023, [], llm_model=LLM_MODEL, client=_answering())
+
+    assert _logged() == []
+
+
+@pytest.mark.parametrize("fails", [False, True])
+def test_latency_is_the_request_and_nothing_around_it(
+    fails: bool, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The clock moves only inside `create`, so a clock started after it would log a zero."""
+    clock = SimpleNamespace(now=100.0)
+    monkeypatch.setattr("golf_coach.clubs.lookup.perf_counter", lambda: clock.now)
+    client = _FakeClient(RuntimeError("boom") if fails else _Response(json.dumps({"clubs": []})))
+    create = client.messages.create
+
+    def slow_create(**kwargs: Any) -> object:
+        clock.now += 2.5
+        return create(**kwargs)
+
+    client.messages.create = slow_create  # type: ignore[method-assign]
+    _t150(client)
+
+    [line] = _logged()
+    assert line["latency_s"] == pytest.approx(2.5)
+
+
+def test_the_response_is_handed_to_the_log_whole() -> None:
+    """Usage, the served model and the request id come off the response, so the line is priced.
+
+    Claude Opus 5 at $5 in and $25 out per million tokens, the pricing page as read on
+    2026-11-09: 1,000 in and 500 out is $0.005 + $0.0125.
+    """
+    response = _Response(json.dumps({"clubs": [_row()]}))
+    response.usage = SimpleNamespace(  # type: ignore[attr-defined]
+        input_tokens=1000,
+        output_tokens=500,
+        cache_read_input_tokens=None,
+        cache_creation_input_tokens=None,
+        cache_creation=None,
+    )
+    response._request_id = "req_lookup"  # type: ignore[attr-defined]
+
+    _t150(_FakeClient(response))
+
+    [line] = _logged()
+    assert line["usage"] == {
+        "input_tokens": 1000,
+        "output_tokens": 500,
+        "cache_read_input_tokens": 0,
+        "cache_creation_input_tokens": 0,
+    }
+    assert line["cost_usd"] == pytest.approx(0.0175)
+    assert line["request_id"] == "req_lookup"
+
+
+def test_a_log_that_cannot_be_written_changes_nothing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """§4: the golfer gets the same specs whether or not the line could be written."""
+    blocker = tmp_path / "not-a-directory"
+    blocker.write_text("", encoding="utf-8")
+    monkeypatch.setattr(llm_log, "_log_path", lambda: blocker / "llm_calls.jsonl")
+
+    outcome = _t150(_answering(_row(loft_deg=30.5)))
+
+    assert outcome.note is None
+    assert [spec.loft_deg for spec in outcome.specs] == [30.5]
+    assert capsys.readouterr().err.startswith("llm_log: ")

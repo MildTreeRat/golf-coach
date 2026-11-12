@@ -1,7 +1,8 @@
 # Architecture — the system AS BUILT
 
 > **Tier: AS-BUILT.** This document describes what actually exists and runs, reviewed
-> **2026-11-02** (§1, §2 and §4, for M42's Full Swing). Everything here has been executed. For the *target* design — the full
+> **2026-11-11** (§1, §2, §4 and §5, for M43's call log and evals; before that 2026-11-02, for
+> M42's Full Swing). Everything here has been executed. For the *target* design — the full
 > component/deployment picture, the build order, and the parts not yet written — see
 > [FLOW.md](FLOW.md).
 >
@@ -292,6 +293,48 @@ python -m golf_coach.feedback.coach --session <S> --swing <W> [--golf-mcp PATH]
 #   provenance as analysis.json stores it, or {note}. The entry golf-lab analyze spawns (the M29
 #   plan's D15); whether to coach at all is the caller's switch
 #   exit 0 written · 2 a note: no key or extra, golf-mcp not built, no such or unanalyzed swing
+
+# What each Claude request cost and did: the call log's summary (M43, ADR-036 §2–§4)
+python -m golf_coach.llm_log summary [--since DATE] [--origin app|eval|all]
+#   reads data/processed/llm_calls.jsonl, which the three Claude routes append to, one line per
+#   API request, at the one place each makes it (clubs/lookup.py::_look_up,
+#   feedback/coach.py::_write, feedback/conversation.py::_mirror): metadata only, priced from
+#   measured usage with llm_prices.json. Per origin, route and requested model, and `app` unless
+#   asked, so an eval never bills real use. What each number counts is llm_log's module
+#   docstring. The coach eval's judge writes no line: its spend is on the eval's rows
+#   (meta.judge_cost_usd), so `--origin eval` leaves it out. Needs no extra
+#   exit 0, and a log not written yet says so
+
+# The evals (M43, ADR-036 §5–§9; the `llm` extra, and a credential the SDK resolves or
+# GOLF_ANTHROPIC_API_KEY). Every case is a paid call: a run is a command the user approves,
+# never a test, and --approve-harness is the user's flag, never an agent's
+python -m golf_coach.evals.runner --flow club_spec|coach_feedback --model M
+                                  [--variant baseline|v<N>] [--reps N] [--limit K]
+                                  [--concurrency N] [--timeout-s S] [--runs-dir DIR]
+                                  [--approve-harness]
+#   one flow's cases (evals/<flow>/) on one model through the real route's client= seam, graded,
+#   into .claude/hillclimb/<flow>/<variant>/: results.jsonl, traces/ and errors.jsonl, resumed at
+#   the (case, rep) key. A v<N> needs its change.md. The row and error shapes, the failure
+#   classes, the backoff, the ceiling, the harness gate and the zeros that stop a run are the
+#   module's docstring, and ADR-036's 2026-11-11 addendum where they are more exact than §5. The
+#   coach flow reads each case through golf-mcp, so build it first
+#   exit 0 every attempt scored · 1 an attempt failed · 2 refused before any request (the
+#   harness gate among the reasons) · 3 stopped on a zero
+python -m golf_coach.evals.judge_sanity [--reps N] [--dry-run] [--golf-mcp PATH]
+#   the coach judge's three must-fail paragraphs (empty, "I don't know", another swing's
+#   coaching), into .claude/hillclimb/coach_feedback/_judge_sanity/. Rerun it after any change
+#   to the judge (golf_coach.evals.coach_judge) and before the judge grades anything again
+#   exit 0 every probe failed · 1 the judge passed one · 2 a row missing, or refused
+python -m golf_coach.evals.coach_cases [--golf-mcp PATH]
+#   rewrites evals/coach_feedback/sessions/ and cases.md from cases.json, through golf-mcp: a
+#   recorder of the frozen engine (ADR-036 §1), byte-stable on a rerun. A brief that changes
+#   stops every coach attempt until the user approves cases.md again
+node "<claude-api skill base>/shared/evals/report/build-report-lite.mjs" .claude/hillclimb/<flow>/
+#   report.html and trajectory/scores.tsv over every variant, which is a directory named
+#   baseline or v<N> and nothing else (so _judge_sanity/ is not one).
+#   It ships with the claude-api skill, not this repo, and the skill prints its base path per
+#   session. It draws the headline metric alone, which on the coach is all_checks as graded, so
+#   ADR-036's results addendum is what to read beside it
 
 # Bring stored analyses up to the current engine (scripts/reanalyze.py's flags, M29 P27)
 cargo run --release --bin golf-lab -- reanalyze [SESSION/SWING ...] [--all] [--player P]
@@ -703,6 +746,19 @@ a pin for it beside the others.
 `BagStore`, the golfer confirms it, and *that* is the write — which is also what teaches the
 catalogue, so the second lookup of a confirmed club is a dictionary read and not an API call
 (ADR-026 §5, §7).
+
+**`llm_log` and `evals/` are M43's, and they sit inside ADR-035 §1's LLM exception** (ADR-036, named
+in clause 1 by ADR-035's M43 addendum). `llm_log.py` is the call log the three Claude routes write
+(`clubs/lookup.py`, `feedback/coach.py`, `feedback/conversation.py`), one line per API request at the
+one place each route makes it. It imports `config.py` and the standard library and nothing from
+`anthropic`, because `feedback/coach.py` imports it at module scope and must still import clean
+without the `llm` extra (`tests/api/test_pipeline_imports.py`). A failed write is one line on
+stderr and never changes what a route returns (ADR-036 §4). `golf_coach.evals` is the eval runner,
+its two flows (`club_spec`, `coach_feedback`) and the coach judge. They call the real route
+functions through their existing `client=` seams and import nothing in `golf_coach` beyond
+`config.py`, `llm_log` and the LLM survivors, so they add nothing to what M40 cuts. The one
+exception is `golf_coach.evals.coach_cases`, a recorder in ADR-035 §4's sense: it runs the frozen
+engine once to write the committed coach cases, and nothing on the run path imports it.
 
 **The dotted edges upward break the rule, knowingly:** `storage/corpus.py` and `mcp/query.py` both
 import `api.state` for `load_analysis` / `load_state`, the tolerant readers for the two artifacts
@@ -1144,6 +1200,9 @@ gitignored and never created. Everything persists as files:
 | Golfer registry | `data/processed/golfers/<player_id>.golfer.json` | ✅ `storage/golfer_store.py` — one file per golfer, name + handedness. Beside `sessions/`, not inside: a golfer outlives any one session, and that outliving is the point |
 | ↳ *their bag* | `data/processed/golfers/<player_id>.bag.json` | ✅ `storage/bag_store.py` (M9 P3, ADR-024) — the declared bag: which physical club fills each slot, carrying the whole `ClubSpec` since M12 P2 — loft, lie, length, head, shaft and grip, not the five free-text fields M9 shipped. Shares the directory with the golfer record and is kept apart by the suffix, since `list_all` globs `*.golfer.json`. Declared rather than derived, because "clubs used" is derivable from shot history and "clubs owned" is not. **Nothing deletes a club**: a replaced or removed one moves to an append-only `retired` shelf, so a loft measured once is never measured twice |
 | Conversations | `data/processed/conversations/<conversation-id>.json` | ✅ `storage/transcript_store.py` (ADR-020) — one follow-up conversation per file, holding the model's own content blocks **verbatim**, thinking blocks included. Not a rendering: they are replayed to the API on the next turn, and thinking blocks are only legal replayed unchanged and only into the model that produced them, which is why `model` is recorded beside them. Beside `sessions/` for `golfers/`'s reason — a conversation seeded from one swing is asking about another by its second turn |
+| LLM call log | `data/processed/llm_calls.jsonl` (from `settings.processed_dir`) | ✅ appended by `llm_log.record` (M43, ADR-036 §2), one JSON line per Claude API request from the club lookup, the coach and the follow-up conversation, at the one place each route makes its request. **Metadata only**: the models requested and served, `usage`, `cost_usd`, `latency_s`, the stop reason, the outcome (`ok` or the route's note kind) and the ids, and never a prompt, a response's text or a key. Priced from measured `usage` by `src/golf_coach/llm_prices.json` (committed, with its source and the date it was checked); a model the table lacks is `cost_usd: null`, never a zero. Each line's `origin` is `app` or `eval:<flow>/<variant>`. Gitignored because it records the user's own use, and read back by `llm_log summary`. The coach eval's judge writes no line: its spend is on the eval's rows |
+| Eval inputs | `evals/club_spec/` (`cases.json`, `cases.md`) and `evals/coach_feedback/` (`cases.json`, `cases.md`, `sessions/`) | ✅ committed whole (M43, ADR-036 §7, §9). The club-spec answer key comes from manufacturer spec pages, each value with its URL and the date it was read, and the user verified every set; `club_catalogue.json` is never its source, because that file is Claude's own past lookups. The coach cases are synthetic swings, laid out as stored swings so `golf-mcp` serves them, and written by `golf_coach.evals.coach_cases` from `cases.json`; `cases.md` is each brief as served, which the user approved and the coach flow refuses to run without |
+| Eval runs | `.claude/hillclimb/<flow>/` — `_state.json`, `baseline/` and `v<N>/`, each with `results.jsonl`, `traces/` and any `errors.jsonl`, plus the report builder's `report.html` and `trajectory/` | ✅ written by `golf_coach.evals.runner` (M43, ADR-036 §9), in the `claude-api` skill's build-eval.md layout; `_state.json` holds the approved harness sha and the metrics the report draws. **Committed, by the user's choice at M43's close**: each flow's `_state.json` (which the eval tests read), every variant's `results.jsonl`, `change.md` and any `errors.jsonl`, and the judge's sanity rows. `.gitignore` keeps `**/traces/` (the full messages with thinking) on the machine that ran them, and `report.html` and `trajectory/` too, because the lite builder regenerates both from `results.jsonl` |
 | Reference corpus | `data/reference/golfdb/` | ✅ gitignored for licensing (ADR-012) |
 | Benchmark aggregates | `src/golf_coach/analysis/benchmarks/*.json` | ✅ committed |
 | OCR models | `data/models/ocr/<model>/` — `model.onnx` and `inference.yml` for each of PP-OCRv6 medium detection and recognition and PP-LCNet textline orientation, and the recognizer's `dict.txt` | ✅ gitignored (`.gitignore`'s `data/models/ocr/`, M29 P1). Converted once from PaddleX's models, and verified, never trusted: `crates/ocr/models.json` is committed and pins each file's sha256, its source and its preprocessing constants, and `crates/ocr` refuses a missing file or a digest that disagrees, by name. The manifest's `conversion` block is the toolchain that made them (ADR-035's M29 addendum) |
@@ -1368,6 +1427,17 @@ is trustworthy without hardware.
   pass for a null. The census is printed instead of a verdict for the same reason M22's flight gate
   prints one. What it does *not* reach is one list in ADR-033's fourth addendum, and the two
   headline gaps are no left-handed clip and no pool running beside a live capture.
+- **And the model's answers are measured, not only handled** (M43, ADR-036). Every test of the
+  three Claude routes runs on a canned response through the route's `client=` seam, which proves
+  the code handles what the model sends and says nothing about whether the answer is right. Two
+  opt-in evals measure that, on the real routes, as commands the user approves and never as tests:
+  the club-spec lookup against an answer key read from manufacturer pages and verified by the user
+  value by value, and the coaching paragraph against code checks (the primary metric) and a blind
+  LLM judge (the secondary one). Both graders were signed off by the user before any full run, and
+  both have a baseline and three model variants on disk. What they found, and their limits, are
+  ADR-036's results addendum: on the coach, most failing code-check verdicts were the grader's own
+  errors, found by reading each one; the judge has passed its must-fail checks but has no human
+  calibration; and both case sets are small enough that only large gaps between models resolve.
 - **Not measured:** end-to-end wall-clock latency. The target is <15s swing-to-feedback
   (charter), but nothing has been benchmarked, and there is no UI to measure to. Any timing
   table you find in [FLOW.md](FLOW.md) is an estimate, not a measurement. The largest known term

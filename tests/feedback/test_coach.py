@@ -15,10 +15,12 @@ import subprocess
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
 
+from golf_coach import llm_log
 from golf_coach.contracts.alignment import (
     AlignmentQuality,
     ClipAlignment,
@@ -886,3 +888,231 @@ def test_the_module_runs_and_prints_one_json_object(tmp_path: Path) -> None:
     answer = json.loads(run.stdout)
     assert set(answer) == {"note"} and answer["note"].startswith("no written coaching: ")
     assert run.stdout.isascii()
+
+
+# --------------------------------------------------------------------------- the call log [M43 P4]
+#
+# One line per request, on both routes and every path that made one, and none on a path that did
+# not (ADR-036 §4). `_write` is the one place both routes reach, so it is the one place that logs.
+# The log is `tests/conftest.py::_throwaway_llm_log`'s file, so nothing here reaches the real
+# `llm_calls.jsonl`.
+
+
+def _logged() -> list[dict[str, Any]]:
+    path = llm_log._log_path()
+    if not path.exists():
+        return []
+    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
+
+
+def test_a_paragraph_logs_one_line() -> None:
+    generate_coaching(_bundle(), model=MODEL, client=_FakeClient(_Response([_Block("ok")])))
+
+    [line] = _logged()
+    assert line["route"] == "coach"
+    assert line["requested_model"] == MODEL
+    assert line["served_model"] == MODEL
+    assert line["stop_reason"] == "end_turn"
+    assert line["outcome"] == "ok"
+    assert line["error_class"] is None
+    assert line["origin"] == llm_log.DEFAULT_ORIGIN
+    assert line["turn_id"] is None and line["iteration"] is None
+    assert line["tool_calls"] == 0
+
+
+def test_a_session_of_swings_logs_a_line_per_swing() -> None:
+    client = _FakeClient(_Response([_Block("ok")]))
+    generate_coaching(_bundle(), model=MODEL, client=client)
+    generate_coaching(_bundle(unscored=["tempo"]), model=MODEL, client=client)
+
+    assert [line["outcome"] for line in _logged()] == ["ok", "ok"]
+
+
+@pytest.mark.parametrize(
+    ("response", "kind", "served"),
+    [
+        (_Response([_Block("...")], stop_reason="refusal"), "refusal", False),
+        (_Response([]), "no_text", False),
+        # Thinking can spend the whole budget, which is a truncation with nothing to serve.
+        (_Response([_Block("hm", type_="thinking")], stop_reason="max_tokens"), "no_text", False),
+        # Unlike the lookup's `truncated`, this one is served, with its admission.
+        (_Response([_Block("Your tempo is")], stop_reason="max_tokens"), "truncated", True),
+    ],
+)
+def test_each_answer_logs_one_line_with_its_kind(
+    response: _Response, kind: str, served: bool
+) -> None:
+    outcome = generate_coaching(_bundle(), model=MODEL, client=_FakeClient(response))
+
+    assert (outcome.text is not None) is served
+    [line] = _logged()
+    assert line["outcome"] == kind
+    assert line["stop_reason"] == response.stop_reason
+    assert line["error_class"] is None
+
+
+def test_a_failed_request_logs_one_line_with_its_error_and_no_usage() -> None:
+    outcome = generate_coaching(
+        _bundle(), model=MODEL, client=_FakeClient(RuntimeError("connection reset"))
+    )
+
+    assert outcome.note is not None
+    [line] = _logged()
+    assert line["outcome"] == "request_failed"
+    assert line["error_class"] == "RuntimeError"
+    assert line["served_model"] is None
+    assert line["usage"] is None
+    assert line["cost_usd"] is None
+
+
+@pytest.mark.parametrize(
+    ("error_name", "kind"),
+    [
+        ("NotFoundError", "model_not_found"),
+        ("AuthenticationError", "auth_failed"),
+        ("RateLimitError", "rate_limited"),
+        ("OverloadedError", "overloaded"),
+        ("InternalServerError", "api_error"),
+        ("BadRequestError", "api_error"),
+        ("APIStatusError", "api_error"),
+        ("APIConnectionError", "connection_failed"),
+        ("APITimeoutError", "connection_failed"),
+    ],
+)
+def test_sdk_errors_log_the_kind_of_note_they_became(error_name: str, kind: str) -> None:
+    """A 429 and a 529 are subclasses of `APIStatusError`, and must not log as one (M43 P8)."""
+    anthropic = pytest.importorskip("anthropic", reason="needs the `llm` extra to be meaningful")
+
+    exc = getattr(anthropic, error_name).__new__(getattr(anthropic, error_name))
+    Exception.__init__(exc, "boom")
+    generate_coaching(_bundle(), model=MODEL, client=_FakeClient(exc))
+
+    [line] = _logged()
+    assert line["outcome"] == kind
+    assert line["error_class"] == error_name
+
+
+def test_no_key_logs_nothing_because_nothing_was_sent() -> None:
+    pytest.importorskip("anthropic", reason="the missing-key note is only reached with the SDK")
+
+    generate_coaching(_bundle(), model=MODEL, api_key=None)
+
+    assert _logged() == []
+
+
+def test_a_missing_extra_logs_nothing(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("golf_coach.feedback.coach._sdk", lambda: None)
+
+    generate_coaching(_bundle(), model=MODEL, api_key=None)
+
+    assert _logged() == []
+
+
+@pytest.mark.parametrize("fails", [False, True])
+def test_latency_is_the_request_and_nothing_around_it(
+    fails: bool, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The clock moves only inside `create`, so a clock started after it would log a zero."""
+    clock = SimpleNamespace(now=100.0)
+    monkeypatch.setattr("golf_coach.feedback.coach.perf_counter", lambda: clock.now)
+    client = _FakeClient(RuntimeError("boom") if fails else _Response([_Block("ok")]))
+    create = client.messages.create
+
+    def slow_create(**kwargs: Any) -> object:
+        clock.now += 2.5
+        return create(**kwargs)
+
+    client.messages.create = slow_create  # type: ignore[method-assign]
+    generate_coaching(_bundle(), model=MODEL, client=client)
+
+    [line] = _logged()
+    assert line["latency_s"] == pytest.approx(2.5)
+
+
+def test_the_response_is_handed_to_the_log_whole() -> None:
+    """Usage, the served model and the request id come off the response, so the line is priced.
+
+    The coaching prompt is cached, so the line carries a cache read and a cache write. Claude Opus
+    5 at $5 in, $25 out, $0.50 a cache read and $6.25 a 5-minute cache write per million tokens,
+    the pricing page as read on 2026-11-09: 200 in, 400 out, 2,000 read and 1,000 written is
+    $0.001 + $0.01 + $0.001 + $0.00625.
+    """
+    response = _Response([_Block("Your tempo is quick.")])
+    response.usage = SimpleNamespace(  # type: ignore[attr-defined]
+        input_tokens=200,
+        output_tokens=400,
+        cache_read_input_tokens=2000,
+        cache_creation_input_tokens=1000,
+        cache_creation=None,
+    )
+    response._request_id = "req_coach"  # type: ignore[attr-defined]
+
+    generate_coaching(_bundle(), model=MODEL, client=_FakeClient(response))
+
+    [line] = _logged()
+    assert line["usage"] == {
+        "input_tokens": 200,
+        "output_tokens": 400,
+        "cache_read_input_tokens": 2000,
+        "cache_creation_input_tokens": 1000,
+    }
+    assert line["cost_usd"] == pytest.approx(0.01825)
+    assert line["request_id"] == "req_coach"
+
+
+def test_a_log_that_cannot_be_written_changes_nothing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """§4: the golfer gets the same paragraph whether or not the line could be written."""
+    blocker = tmp_path / "not-a-directory"
+    blocker.write_text("", encoding="utf-8")
+    monkeypatch.setattr(llm_log, "_log_path", lambda: blocker / "llm_calls.jsonl")
+
+    outcome = generate_coaching(
+        _bundle(), model=MODEL, client=_FakeClient(_Response([_Block("Your tempo is quick.")]))
+    )
+
+    assert outcome.text == "Your tempo is quick."
+    assert outcome.note is None
+    assert capsys.readouterr().err.startswith("llm_log: ")
+
+
+def test_the_stdio_route_logs_its_one_request(
+    golf_mcp: Path, tmp_path: Path, store_swing: Any
+) -> None:
+    """The second route reaches `_write` too, so its request is logged in the same one place."""
+    store_swing(tmp_path / "sessions", _full_bundle())
+    (tmp_path / "shots").mkdir()
+    client = _FakeClient(_Response([_Block("Your tempo is quick.")]))
+
+    answer = coach_through_golf_mcp(
+        "2026-08-10", "2", server=_golf_mcp_over(golf_mcp, tmp_path), model=MODEL, client=client
+    )
+
+    assert answer["text"] == "Your tempo is quick."
+    [line] = _logged()
+    assert line["route"] == "coach"
+    assert line["outcome"] == "ok"
+
+
+def test_a_swing_with_nothing_to_coach_from_logs_nothing(golf_mcp: Path, tmp_path: Path) -> None:
+    (tmp_path / "sessions").mkdir()
+    (tmp_path / "shots").mkdir()
+    client = _FakeClient(_Response([_Block("never asked")]))
+
+    coach_through_golf_mcp(
+        "2026-08-10", "9", server=_golf_mcp_over(golf_mcp, tmp_path), model=MODEL, client=client
+    )
+
+    assert _logged() == []
+
+
+def test_an_unbuilt_server_and_a_missing_key_log_nothing(tmp_path: Path) -> None:
+    unbuilt = _golf_mcp_over(tmp_path / "golf-mcp", tmp_path)
+
+    coach_through_golf_mcp(
+        "2026-08-10", "2", server=unbuilt, model=MODEL, client=_FakeClient(_Response([]))
+    )
+    coach_through_golf_mcp("2026-08-10", "2", server=unbuilt, model=MODEL, api_key=None)
+
+    assert _logged() == []

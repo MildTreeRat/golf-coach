@@ -25,8 +25,10 @@ on 2026-09-30, and their commands are in
 [P2's](../plans/m31-5-rust-first-replan.md#p2--found-2026-09-30). "Rn" below is a row of P1's
 inventory, and "Qn" is one of P2's answers.
 
-**M29 built clauses 2 and 5** (2026-10-29). The addendum at the foot answers the four
-questions this ADR left to M29 and names the dependencies the build brought in.
+**M29 built clauses 2 and 5** (2026-10-29). The first addendum at the foot answers the four
+questions this ADR left to M29 and names the dependencies the build brought in. The second
+(2026-11-09, M43, with [ADR-036](036-llm-evaluation-and-observability.md)) adds the
+call log and the evals to clause 1's LLM list.
 
 ## Date
 2026-09-30
@@ -496,3 +498,34 @@ Each is pinned to an exact version, and each crate's `Cargo.toml` says why that 
 Clauses 1–7 stand. The survivors are clause 1's list, the scoring path has no numeric library, the
 oracle is Rust's, and M40 still deletes the frozen server's closure: `analysis/`, `storage/` but
 `transcript_store.py`, `launch_monitor/`, `audio/`, Python `mcp/` and `api/` unless M40 ports it.
+
+## Addendum (2026-11-09, M43): the LLM exception gains the call log and the evals
+
+[M43](../plans/m43-llm-evals.md) measures the three Claude routes, logging what each request costs
+and grading the answers against an answer key. That is new Python, and clause 1 says nothing
+survives that it does not name. So clause 1's **LLM** list gains, by name:
+
+- **`src/golf_coach/llm_log.py`**, the call log, which the three routes write to;
+- **`src/golf_coach/llm_prices.json`**, the price table it reads;
+- **the `golf_coach.evals` package**, the eval runner, its flows and the judge;
+- **the `evals/` data directory** at the repo root, the answer key and the coach cases.
+
+A file inside the package or the directory needs no further decision (ADR-036 clause 1). The runs
+under `.claude/hillclimb/` are data, not Python, and fall under no clause here.
+
+**Why this is the LLM exception and not a third one.** Every one of these exists only to observe
+or measure the LLM routes. `llm_log` is imported by `clubs/lookup.py`, `feedback/coach.py` and
+`feedback/conversation.py`, and the runner calls those same functions. None of them is required by
+some other library, so this is not the bar clause 1 sets for a third exception, and it does not
+lower that bar.
+
+**The closure stays where it was.** `llm_log` imports no `anthropic`. The runner, the flows and the
+judge import nothing from `golf_coach` beyond `config.py`, `llm_log` and this clause's survivors, so
+they add nothing to what M40 cuts. The one possible exception is a coach-case generator that reads
+the frozen lab's shapes as a recorder, under clause 4 (ADR-036 clause 1 sets its terms). **For
+M40**: `llm_log` writes beneath `settings.processed_dir`, so M40's cut of `config.py` keeps that
+field, or gives `llm_log` its path another way.
+
+**What this does not change.** Clauses 1–7 stand, with clause 1's list extended as above. The
+bar for a third exception is where it was, the frozen lab gains nothing, and M43 changes no Rust
+and adds no `config.py` field.
