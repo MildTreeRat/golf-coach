@@ -42,7 +42,7 @@ machine, pull on the new" as its precondition.
 | Phase | What | State |
 |---|---|---|
 | **P0** | 🪟 This plan, the ROADMAP pointer, and the plan's commit | ✅ Done *(2026-11-12)* — approved by the user |
-| **P1** | 🪟 ADR-037: where on the face, by method, and the drill framework | ⬜ |
+| **P1** | 🪟 ADR-037: where on the face, by method, and the drill framework | ✅ Done *(2026-11-12)* |
 | **P2** | 🪟 The truth sheet and the tape session's run sheet | ⬜ |
 | **P3** | 🧍 The tape session: labels measured, strikes photographed, truth sheets photographed | ⬜ |
 | **P4** | 🪟 The session's inventory and the label geometry as data | ⬜ |
@@ -988,3 +988,37 @@ named as skipped where they are not), then write the three records, and commit `
    and P3's finding must say what a strike looks like on the label.
 3. **For P8**: `golf-lab` already reaches `ocr::decode::load_image` (HEIC through ffmpeg), so the desk
    decode needs no new path.
+
+### P1 (2026-11-12)
+
+1. **ADR-037 is written**, `docs/decisions/037-impact-location-by-method-and-drills.md`, Accepted
+   2026-11-12, and `docs/README.md` lists it with no addenda. **It amends no ADR**: it applies ADR-034 §3
+   and the M37 addendum's strike-location rule as written. Its clauses are numbered 1 to 11 for later
+   phases to cite: the interface (1), the tape's frame (2), the reader's answers and the gate (3),
+   declarations (4), the framework and its layout (5), untracked and kept (6), the ladder (7), the pattern
+   and suggestions (8), differential judging (9), the credit (10) and what does not change (11). C9's radii
+   are pointed at rather than copied, because P4 and P13 cut them.
+2. **P0 left the map's document count stale.** `docs/README.md` said 94 markdown documents while git
+   tracked 95, the plan itself, so the doc-truth test failed at P1's start. P1's counts take both files:
+   96 documents, 79 in `docs/`, 38 ADR files, 16 plans, and 37 decisions. **For every later phase that
+   adds a committed `.md`** (P2's truth sheet and run sheet, if they are markdown): bump the map's counts
+   in the same change, and `git add` the file before running doc-truth, because the test counts
+   `git ls-files`.
+3. **The plan's rejected alternative "tip only" was read as "tap only"**: the user tapping every mark,
+   with no reader. That is the alternative ROADMAP §M46 raised ("the user tapping it, or the photo being
+   read") and D4 declines as the last resort. If the user meant something else, the ADR's third option
+   under Options Considered is the one to change.
+4. **For P5**: `FaceImpact.method_version` has nothing to hold for `OverheadReplay`, because M42's replay
+   reader has no version key (ADR-034's M42 addendum). ADR-037 clause 1 names the gap and leaves it to the
+   first milestone that makes a `FaceImpact` from a replay, since nothing in M46 does. P5 should say so in
+   the doc comment rather than invent a replay version key, which would be improving M42's reader (Not in
+   M46).
+5. **For P14 and P15**: C11 gives no start level to a baseline whose widest circle holds fewer than 5, and
+   C14's `R` is "the last ladder level, or the baseline's start level". So after such a baseline, which
+   suggests differential practice (C13), `R` is unstated, and ADR-037 clause 9 repeats the plan without
+   deciding. The widest radius is the obvious reading. If the plan still says nothing more by then, that
+   is the user's call, and the phase reports `BLOCKED` rather than choosing.
+6. **For P15**: ADR-037 clause 8 reads C13's recentre trigger as both conditions on the **same** axis: on
+   some axis, the 95% interval excludes 0 and that axis's mean is more than a third of the radius from 0.
+7. **For P30**: nothing routes to ADR-037 yet outside the map. CLAUDE.md's *Where the answer is* table and
+   `docs/ARCHITECTURE.md` (with C22's credit) are P30's to add.
