@@ -56,7 +56,7 @@ machine, pull on the new" as its precondition.
 | **P12** | 🪟 The newest mark: the diff against the last strike | ✅ Done *(2026-11-13)* |
 | **P13** | 🪟 The reader end to end on synthetic photos, and its gate | ✅ Done *(2026-11-13)* |
 | **P14** | 🪟 `analysis::drill`: the baseline and the ladder | ✅ Done *(2026-11-13)* |
-| **P15** | 🪟 `analysis::drill`: the pattern, the triggers and differential judging | ⬜ |
+| **P15** | 🪟 `analysis::drill`: the pattern, the triggers and differential judging | ✅ Done *(2026-11-13)* |
 | **P16** | 🪟 `feedback::drill_rules`: the sentences | ⬜ |
 | **P17** | 🪟 `storage::drill_store`: the drill history on disk | ⬜ |
 | **P18** | 🪟 Facade: `record_tape_photo`, the pick and "missed the tape" | ⬜ |
@@ -1071,6 +1071,14 @@ named as skipped where they are not), then write the three records, and commit `
    suggests differential practice (C13), `R` is unstated, and ADR-037 clause 9 repeats the plan without
    deciding. The widest radius is the obvious reading. If the plan still says nothing more by then, that
    is the user's call, and the phase reports `BLOCKED` rather than choosing.
+   - **Decided by the user (2026-11-13): the widest radius.** If a first baseline's widest circle holds
+     fewer than 5 of its 10 strikes, the club starts at the category's widest ladder radius. That radius
+     is C14's `R` until the ladder moves it, so differential practice can be accepted and judged after
+     such a baseline. The two alternatives the user turned down were re-running the baseline until the
+     circle holds 5, and starting at the widest but marking the level provisional. P14's `start_level`
+     returns `None` here as built; whichever of P15, P18 or P19 first needs the level maps that `None`
+     to the widest index (or changes `start_level` itself, and says so in its finding). ADR-037 clause 9
+     gains the sentence at P30.
 6. **For P15**: ADR-037 clause 8 reads C13's recentre trigger as both conditions on the **same** axis: on
    some axis, the 95% interval excludes 0 and that axis's mean is more than a third of the radius from 0.
 7. **For P30**: nothing routes to ADR-037 yet outside the map. CLAUDE.md's *Where the answer is* table and
@@ -2483,6 +2491,100 @@ named as skipped where they are not), then write the three records, and commit `
    plain numbers.
 6. **Verify**:
    - `cargo test -p analysis` passes, all binaries.
+   - `cargo clippy -p analysis --all-targets -- -D warnings` and `cargo fmt --check` are clean.
+   - The doc-truth test passes (91).
+   - `cargo doc -p analysis` adds no warning from `drill.rs`.
+
+### P15 (2026-11-13)
+
+1. **The rest of `analysis::drill` is built**, in `crates/analysis/src/drill.rs`: `pattern` (with `Pattern`),
+   `off_centre` (with `OffCentre { heel_toe, high_low }` and `any()`), `judge_recentre` (with `RecentreResult`),
+   `call_made`, `judge_differential` (with `DifferentialResult`), `suggestion` and `level_or_widest`.
+   `crates/analysis/tests/drill.rs` gained 19 tests, 42 in all, covering every case the section's done line
+   names. Four mutations were tried by hand and each one was caught: `>` to `>=` in the trigger, `<=` to `<` in
+   the goal, `<=` to `<` in the heel call, and recentre dropped. No shape in `contracts` changed, and no
+   version key moved. Three const assertions join P14's two: `FRESH_BASELINE_AT <= BLOCK_SIZE`,
+   `PATTERN_WINDOW >= RATE_MINIMUM_N` and `DIFFERENTIAL_AFTER_BLOCKS > 0`.
+2. **What the section left open, and how P15 settled it.**
+   - **The signature is `suggestion(club: ClubId, state: &ClubDrillState, strikes: &[TapeStrike]) ->
+     Result<Option<Suggestion>, ContractError>`**, not the section's `(state, last_block, pattern)`. The
+     two-in-a-row trigger has to judge the last two entries again from their strikes (P14 finding 3). The
+     pattern is worked out inside, from the club's own strikes, so its window cannot be the wrong one.
+     `strikes` may hold every club's, and only `club`'s are read. The category is `category_of(club)`.
+     **`state.suggestion` is never read**, which is what makes a declined suggestion come back after every
+     block it still holds for.
+   - **The judged block's stage is read from its strikes** (the history's last entry), never from
+     `state.stage`, because a judged baseline leaves the club on the ladder. An entry whose strikes span two
+     stages is refused.
+   - **What fires, by that stage.** After a baseline or a ladder block, `Recentre` comes first if the pattern is
+     off centre against the club's current circle. If it is not, `Differential` fires if the baseline named no
+     start level, or after two ladder blocks in a row. After a recentre block, `ReturnToLadder` fires if it met
+     its goal. After a differential block, `FreshBaseline` fires if it made 7 calls. So neither the recentre
+     stage nor the differential stage ever suggests recentring. In the differential stage the pattern is
+     stale, because its strikes never enter it.
+   - **Recentre outranks differential practice** when both hold. ADR-037 clause 8 says the circle's count
+     "cannot tell" a tight pattern off centre from a centred wide one, and the recentre trigger can. So when it
+     fires, the failed count is at least partly the offset. The test is a tight pattern 15 mm toward the toe:
+     it misses even the widest circle, so both triggers hold, and the answer is `Recentre`.
+   - **"Two blocks in a row" counts ladder blocks only** (P14 finding 3's question). Each of the last
+     `DIFFERENTIAL_AFTER_BLOCKS` entries must be a ladder block, judged again by `judge_block` at its `from`,
+     whose `at_widest_out` is true. A judged recentre, differential or baseline entry between them breaks the
+     row. An abandoned block leaves no entry, so it does not. A block that moved out *to* the widest was not
+     at it.
+   - **The recentre goal is per axis and inclusive**: each axis's block mean is at most `RECENTRE_FRACTION ×
+     R` from 0. That is the trigger's own test turned round (P1 finding 6), so a block that meets the goal
+     cannot be off centre by its mean. The trigger's "more than" is strict, and "excludes 0" means `low > 0`
+     or `high < 0`, so an interval touching 0 holds it.
+   - **A recentre block with a strike declared off the tape has no mean (`None`), and the goal is not met.**
+     Nobody saw which side that strike missed on, and a mean of the other nine would guess at the tenth
+     (ADR-010 §2). The pattern leaves such a strike out instead, because C12 defines it over positioned
+     strikes.
+   - **`judge_recentre` and `judge_differential` take `(block, level, category)`**, as `judge_block` does. They
+     read the radius from the table and refuse exactly what it refuses. `judge_differential` reads each
+     strike's own stored `call` and refuses a counted strike with none. Inside `suggestion`, the recentre
+     trigger's radius is `state.level`'s, and a block judged again is judged at its entry's `from`.
+   - **P1 finding 5 is now in the code as `level_or_widest(level: Option<usize>) -> usize`**, the user's rule
+     written once. `level_or_widest(start_level(baseline, category)?)` is the level a judged baseline leaves its
+     club at. `start_level` still answers `Ok(None)`, so the differential trigger stays visible. `suggestion`
+     reads `state.level` and every entry's `from` through it, so a club left in the baseline with no level is
+     treated as at the widest (tested).
+   - **The refusal fields** are `suggestion.history`, for an entry naming a strike that is not among the
+     club's, an entry naming no strikes, or an entry of two stages. `suggestion.level` and
+     `suggestion.category` come from the radius lookup, and `judge_recentre.{block,level,category}` and
+     `judge_differential.{block,level,category}` follow the same pattern. An uncalled strike in a
+     differential block is refused under `judge_differential.block`.
+   - `pattern` takes `impl IntoIterator<Item = &TapeStrike>`, so a slice and a filtered `Vec<&TapeStrike>`
+     both work. It reads whatever strikes it is given, one club's or a category's, oldest first.
+   - Outside the Touch line: one sentence of `crates/analysis/src/lib.rs`'s module doc now says P15 is built.
+     The test file's `shell` stamps `07:MM:SS`, so strike numbers up to 3,599 are valid, where they had stopped
+     at 59.
+3. **For P16**: the inputs for each sentence are plain numbers the facade copies across, because `feedback`
+   cannot see `analysis`. "Your strikes sit 6 mm toward the toe" takes `Pattern::centre` together with
+   `OffCentre`'s axes. When both axes are off, naming both or only the larger is P16's call. The recentre
+   result is `RecentreResult::mean`, which is `None` with a strike off the tape, so the sentence has to say the
+   block had a miss rather than print a mean. The differential result is `DifferentialResult::made` of
+   `counted`. **The differential suggestion fires for two reasons**: a baseline that named no start level, or
+   two ladder blocks failed at the widest. `Suggestion` does not say which, so if the sentence differs between
+   them, the facade has to tell it which one fired.
+4. **For P16 and P20**: **the baseline's R50, "shown either way" (C11), is not always `pattern`'s `r50`.**
+   `pattern` leaves out strikes declared off the tape and needs 10 positioned strikes, so a baseline with one
+   declaration has no pattern of its own. A median of ten can still be exact with up to four declarations,
+   because each one lies past the label's inscribed radius. That holds only when the placed strikes the
+   median needs lie inside that radius, since a strike in a label's corner lies past it too. P15 added no
+   baseline R50. Whichever phase shows it first decides how, and says so.
+5. **For P18 and P19**: when a block ends, judge it by its stage. A baseline goes through `level_or_widest(
+   start_level(..)?)`, a ladder block through `judge_block`, and a recentre or differential block keeps the
+   level (`judge_recentre` or `judge_differential` give its view). Then push the `LevelEntry` (`from` is the
+   level before, `to` the level after), set the stage (a baseline goes to the ladder, any other stage stays),
+   and only then call `suggestion(club, &state, &strikes)` and store what it returns. It reads the entry just
+   pushed. An accepted `ReturnToLadder` goes back to the ladder at the same level. An accepted `FreshBaseline`
+   goes to the baseline stage and keeps the level until the new baseline replaces it. The reading card's
+   "made it" for a differential strike is `call_made(strike, call, radius)` at the club's current radius.
+6. **For P30**: ADR-037 clause 8 gains four sentences: recentre outranks differential practice; the row
+   counts ladder blocks only; the goal is per axis; and a declaration leaves a recentre block's mean unknown.
+   P1 finding 5's sentence for clause 9 is still P30's to write.
+7. **Verify**:
+   - `cargo test -p analysis` passes, all binaries (`drill`: 42).
    - `cargo clippy -p analysis --all-targets -- -D warnings` and `cargo fmt --check` are clean.
    - The doc-truth test passes (91).
    - `cargo doc -p analysis` adds no warning from `drill.rs`.
