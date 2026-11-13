@@ -52,7 +52,7 @@ machine, pull on the new" as its precondition.
 | **P8** | 🪟 `golf-lab read-tape`: the desk tool and its review images | ✅ Done *(2026-11-12)* |
 | **P9** | 🪟 The label finder, on synthetic photos | ✅ Done *(2026-11-12)* |
 | **P10** | 🪟 Orientation: heel and up, from the hosel | ✅ Done *(2026-11-12)* |
-| **P11** | 🪟 The mark on a fresh label | ⬜ |
+| **P11** | 🪟 The mark on a fresh label | ✅ Done *(2026-11-12)* |
 | **P12** | 🪟 The newest mark: the diff against the last strike | ⬜ |
 | **P13** | 🪟 The reader end to end on synthetic photos, and its gate | ⬜ |
 | **P14** | 🪟 `analysis::drill`: the baseline and the ladder | ⬜ |
@@ -1980,3 +1980,119 @@ named as skipped where they are not), then write the three records, and commit `
       well (finding 2).
     - `impact::tape` now orients the label. P9 finding 14 already names `docs/ARCHITECTURE.md` and
       `CLAUDE.md`'s `crates/impact` sentence.
+
+### P11 (2026-11-12)
+
+1. **The mark finder is built**: `impact::tape::find_marks(crop, label) -> Result<Vec<Spot>, MarkMiss>`, in
+   `crates/impact/src/tape/mark.rs`, and `read_tape` calls it after the orientation. The module doc gives the
+   steps:
+   - **the interior**: the outline less a `MARK_EDGE_MARGIN_MM` rim, where the face may show;
+   - **the white**: a plane over the crop, fitted robustly to a `WHITE_BAND_MM` band just inside the rim;
+   - **dark**: a darkening `(white − luminance) / white` of at least `MARK_MIN_CONTRAST`;
+   - **wide**: opened by a disc `MARK_OPEN_RADIUS_MM` in radius, which strips the printing;
+   - **spots**: runs of at least `MARK_MIN_AREA_MM2`, each centroid weighted by darkening;
+   - **clipped**: a spot reaching the rim.
+
+   With no previous crop, `read_tape` reads one whole spot as `Read { new_label: true }`. One clipped spot is
+   `mark_clipped`, and none is `no_new_mark`. Two or more spots need a pick, and so does one spot longer than
+   `MARK_MAX_ELONGATION`. `MarkMiss::NoWhite` (a band too dark or too mixed to give a white) is also
+   `NeedsPick`, because that is a label found and squared whose mark cannot be placed (C5).
+2. **What P11 settled that the plan left open.** None of these touches a decision.
+   - **The printing is told apart by shape.** Every printed stroke is thin, and a 4 mm disc fits in none of
+     them. Colour was not used, because the mark's colour is unknown. A mask of the printing was not used
+     either: its layout is not in `LabelType` (P4 finding 9), and the mask would cut a hole where a mark
+     covers printing. The module doc gives the reasons.
+   - **The cross is not the anchor** (P9 finding 10). A centred strike covers the cross, so the anchor would
+     fail on the strikes the drill is for, and one pattern would mix two frames. The 0.9 mm was measured on
+     white paper, where the edge is faint. The module doc says so, and P29 measures it.
+   - **An elongation gate the section did not name.** A lone spot longer than 1.3 (`√(λ₁/λ₂)`) is taken for
+     two marks run together and needs a pick, rather than being read halfway between them (rule 6). Its known
+     cost is that a pair closer than about 0.8 radii reads as one mark at their middle, at most 0.42 radii
+     from each. A test pins that.
+   - **With a previous crop, a marked label needs a pick until P12.** A spot there may be the last strike's.
+     A label with no spot is `no_new_mark` either way. This placeholder is the same kind as P10's.
+   - **`TapeMark` gained `area_mm2`** (P8 finding 6's invitation). No strike's size is known, so the reader
+     reports each. `golf-lab read-tape` prints it as `area_mm2`, and the review's ring is now the disc of that
+     area. `MARK_RING_MM` gave way to `mark_ring_px`.
+   - **A mark mostly off the label is a speck.** What lies inside the rim is under `MARK_MIN_AREA_MM2`, so the
+     reader answers `no_new_mark`, not `mark_clipped`. "Missed the tape" then gives the same verdict, outside
+     every circle, because that mark's centre is at or beyond the edge.
+   - **Files beyond the Touch line**:
+     - `crates/impact/src/tape/orient.rs`: `opening` is split out of `thin_parts` and is `pub(super)`, as is
+       `squared_distance`. The marks and the shaft now share one distance transform.
+     - `crates/impact/tests/tape_scene/mod.rs`: `truth` and `framed` moved here from `tape_orient.rs`, and the
+       six tilted poses became `tilted_poses()`, with `Pose::scene`.
+     - `crates/impact/tests/tape_orient.rs` now uses those. Its last test, P10's placeholder ("`NeedsPick`
+       until P11"), is gone, and `tape_mark.rs` covers what `read_tape` answers for an oriented label.
+     - `crates/lab/src/read_tape.rs`: `area_mm2`, as above.
+3. **The tunables**, each with its doc and the bracket P29 may move it within:
+
+   | Constant | Value | Bracket |
+   |---|---|---|
+   | `MARK_MIN_CONTRAST` | 0.2 | 0.1 to 0.35 |
+   | `MARK_OPEN_RADIUS_MM` | 2.0 | 1.0 to 3.0 |
+   | `MARK_MIN_AREA_MM2` | 30 | 15 to 100 |
+   | `MARK_EDGE_MARGIN_MM` | 1.0 | 0.5 to 2.0 |
+   | `MARK_MAX_ELONGATION` | 1.3 | 1.15 to 1.8 |
+
+   `WHITE_BAND_MM` (3) is public. These are private, each with its reason:
+   - `CLIP_REACH_MM` (0.5);
+   - the white fit's settings: 5 rounds, keep within 3 spreads, a least spread of 1 level, at most 0.25 of the
+     band brighter than the white, and a least white of 32 levels.
+4. **The tests.**
+   - **Where they are**: `crates/impact/tests/tape_mark.rs` holds 9 tests, and `mark.rs` 5 unit tests (the
+     interior, the white through stripes and a gradient, a mostly dark band refused, elongation, and the
+     fresh-label rule). Every mark is a 6 mm-radius disc unless named.
+   - **Read, all within 0.2 mm**:
+     - 12 face-on scenes: 3 types × 2 hands × both ways up, with marks over the cross, the dashes, the iron's
+       grid, the driver's text and the edge of the logo's letters. The worst was **0.089 mm**.
+     - The 6 tilted poses. The worst was **0.059 mm**.
+     - Each area came to 114.2 to 117.2 mm² for a 113.1 mm² disc. The largest is the hybrid mark touching the
+       logo's letters.
+   - **No mark found on 12 unmarked labels**, and none of the printing taken for one. They are face-on at 200
+     mm, at 240 mm (about 4.2 px/mm, near the finder's least), and the 6 tilted poses. Each is `no_new_mark`.
+   - **Refused or handed to a pick**:
+     - `mark_clipped`: a mark 1 mm in from each type's bottom edge, and one at the iron label's end;
+     - `NeedsPick`, two marks 24 mm apart: each spot lies within 0.2 mm of its mark;
+     - `NeedsPick`, two 5 mm marks 8 mm apart: elongation 1.88 to 1.97;
+     - read as one, two 5 mm marks 3 mm apart: the reading is their middle, within 0.2 mm;
+     - `no_new_mark`, a 2.5 mm speck;
+     - with a previous crop: `NeedsPick` when marked, and `no_new_mark` when not;
+     - `no_orientation`, a marked label with no shaft, before any mark is looked for.
+   - **Speed.** The file takes about 21 s in a debug build, almost all of it drawing.
+5. **The verb over the drawn photos.** All 45 photos the tests drew (`TAPE_SCENE_DIR`) went through `golf-lab
+   read-tape --review`, into the session scratchpad. Each outcome is as its test expects. Four reviews were
+   looked at: a left-handed driver logo-down, a hybrid mark over the logo's letters, a tilted iron, and the
+   clipped iron end. On each, the ring sits on the mark at its size, and the arrows match the scene's hand
+   and turn. P3's flat photo is still `no_orientation` on all three types, since no mark is looked for on
+   a label with no club. A release read of an 800 × 600 photo takes 0.12 to 0.14 s, marks included. Nothing
+   was written under `data/`. The run over P3's first-strike photos is P29's (P3 finding 10).
+6. **For P12**:
+   - Replace the `if previous.is_some()` block in `read_tape`. `on_a_fresh_label` is the single-mark rule for a
+     label the diff finds new.
+   - `mark.rs`'s `Interior`, `White`, `darkening` and `spots` are `pub(super)`. A change field can be handed to
+     `spots` in place of the darkening, which brings the opening, the area floor, the centroid and the clip
+     test along with it.
+   - Both crops share one `CropGrid` (P7 finding 6), so the current crop's `Interior` serves both. The previous
+     crop arrives as a bare `Frame` (P8 finding 5), and its outside pixels are black, which reads as dark.
+     Leave them out.
+   - P9's synthetic marks, 2.5 to 3.5 mm in radius, are specks to this reader. A whole mark needs about 3.1
+     mm of radius for `MARK_MIN_AREA_MM2`. Draw them 4.5 mm or more.
+7. **For P13**:
+   - `truth`, `framed`, `tilted_poses` and `Pose` are in `tape_scene`.
+   - Keep whole marks at least 1.5 mm plus their radius inside the outline, or they come out `mark_clipped`.
+   - With no previous crop, an overlap closer than about 0.8 radii reads as one mark (finding 2). The set's
+     overlap photo is P12's diff to judge, not this rule.
+8. **For P18**:
+   - C8's `TapeStrike` has no area, so `TapeMark::area_mm2` is the reader's alone unless P18 stores it.
+   - A pending pick can come from `MarkMiss::NoWhite` as well as from two marks.
+9. **For P29**:
+   - every tunable in finding 3, with its bracket;
+   - the real mark's colour, size (each JSON line's `area_mm2`) and shape (the elongation gate);
+   - marks speckled by the ball's dimples, which may break into pieces narrower than the disc;
+   - shadows across the label, which a plane cannot follow;
+   - whether the darkening weights pull a translucent mark's centroid toward the printing under it;
+   - the cross's offset from the fit (finding 2).
+10. **For P30**:
+    - `impact::tape` now finds marks, and P9 finding 14 names the docs to update.
+    - The desk tool's JSON line has a new key, `area_mm2`, in each mark.

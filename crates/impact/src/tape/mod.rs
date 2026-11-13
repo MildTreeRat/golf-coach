@@ -22,8 +22,11 @@
 //! **P10 orients a found label from the club** (`orient.rs`): [`orient`] finds the shaft leaving
 //! the label's heel end and running up, which settles both of [`Orientation`]'s flips, and checks
 //! them against the golfer's hand when one is given. A label stuck logo-down is read, not refused.
-//! Nothing yet looks for marks, so [`read_tape`] hands every label it orients to the golfer as
-//! [`TapeOutcome::NeedsPick`] until P11.
+//!
+//! **P11 finds the marks on an oriented label** (`mark.rs`): [`find_marks`] takes each dark spot on
+//! the crop wide enough to be a strike's, against the label's own white, and [`read_tape`] reads a
+//! fresh label's one mark. With a previous crop it does not yet tell old marks from new, so a marked
+//! label needs a pick there until P12.
 //!
 //! # A Rust table, not `tape_labels.json`
 //!
@@ -56,15 +59,21 @@
 
 mod geometry;
 mod label;
+mod mark;
 mod orient;
 mod tape_labels;
 
 use crate::frame::Frame;
+use mark::{on_a_fresh_label, Fresh};
 
 pub use geometry::{rectify, Crop, CropGrid, Degenerate, Homography, CROP_PX_PER_MM};
 pub use label::{
     find_label, LabelMiss, OutlineFit, ASPECT_TOLERANCE, LABEL_SATURATION_MAX, LOGO_CONTRAST,
     MAX_OUTSIDE_SHARE, MIN_INLIER_SHARE, MIN_OUTLINE_SUPPORT, MIN_PX_PER_MM, OUTLINE_INLIER_MM,
+};
+pub use mark::{
+    find_marks, MarkMiss, Spot, MARK_EDGE_MARGIN_MM, MARK_MAX_ELONGATION, MARK_MIN_AREA_MM2,
+    MARK_MIN_CONTRAST, MARK_OPEN_RADIUS_MM, WHITE_BAND_MM,
 };
 pub use orient::{
     orient, OrientMiss, Shaft, HEEL_MIN_SHARE, ORIENT_PX_PER_MM, SEARCH_REACH_MM, SHAFT_DARK_RATIO,
@@ -212,6 +221,10 @@ pub struct TapeMark {
     pub offset_h_mm: f64,
     /// High to low, millimetres from the label's centre: `+` toward the top line.
     pub offset_v_mm: f64,
+    /// The mark's area on the label, square millimetres: what [`find_marks`] kept of it. No
+    /// strike's size is known before P29 (P3 finding 10), so the reader reports each, for the
+    /// review's ring and for P29 to set [`MARK_MIN_AREA_MM2`] from. [M46 P11]
+    pub area_mm2: f64,
 }
 
 /// Which way the club lies across the label's printed frame: what turns a printed millimetre into
@@ -330,22 +343,30 @@ impl TapeRefusal {
 
 /// Read one photo of a label on the club: C5's reader. `previous` is the club's last crop (C16,
 /// ADR-037 clause 3), and `None` reads the label as fresh. `hand` is the golfer's, which checks the
-/// orientation the shaft gives (C4), and `None` leaves the shaft alone to decide. [M46 P8, P9, P10]
+/// orientation the shaft gives (C4), and `None` leaves the shaft alone to decide. [M46 P8, P9, P10,
+/// P11]
 ///
 /// A photo that is not well formed ([`Frame::is_well_formed`]) is `decode_failed`, and one in which
 /// [`find_label`] finds no label is `no_label`, whatever its [`LabelMiss`]. A found label that
 /// [`orient`] cannot orient is `no_orientation`, whatever its [`OrientMiss`], and carries the label.
+/// Orientation comes before the marks, so no mark is looked for on a label with no sides (P8's
+/// finding).
 ///
-/// **An oriented label needs a pick until P11.** Nothing has looked for a mark yet, so the golfer is
-/// handed the crop to tap, which is the one way to place a mark without a guess (the M46 plan's
-/// rule 6). P11 and P12 add the marks, and `previous` is unread until P12.
+/// **The marks** are [`find_marks`]'s spots. A label with none is `no_new_mark`, whatever came
+/// before it. With no previous crop the label is fresh (D4): one whole spot is read, with
+/// `new_label`; one cut by the edge is `mark_clipped`; and two or more, or one too long to be one
+/// mark ([`MARK_MAX_ELONGATION`]), need the golfer's pick. So does a label whose white could not be
+/// told ([`MarkMiss`]), since that is a label found and squared whose mark cannot be placed (C5).
+///
+/// **With a previous crop, a marked label needs a pick until P12**, which diffs the two. Read here,
+/// an old mark would come out as the new one, a wrong reading where a pick is owed (the M46 plan's
+/// rule 6).
 pub fn read_tape(
     photo: &Frame,
     previous: Option<&Frame>,
     label: &LabelType,
     hand: Option<Handedness>,
 ) -> TapeOutcome {
-    let _ = previous;
     if !photo.is_well_formed() {
         return TapeOutcome::NotRead {
             reason: TapeRefusal::DecodeFailed,
@@ -361,12 +382,39 @@ pub fn read_tape(
             }
         }
     };
-    match orient(photo, &found, label, hand) {
-        Ok((orientation, _)) => TapeOutcome::NeedsPick(TapePick { found, orientation }),
-        Err(_) => TapeOutcome::NotRead {
-            reason: TapeRefusal::NoOrientation,
-            found: Some(found),
-        },
+    let orientation = match orient(photo, &found, label, hand) {
+        Ok((orientation, _)) => orientation,
+        Err(_) => {
+            return TapeOutcome::NotRead {
+                reason: TapeRefusal::NoOrientation,
+                found: Some(found),
+            }
+        }
+    };
+    let Ok(spots) = find_marks(&found.crop, label) else {
+        return TapeOutcome::NeedsPick(TapePick { found, orientation });
+    };
+    let refused = |reason, found| TapeOutcome::NotRead {
+        reason,
+        found: Some(found),
+    };
+    if previous.is_some() {
+        return if spots.is_empty() {
+            refused(TapeRefusal::NoNewMark, found)
+        } else {
+            TapeOutcome::NeedsPick(TapePick { found, orientation })
+        };
+    }
+    match on_a_fresh_label(&spots) {
+        Fresh::Mark(spot) => TapeOutcome::Read(TapeReading {
+            found,
+            orientation,
+            new_label: true,
+            marks: vec![spot.reading(orientation)],
+        }),
+        Fresh::Clipped => refused(TapeRefusal::MarkClipped, found),
+        Fresh::Unmarked => refused(TapeRefusal::NoNewMark, found),
+        Fresh::Pick => TapeOutcome::NeedsPick(TapePick { found, orientation }),
     }
 }
 

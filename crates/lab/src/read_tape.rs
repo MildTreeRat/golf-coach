@@ -28,10 +28,10 @@
 //! One JSON object a photo, with the outcome's every field: `photo` (the file name), `label`,
 //! `previous` and `outcome` (`read`, `needs_pick` or `not_read`), then the outcome's own. A found
 //! label is its `corners` in the photo and its `crop`'s grid with the count of `outside_px`; a
-//! reading adds its `orientation`, `new_label` and `marks`, each mark its `centroid_px` in the crop
-//! and its `offset_h_mm` and `offset_v_mm`; a refusal is its `reason`, the golfer's `sentence` and
-//! `retake_helps` (both `contracts::drill::TapeNotRead`'s, mapped by wire name), and the decoder's
-//! `error` when there is one. The crop's pixels are the review's, not the line's.
+//! reading adds its `orientation`, `new_label` and `marks`, each mark its `centroid_px` in the crop,
+//! its `offset_h_mm` and `offset_v_mm`, and its `area_mm2`; a refusal is its `reason`, the golfer's
+//! `sentence` and `retake_helps` (both `contracts::drill::TapeNotRead`'s, mapped by wire name), and
+//! the decoder's `error` when there is one. The crop's pixels are the review's, not the line's.
 //!
 //! # Review images
 //!
@@ -45,8 +45,8 @@
 //!   arrows, and each new mark ringed in magenta round a dot at its centroid. Written whenever a
 //!   label was found.
 //!
-//! The ring is a fixed [`MARK_RING_MM`] round the centroid, because a mark carries no extent yet
-//! (P11's to add if it needs one). Both files a previous run left are removed first, so a re-run
+//! The ring is the disc of the mark's area round its centroid ([`mark_ring_px`]), so a review
+//! shows what the reader kept of each mark (P11 gave a mark its area). Both files a previous run left are removed first, so a re-run
 //! after tuning never leaves a stale crop beside a photo that now finds none; nothing else in the
 //! directory is touched. The drawing is `read_impact`'s helpers, shared rather than copied.
 
@@ -58,7 +58,8 @@ use contracts::drill::TapeNotRead;
 use image::imageops::{self, FilterType};
 use image::{Rgb, RgbImage};
 use impact::tape::{
-    read_tape, FoundLabel, Homography, LabelType, Orientation, TapeOutcome, TapeRefusal,
+    read_tape, CropGrid, FoundLabel, Homography, LabelType, Orientation, TapeMark, TapeOutcome,
+    TapeRefusal,
 };
 use impact::Frame;
 use serde_json::{json, Map, Value};
@@ -74,8 +75,11 @@ pub const REVIEW_MAX_SIDE: u32 = 1600;
 /// inscribed radius (the iron's 14.6), so both stay on every label type.
 pub const ARROW_MM: f64 = 12.0;
 
-/// The ring drawn round a mark's centroid on the crop's review, millimetres.
-pub const MARK_RING_MM: f64 = 3.0;
+/// The radius of the ring drawn round a mark on the crop's review, in the crop's pixels: the disc of
+/// the mark's area, so a mark the reader kept only part of shows a ring too small for it. [M46 P11]
+pub fn mark_ring_px(mark: &TapeMark, grid: &CropGrid) -> f64 {
+    (mark.area_mm2 / std::f64::consts::PI).sqrt() * grid.px_per_mm
+}
 
 /// The photo's review image's file name.
 pub const PHOTO_REVIEW: &str = "photo.png";
@@ -181,6 +185,7 @@ pub fn json_line(
                         "centroid_px": mark.centroid_px,
                         "offset_h_mm": mark.offset_h_mm,
                         "offset_v_mm": mark.offset_v_mm,
+                        "area_mm2": mark.area_mm2,
                     })
                 })
                 .collect();
@@ -314,7 +319,7 @@ pub fn write_review(
                 ring(
                     &mut crop,
                     mark.centroid_px,
-                    MARK_RING_MM * grid.px_per_mm,
+                    mark_ring_px(mark, grid),
                     MARK_COLOUR,
                 );
                 disc(&mut crop, mark.centroid_px, 3.0, MARK_COLOUR);
@@ -462,6 +467,8 @@ mod tests {
                 centroid_px,
                 offset_h_mm: 4.0,
                 offset_v_mm: 2.5,
+                // A disc 3 mm in radius.
+                area_mm2: std::f64::consts::PI * 9.0,
             }],
         })
     }
@@ -538,6 +545,7 @@ mod tests {
         assert_eq!(line["new_label"], true);
         assert_eq!(line["marks"][0]["offset_h_mm"], 4.0);
         assert_eq!(line["marks"][0]["offset_v_mm"], 2.5);
+        assert_eq!(line["marks"][0]["area_mm2"], std::f64::consts::PI * 9.0);
         assert_eq!(line["marks"].as_array().unwrap().len(), 1);
         assert!(line.get("reason").is_none());
     }
@@ -611,7 +619,8 @@ mod tests {
         };
         let [mx, my] = reading.marks[0].centroid_px;
         assert_eq!(crop.get_pixel(mx as u32, my as u32), &MARK_COLOUR);
-        let rim = mx + MARK_RING_MM * CROP_PX_PER_MM;
+        // The ring is the disc of the mark's area, 3 mm in radius.
+        let rim = mx + 3.0 * CROP_PX_PER_MM;
         assert_eq!(crop.get_pixel(rim as u32, my as u32), &MARK_COLOUR);
         assert_eq!(
             crop.get_pixel((mx + 15.0) as u32, my as u32),

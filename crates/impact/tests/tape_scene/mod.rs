@@ -1,10 +1,12 @@
 //! Synthetic photos of a STRIKEPRO label stuck on a club face, drawn through a pinhole camera, for
-//! the tape reader's tests. [M46 P9, P10]
+//! the tape reader's tests. [M46 P9, P10, P11]
 //!
 //! The M46 plan builds the reader on synthetic photos alone, because no photo of a label on a club
 //! exists before P29 (P3 finding 10). This module is the one renderer P9 to P12's tests draw with,
 //! and P13's end-to-end gate draws its sets with it. It lives under `tests/` in a directory, so each
-//! test file that wants it says `mod tape_scene;`, and it is no test crate of its own.
+//! test file that wants it says `mod tape_scene;`, and it is no test crate of its own. Beside the
+//! drawing it holds what more than one test file frames a scene with: [`truth`], [`framed`] and
+//! [`tilted_poses`] (moved here from `tape_orient.rs` at P11).
 //!
 //! # What a photo holds
 //!
@@ -32,7 +34,7 @@
 
 #![allow(dead_code)] // Each test file that includes this module uses part of it.
 
-use impact::tape::LabelType;
+use impact::tape::{LabelType, Orientation, STRIKEPRO_DRIVER, STRIKEPRO_HYBRID, STRIKEPRO_IRON};
 use impact::Frame;
 
 /// The camera's focal length in pixels, about a phone's main camera over an 800-pixel-wide photo.
@@ -172,6 +174,122 @@ fn multiply(a: &[[f64; 3]; 3], b: &[[f64; 3]; 3]) -> [[f64; 3]; 3] {
 /// The club's hand is the reader's own type, so a scene's hand is what a test passes to it as the
 /// golfer's. [M46 P10]
 pub use impact::tape::Handedness as Hand;
+
+/// Which way the scene's club lies across its label, from the scene alone. In the face's plane the
+/// toe is toward `−x` on a right-handed club and `+x` on a left-handed one (C4), and the top line is
+/// `+y`. A label stuck logo-down has its printed frame turned half a turn from the plane's. [M46
+/// P10, moved here from `tape_orient.rs` at P11]
+pub fn truth(scene: &Scene) -> Orientation {
+    let toe = match scene.hand {
+        Hand::Right => -1.0,
+        Hand::Left => 1.0,
+    };
+    let turn = if scene.logo_up { 1.0 } else { -1.0 };
+    Orientation {
+        toe_printed_right: toe * turn > 0.0,
+        top_line_printed_top: turn > 0.0,
+    }
+}
+
+/// A scene of `label` on the head its type suits, the camera aimed beside the label toward the
+/// heel and up, so the hosel and some shaft are in frame, as the tape camera's frame will ask. [M46
+/// P10, moved here from `tape_orient.rs` at P11]
+pub fn framed(
+    label: &'static LabelType,
+    hand: Hand,
+    logo_up: bool,
+    [pitch, yaw, roll]: [f64; 3],
+    distance_mm: f64,
+) -> Scene {
+    let heel = match hand {
+        Hand::Right => 1.0,
+        Hand::Left => -1.0,
+    };
+    let camera = Camera::aimed(pitch, yaw, roll, distance_mm, [heel * 12.0, 15.0]);
+    let mut scene = Scene::new(label, camera);
+    scene.hand = hand;
+    scene.logo_up = logo_up;
+    scene
+}
+
+/// One of the six poses up to 30° off square that P10 oriented, each with the aim that keeps the
+/// whole label and some shaft in the 800 × 600 photo. [M46 P10, shared at P11]
+#[derive(Debug, Clone, Copy)]
+pub struct Pose {
+    pub label: &'static LabelType,
+    pub hand: Hand,
+    pub logo_up: bool,
+    /// Pitch, yaw and roll, as [`Camera::new`] takes them.
+    pub turn: [f64; 3],
+    pub aim_mm: [f64; 2],
+}
+
+impl Pose {
+    /// The pose's scene at 200 mm, unmarked.
+    pub fn scene(&self) -> Scene {
+        let mut scene = framed(self.label, self.hand, self.logo_up, self.turn, 200.0);
+        let [pitch, yaw, roll] = self.turn;
+        scene.camera = Camera::aimed(pitch, yaw, roll, 200.0, self.aim_mm);
+        scene
+    }
+}
+
+/// Every type, both hands, both ways up, tilted 28.5° to 30° and turned −90° to 180°. Pose 2's yaw
+/// and roll swing the shaft toward the photo's top edge, so it is aimed further along the shaft
+/// than the rest (P10 finding 8).
+pub fn tilted_poses() -> [Pose; 6] {
+    let pose = |label, hand, logo_up, turn, aim_mm| Pose {
+        label,
+        hand,
+        logo_up,
+        turn,
+        aim_mm,
+    };
+    [
+        pose(
+            &STRIKEPRO_DRIVER,
+            Hand::Right,
+            true,
+            [25.0, -15.0, 90.0],
+            [12.0, 15.0],
+        ),
+        pose(
+            &STRIKEPRO_DRIVER,
+            Hand::Left,
+            false,
+            [-12.0, 26.0, 180.0],
+            [-12.0, 15.0],
+        ),
+        pose(
+            &STRIKEPRO_HYBRID,
+            Hand::Left,
+            true,
+            [0.0, -30.0, -40.0],
+            [-22.0, 26.0],
+        ),
+        pose(
+            &STRIKEPRO_HYBRID,
+            Hand::Right,
+            false,
+            [10.0, 28.0, -90.0],
+            [12.0, 15.0],
+        ),
+        pose(
+            &STRIKEPRO_IRON,
+            Hand::Right,
+            true,
+            [20.0, 21.0, 120.0],
+            [12.0, 15.0],
+        ),
+        pose(
+            &STRIKEPRO_IRON,
+            Hand::Left,
+            true,
+            [-25.0, 15.0, 65.0],
+            [-12.0, 15.0],
+        ),
+    ]
+}
 
 /// What leaves the head at the hosel: the reader's only cue to which end is the heel. [M46 P10]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

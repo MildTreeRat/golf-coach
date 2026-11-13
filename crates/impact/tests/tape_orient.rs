@@ -10,47 +10,12 @@ mod tape_scene;
 
 use impact::tape::{
     find_label, orient, read_tape, FoundLabel, LabelType, OrientMiss, Orientation, Shaft as Found,
-    TapeOutcome, TapePick, TapeRefusal, STRIKEPRO_DRIVER, STRIKEPRO_HYBRID, STRIKEPRO_IRON,
+    TapeOutcome, TapeRefusal, STRIKEPRO_DRIVER, STRIKEPRO_HYBRID, STRIKEPRO_IRON,
 };
-use tape_scene::{keep, Camera, Hand, Head, Scene, Shaft};
+use tape_scene::{framed, keep, tilted_poses, truth, Camera, Hand, Head, Scene, Shaft};
 
 fn labels() -> [&'static LabelType; 3] {
     [&STRIKEPRO_DRIVER, &STRIKEPRO_HYBRID, &STRIKEPRO_IRON]
-}
-
-/// Which way the scene's club lies across its label, from the scene alone. In the face's plane the
-/// toe is toward `−x` on a right-handed club and `+x` on a left-handed one (C4), and the top line is
-/// `+y`. A label stuck logo-down has its printed frame turned half a turn from the plane's.
-fn truth(scene: &Scene) -> Orientation {
-    let toe = match scene.hand {
-        Hand::Right => -1.0,
-        Hand::Left => 1.0,
-    };
-    let turn = if scene.logo_up { 1.0 } else { -1.0 };
-    Orientation {
-        toe_printed_right: toe * turn > 0.0,
-        top_line_printed_top: turn > 0.0,
-    }
-}
-
-/// A scene of `label` on the head its type suits, the camera aimed beside the label toward the
-/// heel and up, so the hosel and some shaft are in frame, as the tape camera's frame will ask.
-fn framed(
-    label: &'static LabelType,
-    hand: Hand,
-    logo_up: bool,
-    [pitch, yaw, roll]: [f64; 3],
-    distance_mm: f64,
-) -> Scene {
-    let heel = match hand {
-        Hand::Right => 1.0,
-        Hand::Left => -1.0,
-    };
-    let camera = Camera::aimed(pitch, yaw, roll, distance_mm, [heel * 12.0, 15.0]);
-    let mut scene = Scene::new(label, camera);
-    scene.hand = hand;
-    scene.logo_up = logo_up;
-    scene
 }
 
 /// Draws the scene, finds its label, and orients it with `hand` as the golfer's.
@@ -103,59 +68,15 @@ fn each_hand_either_way_up_is_oriented_by_its_shaft_on_every_label() {
 
 #[test]
 fn a_club_up_to_thirty_degrees_off_square_and_turned_any_way_is_oriented() {
-    // Each pose's aim, a plane point at the photo's centre, keeps the whole label and some shaft in
-    // the 800 × 600 photo once the camera is turned. Pose 2's yaw and roll swing the shaft toward
-    // the photo's top edge, so it is aimed further along the shaft than the rest.
-    let poses = [
-        (
-            &STRIKEPRO_DRIVER,
-            Hand::Right,
-            true,
-            [25.0, -15.0, 90.0],
-            [12.0, 15.0],
-        ),
-        (
-            &STRIKEPRO_DRIVER,
-            Hand::Left,
-            false,
-            [-12.0, 26.0, 180.0],
-            [-12.0, 15.0],
-        ),
-        (
-            &STRIKEPRO_HYBRID,
-            Hand::Left,
-            true,
-            [0.0, -30.0, -40.0],
-            [-22.0, 26.0],
-        ),
-        (
-            &STRIKEPRO_HYBRID,
-            Hand::Right,
-            false,
-            [10.0, 28.0, -90.0],
-            [12.0, 15.0],
-        ),
-        (
-            &STRIKEPRO_IRON,
-            Hand::Right,
-            true,
-            [20.0, 21.0, 120.0],
-            [12.0, 15.0],
-        ),
-        (
-            &STRIKEPRO_IRON,
-            Hand::Left,
-            true,
-            [-25.0, 15.0, 65.0],
-            [-12.0, 15.0],
-        ),
-    ];
-    for (index, (label, hand, logo_up, [pitch, yaw, roll], aim)) in poses.into_iter().enumerate() {
-        let mut scene = framed(label, hand, logo_up, [pitch, yaw, roll], 200.0);
-        scene.camera = Camera::aimed(pitch, yaw, roll, 200.0, aim);
+    // The poses, and the aim that frames each, are `tape_scene`'s, shared with the marks' tests.
+    for (index, pose) in tilted_poses().into_iter().enumerate() {
+        let scene = pose.scene();
         let tilt = scene.camera.tilt_deg();
         assert!(tilt <= 30.0 + 1e-9, "pose {index} is {tilt:.1}° off square");
-        holds_its_truth(&scene, &format!("pose {index} {hand:?} {}", label.id));
+        holds_its_truth(
+            &scene,
+            &format!("pose {index} {:?} {}", pose.hand, pose.label.id),
+        );
     }
 }
 
@@ -282,29 +203,4 @@ fn shafts_leaving_both_ends_are_ambiguous() {
         let (_, _, answer) = oriented(&scene, &name, None);
         assert_eq!(answer.map(|(o, _)| o), Err(OrientMiss::Ambiguous), "{name}");
     }
-}
-
-#[test]
-fn read_tape_hands_an_oriented_label_to_the_golfer_to_pick_until_p11() {
-    let scene = framed(
-        &STRIKEPRO_HYBRID,
-        Hand::Left,
-        false,
-        [10.0, 12.0, 20.0],
-        200.0,
-    );
-    let photo = scene.draw();
-    let (found, _) = find_label(&photo, scene.label).expect("the label is found");
-    let picked = TapeOutcome::NeedsPick(TapePick {
-        found: found.clone(),
-        orientation: truth(&scene),
-    });
-    for hand in [None, Some(Hand::Left)] {
-        assert_eq!(read_tape(&photo, None, scene.label, hand), picked);
-    }
-    // A previous crop changes nothing before P12.
-    assert_eq!(
-        read_tape(&photo, Some(&found.crop.frame), scene.label, None),
-        picked
-    );
 }

@@ -355,6 +355,19 @@ fn judge(bar: &Bar, label: &LabelType) -> Option<(Orientation, Shaft)> {
 /// The pixels of `solid` that a disc of `radius` pixels, held inside `solid`, cannot cover: the
 /// set less its opening. Beyond the grid counts as solid, so nothing is thin for touching the edge.
 fn thin_parts(solid: &[bool], width: usize, height: usize, radius: f64) -> Vec<bool> {
+    let opened = opening(solid, width, height, radius);
+    solid
+        .iter()
+        .zip(&opened)
+        .map(|(&s, &covered)| s && !covered)
+        .collect()
+}
+
+/// The pixels of `solid` that a disc of `radius` pixels, held wholly inside `solid`, can cover: the
+/// morphological opening, by two exact distance transforms. Beyond the grid counts as solid. The
+/// shaft keeps what the disc cannot reach ([`thin_parts`]), and the mark finder keeps what it can,
+/// which strips the label's thin printing from a mark (`mark.rs`). [M46 P10, shared at P11]
+pub(super) fn opening(solid: &[bool], width: usize, height: usize, radius: f64) -> Vec<bool> {
     let r2 = radius * radius;
     let open: Vec<bool> = solid.iter().map(|&s| !s).collect();
     let to_open = squared_distance(&open, width, height);
@@ -364,7 +377,7 @@ fn thin_parts(solid: &[bool], width: usize, height: usize, radius: f64) -> Vec<b
     solid
         .iter()
         .zip(&to_core)
-        .map(|(&s, &d)| s && d > r2)
+        .map(|(&s, &d)| s && d <= r2)
         .collect()
 }
 
@@ -373,7 +386,7 @@ fn thin_parts(solid: &[bool], width: usize, height: usize, radius: f64) -> Vec<b
 ///
 /// Felzenszwalb and Huttenlocher's exact transform (2012): the squared distance separates into a
 /// pass along every row and then every column, each the lower envelope of parabolas.
-fn squared_distance(targets: &[bool], width: usize, height: usize) -> Vec<f64> {
+pub(super) fn squared_distance(targets: &[bool], width: usize, height: usize) -> Vec<f64> {
     let mut grid: Vec<f64> = targets.iter().map(|&t| if t { 0.0 } else { FAR }).collect();
     let mut line = Vec::with_capacity(width.max(height));
     for row in grid.chunks_exact_mut(width.max(1)) {
