@@ -45,7 +45,7 @@ machine, pull on the new" as its precondition.
 | **P1** | 🪟 ADR-037: where on the face, by method, and the drill framework | ✅ Done *(2026-11-12)* |
 | **P2** | 🪟 The truth sheet and the tape session's run sheet | ✅ Done *(2026-11-12)* |
 | **P3** | 🧍 The labels: one flat photo, their sizes measured off it, and the user's answers | ✅ Done *(2026-11-12)* |
-| **P4** | 🪟 The session's inventory and the label geometry as data | ⬜ |
+| **P4** | 🪟 The session's inventory and the label geometry as data | ✅ Done *(2026-11-12)* |
 | **P5** | 🪟 `contracts::face_impact`: the method interface and `TAPE_READER_VERSION` | ⬜ |
 | **P6** | 🪟 `contracts::drill`: the strike record, the stages and the ladder tables | ⬜ |
 | **P7** | 🪟 `impact::tape` geometry: the homography and the rectified crop | ⬜ |
@@ -1211,6 +1211,13 @@ named as skipped where they are not), then write the three records, and commit `
      within 0.6 mm on the driver and hybrid labels, and differ by 4.8 mm vertically on the iron label, whose
      top is shouldered. The cross is what a golfer aims at, and it is what finding 4's inscribed radii are
      measured about. If P4 finds no rule for this in the plan, it is the user's call.
+     - **Decided by the user (2026-11-12): the centre is the printed red cross.** The user chose it over
+       the outline's box centre after being given three reasons. First, the maker offset the cross on the
+       iron label on purpose, so it is the maker's sweet spot and the outline's middle is only the shape
+       of the sticker. Second, the printed −7% and −15% rings are centred on the cross, so a centre at
+       the outline's middle would score a strike dead on the cross as 4.8 mm off. Third, the cross is a
+       fixed point in each label's geometry, so choosing it costs nothing. Neither point is the club's
+       true sweet spot, which depends on where the label is stuck; P29 is where that would show.
    - About the cross, finding 4's inscribed radii **trim C9** as follows. P4 computes the trim from the
      outline it commits, which is finding 4's, so this is the result it should get:
      - the driver table loses 30 and 26;
@@ -1346,3 +1353,85 @@ named as skipped where they are not), then write the three records, and commit `
       label settles all three. That stays the user's to offer.
     - If Strike Tape later publishes sizes, they are a check on these, and a difference of more than 1 mm is
       the user's to decide.
+
+### P4 (2026-11-12)
+
+1. **The geometry is a Rust table, not `tape_labels.json`.** It lives in `crates/impact/src/tape/tape_labels.rs`, behind
+   `crates/impact/src/tape/mod.rs`, and `lib.rs` declares `pub mod tape`. The section's own rule chose it: this crate
+   takes no `serde`, and a hand parser of nested arrays, numbers, strings and `null`, plus the code that lifts the
+   values into fields, passes 80 lines. Nothing outside Rust reads the geometry (C20). **For every later phase that
+   names `tape_labels.json`** (C3, P6, P9 to P12), read it as `impact::tape`:
+   - `LabelType` and `LABEL_TYPES`, with `STRIKEPRO_DRIVER`, `STRIKEPRO_HYBRID` and `STRIKEPRO_IRON`;
+   - `label_type(id)`;
+   - `category_label(wire_name)`, which returns `Some(Label(&LabelType))`, `Some(NoLabel { why })`, or `None` for a
+     category the table has no row for;
+   - `CATEGORY_LABELS` and `PROVENANCE`, the latter in finding 11's words.
+2. **What a `LabelType` holds.** `id`, `width_mm`, `height_mm`, `centre_from_left_mm`, `centre_from_top_mm` and
+   `inscribed_radius_mm` are finding 4's numbers exactly, the record. `outline_mm` is a polygon about the cross. None
+   of the labels is a rounded rectangle, so there is no corner radius. `crates/impact/tests/tape_labels.rs` holds the
+   record exactly, and holds the outline to the record within finding 4's ±0.5 mm. The cross is the centre, as the
+   user decided in finding 6. That decision was in the tree uncommitted when P4 started, and P4's commit carries it.
+3. **The outline is denser than finding 4's 30° profile, and comes from the same edge points.** Those are P3's
+   grid-end points in the printed frame, still in the session scratchpad as `work/frame{1,2,3}.npy`, after
+   finding 4's spike filter. The method:
+   - take the median radius about the cross in each 2° sector;
+   - simplify by Douglas–Peucker at 0.2 mm and round to 0.1 mm, which gives 42, 32 and 25 vertices (driver, hybrid,
+     iron);
+   - check that every kept edge point lies within 0.33 mm of the result.
+
+   The edge was hidden in four places: the driver's 54° to 92°, the hybrid's 58° to 86° and 216° to 264°, and the
+   iron's 72° to 118°. Those gaps are filled by the label's measured opposite side, mirrored about the outline's
+   vertical middle, with a chord where both sides were hidden under the logo. A plain chord would have cut the iron's
+   hidden top-left corner by about 0.8 mm, outside the ±0.5. The mirrored corner meets the measured left shoulder
+   within 0.1 mm. The hybrid's mirrored bottom-left lies within 0.3 mm of P3's brightness outline. On the driver, a
+   quadratic through the flanks of the whole gap departs by 0.34 mm at most from a chord across all of it, so the
+   shorter chord left is closer still.
+
+   The result agrees with the record:
+   - **extents**: within 0.2 mm of the record's on every side;
+   - **inscribed radii**: 24.33, 16.74 and 14.66 mm, against the record's 24.4, 16.8 and 14.6.
+
+   The section's cross-check, each dimension within 1 mm, has no second source (finding 6). So it is this
+   comparison of the outline with the record, and no number had to win.
+4. **Finding 4's 30° profile is up to 0.8 mm off at two tight curves**: the driver's 150° and the hybrid's 60°. Each
+   profile value was a median over ±4°, and the edge points within 1.5° of those two angles measure 39.1–40.5 and
+   20.0–20.5 mm. The outline follows those points, so the test holds the profile at 1.0 mm and gives the reason.
+5. **The table is in the label's printed frame, not C4's.** The origin is the cross, `+y` points toward the logo's
+   edge, and `+x` toward the printed right, the end the logo's `.com` reads toward. Take a label stuck logo-up on a
+   right-handed club: its printed left is at the toe, so C4's `x` is the printed `x` negated. On a left-handed club
+   it is the printed `x`.
+   - **For P7, P9 and P10**: draw, crop and find the label in the printed frame, and convert at the reading. The
+     side comes from the hosel (P10), never from this table.
+   - Do not assume the outline is mirror-symmetric. The cross sits up to 0.6 mm off the outline's middle on the
+     hybrid label, so on a mirrored photo, mirror the stored outline.
+   - The table assumes the label is stuck logo-up, toward the top line. Whether a label stuck logo-down is
+     refused or turned is P9's and P10's to settle.
+6. **The category map is finding 8's, plus `all`.** `ClubCategory::All` is named as taking no label, because no club
+   maps to it (`contracts::club::CLUB_CATEGORY`). `putter` is named the same way, with the user's reason. **For
+   P6**: `impact` cannot see the enum, so its test lists the nine wire names by hand. `crates/contracts/tests/drill.rs`
+   should walk every `ClubCategory` through `impact::tape::category_label(c.as_str())` and fail on `None`.
+7. **The trimmed tables, for P6 to commit.** Each is cut at the record's inscribed radius. The outline's own radii
+   give the same cuts, and they match finding 6's prediction.
+
+   | Category | Label (inscribed, mm) | Radii (mm) |
+   |---|---|---|
+   | `driver` | driver (24.4) | 22, 19, 16, 14, 12, 10 |
+   | `wood` | hybrid (16.8) | 15, 13, 11, 9 |
+   | `hybrid` | hybrid (16.8) | 16, 14, 12, 10, 8 |
+   | `long_iron` | iron (14.6) | 13, 11, 9, 8, 7 |
+   | `mid_iron` | iron (14.6) | 14, 12, 10, 9, 8, 7, 6 |
+   | `short_iron` | iron (14.6) | 13, 11, 10, 9, 8, 7, 6, 5 |
+   | `wedge` | iron (14.6) | 14, 12, 10, 9, 8, 7, 6, 5 |
+   | `putter` | none | no table |
+
+   The tightest margin is 0.6 mm, between `mid_iron`'s and `wedge`'s 14 and the iron label's 14.6. That is just over
+   the measurement's ±0.5. C6's "outside every circle" holds on the measured label, and P29 is the first place
+   that could show otherwise.
+8. **The inventory** is `data/raw/strike_tape/2026-11-12/inventory.json` (gitignored). It has one entry, the flat
+   photo, with its sha256, its strike fields `null`, and its three labels by position and type.
+9. **For P9 and P11**: finding 4's printing is not in the table, because C3 does not ask for it. That means the ring's
+   diameter, the cross's arms, the dashed rings and the logo band. A phase that renders the printing or masks it out
+   adds those fields to `LabelType` then, from finding 4.
+10. **For P30**: `crates/impact/Cargo.toml`'s `description` still names only the replay, and the manifest was not on
+    P4's Touch line. Separately, `cargo doc -p impact` under `-D warnings` already failed before P4, on M42's private
+    link at `frame.rs:51` (`sharpest_frame` to `luminance`). P4's docs add no warning.

@@ -59,6 +59,16 @@
 //! `[i, i + 1) × [j, j + 1)` and its centre is `(i + 0.5, j + 0.5)`. A rectangle given in them is
 //! clipped to whole pixels as `TextBox.rgb`'s box is (M42 P2), so a box, a ball and a club head can
 //! be drawn on one review image without a half-pixel shift between them.
+//!
+//! # The second method: a STRIKEPRO label on the face (M46)
+//!
+//! [`tape`] answers the same question from a photo of a STRIKEPRO impact label stuck on the face,
+//! taken after every strike of a drill (the M46 plan and ADR-037). Unlike the replay it sees both
+//! axes, heel to toe and high to low, in millimetres from the label's printed centre, and its scale
+//! is the label rather than the ball. The stages and approximations above are the replay's alone.
+//! The tape's reader is to reuse `frame`, `mask` and `component` (the plan's C1) and to stay std
+//! only, as this crate is. Since P4 the module holds the labels' geometry, and the reader lands in
+//! P7 to P13.
 
 mod ball;
 mod component;
@@ -67,6 +77,7 @@ mod frame;
 mod head;
 mod mask;
 mod shaft;
+pub mod tape;
 
 pub use ball::{find_ball, Ball};
 pub use frame::{sharpest_frame, Frame};
