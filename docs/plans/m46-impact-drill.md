@@ -58,7 +58,7 @@ machine, pull on the new" as its precondition.
 | **P14** | 🪟 `analysis::drill`: the baseline and the ladder | ✅ Done *(2026-11-13)* |
 | **P15** | 🪟 `analysis::drill`: the pattern, the triggers and differential judging | ✅ Done *(2026-11-13)* |
 | **P16** | 🪟 `feedback::drill_rules`: the sentences | ✅ Done *(2026-11-13)* |
-| **P17** | 🪟 `storage::drill_store`: the drill history on disk | ⬜ |
+| **P17** | 🪟 `storage::drill_store`: the drill history on disk | ✅ Done *(2026-11-13)* |
 | **P18** | 🪟 Facade: `record_tape_photo`, the pick and "missed the tape" | ⬜ |
 | **P19** | 🪟 Facade: the drill's actions (start, stage, suggestions, calls) | ⬜ |
 | **P20** | 🪟 Facade: the progress views (dots, level, pattern, heat map, roll-up) | ⬜ |
@@ -2667,3 +2667,75 @@ named as skipped where they are not), then write the three records, and commit `
    - The doc-truth test passes (91).
    - `cargo doc -p feedback` adds no warning from `drill_rules.rs`. The four it shows are `rules.rs`'s, from
      before.
+
+### P17 (2026-11-13)
+
+1. **`storage::drill_store` is built**, `crates/storage/src/drill_store.rs`, with its tests in
+   `crates/storage/tests/drill_store.rs` (13). `DrillStore::open(root, player_id)` refuses a player id that
+   is not a slug (`StoreError::Invalid`, `check_player_id`'s), because the id names a directory, and creates
+   nothing until a write. Its API is `append_strike`, `strikes(club)`, `all_strikes()`, `state()`,
+   `put_state`, `put_crop(strike_id, jpeg) -> PathBuf`, `last(club)` and `put_last(club, rgb)`. The path
+   accessors are `dir`, `strikes_path`, `state_path`, `crop_path` (`crop_file` joined one segment at a time,
+   so the platform's separator is used throughout) and `last_path` (`last/<club wire name>.rgb`). The
+   constants are `DRILLS_DIR`, `STRIKES_NAME`, `STATE_NAME`, `LAST_DIR` and `LAST_SUFFIX`, and the directory's
+   last two segments are `DrillTopic::as_str` and `TapeMethod::as_str`. `lib.rs` gained
+   `write_bytes_atomically`, which `write_atomically` now calls, for the crops and the last crops.
+   `put_crop` was not in the section. It was added so that every write under the drill's directory takes
+   the store's lock and an atomic rename.
+2. **C7's "the lock the shot store holds" does not exist in `storage`.** `ShotStore` holds no lock. On the
+   phone, the shot writes are serialized by the app's `crate::record::one_writer()`, which `storage` cannot
+   reach. So the store holds its own lock, a process-wide `static` (the facade opens a store per call, so a
+   lock per store, as `SwingBundleStore` has, would serialize nothing). Every call takes it, readers too,
+   and none holds it across calls.
+   - **For P18**: hold `one_writer()` around each whole read, judge and store (state, `read_tape`, the
+     strikes, `put_state`, the crop and `last/`). That stops two record calls from drawing one counter, and
+     it stops the export from zipping half a strike. The store's lock is inner and short, so it cannot
+     deadlock with `one_writer()`. `std`'s `Mutex` does not re-enter, so don't call a facade function that
+     takes `one_writer()` itself while you hold it.
+3. **The strikes.** `strikes`/`all_strikes` answer a `StrikeLog { strikes, skipped }` in append order.
+   `skipped` is **counted over the whole file**, even for one club's read, because a torn line names no
+   club. It counts a torn or non-JSON line, a line the contract refuses, another golfer's strike, and a
+   second line with an id already read. **The first line with an id is kept**, as C17 keeps a held id. Blank
+   lines are not counted. `append_strike` refuses four things, writing nothing: a strike the contract
+   refuses (`Invalid`), another golfer's strike, an id that is not `[A-Za-z0-9_-]+` (the id names the crop,
+   so `..` or `/` would leave `crops/`), and an id already held (`Refused`, "strike 'a1b2-1' is already
+   stored; refusing to store it twice"). After a torn last line it writes a newline first, so the fragment
+   stays its own line and never swallows the next strike.
+   - **For P20**: a `skipped` above zero means a torn write, a hand edit or a merge. Whether a view says so
+     is yours to decide.
+4. **The state is read strictly.** `state()` is `Result<Option<DrillState>, StoreError>`. A missing file is
+   `Ok(None)`. A file that does not parse, or that holds another golfer's state, is
+   `StoreError::Unreadable`. `put_state` refuses to replace such a file, with the bag store's guard and
+   wording ("drill state at … exists but cannot be read; refusing to overwrite it"). The counters behind
+   every id live in it, so reading a damaged state as absent would re-issue ids and reset every club's
+   level and history.
+   - **For P18 to P20**: turn an `Err` into a sentence. Never fall back to a fresh state.
+5. **`last/<club>.rgb` is raw bytes with no size** (C16). `last` answers the bytes as written, and `put_last`
+   replaces them whole.
+   - **For P18**: build `Frame { width, height, rgb }` from the club's label type's `CropGrid::new(label,
+     CROP_PX_PER_MM)`. A reference of the wrong length is not well formed, and `diff.rs`'s `same_grid`
+     refuses it as `DiffMiss::OtherGrid`, which ends in a pick (P12 finding 9), never in a reading. A
+     reference of the same length but a different shape cannot occur: the three label grids' byte counts
+     differ (P7 finding 4), and changing `CROP_PX_PER_MM` changes every grid's count.
+   - **For P18**: pending strikes are not in the store (P6 finding 3). If you keep a pending crop under
+     `crops/`, its id must pass `put_crop`'s file-name rule too.
+6. **For P21**: read the phone tree's strikes through `DrillStore::all_strikes()`. Check held ids against
+   the lab's `all_strikes()` before appending, rather than matching on the refusal's message. Write the
+   newer state with `put_state`, and an absent crop with `put_crop`. `put_state` refuses to overwrite an
+   unreadable lab state, and that refusal should surface in the verb's summary rather than be bypassed.
+   `last/` is not imported (P21's own section).
+7. **For P30**: the `crates/storage` paragraph and the *Where is the Rust* row in `CLAUDE.md`, and
+   ARCHITECTURE's storage module list, should gain `drill_store`. Only the `impact` and `contracts`
+   sentences are on P30's Touch line.
+8. **The tests have teeth.** With `append_strike`'s lock removed, the race test failed 5 runs in 5. Every
+   racer offers every id, starting at a `Barrier`, and each opens its own store. A first draft without the
+   barrier failed only 1 run in 6. With the newline-after-a-torn-line guard removed, the torn-line test
+   fails.
+9. **On the Windows desk, a Python `write_text` edit writes CRLF.** Two files picked it up mid-phase and were
+   put back to LF. Use the Edit tool, or write bytes.
+10. **Verify**:
+    - `cargo test -p storage` passes (lib 108, `drill_store` 13, and the other binaries).
+    - `cargo clippy -p storage --all-targets -- -D warnings` and `cargo fmt --check` are clean.
+    - The doc-truth test passes (91).
+    - `cargo doc -p storage` shows only the three warnings from before (`audio_io`, `bag_store` and
+      `flight_inputs`), none from `drill_store.rs`.

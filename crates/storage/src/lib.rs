@@ -42,6 +42,10 @@
 //!   in either of its two shapes, strict as [`audio_io`] is (M29 P22). The writer is
 //!   `pose::writer`, the sidecar caller's half of ADR-033 clause 8, so there is one spelling of the
 //!   artifact. Its caller is the lab's pose cache.
+//! - [`drill_store`] — the impact drill's history, `drills/<player_id>/impact/strike_tape/`: the
+//!   strikes, append-only, each club's place on the ladder, each strike's crop and each club's last
+//!   crop, beside the corpus and never inside it (M46 P17). **No Python twin**: the drill was
+//!   designed after the pivot (ADR-034), and nothing here reads it into the corpus (ADR-037).
 //!
 //! # ADR-008's exception is not carried over
 //!
@@ -105,6 +109,7 @@ pub mod bag_store;
 pub mod bundle_store;
 pub mod catalogue;
 pub mod corpus;
+pub mod drill_store;
 pub mod flight_inputs;
 pub mod golfer_store;
 pub mod keypoints_io;
@@ -164,7 +169,8 @@ impl From<io::Error> for StoreError {
 /// with one (`clip.` is `clip.tmp` here and `clip..tmp` there), and agree on every name ending in a
 /// suffix. Every caller's name ends in `.json` — `manifest.json`, `<id>.golfer.json`,
 /// `analysis.state.json`, `session.json`, `shot_analysis.json` — so the stale `manifest.tmp` the storage family pins
-/// being consumed is the same file in both languages.
+/// being consumed is the same file in both languages. The drill store's names (`state.json`,
+/// `<strike_id>.jpg`, `<club>.rgb`) end in a suffix too, and have no Python twin to agree with.
 pub(crate) fn tmp_beside(path: &Path) -> PathBuf {
     path.with_extension("tmp")
 }
@@ -176,8 +182,14 @@ pub(crate) fn tmp_beside(path: &Path) -> PathBuf {
 /// (key order, float spelling, line endings): what frozen Python reads by is the value, and that is
 /// what the storage family pins.
 pub(crate) fn write_atomically<T: Serialize>(value: &T, path: &Path) -> io::Result<()> {
+    write_bytes_atomically(to_pretty_json(value).as_bytes(), path)
+}
+
+/// [`write_atomically`] for bytes that are not JSON: the drill's crops and its last-crop references
+/// ([`drill_store`]), which a reader must never find half written either. [M46 P17]
+pub(crate) fn write_bytes_atomically(bytes: &[u8], path: &Path) -> io::Result<()> {
     let tmp = tmp_beside(path);
-    fs::write(&tmp, to_pretty_json(value))?;
+    fs::write(&tmp, bytes)?;
     fs::rename(&tmp, path)
 }
 
