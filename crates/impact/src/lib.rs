@@ -10,6 +10,11 @@
 //! graphic doesn't accurately show where the ball was hit. The video is the best indicator we can
 //! get."
 //!
+//! **This reader is `contracts::face_impact`'s `ImpactMethod::OverheadReplay`** (M46 P5, ADR-037
+//! clause 1), whose declared axes, heel to toe and not high to low, are this paragraph's as a rule.
+//! It has no version key, so a `FaceImpact` it made would have nothing for `method_version` to hold,
+//! and nothing in M46 makes one.
+//!
 //! **It has no Python twin.** No Python ever read the replay and frozen Python never gains it
 //! (ADR-035 clause 4), so there is nothing to port and no vector recorded from one; its tests draw
 //! their own frames. It depends on nothing, std only, and decodes no video: frames arrive as RGB

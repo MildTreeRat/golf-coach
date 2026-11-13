@@ -46,7 +46,7 @@ machine, pull on the new" as its precondition.
 | **P2** | 🪟 The truth sheet and the tape session's run sheet | ✅ Done *(2026-11-12)* |
 | **P3** | 🧍 The labels: one flat photo, their sizes measured off it, and the user's answers | ✅ Done *(2026-11-12)* |
 | **P4** | 🪟 The session's inventory and the label geometry as data | ✅ Done *(2026-11-12)* |
-| **P5** | 🪟 `contracts::face_impact`: the method interface and `TAPE_READER_VERSION` | ⬜ |
+| **P5** | 🪟 `contracts::face_impact`: the method interface and `TAPE_READER_VERSION` | ✅ Done *(2026-11-12)* |
 | **P6** | 🪟 `contracts::drill`: the strike record, the stages and the ladder tables | ⬜ |
 | **P7** | 🪟 `impact::tape` geometry: the homography and the rectified crop | ⬜ |
 | **P8** | 🪟 `golf-lab read-tape`: the desk tool and its review images | ⬜ |
@@ -1435,3 +1435,29 @@ named as skipped where they are not), then write the three records, and commit `
 10. **For P30**: `crates/impact/Cargo.toml`'s `description` still names only the replay, and the manifest was not on
     P4's Touch line. Separately, `cargo doc -p impact` under `-D warnings` already failed before P4, on M42's private
     link at `frame.rs:51` (`sharpest_frame` to `luminance`). P4's docs add no warning.
+
+### P5 (2026-11-12)
+
+1. **`contracts::face_impact` is built**, `crates/contracts/src/face_impact.rs`, with C2's shapes as written:
+   `ImpactMethod` (`overhead_replay`, `strike_tape`), `ImpactAxes { heel_toe, high_low }` from `axes()`, a
+   `match` with no wildcard, and `FaceImpact`, `validated!` so that reading one from JSON applies the checks.
+   `TAPE_READER_VERSION = 1` sits beside them, its doc a ledger in `SCREEN_PARSER_VERSION`'s style: what bumps
+   it (any change to what a re-read of the same photo produces, after P13, per rule 4), why it is its own
+   ledger, and that 0 is no entry. `crates/contracts/tests/face_impact.rs` holds the four done-when cases plus
+   the axes, an unknown method, absent keys and the version's value. A unit test holds the refusal message's
+   method name to its serde spelling. `crates/impact/src/lib.rs` gained one doc paragraph naming its reader
+   `ImpactMethod::OverheadReplay`, and no code.
+2. **On the wire an unread axis is an absent key, never `null`**, `crate::strike`'s convention (skipped when
+   `None`, and a `null` that arrives reads as absent). C2 did not say which. **For P6**: `TapeStrike`'s
+   `offset_h_mm` and `offset_v_mm` would match it by the same convention, and that is P6's to settle.
+3. **The replay's `method_version` is left as P1 finding 4 asked**: the field's doc says it has nothing to
+   hold for `OverheadReplay`, and that the first milestone making a `FaceImpact` from a replay settles it.
+   No replay key was invented, and `Validate` does not check the field against its method. The tests write 0
+   for a replay as a placeholder only.
+4. **`Validate` checks only what C2 names**: a value on an axis the method cannot see (including 0, which is
+   face centre and so a claim), and a non-finite value on either axis. It does **not** require any axis to
+   hold a value, so a `FaceImpact` with both `None` is valid. **For P13 and P18**: if `Read` must carry both
+   tape axes, the reader or the facade has to hold that rule, since this shape does not.
+5. `cargo doc -p contracts` under `-D warnings` already fails, as P4 finding 10 found for `impact`, on three
+   links that predate M46 (`unscored.rs:351`, `feedback.rs:44`, `swing.rs:48`). This phase's docs add no
+   warning. **For P30**, beside finding 10's.
