@@ -39,12 +39,13 @@ const EVERY_CATEGORY: [ClubCategory; 9] = [
     ClubCategory::All,
 ];
 
-const EVERY_REASON: [TapeNotRead; 5] = [
+const EVERY_REASON: [TapeNotRead; 6] = [
     TapeNotRead::NoLabel,
     TapeNotRead::NoOrientation,
     TapeNotRead::NoNewMark,
     TapeNotRead::MarkClipped,
     TapeNotRead::DecodeFailed,
+    TapeNotRead::NotPicked,
 ];
 
 /// A ladder strike on the 7 iron at its widest circle, with no position and no source yet.

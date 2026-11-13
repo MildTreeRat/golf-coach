@@ -89,7 +89,8 @@ fn every_variant_is_listed(
         | TapeNotRead::NoOrientation
         | TapeNotRead::NoNewMark
         | TapeNotRead::MarkClipped
-        | TapeNotRead::DecodeFailed => {}
+        | TapeNotRead::DecodeFailed
+        | TapeNotRead::NotPicked => {}
     }
     match suggestion {
         Suggestion::Recentre
@@ -99,13 +100,18 @@ fn every_variant_is_listed(
     }
 }
 
-const EVERY_REASON: [(TapeNotRead, &str); 5] = [
+const EVERY_REASON: [(TapeNotRead, &str); 6] = [
     (TapeNotRead::NoLabel, "no_label"),
     (TapeNotRead::NoOrientation, "no_orientation"),
     (TapeNotRead::NoNewMark, "no_new_mark"),
     (TapeNotRead::MarkClipped, "mark_clipped"),
     (TapeNotRead::DecodeFailed, "decode_failed"),
+    (TapeNotRead::NotPicked, "not_picked"),
 ];
+
+/// The one reason the reader never gives: the app's facade stores it for a pick the golfer
+/// discarded (M46 P18).
+const FACADES_OWN: TapeNotRead = TapeNotRead::NotPicked;
 
 #[test]
 fn every_wire_name_is_pinned() {
@@ -576,10 +582,11 @@ fn a_retake_helps_exactly_where_the_photo_is_the_problem() {
     );
 }
 
-/// The reader's reasons are these, by wire name, one for one. `impact` cannot see this crate, so
-/// `golf-lab read-tape` and the facade (P18) each map an `impact::tape::TapeRefusal` across by its
-/// `as_str`. A reason added on either side, or spelled apart, fails here before it reaches a stored
-/// strike. [M46 P13, as P6's finding 5 asked]
+/// The reader's reasons are these, by wire name, one for one, less the facade's own. `impact`
+/// cannot see this crate, so `golf-lab read-tape` and the facade (P18) each map an
+/// `impact::tape::TapeRefusal` across by its `as_str`. A reason added on either side, or spelled
+/// apart, fails here before it reaches a stored strike. [M46 P13, as P6's finding 5 asked; the
+/// facade's own since P18]
 #[test]
 fn every_reason_the_reader_gives_is_one_of_these_by_wire_name() {
     let from_reader: Vec<TapeNotRead> = TapeRefusal::ALL
@@ -589,8 +596,18 @@ fn every_reason_the_reader_gives_is_one_of_these_by_wire_name() {
                 .unwrap_or_else(|_| panic!("{} is no TapeNotRead", reason.as_str()))
         })
         .collect();
-    let ours: Vec<TapeNotRead> = EVERY_REASON.iter().map(|(reason, _)| *reason).collect();
+    let ours: Vec<TapeNotRead> = EVERY_REASON
+        .iter()
+        .map(|(reason, _)| *reason)
+        .filter(|reason| *reason != FACADES_OWN)
+        .collect();
     assert_eq!(from_reader, ours);
+    assert!(
+        TapeRefusal::ALL
+            .iter()
+            .all(|reason| reason.as_str() != "not_picked"),
+        "the reader gives the facade's own reason"
+    );
 }
 
 #[test]

@@ -6,6 +6,7 @@
 
 pub mod about;
 pub mod bay;
+pub mod drill;
 pub mod export;
 pub mod history;
 pub mod profile;

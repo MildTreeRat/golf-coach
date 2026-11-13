@@ -59,7 +59,7 @@ machine, pull on the new" as its precondition.
 | **P15** | 🪟 `analysis::drill`: the pattern, the triggers and differential judging | ✅ Done *(2026-11-13)* |
 | **P16** | 🪟 `feedback::drill_rules`: the sentences | ✅ Done *(2026-11-13)* |
 | **P17** | 🪟 `storage::drill_store`: the drill history on disk | ✅ Done *(2026-11-13)* |
-| **P18** | 🪟 Facade: `record_tape_photo`, the pick and "missed the tape" | ⬜ |
+| **P18** | 🪟 Facade: `record_tape_photo`, the pick and "missed the tape" | ✅ Done *(2026-11-13)* |
 | **P19** | 🪟 Facade: the drill's actions (start, stage, suggestions, calls) | ⬜ |
 | **P20** | 🪟 Facade: the progress views (dots, level, pattern, heat map, roll-up) | ⬜ |
 | **P21** | 🪟 Export carries `drills/`, and `golf-lab import-export` keeps it | ⬜ |
@@ -2739,3 +2739,131 @@ named as skipped where they are not), then write the three records, and commit `
     - The doc-truth test passes (91).
     - `cargo doc -p storage` shows only the three warnings from before (`audio_io`, `bag_store` and
       `flight_inputs`), none from `drill_store.rs`.
+
+### P18 (2026-11-13)
+
+1. **The facade's first three rows are built.** Resumed once: a usage limit cut the first session off just after
+   the contracts change below, and the rest was finished in a second.
+   - **`crates/app/src/api/drill.rs`**: `DrillCall`, `TapeIn`, `TapeStatus`, `TapeOutcome`, `TapeStrikeCard`, and
+     `record_tape_photo`, `pick_mark` and `declare_off_tape`, each a one-line call.
+   - **`crates/app/src/drill.rs`**: what they do, with the order and the reasons in its module doc. It is `pub`
+     (at the crate root, outside `api`, so the codegen never meets it) for one seam:
+     `record_tape_photo_with(input, reader)`, where `Reader` answers a `Reading { outcome, sides }`. `read_photo`
+     is the phone's reader. The constants are `CROP_JPEG_QUALITY` (80), `FAILED_JPEG_QUALITY` (90), `PENDING_DIR`
+     and `TMP_DIR`.
+   - **`crates/app/tests/drill_record.rs`**, 18 tests. Six use photos drawn by P9 to P13's renderer, included by
+     path from `crates/impact/tests/tape_scene`, so there is one renderer, and read by the real reader: a fresh
+     label, two new marks, nothing new declared off the tape, a pick, a clipped mark, no label, no shaft, and a
+     raw file of the wrong size. Twelve use a stand-in reader, for counting, judging, waiting strikes and
+     refusals. `drill.rs` has 3 unit tests of `baseline_r50`. The file takes about 8 s in a debug build.
+   - **Four mutations were tried by hand, and each was caught**: a clipped mark that did not advance the label,
+     no discard of a waiting strike, a tap that ignored the sides, and a `NeedsPick` that did not advance the
+     reference.
+   - **The dependencies**: `crates/app/Cargo.toml` gained `impact`, `analysis`, `feedback` and
+     `jpeg-encoder = "=0.7.1"`, which has no dependencies of its own and needs Rust 1.87, the workspace's floor.
+     `Cargo.lock` gained the crate and the four edges. Its comment on `impact` now says the edge is for the tape
+     reader alone, and that the M38 plan's D4 still keeps the replay reader off the phone.
+2. **Outside the Touch line: `TapeNotRead::NotPicked`** (wire name `not_picked`, `retake_helps` false), as P6
+   finding 3 offered. A pick the golfer never made is stored as not read rather than dropped, because exit 2
+   wants every strike placed, declared or named not read. No pick is retaken, because its mark is already in
+   the club's last crop.
+   - **Its tests**: `crates/contracts/tests/drill.rs` lists it. The walk is now one for one less the facade's
+     own, and it checks that the reader never gives that name. `crates/feedback/tests/drill_rules.rs` and
+     `crates/analysis/tests/drill.rs` list it in their sweeps of every reason.
+   - **No version key moved**: it is the facade's reason, not something the reader produces.
+3. **What the section and C15 left open, and how P18 settled it.**
+   - **`TapeStatus` has six values**: `Read`, `Picked`, `OffTape`, `NeedsPick`, `NoNewMark` and `NotRead`.
+     `TapeOutcome` carries:
+     - the strikes this call stored, each with `position_line` and a verdict (`inside_verdict` at the strike's
+       own radius, `call_verdict` in differential, and none in the baseline or for a strike not read);
+     - `pending_id` and `crop_path`;
+     - the reason's sentence and `retake_helps`;
+     - `block_line` and `block_result`.
+   - **A tap is 0 to 1 across the crop JPEG**, from its left edge and its top edge, as the image is drawn. Rust
+     scales it to the grid's pixels and applies P7 finding 8's `to_label_mm`, then the stored sides. The crop is
+     the label's box, so this is C20's "0 to 1 across the label".
+   - **The raw file must sit directly in `<root>/.app/tmp/`.**
+     - A path anywhere else is refused and left untouched, so a caller's bug cannot delete a store's file.
+     - Past that check the file is deleted on every answer, refusals included, by `TakenPhoto`'s `Drop`.
+     - **For P29**: that `Drop` is the one place a switch to keep originals would go (P3 finding 10).
+   - **A photo with no label is kept as a JPEG at quality 90**, as `.app/failed/tape-<strike_id>.jpg`. The raw
+     file is 48 MB at 12 MP, and `.app/failed/` rides every export. `golf-lab read-tape` reads a JPEG.
+   - **Waiting strikes** are kept in `.app/drill_pending/<id>.json` and `<id>.jpg`, which stay on the phone.
+     - **The id is a strike id**, issued when the photo is taken.
+     - **The record holds the strike as it is stored if nobody resolves it**: not read, with its crop.
+     - **The club's next photo discards it**, storing a retake's `no_new_mark` as `no_new_mark`, and a pick
+       nobody made as `not_picked`.
+     - **`pick_mark` takes either kind** (P12 finding 9). `declare_off_tape` refuses a `NeedsPick`.
+     - **A strike is resolved only into the club as it was when its photo was taken.** A stage or level changed
+       since then refuses the resolution.
+     - **The sides of a `no_new_mark`**: `NotRead` does not carry the orientation, so `read_photo` runs
+       `impact::tape::orient` again for that outcome alone.
+   - **The label counters advance with the reference**, one place for each mark accounted for: a `Read` mark, a
+     `NeedsPick` when its photo is taken, a `mark_clipped`, or a pick of a `no_new_mark`.
+     - **A new label is issued** when the reader says so, or when it read with no reference (D4).
+     - **A strike whose mark is off the label or unseen** records the place the mark would take. That is `n + 1`
+       on the club's label, or the next label id at 1, and nothing moves.
+   - **P14 finding 4's reading is confirmed.** A photo with two new marks on a block of nine closes the block
+     with the first mark and opens the next with the second. The marks are stamped one at a time, so the second
+     carries the stage and the circle the judgment left.
+   - **The baseline's R50** (P15 finding 4, P16 finding 3) is `baseline_r50`.
+     - It is `stats::percentile` over the ten distances, each declaration standing in as `f64::MAX`.
+     - It is `None` unless every order statistic the median reads is placed, and at or inside the label's
+       inscribed radius.
+   - **The counters are written first, alone.** An id that reached `strikes.jsonl` with the counter behind it
+     would be issued again and refused forever. The crops and strikes come next, then the reference, then the
+     state.
+   - **A club with no drill state starts its baseline on its first photo.** Nothing has to call `start_drill`
+     first.
+   - **Refusals are `Err` sentences.** They cover:
+     - a club no label fits, with `NO_LABEL_FITS`;
+     - a golfer who is not on the phone;
+     - a time with no offset;
+     - a call outside differential practice, or no call in it;
+     - an unreadable drill record, with P17 finding 4's sentence.
+4. **For P19**:
+   - **`set_stage` and `answer_suggestion` must store the club's waiting strike first**:
+     `crate::drill::discard_pending(root, &store, club)`, under `one_writer()`. Otherwise a pick after the change
+     is refused, and the strike waits for the next photo.
+   - **`Drill::open` is private.** It reads the install, the golfer, the label type and the state, and makes the
+     club's entry. `start_drill` can share it if it becomes `pub(crate)`.
+   - **The suggestion's sentence is not in `TapeOutcome`** (P16 finding 4 is yours). If P24's block-end sheet
+     wants it beside the result, add `suggestion: Option<String>` there.
+5. **For P20**: `TapeOutcome` carries no geometry, and P23's card draws the dot and the circle. Add P20's
+   normalised coordinates to `TapeStrikeCard` (the dot) and `TapeOutcome` (the outline and the circle). Keep the
+   pick's frame, 0 to 1 from the crop's left edge and its top edge.
+6. **For P21**:
+   - **Waiting strikes are never under `drills/`.** So every crop in `crops/` belongs to a stored strike, save one
+     whose strike a crash cut off.
+   - **`.app/failed/tape-*.jpg` already travels**, since C16's export list names `.app/failed/`.
+   - **`strikes.jsonl` is in append order.** A resolved strike is appended when it is resolved, so its line can
+     follow a later strike of another club. The ids give the order the photos were taken in.
+7. **For P22**:
+   - **What `TapeIn.raw_path` must be**: directly in `<Documents>/processed/.app/tmp/`, raw RGBA, exactly
+     `width × height × 4` bytes. A missing or wrong-sized file is stored as `decode_failed`.
+   - **The bridge's lock gains `jpeg-encoder` when the Mac re-resolves it.** The exact pin holds it to 0.7.1, so
+     `tests/lock_agreement.rs` needs no line for it.
+8. **For P23**:
+   - **The `NeedsPick` screen should offer no retake.** The reference has already advanced, so a retake of the
+     same strike reads `no_new_mark`, and "Missed the tape" there would be a wrong declaration.
+     - Skipping the pick means taking the next photo, which stores the strike as `not_picked`.
+   - **The crop is drawn as printed**, with row 0 at the logo's edge. On a label stuck logo-down it shows
+     upside down.
+   - **C19's call holds over anything that did not count**: `NotRead`, `NoNewMark` and `NeedsPick`.
+9. **For P29**: `CROP_JPEG_QUALITY` and `FAILED_JPEG_QUALITY` are P18's and provisional. Each doc says what
+   revises it.
+10. **A failure from before P18, on Windows only**: `crates/app/tests/bay_bars.rs`'s
+    `a_bars_file_that_does_not_say_is_refused_rather_than_guessed_at`.
+    - **Why it fails**: `docs/plans/m38-bay-thresholds.md` is checked out CRLF here (`git ls-files --eol`:
+      `w/crlf`), and the test looks for a line ending in `|\n`.
+    - **Where it came from**: the M38 checkpoint (`0b88173`), the same family as P12 finding 12. P18 touches
+      neither file.
+    - **For P21, P28 and P31**, which run the workspace, or for the user.
+11. **Verify**:
+    - `cargo test -p app -p contracts -p feedback -p analysis --no-fail-fast` passes but for item 10
+      (`drill_record`: 18; `contracts`' `drill`: 39).
+    - `cargo clippy -p app -p contracts -p feedback -p analysis --all-targets -- -D warnings` and
+      `cargo fmt --check` are clean.
+    - `ort_reach` passes (4), and so do `golf-lab`'s `read_tape` tests (4).
+    - The doc-truth test passes (91).
+    - `cargo doc -p app` shows only the `events` warning from before.

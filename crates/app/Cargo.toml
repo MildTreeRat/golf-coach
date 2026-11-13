@@ -7,8 +7,9 @@
 #
 # **The lab's shell and `ocr` are never edges that ship from here**, since `ocr` holds `ort` and the
 # shell reaches it, and `crates/ocr/tests/ort_reach.rs` fails if this crate reaches it by any path of
-# normal or build dependencies. The lab is one dev-dependency, below, for one test. **Nor is `impact`
-# an edge, for a different reason**: the plan's D4 keeps clips off the phone until the reader works.
+# normal or build dependencies. The lab is one dev-dependency, below, for one test. **`impact` is an
+# edge since M46 P18, for its tape reader alone**: the M38 plan's D4 still keeps clips, and so the
+# replay reader, off the phone until that reader works.
 [package]
 name = "app"
 version = "0.1.0"
@@ -48,6 +49,19 @@ serde_json.workspace = true
 # ends of one archive format should not be free to differ and a lock holding two copies would be a
 # reason for them to. Its comment says what the features leave out and why.
 zip = { version = "=7.3.0", default-features = false, features = ["deflate-flate2"] }
+# The impact drill's facade (M46 P18, the plan's C15). `impact` reads each photo of a label on the club
+# (`impact::tape::read_tape`), std only, so it adds nothing below it. `analysis` judges a block and
+# works out the suggestion (`analysis::drill`), and `feedback` holds every word the drill shows
+# (`feedback::drill_rules`). `golf-core` already reached both, and naming them is what lets this crate
+# call them.
+impact = { path = "../impact" }
+analysis = { path = "../analysis" }
+feedback = { path = "../feedback" }
+# The crops a strike keeps, as JPEG (the M46 plan's D6 and C16): the one dependency M46 adds. Pure
+# Rust with no dependency of its own, and pinned exactly, which also holds the bridge's lock to this
+# version without a line in `tests/lock_agreement.rs`. Nothing in Rust here decodes a JPEG: the diff's
+# reference is raw RGB (`last/<club>.rgb`), and only a person or the lab reads a crop back.
+jpeg-encoder = "=0.7.1"
 
 [dev-dependencies]
 # A scratch data root per test, as `crates/storage`'s tests use. Test-only, and so off the phone.

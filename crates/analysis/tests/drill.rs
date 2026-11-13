@@ -214,6 +214,7 @@ fn a_strike_not_read_is_neither_inside_nor_outside() {
         TapeNotRead::NoNewMark,
         TapeNotRead::MarkClipped,
         TapeNotRead::DecodeFailed,
+        TapeNotRead::NotPicked,
     ]
     .into_iter()
     .enumerate()

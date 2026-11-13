@@ -48,6 +48,9 @@ pub mod api;
 /// `golf-bay-report`'s arithmetic, `pub` for the bin and outside [`api`], so the codegen never meets it.
 pub mod bay;
 mod card;
+// The impact drill's facade (M46 P18). `pub` for its one seam, `drill::record_tape_photo_with`, which
+// lets a test stand in for the tape reader, and outside `api`, so the codegen never meets it.
+pub mod drill;
 mod export;
 mod history;
 mod profile;

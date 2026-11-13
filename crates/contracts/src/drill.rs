@@ -280,6 +280,13 @@ pub enum TapeNotRead {
     MarkClipped,
     /// The photo could not be decoded into pixels.
     DecodeFailed,
+    /// **Never the reader's: the facade's** (M46 P18, as P6's finding 3 left to it). The reader
+    /// could not tell the new mark apart and asked for a tap, and the golfer moved on without one:
+    /// the next photo of the club, or a change of stage, discarded the pick. The mark is on the
+    /// label, so the club's last crop already holds it and a retake would show nothing new, which
+    /// is why this is stored rather than dropped. Exit 2 asks every strike to be placed, declared or
+    /// named not read.
+    NotPicked,
 }
 
 impl TapeNotRead {
@@ -302,6 +309,10 @@ impl TapeNotRead {
                  be placed. Another photo would show the same edge."
             }
             TapeNotRead::DecodeFailed => "The photo could not be opened. Take it again.",
+            TapeNotRead::NotPicked => {
+                "The new mark could not be told from the old ones, and none was tapped, so this \
+                 strike was not placed."
+            }
         }
     }
 
@@ -309,13 +320,14 @@ impl TapeNotRead {
     /// caused, and false for [`TapeNotRead::MarkClipped`], where the strike itself landed on the
     /// edge and every photo of it shows the same. [`TapeNotRead::NoNewMark`] is true, because a faint
     /// mark may show in a sharper photo, and it is also where "missed the tape" is offered (C6).
+    /// [`TapeNotRead::NotPicked`] is false, because the club's last crop already holds the mark.
     pub const fn retake_helps(self) -> bool {
         match self {
             TapeNotRead::NoLabel
             | TapeNotRead::NoOrientation
             | TapeNotRead::NoNewMark
             | TapeNotRead::DecodeFailed => true,
-            TapeNotRead::MarkClipped => false,
+            TapeNotRead::MarkClipped | TapeNotRead::NotPicked => false,
         }
     }
 }
@@ -537,6 +549,7 @@ fn reason_name(reason: TapeNotRead) -> &'static str {
         TapeNotRead::NoNewMark => "no_new_mark",
         TapeNotRead::MarkClipped => "mark_clipped",
         TapeNotRead::DecodeFailed => "decode_failed",
+        TapeNotRead::NotPicked => "not_picked",
     }
 }
 
