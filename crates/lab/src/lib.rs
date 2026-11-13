@@ -83,6 +83,11 @@
 //! - [`read_impact`] (M42 P13): `golf-lab read-impact`, no Python twin: the impact offset off a
 //!   Live Photo clip's replay of Full Swing's screen, through [`ffmpeg`]'s frames and
 //!   `crates/impact`'s reader, one line a clip, with review images of what each reading came from.
+//! - [`read_tape`] (M46 P8): `golf-lab read-tape`, no Python twin: where on the face, off photos of
+//!   a STRIKEPRO label on the club, through `ocr::decode::load_image` and `impact::tape::read_tape`,
+//!   one JSON line a photo, with review images of the found label, the crop and its marks. Its
+//!   reader is a stub that finds no label until M46 P9. `tests/read_tape.rs` runs the binary on
+//!   photos it draws.
 //!
 //! **No render** (the plan's C4): no verb here writes `aligned.mp4`.
 
@@ -100,6 +105,7 @@ pub mod import_export;
 pub mod pipeline;
 pub mod pose;
 pub mod read_impact;
+pub mod read_tape;
 pub mod reanalyze;
 pub mod report;
 pub mod shot;

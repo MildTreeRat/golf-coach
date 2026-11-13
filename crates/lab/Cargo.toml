@@ -88,12 +88,15 @@ zip = { version = "=7.3.0", default-features = false, features = ["deflate-flate
 # `read_impact`, the impact offset off Full Swing's overhead replay (`read_impact`, the M42 plan's
 # P13): the lab decodes a Live Photo's clip with ffmpeg and hands the reader RGB frames, which is
 # why the crate decodes nothing itself. The only crate that depends on it in M42; M38's `crates/app`
-# will be the second.
+# will be the second. M46 P8's `read_tape` crosses it for `impact::tape`, the STRIKEPRO label reader,
+# with each photo decoded through `ocr` first for the same reason.
 impact = { path = "../impact" }
 # The PNG encoder for `read-impact --review`'s images (the M42 plan's P13): the frames the reader
 # read, with the ball, the head and the toe drawn on them, for the user's later look at what each
 # reading came from (decision 3). Already in the lock through `crates/ocr`, pinned as that crate
 # pins it and with the same features, so the lock gains nothing and only the PNG codec compiles.
+# M46 P8's `read-tape --review` writes its images through it too, and shrinks a full-size photo
+# with `imageops::resize`, which the crate compiles with no feature.
 image = { version = "=0.25.9", default-features = false, features = ["png"] }
 
 # The engine input cut as a committed corpus vector holds it (`pipeline::corpus_input`, P25), which

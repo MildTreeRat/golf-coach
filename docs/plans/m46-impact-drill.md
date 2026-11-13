@@ -49,7 +49,7 @@ machine, pull on the new" as its precondition.
 | **P5** | 🪟 `contracts::face_impact`: the method interface and `TAPE_READER_VERSION` | ✅ Done *(2026-11-12)* |
 | **P6** | 🪟 `contracts::drill`: the strike record, the stages and the ladder tables | ✅ Done *(2026-11-12)* |
 | **P7** | 🪟 `impact::tape` geometry: the homography and the rectified crop | ✅ Done *(2026-11-12)* |
-| **P8** | 🪟 `golf-lab read-tape`: the desk tool and its review images | ⬜ |
+| **P8** | 🪟 `golf-lab read-tape`: the desk tool and its review images | ✅ Done *(2026-11-12)* |
 | **P9** | 🪟 The label finder, on synthetic photos | ⬜ |
 | **P10** | 🪟 Orientation: heel and up, from the hosel | ⬜ |
 | **P11** | 🪟 The mark on a fresh label | ⬜ |
@@ -1601,3 +1601,86 @@ named as skipped where they are not), then write the three records, and commit `
    `CropGrid::new(label, CROP_PX_PER_MM).to_label_mm([x, y])`, in the crop's pixel coordinates.
 9. `cargo doc -p impact` shows only the warning from before (P4 finding 10). `ort_reach`, fmt, clippy and the
    doc-truth test pass.
+
+### P8 (2026-11-12)
+
+1. **The verb is built**: `golf-lab read-tape PHOTO... --label T [--sequence] [--review DIR]`, in
+   `crates/lab/src/read_tape.rs` and wired in `crates/lab/src/bin/golf_lab.rs`. It decodes each photo through
+   `ocr::decode::load_image`, runs `impact::tape::read_tape`, and prints one JSON line a photo, with every field
+   of the outcome. It stores nothing. The exit codes are 0 when every photo was read, 1 when any needed a pick
+   or was not read, and 2 for a usage error or a photo that is not there. `crates/lab/tests/read_tape.rs` runs
+   the binary (4 tests): two drawn PNGs give two lines and their review images, a file that will not decode gives
+   its own line, and every refusal is checked, including an unknown flag and a missing photo. The module has 7
+   unit tests over outcomes built by hand. A smoke run on P3's flat photo (a 1512 × 2016 JPEG) gave `no_label`.
+   Its review went to the session scratchpad, and nothing was written under `data/`.
+2. **The stub, and C5's shapes, are in `crates/impact/src/tape/mod.rs`.** That file is not on P8's Touch line,
+   but the section's Do needs the stub there, and P9's Touch line names `mod.rs` for replacing it. The stub
+   answers `no_label` for any well-formed frame and `decode_failed` for a frame that is not well formed, and
+   has 3 unit tests. The shapes are:
+   - `TapeOutcome::Read(TapeReading)`, `NeedsPick(TapePick)` and `NotRead { reason, found }`, with `found()`;
+   - `FoundLabel { corners, crop }`, whose corners pair with `box_corners_mm()` by index, so the homography is
+     derived from them and not stored;
+   - `TapeReading { found, orientation, new_label, marks }`, `TapePick { found, orientation }`, and
+     `TapeMark { centroid_px, offset_h_mm, offset_v_mm }`;
+   - `Orientation { toe_printed_right, top_line_printed_top }`, with `to_reading_mm` and `to_printed_mm`;
+   - `TapeRefusal`, the five reasons, with `as_str()` (the wire name) and `ALL`.
+
+   **For P9 to P12**: replace or extend these as each stage needs. The verb prints and draws whatever they hold,
+   so a new field means a line in `json_line`, and in `write_review` if it should be drawn.
+3. **What P8 settled that C5 left open.** A later phase may revise any of these:
+   - **`NotRead` carries `found: Option<FoundLabel>`.** C5 names a bare reason, but C15 holds a `no_new_mark`
+     strike pending "with its crop", and a refusal's review image is how the refusal gets tuned. **For P10 to
+     P12**: set `found` for every reason that comes after the finder (`no_orientation`, `no_new_mark`,
+     `mark_clipped`). **For P18**: a pending `no_new_mark` strike's crop is `found.crop`.
+   - **`NeedsPick` carries the orientation**, because C6 turns the tap into millimetres in the reading frame.
+     So orientation comes before the marks, and `no_orientation` refuses before any mark is looked for. **For
+     P10 and P11.**
+   - **An orientation is two flips and no turn**, because a label lies along the face. The four combinations are
+     every real case: right- or left-handed, each with the logo up or down. A label turned 180° flips both axes.
+     **For P10**: if logo-down is read rather than refused, it is `top_line_printed_top: false`, with the toe
+     flag flipped as well.
+   - **No sentences in `impact`.** `golf_lab::read_tape::not_read` maps a `TapeRefusal` to
+     `contracts::drill::TapeNotRead` by wire name, and its test walks `TapeRefusal::ALL`. **For P13**: P6
+     finding 5's walk in `crates/contracts/tests/drill.rs` is still wanted, because P18's facade maps the
+     reasons again, in `crates/app`.
+4. **`--label` is required, where C23 bracketed it.** No default is safe. The driver label's box is
+   90.5 × 49.6 mm and the iron's is 73 × 39.9, aspects of 1.825 and 1.830. Read as the wrong type, a photo
+   could pass an aspect check and come out at a scale 1.24 off, a wrong reading where a refusal was owed (rule
+   6). The value is a label id, checked at parse time against `LABEL_TYPES` (argparse's `invalid choice`).
+   **For P9**: `ASPECT_TOLERANCE` alone cannot tell the driver label from the iron, so if a default or an
+   auto-detected type is ever wanted, the outline's shape has to make the call.
+5. **`--sequence` reads each photo against a crop, not against the previous photo.** ADR-037 clause 3 says
+   `previous` is the club's last crop. Here that is the crop of the latest photo that came out `Read` or
+   `NeedsPick`, which is what the phone's `last/<club>.rgb` will hold: the last strike stored with a crop.
+   - A refusal leaves the reference where it was. A photo that did not decode is read against nothing, and its
+     `previous` is `null`. The line names, in `previous`, the photo whose crop was the reference.
+   - **For P12 and P18**: since a refusal leaves the reference alone, the mark of a `mark_clipped` or
+     `no_orientation` photo shows as new again on the next photo. The phone and the desk tool should follow
+     one rule. If P18 picks another, the desk tool follows it in one `if let` in `read_tape_photos_with`.
+   - **For P12**: the verb passes `crop.frame` alone, which is C5's `Option<&Frame>`, without the `outside`
+     mask. That matches C16, whose `last/<club>.rgb` is raw RGB. An outside pixel is therefore black in the
+     reference. To leave it out of the diff (P7 finding 6), either treat a black reference pixel as outside, or
+     widen `previous` to a `Crop` and add the mask to C16's file.
+6. **The review**, under `DIR/<stem>/`:
+   - **`photo.png`**: the photo, shrunk to fit `REVIEW_MAX_SIDE` (1600). A full-size photo would be a PNG of
+     about 25 MB, and P3's flat photo came to 4 MB at 1200 × 1600. It shows the found box in yellow, the outline
+     through the same map in cyan, the cross in white, and once the label is oriented, `ARROW_MM` arrows toward
+     the toe in red and toward the top line in blue. It is written for every photo that decoded, so a
+     `no_label` photo gets one too.
+   - **`crop.png`**: the crop at its own size, with the cross, the two arrows, and each mark ringed in magenta.
+   - Before writing, both files a previous run left are removed. A photo that will not decode only has its
+     stale files removed.
+   - **For P11**: the ring is a fixed `MARK_RING_MM` (3 mm), because a `TapeMark` carries no extent. If a mark
+     gains one, the ring in `write_review` can follow it.
+   - The drawing reuses `read_impact`'s `ring`, `disc` and `segment`, which are now `pub(crate)`. That is a
+     visibility change in `crates/lab/src/read_impact.rs` and nothing more.
+7. Small things:
+   - The line's keys come out sorted, because `serde_json` is built without `preserve_order`.
+   - `crates/lab/Cargo.toml`'s `impact` and `image` comments name the new verb. No dependency was added, and the
+     lock did not change.
+   - `cargo doc` gives no new warning.
+   - Clippy and fmt are clean. `cargo test -p impact`, `-p golf-lab --lib`, `--test golf_lab` and
+     `--test read_tape`, `-p contracts --test drill`, `ort_reach` and the doc-truth test all pass.
+8. **For P30**: `CLAUDE.md`'s list of golf-lab's other verbs, in the Commands block's `golf-lab analyze` comment,
+   does not name `read-tape`, and neither does `docs/ARCHITECTURE.md` §1. P30's Touch line covers §1, but its
+   `CLAUDE.md` entry names only the `crates/impact` and `contracts` sentences.

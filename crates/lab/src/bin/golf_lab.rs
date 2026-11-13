@@ -25,6 +25,7 @@
 //! golf-lab build-vectors [--sessions-dir D] [--golfers-dir D] [--out DIR] [--dry-run]
 //! golf-lab import-export EXPORT [--sessions-dir D] [--shots-dir D] [--golfers-dir D] [--dry-run]
 //! golf-lab read-impact CLIP... [--json] [--review DIR]
+//! golf-lab read-tape PHOTO... --label T [--sequence] [--review DIR]
 //! golf-lab --help
 //! ```
 //!
@@ -139,6 +140,21 @@
 //! layout no profile reads. A device that declares nothing from the replay exits 2 before anything
 //! is read (`--device full_swing`, or `GOLF_LAUNCH_MONITOR_PROFILE`; the default is `hd_golf`). No
 //! ffmpeg is a clip that cannot be decoded, for every clip, as with `read-impact`.
+//!
+//! # `read-tape` (M46 P8)
+//!
+//! No script: where on the face, read off each `PHOTO` of a STRIKEPRO label on the club and
+//! printed as one JSON object a line (`golf_lab::read_tape`'s module doc). `--label` names the label
+//! type every photo is read as, by its id (`strikepro_driver`, `strikepro_iron` or
+//! `strikepro_hybrid`). **It is required**, where the M46 plan's C23 bracketed it, because no
+//! default is safe: the driver and iron labels' boxes are within 1% of one aspect (90.5 × 49.6 and
+//! 73 × 39.9 mm), so a photo read as the wrong one could pass the finder's aspect check and be read
+//! at the wrong scale, a wrong reading where a refusal was owed. `--sequence` reads each photo
+//! against the crop of the last one placed before it, and `--review DIR` writes each photo's review
+//! images under `DIR/<stem>/`. Nothing is stored. A photo that is not there is refused before any
+//! is read, since with `--sequence` it would change what every later photo is read against; one
+//! that is there and will not decode is its own `decode_failed` line. Exit codes: 0 every photo
+//! read, 1 any needing a pick or not read, 2 usage or a photo not there.
 
 use std::io::{self, Write};
 use std::path::PathBuf;
@@ -161,6 +177,7 @@ use golf_lab::import_export::{import_export, Request as ExportRequest};
 use golf_lab::pipeline::{PipelineOptions, Tools, VIEWS};
 use golf_lab::pose::{keypoints_for, Sidecar};
 use golf_lab::read_impact::{is_clip, read_impact_clips, Request as ImpactRequest};
+use golf_lab::read_tape::{missing_photo, read_tape_photos, Request as TapeRequest};
 use golf_lab::reanalyze::{reanalyze, Request as ReanalyzeRequest};
 use golf_lab::report::{print_report, print_swings};
 use golf_lab::shot::{OcrReader, ShotOptions};
@@ -194,7 +211,8 @@ const USAGE: &str = "usage: golf-lab import-photos [PATHS...] [--session S] [--o
                      [--dry-run]\n       \
                      golf-lab import-export EXPORT [--sessions-dir D] [--shots-dir D] \
                      [--golfers-dir D] [--dry-run]\n       \
-                     golf-lab read-impact CLIP... [--json] [--review DIR]";
+                     golf-lab read-impact CLIP... [--json] [--review DIR]
+                            golf-lab read-tape PHOTO... --label T [--sequence] [--review DIR]";
 
 fn main() -> ExitCode {
     let mut args = std::env::args().skip(1);
@@ -293,6 +311,17 @@ fn main() -> ExitCode {
         },
         Some("read-impact") => match parse_read_impact(args) {
             Ok(Some(request)) => run_read_impact(&request),
+            Ok(None) => {
+                println!("{USAGE}");
+                ExitCode::SUCCESS
+            }
+            Err(problem) => {
+                usage(&problem);
+                ExitCode::from(2)
+            }
+        },
+        Some("read-tape") => match parse_read_tape(args) {
+            Ok(Some(request)) => run_read_tape(&request),
             Ok(None) => {
                 println!("{USAGE}");
                 ExitCode::SUCCESS
@@ -1178,6 +1207,84 @@ fn run_read_impact(request: &ImpactRequest) -> ExitCode {
         Ok(code) => ExitCode::from(code),
         Err(error) => {
             eprintln!("golf-lab read-impact: writing the report or the review: {error}");
+            ExitCode::FAILURE
+        }
+    }
+}
+
+/// `read-tape`'s photos and flags, argparse's way. `--label` is checked against the label types
+/// here, so nothing is decoded before the usage error. `Ok(None)` is `--help`.
+fn parse_read_tape(mut args: impl Iterator<Item = String>) -> Result<Option<TapeRequest>, String> {
+    const VERB: &str = "read-tape";
+    let (mut photos, mut sequence, mut label, mut review) = (Vec::new(), false, None, None);
+    while let Some(arg) = args.next() {
+        let (flag, inline) = split_flag(&arg);
+        match flag.as_str() {
+            "--label" => {
+                let id = inline
+                    .or_else(|| args.next())
+                    .ok_or_else(|| format!("{VERB}: argument --label: expected one argument"))?;
+                label = Some(impact::tape::label_type(&id).ok_or_else(|| {
+                    let choices: Vec<String> = impact::tape::LABEL_TYPES
+                        .iter()
+                        .map(|label| format!("'{}'", label.id))
+                        .collect();
+                    format!(
+                        "{VERB}: argument --label: invalid choice: '{id}' (choose from {})",
+                        choices.join(", ")
+                    )
+                })?);
+            }
+            "--review" => {
+                review = Some(PathBuf::from(inline.or_else(|| args.next()).ok_or_else(
+                    || format!("{VERB}: argument --review: expected one argument"),
+                )?))
+            }
+            "--sequence" | "-h" | "--help" if inline.is_some() => {
+                return Err(format!(
+                    "{VERB}: argument {flag}: ignored explicit argument {:?}",
+                    inline.unwrap_or_default()
+                ))
+            }
+            "--sequence" => sequence = true,
+            "-h" | "--help" => return Ok(None),
+            other if other.starts_with('-') && other != "-" => {
+                return Err(format!("{VERB}: unrecognized arguments: {other}"))
+            }
+            _ => photos.push(PathBuf::from(&arg)),
+        }
+    }
+    let missing: Vec<&str> = [(photos.is_empty(), "PHOTO"), (label.is_none(), "--label")]
+        .into_iter()
+        .filter_map(|(absent, name)| absent.then_some(name))
+        .collect();
+    let Some(label) = label.filter(|_| missing.is_empty()) else {
+        return Err(format!(
+            "{VERB}: the following arguments are required: {}",
+            missing.join(", ")
+        ));
+    };
+    Ok(Some(TapeRequest {
+        photos,
+        sequence,
+        label,
+        review,
+    }))
+}
+
+/// Run `read-tape`: every photo checked to be there, then one line a photo on stdout.
+fn run_read_tape(request: &TapeRequest) -> ExitCode {
+    if let Some(photo) = missing_photo(request) {
+        eprintln!(
+            "golf-lab read-tape: {} not found, so no photo was read",
+            spelled(photo).display()
+        );
+        return ExitCode::from(2);
+    }
+    match read_tape_photos(request, &mut io::stdout().lock()) {
+        Ok(code) => ExitCode::from(code),
+        Err(error) => {
+            eprintln!("golf-lab read-tape: writing the report or the review: {error}");
             ExitCode::FAILURE
         }
     }

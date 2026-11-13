@@ -266,7 +266,7 @@ fn paint(
 }
 
 /// A circle's outline, a pixel and a half thick, at `radius` round `center`.
-fn ring(image: &mut RgbImage, center: [f64; 2], radius: f64, colour: Rgb<u8>) {
+pub(crate) fn ring(image: &mut RgbImage, center: [f64; 2], radius: f64, colour: Rgb<u8>) {
     let reach = radius + 1.0;
     paint(
         image,
@@ -278,7 +278,7 @@ fn ring(image: &mut RgbImage, center: [f64; 2], radius: f64, colour: Rgb<u8>) {
 }
 
 /// A filled disc of `radius` round `center`.
-fn disc(image: &mut RgbImage, center: [f64; 2], radius: f64, colour: Rgb<u8>) {
+pub(crate) fn disc(image: &mut RgbImage, center: [f64; 2], radius: f64, colour: Rgb<u8>) {
     paint(
         image,
         [center[0] - radius, center[1] - radius],
@@ -289,7 +289,7 @@ fn disc(image: &mut RgbImage, center: [f64; 2], radius: f64, colour: Rgb<u8>) {
 }
 
 /// A line segment two pixels thick from `a` to `b`.
-fn segment(image: &mut RgbImage, a: [f64; 2], b: [f64; 2], colour: Rgb<u8>) {
+pub(crate) fn segment(image: &mut RgbImage, a: [f64; 2], b: [f64; 2], colour: Rgb<u8>) {
     let along = [b[0] - a[0], b[1] - a[1]];
     let length_squared = along[0] * along[0] + along[1] * along[1];
     paint(
