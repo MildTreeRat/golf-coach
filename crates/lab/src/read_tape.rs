@@ -3,8 +3,9 @@
 //!
 //! **It has no Python twin and stores nothing.** It is the M46 plan's C23, the desk tool every
 //! reader phase after it is tuned with (P9 to P12 on synthetic photos, P29 on any originals the
-//! phone keeps), and it runs the one reader the phone runs, [`impact::tape::read_tape`]. **Until P9
-//! that reader is a stub** that finds no label, so every photo is `no_label` here until P9 lands.
+//! phone keeps), and it runs the one reader the phone runs, [`impact::tape::read_tape`]. It runs it
+//! with no golfer's hand, since the desk has no golfer: the shaft alone orients each label, without
+//! the cross-check the phone makes (M46 P10).
 //!
 //! Each photo is decoded by [`ocr::decode::load_image`] (JPEG and PNG in-process, HEIC through
 //! ffmpeg, as the OCR gate decodes them) into a [`Frame`] and read against the one label type the
@@ -102,7 +103,8 @@ pub struct Request {
     pub review: Option<PathBuf>,
 }
 
-/// The reader the run calls: [`read_tape`]'s signature, so a test can stand in for the stub.
+/// The reader the run calls: [`read_tape`]'s signature less the hand, so a test can stand in for
+/// it.
 pub type Reader<'a> = dyn FnMut(&Frame, Option<&Frame>, &LabelType) -> TapeOutcome + 'a;
 
 /// The decoder the run calls: a photo's pixels, or the sentence saying why there are none.
@@ -210,9 +212,13 @@ fn orientation_json(orientation: Orientation) -> Value {
     })
 }
 
-/// Run the verb over every photo through [`decode_photo`] and [`read_tape`].
+/// Run the verb over every photo through [`decode_photo`] and [`read_tape`], with no hand (the
+/// module doc).
 pub fn read_tape_photos(request: &Request, out: &mut dyn Write) -> io::Result<u8> {
-    read_tape_photos_with(request, &mut decode_photo, &mut read_tape, out)
+    let mut read = |photo: &Frame, previous: Option<&Frame>, label: &LabelType| {
+        read_tape(photo, previous, label, None)
+    };
+    read_tape_photos_with(request, &mut decode_photo, &mut read, out)
 }
 
 /// Run the verb over every photo with the decoder and reader given, printing one line a photo to

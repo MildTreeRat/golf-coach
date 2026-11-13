@@ -284,7 +284,12 @@ pub fn rectify(
     label: &LabelType,
     px_per_mm: f64,
 ) -> Crop {
-    let grid = CropGrid::new(label, px_per_mm);
+    rectify_onto(frame, photo_to_label, CropGrid::new(label, px_per_mm))
+}
+
+/// [`rectify`] onto any grid in the printed frame, not only the label's box: the orientation stage
+/// (P10) cuts a wider, coarser window round the label through the same map to look for the shaft.
+pub(super) fn rectify_onto(frame: &Frame, photo_to_label: &Homography, grid: CropGrid) -> Crop {
     let pixels = grid.width * grid.height;
     let mut rgb = vec![0; pixels * 3];
     let mut outside = vec![true; pixels];

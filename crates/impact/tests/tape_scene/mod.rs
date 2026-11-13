@@ -1,5 +1,5 @@
 //! Synthetic photos of a STRIKEPRO label stuck on a club face, drawn through a pinhole camera, for
-//! the tape reader's tests. [M46 P9]
+//! the tape reader's tests. [M46 P9, P10]
 //!
 //! The M46 plan builds the reader on synthetic photos alone, because no photo of a label on a club
 //! exists before P29 (P3 finding 10). This module is the one renderer P9 to P12's tests draw with,
@@ -14,6 +14,8 @@
 //! - **The head** is a face outline with a hosel and a shaft leaving its heel, up and away from the
 //!   toe at a lie of 62°. A right-handed club seen face-on has its toe on the photo's left (the
 //!   plan's C4), so its heel and hosel are on the right. A left-handed one is that mirrored.
+//!   [`Scene::shaft`] can leave both out, or draw a second at the toe, for the orientation's
+//!   refusals (P10). The shaft lies in the face's plane, which a real one does not (`orient.rs`).
 //! - **The label** is the type's measured outline (`LabelType::outline_mm`) with its cross at
 //!   [`Scene::label_at_mm`]. Stuck logo-up, its printed frame is the plane's, and stuck logo-down it
 //!   is turned half a turn. The labels are sold for either hand and are printed one way, so a
@@ -108,6 +110,23 @@ impl Camera {
         Camera::new(0.0, 0.0, 0.0, distance_mm, [0.0, 0.0])
     }
 
+    /// Turned as [`Camera::new`] turns it, and moved so that the plane point `aim_mm` is the
+    /// photo's centre at `distance_mm`: how a test frames the hosel and shaft beside the label.
+    /// [M46 P10]
+    pub fn aimed(
+        pitch_deg: f64,
+        yaw_deg: f64,
+        roll_deg: f64,
+        distance_mm: f64,
+        aim_mm: [f64; 2],
+    ) -> Camera {
+        let mut camera = Camera::new(pitch_deg, yaw_deg, roll_deg, distance_mm, [0.0, 0.0]);
+        let (u, v) = (camera.column(0), camera.column(1));
+        let aim: [f64; 3] = std::array::from_fn(|k| aim_mm[0] * u[k] + aim_mm[1] * v[k]);
+        camera.translation = [-aim[0], -aim[1], distance_mm - aim[2]];
+        camera
+    }
+
     /// The angle between the plane's normal and the optical axis: 0 face-on.
     pub fn tilt_deg(&self) -> f64 {
         self.rotation[2][2].acos().to_degrees()
@@ -150,10 +169,20 @@ fn multiply(a: &[[f64; 3]; 3], b: &[[f64; 3]; 3]) -> [[f64; 3]; 3] {
     std::array::from_fn(|i| std::array::from_fn(|j| (0..3).map(|k| a[i][k] * b[k][j]).sum()))
 }
 
+/// The club's hand is the reader's own type, so a scene's hand is what a test passes to it as the
+/// golfer's. [M46 P10]
+pub use impact::tape::Handedness as Hand;
+
+/// What leaves the head at the hosel: the reader's only cue to which end is the heel. [M46 P10]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Hand {
-    Right,
-    Left,
+pub enum Shaft {
+    /// The hosel and a graphite shaft, at the heel.
+    AtHeel,
+    /// Neither, as a photo framed too tight to hold them shows the head.
+    Missing,
+    /// A hosel and shaft at each end, as a dark bar leaving the toe too (a shadow, or another
+    /// club) would make it: no end is the heel.
+    AtBothEnds,
 }
 
 /// Which club's face is drawn around the label.
@@ -195,6 +224,10 @@ pub struct Scene {
     /// The label stuck with its logo toward the top line. `false` turns it half a turn.
     pub logo_up: bool,
     pub head: Head,
+    /// What leaves the head at the hosel. Drawn only with a head.
+    pub shaft: Shaft,
+    /// Behind the club: [`MAT`] unless a test needs another.
+    pub background: [u8; 3],
     /// The label's cross in the plane's frame.
     pub label_at_mm: [f64; 2],
     /// A second label of the same type, its cross here, for a photo with two.
@@ -224,6 +257,8 @@ impl Scene {
             } else {
                 Head::Iron
             },
+            shaft: Shaft::AtHeel,
+            background: MAT,
             label_at_mm: [0.0, 0.0],
             second_label_at_mm: None,
             no_label: false,
@@ -320,21 +355,29 @@ impl Scene {
         let (face, hosel_base, colour): (&[[f64; 2]], [f64; 2], [u8; 3]) = match self.head {
             Head::Iron => (&IRON_FACE, [40.0, 12.0], STEEL),
             Head::Driver => (&DRIVER_FACE, [52.0, 18.0], CARBON),
-            Head::None => return MAT,
+            Head::None => return self.background,
         };
         let up = [LIE_DEG.to_radians().cos(), LIE_DEG.to_radians().sin()];
-        let along = |from: f64, to: f64, half_width: f64| {
-            let rel = [heel_right[0] - hosel_base[0], heel_right[1] - hosel_base[1]];
+        // A point along the hosel's line from its base, in a frame with that hosel's end to the
+        // right: `from..=to` along it and within `half_width` across.
+        let along = |point: [f64; 2], from: f64, to: f64, half_width: f64| {
+            let rel = [point[0] - hosel_base[0], point[1] - hosel_base[1]];
             let t = rel[0] * up[0] + rel[1] * up[1];
             let across = (rel[0] * up[1] - rel[1] * up[0]).abs();
             (from..=to).contains(&t) && across <= half_width
         };
-        if along(30.0, 1000.0, 4.5) {
+        let toe_right = [-heel_right[0], heel_right[1]];
+        let hosels: &[[f64; 2]] = match self.shaft {
+            Shaft::AtHeel => &[heel_right],
+            Shaft::Missing => &[],
+            Shaft::AtBothEnds => &[heel_right, toe_right],
+        };
+        if hosels.iter().any(|&at| along(at, 30.0, 1000.0, 4.5)) {
             SHAFT
-        } else if along(0.0, 30.0, 7.0) || inside(face, heel_right) {
+        } else if hosels.iter().any(|&at| along(at, 0.0, 30.0, 7.0)) || inside(face, heel_right) {
             colour
         } else {
-            MAT
+            self.background
         }
     }
 

@@ -18,8 +18,12 @@
 //! **P9 replaces the stub's first step with the label finder** (`label.rs`): [`find_label`] fits the
 //! label type's measured outline to the bright, neutral region in the photo that it fits, and returns
 //! the box's four corners in the printed frame with the crop cut through them, or a [`LabelMiss`].
-//! Nothing yet looks for the hosel, so [`read_tape`] refuses every label it finds as
-//! `no_orientation` until P10.
+//!
+//! **P10 orients a found label from the club** (`orient.rs`): [`orient`] finds the shaft leaving
+//! the label's heel end and running up, which settles both of [`Orientation`]'s flips, and checks
+//! them against the golfer's hand when one is given. A label stuck logo-down is read, not refused.
+//! Nothing yet looks for marks, so [`read_tape`] hands every label it orients to the golfer as
+//! [`TapeOutcome::NeedsPick`] until P11.
 //!
 //! # A Rust table, not `tape_labels.json`
 //!
@@ -52,6 +56,7 @@
 
 mod geometry;
 mod label;
+mod orient;
 mod tape_labels;
 
 use crate::frame::Frame;
@@ -60,6 +65,11 @@ pub use geometry::{rectify, Crop, CropGrid, Degenerate, Homography, CROP_PX_PER_
 pub use label::{
     find_label, LabelMiss, OutlineFit, ASPECT_TOLERANCE, LABEL_SATURATION_MAX, LOGO_CONTRAST,
     MAX_OUTSIDE_SHARE, MIN_INLIER_SHARE, MIN_OUTLINE_SUPPORT, MIN_PX_PER_MM, OUTLINE_INLIER_MM,
+};
+pub use orient::{
+    orient, OrientMiss, Shaft, HEEL_MIN_SHARE, ORIENT_PX_PER_MM, SEARCH_REACH_MM, SHAFT_DARK_RATIO,
+    SHAFT_MAX_ANGLE_DEG, SHAFT_MAX_GAP_MM, SHAFT_MAX_WIDTH_MM, SHAFT_MIN_ANGLE_DEG,
+    SHAFT_MIN_ASPECT, SHAFT_MIN_LENGTH_MM,
 };
 pub use tape_labels::{
     CATEGORY_LABELS, LABEL_TYPES, PROVENANCE, STRIKEPRO_DRIVER, STRIKEPRO_HYBRID, STRIKEPRO_IRON,
@@ -206,7 +216,8 @@ pub struct TapeMark {
 
 /// Which way the club lies across the label's printed frame: what turns a printed millimetre into
 /// C4's reading frame, `+x` toward the toe and `+y` toward the top line, whichever hand the club
-/// is. It comes from the hosel and shaft (P10), never from the golfer's hand alone. [M46 P8]
+/// is. It comes from the hosel and shaft ([`orient`]), never from the golfer's hand alone. [M46 P8,
+/// P10]
 ///
 /// Two flips and no turn, because a label is stuck along the face, so its printed axes lie along
 /// the face's (the module doc). Each flip is its own inverse, so one map runs both ways.
@@ -218,9 +229,27 @@ pub struct Orientation {
     pub toe_printed_right: bool,
     /// The top line is toward the printed top, the logo's edge: the label was stuck logo-up, as
     /// the table assumes (P4 finding 5). The finder (P9) finds a label stuck logo-down in its
-    /// printed frame as it finds one at any turn, by the outline's shape, so whether logo-down is
-    /// read or refused is P10's alone.
+    /// printed frame as it finds one at any turn, by the outline's shape. [`orient`] reads it,
+    /// with this flag `false` and the toe's flipped too, because the shaft says which way is up.
     pub top_line_printed_top: bool,
+}
+
+/// Which hand a club is for: the golfer's, as `contracts::golfer::Handedness` holds it. A caller
+/// maps that across by hand, since this crate takes no dependency, `contracts` included. [M46 P10]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Handedness {
+    Right,
+    Left,
+}
+
+impl Handedness {
+    /// `contracts::golfer::Handedness`'s wire name.
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Handedness::Right => "right",
+            Handedness::Left => "left",
+        }
+    }
 }
 
 impl Orientation {
@@ -235,6 +264,22 @@ impl Orientation {
     /// A point in the reading frame, in the printed frame: the same flips, each its own inverse.
     pub fn to_printed_mm(self, reading: [f64; 2]) -> [f64; 2] {
         self.to_reading_mm(reading)
+    }
+
+    /// The hand of club that lies this way across a label seen from the front. [M46 P10]
+    ///
+    /// Face-on, with the top line up, a right-handed club has its toe on the photo's left (C4) and
+    /// a left-handed one on its right. A label stuck logo-up lies in the photo as printed, so a
+    /// right-handed club has its toe printed left and a left-handed one printed right. Stuck
+    /// logo-down, the label is turned half a turn, which flips both flags and keeps the hand. Only
+    /// a mirror would flip one alone, and the finder refuses a mirrored label (P7's `Mirrored`). So
+    /// the two flags agree on a left-handed club and differ on a right-handed one.
+    pub fn handedness(self) -> Handedness {
+        if self.toe_printed_right == self.top_line_printed_top {
+            Handedness::Left
+        } else {
+            Handedness::Right
+        }
     }
 }
 
@@ -284,16 +329,22 @@ impl TapeRefusal {
 }
 
 /// Read one photo of a label on the club: C5's reader. `previous` is the club's last crop (C16,
-/// ADR-037 clause 3), and `None` reads the label as fresh. [M46 P8, P9]
+/// ADR-037 clause 3), and `None` reads the label as fresh. `hand` is the golfer's, which checks the
+/// orientation the shaft gives (C4), and `None` leaves the shaft alone to decide. [M46 P8, P9, P10]
 ///
 /// A photo that is not well formed ([`Frame::is_well_formed`]) is `decode_failed`, and one in which
-/// [`find_label`] finds no label is `no_label`, whatever its [`LabelMiss`].
+/// [`find_label`] finds no label is `no_label`, whatever its [`LabelMiss`]. A found label that
+/// [`orient`] cannot orient is `no_orientation`, whatever its [`OrientMiss`], and carries the label.
 ///
-/// **A found label is refused as `no_orientation` until P10**, carrying the label it found. Nothing
-/// has looked for the hosel yet, so which side of the label is the toe is unknown, and a reading
-/// without it would be a guessed sign (the M46 plan's rule 6). P10 adds the orientation, and P11 and
-/// P12 the marks.
-pub fn read_tape(photo: &Frame, previous: Option<&Frame>, label: &LabelType) -> TapeOutcome {
+/// **An oriented label needs a pick until P11.** Nothing has looked for a mark yet, so the golfer is
+/// handed the crop to tap, which is the one way to place a mark without a guess (the M46 plan's
+/// rule 6). P11 and P12 add the marks, and `previous` is unread until P12.
+pub fn read_tape(
+    photo: &Frame,
+    previous: Option<&Frame>,
+    label: &LabelType,
+    hand: Option<Handedness>,
+) -> TapeOutcome {
     let _ = previous;
     if !photo.is_well_formed() {
         return TapeOutcome::NotRead {
@@ -301,12 +352,18 @@ pub fn read_tape(photo: &Frame, previous: Option<&Frame>, label: &LabelType) -> 
             found: None,
         };
     }
-    match find_label(photo, label) {
+    let found = match find_label(photo, label) {
+        Ok((found, _)) => found,
+        Err(_) => {
+            return TapeOutcome::NotRead {
+                reason: TapeRefusal::NoLabel,
+                found: None,
+            }
+        }
+    };
+    match orient(photo, &found, label, hand) {
+        Ok((orientation, _)) => TapeOutcome::NeedsPick(TapePick { found, orientation }),
         Err(_) => TapeOutcome::NotRead {
-            reason: TapeRefusal::NoLabel,
-            found: None,
-        },
-        Ok((found, _)) => TapeOutcome::NotRead {
             reason: TapeRefusal::NoOrientation,
             found: Some(found),
         },
@@ -324,7 +381,7 @@ mod tests {
             height: 2,
             rgb: vec![90; 4 * 2 * 3],
         };
-        let outcome = read_tape(&photo, Some(&photo), &STRIKEPRO_IRON);
+        let outcome = read_tape(&photo, Some(&photo), &STRIKEPRO_IRON, None);
         assert_eq!(
             outcome,
             TapeOutcome::NotRead {
@@ -338,7 +395,7 @@ mod tests {
             ..photo
         };
         assert_eq!(
-            read_tape(&short, None, &STRIKEPRO_DRIVER),
+            read_tape(&short, None, &STRIKEPRO_DRIVER, Some(Handedness::Left)),
             TapeOutcome::NotRead {
                 reason: TapeRefusal::DecodeFailed,
                 found: None
@@ -362,6 +419,24 @@ mod tests {
             assert_eq!(orientation.to_reading_mm(point), reading);
             assert_eq!(orientation.to_printed_mm(reading), point);
         }
+    }
+
+    #[test]
+    fn the_two_flags_agree_on_a_left_handed_club_and_a_half_turn_keeps_the_hand() {
+        let hand = |toe_printed_right, top_line_printed_top| {
+            Orientation {
+                toe_printed_right,
+                top_line_printed_top,
+            }
+            .handedness()
+        };
+        // Logo-up, then logo-down, for each hand.
+        assert_eq!(hand(false, true), Handedness::Right);
+        assert_eq!(hand(true, false), Handedness::Right);
+        assert_eq!(hand(true, true), Handedness::Left);
+        assert_eq!(hand(false, false), Handedness::Left);
+        assert_eq!(Handedness::Right.as_str(), "right");
+        assert_eq!(Handedness::Left.as_str(), "left");
     }
 
     #[test]

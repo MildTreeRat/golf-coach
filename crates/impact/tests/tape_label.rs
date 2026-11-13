@@ -335,29 +335,12 @@ fn two_labels_of_one_type_in_one_photo_are_ambiguous() {
 }
 
 #[test]
-fn read_tape_refuses_a_found_label_as_unoriented_and_carries_it_until_p10() {
-    let scene = Scene::new(
-        &STRIKEPRO_IRON,
-        Camera::new(10.0, 12.0, 20.0, 160.0, [0.0, 0.0]),
-    );
-    let photo = scene.draw();
-    let (label, _) = find_label(&photo, &STRIKEPRO_IRON).unwrap();
-    assert_eq!(
-        read_tape(&photo, None, &STRIKEPRO_IRON),
-        TapeOutcome::NotRead {
-            reason: TapeRefusal::NoOrientation,
-            found: Some(label.clone()),
-        }
-    );
-    // A previous crop changes nothing before P12.
-    assert_eq!(
-        read_tape(&photo, Some(&label.crop.frame), &STRIKEPRO_IRON),
-        read_tape(&photo, None, &STRIKEPRO_IRON)
-    );
+fn read_tape_answers_no_label_for_a_photo_the_finder_finds_none_in() {
+    // What `read_tape` does with a label it finds is P10's, in `tests/tape_orient.rs`.
     let mut empty = Scene::new(&STRIKEPRO_IRON, Camera::face_on(160.0));
     empty.no_label = true;
     assert_eq!(
-        read_tape(&empty.draw(), None, &STRIKEPRO_IRON),
+        read_tape(&empty.draw(), None, &STRIKEPRO_IRON, None),
         TapeOutcome::NotRead {
             reason: TapeRefusal::NoLabel,
             found: None,

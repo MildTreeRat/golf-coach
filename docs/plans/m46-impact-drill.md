@@ -51,7 +51,7 @@ machine, pull on the new" as its precondition.
 | **P7** | 🪟 `impact::tape` geometry: the homography and the rectified crop | ✅ Done *(2026-11-12)* |
 | **P8** | 🪟 `golf-lab read-tape`: the desk tool and its review images | ✅ Done *(2026-11-12)* |
 | **P9** | 🪟 The label finder, on synthetic photos | ✅ Done *(2026-11-12)* |
-| **P10** | 🪟 Orientation: heel and up, from the hosel | ⬜ |
+| **P10** | 🪟 Orientation: heel and up, from the hosel | ✅ Done *(2026-11-12)* |
 | **P11** | 🪟 The mark on a fresh label | ⬜ |
 | **P12** | 🪟 The newest mark: the diff against the last strike | ⬜ |
 | **P13** | 🪟 The reader end to end on synthetic photos, and its gate | ⬜ |
@@ -1843,3 +1843,140 @@ named as skipped where they are not), then write the three records, and commit `
     a pixel, which is about 75 MB on a 12 MP photo before the frame itself.
 14. **For P30**: `impact::tape` now finds the label. `docs/ARCHITECTURE.md` and `CLAUDE.md`'s `crates/impact`
     sentence still describe the replay alone (P4 finding 10 already names the manifest's `description`).
+
+### P10 (2026-11-12)
+
+1. **The orientation is built**: `impact::tape::orient(photo, found, label, hand) -> Result<(Orientation,
+   Shaft), OrientMiss>`, in `crates/impact/src/tape/orient.rs`, and `read_tape` calls it after the finder.
+   The module doc gives the steps:
+   - **a window**: the label's box grown by `SEARCH_REACH_MM` (150) on every side, cut through the found
+     label's map at 1 sample a millimetre;
+   - **dark**: at most `SHAFT_DARK_RATIO` of the label's white, the window's 90th percentile inside the box;
+   - **thin**: what a disc `SHAFT_MAX_WIDTH_MM` across cannot reach inside the dark, an opening by an exact
+     Euclidean distance transform. For the opening the label's box and the part of the window outside the
+     photo count as dark, so a dark driver face round the label is not a thin rim and a dark strip along
+     the photo's edge is not a bar;
+   - **bars**: each 4-connected run of thin, dark pixels outside the box (the crate's `component`), its
+     end nearer the cross the hosel's;
+   - **a shaft**: long enough, slim enough, near the box, at a lie's angle, starting toward one end of the
+     label and leaning further that way. Those two cues to the heel must agree;
+   - **one answer**: shafts that disagree are `Ambiguous`, never chosen between, then the hand is checked.
+
+   The shaft's side is the heel and its direction up, so both of `Orientation`'s flips come from the club.
+   `Handedness` (`Right`, `Left`, with `as_str`) and `Orientation::handedness()` are in `mod.rs`: the two
+   flags agree on a left-handed club and differ on a right-handed one, whichever way up the label was stuck.
+2. **What P10 settled that the plan left open.** None of these touches a decision.
+   - **`read_tape` takes a fourth argument, `hand: Option<Handedness>`.** C5 names three, and so does
+     ADR-037 at line 157. The section's cross-check read the inventory's handedness, and the inventory has
+     none since P3 (P3 finding 1), so the hand is now the caller's. `None` skips only the cross-check, and
+     the shaft still decides. `golf-lab read-tape` passes `None`, because the desk has no golfer. Its
+     `read_tape_photos` wraps the reader in a closure, so its `Reader` type and its tests did not change.
+   - **A label stuck logo-down is read, not refused** (P4 finding 5, P8 finding 3). The shaft says which
+     way is up, so `top_line_printed_top` is `false` there and the toe flag flips with it.
+   - **An oriented label is `NeedsPick` until P11.** Nothing looks for a mark yet, and a pick is the one way
+     to place one without a guess. This is the same kind of placeholder as P9's `no_orientation`.
+   - **M42's `shaft.rs` is not reused.** It measures in ball diameters and joins a head bar's ends, and
+     here there is neither. A driver's face is as dark as its shaft, so the opening is new. Its rule that
+     bars at both ends decide nothing is kept, as `Ambiguous`.
+   - **Files beyond the Touch line**:
+     - `crates/impact/src/tape/geometry.rs`: `rectify` now calls `rectify_onto(frame, map, grid)`, a
+       `pub(super)` that samples onto any `CropGrid`. The window uses it.
+     - `crates/impact/tests/tape_scene/mod.rs`: finding 9 below.
+     - `crates/impact/tests/tape_label.rs`: its last test was P9's placeholder ("until P10"). It is now
+       `read_tape_answers_no_label_for_a_photo_the_finder_finds_none_in`, and the found-label case moved to
+       `tape_orient.rs`.
+     - `crates/lab/src/read_tape.rs`: the closure, and its module doc, which said the reader was a stub
+       until P9.
+3. **The tunables**, each with its doc and the bracket P29 may move it within:
+
+   | Constant | Value | Bracket |
+   |---|---|---|
+   | `SHAFT_DARK_RATIO` | 0.35 | 0.25 to 0.45 |
+   | `SHAFT_MAX_WIDTH_MM` | 20 | 15 to 30 |
+   | `SHAFT_MIN_LENGTH_MM` | 25 | 15 to 50 |
+   | `SHAFT_MIN_ASPECT` | 2.5 | 2 to 4 |
+   | `SHAFT_MAX_GAP_MM` | 80 | 50 to 120 |
+   | `SHAFT_MIN_ANGLE_DEG` | 35 | 25 to 45 |
+   | `SHAFT_MAX_ANGLE_DEG` | 85 | 80 to 89 |
+   | `HEEL_MIN_SHARE` | 0.33 | 0.2 to 0.8 |
+
+   `ORIENT_PX_PER_MM` (1) and `SEARCH_REACH_MM` (150) are public with their reasons. The box's margin
+   (1.5 mm) and the white's percentile (0.9) are private.
+   - **The angle range is wide on purpose.** A real shaft rises behind a lofted face, so seen square to the
+     face it draws at `tan(drawn) = tan(lie) · cos(loft)`. That is about 57° for a 62° lie behind a 34°
+     face, and about 46° for a 64° lie behind a 60° lob wedge. Only the side and the sense of up are used,
+     never the angle.
+4. **The tests.**
+   - **Where they are**: `crates/impact/tests/tape_orient.rs` holds 8 tests. `orient.rs` holds 3 unit tests:
+     the transform against brute force, an opening that keeps a disc and drops its bar, and the shaft's
+     rules one at a time. `mod.rs` holds 1, the hand from the two flags.
+   - **The truth.** The test works each scene's orientation out from its hand and how the label was stuck
+     (`truth` in `tape_orient.rs`), never from the reader.
+   - **What is oriented, every one right**, with no hand and with the scene's own:
+     - 12 face-on photos: 3 label types × 2 hands × logo up and down;
+     - 6 photos tilted 28.5° to 30° and turned −90° to 180°, across both hands and both ways up.
+   - **What the shaft measured.** Face-on, its angle was 61.1° to 62.3° against the drawn 62°, and tilted
+     61.8° to 66.1°. Both ends lie within 2 mm of the line the scene drew. The visible length was 27.8 to
+     104 mm. The width was 10.0 to 10.9 mm on the iron head, where the shaft alone is dark, and 15.0 to
+     15.1 mm on the driver, where the dark hosel joins it.
+   - **What is refused**:
+     - a right-handed club given a left-handed golfer, both ways up: `HandDisagrees`;
+     - `Shaft::Missing` on an iron and on a driver, the label on the mat with no club, and the label framed
+       too tight at 160 mm face-on: `NoShaft`;
+     - a hosel and shaft at both ends, on an iron and on a driver: `Ambiguous`;
+     - a near-black background, behind an iron and a driver of each hand: `NoShaft` in all four. The test
+       allows a right reading too, and fails only a flipped one.
+   - **What `read_tape` answers**: each refusal is `no_orientation` carrying the found label, and an
+     oriented label is `NeedsPick` with its orientation, whether or not a previous crop is passed.
+   - The file takes about 14 s in a debug build, almost all of it drawing.
+5. **The review images were checked by eye, on synthetic photos.** The verb, run over the 33 photos the
+   tests drew (`TAPE_SCENE_DIR`), gave 23 `needs_pick` and 10 `no_orientation`, as the tests expect. The two photos of a right-handed
+   club given a left-handed golfer are among the 23, because the desk passes no hand. Four
+   `photo.png` reviews were looked at: a right-handed iron logo-down, a left-handed iron tilted and turned
+   65°, a left-handed driver logo-down turned 180°, and a left-handed hybrid tilted 30°. On each, the toe
+   arrow points to the end away from the hosel, and the top-line arrow toward the edge the hosel rises
+   from. The section's run over P3's photos moved to P29 (P3 finding 10).
+6. **P3's flat photo, as a smoke test.** All three labels are found and refused as `no_orientation`, which
+   is the right answer for a photo with no club in it. A release read takes 0.30 s, decode included, where
+   P9 measured 0.28 s, so the orientation costs about 20 ms. The reviews went to the session scratchpad,
+   and nothing was written under `data/`.
+7. **For P11**: replace the `Ok((orientation, _))` arm in `read_tape`, which answers `NeedsPick`, with the
+   marks. Orientation runs before the marks, so a `no_orientation` refuses before any mark is looked for (P8
+   finding 3). `read_tape` drops the `Shaft` as it drops the `OutlineFit`.
+8. **For P13**: the set must frame the hosel and some shaft, or every photo is `no_orientation`.
+   - **Aiming.** `Camera::aimed(pitch, yaw, roll, distance, aim_mm)` puts a plane point at the photo's
+     centre. `tape_orient.rs`'s `framed` aims at `[±12, 15]` mm toward the heel at 200 mm. That keeps the
+     whole label and at least 32 mm of shaft in the 800 × 600 photo, except where yaw and roll swing the
+     shaft toward the photo's edge. Pose 2 (yaw −30°, roll −40°) needed `[−22, 26]`, and showed 27.8 mm.
+   - **Reuse `truth` and `framed`** from `tape_orient.rs` rather than writing them again.
+9. **The renderer** (`crates/impact/tests/tape_scene/mod.rs`) gained:
+   - `Hand` is now `impact::tape::Handedness`, re-exported, so a scene's hand is what a test passes to the
+     reader;
+   - `Scene::shaft`: `AtHeel` (the default), `Missing` (no hosel or shaft), or `AtBothEnds`;
+   - `Scene::background`: `MAT` by default;
+   - `Camera::aimed`.
+10. **For P18**:
+    - `contracts::golfer::Golfer::handedness` is required, so the facade always has a hand and passes
+      `Some`. Map it with a two-arm `match`: `impact` cannot see `contracts`, and `Handedness::as_str` spells
+      the same wire names.
+    - The window is about 140k samples, a few MB with its masks and two distance grids. That is small beside
+      the finder's 75 MB (P9 finding 13).
+11. **For P22**: the tape camera's frame must ask for the whole label **and** the hosel with some shaft. At
+    least 25 mm of dark shaft must show beyond it. A photo framed on the label alone is refused (finding 4's
+    "framed too tight").
+12. **For P29**:
+    - every tunable in finding 3, with its bracket;
+    - chrome shafts, which may not be dark (P9 finding 9). A refusal is the answer there, until a ferrule or
+      hosel is shown to stand in;
+    - backgrounds dark enough to hide a shaft;
+    - labels stuck crooked;
+    - the real loft and camera geometry against the angle range.
+    - **A wrong orientation shows on a stored crop** as the logo on the wrong side of the arrows (P3 finding
+      10's note).
+    - **A `--hand` flag for the desk tool.** If P29 wants the cross-check there, it goes in
+      `parse_read_tape` (`crates/lab/src/bin/golf_lab.rs`) and the closure in `read_tape_photos`.
+13. **For P30**:
+    - ADR-037 line 157 and C5 name the three-argument `read_tape`. The reader now takes the golfer's hand as
+      well (finding 2).
+    - `impact::tape` now orients the label. P9 finding 14 already names `docs/ARCHITECTURE.md` and
+      `CLAUDE.md`'s `crates/impact` sentence.
