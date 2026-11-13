@@ -47,7 +47,7 @@ machine, pull on the new" as its precondition.
 | **P3** | 🧍 The labels: one flat photo, their sizes measured off it, and the user's answers | ✅ Done *(2026-11-12)* |
 | **P4** | 🪟 The session's inventory and the label geometry as data | ✅ Done *(2026-11-12)* |
 | **P5** | 🪟 `contracts::face_impact`: the method interface and `TAPE_READER_VERSION` | ✅ Done *(2026-11-12)* |
-| **P6** | 🪟 `contracts::drill`: the strike record, the stages and the ladder tables | ⬜ |
+| **P6** | 🪟 `contracts::drill`: the strike record, the stages and the ladder tables | ✅ Done *(2026-11-12)* |
 | **P7** | 🪟 `impact::tape` geometry: the homography and the rectified crop | ⬜ |
 | **P8** | 🪟 `golf-lab read-tape`: the desk tool and its review images | ⬜ |
 | **P9** | 🪟 The label finder, on synthetic photos | ⬜ |
@@ -1461,3 +1461,73 @@ named as skipped where they are not), then write the three records, and commit `
 5. `cargo doc -p contracts` under `-D warnings` already fails, as P4 finding 10 found for `impact`, on three
    links that predate M46 (`unscored.rs:351`, `feedback.rs:44`, `swing.rs:48`). This phase's docs add no
    warning. **For P30**, beside finding 10's.
+
+### P6 (2026-11-12)
+
+1. **`contracts::drill` is built**, `crates/contracts/src/drill.rs`, with every shape and constant P6's section
+   names, and `ladder_radii` returning P4 finding 7's tables exactly (an empty slice for `putter` and `all`).
+   C9's uncut tables and both cuts are in the module doc, and `// floored at P29` sits above the tables (P3
+   finding 10). It also has three id helpers, `strike_id(install, n)`, `label_id(install, n)` and
+   `crop_file(strike_id)` (`crops/<id>.jpg`), so that the store and the facade spell them once. Beside them
+   are `TapeMethod::impact_method()` and `TapeStrike::counts()` and `position()`. `crates/contracts/tests/drill.rs`
+   has 38 tests, and `contracts` takes `impact` as a dev-dependency only, so the tables are checked against
+   `impact::tape`'s inscribed radii, and every `ClubCategory` is walked through `category_label` (P4 finding 6).
+   `Cargo.lock` gained that one edge.
+2. **What C8 left open about a strike, and how P6 settled it.** Each answer is a `Validate` refusal with its
+   own test:
+   - **`source` is an `Option`, absent exactly when `not_read` is present.** C8's three sources cannot
+     describe a strike that was not read, and the plan's own "no offsets with `read`" refusal would
+     otherwise refuse one.
+   - **A position is both offsets or neither**, written as absent keys. That settles P5 finding 2 by the same
+     convention.
+   - `call` is present exactly in the differential stage.
+   - `level_radius_mm` is absent in the baseline and present in every other stage.
+   - `crop` is `crop_file(strike_id)` or absent, and required on `read` and `picked`.
+   - `reader_version` is at least 1, and `player_id` is a slug (`check_player_id`), because it names the
+     directory.
+
+   **`category` is not checked against `category_of(club)`**, on purpose. A strike records the table it was
+   judged by, and checking it against today's map would refuse the whole history the day `CLUB_CATEGORY`
+   moves a club. `label_type` is text, `impact::tape`'s `LabelType::id`.
+   - **For P18**: a fresh-baseline strike stores no radius, even though the club still holds a level. A
+     differential strike that is not read still carries its call (C19).
+   - **For P14**: `counted(strikes)` filters by `TapeStrike::counts()`. `inside(strike, radius)` is yours and
+     reads `position()`. P6 left inside out of `contracts`, because it is a judgment.
+   - **For P17**: "the crop path for a strike" is `crop_file`, joined to the method's directory.
+3. **What P6's section left open about the state, and how P6 settled it.**
+   - **`DrillState`** has `player_id`, `strikes_issued` and `labels_issued` (the next id is `strike_id(install,
+     issued + 1)`), `clubs: BTreeMap<ClubId, ClubDrillState>` in bag order (as `Bag` keys its entries), and
+     `updated_at`.
+   - **`ClubDrillState`** has `stage`, `level`, `block`, `suggestion`, `history` and `label`. `level` is an
+     index into `ladder_radii(category_of(club))`, absent only in a club's first baseline. `block` also holds
+     the baseline in progress. `label: Option<AppliedLabel { label_id, n_on_label }>` holds the counters P18
+     names.
+   - **`Validate` refuses**: a stage past the baseline with no level, a stored block of `BLOCK_SIZE` or more
+     (a block is judged at its tenth), a level past its table, any state for a club whose category has no
+     ladder (the putter), a label with `n_on_label < 1`, and negative counters.
+   - **For P14 and P15**: `history` is `Vec<LevelEntry { at, from, to, block }>`, and it holds **one entry per
+     judged block of any stage**, with `from == to` where the level stayed. `block` holds the block's strike
+     ids. That is the only way C13's "two blocks in a row at 3 or fewer at the widest" is visible, because a
+     failed block at the widest cannot move out. A block's stage and its inside count are read from its
+     strikes, never stored. An abandoned block leaves no entry.
+   - **For P18**: pending strikes (C15's `pending_id`) are not in `DrillState`, and P6 did not shape them.
+     A discarded `NeedsPick` has no C5 reason. If it must be stored as not read, P18 adds a `TapeNotRead`
+     variant here, with its sentence and its flag. If not, it stores nothing.
+4. **For P15**: there are two constants beyond the section's six, so that C13's other numbers are not
+   literals: `DIFFERENTIAL_AFTER_BLOCKS = 2` and `FRESH_BASELINE_AT = 7`. The second is a different success
+   from `MOVE_IN_AT`, so it is its own constant. The seven counts are `usize`, because they compare with
+   lengths, and `RECENTRE_FRACTION` is `f64`.
+5. **`TapeNotRead`**: `retake_helps` is true for every reason but `mark_clipped`, where the strike itself ran
+   off the label's edge. `no_new_mark` is true, which matches P23's "Missed the tape" and "Retake". The
+   test holds each sentence to saying "take it again" exactly when a retake helps, and to holding no digit.
+   - **For P16**: the not-read sentences are `TapeNotRead::sentence()`.
+   - **For P13 and P18**: `impact::tape`'s reasons will be its own enum, since `impact` cannot see this
+     crate. The facade maps them across by wire name. P13 should add a walk of them to
+     `crates/contracts/tests/drill.rs`, as `category_label` is walked there.
+6. **For P29**: the floor changes `every_table_is_c9s_trimmed_at_its_labels_inscribed_radius`, which derives
+   each shipped table from C9's uncut one. A stored `level` is an index, so a revised table re-means it. The
+   floor removes only the tightest radii, so it leaves every level above them alone, and a club whose level
+   it removes is refused by `DrillState`'s check until it is moved. Every strike keeps the radius it was
+   judged against.
+7. `cargo doc -p contracts` shows only the three warnings from before (P5 finding 5). `ort_reach` and the
+   doc-truth test pass.

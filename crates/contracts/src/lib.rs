@@ -69,6 +69,10 @@
 //! **[`face_impact`] is the fifth** (M46 P5): *where on the face*, one shape for every method that
 //! can say, each method declaring the axes it sees, and [`face_impact::TAPE_READER_VERSION`], the
 //! STRIKEPRO label reader's version key (ADR-037 clause 1).
+//! **[`drill`] is the sixth** (M46 P6): the impact drill's stored strike, each club's place on the
+//! ladder and the ladder's tables, so the drill store, its judgments and the app's facade share one
+//! spelling (ADR-037 clauses 5 to 9). A drill is untracked (ADR-034 §3), so nothing here reaches the
+//! corpus or the graded profile.
 //!
 //! **M29 P20 brought [`audio`]**, `contracts/audio.py`: the strike cache `{role}.audio.json`, which
 //! the lab writes once it stops being Python's (`crates/lab`). No vector family holds it, because no
@@ -132,6 +136,7 @@ pub mod club_spec;
 pub mod comparison;
 pub mod detections;
 pub mod dispersion;
+pub mod drill;
 pub mod face_impact;
 pub mod feedback;
 pub mod golfer;

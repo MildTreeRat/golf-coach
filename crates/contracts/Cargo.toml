@@ -20,3 +20,8 @@ serde_json.workspace = true
 [dev-dependencies]
 # The round-trip gate reads `spec/vectors/corpus/`, which is committed gzipped.
 flate2.workspace = true
+# `tests/drill.rs` holds each ladder table to its label's inscribed radius, which is `impact::tape`'s
+# data (M46 P6). A dev-dependency only, so no shipped edge runs from `contracts` to `impact`, and
+# `impact` depends on nothing, so no cycle either. The alternative, copying the three radii into this
+# crate, is a second home for a measurement.
+impact = { path = "../impact" }
