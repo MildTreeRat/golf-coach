@@ -1,6 +1,7 @@
 //! The impact drill by STRIKEPRO tape, on the phone: one photo of the label on the club to the
 //! strikes it shows, stored with a crop each, the club's block judged when it fills, and the golfer's
-//! two declarations, a tap on the new mark and "missed the tape". [M46 P18]
+//! two declarations, a tap on the new mark and "missed the tape" [M46 P18]. Then the drill's actions:
+//! the clubs it runs on, a club's drill opened, a suggestion answered and a stage changed [M46 P19].
 //!
 //! This adds no reading, judging, storing or wording of its own. The photo is read by
 //! `impact::tape::read_tape`, a block is judged by `analysis::drill`, the drill is stored by
@@ -94,6 +95,37 @@
 //!
 //! The whole call holds `crate::record::one_writer()` (the plan's P17 finding 2), so no two calls draw
 //! one counter, and the export never zips half a strike. The store's own lock is inner and short.
+//!
+//! # The drill's actions (C13, C15, the plan's P19)
+//!
+//! **A stage changes in two ways**: the golfer accepts a suggestion (`answer_suggestion`), or picks a
+//! stage (`set_stage`). Both keep the level, and both go through `Drill::change_stage`, which:
+//!
+//! 1. stores the club's waiting strike as it stands (`discard_pending`), because a tap after the
+//!    change would be refused, and the strike would wait for the next photo (the plan's P18 finding 4);
+//! 2. abandons the block in progress. Its strikes stay stored, and it is never judged (C10);
+//! 3. clears the waiting suggestion. A suggestion is about what follows the block that raised it, and
+//!    the golfer has now said what follows. `analysis::drill::suggestion` works each one again after
+//!    every block, so nothing is lost (C13).
+//!
+//! Choosing the stage the club is already in changes nothing, block included, and writes nothing.
+//! **A club whose first baseline has not set a level stays in the baseline**, because
+//! `ClubDrillState` refuses a later stage with no level. A judged baseline always leaves a level,
+//! the widest when its widest circle held too few (`level_or_widest`, the user's rule), so after any
+//! baseline every suggestion can be accepted.
+//!
+//! Declining a suggestion only clears it. The stage stays, so a waiting strike stays resolvable.
+//!
+//! **Opening a club writes nothing** (`start`). A club with no drill state is shown at the start of
+//! its baseline, as `Drill::open` makes it in memory, and its first stored strike writes it. So
+//! browsing the picker leaves `state.json` as it was, and `drill_clubs` lists a club as started only
+//! once it has a strike.
+//!
+//! **The suggestion's sentence is worked again from the record** each time a view asks
+//! (`Drill::suggestion_line`), never stored as words (the plan's P16 finding 4). Its inputs are read
+//! as they stood when the suggestion was made: the pattern over the club's strikes through the last
+//! judged block's last, at the club's level, which no later strike or change can have moved while the
+//! suggestion waits.
 
 use std::collections::BTreeMap;
 use std::fs;
@@ -102,13 +134,14 @@ use std::path::{Path, PathBuf};
 
 use analysis::drill::{
     call_made, inside, judge_block, judge_differential, judge_recentre, level_or_widest,
-    start_level, suggestion,
+    off_centre, pattern, start_level, suggestion,
 };
 use analysis::stats;
 use contracts::club::{category_of, ClubId};
 use contracts::drill::{
     crop_file, label_id, ladder_radii, strike_id, AppliedLabel, ClubDrillState, DrillStage,
-    DrillState, LevelEntry, StrikeCall, StrikeSource, TapeNotRead, TapeStrike, BLOCK_SIZE,
+    DrillState, LevelEntry, StrikeCall, StrikeSource, Suggestion, TapeNotRead, TapeStrike,
+    BLOCK_SIZE,
 };
 use contracts::face_impact::TAPE_READER_VERSION;
 use contracts::golfer::Handedness as GolferHand;
@@ -116,19 +149,25 @@ use contracts::intent::ClubCategory;
 use contracts::Timestamp;
 use feedback::drill_rules::{
     baseline_progress, baseline_tip, call_verdict, differential_progress, differential_result,
-    inside_verdict, ladder_progress, ladder_result, position_line, recentre_progress,
-    recentre_result, NO_LABEL_FITS,
+    differential_suggestion, fresh_baseline_suggestion, inside_verdict, ladder_progress,
+    ladder_result, level_line, position_line, recentre_progress, recentre_result,
+    recentre_suggestion, return_to_ladder_suggestion, stage_name, DifferentialWhy, NO_LABEL_FITS,
+    NO_LEVEL_YET,
 };
 use impact::tape::{
     self, CategoryLabel, CropGrid, Handedness, LabelType, Orientation, TapeRefusal, CROP_PX_PER_MM,
 };
 use impact::Frame;
 use serde::{Deserialize, Serialize};
+use storage::bag_store::BagStore;
 use storage::drill_store::DrillStore;
 use storage::golfer_store::GolferStore;
 use storage::StoreError;
 
-use crate::api::drill::{DrillCall, TapeIn, TapeOutcome, TapeStatus, TapeStrikeCard};
+use crate::api::drill::{
+    DrillCall, DrillClubView, DrillStage as StageView, DrillView, TapeIn, TapeOutcome, TapeStatus,
+    TapeStrikeCard,
+};
 use crate::record::one_writer;
 use crate::{club_id, parse_now, state, Dirs};
 
@@ -319,7 +358,7 @@ pub fn record_tape_photo_with(photo: TapeIn, read: &mut Reader<'_>) -> Result<Ta
         }
     };
     drill.commit(&mut next, now, &plan)?;
-    Ok(drill.answer(&next, &club_strikes, &plan, status))
+    drill.answer(&next, &club_strikes, &plan, status)
 }
 
 /// `pick_mark`'s body: the tap is 0 to 1 across the crop, from its left and its top.
@@ -429,7 +468,7 @@ fn resolve(
     };
     drill.land(&mut next, &mut club_strikes, &mut plan, strike, crop, now)?;
     drill.commit(&mut next, now, &plan)?;
-    Ok(drill.answer(&next, &club_strikes, &plan, status))
+    drill.answer(&next, &club_strikes, &plan, status)
 }
 
 /// One golfer's drill on one club, as a call finds it.
@@ -461,10 +500,7 @@ impl Drill {
             GolferHand::Left => Handedness::Left,
         };
         let category = category_of(club);
-        let label = match tape::category_label(category.as_str()) {
-            Some(CategoryLabel::Label(label)) if !ladder_radii(category).is_empty() => label,
-            _ => return Err(format!("{NO_LABEL_FITS} ({club}).")),
-        };
+        let label = tape_label(category).ok_or_else(|| format!("{NO_LABEL_FITS} ({club})."))?;
         let store = DrillStore::open(root, player_id).map_err(|refused| refused.to_string())?;
         let mut state = store
             .state()
@@ -656,17 +692,7 @@ impl Drill {
     ) -> Result<String, String> {
         let refused = |refusal: contracts::ContractError| refusal.to_string();
         let radii = ladder_radii(self.category);
-        let block = club
-            .block
-            .iter()
-            .map(|id| {
-                strikes
-                    .iter()
-                    .find(|strike| strike.strike_id == *id)
-                    .cloned()
-                    .ok_or_else(|| format!("the block names strike '{id}', which is not stored"))
-            })
-            .collect::<Result<Vec<TapeStrike>, String>>()?;
+        let block = strikes_named(&club.block, strikes)?;
         let from = club.level;
         let level = level_or_widest(from);
         let result = match club.stage {
@@ -764,14 +790,20 @@ impl Drill {
         Ok(())
     }
 
-    /// The card (C20): the strikes stored, the waiting one, and the club's block as it now stands.
+    /// The card (C20): the strikes stored, the waiting one, the club's block as it now stands, and
+    /// the suggestion a block finished here raised.
     fn answer(
         &self,
         next: &DrillState,
         club_strikes: &[TapeStrike],
         plan: &Plan,
         status: TapeStatus,
-    ) -> TapeOutcome {
+    ) -> Result<TapeOutcome, String> {
+        let club = self.club_state(next);
+        let suggestion = match plan.judged {
+            Some(_) => self.suggestion_line(club, club_strikes)?,
+            None => None,
+        };
         let crop_path = match &plan.pending {
             Some((pending, _)) => Some(pending_path(
                 &self.root,
@@ -784,7 +816,7 @@ impl Drill {
                 .find(|(strike, _)| strike.crop.is_some())
                 .map(|(strike, _)| self.store.crop_path(&strike.strike_id)),
         };
-        TapeOutcome {
+        Ok(TapeOutcome {
             status,
             strikes: plan
                 .strikes
@@ -798,9 +830,10 @@ impl Drill {
             crop_path: crop_path.map(|path| path.display().to_string()),
             message: plan.reason.map(|reason| reason.sentence().to_string()),
             retake_helps: plan.reason.is_some_and(TapeNotRead::retake_helps),
-            block_line: self.block_line(self.club_state(next), club_strikes),
+            block_line: self.block_line(club, club_strikes),
             block_result: plan.judged.clone(),
-        }
+            suggestion,
+        })
     }
 
     /// The club's baseline or block so far (C20), with each strike against the circle it is hit at.
@@ -836,6 +869,267 @@ impl Drill {
             ),
         }
     }
+
+    /// The club's page between photos (C15's `DrillView`).
+    fn view(&self, state: &DrillState, strikes: &[TapeStrike]) -> Result<DrillView, String> {
+        let club = self.club_state(state);
+        Ok(DrillView {
+            club: self.club.as_str().to_string(),
+            stage: stage_view(club.stage),
+            stage_name: stage_name(club.stage).to_string(),
+            level_line: level_text(club.level, self.category),
+            block_line: self.block_line(club, strikes),
+            suggestion: self.suggestion_line(club, strikes)?,
+            call_wanted: club.stage == DrillStage::Differential,
+        })
+    }
+
+    /// The waiting suggestion in words, with why it was made (the plan's P16 finding 4), from the
+    /// record as it stood when it was made (the module doc's actions). `strikes` is the club's.
+    fn suggestion_line(
+        &self,
+        club: &ClubDrillState,
+        strikes: &[TapeStrike],
+    ) -> Result<Option<String>, String> {
+        let Some(suggested) = club.suggestion else {
+            return Ok(None);
+        };
+        let last = club
+            .history
+            .last()
+            .ok_or("a suggestion is waiting with no judged block behind it")?;
+        let block = strikes_named(&last.block, strikes)?;
+        let radii = ladder_radii(self.category);
+        let radius = radii[level_or_widest(club.level)];
+        let sentence = match suggested {
+            Suggestion::Recentre => {
+                // The pattern `suggestion` saw: the club's strikes through the judged block's last.
+                let through = strikes
+                    .iter()
+                    .rposition(|strike| last.block.last() == Some(&strike.strike_id))
+                    .map_or(0, |end| end + 1);
+                match pattern(&strikes[..through]) {
+                    Some(found) => {
+                        let off = off_centre(&found, radius);
+                        recentre_suggestion(found.centre, off.heel_toe, off.high_low)
+                    }
+                    // Only a record changed since the suggestion was made lands here, and the words
+                    // with no number in them still say why it was.
+                    None => recentre_suggestion((0.0, 0.0), false, false),
+                }
+            }
+            Suggestion::Differential => {
+                let why = match block.first().map(|strike| strike.stage) {
+                    Some(DrillStage::Baseline) => DifferentialWhy::Baseline,
+                    // `analysis::drill::suggestion` raises it after a baseline or a ladder block only.
+                    Some(DrillStage::Ladder | DrillStage::Recentre | DrillStage::Differential) => {
+                        DifferentialWhy::AtWidest
+                    }
+                    None => {
+                        return Err("a judged block in the drill's record names no strikes".into())
+                    }
+                };
+                // Index 0 is every table's widest circle (`ladder_radii`'s doc).
+                differential_suggestion(why, radii[0])
+            }
+            Suggestion::ReturnToLadder => return_to_ladder_suggestion(radius),
+            Suggestion::FreshBaseline => {
+                let judged = judge_differential(&block, level_or_widest(last.from), self.category)
+                    .map_err(|refused| refused.to_string())?;
+                fresh_baseline_suggestion(judged.made, judged.counted)
+            }
+        };
+        Ok(Some(sentence))
+    }
+
+    /// The club moved to `stage` at its level (the module doc's actions): its waiting strike stored,
+    /// its block abandoned and its suggestion cleared. The stage it is in changes nothing.
+    fn change_stage(&self, next: &mut DrillState, stage: DrillStage) -> Result<(), String> {
+        let club = self.club_state_mut(next);
+        if club.stage == stage {
+            return Ok(());
+        }
+        if club.level.is_none() && stage != DrillStage::Baseline {
+            return Err(NO_LEVEL_TO_LEAVE.to_string());
+        }
+        discard_pending(&self.root, &self.store, self.club)?;
+        club.stage = stage;
+        club.block.clear();
+        club.suggestion = None;
+        Ok(())
+    }
+
+    /// The state written whole, stamped `now`: an action's one write.
+    fn save(&self, next: &mut DrillState, now: Timestamp) -> Result<(), String> {
+        next.updated_at = now;
+        self.store
+            .put_state(next)
+            .map_err(|error| format!("could not store the drill's state: {error}"))
+    }
+}
+
+/// The refusal for a stage past the baseline before the club's first baseline sets a level, which
+/// `ClubDrillState` refuses (the module doc's actions).
+const NO_LEVEL_TO_LEAVE: &str = "This club's first baseline has not set its level yet, so it \
+                                 stays in the baseline until the baseline's last strike.";
+
+/// The refusal for an answer when no suggestion waits.
+const NO_SUGGESTION: &str = "No suggestion is waiting for this club.";
+
+/// `drill_clubs`' body: the bag in bag order, each club with its label and its place in the drill.
+pub(crate) fn clubs(root: &str, player_id: &str) -> Result<Vec<DrillClubView>, String> {
+    let root = Path::new(root);
+    let Some(bag) = BagStore::new(Dirs::of(root).golfers).get(player_id) else {
+        return Ok(Vec::new());
+    };
+    let state = DrillStore::open(root, player_id)
+        .map_err(|refused| refused.to_string())?
+        .state()
+        .map_err(|unreadable| format!("{UNREADABLE} {unreadable}"))?;
+    Ok(bag
+        .club_ids()
+        .into_iter()
+        .map(|club| {
+            let category = category_of(club);
+            let label = tape_label(category);
+            let held = state.as_ref().and_then(|state| state.clubs.get(&club));
+            let line = match (label, held) {
+                (None, _) => NO_LABEL_FITS.to_string(),
+                (Some(_), Some(held)) => level_text(held.level, category),
+                (Some(_), None) => NO_LEVEL_YET.to_string(),
+            };
+            let held = held.filter(|_| label.is_some());
+            DrillClubView {
+                club: club.as_str().to_string(),
+                category: category.as_str().to_string(),
+                label_type: label.map(|label| label.id.to_string()),
+                can_start: label.is_some(),
+                stage: held.map(|held| stage_view(held.stage)),
+                stage_name: held.map(|held| stage_name(held.stage).to_string()),
+                line,
+            }
+        })
+        .collect())
+}
+
+/// `start_drill`'s body. Writes nothing (the module doc's actions).
+pub(crate) fn start(
+    root: &str,
+    player_id: &str,
+    club: &str,
+    now: &str,
+) -> Result<DrillView, String> {
+    let _one_at_a_time = one_writer();
+    let now = parse_now(now)?;
+    let club = club_id(club)?;
+    let drill = Drill::open(Path::new(root), player_id, club, now)?;
+    drill.view(&drill.state, &drill.club_strikes()?)
+}
+
+/// `answer_suggestion`'s body.
+pub(crate) fn answer_suggestion(
+    root: &str,
+    player_id: &str,
+    club: &str,
+    accept: bool,
+    now: &str,
+) -> Result<DrillView, String> {
+    let _one_at_a_time = one_writer();
+    let now = parse_now(now)?;
+    let club = club_id(club)?;
+    let drill = Drill::open(Path::new(root), player_id, club, now)?;
+    let mut next = drill.state.clone();
+    let suggested = drill.club_state(&next).suggestion.ok_or(NO_SUGGESTION)?;
+    if accept {
+        drill.change_stage(&mut next, stage_taken(suggested))?;
+    }
+    drill.club_state_mut(&mut next).suggestion = None;
+    drill.save(&mut next, now)?;
+    drill.view(&next, &drill.club_strikes()?)
+}
+
+/// `set_stage`'s body.
+pub(crate) fn set_stage(
+    root: &str,
+    player_id: &str,
+    club: &str,
+    stage: StageView,
+    now: &str,
+) -> Result<DrillView, String> {
+    let _one_at_a_time = one_writer();
+    let now = parse_now(now)?;
+    let club = club_id(club)?;
+    let drill = Drill::open(Path::new(root), player_id, club, now)?;
+    let mut next = drill.state.clone();
+    let stage = stored_stage(stage);
+    if drill.club_state(&next).stage != stage {
+        drill.change_stage(&mut next, stage)?;
+        drill.save(&mut next, now)?;
+    }
+    drill.view(&next, &drill.club_strikes()?)
+}
+
+/// The stage an accepted suggestion moves the club to (C13). A fresh baseline keeps the club's
+/// level until it is judged, and the ladder starts from what it sets (the plan's P15 finding 5).
+fn stage_taken(suggested: Suggestion) -> DrillStage {
+    match suggested {
+        Suggestion::Recentre => DrillStage::Recentre,
+        Suggestion::Differential => DrillStage::Differential,
+        Suggestion::ReturnToLadder => DrillStage::Ladder,
+        Suggestion::FreshBaseline => DrillStage::Baseline,
+    }
+}
+
+/// The label a club's category takes, or `None` for a category no label fits and so with no ladder
+/// (the putter, the plan's P3 finding 8).
+fn tape_label(category: ClubCategory) -> Option<&'static LabelType> {
+    match tape::category_label(category.as_str()) {
+        Some(CategoryLabel::Label(label)) if !ladder_radii(category).is_empty() => Some(label),
+        _ => None,
+    }
+}
+
+/// A club's level line, or [`NO_LEVEL_YET`] before its first baseline sets one. A validated
+/// `DrillState` holds no level past its table, so `level_line`'s `None` is only ever that case's.
+fn level_text(level: Option<usize>, category: ClubCategory) -> String {
+    level
+        .and_then(|level| level_line(level, category))
+        .unwrap_or_else(|| NO_LEVEL_YET.to_string())
+}
+
+/// The stage as Dart sees it.
+fn stage_view(stage: DrillStage) -> StageView {
+    match stage {
+        DrillStage::Baseline => StageView::Baseline,
+        DrillStage::Ladder => StageView::Ladder,
+        DrillStage::Recentre => StageView::Recentre,
+        DrillStage::Differential => StageView::Differential,
+    }
+}
+
+/// The stage as stored.
+fn stored_stage(stage: StageView) -> DrillStage {
+    match stage {
+        StageView::Baseline => DrillStage::Baseline,
+        StageView::Ladder => DrillStage::Ladder,
+        StageView::Recentre => DrillStage::Recentre,
+        StageView::Differential => DrillStage::Differential,
+    }
+}
+
+/// The strikes `ids` name, in that order, or a refusal naming one that is not stored.
+fn strikes_named(ids: &[String], strikes: &[TapeStrike]) -> Result<Vec<TapeStrike>, String> {
+    ids.iter()
+        .map(|id| {
+            strikes
+                .iter()
+                .find(|strike| strike.strike_id == *id)
+                .cloned()
+                .ok_or_else(|| {
+                    format!("the drill's record names strike '{id}', which is not stored")
+                })
+        })
+        .collect()
 }
 
 /// What one call writes, gathered before anything is (the module doc's order).

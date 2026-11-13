@@ -1,11 +1,12 @@
 //! The impact drill by STRIKEPRO tape: one photo of the label on the club in, the strikes it stored
 //! and the card's words out, and the golfer's two declarations, a tap on the new mark and "missed the
-//! tape". [M46 P18]
+//! tape" [M46 P18]. Then the drill's actions: the clubs it can run on, a club's drill opened, a
+//! suggestion answered and the golfer's own change of stage [M46 P19].
 //!
-//! The shapes Dart sees and three one-line calls (the M38 plan's rule 7). `crate::drill` holds what
-//! they do, in what order and why, and every word on the card is `feedback::drill_rules`' or
-//! `contracts::drill::TapeNotRead`'s (rule 8). P19 adds the drill's actions here and P20 its
-//! progress views.
+//! The shapes Dart sees and one-line calls (the M38 plan's rule 7). `crate::drill` holds what they
+//! do, in what order and why, and every word on the card and the drill's page is
+//! `feedback::drill_rules`' or `contracts::drill::TapeNotRead`'s (rule 8). P20 adds the progress
+//! views.
 
 /// The spot a differential strike was called to (C19): drawn in Dart, uniformly over the three,
 /// and passed with each photo. High and low are not called in M46.
@@ -88,6 +89,11 @@ pub struct TapeOutcome {
     pub block_line: String,
     /// The result of the block this call finished, and the next target, when it finished one.
     pub block_result: Option<String>,
+    /// What the drill suggests after the block this call finished, when it suggests something: the
+    /// sentence [`DrillView::suggestion`] carries until the golfer answers it
+    /// ([`answer_suggestion`]). `None` on every call that finished no block, even while an older
+    /// suggestion waits, so that the card shows a suggestion once, beside the result that raised it.
+    pub suggestion: Option<String>,
 }
 
 /// One stored strike on the reading card.
@@ -132,4 +138,118 @@ pub fn declare_off_tape(
     now: String,
 ) -> Result<TapeOutcome, String> {
     crate::drill::declare(&root, &pending_id, &now)
+}
+
+// --- The drill's actions [M46 P19] ------------------------------------------------------------------
+
+/// Where a club is in the drill, as `contracts::drill::DrillStage` spells it. Declared here rather
+/// than taken from `contracts`, as `api::setup`'s enums are, because the codegen binds only what
+/// `app::api` holds.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DrillStage {
+    /// Ten strikes aimed at centre, which set the club's level.
+    Baseline,
+    /// Blocks of ten against the club's circle, moving in, out or staying.
+    Ladder,
+    /// Blocks whose goal is their own centre: moving the pattern before shrinking it.
+    Recentre,
+    /// Heel, centre and toe calls, each photo passed with its call.
+    Differential,
+}
+
+/// One club of the golfer's bag, as the drill's club picker lists it.
+#[derive(Debug, Clone, PartialEq)]
+pub struct DrillClubView {
+    /// `ClubId`'s spelling, which [`start_drill`] takes.
+    pub club: String,
+    /// The club's category as `ClubCategory` spells it (`mid_iron`), which a category's progress
+    /// view takes (P20).
+    pub category: String,
+    /// The STRIKEPRO label this club takes (`strikepro_iron`), or `None` for a club no label fits.
+    pub label_type: Option<String>,
+    /// Whether [`start_drill`] opens this club: false only for a club no label fits (the putter),
+    /// which is listed so the picker can say why.
+    pub can_start: bool,
+    /// Where the club is in the drill, or `None` before its first strike is stored and for a club
+    /// that cannot start.
+    pub stage: Option<DrillStage>,
+    /// [`DrillClubView::stage`] in words ("Ladder"), with it.
+    pub stage_name: Option<String>,
+    /// The line under the club's name: its level ("Level 3 of 7: 10 mm"), "No level yet: the
+    /// baseline sets it", or "No STRIKEPRO label fits this club".
+    pub line: String,
+}
+
+/// One club's drill as its page shows it, between photos.
+#[derive(Debug, Clone, PartialEq)]
+pub struct DrillView {
+    /// `ClubId`'s spelling.
+    pub club: String,
+    pub stage: DrillStage,
+    /// The stage in words ("Recentring").
+    pub stage_name: String,
+    /// The club's level ("Level 3 of 7: 10 mm"), or "No level yet: the baseline sets it".
+    pub level_line: String,
+    /// The baseline or block so far ("Block: 6 of 10, 4 inside"), as the card's after a photo.
+    pub block_line: String,
+    /// The suggestion waiting for the golfer's answer ([`answer_suggestion`]), in words with why it
+    /// was made, or `None`. Worked again from the drill's record each time, never stored as words.
+    pub suggestion: Option<String>,
+    /// The club is in differential practice, so each photo is passed with a call (C19): Dart draws
+    /// one and shows it before the strike.
+    pub call_wanted: bool,
+}
+
+/// Every club in the golfer's bag, in bag order, with where each is in the drill. A club no label
+/// fits is listed and cannot start. Empty when the golfer has no bag.
+///
+/// `Err` only when the drill's record on this phone cannot be read, which is never shown as no
+/// drill (the plan's P17 finding 4).
+pub fn drill_clubs(root: String, player_id: String) -> Result<Vec<DrillClubView>, String> {
+    crate::drill::clubs(&root, &player_id)
+}
+
+/// Open the club's drill, or resume it where it stands. A club with no drill yet is shown at the
+/// start of its baseline, and **nothing is written**: the club's first stored strike starts it
+/// (`record_tape_photo`), so opening a club and leaving it leaves no trace.
+///
+/// Refused for a club no label fits, a golfer not on this phone, or a record that cannot be read.
+pub fn start_drill(
+    root: String,
+    player_id: String,
+    club: String,
+    now: String,
+) -> Result<DrillView, String> {
+    crate::drill::start(&root, &player_id, &club, &now)
+}
+
+/// The golfer's answer to the waiting suggestion. Accepting moves the club to the stage it names
+/// (recentring, differential practice, back to the ladder, or a fresh baseline), at the same level,
+/// and abandons the block in progress. Declining only clears it, and the drill offers it again after
+/// any later block for which it still holds: "not now" is never "never".
+///
+/// Refused when no suggestion waits.
+pub fn answer_suggestion(
+    root: String,
+    player_id: String,
+    club: String,
+    accept: bool,
+    now: String,
+) -> Result<DrillView, String> {
+    crate::drill::answer_suggestion(&root, &player_id, &club, accept, &now)
+}
+
+/// The golfer's own change of stage, at the same level. It abandons the block in progress, whose
+/// strikes stay stored and are never judged (C10), and clears a waiting suggestion. The stage the
+/// club is already in changes nothing.
+///
+/// Refused past the baseline for a club whose first baseline has not set a level yet.
+pub fn set_stage(
+    root: String,
+    player_id: String,
+    club: String,
+    stage: DrillStage,
+    now: String,
+) -> Result<DrillView, String> {
+    crate::drill::set_stage(&root, &player_id, &club, stage, &now)
 }

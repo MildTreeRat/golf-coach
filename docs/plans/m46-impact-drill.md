@@ -60,7 +60,7 @@ machine, pull on the new" as its precondition.
 | **P16** | 🪟 `feedback::drill_rules`: the sentences | ✅ Done *(2026-11-13)* |
 | **P17** | 🪟 `storage::drill_store`: the drill history on disk | ✅ Done *(2026-11-13)* |
 | **P18** | 🪟 Facade: `record_tape_photo`, the pick and "missed the tape" | ✅ Done *(2026-11-13)* |
-| **P19** | 🪟 Facade: the drill's actions (start, stage, suggestions, calls) | ⬜ |
+| **P19** | 🪟 Facade: the drill's actions (start, stage, suggestions, calls) | ✅ Done *(2026-11-13)* |
 | **P20** | 🪟 Facade: the progress views (dots, level, pattern, heat map, roll-up) | ⬜ |
 | **P21** | 🪟 Export carries `drills/`, and `golf-lab import-export` keeps it | ⬜ |
 | **P22** | 🍎 Swift: the photo decoded for Rust, and the tape camera's overlay | ⬜ |
@@ -2867,3 +2867,122 @@ named as skipped where they are not), then write the three records, and commit `
     - `ort_reach` passes (4), and so do `golf-lab`'s `read_tape` tests (4).
     - The doc-truth test passes (91).
     - `cargo doc -p app` shows only the `events` warning from before.
+
+### P19 (2026-11-13)
+
+1. **The drill's actions are built.**
+   - **`crates/app/src/api/drill.rs`**: `DrillStage` (a plain enum, declared here as `api::setup`'s are),
+     `DrillClubView`, `DrillView`, and `drill_clubs`, `start_drill`, `answer_suggestion` and `set_stage`,
+     each a one-line call. `TapeOutcome` gained `suggestion: Option<String>`, as P18 finding 4 offered.
+   - **`crates/app/src/drill.rs`**: the four bodies (`clubs`, `start`, `answer_suggestion`, `set_stage`),
+     and `Drill::view`, `suggestion_line`, `change_stage` and `save`. The module doc gained *The drill's
+     actions*, with the rules below. `judge`'s block lookup and `suggestion_line` share `strikes_named`, and
+     `Drill::open` and `clubs` share `tape_label`.
+   - **`crates/app/tests/drill_actions.rs`**: 9 tests, about 7 s in a debug build, every photo stood in. The
+     cycle test walks the 7 iron through 14 judged blocks and 140 strikes, checking the page, the card's
+     suggestion and the stored state at each step:
+     - a baseline;
+     - a ladder block, then a recentre suggestion, declined, and offered again after the next block;
+     - recentring, then back to the ladder;
+     - seven wide blocks out to the widest circle, with two at it;
+     - differential practice;
+     - a fresh baseline, with the ladder started from it.
+
+     The other tests cover:
+     - a stage change mid-block;
+     - a stage change clearing a suggestion;
+     - no leaving a first baseline without a level;
+     - a baseline that misses the widest circle;
+     - a waiting suggestion keeping its block's words;
+     - `drill_clubs` with the putter, with no bag, and with an unreadable record.
+   - **Five mutations were tried by hand, and each one was caught**:
+     - a stage change that kept the suggestion;
+     - no `discard_pending`;
+     - the block kept on a stage change;
+     - the pattern taken over every strike rather than through the judged block's last;
+     - the suggestion put on every card.
+   - No shape in `contracts` changed, no version key moved, and no dependency was added. Nothing outside the
+     Touch line was changed.
+2. **What the section and C15 left open, and how P19 settled it.**
+   - **All four return `Result<_, String>`**, where C15's table has `drill_clubs` answer a bare `Vec`. That is
+     because the drill's record can be unreadable, and P17 finding 4 forbids falling back to a fresh state.
+     `drill_clubs` for a golfer with no bag is `Ok` and empty. It does not check that the golfer exists,
+     because `bag_slots` does not either.
+   - **The putter is listed**, with `can_start: false`, `label_type: None` and `NO_LABEL_FITS` as its line.
+     P19's section says to list it. P3 finding 8 left "left out or shown as unavailable" to this phase and the
+     user. For the facade, the section's words decide. Hiding it is a Dart filter on `can_start`, so the
+     picker's choice stays open (item 5).
+   - **`DrillClubView`**: `club`, `category` (the wire name, `mid_iron`, which P20's `category_progress`
+     takes), `label_type` (the id, `strikepro_iron`), `can_start`, `stage` and `stage_name` (`None` before
+     the club's first stored strike), and `line` (its level line, `NO_LEVEL_YET`, or `NO_LABEL_FITS`). It
+     lists bag clubs only, in bag order, so a club that has left the bag is not listed, even with drill
+     history.
+   - **`DrillView`**: `club`, `stage`, `stage_name`, `level_line` (`level_line` or `NO_LEVEL_YET`),
+     `block_line` (the card's), `suggestion` and `call_wanted` (differential).
+   - **`start_drill` writes nothing.** `Drill::open` makes the club's entry in memory, and the club's first
+     stored strike writes it (P18). Browsing the picker leaves `state.json` as it was, and a club shows as
+     started only once it has a strike. Its refusals are `Drill::open`'s.
+   - **A change of stage** comes from accepting a suggestion, or from `set_stage` to another stage. It keeps
+     the level and goes through `change_stage`, which:
+     - stores the waiting strike first (P18 finding 4);
+     - abandons the block, whose strikes stay stored and are never judged;
+     - clears the waiting suggestion.
+
+     The golfer has then said what follows the block that raised the suggestion. `suggestion` works it
+     again after every block, so nothing is lost. **`set_stage` to the stage the club is in changes nothing
+     and writes nothing**, block and suggestion included. **Declining** only clears the suggestion, and
+     keeps a waiting strike resolvable, since the stage does not move.
+   - **A club with no level cannot leave the baseline** (`NO_LEVEL_TO_LEAVE`, an `Err` sentence like P18's
+     refusals). Only a first baseline still in progress has no level, because P18's `judge` stores
+     `level_or_widest(start_level(..))`. So **P1 finding 5 and P14 finding 4's concern are closed on the
+     facade**: after a baseline that missed the widest circle, differential practice is accepted and judged
+     at the widest radius (tested).
+   - **An accepted fresh baseline keeps the level**, as P15 finding 5 says. Its page shows the old level
+     line beside "Baseline: 0 of 10" until the baseline is judged.
+   - **Answering with no suggestion waiting** is refused (`NO_SUGGESTION`).
+   - **The suggestion's sentence is worked again each time** (P16 finding 4), from the record as it stood
+     when the suggestion was made:
+     - `Recentre` takes its pattern over the club's strikes through the last judged block's last strike, so
+       strikes that land while the suggestion waits do not move its numbers (tested). Its radius is the
+       club's level, which nothing can move while it waits: a judged block replaces the suggestion, and a
+       stage change clears it. With no pattern (a record changed by hand), it falls back to
+       `recentre_suggestion`'s sentence with no number in it.
+     - `Differential`'s `DifferentialWhy` is the stage of the last entry's first strike.
+     - `FreshBaseline` re-runs `judge_differential` on the last entry at its `from`.
+   - **`TapeOutcome::suggestion` is present only on the call that judged the block that raised it**, and is
+     `None` on every other call, even while a suggestion waits. `DrillView` carries the waiting one.
+3. **For P20**:
+   - Reuse `crate::drill`'s `level_text`, `stage_view`, `strikes_named` and `tape_label` rather than writing
+     them again.
+   - **No display name exists for a category or a label type.** `ClubCategory::as_str` is the wire name, and
+     `LabelType` has only `id`. A category's progress view is the first to need a title. Add it to
+     `feedback::drill_rules`, and `DrillClubView` can carry it too, before P22's codegen.
+   - **`drill_clubs` lists bag clubs only.** Whether `category_progress` gathers a club that has left the bag
+     but holds drill history is yours to decide (D10 says "its clubs").
+   - **A resumed drill does not show a waiting strike.** `DrillView` has no `pending_id` or crop. If the
+     app closes while a `NeedsPick` waits, the club's next photo stores it as `not_picked`, and nothing is
+     lost (exit 2). If P23 is to show the waiting crop again on resume, `DrillView` needs those two
+     fields. P20 is the last desk phase before P22's codegen, so add them there if P23 should have them.
+4. **For P22**: `crates/app/src/api/drill.rs` gained a plain enum, two structs, four functions and a
+   `TapeOutcome` field, so run `codegen_check.sh` first, as the Verify section says.
+5. **For P23 and P24**:
+   - **The picker**: `line` goes under each club's name, and a club with `can_start` false cannot be opened.
+     Whether the putter is shown at all is still P3 finding 8's question for the user, and it needs no Rust
+     change.
+   - **`call_wanted`** says when to draw a call (C19). The page after an accepted differential suggestion is
+     the first to want one.
+   - **The suggestion sheet**: `TapeOutcome::suggestion` beside `block_result` at a block's end, and
+     `DrillView::suggestion` on a resumed page. Both buttons call `answer_suggestion`, and each answer
+     returns the new page. `set_stage`'s refusal names the baseline, so show it as it comes.
+6. **For P30**: ADR-037 and ARCHITECTURE should gain item 2's rules:
+   - a stage change stores the waiting strike, abandons the block and clears the suggestion;
+   - the same stage changes nothing;
+   - opening a club writes nothing;
+   - a suggestion's words are worked again from the record as it stood.
+7. **Still failing on Windows**: `bay_bars`' `a_bars_file_that_does_not_say_is_refused_rather_than_guessed_at`
+   (P18 finding 10). P19 touches neither file involved.
+8. **Verify**:
+   - `cargo test -p app --no-fail-fast` passes but for item 7 (`drill_actions`: 9; `drill_record`: 18).
+   - `cargo clippy -p app --all-targets -- -D warnings` and `cargo fmt --check` are clean.
+   - The doc-truth test passes (91).
+   - `cargo doc -p app` shows only the `events` warning from before.
