@@ -415,7 +415,10 @@ fn solve_normalised(from: [[f64; 2]; 4], to: [[f64; 2]; 4]) -> Option<[[f64; 3];
 
 /// Gaussian elimination with partial pivoting on an 8 × 8 system with its right-hand side as the
 /// ninth column, then back substitution. `None` when a pivot is at or below [`PIVOT_TOLERANCE`].
-fn gauss(mut system: [[f64; 9]; 8]) -> Option<[f64; 8]> {
+///
+/// The label finder's outline fit (`label.rs`, M46 P9) solves its normal equations with it too,
+/// since its homography has the same eight unknowns.
+pub(super) fn gauss(mut system: [[f64; 9]; 8]) -> Option<[f64; 8]> {
     for column in 0..8 {
         let pivot = (column..8)
             .max_by(|&a, &b| system[a][column].abs().total_cmp(&system[b][column].abs()))?;

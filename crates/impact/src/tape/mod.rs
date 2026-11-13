@@ -9,11 +9,17 @@
 //! **P7 adds the geometry between a photo and a label** (`geometry.rs`): [`Homography`], the
 //! perspective map from four corners in the photo to the same four on the label, and [`rectify`],
 //! which cuts the label out through it into a [`Crop`] in the printed frame at [`CROP_PX_PER_MM`].
-//! Nothing yet finds the corners. That is P9's label finder.
+//! P9's label finder gives it the corners.
 //!
 //! **P8 adds what the reader answers** ([`TapeOutcome`], C5's three) and [`read_tape`] as a stub
 //! that finds no label in any photo, so that `golf-lab read-tape` is built over the shapes P9 to
-//! P12 fill. The stub is P9's to replace.
+//! P12 fill.
+//!
+//! **P9 replaces the stub's first step with the label finder** (`label.rs`): [`find_label`] fits the
+//! label type's measured outline to the bright, neutral region in the photo that it fits, and returns
+//! the box's four corners in the printed frame with the crop cut through them, or a [`LabelMiss`].
+//! Nothing yet looks for the hosel, so [`read_tape`] refuses every label it finds as
+//! `no_orientation` until P10.
 //!
 //! # A Rust table, not `tape_labels.json`
 //!
@@ -45,11 +51,16 @@
 //! which is printing registration or measurement error. Nothing is known to fix it per label.
 
 mod geometry;
+mod label;
 mod tape_labels;
 
 use crate::frame::Frame;
 
 pub use geometry::{rectify, Crop, CropGrid, Degenerate, Homography, CROP_PX_PER_MM};
+pub use label::{
+    find_label, LabelMiss, OutlineFit, ASPECT_TOLERANCE, LABEL_SATURATION_MAX, LOGO_CONTRAST,
+    MAX_OUTSIDE_SHARE, MIN_INLIER_SHARE, MIN_OUTLINE_SUPPORT, MIN_PX_PER_MM, OUTLINE_INLIER_MM,
+};
 pub use tape_labels::{
     CATEGORY_LABELS, LABEL_TYPES, PROVENANCE, STRIKEPRO_DRIVER, STRIKEPRO_HYBRID, STRIKEPRO_IRON,
 };
@@ -206,7 +217,9 @@ pub struct Orientation {
     /// right-handed one.
     pub toe_printed_right: bool,
     /// The top line is toward the printed top, the logo's edge: the label was stuck logo-up, as
-    /// the table assumes (P4 finding 5). Whether logo-down is turned or refused is P9's and P10's.
+    /// the table assumes (P4 finding 5). The finder (P9) finds a label stuck logo-down in its
+    /// printed frame as it finds one at any turn, by the outline's shape, so whether logo-down is
+    /// read or refused is P10's alone.
     pub top_line_printed_top: bool,
 }
 
@@ -271,22 +284,32 @@ impl TapeRefusal {
 }
 
 /// Read one photo of a label on the club: C5's reader. `previous` is the club's last crop (C16,
-/// ADR-037 clause 3), and `None` reads the label as fresh. [M46 P8]
+/// ADR-037 clause 3), and `None` reads the label as fresh. [M46 P8, P9]
 ///
-/// **A stub until P9.** It answers `no_label` for every well-formed photo and `decode_failed` for
-/// one that is not, so that `golf-lab read-tape` and its review images are built and tested over
-/// the shapes before anything finds a label. P9 replaces it with the label finder, P10 adds the
-/// orientation, and P11 and P12 the marks.
+/// A photo that is not well formed ([`Frame::is_well_formed`]) is `decode_failed`, and one in which
+/// [`find_label`] finds no label is `no_label`, whatever its [`LabelMiss`].
+///
+/// **A found label is refused as `no_orientation` until P10**, carrying the label it found. Nothing
+/// has looked for the hosel yet, so which side of the label is the toe is unknown, and a reading
+/// without it would be a guessed sign (the M46 plan's rule 6). P10 adds the orientation, and P11 and
+/// P12 the marks.
 pub fn read_tape(photo: &Frame, previous: Option<&Frame>, label: &LabelType) -> TapeOutcome {
-    let _ = (previous, label);
-    let reason = if photo.is_well_formed() {
-        TapeRefusal::NoLabel
-    } else {
-        TapeRefusal::DecodeFailed
-    };
-    TapeOutcome::NotRead {
-        reason,
-        found: None,
+    let _ = previous;
+    if !photo.is_well_formed() {
+        return TapeOutcome::NotRead {
+            reason: TapeRefusal::DecodeFailed,
+            found: None,
+        };
+    }
+    match find_label(photo, label) {
+        Err(_) => TapeOutcome::NotRead {
+            reason: TapeRefusal::NoLabel,
+            found: None,
+        },
+        Ok((found, _)) => TapeOutcome::NotRead {
+            reason: TapeRefusal::NoOrientation,
+            found: Some(found),
+        },
     }
 }
 
@@ -295,7 +318,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn the_stub_finds_no_label_in_a_photo_and_refuses_pixels_that_are_not_one() {
+    fn a_flat_photo_has_no_label_and_pixels_that_are_not_one_are_refused() {
         let photo = Frame {
             width: 4,
             height: 2,

@@ -2,9 +2,11 @@
 //!
 //! The done-when of the M46 plan's P8: two synthetic PNGs give two JSON lines and their review
 //! files, and an unknown flag and a photo that is not there are each refused with their sentences.
-//! The reader behind the verb is `impact::tape::read_tape`'s stub until P9, so every photo here is
-//! `no_label`. What the verb prints and draws for a found label, a reading and a pick is held by
-//! `golf_lab::read_tape`'s own tests, over outcomes built by hand. No real photo is read here, since
+//! Every photo here is `no_label`. That was the stub's answer until P9, and since P9 it is the label
+//! finder's, because a plain pale rectangle this small is no STRIKEPRO label: it samples under
+//! `impact::tape::MIN_PX_PER_MM`, and it has neither the outline nor the logo. What the verb prints
+//! and draws for a found label, a reading and a pick is held by `golf_lab::read_tape`'s own tests,
+//! over outcomes built by hand, and the finder's own tests are `crates/impact/tests/tape_label.rs`. No real photo is read here, since
 //! none of a struck label exists before P29 (the plan's P3 finding 10).
 
 use std::fs;
@@ -22,7 +24,7 @@ fn golf_lab(args: &[&str]) -> Output {
 }
 
 /// A photo of a pale label-sized patch with one dark mark on it, on a darker face, `width` by
-/// `height`: enough to look like the thing the verb is for, though the stub finds nothing in it.
+/// `height`: enough to look like the thing the verb is for, though the finder finds nothing in it.
 fn draw_photo(path: &Path, width: u32, height: u32) {
     let mut image = RgbImage::from_pixel(width, height, Rgb([45, 45, 50]));
     for y in height / 4..height * 3 / 4 {

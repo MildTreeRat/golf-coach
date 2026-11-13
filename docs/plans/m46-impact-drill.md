@@ -50,7 +50,7 @@ machine, pull on the new" as its precondition.
 | **P6** | 🪟 `contracts::drill`: the strike record, the stages and the ladder tables | ✅ Done *(2026-11-12)* |
 | **P7** | 🪟 `impact::tape` geometry: the homography and the rectified crop | ✅ Done *(2026-11-12)* |
 | **P8** | 🪟 `golf-lab read-tape`: the desk tool and its review images | ✅ Done *(2026-11-12)* |
-| **P9** | 🪟 The label finder, on synthetic photos | ⬜ |
+| **P9** | 🪟 The label finder, on synthetic photos | ✅ Done *(2026-11-12)* |
 | **P10** | 🪟 Orientation: heel and up, from the hosel | ⬜ |
 | **P11** | 🪟 The mark on a fresh label | ⬜ |
 | **P12** | 🪟 The newest mark: the diff against the last strike | ⬜ |
@@ -1684,3 +1684,162 @@ named as skipped where they are not), then write the three records, and commit `
 8. **For P30**: `CLAUDE.md`'s list of golf-lab's other verbs, in the Commands block's `golf-lab analyze` comment,
    does not name `read-tape`, and neither does `docs/ARCHITECTURE.md` §1. P30's Touch line covers §1, but its
    `CLAUDE.md` entry names only the `crates/impact` and `contracts` sentences.
+
+### P9 (2026-11-12)
+
+1. **The finder is built**: `impact::tape::find_label(photo, label) -> Result<(FoundLabel, OutlineFit),
+   LabelMiss>`, in `crates/impact/src/tape/label.rs`, and `read_tape` uses it in place of P8's stub. The
+   module doc gives the steps. A pixel is a candidate when it is bright (above one of two Otsu levels) and
+   neutral. The candidate regions the size of a label are hole-filled and checked for the label's aspect.
+   Then the type's measured outline is fitted to each region's sub-pixel edge through a homography, from two
+   starts (each way along the long axis). A fit is accepted on its measures and the logo, and exactly one
+   distinct label must remain. **`read_tape` answers `no_orientation`, carrying the found label, for every
+   label it finds until P10**, because nothing has looked for the hosel and a side would be a guessed sign.
+   It answers `no_label` for any `LabelMiss` and `decode_failed` as before.
+2. **Where the section's Do was not followed, and why.** None of these touches a decision.
+   - **Not four edge lines.** The section asked for a rounded rectangle's corners from its four edge lines.
+     No label is a rectangle (P4), and the driver label has no straight edge at all, so the whole measured
+     outline is fitted instead (P7 finding 3 foresaw this). The corners are `box_corners_mm()` mapped
+     through the fitted map, so they pair with the printed frame by index and the crop is cut logo-up.
+   - **The aspect check is on the region.** A crop cut through a fitted outline has the label's aspect by
+     construction. `ASPECT_TOLERANCE` therefore bounds the region's moment aspect against the outline's
+     before the fit, and the fitted map's foreshortening at the cross after it.
+   - **Files beyond the Touch line**:
+     - `crates/impact/src/component.rs` gained `components_with_pixels`. The flood fill is shared, and
+       `components` is unchanged, so M42's tests pass as they were.
+     - `crates/impact/src/tape/geometry.rs`'s `gauss` is now `pub(super)`, so there is one 8 × 8 solver.
+     - `crates/lab/tests/read_tape.rs` changed in its doc only. Its drawn photos are still `no_label`, now
+       for the finder's reasons.
+     - The shared renderer is `crates/impact/tests/tape_scene/mod.rs` (finding 11).
+3. **The fit is measured in the photo.** The first version mapped edge points into the label and measured
+   them there. On a notched label it walked off to a strongly projective map (`h₆ = −0.44`) that squeezed
+   the points onto part of the outline. Measured in the photo, to the outline as the map projects it, the
+   points cannot be shrunk. The method is Levenberg–Marquardt on point-to-tangent residuals, through three
+   robust stages that narrow: Huber 1 mm, then Tukey 2 mm, then Tukey 0.6 mm. The last stage exists because
+   notch points within 2 mm left a marked driver label 0.43 mm off. It is wider than P3's ±0.5 mm on the
+   outline. Edge points are subsampled to 500 for the iterations, and all of them are judged.
+4. **The logo decides which edge is the top, because the outline cannot.**
+   - **The outline alone.** The hybrid label fitted the wrong way up scored 0.35 mm RMS, inlier share 0.90
+     and support 0.84, and passed loose thresholds. So the photo was refused as ambiguous.
+   - **The rule.** A fit is accepted only when the band across the logo's letters is darker than the band as
+     deep in from the bottom edge, by `LOGO_CONTRAST`. Each band's darkness is `1 − mean / p90` of its own
+     samples, so a light gradient across the label does not count. On P3's photo the iron label's bottom
+     band was 13 levels dimmer at its white than its top band.
+   - **The band, measured on P3's flat photo.** The real letters lie 3.2 to 6.2 mm below the top edge on all
+     three labels, under a thin swoosh within about 1 mm of it. They span about ±16 mm (hybrid, iron) and
+     ±19 mm (driver). The band is 2.5 to 6.5 mm in and ±12 mm across. A first guess, 1.2 to 4.0 mm, mostly
+     caught white, and refused the real iron label.
+   - **The scores.** Right way up, the real labels score 0.33 (driver), 0.20 (hybrid) and 0.18 (iron), the
+     iron lowest because its grid's bottom line lies in its bottom band. Turned, they score about the
+     negative.
+5. **A wrong reading was found and closed.** Under the first thresholds an iron label read as the hybrid type
+   was *accepted*. Those thresholds were inlier 0.8, support 0.8, no outside share, and the logo only vetoing
+   a decisive upside-down. The accepted fit had inlier 0.80, support 0.87, RMS 0.47 mm and foreshortening
+   1.27. Three measures now refuse it:
+   - `MAX_OUTSIDE_SHARE`. A notch only ever falls inside the outline, so edge beyond it is white the label
+     does not have.
+   - Support of 0.9.
+   - The logo, now required.
+
+   `MIN_INLIER_SHARE` went down to 0.7. Notches add their inner sides to the edge, and a label whose swoosh
+   crosses its top edge, with two strikes notching its bottom, scores 0.80 to 0.82. Across the final tests
+   there were 72 accepted fits and 61 refused. **Every refused fit fails at least two measures.** Every
+   accepted one had:
+   - outside share 0;
+   - support at least 0.955;
+   - logo contrast at least 0.172;
+   - foreshortening at most 1.181;
+   - inlier share at least 0.797.
+6. **The tunables**, each with its doc and the bracket P29 may move it within:
+
+   | Constant | Value | Bracket |
+   |---|---|---|
+   | `LABEL_SATURATION_MAX` | 0.25 | 0.15 to 0.4 |
+   | `MIN_PX_PER_MM` | 4 | 2.5 to 6 |
+   | `ASPECT_TOLERANCE` | 1.3 | 1.15 to 1.6 |
+   | `OUTLINE_INLIER_MM` | 1.0 | 0.5 to 2.0 |
+   | `MIN_INLIER_SHARE` | 0.7 | 0.6 to 0.95 |
+   | `MAX_OUTSIDE_SHARE` | 0.05 | 0.02 to 0.15 |
+   | `MIN_OUTLINE_SUPPORT` | 0.9 | 0.7 to 0.97 |
+   | `LOGO_CONTRAST` | 0.08 | 0.04 to 0.15 |
+
+   The fit's own settings (the kernel widths, `FIT_POINTS`, the logo band's geometry) are private constants
+   with their reasons.
+7. **The tests.**
+   - **Where they are**: `crates/impact/tests/tape_label.rs` holds 11 tests, and `label.rs` holds 5 unit
+     tests (Otsu, the crossing, neutrality, the outline's moments and distance, and hole filling).
+   - **What a found label is held to.** Every found label is within `FOUND_WITHIN_MM` (0.25) of the camera's
+     truth, at every outline vertex and the cross. The worst was 0.19 mm, the marked driver label with its
+     swoosh crossing the edge. Every other was 0.09 mm or less.
+   - **What is found**:
+     - each type face-on;
+     - six poses tilted 28.7° to 30° and turned −90° to 180°;
+     - left-handed clubs, and labels stuck logo-down, with the crop asserted logo-up;
+     - every type on a steel face, a dark face and no face;
+     - eight marks, two of them clipped by the bottom edge, plus the swoosh crossing the top edge.
+   - **What is refused**:
+     - no label: `NoCandidate` on a dark face, and on a steel face `OutlineMisfit` (the face is a candidate);
+     - a white card the iron box's size: `OutlineMisfit`;
+     - a disc: `WrongProportions`;
+     - four wrong-type pairs;
+     - a label cut by the photo's edge: `NoCandidate`;
+     - one at 400 mm, about 2.5 px/mm;
+     - two hybrid labels in one photo: `Ambiguous`.
+   - **`read_tape`'s outcomes** each have a test too.
+   - **Speed.** The file runs in about 9 s in a debug build. The renderer samples each pixel's corners once
+     and supersamples only the pixels whose corners disagree, which took it from 40 s.
+8. **P3's flat photo, the one real photo, as a smoke test** (P3 finding 10 allows it). It was read through
+   `golf-lab read-tape --review`, with the reviews in the session scratchpad and nothing written under
+   `data/`.
+   - **All three labels are found** against the graph paper with no head behind them. Every one has inlier
+     share and support of 1.0 and outside share 0, with RMS 0.22 (driver), 0.13 (hybrid) and 0.11 mm (iron).
+   - **The fitted sampling matches.** It is 7.95, 8.35 and 9.0 px/mm, where P7 read 7.4, 8.3 and 8.8 to 9.2
+     by eye.
+   - **The cross is off by up to 0.9 mm.** The printed red cross's arms, found in each crop, lie 0.9 mm
+     (driver), 0.3 mm (hybrid) and 0.2 mm (iron) from where the fit puts the label's centre. The paper is
+     nearly as white as the label, so the edge there is faint, and P3 measured the outlines and the cross
+     to ±0.5 mm.
+   - **Speed.** A read takes 0.28 s in release, decode included. A 3024 × 4032 copy upscaled from it takes
+     0.57 s.
+9. **For P10**:
+   - **The renderer draws what P10 needs.** It draws the hosel and shaft. A right-handed club seen face-on
+     has its heel on the photo's right (C4): a hosel band 7 mm either side of a line from the heel, at a
+     62° lie, and a graphite shaft 4.5 mm either side beyond 30 mm. `Hand::Left` mirrors the head, and
+     `logo_up: false` turns the label half a turn on the face. `Scene::true_corners` and `photo_of` are the
+     truth.
+   - **The finder's corners are always the printed frame's**, whatever the label's turn on the club, so
+     logo-down is P10's alone (`Orientation`'s doc now says so). P10 replaces the `Ok` arm in `read_tape`,
+     which refuses as `no_orientation`.
+   - **A steel face is bright and neutral**, so it is often a candidate region of its own. The renderer's
+     shaft is dark graphite. A steel-shafted iron's real shaft is chrome and may not be the dark bar the
+     section expects. That is for P29 to see.
+10. **For P11**:
+    - **The cross may anchor the reading better than the fit.** On the real photo the fitted centre lay up to
+      0.9 mm from the printed cross (finding 8). Every crop holds that cross: red arms 9.5 to 10.2 mm long
+      (P3 finding 4), and since D2 and P3 finding 6 it *is* the label's centre. Locating its arms in the
+      crop and measuring each mark from them would take the fit's translation error out of every reading.
+      The section does not ask for this. It is P11's to decide, and P29's to measure.
+    - **A mark across the bottom band costs logo contrast.** Two strikes there took the synthetic iron label
+      from 0.22 to 0.17, so a label marked hard along its bottom edge is refused as `no_label`.
+    - `Scene.marks` draws discs at printed-frame millimetres with a 0.4 mm ramp, in the guessed `MARK`
+      colour (120, 116, 122). P3 finding 8 says only "darker".
+11. **For P13**:
+    - **The shared renderer** is `crates/impact/tests/tape_scene/mod.rs`, included by `mod tape_scene;`.
+    - **Its printing matches P3's photo where the finder looks.** That covers the logo's letters and swoosh,
+      the driver's and hybrid's dashed ellipses (the outer ones 2 mm above the bottom edge), the driver's
+      text, and the iron's grid. Its logo contrasts, 0.21 to 0.35, match the real 0.18 to 0.33.
+    - **Keeping photos.** `TAPE_SCENE_DIR=<dir>` keeps every drawn photo as a PNG (`tape_scene::keep`, a
+      std-only writer), to look at or to run `golf-lab read-tape --review` over.
+    - **A second camera.** `tests/tape_geometry.rs` keeps P7's own copy of the camera, and P13 may fold it
+      onto `tape_scene::Camera`.
+12. **For P29**:
+    - every tunable in finding 6, with its bracket;
+    - a label on a curved driver face, which a homography takes as flat (the module doc);
+    - the cross offset of finding 8;
+    - chrome shafts (finding 9);
+    - the logo band, which was measured on unused labels only.
+13. **For P18**: on the desk a full-size photo is found in about 0.6 s in release, decode included (finding
+    8). The finder holds the photo's luminance as `f32`, a neutral flag and a mask per level, about 6 bytes
+    a pixel, which is about 75 MB on a 12 MP photo before the frame itself.
+14. **For P30**: `impact::tape` now finds the label. `docs/ARCHITECTURE.md` and `CLAUDE.md`'s `crates/impact`
+    sentence still describe the replay alone (P4 finding 10 already names the manifest's `description`).

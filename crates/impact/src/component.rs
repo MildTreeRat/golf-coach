@@ -134,9 +134,34 @@ pub(crate) fn segment_distance(ends: [[f64; 2]; 2], point: [f64; 2]) -> f64 {
 
 /// Every 4-connected component of `mask`, in the order a row-major scan first meets each.
 pub(crate) fn components(mask: &Mask) -> Vec<Component> {
+    let mut found = Vec::new();
+    for_each_component(mask, |pixels| {
+        found.push(Component::from_pixels(pixels, mask.rect))
+    });
+    found
+}
+
+/// The components of `mask` of at least `min_area` pixels, each with its pixels as indices
+/// row-major into `mask.rect`, in scan order as [`components`] gives them. [M46 P9]
+///
+/// The tape's label finder fills a label's holes and walks its outline, which need the pixels and
+/// not only their moments. Only the large ones are kept, because a photo's small specks are
+/// thousands and each would hold its own list.
+pub(crate) fn components_with_pixels(mask: &Mask, min_area: usize) -> Vec<(Component, Vec<usize>)> {
+    let mut found = Vec::new();
+    for_each_component(mask, |pixels| {
+        if pixels.len() >= min_area {
+            found.push((Component::from_pixels(pixels, mask.rect), pixels.to_vec()));
+        }
+    });
+    found
+}
+
+/// The flood fill both of the above share: each 4-connected component's pixels, as indices
+/// row-major into `mask.rect`, handed to `visit` in the order a row-major scan first meets each.
+fn for_each_component(mask: &Mask, mut visit: impl FnMut(&[usize])) {
     let (width, height) = (mask.rect.width(), mask.rect.height());
     let mut seen = vec![false; width * height];
-    let mut found = Vec::new();
     let mut stack = Vec::new();
     let mut pixels = Vec::new();
     for start in 0..width * height {
@@ -168,9 +193,8 @@ pub(crate) fn components(mask: &Mask) -> Vec<Component> {
                 visit(index + width);
             }
         }
-        found.push(Component::from_pixels(&pixels, mask.rect));
+        visit(&pixels);
     }
-    found
 }
 
 #[cfg(test)]
