@@ -6,6 +6,11 @@
 //! the shape every later phase draws, crops and judges against: each label type's outline and
 //! printed centre, and which label each club category takes.
 //!
+//! **P7 adds the geometry between a photo and a label** (`geometry.rs`): [`Homography`], the
+//! perspective map from four corners in the photo to the same four on the label, and [`rectify`],
+//! which cuts the label out through it into a [`Crop`] in the printed frame at [`CROP_PX_PER_MM`].
+//! Nothing yet finds the corners. That is P9's label finder.
+//!
 //! # A Rust table, not `tape_labels.json`
 //!
 //! The plan's C3 asked for JSON read by `include_str!`, as `contracts::catalogue` reads its rows,
@@ -35,8 +40,10 @@
 //! not quite on that middle, and sits up to 0.6 mm to one side on the hybrid label (P3 finding 4),
 //! which is printing registration or measurement error. Nothing is known to fix it per label.
 
+mod geometry;
 mod tape_labels;
 
+pub use geometry::{rectify, Crop, CropGrid, Degenerate, Homography, CROP_PX_PER_MM};
 pub use tape_labels::{
     CATEGORY_LABELS, LABEL_TYPES, PROVENANCE, STRIKEPRO_DRIVER, STRIKEPRO_HYBRID, STRIKEPRO_IRON,
 };

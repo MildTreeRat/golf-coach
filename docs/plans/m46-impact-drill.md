@@ -48,7 +48,7 @@ machine, pull on the new" as its precondition.
 | **P4** | 🪟 The session's inventory and the label geometry as data | ✅ Done *(2026-11-12)* |
 | **P5** | 🪟 `contracts::face_impact`: the method interface and `TAPE_READER_VERSION` | ✅ Done *(2026-11-12)* |
 | **P6** | 🪟 `contracts::drill`: the strike record, the stages and the ladder tables | ✅ Done *(2026-11-12)* |
-| **P7** | 🪟 `impact::tape` geometry: the homography and the rectified crop | ⬜ |
+| **P7** | 🪟 `impact::tape` geometry: the homography and the rectified crop | ✅ Done *(2026-11-12)* |
 | **P8** | 🪟 `golf-lab read-tape`: the desk tool and its review images | ⬜ |
 | **P9** | 🪟 The label finder, on synthetic photos | ⬜ |
 | **P10** | 🪟 Orientation: heel and up, from the hosel | ⬜ |
@@ -1530,4 +1530,74 @@ named as skipped where they are not), then write the three records, and commit `
    it removes is refused by `DrillState`'s check until it is moved. Every strike keeps the radius it was
    judged against.
 7. `cargo doc -p contracts` shows only the three warnings from before (P5 finding 5). `ort_reach` and the
+   doc-truth test pass.
+
+### P7 (2026-11-12)
+
+1. **The geometry is built**, in `crates/impact/src/tape/geometry.rs`, and `impact::tape` re-exports it:
+   - `Homography::from_corners(photo, label) -> Result<Homography, Degenerate>`, which maps photo pixels to
+     printed-frame millimetres. Each side is normalised (Hartley), then the 8 × 8 system is solved by Gaussian
+     elimination with partial pivoting. `apply` returns `None` on or beyond the plane's horizon, `inverse()`
+     cannot fail (both matrices are held), and `matrix()` is for review images.
+   - `Degenerate`: `NotFinite`, `Collinear` (three corners on a line, two that coincide, or all four at one
+     point), `Folded` (a bow-tie, or a corner inside the other three's triangle), and `Mirrored`.
+   - `LabelType::box_corners_mm()`: the record's box about the cross, listed top-left, top-right,
+     bottom-right, bottom-left.
+   - `CropGrid { width, height, px_per_mm, left_mm, top_mm }`, with `new(label, px_per_mm)`, `to_label_mm`
+     and `to_crop_px`, in continuous pixel coordinates (pixel `(i, j)`'s centre is `(i + 0.5, j + 0.5)`).
+   - `rectify(frame, &h, label, px_per_mm) -> Crop { grid, frame, outside }`.
+   - `CROP_PX_PER_MM = 10.0`.
+
+   `crates/impact/tests/tape_geometry.rs` has 17 tests and `geometry.rs` 3 unit tests. `docs/REFACTOR_LEDGER.md`
+   has C1's row (R4, Declined).
+2. **Where the section's signatures moved, and why.**
+   - `rectify` returns a `Crop`, not a bare `Frame`. "Outside pixels marked" needs a mask, because a `Frame`
+     has no alpha, and any colour chosen to mean nothing is one a photo can hold. An outside pixel is
+     black and flagged, and a frame that is not well formed comes back all outside at the grid's size.
+   - `CropGrid` is a value apart from the pixels, because a stored crop is read back by its grid alone.
+   - `CropGrid::new` panics on a `px_per_mm` that is not positive and finite. That is R8's wiring bug.
+3. **`Mirrored` is a refusal the section did not name.** A front view of an opaque label keeps its handedness.
+   The photo's `y` runs down and the label's up, so the forward matrix's determinant is negative, given that
+   `w` is held positive. A positive one means the two corner lists pair as a mirror image, and reading through
+   it would put every mark on the wrong side of the cross. That is a guessed sign (rule 6). A label turned
+   to any angle in the photo is accepted, and a test pins all four quarter-turns of one quad.
+   - **For P9**: list the photo's corners as seen, top-left, top-right, bottom-right, bottom-left, and pair
+     them with `box_corners_mm()`. A wrong order is refused, never read. Whether a label stuck logo-down is
+     refused or turned is still P9's and P10's (P4 finding 5). Here it is just another rotation.
+   - **For P9**: `box_corners_mm()` is the record's box, and no label is a rectangle (P4), so its corners
+     are not points on the label. They are where lines along the label's four extremes meet. The record box
+     and the outline's extents agree within 0.2 mm (P4 finding 3).
+4. **`CROP_PX_PER_MM` stays at the plan's 10**, and its doc carries the reason:
+   - **The photo's sampling.** On P3's flat photo (half size, P3 finding 2) the label boxes span about 7.4
+     (driver), 8.3 (hybrid) and 8.8 to 9.2 (iron) pixels a millimetre, read by eye off the photo. A full-size
+     photo framed the same way would sample about 15 to 18.
+   - **The crop sizes.** 905 × 496, 735 × 344 and 730 × 399, which as raw RGB (C16's `last/<club>.rgb`) is
+     0.74 to 1.3 MB a club.
+   - **The JPEG sizes.** Each box was cut from P3's photo by eye, resized (bilinear) and encoded with Pillow.
+     That was a desk measurement in the session scratchpad, and nothing of it is in the repo. At 10 px/mm the
+     three came to 36 to 58 KB at quality 75 and 47 to 76 KB at quality 85. That fits D6's "tens of KB". At
+     8 px/mm they were 27 to 56 KB, at 5 12 to 26 KB, and at 12 47 to 99 KB.
+   - **No mark size is known** (P3 finding 10). At 10, a pixel is 0.1 mm, and the tightest radius and
+     `WRONG_MM` are each 50 pixels.
+   - **For P18**: the quality those numbers suggest is 75 to 85, and the grid paper in the boxes' corners
+     inflated them.
+   - **For P29**: the first real marks are what revise the constant, and after P13 it moves with
+     `TAPE_READER_VERSION`, because it sets every crop's size.
+5. **What the tests measured.** The dot test has seven poses over all three label types: two face-on, and five
+   tilted 28.7° to 30° about different axes. They are turned −90° to 180° in the image, at 110 to 200 mm, which
+   is 5.5 to 10 photo pixels a millimetre. **The worst dot was recovered 0.0028 mm off**, inside the 0.1 mm by
+   35 times, and the dot's photo position maps through the homography within 1e-9 mm. `inverse ∘ apply` holds
+   within 1e-9 over a 50-pixel grid of each whole photo and a 2 mm grid of each label box. The 0.1 mm bound
+   would pass a crop shifted by half a pixel (0.05 mm), so a second test pins the pixel-centre convention. At a
+   pure one-to-one shift, the crop must equal the photo's pixels exactly.
+6. **For P11 and P12**: `rectify` does not smooth before it samples. A full-size photo, at 15 to 18 px/mm,
+   is decimated to 10, so the label's finest printing (the 1 mm dashes) may alias a little. A mark is much
+   larger than that. Two crops of one label type at `CROP_PX_PER_MM` share one `CropGrid`, so P12's diff
+   is pixel to pixel. A pixel flagged `outside` in either crop holds nothing and must be left out of the
+   diff.
+7. **For P10**: the crop is the printed frame. Row 0 is the box's top edge (the logo's), the cross is at
+   `grid.to_crop_px([0.0, 0.0])`, and C4's `x` is the printed `x` negated or not, decided at the reading.
+8. **For P18**: a tap on a stored crop becomes millimetres as
+   `CropGrid::new(label, CROP_PX_PER_MM).to_label_mm([x, y])`, in the crop's pixel coordinates.
+9. `cargo doc -p impact` shows only the warning from before (P4 finding 10). `ort_reach`, fmt, clippy and the
    doc-truth test pass.
