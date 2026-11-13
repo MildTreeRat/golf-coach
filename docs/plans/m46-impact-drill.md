@@ -57,7 +57,7 @@ machine, pull on the new" as its precondition.
 | **P13** | 🪟 The reader end to end on synthetic photos, and its gate | ✅ Done *(2026-11-13)* |
 | **P14** | 🪟 `analysis::drill`: the baseline and the ladder | ✅ Done *(2026-11-13)* |
 | **P15** | 🪟 `analysis::drill`: the pattern, the triggers and differential judging | ✅ Done *(2026-11-13)* |
-| **P16** | 🪟 `feedback::drill_rules`: the sentences | ⬜ |
+| **P16** | 🪟 `feedback::drill_rules`: the sentences | ✅ Done *(2026-11-13)* |
 | **P17** | 🪟 `storage::drill_store`: the drill history on disk | ⬜ |
 | **P18** | 🪟 Facade: `record_tape_photo`, the pick and "missed the tape" | ⬜ |
 | **P19** | 🪟 Facade: the drill's actions (start, stage, suggestions, calls) | ⬜ |
@@ -2588,3 +2588,82 @@ named as skipped where they are not), then write the three records, and commit `
    - `cargo clippy -p analysis --all-targets -- -D warnings` and `cargo fmt --check` are clean.
    - The doc-truth test passes (91).
    - `cargo doc -p analysis` adds no warning from `drill.rs`.
+
+### P16 (2026-11-13)
+
+1. **`feedback::drill_rules` is built**, `crates/feedback/src/drill_rules.rs`, and `crates/feedback/tests/drill_rules.rs`
+   has 25 tests. Each function is pinned whole for a named input, singular and plural included. Two sweeps
+   close the file: no number in any line or sentence goes past a tenth (with inputs like `14 / 3`), and lines
+   and sentences keep to their kinds. Four mutations were tried by hand, and each one was caught: a raw
+   `{}` for a measured distance, `fixed(.., 1)` for a radius, `<` for the dead-centre edge, and singular at
+   0 instead of 1. `feedback` gained no dependency, so `profile_rules.rs`'s edge test still holds it to
+   `contracts` and `pyfmt`. No shape in `contracts` changed, and no version key moved. `lib.rs`'s module doc
+   names the third module.
+2. **What the section left open, and how P16 settled it.**
+   - **Scope: every string a later phase names, not only the five bullets.** The module also has C20's verdict
+     (`inside_verdict`) and block line (`ladder_progress`), the progress line for each other stage, `call_name`,
+     `call_verdict`, `stage_name`, `level_line`, `radius_text`, P19's `NO_LABEL_FITS`, and P20's pattern,
+     spread, R50 and two "needs N more" sentences. That way the facade writes no words of its own.
+   - **Two formatters.** A measured distance (an offset, a mean, R50, a spread, the recentre goal) prints to a
+     tenth through `pyfmt::fixed`. A table radius prints through `pyfmt::g`, as the table holds it ("12 mm").
+     So the plan's baseline example prints **"within 14.0 mm"**, not "14 mm".
+   - **Lines and sentences.** A line is a fragment with no full stop ("8.4 mm toe, 2.1 mm high", "Inside 12
+     mm", "Block: 6 of 10, 4 inside"). A tip, result, suggestion or absence is a sentence, and ends with one.
+   - **Dead centre is per axis**: `DEAD_CENTRE_MM = 0.5`, inclusive, display only and provisional. An axis
+     within it is left out ("8.4 mm toe"), and both within it is "dead centre". This is so a tenth that rounds
+     to 0.0 never gets a side ("0.0 mm heel").
+   - **`position_line(strike)`**: a read strike is its offset line, and a pick adds " (picked)", because it is a
+     declaration (rule 6). A strike declared off the tape is "off the tape", and one that was not read is
+     "not read". The not-read sentences stay `TapeNotRead::sentence()` and are not wrapped (P6 finding 5).
+   - **`level_line(level, category) -> Option<String>`** counts from 1 at the widest: "Level 1 of 6: 22 mm". It
+     is `None` past the table or for a category with no ladder. A club with no level shows `NO_LEVEL_YET`.
+   - **The recentre suggestion names each off axis and only those** (P15 finding 3's call). It names both when
+     both are off, heel to toe first: "Your strikes sit 6.0 mm toward the heel and 4.2 mm low."
+   - **The two differential triggers have two sentences**, chosen by `DifferentialWhy::{Baseline, AtWidest}`.
+     That is a feedback enum, because `contracts::drill::Suggestion` does not say which trigger fired.
+   - **Every target is written from its constants** (`MOVE_IN_AT`, `BLOCK_SIZE`, `BASELINE_HOLDS`,
+     `MOVE_OUT_AT`, `FRESH_BASELINE_AT`, `RECENTRE_FRACTION`), so a revised constant changes the words with
+     it. One `const` assertion, `DIFFERENTIAL_AFTER_BLOCKS >= 2`, keeps "Your last 2 blocks each had" plural.
+   - **The recentre goal prints as `RECENTRE_FRACTION × R` to a tenth**: 4.0 mm at 12, 4.7 mm at 14. At 14, a
+     block mean of 4.68 mm shows as "4.7 mm toe" beside "within 4.7 mm", yet the goal is not met. This is
+     display precision, and the verdict stays `judge_recentre`'s. `recentre_result` ignores `goal_met` when
+     there is no mean, so it can never print "Goal met" beside "not known".
+3. **For P18**: the card's strings. `position_line(&strike)` is the position. The verdict is
+   `inside_verdict(b, radius)` when `inside(strike, radius)` is `Some(b)`, and a baseline strike or one not
+   read has none. A differential strike's verdict is `call_verdict(call, made)` from `call_made(..)`. The
+   progress line is `baseline_progress(counted)`, `ladder_progress(counted, inside)`,
+   `recentre_progress(counted)` or `differential_progress(counted, made)`, by stage. A `NotRead` shows
+   `reason.sentence()`. At a block's end:
+   - a baseline shows `baseline_tip(r50, radii[level_or_widest(start)], start.is_some())`;
+   - a ladder block shows `ladder_result(r.inside, r.counted, radii[from], radii[to], r.at_tightest_in,
+     r.at_widest_out)`;
+   - a recentre block shows `recentre_result(r.mean, r.goal_met, radius)`;
+   - a differential block shows `differential_result(r.made, r.counted, r.fresh_baseline)`.
+   **The baseline's R50 is the facade's to compute**, as an `Option` (P15 finding 4). `None` must mean the
+   median could not be placed, because the sentence then says the baseline had a strike off the tape.
+   Whichever of P18 and P19 first judges a baseline writes it, and says how.
+4. **For P19**: the pending suggestion's sentence.
+   - `Recentre`: `recentre_suggestion(p.centre, off.heel_toe, off.high_low)`, where `p` and `off` are `pattern`
+     and `off_centre` at the club's current radius.
+   - `Differential`: `differential_suggestion(why, radii[0])`. `why` is `Baseline` when the last history
+     entry's strikes are a baseline, and `AtWidest` when they are a ladder block.
+   - `ReturnToLadder`: `return_to_ladder_suggestion(radii[level])`.
+   - `FreshBaseline`: `fresh_baseline_suggestion(r.made, r.counted)`, from `judge_differential` on the last
+     entry.
+
+   Each input can be worked again from the state and the strikes, so a resumed view (`start_drill`) rebuilds
+   the sentence rather than storing it. The stage is `stage_name`. The level is `level_line(level, category)`,
+   or `NO_LEVEL_YET`. A club with no label is listed with `NO_LABEL_FITS`.
+5. **For P20**: `pattern_centre_line(p.centre)`, `spread_line(p.spread)` and `r50_line(p.r50)`.
+   `pattern_needs(n)` and `heat_map_needs(n)` are `None` from `RATE_MINIMUM_N` placed strikes on. Each takes the
+   count its view is built from, so which strikes the heat map counts (C21 says "positioned strikes", and
+   differential dots are drawn) is P20's to settle. A history row's radii are `radius_text`.
+6. **For P30**: CLAUDE.md's `crates/feedback` sentence (in *Where the answer is*) names `rules` and
+   `profile_rules`, and `docs/ARCHITECTURE.md` names `feedback::profile_rules` (around its lines 409 and 677).
+   Neither is on P30's Touch line. Both should gain `drill_rules` beside them.
+7. **Verify**:
+   - `cargo test -p feedback` passes, all binaries (`drill_rules`: 25).
+   - `cargo clippy -p feedback --all-targets -- -D warnings` and `cargo fmt --check` are clean.
+   - The doc-truth test passes (91).
+   - `cargo doc -p feedback` adds no warning from `drill_rules.rs`. The four it shows are `rules.rs`'s, from
+     before.

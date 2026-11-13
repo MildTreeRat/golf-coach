@@ -11,6 +11,10 @@
 //! here rather than beside the grades in `analysis` for the reason below, and it reads the career
 //! layer's dispersion, never the grades.
 //!
+//! [`drill_rules`] (M46 P16) is the third, also with no Python twin: every line and sentence the
+//! impact drill shows, so that the app's Dart holds no golf. It takes `analysis::drill`'s verdicts
+//! as plain numbers its caller copies across, and re-decides none of them, for the reason below.
+//!
 //! # Why this is a crate and not a module of `analysis`
 //!
 //! ADR-008: modules never import each other, everything imports `contracts`. `analysis` may not
@@ -28,5 +32,6 @@
 //! and corrected it, which is why [`rules::build_feedback`]'s output is gated by the engine vectors
 //! rather than by a stage.
 
+pub mod drill_rules;
 pub mod profile_rules;
 pub mod rules;
