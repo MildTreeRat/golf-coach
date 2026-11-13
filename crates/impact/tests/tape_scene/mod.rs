@@ -1,13 +1,13 @@
 //! Synthetic photos of a STRIKEPRO label stuck on a club face, drawn through a pinhole camera, for
-//! the tape reader's tests. [M46 P9, P10, P11, P12]
+//! the tape reader's tests. [M46 P9, P10, P11, P12, P13]
 //!
 //! The M46 plan builds the reader on synthetic photos alone, because no photo of a label on a club
 //! exists before P29 (P3 finding 10). This module is the one renderer P9 to P12's tests draw with,
 //! and P13's end-to-end gate draws its sets with it. It lives under `tests/` in a directory, so each
 //! test file that wants it says `mod tape_scene;`, and it is no test crate of its own. Beside the
 //! drawing it holds what more than one test file frames a scene with: [`truth`], [`framed`] and
-//! [`tilted_poses`] (moved here from `tape_orient.rs` at P11), and [`bottom_at`] (from
-//! `tape_mark.rs` at P12).
+//! [`tilted_poses`] (moved here from `tape_orient.rs` at P11), [`bottom_at`] (from
+//! `tape_mark.rs` at P12), and [`brief`] and [`moved`] (from `tape_diff.rs` at P13).
 //!
 //! # What a photo holds
 //!
@@ -35,7 +35,9 @@
 
 #![allow(dead_code)] // Each test file that includes this module uses part of it.
 
-use impact::tape::{LabelType, Orientation, STRIKEPRO_DRIVER, STRIKEPRO_HYBRID, STRIKEPRO_IRON};
+use impact::tape::{
+    LabelType, Orientation, TapeOutcome, STRIKEPRO_DRIVER, STRIKEPRO_HYBRID, STRIKEPRO_IRON,
+};
 use impact::Frame;
 
 /// The camera's focal length in pixels, about a phone's main camera over an 800-pixel-wide photo.
@@ -61,6 +63,10 @@ pub const MAT: [u8; 3] = [95, 120, 80];
 
 /// The lie angle the shaft leaves the face at, from the face's horizontal.
 const LIE_DEG: f64 = 62.0;
+
+/// How far up the hosel's line the shaft begins, millimetres from the hosel's base. Below it the
+/// hosel is the head's colour.
+pub const SHAFT_FROM_MM: f64 = 30.0;
 
 /// How a mark's edge blends into the label, millimetres, so a mark is not stepped where it crosses
 /// a pixel.
@@ -408,6 +414,19 @@ impl Scene {
         self.label.box_corners_mm().map(|c| self.photo_of(c))
     }
 
+    /// The plane point `along_mm` up the heel's hosel line from its base, the shaft beginning at
+    /// [`SHAFT_FROM_MM`]: where a test checks that the shaft is in frame. `None` with no head.
+    /// [M46 P13]
+    pub fn hosel_mm(&self, along_mm: f64) -> Option<[f64; 2]> {
+        let base = hosel_base(self.head)?;
+        let up = lie_up();
+        let heel_right = [base[0] + along_mm * up[0], base[1] + along_mm * up[1]];
+        Some(match self.hand {
+            Hand::Right => heel_right,
+            Hand::Left => [-heel_right[0], heel_right[1]],
+        })
+    }
+
     /// The photo. A pixel whose four corners see one colour is that colour, and any other is the
     /// mean of four samples inside it, which is what a pixel straddling an edge needs. Sampling
     /// every pixel four times costs three times as long in a debug build and draws the same flat
@@ -471,12 +490,15 @@ impl Scene {
             Hand::Right => plane,
             Hand::Left => [-plane[0], plane[1]],
         };
-        let (face, hosel_base, colour): (&[[f64; 2]], [f64; 2], [u8; 3]) = match self.head {
-            Head::Iron => (&IRON_FACE, [40.0, 12.0], STEEL),
-            Head::Driver => (&DRIVER_FACE, [52.0, 18.0], CARBON),
+        let (face, colour): (&[[f64; 2]], [u8; 3]) = match self.head {
+            Head::Iron => (&IRON_FACE, STEEL),
+            Head::Driver => (&DRIVER_FACE, CARBON),
             Head::None => return self.background,
         };
-        let up = [LIE_DEG.to_radians().cos(), LIE_DEG.to_radians().sin()];
+        let Some(hosel_base) = hosel_base(self.head) else {
+            return self.background;
+        };
+        let up = lie_up();
         // A point along the hosel's line from its base, in a frame with that hosel's end to the
         // right: `from..=to` along it and within `half_width` across.
         let along = |point: [f64; 2], from: f64, to: f64, half_width: f64| {
@@ -491,9 +513,14 @@ impl Scene {
             Shaft::Missing => &[],
             Shaft::AtBothEnds => &[heel_right, toe_right],
         };
-        if hosels.iter().any(|&at| along(at, 30.0, 1000.0, 4.5)) {
+        if hosels
+            .iter()
+            .any(|&at| along(at, SHAFT_FROM_MM, 1000.0, 4.5))
+        {
             SHAFT
-        } else if hosels.iter().any(|&at| along(at, 0.0, 30.0, 7.0)) || inside(face, heel_right) {
+        } else if hosels.iter().any(|&at| along(at, 0.0, SHAFT_FROM_MM, 7.0))
+            || inside(face, heel_right)
+        {
             colour
         } else {
             self.background
@@ -557,6 +584,30 @@ const DRIVER_FACE: [[f64; 2]; 10] = [
     [-66.0, -14.0],
 ];
 
+/// Where the hosel leaves a head's face, in a frame with the heel to the right.
+fn hosel_base(head: Head) -> Option<[f64; 2]> {
+    match head {
+        Head::Iron => Some([40.0, 12.0]),
+        Head::Driver => Some([52.0, 18.0]),
+        Head::None => None,
+    }
+}
+
+/// The hosel's direction up from its base, at the lie, in a frame with the heel to the right.
+fn lie_up() -> [f64; 2] {
+    [LIE_DEG.to_radians().cos(), LIE_DEG.to_radians().sin()]
+}
+
+/// The radius of the red circle printed about a label type's cross, millimetres: P3 finding 4's
+/// diameters, 23.1 on the driver label and 18.3 on the others. A mark whose edge runs along it
+/// reads off by the stroke (P12 finding 6). [M46 P13]
+pub fn ring_radius_mm(label: &LabelType) -> f64 {
+    match label.id {
+        "strikepro_driver" => 23.1 / 2.0,
+        _ => 18.3 / 2.0,
+    }
+}
+
 /// Whether a printed-frame point is inside the label's box, which holds its outline: a cheap test
 /// before the outline's own.
 fn in_box(label: &LabelType, [x, y]: [f64; 2]) -> bool {
@@ -565,7 +616,7 @@ fn in_box(label: &LabelType, [x, y]: [f64; 2]) -> bool {
 }
 
 /// Whether a point is inside a polygon, by the crossing count.
-fn inside(polygon: &[[f64; 2]], [x, y]: [f64; 2]) -> bool {
+pub fn inside(polygon: &[[f64; 2]], [x, y]: [f64; 2]) -> bool {
     let mut crossings = false;
     for (i, &[x0, y0]) in polygon.iter().enumerate() {
         let [x1, y1] = polygon[(i + 1) % polygon.len()];
@@ -612,11 +663,12 @@ impl Printing {
     /// them on P3's flat photo: 3.2 to 6.2 mm down on all three labels, and about ±16 mm across on
     /// the hybrid and iron labels and ±19 mm on the driver's.
     fn of(label: &'static LabelType, gap_mm: f64) -> Printing {
-        let (half, ring_mm, kind) = match label.id {
-            "strikepro_driver" => (19.0, 23.1 / 2.0, Dashes::Driver),
-            "strikepro_hybrid" => (16.0, 18.3 / 2.0, Dashes::Hybrid),
-            _ => (16.0, 18.3 / 2.0, Dashes::Iron),
+        let (half, kind) = match label.id {
+            "strikepro_driver" => (19.0, Dashes::Driver),
+            "strikepro_hybrid" => (16.0, Dashes::Hybrid),
+            _ => (16.0, Dashes::Iron),
         };
+        let ring_mm = ring_radius_mm(label);
         let top = label.centre_from_top_mm;
         let (letter, space, target_radius) = (1.0, 0.8, 2.0);
         let mut letters = Vec::new();
@@ -811,4 +863,41 @@ pub fn keep(frame: &Frame, name: &str) {
         std::fs::create_dir_all(&dir).expect("TAPE_SCENE_DIR can be made");
         write_png(frame, &dir.join(format!("{name}.png"))).expect("the photo is written");
     }
+}
+
+/// An outcome without its crop's pixels, for a failure's message. [M46 P12, moved here from
+/// `tape_diff.rs` at P13]
+pub fn brief(outcome: &TapeOutcome) -> String {
+    match outcome {
+        TapeOutcome::Read(reading) => {
+            format!("read {:?} new_label {}", reading.marks, reading.new_label)
+        }
+        TapeOutcome::NeedsPick(pick) => format!("needs a pick ({:?})", pick.orientation),
+        TapeOutcome::NotRead { reason, found } => {
+            format!(
+                "not read: {} (label found: {})",
+                reason.as_str(),
+                found.is_some()
+            )
+        }
+    }
+}
+
+/// `frame` moved by `by` pixels, black where nothing moved in: a pixel at `p` there is at `p + by`
+/// here. A crop moved so stands for a reference the last photo's fit placed that much off, and its
+/// black is outside, as `rectify` leaves it (P12 finding 9). [M46 P12, moved here from
+/// `tape_diff.rs` at P13]
+pub fn moved(frame: &Frame, by: [i64; 2]) -> Frame {
+    let mut rgb = vec![0; frame.rgb.len()];
+    for y in 0..frame.height as i64 {
+        for x in 0..frame.width as i64 {
+            let (fx, fy) = (x - by[0], y - by[1]);
+            if (0..frame.width as i64).contains(&fx) && (0..frame.height as i64).contains(&fy) {
+                let from = (fy as usize * frame.width + fx as usize) * 3;
+                let to = (y as usize * frame.width + x as usize) * 3;
+                rgb[to..to + 3].copy_from_slice(&frame.rgb[from..from + 3]);
+            }
+        }
+    }
+    Frame { rgb, ..*frame }
 }

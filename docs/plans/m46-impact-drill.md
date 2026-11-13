@@ -54,7 +54,7 @@ machine, pull on the new" as its precondition.
 | **P10** | 🪟 Orientation: heel and up, from the hosel | ✅ Done *(2026-11-12)* |
 | **P11** | 🪟 The mark on a fresh label | ✅ Done *(2026-11-12)* |
 | **P12** | 🪟 The newest mark: the diff against the last strike | ✅ Done *(2026-11-13)* |
-| **P13** | 🪟 The reader end to end on synthetic photos, and its gate | ⬜ |
+| **P13** | 🪟 The reader end to end on synthetic photos, and its gate | ✅ Done *(2026-11-13)* |
 | **P14** | 🪟 `analysis::drill`: the baseline and the ladder | ⬜ |
 | **P15** | 🪟 `analysis::drill`: the pattern, the triggers and differential judging | ⬜ |
 | **P16** | 🪟 `feedback::drill_rules`: the sentences | ⬜ |
@@ -2302,3 +2302,134 @@ named as skipped where they are not), then write the three records, and commit `
       every other test, `read_tape`'s included.
     - **Who fixes it**: P21 edits `import-export` and runs the workspace, so the test's expected string is
       P21's to fix, or the user's call if the Mac's output is the one meant.
+
+### P13 (2026-11-13)
+
+1. **The gate is built**: `crates/impact/tests/tape_synthetic.rs`, 5 tests, all in the default `cargo test`.
+   No reader code changed, so `TAPE_READER_VERSION` stays at 1, and nothing sets `TAPE_ERROR_P95_MM`,
+   `READ_AT_LEAST` or C9's floor.
+   - **Three gate tests**, one a label type. Each runs four drills on their own threads.
+   - **Two tests check the set without drawing it**: every strike lands as its kind says, and every photo
+     frames the label and the shaft.
+2. **The set.** Each label type gets four drills: right-handed and left-handed, square (within 10°) and 20 to
+   30° off square, logo-up and logo-down. Each photo is taken from its own pose, at 190 to 210 mm.
+   - **What a drill does**: it strikes one label nine times and takes ten photos, then sticks on a fresh
+     label and strikes that once. The fresh label goes on the same way up in two drills and the other way up
+     in two.
+   - **The strikes**: seven whole marks, 4.5 to 5.5 mm in radius. One photo is skipped, so the next holds two
+     new marks. The others are a mark half over an older one, a mark cut by the bottom edge, and a strike off
+     the tape.
+   - **Every photo is read with the drill's hand**, against the crop of the last `Read`, `NeedsPick` or
+     `mark_clipped` photo (P12 finding 3). A `no_new_mark` is taken as declared off the tape: its strike is
+     accounted for and the reference stays.
+   - **Moved references**: in each drill one reference is moved 0.9 to 1.3 mm (`tape_scene::moved`), as if
+     the last photo's fit had been that far off. That exercises the alignment, which no drawn pair does on
+     its own (P12 finding 8).
+   - **Each photo's expected answer**, in order: `read 1 (new label)`, `read 1`, `read 2`, `no_new_mark`,
+     `needs_pick`, `read 1`, `mark_clipped`, `read 1`, `read 1`, `read 1 (new label)`.
+   - **The set checks itself before anything is drawn**:
+     - every whole mark stays 1.5 mm inside the outline and 0.75 mm clear of the red ring's line;
+     - every gap between marks is at least 2.6 mm, except the overlap's;
+     - the overlap covers half of exactly one older mark, and the cut mark crosses the edge;
+     - the fresh mark is 8 mm or more from every old place;
+     - every photo shows the whole label 10 px inside and the shaft's first 30 mm.
+3. **What "wrong" means here**, in `judge`. A reading is wrong when any of these holds, which is C24 plus
+   what a stored strike would carry wrong:
+   - a mark is more than `WRONG_MM` (5, C24's provisional value, a constant in the test) from its matched
+     new mark on either axis;
+   - the count is off: an old mark read as new, or a new one missed;
+   - its sides are not the scene's (a guessed sign);
+   - `new_label` is wrong, because that restarts or carries on C8's `n_on_label`.
+
+   **Every photo's outcome is also held to its scene's answer**, so a reader that starts withholding fails
+   rather than passing with nothing read. On drawn photos that is a 100% hold, and it is not
+   `READ_AT_LEAST`, which stays P29's (C24 as changed at P3).
+4. **The record** (`cargo test -p impact --test tape_synthetic -- --nocapture`, debug):
+
+   | Label type | Photos | Strikes | Read | Picked | `no_new_mark` | `mark_clipped` | Wrong | P50 (mm) | P95 (mm) | Worst (mm) |
+   |---|---|---|---|---|---|---|---|---|---|---|
+   | driver | 40 | 44 | 32 | 4 | 4 | 4 | 0 | 0.034 | 0.097 | 0.119 |
+   | hybrid | 40 | 44 | 32 | 4 | 4 | 4 | 0 | 0.028 | 0.063 | 0.071 |
+   | iron | 40 | 44 | 32 | 4 | 4 | 4 | 0 | 0.017 | 0.052 | 0.066 |
+
+   - **Coverage**: every strike that could be placed was read, 96 of 96. The 12 picks are the overlaps, the
+     12 `no_new_mark` the strikes off the tape, and the 12 `mark_clipped` the cut marks, each as its scene
+     calls for.
+   - **The worst drill**: by P95, the driver's tilted left-handed one, logo-up, at 0.119 mm. No other drill
+     passes 0.1 mm.
+   - **Square against tilted**: no tilted drill is worse than its type's square ones by more than 0.022 mm
+     at P95.
+   - **These are drawn errors.** They say the chain composes. They are not the reader's error on a real
+     strike.
+5. **The desk tool agrees.** All 120 drawn photos (`TAPE_SCENE_DIR`, in the session scratchpad) went through
+   `golf-lab read-tape --sequence`, a drill at a time. That run had no hand and no moved reference, and every
+   outcome came out as above in all 12 drills. One review was looked at, the driver's tilted right-handed
+   drill, logo-down, at photo 8. Its eight marks are on the label, the overlap pair sits at the printed left,
+   and the cut mark is at the printed bottom edge, which is the photo's top because the label is upside down.
+   Nothing was written under `data/`.
+6. **A cut old mark can cost a pick, which the set now steps round.** The first run put two moved references
+   on the photo after the cut mark. On the hybrid and the iron, the square left-handed drill's photo 7 then
+   came out `NeedsPick` where a reading was due. It was not wrong.
+   - **The alignment found the move exactly**: `[−12, 6]` px, residual 0.017, share 0.31 to 0.32.
+   - **What happened**: moving the reference's content 0.6 mm toward the bottom edge pushed the cut mark
+     further past the crop's fixed interior. Its part inside fell under `MARK_MIN_AREA_MM2`, so the
+     reference held no spot there.
+   - **Why it needed a pick**: in this photo the same mark was a spot, 33 mm² (hybrid, at `[−19.5, −11.8]`)
+     and 35 mm² (iron, at `[27.0, −11.8]`). It had not darkened and lay on no old spot, so it was `Unclear`,
+     and that needs a pick (P12 finding 1).
+   - **The driver**, in the same place, passed.
+   - **The reader was left as it is**, because an `Unclear` spot is P12's guard against an inconsistent diff
+     (rule 6).
+   - **What the set does now**: each moved reference sits on a photo whose reference holds no cut mark, or on
+     the fresh label's photo. The `Drill` doc says why. A mismatch's message now carries the diff's verdict
+     (`verdict`).
+7. **Files beyond the Touch line**:
+   - **`crates/impact/tests/tape_scene/mod.rs`** (the shared renderer, which the Touch line allows). It
+     gained:
+     - `SHAFT_FROM_MM` and `Scene::hosel_mm`, the shaft's line, which the framing check projects;
+     - `ring_radius_mm`, which `Printing` now uses too;
+     - `inside`, now `pub`;
+     - `brief` and `moved`, moved here from `tape_diff.rs`, which now imports them.
+
+     The drawing is unchanged, and every P9 to P12 test passes as it did.
+   - **`crates/contracts/tests/drill.rs`**: the walk P6 finding 5 and P8 finding 3 asked of P13,
+     `every_reason_the_reader_gives_is_one_of_these_by_wire_name`. It maps `impact::tape::TapeRefusal::ALL`
+     onto `TapeNotRead` by wire name, one for one, and the file now has 39 tests.
+   - **Not done**: P9 finding 11's optional fold of `tests/tape_geometry.rs`'s camera onto
+     `tape_scene::Camera`. Its camera has its own focal length and photo size (1100 px, 1000 × 800), which
+     P7's measured numbers rest on.
+8. **How the photos are aimed.** A fixed aim such as `framed`'s `[±12, 15]` loses the shaft or a label corner
+   off square, and loses the driver label whenever the phone is held a quarter turn.
+   - **The aim**: `scene` aims at the middle of the label's box and the shaft's first 30 mm, then corrects
+     twice by where those land in the photo.
+   - **The rolls**: the tilted poses keep within 20°, plus one upside down. A quarter-turned 800 × 600 photo
+     at 200 mm cannot hold the driver label and 30 mm of shaft.
+   - **For P22**: on a real phone, the tape camera's frame decides this, as P10 finding 11 says.
+9. **Speed.** In a debug build the file takes about 31.5 s on this 20-core desk: the 12 drills run side by
+   side, at about 3 s a photo. `cargo test -p impact` now takes about 1 min 48 s. P12 finding 8's
+   `[profile.dev.package.impact] opt-level` line is still the user's to add.
+10. **For P18**:
+    - The gate's `run_drill` is the reference rule the facade keeps (P12 finding 9). The reference advances on
+      `Read`, `NeedsPick` and `mark_clipped`. A `no_new_mark` declared off the tape accounts for its strike
+      and leaves the reference.
+    - On this set that rule, with the hand passed, gives every expected outcome.
+11. **For P23 and P28**: "P13's synthetic photos" are
+    `TAPE_SCENE_DIR=<dir> cargo test -p impact --test tape_synthetic`.
+    - **What it writes**: 120 PNGs, 800 × 600 RGB, named `<label id> <drill name> photo <n>.png`. The names
+      hold spaces.
+    - **The order**: a drill's ten photos, in order, are the sequence item 2 lists, against a club of the
+      drill's hand (`right` or `left` in its name).
+    - **The format**: the PNGs are uncompressed, about 1.4 MB each. C16's raw RGBA is the phase's own
+      conversion.
+    - **What the app sees**: the moved references are the test's alone, so the app's sequence is item 5's.
+12. **For P29**:
+    - **The real gate** (`crates/lab/tests/strike_tape.rs`) can take `judge`'s meaning of wrong (item 3) and
+      `WRONG_MM`. Both are in `tape_synthetic.rs` today, and a shared home is P29's call.
+    - **The cut mark of item 6**: real `mark_clipped` strikes leave marks whose inside part can sit near
+      `MARK_MIN_AREA_MM2`. Every later photo of that label is diffed against a crop holding one, so the
+      inside part may flicker between spot and speck, which costs a pick and is never wrong. Count the picks
+      that follow a clipped strike.
+    - **Square against tilted**: real tilts at 20 to 30° are worth one drill each.
+13. **For P30**: `crates/impact/tests/tape_synthetic.rs` is the tape reader's end-to-end check until P29's
+    real gate exists. `docs/ARCHITECTURE.md` §5, *How this project knows it works*, may name it beside the
+    Full Swing gates.

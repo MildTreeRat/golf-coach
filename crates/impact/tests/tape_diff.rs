@@ -15,7 +15,7 @@ use impact::tape::{
     TapeReading, TapeRefusal, DIFF_SEARCH_MM, STRIKEPRO_DRIVER, STRIKEPRO_HYBRID, STRIKEPRO_IRON,
 };
 use impact::Frame;
-use tape_scene::{bottom_at, framed, keep, truth, Hand, Mark, Scene};
+use tape_scene::{bottom_at, brief, framed, keep, moved, truth, Hand, Mark, Scene};
 
 const RADIUS_MM: f64 = 5.0;
 
@@ -107,23 +107,6 @@ fn read(scene: &Scene, previous: Option<&Frame>, name: &str) -> (Frame, TapeOutc
 /// The crop a found label leaves, the next photo's reference, as `last/<club>.rgb` holds it.
 fn crop_of(outcome: &TapeOutcome) -> Frame {
     outcome.found().expect("a found label").crop.frame.clone()
-}
-
-/// An outcome without its crop's pixels, for a failure's message.
-fn brief(outcome: &TapeOutcome) -> String {
-    match outcome {
-        TapeOutcome::Read(reading) => {
-            format!("read {:?} new_label {}", reading.marks, reading.new_label)
-        }
-        TapeOutcome::NeedsPick(pick) => format!("needs a pick ({:?})", pick.orientation),
-        TapeOutcome::NotRead { reason, found } => {
-            format!(
-                "not read: {} (label found: {})",
-                reason.as_str(),
-                found.is_some()
-            )
-        }
-    }
 }
 
 /// Holds a reading to the scene's marks at `expected`, printed-frame millimetres, in any order, and
@@ -407,23 +390,6 @@ fn a_new_mark_the_labels_edge_cuts_is_clipped() {
             brief(&outcome)
         );
     }
-}
-
-/// `frame` moved by `by` pixels, black where nothing moved in: a pixel at `p` there is at `p + by`
-/// here.
-fn moved(frame: &Frame, by: [i64; 2]) -> Frame {
-    let mut rgb = vec![0; frame.rgb.len()];
-    for y in 0..frame.height as i64 {
-        for x in 0..frame.width as i64 {
-            let (fx, fy) = (x - by[0], y - by[1]);
-            if (0..frame.width as i64).contains(&fx) && (0..frame.height as i64).contains(&fy) {
-                let from = (fy as usize * frame.width + fx as usize) * 3;
-                let to = (y as usize * frame.width + x as usize) * 3;
-                rgb[to..to + 3].copy_from_slice(&frame.rgb[from..from + 3]);
-            }
-        }
-    }
-    Frame { rgb, ..*frame }
 }
 
 #[test]

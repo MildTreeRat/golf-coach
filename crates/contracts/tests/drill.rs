@@ -22,7 +22,7 @@ use contracts::drill::{
 use contracts::face_impact::{ImpactMethod, TAPE_READER_VERSION};
 use contracts::intent::ClubCategory;
 use contracts::{Timestamp, Validate};
-use impact::tape::{category_label, CategoryLabel};
+use impact::tape::{category_label, CategoryLabel, TapeRefusal};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use serde_json::{json, Value};
@@ -574,6 +574,23 @@ fn a_retake_helps_exactly_where_the_photo_is_the_problem() {
             TapeNotRead::DecodeFailed,
         ]
     );
+}
+
+/// The reader's reasons are these, by wire name, one for one. `impact` cannot see this crate, so
+/// `golf-lab read-tape` and the facade (P18) each map an `impact::tape::TapeRefusal` across by its
+/// `as_str`. A reason added on either side, or spelled apart, fails here before it reaches a stored
+/// strike. [M46 P13, as P6's finding 5 asked]
+#[test]
+fn every_reason_the_reader_gives_is_one_of_these_by_wire_name() {
+    let from_reader: Vec<TapeNotRead> = TapeRefusal::ALL
+        .iter()
+        .map(|reason| {
+            serde_json::from_value(json!(reason.as_str()))
+                .unwrap_or_else(|_| panic!("{} is no TapeNotRead", reason.as_str()))
+        })
+        .collect();
+    let ours: Vec<TapeNotRead> = EVERY_REASON.iter().map(|(reason, _)| *reason).collect();
+    assert_eq!(from_reader, ours);
 }
 
 #[test]
