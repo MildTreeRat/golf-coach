@@ -347,6 +347,62 @@ fn a_refused_line_another_golfers_and_a_second_id_are_skipped_and_counted_and_th
     assert_eq!(log.skipped, 4);
 }
 
+/// The lab's merge reads a phone's files as bytes (P21), and the store's own rules are what it reads
+/// them by: the same strikes and the same count skipped as the file read in place, and the strict
+/// state reader's answer, refusals included. A store opened at the `drills/` directory is the store
+/// opened at the root above it.
+#[test]
+fn another_copys_bytes_read_by_the_stores_own_rules() {
+    let root = tempfile::tempdir().unwrap();
+    let store = open(root.path());
+    assert_eq!(
+        DrillStore::in_drills(root.path().join("drills"), PLAYER)
+            .unwrap()
+            .dir(),
+        store.dir()
+    );
+    assert!(matches!(
+        DrillStore::in_drills(root.path(), "../aaron"),
+        Err(StoreError::Invalid(_))
+    ));
+
+    store.append_strike(&strike(1, ClubId::SevenIron)).unwrap();
+    store.append_strike(&strike(2, ClubId::Driver)).unwrap();
+    let dave = TapeStrike {
+        player_id: "dave".into(),
+        ..strike(3, ClubId::SevenIron)
+    };
+    append_raw(
+        &store,
+        &format!(
+            "{}\n{{\"strike_id\": ",
+            serde_json::to_string(&dave).unwrap()
+        ),
+    );
+    store.put_state(&state()).unwrap();
+
+    // Read from bytes held anywhere, here a copy outside the store's directory.
+    let copy = |path: &Path| fs::read(path).unwrap();
+    let in_place = store.all_strikes().unwrap();
+    assert_eq!(in_place.skipped, 2, "dave's line and the torn one");
+    assert_eq!(store.parse_strikes(&copy(&store.strikes_path())), in_place);
+    assert_eq!(
+        store.parse_state(&copy(&store.state_path())),
+        Ok(store.state().unwrap().unwrap())
+    );
+
+    let theirs = DrillStore::open(root.path(), "dave").unwrap();
+    assert_eq!(
+        ids(&theirs.parse_strikes(&copy(&store.strikes_path()))),
+        ["a1b2-3"]
+    );
+    assert_eq!(
+        theirs.parse_state(&copy(&store.state_path())),
+        Err("it holds the drill of 'aaron', not of 'dave'".to_string())
+    );
+    assert!(store.parse_state(b"{\"player_id\": \"aaron\"").is_err());
+}
+
 #[test]
 fn two_clubs_are_kept_apart() {
     let root = tempfile::tempdir().unwrap();

@@ -996,6 +996,7 @@ impl Lab {
                 sessions_dir: dirs.sessions.clone(),
                 shots_dir: dirs.shots.clone(),
                 golfers_dir: dirs.golfers.clone(),
+                drills_dir: dirs.drills.clone(),
                 dry_run: false,
             },
             &mut out,

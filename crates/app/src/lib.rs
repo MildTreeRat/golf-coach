@@ -117,6 +117,9 @@ pub struct Dirs {
     pub shots: PathBuf,
     /// `GolferStore`'s and `BagStore`'s root.
     pub golfers: PathBuf,
+    /// Every golfer's drills, `storage::drill_store::DRILLS_DIR`: the impact drill's strikes, state,
+    /// crops and last crops, beside the corpus and never inside it (M46's C7). [M46 P21]
+    pub drills: PathBuf,
     /// The app's own directory: `state.json`, the numbers deleted (`crate::record`'s module doc), and
     /// the read diagnostics.
     ///
@@ -128,7 +131,7 @@ pub struct Dirs {
 impl Dirs {
     /// The directories under `root`. Nothing is created, because each store makes its own.
     ///
-    /// The three store names are the lab's `import_export::TREES`, which this crate cannot reach
+    /// The four tree names are the lab's `import_export::TREES`, which this crate cannot reach
     /// (`golf-lab` holds `ort`), so P13's round trip through `import-export` is what holds them equal.
     pub fn of(root: impl AsRef<Path>) -> Self {
         let root = root.as_ref();
@@ -136,6 +139,7 @@ impl Dirs {
             sessions: root.join("sessions"),
             shots: root.join("shots"),
             golfers: root.join("golfers"),
+            drills: root.join(storage::drill_store::DRILLS_DIR),
             app: root.join(".app"),
         }
     }

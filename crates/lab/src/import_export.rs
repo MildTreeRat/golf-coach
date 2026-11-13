@@ -4,12 +4,12 @@
 //! # What an export is
 //!
 //! The M29 plan's D16: **the stored layout itself**, a zip or a directory holding the phone's
-//! `data/processed` subtree as `crates/storage` writes it, `sessions/`, `shots/` and `golfers/`, so
-//! there is no export contract to drift from the stores' own. M38 P1's `export_sessions` writes it,
+//! `data/processed` subtree as `crates/storage` writes it, `sessions/`, `shots/` and `golfers/`, and
+//! since M46 P21 `drills/`, so there is no export contract to drift from the stores' own. M38 P1's `export_sessions` writes it,
 //! and M38 P4's exit compares the phone's corpus with Rust's `read_corpus` over what this wrote;
 //! frozen Python's corpus is not the reference, since it leaves photo entries out by design (the
 //! program plan's §M38). An archive or directory whose files all sit in one folder that is none of
-//! the three (a zipped `processed/`) is read below that folder.
+//! the four (a zipped `processed/`) is read below that folder.
 //!
 //! # The merge, file by file (the plan's C11)
 //!
@@ -65,13 +65,39 @@
 //! Either is printed, so a correction made on the phone that the stored copy lacks is seen rather
 //! than lost quietly.
 //!
+//! # A drill (M46 P21, the M46 plan's C17)
+//!
+//! Each golfer's tape drill, `drills/<player_id>/impact/strike_tape/`, is **merged** rather than
+//! copied, through the lab's own [`DrillStore`], whose readers judge the export's bytes as they judge
+//! the store's own files ([`DrillStore::parse_strikes`], [`DrillStore::parse_state`]):
+//!
+//! - **`strikes.jsonl`, by `strike_id`.** A strike the store does not hold is appended, in the
+//!   export's order, and **a held id is kept** as the store holds it, as a shot of a stored photo is.
+//!   A line the store would skip (torn, refused, another golfer's, an id repeated) is skipped here
+//!   too and counted, never refused: the file is append-only on the phone, so a line torn there is
+//!   torn in every export after it, and refusing it would refuse them all.
+//! - **`state.json`, by `updated_at`.** The export's replaces the store's only when it was written
+//!   later, and through the store's writer, so this is the one file the verb replaces. One the export
+//!   holds that does not read is exit 2, as a torn shot is. One stored that does not read is a
+//!   conflict, since the store's writer refuses to write over it and so does this verb: it holds the
+//!   counters every id is drawn from (`storage::drill_store`'s module doc).
+//! - **`crops/`.** A crop the store lacks is copied, and one it holds stays, by the held id's rule.
+//! - **`last/`**, each club's last crop, is the phone's reference for that club's next photo. It is
+//!   ignored and counted, since the lab takes no photo and the crops are the strikes' record.
+//!
+//! Each of the first three prints one line with its counts, and any other file of the tree goes by
+//! bytes. The strikes and the state are written after every copied file, the drill's crops among
+//! them, and the state last, so a strike never names a crop not yet stored, nor a state a strike.
+//! A re-run after a failure part way appends what is missing.
+//!
 //! # What is refused before anything is compared
 //!
 //! Exit 2 and nothing written, every reason listed: a path that is not a plain relative one (`..`,
 //! an absolute name, a `\` or `:` in a name), a symbolic link, an encrypted entry or one compressed
-//! other than stored or deflated, a name the archive holds twice, a file outside the three trees, a
+//! other than stored or deflated, a name the archive holds twice, a file outside the four trees, a
 //! shot that does not read as a shot, a manifest that does not read as one or names a file its
-//! directory lacks, and an archive entry whose checksum fails. Those are the files whose reading
+//! directory lacks, a drill under a name that is not a golfer's id or whose state does not read, and
+//! an archive entry whose checksum fails. Those are the files whose reading
 //! the rules above need, and a torn export is caught before it is half-copied; the other files go
 //! by bytes, and the stores' tolerant readers judge them as they judge any file. **Ignored** and
 //! counted, never copied: a name starting with `.` anywhere in its path (`.DS_Store`, the bundle
@@ -81,7 +107,7 @@
 //! # The write
 //!
 //! Golfers, then shots, then sessions, a swing's `manifest.json` last in its directory, since a swing
-//! directory with no manifest is one no reader lists: an import stopped part way leaves nothing a
+//! directory with no manifest is one no reader lists, then each drill's strikes and state (above): an import stopped part way leaves nothing a
 //! reader half-sees, and a re-run copies the rest, because what was copied is identical by then.
 //! Each file is written beside its place as `.part` and renamed, refusing a file that appeared there
 //! since it was compared. No time is stamped and no shot is re-read: an imported file is the
@@ -92,26 +118,31 @@
 //! layout, nothing written, or a write failed part way (named, with what was copied before it).
 
 use std::collections::{BTreeMap, BTreeSet};
+use std::fmt;
 use std::fs;
 use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+use contracts::drill::{crop_file, DrillState, DrillTopic, TapeMethod, TapeStrike};
 use contracts::golfer::Golfer;
 use contracts::shot::ShotData;
 use golf_core::session::session_holding;
 use storage::bag_store;
 use storage::bundle_store::SwingBundleStore;
+use storage::drill_store::{DrillStore, DRILLS_DIR, LAST_DIR, STATE_NAME, STRIKES_NAME};
 use storage::golfer_store::{self, GolferStore};
 use storage::manifest::{Role, SwingManifest, MANIFEST_NAME};
 use storage::shot_store::{self, ShotStore};
+use storage::StoreError;
 use zip::extra_fields::ExtraField;
 use zip::{CompressionMethod, ZipArchive};
 
 use crate::import::spelled;
 
-/// The three trees an export holds, the stores' directory names under `data/processed`.
-pub const TREES: [&str; 3] = ["sessions", "shots", "golfers"];
+/// The four trees an export holds, the stores' directory names under `data/processed`: the drills'
+/// since M46 P21.
+pub const TREES: [&str; 4] = ["sessions", "shots", "golfers", DRILLS_DIR];
 
 /// The bytes compared at a time, so a clip is never read whole to learn it is stored already.
 const CHUNK: usize = 64 * 1024;
@@ -128,6 +159,8 @@ pub struct Request {
     pub sessions_dir: PathBuf,
     pub shots_dir: PathBuf,
     pub golfers_dir: PathBuf,
+    /// The `drills/` directory, which each golfer's drill is opened under (`DrillStore::in_drills`).
+    pub drills_dir: PathBuf,
     /// Judge every file and print the report, and write nothing.
     pub dry_run: bool,
 }
@@ -152,6 +185,7 @@ pub fn import_export(
         &request.sessions_dir,
         &request.shots_dir,
         &request.golfers_dir,
+        &request.drills_dir,
     ]) {
         writeln!(out, "  {tree} into {}", spelled(dir).display())?;
     }
@@ -186,27 +220,35 @@ pub fn import_export(
         "{} identical, {} left as stored, {} ignored",
         plan.identical, plan.left, plan.ignored
     );
+    let total = plan.writes.len() + plan.drill_writes.len();
     if request.dry_run {
         writeln!(
             out,
-            "\nDry run: {} file(s) would be copied; {tally}. Nothing was written.",
-            plan.writes.len()
+            "\nDry run: {total} file(s) would be copied; {tally}. Nothing was written."
         )?;
         return Ok(0);
     }
+    let failed = |err: &mut dyn Write, dest: &Path, why: &dyn fmt::Display, done: usize| {
+        writeln!(
+            err,
+            "error: writing {}: {why}. {done} of {total} file(s) were copied before it; a re-run \
+             copies the rest, since those are stored identically now.",
+            dest.display(),
+        )
+    };
     for (done, (item, dest)) in plan.writes.iter().enumerate() {
         if let Err(why) = place(&mut export, *item, dest) {
-            writeln!(
-                err,
-                "error: writing {}: {why}. {done} of {} file(s) were copied before it; a re-run \
-                 copies the rest, since those are stored identically now.",
-                dest.display(),
-                plan.writes.len()
-            )?;
+            failed(err, dest, &why, done)?;
             return Ok(2);
         }
     }
-    writeln!(out, "\n{} file(s) copied; {tally}.", plan.writes.len())?;
+    for (done, write) in plan.drill_writes.iter().enumerate() {
+        if let Err(why) = write.run() {
+            failed(err, &write.dest(), &why, plan.writes.len() + done)?;
+            return Ok(2);
+        }
+    }
+    writeln!(out, "\n{total} file(s) copied; {tally}.")?;
     Ok(0)
 }
 
@@ -498,14 +540,18 @@ fn fill(reader: &mut dyn Read, buf: &mut [u8]) -> io::Result<usize> {
 /// Every file judged, before anything is written.
 #[derive(Default)]
 struct Plan {
-    /// The report's lines, one per golfer file, shot, session file and swing, in the write order.
+    /// The report's lines, one per golfer file, shot, session file and swing, and per drill one for
+    /// its crops, its strikes and its state, in the write order.
     lines: Vec<String>,
     /// What to copy, an item and its place, in the order the module doc gives.
     writes: Vec<(usize, PathBuf)>,
+    /// What each drill's merge writes through the lab's store, after every copy (the module doc).
+    drill_writes: Vec<DrillWrite>,
     conflicts: Vec<String>,
     problems: Vec<String>,
     identical: usize,
-    /// Files a rule left as stored: a kept shot, golfer or bag, a duplicate entry's files.
+    /// Files a rule left as stored: a kept shot, golfer or bag, a duplicate entry's files, a drill's
+    /// strikes or state kept, and a crop held with other bytes.
     left: usize,
     ignored: usize,
 }
@@ -516,7 +562,8 @@ impl Plan {
             problems: std::mem::take(&mut export.problems),
             ..Plan::default()
         };
-        let (mut golfers, mut shots, mut sessions) = (Vec::new(), Vec::new(), Vec::new());
+        let (mut golfers, mut shots, mut sessions, mut drills) =
+            (Vec::new(), Vec::new(), Vec::new(), Vec::new());
         for (index, item) in export.items.iter().enumerate() {
             if ignored(&item.parts) {
                 plan.ignored += 1;
@@ -526,16 +573,20 @@ impl Plan {
                 "golfers" if item.parts.len() > 1 => golfers.push(index),
                 "shots" if item.parts.len() > 1 => shots.push(index),
                 "sessions" if item.parts.len() > 1 => sessions.push(index),
+                DRILLS_DIR if item.parts.len() > 1 => drills.push(index),
                 _ => plan.problems.push(format!(
-                    "{}: outside sessions/, shots/ and golfers/, which are all an export holds",
+                    "{}: outside sessions/, shots/, golfers/ and drills/, which are all an export \
+                     holds",
                     item.rel()
                 )),
             }
         }
-        if golfers.is_empty() && shots.is_empty() && sessions.is_empty() && plan.problems.is_empty()
-        {
+        let empty = [&golfers, &shots, &sessions, &drills]
+            .iter()
+            .all(|tree| tree.is_empty());
+        if empty && plan.problems.is_empty() {
             plan.problems
-                .push("it holds no file under sessions/, shots/ or golfers/".to_string());
+                .push("it holds no file under sessions/, shots/, golfers/ or drills/".to_string());
         }
         if !plan.problems.is_empty() {
             return plan;
@@ -551,6 +602,7 @@ impl Plan {
             plan.shot(export, index, &store, &mut placed);
         }
         plan.sessions(export, sessions, &request.sessions_dir);
+        plan.drills(export, drills, &request.drills_dir);
         plan
     }
 
@@ -865,6 +917,266 @@ impl Plan {
         } else {
             format!("added     {rel} ({new} new file(s), {same} identical)")
         });
+    }
+}
+
+/// A drill's merge (the module doc's "A drill").
+impl Plan {
+    /// `drills/`: each golfer's tape drill is merged, and any other file of the tree, M44's low
+    /// point's one day, goes by the plain rule until its own rule is written.
+    fn drills(&mut self, export: &mut Export, indices: Vec<usize>, root: &Path) {
+        let (topic, method) = (DrillTopic::Impact.as_str(), TapeMethod::StrikeTape.as_str());
+        let mut tape: BTreeMap<String, Vec<usize>> = BTreeMap::new();
+        for index in indices {
+            let parts = &export.items[index].parts;
+            if parts.len() > 4 && parts[2] == topic && parts[3] == method {
+                tape.entry(parts[1].clone()).or_default().push(index);
+            } else {
+                let dest = below(root, &parts[1..]);
+                self.file(export, index, dest);
+            }
+        }
+        for (player_id, indices) in tape {
+            self.drill(export, &player_id, indices, root);
+        }
+    }
+
+    /// One golfer's tape drill: its other files by bytes, then its crops, its strikes and its state,
+    /// in the order they are written.
+    fn drill(&mut self, export: &mut Export, player_id: &str, indices: Vec<usize>, root: &Path) {
+        let rel = export.items[indices[0]].parts[..4].join("/");
+        let store = match DrillStore::in_drills(spelled(root), player_id) {
+            Ok(store) => store,
+            Err(why) => {
+                return self
+                    .problems
+                    .push(format!("{rel}: not a golfer's drill ({why})"))
+            }
+        };
+        let (mut strikes, mut state, mut crops) = (None, None, Vec::new());
+        for index in indices {
+            let rest = &export.items[index].parts[4..];
+            match rest {
+                [name] if name == STRIKES_NAME => strikes = Some(index),
+                [name] if name == STATE_NAME => state = Some(index),
+                [dir, ..] if dir == LAST_DIR => self.ignored += 1,
+                _ if is_crop(rest) => crops.push(index),
+                _ => {
+                    let dest = below(root, &export.items[index].parts[1..]);
+                    self.file(export, index, dest);
+                }
+            }
+        }
+        self.crops(export, crops, root);
+        if let Some(index) = strikes {
+            self.strikes(export, index, &store);
+        }
+        if let Some(index) = state {
+            self.state(export, index, store);
+        }
+    }
+
+    /// A drill's crops, in one line: copied where the store lacks one, and one it holds kept.
+    fn crops(&mut self, export: &mut Export, indices: Vec<usize>, root: &Path) {
+        let Some(&first) = indices.first() else {
+            return;
+        };
+        let rel = export.items[first].parts[..5].join("/");
+        let (mut new, mut same, mut kept) = (0, 0, 0);
+        for index in indices {
+            let dest = below(root, &export.items[index].parts[1..]);
+            // `stored` learns a difference from the size alone, and a kept crop is never written, so
+            // it is read through here: a torn entry is exit 2, as it is for any file.
+            let judged = stored(export, index, &dest).and_then(|state| match state {
+                Stored::Different => export.check(index).map(|()| state),
+                state => Ok(state),
+            });
+            match judged {
+                Ok(Stored::Absent) => {
+                    new += 1;
+                    self.writes.push((index, dest));
+                }
+                Ok(Stored::Same) => same += 1,
+                Ok(Stored::Different) => kept += 1,
+                Err(why) => self
+                    .problems
+                    .push(format!("{}: {why}", export.items[index].rel())),
+            }
+        }
+        let (status, mut counts) = match (new, same + kept) {
+            (0, _) if kept == 0 => ("identical", format!("{same} file(s)")),
+            (0, _) => ("kept", format!("{same} identical")),
+            (_, 0) => ("new", format!("{new} file(s)")),
+            _ => ("added", format!("{new} new file(s), {same} identical")),
+        };
+        if kept > 0 {
+            counts.push_str(&format!(", {kept} held with other bytes, which stay"));
+        }
+        self.lines.push(format!("{status:<9} {rel} ({counts})"));
+        self.identical += same;
+        self.left += kept;
+    }
+
+    /// A drill's `strikes.jsonl`, merged by id: the strikes the store lacks are appended, and a held
+    /// id is kept as stored.
+    fn strikes(&mut self, export: &mut Export, index: usize, store: &DrillStore) {
+        let rel = export.items[index].rel();
+        let theirs = match export.bytes(index) {
+            Ok(bytes) => store.parse_strikes(&bytes),
+            Err(why) => return self.problems.push(format!("{rel}: {why}")),
+        };
+        let ours = match store.all_strikes() {
+            Ok(ours) => ours,
+            Err(why) => {
+                return self
+                    .problems
+                    .push(format!("{rel}: the store's strikes cannot be read ({why})"))
+            }
+        };
+        let by_id: BTreeMap<&str, &TapeStrike> = ours
+            .strikes
+            .iter()
+            .map(|strike| (strike.strike_id.as_str(), strike))
+            .collect();
+        let (mut new, mut same, mut other) = (Vec::new(), 0, 0);
+        for strike in theirs.strikes {
+            match by_id.get(strike.strike_id.as_str()) {
+                None => new.push(strike),
+                Some(stored) if **stored == strike => same += 1,
+                Some(_) => other += 1,
+            }
+        }
+        let held = same + other;
+        let (status, mut counts) = match (new.len(), held) {
+            (0, _) if other == 0 => ("identical", format!("{same} strike(s)")),
+            (0, _) => ("kept", format!("{held} held")),
+            (fresh, 0) => ("new", format!("{fresh} strike(s)")),
+            (fresh, _) => ("added", format!("{fresh} new strike(s), {held} held")),
+        };
+        if other > 0 {
+            counts.push_str(&format!(
+                ", {other} held under its id with other values, which stay"
+            ));
+        }
+        if theirs.skipped > 0 {
+            counts.push_str(&format!(
+                ", {} line(s) skipped as the store skips them",
+                theirs.skipped
+            ));
+        }
+        self.lines.push(format!("{status:<9} {rel} ({counts})"));
+        if !new.is_empty() {
+            self.drill_writes
+                .push(DrillWrite::Strikes(store.clone(), new));
+        } else if other == 0 {
+            self.identical += 1;
+        } else {
+            self.left += 1;
+        }
+    }
+
+    /// A drill's `state.json`, by `updated_at`: the export's is written where the store holds none
+    /// or an older one, and the store's stays otherwise.
+    fn state(&mut self, export: &mut Export, index: usize, store: DrillStore) {
+        let rel = export.items[index].rel();
+        let dest = store.state_path();
+        let judged = match stored(export, index, &dest) {
+            Ok(judged) => judged,
+            Err(why) => return self.problems.push(format!("{rel}: {why}")),
+        };
+        // The export's is read whatever the store holds, so one that does not read is refused even
+        // where it would never be written, as a shot that does not read is.
+        let theirs = match export
+            .bytes(index)
+            .map_err(|why| why.to_string())
+            .and_then(|bytes| store.parse_state(&bytes))
+        {
+            Ok(theirs) => theirs,
+            Err(why) => {
+                return self
+                    .problems
+                    .push(format!("{rel}: not a drill state the store reads ({why})"))
+            }
+        };
+        let ours = match judged {
+            Stored::Same => {
+                self.lines.push(format!("identical {rel}"));
+                self.identical += 1;
+                return;
+            }
+            Stored::Absent => None,
+            Stored::Different => match store.state() {
+                Ok(ours) => ours,
+                Err(StoreError::Unreadable { reason, .. }) => {
+                    return self.conflicts.push(format!(
+                        "{}: the store's does not read ({reason}), and nothing here writes over \
+                         it",
+                        conflict(&rel, &dest)
+                    ))
+                }
+                Err(why) => {
+                    return self
+                        .problems
+                        .push(format!("{rel}: the store's state cannot be read ({why})"))
+                }
+            },
+        };
+        match ours {
+            None => self.lines.push(format!("new       {rel}")),
+            Some(ours) if theirs.updated_at > ours.updated_at => self.lines.push(format!(
+                "replaced  {rel}: the export's was written later ({}, the store's {})",
+                theirs.updated_at, ours.updated_at
+            )),
+            Some(ours) => {
+                self.lines.push(format!(
+                    "kept      {rel}: the store's was written at or after the export's ({}, the \
+                     export's {}), and it stays",
+                    ours.updated_at, theirs.updated_at
+                ));
+                self.left += 1;
+                return;
+            }
+        }
+        self.drill_writes
+            .push(DrillWrite::State(store, Box::new(theirs)));
+    }
+}
+
+/// A drill's crop, `crops/<strike_id>.jpg` below the method's directory, by the contract's own
+/// [`crop_file`], so the name a strike records and the name judged here cannot drift apart.
+fn is_crop(rest: &[String]) -> bool {
+    let [_, name] = rest else {
+        return false;
+    };
+    Path::new(name)
+        .file_stem()
+        .and_then(|stem| stem.to_str())
+        .is_some_and(|id| crop_file(id) == rest.join("/"))
+}
+
+/// A write a drill's merge makes through the lab's [`DrillStore`], after every copy (the module doc).
+enum DrillWrite {
+    /// The export's strikes the store does not hold, in the export's order.
+    Strikes(DrillStore, Vec<TapeStrike>),
+    /// The export's state, where the store holds none or one written earlier.
+    State(DrillStore, Box<DrillState>),
+}
+
+impl DrillWrite {
+    fn dest(&self) -> PathBuf {
+        match self {
+            DrillWrite::Strikes(store, _) => store.strikes_path(),
+            DrillWrite::State(store, _) => store.state_path(),
+        }
+    }
+
+    fn run(&self) -> Result<(), StoreError> {
+        match self {
+            DrillWrite::Strikes(store, strikes) => strikes
+                .iter()
+                .try_for_each(|strike| store.append_strike(strike)),
+            DrillWrite::State(store, state) => store.put_state(state),
+        }
     }
 }
 

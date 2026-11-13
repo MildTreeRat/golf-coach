@@ -23,7 +23,8 @@
 //! golf-lab flight (--gate | --shots | --shot SHOT_ID) [--altitude M] [--step S] [--points N]
 //!                 [--verbose] [--shots-dir D] [--sessions-dir D] [--golfers-dir D]
 //! golf-lab build-vectors [--sessions-dir D] [--golfers-dir D] [--out DIR] [--dry-run]
-//! golf-lab import-export EXPORT [--sessions-dir D] [--shots-dir D] [--golfers-dir D] [--dry-run]
+//! golf-lab import-export EXPORT [--sessions-dir D] [--shots-dir D] [--golfers-dir D]
+//!                       [--drills-dir D] [--dry-run]
 //! golf-lab read-impact CLIP... [--json] [--review DIR]
 //! golf-lab read-tape PHOTO... --label T [--sequence] [--review DIR]
 //! golf-lab --help
@@ -113,12 +114,14 @@
 //! # `import-export` (P31)
 //!
 //! No script: the phone's export, `EXPORT` a zip archive or a directory of the stored layout itself
-//! (`sessions/`, `shots/`, `golfers/`; the M29 plan's D16), merged into the stores
-//! (`golf_lab::import_export`'s module doc). `--sessions-dir`, `--shots-dir` and `--golfers-dir` are
-//! resolved as the other verbs resolve them. New files are copied, identical ones skipped, a shot
-//! and a photo entry whose photo is stored already are left as stored, as are a bag and a golfer of
-//! the same id and handedness (M38's D6), and any other file that differs from what is stored
-//! refuses the whole import, naming each (C11). `--dry-run` judges every file
+//! (`sessions/`, `shots/`, `golfers/`, and since M46 P21 `drills/`; the M29 plan's D16), merged into
+//! the stores (`golf_lab::import_export`'s module doc). `--sessions-dir`, `--shots-dir` and
+//! `--golfers-dir` are resolved as the other verbs resolve them, and so is `--drills-dir`, whose
+//! variable is `GOLF_DRILLS_DIR`, a name only Rust reads. New files are copied, identical ones
+//! skipped, a shot and a photo entry whose photo is stored already are left as stored, as are a bag
+//! and a golfer of the same id and handedness (M38's D6), a drill's strikes merge by id and its state
+//! by when it was written (M46's C17), and any other file that differs from what is stored refuses
+//! the whole import, naming each (C11). `--dry-run` judges every file
 //! and writes nothing. Exit codes: 0 imported (or importable), 1 refused on a conflict, 2 the export
 //! is not a stored layout this reads, or a write failed part way.
 //!
@@ -181,6 +184,7 @@ use golf_lab::read_tape::{missing_photo, read_tape_photos, Request as TapeReques
 use golf_lab::reanalyze::{reanalyze, Request as ReanalyzeRequest};
 use golf_lab::report::{print_report, print_swings};
 use golf_lab::shot::{OcrReader, ShotOptions};
+use storage::drill_store::DRILLS_DIR;
 use storage::manifest::{load_manifest, manifest_path, Role};
 
 const USAGE: &str = "usage: golf-lab import-photos [PATHS...] [--session S] [--out DIR] \
@@ -210,7 +214,7 @@ const USAGE: &str = "usage: golf-lab import-photos [PATHS...] [--session S] [--o
                      golf-lab build-vectors [--sessions-dir D] [--golfers-dir D] [--out DIR] \
                      [--dry-run]\n       \
                      golf-lab import-export EXPORT [--sessions-dir D] [--shots-dir D] \
-                     [--golfers-dir D] [--dry-run]\n       \
+                     [--golfers-dir D] [--drills-dir D] [--dry-run]\n       \
                      golf-lab read-impact CLIP... [--json] [--review DIR]
                             golf-lab read-tape PHOTO... --label T [--sequence] [--review DIR]";
 
@@ -1081,13 +1085,14 @@ fn run_build_vectors(request: &BuildRequest) -> ExitCode {
     }
 }
 
-/// `import-export`'s flags, argparse's way, then the three stores resolved against the process
+/// `import-export`'s flags, argparse's way, then the four trees resolved against the process
 /// environment. `Ok(None)` is `--help`.
 fn parse_import_export(
     mut args: impl Iterator<Item = String>,
 ) -> Result<Option<ExportRequest>, String> {
     const VERB: &str = "import-export";
-    let (mut export, mut sessions, mut shots, mut golfers) = (None, None, None, None);
+    let (mut export, mut sessions, mut shots, mut golfers, mut drills) =
+        (None, None, None, None, None);
     let mut dry_run = false;
     while let Some(arg) = args.next() {
         let (flag, inline) = split_flag(&arg);
@@ -1101,6 +1106,7 @@ fn parse_import_export(
             "--sessions-dir" => sessions = Some(PathBuf::from(value("--sessions-dir")?)),
             "--shots-dir" => shots = Some(PathBuf::from(value("--shots-dir")?)),
             "--golfers-dir" => golfers = Some(PathBuf::from(value("--golfers-dir")?)),
+            "--drills-dir" => drills = Some(PathBuf::from(value("--drills-dir")?)),
             "--dry-run" | "-h" | "--help" if inline.is_some() => {
                 return Err(format!(
                     "{VERB}: argument {flag}: ignored explicit argument {:?}",
@@ -1127,6 +1133,7 @@ fn parse_import_export(
         sessions_dir: data_dir(sessions, "GOLF_SESSIONS_DIR", "sessions", &env),
         shots_dir: data_dir(shots, "GOLF_SHOTS_DIR", "shots", &env),
         golfers_dir: data_dir(golfers, "GOLF_GOLFERS_DIR", "golfers", &env),
+        drills_dir: data_dir(drills, "GOLF_DRILLS_DIR", DRILLS_DIR, &env),
         dry_run,
     }))
 }

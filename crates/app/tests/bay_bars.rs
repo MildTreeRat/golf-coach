@@ -290,8 +290,12 @@ fn committed() -> String {
 }
 
 /// A scratch copy of the bars with one thing changed, refusing a change that would change nothing.
+///
+/// Read with `\n` line ends, as every edit is written: a Windows desk under `core.autocrlf` checks the
+/// bars out with `\r\n`, and an edit ending in `|\n` would then find nothing (the M46 plan's P18
+/// finding 10). The parser reads either, which the tests that read `committed()` as it is pin.
 fn edited(from: &str, to: &str) -> String {
-    let text = committed();
+    let text = committed().replace("\r\n", "\n");
     assert!(text.contains(from), "the bars do not say {from:?}");
     text.replace(from, to)
 }

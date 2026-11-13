@@ -69,6 +69,13 @@
 //! caller holding its own lock around several of them cannot deadlock with it. A panic while it is
 //! held poisons it, and the next caller takes it anyway, because what it guards is on disk and each
 //! write there leaves a whole file or a torn line that a read skips.
+//!
+//! # Another copy of the files
+//!
+//! The lab's `golf-lab import-export` merges a phone's drill into its own (C17), and the phone's
+//! files arrive as bytes, often out of a zip, with no store around them. [`DrillStore::parse_strikes`]
+//! and [`DrillStore::parse_state`] read such bytes by this store's own rules, so that the merge and
+//! the store cannot disagree on which lines are strikes or on what a state is. [P21]
 
 use std::collections::HashSet;
 use std::fs;
@@ -130,10 +137,16 @@ impl DrillStore {
     /// **The id must be a slug**, because it names a directory: `../aaron` would put a drill outside
     /// `drills/`. The refusal is [`check_player_id`]'s, the one every store's contract makes.
     pub fn open(root: impl AsRef<Path>, player_id: &str) -> Result<Self, StoreError> {
+        Self::in_drills(root.as_ref().join(DRILLS_DIR), player_id)
+    }
+
+    /// The same store, named by the `drills/` directory itself rather than the data root above it.
+    /// The lab's `import-export` takes each tree's directory as a flag of its own, `--drills-dir`
+    /// beside `--sessions-dir`, and the directory it names need not be called `drills`. [P21]
+    pub fn in_drills(drills_dir: impl AsRef<Path>, player_id: &str) -> Result<Self, StoreError> {
         check_player_id("DrillStore", player_id).map_err(StoreError::Invalid)?;
-        let dir = root
+        let dir = drills_dir
             .as_ref()
-            .join(DRILLS_DIR)
             .join(player_id)
             .join(DrillTopic::Impact.as_str())
             .join(TapeMethod::StrikeTape.as_str());
@@ -189,7 +202,7 @@ impl DrillStore {
         let path = self.strikes_path();
         let held = read_or_empty(&path)?;
         if self
-            .parse(&held)
+            .parse_strikes(&held)
             .strikes
             .iter()
             .any(|stored| stored.strike_id == strike.strike_id)
@@ -227,7 +240,7 @@ impl DrillStore {
     /// merge read them all.
     pub fn all_strikes(&self) -> Result<StrikeLog, StoreError> {
         let _held = one_at_a_time();
-        Ok(self.parse(&read_or_empty(&self.strikes_path())?))
+        Ok(self.parse_strikes(&read_or_empty(&self.strikes_path())?))
     }
 
     /// The drill's state, or `None` before the first was written. A file that is not this golfer's
@@ -310,10 +323,13 @@ impl DrillStore {
         )))
     }
 
-    /// The strikes in `strikes.jsonl`'s bytes, and how many lines were skipped (the module doc). An
-    /// empty or blank line is the file's last newline, or a newline written after a torn line, and
+    /// The strikes in a `strikes.jsonl`'s bytes, and how many lines were skipped (the module doc).
+    /// An empty or blank line is the file's last newline, or a newline written after a torn line, and
     /// is not counted.
-    fn parse(&self, bytes: &[u8]) -> StrikeLog {
+    ///
+    /// **Public for another copy of the file** (the module doc's last section): the bytes need not
+    /// be this store's, and they are read as if they were, this golfer's strikes and no other's.
+    pub fn parse_strikes(&self, bytes: &[u8]) -> StrikeLog {
         let mut log = StrikeLog::default();
         let mut seen = HashSet::new();
         for line in bytes.split(|byte| *byte == b'\n') {
@@ -333,6 +349,21 @@ impl DrillStore {
         log
     }
 
+    /// A `state.json`'s bytes as this golfer's [`DrillState`], or why they are not one: the strict
+    /// reader [`Self::state`] runs, public for another copy of the file as
+    /// [`Self::parse_strikes`] is.
+    pub fn parse_state(&self, bytes: &[u8]) -> Result<DrillState, String> {
+        let state: DrillState = serde_json::from_slice(bytes).map_err(|error| error.to_string())?;
+        if state.player_id != self.player_id {
+            return Err(format!(
+                "it holds the drill of {}, not of {}",
+                str_repr(&state.player_id),
+                str_repr(&self.player_id)
+            ));
+        }
+        Ok(state)
+    }
+
     /// [`Self::state`] for a caller already holding the lock.
     fn read_state(&self) -> Result<Option<DrillState>, StoreError> {
         let path = self.state_path();
@@ -341,22 +372,9 @@ impl DrillStore {
             Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(None),
             Err(error) => return Err(error.into()),
         };
-        let state: DrillState =
-            serde_json::from_slice(&bytes).map_err(|error| StoreError::Unreadable {
-                path: path.clone(),
-                reason: error.to_string(),
-            })?;
-        if state.player_id != self.player_id {
-            return Err(StoreError::Unreadable {
-                path,
-                reason: format!(
-                    "it holds the drill of {}, not of {}",
-                    str_repr(&state.player_id),
-                    str_repr(&self.player_id)
-                ),
-            });
-        }
-        Ok(Some(state))
+        self.parse_state(&bytes)
+            .map(Some)
+            .map_err(|reason| StoreError::Unreadable { path, reason })
     }
 }
 

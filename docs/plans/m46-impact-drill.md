@@ -62,7 +62,7 @@ machine, pull on the new" as its precondition.
 | **P18** | 🪟 Facade: `record_tape_photo`, the pick and "missed the tape" | ✅ Done *(2026-11-13)* |
 | **P19** | 🪟 Facade: the drill's actions (start, stage, suggestions, calls) | ✅ Done *(2026-11-13)* |
 | **P20** | 🪟 Facade: the progress views (dots, level, pattern, heat map, roll-up) | ✅ Done *(2026-11-13)* |
-| **P21** | 🪟 Export carries `drills/`, and `golf-lab import-export` keeps it | ⬜ |
+| **P21** | 🪟 Export carries `drills/`, and `golf-lab import-export` keeps it | ✅ Done *(2026-11-13)* |
 | **P22** | 🍎 Swift: the photo decoded for Rust, and the tape camera's overlay | ⬜ |
 | **P23** | 🍎 The Drills page: picker, strike loop, reading card, pick and missed tape | ⬜ |
 | **P24** | 🍎 The Drills page: baseline, block end, suggestions, differential calls | ⬜ |
@@ -3131,3 +3131,75 @@ named as skipped where they are not), then write the three records, and commit `
      clean.
    - The doc-truth test passes (91).
    - `cargo doc -p app -p feedback` shows only the warnings from before (`events`, and `rules.rs`'s four).
+
+### P21 (2026-11-13)
+
+1. **The export carries `drills/`, and `import-export` merges it (C17).**
+   - **The phone**: `app::Dirs` gained `drills`, `storage::drill_store::DRILLS_DIR` under the root, and
+     `export.rs` walks it whole beside the three trees. `.app/drill_pending/` stays home, so every crop
+     that goes is a stored strike's (P18 finding 6).
+   - **The lab**: `TREES` has four, with `DRILLS_DIR` the fourth. `Request` gained `drills_dir`, and the
+     binary gained `--drills-dir`, resolved like the others through `GOLF_DRILLS_DIR`, a variable only Rust
+     reads. Each golfer's `drills/<player>/impact/strike_tape/` is judged by `Plan::drill`:
+     - **crops**: copied where the lab lacks one, and one it holds stays;
+     - **`strikes.jsonl`**: merged by id. A held id is kept as the lab's, and the export's order is kept;
+     - **`state.json`**: by `updated_at`. The export's is written only when it is strictly later, so equal
+       times keep the lab's;
+     - **`last/`**: ignored and counted;
+     - **any other file of the tree** (M44's, one day) goes by bytes.
+   - **One line each**, in the swing line's style: `new`, `added` (`N new strike(s), M held`), `identical`,
+     `kept`, and `replaced` for the state. A held id or crop that differs, and the export's skipped lines,
+     are counts on that line. The tally counts each of the three as one file, so a strikes file that gains
+     strikes is one file copied.
+   - **The write order**: every plain-rule file first, the drill's crops among them. Then each drill's
+     strikes, appended through `append_strike`, then its state through `put_state`. A strike never names
+     a crop not yet stored, and the state never names a strike not yet stored.
+2. **`storage::drill_store` gained three things outside the Touch line.**
+   - **`DrillStore::in_drills(drills_dir, player)`**: `open` joins `DRILLS_DIR` and calls it. The verb takes
+     each tree's directory as its own flag, and that directory need not be named `drills`.
+   - **`parse_strikes(bytes)` and `parse_state(bytes)`**: the store's own readers over bytes it does not hold.
+     A zip's entries are not files, so P17 finding 6's "read the phone's strikes through `all_strikes()`"
+     could not hold as written. These keep one reader rather than a second copy in the lab.
+   - **Pinned** by `another_copys_bytes_read_by_the_stores_own_rules`.
+3. **Crops are copied by the verb's `place()`, not `put_crop`**, against P17 finding 6. `place()` keeps the
+   export's time, as every copied file does. It needs no second copy of `put_crop`'s private file-name
+   rule. And at a one-process CLI, the store's lock serializes nothing. A crop is known by the contract's
+   `crop_file`, so its name cannot drift from the one a strike records. The strikes and the state do go
+   through the store, as finding 6 says.
+4. **What refuses.**
+   - **A state that does not read in the export** is exit 2, even where it would not be written, as a torn
+     shot is.
+   - **A lab state that does not read** is a conflict, exit 1, with nothing written. The line names the
+     reason, and nothing writes over the counters (P17 finding 4). It is refused rather than bypassed.
+   - **A drill under a name that is not a slug** is exit 2.
+   - **A torn or refused strike line in the export is counted, never refused.** The phone's file is
+     append-only, so a refusal would refuse every export after it.
+   - **Changed messages**: "outside sessions/, shots/, golfers/ and drills/" and "it holds no file under
+     sessions/, shots/, golfers/ or drills/".
+5. **For P29: `last/` crosses in every export, and the lab drops it.** That is the section's own reading:
+   the walked list gains `drills/` whole, and the lab does not import `last/`.
+   - **What it costs**: each club's last crop is raw RGB, 0.74 to 1.3 MB a club (P7 finding 4). It is
+     zipped stored, so a bag's worth adds megabytes to every export.
+   - **The fix, if size matters**: skip `LAST_DIR` in `export.rs`'s walk of `dirs.drills`. The lab's rule
+     stays for a hand-made export.
+6. **The merge appends one strike at a time.** `append_strike` reads the whole file each time, so a merge
+   of n new strikes reads O(n²). That is nothing at a session's scale. A batch append in `drill_store` is
+   the fix if a first import ever holds thousands.
+7. **Both Windows-only failures are fixed.**
+   - **P12 finding 12**: `refused_on` joins a name one segment at a time, as the verb does.
+   - **P18 finding 10**: `bay_bars`' `edited()` reads the bars with `\n`. The parser reads either line
+     ending, which the tests reading `committed()` as checked out still pin.
+8. **For P30**: these docs should name `--drills-dir`, `GOLF_DRILLS_DIR` and the merge:
+   - ARCHITECTURE §1's `import-export` line, and §4's table;
+   - `data/README.md`;
+   - CLAUDE.md's `crates/storage` sentence (`in_drills`, `parse_strikes`, `parse_state`), beside P17
+     finding 7.
+9. **Verify**:
+   - `cargo test --workspace --no-fail-fast` passes, with nothing failing on Windows.
+   - The new and changed binaries: `storage`'s `drill_store` 14, `golf-lab`'s `import_export` 24, `app`'s
+     `export_roundtrip` 34 and `bay_bars` 64.
+   - `cargo clippy -p storage -p app -p golf-lab --all-targets -- -D warnings` and `cargo fmt --check` are
+     clean.
+   - The doc-truth test passes (91).
+   - **Two rules were mutated, and the tests caught both.** Ignoring `last/` failed 4 tests. Writing the
+     state at an equal time failed the equal-time case.

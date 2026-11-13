@@ -1,7 +1,9 @@
 //! `golf-lab import-export` over a phone's export built by the real writers: a photo-only session
 //! with its `shot_analysis.json`, a shot, a golfer and a bag, imported, imported again, refused on a
 //! conflict, deduped by photo and read from a zip. [M29 P31] A golfer and a bag that differ from the
-//! lab's go by M38's D6. [M38 P12]
+//! lab's go by M38's D6. [M38 P12] A golfer's impact drill merges by M46's C17: its strikes by id, its
+//! state by when it was written, its crops where the lab lacks one, and its last crops never.
+//! [M46 P21]
 //!
 //! No Python twin, and no committed vector: the phone does not exist yet (M38). So the export is
 //! what M38's phone will write, a `data/processed` subtree as `crates/storage` writes it (the M29
@@ -17,7 +19,12 @@ use std::process::Command;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use contracts::bag::Bag;
-use contracts::club::parse_club;
+use contracts::club::{category_of, parse_club, ClubId};
+use contracts::drill::{
+    crop_file, label_id, strike_id, ClubDrillState, DrillStage, DrillState, StrikeSource,
+    TapeStrike,
+};
+use contracts::face_impact::TAPE_READER_VERSION;
 use contracts::shot::ShotData;
 use contracts::swing::{ANALYSIS_VERSION, COMPARABLE_FROM};
 use contracts::Timestamp;
@@ -29,6 +36,7 @@ use screen::ScreenInput;
 use serde_json::Value;
 use storage::bag_store::BagStore;
 use storage::corpus::{read_corpus, EngineVersions};
+use storage::drill_store::DrillStore;
 use storage::golfer_store::GolferStore;
 use storage::manifest::{load_manifest, manifest_path, save_manifest};
 use storage::session_meta::set_current_club;
@@ -153,14 +161,15 @@ impl Phone {
     }
 }
 
-/// The three stores' directories under `root`, as `--sessions-dir`, `--shots-dir` and
-/// `--golfers-dir` would name them.
+/// The four trees' directories under `root`, as `--sessions-dir`, `--shots-dir`, `--golfers-dir`
+/// and `--drills-dir` would name them.
 fn request(export: &Path, lab: &Path) -> Request {
     Request {
         export: export.to_path_buf(),
         sessions_dir: lab.join("sessions"),
         shots_dir: lab.join("shots"),
         golfers_dir: lab.join("golfers"),
+        drills_dir: lab.join("drills"),
         dry_run: false,
     }
 }
@@ -220,6 +229,85 @@ fn digest() -> String {
 /// The report's line for one unit, as the verb pads its status.
 fn line(status: &str, what: &str) -> String {
     format!("\n  {status:<9} {what}")
+}
+
+// ----------------------------------------------------------------------------------- a drill
+
+/// `aaron`'s tape drill below `drills/`, as each line of the report names it.
+const DRILL: &str = "drills/aaron/impact/strike_tape";
+
+const EARLIER: &str = "2026-11-13T09:00:00-05:00";
+const LATER: &str = "2026-11-13T10:00:00-05:00";
+
+/// The `n`th strike on the 7 iron, read in the baseline: what `record_tape_photo` stores.
+fn tape_strike(n: i64) -> TapeStrike {
+    let id = strike_id("a1b2", n);
+    TapeStrike {
+        crop: Some(crop_file(&id)),
+        strike_id: id,
+        player_id: "aaron".into(),
+        club: ClubId::SevenIron,
+        category: category_of(ClubId::SevenIron),
+        label_type: "strikepro_iron".into(),
+        label_id: label_id("a1b2", 1),
+        n_on_label: n,
+        captured_at: EARLIER.parse().unwrap(),
+        stage: DrillStage::Baseline,
+        level_radius_mm: None,
+        call: None,
+        offset_h_mm: Some(1.5 * n as f64),
+        offset_v_mm: Some(-0.25),
+        source: Some(StrikeSource::Read),
+        not_read: None,
+        reader_version: TAPE_READER_VERSION,
+    }
+}
+
+/// The drill's state after `strikes` strikes in the 7 iron's baseline, written at `at`.
+fn drill_state(strikes: i64, at: &str) -> DrillState {
+    let club = ClubDrillState {
+        stage: DrillStage::Baseline,
+        level: None,
+        block: (1..=strikes).map(|n| strike_id("a1b2", n)).collect(),
+        suggestion: None,
+        history: Vec::new(),
+        label: None,
+    };
+    DrillState {
+        player_id: "aaron".into(),
+        strikes_issued: strikes,
+        labels_issued: 1,
+        clubs: BTreeMap::from([(ClubId::SevenIron, club)]),
+        updated_at: at.parse().unwrap(),
+    }
+}
+
+/// The drill under the data root `root`.
+fn drill_store(root: &Path) -> DrillStore {
+    DrillStore::open(root, "aaron").unwrap()
+}
+
+/// Strikes `from..=to` stored through the drill store's own writers, each with its crop, then the
+/// state written at `at` and the club's last crop: the files a photo leaves.
+fn strike_on(root: &Path, from: i64, to: i64, at: &str) {
+    let store = drill_store(root);
+    for n in from..=to {
+        let strike = tape_strike(n);
+        let crop = format!("the crop of {}", strike.strike_id);
+        store.put_crop(&strike.strike_id, crop.as_bytes()).unwrap();
+        store.append_strike(&strike).unwrap();
+    }
+    store
+        .put_last(ClubId::SevenIron, &[236; 3 * 40 * 20])
+        .unwrap();
+    store.put_state(&drill_state(to, at)).unwrap();
+}
+
+/// Every file under `root` but the drill's last crops, which the lab never imports.
+fn but_last(root: &Path) -> BTreeMap<String, Vec<u8>> {
+    let mut held = files(root);
+    held.retain(|name, _| !name.starts_with(&format!("{DRILL}/last/")));
+    held
 }
 
 // ----------------------------------------------------------------------------------- the merge
@@ -647,6 +735,320 @@ fn a_write_that_fails_part_way_is_named_and_a_re_run_finishes_it() {
     assert_eq!(files(lab.path()), files(phone.path()));
 }
 
+/// C17 into an empty lab: the crops copied, the strikes appended in the phone's order and the state
+/// written, so the lab's drill is the phone's to the byte but for `last/`, ignored and counted. A
+/// dry run says so and writes nothing, and a second import finds every file held and writes nothing.
+#[test]
+fn a_drill_merges_whole_and_a_second_import_changes_nothing() {
+    let phone = Phone::new();
+    strike_on(phone.path(), 1, 3, EARLIER);
+    let lab = tempfile::tempdir().unwrap();
+
+    let mut dry = request(phone.path(), lab.path());
+    dry.dry_run = true;
+    let (code, out, _) = run(&dry);
+    assert_eq!(code, 0, "{out}");
+    assert!(
+        out.ends_with(
+            "\n\nDry run: 12 file(s) would be copied; 0 identical, 0 left as stored, 1 ignored. \
+             Nothing was written.\n"
+        ),
+        "{out}"
+    );
+    assert_eq!(fs::read_dir(lab.path()).unwrap().count(), 0);
+
+    let (code, out, err) = run(&request(phone.path(), lab.path()));
+    assert_eq!((code, err.as_str()), (0, ""), "{out}");
+    assert!(
+        out.contains(&format!(
+            "\n  drills into {}\n",
+            lab.path().join("drills").display()
+        )),
+        "{out}"
+    );
+    let expected = [
+        line("new", &format!("sessions/{SESSION}/1 (3 file(s))")),
+        line("new", &format!("{DRILL}/crops (3 file(s))")),
+        line("new", &format!("{DRILL}/strikes.jsonl (3 strike(s))")),
+        line("new", &format!("{DRILL}/state.json")),
+    ];
+    let mut at = 0;
+    for want in &expected {
+        let found = out[at..].find(want.as_str()).unwrap_or_else(|| {
+            panic!("{want:?} after byte {at}, in the write order: {out}");
+        });
+        at += found + want.len();
+    }
+    assert!(
+        out.ends_with("\n\n12 file(s) copied; 0 identical, 0 left as stored, 1 ignored.\n"),
+        "{out}"
+    );
+    assert_eq!(
+        files(lab.path()),
+        but_last(phone.path()),
+        "the phone's bytes"
+    );
+    assert!(!drill_store(lab.path())
+        .last_path(ClubId::SevenIron)
+        .exists());
+
+    let held = files(lab.path());
+    let strikes = drill_store(lab.path()).strikes_path();
+    let written = modified(&strikes);
+    let (code, out, err) = run(&request(phone.path(), lab.path()));
+    assert_eq!((code, err.as_str()), (0, ""), "{out}");
+    for want in [
+        line("identical", &format!("{DRILL}/crops (3 file(s))")),
+        line("identical", &format!("{DRILL}/strikes.jsonl (3 strike(s))")),
+        line("identical", &format!("{DRILL}/state.json")),
+    ] {
+        assert!(out.contains(&want), "{want:?}: {out}");
+    }
+    assert!(
+        out.ends_with("\n\n0 file(s) copied; 12 identical, 0 left as stored, 1 ignored.\n"),
+        "{out}"
+    );
+    assert_eq!((files(lab.path()), modified(&strikes)), (held, written));
+}
+
+/// The phone's later export: the strikes the lab lacks are appended and the newer state replaces
+/// the lab's, so the lab's drill is the phone's again.
+#[test]
+fn a_later_drill_appends_its_new_strikes_and_its_newer_state_replaces_the_labs() {
+    let phone = Phone::new();
+    strike_on(phone.path(), 1, 3, EARLIER);
+    let lab = tempfile::tempdir().unwrap();
+    assert_eq!(run(&request(phone.path(), lab.path())).0, 0);
+    strike_on(phone.path(), 4, 5, LATER);
+
+    let (code, out, err) = run(&request(phone.path(), lab.path()));
+    assert_eq!((code, err.as_str()), (0, ""), "{out}");
+    for want in [
+        line(
+            "added",
+            &format!("{DRILL}/crops (2 new file(s), 3 identical)"),
+        ),
+        line(
+            "added",
+            &format!("{DRILL}/strikes.jsonl (2 new strike(s), 3 held)"),
+        ),
+        line(
+            "replaced",
+            &format!(
+                "{DRILL}/state.json: the export's was written later ({LATER}, the store's \
+                 {EARLIER})"
+            ),
+        ),
+    ] {
+        assert!(out.contains(&want), "{want:?}: {out}");
+    }
+    assert!(
+        out.ends_with("\n\n4 file(s) copied; 10 identical, 0 left as stored, 1 ignored.\n"),
+        "{out}"
+    );
+    assert_eq!(files(lab.path()), but_last(phone.path()));
+    assert_eq!(
+        drill_store(lab.path()).state().unwrap(),
+        Some(drill_state(5, LATER))
+    );
+}
+
+/// What the lab holds already stays: a strike under a held id with other values, a crop held with
+/// other bytes, a strike the phone never had, and a state written after the phone's. Only what the
+/// lab lacks is written.
+#[test]
+fn a_held_strike_a_held_crop_and_a_later_state_stay_as_the_labs() {
+    let phone = Phone::new();
+    strike_on(phone.path(), 1, 3, EARLIER);
+    let lab = tempfile::tempdir().unwrap();
+    let store = drill_store(lab.path());
+    let theirs = TapeStrike {
+        offset_h_mm: Some(-9.0),
+        ..tape_strike(2)
+    };
+    store.append_strike(&theirs).unwrap();
+    store.append_strike(&tape_strike(9)).unwrap();
+    store.put_crop("a1b2-1", b"the lab's own crop").unwrap();
+    store.put_state(&drill_state(9, LATER)).unwrap();
+    let state = fs::read(store.state_path()).unwrap();
+
+    let (code, out, err) = run(&request(phone.path(), lab.path()));
+    assert_eq!((code, err.as_str()), (0, ""), "{out}");
+    for want in [
+        line(
+            "added",
+            &format!(
+                "{DRILL}/crops (2 new file(s), 0 identical, 1 held with other bytes, which stay)"
+            ),
+        ),
+        line(
+            "added",
+            &format!(
+                "{DRILL}/strikes.jsonl (2 new strike(s), 1 held, 1 held under its id with other \
+                 values, which stay)"
+            ),
+        ),
+        line(
+            "kept",
+            &format!(
+                "{DRILL}/state.json: the store's was written at or after the export's ({LATER}, \
+                 the export's {EARLIER}), and it stays"
+            ),
+        ),
+    ] {
+        assert!(out.contains(&want), "{want:?}: {out}");
+    }
+    assert!(
+        out.ends_with("\n\n10 file(s) copied; 0 identical, 2 left as stored, 1 ignored.\n"),
+        "{out}"
+    );
+    let ids: Vec<String> = store
+        .all_strikes()
+        .unwrap()
+        .strikes
+        .into_iter()
+        .map(|strike| strike.strike_id)
+        .collect();
+    assert_eq!(ids, ["a1b2-2", "a1b2-9", "a1b2-1", "a1b2-3"]);
+    assert_eq!(
+        store.all_strikes().unwrap().strikes[0],
+        theirs,
+        "the held id"
+    );
+    assert_eq!(
+        fs::read(store.crop_path("a1b2-1")).unwrap(),
+        b"the lab's own crop"
+    );
+    assert_eq!(fs::read(store.state_path()).unwrap(), state);
+
+    // Written at the same moment as the phone's and holding something else: neither is later, so
+    // the lab's stays, as the line says.
+    store.put_state(&drill_state(9, EARLIER)).unwrap();
+    let state = fs::read(store.state_path()).unwrap();
+    let (code, out, err) = run(&request(phone.path(), lab.path()));
+    assert_eq!((code, err.as_str()), (0, ""), "{out}");
+    assert!(
+        out.contains(&line(
+            "kept",
+            &format!(
+                "{DRILL}/state.json: the store's was written at or after the export's \
+                 ({EARLIER}, the export's {EARLIER}), and it stays"
+            ),
+        )),
+        "{out}"
+    );
+    assert_eq!(fs::read(store.state_path()).unwrap(), state);
+}
+
+/// A line the store would skip is counted and the rest imported, since the phone's file is
+/// append-only and a torn line would otherwise refuse every export after it. A state that does not
+/// read refuses: the export's as a layout this does not read, exit 2, and the lab's as a conflict,
+/// exit 1, since nothing writes over the counters. So does a drill under a name that is no golfer's.
+#[test]
+fn a_torn_strike_is_counted_and_a_state_or_name_that_does_not_read_refuses() {
+    let phone = Phone::new();
+    strike_on(phone.path(), 1, 3, EARLIER);
+    let phones = drill_store(phone.path());
+    let mut torn = fs::read(phones.strikes_path()).unwrap();
+    torn.extend(b"{\"strike_id\": \"a1b2-4\", ");
+    fs::write(phones.strikes_path(), torn).unwrap();
+    let lab = tempfile::tempdir().unwrap();
+    let (code, out, err) = run(&request(phone.path(), lab.path()));
+    assert_eq!((code, err.as_str()), (0, ""), "{out}");
+    assert!(
+        out.contains(&line(
+            "new",
+            &format!(
+                "{DRILL}/strikes.jsonl (3 strike(s), 1 line(s) skipped as the store skips them)"
+            )
+        )),
+        "{out}"
+    );
+    assert_eq!(drill_store(lab.path()).all_strikes().unwrap().skipped, 0);
+
+    let refused = |lab: &Path, code: u8| {
+        let before = files(lab);
+        let (got, out, err) = run(&request(phone.path(), lab));
+        assert_eq!(got, code, "{out}{err}");
+        assert_eq!(files(lab), before, "nothing written");
+        err
+    };
+    let theirs = drill_store(lab.path()).state_path();
+    fs::write(&theirs, "{\"player_id\": \"aaron\", ").unwrap();
+    let err = refused(lab.path(), 1);
+    assert!(
+        err.contains(&format!(
+            "\n  {DRILL}/state.json -> {}: the store's does not read (",
+            theirs.display()
+        )),
+        "{err}"
+    );
+    assert!(
+        err.ends_with("), and nothing here writes over it\n"),
+        "{err}"
+    );
+
+    let fresh = tempfile::tempdir().unwrap();
+    fs::write(phones.state_path(), "{\"player_id\": \"aaron\", ").unwrap();
+    let err = refused(fresh.path(), 2);
+    assert!(
+        err.contains(&format!(
+            "\n  {DRILL}/state.json: not a drill state the store reads ("
+        )),
+        "{err}"
+    );
+    fs::remove_file(phones.state_path()).unwrap();
+
+    let dave = phone.path().join("drills").join("Dave Smith");
+    fs::create_dir_all(dave.join("impact").join("strike_tape")).unwrap();
+    fs::write(
+        dave.join("impact").join("strike_tape").join("state.json"),
+        "{}",
+    )
+    .unwrap();
+    let err = refused(fresh.path(), 2);
+    assert!(
+        err.contains("\n  drills/Dave Smith/impact/strike_tape: not a golfer's drill ("),
+        "{err}"
+    );
+}
+
+/// A copy that fails part way through a drill names its file, and a re-run copies the rest and
+/// writes the strikes and the state after it.
+#[test]
+fn a_drill_whose_crop_cannot_be_written_is_named_and_a_re_run_finishes_it() {
+    let phone = Phone::new();
+    strike_on(phone.path(), 1, 3, EARLIER);
+    let lab = tempfile::tempdir().unwrap();
+    let crops = drill_store(lab.path()).dir().join("crops");
+    fs::create_dir_all(crops.parent().unwrap()).unwrap();
+    fs::write(&crops, "a file where the crops directory goes").unwrap();
+
+    let (code, out, err) = run(&request(phone.path(), lab.path()));
+    assert_eq!(code, 2, "{out}{err}");
+    assert!(
+        err.starts_with(&format!(
+            "error: writing {}: ",
+            drill_store(lab.path()).crop_path("a1b2-1").display()
+        )),
+        "{err}"
+    );
+    assert!(
+        err.contains(". 7 of 12 file(s) were copied before it;"),
+        "{err}"
+    );
+    assert!(!drill_store(lab.path()).strikes_path().exists());
+
+    fs::remove_file(&crops).unwrap();
+    let (code, out, err) = run(&request(phone.path(), lab.path()));
+    assert_eq!((code, err.as_str()), (0, ""), "{out}");
+    assert!(
+        out.ends_with("\n\n5 file(s) copied; 7 identical, 0 left as stored, 1 ignored.\n"),
+        "{out}"
+    );
+    assert_eq!(files(lab.path()), but_last(phone.path()));
+}
+
 // ----------------------------------------------------------------------------------- M38's D6
 
 /// A golfer record as both sides write one, spaced as `golfers` spaces the phone's.
@@ -672,13 +1074,15 @@ fn refused_on(phone: &Phone, lab: &Path, names: &[&str]) {
     let before = files(lab);
     let (code, out, err) = run(&request(phone.path(), lab));
     assert_eq!(code, 1, "{names:?}: {out}{err}");
+    // Joined a name at a time, as the verb places a file, so `old/aaron.bag.json` is spelled with
+    // the platform's separator throughout (the M46 plan's P12 finding 12).
     let conflicts: String = names
         .iter()
         .map(|name| {
-            format!(
-                "\n  golfers/{name} -> {}",
-                lab.join("golfers").join(name).display()
-            )
+            let at = name
+                .split('/')
+                .fold(lab.join("golfers"), |at, n| at.join(n));
+            format!("\n  golfers/{name} -> {}", at.display())
         })
         .collect();
     assert!(err.ends_with(&format!(":{conflicts}\n")), "{err}");
@@ -1061,7 +1465,8 @@ fn what_is_not_a_stored_layout_is_refused_by_name() {
     assert_eq!(
         err,
         "error: nothing was imported, because the export cannot be read as a stored layout:\n  \
-         notes.txt: outside sessions/, shots/ and golfers/, which are all an export holds\n"
+         notes.txt: outside sessions/, shots/, golfers/ and drills/, which are all an export \
+         holds\n"
     );
     fs::remove_file(phone.path().join("notes.txt")).unwrap();
     fs::write(
@@ -1120,7 +1525,7 @@ fn what_is_not_a_stored_layout_is_refused_by_name() {
     fs::create_dir_all(empty.join("sessions").join(".incoming")).unwrap();
     fs::write(empty.join("sessions").join(".incoming").join("x.part"), "").unwrap();
     assert!(refused(&empty, lab.path())
-        .contains("\n  it holds no file under sessions/, shots/ or golfers/\n"));
+        .contains("\n  it holds no file under sessions/, shots/, golfers/ or drills/\n"));
 }
 
 // ----------------------------------------------------------------------------------- the binary
@@ -1173,7 +1578,7 @@ fn the_binary_parses_as_argparse_and_imports_through_its_flags() {
     assert_eq!(code, Some(0));
     assert!(out.contains(
         "golf-lab import-export EXPORT [--sessions-dir D] [--shots-dir D] [--golfers-dir D] \
-         [--dry-run]"
+         [--drills-dir D] [--dry-run]"
     ));
     assert!(!out.contains("arrives"), "every verb has arrived: {out}");
 
@@ -1190,12 +1595,16 @@ fn the_binary_parses_as_argparse_and_imports_through_its_flags() {
         &dir("shots"),
         "--golfers-dir",
         &dir("golfers"),
+        "--drills-dir",
+        &dir("drills"),
     ]);
     assert_eq!((code, err.as_str()), (Some(0), ""), "{out}");
-    assert!(
-        out.contains(&format!("\n  shots into {}\n", dir("shots"))),
-        "{out}"
-    );
+    for tree in ["shots", "drills"] {
+        assert!(
+            out.contains(&format!("\n  {tree} into {}\n", dir(tree))),
+            "{out}"
+        );
+    }
     assert!(out.ends_with("Nothing was written.\n"), "{out}");
     assert_eq!(fs::read_dir(lab.path()).unwrap().count(), 0);
 }

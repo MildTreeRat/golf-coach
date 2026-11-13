@@ -8,6 +8,10 @@
 //! here. `golf-lab` is a dev-dependency for this file alone, and never ships (`ort_reach` and
 //! `crates/lab/tests/edges.rs`).
 //!
+//! **Since M46 P21 a drill goes too** (M46's C17): strikes recorded through `record_tape_photo`'s own
+//! path, a stood-in reader answering for the pixels as `tests/drill_record.rs` stands one in, and
+//! merged at the lab by the same verb. The plan's exit 3 is the pair of drill tests at the foot.
+//!
 //! **Everything read off the six captures here is provisional: pasted copies** (rule 12). They are
 //! chat-pasted JPEGs and not the originals, by M33's decision of 2026-11-04. Those files are read and
 //! never written (rule 5), and each is copied into the scratch root first.
@@ -15,9 +19,11 @@
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+use app::api::drill::{TapeIn, TapeOutcome};
 use app::api::export::{export_sessions, export_status, ExportStatus, ExportSummary};
 use app::api::history::{
     delete_shot, set_shot_club, set_shot_intent, set_shot_mishit, MishitVerdict,
@@ -31,6 +37,7 @@ use app::api::setup::{
     create_golfer, get_state, init_state, set_bag_slot, set_state, AppState, Handedness,
     PracticeMode,
 };
+use app::drill::{record_tape_photo_with, Reading, PENDING_DIR};
 use app::{engine_versions, Dirs, DEVICE};
 use contracts::career::CareerCorpus;
 use contracts::golfer::Handedness as StoredHandedness;
@@ -38,10 +45,16 @@ use contracts::shot::ShotData;
 use contracts::Timestamp;
 use golf_lab::import_export::{import_export, Request};
 use golf_lab::shot::{shot_for, PhotoReader, Prepared, ShotOptions};
+use impact::tape::{
+    self, Crop, CropGrid, FoundLabel, LabelType, Orientation, TapeMark, TapePick, TapeReading,
+    TapeRefusal, CROP_PX_PER_MM, STRIKEPRO_IRON,
+};
+use impact::Frame;
 use screen::profile::DeviceProfile;
 use serde_json::Value;
 use storage::bundle_store::SwingBundleStore;
 use storage::corpus::read_corpus;
+use storage::drill_store::DrillStore;
 use storage::golfer_store::GolferStore;
 use storage::manifest::{Role, SwingManifest};
 use storage::shot_store::{hash_image, ShotStore};
@@ -325,6 +338,7 @@ impl Lab {
                 sessions_dir: self.dirs.sessions.clone(),
                 shots_dir: self.dirs.shots.clone(),
                 golfers_dir: self.dirs.golfers.clone(),
+                drills_dir: self.dirs.drills.clone(),
                 dry_run: false,
             },
             &mut out,
@@ -1293,4 +1307,216 @@ fn photo_in(phone: &Phone, (id, taken): (&str, &str)) -> PhotoIn {
         now: RECORDED.to_string(),
         challenge_call: None,
     }
+}
+
+// ------------------------------------------------------------------------------------------- a drill
+
+/// `aaron`'s tape drill below the data root, as the lab's report names it.
+const DRILL: &str = "drills/aaron/impact/strike_tape";
+
+static TAPE_PHOTOS: AtomicUsize = AtomicUsize::new(0);
+
+/// The iron label found, with a plain crop: what a stood-in reading carries (`tests/drill_record.rs`).
+fn found() -> FoundLabel {
+    let grid = CropGrid::new(&STRIKEPRO_IRON, CROP_PX_PER_MM);
+    let pixels = grid.width * grid.height;
+    FoundLabel {
+        corners: [[10.0, 10.0], [90.0, 10.0], [90.0, 50.0], [10.0, 50.0]],
+        crop: Crop {
+            grid,
+            frame: Frame {
+                width: grid.width,
+                height: grid.height,
+                rgb: vec![236; pixels * 3],
+            },
+            outside: vec![false; pixels],
+        },
+    }
+}
+
+/// A right-handed club with its label logo-up.
+const SIDES: Orientation = Orientation {
+    toe_printed_right: false,
+    top_line_printed_top: true,
+};
+
+/// One new mark, `h` millimetres toward the toe.
+fn read_at(h: f64) -> Reading {
+    Reading {
+        outcome: tape::TapeOutcome::Read(TapeReading {
+            found: found(),
+            orientation: SIDES,
+            new_label: false,
+            marks: vec![TapeMark {
+                centroid_px: [0.0, 0.0],
+                offset_h_mm: h,
+                offset_v_mm: 0.5,
+                area_mm2: 78.5,
+            }],
+        }),
+        sides: Some(SIDES),
+    }
+}
+
+impl Phone {
+    /// One photo of the 7 iron's label, recorded at `now` as Dart records it, the reader answering
+    /// `reading` whatever the pixels.
+    fn strike_at(&self, reading: Reading, now: &str) -> TapeOutcome {
+        let tmp = self.dirs().app.join("tmp");
+        fs::create_dir_all(&tmp).expect("tmp");
+        let n = TAPE_PHOTOS.fetch_add(1, Ordering::Relaxed);
+        let raw = tmp.join(format!("tape-{n}.rgba"));
+        fs::write(&raw, [200u8; 4 * 2 * 4]).expect("a raw photo");
+        let input = TapeIn {
+            root: self.root.clone(),
+            player_id: "aaron".to_string(),
+            club: "7i".to_string(),
+            raw_path: raw.display().to_string(),
+            width: 4,
+            height: 2,
+            captured_at: now.to_string(),
+            now: now.to_string(),
+            call: None,
+        };
+        record_tape_photo_with(input, &mut |_: &Frame,
+                                            _: Option<&Frame>,
+                                            _: &LabelType,
+                                            _| {
+            reading.clone()
+        })
+        .unwrap_or_else(|refused| panic!("{refused}"))
+    }
+
+    fn strike(&self, reading: Reading) -> TapeOutcome {
+        self.strike_at(reading, RECORDED)
+    }
+
+    fn drill(&self) -> DrillStore {
+        DrillStore::open(&self.root, "aaron").expect("a drill store")
+    }
+
+    /// The drill's files as the lab should hold them: all but `last/`, the phone's reference.
+    fn drill_files(&self) -> BTreeMap<String, Vec<u8>> {
+        let mut files = files_below(&self.dirs().drills);
+        files.retain(|name, _| !name.starts_with("aaron/impact/strike_tape/last/"));
+        files
+    }
+}
+
+impl Lab {
+    fn drill(&self) -> DrillStore {
+        DrillStore::in_drills(&self.dirs.drills, "aaron").expect("a drill store")
+    }
+}
+
+/// C16's list gains `drills/` whole, `last/` with it, and a strike waiting for the golfer's tap stays
+/// home under `.app/`, so every crop that goes is a stored strike's.
+#[test]
+fn a_drill_goes_in_the_zip_and_a_strike_waiting_for_a_tap_stays_home() {
+    let phone = Phone::new();
+    phone.strike(read_at(1.0));
+    phone.strike(Reading {
+        outcome: tape::TapeOutcome::NeedsPick(TapePick {
+            found: found(),
+            orientation: SIDES,
+        }),
+        sides: Some(SIDES),
+    });
+    let pending = phone.dirs().app.join(PENDING_DIR);
+    assert_eq!(fs::read_dir(&pending).expect("a strike waiting").count(), 2);
+
+    let names = entry_names(&phone.export());
+    let drill: Vec<&str> = names
+        .iter()
+        .filter(|name| name.starts_with("drills/"))
+        .map(String::as_str)
+        .collect();
+    assert_eq!(
+        drill,
+        [
+            format!("{DRILL}/crops/a1b2-1.jpg"),
+            format!("{DRILL}/last/7i.rgb"),
+            format!("{DRILL}/state.json"),
+            format!("{DRILL}/strikes.jsonl"),
+        ]
+    );
+    assert!(
+        names.iter().all(|name| !name.contains(PENDING_DIR)),
+        "{names:?}"
+    );
+}
+
+/// The plan's exit 3 at the desk: every strike, the state and every crop cross to the lab, `last/`
+/// does not, and a second import of the same zip changes no byte.
+#[test]
+fn a_drill_exported_and_imported_keeps_every_strike_the_state_and_every_crop() {
+    let phone = Phone::new();
+    for h in [1.0, -2.0, 3.0] {
+        phone.strike(read_at(h));
+    }
+    phone.strike(Reading {
+        outcome: tape::TapeOutcome::NotRead {
+            reason: TapeRefusal::NoLabel,
+            found: None,
+        },
+        sides: None,
+    });
+    let lab = Lab::new();
+    let names = entry_names(&phone.export());
+    let ignored = names
+        .iter()
+        .filter(|name| name.starts_with(".app/") || name.starts_with(&format!("{DRILL}/last/")))
+        .count();
+    assert_eq!(
+        ignored, 2,
+        "the photo with no label, and the last crop: {names:?}"
+    );
+
+    let imported = lab.import(&phone.zip_path());
+    imported.clean();
+    imported.says(&format!("new       {DRILL}/crops (3 file(s))"));
+    imported.says(&format!("new       {DRILL}/strikes.jsonl (4 strike(s))"));
+    imported.says(&format!("new       {DRILL}/state.json"));
+    imported.tally(names.len() - ignored, 0, 0, ignored);
+    let strikes = phone.drill().all_strikes().expect("the phone's strikes");
+    assert_eq!(strikes.strikes.len(), 4);
+    assert_eq!(lab.drill().all_strikes().expect("the lab's"), strikes);
+    assert_eq!(
+        lab.drill().state().expect("the lab's state"),
+        phone.drill().state().expect("the phone's state")
+    );
+    assert_eq!(files_below(&lab.dirs.drills), phone.drill_files());
+    assert_eq!(lab.files().len(), names.len() - ignored);
+
+    let held = lab.files();
+    let again = lab.import(&phone.zip_path());
+    again.clean();
+    again.tally(0, names.len() - ignored, 0, ignored);
+    assert_eq!(lab.files(), held, "a second import changes nothing");
+}
+
+/// The phone's next export holds the first strikes again (C16's export is cumulative): the lab
+/// appends only the new one and its crop, and the phone's newer state replaces the lab's.
+#[test]
+fn a_later_export_appends_its_new_strikes_and_its_newer_state_replaces_the_labs() {
+    let phone = Phone::new();
+    phone.strike(read_at(1.0));
+    phone.strike(read_at(-2.0));
+    let lab = Lab::new();
+    lab.import(&phone.export()).clean();
+
+    phone.strike_at(read_at(3.0), LATER);
+    let again = lab.import(&phone.export());
+    again.clean();
+    again.says(&format!(
+        "added     {DRILL}/crops (1 new file(s), 2 identical)"
+    ));
+    again.says(&format!(
+        "added     {DRILL}/strikes.jsonl (1 new strike(s), 2 held)"
+    ));
+    again.says(&format!(
+        "replaced  {DRILL}/state.json: the export's was written later ({LATER}, the store's \
+         {RECORDED})"
+    ));
+    assert_eq!(files_below(&lab.dirs.drills), phone.drill_files());
 }

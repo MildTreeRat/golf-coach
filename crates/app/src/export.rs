@@ -13,6 +13,12 @@
 //! `.app/` stays home until someone adds it to this list. The lab counts a dotted path as ignored, so
 //! the diagnostics travel in the export and never reach its stores (C7).
 //!
+//! **Since M46 P21 the list holds `drills/` too** (M46's C17), whole: each golfer's strikes, drill
+//! state, crops and each club's last crop. The lab merges the first three by its own rule and never
+//! imports `last/`, the phone's reference for the club's next photo. A strike waiting for the golfer's
+//! tap is under `.app/drill_pending/` and stays home, so every crop that goes is a stored strike's,
+//! save one whose strike a crash cut off (the M46 plan's P18 finding 6).
+//!
 //! **What a crash or the store's own working left behind does not go** ([`left_behind`]): a dotted
 //! name, which covers `sessions/.incoming/`, and a `.tmp` or `.part`. The lab would ignore each as
 //! well, by the same list, and counting them there is only noise for someone reading its tally. A
@@ -65,10 +71,10 @@ const EXTENDED_TIMESTAMP: u16 = 0x5455;
 /// The field's one flag: the modification time follows.
 const HAS_MODIFIED: u8 = 1;
 
-/// A zip holding none of the three trees is one `import-export` refuses (exit 2, "it holds no file
+/// A zip holding none of the four trees is one `import-export` refuses (exit 2, "it holds no file
 /// under"), so a phone saying so itself is better than a file handed to the share sheet that fails at
 /// the far end. Only a phone with no golfer is here, and first-run setup makes one before anything
-/// else. A golfer with no shots does export, since a session of nothing but failed reads is the one
+/// else, since a drill is a golfer's too. A golfer with no shots does export, since a session of nothing but failed reads is the one
 /// whose diagnostics are most wanted.
 const NOTHING_YET: &str = "There is nothing on this phone to export yet.";
 
@@ -151,6 +157,7 @@ fn listed(root: &Path, dirs: &Dirs) -> io::Result<BTreeMap<String, PathBuf>> {
         &dirs.sessions,
         &dirs.shots,
         &dirs.golfers,
+        &dirs.drills,
         &dirs.app.join("boxes"),
         &dirs.app.join("failed"),
     ] {
