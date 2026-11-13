@@ -117,6 +117,14 @@
 //! P6 and P7 add the builders that count them. No pose measurement reaches either, so mechanics
 //! enters no grade (Decision 12).
 //!
+//! # M46 judges a drill, and feeds nothing else
+//!
+//! [`drill`] (M46 P14) judges the impact drill over `contracts::drill`'s stored strikes: which count,
+//! which landed inside a circle, the level a baseline starts the ladder at, and the step a block of
+//! ten earns. P15 adds the pattern and the suggestions. Rust first, as [`strike`] was, with no oracle
+//! but the M46 plan's calls. A drill is untracked (ADR-034 §3), so it reads no corpus, and nothing in
+//! it reaches [`strike`]'s grades or the career half.
+//!
 //! # What this crate may not reach for
 //!
 //! ADR-030 §1's stdlib-only invariant is inherited here as *no numeric library in the scoring
@@ -131,6 +139,7 @@ pub mod checkpoints;
 pub mod club_profile;
 pub mod comparison;
 pub mod dispersion;
+pub mod drill;
 pub mod engine;
 pub mod flight;
 pub mod flight_caveats;

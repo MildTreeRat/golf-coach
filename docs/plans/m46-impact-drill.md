@@ -55,7 +55,7 @@ machine, pull on the new" as its precondition.
 | **P11** | 🪟 The mark on a fresh label | ✅ Done *(2026-11-12)* |
 | **P12** | 🪟 The newest mark: the diff against the last strike | ✅ Done *(2026-11-13)* |
 | **P13** | 🪟 The reader end to end on synthetic photos, and its gate | ✅ Done *(2026-11-13)* |
-| **P14** | 🪟 `analysis::drill`: the baseline and the ladder | ⬜ |
+| **P14** | 🪟 `analysis::drill`: the baseline and the ladder | ✅ Done *(2026-11-13)* |
 | **P15** | 🪟 `analysis::drill`: the pattern, the triggers and differential judging | ⬜ |
 | **P16** | 🪟 `feedback::drill_rules`: the sentences | ⬜ |
 | **P17** | 🪟 `storage::drill_store`: the drill history on disk | ⬜ |
@@ -2433,3 +2433,56 @@ named as skipped where they are not), then write the three records, and commit `
 13. **For P30**: `crates/impact/tests/tape_synthetic.rs` is the tape reader's end-to-end check until P29's
     real gate exists. `docs/ARCHITECTURE.md` §5, *How this project knows it works*, may name it beside the
     Full Swing gates.
+
+### P14 (2026-11-13)
+
+1. **`analysis::drill` is built**, `crates/analysis/src/drill.rs`, with `counted`, `inside`, `start_level` and
+   `judge_block`, and `crates/analysis/tests/drill.rs` has 23 tests, covering every case the section's done line
+   names. No shape in `contracts` changed, and no version key moved. The tests read the tables through
+   `ladder_radii` and assert the radii a worked case names, so P29's floor moves them rather than breaking
+   them.
+2. **What the section left open, and how P14 settled it.**
+   - **`move` is a Rust keyword**, so `BlockResult`'s field is `step: LadderStep` (`In`, `Out`, `Stay`).
+     `In` is a tighter circle, one level further into the table.
+   - **`BlockResult` has `at_tightest_in` beside `at_widest_out`**, because "moving in at the tightest level
+     stays and says so" needs its own flag. Both are false unless the count earned a move off the table.
+   - **`inside(strike, radius) -> Option<bool>`**, in `analysis::strike`'s style. A strike that was not read
+     is `None`. A strike declared off the tape is `Some(false)` at every radius, and the test walks every
+     radius of every table. The edge is inclusive, through `f64::hypot`.
+   - **`start_level(baseline, category) -> Result<Option<usize>, ContractError>`**. It is `Ok(None)` when
+     even the widest circle holds fewer than `BASELINE_HOLDS`. **P14 did not choose a level for that case**
+     (P1 finding 5).
+   - **Both functions refuse anything but exactly `BLOCK_SIZE` counted strikes**, because the steps are
+     counts, not shares. They also refuse a level past the table and a category with no ladder. The refusal
+     fields are `judge_block.block`, `judge_block.level`, `judge_block.category`, `start_level.baseline` and
+     `start_level.category`. A strike that was not read may sit in the slice and is filtered out, but it
+     never makes up the tenth.
+   - `judge_block` takes its radius from the table at `level`. It does not read the strikes' stage or their
+     stored `level_radius_mm`.
+   - Two `const` assertions guard the thresholds: `MOVE_OUT_AT < MOVE_IN_AT <= BLOCK_SIZE`, and
+     `BASELINE_HOLDS <= BLOCK_SIZE`.
+3. **For P15**:
+   - **C13's "two blocks in a row at 3 or fewer at the widest" has to be judged again from the strikes.**
+     `LevelEntry` stores only `from`, `to` and the strike ids, and an entry with `from == to == 0` cannot
+     tell a block with 3 or fewer inside from one with 4 to 6. So `suggestion` either runs `judge_block`
+     over the last two entries' strikes and reads `at_widest_out`, or it takes the `BlockResult`s as input.
+   - **Whether a recentre block at the widest level counts toward that trigger is C13's to read.** C13 does
+     not say "ladder blocks".
+   - **P1 finding 5 is still open.** `call_made(strike, call, radius)` takes its radius from its caller, so
+     P15 can leave it open too.
+4. **For P18 and P19**:
+   - **P1 finding 5 lands on the facade.** A first baseline with `start_level == None` leaves the club with no
+     level. `ClubDrillState` refuses any stage past the baseline with no level, so the facade cannot accept
+     differential practice, or answer that suggestion, without the user's word on `R`.
+   - **`judge_block` refuses a block of 11.** If a photo with two new marks lands on a block that holds 9,
+     the block reaches 11. Read literally, C10's "a block is 10 counted strikes" makes the second mark the
+     first strike of the next block. That reading is P18's to confirm, or to raise, and it holds for a
+     baseline too.
+5. **For P16**: the block line's numbers are `BlockResult`'s `inside` and `counted`. The next target is
+   `ladder_radii(category)[new_level]`. `feedback` cannot see `analysis`, so the facade copies these across as
+   plain numbers.
+6. **Verify**:
+   - `cargo test -p analysis` passes, all binaries.
+   - `cargo clippy -p analysis --all-targets -- -D warnings` and `cargo fmt --check` are clean.
+   - The doc-truth test passes (91).
+   - `cargo doc -p analysis` adds no warning from `drill.rs`.
