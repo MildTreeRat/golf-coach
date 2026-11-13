@@ -293,7 +293,10 @@ pub fn pattern<'a>(strikes: impl IntoIterator<Item = &'a TapeStrike>) -> Option<
 
 /// Which stages a pattern is taken over (C12). A `match` with no wildcard, so a stage added is a
 /// compile error here until someone decides whether its strikes were aimed at centre.
-fn in_pattern(stage: DrillStage) -> bool {
+///
+/// `pub` since P20, whose heat map counts the strikes a pattern does, so that a stage added changes
+/// both views together rather than leaving the facade with a second copy of the rule.
+pub fn in_pattern(stage: DrillStage) -> bool {
     match stage {
         DrillStage::Baseline | DrillStage::Ladder | DrillStage::Recentre => true,
         DrillStage::Differential => false,

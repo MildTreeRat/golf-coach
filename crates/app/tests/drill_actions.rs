@@ -638,6 +638,11 @@ fn drill_clubs_lists_the_bag_with_the_putter_unable_to_start() {
     let fresh = |club: &str, category: &str, label: &str| DrillClubView {
         club: club.into(),
         category: category.into(),
+        category_name: match category {
+            "driver" => "Driver",
+            _ => "Mid irons",
+        }
+        .into(),
         label_type: Some(label.into()),
         can_start: true,
         stage: None,
@@ -647,6 +652,7 @@ fn drill_clubs_lists_the_bag_with_the_putter_unable_to_start() {
     let putter = DrillClubView {
         club: "putter".into(),
         category: "putter".into(),
+        category_name: "Putter".into(),
         label_type: None,
         can_start: false,
         stage: None,

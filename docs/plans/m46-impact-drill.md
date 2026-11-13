@@ -61,7 +61,7 @@ machine, pull on the new" as its precondition.
 | **P17** | 🪟 `storage::drill_store`: the drill history on disk | ✅ Done *(2026-11-13)* |
 | **P18** | 🪟 Facade: `record_tape_photo`, the pick and "missed the tape" | ✅ Done *(2026-11-13)* |
 | **P19** | 🪟 Facade: the drill's actions (start, stage, suggestions, calls) | ✅ Done *(2026-11-13)* |
-| **P20** | 🪟 Facade: the progress views (dots, level, pattern, heat map, roll-up) | ⬜ |
+| **P20** | 🪟 Facade: the progress views (dots, level, pattern, heat map, roll-up) | ✅ Done *(2026-11-13)* |
 | **P21** | 🪟 Export carries `drills/`, and `golf-lab import-export` keeps it | ⬜ |
 | **P22** | 🍎 Swift: the photo decoded for Rust, and the tape camera's overlay | ⬜ |
 | **P23** | 🍎 The Drills page: picker, strike loop, reading card, pick and missed tape | ⬜ |
@@ -2986,3 +2986,148 @@ named as skipped where they are not), then write the three records, and commit `
    - `cargo clippy -p app --all-targets -- -D warnings` and `cargo fmt --check` are clean.
    - The doc-truth test passes (91).
    - `cargo doc -p app` shows only the `events` warning from before.
+
+### P20 (2026-11-13)
+
+1. **The progress views are built.**
+   - **`crates/app/src/api/drill.rs`**:
+     - the progress shapes `LabelPoint`, `LabelCircle`, `LabelShape`, `StrikeDot`, `PatternView`, `HeatMapView`,
+       `HistoryRow`, `ClubLevelRow` and `ProgressView`;
+     - the calls `drill_progress` and `category_progress`, each a one-line call;
+     - the card's geometry (P18 finding 5): `TapeOutcome` gained `label` and `circle`, and `TapeStrikeCard`
+       gained `dot`;
+     - `DrillClubView` gained `category_name` (P19 finding 3).
+
+     The module doc gained *Drawing the label*.
+   - **`crates/app/src/drill.rs`**:
+     - `club_progress`, `category_progress`, `progress`, `heat_map`, `history`, `face_on` and `Record`;
+     - the geometry, `across`, `circle_about` and `label_shape`;
+     - `golfer_hand`, now shared with `Drill::open`;
+     - `HEAT_CELL_MM` (C21's 2) and `HEAT_SIGMA_MM` (C21's 3, provisional), both `pub`.
+
+     The module doc gained *The progress views*, with the rules below.
+   - **`crates/app/tests/drill_progress.rs`** has 11 tests. Every photo is stood in, as in `drill_actions.rs`.
+     They cover:
+     - a club at 0, 9, 10 and 20 strikes;
+     - the heat map's peak, exactly 1 and in the cell the strikes landed in;
+     - a left-handed golfer;
+     - differential strikes, drawn as dots and kept out of the pattern and the heat map;
+     - only aimed strikes counting toward what each still needs;
+     - a category over two clubs;
+     - a pooled strike stored out of photo order;
+     - the card's dot on a logo-down crop, its circle, and a pick's dot as the tap;
+     - a line left out of the record;
+     - the refusals.
+   - **Seven mutations were tried by hand, and each one was caught**:
+     - `face_on` flipped;
+     - differential strikes in the heat map;
+     - the card's dot drawn face-on rather than through its photo's sides;
+     - a circle's radius in millimetres rather than pixels;
+     - the heat map not normalised;
+     - a history row's `from` and `to` swapped;
+     - the pool left unsorted.
+   - **Outside the Touch line**:
+     - `feedback::drill_rules` gained `category_name`, `TOE_SIDE`, `HEEL_SIDE`, `NO_LEVEL` and
+       `skipped_lines`. `tests/drill_rules.rs` pins each and adds them to both sweeps (27 tests).
+     - `analysis::drill::in_pattern` is now `pub`, so the heat map counts through the pattern's own rule
+       rather than a copy of it.
+     - The two `DrillClubView` literals in `drill_actions.rs` gained `category_name`.
+   - No shape in `contracts` changed, no version key moved, and no dependency was added.
+2. **What the section left open, and how P20 settled it.**
+   - **One coordinate system, two orientations.** Every shape is a share of the crop: 0 to 1 from the left edge
+     of the label's box, and 0 to 1 down from its top edge. That is the frame a tap is read in, through the
+     crop's own rounded grid. A circle is a `LabelCircle` with `rx` and `ry`, its radius as a share of each
+     side, so it is round in a box of `LabelShape::aspect`, the grid's width over its height.
+     - **The card** draws each strike through its own photo's sides, so its dot sits on its mark on the crop.
+       A pick's dot is the tap, to 1e-12 (tested).
+     - **A progress view** pools many photos, so it draws every strike through one orientation, `face_on`: the
+       label stuck logo-up on the golfer's club and seen face-on, shaft up. The toe is on the left for a
+       right-handed golfer (C4). `left_side` and `right_side` hand Dart the words ("Toe", "Heel").
+     - So a strike on a label stuck logo-down is mirrored between the two: on the card it sits where the crop
+       shows it, and in the view where it sat on the face (tested).
+   - **The card's circle** is the one the photo was hit at: its first stored strike's `level_radius_mm`, or its
+     waiting strike's. It is `None` in the baseline. When two marks close a block and open the next, the circle
+     is the first's, and the second's verdict names its own radius in words.
+   - **The dots are every placed strike**, read or picked, from the club's whole history, oldest first, with
+     differential strikes included and marked by `stage`. There is no window.
+   - **The heat map counts what C12's pattern counts**: placed strikes aimed at centre, through
+     `analysis::drill::in_pattern`. Unlike the pattern it takes all of them, not the last 20. It shows from the
+     same count, and `pattern_needs` and `heat_map_needs` both take that count. A differential strike is
+     aimed off centre on purpose, so it is in neither.
+     - The grid is the label's box in 2 mm cells, rounded up: 37 by 20 on the iron label. The last row and
+       column run past the box, so the painter clips to the outline.
+     - Each cell is the sum of a Gaussian about every strike at the cell's centre, divided by the peak cell.
+       So the peak is exactly 1, a value over itself.
+   - **R50 comes only with the pattern** (`r50_line`). The view shows no baseline R50, since the baseline's
+     tip already shows it (P18, P15 finding 4).
+   - **A club's view** takes the club's strikes in store order. For one club that is photo order, and it is
+     the order the drill judged by, so the view's pattern is the one `suggestion` saw. A club with no drill
+     state answers an empty view showing `NO_LEVEL_YET`, rather than an error.
+   - **History rows**:
+     - `date` is `LevelEntry::at.date_ymd()`, at the phone's offset when the block was judged.
+     - `stage` is the stage of the block's first stored strike (a judged block holds one stage). It is
+       `None` when none of the block's strikes can be read any more.
+     - `from` and `to` are `radius_text` through today's table, and `NO_LEVEL` ("no level") for a level that
+       is absent.
+   - **A category** (D10):
+     - **Its clubs** are those of the category with a drill state, in bag order (`ClubId::ALL`), in the bag
+       today or not. Their strikes are in the pool, so the list matches the dots. That settles P19 finding
+       3's question.
+     - **Its strikes** are those whose `category_of(club)` is the category, sorted stably by `captured_at`. A
+       strike waiting for a tap is stored when it is resolved, so the store's order can put it after another
+       club's photo (P18 finding 6), and the pattern's window should read photo order (tested).
+     - **It has no circle, level line or history of its own.** Each club's level is in `clubs`. The title is
+       `category_name` ("Mid irons").
+   - **`record_note`**: `skipped_lines(StrikeLog::skipped)`, counted over the whole file, in both views. The
+     view names the lines it left out rather than dropping them silently (P17 finding 3).
+   - **The refusals**:
+     - a club or category no label fits (`NO_LABEL_FITS`);
+     - a category that is not one;
+     - a golfer not on this phone;
+     - a state that cannot be read (`UNREADABLE_PROGRESS`, P17 finding 4). It is never shown as no progress.
+   - **Both views hold `one_writer()`**, as `start` does, so that neither sees half of a strike being stored.
+     Both write nothing (tested on a fresh club).
+3. **For P22**: the codegen binds what P20 added to `crates/app/src/api/drill.rs`: nine structs, two
+   functions, and fields on `TapeOutcome`, `TapeStrikeCard` and `DrillClubView`. `HeatMapView::rows` is
+   `Vec<Vec<f64>>`, the first nested `Vec` in `api`. If the codegen refuses it, flatten it there to `values`
+   with a `columns` count. Run `codegen_check.sh` first, as the Verify section says.
+4. **For P23**:
+   - **The card**: draw `TapeOutcome::label` over the crop at `crop_path`, a `TapeStrikeCard::dot` for each
+     strike, and `circle` about `label.cross`. With no crop, the label is drawn alone. A dot is `None` for a
+     strike off the tape or not read.
+   - **P20 did not add a waiting strike to `DrillView`** (P19 finding 3's offer). P23's section does not ask for
+     a resumed pick, and nothing is lost without it: the club's next photo stores the strike as `not_picked`
+     or `no_new_mark`. If P23 wants the waiting crop shown again on resume, add `pending_id`, `crop_path` and
+     the status to `DrillView`. Find the club's record under `.app/drill_pending/`, as `discard_pending` does,
+     and regenerate the bindings on the Mac.
+5. **For P25**:
+   - **What to draw**:
+     - draw the label in a box of `aspect`;
+     - draw `outline` and `cross`, then the club's `circle` when there is one;
+     - draw the dots, hollow when `stage` is `Differential`;
+     - draw the pattern's `centre` and its `spread` circle;
+     - draw the heat map's cells at `cell_width` by `cell_height`, clipped to the outline;
+     - put `left_side` and `right_side` at the label's ends.
+   - **Where the words go**: each absence (`pattern_needs`, `heat_map_needs`, `record_note`) shows as given.
+     `history` rows show for a club, and `clubs` rows for a category.
+   - **A long history draws many dots.** The view sends every placed strike, so fading old ones is a layout
+     choice. Any rule about which strikes to show belongs in Rust.
+6. **For P29**:
+   - **`HEAT_SIGMA_MM` is provisional.** Its doc says what revises it.
+   - **History rows read levels through today's table.** The floor cut, which P29 may apply, removes the
+     tightest radii. Then a history entry whose level lies past the new end shows "no level". If that
+     matters, give a row the radius its block was hit at, which `TapeStrike::level_radius_mm` holds for every
+     stage but the baseline.
+7. **For P30**: ADR-037 and ARCHITECTURE should gain:
+   - the two orientations in one frame (item 2);
+   - the heat map counting what the pattern counts;
+   - a category pooling every club with a drill state, in photo order.
+8. **Still failing on Windows**: `bay_bars`' `a_bars_file_that_does_not_say_is_refused_rather_than_guessed_at`
+   (P18 finding 10). P20 touches neither file involved.
+9. **Verify**:
+   - `cargo test -p app -p analysis -p feedback --no-fail-fast` passes but for item 8 (`drill_progress`: 11;
+     `drill_actions`: 9; `drill_record`: 18; `feedback`'s `drill_rules`: 27; `analysis`' `drill`: 42).
+   - `cargo clippy -p app -p analysis -p feedback --all-targets -- -D warnings` and `cargo fmt --check` are
+     clean.
+   - The doc-truth test passes (91).
+   - `cargo doc -p app -p feedback` shows only the warnings from before (`events`, and `rules.rs`'s four).

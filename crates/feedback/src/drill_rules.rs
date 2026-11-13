@@ -442,6 +442,49 @@ pub fn heat_map_needs(placed: usize) -> Option<String> {
     needs("The heat map", placed)
 }
 
+/// The two ends of the label as the progress view draws them, heel to toe: the toe's word and the
+/// heel's. Which end is on which side is the facade's, from the golfer's hand (C4). [M46 P20]
+pub const TOE_SIDE: &str = "Toe";
+/// See [`TOE_SIDE`].
+pub const HEEL_SIDE: &str = "Heel";
+
+/// A level history row's level before a club's first baseline set one: the `from` of that
+/// baseline's row. A row's levels are otherwise [`radius_text`]. [M46 P20]
+pub const NO_LEVEL: &str = "no level";
+
+/// A club category as the app names it, a view's title: "Mid irons". The putter and `all` have no
+/// ladder and are never a drill view's title, and are named all the same, so that a `match` with no
+/// wildcard makes a category added a compile error here. [M46 P20, the plan's P19 finding 3]
+pub const fn category_name(category: ClubCategory) -> &'static str {
+    match category {
+        ClubCategory::Driver => "Driver",
+        ClubCategory::Wood => "Fairway woods",
+        ClubCategory::Hybrid => "Hybrids",
+        ClubCategory::LongIron => "Long irons",
+        ClubCategory::MidIron => "Mid irons",
+        ClubCategory::ShortIron => "Short irons",
+        ClubCategory::Wedge => "Wedges",
+        ClubCategory::Putter => "Putter",
+        ClubCategory::All => "All clubs",
+    }
+}
+
+/// What a view says when the drill's record held lines it could not read (`storage::drill_store`'s
+/// `StrikeLog::skipped`: a torn write, a hand edit or a merge), or `None` when it held none. The
+/// strikes on those lines are not in the view, and a view that left them out silently would show
+/// fewer strikes than were hit. "1 line of the drill's record could not be read and is left out."
+/// [M46 P20, the plan's P17 finding 3]
+pub fn skipped_lines(skipped: usize) -> Option<String> {
+    if skipped == 0 {
+        return None;
+    }
+    let lines = plural(skipped, "line", "lines");
+    let verb = if skipped == 1 { "is" } else { "are" };
+    Some(format!(
+        "{lines} of the drill's record could not be read and {verb} left out."
+    ))
+}
+
 fn needs(what: &str, placed: usize) -> Option<String> {
     // A constant of 10, so the conversion cannot fail; `strike` keeps it `i64` because it
     // compares with a count of rows there.

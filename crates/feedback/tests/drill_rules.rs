@@ -17,12 +17,12 @@ use contracts::face_impact::TAPE_READER_VERSION;
 use contracts::intent::ClubCategory;
 use contracts::{Timestamp, Validate};
 use feedback::drill_rules::{
-    baseline_progress, baseline_tip, call_name, call_verdict, differential_progress,
+    baseline_progress, baseline_tip, call_name, call_verdict, category_name, differential_progress,
     differential_result, differential_suggestion, fresh_baseline_suggestion, heat_map_needs,
     inside_verdict, ladder_progress, ladder_result, level_line, offset_line, pattern_centre_line,
     pattern_needs, position_line, r50_line, radius_text, recentre_progress, recentre_result,
-    recentre_suggestion, return_to_ladder_suggestion, spread_line, stage_name, DifferentialWhy,
-    DEAD_CENTRE_MM, NO_LABEL_FITS, NO_LEVEL_YET,
+    recentre_suggestion, return_to_ladder_suggestion, skipped_lines, spread_line, stage_name,
+    DifferentialWhy, DEAD_CENTRE_MM, HEEL_SIDE, NO_LABEL_FITS, NO_LEVEL, NO_LEVEL_YET, TOE_SIDE,
 };
 
 const INSTALL: &str = "3fa2";
@@ -471,6 +471,42 @@ fn the_pattern_and_heat_map_say_how_many_more_they_need_until_they_show() {
     assert_eq!(heat_map_needs(10), None);
 }
 
+/// Each category's title, and the putter and `all` named though no drill view is titled by them. The
+/// side words and a history row's absent level are lines. [M46 P20]
+#[test]
+fn every_category_has_a_title_and_the_sides_and_no_level_are_lines() {
+    let names: Vec<&str> = EVERY_CATEGORY.iter().map(|c| category_name(*c)).collect();
+    assert_eq!(
+        names,
+        [
+            "Driver",
+            "Fairway woods",
+            "Hybrids",
+            "Long irons",
+            "Mid irons",
+            "Short irons",
+            "Wedges",
+            "Putter",
+            "All clubs"
+        ]
+    );
+    assert_eq!((TOE_SIDE, HEEL_SIDE, NO_LEVEL), ("Toe", "Heel", "no level"));
+}
+
+/// No note for a record read whole, and the count, singular and plural, for one that was not.
+#[test]
+fn a_record_with_lines_left_out_says_how_many() {
+    assert_eq!(skipped_lines(0), None);
+    assert_eq!(
+        skipped_lines(1).as_deref(),
+        Some("1 line of the drill's record could not be read and is left out.")
+    );
+    assert_eq!(
+        skipped_lines(3).as_deref(),
+        Some("3 lines of the drill's record could not be read and are left out.")
+    );
+}
+
 // --- The sweeps -------------------------------------------------------------------------------------
 
 /// Every line, with inputs whose expansions run long, and every radius of every table.
@@ -482,7 +518,14 @@ fn every_line() -> Vec<String> {
         -0.666_666_7,
         23.999_99,
     ];
-    let mut lines = vec![NO_LEVEL_YET.to_string(), NO_LABEL_FITS.to_string()];
+    let mut lines = vec![
+        NO_LEVEL_YET.to_string(),
+        NO_LABEL_FITS.to_string(),
+        NO_LEVEL.to_string(),
+        TOE_SIDE.to_string(),
+        HEEL_SIDE.to_string(),
+    ];
+    lines.extend(EVERY_CATEGORY.iter().map(|c| category_name(*c).to_string()));
     for &h in &awkward {
         for &v in &awkward {
             lines.push(offset_line(h, v));
@@ -568,6 +611,8 @@ fn every_sentence() -> Vec<String> {
         fresh_baseline_suggestion(8, 10),
         pattern_needs(3).unwrap(),
         heat_map_needs(9).unwrap(),
+        skipped_lines(1).unwrap(),
+        skipped_lines(3).unwrap(),
     ]);
     sentences.extend(
         EVERY_REASON

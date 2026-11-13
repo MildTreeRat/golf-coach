@@ -2,12 +2,13 @@
 //! strikes it shows, stored with a crop each, the club's block judged when it fills, and the golfer's
 //! two declarations, a tap on the new mark and "missed the tape" [M46 P18]. Then the drill's actions:
 //! the clubs it runs on, a club's drill opened, a suggestion answered and a stage changed [M46 P19].
+//! Then the progress views, a club's and its category's, and the card's geometry [M46 P20].
 //!
 //! This adds no reading, judging, storing or wording of its own. The photo is read by
 //! `impact::tape::read_tape`, a block is judged by `analysis::drill`, the drill is stored by
 //! `storage::drill_store`, and every word is `feedback::drill_rules`' or `TapeNotRead::sentence`'s.
 //! What is the phone's is the order they run in, the counters the ids come from, the strikes that wait
-//! for the golfer, and the answer Dart gets. `api::drill` holds the shapes and three one-line calls,
+//! for the golfer, and the answer Dart gets. `api::drill` holds the shapes and the one-line calls,
 //! outside this module because the codegen binds every `pub` item in `api` (the M38 plan's rule 7).
 //!
 //! # The photo (C16)
@@ -126,6 +127,30 @@
 //! as they stood when the suggestion was made: the pattern over the club's strikes through the last
 //! judged block's last, at the club's level, which no later strike or change can have moved while the
 //! suggestion waits.
+//!
+//! # The progress views (C20, C21, D10, D13, the plan's P20)
+//!
+//! `drill_progress` and `category_progress` read the record strictly and write nothing. They hold
+//! `one_writer()` as `start` does, so a view never sees half of a strike being stored.
+//!
+//! - **Two frames, one coordinate system.** Every shape is a share of the crop, the frame a tap is
+//!   read in. The card draws a strike through its photo's own sides, so its dot sits on its mark on
+//!   the crop, which shows the label as printed. A progress view pools many photos, so it draws every
+//!   strike through one orientation, `face_on`: the label stuck logo-up on the golfer's club and seen
+//!   face-on, the toe on the left for a right-handed golfer (C4). A strike on a label stuck logo-down
+//!   is drawn on the card where the crop shows it, and in a view where it sat on the face.
+//! - **The dots are every placed strike**, differential ones included and marked by their stage. The
+//!   pattern is `analysis::drill::pattern`'s, over the last 20 aimed at centre. The heat map is drawn
+//!   from every strike the pattern would take before its window, through the same
+//!   `analysis::drill::in_pattern`, so a differential strike is in neither. The heat map shows from
+//!   the pattern's count, and each view's "needs N more" counts those strikes.
+//! - **A category pools the strikes of every club in it with a drill state**, in or out of the bag
+//!   today, since those strikes are in the pool, and lists each club's level. Pooled strikes are put
+//!   in the order their photos were taken, because a strike waiting for a tap is stored when it is
+//!   resolved, which can come after another club's photo. A club's own strikes are in store order,
+//!   which for one club is photo order, and is the order the drill judged by.
+//! - **Lines the record could not read** are left out and named (`record_note`), never dropped
+//!   silently (the plan's P17 finding 3).
 
 use std::collections::BTreeMap;
 use std::fs;
@@ -133,8 +158,8 @@ use std::io;
 use std::path::{Path, PathBuf};
 
 use analysis::drill::{
-    call_made, inside, judge_block, judge_differential, judge_recentre, level_or_widest,
-    off_centre, pattern, start_level, suggestion,
+    call_made, in_pattern, inside, judge_block, judge_differential, judge_recentre,
+    level_or_widest, off_centre, pattern, start_level, suggestion,
 };
 use analysis::stats;
 use contracts::club::{category_of, ClubId};
@@ -148,11 +173,12 @@ use contracts::golfer::Handedness as GolferHand;
 use contracts::intent::ClubCategory;
 use contracts::Timestamp;
 use feedback::drill_rules::{
-    baseline_progress, baseline_tip, call_verdict, differential_progress, differential_result,
-    differential_suggestion, fresh_baseline_suggestion, inside_verdict, ladder_progress,
-    ladder_result, level_line, position_line, recentre_progress, recentre_result,
-    recentre_suggestion, return_to_ladder_suggestion, stage_name, DifferentialWhy, NO_LABEL_FITS,
-    NO_LEVEL_YET,
+    baseline_progress, baseline_tip, call_verdict, category_name, differential_progress,
+    differential_result, differential_suggestion, fresh_baseline_suggestion, heat_map_needs,
+    inside_verdict, ladder_progress, ladder_result, level_line, pattern_centre_line, pattern_needs,
+    position_line, r50_line, radius_text, recentre_progress, recentre_result, recentre_suggestion,
+    return_to_ladder_suggestion, skipped_lines, spread_line, stage_name, DifferentialWhy,
+    HEEL_SIDE, NO_LABEL_FITS, NO_LEVEL, NO_LEVEL_YET, TOE_SIDE,
 };
 use impact::tape::{
     self, CategoryLabel, CropGrid, Handedness, LabelType, Orientation, TapeRefusal, CROP_PX_PER_MM,
@@ -165,8 +191,9 @@ use storage::golfer_store::GolferStore;
 use storage::StoreError;
 
 use crate::api::drill::{
-    DrillCall, DrillClubView, DrillStage as StageView, DrillView, TapeIn, TapeOutcome, TapeStatus,
-    TapeStrikeCard,
+    ClubLevelRow, DrillCall, DrillClubView, DrillStage as StageView, DrillView, HeatMapView,
+    HistoryRow, LabelCircle, LabelPoint, LabelShape, PatternView, ProgressView, StrikeDot, TapeIn,
+    TapeOutcome, TapeStatus, TapeStrikeCard,
 };
 use crate::record::one_writer;
 use crate::{club_id, parse_now, state, Dirs};
@@ -272,6 +299,7 @@ pub fn record_tape_photo_with(photo: TapeIn, read: &mut Reader<'_>) -> Result<Ta
     let mut plan = Plan::default();
     let status = match reading.outcome {
         tape::TapeOutcome::Read(seen) => {
+            plan.sides = Some(seen.orientation);
             let crop = jpeg(&seen.found.crop.frame, CROP_JPEG_QUALITY)?;
             for (at, mark) in seen.marks.iter().enumerate() {
                 let id = issue(&mut next, &drill.install);
@@ -421,6 +449,7 @@ fn resolve(
     }
 
     strike.not_read = None;
+    let mut drawn = None;
     let status = match declared {
         Declared::Pick([x, y]) => {
             let sides = pending.sides.ok_or(
@@ -430,6 +459,7 @@ fn resolve(
             let grid = CropGrid::new(drill.label, CROP_PX_PER_MM);
             let printed = grid.to_label_mm([x * grid.width as f64, y * grid.height as f64]);
             let [h, v] = sides.orientation().to_reading_mm(printed);
+            drawn = Some(sides.orientation());
             strike.offset_h_mm = Some(h);
             strike.offset_v_mm = Some(v);
             strike.source = Some(StrikeSource::Picked);
@@ -464,6 +494,7 @@ fn resolve(
     }
     let mut plan = Plan {
         resolved: Some(pending_id.to_string()),
+        sides: drawn,
         ..Plan::default()
     };
     drill.land(&mut next, &mut club_strikes, &mut plan, strike, crop, now)?;
@@ -491,14 +522,7 @@ impl Drill {
         let install = state::read(root)
             .install_id
             .ok_or("this phone has no install id yet, so no strike can be named")?;
-        let golfer = GolferStore::new(Dirs::of(root).golfers)
-            .get(player_id)
-            .ok_or_else(|| format!("golfer '{player_id}' is not on this phone"))?;
-        // `impact` cannot see `contracts`, so the two spellings of a hand meet here (P10 finding 10).
-        let hand = match golfer.handedness {
-            GolferHand::Right => Handedness::Right,
-            GolferHand::Left => Handedness::Left,
-        };
+        let hand = golfer_hand(root, player_id)?;
         let category = category_of(club);
         let label = tape_label(category).ok_or_else(|| format!("{NO_LABEL_FITS} ({club})."))?;
         let store = DrillStore::open(root, player_id).map_err(|refused| refused.to_string())?;
@@ -800,6 +824,13 @@ impl Drill {
         status: TapeStatus,
     ) -> Result<TapeOutcome, String> {
         let club = self.club_state(next);
+        let grid = CropGrid::new(self.label, CROP_PX_PER_MM);
+        // The circle the photo was hit at: its first stored strike's, or its waiting strike's.
+        let hit_at = match (plan.strikes.first(), &plan.pending) {
+            (Some((strike, _)), _) => strike.level_radius_mm,
+            (None, Some((pending, _))) => pending.strike.level_radius_mm,
+            (None, None) => None,
+        };
         let suggestion = match plan.judged {
             Some(_) => self.suggestion_line(club, club_strikes)?,
             None => None,
@@ -821,7 +852,7 @@ impl Drill {
             strikes: plan
                 .strikes
                 .iter()
-                .map(|(strike, _)| card(strike))
+                .map(|(strike, _)| card(strike, plan.sides, &grid))
                 .collect(),
             pending_id: plan
                 .pending
@@ -833,6 +864,8 @@ impl Drill {
             block_line: self.block_line(club, club_strikes),
             block_result: plan.judged.clone(),
             suggestion,
+            label: label_shape(self.label),
+            circle: hit_at.map(|radius| circle_about(&grid, [0.0, 0.0], radius)),
         })
     }
 
@@ -1002,6 +1035,7 @@ pub(crate) fn clubs(root: &str, player_id: &str) -> Result<Vec<DrillClubView>, S
             DrillClubView {
                 club: club.as_str().to_string(),
                 category: category.as_str().to_string(),
+                category_name: category_name(category).to_string(),
                 label_type: label.map(|label| label.id.to_string()),
                 can_start: label.is_some(),
                 stage: held.map(|held| stage_view(held.stage)),
@@ -1149,10 +1183,13 @@ struct Plan {
     reason: Option<TapeNotRead>,
     /// The result of a block this call finished.
     judged: Option<String>,
+    /// Which way the club lay across the crop of the strikes this call stored, when a reading or a
+    /// tap placed them: what draws their dots on it.
+    sides: Option<Orientation>,
 }
 
-/// One strike on the card.
-fn card(strike: &TapeStrike) -> TapeStrikeCard {
+/// One strike on the card, its dot drawn on the crop through `sides`.
+fn card(strike: &TapeStrike, sides: Option<Orientation>, grid: &CropGrid) -> TapeStrikeCard {
     let verdict = match (strike.stage, strike.level_radius_mm) {
         (DrillStage::Differential, Some(radius)) => strike
             .call
@@ -1166,6 +1203,9 @@ fn card(strike: &TapeStrike) -> TapeStrikeCard {
         strike_id: strike.strike_id.clone(),
         position: position_line(strike),
         verdict,
+        dot: sides
+            .zip(strike.position())
+            .map(|(sides, (h, v))| across(grid, sides.to_printed_mm([h, v]))),
     }
 }
 
@@ -1294,6 +1334,340 @@ fn jpeg(frame: &Frame, quality: u8) -> Result<Vec<u8>, String> {
         .encode(&frame.rgb, width, height, jpeg_encoder::ColorType::Rgb)
         .map_err(|failed| format!("could not encode an image as JPEG: {failed}"))?;
     Ok(bytes)
+}
+
+/// The golfer's hand, as `impact` spells it, or a refusal for a golfer not on this phone.
+fn golfer_hand(root: &Path, player_id: &str) -> Result<Handedness, String> {
+    let golfer = GolferStore::new(Dirs::of(root).golfers)
+        .get(player_id)
+        .ok_or_else(|| format!("golfer '{player_id}' is not on this phone"))?;
+    // `impact` cannot see `contracts`, so the two spellings of a hand meet here (P10 finding 10).
+    Ok(match golfer.handedness {
+        GolferHand::Right => Handedness::Right,
+        GolferHand::Left => Handedness::Left,
+    })
+}
+
+// --- Drawing the label (C20) [M46 P20] ---------------------------------------------------------------
+
+/// A point in the label's printed frame, millimetres about the cross, as a point across the crop:
+/// `api::drill`'s frame, the one [`pick`] reads a tap in. Through the crop's own grid rather than the
+/// label's measured size, because the crop is that grid's pixels, rounded, and a tap is a share of them.
+fn across(grid: &CropGrid, printed_mm: [f64; 2]) -> LabelPoint {
+    let [x, y] = grid.to_crop_px(printed_mm);
+    LabelPoint {
+        x: x / grid.width as f64,
+        y: y / grid.height as f64,
+    }
+}
+
+/// A circle of `radius_mm` about a point in the printed frame, as [`LabelCircle`] spans it.
+fn circle_about(grid: &CropGrid, centre_mm: [f64; 2], radius_mm: f64) -> LabelCircle {
+    let centre = across(grid, centre_mm);
+    let px = radius_mm * grid.px_per_mm;
+    LabelCircle {
+        x: centre.x,
+        y: centre.y,
+        rx: px / grid.width as f64,
+        ry: px / grid.height as f64,
+    }
+}
+
+/// A label type's outline and cross, across its crop.
+fn label_shape(label: &LabelType) -> LabelShape {
+    let grid = CropGrid::new(label, CROP_PX_PER_MM);
+    LabelShape {
+        label_type: label.id.to_string(),
+        aspect: grid.width as f64 / grid.height as f64,
+        outline: label
+            .outline_mm
+            .iter()
+            .map(|&point| across(&grid, point))
+            .collect(),
+        cross: across(&grid, [0.0, 0.0]),
+    }
+}
+
+// --- The progress views (C20, C21, D10, D13) [M46 P20] ---------------------------------------------
+
+/// The heat map's cells, millimetres a side: C21's.
+pub const HEAT_CELL_MM: f64 = 2.0;
+
+/// The heat map's Gaussian kernel, its standard deviation in millimetres. **C21's, provisional**: about
+/// one and a half cells, so a lone strike shows as a spot a few cells wide rather than one cell. What
+/// revises it is P25's first look at a real heat map, and P29's measured reading error, since a
+/// kernel narrower than the reader resolves draws a precision the readings do not have.
+pub const HEAT_SIGMA_MM: f64 = 3.0;
+
+/// The refusal for a progress view over a drill state that cannot be read (the plan's P17 finding
+/// 4): never shown as no progress.
+const UNREADABLE_PROGRESS: &str =
+    "The drill's record on this phone cannot be read, so its progress cannot be shown.";
+
+/// What a progress view reads, read strictly and once: the golfer's hand, the drill's state, and
+/// every stored strike in the order it was stored.
+struct Record {
+    hand: Handedness,
+    state: Option<DrillState>,
+    strikes: Vec<TapeStrike>,
+    /// `StrikeLog::skipped`: lines that could not be read, counted over the whole file.
+    skipped: usize,
+}
+
+impl Record {
+    fn read(root: &Path, player_id: &str) -> Result<Record, String> {
+        let hand = golfer_hand(root, player_id)?;
+        let store = DrillStore::open(root, player_id).map_err(|refused| refused.to_string())?;
+        let state = store
+            .state()
+            .map_err(|unreadable| format!("{UNREADABLE_PROGRESS} {unreadable}"))?;
+        let log = store.all_strikes().map_err(|failed| failed.to_string())?;
+        Ok(Record {
+            hand,
+            state,
+            strikes: log.strikes,
+            skipped: log.skipped,
+        })
+    }
+}
+
+/// How a progress view lays the label: stuck logo-up on the golfer's club and seen face-on, shaft
+/// up, so the toe is on the left for a right-handed golfer (C4). A strike's reading frame is the same
+/// whichever way up its label was stuck (`impact::tape`'s module doc), so drawing every strike
+/// through this one orientation puts it where it sat on its own label, on a label drawn as printed.
+///
+/// The golfer's hand rather than the reader's sides, because a view pools strikes from many photos
+/// and needs one picture for all of them, and the hand is the one thing they share.
+fn face_on(hand: Handedness) -> Orientation {
+    Orientation {
+        toe_printed_right: hand == Handedness::Left,
+        top_line_printed_top: true,
+    }
+}
+
+/// The view every progress view starts from: `strikes` on `label`, with their pattern and heat map.
+/// The club's circle, level and history, or the category's clubs, are its caller's to add.
+///
+/// `strikes` are in the order the pattern's window reads them, oldest first.
+fn progress(
+    title: String,
+    label: &LabelType,
+    hand: Handedness,
+    strikes: &[&TapeStrike],
+    skipped: usize,
+) -> ProgressView {
+    let grid = CropGrid::new(label, CROP_PX_PER_MM);
+    let drawn = face_on(hand);
+    let printed = |(h, v): (f64, f64)| drawn.to_printed_mm([h, v]);
+    let dots = strikes
+        .iter()
+        .filter_map(|strike| {
+            Some(StrikeDot {
+                at: across(&grid, printed(strike.position()?)),
+                stage: stage_view(strike.stage),
+            })
+        })
+        .collect();
+    // The strikes the pattern takes before its window: placed, and aimed at centre (C12). The heat
+    // map is drawn from every one of them, and both show from the same count (C21).
+    let aimed: Vec<[f64; 2]> = strikes
+        .iter()
+        .filter(|strike| in_pattern(strike.stage))
+        .filter_map(|strike| strike.position())
+        .map(printed)
+        .collect();
+    let pattern = pattern(strikes.iter().copied()).map(|found| {
+        let centre = printed(found.centre);
+        PatternView {
+            centre: across(&grid, centre),
+            spread: circle_about(&grid, centre, found.spread),
+            centre_line: pattern_centre_line(found.centre),
+            spread_line: spread_line(found.spread),
+            r50_line: r50_line(found.r50),
+        }
+    });
+    let heat_map_needs = heat_map_needs(aimed.len());
+    let heat_map = match heat_map_needs {
+        Some(_) => None,
+        None => heat_map(&grid, label, &aimed),
+    };
+    let (left_side, right_side) = if drawn.toe_printed_right {
+        (HEEL_SIDE, TOE_SIDE)
+    } else {
+        (TOE_SIDE, HEEL_SIDE)
+    };
+    ProgressView {
+        title,
+        label: label_shape(label),
+        left_side: left_side.to_string(),
+        right_side: right_side.to_string(),
+        circle: None,
+        level_line: None,
+        dots,
+        pattern,
+        pattern_needs: pattern_needs(aimed.len()),
+        heat_map,
+        heat_map_needs,
+        history: Vec::new(),
+        clubs: Vec::new(),
+        record_note: skipped_lines(skipped),
+    }
+}
+
+/// C21's heat map of `strikes`, printed-frame millimetres: each cell's sum of a Gaussian of
+/// [`HEAT_SIGMA_MM`] about every strike, at the cell's centre, over the peak cell's, so the densest
+/// cell is exactly 1 (a value over itself). `None` with no strike, whose peak is 0.
+fn heat_map(grid: &CropGrid, label: &LabelType, strikes: &[[f64; 2]]) -> Option<HeatMapView> {
+    let columns = (label.width_mm / HEAT_CELL_MM).ceil() as usize;
+    let rows = (label.height_mm / HEAT_CELL_MM).ceil() as usize;
+    let spread = 2.0 * HEAT_SIGMA_MM * HEAT_SIGMA_MM;
+    let density: Vec<Vec<f64>> = (0..rows)
+        .map(|row| {
+            let y = grid.top_mm - (row as f64 + 0.5) * HEAT_CELL_MM;
+            (0..columns)
+                .map(|column| {
+                    let x = grid.left_mm + (column as f64 + 0.5) * HEAT_CELL_MM;
+                    strikes
+                        .iter()
+                        .map(|&[sx, sy]| (-((x - sx).powi(2) + (y - sy).powi(2)) / spread).exp())
+                        .sum()
+                })
+                .collect()
+        })
+        .collect();
+    let peak = density.iter().flatten().copied().fold(0.0, f64::max);
+    if !(peak.is_finite() && peak > 0.0) {
+        return None;
+    }
+    let cell_px = HEAT_CELL_MM * grid.px_per_mm;
+    Some(HeatMapView {
+        rows: density
+            .into_iter()
+            .map(|row| row.into_iter().map(|value| value / peak).collect())
+            .collect(),
+        cell_width: cell_px / grid.width as f64,
+        cell_height: cell_px / grid.height as f64,
+    })
+}
+
+/// A club's judged blocks as rows, each level as its circle (the plan's P16 finding 5). A level is
+/// read through today's table, as every level line is.
+fn history(
+    held: &ClubDrillState,
+    strikes: &[&TapeStrike],
+    category: ClubCategory,
+) -> Vec<HistoryRow> {
+    let radii = ladder_radii(category);
+    let circle = |level: Option<usize>| match level.and_then(|level| radii.get(level)) {
+        Some(&radius) => radius_text(radius),
+        None => NO_LEVEL.to_string(),
+    };
+    held.history
+        .iter()
+        .map(|entry| HistoryRow {
+            date: entry.at.date_ymd(),
+            // A judged block holds one stage (the module doc's blocks), so its first strike found
+            // names it.
+            stage: entry
+                .block
+                .iter()
+                .find_map(|id| strikes.iter().find(|strike| strike.strike_id == *id))
+                .map(|strike| stage_name(strike.stage).to_string()),
+            from: circle(entry.from),
+            to: circle(entry.to),
+        })
+        .collect()
+}
+
+/// `drill_progress`'s body. Reads under `one_writer()`, as `start` does, so that it never sees half
+/// of a strike being stored. Writes nothing.
+pub(crate) fn club_progress(
+    root: &str,
+    player_id: &str,
+    club: &str,
+) -> Result<ProgressView, String> {
+    let _one_at_a_time = one_writer();
+    let club = club_id(club)?;
+    let category = category_of(club);
+    let label = tape_label(category).ok_or_else(|| format!("{NO_LABEL_FITS} ({club})."))?;
+    let record = Record::read(Path::new(root), player_id)?;
+    // In the order they were stored, which for one club is the order its photos were taken: a
+    // waiting strike is stored before the club's next photo is read. So this is the pattern the
+    // drill judged by.
+    let strikes: Vec<&TapeStrike> = record
+        .strikes
+        .iter()
+        .filter(|strike| strike.club == club)
+        .collect();
+    let mut view = progress(
+        club.as_str().to_string(),
+        label,
+        record.hand,
+        &strikes,
+        record.skipped,
+    );
+    let held = record
+        .state
+        .as_ref()
+        .and_then(|state| state.clubs.get(&club));
+    let level = held.and_then(|held| held.level);
+    let grid = CropGrid::new(label, CROP_PX_PER_MM);
+    view.circle = level
+        .and_then(|level| ladder_radii(category).get(level))
+        .map(|&radius| circle_about(&grid, [0.0, 0.0], radius));
+    view.level_line = Some(level_text(level, category));
+    view.history = held
+        .map(|held| history(held, &strikes, category))
+        .unwrap_or_default();
+    Ok(view)
+}
+
+/// `category_progress`'s body (D10). Its clubs are those of the category with a drill state, in bag
+/// order, whether or not they are in the bag today, since their strikes are in the pool. Writes
+/// nothing.
+pub(crate) fn category_progress(
+    root: &str,
+    player_id: &str,
+    category: &str,
+) -> Result<ProgressView, String> {
+    let _one_at_a_time = one_writer();
+    let wire = category;
+    let category: ClubCategory = serde_json::from_value(serde_json::Value::from(wire))
+        .map_err(|_| format!("'{wire}' is not a club category"))?;
+    let label = tape_label(category).ok_or_else(|| format!("{NO_LABEL_FITS} ({wire})."))?;
+    let record = Record::read(Path::new(root), player_id)?;
+    // Pooled across clubs, store order is not quite photo order: a strike waiting for a tap is
+    // stored when it is resolved, which can follow another club's photo (the plan's P18 finding 6).
+    // So the pool is put in the order the photos were taken, stably, before the pattern's window
+    // reads its last 20.
+    let mut strikes: Vec<&TapeStrike> = record
+        .strikes
+        .iter()
+        .filter(|strike| category_of(strike.club) == category)
+        .collect();
+    strikes.sort_by(|a, b| a.captured_at.cmp(&b.captured_at));
+    let mut view = progress(
+        category_name(category).to_string(),
+        label,
+        record.hand,
+        &strikes,
+        record.skipped,
+    );
+    if let Some(state) = &record.state {
+        view.clubs = ClubId::ALL
+            .into_iter()
+            .filter(|club| category_of(*club) == category)
+            .filter_map(|club| {
+                let held = state.clubs.get(&club)?;
+                Some(ClubLevelRow {
+                    club: club.as_str().to_string(),
+                    stage_name: stage_name(held.stage).to_string(),
+                    level_line: level_text(held.level, category),
+                })
+            })
+            .collect();
+    }
+    Ok(view)
 }
 
 // --- Pending strikes ------------------------------------------------------------------------------
