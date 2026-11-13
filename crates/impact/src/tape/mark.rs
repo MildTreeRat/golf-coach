@@ -363,11 +363,36 @@ pub(super) fn darkening(crop: &Crop, interior: &Interior, white: &White) -> Vec<
 /// The spots of a darkening over a crop's grid (the module doc's steps 3 to 6). Every pixel in a
 /// spot is at least [`MARK_MIN_CONTRAST`] dark, so each spot's weights are positive.
 pub(super) fn spots(field: &[f64], interior: &Interior, grid: CropGrid) -> Vec<Spot> {
+    let wide = wide_dark(field, interior, grid);
+    spot_pixels(field, &wide, interior, grid)
+        .into_iter()
+        .map(|(spot, _)| spot)
+        .collect()
+}
+
+/// The interior's pixels at least [`MARK_MIN_CONTRAST`] dark, opened by the disc
+/// [`MARK_OPEN_RADIUS_MM`] in radius: every wide dark run of any area, the printing stripped (the
+/// module doc's steps 3 and 4). Split out of [`spots`] at P12, whose diff aligns two crops on what
+/// this leaves out. [M46 P11, P12]
+pub(super) fn wide_dark(field: &[f64], interior: &Interior, grid: CropGrid) -> Vec<bool> {
     let (width, height) = (grid.width, grid.height);
-    let px = grid.px_per_mm;
     let dark: Vec<bool> = (0..width * height)
         .map(|at| interior.holds(at) && field[at] >= MARK_MIN_CONTRAST)
         .collect();
+    opening(&dark, width, height, MARK_OPEN_RADIUS_MM * grid.px_per_mm)
+}
+
+/// The spots of an opened darkening, each with its pixels, row-major over the grid (the module
+/// doc's steps 5 and 6). The diff (P12) asks of each pixel whether it was dark before. [M46 P11,
+/// P12]
+pub(super) fn spot_pixels(
+    field: &[f64],
+    wide: &[bool],
+    interior: &Interior,
+    grid: CropGrid,
+) -> Vec<(Spot, Vec<usize>)> {
+    let (width, height) = (grid.width, grid.height);
+    let px = grid.px_per_mm;
     let mask = Mask {
         rect: Rect {
             x0: 0,
@@ -375,7 +400,7 @@ pub(super) fn spots(field: &[f64], interior: &Interior, grid: CropGrid) -> Vec<S
             x1: width,
             y1: height,
         },
-        bits: opening(&dark, width, height, MARK_OPEN_RADIUS_MM * px),
+        bits: wide.to_vec(),
     };
     let min_area = (MARK_MIN_AREA_MM2 * px * px).ceil() as usize;
     components_with_pixels(&mask, min_area)
@@ -392,13 +417,14 @@ pub(super) fn spots(field: &[f64], interior: &Interior, grid: CropGrid) -> Vec<S
                 nearest_rim = nearest_rim.min(interior.inner_mm[at]);
             }
             let centroid_px = [sum[0] / total, sum[1] / total];
-            Spot {
+            let spot = Spot {
                 centroid_px,
                 centre_mm: grid.to_label_mm(centroid_px),
                 area_mm2: pixels.len() as f64 / (px * px),
                 elongation: elongation(&pixels, width),
                 clipped: nearest_rim < MARK_EDGE_MARGIN_MM + CLIP_REACH_MM,
-            }
+            };
+            (spot, pixels)
         })
         .collect()
 }

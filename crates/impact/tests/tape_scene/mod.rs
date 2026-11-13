@@ -1,12 +1,13 @@
 //! Synthetic photos of a STRIKEPRO label stuck on a club face, drawn through a pinhole camera, for
-//! the tape reader's tests. [M46 P9, P10, P11]
+//! the tape reader's tests. [M46 P9, P10, P11, P12]
 //!
 //! The M46 plan builds the reader on synthetic photos alone, because no photo of a label on a club
 //! exists before P29 (P3 finding 10). This module is the one renderer P9 to P12's tests draw with,
 //! and P13's end-to-end gate draws its sets with it. It lives under `tests/` in a directory, so each
 //! test file that wants it says `mod tape_scene;`, and it is no test crate of its own. Beside the
 //! drawing it holds what more than one test file frames a scene with: [`truth`], [`framed`] and
-//! [`tilted_poses`] (moved here from `tape_orient.rs` at P11).
+//! [`tilted_poses`] (moved here from `tape_orient.rs` at P11), and [`bottom_at`] (from
+//! `tape_mark.rs` at P12).
 //!
 //! # What a photo holds
 //!
@@ -715,6 +716,20 @@ impl Printing {
             }
         }
     }
+}
+
+/// The outline's lowest point at printed `x`: where a vertical line there meets its bottom edge.
+/// [M46 P11, moved here from `tape_mark.rs` at P12]
+pub fn bottom_at(label: &LabelType, x: f64) -> f64 {
+    let outline = label.outline_mm;
+    let mut bottom = f64::INFINITY;
+    for (i, &[x0, y0]) in outline.iter().enumerate() {
+        let [x1, y1] = outline[(i + 1) % outline.len()];
+        if (x0 <= x) != (x1 <= x) {
+            bottom = bottom.min(y0 + (x - x0) * (y1 - y0) / (x1 - x0));
+        }
+    }
+    bottom
 }
 
 /// The outline's top at `x` in the printed frame: the highest point where a vertical line there

@@ -25,8 +25,12 @@
 //!
 //! **P11 finds the marks on an oriented label** (`mark.rs`): [`find_marks`] takes each dark spot on
 //! the crop wide enough to be a strike's, against the label's own white, and [`read_tape`] reads a
-//! fresh label's one mark. With a previous crop it does not yet tell old marks from new, so a marked
-//! label needs a pick there until P12.
+//! fresh label's one mark.
+//!
+//! **P12 tells the new marks from the old** (`diff.rs`): [`diff_marks`] aligns the club's last crop
+//! on this one by the label's printing and asks of each spot whether it has darkened since, so a
+//! used label's newest mark is read, two are read when a photo was missed, and a label whose old
+//! marks are all gone is read as new.
 //!
 //! # A Rust table, not `tape_labels.json`
 //!
@@ -57,6 +61,7 @@
 //! not quite on that middle, and sits up to 0.6 mm to one side on the hybrid label (P3 finding 4),
 //! which is printing registration or measurement error. Nothing is known to fix it per label.
 
+mod diff;
 mod geometry;
 mod label;
 mod mark;
@@ -64,8 +69,11 @@ mod orient;
 mod tape_labels;
 
 use crate::frame::Frame;
-use mark::{on_a_fresh_label, Fresh};
+use diff::{diff_measured, fresh, Measured, Newest};
 
+pub use diff::{
+    diff_marks, Change, DiffMiss, Holds, ALIGN_MAX_SHARE, DIFF_SEARCH_MM, PART_MIN_AREA_MM2,
+};
 pub use geometry::{rectify, Crop, CropGrid, Degenerate, Homography, CROP_PX_PER_MM};
 pub use label::{
     find_label, LabelMiss, OutlineFit, ASPECT_TOLERANCE, LABEL_SATURATION_MAX, LOGO_CONTRAST,
@@ -344,7 +352,7 @@ impl TapeRefusal {
 /// Read one photo of a label on the club: C5's reader. `previous` is the club's last crop (C16,
 /// ADR-037 clause 3), and `None` reads the label as fresh. `hand` is the golfer's, which checks the
 /// orientation the shaft gives (C4), and `None` leaves the shaft alone to decide. [M46 P8, P9, P10,
-/// P11]
+/// P11, P12]
 ///
 /// A photo that is not well formed ([`Frame::is_well_formed`]) is `decode_failed`, and one in which
 /// [`find_label`] finds no label is `no_label`, whatever its [`LabelMiss`]. A found label that
@@ -358,9 +366,11 @@ impl TapeRefusal {
 /// mark ([`MARK_MAX_ELONGATION`]), need the golfer's pick. So does a label whose white could not be
 /// told ([`MarkMiss`]), since that is a label found and squared whose mark cannot be placed (C5).
 ///
-/// **With a previous crop, a marked label needs a pick until P12**, which diffs the two. Read here,
-/// an old mark would come out as the new one, a wrong reading where a pick is owed (the M46 plan's
-/// rule 6).
+/// **With a previous crop**, a marked label is diffed against it ([`diff_marks`], whose module doc
+/// lists the outcomes): one or two new marks are read, an overlap needs a pick, nothing new is
+/// `no_new_mark`, and a label whose old marks are all gone is fresh. A previous crop that cannot be
+/// compared ([`DiffMiss`]) leaves a marked label to the golfer's pick, since read as fresh an old
+/// mark would come out as the new one, a wrong reading where a pick is owed (the M46 plan's rule 6).
 pub fn read_tape(
     photo: &Frame,
     previous: Option<&Frame>,
@@ -391,30 +401,34 @@ pub fn read_tape(
             }
         }
     };
-    let Ok(spots) = find_marks(&found.crop, label) else {
+    // `find_marks`, measured once for the diff to reuse.
+    let Ok(measured) = Measured::of(&found.crop, label) else {
         return TapeOutcome::NeedsPick(TapePick { found, orientation });
     };
+    let spots = measured.spots();
     let refused = |reason, found| TapeOutcome::NotRead {
         reason,
         found: Some(found),
     };
-    if previous.is_some() {
-        return if spots.is_empty() {
-            refused(TapeRefusal::NoNewMark, found)
-        } else {
-            TapeOutcome::NeedsPick(TapePick { found, orientation })
-        };
-    }
-    match on_a_fresh_label(&spots) {
-        Fresh::Mark(spot) => TapeOutcome::Read(TapeReading {
+    let newest = match previous {
+        None => fresh(&spots),
+        // A label with no spot has nothing new, whatever came before.
+        Some(_) if spots.is_empty() => Newest::Unmarked,
+        Some(previous) => match diff_measured(&found.crop, &measured, previous, label) {
+            Ok(change) => change.newest(),
+            Err(_) => Newest::Pick,
+        },
+    };
+    match newest {
+        Newest::Marks { spots, new_label } => TapeOutcome::Read(TapeReading {
             found,
             orientation,
-            new_label: true,
-            marks: vec![spot.reading(orientation)],
+            new_label,
+            marks: spots.iter().map(|spot| spot.reading(orientation)).collect(),
         }),
-        Fresh::Clipped => refused(TapeRefusal::MarkClipped, found),
-        Fresh::Unmarked => refused(TapeRefusal::NoNewMark, found),
-        Fresh::Pick => TapeOutcome::NeedsPick(TapePick { found, orientation }),
+        Newest::Clipped => refused(TapeRefusal::MarkClipped, found),
+        Newest::Unmarked => refused(TapeRefusal::NoNewMark, found),
+        Newest::Pick => TapeOutcome::NeedsPick(TapePick { found, orientation }),
     }
 }
 

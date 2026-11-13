@@ -6,6 +6,9 @@
 //! scene's [`truth`], never by the reader's orientation. No label is hit before P29 (P3 finding 10),
 //! so these are the mark's only tests until then, and the marks are the renderer's guess at a
 //! strike: discs of `tape_scene::MARK`, darker than the white and lighter than the printing.
+//!
+//! What a previous crop changes is `tape_diff.rs`'s (P12), which took over this file's last
+//! placeholder, "a marked label needs a pick until P12".
 
 mod tape_scene;
 
@@ -13,7 +16,7 @@ use impact::tape::{
     find_marks, read_tape, LabelType, Spot, TapeOutcome, TapePick, TapeReading, TapeRefusal,
     MARK_MAX_ELONGATION, STRIKEPRO_DRIVER, STRIKEPRO_HYBRID, STRIKEPRO_IRON,
 };
-use tape_scene::{framed, keep, tilted_poses, truth, Hand, Mark, Scene, Shaft};
+use tape_scene::{bottom_at, framed, keep, tilted_poses, truth, Hand, Mark, Scene, Shaft};
 
 /// A mark 12 mm across, inside the iron label's inscribed circle with room, and well below the
 /// contact patch a full swing leaves, which no photo here has measured.
@@ -181,19 +184,6 @@ fn an_unmarked_label_has_no_new_mark_and_none_of_its_printing_is_taken_for_one()
     }
 }
 
-/// The outline's lowest point at printed `x`: where a vertical line there meets its bottom edge.
-fn bottom_at(label: &LabelType, x: f64) -> f64 {
-    let outline = label.outline_mm;
-    let mut bottom = f64::INFINITY;
-    for (i, &[x0, y0]) in outline.iter().enumerate() {
-        let [x1, y1] = outline[(i + 1) % outline.len()];
-        if (x0 <= x) != (x1 <= x) {
-            bottom = bottom.min(y0 + (x - x0) * (y1 - y0) / (x1 - x0));
-        }
-    }
-    bottom
-}
-
 #[test]
 fn a_mark_the_labels_edge_cuts_is_clipped_and_keeps_the_label() {
     // Most of a mark on the label, its centre 1 mm in from the bottom edge, and clear of the band
@@ -304,35 +294,6 @@ fn a_speck_smaller_than_a_strike_is_no_mark() {
         "{}",
         brief(&outcome)
     );
-}
-
-#[test]
-fn with_a_previous_crop_a_marked_label_needs_a_pick_until_p12() {
-    let mut scene = framed(&STRIKEPRO_IRON, Hand::Right, true, [8.0, 6.0, -10.0], 200.0);
-    scene.marks = vec![mark([5.0, 2.0], RADIUS_MM)];
-    let photo = scene.draw();
-    let TapeOutcome::Read(fresh) = read_tape(&photo, None, scene.label, None) else {
-        panic!("the fresh label is read");
-    };
-    let previous = &fresh.found.crop.frame;
-    // Its one mark may be the last strike's, so it is not read as new without the diff.
-    assert_eq!(
-        read_tape(&photo, Some(previous), scene.label, None),
-        TapeOutcome::NeedsPick(TapePick {
-            found: fresh.found.clone(),
-            orientation: fresh.orientation,
-        })
-    );
-    // A label with no mark at all has nothing new, whatever came before.
-    scene.marks.clear();
-    let unmarked = scene.draw();
-    assert!(matches!(
-        read_tape(&unmarked, Some(previous), scene.label, None),
-        TapeOutcome::NotRead {
-            reason: TapeRefusal::NoNewMark,
-            found: Some(_)
-        }
-    ));
 }
 
 #[test]

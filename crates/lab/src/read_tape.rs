@@ -12,16 +12,23 @@
 //! request names. A photo that will not decode is `decode_failed`, with the decoder's own sentence
 //! beside the reason, and the photos after it are still read.
 //!
-//! # `--sequence`: the reference is the last placed strike's crop
+//! # `--sequence`: the reference is the last accounted strike's crop
 //!
 //! Without it, every photo is read as a fresh label (`previous: None`). With it, a photo is read
-//! against the crop of the latest photo before it that came out [`TapeOutcome::Read`] or
-//! [`TapeOutcome::NeedsPick`], because that is what the phone's `last/<club>.rgb` will hold: the
-//! last stored strike with a crop (C7, C8), a pick being stored once it is tapped. ADR-037 clause 3
-//! says why the reference is a crop and not the photo: the diff is in label millimetres. A refusal
-//! leaves the reference where it was, so a mark the reader saw and did not place (`mark_clipped`,
-//! `no_orientation`) shows as new again on the next photo. Whether the phone does the same is P12's
-//! and P18's (P8's finding). The JSON line names the photo whose crop was the reference.
+//! against the crop of the latest photo before it whose new marks were all accounted for: one that
+//! came out [`TapeOutcome::Read`], [`TapeOutcome::NeedsPick`] (a pick being stored once it is
+//! tapped), or `mark_clipped`. That is what the phone's `last/<club>.rgb` should hold (C7, C16).
+//! ADR-037 clause 3 says why the reference is a crop and not the photo: the diff is in label
+//! millimetres.
+//!
+//! The other refusals leave the reference where it was, because each is one a retake helps
+//! (`no_label`, `no_orientation`, `no_new_mark`, `decode_failed`): the retake is read against the
+//! same reference, and still shows the strike as new. Had the strike's own photo moved it, the
+//! retake would find nothing new. If the golfer hits again instead, the unplaced mark shows as new
+//! beside the next, and two new marks are both read (C10). `mark_clipped` is the refusal no retake
+//! helps, and it moves the reference, since otherwise its mark would be new on every photo after it
+//! and refuse each one again (P12's finding; P8 had every refusal leave it). The JSON line names the
+//! photo whose crop was the reference.
 //!
 //! # The line
 //!
@@ -272,10 +279,12 @@ pub fn read_tape_photos_with(
                 Err(_) => clear_review(&dir)?,
             }
         }
-        if let TapeOutcome::Read(_) | TapeOutcome::NeedsPick(_) = &outcome {
-            if let Some(found) = outcome.found() {
-                reference = Some((name, found.crop.frame.clone()));
-            }
+        let accounted = match &outcome {
+            TapeOutcome::Read(_) | TapeOutcome::NeedsPick(_) => true,
+            TapeOutcome::NotRead { reason, .. } => *reason == TapeRefusal::MarkClipped,
+        };
+        if let Some(found) = outcome.found().filter(|_| accounted) {
+            reference = Some((name, found.crop.frame.clone()));
         }
     }
     Ok(if every_read { 0 } else { 1 })
@@ -658,7 +667,7 @@ mod tests {
     /// mark. Each crop it returns carries its photo's byte, so what a photo was read against is
     /// seen by that byte.
     #[test]
-    fn a_sequence_reads_each_photo_against_the_last_placed_strikes_crop() {
+    fn a_sequence_reads_each_photo_against_the_last_accounted_strikes_crop() {
         let (_, found) = found_iron(4.0, [50.0, 40.0]);
         let photos: Vec<PathBuf> = ["a.jpg", "b.jpg", "c.jpg", "d.jpg", "e.png", "f.jpg"]
             .iter()
@@ -713,11 +722,11 @@ mod tests {
         let mut out = Vec::new();
         let code = read_tape_photos_with(&request, &mut decode, &mut read, &mut out).unwrap();
         assert_eq!(code, 1);
-        // c never reached the reader, so it was read against nothing; b's clipped mark left the
-        // reference at a, and d's pick moved it.
+        // c never reached the reader, so it was read against nothing. b's clipped mark moved the
+        // reference, since no retake places it, then d's pick moved it, and e's no label did not.
         assert_eq!(
             *against.borrow(),
-            [None, Some(1), Some(1), Some(2), Some(2)]
+            [None, Some(1), Some(3), Some(2), Some(2)]
         );
         let lines: Vec<Value> = String::from_utf8(out)
             .unwrap()
@@ -731,7 +740,7 @@ mod tests {
                 &Value::Null,
                 &json!("a.jpg"),
                 &Value::Null,
-                &json!("a.jpg"),
+                &json!("b.jpg"),
                 &json!("d.jpg"),
                 &json!("d.jpg"),
             ]

@@ -53,7 +53,7 @@ machine, pull on the new" as its precondition.
 | **P9** | 🪟 The label finder, on synthetic photos | ✅ Done *(2026-11-12)* |
 | **P10** | 🪟 Orientation: heel and up, from the hosel | ✅ Done *(2026-11-12)* |
 | **P11** | 🪟 The mark on a fresh label | ✅ Done *(2026-11-12)* |
-| **P12** | 🪟 The newest mark: the diff against the last strike | ⬜ |
+| **P12** | 🪟 The newest mark: the diff against the last strike | ✅ Done *(2026-11-13)* |
 | **P13** | 🪟 The reader end to end on synthetic photos, and its gate | ⬜ |
 | **P14** | 🪟 `analysis::drill`: the baseline and the ladder | ⬜ |
 | **P15** | 🪟 `analysis::drill`: the pattern, the triggers and differential judging | ⬜ |
@@ -2096,3 +2096,209 @@ named as skipped where they are not), then write the three records, and commit `
 10. **For P30**:
     - `impact::tape` now finds marks, and P9 finding 14 names the docs to update.
     - The desk tool's JSON line has a new key, `area_mm2`, in each mark.
+
+### P12 (2026-11-13)
+
+1. **The diff is built**: `impact::tape::diff_marks(crop, previous, label) -> Result<Change, DiffMiss>`, in
+   `crates/impact/src/tape/diff.rs`. `read_tape` calls it whenever a previous crop is given and the label
+   holds a spot, and it measures the photo's crop once for both. The module doc gives the steps:
+   - **each crop measured by `mark.rs` alone**: its interior, its own white, its darkening and its spots, so
+     two photos lit differently compare;
+   - **the alignment**: every whole-pixel translation within `DIFF_SEARCH_MM` (the plan's ±2 mm), coarse to
+     fine over a three-level pyramid. Each is scored by the mean darkening difference over the pixels where
+     neither crop is dark and wide, so it aligns on the printing and never on the marks;
+   - **the change**: each pixel's darkening less the previous crop's at the aligned pixel. A pixel is newly
+     dark at `MARK_MIN_CONTRAST`;
+   - **what each spot holds** (`Holds`): `New` with at least `PART_MIN_AREA_MM2` newly dark, `Old` with as
+     much on a previous spot, `Both` for an overlap, and `Unclear` for neither;
+   - **which label**: a previous mark is still here when half of it lies on what is dark and wide here. None
+     still here means a new label, read by P11's single-mark rule with `new_label`.
+
+   The outcomes (`Change::newest`):
+   - **a new label**: P11's rule, so two marks on it need a pick (P2 finding 3);
+   - **a pick**: some old marks gone and some not, an overlap, or an unclear spot;
+   - **on the same label**: none new is `no_new_mark`, and a new spot cut by the edge is `mark_clipped`, even
+     beside a whole one. A long new spot, or more than two, needs a pick. One or two are read with
+     `new_label: false`.
+
+   A previous crop that cannot be compared leaves a marked label to a pick. `DiffMiss` says why: `OtherGrid`,
+   `NoWhite` or `Unaligned`.
+2. **What P12 settled that the plan left open.** None of these touches a decision.
+   - **The change picks the new spots, and the spot gives the reading.** The section names the change's
+     components as the new marks. Here a new mark is read where its own spot lies in this crop, exactly as
+     on a fresh label, for two reasons:
+     - the alignment is to a whole pixel, and would carry its error into every reading;
+     - a mark is lighter than the printing it covers, so the change has a hole along each stroke under a new
+       mark.
+
+     P11's 0.2 mm bound therefore holds unchanged.
+   - **Two guards on the alignment, beyond the section's.**
+     - A best shift on the search's edge is refused, since the cost may still be falling past it.
+     - A best shift the printing did not pick out is refused. That is a top-level cost more than
+       `ALIGN_MAX_SHARE` (0.7) of the median over the reach.
+   - **A new label is not called where a spot stands on an old mark's place** (`PLACE_TAKEN_MM`, 4 mm, in
+     each crop's own printed frame). The alignment's unit test found the hole this closes:
+     - **The case**: rows 28 px apart, with the true shift 24 px beyond the reach, lined up one row at a
+       false shift of 4 px. Its share, 0.48, passes the share guard.
+     - **Why it matters**: an alignment wrong by more than about 2.6 mm leaves even the smallest old mark
+       (30 mm²) under half on itself. Every old mark then reads as gone, and the label is called new. A lone
+       old mark beside a missed strike would then be read as a fresh label's first strike.
+     - **What the veto leaves**: an alignment wrong by less keeps each old mark `Old` or `Both`, never
+       `New`.
+   - **A clipped new mark refuses the photo, even beside a whole one.** Reading the whole one alone would leave
+     the clipped strike uncounted and unrecorded. Refusing loses both, but says why.
+   - **The previous crop's outside is its pure black pixels**, P8 finding 5's first option. C5's
+     `Option<&Frame>` and C16's raw RGB stay as they are. A real pure-black pixel on the label is only left
+     out of the diff.
+   - **`TapeOutcome` gained no field.** The `Change` is public, for the tests and for P29's look at real
+     pairs.
+   - **Files beyond the Touch line**:
+     - `crates/impact/src/tape/mark.rs`: `spots` is split into two parts, and keeps its signature:
+       - `wide_dark`, the opened mask, which the alignment leaves out;
+       - `spot_pixels`, each spot with its pixels.
+     - `crates/impact/tests/tape_scene/mod.rs`: `bottom_at` moved here from `tape_mark.rs`.
+     - `crates/impact/tests/tape_mark.rs`: P11's placeholder test ("with a previous crop, a marked label
+       needs a pick until P12") is gone, and `tape_diff.rs` covers what replaced it.
+     - `crates/lab/src/read_tape.rs`: the reference rule (finding 3).
+3. **The desk tool's reference now advances on `mark_clipped`.** P8 finding 5 left this rule to P12 and P18.
+   - **Why**: under P8's rule every refusal left the reference where it was. A clipped mark would then show
+     as new on every later photo, and each of those photos would be refused `mark_clipped` in turn.
+   - **The new rule**: the verb advances the reference on `Read`, `NeedsPick` and `mark_clipped`, every
+     outcome whose new marks are accounted for.
+   - **Where it stays**: on `no_label`, `no_orientation`, `no_new_mark` and `decode_failed`, because a
+     retake helps each of those. The retake is read against the same reference, so it still shows the
+     strike. If the golfer hits again instead, the unplaced mark shows beside the next one, and both are
+     read (C10).
+   - **Where it is written down**: the module doc and the sequence test
+     (`a_sequence_reads_each_photo_against_the_last_accounted_strikes_crop`).
+4. **The tunables**, each with its doc and the bracket P29 may move it within:
+
+   | Constant | Value | Bracket |
+   |---|---|---|
+   | `DIFF_SEARCH_MM` | 2.0 | 1 to 4 |
+   | `PART_MIN_AREA_MM2` | 12 | 5 to 30 |
+   | `ALIGN_MAX_SHARE` | 0.7 | 0.3 to 0.9 |
+
+   These are private, each with its reason:
+   - `PLACE_TAKEN_MM`: twice the search;
+   - `OLD_PRESENT_SHARE`: 0.5;
+   - `ALIGN_MIN_OVERLAP`: 0.5;
+   - `PYRAMID_STEPS`: 2, so the top level is at 2.5 px/mm;
+   - `REFINE_RADIUS`: 2.
+5. **The tests.**
+   - **Where they are**: `crates/impact/tests/tape_diff.rs` holds 10 tests, and `diff.rs` 7 unit tests. The
+     unit tests cover the outcome rules, the new-label veto, the alignment on drawn strokes, and another
+     grid.
+   - **The marks**: every mark is 5 mm in radius, and each label's six places are 12.6 mm or more apart. The
+     photos come from six poses: up to 12° off square, turned up to 10°, at 190 to 210 mm.
+   - **A run per label type**: six strikes with a photo after each, every photo read against the last one's
+     crop.
+     - All 18 readings are within 0.2 mm, the worst **0.088 mm**.
+     - The first photo reads `new_label: true` and every later one `false`. Each later photo holds one `New`
+       spot, and every old mark is still there.
+   - **The alignment on the runs**:
+     - the two fits disagreed at the cross by at most 0.42 crop px (0.04 mm), so every shift found was
+       `[0, 0]`;
+     - the residual was 0.014 to 0.021;
+     - the share was 0.07 to 0.15.
+   - **Two new marks (a photo missed)** are read on all three types, the worst 0.178 mm on the iron. Three
+     new marks need a pick.
+   - **An overlap**: a new mark half over an old one, or just touching it, needs a pick on every type, with a
+     `Both` spot. Its new part was 42 or 72 mm², and its old part 80.
+   - **Nothing new**:
+     - a retake from another pose is `no_new_mark`, and so is a photo against its own crop (shift `[0, 0]`);
+     - every spot is `Old`;
+     - an old mark's newly dark rim was at most 0.06 mm².
+   - **A fresh label after a used one**, stuck the other way up:
+     - one mark reads `new_label: true`, with every old mark gone;
+     - two marks need a pick;
+     - one mark 1 mm from an old mark's place also needs a pick. That old mark counts as still there and the
+       others as gone, and its crescent was 9.0 to 10.6 mm² newly dark, under the floor.
+   - **A new mark cut by the bottom edge** is `mark_clipped` on every type.
+   - **A moved reference**:
+     - moved by `[13, −7]` px, it is aligned at exactly that much more, and the photo reads the same;
+     - moved 2.5 mm, beyond the reach, its best shift lies on the edge (share 0.49). That is `Unaligned`,
+       so the photo needs a pick.
+   - **A reference whose top fifth is black** (outside) reads the same. A reference of another label type is
+     `OtherGrid`, so the photo needs a pick.
+   - **Speed**:
+     - **Release**: the file takes about 7 s, almost all of it drawing.
+     - **Debug**: it took 27 s on a quiet machine and 68 s while another build ran, against P11's file at
+       21 s.
+     - **One diff**: about 2 s in debug, about half of it the two crops' measurements and half the
+       alignment.
+     - **What was done about it**: `read_tape` measures the photo's crop once. The run test is split into
+       one test per label type, so the three run side by side.
+6. **A mark tangent to the printed red ring reads up to 0.18 mm off.** That is P11's reader, met here, not
+   the diff.
+   - **The case**: the iron's run first had a mark at `[1, 4]`. Its far edge lay 9.12 mm from the cross, on
+     the ring (9.15 ± 0.3 mm). It read 0.178 mm off, against at most 0.088 mm for every other mark.
+   - **Why**: the ring's stroke along the mark's edge survives the opening and is darker than the mark, so it
+     pulls the centroid outward.
+   - **What was done**: the run's place moved to `[1, 3]`. The skipped-photo test still holds that mark near
+     the ring, at 0.178 mm, inside the bound.
+7. **The verb over the drawn sequences.** All 65 photos the tests drew went through `golf-lab read-tape
+   --sequence --review`, with no hand, into the session scratchpad. Each label type had ten sequences: the
+   run, two missed-photo pairs, two overlaps, nothing new, three fresh labels and a clipped mark. Every line
+   came out as its test expects:
+   - each run is six `read`s, the first with `new_label: true`, each within 0.07 mm;
+   - the two-new photo is `read` with two marks;
+   - three new, each overlap, two marks on a fresh label, and a fresh mark on an old place are each
+     `needs_pick`;
+   - nothing new is `no_new_mark`, and the cut mark is `mark_clipped`.
+
+   Each sequence's first photo, holding two or three marks with no reference, is `needs_pick` by P11's rule,
+   and becomes the next photo's reference as finding 3 says. Two reviews were looked at:
+   - the iron's two-new crop rings the two new marks and neither old one;
+   - the fresh hybrid's photo has its arrows toward a left-handed club's toe and top line.
+
+   Nothing was written under `data/`.
+8. **For P13**:
+   - `tape_diff.rs`'s `run`, `POSES`, `scene`, `reads` and `moved` are shapes a synthetic set can reuse, and
+     `bottom_at` is in `tape_scene`.
+   - The drawn photos of one label are fitted within 0.05 mm of each other, so nothing drawn exercises the
+     alignment but `moved`. A set that wants the search exercised has to move the reference itself.
+   - Keep marks off tangency with the red ring (finding 6), and 12.6 mm or more apart for 5 mm marks.
+   - The renderer lays a mark over a mark in the same colour, so a re-strike over an old mark darkens
+     nothing. A strike within about 1.2 mm of an old mark's centre is `no_new_mark`. That is the diff's
+     known limit, not a wrong reading.
+   - A debug build draws a photo in about 0.45 s and diffs one in about 2 s (finding 5). A set of many
+     sequences should split its tests so that they run side by side.
+   - **For the user, not a phase**: a `[profile.dev.package.impact] opt-level` line in the workspace
+     `Cargo.toml` would cut every tape test's debug time several-fold. P12 left that shared file alone,
+     since M38's Mac work edits it too.
+9. **For P18**:
+   - **Advance `last/<club>.rgb` as the desk tool now does** (finding 3):
+     - on `Read`;
+     - on `NeedsPick`, whatever becomes of the pending strike, since its mark is on the label either way;
+     - on `mark_clipped`.
+
+     Leave it on `no_label`, `no_orientation`, `no_new_mark` and `decode_failed`, so that a retake still
+     sees the strike.
+   - **Write the crop's frame as `rectify` left it.** Its outside pixels must stay pure black, because that
+     is how the diff knows them.
+   - **A `Read` may hold two marks**, and each is a `TapeStrike` (C10).
+   - **A `no_new_mark` pending may be a re-strike within about 1.2 mm of an old mark.** C15's pick of it
+     covers that case, though its sentence advises a retake, which will not help there.
+   - **A pick can now come from `DiffMiss` too**: a reference of another grid, one with no white, or one that
+     could not be aligned. The `NeedsPick` that follows advances the reference, so the next photo diffs
+     against a good crop.
+10. **For P29**:
+    - the three tunables in finding 4, with their brackets;
+    - the real fits' disagreement (each pair's `shift_px`), and each pair's `residual` and `match_share`;
+    - whether a re-strike darkens an old mark;
+    - how much a mark's look changes between two photos: its newly dark rim, which was 0.06 mm² here;
+    - a turn or a scale between two fits, which a translation does not follow;
+    - marks tangent to the printed ring (finding 6).
+11. **For P30**:
+    - `impact::tape` now diffs a used label (`diff_marks`), and P9 finding 14 names the docs to update.
+    - `golf-lab read-tape --sequence` advances its reference on `mark_clipped` too (finding 3).
+12. **For P21: one `golf-lab` test fails on Windows, before P12 and apart from it.**
+    - **The test**: `crates/lab/tests/import_export.rs`'s `a_file_no_golfers_store_lists_still_goes_by_bytes`,
+      last changed in the M38 checkpoint commit (`0b88173`).
+    - **Why it fails**: its expected conflict lines join `old/aaron.bag.json` onto a Windows path, which
+      keeps the forward slash. The verb prints `golfers\old\aaron.bag.json`.
+    - **What it is not**: P12 touched nothing on that path. `cargo test -p golf-lab --no-fail-fast` passes
+      every other test, `read_tape`'s included.
+    - **Who fixes it**: P21 edits `import-export` and runs the workspace, so the test's expected string is
+      P21's to fix, or the user's call if the Mac's output is the one meant.
