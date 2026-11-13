@@ -44,17 +44,17 @@ machine, pull on the new" as its precondition.
 | **P0** | 🪟 This plan, the ROADMAP pointer, and the plan's commit | ✅ Done *(2026-11-12)* — approved by the user |
 | **P1** | 🪟 ADR-037: where on the face, by method, and the drill framework | ✅ Done *(2026-11-12)* |
 | **P2** | 🪟 The truth sheet and the tape session's run sheet | ✅ Done *(2026-11-12)* |
-| **P3** | 🧍 The tape session: labels measured, strikes photographed, truth sheets photographed | ⬜ |
+| **P3** | 🧍 The labels: one flat photo, their sizes measured off it, and the user's answers | ✅ Done *(2026-11-12)* |
 | **P4** | 🪟 The session's inventory and the label geometry as data | ⬜ |
 | **P5** | 🪟 `contracts::face_impact`: the method interface and `TAPE_READER_VERSION` | ⬜ |
 | **P6** | 🪟 `contracts::drill`: the strike record, the stages and the ladder tables | ⬜ |
 | **P7** | 🪟 `impact::tape` geometry: the homography and the rectified crop | ⬜ |
 | **P8** | 🪟 `golf-lab read-tape`: the desk tool and its review images | ⬜ |
-| **P9** | 🪟 The label finder, on P3's photos | ⬜ |
+| **P9** | 🪟 The label finder, on synthetic photos | ⬜ |
 | **P10** | 🪟 Orientation: heel and up, from the hosel | ⬜ |
 | **P11** | 🪟 The mark on a fresh label | ⬜ |
 | **P12** | 🪟 The newest mark: the diff against the last strike | ⬜ |
-| **P13** | 🪟 The truth reader, the measured error, and the real-photo gate | ⬜ |
+| **P13** | 🪟 The reader end to end on synthetic photos, and its gate | ⬜ |
 | **P14** | 🪟 `analysis::drill`: the baseline and the ladder | ⬜ |
 | **P15** | 🪟 `analysis::drill`: the pattern, the triggers and differential judging | ⬜ |
 | **P16** | 🪟 `feedback::drill_rules`: the sentences | ⬜ |
@@ -69,8 +69,8 @@ machine, pull on the new" as its precondition.
 | **P25** | 🍎 The progress view: dots and level, the heat map, the roll-up | ⬜ |
 | **P26** | 🍎 The golf-ball navigation, as a widget on its own | ⬜ |
 | **P27** | 🍎 The ball replaces the tab bar, and every test is moved onto it | ⬜ |
-| **P28** | 🍎 The whole drill on the Simulator, over P3's photos: desk-complete | ⬜ |
-| **P29** | 🧍 A real drill session on the iPhone, exported and imported at the lab | ⬜ |
+| **P28** | 🍎 The whole drill on the Simulator, over synthetic photos: desk-complete | ⬜ |
+| **P29** | 🧍 The first real test: a drill session on the iPhone, exported, imported and checked at the lab | ⬜ |
 | **P30** | 🪟 Docs | ⬜ |
 | **P31** | 🪟 Close: verify, WORKLOG, ROADMAP, memory, and the close commit | ⬜ |
 
@@ -97,9 +97,11 @@ code and the app's words are this repo's own.
 ## Exit
 
 All of these hold:
-1. **The reader's error is measured** on P3's truth set, per label type, as P50 and P95 in millimetres, and
-   the real-photo gate (P13) passes with **no wrong reading**: every strike is read, sent to a pick, or
-   refused by name.
+1. **The reader works on real strikes, tried for the first time at P29**, with **no wrong reading**. Every
+   strike of P29's session is read, sent to a pick, or refused by name. Before P29 the reader is built and
+   gated on synthetic photos only (P13). *Changed at P3 by the user's word (P3 finding 10).* No label is hit
+   before the end and there is no truth sheet, so P3's truth set is gone. What a reading is checked against,
+   and whether P50 and P95 can still be measured per label type, is P29's to settle with the user.
 2. **On the iPhone (P29)**: one club has a baseline and at least two judged ladder blocks, and a club of
    another category has a baseline. Every strike is read, picked, declared off the tape, or named not read,
    and the progress view shows the dots, the level, the pattern and the heat map.
@@ -165,7 +167,7 @@ follows `. app/tool/env.sh` in the same Bash call (the M38 plan's Verify section
 | `cargo clippy -p <crate> --all-targets -- -D warnings 2>&1 \| tail -15` | same, for `impact`, `app` and any crate this plan creates a module in |
 | `cargo fmt --check` | every phase touching Rust |
 | `cargo test -p ocr --test ort_reach 2>&1 \| tail -3` | P7, P18, P31 |
-| `cargo test --release -p golf-lab --test strike_tape -- --include-ignored 2>&1 \| tail -20` | P13 onward, every phase touching `impact::tape` |
+| `cargo test --release -p golf-lab --test strike_tape -- --include-ignored 2>&1 \| tail -20` | P29, if it writes the real-photo gate, and every phase after it touching `impact::tape` (moved from P13 at P3, finding 10) |
 | `cargo build -p app --target aarch64-apple-ios 2>&1 \| tail -3` | 🍎, the first Mac phase after P18 adds `jpeg-encoder` |
 | `<python> -m pytest tests/test_docs_truth.py 2>&1 \| tail -3` | every phase touching a doc or the workspace's members |
 | `cargo test --workspace --no-fail-fast 2>&1 \| grep -E '^test result\|FAILED\|failed' \| tail -40` | P21, P28, P31 |
@@ -185,12 +187,15 @@ there by `cargo test -p app`. The bindings are regenerated at P22, which runs `c
   STRIKEPRO labels ([strike-tape.com](https://strike-tape.com/)). Packs hold driver, iron and hybrid labels, at
   about 6 to 10 hits per label. The site gives no dimensions and says nothing of how a strike shows, so P3
   measures them and P4 commits them as data. Another tape later is a new label type or a new method, never a
-  change to this one.
+  change to this one. *Changed at P3 by the user's word (P3 findings 10 and 11)*: no ruler was used, and no
+  size is published, so the dimensions are measured off P3's flat photo. The user reports a strike as a
+  darker mark (finding 8).
 - **D2 — Face centre is the label's centre, on every club.** The user's call, made knowing that application
   error then lands in every reading unmeasured: *"let's not worry about that for now"*. A reading is the mark's
   position in the label's own frame.
 - **D3 — Every club.** Each category takes one of the three label types. Which label goes on fairway woods
-  and on the putter (if any) is the user's answer at P3 (the run sheet asks), and P4 records it.
+  and on the putter (if any) is the user's answer at P3 (the run sheet asks), and P4 records it. *Answered at
+  P3 (finding 8): a fairway wood takes the hybrid label, and the putter takes none and is out of the drill.*
 - **D4 — One photo per strike, newest mark.** There is no clean photo of a fresh label. One mark on the label
   means a new label. More than one means diff against the last strike's crop. If the reader cannot tell, the
   user taps the new mark, which is the last resort (*"a doomsday task where we have utterly failed"*).
@@ -200,6 +205,9 @@ there by `cargo test -p app`. The bindings are regenerated at P22, which runs `c
   stored as a compressed JPEG of tens of KB, and the original photo is deleted once the strike is stored.
 - **D7 — The truth is a printed mm grid.** P2 prints a grid sheet. In P3, peeled labels are stuck onto it in
   order and photographed straight on, and that photo is the truth the on-club readings are compared to.
+  *Changed at P3 by the user's word (P3 finding 10)*: there are no truth sheets beyond the one flat photo of
+  unused labels, and no label is hit before P29, so no peeled-label truth exists. P2's sheet stays in
+  `spikes/strike-tape/`, unused.
 - **D8 — Baseline, then the ladder.** A 10-strike baseline sets the start level. Blocks of 10 follow: **7 or
   more inside moves in a level, 3 or fewer moves out, and anything else stays** (the user's numbers).
 - **D9 — The levels are a table per category** (C9 has the provisional radii, for the user to confirm at
@@ -248,7 +256,8 @@ method:
 `strikepro_hybrid`), the outline (`width_mm`, `height_mm`, corner radius, or a polygon if the shape is not a
 rounded rectangle), the centre in label millimetres, and `inscribed_radius_mm`. Beside it, a
 `category_labels` map (`ClubCategory` → label id, or absent for a category no label fits). Every number has its
-provenance: "measured by the user at P3 with <tool>".
+provenance: "measured by the user at P3 with <tool>". *Changed at P3 (finding 11)*: the provenance is P3's
+flat photo, as finding 11 words it.
 
 **C4 — Coordinates.** The label frame is millimetres with the origin at the label's centre, **+x toward the
 toe and +y toward the top line**, whichever hand the club is. The rectified crop is `CROP_PX_PER_MM`
@@ -309,7 +318,8 @@ Each table has two cuts applied:
 - **trimmed at P4**: a radius above the category's label `inscribed_radius_mm` is removed, so a strike off the
   tape is outside every circle (C6);
 - **floored at P13**: a radius below `2 × P95` of the label type's measured error is removed, so a level is
-  never tighter than the reader can resolve (ADR-010 §2).
+  never tighter than the reader can resolve (ADR-010 §2). *Moved to P29 at P3 (finding 10)*: the real error
+  is first measured there, if it can be, so the tables ship trimmed and unfloored until then.
 
 The cut tables are what ship. The uncut ones stay in the doc comment, with both cuts named.
 
@@ -415,7 +425,9 @@ and prints one JSON line per photo. With `--sequence`, each photo's previous fra
 **C24 — The gate's "wrong".** On the truth set, a reading is **wrong** when it is more than `WRONG_MM`
 (provisional 5) from the truth on either axis. **One wrong reading fails the gate.** Coverage (read, picked
 and refused) is printed, and a `READ_AT_LEAST` floor is set at what P13 measured, so a reader that starts
-withholding is seen (the clip gate's precedent).
+withholding is seen (the clip gate's precedent). *Changed at P3 (finding 10)*: P13 applies this rule against
+its synthetic truth and sets no floor from it. The real gate, with `READ_AT_LEAST` set from real photos,
+moves to P29, where what counts as the truth is settled with the user.
 
 ### Not in M46
 
@@ -489,16 +501,34 @@ style of one.
 reading the file) and the run sheet names every item P4 and P13 need.
 **Verify**: doc-truth.
 
-### P3 — 🧍 The tape session: labels measured, strikes photographed, truth sheets photographed
+### P3 — 🧍 The labels: one flat photo, their sizes measured off it, and the user's answers
 
-**Precondition (yours)**: STRIKEPRO labels of all three types, a ruler or calipers, a printer, the clubs
-named in the run sheet, somewhere to hit (no launch monitor needed), and the iPhone.
-**What you do**: the run sheet, `docs/plans/m46-tape-run-sheet.md`, top to bottom.
-**What the session does**: lists `data/raw/strike_tape/<date>/`, checks every item the run sheet asked for is
-there (photo counts per label, the skipped-photo notes, the truth sheet photos, the measurements, the two
-answers), and asks for anything missing. It writes nothing but this phase's finding.
-**Done when**: the finding lists what arrived, per club and label, and nothing the later phases need is
-missing.
+**Rewritten at P3 by the user's word** (2026-11-12, relayed by the orchestrator in four rounds). The later
+round wins wherever two conflict:
+1. *"Ignore strike photos"*.
+2. A fairway wood takes the hybrid label. The putter takes none and is out of the drill. The three labels
+   in the first photo are the driver (top), hybrid (middle) and iron (bottom) labels. A strike shows as a
+   darker mark. The photo's sizes were not accepted as the record, which round 4 reversed, and the print
+   check and truth sheets were kept, which round 3 replaced.
+3. *"There will be no more truth sheets. Just the one. There will be no measuring labels with a ruler. Use
+   the online information. There will be no hitting labels until we are done, the finished product should
+   be our first "test" of the product and we are hoping it works. (In otherwords if testing is going to be a
+   milestone it should be at the VERY end)."*
+4. Nothing was found published (finding 11), so **the sizes measured off the photo are the record**:
+   driver 90.5 × 49.6, hybrid 73.5 × 34.4, iron 73.0 × 39.9 mm, ±0.5 mm, on the assumption that the
+   graph paper's squares are 1 mm.
+
+So the run sheet, `docs/plans/m46-tape-run-sheet.md`, is now only a record of what was first asked. **Nothing
+in M46 hits a label before P29**, which becomes the plan's first real test. Every real-photo check that was
+placed earlier moves there, and P3's finding 10 says what each phase builds and tests against now.
+**What P3 holds**:
+- the one flat photo, filed (finding 2), which is the "one" truth sheet (finding 10);
+- the user's answers (finding 8);
+- each label type's size, outline, printed centre and printing, measured off that photo (finding 4) and
+  sourced as finding 11 says.
+
+**Done when**: met on 2026-11-12. Every label type has its size from a named source, every category has a
+label or is named as having none, and nothing a later phase needs is left with the user.
 
 ### P4 — 🪟 The session's inventory and the label geometry as data
 
@@ -597,7 +627,7 @@ outcome's every field, and the review images go under `DIR/<stem>/`.
 the review files, and an unknown flag and a missing file are each refused with their sentences.
 **Verify**: `cargo test -p golf-lab --test read_tape`, clippy, fmt.
 
-### P9 — 🪟 The label finder, on P3's photos
+### P9 — 🪟 The label finder, on synthetic photos
 
 **Goal**: a STRIKEPRO label's four corners found in a photo of it on the club, or `no_label`.
 **Read**: P3's and P4's findings (what the label looks like against each face); C3; `crates/impact/src/mask.rs`
@@ -662,30 +692,29 @@ Over P3's first-strike photos the finding tables the outcomes, with each review 
 finding tables outcomes per label, and **both deliberately skipped photos come out as two new marks**.
 **Verify**: `cargo test -p impact`, the verb, clippy, fmt.
 
-### P13 — 🪟 The truth reader, the measured error, and the real-photo gate
+### P13 — 🪟 The reader end to end on synthetic photos, and its gate
 
-**Goal**: exit item 1. It also floors C9's tables.
-**Read**: D7, C9, C24; P2's sheet geometry (`spikes/strike-tape/README.md`); P4's inventory;
-`crates/ocr/tests/full_swing.rs` and `crates/lab/tests/full_swing_clips.rs` (the ignored-gate precedent).
-**Touch**: `crates/impact/src/tape/truth.rs`, `crates/lab/tests/strike_tape.rs`,
-`crates/contracts/src/drill.rs` (the floored tables and `TAPE_ERROR_P95_MM` per label type),
-`data/raw/strike_tape/<date>/truth.json` (gitignored).
-**Do**: read the truth, write the gate, then floor the tables.
-- **The truth**: in each truth-sheet photo, find the four fiducial squares, rectify the sheet to millimetres,
-  find each slot's label edges (the label's own centre, per D2) and its marks. Every mark on a peeled label is
-  every strike that label took, in sheet order. The last photo of each label in the sequence matches the
-  peeled label, so each truth mark is matched to the strike that made it by the diff order. Write
-  `truth.json`. What the truth cannot see is stated in the doc: the mark's segmentation is shared with the
-  reader, so this measures the geometry chain (finding, squaring, orientation, curvature) and not
-  segmentation.
-- **The gate test** (ignored by default, rule 10): every photo is held to its sha256. Each strike is read
-  (error measured), `NeedsPick`, or a named refusal, and a wrong reading fails (C24). It prints coverage and
-  P50 and P95 per label type, and holds `READ_AT_LEAST` at what it measured.
-- **The floor**: set `TAPE_ERROR_P95_MM` per label type, apply C9's floor to the tables (any cut radius named
-  in the finding), and set `TAPE_READER_VERSION` to 1 as the first gated reader.
-**Done when**: the gate passes with `--include-ignored`, the finding holds the error table and the floored
-tables, and the gate fails without the photos rather than passing.
-**Verify**: the gate's command, `cargo test -p contracts -p impact`, clippy, fmt.
+**Rewritten at P3 by the user's word (P3 finding 10).** No label is hit before P29 and there is no truth
+sheet, so this phase's old work moves to P29: the truth reader (`truth.rs`), the real-photo gate
+(`crates/lab/tests/strike_tape.rs`), `TAPE_ERROR_P95_MM`, `READ_AT_LEAST` and C9's floor. Here the reader is
+gated on synthetic photos with a known truth instead.
+**Goal**: the whole reader, P9 to P12, checked end to end against known marks before the app is built on it.
+**Read**: C4, C5, C10, C24; P9 to P12's findings (each one's synthetic renderer, to reuse rather than copy);
+`crates/impact/tape_labels.json`.
+**Touch**: `crates/impact/tests/tape_synthetic.rs`, and the shared renderer wherever P9 to P12 left it.
+**Do**: render a set per label type, then run the reader over it.
+- **The set**: each outline in `tape_labels.json`, with the dark parts of its printing (P3 finding 4), on a
+  rendered head with a hosel and shaft, in both hands, square and 20 to 30° off square. Each label carries a
+  run of 6 to 10 darker marks (P3 finding 8) at known label millimetres, with one photo holding two new marks and one holding
+  an overlap.
+- **The run**: run `read_tape` over each sequence. Every strike is read, `NeedsPick` or refused by name, and
+  none is wrong by C24's `WRONG_MM` against the synthetic truth.
+- **The record**: print coverage, P50 and P95 per label type, for the finding only. A synthetic error is
+  not the reader's real error, so it sets neither `TAPE_ERROR_P95_MM` nor C9's floor, and
+  `TAPE_READER_VERSION` stays at P5's 1.
+
+**Done when**: the synthetic gate passes in the default `cargo test`, and the finding holds its table.
+**Verify**: `cargo test -p impact`, clippy, fmt.
 
 ### P14 — 🪟 `analysis::drill`: the baseline and the ladder
 
@@ -913,8 +942,10 @@ test onto `goTo`.
 `sim_test.sh integration_test/smoke_test.dart` passes.
 **Verify**: the Dart commands, the smoke integration test.
 
-### P28 — 🍎 The whole drill on the Simulator, over P3's photos: desk-complete
+### P28 — 🍎 The whole drill on the Simulator, over synthetic photos: desk-complete
 
+**Changed at P3 (P3 finding 10)**: P3 has no strike photos, so `TestPhone` returns P13's synthetic sequence,
+written out as images, wherever this section says P3's photos. P4's inventory is not read.
 **Goal**: everything before the iPhone, run together.
 **Read**: `app/integration_test/whole_flow_test.dart` and `test_host.dart` (the `TestPhone` pattern, the M38
 plan's C22); P4's inventory.
@@ -927,7 +958,7 @@ root. Navigation goes only through the ball.
 **Done when**: the integration test passes, and so do the whole workspace and the whole `flutter test`.
 **Verify**: `sim_test.sh integration_test/drill_flow_test.dart`, the workspace command, the Dart commands.
 
-### P29 — 🧍 A real drill session on the iPhone, exported and imported at the lab
+### P29 — 🧍 The first real test: a drill session on the iPhone, exported, imported and checked at the lab
 
 **Precondition (yours)**: the iPhone at the Mac for a `--release` install (the M38 plan's C20: free signing
 lasts 7 days, and deleting the app deletes its data, so export first). Labels, two clubs of different
@@ -942,7 +973,29 @@ categories, and somewhere to hit.
 **What the session does**: imports the zip with `golf-lab import-export` into `data/processed/drills/`,
 checks exit item 2 against what was imported (strike counts, every strike accounted for, levels and history),
 and imports it a second time to check exit item 3. It records anything that misread, with the crop.
-**Done when**: exit items 2 and 3 hold, or the finding names what failed and the user decides.
+**Changed at P3 by the user's word (P3 finding 10): this is the plan's first real test, and nothing before it
+hits a label.** It takes over every real-photo check the plan had placed earlier:
+- P9's table of found against `no_label`;
+- P10's "no photo oriented wrongly";
+- P11's first-strike outcomes;
+- P12's skipped photos read as two new marks;
+- P13's real-photo gate, with C24's "wrong" and `READ_AT_LEAST`;
+- exit item 1;
+- the measured error, with `TAPE_ERROR_P95_MM` and C9's floor;
+- P22's real HEIC decode, P23's strike stored from a real photo, and P28's real sequence.
+
+**Settled here with the user, because the plan cannot settle them for this phase**:
+- with no truth sheet, what a reading is checked against. What exists is each strike's stored crop with its
+  reading drawn, looked at strike by strike;
+- whether P50 and P95 can be measured at all;
+- whether the original photos are kept for a desk re-run through `golf-lab read-tape`, since C16 deletes
+  them;
+- whether the run sheet's steps 5 and 6 (a deliberately skipped photo, and photos off square) are repeated
+  in the app.
+
+The floor and any `READ_AT_LEAST` this phase sets change shipped constants, so it commits them as P13 would
+have done, and rule 4's `TAPE_READER_VERSION` rule holds.
+**Done when**: exit items 1, 2 and 3 hold, or the finding names what failed and the user decides.
 
 ### P30 — 🪟 Docs
 
@@ -1077,3 +1130,219 @@ named as skipped where they are not), then write the three records, and commit `
    names every spike folder.
 6. **For P3**: the session checks the folder against the run sheet's last table, *What each item is for*,
    and `labels.txt` against its template.
+
+### P3 (2026-11-12)
+
+1. **The user's decision: no strike photos.** Their words, relayed by the orchestrator while P3 was open,
+   were *"Ignore strike photos"*. P3's section records it. The run sheet's steps 4 to 6 are no longer asked
+   for. What each phase loses, so that none finds out at its own start:
+   - **Exit item 1 and P13.** The truth was each on-club reading compared with the same mark on the peeled
+     label, and no on-club photo now exists. So there is no measured error, no `TAPE_ERROR_P95_MM`, no
+     `READ_AT_LEAST`, and no real-photo gate for rule 10 to ignore by default. C9's floor (`2 × P95`) and C24's
+     `WRONG_MM` have nothing to apply to, and P13 set `TAPE_READER_VERSION` "as the first gated reader".
+   - **P4**: the inventory was one entry per strike photo, and only the flat photo below is left. The label
+     geometry and the `category_labels` map are unaffected.
+   - **P9, P10, P11 and P12**: each one's done-when ends in a run over P3's photos (found against `no_label`,
+     no photo oriented wrongly, the first-strike outcomes, and both skipped photos read as two new marks).
+     Their synthetic tests are unaffected. P10's handedness cross-check read the inventory, which came from
+     the strike photos.
+   - **P22** decodes "one P3 HEIC", and the one P3 photo is a JPEG (finding 2). **P23**'s test through
+     `RustCore` stores a strike from a P3 photo, which needs a marked label on a club. **P28** runs "one club's
+     P3 sequence" through the app.
+   - **D7, P2's truth sheet, and the run sheet's steps 1 and 7** (the print check, peeled labels in their
+     slots, and the sheet photos). The peeled labels' only reader was the comparison with the strike photos.
+     The user's words do not say whether these go too, so finding 5 asks.
+   - P29 is unaffected, because its photos are taken in the app.
+2. **What arrived**: one photo, filed untouched as `data/raw/strike_tape/2026-11-12/da3ef6f9-image.jpg`
+   (sha256 `5741307b…4c8f15`), under the day it arrived because it carries no date. It shows three unused
+   labels on the user's own graph paper, not on the printed truth sheet, so there are no fiducials, no scale
+   bar and no slot bands. It is not an original. It is 1512 × 2016, exactly half an iPhone's 3024 × 4032, a
+   JPEG at quality 95 in Display P3. Its EXIF is stripped to the dimensions, with no date, make or model, and
+   the file name is the upload's. There is no `labels.txt`, no print measurement and no truth-sheet photo.
+3. **Which label is which, read by shape and unconfirmed** (finding 5). The **top** label is the driver label:
+   the largest, an oval with distance-loss rings. The **middle** one is the hybrid label. The **bottom** one is
+   the iron label, with straight sides and bottom and a dashed grid.
+4. **What the photo measures, which is the record.** The user first declined these numbers as the record
+   (finding 8), then took them as the record when nothing was found published (finding 11). The paper has
+   no fiducials, so it was rectified by its own grid. The grid is
+   1 mm, with every 5th and every 10th line heavier, so it reads as metric paper, and **every number below
+   assumes its pitch is exactly 1.000 mm**. Grid lines were indexed in label-free bands and fitted as straight
+   lines, and an image-to-grid homography over 37,359 intersections fits with an RMS residual of 0.13 mm (max
+   0.71). Each label edge was taken where the grid lines stop, sampled every 1 mm. It agrees with a brightness
+   edge to 0.2–0.4 mm on every side but the top (finding 7). Each label was then turned into its own frame by
+   its printed cross's arms, since it sat 0.2° to 0.8° off square on the paper. The numbers are good to
+   about ±0.5 mm, and the dashed printing to about ±1 mm:
+
+   | Label (by shape) | Width × height, mm | Printed cross from left, top edge | Box centre − cross (+x right, +y up) | Inscribed radius about the cross | Red ring Ø |
+   |---|---|---|---|---|---|
+   | driver (top) | 90.5 × 49.6 | 45.2, 25.1 | +0.1, +0.3 | 24.4 (bottom edge) | 23.1 |
+   | hybrid (middle) | 73.5 × 34.4 | 36.2, 17.6 | +0.6, +0.4 | 16.8 (bottom edge) | 18.3 |
+   | iron (bottom) | 73.0 × 39.9 | 36.6, 24.8 | −0.1, +4.8 | 14.6 (bottom edge) | 18.3 |
+
+   **None is a rounded rectangle.** Each shape is given below with the edge's distance from the cross every
+   30° (0° is right in the photo and 90° up), where an angle is missing because the logo or glare hid the edge:
+   - **driver**: an asymmetric oval, widest about 9 mm above the cross, with a flatter top and a rounder
+     bottom. 0:43.1 30:39.6 90:25.1 120:28.2 150:40.5 180:43.3 210:34.1 240:26.5 270:24.4 300:26.2 330:32.8.
+   - **hybrid**: a flat top edge, straight to within 0.3 mm over 55 mm, with rounded ends and a bottom that
+     curves up into them. 0:35.9 30:34.2 60:21.0 90:17.6 120:20.3 150:33.8 180:34.9 210:27.7 270:16.8
+     300:19.1 330:27.7.
+   - **iron**: a straight bottom and sides, the sides vertical from about 13 mm below the top. From each side
+     the top rises at about 22° to a flat run of about 20 mm under the logo. 0:36.3 30:33.9 60:27.3
+     120:27.6 150:34.4 180:36.4 210:29.3 240:16.9 270:14.6 300:17.0 330:30.5.
+
+   **Printing, colour, see-through.** All three are white and opaque, so no grid shows through. Across each
+   label's interior, printing included, the grid's signal is 5 to 7% of the paper's around it, and on a
+   print-free patch of the driver label it is under 1%. Each carries the navy `STRIKE⊕TAPE.com` logo, centred along the top edge, with a
+   red target as the ⊕, and a red circle with a red cross (arms 9.5 to 10.2 mm) at the printed centre. On the
+   driver label, two black dashed rings surround the circle, with black text: `-7%` at the top, `-15%` left
+   and right, and `7% Loss of Distance` at the bottom. On the hybrid label, two black dashed elliptical rings
+   cross the horizontal axis at about ±19.5 and ±28.5 mm, with no text. On the iron label, a black dashed grid
+   has horizontal lines through the cross and about 10.5 mm above and below it, and vertical lines about
+   18.5 mm either side, with a `+` where they cross.
+5. **Still missing at the first report, asked through `BLOCKED`, and answered in finding 8**:
+   - (a) the fairway wood and putter answers (step 3), without which P4's `category_labels` cannot be built;
+   - (b) confirmation of finding 3's identities;
+   - (c) whether finding 4's numbers stand in for step 2's ruler measurements, given the 1 mm assumption;
+   - (d) whether steps 1 and 7 go with the strike photos;
+   - (e) what a strike looks like on the tape (step 4's note, which P11 reads);
+   - (f) `labels.txt`, or the same facts in the user's reply, which a resumed P3 writes into this finding.
+6. **For P4**:
+   - **C3's centre is not decided between the printed cross and the outline's box centre.** They agree
+     within 0.6 mm on the driver and hybrid labels, and differ by 4.8 mm vertically on the iron label, whose
+     top is shouldered. The cross is what a golfer aims at, and it is what finding 4's inscribed radii are
+     measured about. If P4 finds no rule for this in the plan, it is the user's call.
+   - About the cross, finding 4's inscribed radii **trim C9** as follows. P4 computes the trim from the
+     outline it commits, which is finding 4's, so this is the result it should get:
+     - the driver table loses 30 and 26;
+     - hybrid loses 26, 22 and 19;
+     - `long_iron` loses 24, 21, 18 and 15;
+     - `mid_iron` loses 22, 19 and 16;
+     - `short_iron` loses 20, 17 and 15;
+     - `wedge` loses 18 and 16;
+     - `wood`, which takes the hybrid label (finding 8), loses 28, 24, 21 and 18;
+     - `putter` has no label and no table.
+   - The photo is the only source, so P4 has nothing to cross-check it against. If P4 re-derives a number,
+     it repeats finding 4's method, rectifying by the grid, rather than the README's fiducials.
+7. **For P9**: the logo sits within about 1 mm of every label's top edge. On the driver label the logo's
+   target comes within 0.7 mm of it. A blurred-brightness outline therefore ran 0.7 to 1 mm inside the true
+   top edge, and notched into the logo where the target and the swoosh near the edge. Expect the same notch
+   when the label is segmented against a club face, and fit the top edge from the rest of the outline.
+8. **The user's answers** (2026-11-12, relayed by the orchestrator), each addressed to the phases it affects:
+   - **A fairway wood takes the hybrid label.**
+     - **For P4**: `category_labels` maps `wood` to `strikepro_hybrid`. The rest is as the run sheet assumed:
+       `driver` to `strikepro_driver`, `hybrid` to `strikepro_hybrid`, and every iron category and `wedge` to
+       `strikepro_iron`.
+     - **For P6**: C9's `wood` table ships, trimmed at the hybrid label's inscribed radius.
+   - **The putter takes no label, and is out of the drill.**
+     - **For P4**: `putter` is named as having no label.
+     - **For P6**: C9's putter table does not ship (C9: "only if P3 maps a label to it"). It stays only in the
+       doc comment, with the uncut tables.
+     - **For P19 and P23**: the putter has no label type, so `drill_clubs` and the picker cannot offer it a
+       tape drill. Whether it is left out or shown as unavailable is for that phase to settle with the user.
+   - **The label identities are confirmed**: top is the driver label, middle the hybrid and bottom the iron
+     (finding 3). **For P4**: finding 4's table is keyed by type.
+   - *Superseded by finding 10, which drops the ruler.* **Step 2 still needs a ruler.** The user did not accept finding 4's numbers as the measurements. **For
+     P4**: `tape_labels.json` takes the ruler's numbers, with C3's provenance ("measured by the user at P3
+     with <tool>"). Finding 4's numbers are what P4's "within 1 mm" cross-check compares them with. Where
+     the two disagree by more than 1 mm, P4's finding says which number won and why, as its section asks.
+   - *Superseded by finding 10, which drops every truth sheet but the one photo.* **Steps 1 and 7 stay**: the print check, the peeled labels in their slots, and the truth-sheet photos
+     are all still asked for, though the strike photos they were to be compared with are gone (finding 1).
+     **For P13**: the truth sheets will be its only real photos of marks, with no on-club reading to match
+     them against. What it measures from them is for P13 to settle with the user.
+   - **A strike shows as a darker mark**, size not given. **For P11 and P12**: segment a mark as darker than
+     the label's clean white, and a new mark in the diff as a darkening. On these labels the printing is dark
+     too (finding 4: the navy logo, black dashes and text, and the red circle and cross), so a mark has to be
+     told from the printing. A label type's printing is the same on every label, and the flat photo shows it
+     clean (finding 2). No mark's size is known before P29 (finding 10).
+9. *Superseded by finding 10: none of this is asked for now, and it stays as the record of what was
+   asked.* **What is left at the bay to finish P3**, by run sheet step. With no strike photos, step 4 keeps only the
+   hitting and its notes, and the per-label face finish is dropped, because it served the on-club photos.
+   1. **Print the truth sheet** at 100%: one copy for the FRESH sheet, plus one for every six used labels. On
+      each, measure the scale bar (99.5 to 100.5 mm) and the left squares (249 to 251 mm), and note both
+      (step 1).
+   2. **Measure one unused label of each type with a ruler or calipers**, width and height to 0.5 mm. None is
+      a rounded rectangle (finding 4). So sketch each shape with its straight edges' lengths and its corners'
+      positions, in mm from the label's left and top edges, and photograph the sketches (step 2). Finding 4
+      already covers the printing, the colour and see-through, unless the user corrects it.
+   3. **Stick those three unused labels on the FRESH sheet**: the driver label in slot 1, the iron label in
+      slot 2 and the hybrid label in slot 3 (step 2).
+   4. **Hit labels, with no photos**: the driver label on the driver, the hybrid label on a hybrid or fairway
+      wood, and the iron label on a long or mid iron and on a wedge. Give each label 6 to 10 marks. Number the
+      labels L1, L2 and on, and note each one's club, hand and strike count, misses included (step 4).
+   5. **Peel each label into the next truth-sheet slot, unturned**: top line toward the slot's number, and the
+      toe to the left for a right-handed club. Fill in the slot's band with the club, hand, label number and
+      strikes (step 7).
+   6. **Photograph every sheet straight on, twice each**, the FRESH one included, with all four corner
+      squares in frame and no shadow (step 7).
+   7. **Copy the originals, untouched**, into `data/raw/strike_tape/<date>/`, by AirDrop or with *Keep
+      Originals* over USB (step 8). The first photo arrived re-encoded at half size (finding 2).
+   8. **Write `labels.txt`, or give the same facts in a reply** (step 9). It needs:
+      - the print numbers;
+      - the ruler measurements;
+      - each label's club, hand, type, sheet and slot, and strikes;
+      - the photo names of the FRESH sheet and of every truth sheet.
+
+      The two answers and "darker" are already recorded here.
+10. **The user's third round replaces the second wherever the two conflict** (2026-11-12, relayed by the
+    orchestrator, and quoted verbatim in P3's section). It brings three changes:
+    - no truth sheet beyond "the one";
+    - no ruler, so the published information is the record, and since none was found, round 4 made the
+      photo's sizes the record (finding 11);
+    - no label hit until the finished product, whose use at the very end is the first test.
+
+    What follows from it:
+    - **"Just the one" is read as the flat photo already filed** (finding 2). The other reading is one printed
+      truth sheet still to come. With no label hit before P29, that sheet could hold only unused labels,
+      which is what the filed photo already shows. It would add P2's fiducials and nothing a later phase
+      reads, so the two readings change no phase, and the question was not put to the user.
+    - **P29 is the plan's first real test.** It keeps its number, so no phase is renumbered. Its section
+      lists what moved into it and what it settles with the user. Exit item 1, D1, D7, C3, C9's floor, C24
+      and the verify table each say so where they stand.
+    - **What each phase builds and tests against now**:
+      - **For P4**: `tape_labels.json` takes finding 4's numbers (size, outline, printed centre and
+        inscribed radius), with finding 11's provenance. None of the labels is a rounded rectangle, so each
+        outline is a polygon. The inventory holds the one photo, and the category map is finding 8's.
+      - **For P6**: the `// floored at P13` note becomes `// floored at P29`.
+      - **For P8**: unchanged. Its done-when is already synthetic, and its verb is what P29 may run over any
+        originals it keeps.
+      - **For P9, P10, P11 and P12**: each is built and tested on synthetic photos only, rendered from
+        `tape_labels.json`'s outlines with finding 4's printing and finding 8's darker marks. Each section's
+        run "over P3's photos" moves to P29. P9 may use the filed flat photo as a smoke test of finding a label
+        against a grid, but the photo shows no head.
+      - **For P10**: the printed logo makes a wrong orientation visible on a stored crop, as mirrored or
+        upside-down text. That is something P29 can check by eye.
+      - **For P13**: rewritten in place, as a synthetic end-to-end gate that sets no floor and no
+        `TAPE_ERROR_P95_MM`.
+      - **For P18**: C16 deletes each original photo once its strike is stored, and P29 may want originals
+        kept for a desk re-run. P18 keeps C16's delete as written, and its finding says where a switch to keep
+        them would go, so that P29 can add one if the user wants it.
+      - **For P22**: P3's one photo is a JPEG, so there is no P3 HEIC to decode. A HEIC from anywhere else
+        will do, or the test decodes the JPEG and says so.
+      - **For P23**: the `RustCore` test stores a strike from a P13 synthetic photo, written as C16's raw RGBA.
+      - **For P28**: `TestPhone` returns P13's synthetic sequence, as its section now says.
+      - **For P29**: everything above that moved, plus the four questions in its section.
+    - **What this costs.** The reader, the ladder's levels and the app are all built without a real strike
+      ever being seen. Until P29 the tables ship trimmed and unfloored, and nothing measures how far a real
+      reading lands from its mark. That is the user's stated plan: *"we are hoping it works"*.
+11. **No size is published, so the label sizes are the photo's.** The user's fourth round (2026-11-12,
+    relayed by the orchestrator) made finding 4's sizes the record: driver 90.5 × 49.6, hybrid 73.5 × 34.4
+    and iron 73.0 × 39.9 mm, ±0.5 mm. This reverses round 2's "not the record". **How the sizes were
+    sourced**:
+    - This phase-runner had no web tool: WebSearch and WebFetch were not available (checked through
+      ToolSearch), and its rules forbid working around a missing tool.
+    - The orchestrator searched the web from its own session and found nothing published:
+      - strike-tape.com's home page lists no sizes;
+      - the product page, `strike-tape.com/products/strike-tape-labels`, returned HTTP 429 twice;
+      - the Amazon listing, ASIN `B0DWLVGJC1`, returned HTTP 503.
+    - P0's fetch during planning had already found no dimensions on strike-tape.com (P0 finding 2).
+
+    So every number came from one photo of three unused labels on the user's graph paper, read by finding
+    4's method.
+    - **For P4**: write the provenance into `tape_labels.json` once, in these words: "measured at M46 P3 off one
+      photo of unused labels on graph paper (`data/raw/strike_tape/2026-11-12/da3ef6f9-image.jpg`, sha256
+      `5741307ba794deb3f90dfdec01c6faa2c746f6bc973edde4061c23039c4c8f15`), rectified by its grid; assumes
+      the paper's squares are exactly 1 mm; ±0.5 mm, the dashed printing ±1 mm; no size is published (P3
+      finding 11)". If the 1 mm assumption is wrong, every size scales with it, so a ruler laid on any one
+      label settles all three. That stays the user's to offer.
+    - If Strike Tape later publishes sizes, they are a check on these, and a difference of more than 1 mm is
+      the user's to decide.
